@@ -5,6 +5,7 @@ import {
   geodeticToVector3,
   degreeToRadian,
 } from "@navara/three_api";
+import { encodePosition } from "@navara/engine-api";
 import ArclineFragShader from "@shaders/glsl/arcLine.frag.glsl";
 import ArclineVertShader from "@shaders/glsl/arcLine.vert.glsl";
 import {
@@ -14,7 +15,10 @@ import {
   ShaderMaterial,
   BufferAttribute,
   InstancedBufferAttribute,
+  InterleavedBufferAttribute,
   Vector2,
+  Vector3,
+  Matrix4,
   DoubleSide,
   Sphere,
   Box3,
@@ -22,6 +26,7 @@ import {
 
 import { Color } from "../Color";
 import { overrideShaderMaterialForMRT } from "../material";
+import { setupRTEBeforeRender } from "./rtcRteHelper";
 
 export type ArcLineConfig = {
   thickness: number; // Thickness of the arc line
@@ -57,9 +62,38 @@ export const DefaultArcLineConfig: ArcLineConfig = {
   geometry: [],
 };
 
+/**
+ * ArcLine - Geodesic arc line renderer for 3D globe visualization
+ *
+ * Renders arc lines between geographic coordinates on a WGS84 ellipsoid using
+ * RTE (Relative-To-Eye) rendering for high precision.
+ *
+ * **Implementation:**
+ * - ECEF coordinates are calculated on CPU side and encoded as high/low precision components
+ * - Shader applies RTE transformation to maintain precision near the camera
+ * - Geodesic interpolation is performed in absolute coordinates before RTE transformation
+ *
+ * **Precision Limitations:**
+ * Due to floating-point precision constraints in the current implementation,
+ * arc lines should be approximately **2km or longer** for reliable rendering.
+ * Shorter arc lines may exhibit visual artifacts or precision issues.
+ *
+ * If future requirements need to support arc lines shorter than 2km,
+ * the implementation will need to be redesigned with:
+ * - RTC (Relative-To-Center) coordinate system per batch
+ * - Alternative interpolation strategies
+ * - Different vertex encoding schemes
+ */
 export class ArcLine extends Object3D {
   private readonly _config: ArcLineConfig[];
   private _subMeshes: Mesh<InstancedBufferGeometry, ShaderMaterial>[] = [];
+
+  // Shared RTE uniforms for all sub-meshes
+  private _sharedRTEUniforms = {
+    modelViewMatrixRTE: { value: new Matrix4() },
+    cameraPositionHigh: { value: new Vector3() },
+    cameraPositionLow: { value: new Vector3() },
+  };
 
   constructor(config: Partial<ArcLineConfig>[] = []) {
     super();
@@ -91,6 +125,27 @@ export class ArcLine extends Object3D {
       this._subMeshes.push(subMesh);
       this.add(subMesh);
     });
+
+    // Setup shared RTE callback for all sub-meshes
+    // All sub-meshes share the same RTE uniforms and can use the same modelViewMatrixRTE because:
+    // 1. All sub-meshes are at origin (no local transforms)
+    // 2. Real world positions are encoded in ECEF coordinates (per-instance attributes)
+    // 3. modelViewMatrixRTE = identityMatrix * camera.matrixWorldInverse (rotation-only view matrix)
+    // Only the first sub-mesh needs onBeforeRender/onBeforeShadow callbacks to update shared uniforms
+    if (this._subMeshes.length > 0) {
+      const identityMatrix = new Matrix4();
+      const callback = setupRTEBeforeRender(
+        this,
+        this._sharedRTEUniforms,
+        identityMatrix,
+        identityMatrix,
+      );
+
+      if (callback) {
+        this._subMeshes[0].onBeforeRender = callback;
+        this._subMeshes[0].onBeforeShadow = callback;
+      }
+    }
   }
 
   private createSubMesh(
@@ -107,7 +162,11 @@ export class ArcLine extends Object3D {
       return new Mesh(geo, new ShaderMaterial());
     }
 
-    const instanceSourceTarget = new Float32Array(numInstances * 4);
+    // RTE mode: ECEF coordinates with high/low precision encoding
+    const instanceSourceHigh = new Float32Array(numInstances * 3);
+    const instanceSourceLow = new Float32Array(numInstances * 3);
+    const instanceTargetHigh = new Float32Array(numInstances * 3);
+    const instanceTargetLow = new Float32Array(numInstances * 3);
     const instanceParams1 = new Float32Array(numInstances * 4);
     const instanceParams2 = new Float32Array(numInstances * 3);
     const instanceDash = new Float32Array(numInstances * 4);
@@ -115,9 +174,22 @@ export class ArcLine extends Object3D {
     const instanceTgtColor = new Float32Array(numInstances * 3);
 
     geo.setAttribute(
-      "aInstanceSourceTarget",
-      new InstancedBufferAttribute(instanceSourceTarget, 4),
+      "aInstanceSourceHigh",
+      new InstancedBufferAttribute(instanceSourceHigh, 3),
     );
+    geo.setAttribute(
+      "aInstanceSourceLow",
+      new InstancedBufferAttribute(instanceSourceLow, 3),
+    );
+    geo.setAttribute(
+      "aInstanceTargetHigh",
+      new InstancedBufferAttribute(instanceTargetHigh, 3),
+    );
+    geo.setAttribute(
+      "aInstanceTargetLow",
+      new InstancedBufferAttribute(instanceTargetLow, 3),
+    );
+
     geo.setAttribute(
       "aInstanceParams1",
       new InstancedBufferAttribute(instanceParams1, 4),
@@ -147,6 +219,14 @@ export class ArcLine extends Object3D {
     material.transparent = config.transparent;
 
     const mesh = new Mesh(geo, material);
+
+    // Share RTE uniforms from the ArcLine group
+    material.uniforms.modelViewMatrixRTE =
+      this._sharedRTEUniforms.modelViewMatrixRTE;
+    material.uniforms.u_cameraPositionHigh =
+      this._sharedRTEUniforms.cameraPositionHigh;
+    material.uniforms.u_cameraPositionLow =
+      this._sharedRTEUniforms.cameraPositionLow;
 
     return mesh;
   }
@@ -260,16 +340,141 @@ export class ArcLine extends Object3D {
     geo.setAttribute("aVertexData", new BufferAttribute(aVertexData, 2));
   }
 
-  private fillSingleConfigInstanceData(
+  /**
+   * Set instance attributes for a single arc (low-level setter)
+   */
+  private setInstanceAttributes(
+    i: number,
+    config: ArcLineConfig,
+    segments: number,
+    arcHeight: number,
+    arcLength: number,
+    instanceParams1: BufferAttribute | InterleavedBufferAttribute,
+    instanceParams2: BufferAttribute | InterleavedBufferAttribute,
+    instanceDash: BufferAttribute | InterleavedBufferAttribute,
+    instanceSrcColor: BufferAttribute | InterleavedBufferAttribute,
+    instanceTgtColor: BufferAttribute | InterleavedBufferAttribute,
+  ): void {
+    instanceParams1.setXYZW(
+      i,
+      config.height,
+      arcHeight,
+      config.thickness,
+      config.opacity,
+    );
+
+    instanceParams2.setXYZ(i, segments, config.gradation, arcLength);
+
+    instanceDash.setXYZW(
+      i,
+      config.dashed ? 1.0 : 0.0,
+      config.dashSize,
+      config.gapSize,
+      config.dashOffset,
+    );
+
+    const srcColor = config.srcColor.raw;
+    const tgtColor = config.tgtColor.raw;
+    instanceSrcColor.setXYZ(i, srcColor.r, srcColor.g, srcColor.b);
+    instanceTgtColor.setXYZ(i, tgtColor.r, tgtColor.g, tgtColor.b);
+  }
+
+  /**
+   * Fill instance data for common attributes (params, dash, colors)
+   * Calculates arcHeight and arcLength from geometry
+   */
+  private fillInstanceCommonData(
+    i: number,
+    config: ArcLineConfig,
+    geom1: LatLng,
+    geom2: LatLng,
+    dist: number,
+    segments: number,
+    instanceParams1: BufferAttribute | InterleavedBufferAttribute,
+    instanceParams2: BufferAttribute | InterleavedBufferAttribute,
+    instanceDash: BufferAttribute | InterleavedBufferAttribute,
+    instanceSrcColor: BufferAttribute | InterleavedBufferAttribute,
+    instanceTgtColor: BufferAttribute | InterleavedBufferAttribute,
+  ): void {
+    const arcHeight = dist * config.arcHeightScale;
+    const arcLength = this.calculateArcLength(geom1, geom2, arcHeight);
+
+    this.setInstanceAttributes(
+      i,
+      config,
+      segments,
+      arcHeight,
+      arcLength,
+      instanceParams1,
+      instanceParams2,
+      instanceDash,
+      instanceSrcColor,
+      instanceTgtColor,
+    );
+  }
+
+  /**
+   * Update arc parameters (no WASM calls)
+   * Updates: thickness, opacity, gradation, colors, dash parameters, height
+   * Reads existing arcHeight, segments, arcLength from buffer
+   */
+  private updateArcParameters(
+    config: ArcLineConfig,
+    geo: InstancedBufferGeometry,
+  ): void {
+    const numInstances = geo.instanceCount;
+    if (numInstances === 0) return;
+
+    const instanceParams1 = geo.getAttribute("aInstanceParams1");
+    const instanceParams2 = geo.getAttribute("aInstanceParams2");
+    const instanceDash = geo.getAttribute("aInstanceDash");
+    const instanceSrcColor = geo.getAttribute("aInstanceSrcColor");
+    const instanceTgtColor = geo.getAttribute("aInstanceTgtColor");
+
+    const params1Array = instanceParams1.array as Float32Array;
+    const params2Array = instanceParams2.array as Float32Array;
+
+    for (let i = 0; i < numInstances; i++) {
+      // Read existing values from buffer (no WASM calls)
+      const offset1 = i * 4;
+      const offset2 = i * 3;
+      const existingArcHeight = params1Array[offset1 + 1];
+      const existingSegments = params2Array[offset2];
+      const existingArcLength = params2Array[offset2 + 2];
+
+      this.setInstanceAttributes(
+        i,
+        config,
+        existingSegments,
+        existingArcHeight,
+        existingArcLength,
+        instanceParams1,
+        instanceParams2,
+        instanceDash,
+        instanceSrcColor,
+        instanceTgtColor,
+      );
+    }
+
+    instanceParams1.needsUpdate = true;
+    instanceParams2.needsUpdate = true;
+    instanceDash.needsUpdate = true;
+    instanceSrcColor.needsUpdate = true;
+    instanceTgtColor.needsUpdate = true;
+  }
+
+  /**
+   * Update arc height and length (requires WASM calls for distance/arc calculation)
+   * Updates: arcHeightScale (need to recalculate arcHeight/arcLength)
+   * Does NOT re-encode ECEF coordinates
+   */
+  private updateArcHeightAndLength(
     config: ArcLineConfig,
     geo: InstancedBufferGeometry,
   ): void {
     const numInstances = Math.floor(config.geometry.length / 2);
-    geo.instanceCount = numInstances;
-
     if (numInstances === 0) return;
 
-    const instanceSourceTarget = geo.getAttribute("aInstanceSourceTarget");
     const instanceParams1 = geo.getAttribute("aInstanceParams1");
     const instanceParams2 = geo.getAttribute("aInstanceParams2");
     const instanceDash = geo.getAttribute("aInstanceDash");
@@ -277,6 +482,70 @@ export class ArcLine extends Object3D {
     const instanceTgtColor = geo.getAttribute("aInstanceTgtColor");
 
     const segments = Math.max(2, Math.floor(config.segments));
+
+    for (let i = 0; i < numInstances; i++) {
+      const geom1 = config.geometry[i * 2];
+      const geom2 = config.geometry[i * 2 + 1];
+
+      // Calculate ECEF positions and distance (WASM calls)
+      const lle1 = {
+        lat: degreeToRadian(geom1.lat),
+        lng: degreeToRadian(geom1.lng),
+        height: 0,
+      };
+      const lle2 = {
+        lat: degreeToRadian(geom2.lat),
+        lng: degreeToRadian(geom2.lng),
+        height: 0,
+      };
+
+      const pos1 = geodeticToVector3(lle1);
+      const pos2 = geodeticToVector3(lle2);
+      const dist = pos1.distanceTo(pos2);
+
+      // Recalculate arcHeight and arcLength from config
+      const arcHeight = dist * config.arcHeightScale;
+      const arcLength = this.calculateArcLength(geom1, geom2, arcHeight);
+
+      this.setInstanceAttributes(
+        i,
+        config,
+        segments,
+        arcHeight,
+        arcLength,
+        instanceParams1,
+        instanceParams2,
+        instanceDash,
+        instanceSrcColor,
+        instanceTgtColor,
+      );
+    }
+
+    instanceParams1.needsUpdate = true;
+    instanceParams2.needsUpdate = true;
+    instanceDash.needsUpdate = true;
+    instanceSrcColor.needsUpdate = true;
+    instanceTgtColor.needsUpdate = true;
+  }
+
+  /**
+   * Fill instance data for RTE mode (ECEF coordinates with high/low encoding)
+   */
+  private fillInstanceDataRTE(
+    config: ArcLineConfig,
+    numInstances: number,
+    segments: number,
+    geo: InstancedBufferGeometry,
+  ): void {
+    const instanceSourceHigh = geo.getAttribute("aInstanceSourceHigh");
+    const instanceSourceLow = geo.getAttribute("aInstanceSourceLow");
+    const instanceTargetHigh = geo.getAttribute("aInstanceTargetHigh");
+    const instanceTargetLow = geo.getAttribute("aInstanceTargetLow");
+    const instanceParams1 = geo.getAttribute("aInstanceParams1");
+    const instanceParams2 = geo.getAttribute("aInstanceParams2");
+    const instanceDash = geo.getAttribute("aInstanceDash");
+    const instanceSrcColor = geo.getAttribute("aInstanceSrcColor");
+    const instanceTgtColor = geo.getAttribute("aInstanceTgtColor");
 
     for (let i = 0; i < numInstances; i++) {
       const geom1 = config.geometry[i * 2];
@@ -297,49 +566,79 @@ export class ArcLine extends Object3D {
       const pos2 = geodeticToVector3(lle2);
       const dist = pos1.distanceTo(pos2);
 
-      // Calculate arc height
-      const arcHeight = dist * config.arcHeightScale;
+      // Encode positions as high/low precision components for RTE
+      const encoded1 = encodePosition(pos1.x, pos1.y, pos1.z);
+      const encoded2 = encodePosition(pos2.x, pos2.y, pos2.z);
 
-      // Calculate arc length considering the elevation
-      const arcLength = this.calculateArcLength(geom1, geom2, arcHeight);
-
-      // Pack source/target: srcLon, srcLat, tgtLon, tgtLat
-      instanceSourceTarget.setXYZW(
+      instanceSourceHigh.setXYZ(
         i,
-        geom1.lng,
-        geom1.lat,
-        geom2.lng,
-        geom2.lat,
+        encoded1.high.x,
+        encoded1.high.y,
+        encoded1.high.z,
+      );
+      instanceSourceLow.setXYZ(
+        i,
+        encoded1.low.x,
+        encoded1.low.y,
+        encoded1.low.z,
+      );
+      instanceTargetHigh.setXYZ(
+        i,
+        encoded2.high.x,
+        encoded2.high.y,
+        encoded2.high.z,
+      );
+      instanceTargetLow.setXYZ(
+        i,
+        encoded2.low.x,
+        encoded2.low.y,
+        encoded2.low.z,
       );
 
-      // Pack params: height, arcHeight, thickness, opacity
-      instanceParams1.setXYZW(
+      encoded1.free();
+      encoded2.free();
+
+      this.fillInstanceCommonData(
         i,
-        config.height,
-        arcHeight,
-        config.thickness,
-        config.opacity,
+        config,
+        geom1,
+        geom2,
+        dist,
+        segments,
+        instanceParams1,
+        instanceParams2,
+        instanceDash,
+        instanceSrcColor,
+        instanceTgtColor,
       );
-
-      // Set segments, gradation, and lineLength (use arc length)
-      instanceParams2.setXYZ(i, segments, config.gradation, arcLength);
-
-      // Set dash parameters: dashed, dashSize, gapSize, dashOffset
-      instanceDash.setXYZW(
-        i,
-        config.dashed ? 1.0 : 0.0,
-        config.dashSize,
-        config.gapSize,
-        config.dashOffset,
-      );
-
-      const srcColor = config.srcColor.raw;
-      const tgtColor = config.tgtColor.raw;
-      instanceSrcColor.setXYZ(i, srcColor.r, srcColor.g, srcColor.b);
-      instanceTgtColor.setXYZ(i, tgtColor.r, tgtColor.g, tgtColor.b);
     }
 
-    instanceSourceTarget.needsUpdate = true;
+    instanceSourceHigh.needsUpdate = true;
+    instanceSourceLow.needsUpdate = true;
+    instanceTargetHigh.needsUpdate = true;
+    instanceTargetLow.needsUpdate = true;
+  }
+
+  private fillSingleConfigInstanceData(
+    config: ArcLineConfig,
+    geo: InstancedBufferGeometry,
+  ): void {
+    const numInstances = Math.floor(config.geometry.length / 2);
+    geo.instanceCount = numInstances;
+
+    if (numInstances === 0) return;
+
+    const segments = Math.max(2, Math.floor(config.segments));
+
+    this.fillInstanceDataRTE(config, numInstances, segments, geo);
+
+    // Mark common attributes as updated
+    const instanceParams1 = geo.getAttribute("aInstanceParams1");
+    const instanceParams2 = geo.getAttribute("aInstanceParams2");
+    const instanceDash = geo.getAttribute("aInstanceDash");
+    const instanceSrcColor = geo.getAttribute("aInstanceSrcColor");
+    const instanceTgtColor = geo.getAttribute("aInstanceTgtColor");
+
     instanceParams1.needsUpdate = true;
     instanceParams2.needsUpdate = true;
     instanceDash.needsUpdate = true;
@@ -359,6 +658,9 @@ export class ArcLine extends Object3D {
       uViewport: { value: new Vector2(1920, 1080) },
       uA: { value: WGS84_A },
       uE2: { value: WGS84_E2 },
+      u_cameraPositionHigh: { value: new Vector3() },
+      u_cameraPositionLow: { value: new Vector3() },
+      modelViewMatrixRTE: { value: new Matrix4() },
     };
 
     material.depthTest = true;
@@ -427,10 +729,21 @@ export class ArcLine extends Object3D {
     });
   }
 
+  // needsRebuild:
+  //   segments, geometry.length
+  // updateArcVertex:
+  //   geometry.lng/lat
+  // updateArcHeightAndLength:
+  //   arcHeightScale
+  // updateArcParameters:
+  //   thickness, opacity, srcColor, tgtColor, gradation, dashed, dashSize, gapSize, dashOffset, height
   updateConfig(newConfig: Partial<ArcLineConfig>[]) {
     const changedConfigs = new Set<number>();
     const changedConfigsForMaterial = new Set<number>();
     const configsNeedingRebuild = new Set<number>();
+    const configsNeedingUpdateArcVertex = new Set<number>();
+    const configsNeedingUpdateArcHeightAndLength = new Set<number>();
+    const configsNeedingUpdateArcParameters = new Set<number>();
 
     newConfig.forEach((cfg, i) => {
       if (!this._config[i]) {
@@ -441,6 +754,9 @@ export class ArcLine extends Object3D {
       } else {
         let hasChanges = false;
         let needsRebuild = false;
+        let needsUpdateArcVertex = false;
+        let needsUpdateArcHeightAndLength = false;
+        let needsUpdateArcParameters = false;
 
         // Check if segments changed (requires geometry rebuild)
         if (
@@ -466,18 +782,35 @@ export class ArcLine extends Object3D {
               ) {
                 this._config[i].geometry[j].lng = cfg.geometry[j].lng;
                 this._config[i].geometry[j].lat = cfg.geometry[j].lat;
+                needsUpdateArcVertex = true;
                 hasChanges = true;
               }
             }
           }
         }
 
-        // Update other properties (these don't need geometry rebuild)
+        // arcHeightScale: need to recalculate arcHeight/arcLength
+        if (
+          cfg.arcHeightScale !== undefined &&
+          cfg.arcHeightScale !== this._config[i].arcHeightScale
+        ) {
+          this._config[i].arcHeightScale = cfg.arcHeightScale;
+          needsUpdateArcHeightAndLength = true;
+          hasChanges = true;
+        }
+
+        // Arc parameters: only update attributes (no WASM calls)
+        if (cfg.height !== undefined && cfg.height !== this._config[i].height) {
+          this._config[i].height = cfg.height;
+          needsUpdateArcParameters = true;
+          hasChanges = true;
+        }
         if (
           cfg.thickness !== undefined &&
           cfg.thickness !== this._config[i].thickness
         ) {
           this._config[i].thickness = cfg.thickness;
+          needsUpdateArcParameters = true;
           hasChanges = true;
         }
         if (
@@ -492,40 +825,34 @@ export class ArcLine extends Object3D {
           cfg.opacity !== this._config[i].opacity
         ) {
           this._config[i].opacity = cfg.opacity;
+          needsUpdateArcParameters = true;
           hasChanges = true;
         }
         if (cfg.srcColor !== undefined) {
           if (cfg.srcColor.toHex() !== this._config[i].srcColor.toHex()) {
             this._config[i].srcColor = cfg.srcColor;
+            needsUpdateArcParameters = true;
             hasChanges = true;
           }
         }
         if (cfg.tgtColor !== undefined) {
           if (cfg.tgtColor.toHex() !== this._config[i].tgtColor.toHex()) {
             this._config[i].tgtColor = cfg.tgtColor;
+            needsUpdateArcParameters = true;
             hasChanges = true;
           }
-        }
-        if (cfg.height !== undefined && cfg.height !== this._config[i].height) {
-          this._config[i].height = cfg.height;
-          hasChanges = true;
-        }
-        if (
-          cfg.arcHeightScale !== undefined &&
-          cfg.arcHeightScale !== this._config[i].arcHeightScale
-        ) {
-          this._config[i].arcHeightScale = cfg.arcHeightScale;
-          hasChanges = true;
         }
         if (
           cfg.gradation !== undefined &&
           cfg.gradation !== this._config[i].gradation
         ) {
           this._config[i].gradation = cfg.gradation;
+          needsUpdateArcParameters = true;
           hasChanges = true;
         }
         if (cfg.dashed !== undefined && cfg.dashed !== this._config[i].dashed) {
           this._config[i].dashed = cfg.dashed;
+          needsUpdateArcParameters = true;
           hasChanges = true;
         }
         if (
@@ -533,6 +860,7 @@ export class ArcLine extends Object3D {
           cfg.dashSize !== this._config[i].dashSize
         ) {
           this._config[i].dashSize = cfg.dashSize;
+          needsUpdateArcParameters = true;
           hasChanges = true;
         }
         if (
@@ -540,6 +868,7 @@ export class ArcLine extends Object3D {
           cfg.gapSize !== this._config[i].gapSize
         ) {
           this._config[i].gapSize = cfg.gapSize;
+          needsUpdateArcParameters = true;
           hasChanges = true;
         }
         if (
@@ -547,6 +876,7 @@ export class ArcLine extends Object3D {
           cfg.dashOffset !== this._config[i].dashOffset
         ) {
           this._config[i].dashOffset = cfg.dashOffset;
+          needsUpdateArcParameters = true;
           hasChanges = true;
         }
 
@@ -554,6 +884,12 @@ export class ArcLine extends Object3D {
           changedConfigs.add(i);
           if (needsRebuild) {
             configsNeedingRebuild.add(i);
+          } else if (needsUpdateArcVertex) {
+            configsNeedingUpdateArcVertex.add(i);
+          } else if (needsUpdateArcHeightAndLength) {
+            configsNeedingUpdateArcHeightAndLength.add(i);
+          } else if (needsUpdateArcParameters) {
+            configsNeedingUpdateArcParameters.add(i);
           }
         }
       }
@@ -574,13 +910,30 @@ export class ArcLine extends Object3D {
       this.add(newMesh);
     });
 
-    // Handle configs that only need instance data update
-    changedConfigs.forEach((configIndex) => {
-      if (
-        !configsNeedingRebuild.has(configIndex) &&
-        this._subMeshes[configIndex]
-      ) {
+    // Handle configs that need to update arc vertex (ECEF re-encoding)
+    configsNeedingUpdateArcVertex.forEach((configIndex) => {
+      if (this._subMeshes[configIndex]) {
         this.fillSingleConfigInstanceData(
+          this._config[configIndex],
+          this._subMeshes[configIndex].geometry,
+        );
+      }
+    });
+
+    // Handle configs that need to update arc height and length (WASM calls)
+    configsNeedingUpdateArcHeightAndLength.forEach((configIndex) => {
+      if (this._subMeshes[configIndex]) {
+        this.updateArcHeightAndLength(
+          this._config[configIndex],
+          this._subMeshes[configIndex].geometry,
+        );
+      }
+    });
+
+    // Handle configs that only need to update arc parameters (no WASM calls)
+    configsNeedingUpdateArcParameters.forEach((configIndex) => {
+      if (this._subMeshes[configIndex]) {
+        this.updateArcParameters(
           this._config[configIndex],
           this._subMeshes[configIndex].geometry,
         );
@@ -601,7 +954,10 @@ export class ArcLine extends Object3D {
     });
 
     // Only update bounding sphere if there were actual changes
-    if (changedConfigs.size > 0) {
+    if (
+      configsNeedingRebuild.size > 0 ||
+      configsNeedingUpdateArcHeightAndLength.size > 0
+    ) {
       this.updateBoundingSphere();
     }
   }

@@ -15,6 +15,7 @@ import {
   type WebGLRenderer,
   type Texture,
 } from "three";
+import { Color } from "three";
 
 import { BufferView } from "../bufferView";
 
@@ -104,7 +105,7 @@ export type SelectiveEffectResources = {
 export type SelectiveEffectConfig = {
   effectIds: string[]; // Always initialized as empty array
   emissiveIntensity?: number;
-  emissiveColor?: number;
+  emissiveColor?: Color;
   layerId?: string; // Layer ID for registry lookup (SoT access)
 };
 

@@ -349,6 +349,7 @@ type MeshFolderOptions = {
   configKey: "box" | "sphere" | "cylinder" | "tube" | "plane";
   bloomId: string;
   outlineId: string;
+  // emissiveColor uses number for Tweakpane, converted to Color when updating layer
   params: {
     emissiveColor: number;
     emissiveIntensity: number;
@@ -460,6 +461,7 @@ type TilesFolderOptions = {
   datasetUrl: string;
   bloomId: string;
   outlineId: string;
+  // baseColor and emissiveColor use number for Tweakpane, converted to Color when updating layer
   params: {
     baseColor: number;
     emissiveColor: number;
@@ -583,7 +585,7 @@ const setupDrumFolder = (
   const updateDrumState = () => {
     drumLayer.updateModel({
       show: params.visible,
-      color: params.baseColor,
+      color: new Color().setHex(params.baseColor),
       effectIds: getEffectIds(
         params.bloomEnabled,
         params.outlineEnabled,
@@ -657,7 +659,7 @@ const setupSoldierFolder = (
     soldierLayer.updateModel({
       show: params.visible,
       animationSpeed: params.animationSpeed,
-      color: params.baseColor,
+      color: new Color().setHex(params.baseColor),
       effectIds: getEffectIds(
         params.bloomEnabled,
         params.outlineEnabled,
