@@ -2,7 +2,6 @@
 
 import fragmentShader from "@shaders/glsl/ssrEffect.frag.glsl?raw";
 import {
-  BlendFunction,
   Effect,
   EffectAttribute,
   Resolution,
@@ -18,6 +17,8 @@ import {
   type WebGLRenderer,
 } from "three";
 
+import { blendFunction, type BlendMode } from "../../utils";
+
 import {
   ConeTracingPass,
   coneTracingPassOptionsDefaults,
@@ -29,7 +30,7 @@ import {
 } from "./SSRMaterial";
 
 export type SSREffectOptions = {
-  blendFunction?: BlendFunction;
+  blendMode?: BlendMode;
   resolutionScale?: number;
   width?: number;
   height?: number;
@@ -46,7 +47,7 @@ export type SSREffectOptions = {
 } & Omit<SSRMaterialParameters, "inputBuffer" | "depthBuffer">;
 
 export const ssrEffectOptionsDefaults = {
-  blendFunction: BlendFunction.NORMAL,
+  blendMode: "normal",
   ...coneTracingPassOptionsDefaults,
 } satisfies SSREffectOptions;
 
@@ -64,7 +65,7 @@ export class SSREffect extends Effect {
     options?: SSREffectOptions,
   ) {
     const {
-      blendFunction,
+      blendMode,
       geometryBuffer = null,
       resolutionScale = 0.5,
       width,
@@ -85,7 +86,7 @@ export class SSREffect extends Effect {
       ...options,
     };
     super("SSREffect", fragmentShader, {
-      blendFunction,
+      blendFunction: blendFunction(blendMode),
       attributes: EffectAttribute.DEPTH,
       uniforms: new Map<string, Uniform>([["ssrBuffer", new Uniform(null)]]),
     });
