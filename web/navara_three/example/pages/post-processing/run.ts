@@ -84,8 +84,6 @@ export const run = async (view: ThreeView) => {
     drumLayer,
     soldierLayer,
     polygonLayer,
-    pointLayer,
-    polylineLayer,
     chiyodaLayer,
     chuoLayer,
   } = createSceneLayers(view);
@@ -109,8 +107,6 @@ export const run = async (view: ThreeView) => {
     drumLayer,
     soldierLayer,
     polygonLayer,
-    pointLayer,
-    polylineLayer,
     chiyodaLayer,
     chuoLayer,
   });
