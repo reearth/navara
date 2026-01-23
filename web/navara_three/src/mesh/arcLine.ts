@@ -88,6 +88,16 @@ export class ArcLine extends Object3D {
   private readonly _config: ArcLineConfig[];
   private _subMeshes: Mesh<InstancedBufferGeometry, ShaderMaterial>[] = [];
 
+  // Shared RTE uniforms for all sub-meshes
+  private _sharedRTEUniforms = {
+    modelViewMatrixRTE: { value: new Matrix4() },
+    cameraPositionHigh: { value: new Vector3() },
+    cameraPositionLow: { value: new Vector3() },
+  };
+
+  // Frame counter to ensure RTE is only updated once per frame
+  private _lastRTEUpdateFrame = -1;
+
   constructor(config: Partial<ArcLineConfig>[] = []) {
     super();
 
@@ -192,19 +202,37 @@ export class ArcLine extends Object3D {
 
     const mesh = new Mesh(geo, material);
 
-    mesh.userData.modelViewMatrixRTE = material.uniforms.modelViewMatrixRTE;
-    mesh.userData.cameraPositionHigh = material.uniforms.u_cameraPositionHigh;
-    mesh.userData.cameraPositionLow = material.uniforms.u_cameraPositionLow;
+    // Share RTE uniforms from the ArcLine group
+    material.uniforms.modelViewMatrixRTE =
+      this._sharedRTEUniforms.modelViewMatrixRTE;
+    material.uniforms.u_cameraPositionHigh =
+      this._sharedRTEUniforms.cameraPositionHigh;
+    material.uniforms.u_cameraPositionLow =
+      this._sharedRTEUniforms.cameraPositionLow;
 
     const identityMatrix = new Matrix4();
     const callback = setupRTEBeforeRender(
-      mesh,
-      mesh.userData,
+      this,
+      this._sharedRTEUniforms,
       identityMatrix,
       identityMatrix,
     );
+
     if (callback) {
-      mesh.onBeforeRender = callback;
+      mesh.onBeforeRender = (
+        renderer,
+        scene,
+        camera,
+        geometry,
+        material,
+        group,
+      ) => {
+        const currentFrame = renderer.info.render.frame;
+        if (this._lastRTEUpdateFrame !== currentFrame) {
+          this._lastRTEUpdateFrame = currentFrame;
+          callback(renderer, scene, camera, geometry, material, group);
+        }
+      };
     }
 
     return mesh;
