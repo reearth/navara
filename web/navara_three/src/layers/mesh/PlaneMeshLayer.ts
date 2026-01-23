@@ -24,7 +24,7 @@ type LayerDescription = {
     widthSegments?: number;
     heightSegments?: number;
     color?: Color;
-    emissiveColor?: number;
+    emissiveColor?: Color;
     emissiveIntensity?: number;
     opacity?: number;
     transparent?: boolean;
@@ -76,9 +76,10 @@ export class PlaneMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
 
     // Create material from properties
     const colorValue = cfg.color ?? new Color().setStyle("#ffffff");
+    const emissiveColorValue = cfg.emissiveColor ? cfg.emissiveColor.raw : 0;
     const material = new MeshLambertMaterial({
       color: colorValue.raw,
-      emissive: cfg.emissiveColor ?? 0,
+      emissive: emissiveColorValue,
       emissiveIntensity: cfg.emissiveIntensity ?? 1,
       opacity: cfg.opacity ?? 1,
       transparent: cfg.transparent ?? false,
@@ -139,7 +140,7 @@ export class PlaneMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
             material.color.set(colorValue);
           }
           if (cfg.emissiveColor !== undefined)
-            material.emissive.set(cfg.emissiveColor);
+            material.emissive.set(cfg.emissiveColor.raw);
           if (cfg.emissiveIntensity !== undefined)
             material.emissiveIntensity = cfg.emissiveIntensity;
           if (cfg.opacity !== undefined) material.opacity = cfg.opacity;

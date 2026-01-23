@@ -138,6 +138,7 @@ export const createControlPane = ({
     outlineId: postEffectOutline.id,
     params: {
       ...CUBE_CONFIG,
+      emissiveColor: CUBE_CONFIG.emissiveColor.toHex(),
       visible: true,
     },
   });
@@ -149,6 +150,7 @@ export const createControlPane = ({
     outlineId: postEffectOutline.id,
     params: {
       ...SPHERE_CONFIG,
+      emissiveColor: SPHERE_CONFIG.emissiveColor.toHex(),
       visible: true,
     },
   });
@@ -160,6 +162,7 @@ export const createControlPane = ({
     outlineId: postEffectOutline.id,
     params: {
       ...CYLINDER_CONFIG,
+      emissiveColor: CYLINDER_CONFIG.emissiveColor.toHex(),
       visible: true,
     },
   });
@@ -171,6 +174,7 @@ export const createControlPane = ({
     outlineId: postEffectOutline.id,
     params: {
       ...TUBE_CONFIG,
+      emissiveColor: TUBE_CONFIG.emissiveColor.toHex(),
       visible: true,
     },
   });
@@ -182,6 +186,7 @@ export const createControlPane = ({
     outlineId: postEffectOutline.id,
     params: {
       ...PLANE_CONFIG,
+      emissiveColor: PLANE_CONFIG.emissiveColor.toHex(),
       visible: true,
     },
   });
@@ -217,6 +222,7 @@ export const createControlPane = ({
     outlineId: postEffectOutline.id,
     params: {
       ...CHIYODA_CONFIG,
+      emissiveColor: CHIYODA_CONFIG.emissiveColor.toHex(),
       visible: true,
     },
   });
@@ -228,6 +234,7 @@ export const createControlPane = ({
     outlineId: postEffectOutline.id,
     params: {
       ...CHUO_CONFIG,
+      emissiveColor: CHUO_CONFIG.emissiveColor.toHex(),
       visible: true,
     },
   });
@@ -362,7 +369,7 @@ const setupMeshFolder = (
   const applyMeshState = () => {
     layer.update({
       ...buildMeshConfig(configKey, {
-        emissiveColor: params.emissiveColor,
+        emissiveColor: new Color().setHex(params.emissiveColor),
         emissiveIntensity: params.emissiveIntensity,
         effectIds: getEffectIds(
           params.bloomEnabled,
@@ -426,7 +433,7 @@ const setupMeshFolder = (
 const buildMeshConfig = (
   configKey: "box" | "sphere" | "cylinder" | "tube" | "plane",
   config: {
-    emissiveColor?: number;
+    emissiveColor?: Color;
     emissiveIntensity?: number;
     effectIds?: string[];
     selectiveEffectOcclusion?: SelectiveEffectOcclusion;
@@ -566,6 +573,7 @@ const setupDrumFolder = (
 ) => {
   const params = {
     ...DRUM_CONFIG,
+    emissiveColor: DRUM_CONFIG.emissiveColor.toHex(),
     visible: true,
     baseColor: 0xffffff,
   };
@@ -582,7 +590,7 @@ const setupDrumFolder = (
         bloomId,
         outlineId,
       ),
-      emissiveColor: params.emissiveColor,
+      emissiveColor: new Color().setHex(params.emissiveColor),
       emissiveIntensity: params.emissiveIntensity,
       selectiveEffectOcclusion: params.selectiveEffectOcclusion,
     } as Partial<DrumModelState>);
@@ -638,6 +646,7 @@ const setupSoldierFolder = (
 ) => {
   const params = {
     ...SOLDIER_CONFIG,
+    emissiveColor: SOLDIER_CONFIG.emissiveColor.toHex(),
     visible: true,
     baseColor: 0xffffff,
   };
@@ -655,7 +664,7 @@ const setupSoldierFolder = (
         bloomId,
         outlineId,
       ),
-      emissiveColor: params.emissiveColor,
+      emissiveColor: new Color().setHex(params.emissiveColor),
       emissiveIntensity: params.emissiveIntensity,
       selectiveEffectOcclusion: params.selectiveEffectOcclusion,
     } as Partial<SoldierModelState>);
@@ -724,6 +733,7 @@ const setupPolygonFolder = (
 ) => {
   const params = {
     ...POLYGON_CONFIG,
+    emissiveColor: POLYGON_CONFIG.emissiveColor.toHex(),
     visible: true,
   };
 

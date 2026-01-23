@@ -30,7 +30,7 @@ import {
  * Cube mesh initial configuration
  */
 export const CUBE_CONFIG = {
-  emissiveColor: 0xff0000,
+  emissiveColor: new Color().setHex(0xff0000),
   emissiveIntensity: 1.0,
   selectiveEffectOcclusion: "normal" satisfies SelectiveEffectOcclusion,
   bloomEnabled: true,
@@ -41,7 +41,7 @@ export const CUBE_CONFIG = {
  * Sphere mesh initial configuration
  */
 export const SPHERE_CONFIG = {
-  emissiveColor: 0x00aaff,
+  emissiveColor: new Color().setHex(0x00aaff),
   emissiveIntensity: 1.0,
   selectiveEffectOcclusion: "normal" satisfies SelectiveEffectOcclusion,
   bloomEnabled: true,
@@ -52,7 +52,7 @@ export const SPHERE_CONFIG = {
  * Cylinder mesh initial configuration (新宿)
  */
 export const CYLINDER_CONFIG = {
-  emissiveColor: 0x00ff00,
+  emissiveColor: new Color().setHex(0x00ff00),
   emissiveIntensity: 0.5,
   selectiveEffectOcclusion: "normal" satisfies SelectiveEffectOcclusion,
   bloomEnabled: true,
@@ -63,7 +63,7 @@ export const CYLINDER_CONFIG = {
  * Tube mesh initial configuration (渋谷)
  */
 export const TUBE_CONFIG = {
-  emissiveColor: 0xffff00,
+  emissiveColor: new Color().setHex(0xffff00),
   emissiveIntensity: 0.5,
   selectiveEffectOcclusion: "normal" satisfies SelectiveEffectOcclusion,
   bloomEnabled: true,
@@ -74,7 +74,7 @@ export const TUBE_CONFIG = {
  * Plane mesh initial configuration (秋葉原)
  */
 export const PLANE_CONFIG = {
-  emissiveColor: 0xff00ff,
+  emissiveColor: new Color().setHex(0xff00ff),
   emissiveIntensity: 0.5,
   selectiveEffectOcclusion: "normal" satisfies SelectiveEffectOcclusion,
   bloomEnabled: true,
@@ -85,7 +85,7 @@ export const PLANE_CONFIG = {
  * Drum model initial configuration
  */
 export const DRUM_CONFIG = {
-  emissiveColor: 0xffffff,
+  emissiveColor: new Color().setHex(0xffffff),
   emissiveIntensity: 0.3,
   selectiveEffectOcclusion: "normal" satisfies SelectiveEffectOcclusion,
   bloomEnabled: false,
@@ -96,7 +96,7 @@ export const DRUM_CONFIG = {
  * Soldier model initial configuration
  */
 export const SOLDIER_CONFIG = {
-  emissiveColor: 0xffffff,
+  emissiveColor: new Color().setHex(0xffffff),
   emissiveIntensity: 0.3,
   animationSpeed: 1.0,
   selectiveEffectOcclusion: "normal" satisfies SelectiveEffectOcclusion,
@@ -109,7 +109,7 @@ export const SOLDIER_CONFIG = {
  */
 export const CHIYODA_CONFIG = {
   baseColor: 0xffffff,
-  emissiveColor: 0xffffff,
+  emissiveColor: new Color().setHex(0xffffff),
   emissiveIntensity: 0.3,
   selectiveEffectOcclusion: "normal" satisfies SelectiveEffectOcclusion,
   bloomEnabled: true,
@@ -121,7 +121,7 @@ export const CHIYODA_CONFIG = {
  */
 export const CHUO_CONFIG = {
   baseColor: 0xffffff,
-  emissiveColor: 0xffffff,
+  emissiveColor: new Color().setHex(0xffffff),
   emissiveIntensity: 0.3,
   selectiveEffectOcclusion: "normal" satisfies SelectiveEffectOcclusion,
   bloomEnabled: false,
@@ -133,7 +133,7 @@ export const CHUO_CONFIG = {
  */
 export const POLYGON_CONFIG = {
   color: 0xffa500,
-  emissiveColor: 0xffa500,
+  emissiveColor: new Color().setHex(0xffa500),
   emissiveIntensity: 0.5,
   selectiveEffectOcclusion: "normal" satisfies SelectiveEffectOcclusion,
   bloomEnabled: true,
@@ -155,7 +155,7 @@ export type DrumModelState = {
   url: string;
   shouldRotateInDefault: boolean;
   color?: number;
-  emissiveColor?: number;
+  emissiveColor?: Color;
   emissiveIntensity?: number;
   selectiveEffectOcclusion?: SelectiveEffectOcclusion;
 };
@@ -169,7 +169,7 @@ export type SoldierModelState = {
   animationActiveClip?: string;
   animationSpeed?: number;
   color?: number;
-  emissiveColor?: number;
+  emissiveColor?: Color;
   emissiveIntensity?: number;
   selectiveEffectOcclusion?: SelectiveEffectOcclusion;
 };
@@ -256,9 +256,11 @@ export const createSceneLayers = (view: ThreeView): SceneLayers => {
   });
 
   // Cylinder at Shinjuku (新宿)
-  const shinjukuPosition = geodeticToVector3(
-    new LLE(degreeToRadian(35.6896), degreeToRadian(139.6917), 200),
-  );
+  const shinjukuPosition = geodeticToVector3({
+    lat: degreeToRadian(35.6896),
+    lng: degreeToRadian(139.6917),
+    height: 200,
+  });
 
   const cylinderLayer = view.addLayer<CylinderMeshLayer>({
     type: "mesh",
@@ -284,9 +286,11 @@ export const createSceneLayers = (view: ThreeView): SceneLayers => {
   });
 
   // Tube at Shibuya (渋谷)
-  const shibuyaPosition = geodeticToVector3(
-    new LLE(degreeToRadian(35.658), degreeToRadian(139.7016), 150),
-  );
+  const shibuyaPosition = geodeticToVector3({
+    lat: degreeToRadian(35.658),
+    lng: degreeToRadian(139.7016),
+    height: 150,
+  });
 
   // Create a curved path for the tube
   const tubePoints = [
@@ -334,9 +338,11 @@ export const createSceneLayers = (view: ThreeView): SceneLayers => {
   });
 
   // Plane at Akihabara (秋葉原)
-  const akihabaraPosition = geodeticToVector3(
-    new LLE(degreeToRadian(35.6984), degreeToRadian(139.7731), 150),
-  );
+  const akihabaraPosition = geodeticToVector3({
+    lat: degreeToRadian(35.6984),
+    lng: degreeToRadian(139.7731),
+    height: 150,
+  });
 
   const planeLayer = view.addLayer<PlaneMeshLayer>({
     type: "mesh",
@@ -386,7 +392,7 @@ export const createSceneLayers = (view: ThreeView): SceneLayers => {
       clampToGround: true,
       url: LOCAL_DATASETS.steelDrumGLTF.url,
       shouldRotateInDefault: true,
-      emissiveColor: 0xffffff,
+      emissiveColor: new Color().setHex(0xffffff),
       emissiveIntensity: 0.3,
       selectiveEffectOcclusion: "normal",
     },
@@ -415,7 +421,7 @@ export const createSceneLayers = (view: ThreeView): SceneLayers => {
       url: LOCAL_DATASETS.soldierGLTF.url,
       animationActiveClip: "Walk",
       animationSpeed: 1.0,
-      emissiveColor: 0xffffff,
+      emissiveColor: new Color().setHex(0xffffff),
       emissiveIntensity: 0.3,
       selectiveEffectOcclusion: "normal",
     },
@@ -452,7 +458,7 @@ export const createSceneLayers = (view: ThreeView): SceneLayers => {
       color: new Color().setHex(POLYGON_CONFIG.color),
       extrudedHeight: 80,
       clampToGround: false, // Required for SelectiveEffect (MRT scene)
-      emissiveColor: new Color().setHex(POLYGON_CONFIG.emissiveColor),
+      emissiveColor: POLYGON_CONFIG.emissiveColor,
       emissiveIntensity: POLYGON_CONFIG.emissiveIntensity,
       selectiveEffectOcclusion: POLYGON_CONFIG.selectiveEffectOcclusion,
     },
