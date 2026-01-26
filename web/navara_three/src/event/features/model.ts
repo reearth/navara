@@ -43,11 +43,12 @@ export async function renderModel(
   const loader = initializeGltfLoader();
   const dracoLoader = initializeDracoLoader();
 
-  const rawScene = await (async () => {
+  const { rawScene, credit } = await (async () => {
+    let credit = undefined;
     if (m.bin) {
       const bin = buf.removeU8(m.bin);
       if (!bin) {
-        return;
+        return {};
       }
 
       if (m.material.__internal__?.pointCloud) {
@@ -103,7 +104,7 @@ export async function renderModel(
             group.add(boxHelper);
           }
         }
-        return group;
+        return { group, credit };
       }
 
       const model = await loader.parseAsync(bin.buffer as ArrayBuffer, "");
@@ -125,13 +126,13 @@ export async function renderModel(
 
       // Attach credit information
       if (model.asset.copyright) {
-        userData.credit = model.asset.copyright;
+        credit = model.asset.copyright;
       }
 
-      return model.scene;
+      return { rawScene: model.scene, credit };
     } else {
       if (!m.material.url) {
-        return;
+        return {};
       }
       const model = await loader.loadAsync(m.material.url);
       // Attach animations to the scene for downstream access
@@ -148,7 +149,7 @@ export async function renderModel(
           }
         });
       }
-      return model.scene;
+      return { rawScene: model.scene, credit };
     }
   })();
 
@@ -164,6 +165,7 @@ export async function renderModel(
     viewEvents,
     viewContext,
     layerId,
+    credit
   );
 
   return scene;

@@ -49,6 +49,8 @@ export class PolylineMesh extends BatchedFeatureMesh<
   /** Layer ID for SelectiveEffect handling */
   private _layerId: string;
 
+  active: boolean = false;
+
   constructor(
     mesh: NavaraPolylineMesh,
     buf: BufferLoader,
@@ -264,6 +266,7 @@ export class PolylineMesh extends BatchedFeatureMesh<
     }
 
     const next = (material.show ?? true) && active;
+    this.active = active;
     if (prev.visible !== next) {
       this.visible = next;
       prev.visible = next;

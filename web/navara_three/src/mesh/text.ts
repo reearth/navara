@@ -43,6 +43,7 @@ import {
 export class TextMesh extends Group implements FeatureMesh, PickableMesh {
   text: Text;
   background?: Mesh<PlaneGeometry, MeshBasicMaterial>;
+  active: boolean = false;
 
   constructor(
     meshMaterial: NavaraTextMaterial,
@@ -597,6 +598,7 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
     }
 
     const nextVisible = (material.show ?? true) && active && !!txt.text;
+    this.active = active;
     if (prev.visible !== nextVisible) {
       this.visible = nextVisible;
       prev.visible = nextVisible;

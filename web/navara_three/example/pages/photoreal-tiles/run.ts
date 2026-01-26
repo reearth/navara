@@ -26,12 +26,12 @@ export const run = async (view: ThreeView) => {
 
   addCameraControl(view, pane);
   addDateControl(view, pane);
-  showAttributions([TILES_3D_DATASETS.googlePhotorealTiles]);
-  trackAttributions(layer);
+  const content = showAttributions([TILES_3D_DATASETS.googlePhotorealTiles]);
+  trackAttributions(layer, content);
 };
 
 // Track credits for all loaded features
-function trackAttributions(layer: Layer) {
+function trackAttributions(layer: Layer, content: HTMLDivElement | undefined) {
   const featureCredits = new Map<bigint, string>();
   // Track which features are currently visible
   const visibleFeatures = new Set<bigint>();
@@ -48,35 +48,35 @@ function trackAttributions(layer: Layer) {
         });
       }
     }
-    const attrib = document.getElementById("navara-attributions-content");
-    if (attrib) {
+
+    if (content) {
       const sorted = Array.from(visibleCredits.entries()).sort(
         (a, b) => b[1] - a[1],
       );
-      attrib.innerHTML = sorted.map(([credit, _]) => `${credit}`).join("<br>");
+      content.innerHTML = sorted.map(([credit, _]) => `${credit}`).join("<br>");
     }
   };
 
-  layer.on("featureCreated", ({ id, credit }) => {
+  layer.on("featureCreated", ({ featureId, credit }) => {
     if (credit) {
-      featureCredits.set(id, credit);
+      featureCredits.set(featureId, credit);
     }
     // New features start as visible
-    visibleFeatures.add(id);
+    visibleFeatures.add(featureId);
     updateAttributions();
   });
 
-  layer.on("featureRemoved", ({ id }) => {
-    featureCredits.delete(id);
-    visibleFeatures.delete(id);
+  layer.on("featureRemoved", ({ featureId }) => {
+    featureCredits.delete(featureId);
+    visibleFeatures.delete(featureId);
     updateAttributions();
   });
 
-  layer.on("featureVisibilityChanged", ({ id, visible }) => {
+  layer.on("featureVisibilityChanged", ({ featureId, visible }) => {
     if (visible) {
-      visibleFeatures.add(id);
+      visibleFeatures.add(featureId);
     } else {
-      visibleFeatures.delete(id);
+      visibleFeatures.delete(featureId);
     }
     updateAttributions();
   });

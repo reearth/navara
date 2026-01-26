@@ -5,24 +5,29 @@ import { FeatureEvaluator } from "./evaluations";
 import type { LayerDescription } from "./type";
 
 export type FeatureCreatedParams = {
-  id: FeatureId;
+  featureId: FeatureId;
   evaluator: FeatureEvaluator;
   credit?: string;
 };
 
 export type FeatureRemovedParams = {
-  id: FeatureId;
-  credit?: string;
+  featureId: FeatureId;
 };
 
 export type FeatureVisibilityChangedParams = {
-  id: FeatureId;
+  featureId: FeatureId;
   visible: boolean;
+};
+
+export type FeatureUpdatedParams = {
+  featureId: FeatureId;
+  evaluator: FeatureEvaluator;
+  updatedAt: number;
 };
 
 export type LayerEvent = {
   featureCreated: (params: FeatureCreatedParams) => void;
-  featureUpdated: (evaluator: FeatureEvaluator, updatedAt: number) => void;
+  featureUpdated: (params: FeatureUpdatedParams) => void;
   featureRemoved: (params: FeatureRemovedParams) => void;
   featureVisibilityChanged: (params: FeatureVisibilityChangedParams) => void;
   afterFeatureUpdated: () => void;
@@ -89,7 +94,7 @@ export class Layer extends EventHandler<LayerEvent> {
 
     // Process all evaluators with the registered callbacks
     for (const evaluator of this.featureEvaluators.values()) {
-      this.emit("featureUpdated", evaluator, updatedAt);
+      this.emit("featureUpdated", { featureId: evaluator.id, evaluator, updatedAt });
     }
     this.emit("afterFeatureUpdated");
 

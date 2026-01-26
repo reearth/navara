@@ -350,7 +350,7 @@ export function processEvent(
             const layer = layersManager.get(removed.layer_id);
             if (!layer || !(layer instanceof Layer)) return;
             layer._unregisterFeatureEvaluator(removed.bits);
-            layer.emit("featureRemoved", { id: removed.bits });
+            layer.emit("featureRemoved", { featureId: removed.bits });
 
             processObjectRemoved(scenes.mrt, meshes, event);
           }

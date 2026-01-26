@@ -34,6 +34,7 @@ import {
 } from "./rtcRteHelper";
 
 export class PointMesh extends Sprite implements FeatureMesh {
+  active: boolean = false;
   constructor(
     material: NavaraPointMaterial,
     batchId: number,
@@ -282,6 +283,7 @@ export class PointMesh extends Sprite implements FeatureMesh {
     }
 
     const nextVisible = (material.show ?? true) && active;
+    this.active = active;
     if (prev.visible !== nextVisible) {
       this.visible = nextVisible;
       prev.visible = nextVisible;
