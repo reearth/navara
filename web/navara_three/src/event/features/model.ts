@@ -104,7 +104,7 @@ export async function renderModel(
             group.add(boxHelper);
           }
         }
-        return { group, credit };
+        return { rawScene: group, credit };
       }
 
       const model = await loader.parseAsync(bin.buffer as ArrayBuffer, "");
