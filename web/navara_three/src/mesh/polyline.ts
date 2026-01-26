@@ -18,15 +18,6 @@ import {
 
 import type { ViewEvents } from "..";
 import type { ViewContext } from "../core";
-import { getSelectiveEffectConfig } from "../core/SelectiveEffectHelper";
-import {
-  getMaskPassContext,
-  MaskPassPhase,
-  evaluateMaskPassParticipation,
-  applyMaskPassSkipState,
-  applyMaskPassRenderState,
-  restoreMaterialState,
-} from "../core/SelectiveEffectMaskContext";
 import type { BufferLoader } from "../event";
 import { packing } from "../shaders";
 import type { CommonUniforms } from "../uniforms";
@@ -225,31 +216,6 @@ export class PolylineMesh extends BatchedFeatureMesh<
       }
     };
     viewEvents.emit("_csmMounted", this.material);
-
-    // Setup onBeforeRender for MaskPass handling
-    this.onBeforeRender = () => {
-      const ctx = getMaskPassContext();
-      if (ctx.phase !== MaskPassPhase.BaseMRT) {
-        restoreMaterialState(this.material);
-        return;
-      }
-
-      const config = getSelectiveEffectConfig(this);
-      const registry =
-        ctx.registry ?? this._viewContext?.selectiveEffectRegistry;
-      const evaluation = evaluateMaskPassParticipation(
-        config,
-        registry,
-        this._layerId,
-        ctx,
-      );
-
-      if (evaluation.shouldRender) {
-        applyMaskPassRenderState(this.material, evaluation.isSilhouette);
-      } else {
-        applyMaskPassSkipState(this.material);
-      }
-    };
 
     this._initBatchedMaterial();
 
