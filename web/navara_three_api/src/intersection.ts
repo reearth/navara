@@ -51,7 +51,7 @@ export function getPlaneFromPointNormal(
 
 /**
  * Creates a picking ray from screen coordinates for raycasting.
- * @param window - Window configuration with width, height, and pixel_ratio
+ * @param window - Window configuration with width, height, and pixelRatio
  * @param camera - Three.js PerspectiveCamera
  * @param vec2 - Screen coordinates in CSS pixels (same as MouseEvent clientX/clientY)
  * @returns A Ray starting from the camera through the screen point
@@ -64,10 +64,10 @@ export function getPickRay(
   const window = new Window(
     windowObject.width,
     windowObject.height,
-    windowObject.pixel_ratio,
+    windowObject.pixelRatio,
   );
-  window.width = window.width * window.pixel_ratio;
-  window.height = window.height * window.pixel_ratio;
+  window.width = window.width * window.pixelRatio;
+  window.height = window.height * window.pixelRatio;
 
   const transform = new Transform(
     camera.position.x,
