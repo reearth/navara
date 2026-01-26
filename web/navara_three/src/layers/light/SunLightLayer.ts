@@ -197,28 +197,28 @@ export class SunLightLayer extends LightLayerDeclaration<
   /**
    * Setup a material for CSM shadows
    */
-  setupMaterialForShadows(material: Material): void {
+  _setupMaterialForShadows(material: Material): void {
     this._instance?.setupMaterialForCSM(material);
   }
 
   /**
    * Remove a material from CSM shadows
    */
-  removeMaterialFromShadows(material: Material): void {
+  _removeMaterialFromShadows(material: Material): void {
     this._instance?.removeMaterialFromCSM(material);
   }
 
   /**
    * Get CSM instance for advanced usage
    */
-  getCSM() {
+  _getCSM() {
     return this._instance?.getCSM();
   }
 
   /**
    * Get CSM helper for debug visualization
    */
-  getCSMHelper() {
+  _getCSMHelper() {
     return this._instance?.getCSMHelper();
   }
 }

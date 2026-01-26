@@ -40,10 +40,18 @@ export * from "./intersection";
 export * from "./rte";
 export * from "./ellipsoidGeodesic";
 
+/**
+ * Initializes the Navara API WASM module. Must be called before using other API functions.
+ */
 export async function initNavaraApi() {
   await initApi();
 }
 
+/**
+ * Converts geodetic coordinates (longitude, latitude, height) to a Cartesian Vector3 in ECEF coordinates.
+ * @param lle - Geodetic coordinates (lng in radians, lat in radians, height in meters)
+ * @returns Cartesian Vector3 in Earth-Centered Earth-Fixed (ECEF) coordinates
+ */
 export function geodeticToVector3(lle: LatLngHeight): Vector3 {
   const pos = geodeticToXyz(new LLE(lle.lat, lle.lng, lle.height));
   const result = new Vector3(pos.x, pos.y, pos.z);
@@ -51,6 +59,11 @@ export function geodeticToVector3(lle: LatLngHeight): Vector3 {
   return result;
 }
 
+/**
+ * Converts a Cartesian Vector3 in ECEF coordinates to geodetic coordinates.
+ * @param xyz - Cartesian Vector3 in Earth-Centered Earth-Fixed (ECEF) coordinates
+ * @returns Geodetic coordinates (lng in radians, lat in radians, height in meters)
+ */
 export function vector3ToGeodetic(xyz: Vector3): LatLngHeight {
   const vec3 = new Vec3(xyz.x, xyz.y, xyz.z);
   const lle = xyzToGeodetic(vec3);
@@ -59,14 +72,31 @@ export function vector3ToGeodetic(xyz: Vector3): LatLngHeight {
   return result;
 }
 
+/**
+ * Converts an angle from degrees to radians.
+ * @param degree - Angle in degrees
+ * @returns Angle in radians
+ */
 export function degreeToRadian(degree: number): number {
   return angleToRadian(degree);
 }
 
+/**
+ * Converts an angle from radians to degrees.
+ * @param radian - Angle in radians
+ * @returns Angle in degrees
+ */
 export function radianToDegree(radian: number): number {
   return angleToDegree(radian);
 }
 
+/**
+ * Converts screen coordinates to world coordinates by raycasting against the WGS84 ellipsoid.
+ * @param window - Window configuration with width, height, and pixelRatio
+ * @param camera - Three.js PerspectiveCamera
+ * @param vec2 - Screen coordinates in CSS pixels (same as MouseEvent clientX/clientY)
+ * @returns World position Vector3 in ECEF coordinates, or undefined if no intersection with ellipsoid
+ */
 export function convertScreenToWorld(
   windowObject: WindowObject,
   camera: PerspectiveCamera,
@@ -75,10 +105,10 @@ export function convertScreenToWorld(
   const window = new Window(
     windowObject.width,
     windowObject.height,
-    windowObject.pixel_ratio,
+    windowObject.pixelRatio,
   );
-  window.width = window.width * window.pixel_ratio;
-  window.height = window.height * window.pixel_ratio;
+  window.width = window.width * window.pixelRatio;
+  window.height = window.height * window.pixelRatio;
 
   const transform = new Transform(
     camera.position.x,
@@ -116,6 +146,11 @@ export function convertScreenToWorld(
   return result;
 }
 
+/**
+ * Computes the surface normal vector at a geodetic position on the WGS84 ellipsoid.
+ * @param lle - Geodetic coordinates (lng in radians, lat in radians, height in meters)
+ * @returns Unit normal vector pointing outward from the ellipsoid surface
+ */
 export function geodeticSurfaceNormal(lle: LatLngHeight): Vector3 {
   const pos = nvGeodeticSurfaceNormal(new LLE(lle.lat, lle.lng, lle.height));
   const result = new Vector3(pos.x, pos.y, pos.z);
@@ -123,6 +158,11 @@ export function geodeticSurfaceNormal(lle: LatLngHeight): Vector3 {
   return result;
 }
 
+/**
+ * Creates a local East-North-Up (ENU) reference frame transformation matrix at a position.
+ * @param origin - Origin position in ECEF coordinates
+ * @returns 4x4 transformation matrix from ENU to ECEF
+ */
 export function eastNorthUpToFixedFrame(origin: Vector3): Matrix4 {
   const vec3 = new Vec3(origin.x, origin.y, origin.z);
   const arr = nvEastNorthUpToFixedFrame(vec3);
@@ -130,6 +170,11 @@ export function eastNorthUpToFixedFrame(origin: Vector3): Matrix4 {
   return matrix;
 }
 
+/**
+ * Creates a local North-East-Down (NED) reference frame transformation matrix at a position.
+ * @param origin - Origin position in ECEF coordinates
+ * @returns 4x4 transformation matrix from NED to ECEF
+ */
 export function northEastDownToFixedFrame(origin: Vector3): Matrix4 {
   const vec3 = new Vec3(origin.x, origin.y, origin.z);
   const arr = nvNorthEastDownToFixedFrame(vec3);
@@ -137,6 +182,11 @@ export function northEastDownToFixedFrame(origin: Vector3): Matrix4 {
   return matrix;
 }
 
+/**
+ * Creates a local North-Up-East (NUE) reference frame transformation matrix at a position.
+ * @param origin - Origin position in ECEF coordinates
+ * @returns 4x4 transformation matrix from NUE to ECEF
+ */
 export function northUpEastToFixedFrame(origin: Vector3): Matrix4 {
   const vec3 = new Vec3(origin.x, origin.y, origin.z);
   const arr = nvNorthUpEastToFixedFrame(vec3);
@@ -144,6 +194,11 @@ export function northUpEastToFixedFrame(origin: Vector3): Matrix4 {
   return matrix;
 }
 
+/**
+ * Creates a local North-West-Up (NWU) reference frame transformation matrix at a position.
+ * @param origin - Origin position in ECEF coordinates
+ * @returns 4x4 transformation matrix from NWU to ECEF
+ */
 export function northWestUpToFixedFrame(origin: Vector3): Matrix4 {
   const vec3 = new Vec3(origin.x, origin.y, origin.z);
   const arr = nvNorthWestUpToFixedFrame(vec3);
@@ -151,6 +206,13 @@ export function northWestUpToFixedFrame(origin: Vector3): Matrix4 {
   return matrix;
 }
 
+/**
+ * Converts world coordinates to screen coordinates.
+ * @param window - Window configuration with width, height, and pixelRatio
+ * @param camera - Three.js PerspectiveCamera
+ * @param worldPos - World position Vector3 in ECEF coordinates
+ * @returns Screen coordinates in CSS pixels, or undefined if behind camera
+ */
 export function convertWorldToScreen(
   windowObject: WindowObject,
   camera: PerspectiveCamera,
@@ -159,10 +221,10 @@ export function convertWorldToScreen(
   const window = new Window(
     windowObject.width,
     windowObject.height,
-    windowObject.pixel_ratio,
+    windowObject.pixelRatio,
   );
-  window.width = window.width * window.pixel_ratio;
-  window.height = window.height * window.pixel_ratio;
+  window.width = window.width * window.pixelRatio;
+  window.height = window.height * window.pixelRatio;
 
   const transform = new Transform(
     camera.position.x,
@@ -200,22 +262,42 @@ export function convertWorldToScreen(
   return result;
 }
 
+/**
+ * Returns the WGS84 ellipsoid semi-major axis (equatorial radius) in meters.
+ * @returns Semi-major axis (approximately 6,378,137 meters)
+ */
 export function getWGS84SemiMajorAxis(): number {
   return nvGetWGS84SemiMajorAxis();
 }
 
+/**
+ * Returns the WGS84 ellipsoid semi-minor axis (polar radius) in meters.
+ * @returns Semi-minor axis (approximately 6,356,752 meters)
+ */
 export function getWGS84SemiMinorAxis(): number {
   return nvGetWGS84SemiMinorAxis();
 }
 
+/**
+ * Returns the WGS84 ellipsoid first eccentricity squared.
+ * @returns Eccentricity squared value
+ */
 export function getWGS84EccentricitySquared(): number {
   return nvGetWGS84EccentricitySquared();
 }
 
+/**
+ * Returns the WGS84 ellipsoid flattening ratio.
+ * @returns Flattening value (approximately 1/298.257)
+ */
 export function getWGS84Flattening(): number {
   return nvGetWGS84Flattening();
 }
 
+/**
+ * Returns the WGS84 ellipsoid first eccentricity.
+ * @returns Eccentricity value
+ */
 export function getWGS84Eccentricity(): number {
   return nvGetWGS84Eccentricity();
 }
