@@ -12,8 +12,6 @@ export type LayerEvent = {
   featureCreated: (evaluator: FeatureEvaluator) => void;
   /** Emitted when a feature in this layer is updated. */
   featureUpdated: (evaluator: FeatureEvaluator, updatedAt: number) => void;
-  /** Emitted after all feature updates have been processed in this frame. */
-  afterFeatureUpdated: () => void;
   /** Emitted when the layer is deleted. */
   deleted: () => void;
 };
@@ -114,7 +112,6 @@ export class Layer extends EventHandler<LayerEvent> {
     for (const evaluator of this.featureEvaluators.values()) {
       this.emit("featureUpdated", evaluator, updatedAt);
     }
-    this.emit("afterFeatureUpdated");
 
     return true;
   }
