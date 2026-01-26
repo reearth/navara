@@ -1,11 +1,11 @@
 import type { LatLng } from "@navara/core";
-import { encodePosition } from "@navara/engine-api";
 import {
   getWGS84SemiMajorAxis,
   getWGS84EccentricitySquared,
   geodeticToVector3,
   degreeToRadian,
 } from "@navara/three_api";
+import { encodePosition } from "@navara/engine-api";
 import ArclineFragShader from "@shaders/glsl/arcLine.frag.glsl";
 import ArclineVertShader from "@shaders/glsl/arcLine.vert.glsl";
 import {
@@ -26,7 +26,6 @@ import {
 
 import { Color } from "../Color";
 import { overrideShaderMaterialForMRT } from "../material";
-
 import { setupRTEBeforeRender } from "./rtcRteHelper";
 
 export type ArcLineConfig = {
