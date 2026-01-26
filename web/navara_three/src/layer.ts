@@ -25,12 +25,12 @@ export type FeatureVisibilityChangedParams = {
  */
 export type LayerEvent = {
   /** Emitted when a new feature is created in this layer. */
-  featureCreated: (evaluator: FeatureEvaluator) => void;
+  featureCreated: (evaluator: FeatureCreatedParams) => void;
   /** Emitted when a feature in this layer is updated. */
   featureUpdated: (evaluator: FeatureEvaluator, updatedAt: number) => void;
-  /** Emitted when the layer is deleted. */
   featureRemoved: (params: FeatureRemovedParams) => void;
   featureVisibilityChanged: (params: FeatureVisibilityChangedParams) => void;
+  /** Emitted when the layer is deleted. */
   deleted: () => void;
 };
 
