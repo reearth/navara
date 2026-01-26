@@ -68,7 +68,7 @@ export type FeatureEvaluatorCallback = (evaluator: FeatureEvaluator) => void;
  * geoJsonLayer.update({ point: { color: 0x00ff00 } });
  *
  * // Listen to feature events
- * geoJsonLayer.on("featureCreated", (evaluator) => {
+ * geoJsonLayer.on("featureCreated", ({ evaluator }) => {
  *   console.log("Feature created:", evaluator);
  * });
  *
