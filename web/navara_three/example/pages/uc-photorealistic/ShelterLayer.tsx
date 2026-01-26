@@ -65,7 +65,7 @@ export const ShelterLayer: FC<{ visible?: boolean }> = ({
 
   const onTextLayerReady = (layer: NavaraLayer) => {
     textLayerRef.current = layer;
-    layer.on("featureUpdated", (evaluator) => {
+    layer.on("featureUpdated", ({ evaluator }) => {
       evaluator.evaluate((_batchId, property) => {
         const name = (property?.get("名称") as string) ?? "";
         // Hide when there's no name
