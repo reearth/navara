@@ -504,8 +504,14 @@ const setupTilesFolder = (
   parent: Pane | FolderApi,
   options: TilesFolderOptions,
 ) => {
-  const { title, layer, datasetUrl, bloomId, outlineId, params: initialParams } =
-    options;
+  const {
+    title,
+    layer,
+    datasetUrl,
+    bloomId,
+    outlineId,
+    params: initialParams,
+  } = options;
 
   const params = { ...initialParams };
 

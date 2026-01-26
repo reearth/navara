@@ -180,7 +180,7 @@ export const CAMERA_FOCUS_POSITIONS = {
   },
   tube: {
     lng: 139.7016,
-    lat: 35.650,
+    lat: 35.65,
     height: 800,
     heading: 0,
     pitch: -45,
