@@ -63,7 +63,7 @@ export class PolygonMesh extends BatchedFeatureMesh<
   MeshLambertMaterial
 > {
   outline?: PolygonOutlineMesh;
-  active: boolean = false;
+  active = false;
 
   private _baseBoundingSphere?: {
     surfaceCenter: Vector3; // Center point on ellipsoid surface (without height)

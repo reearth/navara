@@ -49,7 +49,7 @@ export class PolylineMesh extends BatchedFeatureMesh<
   /** Layer ID for SelectiveEffect handling */
   private _layerId: string;
 
-  active: boolean = false;
+  active = false;
 
   constructor(
     mesh: NavaraPolylineMesh,

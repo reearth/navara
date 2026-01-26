@@ -58,7 +58,11 @@ export const handleFeatureUpdatedEventByLayerId = (
   if (!evaluator) return;
 
   // Emit the event with the evaluator
-  viewEvents.emit("layer", "featureUpdated", layerId, { featureId, evaluator, updatedAt });
+  viewEvents.emit("layer", "featureUpdated", layerId, {
+    featureId,
+    evaluator,
+    updatedAt,
+  });
 };
 
 export const handleFeatureVisibilityChangedEventByLayerId = (

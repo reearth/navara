@@ -43,7 +43,7 @@ import {
 export class TextMesh extends Group implements FeatureMesh, PickableMesh {
   text: Text;
   background?: Mesh<PlaneGeometry, MeshBasicMaterial>;
-  active: boolean = false;
+  active = false;
 
   constructor(
     meshMaterial: NavaraTextMaterial,

@@ -100,7 +100,7 @@ export class ModelMesh
   // model credit for attribution
   credit: string | undefined;
 
-  active: boolean = false;
+  active = false;
 
   /**
    * Returns the shared water normal map texture if water is enabled.

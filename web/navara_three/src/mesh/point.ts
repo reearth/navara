@@ -34,7 +34,7 @@ import {
 } from "./rtcRteHelper";
 
 export class PointMesh extends Sprite implements FeatureMesh {
-  active: boolean = false;
+  active = false;
   constructor(
     material: NavaraPointMaterial,
     batchId: number,

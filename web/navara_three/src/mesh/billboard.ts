@@ -34,7 +34,7 @@ import {
 } from "./rtcRteHelper";
 
 export class BillboardMesh extends Sprite implements FeatureMesh {
-  active: boolean = false;
+  active = false;
 
   constructor(useRTE = false) {
     super(new SpriteMaterial());

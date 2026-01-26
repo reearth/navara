@@ -168,7 +168,7 @@ const addInteriorGeoJSONLayer = (pane: Pane, view: ThreeView) => {
 
         layer = view.addLayer(layerDescription);
 
-        layer.on("featureUpdated", ({evaluator}) => {
+        layer.on("featureUpdated", ({ evaluator }) => {
           // Prevent repeated heavy updates per feature
           if (UPDATED_FEATURE.has(evaluator.id)) return;
           UPDATED_FEATURE.add(evaluator.id);
@@ -374,7 +374,7 @@ const addGeoJSONLayer = (pane: Pane, view: ThreeView) => {
       }
 
       layer = view.addLayer(layerDescription);
-      layer.on("featureUpdated", ({evaluator}) => {
+      layer.on("featureUpdated", ({ evaluator }) => {
         // FIXME(keiya01): Handle this internally
         if (UPDATED_FEATURE.has(evaluator.id)) return;
         UPDATED_FEATURE.add(evaluator.id);
@@ -419,7 +419,7 @@ const addHeliportLayer = (pane: Pane, view: ThreeView) => {
     }
 
     layer = view.addLayer(layerDescription);
-    layer.on("featureUpdated", ({evaluator}) => {
+    layer.on("featureUpdated", ({ evaluator }) => {
       if (UPDATED_FEATURE.has(evaluator.id)) return;
       UPDATED_FEATURE.add(evaluator.id);
 
@@ -476,7 +476,7 @@ const addRoadLayer = (pane: Pane, view: ThreeView) => {
     }
 
     layer = view.addLayer(layerDescription);
-    layer.on("featureUpdated", ({evaluator}) => {
+    layer.on("featureUpdated", ({ evaluator }) => {
       if (UPDATED_FEATURE.has(evaluator.id)) return;
       UPDATED_FEATURE.add(evaluator.id);
 
@@ -541,7 +541,7 @@ const addFireproofAreaLayer = (pane: Pane, view: ThreeView) => {
     }
 
     layer = view.addLayer(layerDescription);
-    layer.on("featureUpdated", ({evaluator}) => {
+    layer.on("featureUpdated", ({ evaluator }) => {
       evaluator.evaluate((_batchId, property) => {
         const functionType = property?.get("urf_function") as string;
 
@@ -621,7 +621,7 @@ const addHeightControlDistrictLayer = (pane: Pane, view: ThreeView) => {
 
     layer = view.addLayer(layerDescription);
 
-    layer.on("featureUpdated", ({evaluator}) => {
+    layer.on("featureUpdated", ({ evaluator }) => {
       // Use the new declarative API to update feature properties
       // This will be called whenever a feature is updated
       evaluator.evaluate((_batchId, property) => {
@@ -730,7 +730,7 @@ const addBuildingModelLayer = (pane: Pane, view: ThreeView) => {
     }
 
     layer = view.addLayer(layerDescription);
-    layer.on("featureUpdated", ({evaluator}) => {
+    layer.on("featureUpdated", ({ evaluator }) => {
       evaluator.evaluate((_batchId, property) => {
         const measuredHeight = property?.get("bldg:measuredHeight") as number;
 
@@ -922,7 +922,7 @@ const addSymbolLayer = (pane: Pane, view: ThreeView) => {
     }
 
     layer = view.addLayer(layerDescription);
-    layer.on("featureUpdated", ({evaluator}) => {
+    layer.on("featureUpdated", ({ evaluator }) => {
       if (UPDATED_FEATURE.has(evaluator.id)) return;
       UPDATED_FEATURE.add(evaluator.id);
 

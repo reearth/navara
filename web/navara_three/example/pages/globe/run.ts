@@ -74,7 +74,7 @@ export async function run() {
     chiyodaSubway.forceUpdate();
   });
 
-  chiyodaSubway.on("featureUpdated", ({evaluator}) => {
+  chiyodaSubway.on("featureUpdated", ({ evaluator }) => {
     evaluator.evaluate((_batchId, properties) => {
       const gmlId = properties?.get("gml_id") as string;
       if (selectedGMLId === gmlId) {
