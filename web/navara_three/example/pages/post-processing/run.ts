@@ -98,6 +98,7 @@ export const run = async (view: ThreeView) => {
   ]);
 
   createControlPane({
+    view,
     postEffectOutline,
     postEffectBloom,
     cubeLayer,

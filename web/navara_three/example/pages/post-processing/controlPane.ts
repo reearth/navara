@@ -1,4 +1,4 @@
-import {
+import ThreeView, {
   Color,
   type BoxMeshLayer,
   type BoxMeshLayerUpdate,
@@ -19,6 +19,7 @@ import { TILES_3D_DATASETS } from "../../helpers/constants";
 
 import { BLOOM_CONFIG, type PostEffects } from "./run";
 import type {
+  CameraPosition,
   GeoJsonModelLayer,
   GeoJsonPolygonLayer,
   SceneLayers,
@@ -26,6 +27,7 @@ import type {
   SoldierModelState,
 } from "./sceneLayers";
 import {
+  CAMERA_FOCUS_POSITIONS,
   CUBE_CONFIG,
   SPHERE_CONFIG,
   CYLINDER_CONFIG,
@@ -98,10 +100,12 @@ const addLayerEmissiveIntensityControl = (
 
 type PaneDependencies = SceneLayers &
   PostEffects & {
+    view: ThreeView;
     paneTitle?: string;
   };
 
 export const createControlPane = ({
+  view,
   paneTitle = "Selective Effect Parameters",
   postEffectBloom,
   postEffectOutline,
@@ -136,6 +140,8 @@ export const createControlPane = ({
     configKey: "box",
     bloomId: postEffectBloom.id,
     outlineId: postEffectOutline.id,
+    view,
+    focusPosition: CAMERA_FOCUS_POSITIONS.cube,
     params: {
       ...CUBE_CONFIG,
       emissiveColor: CUBE_CONFIG.emissiveColor.toHex(),
@@ -148,6 +154,8 @@ export const createControlPane = ({
     configKey: "sphere",
     bloomId: postEffectBloom.id,
     outlineId: postEffectOutline.id,
+    view,
+    focusPosition: CAMERA_FOCUS_POSITIONS.sphere,
     params: {
       ...SPHERE_CONFIG,
       emissiveColor: SPHERE_CONFIG.emissiveColor.toHex(),
@@ -160,6 +168,8 @@ export const createControlPane = ({
     configKey: "cylinder",
     bloomId: postEffectBloom.id,
     outlineId: postEffectOutline.id,
+    view,
+    focusPosition: CAMERA_FOCUS_POSITIONS.cylinder,
     params: {
       ...CYLINDER_CONFIG,
       emissiveColor: CYLINDER_CONFIG.emissiveColor.toHex(),
@@ -172,6 +182,8 @@ export const createControlPane = ({
     configKey: "tube",
     bloomId: postEffectBloom.id,
     outlineId: postEffectOutline.id,
+    view,
+    focusPosition: CAMERA_FOCUS_POSITIONS.tube,
     params: {
       ...TUBE_CONFIG,
       emissiveColor: TUBE_CONFIG.emissiveColor.toHex(),
@@ -184,6 +196,8 @@ export const createControlPane = ({
     configKey: "plane",
     bloomId: postEffectBloom.id,
     outlineId: postEffectOutline.id,
+    view,
+    focusPosition: CAMERA_FOCUS_POSITIONS.plane,
     params: {
       ...PLANE_CONFIG,
       emissiveColor: PLANE_CONFIG.emissiveColor.toHex(),
@@ -198,18 +212,24 @@ export const createControlPane = ({
     drumLayer,
     postEffectBloom.id,
     postEffectOutline.id,
+    view,
+    CAMERA_FOCUS_POSITIONS.drum,
   );
   setupSoldierFolder(
     geoJsonFolder,
     soldierLayer,
     postEffectBloom.id,
     postEffectOutline.id,
+    view,
+    CAMERA_FOCUS_POSITIONS.soldier,
   );
   setupPolygonFolder(
     geoJsonFolder,
     polygonLayer,
     postEffectBloom.id,
     postEffectOutline.id,
+    view,
+    CAMERA_FOCUS_POSITIONS.polygon,
   );
 
   // 3D Tiles カテゴリ
@@ -349,6 +369,8 @@ type MeshFolderOptions = {
   configKey: "box" | "sphere" | "cylinder" | "tube" | "plane";
   bloomId: string;
   outlineId: string;
+  view: ThreeView;
+  focusPosition: CameraPosition;
   // emissiveColor uses number for Tweakpane, converted to Color when updating layer
   params: {
     emissiveColor: number;
@@ -364,7 +386,8 @@ const setupMeshFolder = (
   parent: Pane | FolderApi,
   options: MeshFolderOptions,
 ) => {
-  const { title, layer, configKey, bloomId, outlineId } = options;
+  const { title, layer, configKey, bloomId, outlineId, view, focusPosition } =
+    options;
   const params = { ...options.params };
 
   const applyMeshState = () => {
@@ -384,6 +407,10 @@ const setupMeshFolder = (
   };
 
   const folder = parent.addFolder({ title });
+
+  folder.addButton({ title: "Focus" }).on("click", () => {
+    view.setCamera(focusPosition);
+  });
 
   folder.addBinding(params, "visible").on("change", (ev) => {
     layer.update({ visible: ev.value });
@@ -477,14 +504,8 @@ const setupTilesFolder = (
   parent: Pane | FolderApi,
   options: TilesFolderOptions,
 ) => {
-  const {
-    title,
-    layer,
-    datasetUrl,
-    bloomId,
-    outlineId,
-    params: initialParams,
-  } = options;
+  const { title, layer, datasetUrl, bloomId, outlineId, params: initialParams } =
+    options;
 
   const params = { ...initialParams };
 
@@ -572,6 +593,8 @@ const setupDrumFolder = (
   drumLayer: GeoJsonModelLayer<DrumModelState>,
   bloomId: string,
   outlineId: string,
+  view: ThreeView,
+  focusPosition: CameraPosition,
 ) => {
   const params = {
     ...DRUM_CONFIG,
@@ -581,6 +604,10 @@ const setupDrumFolder = (
   };
 
   const folder = parent.addFolder({ title: "Drum Model" });
+
+  folder.addButton({ title: "Focus" }).on("click", () => {
+    view.setCamera(focusPosition);
+  });
 
   const updateDrumState = () => {
     drumLayer.updateModel({
@@ -645,6 +672,8 @@ const setupSoldierFolder = (
   soldierLayer: GeoJsonModelLayer<SoldierModelState>,
   bloomId: string,
   outlineId: string,
+  view: ThreeView,
+  focusPosition: CameraPosition,
 ) => {
   const params = {
     ...SOLDIER_CONFIG,
@@ -654,6 +683,10 @@ const setupSoldierFolder = (
   };
 
   const folder = parent.addFolder({ title: "Soldier Model" });
+
+  folder.addButton({ title: "Focus" }).on("click", () => {
+    view.setCamera(focusPosition);
+  });
 
   const updateSoldierState = () => {
     soldierLayer.updateModel({
@@ -732,6 +765,8 @@ const setupPolygonFolder = (
   polygonLayer: GeoJsonPolygonLayer,
   bloomId: string,
   outlineId: string,
+  view: ThreeView,
+  focusPosition: CameraPosition,
 ) => {
   const params = {
     ...POLYGON_CONFIG,
@@ -740,6 +775,10 @@ const setupPolygonFolder = (
   };
 
   const folder = parent.addFolder({ title: "Polygon (Odaiba)" });
+
+  folder.addButton({ title: "Focus" }).on("click", () => {
+    view.setCamera(focusPosition);
+  });
 
   const updatePolygonState = () => {
     const effectIds = getEffectIds(

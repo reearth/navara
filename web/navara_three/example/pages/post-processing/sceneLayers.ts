@@ -140,6 +140,102 @@ export const POLYGON_CONFIG = {
   outlineEnabled: false,
 } as const;
 
+// ============================================
+// Camera Focus Positions
+// ============================================
+
+export type CameraPosition = {
+  lng: number;
+  lat: number;
+  height: number;
+  heading: number;
+  pitch: number;
+  roll: number;
+};
+
+export const CAMERA_FOCUS_POSITIONS = {
+  cube: {
+    lng: 139.767125,
+    lat: 35.676,
+    height: 800,
+    heading: 0,
+    pitch: -35,
+    roll: 0,
+  },
+  sphere: {
+    lng: 139.762,
+    lat: 35.676,
+    height: 700,
+    heading: 100,
+    pitch: -40,
+    roll: 0,
+  },
+  cylinder: {
+    lng: 139.6917,
+    lat: 35.684,
+    height: 1000,
+    heading: 0,
+    pitch: -40,
+    roll: 0,
+  },
+  tube: {
+    lng: 139.7016,
+    lat: 35.650,
+    height: 800,
+    heading: 0,
+    pitch: -45,
+    roll: 0,
+  },
+  plane: {
+    lng: 139.7731,
+    lat: 35.693,
+    height: 800,
+    heading: 0,
+    pitch: -40,
+    roll: 0,
+  },
+  drum: {
+    lng: 139.7682,
+    lat: 35.671,
+    height: 600,
+    heading: 0,
+    pitch: -35,
+    roll: 0,
+  },
+  soldier: {
+    lng: 139.7505,
+    lat: 35.672,
+    height: 600,
+    heading: 0,
+    pitch: -35,
+    roll: 0,
+  },
+  polygon: {
+    lng: 139.775,
+    lat: 35.623,
+    height: 800,
+    heading: 0,
+    pitch: -40,
+    roll: 0,
+  },
+  chiyoda: {
+    lng: 139.7511,
+    lat: 35.6736,
+    height: 902,
+    heading: 64.4,
+    pitch: -36,
+    roll: 0,
+  },
+  chuo: {
+    lng: 139.772,
+    lat: 35.673,
+    height: 1000,
+    heading: -30,
+    pitch: -40,
+    roll: 0,
+  },
+} as const satisfies Record<string, CameraPosition>;
+
 type GeoJsonModelState = Record<string, unknown>;
 
 export type GeoJsonModelLayer<TState extends GeoJsonModelState> = {
