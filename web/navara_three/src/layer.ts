@@ -4,16 +4,57 @@ import type { Core } from "@navara/engine";
 import { FeatureEvaluator } from "./evaluations";
 import type { LayerDescription } from "./type";
 
+/**
+ * Events emitted by Layer. Subscribe using `layer.on(eventName, callback)`.
+ */
 export type LayerEvent = {
+  /** Emitted when a new feature is created in this layer. */
   featureCreated: (evaluator: FeatureEvaluator) => void;
+  /** Emitted when a feature in this layer is updated. */
   featureUpdated: (evaluator: FeatureEvaluator, updatedAt: number) => void;
+  /** Emitted after all feature updates have been processed in this frame. */
   afterFeatureUpdated: () => void;
+  /** Emitted when the layer is deleted. */
   deleted: () => void;
 };
 
+/**
+ * Callback function type for feature evaluator operations.
+ */
 export type FeatureEvaluatorCallback = (evaluator: FeatureEvaluator) => void;
 
+/**
+ * A handle to control a resource layer (e.g., imagery, terrain, GeoJSON, 3D Tiles) after it has been added to the scene.
+ * Returned by `ThreeView.addLayer()` when adding resource layers (not mesh, light, or effect layers).
+ *
+ * Resource layers are data-driven layers that load and display geographic data from external sources.
+ * Use this handle to update layer configuration or delete the layer.
+ *
+ * @example
+ * ```typescript
+ * // Add a GeoJSON layer
+ * const geoJsonLayer = view.addLayer({
+ *   type: "geojson",
+ *   data: {
+ *     url: "https://example.com/data.geojson",
+ *   },
+ *   point: { color: 0xff0000 }
+ * });
+ *
+ * // Update the layer configuration
+ * geoJsonLayer.update({ point: { color: 0x00ff00 } });
+ *
+ * // Listen to feature events
+ * geoJsonLayer.on("featureCreated", (evaluator) => {
+ *   console.log("Feature created:", evaluator);
+ * });
+ *
+ * // Delete the layer
+ * geoJsonLayer.delete();
+ * ```
+ */
 export class Layer extends EventHandler<LayerEvent> {
+  /** The unique identifier of this layer. */
   id: string;
   private core: Core;
   private featureEvaluators: Map<FeatureId, FeatureEvaluator> = new Map<
@@ -78,10 +119,19 @@ export class Layer extends EventHandler<LayerEvent> {
     return true;
   }
 
+  /**
+   * Marks the layer for update on the next frame.
+   * Call this when you need to trigger `featureUpdated` events.
+   */
   forceUpdate() {
     this.needUpdate = true;
   }
 
+  /**
+   * Updates the layer configuration.
+   * The entire configuration is replaced with the new values.
+   * @param l - New layer configuration
+   */
   update(l: LayerDescription) {
     // Convert Color objects to numbers if converter is provided
     const processedLayer = this.convertColors
@@ -90,6 +140,11 @@ export class Layer extends EventHandler<LayerEvent> {
     this.core.updateLayer(this.id, processedLayer);
   }
 
+  /**
+   * Removes the layer from the scene and disposes its resources.
+   * Emits the "deleted" event before cleanup.
+   * After calling this, the layer should no longer be used.
+   */
   delete() {
     this.core.deleteLayer(this.id);
     this.emit("deleted");
