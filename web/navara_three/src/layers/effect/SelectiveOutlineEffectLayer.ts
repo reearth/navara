@@ -35,7 +35,7 @@ import {
 export type SelectiveOutlineEffectConfig = {
   selectiveEffect: true;
   selectiveOutline: {
-    color?: number;
+    color?: Color;
     thickness?: number;
     edgeStrength?: number;
     resolutionScale?: number;
@@ -45,7 +45,7 @@ export type SelectiveOutlineEffectConfig = {
 
 export type SelectiveOutlineEffectUpdate = {
   selectiveOutline?: {
-    color?: number;
+    color?: Color;
     thickness?: number;
     edgeStrength?: number;
     resolutionScale?: number;
@@ -74,7 +74,8 @@ export class SelectiveOutlineEffectLayer extends SelectiveEffectLayer<
 
   // Getters that derive values from config (single source of truth)
   get outlineColor(): number {
-    return this.config.selectiveOutline?.color ?? DEFAULT_COLOR;
+    const color = this.config.selectiveOutline?.color;
+    return color instanceof Color ? color.getHex() : DEFAULT_COLOR;
   }
 
   get outlineThickness(): number {
@@ -106,7 +107,7 @@ export class SelectiveOutlineEffectLayer extends SelectiveEffectLayer<
       ...(config as SelectiveOutlineEffectConfig),
       selectiveEffect: true,
       selectiveOutline: {
-        color: outlineConfig?.color ?? DEFAULT_COLOR,
+        color: outlineConfig?.color ?? new Color().setHex(DEFAULT_COLOR),
         thickness: outlineConfig?.thickness ?? DEFAULT_THICKNESS,
         edgeStrength: outlineConfig?.edgeStrength ?? DEFAULT_EDGE_STRENGTH,
         resolutionScale: outlineConfig?.resolutionScale ?? 1.0,

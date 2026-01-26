@@ -20,6 +20,12 @@ import {
   Plane as ThreePlane,
 } from "three";
 
+/**
+ * Creates a plane from a point and a normal vector.
+ * @param point - A point on the plane
+ * @param normal - The normal vector of the plane
+ * @returns A Plane object defined by the point and normal
+ */
 export function getPlaneFromPointNormal(
   point: Vector3,
   normal: Vector3,
@@ -43,6 +49,13 @@ export function getPlaneFromPointNormal(
   return threePlane;
 }
 
+/**
+ * Creates a picking ray from screen coordinates for raycasting.
+ * @param window - Window configuration with width, height, and pixelRatio
+ * @param camera - Three.js PerspectiveCamera
+ * @param vec2 - Screen coordinates in CSS pixels (same as MouseEvent clientX/clientY)
+ * @returns A Ray starting from the camera through the screen point
+ */
 export function getPickRay(
   windowObject: WindowObject,
   camera: PerspectiveCamera,
@@ -51,10 +64,10 @@ export function getPickRay(
   const window = new Window(
     windowObject.width,
     windowObject.height,
-    windowObject.pixel_ratio,
+    windowObject.pixelRatio,
   );
-  window.width = window.width * window.pixel_ratio;
-  window.height = window.height * window.pixel_ratio;
+  window.width = window.width * window.pixelRatio;
+  window.height = window.height * window.pixelRatio;
 
   const transform = new Transform(
     camera.position.x,
@@ -101,6 +114,12 @@ export function getPickRay(
   return threeRay;
 }
 
+/**
+ * Computes the intersection point between a ray and a plane.
+ * @param ray - The ray to test
+ * @param plane - The plane to intersect with
+ * @returns Intersection point Vector3 or undefined if no intersection
+ */
 export function getRayPlaneIntersection(
   ray: ThreeRay,
   plane: ThreePlane,
@@ -135,6 +154,11 @@ export function getRayPlaneIntersection(
   return undefined;
 }
 
+/**
+ * Computes the height of a point above the WGS84 ellipsoid surface.
+ * @param point - Position in ECEF coordinates
+ * @returns Height above the ellipsoid in meters
+ */
 export function getHeightFromEllipsoid(point: Vector3): number {
   const vec3 = new Vec3(point.x, point.y, point.z);
   const result = nvGetHeightFromEllipsoid(vec3);

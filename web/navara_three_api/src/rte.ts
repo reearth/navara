@@ -1,6 +1,13 @@
 import { encodePosition } from "@navara/engine-api";
 import { Matrix4, Vector3 } from "three";
 
+/**
+ * Calculates the model-view matrix for Relative-To-Eye (RTE) rendering, which improves precision for distant objects.
+ * @param objectMatrixWorld - The object's world transformation matrix
+ * @param matrixWorldInverse - The camera's inverse world matrix
+ * @param result - Optional matrix to store the result (creates new if omitted)
+ * @returns Model-view matrix with translation zeroed for RTE rendering
+ */
 export const calcModelMatrixRTE = (
   objectMatrixWorld: Matrix4,
   matrixWorldInverse: Matrix4,
@@ -16,6 +23,12 @@ export const calcModelMatrixRTE = (
 
 const INVERSE_MODEL_MATRIX = new Matrix4();
 const CAMERA_MODEL_POSITION = new Vector3();
+/**
+ * Calculates the camera position relative to an object with high/low precision encoding for RTE rendering.
+ * @param cameraPosition - The camera's world position
+ * @param modelMatrixWorld - The object's world transformation matrix
+ * @returns Object with high and low precision Vector3 components for GPU double precision emulation
+ */
 export const calcCameraPosition = (
   cameraPosition: Vector3,
   modelMatrixWorld: Matrix4,

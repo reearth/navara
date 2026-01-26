@@ -20,7 +20,7 @@ export const convertScreenPos = (
   const win = {
     width: screenSize.x,
     height: screenSize.y,
-    pixel_ratio: pixelRatio,
+    pixelRatio: pixelRatio,
   };
 
   const pos = convertScreenToWorld(win, view.camera.raw, new Vector2(x, y));

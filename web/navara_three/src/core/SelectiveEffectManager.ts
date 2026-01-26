@@ -1,3 +1,5 @@
+import { Color } from "../Color";
+
 import {
   type SelectiveEffectHelper,
   type SelectiveEffectOcclusionValue,
@@ -10,7 +12,7 @@ const DEFAULT_EMISSIVE_INTENSITY = 0.3;
 type LayerEffectConfig = {
   effectIds: string[];
   emissiveIntensity: number;
-  emissiveColor?: number;
+  emissiveColor?: Color;
   occlusion: SelectiveEffectOcclusionValue; // SoT for occlusion setting
 };
 
@@ -64,7 +66,7 @@ export class SelectiveEffectManager {
 
   setLayerEmissiveColor(
     layerId: string,
-    emissiveColor: number | undefined,
+    emissiveColor: Color | undefined,
   ): void {
     const config = this.ensureConfig(layerId);
 

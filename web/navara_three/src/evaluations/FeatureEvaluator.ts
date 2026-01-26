@@ -31,11 +31,19 @@ type AvailableMaterialProperty = ExtractProperties<
     TextMaterial
 >;
 
+/**
+ * Material properties that can be evaluated and modified per-feature.
+ */
 export type EvaluatableMaterialProperty = {
+  /** Feature color expression from layer configuration. */
   color: AvailableMaterialProperty["color"];
+  /** Feature visibility expression from layer configuration. */
   show: AvailableMaterialProperty["show"];
+  /** Extruded height expression from layer configuration (for polygons). */
   extrudedHeight: AvailableMaterialProperty["extrudedHeight"];
+  /** Height expression from layer configuration. */
   height: AvailableMaterialProperty["height"];
+  /** Text content expression from layer configuration (for text). */
   text: AvailableMaterialProperty["text"];
 };
 
@@ -49,7 +57,12 @@ type EvaluatedMaterialProperty = {
   text: string;
 };
 
+/**
+ * The evaluated values that can be returned from the evaluate callback.
+ * All properties are optional - only return the ones you want to modify.
+ */
 export type EvaluatedValue = {
+  /** The evaluated color for this feature. */
   [K in EvaluatableMaterialPropertyKey]: EvaluatedMaterialProperty[K];
 };
 
@@ -63,14 +76,67 @@ type AggregatedResultValue<K = EvaluatableMaterialPropertyKey> = {
       : Uint32Array;
 };
 
+/**
+ * Provides access to feature data and allows dynamic styling of features based on their properties.
+ * Received through the `featureCreated` and `featureUpdated` events on a Layer.
+ *
+ * Use this class to:
+ * - Read feature properties from the data source
+ * - Dynamically style features based on their properties
+ *
+ * @example
+ * ```typescript
+ * // Style 3D Tiles buildings by height
+ * layer.on("featureUpdated", (evaluator) => {
+ *   evaluator.evaluate((_batchId, property) => {
+ *     const measuredHeight = property?.get("height") as number;
+ *
+ *     // Color and visibility based on building height
+ *     const color = (() => {
+ *       if (measuredHeight < 30) return new Color().setStyle("#00ff00");
+ *       if (measuredHeight < 60) return new Color().setStyle("#ffff00");
+ *       if (measuredHeight < 90) return new Color().setStyle("#ff00ff");
+ *       return new Color().setStyle("#ff0000");
+ *     })();
+ *
+ *     return {
+ *       color,
+ *       show: measuredHeight >= 30, // Hide small buildings
+ *     };
+ *   });
+ * });
+ *
+ * // Style GeoJSON polygons with extrusion based on properties
+ * layer.on("featureUpdated", (evaluator) => {
+ *   evaluator.evaluate((_batchId, property) => {
+ *     const height = (property?.get("height") as number) ?? 0;
+ *     const extrudedHeight = (property?.get("extrudedHeight") as number) ?? 0;
+ *
+ *     return {
+ *       height,
+ *       extrudedHeight,
+ *     };
+ *   });
+ * });
+ *
+ * // Re-evaluate styles
+ * const onChange = () => {
+ *   layer.forceUpdate(); // Triggers featureUpdated events
+ * };
+ * ```
+ */
 export class FeatureEvaluator {
   private handler: FeatureHandler;
   private featureId: FeatureId;
   private cachedBatchedProperties?: Map<number, Map<string, unknown>>;
   private batchIds: number[] = [];
 
-  // TODO: Need to support TSL
-  obj: Object3D;
+  /**
+   * The underlying Three.js object representing this feature.
+   * Can be used for advanced manipulation, but prefer using `evaluate()` for styling.
+   */
+  // TODO: Need to support TSL if we export it.
+  private obj: Object3D;
 
   private result: AggregatedResultValue[] = [];
 
@@ -80,31 +146,102 @@ export class FeatureEvaluator {
     this.obj = obj;
   }
 
+  /**
+   * Gets the unique identifier of this feature.
+   */
   get id() {
     return this.featureId;
   }
 
-  // This works with non-batched feature like GeoJSON.
-  readFeatureProperties() {
-    let properties: Map<string, unknown> | undefined;
-
-    this.handler.readPropertiesFromFeature(
-      this.featureId,
-      (
-        _batchIdx: number,
-        _batchId: number,
-        props: Map<string, unknown> | undefined,
-      ) => {
-        properties = props;
-      },
-    );
-
-    return properties;
+  /**
+   * Reads the properties of this feature from the data source.
+   * The callback is invoked for each batch within this feature.
+   *
+   * @param f - Callback function that receives batchId and the property map for each batch
+   *
+   * @example
+   * ```typescript
+   * // Log all properties
+   * evaluator.readFeatureProperties((batchId, properties) => {
+   *   console.log(`Batch ${batchId}:`, properties);
+   * });
+   *
+   * // Access nested JSON attributes (common in MVT/PLATEAU data)
+   * evaluator.readFeatureProperties((_batchId, property) => {
+   *   const attributes = JSON.parse((property?.get("attributes") as string) ?? "{}");
+   *   const minHeight = attributes["minHeight"];
+   *   const maxHeight = attributes["maxHeight"];
+   * });
+   * ```
+   */
+  readFeatureProperties(
+    f: (batchId: number, property: Map<string, unknown> | undefined) => void,
+  ) {
+    if (this.cachedBatchedProperties) {
+      for (const [batchIdx, property] of this.cachedBatchedProperties) {
+        f(this.batchIds[batchIdx], property);
+      }
+    } else {
+      this.cachedBatchedProperties = new Map();
+      this.handler.readPropertiesFromFeature(
+        this.featureId,
+        (
+          batchIdx: number,
+          batchId: number,
+          property: Map<string, unknown> | undefined,
+        ) => {
+          if (property) {
+            this.cachedBatchedProperties?.set(batchIdx, property);
+          }
+          this.batchIds[batchIdx] = batchId;
+          f(batchId, property);
+        },
+      );
+    }
   }
 
   /**
-   * Evaluate feature styles by feature's property.
-   * Note that layer color is overridden by the evaluated color.
+   * Evaluates and applies dynamic styles to features based on their properties.
+   * The callback is invoked for each batch (sub-feature) within this feature.
+   *
+   * Supported style properties:
+   * - `color` - Feature color (use `new Color()`)
+   * - `show` - Feature visibility (boolean)
+   * - `height` - Feature height in meters
+   * - `extrudedHeight` - Extrusion height for polygons in meters
+   * - `text` - Label text content (for text/label features)
+   *
+   * Note: Evaluated styles override the layer's default styles.
+   *
+   * @param f - Callback function that receives batchId and properties, returns style values
+   *
+   * @example
+   * ```typescript
+   * // Color MVT features based on a category property
+   * evaluator.evaluate((_batchId, property) => {
+   *   const category = property?.get("category") as string;
+   *
+   *   const color = (() => {
+   *     if (category === "A") return "#0000ff";
+   *     if (category === "B") return "#00ff00";
+   *     return "#ff0000";
+   *   })();
+   *
+   *   return {
+   *     color: new Color().setStyle(color),
+   *   };
+   * });
+   *
+   * // Filter and style text labels
+   * evaluator.evaluate((_batchId, property) => {
+   *   const text = property?.get("name") as string;
+   *
+   *   return {
+   *     text,
+   *     show: !!text,
+   *   };
+   * });
+   * ```
    */
   evaluate(
     f: (
@@ -153,27 +290,7 @@ export class FeatureEvaluator {
       }
     };
 
-    if (this.cachedBatchedProperties) {
-      for (const [batchIdx, property] of this.cachedBatchedProperties) {
-        prepare(this.batchIds[batchIdx], property);
-      }
-    } else {
-      this.cachedBatchedProperties = new Map();
-      this.handler.readPropertiesFromFeature(
-        this.featureId,
-        (
-          batchIdx: number,
-          batchId: number,
-          property: Map<string, unknown> | undefined,
-        ) => {
-          if (property) {
-            this.cachedBatchedProperties?.set(batchIdx, property);
-          }
-          this.batchIds[batchIdx] = batchId;
-          prepare(batchId, property);
-        },
-      );
-    }
+    this.readFeatureProperties(prepare);
 
     // Convert just an array into TypedArray
     for (const [k, v] of result) {
