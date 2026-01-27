@@ -34,8 +34,6 @@ import {
 } from "./rtcRteHelper";
 
 export class BillboardMesh extends Sprite implements FeatureMesh {
-  active = false;
-
   constructor(useRTE = false) {
     super(new SpriteMaterial());
 
@@ -279,7 +277,6 @@ export class BillboardMesh extends Sprite implements FeatureMesh {
     }
 
     const nextVisible = (material.show ?? true) && active;
-    this.active = active;
     if (prev.visible !== nextVisible) {
       this.visible = nextVisible;
       prev.visible = nextVisible;

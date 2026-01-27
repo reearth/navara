@@ -100,8 +100,6 @@ export class ModelMesh
   // model credit for attribution
   credit: string | undefined;
 
-  active = false;
-
   /**
    * Returns the shared water normal map texture if water is enabled.
    * The texture must be enabled via Options.waterTexture.enabled.
@@ -768,7 +766,6 @@ export class ModelMesh
 
   _update(material: NavaraModelMaterial, active: boolean) {
     const next = (material.show ?? true) && active;
-    this.active = active;
     if (this.userData.prev.visible !== next) {
       this.visible = next;
       this.userData.prev.visible = next;
