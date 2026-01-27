@@ -290,9 +290,6 @@ export default class ThreeView<
   camera: ThreeViewCamera;
   /** The Three.js WebGL renderer instance used for rendering the scene. */
   renderer: WebGLRenderer;
-  /** Optional camera control interface for external control systems (e.g., OrbitControls). */
-  control?: { update: () => void; get target(): Vector3 | undefined };
-
   /** The globe instance that manages terrain, imagery layers, and globe-specific settings. */
   globe!: Globe;
   /** The atmosphere renderer that handles sky, sun, and atmospheric scattering effects. */
@@ -1088,7 +1085,6 @@ export default class ThreeView<
     );
     events?.free();
 
-    this.control?.update();
     this.camera.raw.updateMatrixWorld();
 
     this._updateUniforms();
