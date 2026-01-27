@@ -132,7 +132,7 @@ export const createControlPane = ({
 
   setupBloomFolder(pane, postEffectBloom);
 
-  // Mesh Layer カテゴリ
+  // Mesh Layer category
   const meshLayerFolder = pane.addFolder({ title: "Mesh Layer" });
   setupMeshFolder(meshLayerFolder, {
     title: "Cube (Red)",
@@ -205,7 +205,7 @@ export const createControlPane = ({
     },
   });
 
-  // GeoJson カテゴリ
+  // GeoJson category
   const geoJsonFolder = pane.addFolder({ title: "GeoJson" });
   setupDrumFolder(
     geoJsonFolder,
@@ -232,7 +232,7 @@ export const createControlPane = ({
     CAMERA_FOCUS_POSITIONS.polygon,
   );
 
-  // 3D Tiles カテゴリ
+  // 3D Tiles category
   const tiles3DFolder = pane.addFolder({ title: "3D Tiles" });
   setupTilesFolder(tiles3DFolder, {
     title: "Chiyoda Buildings",
@@ -382,10 +382,7 @@ type MeshFolderOptions = {
   };
 };
 
-const setupMeshFolder = (
-  parent: Pane | FolderApi,
-  options: MeshFolderOptions,
-) => {
+const setupMeshFolder = (parent: FolderApi, options: MeshFolderOptions) => {
   const { title, layer, configKey, bloomId, outlineId, view, focusPosition } =
     options;
   const params = { ...options.params };
@@ -500,10 +497,7 @@ type TilesFolderOptions = {
   };
 };
 
-const setupTilesFolder = (
-  parent: Pane | FolderApi,
-  options: TilesFolderOptions,
-) => {
+const setupTilesFolder = (parent: FolderApi, options: TilesFolderOptions) => {
   const {
     title,
     layer,
@@ -595,7 +589,7 @@ const setupTilesFolder = (
 };
 
 const setupDrumFolder = (
-  parent: Pane | FolderApi,
+  parent: FolderApi,
   drumLayer: GeoJsonModelLayer<DrumModelState>,
   bloomId: string,
   outlineId: string,
@@ -674,7 +668,7 @@ const setupDrumFolder = (
 };
 
 const setupSoldierFolder = (
-  parent: Pane | FolderApi,
+  parent: FolderApi,
   soldierLayer: GeoJsonModelLayer<SoldierModelState>,
   bloomId: string,
   outlineId: string,
@@ -764,10 +758,10 @@ const setupSoldierFolder = (
 };
 
 /**
- * Setup Polygon folder (お台場)
+ * Setup Polygon folder (Odaiba)
  */
 const setupPolygonFolder = (
-  parent: Pane | FolderApi,
+  parent: FolderApi,
   polygonLayer: GeoJsonPolygonLayer,
   bloomId: string,
   outlineId: string,
@@ -839,8 +833,6 @@ const setupPolygonFolder = (
       updatePolygonState();
     });
 
-  // Apply initial state after a frame to ensure mesh is ready
-  requestAnimationFrame(() => {
-    updatePolygonState();
-  });
+  // Apply initial state
+  updatePolygonState();
 };
