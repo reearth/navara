@@ -17,7 +17,7 @@ export type WaterOnlyProps = {
   waterSpeed?: number;
   shininess?: number;
   specularStrength?: number;
-  applyWaterNormal?: number;
+  applyWaterNormal?: boolean;
   specular?: boolean;
   ior?: number;
   skyEnvMap?: Texture | null;
@@ -53,7 +53,7 @@ export type PolygonWaterState = Readonly<{
   waterSpeed: number;
   shininess: number;
   specularStrength: number;
-  applyWaterNormal: number;
+  applyWaterNormal: boolean;
   specular: boolean;
   ior: number;
 }>;
@@ -69,17 +69,42 @@ export type PolygonWaterCombinedStates = {
 
 /**
  * Combined mutation functions for the polygon water enhancer.
- * Includes base mutation functions (water enhancer has no additional mutations).
  */
 export type PolygonWaterCombinedMutates = {
   readonly base: PolygonBaseMutates;
+  readonly water: WaterMutates;
 };
+
+/**
+ * Mutable references (uniforms) for the water enhancer.
+ *
+ * These are shared references with shader.uniforms and can be mutated directly
+ * for efficient GPU uniform updates without shader recompilation.
+ * Internal type - not exposed externally.
+ */
+export type PolygonWaterRefs = {
+  // Internal refs (value-based updates)
+  uWaterNormalMap: UniformValue<Texture | null>;
+  uWaterScaleNormal: UniformValue<number>;
+  uWaterSpeed: UniformValue<number>;
+  uShininess: UniformValue<number>;
+  uSpecularStrength: UniformValue<number>;
+  uApplyWaterNormal: UniformValue<number>;
+  uSpecular: UniformValue<boolean>;
+  uIor: UniformValue<number>;
+
+  // External uniform ref (assigned as ref object, identity doesn't change)
+  uTime?: UniformValue<number>;
+};
+
+export type PolygonWaterUniforms = Partial<PolygonWaterRefs>;
 
 /**
  * Mutation functions for the water enhancer (internal only).
  */
 export type WaterMutates = Mutates<
   PolygonWaterState,
+  PolygonWaterUniforms,
   {
     /**
      * Set the time uniform ref.

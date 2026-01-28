@@ -296,36 +296,32 @@ export class PolygonMesh extends BatchedFeatureMesh<
     // The enhancer handles the !isTexturized && logic internally.
     const initialProps: PolygonMaterialProps = {
       base: {
-        color: mcolor ?? 0,
-        opacity: meshMaterial.opacity ?? 1.0,
-        transparent: !!meshMaterial.transparent,
-        wireframe: !!meshMaterial.wireframe,
+        color: mcolor,
+        opacity: meshMaterial.opacity,
+        transparent: meshMaterial.transparent,
+        wireframe: meshMaterial.wireframe,
         minMaxHeight,
-        addExtrudedHeight: 0,
-        addHeight: 0,
-        clampToGround: !!meshMaterial.clampToGround,
-        useGroundNormals: !!meshMaterial.useGroundNormals,
+        clampToGround: meshMaterial.clampToGround,
+        useGroundNormals: meshMaterial.useGroundNormals,
         isTexturized,
-        pickable: false,
-        reflectivity: meshMaterial.reflectivity ?? 0,
-        roughness: meshMaterial.roughness ?? 0,
+        reflectivity: meshMaterial.reflectivity,
+        roughness: meshMaterial.roughness,
         emissiveColor: meshMaterial.emissiveColor,
-        emissiveIntensity: meshMaterial.emissiveIntensity ?? 0,
+        emissiveIntensity: meshMaterial.emissiveIntensity,
         globeNormalTexture: uniforms.tGlobeNormal as { value: Texture | null },
         useRTE,
       },
       water: {
-        water: !!meshMaterial.water,
-        waterNormalMap: null,
-        waterScaleNormal: meshMaterial.waterScaleNormal ?? 0,
-        waterSpeed: meshMaterial.waterSpeed ?? 0,
-        shininess: meshMaterial.shininess ?? 0,
-        specularStrength: meshMaterial.specularStrength ?? 0,
-        applyWaterNormal: meshMaterial.applyWaterNormal ? 1 : 0,
-        specular: meshMaterial.specular ?? false,
-        ior: meshMaterial.ior ?? 1.33333,
+        water: meshMaterial.water,
+        waterScaleNormal: meshMaterial.waterScaleNormal,
+        waterSpeed: meshMaterial.waterSpeed,
+        shininess: meshMaterial.shininess,
+        specularStrength: meshMaterial.specularStrength,
+        applyWaterNormal: meshMaterial.applyWaterNormal,
+        specular: meshMaterial.specular,
+        ior: meshMaterial.ior,
         timeUniform: uniforms.time as { value: number },
-        skyEnvMap: uniforms.tSkyEnvMap.value ?? null,
+        skyEnvMap: uniforms.tSkyEnvMap.value,
       },
     };
 
@@ -434,7 +430,7 @@ export class PolygonMesh extends BatchedFeatureMesh<
         waterSpeed: material.waterSpeed,
         shininess: material.shininess,
         specularStrength: material.specularStrength,
-        applyWaterNormal: material.applyWaterNormal ? 1 : 0,
+        applyWaterNormal: material.applyWaterNormal,
         specular: material.specular,
         ior: material.ior,
       },
@@ -594,7 +590,7 @@ export class PolygonMesh extends BatchedFeatureMesh<
   get specularStrength(): number {
     return this.getEnhancer().states().water.specularStrength;
   }
-  get applyWaterNormal(): number {
+  get applyWaterNormal(): boolean {
     return this.getEnhancer().states().water.applyWaterNormal;
   }
   get specular(): boolean {

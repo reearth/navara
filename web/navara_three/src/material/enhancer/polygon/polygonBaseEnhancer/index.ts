@@ -1,3 +1,4 @@
+import { defaults } from "lodash-es";
 import type { WebGLProgramParametersWithUniforms } from "three";
 import invariant from "tiny-invariant";
 
@@ -56,7 +57,7 @@ export function createPolygonBaseEnhancer(
     },
 
     mount: (props: PolygonBaseProps): void => {
-      const mergedProps = { ...DEFAULT_BASE_PROPS, ...props };
+      const mergedProps = defaults({}, props, DEFAULT_BASE_PROPS);
       // Create initial state with useRTE from props (useRTE can't change after mount)
       const initialState = {
         ...DEFAULT_BASE_STATE,

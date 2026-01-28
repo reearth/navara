@@ -42,13 +42,14 @@ export type ShaderUniforms = WebGLProgramParametersWithUniforms["uniforms"];
  */
 export type Mutates<
   States,
+  Uniforms extends ShaderUniforms,
   Methods extends Record<string, (...args: never[]) => void> = Record<
     string,
     never
   >,
 > = {
   update: (states: States) => void;
-  updateUniforms: (uniforms: ShaderUniforms, states: States) => void;
+  updateUniforms: (uniforms: Uniforms, states: States) => void;
 } & Methods;
 
 /**

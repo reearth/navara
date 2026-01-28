@@ -1,30 +1,6 @@
-import type { Texture } from "three";
-
 import type { UniformValue } from "../../../types";
 
-import type { WaterMutates } from "./types";
-
-/**
- * Mutable references (uniforms) for the water enhancer.
- *
- * These are shared references with shader.uniforms and can be mutated directly
- * for efficient GPU uniform updates without shader recompilation.
- * Internal type - not exposed externally.
- */
-type PolygonWaterRefs = {
-  // Internal refs (value-based updates)
-  uWaterNormalMap: UniformValue<Texture | null>;
-  uWaterScaleNormal: UniformValue<number>;
-  uWaterSpeed: UniformValue<number>;
-  uShininess: UniformValue<number>;
-  uSpecularStrength: UniformValue<number>;
-  uApplyWaterNormal: UniformValue<number>;
-  uSpecular: UniformValue<boolean>;
-  uIor: UniformValue<number>;
-
-  // External uniform ref (assigned as ref object, identity doesn't change)
-  timeUniform?: UniformValue<number>;
-};
+import type { PolygonWaterRefs, WaterMutates } from "./types";
 
 /**
  * Default refs with initial values.
@@ -59,7 +35,7 @@ export const createWaterMutates = (): WaterMutates => {
       refs.uWaterSpeed.value = state.waterSpeed;
       refs.uShininess.value = state.shininess;
       refs.uSpecularStrength.value = state.specularStrength;
-      refs.uApplyWaterNormal.value = state.applyWaterNormal;
+      refs.uApplyWaterNormal.value = state.applyWaterNormal ? 1 : 0;
       refs.uSpecular.value = state.specular;
       refs.uIor.value = state.ior;
     },
@@ -73,13 +49,13 @@ export const createWaterMutates = (): WaterMutates => {
       uniforms.uApplyWaterNormal = refs.uApplyWaterNormal;
       uniforms.uSpecular = refs.uSpecular;
       uniforms.uIor = refs.uIor;
-      if (refs.timeUniform) {
-        uniforms.uTime = refs.timeUniform;
+      if (refs.uTime) {
+        uniforms.uTime = refs.uTime;
       }
     },
     setTimeUniform: (timeUniform: UniformValue<number>): void => {
       // Assign external ref object (identity doesn't change after mount)
-      refs.timeUniform = timeUniform;
+      refs.uTime = timeUniform;
     },
   };
 };

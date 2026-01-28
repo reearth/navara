@@ -1,3 +1,4 @@
+import { defaults } from "lodash-es";
 import type { WebGLProgramParametersWithUniforms } from "three";
 import invariant from "tiny-invariant";
 
@@ -78,7 +79,7 @@ export function createPolygonWaterEnhancer(
 
       // Initialize water state and mutates with water props
       const waterProps = props.water ?? {};
-      const mergedWaterProps = { ...DEFAULT_WATER_PROPS, ...waterProps };
+      const mergedWaterProps = defaults({}, waterProps, DEFAULT_WATER_PROPS);
       state = updateWaterState(mergedWaterProps, DEFAULT_WATER_STATE);
       // Create mutates (refs are created inside with default values)
       mutates = createWaterMutates();
@@ -136,8 +137,10 @@ export function createPolygonWaterEnhancer(
     },
 
     mutates: (): PolygonWaterCombinedMutates => {
+      invariant(mutates, "mount() must be called before mutates");
       return {
         base: baseEnhancer.mutates(),
+        water: mutates,
       };
     },
 

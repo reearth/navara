@@ -3,36 +3,7 @@ import { Matrix4 as ThreeMatrix4, Vector3 as ThreeVector3 } from "three";
 
 import type { UniformValue } from "../../../types";
 
-import type { PolygonBaseMutates, PolygonBaseState } from "./types";
-
-/**
- * Mutable references (uniforms) for the polygon base enhancer.
- *
- * These are shared references with shader.uniforms and can be mutated directly
- * for efficient GPU uniform updates without shader recompilation.
- * Internal type - not exposed externally.
- */
-type PolygonBaseRefs = {
-  // Core uniforms
-  uMinMaxHeight: UniformValue<[number, number] | undefined>;
-  uAddExtrudedHeight: UniformValue<number>;
-  uAddHeight: UniformValue<number>;
-  uClampToGround: UniformValue<boolean>;
-  useGroundNormals: UniformValue<boolean>;
-  nvr_uPickable: UniformValue<number>;
-  uIsTexturized: UniformValue<boolean>;
-  reflectivity: UniformValue<number>;
-  roughness: UniformValue<number>;
-
-  // Optional uniforms
-  batchDataTexture?: UniformValue<Texture | null>;
-  globeNormalTexture?: UniformValue<Texture | null>;
-
-  // RTE uniforms (only present if useRTE is true)
-  modelViewMatrixRTE?: UniformValue<Matrix4>;
-  cameraPositionHigh?: UniformValue<Vector3>;
-  cameraPositionLow?: UniformValue<Vector3>;
-};
+import type { PolygonBaseMutates, PolygonBaseRefs, PolygonBaseState } from "./types";
 
 /**
  * Default refs with initial values.
@@ -55,8 +26,6 @@ const DEFAULT_BASE_REFS: PolygonBaseRefs = {
  * Refs are created internally and captured via closure.
  *
  * @param useRTE - Whether RTE is enabled (determines if RTE refs are created)
- * @param getState - Callback to read current state; used in updateUniforms()
- *   to conditionally assign refs based on runtime state (e.g., useRTE flag)
  */
 export const createBaseMutates = (useRTE: boolean): PolygonBaseMutates => {
   // Clone defaults so each enhancer instance gets independent ref objects
@@ -65,8 +34,8 @@ export const createBaseMutates = (useRTE: boolean): PolygonBaseMutates => {
   // Conditionally create RTE refs (useRTE can't change after mount)
   if (useRTE) {
     refs.modelViewMatrixRTE = { value: new ThreeMatrix4() };
-    refs.cameraPositionHigh = { value: new ThreeVector3() };
-    refs.cameraPositionLow = { value: new ThreeVector3() };
+    refs.u_cameraPositionHigh = { value: new ThreeVector3() };
+    refs.u_cameraPositionLow = { value: new ThreeVector3() };
   }
 
   return {
@@ -84,8 +53,8 @@ export const createBaseMutates = (useRTE: boolean): PolygonBaseMutates => {
     },
     updateUniforms: (uniforms, state) => {
       // Assign core uniform refs to shader.uniforms
-      if (refs.globeNormalTexture) {
-        uniforms.uGlobeNormal = refs.globeNormalTexture;
+      if (refs.uGlobeNormal) {
+        uniforms.uGlobeNormal = refs.uGlobeNormal;
       }
       uniforms.nvr_uPickable = refs.nvr_uPickable;
       uniforms.useGroundNormals = refs.useGroundNormals;
@@ -96,11 +65,11 @@ export const createBaseMutates = (useRTE: boolean): PolygonBaseMutates => {
       if (
         state.useRTE &&
         refs.modelViewMatrixRTE &&
-        refs.cameraPositionHigh &&
-        refs.cameraPositionLow
+        refs.u_cameraPositionHigh &&
+        refs.u_cameraPositionLow
       ) {
-        uniforms.u_cameraPositionHigh = refs.cameraPositionHigh;
-        uniforms.u_cameraPositionLow = refs.cameraPositionLow;
+        uniforms.u_cameraPositionHigh = refs.u_cameraPositionHigh;
+        uniforms.u_cameraPositionLow = refs.u_cameraPositionLow;
         uniforms.modelViewMatrixRTE = refs.modelViewMatrixRTE;
       }
 
@@ -123,7 +92,7 @@ export const createBaseMutates = (useRTE: boolean): PolygonBaseMutates => {
       refs.batchDataTexture = texture;
     },
     setGlobeNormalTexture: (texture: UniformValue<Texture | null>): void => {
-      refs.globeNormalTexture = texture;
+      refs.uGlobeNormal = texture;
     },
     updateRteUniforms: (
       modelViewMatrixRTE: Matrix4,
@@ -135,11 +104,11 @@ export const createBaseMutates = (useRTE: boolean): PolygonBaseMutates => {
       if (refs.modelViewMatrixRTE) {
         refs.modelViewMatrixRTE.value.copy(modelViewMatrixRTE);
       }
-      if (refs.cameraPositionHigh) {
-        refs.cameraPositionHigh.value.copy(cameraPositionHigh);
+      if (refs.u_cameraPositionHigh) {
+        refs.u_cameraPositionHigh.value.copy(cameraPositionHigh);
       }
-      if (refs.cameraPositionLow) {
-        refs.cameraPositionLow.value.copy(cameraPositionLow);
+      if (refs.u_cameraPositionLow) {
+        refs.u_cameraPositionLow.value.copy(cameraPositionLow);
       }
     },
   };

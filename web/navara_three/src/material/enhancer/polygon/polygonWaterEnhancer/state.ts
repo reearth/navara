@@ -6,7 +6,7 @@ export const DEFAULT_WATER_PROPS: Required<WaterOnlyProps> = {
   waterSpeed: 0,
   shininess: 0,
   specularStrength: 0,
-  applyWaterNormal: 0,
+  applyWaterNormal: false,
   specular: false,
   ior: 1.33333,
   skyEnvMap: null,

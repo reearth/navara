@@ -114,9 +114,10 @@ expect(state.intensity).toBe(0.5);
 
 // Test ref syncing (mutates.test.ts)
 const mutates = createMutates();
-mutates.update({ intensity: 0.7 });
+const state = { intensity: 0.7 };
+mutates.update(state);
 const uniforms: Record<string, unknown> = {};
-mutates.updateUniforms(uniforms);
+mutates.updateUniforms(uniforms, state);
 expect((uniforms.uIntensity as { value: number }).value).toBe(0.7);
 
 // Test shader injection (shader.test.ts)
@@ -278,8 +279,9 @@ Each enhancer defines four types:
 ```typescript
 type FeatureProps = { ... };                         // Input (public)
 type FeatureState = Readonly<{ ... }>;               // Immutable snapshot (public)
-type FeatureMutates = Mutates<FeatureState, { ... }>; // Mutation interface (public)
 type FeatureRefs = { ... };                          // Uniform references (internal)
+type FeatureUniforms = Partial<FeatureRefs>;         // Uniform types (internal)
+type FeatureMutates = Mutates<FeatureState, FeatureUniforms, { ... }>; // Mutation interface (public)
 ```
 
 ## File Organization
@@ -287,8 +289,8 @@ type FeatureRefs = { ... };                          // Uniform references (inte
 ```
 /featureEnhancer
   index.ts    - Factory function + public type re-exports
-  types.ts    - Props, State, Mutates type definitions
-  mutates.ts  - createMutates, Refs type, default ref values (use structuredClone for defaults)
+  types.ts    - Props, State, Refs, Uniforms, Mutates type definitions
+  mutates.ts  - createMutates, default ref values (use structuredClone for defaults)
   state.ts    - State transitions and default values
   shader.ts   - transformShader logic
   material.ts - Supported material types and shader compatibility

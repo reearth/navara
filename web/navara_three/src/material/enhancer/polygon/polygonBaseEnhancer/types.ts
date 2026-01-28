@@ -74,11 +74,43 @@ export type PolygonBaseState = Readonly<{
 }>;
 
 /**
+ * Mutable references (uniforms) for the polygon base enhancer.
+ *
+ * These are shared references with shader.uniforms and can be mutated directly
+ * for efficient GPU uniform updates without shader recompilation.
+ * Internal type - not exposed externally.
+ */
+export type PolygonBaseRefs = {
+  // Core uniforms
+  uMinMaxHeight: UniformValue<[number, number] | undefined>;
+  uAddExtrudedHeight: UniformValue<number>;
+  uAddHeight: UniformValue<number>;
+  uClampToGround: UniformValue<boolean>;
+  useGroundNormals: UniformValue<boolean>;
+  nvr_uPickable: UniformValue<number>;
+  uIsTexturized: UniformValue<boolean>;
+  reflectivity: UniformValue<number>;
+  roughness: UniformValue<number>;
+
+  // Optional uniforms
+  batchDataTexture?: UniformValue<Texture | null>;
+  uGlobeNormal?: UniformValue<Texture | null>;
+
+  // RTE uniforms (only present if useRTE is true)
+  modelViewMatrixRTE?: UniformValue<Matrix4>;
+  u_cameraPositionHigh?: UniformValue<Vector3>;
+  u_cameraPositionLow?: UniformValue<Vector3>;
+};
+
+export type PolygonBaseUniforms = Partial<PolygonBaseRefs>;
+
+/**
  * Mutation functions for the polygon base enhancer.
  * Includes `update(state)` to sync refs from state, plus additional methods.
  */
 export type PolygonBaseMutates = Mutates<
   PolygonBaseState,
+  PolygonBaseUniforms,
   {
     /**
      * Update RTE (Relative-To-Eye) uniforms for high-precision rendering.
