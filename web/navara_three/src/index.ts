@@ -105,7 +105,6 @@ import { LayersManager } from "./layersManager";
 import { overrideMaterialsForMRT } from "./material";
 import { RenderPassOrchestrator } from "./orchestrators/RenderPassOrchestrator";
 import { PickHelper } from "./pick/pickHelper";
-import type { Picking } from "./pick/picking";
 import { TerrainPicker } from "./pick/pickTerrain";
 import { TexturizedSceneByTileCoordinates, type Scenes } from "./scene";
 import { ShadowMapViewers } from "./ShadowMapViewers";
@@ -184,7 +183,7 @@ export type Options = {
   /** Background color of the scene. Defaults to dark color (0x0a0a0f). */
   backgroundColor?: CoreColor;
   /** Feature picking configuration. */
-  picking?: Picking;
+  picking?: boolean;
   /** Selective post-processing effects configuration. */
   selectiveEffects?: {
     /** Enables debug views for selective effect masks. */
@@ -291,9 +290,6 @@ export default class ThreeView<
   camera: ThreeViewCamera;
   /** The Three.js WebGL renderer instance used for rendering the scene. */
   renderer: WebGLRenderer;
-  /** Optional camera control interface for external control systems (e.g., OrbitControls). */
-  control?: { update: () => void; get target(): Vector3 | undefined };
-
   /** The globe instance that manages terrain, imagery layers, and globe-specific settings. */
   globe!: Globe;
   /** The atmosphere renderer that handles sky, sun, and atmospheric scattering effects. */
@@ -897,7 +893,7 @@ export default class ThreeView<
         //   debug: true,
         // },
       );
-      this._pickHelper.enablePick(this._options.picking?.enable ?? true);
+      this._pickHelper.enablePick(this._options.picking ?? true);
     }
 
     await this.initializeRenderPass();
@@ -1089,7 +1085,6 @@ export default class ThreeView<
     );
     events?.free();
 
-    this.control?.update();
     this.camera.raw.updateMatrixWorld();
 
     this._updateUniforms();
