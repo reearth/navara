@@ -8,6 +8,7 @@ import { Color } from "@navara/three";
 import { Layer } from "@navara/three_react";
 import { useEffect, useMemo, useRef } from "react";
 
+import type { FeatureEvaluator } from "../../../src/evaluations";
 import { PLATEAU_COLOR_MAP } from "../../helpers/colors";
 
 export type BuildingColorAttribute =
@@ -154,8 +155,10 @@ export function BuildingTilesLayer({
         return { color: fallback };
       });
     };
-    layer.on("featureUpdated", onFeatureUpdated);
-    return () => layer.off("featureUpdated", onFeatureUpdated);
+    const handler = ({ evaluator }: { evaluator: FeatureEvaluator }) =>
+      onFeatureUpdated(evaluator);
+    layer.on("featureUpdated", handler);
+    return () => layer.off("featureUpdated", handler);
   };
 
   // Re-evaluate when coloring parameters change

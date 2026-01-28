@@ -4,14 +4,39 @@ import type { Core } from "@navara/engine";
 import { FeatureEvaluator } from "./evaluations";
 import type { LayerDescription } from "./type";
 
+export type FeatureCreatedParams = {
+  featureId: FeatureId;
+  evaluator: FeatureEvaluator;
+  credit?: string;
+};
+
+export type FeatureUpdatedParams = {
+  featureId: FeatureId;
+  evaluator: FeatureEvaluator;
+  updatedAt: number;
+};
+
+export type FeatureVisibilityChangedParams = {
+  featureId: FeatureId;
+  visible: boolean;
+};
+
+export type FeatureRemovedParams = {
+  featureId: FeatureId;
+};
+
 /**
  * Events emitted by Layer. Subscribe using `layer.on(eventName, callback)`.
  */
 export type LayerEvent = {
   /** Emitted when a new feature is created in this layer. */
-  featureCreated: (evaluator: FeatureEvaluator) => void;
+  featureCreated: (params: FeatureCreatedParams) => void;
   /** Emitted when a feature in this layer is updated. */
-  featureUpdated: (evaluator: FeatureEvaluator, updatedAt: number) => void;
+  featureUpdated: (params: FeatureUpdatedParams) => void;
+  /** Emitted when a feature's visibility changes. */
+  featureVisibilityChanged: (params: FeatureVisibilityChangedParams) => void;
+  /** Emitted when a feature is removed from this layer. */
+  featureRemoved: (params: FeatureRemovedParams) => void;
   /** Emitted when the layer is deleted. */
   deleted: () => void;
 };
@@ -43,7 +68,7 @@ export type FeatureEvaluatorCallback = (evaluator: FeatureEvaluator) => void;
  * geoJsonLayer.update({ point: { color: 0x00ff00 } });
  *
  * // Listen to feature events
- * geoJsonLayer.on("featureCreated", (evaluator) => {
+ * geoJsonLayer.on("featureCreated", ({ evaluator }) => {
  *   console.log("Feature created:", evaluator);
  * });
  *
@@ -110,7 +135,11 @@ export class Layer extends EventHandler<LayerEvent> {
 
     // Process all evaluators with the registered callbacks
     for (const evaluator of this.featureEvaluators.values()) {
-      this.emit("featureUpdated", evaluator, updatedAt);
+      this.emit("featureUpdated", {
+        featureId: evaluator.id,
+        evaluator,
+        updatedAt,
+      });
     }
 
     return true;

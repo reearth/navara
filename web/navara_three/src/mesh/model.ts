@@ -97,6 +97,9 @@ export class ModelMesh
   // Minimal animation support (clip + speed)
   private mixer: AnimationMixer | null = null;
 
+  // model credit for attribution
+  credit: string | undefined;
+
   /**
    * Returns the shared water normal map texture if water is enabled.
    * The texture must be enabled via Options.waterTexture.enabled.
@@ -127,11 +130,13 @@ export class ModelMesh
     viewEvents: EventHandler<ViewEvents>,
     viewContext: ViewContext,
     layerId: string,
+    credit?: string,
   ) {
     super();
     this.viewContext = viewContext;
     this._layerId = layerId;
     this._uniforms = uniforms;
+    this.credit = credit;
     this.add(rawScene);
     this.init(m, uniforms, buf, viewEvents);
     this.addEventListener("removedFromWorld", () => {

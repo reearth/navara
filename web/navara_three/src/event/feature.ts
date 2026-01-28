@@ -31,6 +31,7 @@ import type { CommonUniforms } from "../uniforms";
 import {
   handleFeatureCreatedEventByLayerId,
   handleFeatureUpdatedEventByLayerId,
+  handleFeatureVisibilityChangedEventByLayerId,
 } from "./featureEvent";
 import { renderBillboard, processBillboardChanged } from "./features/billboard";
 import { renderModel, processModelChanged } from "./features/model";
@@ -305,6 +306,9 @@ export async function processRenderableFeatureChanged(
     (point ?? billboard ?? text ?? polyline ?? polygon ?? model)?.active ??
     true;
 
+  // Capture visibility before material updates to detect changes
+  const prevVisible = obj.visible;
+
   if (obj instanceof InstancedPointMesh && point) {
     processPointChanged(obj, point, buf, active);
   }
@@ -363,6 +367,16 @@ export async function processRenderableFeatureChanged(
       obj.material.colorWrite = true;
       drapedFeatureMaterials.delete(id);
     }
+  }
+
+  // Emit visibility changed event if visibility actually changed after material updates
+  if (prevVisible !== obj.visible) {
+    handleFeatureVisibilityChangedEventByLayerId(
+      layersManager,
+      layerId,
+      ev.bits,
+      obj.visible,
+    );
   }
 
   // Point, billboard and text should be handled by their mesh.
