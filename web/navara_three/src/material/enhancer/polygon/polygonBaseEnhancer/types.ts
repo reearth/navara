@@ -1,0 +1,110 @@
+import type { Matrix4, Texture, Vector3 } from "three";
+
+import type { UniformValue } from "../../../types";
+import type { BatchTextureFlags } from "../../batchTexture";
+import type { Mutates } from "../../MaterialEnhancer";
+
+/**
+ * Props for the polygon core enhancer.
+ */
+export type PolygonBaseProps = {
+  // Basic material props
+  color?: number;
+  opacity?: number;
+  transparent?: boolean;
+  wireframe?: boolean;
+
+  // Height/extrusion
+  minMaxHeight?: [number, number];
+  addExtrudedHeight?: number;
+  addHeight?: number;
+
+  // Clamp to ground
+  clampToGround?: boolean;
+  useGroundNormals?: boolean;
+  isTexturized?: boolean;
+
+  // Picking
+  pickable?: boolean;
+
+  // Reflectivity
+  reflectivity?: number;
+  roughness?: number;
+
+  // Emissive (for selective effects)
+  emissiveColor?: number;
+  emissiveIntensity?: number;
+
+  // External uniforms (passed from CommonUniforms)
+  globeNormalTexture?: UniformValue<Texture | null>;
+
+  // Batch texture
+  batchDataTexture?: UniformValue<Texture | null>;
+
+  // Batch texture state flags - track when batch attributes are being used
+  // When batchColorEnabled is true, material.color is set to white and actual colors come from batch texture
+  batchColorEnabled?: boolean;
+
+  // RTE (Relative To Eye) support
+  useRTE?: boolean;
+} & BatchTextureFlags;
+
+/**
+ * Immutable state for the polygon base enhancer.
+ * This state is always replaced as a whole (never mutated).
+ * Returned directly via states() - refresh after updates.
+ */
+export type PolygonBaseState = Readonly<{
+  useRTE: boolean;
+  isTexturized: boolean;
+  clampToGround: boolean;
+  useGroundNormals: boolean;
+  pickable: boolean;
+  minMaxHeight: [number, number] | undefined;
+  addExtrudedHeight: number;
+  addHeight: number;
+  reflectivity: number;
+  roughness: number;
+  // Batch texture state - when true, material.color is white and colors come from batch texture
+  batchColorEnabled: boolean;
+  useBatchTexture: boolean;
+  useBatchColorShow: boolean;
+  useBatchHeight: boolean;
+  useBatchExtrudedHeight: boolean;
+}>;
+
+/**
+ * Mutation functions for the polygon base enhancer.
+ * Includes `update(state)` to sync refs from state, plus additional methods.
+ */
+export type PolygonBaseMutates = Mutates<
+  PolygonBaseState,
+  {
+    /**
+     * Update RTE (Relative-To-Eye) uniforms for high-precision rendering.
+     * Call this per-frame to update the model-view matrix and camera position.
+     * Does nothing if RTE is not enabled.
+     *
+     * @param modelViewMatrixRTE - The model-view matrix in RTE coordinates
+     * @param cameraPositionHigh - High-precision component of camera position
+     * @param cameraPositionLow - Low-precision component of camera position
+     * @param state - PolygonBaseState
+     */
+    updateRteUniforms: (
+      modelViewMatrixRTE: Matrix4,
+      cameraPositionHigh: Vector3,
+      cameraPositionLow: Vector3,
+      state: PolygonBaseState,
+    ) => void;
+    /**
+     * Set the batch data texture ref.
+     * This is needed because batchDataTexture is an external ref passed via props.
+     */
+    setBatchDataTexture: (texture: UniformValue<Texture | null>) => void;
+    /**
+     * Set the globe normal texture ref.
+     * This is needed because globeNormalTexture is an external ref passed via props.
+     */
+    setGlobeNormalTexture: (texture: UniformValue<Texture | null>) => void;
+  }
+>;
