@@ -3,7 +3,11 @@ import { Matrix4 as ThreeMatrix4, Vector3 as ThreeVector3 } from "three";
 
 import type { UniformValue } from "../../../types";
 
-import type { PolygonBaseMutates, PolygonBaseRefs, PolygonBaseState } from "./types";
+import type {
+  PolygonBaseMutates,
+  PolygonBaseRefs,
+  PolygonBaseState,
+} from "./types";
 
 /**
  * Default refs with initial values.
