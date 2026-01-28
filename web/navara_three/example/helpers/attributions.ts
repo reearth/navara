@@ -154,7 +154,9 @@ function createContent(attributions: UniqueAttribution[]): HTMLDivElement {
  * showAttributions([TILES_3D_DATASETS.plateauChiyoda, TILES_3D_DATASETS.plateauChuo]);
  * ```
  */
-export function showAttributions(datasets: Dataset[]): void {
+export function showAttributions(
+  datasets: Dataset[],
+): HTMLDivElement | undefined {
   // Remove existing container if present
   if (attributionContainer) {
     attributionContainer.remove();
@@ -194,6 +196,8 @@ export function showAttributions(datasets: Dataset[]): void {
   // Add to document
   document.body.appendChild(container);
   attributionContainer = container;
+
+  return content;
 }
 
 /**
