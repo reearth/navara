@@ -3,7 +3,6 @@ import { PointMesh as NavaraPointMesh } from "@navara/engine";
 import type { BufferLoader } from "..";
 import type { ViewContext } from "../../core";
 import { InstancedPointMesh, InstancedSpriteMesh } from "../../mesh";
-import { FEATURE_RENDER_ORDER } from "../../renderOrder";
 
 export async function renderPoint(
   m: NavaraPointMesh,
@@ -18,7 +17,6 @@ export async function renderPoint(
   // });
   // return mesh;
 
-  console.log("Rendering point as sprite mesh");
   // For testing, use InstancedSpriteMesh
   // TODO: choose based on some condition (instanced point vs instanced sprite (true gpu instancing or not))
   const mesh = new InstancedSpriteMesh(m, buf);
@@ -26,11 +24,10 @@ export async function renderPoint(
 }
 
 export function processPointChanged(
-  obj: InstancedPointMesh,
+  obj: InstancedSpriteMesh,
   m: NavaraPointMesh,
   buf: BufferLoader,
   active: boolean,
 ) {
-  console.log("Processing point change");
-  obj._update(m, buf, active);
+  obj._update(active);
 }

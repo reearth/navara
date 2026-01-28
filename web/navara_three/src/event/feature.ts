@@ -18,6 +18,7 @@ import type { LayersManager } from "../layersManager";
 import {
   InstancedBillboardMesh,
   InstancedPointMesh,
+  InstancedSpriteMesh,
   InstancedTextMesh,
   ModelMesh,
   PolygonMesh,
@@ -309,7 +310,7 @@ export async function processRenderableFeatureChanged(
   // Capture visibility before material updates to detect changes
   const prevVisible = obj.visible;
 
-  if (obj instanceof InstancedPointMesh && point) {
+  if (obj instanceof InstancedSpriteMesh && point) {
     processPointChanged(obj, point, buf, active);
   }
   if (obj instanceof InstancedBillboardMesh && billboard) {
