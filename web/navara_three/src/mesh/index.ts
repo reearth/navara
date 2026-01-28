@@ -22,3 +22,4 @@ export * from "./smoothLine";
 export * from "./spherePoints";
 export * from "./pickableMesh";
 export * from "./rtcRteHelper";
+export * from "./instancedSprite";
