@@ -168,15 +168,15 @@ export async function processRenderableFeatureAdded(
 
   obj.renderOrder = FEATURE_RENDER_ORDER;
 
-  if (!obj.userData.draped) {
+  if (obj instanceof PolygonMesh ? !obj.clampToGround : !obj.userData.draped) {
     scenes.mrt.add(obj);
   }
 
   meshes.set(id, obj);
 
   if (
-    (obj instanceof PolygonMesh || obj instanceof PolylineMesh) &&
-    obj.userData.draped &&
+    ((obj instanceof PolygonMesh && obj.clampToGround) ||
+      (obj instanceof PolylineMesh && obj.userData.draped)) &&
     tileHandle
   ) {
     obj.addEventListener("removedFromWorld", () => {
@@ -187,7 +187,7 @@ export async function processRenderableFeatureAdded(
     });
   }
 
-  if (obj instanceof PolygonMesh && obj.userData.draped && !tileHandle) {
+  if (obj instanceof PolygonMesh && obj.clampToGround && !tileHandle) {
     drapedFeatureMaterials.set(id, obj.material);
     obj.addEventListener("removedFromWorld", () => {
       drapedFeatureMaterials.delete(id);
@@ -335,10 +335,13 @@ export async function processRenderableFeatureChanged(
   // Handle a draped polygon mesh and polyline mesh
   if (
     (obj instanceof PolygonMesh || obj instanceof PolylineMesh) &&
-    obj.userData.draped != null &&
     tileHandle
   ) {
-    if (obj.userData.draped) {
+    if (
+      (obj instanceof PolygonMesh && obj.clampToGround) ||
+      // TODO: Remove `userData`
+      obj.userData.draped
+    ) {
       if (obj.visible) {
         texturizedSceneByTileCoordinates.add(tileHandle, layerId, obj as Mesh);
       }
@@ -347,12 +350,8 @@ export async function processRenderableFeatureChanged(
     }
     texturizedSceneByTileCoordinates.setNeedsUpdate(tileHandle, true);
   }
-  if (
-    obj instanceof PolygonMesh &&
-    obj.userData.draped != null &&
-    !tileHandle
-  ) {
-    if (obj.userData.draped) {
+  if (obj instanceof PolygonMesh && !tileHandle) {
+    if (obj.clampToGround) {
       if (!drapedFeatureMaterials.has(id)) {
         obj.material.stencilWrite = false;
         obj.material.depthWrite = false;
