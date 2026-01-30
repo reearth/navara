@@ -4,24 +4,28 @@ import instancedSpriteFragmentShader from "@shaders/glsl/instancedSprite.frag.gl
 import type { BufferLoader } from "../event";
 import type { ViewContext } from "../core";
 import { DoubleSide, InstancedBufferAttribute, InstancedBufferGeometry, Mesh, ShaderMaterial, BufferAttribute, Vector3, DataArrayTexture, UnsignedByteType, RGBAFormat, LinearFilter } from "three";
-import { IMAGE_LOADER, TEXTURE_LOADER } from "../event/loaders";
+import { TEXTURE_LOADER } from "../event/loaders";
 
+// TODOs:
+// - handle RTE
+// - handle depth offset
+// - reenable depth test ...
+// - handle style evalutator stuff - see notion page
+// - handle batch ids and picking (if it was working before)...
+// - make sure to cover all what was the old point/billboard mesh doing
+// - handle choosing between using new sprite mesh or old point mesh based on conditions
+// - handle selective layer stuff
+// - handle layer material, user data, color, height, ... 
+// - make sure texture array and layer attribute are only created for billboard case
+// - optimize shader if needed
+// - cleanup code
+// - test performance and correctness
 
 export type InstancedSpriteOptions = {
     renderOrder?: number;
     viewContext: ViewContext;
     layerId: string;
 };
-
-// dummy data for now: lat long of some points
-// convert these lat long to wgs84 x,y for testing
-const dummyData = [
-    -3.18827, 55.95325,
-    -1.86168, 53.72128,
-    -2.09818, 53.71589,
-    -2.10975, 53.71997,
-    -2.09666, 53.714,
-];
 
 export class InstancedSpriteMesh extends Mesh {
     constructor(
