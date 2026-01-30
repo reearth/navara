@@ -21,7 +21,6 @@ import {
   BufferGeometry,
   Color,
   NearestFilter,
-  Material,
   Mesh,
   MeshBasicMaterial,
   MeshLambertMaterial,
@@ -58,7 +57,6 @@ import type { MeshCache, TileMapByHandle } from "../type";
 import type { CommonUniforms } from "../uniforms";
 import { createReplacer } from "../utils";
 
-import { BatchedFeatureMesh } from "./batchedFeature";
 import type { PickableMesh } from "./pickableMesh";
 
 export type TileMaterial = MeshBasicMaterial | MeshLambertMaterial;
@@ -1031,26 +1029,17 @@ if (uPickable > 0.) {
       m.userData.shows.value[lastIdx] = visible ? 1 : 0;
 
       const mesh = this.texturizedScenes.children[sceneIdx].children[0];
-      if (mesh instanceof Mesh && mesh.material instanceof Material) {
-        m.userData.reflectivities.value[lastIdx] =
-          mesh.material.userData.reflectivity?.value ?? 0;
-        m.userData.roughnesses.value[lastIdx] =
-          mesh.material.userData.roughness?.value ?? 0;
-        if (mesh instanceof PolygonMesh) {
-          m.userData.waters.value[lastIdx] = mesh.water;
-          m.userData.waterScaleNormals.value[lastIdx] =
-            mesh.material.userData.waterScaleNormal?.value ?? 0;
-          m.userData.waterSpeeds.value[lastIdx] =
-            mesh.material.userData.waterSpeed?.value ?? 0;
-          m.userData.shininesses.value[lastIdx] =
-            mesh.material.userData.shininess?.value ?? 0;
-          m.userData.specularStrengths.value[lastIdx] =
-            mesh.material.userData.specularStrength?.value ?? 0;
-          m.userData.applyWaterNormals.value[lastIdx] =
-            mesh.material.userData.applyWaterNormal?.value ?? 0;
-          m.userData.speculars.value[lastIdx] =
-            mesh.material.userData.specular?.value ?? false;
-        }
+      if (mesh instanceof PolygonMesh) {
+        // Use PolygonMesh getters that expose material enhancer state
+        m.userData.reflectivities.value[lastIdx] = mesh.reflectivity;
+        m.userData.roughnesses.value[lastIdx] = mesh.roughness;
+        m.userData.waters.value[lastIdx] = mesh.water;
+        m.userData.waterScaleNormals.value[lastIdx] = mesh.waterScaleNormal;
+        m.userData.waterSpeeds.value[lastIdx] = mesh.waterSpeed;
+        m.userData.shininesses.value[lastIdx] = mesh.shininess;
+        m.userData.specularStrengths.value[lastIdx] = mesh.specularStrength;
+        m.userData.applyWaterNormals.value[lastIdx] = mesh.applyWaterNormal;
+        m.userData.speculars.value[lastIdx] = mesh.specular;
       }
     }
   }
@@ -1353,14 +1342,6 @@ if (uPickable > 0.) {
       this.material.color.setHex(this.userData.tileOrigColor);
     }
     this.material.userData.uPickable.value = pickable ? 1 : 0;
-
-    for (const texturizedScene of this.texturizedScenes.children) {
-      texturizedScene.traverse((obj) => {
-        if (obj instanceof BatchedFeatureMesh) {
-          obj._setPickable(pickable);
-        }
-      });
-    }
   }
 
   dispose(

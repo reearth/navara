@@ -16,14 +16,11 @@ export async function renderPolygon(
   viewContext: ViewContext,
   layerId: string,
 ) {
-  return new PolygonMesh().init(
+  return new PolygonMesh(viewContext, layerId, uniforms).init(
     mesh,
     buf,
-    uniforms,
     tileHandle,
     viewEvents,
-    viewContext,
-    layerId,
   );
 }
 

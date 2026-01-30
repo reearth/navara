@@ -7,6 +7,8 @@ import { Color } from "@navara/three";
 import { Layer } from "@navara/three_react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import type { FeatureEvaluator } from "../../../src/evaluations";
+
 import { czmlToGeoJSON, type GeoJSONFC } from "./czml";
 
 export type FloodLayerProps = {
@@ -185,8 +187,10 @@ export function FloodLayer({
       });
     };
     // Attach per-feature evaluator: set color + show based on availability
-    layer.on("featureUpdated", onUpdate);
-    return () => layer.off("featureUpdated", onUpdate);
+    const handler = ({ evaluator }: { evaluator: FeatureEvaluator }) =>
+      onUpdate(evaluator);
+    layer.on("featureUpdated", handler);
+    return () => layer.off("featureUpdated", handler);
   };
 
   const layerDesc = useMemo<LayerDescription | null>(() => {

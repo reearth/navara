@@ -49,7 +49,7 @@ export async function initNavaraApi() {
 
 /**
  * Converts geodetic coordinates (longitude, latitude, height) to a Cartesian Vector3 in ECEF coordinates.
- * @param lle - Geodetic coordinates (lng, lat, height in meters)
+ * @param lle - Geodetic coordinates (lng in radians, lat in radians, height in meters)
  * @returns Cartesian Vector3 in Earth-Centered Earth-Fixed (ECEF) coordinates
  */
 export function geodeticToVector3(lle: LatLngHeight): Vector3 {
@@ -62,7 +62,7 @@ export function geodeticToVector3(lle: LatLngHeight): Vector3 {
 /**
  * Converts a Cartesian Vector3 in ECEF coordinates to geodetic coordinates.
  * @param xyz - Cartesian Vector3 in Earth-Centered Earth-Fixed (ECEF) coordinates
- * @returns Geodetic coordinates (lng, lat, height in meters)
+ * @returns Geodetic coordinates (lng in radians, lat in radians, height in meters)
  */
 export function vector3ToGeodetic(xyz: Vector3): LatLngHeight {
   const vec3 = new Vec3(xyz.x, xyz.y, xyz.z);
@@ -92,7 +92,7 @@ export function radianToDegree(radian: number): number {
 
 /**
  * Converts screen coordinates to world coordinates by raycasting against the WGS84 ellipsoid.
- * @param window - Window configuration with width, height, and pixel_ratio
+ * @param window - Window configuration with width, height, and pixelRatio
  * @param camera - Three.js PerspectiveCamera
  * @param vec2 - Screen coordinates in CSS pixels (same as MouseEvent clientX/clientY)
  * @returns World position Vector3 in ECEF coordinates, or undefined if no intersection with ellipsoid
@@ -105,10 +105,10 @@ export function convertScreenToWorld(
   const window = new Window(
     windowObject.width,
     windowObject.height,
-    windowObject.pixel_ratio,
+    windowObject.pixelRatio,
   );
-  window.width = window.width * window.pixel_ratio;
-  window.height = window.height * window.pixel_ratio;
+  window.width = window.width * window.pixelRatio;
+  window.height = window.height * window.pixelRatio;
 
   const transform = new Transform(
     camera.position.x,
@@ -148,7 +148,7 @@ export function convertScreenToWorld(
 
 /**
  * Computes the surface normal vector at a geodetic position on the WGS84 ellipsoid.
- * @param lle - Geodetic coordinates (lng, lat, height)
+ * @param lle - Geodetic coordinates (lng in radians, lat in radians, height in meters)
  * @returns Unit normal vector pointing outward from the ellipsoid surface
  */
 export function geodeticSurfaceNormal(lle: LatLngHeight): Vector3 {
@@ -208,7 +208,7 @@ export function northWestUpToFixedFrame(origin: Vector3): Matrix4 {
 
 /**
  * Converts world coordinates to screen coordinates.
- * @param window - Window configuration with width, height, and pixel_ratio
+ * @param window - Window configuration with width, height, and pixelRatio
  * @param camera - Three.js PerspectiveCamera
  * @param worldPos - World position Vector3 in ECEF coordinates
  * @returns Screen coordinates in CSS pixels, or undefined if behind camera
@@ -221,10 +221,10 @@ export function convertWorldToScreen(
   const window = new Window(
     windowObject.width,
     windowObject.height,
-    windowObject.pixel_ratio,
+    windowObject.pixelRatio,
   );
-  window.width = window.width * window.pixel_ratio;
-  window.height = window.height * window.pixel_ratio;
+  window.width = window.width * window.pixelRatio;
+  window.height = window.height * window.pixelRatio;
 
   const transform = new Transform(
     camera.position.x,

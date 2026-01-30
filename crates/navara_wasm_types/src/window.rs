@@ -5,6 +5,7 @@ use wasm_bindgen::prelude::*;
 pub struct Window {
     pub width: FloatType,
     pub height: FloatType,
+    #[wasm_bindgen(js_name = pixelRatio)]
     pub pixel_ratio: FloatType,
 }
 

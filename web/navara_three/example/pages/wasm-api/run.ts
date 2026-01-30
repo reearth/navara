@@ -260,7 +260,7 @@ const placeOneBall = (
       sphere: {
         radius: 1,
         color: new Color().setHex(color),
-        emissiveColor: 0x072534,
+        emissiveColor: new Color().setHex(0x072534),
       },
       position: { x: pos.x, y: pos.y, z: pos.z },
     });
@@ -574,7 +574,7 @@ const testRayPlane = (view: ThreeView) => {
       const win: Window = {
         width: screenSize.x,
         height: screenSize.y,
-        pixel_ratio: pixelRatio,
+        pixelRatio: pixelRatio,
       };
       const ray = getPickRay(win, view.camera.raw, new Vector2(x, y));
 
@@ -593,7 +593,7 @@ const testRayPlane = (view: ThreeView) => {
       const win: Window = {
         width: screenSize.x,
         height: screenSize.y,
-        pixel_ratio: pixelRatio,
+        pixelRatio: pixelRatio,
       };
       const ray = getPickRay(win, view.camera.raw, new Vector2(x, y));
       const rayDir = ray.direction.clone();
@@ -923,7 +923,7 @@ const updatePopup = () => {
     const win: Window = {
       width: screenSize.x,
       height: screenSize.y,
-      pixel_ratio: pixelRatio,
+      pixelRatio: pixelRatio,
     };
     const screenPos = convertWorldToScreen(win, gView.camera.raw, gPickedPos);
 

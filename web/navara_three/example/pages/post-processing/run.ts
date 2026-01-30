@@ -1,4 +1,5 @@
 import ThreeView, { type Layer } from "@navara/three";
+import { Color } from "three";
 
 import { showAttributions } from "../../helpers/attributions";
 import {
@@ -54,7 +55,7 @@ export const run = async (view: ThreeView) => {
   const postEffectOutline = view.addLayer({
     type: "effect",
     selectiveOutline: {
-      color: 0xff0000,
+      color: new Color().setHex(0xff0000),
       thickness: 2.0,
       edgeStrength: 1.0,
       debugViews: false,

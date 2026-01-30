@@ -265,6 +265,7 @@ pub struct TextMaterial {
     pub offset_depth: Option<bool>,
     #[wasm_bindgen(getter_with_clone)]
     pub text: Option<String>,
+    /// **Experimental*:
     /// Specify URL for font file. Supported files are ttf, otf and woff. Default is `Roboto`.
     /// Please note that this API might be replaced with another API in the future, since it loads a large font file at once.
     #[wasm_bindgen(getter_with_clone)]
