@@ -517,10 +517,9 @@ pub fn activate_all_renderable_features(
         .and_then(|fs| fs.iter().map(|f| f.0).collect::<Option<Vec<_>>>())
         .map(|ids| {
             for id in ids {
-                let Some(mut r) = renderable_features.get_mut(id).ok() else {
-                    unreachable!("It must be set");
+                if let Ok(mut r) = renderable_features.get_mut(id) {
+                    r.activate(active);
                 };
-                r.activate(active);
             }
         });
 }
