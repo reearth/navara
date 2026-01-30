@@ -74,6 +74,7 @@ export class InstancedSpriteMesh extends Mesh {
         // const layerBuffer = new Float32Array(instanceCount);
 
         for (let i = 0; i < instanceCount; i++) {
+            // TODO: get scale from user data
             scaleBuffer[i] = 10000.0;
             // layerBuffer[i] = Math.floor(Math.random() * depth); // Random sprite
         }
@@ -91,7 +92,6 @@ export class InstancedSpriteMesh extends Mesh {
             vertexShader: instancedSpriteVertexShader,
             fragmentShader: instancedSpriteFragmentShader,
             side: DoubleSide,
-            // transparent: true
         });
 
         // disable depth test for now
