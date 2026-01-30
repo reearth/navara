@@ -146,6 +146,7 @@ export class InstancedSpriteMesh extends Mesh {
 
         for (let i = 0; i < instanceCount; i++) {
             scaleBuffer[i] = 100000.0;
+            console.log("position:", positionsInfo.position[i * positionsInfo.positionSize], positionsInfo.position[i * positionsInfo.positionSize + 1], positionsInfo.position[i * positionsInfo.positionSize + 2]);
             // layerBuffer[i] = Math.floor(Math.random() * depth); // Random sprite
         }
 
