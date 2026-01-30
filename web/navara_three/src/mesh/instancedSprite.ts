@@ -1,8 +1,9 @@
 import { PointMesh as NavaraPointMesh } from "@navara/engine";
-import { degreeToRadian, geodeticToVector3 } from "@navara/three_api";
+import instancedSpriteVertexShader from "@shaders/glsl/instancedSprite.vert.glsl";
+import instancedSpriteFragmentShader from "@shaders/glsl/instancedSprite.frag.glsl";
 import type { BufferLoader } from "../event";
 import type { ViewContext } from "../core";
-import { BufferGeometry, DoubleSide, InstancedBufferAttribute, InstancedBufferGeometry, Mesh, ShaderMaterial, BufferAttribute, Material, Vector3 } from "three";
+import { DoubleSide, InstancedBufferAttribute, InstancedBufferGeometry, Mesh, ShaderMaterial, BufferAttribute, Vector3 } from "three";
 
 
 export type InstancedSpriteOptions = {
@@ -28,6 +29,7 @@ export class InstancedSpriteMesh extends Mesh {
         // options: InstancedSpriteOptions,
     ) {
         super();
+        // TODO: also handle RTE
         const positionsInfo = this.extractPositions(m, buf);
         if (!positionsInfo.position) {
             console.warn("No position data found for InstancedSpriteMesh");
@@ -60,87 +62,6 @@ export class InstancedSpriteMesh extends Mesh {
 
         const instanceCount = positionsInfo.nPositions;
 
-        // Create the Custom Material
-        const material: ShaderMaterial = new ShaderMaterial({
-            uniforms: {
-                // uTexture: { value: textureArray },
-                uRTCCenter: { value: rtcCenter }
-            },
-            vertexShader: `                
-                attribute vec3 instancePosition; 
-                attribute float instanceScale;
-                // attribute float instanceLayer; // Which texture layer to use
-                
-                varying vec2 vUv;
-                // varying float vLayer;
-
-                uniform vec3 uRTCCenter;
-
-                void main() {
-                vUv = uv;
-                // vLayer = instanceLayer;
-
-                // --- Billboarding Logic ---
-                
-                vec4 centerMV = viewMatrix * vec4(uRTCCenter, 1.0);
-                mat4 viewMatrixRTC = viewMatrix;
-                viewMatrixRTC[3] = vec4(centerMV.xyz, 1.0);
-
-                // 1. Get the center of the instance in View Space
-                vec4 mvPosition = viewMatrixRTC * vec4(instancePosition, 1.0);
-                
-                // 2. Add the vertex offset (scaling included)
-                // This makes it always face the camera
-                mvPosition.xy += (position.xy * instanceScale);
-
-                // 3. Project to screen
-                gl_Position = projectionMatrix * mvPosition;
-                }
-            `,
-            fragmentShader: `
-                // precision highp sampler2DArray; // Important for WebGL 2
-
-                #ifndef USE_SHADOWMAP_DEPTH
-                  layout(location = 1) out vec4 outputBuffer1;
-                #endif
-
-                // uniform sampler2DArray uTexture;
-
-                varying vec2 vUv;
-                // varying float vLayer;
-
-                // Pack normal to vec2 for MRT
-                vec2 packNormalToVec2(vec3 normal) {
-                  return normal.xy * 0.5 + 0.5;
-                }
-
-                void main() {
-                // Calculate screen-space normal for MRT compatibility
-                vec3 fdx = dFdx(gl_FragCoord.xyz);
-                vec3 fdy = dFdy(gl_FragCoord.xyz);
-                vec3 normal = normalize(cross(fdx, fdy));
-                if (normal.z < 0.0) normal = -normal;
-
-                // Sample the specific layer from the Texture Array
-                // vec4 color = texture(uTexture, vec3(vUv, vLayer));
-                vec4 color = vec4(1.0, 0.0, 0.0, 1.0); // Placeholder color
-
-                // if (color.a < 0.1) discard; // Alpha test
-                gl_FragColor = color;
-
-                #ifndef USE_SHADOWMAP_DEPTH
-                  outputBuffer1 = vec4(packNormalToVec2(normal), 0.0, 0.0);
-                #endif
-                }
-            `,
-            side: DoubleSide,
-            // transparent: true
-        });
-
-        // disable depth test for now
-        // TODO: consider depth test with offset
-        material.depthTest = false;
-
         // Create the Instanced Mesh
         // We use InstancedBufferGeometry to inject our custom attributes
         const instancedGeometry = new InstancedBufferGeometry();
@@ -154,7 +75,6 @@ export class InstancedSpriteMesh extends Mesh {
 
         for (let i = 0; i < instanceCount; i++) {
             scaleBuffer[i] = 10000.0;
-            console.log("position:", positionsInfo.position[i * positionsInfo.positionSize], positionsInfo.position[i * positionsInfo.positionSize + 1], positionsInfo.position[i * positionsInfo.positionSize + 2]);
             // layerBuffer[i] = Math.floor(Math.random() * depth); // Random sprite
         }
 
@@ -162,10 +82,25 @@ export class InstancedSpriteMesh extends Mesh {
         instancedGeometry.setAttribute('instanceScale', new InstancedBufferAttribute(scaleBuffer, 1));
         // instancedGeometry.setAttribute('instanceLayer', new InstancedBufferAttribute(layerBuffer, 1));
 
+        // Create the Custom Material
+        const material: ShaderMaterial = new ShaderMaterial({
+            uniforms: {
+                // uTexture: { value: textureArray },
+                uRTCCenter: { value: rtcCenter }
+            },
+            vertexShader: instancedSpriteVertexShader,
+            fragmentShader: instancedSpriteFragmentShader,
+            side: DoubleSide,
+            // transparent: true
+        });
+
+        // disable depth test for now
+        // TODO: consider depth test with offset
+        material.depthTest = false;
+
         // Final Mesh
         this.geometry = instancedGeometry;
         this.material = material;
-        this.visible = true;
         this.frustumCulled = false; // Disable since bounding box doesn't account for instance positions
         console.log("InstancedSpriteMesh created with", instanceCount, "instances");
     }
