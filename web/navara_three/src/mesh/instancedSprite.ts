@@ -83,7 +83,7 @@ export class InstancedSpriteMesh extends Mesh {
                 
                 // 2. Add the vertex offset (scaling included)
                 // This makes it always face the camera
-                mvPosition.xyz += position * instanceScale;
+                mvPosition.xy += (position.xy * instanceScale);
 
                 // 3. Project to screen
                 gl_Position = projectionMatrix * mvPosition;
