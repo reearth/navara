@@ -148,6 +148,9 @@ pub fn traverse_tile(
     let is_renderable = is_rendered_last_frame || is_tile_ready;
 
     if meets_sse || meets_sse_ancestors {
+        // The overscaled tile means that the tiles reached the max zoom level,
+        // so there is no next tile.
+        // The tile itself is upscaled without fetching new tile.
         if is_overscaled {
             return TraversalResult::Overscaled;
         }
@@ -417,10 +420,6 @@ pub fn traverse_tile(
                 }
             }
         }
-    }
-
-    if is_overscaled {
-        return TraversalResult::Overscaled;
     }
 
     if is_tile_failed {

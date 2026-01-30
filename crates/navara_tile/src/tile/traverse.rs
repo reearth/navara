@@ -12,7 +12,7 @@ use navara_occluder::ellipsoidal_occluder::EllipsoidalOccluder;
 
 use navara_camera::CameraFrustum;
 use navara_tile_component::{
-    RasterTile, RasterTileQuadtree, Tile, TileHandle, TileMeshMarker,
+    RasterDEMData, RasterTile, RasterTileQuadtree, Tile, TileHandle, TileMeshMarker,
     TileTerrainDataRequesterQuery, TileTextureFragmentQuery,
 };
 use navara_window::Window;
@@ -25,7 +25,7 @@ use super::{
     tile_cache_manager::{RenderedTileCache, TileCacheManager},
 };
 
-use navara_layer::{TerrainLayer, TilesLayer};
+use navara_layer::{TerrainDataType, TerrainLayer, TilesLayer};
 
 // This process works in the following steps.
 // 1. Check if the AABB of the tile is within the camera's frustum.(Frustum culling)
@@ -152,6 +152,12 @@ pub fn traverse_tile(
         );
     }
 
+    // This should not create the unnecessary terrain data, since `is_upsamplable` becomes `true`
+    // only when the parent tile has been rendered.
+    if tile_ready_state.is_upsamplable {
+        prepare_upsamplable_terrain_data(qt, terrain_layer, handle);
+    }
+
     if meets_sse || meets_sse_ancestors {
         if !meets_sse_ancestors {
             prepare_tile_resource(
@@ -180,6 +186,7 @@ pub fn traverse_tile(
             if meets_sse_ancestors && !tc.is_rendered_tile_activated(&handle, meshes) {
                 return TraversalResult::NotFound;
             }
+
             return TraversalResult::TileRendered;
         }
 
@@ -433,6 +440,12 @@ pub fn prepare_tile_resource(
     priority: Priority,
 ) {
     let tile = qt.qt.get_mut(handle).unwrap();
+
+    let should_upsample = terrain_layer.is_some_and(|l| l.should_upsample(tile.coords.z));
+    if should_upsample {
+        return;
+    }
+
     if matches!(terrain_layer, Some(l) if l.is_over_min_zoom(tile.coords.z)) {
         request_terrain_data(
             commands,
@@ -458,6 +471,36 @@ pub fn prepare_tile_resource(
     if !tc.requested_tile_caches.contains(&handle) {
         tc.requested_tile_caches.insert(handle);
     }
+}
+
+fn prepare_upsamplable_terrain_data(
+    qt: &mut RasterTileQuadtree,
+    terrain_layer: &Option<&TerrainLayer>,
+    handle: TileHandle,
+) {
+    let Some((terrain_type, terrain_appearance)) =
+        terrain_layer.map(|l| (&l.terrain_type, &l.appearance))
+    else {
+        return;
+    };
+
+    let Some(elevation_decoder) = terrain_appearance
+        .as_ref()
+        .and_then(|t| t.elevation_decoder())
+    else {
+        return;
+    };
+
+    let terrain_data = match terrain_type {
+        TerrainDataType::RasterDEM => RasterDEMData::new(*elevation_decoder),
+        // TODO: Support quantized-mesh
+        TerrainDataType::QuantizedMesh => unimplemented!(), // quantized-mesh
+        TerrainDataType::Ellipsoid | TerrainDataType::Unknown => unreachable!(),
+    };
+
+    let tile = qt.qt.get_mut(handle).unwrap();
+
+    tile.terrain_data = Some(Box::new(terrain_data));
 }
 
 fn begine_traverse_tile(
