@@ -313,7 +313,7 @@ export async function processRenderableFeatureChanged(
   if (obj instanceof InstancedSpriteMesh && point) {
     processPointChanged(obj, point, buf, active);
   }
-  if (obj instanceof InstancedBillboardMesh && billboard) {
+  if (obj instanceof InstancedSpriteMesh && billboard) {
     await processBillboardChanged(obj, billboard, buf, active);
   }
   if (obj instanceof InstancedTextMesh && text) {

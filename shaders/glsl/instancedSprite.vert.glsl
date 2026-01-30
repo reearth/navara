@@ -1,15 +1,15 @@
 attribute vec3 instancePosition; 
 attribute float instanceScale;
-// attribute float instanceLayer; // Which texture layer to use
+attribute float instanceLayer; // Which texture layer to use
 
 varying vec2 vUv;
-// varying float vLayer;
+varying float vLayer;
 
 uniform vec3 uRTCCenter;
 
 void main() {
     vUv = uv;
-    // vLayer = instanceLayer;
+    vLayer = instanceLayer;
 
     // Adjust view matrix for RTC
     vec4 centerMV = viewMatrix * vec4(uRTCCenter, 1.0);

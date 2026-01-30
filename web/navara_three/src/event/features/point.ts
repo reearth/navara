@@ -20,6 +20,7 @@ export async function renderPoint(
   // For testing, use InstancedSpriteMesh
   // TODO: choose based on some condition (instanced point vs instanced sprite (true gpu instancing or not))
   const mesh = new InstancedSpriteMesh(m, buf);
+  await mesh._init(m, buf);
   return mesh;
 }
 

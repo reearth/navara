@@ -1,14 +1,14 @@
 
-// precision highp sampler2DArray; // Important for WebGL 2
+precision highp sampler2DArray; // Important for WebGL 2
 
 #ifndef USE_SHADOWMAP_DEPTH
     layout(location = 1) out vec4 outputBuffer1;
 #endif
 
-// uniform sampler2DArray uTexture;
+uniform sampler2DArray uTexture;
 
 varying vec2 vUv;
-// varying float vLayer;
+varying float vLayer;
 
 #ifndef USE_SHADOWMAP_DEPTH
     // Pack normal to vec2 for MRT
@@ -28,10 +28,10 @@ varying vec2 vUv;
 
 void main() {
     // Sample the specific layer from the Texture Array
-    // vec4 color = texture(uTexture, vec3(vUv, vLayer));
-    vec4 color = vec4(1.0, 0.0, 0.0, 1.0); // Placeholder color
+    vec4 color = texture(uTexture, vec3(vUv, vLayer));
+    // vec4 color = vec4(1.0, 0.0, 0.0, 1.0); // Placeholder color
 
-    // if (color.a < 0.1) discard; // Alpha test
+    if (color.a < 0.1) discard; // Alpha test
     gl_FragColor = color;
 
     #ifndef USE_SHADOWMAP_DEPTH
