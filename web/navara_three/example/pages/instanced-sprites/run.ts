@@ -89,11 +89,22 @@ export const run = async (view: ThreeView) => {
     data: {
       url: VECTOR_DATASETS.gsiExperimentalVector.url,
     },
-    point: {
-      size: 0.01,
+    // point: {
+    //   size: 0.01,
+    //   scaleByDistance: true,
+    //   clampToGround: true,
+    //   color: new Color().setStyle("#ff0000"),
+    // },
+    billboard: {
+      color: new Color().setStyle("#ffffff"),
+      size: 0.05,
+      height: 1,
       scaleByDistance: true,
       clampToGround: true,
-      color: new Color().setStyle("#ff0000"),
+      depthTest: true,
+      transparent: false,
+      url: "/example.png",
+      offsetDepth: false,
     },
     vectorTile: {
       maxZoom: 16,

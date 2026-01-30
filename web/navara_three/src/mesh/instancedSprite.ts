@@ -3,7 +3,7 @@ import instancedSpriteVertexShader from "@shaders/glsl/instancedSprite.vert.glsl
 import instancedSpriteFragmentShader from "@shaders/glsl/instancedSprite.frag.glsl";
 import type { BufferLoader } from "../event";
 import type { ViewContext } from "../core";
-import { DoubleSide, InstancedBufferAttribute, InstancedBufferGeometry, Mesh, ShaderMaterial, BufferAttribute, Vector3, DataArrayTexture, UnsignedByteType, RGBAFormat } from "three";
+import { DoubleSide, InstancedBufferAttribute, InstancedBufferGeometry, Mesh, ShaderMaterial, BufferAttribute, Vector3, DataArrayTexture, UnsignedByteType, RGBAFormat, LinearFilter } from "three";
 import { IMAGE_LOADER, TEXTURE_LOADER } from "../event/loaders";
 
 
@@ -104,6 +104,8 @@ export class InstancedSpriteMesh extends Mesh {
                 textureArray.type = UnsignedByteType;
                 textureArray.generateMipmaps = true;
                 textureArray.needsUpdate = true;
+                textureArray.minFilter = LinearFilter
+                textureArray.magFilter = LinearFilter
 
                 material.uniforms.uTexture = { value: textureArray };
                 instancedGeometry.setAttribute('instanceLayer', new InstancedBufferAttribute(layerBuffer, 1));
