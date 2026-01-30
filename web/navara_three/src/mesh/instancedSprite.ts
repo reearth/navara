@@ -2,7 +2,7 @@ import { PointMesh as NavaraPointMesh } from "@navara/engine";
 import { degreeToRadian, geodeticToVector3 } from "@navara/three_api";
 import type { BufferLoader } from "../event";
 import type { ViewContext } from "../core";
-import { BufferGeometry, DoubleSide, InstancedBufferAttribute, InstancedBufferGeometry, Mesh, ShaderMaterial, BufferAttribute, Material } from "three";
+import { BufferGeometry, DoubleSide, InstancedBufferAttribute, InstancedBufferGeometry, Mesh, ShaderMaterial, BufferAttribute, Material, Vector3 } from "three";
 
 
 export type InstancedSpriteOptions = {
@@ -33,10 +33,12 @@ export class InstancedSpriteMesh extends Mesh {
             console.warn("No position data found for InstancedSpriteMesh");
             return;
         }
-        this.init(positionsInfo);
+
+        const rtcCenter = new Vector3(m.transform.tx, m.transform.ty, m.transform.tz);
+        this.init(positionsInfo, rtcCenter);
     }
 
-    private init(positionsInfo: { position: Float32Array; positionSize: number; nPositions: number }) {
+    private init(positionsInfo: { position: Float32Array; positionSize: number; nPositions: number }, rtcCenter: Vector3) {
         // Setup Geometry & Instances
         const vertices = new Float32Array([
             -0.5, -0.5, 0.0, // v0
@@ -62,7 +64,7 @@ export class InstancedSpriteMesh extends Mesh {
         const material: ShaderMaterial = new ShaderMaterial({
             uniforms: {
                 // uTexture: { value: textureArray },
-                // uTime: { value: 0 }
+                uRTCCenter: { value: rtcCenter }
             },
             vertexShader: `                
                 attribute vec3 instancePosition; 
@@ -72,14 +74,20 @@ export class InstancedSpriteMesh extends Mesh {
                 varying vec2 vUv;
                 // varying float vLayer;
 
+                uniform vec3 uRTCCenter;
+
                 void main() {
                 vUv = uv;
                 // vLayer = instanceLayer;
 
                 // --- Billboarding Logic ---
                 
+                vec4 centerMV = viewMatrix * vec4(uRTCCenter, 1.0);
+                mat4 viewMatrixRTC = viewMatrix;
+                viewMatrixRTC[3] = vec4(centerMV.xyz, 1.0);
+
                 // 1. Get the center of the instance in View Space
-                vec4 mvPosition = viewMatrix * vec4(instancePosition, 1.0);
+                vec4 mvPosition = viewMatrixRTC * vec4(instancePosition, 1.0);
                 
                 // 2. Add the vertex offset (scaling included)
                 // This makes it always face the camera
@@ -145,7 +153,7 @@ export class InstancedSpriteMesh extends Mesh {
         // const layerBuffer = new Float32Array(instanceCount);
 
         for (let i = 0; i < instanceCount; i++) {
-            scaleBuffer[i] = 100000.0;
+            scaleBuffer[i] = 10000.0;
             console.log("position:", positionsInfo.position[i * positionsInfo.positionSize], positionsInfo.position[i * positionsInfo.positionSize + 1], positionsInfo.position[i * positionsInfo.positionSize + 2]);
             // layerBuffer[i] = Math.floor(Math.random() * depth); // Random sprite
         }
