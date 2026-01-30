@@ -20,7 +20,11 @@ export async function renderBillboard(
   // });
   // await mesh._init(m, buf);
 
-  const mesh = new InstancedSpriteMesh(m, buf);
+  const mesh = new InstancedSpriteMesh({
+    renderOrder: FEATURE_RENDER_ORDER,
+    viewContext,
+    layerId,
+  });
   await mesh._init(m, buf);
 
   return mesh;

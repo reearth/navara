@@ -25,9 +25,7 @@ const dummyData = [
 
 export class InstancedSpriteMesh extends Mesh {
     constructor(
-        m: NavaraPointMesh | NavaraBillboardMesh,
-        buf: BufferLoader,
-        // options: InstancedSpriteOptions,
+        options: InstancedSpriteOptions,
     ) {
         super();
     }
