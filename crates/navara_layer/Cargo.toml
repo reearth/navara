@@ -11,3 +11,4 @@ navara_core.workspace = true
 navara_math.workspace = true
 navara_parser.workspace = true
 navara_material.workspace = true
+rustc-hash.workspace = true

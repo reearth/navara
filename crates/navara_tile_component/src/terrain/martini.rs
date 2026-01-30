@@ -1,6 +1,5 @@
-use std::collections::HashMap;
-
 use bevy_ecs::{component::Component, entity::Entity, prelude::Resource};
+use fxhash::FxHashMap;
 
 #[derive(Component)]
 pub struct MartiniComponent {
@@ -30,7 +29,7 @@ impl MartiniComponent {
 }
 
 #[derive(Default, Resource)]
-pub struct CachedMartini(HashMap<u32, Entity>);
+pub struct CachedMartini(FxHashMap<u32, Entity>);
 
 impl CachedMartini {
     pub fn insert(&mut self, k: u32, v: Entity) {

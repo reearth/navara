@@ -35,7 +35,8 @@ use navara_layer::Cesium3dTilesLayer;
 use navara_material::Appearance;
 use navara_math::{FloatType, Mat4, Transform, Vec3};
 use navara_parser::cesium3dtiles::{self, tileset::Refine};
-use std::{cmp::Ordering, collections::HashMap};
+use rustc_hash::FxHashMap;
+use std::cmp::Ordering;
 use url::{ParseError, Url};
 
 use crate::TileOrderByDistance;
@@ -236,7 +237,7 @@ impl Cesium3dTileContent {
     ) -> Result<(String, DataRequesterExtension), ParseError> {
         let mut url = base_url.join(self.uri.as_ref().unwrap())?;
         let base_query = base_url.query_pairs().into_owned();
-        let new_query: HashMap<String, String> = url.query_pairs().into_owned().collect();
+        let new_query: FxHashMap<String, String> = url.query_pairs().into_owned().collect();
         for (key, value) in base_query {
             if new_query.contains_key(&key) {
                 continue;

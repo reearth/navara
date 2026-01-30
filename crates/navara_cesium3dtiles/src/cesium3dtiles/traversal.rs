@@ -35,8 +35,6 @@
 //! When SSE > max_sse, the tile needs more detail (traverse to children).
 //! When SSE <= max_sse, the tile is sufficient detail (render this tile).
 
-use std::collections::HashMap;
-
 use bevy_ecs::{
     entity::Entity,
     system::{Commands, Query, ResMut},
@@ -50,6 +48,7 @@ use navara_feature_component::{id::FeatureId, render::RenderableFeature};
 use navara_math::Vec3;
 use navara_parser::cesium3dtiles::tileset::Refine;
 use navara_window::Window;
+use rustc_hash::FxHashMap;
 use url::Url;
 
 use crate::{
@@ -772,7 +771,7 @@ fn update_or_spawn_rendered_tile(
 fn construct_child_tile_url(base_url: &Url, child_url: &str) -> Url {
     let mut new_url: Url = base_url.clone().join(child_url).unwrap();
     let base_query = base_url.query_pairs().into_owned();
-    let new_query: HashMap<String, String> = new_url.query_pairs().into_owned().collect();
+    let new_query: FxHashMap<String, String> = new_url.query_pairs().into_owned().collect();
     for (key, value) in base_query {
         if new_query.contains_key(&key) {
             continue;

@@ -1,9 +1,9 @@
 use crate::LayerDescription;
 use bevy_ecs::prelude::Resource;
-use std::collections::HashMap;
+use rustc_hash::FxHashMap;
 
 /// A store to preserve a relation between [`LayerId`] and [`LayerDescription`].
 #[derive(Resource, Debug)]
 pub struct LayerDescStore {
-    pub map: HashMap<String, LayerDescription>,
+    pub map: FxHashMap<String, LayerDescription>,
 }

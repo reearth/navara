@@ -1,11 +1,10 @@
-use std::collections::HashMap;
-
 use bevy_ecs::{
     component::Component,
     entity::Entity,
     system::{Commands, Query},
 };
 
+use fxhash::FxHashMap;
 use navara_component::Deleted;
 use navara_feature_component::{batch::BatchedFeature, id::FeatureId};
 use navara_layer::LayerId;
@@ -13,7 +12,7 @@ use navara_tile_component::TileHandle;
 
 /// Removed features grouped by layer ID.
 /// Used to properly update LayerStore for each layer when tiles are destroyed.
-pub type RemovedFeaturesByLayer = HashMap<String, Vec<Entity>>;
+pub type RemovedFeaturesByLayer = FxHashMap<String, Vec<Entity>>;
 
 #[derive(Component, Default)]
 pub struct RenderedTile {
@@ -32,7 +31,7 @@ impl RenderedTile {
         features: &Query<(&FeatureId, &LayerId)>,
         batched_features: &Query<&BatchedFeature>,
     ) -> RemovedFeaturesByLayer {
-        let mut removed_by_layer: RemovedFeaturesByLayer = HashMap::new();
+        let mut removed_by_layer: RemovedFeaturesByLayer = FxHashMap::default();
         if let Some(feature_ids) = self.feature_ids.take() {
             for feature_id in feature_ids {
                 if let Ok(batched_feature) = batched_features.get(feature_id) {

@@ -1,4 +1,5 @@
 use bevy_ecs::prelude::*;
+use fxhash::FxHashMap;
 use navara_buffer_store::BufferStore;
 use navara_component::{OrderByDistance, Priority, Rendered};
 use navara_core::{TileXYZ, WGS84_64};
@@ -237,8 +238,7 @@ pub fn transfer_mesh(
     mvt_data_requester: MvtDataRequesterQuery,
 ) {
     // Group layers by source entity, storing resource info for direct iteration
-    let mut sources: std::collections::HashMap<Entity, SourceData> =
-        std::collections::HashMap::new();
+    let mut sources: FxHashMap<Entity, SourceData> = FxHashMap::default();
 
     for (layer_entity, layer, resources) in &layers {
         sources

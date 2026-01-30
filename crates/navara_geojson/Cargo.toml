@@ -22,6 +22,7 @@ navara_data_requester.workspace = true
 navara_event_store.workspace = true
 navara_geometry.workspace = true
 navara_component.workspace = true
+rustc-hash.workspace = true
 
 [dev-dependencies]
 navara_feature.workspace = true

@@ -1,11 +1,10 @@
-use std::collections::HashMap;
-
 use crate::Geometry;
 use navara_core::{
     get_ellipsoid_terrain_level_zero_maximum_geometric_error, get_level_maximum_geometric_error,
     Ellipsoid, Meters, XYZ,
 };
 use navara_math::FloatType;
+use rustc_hash::FxHashMap;
 
 /// Represents a boundary edge of the mesh.
 #[derive(Debug, Clone, Copy)]
@@ -60,7 +59,7 @@ fn edge_key(a: u32, b: u32) -> u64 {
 pub fn compute_boundary_edges(triangles: &[u32]) -> Vec<Edge> {
     assert!(triangles.len() % 3 == 0);
 
-    let mut map: HashMap<u64, EdgeInfo> = HashMap::new();
+    let mut map: FxHashMap<u64, EdgeInfo> = FxHashMap::default();
 
     let mut process_edge = |i1: u32, i2: u32| {
         let key = edge_key(i1, i2);

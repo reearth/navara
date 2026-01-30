@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use bevy_ecs::{
     component::Component,
     entity::Entity,
@@ -7,6 +5,7 @@ use bevy_ecs::{
     system::{Commands, Query, Res, ResMut},
 };
 
+use fxhash::FxHashMap;
 use navara_buffer_store::BufferStore;
 use navara_component::Deleted;
 use navara_core::get_tile_pos_from_url;
@@ -41,7 +40,7 @@ pub fn prepare_layer_resource(
     mut source_cache: ResMut<MvtSourceCache>,
     mut source_query: Query<&mut MvtSourceResources>,
 ) {
-    let mut layer_source_map: HashMap<SourceId, Vec<Entity>> = HashMap::new();
+    let mut layer_source_map: FxHashMap<SourceId, Vec<Entity>> = FxHashMap::default();
 
     for (layer_entity, layer) in &mvt_layers {
         if !layer.has_template_url() {

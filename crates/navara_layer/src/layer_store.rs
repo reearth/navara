@@ -1,11 +1,11 @@
 use bevy_ecs::entity::Entity;
 use bevy_ecs::prelude::Resource;
-use std::collections::HashMap;
+use rustc_hash::FxHashMap;
 
 /// A store to preserve a relation between layer id and a feature's entity.
 #[derive(Resource, Debug)]
 pub struct LayerStore {
-    map: HashMap<String, Vec<Entity>>,
+    map: FxHashMap<String, Vec<Entity>>,
 }
 
 impl Default for LayerStore {
@@ -17,7 +17,7 @@ impl Default for LayerStore {
 impl LayerStore {
     pub fn new() -> Self {
         Self {
-            map: HashMap::new(),
+            map: FxHashMap::default(),
         }
     }
     pub fn add(&mut self, key: String, e: Entity) {

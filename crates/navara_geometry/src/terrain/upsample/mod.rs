@@ -1,12 +1,11 @@
 mod clip;
 
-use std::collections::HashMap;
-
 use clip::{clip_2d_triangle_at_threshold, ClippedIndex};
 use itertools::Itertools;
 use radians::{Angle, Radians};
 
 use navara_core::{lerp, Ellipsoid, Extent, Meters, TileRegion, LLE};
+use rustc_hash::FxHashMap;
 
 use crate::Geometry;
 
@@ -322,13 +321,13 @@ fn construct_indices(idxs: [u32; 3]) -> Option<[u32; 3]> {
 }
 
 // This is used to avoid duplicating a coordinate.
-struct ClippedCoordMap(HashMap<String, usize>);
+struct ClippedCoordMap(FxHashMap<String, usize>);
 
 impl ClippedCoordMap {
     const SCALE_U16: FloatType = 32767.;
 
     fn new() -> Self {
-        Self(HashMap::new())
+        Self(FxHashMap::default())
     }
     fn get(&mut self, u: FloatType, v: FloatType, h: FloatType) -> Option<&usize> {
         self.0.get(&self.make_key(u, v, h))

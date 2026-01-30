@@ -3,7 +3,7 @@
 use bevy_app::{App, Plugin, Update};
 use bevy_ecs::schedule::IntoScheduleConfigs;
 use navara_layer::{LayerDescStore, LayerStore};
-use std::collections::HashMap;
+use rustc_hash::FxHashMap;
 
 mod system;
 
@@ -13,7 +13,7 @@ impl Plugin for GeoJsonPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(LayerStore::new());
         app.insert_resource(LayerDescStore {
-            map: HashMap::new(),
+            map: FxHashMap::default(),
         });
         app.add_systems(
             Update,
