@@ -11,7 +11,10 @@
 #endif
 
 attribute float instanceScale;
+
 uniform vec3 uRTCCenter;
+uniform vec3 uEyeRTEHigh;
+uniform vec3 uEyeRTELow;
 
 varying vec2 vUv;
 
@@ -24,6 +27,13 @@ void main() {
     vec4 mvPosition;
 #ifdef USE_RTE
     // TODO: Adjust view matrix for RTE
+    vec3 highDiff = instancePositionHIGH - uEyeRTEHigh;
+    vec3 lowDiff = instancePositionLOW - uEyeRTELow;
+    vec3 instancePosition = highDiff + lowDiff;
+
+    mat4 viewMatrixRTE = viewMatrix;
+    viewMatrixRTE[3] = vec4(0.0, 0.0, 0.0, 1.0); // Remove translation
+    mvPosition = viewMatrixRTE * vec4(instancePosition, 1.0);
 #else
     // Adjust view matrix for RTC
     vec4 centerMV = viewMatrix * vec4(uRTCCenter, 1.0);

@@ -1,4 +1,5 @@
 import { PointMesh as NavaraPointMesh, BillboardMesh as NavaraBillboardMesh } from "@navara/engine";
+import { encodePosition } from "@navara/engine-api";
 import instancedSpriteVertexShader from "@shaders/glsl/instancedSprite.vert.glsl";
 import instancedSpriteFragmentShader from "@shaders/glsl/instancedSprite.frag.glsl";
 import type { BufferLoader } from "../event";
@@ -104,7 +105,9 @@ export class InstancedSpriteMesh extends Mesh {
         const material: ShaderMaterial = new ShaderMaterial({
             uniforms: {
                 // uTexture: { value: textureArray },
-                uRTCCenter: { value: rtcCenter }
+                uRTCCenter: { value: rtcCenter },
+                uEyeRTELow: { value: new Vector3(0, 0, 0) },
+                uEyeRTEHigh: { value: new Vector3(0, 0, 0) },
             },
             vertexShader: instancedSpriteVertexShader,
             fragmentShader: instancedSpriteFragmentShader,
@@ -113,8 +116,12 @@ export class InstancedSpriteMesh extends Mesh {
 
         if (positionsInfo.RTE) {
             material.defines.USE_RTE = 1;
+            material.onBeforeRender = (renderer, scene, camera, geometry, mat, group) => {
+                const encodedCamPos = encodePosition(camera.position.x, camera.position.y, camera.position.z);
+                material.uniforms.uEyeRTELow.value = new Vector3(encodedCamPos.low.x, encodedCamPos.low.y, encodedCamPos.low.z);
+                material.uniforms.uEyeRTEHigh.value = new Vector3(encodedCamPos.high.x, encodedCamPos.high.y, encodedCamPos.high.z);
+            }
         }
-
 
         if (m instanceof NavaraBillboardMesh) {
             material.defines.BILLBOARD = 1;
