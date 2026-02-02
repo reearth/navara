@@ -122,6 +122,7 @@ export async function processRenderableFeatureAdded(
 
   const featureLayerId = ev.layer_id;
 
+  // `model` feature uses Web worker internally to parse glTF and its compression.
   const useParallel = !!model;
 
   if (useParallel) {
