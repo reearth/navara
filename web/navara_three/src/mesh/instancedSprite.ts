@@ -4,21 +4,21 @@ import instancedSpriteVertexShader from "@shaders/glsl/instancedSprite.vert.glsl
 import instancedSpriteFragmentShader from "@shaders/glsl/instancedSprite.frag.glsl";
 import type { BufferLoader } from "../event";
 import type { ViewContext } from "../core";
-import { DoubleSide, InstancedBufferAttribute, InstancedBufferGeometry, Mesh, ShaderMaterial, BufferAttribute, Vector3, DataArrayTexture, UnsignedByteType, RGBAFormat, LinearFilter } from "three";
+import { InstancedBufferAttribute, InstancedBufferGeometry, Mesh, ShaderMaterial, BufferAttribute, Vector3, DataArrayTexture, UnsignedByteType, RGBAFormat, LinearFilter } from "three";
 import { TEXTURE_LOADER } from "../event/loaders";
 import invariant from "tiny-invariant";
 
 // TODOs:
-// - handle RTE
-// - handle depth offset
-// - reenable depth test ...
+// - handle RTE - done
+// - handle depth offset - done
+// - reenable depth test ... - done
+// - make sure texture array and layer attribute are only created for billboard case - done
 // - handle style evalutator stuff - see notion page
+// - handle layer material, user data, color, height, ... 
 // - handle batch ids and picking (if it was working before)...
 // - make sure to cover all what was the old point/billboard mesh doing
 // - handle choosing between using new sprite mesh or old point mesh based on conditions
 // - handle selective layer stuff
-// - handle layer material, user data, color, height, ... 
-// - make sure texture array and layer attribute are only created for billboard case
 // - optimize shader if needed
 // - cleanup code
 // - test performance and correctness
@@ -29,6 +29,13 @@ export type InstancedSpriteOptions = {
     layerId: string;
 };
 
+type PositionsInfo = {
+    position: Float32Array<ArrayBufferLike> | { high: Float32Array<ArrayBufferLike>, low: Float32Array<ArrayBufferLike> };
+    positionSize: number;
+    nPositions: number
+    RTE: boolean;
+};
+
 export class InstancedSpriteMesh extends Mesh {
     constructor(
         options: InstancedSpriteOptions,
@@ -37,14 +44,25 @@ export class InstancedSpriteMesh extends Mesh {
     }
 
     async _init(m: NavaraPointMesh | NavaraBillboardMesh, buf: BufferLoader) {
-        // TODO: also handle RTE
         const positionsInfo = this.extractPositions(m, buf);
         if (positionsInfo === null) {
             console.warn("No position data found for InstancedSpriteMesh");
             return;
         }
 
-        // Setup Geometry & Instances
+        // Create Geometry
+        const instancedGeometry = this._initGeometry(positionsInfo, m);
+
+        // Create Material
+        const material = await this._initMaterial(positionsInfo, m);
+
+        // Final Mesh
+        this.geometry = instancedGeometry;
+        this.material = material;
+        this.frustumCulled = false; // Disable since bounding box doesn't account for instance positions
+    }
+
+    private _initGeometry(positionsInfo: PositionsInfo, m: NavaraPointMesh | NavaraBillboardMesh) {
         const vertices = new Float32Array([
             -0.5, -0.5, 0.0, // v0
             0.5, -0.5, 0.0,  // v1
@@ -75,7 +93,7 @@ export class InstancedSpriteMesh extends Mesh {
         // Add Custom Attributes
         const scaleBuffer = new Float32Array(instanceCount);
         let layerBuffer = undefined;
-        
+
         for (let i = 0; i < instanceCount; i++) {
             // TODO: get scale from user data
             scaleBuffer[i] = 10000.0;
@@ -89,7 +107,7 @@ export class InstancedSpriteMesh extends Mesh {
             }
             instancedGeometry.setAttribute('instanceLayer', new InstancedBufferAttribute(layerBuffer, 1));
         }
-        
+
         if (positionsInfo.RTE) {
             const pos = positionsInfo.position as { high: Float32Array<ArrayBufferLike>, low: Float32Array<ArrayBufferLike> };
             instancedGeometry.setAttribute('instancePositionLOW', new InstancedBufferAttribute(pos.low, positionsInfo.positionSize));
@@ -100,23 +118,27 @@ export class InstancedSpriteMesh extends Mesh {
         }
         instancedGeometry.setAttribute('instanceScale', new InstancedBufferAttribute(scaleBuffer, 1));
 
-        // Create the Custom Material
+        return instancedGeometry;
+    }
+
+    private async _initMaterial(positionsInfo: PositionsInfo, m: NavaraPointMesh | NavaraBillboardMesh) {
         const rtcCenter = new Vector3(m.transform.tx, m.transform.ty, m.transform.tz);
         const material: ShaderMaterial = new ShaderMaterial({
             uniforms: {
-                // uTexture: { value: textureArray },
                 uRTCCenter: { value: rtcCenter },
                 uEyeRTELow: { value: new Vector3(0, 0, 0) },
                 uEyeRTEHigh: { value: new Vector3(0, 0, 0) },
+                uOffsetDepth: { value: m.material.offsetDepth ?? true },
+                uColor: { value: new Vector3(1.0, 0.0, 0.0) }, // Placeholder color
             },
             vertexShader: instancedSpriteVertexShader,
             fragmentShader: instancedSpriteFragmentShader,
-            side: DoubleSide,
+            transparent: true,
         });
 
         if (positionsInfo.RTE) {
             material.defines.USE_RTE = 1;
-            material.onBeforeRender = (renderer, scene, camera, geometry, mat, group) => {
+            material.onBeforeRender = (_renderer, _scene, camera, _geometry, _mat, _group) => {
                 const encodedCamPos = encodePosition(camera.position.x, camera.position.y, camera.position.z);
                 material.uniforms.uEyeRTELow.value = new Vector3(encodedCamPos.low.x, encodedCamPos.low.y, encodedCamPos.low.z);
                 material.uniforms.uEyeRTEHigh.value = new Vector3(encodedCamPos.high.x, encodedCamPos.high.y, encodedCamPos.high.z);
@@ -144,22 +166,10 @@ export class InstancedSpriteMesh extends Mesh {
             }
         }
 
-        // disable depth test for now
-        // TODO: consider depth test with offset
-        material.depthTest = false;
-
-        // Final Mesh
-        this.geometry = instancedGeometry;
-        this.material = material;
-        this.frustumCulled = false; // Disable since bounding box doesn't account for instance positions
+        return material;
     }
 
-    private extractPositions(m: NavaraPointMesh | NavaraBillboardMesh, buf: BufferLoader): {
-        position: Float32Array<ArrayBufferLike> | { high: Float32Array<ArrayBufferLike>, low: Float32Array<ArrayBufferLike> };
-        positionSize: number;
-        nPositions: number
-        RTE: boolean;
-    } | null {
+    private extractPositions(m: NavaraPointMesh | NavaraBillboardMesh, buf: BufferLoader): PositionsInfo | null {
         const g = m.geometry;
         const positionData = g.position;
         const position = positionData

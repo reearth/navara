@@ -1,3 +1,4 @@
+#include "chunks/horizon_culling_pars_vertex.glsl"
 #ifdef USE_RTE
     attribute vec3 instancePositionLOW; 
     attribute vec3 instancePositionHIGH; 
@@ -19,6 +20,14 @@ uniform vec3 uEyeRTELow;
 varying vec2 vUv;
 
 void main() {
+
+#ifdef USE_RTE
+    vec3 absTransformed = instancePositionHIGH + instancePositionLOW;
+#else
+    vec3 absTransformed = instancePosition + uRTCCenter;
+#endif
+    #include "chunks/horizon_culling_vertex.glsl"
+
     vUv = uv;
 #ifdef BILLBOARD
     vLayer = instanceLayer;
@@ -48,4 +57,3 @@ void main() {
 
     gl_Position = projectionMatrix * mvPosition;
 }
-        
