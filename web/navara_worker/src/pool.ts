@@ -1,3 +1,4 @@
+import invariant from "tiny-invariant";
 import workerpool, { Promise } from "workerpool";
 import type Pool from "workerpool/types/Pool";
 import type { ExecOptions } from "workerpool/types/types";
@@ -9,10 +10,12 @@ export type { Promise } from "workerpool";
 
 const { initializeWorkerPool, worker } = (() => {
   // Restrict access to this object.
-  let worker: {
-    pool: Pool;
-    manager: ConcurrencyManager;
-  };
+  let worker:
+    | {
+        pool: Pool;
+        manager: ConcurrencyManager;
+      }
+    | undefined;
 
   return {
     initializeWorkerPool: (url: string, manager: ConcurrencyManager) => {
@@ -32,6 +35,7 @@ const { initializeWorkerPool, worker } = (() => {
       };
     },
     worker: () => {
+      invariant(worker, "initializeWorkerPool() must be invoked first.");
       return {
         pool: worker.pool,
         manager: worker.manager,
@@ -75,5 +79,21 @@ export function queueTask<
   params?: TaskParams<Task, Name>,
   options?: ExecOptions,
 ): Promise<MethodReturnType<Task, Name>> {
-  return worker().pool.exec(method, params, options);
+  const { pool, manager } = worker();
+
+  manager.increment();
+
+  return (
+    pool
+      .exec(method, params, options)
+      // `finally` doesn't work, so use `then()` and `catch()` to ensure that `manager.decrement()` is invoked.
+      .then((p) => {
+        manager.decrement();
+        return p;
+      })
+      .catch((e) => {
+        manager.decrement();
+        throw e;
+      })
+  );
 }
