@@ -1,5 +1,5 @@
 export type ConcurrencyManager = {
-  /** Total concurrences */
+  /** Total concurrency */
   total: number;
   /** Increment the count according to the activated process */
   increment: () => void;
