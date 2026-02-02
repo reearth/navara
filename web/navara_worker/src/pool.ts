@@ -19,7 +19,7 @@ const { initializeWorkerPool, worker } = (() => {
 
   return {
     initializeWorkerPool: (url: string, manager: ConcurrencyManager) => {
-      if (worker?.pool) return;
+      if (worker) return;
 
       const pool = workerpool.pool(url, {
         maxWorkers: manager.total,
