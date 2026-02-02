@@ -6,7 +6,7 @@ use navara_component::Deleted;
 use rand::Rng;
 
 use navara_parser::b3dm::BatchTable as B3dmBatchTable;
-use std::collections::HashMap;
+use rustc_hash::FxHashMap;
 use std::sync::Arc;
 
 #[derive(Component, Debug, Default)]
@@ -64,13 +64,13 @@ pub struct GlobalBatchIds {
 // Search b3dm feature by global batch id
 #[derive(Resource, Default, Debug)]
 pub struct FeatureBatchIdMap {
-    pub map: HashMap<Entity, GlobalBatchIds>,
+    pub map: FxHashMap<Entity, GlobalBatchIds>,
 }
 
 impl FeatureBatchIdMap {
     pub fn new() -> Self {
         Self {
-            map: HashMap::new(),
+            map: FxHashMap::default(),
         }
     }
 
@@ -204,7 +204,7 @@ impl BatchTableValue {
 
 #[derive(Resource)]
 pub struct BatchTable {
-    map: HashMap<u32, Option<BatchTableValue>>,
+    map: FxHashMap<u32, Option<BatchTableValue>>,
 }
 
 impl Default for BatchTable {
@@ -216,7 +216,7 @@ impl Default for BatchTable {
 impl BatchTable {
     pub fn new() -> Self {
         Self {
-            map: HashMap::new(),
+            map: FxHashMap::default(),
         }
     }
 

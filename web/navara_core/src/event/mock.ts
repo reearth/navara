@@ -4,6 +4,7 @@ import type {
   RenderableFeatureAddedEvent,
   RenderableFeatureChangedEvent,
 } from "@navara/engine";
+import { noop } from "lodash-es";
 
 import type { JsEvents, JsEventsKey } from "./EventManager";
 
@@ -16,7 +17,7 @@ export const makeRenderableFeatures = <
   ind: number,
   gen: number,
 ) => {
-  return { ind, gen } as Ev;
+  return { ind, gen, free: noop } as Ev;
 };
 
 export const makeEvent = (events: { [K in JsEventsKey]?: JsEvents[K] }) => {

@@ -152,6 +152,8 @@ async function processConstructTerrainMesh(
   const { result } = await promise;
   workerPoolPromises.delete(id);
 
+  params.free();
+
   if (!workerTaskHandler.hasWorkerTask(delegator_id[0])) return;
 
   const vertices = bufHandler.newF32(result.vertices);
@@ -263,6 +265,8 @@ async function processUpsampleTerrainMesh(
   const result = await promise;
   workerPoolPromises.delete(id);
 
+  params.free();
+
   if (!workerTaskHandler.hasWorkerTask(delegator_id[0])) return;
 
   const vertices = bufHandler.newF32(result.vertices);
@@ -345,6 +349,9 @@ async function processConstructPolygonBatchedFeature(
   workerPoolPromises.set(id, promise);
   const result = await promise;
   workerPoolPromises.delete(id);
+
+  // transferable.free();
+  params.free();
 
   if (!result) return;
 
@@ -473,6 +480,7 @@ async function processConstructPolylineBatchedFeature(
   workerPoolPromises.delete(id);
 
   transferable.free();
+  params.free();
 
   if (!result || !result.batch_id || !result.batch_index) return;
 
