@@ -58,7 +58,7 @@ export const run = async (view: ThreeView) => {
       url: TERRAIN_DATASETS.mapterhorn.url,
     },
     rasterTerrain: {
-      maxZoom: 12,
+      maxZoom: 15,
       minZoom: 5,
       elevationDecoder: TERRARIUM_ELEVATION_DECODER(),
       castShadow: true,

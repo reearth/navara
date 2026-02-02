@@ -99,6 +99,10 @@ pub struct TerrainLayer {
 }
 
 impl TerrainLayer {
+    pub fn should_upsample(&self, z: usize) -> bool {
+        self.is_over_max_zoom(z) && !self.is_over_overscaled_max_zoom(z)
+    }
+
     pub fn is_over_max_zoom(&self, z: usize) -> bool {
         match &self.terrain_type {
             TerrainDataType::Ellipsoid => false, // Ellipsoid has no max zoom limit
