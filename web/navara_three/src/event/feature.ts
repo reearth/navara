@@ -110,7 +110,6 @@ export async function processRenderableFeatureAdded(
   layersManager: LayersManager,
   viewContext: ViewContext,
   updatedAt: number,
-  onConcurrency: (v: number) => void,
 ) {
   const id = generate_id_from_entity(ev);
   const feature = ev.feature;
@@ -127,7 +126,7 @@ export async function processRenderableFeatureAdded(
 
   if (useParallel) {
     // Start parallel process
-    onConcurrency(1);
+    viewContext.concurrencyManager.increment();
   }
 
   const obj = await renderFeature(
@@ -154,7 +153,7 @@ export async function processRenderableFeatureAdded(
     .finally(() => {
       if (useParallel) {
         // End parallel process
-        onConcurrency(-1);
+        viewContext.concurrencyManager.decrement();
       }
     });
 

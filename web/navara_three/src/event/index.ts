@@ -35,7 +35,6 @@ import { Mesh, Material, Object3D, Texture, Sprite } from "three";
 
 import { Layer, type ViewEvents } from "..";
 import { ThreeViewCamera } from "../camera";
-import { FEATURE_CONCURRENCY } from "../concurrency";
 import type { ViewContext } from "../core";
 import type { LayersManager } from "../layersManager";
 import type { AbortableTextureLoader } from "../loaders/AbortableTextureLoader";
@@ -152,9 +151,6 @@ export type FeatureHandler = {
 export type MeshHandler = {
   setTileMeshPrepared: (handle: bigint) => void;
 };
-
-// This is used to count concurrency while adding RenderableFeature to avoid occupying a worker process.
-let RENDERABLE_FEATURE_CONCURRENCY = 0;
 
 export function processEvent(
   eventManager: EventManager,
@@ -341,7 +337,6 @@ export function processEvent(
             layersManager,
             viewContext,
             updatedAt,
-            (v: number) => (RENDERABLE_FEATURE_CONCURRENCY += v),
           );
           break;
         case "remove":
@@ -375,7 +370,7 @@ export function processEvent(
       shouldProcess: ({ type, event }) => {
         switch (type) {
           case "add":
-            return RENDERABLE_FEATURE_CONCURRENCY < FEATURE_CONCURRENCY;
+            return viewContext.concurrencyManager.canIncrement();
           case "remove":
             return true;
           case "change":

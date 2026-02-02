@@ -2,31 +2,48 @@ import workerpool, { Promise } from "workerpool";
 import type Pool from "workerpool/types/Pool";
 import type { ExecOptions } from "workerpool/types/types";
 
+import type { ConcurrencyManager } from "./manager";
 import { type CommonTasks } from "./worker";
 
 export type { Promise } from "workerpool";
 
-const DEFAULT_CONCURRENCY = navigator.hardwareConcurrency - 1;
+const { initializeWorkerPool, worker } = (() => {
+  // Restrict access to this object.
+  let worker: {
+    pool: Pool;
+    manager: ConcurrencyManager;
+  };
 
-let pool: Pool;
-export const initializeWorkerPool = (
-  url: string,
-  concurrency = DEFAULT_CONCURRENCY,
-): Pool =>
-  pool ??
-  (pool = workerpool.pool(url, {
-    maxWorkers: concurrency,
-    minWorkers: concurrency, // Keep all workers alive to preserve WASM cache
-    workerOpts: {
-      type: import.meta.env.PROD ? undefined : "module",
+  return {
+    initializeWorkerPool: (url: string, manager: ConcurrencyManager) => {
+      if (worker?.pool) return;
+
+      const pool = workerpool.pool(url, {
+        maxWorkers: manager.total,
+        minWorkers: manager.total, // Keep all workers alive to preserve WASM cache
+        workerOpts: {
+          type: import.meta.env.PROD ? undefined : "module",
+        },
+      });
+
+      worker = {
+        pool,
+        manager,
+      };
     },
-  }));
+    worker: () => {
+      return {
+        pool: worker.pool,
+        manager: worker.manager,
+      };
+    },
+  };
+})();
 
-export const workerPool = (): Pool => pool;
+export { initializeWorkerPool };
 
 export const canWorkerProcessImmediately = () => {
-  const stats = workerPool().stats();
-  return stats.busyWorkers < (workerPool().maxWorkers ?? DEFAULT_CONCURRENCY);
+  return worker().manager.canIncrement();
 };
 
 export type { ExecOptions } from "workerpool/types/types";
@@ -58,5 +75,5 @@ export function queueTask<
   params?: TaskParams<Task, Name>,
   options?: ExecOptions,
 ): Promise<MethodReturnType<Task, Name>> {
-  return workerPool().exec(method, params, options);
+  return worker().pool.exec(method, params, options);
 }

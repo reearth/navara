@@ -1,8 +1,8 @@
+import type { ConcurrencyManager } from "@navara/worker";
 import { BufferGeometry, Cache, ImageLoader, TextureLoader } from "three";
 import { DRACOLoader as DRACODecoder } from "three/addons/loaders/DRACOLoader.js";
 import { DRACOLoader, GLTFLoader } from "three-stdlib";
 
-import { FEATURE_CONCURRENCY } from "../concurrency";
 import { AbortableImageLoader } from "../loaders";
 import { AbortableTextureLoader } from "../loaders/AbortableTextureLoader";
 
@@ -15,11 +15,11 @@ export const ABORTABLE_IMAGE_LOADER = new AbortableImageLoader();
 
 export const initializeGltfLoader = (() => {
   let GLTF: GLTFLoader;
-  return () => {
+  return (concurrencyManager: ConcurrencyManager) => {
     if (GLTF) return GLTF;
     GLTF = new GLTFLoader();
     const draco = new DRACOLoader();
-    draco.setWorkerLimit(FEATURE_CONCURRENCY);
+    draco.setWorkerLimit(concurrencyManager.total);
     draco.setDecoderPath(
       "https://unpkg.com/three@0.170.0/examples/jsm/libs/draco/gltf/",
     );
@@ -30,10 +30,10 @@ export const initializeGltfLoader = (() => {
 
 export const initializeDracoLoader = (() => {
   let draco: DRACODecoder;
-  return () => {
+  return (concurrencyManager: ConcurrencyManager) => {
     if (draco) return draco;
     draco = new DRACODecoder();
-    draco.setWorkerLimit(FEATURE_CONCURRENCY);
+    draco.setWorkerLimit(concurrencyManager.total);
     draco.setDecoderPath(
       "https://unpkg.com/three@0.180.0/examples/jsm/libs/draco/",
     );
