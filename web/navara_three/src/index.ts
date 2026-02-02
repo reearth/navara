@@ -869,8 +869,8 @@ export default class ThreeView<
       warmUpPromises.push(warmUp());
     }
 
-    await initCore();
-    await initNavaraApi();
+    // Asynchronous initialization in parallel.
+    await Promise.all([...warmUpPromises, initCore(), initNavaraApi()]);
 
     this._core = new Core(newId());
     this._core.start();
