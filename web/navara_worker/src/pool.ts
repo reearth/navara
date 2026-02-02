@@ -19,7 +19,9 @@ const { initializeWorkerPool, worker } = (() => {
 
   return {
     initializeWorkerPool: (url: string, manager: ConcurrencyManager) => {
-      if (worker) return;
+      if (worker) {
+        throw new Error("Worker pool has already been initialized.");
+      }
 
       const pool = workerpool.pool(url, {
         maxWorkers: manager.total,
@@ -83,17 +85,22 @@ export function queueTask<
 
   manager.increment();
 
-  return (
-    pool
-      .exec(method, params, options)
-      // `finally` doesn't work, so use `then()` and `catch()` to ensure that `manager.decrement()` is invoked.
-      .then((p) => {
-        manager.decrement();
-        return p;
-      })
-      .catch((e) => {
-        manager.decrement();
-        throw e;
-      })
-  );
+  try {
+    return (
+      pool
+        .exec(method, params, options)
+        // `finally` doesn't work, so use `then()` and `catch()` to ensure that `manager.decrement()` is invoked.
+        .then((p) => {
+          manager.decrement();
+          return p;
+        })
+        .catch((e) => {
+          manager.decrement();
+          throw e;
+        })
+    );
+  } catch (e) {
+    manager.decrement();
+    throw e;
+  }
 }
