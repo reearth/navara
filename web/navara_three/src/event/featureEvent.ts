@@ -1,7 +1,7 @@
 import type { EventHandler, FeatureId } from "@navara/core";
 import type { Object3D } from "three";
 
-import type { ViewEvents } from "..";
+import { ModelMesh, type ViewEvents } from "..";
 import { FeatureEvaluator } from "../evaluations";
 import { Layer } from "../layer";
 import { LayersManager } from "../layersManager";
@@ -26,8 +26,17 @@ export const handleFeatureCreatedEventByLayerId = (
     layer._registerFeatureEvaluator(featureId, evaluator);
   }
 
+  let credit = undefined;
+  if (obj instanceof ModelMesh && obj.credit) {
+    credit = obj.credit;
+  }
+
   // Emit the evaluator
-  viewEvents.emit("layer", "featureCreated", layerId, evaluator);
+  viewEvents.emit("layer", "featureCreated", layerId, {
+    featureId,
+    evaluator,
+    credit,
+  });
 
   return layer;
 };
@@ -49,5 +58,24 @@ export const handleFeatureUpdatedEventByLayerId = (
   if (!evaluator) return;
 
   // Emit the event with the evaluator
-  viewEvents.emit("layer", "featureUpdated", layerId, evaluator, updatedAt);
+  viewEvents.emit("layer", "featureUpdated", layerId, {
+    featureId,
+    evaluator,
+    updatedAt,
+  });
+};
+
+export const handleFeatureVisibilityChangedEventByLayerId = (
+  layersManager: LayersManager,
+  layerId: string,
+  featureId: FeatureId,
+  visible: boolean,
+) => {
+  const layer = layersManager.get(layerId);
+
+  if (!layer) return;
+  if (!(layer instanceof Layer)) return;
+
+  // Emit the visibility changed event
+  layer.emit("featureVisibilityChanged", { featureId, visible });
 };

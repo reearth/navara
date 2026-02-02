@@ -5,6 +5,72 @@ import { Camera, Matrix4, Object3D, Vector3 } from "three";
 import { setTransform } from "../event";
 
 /**
+ * Type for the updateRteUniforms mutation function
+ */
+export type UpdateRteUniformsFn = (
+  modelViewMatrixRTE: Matrix4,
+  cameraPositionHigh: Vector3,
+  cameraPositionLow: Vector3,
+) => void;
+
+// Temporary objects for RTE calculations to avoid allocations
+const _tempModelViewMatrix = new Matrix4();
+const _tempCameraHigh = new Vector3();
+const _tempCameraLow = new Vector3();
+
+/**
+ * Setup onBeforeRender/onBeforeShadow callback for RTE rendering using mutates()
+ *
+ * @param mesh - The mesh object to setup
+ * @param updateRteUniforms - The mutation function from enhancer.mutates()
+ * @param modelMatrix - Optional model matrix for calcModelMatrixRTE.
+ *                      - Use identity matrix for GLTF models where world position is in RTE uniforms
+ *                      - Use mesh.matrixWorld for objects with actual positions (default)
+ * @param cameraPosMatrix - Optional matrix for calcCameraPosition. If not specified, uses modelMatrix.
+ *                          - Point/Billboard/Text/Model: use identity matrix (world space camera position)
+ *                          - Polygon: use mesh.matrixWorld (same as modelMatrix)
+ * @returns A callback function that works for both onBeforeRender and onBeforeShadow
+ */
+export function setupRTECallback(
+  mesh: Object3D,
+  updateRteUniforms: UpdateRteUniformsFn,
+  modelMatrix?: Matrix4,
+  cameraPosMatrix?: Matrix4,
+): Object3D["onBeforeRender"] & Object3D["onBeforeShadow"] {
+  const modelMatrixToUse =
+    modelMatrix !== undefined ? modelMatrix : mesh.matrixWorld;
+  const cameraPosMatrixToUse =
+    cameraPosMatrix !== undefined ? cameraPosMatrix : modelMatrixToUse;
+
+  return (_renderer, _scene, camera, shadowCameraOrGeometry) => {
+    // If 4th parameter is a Camera, this is onBeforeShadow, use shadowCamera
+    // Otherwise this is onBeforeRender, use camera
+    const actualCamera =
+      shadowCameraOrGeometry instanceof Camera
+        ? shadowCameraOrGeometry
+        : camera;
+
+    // Calculate RTE model-view matrix
+    calcModelMatrixRTE(
+      modelMatrixToUse,
+      actualCamera.matrixWorldInverse,
+      _tempModelViewMatrix,
+    );
+
+    // Calculate camera position in high/low precision
+    const result = calcCameraPosition(
+      actualCamera.position,
+      cameraPosMatrixToUse,
+    );
+    _tempCameraHigh.copy(result.high);
+    _tempCameraLow.copy(result.low);
+
+    // Update uniforms via mutation function
+    updateRteUniforms(_tempModelViewMatrix, _tempCameraHigh, _tempCameraLow);
+  };
+}
+
+/**
  * Interface for objects that need RTE (Relative-To-Eye) rendering support
  */
 export type RTEUserData = {
@@ -25,6 +91,7 @@ export type RTEUserData = {
  *                          - Point/Billboard/Text/Model: use identity matrix (world space camera position)
  *                          - Polygon: use mesh.matrixWorld (same as modelMatrix)
  * @returns A callback function that works for both onBeforeRender and onBeforeShadow
+ * @deprecated Use setupRTECallback with mutates() instead
  */
 export function setupRTEBeforeRender(
   mesh: Object3D,

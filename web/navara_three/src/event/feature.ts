@@ -31,6 +31,7 @@ import type { CommonUniforms } from "../uniforms";
 import {
   handleFeatureCreatedEventByLayerId,
   handleFeatureUpdatedEventByLayerId,
+  handleFeatureVisibilityChangedEventByLayerId,
 } from "./featureEvent";
 import { renderBillboard, processBillboardChanged } from "./features/billboard";
 import { renderModel, processModelChanged } from "./features/model";
@@ -167,15 +168,15 @@ export async function processRenderableFeatureAdded(
 
   obj.renderOrder = FEATURE_RENDER_ORDER;
 
-  if (!obj.userData.draped) {
+  if (obj instanceof PolygonMesh ? !obj.clampToGround : !obj.userData.draped) {
     scenes.mrt.add(obj);
   }
 
   meshes.set(id, obj);
 
   if (
-    (obj instanceof PolygonMesh || obj instanceof PolylineMesh) &&
-    obj.userData.draped &&
+    ((obj instanceof PolygonMesh && obj.clampToGround) ||
+      (obj instanceof PolylineMesh && obj.userData.draped)) &&
     tileHandle
   ) {
     obj.addEventListener("removedFromWorld", () => {
@@ -186,7 +187,7 @@ export async function processRenderableFeatureAdded(
     });
   }
 
-  if (obj instanceof PolygonMesh && obj.userData.draped && !tileHandle) {
+  if (obj instanceof PolygonMesh && obj.clampToGround && !tileHandle) {
     drapedFeatureMaterials.set(id, obj.material);
     obj.addEventListener("removedFromWorld", () => {
       drapedFeatureMaterials.delete(id);
@@ -305,6 +306,9 @@ export async function processRenderableFeatureChanged(
     (point ?? billboard ?? text ?? polyline ?? polygon ?? model)?.active ??
     true;
 
+  // Capture visibility before material updates to detect changes
+  const prevVisible = obj.visible;
+
   if (obj instanceof InstancedPointMesh && point) {
     processPointChanged(obj, point, buf, active);
   }
@@ -331,10 +335,13 @@ export async function processRenderableFeatureChanged(
   // Handle a draped polygon mesh and polyline mesh
   if (
     (obj instanceof PolygonMesh || obj instanceof PolylineMesh) &&
-    obj.userData.draped != null &&
     tileHandle
   ) {
-    if (obj.userData.draped) {
+    if (
+      (obj instanceof PolygonMesh && obj.clampToGround) ||
+      // TODO: Remove `userData`
+      obj.userData.draped
+    ) {
       if (obj.visible) {
         texturizedSceneByTileCoordinates.add(tileHandle, layerId, obj as Mesh);
       }
@@ -343,12 +350,8 @@ export async function processRenderableFeatureChanged(
     }
     texturizedSceneByTileCoordinates.setNeedsUpdate(tileHandle, true);
   }
-  if (
-    obj instanceof PolygonMesh &&
-    obj.userData.draped != null &&
-    !tileHandle
-  ) {
-    if (obj.userData.draped) {
+  if (obj instanceof PolygonMesh && !tileHandle) {
+    if (obj.clampToGround) {
       if (!drapedFeatureMaterials.has(id)) {
         obj.material.stencilWrite = false;
         obj.material.depthWrite = false;
@@ -363,6 +366,16 @@ export async function processRenderableFeatureChanged(
       obj.material.colorWrite = true;
       drapedFeatureMaterials.delete(id);
     }
+  }
+
+  // Emit visibility changed event if visibility actually changed after material updates
+  if (prevVisible !== obj.visible) {
+    handleFeatureVisibilityChangedEventByLayerId(
+      layersManager,
+      layerId,
+      ev.bits,
+      obj.visible,
+    );
   }
 
   // Point, billboard and text should be handled by their mesh.
