@@ -87,7 +87,10 @@ export const run = async (view: ThreeView) => {
     polygonLayer,
     chiyodaLayer,
     chuoLayer,
-  } = createSceneLayers(view);
+  } = createSceneLayers(view, {
+    bloomId: postEffectBloom.id,
+    outlineId: postEffectOutline.id,
+  });
 
   showAttributions([
     TILE_DATASETS.openstreetmap,

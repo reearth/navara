@@ -299,7 +299,15 @@ export type SceneLayers = {
   chuoLayer: Layer;
 };
 
-export const createSceneLayers = (view: ThreeView): SceneLayers => {
+export type EffectIds = {
+  bloomId: string;
+  outlineId: string;
+};
+
+export const createSceneLayers = (
+  view: ThreeView,
+  effectIds: EffectIds,
+): SceneLayers => {
   const tokyoStationPosition = geodeticToVector3({
     lat: degreeToRadian(35.681236),
     lng: degreeToRadian(139.767125),
@@ -546,6 +554,11 @@ export const createSceneLayers = (view: ThreeView): SceneLayers => {
     ],
   };
 
+  // Compute initial effectIds based on POLYGON_CONFIG
+  const polygonEffectIds: string[] = [];
+  if (POLYGON_CONFIG.bloomEnabled) polygonEffectIds.push(effectIds.bloomId);
+  if (POLYGON_CONFIG.outlineEnabled) polygonEffectIds.push(effectIds.outlineId);
+
   const polygonLayer = createGeoJsonPolygonLayer({
     view,
     feature: odaibaFeature,
@@ -554,6 +567,7 @@ export const createSceneLayers = (view: ThreeView): SceneLayers => {
       color: new Color().setHex(POLYGON_CONFIG.color),
       extrudedHeight: 80,
       clampToGround: false, // Required for SelectiveEffect (MRT scene)
+      effectIds: polygonEffectIds,
       emissiveColor: POLYGON_CONFIG.emissiveColor,
       emissiveIntensity: POLYGON_CONFIG.emissiveIntensity,
       selectiveEffectOcclusion: POLYGON_CONFIG.selectiveEffectOcclusion,

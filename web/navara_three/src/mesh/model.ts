@@ -46,19 +46,8 @@ import {
 
 import type { ViewEvents } from "..";
 import type { ViewContext } from "../core";
-import {
-  ensureSelectiveEffectUserData,
-  getSelectiveEffectConfig,
-  SELECTIVE_EFFECT_OCCLUSION_SKIP,
-} from "../core/SelectiveEffectHelper";
-import {
-  getMaskPassContext,
-  MaskPassPhase,
-  evaluateMaskPassParticipation,
-  applyMaskPassSkipState as applyMaskPassSkipStateBase,
-  applyMaskPassRenderState,
-  restoreMaterialState as restoreMaterialStateBase,
-} from "../core/SelectiveEffectMaskContext";
+import { ensureSelectiveEffectUserData } from "../core/SelectiveEffectHelper";
+import { injectSelectiveEffectHandlers } from "../core/SelectiveEffectMaskContext";
 import type { BufferLoader } from "../event";
 import type { CustomObject3DEventMap } from "../object3DEvent";
 import type { CommonUniforms } from "../uniforms";
@@ -565,108 +554,24 @@ export class ModelMesh
       this.initDepthMaterial(mesh);
 
       // Setup onBeforeRender for SelectiveEffect state handling
-      this.setupMeshOnBeforeRender(mesh);
+      // Initialize uniforms (for future custom shader support)
+      ensureSelectiveEffectUserData(mesh.material);
+
+      // Setup selective effect handlers with shader uniforms
+      injectSelectiveEffectHandlers(mesh, {
+        registry: this.viewContext?.selectiveEffectRegistry,
+        layerId: this._layerId,
+        shaderUniforms: {
+          uBloomMaskPass: mesh.material.userData.uBloomMaskPass,
+          uOutlineMaskPass: mesh.material.userData.uOutlineMaskPass,
+          uSelectiveEffectOcclusion:
+            mesh.material.userData.uSelectiveEffectOcclusion,
+        },
+      });
+      // Note: Function modifies mesh in place
 
       viewEvents.emit("_csmMounted", mesh.material);
     });
-  }
-
-  /**
-   * Setup onBeforeRender callback for a mesh to handle SelectiveEffect rendering
-   *
-   * Mesh determines its own depth/mask flags via onBeforeRender.
-   * Uses MaskPassContext for self-determination during BaseMRT phase.
-   *
-   * SoT Flow:
-   * - MaskPassContext provides runtime state (phase, activeEffects)
-   * - SelectiveEffectManager provides layer configuration (occlusion), accessed via registry
-   * - Mesh reads SoT, never modifies it
-   */
-  private setupMeshOnBeforeRender(
-    mesh: Mesh<BufferGeometry<NormalBufferAttributes>, ModelMaterial>,
-  ): void {
-    mesh.onBeforeRender = () => {
-      // Get MaskPassContext for current rendering state
-      const ctx = getMaskPassContext();
-
-      // Only process during BaseMRT phase (mask pass rendering)
-      if (ctx.phase !== MaskPassPhase.BaseMRT) {
-        // Not in mask pass - restore normal material state
-        restoreMaterialStateBase(mesh.material);
-        return;
-      }
-
-      // Get SelectiveEffectConfig from mesh (link() sets config on child meshes, not parent)
-      const config = getSelectiveEffectConfig(mesh);
-      const registry =
-        ctx.registry ?? this.viewContext?.selectiveEffectRegistry;
-      const layerId = this._layerId;
-
-      // Context-based self-determination during BaseMRT
-      this.applyMaskPassState(mesh, config, registry, layerId, ctx);
-    };
-  }
-
-  /**
-   * Apply mask pass state based on MaskPassContext.
-   * Called during BaseMRT phase for context-based self-determination.
-   *
-   * Uses shared helper for evaluation and render state, then applies
-   * model-specific shader uniforms for future custom shader support.
-   */
-  private applyMaskPassState(
-    mesh: Mesh<BufferGeometry<NormalBufferAttributes>, ModelMaterial>,
-    config: ReturnType<typeof getSelectiveEffectConfig>,
-    registry: ReturnType<typeof getMaskPassContext>["registry"],
-    layerId: string | undefined,
-    ctx: ReturnType<typeof getMaskPassContext>,
-  ): void {
-    const material = mesh.material;
-
-    // Initialize uniforms if not present (for future custom shader support)
-    material.userData.uBloomMaskPass ??= { value: 0.0 };
-    material.userData.uOutlineMaskPass ??= { value: 0.0 };
-    material.userData.uSelectiveEffectOcclusion ??= {
-      value: SELECTIVE_EFFECT_OCCLUSION_SKIP,
-    };
-
-    // Use shared helper for evaluation
-    const evaluation = evaluateMaskPassParticipation(
-      config,
-      registry,
-      layerId,
-      ctx,
-    );
-
-    if (!evaluation.shouldRender) {
-      this.setMaskPassSkipState(material);
-      return;
-    }
-
-    // Set shader uniforms (model-specific, for future custom shader support)
-    material.userData.uBloomMaskPass.value = evaluation.bloomActive ? 1.0 : 0.0;
-    material.userData.uOutlineMaskPass.value = evaluation.outlineActive
-      ? 1.0
-      : 0.0;
-    material.userData.uSelectiveEffectOcclusion.value = evaluation.occlusion;
-
-    // Apply render state using shared helper
-    applyMaskPassRenderState(material, evaluation.isSilhouette);
-  }
-
-  /**
-   * Set material state to skip mask pass rendering.
-   * Used when mesh doesn't contribute to current pass.
-   */
-  private setMaskPassSkipState(material: ModelMaterial): void {
-    // Set shader uniforms to skip values
-    material.userData.uBloomMaskPass.value = 0.0;
-    material.userData.uOutlineMaskPass.value = 0.0;
-    material.userData.uSelectiveEffectOcclusion.value =
-      SELECTIVE_EFFECT_OCCLUSION_SKIP;
-
-    // Apply render state using shared helper
-    applyMaskPassSkipStateBase(material);
   }
 
   private traversePoints(

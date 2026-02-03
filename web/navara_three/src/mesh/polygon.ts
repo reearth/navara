@@ -18,17 +18,10 @@ import { PolygonOutlineMesh, type ViewEvents } from "..";
 import type { ViewContext } from "../core";
 import {
   ensureSelectiveEffectUserData,
-  getSelectiveEffectConfig,
   parseSelectiveEffectOcclusion,
   type SelectiveEffectOcclusion,
 } from "../core/SelectiveEffectHelper";
-import {
-  getMaskPassContext,
-  MaskPassPhase,
-  evaluateMaskPassParticipation,
-  applyMaskPassSkipState,
-  applyMaskPassRenderState,
-} from "../core/SelectiveEffectMaskContext";
+import { injectSelectiveEffectHandlers } from "../core/SelectiveEffectMaskContext";
 import type { BufferLoader } from "../event";
 import type { PolygonMaterialProps } from "../material/enhancer/polygon";
 import { createPolygonMaterialEnhancer } from "../material/enhancer/polygon/polygonMaterialEnhancer";
@@ -44,17 +37,6 @@ import type {
   DefaultBatchAttributeValues,
 } from "./batchTexture";
 import { setupRTECallback } from "./rtcRteHelper";
-
-/**
- * Restore material state after mask pass rendering
- * (polygon.ts internal helper)
- */
-function restorePolygonMaterialState(material: MeshLambertMaterial): void {
-  // Reset to normal rendering state
-  material.colorWrite = true;
-  material.depthWrite = true;
-  material.depthTest = true;
-}
 
 type Attributes = BatchedFeatureAttributes<{
   position?: BufferAttribute; // Present when use_rte = false
@@ -116,8 +98,12 @@ export class PolygonMesh extends BatchedFeatureMesh<
     // TODO: Need to calculate bounding sphere by position_high and position_low.
     this.frustumCulled = false;
 
-    const useRTE = this.initGeometry(mesh, buf);
-    this.initMaterial(mesh, this._uniforms, tileHandle, viewEvents, !!useRTE);
+    const { success, useRTE } = this.initGeometry(mesh, buf);
+    if (!success) {
+      console.warn("PolygonMesh.init: geometry initialization failed");
+      return this;
+    }
+    this.initMaterial(mesh, this._uniforms, tileHandle, viewEvents, useRTE);
     this.initDepthMaterial();
 
     if (mesh.bounding_sphere) {
@@ -139,17 +125,42 @@ export class PolygonMesh extends BatchedFeatureMesh<
   }
 
   clone() {
-    return new PolygonMesh(
+    // Clone geometry and material to avoid shared references
+    const clonedGeometry = this.geometry.clone();
+    const clonedMaterial = this.material.clone();
+
+    // Create new enhancer for the cloned material
+    // This ensures independent state management
+    const clonedEnhancer = createPolygonMaterialEnhancer(clonedMaterial);
+
+    // Copy enhancer state from original to cloned
+    if (this._enhancedMaterial) {
+      const originalState = this._enhancedMaterial.states();
+      clonedEnhancer.mount({
+        base: { ...originalState.base },
+        water: { ...originalState.water },
+      });
+    }
+
+    const cloned = new PolygonMesh(
       this._viewContext,
       this._layerId,
       this._uniforms,
-      this.geometry,
-      this.material,
-      this._enhancedMaterial,
+      clonedGeometry,
+      clonedMaterial,
+      clonedEnhancer,
     ) as this;
+
+    // Note: Batch data texture sharing may need special handling in the future
+    // Currently batch data is managed by the parent class
+
+    return cloned;
   }
 
-  private initGeometry(mesh: NavaraPolygonMesh, buf: BufferLoader) {
+  private initGeometry(
+    mesh: NavaraPolygonMesh,
+    buf: BufferLoader,
+  ): { success: boolean; useRTE: boolean } {
     const g = mesh.geometry;
 
     // Check if RTE attributes are present
@@ -178,9 +189,10 @@ export class PolygonMesh extends BatchedFeatureMesh<
       : undefined;
     const batchIndexSize = g.batch_index ? g.batch_index.size : 0;
 
-    if (!indices) return;
-    if (!useRTE && !position) return;
-    if (useRTE && (!position_3d_high || !position_3d_low)) return;
+    if (!indices) return { success: false, useRTE: false };
+    if (!useRTE && !position) return { success: false, useRTE: false };
+    if (useRTE && (!position_3d_high || !position_3d_low))
+      return { success: false, useRTE: false };
 
     const geometry = this.geometry;
 
@@ -237,7 +249,7 @@ export class PolygonMesh extends BatchedFeatureMesh<
 
     geometry.setIndex(new BufferAttribute(indices, 1));
 
-    return useRTE;
+    return { success: true, useRTE };
   }
 
   /**
@@ -375,47 +387,12 @@ export class PolygonMesh extends BatchedFeatureMesh<
     // Initialize SelectiveEffect shader uniforms
     ensureSelectiveEffectUserData(material);
 
-    // Wrap existing onBeforeRender with MaskPass handling
-    const rteCallback = this.onBeforeRender; // Store existing callback (RTE or undefined)
-
-    this.onBeforeRender = (
-      renderer,
-      scene,
-      camera,
-      geometry,
-      _material,
-      group,
-    ) => {
-      // 1. RTE processing (if callback exists)
-      if (rteCallback) {
-        rteCallback(renderer, scene, camera, geometry, _material, group);
-      }
-
-      // 2. MaskPass processing
-      const ctx = getMaskPassContext();
-      if (ctx.phase !== MaskPassPhase.BaseMRT) {
-        // Not in mask pass - restore normal state
-        restorePolygonMaterialState(this.material);
-        return;
-      }
-
-      // During mask pass - evaluate participation
-      const config = getSelectiveEffectConfig(this);
-      const registry =
-        ctx.registry ?? this._viewContext?.selectiveEffectRegistry;
-      const evaluation = evaluateMaskPassParticipation(
-        config,
-        registry,
-        this._layerId,
-        ctx,
-      );
-
-      if (evaluation.shouldRender) {
-        applyMaskPassRenderState(this.material, evaluation.isSilhouette);
-      } else {
-        applyMaskPassSkipState(this.material);
-      }
-    };
+    // Setup selective effect handlers (automatically wraps existing RTE callback)
+    injectSelectiveEffectHandlers(this, {
+      registry: this._viewContext?.selectiveEffectRegistry,
+      layerId: this._layerId,
+    });
+    // Note: No need to manually assign handlers - function modifies object in place
 
     // ========== SelectiveEffect integration end ==========
 
@@ -535,6 +512,14 @@ export class PolygonMesh extends BatchedFeatureMesh<
 
     // Update via enhancer
     enhancer.update(updateProps);
+
+    // Update material state based on clampToGround changes
+    const clampToGround = !!material.clampToGround;
+    const shouldClipByStencil = !isTexturized && clampToGround;
+
+    this.material.colorWrite = !shouldClipByStencil;
+    this.material.depthWrite = !clampToGround;
+    this.material.depthTest = !clampToGround;
 
     // Post-update actions
     this.enableWater();
@@ -704,6 +689,24 @@ export class PolygonMesh extends BatchedFeatureMesh<
   }
 
   dispose(viewEvents: EventHandler<ViewEvents>) {
+    // Clean up SelectiveEffect registry links
+    if (this._viewContext?.selectiveEffectRegistry && this._prevEffectIds) {
+      this._viewContext.selectiveEffectRegistry.updateLinksForObject(
+        this,
+        [], // New effectIds: empty array (removing all links)
+        this._prevEffectIds, // Previous effectIds
+        this._layerId,
+      );
+      this._prevEffectIds = undefined;
+    }
+
     viewEvents.emit("_csmUnmounted", this.material);
+
+    // Dispose of geometry and materials to free GPU resources
+    this.geometry.dispose();
+    this.material.dispose();
+    if (this.customDepthMaterial) {
+      this.customDepthMaterial.dispose();
+    }
   }
 }
