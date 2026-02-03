@@ -48,7 +48,16 @@ export function Layer<L = NavaraLayer>({
       // Type assertion needed because LH<L> is a conditional type that TypeScript
       // can't fully resolve for generic L. Both LayerHandle and NavaraLayer have
       // compatible update methods at runtime.
-      (handleRef.current as NavaraLayer).update(config);
+      const handler = handleRef.current as NavaraLayer;
+
+      if ("data" in config) {
+        // Updating `data` isn't supported now.
+        // Also excluding this data prevents the assignment of an unnecessary large data.
+        const { data, ...withoutData } = config;
+        handler.update(withoutData);
+      } else {
+        handler.update(config);
+      }
     }
   }, [config]);
 
