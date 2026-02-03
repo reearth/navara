@@ -171,7 +171,6 @@ export type EffectBaseInstance<Instance extends object = object> =
  * 5. **{@link onDestroy}** - Called on `handle.delete()`. The base class removes the pass
  *    from the render pipeline.
  *
- * @see {@link FXAAEffectLayer} for a minimal built-in example.
  * @see The `custom-effect` example page for a complete custom effect layer tutorial
  *      implementing a vignette effect.
  *

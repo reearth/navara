@@ -163,7 +163,6 @@ export type MeshBaseInstance<Instance extends object = object> =
  * 6. **{@link onDestroy}** - Called on `handle.delete()`. The base class removes the mesh
  *    from its parent scene. Override to dispose geometry/material resources.
  *
- * @see {@link BoxMeshLayer} for a built-in example with geometry, material, and shadow support.
  * @see The `custom-shader` example page for a complete custom mesh layer tutorial using
  *      MarchingCubes with a custom shader material.
  *
