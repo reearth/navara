@@ -121,46 +121,54 @@ export class PolylineMesh extends BatchedFeatureMesh<
     )
       return;
     const geometry = this.geometry;
+    this.userData.useRTE = !!(
+      position_high &&
+      position_low &&
+      start_high &&
+      start_low &&
+      end_high &&
+      end_low
+    );
 
     geometry.setAttribute(
       "position",
       new BufferAttribute(position, g.position.size),
     );
 
-    // RTE attributes
-    if (position_high && position_low) {
-      geometry.setAttribute(
-        "position_3d_high",
-        new BufferAttribute(position_high, 3),
-      );
-      geometry.setAttribute(
-        "position_3d_low",
-        new BufferAttribute(position_low, 3),
-      );
-      this.userData.useRTE = true;
+    if (this.userData.useRTE) {
+      // RTE attributes
+      if (position_high && position_low) {
+        geometry.setAttribute(
+          "position_3d_high",
+          new BufferAttribute(position_high, 3),
+        );
+        geometry.setAttribute(
+          "position_3d_low",
+          new BufferAttribute(position_low, 3),
+        );
+      }
+      if (start_high && start_low) {
+        geometry.setAttribute(
+          "start_3d_high",
+          new BufferAttribute(start_high, 3),
+        );
+        geometry.setAttribute(
+          "start_3d_low",
+          new BufferAttribute(start_low, 3),
+        );
+      }
+      if (end_high && end_low) {
+        geometry.setAttribute("end_3d_high", new BufferAttribute(end_high, 3));
+        geometry.setAttribute("end_3d_low", new BufferAttribute(end_low, 3));
+      }
     } else {
       // Non-RTE mode: use regular start attribute
       geometry.setAttribute("start", new BufferAttribute(start, g.start.size));
-    }
 
-    // RTE attributes for start
-    if (start_high && start_low) {
-      geometry.setAttribute(
-        "start_3d_high",
-        new BufferAttribute(start_high, 3),
-      );
-      geometry.setAttribute("start_3d_low", new BufferAttribute(start_low, 3));
-    } else {
       geometry.setAttribute(
         "forward_offset",
         new BufferAttribute(forward_offset, g.forward_offset.size),
       );
-    }
-
-    // RTE attributes for end
-    if (end_high && end_low) {
-      geometry.setAttribute("end_3d_high", new BufferAttribute(end_high, 3));
-      geometry.setAttribute("end_3d_low", new BufferAttribute(end_low, 3));
     }
 
     geometry.setAttribute(
