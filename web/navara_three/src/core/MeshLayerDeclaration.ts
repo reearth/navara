@@ -38,6 +38,140 @@ export type MeshBaseInstance<Instance extends object = object> =
       ? Instance & { raw: Raw } & BaseInstance
       : Instance & BaseInstance;
 
+/**
+ * Abstract base class for creating custom mesh layers.
+ *
+ * Extend this class to add custom Three.js 3D objects (meshes, groups, particles, etc.)
+ * to the Navara scene. The base class handles position/scale/rotation synchronization
+ * and automatic scene management via {@link getPassKey}.
+ *
+ * ## Implementing a Custom Mesh Layer
+ *
+ * ### 1. Define configuration types
+ *
+ * Create a description type for your mesh-specific options, then merge it with the
+ * base config and update types:
+ *
+ * ```typescript
+ * type MyMeshDescription = {
+ *   myMesh?: {
+ *     radius?: number;
+ *     color?: Color;
+ *     castShadow?: boolean;
+ *   };
+ * };
+ *
+ * type MyMeshConfig = MeshLayerConfig & MyMeshDescription;
+ * type MyMeshUpdate = MeshLayerUpdate & MyMeshDescription;
+ * ```
+ *
+ * ### 2. Extend `MeshLayerDeclaration`
+ *
+ * Implement the {@link createMesh} factory method. Optionally override
+ * {@link getPassKey} to control which render scene the mesh belongs to,
+ * {@link onUpdateConfig} for dynamic updates, and {@link update} for animation.
+ *
+ * ```typescript
+ * class MyMeshLayer extends MeshLayerDeclaration<
+ *   MyMeshConfig,
+ *   MyMeshUpdate,
+ *   Mesh<SphereGeometry, MeshStandardMaterial>
+ * > {
+ *   private config: MyMeshConfig;
+ *
+ *   constructor(view: ViewContext, config: MyMeshConfig) {
+ *     super(view, config);
+ *     this.config = config;
+ *   }
+ *
+ *   createMesh() {
+ *     const cfg = this.config.myMesh ?? {};
+ *     const geometry = new SphereGeometry(cfg.radius ?? 1);
+ *     const material = new MeshStandardMaterial({
+ *       color: cfg.color?.raw ?? 0xffffff,
+ *     });
+ *     const mesh = new Mesh(geometry, material);
+ *     mesh.castShadow = cfg.castShadow ?? false;
+ *
+ *     // Enable CSM shadows if needed
+ *     if (mesh.castShadow) {
+ *       this.view.emit("_csmMounted", material);
+ *     }
+ *
+ *     return mesh;
+ *   }
+ *
+ *   onUpdateConfig(updates: MyMeshUpdate): void {
+ *     if (updates.myMesh && this._instance) {
+ *       if (updates.myMesh.color !== undefined) {
+ *         this._instance.material.color.set(updates.myMesh.color.raw);
+ *       }
+ *       this.emit("_needsUpdate");
+ *     }
+ *     super.onUpdateConfig(updates);
+ *   }
+ * }
+ * ```
+ *
+ * ### 3. Register and use the layer
+ *
+ * ```typescript
+ * view.registerMesh("myMesh", MyMeshLayer);
+ *
+ * const handle = view.addLayer<MyMeshLayer>({
+ *   type: "mesh",
+ *   position: { x: 0, y: 100, z: 0 },
+ *   scale: { x: 10, y: 10, z: 10 },
+ *   rotation: { x: 0, y: Math.PI / 4, z: 0 },
+ *   myMesh: { radius: 5, color: new Color("#00ff00") },
+ * });
+ *
+ * // Update dynamically
+ * handle.update({ myMesh: { color: new Color("#ff0000") } });
+ *
+ * // Access the raw Three.js object for direct manipulation
+ * const mesh = handle.ref.raw;
+ *
+ * // Animate on every frame
+ * view.on("preUpdate", (time) => {
+ *   mesh.rotation.y += 0.01;
+ * });
+ *
+ * // Remove the layer
+ * handle.delete();
+ * ```
+ *
+ * ## Render Scenes (Pass Keys)
+ *
+ * Override {@link getPassKey} to control which render scene the mesh is added to:
+ * - `"opaque"` (default) - Standard opaque rendering with depth testing.
+ * - `"transparent"` - Transparent rendering pass.
+ * - `"mrt"` - Multiple Render Target scene, used for selective effects (bloom, outline).
+ * - `"skyEnvMap"` - Sky environment map scene.
+ *
+ * ## Lifecycle
+ *
+ * 1. **Construction** - The layer is instantiated with the view context and config.
+ * 2. **{@link createMesh}** - Called during {@link onCreate} to create the Three.js object.
+ *    The base class applies position/scale/rotation and adds it to the scene
+ *    determined by {@link getPassKey}.
+ * 3. **{@link onUpdateConfig}** - Called when `handle.update()` is invoked. The base class
+ *    handles `visible`, `position`, `scale`, and `rotation`; override to handle your
+ *    custom properties. Always call `super.onUpdateConfig(updates)`.
+ * 4. **{@link update}** - Optional per-frame callback for animation.
+ * 5. **{@link onResize}** - Optional callback when the viewport is resized.
+ * 6. **{@link onDestroy}** - Called on `handle.delete()`. The base class removes the mesh
+ *    from its parent scene. Override to dispose geometry/material resources.
+ *
+ * @see The `custom-shader` example page for a complete custom mesh layer tutorial using
+ *      MarchingCubes with a custom shader material.
+ *
+ * @typeParam Config - Layer configuration type (extends {@link MeshLayerConfig})
+ * @typeParam UpdateConfig - Updatable properties (extends {@link MeshLayerUpdate})
+ * @typeParam InstanceObj - The Three.js Object3D type or a wrapper with a `raw` property
+ * @typeParam CustomEvent - Additional custom events the layer can emit
+ * @typeParam Instance - Resolved instance type (inferred automatically)
+ */
 export abstract class MeshLayerDeclaration<
   Config extends MeshLayerConfig = MeshLayerConfig,
   UpdateConfig extends MeshLayerUpdate = MeshLayerUpdate,
@@ -61,10 +195,26 @@ export abstract class MeshLayerDeclaration<
     this.rotation = resolvedConfig.rotation;
   }
 
+  /**
+   * Determines which render scene the mesh is added to.
+   * Override this to change the rendering pass for your mesh.
+   *
+   * @returns The pass key: `"opaque"` (default), `"transparent"`, `"mrt"`, or `"skyEnvMap"`.
+   */
   protected getPassKey(): PassKey {
     return "opaque";
   }
 
+  /**
+   * Factory method to create the Three.js 3D object.
+   *
+   * Override this to return your custom mesh. The returned object can be either:
+   * - A Three.js `Object3D` directly (e.g. `Mesh`, `Group`, `Points`)
+   * - A wrapper object with a `raw` property containing the `Object3D`
+   *
+   * The base class calls this during {@link onCreate} and automatically applies
+   * position, scale, rotation, and adds the object to the appropriate scene.
+   */
   abstract createMesh(): Instance;
 
   get raw() {
@@ -164,7 +314,19 @@ export abstract class MeshLayerDeclaration<
     super.onDestroy();
   }
 
+  /**
+   * Optional per-frame update callback.
+   * Override this to animate the mesh (e.g. rotation, morph targets, shader uniforms).
+   * @param time - High-resolution timestamp from the main render loop (same value passed
+   *   to `requestAnimationFrame`), in milliseconds.
+   */
   update?(time: number): void;
 
+  /**
+   * Optional callback when the viewport is resized.
+   * Override this to adjust the mesh based on viewport dimensions.
+   * @param width - New viewport width in pixels.
+   * @param height - New viewport height in pixels.
+   */
   onResize?(width: number, height: number): void;
 }
