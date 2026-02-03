@@ -361,6 +361,17 @@ export function injectSelectiveEffectHandlers(
     // 5. Early return: effectIds check (PERFORMANCE OPTIMIZATION)
     // Even without effectIds, must apply skip state during BaseMRT to prevent rendering to mask RT
     if (!config || !config.effectIds || config.effectIds.length === 0) {
+      // Reset shader uniforms to skip values (prevent residual from previous frame)
+      if (shaderUniforms) {
+        if (shaderUniforms.uBloomMaskPass)
+          shaderUniforms.uBloomMaskPass.value = 0;
+        if (shaderUniforms.uOutlineMaskPass)
+          shaderUniforms.uOutlineMaskPass.value = 0;
+        if (shaderUniforms.uSelectiveEffectOcclusion) {
+          shaderUniforms.uSelectiveEffectOcclusion.value =
+            SelectiveEffectOcclusionMode.Normal;
+        }
+      }
       applyMaskPassSkipState(material);
       return;
     }

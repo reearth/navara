@@ -263,6 +263,23 @@ export class PolygonMesh extends BatchedFeatureMesh<
     return this._enhancedMaterial;
   }
 
+  /**
+   * Update material state based on clampToGround and texturization settings.
+   * This method is used by both initMaterial() and _update() to keep material state consistent.
+   *
+   * @param clampToGround - Whether the polygon is clamped to ground
+   * @param isTexturized - Whether the polygon is texturized
+   */
+  private updateMaterialState(
+    clampToGround: boolean,
+    isTexturized: boolean,
+  ): void {
+    const shouldClipByStencil = !isTexturized && clampToGround;
+    this.material.colorWrite = !shouldClipByStencil;
+    this.material.depthWrite = !clampToGround;
+    this.material.depthTest = !clampToGround;
+  }
+
   private enableWater() {
     if (!this._enhancedMaterial) return;
 
@@ -301,17 +318,14 @@ export class PolygonMesh extends BatchedFeatureMesh<
     this.castShadow = !!meshMaterial.castShadow;
     this.receiveShadow = !!meshMaterial.receiveShadow;
 
-    const clampToGround = meshMaterial.clampToGround;
+    const clampToGround = !!meshMaterial.clampToGround;
     // This mesh should be texturized if it uses clamp-to-ground.
     const isTexturized = !!tileHandle;
-    const shouldClipByStencil = !isTexturized && clampToGround;
     const material = this.material;
 
     material.stencilWrite = false;
-    material.colorWrite = !shouldClipByStencil;
-    material.depthWrite = !clampToGround;
-    material.depthTest = !clampToGround;
     material.vertexColors = false;
+    this.updateMaterialState(clampToGround, isTexturized);
     this.visible = !!meshMaterial.show;
 
     const uMinMaxHeights = meshMaterial.__internal__?.minMaxHeights;
@@ -514,12 +528,7 @@ export class PolygonMesh extends BatchedFeatureMesh<
     enhancer.update(updateProps);
 
     // Update material state based on clampToGround changes
-    const clampToGround = !!material.clampToGround;
-    const shouldClipByStencil = !isTexturized && clampToGround;
-
-    this.material.colorWrite = !shouldClipByStencil;
-    this.material.depthWrite = !clampToGround;
-    this.material.depthTest = !clampToGround;
+    this.updateMaterialState(!!material.clampToGround, isTexturized);
 
     // Post-update actions
     this.enableWater();
