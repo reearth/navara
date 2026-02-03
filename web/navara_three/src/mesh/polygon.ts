@@ -98,6 +98,12 @@ export class PolygonMesh extends BatchedFeatureMesh<
     // TODO: Need to calculate bounding sphere by position_high and position_low.
     this.frustumCulled = false;
 
+    // Register cleanup listener first (before any potential early returns)
+    // This ensures dispose() is called even if geometry initialization fails
+    this.addEventListener("removedFromWorld", () => {
+      this.dispose(viewEvents);
+    });
+
     const { success, useRTE } = this.initGeometry(mesh, buf);
     if (!success) {
       console.warn("PolygonMesh.init: geometry initialization failed");
@@ -116,10 +122,6 @@ export class PolygonMesh extends BatchedFeatureMesh<
 
       this._recalculateBoundingSphere();
     }
-
-    this.addEventListener("removedFromWorld", () => {
-      this.dispose(viewEvents);
-    });
 
     return this;
   }

@@ -2,6 +2,7 @@ import type { Material, Mesh, Object3D, WebGLRenderTarget } from "three";
 
 import {
   SELECTIVE_BLOOM_EFFECT_KEY,
+  SELECTIVE_EFFECT_OCCLUSION_SKIP,
   SELECTIVE_OUTLINE_EFFECT_KEY,
   SelectiveEffectOcclusionMode,
   getSelectiveEffectConfig,
@@ -369,7 +370,7 @@ export function injectSelectiveEffectHandlers(
           shaderUniforms.uOutlineMaskPass.value = 0;
         if (shaderUniforms.uSelectiveEffectOcclusion) {
           shaderUniforms.uSelectiveEffectOcclusion.value =
-            SelectiveEffectOcclusionMode.Normal;
+            SELECTIVE_EFFECT_OCCLUSION_SKIP;
         }
       }
       applyMaskPassSkipState(material);
