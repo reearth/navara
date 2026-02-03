@@ -533,6 +533,38 @@ const geoLayersDef: MaterialLayerDescription[] = [
       layers: ["HeightControlDistrict"],
     },
   },
+  {
+    // Test RTE polyline
+    type: "geojson",
+    data: {
+      type: "Feature",
+      properties: {},
+      geometry: {
+        coordinates: [
+          [139.751163762, 35.687114441],
+          [139.751182224, 35.687136426],
+          [139.751162803, 35.687163336],
+          [139.75120476, 35.687157594],
+          [139.75122795, 35.687183842],
+          [139.751231487, 35.687149816],
+          [139.7512637, 35.6871450481],
+          [139.751220093, 35.687126052],
+          [139.751206672, 35.687090215],
+          [139.751191521, 35.687120873],
+          [139.75116, 35.68711],
+        ],
+        type: "LineString",
+      },
+    },
+    polyline: {
+      show: true,
+      color: new Color().setStyle("#ff0000"),
+      width: 5,
+      height: 1,
+      clampToGround: true,
+      useGroundNormals: true,
+    },
+  },
 ];
 
 export const run = async (view: ThreeView) => {

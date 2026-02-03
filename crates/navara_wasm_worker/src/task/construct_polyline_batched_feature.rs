@@ -39,7 +39,7 @@ fn construct_polyline(
         let (geometry, batch_index, batch_id) = features.to_transferable_by_index(idx);
 
         let Some((extent, mut constructed_geometry)) =
-            construct_polyline_feature(&material, geometry, &crs)
+            construct_polyline_feature(&material, geometry, &crs, false)
         else {
             continue;
         };

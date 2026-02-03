@@ -10,6 +10,7 @@ pub fn construct_polyline_feature(
     material: &PolylineMaterial,
     coords: Vec<f64>,
     crs: &CRS,
+    use_rte: bool,
 ) -> Option<(Extent<f64, Radians>, navara_geometry::PolylineGeometry)> {
     let mut latlngs = vec![];
     let mut positions = vec![];
@@ -27,6 +28,7 @@ pub fn construct_polyline_feature(
         PolylineGeometryOptions {
             positions,
             clamp_to_ground: material.clamp_to_ground,
+            use_rte,
             ..Default::default()
         },
     )
