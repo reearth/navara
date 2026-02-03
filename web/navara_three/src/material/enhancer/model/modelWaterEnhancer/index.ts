@@ -4,11 +4,11 @@ import invariant from "tiny-invariant";
 
 import type { MaterialEnhancer } from "../../MaterialEnhancer";
 import type {
-  PolygonBaseMutates,
-  PolygonBaseProps,
-  PolygonBaseState,
+  ModelBaseMutates,
+  ModelBaseProps,
+  ModelBaseState,
   SupportedMaterial,
-} from "../polygonBaseEnhancer";
+} from "../modelBaseEnhancer";
 
 import {
   AVAILABLE_SHADERS,
@@ -23,40 +23,40 @@ import {
   updateWaterState,
 } from "./state";
 import type {
-  PolygonWaterCombinedMutates,
-  PolygonWaterCombinedStates,
-  PolygonWaterProps,
-  PolygonWaterState,
-  WaterMutates,
-  WaterOnlyProps,
+  ModelWaterCombinedMutates,
+  ModelWaterCombinedStates,
+  ModelWaterMutates,
+  ModelWaterOnlyProps,
+  ModelWaterProps,
+  ModelWaterState,
 } from "./types";
 
 /**
- * Factory function to create a polygon water enhancer.
+ * Factory function to create a model water enhancer.
  *
- * @param baseEnhancer - The base polygon enhancer to compose with (material is obtained from this)
+ * @param baseEnhancer - The base model enhancer to compose with (material is obtained from this)
  * @returns A new MaterialEnhancer with combined base + water functionality
  */
-export function createPolygonWaterEnhancer(
+export function createModelWaterEnhancer(
   baseEnhancer: MaterialEnhancer<
     SupportedMaterial,
-    PolygonBaseProps,
-    PolygonBaseState,
-    PolygonBaseMutates,
+    ModelBaseProps,
+    ModelBaseState,
+    ModelBaseMutates,
     typeof AVAILABLE_SHADERS
   >,
 ): MaterialEnhancer<
   WaterSupportedMaterial,
-  PolygonWaterProps,
-  PolygonWaterCombinedStates,
-  PolygonWaterCombinedMutates,
+  ModelWaterProps,
+  ModelWaterCombinedStates,
+  ModelWaterCombinedMutates,
   typeof AVAILABLE_SHADERS
 > {
   const { material } = baseEnhancer;
   // Internal state - immutable, always replaced as a whole
-  let state: PolygonWaterState | null = null;
+  let state: ModelWaterState | null = null;
   // Internal mutates object (refs are hidden inside)
-  let mutates: WaterMutates | null = null;
+  let mutates: ModelWaterMutates | null = null;
 
   return {
     material: material as WaterSupportedMaterial,
@@ -73,7 +73,7 @@ export function createPolygonWaterEnhancer(
       transformWaterShader(shader, state, mutates);
     },
 
-    mount: (props: PolygonWaterProps): void => {
+    mount: (props: ModelWaterProps): void => {
       // Mount base enhancer first with base props
       baseEnhancer.mount(props.base ?? {});
 
@@ -84,22 +84,26 @@ export function createPolygonWaterEnhancer(
       // Create mutates (refs are created inside with default values)
       mutates = createWaterMutates();
       mutates.update(state);
-      // Handle external ref (timeUniform identity doesn't change after mount)
+      // Handle external refs (identity doesn't change after mount)
+      if (waterProps.waterNormalMap) {
+        mutates.setWaterNormalMap(waterProps.waterNormalMap, state.useWater);
+      }
       if (waterProps.timeUniform) {
         mutates.setTimeUniform(waterProps.timeUniform);
       }
+      if (waterProps.skyEnvMapUniform) {
+        mutates.setSkyEnvMapUniform(waterProps.skyEnvMapUniform);
+      }
 
       // Apply material configuration (side effect)
-      const { isTexturized } = baseEnhancer.states();
       applyWaterMaterialConfig(
         material as WaterSupportedMaterial,
         state,
-        isTexturized,
         false,
       );
     },
 
-    update: (props: PolygonWaterProps): void => {
+    update: (props: ModelWaterProps): void => {
       // Update base enhancer first with base props
       if (props.base) {
         baseEnhancer.update(props.base);
@@ -112,18 +116,24 @@ export function createPolygonWaterEnhancer(
         const prevUseWater = state.useWater;
         state = updateWaterState(props.water, state);
         mutates.update(state);
-        // Handle external ref (timeUniform identity doesn't change, only set once)
+        // Handle external refs (identity doesn't change, only set once)
         if (props.water.timeUniform) {
           mutates.setTimeUniform(props.water.timeUniform);
         }
+        if (props.water.skyEnvMapUniform) {
+          mutates.setSkyEnvMapUniform(props.water.skyEnvMapUniform);
+        }
 
         // Apply material configuration (side effect)
-        const { isTexturized } = baseEnhancer.states();
-        applyWaterMaterialConfig(material, state, isTexturized, prevUseWater);
+        applyWaterMaterialConfig(
+          material as WaterSupportedMaterial,
+          state,
+          prevUseWater,
+        );
       }
     },
 
-    states: (): PolygonWaterCombinedStates => {
+    states: (): ModelWaterCombinedStates => {
       invariant(state, "mount() must be called before states");
       return {
         base: baseEnhancer.states(),
@@ -131,7 +141,7 @@ export function createPolygonWaterEnhancer(
       };
     },
 
-    mutates: (): PolygonWaterCombinedMutates => {
+    mutates: (): ModelWaterCombinedMutates => {
       invariant(mutates, "mount() must be called before mutates");
       return {
         base: baseEnhancer.mutates(),
@@ -154,11 +164,12 @@ export function createPolygonWaterEnhancer(
 
 // Re-export public types
 export type {
-  PolygonWaterCombinedMutates,
-  PolygonWaterCombinedStates,
-  PolygonWaterProps,
-  PolygonWaterState,
-  WaterOnlyProps,
+  ModelWaterCombinedMutates,
+  ModelWaterCombinedStates,
+  ModelWaterMutates,
+  ModelWaterOnlyProps,
+  ModelWaterProps,
+  ModelWaterState,
   AVAILABLE_SHADERS,
   SupportedMaterial,
 };
