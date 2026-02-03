@@ -340,8 +340,7 @@ export class ModelMesh
       enhancer.mount(initialProps);
 
       // Set up custom program cache key based on config flags that affect shader defines
-      mesh.material.customProgramCacheKey = () =>
-        enhancer.programCacheKey();
+      mesh.material.customProgramCacheKey = () => enhancer.programCacheKey();
 
       // Set up onBeforeCompile using the enhancer's transformShader
       mesh.material.onBeforeCompile = enhancer.transformShader;
