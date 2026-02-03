@@ -26,3 +26,4 @@ navara_component.workspace = true
 navara_parser.workspace = true
 geozero.workspace = true
 prost.workspace = true
+rustc-hash.workspace = true
