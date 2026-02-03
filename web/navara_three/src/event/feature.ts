@@ -101,7 +101,7 @@ export function renderFeature(
 // - `model` feature uses Web worker internally to parse glTF and its compression.
 export const checkFeatureParallel = (feature: RenderableFeature): boolean => {
   const { model } = feature;
-  return !model;
+  return !!model;
 };
 
 export async function processRenderableFeatureAdded(

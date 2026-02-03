@@ -276,3 +276,109 @@ it("should handle the increment in async boundary", async () => {
 
   await vi.waitFor(() => expect(processedCount).toBe(2));
 });
+
+it("should keep skipped events in stack when shouldProcess returns false", async () => {
+  const eventManager = new EventManager();
+
+  const processedIds: number[] = [];
+
+  // Add 5 events to the stack
+  eventManager.pushEvents(
+    makeEvent({
+      renderable_feature_added: [
+        makeRenderableFeatures(1, 1),
+        makeRenderableFeatures(1, 2),
+        makeRenderableFeatures(1, 3),
+        makeRenderableFeatures(1, 4),
+        makeRenderableFeatures(1, 5),
+      ],
+      renderable_feature_removed: [],
+      renderable_feature_changed: [],
+    }),
+  );
+
+  // First pass: only process events with odd gen (1, 3, 5)
+  await eventManager.forEachStackAsync(
+    "renderable_feature_added",
+    async (event) => {
+      processedIds.push(event.gen);
+    },
+    10,
+    (event) => event.gen % 2 === 1, // Only process odd gen
+  );
+
+  // Should have processed 1, 3, 5
+  expect(processedIds).toEqual([1, 3, 5]);
+
+  // Events with gen 2, 4 should remain in the stack
+  expect(eventManager.stacks.renderable_feature_added).toHaveLength(2);
+  expect(eventManager.stacks.renderable_feature_added[0]).toMatchObject({
+    gen: 2,
+  });
+  expect(eventManager.stacks.renderable_feature_added[1]).toMatchObject({
+    gen: 4,
+  });
+
+  // Second pass: process remaining events
+  processedIds.length = 0;
+  await eventManager.forEachStackAsync(
+    "renderable_feature_added",
+    async (event) => {
+      processedIds.push(event.gen);
+    },
+    10,
+  );
+
+  // Should have processed 2, 4
+  expect(processedIds).toEqual([2, 4]);
+
+  // Stack should now be empty
+  expect(eventManager.stacks.renderable_feature_added).toHaveLength(0);
+});
+
+it("should correctly count max limit including skipped events", async () => {
+  const eventManager = new EventManager();
+
+  const processedIds: number[] = [];
+
+  // Add 10 events to the stack
+  eventManager.pushEvents(
+    makeEvent({
+      renderable_feature_added: [
+        makeRenderableFeatures(1, 1),
+        makeRenderableFeatures(1, 2),
+        makeRenderableFeatures(1, 3),
+        makeRenderableFeatures(1, 4),
+        makeRenderableFeatures(1, 5),
+        makeRenderableFeatures(1, 6),
+        makeRenderableFeatures(1, 7),
+        makeRenderableFeatures(1, 8),
+        makeRenderableFeatures(1, 9),
+        makeRenderableFeatures(1, 10),
+      ],
+      renderable_feature_removed: [],
+      renderable_feature_changed: [],
+    }),
+  );
+
+  // Process with max=5, but only process odd gen (1, 3, 5)
+  // This tests that idx is incremented for skipped events too,
+  // so max limit works correctly (should check first 5 events: 1,2,3,4,5)
+  await eventManager.forEachStackAsync(
+    "renderable_feature_added",
+    async (event) => {
+      processedIds.push(event.gen);
+    },
+    5, // max limit
+    (event) => event.gen % 2 === 1, // Only process odd gen
+  );
+
+  // Should have processed odd events within first 5: 1, 3, 5
+  expect(processedIds).toEqual([1, 3, 5]);
+
+  // Stack should have: 2, 4 (skipped from first 5) + 6, 7, 8, 9, 10 (not checked)
+  expect(eventManager.stacks.renderable_feature_added).toHaveLength(7);
+  expect(
+    eventManager.stacks.renderable_feature_added.map((e) => e.gen),
+  ).toEqual([2, 4, 6, 7, 8, 9, 10]);
+});
