@@ -31,9 +31,7 @@ export const createBaseMutates = (): ModelBaseMutates => {
       // Selective effects - convert boolean to number
       refs.uBloomMaskPass.value = state.bloom ? 1 : 0;
       refs.uOutlineMaskPass.value = state.outline ? 1 : 0;
-      refs.uSelectiveEffectOcclusion.value = state.occlusion
-        ? 1
-        : SELECTIVE_EFFECT_OCCLUSION_SKIP;
+      refs.uSelectiveEffectOcclusion.value = state.occlusion;
     },
     updateUniforms: (uniforms) => {
       // Assign core uniform refs to shader.uniforms

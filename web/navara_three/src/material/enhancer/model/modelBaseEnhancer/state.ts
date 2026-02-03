@@ -1,3 +1,5 @@
+import { SelectiveEffectOcclusionMode } from "../../../../core";
+
 import type { ModelBaseProps, ModelBaseState } from "./types";
 
 export const DEFAULT_BASE_PROPS: Required<
@@ -16,7 +18,7 @@ export const DEFAULT_BASE_PROPS: Required<
   useBatchExtrudedHeight: false,
   bloom: false,
   outline: false,
-  occlusion: false,
+  occlusion: SelectiveEffectOcclusionMode.Skip,
 };
 
 /** Default state derived from DEFAULT_BASE_PROPS */

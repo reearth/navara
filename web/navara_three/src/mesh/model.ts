@@ -123,6 +123,7 @@ export class ModelMesh
 
   get water(): boolean {
     for (const enhancer of this._enhancers.values()) {
+      // Assume the first enhancer has the common value.
       return enhancer.states().water.useWater;
     }
     return false;
@@ -424,7 +425,7 @@ export class ModelMesh
         base: {
           bloom: false,
           outline: false,
-          occlusion: false,
+          occlusion: SelectiveEffectOcclusionMode.Skip,
         },
       });
 
@@ -438,7 +439,7 @@ export class ModelMesh
       base: {
         bloom: evaluation.bloomActive,
         outline: evaluation.outlineActive,
-        occlusion: evaluation.occlusion !== SelectiveEffectOcclusionMode.Skip,
+        occlusion: evaluation.occlusion,
       },
     });
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { SelectiveEffectOcclusionMode } from "../../../../core";
 import type { ShaderUniforms } from "../../MaterialEnhancer";
 
 import { createBaseMutates } from "./mutates";
@@ -71,16 +72,16 @@ describe("modelBaseEnhancer/mutates", () => {
         expected: 0,
       },
       {
-        name: "occlusion true → uSelectiveEffectOcclusion = 1",
-        stateOverride: { occlusion: true },
+        name: "occlusion SelectiveEffectOcclusionMode.Normal → uSelectiveEffectOcclusion = SelectiveEffectOcclusionMode.Normal",
+        stateOverride: { occlusion: SelectiveEffectOcclusionMode.Normal },
         uniformKey: "uSelectiveEffectOcclusion",
-        expected: 1,
+        expected: SelectiveEffectOcclusionMode.Normal,
       },
       {
-        name: "occlusion false → uSelectiveEffectOcclusion < 0 (SKIP)",
-        stateOverride: { occlusion: false },
+        name: "occlusion SelectiveEffectOcclusionMode.Skip → uSelectiveEffectOcclusion = SelectiveEffectOcclusionMode.Normal",
+        stateOverride: { occlusion: SelectiveEffectOcclusionMode.Skip },
         uniformKey: "uSelectiveEffectOcclusion",
-        expected: (v: number) => v < 0,
+        expected: SelectiveEffectOcclusionMode.Skip,
       },
     ];
 
@@ -93,11 +94,7 @@ describe("modelBaseEnhancer/mutates", () => {
       mutates.updateUniforms(uniforms, state);
 
       const value = uniforms[uniformKey]?.value as number;
-      if (typeof expected === "function") {
-        expect(expected(value)).toBe(true);
-      } else {
-        expect(value).toBe(expected);
-      }
+      expect(value).toBe(expected);
     });
   });
 

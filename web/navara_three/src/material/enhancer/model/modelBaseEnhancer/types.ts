@@ -1,5 +1,6 @@
 import type { Texture } from "three";
 
+import type { SelectiveEffectOcclusionValue } from "../../../../core";
 import type { UniformValue } from "../../../types";
 import type { BatchTextureFlags } from "../../batchTexture";
 import type { Mutates } from "../../MaterialEnhancer";
@@ -31,7 +32,7 @@ export type ModelBaseProps = {
   bloom?: boolean;
   outline?: boolean;
   // When true, uses 1.0; when false, uses SELECTIVE_EFFECT_OCCLUSION_SKIP
-  occlusion?: boolean;
+  occlusion?: SelectiveEffectOcclusionValue;
 } & BatchTextureFlags;
 
 /**
@@ -50,7 +51,7 @@ export type ModelBaseState = Readonly<{
   // Selective effects state - stored as boolean, converted to number in mutates
   bloom: boolean;
   outline: boolean;
-  occlusion: boolean;
+  occlusion: SelectiveEffectOcclusionValue;
 }>;
 
 /**
@@ -64,7 +65,7 @@ export type ModelBaseRefs = {
   nvr_uPickable: UniformValue<number>;
   uBloomMaskPass: UniformValue<number>;
   uOutlineMaskPass: UniformValue<number>;
-  uSelectiveEffectOcclusion: UniformValue<number>;
+  uSelectiveEffectOcclusion: UniformValue<SelectiveEffectOcclusionValue>;
 
   // Optional uniforms
   batchDataTexture?: UniformValue<Texture | null>;

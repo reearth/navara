@@ -56,8 +56,7 @@ uniform float uSpecularStrength;
 uniform float uApplyWaterNormal;
 uniform bool uSpecular;
 uniform float uIor;
-uniform float uTime;
-// uniform float reflectivity;`,
+uniform float uTime;`,
     )
     // Replace normal block with water/non-water specular computation
     .replaceBlock(
