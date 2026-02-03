@@ -52,32 +52,6 @@ export function FloodLayer({
   const layerRef = useRef<NavaraLayer | null>(null);
   const currentTimeRef = useRef<string>("");
 
-  // Track whether water_normal should be temporarily disabled during slider changes
-  const [waterNormalEnabled, setWaterNormalEnabled] = useState(waterSurface);
-  const waterNormalTimerRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Disable water_normal while slider is being changed, re-enable after 100ms
-  useEffect(() => {
-    // Disable water_normal immediately when progress changes
-    setWaterNormalEnabled(false);
-
-    // Clear any existing timer
-    if (waterNormalTimerRef.current) {
-      clearTimeout(waterNormalTimerRef.current);
-    }
-
-    waterNormalTimerRef.current = setTimeout(() => {
-      setWaterNormalEnabled(waterSurface);
-    }, 1500);
-
-    // Cleanup on unmount
-    return () => {
-      if (waterNormalTimerRef.current) {
-        clearTimeout(waterNormalTimerRef.current);
-      }
-    };
-  }, [progressPercent, waterSurface]);
-
   // Load CZML once
   useEffect(() => {
     let mounted = true;
@@ -126,10 +100,10 @@ export function FloodLayer({
     return currentDate.toISOString();
   }, [fc, progressPercent]);
 
+  currentTimeRef.current = currentTime;
+
   // Keep an up-to-date ref for evaluator closure
   useEffect(() => {
-    currentTimeRef.current = currentTime;
-
     // Notify parent of current date change
     if (currentTime && onCurrentDateChange) {
       onCurrentDateChange(new Date(currentTime));
@@ -193,30 +167,30 @@ export function FloodLayer({
     return () => layer.off("featureUpdated", handler);
   };
 
-  const layerDesc = useMemo<LayerDescription | null>(() => {
+  const layerDesc = useMemo((): LayerDescription | null => {
     if (!fc || !visible) return null;
     return {
       type: "geojson",
       data: fc,
       polygon: {
         color: DEFAULT_POLY_COLOR,
-        clamp_to_ground: false,
-        outline_show: false,
-        water: waterNormalEnabled,
-        per_position_height: true,
+        clampToGround: false,
+        outlineShow: false,
+        water: waterSurface,
+        perPositionHeight: true,
         height: -22.0,
         reflectivity: transparent ? 0.0 : 0.3,
-        water_scale_normal: 0.3,
-        extruded_height: 1,
+        waterScaleNormal: 0.3,
+        extrudedHeight: 1,
         transparent,
         opacity: 0.9,
-        show: false,
+        // show: false,
         specular: true,
-        apply_water_normal: false,
-        receive_shadow: true,
+        applyWaterNormal: false,
+        receiveShadow: true,
       },
     };
-  }, [fc, visible, waterNormalEnabled, transparent]);
+  }, [fc, visible, waterSurface, transparent]);
 
   // Re-evaluate show/color without replacing data when the current time changes
   useEffect(() => {
