@@ -205,7 +205,8 @@ export abstract class LightLayerDeclaration<
   /**
    * Optional per-frame update callback.
    * Override this to animate the light (e.g. orbiting, flickering, color shifts).
-   * @param time - Elapsed time in milliseconds since the view started.
+   * @param time - High-resolution timestamp (in milliseconds) provided by the render loop,
+   *   the same value passed to `requestAnimationFrame` callbacks.
    */
   update?(time: number): void;
 }
