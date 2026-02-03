@@ -46,7 +46,6 @@ describe("modelBaseEnhancer", () => {
       expect(parsed).toEqual({
         useBatchTexture: true,
         useBatchColorShow: false,
-        useBatchHeight: true,
       });
     });
 
