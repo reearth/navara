@@ -145,6 +145,7 @@ export class EventManager {
       const v = value as GetJsEventValue<Key>;
 
       if (shouldProcess && !shouldProcess(v)) {
+        idx++;
         continue;
       }
 
