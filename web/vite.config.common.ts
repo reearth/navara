@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import fs from "fs";
 import path from "path";
 import { ConfigEnv, normalizePath } from "vite";
@@ -62,4 +63,7 @@ export const commonConfig = (name: string, env: ConfigEnv): UserConfig => ({
           }
         : undefined,
   },
+  test: {
+    environment: "jsdom",
+  }
 });
