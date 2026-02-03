@@ -698,7 +698,8 @@ export class ModelMesh
   }
 
   _setFeatureHeight(_height: number) {
-    throw new Unimplemented();
+    // Height adjustment via batch textures is currently not implemented.
+    // This method is intentionally a no-op to avoid breaking existing callers.
   }
 
   dispose(viewEvents: EventHandler<ViewEvents>) {
