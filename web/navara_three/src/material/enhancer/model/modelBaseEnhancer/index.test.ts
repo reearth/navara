@@ -38,7 +38,6 @@ describe("modelBaseEnhancer", () => {
       enhancer.mount({
         useBatchTexture: true,
         useBatchColorShow: false,
-        useBatchHeight: true,
       });
 
       const cacheKey = enhancer.programCacheKey();
@@ -48,7 +47,6 @@ describe("modelBaseEnhancer", () => {
         useBatchTexture: true,
         useBatchColorShow: false,
         useBatchHeight: true,
-        useBatchExtrudedHeight: false,
       });
     });
 

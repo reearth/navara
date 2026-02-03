@@ -14,8 +14,6 @@ export const DEFAULT_BASE_PROPS: Required<
   batchColorEnabled: false,
   useBatchTexture: false,
   useBatchColorShow: false,
-  useBatchHeight: false,
-  useBatchExtrudedHeight: false,
   bloom: false,
   outline: false,
   occlusion: SelectiveEffectOcclusionMode.Skip,
@@ -27,8 +25,6 @@ export const DEFAULT_BASE_STATE: ModelBaseState = {
   batchColorEnabled: DEFAULT_BASE_PROPS.batchColorEnabled,
   useBatchTexture: DEFAULT_BASE_PROPS.useBatchTexture,
   useBatchColorShow: DEFAULT_BASE_PROPS.useBatchColorShow,
-  useBatchHeight: DEFAULT_BASE_PROPS.useBatchHeight,
-  useBatchExtrudedHeight: DEFAULT_BASE_PROPS.useBatchExtrudedHeight,
   bloom: DEFAULT_BASE_PROPS.bloom,
   outline: DEFAULT_BASE_PROPS.outline,
   occlusion: DEFAULT_BASE_PROPS.occlusion,
@@ -51,9 +47,6 @@ export const updateState = (
   batchColorEnabled: props.batchColorEnabled ?? currentState.batchColorEnabled,
   useBatchTexture: props.useBatchTexture ?? currentState.useBatchTexture,
   useBatchColorShow: props.useBatchColorShow ?? currentState.useBatchColorShow,
-  useBatchHeight: props.useBatchHeight ?? currentState.useBatchHeight,
-  useBatchExtrudedHeight:
-    props.useBatchExtrudedHeight ?? currentState.useBatchExtrudedHeight,
   // Selective effects - these are per-frame values, always take from props
   bloom: props.bloom ?? currentState.bloom,
   outline: props.outline ?? currentState.outline,

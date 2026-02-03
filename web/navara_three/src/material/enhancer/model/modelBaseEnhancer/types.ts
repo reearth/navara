@@ -33,7 +33,7 @@ export type ModelBaseProps = {
   outline?: boolean;
   // When true, uses 1.0; when false, uses SELECTIVE_EFFECT_OCCLUSION_SKIP
   occlusion?: SelectiveEffectOcclusionValue;
-} & BatchTextureFlags;
+} & Omit<BatchTextureFlags, "useBatchExtrudedHeight" | "useBatchHeight">;
 
 /**
  * Immutable state for the model base enhancer.
@@ -46,8 +46,6 @@ export type ModelBaseState = Readonly<{
   batchColorEnabled: boolean;
   useBatchTexture: boolean;
   useBatchColorShow: boolean;
-  useBatchHeight: boolean;
-  useBatchExtrudedHeight: boolean;
   // Selective effects state - stored as boolean, converted to number in mutates
   bloom: boolean;
   outline: boolean;

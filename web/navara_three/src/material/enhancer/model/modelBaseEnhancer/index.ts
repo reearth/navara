@@ -92,8 +92,6 @@ export function createModelBaseEnhancer(
       return JSON.stringify({
         useBatchTexture: state.useBatchTexture,
         useBatchColorShow: state.useBatchColorShow,
-        useBatchHeight: state.useBatchHeight,
-        useBatchExtrudedHeight: state.useBatchExtrudedHeight,
       });
     },
   };
