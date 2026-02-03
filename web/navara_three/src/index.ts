@@ -17,7 +17,7 @@ import initCore, {
   type TextureFragmentStatus,
 } from "@navara/engine";
 import { initNavaraApi } from "@navara/three_api";
-import { initializeWorkerPool, workerPool } from "@navara/worker";
+import { initializeWorkerPool } from "@navara/worker";
 import {
   Scene,
   WebGLRenderer,
@@ -36,7 +36,7 @@ import invariant from "tiny-invariant";
 import { Atmosphere, type AtmosphereOptions } from "./atmosphere";
 import { ThreeViewCamera } from "./camera";
 import { Color } from "./Color";
-import { MAP_CONCURRENCY } from "./concurrency";
+import { createDefaultConcurrencyManager } from "./concurrency";
 import { WATER_NORMAL_URL } from "./constants/assets";
 import {
   LayerDeclaration,
@@ -109,6 +109,7 @@ import { TerrainPicker } from "./pick/pickTerrain";
 import { TexturizedSceneByTileCoordinates, type Scenes } from "./scene";
 import { ShadowMapViewers } from "./ShadowMapViewers";
 import { RendererStats } from "./stats";
+import { warmUp } from "./tasks/warmUp";
 import type { TextureOptions } from "./textures";
 import {
   type AbortControllers,
@@ -718,6 +719,7 @@ export default class ThreeView<
       this.atmosphere,
       this.layersManager,
       this.renderPassOrchestrator,
+      createDefaultConcurrencyManager(),
       {
         meshes: this._meshes,
         drapedMaterials: this._drapedFeatureMaterials,
@@ -857,16 +859,18 @@ export default class ThreeView<
 
     this._initialized = true;
 
-    initializeWorkerPool(WorkerURL, MAP_CONCURRENCY);
+    const concurrencyManager = this.viewContext.concurrencyManager;
+
+    initializeWorkerPool(WorkerURL, concurrencyManager);
 
     // Pre-warm all workers with WASM initialization
-    const warmUpPromises: Promise<unknown>[] = [];
-    for (let i = 0; i < MAP_CONCURRENCY; i++) {
-      warmUpPromises.push(workerPool().exec("warmUp", []));
+    const warmUpPromises: Promise<void>[] = [];
+    for (let i = 0; i < concurrencyManager.total; i++) {
+      warmUpPromises.push(warmUp());
     }
 
-    await initCore();
-    await initNavaraApi();
+    // Asynchronous initialization in parallel.
+    await Promise.all([...warmUpPromises, initCore(), initNavaraApi()]);
 
     this._core = new Core(newId());
     this._core.start();

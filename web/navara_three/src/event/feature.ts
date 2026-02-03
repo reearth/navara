@@ -97,6 +97,13 @@ export function renderFeature(
   }
 }
 
+// Define whether the feature uses web worker internally.
+// - `model` feature uses Web worker internally to parse glTF and its compression.
+export const checkFeatureParallel = (feature: RenderableFeature): boolean => {
+  const { model } = feature;
+  return !!model;
+};
+
 export async function processRenderableFeatureAdded(
   ev: RenderableFeatureAddedEvent,
   scenes: Scenes,
@@ -110,7 +117,6 @@ export async function processRenderableFeatureAdded(
   layersManager: LayersManager,
   viewContext: ViewContext,
   updatedAt: number,
-  onConcurrency: (v: number) => void,
 ) {
   const id = generate_id_from_entity(ev);
   const feature = ev.feature;
@@ -123,11 +129,11 @@ export async function processRenderableFeatureAdded(
 
   const featureLayerId = ev.layer_id;
 
-  const useParallel = !!model;
+  const useParallel = checkFeatureParallel(feature);
 
   if (useParallel) {
     // Start parallel process
-    onConcurrency(1);
+    viewContext.concurrencyManager.increment();
   }
 
   const obj = await renderFeature(
@@ -154,7 +160,7 @@ export async function processRenderableFeatureAdded(
     .finally(() => {
       if (useParallel) {
         // End parallel process
-        onConcurrency(-1);
+        viewContext.concurrencyManager.decrement();
       }
     });
 
