@@ -317,7 +317,8 @@ export abstract class MeshLayerDeclaration<
   /**
    * Optional per-frame update callback.
    * Override this to animate the mesh (e.g. rotation, morph targets, shader uniforms).
-   * @param time - Elapsed time in milliseconds since the view started.
+   * @param time - High-resolution timestamp from the main render loop (same value passed
+   *   to `requestAnimationFrame`), in milliseconds.
    */
   update?(time: number): void;
 
