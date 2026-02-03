@@ -51,6 +51,7 @@ import type {
 import type { CommonUniforms } from "../uniforms";
 
 import {
+  checkFeatureParallel,
   processRenderableFeatureAdded,
   processRenderableFeatureChanged,
 } from "./feature";
@@ -370,7 +371,10 @@ export function processEvent(
       shouldProcess: ({ type, event }) => {
         switch (type) {
           case "add":
-            return viewContext.concurrencyManager.canIncrement();
+            return (
+              !checkFeatureParallel(event.feature) ||
+              viewContext.concurrencyManager.canIncrement()
+            );
           case "remove":
             return true;
           case "change":

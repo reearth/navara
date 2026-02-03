@@ -1,3 +1,4 @@
+import type { RenderableFeatureAddedEvent } from "@navara/engine";
 import { expect, it, vi } from "vitest";
 
 import { wait } from "../time";
@@ -198,4 +199,80 @@ it("should remove duplicated renderable feature event", async () => {
   expect(eventManager.stacks.renderable_feature_changed).toEqual([
     makeRenderableFeatures(1, 4),
   ]);
+});
+
+it("should handle the increment in async boundary", async () => {
+  const eventManager = new EventManager();
+
+  // Simulate a concurrency limiter that allows max 2 concurrent operations
+  const maxConcurrent = 2;
+  let currentConcurrent = 0;
+  let processedCount = 0;
+
+  const canIncrement = () => currentConcurrent < maxConcurrent;
+  const increment = () => {
+    currentConcurrent++;
+  };
+  const decrement = () => {
+    currentConcurrent--;
+  };
+
+  const doAsync = async (t: number) => {
+    increment();
+    await wait(t);
+    decrement();
+    processedCount++;
+  };
+
+  const addedFeatures: RenderableFeatureAddedEvent[] = [
+    makeRenderableFeatures(1, 1),
+    makeRenderableFeatures(1, 2),
+    makeRenderableFeatures(1, 3),
+    makeRenderableFeatures(1, 4),
+    makeRenderableFeatures(1, 5),
+  ];
+
+  eventManager.pushEvents(
+    makeEvent({
+      renderable_feature_added: addedFeatures,
+      renderable_feature_removed: [],
+      renderable_feature_changed: [],
+    }),
+  );
+
+  const waitingTime = 10;
+
+  eventManager.processTransactionEvents(
+    "renderableFeature",
+    {
+      add: {
+        key: "renderable_feature_added",
+        max: 10,
+      },
+      remove: {
+        key: "renderable_feature_removed",
+      },
+      change: {
+        key: "renderable_feature_changed",
+      },
+    },
+    async ({ type }) => {
+      if (type === "add") {
+        await doAsync(waitingTime);
+      }
+    },
+    {
+      shouldProcess: ({ type }) => {
+        if (type === "add") {
+          return canIncrement();
+        }
+        return true;
+      },
+    },
+  );
+
+  // Wait until all features is processed.
+  await wait(waitingTime * (addedFeatures.length + 1));
+
+  await vi.waitFor(() => expect(processedCount).toBe(2));
 });

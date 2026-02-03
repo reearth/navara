@@ -97,6 +97,13 @@ export function renderFeature(
   }
 }
 
+// Define whether the feature uses web worker internally.
+// - `model` feature uses Web worker internally to parse glTF and its compression.
+export const checkFeatureParallel = (feature: RenderableFeature): boolean => {
+  const { model } = feature;
+  return !model;
+};
+
 export async function processRenderableFeatureAdded(
   ev: RenderableFeatureAddedEvent,
   scenes: Scenes,
@@ -122,8 +129,7 @@ export async function processRenderableFeatureAdded(
 
   const featureLayerId = ev.layer_id;
 
-  // `model` feature uses Web worker internally to parse glTF and its compression.
-  const useParallel = !!model;
+  const useParallel = checkFeatureParallel(feature);
 
   if (useParallel) {
     // Start parallel process
