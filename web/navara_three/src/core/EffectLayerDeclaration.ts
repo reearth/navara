@@ -319,7 +319,7 @@ export abstract class EffectLayerDeclaration<
   /**
    * Optional per-frame update callback.
    * Override this to animate effect parameters over time.
-   * @param time - Elapsed time in milliseconds since the view started.
+   * @param time - Render-loop timestamp in milliseconds (same as the `requestAnimationFrame` time).
    */
   update?(time: number): void;
 
