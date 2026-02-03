@@ -52,7 +52,7 @@ export function Layer<L = NavaraLayer>({
 
       if ("data" in config) {
         // Updating `data` isn't supported now.
-        // Also excluding this data prevents the assignment of an unnecessary large data.
+        // Also excluding this data prevents the assignment of an unnecessarily large amount of data.
         const { data: _data, ...withoutData } = config;
         handler.update(withoutData);
       } else {
