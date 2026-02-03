@@ -10,7 +10,5 @@ const TOTAL_CONCURRENCY = isMobileDevice()
   ? Math.min(hardwareConcurrency, MOBILE_MAX_WORKERS)
   : hardwareConcurrency;
 
-const MAP_CONCURRENCY = Math.max(TOTAL_CONCURRENCY, 1);
-
 export const createDefaultConcurrencyManager = () =>
-  createConcurrencyManager(MAP_CONCURRENCY);
+  createConcurrencyManager(TOTAL_CONCURRENCY);
