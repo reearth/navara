@@ -184,7 +184,6 @@ export function FloodLayer({
         extrudedHeight: 1,
         transparent,
         opacity: 0.9,
-        // show: false,
         specular: true,
         applyWaterNormal: false,
         receiveShadow: true,
