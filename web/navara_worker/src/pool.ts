@@ -25,7 +25,8 @@ const { initializeWorkerPool, worker } = (() => {
 
       const pool = workerpool.pool(url, {
         maxWorkers: manager.total,
-        minWorkers: manager.total, // Keep all workers alive to preserve WASM cache
+        // Avoid oversubscribing CPU when combined with other systems (e.g., DRACO loader).
+        minWorkers: 0,
         workerOpts: {
           type: import.meta.env.PROD ? undefined : "module",
         },
