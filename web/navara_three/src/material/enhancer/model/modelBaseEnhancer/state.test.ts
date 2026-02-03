@@ -38,7 +38,6 @@ describe("modelBaseEnhancer/state", () => {
           batchColorEnabled: true,
           useBatchTexture: true,
           useBatchColorShow: true,
-          useBatchHeight: true,
         },
         currentState: DEFAULT_BASE_STATE,
         expected: createExpectedState({
@@ -46,7 +45,6 @@ describe("modelBaseEnhancer/state", () => {
           batchColorEnabled: true,
           useBatchTexture: true,
           useBatchColorShow: true,
-          useBatchHeight: true,
         }),
       },
       {

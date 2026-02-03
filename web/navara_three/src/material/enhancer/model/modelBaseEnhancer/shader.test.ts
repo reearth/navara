@@ -17,7 +17,6 @@ testShaderCompatibility(
       props: {
         useBatchTexture: true,
         useBatchColorShow: true,
-        useBatchHeight: true,
       },
     },
   ],
