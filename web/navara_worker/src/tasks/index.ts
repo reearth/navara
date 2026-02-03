@@ -6,9 +6,8 @@ import { upsampleTerrainMesh } from "./upsampleTerrainMesh";
 import { waitWasm } from "./waitWasm";
 
 /** Pre-warm worker by initializing WASM module */
-export async function warmUp(): Promise<boolean> {
+export async function warmUp(): Promise<void> {
   await waitWasm();
-  return true;
 }
 
 export const commonTasks = {
