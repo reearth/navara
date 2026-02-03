@@ -83,19 +83,18 @@ export function BuildingTilesLayer({
   paramsRef.current.colorBy = colorBy;
   paramsRef.current.heightDomain = heightDomain;
 
-  const layerDesc = useMemo<LayerDescription | null>(() => {
+  const layerDesc = useMemo((): LayerDescription | null => {
     if (!visible) return null;
     return {
       type: "cesium3dtiles",
       data: { url },
       model: {
         show: true,
-        id_property: "gml_id",
         color: new Color().setStyle("#ffffff"),
         metalness: 0,
         roughness: 1,
-        cast_shadow: true,
-        receive_shadow: true,
+        castShadow: true,
+        receiveShadow: true,
         height: heightOffset,
       },
     };
