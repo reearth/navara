@@ -423,7 +423,7 @@ export class FeatureEvaluator {
           }
           case "height": {
             const height = target.array[0] as number;
-            featureMesh._setFeatureHeight(height, m.material as ModelMaterial);
+            featureMesh._setFeatureHeight(height);
             continue;
           }
           // TODO: Support others

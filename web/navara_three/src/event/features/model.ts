@@ -40,8 +40,8 @@ export async function renderModel(
   viewContext: ViewContext,
   layerId: string,
 ) {
-  const loader = initializeGltfLoader();
-  const dracoLoader = initializeDracoLoader();
+  const loader = initializeGltfLoader(viewContext.concurrencyManager);
+  const dracoLoader = initializeDracoLoader(viewContext.concurrencyManager);
 
   const { rawScene, credit } = await (async () => {
     let credit = undefined;
