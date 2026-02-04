@@ -64,7 +64,9 @@ void main() {
     float near = frustumNearFar.x;
     float far = frustumNearFar.y;
 
-    vec2 screenCoords = (sampleCoord / viewport) * 2.0 - 1.0;
+    // For picking, the camera uses setViewOffset for a 1x1 render so the pixel is already at NDC center.
+    // Use NDC (0,0) in that case; otherwise derive NDC from the full-screen fragment coordinate.
+    vec2 screenCoords = usePickingCoord ? vec2(0.0) : ((sampleCoord / viewport) * 2.0 - 1.0);
 
     #ifdef USE_LOGDEPTHBUF
     float linearDepth = exp2(logDepthOrDepth / (logDepthBufFC * 0.5)) - 1.0;
