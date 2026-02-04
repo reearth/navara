@@ -5,7 +5,7 @@ import {
   Color,
   Material,
   Mesh,
-  Vector2,
+  type Vector2,
   type NormalBufferAttributes,
 } from "three";
 

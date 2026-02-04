@@ -170,8 +170,14 @@ export class PickHelper extends CustomRenderPass {
 
     // Calculate pixel-space coordinates matching gl_FragCoord convention (pixel centers at 0.5, 1.5, 2.5, ...)
     // Clamp to valid viewport bounds to handle edge cases where rounding puts us outside [0, width-1] or [0, height-1]
-    const pixelX = Math.min(Math.floor(x * pixelRatio), fullWidth - 1);
-    const pixelY = Math.min(Math.floor(y * pixelRatio), fullHeight - 1);
+    const pixelX = Math.max(
+      0,
+      Math.min(Math.floor(x * pixelRatio), fullWidth - 1),
+    );
+    const pixelY = Math.max(
+      0,
+      Math.min(Math.floor(y * pixelRatio), fullHeight - 1),
+    );
     const pickingCoordX = pixelX + 0.5;
     const pickingCoordY = fullHeight - pixelY - 0.5; // Flip Y axis for WebGL
     const pickingCoord = new Vector2(pickingCoordX, pickingCoordY);

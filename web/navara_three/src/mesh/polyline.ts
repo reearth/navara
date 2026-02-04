@@ -392,7 +392,7 @@ export class PolylineMesh extends BatchedFeatureMesh<
     // Call parent implementation to set nvr_uPickable
     super._setPickable(pickable, pickingCoord);
 
-    // Set picking coordinate for ground polylines (clampToGround)
+    // the uniform is always set but only consumed by the ground polyline fragment shader.
     if (this.material.uniforms.nvr_uPickingCoord) {
       if (pickable && pickingCoord) {
         this.material.uniforms.nvr_uPickingCoord.value.copy(pickingCoord);

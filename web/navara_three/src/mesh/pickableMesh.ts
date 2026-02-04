@@ -1,5 +1,5 @@
 import { Unimplemented } from "@navara/core";
-import { Vector2 } from "three";
+import { type Vector2 } from "three";
 
 // Interface for pickable mesh.
 export class PickableMesh {
