@@ -33,6 +33,7 @@ uniform vec4 frustumRatio;
 uniform float logDepthBufFC;
 uniform mat4 inverseProjectionMatrix;
 uniform float nvr_uPickable;
+uniform vec2 nvr_uPickingCoord; // Screen coordinate for picking (in pixels)
 
 layout(location = 1) out vec4 normalBuffer;
 
@@ -44,21 +45,24 @@ float readDepth(sampler2D depthSampler, vec2 coord) {
 
 void main() {
     #include chunks/show_fragment;
-    
+
     vec2 viewport = (viewportAndPixelRatio.xy * viewportAndPixelRatio.z);
-    float logDepthOrDepth = unpackRGBAToDepth(texture(tGlobeDepth, gl_FragCoord.xy / viewport.xy));
+
+    // Use picking coordinate when in picking mode, otherwise use fragment coordinate
+    vec2 sampleCoord = nvr_uPickable > 0.0 ? nvr_uPickingCoord : gl_FragCoord.xy;
+    float logDepthOrDepth = unpackRGBAToDepth(texture(tGlobeDepth, sampleCoord / viewport.xy));
 
     // Discard sky
     if (logDepthOrDepth == 1.0) {
         discard;
     }
-    
+
     vec3 ecStart = vec3(v_endEcAndStartEcX.w, v_texcoordNormalizationAndStartEcYZ.zw);
 
     float near = frustumNearFar.x;
     float far = frustumNearFar.y;
 
-    vec2 screenCoords = (gl_FragCoord.xy / viewport) * 2.0 - 1.0;
+    vec2 screenCoords = (sampleCoord / viewport) * 2.0 - 1.0;
 
     #ifdef USE_LOGDEPTHBUF
     float linearDepth = exp2(logDepthOrDepth / (logDepthBufFC * 0.5)) - 1.0;

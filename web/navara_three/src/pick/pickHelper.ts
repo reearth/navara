@@ -9,6 +9,7 @@ import {
   Scene,
   RGBAFormat,
   Color,
+  Vector2,
 } from "three";
 
 import { BufferView } from "../bufferView";
@@ -119,10 +120,18 @@ export class PickHelper extends CustomRenderPass {
     }
   }
 
-  private togglePickable(pickable: boolean) {
+  private togglePickable(pickable: boolean, pickingCoord?: Vector2) {
     for (const [_key, obj] of this._meshes) {
       if (isPickableMesh(obj)) {
         obj._setPickable(pickable);
+
+        // Set picking coordinate for ground polylines
+        if (pickable && pickingCoord && obj instanceof Mesh) {
+          const uniforms = (obj.material as any)?.uniforms;
+          if (uniforms?.nvr_uPickingCoord) {
+            uniforms.nvr_uPickingCoord.value.copy(pickingCoord);
+          }
+        }
       }
     }
 
@@ -131,13 +140,13 @@ export class PickHelper extends CustomRenderPass {
     this._scenes.opaque.visible = !pickable;
   }
 
-  public processRender(target: WebGLRenderTarget) {
+  public processRender(target: WebGLRenderTarget, pickingCoord?: Vector2) {
     const orgClearColor = new Color();
     this._renderer.getClearColor(orgClearColor);
 
     this._renderer.setClearColor(0x000000);
 
-    this.togglePickable(true);
+    this.togglePickable(true, pickingCoord);
 
     this.render(this._renderer, target, null);
 
@@ -159,20 +168,29 @@ export class PickHelper extends CustomRenderPass {
   }
 
   private onMouseClick(event: MouseEvent) {
-    const x = event.clientX;
-    const y = event.clientY;
+    const rect = this._renderer.domElement.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
 
     const pixelRatio = this._renderer.getPixelRatio();
+    const fullWidth = this._renderer.getContext().drawingBufferWidth;
+    const fullHeight = this._renderer.getContext().drawingBufferHeight;
+
+    // Calculate picking coordinate in pixel space for ground polyline shader
+    const pickingCoordX = x * pixelRatio;
+    const pickingCoordY = fullHeight - y * pixelRatio; // Flip Y axis for WebGL
+    const pickingCoord = new Vector2(pickingCoordX, pickingCoordY);
+
     this._camera.setViewOffset(
-      this._renderer.getContext().drawingBufferWidth, // full width
-      this._renderer.getContext().drawingBufferHeight, // full top
-      (x * pixelRatio) | 0, // rect x
-      (y * pixelRatio) | 0, // rect y
+      fullWidth, // full width
+      fullHeight, // full height
+      pickingCoordX | 0, // rect x
+      (y * pixelRatio) | 0, // rect y (screen space Y for setViewOffset)
       1, // rect width
       1, // rect height
     );
 
-    this.processRender(this.pickingTexture);
+    this.processRender(this.pickingTexture, pickingCoord);
 
     this._renderer.readRenderTargetPixels(
       this.pickingTexture,
