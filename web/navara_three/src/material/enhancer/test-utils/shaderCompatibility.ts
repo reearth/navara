@@ -5,6 +5,7 @@ import {
   MeshPhongMaterial,
   MeshPhysicalMaterial,
   MeshStandardMaterial,
+  PointsMaterial,
   ShaderLib,
 } from "three";
 import { beforeAll, describe, expect, it } from "vitest";
@@ -23,6 +24,7 @@ const SHADER_MATERIAL_MAP: Record<ShaderName, new () => Material> = {
   phong: MeshPhongMaterial,
   standard: MeshStandardMaterial,
   physical: MeshPhysicalMaterial,
+  points: PointsMaterial,
 };
 
 const ALL_SHADER_TYPES = Object.keys(SHADER_MATERIAL_MAP) as ShaderName[];

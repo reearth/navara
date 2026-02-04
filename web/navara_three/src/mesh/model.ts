@@ -18,8 +18,6 @@ import {
   RGBADepthPacking,
   Texture,
   type NormalBufferAttributes,
-  type WebGLProgramParametersWithUniforms,
-  ShaderChunk,
   PointsMaterial,
 } from "three";
 import {
@@ -44,12 +42,15 @@ import {
   restoreMaterialState as restoreMaterialStateBase,
 } from "../core/SelectiveEffectMaskContext";
 import type { BufferLoader } from "../event";
-import type { ModelMaterialProps } from "../material/enhancer/model";
-import { createModelMaterialEnhancer } from "../material/enhancer/model";
+import {
+  createModelMaterialEnhancer,
+  createPntsEnhancer,
+} from "../material/enhancer/model";
+import type { ModelMaterialProps, PntsProps } from "../material/enhancer/model";
 import type { UniformValue } from "../material/types";
 import type { CustomObject3DEventMap } from "../object3DEvent";
 import type { CommonUniforms } from "../uniforms";
-import { arraysEqual, createReplacer } from "../utils";
+import { arraysEqual } from "../utils";
 
 import {
   getBatchDataTexture,
@@ -72,6 +73,7 @@ export const MODEL_BATCH_TEXTURE_CONFIG: BatchTextureConfig = {
 };
 
 type ModelMaterialEnhancer = ReturnType<typeof createModelMaterialEnhancer>;
+type PntsMaterialEnhancer = ReturnType<typeof createPntsEnhancer>;
 
 export class ModelMesh
   extends Object3D<CustomObject3DEventMap>
@@ -88,6 +90,12 @@ export class ModelMesh
     ModelMaterialEnhancer
   >();
 
+  /** Enhanced materials for point cloud objects, one per Points child */
+  private _pntsEnhancers = new Map<
+    Points<BufferGeometry<NormalBufferAttributes>, PointsMaterial>,
+    PntsMaterialEnhancer
+  >();
+
   // Minimal animation support (clip + speed)
   private mixer: AnimationMixer | null = null;
 
@@ -98,24 +106,28 @@ export class ModelMesh
   private currentAction: AnimationAction | null = null;
   private animationSpeed = 1.0;
   private lastUpdateTime?: number;
+  private prevEffectIds: string[] = [];
 
   constructor(
-    rawScene: Group,
+    gltfInfo: {
+      scene: Group;
+      credit?: string;
+      animations?: AnimationClip[];
+    },
     m: NavaraModelMesh,
     uniforms: CommonUniforms,
     buf: BufferLoader,
     viewEvents: EventHandler<ViewEvents>,
     viewContext: ViewContext,
     layerId: string,
-    credit?: string,
   ) {
     super();
     this.viewContext = viewContext;
     this._layerId = layerId;
     this._uniforms = uniforms;
-    this.credit = credit;
-    this.add(rawScene);
-    this.init(m, buf, viewEvents);
+    this.credit = gltfInfo.credit;
+    this.add(gltfInfo.scene);
+    this.init(m, buf, viewEvents, gltfInfo.animations);
     this.addEventListener("removedFromWorld", () => {
       this.dispose(viewEvents);
     });
@@ -139,15 +151,13 @@ export class ModelMesh
     m: NavaraModelMesh,
     buf: BufferLoader,
     viewEvents: EventHandler<ViewEvents>,
+    animations?: AnimationClip[],
   ) {
     const batchIdsData = m.geometry.batch_ids;
     const dataSize = batchIdsData?.size ?? 0;
     const batchIds = batchIdsData
       ? buf.u32(batchIdsData.data)
       : new Uint32Array(dataSize);
-
-    this.userData.batchIds = batchIds;
-    this.userData.dataSize = dataSize;
 
     const meshMaterial = m.material;
 
@@ -166,15 +176,10 @@ export class ModelMesh
       this.overridePntsMaterial(meshMaterial);
     }
 
-    this.userData.prev = {};
     this.visible = meshMaterial.show ?? true;
-    this.userData.prev.visible = this.visible;
 
-    // Initialize minimal animation features if GLTF animations exist on the scene
-    const gltfAnimations: AnimationClip[] | undefined = (
-      this.children[0] as Group
-    )?.userData?.gltfAnimations;
-    if (gltfAnimations && gltfAnimations.length > 0) {
+    // Initialize minimal animation features if GLTF animations exist
+    if (animations && animations.length > 0) {
       const target = this.children[0] as Group;
       this.mixer = new AnimationMixer(target);
 
@@ -182,7 +187,7 @@ export class ModelMesh
       const initSpeed = meshMaterial.animationSpeed as number | undefined;
       this.animationSpeed = initSpeed ?? 1.0;
 
-      gltfAnimations.forEach((clip) => {
+      animations.forEach((clip) => {
         if (!this.mixer) {
           console.warn("Animation mixer not initialized");
           return;
@@ -460,62 +465,24 @@ export class ModelMesh
   }
 
   private overridePntsMaterial(meshMaterial: NavaraModelMaterial) {
-    this.traverse((object: Object3D) => {
-      if (!(object instanceof Points)) {
-        return;
-      }
+    const geodeticNormal: Vec3 =
+      meshMaterial.__internal__?.pointCloudGeodeticNormal ?? new Vec3(0, 0, 0);
 
-      const material = object.material;
-      material.userData.uAddHeight = { value: meshMaterial.height ?? 0.0 };
+    const initialProps: PntsProps = {
+      color: meshMaterial.color ?? 0,
+      pointSize: meshMaterial.pointSize ?? 1,
+      height: meshMaterial.height ?? 0,
+      geodeticNormal,
+    };
 
-      const geodetic_normal: Vec3 =
-        meshMaterial.__internal__?.pointCloudGeodeticNormal ??
-        new Vec3(0, 0, 0);
+    this.traversePoints((points) => {
+      const enhancer = createPntsEnhancer(points.material);
+      this._pntsEnhancers.set(points, enhancer);
 
-      material.onBeforeCompile = (
-        shader: WebGLProgramParametersWithUniforms,
-      ) => {
-        shader.uniforms.uAddHeight = material.userData.uAddHeight;
+      enhancer.mount(initialProps);
 
-        // Update vertex shader
-        const colorDivisior = 65535.0;
-        shader.vertexShader = createReplacer(shader.vertexShader)
-          .replace(
-            "#include <color_vertex>",
-            createReplacer(ShaderChunk.color_vertex)
-              .replace(
-                "vColor = vec4( 1.0 );",
-                `vColor = vec4( 1.0 / ${colorDivisior}.0 );`,
-              )
-              .replace(
-                "vColor = vec3( 1.0 );",
-                `vColor = vec3( 1.0 / ${colorDivisior}.0 );`,
-              ).source,
-          )
-          .replace(
-            "#include <common>",
-            `#include <common>
-          uniform float uAddHeight;`,
-          )
-          .replace(
-            "#include <project_vertex>",
-            createReplacer(ShaderChunk.project_vertex)
-              .replace(
-                "vec4 mvPosition = vec4( transformed, 1.0 );",
-                `vec4 mvPosition = vec4( transformed, 1.0 );
-               // point cloud geodetic normal in world space - precomputed
-               vec3 normal = vec3(${geodetic_normal.x}, ${geodetic_normal.y}, ${geodetic_normal.z});
-               vec4 mvNormal = viewMatrix * vec4(normal, 0.0);`,
-              )
-              .replace(
-                "gl_Position = projectionMatrix * mvPosition;",
-                `mvPosition += mvNormal * uAddHeight;
-               gl_Position = projectionMatrix * mvPosition;`,
-              ).source,
-          ).source;
-      };
-
-      this.setPointsMaterial(meshMaterial, object);
+      points.material.customProgramCacheKey = () => enhancer.programCacheKey();
+      points.material.onBeforeCompile = enhancer.transformShader;
     });
   }
 
@@ -540,11 +507,7 @@ export class ModelMesh
   }
 
   _update(material: NavaraModelMaterial, active: boolean) {
-    const next = (material.show ?? true) && active;
-    if (this.userData.prev.visible !== next) {
-      this.visible = next;
-      this.userData.prev.visible = next;
-    }
+    this.visible = (material.show ?? true) && active;
 
     if (!material.__internal__?.pointCloud) {
       // Update all enhancers with new props
@@ -557,9 +520,14 @@ export class ModelMesh
         mesh.receiveShadow = !!material.receiveShadow;
       }
     } else {
-      this.traversePoints((pnts) => {
-        this.setPointsMaterial(material, pnts);
-      });
+      const pntsProps: PntsProps = {
+        color: material.color,
+        pointSize: material.pointSize,
+        height: material.height,
+      };
+      for (const enhancer of this._pntsEnhancers.values()) {
+        enhancer.update(pntsProps);
+      }
     }
 
     // Minimal animation updates: speed and active clip
@@ -589,16 +557,14 @@ export class ModelMesh
     }
 
     // SelectiveEffect: effectIds handling at ModelMesh level
-    if (!arraysEqual(this.userData.prev.effectIds, material.effectIds)) {
+    if (!arraysEqual(this.prevEffectIds, material.effectIds)) {
       this.viewContext.selectiveEffectRegistry?.updateLinksForObject(
         this,
         material.effectIds ?? [],
-        this.userData.prev.effectIds ?? [],
+        this.prevEffectIds,
         this._layerId,
       );
-      this.userData.prev.effectIds = material.effectIds
-        ? [...material.effectIds]
-        : [];
+      this.prevEffectIds = material.effectIds ? [...material.effectIds] : [];
     }
   }
 
@@ -626,37 +592,6 @@ export class ModelMesh
         reflectivity: material.reflectivity,
       },
     };
-  }
-
-  /**
-   * Update PointsMaterial properties from NavaraModelMaterial.
-   * Points use a separate code path since they don't use the material enhancer.
-   */
-  private setPointsMaterial(
-    src: NavaraModelMaterial,
-    dist: Points<BufferGeometry<NormalBufferAttributes>, PointsMaterial>,
-  ) {
-    const distMaterial = dist.material;
-
-    if (!distMaterial.userData.prev) {
-      distMaterial.userData.prev = {};
-    }
-    if (distMaterial.userData.prev.color !== src.color) {
-      const next = src.color ?? 0;
-      distMaterial.color.set(next);
-      distMaterial.userData.prev.color = next;
-    }
-    if (distMaterial.userData.prev.pointSize !== src.pointSize) {
-      const next = src.pointSize ?? 0;
-      distMaterial.userData.prev.pointSize = distMaterial.size;
-      distMaterial.size = next;
-    }
-    if (distMaterial.userData.prev.uAddHeight !== src.height) {
-      const next = src.height ?? 0;
-      distMaterial.userData.prev.uAddHeight =
-        distMaterial.userData.uAddHeight.value;
-      distMaterial.userData.uAddHeight.value = next;
-    }
   }
 
   traverseMesh(

@@ -4,6 +4,7 @@ import {
   MeshPhongMaterial,
   MeshPhysicalMaterial,
   MeshStandardMaterial,
+  PointsMaterial,
   type Material,
   type WebGLProgramParametersWithUniforms,
 } from "three";
@@ -19,6 +20,7 @@ type ShaderToMaterial = {
   phong: MeshPhongMaterial;
   standard: MeshStandardMaterial;
   physical: MeshPhysicalMaterial;
+  points: PointsMaterial;
 };
 
 // All shader names that have material mappings
@@ -44,7 +46,7 @@ export type Mutates<
   States,
   Uniforms extends ShaderUniforms,
   Methods extends Record<string, (...args: never[]) => void> = Record<
-    string,
+    never,
     never
   >,
 > = {
