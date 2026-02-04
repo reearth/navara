@@ -182,16 +182,18 @@ export class PickHelper extends CustomRenderPass {
     const fullWidth = this._renderer.getContext().drawingBufferWidth;
     const fullHeight = this._renderer.getContext().drawingBufferHeight;
 
-    // Calculate picking coordinate in pixel space for ground polyline shader
-    const pickingCoordX = x * pixelRatio;
-    const pickingCoordY = fullHeight - y * pixelRatio; // Flip Y axis for WebGL
+    // Calculate pixel-space coordinates matching gl_FragCoord convention (pixel centers at 0.5, 1.5, 2.5, ...)
+    const pixelX = Math.floor(x * pixelRatio);
+    const pixelY = Math.floor(y * pixelRatio);
+    const pickingCoordX = pixelX + 0.5;
+    const pickingCoordY = fullHeight - pixelY - 0.5; // Flip Y axis for WebGL
     const pickingCoord = new Vector2(pickingCoordX, pickingCoordY);
 
     this._camera.setViewOffset(
       fullWidth, // full width
       fullHeight, // full height
-      pickingCoordX | 0, // rect x
-      (y * pixelRatio) | 0, // rect y (screen space Y for setViewOffset)
+      pixelX, // rect x
+      pixelY, // rect y (screen space Y for setViewOffset)
       1, // rect width
       1, // rect height
     );
