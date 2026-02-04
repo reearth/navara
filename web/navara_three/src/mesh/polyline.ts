@@ -15,6 +15,7 @@ import {
   ShaderMaterial,
   UniformsLib,
   Matrix4,
+  Vector2,
   Vector3,
 } from "three";
 
@@ -265,6 +266,7 @@ export class PolylineMesh extends BatchedFeatureMesh<
       uGlobeNormal: uniforms.tGlobeNormal,
       inverseProjectionMatrix: uniforms.inverseProjectionMatrix,
       nvr_uPickable: uPickable,
+      nvr_uPickingCoord: { value: new Vector2(-1, -1) }, // Sentinel value: use gl_FragCoord by default
     };
 
     const isTexturized = mesh.should_be_texturized;
@@ -384,6 +386,21 @@ export class PolylineMesh extends BatchedFeatureMesh<
 
   get color() {
     return this.material.uniforms.color.value;
+  }
+
+  _setPickable(pickable: boolean, pickingCoord?: Vector2) {
+    // Call parent implementation to set nvr_uPickable
+    super._setPickable(pickable, pickingCoord);
+
+    // the uniform is always set but only consumed by the ground polyline fragment shader.
+    if (this.material.uniforms.nvr_uPickingCoord) {
+      if (pickable && pickingCoord) {
+        this.material.uniforms.nvr_uPickingCoord.value.copy(pickingCoord);
+      } else {
+        // Reset to sentinel value when not picking or no coordinate provided
+        this.material.uniforms.nvr_uPickingCoord.value.set(-1, -1);
+      }
+    }
   }
 
   _getDefaultBatchAttributeValues(): DefaultBatchAttributeValues {
