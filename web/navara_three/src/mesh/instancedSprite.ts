@@ -237,7 +237,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
             const mat = this.material as ShaderMaterial;
             mat.uniforms.nvr_uPickable = { value: pickable ? 1.0 : 0.0 };
             mat.uniformsNeedUpdate = true;
-            console.log("Set pickable to", pickable);
+            // console.log("Set pickable to", pickable);
         }
     }
 
@@ -252,13 +252,13 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     // TODO: delay changes to attributes to avoid multiple updates in a frame
     // use a dirty flag and update in onBeforeRender or similar
     setFeatureColorByBatchId(batchId: number, color: Color) {
-        // const instanceId = this._batchIdToInstance.get(batchId);
-        // if (instanceId === undefined) return;
+        console.log("Setting color for batchId", batchId, "to", color.getHexString());
+        console.log(this._batchIdToInstance);
+        const instanceId = this._batchIdToInstance.get(batchId);
+        if (instanceId === undefined) return;
 
-        // console.log("Setting color for batchId", batchId, "to", color.getHexString());
         const colorAttr = this.geometry.getAttribute('instanceColor') as InstancedBufferAttribute;
-        colorAttr.setXYZ(batchId, color.r, color.g, color.b);
-        // console.log(`Set color of batchId ${batchId} (instance ${instanceId}) to ${color.getHexString()}`);
+        colorAttr.setXYZ(instanceId, color.r, color.g, color.b);
         colorAttr.needsUpdate = true;
     }
 

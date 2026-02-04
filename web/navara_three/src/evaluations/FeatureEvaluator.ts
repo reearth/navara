@@ -354,7 +354,7 @@ export class FeatureEvaluator {
               ).raw;
 
               m.setFeatureColorByBatchId(
-                i,
+                color.getHex(),
                 color,
               );
             }

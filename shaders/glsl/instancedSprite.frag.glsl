@@ -48,9 +48,9 @@ void main() {
     if (uOffsetDepth) { gl_FragDepth -= 0.2; }
 
     if (nvr_uPickable > 0.0 && alpha > 0.0) {
-        // vec3 pickColor = nvr_batchIdToColor(vBatchID);
-        // color = vec4(pickColor.xyz, alpha);
-        color = vec4(1.0, 0.0, 0.0, 1.0); // For testing pick buffer
+        vec3 pickColor = nvr_batchIdToColor(vBatchID);
+        color = vec4(pickColor.xyz, alpha);
+        // color = vec4(1.0, 0.0, 0.0, 1.0); // For testing pick buffer
     }
 
     gl_FragColor = color;
