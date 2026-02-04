@@ -20,3 +20,6 @@ export type {
 
 export { createModelMaterialEnhancer } from "./modelMaterialEnhancer";
 export type { ModelMaterialProps } from "./modelMaterialEnhancer";
+
+export { createPntsEnhancer } from "./pntsEnhancer";
+export type { PntsMutates, PntsProps, PntsState } from "./pntsEnhancer";
