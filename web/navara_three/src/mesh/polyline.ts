@@ -266,7 +266,7 @@ export class PolylineMesh extends BatchedFeatureMesh<
       uGlobeNormal: uniforms.tGlobeNormal,
       inverseProjectionMatrix: uniforms.inverseProjectionMatrix,
       nvr_uPickable: uPickable,
-      nvr_uPickingCoord: { value: new Vector2(0, 0) },
+      nvr_uPickingCoord: { value: new Vector2(-1, -1) }, // Sentinel value: use gl_FragCoord by default
     };
 
     const isTexturized = mesh.should_be_texturized;

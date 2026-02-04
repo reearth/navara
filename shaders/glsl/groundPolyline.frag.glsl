@@ -48,8 +48,10 @@ void main() {
 
     vec2 viewport = (viewportAndPixelRatio.xy * viewportAndPixelRatio.z);
 
-    // Use picking coordinate when in picking mode, otherwise use fragment coordinate
-    vec2 sampleCoord = nvr_uPickable > 0.0 ? nvr_uPickingCoord : gl_FragCoord.xy;
+    // Use picking coordinate when provided (1x1 picking), otherwise use fragment coordinate
+    // nvr_uPickingCoord is set to (-1, -1) for non-picking renders (including debug canvas)
+    bool usePickingCoord = nvr_uPickable > 0.0 && nvr_uPickingCoord.x >= 0.0;
+    vec2 sampleCoord = usePickingCoord ? nvr_uPickingCoord : gl_FragCoord.xy;
     float logDepthOrDepth = unpackRGBAToDepth(texture(tGlobeDepth, sampleCoord / viewport.xy));
 
     // Discard sky
