@@ -889,9 +889,9 @@ export default class ThreeView<
         this.onPick.bind(this),
         this.renderPassOrchestrator.effectComposer.inputBuffer,
         this.globe,
-        // {
-        //   debug: true,
-        // },
+        {
+          debug: true,
+        },
       );
       this._pickHelper.enablePick(this._options.picking ?? true);
     }

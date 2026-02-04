@@ -5,5 +5,7 @@ import { run } from "./run";
 const view = new ThreeView({
   debug: true,
 //   shadow: true,
+picking: true,
+
 });
 run(view);

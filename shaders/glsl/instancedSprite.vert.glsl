@@ -12,15 +12,19 @@
 #endif
 
 attribute float instanceScale;
+attribute vec3 instanceColor;
+attribute float instanceBatchID;
 
 uniform vec3 uRTCCenter;
 uniform vec3 uEyeRTEHigh;
 uniform vec3 uEyeRTELow;
 
 varying vec2 vUv;
+varying vec3 vColor;
+varying float vBatchID;
 
 void main() {
-
+int id = gl_InstanceID;
 #ifdef USE_RTE
     vec3 absTransformed = instancePositionHIGH + instancePositionLOW;
 #else
@@ -28,10 +32,13 @@ void main() {
 #endif
     #include "chunks/horizon_culling_vertex.glsl"
 
-    vUv = uv;
 #ifdef BILLBOARD
     vLayer = instanceLayer;
 #endif
+
+    vUv = uv;
+    vBatchID = instanceBatchID;
+    vColor = instanceColor;
 
     vec4 mvPosition;
 #ifdef USE_RTE

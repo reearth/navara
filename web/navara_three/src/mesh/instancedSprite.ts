@@ -4,21 +4,23 @@ import instancedSpriteVertexShader from "@shaders/glsl/instancedSprite.vert.glsl
 import instancedSpriteFragmentShader from "@shaders/glsl/instancedSprite.frag.glsl";
 import type { BufferLoader } from "../event";
 import type { ViewContext } from "../core";
-import { InstancedBufferAttribute, InstancedBufferGeometry, Mesh, ShaderMaterial, BufferAttribute, Vector3, DataArrayTexture, UnsignedByteType, RGBAFormat, LinearFilter } from "three";
+import { InstancedBufferAttribute, InstancedBufferGeometry, Mesh, ShaderMaterial, BufferAttribute, Vector3, DataArrayTexture, UnsignedByteType, RGBAFormat, LinearFilter, Color } from "three";
 import { TEXTURE_LOADER } from "../event/loaders";
 import invariant from "tiny-invariant";
+import { PickableMesh } from "./pickableMesh";
 
 // TODOs:
 // - handle RTE - done
 // - handle depth offset - done
 // - reenable depth test ... - done
 // - make sure texture array and layer attribute are only created for billboard case - done
+// --------------------------------------------------------------
+// - handle batch ids and picking (if it was working before)...
 // - handle style evalutator stuff - see notion page
 // - handle layer material, user data, color, height, ... 
-// - handle batch ids and picking (if it was working before)...
 // - make sure to cover all what was the old point/billboard mesh doing
-// - handle choosing between using new sprite mesh or old point mesh based on conditions
 // - handle selective layer stuff
+// - handle choosing between using new sprite mesh or old point mesh based on conditions
 // - optimize shader if needed
 // - cleanup code
 // - test performance and correctness
@@ -31,12 +33,15 @@ export type InstancedSpriteOptions = {
 
 type PositionsInfo = {
     position: Float32Array<ArrayBufferLike> | { high: Float32Array<ArrayBufferLike>, low: Float32Array<ArrayBufferLike> };
+    batchIDs: Float32Array<ArrayBufferLike>;
     positionSize: number;
-    nPositions: number
+    batchIDSize: number;
+    nPositions: number;
     RTE: boolean;
 };
 
-export class InstancedSpriteMesh extends Mesh {
+export class InstancedSpriteMesh extends Mesh implements PickableMesh {
+    private _batchIdToInstance: Map<number, number> = new Map();
     constructor(
         options: InstancedSpriteOptions,
     ) {
@@ -92,11 +97,22 @@ export class InstancedSpriteMesh extends Mesh {
 
         // Add Custom Attributes
         const scaleBuffer = new Float32Array(instanceCount);
+        const colorBuffer = new Float32Array(instanceCount * 3);
         let layerBuffer = undefined;
 
+        const color = new Color().setHex(0xffffff);
         for (let i = 0; i < instanceCount; i++) {
             // TODO: get scale from user data
             scaleBuffer[i] = 10000.0;
+
+            colorBuffer[i * 3 + 0] = color.r;
+            colorBuffer[i * 3 + 1] = color.g;
+            colorBuffer[i * 3 + 2] = color.b;
+
+            // Map batch ID to instance id
+            // assuming batch IDs are 32bit floats
+            const batchId = positionsInfo.batchIDs[i];
+            this._batchIdToInstance.set(batchId, i);
         }
 
         if (m instanceof NavaraBillboardMesh) {
@@ -117,6 +133,8 @@ export class InstancedSpriteMesh extends Mesh {
             instancedGeometry.setAttribute('instancePosition', new InstancedBufferAttribute(pos, positionsInfo.positionSize));
         }
         instancedGeometry.setAttribute('instanceScale', new InstancedBufferAttribute(scaleBuffer, 1));
+        instancedGeometry.setAttribute('instanceColor', new InstancedBufferAttribute(colorBuffer, 3));
+        instancedGeometry.setAttribute('instanceBatchID', new InstancedBufferAttribute(positionsInfo.batchIDs, positionsInfo.batchIDSize));
 
         return instancedGeometry;
     }
@@ -129,7 +147,8 @@ export class InstancedSpriteMesh extends Mesh {
                 uEyeRTELow: { value: new Vector3(0, 0, 0) },
                 uEyeRTEHigh: { value: new Vector3(0, 0, 0) },
                 uOffsetDepth: { value: m.material.offsetDepth ?? true },
-                uColor: { value: new Vector3(1.0, 0.0, 0.0) }, // Placeholder color
+                // uColor: { value: new Vector3(1.0, 0.0, 0.0) }, // Placeholder color
+                nvr_uPickable: { value: 0.0 },
             },
             vertexShader: instancedSpriteVertexShader,
             fragmentShader: instancedSpriteFragmentShader,
@@ -140,8 +159,8 @@ export class InstancedSpriteMesh extends Mesh {
             material.defines.USE_RTE = 1;
             material.onBeforeRender = (_renderer, _scene, camera, _geometry, _mat, _group) => {
                 const encodedCamPos = encodePosition(camera.position.x, camera.position.y, camera.position.z);
-                material.uniforms.uEyeRTELow.value = new Vector3(encodedCamPos.low.x, encodedCamPos.low.y, encodedCamPos.low.z);
-                material.uniforms.uEyeRTEHigh.value = new Vector3(encodedCamPos.high.x, encodedCamPos.high.y, encodedCamPos.high.z);
+                material.uniforms.uEyeRTELow.value.set(encodedCamPos.low.x, encodedCamPos.low.y, encodedCamPos.low.z);
+                material.uniforms.uEyeRTEHigh.value.set(encodedCamPos.high.x, encodedCamPos.high.y, encodedCamPos.high.z);
             }
         }
 
@@ -171,6 +190,14 @@ export class InstancedSpriteMesh extends Mesh {
 
     private extractPositions(m: NavaraPointMesh | NavaraBillboardMesh, buf: BufferLoader): PositionsInfo | null {
         const g = m.geometry;
+
+        const batchIdsData = g.batch_ids;
+        const batchIDs = buf.removeF32(batchIdsData.data);
+        const batchIDSize = batchIdsData.size;
+        // const batchIndexData = g.batch_index;
+        // const batchIndex = buf.removeU32(batchIndexData.data);
+        if (!batchIDs) return null;
+
         const positionData = g.position;
         const position = positionData
             ? buf.removeF32(positionData.data)
@@ -180,7 +207,7 @@ export class InstancedSpriteMesh extends Mesh {
             const positionSize = positionData.size;
             const nPositions = position.length / positionSize;
 
-            return { position, positionSize, nPositions, RTE: false };
+            return { position, batchIDs, batchIDSize, positionSize, nPositions, RTE: false };
         }
 
         const positionHighData = g.position_3d_high;
@@ -199,16 +226,48 @@ export class InstancedSpriteMesh extends Mesh {
 
             const nPositions = positionHigh.length / positionHighSize;
 
-            return { position: { high: positionHigh, low: positionLow }, positionSize: positionHighSize, nPositions, RTE: true };
+            return { position: { high: positionHigh, low: positionLow }, batchIDs, batchIDSize, positionSize: positionHighSize, nPositions, RTE: true };
         }
 
         return null;
     }
 
+    _setPickable(pickable: boolean): void {
+        if (this.material as ShaderMaterial) {
+            const mat = this.material as ShaderMaterial;
+            mat.uniforms.nvr_uPickable = { value: pickable ? 1.0 : 0.0 };
+            mat.uniformsNeedUpdate = true;
+            console.log("Set pickable to", pickable);
+        }
+    }
+
     _update(active: boolean) {
         if (this.material as ShaderMaterial) {
             const mat = this.material as ShaderMaterial;
-            mat.needsUpdate = true;
+            // mat.needsUpdate = true;
+            mat.uniformsNeedUpdate = true;
         }
     }
+
+    // TODO: delay changes to attributes to avoid multiple updates in a frame
+    // use a dirty flag and update in onBeforeRender or similar
+    setFeatureColorByBatchId(batchId: number, color: Color) {
+        // const instanceId = this._batchIdToInstance.get(batchId);
+        // if (instanceId === undefined) return;
+
+        // console.log("Setting color for batchId", batchId, "to", color.getHexString());
+        const colorAttr = this.geometry.getAttribute('instanceColor') as InstancedBufferAttribute;
+        colorAttr.setXYZ(batchId, color.r, color.g, color.b);
+        // console.log(`Set color of batchId ${batchId} (instance ${instanceId}) to ${color.getHexString()}`);
+        colorAttr.needsUpdate = true;
+    }
+
+    setFeatureShowByBatchId(batchId: number, rawVisible: boolean) {
+        // Not implemented yet
+    }
+
+    setFeatureHeightByBatchId(batchId: number, height: number) {
+        // Not implemented yet
+    }
+
 }

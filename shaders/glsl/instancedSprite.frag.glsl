@@ -1,4 +1,5 @@
 #include "point.frag.glsl"
+#include "chunks/pick.glsl"
 #ifdef BILLBOARD
     precision highp sampler2DArray; // Important for WebGL 2
     uniform sampler2DArray uTexture;
@@ -23,22 +24,34 @@
 #endif
 
 varying vec2 vUv;
+varying vec3 vColor;
+varying float vBatchID;
+
 uniform bool uOffsetDepth;
-uniform vec3 uColor;
+// uniform vec3 uColor;
+uniform float nvr_uPickable;
 
 void main() {
+    float alpha = 1.0;
     #ifdef BILLBOARD
         // Sample the specific layer from the Texture Array
         vec4 color = texture(uTexture, vec3(vUv, vLayer));
+        alpha = color.a;
     #else
-        float alpha = nvr_circle_alpha(vUv - vec2(0.5));
-        vec4 color = vec4(uColor, alpha); // Placeholder color
+        alpha = nvr_circle_alpha(vUv - vec2(0.5));
+        vec4 color = vec4(vColor, alpha); // Placeholder color
     #endif
 
-    if (color.a == 0.0) discard; // Alpha test
+    if (color.a == 0.0) {gl_FragColor = vec4(0.0); return;}; // Alpha test
 
     // Offset depth to make sure to be drawn over ellipsoid surface
     if (uOffsetDepth) { gl_FragDepth -= 0.2; }
+
+    if (nvr_uPickable > 0.0 && alpha > 0.0) {
+        // vec3 pickColor = nvr_batchIdToColor(vBatchID);
+        // color = vec4(pickColor.xyz, alpha);
+        color = vec4(1.0, 0.0, 0.0, 1.0); // For testing pick buffer
+    }
 
     gl_FragColor = color;
 
