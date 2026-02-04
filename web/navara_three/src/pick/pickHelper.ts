@@ -123,21 +123,7 @@ export class PickHelper extends CustomRenderPass {
   private togglePickable(pickable: boolean, pickingCoord?: Vector2) {
     for (const [_key, obj] of this._meshes) {
       if (isPickableMesh(obj)) {
-        obj._setPickable(pickable);
-
-        // Set picking coordinate for ground polylines
-        if (pickable && obj instanceof Mesh) {
-          const uniforms = (obj.material as any)?.uniforms;
-          if (uniforms?.nvr_uPickingCoord) {
-            if (pickingCoord) {
-              uniforms.nvr_uPickingCoord.value.copy(pickingCoord);
-            } else {
-              // When no specific pickingCoord is provided (e.g. full-frame debug pass),
-              // reset to a sentinel value so shaders don't use stale coordinates.
-              uniforms.nvr_uPickingCoord.value.set(-1, -1);
-            }
-          }
-        }
+        obj._setPickable(pickable, pickingCoord);
       }
     }
 

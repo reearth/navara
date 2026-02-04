@@ -388,6 +388,21 @@ export class PolylineMesh extends BatchedFeatureMesh<
     return this.material.uniforms.color.value;
   }
 
+  _setPickable(pickable: boolean, pickingCoord?: Vector2) {
+    // Call parent implementation to set nvr_uPickable
+    super._setPickable(pickable, pickingCoord);
+
+    // Set picking coordinate for ground polylines (clampToGround)
+    if (this.material.uniforms.nvr_uPickingCoord) {
+      if (pickable && pickingCoord) {
+        this.material.uniforms.nvr_uPickingCoord.value.copy(pickingCoord);
+      } else {
+        // Reset to sentinel value when not picking or no coordinate provided
+        this.material.uniforms.nvr_uPickingCoord.value.set(-1, -1);
+      }
+    }
+  }
+
   _getDefaultBatchAttributeValues(): DefaultBatchAttributeValues {
     return {
       color: this.color,
