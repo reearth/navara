@@ -228,8 +228,14 @@ impl RenderableFeature {
 #[derive(Component, Clone, Debug, Default, PartialEq)]
 pub struct TransferablePolylineGeometry {
     pub position: TransferableFloatAttribute,
+    pub position_high: Option<TransferableFloatAttribute>,
+    pub position_low: Option<TransferableFloatAttribute>,
     pub start: TransferableFloatAttribute,
+    pub start_high: Option<TransferableFloatAttribute>,
+    pub start_low: Option<TransferableFloatAttribute>,
     pub forward_offset: TransferableFloatAttribute,
+    pub end_high: Option<TransferableFloatAttribute>,
+    pub end_low: Option<TransferableFloatAttribute>,
     pub start_normals: TransferableFloatAttribute,
     pub end_normal_and_texture_coordinate_normalization_x: TransferableFloatAttribute,
     pub right_normal_and_texture_coordinate_normalization_y: TransferableFloatAttribute,
@@ -264,14 +270,56 @@ impl TransferablePolylineGeometry {
                 data: position,
                 size: geo.attributes.position.size,
             },
+            position_high: geo
+                .attributes
+                .position_high
+                .map(|attr| TransferableFloatAttribute {
+                    data: buf.new_f32(attr.data),
+                    size: attr.size,
+                }),
+            position_low: geo
+                .attributes
+                .position_low
+                .map(|attr| TransferableFloatAttribute {
+                    data: buf.new_f32(attr.data),
+                    size: attr.size,
+                }),
             start: TransferableFloatAttribute {
                 data: start,
                 size: geo.attributes.start.size,
             },
+            start_high: geo
+                .attributes
+                .start_high
+                .map(|attr| TransferableFloatAttribute {
+                    data: buf.new_f32(attr.data),
+                    size: attr.size,
+                }),
+            start_low: geo
+                .attributes
+                .start_low
+                .map(|attr| TransferableFloatAttribute {
+                    data: buf.new_f32(attr.data),
+                    size: attr.size,
+                }),
             forward_offset: TransferableFloatAttribute {
                 data: forward_offset,
                 size: geo.attributes.forward_offset.size,
             },
+            end_high: geo
+                .attributes
+                .end_high
+                .map(|attr| TransferableFloatAttribute {
+                    data: buf.new_f32(attr.data),
+                    size: attr.size,
+                }),
+            end_low: geo
+                .attributes
+                .end_low
+                .map(|attr| TransferableFloatAttribute {
+                    data: buf.new_f32(attr.data),
+                    size: attr.size,
+                }),
             start_normals: TransferableFloatAttribute {
                 data: start_normals,
                 size: geo.attributes.start_normals.size,
@@ -310,7 +358,25 @@ impl TransferablePolylineGeometry {
 
     pub fn remove_from_buf(&mut self, buf: &mut BufferStore, batch_table: &mut BatchTable) {
         buf.remove(&self.position.data);
+        if let Some(position_high) = &self.position_high {
+            buf.remove(&position_high.data);
+        }
+        if let Some(position_low) = &self.position_low {
+            buf.remove(&position_low.data);
+        }
         buf.remove(&self.start.data);
+        if let Some(start_high) = &self.start_high {
+            buf.remove(&start_high.data);
+        }
+        if let Some(start_low) = &self.start_low {
+            buf.remove(&start_low.data);
+        }
+        if let Some(end_high) = &self.end_high {
+            buf.remove(&end_high.data);
+        }
+        if let Some(end_low) = &self.end_low {
+            buf.remove(&end_low.data);
+        }
         buf.remove(&self.forward_offset.data);
         buf.remove(&self.start_normals.data);
         buf.remove(&self.end_normal_and_texture_coordinate_normalization_x.data);
