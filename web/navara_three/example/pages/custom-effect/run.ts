@@ -5,8 +5,8 @@ import ThreeView, {
   type EffectLayerUpdate,
   type ViewContext,
 } from "@navara/three";
-import { VignetteEffect, VignetteTechnique } from "postprocessing";
 import type { Camera } from "three";
+import { VignetteEffect, VignetteTechnique } from "postprocessing";
 import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../helpers/attributions";

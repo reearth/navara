@@ -132,8 +132,22 @@ import WorkerURL from "./worker?url&worker";
 
 export type { CameraOptions, CameraEvent } from "./camera";
 
-export { ColorMap, type LUT, type ColorTuple } from "@navara/core";
-export type { Nullable, XYZ, LatLng, LatLngHeight } from "@navara/core";
+export { ColorMap, EventHandler } from "@navara/core";
+export type {
+  Nullable,
+  XYZ,
+  LatLng,
+  LatLngHeight,
+  CameraOrientation,
+  CameraPosition,
+  ColorTuple,
+  LUT,
+  Globe,
+} from "@navara/core";
+export { CameraDirection } from "@navara/engine";
+// CSM exports for advanced users
+export { CascadedShadowMaps, CSMHelper } from "@navara/three_csm";
+
 export * from "./type";
 export * from "./constants";
 export * from "./light";
@@ -141,24 +155,16 @@ export * from "./mesh";
 export * from "./layer";
 export * from "./effects";
 export * from "./shaders";
-export * from "./event/loaders";
 export * from "./material";
 export * from "./core";
 export * from "./layers";
 export * from "./lights";
 export * from "./passes";
+export * from "./evaluations";
 export * from "@navara/three_api";
 export * from "./Color";
-export {
-  isMobileDevice,
-  getDevicePixelRatio,
-  type DevicePixelRatioOptions,
-} from "./device";
-export { type BlendMode } from "./utils/blendModes";
-export { CameraDirection } from "@navara/engine";
-
-// CSM exports for advanced users
-export { CascadedShadowMaps, CSMHelper } from "@navara/three_csm";
+export { isMobileDevice, type DevicePixelRatioOptions } from "./device";
+export { type BlendMode } from "./utils";
 
 // NOTE:
 // This overrides all materials to output a normal buffer, meaning Navara operates using MRT (Multiple Render Targets).

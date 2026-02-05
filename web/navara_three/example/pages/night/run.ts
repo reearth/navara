@@ -1,5 +1,5 @@
-import { EventHandler } from "@navara/core";
 import ThreeView, {
+  EventHandler,
   JAPAN_GSI_ELEVATION_DECODER,
   type LayerHandle,
   type LightProbeLayer,
@@ -12,8 +12,8 @@ import ThreeView, {
   geodeticToVector3,
   Color,
 } from "@navara/three";
+import { SphericalHarmonics3 } from "three";
 import type { FeatureCollection, Point } from "geojson";
-import * as THREE from "three";
 import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../helpers/attributions";
@@ -154,7 +154,7 @@ const addNightLightProbeControl = (view: ThreeView, pane: Pane) => {
   const lightProbeLayer = view.addLayer<LightProbeLayer>({
     type: "light",
     lightProbe: {
-      sh: new THREE.SphericalHarmonics3().set(SH_COEFFICIENTS.night),
+      sh: new SphericalHarmonics3().set(SH_COEFFICIENTS.night),
       intensity: 0.05,
     },
   });

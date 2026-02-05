@@ -9,8 +9,8 @@ import ThreeView, {
   type SelectiveEffectOcclusion,
   Layer,
 } from "@navara/three";
-import type { FeatureCollection } from "geojson";
 import { Vector3 } from "three";
+import type { FeatureCollection } from "geojson";
 
 import {
   LOCAL_DATASETS,

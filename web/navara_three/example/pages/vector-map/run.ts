@@ -1,4 +1,7 @@
-import ThreeView, { JAPAN_GSI_ELEVATION_DECODER, Color } from "@navara/three";
+import ThreeView, {
+  JAPAN_GSI_ELEVATION_DECODER,
+  Color,
+} from "@navara/three";
 import { Vector3 } from "three";
 
 import { showAttributions } from "../../helpers/attributions";

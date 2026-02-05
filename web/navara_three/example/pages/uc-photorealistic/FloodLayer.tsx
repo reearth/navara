@@ -1,13 +1,11 @@
+import { Color } from "@navara/three";
 import type {
   Layer as NavaraLayer,
   LayerDescription,
   FeatureEvaluatorCallback,
-} from "@navara/three";
-import { Color } from "@navara/three";
+ FeatureEvaluator } from "@navara/three";
 import { Layer } from "@navara/three_react";
 import { useEffect, useMemo, useRef, useState } from "react";
-
-import type { FeatureEvaluator } from "../../../src/evaluations";
 
 import { czmlToGeoJSON, type GeoJSONFC } from "./czml";
 
