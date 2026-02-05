@@ -4,6 +4,7 @@ import ThreeView, {
   MeshLayerDeclaration,
   type MeshLayerConfig,
   type ViewContext,
+  type CloudsEffectLayer,
   degreeToRadian,
   eastNorthUpToFixedFrame,
   geodeticToVector3,
@@ -16,12 +17,11 @@ import {
   Vector2,
   Vector3,
   Matrix4,
-  Material,
+  type Material,
   type ShaderLibShader,
 } from "three";
 import { ToonShaderHatching, MarchingCubes } from "three-stdlib";
 
-import type { CloudsEffectLayer } from "../../../src/layers/effect";
 import { showAttributions } from "../../helpers/attributions";
 import { TERRAIN_DATASETS, TILE_DATASETS } from "../../helpers/constants";
 

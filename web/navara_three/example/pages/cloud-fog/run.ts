@@ -3,9 +3,9 @@ import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
   LayerHandle,
 } from "@navara/three";
+import type { CloudsEffectLayer } from "@navara/three";
 import { Pane } from "tweakpane";
 
-import type { CloudsEffectLayer } from "../../../src/layers/effect";
 import { showAttributions } from "../../helpers/attributions";
 import {
   TERRAIN_DATASETS,
