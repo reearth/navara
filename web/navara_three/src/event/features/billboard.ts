@@ -36,5 +36,5 @@ export async function processBillboardChanged(
   buf: BufferLoader,
   active: boolean,
 ) {
-  await obj._update(active);
+  await obj._update(m ,active);
 }

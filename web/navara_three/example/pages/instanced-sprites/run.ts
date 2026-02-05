@@ -11,94 +11,93 @@ import { addCtrlPanel, type MaterialLayerDescription } from "../../helpers/panel
 import isNumber from "lodash-es/isNumber";
 
 
-// const layers: MaterialLayerDescription[] = [
-//     // {
-//     //     type: "geojson",
-//     //     data: {
-//     //         type: "FeatureCollection",
-//     //         features: [
-//     //             {
-//     //                 type: "Feature",
-//     //                 properties: {},
-//     //                 geometry: {
-//     //                     coordinates: [139.70513431449842, 35.69279782617761],
-//     //                     type: "Point",
-//     //                 },
-//     //             },
-//     //             {
-//     //                 type: "Feature",
-//     //                 properties: {},
-//     //                 geometry: {
-//     //                     coordinates: [140.13033810546995, 35.60447056434825],
-//     //                     type: "Point",
-//     //                 },
-//     //             },
-//     //             // {
-//     //             //     type: "Feature",
-//     //             //     properties: {},
-//     //             //     geometry: {
-//     //             //         coordinates: [139.64591330307843, 35.85950281451436],
-//     //             //         type: "Point",
-//     //             //     },
-//     //             // },
-//     //             // {
-//     //             //     type: "Feature",
-//     //             //     properties: {},
-//     //             //     geometry: {
-//     //             //         coordinates: [139.63564871528018, 35.44128807202607],
-//     //             //         type: "Point",
-//     //             //     },
-//     //             // },
-//     //             // // {
-//     //             // //     type: "Feature",
-//     //             // //     properties: {},
-//     //             // //     geometry: {
-//     //             // //         coordinates: [139.28453080888477, 35.51560883529815],
-//     //             // //         type: "Point",
-//     //             // //     },
-//     //             // // },
-//     //         ],
-//     //     },
-//     //     point: {
-//     //         color: new Color().setStyle("#283e9e"),
-//     //         size: 0.1,
-//     //         height: 1,
-//     //         scaleByDistance: true,
-//     //         clampToGround: true,
-//     //         transparent: false,
-//     //         depthTest: true,
-//     //         offsetDepth: false,
-//     //     },
-//     // },
-//     {
-//         type: "mvt",
-//         data: {
-//             url: VECTOR_DATASETS.gsiExperimentalVector.url,
-//         },
-//         point: {
-//             size: 0.01,
-//             scaleByDistance: true,
-//             clampToGround: true,
-//             color: new Color().setStyle("#40ff00"),
-//         },
-//         // billboard: {
-//         //     color: new Color().setStyle("#ffffff"),
-//         //     size: 0.05,
-//         //     height: 1,
-//         //     scaleByDistance: true,
-//         //     clampToGround: true,
-//         //     depthTest: true,
-//         //     transparent: false,
-//         //     url: "/example.png",
-//         //     offsetDepth: false,
+const layers: MaterialLayerDescription[] = [
+    // {
+    //     type: "geojson",
+    //     data: {
+    //         type: "FeatureCollection",
+    //         features: [
+    //             {
+    //                 type: "Feature",
+    //                 properties: {},
+    //                 geometry: {
+    //                     coordinates: [139.70513431449842, 35.69279782617761],
+    //                     type: "Point",
+    //                 },
+    //             },
+    //             {
+    //                 type: "Feature",
+    //                 properties: {},
+    //                 geometry: {
+    //                     coordinates: [140.13033810546995, 35.60447056434825],
+    //                     type: "Point",
+    //                 },
+    //             },
+    //             // {
+    //             //     type: "Feature",
+    //             //     properties: {},
+    //             //     geometry: {
+    //             //         coordinates: [139.64591330307843, 35.85950281451436],
+    //             //         type: "Point",
+    //             //     },
+    //             // },
+    //             // {
+    //             //     type: "Feature",
+    //             //     properties: {},
+    //             //     geometry: {
+    //             //         coordinates: [139.63564871528018, 35.44128807202607],
+    //             //         type: "Point",
+    //             //     },
+    //             // },
+    //             // // {
+    //             // //     type: "Feature",
+    //             // //     properties: {},
+    //             // //     geometry: {
+    //             // //         coordinates: [139.28453080888477, 35.51560883529815],
+    //             // //         type: "Point",
+    //             // //     },
+    //             // // },
+    //         ],
+    //     },
+    //     point: {
+    //         color: new Color().setStyle("#283e9e"),
+    //         size: 0.1,
+    //         height: 1,
+    //         scaleByDistance: true,
+    //         clampToGround: true,
+    //         transparent: false,
+    //         depthTest: true,
+    //         offsetDepth: false,
+    //     },
+    // },
+    {
+        type: "mvt",
+        data: {
+            url: VECTOR_DATASETS.gsiExperimentalVector.url,
+        },
+        point: {
+            size: 0.01,
+            scaleByDistance: true,
+            clampToGround: true,
+            color: new Color().setStyle("#991f3d"),
+        },
+        // billboard: {
+        //     color: new Color().setStyle("#ffffff"),
+        //     size: 0.05,
+        //     height: 1,
+        //     scaleByDistance: true,
+        //     clampToGround: true,
+        //     depthTest: true,
+        //     transparent: false,
+        //     url: "/example.png",
+        //     offsetDepth: false,
 
-//         // },
-//         vectorTile: {
-//             maxZoom: 8,
-//             layers: ["symbol", "label"],
-//         },
-//     }
-// ];
+        // },
+        vectorTile: {
+            maxZoom: 4,
+        },
+    }
+];
 
 let gLayer: Layer;
 
@@ -138,7 +137,7 @@ export const run = async (view: ThreeView) => {
     //         size: 0.01,
     //         scaleByDistance: true,
     //         clampToGround: true,
-    //         color: new Color().setStyle("#40ff00"),
+    //         color: new Color().setStyle("#2d169c"),
     //     },
     //     // billboard: {
     //     //     color: new Color().setStyle("#ffffff"),
@@ -158,55 +157,55 @@ export const run = async (view: ThreeView) => {
     //     },
     // });
 
-    gLayer = view.addLayer({
-        type: "mvt",
-        data: {
-            url: MVT_DATASETS.plateauWakayamaGen.url,
-        },
-        point: {
-            size: 0.01,
-            scaleByDistance: true,
-            clampToGround: true,
-            color: new Color().setStyle("#b8119c"),
-        },
-    });
+    // gLayer = view.addLayer({
+    //     type: "mvt",
+    //     data: {
+    //         url: MVT_DATASETS.plateauWakayamaGen.url,
+    //     },
+    //     point: {
+    //         size: 0.01,
+    //         scaleByDistance: true,
+    //         clampToGround: true,
+    //         color: new Color().setStyle("#2d169c"),
+    //     },
+    // });
 
     const pane = new Pane({
         title: "Parameters",
         expanded: true,
     });
 
-    // addCtrlPanel(layers, view, pane);
+    addCtrlPanel(layers, view, pane);
 
     addCameraControl(view, pane);
-    registerLayerUpdate(view);
+    // registerLayerUpdate(view);
     addDateControl(view, pane);
 };
-let pickedBatchIds: Set<number> = new Set();
+// let pickedBatchIds: Set<number> = new Set();
 
-function registerLayerUpdate(view: ThreeView) {
-    if (!gLayer) return;
+// function registerLayerUpdate(view: ThreeView) {
+//     if (!gLayer) return;
 
-    view.on("pick", (info) => {
-        if (info && isNumber(info.batchId)) {
-            pickedBatchIds.add(info.batchId);
-        } else {
-            pickedBatchIds.clear();
-        }
-        gLayer.forceUpdate();
-        console.log(pickedBatchIds);
-    });
+//     view.on("pick", (info) => {
+//         if (info && isNumber(info.batchId)) {
+//             pickedBatchIds.add(info.batchId);
+//             gLayer.forceUpdate();
+//         } else {
+//             pickedBatchIds.clear();
+//         }
+//         console.log(pickedBatchIds);
+//     });
 
-    gLayer.on("featureUpdated", ({ evaluator }) => {
-        evaluator.evaluate((batchId, property) => {
-            if (pickedBatchIds.has(batchId)) {
-                console.log("pick color");
-                return { color: new Color().setHex(batchId) }
-            }
-            else {
-                // console.log("default color")
-                return { color: new Color().setHex(0x40ff00) }
-            }
-        });
-    });
-}
+//     gLayer.on("featureUpdated", ({ evaluator }) => {
+//         evaluator.evaluate((batchId, property) => {
+//             if (pickedBatchIds.has(batchId)) {
+//                 console.log("pick color");
+//                 return { color: new Color().setHex(0xff0000) }
+//             }
+//             else {
+//                 console.log("default color")
+//                 return { color: new Color().setHex(0x2d169c) }
+//             }
+//         });
+//     });
+// }

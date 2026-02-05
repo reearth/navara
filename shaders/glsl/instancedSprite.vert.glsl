@@ -11,13 +11,14 @@
     varying float vLayer;
 #endif
 
-attribute float instanceScale;
+// attribute float instanceScale;
 attribute vec3 instanceColor;
 attribute float instanceBatchID;
 
 uniform vec3 uRTCCenter;
 uniform vec3 uEyeRTEHigh;
 uniform vec3 uEyeRTELow;
+uniform float uScale;
 
 varying vec2 vUv;
 varying vec3 vColor;
@@ -42,7 +43,6 @@ int id = gl_InstanceID;
 
     vec4 mvPosition;
 #ifdef USE_RTE
-    // TODO: Adjust view matrix for RTE
     vec3 highDiff = instancePositionHIGH - uEyeRTEHigh;
     vec3 lowDiff = instancePositionLOW - uEyeRTELow;
     vec3 instancePosition = highDiff + lowDiff;
@@ -60,7 +60,7 @@ int id = gl_InstanceID;
 #endif
 
     // This makes it always face the camera
-    mvPosition.xy += (position.xy * instanceScale);
+    mvPosition.xy += (position.xy * uScale);
 
     gl_Position = projectionMatrix * mvPosition;
 }

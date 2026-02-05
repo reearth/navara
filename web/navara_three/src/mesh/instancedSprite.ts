@@ -15,8 +15,9 @@ import { PickableMesh } from "./pickableMesh";
 // - reenable depth test ... - done
 // - make sure texture array and layer attribute are only created for billboard case - done
 // --------------------------------------------------------------
-// - handle batch ids and picking (if it was working before)...
-// - handle style evalutator stuff - see notion page
+// - handle batch ids and picking (if it was working before)... - done
+// - handle style evalutator stuff - batch ids are not correct now.
+// --------------------------------------------------------------
 // - handle layer material, user data, color, height, ... 
 // - make sure to cover all what was the old point/billboard mesh doing
 // - handle selective layer stuff
@@ -96,14 +97,14 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
         instancedGeometry.instanceCount = instanceCount;
 
         // Add Custom Attributes
-        const scaleBuffer = new Float32Array(instanceCount);
+        // const scaleBuffer = new Float32Array(instanceCount);
         const colorBuffer = new Float32Array(instanceCount * 3);
         let layerBuffer = undefined;
 
         const color = new Color().setHex(m.material.color ?? 0xffffff);
         for (let i = 0; i < instanceCount; i++) {
             // TODO: get scale from user data
-            scaleBuffer[i] = 1000.0;
+            // scaleBuffer[i] = 10000.0;
 
             colorBuffer[i * 3 + 0] = color.r;
             colorBuffer[i * 3 + 1] = color.g;
@@ -132,7 +133,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
             const pos = positionsInfo.position as Float32Array<ArrayBufferLike>;
             instancedGeometry.setAttribute('instancePosition', new InstancedBufferAttribute(pos, positionsInfo.positionSize));
         }
-        instancedGeometry.setAttribute('instanceScale', new InstancedBufferAttribute(scaleBuffer, 1));
+        // instancedGeometry.setAttribute('instanceScale', new InstancedBufferAttribute(scaleBuffer, 1));
         instancedGeometry.setAttribute('instanceColor', new InstancedBufferAttribute(colorBuffer, 3));
         instancedGeometry.setAttribute('instanceBatchID', new InstancedBufferAttribute(positionsInfo.batchIDs, positionsInfo.batchIDSize));
 
@@ -147,12 +148,12 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
                 uEyeRTELow: { value: new Vector3(0, 0, 0) },
                 uEyeRTEHigh: { value: new Vector3(0, 0, 0) },
                 uOffsetDepth: { value: m.material.offsetDepth ?? true },
-                // uColor: { value: new Vector3(1.0, 0.0, 0.0) }, // Placeholder color
+                uScale: { value: m.material.size ?? 100.0 },
                 nvr_uPickable: { value: 0.0 },
             },
             vertexShader: instancedSpriteVertexShader,
             fragmentShader: instancedSpriteFragmentShader,
-            transparent: true,
+            transparent: m.material.transparent ?? true,
         });
 
         if (positionsInfo.RTE) {
@@ -185,6 +186,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
             }
         }
 
+        material.visible = m.material.show ?? true;
         return material;
     }
 
@@ -194,8 +196,6 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
         const batchIdsData = g.batch_ids;
         const batchIDs = buf.removeF32(batchIdsData.data);
         const batchIDSize = batchIdsData.size;
-        // const batchIndexData = g.batch_index;
-        // const batchIndex = buf.removeU32(batchIndexData.data);
         if (!batchIDs) return null;
 
         const positionData = g.position;
@@ -237,28 +237,48 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
             const mat = this.material as ShaderMaterial;
             mat.uniforms.nvr_uPickable = { value: pickable ? 1.0 : 0.0 };
             mat.uniformsNeedUpdate = true;
-            // console.log("Set pickable to", pickable);
         }
     }
 
-    _update(active: boolean) {
-        if (this.material as ShaderMaterial) {
-            const mat = this.material as ShaderMaterial;
-            // mat.needsUpdate = true;
-            mat.uniformsNeedUpdate = true;
+    // TODO: cleanup
+    _update(m: NavaraPointMesh | NavaraBillboardMesh, active: boolean) {
+        const material = this.material as ShaderMaterial;
+        let uniformsChanged = false;
+
+        if (material.visible !== m.material.show) {
+            material.visible = m.material.show ?? true;
+            material.visible = material.visible && active;
+            uniformsChanged = true;
+        }
+
+        if (material.uniforms.uOffsetDepth.value !== (m.material.offsetDepth ?? true)) {
+            material.uniforms.uOffsetDepth.value = m.material.offsetDepth ?? true;
+            uniformsChanged = true;
+        }
+
+        if (material.transparent !== (m.material.transparent ?? true)) {
+            material.transparent = m.material.transparent ?? true;
+            uniformsChanged = true;
+        }
+
+        if (material.uniforms.uScale.value !== (m.material.size ?? 100.0)) {
+            material.uniforms.uScale.value = m.material.size ?? 100.0;
+            uniformsChanged = true;
+        }
+
+        if (uniformsChanged) {
+            material.uniformsNeedUpdate = true;
         }
     }
 
     // TODO: delay changes to attributes to avoid multiple updates in a frame
     // use a dirty flag and update in onBeforeRender or similar
     setFeatureColorByBatchId(batchId: number, color: Color) {
-        // console.log("Setting color for batchId", batchId, "to", color.getHexString());
-        // console.log(this._batchIdToInstance);
-        // const instanceId = this._batchIdToInstance.get(batchId);
-        // if (instanceId === undefined) return;
+        const instanceId = this._batchIdToInstance.get(batchId);
+        if (instanceId === undefined) return;
 
         const colorAttr = this.geometry.getAttribute('instanceColor') as InstancedBufferAttribute;
-        colorAttr.setXYZ(3, color.r, color.g, color.b);
+        colorAttr.setXYZ(instanceId, color.r, color.g, color.b);
         colorAttr.needsUpdate = true;
     }
 

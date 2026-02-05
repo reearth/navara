@@ -132,6 +132,8 @@ export class FeatureEvaluator {
   private cachedBatchedProperties?: Map<number, Map<string, unknown>>;
   private batchIds: number[] = [];
 
+  instanceSelectedBatchIds: number[] = [];
+
   /**
    * The underlying Three.js object representing this feature.
    * Can be used for advanced manipulation, but prefer using `evaluate()` for styling.
@@ -195,6 +197,7 @@ export class FeatureEvaluator {
             this.cachedBatchedProperties?.set(batchIdx, property);
           }
           this.batchIds[batchIdx] = batchId;
+          // console.log("FeatureEvaluator read batchId:", batchId);
           f(batchId, property);
         },
       );
@@ -341,6 +344,7 @@ export class FeatureEvaluator {
     for (const target of this.result) {
 
       if (m instanceof InstancedSpriteMesh) {
+        // const batchIds = m.geometry.getAttribute("instanceBatchID");
         switch (target.attribute) {
           case "color": {
             const len = target.array.length / target.itemSize;
@@ -354,7 +358,7 @@ export class FeatureEvaluator {
               ).raw;
 
               m.setFeatureColorByBatchId(
-                color.getHex(),
+                this.instanceSelectedBatchIds.pop() ?? 0,
                 color,
               );
             }

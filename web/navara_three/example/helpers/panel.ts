@@ -70,6 +70,7 @@ const addFeatureUpdateHandler = (
   };
 
   layer.on("featureUpdated", ({ evaluator }) => {
+    selectedBatchIds.forEach((batchId) => evaluator.instanceSelectedBatchIds.push(batchId));
     evaluator.evaluate((batchId, property) => {
       const gmlId = property?.get("gml_id");
       if (gmlId && selectedFeatures.has(gmlId as string)) {
@@ -85,10 +86,10 @@ const addFeatureUpdateHandler = (
       // Dynamically get the current default color
       let defaultColor = getDefaultColor();
       if (isNumber(defaultColor)) {
-        defaultColor = new Color().setHex(defaultColor);
+        defaultColor = new Color().setHex(0x00ffff);
       }
       return {
-        color: defaultColor,
+        color: new Color().setHex(0x00ffff),
       };
     });
   });
@@ -120,6 +121,7 @@ export const addCtrlPanel = (
       // else if batchId exists, use it for selection
       selectedBatchIds.add(info?.batchId);
 
+      console.log("Selected batchId:", info?.batchId);
       const layerId = info?.layerId;
       if (layerId) {
         const layer = layerInstMap.get(layerId);

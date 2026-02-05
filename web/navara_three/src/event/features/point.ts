@@ -36,5 +36,5 @@ export function processPointChanged(
   buf: BufferLoader,
   active: boolean,
 ) {
-  obj._update(active);
+  obj._update(m , active);
 }

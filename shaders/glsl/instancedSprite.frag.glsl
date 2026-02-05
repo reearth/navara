@@ -1,7 +1,7 @@
 #include "point.frag.glsl"
 #include "chunks/pick.glsl"
 #ifdef BILLBOARD
-    precision highp sampler2DArray; // Important for WebGL 2
+    precision highp sampler2DArray;
     uniform sampler2DArray uTexture;
     varying float vLayer;
 #endif
@@ -28,7 +28,6 @@ varying vec3 vColor;
 varying float vBatchID;
 
 uniform bool uOffsetDepth;
-// uniform vec3 uColor;
 uniform float nvr_uPickable;
 
 void main() {
@@ -42,7 +41,7 @@ void main() {
         vec4 color = vec4(vColor, alpha); // Placeholder color
     #endif
 
-    if (color.a == 0.0) {gl_FragColor = vec4(0.0); return;}; // Alpha test
+    if (color.a == 0.0) { gl_FragColor = vec4(0.0); return; }; // Alpha test
 
     // Offset depth to make sure to be drawn over ellipsoid surface
     if (uOffsetDepth) { gl_FragDepth -= 0.2; }
@@ -50,7 +49,6 @@ void main() {
     if (nvr_uPickable > 0.0 && alpha > 0.0) {
         vec3 pickColor = nvr_batchIdToColor(vBatchID);
         color = vec4(pickColor.xyz, alpha);
-        // color = vec4(1.0, 0.0, 0.0, 1.0); // For testing pick buffer
     }
 
     gl_FragColor = color;
