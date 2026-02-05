@@ -138,7 +138,7 @@ export const TILES_3D_DATASETS = {
       "https://www.geospatial.jp/ckan/dataset/yamanashi-pointcloud-2024",
   },
   googlePhotorealTiles: {
-    url: `https://tile.googleapis.com/v1/3dtiles/root.json?key=${import.meta.env.NAVARA_GOOGLE_MAPS_API_KEY}`,
+    url: `https://tile.googleapis.com/v1/3dtiles/root.json`, // `?key=${YOUR_TOKEN}`
     attribution: "Google Maps Photorealistic 3D Tiles",
   },
 } satisfies Record<string, Dataset>;
