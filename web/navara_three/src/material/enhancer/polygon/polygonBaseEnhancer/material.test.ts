@@ -16,4 +16,47 @@ describe("polygonBaseEnhancer/material", () => {
       expect(material.opacity).toBe(0.5);
     });
   });
+
+  describe("material render state", () => {
+    it("should set colorWrite false when clampToGround and not texturized", () => {
+      const material = new MeshLambertMaterial();
+      updateMaterialProps(material, { clampToGround: true, isTexturized: false });
+      expect(material.colorWrite).toBe(false);
+      expect(material.depthWrite).toBe(false);
+      expect(material.depthTest).toBe(false);
+    });
+
+    it("should set colorWrite true when texturized", () => {
+      const material = new MeshLambertMaterial();
+      updateMaterialProps(material, { clampToGround: true, isTexturized: true });
+      expect(material.colorWrite).toBe(true);
+      expect(material.depthWrite).toBe(false);
+      expect(material.depthTest).toBe(false);
+    });
+
+    it("should set depthWrite/depthTest true when not clamped to ground", () => {
+      const material = new MeshLambertMaterial();
+      updateMaterialProps(material, {
+        clampToGround: false,
+        isTexturized: false,
+      });
+      expect(material.colorWrite).toBe(true);
+      expect(material.depthWrite).toBe(true);
+      expect(material.depthTest).toBe(true);
+    });
+
+    it("should not change render state when neither clampToGround nor isTexturized is provided", () => {
+      const material = new MeshLambertMaterial();
+      // Set initial values
+      material.colorWrite = false;
+      material.depthWrite = false;
+      material.depthTest = false;
+
+      // Empty props should not change render state
+      updateMaterialProps(material, { color: 0xff0000 });
+      expect(material.colorWrite).toBe(false);
+      expect(material.depthWrite).toBe(false);
+      expect(material.depthTest).toBe(false);
+    });
+  });
 });

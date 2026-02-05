@@ -41,4 +41,15 @@ export const updateMaterialProps = (
         props.reflectivity;
     }
   }
+
+  // Material render state based on clampToGround and isTexturized
+  // When clampToGround is true and not texturized, use stencil clipping
+  if (props.clampToGround !== undefined || props.isTexturized !== undefined) {
+    const clampToGround = props.clampToGround ?? false;
+    const isTexturized = props.isTexturized ?? false;
+    const shouldClipByStencil = !isTexturized && clampToGround;
+    material.colorWrite = !shouldClipByStencil;
+    material.depthWrite = !clampToGround;
+    material.depthTest = !clampToGround;
+  }
 };

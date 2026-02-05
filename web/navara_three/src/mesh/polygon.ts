@@ -16,11 +16,7 @@ import {
 
 import { PolygonOutlineMesh, type ViewEvents } from "..";
 import type { ViewContext } from "../core";
-import {
-  ensureSelectiveEffectUserData,
-  parseSelectiveEffectOcclusion,
-  type SelectiveEffectOcclusion,
-} from "../core/SelectiveEffectHelper";
+import { ensureSelectiveEffectUserData } from "../core/SelectiveEffectHelper";
 import { injectSelectiveEffectHandlers } from "../core/SelectiveEffectMaskContext";
 import type { BufferLoader } from "../event";
 import type { PolygonMaterialProps } from "../material/enhancer/polygon";
@@ -127,36 +123,14 @@ export class PolygonMesh extends BatchedFeatureMesh<
   }
 
   clone() {
-    // Clone geometry and material to avoid shared references
-    const clonedGeometry = this.geometry.clone();
-    const clonedMaterial = this.material.clone();
-
-    // Create new enhancer for the cloned material
-    // This ensures independent state management
-    const clonedEnhancer = createPolygonMaterialEnhancer(clonedMaterial);
-
-    // Copy enhancer state from original to cloned
-    if (this._enhancedMaterial) {
-      const originalState = this._enhancedMaterial.states();
-      clonedEnhancer.mount({
-        base: { ...originalState.base },
-        water: { ...originalState.water },
-      });
-    }
-
-    const cloned = new PolygonMesh(
+    return new PolygonMesh(
       this._viewContext,
       this._layerId,
       this._uniforms,
-      clonedGeometry,
-      clonedMaterial,
-      clonedEnhancer,
+      this.geometry,
+      this.material,
+      this._enhancedMaterial,
     ) as this;
-
-    // Note: Batch data texture sharing may need special handling in the future
-    // Currently batch data is managed by the parent class
-
-    return cloned;
   }
 
   private initGeometry(
@@ -265,23 +239,6 @@ export class PolygonMesh extends BatchedFeatureMesh<
     return this._enhancedMaterial;
   }
 
-  /**
-   * Update material state based on clampToGround and texturization settings.
-   * This method is used by both initMaterial() and _update() to keep material state consistent.
-   *
-   * @param clampToGround - Whether the polygon is clamped to ground
-   * @param isTexturized - Whether the polygon is texturized
-   */
-  private updateMaterialState(
-    clampToGround: boolean,
-    isTexturized: boolean,
-  ): void {
-    const shouldClipByStencil = !isTexturized && clampToGround;
-    this.material.colorWrite = !shouldClipByStencil;
-    this.material.depthWrite = !clampToGround;
-    this.material.depthTest = !clampToGround;
-  }
-
   private enableWater() {
     if (!this._enhancedMaterial) return;
 
@@ -320,14 +277,12 @@ export class PolygonMesh extends BatchedFeatureMesh<
     this.castShadow = !!meshMaterial.castShadow;
     this.receiveShadow = !!meshMaterial.receiveShadow;
 
-    const clampToGround = !!meshMaterial.clampToGround;
     // This mesh should be texturized if it uses clamp-to-ground.
     const isTexturized = !!tileHandle;
     const material = this.material;
 
     material.stencilWrite = false;
     material.vertexColors = false;
-    this.updateMaterialState(clampToGround, isTexturized);
     this.visible = !!meshMaterial.show;
 
     const uMinMaxHeights = meshMaterial.__internal__?.minMaxHeights;
@@ -466,30 +421,6 @@ export class PolygonMesh extends BatchedFeatureMesh<
       this._prevEffectIds = material.effectIds ? [...material.effectIds] : [];
     }
 
-    // ========== SelectiveEffect properties ==========
-
-    // SelectiveEffect: emissiveIntensity
-    if (material.emissiveIntensity !== undefined) {
-      this.material.emissiveIntensity = material.emissiveIntensity;
-    }
-
-    // SelectiveEffect: selectiveEffectOcclusion
-    if (material.selectiveEffectOcclusion !== undefined) {
-      const occlusion = parseSelectiveEffectOcclusion(
-        material.selectiveEffectOcclusion as
-          | SelectiveEffectOcclusion
-          | undefined,
-      );
-      if (occlusion !== undefined && this._viewContext) {
-        this._viewContext.setLayerSelectiveEffectOcclusion(
-          this._layerId,
-          occlusion,
-        );
-      }
-    }
-
-    // ========== SelectiveEffect properties end ==========
-
     const { base } = enhancer.states();
 
     // Build props from material with separated base and water sections
@@ -528,9 +459,6 @@ export class PolygonMesh extends BatchedFeatureMesh<
 
     // Update via enhancer
     enhancer.update(updateProps);
-
-    // Update material state based on clampToGround changes
-    this.updateMaterialState(!!material.clampToGround, isTexturized);
 
     // Post-update actions
     this.enableWater();
