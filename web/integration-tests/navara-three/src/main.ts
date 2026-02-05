@@ -47,7 +47,6 @@ async function main() {
       maxZoom: 15,
       minZoom: 6,
       elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-      skirt: false,
     },
   });
 
