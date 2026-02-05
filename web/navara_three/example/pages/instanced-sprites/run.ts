@@ -105,6 +105,15 @@ let gLayer: Layer;
 export const run = async (view: ThreeView) => {
     await view.init();
 
+    view.setCamera({
+        lng: 135.2876307211,
+        lat: 34.0681032412,
+        height: 44412.93,
+        heading: 8.3733205871,
+        pitch:-73.2083324309,
+        roll: 360,
+    });
+
     view.addLayer<AmbientLightLayer>({
         type: "light",
         ambient: {
@@ -120,32 +129,45 @@ export const run = async (view: ThreeView) => {
         },
     });
 
+    // gLayer = view.addLayer({
+    //     type: "mvt",
+    //     data: {
+    //         url: VECTOR_DATASETS.gsiExperimentalVector.url,
+    //     },
+    //     point: {
+    //         size: 0.01,
+    //         scaleByDistance: true,
+    //         clampToGround: true,
+    //         color: new Color().setStyle("#40ff00"),
+    //     },
+    //     // billboard: {
+    //     //     color: new Color().setStyle("#ffffff"),
+    //     //     size: 0.05,
+    //     //     height: 1,
+    //     //     scaleByDistance: true,
+    //     //     clampToGround: true,
+    //     //     depthTest: true,
+    //     //     transparent: false,
+    //     //     url: "/example.png",
+    //     //     offsetDepth: false,
+
+    //     // },
+    //     vectorTile: {
+    //         maxZoom: 23,
+    //         layers: ["symbol", "label"],
+    //     },
+    // });
+
     gLayer = view.addLayer({
         type: "mvt",
         data: {
-            url: VECTOR_DATASETS.gsiExperimentalVector.url,
+            url: MVT_DATASETS.plateauWakayamaGen.url,
         },
         point: {
             size: 0.01,
             scaleByDistance: true,
             clampToGround: true,
-            color: new Color().setStyle("#40ff00"),
-        },
-        // billboard: {
-        //     color: new Color().setStyle("#ffffff"),
-        //     size: 0.05,
-        //     height: 1,
-        //     scaleByDistance: true,
-        //     clampToGround: true,
-        //     depthTest: true,
-        //     transparent: false,
-        //     url: "/example.png",
-        //     offsetDepth: false,
-
-        // },
-        vectorTile: {
-            maxZoom: 23,
-            layers: ["symbol", "label"],
+            color: new Color().setStyle("#b8119c"),
         },
     });
 

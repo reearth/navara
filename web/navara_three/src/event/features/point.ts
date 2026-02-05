@@ -26,6 +26,7 @@ export async function renderPoint(
     layerId,
   });
   await mesh._init(m, buf);
+  console.log("Created InstancedSpriteMesh for point feature");
   return mesh;
 }
 

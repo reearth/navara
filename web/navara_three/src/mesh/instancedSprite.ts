@@ -100,10 +100,10 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
         const colorBuffer = new Float32Array(instanceCount * 3);
         let layerBuffer = undefined;
 
-        const color = new Color().setHex(0xffffff);
+        const color = new Color().setHex(m.material.color ?? 0xffffff);
         for (let i = 0; i < instanceCount; i++) {
             // TODO: get scale from user data
-            scaleBuffer[i] = 10000.0;
+            scaleBuffer[i] = 1000.0;
 
             colorBuffer[i * 3 + 0] = color.r;
             colorBuffer[i * 3 + 1] = color.g;
@@ -252,13 +252,13 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     // TODO: delay changes to attributes to avoid multiple updates in a frame
     // use a dirty flag and update in onBeforeRender or similar
     setFeatureColorByBatchId(batchId: number, color: Color) {
-        console.log("Setting color for batchId", batchId, "to", color.getHexString());
-        console.log(this._batchIdToInstance);
-        const instanceId = this._batchIdToInstance.get(batchId);
-        if (instanceId === undefined) return;
+        // console.log("Setting color for batchId", batchId, "to", color.getHexString());
+        // console.log(this._batchIdToInstance);
+        // const instanceId = this._batchIdToInstance.get(batchId);
+        // if (instanceId === undefined) return;
 
         const colorAttr = this.geometry.getAttribute('instanceColor') as InstancedBufferAttribute;
-        colorAttr.setXYZ(instanceId, color.r, color.g, color.b);
+        colorAttr.setXYZ(3, color.r, color.g, color.b);
         colorAttr.needsUpdate = true;
     }
 
