@@ -3,7 +3,8 @@ import type {
   Layer as NavaraLayer,
   LayerDescription,
   FeatureEvaluatorCallback,
- FeatureEvaluator } from "@navara/three";
+  FeatureEvaluator,
+} from "@navara/three";
 import { Layer } from "@navara/three_react";
 import { useEffect, useMemo, useRef, useState } from "react";
 

@@ -12,8 +12,8 @@ import ThreeView, {
   geodeticToVector3,
   Color,
 } from "@navara/three";
-import { SphericalHarmonics3 } from "three";
 import type { FeatureCollection, Point } from "geojson";
+import { SphericalHarmonics3 } from "three";
 import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../helpers/attributions";

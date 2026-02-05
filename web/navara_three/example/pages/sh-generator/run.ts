@@ -100,8 +100,7 @@ export const run = async (view: ThreeView): Promise<void> => {
             const renderTarget = pmremGenerator.fromEquirectangular(texture);
 
             // Generate LightProbe from cube render target
-            const cubeRenderTarget =
-              renderTarget as WebGLCubeRenderTarget;
+            const cubeRenderTarget = renderTarget as WebGLCubeRenderTarget;
 
             statusDiv.innerHTML = `Generating spherical harmonics for ${file.name}...`;
 
