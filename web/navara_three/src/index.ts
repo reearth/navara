@@ -163,7 +163,7 @@ export * from "./passes";
 export * from "./evaluations";
 export * from "@navara/three_api";
 export * from "./Color";
-export { isMobileDevice, type DevicePixelRatioOptions } from "./device";
+export { getDevicePixelRatio, isMobileDevice, type DevicePixelRatioOptions } from "./device";
 export { type BlendMode } from "./utils";
 
 // NOTE:
