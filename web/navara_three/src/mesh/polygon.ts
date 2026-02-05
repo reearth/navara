@@ -277,7 +277,7 @@ export class PolygonMesh extends BatchedFeatureMesh<
     this.castShadow = !!meshMaterial.castShadow;
     this.receiveShadow = !!meshMaterial.receiveShadow;
 
-    // This mesh should be texturized if it uses clamp-to-ground.
+    // This mesh is texturized if it has a tile handle (terrain attachment).
     const isTexturized = !!tileHandle;
     const material = this.material;
 

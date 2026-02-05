@@ -20,7 +20,10 @@ describe("polygonBaseEnhancer/material", () => {
   describe("material render state", () => {
     it("should set colorWrite false when clampToGround and not texturized", () => {
       const material = new MeshLambertMaterial();
-      updateMaterialProps(material, { clampToGround: true, isTexturized: false });
+      updateMaterialProps(material, {
+        clampToGround: true,
+        isTexturized: false,
+      });
       expect(material.colorWrite).toBe(false);
       expect(material.depthWrite).toBe(false);
       expect(material.depthTest).toBe(false);
@@ -28,7 +31,10 @@ describe("polygonBaseEnhancer/material", () => {
 
     it("should set colorWrite true when texturized", () => {
       const material = new MeshLambertMaterial();
-      updateMaterialProps(material, { clampToGround: true, isTexturized: true });
+      updateMaterialProps(material, {
+        clampToGround: true,
+        isTexturized: true,
+      });
       expect(material.colorWrite).toBe(true);
       expect(material.depthWrite).toBe(false);
       expect(material.depthTest).toBe(false);
