@@ -34,6 +34,8 @@ import { CLOUD_ASSETS_URL, STBN_URL } from "../constants";
 import { CustomEffectPass } from "./CustomEffectPass";
 import { Pass, type EffectOptions } from "./effect";
 
+export type * from "@takram/three-clouds";
+
 export type CloudsOptions = {
   assetsUrl?: string;
   stbnUrl?: string;

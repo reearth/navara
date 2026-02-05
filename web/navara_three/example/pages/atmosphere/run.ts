@@ -1,5 +1,5 @@
-import { EventHandler } from "@navara/core";
 import ThreeView, {
+  EventHandler,
   Color,
   DEFAULT_CLOUDS_OPTIONS,
   JAPAN_GSI_ELEVATION_DECODER,
@@ -14,17 +14,15 @@ import ThreeView, {
   AmbientLightLayer,
   SkyLightProbeLayer,
   isMobileDevice,
-} from "@navara/three";
-import type { TextureChannel } from "@takram/three-clouds";
-import { SphericalHarmonics3 } from "three";
-import { Pane } from "tweakpane";
-
-import type {
+  type TextureChannel,
   AerialPerspectiveEffectLayer,
   CloudsEffectLayer,
   SSAOEffectLayer,
-} from "../../../src/layers/effect";
-import type { LightProbeLayer } from "../../../src/layers/light/LightProbeLayer";
+  LightProbeLayer,
+} from "@navara/three";
+import { SphericalHarmonics3 } from "three";
+import { Pane } from "tweakpane";
+
 import { showAttributions } from "../../helpers/attributions";
 import {
   TERRAIN_DATASETS,
