@@ -18,6 +18,8 @@ pub struct TransferablePolylineBatchedFeature {
     pub length: usize,
 
     cur_idx: usize,
+
+    points_offset: usize,
 }
 
 #[wasm_bindgen]
@@ -33,6 +35,7 @@ impl TransferablePolylineBatchedFeature {
             crs,
             length,
             cur_idx: 0,
+            points_offset: 0,
         }
     }
 
@@ -128,10 +131,11 @@ impl TransferablePolylineBatchedFeature {
     }
 
     pub fn to_transferable_by_index(&mut self, idx: usize) -> (Vec<f64>, BatchIndex, BatchId) {
-        let points = self
-            .points
-            .drain(..self.points_sizes[idx] as usize)
-            .collect();
+        let size = self.points_sizes[idx] as usize;
+        let start = self.points_offset;
+        let end = start + size;
+        let points = self.points[start..end].to_vec();
+        self.points_offset = end;
 
         let batch_index = self.batch_indices[idx] as usize;
 

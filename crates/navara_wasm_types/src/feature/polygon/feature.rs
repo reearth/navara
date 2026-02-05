@@ -33,6 +33,12 @@ pub struct TransferablePolygonBatchedFeature {
     pub length: usize,
 
     cur_idx: usize,
+
+    // Offsets for zero-shift iteration (avoids O(n²) drain-from-front)
+    outer_ring_offset: usize,
+    holes_offset: usize,
+    holes_sizes_offset: usize,
+    expected_winding_orders_offset: usize,
 }
 
 #[wasm_bindgen]
@@ -53,6 +59,10 @@ impl TransferablePolygonBatchedFeature {
             crs,
             length,
             cur_idx: 0,
+            outer_ring_offset: 0,
+            holes_offset: 0,
+            holes_sizes_offset: 0,
+            expected_winding_orders_offset: 0,
         }
     }
 
@@ -164,6 +174,8 @@ impl TransferablePolygonBatchedFeature {
                 .push(Into::<WindingOrder>::into(hierarchy.expected_winding_order).0);
 
             let Some(h_holes) = hierarchy.holes else {
+                holes_boundaries.push(0);
+                holes_total_sizes.push(0);
                 continue;
             };
             holes_boundaries.push(h_holes.len() as u32);
@@ -232,6 +244,8 @@ impl TransferablePolygonBatchedFeature {
         self.batch_indices.push(batch_index.0);
 
         let Some(h_holes) = &mut hierarchy.holes else {
+            self.holes_boundaries.push(0);
+            self.holes_total_sizes.push(0);
             return;
         };
 
@@ -255,25 +269,43 @@ impl TransferablePolygonBatchedFeature {
         &mut self,
         idx: usize,
     ) -> (TransferableHierarchy, BatchIndex, BatchId) {
+        // Extract outer_ring slice
+        let or_size = self.outer_ring_sizes[idx] as usize;
+        let or_start = self.outer_ring_offset;
+        let or_end = or_start + or_size;
+        let outer_ring = self.outer_ring[or_start..or_end].to_vec();
+        self.outer_ring_offset = or_end;
+
+        // Extract winding order for the outer ring
+        let expected_winding_order =
+            self.expected_winding_orders[self.expected_winding_orders_offset];
+        self.expected_winding_orders_offset += 1;
+
+        // Extract holes
+        let holes_total = self.holes_total_sizes[idx] as usize;
+        let h_start = self.holes_offset;
+        let h_end = h_start + holes_total;
+        let holes_data = self.holes[h_start..h_end].to_vec();
+        self.holes_offset = h_end;
+
+        let boundaries = self.holes_boundaries[idx] as usize;
+        let hs_start = self.holes_sizes_offset;
+        let hs_end = hs_start + boundaries;
+        let holes_sizes = self.holes_sizes[hs_start..hs_end].to_vec();
+        self.holes_sizes_offset = hs_end;
+
+        let ewo_start = self.expected_winding_orders_offset;
+        let ewo_end = ewo_start + boundaries;
+        let holes_winding_orders = self.expected_winding_orders[ewo_start..ewo_end].to_vec();
+        self.expected_winding_orders_offset = ewo_end;
+
         let transferable_hierarchy = TransferableHierarchy {
-            outer_ring: self
-                .outer_ring
-                .drain(..self.outer_ring_sizes[idx] as usize)
-                .collect(),
-            expected_winding_order: self.expected_winding_orders.remove(0),
+            outer_ring,
+            expected_winding_order,
             holes: TransferableHoles {
-                holes: self
-                    .holes
-                    .drain(..self.holes_total_sizes[idx] as usize)
-                    .collect(),
-                sizes: self
-                    .holes_sizes
-                    .drain(..self.holes_boundaries[idx] as usize)
-                    .collect(),
-                expected_winding_orders: self
-                    .expected_winding_orders
-                    .drain(..self.holes_boundaries[idx] as usize)
-                    .collect(),
+                holes: holes_data,
+                sizes: holes_sizes,
+                expected_winding_orders: holes_winding_orders,
             },
         };
 
@@ -414,5 +446,84 @@ mod test {
         assert_eq!(features, hierarchies);
         assert_eq!(batch_ids, vec![0.0, 1.0, 2.0]);
         assert_eq!(batch_idxs, vec![0, 1, 2,]);
+    }
+
+    #[test]
+    fn it_should_handle_features_without_holes() {
+        let hierarchies = vec![
+            Hierarchy {
+                #[rustfmt::skip]
+                outer_ring: vec![
+                    0., 0., 0.,
+                    1., 1., 1.,
+                ],
+                holes: Some(vec![Hierarchy {
+                    outer_ring: vec![2., 2., 2.],
+                    holes: None,
+                    expected_winding_order: navara_geometry::WindingOrder::Clockwise,
+                }]),
+                expected_winding_order: navara_geometry::WindingOrder::CounterClockwise,
+            },
+            // Feature without holes in the middle to catch indexing bugs
+            Hierarchy {
+                #[rustfmt::skip]
+                outer_ring: vec![
+                    10., 10., 10.,
+                    11., 11., 11.,
+                ],
+                holes: None,
+                expected_winding_order: navara_geometry::WindingOrder::CounterClockwise,
+            },
+            Hierarchy {
+                outer_ring: vec![20., 20., 20.],
+                holes: Some(vec![Hierarchy {
+                    outer_ring: vec![21., 21., 21.],
+                    holes: None,
+                    expected_winding_order: navara_geometry::WindingOrder::Clockwise,
+                }]),
+                expected_winding_order: navara_geometry::WindingOrder::CounterClockwise,
+            },
+        ];
+
+        struct BatchedHierarchy(usize, Vec<Hierarchy>);
+        impl Iterator for BatchedHierarchy {
+            type Item = (usize, Hierarchy);
+            fn next(&mut self) -> Option<Self::Item> {
+                if self.1.is_empty() {
+                    return None;
+                }
+                let result = (self.0, self.1.remove(0));
+                self.0 += 1;
+                Some(result)
+            }
+        }
+
+        let transferable_features = TransferablePolygonBatchedFeature::new(
+            BatchedHierarchy(0, hierarchies.clone()),
+            hierarchies.len(),
+        );
+
+        let mut features: Vec<Hierarchy> = vec![];
+        let mut batch_ids = vec![];
+        let mut batch_idxs = vec![];
+        for (feature, batch_index, batch_id) in transferable_features {
+            features.push(feature.into());
+            batch_ids.push(batch_id.0);
+            batch_idxs.push(batch_index.0);
+        }
+
+        // From<TransferableHierarchy> always produces Some(vec![]) even for holes: None,
+        // so the expected output differs from input for the no-holes feature.
+        let expected = vec![
+            hierarchies[0].clone(),
+            Hierarchy {
+                holes: Some(vec![]),
+                ..hierarchies[1].clone()
+            },
+            hierarchies[2].clone(),
+        ];
+        assert_eq!(features, expected);
+        assert_eq!(batch_ids, vec![0.0, 1.0, 2.0]);
+        assert_eq!(batch_idxs, vec![0, 1, 2]);
     }
 }
