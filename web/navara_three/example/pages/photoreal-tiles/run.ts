@@ -37,7 +37,7 @@ function addTokenControl(
     currentLayer = view.addLayer({
       type: "cesium3dtiles",
       data: {
-        url: `${TILES_3D_DATASETS.googlePhotorealTiles.url}?key=${token}`,
+        url: `${TILES_3D_DATASETS.googlePhotorealTiles.url}?key=${encodeURIComponent(token)}`,
       },
       model: {
         maxSse: 60,
