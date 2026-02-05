@@ -450,6 +450,18 @@ fn mark_rendered_tiles(
 
     let mut is_rendered = touched && state.is_rendered_last_frame;
 
+    let priority = if state.should_preload {
+        // Prioritize non-renderable content, since it requires additional traversals.
+        if tile.is_renderable_content {
+            Priority::VeryLow
+        } else {
+            Priority::Low
+        }
+    } else {
+        // Use same priority for both of the JSON tree and the tile.
+        Priority::High
+    };
+
     if tile.is_renderable_content {
         if touched && (leaf || state.should_preload) {
             if state.is_data_loaded {
@@ -467,18 +479,7 @@ fn mark_rendered_tiles(
                     is_rendered = true;
                 }
             } else if state.is_visible || state.should_preload {
-                request_tile_content(
-                    commands,
-                    buf,
-                    base_url,
-                    tile,
-                    requesters,
-                    if !leaf && !state.should_preload {
-                        Priority::Medium
-                    } else {
-                        Priority::VeryLow
-                    },
-                );
+                request_tile_content(commands, buf, base_url, tile, requesters, priority);
             } else {
                 toggle_rendered_tile_visible(rendered_tiles, tile, false, touched);
             }
@@ -502,11 +503,7 @@ fn mark_rendered_tiles(
                     .spawn((
                         Cesium3dTilesMetadataDataRequesterMarker(layer_id),
                         Cesium3dTileContentDataRequesterMarker,
-                        if state.should_preload {
-                            Priority::Low
-                        } else {
-                            Priority::High
-                        },
+                        priority,
                         Cesium3dTilesTreeOrder {
                             index: next_tree_order,
                             distance: TileOrderByDistance {

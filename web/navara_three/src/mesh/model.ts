@@ -4,20 +4,6 @@ import {
   ModelMesh as NavaraModelMesh,
   Vec3,
 } from "@navara/engine";
-import BatchTextureParsVertex from "@shaders/glsl/chunks/batch_texture_pars_vertex.glsl";
-import BatchTextureVertex from "@shaders/glsl/chunks/batch_texture_vertex.glsl";
-import HeightParsVertex from "@shaders/glsl/chunks/height_pars_vertex.glsl";
-import HeightVertex from "@shaders/glsl/chunks/height_vertex.glsl";
-import Pick from "@shaders/glsl/chunks/pick.glsl";
-import ShadowMapDepthFragment from "@shaders/glsl/chunks/shadowmap_depth_fragment.glsl";
-import ShadowMapDepthParsFragment from "@shaders/glsl/chunks/shadowmap_depth_pars_fragment.glsl";
-import ShadowMapDepthParsVertex from "@shaders/glsl/chunks/shadowmap_depth_pars_vertex.glsl";
-import ShadowMapDepthVertex from "@shaders/glsl/chunks/shadowmap_depth_vertex.glsl";
-import ShowFragment from "@shaders/glsl/chunks/show_fragment.glsl";
-import ShowParsFragment from "@shaders/glsl/chunks/show_pars_fragment.glsl";
-import ShowParsVertex from "@shaders/glsl/chunks/show_pars_vertex.glsl";
-import SpecularParsFragment from "@shaders/glsl/chunks/spucular_pars_fragment.glsl";
-import WaterParsFragment from "@shaders/glsl/chunks/water_pars_fragment.glsl?raw";
 import {
   BufferAttribute,
   BufferGeometry,
@@ -32,10 +18,7 @@ import {
   RGBADepthPacking,
   Texture,
   type NormalBufferAttributes,
-  type WebGLProgramParametersWithUniforms,
-  ShaderChunk,
   PointsMaterial,
-  Material,
 } from "three";
 import {
   AnimationAction,
@@ -46,12 +29,28 @@ import {
 
 import type { ViewEvents } from "..";
 import type { ViewContext } from "../core";
-import { ensureSelectiveEffectUserData } from "../core/SelectiveEffectHelper";
-import { injectSelectiveEffectHandlers } from "../core/SelectiveEffectMaskContext";
+import {
+  getSelectiveEffectConfig,
+  SelectiveEffectOcclusionMode,
+} from "../core/SelectiveEffectHelper";
+import {
+  getMaskPassContext,
+  MaskPassPhase,
+  evaluateMaskPassParticipation,
+  applyMaskPassSkipState as applyMaskPassSkipStateBase,
+  applyMaskPassRenderState,
+  restoreMaterialState as restoreMaterialStateBase,
+} from "../core/SelectiveEffectMaskContext";
 import type { BufferLoader } from "../event";
+import {
+  createModelMaterialEnhancer,
+  createPntsEnhancer,
+} from "../material/enhancer/model";
+import type { ModelMaterialProps, PntsProps } from "../material/enhancer/model";
+import type { UniformValue } from "../material/types";
 import type { CustomObject3DEventMap } from "../object3DEvent";
 import type { CommonUniforms } from "../uniforms";
-import { arraysEqual, createReplacer } from "../utils";
+import { arraysEqual } from "../utils";
 
 import {
   getBatchDataTexture,
@@ -65,23 +64,37 @@ import type { PickableMesh } from "./pickableMesh";
 
 export type ModelMaterial = MeshStandardMaterial | MeshPhysicalMaterial;
 
-export type ModelBatchedAttributeName = "color" | "show" | "height";
+// TODO: Height to adjust the height based on its property.
+export type ModelBatchedAttributeName = "color" | "show";
 
 export const MODEL_BATCH_TEXTURE_CONFIG: BatchTextureConfig = {
-  rows: ["COLOR_SHOW", "HEIGHT"],
+  rows: ["COLOR_SHOW"],
   batchLength: 0,
 };
+
+type ModelMaterialEnhancer = ReturnType<typeof createModelMaterialEnhancer>;
+type PntsMaterialEnhancer = ReturnType<typeof createPntsEnhancer>;
 
 export class ModelMesh
   extends Object3D<CustomObject3DEventMap>
   implements FeatureMesh, PickableMesh
 {
-  water = false;
-  private waterNormalMapTexture: Texture | null = null;
   private viewContext: ViewContext;
   /** Layer ID for SelectiveEffect handling */
   private _layerId: string;
-  private _uniforms?: CommonUniforms;
+  private _uniforms: CommonUniforms;
+
+  /** Enhanced materials with encapsulated state, one per child mesh */
+  private _enhancers = new Map<
+    Mesh<BufferGeometry<NormalBufferAttributes>, ModelMaterial>,
+    ModelMaterialEnhancer
+  >();
+
+  /** Enhanced materials for point cloud objects, one per Points child */
+  private _pntsEnhancers = new Map<
+    Points<BufferGeometry<NormalBufferAttributes>, PointsMaterial>,
+    PntsMaterialEnhancer
+  >();
 
   // Minimal animation support (clip + speed)
   private mixer: AnimationMixer | null = null;
@@ -89,55 +102,56 @@ export class ModelMesh
   // model credit for attribution
   credit: string | undefined;
 
-  /**
-   * Returns the shared water normal map texture if water is enabled.
-   * The texture must be enabled via Options.waterTexture.enabled.
-   */
-  private enableWaterNormalMap(water: boolean): Texture | null {
-    // Only use if water is enabled
-    if (!water) {
-      return null;
-    }
-
-    // Use shared water texture from CommonUniforms if available
-    if (!this.waterNormalMapTexture && this._uniforms?.waterTexture.value) {
-      this.waterNormalMapTexture = this._uniforms.waterTexture.value;
-    }
-
-    return this.waterNormalMapTexture;
-  }
   private actions = new Map<string, AnimationAction>();
   private currentAction: AnimationAction | null = null;
   private animationSpeed = 1.0;
   private lastUpdateTime?: number;
+  private prevEffectIds: string[] = [];
 
   constructor(
-    rawScene: Group,
+    gltfInfo: {
+      scene: Group;
+      credit?: string;
+      animations?: AnimationClip[];
+    },
     m: NavaraModelMesh,
     uniforms: CommonUniforms,
     buf: BufferLoader,
     viewEvents: EventHandler<ViewEvents>,
     viewContext: ViewContext,
     layerId: string,
-    credit?: string,
   ) {
     super();
     this.viewContext = viewContext;
     this._layerId = layerId;
     this._uniforms = uniforms;
-    this.credit = credit;
-    this.add(rawScene);
-    this.init(m, uniforms, buf, viewEvents);
+    this.credit = gltfInfo.credit;
+    this.add(gltfInfo.scene);
+    this.init(m, buf, viewEvents, gltfInfo.animations);
     this.addEventListener("removedFromWorld", () => {
       this.dispose(viewEvents);
     });
   }
 
+  get water(): boolean {
+    for (const enhancer of this._enhancers.values()) {
+      // Assume the first enhancer has the common value.
+      return enhancer.states().water.useWater;
+    }
+    return false;
+  }
+
+  set water(v: boolean) {
+    for (const enhancer of this._enhancers.values()) {
+      enhancer.update({ water: { water: v } });
+    }
+  }
+
   private init(
     m: NavaraModelMesh,
-    uniforms: CommonUniforms,
     buf: BufferLoader,
     viewEvents: EventHandler<ViewEvents>,
+    animations?: AnimationClip[],
   ) {
     const batchIdsData = m.geometry.batch_ids;
     const dataSize = batchIdsData?.size ?? 0;
@@ -145,14 +159,7 @@ export class ModelMesh
       ? buf.u32(batchIdsData.data)
       : new Uint32Array(dataSize);
 
-    this.userData.batchIds = batchIds;
-    this.userData.dataSize = dataSize;
-
     const meshMaterial = m.material;
-
-    this.waterNormalMapTexture = this.enableWaterNormalMap(
-      !!meshMaterial.water,
-    );
 
     // For Cesium 3D Tiles
     if (batchIds) {
@@ -160,7 +167,6 @@ export class ModelMesh
         meshMaterial,
         batchIds,
         dataSize,
-        uniforms,
         viewEvents,
       );
     }
@@ -170,15 +176,10 @@ export class ModelMesh
       this.overridePntsMaterial(meshMaterial);
     }
 
-    this.userData.prev = {};
     this.visible = meshMaterial.show ?? true;
-    this.userData.prev.visible = this.visible;
 
-    // Initialize minimal animation features if GLTF animations exist on the scene
-    const gltfAnimations: AnimationClip[] | undefined = (
-      this.children[0] as Group
-    )?.userData?.gltfAnimations;
-    if (gltfAnimations && gltfAnimations.length > 0) {
+    // Initialize minimal animation features if GLTF animations exist
+    if (animations && animations.length > 0) {
       const target = this.children[0] as Group;
       this.mixer = new AnimationMixer(target);
 
@@ -186,7 +187,7 @@ export class ModelMesh
       const initSpeed = meshMaterial.animationSpeed as number | undefined;
       this.animationSpeed = initSpeed ?? 1.0;
 
-      gltfAnimations.forEach((clip) => {
+      animations.forEach((clip) => {
         if (!this.mixer) {
           console.warn("Animation mixer not initialized");
           return;
@@ -238,6 +239,15 @@ export class ModelMesh
     };
 
     initBatchDataTexture(mesh.material, config);
+
+    // Update the enhancer with the new batchDataTexture
+    const texture = this._getBatchDataTexture(mesh);
+    const enhancer = this._enhancers.get(mesh);
+    if (texture && enhancer) {
+      enhancer.update({
+        base: { useBatchTexture: true, batchDataTexture: { value: texture } },
+      });
+    }
   }
 
   _getBatchDataTexture(
@@ -252,51 +262,53 @@ export class ModelMesh
     attribute: ModelBatchedAttributeName,
     value: number | number[] | boolean,
   ): void {
+    const enhancer = this._enhancers.get(mesh);
+    if (enhancer) {
+      switch (attribute) {
+        case "color": {
+          // When batch color is first used, enable batchColorEnabled and set material.color to white
+          if (!enhancer.states().base.batchColorEnabled) {
+            enhancer.update({
+              base: { batchColorEnabled: true, color: 0xffffff },
+            });
+          }
+          enhancer.update({ base: { useBatchColorShow: true } });
+          break;
+        }
+        case "show": {
+          enhancer.update({ base: { useBatchColorShow: true } });
+          break;
+        }
+      }
+    }
+
     updateBatchAttribute(mesh.material, batchId, attribute, value, {
       color: mesh.material.color,
     });
-  }
-
-  setupWaterMaterial(
-    mesh: Mesh<BufferGeometry, Material>,
-    meshMaterial: NavaraModelMaterial,
-  ) {
-    mesh.material.userData.reflectivity ??= {
-      value: meshMaterial.reflectivity ?? 0,
-    };
-    mesh.material.userData.waterScaleNormal ??= {
-      value: meshMaterial.waterScaleNormal ?? 0.01,
-    };
-    mesh.material.userData.waterSpeed ??= {
-      value: meshMaterial.waterSpeed ?? 0.0003,
-    };
-    mesh.material.userData.shininess ??= {
-      value: meshMaterial.shininess ?? 30.0,
-    };
-    mesh.material.userData.specularStrength ??= {
-      value: meshMaterial.specularStrength ?? 1.0,
-    };
-    mesh.material.userData.applyWaterNormal ??= {
-      value: (meshMaterial.applyWaterNormal ?? false) ? 1.0 : 0.0,
-    };
-    mesh.material.userData.waterNormalMap ??= {
-      value: this.waterNormalMapTexture,
-    };
-    mesh.material.userData.specular ??= {
-      value: meshMaterial.specular ?? false,
-    };
-    mesh.material.userData.ior ??= {
-      value: meshMaterial.ior ?? 1.33333,
-    };
   }
 
   private overrideCesium3DTilesMaterial(
     meshMaterial: NavaraModelMaterial,
     batchIds: Uint32Array<ArrayBufferLike>,
     dataSize: number,
-    uniforms: CommonUniforms,
     viewEvents: EventHandler<ViewEvents>,
   ) {
+    const uniforms = this._uniforms;
+
+    // Build initial props using buildUpdateProps plus initial-only external refs
+    const updateProps = this.buildUpdateProps(meshMaterial);
+    const initialProps: ModelMaterialProps = {
+      ...updateProps,
+      water: {
+        ...updateProps.water,
+        skyEnvMap: uniforms.tSkyEnvMap.value,
+        // Pass waterNormalMap directly from uniforms if water is enabled
+        waterNormalMap: uniforms.waterTexture as UniformValue<Texture | null>,
+        timeUniform: uniforms.time as UniformValue<number>,
+        skyEnvMapUniform: uniforms.tSkyEnvMap as UniformValue<Texture | null>,
+      },
+    };
+
     this.traverseMesh((mesh) => {
       const vertCnt = mesh.geometry.attributes?.position?.count;
 
@@ -320,260 +332,125 @@ export class ModelMesh
         new BufferAttribute(attrBatchIds, dataSize),
       );
 
-      const mcolor = meshMaterial.color;
-
       mesh.castShadow = !!meshMaterial.castShadow;
       mesh.receiveShadow = !!meshMaterial.receiveShadow;
 
       mesh.material.depthTest = true;
       mesh.material.depthWrite = true;
 
-      mesh.material.userData.color = mcolor;
-      mesh.material.userData.uPickable = {
-        value: 0.0,
-      };
-      mesh.material.userData.uAddHeight = {
-        value: 0.0,
-      };
+      // Create enhanced material with encapsulated state
+      const enhancer = createModelMaterialEnhancer(mesh.material);
+      this._enhancers.set(mesh, enhancer);
 
-      // Initialize post effect user data (includes uSelectiveEffectOcclusion shader uniform)
-      ensureSelectiveEffectUserData(mesh.material);
-      this.setupWaterMaterial(mesh, meshMaterial);
+      // Mount the enhancer
+      enhancer.mount(initialProps);
 
-      this.water = !!meshMaterial.water;
-      this.setMaterial(meshMaterial, mesh);
+      // Set up custom program cache key based on config flags that affect shader defines
+      mesh.material.customProgramCacheKey = () => enhancer.programCacheKey();
+
+      // Set up onBeforeCompile using the enhancer's transformShader
+      mesh.material.onBeforeCompile = enhancer.transformShader;
 
       this._initBatchedMaterial(mesh);
 
-      // Set water define if water is enabled
-      if (this.water) {
-        mesh.material.userData.defines = mesh.material.userData.defines || {};
-        mesh.material.userData.defines.WATER = 1;
-      }
-
-      mesh.material.customProgramCacheKey = () =>
-        mesh.material.onBeforeCompile.toString() +
-        JSON.stringify(mesh.material.userData.defines);
-
-      mesh.material.onBeforeCompile = (
-        shader: WebGLProgramParametersWithUniforms,
-      ) => {
-        shader.defines ??= {};
-        Object.assign(shader.defines, mesh.material.userData.defines);
-        if (this.water && uniforms.tSkyEnvMap.value) {
-          shader.defines.USE_SKY_ENVMAP = "1";
-          shader.uniforms.tSkyEnvMap = uniforms.tSkyEnvMap;
-        }
-        shader.uniforms.nvr_uPickable = mesh.material.userData.uPickable;
-        shader.uniforms.reflectivity = mesh.material.userData.reflectivity;
-        shader.uniforms.uWaterNormalMap = mesh.material.userData.waterNormalMap;
-        shader.uniforms.uWaterScaleNormal =
-          mesh.material.userData.waterScaleNormal;
-        shader.uniforms.uWaterSpeed = mesh.material.userData.waterSpeed;
-        shader.uniforms.uShininess = mesh.material.userData.shininess;
-        shader.uniforms.uSpecularStrength =
-          mesh.material.userData.specularStrength;
-        shader.uniforms.uApplyWaterNormal =
-          mesh.material.userData.applyWaterNormal;
-        shader.uniforms.uSpecular = mesh.material.userData.specular;
-        shader.uniforms.uIor = mesh.material.userData.ior;
-        shader.uniforms.uTime = uniforms.time;
-        shader.uniforms.uAddHeight = mesh.material.userData.uAddHeight;
-        shader.uniforms.uBloomMaskPass = mesh.material.userData.uBloomMaskPass;
-        shader.uniforms.uOutlineMaskPass =
-          mesh.material.userData.uOutlineMaskPass;
-        shader.uniforms.uSelectiveEffectOcclusion =
-          mesh.material.userData.uSelectiveEffectOcclusion;
-
-        if (mesh.material.userData.batchDataTexture) {
-          shader.uniforms.batchDataTexture =
-            mesh.material.userData.batchDataTexture;
-        }
-
-        // Update vertex shader
-        shader.vertexShader = createReplacer(shader.vertexShader)
-          .replace(
-            "void main() {",
-            `
-                  in float batchId;
-                  out float nvr_vBatchId;
-                  out vec3 vPosition;
-                  
-                  ${ShowParsVertex}
-                  ${HeightParsVertex}
-                  ${BatchTextureParsVertex}
-
-                  ${ShadowMapDepthParsVertex}
-    
-                  void main() {
-                    nvr_vBatchId = batchId;
-              `,
-          )
-          .replace(
-            "#include <begin_vertex>",
-            `
-    #include <begin_vertex>
-    ${HeightVertex}
-    transformed.xyz += normal * addHeight;
-            `,
-          )
-          .replace(
-            "#include <color_vertex>",
-            `
-                  #include <color_vertex>
-
-                  ${BatchTextureVertex}
-            `,
-          )
-          .replace(
-            "#include <clipping_planes_vertex>",
-            `
-    #include <clipping_planes_vertex>
-    vPosition = (modelMatrix * vec4(transformed, 1.0)).xyz;
-    ${ShadowMapDepthVertex}
-    `,
-          ).source;
-
-        // Update fragment shader
-        shader.fragmentShader = createReplacer(shader.fragmentShader)
-          .replace(
-            "void main() {",
-            `
-                  uniform float nvr_uPickable;
-                  uniform sampler2D uWaterNormalMap;
-                  uniform samplerCube tSkyEnvMap;
-                  uniform float uWaterScaleNormal;
-                  uniform float uWaterSpeed;
-                  uniform float uShininess;
-                  uniform float uSpecularStrength;
-                  uniform float uApplyWaterNormal;
-                  uniform bool uSpecular;
-                  uniform float uIor;
-                  uniform float uTime;
-                  // uniform float reflectivity;
-                  uniform float uBloomMaskPass;
-                  uniform float uOutlineMaskPass;
-                  uniform float uSelectiveEffectOcclusion;
-                  in float nvr_vBatchId;
-
-                  ${ShowParsFragment}
-
-                  ${Pick}
-
-                  ${ShadowMapDepthParsFragment}
-
-                  void main() {
-                    ${ShowFragment}
-                    ${ShadowMapDepthFragment}
-                  `,
-          )
-          .replace(
-            "#include <lights_physical_pars_fragment>",
-            `
-        #include <lights_physical_pars_fragment>
-        ${WaterParsFragment}
-        ${SpecularParsFragment}
-        `,
-          )
-          .replace(
-            "#include <normal_fragment_maps>",
-            `
-        vec3 origNormal = normal;
-        vec3 specular;
-
-        #ifdef WATER
-          specular = computeWaterSpecularSimple(
-            uWaterNormalMap,
-            vPosition.xy * uWaterScaleNormal,
-            uTime * uWaterSpeed,
-            vViewPosition,
-            uShininess,
-            uSpecularStrength,
-            diffuseColor.rgb,
-            normal
-          );
-        #else
-          if(uSpecular) {
-            specular = computeSpecular(
-              vViewPosition,
-              origNormal,
-              uShininess,
-              uSpecularStrength,
-              uIor
-            );
-          }
-          #include <normal_fragment_maps>
-        #endif
-        `,
-          )
-          .replace(
-            "vec3 outgoingLight = totalDiffuse + totalSpecular + totalEmissiveRadiance;",
-            `
-            // Bloom mask pass: output only emissive radiance
-            // Pass separation handles occlusion mode
-            if (uBloomMaskPass > 0.5) {
-              gl_FragColor = vec4(totalEmissiveRadiance, 1.0);
-              return;
-            }
-
-            // Outline mask pass: output white
-            // Uses original material to ensure depthTexture is written correctly
-            if (uOutlineMaskPass > 0.5) {
-              gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
-              return;
-            }
-
-            vec3 outgoingLight = totalDiffuse + totalSpecular + totalEmissiveRadiance;
-            #if defined(WATER) && defined(USE_SKY_ENVMAP)
-              vec3 envColor = getSkyEnv(geometryNormal, tSkyEnvMap, vPosition);
-              outgoingLight += envColor * reflectivity;
-            #endif
-            outgoingLight += specular;
-          `,
-          )
-          .replace(
-            "#include <dithering_fragment>",
-            `
-                  #include <dithering_fragment>
-    
-                  if (nvr_uPickable > 0.0 && diffuseColor.a > 0.0) {
-                    vec3 pickColor = nvr_batchIdToColor(nvr_vBatchId);
-                    gl_FragColor = vec4(pickColor.xyz, 1.0);
-                  }
-                  `,
-          )
-          .replace(
-            "outputBuffer1 = vec4(packNormalToVec2(normal), metalnessFactor, roughnessFactor)",
-            `
-            vec3 finalNormal = mix(origNormal, normalize(origNormal * 0.7 + normal), uApplyWaterNormal);
-            outputBuffer1 = vec4(packNormalToVec2(finalNormal), metalnessFactor, roughnessFactor)
-            `,
-          ).source;
-      };
-
-      this.initDepthMaterial(mesh);
+      this.initDepthMaterial(mesh, enhancer);
 
       // Setup onBeforeRender for SelectiveEffect state handling
-      // Initialize uniforms (for future custom shader support)
-      ensureSelectiveEffectUserData(mesh.material);
-
-      // Setup selective effect handlers with shader uniforms
-      injectSelectiveEffectHandlers(mesh, {
-        registry: this.viewContext?.selectiveEffectRegistry,
-        layerId: this._layerId,
-        shaderUniforms: {
-          uBloomMaskPass: mesh.material.userData.uBloomMaskPass,
-          uOutlineMaskPass: mesh.material.userData.uOutlineMaskPass,
-          uSelectiveEffectOcclusion:
-            mesh.material.userData.uSelectiveEffectOcclusion,
-        },
-      });
-      // Note: Function modifies mesh in place
+      this.setupMeshOnBeforeRender(mesh, enhancer);
 
       viewEvents.emit("_csmMounted", mesh.material);
     });
   }
 
+  /**
+   * Setup onBeforeRender callback for a mesh to handle SelectiveEffect rendering
+   *
+   * Mesh determines its own depth/mask flags via onBeforeRender.
+   * Uses MaskPassContext for self-determination during BaseMRT phase.
+   *
+   * SoT Flow:
+   * - MaskPassContext provides runtime state (phase, activeEffects)
+   * - SelectiveEffectManager provides layer configuration (occlusion), accessed via registry
+   * - Mesh reads SoT, never modifies it
+   */
+  private setupMeshOnBeforeRender(
+    mesh: Mesh<BufferGeometry<NormalBufferAttributes>, ModelMaterial>,
+    enhancer: ModelMaterialEnhancer,
+  ): void {
+    mesh.onBeforeRender = () => {
+      // Get MaskPassContext for current rendering state
+      const ctx = getMaskPassContext();
+
+      // Only process during BaseMRT phase (mask pass rendering)
+      if (ctx.phase !== MaskPassPhase.BaseMRT) {
+        // Not in mask pass - restore normal material state
+        restoreMaterialStateBase(mesh.material);
+        return;
+      }
+
+      // Get SelectiveEffectConfig from mesh (link() sets config on child meshes, not parent)
+      const config = getSelectiveEffectConfig(mesh);
+      const registry =
+        ctx.registry ?? this.viewContext?.selectiveEffectRegistry;
+      const layerId = this._layerId;
+
+      // Context-based self-determination during BaseMRT
+      this.applyMaskPassState(mesh, enhancer, config, registry, layerId, ctx);
+    };
+  }
+
+  /**
+   * Apply mask pass state based on MaskPassContext.
+   * Called during BaseMRT phase for context-based self-determination.
+   *
+   * Uses shared helper for evaluation and render state, then applies
+   * model-specific shader uniforms via enhancer mutates.
+   */
+  private applyMaskPassState(
+    mesh: Mesh<BufferGeometry<NormalBufferAttributes>, ModelMaterial>,
+    enhancer: ModelMaterialEnhancer,
+    config: ReturnType<typeof getSelectiveEffectConfig>,
+    registry: ReturnType<typeof getMaskPassContext>["registry"],
+    layerId: string | undefined,
+    ctx: ReturnType<typeof getMaskPassContext>,
+  ): void {
+    const material = mesh.material;
+
+    // Use shared helper for evaluation
+    const evaluation = evaluateMaskPassParticipation(
+      config,
+      registry,
+      layerId,
+      ctx,
+    );
+
+    if (!evaluation.shouldRender) {
+      // Set shader uniforms to skip values via enhancer
+      enhancer.update({
+        base: {
+          bloom: false,
+          outline: false,
+          occlusion: SelectiveEffectOcclusionMode.Skip,
+        },
+      });
+
+      // Apply render state using shared helper
+      applyMaskPassSkipStateBase(material);
+      return;
+    }
+
+    // Set shader uniforms via enhancer
+    enhancer.update({
+      base: {
+        bloom: evaluation.bloomActive,
+        outline: evaluation.outlineActive,
+        occlusion: evaluation.occlusion,
+      },
+    });
+
+    // Apply render state using shared helper
+    applyMaskPassRenderState(material, evaluation.isSilhouette);
+  }
   private traversePoints(
     f: (
       points: Points<BufferGeometry<NormalBufferAttributes>, PointsMaterial>,
@@ -587,62 +464,24 @@ export class ModelMesh
   }
 
   private overridePntsMaterial(meshMaterial: NavaraModelMaterial) {
-    this.traverse((object: Object3D) => {
-      if (!(object instanceof Points)) {
-        return;
-      }
+    const geodeticNormal: Vec3 =
+      meshMaterial.__internal__?.pointCloudGeodeticNormal ?? new Vec3(0, 0, 0);
 
-      const material = object.material;
-      material.userData.uAddHeight = { value: meshMaterial.height ?? 0.0 };
+    const initialProps: PntsProps = {
+      color: meshMaterial.color ?? 0,
+      pointSize: meshMaterial.pointSize ?? 1,
+      height: meshMaterial.height ?? 0,
+      geodeticNormal,
+    };
 
-      const geodetic_normal: Vec3 =
-        meshMaterial.__internal__?.pointCloudGeodeticNormal ??
-        new Vec3(0, 0, 0);
+    this.traversePoints((points) => {
+      const enhancer = createPntsEnhancer(points.material);
+      this._pntsEnhancers.set(points, enhancer);
 
-      material.onBeforeCompile = (
-        shader: WebGLProgramParametersWithUniforms,
-      ) => {
-        shader.uniforms.uAddHeight = material.userData.uAddHeight;
+      enhancer.mount(initialProps);
 
-        // Update vertex shader
-        const colorDivisior = 65535.0;
-        shader.vertexShader = createReplacer(shader.vertexShader)
-          .replace(
-            "#include <color_vertex>",
-            createReplacer(ShaderChunk.color_vertex)
-              .replace(
-                "vColor = vec4( 1.0 );",
-                `vColor = vec4( 1.0 / ${colorDivisior}.0 );`,
-              )
-              .replace(
-                "vColor = vec3( 1.0 );",
-                `vColor = vec3( 1.0 / ${colorDivisior}.0 );`,
-              ).source,
-          )
-          .replace(
-            "#include <common>",
-            `#include <common>
-          uniform float uAddHeight;`,
-          )
-          .replace(
-            "#include <project_vertex>",
-            createReplacer(ShaderChunk.project_vertex)
-              .replace(
-                "vec4 mvPosition = vec4( transformed, 1.0 );",
-                `vec4 mvPosition = vec4( transformed, 1.0 );
-               // point cloud geodetic normal in world space - precomputed
-               vec3 normal = vec3(${geodetic_normal.x}, ${geodetic_normal.y}, ${geodetic_normal.z});
-               vec4 mvNormal = viewMatrix * vec4(normal, 0.0);`,
-              )
-              .replace(
-                "gl_Position = projectionMatrix * mvPosition;",
-                `mvPosition += mvNormal * uAddHeight;
-               gl_Position = projectionMatrix * mvPosition;`,
-              ).source,
-          ).source;
-      };
-
-      this.setMaterial(material, object);
+      points.material.customProgramCacheKey = () => enhancer.programCacheKey();
+      points.material.onBeforeCompile = enhancer.transformShader;
     });
   }
 
@@ -651,39 +490,43 @@ export class ModelMesh
    */
   initDepthMaterial(
     mesh: Mesh<BufferGeometry<NormalBufferAttributes>, ModelMaterial>,
+    enhancer: ModelMaterialEnhancer,
   ) {
     mesh.customDepthMaterial = mesh.material.clone();
     mesh.customDepthMaterial.needsUpdate = true;
 
-    mesh.customDepthMaterial.userData = mesh.material.userData;
-
-    const origin = mesh.material;
-
-    mesh.customDepthMaterial.onBeforeCompile = (shader, renderer) => {
-      origin.onBeforeCompile(shader, renderer);
+    mesh.customDepthMaterial.onBeforeCompile = (shader) => {
+      enhancer.transformShader(shader);
 
       shader.defines ??= {};
-      Object.assign(shader.defines, origin.userData?.defines || {});
+      Object.assign(shader.defines, mesh.material.userData?.defines || {});
       shader.defines["USE_SHADOWMAP_DEPTH"] = 1;
       shader.defines["DEPTH_PACKING"] = RGBADepthPacking;
     };
   }
 
   _update(material: NavaraModelMaterial, active: boolean) {
-    const next = (material.show ?? true) && active;
-    if (this.userData.prev.visible !== next) {
-      this.visible = next;
-      this.userData.prev.visible = next;
-    }
+    this.visible = (material.show ?? true) && active;
 
     if (!material.__internal__?.pointCloud) {
-      this.traverseMesh((m) => {
-        this.setMaterial(material, m);
-      });
+      // Update all enhancers with new props
+      const updateProps = this.buildUpdateProps(material);
+      for (const [mesh, enhancer] of this._enhancers) {
+        enhancer.update(updateProps);
+
+        // Update mesh properties not managed by enhancer
+        mesh.castShadow = !!material.castShadow;
+        mesh.receiveShadow = !!material.receiveShadow;
+      }
     } else {
-      this.traversePoints((pnts) => {
-        this.setMaterial(material, pnts);
-      });
+      const pntsProps: PntsProps = {
+        color: material.color,
+        pointSize: material.pointSize,
+        height: material.height,
+      };
+      for (const enhancer of this._pntsEnhancers.values()) {
+        enhancer.update(pntsProps);
+      }
     }
 
     // Minimal animation updates: speed and active clip
@@ -713,145 +556,41 @@ export class ModelMesh
     }
 
     // SelectiveEffect: effectIds handling at ModelMesh level
-    if (!arraysEqual(this.userData.prev.effectIds, material.effectIds)) {
+    if (!arraysEqual(this.prevEffectIds, material.effectIds)) {
       this.viewContext.selectiveEffectRegistry?.updateLinksForObject(
         this,
         material.effectIds ?? [],
-        this.userData.prev.effectIds ?? [],
+        this.prevEffectIds,
         this._layerId,
       );
-      this.userData.prev.effectIds = material.effectIds
-        ? [...material.effectIds]
-        : [];
+      this.prevEffectIds = material.effectIds ? [...material.effectIds] : [];
     }
   }
 
-  private setMaterial(
-    src: NavaraModelMaterial,
-    dist:
-      | Mesh<BufferGeometry<NormalBufferAttributes>, ModelMaterial>
-      | Points<BufferGeometry<NormalBufferAttributes>, PointsMaterial>,
-  ) {
-    const distMaterial = dist.material;
-
-    if (dist instanceof Mesh) {
-      this.setupWaterMaterial(dist, src);
-    }
-
-    if (!distMaterial.userData.prev) {
-      distMaterial.userData.prev = {};
-    }
-    if (distMaterial.userData.prev.color !== src.color) {
-      const next = src.color ?? 0;
-      distMaterial.color.set(next);
-      distMaterial.userData.prev.color = next;
-    }
-    if (distMaterial instanceof PointsMaterial) {
-      if (distMaterial.userData.prev.pointSize !== src.pointSize) {
-        const next = src.pointSize ?? 0;
-        distMaterial.userData.prev.pointSize = distMaterial.size;
-        distMaterial.size = next;
-      }
-      if (distMaterial.userData.prev.uAddHeight !== src.height) {
-        const next = src.height ?? 0;
-        distMaterial.userData.prev.uAddHeight =
-          distMaterial.userData.uAddHeight.value;
-        distMaterial.userData.uAddHeight.value = next;
-      }
-    }
-    if (
-      distMaterial instanceof MeshStandardMaterial ||
-      distMaterial instanceof MeshPhysicalMaterial
-    ) {
-      if (distMaterial.userData.prev.metalness !== src.metalness) {
-        const next = src.metalness ?? 0;
-        distMaterial.metalness = next;
-        distMaterial.userData.prev.metalness = next;
-      }
-      if (distMaterial.userData.prev.roughness !== src.roughness) {
-        const next = src.roughness ?? 0;
-        distMaterial.roughness = next;
-        distMaterial.userData.prev.roughness = next;
-      }
-      if (distMaterial.userData.prev.water !== src.water) {
-        const next = !!src.water;
-        this.water = next;
-        distMaterial.userData.prev.water = next;
-        // Update water define
-        distMaterial.userData.defines = distMaterial.userData.defines || {};
-        if (next) {
-          distMaterial.userData.defines.WATER = 1;
-
-          distMaterial.userData.waterNormalMap.value =
-            this.enableWaterNormalMap(next);
-        } else {
-          delete distMaterial.userData.defines.WATER;
-          distMaterial.userData.waterNormalMap.value = null;
-        }
-        distMaterial.needsUpdate = true;
-      }
-      if (distMaterial.userData.prev.reflectivity !== src.reflectivity) {
-        const next = src.reflectivity ?? 0;
-        distMaterial.userData.reflectivity.value = next;
-        distMaterial.userData.prev.reflectivity = next;
-      }
-      if (
-        distMaterial.userData.prev.waterScaleNormal !== src.waterScaleNormal
-      ) {
-        const next = src.waterScaleNormal ?? 0.01;
-        distMaterial.userData.waterScaleNormal.value = next;
-        distMaterial.userData.prev.waterScaleNormal = next;
-      }
-      if (distMaterial.userData.prev.waterSpeed !== src.waterSpeed) {
-        const next = src.waterSpeed ?? 0.0003;
-        distMaterial.userData.waterSpeed.value = next;
-        distMaterial.userData.prev.waterSpeed = next;
-      }
-      if (distMaterial.userData.prev.shininess !== src.shininess) {
-        const next = src.shininess ?? 0;
-        distMaterial.userData.shininess.value = next;
-        distMaterial.userData.prev.shininess = next;
-      }
-      if (
-        distMaterial.userData.prev.specularStrength !== src.specularStrength
-      ) {
-        const next = src.specularStrength ?? 0;
-        distMaterial.userData.specularStrength.value = next;
-        distMaterial.userData.prev.specularStrength = next;
-      }
-      if (
-        distMaterial.userData.prev.applyWaterNormal !== src.applyWaterNormal
-      ) {
-        const next = src.applyWaterNormal ?? 0;
-        distMaterial.userData.applyWaterNormal.value = next;
-        distMaterial.userData.prev.applyWaterNormal = next;
-      }
-      if (distMaterial.userData.prev.specular !== src.specular) {
-        const next = src.specular ?? false;
-        distMaterial.userData.specular.value = next;
-        distMaterial.userData.prev.specular = next;
-      }
-      if (dist.castShadow !== src.castShadow) {
-        dist.castShadow = !!src.castShadow;
-      }
-      if (dist.receiveShadow !== src.receiveShadow) {
-        dist.receiveShadow = !!src.receiveShadow;
-      }
-
-      // SelectiveEffect: emissiveColor handling
-      if (distMaterial.userData.prev.emissiveColor !== src.emissiveColor) {
-        distMaterial.emissive.set(src.emissiveColor ?? 0);
-        distMaterial.userData.prev.emissiveColor = src.emissiveColor;
-      }
-
-      // SelectiveEffect: emissiveIntensity handling
-      if (
-        distMaterial.userData.prev.emissiveIntensity !== src.emissiveIntensity
-      ) {
-        distMaterial.emissiveIntensity = src.emissiveIntensity ?? 0;
-        distMaterial.userData.prev.emissiveIntensity = src.emissiveIntensity;
-      }
-    }
+  /**
+   * Build update props from NavaraModelMaterial for enhancer.update().
+   */
+  private buildUpdateProps(material: NavaraModelMaterial): ModelMaterialProps {
+    return {
+      base: {
+        color: material.color,
+        metalness: material.metalness,
+        roughness: material.roughness,
+        emissiveColor: material.emissiveColor,
+        emissiveIntensity: material.emissiveIntensity,
+      },
+      water: {
+        water: material.water,
+        waterScaleNormal: material.waterScaleNormal,
+        waterSpeed: material.waterSpeed,
+        shininess: material.shininess,
+        specularStrength: material.specularStrength,
+        applyWaterNormal: material.applyWaterNormal,
+        specular: material.specular,
+        ior: material.ior,
+        reflectivity: material.reflectivity,
+      },
+    };
   }
 
   traverseMesh(
@@ -888,17 +627,14 @@ export class ModelMesh
   }
 
   _setPickable(pickable: boolean): void {
-    this.traverseMesh((mesh) => {
-      if ("userData" in mesh.material && mesh.material.userData.uPickable) {
-        mesh.material.userData.uPickable.value = pickable ? 1.0 : 0.0;
-      }
-    });
+    for (const enhancer of this._enhancers.values()) {
+      enhancer.update({ base: { pickable } });
+    }
   }
 
-  _setFeatureHeight(height: number, m?: ModelMaterial): void {
-    if (m) {
-      m.userData.uAddHeight.value = height;
-    }
+  _setFeatureHeight(_height: number) {
+    // Height adjustment via batch textures is currently not implemented.
+    // This method is intentionally a no-op to avoid breaking existing callers.
   }
 
   dispose(viewEvents: EventHandler<ViewEvents>) {

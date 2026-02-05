@@ -5,6 +5,7 @@ import {
   Color,
   Material,
   Mesh,
+  type Vector2,
   type NormalBufferAttributes,
 } from "three";
 
@@ -126,7 +127,7 @@ export class BatchedFeatureMesh<
     throw new Unimplemented();
   }
 
-  _setPickable(pickable: boolean) {
+  _setPickable(pickable: boolean, _pickingCoord?: Vector2) {
     this.material.userData.uPickable.value = pickable ? 1.0 : 0.0;
     this.needsUpdate();
   }

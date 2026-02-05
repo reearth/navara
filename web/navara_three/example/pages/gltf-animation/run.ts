@@ -1,11 +1,10 @@
 // GLTF Animation Example - Main Entry Point
 
-import ThreeView from "@navara/three";
-import {
+import ThreeView, {
   geodeticToVector3,
   degreeToRadian,
   geodeticSurfaceNormal,
-} from "@navara/three_api";
+} from "@navara/three";
 import { Vector3, Quaternion, Euler, Matrix4 } from "three";
 import { Pane } from "tweakpane";
 

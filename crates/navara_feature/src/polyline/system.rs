@@ -170,7 +170,7 @@ pub fn transfer_mesh(
         // `coords` has a lifetime for sure.
         let constructed_feature = {
             let coords = buf.remove_f64(&geometry.coords).unwrap();
-            construct_polyline_feature(material, coords, &geometry.crs)
+            construct_polyline_feature(material, coords, &geometry.crs, true)
         };
 
         if let Some((extent, mut geometry)) = constructed_feature {

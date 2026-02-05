@@ -1,14 +1,14 @@
+import { Color } from "@navara/three";
 import type {
   Layer as NavaraLayer,
   LayerDescription,
   ColorTuple,
   FeatureEvaluatorCallback,
+  FeatureEvaluator,
 } from "@navara/three";
-import { Color } from "@navara/three";
 import { Layer } from "@navara/three_react";
 import { useEffect, useMemo, useRef } from "react";
 
-import type { FeatureEvaluator } from "../../../src/evaluations";
 import { PLATEAU_COLOR_MAP } from "../../helpers/colors";
 
 export type BuildingColorAttribute =

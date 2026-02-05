@@ -14,21 +14,58 @@ export const run = async (view: ThreeView) => {
     expanded: true,
   });
 
-  const layer = view.addLayer({
-    type: "cesium3dtiles",
-    data: {
-      url: TILES_3D_DATASETS.googlePhotorealTiles.url,
-    },
-    model: {
-      maxSse: 60,
-    },
-  });
+  const content = showAttributions([TILES_3D_DATASETS.googlePhotorealTiles]);
 
+  addTokenControl(view, pane, content);
   addCameraControl(view, pane);
   addDateControl(view, pane);
-  const content = showAttributions([TILES_3D_DATASETS.googlePhotorealTiles]);
-  trackAttributions(layer, content);
 };
+
+function addTokenControl(
+  view: ThreeView,
+  pane: Pane,
+  content: HTMLDivElement | undefined,
+) {
+  let currentLayer: Layer | undefined;
+
+  const addTileLayer = (token: string) => {
+    if (currentLayer) {
+      currentLayer.delete();
+    }
+    if (!token) return;
+
+    currentLayer = view.addLayer({
+      type: "cesium3dtiles",
+      data: {
+        url: `${TILES_3D_DATASETS.googlePhotorealTiles.url}?key=${encodeURIComponent(token)}`,
+      },
+      model: {
+        maxSse: 60,
+      },
+    });
+    trackAttributions(currentLayer, content);
+  };
+
+  const PARAMS = {
+    // Don't bundle the API key in the production build.
+    token: import.meta.env.PROD
+      ? ""
+      : (import.meta.env.NAVARA_GOOGLE_MAPS_API_KEY ?? ""),
+  };
+
+  pane
+    .addBinding(PARAMS, "token", {
+      label: "Google Maps API Key",
+    })
+    .on("change", (ev) => {
+      addTileLayer(ev.value);
+    });
+
+  // Add initial layer if token exists
+  if (PARAMS.token) {
+    addTileLayer(PARAMS.token);
+  }
+}
 
 // Track credits for all loaded features
 function trackAttributions(layer: Layer, content: HTMLDivElement | undefined) {

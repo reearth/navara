@@ -14,6 +14,9 @@ import {
   Color,
   ShaderMaterial,
   UniformsLib,
+  Matrix4,
+  Vector2,
+  Vector3,
 } from "three";
 
 import type { ViewEvents } from "..";
@@ -28,10 +31,17 @@ import {
   type BatchedFeatureAttributes,
 } from "./batchedFeature";
 import type { DefaultBatchAttributeValues } from "./batchTexture";
+import { setupRTEBeforeRender } from "./rtcRteHelper";
 
 type Attributes = BatchedFeatureAttributes<{
   position: BufferAttribute;
+  position_3d_high?: BufferAttribute;
+  position_3d_low?: BufferAttribute;
   start: BufferAttribute;
+  start_3d_high?: BufferAttribute;
+  start_3d_low?: BufferAttribute;
+  end_3d_high?: BufferAttribute;
+  end_3d_low?: BufferAttribute;
   normal: BufferAttribute;
   start_normal: BufferAttribute;
   right_normal_and_texture_coordinate_normalization_y: BufferAttribute;
@@ -74,7 +84,17 @@ export class PolylineMesh extends BatchedFeatureMesh<
   private initGeometry(mesh: NavaraPolylineMesh, buf: BufferLoader) {
     const g = mesh.geometry;
     const position = buf.removeF32(g.position.data);
+    const position_high = g.position_high
+      ? buf.removeF32(g.position_high.data)
+      : null;
+    const position_low = g.position_low
+      ? buf.removeF32(g.position_low.data)
+      : null;
     const start = buf.removeF32(g.start.data);
+    const start_high = g.start_high ? buf.removeF32(g.start_high.data) : null;
+    const start_low = g.start_low ? buf.removeF32(g.start_low.data) : null;
+    const end_high = g.end_high ? buf.removeF32(g.end_high.data) : null;
+    const end_low = g.end_low ? buf.removeF32(g.end_low.data) : null;
     const forward_offset = buf.removeF32(g.forward_offset.data);
     const start_normals = buf.removeF32(g.start_normals.data);
     const end_normal_and_texture_coordinate_normalization_x = buf.removeF32(
@@ -102,16 +122,56 @@ export class PolylineMesh extends BatchedFeatureMesh<
     )
       return;
     const geometry = this.geometry;
+    this.userData.useRTE = !!(
+      position_high &&
+      position_low &&
+      start_high &&
+      start_low &&
+      end_high &&
+      end_low
+    );
 
     geometry.setAttribute(
       "position",
       new BufferAttribute(position, g.position.size),
     );
-    geometry.setAttribute("start", new BufferAttribute(start, g.start.size));
-    geometry.setAttribute(
-      "forward_offset",
-      new BufferAttribute(forward_offset, g.forward_offset.size),
-    );
+
+    if (this.userData.useRTE) {
+      // RTE attributes
+      if (position_high && position_low) {
+        geometry.setAttribute(
+          "position_3d_high",
+          new BufferAttribute(position_high, 3),
+        );
+        geometry.setAttribute(
+          "position_3d_low",
+          new BufferAttribute(position_low, 3),
+        );
+      }
+      if (start_high && start_low) {
+        geometry.setAttribute(
+          "start_3d_high",
+          new BufferAttribute(start_high, 3),
+        );
+        geometry.setAttribute(
+          "start_3d_low",
+          new BufferAttribute(start_low, 3),
+        );
+      }
+      if (end_high && end_low) {
+        geometry.setAttribute("end_3d_high", new BufferAttribute(end_high, 3));
+        geometry.setAttribute("end_3d_low", new BufferAttribute(end_low, 3));
+      }
+    } else {
+      // Non-RTE mode: use regular start attribute
+      geometry.setAttribute("start", new BufferAttribute(start, g.start.size));
+
+      geometry.setAttribute(
+        "forward_offset",
+        new BufferAttribute(forward_offset, g.forward_offset.size),
+      );
+    }
+
     geometry.setAttribute(
       "start_normal",
       new BufferAttribute(start_normals, g.start_normals.size),
@@ -167,6 +227,31 @@ export class PolylineMesh extends BatchedFeatureMesh<
     this.castShadow = !!meshMaterial.castShadow;
     this.receiveShadow = !!meshMaterial.receiveShadow;
 
+    // Set up RTE uniforms and callback if using RTE
+    const useRTE = this.userData.useRTE;
+    if (useRTE) {
+      this.userData.modelViewMatrixRTE = { value: new Matrix4() };
+      this.userData.cameraPositionHigh = { value: new Vector3() };
+      this.userData.cameraPositionLow = { value: new Vector3() };
+
+      // RTE mode: mesh should be at origin with identity transform
+      // Real world positions are encoded in position_3d_high/low attributes (ECEF coordinates)
+      // Similar to arcLine RTE implementation
+      const identityMatrix = new Matrix4();
+      const callback = setupRTEBeforeRender(
+        this,
+        this.userData,
+        identityMatrix,
+        identityMatrix,
+      );
+      if (callback) {
+        this.onBeforeRender = callback;
+      }
+
+      // Disable frustum culling for RTE mode - mesh is at origin but represents distant coordinates
+      this.frustumCulled = false;
+    }
+
     this.material.uniforms = {
       ...UniformsLib["lights"],
       minMaxHeightAndWidth: {
@@ -181,6 +266,7 @@ export class PolylineMesh extends BatchedFeatureMesh<
       uGlobeNormal: uniforms.tGlobeNormal,
       inverseProjectionMatrix: uniforms.inverseProjectionMatrix,
       nvr_uPickable: uPickable,
+      nvr_uPickingCoord: { value: new Vector2(-1, -1) }, // Sentinel value: use gl_FragCoord by default
     };
 
     const isTexturized = mesh.should_be_texturized;
@@ -210,6 +296,15 @@ export class PolylineMesh extends BatchedFeatureMesh<
     this.material.onBeforeCompile = (shader) => {
       shader.defines ??= {};
       Object.assign(shader.defines, this.material.userData.defines);
+
+      // Add RTE uniforms and defines if using RTE
+      if (useRTE) {
+        shader.defines.USE_RTE = true;
+        shader.uniforms.u_cameraPositionHigh = this.userData.cameraPositionHigh;
+        shader.uniforms.u_cameraPositionLow = this.userData.cameraPositionLow;
+        shader.uniforms.modelViewMatrixRTE = this.userData.modelViewMatrixRTE;
+      }
+
       if (this.material.userData.batchDataTexture) {
         shader.uniforms.batchDataTexture =
           this.material.userData.batchDataTexture;
@@ -291,6 +386,21 @@ export class PolylineMesh extends BatchedFeatureMesh<
 
   get color() {
     return this.material.uniforms.color.value;
+  }
+
+  _setPickable(pickable: boolean, pickingCoord?: Vector2) {
+    // Call parent implementation to set nvr_uPickable
+    super._setPickable(pickable, pickingCoord);
+
+    // the uniform is always set but only consumed by the ground polyline fragment shader.
+    if (this.material.uniforms.nvr_uPickingCoord) {
+      if (pickable && pickingCoord) {
+        this.material.uniforms.nvr_uPickingCoord.value.copy(pickingCoord);
+      } else {
+        // Reset to sentinel value when not picking or no coordinate provided
+        this.material.uniforms.nvr_uPickingCoord.value.set(-1, -1);
+      }
+    }
   }
 
   _getDefaultBatchAttributeValues(): DefaultBatchAttributeValues {
