@@ -4,6 +4,7 @@ import ThreeView, {
   type BlendMode,
   LayerHandle,
   DEFAULT_COLOR_GRADING_LUT_OPTIONS,
+  JAPAN_GSI_ELEVATION_DECODER,
 } from "@navara/three";
 import { Pane } from "tweakpane";
 
@@ -12,6 +13,7 @@ import {
   TILE_DATASETS,
   TILES_3D_DATASETS,
   LUT_DATASETS,
+  TERRAIN_DATASETS,
 } from "../../helpers/constants";
 import {
   addHidePaneKeyShortcut,
@@ -23,6 +25,10 @@ let gColorGradingLUTLayer: LayerHandle<ColorGradingLUTEffectLayer>;
 
 export const run = async (view: ThreeView) => {
   await view.init();
+
+  view.toneMappingExposure = 10;
+
+  view.addDefaultEffectLayers();
 
   const defaultAtmospheres = view.addDefaultAtmosphereLayers();
   defaultAtmospheres.sun.update({
@@ -40,9 +46,18 @@ export const run = async (view: ThreeView) => {
 
   view.addLayer({
     type: "tiles",
-    data: { url: TILE_DATASETS.openstreetmap.url },
+    data: { url: TILE_DATASETS.gsiSeamlessphoto.url },
     rasterTile: {
       maxZoom: 23,
+    },
+  });
+
+  view.addLayer({
+    type: "terrain",
+    data: { url: TERRAIN_DATASETS.gsi.url },
+    rasterTerrain: {
+      maxZoom: 15,
+      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
     },
   });
 
