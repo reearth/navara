@@ -23,16 +23,19 @@ pub struct TransferableHoles {
 impl From<TransferableHierarchy> for navara_geometry::Hierarchy {
     fn from(val: TransferableHierarchy) -> Self {
         let mut holes = vec![];
-        let mut t_holes = val.holes;
+        let t_holes = val.holes;
+        let mut offset = 0;
         for (winding_order_idx, size) in t_holes.sizes.into_iter().enumerate() {
+            let size = size as usize;
             holes.push(Hierarchy {
-                outer_ring: t_holes.holes.drain(0..size as usize).collect(),
+                outer_ring: t_holes.holes[offset..offset + size].to_vec(),
                 holes: None,
                 expected_winding_order: WindingOrder(
                     t_holes.expected_winding_orders[winding_order_idx],
                 )
                 .into(),
             });
+            offset += size;
         }
         navara_geometry::Hierarchy {
             outer_ring: val.outer_ring,
