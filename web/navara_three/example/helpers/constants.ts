@@ -46,7 +46,7 @@ export const TERRAIN_DATASETS = {
     attributionUrl: "https://mapterhorn.com/attribution",
   },
   mapbox: {
-    url: `https://api.mapbox.com/v4/mapbox.terrain-rgb/{z}/{x}/{y}.pngraw?access_token=${
+    url: `https://api.mapbox.com/v4/mapbox.terrain-rgb/{z}/{x}/{y}.webp?access_token=${
       import.meta.env.NAVARA_MAPBOX_ACCESS_TOKEN
     }`,
     attribution: "© Mapbox Terrain-RGB",

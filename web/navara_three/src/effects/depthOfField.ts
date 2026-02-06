@@ -14,8 +14,8 @@ export type DepthOfFieldOptions = {
 
 export const DEFAULT_DEPTH_OF_FIELD_OPTIONS: Required<DepthOfFieldOptions> = {
   enabled: false,
-  focusDistance: 0.000006,
-  focalLength: 0.000013,
+  focusDistance: 0.0005,
+  focalLength: 0.005,
   bokehScale: 7,
 };
 
