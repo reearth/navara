@@ -68,6 +68,15 @@ export class SmoothLine extends Object3D {
     cameraPositionLow: { value: new Vector3() },
   };
 
+  // Temporary matrices for RTE calculations (reused to avoid allocations)
+  private _identityMatrix = new Matrix4();
+  private _tempModelViewMatrix = new Matrix4();
+
+  // Store the original Line2 onBeforeRender to avoid nested callback chains
+  private _originalLineOnBeforeRender:
+    | typeof Object3D.prototype.onBeforeRender
+    | null = null;
+
   constructor(config: Partial<SmoothLineConfig>[] = []) {
     super();
 
@@ -285,7 +294,9 @@ export class SmoothLine extends Object3D {
             this.add(spherePoint);
           }
 
-          this.setupRTECallback();
+          if (i === 0) {
+            this.setupRTECallback();
+          }
         }
       } else {
         this.updateLineCfg(cfg, i);
@@ -351,8 +362,10 @@ export class SmoothLine extends Object3D {
       this._lineMeshes[i] = lineMesh;
       this.add(lineMesh);
 
-      // Re-setup RTE callback after rebuilding
-      this.setupRTECallback();
+      // Re-setup RTE callback after rebuilding for the first line mesh only
+      if (i === 0) {
+        this.setupRTECallback();
+      }
     }
 
     if (
@@ -500,45 +513,62 @@ export class SmoothLine extends Object3D {
 
   /**
    * Setup RTE callback for camera-relative rendering
+   * This method is safe to call multiple times - it only sets up the callback once
    */
   private setupRTECallback(): void {
     if (this._lineMeshes.length === 0) {
       return;
     }
 
-    const identityMatrix = new Matrix4();
-    const tempModelViewMatrix = new Matrix4();
     const firstMesh = this._lineMeshes[0];
 
-    // Save the original onBeforeRender from LineSegments2
-    // It updates the resolution uniform which is critical for line width rendering
-    const originalOnBeforeRender = firstMesh.onBeforeRender.bind(firstMesh);
+    // Only setup the callback once to avoid nested callback chains
+    // Each subsequent call would wrap the previous RTE callback, causing multiple
+    // redundant RTE calculations per frame
+    if (this._originalLineOnBeforeRender === null) {
+      // Save the original onBeforeRender from LineSegments2 (first time only)
+      // It updates the resolution uniform which is critical for line width rendering
+      this._originalLineOnBeforeRender =
+        firstMesh.onBeforeRender.bind(firstMesh);
+    }
 
     // Create the callback with proper Mesh.onBeforeRender signature
     // Line2 extends LineSegments2 extends Mesh, so it has the standard signature
     const callback: typeof Object3D.prototype.onBeforeRender = (
       renderer,
-      _scene,
+      scene,
       camera,
+      geometry,
+      material,
+      group,
     ) => {
       // First, call the original LineSegments2.onBeforeRender to update resolution
-      // LineSegments2.onBeforeRender only needs the renderer parameter
-      originalOnBeforeRender(renderer);
+      // LineSegments2.onBeforeRender only uses the renderer parameter, but we pass all for type safety
+      if (this._originalLineOnBeforeRender) {
+        this._originalLineOnBeforeRender(
+          renderer,
+          scene,
+          camera,
+          geometry,
+          material,
+          group,
+        );
+      }
 
       // Then, update RTE uniforms
-      // Calculate RTE model-view matrix
+      // Calculate RTE model-view matrix (reuse class member matrices to avoid allocations)
       calcModelMatrixRTE(
-        identityMatrix,
+        this._identityMatrix,
         camera.matrixWorldInverse,
-        tempModelViewMatrix,
+        this._tempModelViewMatrix,
       );
 
       // Calculate camera position in high/low precision
-      const result = calcCameraPosition(camera.position, identityMatrix);
+      const result = calcCameraPosition(camera.position, this._identityMatrix);
 
       // Update shared RTE uniforms
       this._sharedRTEUniforms.modelViewMatrixRTE.value.copy(
-        tempModelViewMatrix,
+        this._tempModelViewMatrix,
       );
       this._sharedRTEUniforms.cameraPositionHigh.value.copy(result.high);
       this._sharedRTEUniforms.cameraPositionLow.value.copy(result.low);

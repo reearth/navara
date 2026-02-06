@@ -39,6 +39,9 @@ export class SpherePoints extends Points {
     cameraPositionLow: { value: new Vector3() },
   };
 
+  // Temporary matrix for RTE calculations (reused to avoid allocations)
+  private _identityMatrix = new Matrix4();
+
   constructor(opts: SpherePointOptions = {}) {
     // Create initial empty geometry and material
     const geometry = new BufferGeometry();
@@ -86,15 +89,14 @@ export class SpherePoints extends Points {
       mat.uniforms.dpr.value = pixelRatio;
     }
 
-    // Update RTE uniforms
-    const identityMatrix = new Matrix4();
+    // Update RTE uniforms (reuse class member matrix to avoid allocations)
     calcModelMatrixRTE(
-      identityMatrix,
+      this._identityMatrix,
       camera.matrixWorldInverse,
       this._rteUniforms.modelViewMatrixRTE.value,
     );
 
-    const result = calcCameraPosition(camera.position, identityMatrix);
+    const result = calcCameraPosition(camera.position, this._identityMatrix);
     this._rteUniforms.cameraPositionHigh.value.copy(result.high);
     this._rteUniforms.cameraPositionLow.value.copy(result.low);
   }
