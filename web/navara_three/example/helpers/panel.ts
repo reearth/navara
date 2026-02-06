@@ -212,6 +212,7 @@ export const addCtrlPanel = (
     surfaceShow: true,
     pointSize: 0.3,
     offsetDepth: true,
+    url: "",
   };
 
   pane
@@ -383,6 +384,10 @@ export const addCtrlPanel = (
 
       if ("text" in material) {
         material.text = paneParams.text;
+      }
+
+      if ("url" in material) {
+        material.url = paneParams.url;
       }
 
       if ("font" in material) {
@@ -584,6 +589,11 @@ function createParamCtrl(
     if ("font" in material) {
       paneParams.font = material.font;
       f.addBinding(paneParams, "font").on("change", changeFunc);
+    }
+
+    if ("url" in material) {
+      paneParams.url = material.url ?? "";
+      f.addBinding(paneParams, "url").on("change", changeFunc);
     }
 
     if ("backgroundColor" in material) {

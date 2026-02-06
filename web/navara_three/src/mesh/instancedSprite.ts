@@ -18,17 +18,11 @@ import { PickableMesh } from "./pickableMesh";
 // - handle batch ids and picking (if it was working before)... - done
 // - handle style evalutator stuff - batch ids are not correct now.
 // --------------------------------------------------------------
-
-
 // - handle layer material, user data, color, height, ... 
-//     - missing:
-//        - center
-//        - url
+// - missing:
 //        - clampToGround (should be handled in shader or rust?)
 //        - selective layer stuff
-
-// - make sure to cover all what was the old point/billboard mesh doing
-
+// - make sure to cover all what was the old point/billboard mesh doing - done for most part, but need to double check
 // --------------------------------------------------------------
 // - handle selective layer stuff
 // - handle choosing between using new sprite mesh or old point mesh based on conditions
@@ -54,6 +48,9 @@ type PositionsInfo = {
 export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     private _batchIdToInstance: Map<number, number> = new Map();
     private _initialColor: Color = new Color(0xffffff);
+    private _loadedUrls: Set<string> = new Set();
+    private _offscreenCanvas: OffscreenCanvas = new OffscreenCanvas(1, 1);
+    private _offscreenCtx: OffscreenCanvasRenderingContext2D = this._offscreenCanvas.getContext('2d')!;
 
     constructor(
         options: InstancedSpriteOptions,
@@ -78,6 +75,84 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
         this.geometry = instancedGeometry;
         this.material = material;
         this.frustumCulled = false; // Disable since bounding box doesn't account for instance positions
+    }
+
+    // TODO: cleanup
+    async _update(m: NavaraPointMesh | NavaraBillboardMesh, active: boolean) {
+        const material = this.material as ShaderMaterial;
+        let uniformsChanged = false;
+
+        if (material.visible !== m.material.show) {
+            material.visible = m.material.show ?? true;
+            material.visible = material.visible && active;
+        }
+
+        if (material.uniforms.uScale.value !== (m.material.size ?? 100.0)) {
+            material.uniforms.uScale.value = m.material.size ?? 100.0;
+            uniformsChanged = true;
+        }
+
+        if (this._initialColor.getHex() !== (m.material.color ?? 0xffffff)) {
+            this._initialColor.setHex(m.material.color ?? 0xffffff);
+            const colorAttr = this.geometry.getAttribute('instanceColor') as InstancedBufferAttribute;
+            const instanceCount = colorAttr.count;
+            for (let i = 0; i < instanceCount; i++) {
+                colorAttr.setXYZ(i, this._initialColor.r, this._initialColor.g, this._initialColor.b);
+            }
+            colorAttr.needsUpdate = true;
+        }
+
+        if (material.uniforms.uCenter.value.x !== (m.material.center?.x ?? 0.5) || material.uniforms.uCenter.value.y !== (m.material.center?.y ?? 0.5)) {
+            material.uniforms.uCenter.value.set(m.material.center?.x ?? 0.5, m.material.center?.y ?? 0.5);
+            uniformsChanged = true;
+        }
+
+        if (material.uniforms.uHeightOffset.value !== (m.material.height ?? 0.0)) {
+            material.uniforms.uHeightOffset.value = m.material.height ?? 0.0;
+            uniformsChanged = true;
+        }
+
+        if (material.uniforms.uScaleByDistance.value !== (m.material.scaleByDistance ?? true)) {
+            material.uniforms.uScaleByDistance.value = m.material.scaleByDistance ?? true;
+            uniformsChanged = true;
+        }
+
+        if (material.depthTest !== (m.material.depthTest ?? true)) {
+            material.depthTest = m.material.depthTest ?? true;
+        }
+
+        if (material.uniforms.uOffsetDepth.value !== (m.material.offsetDepth ?? true)) {
+            material.uniforms.uOffsetDepth.value = m.material.offsetDepth ?? true;
+            uniformsChanged = true;
+        }
+
+        if (material.transparent !== (m.material.transparent ?? true)) {
+            material.transparent = m.material.transparent ?? true;
+        }
+
+        // Alpha test and url is only relevant for billboards
+        if (m instanceof NavaraBillboardMesh) {
+            if (material.uniforms.uAlphaTest.value !== (m.material.alphaTest ?? 0.0)) {
+                material.uniforms.uAlphaTest.value = m.material.alphaTest ?? 0.0;
+                uniformsChanged = true;
+            }
+
+            if (m.material.url) {
+                await this._uploadTexture(m.material.url, material);
+                uniformsChanged = true;
+                // need also to update instance layer attribute.
+                const layerAttr = this.geometry.getAttribute('instanceLayer') as InstancedBufferAttribute;
+                const instanceCount = layerAttr.count;
+                for (let i = 0; i < instanceCount; i++) {
+                    layerAttr.setX(i, this._loadedUrls.size - 1); // always set to last layer
+                }
+                layerAttr.needsUpdate = true;
+            }
+        }
+
+        if (uniformsChanged) {
+            material.uniformsNeedUpdate = true;
+        }
     }
 
     private _initGeometry(positionsInfo: PositionsInfo, m: NavaraPointMesh | NavaraBillboardMesh) {
@@ -184,22 +259,9 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
 
         if (m instanceof NavaraBillboardMesh) {
             material.defines.BILLBOARD = 1;
-            const textureURL = m.material.url;
-            const billboardTexture = textureURL ? await TEXTURE_LOADER.loadAsync(textureURL) : undefined;
-            if (billboardTexture) {
-                const textureArray = new DataArrayTexture(billboardTexture.source.data, billboardTexture.width, billboardTexture.height, 1);
-                textureArray.flipY = true;
-                textureArray.format = RGBAFormat;
-                textureArray.type = UnsignedByteType;
-                textureArray.generateMipmaps = true;
-                textureArray.needsUpdate = true;
-                textureArray.minFilter = LinearFilter
-                textureArray.magFilter = LinearFilter
-
-                material.uniforms.uTexture = { value: textureArray };
-
-                billboardTexture.dispose(); // Dispose the original texture as we now have a texture array
-                console.log("InstancedSpriteMesh: Loaded billboard texture and created texture array");
+            if (m.material.url) {
+                material.uniforms.uTexture = { value: null };
+                await this._uploadTexture(m.material.url, material);
             }
         }
 
@@ -249,77 +311,79 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
         return null;
     }
 
+    /** Extract raw RGBA pixel data from an image-based texture via an offscreen canvas. */
+    private _extractPixelData(texture: { image: HTMLImageElement | ImageBitmap }, flipY: boolean) {
+        const img = texture.image;
+        this._offscreenCanvas.width = img.width;
+        this._offscreenCanvas.height = img.height;
+        const ctx = this._offscreenCtx;
+        ctx.reset();
+        if (flipY) {
+            ctx.translate(0, img.height);
+            ctx.scale(1, -1);
+        }
+        ctx.drawImage(img, 0, 0);
+        const imageData = ctx.getImageData(0, 0, img.width, img.height);
+        return new Uint8Array(imageData.data);
+    }
+
+    private async _uploadTexture(url: string, material: ShaderMaterial) {
+        if (this._loadedUrls.has(url)) return;
+        this._loadedUrls.add(url);
+
+        const newTexture = await TEXTURE_LOADER.loadAsync(url);
+
+        if (newTexture) {
+            let newTextureArray: DataArrayTexture;
+            const width = newTexture.image.width;
+            const height = newTexture.image.height;
+            const pixelData = this._extractPixelData(newTexture, true);
+
+            const existingTextureArray = material.uniforms.uTexture.value as DataArrayTexture;
+            if (existingTextureArray) {
+                // make sure new texture has same dimensions as existing one, otherwise we cannot update the texture array
+                if (existingTextureArray.image.width !== width || existingTextureArray.image.height !== height) {
+                    console.warn(`InstancedSpriteMesh: Billboard texture size mismatch old:[${existingTextureArray.image.width}x${existingTextureArray.image.height}] ,new:[${width}x${height}], cannot update texture array`);
+                    newTexture.dispose();
+                    return;
+                }
+                // update existing texture array with new texture data
+                const existingData = existingTextureArray.image.data as Uint8Array;
+                const totalByteLength = existingData.byteLength + pixelData.byteLength;
+                const textureData = new Uint8Array(totalByteLength);
+                textureData.set(existingData, 0); // copy existing layers
+                textureData.set(pixelData, existingData.byteLength); // append new layer
+
+                newTextureArray = new DataArrayTexture(textureData, width, height, this._loadedUrls.size);
+
+                existingTextureArray.dispose(); // dispose old texture array
+                console.log("InstancedSpriteMesh: Updated billboard texture array with new texture");
+
+            }
+            else {
+                newTextureArray = new DataArrayTexture(pixelData, width, height, 1);
+                console.log("InstancedSpriteMesh: Loaded billboard texture and created texture array");
+            }
+
+            newTextureArray.format = RGBAFormat;
+            newTextureArray.type = UnsignedByteType;
+            newTextureArray.generateMipmaps = false;
+            newTextureArray.needsUpdate = true;
+            newTextureArray.minFilter = LinearFilter;
+            newTextureArray.magFilter = LinearFilter;
+
+            material.uniforms.uTexture = { value: newTextureArray };
+            material.uniformsNeedUpdate = true;
+
+            newTexture.dispose();
+        }
+    }
+
     _setPickable(pickable: boolean): void {
         if (this.material as ShaderMaterial) {
             const mat = this.material as ShaderMaterial;
             mat.uniforms.nvr_uPickable = { value: pickable ? 1.0 : 0.0 };
             mat.uniformsNeedUpdate = true;
-        }
-    }
-
-    // TODO: cleanup
-    _update(m: NavaraPointMesh | NavaraBillboardMesh, active: boolean) {
-        const material = this.material as ShaderMaterial;
-        let uniformsChanged = false;
-
-        if (material.visible !== m.material.show) {
-            material.visible = m.material.show ?? true;
-            material.visible = material.visible && active;
-        }
-
-        if (material.uniforms.uScale.value !== (m.material.size ?? 100.0)) {
-            material.uniforms.uScale.value = m.material.size ?? 100.0;
-            uniformsChanged = true;
-        }
-
-        if (this._initialColor.getHex() !== (m.material.color ?? 0xffffff)) {
-            this._initialColor.setHex(m.material.color ?? 0xffffff);
-            const colorAttr = this.geometry.getAttribute('instanceColor') as InstancedBufferAttribute;
-            const instanceCount = colorAttr.count;
-            for (let i = 0; i < instanceCount; i++) {
-                colorAttr.setXYZ(i, this._initialColor.r, this._initialColor.g, this._initialColor.b);
-            }
-            colorAttr.needsUpdate = true;
-        }
-
-        if (material.uniforms.uCenter.value.x !== (m.material.center?.x ?? 0.5) || material.uniforms.uCenter.value.y !== (m.material.center?.y ?? 0.5)) {
-            material.uniforms.uCenter.value.set(m.material.center?.x ?? 0.5, m.material.center?.y ?? 0.5);
-            uniformsChanged = true;
-        }
-
-        if (material.uniforms.uHeightOffset.value !== (m.material.height ?? 0.0)) {
-            material.uniforms.uHeightOffset.value = m.material.height ?? 0.0;
-            uniformsChanged = true;
-        }
-
-        if (material.uniforms.uScaleByDistance.value !== (m.material.scaleByDistance ?? true)) {
-            material.uniforms.uScaleByDistance.value = m.material.scaleByDistance ?? true;
-            uniformsChanged = true;
-        }
-
-        if (material.depthTest !== (m.material.depthTest ?? true)) {
-            material.depthTest = m.material.depthTest ?? true;
-        }
-        
-        if (material.uniforms.uOffsetDepth.value !== (m.material.offsetDepth ?? true)) {
-            material.uniforms.uOffsetDepth.value = m.material.offsetDepth ?? true;
-            uniformsChanged = true;
-        }
-
-        if (material.transparent !== (m.material.transparent ?? true)) {
-            material.transparent = m.material.transparent ?? true;
-        }
-
-        // Alpha test is only relevant for billboards
-        if (m instanceof NavaraBillboardMesh) {
-            if (material.uniforms.uAlphaTest.value !== (m.material.alphaTest ?? 0.0)) {
-                material.uniforms.uAlphaTest.value = m.material.alphaTest ?? 0.0;
-                uniformsChanged = true;
-            }
-        }
-
-        if (uniformsChanged) {
-            material.uniformsNeedUpdate = true;
         }
     }
 
