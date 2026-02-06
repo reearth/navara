@@ -8,6 +8,7 @@ import { InstancedBufferAttribute, InstancedBufferGeometry, Mesh, ShaderMaterial
 import { TEXTURE_LOADER } from "../event/loaders";
 import invariant from "tiny-invariant";
 import { PickableMesh } from "./pickableMesh";
+import { arraysEqual } from "../utils";
 
 // TODOs:
 // - handle RTE - done
@@ -24,11 +25,20 @@ import { PickableMesh } from "./pickableMesh";
 //        - selective layer stuff
 // - make sure to cover all what was the old point/billboard mesh doing - done for most part, but need to double check
 // --------------------------------------------------------------
-// - handle selective layer stuff
+// - handle selective layer stuff - meh 
 // - handle choosing between using new sprite mesh or old point mesh based on conditions
 // - optimize shader if needed
 // - cleanup code
 // - test performance and correctness
+
+
+/** UserData type for InstancedSpriteMesh */
+type InstancedSpriteUserData = {
+    prev?: {
+        effectIds?: string[];
+    };
+};
+
 
 export type InstancedSpriteOptions = {
     renderOrder?: number;
@@ -51,11 +61,18 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     private _loadedUrls: Set<string> = new Set();
     private _offscreenCanvas: OffscreenCanvas = new OffscreenCanvas(1, 1);
     private _offscreenCtx: OffscreenCanvasRenderingContext2D = this._offscreenCanvas.getContext('2d')!;
+    /** ViewContext for SelectiveEffect handling */
+    private _viewContext: ViewContext;
+    /** Layer ID for SelectiveEffect handling */
+    private _layerId: string;
 
     constructor(
         options: InstancedSpriteOptions,
     ) {
         super();
+        this.renderOrder = options.renderOrder ?? this.renderOrder;
+        this._viewContext = options.viewContext;
+        this._layerId = options.layerId;
     }
 
     async _init(m: NavaraPointMesh | NavaraBillboardMesh, buf: BufferLoader) {
@@ -152,6 +169,20 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
 
         if (uniformsChanged) {
             material.uniformsNeedUpdate = true;
+        }
+
+        // SelectiveEffect: effectIds handling at container level
+        // SpriteMaterial doesn't support emissive, so only effectIds is handled
+        const ud = this.userData as InstancedSpriteUserData;
+        ud.prev ??= {};
+        if (!arraysEqual(ud.prev.effectIds, m.material.effectIds)) {
+            this._viewContext.selectiveEffectRegistry?.updateLinksForObject(
+                this,
+                m.material.effectIds ?? [],
+                ud.prev.effectIds ?? [],
+                this._layerId,
+            );
+            ud.prev.effectIds = m.material.effectIds ? [...m.material.effectIds] : [];
         }
     }
 
