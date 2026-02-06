@@ -121,7 +121,13 @@ export async function renderModel(
       if (!m.material.url) {
         return {};
       }
-      const model = await loader.loadAsync(m.material.url);
+      let model;
+      try {
+        model = await loader.loadAsync(m.material.url);
+      } catch (e) {
+        console.warn(`Failed to load model: ${m.material.url}`, e);
+        return {};
+      }
       if (m.material.showBoundingBox) {
         model.scene.traverse((child) => {
           if (child instanceof Mesh) {
