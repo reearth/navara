@@ -1,11 +1,25 @@
 import type { LatLngHeight } from "@navara/core";
-import { geodeticToVector3, degreeToRadian } from "@navara/three_api";
-import { Object3D, CatmullRomCurve3, Vector3 } from "three";
+import { encodePosition } from "@navara/engine-api";
+import {
+  geodeticToVector3,
+  degreeToRadian,
+  calcCameraPosition,
+  calcModelMatrixRTE,
+} from "@navara/three_api";
+
+import {
+  Object3D,
+  CatmullRomCurve3,
+  Vector3,
+  InstancedBufferAttribute,
+  Matrix4,
+} from "three";
 import { Line2 } from "three/examples/jsm/lines/Line2.js";
 import { LineGeometry } from "three/examples/jsm/lines/LineGeometry.js";
 import { LineMaterial } from "three/examples/jsm/lines/LineMaterial.js";
 
 import { overrideLineMaterialForMRT } from "../material";
+import { createReplacer } from "../utils";
 
 import { SpherePoints } from "./spherePoints";
 
@@ -47,6 +61,13 @@ export class SmoothLine extends Object3D {
   private _pointsMeshes: SpherePoints[] = [];
   private _pointsData: Vector3[][] = [];
 
+  // Shared RTE uniforms for all line meshes
+  private _sharedRTEUniforms = {
+    modelViewMatrixRTE: { value: new Matrix4() },
+    cameraPositionHigh: { value: new Vector3() },
+    cameraPositionLow: { value: new Vector3() },
+  };
+
   constructor(config: Partial<SmoothLineConfig>[] = []) {
     super();
 
@@ -60,6 +81,7 @@ export class SmoothLine extends Object3D {
 
     this.updatePointsData();
     this.initSubMeshes();
+    this.setupRTECallback();
   }
 
   private updatePointsData(): void {
@@ -93,7 +115,10 @@ export class SmoothLine extends Object3D {
   private createLinePosAttr(
     config: SmoothLineConfig,
     index: number,
-  ): Float32Array {
+  ): {
+    positionsHigh: Float32Array;
+    positionsLow: Float32Array;
+  } {
     // Create CatmullRom curve
     const curve = new CatmullRomCurve3(
       this._pointsData[index],
@@ -114,15 +139,22 @@ export class SmoothLine extends Object3D {
       points.push(points[0].clone());
     }
 
-    // Create Line2 geometry
-    const positions = new Float32Array(points.length * 3);
+    // Encode positions as RTE high/low components
+    const positionsHigh = new Float32Array(points.length * 3);
+    const positionsLow = new Float32Array(points.length * 3);
+
     for (let i = 0; i < points.length; i++) {
-      positions[3 * i + 0] = points[i].x;
-      positions[3 * i + 1] = points[i].y;
-      positions[3 * i + 2] = points[i].z;
+      const encoded = encodePosition(points[i].x, points[i].y, points[i].z);
+      positionsHigh[3 * i + 0] = encoded.high.x;
+      positionsHigh[3 * i + 1] = encoded.high.y;
+      positionsHigh[3 * i + 2] = encoded.high.z;
+      positionsLow[3 * i + 0] = encoded.low.x;
+      positionsLow[3 * i + 1] = encoded.low.y;
+      positionsLow[3 * i + 2] = encoded.low.z;
+      encoded.free();
     }
 
-    return positions;
+    return { positionsHigh, positionsLow };
   }
 
   private createLineMesh(config: SmoothLineConfig, index: number): Line2 {
@@ -130,10 +162,67 @@ export class SmoothLine extends Object3D {
       return new Line2(new LineGeometry(), new LineMaterial());
     }
 
-    const positions = this.createLinePosAttr(config, index);
+    const { positionsHigh, positionsLow } = this.createLinePosAttr(
+      config,
+      index,
+    );
 
     const geometry = new LineGeometry();
-    geometry.setPositions(positions);
+
+    // Reconstruct full positions from high/low for LineGeometry setup
+    // IMPORTANT: Must use real world-space positions (not dummy/zero data) because:
+    // 1. LineGeometry.setPositions() calculates bounding box/sphere for frustum culling
+    // 2. line.computeLineDistances() depends on real positions to calculate cumulative distances
+    //    for dashed lines (instanceDistanceStart/instanceDistanceEnd attributes)
+    const fullPositions = new Float32Array(positionsHigh.length);
+    for (let i = 0; i < positionsHigh.length; i++) {
+      fullPositions[i] = positionsHigh[i] + positionsLow[i];
+    }
+    geometry.setPositions(fullPositions);
+
+    // Now create RTE versions of instanceStart and instanceEnd
+    const numPoints = positionsHigh.length / 3;
+    const instanceStartHigh = new Float32Array((numPoints - 1) * 3);
+    const instanceStartLow = new Float32Array((numPoints - 1) * 3);
+    const instanceEndHigh = new Float32Array((numPoints - 1) * 3);
+    const instanceEndLow = new Float32Array((numPoints - 1) * 3);
+
+    // Fill RTE instance attributes (each line segment from point i to point i+1)
+    for (let i = 0; i < numPoints - 1; i++) {
+      // Start point
+      instanceStartHigh[i * 3 + 0] = positionsHigh[i * 3 + 0];
+      instanceStartHigh[i * 3 + 1] = positionsHigh[i * 3 + 1];
+      instanceStartHigh[i * 3 + 2] = positionsHigh[i * 3 + 2];
+      instanceStartLow[i * 3 + 0] = positionsLow[i * 3 + 0];
+      instanceStartLow[i * 3 + 1] = positionsLow[i * 3 + 1];
+      instanceStartLow[i * 3 + 2] = positionsLow[i * 3 + 2];
+
+      // End point
+      instanceEndHigh[i * 3 + 0] = positionsHigh[(i + 1) * 3 + 0];
+      instanceEndHigh[i * 3 + 1] = positionsHigh[(i + 1) * 3 + 1];
+      instanceEndHigh[i * 3 + 2] = positionsHigh[(i + 1) * 3 + 2];
+      instanceEndLow[i * 3 + 0] = positionsLow[(i + 1) * 3 + 0];
+      instanceEndLow[i * 3 + 1] = positionsLow[(i + 1) * 3 + 1];
+      instanceEndLow[i * 3 + 2] = positionsLow[(i + 1) * 3 + 2];
+    }
+
+    // Add RTE instance attributes (must be InstancedBufferAttribute like instanceStart/instanceEnd)
+    geometry.setAttribute(
+      "instanceStartHigh",
+      new InstancedBufferAttribute(instanceStartHigh, 3),
+    );
+    geometry.setAttribute(
+      "instanceStartLow",
+      new InstancedBufferAttribute(instanceStartLow, 3),
+    );
+    geometry.setAttribute(
+      "instanceEndHigh",
+      new InstancedBufferAttribute(instanceEndHigh, 3),
+    );
+    geometry.setAttribute(
+      "instanceEndLow",
+      new InstancedBufferAttribute(instanceEndLow, 3),
+    );
 
     // Create Line2 material
     const material = new LineMaterial({
@@ -151,6 +240,9 @@ export class SmoothLine extends Object3D {
 
     material.resolution.set(1920, 1080);
     overrideLineMaterialForMRT(material);
+
+    // Inject RTE shader code via onBeforeCompile
+    this.injectRTEShaderCode(material);
 
     // Create Line2 mesh
     const line = new Line2(geometry, material);
@@ -192,6 +284,8 @@ export class SmoothLine extends Object3D {
             this._pointsMeshes.push(spherePoint);
             this.add(spherePoint);
           }
+
+          this.setupRTECallback();
         }
       } else {
         this.updateLineCfg(cfg, i);
@@ -256,6 +350,9 @@ export class SmoothLine extends Object3D {
       const lineMesh = this.createLineMesh(this._config[i], i);
       this._lineMeshes[i] = lineMesh;
       this.add(lineMesh);
+
+      // Re-setup RTE callback after rebuilding
+      this.setupRTECallback();
     }
 
     if (
@@ -344,6 +441,112 @@ export class SmoothLine extends Object3D {
         visible: this._config[i].showPoints,
       });
     }
+  }
+
+  /**
+   * Inject RTE shader code into LineMaterial via onBeforeCompile
+   */
+  private injectRTEShaderCode(material: LineMaterial): void {
+    // Store shared RTE uniforms reference
+    const sharedUniforms = this._sharedRTEUniforms;
+
+    material.onBeforeCompile = (shader) => {
+      // Add RTE uniforms
+      shader.uniforms.u_cameraPositionHigh = sharedUniforms.cameraPositionHigh;
+      shader.uniforms.u_cameraPositionLow = sharedUniforms.cameraPositionLow;
+      shader.uniforms.modelViewMatrixRTE = sharedUniforms.modelViewMatrixRTE;
+
+      // Modify vertex shader to use RTE instance attributes
+      shader.vertexShader = createReplacer(shader.vertexShader)
+        // Add RTE uniforms after instanceEnd attribute
+        .replace(
+          "attribute vec3 instanceEnd;",
+          /* glsl */ `attribute vec3 instanceEnd;
+
+        // RTE uniforms
+        uniform vec3 u_cameraPositionHigh;
+        uniform vec3 u_cameraPositionLow;
+        uniform mat4 modelViewMatrixRTE;
+
+        // RTE instance attributes
+        attribute vec3 instanceStartHigh;
+        attribute vec3 instanceStartLow;
+        attribute vec3 instanceEndHigh;
+        attribute vec3 instanceEndLow;`,
+        )
+        // Replace the start transformation
+        .replace(
+          "vec4 start = modelViewMatrix * vec4( instanceStart, 1.0 );",
+          /* glsl */ `// Decode RTE position for start point
+        vec3 startHighDiff = instanceStartHigh - u_cameraPositionHigh;
+        vec3 startLowDiff = instanceStartLow - u_cameraPositionLow;
+        vec3 startRTE = startHighDiff + startLowDiff;
+        vec4 start = modelViewMatrixRTE * vec4( startRTE, 1.0 );`,
+        )
+        // Replace the end transformation
+        .replace(
+          "vec4 end = modelViewMatrix * vec4( instanceEnd, 1.0 );",
+          /* glsl */ `// Decode RTE position for end point
+        vec3 endHighDiff = instanceEndHigh - u_cameraPositionHigh;
+        vec3 endLowDiff = instanceEndLow - u_cameraPositionLow;
+        vec3 endRTE = endHighDiff + endLowDiff;
+        vec4 end = modelViewMatrixRTE * vec4( endRTE, 1.0 );`,
+        ).source;
+    };
+
+    // Mark material as customized
+    material.needsUpdate = true;
+  }
+
+  /**
+   * Setup RTE callback for camera-relative rendering
+   */
+  private setupRTECallback(): void {
+    if (this._lineMeshes.length === 0) {
+      return;
+    }
+
+    const identityMatrix = new Matrix4();
+    const tempModelViewMatrix = new Matrix4();
+    const firstMesh = this._lineMeshes[0];
+
+    // Save the original onBeforeRender from LineSegments2
+    // It updates the resolution uniform which is critical for line width rendering
+    const originalOnBeforeRender = firstMesh.onBeforeRender.bind(firstMesh);
+
+    // Create the callback with proper Mesh.onBeforeRender signature
+    // Line2 extends LineSegments2 extends Mesh, so it has the standard signature
+    const callback: typeof Object3D.prototype.onBeforeRender = (
+      renderer,
+      _scene,
+      camera,
+    ) => {
+      // First, call the original LineSegments2.onBeforeRender to update resolution
+      // LineSegments2.onBeforeRender only needs the renderer parameter
+      originalOnBeforeRender(renderer);
+
+      // Then, update RTE uniforms
+      // Calculate RTE model-view matrix
+      calcModelMatrixRTE(
+        identityMatrix,
+        camera.matrixWorldInverse,
+        tempModelViewMatrix,
+      );
+
+      // Calculate camera position in high/low precision
+      const result = calcCameraPosition(camera.position, identityMatrix);
+
+      // Update shared RTE uniforms
+      this._sharedRTEUniforms.modelViewMatrixRTE.value.copy(
+        tempModelViewMatrix,
+      );
+      this._sharedRTEUniforms.cameraPositionHigh.value.copy(result.high);
+      this._sharedRTEUniforms.cameraPositionLow.value.copy(result.low);
+    };
+
+    // Set callback on the first Line2 mesh (all meshes share the uniforms)
+    // Cast to Object3D to use the standard onBeforeRender signature
+    (firstMesh as Object3D).onBeforeRender = callback;
   }
 
   dispose(): void {

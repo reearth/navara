@@ -1,4 +1,8 @@
 import { packing } from "@takram/three-geospatial/shaders";
+import { encodePosition } from "@navara/engine-api";
+import { calcCameraPosition, calcModelMatrixRTE } from "@navara/three_api";
+import RteParsVertex from "@shaders/glsl/chunks/rte_pars_vertex.glsl";
+import RteVertex from "@shaders/glsl/chunks/rte_vertex.glsl";
 import {
   BufferGeometry,
   BufferAttribute,
@@ -11,6 +15,7 @@ import {
   PerspectiveCamera,
   WebGLRenderer,
   Scene,
+  Matrix4,
 } from "three";
 
 import { createReplacer } from "../utils";
@@ -22,10 +27,17 @@ export type SpherePointOptions = {
 };
 
 /**
- * Renders points as spheres using impostor technique.
+ * Renders points as spheres using impostor technique with RTE (Relative-To-Eye) support.
  */
 export class SpherePoints extends Points {
   public pointOpts: Required<SpherePointOptions>;
+
+  // RTE uniforms shared across renders
+  private _rteUniforms = {
+    modelViewMatrixRTE: { value: new Matrix4() },
+    cameraPositionHigh: { value: new Vector3() },
+    cameraPositionLow: { value: new Vector3() },
+  };
 
   constructor(opts: SpherePointOptions = {}) {
     // Create initial empty geometry and material
@@ -73,6 +85,18 @@ export class SpherePoints extends Points {
     if (mat.uniforms?.dpr) {
       mat.uniforms.dpr.value = pixelRatio;
     }
+
+    // Update RTE uniforms
+    const identityMatrix = new Matrix4();
+    calcModelMatrixRTE(
+      identityMatrix,
+      camera.matrixWorldInverse,
+      this._rteUniforms.modelViewMatrixRTE.value,
+    );
+
+    const result = calcCameraPosition(camera.position, identityMatrix);
+    this._rteUniforms.cameraPositionHigh.value.copy(result.high);
+    this._rteUniforms.cameraPositionLow.value.copy(result.low);
   }
 
   dispose() {
@@ -89,17 +113,48 @@ export class SpherePoints extends Points {
       "position",
       new BufferAttribute(new Float32Array(pointCount * 3), 3),
     );
+    // Add RTE attributes
+    geo.setAttribute(
+      "position_3d_high",
+      new BufferAttribute(new Float32Array(pointCount * 3), 3),
+    );
+    geo.setAttribute(
+      "position_3d_low",
+      new BufferAttribute(new Float32Array(pointCount * 3), 3),
+    );
     this.geometry = geo;
   }
 
   private _updatePositionsAttr(points: Vector3[]) {
     if (!this.geometry) return;
+
     const pos = this.geometry.getAttribute("position") as BufferAttribute;
+    const posHigh = this.geometry.getAttribute(
+      "position_3d_high",
+    ) as BufferAttribute;
+    const posLow = this.geometry.getAttribute(
+      "position_3d_low",
+    ) as BufferAttribute;
+
     for (let i = 0; i < points.length; i++) {
       const p = points[i];
+
+      // Encode position to RTE high/low components
+      const encoded = encodePosition(p.x, p.y, p.z);
+
+      // Set RTE attributes
+      posHigh.setXYZ(i, encoded.high.x, encoded.high.y, encoded.high.z);
+      posLow.setXYZ(i, encoded.low.x, encoded.low.y, encoded.low.z);
+
+      // Also set standard position (sum of high + low) for bounding calculations
       pos.setXYZ(i, p.x, p.y, p.z);
+
+      encoded.free();
     }
+
     pos.needsUpdate = true;
+    posHigh.needsUpdate = true;
+    posLow.needsUpdate = true;
   }
 
   private _makePointsMat(): ShaderMaterial {
@@ -112,17 +167,25 @@ export class SpherePoints extends Points {
         uNear: { value: 0.1 }, // set in onBeforeRender
         uFar: { value: 1000.0 }, // set in onBeforeRender
         uSize: { value: this.pointOpts.size }, // pixel diameter
+        // RTE uniforms
+        u_cameraPositionHigh: this._rteUniforms.cameraPositionHigh,
+        u_cameraPositionLow: this._rteUniforms.cameraPositionLow,
+        modelViewMatrixRTE: this._rteUniforms.modelViewMatrixRTE,
       },
       vertexShader: `
         precision highp float;
         uniform float dpr;
         uniform float uSize;
 
+        ${RteParsVertex}
+
         varying vec3  vCenterView;
         varying float vRadiusPx;
 
         void main() {
-          vec4 mv = modelViewMatrix * vec4(position, 1.0);
+          ${RteVertex}
+
+          vec4 mv = modelViewMatrixRTE * vec4(transformed, 1.0);
           vCenterView = mv.xyz;
 
           gl_PointSize = uSize * dpr;        // pixel diameter
