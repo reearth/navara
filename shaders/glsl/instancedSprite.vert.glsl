@@ -68,9 +68,9 @@ int id = gl_InstanceID;
     // This makes it always face the camera
     if (uScaleByDistance) {
         float scale = uScale * length(mvPosition.xyz) / 1000000.0; // Scale by distance (1 unit = 1km)
-        mvPosition.xy += ((position.xy - (uCenter - vec2(0.5, 0.5))) * scale);
+        mvPosition.xy += ((position.xy - (clamp(uCenter, vec2(-0.5), vec2(0.5)))) * scale);
     } else {
-        mvPosition.xy += ((position.xy - (uCenter - vec2(0.5, 0.5))) * uScale);
+        mvPosition.xy += ((position.xy - (clamp(uCenter, vec2(-0.5), vec2(0.5)))) * uScale);
     }
     gl_Position = projectionMatrix * mvPosition;
 
