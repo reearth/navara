@@ -730,8 +730,8 @@ function createMaterialCtrl(
 
 function getMaterialOptions(layer: MaterialLayerDescription) {
   const materials = [];
-  if ("raster_tile" in layer) {
-    materials.push("raster_tile");
+  if ("rasterTile" in layer) {
+    materials.push("rasterTile");
   }
   if ("point" in layer) {
     materials.push("point");
