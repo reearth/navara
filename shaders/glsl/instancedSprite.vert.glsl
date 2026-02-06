@@ -1,4 +1,6 @@
 #include "chunks/horizon_culling_pars_vertex.glsl"
+#include "chunks/sprite_height_pars_vertex.glsl"
+
 #ifdef USE_RTE
     attribute vec3 instancePositionLOW; 
     attribute vec3 instancePositionHIGH; 
@@ -19,6 +21,8 @@ uniform vec3 uRTCCenter;
 uniform vec3 uEyeRTEHigh;
 uniform vec3 uEyeRTELow;
 uniform float uScale;
+uniform float uHeightOffset;
+uniform bool uScaleByDistance;
 
 varying vec2 vUv;
 varying vec3 vColor;
@@ -59,8 +63,14 @@ int id = gl_InstanceID;
     mvPosition = viewMatrixRTC * vec4(instancePosition, 1.0);
 #endif
 
+    mvPosition += mvr_getMvHeightOffset(absTransformed, uHeightOffset);
     // This makes it always face the camera
-    mvPosition.xy += (position.xy * uScale);
-
+    if (uScaleByDistance) {
+        float scale = uScale * length(mvPosition.xyz) / 1000000.0; // Scale by distance (1 unit = 1km)
+        mvPosition.xy += (position.xy * scale);
+    } else {
+        mvPosition.xy += (position.xy * uScale);
+    }
     gl_Position = projectionMatrix * mvPosition;
+
 }

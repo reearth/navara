@@ -75,24 +75,25 @@ const layers: MaterialLayerDescription[] = [
         data: {
             url: VECTOR_DATASETS.gsiExperimentalVector.url,
         },
-        point: {
-            size: 0.01,
-            scaleByDistance: true,
-            clampToGround: true,
-            color: new Color().setStyle("#991f3d"),
-        },
-        // billboard: {
-        //     color: new Color().setStyle("#ffffff"),
-        //     size: 0.05,
-        //     height: 1,
+        // point: {
+        //     size: 1000,
         //     scaleByDistance: true,
         //     clampToGround: true,
-        //     depthTest: true,
-        //     transparent: false,
-        //     url: "/example.png",
-        //     offsetDepth: false,
-
+        //     color: new Color().setStyle("#991f3d"),
+        //     height: 1,
         // },
+        billboard: {
+            color: new Color().setStyle("#ffffff"),
+            size: 1000,
+            height: 1,
+            scaleByDistance: true,
+            clampToGround: true,
+            depthTest: true,
+            alphaTest: .5,
+            transparent: false,
+            url: "/example.png",
+            offsetDepth: false,
+        },
         vectorTile: {
             maxZoom: 4,
         },

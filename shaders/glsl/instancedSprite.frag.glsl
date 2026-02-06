@@ -29,6 +29,7 @@ varying float vBatchID;
 
 uniform bool uOffsetDepth;
 uniform float nvr_uPickable;
+uniform float uAlphaTest;
 
 void main() {
     float alpha = 1.0;
@@ -41,7 +42,7 @@ void main() {
         vec4 color = vec4(vColor, alpha); // Placeholder color
     #endif
 
-    if (color.a == 0.0) { gl_FragColor = vec4(0.0); return; }; // Alpha test
+    if (color.a <= uAlphaTest) { gl_FragColor = vec4(0.0); return; }; // Alpha test
 
     // Offset depth to make sure to be drawn over ellipsoid surface
     if (uOffsetDepth) { gl_FragDepth -= 0.2; }

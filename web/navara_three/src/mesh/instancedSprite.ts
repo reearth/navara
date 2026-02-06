@@ -18,8 +18,18 @@ import { PickableMesh } from "./pickableMesh";
 // - handle batch ids and picking (if it was working before)... - done
 // - handle style evalutator stuff - batch ids are not correct now.
 // --------------------------------------------------------------
+
+
 // - handle layer material, user data, color, height, ... 
+//     - missing:
+//        - center
+//        - url
+//        - clampToGround (should be handled in shader or rust?)
+//        - selective layer stuff
+
 // - make sure to cover all what was the old point/billboard mesh doing
+
+// --------------------------------------------------------------
 // - handle selective layer stuff
 // - handle choosing between using new sprite mesh or old point mesh based on conditions
 // - optimize shader if needed
@@ -43,6 +53,8 @@ type PositionsInfo = {
 
 export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     private _batchIdToInstance: Map<number, number> = new Map();
+    private _initialColor: Color = new Color(0xffffff);
+
     constructor(
         options: InstancedSpriteOptions,
     ) {
@@ -101,14 +113,14 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
         const colorBuffer = new Float32Array(instanceCount * 3);
         let layerBuffer = undefined;
 
-        const color = new Color().setHex(m.material.color ?? 0xffffff);
+        this._initialColor = new Color().setHex(m.material.color ?? 0xffffff);
         for (let i = 0; i < instanceCount; i++) {
             // TODO: get scale from user data
             // scaleBuffer[i] = 10000.0;
 
-            colorBuffer[i * 3 + 0] = color.r;
-            colorBuffer[i * 3 + 1] = color.g;
-            colorBuffer[i * 3 + 2] = color.b;
+            colorBuffer[i * 3 + 0] = this._initialColor.r;
+            colorBuffer[i * 3 + 1] = this._initialColor.g;
+            colorBuffer[i * 3 + 2] = this._initialColor.b;
 
             // Map batch ID to instance id
             // assuming batch IDs are 32bit floats
@@ -148,12 +160,16 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
                 uEyeRTELow: { value: new Vector3(0, 0, 0) },
                 uEyeRTEHigh: { value: new Vector3(0, 0, 0) },
                 uOffsetDepth: { value: m.material.offsetDepth ?? true },
+                uHeightOffset: { value: m.material.height ?? 0.0 },
+                uScaleByDistance: { value: m.material.scaleByDistance ?? true },
+                uAlphaTest: { value: m instanceof NavaraBillboardMesh ? m.material.alphaTest : 0.0 },
                 uScale: { value: m.material.size ?? 100.0 },
                 nvr_uPickable: { value: 0.0 },
             },
             vertexShader: instancedSpriteVertexShader,
             fragmentShader: instancedSpriteFragmentShader,
             transparent: m.material.transparent ?? true,
+            depthTest: m.material.depthTest ?? true,
         });
 
         if (positionsInfo.RTE) {
@@ -248,9 +264,37 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
         if (material.visible !== m.material.show) {
             material.visible = m.material.show ?? true;
             material.visible = material.visible && active;
+        }
+
+        if (material.uniforms.uScale.value !== (m.material.size ?? 100.0)) {
+            material.uniforms.uScale.value = m.material.size ?? 100.0;
             uniformsChanged = true;
         }
 
+        if (this._initialColor.getHex() !== (m.material.color ?? 0xffffff)) {
+            this._initialColor.setHex(m.material.color ?? 0xffffff);
+            const colorAttr = this.geometry.getAttribute('instanceColor') as InstancedBufferAttribute;
+            const instanceCount = colorAttr.count;
+            for (let i = 0; i < instanceCount; i++) {
+                colorAttr.setXYZ(i, this._initialColor.r, this._initialColor.g, this._initialColor.b);
+            }
+            colorAttr.needsUpdate = true;
+        }
+
+        if (material.uniforms.uHeightOffset.value !== (m.material.height ?? 0.0)) {
+            material.uniforms.uHeightOffset.value = m.material.height ?? 0.0;
+            uniformsChanged = true;
+        }
+
+        if (material.uniforms.uScaleByDistance.value !== (m.material.scaleByDistance ?? true)) {
+            material.uniforms.uScaleByDistance.value = m.material.scaleByDistance ?? true;
+            uniformsChanged = true;
+        }
+
+        if (material.depthTest !== (m.material.depthTest ?? true)) {
+            material.depthTest = m.material.depthTest ?? true;
+        }
+        
         if (material.uniforms.uOffsetDepth.value !== (m.material.offsetDepth ?? true)) {
             material.uniforms.uOffsetDepth.value = m.material.offsetDepth ?? true;
             uniformsChanged = true;
@@ -258,12 +302,14 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
 
         if (material.transparent !== (m.material.transparent ?? true)) {
             material.transparent = m.material.transparent ?? true;
-            uniformsChanged = true;
         }
 
-        if (material.uniforms.uScale.value !== (m.material.size ?? 100.0)) {
-            material.uniforms.uScale.value = m.material.size ?? 100.0;
-            uniformsChanged = true;
+        // Alpha test is only relevant for billboards
+        if (m instanceof NavaraBillboardMesh) {
+            if (material.uniforms.uAlphaTest.value !== (m.material.alphaTest ?? 0.0)) {
+                material.uniforms.uAlphaTest.value = m.material.alphaTest ?? 0.0;
+                uniformsChanged = true;
+            }
         }
 
         if (uniformsChanged) {
