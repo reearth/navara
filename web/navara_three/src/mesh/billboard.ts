@@ -242,7 +242,14 @@ export class BillboardMesh extends Sprite implements FeatureMesh {
 
     const nextUrl = material.url;
     if (prev.url !== nextUrl) {
-      const map = nextUrl ? await TEXTURE_LOADER.loadAsync(nextUrl) : undefined;
+      let map;
+      if (nextUrl) {
+        try {
+          map = await TEXTURE_LOADER.loadAsync(nextUrl);
+        } catch (e) {
+          console.warn(`Failed to load billboard texture: ${nextUrl}`, e);
+        }
+      }
       if (map) {
         this.material.map = map;
       } else {

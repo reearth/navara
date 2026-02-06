@@ -172,17 +172,12 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
     const group = new Group();
 
     if (modelConfig?.url) {
-      this.loadModel(modelConfig.url, group)
-        .then(() => {
-          // Initialize animations if conditions are met
-          if (this.shouldInitializeAnimation()) {
-            this.initAnimation();
-          }
-        })
-        .catch((error) => {
-          console.error("Model loading failed:", error);
-          // Animation initialization is automatically skipped on error
-        });
+      this.loadModel(modelConfig.url, group).then(() => {
+        // Initialize animations if conditions are met
+        if (this.shouldInitializeAnimation()) {
+          this.initAnimation();
+        }
+      });
     }
 
     return group;
@@ -208,7 +203,6 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
       this.emit("load");
     } catch (error) {
       console.error("Failed to load GLTF model:", error);
-      throw error; // Propagate error to caller
     }
   }
 
