@@ -90,6 +90,7 @@ const layers: MaterialLayerDescription[] = [
             clampToGround: true,
             depthTest: true,
             alphaTest: .5,
+            center: { x: 0.5, y: 0.5 },
             transparent: false,
             url: "/example.png",
             offsetDepth: false,

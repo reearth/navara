@@ -4,7 +4,7 @@ import instancedSpriteVertexShader from "@shaders/glsl/instancedSprite.vert.glsl
 import instancedSpriteFragmentShader from "@shaders/glsl/instancedSprite.frag.glsl";
 import type { BufferLoader } from "../event";
 import type { ViewContext } from "../core";
-import { InstancedBufferAttribute, InstancedBufferGeometry, Mesh, ShaderMaterial, BufferAttribute, Vector3, DataArrayTexture, UnsignedByteType, RGBAFormat, LinearFilter, Color } from "three";
+import { InstancedBufferAttribute, InstancedBufferGeometry, Mesh, ShaderMaterial, BufferAttribute, Vector3, DataArrayTexture, UnsignedByteType, RGBAFormat, LinearFilter, Color, Vector2 } from "three";
 import { TEXTURE_LOADER } from "../event/loaders";
 import invariant from "tiny-invariant";
 import { PickableMesh } from "./pickableMesh";
@@ -162,6 +162,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
                 uOffsetDepth: { value: m.material.offsetDepth ?? true },
                 uHeightOffset: { value: m.material.height ?? 0.0 },
                 uScaleByDistance: { value: m.material.scaleByDistance ?? true },
+                uCenter: { value: new Vector2(m.material.center?.x ?? 0.5, m.material.center?.y ?? 0.5) },
                 uAlphaTest: { value: m instanceof NavaraBillboardMesh ? m.material.alphaTest : 0.0 },
                 uScale: { value: m.material.size ?? 100.0 },
                 nvr_uPickable: { value: 0.0 },
@@ -279,6 +280,11 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
                 colorAttr.setXYZ(i, this._initialColor.r, this._initialColor.g, this._initialColor.b);
             }
             colorAttr.needsUpdate = true;
+        }
+
+        if (material.uniforms.uCenter.value.x !== (m.material.center?.x ?? 0.5) || material.uniforms.uCenter.value.y !== (m.material.center?.y ?? 0.5)) {
+            material.uniforms.uCenter.value.set(m.material.center?.x ?? 0.5, m.material.center?.y ?? 0.5);
+            uniformsChanged = true;
         }
 
         if (material.uniforms.uHeightOffset.value !== (m.material.height ?? 0.0)) {

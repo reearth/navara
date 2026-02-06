@@ -23,6 +23,7 @@ uniform vec3 uEyeRTELow;
 uniform float uScale;
 uniform float uHeightOffset;
 uniform bool uScaleByDistance;
+uniform vec2 uCenter;
 
 varying vec2 vUv;
 varying vec3 vColor;
@@ -67,9 +68,9 @@ int id = gl_InstanceID;
     // This makes it always face the camera
     if (uScaleByDistance) {
         float scale = uScale * length(mvPosition.xyz) / 1000000.0; // Scale by distance (1 unit = 1km)
-        mvPosition.xy += (position.xy * scale);
+        mvPosition.xy += ((position.xy - (uCenter - vec2(0.5, 0.5))) * scale);
     } else {
-        mvPosition.xy += (position.xy * uScale);
+        mvPosition.xy += ((position.xy - (uCenter - vec2(0.5, 0.5))) * uScale);
     }
     gl_Position = projectionMatrix * mvPosition;
 
