@@ -172,12 +172,16 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
     const group = new Group();
 
     if (modelConfig?.url) {
-      this.loadModel(modelConfig.url, group).then(() => {
-        // Initialize animations if conditions are met
-        if (this.shouldInitializeAnimation()) {
-          this.initAnimation();
-        }
-      });
+      this.loadModel(modelConfig.url, group)
+        .then(() => {
+          // Initialize animations if conditions are met
+          if (this.shouldInitializeAnimation()) {
+            this.initAnimation();
+          }
+        })
+        .catch((error) => {
+          console.error("Failed to initialize GLTF model layer:", error);
+        });
     }
 
     return group;
