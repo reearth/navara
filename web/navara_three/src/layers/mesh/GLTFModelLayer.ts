@@ -206,7 +206,7 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
       this.emit("_needsUpdate");
       this.emit("load");
     } catch (error) {
-      console.error("Failed to load GLTF model:", error);
+      console.warn("Failed to load GLTF model:", error);
     }
   }
 
