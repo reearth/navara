@@ -45,7 +45,6 @@ int id = gl_InstanceID;
     vUv = uv;
     vBatchID = instanceBatchID;
     vColor = instanceColor;
-    // vShow = instanceShow > 0.5;
 
     if (instanceShow <= 0.5) {
         gl_Position = vec4(2.0, 2.0, 2.0, 1.0); // Cull the vertex by moving it outside of the clip space
