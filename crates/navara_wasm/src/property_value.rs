@@ -48,7 +48,7 @@ impl PropertyValue for JsPropertyValue {
 
     fn empty_map() -> Self::Map {
         // Create an object with a null prototype to prevent prototype pollution
-        Object::create(&JsValue::NULL)
+        Object::new()
     }
 
     fn insert(map: &mut Self::Map, key: String, value: Self) {
