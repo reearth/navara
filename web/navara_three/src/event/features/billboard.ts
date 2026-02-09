@@ -13,13 +13,6 @@ export async function renderBillboard(
 ) {
   if (!m.material.url) return;
 
-  // const mesh = new InstancedBillboardMesh({
-  //   renderOrder: FEATURE_RENDER_ORDER,
-  //   viewContext,
-  //   layerId,
-  // });
-  // await mesh._init(m, buf);
-
   const mesh = new InstancedSpriteMesh({
     renderOrder: FEATURE_RENDER_ORDER,
     viewContext,
@@ -33,7 +26,6 @@ export async function renderBillboard(
 export async function processBillboardChanged(
   obj: InstancedSpriteMesh,
   m: NavaraBillboardMesh,
-  buf: BufferLoader,
   active: boolean,
 ) {
   await obj._update(m ,active);

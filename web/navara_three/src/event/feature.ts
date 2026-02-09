@@ -311,10 +311,10 @@ export async function processRenderableFeatureChanged(
   const prevVisible = obj.visible;
 
   if (obj instanceof InstancedSpriteMesh && point) {
-    processPointChanged(obj, point, buf, active);
+    processPointChanged(obj, point, active);
   }
   if (obj instanceof InstancedSpriteMesh && billboard) {
-    await processBillboardChanged(obj, billboard, buf, active);
+    await processBillboardChanged(obj, billboard, active);
   }
   if (obj instanceof InstancedTextMesh && text) {
     processTextChanged(obj, text, buf, active, renderFlag);

@@ -353,7 +353,6 @@ export class FeatureEvaluator {
                 target.array[colorIdx + 2] as number,
               ).raw;
 
-            console.log(" feature evaluator batch id", this.batchIds[i]);
               m.setFeatureColorByBatchId(
                 this.batchIds[i],
                 color,
@@ -369,7 +368,6 @@ export class FeatureEvaluator {
                 value != null && typeof value === "number"
                   ? value >= 0.5
                   : undefined;
-            console.log(" feature evaluator batch id", this.batchIds[i]);
               m.setFeatureShowByBatchId(this.batchIds[i], visible ?? true);
             }
             continue;
@@ -378,7 +376,6 @@ export class FeatureEvaluator {
             const len = target.array.length / target.itemSize;
             for (let i = 0; i < len; i++) {
               const height = target.array[i * target.itemSize] as number;
-            console.log(" feature evaluator batch id", this.batchIds[i]);
               m.setFeatureHeightByBatchId(this.batchIds[i], height);
             }
             continue;

@@ -437,7 +437,6 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
         const instanceId = this._batchIdToInstance.get(batchId);
         if (instanceId === undefined) return;
 
-        console.log(`Setting color for batchId ${batchId} at instanceId ${instanceId} to ${color.getHexString()}`);
         const colorAttr = this.geometry.getAttribute('instanceColor') as InstancedBufferAttribute;
         colorAttr.setXYZ(instanceId, color.r, color.g, color.b);
         colorAttr.needsUpdate = true;
@@ -447,7 +446,6 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
         const instanceId = this._batchIdToInstance.get(batchId);
         if (instanceId === undefined) return;
 
-        console.log(`Setting show for batchId ${batchId} at instanceId ${instanceId} to ${rawVisible}`);
         const showAttr = this.geometry.getAttribute('instanceShow') as InstancedBufferAttribute;
         showAttr.setX(instanceId, rawVisible ? 1.0 : 0.0);
         showAttr.needsUpdate = true;
@@ -456,8 +454,6 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     setFeatureHeightByBatchId(batchId: number, height: number) {
         const instanceId = this._batchIdToInstance.get(batchId);
         if (instanceId === undefined) return;
-
-        console.log(`Setting height for batchId ${batchId} at instanceId ${instanceId} to ${height}`);
 
         const heightAttr = this.geometry.getAttribute('instanceHeight') as InstancedBufferAttribute;
         heightAttr.setX(instanceId, height);

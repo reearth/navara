@@ -13,7 +13,8 @@
     varying float vLayer;
 #endif
 
-// attribute float instanceScale;
+attribute float instanceShow;
+attribute float instanceHeight;
 attribute vec3 instanceColor;
 attribute float instanceBatchID;
 
@@ -21,7 +22,6 @@ uniform vec3 uRTCCenter;
 uniform vec3 uEyeRTEHigh;
 uniform vec3 uEyeRTELow;
 uniform float uScale;
-uniform float uHeightOffset;
 uniform bool uScaleByDistance;
 uniform vec2 uCenter;
 
@@ -42,10 +42,15 @@ int id = gl_InstanceID;
 #ifdef BILLBOARD
     vLayer = instanceLayer;
 #endif
-
     vUv = uv;
     vBatchID = instanceBatchID;
     vColor = instanceColor;
+    // vShow = instanceShow > 0.5;
+
+    if (instanceShow <= 0.5) {
+        gl_Position = vec4(2.0, 2.0, 2.0, 1.0); // Cull the vertex by moving it outside of the clip space
+        return;
+    }
 
     vec4 mvPosition;
 #ifdef USE_RTE
@@ -65,7 +70,7 @@ int id = gl_InstanceID;
     mvPosition = viewMatrixRTC * vec4(instancePosition, 1.0);
 #endif
 
-    mvPosition += mvr_getMvHeightOffset(absTransformed, uHeightOffset);
+    mvPosition += mvr_getMvHeightOffset(absTransformed, instanceHeight);
     // This makes it always face the camera
     if (uScaleByDistance) {
         float scale = uScale * length(mvPosition.xyz) / 1000000.0; // Scale by distance (1 unit = 1km)
