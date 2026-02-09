@@ -1091,9 +1091,9 @@ fn json_value_to_property_value<V: PropertyValue>(value: &serde_json::Value) -> 
         }
         serde_json::Value::String(s) => Some(V::from_string(s.clone())),
         serde_json::Value::Array(arr) => {
-            let mut result = Vec::with_capacity(arr.capacity());
+            let mut result = Vec::with_capacity(arr.len());
             for e in arr {
-                let Some(v) = json_value_to_property_value(e) else {
+                let Some(v) = json_value_to_property_value::<V>(e) else {
                     continue;
                 };
                 result.push(v);
