@@ -481,7 +481,9 @@ const addRoadLayer = (pane: Pane, view: ThreeView) => {
       UPDATED_FEATURE.add(evaluator.id);
 
       evaluator.evaluate((_batchId, property) => {
-        const attrs = JSON.parse((property?.["attributes"] as string) ?? {});
+        const rawAttributes = property?.["attributes"];
+        const attrs =
+          typeof rawAttributes === "string" ? JSON.parse(rawAttributes) : {};
         const generics = attrs["gen:genericAttribute"] as unknown[];
         const treeInfo = generics.find(
           (g) =>
