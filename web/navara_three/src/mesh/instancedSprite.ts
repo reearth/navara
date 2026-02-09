@@ -58,6 +58,7 @@ type PositionsInfo = {
 export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     private _batchIdToInstance: Map<number, number> = new Map();
     private _initialColor: Color = new Color(0xffffff);
+    private _initialHeight: number = 0.0;
     private _loadedUrls: Set<string> = new Set();
     private _offscreenCanvas: OffscreenCanvas = new OffscreenCanvas(1, 1);
     private _offscreenCtx: OffscreenCanvasRenderingContext2D = this._offscreenCanvas.getContext('2d')!;
@@ -124,9 +125,14 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
             uniformsChanged = true;
         }
 
-        if (material.uniforms.uHeightOffset.value !== (m.material.height ?? 0.0)) {
-            material.uniforms.uHeightOffset.value = m.material.height ?? 0.0;
-            uniformsChanged = true;
+        if (this._initialHeight !== (m.material.height ?? 0.0)) {
+            this._initialHeight = m.material.height ?? 0.0;
+            const heightAttr = this.geometry.getAttribute('instanceHeight') as InstancedBufferAttribute;
+            const instanceCount = heightAttr.count;
+            for (let i = 0; i < instanceCount; i++) {
+                heightAttr.setX(i, m.material.height ?? 0.0);
+            }
+            heightAttr.needsUpdate = true;
         }
 
         if (material.uniforms.uScaleByDistance.value !== (m.material.scaleByDistance ?? true)) {
@@ -215,14 +221,15 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
         instancedGeometry.instanceCount = instanceCount;
 
         // Add Custom Attributes
-        // const scaleBuffer = new Float32Array(instanceCount);
+        const heightBuffer = new Float32Array(instanceCount);
+        const showBuffer = new Float32Array(instanceCount);
         const colorBuffer = new Float32Array(instanceCount * 3);
         let layerBuffer = undefined;
 
         this._initialColor = new Color().setHex(m.material.color ?? 0xffffff);
         for (let i = 0; i < instanceCount; i++) {
-            // TODO: get scale from user data
-            // scaleBuffer[i] = 10000.0;
+            heightBuffer[i] = m.material.height ?? 0.0;
+            showBuffer[i] = m.material.show !== undefined ? (m.material.show ? 1.0 : 0.0) : 1.0;
 
             colorBuffer[i * 3 + 0] = this._initialColor.r;
             colorBuffer[i * 3 + 1] = this._initialColor.g;
@@ -251,7 +258,8 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
             const pos = positionsInfo.position as Float32Array<ArrayBufferLike>;
             instancedGeometry.setAttribute('instancePosition', new InstancedBufferAttribute(pos, positionsInfo.positionSize));
         }
-        // instancedGeometry.setAttribute('instanceScale', new InstancedBufferAttribute(scaleBuffer, 1));
+        instancedGeometry.setAttribute('instanceHeight', new InstancedBufferAttribute(heightBuffer, 1));
+        instancedGeometry.setAttribute('instanceShow', new InstancedBufferAttribute(showBuffer, 1));
         instancedGeometry.setAttribute('instanceColor', new InstancedBufferAttribute(colorBuffer, 3));
         instancedGeometry.setAttribute('instanceBatchID', new InstancedBufferAttribute(positionsInfo.batchIDs, positionsInfo.batchIDSize));
 
@@ -266,7 +274,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
                 uEyeRTELow: { value: new Vector3(0, 0, 0) },
                 uEyeRTEHigh: { value: new Vector3(0, 0, 0) },
                 uOffsetDepth: { value: m.material.offsetDepth ?? true },
-                uHeightOffset: { value: m.material.height ?? 0.0 },
+                // uHeightOffset: { value: m.material.height ?? 0.0 },
                 uScaleByDistance: { value: m.material.scaleByDistance ?? true },
                 uCenter: { value: new Vector2(m.material.center?.x ?? 0.5, m.material.center?.y ?? 0.5) },
                 uAlphaTest: { value: m instanceof NavaraBillboardMesh ? m.material.alphaTest : 0.0 },
@@ -429,17 +437,30 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
         const instanceId = this._batchIdToInstance.get(batchId);
         if (instanceId === undefined) return;
 
+        console.log(`Setting color for batchId ${batchId} at instanceId ${instanceId} to ${color.getHexString()}`);
         const colorAttr = this.geometry.getAttribute('instanceColor') as InstancedBufferAttribute;
         colorAttr.setXYZ(instanceId, color.r, color.g, color.b);
         colorAttr.needsUpdate = true;
     }
 
     setFeatureShowByBatchId(batchId: number, rawVisible: boolean) {
-        // Not implemented yet
+        const instanceId = this._batchIdToInstance.get(batchId);
+        if (instanceId === undefined) return;
+
+        console.log(`Setting show for batchId ${batchId} at instanceId ${instanceId} to ${rawVisible}`);
+        const showAttr = this.geometry.getAttribute('instanceShow') as InstancedBufferAttribute;
+        showAttr.setX(instanceId, rawVisible ? 1.0 : 0.0);
+        showAttr.needsUpdate = true;
     }
 
     setFeatureHeightByBatchId(batchId: number, height: number) {
-        // Not implemented yet
-    }
+        const instanceId = this._batchIdToInstance.get(batchId);
+        if (instanceId === undefined) return;
 
+        console.log(`Setting height for batchId ${batchId} at instanceId ${instanceId} to ${height}`);
+
+        const heightAttr = this.geometry.getAttribute('instanceHeight') as InstancedBufferAttribute;
+        heightAttr.setX(instanceId, height);
+        heightAttr.needsUpdate = true;
+    }
 }

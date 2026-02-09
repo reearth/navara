@@ -26,10 +26,10 @@ import {
 
 type AvailableMaterialProperty = ExtractProperties<
   PointMaterial &
-    PolylineMaterial &
-    PolygonMaterial &
-    NavaraModelMaterial &
-    TextMaterial
+  PolylineMaterial &
+  PolygonMaterial &
+  NavaraModelMaterial &
+  TextMaterial
 >;
 
 /**
@@ -71,10 +71,10 @@ type AggregatedResultValue<K = EvaluatableMaterialPropertyKey> = {
   attribute: K;
   itemSize: number;
   array: K extends "color"
-    ? Float32Array
-    : K extends "text"
-      ? string[]
-      : Uint32Array;
+  ? Float32Array
+  : K extends "text"
+  ? string[]
+  : Uint32Array;
 };
 
 /**
@@ -132,7 +132,6 @@ export class FeatureEvaluator {
   private cachedBatchedProperties?: Map<number, Map<string, unknown>>;
   private batchIds: number[] = [];
 
-  instanceSelectedBatchIds: number[] = [];
 
   /**
    * The underlying Three.js object representing this feature.
@@ -197,7 +196,6 @@ export class FeatureEvaluator {
             this.cachedBatchedProperties?.set(batchIdx, property);
           }
           this.batchIds[batchIdx] = batchId;
-          // console.log("FeatureEvaluator read batchId:", batchId);
           f(batchId, property);
         },
       );
@@ -342,9 +340,7 @@ export class FeatureEvaluator {
     const batchIdAttr =
       "geometry" in m ? m.geometry.getAttribute("_batchid") : undefined;
     for (const target of this.result) {
-
       if (m instanceof InstancedSpriteMesh) {
-        // const batchIds = m.geometry.getAttribute("instanceBatchID");
         switch (target.attribute) {
           case "color": {
             const len = target.array.length / target.itemSize;
@@ -357,10 +353,33 @@ export class FeatureEvaluator {
                 target.array[colorIdx + 2] as number,
               ).raw;
 
+            console.log(" feature evaluator batch id", this.batchIds[i]);
               m.setFeatureColorByBatchId(
-                this.instanceSelectedBatchIds.pop() ?? 0,
+                this.batchIds[i],
                 color,
               );
+            }
+            continue;
+          }
+          case "show": {
+            const len = target.array.length / target.itemSize;
+            for (let i = 0; i < len; i++) {
+              const value = target.array[i * target.itemSize];
+              const visible =
+                value != null && typeof value === "number"
+                  ? value >= 0.5
+                  : undefined;
+            console.log(" feature evaluator batch id", this.batchIds[i]);
+              m.setFeatureShowByBatchId(this.batchIds[i], visible ?? true);
+            }
+            continue;
+          }
+          case "height": {
+            const len = target.array.length / target.itemSize;
+            for (let i = 0; i < len; i++) {
+              const height = target.array[i * target.itemSize] as number;
+            console.log(" feature evaluator batch id", this.batchIds[i]);
+              m.setFeatureHeightByBatchId(this.batchIds[i], height);
             }
             continue;
           }
