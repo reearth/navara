@@ -180,8 +180,7 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
           }
         })
         .catch((error) => {
-          console.error("Model loading failed:", error);
-          // Animation initialization is automatically skipped on error
+          console.error("Failed to initialize GLTF model layer:", error);
         });
     }
 
@@ -207,8 +206,7 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
       this.emit("_needsUpdate");
       this.emit("load");
     } catch (error) {
-      console.error("Failed to load GLTF model:", error);
-      throw error; // Propagate error to caller
+      console.warn("Failed to load GLTF model:", error);
     }
   }
 

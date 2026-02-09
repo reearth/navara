@@ -8,6 +8,7 @@ import ThreeView, {
   ColorGradingLUTEffectLayer,
   DEFAULT_SKY_BOX_OPTIONS,
   type BlendMode,
+  ToneMappingMode,
 } from "@navara/three";
 import { Pane } from "tweakpane";
 
@@ -25,6 +26,15 @@ const gPaneParams = {
 
 export const run = async (view: ThreeView) => {
   await view.init();
+
+  view.toneMappingExposure = 3;
+
+  view.addLayer({
+    type: "effect",
+    toneMapping: {
+      mode: ToneMappingMode.NEUTRAL,
+    },
+  });
 
   view.setCamera({
     lng: 139.920126569,
