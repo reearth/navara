@@ -34,6 +34,12 @@ uniform float uAlphaTest;
 uniform float uFarPlane;
 
 void main() {
+    // Logarithmic depth buffer
+    gl_FragDepth = log(vFragDepth) / log(uFarPlane + 1.0);
+
+    // Offset depth to make sure to be drawn over ellipsoid surface
+    if (uOffsetDepth) { gl_FragDepth -= 0.2; }
+
     float alpha = 1.0;
     #ifdef BILLBOARD
         // Sample the specific layer from the Texture Array
@@ -41,23 +47,17 @@ void main() {
         alpha = color.a;
     #else
         alpha = nvr_circle_alpha(vUv - vec2(0.5));
-        vec4 color = vec4(vColor, alpha); // Placeholder color
+        vec4 color = vec4(vColor, 1.0);
     #endif
 
-    if (color.a <= uAlphaTest) { gl_FragColor = vec4(0.0); return; }; // Alpha test
+    if (alpha <= uAlphaTest) { discard; };
     
     if (nvr_uPickable > 0.0 && alpha > 0.0) {
         vec3 pickColor = nvr_batchIdToColor(vBatchID);
-        color = vec4(pickColor.xyz, alpha);
+        color = vec4(pickColor.xyz, 1.0);
     }
 
     gl_FragColor = color;
-
-    // Logarithmic depth buffer
-    gl_FragDepth = log(vFragDepth) / log(uFarPlane + 1.0);
-
-    // Offset depth to make sure to be drawn over ellipsoid surface
-    if (uOffsetDepth) { gl_FragDepth -= 0.2; }
 
     #ifndef USE_SHADOWMAP_DEPTH
         // Calculate screen-space normal for MRT compatibility
