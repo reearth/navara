@@ -280,18 +280,17 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
             depthTest: m.material.depthTest ?? true,
         });
 
-        if (positionsInfo.RTE) {
-            material.defines.USE_RTE = 1;
-            material.onBeforeRender = (_renderer, _scene, camera, _geometry, _mat, _group) => {
-                const encodedCamPos = encodePosition(camera.position.x, camera.position.y, camera.position.z);
-                material.uniforms.uEyeRTELow.value.set(encodedCamPos.low.x, encodedCamPos.low.y, encodedCamPos.low.z);
-                material.uniforms.uEyeRTEHigh.value.set(encodedCamPos.high.x, encodedCamPos.high.y, encodedCamPos.high.z);
-            }
-        }
 
         material.onBeforeRender = (_renderer, _scene, camera, _geometry, _mat, _group) => {
             const pCam = camera as PerspectiveCamera;
             material.uniforms.uFarPlane.value = pCam.far;
+
+            if (positionsInfo.RTE) {
+                material.defines.USE_RTE = 1;
+                const encodedCamPos = encodePosition(camera.position.x, camera.position.y, camera.position.z);
+                material.uniforms.uEyeRTELow.value.set(encodedCamPos.low.x, encodedCamPos.low.y, encodedCamPos.low.z);
+                material.uniforms.uEyeRTEHigh.value.set(encodedCamPos.high.x, encodedCamPos.high.y, encodedCamPos.high.z);
+            }
         }
 
         if (m instanceof NavaraBillboardMesh) {
