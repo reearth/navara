@@ -66,7 +66,7 @@ export const ShelterLayer: FC<{ visible?: boolean }> = ({
     textLayerRef.current = layer;
     layer.on("featureUpdated", ({ evaluator }) => {
       evaluator.evaluate((_batchId, property) => {
-        const name = (property?.get("名称") as string) ?? "";
+        const name = (property?.["名称"] as string) ?? "";
         // Hide when there's no name
         if (!name) return { text: "" };
         return { text: name };

@@ -113,13 +113,13 @@ export function FloodLayer({
     layerRef.current = layer;
     const onUpdate: FeatureEvaluatorCallback = (evaluator) => {
       evaluator.evaluate((_batchId, property) => {
-        const kind = (property?.get("kind") as string) || "";
+        const kind = (property?.["kind"] as string) || "";
         const color =
           kind === "point" ? DEFAULT_POINT_COLOR : DEFAULT_POLY_COLOR;
 
         // Check if feature is available at current time
-        const availabilities = property?.get("availabilities") as
-          | Map<"start" | "end", string>[]
+        const availabilities = property?.["availabilities"] as
+          | Record<"start" | "end", string>[]
           | undefined;
 
         // If no availabilities specified, feature is always shown
@@ -141,8 +141,8 @@ export function FloodLayer({
 
         const currentDate = new Date(currentTimeISO);
         const isAvailable = availabilities.some((av) => {
-          const start = new Date(av.get("start") ?? "");
-          const end = new Date(av.get("end") ?? "");
+          const start = new Date(av["start"] ?? "");
+          const end = new Date(av["end"] ?? "");
           return currentDate >= start && currentDate < end;
         });
 

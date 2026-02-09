@@ -1,8 +1,8 @@
-import { packing } from "@takram/three-geospatial/shaders";
 import { encodePosition } from "@navara/engine-api";
 import { calcCameraPosition, calcModelMatrixRTE } from "@navara/three_api";
 import RteParsVertex from "@shaders/glsl/chunks/rte_pars_vertex.glsl";
 import RteVertex from "@shaders/glsl/chunks/rte_vertex.glsl";
+import { packing } from "@takram/three-geospatial/shaders";
 import {
   BufferGeometry,
   BufferAttribute,

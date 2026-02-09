@@ -5,6 +5,7 @@ mod entity;
 mod event;
 mod geometry;
 mod input;
+mod property_value;
 mod types;
 mod vector_tile;
 
@@ -403,11 +404,11 @@ impl Core {
 
     #[wasm_bindgen(js_name = getBatchProp)]
     pub fn get_batch_prop(&mut self, batch_id: u32) -> BatchPropResult {
-        let (properties, layer_id) = self.app.get_batch_prop(&batch_id);
+        use property_value::JsPropertyValue;
 
-        let properties_js = properties
-            .and_then(|v| serde_wasm_bindgen::to_value(&v).ok())
-            .unwrap_or(JsValue::NULL);
+        let (properties, layer_id) = self.app.get_batch_prop::<JsPropertyValue>(&batch_id);
+
+        let properties_js = properties.map(|v| v.0).unwrap_or(JsValue::NULL);
 
         BatchPropResult {
             properties: properties_js,
@@ -420,22 +421,24 @@ impl Core {
         &mut self,
         renderable_feature_bits: u64,
         callback: &js_sys::Function,
-    ) {
+    ) -> Result<(), JsValue> {
+        use property_value::JsPropertyValue;
+
         let this = JsValue::NULL;
-        self.app.read_properties_by_global_batch_ids(
-            renderable_feature_bits,
-            &|batch_idx, batch_id, v| {
-                let batch_idx = JsValue::from(batch_idx as u32);
-                let batch_id = JsValue::from(batch_id);
-                let _ = match v
-                    .as_ref()
-                    .and_then(|v| serde_wasm_bindgen::to_value(v).ok())
-                {
-                    Some(v) => callback.call3(&this, &batch_idx, &batch_id, &v).unwrap(),
-                    None => callback.call2(&this, &batch_idx, &batch_id).unwrap(),
-                };
-            },
-        );
+        self.app
+            .read_properties_by_global_batch_ids::<JsPropertyValue, JsValue, _>(
+                renderable_feature_bits,
+                &|batch_idx, batch_id, v: Option<JsPropertyValue>| {
+                    let batch_idx = JsValue::from(batch_idx as u32);
+                    let batch_id = JsValue::from(batch_id);
+                    match v {
+                        Some(v) => callback.call3(&this, &batch_idx, &batch_id, &v.0)?,
+                        None => callback.call2(&this, &batch_idx, &batch_id)?,
+                    };
+                    Ok(())
+                },
+            )?;
+        Ok(())
     }
 
     #[wasm_bindgen(js_name = changeCamera)]
