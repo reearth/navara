@@ -72,7 +72,7 @@ int id = gl_InstanceID;
     mvPosition += mvr_getMvHeightOffset(absTransformed, instanceHeight);
     // This makes it always face the camera
     if (uScaleByDistance) {
-        float scale = uScale * length(mvPosition.xyz) / 1000000.0; // Scale by distance (1 unit = 1km)
+        float scale = uScale * length(mvPosition.xyz) / 1000000.0;
         mvPosition.xy += ((position.xy - (clamp(uCenter, vec2(-0.5), vec2(0.5)))) * scale);
     } else {
         mvPosition.xy += ((position.xy - (clamp(uCenter, vec2(-0.5), vec2(0.5)))) * uScale);
