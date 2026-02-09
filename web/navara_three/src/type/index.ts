@@ -185,7 +185,7 @@ export type AbortControllers = Map<string, AbortController>;
 export type WorkerPoolPromises = Map<string, WorkerPoolPromise<unknown>>;
 
 export type PickedFeature = {
-  properties: Record<string, unknown>;
+  properties: Nullable<Record<string, unknown>>;
   batchId: Nullable<number>;
   layerId: Nullable<string>;
 };

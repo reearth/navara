@@ -102,7 +102,7 @@ export const addCtrlPanel = (
   const layerInstMap = new Map<string, Layer>();
 
   view.on("pick", (info) => {
-    const gmlId = info?.properties["gml_id"];
+    const gmlId = info?.properties?.["gml_id"];
     if (gmlId) {
       // if gml_id exists, use it for selection
       selectedFeatures.add(gmlId as string);

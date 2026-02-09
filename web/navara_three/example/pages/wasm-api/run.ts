@@ -888,9 +888,9 @@ const testShowModelInfo = (view: ThreeView) => {
       return;
     }
 
-    const x = info.properties["_x"];
-    const y = info.properties["_y"];
-    const z = info.properties["_zmax"];
+    const x = info.properties?.["_x"];
+    const y = info.properties?.["_y"];
+    const z = info.properties?.["_zmax"];
 
     if (
       typeof x !== "number" ||
@@ -929,10 +929,10 @@ const updatePopup = () => {
 
     if (screenPos) {
       gPopup.updateMessages([
-        `name: ${gPickedFeature.properties["gml:name"] ?? "N/A"}`,
-        `address: ${gPickedFeature.properties["bldg:address"] ?? "N/A"}`,
-        `class: ${gPickedFeature.properties["bldg:class"] ?? "N/A"}`,
-        `usage: ${gPickedFeature.properties["bldg:usage"] ?? "N/A"}`,
+        `name: ${gPickedFeature.properties?.["gml:name"] ?? "N/A"}`,
+        `address: ${gPickedFeature.properties?.["bldg:address"] ?? "N/A"}`,
+        `class: ${gPickedFeature.properties?.["bldg:class"] ?? "N/A"}`,
+        `usage: ${gPickedFeature.properties?.["bldg:usage"] ?? "N/A"}`,
       ]);
       gPopup.updatePosition(screenPos.x, screenPos.y);
       gPopup.show();
