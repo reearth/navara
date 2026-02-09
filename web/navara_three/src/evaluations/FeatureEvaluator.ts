@@ -89,7 +89,7 @@ type AggregatedResultValue<K = EvaluatableMaterialPropertyKey> = {
  * // Style 3D Tiles buildings by height
  * layer.on("featureUpdated", (evaluator) => {
  *   evaluator.evaluate((_batchId, property) => {
- *     const measuredHeight = property?.get("height") as number;
+ *     const measuredHeight = property?.["height"] as number;
  *
  *     // Color and visibility based on building height
  *     const color = (() => {
@@ -109,8 +109,8 @@ type AggregatedResultValue<K = EvaluatableMaterialPropertyKey> = {
  * // Style GeoJSON polygons with extrusion based on properties
  * layer.on("featureUpdated", (evaluator) => {
  *   evaluator.evaluate((_batchId, property) => {
- *     const height = (property?.get("height") as number) ?? 0;
- *     const extrudedHeight = (property?.get("extrudedHeight") as number) ?? 0;
+ *     const height = (property?.["height"] as number) ?? 0;
+ *     const extrudedHeight = (property?.["extrudedHeight"] as number) ?? 0;
  *
  *     return {
  *       height,
@@ -128,7 +128,7 @@ type AggregatedResultValue<K = EvaluatableMaterialPropertyKey> = {
 export class FeatureEvaluator {
   private handler: FeatureHandler;
   private featureId: FeatureId;
-  private cachedBatchedProperties?: Map<number, Map<string, unknown>>;
+  private cachedBatchedProperties?: Map<number, Record<string, unknown>>;
   private batchIds: number[] = [];
 
   /**
@@ -168,14 +168,14 @@ export class FeatureEvaluator {
    *
    * // Access nested JSON attributes (common in MVT/PLATEAU data)
    * evaluator.readFeatureProperties((_batchId, property) => {
-   *   const attributes = JSON.parse((property?.get("attributes") as string) ?? "{}");
+   *   const attributes = JSON.parse((property?.["attributes"] as string) ?? "{}");
    *   const minHeight = attributes["minHeight"];
    *   const maxHeight = attributes["maxHeight"];
    * });
    * ```
    */
   readFeatureProperties(
-    f: (batchId: number, property: Map<string, unknown> | undefined) => void,
+    f: (batchId: number, property: Record<string, unknown> | undefined) => void,
   ) {
     if (this.cachedBatchedProperties) {
       for (const [batchIdx, property] of this.cachedBatchedProperties) {
@@ -188,7 +188,7 @@ export class FeatureEvaluator {
         (
           batchIdx: number,
           batchId: number,
-          property: Map<string, unknown> | undefined,
+          property: Record<string, unknown> | undefined,
         ) => {
           if (property) {
             this.cachedBatchedProperties?.set(batchIdx, property);
@@ -219,7 +219,7 @@ export class FeatureEvaluator {
    * ```typescript
    * // Color MVT features based on a category property
    * evaluator.evaluate((_batchId, property) => {
-   *   const category = property?.get("category") as string;
+   *   const category = property?.["category"] as string;
    *
    *   const color = (() => {
    *     if (category === "A") return "#0000ff";
@@ -234,7 +234,7 @@ export class FeatureEvaluator {
    *
    * // Filter and style text labels
    * evaluator.evaluate((_batchId, property) => {
-   *   const text = property?.get("name") as string;
+   *   const text = property?.["name"] as string;
    *
    *   return {
    *     text,
@@ -246,7 +246,7 @@ export class FeatureEvaluator {
   evaluate(
     f: (
       batchId: number,
-      property: Map<string, unknown> | undefined,
+      property: Record<string, unknown> | undefined,
     ) => Partial<EvaluatedValue>,
   ) {
     const result = new Map<
@@ -259,7 +259,7 @@ export class FeatureEvaluator {
 
     const prepare = (
       batchId: number,
-      property: Map<string, unknown> | undefined,
+      property: Record<string, unknown> | undefined,
     ) => {
       const evaluatedValues = f(batchId, property);
 

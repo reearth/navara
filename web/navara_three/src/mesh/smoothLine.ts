@@ -6,7 +6,6 @@ import {
   calcCameraPosition,
   calcModelMatrixRTE,
 } from "@navara/three_api";
-
 import {
   Object3D,
   CatmullRomCurve3,

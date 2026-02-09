@@ -55,10 +55,13 @@ function rampFromColorMap(t01: number) {
   return new Color().setRGB(r, g, b);
 }
 
-function readProperty(property: Map<string, unknown> | undefined, key: string) {
-  const direct = property?.get(key);
+function readProperty(
+  property: Record<string, unknown> | undefined,
+  key: string,
+) {
+  const direct = property?.[key];
   if (direct != null) return direct as unknown;
-  const attributesRaw = property?.get("attributes");
+  const attributesRaw = property?.["attributes"];
   if (typeof attributesRaw === "string") {
     try {
       const attrs = JSON.parse(attributesRaw) as Record<string, unknown>;
