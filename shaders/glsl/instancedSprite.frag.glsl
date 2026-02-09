@@ -26,10 +26,12 @@
 varying vec2 vUv;
 varying vec3 vColor;
 varying float vBatchID;
+varying float vFragDepth;
 
 uniform bool uOffsetDepth;
 uniform float nvr_uPickable;
 uniform float uAlphaTest;
+uniform float uFarPlane;
 
 void main() {
     float alpha = 1.0;
@@ -43,16 +45,19 @@ void main() {
     #endif
 
     if (color.a <= uAlphaTest) { gl_FragColor = vec4(0.0); return; }; // Alpha test
-
-    // Offset depth to make sure to be drawn over ellipsoid surface
-    if (uOffsetDepth) { gl_FragDepth -= 0.2; }
-
+    
     if (nvr_uPickable > 0.0 && alpha > 0.0) {
         vec3 pickColor = nvr_batchIdToColor(vBatchID);
         color = vec4(pickColor.xyz, alpha);
     }
 
     gl_FragColor = color;
+
+    // Logarithmic depth buffer
+    gl_FragDepth = log(vFragDepth) / log(uFarPlane + 1.0);
+
+    // Offset depth to make sure to be drawn over ellipsoid surface
+    if (uOffsetDepth) { gl_FragDepth -= 0.2; }
 
     #ifndef USE_SHADOWMAP_DEPTH
         // Calculate screen-space normal for MRT compatibility

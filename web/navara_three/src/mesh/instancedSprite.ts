@@ -4,7 +4,7 @@ import instancedSpriteVertexShader from "@shaders/glsl/instancedSprite.vert.glsl
 import instancedSpriteFragmentShader from "@shaders/glsl/instancedSprite.frag.glsl";
 import type { BufferLoader } from "../event";
 import type { ViewContext } from "../core";
-import { InstancedBufferAttribute, InstancedBufferGeometry, Mesh, ShaderMaterial, BufferAttribute, Vector3, DataArrayTexture, UnsignedByteType, RGBAFormat, LinearFilter, Color, Vector2 } from "three";
+import { InstancedBufferAttribute, InstancedBufferGeometry, Mesh, ShaderMaterial, BufferAttribute, Vector3, DataArrayTexture, UnsignedByteType, RGBAFormat, LinearFilter, Color, Vector2, PerspectiveCamera } from "three";
 import { TEXTURE_LOADER } from "../event/loaders";
 import invariant from "tiny-invariant";
 import { PickableMesh } from "./pickableMesh";
@@ -271,6 +271,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
                 uCenter: { value: new Vector2(m.material.center?.x ?? 0.5, m.material.center?.y ?? 0.5) },
                 uAlphaTest: { value: m instanceof NavaraBillboardMesh ? m.material.alphaTest : 0.0 },
                 uScale: { value: m.material.size ?? 100.0 },
+                uFarPlane: { value: 0.0 },
                 nvr_uPickable: { value: 0.0 },
             },
             vertexShader: instancedSpriteVertexShader,
@@ -286,6 +287,11 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
                 material.uniforms.uEyeRTELow.value.set(encodedCamPos.low.x, encodedCamPos.low.y, encodedCamPos.low.z);
                 material.uniforms.uEyeRTEHigh.value.set(encodedCamPos.high.x, encodedCamPos.high.y, encodedCamPos.high.z);
             }
+        }
+
+        material.onBeforeRender = (_renderer, _scene, camera, _geometry, _mat, _group) => {
+            const pCam = camera as PerspectiveCamera;
+            material.uniforms.uFarPlane.value = pCam.far;
         }
 
         if (m instanceof NavaraBillboardMesh) {

@@ -28,6 +28,7 @@ uniform vec2 uCenter;
 varying vec2 vUv;
 varying vec3 vColor;
 varying float vBatchID;
+varying float vFragDepth;
 
 void main() {
 int id = gl_InstanceID;
@@ -73,5 +74,6 @@ int id = gl_InstanceID;
         mvPosition.xy += ((position.xy - (clamp(uCenter, vec2(-0.5), vec2(0.5)))) * uScale);
     }
     gl_Position = projectionMatrix * mvPosition;
+    vFragDepth = gl_Position.w + 1.0;
 
 }
