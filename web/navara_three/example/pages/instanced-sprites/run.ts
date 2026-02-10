@@ -110,6 +110,15 @@ export const run = async (view: ThreeView) => {
     },
   });
 
+  view.setCamera({
+    lng: 133.4791459306,
+    lat: 32.8411214823,
+    height: 320413.04,
+    heading: 50.2271850895,
+    pitch: -39.5339635139,
+    roll: 360,
+  });
+
   const pane = new Pane({
     title: "Parameters",
     expanded: true,
