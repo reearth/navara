@@ -1,13 +1,12 @@
-import ThreeView, {
-  AmbientLightLayer,
-  Color,
-} from "@navara/three";
+import ThreeView, { AmbientLightLayer, Color } from "@navara/three";
 import { Pane } from "tweakpane";
 
 import { TILE_DATASETS, VECTOR_DATASETS } from "../../helpers/constants";
 import { addCameraControl, addDateControl } from "../../helpers/control";
-import { addCtrlPanel, type MaterialLayerDescription } from "../../helpers/panel";
-
+import {
+  addCtrlPanel,
+  type MaterialLayerDescription,
+} from "../../helpers/panel";
 
 const layers: MaterialLayerDescription[] = [
   {
@@ -64,7 +63,7 @@ const layers: MaterialLayerDescription[] = [
       scaleByDistance: false,
       clampToGround: true,
       depthTest: true,
-      alphaTest: .5,
+      alphaTest: 0.5,
       center: { x: 1.0, y: -1.0 },
       transparent: true,
       url: "/example.png",
@@ -90,7 +89,7 @@ const layers: MaterialLayerDescription[] = [
     vectorTile: {
       maxZoom: 4,
     },
-  }
+  },
 ];
 
 export const run = async (view: ThreeView) => {

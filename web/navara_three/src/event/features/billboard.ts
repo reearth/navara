@@ -2,7 +2,7 @@ import type { BillboardMesh as NavaraBillboardMesh } from "@navara/engine";
 
 import type { BufferLoader } from "..";
 import type { ViewContext } from "../../core";
-import { InstancedBillboardMesh , InstancedSpriteMesh} from "../../mesh";
+import { InstancedSpriteMesh } from "../../mesh";
 import { FEATURE_RENDER_ORDER } from "../../renderOrder";
 
 export async function renderBillboard(
@@ -28,5 +28,5 @@ export async function processBillboardChanged(
   m: NavaraBillboardMesh,
   active: boolean,
 ) {
-  await obj._update(m ,active);
+  await obj._update(m, active);
 }

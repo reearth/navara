@@ -26,10 +26,10 @@ import {
 
 type AvailableMaterialProperty = ExtractProperties<
   PointMaterial &
-  PolylineMaterial &
-  PolygonMaterial &
-  NavaraModelMaterial &
-  TextMaterial
+    PolylineMaterial &
+    PolygonMaterial &
+    NavaraModelMaterial &
+    TextMaterial
 >;
 
 /**
@@ -71,10 +71,10 @@ type AggregatedResultValue<K = EvaluatableMaterialPropertyKey> = {
   attribute: K;
   itemSize: number;
   array: K extends "color"
-  ? Float32Array
-  : K extends "text"
-  ? string[]
-  : Uint32Array;
+    ? Float32Array
+    : K extends "text"
+      ? string[]
+      : Uint32Array;
 };
 
 /**
@@ -131,7 +131,6 @@ export class FeatureEvaluator {
   private featureId: FeatureId;
   private cachedBatchedProperties?: Map<number, Map<string, unknown>>;
   private batchIds: number[] = [];
-
 
   /**
    * The underlying Three.js object representing this feature.
@@ -333,7 +332,11 @@ export class FeatureEvaluator {
   }
 
   private apply(
-    m: Mesh | BatchedFeatureMesh | InstancedMesh<Object3D> | InstancedSpriteMesh,
+    m:
+      | Mesh
+      | BatchedFeatureMesh
+      | InstancedMesh<Object3D>
+      | InstancedSpriteMesh,
     parent?: ModelMesh,
   ) {
     // FIXME(keiya01): Handle in web worker
@@ -353,10 +356,7 @@ export class FeatureEvaluator {
                 target.array[colorIdx + 2] as number,
               ).raw;
 
-              m.setFeatureColorByBatchId(
-                this.batchIds[i],
-                color,
-              );
+              m.setFeatureColorByBatchId(this.batchIds[i], color);
             }
             continue;
           }

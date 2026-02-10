@@ -2,7 +2,7 @@ import { PointMesh as NavaraPointMesh } from "@navara/engine";
 
 import type { BufferLoader } from "..";
 import type { ViewContext } from "../../core";
-import { InstancedPointMesh, InstancedSpriteMesh } from "../../mesh";
+import { InstancedSpriteMesh } from "../../mesh";
 import { FEATURE_RENDER_ORDER } from "../../renderOrder";
 
 export async function renderPoint(
@@ -25,5 +25,5 @@ export function processPointChanged(
   m: NavaraPointMesh,
   active: boolean,
 ) {
-  obj._update(m , active);
+  obj._update(m, active);
 }

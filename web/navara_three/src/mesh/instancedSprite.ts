@@ -1,436 +1,613 @@
-import { PointMesh as NavaraPointMesh, BillboardMesh as NavaraBillboardMesh } from "@navara/engine";
+import {
+  PointMesh as NavaraPointMesh,
+  BillboardMesh as NavaraBillboardMesh,
+} from "@navara/engine";
 import { encodePosition } from "@navara/engine-api";
-import instancedSpriteVertexShader from "@shaders/glsl/instancedSprite.vert.glsl";
 import instancedSpriteFragmentShader from "@shaders/glsl/instancedSprite.frag.glsl";
-import type { BufferLoader } from "../event";
-import type { ViewContext } from "../core";
-import { InstancedBufferAttribute, InstancedBufferGeometry, Mesh, ShaderMaterial, BufferAttribute, Vector3, DataArrayTexture, UnsignedByteType, RGBAFormat, LinearFilter, Color, Vector2, PerspectiveCamera } from "three";
-import { TEXTURE_LOADER } from "../event/loaders";
+import instancedSpriteVertexShader from "@shaders/glsl/instancedSprite.vert.glsl";
+import {
+  InstancedBufferAttribute,
+  InstancedBufferGeometry,
+  Mesh,
+  ShaderMaterial,
+  BufferAttribute,
+  Vector3,
+  DataArrayTexture,
+  UnsignedByteType,
+  RGBAFormat,
+  LinearFilter,
+  Color,
+  Vector2,
+  PerspectiveCamera,
+} from "three";
 import invariant from "tiny-invariant";
-import { PickableMesh } from "./pickableMesh";
+
+import type { ViewContext } from "../core";
+import type { BufferLoader } from "../event";
+import { TEXTURE_LOADER } from "../event/loaders";
 import { arraysEqual } from "../utils";
+
+import { PickableMesh } from "./pickableMesh";
 
 /** UserData type for InstancedSpriteMesh */
 type InstancedSpriteUserData = {
-    prev?: {
-        effectIds?: string[];
-    };
+  prev?: {
+    effectIds?: string[];
+  };
 };
 
 export type InstancedSpriteOptions = {
-    renderOrder?: number;
-    viewContext: ViewContext;
-    layerId: string;
+  renderOrder?: number;
+  viewContext: ViewContext;
+  layerId: string;
 };
 
 type PositionsInfo = {
-    position: Float32Array<ArrayBufferLike> | { high: Float32Array<ArrayBufferLike>, low: Float32Array<ArrayBufferLike> };
-    batchIDs: Float32Array<ArrayBufferLike>;
-    positionSize: number;
-    batchIDSize: number;
-    nPositions: number;
-    RTE: boolean;
+  position:
+    | Float32Array<ArrayBufferLike>
+    | {
+        high: Float32Array<ArrayBufferLike>;
+        low: Float32Array<ArrayBufferLike>;
+      };
+  batchIDs: Float32Array<ArrayBufferLike>;
+  positionSize: number;
+  batchIDSize: number;
+  nPositions: number;
+  RTE: boolean;
 };
 
 export class InstancedSpriteMesh extends Mesh implements PickableMesh {
-    private _batchIdToInstance: Map<number, number> = new Map();
-    private _initialColor: Color = new Color(0xffffff);
-    private _initialHeight: number = 0.0;
-    private _loadedUrls: Set<string> = new Set();
-    private _offscreenCanvas: OffscreenCanvas = new OffscreenCanvas(1, 1);
-    private _offscreenCtx: OffscreenCanvasRenderingContext2D = this._offscreenCanvas.getContext('2d')!;
-    /** ViewContext for SelectiveEffect handling */
-    private _viewContext: ViewContext;
-    /** Layer ID for SelectiveEffect handling */
-    private _layerId: string;
+  private _batchIdToInstance = new Map<number, number>();
+  private _initialColor: Color = new Color(0xffffff);
+  private _initialHeight = 0.0;
+  private _loadedUrls = new Set<string>();
+  private _offscreenCanvas: OffscreenCanvas = new OffscreenCanvas(1, 1);
+  private _offscreenCtx: OffscreenCanvasRenderingContext2D =
+    this._offscreenCanvas.getContext("2d") as OffscreenCanvasRenderingContext2D;
+  /** ViewContext for SelectiveEffect handling */
+  private _viewContext: ViewContext;
+  /** Layer ID for SelectiveEffect handling */
+  private _layerId: string;
 
-    constructor(
-        options: InstancedSpriteOptions,
+  constructor(options: InstancedSpriteOptions) {
+    super();
+    this.renderOrder = options.renderOrder ?? this.renderOrder;
+    this._viewContext = options.viewContext;
+    this._layerId = options.layerId;
+  }
+
+  async _init(m: NavaraPointMesh | NavaraBillboardMesh, buf: BufferLoader) {
+    const positionsInfo = this.extractPositions(m, buf);
+    if (positionsInfo === null) {
+      console.warn("No position data found for InstancedSpriteMesh");
+      return;
+    }
+
+    // Create Geometry
+    const instancedGeometry = this._initGeometry(positionsInfo, m);
+
+    // Create Material
+    const material = await this._initMaterial(positionsInfo, m);
+
+    // Final Mesh
+    this.geometry = instancedGeometry;
+    this.material = material;
+    this.frustumCulled = false; // Disable since bounding box doesn't account for instance positions
+  }
+
+  // TODO: cleanup
+  async _update(m: NavaraPointMesh | NavaraBillboardMesh, active: boolean) {
+    const material = this.material as ShaderMaterial;
+    let uniformsChanged = false;
+
+    if (material.visible !== m.material.show) {
+      material.visible = m.material.show ?? true;
+      material.visible = material.visible && active;
+    }
+
+    if (material.uniforms.uScale.value !== (m.material.size ?? 100.0)) {
+      material.uniforms.uScale.value = m.material.size ?? 100.0;
+      uniformsChanged = true;
+    }
+
+    if (this._initialColor.getHex() !== (m.material.color ?? 0xffffff)) {
+      this._initialColor.setHex(m.material.color ?? 0xffffff);
+      const colorAttr = this.geometry.getAttribute(
+        "instanceColor",
+      ) as InstancedBufferAttribute;
+      const instanceCount = colorAttr.count;
+      for (let i = 0; i < instanceCount; i++) {
+        colorAttr.setXYZ(
+          i,
+          this._initialColor.r,
+          this._initialColor.g,
+          this._initialColor.b,
+        );
+      }
+      colorAttr.needsUpdate = true;
+    }
+
+    if (
+      material.uniforms.uCenter.value.x !== (m.material.center?.x ?? 0.5) ||
+      material.uniforms.uCenter.value.y !== (m.material.center?.y ?? 0.5)
     ) {
-        super();
-        this.renderOrder = options.renderOrder ?? this.renderOrder;
-        this._viewContext = options.viewContext;
-        this._layerId = options.layerId;
+      material.uniforms.uCenter.value.set(
+        m.material.center?.x ?? 0.5,
+        m.material.center?.y ?? 0.5,
+      );
+      uniformsChanged = true;
     }
 
-    async _init(m: NavaraPointMesh | NavaraBillboardMesh, buf: BufferLoader) {
-        const positionsInfo = this.extractPositions(m, buf);
-        if (positionsInfo === null) {
-            console.warn("No position data found for InstancedSpriteMesh");
-            return;
-        }
-
-        // Create Geometry
-        const instancedGeometry = this._initGeometry(positionsInfo, m);
-
-        // Create Material
-        const material = await this._initMaterial(positionsInfo, m);
-
-        // Final Mesh
-        this.geometry = instancedGeometry;
-        this.material = material;
-        this.frustumCulled = false; // Disable since bounding box doesn't account for instance positions
+    if (this._initialHeight !== (m.material.height ?? 0.0)) {
+      this._initialHeight = m.material.height ?? 0.0;
+      const heightAttr = this.geometry.getAttribute(
+        "instanceHeight",
+      ) as InstancedBufferAttribute;
+      const instanceCount = heightAttr.count;
+      for (let i = 0; i < instanceCount; i++) {
+        heightAttr.setX(i, m.material.height ?? 0.0);
+      }
+      heightAttr.needsUpdate = true;
     }
 
-    // TODO: cleanup
-    async _update(m: NavaraPointMesh | NavaraBillboardMesh, active: boolean) {
-        const material = this.material as ShaderMaterial;
-        let uniformsChanged = false;
-
-        if (material.visible !== m.material.show) {
-            material.visible = m.material.show ?? true;
-            material.visible = material.visible && active;
-        }
-
-        if (material.uniforms.uScale.value !== (m.material.size ?? 100.0)) {
-            material.uniforms.uScale.value = m.material.size ?? 100.0;
-            uniformsChanged = true;
-        }
-
-        if (this._initialColor.getHex() !== (m.material.color ?? 0xffffff)) {
-            this._initialColor.setHex(m.material.color ?? 0xffffff);
-            const colorAttr = this.geometry.getAttribute('instanceColor') as InstancedBufferAttribute;
-            const instanceCount = colorAttr.count;
-            for (let i = 0; i < instanceCount; i++) {
-                colorAttr.setXYZ(i, this._initialColor.r, this._initialColor.g, this._initialColor.b);
-            }
-            colorAttr.needsUpdate = true;
-        }
-
-        if (material.uniforms.uCenter.value.x !== (m.material.center?.x ?? 0.5) || material.uniforms.uCenter.value.y !== (m.material.center?.y ?? 0.5)) {
-            material.uniforms.uCenter.value.set(m.material.center?.x ?? 0.5, m.material.center?.y ?? 0.5);
-            uniformsChanged = true;
-        }
-
-        if (this._initialHeight !== (m.material.height ?? 0.0)) {
-            this._initialHeight = m.material.height ?? 0.0;
-            const heightAttr = this.geometry.getAttribute('instanceHeight') as InstancedBufferAttribute;
-            const instanceCount = heightAttr.count;
-            for (let i = 0; i < instanceCount; i++) {
-                heightAttr.setX(i, m.material.height ?? 0.0);
-            }
-            heightAttr.needsUpdate = true;
-        }
-
-        if (material.uniforms.uScaleByDistance.value !== (m.material.scaleByDistance ?? true)) {
-            material.uniforms.uScaleByDistance.value = m.material.scaleByDistance ?? true;
-            uniformsChanged = true;
-        }
-
-        if (material.depthTest !== (m.material.depthTest ?? true)) {
-            material.depthTest = m.material.depthTest ?? true;
-        }
-
-        if (material.uniforms.uOffsetDepth.value !== (m.material.offsetDepth ?? true)) {
-            material.uniforms.uOffsetDepth.value = m.material.offsetDepth ?? true;
-            uniformsChanged = true;
-        }
-
-        if (material.transparent !== (m.material.transparent ?? true)) {
-            material.transparent = m.material.transparent ?? true;
-        }
-
-        // Alpha test and url is only relevant for billboards
-        if (m instanceof NavaraBillboardMesh) {
-            if (material.uniforms.uAlphaTest.value !== (m.material.alphaTest ?? 0.0)) {
-                material.uniforms.uAlphaTest.value = m.material.alphaTest ?? 0.0;
-                uniformsChanged = true;
-            }
-
-            if (m.material.url) {
-                await this._uploadTexture(m.material.url, material);
-                uniformsChanged = true;
-                // need also to update instance layer attribute.
-                const layerAttr = this.geometry.getAttribute('instanceLayer') as InstancedBufferAttribute;
-                const instanceCount = layerAttr.count;
-                for (let i = 0; i < instanceCount; i++) {
-                    layerAttr.setX(i, this._loadedUrls.size - 1); // always set to last layer
-                }
-                layerAttr.needsUpdate = true;
-            }
-        }
-
-        if (uniformsChanged) {
-            material.uniformsNeedUpdate = true;
-        }
-
-        // SelectiveEffect: effectIds handling at container level
-        // SpriteMaterial doesn't support emissive, so only effectIds is handled
-        const ud = this.userData as InstancedSpriteUserData;
-        ud.prev ??= {};
-        if (!arraysEqual(ud.prev.effectIds, m.material.effectIds)) {
-            this._viewContext.selectiveEffectRegistry?.updateLinksForObject(
-                this,
-                m.material.effectIds ?? [],
-                ud.prev.effectIds ?? [],
-                this._layerId,
-            );
-            ud.prev.effectIds = m.material.effectIds ? [...m.material.effectIds] : [];
-        }
+    if (
+      material.uniforms.uScaleByDistance.value !==
+      (m.material.scaleByDistance ?? true)
+    ) {
+      material.uniforms.uScaleByDistance.value =
+        m.material.scaleByDistance ?? true;
+      uniformsChanged = true;
     }
 
-    private _initGeometry(positionsInfo: PositionsInfo, m: NavaraPointMesh | NavaraBillboardMesh) {
-        const vertices = new Float32Array([
-            -0.5, -0.5, 0.0, // v0
-            0.5, -0.5, 0.0,  // v1
-            0.5, 0.5, 0.0,   // v2
-            -0.5, -0.5, 0.0, // v3
-            0.5, 0.5, 0.0,   // v4
-            -0.5, 0.5, 0.0,  // v5
-        ]);
+    if (material.depthTest !== (m.material.depthTest ?? true)) {
+      material.depthTest = m.material.depthTest ?? true;
+    }
 
-        const uvs = new Float32Array([
-            0.0, 0.0, // v0
-            1.0, 0.0, // v1
-            1.0, 1.0, // v2
-            0.0, 0.0, // v3
-            1.0, 1.0, // v4
-            0.0, 1.0, // v5
-        ]);
+    if (
+      material.uniforms.uOffsetDepth.value !== (m.material.offsetDepth ?? true)
+    ) {
+      material.uniforms.uOffsetDepth.value = m.material.offsetDepth ?? true;
+      uniformsChanged = true;
+    }
 
-        const instanceCount = positionsInfo.nPositions;
+    if (material.transparent !== (m.material.transparent ?? true)) {
+      material.transparent = m.material.transparent ?? true;
+    }
 
-        // Create the Instanced Mesh
-        // We use InstancedBufferGeometry to inject our custom attributes
-        const instancedGeometry = new InstancedBufferGeometry();
-        instancedGeometry.setAttribute('position', new BufferAttribute(vertices, 3));
-        instancedGeometry.setAttribute('uv', new BufferAttribute(uvs, 2));
-        instancedGeometry.instanceCount = instanceCount;
+    // Alpha test and url is only relevant for billboards
+    if (m instanceof NavaraBillboardMesh) {
+      if (
+        material.uniforms.uAlphaTest.value !== (m.material.alphaTest ?? 0.0)
+      ) {
+        material.uniforms.uAlphaTest.value = m.material.alphaTest ?? 0.0;
+        uniformsChanged = true;
+      }
 
-        // Add Custom Attributes
-        const heightBuffer = new Float32Array(instanceCount);
-        const showBuffer = new Float32Array(instanceCount);
-        const colorBuffer = new Float32Array(instanceCount * 3);
-        let layerBuffer = undefined;
-
-        this._initialColor = new Color().setHex(m.material.color ?? 0xffffff);
+      if (m.material.url) {
+        await this._uploadTexture(m.material.url, material);
+        uniformsChanged = true;
+        // need also to update instance layer attribute.
+        const layerAttr = this.geometry.getAttribute(
+          "instanceLayer",
+        ) as InstancedBufferAttribute;
+        const instanceCount = layerAttr.count;
         for (let i = 0; i < instanceCount; i++) {
-            heightBuffer[i] = m.material.height ?? 0.0;
-            showBuffer[i] = m.material.show !== undefined ? (m.material.show ? 1.0 : 0.0) : 1.0;
-
-            colorBuffer[i * 3 + 0] = this._initialColor.r;
-            colorBuffer[i * 3 + 1] = this._initialColor.g;
-            colorBuffer[i * 3 + 2] = this._initialColor.b;
-
-            // Map batch ID to instance id
-            // assuming batch IDs are 32bit floats
-            const batchId = positionsInfo.batchIDs[i];
-            this._batchIdToInstance.set(batchId, i);
+          layerAttr.setX(i, this._loadedUrls.size - 1); // always set to last layer
         }
-
-        if (m instanceof NavaraBillboardMesh) {
-            layerBuffer = new Float32Array(instanceCount);
-            // For billboards, we set layer based on some logic, here we just set to 0
-            for (let i = 0; i < instanceCount; i++) {
-                layerBuffer[i] = 0; // All use layer 0 for now
-            }
-            instancedGeometry.setAttribute('instanceLayer', new InstancedBufferAttribute(layerBuffer, 1));
-        }
-
-        if (positionsInfo.RTE) {
-            const pos = positionsInfo.position as { high: Float32Array<ArrayBufferLike>, low: Float32Array<ArrayBufferLike> };
-            instancedGeometry.setAttribute('instancePositionLOW', new InstancedBufferAttribute(pos.low, positionsInfo.positionSize));
-            instancedGeometry.setAttribute('instancePositionHIGH', new InstancedBufferAttribute(pos.high, positionsInfo.positionSize));
-        } else {
-            const pos = positionsInfo.position as Float32Array<ArrayBufferLike>;
-            instancedGeometry.setAttribute('instancePosition', new InstancedBufferAttribute(pos, positionsInfo.positionSize));
-        }
-        instancedGeometry.setAttribute('instanceHeight', new InstancedBufferAttribute(heightBuffer, 1));
-        instancedGeometry.setAttribute('instanceShow', new InstancedBufferAttribute(showBuffer, 1));
-        instancedGeometry.setAttribute('instanceColor', new InstancedBufferAttribute(colorBuffer, 3));
-        instancedGeometry.setAttribute('instanceBatchID', new InstancedBufferAttribute(positionsInfo.batchIDs, positionsInfo.batchIDSize));
-
-        return instancedGeometry;
+        layerAttr.needsUpdate = true;
+      }
     }
 
-    private async _initMaterial(positionsInfo: PositionsInfo, m: NavaraPointMesh | NavaraBillboardMesh) {
-        const rtcCenter = new Vector3(m.transform.tx, m.transform.ty, m.transform.tz);
-        const material: ShaderMaterial = new ShaderMaterial({
-            uniforms: {
-                uRTCCenter: { value: rtcCenter },
-                uEyeRTELow: { value: new Vector3(0, 0, 0) },
-                uEyeRTEHigh: { value: new Vector3(0, 0, 0) },
-                uOffsetDepth: { value: m.material.offsetDepth ?? true },
-                uScaleByDistance: { value: m.material.scaleByDistance ?? true },
-                uCenter: { value: new Vector2(m.material.center?.x ?? 0.5, m.material.center?.y ?? 0.5) },
-                uAlphaTest: { value: m instanceof NavaraBillboardMesh ? m.material.alphaTest : 0.0 },
-                uScale: { value: m.material.size ?? 100.0 },
-                uFarPlane: { value: 0.0 },
-                nvr_uPickable: { value: 0.0 },
-            },
-            vertexShader: instancedSpriteVertexShader,
-            fragmentShader: instancedSpriteFragmentShader,
-            transparent: m.material.transparent ?? true,
-            depthTest: m.material.depthTest ?? true,
-        });
+    if (uniformsChanged) {
+      material.uniformsNeedUpdate = true;
+    }
 
+    // SelectiveEffect: effectIds handling at container level
+    // SpriteMaterial doesn't support emissive, so only effectIds is handled
+    const ud = this.userData as InstancedSpriteUserData;
+    ud.prev ??= {};
+    if (!arraysEqual(ud.prev.effectIds, m.material.effectIds)) {
+      this._viewContext.selectiveEffectRegistry?.updateLinksForObject(
+        this,
+        m.material.effectIds ?? [],
+        ud.prev.effectIds ?? [],
+        this._layerId,
+      );
+      ud.prev.effectIds = m.material.effectIds ? [...m.material.effectIds] : [];
+    }
+  }
 
-        material.onBeforeRender = (_renderer, _scene, camera, _geometry, _mat, _group) => {
-            const pCam = camera as PerspectiveCamera;
-            material.uniforms.uFarPlane.value = pCam.far;
+  private _initGeometry(
+    positionsInfo: PositionsInfo,
+    m: NavaraPointMesh | NavaraBillboardMesh,
+  ) {
+    const vertices = new Float32Array([
+      -0.5,
+      -0.5,
+      0.0, // v0
+      0.5,
+      -0.5,
+      0.0, // v1
+      0.5,
+      0.5,
+      0.0, // v2
+      -0.5,
+      -0.5,
+      0.0, // v3
+      0.5,
+      0.5,
+      0.0, // v4
+      -0.5,
+      0.5,
+      0.0, // v5
+    ]);
 
-            if (positionsInfo.RTE) {
-                material.defines.USE_RTE = 1;
-                const encodedCamPos = encodePosition(camera.position.x, camera.position.y, camera.position.z);
-                material.uniforms.uEyeRTELow.value.set(encodedCamPos.low.x, encodedCamPos.low.y, encodedCamPos.low.z);
-                material.uniforms.uEyeRTEHigh.value.set(encodedCamPos.high.x, encodedCamPos.high.y, encodedCamPos.high.z);
-            }
+    const uvs = new Float32Array([
+      0.0,
+      0.0, // v0
+      1.0,
+      0.0, // v1
+      1.0,
+      1.0, // v2
+      0.0,
+      0.0, // v3
+      1.0,
+      1.0, // v4
+      0.0,
+      1.0, // v5
+    ]);
+
+    const instanceCount = positionsInfo.nPositions;
+
+    // Create the Instanced Mesh
+    // We use InstancedBufferGeometry to inject our custom attributes
+    const instancedGeometry = new InstancedBufferGeometry();
+    instancedGeometry.setAttribute(
+      "position",
+      new BufferAttribute(vertices, 3),
+    );
+    instancedGeometry.setAttribute("uv", new BufferAttribute(uvs, 2));
+    instancedGeometry.instanceCount = instanceCount;
+
+    // Add Custom Attributes
+    const heightBuffer = new Float32Array(instanceCount);
+    const showBuffer = new Float32Array(instanceCount);
+    const colorBuffer = new Float32Array(instanceCount * 3);
+    let layerBuffer = undefined;
+
+    this._initialColor = new Color().setHex(m.material.color ?? 0xffffff);
+    for (let i = 0; i < instanceCount; i++) {
+      heightBuffer[i] = m.material.height ?? 0.0;
+      showBuffer[i] =
+        m.material.show !== undefined ? (m.material.show ? 1.0 : 0.0) : 1.0;
+
+      colorBuffer[i * 3 + 0] = this._initialColor.r;
+      colorBuffer[i * 3 + 1] = this._initialColor.g;
+      colorBuffer[i * 3 + 2] = this._initialColor.b;
+
+      // Map batch ID to instance id
+      // assuming batch IDs are 32bit floats
+      const batchId = positionsInfo.batchIDs[i];
+      this._batchIdToInstance.set(batchId, i);
+    }
+
+    if (m instanceof NavaraBillboardMesh) {
+      layerBuffer = new Float32Array(instanceCount);
+      // For billboards, we set layer based on some logic, here we just set to 0
+      for (let i = 0; i < instanceCount; i++) {
+        layerBuffer[i] = 0; // All use layer 0 for now
+      }
+      instancedGeometry.setAttribute(
+        "instanceLayer",
+        new InstancedBufferAttribute(layerBuffer, 1),
+      );
+    }
+
+    if (positionsInfo.RTE) {
+      const pos = positionsInfo.position as {
+        high: Float32Array<ArrayBufferLike>;
+        low: Float32Array<ArrayBufferLike>;
+      };
+      instancedGeometry.setAttribute(
+        "instancePositionLOW",
+        new InstancedBufferAttribute(pos.low, positionsInfo.positionSize),
+      );
+      instancedGeometry.setAttribute(
+        "instancePositionHIGH",
+        new InstancedBufferAttribute(pos.high, positionsInfo.positionSize),
+      );
+    } else {
+      const pos = positionsInfo.position as Float32Array<ArrayBufferLike>;
+      instancedGeometry.setAttribute(
+        "instancePosition",
+        new InstancedBufferAttribute(pos, positionsInfo.positionSize),
+      );
+    }
+    instancedGeometry.setAttribute(
+      "instanceHeight",
+      new InstancedBufferAttribute(heightBuffer, 1),
+    );
+    instancedGeometry.setAttribute(
+      "instanceShow",
+      new InstancedBufferAttribute(showBuffer, 1),
+    );
+    instancedGeometry.setAttribute(
+      "instanceColor",
+      new InstancedBufferAttribute(colorBuffer, 3),
+    );
+    instancedGeometry.setAttribute(
+      "instanceBatchID",
+      new InstancedBufferAttribute(
+        positionsInfo.batchIDs,
+        positionsInfo.batchIDSize,
+      ),
+    );
+
+    return instancedGeometry;
+  }
+
+  private async _initMaterial(
+    positionsInfo: PositionsInfo,
+    m: NavaraPointMesh | NavaraBillboardMesh,
+  ) {
+    const rtcCenter = new Vector3(
+      m.transform.tx,
+      m.transform.ty,
+      m.transform.tz,
+    );
+    const material: ShaderMaterial = new ShaderMaterial({
+      uniforms: {
+        uRTCCenter: { value: rtcCenter },
+        uEyeRTELow: { value: new Vector3(0, 0, 0) },
+        uEyeRTEHigh: { value: new Vector3(0, 0, 0) },
+        uOffsetDepth: { value: m.material.offsetDepth ?? true },
+        uScaleByDistance: { value: m.material.scaleByDistance ?? true },
+        uCenter: {
+          value: new Vector2(
+            m.material.center?.x ?? 0.5,
+            m.material.center?.y ?? 0.5,
+          ),
+        },
+        uAlphaTest: {
+          value: m instanceof NavaraBillboardMesh ? m.material.alphaTest : 0.0,
+        },
+        uScale: { value: m.material.size ?? 100.0 },
+        uFarPlane: { value: 0.0 },
+        nvr_uPickable: { value: 0.0 },
+      },
+      vertexShader: instancedSpriteVertexShader,
+      fragmentShader: instancedSpriteFragmentShader,
+      transparent: m.material.transparent ?? true,
+      depthTest: m.material.depthTest ?? true,
+    });
+
+    material.onBeforeRender = (
+      _renderer,
+      _scene,
+      camera,
+      _geometry,
+      _mat,
+      _group,
+    ) => {
+      const pCam = camera as PerspectiveCamera;
+      material.uniforms.uFarPlane.value = pCam.far;
+
+      if (positionsInfo.RTE) {
+        material.defines.USE_RTE = 1;
+        const encodedCamPos = encodePosition(
+          camera.position.x,
+          camera.position.y,
+          camera.position.z,
+        );
+        material.uniforms.uEyeRTELow.value.set(
+          encodedCamPos.low.x,
+          encodedCamPos.low.y,
+          encodedCamPos.low.z,
+        );
+        material.uniforms.uEyeRTEHigh.value.set(
+          encodedCamPos.high.x,
+          encodedCamPos.high.y,
+          encodedCamPos.high.z,
+        );
+      }
+    };
+
+    if (m instanceof NavaraBillboardMesh) {
+      material.defines.BILLBOARD = 1;
+      if (m.material.url) {
+        material.uniforms.uTexture = { value: null };
+        await this._uploadTexture(m.material.url, material);
+      }
+    }
+
+    material.visible = m.material.show ?? true;
+    return material;
+  }
+
+  private extractPositions(
+    m: NavaraPointMesh | NavaraBillboardMesh,
+    buf: BufferLoader,
+  ): PositionsInfo | null {
+    const g = m.geometry;
+
+    const batchIdsData = g.batch_ids;
+    const batchIDs = buf.removeF32(batchIdsData.data);
+    const batchIDSize = batchIdsData.size;
+    if (!batchIDs) return null;
+
+    const positionData = g.position;
+    const position = positionData
+      ? buf.removeF32(positionData.data)
+      : undefined;
+
+    if (position && positionData) {
+      const positionSize = positionData.size;
+      const nPositions = position.length / positionSize;
+
+      return {
+        position,
+        batchIDs,
+        batchIDSize,
+        positionSize,
+        nPositions,
+        RTE: false,
+      };
+    }
+
+    const positionHighData = g.position_3d_high;
+    const positionLowData = g.position_3d_low;
+    const positionHigh = positionHighData
+      ? buf.removeF32(positionHighData.data)
+      : undefined;
+    const positionLow = positionLowData
+      ? buf.removeF32(positionLowData.data)
+      : undefined;
+
+    if (positionHigh && positionLow && positionHighData && positionLowData) {
+      const positionLowSize = positionLowData.size;
+      const positionHighSize = positionHighData.size;
+      invariant(
+        positionLowSize === positionHighSize,
+        "Position high and low size mismatch",
+      );
+
+      const nPositions = positionHigh.length / positionHighSize;
+
+      return {
+        position: { high: positionHigh, low: positionLow },
+        batchIDs,
+        batchIDSize,
+        positionSize: positionHighSize,
+        nPositions,
+        RTE: true,
+      };
+    }
+
+    return null;
+  }
+
+  /** Extract raw RGBA pixel data from an image-based texture via an offscreen canvas. */
+  private _extractPixelData(
+    texture: { image: HTMLImageElement | ImageBitmap },
+    flipY: boolean,
+  ) {
+    const img = texture.image;
+    this._offscreenCanvas.width = img.width;
+    this._offscreenCanvas.height = img.height;
+    const ctx = this._offscreenCtx;
+    ctx.reset();
+    if (flipY) {
+      ctx.translate(0, img.height);
+      ctx.scale(1, -1);
+    }
+    ctx.drawImage(img, 0, 0);
+    const imageData = ctx.getImageData(0, 0, img.width, img.height);
+    return new Uint8Array(imageData.data);
+  }
+
+  private async _uploadTexture(url: string, material: ShaderMaterial) {
+    if (this._loadedUrls.has(url)) return;
+    this._loadedUrls.add(url);
+
+    const newTexture = await TEXTURE_LOADER.loadAsync(url);
+
+    if (newTexture) {
+      let newTextureArray: DataArrayTexture;
+      const width = newTexture.image.width;
+      const height = newTexture.image.height;
+      const pixelData = this._extractPixelData(newTexture, true);
+
+      const existingTextureArray = material.uniforms.uTexture
+        .value as DataArrayTexture;
+      if (existingTextureArray) {
+        // make sure new texture has same dimensions as existing one, otherwise we cannot update the texture array
+        if (
+          existingTextureArray.image.width !== width ||
+          existingTextureArray.image.height !== height
+        ) {
+          console.warn(
+            `InstancedSpriteMesh: Billboard texture size mismatch old:[${existingTextureArray.image.width}x${existingTextureArray.image.height}] ,new:[${width}x${height}], cannot update texture array`,
+          );
+          newTexture.dispose();
+          return;
         }
+        // update existing texture array with new texture data
+        const existingData = existingTextureArray.image.data as Uint8Array;
+        const totalByteLength = existingData.byteLength + pixelData.byteLength;
+        const textureData = new Uint8Array(totalByteLength);
+        textureData.set(existingData, 0); // copy existing layers
+        textureData.set(pixelData, existingData.byteLength); // append new layer
 
-        if (m instanceof NavaraBillboardMesh) {
-            material.defines.BILLBOARD = 1;
-            if (m.material.url) {
-                material.uniforms.uTexture = { value: null };
-                await this._uploadTexture(m.material.url, material);
-            }
-        }
+        newTextureArray = new DataArrayTexture(
+          textureData,
+          width,
+          height,
+          this._loadedUrls.size,
+        );
 
-        material.visible = m.material.show ?? true;
-        return material;
+        existingTextureArray.dispose(); // dispose old texture array
+        console.log(
+          "InstancedSpriteMesh: Updated billboard texture array with new texture",
+        );
+      } else {
+        newTextureArray = new DataArrayTexture(pixelData, width, height, 1);
+        console.log(
+          "InstancedSpriteMesh: Loaded billboard texture and created texture array",
+        );
+      }
+
+      newTextureArray.format = RGBAFormat;
+      newTextureArray.type = UnsignedByteType;
+      newTextureArray.generateMipmaps = false;
+      newTextureArray.needsUpdate = true;
+      newTextureArray.minFilter = LinearFilter;
+      newTextureArray.magFilter = LinearFilter;
+
+      material.uniforms.uTexture = { value: newTextureArray };
+      material.uniformsNeedUpdate = true;
+
+      newTexture.dispose();
     }
+  }
 
-    private extractPositions(m: NavaraPointMesh | NavaraBillboardMesh, buf: BufferLoader): PositionsInfo | null {
-        const g = m.geometry;
-
-        const batchIdsData = g.batch_ids;
-        const batchIDs = buf.removeF32(batchIdsData.data);
-        const batchIDSize = batchIdsData.size;
-        if (!batchIDs) return null;
-
-        const positionData = g.position;
-        const position = positionData
-            ? buf.removeF32(positionData.data)
-            : undefined;
-
-        if (position && positionData) {
-            const positionSize = positionData.size;
-            const nPositions = position.length / positionSize;
-
-            return { position, batchIDs, batchIDSize, positionSize, nPositions, RTE: false };
-        }
-
-        const positionHighData = g.position_3d_high;
-        const positionLowData = g.position_3d_low;
-        const positionHigh = positionHighData
-            ? buf.removeF32(positionHighData.data)
-            : undefined;
-        const positionLow = positionLowData
-            ? buf.removeF32(positionLowData.data)
-            : undefined;
-
-        if (positionHigh && positionLow && positionHighData && positionLowData) {
-            const positionLowSize = positionLowData.size;
-            const positionHighSize = positionHighData.size;
-            invariant(positionLowSize === positionHighSize, "Position high and low size mismatch");
-
-            const nPositions = positionHigh.length / positionHighSize;
-
-            return { position: { high: positionHigh, low: positionLow }, batchIDs, batchIDSize, positionSize: positionHighSize, nPositions, RTE: true };
-        }
-
-        return null;
+  _setPickable(pickable: boolean): void {
+    if (this.material as ShaderMaterial) {
+      const mat = this.material as ShaderMaterial;
+      mat.uniforms.nvr_uPickable = { value: pickable ? 1.0 : 0.0 };
+      mat.uniformsNeedUpdate = true;
     }
+  }
 
-    /** Extract raw RGBA pixel data from an image-based texture via an offscreen canvas. */
-    private _extractPixelData(texture: { image: HTMLImageElement | ImageBitmap }, flipY: boolean) {
-        const img = texture.image;
-        this._offscreenCanvas.width = img.width;
-        this._offscreenCanvas.height = img.height;
-        const ctx = this._offscreenCtx;
-        ctx.reset();
-        if (flipY) {
-            ctx.translate(0, img.height);
-            ctx.scale(1, -1);
-        }
-        ctx.drawImage(img, 0, 0);
-        const imageData = ctx.getImageData(0, 0, img.width, img.height);
-        return new Uint8Array(imageData.data);
-    }
+  setFeatureColorByBatchId(batchId: number, color: Color) {
+    const instanceId = this._batchIdToInstance.get(batchId);
+    if (instanceId === undefined) return;
 
-    private async _uploadTexture(url: string, material: ShaderMaterial) {
-        if (this._loadedUrls.has(url)) return;
-        this._loadedUrls.add(url);
+    const colorAttr = this.geometry.getAttribute(
+      "instanceColor",
+    ) as InstancedBufferAttribute;
+    colorAttr.setXYZ(instanceId, color.r, color.g, color.b);
+    colorAttr.needsUpdate = true;
+  }
 
-        const newTexture = await TEXTURE_LOADER.loadAsync(url);
+  setFeatureShowByBatchId(batchId: number, rawVisible: boolean) {
+    const instanceId = this._batchIdToInstance.get(batchId);
+    if (instanceId === undefined) return;
 
-        if (newTexture) {
-            let newTextureArray: DataArrayTexture;
-            const width = newTexture.image.width;
-            const height = newTexture.image.height;
-            const pixelData = this._extractPixelData(newTexture, true);
+    const showAttr = this.geometry.getAttribute(
+      "instanceShow",
+    ) as InstancedBufferAttribute;
+    showAttr.setX(instanceId, rawVisible ? 1.0 : 0.0);
+    showAttr.needsUpdate = true;
+  }
 
-            const existingTextureArray = material.uniforms.uTexture.value as DataArrayTexture;
-            if (existingTextureArray) {
-                // make sure new texture has same dimensions as existing one, otherwise we cannot update the texture array
-                if (existingTextureArray.image.width !== width || existingTextureArray.image.height !== height) {
-                    console.warn(`InstancedSpriteMesh: Billboard texture size mismatch old:[${existingTextureArray.image.width}x${existingTextureArray.image.height}] ,new:[${width}x${height}], cannot update texture array`);
-                    newTexture.dispose();
-                    return;
-                }
-                // update existing texture array with new texture data
-                const existingData = existingTextureArray.image.data as Uint8Array;
-                const totalByteLength = existingData.byteLength + pixelData.byteLength;
-                const textureData = new Uint8Array(totalByteLength);
-                textureData.set(existingData, 0); // copy existing layers
-                textureData.set(pixelData, existingData.byteLength); // append new layer
+  setFeatureHeightByBatchId(batchId: number, height: number) {
+    const instanceId = this._batchIdToInstance.get(batchId);
+    if (instanceId === undefined) return;
 
-                newTextureArray = new DataArrayTexture(textureData, width, height, this._loadedUrls.size);
-
-                existingTextureArray.dispose(); // dispose old texture array
-                console.log("InstancedSpriteMesh: Updated billboard texture array with new texture");
-
-            }
-            else {
-                newTextureArray = new DataArrayTexture(pixelData, width, height, 1);
-                console.log("InstancedSpriteMesh: Loaded billboard texture and created texture array");
-            }
-
-            newTextureArray.format = RGBAFormat;
-            newTextureArray.type = UnsignedByteType;
-            newTextureArray.generateMipmaps = false;
-            newTextureArray.needsUpdate = true;
-            newTextureArray.minFilter = LinearFilter;
-            newTextureArray.magFilter = LinearFilter;
-
-            material.uniforms.uTexture = { value: newTextureArray };
-            material.uniformsNeedUpdate = true;
-
-            newTexture.dispose();
-        }
-    }
-
-    _setPickable(pickable: boolean): void {
-        if (this.material as ShaderMaterial) {
-            const mat = this.material as ShaderMaterial;
-            mat.uniforms.nvr_uPickable = { value: pickable ? 1.0 : 0.0 };
-            mat.uniformsNeedUpdate = true;
-        }
-    }
-
-    setFeatureColorByBatchId(batchId: number, color: Color) {
-        const instanceId = this._batchIdToInstance.get(batchId);
-        if (instanceId === undefined) return;
-
-        const colorAttr = this.geometry.getAttribute('instanceColor') as InstancedBufferAttribute;
-        colorAttr.setXYZ(instanceId, color.r, color.g, color.b);
-        colorAttr.needsUpdate = true;
-    }
-
-    setFeatureShowByBatchId(batchId: number, rawVisible: boolean) {
-        const instanceId = this._batchIdToInstance.get(batchId);
-        if (instanceId === undefined) return;
-
-        const showAttr = this.geometry.getAttribute('instanceShow') as InstancedBufferAttribute;
-        showAttr.setX(instanceId, rawVisible ? 1.0 : 0.0);
-        showAttr.needsUpdate = true;
-    }
-
-    setFeatureHeightByBatchId(batchId: number, height: number) {
-        const instanceId = this._batchIdToInstance.get(batchId);
-        if (instanceId === undefined) return;
-
-        const heightAttr = this.geometry.getAttribute('instanceHeight') as InstancedBufferAttribute;
-        heightAttr.setX(instanceId, height);
-        heightAttr.needsUpdate = true;
-    }
+    const heightAttr = this.geometry.getAttribute(
+      "instanceHeight",
+    ) as InstancedBufferAttribute;
+    heightAttr.setX(instanceId, height);
+    heightAttr.needsUpdate = true;
+  }
 }

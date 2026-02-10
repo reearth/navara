@@ -16,8 +16,6 @@ import {
 import type { ViewContext } from "../core/ViewContext";
 import type { LayersManager } from "../layersManager";
 import {
-  InstancedBillboardMesh,
-  InstancedPointMesh,
   InstancedSpriteMesh,
   InstancedTextMesh,
   ModelMesh,

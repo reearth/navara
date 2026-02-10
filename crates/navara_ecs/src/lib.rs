@@ -669,7 +669,7 @@ impl App {
                     feature_batch_id,
                     batch_length,
                     feature_id,
-                    .. 
+                    ..
                 }
                 | RenderableFeature::Billboard {
                     feature_batch_id,
@@ -684,10 +684,10 @@ impl App {
                     ..
                 } => (*feature_batch_id, *feature_id, Some(*batch_length as usize)),
                 RenderableFeature::Polygon {
-                    feature_batch_id,..
+                    feature_batch_id, ..
                 }
                 | RenderableFeature::Polyline {
-                    feature_batch_id,..
+                    feature_batch_id, ..
                 } => (*feature_batch_id, renderable_feature_entity, None),
                 RenderableFeature::Unknown => return Some(()),
             };
