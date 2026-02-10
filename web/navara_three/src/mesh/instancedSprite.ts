@@ -184,17 +184,18 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
       }
 
       if (m.material.url) {
-        await this._uploadTexture(m.material.url, material);
-        uniformsChanged = true;
-        // need also to update instance layer attribute.
-        const layerAttr = this.geometry.getAttribute(
-          "instanceLayer",
-        ) as InstancedBufferAttribute;
-        const instanceCount = layerAttr.count;
-        for (let i = 0; i < instanceCount; i++) {
-          layerAttr.setX(i, this._loadedUrls.size - 1); // always set to last layer
+        const layerIndex = await this._uploadTexture(m.material.url, material);
+        if (layerIndex !== undefined) {
+          uniformsChanged = true;
+          const layerAttr = this.geometry.getAttribute(
+            "instanceLayer",
+          ) as InstancedBufferAttribute;
+          const instanceCount = layerAttr.count;
+          for (let i = 0; i < instanceCount; i++) {
+            layerAttr.setX(i, layerIndex);
+          }
+          layerAttr.needsUpdate = true;
         }
-        layerAttr.needsUpdate = true;
       }
     }
 
@@ -505,8 +506,11 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     return new Uint8Array(imageData.data);
   }
 
-  private async _uploadTexture(url: string, material: ShaderMaterial) {
-    if (this._loadedUrls.has(url)) return;
+  private async _uploadTexture(
+    url: string,
+    material: ShaderMaterial,
+  ): Promise<number | undefined> {
+    if (this._loadedUrls.has(url)) return [...this._loadedUrls].indexOf(url);
     this._loadedUrls.add(url);
 
     const newTexture = await TEXTURE_LOADER.loadAsync(url);
@@ -529,7 +533,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
             `InstancedSpriteMesh: Billboard texture size mismatch old:[${existingTextureArray.image.width}x${existingTextureArray.image.height}] ,new:[${width}x${height}], cannot update texture array`,
           );
           newTexture.dispose();
-          return;
+          return undefined;
         }
         // update existing texture array with new texture data
         const existingData = existingTextureArray.image.data as Uint8Array;
@@ -546,14 +550,8 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
         );
 
         existingTextureArray.dispose(); // dispose old texture array
-        console.log(
-          "InstancedSpriteMesh: Updated billboard texture array with new texture",
-        );
       } else {
         newTextureArray = new DataArrayTexture(pixelData, width, height, 1);
-        console.log(
-          "InstancedSpriteMesh: Loaded billboard texture and created texture array",
-        );
       }
 
       newTextureArray.format = RGBAFormat;
@@ -567,15 +565,14 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
       material.uniformsNeedUpdate = true;
 
       newTexture.dispose();
+      return this._loadedUrls.size - 1; // return index of the newly added texture layer
     }
   }
 
   _setPickable(pickable: boolean): void {
-    if (this.material as ShaderMaterial) {
-      const mat = this.material as ShaderMaterial;
-      mat.uniforms.nvr_uPickable = { value: pickable ? 1.0 : 0.0 };
-      mat.uniformsNeedUpdate = true;
-    }
+    const mat = this.material as ShaderMaterial;
+    mat.uniforms.nvr_uPickable = { value: pickable ? 1.0 : 0.0 };
+    mat.uniformsNeedUpdate = true;
   }
 
   setFeatureColorByBatchId(batchId: number, color: Color) {

@@ -17,6 +17,7 @@ export async function renderPoint(
     layerId,
   });
   await mesh._init(m, buf);
+
   return mesh;
 }
 

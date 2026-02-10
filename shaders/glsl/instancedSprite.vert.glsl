@@ -31,7 +31,6 @@ varying float vBatchID;
 varying float vFragDepth;
 
 void main() {
-int id = gl_InstanceID;
 #ifdef USE_RTE
     vec3 absTransformed = instancePositionHIGH + instancePositionLOW;
 #else
@@ -55,11 +54,11 @@ int id = gl_InstanceID;
 #ifdef USE_RTE
     vec3 highDiff = instancePositionHIGH - uEyeRTEHigh;
     vec3 lowDiff = instancePositionLOW - uEyeRTELow;
-    vec3 instancePosition = highDiff + lowDiff;
+    vec3 resolvedPosition = highDiff + lowDiff;
 
     mat4 viewMatrixRTE = viewMatrix;
     viewMatrixRTE[3] = vec4(0.0, 0.0, 0.0, 1.0); // Remove translation
-    mvPosition = viewMatrixRTE * vec4(instancePosition, 1.0);
+    mvPosition = viewMatrixRTE * vec4(resolvedPosition, 1.0);
 #else
     // Adjust view matrix for RTC
     vec4 centerMV = viewMatrix * vec4(uRTCCenter, 1.0);
