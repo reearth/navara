@@ -133,12 +133,6 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
     cameraPositionLow: { value: new Vector3() },
   };
 
-  // Shadow map depth enhancers for customDepthMaterial
-  private depthEnhancers = new Map<
-    Mesh<BufferGeometry<NormalBufferAttributes>, Material>,
-    ReturnType<typeof createShadowMapDepthEnhancer>
-  >();
-
   constructor(view: ViewContext, config: GLTFModelLayerConfig) {
     super(view, config);
     this.config = {
@@ -227,6 +221,7 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
       );
     }
 
+    let setRteCbk = false;
     const IDENTITY_MATRIX = new Matrix4();
 
     // Setup shadows and CSM
@@ -241,14 +236,17 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
         this.initDepthMaterial(child);
 
         // Set RTE callback only once for the first mesh (shared RTE uniforms)
-        const rteCallback = setupRTEBeforeRender(
-          child,
-          this.rteUserData,
-          IDENTITY_MATRIX,
-        );
-        if (rteCallback) {
-          child.onBeforeRender = rteCallback;
-          child.onBeforeShadow = rteCallback;
+        if (!setRteCbk) {
+          const rteCallback = setupRTEBeforeRender(
+            child,
+            this.rteUserData,
+            IDENTITY_MATRIX,
+          );
+          if (rteCallback) {
+            child.onBeforeRender = rteCallback;
+            child.onBeforeShadow = rteCallback;
+          }
+          setRteCbk = true;
         }
 
         // Setup CSM for materials if shadows are enabled
@@ -268,18 +266,18 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
    * Uses the shadowMapDepthEnhancer to inject shadow map depth shaders.
    */
   private initDepthMaterial(
-    mesh: Mesh<BufferGeometry<NormalBufferAttributes>, Material>,
+    mesh: Mesh<BufferGeometry<NormalBufferAttributes>>,
   ) {
-    mesh.customDepthMaterial = mesh.material.clone();
+    const origMaterial = Array.isArray(mesh.material)
+      ? mesh.material[0]
+      : mesh.material;
+    mesh.customDepthMaterial = origMaterial.clone();
     mesh.customDepthMaterial.needsUpdate = true;
-
-    const origMaterial = mesh.material;
 
     // Create enhancer for depth material
     const enhancer = createShadowMapDepthEnhancer(
       mesh.customDepthMaterial as ShadowMapDepthSupportedMaterial,
     );
-    this.depthEnhancers.set(mesh, enhancer);
 
     // Mount the enhancer with RTE uniforms
     enhancer.mount({});
@@ -290,6 +288,7 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
 
     // Set up onBeforeCompile using the enhancer's transformShader
     mesh.customDepthMaterial.onBeforeCompile = (shader, renderer) => {
+      // The original material's state is shared through `origMaterial`.
       origMaterial.onBeforeCompile(shader, renderer);
 
       enhancer.transformShader(shader);
@@ -465,9 +464,6 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
   protected disposeMesh(): void {
     // Clean up animation-related resources
     this.disposeAnimation();
-
-    // Clean up depth enhancers
-    this.depthEnhancers.clear();
 
     if (this._instance) {
       this._instance.traverse((child) => {
@@ -1092,7 +1088,7 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
     return null;
   }
 
-  getWorldPosition(): Vector3 | undefined {
+  getWorldPosition(): Vector3 {
     // Return stored world position (RTE mode)
     return this.originalWorldPosition;
   }
