@@ -370,7 +370,10 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
           ),
         },
         uAlphaTest: {
-          value: m instanceof NavaraBillboardMesh ? m.material.alphaTest : 0.0,
+          value:
+            m instanceof NavaraBillboardMesh
+              ? (m.material.alphaTest ?? 0.0)
+              : 0.0,
         },
         uScale: { value: m.material.size ?? 100.0 },
         uFarPlane: { value: 0.0 },
@@ -511,7 +514,6 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     material: ShaderMaterial,
   ): Promise<number | undefined> {
     if (this._loadedUrls.has(url)) return [...this._loadedUrls].indexOf(url);
-    this._loadedUrls.add(url);
 
     const newTexture = await TEXTURE_LOADER.loadAsync(url);
 
@@ -565,6 +567,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
       material.uniformsNeedUpdate = true;
 
       newTexture.dispose();
+      this._loadedUrls.add(url);
       return this._loadedUrls.size - 1; // return index of the newly added texture layer
     }
   }
