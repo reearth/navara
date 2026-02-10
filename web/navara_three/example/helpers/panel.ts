@@ -328,7 +328,7 @@ export const addCtrlPanel = (
       material.show = paneParams.show;
 
       if ("color" in material) {
-        material.color = parseInt(paneParams.color.replace("#", ""), 16);
+        material.color = new Color().setStyle(paneParams.color);
       }
 
       if ("opacity" in material) {

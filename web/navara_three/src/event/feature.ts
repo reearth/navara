@@ -345,8 +345,7 @@ export async function processRenderableFeatureChanged(
   ) {
     if (
       (obj instanceof PolygonMesh && obj.clampToGround) ||
-      // TODO: Remove `userData`
-      obj.userData.draped
+      (obj instanceof PolylineMesh && obj.draped)
     ) {
       if (obj.visible) {
         texturizedSceneByTileCoordinates.add(tileHandle, layerId, obj as Mesh);

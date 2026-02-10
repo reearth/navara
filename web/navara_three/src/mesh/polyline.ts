@@ -3,26 +3,19 @@ import {
   PolylineMesh as NavaraPolylineMesh,
   PolylineMaterial,
 } from "@navara/engine";
-import FlatPolylineFragShader from "@shaders/glsl/flatPolyline.frag.glsl";
-import FlatPolylineVertShader from "@shaders/glsl/flatPolyline.vert.glsl";
-import GroundPolylineFragShader from "@shaders/glsl/groundPolyline.frag.glsl";
-import PolylineFragShader from "@shaders/glsl/polyline.frag.glsl";
-import PolylineVertShader from "@shaders/glsl/polyline.vert.glsl";
 import {
   BufferAttribute,
   BufferGeometry,
   Color,
   ShaderMaterial,
-  UniformsLib,
-  Matrix4,
+  Texture,
   Vector2,
-  Vector3,
 } from "three";
 
 import type { ViewEvents } from "..";
 import type { ViewContext } from "../core";
 import type { BufferLoader } from "../event";
-import { packing } from "../shaders";
+import { createPolylineMaterialEnhancer } from "../material/enhancer";
 import type { CommonUniforms } from "../uniforms";
 import { arraysEqual } from "../utils";
 
@@ -31,7 +24,7 @@ import {
   type BatchedFeatureAttributes,
 } from "./batchedFeature";
 import type { DefaultBatchAttributeValues } from "./batchTexture";
-import { setupRTEBeforeRender } from "./rtcRteHelper";
+import { setupRTECallback } from "./rtcRteHelper";
 
 type Attributes = BatchedFeatureAttributes<{
   position: BufferAttribute;
@@ -58,6 +51,10 @@ export class PolylineMesh extends BatchedFeatureMesh<
   private _viewContext: ViewContext;
   /** Layer ID for SelectiveEffect handling */
   private _layerId: string;
+  /** Material enhancer for managing shader state */
+  private _enhancedMaterial?: ReturnType<typeof createPolylineMaterialEnhancer>;
+  /** Previous effectIds for SelectiveEffect registry diff */
+  private _prevEffectIds?: string[];
 
   constructor(
     mesh: NavaraPolylineMesh,
@@ -70,18 +67,15 @@ export class PolylineMesh extends BatchedFeatureMesh<
     super(new BufferGeometry<Attributes>(), new ShaderMaterial());
     this._viewContext = viewContext;
     this._layerId = layerId;
-    this.initGeometry(mesh, buf);
-    this.initMaterial(mesh, uniforms, viewEvents);
-
-    // Set draped flag for texturized rendering
-    this.userData.draped = mesh.should_be_texturized;
+    const useRTE = this.initGeometry(mesh, buf);
+    this.initMaterial(mesh, uniforms, viewEvents, useRTE);
 
     this.addEventListener("removedFromWorld", () => {
       this.dispose(viewEvents);
     });
   }
 
-  private initGeometry(mesh: NavaraPolylineMesh, buf: BufferLoader) {
+  private initGeometry(mesh: NavaraPolylineMesh, buf: BufferLoader): boolean {
     const g = mesh.geometry;
     const position = buf.removeF32(g.position.data);
     const position_high = g.position_high
@@ -119,10 +113,12 @@ export class PolylineMesh extends BatchedFeatureMesh<
       !end_normal_and_texture_coordinate_normalization_x ||
       !right_normal_and_texture_coordinate_normalization_y ||
       !indices
-    )
-      return;
+    ) {
+      return false;
+    }
+
     const geometry = this.geometry;
-    this.userData.useRTE = !!(
+    const useRTE = !!(
       position_high &&
       position_low &&
       start_high &&
@@ -136,7 +132,7 @@ export class PolylineMesh extends BatchedFeatureMesh<
       new BufferAttribute(position, g.position.size),
     );
 
-    if (this.userData.useRTE) {
+    if (useRTE) {
       // RTE attributes
       if (position_high && position_low) {
         geometry.setAttribute(
@@ -205,14 +201,14 @@ export class PolylineMesh extends BatchedFeatureMesh<
     geometry.setIndex(new BufferAttribute(indices, 1));
     // geometry.computeVertexNormals();
 
-    this.userData.batchIds = batchIds;
-    this.userData.batchIdSize = batchIdSize;
+    return useRTE;
   }
 
   private initMaterial(
     mesh: NavaraPolylineMesh,
     uniforms: CommonUniforms,
     viewEvents: EventHandler<ViewEvents>,
+    useRTE: boolean,
   ) {
     const meshMaterial = mesh.material;
 
@@ -220,96 +216,77 @@ export class PolylineMesh extends BatchedFeatureMesh<
       0, 0,
     ];
 
-    const uPickable = {
-      value: 0.0,
-    };
-
     this.castShadow = !!meshMaterial.castShadow;
     this.receiveShadow = !!meshMaterial.receiveShadow;
 
-    // Set up RTE uniforms and callback if using RTE
-    const useRTE = this.userData.useRTE;
-    if (useRTE) {
-      this.userData.modelViewMatrixRTE = { value: new Matrix4() };
-      this.userData.cameraPositionHigh = { value: new Vector3() };
-      this.userData.cameraPositionLow = { value: new Vector3() };
-
-      // RTE mode: mesh should be at origin with identity transform
-      // Real world positions are encoded in position_3d_high/low attributes (ECEF coordinates)
-      // Similar to arcLine RTE implementation
-      const identityMatrix = new Matrix4();
-      const callback = setupRTEBeforeRender(
-        this,
-        this.userData,
-        identityMatrix,
-        identityMatrix,
-      );
-      if (callback) {
-        this.onBeforeRender = callback;
-      }
-
-      // Disable frustum culling for RTE mode - mesh is at origin but represents distant coordinates
-      this.frustumCulled = false;
-    }
-
-    this.material.uniforms = {
-      ...UniformsLib["lights"],
-      minMaxHeightAndWidth: {
-        value: [minHeight, maxHeight, meshMaterial.width],
-      },
-      color: { value: new Color(meshMaterial.color) },
-      useGroundNormals: { value: !!meshMaterial.useGroundNormals },
-      viewportAndPixelRatio: uniforms.viewportAndPixelRatio,
-      frustumNearFar: uniforms.frustumNearFar,
-      frustumRatio: uniforms.frustumRatio,
-      tGlobeDepth: uniforms.tGlobeDepth,
-      uGlobeNormal: uniforms.tGlobeNormal,
-      inverseProjectionMatrix: uniforms.inverseProjectionMatrix,
-      nvr_uPickable: uPickable,
-      nvr_uPickingCoord: { value: new Vector2(-1, -1) }, // Sentinel value: use gl_FragCoord by default
-    };
-
     const isTexturized = mesh.should_be_texturized;
 
-    // Select shaders based on rendering mode
-    if (isTexturized) {
-      // Flat polyline for texturized tile rendering
-      this.material.vertexShader = FlatPolylineVertShader;
-      this.material.fragmentShader = FlatPolylineFragShader;
-    } else {
-      // 3D polyline for globe rendering
-      this.material.vertexShader = PolylineVertShader;
-      this.material.fragmentShader =
-        `${packing}\n` +
-        (meshMaterial.clampToGround
-          ? GroundPolylineFragShader
-          : PolylineFragShader);
-    }
-
+    // Shader selection is handled by enhancer's transformShader
     this.material.depthTest = false;
     this.material.visible = !!meshMaterial.show;
     // Disable lighting for texturized rendering - the texture will be applied to the lit tile
     this.material.lights = !isTexturized;
     this.material.vertexColors = false;
 
-    this.material.userData.uPickable = uPickable;
-    this.material.onBeforeCompile = (shader) => {
-      shader.defines ??= {};
-      Object.assign(shader.defines, this.material.userData.defines);
+    // Ignored if it is cloned.
+    if (!this._enhancedMaterial) {
+      // Create enhanced material with encapsulated state
+      const enhancer = createPolylineMaterialEnhancer(this.material);
+      this._enhancedMaterial = enhancer;
+    }
+    const enhancer = this._enhancedMaterial;
 
-      // Add RTE uniforms and defines if using RTE
-      if (useRTE) {
-        shader.defines.USE_RTE = true;
-        shader.uniforms.u_cameraPositionHigh = this.userData.cameraPositionHigh;
-        shader.uniforms.u_cameraPositionLow = this.userData.cameraPositionLow;
-        shader.uniforms.modelViewMatrixRTE = this.userData.modelViewMatrixRTE;
-      }
+    enhancer.mount({
+      base: {
+        color: meshMaterial.color,
+        minMaxHeight: [minHeight, maxHeight],
+        width: meshMaterial.width,
+        clampToGround: !!meshMaterial.clampToGround,
+        useGroundNormals: !!meshMaterial.useGroundNormals,
+        isTexturized,
+        pickable: false,
+        useRTE,
+        // External shared uniforms from CommonUniforms
+        globeNormalTexture: uniforms.tGlobeNormal as { value: Texture | null },
+        viewportAndPixelRatio: uniforms.viewportAndPixelRatio,
+        frustumNearFar: uniforms.frustumNearFar,
+        frustumRatio: uniforms.frustumRatio,
+        tGlobeDepth: uniforms.tGlobeDepth,
+        inverseProjectionMatrix: uniforms.inverseProjectionMatrix,
+      },
+    });
 
-      if (this.material.userData.batchDataTexture) {
-        shader.uniforms.batchDataTexture =
-          this.material.userData.batchDataTexture;
-      }
-    };
+    // Initialize enhancer uniforms early so they're available before onBeforeCompile
+    const mutates = enhancer.mutates();
+    mutates.updateUniforms(this.material.uniforms, enhancer.states());
+
+    // Set up RTE callback if needed
+    const state = enhancer.states();
+    if (state.useRTE) {
+      const mutates = enhancer.mutates();
+      const callback = setupRTECallback(
+        this,
+        (modelViewMatrixRTE, cameraPositionHigh, cameraPositionLow) =>
+          mutates.updateRteUniforms(
+            modelViewMatrixRTE,
+            cameraPositionHigh,
+            cameraPositionLow,
+            state,
+          ),
+      );
+      this.onBeforeRender = callback;
+      this.onBeforeShadow = callback;
+
+      // Disable frustum culling for RTE mode
+      this.frustumCulled = false;
+    }
+
+    // Set up custom program cache key based on config flags that affect shader defines
+    this.material.customProgramCacheKey = enhancer.programCacheKey;
+
+    // Set onBeforeCompile to use enhancer
+    this.material.onBeforeCompile = enhancer.transformShader;
+
     viewEvents.emit("_csmMounted", this.material);
 
     this._initBatchedMaterial();
@@ -317,89 +294,86 @@ export class PolylineMesh extends BatchedFeatureMesh<
     this._update(meshMaterial, mesh.active);
   }
 
+  _initBatchDataTexture(batchLength: number): void {
+    // Call parent to create the texture
+    super._initBatchDataTexture(batchLength);
+
+    // Update the enhancer with the new batchDataTexture
+    const texture = this._getBatchDataTexture();
+    if (texture) {
+      this.getEnhancer().update({
+        base: { useBatchTexture: true, batchDataTexture: { value: texture } },
+      });
+    }
+  }
+
   _update(material: PolylineMaterial, active: boolean) {
-    if (!this.material.userData.prev) {
-      this.material.userData.prev = {};
-    }
-    const prev = this.material.userData.prev;
+    const enhancer = this.getEnhancer();
 
-    // Only update material.color if batchTexture color is not being used
-    if (prev.color !== material.color) {
-      const next = material.color ?? 0;
-      // If batchTexture color is not enabled, update material.color directly
-      if (!this.material.userData._batchColorTouched) {
-        this.material.uniforms.color.value.set(material.color);
-      }
-      prev.color = next;
-    }
+    // Update mesh properties (not handled by enhancer)
+    this.visible = (material.show ?? true) && active;
+    this.castShadow = !!material.castShadow;
+    this.receiveShadow = !!material.receiveShadow;
 
-    if (prev.useGroundNormals !== material.useGroundNormals) {
-      this.material.uniforms.useGroundNormals.value =
-        !!material.useGroundNormals;
-      prev.useGroundNormals = !!material.useGroundNormals;
-    }
-
-    const [minHeight, maxHeight] = material.__internal__?.minMaxHeights ?? [
-      0, 0,
-    ];
-    const width = material.width;
-    if (
-      prev.minHeight !== minHeight ||
-      prev.maxHeight !== maxHeight ||
-      prev.width !== width
-    ) {
-      this.material.uniforms.minMaxHeightAndWidth.value = [
-        minHeight,
-        maxHeight,
-        width,
-      ];
-      prev.minHeight = minHeight;
-      prev.maxHeight = maxHeight;
-      prev.width = width;
-    }
-
-    const next = (material.show ?? true) && active;
-    if (prev.visible !== next) {
-      this.visible = next;
-      prev.visible = next;
-    }
-
-    if (this.castShadow !== material.castShadow) {
-      this.castShadow = !!material.castShadow;
-    }
-    if (this.receiveShadow !== material.receiveShadow) {
-      this.receiveShadow = !!material.receiveShadow;
-    }
-
-    // SelectiveEffect: effectIds handling
-    // ShaderMaterial doesn't have built-in emissive, so only effectIds is handled
-    if (!arraysEqual(prev.effectIds, material.effectIds)) {
+    // SelectiveEffect: effectIds handling (needs prev state for registry)
+    if (!arraysEqual(this._prevEffectIds, material.effectIds)) {
       this._viewContext.selectiveEffectRegistry?.updateLinksForObject(
         this,
         material.effectIds ?? [],
-        prev.effectIds ?? [],
+        this._prevEffectIds ?? [],
         this._layerId,
       );
-      prev.effectIds = material.effectIds ? [...material.effectIds] : [];
+      this._prevEffectIds = material.effectIds ? [...material.effectIds] : [];
     }
+
+    const base = enhancer.states();
+
+    // Build update props from material
+    const minMaxHeights = material.__internal__?.minMaxHeights;
+    enhancer.update({
+      base: {
+        // `material.color` is used only when `batchColorEnabled` is `false`.
+        // Otherwise the color is updated via `_setFeatureColor` or the batch data texture.
+        color: base.batchColorEnabled ? undefined : material.color,
+        minMaxHeight:
+          minMaxHeights !== undefined
+            ? [minMaxHeights[0], minMaxHeights[1]]
+            : undefined,
+        width: material.width,
+        useGroundNormals: !!material.useGroundNormals,
+      },
+    });
+  }
+
+  /**
+   * Get the enhancer, throwing if not initialized.
+   * @throws Error if enhancer is not initialized
+   */
+  private getEnhancer(): NonNullable<typeof this._enhancedMaterial> {
+    if (!this._enhancedMaterial) {
+      throw new Error("PolylineMesh must be initialized via init() before use");
+    }
+    return this._enhancedMaterial;
   }
 
   get color() {
     return this.material.uniforms.color.value;
   }
 
-  _setPickable(pickable: boolean, pickingCoord?: Vector2) {
-    // Call parent implementation to set nvr_uPickable
-    super._setPickable(pickable, pickingCoord);
+  get draped(): boolean {
+    return this.getEnhancer().states().isTexturized;
+  }
 
-    // the uniform is always set but only consumed by the ground polyline fragment shader.
-    if (this.material.uniforms.nvr_uPickingCoord) {
-      if (pickable && pickingCoord) {
-        this.material.uniforms.nvr_uPickingCoord.value.copy(pickingCoord);
-      } else {
-        // Reset to sentinel value when not picking or no coordinate provided
-        this.material.uniforms.nvr_uPickingCoord.value.set(-1, -1);
-      }
+  _setPickable(pickable: boolean, pickingCoord?: Vector2) {
+    this.getEnhancer().update({ base: { pickable } });
+    this.needsUpdate();
+
+    const mutates = this.getEnhancer().mutates();
+    if (pickable && pickingCoord) {
+      mutates.setPickingCoord(pickingCoord);
+    } else {
+      // Reset to sentinel value when not picking or no coordinate provided
+      mutates.setPickingCoord(new Vector2(-1, -1));
     }
   }
 
@@ -410,13 +384,9 @@ export class PolylineMesh extends BatchedFeatureMesh<
   }
 
   _setFeatureColor(color: Color): void {
-    // If batchTexture is being used, update via batchTexture
-    if (this.material.userData._batchColorTouched) {
-      super._setFeatureColor(color);
-    } else {
-      // Otherwise, update material.uniforms.color directly
-      this.material.uniforms.color.value.set(color);
-    }
+    this._enhancedMaterial?.update({
+      base: { batchColorEnabled: true, color: color.getHex() },
+    });
   }
 
   _setFeatureShow(visible: boolean): void {
