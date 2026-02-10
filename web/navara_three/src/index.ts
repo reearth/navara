@@ -1811,7 +1811,7 @@ export default class ThreeView<
         this.emit("pick", pickedFeature);
       } else {
         const emptyFeature: PickedFeature = {
-          properties: new Map<string, unknown>(),
+          properties: {},
           batchId: null,
           layerId: null,
         };

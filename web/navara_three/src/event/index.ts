@@ -144,7 +144,7 @@ export type FeatureHandler = {
     callback: (
       batchIdx: number,
       batchId: number,
-      properties?: Map<string, unknown>,
+      properties?: Record<string, unknown>,
     ) => void,
   ): void;
 };
