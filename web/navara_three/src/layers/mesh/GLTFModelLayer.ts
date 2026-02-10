@@ -12,6 +12,10 @@ import {
   Material,
   Matrix4,
   Vector3,
+  BufferGeometry,
+  type NormalBufferAttributes,
+  RGBADepthPacking,
+  ShaderChunk,
 } from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import type { GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
@@ -22,6 +26,8 @@ import {
   type MeshLayerUpdate,
   type ViewContext,
 } from "../../core";
+import { createShadowMapDepthEnhancer } from "../../material/enhancer/shadowMap";
+import type { ShadowMapDepthSupportedMaterial } from "../../material/enhancer/shadowMap";
 import {
   setupRTEBeforeRender,
   type RTEUserData,
@@ -33,7 +39,6 @@ type LayerDescription = {
     url: string;
     castShadow?: boolean;
     receiveShadow?: boolean;
-    useRTE?: boolean; // Enable RTE (Relative-To-Eye) rendering for high precision
 
     // Declarative animation settings
     animationEnabled?: boolean;
@@ -50,7 +55,6 @@ export const DEFAULT_GLTF_MODEL_DESCRIPTION: NonNullable<
   LayerDescription["gltfModel"]
 > = {
   url: "",
-  useRTE: true,
   animationSpeed: 1,
   animationLoop: true,
   animationCrossfadeDuration: 0.3,
@@ -144,13 +148,8 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
   override onCreate() {
     this._instance = this.createMesh();
 
-    // In RTE mode, keep raw.position at (0,0,0)
+    // RTE mode: keep raw.position at (0,0,0)
     // The world position is stored in this.position and encoded in RTE uniforms
-    const useRTE = this.config.gltfModel?.useRTE ?? true;
-
-    if (this.position && !useRTE) {
-      this.raw?.position.copy(this.position);
-    }
 
     if (this.scale) {
       this.raw?.scale.copy(this.scale);
@@ -215,16 +214,11 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
 
     if (!modelConfig) return;
 
-    const useRTE = modelConfig.useRTE ?? false;
-
-    // If RTE is enabled, setup RTE shaders first
-    if (useRTE) {
-      // Encode world position from this.position (not targetGroup.position which is 0,0,0)
-      if (this.position) {
-        this.setPositionRTE(
-          new Vector3(this.position.x, this.position.y, this.position.z),
-        );
-      }
+    // RTE: Encode world position from this.position (not targetGroup.position which is 0,0,0)
+    if (this.position) {
+      this.setPositionRTE(
+        new Vector3(this.position.x, this.position.y, this.position.z),
+      );
     }
 
     let setRteCbk = false;
@@ -236,23 +230,23 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
         if (modelConfig.castShadow) child.castShadow = true;
         if (modelConfig.receiveShadow) child.receiveShadow = true;
 
-        if (useRTE) {
-          child.frustumCulled = false;
-          this.setupRTEShadersForMesh(child);
+        child.frustumCulled = false;
+        this.setupRTEShadersForMesh(child);
 
-          // Set RTE callback only once for the first mesh (shared RTE uniforms)
-          if (!setRteCbk) {
-            const rteCallback = setupRTEBeforeRender(
-              child,
-              this.rteUserData,
-              IDENTITY_MATRIX,
-            );
-            if (rteCallback) {
-              child.onBeforeRender = rteCallback;
-              child.onBeforeShadow = rteCallback;
-            }
-            setRteCbk = true;
+        this.initDepthMaterial(child);
+
+        // Set RTE callback only once for the first mesh (shared RTE uniforms)
+        if (!setRteCbk) {
+          const rteCallback = setupRTEBeforeRender(
+            child,
+            this.rteUserData,
+            IDENTITY_MATRIX,
+          );
+          if (rteCallback) {
+            child.onBeforeRender = rteCallback;
+            child.onBeforeShadow = rteCallback;
           }
+          setRteCbk = true;
         }
 
         // Setup CSM for materials if shadows are enabled
@@ -265,6 +259,45 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
         }
       }
     });
+  }
+
+  /**
+   * Override a material that is used to generate a shadow map.
+   * Uses the shadowMapDepthEnhancer to inject shadow map depth shaders.
+   */
+  private initDepthMaterial(
+    mesh: Mesh<BufferGeometry<NormalBufferAttributes>>,
+  ) {
+    const origMaterial = Array.isArray(mesh.material)
+      ? mesh.material[0]
+      : mesh.material;
+    mesh.customDepthMaterial = origMaterial.clone();
+    mesh.customDepthMaterial.needsUpdate = true;
+
+    // Create enhancer for depth material
+    const enhancer = createShadowMapDepthEnhancer(
+      mesh.customDepthMaterial as ShadowMapDepthSupportedMaterial,
+    );
+
+    // Mount the enhancer with RTE uniforms
+    enhancer.mount({});
+
+    // Set up custom program cache key
+    mesh.customDepthMaterial.customProgramCacheKey = () =>
+      enhancer.programCacheKey();
+
+    // Set up onBeforeCompile using the enhancer's transformShader
+    mesh.customDepthMaterial.onBeforeCompile = (shader, renderer) => {
+      // The original material's state is shared through `origMaterial`.
+      origMaterial.onBeforeCompile(shader, renderer);
+
+      enhancer.transformShader(shader);
+
+      shader.defines ??= {};
+      Object.assign(shader.defines, origMaterial.userData?.defines || {});
+      shader.defines["USE_SHADOWMAP_DEPTH"] = 1;
+      shader.defines["DEPTH_PACKING"] = RGBADepthPacking;
+    };
   }
 
   private setPositionRTE(worldPosition: Vector3): void {
@@ -319,9 +352,7 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
           .modelViewMatrixRTE || { value: new Matrix4() };
 
         // Modify vertex shader with RTE chunks
-        let vertexShader = shader.vertexShader;
-
-        vertexShader = createReplacer(vertexShader)
+        shader.vertexShader = createReplacer(shader.vertexShader)
           .replace(
             "#include <common>",
             `
@@ -329,18 +360,20 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
             ${RteUniformParsVertex}
             `,
           )
-          .replace("#include <project_vertex>", ProjectVertexRteModel).source;
-
-        shader.vertexShader = vertexShader;
+          .replace("#include <project_vertex>", ProjectVertexRteModel)
+          .replace(
+            "#include <worldpos_vertex>",
+            createReplacer(ShaderChunk.worldpos_vertex)
+              // Use RTE absolute position.
+              .replace(
+                "vec4 worldPosition = vec4( transformed, 1.0 );",
+                "vec4 worldPosition = vec4( absTransformed, 1.0 );",
+              )
+              // RTE absolute position don't need modelMatrix multiplication.
+              .replace("worldPosition = modelMatrix * worldPosition;", "")
+              .source,
+          ).source;
       };
-
-      // Update cache key to enable shader caching
-      // Materials with the same type will share compiled shaders
-      material.customProgramCacheKey = () => {
-        return "RTE_MODEL_" + material.type;
-      };
-
-      material.needsUpdate = true;
     });
   }
 
@@ -411,7 +444,7 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
     }
 
     // Handle position updates for RTE mode
-    if (updates.position !== undefined && this.config.gltfModel?.useRTE) {
+    if (updates.position !== undefined) {
       // Update our stored world position
       this.position = updates.position;
 
@@ -444,6 +477,10 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
             } else {
               child.material.dispose();
             }
+          }
+          // Dispose custom depth material
+          if (child.customDepthMaterial) {
+            child.customDepthMaterial.dispose();
           }
         }
       });
@@ -1051,14 +1088,9 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
     return null;
   }
 
-  getWorldPosition(): Vector3 | undefined {
-    if (this.config.gltfModel?.useRTE) {
-      // Return stored world position in RTE mode
-      return this.originalWorldPosition;
-    } else {
-      // Return Three.js position in non-RTE mode
-      return this.raw?.position.clone();
-    }
+  getWorldPosition(): Vector3 {
+    // Return stored world position (RTE mode)
+    return this.originalWorldPosition;
   }
 
   private lastUpdateTime?: number;
