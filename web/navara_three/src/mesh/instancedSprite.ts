@@ -10,35 +10,12 @@ import invariant from "tiny-invariant";
 import { PickableMesh } from "./pickableMesh";
 import { arraysEqual } from "../utils";
 
-// TODOs:
-// - handle RTE - done
-// - handle depth offset - done
-// - reenable depth test ... - done
-// - make sure texture array and layer attribute are only created for billboard case - done
-// --------------------------------------------------------------
-// - handle batch ids and picking (if it was working before)... - done
-// - handle style evalutator stuff - batch ids are not correct now.
-// --------------------------------------------------------------
-// - handle layer material, user data, color, height, ... 
-// - missing:
-//        - clampToGround (should be handled in shader or rust?)
-//        - selective layer stuff
-// - make sure to cover all what was the old point/billboard mesh doing - done for most part, but need to double check
-// --------------------------------------------------------------
-// - handle selective layer stuff - meh 
-// - handle choosing between using new sprite mesh or old point mesh based on conditions
-// - optimize shader if needed
-// - cleanup code
-// - test performance and correctness
-
-
 /** UserData type for InstancedSpriteMesh */
 type InstancedSpriteUserData = {
     prev?: {
         effectIds?: string[];
     };
 };
-
 
 export type InstancedSpriteOptions = {
     renderOrder?: number;
@@ -197,7 +174,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
             -0.5, -0.5, 0.0, // v0
             0.5, -0.5, 0.0,  // v1
             0.5, 0.5, 0.0,   // v2
-            -0.5, -0.5, 0.0,  // v3
+            -0.5, -0.5, 0.0, // v3
             0.5, 0.5, 0.0,   // v4
             -0.5, 0.5, 0.0,  // v5
         ]);
@@ -274,7 +251,6 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
                 uEyeRTELow: { value: new Vector3(0, 0, 0) },
                 uEyeRTEHigh: { value: new Vector3(0, 0, 0) },
                 uOffsetDepth: { value: m.material.offsetDepth ?? true },
-                // uHeightOffset: { value: m.material.height ?? 0.0 },
                 uScaleByDistance: { value: m.material.scaleByDistance ?? true },
                 uCenter: { value: new Vector2(m.material.center?.x ?? 0.5, m.material.center?.y ?? 0.5) },
                 uAlphaTest: { value: m instanceof NavaraBillboardMesh ? m.material.alphaTest : 0.0 },
@@ -431,8 +407,6 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
         }
     }
 
-    // TODO: delay changes to attributes to avoid multiple updates in a frame
-    // use a dirty flag and update in onBeforeRender or similar
     setFeatureColorByBatchId(batchId: number, color: Color) {
         const instanceId = this._batchIdToInstance.get(batchId);
         if (instanceId === undefined) return;
