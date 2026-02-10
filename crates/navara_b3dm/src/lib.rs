@@ -2,15 +2,16 @@
 
 extern crate alloc;
 
+mod property_value;
 mod types;
 
 pub use navara_bin::*;
+pub use property_value::PropertyValue;
 
 use alloc::vec::Vec;
 use binrw::BinRead;
 use navara_glb::Glb;
 use serde::{Deserialize, Serialize};
-use serde_json::{Number, Value};
 use types::{ComponentType, DataType};
 
 pub const B3DM_HEADER_SIZE: usize = 28;
@@ -85,11 +86,11 @@ impl BatchTable {
         parse_json_to_struct(&self.json_data)
     }
 
-    pub fn read_property_from_binary(
+    pub fn read_property_from_binary<V: PropertyValue>(
         &self,
         idx: usize,
         prop: &serde_json::Value,
-    ) -> Result<Value, &'static str> {
+    ) -> Result<V, &'static str> {
         let offset = prop["byteOffset"].as_u64().unwrap() as usize;
         let component_type = ComponentType::from_str(prop["componentType"].as_str().unwrap());
         let data_type = DataType::from_str(prop["type"].as_str().unwrap());
@@ -102,92 +103,78 @@ impl BatchTable {
         }
     }
 
-    fn read_scalar(
+    fn read_scalar<V: PropertyValue>(
         &self,
         byte_offset: usize,
         idx: usize,
         component_type: ComponentType,
-    ) -> Result<Value, &'static str> {
+    ) -> Result<V, &'static str> {
         let offset = byte_offset + idx * component_type.size();
         self.read_value(offset, &component_type)
     }
 
-    fn read_vector(
+    fn read_vector<V: PropertyValue>(
         &self,
         byte_offset: usize,
         idx: usize,
         data_type: DataType,
         component_type: ComponentType,
-    ) -> Result<Value, &'static str> {
+    ) -> Result<V, &'static str> {
         let offset = byte_offset + idx * data_type.size() * component_type.size();
         let values = (0..data_type.size())
-            .map(|j| self.read_value(offset + j * component_type.size(), &component_type))
+            .map(|j| self.read_value::<V>(offset + j * component_type.size(), &component_type))
             .collect::<Result<Vec<_>, _>>()?;
-        Ok(Value::Array(values))
+        Ok(V::from_array(values))
     }
 
-    fn read_value(
+    fn read_value<V: PropertyValue>(
         &self,
         offset: usize,
         component_type: &ComponentType,
-    ) -> Result<Value, &'static str> {
+    ) -> Result<V, &'static str> {
         if offset + component_type.size() > self.binary_data.len() {
             return Err("Out of bounds read");
         }
 
         match component_type {
-            ComponentType::Byte => Ok(Value::Number(
-                (self.binary_data[offset] as i8 as i64).into(),
-            )),
-            ComponentType::UnsignedByte => Ok(Value::Number(self.binary_data[offset].into())),
-            ComponentType::Short => Ok(Value::Number(
-                (i16::from_le_bytes([self.binary_data[offset], self.binary_data[offset + 1]])
-                    as i64)
-                    .into(),
-            )),
-            ComponentType::UnsignedShort => Ok(Value::Number(
-                u16::from_le_bytes([self.binary_data[offset], self.binary_data[offset + 1]]).into(),
-            )),
-            ComponentType::Int => Ok(Value::Number(
-                (i32::from_le_bytes([
-                    self.binary_data[offset],
-                    self.binary_data[offset + 1],
-                    self.binary_data[offset + 2],
-                    self.binary_data[offset + 3],
-                ]) as i64)
-                    .into(),
-            )),
-            ComponentType::UnsignedInt => Ok(Value::Number(
-                u32::from_le_bytes([
-                    self.binary_data[offset],
-                    self.binary_data[offset + 1],
-                    self.binary_data[offset + 2],
-                    self.binary_data[offset + 3],
-                ])
-                .into(),
-            )),
-            ComponentType::Float => Ok(Value::Number(
-                Number::from_f64(f32::from_le_bytes([
-                    self.binary_data[offset],
-                    self.binary_data[offset + 1],
-                    self.binary_data[offset + 2],
-                    self.binary_data[offset + 3],
-                ]) as f64)
-                .unwrap(),
-            )),
-            ComponentType::Double => Ok(Value::Number(
-                Number::from_f64(f64::from_le_bytes([
-                    self.binary_data[offset],
-                    self.binary_data[offset + 1],
-                    self.binary_data[offset + 2],
-                    self.binary_data[offset + 3],
-                    self.binary_data[offset + 4],
-                    self.binary_data[offset + 5],
-                    self.binary_data[offset + 6],
-                    self.binary_data[offset + 7],
-                ]))
-                .unwrap(),
-            )),
+            ComponentType::Byte => Ok(V::from_i64(self.binary_data[offset] as i8 as i64)),
+            ComponentType::UnsignedByte => Ok(V::from_u64(self.binary_data[offset] as u64)),
+            ComponentType::Short => Ok(V::from_i64(i16::from_le_bytes([
+                self.binary_data[offset],
+                self.binary_data[offset + 1],
+            ]) as i64)),
+            ComponentType::UnsignedShort => Ok(V::from_u64(u16::from_le_bytes([
+                self.binary_data[offset],
+                self.binary_data[offset + 1],
+            ]) as u64)),
+            ComponentType::Int => Ok(V::from_i64(i32::from_le_bytes([
+                self.binary_data[offset],
+                self.binary_data[offset + 1],
+                self.binary_data[offset + 2],
+                self.binary_data[offset + 3],
+            ]) as i64)),
+            ComponentType::UnsignedInt => Ok(V::from_u64(u32::from_le_bytes([
+                self.binary_data[offset],
+                self.binary_data[offset + 1],
+                self.binary_data[offset + 2],
+                self.binary_data[offset + 3],
+            ]) as u64)),
+            ComponentType::Float => Ok(V::from_f32(f32::from_le_bytes([
+                self.binary_data[offset],
+                self.binary_data[offset + 1],
+                self.binary_data[offset + 2],
+                self.binary_data[offset + 3],
+            ]))),
+            ComponentType::Double => Ok(V::from_f64(f64::from_le_bytes([
+                self.binary_data[offset],
+                self.binary_data[offset + 1],
+                self.binary_data[offset + 2],
+                self.binary_data[offset + 3],
+                self.binary_data[offset + 4],
+                self.binary_data[offset + 5],
+                self.binary_data[offset + 6],
+                self.binary_data[offset + 7],
+            ]))),
         }
     }
 }
@@ -198,7 +185,7 @@ mod tests {
     use approx::assert_abs_diff_eq;
     #[cfg(test)]
     use navara_glb::mock::create_mock_glb_data;
-    use serde_json::Value;
+    use serde_json::{Number, Value};
 
     fn create_mock_b3dm_data() -> Vec<u8> {
         // Feature Table JSON
