@@ -19,13 +19,17 @@ import type {
  * Factory function to create a polyline base enhancer.
  *
  * This enhancer handles:
- * - Basic material properties (color, opacity, wireframe)
- * - Height and width
- * - Clamp to ground
+ * - Color (via shader uniforms)
+ * - Height (minMaxHeight) and width
+ * - Clamp to ground (with ground normals support)
+ * - Texturized rendering (draped on terrain)
  * - Picking
- * - RTE support
+ * - Batch texture attributes (color, show, height, extrudedHeight)
+ * - RTE (Relative-To-Eye) support for high-precision coordinates
  *
  * Supports ShaderMaterial with custom polyline shaders.
+ * Note: Unlike polygon materials, polylines don't support opacity/transparent/wireframe
+ * as these are managed via shader uniforms and custom shader code.
  *
  * @param material - The Three.js ShaderMaterial to enhance
  */

@@ -73,12 +73,12 @@ export const updateState = (
     color: props.color ?? currentState.color,
     // Batch flags can only transition from false to true, never back
     batchColorEnabled:
-      props.batchColorEnabled ?? currentState.batchColorEnabled,
-    useBatchTexture: props.useBatchTexture ?? currentState.useBatchTexture,
+      currentState.batchColorEnabled || !!props.batchColorEnabled,
+    useBatchTexture: currentState.useBatchTexture || !!props.useBatchTexture,
     useBatchColorShow:
-      props.useBatchColorShow ?? currentState.useBatchColorShow,
-    useBatchHeight: props.useBatchHeight ?? currentState.useBatchHeight,
+      currentState.useBatchColorShow || !!props.useBatchColorShow,
+    useBatchHeight: currentState.useBatchHeight || !!props.useBatchHeight,
     useBatchExtrudedHeight:
-      props.useBatchExtrudedHeight ?? currentState.useBatchExtrudedHeight,
+      currentState.useBatchExtrudedHeight || !!props.useBatchExtrudedHeight,
   };
 };

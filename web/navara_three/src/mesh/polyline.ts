@@ -399,9 +399,14 @@ export class PolylineMesh extends BatchedFeatureMesh<
             ? [minMaxHeights[0], minMaxHeights[1]]
             : undefined,
         width: material.width,
+        clampToGround: !!material.clampToGround,
         useGroundNormals: !!material.useGroundNormals,
       },
     });
+
+    // Update material.lights flag based on isTexturized state
+    // (lighting should be disabled for texturized/draped polylines)
+    this.material.lights = !base.isTexturized;
   }
 
   /**
@@ -445,9 +450,10 @@ export class PolylineMesh extends BatchedFeatureMesh<
   }
 
   _setFeatureColor(color: Color): void {
-    this._enhancedMaterial?.update({
+    this.getEnhancer().update({
       base: { color: color.getHex() },
     });
+    this.needsUpdate();
   }
 
   _setFeatureShow(visible: boolean): void {
