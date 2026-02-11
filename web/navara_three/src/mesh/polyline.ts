@@ -23,7 +23,10 @@ import {
   BatchedFeatureMesh,
   type BatchedFeatureAttributes,
 } from "./batchedFeature";
-import type { DefaultBatchAttributeValues } from "./batchTexture";
+import type {
+  BatchedAttributeName,
+  DefaultBatchAttributeValues,
+} from "./batchTexture";
 import { setupRTECallback } from "./rtcRteHelper";
 
 type Attributes = BatchedFeatureAttributes<{
@@ -67,7 +70,18 @@ export class PolylineMesh extends BatchedFeatureMesh<
     super(new BufferGeometry<Attributes>(), new ShaderMaterial());
     this._viewContext = viewContext;
     this._layerId = layerId;
+
     const useRTE = this.initGeometry(mesh, buf);
+
+    // If geometry init failed (missing required buffers), mark as invisible and skip material init
+    if (useRTE === false && !this.geometry.attributes.position) {
+      console.warn(
+        "PolylineMesh: Failed to initialize geometry due to missing required buffers. Mesh will be invisible.",
+      );
+      this.visible = false;
+      return;
+    }
+
     this.initMaterial(mesh, uniforms, viewEvents, useRTE);
 
     this.addEventListener("removedFromWorld", () => {
@@ -305,6 +319,46 @@ export class PolylineMesh extends BatchedFeatureMesh<
         base: { useBatchTexture: true, batchDataTexture: { value: texture } },
       });
     }
+  }
+
+  /**
+   * Keep enhancer state in sync with batch-attribute usage so that
+   * customProgramCacheKey reflects the correct shader configuration.
+   *
+   * This mirrors PolygonMesh._updateBatchAttribute: when batch color
+   * is first enabled, also enable batchColorEnabled and set color to white.
+   */
+  _updateBatchAttribute(
+    batchId: number,
+    attribute: BatchedAttributeName,
+    value: number | number[] | boolean,
+  ): void {
+    switch (attribute) {
+      case "color": {
+        // When batch color is first used, enable batchColorEnabled and set material.color to white
+        if (!this.getEnhancer().states().batchColorEnabled) {
+          // Set material.color to white (multiplier identity) and enable batch color mode
+          this.getEnhancer().update({
+            base: { batchColorEnabled: true, color: 0xffffff },
+          });
+        }
+        this.getEnhancer().update({ base: { useBatchColorShow: true } });
+        break;
+      }
+      case "show": {
+        this.getEnhancer().update({ base: { useBatchColorShow: true } });
+        break;
+      }
+      case "height":
+        this.getEnhancer().update({ base: { useBatchHeight: true } });
+        break;
+      case "extrudedHeight":
+        this.getEnhancer().update({ base: { useBatchExtrudedHeight: true } });
+        break;
+    }
+
+    // Call parent to update the batch texture
+    super._updateBatchAttribute(batchId, attribute, value);
   }
 
   _update(material: PolylineMaterial, active: boolean) {
