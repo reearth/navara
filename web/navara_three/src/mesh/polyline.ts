@@ -34,18 +34,21 @@ const PICKING_COORD_SENTINEL = new Vector2(-1, -1);
 
 type Attributes = BatchedFeatureAttributes<{
   position: BufferAttribute;
+  // RTE mode attributes (only present when useRTE=true)
   position_3d_high?: BufferAttribute;
   position_3d_low?: BufferAttribute;
-  start: BufferAttribute;
   start_3d_high?: BufferAttribute;
   start_3d_low?: BufferAttribute;
   end_3d_high?: BufferAttribute;
   end_3d_low?: BufferAttribute;
+  // Non-RTE mode attributes (only present when useRTE=false)
+  start?: BufferAttribute;
+  forward_offset?: BufferAttribute;
+  // Common attributes (always present)
   normal: BufferAttribute;
   start_normal: BufferAttribute;
   right_normal_and_texture_coordinate_normalization_y: BufferAttribute;
   end_normal_and_texture_coordinate_normalization_x: BufferAttribute;
-  forward_offset: BufferAttribute;
   attrBatchId: BufferAttribute;
 }>;
 
@@ -239,7 +242,7 @@ export class PolylineMesh extends BatchedFeatureMesh<
 
     // Shader selection is handled by enhancer's transformShader
     this.material.depthTest = false;
-    this.material.visible = !!meshMaterial.show;
+
     // Disable lighting for texturized rendering - the texture will be applied to the lit tile
     this.material.lights = !isTexturized;
     this.material.vertexColors = false;
@@ -443,7 +446,7 @@ export class PolylineMesh extends BatchedFeatureMesh<
 
   _setFeatureColor(color: Color): void {
     this._enhancedMaterial?.update({
-      base: { batchColorEnabled: true, color: color.getHex() },
+      base: { color: color.getHex() },
     });
   }
 
