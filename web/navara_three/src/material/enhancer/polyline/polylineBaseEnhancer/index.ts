@@ -103,12 +103,19 @@ export function createPolylineBaseEnhancer(
 
     programCacheKey: (): string => {
       invariant(state, "mount() must be called before programCacheKey");
-      // Return cache key based on state that affects shader defines
+      // Return cache key based on all state that affects shader sources/defines
       return JSON.stringify({
+        // Batch-texture related flags
         useBatchTexture: state.useBatchTexture,
         useBatchColorShow: state.useBatchColorShow,
         useBatchHeight: state.useBatchHeight,
         useBatchExtrudedHeight: state.useBatchExtrudedHeight,
+        // Additional shader-affecting state used by transformShader
+        isTexturized: state.isTexturized,
+        clampToGround: state.clampToGround,
+        useRTE: state.useRTE,
+        // Custom defines that may influence shader variants
+        userDataDefines: material.userData?.defines ?? undefined,
       });
     },
   };

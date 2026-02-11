@@ -29,6 +29,9 @@ import type {
 } from "./batchTexture";
 import { setupRTECallback } from "./rtcRteHelper";
 
+// Sentinel value for picking coordinate when not picking (reused to avoid allocations)
+const PICKING_COORD_SENTINEL = new Vector2(-1, -1);
+
 type Attributes = BatchedFeatureAttributes<{
   position: BufferAttribute;
   position_3d_high?: BufferAttribute;
@@ -73,13 +76,12 @@ export class PolylineMesh extends BatchedFeatureMesh<
 
     const useRTE = this.initGeometry(mesh, buf);
 
-    // If geometry init failed (missing required buffers), mark as invisible and skip material init
+    // If geometry init failed (missing required buffers), mark as invisible but continue initialization
     if (useRTE === false && !this.geometry.attributes.position) {
       console.warn(
         "PolylineMesh: Failed to initialize geometry due to missing required buffers. Mesh will be invisible.",
       );
       this.visible = false;
-      return;
     }
 
     this.initMaterial(mesh, uniforms, viewEvents, useRTE);
@@ -405,7 +407,9 @@ export class PolylineMesh extends BatchedFeatureMesh<
    */
   private getEnhancer(): NonNullable<typeof this._enhancedMaterial> {
     if (!this._enhancedMaterial) {
-      throw new Error("PolylineMesh must be initialized via init() before use");
+      throw new Error(
+        "PolylineMesh material enhancer is not initialized. This usually indicates a failure during construction or geometry/material setup.",
+      );
     }
     return this._enhancedMaterial;
   }
@@ -427,7 +431,7 @@ export class PolylineMesh extends BatchedFeatureMesh<
       mutates.setPickingCoord(pickingCoord);
     } else {
       // Reset to sentinel value when not picking or no coordinate provided
-      mutates.setPickingCoord(new Vector2(-1, -1));
+      mutates.setPickingCoord(PICKING_COORD_SENTINEL);
     }
   }
 

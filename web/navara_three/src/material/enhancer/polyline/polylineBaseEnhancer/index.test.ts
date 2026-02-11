@@ -114,6 +114,9 @@ describe("polylineBaseEnhancer", () => {
         useBatchColorShow: false,
         useBatchHeight: true,
         useBatchExtrudedHeight: false,
+        isTexturized: true,
+        clampToGround: false,
+        useRTE: true,
       });
 
       const cacheKey = enhancer.programCacheKey();
@@ -124,6 +127,10 @@ describe("polylineBaseEnhancer", () => {
         useBatchColorShow: false,
         useBatchHeight: true,
         useBatchExtrudedHeight: false,
+        isTexturized: true,
+        clampToGround: false,
+        useRTE: true,
+        userDataDefines: undefined,
       });
     });
 
