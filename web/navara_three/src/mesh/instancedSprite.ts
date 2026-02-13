@@ -44,11 +44,11 @@ export type InstancedSpriteOptions = {
 
 type PositionsInfo = {
   position:
-  | Float32Array<ArrayBufferLike>
-  | {
-    high: Float32Array<ArrayBufferLike>;
-    low: Float32Array<ArrayBufferLike>;
-  };
+    | Float32Array<ArrayBufferLike>
+    | {
+        high: Float32Array<ArrayBufferLike>;
+        low: Float32Array<ArrayBufferLike>;
+      };
   batchIDs: Float32Array<ArrayBufferLike> | null;
   positionSize: number;
   batchIDSize: number;
@@ -93,7 +93,11 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
   }
 
   // TODO: cleanup
-  async _update(m: NavaraPointMesh | NavaraBillboardMesh, buf: BufferLoader, active: boolean) {
+  async _update(
+    m: NavaraPointMesh | NavaraBillboardMesh,
+    buf: BufferLoader,
+    active: boolean,
+  ) {
     const material = this.material as ShaderMaterial;
     let uniformsChanged = false;
 
@@ -171,7 +175,6 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
       material.transparent = m.material.transparent ?? true;
     }
 
-
     {
       const positionsInfo = this.extractPositions(m, buf);
 
@@ -181,15 +184,21 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
             high: Float32Array<ArrayBufferLike>;
             low: Float32Array<ArrayBufferLike>;
           };
-          const pLow = this.geometry.getAttribute("instancePositionLOW") as InstancedBufferAttribute;
-          const pHigh = this.geometry.getAttribute("instancePositionHIGH") as InstancedBufferAttribute;
+          const pLow = this.geometry.getAttribute(
+            "instancePositionLOW",
+          ) as InstancedBufferAttribute;
+          const pHigh = this.geometry.getAttribute(
+            "instancePositionHIGH",
+          ) as InstancedBufferAttribute;
           pLow.copyArray(pos.low);
           pHigh.copyArray(pos.high);
           pLow.needsUpdate = true;
           pHigh.needsUpdate = true;
         } else {
           const pos = positionsInfo.position as Float32Array<ArrayBufferLike>;
-          const p = this.geometry.getAttribute("instancePosition") as InstancedBufferAttribute;
+          const p = this.geometry.getAttribute(
+            "instancePosition",
+          ) as InstancedBufferAttribute;
           p.copyArray(pos);
           p.needsUpdate = true;
         }

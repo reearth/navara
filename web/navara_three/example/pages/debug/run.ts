@@ -103,7 +103,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
       transparent: false,
       depthTest: true,
       offsetDepth: true,
-      center: {x: 0.0, y: 0.0}
+      center: { x: 0.0, y: 0.0 },
     },
   },
 
@@ -140,7 +140,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
       transparent: true,
       url: "/example.png",
       offsetDepth: true,
-      center: {x: 0.0, y: -0.5}
+      center: { x: 0.0, y: -0.5 },
     },
   },
 
