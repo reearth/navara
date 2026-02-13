@@ -7,6 +7,7 @@ import {
   MeshStandardMaterial,
   PointsMaterial,
   ShaderLib,
+  ShaderMaterial,
 } from "three";
 import { beforeAll, describe, expect, it } from "vitest";
 
@@ -25,6 +26,7 @@ const SHADER_MATERIAL_MAP: Record<ShaderName, new () => Material> = {
   standard: MeshStandardMaterial,
   physical: MeshPhysicalMaterial,
   points: PointsMaterial,
+  shader: ShaderMaterial, // Custom ShaderMaterial
 };
 
 const ALL_SHADER_TYPES = Object.keys(SHADER_MATERIAL_MAP) as ShaderName[];
@@ -32,6 +34,17 @@ const ALL_SHADER_TYPES = Object.keys(SHADER_MATERIAL_MAP) as ShaderName[];
 function createMockShader(
   shaderType: ShaderName,
 ): WebGLProgramParametersWithUniforms {
+  // For custom ShaderMaterial, return minimal shader
+  if (shaderType === "shader") {
+    return {
+      vertexShader: "void main() { gl_Position = vec4(0.0); }",
+      fragmentShader: "void main() { gl_FragColor = vec4(1.0); }",
+      uniforms: {},
+      defines: {},
+    } as WebGLProgramParametersWithUniforms;
+  }
+
+  // For standard Three.js materials, use ShaderLib
   const shaderDef = ShaderLib[shaderType];
   return {
     vertexShader: shaderDef.vertexShader,

@@ -89,8 +89,31 @@ export function createPolylineBaseEnhancer(
 
     update: (props: PolylineBaseProps): void => {
       invariant(state && mutates, "mount() must be called before update");
+
+      // Capture previous state for shader-affecting properties
+      const prevIsTexturized = state.isTexturized;
+      const prevClampToGround = state.clampToGround;
+      const prevUseBatchTexture = state.useBatchTexture;
+      const prevUseBatchColorShow = state.useBatchColorShow;
+      const prevUseBatchHeight = state.useBatchHeight;
+      const prevUseBatchExtrudedHeight = state.useBatchExtrudedHeight;
+
       state = updateState(props, state);
       mutates.update(state);
+
+      // Trigger shader recompilation if shader-affecting state changed
+      const shaderStateChanged =
+        state.isTexturized !== prevIsTexturized ||
+        state.clampToGround !== prevClampToGround ||
+        state.useBatchTexture !== prevUseBatchTexture ||
+        state.useBatchColorShow !== prevUseBatchColorShow ||
+        state.useBatchHeight !== prevUseBatchHeight ||
+        state.useBatchExtrudedHeight !== prevUseBatchExtrudedHeight;
+
+      if (shaderStateChanged) {
+        material.needsUpdate = true;
+      }
+
       // Handle external refs that are passed through props
       if (props.batchDataTexture) {
         mutates.setBatchDataTexture(props.batchDataTexture);

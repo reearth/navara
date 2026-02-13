@@ -8,7 +8,7 @@ import type { PolylineBaseProps } from "./types";
  * Shaders that the polyline base enhancer supports.
  * Polylines use ShaderMaterial with custom shaders, not built-in shaders like lambert or phong.
  */
-export const AVAILABLE_SHADERS = [] satisfies ShaderName[];
+export const AVAILABLE_SHADERS = ["shader"] satisfies ShaderName[];
 
 /**
  * Material types that the polyline base enhancer supports.
