@@ -450,8 +450,8 @@ export class PolylineMesh extends BatchedFeatureMesh<
   }
 
   _setFeatureColor(color: Color): void {
-    // When setting feature color via evaluator, always enable batch color mode
-    // This ensures material.vertexColors=true and USE_COLOR is defined in shader
+    // Called by evaluator to override feature color
+    // Set batchColorEnabled=true to prevent _update() from overwriting with material.color
     this.getEnhancer().update({
       base: { batchColorEnabled: true, color: color.getHex() },
     });
