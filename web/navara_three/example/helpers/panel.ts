@@ -388,17 +388,13 @@ export const addCtrlPanel = (
       }
 
       if ("backgroundColor" in material) {
-        material.backgroundColor = parseInt(
-          paneParams.backgroundColor.replace("#", ""),
-          16,
+        material.backgroundColor = new Color().setStyle(
+          paneParams.backgroundColor,
         );
       }
 
       if ("borderColor" in material) {
-        material.borderColor = parseInt(
-          paneParams.borderColor.replace("#", ""),
-          16,
-        );
+        material.borderColor = new Color().setStyle(paneParams.borderColor);
       }
 
       if ("borderWidth" in material) {
