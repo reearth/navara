@@ -67,17 +67,23 @@ export function createPolylineBaseEnhancer(
         useRTE: mergedProps.useRTE,
       };
       state = updateState(mergedProps, initialState);
-      // Create mutates with external uniform refs passed in
-      mutates = createBaseMutates(mergedProps.useRTE, {
-        batchDataTexture: props.batchDataTexture,
-        globeNormalTexture: props.globeNormalTexture,
+      // Create mutates (refs are created inside with default values)
+      mutates = createBaseMutates(mergedProps.useRTE);
+      mutates.update(state);
+      // Handle external refs that are passed through props
+      if (props.batchDataTexture) {
+        mutates.setBatchDataTexture(props.batchDataTexture);
+      }
+      if (props.globeNormalTexture) {
+        mutates.setGlobeNormalTexture(props.globeNormalTexture);
+      }
+      mutates.setExternalRefs({
         viewportAndPixelRatio: props.viewportAndPixelRatio,
         frustumNearFar: props.frustumNearFar,
         frustumRatio: props.frustumRatio,
         tGlobeDepth: props.tGlobeDepth,
         inverseProjectionMatrix: props.inverseProjectionMatrix,
       });
-      mutates.update(state);
       updateMaterialProps(material, mergedProps);
     },
 
@@ -91,6 +97,22 @@ export function createPolylineBaseEnhancer(
       }
       if (props.globeNormalTexture) {
         mutates.setGlobeNormalTexture(props.globeNormalTexture);
+      }
+      // Update external refs if any are provided
+      if (
+        props.viewportAndPixelRatio ||
+        props.frustumNearFar ||
+        props.frustumRatio ||
+        props.tGlobeDepth ||
+        props.inverseProjectionMatrix
+      ) {
+        mutates.setExternalRefs({
+          viewportAndPixelRatio: props.viewportAndPixelRatio,
+          frustumNearFar: props.frustumNearFar,
+          frustumRatio: props.frustumRatio,
+          tGlobeDepth: props.tGlobeDepth,
+          inverseProjectionMatrix: props.inverseProjectionMatrix,
+        });
       }
       updateMaterialProps(material, props);
     },

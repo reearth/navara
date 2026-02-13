@@ -1,12 +1,14 @@
 import { ShaderMaterial } from "three";
 
+import type { ShaderName } from "../../MaterialEnhancer";
+
 import type { PolylineBaseProps } from "./types";
 
 /**
  * Shaders that the polyline base enhancer supports.
  * Polylines use ShaderMaterial with custom shaders, not built-in shaders like lambert or phong.
  */
-export const AVAILABLE_SHADERS = [] as const;
+export const AVAILABLE_SHADERS = [] satisfies ShaderName[];
 
 /**
  * Material types that the polyline base enhancer supports.

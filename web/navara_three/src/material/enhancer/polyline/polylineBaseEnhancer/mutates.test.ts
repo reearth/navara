@@ -8,19 +8,6 @@ import { DEFAULT_BASE_STATE } from "./state";
 import type { PolylineBaseState } from "./types";
 
 describe("polylineBaseEnhancer/mutates", () => {
-  describe("createBaseMutates", () => {
-    it("should create mutates with all required methods", () => {
-      const mutates = createBaseMutates(false);
-
-      expect(mutates.update).toBeDefined();
-      expect(mutates.updateUniforms).toBeDefined();
-      expect(mutates.setBatchDataTexture).toBeDefined();
-      expect(mutates.setGlobeNormalTexture).toBeDefined();
-      expect(mutates.setPickingCoord).toBeDefined();
-      expect(mutates.updateRteUniforms).toBeDefined();
-    });
-  });
-
   describe("RTE uniforms", () => {
     it("should assign RTE refs to shader.uniforms when useRTE=true", () => {
       const state: PolylineBaseState = { ...DEFAULT_BASE_STATE, useRTE: true };

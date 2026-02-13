@@ -32,55 +32,14 @@ const DEFAULT_BASE_REFS: PolylineBaseRefs = {
  * Refs are created internally and captured via closure.
  *
  * @param useRTE - Whether RTE is enabled (determines if RTE refs are created)
- * @param externalRefs - External uniform references to be stored
  */
-export const createBaseMutates = (
-  useRTE: boolean,
-  externalRefs?: {
-    batchDataTexture?: UniformValue<Texture | null>;
-    globeNormalTexture?: UniformValue<Texture | null>;
-    viewportAndPixelRatio?: {
-      value: [x: number, y: number, z: number] | undefined | null;
-    };
-    frustumNearFar?: { value: [x: number, y: number] | undefined | null };
-    frustumRatio?: {
-      value: [x: number, y: number, z: number, w: number] | undefined | null;
-    };
-    tGlobeDepth?: { value: Texture | undefined | null };
-    inverseProjectionMatrix?: { value: ThreeMatrix4 | undefined | null };
-  },
-): PolylineBaseMutates => {
+export const createBaseMutates = (useRTE: boolean): PolylineBaseMutates => {
   // Clone defaults so each enhancer instance gets independent ref objects
   const refs = structuredClone(DEFAULT_BASE_REFS) as PolylineBaseRefs;
 
   // Restore Three.js objects (structuredClone creates plain objects for Three.js types)
   refs.color.value = new ThreeColor(0xffffff);
   refs.nvr_uPickingCoord.value = new ThreeVector2(-1, -1);
-
-  // Store external uniform refs
-  if (externalRefs) {
-    if (externalRefs.batchDataTexture) {
-      refs.batchDataTexture = externalRefs.batchDataTexture;
-    }
-    if (externalRefs.globeNormalTexture) {
-      refs.uGlobeNormal = externalRefs.globeNormalTexture;
-    }
-    if (externalRefs.viewportAndPixelRatio) {
-      refs.viewportAndPixelRatio = externalRefs.viewportAndPixelRatio;
-    }
-    if (externalRefs.frustumNearFar) {
-      refs.frustumNearFar = externalRefs.frustumNearFar;
-    }
-    if (externalRefs.frustumRatio) {
-      refs.frustumRatio = externalRefs.frustumRatio;
-    }
-    if (externalRefs.tGlobeDepth) {
-      refs.tGlobeDepth = externalRefs.tGlobeDepth;
-    }
-    if (externalRefs.inverseProjectionMatrix) {
-      refs.inverseProjectionMatrix = externalRefs.inverseProjectionMatrix;
-    }
-  }
 
   // Conditionally create RTE refs (useRTE can't change after mount)
   if (useRTE) {
@@ -161,6 +120,33 @@ export const createBaseMutates = (
     },
     setPickingCoord: (coord: ThreeVector2): void => {
       refs.nvr_uPickingCoord.value.copy(coord);
+    },
+    setExternalRefs: (externalRefs: {
+      viewportAndPixelRatio?: {
+        value: [x: number, y: number, z: number] | undefined | null;
+      };
+      frustumNearFar?: { value: [x: number, y: number] | undefined | null };
+      frustumRatio?: {
+        value: [x: number, y: number, z: number, w: number] | undefined | null;
+      };
+      tGlobeDepth?: { value: Texture | undefined | null };
+      inverseProjectionMatrix?: { value: ThreeMatrix4 | undefined | null };
+    }): void => {
+      if (externalRefs.viewportAndPixelRatio) {
+        refs.viewportAndPixelRatio = externalRefs.viewportAndPixelRatio;
+      }
+      if (externalRefs.frustumNearFar) {
+        refs.frustumNearFar = externalRefs.frustumNearFar;
+      }
+      if (externalRefs.frustumRatio) {
+        refs.frustumRatio = externalRefs.frustumRatio;
+      }
+      if (externalRefs.tGlobeDepth) {
+        refs.tGlobeDepth = externalRefs.tGlobeDepth;
+      }
+      if (externalRefs.inverseProjectionMatrix) {
+        refs.inverseProjectionMatrix = externalRefs.inverseProjectionMatrix;
+      }
     },
     updateRteUniforms: (
       modelViewMatrixRTE: ThreeMatrix4,

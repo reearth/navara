@@ -146,5 +146,20 @@ export type PolylineBaseMutates = Mutates<
      * This is needed to update the picking coordinate uniform.
      */
     setPickingCoord: (coord: Vector2) => void;
+    /**
+     * Set external uniform references shared across materials.
+     * These are typically passed from CommonUniforms and should be set once during mount.
+     */
+    setExternalRefs: (externalRefs: {
+      viewportAndPixelRatio?: {
+        value: [x: number, y: number, z: number] | undefined | null;
+      };
+      frustumNearFar?: { value: [x: number, y: number] | undefined | null };
+      frustumRatio?: {
+        value: [x: number, y: number, z: number, w: number] | undefined | null;
+      };
+      tGlobeDepth?: { value: Texture | undefined | null };
+      inverseProjectionMatrix?: { value: Matrix4 | undefined | null };
+    }) => void;
   }
 >;
