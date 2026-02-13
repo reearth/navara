@@ -61,7 +61,6 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
   private _initialColor: Color = new Color(0xffffff);
   private _initialHeight = 0.0;
   private _loadedUrls = new Set<string>();
-  // private _billboardAspect = 1.0;
   private _offscreenCanvas: OffscreenCanvas = new OffscreenCanvas(1, 1);
   private _offscreenCtx: OffscreenCanvasRenderingContext2D =
     this._offscreenCanvas.getContext("2d") as OffscreenCanvasRenderingContext2D;
@@ -421,15 +420,6 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
         material.uniforms.uTexture = { value: null };
         await this._uploadTexture(m.material.url, material);
       }
-
-      // // update the sprite aspect ratio based on the first texture, since all textures in the array must have the same dimensions
-      // const verticies = this.geometry.getAttribute("position") as BufferAttribute;
-      // const aspect = this._billboardAspect;
-      // for (let i = 0; i < verticies.count; i++) {
-      //   const x = verticies.getX(i);
-      //   verticies.setX(i, x * aspect);
-      // }
-      // verticies.needsUpdate = true;
     }
 
     material.visible = m.material.show ?? true;
