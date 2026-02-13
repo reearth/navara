@@ -44,12 +44,12 @@ export type InstancedSpriteOptions = {
 
 type PositionsInfo = {
   position:
-    | Float32Array<ArrayBufferLike>
-    | {
-        high: Float32Array<ArrayBufferLike>;
-        low: Float32Array<ArrayBufferLike>;
-      };
-  batchIDs: Float32Array<ArrayBufferLike>;
+  | Float32Array<ArrayBufferLike>
+  | {
+    high: Float32Array<ArrayBufferLike>;
+    low: Float32Array<ArrayBufferLike>;
+  };
+  batchIDs: Float32Array<ArrayBufferLike> | null;
   positionSize: number;
   batchIDSize: number;
   nPositions: number;
@@ -93,7 +93,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
   }
 
   // TODO: cleanup
-  async _update(m: NavaraPointMesh | NavaraBillboardMesh, active: boolean) {
+  async _update(m: NavaraPointMesh | NavaraBillboardMesh, buf: BufferLoader, active: boolean) {
     const material = this.material as ShaderMaterial;
     let uniformsChanged = false;
 
@@ -171,6 +171,31 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
       material.transparent = m.material.transparent ?? true;
     }
 
+
+    {
+      const positionsInfo = this.extractPositions(m, buf);
+
+      if (positionsInfo) {
+        if (positionsInfo.RTE) {
+          const pos = positionsInfo.position as {
+            high: Float32Array<ArrayBufferLike>;
+            low: Float32Array<ArrayBufferLike>;
+          };
+          const pLow = this.geometry.getAttribute("instancePositionLOW") as InstancedBufferAttribute;
+          const pHigh = this.geometry.getAttribute("instancePositionHIGH") as InstancedBufferAttribute;
+          pLow.copyArray(pos.low);
+          pHigh.copyArray(pos.high);
+          pLow.needsUpdate = true;
+          pHigh.needsUpdate = true;
+        } else {
+          const pos = positionsInfo.position as Float32Array<ArrayBufferLike>;
+          const p = this.geometry.getAttribute("instancePosition") as InstancedBufferAttribute;
+          p.copyArray(pos);
+          p.needsUpdate = true;
+        }
+      }
+    }
+
     // Alpha test and url is only relevant for billboards
     if (m instanceof NavaraBillboardMesh) {
       if (
@@ -219,6 +244,8 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     positionsInfo: PositionsInfo,
     m: NavaraPointMesh | NavaraBillboardMesh,
   ) {
+    invariant(positionsInfo.batchIDs, "Batch IDs not found!");
+
     const vertices = new Float32Array([
       -0.5,
       -0.5,
@@ -362,8 +389,8 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
         uScaleByDistance: { value: m.material.scaleByDistance ?? true },
         uCenter: {
           value: new Vector2(
-            m.material.center?.x ?? 0.5,
-            m.material.center?.y ?? 0.5,
+            m.material.center?.x ?? 0.0,
+            m.material.center?.y ?? 0.0,
           ),
         },
         uAlphaTest: {
@@ -435,7 +462,6 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     const batchIdsData = g.batch_ids;
     const batchIDs = buf.removeF32(batchIdsData.data);
     const batchIDSize = batchIdsData.size;
-    if (!batchIDs) return null;
 
     const positionData = g.position;
     const position = positionData

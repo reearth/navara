@@ -24,7 +24,8 @@ export async function renderPoint(
 export function processPointChanged(
   obj: InstancedSpriteMesh,
   m: NavaraPointMesh,
+  buf: BufferLoader,
   active: boolean,
 ) {
-  obj._update(m, active);
+  obj._update(m, buf, active);
 }

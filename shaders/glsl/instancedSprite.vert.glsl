@@ -73,9 +73,9 @@ void main() {
     // This makes it always face the camera
     if (uScaleByDistance) {
         float scale = uScale * length(mvPosition.xyz) / 1000000.0;
-        mvPosition.xy += ((position.xy - (clamp(uCenter, vec2(-0.5), vec2(0.5)))) * vec2(uAspect, 1.0) * scale);
+        mvPosition.xy += (((position.xy - uCenter)) * vec2(uAspect, 1.0) * scale);
     } else {
-        mvPosition.xy += ((position.xy - (clamp(uCenter, vec2(-0.5), vec2(0.5)))) * vec2(uAspect, 1.0) * uScale);
+        mvPosition.xy += (((position.xy - uCenter)) * vec2(uAspect, 1.0) * uScale);
     }
     gl_Position = projectionMatrix * mvPosition;
     vFragDepth = gl_Position.w + 1.0;
