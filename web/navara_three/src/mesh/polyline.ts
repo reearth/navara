@@ -7,6 +7,7 @@ import {
   BufferAttribute,
   BufferGeometry,
   Color,
+  Matrix4,
   ShaderMaterial,
   Texture,
   Vector2,
@@ -45,7 +46,6 @@ type Attributes = BatchedFeatureAttributes<{
   start?: BufferAttribute;
   forward_offset?: BufferAttribute;
   // Common attributes (always present)
-  normal: BufferAttribute;
   start_normal: BufferAttribute;
   right_normal_and_texture_coordinate_normalization_y: BufferAttribute;
   end_normal_and_texture_coordinate_normalization_x: BufferAttribute;
@@ -77,24 +77,27 @@ export class PolylineMesh extends BatchedFeatureMesh<
     this._viewContext = viewContext;
     this._layerId = layerId;
 
-    const useRTE = this.initGeometry(mesh, buf);
+    const geometryResult = this.initGeometry(mesh, buf);
 
     // If geometry init failed (missing required buffers), mark as invisible but continue initialization
-    if (useRTE === false && !this.geometry.attributes.position) {
+    if (!geometryResult.success) {
       console.warn(
         "PolylineMesh: Failed to initialize geometry due to missing required buffers. Mesh will be invisible.",
       );
       this.visible = false;
     }
 
-    this.initMaterial(mesh, uniforms, viewEvents, useRTE);
+    this.initMaterial(mesh, uniforms, viewEvents, geometryResult.useRTE);
 
     this.addEventListener("removedFromWorld", () => {
       this.dispose(viewEvents);
     });
   }
 
-  private initGeometry(mesh: NavaraPolylineMesh, buf: BufferLoader): boolean {
+  private initGeometry(
+    mesh: NavaraPolylineMesh,
+    buf: BufferLoader,
+  ): { success: true; useRTE: boolean } | { success: false; useRTE: false } {
     const g = mesh.geometry;
     const position = buf.removeF32(g.position.data);
     const position_high = g.position_high
@@ -133,7 +136,7 @@ export class PolylineMesh extends BatchedFeatureMesh<
       !right_normal_and_texture_coordinate_normalization_y ||
       !indices
     ) {
-      return false;
+      return { success: false, useRTE: false };
     }
 
     const geometry = this.geometry;
@@ -220,7 +223,7 @@ export class PolylineMesh extends BatchedFeatureMesh<
     geometry.setIndex(new BufferAttribute(indices, 1));
     // geometry.computeVertexNormals();
 
-    return useRTE;
+    return { success: true, useRTE };
   }
 
   private initMaterial(
@@ -292,6 +295,8 @@ export class PolylineMesh extends BatchedFeatureMesh<
             cameraPositionLow,
             state,
           ),
+        new Matrix4(),
+        new Matrix4(),
       );
       this.onBeforeRender = callback;
       this.onBeforeShadow = callback;
