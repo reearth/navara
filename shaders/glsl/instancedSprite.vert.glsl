@@ -26,6 +26,9 @@ uniform bool uScaleByDistance;
 uniform vec2 uCenter;
 uniform float uAspect; // Aspect ratio of the billboard texture
 
+// Normalization factor to keep sprite size consistent across globe-scale distances
+const float DISTANCE_SCALE_FACTOR = 1000000.0;
+
 varying vec2 vUv;
 varying vec3 vColor;
 varying float vBatchID;
@@ -72,7 +75,7 @@ void main() {
     mvPosition += mvr_getMvHeightOffset(absTransformed, instanceHeight);
     // This makes it always face the camera
     if (uScaleByDistance) {
-        float scale = uScale * length(mvPosition.xyz) / 1000000.0;
+        float scale = uScale * length(mvPosition.xyz) / DISTANCE_SCALE_FACTOR;
         mvPosition.xy += (((position.xy - uCenter)) * vec2(uAspect, 1.0) * scale);
     } else {
         mvPosition.xy += (((position.xy - uCenter)) * vec2(uAspect, 1.0) * uScale);
