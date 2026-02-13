@@ -25,7 +25,7 @@ export type PolylineMaterialProps = {
 };
 
 // Shaders this enhancer supports (currently empty as polylines use custom ShaderMaterial)
-const AVAILABLE_SHADERS = [] as const;
+const AVAILABLE_SHADERS = ["shader"] as const;
 type AVAILABLE_SHADERS = typeof AVAILABLE_SHADERS;
 
 /**

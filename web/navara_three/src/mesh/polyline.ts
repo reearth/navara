@@ -64,6 +64,8 @@ export class PolylineMesh extends BatchedFeatureMesh<
   private _enhancedMaterial?: ReturnType<typeof createPolylineMaterialEnhancer>;
   /** Previous effectIds for SelectiveEffect registry diff */
   private _prevEffectIds?: string[];
+  /** Flag indicating geometry initialization failed - mesh should never be visible */
+  private _geometryInitFailed = false;
 
   constructor(
     mesh: NavaraPolylineMesh,
@@ -79,11 +81,12 @@ export class PolylineMesh extends BatchedFeatureMesh<
 
     const geometryResult = this.initGeometry(mesh, buf);
 
-    // If geometry init failed (missing required buffers), mark as invisible but continue initialization
+    // If geometry init failed (missing required buffers), mark as permanently invisible
     if (!geometryResult.success) {
       console.warn(
-        "PolylineMesh: Failed to initialize geometry due to missing required buffers. Mesh will be invisible.",
+        "PolylineMesh: Failed to initialize geometry due to missing required buffers. Mesh will be permanently invisible.",
       );
+      this._geometryInitFailed = true;
       this.visible = false;
     }
 
@@ -372,6 +375,13 @@ export class PolylineMesh extends BatchedFeatureMesh<
   }
 
   _update(material: PolylineMaterial, active: boolean) {
+    // If geometry initialization failed, keep mesh permanently invisible
+    // to prevent WebGL errors from missing attributes/buffers
+    if (this._geometryInitFailed) {
+      this.visible = false;
+      return;
+    }
+
     const enhancer = this.getEnhancer();
 
     // Update mesh properties (not handled by enhancer)
