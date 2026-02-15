@@ -34,7 +34,9 @@ const ALL_SHADER_TYPES = Object.keys(SHADER_MATERIAL_MAP) as ShaderName[];
 function createMockShader(
   shaderType: ShaderName,
 ): WebGLProgramParametersWithUniforms {
-  // For custom ShaderMaterial, return minimal shader
+  // Custom ShaderMaterial ("shader") is not in Three.js ShaderLib
+  // ShaderLib only contains built-in materials: basic, lambert, phong, standard, physical, points
+  // For custom ShaderMaterial, we provide a minimal shader for testing enhancer transformShader()
   if (shaderType === "shader") {
     return {
       vertexShader: "void main() { gl_Position = vec4(0.0); }",

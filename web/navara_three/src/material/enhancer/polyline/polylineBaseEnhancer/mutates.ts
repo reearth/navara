@@ -115,13 +115,12 @@ export const createBaseMutates = (useRTE: boolean): PolylineBaseMutates => {
     setBatchDataTexture: (texture: UniformValue<Texture | null>): void => {
       refs.batchDataTexture = texture;
     },
-    setGlobeNormalTexture: (texture: UniformValue<Texture | null>): void => {
-      refs.uGlobeNormal = texture;
-    },
     setPickingCoord: (coord: ThreeVector2): void => {
       refs.nvr_uPickingCoord.value.copy(coord);
     },
     setExternalRefs: (externalRefs: {
+      batchDataTexture?: UniformValue<Texture | null>;
+      globeNormalTexture?: UniformValue<Texture | null>;
       viewportAndPixelRatio?: {
         value: [x: number, y: number, z: number] | undefined | null;
       };
@@ -132,6 +131,12 @@ export const createBaseMutates = (useRTE: boolean): PolylineBaseMutates => {
       tGlobeDepth?: { value: Texture | undefined | null };
       inverseProjectionMatrix?: { value: ThreeMatrix4 | undefined | null };
     }): void => {
+      if (externalRefs.batchDataTexture) {
+        refs.batchDataTexture = externalRefs.batchDataTexture;
+      }
+      if (externalRefs.globeNormalTexture) {
+        refs.uGlobeNormal = externalRefs.globeNormalTexture;
+      }
       if (externalRefs.viewportAndPixelRatio) {
         refs.viewportAndPixelRatio = externalRefs.viewportAndPixelRatio;
       }

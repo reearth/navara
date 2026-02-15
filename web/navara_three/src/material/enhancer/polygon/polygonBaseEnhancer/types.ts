@@ -4,6 +4,9 @@ import type { UniformValue } from "../../../types";
 import type { BatchTextureFlags } from "../../batchTexture";
 import type { Mutates } from "../../MaterialEnhancer";
 
+// Helper type to make BatchTextureFlags required (remove optional modifiers)
+type RequiredBatchTextureFlags = Required<BatchTextureFlags>;
+
 /**
  * Props for the polygon core enhancer.
  */
@@ -54,24 +57,22 @@ export type PolygonBaseProps = {
  * This state is always replaced as a whole (never mutated).
  * Returned directly via states() - refresh after updates.
  */
-export type PolygonBaseState = Readonly<{
-  useRTE: boolean;
-  isTexturized: boolean;
-  clampToGround: boolean;
-  useGroundNormals: boolean;
-  pickable: boolean;
-  minMaxHeight: [number, number] | undefined;
-  addExtrudedHeight: number;
-  addHeight: number;
-  reflectivity: number;
-  roughness: number;
-  // Batch texture state - when true, material.color is white and colors come from batch texture
-  batchColorEnabled: boolean;
-  useBatchTexture: boolean;
-  useBatchColorShow: boolean;
-  useBatchHeight: boolean;
-  useBatchExtrudedHeight: boolean;
-}>;
+export type PolygonBaseState = Readonly<
+  {
+    useRTE: boolean;
+    isTexturized: boolean;
+    clampToGround: boolean;
+    useGroundNormals: boolean;
+    pickable: boolean;
+    minMaxHeight: [number, number] | undefined;
+    addExtrudedHeight: number;
+    addHeight: number;
+    reflectivity: number;
+    roughness: number;
+    // Batch texture state - when true, material.color is white and colors come from batch texture
+    batchColorEnabled: boolean;
+  } & RequiredBatchTextureFlags
+>;
 
 /**
  * Mutable references (uniforms) for the polygon base enhancer.

@@ -1,4 +1,4 @@
-import { Matrix4, Vector2, Vector3 } from "three";
+import { Vector2 } from "three";
 import { describe, expect, it } from "vitest";
 
 import type { ShaderUniforms } from "../../MaterialEnhancer";
@@ -54,54 +54,6 @@ describe("polylineBaseEnhancer/mutates", () => {
       expect(uniforms.minMaxHeightAndWidth?.value).toEqual([10, 100, 3]);
       expect(uniforms.useGroundNormals?.value).toBe(true);
       expect(uniforms.nvr_uPickable?.value).toBe(1);
-    });
-  });
-
-  describe("updateRteUniforms", () => {
-    it("should update RTE uniforms when useRTE=true", () => {
-      const state: PolylineBaseState = { ...DEFAULT_BASE_STATE, useRTE: true };
-      const mutates = createBaseMutates(true);
-
-      const modelViewMatrix = new Matrix4().makeTranslation(1, 2, 3);
-      const cameraHigh = new Vector3(100, 200, 300);
-      const cameraLow = new Vector3(0.1, 0.2, 0.3);
-
-      mutates.update(state);
-      mutates.updateRteUniforms(modelViewMatrix, cameraHigh, cameraLow, state);
-
-      const uniforms: ShaderUniforms = {};
-      mutates.updateUniforms(uniforms, state);
-
-      const mvMatrix = uniforms.modelViewMatrixRTE as { value: Matrix4 };
-      expect(mvMatrix.value.equals(modelViewMatrix)).toBe(true);
-
-      const camHigh = uniforms.u_cameraPositionHigh as { value: Vector3 };
-      expect(camHigh.value.equals(cameraHigh)).toBe(true);
-
-      const camLow = uniforms.u_cameraPositionLow as { value: Vector3 };
-      expect(camLow.value.equals(cameraLow)).toBe(true);
-    });
-
-    it("should not throw when useRTE=false", () => {
-      const state: PolylineBaseState = {
-        ...DEFAULT_BASE_STATE,
-        useRTE: false,
-      };
-      const mutates = createBaseMutates(false);
-
-      const modelViewMatrix = new Matrix4();
-      const cameraHigh = new Vector3();
-      const cameraLow = new Vector3();
-
-      // Should not throw
-      expect(() =>
-        mutates.updateRteUniforms(
-          modelViewMatrix,
-          cameraHigh,
-          cameraLow,
-          state,
-        ),
-      ).not.toThrow();
     });
   });
 

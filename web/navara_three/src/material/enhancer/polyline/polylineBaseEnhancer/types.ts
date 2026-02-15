@@ -4,6 +4,9 @@ import type { UniformValue } from "../../../types";
 import type { BatchTextureFlags } from "../../batchTexture";
 import type { Mutates } from "../../MaterialEnhancer";
 
+// Helper type to make BatchTextureFlags required (remove optional modifiers)
+type RequiredBatchTextureFlags = Required<BatchTextureFlags>;
+
 /**
  * Props for the polyline base enhancer.
  */
@@ -51,22 +54,20 @@ export type PolylineBaseProps = {
  * This state is always replaced as a whole (never mutated).
  * Returned directly via states() - refresh after updates.
  */
-export type PolylineBaseState = Readonly<{
-  useRTE: boolean;
-  isTexturized: boolean;
-  clampToGround: boolean;
-  useGroundNormals: boolean;
-  pickable: boolean;
-  minMaxHeight: [number, number];
-  width: number;
-  color: number;
-  // Batch texture state - when true, material.color is white and colors come from batch texture
-  batchColorEnabled: boolean;
-  useBatchTexture: boolean;
-  useBatchColorShow: boolean;
-  useBatchHeight: boolean;
-  useBatchExtrudedHeight: boolean;
-}>;
+export type PolylineBaseState = Readonly<
+  {
+    useRTE: boolean;
+    isTexturized: boolean;
+    clampToGround: boolean;
+    useGroundNormals: boolean;
+    pickable: boolean;
+    minMaxHeight: [number, number];
+    width: number;
+    color: number;
+    // Batch texture state - when true, material.color is white and colors come from batch texture
+    batchColorEnabled: boolean;
+  } & RequiredBatchTextureFlags
+>;
 
 /**
  * Mutable references (uniforms) for the polyline base enhancer.
@@ -137,11 +138,6 @@ export type PolylineBaseMutates = Mutates<
      */
     setBatchDataTexture: (texture: UniformValue<Texture | null>) => void;
     /**
-     * Set the globe normal texture ref.
-     * This is needed because globeNormalTexture is an external ref passed via props.
-     */
-    setGlobeNormalTexture: (texture: UniformValue<Texture | null>) => void;
-    /**
      * Set the picking coordinate.
      * This is needed to update the picking coordinate uniform.
      */
@@ -151,6 +147,8 @@ export type PolylineBaseMutates = Mutates<
      * These are typically passed from CommonUniforms and should be set once during mount.
      */
     setExternalRefs: (externalRefs: {
+      batchDataTexture?: UniformValue<Texture | null>;
+      globeNormalTexture?: UniformValue<Texture | null>;
       viewportAndPixelRatio?: {
         value: [x: number, y: number, z: number] | undefined | null;
       };
