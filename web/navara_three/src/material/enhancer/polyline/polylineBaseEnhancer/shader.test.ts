@@ -1,38 +1,99 @@
-import { testShaderCompatibility } from "../../test-utils/shaderCompatibility";
-
-import { POLYLINE_BASE_SHADER_MARKERS } from "./markers";
+import FlatPolylineFragShader from "@shaders/glsl/flatPolyline.frag.glsl";
+import FlatPolylineVertShader from "@shaders/glsl/flatPolyline.vert.glsl";
+import GroundPolylineFragShader from "@shaders/glsl/groundPolyline.frag.glsl";
+import PolylineFragShader from "@shaders/glsl/polyline.frag.glsl";
+import PolylineVertShader from "@shaders/glsl/polyline.vert.glsl";
+import { describe, it, expect } from "vitest";
 
 import { createPolylineBaseEnhancer, type SupportedMaterial } from ".";
 
-testShaderCompatibility(
-  "polylineBaseEnhancer",
-  (material) => createPolylineBaseEnhancer(material as SupportedMaterial),
-  [
-    {
-      name: "With RTE",
-      props: {
-        useRTE: true,
-      },
-    },
-    {
-      name: "Without RTE",
-      props: {
-        useRTE: false,
-      },
-    },
-    {
-      name: "With clampToGround",
-      props: {
-        clampToGround: true,
-        isTexturized: false,
-      },
-    },
-    {
-      name: "With isTexturized",
-      props: {
-        isTexturized: true,
-      },
-    },
-  ],
-  POLYLINE_BASE_SHADER_MARKERS,
-);
+describe("polylineBaseEnhancer shader selection", () => {
+  it("should use FlatPolyline shaders when isTexturized is true", () => {
+    const material = {
+      type: "ShaderMaterial",
+      userData: {},
+    } as unknown as SupportedMaterial;
+
+    const enhancer = createPolylineBaseEnhancer(material);
+
+    // Mount with isTexturized = true
+    enhancer.mount({
+      isTexturized: true,
+    });
+
+    // Create a mock shader object
+    const shader = {
+      vertexShader: "",
+      fragmentShader: "",
+      uniforms: {},
+      defines: {},
+    };
+
+    // Transform the shader
+    enhancer.transformShader(shader as any);
+
+    // Verify that FlatPolyline shaders are used
+    expect(shader.vertexShader).toBe(FlatPolylineVertShader);
+    expect(shader.fragmentShader).toBe(FlatPolylineFragShader);
+  });
+
+  it("should use GroundPolylineFragShader when isTexturized is false and clampToGround is true", () => {
+    const material = {
+      type: "ShaderMaterial",
+      userData: {},
+    } as unknown as SupportedMaterial;
+
+    const enhancer = createPolylineBaseEnhancer(material);
+
+    // Mount with isTexturized = false, clampToGround = true
+    enhancer.mount({
+      isTexturized: false,
+      clampToGround: true,
+    });
+
+    // Create a mock shader object
+    const shader = {
+      vertexShader: "",
+      fragmentShader: "",
+      uniforms: {},
+      defines: {},
+    };
+
+    // Transform the shader
+    enhancer.transformShader(shader as any);
+
+    // Verify that PolylineVertShader and GroundPolylineFragShader are used
+    expect(shader.vertexShader).toBe(PolylineVertShader);
+    expect(shader.fragmentShader).toContain(GroundPolylineFragShader);
+  });
+
+  it("should use PolylineFragShader when isTexturized is false and clampToGround is false", () => {
+    const material = {
+      type: "ShaderMaterial",
+      userData: {},
+    } as unknown as SupportedMaterial;
+
+    const enhancer = createPolylineBaseEnhancer(material);
+
+    // Mount with isTexturized = false, clampToGround = false
+    enhancer.mount({
+      isTexturized: false,
+      clampToGround: false,
+    });
+
+    // Create a mock shader object
+    const shader = {
+      vertexShader: "",
+      fragmentShader: "",
+      uniforms: {},
+      defines: {},
+    };
+
+    // Transform the shader
+    enhancer.transformShader(shader as any);
+
+    // Verify that PolylineVertShader and PolylineFragShader are used
+    expect(shader.vertexShader).toBe(PolylineVertShader);
+    expect(shader.fragmentShader).toContain(PolylineFragShader);
+  });
+});
