@@ -109,12 +109,10 @@ export class PolylineMesh extends BatchedFeatureMesh<
     const position_low = g.position_low
       ? buf.removeF32(g.position_low.data)
       : null;
-    const start = buf.removeF32(g.start.data);
     const start_high = g.start_high ? buf.removeF32(g.start_high.data) : null;
     const start_low = g.start_low ? buf.removeF32(g.start_low.data) : null;
     const end_high = g.end_high ? buf.removeF32(g.end_high.data) : null;
     const end_low = g.end_low ? buf.removeF32(g.end_low.data) : null;
-    const forward_offset = buf.removeF32(g.forward_offset.data);
     const start_normals = buf.removeF32(g.start_normals.data);
     const end_normal_and_texture_coordinate_normalization_x = buf.removeF32(
       g.end_normal_and_texture_coordinate_normalization_x.data,
@@ -132,8 +130,6 @@ export class PolylineMesh extends BatchedFeatureMesh<
 
     if (
       !position ||
-      !start ||
-      !forward_offset ||
       !start_normals ||
       !end_normal_and_texture_coordinate_normalization_x ||
       !right_normal_and_texture_coordinate_normalization_y ||
@@ -184,6 +180,13 @@ export class PolylineMesh extends BatchedFeatureMesh<
         geometry.setAttribute("end_3d_low", new BufferAttribute(end_low, 3));
       }
     } else {
+      const start = buf.removeF32(g.start.data);
+      const forward_offset = buf.removeF32(g.forward_offset.data);
+
+      if (!start || !forward_offset) {
+        return { success: false, useRTE: false };
+      }
+
       // Non-RTE mode: use regular start attribute
       geometry.setAttribute("start", new BufferAttribute(start, g.start.size));
 

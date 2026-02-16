@@ -38,12 +38,9 @@ function createMockShader(
   // ShaderLib only contains built-in materials: basic, lambert, phong, standard, physical, points
   // For custom ShaderMaterial, we provide a minimal shader for testing enhancer transformShader()
   if (shaderType === "shader") {
-    return {
-      vertexShader: "void main() { gl_Position = vec4(0.0); }",
-      fragmentShader: "void main() { gl_FragColor = vec4(1.0); }",
-      uniforms: {},
-      defines: {},
-    } as WebGLProgramParametersWithUniforms;
+    throw new Error(
+      "This test checks if the shader replacement works without any error. ShaderMaterial doesn't need this check.",
+    );
   }
 
   // For standard Three.js materials, use ShaderLib
