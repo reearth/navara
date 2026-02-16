@@ -63,7 +63,11 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
   private _loadedUrls = new Set<string>();
   private _offscreenCanvas: OffscreenCanvas = new OffscreenCanvas(1, 1);
   private _offscreenCtx: OffscreenCanvasRenderingContext2D =
-    this._offscreenCanvas.getContext("2d") as OffscreenCanvasRenderingContext2D;
+  (() => {
+      const ctx = this._offscreenCanvas.getContext("2d");
+      invariant(ctx, "Failed to acquire 2D context for OffscreenCanvas");
+      return ctx;
+    })();
   /** ViewContext for SelectiveEffect handling */
   private _viewContext: ViewContext;
   /** Layer ID for SelectiveEffect handling */
@@ -129,12 +133,12 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     }
 
     if (
-      material.uniforms.uCenter.value.x !== (m.material.center?.x ?? 0.5) ||
-      material.uniforms.uCenter.value.y !== (m.material.center?.y ?? 0.5)
+      material.uniforms.uCenter.value.x !== (m.material.center?.x ?? 0.0) ||
+      material.uniforms.uCenter.value.y !== (m.material.center?.y ?? 0.0)
     ) {
       material.uniforms.uCenter.value.set(
-        m.material.center?.x ?? 0.5,
-        m.material.center?.y ?? 0.5,
+        m.material.center?.x ?? 0.0,
+        m.material.center?.y ?? 0.0,
       );
       uniformsChanged = true;
     }
@@ -215,7 +219,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
       }
 
       if (m.material.url) {
-        const layerIndex = await this._uploadTexture(m.material.url, material);
+        const layerIndex = await this.uploadTexture(m.material.url, material);
         if (layerIndex !== undefined) {
           uniformsChanged = true;
           const layerAttr = this.geometry.getAttribute(
@@ -454,7 +458,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
       material.defines.BILLBOARD = 1;
       if (m.material.url) {
         material.uniforms.uTexture = { value: null };
-        await this._uploadTexture(m.material.url, material);
+        await this.uploadTexture(m.material.url, material);
       }
     }
 
@@ -524,7 +528,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
   }
 
   /** Extract raw RGBA pixel data from an image-based texture via an offscreen canvas. */
-  private _extractPixelData(
+  private extractPixelData(
     texture: { image: HTMLImageElement | ImageBitmap },
     flipY: boolean,
   ) {
@@ -542,7 +546,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     return new Uint8Array(imageData.data);
   }
 
-  private async _uploadTexture(
+  private async uploadTexture(
     url: string,
     material: ShaderMaterial,
   ): Promise<number | undefined> {
@@ -554,8 +558,8 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
       let newTextureArray: DataArrayTexture;
       const width = newTexture.image.width;
       const height = newTexture.image.height;
-      material.uniforms.uAspect = { value: width / height };
-      const pixelData = this._extractPixelData(newTexture, true);
+      material.uniforms.uAspect.value = width / height;
+      const pixelData = this.extractPixelData(newTexture, true);
 
       const existingTextureArray = material.uniforms.uTexture
         .value as DataArrayTexture;
@@ -582,7 +586,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
           textureData,
           width,
           height,
-          this._loadedUrls.size,
+          this._loadedUrls.size + 1,
         );
 
         existingTextureArray.dispose(); // dispose old texture array
@@ -597,7 +601,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
       newTextureArray.minFilter = LinearFilter;
       newTextureArray.magFilter = LinearFilter;
 
-      material.uniforms.uTexture = { value: newTextureArray };
+      material.uniforms.uTexture.value = newTextureArray;
       material.uniformsNeedUpdate = true;
 
       newTexture.dispose();
@@ -608,7 +612,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
 
   _setPickable(pickable: boolean): void {
     const mat = this.material as ShaderMaterial;
-    mat.uniforms.nvr_uPickable = { value: pickable ? 1.0 : 0.0 };
+    mat.uniforms.nvr_uPickable.value = pickable ? 1.0 : 0.0;
     mat.uniformsNeedUpdate = true;
   }
 
@@ -643,5 +647,28 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     ) as InstancedBufferAttribute;
     heightAttr.setX(instanceId, height);
     heightAttr.needsUpdate = true;
+  }
+
+  dispose(): void {
+    this.geometry?.dispose();
+
+    const shaderMaterial = this.material as ShaderMaterial;
+
+    const uniforms = shaderMaterial.uniforms as {
+      uTexture?: { value: DataArrayTexture | null };
+      [key: string]: unknown;
+    };
+
+    const textureArray = uniforms?.uTexture?.value;
+    if (textureArray instanceof DataArrayTexture) {
+      textureArray.dispose();
+      uniforms.uTexture!.value = null;
+    }
+    
+    shaderMaterial.dispose();
+
+    // Clear internal collections to release references
+    this._batchIdToInstance.clear();
+    this._loadedUrls.clear();
   }
 }
