@@ -239,11 +239,13 @@ const addGeoJSONLayer = (pane: Pane, view: ThreeView) => {
       },
       billboard: {
         color: new Color().setStyle("#ffffff"),
-        size: 0.05,
+        size: 50000.0,
         height: 1,
         scaleByDistance: true,
         clampToGround: true,
         depthTest: true,
+        transparent: true,
+        center: { x: 0.0, y: -0.5 },
         url: "/example.png",
       },
     },
@@ -399,7 +401,7 @@ const addHeliportLayer = (pane: Pane, view: ThreeView) => {
       url: MVT_DATASETS.plateauWakayamaGen.url,
     },
     point: {
-      size: 0.01,
+      size: 10000.0,
       scaleByDistance: true,
       clampToGround: true,
       color: new Color().setStyle("#ff0000"),
