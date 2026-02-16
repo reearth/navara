@@ -782,7 +782,7 @@ export default class ThreeView<
 
   private async initializeRenderPass() {
     // Initialize atmosphere
-    await this.atmosphere.init();
+    await this.atmosphere._init();
 
     this.skyEnvMapLayer = this.addLayer<SkyEnvMapEffectLayer>({
       type: "effect",
@@ -985,6 +985,7 @@ export default class ThreeView<
 
     // Dispose SelectiveEffectHelper
     this.selectiveEffectHelper.dispose();
+    this.atmosphere._dispose();
 
     this.renderer.setAnimationLoop(null);
     if (

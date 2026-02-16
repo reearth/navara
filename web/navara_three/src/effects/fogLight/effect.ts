@@ -1,11 +1,6 @@
-import {
-  Camera,
-  PerspectiveCamera,
-  OrthographicCamera,
-  Color,
-  Vector3,
-} from "three";
+import { Camera, PerspectiveCamera, OrthographicCamera, Vector3 } from "three";
 
+import { Color } from "../../Color";
 import {
   Pass as PassWrapper,
   type EffectEvents,
@@ -92,7 +87,9 @@ export class FogLight extends PassWrapper<
         light.position.z,
       );
       const color =
-        light.color instanceof Color ? light.color : new Color(light.color);
+        light.color instanceof Color
+          ? light.color
+          : new Color().setHex(light.color);
 
       this.rawEffect.writeLight(
         i,
@@ -105,7 +102,12 @@ export class FogLight extends PassWrapper<
 
     // Clear remaining slots
     for (let i = numLights; i < maxLights; i++) {
-      this.rawEffect.writeLight(i, new Color(0, 0, 0), 0, new Vector3(0, 0, 0));
+      this.rawEffect.writeLight(
+        i,
+        new Color().setRGB(0, 0, 0),
+        0,
+        new Vector3(0, 0, 0),
+      );
     }
 
     // Update textures
