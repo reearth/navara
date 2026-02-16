@@ -8,8 +8,6 @@ export * from "./billboard";
 export * from "./featureMesh";
 export * from "./batchedFeature";
 export * from "./instanced";
-export * from "./instancedPoint";
-export * from "./instancedBillboard";
 export * from "./instancedText";
 export * from "./batchTexture";
 export * from "./tile";
