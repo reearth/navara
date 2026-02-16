@@ -174,10 +174,10 @@ const addInteriorGeoJSONLayer = (pane: Pane, view: ThreeView) => {
           UPDATED_FEATURE.add(evaluator.id);
 
           evaluator.evaluate((_batchId, property) => {
-            const height = (property?.get("height") as number) ?? 0;
-            const color = (property?.get("color") as string) ?? "#ffffff";
+            const height = (property?.["height"] as number) ?? 0;
+            const color = (property?.["color"] as string) ?? "#ffffff";
             const extrudedHeight =
-              (property?.get("extrudedHeight") as number) ?? 0;
+              (property?.["extrudedHeight"] as number) ?? 0;
 
             return {
               height,
@@ -382,7 +382,7 @@ const addGeoJSONLayer = (pane: Pane, view: ThreeView) => {
         UPDATED_FEATURE.add(evaluator.id);
 
         evaluator.evaluate((_batchId, property) => {
-          const num = property?.get("No") as number;
+          const num = property?.["No"] as number;
           const [r, g, b] = calcColor(num);
 
           return {
@@ -426,7 +426,7 @@ const addHeliportLayer = (pane: Pane, view: ThreeView) => {
       UPDATED_FEATURE.add(evaluator.id);
 
       evaluator.evaluate((_batchId, property) => {
-        const type = property?.get("備考") as string;
+        const type = property?.["備考"] as string;
 
         const color = (() => {
           // Athletic field
@@ -483,7 +483,9 @@ const addRoadLayer = (pane: Pane, view: ThreeView) => {
       UPDATED_FEATURE.add(evaluator.id);
 
       evaluator.evaluate((_batchId, property) => {
-        const attrs = JSON.parse((property?.get("attributes") as string) || "");
+        const rawAttributes = property?.["attributes"];
+        const attrs =
+          typeof rawAttributes === "string" ? JSON.parse(rawAttributes) : {};
         const generics = attrs["gen:genericAttribute"] as unknown[];
         const treeInfo = generics.find(
           (g) =>
@@ -545,7 +547,7 @@ const addFireproofAreaLayer = (pane: Pane, view: ThreeView) => {
     layer = view.addLayer(layerDescription);
     layer.on("featureUpdated", ({ evaluator }) => {
       evaluator.evaluate((_batchId, property) => {
-        const functionType = property?.get("urf_function") as string;
+        const functionType = property?.["urf_function"] as string;
 
         const color = (() => {
           // Fireproof area
@@ -628,7 +630,7 @@ const addHeightControlDistrictLayer = (pane: Pane, view: ThreeView) => {
       // This will be called whenever a feature is updated
       evaluator.evaluate((_batchId, property) => {
         const attributes = JSON.parse(
-          (property?.get("attributes") as string) ?? "",
+          (property?.["attributes"] as string) ?? "",
         );
         const minHeight = attributes["urf:minimumBuildingHeight"];
         const maxHeight = attributes["urf:maximumBuildingHeight"];
@@ -734,7 +736,7 @@ const addBuildingModelLayer = (pane: Pane, view: ThreeView) => {
     layer = view.addLayer(layerDescription);
     layer.on("featureUpdated", ({ evaluator }) => {
       evaluator.evaluate((_batchId, property) => {
-        const measuredHeight = property?.get("bldg:measuredHeight") as number;
+        const measuredHeight = property?.["bldg:measuredHeight"] as number;
 
         // Determine visibility buckets regardless of color mode
         const show = (() => {
@@ -930,9 +932,9 @@ const addSymbolLayer = (pane: Pane, view: ThreeView) => {
 
       const uniqueLabels = new Set();
       evaluator.evaluate((_batchId, property) => {
-        const text = (property?.get("knj") ?? property?.get("name")) as string;
-        const ftCode = property?.get("ftCode") as number;
-        const annoCtg = property?.get("annoCtg") as number;
+        const text = (property?.["knj"] ?? property?.["name"]) as string;
+        const ftCode = property?.["ftCode"] as number;
+        const annoCtg = property?.["annoCtg"] as number;
 
         if (
           !ALLOWED_FT_CODE.includes(ftCode) ||

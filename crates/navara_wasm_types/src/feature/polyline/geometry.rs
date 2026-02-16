@@ -30,17 +30,53 @@ impl ConstructedPolylineGeometry {
     pub fn position_size(&mut self) -> u8 {
         self.geometry.position_size()
     }
+    pub fn position_high(&mut self) -> Option<js_sys::Float32Array> {
+        self.geometry.position_high()
+    }
+    pub fn position_high_size(&mut self) -> Option<u8> {
+        self.geometry.position_high_size()
+    }
+    pub fn position_low(&mut self) -> Option<js_sys::Float32Array> {
+        self.geometry.position_low()
+    }
+    pub fn position_low_size(&mut self) -> Option<u8> {
+        self.geometry.position_low_size()
+    }
     pub fn start(&mut self) -> js_sys::Float32Array {
         self.geometry.start()
     }
     pub fn start_size(&mut self) -> u8 {
         self.geometry.start_size()
     }
+    pub fn start_high(&mut self) -> Option<js_sys::Float32Array> {
+        self.geometry.start_high()
+    }
+    pub fn start_high_size(&mut self) -> Option<u8> {
+        self.geometry.start_high_size()
+    }
+    pub fn start_low(&mut self) -> Option<js_sys::Float32Array> {
+        self.geometry.start_low()
+    }
+    pub fn start_low_size(&mut self) -> Option<u8> {
+        self.geometry.start_low_size()
+    }
     pub fn forward_offset(&mut self) -> js_sys::Float32Array {
         self.geometry.forward_offset()
     }
     pub fn forward_offset_size(&mut self) -> u8 {
         self.geometry.forward_offset_size()
+    }
+    pub fn end_high(&mut self) -> Option<js_sys::Float32Array> {
+        self.geometry.end_high()
+    }
+    pub fn end_high_size(&mut self) -> Option<u8> {
+        self.geometry.end_high_size()
+    }
+    pub fn end_low(&mut self) -> Option<js_sys::Float32Array> {
+        self.geometry.end_low()
+    }
+    pub fn end_low_size(&mut self) -> Option<u8> {
+        self.geometry.end_low_size()
     }
     pub fn start_normals(&mut self) -> js_sys::Float32Array {
         self.geometry.start_normals()
@@ -105,17 +141,53 @@ impl PolylineGeometry {
     pub fn position_size(&mut self) -> u8 {
         self.attributes.transfer_position_size()
     }
+    pub fn position_high(&mut self) -> Option<js_sys::Float32Array> {
+        self.attributes.transfer_position_high()
+    }
+    pub fn position_high_size(&mut self) -> Option<u8> {
+        self.attributes.transfer_position_high_size()
+    }
+    pub fn position_low(&mut self) -> Option<js_sys::Float32Array> {
+        self.attributes.transfer_position_low()
+    }
+    pub fn position_low_size(&mut self) -> Option<u8> {
+        self.attributes.transfer_position_low_size()
+    }
     pub fn start(&mut self) -> js_sys::Float32Array {
         self.attributes.transfer_start()
     }
     pub fn start_size(&mut self) -> u8 {
         self.attributes.transfer_start_size()
     }
+    pub fn start_high(&mut self) -> Option<js_sys::Float32Array> {
+        self.attributes.transfer_start_high()
+    }
+    pub fn start_high_size(&mut self) -> Option<u8> {
+        self.attributes.transfer_start_high_size()
+    }
+    pub fn start_low(&mut self) -> Option<js_sys::Float32Array> {
+        self.attributes.transfer_start_low()
+    }
+    pub fn start_low_size(&mut self) -> Option<u8> {
+        self.attributes.transfer_start_low_size()
+    }
     pub fn forward_offset(&mut self) -> js_sys::Float32Array {
         self.attributes.transfer_forward_offset()
     }
     pub fn forward_offset_size(&mut self) -> u8 {
         self.attributes.transfer_forward_offset_size()
+    }
+    pub fn end_high(&mut self) -> Option<js_sys::Float32Array> {
+        self.attributes.transfer_end_high()
+    }
+    pub fn end_high_size(&mut self) -> Option<u8> {
+        self.attributes.transfer_end_high_size()
+    }
+    pub fn end_low(&mut self) -> Option<js_sys::Float32Array> {
+        self.attributes.transfer_end_low()
+    }
+    pub fn end_low_size(&mut self) -> Option<u8> {
+        self.attributes.transfer_end_low_size()
     }
     pub fn start_normals(&mut self) -> js_sys::Float32Array {
         self.attributes.transfer_start_normals()
@@ -160,8 +232,14 @@ impl PolylineGeometry {
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct PolylineGeometryAttributes {
     position: FloatAttribute,
+    position_high: Option<FloatAttribute>,
+    position_low: Option<FloatAttribute>,
     start: FloatAttribute,
+    start_high: Option<FloatAttribute>,
+    start_low: Option<FloatAttribute>,
     forward_offset: FloatAttribute,
+    end_high: Option<FloatAttribute>,
+    end_low: Option<FloatAttribute>,
     start_normals: FloatAttribute,
     end_normal_and_texture_coordinate_normalization_x: FloatAttribute,
     right_normal_and_texture_coordinate_normalization_y: FloatAttribute,
@@ -177,17 +255,53 @@ impl PolylineGeometryAttributes {
     pub fn transfer_position_size(&mut self) -> u8 {
         self.position.size
     }
+    pub fn transfer_position_high(&mut self) -> Option<js_sys::Float32Array> {
+        self.position_high.as_mut().map(|attr| attr.transfer_data())
+    }
+    pub fn transfer_position_high_size(&mut self) -> Option<u8> {
+        self.position_high.as_ref().map(|attr| attr.size)
+    }
+    pub fn transfer_position_low(&mut self) -> Option<js_sys::Float32Array> {
+        self.position_low.as_mut().map(|attr| attr.transfer_data())
+    }
+    pub fn transfer_position_low_size(&mut self) -> Option<u8> {
+        self.position_low.as_ref().map(|attr| attr.size)
+    }
     pub fn transfer_start(&mut self) -> js_sys::Float32Array {
         self.start.transfer_data()
     }
     pub fn transfer_start_size(&mut self) -> u8 {
         self.start.size
     }
+    pub fn transfer_start_high(&mut self) -> Option<js_sys::Float32Array> {
+        self.start_high.as_mut().map(|attr| attr.transfer_data())
+    }
+    pub fn transfer_start_high_size(&mut self) -> Option<u8> {
+        self.start_high.as_ref().map(|attr| attr.size)
+    }
+    pub fn transfer_start_low(&mut self) -> Option<js_sys::Float32Array> {
+        self.start_low.as_mut().map(|attr| attr.transfer_data())
+    }
+    pub fn transfer_start_low_size(&mut self) -> Option<u8> {
+        self.start_low.as_ref().map(|attr| attr.size)
+    }
     pub fn transfer_forward_offset(&mut self) -> js_sys::Float32Array {
         self.forward_offset.transfer_data()
     }
     pub fn transfer_forward_offset_size(&mut self) -> u8 {
         self.forward_offset.size
+    }
+    pub fn transfer_end_high(&mut self) -> Option<js_sys::Float32Array> {
+        self.end_high.as_mut().map(|attr| attr.transfer_data())
+    }
+    pub fn transfer_end_high_size(&mut self) -> Option<u8> {
+        self.end_high.as_ref().map(|attr| attr.size)
+    }
+    pub fn transfer_end_low(&mut self) -> Option<js_sys::Float32Array> {
+        self.end_low.as_mut().map(|attr| attr.transfer_data())
+    }
+    pub fn transfer_end_low_size(&mut self) -> Option<u8> {
+        self.end_low.as_ref().map(|attr| attr.size)
     }
     pub fn transfer_start_normals(&mut self) -> js_sys::Float32Array {
         self.start_normals.transfer_data()
@@ -244,9 +358,15 @@ impl From<PolylineGeometryAttributes> for navara_geometry::PolylineGeometryAttri
     fn from(val: PolylineGeometryAttributes) -> Self {
         navara_geometry::PolylineGeometryAttributes {
             position: val.position.into(),
+            position_high: val.position_high.map(|v| v.into()),
+            position_low: val.position_low.map(|v| v.into()),
             start: val.start.into(),
+            start_high: val.start_high.map(|v| v.into()),
+            start_low: val.start_low.map(|v| v.into()),
             start_normals: val.start_normals.into(),
             forward_offset: val.forward_offset.into(),
+            end_high: val.end_high.map(|v| v.into()),
+            end_low: val.end_low.map(|v| v.into()),
             end_normal_and_texture_coordinate_normalization_x: val
                 .end_normal_and_texture_coordinate_normalization_x
                 .into(),
@@ -262,9 +382,15 @@ impl From<navara_geometry::PolylineGeometryAttributes> for PolylineGeometryAttri
     fn from(val: navara_geometry::PolylineGeometryAttributes) -> Self {
         PolylineGeometryAttributes {
             position: val.position.into(),
+            position_high: val.position_high.map(|v| v.into()),
+            position_low: val.position_low.map(|v| v.into()),
             start: val.start.into(),
+            start_high: val.start_high.map(|v| v.into()),
+            start_low: val.start_low.map(|v| v.into()),
             start_normals: val.start_normals.into(),
             forward_offset: val.forward_offset.into(),
+            end_high: val.end_high.map(|v| v.into()),
+            end_low: val.end_low.map(|v| v.into()),
             end_normal_and_texture_coordinate_normalization_x: val
                 .end_normal_and_texture_coordinate_normalization_x
                 .into(),

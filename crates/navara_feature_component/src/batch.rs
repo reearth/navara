@@ -5,8 +5,8 @@ use navara_buffer_store::{BufferStore, Handle};
 use navara_component::Deleted;
 use rand::Rng;
 
-use navara_parser::b3dm::BatchTable as B3dmBatchTable;
-use std::collections::HashMap;
+use navara_parser::b3dm::{BatchTable as B3dmBatchTable, PropertyValue};
+use rustc_hash::FxHashMap;
 use std::sync::Arc;
 
 #[derive(Component, Debug, Default)]
@@ -64,13 +64,13 @@ pub struct GlobalBatchIds {
 // Search b3dm feature by global batch id
 #[derive(Resource, Default, Debug)]
 pub struct FeatureBatchIdMap {
-    pub map: HashMap<Entity, GlobalBatchIds>,
+    pub map: FxHashMap<Entity, GlobalBatchIds>,
 }
 
 impl FeatureBatchIdMap {
     pub fn new() -> Self {
         Self {
-            map: HashMap::new(),
+            map: FxHashMap::default(),
         }
     }
 
@@ -128,56 +128,56 @@ pub enum MvtValue {
 }
 
 impl MvtValue {
-    pub fn to_json(&self) -> serde_json::Value {
+    pub fn to_value<V: PropertyValue>(&self) -> V {
         match self {
-            MvtValue::String(s) => serde_json::Value::String(s.clone()),
-            MvtValue::Float(f) => serde_json::json!(*f),
-            MvtValue::Double(d) => serde_json::json!(*d),
-            MvtValue::Int(i) => serde_json::json!(*i),
-            MvtValue::UInt(u) => serde_json::json!(*u),
-            MvtValue::SInt(i) => serde_json::json!(*i),
-            MvtValue::Bool(b) => serde_json::Value::Bool(*b),
+            MvtValue::String(s) => V::from_string(s.clone()),
+            MvtValue::Float(f) => V::from_f32(*f),
+            MvtValue::Double(d) => V::from_f64(*d),
+            MvtValue::Int(i) => V::from_i64(*i),
+            MvtValue::UInt(u) => V::from_u64(*u),
+            MvtValue::SInt(i) => V::from_i64(*i),
+            MvtValue::Bool(b) => V::from_bool(*b),
         }
     }
 }
 
-/// Convert raw MVT tile::Value to serde_json::Value
-fn tile_value_to_json(value: &tile::Value) -> serde_json::Value {
+/// Convert raw MVT tile::Value to PropertyValue
+fn tile_value_to_property<V: PropertyValue>(value: &tile::Value) -> V {
     if let Some(s) = &value.string_value {
-        serde_json::Value::String(s.clone())
+        V::from_string(s.clone())
     } else if let Some(f) = value.float_value {
-        serde_json::json!(f)
+        V::from_f32(f)
     } else if let Some(d) = value.double_value {
-        serde_json::json!(d)
+        V::from_f64(d)
     } else if let Some(i) = value.int_value {
-        serde_json::json!(i)
+        V::from_i64(i)
     } else if let Some(u) = value.uint_value {
-        serde_json::json!(u)
+        V::from_u64(u)
     } else if let Some(i) = value.sint_value {
-        serde_json::json!(i)
+        V::from_i64(i)
     } else if let Some(b) = value.bool_value {
-        serde_json::Value::Bool(b)
+        V::from_bool(b)
     } else {
-        serde_json::Value::Null
+        V::null()
     }
 }
 
 impl MvtLayerData {
-    /// Get properties for a specific feature index as JSON.
+    /// Get properties for a specific feature index.
     /// Properties are converted lazily from raw MVT format.
-    pub fn get_properties(&self, feature_index: usize) -> Option<serde_json::Value> {
+    pub fn get_properties<V: PropertyValue>(&self, feature_index: usize) -> Option<V> {
         let tags = self.feature_tags.get(feature_index)?;
-        let mut props = serde_json::Map::new();
+        let mut props = V::empty_map();
 
         for pair in tags.chunks(2) {
             if let [key_idx, value_idx] = pair {
                 let key = self.keys.get(*key_idx as usize)?;
                 let value = self.values.get(*value_idx as usize)?;
-                props.insert(key.clone(), tile_value_to_json(value));
+                V::insert(&mut props, key.clone(), tile_value_to_property(value));
             }
         }
 
-        Some(serde_json::Value::Object(props))
+        Some(V::finalize_map(props))
     }
 }
 
@@ -204,7 +204,7 @@ impl BatchTableValue {
 
 #[derive(Resource)]
 pub struct BatchTable {
-    map: HashMap<u32, Option<BatchTableValue>>,
+    map: FxHashMap<u32, Option<BatchTableValue>>,
 }
 
 impl Default for BatchTable {
@@ -216,7 +216,7 @@ impl Default for BatchTable {
 impl BatchTable {
     pub fn new() -> Self {
         Self {
-            map: HashMap::new(),
+            map: FxHashMap::default(),
         }
     }
 

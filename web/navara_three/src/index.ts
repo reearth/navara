@@ -17,7 +17,7 @@ import initCore, {
   type TextureFragmentStatus,
 } from "@navara/engine";
 import { initNavaraApi } from "@navara/three_api";
-import { initializeWorkerPool, workerPool } from "@navara/worker";
+import { initializeWorkerPool } from "@navara/worker";
 import {
   Scene,
   WebGLRenderer,
@@ -36,7 +36,7 @@ import invariant from "tiny-invariant";
 import { Atmosphere, type AtmosphereOptions } from "./atmosphere";
 import { ThreeViewCamera } from "./camera";
 import { Color } from "./Color";
-import { MAP_CONCURRENCY } from "./concurrency";
+import { createDefaultConcurrencyManager } from "./concurrency";
 import { WATER_NORMAL_URL } from "./constants/assets";
 import {
   LayerDeclaration,
@@ -109,6 +109,7 @@ import { TerrainPicker } from "./pick/pickTerrain";
 import { TexturizedSceneByTileCoordinates, type Scenes } from "./scene";
 import { ShadowMapViewers } from "./ShadowMapViewers";
 import { RendererStats } from "./stats";
+import { warmUp } from "./tasks/warmUp";
 import type { TextureOptions } from "./textures";
 import {
   type AbortControllers,
@@ -131,8 +132,22 @@ import WorkerURL from "./worker?url&worker";
 
 export type { CameraOptions, CameraEvent } from "./camera";
 
-export { ColorMap, type LUT, type ColorTuple } from "@navara/core";
-export type { Nullable, XYZ, LatLng, LatLngHeight } from "@navara/core";
+export { ColorMap, EventHandler } from "@navara/core";
+export type {
+  Nullable,
+  XYZ,
+  LatLng,
+  LatLngHeight,
+  CameraOrientation,
+  CameraPosition,
+  ColorTuple,
+  LUT,
+  Globe,
+} from "@navara/core";
+export { CameraDirection } from "@navara/engine";
+// CSM exports for advanced users
+export { CascadedShadowMaps, CSMHelper } from "@navara/three_csm";
+
 export * from "./type";
 export * from "./constants";
 export * from "./light";
@@ -140,24 +155,20 @@ export * from "./mesh";
 export * from "./layer";
 export * from "./effects";
 export * from "./shaders";
-export * from "./event/loaders";
 export * from "./material";
 export * from "./core";
 export * from "./layers";
 export * from "./lights";
 export * from "./passes";
+export * from "./evaluations";
 export * from "@navara/three_api";
 export * from "./Color";
 export {
-  isMobileDevice,
   getDevicePixelRatio,
+  isMobileDevice,
   type DevicePixelRatioOptions,
 } from "./device";
-export { type BlendMode } from "./utils/blendModes";
-export { CameraDirection } from "@navara/engine";
-
-// CSM exports for advanced users
-export { CascadedShadowMaps, CSMHelper } from "@navara/three_csm";
+export { type BlendMode } from "./utils";
 
 // NOTE:
 // This overrides all materials to output a normal buffer, meaning Navara operates using MRT (Multiple Render Targets).
@@ -718,6 +729,7 @@ export default class ThreeView<
       this.atmosphere,
       this.layersManager,
       this.renderPassOrchestrator,
+      createDefaultConcurrencyManager(),
       {
         meshes: this._meshes,
         drapedMaterials: this._drapedFeatureMaterials,
@@ -770,7 +782,7 @@ export default class ThreeView<
 
   private async initializeRenderPass() {
     // Initialize atmosphere
-    await this.atmosphere.init();
+    await this.atmosphere._init();
 
     this.skyEnvMapLayer = this.addLayer<SkyEnvMapEffectLayer>({
       type: "effect",
@@ -857,16 +869,18 @@ export default class ThreeView<
 
     this._initialized = true;
 
-    initializeWorkerPool(WorkerURL, MAP_CONCURRENCY);
+    const concurrencyManager = this.viewContext.concurrencyManager;
+
+    initializeWorkerPool(WorkerURL, concurrencyManager);
 
     // Pre-warm all workers with WASM initialization
-    const warmUpPromises: Promise<unknown>[] = [];
-    for (let i = 0; i < MAP_CONCURRENCY; i++) {
-      warmUpPromises.push(workerPool().exec("warmUp", []));
+    const warmUpPromises: Promise<void>[] = [];
+    for (let i = 0; i < concurrencyManager.total; i++) {
+      warmUpPromises.push(warmUp());
     }
 
-    await initCore();
-    await initNavaraApi();
+    // Asynchronous initialization in parallel.
+    await Promise.all([...warmUpPromises, initCore(), initNavaraApi()]);
 
     this._core = new Core(newId());
     this._core.start();
@@ -971,6 +985,7 @@ export default class ThreeView<
 
     // Dispose SelectiveEffectHelper
     this.selectiveEffectHelper.dispose();
+    this.atmosphere._dispose();
 
     this.renderer.setAnimationLoop(null);
     if (
@@ -1797,7 +1812,7 @@ export default class ThreeView<
         this.emit("pick", pickedFeature);
       } else {
         const emptyFeature: PickedFeature = {
-          properties: new Map<string, unknown>(),
+          properties: {},
           batchId: null,
           layerId: null,
         };

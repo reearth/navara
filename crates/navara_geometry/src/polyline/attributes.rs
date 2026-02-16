@@ -1,3 +1,5 @@
+use navara_core::EncodedVec3;
+
 use crate::{
     helpers::vec::{append_flatten_vec3_with_index, unpack_flatten_vec3},
     FloatAttribute, UintAttribute,
@@ -11,8 +13,14 @@ use super::{
 #[derive(Clone, Debug, PartialEq)]
 pub struct PolylineGeometryAttributes {
     pub position: FloatAttribute,
+    pub position_high: Option<FloatAttribute>,
+    pub position_low: Option<FloatAttribute>,
     pub start: FloatAttribute,
+    pub start_high: Option<FloatAttribute>,
+    pub start_low: Option<FloatAttribute>,
     pub forward_offset: FloatAttribute,
+    pub end_high: Option<FloatAttribute>,
+    pub end_low: Option<FloatAttribute>,
     pub start_normals: FloatAttribute,
     pub end_normal_and_texture_coordinate_normalization_x: FloatAttribute,
     pub right_normal_and_texture_coordinate_normalization_y: FloatAttribute,
@@ -34,8 +42,14 @@ impl Default for PolylineGeometryAttributes {
     fn default() -> Self {
         Self {
             position: FloatAttribute::new(vec![], 3),
+            position_high: None,
+            position_low: None,
             start: FloatAttribute::new(vec![], 3),
+            start_high: None,
+            start_low: None,
             forward_offset: FloatAttribute::new(vec![], 3),
+            end_high: None,
+            end_low: None,
             start_normals: FloatAttribute::new(vec![], 3),
             end_normal_and_texture_coordinate_normalization_x: FloatAttribute::new(vec![], 4),
             right_normal_and_texture_coordinate_normalization_y: FloatAttribute::new(vec![], 4),
@@ -45,6 +59,40 @@ impl Default for PolylineGeometryAttributes {
     }
 }
 
+/// Encodes a Vec<f64> of 3D coordinates into high/low precision FloatAttributes
+/// # Arguments
+/// * `f64_coords` - Optional vector of f64 coordinates in [x, y, z, x, y, z, ...] format
+///
+/// # Returns
+/// A tuple of (Option<FloatAttribute>, Option<FloatAttribute>) for high and low components
+fn encode_f64_to_high_low(
+    f64_coords: Option<Vec<f64>>,
+) -> (Option<FloatAttribute>, Option<FloatAttribute>) {
+    let Some(coords) = f64_coords else {
+        return (None, None);
+    };
+
+    let mut high_values = Vec::with_capacity(coords.len());
+    let mut low_values = Vec::with_capacity(coords.len());
+
+    for i in (0..coords.len()).step_by(3) {
+        let encoded = EncodedVec3::encode_xyz(coords[i], coords[i + 1], coords[i + 2]);
+
+        high_values.push(encoded.high.x as f32);
+        high_values.push(encoded.high.y as f32);
+        high_values.push(encoded.high.z as f32);
+
+        low_values.push(encoded.low.x as f32);
+        low_values.push(encoded.low.y as f32);
+        low_values.push(encoded.low.z as f32);
+    }
+
+    (
+        Some(FloatAttribute::new(high_values, 3)),
+        Some(FloatAttribute::new(low_values, 3)),
+    )
+}
+
 // Ref: https://github.com/CesiumGS/cesium/blob/165e0fb4fcc9a448b15de6a2df46db23c71fffda/packages/engine/Source/Core/GroundPolylineGeometry.js#L1055
 pub(super) fn generate_geometry_attributes(
     bottom_positions_array: Vec<f64>,
@@ -52,6 +100,7 @@ pub(super) fn generate_geometry_attributes(
     normals_array: Vec<f64>,
     _cartographics_array: Vec<f64>,
     clamp_to_ground: bool,
+    use_rte: bool,
 ) -> (PolylineGeometryAttributes, Vec<u32>) {
     let segment_count = bottom_positions_array.len() / 3 - 1;
     let vertex_count = segment_count * 8;
@@ -62,8 +111,27 @@ pub(super) fn generate_geometry_attributes(
     let mut indices = vec![0; index_count];
     let mut positions_array = vec![0.; vertex_count * 3];
 
+    // Keep f64 positions for RTE encoding if needed
+    let mut positions_f64 = if use_rte {
+        Some(Vec::with_capacity(vertex_count * 3))
+    } else {
+        None
+    };
+
     let mut starts_array = vec![0.; array_size_vec3];
+    // Keep f64 starts for RTE encoding if needed
+    let mut starts_f64 = if use_rte {
+        Some(Vec::with_capacity(array_size_vec3))
+    } else {
+        None
+    };
     let mut forward_offsets = vec![0.; array_size_vec3];
+    // Keep f64 ends for RTE encoding if needed (for calculating offset in shader)
+    let mut ends_f64 = if use_rte {
+        Some(Vec::with_capacity(array_size_vec3))
+    } else {
+        None
+    };
     let mut start_normals = vec![0.; array_size_vec3];
     let mut end_normal_and_texture_coordinate_normalization_x = vec![0.; array_size_vec4];
     let mut right_normal_and_texture_coordinate_normalization_y = vec![0.; array_size_vec4];
@@ -159,6 +227,16 @@ pub(super) fn generate_geometry_attributes(
         let tex_coords_normal_3d_x = segment_length_3d / length_3d;
         let tex_coords_normal_3d_y = length_so_far_3d / length_3d;
 
+        // Adjust height for actual rendering
+        // The actual height is updated by shader uniform.
+        let min_height = 0.;
+        let max_height = if clamp_to_ground { 1. } else { 0. };
+
+        let (adjust_height_start_bottom, adjust_height_start_top) =
+            adjust_height(start_bottom, start_top, min_height, max_height);
+        let (adjust_height_end_bottom, adjust_height_end_top) =
+            adjust_height(end_bottom, end_top, min_height, max_height);
+
         // Pack
         for j in 0..8 {
             let vec4_index = vec4s_write_index + j * 4;
@@ -169,7 +247,21 @@ pub(super) fn generate_geometry_attributes(
             let top_bottom_side = if [2, 3, 6, 7].contains(&j) { 1.0 } else { -1. };
 
             append_flatten_vec3_with_index(&mut starts_array, &start_bottom, vec3_index);
+            // Store f64 start for RTE encoding using unadjusted coordinates
+            // CRITICAL: start/end are used for plane calculations in shader, must use original coords
+            if let Some(ref mut f64_starts) = starts_f64 {
+                f64_starts.push(start_bottom.x);
+                f64_starts.push(start_bottom.y);
+                f64_starts.push(start_bottom.z);
+            }
             append_flatten_vec3_with_index(&mut forward_offsets, &forward_offset, vec3_index);
+            // Store f64 end for RTE encoding (end = start + forward_offset)
+            // CRITICAL: Must use unadjusted coordinates for plane calculations
+            if let Some(ref mut f64_ends) = ends_f64 {
+                f64_ends.push(end_bottom.x);
+                f64_ends.push(end_bottom.y);
+                f64_ends.push(end_bottom.z);
+            }
             append_flatten_vec3_with_index(&mut start_normals, &start_plane_normal, vec3_index);
 
             append_flatten_vec3_with_index(
@@ -193,16 +285,40 @@ pub(super) fn generate_geometry_attributes(
             right_normal_and_texture_coordinate_normalization_y[w_index] = tex_coord_normal as f32;
         }
 
-        // Adjust height of volume in 3D
-        // The actual height is updated by shader uniform.
-        let min_height = 0.;
-        let max_height = if clamp_to_ground { 1. } else { 0. };
-        // sum_heights += 0.; // For the bounding sphere
-
-        let (adjust_height_start_bottom, adjust_height_start_top) =
-            adjust_height(start_bottom, start_top, min_height, max_height);
-        let (adjust_height_end_bottom, adjust_height_end_top) =
-            adjust_height(end_bottom, end_top, min_height, max_height);
+        // Store f64 positions for RTE encoding using unadjusted coordinates
+        // CRITICAL: Must use unadjusted coordinates to maintain consistent coordinate space
+        // The shader's height extrusion logic depends on distance calculation between
+        // positionEC and ecCurPoint, which requires them to be in the same coordinate space
+        if let Some(ref mut f64_positions) = positions_f64 {
+            // 8 vertices per segment (repeated positions for each corner)
+            // Use unadjusted coordinates to match ecStart/ecEnd coordinate space
+            f64_positions.extend_from_slice(&[
+                start_bottom.x,
+                start_bottom.y,
+                start_bottom.z,
+                end_bottom.x,
+                end_bottom.y,
+                end_bottom.z,
+                end_top.x,
+                end_top.y,
+                end_top.z,
+                start_top.x,
+                start_top.y,
+                start_top.z,
+                start_bottom.x,
+                start_bottom.y,
+                start_bottom.z,
+                end_bottom.x,
+                end_bottom.y,
+                end_bottom.z,
+                end_top.x,
+                end_top.y,
+                end_top.z,
+                start_top.x,
+                start_top.y,
+                start_top.z,
+            ]);
+        }
 
         append_flatten_vec3_with_index(
             &mut positions_array,
@@ -265,10 +381,21 @@ pub(super) fn generate_geometry_attributes(
         index += reference_indices_length;
     }
 
+    // Encode positions as high/low for RTE if requested
+    let (position_high, position_low) = encode_f64_to_high_low(positions_f64);
+    let (start_high, start_low) = encode_f64_to_high_low(starts_f64);
+    let (end_high, end_low) = encode_f64_to_high_low(ends_f64);
+
     let attributes = PolylineGeometryAttributes {
         position: FloatAttribute::new(positions_array, 3),
+        position_high,
+        position_low,
         start: FloatAttribute::new(starts_array, 3),
+        start_high,
+        start_low,
         forward_offset: FloatAttribute::new(forward_offsets, 3),
+        end_high,
+        end_low,
         start_normals: FloatAttribute::new(start_normals, 3),
         end_normal_and_texture_coordinate_normalization_x: FloatAttribute::new(
             end_normal_and_texture_coordinate_normalization_x,

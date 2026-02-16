@@ -1,5 +1,9 @@
 import type ThreeView from "@navara/three";
-import * as THREE from "three";
+import {
+  PMREMGenerator,
+  EquirectangularReflectionMapping,
+  type WebGLCubeRenderTarget,
+} from "three";
 import { LightProbeGenerator } from "three/examples/jsm/lights/LightProbeGenerator.js";
 import { EXRLoader } from "three/examples/jsm/loaders/EXRLoader.js";
 
@@ -79,7 +83,7 @@ export const run = async (view: ThreeView): Promise<void> => {
 
     try {
       // Create PMREM Generator for environment map processing
-      const pmremGenerator = new THREE.PMREMGenerator(renderer);
+      const pmremGenerator = new PMREMGenerator(renderer);
       pmremGenerator.compileEquirectangularShader();
 
       // Load EXR file and generate LightProbe
@@ -88,7 +92,7 @@ export const run = async (view: ThreeView): Promise<void> => {
         async (texture) => {
           try {
             // Set mapping for equirectangular texture
-            texture.mapping = THREE.EquirectangularReflectionMapping;
+            texture.mapping = EquirectangularReflectionMapping;
 
             statusDiv.innerHTML = `Converting ${file.name} to cube map...`;
 
@@ -96,8 +100,7 @@ export const run = async (view: ThreeView): Promise<void> => {
             const renderTarget = pmremGenerator.fromEquirectangular(texture);
 
             // Generate LightProbe from cube render target
-            const cubeRenderTarget =
-              renderTarget as THREE.WebGLCubeRenderTarget;
+            const cubeRenderTarget = renderTarget as WebGLCubeRenderTarget;
 
             statusDiv.innerHTML = `Generating spherical harmonics for ${file.name}...`;
 

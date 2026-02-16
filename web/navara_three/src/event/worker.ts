@@ -152,6 +152,8 @@ async function processConstructTerrainMesh(
   const { result } = await promise;
   workerPoolPromises.delete(id);
 
+  params.free();
+
   if (!workerTaskHandler.hasWorkerTask(delegator_id[0])) return;
 
   const vertices = bufHandler.newF32(result.vertices);
@@ -263,6 +265,8 @@ async function processUpsampleTerrainMesh(
   const result = await promise;
   workerPoolPromises.delete(id);
 
+  params.free();
+
   if (!workerTaskHandler.hasWorkerTask(delegator_id[0])) return;
 
   const vertices = bufHandler.newF32(result.vertices);
@@ -345,6 +349,9 @@ async function processConstructPolygonBatchedFeature(
   workerPoolPromises.set(id, promise);
   const result = await promise;
   workerPoolPromises.delete(id);
+
+  // transferable.free();
+  params.free();
 
   if (!result) return;
 
@@ -473,15 +480,32 @@ async function processConstructPolylineBatchedFeature(
   workerPoolPromises.delete(id);
 
   transferable.free();
+  params.free();
 
   if (!result || !result.batch_id || !result.batch_index) return;
 
   if (!workerTaskHandler.hasWorkerTask(delegator_id[0])) return;
 
   const position = bufHandler.newF32(result.position);
+  const positionHigh = result.position_high
+    ? bufHandler.newF32(result.position_high)
+    : undefined;
+  const positionLow = result.position_low
+    ? bufHandler.newF32(result.position_low)
+    : undefined;
   const start = bufHandler.newF32(result.start);
+  const startHigh = result.start_high
+    ? bufHandler.newF32(result.start_high)
+    : undefined;
+  const startLow = result.start_low
+    ? bufHandler.newF32(result.start_low)
+    : undefined;
   const startNormals = bufHandler.newF32(result.start_normals);
   const forwardOffset = bufHandler.newF32(result.forward_offset);
+  const endHigh = result.end_high
+    ? bufHandler.newF32(result.end_high)
+    : undefined;
+  const endLow = result.end_low ? bufHandler.newF32(result.end_low) : undefined;
   const endNormalAndTextureCoordinateNormalizationX = bufHandler.newF32(
     result.end_normal_and_texture_coordinate_normalization_x,
   );
@@ -517,10 +541,31 @@ async function processConstructPolylineBatchedFeature(
     position,
     result.position_size,
   );
+  const transferablePositionHigh = positionHigh
+    ? new TransferableFloatAttribute(
+        positionHigh,
+        result.position_high_size ?? 0,
+      )
+    : undefined;
+  const transferablePositionLow = positionLow
+    ? new TransferableFloatAttribute(positionLow, result.position_low_size ?? 0)
+    : undefined;
   const transferableStart = new TransferableFloatAttribute(
     start,
     result.start_size,
   );
+  const transferableStartHigh = startHigh
+    ? new TransferableFloatAttribute(startHigh, result.start_high_size ?? 0)
+    : undefined;
+  const transferableStartLow = startLow
+    ? new TransferableFloatAttribute(startLow, result.start_low_size ?? 0)
+    : undefined;
+  const transferableEndHigh = endHigh
+    ? new TransferableFloatAttribute(endHigh, result.end_high_size ?? 0)
+    : undefined;
+  const transferableEndLow = endLow
+    ? new TransferableFloatAttribute(endLow, result.end_low_size ?? 0)
+    : undefined;
   const transferableStartNormals = new TransferableFloatAttribute(
     startNormals,
     result.start_normals_size,
@@ -542,8 +587,14 @@ async function processConstructPolylineBatchedFeature(
 
   const geometry = new TransferablePolylineGeometry(
     transferablePosition,
+    transferablePositionHigh,
+    transferablePositionLow,
     transferableStart,
+    transferableStartHigh,
+    transferableStartLow,
     transferableForwardOffset,
+    transferableEndHigh,
+    transferableEndLow,
     transferableStartNormals,
     transferableEndNormalAndTextureCoordinateNormalizationX,
     transferableRightNormalAndTextureCoordinateNormalizationY,

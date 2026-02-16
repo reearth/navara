@@ -26,7 +26,7 @@ use navara_layer::{LayerDescStore, LayerDescription, LayerId, MvtLayer};
 use navara_material::{PolygonMaterial, PolylineMaterial};
 use navara_math::{FloatType, Transform, Vec3};
 use navara_mvt::MvtLayerResources;
-use navara_parser::b3dm::BatchTable as B3dmBatchTable;
+use navara_parser::b3dm::{BatchTable as B3dmBatchTable, PropertyValue};
 use navara_texture_fragment::{TextureFragmentLoadedEvent, TextureFragmentStatus};
 use navara_tile_component::{
     compute_terrain_height_at_point, MartiniComponent, RasterTile, RasterTileQuadtree,
@@ -509,12 +509,12 @@ impl App {
         self.get_batched_features_with_material(batched_feature_id)
     }
 
-    fn get_internal_batch_table(
+    fn get_internal_batch_table<V: PropertyValue>(
         &mut self,
         entity: Entity,
         in_batch_len: &usize,
         in_batch_id: &usize,
-    ) -> Option<serde_json::Map<String, serde_json::Value>> {
+    ) -> Option<V> {
         let world = self.app.world_mut();
         let mut query = world.query::<&RenderableFeature>();
 
@@ -557,36 +557,21 @@ impl App {
                     in_batch_id,
                 )
             }
-            BatchProperty::Values(values) => {
-                let serde_json::Value::Object(map) = values.get(*in_batch_id)?.clone() else {
-                    return None;
-                };
-                Some(map)
-            }
-            BatchProperty::Mvt(mvt_layer_data) => {
-                mvt_layer_data.get_properties(*in_batch_id).and_then(|v| {
-                    if let serde_json::Value::Object(map) = v {
-                        Some(map)
-                    } else {
-                        None
-                    }
-                })
-            }
+            BatchProperty::Values(values) => json_value_to_property(values.get(*in_batch_id)?),
+            BatchProperty::Mvt(mvt_layer_data) => mvt_layer_data.get_properties(*in_batch_id),
         }
     }
 
-    pub fn get_batch_prop(
+    pub fn get_batch_prop<V: PropertyValue>(
         &mut self,
         batch_id: &u32,
-    ) -> (
-        Option<serde_json::Map<String, serde_json::Value>>,
-        Option<String>,
-    ) {
+    ) -> (Option<V>, Option<String>) {
         // For batched features like MVT(polygon, polyline) and Cesium 3D Tiles.
         if let Some((entity, in_batch_id, in_batch_len)) =
             self.search_feature_entity_by_global_batch_id(batch_id)
         {
-            let properties = self.get_internal_batch_table(entity, &in_batch_len, &in_batch_id);
+            let properties: Option<V> =
+                self.get_internal_batch_table(entity, &in_batch_len, &in_batch_id);
             if properties.is_some() {
                 // Get layer_id from batch table
                 let layer_id = self
@@ -616,45 +601,44 @@ impl App {
             return (None, layer_id);
         };
         // This should include only one batch.
-        let serde_json::Value::Object(map) = values[0].clone() else {
-            return (None, layer_id);
-        };
+        let properties: Option<V> = json_value_to_property(&values[0]);
 
-        (Some(map), layer_id)
+        (properties, layer_id)
     }
 
     pub fn read_properties_by_global_batch_ids<
-        F: Fn(usize, u32, Option<serde_json::Map<String, serde_json::Value>>),
+        V: PropertyValue,
+        E,
+        F: Fn(usize, u32, Option<V>) -> Result<(), E>,
     >(
         &mut self,
         renderable_feature_bits: u64,
         callback: &F,
-    ) -> Option<()> {
+    ) -> Result<Option<()>, E> {
         let renderable_feature_entity = Entity::from_bits(renderable_feature_bits);
 
-        if self
-            .read_internal_batch_table(renderable_feature_entity, callback)
-            .is_some()
-        {
-            return Some(());
-        }
-
-        Some(())
+        self.read_internal_batch_table::<V, E, F>(renderable_feature_entity, callback)
     }
 
     fn read_internal_batch_table<
-        F: Fn(usize, u32, Option<serde_json::Map<String, serde_json::Value>>),
+        V: PropertyValue,
+        E,
+        F: Fn(usize, u32, Option<V>) -> Result<(), E>,
     >(
         &mut self,
         renderable_feature_entity: Entity,
         callback: &F,
-    ) -> Option<()> {
+    ) -> Result<Option<()>, E> {
         let world = self.app.world_mut();
         let mut query = world.query::<&RenderableFeature>();
 
-        let batch_table = world.get_resource::<BatchTable>()?;
+        let Some(batch_table) = world.get_resource::<BatchTable>() else {
+            return Ok(None);
+        };
 
-        let renderable_feature = query.get(world, renderable_feature_entity).ok()?;
+        let Ok(renderable_feature) = query.get(world, renderable_feature_entity) else {
+            return Ok(None);
+        };
 
         // Extract feature_batch_id and global_batch_ids_entity based on feature type
         let (feature_batch_id, global_batch_ids_entity, model_batch_length) =
@@ -689,11 +673,15 @@ impl App {
                 | RenderableFeature::Polyline {
                     feature_batch_id, ..
                 } => (*feature_batch_id, renderable_feature_entity, None),
-                RenderableFeature::Unknown => return Some(()),
+                RenderableFeature::Unknown => return Ok(Some(())),
             };
 
-        let batch_value = batch_table.get(&feature_batch_id)?;
-        let batch_prop = batch_value.properties.as_ref()?;
+        let Some(batch_value) = batch_table.get(&feature_batch_id) else {
+            return Ok(None);
+        };
+        let Some(batch_prop) = batch_value.properties.as_ref() else {
+            return Ok(None);
+        };
 
         let global_batch_ids_opt = world
             .get_entity(global_batch_ids_entity)
@@ -710,12 +698,14 @@ impl App {
             BatchProperty::Cesium3dTileset(in_batch_table) => {
                 let Some(batch_length) = model_batch_length else {
                     // Cesium3dTileset is only expected for Model features
-                    return Some(());
+                    return Ok(Some(()));
                 };
-                let batch_table_json = in_batch_table.json().ok()?;
+                let Some(batch_table_json) = in_batch_table.json().ok() else {
+                    return Ok(None);
+                };
 
                 for batch_idx in 0..batch_length {
-                    let props = get_prop_from_batch_table(
+                    let props: Option<V> = get_prop_from_batch_table(
                         in_batch_table,
                         &batch_table_json,
                         &batch_length,
@@ -725,40 +715,32 @@ impl App {
                         .as_ref()
                         .and_then(|arr| arr.get(batch_idx).copied())
                         .unwrap_or(batch_idx as u32);
-                    callback(batch_idx, global_batch_id, props);
+                    callback(batch_idx, global_batch_id, props)?;
                 }
             }
             BatchProperty::Values(values) => {
                 for (batch_idx, value) in values.iter().enumerate() {
-                    let serde_json::Value::Object(map) = value.clone() else {
-                        continue;
-                    };
+                    let props: Option<V> = json_value_to_property(value);
                     let global_batch_id = global_batch_id_array
                         .as_ref()
                         .and_then(|arr| arr.get(batch_idx).copied())
                         .unwrap_or(feature_batch_id);
-                    callback(batch_idx, global_batch_id, Some(map));
+                    callback(batch_idx, global_batch_id, props)?;
                 }
             }
             BatchProperty::Mvt(mvt_layer_data) => {
                 for batch_idx in 0..mvt_layer_data.feature_tags.len() {
-                    let props = mvt_layer_data.get_properties(batch_idx).and_then(|v| {
-                        if let serde_json::Value::Object(map) = v {
-                            Some(map)
-                        } else {
-                            None
-                        }
-                    });
+                    let props: Option<V> = mvt_layer_data.get_properties(batch_idx);
                     let global_batch_id = global_batch_id_array
                         .as_ref()
                         .and_then(|arr| arr.get(batch_idx).copied())
                         .unwrap_or(feature_batch_id);
-                    callback(batch_idx, global_batch_id, props);
+                    callback(batch_idx, global_batch_id, props)?;
                 }
             }
         }
 
-        Some(())
+        Ok(Some(()))
     }
 
     pub fn search_feature_entity_by_global_batch_id(
@@ -1053,35 +1035,91 @@ impl App {
     // === Globe definition ===
 }
 
-fn get_prop_from_batch_table(
+fn get_prop_from_batch_table<V: PropertyValue>(
     in_batch_table: &B3dmBatchTable,
     batch_table_json: &serde_json::Value,
     in_batch_len: &usize,
     in_batch_id: &usize,
-) -> Option<serde_json::Map<String, serde_json::Value>> {
+) -> Option<V> {
     if *in_batch_id >= *in_batch_len {
         return None;
     }
 
-    let mut prop: serde_json::Map<String, serde_json::Value> = serde_json::Map::new();
+    let mut prop = V::empty_map();
 
     if let serde_json::Value::Object(map) = batch_table_json {
         for (key, value) in map {
             match value {
                 serde_json::Value::Object(ref _m) => {
-                    if let Ok(v) = in_batch_table.read_property_from_binary(*in_batch_id, value) {
-                        prop.insert(key.clone(), v);
+                    if let Ok(v) =
+                        in_batch_table.read_property_from_binary::<V>(*in_batch_id, value)
+                    {
+                        V::insert(&mut prop, key.clone(), v);
                     }
                 }
                 serde_json::Value::Array(arr) => {
-                    prop.insert(key.clone(), arr[*in_batch_id].clone());
+                    if let Some(v) = json_value_to_property_value::<V>(&arr[*in_batch_id]) {
+                        V::insert(&mut prop, key.clone(), v);
+                    }
                 }
                 _ => {}
             }
         }
     }
 
-    Some(prop)
+    Some(V::finalize_map(prop))
+}
+
+/// Convert a serde_json::Value::Object to a PropertyValue (expects Object variant).
+fn json_value_to_property<V: PropertyValue>(value: &serde_json::Value) -> Option<V> {
+    let serde_json::Value::Object(map) = value else {
+        return None;
+    };
+    let mut prop = V::empty_map();
+    for (key, v) in map {
+        if let Some(converted) = json_value_to_property_value::<V>(v) {
+            V::insert(&mut prop, key.clone(), converted);
+        }
+    }
+    Some(V::finalize_map(prop))
+}
+
+/// Convert a single serde_json::Value to a PropertyValue.
+fn json_value_to_property_value<V: PropertyValue>(value: &serde_json::Value) -> Option<V> {
+    match value {
+        serde_json::Value::Null => Some(V::null()),
+        serde_json::Value::Bool(b) => Some(V::from_bool(*b)),
+        serde_json::Value::Number(n) => {
+            if let Some(i) = n.as_i64() {
+                Some(V::from_i64(i))
+            } else if let Some(u) = n.as_u64() {
+                Some(V::from_u64(u))
+            } else {
+                n.as_f64().map(V::from_f64)
+            }
+        }
+        serde_json::Value::String(s) => Some(V::from_string(s.clone())),
+        serde_json::Value::Array(arr) => {
+            let mut result = Vec::with_capacity(arr.len());
+            for e in arr {
+                let Some(v) = json_value_to_property_value::<V>(e) else {
+                    continue;
+                };
+                result.push(v);
+            }
+
+            Some(V::from_array(result))
+        }
+        serde_json::Value::Object(map) => {
+            let mut prop = V::empty_map();
+            for (key, v) in map {
+                if let Some(converted) = json_value_to_property_value::<V>(v) {
+                    V::insert(&mut prop, key.clone(), converted);
+                }
+            }
+            Some(V::finalize_map(prop))
+        }
+    }
 }
 
 impl Default for App {

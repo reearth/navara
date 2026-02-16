@@ -21,6 +21,7 @@ pub struct PolylineGeometryOptions {
     pub granularity: f64,
     pub crs: CRS,
     pub clamp_to_ground: bool,
+    pub use_rte: bool,
 }
 
 impl Default for PolylineGeometryOptions {
@@ -30,6 +31,7 @@ impl Default for PolylineGeometryOptions {
             crs: Default::default(),
             granularity: 9999.,
             clamp_to_ground: false,
+            use_rte: false,
         }
     }
 }
@@ -172,6 +174,7 @@ pub fn create_polyline_geometry(
         normals_array,
         cartographics_array,
         options.clamp_to_ground,
+        options.use_rte,
     );
 
     Some(PolylineGeometry {
@@ -321,8 +324,14 @@ pub fn create_flat_polyline_geometry(
     Some(PolylineGeometry {
         attributes: PolylineGeometryAttributes {
             position: crate::FloatAttribute::new(flat_positions, 3),
+            position_high: None,
+            position_low: None,
             start: crate::FloatAttribute::new(start_positions, 3),
+            start_high: None,
+            start_low: None,
             forward_offset: crate::FloatAttribute::new(forward_offsets, 3),
+            end_high: None,
+            end_low: None,
             start_normals: crate::FloatAttribute::new(start_normals, 3),
             end_normal_and_texture_coordinate_normalization_x: crate::FloatAttribute::new(
                 end_normal_and_tex_x,

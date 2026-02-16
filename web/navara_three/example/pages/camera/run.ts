@@ -1,5 +1,5 @@
-import type { CameraOrientation } from "@navara/core";
 import ThreeView, {
+  type CameraOrientation,
   CameraDirection,
   JAPAN_GSI_ELEVATION_DECODER,
   type LatLngHeight,

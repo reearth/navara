@@ -2,10 +2,10 @@ import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
   Color,
   type LayerDescription,
+  SSREffectLayer,
 } from "@navara/three";
 import { Pane } from "tweakpane";
 
-import type { SSREffectLayer } from "../../../src/layers/effect";
 import { showAttributions } from "../../helpers/attributions";
 import {
   TERRAIN_DATASETS,

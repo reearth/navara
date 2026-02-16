@@ -1,14 +1,14 @@
+import { Color } from "@navara/three";
 import type {
   Layer as NavaraLayer,
   LayerDescription,
   ColorTuple,
   FeatureEvaluatorCallback,
+  FeatureEvaluator,
 } from "@navara/three";
-import { Color } from "@navara/three";
 import { Layer } from "@navara/three_react";
 import { useEffect, useMemo, useRef } from "react";
 
-import type { FeatureEvaluator } from "../../../src/evaluations";
 import { PLATEAU_COLOR_MAP } from "../../helpers/colors";
 
 export type BuildingColorAttribute =
@@ -55,10 +55,13 @@ function rampFromColorMap(t01: number) {
   return new Color().setRGB(r, g, b);
 }
 
-function readProperty(property: Map<string, unknown> | undefined, key: string) {
-  const direct = property?.get(key);
+function readProperty(
+  property: Record<string, unknown> | undefined,
+  key: string,
+) {
+  const direct = property?.[key];
   if (direct != null) return direct as unknown;
-  const attributesRaw = property?.get("attributes");
+  const attributesRaw = property?.["attributes"];
   if (typeof attributesRaw === "string") {
     try {
       const attrs = JSON.parse(attributesRaw) as Record<string, unknown>;
@@ -83,19 +86,18 @@ export function BuildingTilesLayer({
   paramsRef.current.colorBy = colorBy;
   paramsRef.current.heightDomain = heightDomain;
 
-  const layerDesc = useMemo<LayerDescription | null>(() => {
+  const layerDesc = useMemo((): LayerDescription | null => {
     if (!visible) return null;
     return {
       type: "cesium3dtiles",
       data: { url },
       model: {
         show: true,
-        id_property: "gml_id",
         color: new Color().setStyle("#ffffff"),
         metalness: 0,
         roughness: 1,
-        cast_shadow: true,
-        receive_shadow: true,
+        castShadow: true,
+        receiveShadow: true,
         height: heightOffset,
       },
     };

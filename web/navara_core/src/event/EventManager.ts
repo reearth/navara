@@ -145,6 +145,7 @@ export class EventManager {
       const v = value as GetJsEventValue<Key>;
 
       if (shouldProcess && !shouldProcess(v)) {
+        idx++;
         continue;
       }
 
@@ -232,24 +233,23 @@ export class EventManager {
     });
 
     if (addedIndicesToRemove.size > 0) {
-      const sortedIndices = [...addedIndicesToRemove].sort((a, b) => b - a);
-      for (const idx of sortedIndices) {
-        this.stacks[options.add.key].splice(idx, 1);
-      }
+      this.removeStacksByIndices(options.add.key, addedIndicesToRemove);
     }
 
     if (changedIndicesToRemove.size > 0 && options.change) {
-      const sortedIndices = [...changedIndicesToRemove].sort((a, b) => b - a);
-      for (const idx of sortedIndices) {
-        this.stacks[options.change.key].splice(idx, 1);
-      }
+      this.removeStacksByIndices(options.change.key, changedIndicesToRemove);
     }
 
     if (removedIndicesToSkip.size > 0) {
-      const sortedIndices = [...removedIndicesToSkip].sort((a, b) => b - a);
-      for (const idx of sortedIndices) {
-        this.stacks[options.remove.key].splice(idx, 1);
-      }
+      this.removeStacksByIndices(options.remove.key, removedIndicesToSkip);
+    }
+  }
+
+  removeStacksByIndices(key: JsEventsKey, removedIndices: Set<number>) {
+    const sortedIndices = [...removedIndices].sort((a, b) => b - a);
+    for (const idx of sortedIndices) {
+      this.stacks[key][idx]?.free();
+      this.stacks[key].splice(idx, 1);
     }
   }
 
