@@ -174,17 +174,17 @@ export async function processRenderableFeatureAdded(
 
   obj.renderOrder = FEATURE_RENDER_ORDER;
 
-  if (obj instanceof PolygonMesh ? !obj.clampToGround : !obj.userData.draped) {
+  // Add to MRT scene if not draped (draped features render to texturized scene)
+  const isDraped =
+    (obj instanceof PolygonMesh && obj.clampToGround) ||
+    (obj instanceof PolylineMesh && obj.draped);
+  if (!isDraped) {
     scenes.mrt.add(obj);
   }
 
   meshes.set(id, obj);
 
-  if (
-    ((obj instanceof PolygonMesh && obj.clampToGround) ||
-      (obj instanceof PolylineMesh && obj.userData.draped)) &&
-    tileHandle
-  ) {
+  if (isDraped && tileHandle) {
     obj.addEventListener("removedFromWorld", () => {
       texturizedSceneByTileCoordinates.remove(tileHandle, featureLayerId);
     });
@@ -345,8 +345,7 @@ export async function processRenderableFeatureChanged(
   ) {
     if (
       (obj instanceof PolygonMesh && obj.clampToGround) ||
-      // TODO: Remove `userData`
-      obj.userData.draped
+      (obj instanceof PolylineMesh && obj.draped)
     ) {
       if (obj.visible) {
         texturizedSceneByTileCoordinates.add(tileHandle, layerId, obj as Mesh);

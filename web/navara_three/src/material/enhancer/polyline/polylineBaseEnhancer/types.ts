@@ -1,4 +1,4 @@
-import type { Matrix4, Texture, Vector3 } from "three";
+import type { Color, Matrix4, Texture, Vector2, Vector3 } from "three";
 
 import type { UniformValue } from "../../../types";
 import type { BatchTextureFlags } from "../../batchTexture";
@@ -8,19 +8,15 @@ import type { Mutates } from "../../MaterialEnhancer";
 type RequiredBatchTextureFlags = Required<BatchTextureFlags>;
 
 /**
- * Props for the polygon core enhancer.
+ * Props for the polyline base enhancer.
  */
-export type PolygonBaseProps = {
+export type PolylineBaseProps = {
   // Basic material props
   color?: number;
-  opacity?: number;
-  transparent?: boolean;
-  wireframe?: boolean;
 
-  // Height/extrusion
+  // Height/width
   minMaxHeight?: [number, number];
-  addExtrudedHeight?: number;
-  addHeight?: number;
+  width?: number;
 
   // Clamp to ground
   clampToGround?: boolean;
@@ -30,22 +26,23 @@ export type PolygonBaseProps = {
   // Picking
   pickable?: boolean;
 
-  // Reflectivity
-  reflectivity?: number;
-  roughness?: number;
-
-  // Emissive (for selective effects)
-  emissiveColor?: number;
-  emissiveIntensity?: number;
-
   // External uniforms (passed from CommonUniforms)
+  // Note: These use tuple types matching CommonUniforms, not Three.js Vector types
   globeNormalTexture?: UniformValue<Texture | null>;
+  viewportAndPixelRatio?: {
+    value: [x: number, y: number, z: number] | undefined | null;
+  };
+  frustumNearFar?: { value: [x: number, y: number] | undefined | null };
+  frustumRatio?: {
+    value: [x: number, y: number, z: number, w: number] | undefined | null;
+  };
+  tGlobeDepth?: { value: Texture | undefined | null };
+  inverseProjectionMatrix?: { value: Matrix4 | undefined | null };
 
   // Batch texture
   batchDataTexture?: UniformValue<Texture | null>;
 
   // Batch texture state flags - track when batch attributes are being used
-  // When batchColorEnabled is true, material.color is set to white and actual colors come from batch texture
   batchColorEnabled?: boolean;
 
   // RTE (Relative To Eye) support
@@ -53,49 +50,55 @@ export type PolygonBaseProps = {
 } & BatchTextureFlags;
 
 /**
- * Immutable state for the polygon base enhancer.
+ * Immutable state for the polyline base enhancer.
  * This state is always replaced as a whole (never mutated).
  * Returned directly via states() - refresh after updates.
  */
-export type PolygonBaseState = Readonly<
+export type PolylineBaseState = Readonly<
   {
     useRTE: boolean;
     isTexturized: boolean;
     clampToGround: boolean;
     useGroundNormals: boolean;
     pickable: boolean;
-    minMaxHeight: [number, number] | undefined;
-    addExtrudedHeight: number;
-    addHeight: number;
-    reflectivity: number;
-    roughness: number;
+    minMaxHeight: [number, number];
+    width: number;
+    color: number;
     // Batch texture state - when true, material.color is white and colors come from batch texture
     batchColorEnabled: boolean;
   } & RequiredBatchTextureFlags
 >;
 
 /**
- * Mutable references (uniforms) for the polygon base enhancer.
+ * Mutable references (uniforms) for the polyline base enhancer.
  *
  * These are shared references with shader.uniforms and can be mutated directly
  * for efficient GPU uniform updates without shader recompilation.
  * Internal type - not exposed externally.
  */
-export type PolygonBaseRefs = {
+export type PolylineBaseRefs = {
   // Core uniforms
-  uMinMaxHeight: UniformValue<[number, number] | undefined>;
-  uAddExtrudedHeight: UniformValue<number>;
-  uAddHeight: UniformValue<number>;
-  uClampToGround: UniformValue<boolean>;
+  minMaxHeightAndWidth: UniformValue<[number, number, number]>;
+  color: UniformValue<Color>;
   useGroundNormals: UniformValue<boolean>;
   nvr_uPickable: UniformValue<number>;
-  uIsTexturized: UniformValue<boolean>;
-  reflectivity: UniformValue<number>;
-  roughness: UniformValue<number>;
+  nvr_uPickingCoord: UniformValue<Vector2>;
 
   // Optional uniforms
   batchDataTexture?: UniformValue<Texture | null>;
   uGlobeNormal?: UniformValue<Texture | null>;
+
+  // External shared uniforms (references passed from CommonUniforms)
+  // Note: These use tuple types matching CommonUniforms, not Three.js Vector types
+  viewportAndPixelRatio?: {
+    value: [x: number, y: number, z: number] | undefined | null;
+  };
+  frustumNearFar?: { value: [x: number, y: number] | undefined | null };
+  frustumRatio?: {
+    value: [x: number, y: number, z: number, w: number] | undefined | null;
+  };
+  tGlobeDepth?: { value: Texture | undefined | null };
+  inverseProjectionMatrix?: { value: Matrix4 | undefined | null };
 
   // RTE uniforms (only present if useRTE is true)
   modelViewMatrixRTE?: UniformValue<Matrix4>;
@@ -103,15 +106,15 @@ export type PolygonBaseRefs = {
   u_cameraPositionLow?: UniformValue<Vector3>;
 };
 
-export type PolygonBaseUniforms = Partial<PolygonBaseRefs>;
+export type PolylineBaseUniforms = Partial<PolylineBaseRefs>;
 
 /**
- * Mutation functions for the polygon base enhancer.
+ * Mutation functions for the polyline base enhancer.
  * Includes `update(state)` to sync refs from state, plus additional methods.
  */
-export type PolygonBaseMutates = Mutates<
-  PolygonBaseState,
-  PolygonBaseUniforms,
+export type PolylineBaseMutates = Mutates<
+  PolylineBaseState,
+  PolylineBaseUniforms,
   {
     /**
      * Update RTE (Relative-To-Eye) uniforms for high-precision rendering.
@@ -121,13 +124,13 @@ export type PolygonBaseMutates = Mutates<
      * @param modelViewMatrixRTE - The model-view matrix in RTE coordinates
      * @param cameraPositionHigh - High-precision component of camera position
      * @param cameraPositionLow - Low-precision component of camera position
-     * @param state - PolygonBaseState
+     * @param state - PolylineBaseState
      */
     updateRteUniforms: (
       modelViewMatrixRTE: Matrix4,
       cameraPositionHigh: Vector3,
       cameraPositionLow: Vector3,
-      state: PolygonBaseState,
+      state: PolylineBaseState,
     ) => void;
     /**
      * Set the batch data texture ref.
@@ -135,9 +138,26 @@ export type PolygonBaseMutates = Mutates<
      */
     setBatchDataTexture: (texture: UniformValue<Texture | null>) => void;
     /**
-     * Set the globe normal texture ref.
-     * This is needed because globeNormalTexture is an external ref passed via props.
+     * Set the picking coordinate.
+     * This is needed to update the picking coordinate uniform.
      */
-    setGlobeNormalTexture: (texture: UniformValue<Texture | null>) => void;
+    setPickingCoord: (coord: Vector2) => void;
+    /**
+     * Set external uniform references shared across materials.
+     * These are typically passed from CommonUniforms and should be set once during mount.
+     */
+    setExternalRefs: (externalRefs: {
+      batchDataTexture?: UniformValue<Texture | null>;
+      globeNormalTexture?: UniformValue<Texture | null>;
+      viewportAndPixelRatio?: {
+        value: [x: number, y: number, z: number] | undefined | null;
+      };
+      frustumNearFar?: { value: [x: number, y: number] | undefined | null };
+      frustumRatio?: {
+        value: [x: number, y: number, z: number, w: number] | undefined | null;
+      };
+      tGlobeDepth?: { value: Texture | undefined | null };
+      inverseProjectionMatrix?: { value: Matrix4 | undefined | null };
+    }) => void;
   }
 >;
