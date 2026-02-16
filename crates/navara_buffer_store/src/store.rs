@@ -1,5 +1,5 @@
 use bevy_ecs::prelude::Resource;
-use std::collections::HashMap;
+use rustc_hash::FxHashMap;
 
 #[derive(Debug)]
 pub enum BufferType {
@@ -20,7 +20,7 @@ pub type Handle = i32;
 
 #[derive(Debug, Default, Resource)]
 pub struct BufferStore {
-    buffers: HashMap<Handle, Buffer>,
+    buffers: FxHashMap<Handle, Buffer>,
     counter: Handle,
 }
 

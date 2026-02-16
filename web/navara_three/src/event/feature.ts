@@ -96,6 +96,13 @@ export function renderFeature(
   }
 }
 
+// Define whether the feature uses web worker internally.
+// - `model` feature uses Web worker internally to parse glTF and its compression.
+export const checkFeatureParallel = (feature: RenderableFeature): boolean => {
+  const { model } = feature;
+  return !!model;
+};
+
 export async function processRenderableFeatureAdded(
   ev: RenderableFeatureAddedEvent,
   scenes: Scenes,
@@ -109,7 +116,6 @@ export async function processRenderableFeatureAdded(
   layersManager: LayersManager,
   viewContext: ViewContext,
   updatedAt: number,
-  onConcurrency: (v: number) => void,
 ) {
   const id = generate_id_from_entity(ev);
   const feature = ev.feature;
@@ -122,11 +128,11 @@ export async function processRenderableFeatureAdded(
 
   const featureLayerId = ev.layer_id;
 
-  const useParallel = !!model;
+  const useParallel = checkFeatureParallel(feature);
 
   if (useParallel) {
     // Start parallel process
-    onConcurrency(1);
+    viewContext.concurrencyManager.increment();
   }
 
   const obj = await renderFeature(
@@ -153,7 +159,7 @@ export async function processRenderableFeatureAdded(
     .finally(() => {
       if (useParallel) {
         // End parallel process
-        onConcurrency(-1);
+        viewContext.concurrencyManager.decrement();
       }
     });
 
@@ -167,17 +173,17 @@ export async function processRenderableFeatureAdded(
 
   obj.renderOrder = FEATURE_RENDER_ORDER;
 
-  if (obj instanceof PolygonMesh ? !obj.clampToGround : !obj.userData.draped) {
+  // Add to MRT scene if not draped (draped features render to texturized scene)
+  const isDraped =
+    (obj instanceof PolygonMesh && obj.clampToGround) ||
+    (obj instanceof PolylineMesh && obj.draped);
+  if (!isDraped) {
     scenes.mrt.add(obj);
   }
 
   meshes.set(id, obj);
 
-  if (
-    ((obj instanceof PolygonMesh && obj.clampToGround) ||
-      (obj instanceof PolylineMesh && obj.userData.draped)) &&
-    tileHandle
-  ) {
+  if (isDraped && tileHandle) {
     obj.addEventListener("removedFromWorld", () => {
       texturizedSceneByTileCoordinates.remove(tileHandle, featureLayerId);
     });
@@ -338,8 +344,7 @@ export async function processRenderableFeatureChanged(
   ) {
     if (
       (obj instanceof PolygonMesh && obj.clampToGround) ||
-      // TODO: Remove `userData`
-      obj.userData.draped
+      (obj instanceof PolylineMesh && obj.draped)
     ) {
       if (obj.visible) {
         texturizedSceneByTileCoordinates.add(tileHandle, layerId, obj as Mesh);

@@ -81,16 +81,14 @@ export const run = async (view: ThreeView) => {
 
   const coc = pane.addFolder({ title: "Circle of confusion", expanded: true });
   coc
-    .addBinding(params, "focusDistance", { step: 0.000001 })
+    .addBinding(params, "focusDistance", { step: 0.0005 })
     .on("change", (ev) => {
       depthOfFieldLayer.update({ depthOfField: { focusDistance: ev.value } });
     });
 
-  coc
-    .addBinding(params, "focalLength", { step: 0.000001 })
-    .on("change", (ev) => {
-      depthOfFieldLayer.update({ depthOfField: { focalLength: ev.value } });
-    });
+  coc.addBinding(params, "focalLength", { step: 0.005 }).on("change", (ev) => {
+    depthOfFieldLayer.update({ depthOfField: { focalLength: ev.value } });
+  });
 
   pane.addButton({ title: "Reset" }).on("click", () => {
     Object.assign(params, depthOfFieldDefaults);

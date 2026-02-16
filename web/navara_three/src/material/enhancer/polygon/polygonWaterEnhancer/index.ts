@@ -119,12 +119,7 @@ export function createPolygonWaterEnhancer(
 
         // Apply material configuration (side effect)
         const { isTexturized } = baseEnhancer.states();
-        applyWaterMaterialConfig(
-          material as WaterSupportedMaterial,
-          state,
-          isTexturized,
-          prevUseWater,
-        );
+        applyWaterMaterialConfig(material, state, isTexturized, prevUseWater);
       }
     },
 

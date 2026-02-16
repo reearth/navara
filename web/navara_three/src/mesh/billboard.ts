@@ -188,7 +188,15 @@ export class BillboardMesh extends Sprite implements FeatureMesh {
           "#include <fog_fragment>",
           `
         #include <fog_fragment>
-        if (nvr_uPickable > 0.0 && sampledDiffuseColor.a > 0.0) {
+
+        bool allowPicking;
+        #ifdef USE_MAP
+          allowPicking = sampledDiffuseColor.a > 0.0;
+        #else
+          allowPicking = true;
+        #endif
+      
+        if (nvr_uPickable > 0.0 && allowPicking) {
           vec3 pickColor = nvr_batchIdToColor(nvr_uBatchId);
           gl_FragColor = vec4(pickColor.xyz, 1.0);
         }
@@ -242,7 +250,14 @@ export class BillboardMesh extends Sprite implements FeatureMesh {
 
     const nextUrl = material.url;
     if (prev.url !== nextUrl) {
-      const map = nextUrl ? await TEXTURE_LOADER.loadAsync(nextUrl) : undefined;
+      let map;
+      if (nextUrl) {
+        try {
+          map = await TEXTURE_LOADER.loadAsync(nextUrl);
+        } catch (e) {
+          console.warn(`Failed to load billboard texture: ${nextUrl}`, e);
+        }
+      }
       if (map) {
         this.material.map = map;
       } else {

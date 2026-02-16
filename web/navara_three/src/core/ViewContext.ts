@@ -1,4 +1,5 @@
 import type { EventHandler, Globe } from "@navara/core";
+import type { ConcurrencyManager } from "@navara/worker";
 import type { Material, Object3D, PerspectiveCamera } from "three";
 
 import type { ViewEvents } from "..";
@@ -40,6 +41,7 @@ export class ViewContext {
     public atmosphere: Atmosphere,
     public layersManager: LayersManager,
     public renderPassOrchestrator: RenderPassOrchestrator,
+    public concurrencyManager: ConcurrencyManager,
     public _privates: Private,
     eventHandler?: EventHandler<ViewEvents>,
     selectiveEffectHelper?: SelectiveEffectHelper,

@@ -39,7 +39,8 @@ fn construct_polyline(
         let (geometry, batch_index, batch_id) = features.to_transferable_by_index(idx);
 
         let Some((extent, mut constructed_geometry)) =
-            construct_polyline_feature(&material, geometry, &crs)
+            // use_rte is hardcoded to false because MVT polylines don't need RTE transformation
+            construct_polyline_feature(&material, geometry, &crs, false)
         else {
             continue;
         };

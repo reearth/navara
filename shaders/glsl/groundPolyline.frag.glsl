@@ -33,6 +33,7 @@ uniform vec4 frustumRatio;
 uniform float logDepthBufFC;
 uniform mat4 inverseProjectionMatrix;
 uniform float nvr_uPickable;
+uniform vec2 nvr_uPickingCoord; // Screen coordinate for picking (in pixels)
 
 layout(location = 1) out vec4 normalBuffer;
 
@@ -44,21 +45,28 @@ float readDepth(sampler2D depthSampler, vec2 coord) {
 
 void main() {
     #include chunks/show_fragment;
-    
+
     vec2 viewport = (viewportAndPixelRatio.xy * viewportAndPixelRatio.z);
-    float logDepthOrDepth = unpackRGBAToDepth(texture(tGlobeDepth, gl_FragCoord.xy / viewport.xy));
+
+    // Use picking coordinate when provided (1x1 picking), otherwise use fragment coordinate
+    // nvr_uPickingCoord is set to (-1, -1) for non-picking renders (including debug canvas)
+    bool usePickingCoord = nvr_uPickable > 0.0 && nvr_uPickingCoord.x >= 0.0;
+    vec2 sampleCoord = usePickingCoord ? nvr_uPickingCoord : gl_FragCoord.xy;
+    float logDepthOrDepth = unpackRGBAToDepth(texture(tGlobeDepth, sampleCoord / viewport.xy));
 
     // Discard sky
     if (logDepthOrDepth == 1.0) {
         discard;
     }
-    
+
     vec3 ecStart = vec3(v_endEcAndStartEcX.w, v_texcoordNormalizationAndStartEcYZ.zw);
 
     float near = frustumNearFar.x;
     float far = frustumNearFar.y;
 
-    vec2 screenCoords = (gl_FragCoord.xy / viewport) * 2.0 - 1.0;
+    // For picking, the camera uses setViewOffset for a 1x1 render so the pixel is already at NDC center.
+    // Use NDC (0,0) in that case; otherwise derive NDC from the full-screen fragment coordinate.
+    vec2 screenCoords = usePickingCoord ? vec2(0.0) : ((sampleCoord / viewport) * 2.0 - 1.0);
 
     #ifdef USE_LOGDEPTHBUF
     float linearDepth = exp2(logDepthOrDepth / (logDepthBufFC * 0.5)) - 1.0;

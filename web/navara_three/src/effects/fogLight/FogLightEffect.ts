@@ -8,7 +8,6 @@ import {
 import {
   PerspectiveCamera,
   OrthographicCamera,
-  Color,
   Matrix4,
   Uniform,
   Vector2,
@@ -28,6 +27,7 @@ import {
   Sphere,
 } from "three";
 
+import type { Color } from "../../Color";
 import { depth, packing, transform } from "../../shaders";
 
 export type FogLightDefinition = {
@@ -299,9 +299,9 @@ export class FogLightEffect extends PostProcessingEffect {
     radius = 500,
   ): void {
     const k = 4 * i;
-    this.buf0[k + 0] = color.r;
-    this.buf0[k + 1] = color.g;
-    this.buf0[k + 2] = color.b;
+    this.buf0[k + 0] = color.raw.r;
+    this.buf0[k + 1] = color.raw.g;
+    this.buf0[k + 2] = color.raw.b;
     this.buf0[k + 3] = intensity;
 
     this.buf1[k + 0] = position.x;

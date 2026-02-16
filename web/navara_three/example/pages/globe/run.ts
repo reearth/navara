@@ -70,13 +70,13 @@ export async function run() {
 
   let selectedGMLId: string | undefined;
   view.on("pick", (info) => {
-    selectedGMLId = info?.properties?.get("gml_id") as string;
+    selectedGMLId = info?.properties?.["gml_id"] as string;
     chiyodaSubway.forceUpdate();
   });
 
   chiyodaSubway.on("featureUpdated", ({ evaluator }) => {
     evaluator.evaluate((_batchId, properties) => {
-      const gmlId = properties?.get("gml_id") as string;
+      const gmlId = properties?.["gml_id"] as string;
       if (selectedGMLId === gmlId) {
         return {
           color: new Color().setHex(0xff00ff),

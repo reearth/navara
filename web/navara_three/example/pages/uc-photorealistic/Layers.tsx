@@ -48,8 +48,8 @@ export const Layers: FC<SceneLayerToggles> = ({
   const { isNight } = useNightContext();
 
   // Descriptions
-  const baseTiles = useMemo<LayerDescription>(
-    () => ({
+  const baseTiles = useMemo(
+    (): LayerDescription => ({
       type: "tiles",
       data: { url: UC_PHOTOREALISTIC_DATASETS.baseRaster.url },
       rasterTile: { minZoom: 2, maxZoom: 18 },
@@ -57,8 +57,8 @@ export const Layers: FC<SceneLayerToggles> = ({
     [],
   );
 
-  const terrain = useMemo<LayerDescription>(
-    () => ({
+  const terrain = useMemo(
+    (): LayerDescription => ({
       type: "terrain",
       data: { url: UC_PHOTOREALISTIC_DATASETS.terrain.url },
       rasterTerrain: {
@@ -72,8 +72,8 @@ export const Layers: FC<SceneLayerToggles> = ({
     [],
   );
 
-  const cloudsEffect = useMemo<LayerDescription>(
-    () => ({
+  const cloudsEffect = useMemo(
+    (): LayerDescription => ({
       type: "effect",
       clouds: {
         coverage: cloudsEffectVisible ? 0.5 : 0,
@@ -89,8 +89,8 @@ export const Layers: FC<SceneLayerToggles> = ({
     [cloudsEffectVisible, quality],
   );
 
-  const rainDesc = useMemo<LayerDescription>(
-    () => ({
+  const rainDesc = useMemo(
+    (): LayerDescription => ({
       type: "mesh",
       visible: rainVisible,
       rain: {
@@ -101,8 +101,8 @@ export const Layers: FC<SceneLayerToggles> = ({
     [rainVisible],
   );
 
-  const rainDropEffect = useMemo<LayerDescription>(
-    () => ({
+  const rainDropEffect = useMemo(
+    (): LayerDescription => ({
       type: "effect",
       rainDrop: {
         opacity: 0.5,
@@ -117,8 +117,8 @@ export const Layers: FC<SceneLayerToggles> = ({
     [rainVisible, quality],
   );
 
-  const ssrEffect = useMemo<LayerDescription>(
-    () => ({
+  const ssrEffect = useMemo(
+    (): LayerDescription => ({
       type: "effect",
       ssr: {
         iterations: QUALITY[quality]?.ssr?.iterations,
@@ -129,8 +129,8 @@ export const Layers: FC<SceneLayerToggles> = ({
     [quality],
   );
 
-  const mvtLayerDescription = useMemo<LayerDescription>(
-    () => ({
+  const mvtLayerDescription = useMemo(
+    (): LayerDescription => ({
       type: "mvt",
       data: {
         url: UC_PHOTOREALISTIC_DATASETS.waterMvt.url,
@@ -193,8 +193,8 @@ export const Layers: FC<SceneLayerToggles> = ({
     });
   }, [defaultLayers, cloudShadow]);
 
-  const nightLightProbe = useMemo<LayerDescription>(
-    () => ({
+  const nightLightProbe = useMemo(
+    (): LayerDescription => ({
       type: "light",
       lightProbe: {
         sh: new SphericalHarmonics3().set(SH_COEFFICIENTS.night),

@@ -1,6 +1,5 @@
 import type { EventHandler } from "@navara/core";
 import { ModelMesh as NavaraModelMesh } from "@navara/engine";
-import type { AnimationClip } from "three";
 import {
   BufferGeometry,
   Points,
@@ -25,13 +24,6 @@ import {
   decompressDraco,
 } from "../loaders";
 
-// Type-safe interface for scene userData
-type SceneUserData = {
-  gltfAnimations?: AnimationClip[];
-  credit?: string;
-  [key: string]: unknown;
-};
-
 export async function renderModel(
   m: NavaraModelMesh,
   buf: BufferLoader,
@@ -40,11 +32,10 @@ export async function renderModel(
   viewContext: ViewContext,
   layerId: string,
 ) {
-  const loader = initializeGltfLoader();
-  const dracoLoader = initializeDracoLoader();
+  const loader = initializeGltfLoader(viewContext.concurrencyManager);
+  const dracoLoader = initializeDracoLoader(viewContext.concurrencyManager);
 
-  const { rawScene, credit } = await (async () => {
-    let credit = undefined;
+  const { rawScene, credit, animations } = await (async () => {
     if (m.bin) {
       const bin = buf.removeU8(m.bin);
       if (!bin) {
@@ -104,7 +95,7 @@ export async function renderModel(
             group.add(boxHelper);
           }
         }
-        return { rawScene: group, credit };
+        return { rawScene: group };
       }
 
       const model = await loader.parseAsync(bin.buffer as ArrayBuffer, "");
@@ -120,24 +111,23 @@ export async function renderModel(
         });
       }
       bin.set([]);
-      // Attach animations to the scene for downstream access
-      const userData = model.scene.userData as SceneUserData;
-      userData.gltfAnimations = model.animations;
 
-      // Attach credit information
-      if (model.asset.copyright) {
-        credit = model.asset.copyright;
-      }
-
-      return { rawScene: model.scene, credit };
+      return {
+        rawScene: model.scene,
+        credit: model.asset.copyright,
+        animations: model.animations,
+      };
     } else {
       if (!m.material.url) {
         return {};
       }
-      const model = await loader.loadAsync(m.material.url);
-      // Attach animations to the scene for downstream access
-      const userData = model.scene.userData as SceneUserData;
-      userData.gltfAnimations = model.animations;
+      let model;
+      try {
+        model = await loader.loadAsync(m.material.url);
+      } catch (e) {
+        console.warn(`Failed to load model: ${m.material.url}`, e);
+        return {};
+      }
       if (m.material.showBoundingBox) {
         model.scene.traverse((child) => {
           if (child instanceof Mesh) {
@@ -149,7 +139,7 @@ export async function renderModel(
           }
         });
       }
-      return { rawScene: model.scene, credit };
+      return { rawScene: model.scene, animations: model.animations };
     }
   })();
 
@@ -158,14 +148,13 @@ export async function renderModel(
   }
 
   const scene = new ModelMesh(
-    rawScene,
+    { scene: rawScene, credit, animations },
     m,
     uniforms,
     buf,
     viewEvents,
     viewContext,
     layerId,
-    credit,
   );
 
   return scene;

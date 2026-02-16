@@ -365,10 +365,9 @@ pub fn transfer_mesh(
             Some(&DataRequesterStatus::Fail)
         );
 
-        let should_upsample_terrain =
-            tile.should_upsampling(
-                terrain_layer.map_or(1, |t| t.appearance.as_ref().unwrap().max_zoom()),
-            ) && tile.is_upsamplable(&qt, &terrain_data_requester, &terrain_layer);
+        let should_upsample_terrain = terrain_layer
+            .is_some_and(|l| l.should_upsample(tile.coords.z))
+            && tile.is_upsamplable(&qt, &terrain_data_requester, &terrain_layer);
 
         if !should_render_terrain
             || is_ellipsoid_terrain

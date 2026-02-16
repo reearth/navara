@@ -71,7 +71,7 @@ const addFeatureUpdateHandler = (
 
   layer.on("featureUpdated", ({ evaluator }) => {
     evaluator.evaluate((batchId, property) => {
-      const gmlId = property?.get("gml_id");
+      const gmlId = property?.["gml_id"];
       if (gmlId && selectedFeatures.has(gmlId as string)) {
         return {
           color: new Color().setHex(0x00ffff),
@@ -102,7 +102,7 @@ export const addCtrlPanel = (
   const layerInstMap = new Map<string, Layer>();
 
   view.on("pick", (info) => {
-    const gmlId = info?.properties.get("gml_id");
+    const gmlId = info?.properties?.["gml_id"];
     if (gmlId) {
       // if gml_id exists, use it for selection
       selectedFeatures.add(gmlId as string);
@@ -328,7 +328,7 @@ export const addCtrlPanel = (
       material.show = paneParams.show;
 
       if ("color" in material) {
-        material.color = parseInt(paneParams.color.replace("#", ""), 16);
+        material.color = new Color().setStyle(paneParams.color);
       }
 
       if ("opacity" in material) {
@@ -388,17 +388,13 @@ export const addCtrlPanel = (
       }
 
       if ("backgroundColor" in material) {
-        material.backgroundColor = parseInt(
-          paneParams.backgroundColor.replace("#", ""),
-          16,
+        material.backgroundColor = new Color().setStyle(
+          paneParams.backgroundColor,
         );
       }
 
       if ("borderColor" in material) {
-        material.borderColor = parseInt(
-          paneParams.borderColor.replace("#", ""),
-          16,
-        );
+        material.borderColor = new Color().setStyle(paneParams.borderColor);
       }
 
       if ("borderWidth" in material) {
@@ -730,8 +726,8 @@ function createMaterialCtrl(
 
 function getMaterialOptions(layer: MaterialLayerDescription) {
   const materials = [];
-  if ("raster_tile" in layer) {
-    materials.push("raster_tile");
+  if ("rasterTile" in layer) {
+    materials.push("rasterTile");
   }
   if ("point" in layer) {
     materials.push("point");

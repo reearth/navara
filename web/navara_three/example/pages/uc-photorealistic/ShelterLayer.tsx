@@ -5,7 +5,6 @@ import {
   type FogLightDefinition,
   type Layer as NavaraLayer,
   type LayerDescription,
-  type MvtLayer,
 } from "@navara/three";
 import { Layer, useViewContext } from "@navara/three_react";
 import type { FeatureCollection, Point } from "geojson";
@@ -67,7 +66,7 @@ export const ShelterLayer: FC<{ visible?: boolean }> = ({
     textLayerRef.current = layer;
     layer.on("featureUpdated", ({ evaluator }) => {
       evaluator.evaluate((_batchId, property) => {
-        const name = (property?.get("名称") as string) ?? "";
+        const name = (property?.["名称"] as string) ?? "";
         // Hide when there's no name
         if (!name) return { text: "" };
         return { text: name };
@@ -75,7 +74,7 @@ export const ShelterLayer: FC<{ visible?: boolean }> = ({
     });
   };
 
-  const textLayerDesc = useMemo<LayerDescription | null>(() => {
+  const textLayerDesc = useMemo((): LayerDescription | null => {
     return {
       type: "mvt",
       data: {
@@ -85,21 +84,21 @@ export const ShelterLayer: FC<{ visible?: boolean }> = ({
       text: {
         color: new Color().setStyle("#ffffff"),
         size: 15,
-        clamp_to_ground: true,
-        scale_by_distance: true,
+        clampToGround: true,
+        scaleByDistance: true,
         height: 10,
-        depth_test: false,
-        outline_width: 2,
-        outline_color: new Color().setStyle("#111111"),
+        depthTest: false,
+        outlineWidth: 2,
+        outlineColor: new Color().setStyle("#111111"),
         show: visible,
       },
       vectorTile: {
-        max_zoom: 16,
+        maxZoom: 16,
       },
-    } as MvtLayer;
+    };
   }, [visible]);
 
-  const fogLayerDesc = useMemo<LayerDescription | null>(() => {
+  const fogLayerDesc = useMemo((): LayerDescription | null => {
     if (!view || fogLights.length === 0) return null;
     return {
       type: "effect",

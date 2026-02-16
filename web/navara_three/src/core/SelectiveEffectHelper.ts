@@ -34,6 +34,12 @@ export const SELECTIVE_OUTLINE_EFFECT_KEY = "selectiveOutline" as const;
 // ============================================================================
 
 /**
+ * Sentinel value for "no mask pass active".
+ * Set to Normal/Silhouette during mask passes via onBeforeRender.
+ */
+export const SELECTIVE_EFFECT_OCCLUSION_SKIP = -1 as const;
+
+/**
  * Post effect occlusion modes (numeric values for shader uniforms)
  * - Normal: Standard depth test/write (default)
  * - Silhouette: No depth test/write, renders as silhouette
@@ -41,6 +47,7 @@ export const SELECTIVE_OUTLINE_EFFECT_KEY = "selectiveOutline" as const;
 export const SelectiveEffectOcclusionMode = {
   Normal: 0,
   Silhouette: 2,
+  Skip: SELECTIVE_EFFECT_OCCLUSION_SKIP,
 } as const;
 
 export type SelectiveEffectOcclusionValue =
@@ -71,12 +78,6 @@ export function parseSelectiveEffectOcclusion(
       return SelectiveEffectOcclusionMode.Normal;
   }
 }
-
-/**
- * Sentinel value for "no mask pass active".
- * Set to Normal/Silhouette during mask passes via onBeforeRender.
- */
-export const SELECTIVE_EFFECT_OCCLUSION_SKIP = -1 as const;
 
 // ============================================================================
 // Types
