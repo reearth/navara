@@ -8,6 +8,6 @@ export async function getImageDataFromImageBitmap(
   } else {
     context.drawImage(img, 0, 0);
   }
-  const data = context.getImageData(0, 0, img.height, img.width).data;
+  const data = context.getImageData(0, 0, img.width, img.height).data;
   return data;
 }

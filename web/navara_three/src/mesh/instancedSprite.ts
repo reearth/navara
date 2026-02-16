@@ -25,6 +25,7 @@ import invariant from "tiny-invariant";
 import type { ViewContext } from "../core";
 import type { BufferLoader } from "../event";
 import { TEXTURE_LOADER } from "../event/loaders";
+import { getImageDataFromImageBitmap } from "../tasks/getImageDataFromImageBitmap";
 import { arraysEqual } from "../utils";
 
 import { PickableMesh } from "./pickableMesh";
@@ -62,12 +63,6 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
   private _initialHeight = 0.0;
   private _loadedUrls = new Set<string>();
   private _offscreenCanvas: OffscreenCanvas = new OffscreenCanvas(1, 1);
-  private _offscreenCtx: OffscreenCanvasRenderingContext2D =
-  (() => {
-      const ctx = this._offscreenCanvas.getContext("2d");
-      invariant(ctx, "Failed to acquire 2D context for OffscreenCanvas");
-      return ctx;
-    })();
   /** ViewContext for SelectiveEffect handling */
   private _viewContext: ViewContext;
   /** Layer ID for SelectiveEffect handling */
@@ -528,22 +523,22 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
   }
 
   /** Extract raw RGBA pixel data from an image-based texture via an offscreen canvas. */
-  private extractPixelData(
+  private async extractPixelData(
     texture: { image: HTMLImageElement | ImageBitmap },
     flipY: boolean,
   ) {
     const img = texture.image;
     this._offscreenCanvas.width = img.width;
     this._offscreenCanvas.height = img.height;
-    const ctx = this._offscreenCtx;
-    ctx.reset();
-    if (flipY) {
-      ctx.translate(0, img.height);
-      ctx.scale(1, -1);
-    }
-    ctx.drawImage(img, 0, 0);
-    const imageData = ctx.getImageData(0, 0, img.width, img.height);
-    return new Uint8Array(imageData.data);
+
+    const imageData = await getImageDataFromImageBitmap(
+      await createImageBitmap(img, {
+        imageOrientation: flipY ? "flipY" : "none",
+      }),
+      this._offscreenCanvas,
+    );
+
+    return new Uint8Array(imageData);
   }
 
   private async uploadTexture(
@@ -559,7 +554,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
       const width = newTexture.image.width;
       const height = newTexture.image.height;
       material.uniforms.uAspect.value = width / height;
-      const pixelData = this.extractPixelData(newTexture, true);
+      const pixelData = await this.extractPixelData(newTexture, true);
 
       const existingTextureArray = material.uniforms.uTexture
         .value as DataArrayTexture;
@@ -662,9 +657,8 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     const textureArray = uniforms?.uTexture?.value;
     if (textureArray instanceof DataArrayTexture) {
       textureArray.dispose();
-      uniforms.uTexture!.value = null;
     }
-    
+
     shaderMaterial.dispose();
 
     // Clear internal collections to release references

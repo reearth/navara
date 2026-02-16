@@ -1,8 +1,9 @@
 import { ShaderMaterial } from "three";
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { createPolylineBaseEnhancer } from "./index";
 import type { PolylineBaseProps } from "./types";
+
+import { createPolylineBaseEnhancer } from "./index";
 
 describe("polylineBaseEnhancer", () => {
   let enhancer: ReturnType<typeof createPolylineBaseEnhancer>;
