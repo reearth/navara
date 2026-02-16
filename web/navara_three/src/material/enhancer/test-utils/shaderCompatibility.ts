@@ -7,6 +7,7 @@ import {
   MeshStandardMaterial,
   PointsMaterial,
   ShaderLib,
+  ShaderMaterial,
 } from "three";
 import { beforeAll, describe, expect, it } from "vitest";
 
@@ -25,6 +26,7 @@ const SHADER_MATERIAL_MAP: Record<ShaderName, new () => Material> = {
   standard: MeshStandardMaterial,
   physical: MeshPhysicalMaterial,
   points: PointsMaterial,
+  shader: ShaderMaterial, // Custom ShaderMaterial
 };
 
 const ALL_SHADER_TYPES = Object.keys(SHADER_MATERIAL_MAP) as ShaderName[];
@@ -32,6 +34,16 @@ const ALL_SHADER_TYPES = Object.keys(SHADER_MATERIAL_MAP) as ShaderName[];
 function createMockShader(
   shaderType: ShaderName,
 ): WebGLProgramParametersWithUniforms {
+  // Custom ShaderMaterial ("shader") is not in Three.js ShaderLib
+  // ShaderLib only contains built-in materials: basic, lambert, phong, standard, physical, points
+  // For custom ShaderMaterial, we provide a minimal shader for testing enhancer transformShader()
+  if (shaderType === "shader") {
+    throw new Error(
+      "This test checks if the shader replacement works without any error. ShaderMaterial doesn't need this check.",
+    );
+  }
+
+  // For standard Three.js materials, use ShaderLib
   const shaderDef = ShaderLib[shaderType];
   return {
     vertexShader: shaderDef.vertexShader,

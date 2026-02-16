@@ -328,7 +328,7 @@ export const addCtrlPanel = (
       material.show = paneParams.show;
 
       if ("color" in material) {
-        material.color = parseInt(paneParams.color.replace("#", ""), 16);
+        material.color = new Color().setStyle(paneParams.color);
       }
 
       if ("opacity" in material) {
@@ -388,17 +388,13 @@ export const addCtrlPanel = (
       }
 
       if ("backgroundColor" in material) {
-        material.backgroundColor = parseInt(
-          paneParams.backgroundColor.replace("#", ""),
-          16,
+        material.backgroundColor = new Color().setStyle(
+          paneParams.backgroundColor,
         );
       }
 
       if ("borderColor" in material) {
-        material.borderColor = parseInt(
-          paneParams.borderColor.replace("#", ""),
-          16,
-        );
+        material.borderColor = new Color().setStyle(paneParams.borderColor);
       }
 
       if ("borderWidth" in material) {

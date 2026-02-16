@@ -5,6 +5,7 @@ import {
   MeshPhysicalMaterial,
   MeshStandardMaterial,
   PointsMaterial,
+  ShaderMaterial,
   type Material,
   type WebGLProgramParametersWithUniforms,
 } from "three";
@@ -21,6 +22,7 @@ type ShaderToMaterial = {
   standard: MeshStandardMaterial;
   physical: MeshPhysicalMaterial;
   points: PointsMaterial;
+  shader: ShaderMaterial;
 };
 
 // All shader names that have material mappings
