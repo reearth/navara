@@ -62,7 +62,6 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
   private _initialColor: Color = new Color(0xffffff);
   private _initialHeight = 0.0;
   private _loadedUrls = new Set<string>();
-  private _offscreenCanvas: OffscreenCanvas = new OffscreenCanvas(1, 1);
   /** ViewContext for SelectiveEffect handling */
   private _viewContext: ViewContext;
   /** Layer ID for SelectiveEffect handling */
@@ -528,14 +527,12 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     flipY: boolean,
   ) {
     const img = texture.image;
-    this._offscreenCanvas.width = img.width;
-    this._offscreenCanvas.height = img.height;
 
     const imageData = await getImageDataFromImageBitmap(
       await createImageBitmap(img, {
         imageOrientation: flipY ? "flipY" : "none",
       }),
-      this._offscreenCanvas,
+      new OffscreenCanvas(img.width, img.height),
     );
 
     return new Uint8Array(imageData);
@@ -603,6 +600,9 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
       this._loadedUrls.add(url);
       return this._loadedUrls.size - 1; // return index of the newly added texture layer
     }
+
+    console.warn(`Failed to load texture from url: ${url}`);
+    return undefined;
   }
 
   _setPickable(pickable: boolean): void {
