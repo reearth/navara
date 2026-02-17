@@ -23,8 +23,9 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v6
+            - uses: dtolnay/rust-toolchain@stable
 
-             # Cache Rust build artifacts and dependencies
+            # Cache Rust build artifacts and dependencies
             - uses: Swatinem/rust-cache@v2
               with:
                 shared-key: "rust-deps"
@@ -33,7 +34,9 @@ jobs:
                 cache-all-crates: true
             
             - name: Install cargo-audit
-              run: which cargo-audit || cargo install cargo-audit --locked
+              uses: taiki-e/install-action@v2
+              with:
+                tool: cargo-audit
             - name: generate Cargo.lock
               run: cargo generate-lockfile
             - name: Run cargo audit
@@ -43,8 +46,11 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v6
-            - uses: actions/setup-node@v4
+            - uses: actions/setup-node@v5
               with:
                 node-version: 22
             - uses: pnpm/action-setup@v3
+              with:
+                version: 10.16.1
+            # --ignore-registry-errors: audit will fail only if the registry actually successfully responds with found vulnerabilities
             - run: pnpm audit --audit-level=high --ignore-registry-errors
