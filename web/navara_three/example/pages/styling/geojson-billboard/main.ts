@@ -126,11 +126,9 @@ const run = async () => {
     }
   });
 
-  pane
-    .addBinding(params, "size")
-    .on("change", ({ value }) => {
-      layer?.update({ billboard: { size: value } });
-    });
+  pane.addBinding(params, "size").on("change", ({ value }) => {
+    layer?.update({ billboard: { size: value } });
+  });
 
   showAttributions([TILE_DATASETS.openstreetmap]);
 };
