@@ -5,12 +5,10 @@ on:
             - main
         paths:
             - "**/Cargo.toml"
-            - "**/Cargo.lock"
             - "**/pnpm-lock.yaml"
     pull_request:
         paths:
             - "**/Cargo.toml"
-            - "**/Cargo.lock"
             - "**/pnpm-lock.yaml"
     schedule:
         - cron: "0 6 * * 1" # Weekly Monday 6am UTC
