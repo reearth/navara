@@ -1,6 +1,8 @@
 name: Security audit
 on:
     push:
+        branches:
+            - main
         paths:
             - "**/Cargo.toml"
             - "**/Cargo.lock"
@@ -20,21 +22,27 @@ jobs:
     cargo-audit:
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v4
-            - name: Cache cargo-audit
-              uses: actions/cache@v4
+            - uses: actions/checkout@v6
+
+             # Cache Rust build artifacts and dependencies
+            - uses: Swatinem/rust-cache@v2
               with:
-                path: ~/.cargo/bin/cargo-audit
-                key: cargo-audit-${{ runner.os }}
+                shared-key: "rust-deps"
+                cache-on-failure: true
+                # Cache cargo-audit binaries
+                cache-all-crates: true
+            
             - name: Install cargo-audit
               run: which cargo-audit || cargo install cargo-audit --locked
+            - name: generate Cargo.lock
+              run: cargo generate-lockfile
             - name: Run cargo audit
-              run: cargo audit
+              run: cargo audit --file Cargo.lock
 
     pnpm-audit:
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v6
             - uses: actions/setup-node@v4
               with:
                 node-version: 22
