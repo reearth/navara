@@ -47,7 +47,7 @@ const run = async () => {
   // Track updated features to prevent duplicate evaluations
   let updatedFeatures = new Set<bigint>();
 
-  const params = { size: 0.02 };
+  const params = { size: 10000 };
 
   // MVT point layer: Heliports in Wakayama
   const addMvtLayer = () => {
