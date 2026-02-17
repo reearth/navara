@@ -13,7 +13,13 @@ import { Separator } from "@/components/ui/separator";
 
 import "./main.css";
 
-declare const PAGES: string[];
+type PageInfo = {
+  name: string;
+  category: string;
+  displayName: string;
+};
+
+declare const PAGES: PageInfo[];
 
 export const App = () => {
   const [query, setQuery] = useState("");
@@ -22,16 +28,33 @@ export const App = () => {
   const pages = useMemo(
     () =>
       (PAGES || [])
-        .filter((p) => p !== "index")
-        .sort((a, b) => a.localeCompare(b)),
+        .filter((p) => p.name !== "index")
+        .sort((a, b) => a.name.localeCompare(b.name)),
     [],
   );
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return pages;
-    return pages.filter((p) => p.toLowerCase().includes(q));
+    return pages.filter(
+      (p) =>
+        p.name.toLowerCase().includes(q) ||
+        p.displayName.toLowerCase().includes(q) ||
+        p.category.toLowerCase().includes(q),
+    );
   }, [pages, query]);
+
+  // Group pages by category
+  const groupedPages = useMemo(() => {
+    const groups: Record<string, PageInfo[]> = {};
+    for (const page of filtered) {
+      if (!groups[page.category]) {
+        groups[page.category] = [];
+      }
+      groups[page.category].push(page);
+    }
+    return groups;
+  }, [filtered]);
 
   return (
     <div className="h-screen w-screen overflow-auto bg-background text-foreground">
@@ -67,7 +90,21 @@ export const App = () => {
 
         <Separator className="mb-4" />
 
-        <PageList pages={filtered} />
+        {Object.entries(groupedPages)
+          .sort(([a], [b]) => {
+            // Sort "uncategorized" to the end
+            if (a === "uncategorized") return 1;
+            if (b === "uncategorized") return -1;
+            return a.localeCompare(b);
+          })
+          .map(([category, categoryPages]) => (
+            <section key={category} className="mb-8">
+              <h2 className="mb-4 text-xl font-semibold capitalize">
+                {category.replace(/-/g, " ")}
+              </h2>
+              <PageList pages={categoryPages} />
+            </section>
+          ))}
       </div>
     </div>
   );

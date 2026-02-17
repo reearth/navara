@@ -9,7 +9,7 @@ import type {
 import { Layer } from "@navara/three_react";
 import { useEffect, useMemo, useRef } from "react";
 
-import { PLATEAU_COLOR_MAP } from "../../helpers/colors";
+import { PLATEAU_COLOR_MAP } from "../../../helpers/colors";
 
 export type BuildingColorAttribute =
   | "none"
