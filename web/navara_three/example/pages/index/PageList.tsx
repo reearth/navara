@@ -1,11 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-type PageInfo = {
-  name: string;
-  category: string;
-  displayName: string;
-};
-
 type PageListProps = {
   pages: PageInfo[];
 };
