@@ -21,6 +21,7 @@ import {
   BatchedFeatureMesh,
   type ModelBatchedAttributeName,
   type BatchedAttributeName,
+  InstancedSpriteMesh,
 } from "../mesh";
 
 type AvailableMaterialProperty = ExtractProperties<
@@ -315,6 +316,9 @@ export class FeatureEvaluator {
     if (this.obj instanceof InstancedMesh) {
       return this.apply(this.obj);
     }
+    if (this.obj instanceof InstancedSpriteMesh) {
+      return this.apply(this.obj);
+    }
     if (this.obj instanceof BatchedFeatureMesh) {
       return this.apply(this.obj);
     }
@@ -328,13 +332,59 @@ export class FeatureEvaluator {
   }
 
   private apply(
-    m: Mesh | BatchedFeatureMesh | InstancedMesh<Object3D>,
+    m:
+      | Mesh
+      | BatchedFeatureMesh
+      | InstancedMesh<Object3D>
+      | InstancedSpriteMesh,
     parent?: ModelMesh,
   ) {
     // FIXME(keiya01): Handle in web worker
     const batchIdAttr =
       "geometry" in m ? m.geometry.getAttribute("_batchid") : undefined;
     for (const target of this.result) {
+      if (m instanceof InstancedSpriteMesh) {
+        switch (target.attribute) {
+          case "color": {
+            const len = target.array.length / target.itemSize;
+            for (let i = 0; i < len; i++) {
+              const colorIdx = i * target.itemSize;
+
+              const color = new Color().setRGBLinear(
+                target.array[colorIdx] as number,
+                target.array[colorIdx + 1] as number,
+                target.array[colorIdx + 2] as number,
+              ).raw;
+
+              m.setFeatureColorByBatchId(this.batchIds[i], color);
+            }
+            continue;
+          }
+          case "show": {
+            const len = target.array.length / target.itemSize;
+            for (let i = 0; i < len; i++) {
+              const value = target.array[i * target.itemSize];
+              const visible =
+                value != null && typeof value === "number"
+                  ? value >= 0.5
+                  : undefined;
+              m.setFeatureShowByBatchId(this.batchIds[i], visible ?? true);
+            }
+            continue;
+          }
+          case "height": {
+            const len = target.array.length / target.itemSize;
+            for (let i = 0; i < len; i++) {
+              const height = target.array[i * target.itemSize] as number;
+              m.setFeatureHeightByBatchId(this.batchIds[i], height);
+            }
+            continue;
+          }
+          default:
+            continue;
+        }
+      }
+
       if (m instanceof InstancedMesh) {
         switch (target.attribute) {
           case "text": {

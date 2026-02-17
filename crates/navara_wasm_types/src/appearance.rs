@@ -7,6 +7,7 @@ use crate::{ElevationDecoder, TextureFragment, Vec2, Vec3 as WasmVec3};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PointMaterial {
     pub show: Option<bool>,
+    /// size in meters.
     pub size: Option<f32>,
     pub color: Option<u32>,
     pub center: Option<Vec2>,
@@ -123,6 +124,7 @@ pub struct NearFar {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BillboardMaterial {
     pub show: Option<bool>,
+    /// size in meters.
     pub size: Option<f32>,
     pub color: Option<u32>,
     pub center: Option<Vec2>,

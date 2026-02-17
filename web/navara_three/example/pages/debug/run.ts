@@ -38,7 +38,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
     },
     point: {
       color: new Color().setStyle("#ff00ff"),
-      size: 0.1,
+      size: 110000.0,
       height: 1,
       scaleByDistance: true,
       clampToGround: true,
@@ -96,13 +96,14 @@ const geoLayersDef: MaterialLayerDescription[] = [
     },
     point: {
       color: new Color().setStyle("#ffffff"),
-      size: 0.1,
+      size: 105300.0,
       height: 1,
       scaleByDistance: true,
       clampToGround: true,
       transparent: false,
       depthTest: true,
-      offsetDepth: false,
+      offsetDepth: true,
+      center: { x: 0.0, y: 0.0 },
     },
   },
 
@@ -131,14 +132,15 @@ const geoLayersDef: MaterialLayerDescription[] = [
     },
     billboard: {
       color: new Color().setStyle("#ffffff"),
-      size: 0.05,
+      size: 70000.0,
       height: 1,
       scaleByDistance: true,
       clampToGround: true,
       depthTest: true,
-      transparent: false,
+      transparent: true,
       url: "/example.png",
-      offsetDepth: false,
+      offsetDepth: true,
+      center: { x: 0.0, y: -0.5 },
     },
   },
 
@@ -483,14 +485,14 @@ const geoLayersDef: MaterialLayerDescription[] = [
     },
     point: {
       color: new Color().setStyle("#ff0000"),
-      size: 0.01,
+      size: 10000.0,
       height: 1,
       // TODO: This should be abstracted like top-left/center/right, bottom-left/center/right
       center: {
-        x: 0.5,
-        y: 0,
+        x: 0.0,
+        y: 0.0,
       },
-      scaleByDistance: true,
+      scaleByDistance: false,
       clampToGround: true,
       depthTest: true,
     },
