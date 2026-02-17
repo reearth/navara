@@ -61,6 +61,7 @@ const run = async () => {
         scaleByDistance: true,
         clampToGround: true,
         color: new Color().setStyle("#ff0000"),
+        center: { x: 0, y: -0.5 },
       },
     });
 
@@ -113,11 +114,9 @@ const run = async () => {
     }
   });
 
-  pane
-    .addBinding(params, "size", { min: 0.001, max: 0.05, step: 0.001 })
-    .on("change", ({ value }) => {
-      layer?.update({ point: { size: value } });
-    });
+  pane.addBinding(params, "size").on("change", ({ value }) => {
+    layer?.update({ point: { size: value } });
+  });
 
   showAttributions([
     TILE_DATASETS.openstreetmap,

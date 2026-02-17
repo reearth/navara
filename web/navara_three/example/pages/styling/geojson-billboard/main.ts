@@ -127,7 +127,7 @@ const run = async () => {
   });
 
   pane
-    .addBinding(params, "size", { min: 0.01, max: 0.2, step: 0.01 })
+    .addBinding(params, "size")
     .on("change", ({ value }) => {
       layer?.update({ billboard: { size: value } });
     });
