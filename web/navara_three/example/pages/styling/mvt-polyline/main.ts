@@ -79,7 +79,10 @@ const run = async () => {
         // Find tree presence info
         const treeInfo = generics?.find(
           (g) =>
-            g && typeof g === "object" && "name" in g && g.name === "樹木の有無",
+            g &&
+            typeof g === "object" &&
+            "name" in g &&
+            g.name === "樹木の有無",
         ) as { value: { value: string }[] } | undefined;
 
         const code = treeInfo?.value[0]?.value;

@@ -20,7 +20,7 @@ const run = async () => {
       intensity: 2,
       castShadow: true,
       shadowFar: 5000,
-      shadowIntensity: 0.9
+      shadowIntensity: 0.9,
     },
   });
 
@@ -94,7 +94,8 @@ const run = async () => {
     // Feature evaluator: style buildings based on measured height
     layer.on("featureUpdated", ({ evaluator }) => {
       evaluator.evaluate((_batchId, property) => {
-        const measuredHeight = (property?.["bldg:measuredHeight"] as number) ?? 0;
+        const measuredHeight =
+          (property?.["bldg:measuredHeight"] as number) ?? 0;
 
         // Determine visibility by height bucket
         const show = (() => {

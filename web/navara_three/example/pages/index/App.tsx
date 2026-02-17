@@ -13,14 +13,6 @@ import { Separator } from "@/components/ui/separator";
 
 import "./main.css";
 
-type PageInfo = {
-  name: string;
-  category: string;
-  displayName: string;
-};
-
-declare const PAGES: PageInfo[];
-
 export const App = () => {
   const [query, setQuery] = useState("");
   const { isDark: dark, toggle } = useDarkMode();

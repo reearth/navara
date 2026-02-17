@@ -16,7 +16,7 @@ const run = async () => {
   view.addDefaultAtmosphereLayers();
 
   view.setCamera({
-    lng: 139.60,
+    lng: 139.6,
     lat: 35.48,
     height: 20000,
     heading: 0,
