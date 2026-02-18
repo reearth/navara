@@ -21,7 +21,7 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v6
-            - uses: dtolnay/rust-toolchain@stable
+            - uses: dtolnay/rust-toolchain@1.86.0
 
             # Cache Rust build artifacts and dependencies
             - uses: Swatinem/rust-cache@v2
@@ -47,8 +47,9 @@ jobs:
             - uses: actions/setup-node@v5
               with:
                 node-version: 22
-            - uses: pnpm/action-setup@v3
+            - uses: pnpm/action-setup@v4
               with:
                 version: 10.16.1
+                run_install: false
             # --ignore-registry-errors: audit will fail only if the registry actually successfully responds with found vulnerabilities
             - run: pnpm audit --audit-level=high --ignore-registry-errors
