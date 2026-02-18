@@ -142,10 +142,12 @@ const run = async () => {
   const scaleFolder = pane.addFolder({ title: "Scale", expanded: false });
 
   for (const key of Object.keys(scaleParams) as (keyof typeof scaleParams)[]) {
-    scaleFolder.addBinding(scaleParams, key).on("change", ({ value }) => {
-      currentScales[key] = value;
-      layer?.forceUpdate();
-    });
+    scaleFolder
+      .addBinding(scaleParams, key, { min: 0 })
+      .on("change", ({ value }) => {
+        currentScales[key] = value;
+        layer?.forceUpdate();
+      });
   }
 
   showAttributions([
