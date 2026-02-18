@@ -73,14 +73,16 @@ void main() {
 #endif
 
     mvPosition += mvr_getMvHeightOffset(absTransformed, instanceHeight);
+    vec2 center = clamp(uCenter, vec2(-0.5), vec2(0.5)); // Ensure center is within the bounds of the sprite
+    float clampedScale = max(0.0, uScale); // Prevent negative scaling
     // This makes it always face the camera
     if (uScaleByDistance) {
-        float scale = uScale * length(mvPosition.xyz) / DISTANCE_SCALE_FACTOR;
-        mvPosition.xy += (((position.xy - uCenter)) * vec2(uAspect, 1.0) * scale);
+        // float scale = clampedScale * (1.0 + (length(mvPosition.xyz) / DISTANCE_SCALE_FACTOR));
+        float scale = -mvPosition.z * 0.1; 
+        mvPosition.xy += (((position.xy - center)) * vec2(uAspect, 1.0) * scale);
     } else {
-        mvPosition.xy += (((position.xy - uCenter)) * vec2(uAspect, 1.0) * uScale);
+        mvPosition.xy += (((position.xy - center)) * vec2(uAspect, 1.0) * clampedScale);
     }
     gl_Position = projectionMatrix * mvPosition;
     vFragDepth = gl_Position.w + 1.0;
-
 }

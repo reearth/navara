@@ -10,6 +10,8 @@ pub struct PointMaterial {
     /// size in meters.
     pub size: Option<f32>,
     pub color: Option<u32>,
+    /// anchor point of the sprite, range is (-0.5, -0.5) to (0.5, 0.5).
+    /// Default is (0.0, 0.0) which means the center of the sprite.
     pub center: Option<Vec2>,
     pub height: Option<f32>,
     #[wasm_bindgen(js_name = scaleByDistance)]
@@ -127,6 +129,8 @@ pub struct BillboardMaterial {
     /// size in meters.
     pub size: Option<f32>,
     pub color: Option<u32>,
+    /// anchor point of the sprite, range is (-0.5, -0.5) to (0.5, 0.5).
+    /// Default is (0.0, 0.0) which means the center of the sprite.
     pub center: Option<Vec2>,
     pub height: Option<f32>,
     #[wasm_bindgen(getter_with_clone)]
