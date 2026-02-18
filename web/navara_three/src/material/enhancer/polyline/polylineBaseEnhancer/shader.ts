@@ -1,9 +1,9 @@
-import { packing } from "@takram/three-geospatial/shaders";
 import FlatPolylineFragShader from "@shaders/glsl/flatPolyline.frag.glsl";
 import FlatPolylineVertShader from "@shaders/glsl/flatPolyline.vert.glsl";
 import GroundPolylineFragShader from "@shaders/glsl/groundPolyline.frag.glsl";
 import PolylineFragShader from "@shaders/glsl/polyline.frag.glsl";
 import PolylineVertShader from "@shaders/glsl/polyline.vert.glsl";
+import { packing } from "@takram/three-geospatial/shaders";
 import type { WebGLProgramParametersWithUniforms } from "three";
 
 import type { SupportedMaterial } from "./material";

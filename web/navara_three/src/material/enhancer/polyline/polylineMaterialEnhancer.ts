@@ -13,8 +13,8 @@ import {
   type PolylineBaseMutates,
   type PolylineBaseProps,
   type PolylineBaseState,
+  type SupportedMaterial,
 } from "./polylineBaseEnhancer";
-import type { SupportedMaterial } from "./polylineBaseEnhancer";
 
 /**
  * Props for the polyline material enhancer.
