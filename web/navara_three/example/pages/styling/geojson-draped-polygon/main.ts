@@ -139,12 +139,6 @@ const run = async () => {
     }
   });
 
-  pane
-    .addBinding(params, "opacity", { min: 0, max: 1, step: 0.1 })
-    .on("change", ({ value }) => {
-      layer?.update({ polygon: { opacity: value } });
-    });
-
   showAttributions([TILE_DATASETS.openstreetmap]);
 };
 
