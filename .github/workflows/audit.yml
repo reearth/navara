@@ -30,7 +30,6 @@ jobs:
                 cache-on-failure: true
                 # Cache cargo-audit binaries
                 cache-all-crates: true
-            
             - name: Install cargo-audit
               uses: taiki-e/install-action@v2
               with:
