@@ -26,8 +26,13 @@ uniform bool uScaleByDistance;
 uniform vec2 uCenter;
 uniform float uAspect; // Aspect ratio of the billboard texture
 
-// Normalization factor to keep sprite size consistent across globe-scale distances
-const float DISTANCE_SCALE_FACTOR = 1000000.0;
+// Normalization factor used when scaling sprites by camera distance.
+// mvPosition is assumed to be in world units roughly corresponding to meters
+// on a globe-scale scene. A smaller factor increases how quickly sprites grow
+// with distance. This was reduced from 1,000,000.0 to 100,000.0 to make
+// distance-based scaling more noticeable at typical camera altitudes; adjust
+// this value if you need to match prior visual behavior.
+const float DISTANCE_SCALE_FACTOR = 100000.0;
 
 varying vec2 vUv;
 varying vec3 vColor;
@@ -73,14 +78,15 @@ void main() {
 #endif
 
     mvPosition += mvr_getMvHeightOffset(absTransformed, instanceHeight);
+    vec2 center = clamp(uCenter, vec2(-0.5), vec2(0.5)); // Ensure center is within the bounds of the sprite
+    float clampedScale = max(0.0, uScale); // Prevent negative scaling
     // This makes it always face the camera
     if (uScaleByDistance) {
-        float scale = uScale * length(mvPosition.xyz) / DISTANCE_SCALE_FACTOR;
-        mvPosition.xy += (((position.xy - uCenter)) * vec2(uAspect, 1.0) * scale);
+        float scale = clampedScale * (1.0 + (length(mvPosition.xyz) / DISTANCE_SCALE_FACTOR));
+        mvPosition.xy += (((position.xy - center)) * vec2(uAspect, 1.0) * scale);
     } else {
-        mvPosition.xy += (((position.xy - uCenter)) * vec2(uAspect, 1.0) * uScale);
+        mvPosition.xy += (((position.xy - center)) * vec2(uAspect, 1.0) * clampedScale);
     }
     gl_Position = projectionMatrix * mvPosition;
     vFragDepth = gl_Position.w + 1.0;
-
 }
