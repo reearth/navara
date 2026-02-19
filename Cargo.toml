@@ -122,3 +122,5 @@ dwarf-debug-info = true
 [profile.release]
 # Optimize for small code size (for WASM modules)
 opt-level = "s"
+
+# test
