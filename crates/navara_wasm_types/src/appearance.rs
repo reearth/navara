@@ -17,8 +17,9 @@ pub struct PointMaterial {
     #[wasm_bindgen(js_name = scaleByDistance)]
     #[serde(rename = "scaleByDistance")]
     /// Whether to scale the point based on distance from the camera.
-    /// When true, the point will maintain a consistent size on the screen regardless of its distance from the camera.
-    /// The size will be multiplied by (1.0 + (distance / predefined constant)).
+    /// When true, the point size will be adjusted to reduce attenuation with distance, so nearby points
+    /// have a minimum apparent size and points gradually grow larger as their distance increases.
+    /// The size is scaled by a factor of the form (1.0 + (distance / predefined constant)).
     pub scale_by_distance: Option<bool>,
     #[wasm_bindgen(js_name = clampToGround)]
     #[serde(rename = "clampToGround")]
