@@ -547,9 +547,10 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
       material.uniformsNeedUpdate = true;
 
       // Sync aspect ratio via enhancer
-      this.getEnhancer()
-        .mutates()
-        .setAspect(width / height);
+      // this.getEnhancer()
+      //   .mutates()
+      //   .setAspect(width / height);
+      this.getEnhancer().update({ base: { aspect: width / height } });
 
       newTexture.dispose();
       this._loadedUrls.add(url);
