@@ -99,7 +99,11 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     const material = this.material as ShaderMaterial;
 
     // Update visibility (combines show + active)
-    material.visible = (m.material.show ?? true) && active;
+    if (material.visible !== m.material.show) {
+      material.visible = m.material.show ?? true;
+      material.visible = material.visible && active;
+    }
+
 
     // Update enhancer state for uniform-backed properties
     enhancer.update({
