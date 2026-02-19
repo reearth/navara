@@ -1,10 +1,10 @@
-import type { Dataset } from "../../helpers/constants";
+import type { Dataset } from "../../../helpers/constants";
 import {
   TILE_DATASETS,
   TERRAIN_DATASETS,
   VECTOR_DATASETS,
   LOCAL_DATASETS,
-} from "../../helpers/constants";
+} from "../../../helpers/constants";
 
 /**
  * Central bundle of all data layers used in the photorealistic example.
