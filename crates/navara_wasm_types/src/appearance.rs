@@ -142,8 +142,9 @@ pub struct BillboardMaterial {
     #[wasm_bindgen(js_name = scaleByDistance)]
     #[serde(rename = "scaleByDistance")]
     /// Whether to scale the billboard based on distance from the camera.
-    /// When true, the billboard will maintain a consistent size on the screen regardless of its distance from the camera.
-    /// The size will be multiplied by (1.0 + (distance / predefined constant)).
+    /// When true, the billboard's size will change with its distance from the camera
+    /// according to an implementation-defined factor (for example, 1.0 + (distance / constant)),
+    /// and it will not maintain a strictly constant size on the screen.
     pub scale_by_distance: Option<bool>,
     #[wasm_bindgen(js_name = clampToGround)]
     #[serde(rename = "clampToGround")]
