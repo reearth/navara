@@ -16,6 +16,9 @@ pub struct PointMaterial {
     pub height: Option<f32>,
     #[wasm_bindgen(js_name = scaleByDistance)]
     #[serde(rename = "scaleByDistance")]
+    /// Whether to scale the point based on distance from the camera.
+    /// When true, the point will maintain a consistent size on the screen regardless of its distance from the camera.
+    /// The size will be multiplied by (1.0 + (distance / predefined constant)).
     pub scale_by_distance: Option<bool>,
     #[wasm_bindgen(js_name = clampToGround)]
     #[serde(rename = "clampToGround")]
@@ -137,6 +140,9 @@ pub struct BillboardMaterial {
     pub url: Option<String>,
     #[wasm_bindgen(js_name = scaleByDistance)]
     #[serde(rename = "scaleByDistance")]
+    /// Whether to scale the billboard based on distance from the camera.
+    /// When true, the billboard will maintain a consistent size on the screen regardless of its distance from the camera.
+    /// The size will be multiplied by (1.0 + (distance / predefined constant)).
     pub scale_by_distance: Option<bool>,
     #[wasm_bindgen(js_name = clampToGround)]
     #[serde(rename = "clampToGround")]
