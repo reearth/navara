@@ -127,8 +127,8 @@ export class PolygonMesh extends BatchedFeatureMesh<
       this._viewContext,
       this._layerId,
       this._uniforms,
-      this.geometry,
-      this.material,
+      this.geometry.clone(),
+      this.material.clone(),
       this._enhancedMaterial,
     ) as this;
   }
@@ -640,12 +640,6 @@ export class PolygonMesh extends BatchedFeatureMesh<
     }
 
     viewEvents.emit("_csmUnmounted", this.material);
-
-    // Dispose of geometry and materials to free GPU resources
-    this.geometry.dispose();
-    this.material.dispose();
-    if (this.customDepthMaterial) {
-      this.customDepthMaterial.dispose();
-    }
+    this.customDepthMaterial?.dispose();
   }
 }
