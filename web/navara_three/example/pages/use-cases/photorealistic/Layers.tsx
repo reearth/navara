@@ -7,7 +7,7 @@ import { Layer, useViewContext } from "@navara/three_react";
 import { useEffect, useMemo, type FC } from "react";
 import { SphericalHarmonics3, Vector2 } from "three";
 
-import { SH_COEFFICIENTS } from "../../helpers/sh";
+import { SH_COEFFICIENTS } from "../../../helpers/sh";
 
 import {
   BuildingTilesLayer,

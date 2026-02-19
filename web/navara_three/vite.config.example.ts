@@ -1,4 +1,4 @@
-import { readdirSync } from "fs";
+import { existsSync, readdirSync } from "fs";
 import path, { resolve } from "path";
 
 import react from "@vitejs/plugin-react";
@@ -12,7 +12,56 @@ import tsconfig from "vite-tsconfig-paths";
 
 import { commonConfig } from "../vite.config.common";
 
-const pages = readdirSync(resolve(__dirname, "example/pages"));
+type PageInfo = {
+  name: string;
+  category: string;
+  displayName: string;
+};
+
+/**
+ * Recursively discover example pages in nested directories.
+ * A directory is considered a page if it contains a main.ts file.
+ * Otherwise, it's treated as a category directory.
+ */
+function getExamplePages(
+  baseDir: string,
+  prefix = "",
+): { name: string; path: string }[] {
+  const entries = readdirSync(baseDir, { withFileTypes: true });
+  const pages: { name: string; path: string }[] = [];
+
+  for (const entry of entries) {
+    if (entry.isDirectory()) {
+      const fullPath = resolve(baseDir, entry.name);
+      const mainFile = resolve(fullPath, "main.ts");
+      const mainTsxFile = resolve(fullPath, "main.tsx");
+
+      if (existsSync(mainFile) || existsSync(mainTsxFile)) {
+        // This is a page directory
+        const pageName = prefix ? `${prefix}/${entry.name}` : entry.name;
+        pages.push({ name: pageName, path: fullPath });
+      } else {
+        // This is a category directory, recurse
+        const nestedPages = getExamplePages(
+          fullPath,
+          prefix ? `${prefix}/${entry.name}` : entry.name,
+        );
+        pages.push(...nestedPages);
+      }
+    }
+  }
+
+  return pages;
+}
+
+const examplePages = getExamplePages(resolve(__dirname, "example/pages"));
+
+// Convert to PageInfo for the PAGES global
+const pageInfos: PageInfo[] = examplePages.map(({ name }) => ({
+  name,
+  category: name.includes("/") ? name.split("/")[0] : "uncategorized",
+  displayName: name.includes("/") ? (name.split("/").pop() ?? name) : name,
+}));
 
 export default defineConfig((env) => {
   const common = commonConfig("NavaraExample", env);
@@ -32,11 +81,13 @@ export default defineConfig((env) => {
       }),
       createMpaPlugin({
         template: "example/template.html",
-        pages: pages.map((page) => {
+        pages: examplePages.map(({ name }) => {
+          // Convert nested path to URL-safe name: "styling/geojson-billboard" -> "styling-geojson-billboard"
+          const urlName = name.replace(/\//g, "-");
           return {
-            name: page,
-            filename: `${page}.html`,
-            entry: normalizePath(`/example/pages/${page}/main.ts`),
+            name: urlName,
+            filename: `${urlName}.html`,
+            entry: normalizePath(`/example/pages/${name}/main.ts`),
             data: {
               title: "Navara",
             },
@@ -52,7 +103,7 @@ export default defineConfig((env) => {
       ...(env.mode !== "production" ? [wasm(), topLevelAwait()] : []),
     ],
     define: {
-      PAGES: pages,
+      PAGES: JSON.stringify(pageInfos),
     },
     build: {
       outDir: "dist-example",

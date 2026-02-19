@@ -1,19 +1,21 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 type PageListProps = {
-  pages: string[];
+  pages: PageInfo[];
 };
 
 export const PageList = ({ pages }: PageListProps) => {
   return (
     <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4">
-      {pages.map((p) => {
-        const href = `/${p}`;
-        const src = `/screenshots/${p}.png`;
-        const title = p.replace(/-/g, " ");
+      {pages.map((page) => {
+        // Convert nested path to URL-safe format: "styling/geojson-billboard" -> "styling-geojson-billboard"
+        const urlName = page.name.replace(/\//g, "-");
+        const href = `/${urlName}`;
+        const src = `/screenshots/${urlName}.png`;
+        const title = page.displayName.replace(/-/g, " ");
         return (
           <a
-            key={p}
+            key={page.name}
             href={href}
             aria-label={`Open ${title}`}
             className="no-underline"

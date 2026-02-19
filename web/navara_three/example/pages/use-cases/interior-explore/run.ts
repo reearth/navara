@@ -11,14 +11,14 @@ import ThreeView, {
 import { Vector3, Quaternion, Euler } from "three";
 import { Pane } from "tweakpane";
 
-import { showAttributions } from "../../helpers/attributions";
+import { showAttributions } from "../../../helpers/attributions";
 import {
   TERRAIN_DATASETS,
   TILE_DATASETS,
   TILES_3D_DATASETS,
   LOCAL_DATASETS,
-} from "../../helpers/constants";
-import { controlGLTFModel } from "../../helpers/modelControl";
+} from "../../../helpers/constants";
+import { controlGLTFModel } from "../../../helpers/modelControl";
 
 const SCENES = {
   ToranomonHillsBIM: {
