@@ -17,7 +17,7 @@ pub struct PointMaterial {
     #[wasm_bindgen(js_name = scaleByDistance)]
     #[serde(rename = "scaleByDistance")]
     /// Whether to scale the point based on distance from the camera.
-    /// When true, the point size will be adjusted to reduce attenuation with distance, so nearby points
+    /// When true, the point size will be adjusted to reduce attenuation with distance, so distant points
     /// have a minimum apparent size and points gradually grow larger as their distance increases.
     /// The size is scaled by a factor of the form (1.0 + (distance / predefined constant)).
     pub scale_by_distance: Option<bool>,
@@ -142,9 +142,9 @@ pub struct BillboardMaterial {
     #[wasm_bindgen(js_name = scaleByDistance)]
     #[serde(rename = "scaleByDistance")]
     /// Whether to scale the billboard based on distance from the camera.
-    /// When true, the billboard's size will change with its distance from the camera
-    /// according to an implementation-defined factor (for example, 1.0 + (distance / constant)),
-    /// and it will not maintain a strictly constant size on the screen.
+    /// When true, the billboard size will be adjusted to reduce attenuation with distance, so distant billboards
+    /// have a minimum apparent size and billboards gradually grow larger as their distance increases.
+    /// The size is scaled by a factor of the form (1.0 + (distance / predefined constant)).
     pub scale_by_distance: Option<bool>,
     #[wasm_bindgen(js_name = clampToGround)]
     #[serde(rename = "clampToGround")]
