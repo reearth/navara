@@ -88,11 +88,7 @@ export function createPolygonBaseEnhancer(
       if (props.globeNormalTexture) {
         mutates.setGlobeNormalTexture(props.globeNormalTexture);
       }
-      updateMaterialProps(material, {
-        ...props,
-        clampToGround: state.clampToGround,
-        isTexturized: state.isTexturized,
-      });
+      updateMaterialProps(material, props);
     },
 
     states: (): PolygonBaseState => {

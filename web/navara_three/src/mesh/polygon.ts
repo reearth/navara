@@ -127,8 +127,8 @@ export class PolygonMesh extends BatchedFeatureMesh<
       this._viewContext,
       this._layerId,
       this._uniforms,
-      this.geometry.clone(),
-      this.material.clone(),
+      this.geometry,
+      this.material,
       this._enhancedMaterial,
     ) as this;
   }
@@ -277,11 +277,17 @@ export class PolygonMesh extends BatchedFeatureMesh<
     this.castShadow = !!meshMaterial.castShadow;
     this.receiveShadow = !!meshMaterial.receiveShadow;
 
+    const clampToGround = meshMaterial.clampToGround;
     // This mesh is texturized if it has a tile handle (terrain attachment).
     const isTexturized = !!tileHandle;
     const material = this.material;
 
+    const shouldClipByStencil = !isTexturized && clampToGround;
+
     material.stencilWrite = false;
+    material.colorWrite = !shouldClipByStencil;
+    material.depthWrite = !clampToGround;
+    material.depthTest = !clampToGround;
     material.vertexColors = false;
     this.visible = !!meshMaterial.show;
 
@@ -459,6 +465,13 @@ export class PolygonMesh extends BatchedFeatureMesh<
 
     // Update via enhancer
     enhancer.update(updateProps);
+
+    // Render state based on clampToGround and isTexturized
+    const clampToGround = !!material.clampToGround;
+    const shouldClipByStencil = !isTexturized && clampToGround;
+    this.material.colorWrite = !shouldClipByStencil;
+    this.material.depthWrite = !clampToGround;
+    this.material.depthTest = !clampToGround;
 
     // Post-update actions
     this.enableWater();
