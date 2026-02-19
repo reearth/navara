@@ -39,6 +39,37 @@ describe("polygonBaseEnhancer", () => {
     });
   });
 
+  describe("material render state on partial update", () => {
+    it("should preserve clampToGround render state when only isTexturized is updated", () => {
+      const material = new MeshLambertMaterial();
+      const e = createPolygonBaseEnhancer(material);
+      e.mount({ clampToGround: true, isTexturized: false });
+      expect(material.depthWrite).toBe(false);
+      expect(material.depthTest).toBe(false);
+      expect(material.colorWrite).toBe(false);
+
+      // Partial update: only isTexturized changes, clampToGround must stay true
+      e.update({ isTexturized: true });
+      expect(material.depthWrite).toBe(false);
+      expect(material.depthTest).toBe(false);
+      expect(material.colorWrite).toBe(true); // texturized → no stencil clip
+    });
+
+    it("should preserve isTexturized render state when only clampToGround is updated", () => {
+      const material = new MeshLambertMaterial();
+      const e = createPolygonBaseEnhancer(material);
+      e.mount({ clampToGround: false, isTexturized: true });
+      expect(material.depthWrite).toBe(true);
+      expect(material.depthTest).toBe(true);
+
+      // Partial update: only clampToGround changes, isTexturized must stay true
+      e.update({ clampToGround: true });
+      expect(material.depthWrite).toBe(false);
+      expect(material.depthTest).toBe(false);
+      expect(material.colorWrite).toBe(true); // still texturized → no stencil clip
+    });
+  });
+
   describe("programCacheKey", () => {
     it("should return cache key based on shader-affecting state", () => {
       enhancer.mount({

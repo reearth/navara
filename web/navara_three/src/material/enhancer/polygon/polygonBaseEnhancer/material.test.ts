@@ -51,18 +51,13 @@ describe("polygonBaseEnhancer/material", () => {
       expect(material.depthTest).toBe(true);
     });
 
-    it("should not change render state when neither clampToGround nor isTexturized is provided", () => {
+    it("should compute render state with defaults when neither clampToGround nor isTexturized is provided", () => {
       const material = new MeshLambertMaterial();
-      // Set initial values
-      material.colorWrite = false;
-      material.depthWrite = false;
-      material.depthTest = false;
-
-      // Empty props should not change render state
+      // Both default to false: clampToGround=false, isTexturized=false
       updateMaterialProps(material, { color: 0xff0000 });
-      expect(material.colorWrite).toBe(false);
-      expect(material.depthWrite).toBe(false);
-      expect(material.depthTest).toBe(false);
+      expect(material.colorWrite).toBe(true);
+      expect(material.depthWrite).toBe(true);
+      expect(material.depthTest).toBe(true);
     });
   });
 });
