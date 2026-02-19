@@ -26,7 +26,12 @@ uniform bool uScaleByDistance;
 uniform vec2 uCenter;
 uniform float uAspect; // Aspect ratio of the billboard texture
 
-// Normalization factor to keep sprite size consistent across globe-scale distances
+// Normalization factor used when scaling sprites by camera distance.
+// mvPosition is assumed to be in world units roughly corresponding to meters
+// on a globe-scale scene. A smaller factor increases how quickly sprites grow
+// with distance. This was reduced from 1,000,000.0 to 100,000.0 to make
+// distance-based scaling more noticeable at typical camera altitudes; adjust
+// this value if you need to match prior visual behavior.
 const float DISTANCE_SCALE_FACTOR = 100000.0;
 
 varying vec2 vUv;
