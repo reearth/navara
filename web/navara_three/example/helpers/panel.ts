@@ -756,22 +756,89 @@ function getMaterialOptions(layer: MaterialLayerDescription) {
   return ret;
 }
 
+/**
+ * A map of field names to their Tweakpane input binding APIs.
+ * Used to access other field bindings within onChange/onMount callbacks.
+ */
 export type FieldsApis<Params extends object> = Record<
   keyof Params,
   InputBindingApi
 >;
 
+/**
+ * Configuration for a single field in the folder.
+ *
+ * @template Params - The parameter object type containing all field values
+ */
 export type FolderField<Params extends object> = {
   [K in keyof Params]: {
+    /** The property name in the params object */
     name: K;
+    /** Optional Tweakpane binding parameters (min, max, step, options, etc.) */
     params?: BindingParams;
+    /** Called after all bindings are created, useful for cross-field logic */
     onMount?: (apis: FieldsApis<Params>) => void;
+    /** Called when the field value changes */
     onChange: (v: TpChangeEvent<Params[K]>, apis: FieldsApis<Params>) => void;
   };
 }[keyof Params];
 
+/**
+ * Array of field configurations for addFieldsToFolder.
+ */
 export type FolderFields<Params extends object> = FolderField<Params>[];
 
+/**
+ * Adds multiple typed form fields to a Tweakpane folder.
+ *
+ * This helper simplifies creating complex control panels by providing:
+ * - Type-safe field definitions based on the params object
+ * - Access to all field APIs within change handlers
+ * - Optional onMount callback for cross-field initialization
+ *
+ * @template Params - The parameter object type containing all field values
+ * @param folder - The Tweakpane folder to add fields to
+ * @param params - The parameter object containing field values
+ * @param fields - Array of field configurations
+ *
+ * @example
+ * ```typescript
+ * import { Pane } from "tweakpane";
+ * import { addFieldsToFolder } from "../../helpers/panel";
+ *
+ * const pane = new Pane({ title: "Controls" });
+ * const folder = pane.addFolder({ title: "Polygon Settings" });
+ *
+ * const params = {
+ *   opacity: 1.0,
+ *   extrudedHeight: 100,
+ *   wireframe: false,
+ * };
+ *
+ * addFieldsToFolder(folder, params, [
+ *   {
+ *     name: "opacity",
+ *     params: { min: 0, max: 1, step: 0.01 },
+ *     onChange: ({ value }) => {
+ *       layer.update({ polygon: { opacity: value } });
+ *     },
+ *   },
+ *   {
+ *     name: "extrudedHeight",
+ *     params: { min: 0, max: 500, step: 10 },
+ *     onChange: ({ value }) => {
+ *       layer.update({ polygon: { extrudedHeight: value } });
+ *     },
+ *   },
+ *   {
+ *     name: "wireframe",
+ *     onChange: ({ value }) => {
+ *       layer.update({ polygon: { wireframe: value } });
+ *     },
+ *   },
+ * ]);
+ * ```
+ */
 export function addFieldsToFolder<Params extends object>(
   folder: FolderApi,
   params: Params,
