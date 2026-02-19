@@ -451,6 +451,7 @@ export class ModelMesh
     // Apply render state using shared helper
     applyMaskPassRenderState(material, evaluation.isSilhouette);
   }
+
   private traversePoints(
     f: (
       points: Points<BufferGeometry<NormalBufferAttributes>, PointsMaterial>,

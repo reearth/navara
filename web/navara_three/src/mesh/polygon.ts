@@ -466,13 +466,6 @@ export class PolygonMesh extends BatchedFeatureMesh<
     // Update via enhancer
     enhancer.update(updateProps);
 
-    // Render state based on clampToGround and isTexturized
-    const clampToGround = !!material.clampToGround;
-    const shouldClipByStencil = !isTexturized && clampToGround;
-    this.material.colorWrite = !shouldClipByStencil;
-    this.material.depthWrite = !clampToGround;
-    this.material.depthTest = !clampToGround;
-
     // Post-update actions
     this.enableWater();
     this._recalculateBoundingSphere();
