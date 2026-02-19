@@ -8,9 +8,9 @@ import ThreeView, {
 } from "@navara/three";
 import type { FeatureCollection, MultiLineString } from "geojson";
 
-import { showAttributions } from "../../helpers/attributions";
-import { PLASMA_COLORMAP } from "../../helpers/colors";
-import { LOCAL_DATASETS, TILE_DATASETS } from "../../helpers/constants";
+import { showAttributions } from "../../../helpers/attributions";
+import { PLASMA_COLORMAP } from "../../../helpers/colors";
+import { LOCAL_DATASETS, TILE_DATASETS } from "../../../helpers/constants";
 
 type AirportTrafficData = FeatureCollection<
   MultiLineString,

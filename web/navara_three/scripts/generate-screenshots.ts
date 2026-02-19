@@ -52,16 +52,13 @@ const PAGE_CONFIGS: Record<string, PageConfig> = {
   night: {
     waitTime: 10000,
   },
-  "override-material": {
-    waitTime: 10000,
-  },
   weather: {
     waitTime: 40000,
   },
   "water-reflection": {
     waitTime: 10000,
   },
-  "uc-photorealistic": {
+  "use-cases-photorealistic": {
     waitTime: 50000,
   },
 };
@@ -96,14 +93,42 @@ class ScreenshotGenerator {
     this.browser = await webkit.launch({});
   }
 
+  /**
+   * Recursively discover example pages in nested directories.
+   * A directory is considered a page if it contains a main.ts file.
+   */
+  async discoverPagesRecursive(
+    baseDir: string,
+    prefix = "",
+  ): Promise<string[]> {
+    const entries = await fs.readdir(baseDir, { withFileTypes: true });
+    const pages: string[] = [];
+
+    for (const entry of entries) {
+      const fullPath = path.join(baseDir, entry.name);
+      const subEntries = await fs.readdir(fullPath, { withFileTypes: true });
+      const hasFiles = subEntries.some((e) => e.isFile());
+
+      if (hasFiles) {
+        // This is a page directory
+        const pageName = prefix ? `${prefix}-${entry.name}` : entry.name;
+        pages.push(pageName);
+      } else {
+        // This is a category directory, recurse
+        const nestedPages = await this.discoverPagesRecursive(
+          fullPath,
+          prefix ? `${prefix}-${entry.name}` : entry.name,
+        );
+        pages.push(...nestedPages);
+      }
+    }
+
+    return pages;
+  }
+
   async discoverPages(): Promise<string[]> {
     const pagesDir = path.join(__dirname, "../example/pages");
-    const entries = await fs.readdir(pagesDir, { withFileTypes: true });
-    // Filter out index and non-directories
-    const pages = entries
-      .filter((entry) => entry.isDirectory() && entry.name !== "index")
-      .map((entry) => entry.name)
-      .sort();
+    const pages = (await this.discoverPagesRecursive(pagesDir)).sort();
 
     // If specific pages are requested, validate and return them
     if (this.targetPages && this.targetPages.length > 0) {
