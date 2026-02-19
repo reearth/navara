@@ -38,7 +38,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
     },
     point: {
       color: new Color().setStyle("#ff00ff"),
-      size: 110000.0,
+      size: 5000.0,
       height: 1,
       scaleByDistance: true,
       clampToGround: true,
@@ -96,7 +96,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
     },
     point: {
       color: new Color().setStyle("#ffffff"),
-      size: 105300.0,
+      size: 7300.0,
       height: 1,
       scaleByDistance: true,
       clampToGround: true,
@@ -132,7 +132,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
     },
     billboard: {
       color: new Color().setStyle("#ffffff"),
-      size: 70000.0,
+      size: 5000.0,
       height: 1,
       scaleByDistance: true,
       clampToGround: true,
