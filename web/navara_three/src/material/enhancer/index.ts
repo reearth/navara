@@ -23,3 +23,12 @@ export type {
   PolylineBaseProps,
   PolylineBaseState,
 } from "./polyline";
+
+// InstancedSprite enhancers
+export { createInstancedSpriteMaterialEnhancer } from "./instancedSprite";
+export type { InstancedSpriteMaterialProps } from "./instancedSprite";
+export type {
+  InstancedSpriteBaseMutates,
+  InstancedSpriteBaseProps,
+  InstancedSpriteBaseState,
+} from "./instancedSprite";
