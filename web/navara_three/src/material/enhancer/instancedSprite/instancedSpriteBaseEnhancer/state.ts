@@ -35,7 +35,7 @@ export const DEFAULT_BASE_STATE: InstancedSpriteBaseState = {
 };
 
 /**
- * Update immutable state from props.
+ * Update mutable state from props.
  * Props override currentState values; missing props fall back to currentState.
  * Pass DEFAULT_BASE_STATE as currentState for initial mount.
  *

@@ -199,8 +199,6 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
       }
     }
 
-    material.uniformsNeedUpdate = true;
-
     // SelectiveEffect: effectIds handling at container level
     // SpriteMaterial doesn't support emissive, so only effectIds is handled
     const ud = this.userData as InstancedSpriteUserData;
@@ -547,7 +545,6 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
       newTextureArray.magFilter = LinearFilter;
 
       material.uniforms.uTexture.value = newTextureArray;
-      material.uniformsNeedUpdate = true;
 
       // Sync aspect ratio via enhancer
       this.getEnhancer().update({ base: { aspect: width / height } });
@@ -563,7 +560,6 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
 
   _setPickable(pickable: boolean): void {
     this.getEnhancer().update({ base: { pickable } });
-    (this.material as ShaderMaterial).uniformsNeedUpdate = true;
   }
 
   /**

@@ -23,7 +23,7 @@ export type InstancedSpriteBaseProps = {
   transparent?: boolean;
   depthTest?: boolean;
 
-  // External refs (set once at mount)
+  // External uniform refs / values (may change over time)
   rtcCenter?: [number, number, number];
   texture?: UniformValue<DataArrayTexture | null>;
   aspect?: number;
