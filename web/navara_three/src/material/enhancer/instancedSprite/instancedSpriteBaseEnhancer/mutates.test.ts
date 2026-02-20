@@ -2,16 +2,16 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { ShaderUniforms } from "../../MaterialEnhancer";
 
+import { createBaseMutates } from "./mutates";
+import { DEFAULT_BASE_STATE } from "./state";
+import type { InstancedSpriteBaseState } from "./types";
+
 vi.mock("@navara/engine-api", () => ({
   encodePosition: (_x: number, _y: number, _z: number) => ({
     high: { x: 1000, y: 2000, z: 3000 },
     low: { x: 0.5, y: 0.25, z: 0.125 },
   }),
 }));
-
-import { createBaseMutates } from "./mutates";
-import { DEFAULT_BASE_STATE } from "./state";
-import type { InstancedSpriteBaseState } from "./types";
 
 describe("instancedSpriteBaseEnhancer/mutates", () => {
   describe("update syncs refs from state", () => {
