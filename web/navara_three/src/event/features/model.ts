@@ -35,7 +35,7 @@ export async function renderModel(
   const loader = initializeGltfLoader(viewContext.concurrencyManager);
   const dracoLoader = initializeDracoLoader(viewContext.concurrencyManager);
 
-  const { rawScene, credit, animations } = await (async () => {
+  const { rawScene, credit } = await (async () => {
     if (m.bin) {
       const bin = buf.removeU8(m.bin);
       if (!bin) {
@@ -115,7 +115,6 @@ export async function renderModel(
       return {
         rawScene: model.scene,
         credit: model.asset.copyright,
-        animations: model.animations,
       };
     } else {
       if (!m.material.url) {
@@ -139,7 +138,7 @@ export async function renderModel(
           }
         });
       }
-      return { rawScene: model.scene, animations: model.animations };
+      return { rawScene: model.scene };
     }
   })();
 
@@ -148,7 +147,7 @@ export async function renderModel(
   }
 
   const scene = new ModelMesh(
-    { scene: rawScene, credit, animations },
+    { scene: rawScene, credit },
     m,
     uniforms,
     buf,
