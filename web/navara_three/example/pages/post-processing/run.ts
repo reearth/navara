@@ -1,4 +1,5 @@
 import ThreeView, { type Layer } from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 import { Color } from "three";
 
 import { showAttributions } from "../../helpers/attributions";
@@ -27,6 +28,8 @@ export type PostEffects = {
 };
 
 export const run = async (view: ThreeView) => {
+  const plugin = new DefaultPlugin();
+  view.addPlugin(plugin);
   await view.init();
 
   view.setCamera({
@@ -38,7 +41,7 @@ export const run = async (view: ThreeView) => {
     roll: 0,
   });
 
-  const defaultAtmosphere = view.addDefaultAtmosphereLayers();
+  const defaultAtmosphere = plugin.addDefaultPhotorealLayers();
   defaultAtmosphere.sun.update({
     sun: {
       intensity: 1,

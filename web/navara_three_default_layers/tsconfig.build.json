@@ -1,0 +1,10 @@
+{
+  "extends": "../tsconfig.common.json",
+  "compilerOptions": {
+    "paths": {
+      "@shaders/*": ["../../shaders"]
+    }
+  },
+  "include": ["src"],
+  "exclude": ["./dist", "./node_modules"]
+}

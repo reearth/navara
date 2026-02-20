@@ -1,4 +1,5 @@
 import ThreeView, { JAPAN_GSI_ELEVATION_DECODER, Color } from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 import { Vector3 } from "three";
 
 import { showAttributions } from "../../helpers/attributions";
@@ -9,9 +10,11 @@ import {
 } from "../../helpers/constants";
 
 export const run = async (view: ThreeView) => {
+  const plugin = new DefaultPlugin();
+  view.addPlugin(plugin);
   await view.init();
 
-  view.addDefaultAtmosphereLayers();
+  plugin.addDefaultPhotorealLayers();
 
   view.addLayer({
     type: "mesh",

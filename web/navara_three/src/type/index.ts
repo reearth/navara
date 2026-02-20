@@ -13,26 +13,10 @@ import type { Mesh, Sprite, Object3D, Material } from "three";
 
 import type { Color } from "../Color";
 import type {
-  RainMeshLayerConfig,
-  SnowMeshLayerConfig,
-  SkyMeshLayerConfig,
-  SkyBoxMeshLayerConfig,
-  StarsLayerConfig,
-  BoxMeshLayerConfig,
-  SphereMeshLayerConfig,
-  GlowGlobeMeshLayerConfig,
-  CylinderMeshLayerConfig,
-  PlaneMeshLayerConfig,
-  GLTFModelLayerConfig,
-  AxesHelperLayerConfig,
-  ArrowHelperLayerConfig,
   SunLightLayerConfig,
   SkyLightProbeLayerConfig,
   AmbientLightLayerConfig,
   LightProbeLayerConfig,
-  TubeMeshLayerConfig,
-  ArclineMeshLayerConfig,
-  SmoothLineMeshLayerConfig,
 } from "../layers";
 import type {
   AerialPerspectiveConfig,
@@ -65,23 +49,10 @@ export type LayerDescription =
   | LightLayerDeclarationDescription
   | EffectLayerDeclarationDescription;
 
-export type MeshLayerDeclarationDescription =
-  | RainMeshLayerConfig
-  | SnowMeshLayerConfig
-  | SkyMeshLayerConfig
-  | SkyBoxMeshLayerConfig
-  | StarsLayerConfig
-  | BoxMeshLayerConfig
-  | SphereMeshLayerConfig
-  | GlowGlobeMeshLayerConfig
-  | CylinderMeshLayerConfig
-  | TubeMeshLayerConfig
-  | PlaneMeshLayerConfig
-  | GLTFModelLayerConfig
-  | AxesHelperLayerConfig
-  | ArrowHelperLayerConfig
-  | ArclineMeshLayerConfig
-  | SmoothLineMeshLayerConfig;
+export type MeshLayerDeclarationDescription = {
+  type: "mesh";
+  [key: string]: unknown;
+};
 
 export type LightLayerDeclarationDescription =
   | SunLightLayerConfig

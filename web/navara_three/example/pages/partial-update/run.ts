@@ -1,4 +1,5 @@
 import ThreeView, { AmbientLightLayer, Color, Layer } from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 
 import {
@@ -15,18 +16,21 @@ let gPntsLayer: Layer;
 let gMvtLayer: Layer;
 
 export const run = async (view: ThreeView) => {
+  const defaultPlugin = new DefaultPlugin();
+  view.addPlugin(defaultPlugin);
+
   await view.init();
+
+  const defaultAtmospheres = defaultPlugin.addDefaultPhotorealLayers();
+  defaultAtmospheres.sun.update({
+    sun: {
+      castShadow: true,
+    },
+  });
 
   view.addLayer<AmbientLightLayer>({
     type: "light",
     ambient: {},
-  });
-
-  const atmosphereLayers = view.addDefaultAtmosphereLayers();
-  atmosphereLayers.sun.update({
-    sun: {
-      castShadow: true,
-    },
   });
 
   gTileLayer = view.addLayer({

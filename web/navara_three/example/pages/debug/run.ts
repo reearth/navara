@@ -3,6 +3,7 @@ import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
   MAPBOX_ELEVATION_DECODER,
 } from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 import { Vector3 } from "three";
 import { Pane } from "tweakpane";
 
@@ -570,9 +571,11 @@ const geoLayersDef: MaterialLayerDescription[] = [
 ];
 
 export const run = async (view: ThreeView) => {
+  const plugin = new DefaultPlugin();
+  view.addPlugin(plugin);
   await view.init();
 
-  const defaultAtmospheres = view.addDefaultAtmosphereLayers();
+  const defaultAtmospheres = plugin.addDefaultPhotorealLayers();
   defaultAtmospheres.sun.update({
     sun: {
       intensity: 1,

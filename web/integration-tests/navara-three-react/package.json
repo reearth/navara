@@ -21,6 +21,7 @@
     "@navara/engine": "workspace:*",
     "@navara/engine-api": "workspace:*",
     "@navara/engine-worker": "workspace:*",
+    "@navara/three_default_plugin": "workspace:*",
     "three": "^0.178.0"
   },
   "devDependencies": {

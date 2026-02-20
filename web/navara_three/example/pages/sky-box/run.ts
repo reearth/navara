@@ -1,15 +1,18 @@
 import ThreeView, {
   Color,
-  SkyBoxMeshLayer,
   LayerHandle,
   SunLightLayer,
-  StarsLayer,
   AmbientLightLayer,
   ColorGradingLUTEffectLayer,
-  DEFAULT_SKY_BOX_OPTIONS,
   type BlendMode,
   ToneMappingMode,
 } from "@navara/three";
+import {
+  SkyBoxMeshLayer,
+  StarsLayer,
+  DEFAULT_SKY_BOX_OPTIONS,
+} from "@navara/three_default_layers";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 
 import { TILE_DATASETS, LUT_DATASETS } from "../../helpers/constants";
@@ -25,6 +28,8 @@ const gPaneParams = {
 };
 
 export const run = async (view: ThreeView) => {
+  const plugin = new DefaultPlugin();
+  view.addPlugin(plugin);
   await view.init();
 
   view.toneMappingExposure = 3;

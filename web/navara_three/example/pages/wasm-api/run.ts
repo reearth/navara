@@ -2,10 +2,6 @@ import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
   type LayerHandle,
   type PickedFeature,
-  type SphereMeshLayer,
-  type TubeMeshLayer,
-  type CylinderMeshLayer,
-  type GLTFModelLayer,
   type Nullable,
   type XYZ,
   type MapMouseEvent,
@@ -27,6 +23,13 @@ import ThreeView, {
   EllipsoidGeodesic,
   Color,
 } from "@navara/three";
+import type {
+  SphereMeshLayer,
+  TubeMeshLayer,
+  CylinderMeshLayer,
+  GLTFModelLayer,
+} from "@navara/three_default_layers";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 import { Mesh, Vector2, Vector3, Object3D, Group, ArrowHelper } from "three";
 import { Pane, FolderApi } from "tweakpane";
 
@@ -90,9 +93,11 @@ let gPickedPos: Nullable<Vector3> = null;
 const gPopup = new FloatingDialog();
 
 export const run = async (view: ThreeView) => {
+  const plugin = new DefaultPlugin();
+  view.addPlugin(plugin);
   await view.init();
 
-  view.addDefaultAtmosphereLayers();
+  plugin.addDefaultPhotorealLayers();
 
   gView = view;
 

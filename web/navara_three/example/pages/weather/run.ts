@@ -2,8 +2,6 @@ import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
   LayerHandle,
   RainDropEffectLayer,
-  RainMeshLayer,
-  SnowMeshLayer,
   SSREffectLayer,
   CloudsEffectLayer,
   type LayerDescription,
@@ -11,6 +9,8 @@ import ThreeView, {
   geodeticToVector3,
   Color,
 } from "@navara/three";
+import { RainMeshLayer, SnowMeshLayer } from "@navara/three_default_layers";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 import { Vector2 } from "three";
 import { Pane } from "tweakpane";
 
@@ -25,10 +25,12 @@ import { addDateControl, addHidePaneKeyShortcut } from "../../helpers/control";
 import { addFieldsToFolder, type FolderFields } from "../../helpers/panel";
 
 export const run = async (view: ThreeView) => {
+  const plugin = new DefaultPlugin();
+  view.addPlugin(plugin);
   await view.init();
 
   const defaultEffects = view.addDefaultEffectLayers();
-  view.addDefaultAtmosphereLayers();
+  plugin.addDefaultPhotorealLayers();
 
   // Add clouds effect layer explicitly
   const cloudsLayer = view.addLayer<CloudsEffectLayer>({

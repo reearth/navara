@@ -4,6 +4,8 @@
     "noEmit": true,
     "paths": {
       "@navara/three": ["./src"],
+      "@navara/three_default_layers": ["../navara_three_default_layers/src"],
+      "@navara/three_default_plugin": ["../navara_three_default_plugin/src"],
       "@navara/three_api": ["../navara_three_api/src"],
       "@navara/core": ["../navara_core/src"],
       "@navara/worker": ["../navara_worker/src"],

@@ -1,9 +1,10 @@
 import ThreeView, {
   Color,
   AmbientLightLayer,
-  GlowGlobeMeshLayer,
   LayerHandle,
 } from "@navara/three";
+import { GlowGlobeMeshLayer } from "@navara/three_default_layers";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 
 import { TILE_DATASETS } from "../../helpers/constants";
@@ -22,6 +23,8 @@ const gPaneParams = {
 };
 
 export const run = async (view: ThreeView) => {
+  const plugin = new DefaultPlugin();
+  view.addPlugin(plugin);
   await view.init();
 
   view.addLayer<AmbientLightLayer>({

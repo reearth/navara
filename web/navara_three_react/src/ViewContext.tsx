@@ -1,4 +1,4 @@
-import ThreeView, { type Options } from "@navara/three";
+import ThreeView, { Plugin, type Options } from "@navara/three";
 import {
   createContext,
   useContext,
@@ -38,11 +38,13 @@ export const useViewContext = <
 
 export type ViewProviderProps = {
   canvas?: HTMLCanvasElement | RefObject<HTMLCanvasElement>;
+  plugins?: Plugin[];
 } & Options;
 
 export const ViewProvider: FC<PropsWithChildren<ViewProviderProps>> = ({
   canvas,
   children,
+  plugins,
   ...opts
 }) => {
   const [view, setView] = useState<ThreeView | undefined>();
@@ -59,6 +61,11 @@ export const ViewProvider: FC<PropsWithChildren<ViewProviderProps>> = ({
     const innerCanvas = canvas && "current" in canvas ? canvas.current : canvas;
 
     const v = new ThreeView({ canvas: innerCanvas, ...opts });
+    if (plugins) {
+      for (const plugin of plugins) {
+        v.addPlugin(plugin);
+      }
+    }
     setView(v);
     viewRef.current = v;
 
@@ -75,7 +82,7 @@ export const ViewProvider: FC<PropsWithChildren<ViewProviderProps>> = ({
       // TODO
       // v.dispose();
     };
-  }, [canvas, opts]);
+  }, [canvas, opts, plugins]);
 
   return (
     <ViewContext.Provider value={{ view }}>

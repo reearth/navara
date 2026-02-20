@@ -5,6 +5,7 @@ import ThreeView, {
   type EffectLayerUpdate,
   type ViewContext,
 } from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 import { VignetteEffect, VignetteTechnique } from "postprocessing";
 import type { Camera } from "three";
 import { Pane } from "tweakpane";
@@ -183,19 +184,24 @@ class VignetteEffectLayer extends EffectLayerDeclaration<
 // ============================================================
 
 export const run = async (view: ThreeView<VignetteEffectConfig>) => {
+  const defaultPlugin = new DefaultPlugin();
+  view.addPlugin(defaultPlugin);
+
   await view.init();
+
+  const defaultAtmospheres = defaultPlugin.addDefaultPhotorealLayers();
+  defaultAtmospheres.sun.update({
+    sun: {
+      intensity: 1,
+      castShadow: true,
+    },
+  });
 
   // Register the custom effect layer
   view.registerEffect("vignette", VignetteEffectLayer);
 
-  // Add default atmosphere layers
+  // Add default effect and light layers
   view.addDefaultEffectLayers();
-  const defaultAtmospheres = view.addDefaultAtmosphereLayers();
-  defaultAtmospheres.sun.update({
-    sun: {
-      intensity: 1,
-    },
-  });
 
   // Set initial camera position
   view.setCamera({

@@ -1,5 +1,4 @@
 import ThreeView, {
-  type GLTFModelLayer,
   type LayerHandle,
   geodeticToVector3,
   vector3ToGeodetic,
@@ -8,6 +7,7 @@ import ThreeView, {
   geodeticSurfaceNormal,
   eastNorthUpToFixedFrame,
 } from "@navara/three";
+import type { GLTFModelLayer } from "@navara/three_default_layers";
 import { Vector3, Quaternion, Euler, Matrix4 } from "three";
 
 export type ModelControlParams = {

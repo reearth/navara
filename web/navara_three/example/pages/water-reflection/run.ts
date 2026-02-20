@@ -4,6 +4,7 @@ import ThreeView, {
   type LayerDescription,
   SSREffectLayer,
 } from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../helpers/attributions";
@@ -19,6 +20,9 @@ import { addFieldsToFolder, type FolderFields } from "../../helpers/panel";
 import { type ReflectiveBoxLayerConfig } from "./layers";
 
 export const run = async (view: ThreeView<ReflectiveBoxLayerConfig>) => {
+  const defaultPlugin = new DefaultPlugin();
+  view.addPlugin(defaultPlugin);
+
   await view.init();
 
   view.toneMappingExposure = 10;
@@ -26,8 +30,8 @@ export const run = async (view: ThreeView<ReflectiveBoxLayerConfig>) => {
   // Add default effect layers
   view.addDefaultEffectLayers();
 
-  const defaultAtmosphere = view.addDefaultAtmosphereLayers();
-  defaultAtmosphere.sun.update({
+  const defaultAtmospheres = defaultPlugin.addDefaultPhotorealLayers();
+  defaultAtmospheres.sun.update({
     sun: {
       castShadow: true,
     },

@@ -3,15 +3,17 @@ import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
   degreeToRadian,
   geodeticToVector3,
-  type BoxMeshLayer,
-  type CylinderMeshLayer,
   type LayerHandle,
-  type PlaneMeshLayer,
-  type SphereMeshLayer,
-  type TubeMeshLayer,
   type SelectiveEffectOcclusion,
   Layer,
 } from "@navara/three";
+import type {
+  BoxMeshLayer,
+  CylinderMeshLayer,
+  PlaneMeshLayer,
+  SphereMeshLayer,
+  TubeMeshLayer,
+} from "@navara/three_default_layers";
 import type { FeatureCollection } from "geojson";
 import { Vector3 } from "three";
 

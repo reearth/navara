@@ -2,9 +2,12 @@ import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
   CloudsEffectLayer,
   Color,
-  type ArclineMeshLayer,
-  type SmoothLineMeshLayer,
 } from "@navara/three";
+import type {
+  ArclineMeshLayer,
+  SmoothLineMeshLayer,
+} from "@navara/three_default_layers";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 import { Vector3 } from "three";
 import { Pane } from "tweakpane";
 
@@ -229,6 +232,8 @@ const gSmoothLinesDef = [
 ];
 
 export const run = async (view: ThreeView) => {
+  const plugin = new DefaultPlugin();
+  view.addPlugin(plugin);
   await view.init();
 
   view.addLayer({
@@ -267,7 +272,7 @@ export const run = async (view: ThreeView) => {
   //   },
   // });
 
-  view.addDefaultAtmosphereLayers();
+  plugin.addDefaultPhotorealLayers();
 
   view.addLayer<CloudsEffectLayer>({
     type: "effect",

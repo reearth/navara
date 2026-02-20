@@ -1,13 +1,13 @@
 // GLTF Model related functions
 
 import ThreeView, {
-  type GLTFModelLayer,
   type LayerHandle,
   geodeticToVector3,
   degreeToRadian,
   geodeticSurfaceNormal,
   Color,
 } from "@navara/three";
+import type { GLTFModelLayer } from "@navara/three_default_layers";
 import { Vector3, Quaternion, Euler } from "three";
 import { Pane, type FolderApi } from "tweakpane";
 

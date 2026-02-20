@@ -1,13 +1,14 @@
 import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
   Color,
-  type GLTFModelLayer,
   type LayerDescription,
   geodeticToVector3,
   degreeToRadian,
   geodeticSurfaceNormal,
   LayerHandle,
 } from "@navara/three";
+import type { GLTFModelLayer } from "@navara/three_default_layers";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 import { Vector3, Quaternion, Euler } from "three";
 import { Pane } from "tweakpane";
 
@@ -36,13 +37,15 @@ const SCENES = {
 let gCurSceneName: keyof typeof SCENES = "ToranomonHillsBIM";
 
 export const run = async (view: ThreeView) => {
+  const plugin = new DefaultPlugin();
+  view.addPlugin(plugin);
   await view.init();
 
   view.atmosphere.date.setHours(8);
   view.toneMappingExposure = 10;
 
   view.addDefaultEffectLayers();
-  const defaultLayers = view.addDefaultAtmosphereLayers();
+  const defaultLayers = plugin.addDefaultPhotorealLayers();
 
   const sunLightLayer = defaultLayers.sun;
   sunLightLayer.update({
