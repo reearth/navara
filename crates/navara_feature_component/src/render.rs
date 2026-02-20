@@ -513,6 +513,7 @@ pub struct TransferablePolygonOutlineGeometry {
     pub position: Option<TransferableFloatAttribute>,
     pub scale_normal_and_cap: Option<TransferableFloatAttribute>,
     pub skip_indices: Option<Handle>,
+    pub batch_index: Option<TransferableFloatAttribute>,
 }
 
 impl TransferablePolygonOutlineGeometry {
@@ -540,6 +541,7 @@ impl TransferablePolygonOutlineGeometry {
             position: Some(position),
             scale_normal_and_cap: Some(scale_normal_and_cap),
             skip_indices: Some(skip_indices),
+            batch_index: None,
         }
     }
 }
@@ -556,6 +558,10 @@ impl TransferablePolygonOutlineGeometry {
 
         if let Some(skip_indices) = &self.skip_indices {
             buf.remove(skip_indices);
+        }
+
+        if let Some(batch_index) = &self.batch_index {
+            buf.remove(&batch_index.data);
         }
     }
 }
@@ -596,31 +602,17 @@ impl TransferablePointGeometry {
         }
     }
 
-    /// Create TransferablePointGeometry with RTE (Relative To Eye) position
-    /// Used for GeoJSON single point with absolute world coordinates
-    /// Position is encoded into high/low components for GPU precision
+    /// Create TransferablePointGeometry with RTE (Relative To Eye) positions
+    /// Used for GeoJSON points with absolute world coordinates
+    /// Callers are responsible for encoding positions into high/low f32 vectors
+    /// via `EncodedVec3` before calling this method.
     pub fn with_buf_rte(
         buf: &mut BufferStore,
-        position: Vec3,
-        batch_index: u32,
-        batch_id: f32,
+        positions_high: Vec<f32>,
+        positions_low: Vec<f32>,
+        batch_indices: Vec<u32>,
+        batch_ids: Vec<f32>,
     ) -> Self {
-        use navara_core::EncodedVec3;
-
-        // Encode the Vec3 position into high/low components
-        let encoded = EncodedVec3::encode_xyz(position.x, position.y, position.z);
-
-        let positions_high = vec![
-            encoded.high.x as f32,
-            encoded.high.y as f32,
-            encoded.high.z as f32,
-        ];
-        let positions_low = vec![
-            encoded.low.x as f32,
-            encoded.low.y as f32,
-            encoded.low.z as f32,
-        ];
-
         Self {
             position: None,
             position_3d_high: Some(TransferableFloatAttribute {
@@ -632,11 +624,11 @@ impl TransferablePointGeometry {
                 size: 3,
             }),
             batch_ids: TransferableFloatAttribute {
-                data: buf.new_f32(vec![batch_id]),
+                data: buf.new_f32(batch_ids),
                 size: 1,
             },
             batch_index: TransferableUintAttribute {
-                data: buf.new_u32(vec![batch_index]),
+                data: buf.new_u32(batch_indices),
                 size: 1,
             },
         }
@@ -663,6 +655,34 @@ impl TransferablePointGeometry {
         }
 
         buf.remove(&self.batch_index.data);
+    }
+
+    /// Update or recreate batched RTE geometry position data after height changes.
+    pub fn update_rte_positions(&mut self, buf: &mut BufferStore, positions: &[navara_math::Vec3]) {
+        if let (Some(high_attr), Some(low_attr)) =
+            (&mut self.position_3d_high, &mut self.position_3d_low)
+        {
+            use navara_core::EncodedVec3;
+
+            let mut all_high = Vec::with_capacity(positions.len() * 3);
+            let mut all_low = Vec::with_capacity(positions.len() * 3);
+
+            for pos in positions {
+                let encoded = EncodedVec3::encode_xyz(pos.x, pos.y, pos.z);
+                all_high.push(encoded.high.x as f32);
+                all_high.push(encoded.high.y as f32);
+                all_high.push(encoded.high.z as f32);
+                all_low.push(encoded.low.x as f32);
+                all_low.push(encoded.low.y as f32);
+                all_low.push(encoded.low.z as f32);
+            }
+
+            buf.remove(&high_attr.data);
+            high_attr.data = buf.new_f32(all_high);
+
+            buf.remove(&low_attr.data);
+            low_attr.data = buf.new_f32(all_low);
+        }
     }
 
     /// Update or recreate RTE geometry position data after height changes.

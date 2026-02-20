@@ -5,301 +5,26 @@ use bevy_ecs::{
 };
 
 use navara_component::{Deleted, Priority};
-use navara_core::CRS;
 
 use navara_feature_component::{
-    batch::{BatchId, BatchProperty, BatchTable, BatchTableValue, FeatureBatchId, GlobalBatchIds},
-    billboard::BillboardGeometry,
-    model::ModelGeometry,
-    point::PointGeometry,
-    polygon::{PolygonGeometry, UpdatePolygon},
-    polyline::PolylineGeometry,
+    batch::{BatchTable, BatchedFeature},
+    polygon::UpdatePolygon,
     render::RenderableFeature,
-    text::TextGeometry,
 };
 
 use navara_buffer_store::BufferStore;
 
-use navara_geometry::{Hierarchy, WindingOrder};
 use navara_layer::{
     DeleteGeoJsonLayerMarker, GeoJsonLayer, LayerId, LayerStore, UpdateGeoJsonLayerMarker,
 };
 use navara_material::Appearance;
 
-use navara_math::{FloatType, Vec3};
-use navara_parser::geojson::{GeoJson, Geometry, Value};
-
 use navara_layer::{GeoJsonLayerData, GeoJsonLayerDataRequesterMarker};
 
 use navara_data_requester::{DataRequester, DataRequesterExtension, DataRequesterStatus};
+use navara_parser::geojson::GeoJson;
 
-fn coords(f: &[f64]) -> Vec3 {
-    Vec3::new(f[0], f[1], *f.get(2).unwrap_or(&0.))
-}
-
-fn multi_flat_coords(f: &[Vec<f64>]) -> Vec<f64> {
-    f.iter()
-        .flat_map(|p| [p[0], p[1], *p.get(2).unwrap_or(&0.)])
-        .collect::<Vec<_>>()
-}
-
-fn get_polygon_holes(f: &[Vec<Vec<f64>>]) -> Option<Vec<Hierarchy>> {
-    let holes: Vec<Hierarchy> = f[1..]
-        .iter()
-        .map(|hole| Hierarchy {
-            outer_ring: multi_flat_coords(hole),
-            holes: None,
-            expected_winding_order: WindingOrder::Unknown,
-        })
-        .collect();
-
-    (!holes.is_empty()).then_some(holes)
-}
-
-fn generate_batch_id(
-    batch_table_res: &mut BatchTable,
-    properties: &Option<serde_json::Map<String, serde_json::Value>>,
-    layer_id: &str,
-) -> u32 {
-    let props = properties
-        .as_ref()
-        .and_then(|prop| serde_json::to_value(prop).ok())
-        .unwrap_or(serde_json::Value::Null);
-    batch_table_res
-        .add(Some(BatchTableValue {
-            properties: Some(BatchProperty::Values(vec![props])),
-            layer_id: Some(layer_id.to_owned()),
-        }))
-        .unwrap_or(0)
-}
-
-#[allow(clippy::too_many_arguments)]
-fn spawn_feature(
-    commands: &mut Commands,
-    buf: &mut BufferStore,
-    batch_table_res: &mut BatchTable,
-    appearances: &[Appearance],
-    geometry: &Geometry,
-    layer_id: &str,
-    properties: &Option<serde_json::Map<String, serde_json::Value>>,
-) {
-    for appearance in appearances {
-        match appearance {
-            Appearance::Point(v) => match &geometry.value {
-                Value::Point(f) => {
-                    let batch_id = generate_batch_id(batch_table_res, properties, layer_id);
-
-                    commands.spawn((
-                        LayerId(layer_id.to_owned()),
-                        BatchId(batch_id as f32),
-                        PointGeometry {
-                            coords: coords(f),
-                            crs: CRS::Geographic,
-                        },
-                        v.clone(),
-                    ));
-                }
-                Value::MultiPoint(fs) => {
-                    for f in fs {
-                        let batch_id = generate_batch_id(batch_table_res, properties, layer_id);
-
-                        commands.spawn((
-                            LayerId(layer_id.to_owned()),
-                            BatchId(batch_id as f32),
-                            PointGeometry {
-                                coords: coords(f),
-                                crs: CRS::Geographic,
-                            },
-                            v.clone(),
-                        ));
-                    }
-                }
-                _ => {}
-            },
-            Appearance::Billboard(v) => match &geometry.value {
-                Value::Point(f) => {
-                    let batch_id = generate_batch_id(batch_table_res, properties, layer_id);
-
-                    commands.spawn((
-                        LayerId(layer_id.to_owned()),
-                        BatchId(batch_id as f32),
-                        BillboardGeometry {
-                            coords: coords(f),
-                            crs: CRS::Geographic,
-                        },
-                        v.clone(),
-                    ));
-                }
-                Value::MultiPoint(fs) => {
-                    for f in fs {
-                        let batch_id = generate_batch_id(batch_table_res, properties, layer_id);
-
-                        commands.spawn((
-                            LayerId(layer_id.to_owned()),
-                            BatchId(batch_id as f32),
-                            BillboardGeometry {
-                                coords: coords(f),
-                                crs: CRS::Geographic,
-                            },
-                            v.clone(),
-                        ));
-                    }
-                }
-                _ => {}
-            },
-            Appearance::Text(v) => match &geometry.value {
-                Value::Point(f) => {
-                    let batch_id = generate_batch_id(batch_table_res, properties, layer_id);
-
-                    commands.spawn((
-                        LayerId(layer_id.to_owned()),
-                        BatchId(batch_id as f32),
-                        TextGeometry {
-                            coords: coords(f),
-                            crs: CRS::Geographic,
-                        },
-                        v.clone(),
-                    ));
-                }
-                Value::MultiPoint(fs) => {
-                    for f in fs {
-                        let batch_id = generate_batch_id(batch_table_res, properties, layer_id);
-
-                        commands.spawn((
-                            LayerId(layer_id.to_owned()),
-                            BatchId(batch_id as f32),
-                            TextGeometry {
-                                coords: coords(f),
-                                crs: CRS::Geographic,
-                            },
-                            v.clone(),
-                        ));
-                    }
-                }
-                _ => {}
-            },
-            Appearance::Polyline(v) => match &geometry.value {
-                Value::LineString(f) => {
-                    let batch_id = generate_batch_id(batch_table_res, properties, layer_id);
-
-                    commands.spawn((
-                        LayerId(layer_id.to_owned()),
-                        BatchId(batch_id as f32),
-                        PolylineGeometry::with_buf(buf, multi_flat_coords(f), CRS::Geographic),
-                        v.clone(),
-                    ));
-                }
-                Value::MultiLineString(fs) => {
-                    for f in fs {
-                        let batch_id = generate_batch_id(batch_table_res, properties, layer_id);
-
-                        commands.spawn((
-                            LayerId(layer_id.to_owned()),
-                            BatchId(batch_id as f32),
-                            PolylineGeometry::with_buf(buf, multi_flat_coords(f), CRS::Geographic),
-                            v.clone(),
-                        ));
-                    }
-                }
-                _ => {}
-            },
-            Appearance::Polygon(v) => match &geometry.value {
-                Value::Polygon(f) => {
-                    let batch_id = generate_batch_id(batch_table_res, properties, layer_id);
-
-                    commands.spawn((
-                        LayerId(layer_id.to_owned()),
-                        BatchId(batch_id as f32),
-                        PolygonGeometry {
-                            hierarchy: Hierarchy {
-                                outer_ring: f
-                                    .first()
-                                    .map_or_else(std::vec::Vec::new, |v| multi_flat_coords(v)),
-                                holes: get_polygon_holes(f),
-                                expected_winding_order: WindingOrder::Unknown,
-                            }
-                            .transfer(buf),
-                            crs: CRS::Geographic,
-                        },
-                        v.clone(),
-                    ));
-                }
-                Value::MultiPolygon(fs) => {
-                    for f in fs {
-                        let batch_id = generate_batch_id(batch_table_res, properties, layer_id);
-                        commands.spawn((
-                            LayerId(layer_id.to_owned()),
-                            BatchId(batch_id as f32),
-                            PolygonGeometry {
-                                hierarchy: Hierarchy {
-                                    outer_ring: multi_flat_coords(&f[0]),
-                                    holes: get_polygon_holes(f),
-                                    expected_winding_order: WindingOrder::Unknown,
-                                }
-                                .transfer(buf),
-                                crs: CRS::Geographic,
-                            },
-                            v.clone(),
-                        ));
-                    }
-                }
-                _ => {}
-            },
-            Appearance::Model(v) => match &geometry.value {
-                Value::Point(f) => {
-                    let batch_id = generate_batch_id(batch_table_res, properties, layer_id);
-
-                    let global_batch_ids = vec![batch_id];
-
-                    let batch_length = global_batch_ids.len();
-                    let ids_handle = buf.new_u32(global_batch_ids);
-                    commands.spawn((
-                        LayerId(layer_id.to_owned()),
-                        FeatureBatchId(batch_id),
-                        GlobalBatchIds {
-                            handle: ids_handle,
-                            batch_length: batch_length as u32,
-                        },
-                        ModelGeometry {
-                            coords: coords(f),
-                            crs: CRS::Geographic,
-                        },
-                        v.clone(),
-                    ));
-                }
-                Value::MultiPoint(fs) => {
-                    for f in fs {
-                        let batch_id = generate_batch_id(batch_table_res, properties, layer_id);
-
-                        let global_batch_ids = vec![batch_id];
-
-                        let batch_length = global_batch_ids.len();
-                        let ids_handle = buf.new_u32(global_batch_ids);
-                        commands.spawn((
-                            LayerId(layer_id.to_owned()),
-                            FeatureBatchId(batch_id),
-                            GlobalBatchIds {
-                                handle: ids_handle,
-                                batch_length: batch_length as u32,
-                            },
-                            ModelGeometry {
-                                coords: Vec3::new(
-                                    f[0] as FloatType,
-                                    f[1] as FloatType,
-                                    *f.get(2).unwrap_or(&0.) as FloatType,
-                                ),
-                                crs: CRS::Geographic,
-                            },
-                            v.clone(),
-                        ));
-                    }
-                }
-                _ => {}
-            },
-            _ => {}
-        };
-    }
-}
+use crate::geometry;
 
 #[allow(clippy::type_complexity)]
 pub fn construct_feature(
@@ -309,50 +34,15 @@ pub fn construct_feature(
     geojson_layers: Query<&GeoJsonLayer, Or<(Added<GeoJsonLayer>, Changed<GeoJsonLayer>)>>,
 ) {
     for layer in &geojson_layers {
-        let appearances = &layer.appearances;
-
         if let Some(GeoJsonLayerData::GeoJson(geo_data)) = &layer.data {
-            match &geo_data {
-                GeoJson::FeatureCollection(fs) => {
-                    for f in fs {
-                        if let Some(g) = &f.geometry {
-                            spawn_feature(
-                                &mut commands,
-                                &mut buf,
-                                &mut batch_table_res,
-                                appearances,
-                                g,
-                                layer.layer_id.as_str(),
-                                &f.properties,
-                            );
-                        }
-                    }
-                }
-                GeoJson::Feature(f) => {
-                    if let Some(g) = &f.geometry {
-                        spawn_feature(
-                            &mut commands,
-                            &mut buf,
-                            &mut batch_table_res,
-                            appearances,
-                            g,
-                            layer.layer_id.as_str(),
-                            &f.properties,
-                        );
-                    }
-                }
-                GeoJson::Geometry(g) => {
-                    spawn_feature(
-                        &mut commands,
-                        &mut buf,
-                        &mut batch_table_res,
-                        appearances,
-                        g,
-                        layer.layer_id.as_str(),
-                        &None,
-                    );
-                }
-            }
+            geometry::construct_geometry(
+                &mut commands,
+                &mut batch_table_res,
+                &mut buf,
+                geo_data,
+                &layer.appearances,
+                layer.layer_id.as_str(),
+            );
         }
     }
 }
@@ -365,12 +55,18 @@ pub fn update_geo_json_layer(
 ) {
     for (e, u) in &updated {
         let layer_id = u.layer_id.clone();
+        let mut all_rendered = true;
         if let Some(ids) = layer_store.get(&layer_id) {
             for id in ids {
                 let mut f = match features.get_mut(*id) {
                     Ok(f) => f,
                     Err(_) => continue,
                 };
+
+                if !f.is_rendered() {
+                    all_rendered = false;
+                    continue;
+                }
 
                 match &mut *f {
                     RenderableFeature::Billboard {
@@ -416,9 +112,14 @@ pub fn update_geo_json_layer(
                             material.update(mat, coordinates, crs, transform);
                         }
                     }
-                    RenderableFeature::Polyline { material, .. } => {
+                    RenderableFeature::Polyline {
+                        material,
+                        render_info,
+                        ..
+                    } => {
                         if let Appearance::Polyline(mat) = &u.appearance {
                             material.update(mat);
+                            render_info.should_recalculate_height = true;
                         }
                     }
                     RenderableFeature::Polygon { .. } => {
@@ -433,7 +134,11 @@ pub fn update_geo_json_layer(
                 }
             }
         }
-        commands.entity(e).despawn();
+        // Only despawn the update marker when all features have been rendered,
+        // so unrendered features can be retried next frame.
+        if all_rendered {
+            commands.entity(e).despawn();
+        }
     }
 }
 
@@ -445,9 +150,8 @@ pub fn delete_geo_json_layer(
     layers: Query<(Entity, &GeoJsonLayer)>,
     mut features: Query<&mut RenderableFeature>,
     mut buf: ResMut<BufferStore>,
-    entities_with_layerid: Query<(Entity, &LayerId), Without<RenderableFeature>>,
+    batched_features: Query<(Entity, &LayerId, &BatchedFeature), Without<RenderableFeature>>,
     mut batch_table: ResMut<BatchTable>,
-    batch_id: Query<&BatchId>,
 ) {
     for (e, d) in &deleted {
         let entities = layer_store.get(&d.0);
@@ -462,13 +166,10 @@ pub fn delete_geo_json_layer(
             }
         }
 
-        // delete all entities with this layer id
-        for (entity, l_id) in entities_with_layerid.iter() {
+        // delete BatchedFeature entities with this layer id
+        for (entity, l_id, batched) in batched_features.iter() {
             if l_id.0 == d.0 {
-                if batch_id.get(entity).is_ok() {
-                    batch_table.remove(&(batch_id.get(entity).unwrap().0 as u32));
-                }
-
+                batched.despawn_recursively(&mut commands);
                 commands.entity(entity).despawn();
             }
         }
@@ -529,523 +230,5 @@ pub fn parse_geojson(
         if let Ok(mut l) = layers.get_mut(marker.0) {
             l.data = Some(GeoJsonLayerData::GeoJson(geojson));
         }
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use bevy_app::{App, Update};
-    use navara_buffer_store::BufferStore;
-    use navara_core::{xyz_to_vec3, Angle, Meters, LLE, WGS84_64};
-    use navara_event_store::EventStore;
-    use navara_feature::FeaturePlugin;
-    use navara_feature_component::render::RenderableFeature;
-    use navara_layer::{GeoJsonLayer, LayerStore};
-    use navara_material::Appearance;
-    use navara_material::{BillboardMaterial, PointMaterial};
-    use navara_math::Vec3;
-    use navara_parser::geojson::GeoJson;
-    use navara_tile_component::RasterTileQuadtree;
-
-    use super::construct_feature;
-
-    /// Helper function to compare two Vec3 with epsilon tolerance
-    /// Returns true if the difference in each component is within epsilon
-    fn vec3_approx_eq(a: Vec3, b: Vec3, epsilon: f64) -> bool {
-        (a.x - b.x).abs() < epsilon && (a.y - b.y).abs() < epsilon && (a.z - b.z).abs() < epsilon
-    }
-
-    /// Helper function to extract position from RTE geometry
-    /// Returns the decoded position by adding high and low components
-    fn get_rte_position(
-        buf: &BufferStore,
-        geometry: &navara_feature_component::render::TransferablePointGeometry,
-    ) -> Option<Vec3> {
-        if let (Some(high_attr), Some(low_attr)) =
-            (&geometry.position_3d_high, &geometry.position_3d_low)
-        {
-            if let (Some(high), Some(low)) =
-                (buf.get_f32(&high_attr.data), buf.get_f32(&low_attr.data))
-            {
-                Some(Vec3::new(
-                    (high[0] + low[0]) as f64,
-                    (high[1] + low[1]) as f64,
-                    (high[2] + low[2]) as f64,
-                ))
-            } else {
-                None
-            }
-        } else {
-            None
-        }
-    }
-
-    fn initialize_app() -> App {
-        let mut app = App::new();
-
-        app.init_resource::<BufferStore>();
-        app.init_resource::<EventStore>();
-        app.insert_resource(RasterTileQuadtree::new_with_linear_qt());
-        app.insert_resource(LayerStore::new());
-        app.add_plugins(FeaturePlugin);
-        app.add_systems(Update, construct_feature);
-
-        app
-    }
-
-    fn construct_geojson_layer(json: &str, appearances: Vec<Appearance>) -> GeoJsonLayer {
-        let geojson = GeoJson::from_json_value(json.parse().unwrap()).unwrap();
-        GeoJsonLayer {
-            layer_id: "123".to_string(),
-            data: Some(navara_layer::GeoJsonLayerData::GeoJson(geojson)),
-            crs: None,
-            appearances,
-        }
-    }
-
-    #[test]
-    fn it_should_render_point_with_point() {
-        let mut app = initialize_app();
-
-        let material = PointMaterial::default();
-
-        app.world_mut().spawn(construct_geojson_layer(
-            r#"{
-    "type": "FeatureCollection",
-    "features": [
-        {
-            "type": "Feature",
-            "properties": {},
-            "geometry": {
-                "coordinates": [
-                    139.75227193360223,
-                    35.68520091767046
-                ],
-                "type": "Point"
-            }
-        },
-        {
-            "type": "Feature",
-            "properties": {},
-            "geometry": {
-                "coordinates": [
-                    139.77250531915263,
-                    35.71562661633277
-                ],
-                "type": "Point"
-            }
-        }
-    ]
-}"#,
-            vec![Appearance::Point(material.clone())],
-        ));
-
-        app.update();
-        app.update();
-
-        let mut renderable_features = app.world_mut().query::<&RenderableFeature>();
-
-        assert_eq!(renderable_features.iter(app.world()).count(), 2);
-
-        let mut iter = renderable_features.iter(app.world());
-
-        let buf = app.world().resource::<BufferStore>();
-
-        let expects = [
-            xyz_to_vec3(
-                LLE {
-                    #[allow(clippy::excessive_precision)]
-                    lng: Angle::new(139.75227193360223),
-                    #[allow(clippy::excessive_precision)]
-                    lat: Angle::new(35.68520091767046),
-                    height: Meters::new(0. + material.height as f64),
-                }
-                .rad()
-                .to_xyz(WGS84_64),
-            ),
-            xyz_to_vec3(
-                LLE {
-                    #[allow(clippy::excessive_precision)]
-                    lng: Angle::new(139.77250531915263),
-                    #[allow(clippy::excessive_precision)]
-                    lat: Angle::new(35.71562661633277),
-                    height: Meters::new(0. + material.height as f64),
-                }
-                .rad()
-                .to_xyz(WGS84_64),
-            ),
-        ];
-
-        let result1 = match iter.next().unwrap() {
-            RenderableFeature::Point {
-                coordinates: _,
-                crs: _,
-                material: _,
-                transform: _,
-                feature_id: _,
-                render_info: _,
-                geometry,
-                ..
-            } => get_rte_position(buf, geometry),
-            _ => None,
-        };
-        assert!(
-            result1.is_some() && vec3_approx_eq(result1.unwrap(), expects[0], 1.0),
-            "Point 1 position mismatch: expected {:?}, got {:?}",
-            expects[0],
-            result1
-        );
-
-        let result2 = match iter.next().unwrap() {
-            RenderableFeature::Point {
-                coordinates: _,
-                crs: _,
-                material: _,
-                transform: _,
-                feature_id: _,
-                render_info: _,
-                geometry,
-                ..
-            } => get_rte_position(buf, geometry),
-            _ => None,
-        };
-        assert!(
-            result2.is_some() && vec3_approx_eq(result2.unwrap(), expects[1], 1.0),
-            "Point 2 position mismatch: expected {:?}, got {:?}",
-            expects[1],
-            result2
-        );
-    }
-
-    #[test]
-    fn it_should_render_point_with_multipoint() {
-        let mut app = initialize_app();
-
-        let material = PointMaterial::default();
-
-        app.world_mut().spawn(construct_geojson_layer(
-            r#"{
-    "type": "FeatureCollection",
-    "features": [
-        {
-            "type": "Feature",
-            "properties": {},
-            "geometry": {
-                "coordinates": [
-                    [
-                        139.75227193360223,
-                        35.68520091767046
-                    ],
-                    [
-                        139.77250531915263,
-                        35.71562661633277
-                    ]
-                ],
-                "type": "MultiPoint"
-            }
-        }
-    ]
-}"#,
-            vec![Appearance::Point(material.clone())],
-        ));
-
-        app.update();
-        app.update();
-
-        let mut renderable_features = app.world_mut().query::<&RenderableFeature>();
-
-        assert_eq!(renderable_features.iter(app.world()).count(), 2);
-
-        let mut iter = renderable_features.iter(app.world());
-
-        let buf = app.world().resource::<BufferStore>();
-
-        let expects = [
-            xyz_to_vec3(
-                LLE {
-                    #[allow(clippy::excessive_precision)]
-                    lng: Angle::new(139.75227193360223),
-                    #[allow(clippy::excessive_precision)]
-                    lat: Angle::new(35.68520091767046),
-                    height: Meters::new(0. + material.height as f64),
-                }
-                .rad()
-                .to_xyz(WGS84_64),
-            ),
-            xyz_to_vec3(
-                LLE {
-                    #[allow(clippy::excessive_precision)]
-                    lng: Angle::new(139.77250531915263),
-                    #[allow(clippy::excessive_precision)]
-                    lat: Angle::new(35.71562661633277),
-                    height: Meters::new(0. + material.height as f64),
-                }
-                .rad()
-                .to_xyz(WGS84_64),
-            ),
-        ];
-
-        let result1 = match iter.next().unwrap() {
-            RenderableFeature::Point {
-                coordinates: _,
-                crs: _,
-                material: _,
-                transform: _,
-                feature_id: _,
-                render_info: _,
-                geometry,
-                ..
-            } => get_rte_position(buf, geometry),
-            _ => None,
-        };
-        assert!(
-            result1.is_some() && vec3_approx_eq(result1.unwrap(), expects[0], 1.0),
-            "Point 1 position mismatch: expected {:?}, got {:?}",
-            expects[0],
-            result1
-        );
-
-        let result2 = match iter.next().unwrap() {
-            RenderableFeature::Point {
-                coordinates: _,
-                crs: _,
-                material: _,
-                transform: _,
-                feature_id: _,
-                render_info: _,
-                geometry,
-                ..
-            } => get_rte_position(buf, geometry),
-            _ => None,
-        };
-        assert!(
-            result2.is_some() && vec3_approx_eq(result2.unwrap(), expects[1], 1.0),
-            "Point 2 position mismatch: expected {:?}, got {:?}",
-            expects[1],
-            result2
-        );
-    }
-
-    #[test]
-    fn it_should_render_billboard_with_point() {
-        let mut app = initialize_app();
-
-        let material = BillboardMaterial::default();
-
-        app.world_mut().spawn(construct_geojson_layer(
-            r#"{
-    "type": "FeatureCollection",
-    "features": [
-        {
-            "type": "Feature",
-            "properties": {},
-            "geometry": {
-                "coordinates": [
-                    139.75227193360223,
-                    35.68520091767046
-                ],
-                "type": "Point"
-            }
-        },
-        {
-            "type": "Feature",
-            "properties": {},
-            "geometry": {
-                "coordinates": [
-                    139.77250531915263,
-                    35.71562661633277
-                ],
-                "type": "Point"
-            }
-        }
-    ]
-}"#,
-            vec![Appearance::Billboard(material.clone())],
-        ));
-
-        app.update();
-        app.update();
-
-        let mut renderable_features = app.world_mut().query::<&RenderableFeature>();
-
-        assert_eq!(renderable_features.iter(app.world()).count(), 2);
-
-        let mut iter = renderable_features.iter(app.world());
-
-        let buf = app.world().resource::<BufferStore>();
-
-        let expects = [
-            xyz_to_vec3(
-                LLE {
-                    #[allow(clippy::excessive_precision)]
-                    lng: Angle::new(139.75227193360223),
-                    #[allow(clippy::excessive_precision)]
-                    lat: Angle::new(35.68520091767046),
-                    height: Meters::new(0. + material.height as f64),
-                }
-                .rad()
-                .to_xyz(WGS84_64),
-            ),
-            xyz_to_vec3(
-                LLE {
-                    #[allow(clippy::excessive_precision)]
-                    lng: Angle::new(139.77250531915263),
-                    #[allow(clippy::excessive_precision)]
-                    lat: Angle::new(35.71562661633277),
-                    height: Meters::new(0. + material.height as f64),
-                }
-                .rad()
-                .to_xyz(WGS84_64),
-            ),
-        ];
-
-        let result1 = match iter.next().unwrap() {
-            RenderableFeature::Billboard {
-                coordinates: _,
-                crs: _,
-                material: _,
-                transform: _,
-                feature_id: _,
-                render_info: _,
-                geometry,
-                ..
-            } => get_rte_position(buf, geometry),
-            _ => None,
-        };
-        assert!(
-            result1.is_some() && vec3_approx_eq(result1.unwrap(), expects[0], 1.0),
-            "Billboard 1 position mismatch: expected {:?}, got {:?}",
-            expects[0],
-            result1
-        );
-
-        let result2 = match iter.next().unwrap() {
-            RenderableFeature::Billboard {
-                coordinates: _,
-                crs: _,
-                material: _,
-                transform: _,
-                feature_id: _,
-                render_info: _,
-                geometry,
-                ..
-            } => get_rte_position(buf, geometry),
-            _ => None,
-        };
-        assert!(
-            result2.is_some() && vec3_approx_eq(result2.unwrap(), expects[1], 1.0),
-            "Billboard 2 position mismatch: expected {:?}, got {:?}",
-            expects[1],
-            result2
-        );
-    }
-
-    #[test]
-    fn it_should_render_billboard_with_multipoint() {
-        let mut app = initialize_app();
-
-        let material = BillboardMaterial::default();
-
-        app.world_mut().spawn(construct_geojson_layer(
-            r#"{
-    "type": "FeatureCollection",
-    "features": [
-        {
-            "type": "Feature",
-            "properties": {},
-            "geometry": {
-                "coordinates": [
-                    [
-                        139.75227193360223,
-                        35.68520091767046
-                    ],
-                    [
-                        139.77250531915263,
-                        35.71562661633277
-                    ]
-                ],
-                "type": "MultiPoint"
-            }
-        }
-    ]
-}"#,
-            vec![Appearance::Billboard(material.clone())],
-        ));
-
-        app.update();
-        app.update();
-
-        let mut renderable_features = app.world_mut().query::<&RenderableFeature>();
-
-        assert_eq!(renderable_features.iter(app.world()).count(), 2);
-
-        let mut iter = renderable_features.iter(app.world());
-
-        let buf = app.world().resource::<BufferStore>();
-
-        let expects = [
-            xyz_to_vec3(
-                LLE {
-                    #[allow(clippy::excessive_precision)]
-                    lng: Angle::new(139.75227193360223),
-                    #[allow(clippy::excessive_precision)]
-                    lat: Angle::new(35.68520091767046),
-                    height: Meters::new(0. + material.height as f64),
-                }
-                .rad()
-                .to_xyz(WGS84_64),
-            ),
-            xyz_to_vec3(
-                LLE {
-                    #[allow(clippy::excessive_precision)]
-                    lng: Angle::new(139.77250531915263),
-                    #[allow(clippy::excessive_precision)]
-                    lat: Angle::new(35.71562661633277),
-                    height: Meters::new(0. + material.height as f64),
-                }
-                .rad()
-                .to_xyz(WGS84_64),
-            ),
-        ];
-
-        let result1 = match iter.next().unwrap() {
-            RenderableFeature::Billboard {
-                coordinates: _,
-                crs: _,
-                material: _,
-                transform: _,
-                feature_id: _,
-                render_info: _,
-                geometry,
-                ..
-            } => get_rte_position(buf, geometry),
-            _ => None,
-        };
-        assert!(
-            result1.is_some() && vec3_approx_eq(result1.unwrap(), expects[0], 1.0),
-            "Billboard 1 position mismatch: expected {:?}, got {:?}",
-            expects[0],
-            result1
-        );
-
-        let result2 = match iter.next().unwrap() {
-            RenderableFeature::Billboard {
-                coordinates: _,
-                crs: _,
-                material: _,
-                transform: _,
-                feature_id: _,
-                render_info: _,
-                geometry,
-                ..
-            } => get_rte_position(buf, geometry),
-            _ => None,
-        };
-        assert!(
-            result2.is_some() && vec3_approx_eq(result2.unwrap(), expects[1], 1.0),
-            "Billboard 2 position mismatch: expected {:?}, got {:?}",
-            expects[1],
-            result2
-        );
     }
 }

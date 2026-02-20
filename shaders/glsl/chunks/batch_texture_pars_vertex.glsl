@@ -13,9 +13,14 @@ float decodeRGBAToFloat(vec4 rgba) {
 vec2 getBatchTextureCoord(float batchId, float rowIndex) {
   vec2 texSize = vec2(textureSize(batchDataTexture, 0));
 
-  float u = (batchId + 0.5) / texSize.x;
-  float v = (rowIndex + 0.5) / texSize.y;
-  
+  // 2D layout: batch IDs are arranged in a grid of width texSize.x.
+  // Each "batch row" group occupies BATCHED_TEXTURE_ROW_COUNT physical rows.
+  float col = mod(batchId, texSize.x);
+  float batchRow = floor(batchId / texSize.x);
+
+  float u = (col + 0.5) / texSize.x;
+  float v = (batchRow * BATCHED_TEXTURE_ROW_COUNT + rowIndex + 0.5) / texSize.y;
+
   return vec2(u, v);
 }
 

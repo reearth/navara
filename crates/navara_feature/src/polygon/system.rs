@@ -9,9 +9,8 @@ use navara_component::{Deleted, OrderByDistance};
 use navara_core::{Aabb, BoundingSphere, CRS, WGS84_64};
 use navara_feature_component::{
     batch::{BatchTable, FeatureBatchId, FeatureBatchIdMap, GlobalBatchIds},
-    polygon::{construct_polygon_feature, PolygonGeometry, PolygonMarker, UpdatePolygon},
+    polygon::{PolygonGeometry, PolygonMarker, UpdatePolygon},
 };
-use navara_geometry::{FloatAttribute, Hierarchy, PolygonResource};
 use navara_layer::{LayerId, LayerStore};
 use navara_material::{PolygonInternalMaterial, PolygonMaterial};
 use navara_math::{FloatType, Transform, Vec3};
@@ -21,13 +20,9 @@ use navara_tile_component::{
 };
 
 use navara_feature_component::{
-    batch::BatchId,
     batch::BatchedFeature,
     id::FeatureId,
-    render::{
-        PolygonRenderInformation, RenderableFeature, TransferablePolygonGeometry,
-        TransferablePolygonOutlineGeometry,
-    },
+    render::{PolygonRenderInformation, RenderableFeature},
     BatchedFeatureMarker,
 };
 use navara_worker::construct_polygon_batched_feature::{
@@ -50,7 +45,7 @@ pub fn transfer_batched_mesh(
             Option<&mut FeatureId>,
             Option<&OverscaledTileHandle>,
             Option<&TileExtent>,
-            &OrderByDistance,
+            Option<&OrderByDistance>,
         ),
         (With<PolygonMarker>, Without<Deleted>),
     >,
@@ -85,6 +80,10 @@ pub fn transfer_batched_mesh(
         }
 
         if batched_feature.construct_polygon_feature.is_none() {
+            let order = order.cloned().unwrap_or(OrderByDistance {
+                sse: 0.,
+                distance: 0.,
+            });
             let task_entity = commands
                 .spawn((
                     ConstructPolygonBatchedFeatureWorkerTaskBundle::new(
@@ -96,7 +95,7 @@ pub fn transfer_batched_mesh(
                             tile_extent: tile_extent_component.map(|t| t.extent),
                         },
                     ),
-                    order.clone(),
+                    order,
                 ))
                 .id();
             batched_feature.construct_polygon_feature = Some(task_entity);
@@ -108,6 +107,7 @@ pub fn transfer_batched_mesh(
             ConstructPolygonBatchedFeatureResult {
                 extent,
                 geometry,
+                outline_geometry,
                 rtc_translation,
             },
         ) = construct_polygon_feature_tasks
@@ -145,7 +145,7 @@ pub fn transfer_batched_mesh(
                 crs: CRS::Geocentric,
                 material,
                 geometry: geometry.clone(),
-                outline_geometry: None,
+                outline_geometry: outline_geometry.clone(),
                 transform: Transform::from_translation(translation),
                 feature_id: None,
                 render_info: PolygonRenderInformation {
@@ -156,7 +156,7 @@ pub fn transfer_batched_mesh(
                 },
                 extent: *extent,
                 bounding_sphere,
-                active: false,
+                active: batched_feature.default_active,
                 feature_batch_id: feature_batch_id.0,
                 batch_length: global_batch_ids.batch_length,
             },
@@ -177,117 +177,6 @@ pub fn transfer_batched_mesh(
         feature_batch_id_map.add(entity, global_batch_ids.clone());
 
         commands.entity(task_entity).insert(Deleted);
-    }
-}
-
-#[allow(clippy::type_complexity)]
-pub fn transfer_mesh(
-    mut commands: Commands,
-    mut buf: ResMut<BufferStore>,
-    mut polygon: Query<
-        (
-            Entity,
-            &LayerId,
-            Option<&mut FeatureId>,
-            &mut PolygonGeometry,
-            &PolygonMaterial,
-            &BatchId,
-        ),
-        (Added<PolygonGeometry>, Without<BatchedFeatureMarker>),
-    >,
-    mut polygon_resource: ResMut<PolygonResource>,
-    mut layer_store: ResMut<LayerStore>,
-) {
-    for (entity, layer_id, feature_id, geometry, material, batch_id) in &mut polygon {
-        let geometry_hierarchy =
-            Hierarchy::from_transferred(&geometry.hierarchy, &mut buf).unwrap();
-
-        let (extent_opt, polygon_result_opt) = construct_polygon_feature(
-            geometry_hierarchy,
-            &geometry.crs,
-            material,
-            &mut polygon_resource,
-            true, // use_rte = true for individual features
-        );
-        if let (Some(extent), Some(mut polygon_result)) = (extent_opt, polygon_result_opt) {
-            let aabb = Aabb::from_extent_f64(extent, 0., 0.);
-            let surface_point = WGS84_64.scale_to_geodetic_surface(aabb.center);
-
-            let mut material = material.clone();
-            material.internal = Some(PolygonInternalMaterial {
-                min_max_heights: calc_min_max_height(
-                    material.height as f64,
-                    material.extruded_height.unwrap_or(0.) as FloatType,
-                    material.clamp_to_ground,
-                    -aabb.center.distance(surface_point.unwrap()),
-                ),
-            });
-
-            let bounding_sphere = get_bounding_sphere(&aabb);
-
-            let pos_cnt = polygon_result
-                .geometry
-                .attributes
-                .position_3d_high
-                .as_ref()
-                .unwrap()
-                .data
-                .len()
-                / polygon_result
-                    .geometry
-                    .attributes
-                    .position_3d_high
-                    .as_ref()
-                    .unwrap()
-                    .size as usize;
-            let batch_id_vec = vec![batch_id.0; pos_cnt];
-            polygon_result.geometry.attributes.batch_ids =
-                Some(FloatAttribute::new(batch_id_vec, 1));
-
-            let clamp_to_ground = material.clamp_to_ground;
-            // TODO: Don't forget removing the stored data from BufferStore when the feature is removed.
-            let entity = commands
-                .spawn((
-                    PolygonMarker,
-                    layer_id.clone(),
-                    RenderableFeature::Polygon {
-                        // TODO: Calculate coordinate to update transform
-                        coordinates: Vec3::new(0., 0., 0.),
-                        crs: CRS::Geocentric,
-                        material,
-                        geometry: TransferablePolygonGeometry::with_buf(
-                            &mut buf,
-                            polygon_result.geometry,
-                        ),
-                        outline_geometry: Some(TransferablePolygonOutlineGeometry::with_buf(
-                            &mut buf,
-                            polygon_result.outline,
-                        )),
-                        transform: Transform::default(),
-                        feature_id: Some(entity),
-                        render_info: PolygonRenderInformation {
-                            should_recalculate_height: clamp_to_ground,
-                            distance_to_center_from_ellipsoid_surface: Some(
-                                -aabb.center.distance(surface_point.unwrap()),
-                            ),
-                            is_rendered: false,
-                            should_be_texturized: false,
-                        },
-                        extent: Some(extent),
-                        bounding_sphere: Some(bounding_sphere),
-                        active: true,
-                        feature_batch_id: batch_id.0 as u32,
-                        batch_length: 1,
-                    },
-                ))
-                .id();
-
-            if let Some(mut feature_id) = feature_id {
-                feature_id.0 = Some(entity);
-            }
-
-            layer_store.add(layer_id.0.clone(), entity);
-        }
     }
 }
 
@@ -465,6 +354,9 @@ pub fn remove_batched_feature(
             if let Ok(result) = worker_task_results.get(task_entity) {
                 let mut geometry = result.geometry.clone();
                 geometry.remove_from_buf(&mut buf, &mut batch_table_res);
+                if let Some(mut outline) = result.outline_geometry.clone() {
+                    outline.remove_from_buf(&mut buf);
+                }
             }
         }
 

@@ -26,7 +26,6 @@ impl Plugin for FeaturePlugin {
             .add_systems(
                 Update,
                 (
-                    point::system::transfer_mesh,
                     point::system::transfer_batched_mesh,
                     point::system::update_height_by_terrain_for_batched,
                     point::system::update_height_by_terrain,
@@ -38,7 +37,6 @@ impl Plugin for FeaturePlugin {
             .add_systems(
                 Update,
                 (
-                    billboard::system::transfer_mesh,
                     billboard::system::transfer_batched_mesh,
                     billboard::system::update_height_by_terrain_for_batched,
                     billboard::system::update_height_by_terrain,
@@ -50,7 +48,6 @@ impl Plugin for FeaturePlugin {
             .add_systems(
                 Update,
                 (
-                    text::system::transfer_mesh,
                     text::system::transfer_batched_mesh,
                     text::system::update_height_by_terrain_for_batched,
                     text::system::update_height_by_terrain,
@@ -71,7 +68,6 @@ impl Plugin for FeaturePlugin {
             .add_systems(
                 Update,
                 (
-                    polyline::system::transfer_mesh,
                     polyline::system::transfer_batched_mesh,
                     polyline::system::update_height_by_terrain,
                     polyline::system::remove_batched_feature,
@@ -82,7 +78,6 @@ impl Plugin for FeaturePlugin {
             .add_systems(
                 Update,
                 (
-                    polygon::system::transfer_mesh,
                     polygon::system::transfer_batched_mesh,
                     polygon::system::update_polygon,
                     polygon::system::update_height_by_terrain,

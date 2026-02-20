@@ -1,6 +1,8 @@
 use bevy_ecs::{component::Component, entity::Entity};
 use navara_core::{Extent, Radians};
-use navara_feature_component::render::TransferablePolygonGeometry;
+use navara_feature_component::render::{
+    TransferablePolygonGeometry, TransferablePolygonOutlineGeometry,
+};
 use navara_math::{FloatType, Vec3};
 
 use crate::component::WorkerTaskBundle;
@@ -21,6 +23,7 @@ pub struct ConstructPolygonBatchedFeatureParameters {
 pub struct ConstructPolygonBatchedFeatureResult {
     pub extent: Option<Extent<FloatType, Radians>>,
     pub geometry: TransferablePolygonGeometry,
+    pub outline_geometry: Option<TransferablePolygonOutlineGeometry>,
     /// RTC (Relative-To-Center) translation vector
     /// Contains the tile center in world-space ECEF coordinates
     pub rtc_translation: Option<Vec3>,

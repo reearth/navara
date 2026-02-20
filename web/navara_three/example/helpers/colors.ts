@@ -1,4 +1,4 @@
-import { Color, ColorMap } from "@navara/three";
+import { Color, ColorMap, type ColorTuple } from "@navara/three";
 
 // Ref: https://github.com/eukarya-inc/PLATEAU-VIEW/blob/26c98fa36e6cfe5776c04d1d2cbf77cc69eb264d/extension/src/prototypes/color-maps/colorMaps/plateau.ts
 export const PLATEAU_COLOR_MAP = new ColorMap("sequential", "Plateau", [
@@ -548,3 +548,12 @@ export const YlGnBu_COLOR_MAP = new ColorMap("sequential", "Blueish", [
   new Color().setStyle("#253494"),
   new Color().setStyle("#081d58"),
 ]);
+
+export const FLOOD_RANK_COLOR_MAP: Record<number, ColorTuple> = {
+  6: [220, 122, 220], // 20m〜
+  5: [242, 133, 201], // 10m〜20m
+  4: [255, 145, 145], // 5m〜10m
+  3: [255, 183, 183], // 3m〜5m
+  2: [255, 216, 192], // 0.5m〜3m
+  1: [247, 245, 169], // 〜0.5m
+};
