@@ -16,6 +16,8 @@ import {
 
 import { PolygonOutlineMesh, type ViewEvents } from "..";
 import type { ViewContext } from "../core";
+import { ensureSelectiveEffectUserData } from "../core/SelectiveEffectHelper";
+import { injectSelectiveEffectHandlers } from "../core/SelectiveEffectMaskContext";
 import type { BufferLoader } from "../event";
 import type { PolygonMaterialProps } from "../material/enhancer/polygon";
 import { createPolygonMaterialEnhancer } from "../material/enhancer/polygon/polygonMaterialEnhancer";
@@ -92,8 +94,18 @@ export class PolygonMesh extends BatchedFeatureMesh<
     // TODO: Need to calculate bounding sphere by position_high and position_low.
     this.frustumCulled = false;
 
-    const useRTE = this.initGeometry(mesh, buf);
-    this.initMaterial(mesh, this._uniforms, tileHandle, viewEvents, !!useRTE);
+    // Register cleanup listener first (before any potential early returns)
+    // This ensures dispose() is called even if geometry initialization fails
+    this.addEventListener("removedFromWorld", () => {
+      this.dispose(viewEvents);
+    });
+
+    const { success, useRTE } = this.initGeometry(mesh, buf);
+    if (!success) {
+      console.warn("PolygonMesh.init: geometry initialization failed");
+      return this;
+    }
+    this.initMaterial(mesh, this._uniforms, tileHandle, viewEvents, useRTE);
     this.initDepthMaterial();
 
     if (mesh.bounding_sphere) {
@@ -106,10 +118,6 @@ export class PolygonMesh extends BatchedFeatureMesh<
 
       this._recalculateBoundingSphere();
     }
-
-    this.addEventListener("removedFromWorld", () => {
-      this.dispose(viewEvents);
-    });
 
     return this;
   }
@@ -125,7 +133,10 @@ export class PolygonMesh extends BatchedFeatureMesh<
     ) as this;
   }
 
-  private initGeometry(mesh: NavaraPolygonMesh, buf: BufferLoader) {
+  private initGeometry(
+    mesh: NavaraPolygonMesh,
+    buf: BufferLoader,
+  ): { success: boolean; useRTE: boolean } {
     const g = mesh.geometry;
 
     // Check if RTE attributes are present
@@ -154,9 +165,10 @@ export class PolygonMesh extends BatchedFeatureMesh<
       : undefined;
     const batchIndexSize = g.batch_index ? g.batch_index.size : 0;
 
-    if (!indices) return;
-    if (!useRTE && !position) return;
-    if (useRTE && (!position_3d_high || !position_3d_low)) return;
+    if (!indices) return { success: false, useRTE: false };
+    if (!useRTE && !position) return { success: false, useRTE: false };
+    if (useRTE && (!position_3d_high || !position_3d_low))
+      return { success: false, useRTE: false };
 
     const geometry = this.geometry;
 
@@ -213,7 +225,7 @@ export class PolygonMesh extends BatchedFeatureMesh<
 
     geometry.setIndex(new BufferAttribute(indices, 1));
 
-    return useRTE;
+    return { success: true, useRTE };
   }
 
   /**
@@ -266,10 +278,11 @@ export class PolygonMesh extends BatchedFeatureMesh<
     this.receiveShadow = !!meshMaterial.receiveShadow;
 
     const clampToGround = meshMaterial.clampToGround;
-    // This mesh should be texturized if it uses clamp-to-ground.
+    // This mesh is texturized if it has a tile handle (terrain attachment).
     const isTexturized = !!tileHandle;
-    const shouldClipByStencil = !isTexturized && clampToGround;
     const material = this.material;
+
+    const shouldClipByStencil = !isTexturized && clampToGround;
 
     material.stencilWrite = false;
     material.colorWrite = !shouldClipByStencil;
@@ -345,6 +358,20 @@ export class PolygonMesh extends BatchedFeatureMesh<
       this.onBeforeRender = callback;
       this.onBeforeShadow = callback;
     }
+
+    // ========== SelectiveEffect integration ==========
+
+    // Initialize SelectiveEffect shader uniforms
+    ensureSelectiveEffectUserData(material);
+
+    // Setup selective effect handlers (automatically wraps existing RTE callback)
+    injectSelectiveEffectHandlers(this, {
+      registry: this._viewContext?.selectiveEffectRegistry,
+      layerId: this._layerId,
+    });
+    // Note: No need to manually assign handlers - function modifies object in place
+
+    // ========== SelectiveEffect integration end ==========
 
     this.enableWater();
 
@@ -613,6 +640,18 @@ export class PolygonMesh extends BatchedFeatureMesh<
   }
 
   dispose(viewEvents: EventHandler<ViewEvents>) {
+    // Clean up SelectiveEffect registry links
+    if (this._viewContext?.selectiveEffectRegistry && this._prevEffectIds) {
+      this._viewContext.selectiveEffectRegistry.updateLinksForObject(
+        this,
+        [], // New effectIds: empty array (removing all links)
+        this._prevEffectIds, // Previous effectIds
+        this._layerId,
+      );
+      this._prevEffectIds = undefined;
+    }
+
     viewEvents.emit("_csmUnmounted", this.material);
+    this.customDepthMaterial?.dispose();
   }
 }

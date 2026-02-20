@@ -10,10 +10,16 @@ pub struct PointMaterial {
     /// size in meters.
     pub size: Option<f32>,
     pub color: Option<u32>,
+    /// anchor point of the sprite, range is (-0.5, -0.5) to (0.5, 0.5).
+    /// Default is (0.0, 0.0) which means the center of the sprite.
     pub center: Option<Vec2>,
     pub height: Option<f32>,
     #[wasm_bindgen(js_name = scaleByDistance)]
     #[serde(rename = "scaleByDistance")]
+    /// Whether to scale the point based on distance from the camera.
+    /// When true, the point size will be adjusted to reduce attenuation with distance, so distant points
+    /// have a minimum apparent size and points gradually grow larger as their distance increases.
+    /// The size is scaled by a factor of the form (1.0 + (distance / predefined constant)).
     pub scale_by_distance: Option<bool>,
     #[wasm_bindgen(js_name = clampToGround)]
     #[serde(rename = "clampToGround")]
@@ -127,12 +133,18 @@ pub struct BillboardMaterial {
     /// size in meters.
     pub size: Option<f32>,
     pub color: Option<u32>,
+    /// anchor point of the sprite, range is (-0.5, -0.5) to (0.5, 0.5).
+    /// Default is (0.0, 0.0) which means the center of the sprite.
     pub center: Option<Vec2>,
     pub height: Option<f32>,
     #[wasm_bindgen(getter_with_clone)]
     pub url: Option<String>,
     #[wasm_bindgen(js_name = scaleByDistance)]
     #[serde(rename = "scaleByDistance")]
+    /// Whether to scale the billboard based on distance from the camera.
+    /// When true, the billboard size will be adjusted to reduce attenuation with distance, so distant billboards
+    /// have a minimum apparent size and billboards gradually grow larger as their distance increases.
+    /// The size is scaled by a factor of the form (1.0 + (distance / predefined constant)).
     pub scale_by_distance: Option<bool>,
     #[wasm_bindgen(js_name = clampToGround)]
     #[serde(rename = "clampToGround")]
