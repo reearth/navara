@@ -103,9 +103,5 @@ export type InstancedSpriteBaseMutates = Mutates<
      * Set texture external ref.
      */
     setTexture: (texture: UniformValue<DataArrayTexture | null>) => void;
-    /**
-     * Update aspect ratio when texture changes.
-     */
-    setAspect: (aspect: number) => void;
   }
 >;

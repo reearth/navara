@@ -101,11 +101,9 @@ export const createBaseMutates = (
     },
 
     setTexture: (texture: UniformValue<DataArrayTexture | null>) => {
-      refs.uTexture = texture;
-    },
-
-    setAspect: (aspect: number) => {
-      refs.uAspect.value = aspect;
+      if (refs.uTexture) {
+        refs.uTexture.value = texture.value;
+      }
     },
   };
 };

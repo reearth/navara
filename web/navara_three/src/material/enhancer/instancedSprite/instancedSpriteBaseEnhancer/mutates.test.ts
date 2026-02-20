@@ -1,3 +1,4 @@
+import { DataArrayTexture } from "three";
 import { describe, expect, it, vi } from "vitest";
 
 import type { ShaderUniforms } from "../../MaterialEnhancer";
@@ -84,6 +85,34 @@ describe("instancedSpriteBaseEnhancer/mutates", () => {
 
       expect(uniforms.uTexture).toBeUndefined();
     });
+
+    it("should update uTexture value without replacing uniform ref", () => {
+      const state: InstancedSpriteBaseState = {
+        ...DEFAULT_BASE_STATE,
+        billboard: true,
+      };
+      const mutates = createBaseMutates(false, true);
+      mutates.update(state);
+
+      const uniforms: ShaderUniforms = {};
+      mutates.updateUniforms(uniforms, state);
+      const initialTextureUniform = uniforms.uTexture;
+      expect(initialTextureUniform).toBeDefined();
+
+      const nextTexture = {
+        image: {
+          width: 1,
+          height: 1,
+          depth: 1,
+          data: new Uint8Array([0, 0, 0, 0]),
+        },
+      } as unknown as DataArrayTexture;
+
+      mutates.setTexture({ value: nextTexture });
+
+      expect(uniforms.uTexture).toBe(initialTextureUniform);
+      expect(uniforms.uTexture?.value).toBe(nextTexture);
+    });
   });
 
   describe("updateRteUniforms", () => {
@@ -137,21 +166,6 @@ describe("instancedSpriteBaseEnhancer/mutates", () => {
       mutates.updateUniforms(uniforms, state);
 
       expect(uniforms.uFarPlane?.value).toBe(1000);
-    });
-  });
-
-  describe("setAspect", () => {
-    it("should update uAspect value", () => {
-      const state: InstancedSpriteBaseState = { ...DEFAULT_BASE_STATE };
-      const mutates = createBaseMutates(false, false);
-      mutates.update(state);
-
-      mutates.setAspect(1.5);
-
-      const uniforms: ShaderUniforms = {};
-      mutates.updateUniforms(uniforms, state);
-
-      expect(uniforms.uAspect?.value).toBe(1.5);
     });
   });
 });

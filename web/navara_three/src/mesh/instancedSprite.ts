@@ -544,10 +544,13 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
       newTextureArray.minFilter = LinearFilter;
       newTextureArray.magFilter = LinearFilter;
 
-      material.uniforms.uTexture.value = newTextureArray;
-
-      // Sync aspect ratio via enhancer
-      this.getEnhancer().update({ base: { aspect: width / height } });
+      // Sync texture and aspect ratio via enhancer
+      this.getEnhancer().update({
+        base: {
+          texture: { value: newTextureArray },
+          aspect: width / height,
+        },
+      });
 
       newTexture.dispose();
       this._loadedUrls.add(url);

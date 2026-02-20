@@ -92,9 +92,6 @@ export function createInstancedSpriteBaseEnhancer(
       if (props.texture) {
         mutates.setTexture(props.texture);
       }
-      if (props.aspect !== undefined) {
-        mutates.setAspect(props.aspect);
-      }
 
       updateMaterialProps(material, props);
     },

@@ -1,4 +1,4 @@
-import { ShaderMaterial } from "three";
+import { DataArrayTexture, ShaderMaterial } from "three";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import type { InstancedSpriteBaseProps } from "./types";
@@ -134,6 +134,40 @@ describe("instancedSpriteBaseEnhancer", () => {
       e.update({ transparent: false });
 
       expect(material.transparent).toBe(false);
+    });
+
+    it("should update texture and aspect together without replacing uTexture ref", () => {
+      enhancer.mount({ billboard: true });
+
+      const shader = {
+        uniforms: {} as any,
+        vertexShader: "",
+        fragmentShader: "",
+        defines: {},
+      } as any;
+      enhancer.transformShader(shader);
+
+      const initialTextureUniform = shader.uniforms.uTexture;
+      expect(initialTextureUniform).toBeDefined();
+
+      const nextTexture = {
+        image: {
+          width: 1,
+          height: 1,
+          depth: 1,
+          data: new Uint8Array([0, 0, 0, 0]),
+        },
+      } as unknown as DataArrayTexture;
+
+      enhancer.update({
+        texture: { value: nextTexture },
+        aspect: 2.5,
+      });
+
+      expect(shader.uniforms.uTexture).toBe(initialTextureUniform);
+      expect(shader.uniforms.uTexture.value).toBe(nextTexture);
+      expect(shader.uniforms.uAspect.value).toBe(2.5);
+      expect(enhancer.states().aspect).toBe(2.5);
     });
   });
 
