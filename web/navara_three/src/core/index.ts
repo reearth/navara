@@ -72,6 +72,7 @@ export {
   type MaskPassPhaseType,
   type MaskPassContext,
   type MaskPassEvaluation,
+  type SelectiveEffectHandlerOptions,
   // Constants
   MaskPassPhase,
   // Context management
@@ -83,4 +84,6 @@ export {
   applyMaskPassSkipState,
   applyMaskPassRenderState,
   restoreMaterialState,
+  // Unified handler injection
+  injectSelectiveEffectHandlers,
 } from "./SelectiveEffectMaskContext";

@@ -79,11 +79,18 @@ export const run = async (view: ThreeView) => {
   const {
     cubeLayer,
     sphereLayer,
+    cylinderLayer,
+    tubeLayer,
+    planeLayer,
     drumLayer,
     soldierLayer,
+    polygonLayer,
     chiyodaLayer,
     chuoLayer,
-  } = createSceneLayers(view);
+  } = createSceneLayers(view, {
+    bloomId: postEffectBloom.id,
+    outlineId: postEffectOutline.id,
+  });
 
   showAttributions([
     TILE_DATASETS.openstreetmap,
@@ -94,12 +101,17 @@ export const run = async (view: ThreeView) => {
   ]);
 
   createControlPane({
+    view,
     postEffectOutline,
     postEffectBloom,
     cubeLayer,
     sphereLayer,
+    cylinderLayer,
+    tubeLayer,
+    planeLayer,
     drumLayer,
     soldierLayer,
+    polygonLayer,
     chiyodaLayer,
     chuoLayer,
   });
