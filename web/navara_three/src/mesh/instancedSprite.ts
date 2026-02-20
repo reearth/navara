@@ -117,7 +117,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
       },
     });
 
-    // Color (per-instance attribute, stays in mesh)
+    // Color (per-instance attribute)
     if (this._initialColor.getHex() !== (m.material.color ?? 0xffffff)) {
       this._initialColor.setHex(m.material.color ?? 0xffffff);
       const colorAttr = this.geometry.getAttribute(
@@ -135,7 +135,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
       colorAttr.needsUpdate = true;
     }
 
-    // Height (per-instance attribute, stays in mesh)
+    // Height (per-instance attribute)
     if (this._initialHeight !== (m.material.height ?? 0.0)) {
       this._initialHeight = m.material.height ?? 0.0;
       const heightAttr = this.geometry.getAttribute(
@@ -148,7 +148,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
       heightAttr.needsUpdate = true;
     }
 
-    // Position updates (per-instance attributes, stay in mesh)
+    // Position updates (per-instance attributes)
     {
       const positionsInfo = this.extractPositions(m, buf);
 
