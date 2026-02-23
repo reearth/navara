@@ -6,8 +6,10 @@ license.workspace = true
 
 [dependencies]
 rustybuzz.workspace = true
-fdsm.workspace = true
+fontsdf.workspace = true
 guillotiere.workspace = true
+
+rustc-hash.workspace = true
 
 bevy_log.workspace = true
 bevy_ecs.workspace = true
