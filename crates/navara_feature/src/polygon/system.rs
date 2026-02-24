@@ -147,7 +147,7 @@ pub fn transfer_batched_mesh(
                 geometry: geometry.clone(),
                 outline_geometry: outline_geometry.clone(),
                 transform: Transform::from_translation(translation),
-                feature_id: None,
+                feature_id: batched_feature_entity,
                 render_info: PolygonRenderInformation {
                     should_recalculate_height: true,
                     distance_to_center_from_ellipsoid_surface,

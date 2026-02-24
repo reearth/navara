@@ -119,7 +119,7 @@ pub fn transfer_batched_mesh(
                 geometry: geometry.clone(),
                 extent: *extent,
                 transform: Transform::default(),
-                feature_id: None,
+                feature_id: batched_feature_entity,
                 render_info: PolylineRenderInformation {
                     should_recalculate_height: true,
                     is_rendered: false,
