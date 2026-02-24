@@ -250,6 +250,7 @@ pub fn update_height_by_terrain_for_batched(
                     // RTE path: collect Vec3 positions at f64 precision
                     let mut positions = Vec::with_capacity(feature_len);
 
+                    // TODO: Improve the performance of this iteration. We might get the terrain height in the shader from a depth buffer.
                     for feature_id in &batched_feature.features {
                         let geom = geometries.get(*feature_id).unwrap();
                         if material.clamp_to_ground {
@@ -260,8 +261,7 @@ pub fn update_height_by_terrain_for_batched(
                                 &geom.crs.to_lng_lat(WGS84_64, geom.coords),
                             )
                             .unwrap_or(0.);
-                            render_info.current_terrain_height =
-                                render_info.current_terrain_height.max(terrain_height);
+                            render_info.current_terrain_height = terrain_height;
                         } else {
                             render_info.current_terrain_height = 0.;
                         }
@@ -289,8 +289,7 @@ pub fn update_height_by_terrain_for_batched(
                                 &geom.crs.to_lng_lat(WGS84_64, geom.coords),
                             )
                             .unwrap_or(0.);
-                            render_info.current_terrain_height =
-                                render_info.current_terrain_height.max(terrain_height);
+                            render_info.current_terrain_height = terrain_height;
                         } else {
                             render_info.current_terrain_height = 0.;
                         }
@@ -316,80 +315,6 @@ pub fn update_height_by_terrain_for_batched(
                         position.data = buf.new_f32(all_coords);
                     }
                 }
-            }
-            _ => unreachable!(),
-        };
-    }
-}
-
-// TODO: This system is executed whenever a tile is added.
-//       This isn't efficient, so we need to update this system
-//       to execute only when the layer's bounding box is within the camera frustum.
-#[allow(clippy::too_many_arguments, clippy::type_complexity)]
-pub fn update_height_by_terrain(
-    mut qt: ResMut<RasterTileQuadtree>,
-    mut buf: ResMut<BufferStore>,
-    mut renderable_features: Query<
-        (&TextMarker, &mut RenderableFeature),
-        Without<BatchedFeatureMarker>,
-    >,
-    geometries: Query<&TextGeometry>,
-    tile_meshes: Query<&TileMeshMarker, Added<TileMeshMarker>>,
-    terrain_data_requester: TileTerrainDataRequesterQuery,
-) {
-    let is_tile_meshes_empty = tile_meshes.is_empty();
-
-    for (_, mut feature) in &mut renderable_features {
-        match feature.as_ref() {
-            RenderableFeature::Text {
-                render_info,
-                material,
-                active,
-                ..
-            } => {
-                if is_tile_meshes_empty && !render_info.should_recalculate_height {
-                    continue;
-                }
-                if !material.show || !active {
-                    continue;
-                }
-            }
-            _ => continue,
-        };
-
-        match feature.as_mut() {
-            RenderableFeature::Text {
-                coordinates: _,
-                crs: _,
-                material,
-                feature_id,
-                render_info,
-                geometry: transferable_geometry,
-                ..
-            } => {
-                render_info.should_recalculate_height = false;
-                let geometry = geometries.get(*feature_id).unwrap();
-                if material.clamp_to_ground {
-                    let terrain_height = compute_terrain_height_at_point(
-                        &mut qt,
-                        &mut buf,
-                        &terrain_data_requester,
-                        &geometry.crs.to_lng_lat(WGS84_64, geometry.coords),
-                    )
-                    .unwrap_or(0.);
-                    render_info.current_terrain_height =
-                        render_info.current_terrain_height.max(terrain_height);
-                } else {
-                    render_info.current_terrain_height = 0.;
-                }
-                let position = geometry.crs.to_vec3(
-                    WGS84_64,
-                    geometry.coords,
-                    material.height + render_info.current_terrain_height as f32,
-                );
-
-                // Update RTE geometry position
-                transferable_geometry.update_rte_position(&mut buf, position);
             }
             _ => unreachable!(),
         };
