@@ -19,6 +19,7 @@ use navara_texture_fragment::TextureFragmentPlugin;
 use navara_tile::TilePlugin;
 use navara_window::WindowPlugin;
 use navara_worker::WorkerPlugin;
+use navara_font::FontPlugin;
 
 pub struct Plugin;
 
@@ -48,6 +49,7 @@ impl bevy_app::Plugin for Plugin {
         app.add_plugins(Cesium3dTilesPlugin);
         app.add_plugins(MvtPlugin);
         app.add_plugins(WorkerPlugin);
+        app.add_plugins(FontPlugin);
 
         // custom systems
         app.add_systems(Startup, startup);

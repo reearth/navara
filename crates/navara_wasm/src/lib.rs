@@ -3,6 +3,7 @@ mod attribute;
 mod camera;
 mod entity;
 mod event;
+mod font;
 mod geometry;
 mod input;
 mod property_value;
@@ -565,6 +566,87 @@ impl Core {
     #[wasm_bindgen(js_name = setCameraControl)]
     pub fn set_camera_control(&mut self, event: navara_wasm_types::CameraControlUpdateEvent) {
         self.app.set_camera_control(event.into());
+    }
+
+    // === Font ===
+
+    /// Load a font file into the cache.
+    /// TypeScript fetches the font and sends bytes via the transfer callback.
+    #[wasm_bindgen(js_name = loadFont)]
+    pub fn load_font(
+        &mut self,
+        url: String,
+        byte_length: usize,
+        f: &js_sys::Function,
+    ) -> bool {
+        let data = transfer_u8_array(byte_length, f);
+        self.app.load_font(url, data).is_ok()
+    }
+
+    /// Check if a font is loaded.
+    #[wasm_bindgen(js_name = isFontLoaded)]
+    pub fn is_font_loaded(&self, url: &str) -> bool {
+        self.app.is_font_loaded(url)
+    }
+
+    /// Get the units-per-em value for a loaded font.
+    #[wasm_bindgen(js_name = getUnitsPerEm)]
+    pub fn get_units_per_em(&self, url: &str) -> Option<u16> {
+        self.app.get_units_per_em(url)
+    }
+
+    /// Get the SDF atlas texture data for a loaded font.
+    /// Returns the RGBA pixel data + dimensions, or None if font isn't loaded.
+    #[wasm_bindgen(js_name = getFontAtlas)]
+    pub fn get_font_atlas(&self, url: &str) -> Option<font::FontAtlas> {
+        let (data, width, height) = self.app.get_font_atlas(url)?;
+        Some(font::FontAtlas {
+            data: copy_u8_array(data),
+            width,
+            height,
+        })
+    }
+
+    /// Shape text with a loaded font and return glyph positions + atlas metrics.
+    /// This also ensures all shaped glyphs are rasterized into the font's atlas.
+    #[wasm_bindgen(js_name = shapeText)]
+    pub fn shape_text(&mut self, url: &str, text: &str) -> Option<font::ShapeTextResult> {
+        // Shape + ensure glyphs in atlas
+        let (shaped, units_per_em) = self.app.shape_text(url, text)?;
+
+        let glyphs: Vec<font::WasmShapedGlyph> = shaped
+            .iter()
+            .map(|&(glyph_id, x_advance, y_advance, x_offset, y_offset, cluster)| {
+                font::WasmShapedGlyph {
+                    glyph_id,
+                    x_advance,
+                    y_advance,
+                    x_offset,
+                    y_offset,
+                    cluster,
+                }
+            })
+            .collect();
+
+        // Get atlas metrics for the shaped glyphs
+        let all_metrics = self.app.get_font_glyph_metrics(url)?;
+        let metrics: Vec<font::WasmGlyphMetrics> = all_metrics
+            .into_iter()
+            .map(|(glyph_id, atlas_x, atlas_y, atlas_w, atlas_h, bearing_x, bearing_y, advance)| {
+                font::WasmGlyphMetrics {
+                    glyph_id,
+                    atlas_x,
+                    atlas_y,
+                    atlas_w,
+                    atlas_h,
+                    bearing_x,
+                    bearing_y,
+                    advance,
+                }
+            })
+            .collect();
+
+        Some(font::ShapeTextResult { glyphs, metrics, units_per_em })
     }
 
     // === Globe definition ===

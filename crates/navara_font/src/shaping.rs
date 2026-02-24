@@ -1,11 +1,18 @@
 use crate::component::ShapedGlyph;
 
+/// Get the units-per-em value from raw font data.
+pub fn get_units_per_em(font_data: &[u8]) -> Option<u16> {
+    let face = rustybuzz::Face::from_slice(font_data, 0)?;
+    Some(face.units_per_em() as u16)
+}
+
 /// Shape a text string using rustybuzz (harfbuzz port).
 ///
-/// Returns positioned glyph info that the TypeScript side uses
-/// to place instanced rect meshes for each character.
-pub fn shape_text(font_data: &[u8], text: &str) -> Option<Vec<ShapedGlyph>> {
+/// Returns positioned glyph info and the font's units-per-em value.
+/// The units-per-em is needed to convert font-unit advances/offsets to SDF pixel space.
+pub fn shape_text(font_data: &[u8], text: &str) -> Option<(Vec<ShapedGlyph>, u16)> {
     let face = rustybuzz::Face::from_slice(font_data, 0)?;
+    let units_per_em = face.units_per_em() as u16;
 
     let mut buffer = rustybuzz::UnicodeBuffer::new();
     buffer.push_str(text);
@@ -28,5 +35,5 @@ pub fn shape_text(font_data: &[u8], text: &str) -> Option<Vec<ShapedGlyph>> {
         })
         .collect();
 
-    Some(glyphs)
+    Some((glyphs, units_per_em))
 }

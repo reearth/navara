@@ -49,6 +49,7 @@ import {
 import { LayerHandle } from "./core/LayerHandle";
 import { Registries } from "./core/Registries";
 import { getDevicePixelRatio, isMobileDevice } from "./device";
+import { FontManager } from "./font";
 import {
   processEvent,
   type BufferLoader,
@@ -157,6 +158,7 @@ export * from "./effects";
 export * from "./shaders";
 export * from "./material";
 export * from "./core";
+export * from "./font";
 export * from "./layers";
 export * from "./lights";
 export * from "./passes";
@@ -305,6 +307,10 @@ export default class ThreeView<
   globe!: Globe;
   /** The atmosphere renderer that handles sky, sun, and atmospheric scattering effects. */
   atmosphere: Atmosphere;
+  /** Manages font loading, text shaping, and SDF atlas access. */
+  get fontManager(): FontManager {
+    return this._fontManager;
+  }
 
   /** Layer handle for the sky environment map effect layer. Used for sky reflections. */
   skyEnvMapLayer?: LayerHandle<SkyEnvMapEffectLayer>;
@@ -323,6 +329,7 @@ export default class ThreeView<
   private _drapedFeatureMaterials: DrapedMaterialCache = new Map();
 
   private _core: Core | undefined;
+  private _fontManager = new FontManager();
   private _options: Options;
   private _stats: RendererStats | undefined;
   private _eventDisposer: (() => void) | undefined;
@@ -885,6 +892,9 @@ export default class ThreeView<
     this._core = new Core(newId());
     this._core.start();
 
+    this._fontManager.setCore(this._core);
+    this.viewContext.fontManager = this._fontManager;
+
     this.globe = new Globe(this._globeHandler, this._options);
     this.viewContext.setGlobe(this.globe);
 
@@ -985,6 +995,7 @@ export default class ThreeView<
 
     // Dispose SelectiveEffectHelper
     this.selectiveEffectHelper.dispose();
+    this._fontManager.dispose();
     this.atmosphere._dispose();
 
     this.renderer.setAnimationLoop(null);

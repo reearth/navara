@@ -42,6 +42,7 @@ navara_wasm_utils.workspace = true
 navara_wasm_transferable.workspace = true
 navara_quadtree.workspace = true
 navara_globe.workspace = true
+navara_font.workspace = true
 
 [dev-dependencies]
 wasm-bindgen-test.workspace = true

@@ -1,61 +1,46 @@
 use guillotiere::Size;
 
-use crate::resource::{GlyphMetrics, SdfAtlas, SDF_PX_SIZE};
+use crate::resource::{GlyphMetrics, LRU_MIN_AGE, SDF_PX_SIZE, SdfAtlas};
 
-/// Generate an SDF image for a single glyph using fontsdf.
+/// Ensure all required glyphs (by glyph ID, post-shaping) are in the atlas.
 ///
-/// Returns the SDF pixel data (single-channel grayscale) and the glyph metrics.
-pub fn generate_glyph_sdf(
-    font: &fontsdf::Font,
-    character: char,
-) -> Option<(fontsdf::Metrics, Vec<u8>)> {
-    let (metrics, sdf_data) = font.rasterize_sdf(character, SDF_PX_SIZE);
-
-    if metrics.width == 0 || metrics.height == 0 {
-        return None;
-    }
-
-    Some((metrics, sdf_data))
-}
-
-/// Generate SDF atlas entries for all glyphs needed by a text string.
-///
-/// For each unique character, generates the SDF and packs it into the atlas.
-/// Skips glyphs that are already present in the atlas.
-pub fn populate_atlas_for_text(
-    font: &fontsdf::Font,
-    text: &str,
+/// For each glyph ID not yet in the atlas, rasterizes its SDF and packs it.
+/// Updates LRU timestamps for all requested glyphs.
+/// If the atlas is full, evicts the coldest unused glyphs before retrying.
+pub fn ensure_glyphs_in_atlas(
+    sdf_font: &fontsdf::Font,
+    glyph_ids: &[u16],
     atlas: &mut SdfAtlas,
+    current_frame: u64,
 ) {
-    // Collect unique characters
-    let mut chars: Vec<char> = text.chars().collect();
-    chars.sort();
-    chars.dedup();
+    for &glyph_id in glyph_ids {
+        // Always touch the glyph for LRU, even if already present
+        atlas.touch(glyph_id, current_frame);
 
-    for ch in chars {
-        let glyph_index = font.lookup_glyph_index(ch);
-
-        // Skip glyphs already in the atlas
-        if atlas.glyph_map.contains_key(&glyph_index) {
+        if atlas.contains(glyph_id) {
             continue;
         }
 
-        let Some((metrics, sdf_data)) = generate_glyph_sdf(font, ch) else {
-            bevy_log::warn!("Failed to generate SDF for character '{}'", ch);
-            continue;
-        };
+        let (metrics, sdf_data) = sdf_font.rasterize_indexed_sdf(glyph_id, SDF_PX_SIZE);
 
-        // Allocate space in the atlas
-        let alloc = atlas
-            .allocator
-            .allocate(Size::new(metrics.width as i32, metrics.height as i32));
+        if metrics.width == 0 || metrics.height == 0 {
+            continue;
+        }
+
+        let alloc_size = Size::new(metrics.width as i32, metrics.height as i32);
+
+        // Try to allocate; if full, evict cold glyphs and retry
+        let alloc = atlas.allocator.allocate(alloc_size).or_else(|| {
+            evict_cold_glyphs(atlas, current_frame, LRU_MIN_AGE);
+            atlas.allocator.allocate(alloc_size)
+        });
 
         let Some(alloc) = alloc else {
             bevy_log::warn!(
-                "Atlas full: could not allocate {}x{} for '{}'",
+                "Atlas full: could not allocate {}x{} for glyph {} even after eviction",
                 metrics.width,
                 metrics.height,
-                ch,
+                glyph_id,
             );
             continue;
         };
@@ -65,15 +50,16 @@ pub fn populate_atlas_for_text(
         let atlas_y = rect.min.y;
 
         // Copy single-channel SDF data into the RGBA atlas pixel buffer
-        for y in 0..metrics.height {
+        for y in (0..metrics.height).rev() {
             for x in 0..metrics.width {
                 let src_idx = y * metrics.width + x;
                 let dst_x = atlas_x as usize + x;
-                let dst_y = atlas_y as usize + y;
+                let dst_y = atlas_y as usize + (metrics.height as usize - 1 - y); // Flip Y for top-left origin
                 let dst_idx = (dst_y * atlas.width as usize + dst_x) * 4;
 
                 if src_idx < sdf_data.len() && dst_idx + 3 < atlas.pixel_data.len() {
                     let v = sdf_data[src_idx];
+                    // TODO: use a single channel for SDF and avoid redundant RGBA copies
                     atlas.pixel_data[dst_idx] = v;
                     atlas.pixel_data[dst_idx + 1] = v;
                     atlas.pixel_data[dst_idx + 2] = v;
@@ -83,7 +69,7 @@ pub fn populate_atlas_for_text(
         }
 
         atlas.glyph_map.insert(
-            glyph_index,
+            glyph_id,
             GlyphMetrics {
                 alloc_id: alloc.id,
                 atlas_x,
@@ -95,5 +81,32 @@ pub fn populate_atlas_for_text(
                 advance: metrics.advance_width,
             },
         );
+    }
+}
+
+/// Evict glyphs that haven't been used for at least `min_age` frames.
+///
+/// Frees atlas space by deallocating the coldest glyphs first.
+fn evict_cold_glyphs(atlas: &mut SdfAtlas, current_frame: u64, min_age: u64) {
+    let mut evictable: Vec<(u16, u64)> = atlas
+        .last_used
+        .iter()
+        .filter_map(|(&glyph_id, &last_frame)| {
+            if current_frame.saturating_sub(last_frame) >= min_age {
+                Some((glyph_id, last_frame))
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    // Sort by last_used ascending (coldest first)
+    evictable.sort_by_key(|&(_, frame)| frame);
+
+    for (glyph_id, _) in evictable {
+        if let Some(metrics) = atlas.glyph_map.remove(&glyph_id) {
+            atlas.allocator.deallocate(metrics.alloc_id);
+            atlas.last_used.remove(&glyph_id);
+        }
     }
 }

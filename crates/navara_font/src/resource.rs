@@ -9,10 +9,13 @@ pub const DEFAULT_ATLAS_SIZE: i32 = 1024;
 /// A single SDF glyph at this size can render both small and large text.
 pub const SDF_PX_SIZE: f32 = 64.0;
 
+/// Number of frames a glyph must be unused before it becomes evictable.
+pub const LRU_MIN_AGE: u64 = 120;
+
 /// Metrics for a single glyph in the SDF atlas.
 #[derive(Debug, Clone)]
 pub struct GlyphMetrics {
-    /// Allocation ID in the atlas (for potential deallocation)
+    /// Allocation ID in the atlas (for deallocation during LRU eviction)
     pub alloc_id: AllocId,
     /// X position of the glyph in the atlas (pixels)
     pub atlas_x: i32,
@@ -30,11 +33,11 @@ pub struct GlyphMetrics {
     pub advance: f32,
 }
 
-/// The SDF texture atlas for a loaded font.
+/// Per-font SDF texture atlas.
 ///
-/// Manages rectangle packing via guillotiere and stores per-glyph metrics
-/// so the TypeScript side knows where each glyph lives in the atlas texture.
-#[derive(Resource)]
+/// Each loaded font gets its own atlas. Glyphs are keyed by glyph ID
+/// (post-shaping, not Unicode codepoint) so that contextual forms
+/// (Arabic positional variants, ligatures, etc.) are stored correctly.
 pub struct SdfAtlas {
     /// Rectangle packer for allocating glyph regions
     pub allocator: AtlasAllocator,
@@ -44,58 +47,88 @@ pub struct SdfAtlas {
     pub width: u32,
     /// Atlas height in pixels
     pub height: u32,
-    /// Map from glyph index to its metrics/position in the atlas
+    /// Map from glyph ID (post-shaping) to its metrics/position in the atlas
     pub glyph_map: FxHashMap<u16, GlyphMetrics>,
+    /// LRU tracking: glyph ID → last frame the glyph was used
+    pub last_used: FxHashMap<u16, u64>,
 }
 
-impl Default for SdfAtlas {
-    fn default() -> Self {
-        let size = DEFAULT_ATLAS_SIZE;
+impl SdfAtlas {
+    pub fn new(size: i32) -> Self {
         Self {
             allocator: AtlasAllocator::new(Size::new(size, size)),
             pixel_data: vec![0u8; (size * size * 4) as usize],
             width: size as u32,
             height: size as u32,
             glyph_map: FxHashMap::default(),
+            last_used: FxHashMap::default(),
         }
+    }
+
+    /// Mark a glyph as used this frame (for LRU tracking).
+    pub fn touch(&mut self, glyph_id: u16, current_frame: u64) {
+        self.last_used.insert(glyph_id, current_frame);
+    }
+
+    /// Check if a glyph is already in the atlas.
+    pub fn contains(&self, glyph_id: u16) -> bool {
+        self.glyph_map.contains_key(&glyph_id)
     }
 }
 
-/// A loaded font stored in the cache.
-pub struct LoadedFont {
+impl Default for SdfAtlas {
+    fn default() -> Self {
+        Self::new(DEFAULT_ATLAS_SIZE)
+    }
+}
+
+/// A loaded font with its own SDF atlas.
+pub struct FontEntry {
     /// Raw font file bytes (kept alive for rustybuzz references)
     pub data: Vec<u8>,
-    /// Parsed fontsdf font (for SDF rasterization)
+    /// Parsed fontsdf font (for SDF rasterization by glyph ID)
     pub sdf_font: fontsdf::Font,
+    /// Per-font SDF atlas
+    pub atlas: SdfAtlas,
 }
 
 /// Cache of loaded fonts, keyed by URL.
 ///
-/// Prevents re-fetching and re-parsing the same font file.
-/// Also tracks which font is currently active (has its atlas generated).
+/// Each font entry owns its own SDF atlas so that different fonts
+/// don't compete for atlas space and the TypeScript side can receive
+/// a single atlas texture per font.
 #[derive(Default, Resource)]
 pub struct FontCache {
     /// Loaded fonts keyed by their URL
-    pub fonts: FxHashMap<String, LoadedFont>,
-    /// URL of the currently active font (the one with a generated SDF atlas)
-    pub active_font_url: Option<String>,
+    pub fonts: FxHashMap<String, FontEntry>,
+    /// Frame counter for LRU tracking (incremented each update cycle)
+    pub current_frame: u64,
 }
 
 impl FontCache {
-    /// Check if a font is already loaded by URL.
     pub fn is_loaded(&self, url: &str) -> bool {
         self.fonts.contains_key(url)
     }
 
-    /// Get a loaded font by URL.
-    pub fn get(&self, url: &str) -> Option<&LoadedFont> {
+    pub fn get(&self, url: &str) -> Option<&FontEntry> {
         self.fonts.get(url)
     }
 
-    /// Store a newly loaded font. Parses the font data for both SDF and shaping.
+    pub fn get_mut(&mut self, url: &str) -> Option<&mut FontEntry> {
+        self.fonts.get_mut(url)
+    }
+
+    /// Store a newly loaded font. Parses the font data and creates a fresh atlas.
     pub fn insert(&mut self, url: String, data: Vec<u8>) -> Result<(), &'static str> {
         let sdf_font = fontsdf::Font::from_bytes(&data)?;
-        self.fonts.insert(url, LoadedFont { data, sdf_font });
+        self.fonts.insert(
+            url,
+            FontEntry {
+                data,
+                sdf_font,
+                atlas: SdfAtlas::default(),
+            },
+        );
         Ok(())
     }
 }

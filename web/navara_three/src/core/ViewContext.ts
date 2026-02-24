@@ -5,6 +5,7 @@ import type { Material, Object3D, PerspectiveCamera } from "three";
 import type { ViewEvents } from "..";
 import type { Atmosphere } from "../atmosphere";
 import { Color } from "../Color";
+import type { FontManager } from "../font";
 import type { LayersManager } from "../layersManager";
 import type { RenderPassOrchestrator } from "../orchestrators";
 import type { Scenes } from "../scene";
@@ -32,6 +33,7 @@ export class ViewContext {
   public selectiveEffectRegistry?: SelectiveEffectHelper;
   public debugOptions: ViewDebugOptions;
   public globe?: Globe;
+  public fontManager?: FontManager;
 
   private readonly selectiveEffects: SelectiveEffectManager;
 

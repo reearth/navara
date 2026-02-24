@@ -21,3 +21,5 @@ export * from "./spherePoints";
 export * from "./pickableMesh";
 export * from "./rtcRteHelper";
 export * from "./instancedSprite";
+export * from "./sdfText";
+export * from "./instancedSdfText";

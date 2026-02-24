@@ -2,7 +2,7 @@ import { type TextMesh as NavaraTextMesh } from "@navara/engine";
 
 import type { BufferLoader } from "..";
 import type { ViewContext } from "../../core";
-import { InstancedTextMesh } from "../../mesh";
+import { InstancedSdfTextMesh, InstancedTextMesh } from "../../mesh";
 import { FEATURE_RENDER_ORDER } from "../../renderOrder";
 import type { RenderFlag } from "../../type";
 import type { CommonUniforms } from "../../uniforms";
@@ -14,6 +14,24 @@ export async function renderText(
   viewContext: ViewContext,
   layerId: string,
 ) {
+  const fontUrl = m.material.font;
+  const fontManager = viewContext.fontManager;
+
+  // Use SDF pipeline when a font URL is specified and FontManager is available
+  if (fontUrl && fontManager) {
+    await fontManager.loadFont(fontUrl);
+
+    const textGroup = new InstancedSdfTextMesh(m, buf, fontManager, fontUrl, uniforms, {
+      renderOrder: FEATURE_RENDER_ORDER,
+      viewContext,
+      layerId,
+    });
+
+    console.log(`Using SDF text for font ${fontUrl}`);
+    return textGroup;
+  }
+
+  // Fallback to Troika-based text
   const textGroup = new InstancedTextMesh(m, buf, uniforms, {
     renderOrder: FEATURE_RENDER_ORDER,
     viewContext,
@@ -24,7 +42,7 @@ export async function renderText(
 }
 
 export function processTextChanged(
-  obj: InstancedTextMesh,
+  obj: InstancedTextMesh | InstancedSdfTextMesh,
   m: NavaraTextMesh,
   buf: BufferLoader,
   active: boolean,
