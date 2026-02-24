@@ -7,6 +7,7 @@ use navara_geometry::PolygonResource;
 
 mod billboard;
 mod event;
+mod geometry;
 mod model;
 mod point;
 mod polygon;

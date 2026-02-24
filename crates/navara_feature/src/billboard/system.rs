@@ -5,25 +5,27 @@ use bevy_ecs::{
 };
 use navara_buffer_store::BufferStore;
 use navara_component::Deleted;
-use navara_core::{Aabb, EncodedVec3, WGS84_64};
 use navara_feature_component::{
     batch::{
         BatchIndex, BatchTable, BatchedFeature, FeatureBatchId, FeatureBatchIdMap, GlobalBatchIds,
     },
     id::FeatureId,
-    render::{RenderInformation, RenderableFeature, TransferablePointGeometry},
+    render::{RenderInformation, RenderableFeature},
     BatchedFeatureMarker,
 };
 use navara_layer::{LayerId, LayerStore};
 use navara_material::BillboardMaterial;
-use navara_math::{Transform, Vec3};
+use navara_math::Vec3;
 
 use navara_tile_component::{
-    compute_terrain_height_at_point, RasterTileQuadtree, TileExtent, TileMeshMarker,
-    TileTerrainDataRequesterQuery,
+    RasterTileQuadtree, TileExtent, TileMeshMarker, TileTerrainDataRequesterQuery,
 };
 
 use navara_feature_component::billboard::{BillboardGeometry, BillboardMarker};
+
+use crate::geometry::point::{
+    build_transform, compute_rtc_center, resolve_terrain_height, PositionBuffer,
+};
 
 #[allow(clippy::type_complexity)]
 pub fn transfer_batched_mesh(
@@ -61,100 +63,42 @@ pub fn transfer_batched_mesh(
         tile_extent_component,
     ) in &mut batched_features
     {
-        // Extract all point geometries and create batch indices and IDs in a single loop
         let feature_len = batched_feature.features.len();
         let mut batch_indices = Vec::with_capacity(feature_len);
         let mut batch_ids = Vec::with_capacity(feature_len);
         let mut crs = None;
 
-        // Get the global batch IDs from the buffer store
         let Some(global_ids) = buf.get_u32(&global_batch_ids.handle) else {
             continue;
         };
 
-        let rtc_center = tile_extent_component.map(|extent_component| {
-            let aabb = Aabb::from_extent_f64(extent_component.extent, 0., 1.);
-            aabb.center
-        });
-
-        // Collect positions as f32 for RTC, or encoded high/low f32 for RTE
-        let mut rtc_coords = Vec::with_capacity(feature_len * 3);
-        let mut rte_high = Vec::with_capacity(feature_len * 3);
-        let mut rte_low = Vec::with_capacity(feature_len * 3);
+        let rtc_center = compute_rtc_center(tile_extent_component);
+        let mut positions = PositionBuffer::new(rtc_center, feature_len);
 
         // TODO: Remove this iteration
         for feature_entity in &batched_feature.features {
             let (point_geometry, batch_index) = points.get(*feature_entity).unwrap();
 
-            // Store the CRS from the first point
             if crs.is_none() {
                 crs = Some(point_geometry.crs.clone());
             }
 
-            // Transform the coordinates and add to our batch
-            let transformed_pos =
-                point_geometry
-                    .crs
-                    .to_vec3(WGS84_64, point_geometry.coords, material.height);
+            positions.push_from_crs(
+                point_geometry.coords,
+                &point_geometry.crs,
+                material.height,
+                0.0,
+            );
 
-            if let Some(center) = rtc_center {
-                let local_pos = Vec3::new(
-                    transformed_pos.x - center.x,
-                    transformed_pos.y - center.y,
-                    transformed_pos.z - center.z,
-                );
-                rtc_coords.push(local_pos.x as f32);
-                rtc_coords.push(local_pos.y as f32);
-                rtc_coords.push(local_pos.z as f32);
-            } else {
-                let encoded = EncodedVec3::encode(transformed_pos);
-                rte_high.push(encoded.high.x as f32);
-                rte_high.push(encoded.high.y as f32);
-                rte_high.push(encoded.high.z as f32);
-                rte_low.push(encoded.low.x as f32);
-                rte_low.push(encoded.low.y as f32);
-                rte_low.push(encoded.low.z as f32);
-            }
-
-            // Add batch index
             batch_indices.push(batch_index.0);
-
-            let global_index = (batch_index.0) as usize;
+            let global_index = batch_index.0 as usize;
             batch_ids.push(global_ids[global_index] as f32);
         }
 
         let crs = crs.unwrap();
 
-        let (transform, geometry) = if let Some(center) = rtc_center {
-            (
-                Transform::from_translation(center).with_scale(Vec3::new(
-                    material.size as f64,
-                    material.size as f64,
-                    material.size as f64,
-                )),
-                TransferablePointGeometry::with_buf_rtc(
-                    &mut buf,
-                    rtc_coords,
-                    batch_indices,
-                    batch_ids,
-                ),
-            )
-        } else {
-            (
-                Transform::from_scale(Vec3::new(
-                    material.size as f64,
-                    material.size as f64,
-                    material.size as f64,
-                )),
-                TransferablePointGeometry::with_buf_rte(
-                    &mut buf,
-                    rte_high,
-                    rte_low,
-                    batch_indices,
-                    batch_ids,
-                ),
-            )
-        };
+        let geometry = positions.transfer(&mut buf, batch_indices, batch_ids);
+        let transform = build_transform(rtc_center, material.size);
 
         // Create the renderable feature entity
         let entity = commands
@@ -189,6 +133,7 @@ pub fn transfer_batched_mesh(
     }
 }
 
+// TODO: We might get the terrain height in the shader from a depth buffer.
 // TODO: This system is executed whenever a tile is added.
 //       This isn't efficient, so we need to update this system
 //       to execute only when the layer's bounding box is within the camera frustum.
@@ -247,77 +192,33 @@ pub fn update_height_by_terrain_for_batched(
                 };
 
                 let feature_len = batched_feature.features.len();
-                let is_rte = geometry.position_3d_high.is_some();
-
-                if is_rte {
-                    // RTE path: collect Vec3 positions at f64 precision
-                    let mut positions = Vec::with_capacity(feature_len);
-
-                    // TODO: Improve the performance of this iteration. We might get the terrain height in the shader from a depth buffer.
-                    for feature_id in &batched_feature.features {
-                        let geom = geometries.get(*feature_id).unwrap();
-                        if material.clamp_to_ground {
-                            let terrain_height = compute_terrain_height_at_point(
-                                &mut qt,
-                                &mut buf,
-                                &terrain_data_requester,
-                                &geom.crs.to_lng_lat(WGS84_64, geom.coords),
-                            )
-                            .unwrap_or(0.);
-                            render_info.current_terrain_height = terrain_height;
-                        } else {
-                            render_info.current_terrain_height = 0.;
-                        }
-                        let position = geom.crs.to_vec3(
-                            WGS84_64,
-                            geom.coords,
-                            material.height + render_info.current_terrain_height as f32,
-                        );
-                        positions.push(position);
-                    }
-
-                    geometry.update_rte_positions(&mut buf, &positions);
+                let rtc_center = if geometry.position_3d_high.is_some() {
+                    None
                 } else {
-                    // RTC path: subtract center, cast to f32
-                    let mut all_coords = Vec::with_capacity(feature_len * 3);
-                    let rtc_center = transform.translation;
+                    Some(transform.translation)
+                };
+                let mut positions = PositionBuffer::new(rtc_center, feature_len);
 
-                    for feature_id in &batched_feature.features {
-                        let geom = geometries.get(*feature_id).unwrap();
-                        if material.clamp_to_ground {
-                            let terrain_height = compute_terrain_height_at_point(
-                                &mut qt,
-                                &mut buf,
-                                &terrain_data_requester,
-                                &geom.crs.to_lng_lat(WGS84_64, geom.coords),
-                            )
-                            .unwrap_or(0.);
-                            render_info.current_terrain_height = terrain_height;
-                        } else {
-                            render_info.current_terrain_height = 0.;
-                        }
-                        let position = geom.crs.to_vec3(
-                            WGS84_64,
-                            geom.coords,
-                            material.height + render_info.current_terrain_height as f32,
-                        );
-
-                        let local_pos = Vec3::new(
-                            position.x - rtc_center.x,
-                            position.y - rtc_center.y,
-                            position.z - rtc_center.z,
-                        );
-
-                        all_coords.push(local_pos.x as f32);
-                        all_coords.push(local_pos.y as f32);
-                        all_coords.push(local_pos.z as f32);
-                    }
-
-                    if let Some(position) = &mut geometry.position {
-                        buf.remove(&position.data);
-                        position.data = buf.new_f32(all_coords);
-                    }
+                for feature_entity in &batched_feature.features {
+                    let geom = geometries.get(*feature_entity).unwrap();
+                    let terrain_height = resolve_terrain_height(
+                        geom.coords,
+                        &geom.crs,
+                        material.clamp_to_ground,
+                        &mut qt,
+                        &mut buf,
+                        &terrain_data_requester,
+                    );
+                    render_info.current_terrain_height = terrain_height;
+                    positions.push_from_crs(
+                        geom.coords,
+                        &geom.crs,
+                        material.height,
+                        terrain_height,
+                    );
                 }
+
+                positions.apply_to(&mut buf, geometry);
             }
             _ => unreachable!(),
         };

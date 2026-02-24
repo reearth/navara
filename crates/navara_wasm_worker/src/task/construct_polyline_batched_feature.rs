@@ -38,6 +38,7 @@ fn construct_polyline(
     for idx in 0..features.length {
         let (geometry, batch_index, batch_id) = features.to_transferable_by_index(idx);
 
+        // TODO: Support RTC for MVT without clamp_to_ground.
         let Some((extent, mut constructed_geometry)) =
             construct_polyline_feature(&material, geometry, &crs, true)
         else {
