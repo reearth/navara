@@ -19,6 +19,8 @@ use navara_material::Appearance;
 use navara_math::Vec3;
 use navara_parser::geojson::{GeoJson, Geometry, Value};
 
+use super::builder::{GeometryAppearanceKind, GeometryBuilder};
+
 fn coords(f: &[f64]) -> Vec3 {
     Vec3::new(f[0], f[1], *f.get(2).unwrap_or(&0.))
 }
@@ -40,83 +42,6 @@ fn get_polygon_holes(f: &[Vec<Vec<f64>>]) -> Option<Vec<Hierarchy>> {
         .collect();
 
     (!holes.is_empty()).then_some(holes)
-}
-
-/// Identifies which geometry-appearance combination a group belongs to.
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
-enum GeometryAppearanceKind {
-    Point,
-    Billboard,
-    Text,
-    Polyline,
-    Polygon,
-}
-
-/// Accumulates feature entities and batch IDs during geometry construction.
-struct GeometryBuilder<'a> {
-    groups: Vec<(GeometryAppearanceKind, Vec<Entity>, Vec<u32>)>,
-    batch_ids_by_kind: Vec<(GeometryAppearanceKind, u32)>,
-    batch_table: &'a mut BatchTable,
-    layer_id: &'a str,
-}
-
-impl<'a> GeometryBuilder<'a> {
-    fn new(batch_table: &'a mut BatchTable, layer_id: &'a str) -> Self {
-        Self {
-            groups: Vec::new(),
-            batch_ids_by_kind: Vec::new(),
-            batch_table,
-            layer_id,
-        }
-    }
-
-    fn get_or_init_batch_id(&mut self, kind: GeometryAppearanceKind) -> u32 {
-        if let Some(entry) = self.batch_ids_by_kind.iter().find(|(k, _)| *k == kind) {
-            entry.1
-        } else {
-            let id = self
-                .batch_table
-                .init_values(Some(self.layer_id.to_owned()))
-                .unwrap_or(0);
-            self.batch_ids_by_kind.push((kind, id));
-            id
-        }
-    }
-
-    fn get_or_create_group(&mut self, kind: GeometryAppearanceKind) -> usize {
-        if let Some(pos) = self.groups.iter().position(|(k, _, _)| *k == kind) {
-            pos
-        } else {
-            self.groups.push((kind, Vec::new(), Vec::new()));
-            self.groups.len() - 1
-        }
-    }
-
-    fn add_feature(
-        &mut self,
-        kind: GeometryAppearanceKind,
-        properties: &Option<serde_json::Map<String, serde_json::Value>>,
-        entity: Entity,
-    ) -> u32 {
-        let feature_batch_id = self.get_or_init_batch_id(kind);
-        let group_idx = self.get_or_create_group(kind);
-
-        let props = properties
-            .as_ref()
-            .and_then(|prop| serde_json::to_value(prop).ok())
-            .unwrap_or(serde_json::Value::Null);
-        self.batch_table.add_values(feature_batch_id, props);
-
-        let batch_id = self
-            .batch_table
-            .init_values(Some(self.layer_id.to_owned()))
-            .unwrap_or(0);
-        self.groups[group_idx].2.push(batch_id);
-
-        let batch_index = self.groups[group_idx].2.len() as u32 - 1;
-        self.groups[group_idx].1.push(entity);
-        batch_index
-    }
 }
 
 /// Construct batched feature entities from GeoJSON data.
@@ -532,10 +457,11 @@ fn spawn_batched_entity(
 mod test {
     use super::*;
     use bevy_app::{App, Update};
-    use bevy_ecs::query::With;
     use bevy_ecs::prelude::Resource;
+    use bevy_ecs::query::With;
     use bevy_ecs::system::{Commands, ResMut};
     use navara_buffer_store::BufferStore;
+    use navara_core::CRS;
     use navara_feature_component::{
         batch::{BatchTable, BatchedFeature, GlobalBatchIds},
         billboard::{BillboardGeometry, BillboardMarker},
@@ -545,7 +471,6 @@ mod test {
         text::{TextGeometry, TextMarker},
         BatchedFeatureMarker,
     };
-    use navara_core::CRS;
     use navara_material::{
         Appearance, BillboardMaterial, PointMaterial, PolygonMaterial, PolylineMaterial,
         TextMaterial,
