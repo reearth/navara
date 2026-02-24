@@ -75,7 +75,6 @@ pub fn transfer_batched_mesh(
         let rtc_center = compute_rtc_center(tile_extent_component);
         let mut positions = PositionBuffer::new(rtc_center, feature_len);
 
-        // TODO: Remove this iteration
         for feature_entity in &batched_feature.features {
             let (point_geometry, batch_index) = points.get(*feature_entity).unwrap();
 

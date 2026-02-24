@@ -67,11 +67,11 @@ impl<'a> GeometryBuilder<'a> {
             .unwrap_or(serde_json::Value::Null);
         self.batch_table.add_values(feature_batch_id, props);
 
-        let batch_id = self
+        let global_batch_id = self
             .batch_table
             .init_values(Some(self.layer_id.to_owned()))
             .unwrap_or(0);
-        self.groups[group_idx].2.push(batch_id);
+        self.groups[group_idx].2.push(global_batch_id);
 
         let batch_index = self.groups[group_idx].2.len() as u32 - 1;
         self.groups[group_idx].1.push(entity);

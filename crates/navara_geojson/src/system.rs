@@ -101,17 +101,6 @@ pub fn update_geo_json_layer(
                             render_info.should_recalculate_height = true;
                         }
                     }
-                    RenderableFeature::Model {
-                        coordinates,
-                        crs,
-                        material,
-                        transform,
-                        ..
-                    } => {
-                        if let Appearance::Model(mat) = &u.appearance {
-                            material.update(mat, coordinates, crs, transform);
-                        }
-                    }
                     RenderableFeature::Polyline {
                         material,
                         render_info,
@@ -148,29 +137,14 @@ pub fn delete_geo_json_layer(
     mut layer_store: ResMut<LayerStore>,
     deleted: Query<(Entity, &DeleteGeoJsonLayerMarker)>,
     layers: Query<(Entity, &GeoJsonLayer)>,
-    mut features: Query<&mut RenderableFeature>,
-    mut buf: ResMut<BufferStore>,
     batched_features: Query<(Entity, &LayerId, &BatchedFeature), Without<RenderableFeature>>,
-    mut batch_table: ResMut<BatchTable>,
 ) {
     for (e, d) in &deleted {
-        let entities = layer_store.get(&d.0);
-        if let Some(vec) = entities {
-            // delete RenderableFeature and related Buffers
-            for entity in vec {
-                if let Ok(mut feature) = features.get_mut(*entity) {
-                    feature.destroy(&mut buf, &mut batch_table);
-                }
-
-                commands.entity(*entity).insert(Deleted);
-            }
-        }
-
         // delete BatchedFeature entities with this layer id
         for (entity, l_id, batched) in batched_features.iter() {
             if l_id.0 == d.0 {
                 batched.despawn_recursively(&mut commands);
-                commands.entity(entity).despawn();
+                commands.entity(entity).insert(Deleted);
             }
         }
 

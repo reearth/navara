@@ -646,13 +646,11 @@ impl TransferablePointGeometry {
             buf.remove(&position_3d_low.data);
         }
 
-        let Some(vec_ids) = buf.remove_f32(&self.batch_ids.data) else {
-            return;
+        if let Some(vec_ids) = buf.remove_f32(&self.batch_ids.data) {
+            for i in (0..vec_ids.len()).step_by(self.batch_ids.size as usize) {
+                batch_table.remove(&(vec_ids[i] as u32));
+            }
         };
-
-        for i in (0..vec_ids.len()).step_by(self.batch_ids.size as usize) {
-            batch_table.remove(&(vec_ids[i] as u32));
-        }
 
         buf.remove(&self.batch_index.data);
     }
