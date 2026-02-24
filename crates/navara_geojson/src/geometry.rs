@@ -530,59 +530,137 @@ fn spawn_batched_entity(
 
 #[cfg(test)]
 mod test {
+    use super::*;
     use bevy_app::{App, Update};
     use bevy_ecs::query::With;
+    use bevy_ecs::prelude::Resource;
+    use bevy_ecs::system::{Commands, ResMut};
     use navara_buffer_store::BufferStore;
-    use navara_event_store::EventStore;
-    use navara_feature::FeaturePlugin;
     use navara_feature_component::{
-        batch::{BatchedFeature, GlobalBatchIds},
+        batch::{BatchTable, BatchedFeature, GlobalBatchIds},
         billboard::{BillboardGeometry, BillboardMarker},
-        id::FeatureId,
         point::{PointGeometry, PointMarker},
         polygon::{PolygonGeometry, PolygonMarker},
         polyline::{PolylineGeometry, PolylineMarker},
         text::{TextGeometry, TextMarker},
         BatchedFeatureMarker,
     };
-    use navara_layer::{GeoJsonLayer, GeoJsonLayerData, LayerStore};
+    use navara_core::CRS;
     use navara_material::{
         Appearance, BillboardMaterial, PointMaterial, PolygonMaterial, PolylineMaterial,
         TextMaterial,
     };
     use navara_parser::geojson::GeoJson;
-    use navara_tile_component::RasterTileQuadtree;
 
-    use crate::system::construct_feature;
+    #[derive(Resource)]
+    struct TestInput {
+        geojson: GeoJson,
+        appearances: Vec<Appearance>,
+    }
 
-    fn initialize_app() -> App {
+    fn test_construct_system(
+        mut commands: Commands,
+        mut batch_table: ResMut<BatchTable>,
+        mut buf: ResMut<BufferStore>,
+        input: bevy_ecs::system::Res<TestInput>,
+    ) {
+        construct_geometry(
+            &mut commands,
+            &mut batch_table,
+            &mut buf,
+            &input.geojson,
+            &input.appearances,
+            "test_layer",
+        );
+    }
+
+    fn run_construct(json: &str, appearances: Vec<Appearance>) -> App {
         let mut app = App::new();
-
         app.init_resource::<BufferStore>();
-        app.init_resource::<EventStore>();
-        app.insert_resource(RasterTileQuadtree::new_with_linear_qt());
-        app.insert_resource(LayerStore::new());
-        app.add_plugins(FeaturePlugin);
-        app.add_systems(Update, construct_feature);
+        app.init_resource::<BatchTable>();
 
+        let geojson = GeoJson::from_json_value(json.parse().unwrap()).unwrap();
+        app.insert_resource(TestInput {
+            geojson,
+            appearances,
+        });
+        app.add_systems(Update, test_construct_system);
+        app.update();
         app
     }
 
-    fn construct_geojson_layer(json: &str, appearances: Vec<Appearance>) -> GeoJsonLayer {
-        let geojson = GeoJson::from_json_value(json.parse().unwrap()).unwrap();
-        GeoJsonLayer {
-            layer_id: "test_layer".to_string(),
-            data: Some(GeoJsonLayerData::GeoJson(geojson)),
-            crs: None,
-            appearances,
-        }
+    // --- Helper function tests ---
+
+    #[test]
+    fn coords_2d_defaults_z_to_zero() {
+        let result = coords(&[139.75, 35.68]);
+        assert_eq!(result.x, 139.75);
+        assert_eq!(result.y, 35.68);
+        assert_eq!(result.z, 0.0);
     }
 
     #[test]
-    fn it_should_create_batched_feature_for_point() {
-        let mut app = initialize_app();
+    fn coords_3d_preserves_elevation() {
+        let result = coords(&[139.75, 35.68, 100.5]);
+        assert_eq!(result.x, 139.75);
+        assert_eq!(result.y, 35.68);
+        assert_eq!(result.z, 100.5);
+    }
 
-        app.world_mut().spawn(construct_geojson_layer(
+    #[test]
+    fn multi_flat_coords_flattens_with_default_z() {
+        let input = vec![vec![1.0, 2.0], vec![3.0, 4.0]];
+        let result = multi_flat_coords(&input);
+        assert_eq!(result, vec![1.0, 2.0, 0.0, 3.0, 4.0, 0.0]);
+    }
+
+    #[test]
+    fn multi_flat_coords_flattens_with_z() {
+        let input = vec![vec![1.0, 2.0, 10.0], vec![3.0, 4.0, 20.0]];
+        let result = multi_flat_coords(&input);
+        assert_eq!(result, vec![1.0, 2.0, 10.0, 3.0, 4.0, 20.0]);
+    }
+
+    #[test]
+    fn get_polygon_holes_returns_none_for_single_ring() {
+        let rings = vec![vec![
+            vec![0.0, 0.0],
+            vec![1.0, 0.0],
+            vec![1.0, 1.0],
+            vec![0.0, 0.0],
+        ]];
+        assert!(get_polygon_holes(&rings).is_none());
+    }
+
+    #[test]
+    fn get_polygon_holes_returns_holes() {
+        let rings = vec![
+            vec![
+                vec![0.0, 0.0],
+                vec![10.0, 0.0],
+                vec![10.0, 10.0],
+                vec![0.0, 0.0],
+            ],
+            vec![
+                vec![2.0, 2.0],
+                vec![4.0, 2.0],
+                vec![4.0, 4.0],
+                vec![2.0, 2.0],
+            ],
+        ];
+        let holes = get_polygon_holes(&rings).unwrap();
+        assert_eq!(holes.len(), 1);
+        assert_eq!(
+            holes[0].outer_ring,
+            vec![2.0, 2.0, 0.0, 4.0, 2.0, 0.0, 4.0, 4.0, 0.0, 2.0, 2.0, 0.0]
+        );
+    }
+
+    // --- construct_geometry tests ---
+
+    #[test]
+    fn it_should_create_batched_feature_for_point() {
+        let mut app = run_construct(
             r#"{
     "type": "FeatureCollection",
     "features": [
@@ -605,9 +683,7 @@ mod test {
     ]
 }"#,
             vec![Appearance::Point(PointMaterial::default())],
-        ));
-
-        app.update();
+        );
 
         // Should have 1 BatchedFeature parent with PointMarker
         let mut batched_query = app
@@ -621,7 +697,9 @@ mod test {
         let mut child_query = app
             .world_mut()
             .query_filtered::<&PointGeometry, With<BatchedFeatureMarker>>();
-        assert_eq!(child_query.iter(app.world()).count(), 2);
+        let children: Vec<_> = child_query.iter(app.world()).collect();
+        assert_eq!(children.len(), 2);
+        assert_eq!(children[0].crs, CRS::Geographic);
 
         // Verify GlobalBatchIds
         let mut global_ids_query = app
@@ -634,9 +712,7 @@ mod test {
 
     #[test]
     fn it_should_create_batched_feature_for_multipoint() {
-        let mut app = initialize_app();
-
-        app.world_mut().spawn(construct_geojson_layer(
+        let mut app = run_construct(
             r#"{
     "type": "FeatureCollection",
     "features": [
@@ -654,11 +730,8 @@ mod test {
     ]
 }"#,
             vec![Appearance::Point(PointMaterial::default())],
-        ));
+        );
 
-        app.update();
-
-        // MultiPoint spawns 2 child entities
         let mut batched_query = app
             .world_mut()
             .query_filtered::<&BatchedFeature, With<PointMarker>>();
@@ -674,9 +747,7 @@ mod test {
 
     #[test]
     fn it_should_create_batched_feature_for_billboard() {
-        let mut app = initialize_app();
-
-        app.world_mut().spawn(construct_geojson_layer(
+        let mut app = run_construct(
             r#"{
     "type": "FeatureCollection",
     "features": [
@@ -684,7 +755,7 @@ mod test {
             "type": "Feature",
             "properties": {},
             "geometry": {
-                "coordinates": [139.75227193360223, 35.68520091767046],
+                "coordinates": [139.75, 35.68],
                 "type": "Point"
             }
         },
@@ -692,16 +763,14 @@ mod test {
             "type": "Feature",
             "properties": {},
             "geometry": {
-                "coordinates": [139.77250531915263, 35.71562661633277],
+                "coordinates": [139.77, 35.71],
                 "type": "Point"
             }
         }
     ]
 }"#,
             vec![Appearance::Billboard(BillboardMaterial::default())],
-        ));
-
-        app.update();
+        );
 
         let mut batched_query = app
             .world_mut()
@@ -718,9 +787,7 @@ mod test {
 
     #[test]
     fn it_should_create_batched_feature_for_text() {
-        let mut app = initialize_app();
-
-        app.world_mut().spawn(construct_geojson_layer(
+        let mut app = run_construct(
             r#"{
     "type": "FeatureCollection",
     "features": [
@@ -728,16 +795,14 @@ mod test {
             "type": "Feature",
             "properties": {},
             "geometry": {
-                "coordinates": [139.75227193360223, 35.68520091767046],
+                "coordinates": [139.75, 35.68],
                 "type": "Point"
             }
         }
     ]
 }"#,
             vec![Appearance::Text(TextMaterial::default())],
-        ));
-
-        app.update();
+        );
 
         let mut batched_query = app
             .world_mut()
@@ -754,9 +819,7 @@ mod test {
 
     #[test]
     fn it_should_create_batched_feature_for_linestring() {
-        let mut app = initialize_app();
-
-        app.world_mut().spawn(construct_geojson_layer(
+        let mut app = run_construct(
             r#"{
     "type": "FeatureCollection",
     "features": [
@@ -786,9 +849,7 @@ mod test {
     ]
 }"#,
             vec![Appearance::Polyline(PolylineMaterial::default())],
-        ));
-
-        app.update();
+        );
 
         let mut batched_query = app
             .world_mut()
@@ -805,9 +866,7 @@ mod test {
 
     #[test]
     fn it_should_create_batched_feature_for_multilinestring() {
-        let mut app = initialize_app();
-
-        app.world_mut().spawn(construct_geojson_layer(
+        let mut app = run_construct(
             r#"{
     "type": "FeatureCollection",
     "features": [
@@ -825,24 +884,19 @@ mod test {
     ]
 }"#,
             vec![Appearance::Polyline(PolylineMaterial::default())],
-        ));
-
-        app.update();
+        );
 
         let mut batched_query = app
             .world_mut()
             .query_filtered::<&BatchedFeature, With<PolylineMarker>>();
         let batched_features: Vec<_> = batched_query.iter(app.world()).collect();
         assert_eq!(batched_features.len(), 1);
-        // MultiLineString with 2 line strings = 2 child entities
         assert_eq!(batched_features[0].features.len(), 2);
     }
 
     #[test]
     fn it_should_create_batched_feature_for_polygon() {
-        let mut app = initialize_app();
-
-        app.world_mut().spawn(construct_geojson_layer(
+        let mut app = run_construct(
             r#"{
     "type": "FeatureCollection",
     "features": [
@@ -865,9 +919,7 @@ mod test {
     ]
 }"#,
             vec![Appearance::Polygon(PolygonMaterial::default())],
-        ));
-
-        app.update();
+        );
 
         let mut batched_query = app
             .world_mut()
@@ -884,9 +936,7 @@ mod test {
 
     #[test]
     fn it_should_create_batched_feature_for_multipolygon() {
-        let mut app = initialize_app();
-
-        app.world_mut().spawn(construct_geojson_layer(
+        let mut app = run_construct(
             r#"{
     "type": "FeatureCollection",
     "features": [
@@ -920,9 +970,7 @@ mod test {
     ]
 }"#,
             vec![Appearance::Polygon(PolygonMaterial::default())],
-        ));
-
-        app.update();
+        );
 
         let mut batched_query = app
             .world_mut()
@@ -934,9 +982,7 @@ mod test {
 
     #[test]
     fn it_should_handle_single_feature_geojson() {
-        let mut app = initialize_app();
-
-        app.world_mut().spawn(construct_geojson_layer(
+        let mut app = run_construct(
             r#"{
     "type": "Feature",
     "properties": {"name": "single"},
@@ -946,9 +992,7 @@ mod test {
     }
 }"#,
             vec![Appearance::Point(PointMaterial::default())],
-        ));
-
-        app.update();
+        );
 
         let mut batched_query = app
             .world_mut()
@@ -960,17 +1004,13 @@ mod test {
 
     #[test]
     fn it_should_handle_geometry_only_geojson() {
-        let mut app = initialize_app();
-
-        app.world_mut().spawn(construct_geojson_layer(
+        let mut app = run_construct(
             r#"{
     "coordinates": [139.75, 35.68],
     "type": "Point"
 }"#,
             vec![Appearance::Point(PointMaterial::default())],
-        ));
-
-        app.update();
+        );
 
         let mut batched_query = app
             .world_mut()
@@ -982,10 +1022,7 @@ mod test {
 
     #[test]
     fn it_should_create_separate_batched_features_for_mixed_geometry() {
-        let mut app = initialize_app();
-
-        // A FeatureCollection with both Point and LineString, with both Point and Polyline appearances
-        app.world_mut().spawn(construct_geojson_layer(
+        let mut app = run_construct(
             r#"{
     "type": "FeatureCollection",
     "features": [
@@ -1011,11 +1048,8 @@ mod test {
                 Appearance::Point(PointMaterial::default()),
                 Appearance::Polyline(PolylineMaterial::default()),
             ],
-        ));
+        );
 
-        app.update();
-
-        // Should have separate BatchedFeature entities for Point and Polyline
         let mut point_query = app
             .world_mut()
             .query_filtered::<&BatchedFeature, With<PointMarker>>();
@@ -1028,46 +1062,8 @@ mod test {
     }
 
     #[test]
-    fn it_should_have_feature_id_on_batched_feature() {
-        let mut app = initialize_app();
-
-        app.world_mut().spawn(construct_geojson_layer(
-            r#"{
-    "type": "FeatureCollection",
-    "features": [
-        {
-            "type": "Feature",
-            "properties": {},
-            "geometry": {
-                "coordinates": [139.75, 35.68],
-                "type": "Point"
-            }
-        }
-    ]
-}"#,
-            vec![Appearance::Point(PointMaterial::default())],
-        ));
-
-        app.update();
-        // Second update needed: construct_feature spawns BatchedFeature in first frame,
-        // transfer_batched_mesh detects it via Added<BatchedFeature> in the next frame.
-        app.update();
-
-        // BatchedFeature parent should have FeatureId
-        let mut query = app
-            .world_mut()
-            .query_filtered::<&FeatureId, With<PointMarker>>();
-        let feature_ids: Vec<_> = query.iter(app.world()).collect();
-        assert_eq!(feature_ids.len(), 1);
-        // After transfer_batched_mesh processes it, FeatureId should point to the RenderableFeature
-        assert!(feature_ids[0].0.is_some());
-    }
-
-    #[test]
     fn it_should_handle_polygon_with_holes() {
-        let mut app = initialize_app();
-
-        app.world_mut().spawn(construct_geojson_layer(
+        let mut app = run_construct(
             r#"{
     "type": "FeatureCollection",
     "features": [
@@ -1097,9 +1093,7 @@ mod test {
     ]
 }"#,
             vec![Appearance::Polygon(PolygonMaterial::default())],
-        ));
-
-        app.update();
+        );
 
         let mut batched_query = app
             .world_mut()
@@ -1116,10 +1110,7 @@ mod test {
 
     #[test]
     fn it_should_not_create_batched_feature_for_mismatched_appearance() {
-        let mut app = initialize_app();
-
-        // Point geometry with Polyline appearance — should produce no batched features
-        app.world_mut().spawn(construct_geojson_layer(
+        let mut app = run_construct(
             r#"{
     "type": "FeatureCollection",
     "features": [
@@ -1134,13 +1125,237 @@ mod test {
     ]
 }"#,
             vec![Appearance::Polyline(PolylineMaterial::default())],
-        ));
-
-        app.update();
+        );
 
         let mut batched_query = app
             .world_mut()
             .query_filtered::<&BatchedFeature, With<PolylineMarker>>();
         assert_eq!(batched_query.iter(app.world()).count(), 0);
+    }
+
+    #[derive(Resource, Default)]
+    struct TestOutput(Vec<Entity>);
+
+    fn test_construct_with_output_system(
+        mut commands: Commands,
+        mut batch_table: ResMut<BatchTable>,
+        mut buf: ResMut<BufferStore>,
+        input: bevy_ecs::system::Res<TestInput>,
+        mut out: ResMut<TestOutput>,
+    ) {
+        out.0 = construct_geometry(
+            &mut commands,
+            &mut batch_table,
+            &mut buf,
+            &input.geojson,
+            &input.appearances,
+            "test_layer",
+        );
+    }
+
+    #[test]
+    fn it_should_return_spawned_parent_entities() {
+        let mut app = App::new();
+        app.init_resource::<BufferStore>();
+        app.init_resource::<BatchTable>();
+        app.init_resource::<TestOutput>();
+
+        let geojson = GeoJson::from_json_value(
+            r#"{
+    "type": "FeatureCollection",
+    "features": [
+        {
+            "type": "Feature",
+            "properties": {},
+            "geometry": { "coordinates": [139.75, 35.68], "type": "Point" }
+        },
+        {
+            "type": "Feature",
+            "properties": {},
+            "geometry": { "coordinates": [139.75, 35.68], "type": "Point" }
+        },
+        {
+            "type": "Feature",
+            "properties": {},
+            "geometry": { "coordinates": [139.75, 35.68], "type": "Point" }
+        }
+    ]
+}"#
+            .parse()
+            .unwrap(),
+        )
+        .unwrap();
+        app.insert_resource(TestInput {
+            geojson,
+            appearances: vec![Appearance::Point(PointMaterial::default())],
+        });
+        app.add_systems(Update, test_construct_with_output_system);
+        app.update();
+
+        let output = app.world().resource::<TestOutput>();
+        assert_eq!(output.0.len(), 1);
+    }
+
+    #[test]
+    fn it_should_handle_all_geometry_types_with_all_appearances() {
+        let mut app = run_construct(
+            r#"{
+    "type": "FeatureCollection",
+    "features": [
+        {
+            "type": "Feature",
+            "properties": {"type": "point"},
+            "geometry": {
+                "coordinates": [139.75, 35.68],
+                "type": "Point"
+            }
+        },
+        {
+            "type": "Feature",
+            "properties": {"type": "multipoint"},
+            "geometry": {
+                "coordinates": [[139.76, 35.69], [139.77, 35.70]],
+                "type": "MultiPoint"
+            }
+        },
+        {
+            "type": "Feature",
+            "properties": {"type": "linestring"},
+            "geometry": {
+                "coordinates": [[139.75, 35.68], [139.76, 35.69], [139.77, 35.70]],
+                "type": "LineString"
+            }
+        },
+        {
+            "type": "Feature",
+            "properties": {"type": "multilinestring"},
+            "geometry": {
+                "coordinates": [
+                    [[139.75, 35.68], [139.76, 35.69]],
+                    [[139.77, 35.70], [139.78, 35.71]]
+                ],
+                "type": "MultiLineString"
+            }
+        },
+        {
+            "type": "Feature",
+            "properties": {"type": "polygon"},
+            "geometry": {
+                "coordinates": [
+                    [
+                        [139.75, 35.68],
+                        [139.76, 35.68],
+                        [139.76, 35.69],
+                        [139.75, 35.69],
+                        [139.75, 35.68]
+                    ]
+                ],
+                "type": "Polygon"
+            }
+        },
+        {
+            "type": "Feature",
+            "properties": {"type": "multipolygon"},
+            "geometry": {
+                "coordinates": [
+                    [
+                        [
+                            [139.80, 35.72],
+                            [139.81, 35.72],
+                            [139.81, 35.73],
+                            [139.80, 35.73],
+                            [139.80, 35.72]
+                        ]
+                    ],
+                    [
+                        [
+                            [139.82, 35.74],
+                            [139.83, 35.74],
+                            [139.83, 35.75],
+                            [139.82, 35.75],
+                            [139.82, 35.74]
+                        ]
+                    ]
+                ],
+                "type": "MultiPolygon"
+            }
+        }
+    ]
+}"#,
+            vec![
+                Appearance::Point(PointMaterial::default()),
+                Appearance::Billboard(BillboardMaterial::default()),
+                Appearance::Text(TextMaterial::default()),
+                Appearance::Polyline(PolylineMaterial::default()),
+                Appearance::Polygon(PolygonMaterial::default()),
+            ],
+        );
+
+        // Point/MultiPoint features match Point, Billboard, and Text appearances.
+        // Point: 1 (Point) + 2 (MultiPoint) = 3 children
+        let mut point_batched = app
+            .world_mut()
+            .query_filtered::<&BatchedFeature, With<PointMarker>>();
+        let point_features: Vec<_> = point_batched.iter(app.world()).collect();
+        assert_eq!(point_features.len(), 1);
+        assert_eq!(point_features[0].features.len(), 3);
+
+        // Billboard: same 3 children from Point/MultiPoint
+        let mut billboard_batched = app
+            .world_mut()
+            .query_filtered::<&BatchedFeature, With<BillboardMarker>>();
+        let billboard_features: Vec<_> = billboard_batched.iter(app.world()).collect();
+        assert_eq!(billboard_features.len(), 1);
+        assert_eq!(billboard_features[0].features.len(), 3);
+
+        // Text: same 3 children from Point/MultiPoint
+        let mut text_batched = app
+            .world_mut()
+            .query_filtered::<&BatchedFeature, With<TextMarker>>();
+        let text_features: Vec<_> = text_batched.iter(app.world()).collect();
+        assert_eq!(text_features.len(), 1);
+        assert_eq!(text_features[0].features.len(), 3);
+
+        // Polyline: 1 (LineString) + 2 (MultiLineString) = 3 children
+        let mut polyline_batched = app
+            .world_mut()
+            .query_filtered::<&BatchedFeature, With<PolylineMarker>>();
+        let polyline_features: Vec<_> = polyline_batched.iter(app.world()).collect();
+        assert_eq!(polyline_features.len(), 1);
+        assert_eq!(polyline_features[0].features.len(), 3);
+
+        // Polygon: 1 (Polygon) + 2 (MultiPolygon) = 3 children
+        let mut polygon_batched = app
+            .world_mut()
+            .query_filtered::<&BatchedFeature, With<PolygonMarker>>();
+        let polygon_features: Vec<_> = polygon_batched.iter(app.world()).collect();
+        assert_eq!(polygon_features.len(), 1);
+        assert_eq!(polygon_features[0].features.len(), 3);
+
+        // Verify child entity component types
+        let mut point_children = app
+            .world_mut()
+            .query_filtered::<&PointGeometry, With<BatchedFeatureMarker>>();
+        assert_eq!(point_children.iter(app.world()).count(), 3);
+
+        let mut billboard_children = app
+            .world_mut()
+            .query_filtered::<&BillboardGeometry, With<BatchedFeatureMarker>>();
+        assert_eq!(billboard_children.iter(app.world()).count(), 3);
+
+        let mut text_children = app
+            .world_mut()
+            .query_filtered::<&TextGeometry, With<BatchedFeatureMarker>>();
+        assert_eq!(text_children.iter(app.world()).count(), 3);
+
+        let mut polyline_children = app
+            .world_mut()
+            .query_filtered::<&PolylineGeometry, With<BatchedFeatureMarker>>();
+        assert_eq!(polyline_children.iter(app.world()).count(), 3);
+
+        let mut polygon_children = app
+            .world_mut()
+            .query_filtered::<&PolygonGeometry, With<BatchedFeatureMarker>>();
+        assert_eq!(polygon_children.iter(app.world()).count(), 3);
     }
 }
