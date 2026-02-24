@@ -6,7 +6,7 @@ import ThreeView, {
   type BoxMeshLayer,
   type SphereMeshLayer,
 } from "@navara/three";
-import { Color as ThreeColor, Vector3 } from "three";
+import { Vector3 } from "three";
 
 import { showAttributions } from "../../../helpers/attributions";
 import { TERRAIN_DATASETS, TILE_DATASETS } from "../../../helpers/constants";
@@ -37,7 +37,7 @@ const run = async () => {
   const outlineEffect = view.addLayer({
     type: "effect",
     selectiveOutline: {
-      color: new ThreeColor().setHex(0xff0000),
+      color: new Color().setHex(0xff0000),
       thickness: 2.0,
       edgeStrength: 1.0,
     },

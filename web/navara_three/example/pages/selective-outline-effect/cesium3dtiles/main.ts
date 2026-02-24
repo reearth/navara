@@ -1,5 +1,4 @@
 import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
-import { Color as ThreeColor } from "three";
 
 import { showAttributions } from "../../../helpers/attributions";
 import {
@@ -34,7 +33,7 @@ const run = async () => {
   const outlineEffect = view.addLayer({
     type: "effect",
     selectiveOutline: {
-      color: new ThreeColor().setHex(0xff0000),
+      color: new Color().setHex(0xff0000),
       thickness: 2.0,
       edgeStrength: 1.0,
     },
