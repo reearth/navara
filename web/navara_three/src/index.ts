@@ -1170,9 +1170,9 @@ export default class ThreeView<
   ): L extends LayerDeclaration ? LayerHandle<L> : Layer {
     // Check if this is a mesh layer
     if (l.type === "mesh") {
-      return this.addMeshLayer(
-        l,
-      ) as L extends LayerDeclaration ? LayerHandle<L> : never; // TODO: Remove this cast later.
+      return this.addMeshLayer(l) as L extends LayerDeclaration
+        ? LayerHandle<L>
+        : never; // TODO: Remove this cast later.
     }
 
     // Check if this is a light layer
@@ -1269,9 +1269,7 @@ export default class ThreeView<
     this.registerEffect("final", FinalCopyEffectLayer);
   }
 
-  private addMeshLayer(
-    config: MeshLayerConfig,
-  ): LayerHandle {
+  private addMeshLayer(config: MeshLayerConfig): LayerHandle {
     // Find which mesh type from config
     const meshType = this.registries.mesh.findMeshType(config);
     if (!meshType) {

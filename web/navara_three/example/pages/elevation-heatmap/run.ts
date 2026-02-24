@@ -21,7 +21,7 @@ import { SH_COEFFICIENTS } from "../../helpers/sh";
 export const run = async (view: ThreeView) => {
   await view.init();
 
-  view.addLayer({ type: "light", ambient: { }});
+  view.addLayer({ type: "light", ambient: {} });
 
   view.toneMappingExposure = 5;
 
