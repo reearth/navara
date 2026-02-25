@@ -45,9 +45,10 @@ void main() {
     }
 
     // --- Per-glyph vertex position ---
-    // position.xy is the unit quad [-0.5, 0.5]
-    // Scale by glyph size and offset by glyph position
-    vec2 localPos = position.xy * glyphSize + glyphOffset;
+    // position.xy is the unit quad [-0.5, 0.5].
+    // glyphOffset is the glyph bbox min corner (left/bottom), so remap
+    // the centered quad to [0,1] before applying glyph size/offset.
+    vec2 localPos = (position.xy + vec2(0.5)) * glyphSize + glyphOffset;
 
     // Apply centering: shift entire text block by anchor point
     localPos.x -= uCenter.x * uTextWidth;
