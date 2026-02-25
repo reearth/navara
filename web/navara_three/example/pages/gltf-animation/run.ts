@@ -18,10 +18,6 @@ import { addHidePaneKeyShortcut } from "../../helpers/control";
 
 import { OSAKA_GEOJSON } from "./constants";
 import {
-  addGeoJsonAnimatedModel,
-  addGeoJsonModelControl,
-} from "./models/geojson-model";
-import {
   addTestModelForNormal,
   addTextModelControl,
   addRunningModelAroundEarth,
@@ -64,11 +60,6 @@ export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
     expanded: true,
   });
 
-  const geojsonFolder = pane.addFolder({
-    title: "GeoJSON Model (Tokyo)",
-    expanded: true,
-  });
-
   const runningModelFolder = pane.addFolder({
     title: "Running Model (Osaka)",
     expanded: true,
@@ -76,9 +67,7 @@ export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
 
   // Add models and their controls
   const modelLayer = addTestModelForNormal(view);
-  const geoJsonModelLayer = addGeoJsonAnimatedModel(view);
   const controls = addTextModelControl(view, gltfFolder, modelLayer);
-  addGeoJsonModelControl(view, geojsonFolder, geoJsonModelLayer);
 
   // Wait for animation initialization, then set initial blend and sync UI
   modelLayer.ref.on("animationReady", () => {

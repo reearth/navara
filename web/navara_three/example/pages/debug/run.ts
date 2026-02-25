@@ -17,7 +17,6 @@ import {
   TILES_3D_DATASETS,
   MVT_DATASETS,
   GEOJSON_DATASETS,
-  LOCAL_DATASETS,
 } from "../../helpers/constants";
 import { addDateControl, addCameraControl } from "../../helpers/control";
 import {
@@ -313,34 +312,6 @@ const geoLayersDef: MaterialLayerDescription[] = [
       height: 1,
       clampToGround: true,
       useGroundNormals: true,
-    },
-  },
-
-  {
-    type: "geojson",
-    data: {
-      type: "FeatureCollection",
-      features: [
-        {
-          type: "Feature",
-          properties: {},
-          geometry: {
-            coordinates: [127.7, 26.2],
-            type: "Point",
-          },
-        },
-      ],
-    },
-    model: {
-      show: true,
-      size: 200000,
-      height: 0,
-      clampToGround: true,
-      url: LOCAL_DATASETS.steelDrumGLTF.url,
-      shouldRotateInDefault: true,
-      color: new Color().setStyle("#ffffff"),
-      metalness: 0.1,
-      roughness: 0.1,
     },
   },
   {
@@ -649,7 +620,6 @@ export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
     TERRAIN_DATASETS.gsi,
     TILE_DATASETS.openstreetmap,
     GEOJSON_DATASETS.calderdaleDefibrillators,
-    LOCAL_DATASETS.steelDrumGLTF,
     TILES_3D_DATASETS.plateauChiyoda,
     TILES_3D_DATASETS.plateauChuo,
     MVT_DATASETS.plateauWakayamaGen,

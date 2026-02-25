@@ -9,7 +9,10 @@ import type {
 import { Layer } from "@navara/three_react";
 import { useEffect, useMemo, useRef } from "react";
 
-import { PLATEAU_COLOR_MAP } from "../../../helpers/colors";
+import {
+  FLOOD_RANK_COLOR_MAP,
+  PLATEAU_COLOR_MAP,
+} from "../../../helpers/colors";
 
 export type BuildingColorAttribute =
   | "none"
@@ -39,15 +42,6 @@ export const FIREPROOF_COLOR_MAP: Record<string, ColorTuple> = {
   準耐火造: [140, 155, 177],
   その他: [250, 131, 158],
   不明: [120, 194, 243],
-};
-
-export const FLOOD_RANK_COLOR_MAP: Record<number, ColorTuple> = {
-  6: [220, 122, 220], // 20m〜
-  5: [242, 133, 201], // 10m〜20m
-  4: [255, 145, 145], // 5m〜10m
-  3: [255, 183, 183], // 3m〜5m
-  2: [255, 216, 192], // 0.5m〜3m
-  1: [247, 245, 169], // 〜0.5m
 };
 
 function rampFromColorMap(t01: number) {

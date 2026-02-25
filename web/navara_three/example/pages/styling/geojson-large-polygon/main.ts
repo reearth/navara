@@ -1,8 +1,12 @@
-import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import ThreeView, {
+  Color,
+  JAPAN_GSI_ELEVATION_DECODER,
+  ToneMappingMode,
+} from "@navara/three";
 import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../../helpers/attributions";
+import { FLOOD_RANK_COLOR_MAP } from "../../../helpers/colors";
 import {
   LOCAL_DATASETS,
   TERRAIN_DATASETS,
@@ -11,30 +15,37 @@ import {
 import { addDateControl } from "../../../helpers/control";
 
 const run = async () => {
-  const view = new ThreeView({
-    debug: true,
-  });
-  const defaultPlugin = new DefaultPlugin();
-  view.addPlugin(defaultPlugin);
-
+  const view = new ThreeView({ debug: true, hideUnderground: false });
   await view.init();
 
-  defaultPlugin.addDefaultPhotorealLayers();
+  view.addLayer({
+    type: "light",
+    sun: {},
+  });
+
+  view.addLayer({
+    type: "effect",
+    toneMapping: {
+      mode: ToneMappingMode.NEUTRAL,
+    },
+  });
+
+  view.toneMappingExposure = 5;
 
   view.setCamera({
-    lng: 138.733,
-    lat: 35.23,
-    height: 1500000,
-    heading: -10,
-    pitch: -78,
+    lng: 139.841,
+    lat: 35.5718,
+    height: 9500,
+    heading: -70,
+    pitch: -41,
     roll: 0,
   });
 
   // Base tiles layer
   view.addLayer({
     type: "tiles",
-    data: { url: TILE_DATASETS.openstreetmap.url },
-    rasterTile: { maxZoom: 19 },
+    data: { url: TILE_DATASETS.gsiSeamlessphoto.url },
+    rasterTile: { maxZoom: 18 },
   });
   view.addLayer({
     type: "terrain",
@@ -52,40 +63,42 @@ const run = async () => {
   // Track updated features to prevent duplicate evaluations
   let updatedFeatures = new Set<bigint>();
 
-  const params = { size: 1000.0 };
+  const params = { outlineShow: false };
 
-  // GeoJSON billboard layer
+  const FLOOD_DEPTH_BY_RANK = [0.5, 3.0, 5.0, 10.0, 20.0];
+
+  // GeoJSON extruded polygon layer - using interior GeoJSON dataset
   const addGeoJsonLayer = () => {
     updatedFeatures = new Set<bigint>();
 
     const layer = view.addLayer({
       type: "geojson",
-      data: {
-        url: LOCAL_DATASETS.railwaysTimeSeries.url,
-      },
-      billboard: {
+      data: { url: LOCAL_DATASETS.tokyoFlood.url },
+      polygon: {
         color: new Color().setStyle("#ffffff"),
-        size: params.size,
-        height: 1,
-        scaleByDistance: true,
-        clampToGround: true,
-        depthTest: true,
-        url: "/example.png",
-        transparent: true,
-        center: { x: 0.0, y: -0.5 },
+        height: 0,
+        extrudedHeight: 0,
+        clampToGround: false,
+        outlineShow: params.outlineShow,
+        outlineWidth: 2,
+        outlineColor: new Color().setHex(0xff00ff),
       },
     });
 
-    // Feature evaluator: style billboards based on properties
+    // Feature evaluator: style polygons based on properties
     layer.on("featureUpdated", ({ evaluator }) => {
       if (updatedFeatures.has(evaluator.id)) return;
       updatedFeatures.add(evaluator.id);
 
       evaluator.evaluate((_batchId, property) => {
-        const isStopped = (property?.["N05_005e"] as string) === "9999";
+        const rank = Number(property?.["A31a_205"] ?? 1);
+        const depth = FLOOD_DEPTH_BY_RANK[rank - 1];
+
+        const [r, g, b] = FLOOD_RANK_COLOR_MAP[rank];
 
         return {
-          color: new Color().setHex(isStopped ? 0xff0000 : 0xffffff),
+          extrudedHeight: depth,
+          color: new Color().setRGB(r / 255, g / 255, b / 255),
         };
       });
     });
@@ -96,7 +109,7 @@ const run = async () => {
   let layer = addGeoJsonLayer();
 
   // Control panel
-  const pane = new Pane({ title: "GeoJSON Billboard Styling" });
+  const pane = new Pane({ title: "GeoJSON Extruded Polygon" });
   addDateControl(view, pane);
 
   // Toggle button to add/remove layer
@@ -112,13 +125,14 @@ const run = async () => {
     }
   });
 
-  pane.addBinding(params, "size").on("change", ({ value }) => {
-    layer?.update({ billboard: { size: value } });
+  pane.addBinding(params, "outlineShow").on("change", ({ value }) => {
+    layer?.update({ polygon: { outlineShow: value } });
   });
 
   showAttributions([
-    TILE_DATASETS.openstreetmap,
-    LOCAL_DATASETS.railwaysTimeSeries,
+    TILE_DATASETS.gsiSeamlessphoto,
+    TERRAIN_DATASETS.gsi,
+    LOCAL_DATASETS.tokyoFlood,
   ]);
 };
 

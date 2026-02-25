@@ -554,17 +554,21 @@ export class PolygonMesh extends BatchedFeatureMesh<
           });
         }
         this.getEnhancer().update({ base: { useBatchColorShow: true } });
+        this.outline?.enableBatchColorShow();
         break;
       }
       case "show": {
         this.getEnhancer().update({ base: { useBatchColorShow: true } });
+        this.outline?.enableBatchColorShow();
         break;
       }
       case "height":
         this.getEnhancer().update({ base: { useBatchHeight: true } });
+        this.outline?.enableBatchHeight();
         break;
       case "extrudedHeight":
         this.getEnhancer().update({ base: { useBatchExtrudedHeight: true } });
+        this.outline?.enableBatchExtrudedHeight();
         break;
     }
 
@@ -582,6 +586,8 @@ export class PolygonMesh extends BatchedFeatureMesh<
       this.getEnhancer().update({
         base: { useBatchTexture: true, batchDataTexture: { value: texture } },
       });
+      // Share the same batch texture with outline (no duplicate data)
+      this.outline?.initBatchTexture(texture);
     }
   }
 

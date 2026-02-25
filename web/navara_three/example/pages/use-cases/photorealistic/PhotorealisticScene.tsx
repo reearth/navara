@@ -2,13 +2,11 @@ import type { DefaultPlugin } from "@navara/three_default_plugin";
 import { useViewContext } from "@navara/three_react";
 import { useEffect, useState } from "react";
 
+import { FLOOD_RANK_COLOR_MAP } from "../../../helpers/colors";
+
 import { AttributionPanel, type Attribution } from "./AttributionPanel";
 import type { BuildingColorAttribute } from "./BuildingLayer";
-import {
-  MEASURED_HEIGHT_GRADIENT,
-  FIREPROOF_COLOR_MAP,
-  FLOOD_RANK_COLOR_MAP,
-} from "./BuildingLayer";
+import { MEASURED_HEIGHT_GRADIENT, FIREPROOF_COLOR_MAP } from "./BuildingLayer";
 import {
   ControlPanel,
   type SequantialData,
