@@ -168,13 +168,18 @@ pub fn update_height_by_terrain(
                 active,
                 ..
             } => {
-                if (is_tile_meshes_empty
-                    || !material.clamp_to_ground
-                    || render_info.should_be_texturized)
-                    && !render_info.should_recalculate_height
-                {
+                if render_info.should_be_texturized {
                     continue;
                 }
+
+                if is_tile_meshes_empty && material.clamp_to_ground {
+                    continue;
+                }
+
+                if !material.clamp_to_ground && !render_info.should_recalculate_height {
+                    continue;
+                }
+
                 if !material.show || !active {
                     continue;
                 }
@@ -190,12 +195,13 @@ pub fn update_height_by_terrain(
             } => {
                 render_info.should_recalculate_height = false;
 
-                let (min_height, max_height) = if material.clamp_to_ground {
-                    let (min, max) = sample_terrain_height_within_extent(&mut qt, *extent);
-                    (min, max)
-                } else {
-                    (0., 0.)
-                };
+                let (min_height, max_height) =
+                    if material.clamp_to_ground && !render_info.should_be_texturized {
+                        let (min, max) = sample_terrain_height_within_extent(&mut qt, *extent);
+                        (min, max)
+                    } else {
+                        (0., 0.)
+                    };
 
                 let internal = material.internal.as_mut().unwrap();
                 internal.min_max_heights = vec![min_height, max_height];
