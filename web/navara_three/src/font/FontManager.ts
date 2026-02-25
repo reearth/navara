@@ -1,7 +1,7 @@
 import type { Core } from "@navara/engine";
 
 /** Glyph metrics from the SDF atlas. */
-export interface GlyphMetrics {
+export type GlyphMetrics = {
   glyphId: number;
   atlasX: number;
   atlasY: number;
@@ -10,32 +10,32 @@ export interface GlyphMetrics {
   bearingX: number;
   bearingY: number;
   advance: number;
-}
+};
 
 /** A single shaped glyph with positioning info. */
-export interface ShapedGlyph {
+export type ShapedGlyph = {
   glyphId: number;
   xAdvance: number;
   yAdvance: number;
   xOffset: number;
   yOffset: number;
   cluster: number;
-}
+};
 
 /** Result from shaping text: glyph positions + atlas metrics. */
-export interface ShapeTextResult {
+export type ShapeTextResult = {
   glyphs: ShapedGlyph[];
   metrics: GlyphMetrics[];
   /** Font units per em (needed for converting font-unit advances to SDF pixel space) */
   unitsPerEm: number;
-}
+};
 
 /** SDF atlas texture data. */
-export interface FontAtlasData {
+export type FontAtlasData = {
   data: Uint8Array;
   width: number;
   height: number;
-}
+};
 
 /**
  * Manages font loading, text shaping, and SDF atlas access.
@@ -111,15 +111,13 @@ export class FontManager {
       advance: m.advance,
     }));
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return { glyphs, metrics, unitsPerEm: (result as any).units_per_em ?? 1000 };
+    return { glyphs, metrics, unitsPerEm: result.units_per_em ?? 1000 };
   }
 
   /** Get the units-per-em value for a loaded font. */
   getUnitsPerEm(fontUrl: string): number | undefined {
     if (!this._core) return undefined;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return (this._core as any).getUnitsPerEm?.(fontUrl) ?? undefined;
+    return this._core.getUnitsPerEm?.(fontUrl) ?? undefined;
   }
 
   /** Get the SDF atlas data for a loaded font. */
@@ -146,7 +144,7 @@ export class FontManager {
     const core = this._core;
     if (!core) throw new Error("FontManager: core not initialized");
 
-    const response = await fetch(url);
+    const response = await fetch(url, { priority: "low" });
     if (!response.ok) {
       throw new Error(`FontManager: failed to fetch font from ${url}: ${response.status}`);
     }

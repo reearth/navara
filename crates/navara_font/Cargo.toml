@@ -8,9 +8,7 @@ license.workspace = true
 rustybuzz.workspace = true
 fontsdf.workspace = true
 guillotiere.workspace = true
-
 rustc-hash.workspace = true
-
 bevy_log.workspace = true
 bevy_ecs.workspace = true
 bevy_app.workspace = true

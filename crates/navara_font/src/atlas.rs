@@ -1,6 +1,6 @@
 use guillotiere::Size;
 
-use crate::resource::{GlyphMetrics, SdfAtlas, LRU_MIN_AGE, SDF_PX_SIZE};
+use crate::resource::{GlyphMetrics, SDFAtlas, LRU_MIN_AGE, SDF_PX_SIZE};
 
 /// Ensure all required glyphs (by glyph ID, post-shaping) are in the atlas.
 ///
@@ -10,7 +10,7 @@ use crate::resource::{GlyphMetrics, SdfAtlas, LRU_MIN_AGE, SDF_PX_SIZE};
 pub fn ensure_glyphs_in_atlas(
     sdf_font: &fontsdf::Font,
     glyph_ids: &[u16],
-    atlas: &mut SdfAtlas,
+    atlas: &mut SDFAtlas,
     current_frame: u64,
 ) {
     for &glyph_id in glyph_ids {
@@ -49,21 +49,17 @@ pub fn ensure_glyphs_in_atlas(
         let atlas_x = rect.min.x;
         let atlas_y = rect.min.y;
 
-        // Copy single-channel SDF data into the RGBA atlas pixel buffer
+        // Copy single-channel SDF data into the atlas pixel buffer
         for y in (0..metrics.height).rev() {
             for x in 0..metrics.width {
                 let src_idx = y * metrics.width + x;
                 let dst_x = atlas_x as usize + x;
-                let dst_y = atlas_y as usize + (metrics.height as usize - 1 - y); // Flip Y for top-left origin
-                let dst_idx = (dst_y * atlas.width as usize + dst_x) * 4;
+                let dst_y = atlas_y as usize + (metrics.height - 1 - y); // Flip Y for top-left origin
+                let dst_idx = dst_y * atlas.width as usize + dst_x; // 1 byte per pixel for single-channel SDF
 
-                if src_idx < sdf_data.len() && dst_idx + 3 < atlas.pixel_data.len() {
+                if src_idx < sdf_data.len() && dst_idx < atlas.pixel_data.len() {
                     let v = sdf_data[src_idx];
-                    // TODO: use a single channel for SDF and avoid redundant RGBA copies
                     atlas.pixel_data[dst_idx] = v;
-                    atlas.pixel_data[dst_idx + 1] = v;
-                    atlas.pixel_data[dst_idx + 2] = v;
-                    atlas.pixel_data[dst_idx + 3] = 255;
                 }
             }
         }
@@ -87,8 +83,8 @@ pub fn ensure_glyphs_in_atlas(
 /// Evict glyphs that haven't been used for at least `min_age` frames.
 ///
 /// Frees atlas space by deallocating the coldest glyphs first.
-fn evict_cold_glyphs(atlas: &mut SdfAtlas, current_frame: u64, min_age: u64) {
-    let mut evictable: Vec<(u16, u64)> = atlas
+fn evict_cold_glyphs(atlas: &mut SDFAtlas, current_frame: u64, min_age: u64) {
+    let evictable: Vec<(u16, u64)> = atlas
         .last_used
         .iter()
         .filter_map(|(&glyph_id, &last_frame)| {
@@ -101,7 +97,7 @@ fn evict_cold_glyphs(atlas: &mut SdfAtlas, current_frame: u64, min_age: u64) {
         .collect();
 
     // Sort by last_used ascending (coldest first)
-    evictable.sort_by_key(|&(_, frame)| frame);
+    // evictable.sort_by_key(|&(_, frame)| frame); // not necessary since we just want to evict all that are old enough
 
     for (glyph_id, _) in evictable {
         if let Some(metrics) = atlas.glyph_map.remove(&glyph_id) {

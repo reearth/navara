@@ -38,10 +38,10 @@ pub struct GlyphMetrics {
 /// Each loaded font gets its own atlas. Glyphs are keyed by glyph ID
 /// (post-shaping, not Unicode codepoint) so that contextual forms
 /// (Arabic positional variants, ligatures, etc.) are stored correctly.
-pub struct SdfAtlas {
+pub struct SDFAtlas {
     /// Rectangle packer for allocating glyph regions
     pub allocator: AtlasAllocator,
-    /// Raw RGBA pixel data of the atlas texture
+    /// Raw single-channel SDF pixel data of the atlas texture
     pub pixel_data: Vec<u8>,
     /// Atlas width in pixels
     pub width: u32,
@@ -53,11 +53,11 @@ pub struct SdfAtlas {
     pub last_used: FxHashMap<u16, u64>,
 }
 
-impl SdfAtlas {
+impl SDFAtlas {
     pub fn new(size: i32) -> Self {
         Self {
             allocator: AtlasAllocator::new(Size::new(size, size)),
-            pixel_data: vec![0u8; (size * size * 4) as usize],
+            pixel_data: vec![0u8; (size * size) as usize],
             width: size as u32,
             height: size as u32,
             glyph_map: FxHashMap::default(),
@@ -76,7 +76,7 @@ impl SdfAtlas {
     }
 }
 
-impl Default for SdfAtlas {
+impl Default for SDFAtlas {
     fn default() -> Self {
         Self::new(DEFAULT_ATLAS_SIZE)
     }
@@ -89,7 +89,7 @@ pub struct FontEntry {
     /// Parsed fontsdf font (for SDF rasterization by glyph ID)
     pub sdf_font: fontsdf::Font,
     /// Per-font SDF atlas
-    pub atlas: SdfAtlas,
+    pub atlas: SDFAtlas,
 }
 
 /// Cache of loaded fonts, keyed by URL.
@@ -126,7 +126,7 @@ impl FontCache {
             FontEntry {
                 data,
                 sdf_font,
-                atlas: SdfAtlas::default(),
+                atlas: SDFAtlas::default(),
             },
         );
         Ok(())

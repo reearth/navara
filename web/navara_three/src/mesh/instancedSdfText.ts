@@ -5,9 +5,9 @@ import type { FontManager } from "../font/FontManager";
 import type { CommonUniforms } from "../uniforms";
 
 import { InstancedMesh, type InstancedMeshOptions } from "./instanced";
-import { SdfTextMesh } from "./sdfText";
+import { SDFTextMesh } from "./sdfText";
 
-export class InstancedSdfTextMesh extends InstancedMesh<SdfTextMesh> {
+export class InstancedSdfTextMesh extends InstancedMesh<SDFTextMesh> {
   private _fontUrl: string;
 
   constructor(
@@ -64,7 +64,7 @@ export class InstancedSdfTextMesh extends InstancedMesh<SdfTextMesh> {
       const batchId = batchIds[batchIdIdx];
       const posIdx = i * positionSize;
 
-      const mesh = new SdfTextMesh(fontManager, this._fontUrl, uniforms, batchId);
+      const mesh = new SDFTextMesh(fontManager, this._fontUrl, uniforms, batchId);
       mesh.renderOrder = this.renderOrder;
       mesh.updateFromMaterial(material, active);
       mesh.setPosition(position, posIdx, transform);

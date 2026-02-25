@@ -10,6 +10,7 @@ import {
   InstancedBufferGeometry,
   LinearFilter,
   Mesh,
+  RedFormat,
   RGBAFormat,
   ShaderMaterial,
   UnsignedByteType,
@@ -36,7 +37,7 @@ const SDF_PX_SIZE = 64.0;
  * sampling from a per-font SDF atlas texture. Uses billboard rendering
  * so text always faces the camera.
  */
-export class SdfTextMesh extends Mesh<
+export class SDFTextMesh extends Mesh<
   InstancedBufferGeometry,
   ShaderMaterial
 > {
@@ -131,7 +132,7 @@ export class SdfTextMesh extends Mesh<
 
   /**
    * Apply material properties from WASM TextMaterial.
-   * Maps relevant properties to SdfTextMesh setters, with change tracking.
+   * Maps relevant properties to SDFTextMesh setters, with change tracking.
    */
   updateFromMaterial(material: NavaraTextMaterial, active: boolean): void {
     if (!this.userData.prev) {
@@ -404,7 +405,7 @@ export class SdfTextMesh extends Mesh<
       this._atlasTexture.dispose();
     }
 
-    const tex = new DataTexture(data, width, height, RGBAFormat, UnsignedByteType);
+    const tex = new DataTexture(data, width, height, RedFormat, UnsignedByteType);
     tex.minFilter = LinearFilter;
     tex.magFilter = LinearFilter;
     tex.generateMipmaps = false;

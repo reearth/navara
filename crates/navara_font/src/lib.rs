@@ -5,7 +5,7 @@ pub mod resource;
 pub mod shaping;
 mod system;
 
-pub use resource::{FontCache, FontEntry, GlyphMetrics, SdfAtlas};
+pub use resource::{FontCache, FontEntry, GlyphMetrics, SDFAtlas};
 
 use bevy_app::{App, Plugin, PreUpdate};
 
