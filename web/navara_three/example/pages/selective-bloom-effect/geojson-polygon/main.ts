@@ -13,9 +13,7 @@ const run = async () => {
     sun: { intensity: 1, castShadow: true },
   });
 
-  const date = new Date();
-  date.setHours(8);
-  view.atmosphere.date = date;
+  view.atmosphere.date.setHours(8);
 
   view.setCamera({
     lng: 139.775,
