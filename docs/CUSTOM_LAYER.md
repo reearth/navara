@@ -122,8 +122,12 @@ A plugin registers layer classes so they can be used via `view.addLayer()`:
 import { Plugin } from "@navara/core";
 import type ThreeView from "@navara/three";
 
+type CustomLayerDescriptions = 
+  | MyMeshDescription
+  | ...
+
 class MyPlugin extends Plugin {
-  async init(view: ThreeView) {
+  async init(view: ThreeView<CustomLayerDescriptions>) {
     view.registerMesh("myMesh", MyMeshLayer);
     view.registerLight("myLight", MyCustomLightLayer);
     view.registerEffect("myEffect", MyCustomEffectLayer);
