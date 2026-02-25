@@ -27,7 +27,6 @@ export async function renderText(
       layerId,
     });
 
-    console.log(`Using SDF text for font ${fontUrl}`);
     return textGroup;
   }
 

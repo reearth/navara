@@ -96,7 +96,6 @@ export class InstancedSdfTextMesh extends InstancedMesh<SDFTextMesh> {
     }
 
     for (const mesh of this.meshes()) {
-      console.log(material.text);
       mesh.updateFromMaterial(material, active);
       this.markVisibility(mesh);
 

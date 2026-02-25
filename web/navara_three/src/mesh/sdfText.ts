@@ -107,7 +107,7 @@ export class SDFTextMesh extends Mesh<
    * Update visual properties: color, size, visibility, etc.
    */
   setColor(color: Color): void {
-    this.material.uniforms.uColor.value.copy(color);
+    // this.material.uniforms.uColor.value.set(color.r, color.g, color.b);
   }
 
   setFontSize(sizePx: number): void {
@@ -134,11 +134,18 @@ export class SDFTextMesh extends Mesh<
    * Apply material properties from WASM TextMaterial.
    * Maps relevant properties to SDFTextMesh setters, with change tracking.
    */
-  updateFromMaterial(material: NavaraTextMaterial, active: boolean): void {
+  updateFromMaterial(material: NavaraTextMaterial, _active: boolean): void {
     if (!this.userData.prev) {
       this.userData.prev = {};
     }
     const prev = this.userData.prev;
+
+    const nextVisible = true;
+    if (prev.visible !== nextVisible) {
+      this.visible = nextVisible;
+      prev.visible = nextVisible;
+    }
+    if (!nextVisible) return;
 
     const nextText = material.text;
     if (nextText !== prev.text) {
@@ -146,19 +153,12 @@ export class SDFTextMesh extends Mesh<
       this.setText(nextText ?? "");
     }
 
-    const nextVisible = true;
-    if (prev.visible !== nextVisible) {
-      this.visible = nextVisible;
-      prev.visible = nextVisible;
-    }
-
     const nextColor = material.color ?? 0xffffff;
     if (nextColor !== prev.color) {
       prev.color = nextColor;
-      this.material.uniforms.uColor.value.set(nextColor);
+      let color = new Color().setHex(nextColor);
+      this.material.uniforms.uColor.value.set(color.r, color.g, color.b);
     }
-
-    if (!nextVisible) return;
 
     const nextFontSize = material.size ?? 16.0;
     if (nextFontSize !== prev.fontSize) {
@@ -274,7 +274,7 @@ export class SDFTextMesh extends Mesh<
       uniforms: {
         uAtlas: { value: null },
         uSdfThreshold: { value: 0.5 },
-        uColor: { value: new Color(0xffffff) },
+        uColor: { value: new Vector3(1.0, 1.0, 1.0) },
         uOpacity: { value: 1.0 },
         uFontSizePx: { value: 16.0 },
         uTextWidth: { value: 0.0 },
