@@ -250,16 +250,23 @@ pub fn update_mvt_layer(
                         }
                     }
                     Appearance::Polyline(polyline) => {
-                        if let RenderableFeature::Polyline { material, .. } = f.as_mut() {
+                        if let RenderableFeature::Polyline {
+                            render_info,
+                            material,
+                            ..
+                        } = f.as_mut()
+                        {
                             material.update(polyline);
+                            render_info.should_recalculate_height = true;
                         }
                     }
                     Appearance::Polygon(polygon) => {
-                        if let RenderableFeature::Polygon { .. } = f.as_mut() {
+                        if let RenderableFeature::Polygon { render_info, .. } = f.as_mut() {
                             commands.spawn(UpdatePolygon {
                                 material: polygon.clone(),
                                 feature_id: *id,
                             });
+                            render_info.should_recalculate_height = true;
                         }
                     }
                     _ => {}

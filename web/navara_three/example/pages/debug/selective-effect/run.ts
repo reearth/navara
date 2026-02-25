@@ -5,7 +5,6 @@ import {
   TILE_DATASETS,
   TILES_3D_DATASETS,
   TERRAIN_DATASETS,
-  LOCAL_DATASETS,
 } from "../../../helpers/constants";
 
 import { createControlPane } from "./controlPane";
@@ -81,8 +80,6 @@ export const run = async (view: ThreeView) => {
     cylinderLayer,
     tubeLayer,
     planeLayer,
-    drumLayer,
-    soldierLayer,
     polygonLayer,
     chiyodaLayer,
     chuoLayer,
@@ -96,7 +93,6 @@ export const run = async (view: ThreeView) => {
     TERRAIN_DATASETS.gsi,
     TILES_3D_DATASETS.plateauChiyoda,
     TILES_3D_DATASETS.plateauChuo,
-    LOCAL_DATASETS.steelDrumGLTF,
   ]);
 
   createControlPane({
@@ -108,8 +104,6 @@ export const run = async (view: ThreeView) => {
     cylinderLayer,
     tubeLayer,
     planeLayer,
-    drumLayer,
-    soldierLayer,
     polygonLayer,
     chiyodaLayer,
     chuoLayer,

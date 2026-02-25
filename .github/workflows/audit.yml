@@ -1,0 +1,44 @@
+name: Security audit
+on:
+    push:
+        branches:
+            - main
+        paths:
+            - "**/Cargo.toml"
+            - "**/pnpm-lock.yaml"
+    pull_request:
+        paths:
+            - "**/Cargo.toml"
+            - "**/pnpm-lock.yaml"
+    schedule:
+        - cron: "0 6 * * 1" # Weekly Monday 6am UTC
+
+permissions:
+    contents: read
+
+jobs:
+    cargo-audit:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v6
+            - uses: dtolnay/rust-toolchain@1.86.0
+
+            - name: Install cargo-audit
+              uses: taiki-e/install-action@v2
+              with:
+                tool: cargo-audit
+            - name: generate Cargo.lock
+              run: cargo generate-lockfile
+            - name: Run cargo audit
+              run: cargo audit --file Cargo.lock
+
+    pnpm-audit:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v6
+            - uses: pnpm/action-setup@v4
+              with:
+                run_install: false
+            - uses: actions/setup-node@v5
+            # --ignore-registry-errors: audit will fail only if the registry actually successfully responds with found vulnerabilities
+            - run: pnpm audit --audit-level=high --ignore-registry-errors

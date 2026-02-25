@@ -23,6 +23,7 @@ import {
   TransferableFloatAttribute,
   TransferableGeometry,
   TransferablePolygonGeometry,
+  TransferablePolygonOutlineGeometry,
   TransferablePolylineGeometry,
   TransferableUintAttribute,
   UpsampleTerrainMeshParameters,
@@ -426,11 +427,50 @@ async function processConstructPolygonBatchedFeature(
     indices,
   );
 
+  // Construct outline geometry if present
+  let outlineGeometry: TransferablePolygonOutlineGeometry | undefined;
+  if (result.outline_position) {
+    const outlinePosition = bufHandler.newF32(result.outline_position);
+    const outlineScaleNormalAndCap = result.outline_scale_normal_and_cap
+      ? bufHandler.newF32(result.outline_scale_normal_and_cap)
+      : undefined;
+    const outlineSkipIndices = result.outline_skip_indices
+      ? bufHandler.newU32(result.outline_skip_indices)
+      : undefined;
+
+    const outlineBatchIndex = result.outline_batch_index
+      ? bufHandler.newF32(result.outline_batch_index)
+      : undefined;
+
+    outlineGeometry = new TransferablePolygonOutlineGeometry(
+      outlinePosition
+        ? new TransferableFloatAttribute(
+            outlinePosition,
+            result.outline_position_size ?? 3,
+          )
+        : undefined,
+      outlineScaleNormalAndCap
+        ? new TransferableFloatAttribute(
+            outlineScaleNormalAndCap,
+            result.outline_scale_normal_and_cap_size ?? 4,
+          )
+        : undefined,
+      outlineSkipIndices,
+      outlineBatchIndex
+        ? new TransferableFloatAttribute(
+            outlineBatchIndex,
+            result.outline_batch_index_size ?? 1,
+          )
+        : undefined,
+    );
+  }
+
   const extent = result.extent;
   const rtc_translation = result.rtc_translation;
   const constructPolygonBatchedFeatureResult =
     new ConstructPolygonBatchedFeatureResult(
       geometry,
+      outlineGeometry,
       extent
         ? new ExtentRadianF32(
             extent.west,

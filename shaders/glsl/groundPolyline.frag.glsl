@@ -13,9 +13,11 @@
 #include <lights_lambert_pars_fragment>
 #include <shadowmap_pars_fragment>
 
-in vec4 v_startPlaneNormalEcAndHalfWidth;
-in vec3 v_endPlaneNormalEc;
-in vec4 v_rightPlaneEC; // Technically can compute distance for this here
+flat in vec4 v_startPlaneNormalEcAndHalfWidth;
+flat in vec3 v_endPlaneNormalEc;
+flat in vec4 v_rightPlaneEC;
+flat in float v_startPlaneOffsetEc;
+flat in float v_endPlaneOffsetEc;
 in vec4 v_endEcAndStartEcX;
 in vec4 v_texcoordNormalizationAndStartEcYZ;
 in float nvr_vBatchId;
@@ -59,8 +61,6 @@ void main() {
         discard;
     }
 
-    vec3 ecStart = vec3(v_endEcAndStartEcX.w, v_texcoordNormalizationAndStartEcYZ.zw);
-
     float near = frustumNearFar.x;
     float far = frustumNearFar.y;
 
@@ -94,13 +94,14 @@ void main() {
 
     eyeCoordinate /= eyeCoordinate.w;
 
-    float halfMaxWidth = v_startPlaneNormalEcAndHalfWidth.w * nvr_metersPerPixel(eyeCoordinate, viewportAndPixelRatio, frustumNearFar, frustumRatio);
+    float mpp = nvr_metersPerPixel(eyeCoordinate, viewportAndPixelRatio, frustumNearFar, frustumRatio);
+    float halfMaxWidth = v_startPlaneNormalEcAndHalfWidth.w * mpp;
+
     // Check distance of the eye coordinate against the right-facing plane
     float widthwiseDistance = nvr_planeDistance(v_rightPlaneEC, eyeCoordinate.xyz);
 
-    // Check eye coordinate against the mitering planes
-    float distanceFromStart = nvr_planeDistance(v_startPlaneNormalEcAndHalfWidth.xyz, -dot(ecStart, v_startPlaneNormalEcAndHalfWidth.xyz), eyeCoordinate.xyz);
-    float distanceFromEnd = nvr_planeDistance(v_endPlaneNormalEc.xyz, -dot(v_endEcAndStartEcX.xyz, v_endPlaneNormalEc.xyz), eyeCoordinate.xyz);
+    float distanceFromStart = nvr_planeDistance(v_startPlaneNormalEcAndHalfWidth.xyz, v_startPlaneOffsetEc, eyeCoordinate.xyz);
+    float distanceFromEnd = nvr_planeDistance(v_endPlaneNormalEc.xyz, v_endPlaneOffsetEc, eyeCoordinate.xyz);
 
     if (abs(widthwiseDistance) > halfMaxWidth || distanceFromStart <= 0.0 || distanceFromEnd <= 0.0) {
         discard;

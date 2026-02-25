@@ -20,11 +20,8 @@ import { TILES_3D_DATASETS } from "../../../helpers/constants";
 import { BLOOM_CONFIG, type PostEffects } from "./run";
 import type {
   CameraPosition,
-  GeoJsonModelLayer,
   GeoJsonPolygonLayer,
   SceneLayers,
-  DrumModelState,
-  SoldierModelState,
 } from "./sceneLayers";
 import {
   CAMERA_FOCUS_POSITIONS,
@@ -33,8 +30,6 @@ import {
   CYLINDER_CONFIG,
   TUBE_CONFIG,
   PLANE_CONFIG,
-  DRUM_CONFIG,
-  SOLDIER_CONFIG,
   CHIYODA_CONFIG,
   CHUO_CONFIG,
   POLYGON_CONFIG,
@@ -114,8 +109,6 @@ export const createControlPane = ({
   cylinderLayer,
   tubeLayer,
   planeLayer,
-  drumLayer,
-  soldierLayer,
   polygonLayer,
   chiyodaLayer,
   chuoLayer,
@@ -207,22 +200,6 @@ export const createControlPane = ({
 
   // GeoJson category
   const geoJsonFolder = pane.addFolder({ title: "GeoJson" });
-  setupDrumFolder(
-    geoJsonFolder,
-    drumLayer,
-    postEffectBloom.id,
-    postEffectOutline.id,
-    view,
-    CAMERA_FOCUS_POSITIONS.drum,
-  );
-  setupSoldierFolder(
-    geoJsonFolder,
-    soldierLayer,
-    postEffectBloom.id,
-    postEffectOutline.id,
-    view,
-    CAMERA_FOCUS_POSITIONS.soldier,
-  );
   setupPolygonFolder(
     geoJsonFolder,
     polygonLayer,
@@ -586,175 +563,6 @@ const setupTilesFolder = (parent: FolderApi, options: TilesFolderOptions) => {
 
   // Apply initial state
   updateTilesState();
-};
-
-const setupDrumFolder = (
-  parent: FolderApi,
-  drumLayer: GeoJsonModelLayer<DrumModelState>,
-  bloomId: string,
-  outlineId: string,
-  view: ThreeView,
-  focusPosition: CameraPosition,
-) => {
-  const params = {
-    ...DRUM_CONFIG,
-    emissiveColor: DRUM_CONFIG.emissiveColor.toHex(),
-    visible: true,
-    baseColor: 0xffffff,
-  };
-
-  const folder = parent.addFolder({ title: "Drum Model" });
-
-  folder.addButton({ title: "Focus" }).on("click", () => {
-    view.setCamera(focusPosition);
-  });
-
-  const updateDrumState = () => {
-    drumLayer.updateModel({
-      show: params.visible,
-      color: new Color().setHex(params.baseColor),
-      effectIds: getEffectIds(
-        params.bloomEnabled,
-        params.outlineEnabled,
-        bloomId,
-        outlineId,
-      ),
-      emissiveColor: new Color().setHex(params.emissiveColor),
-      emissiveIntensity: params.emissiveIntensity,
-      selectiveEffectOcclusion: params.selectiveEffectOcclusion,
-    } as Partial<DrumModelState>);
-  };
-
-  folder.addBinding(params, "visible").on("change", () => {
-    updateDrumState();
-  });
-
-  folder
-    .addBinding(params, "selectiveEffectOcclusion", {
-      label: "Occlusion Mode",
-      options: OCCLUSION_MODE_OPTIONS,
-    })
-    .on("change", () => {
-      updateDrumState();
-    });
-
-  folder
-    .addBinding(params, "emissiveColor", {
-      color: { type: "int" },
-      label: "Emissive Color",
-    })
-    .on("change", () => {
-      updateDrumState();
-    });
-
-  addLayerEmissiveIntensityControl(folder, params, () => {
-    updateDrumState();
-  });
-
-  folder
-    .addBinding(params, "bloomEnabled", { label: "Bloom" })
-    .on("change", () => {
-      updateDrumState();
-    });
-
-  folder
-    .addBinding(params, "outlineEnabled", { label: "Outline" })
-    .on("change", () => {
-      updateDrumState();
-    });
-
-  // Apply initial state
-  updateDrumState();
-};
-
-const setupSoldierFolder = (
-  parent: FolderApi,
-  soldierLayer: GeoJsonModelLayer<SoldierModelState>,
-  bloomId: string,
-  outlineId: string,
-  view: ThreeView,
-  focusPosition: CameraPosition,
-) => {
-  const params = {
-    ...SOLDIER_CONFIG,
-    emissiveColor: SOLDIER_CONFIG.emissiveColor.toHex(),
-    visible: true,
-    baseColor: 0xffffff,
-  };
-
-  const folder = parent.addFolder({ title: "Soldier Model" });
-
-  folder.addButton({ title: "Focus" }).on("click", () => {
-    view.setCamera(focusPosition);
-  });
-
-  const updateSoldierState = () => {
-    soldierLayer.updateModel({
-      show: params.visible,
-      animationSpeed: params.animationSpeed,
-      color: new Color().setHex(params.baseColor),
-      effectIds: getEffectIds(
-        params.bloomEnabled,
-        params.outlineEnabled,
-        bloomId,
-        outlineId,
-      ),
-      emissiveColor: new Color().setHex(params.emissiveColor),
-      emissiveIntensity: params.emissiveIntensity,
-      selectiveEffectOcclusion: params.selectiveEffectOcclusion,
-    } as Partial<SoldierModelState>);
-  };
-
-  folder.addBinding(params, "visible").on("change", () => {
-    updateSoldierState();
-  });
-
-  folder
-    .addBinding(params, "selectiveEffectOcclusion", {
-      label: "Occlusion Mode",
-      options: OCCLUSION_MODE_OPTIONS,
-    })
-    .on("change", () => {
-      updateSoldierState();
-    });
-
-  folder
-    .addBinding(params, "animationSpeed", {
-      min: 0.0,
-      max: 3.0,
-      step: 0.1,
-    })
-    .on("change", () => {
-      updateSoldierState();
-    });
-
-  folder
-    .addBinding(params, "emissiveColor", {
-      color: { type: "int" },
-      label: "Emissive Color",
-    })
-    .on("change", () => {
-      updateSoldierState();
-    });
-
-  addLayerEmissiveIntensityControl(folder, params, () => {
-    updateSoldierState();
-  });
-
-  folder
-    .addBinding(params, "bloomEnabled", { label: "Bloom" })
-    .on("change", () => {
-      updateSoldierState();
-    });
-
-  folder
-    .addBinding(params, "outlineEnabled", { label: "Outline" })
-    .on("change", () => {
-      updateSoldierState();
-    });
-
-  // Apply initial state
-  updateSoldierState();
 };
 
 /**

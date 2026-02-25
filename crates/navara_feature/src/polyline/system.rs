@@ -8,15 +8,11 @@ use navara_buffer_store::BufferStore;
 use navara_component::{Deleted, OrderByDistance};
 use navara_core::CRS;
 use navara_feature_component::{
-    batch::{
-        BatchId, BatchTable, BatchedFeature, FeatureBatchId, FeatureBatchIdMap, GlobalBatchIds,
-    },
+    batch::{BatchTable, BatchedFeature, FeatureBatchId, FeatureBatchIdMap, GlobalBatchIds},
     id::FeatureId,
-    polyline::construct_polyline_feature,
-    render::{PolylineRenderInformation, RenderableFeature, TransferablePolylineGeometry},
+    render::{PolylineRenderInformation, RenderableFeature},
     BatchedFeatureMarker,
 };
-use navara_geometry::FloatAttribute;
 use navara_layer::{LayerId, LayerStore};
 use navara_material::{PolylineInternalMaterial, PolylineMaterial};
 use navara_math::{Transform, Vec3};
@@ -46,7 +42,7 @@ pub fn transfer_batched_mesh(
             Option<&mut FeatureId>,
             Option<&OverscaledTileHandle>,
             Option<&TileExtent>,
-            &OrderByDistance,
+            Option<&OrderByDistance>,
         ),
         (With<PolylineMarker>, Without<Deleted>),
     >,
@@ -79,6 +75,10 @@ pub fn transfer_batched_mesh(
         }
 
         if batched_feature.construct_polyline_feature.is_none() {
+            let order = order.cloned().unwrap_or(OrderByDistance {
+                sse: 0.,
+                distance: 0.,
+            });
             let task_entity = commands
                 .spawn((
                     ConstructPolylineBatchedFeatureWorkerTaskBundle::new(
@@ -90,7 +90,7 @@ pub fn transfer_batched_mesh(
                             tile_extent: tile_extent_component.map(|t| t.extent),
                         },
                     ),
-                    order.clone(),
+                    order,
                 ))
                 .id();
             batched_feature.construct_polyline_feature = Some(task_entity);
@@ -119,13 +119,13 @@ pub fn transfer_batched_mesh(
                 geometry: geometry.clone(),
                 extent: *extent,
                 transform: Transform::default(),
-                feature_id: None,
+                feature_id: batched_feature_entity,
                 render_info: PolylineRenderInformation {
                     should_recalculate_height: true,
                     is_rendered: false,
                     should_be_texturized: clamp_to_ground && tile_coordinates.is_some(),
                 },
-                active: false,
+                active: batched_feature.default_active,
                 feature_batch_id: feature_batch_id.0,
                 batch_length: global_batch_ids.batch_length,
             },
@@ -149,77 +149,6 @@ pub fn transfer_batched_mesh(
     }
 }
 
-#[allow(clippy::type_complexity)]
-pub fn transfer_mesh(
-    mut commands: Commands,
-    mut buf: ResMut<BufferStore>,
-    mut polylines: Query<
-        (
-            Entity,
-            &LayerId,
-            Option<&mut FeatureId>,
-            &PolylineGeometry,
-            &PolylineMaterial,
-            &BatchId,
-        ),
-        (Added<PolylineGeometry>, Without<BatchedFeatureMarker>),
-    >,
-    mut layer_store: ResMut<LayerStore>,
-) {
-    for (entity, layer_id, feature_id, geometry, material, batch_id) in &mut polylines {
-        // `coords` has a lifetime for sure.
-        let constructed_feature = {
-            let coords = buf.remove_f64(&geometry.coords).unwrap();
-            construct_polyline_feature(material, coords, &geometry.crs, true)
-        };
-
-        if let Some((extent, mut geometry)) = constructed_feature {
-            let mut material = material.clone();
-            material.internal = Some(PolylineInternalMaterial {
-                min_max_heights: vec![0., 0.],
-            });
-
-            let pos_cnt = geometry.attributes.position.data.len()
-                / geometry.attributes.position.size as usize;
-            let batch_id_vec = vec![batch_id.0; pos_cnt];
-
-            geometry.attributes.batch_ids = Some(FloatAttribute::new(batch_id_vec, 1));
-
-            let clamp_to_ground = material.clamp_to_ground;
-            let entity = commands
-                .spawn((
-                    PolylineMarker,
-                    layer_id.clone(),
-                    RenderableFeature::Polyline {
-                        // TODO: Calculate coordinate to update transform
-                        coordinates: Vec3::new(0., 0., 0.),
-                        crs: CRS::Geocentric,
-                        material,
-                        geometry: TransferablePolylineGeometry::with_buf(&mut buf, geometry),
-                        transform: Transform::default(),
-                        feature_id: Some(entity),
-                        render_info: PolylineRenderInformation {
-                            should_recalculate_height: clamp_to_ground,
-                            is_rendered: false,
-                            should_be_texturized: false, // non-batched features are not texturized
-                        },
-                        extent,
-                        active: true,
-                        feature_batch_id: batch_id.0 as u32,
-                        batch_length: 1,
-                    },
-                ))
-                .id();
-
-            if let Some(mut feature_id) = feature_id {
-                feature_id.0 = Some(entity);
-            }
-
-            layer_store.add(layer_id.0.clone(), entity);
-        }
-    }
-}
-
 // TODO: This system is executed whenever a tile is added.
 //       This isn't efficient, so we need to update this system
 //       to execute only when the layer's bounding box is within the camera frustum.
@@ -239,13 +168,18 @@ pub fn update_height_by_terrain(
                 active,
                 ..
             } => {
-                if (is_tile_meshes_empty
-                    || !material.clamp_to_ground
-                    || render_info.should_be_texturized)
-                    && !render_info.should_recalculate_height
-                {
+                if render_info.should_be_texturized {
                     continue;
                 }
+
+                if is_tile_meshes_empty && material.clamp_to_ground {
+                    continue;
+                }
+
+                if !material.clamp_to_ground && !render_info.should_recalculate_height {
+                    continue;
+                }
+
                 if !material.show || !active {
                     continue;
                 }
@@ -261,12 +195,13 @@ pub fn update_height_by_terrain(
             } => {
                 render_info.should_recalculate_height = false;
 
-                let (min_height, max_height) = if material.clamp_to_ground {
-                    let (min, max) = sample_terrain_height_within_extent(&mut qt, *extent);
-                    (min, max)
-                } else {
-                    (0., 0.)
-                };
+                let (min_height, max_height) =
+                    if material.clamp_to_ground && !render_info.should_be_texturized {
+                        let (min, max) = sample_terrain_height_within_extent(&mut qt, *extent);
+                        (min, max)
+                    } else {
+                        (0., 0.)
+                    };
 
                 let internal = material.internal.as_mut().unwrap();
                 internal.min_max_heights = vec![min_height, max_height];

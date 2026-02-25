@@ -33,9 +33,11 @@ uniform vec3 viewportAndPixelRatio;
 uniform vec2 frustumNearFar;
 uniform vec4 frustumRatio;
 
-out vec4 v_startPlaneNormalEcAndHalfWidth;
-out vec3 v_endPlaneNormalEc;
-out vec4 v_rightPlaneEC;
+flat out vec4 v_startPlaneNormalEcAndHalfWidth;
+flat out vec3 v_endPlaneNormalEc;
+flat out vec4 v_rightPlaneEC;
+flat out float v_startPlaneOffsetEc;
+flat out float v_endPlaneOffsetEc;
 out vec4 v_endEcAndStartEcX;
 out vec4 v_texcoordNormalizationAndStartEcYZ;
 out vec3 vViewPosition;
@@ -176,6 +178,10 @@ void main() {
     v_startPlaneNormalEcAndHalfWidth.w = lineWidth * 0.5;
 
     v_endPlaneNormalEc.xyz = endPlaneEC.xyz;
+
+    // Pass pre-computed plane offsets to avoid recomputation error in fragment shader
+    v_startPlaneOffsetEc = startPlaneEC.w;
+    v_endPlaneOffsetEc = endPlaneEC.w;
 
     lineWidth = lineWidth * max(0.0, nvr_metersPerPixel(positionEC, viewportAndPixelRatio, frustumNearFar, frustumRatio)); // lineWidth = distance to push along R
     lineWidth = lineWidth / dot(normalEC, v_rightPlaneEC.xyz); // lineWidth = distance to push along N

@@ -35,6 +35,10 @@ export function encodeFloatToRGBA(
   return [bytes[0] / 255, bytes[1] / 255, bytes[2] / 255, bytes[3] / 255];
 }
 
+// Maximum batch texture width to stay within WebGL texture size limits (max 16384).
+// Using 4096 as a safe default that balances memory layout with broad GPU support.
+export const MAX_BATCH_TEXTURE_WIDTH = 4096;
+
 /**
  * Set batched texture rows to the material.
  */
@@ -51,9 +55,19 @@ export function initBatchedMaterial(
     idx++;
   }
 
+  material.userData.defines.BATCHED_TEXTURE_ROW_COUNT =
+    config.rows.length.toFixed(1);
+
   material.needsUpdate = true;
 }
 
+/**
+ * Allocate the batch data texture for a material.
+ *
+ * The texture size is fixed at initialization based on `config.batchLength` and
+ * is never resized afterwards. Dynamically increasing the batch count is not
+ * supported — callers must know the total number of batches up front.
+ */
 export function initBatchDataTexture(
   material: Material,
   config: BatchTextureConfig,
@@ -61,11 +75,16 @@ export function initBatchDataTexture(
   if (material.userData.batchDataTexture) return;
 
   const rowCount = config.rows.length;
-  const data = new Float32Array(config.batchLength * 4 * rowCount);
+  // Use a 2D texture layout: cap width to avoid exceeding WebGL max texture dimension.
+  // Batch IDs are mapped to 2D coordinates: col = batchId % texWidth, row = floor(batchId / texWidth).
+  const textureWidth = Math.min(config.batchLength, MAX_BATCH_TEXTURE_WIDTH);
+  const batchRows = Math.ceil(config.batchLength / textureWidth);
+  const textureHeight = batchRows * rowCount;
+  const data = new Float32Array(textureWidth * 4 * textureHeight);
   const texture = new DataTexture(
     data,
-    config.batchLength,
-    rowCount,
+    textureWidth,
+    textureHeight,
     RGBAFormat,
     FloatType,
   );
@@ -102,6 +121,30 @@ export type DefaultBatchAttributeValues = {
   color: Color;
 };
 
+/**
+ * Compute the flat float-array index for a given batchId and attribute row
+ * in the 2D texture layout.
+ *
+ * Layout: batch IDs are arranged in a grid of width `texWidth`.
+ * Each "batch row" (ceil(batchLength / texWidth) groups) occupies `rowCount`
+ * physical texture rows (one per attribute row).
+ *
+ * Physical row = floor(batchId / texWidth) * rowCount + rowIndex
+ * Physical col = batchId % texWidth
+ * Flat index   = (physicalRow * texWidth + physicalCol) * 4
+ */
+export function batchBaseIndex(
+  texWidth: number,
+  rowCount: number,
+  batchId: number,
+  rowIndex: number,
+): number {
+  const col = batchId % texWidth;
+  const batchRow = Math.floor(batchId / texWidth);
+  const physicalRow = batchRow * rowCount + rowIndex;
+  return (physicalRow * texWidth + col) * 4;
+}
+
 export function updateBatchAttribute(
   material: Material,
   batchId: number,
@@ -113,7 +156,11 @@ export function updateBatchAttribute(
   if (!texture) return;
 
   const data = texture.image.data as Float32Array;
-  const textureWidth = texture.image.width * 4;
+  const texWidth = texture.image.width;
+  const config = material.userData.batchTextureConfig as
+    | BatchTextureConfig
+    | undefined;
+  const rowCount = config?.rows.length ?? BATCH_TEXTURE_ROW.length;
 
   switch (attribute) {
     case "color": {
@@ -140,7 +187,7 @@ export function updateBatchAttribute(
 
       const rowIndex = getRowIndex(material, "COLOR_SHOW");
 
-      const baseIndex = batchId * 4 + rowIndex * textureWidth;
+      const baseIndex = batchBaseIndex(texWidth, rowCount, batchId, rowIndex);
       data[baseIndex] = value[0]; // R
       data[baseIndex + 1] = value[1]; // G
       data[baseIndex + 2] = value[2]; // B
@@ -163,7 +210,7 @@ export function updateBatchAttribute(
       const rowIndex = getRowIndex(material, "COLOR_SHOW");
       if (rowIndex < 0) return;
 
-      const baseIndex = batchId * 4 + rowIndex * textureWidth;
+      const baseIndex = batchBaseIndex(texWidth, rowCount, batchId, rowIndex);
       if (!material.userData._batchColorTouched) {
         const color = defaultValues.color;
         data[baseIndex] = color.r; // R
@@ -187,7 +234,7 @@ export function updateBatchAttribute(
       const encodedHeight = encodeFloatToRGBA(value);
 
       // Store as RGBA
-      const baseIndex = batchId * 4 + rowIndex * textureWidth;
+      const baseIndex = batchBaseIndex(texWidth, rowCount, batchId, rowIndex);
       data[baseIndex] = encodedHeight[0]; // R
       data[baseIndex + 1] = encodedHeight[1]; // G
       data[baseIndex + 2] = encodedHeight[2]; // B
@@ -206,7 +253,7 @@ export function updateBatchAttribute(
 
       const encodedHeight = encodeFloatToRGBA(value);
 
-      const baseIndex = batchId * 4 + rowIndex * textureWidth;
+      const baseIndex = batchBaseIndex(texWidth, rowCount, batchId, rowIndex);
       data[baseIndex] = encodedHeight[0]; // R
       data[baseIndex + 1] = encodedHeight[1]; // G
       data[baseIndex + 2] = encodedHeight[2]; // B
