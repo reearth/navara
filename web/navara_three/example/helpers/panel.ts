@@ -45,8 +45,6 @@ const addFeatureUpdateHandler = (
         defaultColor = layerDesc.polyline.color;
       } else if (layerDesc.polygon && layerDesc.polygon.color !== undefined) {
         defaultColor = layerDesc.polygon.color;
-      } else if (layerDesc.model && layerDesc.model.color !== undefined) {
-        defaultColor = layerDesc.model.color;
       }
     } else if (layerDesc.type == "b3dm") {
       if (layerDesc.model && layerDesc.model.color !== undefined) {

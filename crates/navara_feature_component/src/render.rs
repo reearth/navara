@@ -89,7 +89,7 @@ pub enum RenderableFeature {
         material: PolylineMaterial,
         geometry: TransferablePolylineGeometry,
         transform: Transform,
-        feature_id: Option<Entity>,
+        feature_id: Entity,
         render_info: PolylineRenderInformation,
         extent: Extent<f64, Radians>,
         feature_batch_id: u32,
@@ -103,7 +103,7 @@ pub enum RenderableFeature {
         geometry: TransferablePolygonGeometry,
         outline_geometry: Option<TransferablePolygonOutlineGeometry>,
         transform: Transform,
-        feature_id: Option<Entity>,
+        feature_id: Entity,
         render_info: PolygonRenderInformation,
         extent: Option<Extent<f64, Radians>>,
         bounding_sphere: Option<BoundingSphere>,
@@ -513,6 +513,7 @@ pub struct TransferablePolygonOutlineGeometry {
     pub position: Option<TransferableFloatAttribute>,
     pub scale_normal_and_cap: Option<TransferableFloatAttribute>,
     pub skip_indices: Option<Handle>,
+    pub batch_index: Option<TransferableFloatAttribute>,
 }
 
 impl TransferablePolygonOutlineGeometry {
@@ -540,6 +541,7 @@ impl TransferablePolygonOutlineGeometry {
             position: Some(position),
             scale_normal_and_cap: Some(scale_normal_and_cap),
             skip_indices: Some(skip_indices),
+            batch_index: None,
         }
     }
 }
@@ -556,6 +558,10 @@ impl TransferablePolygonOutlineGeometry {
 
         if let Some(skip_indices) = &self.skip_indices {
             buf.remove(skip_indices);
+        }
+
+        if let Some(batch_index) = &self.batch_index {
+            buf.remove(&batch_index.data);
         }
     }
 }
@@ -596,31 +602,17 @@ impl TransferablePointGeometry {
         }
     }
 
-    /// Create TransferablePointGeometry with RTE (Relative To Eye) position
-    /// Used for GeoJSON single point with absolute world coordinates
-    /// Position is encoded into high/low components for GPU precision
+    /// Create TransferablePointGeometry with RTE (Relative To Eye) positions
+    /// Used for GeoJSON points with absolute world coordinates
+    /// Callers are responsible for encoding positions into high/low f32 vectors
+    /// via `EncodedVec3` before calling this method.
     pub fn with_buf_rte(
         buf: &mut BufferStore,
-        position: Vec3,
-        batch_index: u32,
-        batch_id: f32,
+        positions_high: Vec<f32>,
+        positions_low: Vec<f32>,
+        batch_indices: Vec<u32>,
+        batch_ids: Vec<f32>,
     ) -> Self {
-        use navara_core::EncodedVec3;
-
-        // Encode the Vec3 position into high/low components
-        let encoded = EncodedVec3::encode_xyz(position.x, position.y, position.z);
-
-        let positions_high = vec![
-            encoded.high.x as f32,
-            encoded.high.y as f32,
-            encoded.high.z as f32,
-        ];
-        let positions_low = vec![
-            encoded.low.x as f32,
-            encoded.low.y as f32,
-            encoded.low.z as f32,
-        ];
-
         Self {
             position: None,
             position_3d_high: Some(TransferableFloatAttribute {
@@ -632,11 +624,11 @@ impl TransferablePointGeometry {
                 size: 3,
             }),
             batch_ids: TransferableFloatAttribute {
-                data: buf.new_f32(vec![batch_id]),
+                data: buf.new_f32(batch_ids),
                 size: 1,
             },
             batch_index: TransferableUintAttribute {
-                data: buf.new_u32(vec![batch_index]),
+                data: buf.new_u32(batch_indices),
                 size: 1,
             },
         }
@@ -654,71 +646,13 @@ impl TransferablePointGeometry {
             buf.remove(&position_3d_low.data);
         }
 
-        let Some(vec_ids) = buf.remove_f32(&self.batch_ids.data) else {
-            return;
+        if let Some(vec_ids) = buf.remove_f32(&self.batch_ids.data) {
+            for i in (0..vec_ids.len()).step_by(self.batch_ids.size as usize) {
+                batch_table.remove(&(vec_ids[i] as u32));
+            }
         };
 
-        for i in (0..vec_ids.len()).step_by(self.batch_ids.size as usize) {
-            batch_table.remove(&(vec_ids[i] as u32));
-        }
-
         buf.remove(&self.batch_index.data);
-    }
-
-    /// Update or recreate RTE geometry position data after height changes.
-    /// If the data was removed by JS (via removeF32), this function will recreate it.
-    pub fn update_rte_position(&mut self, buf: &mut BufferStore, position: navara_math::Vec3) {
-        if let (Some(high_attr), Some(low_attr)) =
-            (&mut self.position_3d_high, &mut self.position_3d_low)
-        {
-            use navara_core::EncodedVec3;
-
-            let encoded = EncodedVec3::encode_xyz(position.x, position.y, position.z);
-
-            // Update or recreate high component
-            match buf.remove_f32(&high_attr.data) {
-                Some(mut data) => {
-                    // Data exists in buffer, update it
-                    if data.len() >= 3 {
-                        data[0] = encoded.high.x as f32;
-                        data[1] = encoded.high.y as f32;
-                        data[2] = encoded.high.z as f32;
-                    }
-                    buf.set_f32(high_attr.data, data);
-                }
-                None => {
-                    // Data was removed by JS, recreate it
-                    let new_data = vec![
-                        encoded.high.x as f32,
-                        encoded.high.y as f32,
-                        encoded.high.z as f32,
-                    ];
-                    high_attr.data = buf.new_f32(new_data);
-                }
-            }
-
-            // Update or recreate low component
-            match buf.remove_f32(&low_attr.data) {
-                Some(mut data) => {
-                    // Data exists in buffer, update it
-                    if data.len() >= 3 {
-                        data[0] = encoded.low.x as f32;
-                        data[1] = encoded.low.y as f32;
-                        data[2] = encoded.low.z as f32;
-                    }
-                    buf.set_f32(low_attr.data, data);
-                }
-                None => {
-                    // Data was removed by JS, recreate it
-                    let new_data = vec![
-                        encoded.low.x as f32,
-                        encoded.low.y as f32,
-                        encoded.low.z as f32,
-                    ];
-                    low_attr.data = buf.new_f32(new_data);
-                }
-            }
-        }
     }
 }
 

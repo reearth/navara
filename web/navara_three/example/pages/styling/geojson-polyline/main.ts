@@ -2,7 +2,11 @@ import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
 import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../../helpers/attributions";
-import { TERRAIN_DATASETS, TILE_DATASETS } from "../../../helpers/constants";
+import {
+  LOCAL_DATASETS,
+  TERRAIN_DATASETS,
+  TILE_DATASETS,
+} from "../../../helpers/constants";
 import { addDateControl } from "../../../helpers/control";
 
 const run = async () => {
@@ -14,9 +18,9 @@ const run = async () => {
   view.setCamera({
     lng: 138.733,
     lat: 35.23,
-    height: 15000,
-    heading: 0,
-    pitch: -45,
+    height: 1500000,
+    heading: -10,
+    pitch: -78,
     roll: 0,
   });
 
@@ -51,35 +55,7 @@ const run = async () => {
     const layer = view.addLayer({
       type: "geojson",
       data: {
-        type: "FeatureCollection",
-        features: [
-          {
-            type: "Feature",
-            properties: { type: "line", No: 1 },
-            geometry: {
-              coordinates: [
-                [138.67683541875112, 35.4173874936028],
-                [138.7969673531889, 35.42047906868497],
-                [138.65597039856073, 35.284337599745484],
-                [138.82415510677106, 35.313235266691635],
-              ],
-              type: "LineString",
-            },
-          },
-          {
-            type: "Feature",
-            properties: { type: "line", No: 2 },
-            geometry: {
-              coordinates: [
-                [138.79254143981473, 35.436965465402466],
-                [138.68631951883958, 35.44005628905532],
-                [138.78558643308418, 35.32510096156801],
-                [138.63194401167237, 35.31684674944552],
-              ],
-              type: "LineString",
-            },
-          },
-        ],
+        url: LOCAL_DATASETS.railways.url,
       },
       polyline: {
         show: true,
@@ -97,16 +73,26 @@ const run = async () => {
       updatedFeatures.add(evaluator.id);
 
       evaluator.evaluate((_batchId, property) => {
-        const num = (property?.["No"] as number) ?? 0;
+        const railwayClass = String(property?.["N02_001"] ?? "");
 
-        // Generate color based on feature number
-        const idx = num % 6;
-        const r = Math.abs(Math.sin(idx + 0));
-        const g = Math.abs(Math.sin(idx + 1));
-        const b = Math.abs(Math.sin(idx + 2));
+        // Color by railway class (N02_001)
+        const colorMap: Record<string, string> = {
+          "11": "#2563eb", // JR Railway - blue
+          "12": "#dc2626", // Private Railway - red
+          "13": "#92400e", // Cable Railway - brown
+          "14": "#9333ea", // Suspended Monorail - purple
+          "15": "#0891b2", // Straddling Monorail - cyan
+          "16": "#16a34a", // Guide Rail Railway - green
+          "17": "#eab308", // Trackless Railway - yellow
+          "21": "#ea580c", // Tramway - orange
+          "22": "#ec4899", // Suspended Monorail (tramway) - pink
+          "23": "#84cc16", // Straddling Monorail (tramway) - lime
+          "24": "#065f46", // Guide Rail System - dark green
+          "25": "#d946ef", // Maglev - magenta
+        };
 
         return {
-          color: new Color().setRGB(r, g, b),
+          color: new Color().setStyle(colorMap[railwayClass] ?? "#888888"),
         };
       });
     });
@@ -139,7 +125,7 @@ const run = async () => {
       layer?.update({ polyline: { width: value } });
     });
 
-  showAttributions([TILE_DATASETS.openstreetmap]);
+  showAttributions([TILE_DATASETS.openstreetmap, LOCAL_DATASETS.railways]);
 };
 
 run();
