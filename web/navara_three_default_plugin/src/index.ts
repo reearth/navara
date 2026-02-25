@@ -41,9 +41,9 @@ import {
 } from "@navara/three_default_layers";
 
 export class DefaultPlugin extends Plugin {
-  private view?: ThreeView;
+  private view?: ThreeView<DefaultLayerDescriptions>;
 
-  async init(view: ThreeView) {
+  async init(view: ThreeView<DefaultLayerDescriptions>) {
     this.view = view;
     view.registerMesh("rain", RainMeshLayer);
     view.registerMesh("snow", SnowMeshLayer);

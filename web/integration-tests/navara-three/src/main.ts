@@ -84,7 +84,7 @@ async function main() {
  * Add a sphere that rotates around the globe.
  * Tests: SphereMeshLayer, geodeticToVector3, LLE, degreeToRadian APIs
  */
-function addRotatingSphere(view: ThreeView) {
+function addRotatingSphere(view: ThreeView<DefaultLayerDescriptions>) {
   // Create a sphere mesh layer
   const sphereLayer = view.addLayer<SphereMeshLayer>({
     type: "mesh",

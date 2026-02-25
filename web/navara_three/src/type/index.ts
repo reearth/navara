@@ -49,10 +49,7 @@ export type LayerDescription =
   | LightLayerDeclarationDescription
   | EffectLayerDeclarationDescription;
 
-export type MeshLayerDeclarationDescription = {
-  type: "mesh";
-  [key: string]: unknown;
-};
+export type MeshLayerDeclarationDescription = { type: "mesh" };
 
 export type LightLayerDeclarationDescription =
   | SunLightLayerConfig

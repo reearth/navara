@@ -14,6 +14,7 @@ import type {
   SphereMeshLayer,
   TubeMeshLayer,
 } from "@navara/three_default_layers";
+import type { DefaultLayerDescriptions } from "@navara/three_default_plugin";
 import type { FeatureCollection } from "geojson";
 import { Vector3 } from "three";
 
@@ -307,7 +308,7 @@ export type EffectIds = {
 };
 
 export const createSceneLayers = (
-  view: ThreeView,
+  view: ThreeView<DefaultLayerDescriptions>,
   effectIds: EffectIds,
 ): SceneLayers => {
   const tokyoStationPosition = geodeticToVector3({
@@ -645,7 +646,7 @@ export const createSceneLayers = (
 };
 
 type CreateGeoJsonModelLayerOptions<TState extends GeoJsonModelState> = {
-  view: ThreeView;
+  view: ThreeView<DefaultLayerDescriptions>;
   feature: FeatureCollection;
   model: TState;
 };
@@ -679,7 +680,7 @@ const createGeoJsonModelLayer = <TState extends GeoJsonModelState>({
 };
 
 type CreateGeoJsonPolygonLayerOptions = {
-  view: ThreeView;
+  view: ThreeView<DefaultLayerDescriptions>;
   feature: FeatureCollection;
   polygon: GeoJsonPolygonState;
 };

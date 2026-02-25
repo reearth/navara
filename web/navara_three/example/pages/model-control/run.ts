@@ -7,7 +7,10 @@ import ThreeView, {
   Color,
 } from "@navara/three";
 import type { GLTFModelLayer } from "@navara/three_default_layers";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import {
+  DefaultPlugin,
+  type DefaultLayerDescriptions,
+} from "@navara/three_default_plugin";
 import { Vector3, Quaternion, Euler } from "three";
 import { Pane } from "tweakpane";
 
@@ -32,7 +35,7 @@ const params: ModelControlParams = {
   allowFly: false,
 };
 
-export const run = async (view: ThreeView) => {
+export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
   await view.init();

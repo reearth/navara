@@ -7,7 +7,10 @@ import type {
   ArclineMeshLayer,
   SmoothLineMeshLayer,
 } from "@navara/three_default_layers";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import {
+  DefaultPlugin,
+  type DefaultLayerDescriptions,
+} from "@navara/three_default_plugin";
 import { Vector3 } from "three";
 import { Pane } from "tweakpane";
 
@@ -231,7 +234,7 @@ const gSmoothLinesDef = [
   },
 ];
 
-export const run = async (view: ThreeView) => {
+export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
   await view.init();
@@ -296,7 +299,7 @@ function intToHexColor(num: number) {
   return "#" + num.toString(16).padStart(6, "0");
 }
 
-const addArcLines = (view: ThreeView, pane: Pane) => {
+const addArcLines = (view: ThreeView<DefaultLayerDescriptions>, pane: Pane) => {
   const arcLineLayer = view.addLayer<ArclineMeshLayer>({
     type: "mesh",
     arcLines: gArcLinesDef,
@@ -513,7 +516,7 @@ const addArcLines = (view: ThreeView, pane: Pane) => {
   dashAnimFunc();
 };
 
-const addSmoothLines = (view: ThreeView, pane: Pane) => {
+const addSmoothLines = (view: ThreeView<DefaultLayerDescriptions>, pane: Pane) => {
   const smoothLineLayer = view.addLayer<SmoothLineMeshLayer>({
     type: "mesh",
     smoothLines: gSmoothLinesDef,

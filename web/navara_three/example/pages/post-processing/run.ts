@@ -1,5 +1,8 @@
 import ThreeView, { type Layer } from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import {
+  DefaultPlugin,
+  type DefaultLayerDescriptions,
+} from "@navara/three_default_plugin";
 import { Color } from "three";
 
 import { showAttributions } from "../../helpers/attributions";
@@ -27,7 +30,7 @@ export type PostEffects = {
   postEffectBloom: Layer;
 };
 
-export const run = async (view: ThreeView) => {
+export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
   await view.init();

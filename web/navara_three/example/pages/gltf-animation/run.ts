@@ -5,7 +5,10 @@ import ThreeView, {
   degreeToRadian,
   geodeticSurfaceNormal,
 } from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import {
+  DefaultPlugin,
+  type DefaultLayerDescriptions,
+} from "@navara/three_default_plugin";
 import { Vector3, Quaternion, Euler, Matrix4 } from "three";
 import { Pane } from "tweakpane";
 
@@ -28,7 +31,7 @@ import {
 /**
  * Main function to run the GLTF Animation example
  */
-export const run = async (view: ThreeView) => {
+export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
   await view.init();

@@ -8,7 +8,10 @@ import ThreeView, {
   LayerHandle,
 } from "@navara/three";
 import type { GLTFModelLayer } from "@navara/three_default_layers";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import {
+  DefaultPlugin,
+  type DefaultLayerDescriptions,
+} from "@navara/three_default_plugin";
 import { Vector3, Quaternion, Euler } from "three";
 import { Pane } from "tweakpane";
 
@@ -36,7 +39,7 @@ const SCENES = {
 
 let gCurSceneName: keyof typeof SCENES = "ToranomonHillsBIM";
 
-export const run = async (view: ThreeView) => {
+export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
   await view.init();
