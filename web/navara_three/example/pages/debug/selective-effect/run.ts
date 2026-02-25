@@ -4,12 +4,12 @@ import {
   type DefaultLayerDescriptions,
 } from "@navara/three_default_plugin";
 
-import { showAttributions } from "../../helpers/attributions";
+import { showAttributions } from "../../../helpers/attributions";
 import {
   TILE_DATASETS,
   TILES_3D_DATASETS,
   TERRAIN_DATASETS,
-} from "../../helpers/constants";
+} from "../../../helpers/constants";
 
 import { createControlPane } from "./controlPane";
 import { createSceneLayers } from "./sceneLayers";

@@ -17,7 +17,7 @@ import type {
 } from "@navara/three_default_layers";
 import { Pane, type FolderApi } from "tweakpane";
 
-import { TILES_3D_DATASETS } from "../../helpers/constants";
+import { TILES_3D_DATASETS } from "../../../helpers/constants";
 
 import { BLOOM_CONFIG, type PostEffects } from "./run";
 import type {

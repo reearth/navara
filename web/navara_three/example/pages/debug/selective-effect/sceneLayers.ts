@@ -22,7 +22,7 @@ import {
   TERRAIN_DATASETS,
   TILE_DATASETS,
   TILES_3D_DATASETS,
-} from "../../helpers/constants";
+} from "../../../helpers/constants";
 
 // ============================================
 // Initial Configurations (Single Source of Truth)
