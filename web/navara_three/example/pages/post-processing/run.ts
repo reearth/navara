@@ -1,5 +1,4 @@
-import ThreeView, { type Layer } from "@navara/three";
-import { Color } from "three";
+import ThreeView, { Color, type Layer } from "@navara/three";
 
 import { showAttributions } from "../../helpers/attributions";
 import {
@@ -79,11 +78,18 @@ export const run = async (view: ThreeView) => {
   const {
     cubeLayer,
     sphereLayer,
+    cylinderLayer,
+    tubeLayer,
+    planeLayer,
     drumLayer,
     soldierLayer,
+    polygonLayer,
     chiyodaLayer,
     chuoLayer,
-  } = createSceneLayers(view);
+  } = createSceneLayers(view, {
+    bloomId: postEffectBloom.id,
+    outlineId: postEffectOutline.id,
+  });
 
   showAttributions([
     TILE_DATASETS.openstreetmap,
@@ -94,12 +100,17 @@ export const run = async (view: ThreeView) => {
   ]);
 
   createControlPane({
+    view,
     postEffectOutline,
     postEffectBloom,
     cubeLayer,
     sphereLayer,
+    cylinderLayer,
+    tubeLayer,
+    planeLayer,
     drumLayer,
     soldierLayer,
+    polygonLayer,
     chiyodaLayer,
     chuoLayer,
   });
