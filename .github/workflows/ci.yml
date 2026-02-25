@@ -37,17 +37,10 @@ jobs:
         with:
           cache: "pnpm"
 
-      - name: Install protoc
+      - name: Install Tools (protoc, wasm-bindgen-cli, cargo-make)
         uses: taiki-e/install-action@v2
         with:
-          tool: protoc@${{ env.PROTOC_VERSION }}
-
-      # Install cargo tools (these will be cached by rust-cache)
-      - name: Install cargo-make
-        run: cargo install cargo-make --locked
-
-      - name: Install wasm-bindgen-cli
-        run: cargo install wasm-bindgen-cli --version 0.2.102 --locked
+          tool: protoc@${{ env.PROTOC_VERSION }}, wasm-bindgen-cli@0.2.102, cargo-make
 
       - name: Prepare
         run: cargo make prepare-ci
