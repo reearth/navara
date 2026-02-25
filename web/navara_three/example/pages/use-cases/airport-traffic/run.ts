@@ -10,7 +10,7 @@ import type {
 } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
-  type DefaultMeshLayerDeclarationDescription,
+  type DefaultLayerDescriptions,
 } from "@navara/three_default_plugin";
 import type { FeatureCollection, MultiLineString } from "geojson";
 
@@ -96,7 +96,7 @@ const constructData = async () => {
 };
 
 export async function run() {
-  const view = new ThreeView<DefaultMeshLayerDeclarationDescription>({
+  const view = new ThreeView<DefaultLayerDescriptions>({
     backgroundColor: new Color().setStyle("#0b0a0d"),
   });
 

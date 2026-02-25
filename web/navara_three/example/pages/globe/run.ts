@@ -1,7 +1,7 @@
 import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
 import {
   DefaultPlugin,
-  type DefaultMeshLayerDeclarationDescription,
+  type DefaultLayerDescriptions,
 } from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 
@@ -15,7 +15,7 @@ import { addCameraControl, addDateControl } from "../../helpers/control";
 import { addFieldsToFolder, type FolderFields } from "../../helpers/panel";
 
 export async function run() {
-  const view = new ThreeView<DefaultMeshLayerDeclarationDescription>({});
+  const view = new ThreeView<DefaultLayerDescriptions>({});
 
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);

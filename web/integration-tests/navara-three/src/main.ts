@@ -8,12 +8,12 @@ import ThreeView, {
 import type { SphereMeshLayer } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
-  type DefaultMeshLayerDeclarationDescription,
+  type DefaultLayerDescriptions,
 } from "@navara/three_default_plugin";
 
 async function main() {
   // Create the view - this tests that the main export works
-  const view = new ThreeView<DefaultMeshLayerDeclarationDescription>({});
+  const view = new ThreeView<DefaultLayerDescriptions>({});
 
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);

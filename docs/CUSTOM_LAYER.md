@@ -14,11 +14,11 @@ Rendering layers (meshes, lights, effects) are purely Three.js constructs with n
 
 `ThreeView` provides three registration methods, each corresponding to a layer category:
 
-| Method | Category | Purpose |
-|---|---|---|
-| `view.registerMesh(name, class)` | Mesh | 3D objects added to the scene (rain, snow, sky, GLTF models, etc.) |
-| `view.registerLight(name, class)` | Light | Light sources (sun, ambient, light probes) |
-| `view.registerEffect(name, class)` | Effect | Post-processing effects (SSAO, SSR, tone mapping, clouds, etc.) |
+| Method                             | Category | Purpose                                                            |
+| ---------------------------------- | -------- | ------------------------------------------------------------------ |
+| `view.registerMesh(name, class)`   | Mesh     | 3D objects added to the scene (rain, snow, sky, GLTF models, etc.) |
+| `view.registerLight(name, class)`  | Light    | Light sources (sun, ambient, light probes)                         |
+| `view.registerEffect(name, class)` | Effect   | Post-processing effects (SSAO, SSR, tone mapping, clouds, etc.)    |
 
 All three are available to plugins, giving external packages the same capabilities as built-in layers.
 
@@ -133,13 +133,13 @@ class MyPlugin extends Plugin {
 
 ## `@navara/three_default_plugin`
 
-`@navara/three_default_plugin` is a plugin that registers the 18 mesh layers from `@navara/three_default_layers` (rain, snow, sky, box, sphere, GLTF model, etc.). It also exports `DefaultMeshLayerDeclarationDescription` — a union type of all default mesh layer configs for type-safe layer declarations.
+`@navara/three_default_plugin` is a plugin that registers the 18 mesh layers from `@navara/three_default_layers` (rain, snow, sky, box, sphere, GLTF model, etc.). It also exports `DefaultLayerDescriptions` — a union type of all default mesh layer configs for type-safe layer declarations.
 
 ```typescript
 import ThreeView from "@navara/three";
-import { DefaultPlugin, type DefaultMeshLayerDeclarationDescription } from "@navara/three_default_plugin";
+import { DefaultPlugin, type DefaultLayerDescriptions } from "@navara/three_default_plugin";
 
-const view = new ThreeView<DefaultMeshLayerDeclarationDescription>({ /* options */ });
+const view = new ThreeView<DefaultLayerDescriptions>({ /* options */ });
 view.addPlugin(new DefaultPlugin());
 await view.init();
 ```

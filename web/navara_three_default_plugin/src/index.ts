@@ -111,6 +111,8 @@ export class DefaultPlugin extends Plugin {
   }
 }
 
+export type DefaultLayerDescriptions = DefaultMeshLayerDeclarationDescription;
+
 export type DefaultMeshLayerDeclarationDescription =
   | RainMeshLayerConfig
   | SnowMeshLayerConfig
