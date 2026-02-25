@@ -28,7 +28,7 @@ const run = async () => {
   const outlineEffect = view.addLayer({
     type: "effect",
     selectiveOutline: {
-      color: new Color().setHex(0xff0000),
+      color: new Color().setHex(0x00ff00),
       thickness: 2.0,
       edgeStrength: 1.0,
     },
