@@ -18,7 +18,10 @@ import { showAttributions } from "../../../helpers/attributions";
 import { TERRAIN_DATASETS, TILE_DATASETS } from "../../../helpers/constants";
 
 const run = async () => {
-  const view = new ThreeView<DefaultLayerDescriptions>({ debug: true, shadow: true });
+  const view = new ThreeView<DefaultLayerDescriptions>({
+    debug: true,
+    shadow: true,
+  });
 
   const defaultPlugin = new DefaultPlugin();
   view.addPlugin(defaultPlugin);
