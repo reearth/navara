@@ -1,5 +1,4 @@
-import ThreeView, { type Layer } from "@navara/three";
-import { Color } from "three";
+import ThreeView, { Color, type Layer } from "@navara/three";
 
 import { showAttributions } from "../../helpers/attributions";
 import {
