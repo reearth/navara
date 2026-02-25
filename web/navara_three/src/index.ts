@@ -1415,7 +1415,8 @@ export default class ThreeView<
    * @returns This view instance for chaining
    */
   addPlugin(plugin: Plugin): this {
-    if (this._initialized) throw new Error("Plugin must be added before `view.init()`.");
+    if (this._initialized)
+      throw new Error("Plugin must be added before `view.init()`.");
     this.plugins.push(plugin);
     return this;
   }

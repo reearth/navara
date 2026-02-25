@@ -180,7 +180,10 @@ export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
   ]);
 };
 
-const addWaterControl = (view: ThreeView<DefaultLayerDescriptions>, pane: Pane) => {
+const addWaterControl = (
+  view: ThreeView<DefaultLayerDescriptions>,
+  pane: Pane,
+) => {
   const PARAMS = {
     "visible flood model": true,
     "visible river model": true,
@@ -246,7 +249,10 @@ const addWaterControl = (view: ThreeView<DefaultLayerDescriptions>, pane: Pane) 
   });
 };
 
-const addCameraControl = (view: ThreeView<DefaultLayerDescriptions>, pane: Pane) => {
+const addCameraControl = (
+  view: ThreeView<DefaultLayerDescriptions>,
+  pane: Pane,
+) => {
   const PARAMS = {
     autoRotation: false,
   };

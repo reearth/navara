@@ -332,7 +332,9 @@ const addTestModelForNormal = (view: ThreeView<DefaultLayerDescriptions>) => {
   }
 };
 
-const addTestModelForTerrainHeight = (view: ThreeView<DefaultLayerDescriptions>) => {
+const addTestModelForTerrainHeight = (
+  view: ThreeView<DefaultLayerDescriptions>,
+) => {
   const pos = geodeticToVector3({
     lat: degreeToRadian(gFujiPos[0]),
     lng: degreeToRadian(gFujiPos[1]),
@@ -650,7 +652,10 @@ const testRayPlane = (view: ThreeView<DefaultLayerDescriptions>) => {
   view.on("mouseup", onMouseUp);
 };
 
-const makeCylinder = (view: ThreeView<DefaultLayerDescriptions>, center: Vector3): Mesh | undefined => {
+const makeCylinder = (
+  view: ThreeView<DefaultLayerDescriptions>,
+  center: Vector3,
+): Mesh | undefined => {
   const cylinderLayer = view.addLayer<CylinderMeshLayer>({
     type: "mesh",
     cylinder: {
@@ -733,7 +738,10 @@ const onDistPosChange = () => {
   geodesic.dispose();
 };
 
-const updatePolylineMesh = (view: ThreeView<DefaultLayerDescriptions>, curvePoints: XYZ[]) => {
+const updatePolylineMesh = (
+  view: ThreeView<DefaultLayerDescriptions>,
+  curvePoints: XYZ[],
+) => {
   if (!gPolylineLayer) return;
 
   // Calculate appropriate tube radius based on camera distance to keep visual thickness constant

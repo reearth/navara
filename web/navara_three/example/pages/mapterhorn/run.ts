@@ -2,7 +2,10 @@ import ThreeView, {
   TERRARIUM_ELEVATION_DECODER,
   ToneMappingMode,
 } from "@navara/three";
-import { DefaultPlugin, type DefaultLayerDescriptions } from "@navara/three_default_plugin";
+import {
+  DefaultPlugin,
+  type DefaultLayerDescriptions,
+} from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../helpers/attributions";
@@ -35,7 +38,7 @@ export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
   });
   view.addLayer({
     type: "mesh",
-    sky: {}
+    sky: {},
   });
 
   view.addLayer({

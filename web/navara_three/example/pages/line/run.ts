@@ -516,7 +516,10 @@ const addArcLines = (view: ThreeView<DefaultLayerDescriptions>, pane: Pane) => {
   dashAnimFunc();
 };
 
-const addSmoothLines = (view: ThreeView<DefaultLayerDescriptions>, pane: Pane) => {
+const addSmoothLines = (
+  view: ThreeView<DefaultLayerDescriptions>,
+  pane: Pane,
+) => {
   const smoothLineLayer = view.addLayer<SmoothLineMeshLayer>({
     type: "mesh",
     smoothLines: gSmoothLinesDef,
