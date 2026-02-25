@@ -1,9 +1,8 @@
-import ThreeView, { type Layer } from "@navara/three";
+import ThreeView, { Color, type Layer } from "@navara/three";
 import {
   DefaultPlugin,
   type DefaultLayerDescriptions,
 } from "@navara/three_default_plugin";
-import { Color } from "three";
 
 import { showAttributions } from "../../helpers/attributions";
 import {
