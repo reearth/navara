@@ -43,11 +43,16 @@ pub(crate) fn construct_polyline_batched_feature(
         else {
             continue;
         };
-        let mut combined_attributes = PolylineGeometryAttributes::with_batch_id();
+        let use_rte = !constructor.flat;
+        let mut combined_attributes = if use_rte {
+            PolylineGeometryAttributes::with_batch_id_and_rte()
+        } else {
+            PolylineGeometryAttributes::with_batch_id()
+        };
         let mut indices = vec![];
         let mut index_offset = 0;
 
-        let mut combined_extent: Option<Extent<f32, Radians>> = None;
+        let mut combined_extent: Option<Extent<f64, Radians>> = None;
         for feature_id in &batched_feature.features {
             let Ok((geometry, _material, batch_id)) = polylines.get(*feature_id) else {
                 continue;
@@ -55,8 +60,9 @@ pub(crate) fn construct_polyline_batched_feature(
 
             let Some((extent, mut constructed_geometry)) = construct_polyline_feature(
                 material,
-                buf.remove_f32(&geometry.coords).unwrap(),
+                buf.remove_f64(&geometry.coords).unwrap(),
                 &geometry.crs,
+                use_rte,
             ) else {
                 continue;
             };
@@ -107,12 +113,49 @@ pub(crate) fn construct_polyline_batched_feature(
                         .data,
                 );
             combined_attributes
-                .batch_id
+                .batch_ids
                 .as_mut()
                 .unwrap()
                 .data
                 // TODO: Avoid cast
                 .append(&mut vec![batch_id.0 as FloatType; position_length]);
+
+            if let (Some(ref mut combined), Some(ref mut geo)) = (
+                &mut combined_attributes.position_high,
+                &mut constructed_geometry.attributes.position_high,
+            ) {
+                combined.data.append(&mut geo.data);
+            }
+            if let (Some(ref mut combined), Some(ref mut geo)) = (
+                &mut combined_attributes.position_low,
+                &mut constructed_geometry.attributes.position_low,
+            ) {
+                combined.data.append(&mut geo.data);
+            }
+            if let (Some(ref mut combined), Some(ref mut geo)) = (
+                &mut combined_attributes.start_high,
+                &mut constructed_geometry.attributes.start_high,
+            ) {
+                combined.data.append(&mut geo.data);
+            }
+            if let (Some(ref mut combined), Some(ref mut geo)) = (
+                &mut combined_attributes.start_low,
+                &mut constructed_geometry.attributes.start_low,
+            ) {
+                combined.data.append(&mut geo.data);
+            }
+            if let (Some(ref mut combined), Some(ref mut geo)) = (
+                &mut combined_attributes.end_high,
+                &mut constructed_geometry.attributes.end_high,
+            ) {
+                combined.data.append(&mut geo.data);
+            }
+            if let (Some(ref mut combined), Some(ref mut geo)) = (
+                &mut combined_attributes.end_low,
+                &mut constructed_geometry.attributes.end_low,
+            ) {
+                combined.data.append(&mut geo.data);
+            }
 
             if index_offset == 0 {
                 indices.append(&mut constructed_geometry.indices);

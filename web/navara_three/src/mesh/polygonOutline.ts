@@ -3,10 +3,13 @@ import {
   PolygonMesh as NavaraPolygonMesh,
   PolygonMaterial,
 } from "@navara/engine";
+import BatchTextureParsVertex from "@shaders/glsl/chunks/batch_texture_pars_vertex.glsl";
 import BranchFreeTernary from "@shaders/glsl/chunks/branchFreeTernary.glsl";
+import ExtrudedHeightParsVertex from "@shaders/glsl/chunks/extruded_height_pars_vertex.glsl";
+import ExtrudedHeightVertex from "@shaders/glsl/chunks/extruded_height_vertex.glsl";
 import HeightParsVertex from "@shaders/glsl/chunks/height_pars_vertex.glsl";
 import HeightVertex from "@shaders/glsl/chunks/height_vertex.glsl";
-import { Color, InstancedBufferAttribute } from "three";
+import { Color, type DataTexture, InstancedBufferAttribute } from "three";
 import {
   Line2,
   LineGeometry,
@@ -19,6 +22,8 @@ import type { BufferLoader } from "../event";
 import { overrideLineMaterialForMRT } from "../material";
 import { createReplacer } from "../utils/replacer";
 
+import { FEATURE_BATCH_TEXTURE_CONFIG } from "./batchedFeature";
+import { initBatchedMaterial } from "./batchTexture";
 import type { FeatureMesh } from "./featureMesh";
 
 class NvLineGeometry extends LineGeometry {
@@ -81,6 +86,10 @@ export class PolygonOutlineMesh extends Line2 implements FeatureMesh {
       ? (buf.removeU32(g.skip_indices) ?? undefined)
       : undefined;
 
+    const batchIndex = g.batch_index
+      ? buf.removeF32(g.batch_index.data)
+      : undefined;
+
     // Convert position buffer to Line2 format
     const lineGeometry = this.geometry as NvLineGeometry;
     lineGeometry.setPositions(position, skipIdx);
@@ -93,6 +102,20 @@ export class PolygonOutlineMesh extends Line2 implements FeatureMesh {
         skipIdx,
         size,
         lineGeometry,
+      );
+    }
+
+    // Add per-segment batch index attribute for batch texture lookups
+    if (batchIndex) {
+      const segmentBatchIds: number[] = [];
+      const skipSet = new Set(skipIdx ?? []);
+      for (let i = 0; i < batchIndex.length - 1; i++) {
+        if (skipSet.has(i)) continue;
+        segmentBatchIds.push(batchIndex[i]);
+      }
+      lineGeometry.setAttribute(
+        "_batchid",
+        new InstancedBufferAttribute(new Float32Array(segmentBatchIds), 1),
       );
     }
   }
@@ -168,10 +191,22 @@ export class PolygonOutlineMesh extends Line2 implements FeatureMesh {
       value: 0.0,
     };
 
+    // Set up batch texture material defines (row indices, row count)
+    initBatchedMaterial(material, FEATURE_BATCH_TEXTURE_CONFIG);
+
     material.onBeforeCompile = (shader) => {
+      // Merge user-defined defines (batch texture, color/show, height, etc.)
+      shader.defines ??= {};
+      Object.assign(shader.defines, material.userData.defines || {});
+
       shader.uniforms.uMinMaxHeight = material.userData.uMinMaxHeight;
       shader.uniforms.uAddExtrudedHeight = material.userData.uAddExtrudedHeight;
       shader.uniforms.uAddHeight = material.userData.uAddHeight;
+
+      // Batch texture uniform (shared from parent PolygonMesh)
+      if (material.userData.batchDataTexture) {
+        shader.uniforms.batchDataTexture = material.userData.batchDataTexture;
+      }
 
       shader.vertexShader = createReplacer(shader.vertexShader)
         .replace(
@@ -180,23 +215,41 @@ export class PolygonOutlineMesh extends Line2 implements FeatureMesh {
         attribute vec3 instanceEnd;
         attribute vec4 scaleNormalAndCapStart;
         attribute vec4 scaleNormalAndCapEnd;
+        varying float nvr_vShow;
         uniform vec2 uMinMaxHeight;
-        uniform float uAddExtrudedHeight;
+        ${ExtrudedHeightParsVertex}
         ${HeightParsVertex}
         ${BranchFreeTernary}
+        ${BatchTextureParsVertex}
         `,
         )
         .replace(
           "vec4 start = modelViewMatrix * vec4( instanceStart, 1.0 );",
           `
+        ${ExtrudedHeightVertex}
         ${HeightVertex}
-        // Apply height adjustment to start point
-        vec3 adjustedInstanceStart = instanceStart;
 
+        nvr_vShow = 1.0;
+        #ifdef USE_BATCH_TEXTURE
+          float batchId = _batchid;
+          #ifdef USE_BATCH_COLOR_SHOW
+            // Color is ignored.
+            vec4 batchColorShow = getBatchColorShow(batchId);
+            nvr_vShow = batchColorShow.a;
+          #endif
+          #ifdef USE_BATCH_EXTRUDED_HEIGHT
+            addExtrudedHeight = getBatchExtrudedHeight(batchId);
+          #endif
+          #ifdef USE_BATCH_HEIGHT
+            addHeight = getBatchHeight(batchId);
+          #endif
+        #endif
+
+        vec3 adjustedInstanceStart = instanceStart;
         adjustedInstanceStart.xyz += scaleNormalAndCapStart.xyz * nvr_branchFreeTernary(
           scaleNormalAndCapStart.w == 0.0,
           uMinMaxHeight.x + addHeight,
-          uMinMaxHeight.y + uAddExtrudedHeight
+          uMinMaxHeight.y + addExtrudedHeight
         );
         vec4 start = modelViewMatrix * vec4( adjustedInstanceStart, 1.0 );
         `,
@@ -204,17 +257,25 @@ export class PolygonOutlineMesh extends Line2 implements FeatureMesh {
         .replace(
           "vec4 end = modelViewMatrix * vec4( instanceEnd, 1.0 );",
           `
-        // Apply height adjustment to end point  
         vec3 adjustedInstanceEnd = instanceEnd;
-
         adjustedInstanceEnd.xyz += scaleNormalAndCapEnd.xyz * nvr_branchFreeTernary(
           scaleNormalAndCapEnd.w == 0.0,
           uMinMaxHeight.x + addHeight,
-          uMinMaxHeight.y + uAddExtrudedHeight
+          uMinMaxHeight.y + addExtrudedHeight
         );
         vec4 end = modelViewMatrix * vec4( adjustedInstanceEnd, 1.0 );
         `,
         ).source;
+
+      shader.fragmentShader = createReplacer(shader.fragmentShader).replace(
+        "void main() {",
+        `
+        varying float nvr_vShow;
+        varying float nvr_vHasBatchColor;
+        void main() {
+          if (nvr_vShow < 0.5) discard;
+        `,
+      ).source;
     };
 
     // Apply MRT compatibility
@@ -289,6 +350,31 @@ export class PolygonOutlineMesh extends Line2 implements FeatureMesh {
   // Utility method to update resolution (should be called when renderer size changes)
   updateResolution(width: number, height: number): void {
     this.material.resolution.set(width, height);
+  }
+
+  initBatchTexture(texture: DataTexture) {
+    this.material.userData.batchDataTexture = { value: texture };
+    this.material.userData.defines ??= {};
+    this.material.userData.defines.USE_BATCH_TEXTURE = true;
+    this.material.needsUpdate = true;
+  }
+
+  enableBatchColorShow() {
+    this.material.userData.defines ??= {};
+    this.material.userData.defines.USE_BATCH_COLOR_SHOW = true;
+    this.material.needsUpdate = true;
+  }
+
+  enableBatchHeight() {
+    this.material.userData.defines ??= {};
+    this.material.userData.defines.USE_BATCH_HEIGHT = true;
+    this.material.needsUpdate = true;
+  }
+
+  enableBatchExtrudedHeight() {
+    this.material.userData.defines ??= {};
+    this.material.userData.defines.USE_BATCH_EXTRUDED_HEIGHT = true;
+    this.material.needsUpdate = true;
   }
 
   // Clean up event listeners when the object is destroyed

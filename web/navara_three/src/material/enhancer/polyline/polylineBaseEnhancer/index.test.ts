@@ -131,7 +131,6 @@ describe("polylineBaseEnhancer", () => {
         isTexturized: true,
         clampToGround: false,
         useRTE: true,
-        userDataDefines: undefined,
       });
     });
 

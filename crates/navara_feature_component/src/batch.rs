@@ -14,6 +14,9 @@ pub struct BatchedFeature {
     pub features: Vec<Entity>,
     pub construct_polygon_feature: Option<Entity>,
     pub construct_polyline_feature: Option<Entity>,
+    /// Whether the feature should be active (visible) immediately when transferred.
+    /// GeoJSON sets this to `true`; MVT tiles use `false` (activated by tile visibility).
+    pub default_active: bool,
 }
 
 impl BatchedFeature {

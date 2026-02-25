@@ -13,14 +13,23 @@ use super::{
 #[derive(Clone, Debug, PartialEq)]
 pub struct PolylineGeometryAttributes {
     pub position: FloatAttribute,
-    pub position_high: Option<FloatAttribute>,
-    pub position_low: Option<FloatAttribute>,
     pub start: FloatAttribute,
+
+    /// RTE (Relative To Eye) high-precision component of vertex positions.
+    /// Present when `use_rte = true` (e.g. GeoJSON polylines with large ECEF coordinates).
+    pub position_high: Option<FloatAttribute>,
+    /// RTE low-precision component of vertex positions.
+    pub position_low: Option<FloatAttribute>,
+    /// RTE high-precision component of segment start positions.
     pub start_high: Option<FloatAttribute>,
+    /// RTE low-precision component of segment start positions.
     pub start_low: Option<FloatAttribute>,
     pub forward_offset: FloatAttribute,
+    /// RTE high-precision component of segment end positions (start + forward_offset).
     pub end_high: Option<FloatAttribute>,
+    /// RTE low-precision component of segment end positions.
     pub end_low: Option<FloatAttribute>,
+
     pub start_normals: FloatAttribute,
     pub end_normal_and_texture_coordinate_normalization_x: FloatAttribute,
     pub right_normal_and_texture_coordinate_normalization_y: FloatAttribute,
@@ -33,6 +42,20 @@ impl PolylineGeometryAttributes {
         Self {
             batch_ids: Some(FloatAttribute::new(vec![], 1)),
             batch_index: Some(UintAttribute::new(vec![], 1)),
+            ..Default::default()
+        }
+    }
+
+    pub fn with_batch_id_and_rte() -> Self {
+        Self {
+            batch_ids: Some(FloatAttribute::new(vec![], 1)),
+            batch_index: Some(UintAttribute::new(vec![], 1)),
+            position_high: Some(FloatAttribute::new(vec![], 3)),
+            position_low: Some(FloatAttribute::new(vec![], 3)),
+            start_high: Some(FloatAttribute::new(vec![], 3)),
+            start_low: Some(FloatAttribute::new(vec![], 3)),
+            end_high: Some(FloatAttribute::new(vec![], 3)),
+            end_low: Some(FloatAttribute::new(vec![], 3)),
             ..Default::default()
         }
     }

@@ -202,9 +202,27 @@ export const LOCAL_DATASETS = {
   airportTrafficVolume: {
     url: "/data/airport-traffic-volume.geojson",
     attribution:
-      "Processed and created from the National Land Numerical Information (inter-airport flow volume data) MLIT",
+      "Processed and created from the National Land Numerical Information (inter-airport flow volume data) - MLIT",
     attributionUrl:
       "https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-S10b-2014.html",
+  },
+  tokyoFlood: {
+    url: "/data/tokyo-flood.geojson",
+    attribution: "Flood Inundation Zone Data (River-Based) - MLIT",
+    attributionUrl:
+      "https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-A31a-2024.html",
+  },
+  railways: {
+    url: "/data/railways.geojson",
+    attribution: "Railway Data - MLIT",
+    attributionUrl:
+      "https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-N02-2024.html",
+  },
+  railwaysTimeSeries: {
+    url: "/data/railwaysTimeSeries.geojson",
+    attribution: "Railway Time Series Data - MLIT",
+    attributionUrl:
+      "https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-N05-2024.html",
   },
   steelDrumGLTF: {
     url: "/glTF/steel_drum/scene.gltf",
