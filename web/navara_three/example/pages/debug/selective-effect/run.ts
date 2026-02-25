@@ -1,12 +1,12 @@
 import ThreeView, { Color, type Layer } from "@navara/three";
 
-import { showAttributions } from "../../helpers/attributions";
+import { showAttributions } from "../../../helpers/attributions";
 import {
   TILE_DATASETS,
   TILES_3D_DATASETS,
   TERRAIN_DATASETS,
   LOCAL_DATASETS,
-} from "../../helpers/constants";
+} from "../../../helpers/constants";
 
 import { createControlPane } from "./controlPane";
 import { createSceneLayers } from "./sceneLayers";
