@@ -109,6 +109,9 @@ export function createPolygonBaseEnhancer(
         useBatchColorShow: state.useBatchColorShow,
         useBatchHeight: state.useBatchHeight,
         useBatchExtrudedHeight: state.useBatchExtrudedHeight,
+        isTexturized: state.isTexturized,
+        clampToGround: state.clampToGround,
+        useRTE: state.useRTE,
       });
     },
   };

@@ -46,6 +46,9 @@ describe("polygonBaseEnhancer", () => {
         useBatchColorShow: false,
         useBatchHeight: true,
         useBatchExtrudedHeight: false,
+        isTexturized: true,
+        clampToGround: false,
+        useRTE: true,
       });
 
       const cacheKey = enhancer.programCacheKey();
@@ -56,7 +59,21 @@ describe("polygonBaseEnhancer", () => {
         useBatchColorShow: false,
         useBatchHeight: true,
         useBatchExtrudedHeight: false,
+        isTexturized: true,
+        clampToGround: false,
+        useRTE: true,
       });
+    });
+
+    it("should return different cache keys when useRTE differs", () => {
+      enhancer.mount({ useRTE: false });
+      const cacheKey1 = enhancer.programCacheKey();
+
+      const enhancer2 = createPolygonBaseEnhancer(new MeshLambertMaterial());
+      enhancer2.mount({ useRTE: true });
+      const cacheKey2 = enhancer2.programCacheKey();
+
+      expect(cacheKey1).not.toBe(cacheKey2);
     });
 
     it("should return different cache keys for different shader-affecting states", () => {
