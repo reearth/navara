@@ -6,19 +6,19 @@ import ThreeView, {
 import { Vector3 } from "three";
 import { Pane } from "tweakpane";
 
-import { showAttributions } from "../../helpers/attributions";
+import { showAttributions } from "../../../helpers/attributions";
 import {
   TERRAIN_DATASETS,
   TILE_DATASETS,
   TILES_3D_DATASETS,
   MVT_DATASETS,
   GEOJSON_DATASETS,
-} from "../../helpers/constants";
-import { addDateControl, addCameraControl } from "../../helpers/control";
+} from "../../../helpers/constants";
+import { addDateControl, addCameraControl } from "../../../helpers/control";
 import {
   addCtrlPanel,
   type MaterialLayerDescription,
-} from "../../helpers/panel";
+} from "../../../helpers/panel";
 
 const geoLayersDef: MaterialLayerDescription[] = [
   {

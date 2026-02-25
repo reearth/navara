@@ -15,7 +15,7 @@ import ThreeView, {
 } from "@navara/three";
 import { Pane, type FolderApi } from "tweakpane";
 
-import { TILES_3D_DATASETS } from "../../helpers/constants";
+import { TILES_3D_DATASETS } from "../../../helpers/constants";
 
 import { BLOOM_CONFIG, type PostEffects } from "./run";
 import type {
