@@ -137,7 +137,7 @@ class MyPlugin extends Plugin {
 
 ## `@navara/three_default_plugin`
 
-`@navara/three_default_plugin` is a plugin that registers the 18 mesh layers from `@navara/three_default_layers` (rain, snow, sky, box, sphere, GLTF model, etc.). It also exports `DefaultLayerDescriptions` — a union type of all default mesh layer configs for type-safe layer declarations.
+`@navara/three_default_plugin` is a plugin that registers the default layers from `@navara/three_default_layers`. It also exports `DefaultLayerDescriptions` — a union type of all default mesh layer configs for type-safe layer declarations.
 
 ```typescript
 import ThreeView from "@navara/three";
