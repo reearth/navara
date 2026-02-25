@@ -43,7 +43,7 @@ export const run = async (view: ThreeView) => {
 
   // Configure atmosphere for night scene
   const defaultAtmosphere = plugin.addDefaultPhotorealLayers();
-  const starsLayer = defaultAtmosphere.stars as LayerHandle<StarsLayer>;
+  const starsLayer = defaultAtmosphere.stars;
   defaultAtmosphere.sun.update({
     sun: {
       castShadow: true,

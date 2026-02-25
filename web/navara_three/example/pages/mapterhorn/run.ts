@@ -2,6 +2,7 @@ import ThreeView, {
   TERRARIUM_ELEVATION_DECODER,
   ToneMappingMode,
 } from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../helpers/attributions";
@@ -9,6 +10,8 @@ import { TERRAIN_DATASETS, TILE_DATASETS } from "../../helpers/constants";
 import { addDateControl } from "../../helpers/control";
 
 export const run = async (view: ThreeView) => {
+  view.addPlugin(new DefaultPlugin());
+
   await view.init();
 
   view.toneMappingExposure = 3;

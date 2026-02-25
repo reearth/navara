@@ -577,12 +577,23 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
     this.emit("animationReady");
   }
 
+  // ========================================
+  // Getter APIs (get prefix)
+  // ========================================
+
+  /**
+   * Get available animation clip names
+   */
   getAnimationAvailable(): string[] {
     return Array.from(this.clips.keys());
   }
 
+  /**
+   * Get animation details information
+   */
   getAnimationDetails(name?: string): AnimationDetails | AnimationDetails[] {
     if (name) {
+      // Get details for specific animation
       const clip = this.clips.get(name);
       const action = this.actions.get(name);
       if (!clip || !action) {
@@ -597,6 +608,7 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
         timeScale: action.timeScale,
       };
     } else {
+      // Get details for all animations
       return Array.from(this.clips.entries()).map(([name, clip]) => {
         const action = this.actions.get(name);
         if (!action) {
@@ -613,12 +625,16 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
     }
   }
 
+  /**
+   * Get current playback state
+   */
   getAnimationCurrentState(): AnimationState {
     const isPlaying = this.currentAction
       ? !this.currentAction.paused && this.currentAction.isRunning()
       : false;
     const currentAnimation = this.getCurrentAnimationName();
 
+    // Get blend animation states
     const blendAnimations = Array.from(
       this.activeBlendAnimations.entries(),
     ).map(([name, blendAnim]) => ({
@@ -627,6 +643,7 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
       isPlaying: !blendAnim.action.paused && blendAnim.action.isRunning(),
     }));
 
+    // Calculate playback time and progress
     let playbackTime = 0;
     let progress = 0;
     if (this.currentAction) {
@@ -647,27 +664,43 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
     };
   }
 
+  /**
+   * Get animation clip directly
+   */
   getAnimationClip(name: string): AnimationClip | null {
     return this.clips.get(name) || null;
   }
 
+  /**
+   * Get animation action directly
+   */
   getAnimationAction(name: string): AnimationAction | null {
     return this.actions.get(name) || null;
   }
 
+  // ========================================
+  // Control APIs (verb-based)
+  // ========================================
+
+  /**
+   * Play specified animation
+   */
   playAnimation(name: string): boolean {
     if (!this.mixer || !this.actions.has(name)) {
       console.warn(`Animation clip "${name}" not found`);
       return false;
     }
 
+    // If currently in blend mode, stop all and exit blend mode
     if (this.isBlendMode) {
       this.stopAllAnimations();
       this.isBlendMode = false;
     } else if (this.currentAction) {
+      // Stop current single animation
       this.currentAction.stop();
     }
 
+    // Start new animation
     const action = this.actions.get(name);
     if (!action) {
       console.warn(`Animation action "${name}" not found`);
@@ -678,6 +711,9 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
     return true;
   }
 
+  /**
+   * Cross-fade between animations
+   */
   crossFadeAnimation(from: string, to: string, duration: number): boolean {
     if (!this.mixer) {
       console.warn("Animation mixer not initialized");
@@ -702,22 +738,30 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
       return false;
     }
 
+    // Handle case where same animation is specified
     if (fromAction === toAction) {
       this.ensureAnimationPlaying(toAction);
       return true;
     }
 
+    // If currently in blend mode, stop all and exit blend mode before crossfading
     if (this.isBlendMode) {
       this.stopAllAnimations();
       this.isBlendMode = false;
     }
 
+    // Ensure 'from' animation is the current animation
     this.ensureFromAnimationActive(fromAction);
+
+    // Execute crossfade
     this.executeCrossFade(fromAction, toAction, duration);
 
     return true;
   }
 
+  /**
+   * Ensure the specified animation is playing
+   */
   private ensureAnimationPlaying(action: AnimationAction): void {
     action.enabled = true;
     action.setEffectiveWeight(1);
@@ -727,8 +771,12 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
     this.emit("_needsUpdate");
   }
 
+  /**
+   * Ensure the 'from' animation is currently active
+   */
   private ensureFromAnimationActive(fromAction: AnimationAction): void {
     if (this.currentAction !== fromAction) {
+      // Ensure the source action is actively contributing before crossfade
       fromAction.enabled = true;
       fromAction.setEffectiveTimeScale(this.animationSpeed);
       fromAction.setEffectiveWeight(1);
@@ -737,31 +785,42 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
     }
   }
 
+  /**
+   * Execute the actual crossfade between animations
+   */
   private executeCrossFade(
     fromAction: AnimationAction,
     toAction: AnimationAction,
     duration: number,
   ): void {
+    // Prepare target action following three.js example semantics
     toAction.enabled = true;
     toAction.setEffectiveTimeScale(this.animationSpeed);
     toAction.setEffectiveWeight(1);
-    toAction.time = 0;
+    toAction.time = 0; // restart target action
     fromAction.crossFadeTo(toAction, duration, true);
     toAction.play();
     this.currentAction = toAction;
     this.emit("_needsUpdate");
   }
 
+  /**
+   * Play multiple animations simultaneously with weights
+   */
   blendAnimations(animations: { name: string; weight: number }[]): void {
     if (!this.mixer) {
       console.warn("Animation mixer not initialized");
       return;
     }
 
+    // Stop existing animations
     this.stopAllAnimations();
+
+    // Switch to blend mode
     this.isBlendMode = true;
     this.currentAction = null;
 
+    // Configure each animation
     animations.forEach(({ name, weight }) => {
       const action = this.actions.get(name);
       if (!action) {
@@ -769,11 +828,13 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
         return;
       }
 
+      // Start animation with effective settings
       action.enabled = true;
       action.setEffectiveTimeScale(this.animationSpeed);
       action.setEffectiveWeight(weight);
       action.play();
 
+      // Register as blend animation
       this.activeBlendAnimations.set(name, {
         action,
         weight,
@@ -781,11 +842,16 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
       });
     });
 
+    // Notify rendering update
     this.emit("_needsUpdate");
   }
 
+  /**
+   * Stop current animation
+   */
   stopAnimation(): void {
     if (this.isBlendMode) {
+      // Stop all in blend mode
       this.stopAllAnimations();
     } else if (this.currentAction) {
       this.currentAction.stop();
@@ -793,27 +859,37 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
     }
   }
 
+  /**
+   * Stop all animations
+   */
   stopAllAnimations(): void {
+    // Stop blend animations
     this.activeBlendAnimations.forEach((blendAnim) => {
       blendAnim.action.stop();
     });
     this.activeBlendAnimations.clear();
 
+    // Stop single animation
     if (this.currentAction) {
       this.currentAction.stop();
       this.currentAction = null;
     }
 
+    // Also reset weights and disable actions
     this.actions.forEach((action) => {
       action.setEffectiveWeight(0);
       action.enabled = false;
     });
 
+    // Exit blend mode
     this.isBlendMode = false;
 
     this.emit("_needsUpdate");
   }
 
+  /**
+   * Pause current animation
+   */
   pauseAnimation(): void {
     if (this.isBlendMode) {
       this.activeBlendAnimations.forEach((blendAnim) => {
@@ -824,6 +900,9 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
     }
   }
 
+  /**
+   * Resume paused animation
+   */
   resumeAnimation(): void {
     if (this.isBlendMode) {
       this.activeBlendAnimations.forEach((blendAnim) => {
@@ -834,12 +913,18 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
     }
   }
 
+  // stepAnimation removed with UI pausing/stepping controls
+
+  /**
+   * Normalize all animation weights (adjust total to 1.0)
+   */
   normalizeAnimationWeights(): void {
     if (!this.isBlendMode || this.activeBlendAnimations.size === 0) {
       console.warn("No blend animations to normalize");
       return;
     }
 
+    // Calculate total weight
     const totalWeight = Array.from(this.activeBlendAnimations.values()).reduce(
       (sum, blendAnim) => sum + blendAnim.targetWeight,
       0,
@@ -850,22 +935,35 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
       return;
     }
 
+    // Normalize each animation weight
     this.activeBlendAnimations.forEach((blendAnim) => {
       const normalizedWeight = blendAnim.targetWeight / totalWeight;
       blendAnim.action.weight = normalizedWeight;
       blendAnim.weight = normalizedWeight;
     });
 
+    // Notify rendering update
     this.emit("_needsUpdate");
   }
 
+  // ========================================
+  // Setter APIs (set prefix)
+  // ========================================
+
+  /**
+   * Set animation speed
+   */
   setAnimationSpeed(speed: number): void {
     this.animationSpeed = speed;
+    // Apply to all actions so both single and blend modes are covered
     this.actions.forEach((action) => {
       action.setEffectiveTimeScale(speed);
     });
   }
 
+  /**
+   * Change animation loop setting
+   */
   setAnimationLoop(loop: boolean): void {
     this.isLooping = loop;
     this.actions.forEach((action) => {
@@ -873,12 +971,16 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
     });
   }
 
+  /**
+   * Set weight for specific animation
+   */
   setAnimationWeight(name: string, weight: number): void {
     if (!this.mixer) {
       console.warn("Animation mixer not initialized");
       return;
     }
 
+    // Weight adjustment in blend mode
     if (this.isBlendMode && this.activeBlendAnimations.has(name)) {
       const blendAnim = this.activeBlendAnimations.get(name);
       if (!blendAnim) {
@@ -890,18 +992,21 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
       blendAnim.weight = weight;
       blendAnim.targetWeight = weight;
     } else {
+      // For single animation, switch to blend mode and set weight
       const action = this.actions.get(name);
       if (!action) {
         console.warn(`Animation "${name}" not found`);
         return;
       }
 
+      // Stop existing animations and switch to blend mode
       if (!this.isBlendMode) {
         this.stopAllAnimations();
         this.isBlendMode = true;
         this.currentAction = null;
       }
 
+      // Start animation and set weight
       action.enabled = true;
       action.setEffectiveTimeScale(this.animationSpeed);
       action.setEffectiveWeight(weight);
@@ -917,32 +1022,58 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
     this.emit("_needsUpdate");
   }
 
+  // ========================================
+  // Internal Processing APIs
+  // ========================================
+
+  /**
+   * Update animation mixer (needs to be called every frame)
+   */
   updateAnimation(deltaTime: number): void {
     this.updateAnimationMixer(deltaTime);
   }
 
+  /**
+   * Dispose animation-related resources
+   */
   disposeAnimation(): void {
     this.disposeAnimationResources();
   }
 
+  /**
+   * Internal method to update animation mixer
+   */
   private updateAnimationMixer(deltaTime: number): void {
     if (this.mixer) {
       this.mixer.update(deltaTime);
     }
   }
 
+  // ========================================
+  // Framework Integration APIs
+  // ========================================
+
+  /**
+   * Update method called every frame
+   * Automatically called by Three.js framework
+   */
   update(time: number): void {
+    // Record previous update time and calculate deltaTime
     if (!this.lastUpdateTime) {
       this.lastUpdateTime = time;
       return;
     }
 
-    const deltaTime = (time - this.lastUpdateTime) / 1000;
+    const deltaTime = (time - this.lastUpdateTime) / 1000; // Convert milliseconds to seconds
     this.lastUpdateTime = time;
 
+    // Update animation mixer
     this.updateAnimationMixer(deltaTime);
   }
 
+  /**
+   * Get currently playing animation name
+   */
   private getCurrentAnimationName(): string | null {
     if (!this.currentAction) return null;
 
@@ -955,6 +1086,7 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
   }
 
   getWorldPosition(): Vector3 {
+    // Return stored world position (RTE mode)
     return this.originalWorldPosition;
   }
 

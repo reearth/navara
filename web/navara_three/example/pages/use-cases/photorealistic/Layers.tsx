@@ -162,8 +162,7 @@ export const Layers: FC<SceneLayerToggles> = ({
   // Night scene tuning inspired by example/pages/night
   useEffect(() => {
     // Boost stars and enable at night; keep subtle in day
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (defaultLayers?.atmosphere?.stars as any)?.update({
+    defaultLayers?.atmosphere?.stars?.update({
       stars: isNight
         ? { intensity: 50, pointSize: 1.5 }
         : { intensity: 1, pointSize: 1 },
@@ -172,8 +171,7 @@ export const Layers: FC<SceneLayerToggles> = ({
 
   useEffect(() => {
     if (!defaultLayers) return;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (defaultLayers.atmosphere?.sun as any)?.update({
+    defaultLayers.atmosphere?.sun?.update({
       sun: {
         castShadow: true,
         ...QUALITY[quality]?.sun,
@@ -183,8 +181,7 @@ export const Layers: FC<SceneLayerToggles> = ({
 
   useEffect(() => {
     if (!defaultLayers) return;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (defaultLayers.atmosphere.skyEnv as any).update({
+    defaultLayers.atmosphere.skyEnv.update({
       sky: {
         sunAngularRadius: cloudsEffectVisible ? 0.0001 : 0.1,
       },

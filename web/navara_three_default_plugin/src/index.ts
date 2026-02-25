@@ -63,6 +63,11 @@ export class DefaultPlugin extends Plugin {
     view.registerMesh("smoothLines", SmoothLineMeshLayer);
   }
 
+  /**
+   * Add default layers automatically to make the photorealistic scene.
+   * This method must be invoked after `view.init()`.
+   */
+  // TODO: Add effect layers.
   addDefaultPhotorealLayers(): {
     sky: LayerHandle<SkyMeshLayer>;
     skyEnv: LayerHandle<SkyMeshLayer>;

@@ -16,7 +16,7 @@ export const run = async (view: ThreeView) => {
 
   view.addLayer({ type: "light", ambient: {} });
 
-  view.toneMappingExposure = 5;
+  view.toneMappingExposure = 3;
 
   view.addLayer({
     type: "effect",
