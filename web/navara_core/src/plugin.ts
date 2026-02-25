@@ -1,3 +1,3 @@
-export class Plugin {
-  async init(_view: unknown): Promise<void> {}
+export class Plugin<TView = unknown> {
+  async init(_view: TView): Promise<void> {}
 }
