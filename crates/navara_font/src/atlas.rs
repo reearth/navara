@@ -1,6 +1,6 @@
 use guillotiere::Size;
 
-use crate::resource::{GlyphMetrics, LRU_MIN_AGE, SDF_PX_SIZE, SdfAtlas};
+use crate::resource::{GlyphMetrics, SdfAtlas, LRU_MIN_AGE, SDF_PX_SIZE};
 
 /// Ensure all required glyphs (by glyph ID, post-shaping) are in the atlas.
 ///

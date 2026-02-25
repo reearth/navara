@@ -1013,7 +1013,10 @@ impl App {
 
     /// Get glyph metrics for all glyphs currently in a font's atlas.
     /// Returns a Vec of (glyph_id, atlas_x, atlas_y, atlas_w, atlas_h, bearing_x, bearing_y, advance).
-    pub fn get_font_glyph_metrics(&self, url: &str) -> Option<Vec<(u16, i32, i32, u32, u32, f32, f32, f32)>> {
+    pub fn get_font_glyph_metrics(
+        &self,
+        url: &str,
+    ) -> Option<Vec<(u16, i32, i32, u32, u32, f32, f32, f32)>> {
         let cache = self.app.world().get_resource::<navara_font::FontCache>()?;
         let entry = cache.get(url)?;
         let metrics: Vec<_> = entry
@@ -1021,7 +1024,16 @@ impl App {
             .glyph_map
             .iter()
             .map(|(&glyph_id, m)| {
-                (glyph_id, m.atlas_x, m.atlas_y, m.atlas_w, m.atlas_h, m.bearing_x, m.bearing_y, m.advance)
+                (
+                    glyph_id,
+                    m.atlas_x,
+                    m.atlas_y,
+                    m.atlas_w,
+                    m.atlas_h,
+                    m.bearing_x,
+                    m.bearing_y,
+                    m.advance,
+                )
             })
             .collect();
         Some(metrics)
@@ -1036,7 +1048,11 @@ impl App {
 
     /// Shape text and ensure all glyphs are in the atlas.
     /// Returns (shaped_glyphs, units_per_em).
-    pub fn shape_text(&mut self, url: &str, text: &str) -> Option<(Vec<(u32, i32, i32, i32, i32, u32)>, u16)> {
+    pub fn shape_text(
+        &mut self,
+        url: &str,
+        text: &str,
+    ) -> Option<(Vec<(u32, i32, i32, i32, i32, u32)>, u16)> {
         let Some(mut font_cache) = self
             .app
             .world_mut()
@@ -1063,7 +1079,14 @@ impl App {
             glyphs
                 .into_iter()
                 .map(|g| {
-                    (g.glyph_id, g.x_advance, g.y_advance, g.x_offset, g.y_offset, g.cluster)
+                    (
+                        g.glyph_id,
+                        g.x_advance,
+                        g.y_advance,
+                        g.x_offset,
+                        g.y_offset,
+                        g.cluster,
+                    )
                 })
                 .collect(),
             units_per_em,

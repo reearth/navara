@@ -573,12 +573,7 @@ impl Core {
     /// Load a font file into the cache.
     /// TypeScript fetches the font and sends bytes via the transfer callback.
     #[wasm_bindgen(js_name = loadFont)]
-    pub fn load_font(
-        &mut self,
-        url: String,
-        byte_length: usize,
-        f: &js_sys::Function,
-    ) -> bool {
+    pub fn load_font(&mut self, url: String, byte_length: usize, f: &js_sys::Function) -> bool {
         let data = transfer_u8_array(byte_length, f);
         self.app.load_font(url, data).is_ok()
     }
@@ -616,37 +611,45 @@ impl Core {
 
         let glyphs: Vec<font::WasmShapedGlyph> = shaped
             .iter()
-            .map(|&(glyph_id, x_advance, y_advance, x_offset, y_offset, cluster)| {
-                font::WasmShapedGlyph {
-                    glyph_id,
-                    x_advance,
-                    y_advance,
-                    x_offset,
-                    y_offset,
-                    cluster,
-                }
-            })
+            .map(
+                |&(glyph_id, x_advance, y_advance, x_offset, y_offset, cluster)| {
+                    font::WasmShapedGlyph {
+                        glyph_id,
+                        x_advance,
+                        y_advance,
+                        x_offset,
+                        y_offset,
+                        cluster,
+                    }
+                },
+            )
             .collect();
 
         // Get atlas metrics for the shaped glyphs
         let all_metrics = self.app.get_font_glyph_metrics(url)?;
         let metrics: Vec<font::WasmGlyphMetrics> = all_metrics
             .into_iter()
-            .map(|(glyph_id, atlas_x, atlas_y, atlas_w, atlas_h, bearing_x, bearing_y, advance)| {
-                font::WasmGlyphMetrics {
-                    glyph_id,
-                    atlas_x,
-                    atlas_y,
-                    atlas_w,
-                    atlas_h,
-                    bearing_x,
-                    bearing_y,
-                    advance,
-                }
-            })
+            .map(
+                |(glyph_id, atlas_x, atlas_y, atlas_w, atlas_h, bearing_x, bearing_y, advance)| {
+                    font::WasmGlyphMetrics {
+                        glyph_id,
+                        atlas_x,
+                        atlas_y,
+                        atlas_w,
+                        atlas_h,
+                        bearing_x,
+                        bearing_y,
+                        advance,
+                    }
+                },
+            )
             .collect();
 
-        Some(font::ShapeTextResult { glyphs, metrics, units_per_em })
+        Some(font::ShapeTextResult {
+            glyphs,
+            metrics,
+            units_per_em,
+        })
     }
 
     // === Globe definition ===

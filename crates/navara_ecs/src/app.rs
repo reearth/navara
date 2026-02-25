@@ -7,6 +7,7 @@ use navara_data_requester::DataRequesterPlugin;
 use navara_event::EventPlugin;
 use navara_feature::FeaturePlugin;
 use navara_fog::FogPlugin;
+use navara_font::FontPlugin;
 use navara_frame::FramePlugin;
 use navara_geojson::GeoJsonPlugin;
 use navara_globe::GlobePlugin;
@@ -19,7 +20,6 @@ use navara_texture_fragment::TextureFragmentPlugin;
 use navara_tile::TilePlugin;
 use navara_window::WindowPlugin;
 use navara_worker::WorkerPlugin;
-use navara_font::FontPlugin;
 
 pub struct Plugin;
 
