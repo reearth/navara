@@ -72,7 +72,7 @@ const run = async () => {
         return new Color().setHex(0xff0000);
       })();
 
-      return { color, extrudedHeight };
+      return { color, extrudedHeight: extrudedHeight * 100 };
     });
   });
 
