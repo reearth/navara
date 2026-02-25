@@ -96,20 +96,14 @@ void main() {
 
     float mpp = nvr_metersPerPixel(eyeCoordinate, viewportAndPixelRatio, frustumNearFar, frustumRatio);
     float halfMaxWidth = v_startPlaneNormalEcAndHalfWidth.w * mpp;
+
     // Check distance of the eye coordinate against the right-facing plane
     float widthwiseDistance = nvr_planeDistance(v_rightPlaneEC, eyeCoordinate.xyz);
 
-    // Check eye coordinate against the mitering planes
-    // Use pre-computed flat offsets from vertex shader to avoid recomputation error
     float distanceFromStart = nvr_planeDistance(v_startPlaneNormalEcAndHalfWidth.xyz, v_startPlaneOffsetEc, eyeCoordinate.xyz);
     float distanceFromEnd = nvr_planeDistance(v_endPlaneNormalEc.xyz, v_endPlaneOffsetEc, eyeCoordinate.xyz);
 
-    // Use half the line width in meters as miter plane tolerance.
-    // At the inside of corner joints, the V-shaped gap between adjacent segments'
-    // shadow volumes causes terrain pixels to be slightly behind the miter plane.
-    // The maximum overshoot is proportional to the half-width of the polyline.
-    float planeEpsilon = halfMaxWidth;
-    if (abs(widthwiseDistance) > halfMaxWidth || distanceFromStart < -planeEpsilon || distanceFromEnd < -planeEpsilon) {
+    if (abs(widthwiseDistance) > halfMaxWidth || distanceFromStart <= 0.0 || distanceFromEnd <= 0.0) {
         discard;
     }
 
