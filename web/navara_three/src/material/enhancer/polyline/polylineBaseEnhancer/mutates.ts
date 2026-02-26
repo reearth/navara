@@ -21,6 +21,7 @@ import type {
  */
 const DEFAULT_BASE_REFS: PolylineBaseRefs = {
   minMaxHeightAndWidth: { value: [0, 0, 1] },
+  maxWidth: { value: 10000 },
   color: { value: new ThreeColor(0xffffff) },
   useGroundNormals: { value: false },
   nvr_uPickable: { value: 0 },
@@ -56,6 +57,7 @@ export const createBaseMutates = (useRTE: boolean): PolylineBaseMutates => {
         state.minMaxHeight[1],
         state.width,
       ];
+      refs.maxWidth.value = state.maxWidth;
       refs.useGroundNormals.value = state.useGroundNormals;
       refs.nvr_uPickable.value = state.pickable ? 1 : 0;
 
@@ -68,6 +70,7 @@ export const createBaseMutates = (useRTE: boolean): PolylineBaseMutates => {
 
       // Assign core uniform refs to shader.uniforms
       uniforms.minMaxHeightAndWidth = refs.minMaxHeightAndWidth;
+      uniforms.maxWidth = refs.maxWidth;
       uniforms.color = refs.color;
       uniforms.useGroundNormals = refs.useGroundNormals;
       uniforms.nvr_uPickable = refs.nvr_uPickable;
