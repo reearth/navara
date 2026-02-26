@@ -27,6 +27,8 @@ export async function renderText(
       layerId,
     });
 
+    console.log("Created InstancedSdfTextMesh with font", fontUrl);
+
     return textGroup;
   }
 

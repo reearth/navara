@@ -1,5 +1,6 @@
 import { Unimplemented } from "@navara/core";
 import type { TextMaterial as NavaraTextMaterial, Transform } from "@navara/engine";
+import { encodePosition } from "@navara/engine-api";
 import sdfTextVertexShader from "@shaders/glsl/sdfText.vert.glsl";
 import sdfTextFragmentShader from "@shaders/glsl/sdfText.frag.glsl";
 import {
@@ -10,8 +11,8 @@ import {
   InstancedBufferGeometry,
   LinearFilter,
   Mesh,
+  PerspectiveCamera,
   RedFormat,
-  RGBAFormat,
   ShaderMaterial,
   UnsignedByteType,
   Vector2,
@@ -23,9 +24,7 @@ import type {
   GlyphMetrics,
   ShapeTextResult,
 } from "../font/FontManager";
-import type { CommonUniforms } from "../uniforms";
-
-import { setRTCPosition } from "./rtcRteHelper";
+import type { PickableMesh } from "./pickableMesh";
 
 /** Must match Rust SDF_PX_SIZE in navara_font/src/resource.rs */
 const SDF_PX_SIZE = 64.0;
@@ -37,30 +36,29 @@ const SDF_PX_SIZE = 64.0;
  * sampling from a per-font SDF atlas texture. Uses billboard rendering
  * so text always faces the camera.
  */
-export class SDFTextMesh extends Mesh<
-  InstancedBufferGeometry,
-  ShaderMaterial
-> {
+export class SDFTextMesh extends Mesh< InstancedBufferGeometry, ShaderMaterial > implements PickableMesh {
   private _fontManager: FontManager;
   private _fontUrl: string;
   private _text = "";
   private _atlasTexture: DataTexture | null = null;
 
   constructor(
+    position: Float32Array | { high: Float32Array; low: Float32Array },
+    material: NavaraTextMaterial,
+    transform: Transform,
     fontManager: FontManager,
     fontUrl: string,
-    uniforms: CommonUniforms,
-    batchId: number,
+    batchId: number | undefined,
+    RTE: boolean,
+    active: boolean,
   ) {
     super();
 
     this._fontManager = fontManager;
     this._fontUrl = fontUrl;
 
-    this.userData.rtcPos = { value: new Vector3() };
-
     this.geometry = this._createBaseGeometry();
-    this.material = this._createMaterial(uniforms, batchId);
+    this.material = this._createMaterial(position, RTE, material, transform, batchId, active);
     this.frustumCulled = false;
   }
 
@@ -89,18 +87,6 @@ export class SDFTextMesh extends Mesh<
     this._buildGlyphInstances(shapeResult, atlasData.width, atlasData.height);
     this._updateAtlasTexture(atlasData.data, atlasData.width, atlasData.height);
     this.visible = true;
-  }
-
-  /**
-   * Set position using RTC encoding.
-   */
-  setPosition(
-    position: Float32Array<ArrayBufferLike> | null | undefined,
-    posIdx: number,
-    transform: Transform,
-  ): void {
-    setRTCPosition(this, position, posIdx, transform);
-    this.material.uniforms.rtcPos.value.copy(this.userData.rtcPos.value);
   }
 
   /**
@@ -134,13 +120,14 @@ export class SDFTextMesh extends Mesh<
    * Apply material properties from WASM TextMaterial.
    * Maps relevant properties to SDFTextMesh setters, with change tracking.
    */
-  updateFromMaterial(material: NavaraTextMaterial, _active: boolean): void {
+  // TODO: cleanup
+  update(material: NavaraTextMaterial, _active: boolean): void {
     if (!this.userData.prev) {
       this.userData.prev = {};
     }
     const prev = this.userData.prev;
 
-    const nextVisible = true;
+    const nextVisible = material.show ?? true;
     if (prev.visible !== nextVisible) {
       this.visible = nextVisible;
       prev.visible = nextVisible;
@@ -229,7 +216,6 @@ export class SDFTextMesh extends Mesh<
 
   _setPickable(pickable: boolean): void {
     this.material.uniforms.nvr_uPickable.value = pickable ? 1.0 : 0.0;
-    this.frustumCulled = !pickable;
   }
 
   // --- Cleanup ---
@@ -265,37 +251,91 @@ export class SDFTextMesh extends Mesh<
   }
 
   private _createMaterial(
-    uniforms: CommonUniforms,
-    batchId: number,
+    position: Float32Array | { high: Float32Array; low: Float32Array },
+    RTE: boolean,
+    material: NavaraTextMaterial,
+    transform: Transform,
+    batchId: number | undefined,
+    active: boolean,
   ): ShaderMaterial {
-    const material = new ShaderMaterial({
+    const rtcCenter = new Vector3(
+      transform.tx,
+      transform.ty,
+      transform.tz,
+    );
+
+    const m = new ShaderMaterial({
       vertexShader: sdfTextVertexShader,
       fragmentShader: sdfTextFragmentShader,
       uniforms: {
         uAtlas: { value: null },
         uSdfThreshold: { value: 0.5 },
-        uColor: { value: new Vector3(1.0, 1.0, 1.0) },
+        uColor: { value:  new Color(1, 1, 1) },
         uOpacity: { value: 1.0 },
         uFontSizePx: { value: 16.0 },
         uTextWidth: { value: 0.0 },
         uTextHeight: { value: 0.0 },
-        uCenter: { value: new Vector2(0.5, 0.0) },
-        uScaleByDistance: { value: 0.0 },
-        uAddHeight: { value: 0.0 },
-        uOffsetDepth: { value: true },
-        uFarPlane: { value: 1e9 },
-        rtcPos: { value: new Vector3() },
-        nvr_uBatchId: { value: batchId },
+        uCenter: { value: material.center ? new Vector2(material.center.x, material.center.y) : new Vector2(0.0, 0.0) },
+        uScaleByDistance: { value: material.scaleByDistance ? 1.0 : 0.0 },
+        uAddHeight: { value: material.height ?? 0.0 },
+        uOffsetDepth: { value: material.offsetDepth ?? true ? 1.0 : 0.0 },
+        uRTCCenter: { value: rtcCenter },
+        uEyeRTELow: { value: new Vector3() },
+        uEyeRTEHigh: { value: new Vector3() },
+        uFarPlane: { value: 1000.0 },
+        nvr_uBatchId: { value: batchId ?? 0 },
         nvr_uPickable: { value: 0.0 },
-        nvr_uFov: uniforms.fov,
-        nvr_uScreenHeightPx: uniforms.screenHeightPx,
       },
       transparent: true,
       depthTest: true,
-      depthWrite: false,
+      visible: true,
     });
 
-    return material;
+    if (RTE) {
+      m.defines = { USE_RTE: 1 };
+      const p = {
+        low: (position as { low: Float32Array }).low,
+        high: (position as { high: Float32Array }).high,
+      };
+      m.uniforms.uRTEPositionLOW = { value:  new Vector3(p.low[0], p.low[1], p.low[2] ?? 0.0) };
+      m.uniforms.uRTEPositionHIGH = { value:  new Vector3(p.high[0], p.high[1], p.high[2] ?? 0.0) };
+    } else 
+    {
+      const p = position as Float32Array;
+      m.uniforms.uRTCPosition = { value: new Vector3(p[0], p[1], p[2] ?? 0.0) };
+    }
+
+    m.onBeforeRender = (
+      _renderer,
+      _scene,
+      camera,
+      _geometry,
+      _mat,
+      _group,
+    ) => {
+      const pCam = camera as PerspectiveCamera;
+      m.uniforms.uFarPlane.value = pCam.far;
+
+      if (RTE) {
+        const encodedCamPos = encodePosition(
+          camera.position.x,
+          camera.position.y,
+          camera.position.z,
+        );
+        m.uniforms.uEyeRTELow.value.set(
+          encodedCamPos.low.x,
+          encodedCamPos.low.y,
+          encodedCamPos.low.z,
+        );
+        m.uniforms.uEyeRTEHigh.value.set(
+          encodedCamPos.high.x,
+          encodedCamPos.high.y,
+          encodedCamPos.high.z,
+        );
+      }
+    };
+
+    return m;
   }
 
   private _buildGlyphInstances(

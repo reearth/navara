@@ -1,6 +1,5 @@
 #include "chunks/horizon_culling_pars_vertex.glsl"
 #include "chunks/sprite_height_pars_vertex.glsl"
-#include "chunks/billboardMat.glsl"
 
 // Per-instance attributes
 attribute vec2 glyphOffset;  // Glyph position in normalized text space
@@ -8,7 +7,17 @@ attribute vec2 glyphSize;    // Glyph quad dimensions in normalized text space
 attribute vec4 glyphUvRect;  // Atlas UV sub-rect: (u0, v0, u1, v1)
 
 // Uniforms
-uniform vec3 rtcPos;
+#ifdef USE_RTE
+    // TODO: do the calculation on CPU and just pass in the final position as a single attribute
+    uniform vec3 uRTEPositionLOW; 
+    uniform vec3 uRTEPositionHIGH;
+    uniform vec3 uEyeRTEHigh;
+    uniform vec3 uEyeRTELow;
+#else
+    uniform vec3 uRTCPosition; 
+    uniform vec3 uRTCCenter;
+#endif
+
 uniform float uFontSizePx;
 uniform float uScaleByDistance;
 uniform float uTextWidth;
@@ -24,25 +33,34 @@ varying float vFragDepth;
 const float DISTANCE_SCALE_FACTOR = 100000.0;
 
 void main() {
-    // --- RTC sprite positioning ---
-    mat4 modelViewMatrixNoScale = nvr_removeScaleFromMat4(modelViewMatrix);
-    vec4 posMv = modelViewMatrixNoScale * vec4(rtcPos, 1.0);
-
-    // Reconstruct world position for horizon culling
-    mat3 viewRotation = mat3(viewMatrix);
-    vec3 absTransformed = transpose(viewRotation) * posMv.xyz + cameraPosition;
-
-    // --- Horizon culling ---
+#ifdef USE_RTE
+    vec3 absTransformed = uRTEPositionHIGH + uRTEPositionLOW;
+#else
+    vec3 absTransformed = uRTCPosition + uRTCCenter;
+#endif
     #include "chunks/horizon_culling_vertex.glsl"
 
-    // --- Height offset ---
-    posMv += mvr_getMvHeightOffset(absTransformed, uAddHeight);
+    vec4 mvPosition;
+#ifdef USE_RTE
+    vec3 highDiff = uRTEPositionHIGH - uEyeRTEHigh;
+    vec3 lowDiff = uRTEPositionLOW - uEyeRTELow;
+    vec3 resolvedPosition = highDiff + lowDiff;
 
-    // --- Compute scale factor ---
-    float scaleFactor = uFontSizePx;
-    if (uScaleByDistance > 0.0) {
-        scaleFactor = uFontSizePx * (1.0 + (length(posMv.xyz) / DISTANCE_SCALE_FACTOR));
-    }
+    mat4 viewMatrixRTE = viewMatrix;
+    viewMatrixRTE[3] = vec4(0.0, 0.0, 0.0, 1.0); // Remove translation
+    mvPosition = viewMatrixRTE * vec4(resolvedPosition, 1.0);
+#else
+    // Adjust view matrix for RTC
+    vec4 centerMV = viewMatrix * vec4(uRTCCenter, 1.0);
+    mat4 viewMatrixRTC = viewMatrix;
+    viewMatrixRTC[3] = vec4(centerMV.xyz, 1.0);
+
+    mvPosition = viewMatrixRTC * vec4(uRTCPosition, 1.0);
+#endif
+
+    mvPosition += mvr_getMvHeightOffset(absTransformed, uAddHeight);
+
+    vec2 center = clamp(uCenter, vec2(-0.5), vec2(0.5)); // Ensure center is within the bounds of the sprite
 
     // --- Per-glyph vertex position ---
     // position.xy is the unit quad [-0.5, 0.5].
@@ -51,19 +69,19 @@ void main() {
     vec2 localPos = (position.xy + vec2(0.5)) * glyphSize + glyphOffset;
 
     // Apply centering: shift entire text block by anchor point
-    localPos.x -= uCenter.x * uTextWidth;
-    localPos.y -= (1.0 - uCenter.y) * uTextHeight;
+    localPos.x -= center.x * uTextWidth;
+    localPos.y -= (1.0 - center.y) * uTextHeight;
+
+    float scaleFactor = uFontSizePx;
 
     // Apply billboard transform (screen-aligned, scaled)
     vec4 delta = vec4(localPos * scaleFactor, 0.0, 0.0);
-    vec4 newMvPosition = posMv + delta;
+    vec4 newMvPosition = mvPosition + delta;
 
     gl_Position = projectionMatrix * newMvPosition;
 
-    // --- Atlas UV interpolation ---
-    // Map unit quad UV [0,1] to atlas sub-rect
+    // Atlas UV interpolation: map unit quad UV [0,1] to atlas sub-rect
     vAtlasUv = mix(glyphUvRect.xy, glyphUvRect.zw, uv);
 
-    // --- Depth for logarithmic depth buffer ---
     vFragDepth = gl_Position.w + 1.0;
 }

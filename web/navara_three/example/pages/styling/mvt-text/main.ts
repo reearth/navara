@@ -87,7 +87,6 @@ const run = async () => {
         clampToGround: false,
         size: params.size,
         center: { x: 0.5, y: 0 },
-        font: "https://raw.githubusercontent.com/blagarde/midori/master/fonts-japanese-gothic.ttf",
       },
       vectorTile: {
         maxZoom: 16,
@@ -95,41 +94,41 @@ const run = async () => {
       },
     });
 
-  //   // Feature evaluator: filter and style text labels
-  //   layer.on("featureUpdated", ({ evaluator }) => {
-  //     if (updatedFeatures.has(evaluator.id)) return;
-  //     updatedFeatures.add(evaluator.id);
+    // Feature evaluator: filter and style text labels
+    layer.on("featureUpdated", ({ evaluator }) => {
+      if (updatedFeatures.has(evaluator.id)) return;
+      updatedFeatures.add(evaluator.id);
 
-  //     const uniqueLabels = new Set<string>();
+      const uniqueLabels = new Set<string>();
 
-  //     evaluator.evaluate((_batchId, property) => {
-  //       const text = (property?.["knj"] ?? property?.["name"]) as string;
-  //       const ftCode = property?.["ftCode"] as number;
-  //       const annoCtg = property?.["annoCtg"] as number;
+      evaluator.evaluate((_batchId, property) => {
+        const text = (property?.["knj"] ?? property?.["name"]) as string;
+        const ftCode = property?.["ftCode"] as number;
+        const annoCtg = property?.["annoCtg"] as number;
 
-  //       // // Filter by feature code and annotation category
-  //       // if (
-  //       //   !ALLOWED_FT_CODE.includes(ftCode) ||
-  //       //   (annoCtg && !ALLOWED_ANNO_CTG.includes(annoCtg))
-  //       // ) {
-  //       //   return { text: "", show: false };
-  //       // }
+        // Filter by feature code and annotation category
+        if (
+          !ALLOWED_FT_CODE.includes(ftCode) ||
+          (annoCtg && !ALLOWED_ANNO_CTG.includes(annoCtg))
+        ) {
+          return { text: "", show: false };
+        }
 
-  //       // // Deduplicate labels
-  //       // if (uniqueLabels.has(text)) {
-  //       //   return { text: "", show: false };
-  //       // }
+        // Deduplicate labels
+        if (uniqueLabels.has(text)) {
+          return { text: "", show: false };
+        }
 
-  //       uniqueLabels.add(text);
+        uniqueLabels.add(text);
 
-  //       return {
-  //         text,
-  //         show: !!text,
-  //       };
-  //     });
-  //   });
+        return {
+          text,
+          show: !!text,
+        };
+      });
+    });
 
-  //   return layer;
+    return layer;
   };
 
   let layer = addMvtLayer();
