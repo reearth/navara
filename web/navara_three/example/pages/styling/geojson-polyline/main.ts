@@ -53,7 +53,7 @@ const run = async () => {
   // Track updated features to prevent duplicate evaluations
   let updatedFeatures = new Set<bigint>();
 
-  const params = { width: 10 };
+  const params = { width: 10, maxWidth: 10000 };
 
   // GeoJSON polyline layer with feature evaluator
   const addGeoJsonLayer = () => {
@@ -68,6 +68,7 @@ const run = async () => {
         show: true,
         color: new Color().setStyle("#ff0000"),
         width: params.width,
+        maxWidth: params.maxWidth,
         height: 1,
         clampToGround: true,
         useGroundNormals: true,
@@ -130,6 +131,12 @@ const run = async () => {
     .addBinding(params, "width", { min: 1, max: 20, step: 1 })
     .on("change", ({ value }) => {
       layer?.update({ polyline: { width: value } });
+    });
+
+  pane
+    .addBinding(params, "maxWidth", { min: 1, step: 1 })
+    .on("change", ({ value }) => {
+      layer?.update({ polyline: { maxWidth: value } });
     });
 
   showAttributions([TILE_DATASETS.openstreetmap, LOCAL_DATASETS.railways]);
