@@ -21,7 +21,7 @@ import type {
  */
 const DEFAULT_BASE_REFS: PolylineBaseRefs = {
   minMaxHeightAndWidth: { value: [0, 0, 1] },
-  maxWidth: { value: 1000 },
+  maxWidth: { value: 10000 },
   color: { value: new ThreeColor(0xffffff) },
   useGroundNormals: { value: false },
   nvr_uPickable: { value: 0 },
