@@ -60,6 +60,8 @@ export const transformShader = (
       "#include <common>",
       `
 #include <common>
+#include <packing>
+
 in float attrBatchId;
 in vec4 scaleNormalAndCap;
 

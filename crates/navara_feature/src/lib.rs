@@ -7,6 +7,7 @@ use navara_geometry::PolygonResource;
 
 mod billboard;
 mod event;
+mod geometry;
 mod model;
 mod point;
 mod polygon;
@@ -26,10 +27,8 @@ impl Plugin for FeaturePlugin {
             .add_systems(
                 Update,
                 (
-                    point::system::transfer_mesh,
                     point::system::transfer_batched_mesh,
                     point::system::update_height_by_terrain_for_batched,
-                    point::system::update_height_by_terrain,
                     point::system::remove_batched_feature,
                     point::system::cleanup_deleted_batched_children,
                 )
@@ -38,10 +37,8 @@ impl Plugin for FeaturePlugin {
             .add_systems(
                 Update,
                 (
-                    billboard::system::transfer_mesh,
                     billboard::system::transfer_batched_mesh,
                     billboard::system::update_height_by_terrain_for_batched,
-                    billboard::system::update_height_by_terrain,
                     billboard::system::remove_batched_feature,
                     billboard::system::cleanup_deleted_batched_children,
                 )
@@ -50,10 +47,8 @@ impl Plugin for FeaturePlugin {
             .add_systems(
                 Update,
                 (
-                    text::system::transfer_mesh,
                     text::system::transfer_batched_mesh,
                     text::system::update_height_by_terrain_for_batched,
-                    text::system::update_height_by_terrain,
                     text::system::remove_batched_feature,
                     text::system::cleanup_deleted_batched_children,
                 )
@@ -63,7 +58,6 @@ impl Plugin for FeaturePlugin {
                 Update,
                 (
                     model::system::transfer_mesh,
-                    model::system::update_height_by_terrain,
                     model::system::remove_batched_feature,
                 )
                     .chain(),
@@ -71,7 +65,6 @@ impl Plugin for FeaturePlugin {
             .add_systems(
                 Update,
                 (
-                    polyline::system::transfer_mesh,
                     polyline::system::transfer_batched_mesh,
                     polyline::system::update_height_by_terrain,
                     polyline::system::remove_batched_feature,
@@ -82,7 +75,6 @@ impl Plugin for FeaturePlugin {
             .add_systems(
                 Update,
                 (
-                    polygon::system::transfer_mesh,
                     polygon::system::transfer_batched_mesh,
                     polygon::system::update_polygon,
                     polygon::system::update_height_by_terrain,

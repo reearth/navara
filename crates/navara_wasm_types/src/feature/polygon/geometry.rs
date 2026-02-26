@@ -1,6 +1,56 @@
 use wasm_bindgen::prelude::*;
 
-use crate::{copy_u32_array, ExtentRadianF32, FloatAttribute, UintAttribute, Vec3};
+use crate::{copy_f32_array, copy_u32_array, ExtentRadianF32, FloatAttribute, UintAttribute, Vec3};
+
+#[wasm_bindgen]
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct ConstructedPolygonOutlineGeometry {
+    position: FloatAttribute,
+    scale_normal_and_cap: FloatAttribute,
+    skip_indices: Vec<u32>,
+    batch_index: Option<FloatAttribute>,
+}
+
+impl ConstructedPolygonOutlineGeometry {
+    pub fn new(
+        position: FloatAttribute,
+        scale_normal_and_cap: FloatAttribute,
+        skip_indices: Vec<u32>,
+        batch_index: Option<FloatAttribute>,
+    ) -> Self {
+        Self {
+            position,
+            scale_normal_and_cap,
+            skip_indices,
+            batch_index,
+        }
+    }
+}
+
+#[wasm_bindgen]
+impl ConstructedPolygonOutlineGeometry {
+    pub fn position(&mut self) -> js_sys::Float32Array {
+        copy_f32_array(&self.position.data)
+    }
+    pub fn position_size(&self) -> u8 {
+        self.position.size
+    }
+    pub fn scale_normal_and_cap(&mut self) -> js_sys::Float32Array {
+        copy_f32_array(&self.scale_normal_and_cap.data)
+    }
+    pub fn scale_normal_and_cap_size(&self) -> u8 {
+        self.scale_normal_and_cap.size
+    }
+    pub fn skip_indices(&mut self) -> js_sys::Uint32Array {
+        copy_u32_array(&self.skip_indices)
+    }
+    pub fn batch_index(&mut self) -> Option<js_sys::Float32Array> {
+        self.batch_index.as_ref().map(|b| copy_f32_array(&b.data))
+    }
+    pub fn batch_index_size(&self) -> Option<u8> {
+        self.batch_index.as_ref().map(|b| b.size)
+    }
+}
 
 #[wasm_bindgen]
 pub struct ConstructedPolygonGeometry {
@@ -12,6 +62,7 @@ pub struct ConstructedPolygonGeometry {
     /// Used to position the mesh while keeping vertex positions in local space
     #[wasm_bindgen(getter_with_clone)]
     pub rtc_translation: Option<Vec3>,
+    outline: Option<ConstructedPolygonOutlineGeometry>,
 }
 
 impl ConstructedPolygonGeometry {
@@ -19,11 +70,13 @@ impl ConstructedPolygonGeometry {
         geometry: PolygonGeometry,
         extent: Option<ExtentRadianF32>,
         rtc_translation: Option<Vec3>,
+        outline: Option<ConstructedPolygonOutlineGeometry>,
     ) -> Self {
         Self {
             geometry,
             extent,
             rtc_translation,
+            outline,
         }
     }
 }
@@ -74,6 +127,9 @@ impl ConstructedPolygonGeometry {
     }
     pub fn indices(&mut self) -> js_sys::Uint32Array {
         self.geometry.indices()
+    }
+    pub fn outline(&mut self) -> Option<ConstructedPolygonOutlineGeometry> {
+        self.outline.take()
     }
 }
 

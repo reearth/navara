@@ -94,6 +94,13 @@ impl TerrainLayerDescription {
     }
 }
 
+/// GeoJSON layer description for configuring feature rendering.
+///
+/// **Note**: Model appearance is intentionally not supported for GeoJSON layers.
+/// The batched feature pipeline requires per-batch coordinate transforms (model matrices)
+/// and animation support, which are incompatible with the current GeoJSON batching approach.
+/// For 3D model rendering at geographic coordinates, use a mesh layer (e.g. `GLTFModelLayerConfig`)
+/// instead.
 #[wasm_bindgen]
 #[derive(Debug, Default, Clone, Deserialize)]
 pub struct GeoJsonLayerDescription {
@@ -116,8 +123,6 @@ pub struct GeoJsonLayerDescription {
     pub polyline: Option<PolylineMaterial>,
     #[wasm_bindgen(getter_with_clone)]
     pub polygon: Option<PolygonMaterial>,
-    #[wasm_bindgen(getter_with_clone)]
-    pub model: Option<ModelMaterial>,
 }
 
 impl GeoJsonLayerDescription {
@@ -224,23 +229,6 @@ impl GeoJsonLayerDescription {
                 }
             }
 
-            if let Some(new_model_material) = self.model.take() {
-                // Merge with the old material if exists.
-                if let Some(old_appearance) = old_layer
-                    .appearances
-                    .iter()
-                    .find(|a| matches!(a, Appearance::Model(_)))
-                {
-                    if let Appearance::Model(old_model_material) = old_appearance {
-                        let updated_model_material = new_model_material.merge(old_model_material);
-                        // Replace the old appearance with the updated one.
-                        result.retain(|a| !matches!(a, Appearance::Model(_)));
-                        result.push(Appearance::Model(updated_model_material));
-                    }
-                } else {
-                    result.push(Appearance::Model(new_model_material.into()));
-                }
-            }
             result
         } else {
             // Otherwise, return new appearances
@@ -259,9 +247,6 @@ impl GeoJsonLayerDescription {
             }
             if let Some(v) = self.polygon.take() {
                 result.push(Appearance::Polygon(v.into()));
-            }
-            if let Some(v) = self.model.take() {
-                result.push(Appearance::Model(v.into()));
             }
             result
         };

@@ -666,13 +666,19 @@ impl App {
                     batch_length,
                     feature_id,
                     ..
-                } => (*feature_batch_id, *feature_id, Some(*batch_length as usize)),
-                RenderableFeature::Polygon {
-                    feature_batch_id, ..
+                }
+                | RenderableFeature::Polygon {
+                    feature_batch_id,
+                    batch_length,
+                    feature_id,
+                    ..
                 }
                 | RenderableFeature::Polyline {
-                    feature_batch_id, ..
-                } => (*feature_batch_id, renderable_feature_entity, None),
+                    feature_batch_id,
+                    batch_length,
+                    feature_id,
+                    ..
+                } => (*feature_batch_id, *feature_id, Some(*batch_length as usize)),
                 RenderableFeature::Unknown => return Ok(Some(())),
             };
 

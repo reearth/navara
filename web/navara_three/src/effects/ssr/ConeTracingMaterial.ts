@@ -206,7 +206,7 @@ export class ConeTracingMaterial extends ShaderMaterial {
   }
 
   get iteration(): number {
-    return +this.defines.ITERATION;
+    return +(this.defines.ITERATION as string);
   }
 
   set iteration(value: number) {

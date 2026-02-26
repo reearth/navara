@@ -22,3 +22,6 @@ navara_layer.workspace = true
 navara_mvt.workspace = true
 navara_worker.workspace = true
 navara_component.workspace = true
+
+[dev-dependencies]
+approx.workspace = true

@@ -269,6 +269,7 @@ export class PolylineMesh extends BatchedFeatureMesh<
         color: meshMaterial.color,
         minMaxHeight: [minHeight, maxHeight],
         width: meshMaterial.width,
+        maxWidth: meshMaterial.maxWidth,
         clampToGround: !!meshMaterial.clampToGround,
         useGroundNormals: !!meshMaterial.useGroundNormals,
         isTexturized,
@@ -417,6 +418,7 @@ export class PolylineMesh extends BatchedFeatureMesh<
             ? [minMaxHeights[0], minMaxHeights[1]]
             : undefined,
         width: material.width,
+        maxWidth: material.maxWidth,
         clampToGround: !!material.clampToGround,
         useGroundNormals: !!material.useGroundNormals,
       },

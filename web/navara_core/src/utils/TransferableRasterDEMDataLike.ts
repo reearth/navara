@@ -3,9 +3,7 @@ import type {
   TransferableRasterDEMData,
 } from "@navara/engine";
 
-export class TransferableRasterDEMDataLike
-  implements TransferableRasterDEMData
-{
+export class TransferableRasterDEMDataLike implements TransferableRasterDEMData {
   decoder: ElevationDecoder;
 
   constructor(decoder: ElevationDecoder) {

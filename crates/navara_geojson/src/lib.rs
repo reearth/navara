@@ -5,6 +5,7 @@ use bevy_ecs::schedule::IntoScheduleConfigs;
 use navara_layer::{LayerDescStore, LayerStore};
 use std::collections::HashMap;
 
+mod geometry;
 mod system;
 
 pub struct GeoJsonPlugin;

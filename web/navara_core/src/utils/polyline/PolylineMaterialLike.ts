@@ -11,6 +11,7 @@ export class PolylineMaterialLike {
   color?: number;
   height?: number;
   width?: number;
+  maxWidth?: number;
   show?: boolean;
   __internal__?: PolylineInternalMaterial;
 
@@ -21,6 +22,7 @@ export class PolylineMaterialLike {
     this.castShadow = material.castShadow;
     this.color = material.color;
     this.width = material.width;
+    this.maxWidth = material.maxWidth;
     this.height = material.height;
     this.show = material.show;
   }

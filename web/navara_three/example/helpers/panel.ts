@@ -45,8 +45,6 @@ const addFeatureUpdateHandler = (
         defaultColor = layerDesc.polyline.color;
       } else if (layerDesc.polygon && layerDesc.polygon.color !== undefined) {
         defaultColor = layerDesc.polygon.color;
-      } else if (layerDesc.model && layerDesc.model.color !== undefined) {
-        defaultColor = layerDesc.model.color;
       }
     } else if (layerDesc.type == "b3dm") {
       if (layerDesc.model && layerDesc.model.color !== undefined) {
@@ -182,6 +180,7 @@ export const addCtrlPanel = (
     opacity: 1,
     size: 1,
     width: 1,
+    maxWidth: 10000,
     height: 1,
     extrudedHeight: 1,
     clampToGround: false,
@@ -341,6 +340,10 @@ export const addCtrlPanel = (
 
       if ("width" in material) {
         material.width = paneParams.width;
+      }
+
+      if ("maxWidth" in material) {
+        material.maxWidth = paneParams.maxWidth;
       }
 
       if ("height" in material) {
@@ -514,6 +517,11 @@ function createParamCtrl(
     if ("width" in material) {
       paneParams.width = material.width;
       f.addBinding(paneParams, "width").on("change", changeFunc);
+    }
+
+    if ("maxWidth" in material) {
+      paneParams.maxWidth = material.maxWidth;
+      f.addBinding(paneParams, "maxWidth", { min: 1 }).on("change", changeFunc);
     }
 
     if ("height" in material) {

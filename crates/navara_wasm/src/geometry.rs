@@ -284,6 +284,8 @@ pub struct TransferablePolygonOutlineGeometry {
     pub scale_normal_and_cap: Option<TransferableFloatAttribute>,
     #[wasm_bindgen(getter_with_clone)]
     pub skip_indices: Option<Handle>,
+    #[wasm_bindgen(getter_with_clone)]
+    pub batch_index: Option<TransferableFloatAttribute>,
 }
 
 #[wasm_bindgen]
@@ -293,11 +295,13 @@ impl TransferablePolygonOutlineGeometry {
         position: Option<TransferableFloatAttribute>,
         scale_normal_and_cap: Option<TransferableFloatAttribute>,
         skip_indices: Option<Handle>,
+        batch_index: Option<TransferableFloatAttribute>,
     ) -> Self {
         Self {
             position,
             scale_normal_and_cap,
             skip_indices,
+            batch_index,
         }
     }
 }
@@ -310,6 +314,7 @@ impl From<TransferablePolygonOutlineGeometry>
             position: val.position.map(|p| p.into()),
             scale_normal_and_cap: val.scale_normal_and_cap.map(|p| p.into()),
             skip_indices: val.skip_indices,
+            batch_index: val.batch_index.map(|b| b.into()),
         }
     }
 }
@@ -323,6 +328,7 @@ impl<'a> From<&'a navara_feature_component::render::TransferablePolygonOutlineGe
             position: val.position.as_ref().map(|p| p.into()),
             scale_normal_and_cap: val.scale_normal_and_cap.as_ref().map(|p| p.into()),
             skip_indices: val.skip_indices,
+            batch_index: val.batch_index.as_ref().map(|b| b.into()),
         }
     }
 }

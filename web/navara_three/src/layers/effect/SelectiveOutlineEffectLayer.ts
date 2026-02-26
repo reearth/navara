@@ -1,6 +1,5 @@
 import { Pass as PostProcessingPass } from "postprocessing";
 import {
-  Color,
   Mesh,
   OrthographicCamera,
   PlaneGeometry,
@@ -15,6 +14,7 @@ import {
 } from "three";
 
 import { BufferView } from "../../bufferView";
+import { Color } from "../../Color";
 import type {
   EffectLayerConfig,
   EffectLayerUpdate,
@@ -73,9 +73,9 @@ export class SelectiveOutlineEffectLayer extends SelectiveEffectLayer<
   private outlinePass?: SelectiveOutlinePass;
 
   // Getters that derive values from config (single source of truth)
-  get outlineColor(): number {
+  get outlineColor(): Color {
     const color = this.config.selectiveOutline?.color;
-    return color instanceof Color ? color.getHex() : DEFAULT_COLOR;
+    return color instanceof Color ? color : new Color().setHex(DEFAULT_COLOR);
   }
 
   get outlineThickness(): number {
@@ -315,7 +315,7 @@ class SelectiveOutlinePass extends PostProcessingPass {
         tBase: { value: null },
         tDepthEnabledEdge: { value: null },
         tSilhouetteEdge: { value: null },
-        outlineColor: { value: new Color(0xffffff) },
+        outlineColor: { value: new Color().setHex(0xffffff).raw },
         thickness: { value: 1.0 },
         resolution: { value: new Vector2(initialWidth, initialHeight) },
       },
@@ -452,8 +452,8 @@ class SelectiveOutlinePass extends PostProcessingPass {
     this.needsSwap = true;
   }
 
-  setParameters(color: number, thickness: number, edgeStrength: number): void {
-    this.compositeMaterial.uniforms.outlineColor.value.setHex(color);
+  setParameters(color: Color, thickness: number, edgeStrength: number): void {
+    this.compositeMaterial.uniforms.outlineColor.value.copy(color.raw);
     this.compositeMaterial.uniforms.thickness.value = thickness;
     this.edgeDetectMaterial.uniforms.edgeStrength.value = edgeStrength;
     this.edgeDetectMaterial.uniforms.thickness.value = thickness;

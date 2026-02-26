@@ -4,9 +4,7 @@ import type {
   TransferablePolylineBatchedFeature,
 } from "@navara/engine";
 
-export class TransferablePolylineBatchedFeatureLike
-  implements TransferablePolylineBatchedFeature
-{
+export class TransferablePolylineBatchedFeatureLike implements TransferablePolylineBatchedFeature {
   points: Float64Array;
   points_sizes: Uint32Array;
   batch_ids: Uint32Array;

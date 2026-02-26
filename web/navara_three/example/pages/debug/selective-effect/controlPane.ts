@@ -1,30 +1,38 @@
-import {
+import ThreeView, {
   Color,
   type BoxMeshLayer,
   type BoxMeshLayerUpdate,
+  type CylinderMeshLayer,
+  type CylinderMeshLayerUpdate,
   type Layer,
+  type PlaneMeshLayer,
+  type PlaneMeshLayerUpdate,
   type SphereMeshLayer,
   type SphereMeshLayerUpdate,
+  type TubeMeshLayer,
+  type TubeMeshLayerUpdate,
   type SelectiveEffectOcclusion,
 } from "@navara/three";
 import { Pane, type FolderApi } from "tweakpane";
 
-import { TILES_3D_DATASETS } from "../../helpers/constants";
+import { TILES_3D_DATASETS } from "../../../helpers/constants";
 
 import { BLOOM_CONFIG, type PostEffects } from "./run";
 import type {
-  GeoJsonModelLayer,
+  CameraPosition,
+  GeoJsonPolygonLayer,
   SceneLayers,
-  DrumModelState,
-  SoldierModelState,
 } from "./sceneLayers";
 import {
+  CAMERA_FOCUS_POSITIONS,
   CUBE_CONFIG,
   SPHERE_CONFIG,
-  DRUM_CONFIG,
-  SOLDIER_CONFIG,
+  CYLINDER_CONFIG,
+  TUBE_CONFIG,
+  PLANE_CONFIG,
   CHIYODA_CONFIG,
   CHUO_CONFIG,
+  POLYGON_CONFIG,
 } from "./sceneLayers";
 
 // ============================================
@@ -87,17 +95,21 @@ const addLayerEmissiveIntensityControl = (
 
 type PaneDependencies = SceneLayers &
   PostEffects & {
+    view: ThreeView;
     paneTitle?: string;
   };
 
 export const createControlPane = ({
-  paneTitle = "PostEffect Bloom Parameters",
+  view,
+  paneTitle = "Selective Effect Parameters",
   postEffectBloom,
   postEffectOutline,
   cubeLayer,
   sphereLayer,
-  drumLayer,
-  soldierLayer,
+  cylinderLayer,
+  tubeLayer,
+  planeLayer,
+  polygonLayer,
   chiyodaLayer,
   chuoLayer,
 }: PaneDependencies): Pane => {
@@ -108,40 +120,98 @@ export const createControlPane = ({
   pane.element.style.position = "absolute";
   pane.element.style.width = "340px";
   pane.element.style.right = "0px";
+  pane.element.style.maxHeight = "90vh";
+  pane.element.style.overflowY = "auto";
 
   setupBloomFolder(pane, postEffectBloom);
-  setupMeshFolder(pane, {
+
+  // Mesh Layer category
+  const meshLayerFolder = pane.addFolder({ title: "Mesh Layer" });
+  setupMeshFolder(meshLayerFolder, {
     title: "Cube (Red)",
     layer: cubeLayer,
     configKey: "box",
     bloomId: postEffectBloom.id,
     outlineId: postEffectOutline.id,
+    view,
+    focusPosition: CAMERA_FOCUS_POSITIONS.cube,
     params: {
       ...CUBE_CONFIG,
       emissiveColor: CUBE_CONFIG.emissiveColor.toHex(),
       visible: true,
     },
   });
-  setupMeshFolder(pane, {
+  setupMeshFolder(meshLayerFolder, {
     title: "Sphere (Blue)",
     layer: sphereLayer,
     configKey: "sphere",
     bloomId: postEffectBloom.id,
     outlineId: postEffectOutline.id,
+    view,
+    focusPosition: CAMERA_FOCUS_POSITIONS.sphere,
     params: {
       ...SPHERE_CONFIG,
       emissiveColor: SPHERE_CONFIG.emissiveColor.toHex(),
       visible: true,
     },
   });
-  setupDrumFolder(pane, drumLayer, postEffectBloom.id, postEffectOutline.id);
-  setupSoldierFolder(
-    pane,
-    soldierLayer,
+  setupMeshFolder(meshLayerFolder, {
+    title: "Cylinder (Green - Shinjuku)",
+    layer: cylinderLayer,
+    configKey: "cylinder",
+    bloomId: postEffectBloom.id,
+    outlineId: postEffectOutline.id,
+    view,
+    focusPosition: CAMERA_FOCUS_POSITIONS.cylinder,
+    params: {
+      ...CYLINDER_CONFIG,
+      emissiveColor: CYLINDER_CONFIG.emissiveColor.toHex(),
+      visible: true,
+    },
+  });
+  setupMeshFolder(meshLayerFolder, {
+    title: "Tube (Yellow - Shibuya)",
+    layer: tubeLayer,
+    configKey: "tube",
+    bloomId: postEffectBloom.id,
+    outlineId: postEffectOutline.id,
+    view,
+    focusPosition: CAMERA_FOCUS_POSITIONS.tube,
+    params: {
+      ...TUBE_CONFIG,
+      emissiveColor: TUBE_CONFIG.emissiveColor.toHex(),
+      visible: true,
+    },
+  });
+  setupMeshFolder(meshLayerFolder, {
+    title: "Plane (Magenta - Akihabara)",
+    layer: planeLayer,
+    configKey: "plane",
+    bloomId: postEffectBloom.id,
+    outlineId: postEffectOutline.id,
+    view,
+    focusPosition: CAMERA_FOCUS_POSITIONS.plane,
+    params: {
+      ...PLANE_CONFIG,
+      emissiveColor: PLANE_CONFIG.emissiveColor.toHex(),
+      visible: true,
+    },
+  });
+
+  // GeoJson category
+  const geoJsonFolder = pane.addFolder({ title: "GeoJson" });
+  setupPolygonFolder(
+    geoJsonFolder,
+    polygonLayer,
     postEffectBloom.id,
     postEffectOutline.id,
+    view,
+    CAMERA_FOCUS_POSITIONS.polygon,
   );
-  setupTilesFolder(pane, {
+
+  // 3D Tiles category
+  const tiles3DFolder = pane.addFolder({ title: "3D Tiles" });
+  setupTilesFolder(tiles3DFolder, {
     title: "Chiyoda Buildings",
     layer: chiyodaLayer,
     datasetUrl: TILES_3D_DATASETS.plateauChiyoda.url,
@@ -153,7 +223,7 @@ export const createControlPane = ({
       visible: true,
     },
   });
-  setupTilesFolder(pane, {
+  setupTilesFolder(tiles3DFolder, {
     title: "Chuo Buildings",
     layer: chuoLayer,
     datasetUrl: TILES_3D_DATASETS.plateauChuo.url,
@@ -254,16 +324,30 @@ const setupBloomFolder = (pane: Pane, postEffectBloom: Layer) => {
 };
 
 type MeshLayerHandle = {
-  ref: BoxMeshLayer | SphereMeshLayer;
-  update: (updates: BoxMeshLayerUpdate | SphereMeshLayerUpdate) => void;
+  ref:
+    | BoxMeshLayer
+    | SphereMeshLayer
+    | CylinderMeshLayer
+    | TubeMeshLayer
+    | PlaneMeshLayer;
+  update: (
+    updates:
+      | BoxMeshLayerUpdate
+      | SphereMeshLayerUpdate
+      | CylinderMeshLayerUpdate
+      | TubeMeshLayerUpdate
+      | PlaneMeshLayerUpdate,
+  ) => void;
 };
 
 type MeshFolderOptions = {
   title: string;
   layer: MeshLayerHandle;
-  configKey: "box" | "sphere";
+  configKey: "box" | "sphere" | "cylinder" | "tube" | "plane";
   bloomId: string;
   outlineId: string;
+  view: ThreeView;
+  focusPosition: CameraPosition;
   // emissiveColor uses number for Tweakpane, converted to Color when updating layer
   params: {
     emissiveColor: number;
@@ -275,8 +359,9 @@ type MeshFolderOptions = {
   };
 };
 
-const setupMeshFolder = (pane: Pane, options: MeshFolderOptions) => {
-  const { title, layer, configKey, bloomId, outlineId } = options;
+const setupMeshFolder = (parent: FolderApi, options: MeshFolderOptions) => {
+  const { title, layer, configKey, bloomId, outlineId, view, focusPosition } =
+    options;
   const params = { ...options.params };
 
   const applyMeshState = () => {
@@ -295,7 +380,11 @@ const setupMeshFolder = (pane: Pane, options: MeshFolderOptions) => {
     });
   };
 
-  const folder = pane.addFolder({ title });
+  const folder = parent.addFolder({ title });
+
+  folder.addButton({ title: "Focus" }).on("click", () => {
+    view.setCamera(focusPosition);
+  });
 
   folder.addBinding(params, "visible").on("change", (ev) => {
     layer.update({ visible: ev.value });
@@ -344,7 +433,7 @@ const setupMeshFolder = (pane: Pane, options: MeshFolderOptions) => {
 };
 
 const buildMeshConfig = (
-  configKey: "box" | "sphere",
+  configKey: "box" | "sphere" | "cylinder" | "tube" | "plane",
   config: {
     emissiveColor?: Color;
     emissiveIntensity?: number;
@@ -354,6 +443,15 @@ const buildMeshConfig = (
 ) => {
   if (configKey === "box") {
     return { box: config };
+  }
+  if (configKey === "cylinder") {
+    return { cylinder: config };
+  }
+  if (configKey === "tube") {
+    return { tube: config };
+  }
+  if (configKey === "plane") {
+    return { plane: config };
   }
   return { sphere: config };
 };
@@ -376,7 +474,7 @@ type TilesFolderOptions = {
   };
 };
 
-const setupTilesFolder = (pane: Pane, options: TilesFolderOptions) => {
+const setupTilesFolder = (parent: FolderApi, options: TilesFolderOptions) => {
   const {
     title,
     layer,
@@ -388,7 +486,7 @@ const setupTilesFolder = (pane: Pane, options: TilesFolderOptions) => {
 
   const params = { ...initialParams };
 
-  const folder = pane.addFolder({ title });
+  const folder = parent.addFolder({ title });
 
   const updateTilesState = () => {
     layer.update({
@@ -467,49 +565,47 @@ const setupTilesFolder = (pane: Pane, options: TilesFolderOptions) => {
   updateTilesState();
 };
 
-const setupDrumFolder = (
-  pane: Pane,
-  drumLayer: GeoJsonModelLayer<DrumModelState>,
+/**
+ * Setup Polygon folder (Odaiba)
+ */
+const setupPolygonFolder = (
+  parent: FolderApi,
+  polygonLayer: GeoJsonPolygonLayer,
   bloomId: string,
   outlineId: string,
+  view: ThreeView,
+  focusPosition: CameraPosition,
 ) => {
   const params = {
-    ...DRUM_CONFIG,
-    emissiveColor: DRUM_CONFIG.emissiveColor.toHex(),
+    ...POLYGON_CONFIG,
+    emissiveColor: POLYGON_CONFIG.emissiveColor.toHex(),
     visible: true,
-    baseColor: 0xffffff,
   };
 
-  const folder = pane.addFolder({ title: "Drum Model" });
+  const folder = parent.addFolder({ title: "Polygon (Odaiba)" });
 
-  const updateDrumState = () => {
-    drumLayer.updateModel({
+  folder.addButton({ title: "Focus" }).on("click", () => {
+    view.setCamera(focusPosition);
+  });
+
+  const updatePolygonState = () => {
+    const effectIds = getEffectIds(
+      params.bloomEnabled,
+      params.outlineEnabled,
+      bloomId,
+      outlineId,
+    );
+
+    polygonLayer.updatePolygon({
       show: params.visible,
-      color: new Color().setHex(params.baseColor),
-      effectIds: getEffectIds(
-        params.bloomEnabled,
-        params.outlineEnabled,
-        bloomId,
-        outlineId,
-      ),
+      effectIds,
       emissiveColor: new Color().setHex(params.emissiveColor),
       emissiveIntensity: params.emissiveIntensity,
       selectiveEffectOcclusion: params.selectiveEffectOcclusion,
-    } as Partial<DrumModelState>);
+    });
   };
 
-  folder.addBinding(params, "visible").on("change", () => {
-    updateDrumState();
-  });
-
-  folder
-    .addBinding(params, "selectiveEffectOcclusion", {
-      label: "Occlusion Mode",
-      options: OCCLUSION_MODE_OPTIONS,
-    })
-    .on("change", () => {
-      updateDrumState();
-    });
+  folder.addBinding(params, "visible").on("change", () => updatePolygonState());
 
   folder
     .addBinding(params, "emissiveColor", {
@@ -517,64 +613,8 @@ const setupDrumFolder = (
       label: "Emissive Color",
     })
     .on("change", () => {
-      updateDrumState();
+      updatePolygonState();
     });
-
-  addLayerEmissiveIntensityControl(folder, params, () => {
-    updateDrumState();
-  });
-
-  folder
-    .addBinding(params, "bloomEnabled", { label: "Bloom" })
-    .on("change", () => {
-      updateDrumState();
-    });
-
-  folder
-    .addBinding(params, "outlineEnabled", { label: "Outline" })
-    .on("change", () => {
-      updateDrumState();
-    });
-
-  // Apply initial state
-  updateDrumState();
-};
-
-const setupSoldierFolder = (
-  pane: Pane,
-  soldierLayer: GeoJsonModelLayer<SoldierModelState>,
-  bloomId: string,
-  outlineId: string,
-) => {
-  const params = {
-    ...SOLDIER_CONFIG,
-    emissiveColor: SOLDIER_CONFIG.emissiveColor.toHex(),
-    visible: true,
-    baseColor: 0xffffff,
-  };
-
-  const folder = pane.addFolder({ title: "Soldier Model" });
-
-  const updateSoldierState = () => {
-    soldierLayer.updateModel({
-      show: params.visible,
-      animationSpeed: params.animationSpeed,
-      color: new Color().setHex(params.baseColor),
-      effectIds: getEffectIds(
-        params.bloomEnabled,
-        params.outlineEnabled,
-        bloomId,
-        outlineId,
-      ),
-      emissiveColor: new Color().setHex(params.emissiveColor),
-      emissiveIntensity: params.emissiveIntensity,
-      selectiveEffectOcclusion: params.selectiveEffectOcclusion,
-    } as Partial<SoldierModelState>);
-  };
-
-  folder.addBinding(params, "visible").on("change", () => {
-    updateSoldierState();
-  });
 
   folder
     .addBinding(params, "selectiveEffectOcclusion", {
@@ -582,44 +622,25 @@ const setupSoldierFolder = (
       options: OCCLUSION_MODE_OPTIONS,
     })
     .on("change", () => {
-      updateSoldierState();
-    });
-
-  folder
-    .addBinding(params, "animationSpeed", {
-      min: 0.0,
-      max: 3.0,
-      step: 0.1,
-    })
-    .on("change", () => {
-      updateSoldierState();
-    });
-
-  folder
-    .addBinding(params, "emissiveColor", {
-      color: { type: "int" },
-      label: "Emissive Color",
-    })
-    .on("change", () => {
-      updateSoldierState();
+      updatePolygonState();
     });
 
   addLayerEmissiveIntensityControl(folder, params, () => {
-    updateSoldierState();
+    updatePolygonState();
   });
 
   folder
     .addBinding(params, "bloomEnabled", { label: "Bloom" })
     .on("change", () => {
-      updateSoldierState();
+      updatePolygonState();
     });
 
   folder
     .addBinding(params, "outlineEnabled", { label: "Outline" })
     .on("change", () => {
-      updateSoldierState();
+      updatePolygonState();
     });
 
   // Apply initial state
-  updateSoldierState();
+  updatePolygonState();
 };

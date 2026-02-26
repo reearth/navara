@@ -16,6 +16,10 @@ export function transferConstructedPolygonGeometry(
       like.position?.buffer,
       like.scale_normal_and_cap?.buffer,
       like.indices.buffer,
+      like.outline_position?.buffer,
+      like.outline_scale_normal_and_cap?.buffer,
+      like.outline_skip_indices?.buffer,
+      like.outline_batch_index?.buffer,
     ].filter(isNotNullish),
   };
 }

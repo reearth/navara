@@ -2,7 +2,11 @@ import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
 import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../../helpers/attributions";
-import { TERRAIN_DATASETS, TILE_DATASETS } from "../../../helpers/constants";
+import {
+  LOCAL_DATASETS,
+  TERRAIN_DATASETS,
+  TILE_DATASETS,
+} from "../../../helpers/constants";
 import { addDateControl } from "../../../helpers/control";
 
 const run = async () => {
@@ -14,9 +18,9 @@ const run = async () => {
   view.setCamera({
     lng: 138.733,
     lat: 35.23,
-    height: 15000,
-    heading: 0,
-    pitch: -45,
+    height: 1500000,
+    heading: -10,
+    pitch: -78,
     roll: 0,
   });
 
@@ -51,25 +55,7 @@ const run = async () => {
     const layer = view.addLayer({
       type: "geojson",
       data: {
-        type: "FeatureCollection",
-        features: [
-          {
-            type: "Feature",
-            properties: { type: "point", No: 1 },
-            geometry: {
-              coordinates: [138.73470764482283, 35.3627947204036],
-              type: "Point",
-            },
-          },
-          {
-            type: "Feature",
-            properties: { type: "point", No: 2 },
-            geometry: {
-              coordinates: [138.7311922738062, 35.359766379480206],
-              type: "Point",
-            },
-          },
-        ],
+        url: LOCAL_DATASETS.railwaysTimeSeries.url,
       },
       billboard: {
         color: new Color().setStyle("#ffffff"),
@@ -90,16 +76,10 @@ const run = async () => {
       updatedFeatures.add(evaluator.id);
 
       evaluator.evaluate((_batchId, property) => {
-        const num = (property?.["No"] as number) ?? 0;
-
-        // Generate color based on feature number
-        const idx = num % 6;
-        const r = Math.abs(Math.sin(idx + 0));
-        const g = Math.abs(Math.sin(idx + 1));
-        const b = Math.abs(Math.sin(idx + 2));
+        const isStopped = (property?.["N05_005e"] as string) === "9999";
 
         return {
-          color: new Color().setRGB(r, g, b),
+          color: new Color().setHex(isStopped ? 0xff0000 : 0xffffff),
         };
       });
     });
@@ -130,7 +110,10 @@ const run = async () => {
     layer?.update({ billboard: { size: value } });
   });
 
-  showAttributions([TILE_DATASETS.openstreetmap]);
+  showAttributions([
+    TILE_DATASETS.openstreetmap,
+    LOCAL_DATASETS.railwaysTimeSeries,
+  ]);
 };
 
 run();

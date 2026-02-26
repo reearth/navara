@@ -2,7 +2,7 @@ import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
 
-import { Browser, Page, webkit } from "playwright";
+import { Browser, Page, chromium } from "playwright";
 import invariant from "tiny-invariant";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -90,7 +90,9 @@ class ScreenshotGenerator {
     await fs.mkdir(this.config.outputDir, { recursive: true });
 
     // Launch browser with WebGL support
-    this.browser = await webkit.launch({});
+    this.browser = await chromium.launch({
+      args: ["--ignore-gpu-blocklist", "--use-gl=angle"],
+    });
   }
 
   /**
