@@ -9,26 +9,26 @@ use bevy_ecs::{
     world::Ref,
 };
 use bevy_input::{
+    ButtonInput,
     keyboard::KeyCode,
     mouse::{MouseButton, MouseMotion, MouseWheel},
-    ButtonInput,
 };
 use navara_core::{
-    ease_out_circ, east_north_up_to_fixed_frame, vec3_to_xyz, xyz_to_vec3, Angle, Ellipsoid, Ray,
-    CRS, WGS84_64,
+    Angle, CRS, Ellipsoid, Ray, WGS84_64, ease_out_circ, east_north_up_to_fixed_frame, vec3_to_xyz,
+    xyz_to_vec3,
 };
 use navara_event_store::EventStore;
 use navara_frame::FrameManager;
-use navara_math::{EqualEpsilon, FloatType, Mat3, Quat, Transform, Vec2, Vec3, EPSILON3, EPSILON6};
+use navara_math::{EPSILON3, EPSILON6, EqualEpsilon, FloatType, Mat3, Quat, Transform, Vec2, Vec3};
 use navara_window::Window;
 
 use crate::{
+    CamDirType, CameraController, CameraDirection, CameraEvent, CameraFlight, CameraInertia,
+    CameraOrientation, CameraStatus, CameraStatusType,
     follow::handle_follow,
     helpers::{
         get_heading, get_pick_ray_from_camera, get_pitch, get_roll, ray_ellipsoid_intersect,
     },
-    CamDirType, CameraController, CameraDirection, CameraEvent, CameraFlight, CameraInertia,
-    CameraOrientation, CameraStatus, CameraStatusType,
 };
 
 use super::{CameraFrustum, CameraMarker, Orbit};

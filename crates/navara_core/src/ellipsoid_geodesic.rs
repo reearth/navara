@@ -1,7 +1,7 @@
 use navara_math::EPSILON12;
 use radians::{Angle, Radians};
 
-use crate::{Ellipsoid, Meters, LLE, WGS84_FE_64};
+use crate::{Ellipsoid, LLE, Meters, WGS84_FE_64};
 
 // Ref: https://github.com/CesiumGS/cesium/blob/16696798115dbc7412453f3ea589f3f42a666315/packages/engine/Source/Core/EllipsoidGeodesic.js
 pub struct EllipsoidGeodesic {
@@ -357,11 +357,11 @@ mod test {
     use std::f64::consts::PI;
 
     use approx::assert_abs_diff_eq;
-    use navara_math::{EPSILON11, EPSILON7};
+    use navara_math::{EPSILON7, EPSILON11};
 
     use radians::Angle;
 
-    use crate::{Meters, LLE, WGS84_64};
+    use crate::{LLE, Meters, WGS84_64};
 
     use super::EllipsoidGeodesic;
 

@@ -51,7 +51,7 @@ use navara_layer::{
     UpdateB3dmLayerMarker,
 };
 use navara_material::{Appearance, ModelMaterial};
-use navara_math::{Quat, Transform, Vec3, PI_OVER_TWO};
+use navara_math::{PI_OVER_TWO, Quat, Transform, Vec3};
 use navara_parser::b3dm::BatchTable as B3dmBatchTable;
 use navara_parser::{b3dm::B3dm, glb::BinaryReader};
 
@@ -60,8 +60,8 @@ use crate::{
 };
 
 use super::{
-    requester::{B3dmDataRequesterMarker, B3dmLayerDataRequesterMarker},
     RenderedCesium3dTileContentB3dmMarker,
+    requester::{B3dmDataRequesterMarker, B3dmLayerDataRequesterMarker},
 };
 
 /// Spawns data requesters for standalone B3DM layers (not part of 3D Tiles).
@@ -236,22 +236,21 @@ pub fn delete_model_by_b3dm_layer(
             feature_batch_id_map.remove(e, &mut buf, &mut batch_table_res);
             commands.entity(*e).despawn();
 
-            if let Ok((_maker, mut feature)) = rendered_features.get_mut(*e) {
-                if let RenderableFeature::Model {
+            if let Ok((_maker, mut feature)) = rendered_features.get_mut(*e)
+                && let RenderableFeature::Model {
                     feature_id,
                     geometry,
                     ..
                 } = &mut *feature
-                {
-                    // if a model hasn't batch table, its global batch ids will be removed here.
-                    geometry.remove_from_buf(&mut buf, &mut batch_table_res);
+            {
+                // if a model hasn't batch table, its global batch ids will be removed here.
+                geometry.remove_from_buf(&mut buf, &mut batch_table_res);
 
-                    if let Ok((modebin, feature_batch_id, ..)) = features.get(*feature_id) {
-                        batch_table_res.remove(&feature_batch_id.0);
-                        buf.remove(&modebin.0);
-                    }
-                    commands.entity(*feature_id).despawn();
+                if let Ok((modebin, feature_batch_id, ..)) = features.get(*feature_id) {
+                    batch_table_res.remove(&feature_batch_id.0);
+                    buf.remove(&modebin.0);
                 }
+                commands.entity(*feature_id).despawn();
             }
         }
 
@@ -479,10 +478,10 @@ pub fn remove_invisible_rendered_tiles(
 
         if let Some(feature_id) = tile.feature_id {
             commands.entity(feature_id).insert(Deleted);
-            if let Ok(rendered_feature_id) = features.get(feature_id) {
-                if let Some(rendered_feature_id) = rendered_feature_id.0 {
-                    commands.entity(rendered_feature_id).insert(Deleted);
-                }
+            if let Ok(rendered_feature_id) = features.get(feature_id)
+                && let Some(rendered_feature_id) = rendered_feature_id.0
+            {
+                commands.entity(rendered_feature_id).insert(Deleted);
             }
         }
 

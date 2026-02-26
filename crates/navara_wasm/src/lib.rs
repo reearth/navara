@@ -197,12 +197,11 @@ impl Core {
     pub fn add_layer(&mut self, layer: JsValue) -> String {
         let layer_id = generate_id();
         // TODO: Improve an undesirable cloning the layer.
-        if let Some(ld) = LayerDescription::from(layer.clone()) {
-            if let Some(layer_type) = ld.r#type {
-                if let Some(l) = LayerDescription::to(&layer_id, layer_type.as_str(), layer, None) {
-                    self.app.add_layer(layer_id.as_str(), l);
-                }
-            }
+        if let Some(ld) = LayerDescription::from(layer.clone())
+            && let Some(layer_type) = ld.r#type
+            && let Some(l) = LayerDescription::to(&layer_id, layer_type.as_str(), layer, None)
+        {
+            self.app.add_layer(layer_id.as_str(), l);
         }
 
         layer_id

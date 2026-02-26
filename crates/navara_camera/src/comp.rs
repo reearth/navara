@@ -1,12 +1,12 @@
 use bevy_ecs::component::Component;
-use navara_core::{adjust_angle_for_lerp, lerp, Aabb, Plane, CRS, WGS84_64, WGS84_B_64};
+use navara_core::{Aabb, CRS, Plane, WGS84_64, WGS84_B_64, adjust_angle_for_lerp, lerp};
 use navara_math::{
-    negative_pi_to_pi, EqualEpsilon, FloatType, Mat3, Quat, Transform, Vec3, EPSILON10,
+    EPSILON10, EqualEpsilon, FloatType, Mat3, Quat, Transform, Vec3, negative_pi_to_pi,
 };
 
 use crate::{
-    helpers::{get_heading, get_pitch, get_roll},
     CameraOrientation,
+    helpers::{get_heading, get_pitch, get_roll},
 };
 
 #[derive(Component)]
@@ -648,7 +648,7 @@ impl CameraFlight {
 mod test {
     use approx::assert_abs_diff_eq;
     use navara_core::{Aabb, Angle, Plane};
-    use navara_math::{Transform, Vec3, EPSILON5};
+    use navara_math::{EPSILON5, Transform, Vec3};
 
     use super::CameraFrustum;
 

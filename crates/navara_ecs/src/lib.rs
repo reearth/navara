@@ -9,11 +9,11 @@ use bevy_ecs::{
 };
 use navara_buffer_store::{BufferStore, Handle};
 use navara_camera::{
-    get_heading, get_pitch, get_roll, CamDirType, CameraControlUpdateEvent, CameraDirection,
-    CameraEvent, CameraFrustum, CameraMarker, CameraOrientation, CameraStatus, FrustumEvent,
+    CamDirType, CameraControlUpdateEvent, CameraDirection, CameraEvent, CameraFrustum,
+    CameraMarker, CameraOrientation, CameraStatus, FrustumEvent, get_heading, get_pitch, get_roll,
 };
 use navara_component::{Deleted, Rendered};
-use navara_core::{ElevationDecoder, LngLat, Radians, CRS, LLE, WGS84_64};
+use navara_core::{CRS, ElevationDecoder, LLE, LngLat, Radians, WGS84_64};
 use navara_data_requester::DataRequester;
 use navara_event::Events;
 use navara_feature_component::{
@@ -29,9 +29,8 @@ use navara_mvt::MvtLayerResources;
 use navara_parser::b3dm::{BatchTable as B3dmBatchTable, PropertyValue};
 use navara_texture_fragment::{TextureFragmentLoadedEvent, TextureFragmentStatus};
 use navara_tile_component::{
-    compute_terrain_height_at_point, MartiniComponent, RasterTile, RasterTileQuadtree,
-    TerrainHeightObserver, TileHandle, TileTerrainDataRequesterQuery, VectorTile,
-    VectorTileQuadtree,
+    MartiniComponent, RasterTile, RasterTileQuadtree, TerrainHeightObserver, TileHandle,
+    TileTerrainDataRequesterQuery, VectorTile, VectorTileQuadtree, compute_terrain_height_at_point,
 };
 use navara_window::{Window, WindowResizeEvent};
 use navara_worker::{
@@ -283,28 +282,28 @@ impl App {
 
     pub fn get_layer_type(&self, layer_id: &String) -> Option<&str> {
         let mut layer_type = None;
-        if let Some(layer_desc_store) = self.app.world().get_resource::<LayerDescStore>() {
-            if let Some(desc) = layer_desc_store.map.get(layer_id) {
-                layer_type = match desc {
-                    LayerDescription::Tiles(_) => Some("tiles"),
-                    LayerDescription::Terrain(_) => Some("terrain"),
-                    LayerDescription::GeoJson(_) => Some("geojson"),
-                    LayerDescription::B3dm(_) => Some("b3dm"),
-                    LayerDescription::Pnts(_) => Some("pnts"),
-                    LayerDescription::Mvt(_) => Some("mvt"),
-                    LayerDescription::Cesium3dTiles(_) => Some("cesium3dtiles"),
-                };
-            }
+        if let Some(layer_desc_store) = self.app.world().get_resource::<LayerDescStore>()
+            && let Some(desc) = layer_desc_store.map.get(layer_id)
+        {
+            layer_type = match desc {
+                LayerDescription::Tiles(_) => Some("tiles"),
+                LayerDescription::Terrain(_) => Some("terrain"),
+                LayerDescription::GeoJson(_) => Some("geojson"),
+                LayerDescription::B3dm(_) => Some("b3dm"),
+                LayerDescription::Pnts(_) => Some("pnts"),
+                LayerDescription::Mvt(_) => Some("mvt"),
+                LayerDescription::Cesium3dTiles(_) => Some("cesium3dtiles"),
+            };
         }
 
         layer_type
     }
 
     pub fn get_layer_description(&self, layer_id: &str) -> Option<LayerDescription> {
-        if let Some(layer_desc_store) = self.app.world().get_resource::<LayerDescStore>() {
-            if let Some(desc) = layer_desc_store.map.get(layer_id) {
-                return Some(desc.clone());
-            }
+        if let Some(layer_desc_store) = self.app.world().get_resource::<LayerDescStore>()
+            && let Some(desc) = layer_desc_store.map.get(layer_id)
+        {
+            return Some(desc.clone());
         }
 
         None
@@ -928,7 +927,7 @@ impl App {
         let _ = world.get_resource::<RasterTileQuadtree>()?;
         let _ = world.get_resource::<BufferStore>()?;
 
-        let result = world.resource_scope(|world, mut qt: Mut<RasterTileQuadtree>| {
+        world.resource_scope(|world, mut qt: Mut<RasterTileQuadtree>| {
             world.resource_scope(|world, mut buf: Mut<BufferStore>| {
                 let mut state: SystemState<TileTerrainDataRequesterQuery> = SystemState::new(world);
                 let query = state.get(world);
@@ -940,9 +939,7 @@ impl App {
                     &LngLat::new(lle.lat.val(), lle.lng.val()),
                 )
             })
-        });
-
-        result
+        })
     }
 
     pub fn add_terrain_height_observer(&mut self, lle: LLE<FloatType, Radians>) -> u64 {
@@ -1061,7 +1058,7 @@ fn get_prop_from_batch_table<V: PropertyValue>(
     if let serde_json::Value::Object(map) = batch_table_json {
         for (key, value) in map {
             match value {
-                serde_json::Value::Object(ref _m) => {
+                serde_json::Value::Object(_m) => {
                     if let Ok(v) =
                         in_batch_table.read_property_from_binary::<V>(*in_batch_id, value)
                     {

@@ -3,13 +3,13 @@ use bevy_ecs::{component::Component, entity::Entity, prelude::Resource, world::W
 #[derive(Debug)]
 pub struct EntityEvent {
     pub ind: u32,
-    pub gen: u32,
+    pub r#gen: u32,
 }
 
 #[derive(Debug)]
 pub struct ComponentEvent<T = ()> {
     pub ind: u32,
-    pub gen: u32,
+    pub r#gen: u32,
     pub comp: T,
 }
 
@@ -17,7 +17,7 @@ impl From<Entity> for EntityEvent {
     fn from(e: Entity) -> Self {
         Self {
             ind: e.index().index(),
-            gen: e.generation().to_bits(),
+            r#gen: e.generation().to_bits(),
         }
     }
 }
@@ -26,7 +26,7 @@ impl<T> ComponentEvent<T> {
     pub fn new(e: Entity, comp: T) -> Self {
         Self {
             ind: e.index().index(),
-            gen: e.generation().to_bits(),
+            r#gen: e.generation().to_bits(),
             comp,
         }
     }
@@ -97,7 +97,7 @@ impl<'a, A: Component, B: Component, C: Component, D: Component, E: Component>
 #[derive(Debug)]
 pub struct ReconstructableComponentEvent<T = ()> {
     pub ind: u32,
-    pub gen: u32,
+    pub r#gen: u32,
     pub bits: u64,
     pub comp: T,
 }
@@ -106,7 +106,7 @@ impl<T> ReconstructableComponentEvent<T> {
     pub fn new(e: Entity, comp: T) -> Self {
         Self {
             ind: e.index().index(),
-            gen: e.generation().to_bits(),
+            r#gen: e.generation().to_bits(),
             bits: e.to_bits(),
             comp,
         }

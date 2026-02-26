@@ -6,8 +6,8 @@ use std::fmt::Debug;
 use num::PrimInt;
 
 use crate::{
-    traits::{GeoSpacialQuadLeaf, GeoSpacialQuadtree, Resource},
     Coords, QuadLeafHandle,
+    traits::{GeoSpacialQuadLeaf, GeoSpacialQuadtree, Resource},
 };
 
 pub use id::*;

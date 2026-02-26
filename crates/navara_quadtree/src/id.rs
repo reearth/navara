@@ -1,8 +1,8 @@
 use num::PrimInt;
 
 use crate::{
-    linear_quadtree::{LinearQuadleafId, LinearQuadleafIdParams},
     Coords, QuadLeafHandle,
+    linear_quadtree::{LinearQuadleafId, LinearQuadleafIdParams},
 };
 
 /// Decode [`QuadLeafHandle`] to [`Coords`].

@@ -3,7 +3,7 @@ use navara_math::FloatType;
 use serde::Deserialize;
 use wasm_bindgen::prelude::wasm_bindgen;
 
-use crate::{copy_f32_array, copy_u32_array, Vec3};
+use crate::{Vec3, copy_f32_array, copy_u32_array};
 
 #[wasm_bindgen]
 #[derive(Debug, Clone, PartialEq, Default, Deserialize)]

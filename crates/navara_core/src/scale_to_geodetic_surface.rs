@@ -1,4 +1,4 @@
-use navara_math::{FloatType, Vec3, EPSILON12};
+use navara_math::{EPSILON12, FloatType, Vec3};
 
 // Ref: https://github.com/CesiumGS/cesium/blob/8016d9f99f0dd8c661f3f7f7f80d17fc0ef082be/packages/engine/Source/Core/scaleToGeodeticSurface.js#L147
 pub fn scale_to_geodetic_surface(

@@ -10,9 +10,9 @@ use navara_event_store::EventStore;
 use navara_feature_component::batch::BatchTable;
 
 use crate::{
-    component::WorkerTaskMarker, DelegatedWorkerTask, DelegatedWorkerTaskMarker,
-    DelegatedWorkerTasksResult, WorkerTaskCompleted, WorkerTaskCompletedEvent,
-    WorkerTaskDelegateeMarker,
+    DelegatedWorkerTask, DelegatedWorkerTaskMarker, DelegatedWorkerTasksResult,
+    WorkerTaskCompleted, WorkerTaskCompletedEvent, WorkerTaskDelegateeMarker,
+    component::WorkerTaskMarker,
 };
 
 pub fn commit(

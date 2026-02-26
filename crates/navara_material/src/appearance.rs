@@ -1,5 +1,5 @@
 use bevy_ecs::{component::Component, entity::Entity};
-use navara_core::{calc_transform, ElevationDecoder, CRS};
+use navara_core::{CRS, ElevationDecoder, calc_transform};
 use navara_math::{Transform, Vec2, Vec3};
 
 /// Configuration for elevation heatmap rendering.

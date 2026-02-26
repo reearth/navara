@@ -1,5 +1,5 @@
 use bevy_ecs::component::Component;
-use navara_core::{is_tile_url, CRS};
+use navara_core::{CRS, is_tile_url};
 
 use navara_material::{Appearance, VectorTileMaterial};
 

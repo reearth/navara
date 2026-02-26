@@ -1,7 +1,7 @@
 use navara_feature_component::batch::{BatchId, BatchIndex};
 use wasm_bindgen::prelude::*;
 
-use crate::{copy_f64_array, copy_u32_array, transfer_f64_array, transfer_u32_array, CRS};
+use crate::{CRS, copy_f64_array, copy_u32_array, transfer_f64_array, transfer_u32_array};
 
 /// To transfer the batched feature efficiently, the all feature's properties are managed as one-dimensional array.
 #[wasm_bindgen]

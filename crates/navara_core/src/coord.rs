@@ -2,8 +2,8 @@ use navara_math::{Quat, Transform, Vec3};
 
 // pub use radians::*;
 use crate::{
-    unit::{Angle, Degrees, Float, Meters, Radians, Unit},
     Ellipsoid, WGS84_64,
+    unit::{Angle, Degrees, Float, Meters, Radians, Unit},
 };
 
 #[derive(PartialEq)]
