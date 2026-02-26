@@ -72,7 +72,7 @@ impl App {
         navara_input::trigger_event(self.app.world_mut(), self.win, ev);
     }
 
-    pub fn read_events(&mut self) -> Option<Events> {
+    pub fn read_events(&mut self) -> Option<Events<'_>> {
         let ev = self
             .app
             .world()
@@ -256,17 +256,21 @@ impl App {
     }
 
     pub fn trigger_texture_fragment_loaded(&mut self, bits: u64, status: TextureFragmentStatus) {
-        self.app.world_mut().write_message(TextureFragmentLoadedEvent {
-            id: Entity::from_bits(bits),
-            status,
-        });
+        self.app
+            .world_mut()
+            .write_message(TextureFragmentLoadedEvent {
+                id: Entity::from_bits(bits),
+                status,
+            });
     }
 
     pub fn trigger_worker_task_completed(&mut self, bits: u64, result: DelegatedWorkerTasksResult) {
-        self.app.world_mut().write_message(WorkerTaskCompletedEvent {
-            parameters_id: Entity::from_bits(bits),
-            result,
-        });
+        self.app
+            .world_mut()
+            .write_message(WorkerTaskCompletedEvent {
+                parameters_id: Entity::from_bits(bits),
+                result,
+            });
     }
 
     pub fn add_layer(&mut self, layer_id: &str, desc: LayerDescription) {
@@ -474,7 +478,7 @@ impl App {
         world.get_resource::<BufferStore>()
     }
 
-    pub fn get_buffer_store_mut(&mut self) -> Option<Mut<BufferStore>> {
+    pub fn get_buffer_store_mut(&mut self) -> Option<Mut<'_, BufferStore>> {
         let world = self.app.world_mut();
         world.get_resource_mut::<BufferStore>()
     }
@@ -482,13 +486,14 @@ impl App {
     fn get_batched_features_with_material<C: Component + Clone>(
         &self,
         batched_feature_id: u64,
-    ) -> Option<(Vec<EntityRef>, GlobalBatchIds, C)> {
+    ) -> Option<(Vec<EntityRef<'_>>, GlobalBatchIds, C)> {
         let entity = Entity::from_bits(batched_feature_id);
         let world = self.app.world();
         let (batched_feature, batch_ids, material) = world
             .get_entity(entity)
             .ok()?
-            .get_components::<(&BatchedFeature, &GlobalBatchIds, &C)>().ok()?;
+            .get_components::<(&BatchedFeature, &GlobalBatchIds, &C)>()
+            .ok()?;
 
         let features = world.get_entity(&batched_feature.features[..]).ok()?;
 
@@ -498,14 +503,14 @@ impl App {
     pub fn get_batched_features_for_polyline(
         &self,
         batched_feature_id: u64,
-    ) -> Option<(Vec<EntityRef>, GlobalBatchIds, PolylineMaterial)> {
+    ) -> Option<(Vec<EntityRef<'_>>, GlobalBatchIds, PolylineMaterial)> {
         self.get_batched_features_with_material(batched_feature_id)
     }
 
     pub fn get_batched_features_for_polygon(
         &self,
         batched_feature_id: u64,
-    ) -> Option<(Vec<EntityRef>, GlobalBatchIds, PolygonMaterial)> {
+    ) -> Option<(Vec<EntityRef<'_>>, GlobalBatchIds, PolygonMaterial)> {
         self.get_batched_features_with_material(batched_feature_id)
     }
 
@@ -978,7 +983,7 @@ impl App {
         self.app.world().get_resource::<Globe>()
     }
 
-    pub fn get_globe_mut(&mut self) -> Option<Mut<Globe>> {
+    pub fn get_globe_mut(&mut self) -> Option<Mut<'_, Globe>> {
         self.app.world_mut().get_resource_mut::<Globe>()
     }
 

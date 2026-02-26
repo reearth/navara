@@ -20,13 +20,10 @@ pub(crate) fn handle_follow(
     mw: &mut MessageReader<MouseWheel>,
 ) {
     // If the user specifies both target and offset, treat it as a lookAt operation.
-    if controller.follow_target_cur.is_some() && controller.follow_offset.is_some() {
-        apply_look_at(
-            transform,
-            orbit,
-            &controller.follow_target_cur.unwrap(),
-            &controller.follow_offset.unwrap(),
-        );
+    if let (Some(follow_target_cur), Some(follow_offset)) =
+        (controller.follow_target_cur, controller.follow_offset)
+    {
+        apply_look_at(transform, orbit, &follow_target_cur, &follow_offset);
         controller.follow_offset = None; // Clear offset after lookAt
         controller.follow_target_pre = controller.follow_target_cur;
         return;
@@ -43,10 +40,9 @@ fn handle_follow_move(
     orbit: &mut Orbit,
     controller: &mut CameraController,
 ) {
-    if controller.follow_target_cur.is_some() && controller.follow_target_pre.is_some() {
-        let target_cur = controller.follow_target_cur.unwrap();
-        let target_pre = controller.follow_target_pre.unwrap();
-
+    if let (Some(target_cur), Some(target_pre)) =
+        (controller.follow_target_cur, controller.follow_target_pre)
+    {
         // Convert both targets to world coordinates
         let ellipsoid = WGS84_64;
         let world_target_cur = CRS::Geographic.to_vec3(ellipsoid, target_cur, 0.0);
