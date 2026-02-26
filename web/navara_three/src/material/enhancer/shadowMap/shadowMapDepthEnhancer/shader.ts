@@ -34,19 +34,20 @@ ${ShadowMapDepthVertex}
 
   // Transform fragment shader - add shadow map depth output
   shader.fragmentShader = createReplacer(shader.fragmentShader)
-      .replace(
+    .replace(
       "#include <common>",
       `
 #include <common>
 #include <packing>
-`)
-  .replace(
-    "void main() {",
-    `
+`,
+    )
+    .replace(
+      "void main() {",
+      `
 ${ShadowMapDepthParsFragment}
 
 void main() {
   ${ShadowMapDepthFragment}
 `,
-  ).source;
+    ).source;
 };

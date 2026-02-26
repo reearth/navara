@@ -49,7 +49,10 @@ export class ColorGradingLUT extends Effect<
       ColorGradingLUT.lutCubeLoader.load(
         url,
         (t) => {
-          const lut = new LookupTexture(t.texture3D.image.data as ArrayBufferView, t.size);
+          const lut = new LookupTexture(
+            t.texture3D.image.data as ArrayBufferView,
+            t.size,
+          );
           lut.type = t.texture3D.type;
           lut.colorSpace = t.texture3D.colorSpace;
           lut.generateMipmaps = false;
@@ -75,7 +78,10 @@ export class ColorGradingLUT extends Effect<
       ColorGradingLUT.lut3dlLoader.load(
         url,
         (t) => {
-          const lut = new LookupTexture(t.texture3D.image.data as ArrayBufferView, t.size);
+          const lut = new LookupTexture(
+            t.texture3D.image.data as ArrayBufferView,
+            t.size,
+          );
           lut.type = t.texture3D.type;
           lut.colorSpace = t.texture3D.colorSpace;
           lut.generateMipmaps = false;

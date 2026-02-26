@@ -2,9 +2,7 @@ import type { ReturnedConstructedTerrainMesh, Vec3 } from "@navara/engine";
 
 import { Vec3Like } from "./Vec3Like";
 
-export class ReturnedConstructedTerrainMeshLike
-  implements ReturnedConstructedTerrainMesh
-{
+export class ReturnedConstructedTerrainMeshLike implements ReturnedConstructedTerrainMesh {
   vertices: Float32Array;
   uvs: Float32Array;
   indices: Uint32Array;

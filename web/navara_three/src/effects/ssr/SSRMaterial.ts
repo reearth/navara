@@ -1,8 +1,8 @@
 // Research and development by https://github.com/takram-design-engineering
 
+import { assertType } from "@navara/core";
 import fragmentShader from "@shaders/glsl/ssr.frag.glsl?raw";
 import vertexShader from "@shaders/glsl/ssr.vert.glsl?raw";
-import { assertType } from "@navara/core";
 import { resolveIncludes } from "@takram/three-geospatial";
 import { depth, packing, transform } from "@takram/three-geospatial/shaders";
 import {
