@@ -235,7 +235,7 @@ The engine supports comprehensive geospatial data formats:
 ## Code Quality Standards
 
 - **Clippy**: Configured with `-D warnings` (warnings treated as errors)
-- **Rust 1.86.0**: Exact toolchain version for consistency
+- **Rust 1.93.0**: Exact toolchain version for consistency
 - **ESLint**: Strict TypeScript linting with reearth configuration
 - **Format on save**: Both Rust and TypeScript code formatting enforced
 

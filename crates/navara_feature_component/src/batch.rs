@@ -3,7 +3,7 @@ use geozero::mvt::tile;
 
 use navara_buffer_store::{BufferStore, Handle};
 use navara_component::Deleted;
-use rand::Rng;
+use rand::RngExt;
 
 use navara_parser::b3dm::{BatchTable as B3dmBatchTable, PropertyValue};
 use rustc_hash::FxHashMap;

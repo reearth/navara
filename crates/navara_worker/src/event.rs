@@ -1,8 +1,8 @@
-use bevy_ecs::{entity::Entity, event::Event};
+use bevy_ecs::{entity::Entity, message::Message};
 
 use crate::DelegatedWorkerTasksResult;
 
-#[derive(Debug, Event)]
+#[derive(Debug, Message)]
 pub struct WorkerTaskCompletedEvent {
     pub parameters_id: Entity,
     pub result: DelegatedWorkerTasksResult,

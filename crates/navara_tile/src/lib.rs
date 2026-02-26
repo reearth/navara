@@ -19,7 +19,7 @@ impl Plugin for TilePlugin {
             .init_resource::<CachedMartini>()
             .insert_resource(RasterTileQuadtree::new_with_linear_qt())
             .insert_resource(TerrainInformationQuadtree::new_with_linear_qt())
-            .add_event::<MeshPreparedEvent>()
+            .add_message::<MeshPreparedEvent>()
             .add_systems(
                 PreUpdate,
                 (

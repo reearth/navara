@@ -16,8 +16,8 @@ pub struct ComponentEvent<T = ()> {
 impl From<Entity> for EntityEvent {
     fn from(e: Entity) -> Self {
         Self {
-            ind: e.index(),
-            gen: e.generation(),
+            ind: e.index().index(),
+            gen: e.generation().to_bits(),
         }
     }
 }
@@ -25,8 +25,8 @@ impl From<Entity> for EntityEvent {
 impl<T> ComponentEvent<T> {
     pub fn new(e: Entity, comp: T) -> Self {
         Self {
-            ind: e.index(),
-            gen: e.generation(),
+            ind: e.index().index(),
+            gen: e.generation().to_bits(),
             comp,
         }
     }
@@ -105,8 +105,8 @@ pub struct ReconstructableComponentEvent<T = ()> {
 impl<T> ReconstructableComponentEvent<T> {
     pub fn new(e: Entity, comp: T) -> Self {
         Self {
-            ind: e.index(),
-            gen: e.generation(),
+            ind: e.index().index(),
+            gen: e.generation().to_bits(),
             bits: e.to_bits(),
             comp,
         }

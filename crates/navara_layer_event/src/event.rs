@@ -9,20 +9,20 @@ use navara_layer::{
 };
 use navara_material::{Appearance, ElevationHeatmapConfig};
 
-#[derive(Debug, Clone, PartialEq, Event)]
+#[derive(Debug, Clone, PartialEq, Message)]
 pub struct AddLayerEvent(pub LayerDescription);
 
-#[derive(Debug, Clone, PartialEq, Event)]
+#[derive(Debug, Clone, PartialEq, Message)]
 pub struct UpdateLayerEvent {
     pub layer_id: LayerId,
     pub appearance: Appearance,
     pub elevation_heatmap_config: Option<ElevationHeatmapConfig>,
 }
 
-#[derive(Debug, Clone, PartialEq, Event)]
+#[derive(Debug, Clone, PartialEq, Message)]
 pub struct DeleteLayerEvent(pub LayerId);
 
-pub fn process_add_events(mut commands: Commands, mut events: EventReader<AddLayerEvent>) {
+pub fn process_add_events(mut commands: Commands, mut events: MessageReader<AddLayerEvent>) {
     for ev in events.read() {
         let AddLayerEvent(desc) = ev;
         match desc {
@@ -54,7 +54,7 @@ pub fn process_add_events(mut commands: Commands, mut events: EventReader<AddLay
 pub fn process_update_events(
     mut commands: Commands,
     layer_desc_store: ResMut<LayerDescStore>,
-    mut events: EventReader<UpdateLayerEvent>,
+    mut events: MessageReader<UpdateLayerEvent>,
 ) {
     for ev in events.read() {
         let layer_desc = match layer_desc_store.map.get(&ev.layer_id.0) {
@@ -113,7 +113,7 @@ pub fn process_update_events(
 pub fn process_delete_events(
     mut commands: Commands,
     mut layer_desc_store: ResMut<LayerDescStore>,
-    mut events: EventReader<DeleteLayerEvent>,
+    mut events: MessageReader<DeleteLayerEvent>,
 ) {
     for ev in events.read() {
         let DeleteLayerEvent(layer_id) = ev;

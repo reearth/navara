@@ -3,7 +3,7 @@ use std::f64::{self, consts::PI};
 use bevy_ecs::{
     change_detection::DetectChanges,
     entity::Entity,
-    event::EventReader,
+    message::MessageReader,
     query::{Added, Changed, Or, With},
     system::{Commands, Query, Res, ResMut},
     world::Ref,
@@ -32,7 +32,7 @@ use crate::{
 };
 
 use super::{CameraFrustum, CameraMarker, Orbit};
-use navara_input::{MouseMoveInput, TouchControl};
+use navara_input::TouchControl;
 
 pub fn startup(mut commands: Commands) {
     let orbit = Orbit::default();
@@ -76,11 +76,10 @@ pub fn update(
         With<CameraMarker>,
     >,
     mb: Res<ButtonInput<MouseButton>>,
-    mut mm: EventReader<MouseMotion>,
-    mut mw: EventReader<MouseWheel>,
-    mut _mp: EventReader<MouseMoveInput>,
-    mut tc: EventReader<TouchControl>,
-    mut ce: EventReader<CameraEvent>,
+    mut mm: MessageReader<MouseMotion>,
+    mut mw: MessageReader<MouseWheel>,
+    mut tc: MessageReader<TouchControl>,
+    mut ce: MessageReader<CameraEvent>,
     keys: Res<ButtonInput<KeyCode>>,
     frame: Res<FrameManager>,
 ) {
@@ -358,7 +357,7 @@ fn handle_orbit_spin(
     controller: &mut CameraController,
     inertia: &mut CameraInertia,
     mb: &Res<ButtonInput<MouseButton>>,
-    mm: &mut EventReader<MouseMotion>,
+    mm: &mut MessageReader<MouseMotion>,
     touch_control: &Option<TouchControl>,
     is_ctrl: bool,
     is_cam_moving: bool,
@@ -564,7 +563,7 @@ fn handle_tilt(
     inertia: &mut CameraInertia,
     controller: &mut CameraController,
     mb: &Res<ButtonInput<MouseButton>>,
-    mm: &mut EventReader<MouseMotion>,
+    mm: &mut MessageReader<MouseMotion>,
     touch_control: &Option<TouchControl>,
     is_ctrl: bool,
     transform: &Transform,
@@ -616,7 +615,7 @@ fn handle_tilt(
 }
 
 fn rotate(
-    mm: &mut EventReader<MouseMotion>,
+    mm: &mut MessageReader<MouseMotion>,
     touch_control: &Option<TouchControl>,
     controller: &CameraController,
     ratio_x: f64,
@@ -643,7 +642,7 @@ fn handle_zoom(
     orbit: &mut Orbit,
     controller: &CameraController,
     inertia: &mut CameraInertia,
-    mw: &mut EventReader<MouseWheel>,
+    mw: &mut MessageReader<MouseWheel>,
     touch_control: &Option<TouchControl>,
     is_ctrl: bool,
     is_cam_moving: bool,

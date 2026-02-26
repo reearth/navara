@@ -1,6 +1,6 @@
 use bevy_ecs::{
     entity::Entity,
-    event::{Event, EventReader, EventWriter},
+    message::{Message, MessageReader, MessageWriter},
     prelude::Resource,
     system::ResMut,
 };
@@ -53,7 +53,7 @@ impl MouseScrollInput {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Event)]
+#[derive(Debug, Clone, Copy, PartialEq, Message)]
 pub struct MouseMoveInput {
     /// Relative position from window.
     /// 0.0 - 1.0
@@ -71,8 +71,8 @@ pub struct MouseCursorPosition {
 
 pub fn trigger_mouse_motion_event(
     mut res: ResMut<MouseCursorPosition>,
-    mut pos: EventReader<MouseMoveInput>,
-    mut motion: EventWriter<MouseMotion>,
+    mut pos: MessageReader<MouseMoveInput>,
+    mut motion: MessageWriter<MouseMotion>,
 ) {
     for event in pos.read() {
         let delta_x = event.x - res.x;
