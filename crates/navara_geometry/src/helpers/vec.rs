@@ -1,7 +1,7 @@
 use std::hash::Hash;
 
 use itertools::Itertools;
-use navara_core::{xyz_to_vec3, Ellipsoid, Meters, LLE};
+use navara_core::{Ellipsoid, LLE, Meters, xyz_to_vec3};
 use navara_math::{FloatType, Vec3};
 use radians::Radians;
 
@@ -117,7 +117,7 @@ pub fn tangent_direction(a: Vec3, b: Vec3, up: Vec3) -> Vec3 {
 mod test {
     use approx::assert_abs_diff_eq;
     use navara_core::LLE;
-    use navara_math::{Vec3, EPSILON10};
+    use navara_math::{EPSILON10, Vec3};
     use radians::Radians;
 
     use crate::helpers::vec::UniqueWithDelta;

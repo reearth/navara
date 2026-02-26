@@ -16,11 +16,10 @@ import type { FeatureCollection } from "geojson";
 import { Vector3 } from "three";
 
 import {
-  LOCAL_DATASETS,
   TERRAIN_DATASETS,
   TILE_DATASETS,
   TILES_3D_DATASETS,
-} from "../../helpers/constants";
+} from "../../../helpers/constants";
 
 // ============================================
 // Initial Configurations (Single Source of Truth)
@@ -78,29 +77,6 @@ export const PLANE_CONFIG = {
   emissiveIntensity: 0.5,
   selectiveEffectOcclusion: "normal" satisfies SelectiveEffectOcclusion,
   bloomEnabled: true,
-  outlineEnabled: false,
-} as const;
-
-/**
- * Drum model initial configuration
- */
-export const DRUM_CONFIG = {
-  emissiveColor: new Color().setHex(0xffffff),
-  emissiveIntensity: 0.3,
-  selectiveEffectOcclusion: "normal" satisfies SelectiveEffectOcclusion,
-  bloomEnabled: false,
-  outlineEnabled: false,
-} as const;
-
-/**
- * Soldier model initial configuration
- */
-export const SOLDIER_CONFIG = {
-  emissiveColor: new Color().setHex(0xffffff),
-  emissiveIntensity: 0.3,
-  animationSpeed: 1.0,
-  selectiveEffectOcclusion: "normal" satisfies SelectiveEffectOcclusion,
-  bloomEnabled: false,
   outlineEnabled: false,
 } as const;
 
@@ -194,22 +170,6 @@ export const CAMERA_FOCUS_POSITIONS = {
     pitch: -40,
     roll: 0,
   },
-  drum: {
-    lng: 139.7682,
-    lat: 35.671,
-    height: 600,
-    heading: 0,
-    pitch: -35,
-    roll: 0,
-  },
-  soldier: {
-    lng: 139.7505,
-    lat: 35.672,
-    height: 600,
-    heading: 0,
-    pitch: -35,
-    roll: 0,
-  },
   polygon: {
     lng: 139.775,
     lat: 35.623,
@@ -236,40 +196,6 @@ export const CAMERA_FOCUS_POSITIONS = {
   },
 } as const satisfies Record<string, CameraPosition>;
 
-type GeoJsonModelState = Record<string, unknown>;
-
-export type GeoJsonModelLayer<TState extends GeoJsonModelState> = {
-  layer: Layer;
-  updateModel: (overrides: Partial<TState>) => void;
-};
-
-export type DrumModelState = {
-  show: boolean;
-  size: number;
-  height: number;
-  clampToGround: boolean;
-  url: string;
-  shouldRotateInDefault: boolean;
-  color?: Color;
-  emissiveColor?: Color;
-  emissiveIntensity?: number;
-  selectiveEffectOcclusion?: SelectiveEffectOcclusion;
-};
-
-export type SoldierModelState = {
-  show: boolean;
-  size: number;
-  height: number;
-  clampToGround: boolean;
-  url: string;
-  animationActiveClip?: string;
-  animationSpeed?: number;
-  color?: Color;
-  emissiveColor?: Color;
-  emissiveIntensity?: number;
-  selectiveEffectOcclusion?: SelectiveEffectOcclusion;
-};
-
 export type GeoJsonPolygonState = {
   show: boolean;
   color: Color;
@@ -292,8 +218,6 @@ export type SceneLayers = {
   cylinderLayer: LayerHandle<CylinderMeshLayer>;
   tubeLayer: LayerHandle<TubeMeshLayer>;
   planeLayer: LayerHandle<PlaneMeshLayer>;
-  drumLayer: GeoJsonModelLayer<DrumModelState>;
-  soldierLayer: GeoJsonModelLayer<SoldierModelState>;
   polygonLayer: GeoJsonPolygonLayer;
   chiyodaLayer: Layer;
   chuoLayer: Layer;
@@ -474,63 +398,6 @@ export const createSceneLayers = (
     selectiveEffectOcclusion: "normal",
   });
 
-  const drumLayer = createGeoJsonModelLayer<DrumModelState>({
-    view,
-    feature: {
-      type: "FeatureCollection",
-      features: [
-        {
-          type: "Feature",
-          properties: {},
-          geometry: {
-            coordinates: [139.7682, 35.6763],
-            type: "Point",
-          },
-        },
-      ],
-    },
-    model: {
-      show: true,
-      size: 100,
-      height: 0,
-      clampToGround: true,
-      url: LOCAL_DATASETS.steelDrumGLTF.url,
-      shouldRotateInDefault: true,
-      emissiveColor: new Color().setHex(0xffffff),
-      emissiveIntensity: 0.3,
-      selectiveEffectOcclusion: "normal",
-    },
-  });
-
-  const soldierLayer = createGeoJsonModelLayer<SoldierModelState>({
-    view,
-    feature: {
-      type: "FeatureCollection",
-      features: [
-        {
-          type: "Feature",
-          properties: {},
-          geometry: {
-            coordinates: [139.7505, 35.677],
-            type: "Point",
-          },
-        },
-      ],
-    },
-    model: {
-      show: true,
-      size: 100,
-      height: 0,
-      clampToGround: true,
-      url: LOCAL_DATASETS.soldierGLTF.url,
-      animationActiveClip: "Walk",
-      animationSpeed: 1.0,
-      emissiveColor: new Color().setHex(0xffffff),
-      emissiveIntensity: 0.3,
-      selectiveEffectOcclusion: "normal",
-    },
-  });
-
   // GeoJSON Polygon at Odaiba (お台場)
   const odaibaFeature: FeatureCollection = {
     type: "FeatureCollection",
@@ -634,45 +501,9 @@ export const createSceneLayers = (
     cylinderLayer,
     tubeLayer,
     planeLayer,
-    drumLayer,
-    soldierLayer,
     polygonLayer,
     chiyodaLayer,
     chuoLayer,
-  };
-};
-
-type CreateGeoJsonModelLayerOptions<TState extends GeoJsonModelState> = {
-  view: ThreeView;
-  feature: FeatureCollection;
-  model: TState;
-};
-
-const createGeoJsonModelLayer = <TState extends GeoJsonModelState>({
-  view,
-  feature,
-  model,
-}: CreateGeoJsonModelLayerOptions<TState>): GeoJsonModelLayer<TState> => {
-  const currentModelState = { ...model };
-
-  const layer = view.addLayer({
-    type: "geojson",
-    data: feature,
-    model: currentModelState,
-  });
-
-  const updateModel = (overrides: Partial<TState>) => {
-    Object.assign(currentModelState, overrides);
-    layer.update({
-      type: "geojson",
-      data: feature,
-      model: { ...currentModelState },
-    });
-  };
-
-  return {
-    layer,
-    updateModel,
   };
 };
 

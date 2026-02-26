@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use num::PrimInt;
 
-use crate::{child_coords, utils::to_int, Coords, QuadLeafHandle};
+use crate::{Coords, QuadLeafHandle, child_coords, utils::to_int};
 
 #[cfg(feature = "bevy")]
 pub trait Resource: bevy_ecs::prelude::Resource {}

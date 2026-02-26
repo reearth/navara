@@ -27,15 +27,10 @@ export const transformShader = (
   shader.vertexShader = createReplacer(shader.vertexShader)
     .replace(
       "#include <color_vertex>",
-      createReplacer(ShaderChunk.color_vertex)
-        .replace(
-          "vColor = vec4( 1.0 );",
-          `vColor = vec4( 1.0 / ${COLOR_DIVISOR}.0 );`,
-        )
-        .replace(
-          "vColor = vec3( 1.0 );",
-          `vColor = vec3( 1.0 / ${COLOR_DIVISOR}.0 );`,
-        ).source,
+      createReplacer(ShaderChunk.color_vertex).replace(
+        "vColor = vec4( 1.0 );",
+        `vColor = vec4( 1.0 / ${COLOR_DIVISOR}.0 );`,
+      ).source,
     )
     .replace(
       "#include <common>",

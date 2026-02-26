@@ -3,7 +3,7 @@ use geozero::mvt::tile;
 
 use navara_buffer_store::{BufferStore, Handle};
 use navara_component::Deleted;
-use rand::Rng;
+use rand::RngExt;
 
 use navara_parser::b3dm::{BatchTable as B3dmBatchTable, PropertyValue};
 use rustc_hash::FxHashMap;
@@ -14,6 +14,9 @@ pub struct BatchedFeature {
     pub features: Vec<Entity>,
     pub construct_polygon_feature: Option<Entity>,
     pub construct_polyline_feature: Option<Entity>,
+    /// Whether the feature should be active (visible) immediately when transferred.
+    /// GeoJSON sets this to `true`; MVT tiles use `false` (activated by tile visibility).
+    pub default_active: bool,
 }
 
 impl BatchedFeature {

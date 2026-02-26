@@ -81,10 +81,10 @@ impl LayerResources {
                 let mut qt = qts.get_mut(self.quadtree);
                 for e in tc_ref.rendered_tile_caches.values() {
                     if let Ok(mut r) = rendered_tiles.get_mut(*e) {
-                        if let Ok(qt) = qt.as_mut() {
-                            if let Some(mut tile) = qt.qt.remove(r.tile_handle) {
-                                tile.destroy(commands);
-                            }
+                        if let Ok(qt) = qt.as_mut()
+                            && let Some(mut tile) = qt.qt.remove(r.tile_handle)
+                        {
+                            tile.destroy(commands);
                         }
                         r.destroy(commands, features, batched_features);
                     }

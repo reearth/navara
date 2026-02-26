@@ -1,7 +1,7 @@
-use navara_core::{Extent, Radians, CRS, WGS84_64};
+use navara_core::{CRS, Extent, Radians, WGS84_64};
 use navara_geometry::{
-    create_flat_polygon_geometry, create_polygon_geometry, Hierarchy, HierarchyDVec3,
-    PolygonGeometryOptions, PolygonGeometryResult, PolygonResource, WindingOrder,
+    Hierarchy, HierarchyDVec3, PolygonGeometryOptions, PolygonGeometryResult, PolygonResource,
+    WindingOrder, create_flat_polygon_geometry, create_polygon_geometry,
 };
 use navara_material::PolygonMaterial;
 use navara_math::Vec3;

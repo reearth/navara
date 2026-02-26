@@ -29,7 +29,7 @@ import {
   RepeatWrapping,
   Group,
   Material,
-  PCFSoftShadowMap,
+  PCFShadowMap,
 } from "three";
 import invariant from "tiny-invariant";
 
@@ -291,13 +291,12 @@ type ActualLayerDescription = _ActualLayerDescription;
  * ```
  */
 export default class ThreeView<
-  CustomLayerDescriptions extends
-    | Record<string, unknown>
-    | undefined = undefined,
-  LayerDescription extends
-    ActualLayerDescription = CustomLayerDescriptions extends undefined
-    ? ActualLayerDescription
-    : ActualLayerDescription | CustomLayerDescriptions,
+  CustomLayerDescriptions extends Record<string, unknown> | undefined =
+    undefined,
+  LayerDescription extends ActualLayerDescription =
+    CustomLayerDescriptions extends undefined
+      ? ActualLayerDescription
+      : ActualLayerDescription | CustomLayerDescriptions,
 > extends EventHandler<ViewEvents> {
   /** The camera controller that manages view position, orientation, and projection. */
   camera: ThreeViewCamera;
@@ -602,7 +601,7 @@ export default class ThreeView<
     this.renderer = renderer;
 
     renderer.shadowMap.enabled = !!options.shadow;
-    this.renderer.shadowMap.type = PCFSoftShadowMap;
+    this.renderer.shadowMap.type = PCFShadowMap;
 
     // Update shadow map manually in CustomRenderPass.
     renderer.shadowMap.autoUpdate = false;

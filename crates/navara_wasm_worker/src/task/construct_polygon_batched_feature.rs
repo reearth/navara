@@ -4,8 +4,11 @@ use navara_geometry::{
 };
 use navara_math::{FloatType, Vec3};
 use navara_wasm_types::{
-    polygon::{ConstructedPolygonGeometry, PolygonGeometry, TransferablePolygonBatchedFeature},
     ExtentRadianF32, PolygonMaterial,
+    polygon::{
+        ConstructedPolygonGeometry, ConstructedPolygonOutlineGeometry, PolygonGeometry,
+        TransferablePolygonBatchedFeature,
+    },
 };
 use wasm_bindgen::prelude::wasm_bindgen;
 
@@ -54,6 +57,12 @@ pub fn construct_polygon(
     };
     let mut indices = vec![];
     let mut index_offset = 0;
+
+    // Outline accumulators
+    let mut outline_positions: Vec<f32> = Vec::new();
+    let mut outline_scale_normal_and_cap: Vec<f32> = Vec::new();
+    let mut outline_skip_indices: Vec<u32> = Vec::new();
+    let mut outline_batch_index: Vec<f32> = Vec::new();
 
     let mut combined_extent: Option<Extent<f64, Radians>> = None;
     for idx in 0..features.length {
@@ -191,6 +200,24 @@ pub fn construct_polygon(
         }
 
         index_offset += position_length as u32;
+
+        // Accumulate outline geometry
+        if let Some(outline) = polygon_result.outline {
+            let vertex_offset = (outline_positions.len() / 3) as u32;
+            // Add boundary skip to prevent connecting separate polygons
+            if vertex_offset > 0 {
+                outline_skip_indices.push(vertex_offset - 1);
+            }
+            for &idx in &outline.skip_indices {
+                outline_skip_indices.push(idx + vertex_offset);
+            }
+            let outline_vertex_count = outline.position.data.len() / 3;
+            for _ in 0..outline_vertex_count {
+                outline_batch_index.push(batch_idx.0 as f32);
+            }
+            outline_positions.extend_from_slice(&outline.position.data);
+            outline_scale_normal_and_cap.extend_from_slice(&outline.scale_normal_and_cap.data);
+        }
     }
 
     let combined_extent = combined_extent?;
@@ -203,13 +230,34 @@ pub fn construct_polygon(
         // RTC mode: calculate translation and translate positions
         let center = rtc_center.unwrap();
         translate_positions_to_center(&mut combined_attributes, &center);
+        // Also translate outline positions to RTC space
+        for chunk in outline_positions.chunks_exact_mut(3) {
+            chunk[0] -= center.x as f32;
+            chunk[1] -= center.y as f32;
+            chunk[2] -= center.z as f32;
+        }
         Some(center.into())
+    };
+
+    let outline = if outline_positions.is_empty() {
+        None
+    } else {
+        Some(ConstructedPolygonOutlineGeometry::new(
+            navara_wasm_types::FloatAttribute::new(outline_positions, 3),
+            navara_wasm_types::FloatAttribute::new(outline_scale_normal_and_cap, 4),
+            outline_skip_indices,
+            Some(navara_wasm_types::FloatAttribute::new(
+                outline_batch_index,
+                1,
+            )),
+        ))
     };
 
     Some(ConstructedPolygonGeometry::new(
         PolygonGeometry::new(combined_attributes.into(), indices),
         Some((&combined_extent).into()),
         rtc_translation,
+        outline,
     ))
 }
 
@@ -332,10 +380,11 @@ pub fn construct_flat_polygon(
         index_offset += position_length as u32;
     }
 
-    // Flat polygons don't have extent or RTC translation
+    // Flat polygons don't have extent or RTC translation or outline
     Some(ConstructedPolygonGeometry::new(
         PolygonGeometry::new(combined_attributes.into(), indices),
         None,
         None, // No RTC translation for flat polygons
+        None, // No outline for flat polygons
     ))
 }

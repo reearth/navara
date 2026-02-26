@@ -17,16 +17,16 @@
     "test": "vitest --passWithNoTests --watch=false",
     "lint": "eslint . --fix",
     "lint:check": "eslint .",
-    "format": "prettier --write --ignore-path ../../.gitignore .",
-    "format:check": "prettier --check --ignore-path ../../.gitignore ."
+    "format": "prettier --write --ignore-path ../../.gitignore --ignore-path ../../.prettierignore .",
+    "format:check": "prettier --check --ignore-path ../../.gitignore --ignore-path ../../.prettierignore ."
   },
   "license": "MIT OR Apache-2.0",
   "peerDependencies": {
-    "three": "^0.178.0"
+    "three": "^0.183.1"
   },
   "dependencies": {},
   "devDependencies": {
-    "@types/three": "^0.178.0",
-    "three": "^0.178.0"
+    "@types/three": "^0.183.1",
+    "three": "^0.183.1"
   }
 }

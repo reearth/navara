@@ -42,13 +42,13 @@ impl RenderedTile {
                 // Track RenderableFeature for LayerStore removal, but DON'T mark as Deleted here.
                 // The remove_batched_feature system will mark it as Deleted after calling
                 // feature.destroy() to clean up BufferStore handles.
-                if let Ok((fid, layer_id)) = features.get(feature_id) {
-                    if let Some(fid_entity) = fid.0 {
-                        removed_by_layer
-                            .entry(layer_id.0.clone())
-                            .or_default()
-                            .push(fid_entity);
-                    }
+                if let Ok((fid, layer_id)) = features.get(feature_id)
+                    && let Some(fid_entity) = fid.0
+                {
+                    removed_by_layer
+                        .entry(layer_id.0.clone())
+                        .or_default()
+                        .push(fid_entity);
                 }
                 commands.entity(feature_id).insert(Deleted);
             }
@@ -74,21 +74,21 @@ impl RenderedTile {
         let mut indices_to_remove = Vec::new();
 
         for (idx, &entity) in feature_ids.iter().enumerate() {
-            if let Ok((feature_id, layer_id)) = features.get(entity) {
-                if layer_id == target_layer_id {
-                    indices_to_remove.push(idx);
+            if let Ok((feature_id, layer_id)) = features.get(entity)
+                && layer_id == target_layer_id
+            {
+                indices_to_remove.push(idx);
 
-                    // Despawn child entities
-                    if let Ok(batched) = batched_features.get(entity) {
-                        batched.despawn_recursively(commands);
-                    }
-
-                    // Track RenderableFeature for LayerStore removal
-                    if let Some(fid) = feature_id.0 {
-                        removed_features.push(fid);
-                    }
-                    commands.entity(entity).insert(Deleted);
+                // Despawn child entities
+                if let Ok(batched) = batched_features.get(entity) {
+                    batched.despawn_recursively(commands);
                 }
+
+                // Track RenderableFeature for LayerStore removal
+                if let Some(fid) = feature_id.0 {
+                    removed_features.push(fid);
+                }
+                commands.entity(entity).insert(Deleted);
             }
         }
 

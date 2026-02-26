@@ -294,7 +294,7 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
             }
 
             // Manual logarithmic depth calculation for RTE/RTC mode
-            #if defined( USE_LOGDEPTHBUF )
+            #if defined(USE_LOGDEPTHBUF) || defined(USE_LOGARITHMIC_DEPTH_BUFFER)
               float depthMultiplier = uOffsetDepth ? 0.8 : 1.0;
               gl_FragDepth = vIsPerspective == 0.0 ? gl_FragCoord.z : log2( vFragDepthManual * depthMultiplier ) * logDepthBufFC * 0.5;
             #endif
@@ -501,7 +501,7 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
 
           // Manual logarithmic depth calculation for RTE/RTC mode
           // Background should be behind text, use relative offset for consistent separation at all distances
-          #if defined( USE_LOGDEPTHBUF )
+          #if defined( USE_LOGDEPTHBUF ) || defined( USE_LOGARITHMIC_DEPTH_BUFFER )
             float backgroundOffset = 1.001; // 0.1% further than text
             float depthMultiplier = uOffsetDepth ? (backgroundOffset * 0.8) : backgroundOffset;
             gl_FragDepth = vIsPerspective == 0.0 ? gl_FragCoord.z : log2( vFragDepthManual * depthMultiplier ) * logDepthBufFC * 0.5;

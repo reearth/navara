@@ -27,9 +27,9 @@ impl Plugin for InputPlugin {
         app.add_plugins(bevy_input::InputPlugin)
             .init_resource::<mouse::MouseCursorPosition>()
             .init_resource::<TouchList>()
-            .add_event::<MouseMoveInput>()
-            .add_event::<TouchInput>()
-            .add_event::<touch::TouchControl>()
+            .add_message::<MouseMoveInput>()
+            .add_message::<TouchInput>()
+            .add_message::<touch::TouchControl>()
             .add_systems(PreUpdate, mouse::trigger_mouse_motion_event)
             .add_systems(PreUpdate, touch::process_touch_input_events);
     }
@@ -38,19 +38,19 @@ impl Plugin for InputPlugin {
 pub fn trigger_event(world: &mut World, win: Entity, ev: Input) {
     match ev {
         Input::Keyboard(ev) => {
-            world.send_event(ev.into_event(win));
+            world.write_message(ev.into_event(win));
         }
         Input::MouseButton(ev) => {
-            world.send_event(ev.into_event(win));
+            world.write_message(ev.into_event(win));
         }
         Input::MouseMove(ev) => {
-            world.send_event(ev);
+            world.write_message(ev);
         }
         Input::MouseScroll(ev) => {
-            world.send_event(ev.into_event(win));
+            world.write_message(ev.into_event(win));
         }
         Input::Touch(ev) => {
-            world.send_event(ev);
+            world.write_message(ev);
         }
     }
 }

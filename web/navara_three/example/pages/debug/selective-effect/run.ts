@@ -1,13 +1,11 @@
-import ThreeView, { type Layer } from "@navara/three";
-import { Color } from "three";
+import ThreeView, { Color, type Layer } from "@navara/three";
 
-import { showAttributions } from "../../helpers/attributions";
+import { showAttributions } from "../../../helpers/attributions";
 import {
   TILE_DATASETS,
   TILES_3D_DATASETS,
   TERRAIN_DATASETS,
-  LOCAL_DATASETS,
-} from "../../helpers/constants";
+} from "../../../helpers/constants";
 
 import { createControlPane } from "./controlPane";
 import { createSceneLayers } from "./sceneLayers";
@@ -82,8 +80,6 @@ export const run = async (view: ThreeView) => {
     cylinderLayer,
     tubeLayer,
     planeLayer,
-    drumLayer,
-    soldierLayer,
     polygonLayer,
     chiyodaLayer,
     chuoLayer,
@@ -97,7 +93,6 @@ export const run = async (view: ThreeView) => {
     TERRAIN_DATASETS.gsi,
     TILES_3D_DATASETS.plateauChiyoda,
     TILES_3D_DATASETS.plateauChuo,
-    LOCAL_DATASETS.steelDrumGLTF,
   ]);
 
   createControlPane({
@@ -109,8 +104,6 @@ export const run = async (view: ThreeView) => {
     cylinderLayer,
     tubeLayer,
     planeLayer,
-    drumLayer,
-    soldierLayer,
     polygonLayer,
     chiyodaLayer,
     chuoLayer,

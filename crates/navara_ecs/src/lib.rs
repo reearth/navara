@@ -9,11 +9,11 @@ use bevy_ecs::{
 };
 use navara_buffer_store::{BufferStore, Handle};
 use navara_camera::{
-    get_heading, get_pitch, get_roll, CamDirType, CameraControlUpdateEvent, CameraDirection,
-    CameraEvent, CameraFrustum, CameraMarker, CameraOrientation, CameraStatus, FrustumEvent,
+    CamDirType, CameraControlUpdateEvent, CameraDirection, CameraEvent, CameraFrustum,
+    CameraMarker, CameraOrientation, CameraStatus, FrustumEvent, get_heading, get_pitch, get_roll,
 };
 use navara_component::{Deleted, Rendered};
-use navara_core::{ElevationDecoder, LngLat, Radians, CRS, LLE, WGS84_64};
+use navara_core::{CRS, ElevationDecoder, LLE, LngLat, Radians, WGS84_64};
 use navara_data_requester::DataRequester;
 use navara_event::Events;
 use navara_feature_component::{
@@ -29,9 +29,8 @@ use navara_mvt::MvtLayerResources;
 use navara_parser::b3dm::{BatchTable as B3dmBatchTable, PropertyValue};
 use navara_texture_fragment::{TextureFragmentLoadedEvent, TextureFragmentStatus};
 use navara_tile_component::{
-    compute_terrain_height_at_point, MartiniComponent, RasterTile, RasterTileQuadtree,
-    TerrainHeightObserver, TileHandle, TileTerrainDataRequesterQuery, VectorTile,
-    VectorTileQuadtree,
+    MartiniComponent, RasterTile, RasterTileQuadtree, TerrainHeightObserver, TileHandle,
+    TileTerrainDataRequesterQuery, VectorTile, VectorTileQuadtree, compute_terrain_height_at_point,
 };
 use navara_window::{Window, WindowResizeEvent};
 use navara_worker::{
@@ -72,7 +71,7 @@ impl App {
         navara_input::trigger_event(self.app.world_mut(), self.win, ev);
     }
 
-    pub fn read_events(&mut self) -> Option<Events> {
+    pub fn read_events(&mut self) -> Option<Events<'_>> {
         let ev = self
             .app
             .world()
@@ -109,7 +108,7 @@ impl App {
         // TODO: This is only for DataRequester, so curve out this function.
         self.app
             .world_mut()
-            .send_event(navara_buffer_store::BufferStoreLoadedEvent {
+            .write_message(navara_buffer_store::BufferStoreLoadedEvent {
                 id: Entity::from_bits(bits),
                 ty: navara_buffer_store::BufferType::U8,
                 handle,
@@ -163,7 +162,7 @@ impl App {
     pub fn set_tile_mesh_prepared(&mut self, handle: TileHandle) {
         self.app
             .world_mut()
-            .send_event(navara_tile::tile::MeshPreparedEvent {
+            .write_message(navara_tile::tile::MeshPreparedEvent {
                 tile_handle: handle,
             });
     }
@@ -234,7 +233,7 @@ impl App {
     pub fn trigger_data_requester_failed(&mut self, bits: u64) {
         self.app
             .world_mut()
-            .send_event(navara_buffer_store::BufferStoreFailedEvent {
+            .write_message(navara_buffer_store::BufferStoreFailedEvent {
                 id: Entity::from_bits(bits),
             });
     }
@@ -248,7 +247,7 @@ impl App {
         window_res.width = width * pixel_ratio;
         window_res.pixel_ratio = pixel_ratio;
 
-        self.app.world_mut().send_event(WindowResizeEvent {
+        self.app.world_mut().write_message(WindowResizeEvent {
             width,
             height,
             pixel_ratio,
@@ -256,17 +255,21 @@ impl App {
     }
 
     pub fn trigger_texture_fragment_loaded(&mut self, bits: u64, status: TextureFragmentStatus) {
-        self.app.world_mut().send_event(TextureFragmentLoadedEvent {
-            id: Entity::from_bits(bits),
-            status,
-        });
+        self.app
+            .world_mut()
+            .write_message(TextureFragmentLoadedEvent {
+                id: Entity::from_bits(bits),
+                status,
+            });
     }
 
     pub fn trigger_worker_task_completed(&mut self, bits: u64, result: DelegatedWorkerTasksResult) {
-        self.app.world_mut().send_event(WorkerTaskCompletedEvent {
-            parameters_id: Entity::from_bits(bits),
-            result,
-        });
+        self.app
+            .world_mut()
+            .write_message(WorkerTaskCompletedEvent {
+                parameters_id: Entity::from_bits(bits),
+                result,
+            });
     }
 
     pub fn add_layer(&mut self, layer_id: &str, desc: LayerDescription) {
@@ -274,33 +277,33 @@ impl App {
 
         self.app
             .world_mut()
-            .send_event(navara_layer_event::AddLayerEvent(desc));
+            .write_message(navara_layer_event::AddLayerEvent(desc));
     }
 
     pub fn get_layer_type(&self, layer_id: &String) -> Option<&str> {
         let mut layer_type = None;
-        if let Some(layer_desc_store) = self.app.world().get_resource::<LayerDescStore>() {
-            if let Some(desc) = layer_desc_store.map.get(layer_id) {
-                layer_type = match desc {
-                    LayerDescription::Tiles(_) => Some("tiles"),
-                    LayerDescription::Terrain(_) => Some("terrain"),
-                    LayerDescription::GeoJson(_) => Some("geojson"),
-                    LayerDescription::B3dm(_) => Some("b3dm"),
-                    LayerDescription::Pnts(_) => Some("pnts"),
-                    LayerDescription::Mvt(_) => Some("mvt"),
-                    LayerDescription::Cesium3dTiles(_) => Some("cesium3dtiles"),
-                };
-            }
+        if let Some(layer_desc_store) = self.app.world().get_resource::<LayerDescStore>()
+            && let Some(desc) = layer_desc_store.map.get(layer_id)
+        {
+            layer_type = match desc {
+                LayerDescription::Tiles(_) => Some("tiles"),
+                LayerDescription::Terrain(_) => Some("terrain"),
+                LayerDescription::GeoJson(_) => Some("geojson"),
+                LayerDescription::B3dm(_) => Some("b3dm"),
+                LayerDescription::Pnts(_) => Some("pnts"),
+                LayerDescription::Mvt(_) => Some("mvt"),
+                LayerDescription::Cesium3dTiles(_) => Some("cesium3dtiles"),
+            };
         }
 
         layer_type
     }
 
     pub fn get_layer_description(&self, layer_id: &str) -> Option<LayerDescription> {
-        if let Some(layer_desc_store) = self.app.world().get_resource::<LayerDescStore>() {
-            if let Some(desc) = layer_desc_store.map.get(layer_id) {
-                return Some(desc.clone());
-            }
+        if let Some(layer_desc_store) = self.app.world().get_resource::<LayerDescStore>()
+            && let Some(desc) = layer_desc_store.map.get(layer_id)
+        {
+            return Some(desc.clone());
         }
 
         None
@@ -322,7 +325,7 @@ impl App {
                 for appearance in &layer.appearances {
                     self.app
                         .world_mut()
-                        .send_event(navara_layer_event::UpdateLayerEvent {
+                        .write_message(navara_layer_event::UpdateLayerEvent {
                             layer_id: LayerId(layer_id.to_owned()),
                             appearance: appearance.clone(),
                             elevation_heatmap_config: None,
@@ -333,7 +336,7 @@ impl App {
                 for appearance in &layer.appearances {
                     self.app
                         .world_mut()
-                        .send_event(navara_layer_event::UpdateLayerEvent {
+                        .write_message(navara_layer_event::UpdateLayerEvent {
                             layer_id: LayerId(layer_id.to_owned()),
                             appearance: appearance.clone(),
                             elevation_heatmap_config: None,
@@ -344,7 +347,7 @@ impl App {
                 for appearance in &layer.appearances {
                     self.app
                         .world_mut()
-                        .send_event(navara_layer_event::UpdateLayerEvent {
+                        .write_message(navara_layer_event::UpdateLayerEvent {
                             layer_id: LayerId(layer_id.to_owned()),
                             appearance: appearance.clone(),
                             elevation_heatmap_config: None,
@@ -355,7 +358,7 @@ impl App {
                 for appearance in &layer.appearances {
                     self.app
                         .world_mut()
-                        .send_event(navara_layer_event::UpdateLayerEvent {
+                        .write_message(navara_layer_event::UpdateLayerEvent {
                             layer_id: LayerId(layer_id.to_owned()),
                             appearance: appearance.clone(),
                             elevation_heatmap_config: None,
@@ -366,7 +369,7 @@ impl App {
                 for appearance in &layer.appearances {
                     self.app
                         .world_mut()
-                        .send_event(navara_layer_event::UpdateLayerEvent {
+                        .write_message(navara_layer_event::UpdateLayerEvent {
                             layer_id: LayerId(layer_id.to_owned()),
                             appearance: appearance.clone(),
                             elevation_heatmap_config: None,
@@ -377,7 +380,7 @@ impl App {
                 if let Some(appearance) = layer.appearance.clone() {
                     self.app
                         .world_mut()
-                        .send_event(navara_layer_event::UpdateLayerEvent {
+                        .write_message(navara_layer_event::UpdateLayerEvent {
                             layer_id: LayerId(layer_id.to_owned()),
                             appearance,
                             elevation_heatmap_config: layer.elevation_heatmap_config.clone(),
@@ -395,7 +398,7 @@ impl App {
     pub fn delete_layer(&mut self, layer_id: &str) {
         self.app
             .world_mut()
-            .send_event(navara_layer_event::DeleteLayerEvent(LayerId(
+            .write_message(navara_layer_event::DeleteLayerEvent(LayerId(
                 layer_id.to_owned(),
             )));
     }
@@ -474,7 +477,7 @@ impl App {
         world.get_resource::<BufferStore>()
     }
 
-    pub fn get_buffer_store_mut(&mut self) -> Option<Mut<BufferStore>> {
+    pub fn get_buffer_store_mut(&mut self) -> Option<Mut<'_, BufferStore>> {
         let world = self.app.world_mut();
         world.get_resource_mut::<BufferStore>()
     }
@@ -482,13 +485,14 @@ impl App {
     fn get_batched_features_with_material<C: Component + Clone>(
         &self,
         batched_feature_id: u64,
-    ) -> Option<(Vec<EntityRef>, GlobalBatchIds, C)> {
+    ) -> Option<(Vec<EntityRef<'_>>, GlobalBatchIds, C)> {
         let entity = Entity::from_bits(batched_feature_id);
         let world = self.app.world();
         let (batched_feature, batch_ids, material) = world
             .get_entity(entity)
             .ok()?
-            .get_components::<(&BatchedFeature, &GlobalBatchIds, &C)>()?;
+            .get_components::<(&BatchedFeature, &GlobalBatchIds, &C)>()
+            .ok()?;
 
         let features = world.get_entity(&batched_feature.features[..]).ok()?;
 
@@ -498,14 +502,14 @@ impl App {
     pub fn get_batched_features_for_polyline(
         &self,
         batched_feature_id: u64,
-    ) -> Option<(Vec<EntityRef>, GlobalBatchIds, PolylineMaterial)> {
+    ) -> Option<(Vec<EntityRef<'_>>, GlobalBatchIds, PolylineMaterial)> {
         self.get_batched_features_with_material(batched_feature_id)
     }
 
     pub fn get_batched_features_for_polygon(
         &self,
         batched_feature_id: u64,
-    ) -> Option<(Vec<EntityRef>, GlobalBatchIds, PolygonMaterial)> {
+    ) -> Option<(Vec<EntityRef<'_>>, GlobalBatchIds, PolygonMaterial)> {
         self.get_batched_features_with_material(batched_feature_id)
     }
 
@@ -666,13 +670,19 @@ impl App {
                     batch_length,
                     feature_id,
                     ..
-                } => (*feature_batch_id, *feature_id, Some(*batch_length as usize)),
-                RenderableFeature::Polygon {
-                    feature_batch_id, ..
+                }
+                | RenderableFeature::Polygon {
+                    feature_batch_id,
+                    batch_length,
+                    feature_id,
+                    ..
                 }
                 | RenderableFeature::Polyline {
-                    feature_batch_id, ..
-                } => (*feature_batch_id, renderable_feature_entity, None),
+                    feature_batch_id,
+                    batch_length,
+                    feature_id,
+                    ..
+                } => (*feature_batch_id, *feature_id, Some(*batch_length as usize)),
                 RenderableFeature::Unknown => return Ok(Some(())),
             };
 
@@ -767,7 +777,7 @@ impl App {
         roll: Option<FloatType>,
     ) {
         let pos = position.and_then(|v| (v.len() == 3).then(|| Vec3::new(v[0], v[1], v[2])));
-        self.app.world_mut().send_event(CameraEvent::Change {
+        self.app.world_mut().write_message(CameraEvent::Change {
             position: pos,
             orientation: Some(CameraOrientation {
                 pitch,
@@ -778,7 +788,7 @@ impl App {
     }
 
     pub fn move_camera(&mut self, direction: CameraDirection, amount: FloatType) {
-        self.app.world_mut().send_event(CameraEvent::Translate {
+        self.app.world_mut().write_message(CameraEvent::Translate {
             direction: CamDirType::Standard(direction),
             amount,
         });
@@ -788,7 +798,7 @@ impl App {
         if direction.len() != 3 {
             return;
         }
-        self.app.world_mut().send_event(CameraEvent::Translate {
+        self.app.world_mut().write_message(CameraEvent::Translate {
             direction: CamDirType::Custom(Vec3::new(direction[0], direction[1], direction[2])),
             amount,
         });
@@ -804,7 +814,7 @@ impl App {
         max_height: Option<FloatType>,
     ) {
         let pos = position.and_then(|v| (v.len() == 3).then(|| Vec3::new(v[0], v[1], v[2])));
-        self.app.world_mut().send_event(CameraEvent::FlyTo {
+        self.app.world_mut().write_message(CameraEvent::FlyTo {
             position: pos,
             orientation: Some(CameraOrientation {
                 pitch,
@@ -817,7 +827,7 @@ impl App {
     }
 
     pub fn look_at(&mut self, target: Vec<FloatType>, offset: Vec<FloatType>) {
-        self.app.world_mut().send_event(CameraEvent::LookAt {
+        self.app.world_mut().write_message(CameraEvent::LookAt {
             target: Vec3::new(target[0], target[1], target[2]),
             offset: Vec3::new(offset[0], offset[1], offset[2]),
         });
@@ -832,7 +842,7 @@ impl App {
         let target_vec3 = target.and_then(|v| (v.len() == 3).then(|| Vec3::new(v[0], v[1], v[2])));
         let offset_vec3 = offset.and_then(|v| (v.len() == 3).then(|| Vec3::new(v[0], v[1], v[2])));
 
-        self.app.world_mut().send_event(CameraEvent::Follow {
+        self.app.world_mut().write_message(CameraEvent::Follow {
             enabled,
             target: target_vec3,
             offset: offset_vec3,
@@ -908,7 +918,7 @@ impl App {
         let axis = axis.and_then(|v| (v.len() == 3).then(|| Vec3::new(v[0], v[1], v[2])));
         self.app
             .world_mut()
-            .send_event(CameraEvent::RotateAroundAxis { axis, angle });
+            .write_message(CameraEvent::RotateAroundAxis { axis, angle });
     }
 
     pub fn sample_terrain_height(&mut self, lle: LLE<FloatType, Radians>) -> Option<FloatType> {
@@ -917,7 +927,7 @@ impl App {
         let _ = world.get_resource::<RasterTileQuadtree>()?;
         let _ = world.get_resource::<BufferStore>()?;
 
-        let result = world.resource_scope(|world, mut qt: Mut<RasterTileQuadtree>| {
+        world.resource_scope(|world, mut qt: Mut<RasterTileQuadtree>| {
             world.resource_scope(|world, mut buf: Mut<BufferStore>| {
                 let mut state: SystemState<TileTerrainDataRequesterQuery> = SystemState::new(world);
                 let query = state.get(world);
@@ -929,9 +939,7 @@ impl App {
                     &LngLat::new(lle.lat.val(), lle.lng.val()),
                 )
             })
-        });
-
-        result
+        })
     }
 
     pub fn add_terrain_height_observer(&mut self, lle: LLE<FloatType, Radians>) -> u64 {
@@ -961,18 +969,18 @@ impl App {
     ) {
         self.app
             .world_mut()
-            .send_event(FrustumEvent { fov, near, far });
+            .write_message(FrustumEvent { fov, near, far });
     }
 
     pub fn set_camera_control(&mut self, event: CameraControlUpdateEvent) {
-        self.app.world_mut().send_event(event);
+        self.app.world_mut().write_message(event);
     }
 
     pub fn get_globe(&self) -> Option<&Globe> {
         self.app.world().get_resource::<Globe>()
     }
 
-    pub fn get_globe_mut(&mut self) -> Option<Mut<Globe>> {
+    pub fn get_globe_mut(&mut self) -> Option<Mut<'_, Globe>> {
         self.app.world_mut().get_resource_mut::<Globe>()
     }
 
@@ -1167,7 +1175,7 @@ fn get_prop_from_batch_table<V: PropertyValue>(
     if let serde_json::Value::Object(map) = batch_table_json {
         for (key, value) in map {
             match value {
-                serde_json::Value::Object(ref _m) => {
+                serde_json::Value::Object(_m) => {
                     if let Ok(v) =
                         in_batch_table.read_property_from_binary::<V>(*in_batch_id, value)
                     {

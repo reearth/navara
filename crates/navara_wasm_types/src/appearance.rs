@@ -426,6 +426,11 @@ pub struct PolylineMaterial {
     pub receive_shadow: Option<bool>,
     pub color: Option<u32>,
     pub width: Option<f32>,
+    /// Maximum line width in pixels, clamping the rendered width regardless of zoom level.
+    /// Smaller values are cheaper to render as they reduce fragment shader overdraw.
+    #[wasm_bindgen(js_name = maxWidth)]
+    #[serde(rename = "maxWidth")]
+    pub max_width: Option<f32>,
     #[wasm_bindgen(js_name = clampToGround)]
     #[serde(rename = "clampToGround")]
     pub clamp_to_ground: Option<bool>,
@@ -467,6 +472,7 @@ impl PolylineMaterial {
         use_ground_normals: Option<bool>,
         height: Option<f32>,
         width: Option<f32>,
+        max_width: Option<f32>,
         __internal__: Option<PolylineInternalMaterial>,
     ) -> Self {
         Self {
@@ -478,6 +484,7 @@ impl PolylineMaterial {
             use_ground_normals,
             height,
             width,
+            max_width,
             __internal__,
             effect_ids: None,
             selective_effect_occlusion: None,
@@ -498,6 +505,7 @@ impl PolylineMaterial {
             receive_shadow: self.receive_shadow.unwrap_or(other.receive_shadow),
             color: self.color.unwrap_or(other.color),
             width: self.width.unwrap_or(other.width),
+            max_width: self.max_width.unwrap_or(other.max_width),
             clamp_to_ground: self.clamp_to_ground.unwrap_or(other.clamp_to_ground),
             use_ground_normals: self.use_ground_normals.unwrap_or(other.use_ground_normals),
             height: self.height.unwrap_or(other.height),
@@ -526,6 +534,7 @@ impl From<PolylineMaterial> for navara_material::PolylineMaterial {
             receive_shadow: val.receive_shadow.unwrap_or(default.receive_shadow),
             color: val.color.unwrap_or(default.color),
             width: val.width.unwrap_or(default.width),
+            max_width: val.max_width.unwrap_or(default.max_width),
             clamp_to_ground: val.clamp_to_ground.unwrap_or(default.clamp_to_ground),
             use_ground_normals: val.use_ground_normals.unwrap_or(default.use_ground_normals),
             height: val.height.unwrap_or(default.height),
@@ -547,6 +556,7 @@ impl<'a> From<&'a navara_material::PolylineMaterial> for PolylineMaterial {
             receive_shadow: Some(value.receive_shadow),
             color: Some(value.color),
             width: Some(value.width),
+            max_width: Some(value.max_width),
             clamp_to_ground: Some(value.clamp_to_ground),
             use_ground_normals: Some(value.use_ground_normals),
             height: Some(value.height),
@@ -567,6 +577,7 @@ impl From<navara_material::PolylineMaterial> for PolylineMaterial {
             receive_shadow: Some(value.receive_shadow),
             color: Some(value.color),
             width: Some(value.width),
+            max_width: Some(value.max_width),
             clamp_to_ground: Some(value.clamp_to_ground),
             use_ground_normals: Some(value.use_ground_normals),
             height: Some(value.height),
@@ -1357,8 +1368,8 @@ impl<'a> From<&'a navara_material::RasterTileInternalMaterial> for RasterTileInt
                 ts.iter()
                     .map(|t| {
                         t.map(|t| TextureFragment {
-                            ind: t.index(),
-                            gen: t.generation(),
+                            ind: t.index().index(),
+                            r#gen: t.generation().to_bits(),
                         })
                     })
                     .collect()

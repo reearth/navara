@@ -1,15 +1,15 @@
-use navara_core::{Ellipsoid, EncodedVec3, Meters, CRS, WGS84_64};
-use navara_math::{EqualEpsilon, FloatType, Vec2, Vec3, EPSILON10, RADIANS_PER_DEGREE};
+use navara_core::{CRS, Ellipsoid, EncodedVec3, Meters, WGS84_64};
+use navara_math::{EPSILON10, EqualEpsilon, FloatType, RADIANS_PER_DEGREE, Vec2, Vec3};
 
-use crate::{helpers::vec::unpack_flatten_vec3_from_f32, FloatAttribute};
+use crate::{FloatAttribute, helpers::vec::unpack_flatten_vec3_from_f32};
 
 use super::{
+    HierarchyDVec3, PolygonGeometryAttributes, PolygonResource, WindingOrder,
     helpers::{
         compute_outline_positions, compute_wall_geometry, create_geometry_from_positions,
         polygons_from_hierarchy, project_to_2d, scale_to_geodetic_height_extruded,
     },
     types::Polygon,
-    HierarchyDVec3, PolygonGeometryAttributes, PolygonResource, WindingOrder,
 };
 
 #[derive(Clone, Debug, Default, PartialEq)]

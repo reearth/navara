@@ -1,11 +1,11 @@
-use navara_core::{Ellipsoid, CRS, LLE};
+use navara_core::{CRS, Ellipsoid, LLE};
 use navara_math::Vec3;
 use radians::Radians;
 
 use crate::helpers::vec::{append_flatten_vec3, get_position, unique_with_delta_e};
 
 use super::{
-    attributes::{generate_geometry_attributes, PolylineGeometryAttributes},
+    attributes::{PolylineGeometryAttributes, generate_geometry_attributes},
     constants::{WALL_INITIAL_MAX_HEIGHT, WALL_INITIAL_MIN_HEIGHT},
     helpers::{compute_right_normal, compute_vertex_miter_normal, interpolate_segment},
 };
@@ -354,8 +354,8 @@ mod test {
     use radians::Degrees;
 
     use super::{
-        create_flat_polyline_geometry, create_polyline_geometry, FlatPolylineGeometryOptions,
-        PolylineGeometryOptions,
+        FlatPolylineGeometryOptions, PolylineGeometryOptions, create_flat_polyline_geometry,
+        create_polyline_geometry,
     };
 
     #[test]

@@ -7,18 +7,14 @@ use navara_buffer_store::BufferStore;
 use navara_component::Deleted;
 use navara_core::{Aabb, WGS84_64};
 use navara_feature_component::{
+    DeletedFeatureMarker,
     batch::{BatchTable, FeatureBatchId, FeatureBatchIdMap, GlobalBatchIds},
     id::FeatureId,
     render::{ModelRenderInformation, RenderableFeature, TransferableModelGeometry},
-    DeletedFeatureMarker,
 };
 use navara_layer::{LayerId, LayerStore};
 use navara_material::ModelMaterial;
 use navara_math::{Quat, Transform, Vec3};
-use navara_tile_component::{
-    compute_terrain_height_at_point, RasterTileQuadtree, TileMeshMarker,
-    TileTerrainDataRequesterQuery,
-};
 
 use navara_feature_component::model::{ModelBin, ModelGeometry, ModelMarker};
 
@@ -167,81 +163,6 @@ pub fn transfer_mesh(
         layer_store.add(layer_id.0.clone(), entity.id());
 
         feature_batch_id_map.add(entity.id(), global_batch_ids.clone());
-    }
-}
-
-#[allow(clippy::too_many_arguments, clippy::type_complexity)]
-pub fn update_height_by_terrain(
-    mut qt: ResMut<RasterTileQuadtree>,
-    mut buf: ResMut<BufferStore>,
-    mut renderable_features: Query<(&ModelMarker, &mut RenderableFeature)>,
-    geometries: Query<&ModelGeometry>,
-    tile_meshes: Query<&TileMeshMarker, Added<TileMeshMarker>>,
-    terrain_data_requester: TileTerrainDataRequesterQuery,
-) {
-    let is_tile_meshes_empty = tile_meshes.is_empty();
-
-    for (_, mut feature) in &mut renderable_features {
-        match feature.as_ref() {
-            RenderableFeature::Model {
-                render_info,
-                material,
-                active,
-                ..
-            } => {
-                if (is_tile_meshes_empty || !material.clamp_to_ground)
-                    && !render_info.should_recalculate_height
-                {
-                    continue;
-                }
-                if !material.show || !active {
-                    continue;
-                }
-            }
-            _ => continue,
-        };
-
-        match feature.as_mut() {
-            RenderableFeature::Model {
-                coordinates: _,
-                crs: _,
-                material,
-                transform,
-                feature_id,
-                render_info,
-                bin: _,
-                geometry: _,
-                feature_batch_id: _,
-                ..
-            } => {
-                render_info.should_recalculate_height = false;
-                let geometry = match geometries.get(*feature_id) {
-                    Ok(g) => g,
-                    Err(_) => continue,
-                };
-                if material.clamp_to_ground {
-                    let terrain_height = compute_terrain_height_at_point(
-                        &mut qt,
-                        &mut buf,
-                        &terrain_data_requester,
-                        &geometry.crs.to_lng_lat(WGS84_64, geometry.coords),
-                    )
-                    .unwrap_or(0.);
-                    render_info.current_terrain_height =
-                        render_info.current_terrain_height.max(terrain_height);
-                } else {
-                    render_info.current_terrain_height = 0.;
-                };
-                let position = geometry.crs.to_vec3(
-                    WGS84_64,
-                    geometry.coords,
-                    material.height + render_info.current_terrain_height as f32,
-                );
-
-                transform.translation = position;
-            }
-            _ => unreachable!(),
-        };
     }
 }
 

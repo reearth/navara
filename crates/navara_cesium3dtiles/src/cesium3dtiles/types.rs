@@ -6,8 +6,8 @@ use navara_component::Deleted;
 use navara_data_requester::DataRequester;
 
 use crate::{
-    b3dm::B3dmDataRequesterMarker, glb::GlbDataRequesterMarker, pnts::PntsDataRequesterMarker,
-    Cesium3dTilesMetadataDataRequesterMarker,
+    Cesium3dTilesMetadataDataRequesterMarker, b3dm::B3dmDataRequesterMarker,
+    glb::GlbDataRequesterMarker, pnts::PntsDataRequesterMarker,
 };
 
 use super::Cesium3dTileContentDataRequesterMarker;

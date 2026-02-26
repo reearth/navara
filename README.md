@@ -19,24 +19,15 @@ You have to install the following environment.
 - Rust (stable)
 - Node.js (LTS)
 - [pnpm](https://pnpm.io/installation)
-- protoc
 
 ### Install prerequisites
 
 ```console
 cargo install cargo-make
 cargo install cargo-watch
-cargo install wasm-bindgen-cli --version 0.2.102
+cargo install wasm-bindgen-cli --version 0.2.112
 ```
 Optional: Install binaryen for `wasm-opt` optimization: https://github.com/WebAssembly/binaryen
-
-**MacOS**
-
-```console
-brew install protobuf
-```
-
-For more information: https://grpc.io/docs/protoc-installation/
 
 ### Initial setup
 

@@ -23,6 +23,7 @@ use navara_tile_component::{
 };
 use navara_window::Window;
 use navara_worker::{
+    WorkerTaskCompleted,
     construct_terrain_mesh::{
         ConstructTerrainMeshMarker, ConstructTerrainMeshParameters, ConstructTerrainMeshResult,
         ConstructTerrainMeshWorkerTaskBundle,
@@ -31,7 +32,6 @@ use navara_worker::{
         UpsampleTerrainMeshMarker, UpsampleTerrainMeshParameters, UpsampleTerrainMeshResult,
         UpsampleTerrainMeshWorkerTaskBundle,
     },
-    WorkerTaskCompleted,
 };
 
 use crate::texture_fragment::request_texture_fragment;
@@ -40,7 +40,7 @@ use super::{
     event::MeshPreparedEvent,
     render::RenderedTile,
     tile_cache_manager::TileCacheManager,
-    traverse::{prepare_tile_resource, spawn_tile_entity, traverse_tile, TraversalResult},
+    traverse::{TraversalResult, prepare_tile_resource, spawn_tile_entity, traverse_tile},
 };
 
 use navara_layer::{
@@ -921,7 +921,7 @@ pub fn update_mesh_material(
 }
 
 pub fn handle_prepared_mesh_event(
-    mut events: EventReader<MeshPreparedEvent>,
+    mut events: MessageReader<MeshPreparedEvent>,
     mut tc: ResMut<TileCacheManager>,
 ) {
     for e in events.read() {

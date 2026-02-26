@@ -1,10 +1,11 @@
+import type { TransferableRasterDEMDataLike } from "@navara/core";
 import {
   ElevationDecoder,
   TransferableRasterDEMData,
 } from "@navara/engine-worker";
 
 export function toTransferableRasterDEMDataLike(
-  like: TransferableRasterDEMData,
+  like: TransferableRasterDEMDataLike,
 ) {
   return new TransferableRasterDEMData(
     new ElevationDecoder(

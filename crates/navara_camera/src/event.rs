@@ -1,4 +1,4 @@
-use bevy_ecs::event::Event;
+use bevy_ecs::message::Message;
 use navara_math::{FloatType, Vec3};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -51,7 +51,7 @@ pub enum CamDirType {
     Custom(Vec3),              // Uses a custom Vec3 direction
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Event)]
+#[derive(Debug, Clone, Copy, PartialEq, Message)]
 pub enum CameraEvent {
     Change {
         position: Option<Vec3>,                 // [longitude, latitude, altitude]
@@ -82,14 +82,14 @@ pub enum CameraEvent {
     },
 }
 
-#[derive(Event)]
+#[derive(Message)]
 pub struct FrustumEvent {
     pub fov: Option<FloatType>,  // field of view in degrees
     pub near: Option<FloatType>, // near clipping plane distance
     pub far: Option<FloatType>,  // far clipping plane distance
 }
 
-#[derive(Event)]
+#[derive(Message)]
 pub struct CameraControlUpdateEvent {
     pub auto_adjust_near_far: Option<bool>,
     pub minimum_zoom_distance: Option<FloatType>,

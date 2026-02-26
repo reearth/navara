@@ -17,16 +17,6 @@ export const SAPPORO_GEOJSON = {
   },
 };
 
-// Tokyo Station coordinates as GeoJSON Feature (used for GeoJSON model)
-export const TOKYO_STATION_GEOJSON = {
-  type: "Feature",
-  properties: {},
-  geometry: {
-    type: "Point",
-    coordinates: [139.7671, 35.6812], // [longitude, latitude]
-  },
-};
-
 // Osaka coordinates (used for running model around earth)
 export const OSAKA_GEOJSON = {
   type: "Feature",

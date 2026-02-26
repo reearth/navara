@@ -181,7 +181,22 @@ impl Cesium3dTileContent {
             (
                 _,
                 _,
-                Some([cx, cy, cz, xdir0, xdir1, xdir2, ydir0, ydir1, ydir2, zdir0, zdir1, zdir2]),
+                Some(
+                    [
+                        cx,
+                        cy,
+                        cz,
+                        xdir0,
+                        xdir1,
+                        xdir2,
+                        ydir0,
+                        ydir1,
+                        ydir2,
+                        zdir0,
+                        zdir1,
+                        zdir2,
+                    ],
+                ),
             ) => {
                 // Transform the bounding volume
                 let center = Vec3::new(cx as FloatType, cy as FloatType, cz as FloatType);

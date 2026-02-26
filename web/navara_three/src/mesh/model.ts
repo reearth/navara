@@ -20,12 +20,6 @@ import {
   type NormalBufferAttributes,
   PointsMaterial,
 } from "three";
-import {
-  AnimationAction,
-  AnimationClip,
-  AnimationMixer,
-  LoopRepeat,
-} from "three";
 
 import type { ViewEvents } from "..";
 import type { ViewContext } from "../core";
@@ -96,23 +90,15 @@ export class ModelMesh
     PntsMaterialEnhancer
   >();
 
-  // Minimal animation support (clip + speed)
-  private mixer: AnimationMixer | null = null;
-
   // model credit for attribution
   credit: string | undefined;
 
-  private actions = new Map<string, AnimationAction>();
-  private currentAction: AnimationAction | null = null;
-  private animationSpeed = 1.0;
-  private lastUpdateTime?: number;
   private prevEffectIds: string[] = [];
 
   constructor(
     gltfInfo: {
       scene: Group;
       credit?: string;
-      animations?: AnimationClip[];
     },
     m: NavaraModelMesh,
     uniforms: CommonUniforms,
@@ -127,7 +113,7 @@ export class ModelMesh
     this._uniforms = uniforms;
     this.credit = gltfInfo.credit;
     this.add(gltfInfo.scene);
-    this.init(m, buf, viewEvents, gltfInfo.animations);
+    this.init(m, buf, viewEvents);
     this.addEventListener("removedFromWorld", () => {
       this.dispose(viewEvents);
     });
@@ -151,7 +137,6 @@ export class ModelMesh
     m: NavaraModelMesh,
     buf: BufferLoader,
     viewEvents: EventHandler<ViewEvents>,
-    animations?: AnimationClip[],
   ) {
     const batchIdsData = m.geometry.batch_ids;
     const dataSize = batchIdsData?.size ?? 0;
@@ -177,50 +162,6 @@ export class ModelMesh
     }
 
     this.visible = meshMaterial.show ?? true;
-
-    // Initialize minimal animation features if GLTF animations exist
-    if (animations && animations.length > 0) {
-      const target = this.children[0] as Group;
-      this.mixer = new AnimationMixer(target);
-
-      // Read initial speed from material if provided
-      const initSpeed = meshMaterial.animationSpeed as number | undefined;
-      this.animationSpeed = initSpeed ?? 1.0;
-
-      animations.forEach((clip) => {
-        if (!this.mixer) {
-          console.warn("Animation mixer not initialized");
-          return;
-        }
-        const action = this.mixer.clipAction(clip);
-        action.timeScale = this.animationSpeed;
-        action.setLoop(LoopRepeat, Infinity);
-        this.actions.set(clip.name, action);
-      });
-
-      const clipName = meshMaterial.animationActiveClip as string | undefined;
-      if (clipName && this.actions.has(clipName)) {
-        const action = this.actions.get(clipName);
-        if (!action) {
-          console.warn(`Animation action "${clipName}" not found`);
-          return;
-        }
-        action.reset().play();
-        this.currentAction = action;
-      }
-
-      // Tick mixer on each frame
-      viewEvents.on("preRender", (t: number) => {
-        if (!this.mixer) return;
-        if (this.lastUpdateTime == null) {
-          this.lastUpdateTime = t;
-          return;
-        }
-        const dt = (t - this.lastUpdateTime) / 1000;
-        this.lastUpdateTime = t;
-        this.mixer.update(dt);
-      });
-    }
   }
 
   _initBatchedMaterial(
@@ -527,32 +468,6 @@ export class ModelMesh
       };
       for (const enhancer of this._pntsEnhancers.values()) {
         enhancer.update(pntsProps);
-      }
-    }
-
-    // Minimal animation updates: speed and active clip
-    if (this.mixer) {
-      const nextSpeed = material.animationSpeed as number | undefined;
-      if (nextSpeed !== undefined && nextSpeed !== this.animationSpeed) {
-        this.animationSpeed = nextSpeed;
-        if (this.currentAction) {
-          this.currentAction.timeScale = this.animationSpeed;
-        }
-      }
-
-      const nextClip = material.animationActiveClip as string | undefined;
-      if (nextClip && this.actions.has(nextClip)) {
-        const nextAction = this.actions.get(nextClip);
-        if (!nextAction) {
-          console.warn(`Animation action "${nextClip}" not found`);
-          return;
-        }
-        if (this.currentAction !== nextAction) {
-          if (this.currentAction) this.currentAction.stop();
-          nextAction.timeScale = this.animationSpeed;
-          nextAction.reset().play();
-          this.currentAction = nextAction;
-        }
       }
     }
 

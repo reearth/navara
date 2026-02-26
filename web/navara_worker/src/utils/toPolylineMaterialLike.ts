@@ -11,6 +11,7 @@ export function toPolylineMaterialLike(like: PolylineMaterialLike) {
     like.useGroundNormals,
     like.height,
     like.width,
+    like.maxWidth,
     like.__internal__,
   );
 }

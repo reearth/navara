@@ -4,8 +4,8 @@ use navara_feature_component::polyline::{
 };
 use navara_geometry::PolylineGeometryAttributes;
 use navara_wasm_types::{
-    polyline::{ConstructedPolylineGeometry, PolylineGeometry, TransferablePolylineBatchedFeature},
     PolylineMaterial,
+    polyline::{ConstructedPolylineGeometry, PolylineGeometry, TransferablePolylineBatchedFeature},
 };
 use wasm_bindgen::prelude::wasm_bindgen;
 
@@ -29,7 +29,7 @@ fn construct_polyline(
     let material: navara_material::PolylineMaterial = material.into();
     let crs: navara_core::CRS = (&features.crs).into();
 
-    let mut combined_attributes = PolylineGeometryAttributes::with_batch_id();
+    let mut combined_attributes = PolylineGeometryAttributes::with_batch_id_and_rte();
     let mut indices = vec![];
     let mut index_offset = 0;
 
@@ -38,9 +38,9 @@ fn construct_polyline(
     for idx in 0..features.length {
         let (geometry, batch_index, batch_id) = features.to_transferable_by_index(idx);
 
+        // TODO: Support RTC for MVT without clamp_to_ground.
         let Some((extent, mut constructed_geometry)) =
-            // use_rte is hardcoded to false because MVT polylines don't need RTE transformation
-            construct_polyline_feature(&material, geometry, &crs, false)
+            construct_polyline_feature(&material, geometry, &crs, true)
         else {
             continue;
         };
@@ -110,6 +110,43 @@ fn construct_polyline(
             .unwrap()
             .data
             .append(&mut batch_indices);
+
+        if let (Some(combined), Some(geo)) = (
+            &mut combined_attributes.position_high,
+            &mut constructed_geometry.attributes.position_high,
+        ) {
+            combined.data.append(&mut geo.data);
+        }
+        if let (Some(combined), Some(geo)) = (
+            &mut combined_attributes.position_low,
+            &mut constructed_geometry.attributes.position_low,
+        ) {
+            combined.data.append(&mut geo.data);
+        }
+        if let (Some(combined), Some(geo)) = (
+            &mut combined_attributes.start_high,
+            &mut constructed_geometry.attributes.start_high,
+        ) {
+            combined.data.append(&mut geo.data);
+        }
+        if let (Some(combined), Some(geo)) = (
+            &mut combined_attributes.start_low,
+            &mut constructed_geometry.attributes.start_low,
+        ) {
+            combined.data.append(&mut geo.data);
+        }
+        if let (Some(combined), Some(geo)) = (
+            &mut combined_attributes.end_high,
+            &mut constructed_geometry.attributes.end_high,
+        ) {
+            combined.data.append(&mut geo.data);
+        }
+        if let (Some(combined), Some(geo)) = (
+            &mut combined_attributes.end_low,
+            &mut constructed_geometry.attributes.end_low,
+        ) {
+            combined.data.append(&mut geo.data);
+        }
 
         if index_offset == 0 {
             indices.append(&mut constructed_geometry.indices);

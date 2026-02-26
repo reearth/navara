@@ -1,4 +1,4 @@
-import type { ConstructedPolygonGeometry, Vec3 } from "@navara/engine";
+import type { ConstructedPolygonGeometry } from "@navara/engine";
 
 import { ExtentRadianF32Like } from "../ExtentRadianF32Like";
 import { Vec3Like } from "../Vec3Like";
@@ -21,7 +21,14 @@ export class ConstructedPolygonGeometryLike {
   batch_index_size: number | undefined;
   indices: Uint32Array;
   /** RTC (Relative-To-Center) translation vector in world-space ECEF coordinates */
-  rtc_translation: Vec3 | undefined;
+  rtc_translation: Vec3Like | undefined;
+  outline_position: Float32Array | undefined;
+  outline_position_size: number | undefined;
+  outline_scale_normal_and_cap: Float32Array | undefined;
+  outline_scale_normal_and_cap_size: number | undefined;
+  outline_skip_indices: Uint32Array | undefined;
+  outline_batch_index: Float32Array | undefined;
+  outline_batch_index_size: number | undefined;
 
   constructor(t: ConstructedPolygonGeometry) {
     const extent = t.extent;
@@ -45,5 +52,19 @@ export class ConstructedPolygonGeometryLike {
     this.rtc_translation = t.rtc_translation
       ? new Vec3Like(t.rtc_translation)
       : undefined;
+    const outline = t.outline();
+    if (outline) {
+      this.outline_position = outline.position()?.slice();
+      this.outline_position_size = outline.position_size();
+      this.outline_scale_normal_and_cap = outline
+        .scale_normal_and_cap()
+        ?.slice();
+      this.outline_scale_normal_and_cap_size =
+        outline.scale_normal_and_cap_size();
+      this.outline_skip_indices = outline.skip_indices()?.slice();
+      this.outline_batch_index = outline.batch_index()?.slice();
+      this.outline_batch_index_size = outline.batch_index_size();
+      outline.free();
+    }
   }
 }

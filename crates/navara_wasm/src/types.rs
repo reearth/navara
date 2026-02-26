@@ -40,17 +40,16 @@ impl TileLayerDescription {
         old_desc: Option<navara_layer::LayerDescription>,
     ) -> Option<navara_material::Appearance> {
         // Merge with old appearance if exists
-        if let Some(navara_layer::LayerDescription::Tiles(old_layer)) = old_desc {
-            if let (Some(new_tile_material), Some(old_appearance)) =
+        if let Some(navara_layer::LayerDescription::Tiles(old_layer)) = old_desc
+            && let (Some(new_tile_material), Some(old_appearance)) =
                 (self.raster_tile.take(), old_layer.appearance.as_ref())
-            {
-                match old_appearance {
-                    navara_material::Appearance::RasterTile(old_tile_material) => {
-                        let updated_tile_material = new_tile_material.merge(old_tile_material);
-                        return Some(Appearance::RasterTile(updated_tile_material));
-                    }
-                    _ => unreachable!(),
+        {
+            match old_appearance {
+                navara_material::Appearance::RasterTile(old_tile_material) => {
+                    let updated_tile_material = new_tile_material.merge(old_tile_material);
+                    return Some(Appearance::RasterTile(updated_tile_material));
                 }
+                _ => unreachable!(),
             }
         }
         // Otherwise, return new appearance
@@ -94,6 +93,13 @@ impl TerrainLayerDescription {
     }
 }
 
+/// GeoJSON layer description for configuring feature rendering.
+///
+/// **Note**: Model appearance is intentionally not supported for GeoJSON layers.
+/// The batched feature pipeline requires per-batch coordinate transforms (model matrices)
+/// and animation support, which are incompatible with the current GeoJSON batching approach.
+/// For 3D model rendering at geographic coordinates, use a mesh layer (e.g. `GLTFModelLayerConfig`)
+/// instead.
 #[wasm_bindgen]
 #[derive(Debug, Default, Clone, Deserialize)]
 pub struct GeoJsonLayerDescription {
@@ -116,8 +122,6 @@ pub struct GeoJsonLayerDescription {
     pub polyline: Option<PolylineMaterial>,
     #[wasm_bindgen(getter_with_clone)]
     pub polygon: Option<PolygonMaterial>,
-    #[wasm_bindgen(getter_with_clone)]
-    pub model: Option<ModelMaterial>,
 }
 
 impl GeoJsonLayerDescription {
@@ -126,8 +130,8 @@ impl GeoJsonLayerDescription {
         old_desc: Option<navara_layer::LayerDescription>,
     ) -> Vec<Appearance> {
         // Merge with old appearances if exists
-        let appearances = if let Some(navara_layer::LayerDescription::GeoJson(old_layer)) = old_desc
-        {
+
+        if let Some(navara_layer::LayerDescription::GeoJson(old_layer)) = old_desc {
             let mut result = old_layer.appearances.clone();
             if let Some(new_point_material) = self.point.take() {
                 // Merge with the old material if exists.
@@ -224,23 +228,6 @@ impl GeoJsonLayerDescription {
                 }
             }
 
-            if let Some(new_model_material) = self.model.take() {
-                // Merge with the old material if exists.
-                if let Some(old_appearance) = old_layer
-                    .appearances
-                    .iter()
-                    .find(|a| matches!(a, Appearance::Model(_)))
-                {
-                    if let Appearance::Model(old_model_material) = old_appearance {
-                        let updated_model_material = new_model_material.merge(old_model_material);
-                        // Replace the old appearance with the updated one.
-                        result.retain(|a| !matches!(a, Appearance::Model(_)));
-                        result.push(Appearance::Model(updated_model_material));
-                    }
-                } else {
-                    result.push(Appearance::Model(new_model_material.into()));
-                }
-            }
             result
         } else {
             // Otherwise, return new appearances
@@ -260,12 +247,8 @@ impl GeoJsonLayerDescription {
             if let Some(v) = self.polygon.take() {
                 result.push(Appearance::Polygon(v.into()));
             }
-            if let Some(v) = self.model.take() {
-                result.push(Appearance::Model(v.into()));
-            }
             result
-        };
-        appearances
+        }
     }
 
     pub fn crs(&self) -> Option<navara_core::CRS> {
@@ -297,18 +280,17 @@ impl B3dmLayerDescription {
     ) -> Vec<Appearance> {
         let mut result = vec![];
         // Merge with old appearance if exists
-        if let Some(navara_layer::LayerDescription::B3dm(old_layer)) = old_desc {
-            if let (Some(new_model_material), Some(old_appearance)) =
+        if let Some(navara_layer::LayerDescription::B3dm(old_layer)) = old_desc
+            && let (Some(new_model_material), Some(old_appearance)) =
                 (self.model.take(), old_layer.appearances.first())
-            {
-                match old_appearance {
-                    navara_material::Appearance::Model(old_model_material) => {
-                        let updated_model_material = new_model_material.merge(old_model_material);
-                        result.push(Appearance::Model(updated_model_material));
-                        return result;
-                    }
-                    _ => unreachable!(),
+        {
+            match old_appearance {
+                navara_material::Appearance::Model(old_model_material) => {
+                    let updated_model_material = new_model_material.merge(old_model_material);
+                    result.push(Appearance::Model(updated_model_material));
+                    return result;
                 }
+                _ => unreachable!(),
             }
         }
         // Otherwise, return new appearance
@@ -346,18 +328,17 @@ impl PntsLayerDescription {
     ) -> Vec<Appearance> {
         let mut result = vec![];
         // Merge with old appearance if exists
-        if let Some(navara_layer::LayerDescription::Pnts(old_layer)) = old_desc {
-            if let (Some(new_model_material), Some(old_appearance)) =
+        if let Some(navara_layer::LayerDescription::Pnts(old_layer)) = old_desc
+            && let (Some(new_model_material), Some(old_appearance)) =
                 (self.model.take(), old_layer.appearances.first())
-            {
-                match old_appearance {
-                    navara_material::Appearance::Model(old_model_material) => {
-                        let updated_model_material = new_model_material.merge(old_model_material);
-                        result.push(Appearance::Model(updated_model_material));
-                        return result;
-                    }
-                    _ => unreachable!(),
+        {
+            match old_appearance {
+                navara_material::Appearance::Model(old_model_material) => {
+                    let updated_model_material = new_model_material.merge(old_model_material);
+                    result.push(Appearance::Model(updated_model_material));
+                    return result;
                 }
+                _ => unreachable!(),
             }
         }
         // Otherwise, return new appearance
@@ -395,18 +376,17 @@ impl Cesium3dTilesLayerDescription {
     ) -> Vec<Appearance> {
         let mut result = vec![];
         // Merge with old appearance if exists
-        if let Some(navara_layer::LayerDescription::Cesium3dTiles(old_layer)) = old_desc {
-            if let (Some(new_model_material), Some(old_appearance)) =
+        if let Some(navara_layer::LayerDescription::Cesium3dTiles(old_layer)) = old_desc
+            && let (Some(new_model_material), Some(old_appearance)) =
                 (self.model.take(), old_layer.appearances.first())
-            {
-                match old_appearance {
-                    navara_material::Appearance::Model(old_model_material) => {
-                        let updated_model_material = new_model_material.merge(old_model_material);
-                        result.push(Appearance::Model(updated_model_material));
-                        return result;
-                    }
-                    _ => unreachable!(),
+        {
+            match old_appearance {
+                navara_material::Appearance::Model(old_model_material) => {
+                    let updated_model_material = new_model_material.merge(old_model_material);
+                    result.push(Appearance::Model(updated_model_material));
+                    return result;
                 }
+                _ => unreachable!(),
             }
         }
         // Otherwise, return new appearance
@@ -454,7 +434,8 @@ impl MvtLayerDescription {
         old_desc: Option<navara_layer::LayerDescription>,
     ) -> Vec<Appearance> {
         // Merge with old appearances if exists
-        let appearances = if let Some(navara_layer::LayerDescription::Mvt(old_layer)) = old_desc {
+
+        if let Some(navara_layer::LayerDescription::Mvt(old_layer)) = old_desc {
             let mut result = old_layer.appearances.clone();
             if let Some(new_point_material) = self.point.take() {
                 // Merge with the old material if exists.
@@ -592,8 +573,7 @@ impl MvtLayerDescription {
                 result.push(Appearance::VectorTile(v.into()));
             }
             result
-        };
-        appearances
+        }
     }
 
     pub fn crs(&self) -> Option<navara_core::CRS> {

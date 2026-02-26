@@ -1,8 +1,8 @@
 use bevy_ecs::prelude::*;
 use navara_component::Deleted;
 use navara_core::{
-    get_ellipsoid_terrain_level_zero_maximum_geometric_error, get_level_maximum_geometric_error,
     Aabb, Ellipsoid, Extent, Radians, TileXYZ, WGS84_64,
+    get_ellipsoid_terrain_level_zero_maximum_geometric_error, get_level_maximum_geometric_error,
 };
 use navara_data_requester::DataRequesterStatus;
 use navara_math::Vec3;

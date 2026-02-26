@@ -6,9 +6,9 @@ use navara_data_requester::{DataRequester, DataRequesterExtension};
 use url::Url;
 
 use crate::{
-    b3dm::B3dmDataRequesterMarker, cesium3dtiles::types::Cesium3dTileContentRequesterQuery,
-    glb::GlbDataRequesterMarker, pnts::PntsDataRequesterMarker, Cesium3dTileContent,
-    TileOrderByDistance,
+    Cesium3dTileContent, TileOrderByDistance, b3dm::B3dmDataRequesterMarker,
+    cesium3dtiles::types::Cesium3dTileContentRequesterQuery, glb::GlbDataRequesterMarker,
+    pnts::PntsDataRequesterMarker,
 };
 
 #[derive(Component)]
@@ -27,10 +27,10 @@ pub(crate) fn request_tile_content(
     priority: Priority,
 ) -> bool {
     let data_requester_entity_id = tile.data_requester_id;
-    if let Some(id) = data_requester_entity_id {
-        if requesters.contains(id) {
-            return false;
-        }
+    if let Some(id) = data_requester_entity_id
+        && requesters.contains(id)
+    {
+        return false;
     }
     let (content_url, extension) = match tile.make_content_url(base_url) {
         Ok(url) => url,

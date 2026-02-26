@@ -6,20 +6,19 @@ import ThreeView, {
 import { Vector3 } from "three";
 import { Pane } from "tweakpane";
 
-import { showAttributions } from "../../helpers/attributions";
+import { showAttributions } from "../../../helpers/attributions";
 import {
   TERRAIN_DATASETS,
   TILE_DATASETS,
   TILES_3D_DATASETS,
   MVT_DATASETS,
   GEOJSON_DATASETS,
-  LOCAL_DATASETS,
-} from "../../helpers/constants";
-import { addDateControl, addCameraControl } from "../../helpers/control";
+} from "../../../helpers/constants";
+import { addDateControl, addCameraControl } from "../../../helpers/control";
 import {
   addCtrlPanel,
   type MaterialLayerDescription,
-} from "../../helpers/panel";
+} from "../../../helpers/panel";
 
 const geoLayersDef: MaterialLayerDescription[] = [
   {
@@ -284,6 +283,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
       show: true,
       color: new Color().setStyle("#ff0000"),
       width: 2,
+      maxWidth: 10000,
       height: 1,
       clampToGround: true,
       useGroundNormals: true,
@@ -307,37 +307,10 @@ const geoLayersDef: MaterialLayerDescription[] = [
       show: true,
       color: new Color().setStyle("#00ff00"),
       width: 5,
+      maxWidth: 10000,
       height: 1,
       clampToGround: true,
       useGroundNormals: true,
-    },
-  },
-
-  {
-    type: "geojson",
-    data: {
-      type: "FeatureCollection",
-      features: [
-        {
-          type: "Feature",
-          properties: {},
-          geometry: {
-            coordinates: [127.7, 26.2],
-            type: "Point",
-          },
-        },
-      ],
-    },
-    model: {
-      show: true,
-      size: 200000,
-      height: 0,
-      clampToGround: true,
-      url: LOCAL_DATASETS.steelDrumGLTF.url,
-      shouldRotateInDefault: true,
-      color: new Color().setStyle("#ffffff"),
-      metalness: 0.1,
-      roughness: 0.1,
     },
   },
   {
@@ -510,6 +483,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
       show: true,
       color: new Color().setStyle("#00ff00"),
       width: 2,
+      maxWidth: 10000,
       height: 1,
       clampToGround: true,
       useGroundNormals: true,
@@ -563,6 +537,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
       show: true,
       color: new Color().setStyle("#ff0000"),
       width: 5,
+      maxWidth: 10000,
       height: 1,
       clampToGround: true,
       useGroundNormals: true,
@@ -644,7 +619,6 @@ export const run = async (view: ThreeView) => {
     TERRAIN_DATASETS.gsi,
     TILE_DATASETS.openstreetmap,
     GEOJSON_DATASETS.calderdaleDefibrillators,
-    LOCAL_DATASETS.steelDrumGLTF,
     TILES_3D_DATASETS.plateauChiyoda,
     TILES_3D_DATASETS.plateauChuo,
     MVT_DATASETS.plateauWakayamaGen,

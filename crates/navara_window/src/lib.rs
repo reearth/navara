@@ -1,6 +1,6 @@
 #![doc = include_str!("../README.md")]
 
-use bevy_ecs::{event::Event, prelude::Resource};
+use bevy_ecs::{message::Message, prelude::Resource};
 
 use navara_math::FloatType;
 
@@ -9,11 +9,11 @@ pub struct WindowPlugin;
 impl bevy_app::Plugin for WindowPlugin {
     fn build(&self, app: &mut bevy_app::App) {
         app.init_resource::<Window>();
-        app.add_event::<WindowResizeEvent>();
+        app.add_message::<WindowResizeEvent>();
     }
 }
 
-#[derive(Debug, Event)]
+#[derive(Debug, Message)]
 pub struct WindowResizeEvent {
     pub width: FloatType,
     pub height: FloatType,

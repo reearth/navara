@@ -9,9 +9,10 @@ export function applyTextureAspect(obj: Object3D) {
     "map" in material &&
     material.map
   ) {
-    const map = material.map as Texture;
+    const map = material.map as Texture<ImageData>;
     if (map) {
-      const aspectRatio = map.image.height / map.image.width;
+      const image = map.image;
+      const aspectRatio = image.height / image.width;
       obj.scale.y *= aspectRatio;
     }
   }

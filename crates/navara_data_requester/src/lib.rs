@@ -4,7 +4,7 @@ use bevy_app::{PostUpdate, PreUpdate};
 use bevy_ecs::{
     component::Component,
     entity::Entity,
-    event::EventReader,
+    message::MessageReader,
     query::{Added, With, Without},
     schedule::IntoScheduleConfigs,
     system::{Commands, Query, ResMut},
@@ -126,7 +126,7 @@ impl DataRequester {
 
 pub fn set_data_requester_loaded(
     mut commands: Commands,
-    mut events: EventReader<BufferStoreLoadedEvent>,
+    mut events: MessageReader<BufferStoreLoadedEvent>,
     mut requests: Query<&mut DataRequester>,
 ) {
     for e in events.read() {
@@ -139,7 +139,7 @@ pub fn set_data_requester_loaded(
 
 pub fn set_data_requester_failed(
     mut commands: Commands,
-    mut events: EventReader<BufferStoreFailedEvent>,
+    mut events: MessageReader<BufferStoreFailedEvent>,
     mut requests: Query<&mut DataRequester>,
 ) {
     for e in events.read() {

@@ -1,5 +1,5 @@
 use bevy_ecs::{component::Component, entity::Entity};
-use navara_core::{calc_transform, ElevationDecoder, CRS};
+use navara_core::{CRS, ElevationDecoder, calc_transform};
 use navara_math::{Transform, Vec2, Vec3};
 
 /// Configuration for elevation heatmap rendering.
@@ -239,6 +239,7 @@ pub struct PolylineMaterial {
     pub receive_shadow: bool,
     pub color: u32,
     pub width: f32,
+    pub max_width: f32,
     pub clamp_to_ground: bool,
     pub use_ground_normals: bool,
     pub height: f32,
@@ -259,6 +260,7 @@ impl Default for PolylineMaterial {
             receive_shadow: false,
             color: 0xffffff,
             width: 1.,
+            max_width: 10000.,
             clamp_to_ground: true,
             use_ground_normals: false,
             height: 1.,

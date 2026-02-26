@@ -1,7 +1,7 @@
 use wasm_bindgen::prelude::*;
 
 use navara_camera::get_pick_ray_from_camera;
-use navara_core::{ray_plane, WGS84_64};
+use navara_core::{WGS84_64, ray_plane};
 use navara_math::{FloatType, Vec3};
 use navara_wasm_types::{
     CameraFrustum, Plane, Ray, Transform as TransformWasm, Vec2 as Vec2Wasm, Vec3 as Vec3Wasm,

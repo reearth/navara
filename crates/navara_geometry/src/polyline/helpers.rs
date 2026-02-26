@@ -1,5 +1,5 @@
 use navara_core::{Ellipsoid, EllipsoidGeodesic, LLE};
-use navara_math::{Quat, Vec3, EPSILON5, PI_OVER_TWO};
+use navara_math::{EPSILON5, PI_OVER_TWO, Quat, Vec3};
 use radians::{Angle, Degrees, Radians};
 
 use crate::helpers::vec::{direction, get_position, tangent_direction};
@@ -152,7 +152,7 @@ mod test {
 
     use approx::assert_abs_diff_eq;
     use navara_core::{LLE, WGS84_64};
-    use navara_math::{AbsDiffEqVec3, Vec3, EPSILON4, EPSILON7};
+    use navara_math::{AbsDiffEqVec3, EPSILON4, EPSILON7, Vec3};
 
     use crate::polyline::{constants::WALL_INITIAL_MAX_HEIGHT, helpers::break_miter};
 
