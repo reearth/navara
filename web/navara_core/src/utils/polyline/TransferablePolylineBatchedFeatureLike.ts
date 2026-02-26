@@ -4,8 +4,10 @@ import type {
   TransferablePolylineBatchedFeature,
 } from "@navara/engine";
 
+import type { RemoveFreeRecursively } from "../../types";
+
 export class TransferablePolylineBatchedFeatureLike
-  implements TransferablePolylineBatchedFeature
+  implements RemoveFreeRecursively<TransferablePolylineBatchedFeature>
 {
   points: Float64Array;
   points_sizes: Uint32Array;
@@ -40,6 +42,4 @@ export class TransferablePolylineBatchedFeatureLike
   transferBatchIndices(): Uint32Array {
     throw new Error();
   }
-
-  free(): void {}
 }

@@ -3,19 +3,21 @@ import type {
   TransferableRasterDEMData,
 } from "@navara/engine";
 
+import type { RemoveFreeRecursively } from "../types";
+
 export class TransferableRasterDEMDataLike
-  implements TransferableRasterDEMData
+  implements RemoveFreeRecursively<TransferableRasterDEMData>
 {
-  decoder: ElevationDecoder;
+  decoder: ElevationDecoderLike;
 
   constructor(decoder: ElevationDecoder) {
     this.decoder = new ElevationDecoderLike(decoder);
   }
-
-  free(): void {}
 }
 
-export class ElevationDecoderLike implements ElevationDecoder {
+export class ElevationDecoderLike
+  implements RemoveFreeRecursively<ElevationDecoder>
+{
   b_scaler: number;
   boundary: number;
   epsilon: number;
@@ -35,6 +37,4 @@ export class ElevationDecoderLike implements ElevationDecoder {
     this.offset = t.offset;
     this.r_scaler = t.r_scaler;
   }
-
-  free(): void {}
 }

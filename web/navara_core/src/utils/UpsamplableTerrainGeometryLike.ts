@@ -1,7 +1,9 @@
 import type { UpsamplableTerrainGeometry } from "@navara/engine";
 
+import type { RemoveFreeRecursively } from "../types";
+
 export class UpsamplableTerrainGeometryLike
-  implements UpsamplableTerrainGeometry
+  implements RemoveFreeRecursively<UpsamplableTerrainGeometry>
 {
   uvs: Float32Array;
   indices: Uint32Array;
@@ -12,6 +14,4 @@ export class UpsamplableTerrainGeometryLike
     this.indices = indices;
     this.heights = heights;
   }
-
-  free(): void {}
 }

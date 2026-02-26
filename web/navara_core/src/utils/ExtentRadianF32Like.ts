@@ -1,6 +1,10 @@
 import type { ExtentRadianF32 } from "@navara/engine";
 
-export class ExtentRadianF32Like implements ExtentRadianF32 {
+import type { RemoveFreeRecursively } from "../types";
+
+export class ExtentRadianF32Like
+  implements RemoveFreeRecursively<ExtentRadianF32>
+{
   east: number;
   north: number;
   south: number;
@@ -12,6 +16,4 @@ export class ExtentRadianF32Like implements ExtentRadianF32 {
     this.south = t.south;
     this.west = t.west;
   }
-
-  free(): void {}
 }

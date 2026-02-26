@@ -1,4 +1,4 @@
-import type { ConstructedPolygonGeometry, Vec3 } from "@navara/engine";
+import type { ConstructedPolygonGeometry } from "@navara/engine";
 
 import { ExtentRadianF32Like } from "../ExtentRadianF32Like";
 import { Vec3Like } from "../Vec3Like";
@@ -21,7 +21,7 @@ export class ConstructedPolygonGeometryLike {
   batch_index_size: number | undefined;
   indices: Uint32Array;
   /** RTC (Relative-To-Center) translation vector in world-space ECEF coordinates */
-  rtc_translation: Vec3 | undefined;
+  rtc_translation: Vec3Like | undefined;
   outline_position: Float32Array | undefined;
   outline_position_size: number | undefined;
   outline_scale_normal_and_cap: Float32Array | undefined;

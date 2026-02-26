@@ -1,6 +1,8 @@
 import type { Vec3 } from "@navara/engine";
 
-export class Vec3Like implements Vec3 {
+import type { RemoveFreeRecursively } from "../types";
+
+export class Vec3Like implements RemoveFreeRecursively<Vec3> {
   x: number;
   y: number;
   z: number;
@@ -10,6 +12,4 @@ export class Vec3Like implements Vec3 {
     this.y = t.y;
     this.z = t.z;
   }
-
-  free(): void {}
 }
