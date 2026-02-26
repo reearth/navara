@@ -1,4 +1,4 @@
-import { DataArrayTexture } from "three";
+import type { DataArrayTexture } from "three";
 import { describe, expect, it, vi } from "vitest";
 
 import type { ShaderUniforms } from "../../MaterialEnhancer";

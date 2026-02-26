@@ -26,13 +26,6 @@ import { arraysEqual } from "../utils";
 
 import { PickableMesh } from "./pickableMesh";
 
-/** UserData type for InstancedSpriteMesh */
-type InstancedSpriteUserData = {
-  prev?: {
-    effectIds?: string[];
-  };
-};
-
 export type InstancedSpriteOptions = {
   renderOrder?: number;
   viewContext: ViewContext;
@@ -66,6 +59,8 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
   private _enhancedMaterial?: ReturnType<
     typeof createInstancedSpriteMaterialEnhancer
   >;
+  /** Previous effectIds for SelectiveEffect registry updates */
+  private _prevEffectIds?: string[];
 
   constructor(options: InstancedSpriteOptions) {
     super();
@@ -199,18 +194,17 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
       }
     }
 
-    // SelectiveEffect: effectIds handling at container level
-    // SpriteMaterial doesn't support emissive, so only effectIds is handled
-    const ud = this.userData as InstancedSpriteUserData;
-    ud.prev ??= {};
-    if (!arraysEqual(ud.prev.effectIds, m.material.effectIds)) {
+    // SelectiveEffect: effectIds handling (needs prev state for registry)
+    if (!arraysEqual(this._prevEffectIds, m.material.effectIds)) {
       this._viewContext.selectiveEffectRegistry?.updateLinksForObject(
         this,
         m.material.effectIds ?? [],
-        ud.prev.effectIds ?? [],
+        this._prevEffectIds ?? [],
         this._layerId,
       );
-      ud.prev.effectIds = m.material.effectIds ? [...m.material.effectIds] : [];
+      this._prevEffectIds = m.material.effectIds
+        ? [...m.material.effectIds]
+        : [];
     }
   }
 
@@ -220,40 +214,24 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
   ) {
     invariant(positionsInfo.batchIDs, "Batch IDs not found!");
 
+    // prettier-ignore
     const vertices = new Float32Array([
-      -0.5,
-      -0.5,
-      0.0, // v0
-      0.5,
-      -0.5,
-      0.0, // v1
-      0.5,
-      0.5,
-      0.0, // v2
-      -0.5,
-      -0.5,
-      0.0, // v3
-      0.5,
-      0.5,
-      0.0, // v4
-      -0.5,
-      0.5,
-      0.0, // v5
+      -0.5, -0.5, 0.0, // v0
+       0.5, -0.5, 0.0, // v1
+       0.5,  0.5, 0.0, // v2
+      -0.5, -0.5, 0.0, // v3
+       0.5,  0.5, 0.0, // v4
+      -0.5,  0.5, 0.0, // v5
     ]);
 
+    // prettier-ignore
     const uvs = new Float32Array([
-      0.0,
-      0.0, // v0
-      1.0,
-      0.0, // v1
-      1.0,
-      1.0, // v2
-      0.0,
-      0.0, // v3
-      1.0,
-      1.0, // v4
-      0.0,
-      1.0, // v5
+      0.0, 0.0, // v0
+      1.0, 0.0, // v1
+      1.0, 1.0, // v2
+      0.0, 0.0, // v3
+      1.0, 1.0, // v4
+      0.0, 1.0, // v5
     ]);
 
     const instanceCount = positionsInfo.nPositions;
@@ -626,6 +604,17 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     }
 
     shaderMaterial.dispose();
+
+    // Clean up SelectiveEffect registry links
+    if (this._viewContext?.selectiveEffectRegistry && this._prevEffectIds) {
+      this._viewContext.selectiveEffectRegistry.updateLinksForObject(
+        this,
+        [], // New effectIds: empty array (removing all links)
+        this._prevEffectIds, // Previous effectIds
+        this._layerId,
+      );
+      this._prevEffectIds = undefined;
+    }
 
     // Clear internal collections to release references
     this._batchIdToInstance.clear();

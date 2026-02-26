@@ -1,4 +1,5 @@
-import { DataArrayTexture, ShaderMaterial } from "three";
+import { ShaderMaterial } from "three";
+import type { DataArrayTexture } from "three";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import type { InstancedSpriteBaseProps } from "./types";
