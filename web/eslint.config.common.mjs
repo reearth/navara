@@ -16,5 +16,5 @@ export default [
       ],
     },
   },
-  globalIgnores(["dist/**/*", "dist-example/**/*"]),
+  globalIgnores(["dist/**/*", "dist-example/**/*", "*/public"]),
 ];

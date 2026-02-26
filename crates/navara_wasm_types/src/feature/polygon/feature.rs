@@ -3,8 +3,8 @@ use navara_geometry::Hierarchy;
 use wasm_bindgen::prelude::*;
 
 use crate::{
-    copy_f64_array, copy_u32_array, copy_u8_array, transfer_f64_array, transfer_u32_array,
-    transfer_u8_array, CRS,
+    CRS, copy_f64_array, copy_u8_array, copy_u32_array, transfer_f64_array, transfer_u8_array,
+    transfer_u32_array,
 };
 
 use super::{TransferableHierarchy, TransferableHoles, WindingOrder};

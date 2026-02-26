@@ -60,8 +60,8 @@ use crate::{
 };
 
 use super::{
-    requester::{PntsDataRequesterMarker, PntsLayerDataRequesterMarker},
     RenderedCesium3dTileContentPntsMarker,
+    requester::{PntsDataRequesterMarker, PntsLayerDataRequesterMarker},
 };
 
 pub fn request_model_by_pnts_layer(
@@ -409,10 +409,10 @@ pub fn remove_invisible_rendered_tiles(
 
         if let Some(feature_id) = tile.feature_id {
             commands.entity(feature_id).insert(Deleted);
-            if let Ok(rendered_feature_id) = features.get(feature_id) {
-                if let Some(rendered_feature_id) = rendered_feature_id.0 {
-                    commands.entity(rendered_feature_id).insert(Deleted);
-                }
+            if let Ok(rendered_feature_id) = features.get(feature_id)
+                && let Some(rendered_feature_id) = rendered_feature_id.0
+            {
+                commands.entity(rendered_feature_id).insert(Deleted);
             }
         }
 

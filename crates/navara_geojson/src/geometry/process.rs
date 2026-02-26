@@ -4,6 +4,7 @@ use bevy_ecs::system::Commands;
 use navara_buffer_store::BufferStore;
 use navara_core::CRS;
 use navara_feature_component::{
+    BatchedFeatureMarker,
     batch::{BatchIndex, BatchTable, BatchedFeature, FeatureBatchId, GlobalBatchIds},
     billboard::{BillboardGeometry, BillboardMarker},
     id::FeatureId,
@@ -11,7 +12,6 @@ use navara_feature_component::{
     polygon::{PolygonGeometry, PolygonMarker},
     polyline::{PolylineGeometry, PolylineMarker},
     text::{TextGeometry, TextMarker},
-    BatchedFeatureMarker,
 };
 use navara_geometry::{Hierarchy, WindingOrder};
 use navara_layer::LayerId;
@@ -463,13 +463,13 @@ mod test {
     use navara_buffer_store::BufferStore;
     use navara_core::CRS;
     use navara_feature_component::{
+        BatchedFeatureMarker,
         batch::{BatchTable, BatchedFeature, GlobalBatchIds},
         billboard::{BillboardGeometry, BillboardMarker},
         point::{PointGeometry, PointMarker},
         polygon::{PolygonGeometry, PolygonMarker},
         polyline::{PolylineGeometry, PolylineMarker},
         text::{TextGeometry, TextMarker},
-        BatchedFeatureMarker,
     };
     use navara_material::{
         Appearance, BillboardMaterial, PointMaterial, PolygonMaterial, PolylineMaterial,

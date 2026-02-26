@@ -28,10 +28,9 @@ pub(crate) fn request_texture_fragment(
         .texture_fragment_entity_ids
         .as_ref()
         .and_then(|ids| ids.last())
+        && texture_fragment.get(*e).is_ok_and(|t| t.1.is_pending())
     {
-        if texture_fragment.get(*e).is_ok_and(|t| t.1.is_pending()) {
-            return;
-        }
+        return;
     }
 
     let idx = leaf

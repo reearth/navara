@@ -1,7 +1,7 @@
-use navara_core::{east_north_up_to_fixed_frame, ray_ellipsoid, Ellipsoid, Ray, WGS84_64};
+use navara_core::{Ellipsoid, Ray, WGS84_64, east_north_up_to_fixed_frame, ray_ellipsoid};
 use navara_math::{
-    zero_to_two_pi, EqualEpsilon, FloatType, Quat, Transform, Vec2, Vec3, EPSILON10, EPSILON3,
-    PI_OVER_TWO, TWO_PI,
+    EPSILON3, EPSILON10, EqualEpsilon, FloatType, PI_OVER_TWO, Quat, TWO_PI, Transform, Vec2, Vec3,
+    zero_to_two_pi,
 };
 use navara_window::Window;
 

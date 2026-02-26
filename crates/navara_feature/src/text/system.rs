@@ -7,12 +7,12 @@ use bevy_ecs::{
 use navara_buffer_store::BufferStore;
 use navara_component::Deleted;
 use navara_feature_component::{
+    BatchedFeatureMarker,
     batch::{
         BatchIndex, BatchTable, BatchedFeature, FeatureBatchId, FeatureBatchIdMap, GlobalBatchIds,
     },
     id::FeatureId,
     render::{RenderInformation, RenderableFeature},
-    BatchedFeatureMarker,
 };
 use navara_layer::{LayerId, LayerStore};
 use navara_material::TextMaterial;
@@ -25,7 +25,7 @@ use navara_tile_component::{
 use navara_feature_component::text::{TextGeometry, TextMarker};
 
 use crate::geometry::point::{
-    build_transform, compute_rtc_center, resolve_terrain_height, PositionBuffer,
+    PositionBuffer, build_transform, compute_rtc_center, resolve_terrain_height,
 };
 
 #[allow(clippy::type_complexity)]

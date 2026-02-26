@@ -1,4 +1,4 @@
-use navara_geometry::{ortho_camera_transform, OrthoCamTransform as GeometryOrthoCamTransform};
+use navara_geometry::{OrthoCamTransform as GeometryOrthoCamTransform, ortho_camera_transform};
 use navara_quadtree::decode_quadleaf_handle;
 use navara_tile_component::TileHandle;
 use wasm_bindgen::prelude::*;

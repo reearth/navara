@@ -2,7 +2,7 @@
 
 use navara_math::{FloatType, Vec2, Vec3};
 
-use crate::{ray_plane, transform::east_north_up_to_fixed_frame, Aabb, Ellipsoid, Plane, Ray};
+use crate::{Aabb, Ellipsoid, Plane, Ray, ray_plane, transform::east_north_up_to_fixed_frame};
 
 #[derive(Debug)]
 pub struct EllipsoidTangentPlane {
@@ -87,7 +87,7 @@ impl EllipsoidTangentPlane {
 mod test {
     use navara_math::{Vec2, Vec3};
 
-    use crate::{ellipsoid_tangent_plane::EllipsoidTangentPlane, UNIT_SPHERE_64};
+    use crate::{UNIT_SPHERE_64, ellipsoid_tangent_plane::EllipsoidTangentPlane};
 
     #[test]
     fn it_should_be_undefined_if_the_point_is_unsolvable() {

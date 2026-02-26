@@ -13,7 +13,6 @@ js-sys.workspace = true
 serde.workspace = true
 serde-wasm-bindgen.workspace = true
 gloo-utils.workspace = true
-nanoid.workspace = true
 web-sys.workspace = true
 navara_wasm_utils.workspace = true
 navara_wasm_types.workspace = true

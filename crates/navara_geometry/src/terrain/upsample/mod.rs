@@ -2,11 +2,11 @@ mod clip;
 
 use std::collections::HashMap;
 
-use clip::{clip_2d_triangle_at_threshold, ClippedIndex};
+use clip::{ClippedIndex, clip_2d_triangle_at_threshold};
 use itertools::Itertools;
 use radians::{Angle, Radians};
 
-use navara_core::{lerp, Ellipsoid, Extent, Meters, TileRegion, LLE};
+use navara_core::{Ellipsoid, Extent, LLE, Meters, TileRegion, lerp};
 
 use crate::Geometry;
 
@@ -251,7 +251,11 @@ fn construct_polygon(
     new_uvs: &mut Vec<FloatType>,
     new_heights: &mut Vec<f32>,
     new_indices: &mut Vec<u32>,
-    [interpolated_u_coords, interpolated_v_coords, interpolated_h_coords]: [[FloatType; 3]; 3],
+    [
+        interpolated_u_coords,
+        interpolated_v_coords,
+        interpolated_h_coords,
+    ]: [[FloatType; 3]; 3],
     clipped_coord_map: &mut ClippedCoordMap,
     (max_height, min_height): (&mut FloatType, &mut FloatType),
 ) {

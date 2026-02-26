@@ -9,7 +9,7 @@ use super::CameraMarker;
 use bevy_app::{PostUpdate, Startup, Update};
 use bevy_ecs::{
     entity::Entity,
-    event::EventReader,
+    message::MessageReader,
     query::{Added, Changed, Or},
     schedule::IntoScheduleConfigs,
     system::{Query, ResMut},
@@ -21,9 +21,9 @@ pub struct CameraPlugin;
 impl bevy_app::Plugin for CameraPlugin {
     fn build(&self, app: &mut bevy_app::App) {
         app.add_systems(Startup, super::system::startup)
-            .add_event::<CameraEvent>()
-            .add_event::<FrustumEvent>()
-            .add_event::<CameraControlUpdateEvent>()
+            .add_message::<CameraEvent>()
+            .add_message::<FrustumEvent>()
+            .add_message::<CameraControlUpdateEvent>()
             .add_systems(
                 Update,
                 (
@@ -61,7 +61,7 @@ fn commit(
 fn handle_resize(
     mut events: ResMut<EventStore>,
     mut camera: Query<(Entity, &CameraMarker, &mut CameraFrustum)>,
-    mut ev: EventReader<WindowResizeEvent>,
+    mut ev: MessageReader<WindowResizeEvent>,
 ) {
     for w in ev.read() {
         for (e, _, mut frustum) in &mut camera {
@@ -77,7 +77,7 @@ fn handle_resize(
 fn handle_frustum_setting(
     mut events: ResMut<EventStore>,
     mut camera: Query<(Entity, &CameraMarker, &mut CameraFrustum, &Transform)>,
-    mut ev: EventReader<FrustumEvent>,
+    mut ev: MessageReader<FrustumEvent>,
 ) {
     for event in ev.read() {
         for (e, _, mut frustum, transform) in &mut camera {
@@ -103,7 +103,7 @@ fn handle_frustum_setting(
 
 fn handle_camera_control_update(
     mut camera: Query<(&CameraMarker, &mut CameraController)>,
-    mut ev: EventReader<CameraControlUpdateEvent>,
+    mut ev: MessageReader<CameraControlUpdateEvent>,
 ) {
     for event in ev.read() {
         for (_, mut controller) in &mut camera {

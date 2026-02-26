@@ -140,7 +140,7 @@ mod test {
 
     use approx::assert_abs_diff_eq;
     use navara_core::{WGS84_64, WGS84_A_64};
-    use navara_math::{AbsDiffEqVec3, Vec3, EPSILON5};
+    use navara_math::{AbsDiffEqVec3, EPSILON5, Vec3};
     use navara_mock::camera::update_camera_transform;
 
     use super::EllipsoidalOccluder;
@@ -164,13 +164,15 @@ mod test {
             AbsDiffEqVec3(Vec3::new(0.5000035, 0.5000035, 1.003371)),
             epsilon = Vec3::new(EPSILON5, EPSILON5, EPSILON5)
         );
-        debug_assert!(occluder
-            .compute_horizontal_culling_point(
-                &WGS84_64,
-                center,
-                vec![Vec3::new(-center.x, -center.y, -center.z)]
-            )
-            .is_none());
+        debug_assert!(
+            occluder
+                .compute_horizontal_culling_point(
+                    &WGS84_64,
+                    center,
+                    vec![Vec3::new(-center.x, -center.y, -center.z)]
+                )
+                .is_none()
+        );
     }
 
     #[test]

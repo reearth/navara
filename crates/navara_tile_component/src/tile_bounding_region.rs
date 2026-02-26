@@ -1,4 +1,4 @@
-use navara_core::{vec3_to_xyz, xyz_to_vec3, Ellipsoid, Extent, Float, Meters, Radians, LLE, XYZ};
+use navara_core::{Ellipsoid, Extent, Float, LLE, Meters, Radians, XYZ, vec3_to_xyz, xyz_to_vec3};
 use navara_math::{FloatType, Vec3};
 
 // Ref: https://github.com/CesiumGS/cesium/blob/290f01d9091c381a0d3f21e3131c0e9f488c6937/packages/engine/Source/Scene/TileBoundingRegion.js
@@ -140,7 +140,7 @@ impl TileBoundingRegion<FloatType> {
 #[cfg(test)]
 mod test {
     use approx::assert_abs_diff_eq;
-    use navara_core::{Angle, Meters, TileXYZ, LLE, WGS84_64, WGS84_A_32};
+    use navara_core::{Angle, LLE, Meters, TileXYZ, WGS84_64, WGS84_A_32};
     use navara_math::{EPSILON1, EPSILON7};
     use navara_mock::camera::update_camera_transform;
 

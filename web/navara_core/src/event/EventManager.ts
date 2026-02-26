@@ -4,7 +4,7 @@ import { generate_id_from_entity, isEntityEvent } from "../id";
 
 import { TransactionManager } from "./TransactionManager";
 
-export type JsEvents = Omit<Events, "free">;
+export type JsEvents = Omit<Events, "free" | SymbolConstructor["dispose"]>;
 export type JsEventsKey = keyof JsEvents;
 
 type EventsStacks = {

@@ -1,6 +1,8 @@
 import type { TransferableMartini } from "@navara/engine";
 
-export class TransferableMartiniLike implements TransferableMartini {
+import type { RemoveFreeRecursively } from "../types";
+
+export class TransferableMartiniLike implements RemoveFreeRecursively<TransferableMartini> {
   coords: Uint32Array;
   size: number;
 
@@ -16,6 +18,4 @@ export class TransferableMartiniLike implements TransferableMartini {
   clone() {
     return new TransferableMartiniLike(this.coords.slice(), this.size);
   }
-
-  free(): void {}
 }

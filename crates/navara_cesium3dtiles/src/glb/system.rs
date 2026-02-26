@@ -39,13 +39,13 @@ use navara_feature_component::{
 };
 use navara_layer::{Cesium3dTilesLayer, LayerId};
 use navara_material::{Appearance, ModelMaterial};
-use navara_math::{Quat, Transform, Vec3, PI_OVER_TWO};
+use navara_math::{PI_OVER_TWO, Quat, Transform, Vec3};
 
 use crate::{
     Cesium3dTileContentDataRequesterMarker, RenderedCesium3dTileContent, TileOrderByDistance,
 };
 
-use super::{requester::GlbDataRequesterMarker, RenderedCesium3dTileContentGlbMarker};
+use super::{RenderedCesium3dTileContentGlbMarker, requester::GlbDataRequesterMarker};
 
 /// Constructs model entities from GLB tile data.
 ///
@@ -170,23 +170,23 @@ pub fn remove_invisible_rendered_tiles(
     mut renderable_features: Query<&mut RenderableFeature>,
 ) {
     for (entity, tile, _) in &rendered_tiles {
-        if tile.touched {
-            if let Some(id) = tile.feature_id {
-                let mut renderable_feature = match features
-                    .get(id)
-                    .ok()
-                    .and_then(|renderable_feature_id| renderable_feature_id.0)
-                    .and_then(|renderable_feature_id| {
-                        renderable_features.get_mut(renderable_feature_id).ok()
-                    }) {
-                    Some(renderable_feature) => renderable_feature,
-                    None => continue,
-                };
-                if let RenderableFeature::Model { active, .. } = renderable_feature.as_mut() {
-                    *active = tile.is_visible;
-                }
-                continue;
+        if tile.touched
+            && let Some(id) = tile.feature_id
+        {
+            let mut renderable_feature = match features
+                .get(id)
+                .ok()
+                .and_then(|renderable_feature_id| renderable_feature_id.0)
+                .and_then(|renderable_feature_id| {
+                    renderable_features.get_mut(renderable_feature_id).ok()
+                }) {
+                Some(renderable_feature) => renderable_feature,
+                None => continue,
+            };
+            if let RenderableFeature::Model { active, .. } = renderable_feature.as_mut() {
+                *active = tile.is_visible;
             }
+            continue;
         }
 
         if tile.is_visible || tile.touched {
@@ -195,10 +195,10 @@ pub fn remove_invisible_rendered_tiles(
 
         if let Some(feature_id) = tile.feature_id {
             commands.entity(feature_id).insert(Deleted);
-            if let Ok(rendered_feature_id) = features.get(feature_id) {
-                if let Some(rendered_feature_id) = rendered_feature_id.0 {
-                    commands.entity(rendered_feature_id).insert(Deleted);
-                }
+            if let Ok(rendered_feature_id) = features.get(feature_id)
+                && let Some(rendered_feature_id) = rendered_feature_id.0
+            {
+                commands.entity(rendered_feature_id).insert(Deleted);
             }
         }
 

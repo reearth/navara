@@ -139,7 +139,7 @@ mod test {
 
     use approx::assert_abs_diff_eq;
 
-    use super::{clip_2d_triangle_at_threshold, ClippedIndex, InterpolatedClippedIndex};
+    use super::{ClippedIndex, InterpolatedClippedIndex, clip_2d_triangle_at_threshold};
 
     #[test]
     fn it_should_clip_specified_coord() {

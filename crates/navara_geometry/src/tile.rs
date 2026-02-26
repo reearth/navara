@@ -1,5 +1,5 @@
 use crate::Geometry;
-use navara_core::{Aabb, Ellipsoid, Extent, Meters, Radians, TileXYZ, LLE};
+use navara_core::{Aabb, Ellipsoid, Extent, LLE, Meters, Radians, TileXYZ};
 use navara_math::{FloatType, Vec2, Vec3};
 
 /// Represents a UV transformation for mapping a child tile to its parent's texture space.

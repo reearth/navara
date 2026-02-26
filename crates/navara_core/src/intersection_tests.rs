@@ -1,4 +1,4 @@
-use navara_math::{EqualEpsilon, FloatType, Vec3, EPSILON15};
+use navara_math::{EPSILON15, EqualEpsilon, FloatType, Vec3};
 
 use crate::{Ellipsoid, Plane, Ray};
 
@@ -124,9 +124,9 @@ pub fn ray_ellipsoid(ray: &Ray, ellipsoid: Ellipsoid<FloatType>) -> Intersection
 #[cfg(test)]
 mod test {
     use approx::assert_abs_diff_eq;
-    use navara_math::{Dir3, Vec3, EPSILON14};
+    use navara_math::{Dir3, EPSILON14, Vec3};
 
-    use crate::{ray_plane, Plane, Ray, UNIT_SPHERE_64};
+    use crate::{Plane, Ray, UNIT_SPHERE_64, ray_plane};
 
     use super::ray_ellipsoid;
 

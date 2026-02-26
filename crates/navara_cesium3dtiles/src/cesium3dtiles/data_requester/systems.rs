@@ -7,10 +7,10 @@ use navara_component::{Deleted, Ignored, Priority, Requested};
 use navara_data_requester::DataRequester;
 
 use crate::{
-    b3dm::B3dmDataRequesterMarker, cesium3dtiles::order::TileOrderByDistance,
-    glb::GlbDataRequesterMarker, pnts::PntsDataRequesterMarker,
     Cesium3dTileContentDataRequesterMarker, Cesium3dTilesMetadataDataRequesterMarker,
-    Cesium3dTilesTreeOrder,
+    Cesium3dTilesTreeOrder, b3dm::B3dmDataRequesterMarker,
+    cesium3dtiles::order::TileOrderByDistance, glb::GlbDataRequesterMarker,
+    pnts::PntsDataRequesterMarker,
 };
 
 const MAX_PENDINGS: u32 = 10;

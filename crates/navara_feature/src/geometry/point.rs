@@ -1,9 +1,9 @@
 use navara_buffer_store::BufferStore;
-use navara_core::{Aabb, EncodedVec3, CRS, WGS84_64};
+use navara_core::{Aabb, CRS, EncodedVec3, WGS84_64};
 use navara_feature_component::render::TransferablePointGeometry;
 use navara_math::{Transform, Vec3};
 use navara_tile_component::{
-    compute_terrain_height_at_point, RasterTileQuadtree, TileExtent, TileTerrainDataRequesterQuery,
+    RasterTileQuadtree, TileExtent, TileTerrainDataRequesterQuery, compute_terrain_height_at_point,
 };
 
 /// Holds position data encoded as either RTC or RTE f32 values.
@@ -141,7 +141,7 @@ pub fn resolve_terrain_height(
 mod tests {
     use super::*;
     use approx::assert_abs_diff_eq;
-    use navara_math::{EPSILON12, EPSILON4};
+    use navara_math::{EPSILON4, EPSILON12};
 
     #[test]
     fn compute_rtc_center_returns_none_without_tile_extent() {
