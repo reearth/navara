@@ -1,4 +1,4 @@
-use bevy_ecs::{event::EventReader, system::Res};
+use bevy_ecs::{message::MessageReader, system::Res};
 use bevy_input::{
     mouse::{MouseButton, MouseMotion, MouseWheel},
     ButtonInput,
@@ -16,17 +16,14 @@ pub(crate) fn handle_follow(
     orbit: &mut Orbit,
     controller: &mut CameraController,
     mb: &Res<ButtonInput<MouseButton>>,
-    mm: &mut EventReader<MouseMotion>,
-    mw: &mut EventReader<MouseWheel>,
+    mm: &mut MessageReader<MouseMotion>,
+    mw: &mut MessageReader<MouseWheel>,
 ) {
     // If the user specifies both target and offset, treat it as a lookAt operation.
-    if controller.follow_target_cur.is_some() && controller.follow_offset.is_some() {
-        apply_look_at(
-            transform,
-            orbit,
-            &controller.follow_target_cur.unwrap(),
-            &controller.follow_offset.unwrap(),
-        );
+    if let (Some(follow_target_cur), Some(follow_offset)) =
+        (controller.follow_target_cur, controller.follow_offset)
+    {
+        apply_look_at(transform, orbit, &follow_target_cur, &follow_offset);
         controller.follow_offset = None; // Clear offset after lookAt
         controller.follow_target_pre = controller.follow_target_cur;
         return;
@@ -43,10 +40,9 @@ fn handle_follow_move(
     orbit: &mut Orbit,
     controller: &mut CameraController,
 ) {
-    if controller.follow_target_cur.is_some() && controller.follow_target_pre.is_some() {
-        let target_cur = controller.follow_target_cur.unwrap();
-        let target_pre = controller.follow_target_pre.unwrap();
-
+    if let (Some(target_cur), Some(target_pre)) =
+        (controller.follow_target_cur, controller.follow_target_pre)
+    {
         // Convert both targets to world coordinates
         let ellipsoid = WGS84_64;
         let world_target_cur = CRS::Geographic.to_vec3(ellipsoid, target_cur, 0.0);
@@ -82,7 +78,7 @@ fn handle_follow_spin(
     orbit: &mut Orbit,
     controller: &mut CameraController,
     mb: &Res<ButtonInput<MouseButton>>,
-    mm: &mut EventReader<MouseMotion>,
+    mm: &mut MessageReader<MouseMotion>,
 ) {
     if mb.pressed(MouseButton::Left) && !mm.is_empty() {
         let screen_delta = if let Some(ev) = mm.read().last() {
@@ -130,45 +126,46 @@ fn handle_follow_zoom(
     transform: &mut Transform,
     orbit: &mut Orbit,
     controller: &mut CameraController,
-    mw: &mut EventReader<MouseWheel>,
+    mw: &mut MessageReader<MouseWheel>,
 ) {
     // Handle mouse wheel to zoom in/out from follow target
-    if !mw.is_empty() && controller.follow_target_cur.is_some() {
-        let zoom = if let Some(ev) = mw.read().last() {
-            ev.y
-        } else {
-            return;
-        };
+    if let Some(follow_target_cur) = controller.follow_target_cur {
+        if !mw.is_empty() {
+            let zoom = if let Some(ev) = mw.read().last() {
+                ev.y
+            } else {
+                return;
+            };
 
-        // Calculate actual distance from camera to follow target
-        let ellipsoid = WGS84_64;
-        let world_target =
-            CRS::Geographic.to_vec3(ellipsoid, controller.follow_target_cur.unwrap(), 0.0);
-        let current_distance = (transform.translation - world_target).length();
+            // Calculate actual distance from camera to follow target
+            let ellipsoid = WGS84_64;
+            let world_target = CRS::Geographic.to_vec3(ellipsoid, follow_target_cur, 0.0);
+            let current_distance = (transform.translation - world_target).length();
 
-        let zoom_amount = (zoom as f64) * controller.zoom_speed * current_distance * 0.0025;
+            let zoom_amount = (zoom as f64) * controller.zoom_speed * current_distance * 0.0025;
 
-        // Calculate direction from camera to target (for zooming in)
-        let to_target = (world_target - transform.translation).normalize();
-        let new_camera_pos = transform.translation - to_target * zoom_amount;
-        let new_distance = new_camera_pos.length();
+            // Calculate direction from camera to target (for zooming in)
+            let to_target = (world_target - transform.translation).normalize();
+            let new_camera_pos = transform.translation - to_target * zoom_amount;
+            let new_distance = new_camera_pos.length();
 
-        let too_close = new_distance <= controller.minimum_zoom_distance;
-        let too_far = new_distance >= controller.maximum_zoom_distance;
+            let too_close = new_distance <= controller.minimum_zoom_distance;
+            let too_far = new_distance >= controller.maximum_zoom_distance;
 
-        if !too_close && !too_far {
-            transform.translation = new_camera_pos;
+            if !too_close && !too_far {
+                transform.translation = new_camera_pos;
 
-            // Update orbit state after zoom
-            let enu_transform = east_north_up_to_fixed_frame(world_target, ellipsoid);
-            orbit.set_quat(
-                transform,
-                Quat::from_mat4(&enu_transform),
-                world_target,
-                true,
-            );
+                // Update orbit state after zoom
+                let enu_transform = east_north_up_to_fixed_frame(world_target, ellipsoid);
+                orbit.set_quat(
+                    transform,
+                    Quat::from_mat4(&enu_transform),
+                    world_target,
+                    true,
+                );
 
-            commit(transform, orbit);
+                commit(transform, orbit);
+            }
         }
     }
 }

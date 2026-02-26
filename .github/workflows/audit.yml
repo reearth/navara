@@ -21,7 +21,7 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v6
-            - uses: dtolnay/rust-toolchain@1.86.0
+            - uses: dtolnay/rust-toolchain@1.93.0
 
             - name: Install cargo-audit
               uses: taiki-e/install-action@v2

@@ -17,7 +17,6 @@ js-sys.workspace = true
 serde.workspace = true
 serde-wasm-bindgen.workspace = true
 gloo-utils.workspace = true
-nanoid.workspace = true
 bevy_log.workspace = true
 web-sys.workspace = true
 navara_core.workspace = true
@@ -42,6 +41,8 @@ navara_wasm_utils.workspace = true
 navara_wasm_transferable.workspace = true
 navara_quadtree.workspace = true
 navara_globe.workspace = true
+rand.workspace = true
+getrandom.workspace = true
 
 [dev-dependencies]
 wasm-bindgen-test.workspace = true

@@ -921,7 +921,7 @@ pub fn update_mesh_material(
 }
 
 pub fn handle_prepared_mesh_event(
-    mut events: EventReader<MeshPreparedEvent>,
+    mut events: MessageReader<MeshPreparedEvent>,
     mut tc: ResMut<TileCacheManager>,
 ) {
     for e in events.read() {

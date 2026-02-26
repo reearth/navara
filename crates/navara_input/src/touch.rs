@@ -1,6 +1,6 @@
 use rustc_hash::FxHashMap;
 
-use bevy_ecs::event::{Event, EventReader, EventWriter};
+use bevy_ecs::message::{Message, MessageReader, MessageWriter};
 use bevy_ecs::resource::Resource;
 use bevy_ecs::system::{Res, ResMut};
 
@@ -66,7 +66,7 @@ pub struct TouchList {
 }
 
 /// Event representing raw touch input from the platform.
-#[derive(Debug, Clone, PartialEq, Event)]
+#[derive(Debug, Clone, PartialEq, Message)]
 pub struct TouchInput {
     pub state: TouchState,
     pub position: Vec2,
@@ -74,7 +74,7 @@ pub struct TouchInput {
 }
 
 /// Event representing a recognized touch gesture with its delta.
-#[derive(Debug, Clone, PartialEq, Event)]
+#[derive(Debug, Clone, PartialEq, Message)]
 pub struct TouchControl {
     pub gesture: TouchGesture,
     pub delta: Vec2,
@@ -85,9 +85,9 @@ pub struct TouchControl {
 /// This system maintains the touch list state and performs gesture recognition
 /// for single-finger swipes and two-finger gestures (pinch, spread, rotate, double swipe).
 pub fn process_touch_input_events(
-    mut ev: EventReader<TouchInput>,
+    mut ev: MessageReader<TouchInput>,
     mut touch_list: ResMut<TouchList>,
-    mut gesture_ev: EventWriter<TouchControl>,
+    mut gesture_ev: MessageWriter<TouchControl>,
     window: Res<Window>,
 ) {
     for touch in ev.read() {

@@ -4,7 +4,7 @@ use bevy_app::{PostUpdate, PreUpdate};
 use bevy_ecs::{
     component::Component,
     entity::Entity,
-    event::{Event, EventReader},
+    message::{Message, MessageReader},
     query::{Added, With, Without},
     schedule::IntoScheduleConfigs,
     system::{Commands, Query, ResMut},
@@ -53,7 +53,7 @@ pub struct TextureFragmentPlugin;
 
 impl bevy_app::Plugin for TextureFragmentPlugin {
     fn build(&self, app: &mut bevy_app::App) {
-        app.add_event::<TextureFragmentLoadedEvent>()
+        app.add_message::<TextureFragmentLoadedEvent>()
             .add_systems(PreUpdate, remove_removed_data_requesters)
             .add_systems(PostUpdate, (commit, handle_loaded_event).chain());
     }
@@ -76,7 +76,7 @@ fn commit(
     }
 }
 
-#[derive(Debug, Event)]
+#[derive(Debug, Message)]
 pub struct TextureFragmentLoadedEvent {
     pub id: Entity,
     pub status: TextureFragmentStatus,
@@ -84,7 +84,7 @@ pub struct TextureFragmentLoadedEvent {
 
 fn handle_loaded_event(
     mut commands: Commands,
-    mut loaded_ev: EventReader<TextureFragmentLoadedEvent>,
+    mut loaded_ev: MessageReader<TextureFragmentLoadedEvent>,
     mut t: Query<&mut TextureFragment, Without<Deleted>>,
 ) {
     for e in loaded_ev.read() {

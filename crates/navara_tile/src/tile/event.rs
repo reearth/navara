@@ -1,7 +1,7 @@
-use bevy_ecs::event::Event;
+use bevy_ecs::message::Message;
 use navara_tile_component::TileHandle;
 
-#[derive(Debug, Event)]
+#[derive(Debug, Message)]
 pub struct MeshPreparedEvent {
     pub tile_handle: TileHandle,
 }

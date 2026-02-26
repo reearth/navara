@@ -314,7 +314,7 @@ mod tests {
     fn test_source_cache_operations() {
         let mut cache = MvtSourceCache::new();
         let source_id = make_source_id("https://example.com/{z}/{x}/{y}.pbf");
-        let entity = Entity::from_raw(42);
+        let entity = Entity::from_raw_u32(42).unwrap();
 
         assert!(!cache.has_source(&source_id));
         assert!(cache.get_source(&source_id).is_none());
@@ -344,8 +344,8 @@ mod tests {
         let source_id1 = make_source_id_with_config("https://example.com/tiles", config1);
         let source_id2 = make_source_id_with_config("https://example.com/tiles", config2);
 
-        let entity1 = Entity::from_raw(1);
-        let entity2 = Entity::from_raw(2);
+        let entity1 = Entity::from_raw_u32(1).unwrap();
+        let entity2 = Entity::from_raw_u32(2).unwrap();
 
         cache.register_source(source_id1.clone(), entity1);
         cache.register_source(source_id2.clone(), entity2);

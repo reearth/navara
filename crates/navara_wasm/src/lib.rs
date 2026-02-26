@@ -13,7 +13,6 @@ use entity::ReconstructableEntity;
 use feature::{
     ReturnedTransferablePolygonBatchedFeature, ReturnedTransferablePolylineBatchedFeature,
 };
-use nanoid::nanoid;
 use navara_buffer_store::Handle;
 use navara_ecs::App;
 use navara_geometry::Hierarchy;
@@ -23,6 +22,7 @@ use navara_tile_component::TileHandle;
 use navara_wasm_utils::set_panic_hook;
 use polygon::TransferablePolygonBatchedFeature;
 use polyline::TransferablePolylineBatchedFeature;
+use rand::RngExt;
 use wasm_bindgen::prelude::*;
 
 pub use camera::*;
@@ -671,7 +671,9 @@ impl Core {
 
 #[wasm_bindgen(js_name = generateId)]
 pub fn generate_id() -> String {
-    nanoid!()
+    let mut rng = rand::rng();
+    let id: u128 = rng.random();
+    format!("{:032x}", id)
 }
 
 #[wasm_bindgen(start)]

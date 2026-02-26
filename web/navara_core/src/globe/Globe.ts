@@ -1,6 +1,7 @@
 import type { Globe as GlobeWasm } from "@navara/engine";
 
 import { ColorMap, Color } from "../color";
+import type { RemoveFreeRecursively } from "../types";
 /**
  * Handler for accessing individual Globe properties from WASM.
  * This provides a reference-based interface instead of copying the entire Globe object.
@@ -40,8 +41,8 @@ export type GlobeOptions = Partial<
  * that are shared across different material types (VectorTile, RasterTile, RasterTerrain).
  */
 export class Globe implements Omit<
-  GlobeWasm,
-  "free" | "elevationColormap" | "color"
+  RemoveFreeRecursively<GlobeWasm>,
+  "elevationColormap" | "color"
 > {
   private handler: GlobeHandler;
   private _elevationColormap?: ColorMap;
