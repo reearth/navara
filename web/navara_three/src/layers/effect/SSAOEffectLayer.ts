@@ -38,10 +38,8 @@ export class SSAOEffectLayer extends EffectLayerDeclaration<
 
     const pass = new SSAO(
       this.view.camera,
-      this.view.renderPassOrchestrator.effectComposer.getRenderer().domElement
-        .clientWidth,
-      this.view.renderPassOrchestrator.effectComposer.getRenderer().domElement
-        .clientHeight,
+      this.view.renderPassOrchestrator.effectComposer.getRenderer().domElement.clientWidth,
+      this.view.renderPassOrchestrator.effectComposer.getRenderer().domElement.clientHeight,
       {
         ...ssaoOptions,
         enabled: this.config.visible ?? true,

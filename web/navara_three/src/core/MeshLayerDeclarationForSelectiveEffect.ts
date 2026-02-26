@@ -36,16 +36,16 @@ export type MeshLayerUpdateWithSelectiveEffect = MeshLayerUpdate & {
 };
 
 export abstract class MeshLayerDeclarationForSelectiveEffect<
-  Config extends MeshLayerConfigWithSelectiveEffect =
-    MeshLayerConfigWithSelectiveEffect,
-  UpdateConfig extends MeshLayerUpdateWithSelectiveEffect =
-    MeshLayerUpdateWithSelectiveEffect,
+  Config extends
+    MeshLayerConfigWithSelectiveEffect = MeshLayerConfigWithSelectiveEffect,
+  UpdateConfig extends
+    MeshLayerUpdateWithSelectiveEffect = MeshLayerUpdateWithSelectiveEffect,
   InstanceObj extends Object3D | { raw: Object3D } =
     | Object3D
     | { raw: Object3D },
   CustomEvent extends BaseEventMap = BaseEventMap,
-  Instance extends MeshBaseInstance<InstanceObj> =
-    MeshBaseInstance<InstanceObj>,
+  Instance extends
+    MeshBaseInstance<InstanceObj> = MeshBaseInstance<InstanceObj>,
 > extends MeshLayerDeclaration<
   Config,
   UpdateConfig,

@@ -185,8 +185,8 @@ export abstract class EffectLayerDeclaration<
   InstanceObj extends EffectInstance | { raw: EffectInstance } =
     | EffectInstance
     | { raw: EffectInstance },
-  Instance extends EffectBaseInstance<InstanceObj> =
-    EffectBaseInstance<InstanceObj>,
+  Instance extends
+    EffectBaseInstance<InstanceObj> = EffectBaseInstance<InstanceObj>,
 > extends LayerDeclaration<Config, UpdateConfig, Instance> {
   /** Unique identifier for this effect type in the render pipeline. Must be defined by subclasses. */
   static key: string;
