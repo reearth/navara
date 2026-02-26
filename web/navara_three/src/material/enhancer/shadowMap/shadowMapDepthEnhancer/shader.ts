@@ -20,6 +20,7 @@ export const transformShader = (
       "#include <common>",
       `
 #include <common>
+#include <packing>
 ${ShadowMapDepthParsVertex}
 `,
     )
@@ -32,7 +33,14 @@ ${ShadowMapDepthVertex}
     ).source;
 
   // Transform fragment shader - add shadow map depth output
-  shader.fragmentShader = createReplacer(shader.fragmentShader).replace(
+  shader.fragmentShader = createReplacer(shader.fragmentShader)
+      .replace(
+      "#include <common>",
+      `
+#include <common>
+#include <packing>
+`)
+  .replace(
     "void main() {",
     `
 ${ShadowMapDepthParsFragment}

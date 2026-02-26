@@ -29,7 +29,7 @@ import {
   RepeatWrapping,
   Group,
   Material,
-  PCFSoftShadowMap,
+  PCFShadowMap,
 } from "three";
 import invariant from "tiny-invariant";
 
@@ -595,7 +595,7 @@ export default class ThreeView<
     this.renderer = renderer;
 
     renderer.shadowMap.enabled = !!options.shadow;
-    this.renderer.shadowMap.type = PCFSoftShadowMap;
+    this.renderer.shadowMap.type = PCFShadowMap;
 
     // Update shadow map manually in CustomRenderPass.
     renderer.shadowMap.autoUpdate = false;

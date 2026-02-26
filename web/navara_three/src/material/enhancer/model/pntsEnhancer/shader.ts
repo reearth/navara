@@ -31,10 +31,6 @@ export const transformShader = (
         .replace(
           "vColor = vec4( 1.0 );",
           `vColor = vec4( 1.0 / ${COLOR_DIVISOR}.0 );`,
-        )
-        .replace(
-          "vColor = vec3( 1.0 );",
-          `vColor = vec3( 1.0 / ${COLOR_DIVISOR}.0 );`,
         ).source,
     )
     .replace(

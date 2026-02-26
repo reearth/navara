@@ -2,7 +2,8 @@
 
 import fragmentShader from "@shaders/glsl/ssr.frag.glsl?raw";
 import vertexShader from "@shaders/glsl/ssr.vert.glsl?raw";
-import { assertType, resolveIncludes } from "@takram/three-geospatial";
+import { assertType } from "@navara/core";
+import { resolveIncludes } from "@takram/three-geospatial";
 import { depth, packing, transform } from "@takram/three-geospatial/shaders";
 import {
   Matrix4,
@@ -180,7 +181,7 @@ export class SSRMaterial extends ShaderMaterial {
   }
 
   get depthPacking(): number {
-    return +this.defines.DEPTH_PACKING;
+    return +(this.defines.DEPTH_PACKING as string);
   }
 
   set depthPacking(value: number) {
