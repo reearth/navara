@@ -17,6 +17,7 @@ export type PolylineBaseProps = {
   // Height/width
   minMaxHeight?: [number, number];
   width?: number;
+  maxWidth?: number;
 
   // Clamp to ground
   clampToGround?: boolean;
@@ -63,6 +64,7 @@ export type PolylineBaseState = Readonly<
     pickable: boolean;
     minMaxHeight: [number, number];
     width: number;
+    maxWidth: number;
     color: number;
     // Batch texture state - when true, material.color is white and colors come from batch texture
     batchColorEnabled: boolean;
@@ -79,6 +81,7 @@ export type PolylineBaseState = Readonly<
 export type PolylineBaseRefs = {
   // Core uniforms
   minMaxHeightAndWidth: UniformValue<[number, number, number]>;
+  maxWidth: UniformValue<number>;
   color: UniformValue<Color>;
   useGroundNormals: UniformValue<boolean>;
   nvr_uPickable: UniformValue<number>;

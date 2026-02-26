@@ -2,7 +2,7 @@
 #ifdef USE_SHADOWMAP_DEPTH
     // Higher precision equivalent of gl_FragCoord.z
 
-	#ifdef USE_REVERSEDEPTHBUF
+	#if defined(USE_REVERSEDEPTHBUF) || defined(USE_REVERSED_DEPTH_BUFFER)
 
 		float fragCoordZ = vHighPrecisionZW[ 0 ] / vHighPrecisionZW[ 1 ];
 

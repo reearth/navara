@@ -84,7 +84,7 @@ const run = async () => {
         lang: "ja",
         color: new Color().setStyle("#ffffff"),
         scaleByDistance: true,
-        clampToGround: false,
+        clampToGround: true,
         size: params.size,
         center: { x: 0.5, y: 0 },
       },

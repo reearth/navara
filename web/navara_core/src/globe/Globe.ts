@@ -39,9 +39,10 @@ export type GlobeOptions = Partial<
  * Provides an interface for accessing and modifying globe properties
  * that are shared across different material types (VectorTile, RasterTile, RasterTerrain).
  */
-export class Globe
-  implements Omit<GlobeWasm, "free" | "elevationColormap" | "color">
-{
+export class Globe implements Omit<
+  GlobeWasm,
+  "free" | "elevationColormap" | "color"
+> {
   private handler: GlobeHandler;
   private _elevationColormap?: ColorMap;
 

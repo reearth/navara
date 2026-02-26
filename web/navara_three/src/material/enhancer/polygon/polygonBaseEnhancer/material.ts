@@ -1,5 +1,3 @@
-import type { MeshLambertMaterial, MeshPhongMaterial } from "three";
-
 import type { MaterialsFromShaders, ShaderName } from "../../MaterialEnhancer";
 
 import type { PolygonBaseProps } from "./types";
@@ -35,10 +33,6 @@ export const updateMaterialProps = (
     material.emissiveIntensity = props.emissiveIntensity;
   }
   if (props.reflectivity !== undefined) {
-    // Only Lambert and Phong have reflectivity property
-    if ("reflectivity" in material) {
-      (material as MeshLambertMaterial | MeshPhongMaterial).reflectivity =
-        props.reflectivity;
-    }
+    material.reflectivity = props.reflectivity;
   }
 };
