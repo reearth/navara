@@ -32,6 +32,7 @@ uniform vec3 minMaxHeightAndWidth;
 uniform vec3 viewportAndPixelRatio;
 uniform vec2 frustumNearFar;
 uniform vec4 frustumRatio;
+uniform float maxWidth;
 
 flat out vec4 v_startPlaneNormalEcAndHalfWidth;
 flat out vec3 v_endPlaneNormalEc;
@@ -132,29 +133,14 @@ void main() {
     // Extrudes height
     vec3 heightNormal = normalize(nvr_branchFreeTernary(absStartPlaneDistance < absEndPlaneDistance, cross(v_rightPlaneEC.xyz, startPlaneEC.xyz), cross(endPlaneEC.xyz, v_rightPlaneEC.xyz)));
     #ifdef USE_RTE
-        // RTE mode: vertices contain WALL_INITIAL heights (bottom=0m, top=1000m)
-        // Need to adjust to actual heights by:
-        // 1. Determining if vertex is top or bottom based on distance from ecStart/ecEnd
-        // 2. For top vertices: subtract 1000m and add minMaxHeightAndWidth.y
-        // 3. For bottom vertices: add minMaxHeightAndWidth.x
-
         // Calculate distance from reference points to determine vertex type
         vec3 ecCurPoint = nvr_branchFreeTernary(absStartPlaneDistance < absEndPlaneDistance, ecStart, ecEnd);
-        float distToRef = length(positionEC.xyz - ecCurPoint);
-
-        // Top vertices are ~1000m away from bottom reference point, bottom vertices are ~0m away
-        // Use threshold at midpoint to determine vertex type
-        const float WALL_INITIAL_MAX_HEIGHT = 1000.0;
-        const float THRESHOLD = 500.0;
+        vec3 distToRef = normalize(positionEC.xyz - ecCurPoint);
 
         // Use mix for branchless selection: mix(bottom, top, step(threshold, distance))
         // step(THRESHOLD, distToRef) returns 0.0 for bottom vertices, 1.0 for top vertices
-        float heightAdjustment = mix(
-            minMaxHeightAndWidth.x,  // Bottom vertex: add minHeight
-            minMaxHeightAndWidth.y - WALL_INITIAL_MAX_HEIGHT,  // Top vertex: remove 1000m, add maxHeight
-            step(THRESHOLD, distToRef)
-        );
-        positionEC.xyz += heightNormal * heightAdjustment;
+        vec3 height = heightNormal * nvr_branchFreeTernary(dot(distToRef, heightNormal) > 0., minMaxHeightAndWidth.y, minMaxHeightAndWidth.x);
+        positionEC.xyz += height;
     #else
         vec3 cur_point = nvr_branchFreeTernary(absStartPlaneDistance < absEndPlaneDistance, start, start + forward_offset);
         vec3 diff = normalize(position - cur_point);
@@ -165,10 +151,6 @@ void main() {
     vec3 transformedNormal = vec3( heightNormal );
 
 	#include <normal_vertex>
-
-    // upOrDown = cross(forwardDirectionEC, normalEC);
-    // upOrDown = float(v_texcoordNormalizationAndStartEcYZ.y > 1.0 || v_texcoordNormalizationAndStartEcYZ.y < 0.0) * upOrDown;
-    // positionEC.xyz += upOrDown;
  
     v_texcoordNormalizationAndStartEcYZ.y = nvr_branchFreeTernary(v_texcoordNormalizationAndStartEcYZ.y > 1.0, 0.0, abs(v_texcoordNormalizationAndStartEcYZ.y));
 
@@ -184,6 +166,15 @@ void main() {
     v_endPlaneOffsetEc = endPlaneEC.w;
 
     lineWidth = lineWidth * max(0.0, nvr_metersPerPixel(positionEC, viewportAndPixelRatio, frustumNearFar, frustumRatio)); // lineWidth = distance to push along R
+    // Clamp the width with maxWidth to reduce fragment shader overdraw.
+    lineWidth = min(lineWidth, maxWidth);
+
+    // Extend shadow volume past each end to cover the concave-side gap at joints.
+    // The fragment shader's miter plane test preserves the clean miter boundary.
+    float forwardPush = lineWidth * 0.5;
+    float pushDirection = nvr_branchFreeTernary(absStartPlaneDistance < absEndPlaneDistance, -1.0, 1.0);
+    positionEC.xyz += pushDirection * forwardPush * forwardDirectionEC;
+
     lineWidth = lineWidth / dot(normalEC, v_rightPlaneEC.xyz); // lineWidth = distance to push along N
 
     normalEC *= sign(end_normal_and_texture_coordinate_normalization_x.w);
