@@ -672,8 +672,8 @@ impl Core {
 #[wasm_bindgen(js_name = generateId)]
 pub fn generate_id() -> String {
     let mut rng = rand::rng();
-    let id: u64 = rng.random();
-    format!("{:016x}", id)
+    let id: u128 = rng.random();
+    format!("{:032x}", id)
 }
 
 #[wasm_bindgen(start)]
