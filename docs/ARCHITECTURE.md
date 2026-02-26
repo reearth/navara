@@ -209,20 +209,20 @@ The engine supports comprehensive geospatial data formats:
 - **Weather Effects** - Volumetric clouds and fog systems
 
 ### **Key Dependencies**
-- **Three.js v0.177.0** - Core 3D rendering
+- **Three.js** - Core 3D rendering
 - **@takram/three-*** - Specialized extensions for atmosphere, clouds, geospatial effects
 - **Postprocessing library** - Advanced visual effects
 
 ## Key Technologies
 
 ### **Rust Ecosystem**
-- **Bevy ECS v0.16.1** - Entity Component System framework
+- **Bevy ECS** - Entity Component System framework
 - **wasm-bindgen** - WebAssembly bindings generation
 - **geo-types** - Geometric types and operations
 - **serde** - Serialization/deserialization
 
 ### **Web Ecosystem**
-- **Three.js v0.177.0** - 3D rendering engine
+- **Three.js** - 3D rendering engine
 - **TypeScript** - Type-safe JavaScript development
 - **Vite** - Fast build tool and development server
 - **pnpm workspaces** - Monorepo package management

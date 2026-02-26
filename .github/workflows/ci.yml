@@ -8,7 +8,6 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  PROTOC_VERSION: "3.20.3"
 
 jobs:
   web:
@@ -37,10 +36,10 @@ jobs:
         with:
           cache: "pnpm"
 
-      - name: Install Tools (protoc, wasm-bindgen-cli, cargo-make)
+      - name: Install Tools (wasm-bindgen-cli, cargo-make)
         uses: taiki-e/install-action@v2
         with:
-          tool: protoc@${{ env.PROTOC_VERSION }}, wasm-bindgen-cli@0.2.102, cargo-make
+          tool: wasm-bindgen-cli@0.2.112, cargo-make
 
       - name: Prepare
         run: cargo make prepare-ci
@@ -75,11 +74,6 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: "rust-docs"
-
-      - name: Install protoc
-        uses: taiki-e/install-action@v2
-        with:
-          tool: protoc@${{ env.PROTOC_VERSION }}
 
       - run: cargo test --doc
       - run: cargo doc --all-features --release
