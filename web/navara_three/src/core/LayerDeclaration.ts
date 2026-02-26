@@ -61,8 +61,8 @@ export type LayerDeclarationEvents = {
  */
 export abstract class LayerDeclaration<
   Config extends LayerDeclarationConfig = LayerDeclarationConfig,
-  UpdateConfig extends
-    LayerDeclarationConfigUpdate = LayerDeclarationConfigUpdate,
+  UpdateConfig extends LayerDeclarationConfigUpdate =
+    LayerDeclarationConfigUpdate,
   Instance extends BaseInstance = BaseInstance,
   CustomEvent extends BaseEventMap = BaseEventMap,
 > extends EventHandler<LayerDeclarationEvents & CustomEvent> {

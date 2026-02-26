@@ -68,7 +68,7 @@ void main() {
     // Use NDC (0,0) in that case; otherwise derive NDC from the full-screen fragment coordinate.
     vec2 screenCoords = usePickingCoord ? vec2(0.0) : ((sampleCoord / viewport) * 2.0 - 1.0);
 
-    #ifdef USE_LOGDEPTHBUF
+    #if defined(USE_LOGDEPTHBUF) || defined(USE_LOGARITHMIC_DEPTH_BUFFER)
     float linearDepth = exp2(logDepthOrDepth / (logDepthBufFC * 0.5)) - 1.0;
     float depthFromCamera = linearDepth + near;
     float z_ndc = -1. * depthFromCamera;

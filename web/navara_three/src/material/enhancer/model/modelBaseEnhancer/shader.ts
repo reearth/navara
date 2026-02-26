@@ -47,6 +47,8 @@ export const transformShader = (
     .replace(
       "void main() {",
       `
+#include <packing>
+
 in float batchId;
 out float nvr_vBatchId;
 out vec3 vPosition;
@@ -82,6 +84,8 @@ ${ShadowMapDepthVertex}
     .replace(
       "void main() {",
       `
+#include <packing>
+
 ${MODEL_BASE_SHADER_MARKERS.fragment.UNIFORM_START}
 uniform float nvr_uPickable;
 uniform float uBloomMaskPass;
