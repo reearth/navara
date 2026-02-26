@@ -41,6 +41,8 @@ export class SDFTextMesh extends Mesh< InstancedBufferGeometry, ShaderMaterial >
   private _fontUrl: string;
   private _text = "";
   private _atlasTexture: DataTexture | null = null;
+  /** When true, the atlas texture is shared and should not be disposed by this mesh. */
+  private _sharedAtlas = false;
 
   constructor(
     position: Float32Array | { high: Float32Array; low: Float32Array },
@@ -65,6 +67,16 @@ export class SDFTextMesh extends Mesh< InstancedBufferGeometry, ShaderMaterial >
   /**
    * Set text to render. Shapes via WASM, rebuilds instanced geometry, updates atlas texture.
    */
+  /**
+   * Set a shared atlas texture. When set, setText() will skip creating its own texture.
+   * The caller is responsible for the texture lifecycle.
+   */
+  setAtlasTexture(tex: DataTexture): void {
+    this._atlasTexture = tex;
+    this._sharedAtlas = true;
+    this.material.uniforms.uAtlas.value = tex;
+  }
+
   setText(text: string): void {
     if (text === this._text) return;
     this._text = text;
@@ -85,7 +97,12 @@ export class SDFTextMesh extends Mesh< InstancedBufferGeometry, ShaderMaterial >
     if (!atlasData) return;
 
     this._buildGlyphInstances(shapeResult, atlasData.width, atlasData.height);
-    this._updateAtlasTexture(atlasData.data, atlasData.width, atlasData.height);
+
+    // Skip texture creation if using a shared atlas from the parent container
+    if (!this._sharedAtlas) {
+      this._updateAtlasTexture(atlasData.data, atlasData.width, atlasData.height);
+    }
+
     this.visible = true;
   }
 
@@ -222,7 +239,9 @@ export class SDFTextMesh extends Mesh< InstancedBufferGeometry, ShaderMaterial >
 
   dispose(): void {
     this.geometry?.dispose();
-    this._atlasTexture?.dispose();
+    if (!this._sharedAtlas) {
+      this._atlasTexture?.dispose();
+    }
     this.material?.dispose();
   }
 

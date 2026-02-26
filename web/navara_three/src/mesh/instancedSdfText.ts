@@ -25,6 +25,7 @@ type PositionsInfo = {
 
 export class InstancedSdfTextMesh extends InstancedMesh<SDFTextMesh> implements PickableMesh {
   private _fontUrl: string;
+  private _fontManager: FontManager;
 
   constructor(
     m: NavaraTextMesh,
@@ -36,6 +37,7 @@ export class InstancedSdfTextMesh extends InstancedMesh<SDFTextMesh> implements 
   ) {
     super(options);
     this._fontUrl = fontUrl;
+    this._fontManager = fontManager;
     this.initMeshes(m, buf, fontManager);
   }
 
@@ -59,6 +61,16 @@ export class InstancedSdfTextMesh extends InstancedMesh<SDFTextMesh> implements 
     const transform = m.transform;
     const active = m.active;
 
+    // Pre-shape text once to prime the FontManager cache.
+    // All subsequent shapeText() calls from individual meshes will hit the cache.
+    const text = material.text ?? "";
+    if (text) {
+      fontManager.shapeText(this._fontUrl, text);
+    }
+
+    // Get the font-level shared atlas texture (one DataTexture per font, shared across all groups)
+    const sharedTex = fontManager.getAtlasTexture(this._fontUrl);
+
     for (let i = 0; i < nPositions; i++) {
       const batchIdIdx = i * batchIDSize;
       const batchId = batchIDs ?  batchIDs[batchIdIdx] : undefined;
@@ -71,6 +83,11 @@ export class InstancedSdfTextMesh extends InstancedMesh<SDFTextMesh> implements 
 
       const mesh = new SDFTextMesh(pos, material, transform, fontManager, this._fontUrl, batchId, RTE, active);
       mesh.renderOrder = this.renderOrder;
+
+      if (sharedTex) {
+        mesh.setAtlasTexture(sharedTex);
+      }
+
       mesh.update(material, active);
 
       this.addWithBatchIndex(mesh, i);
@@ -79,13 +96,27 @@ export class InstancedSdfTextMesh extends InstancedMesh<SDFTextMesh> implements 
 
   _update(
     m: NavaraTextMesh,
-    buf: BufferLoader,
+    _buf: BufferLoader,
     active: boolean,
     needRender?: () => void,
   ) {
     this.setActive(true);
 
     const material = m.material;
+
+    // Pre-shape new text to prime cache, then refresh the shared atlas texture
+    const text = material.text ?? "";
+    if (text) {
+      this._fontManager.shapeText(this._fontUrl, text);
+    }
+
+    // Update shared texture (in-place update if atlas grew)
+    const sharedTex = this._fontManager.getAtlasTexture(this._fontUrl);
+    if (sharedTex) {
+      for (const mesh of this.meshes()) {
+        mesh.setAtlasTexture(sharedTex);
+      }
+    }
 
     for (const mesh of this.meshes()) {
       mesh.update(material, active);
