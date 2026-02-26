@@ -4,9 +4,7 @@ import type {
   TransferablePolygonBatchedFeature,
 } from "@navara/engine";
 
-export class TransferablePolygonBatchedFeatureLike
-  implements TransferablePolygonBatchedFeature
-{
+export class TransferablePolygonBatchedFeatureLike implements TransferablePolygonBatchedFeature {
   batch_ids: Uint32Array;
   batch_indices: Uint32Array;
   crs: CRS;

@@ -36,11 +36,11 @@ export const FEATURE_BATCH_TEXTURE_CONFIG: BatchTextureConfig = {
 };
 
 export class BatchedFeatureMesh<
-    Buf extends
-      BufferGeometry<BatchedFeatureAttributes> = BufferGeometry<BatchedFeatureAttributes>,
-    M extends Material = Material,
-    E extends CustomObject3DEventMap = CustomObject3DEventMap,
-  >
+  Buf extends BufferGeometry<BatchedFeatureAttributes> =
+    BufferGeometry<BatchedFeatureAttributes>,
+  M extends Material = Material,
+  E extends CustomObject3DEventMap = CustomObject3DEventMap,
+>
   extends Mesh<Buf, M, E>
   implements FeatureMesh, PickableMesh
 {

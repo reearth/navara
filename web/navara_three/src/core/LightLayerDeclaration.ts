@@ -131,8 +131,8 @@ export abstract class LightLayerDeclaration<
   Config extends LightLayerConfig = LightLayerConfig,
   UpdateConfig extends LightLayerUpdate = LightLayerUpdate,
   InstanceObj extends Light | { raw: Light } = Light | { raw: Light },
-  Instance extends
-    LightBaseInstance<InstanceObj> = LightBaseInstance<InstanceObj>,
+  Instance extends LightBaseInstance<InstanceObj> =
+    LightBaseInstance<InstanceObj>,
 > extends LayerDeclaration<Config, UpdateConfig, Instance> {
   public position?: XYZ;
 
