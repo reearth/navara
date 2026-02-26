@@ -2,9 +2,7 @@ import type { FloatAttribute } from "@navara/engine";
 
 import type { RemoveFreeRecursively } from "../types";
 
-export class FloatAttributeLike
-  implements RemoveFreeRecursively<FloatAttribute>
-{
+export class FloatAttributeLike implements RemoveFreeRecursively<FloatAttribute> {
   data: Float32Array;
   size: number;
 

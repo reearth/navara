@@ -4,9 +4,7 @@ import type { RemoveFreeRecursively } from "../types";
 
 import { Vec3Like } from "./Vec3Like";
 
-export class ReturnedConstructedTerrainMeshLike
-  implements RemoveFreeRecursively<ReturnedConstructedTerrainMesh>
-{
+export class ReturnedConstructedTerrainMeshLike implements RemoveFreeRecursively<ReturnedConstructedTerrainMesh> {
   vertices: Float32Array;
   uvs: Float32Array;
   indices: Uint32Array;

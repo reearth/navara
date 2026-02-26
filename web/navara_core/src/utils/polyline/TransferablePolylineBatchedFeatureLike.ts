@@ -6,9 +6,7 @@ import type {
 
 import type { RemoveFreeRecursively } from "../../types";
 
-export class TransferablePolylineBatchedFeatureLike
-  implements RemoveFreeRecursively<TransferablePolylineBatchedFeature>
-{
+export class TransferablePolylineBatchedFeatureLike implements RemoveFreeRecursively<TransferablePolylineBatchedFeature> {
   points: Float64Array;
   points_sizes: Uint32Array;
   batch_ids: Uint32Array;

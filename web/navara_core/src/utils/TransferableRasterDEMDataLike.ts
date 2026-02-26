@@ -5,9 +5,7 @@ import type {
 
 import type { RemoveFreeRecursively } from "../types";
 
-export class TransferableRasterDEMDataLike
-  implements RemoveFreeRecursively<TransferableRasterDEMData>
-{
+export class TransferableRasterDEMDataLike implements RemoveFreeRecursively<TransferableRasterDEMData> {
   decoder: ElevationDecoderLike;
 
   constructor(decoder: ElevationDecoder) {
@@ -15,9 +13,7 @@ export class TransferableRasterDEMDataLike
   }
 }
 
-export class ElevationDecoderLike
-  implements RemoveFreeRecursively<ElevationDecoder>
-{
+export class ElevationDecoderLike implements RemoveFreeRecursively<ElevationDecoder> {
   b_scaler: number;
   boundary: number;
   epsilon: number;

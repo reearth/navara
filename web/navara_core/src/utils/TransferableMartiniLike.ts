@@ -2,9 +2,7 @@ import type { TransferableMartini } from "@navara/engine";
 
 import type { RemoveFreeRecursively } from "../types";
 
-export class TransferableMartiniLike
-  implements RemoveFreeRecursively<TransferableMartini>
-{
+export class TransferableMartiniLike implements RemoveFreeRecursively<TransferableMartini> {
   coords: Uint32Array;
   size: number;
 
