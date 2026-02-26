@@ -207,11 +207,9 @@ pub fn update_polygon(
             material.update(&updated.material);
             render_info.should_recalculate_height = should_recalculate_height;
 
-            if should_recalculate_height {
-                if let Some(extent) = extent {
-                    let aabb = Aabb::from_extent_f64(*extent, 0., 0.);
-                    *bounding_sphere = Some(get_bounding_sphere(&aabb));
-                }
+            if should_recalculate_height && let Some(extent) = extent {
+                let aabb = Aabb::from_extent_f64(*extent, 0., 0.);
+                *bounding_sphere = Some(get_bounding_sphere(&aabb));
             }
         }
         commands.entity(e).remove::<UpdatePolygon>();

@@ -205,29 +205,29 @@ impl GestureCandidates {
         let mut max_magnitude: Option<f64> = None;
         let mut dominant = None;
 
-        if let Some(mag) = rotate_magnitude {
-            if max_magnitude.map(|m| mag > m).unwrap_or(true) {
-                max_magnitude = Some(mag);
-                dominant = Some(TouchGesture::Rotate);
-            }
+        if let Some(mag) = rotate_magnitude
+            && max_magnitude.map(|m| mag > m).unwrap_or(true)
+        {
+            max_magnitude = Some(mag);
+            dominant = Some(TouchGesture::Rotate);
         }
 
-        if let Some(mag) = spread_pinch_magnitude {
-            if max_magnitude.map(|m| mag > m).unwrap_or(true) {
-                max_magnitude = Some(mag);
-                // Positive delta means prev_distance > current_distance (fingers moving together)
-                dominant = if self.spread_pinch.unwrap_or(0.0) > 0.0 {
-                    Some(TouchGesture::Pinch)
-                } else {
-                    Some(TouchGesture::Spread)
-                };
-            }
+        if let Some(mag) = spread_pinch_magnitude
+            && max_magnitude.map(|m| mag > m).unwrap_or(true)
+        {
+            max_magnitude = Some(mag);
+            // Positive delta means prev_distance > current_distance (fingers moving together)
+            dominant = if self.spread_pinch.unwrap_or(0.0) > 0.0 {
+                Some(TouchGesture::Pinch)
+            } else {
+                Some(TouchGesture::Spread)
+            };
         }
 
-        if let Some(mag) = double_swipe_magnitude {
-            if max_magnitude.map(|m| mag > m).unwrap_or(true) {
-                dominant = Some(TouchGesture::DoubleSwipe);
-            }
+        if let Some(mag) = double_swipe_magnitude
+            && max_magnitude.map(|m| mag > m).unwrap_or(true)
+        {
+            dominant = Some(TouchGesture::DoubleSwipe);
         }
 
         dominant

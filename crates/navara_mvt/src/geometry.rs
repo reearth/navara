@@ -265,10 +265,10 @@ pub fn construct_geometry(
 
     for layer in tile.layers {
         // Check layer filter
-        if let Some(ll) = limit_layers {
-            if !ll.contains(&layer.name) {
-                continue;
-            }
+        if let Some(ll) = limit_layers
+            && !ll.contains(&layer.name)
+        {
+            continue;
         }
 
         if let Some(entity) = process_layer(

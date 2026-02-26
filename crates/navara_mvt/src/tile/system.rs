@@ -422,10 +422,10 @@ pub fn clear_caches(
     // we may have skipped some sources above due to !is_updated_in_this_frame
     let mut reset_sources = std::collections::HashSet::new();
     for (_, resources) in &layers {
-        if reset_sources.insert(resources.source) {
-            if let Ok(mut tc) = tcs.get_mut(resources.tile_cache_manager) {
-                tc.is_updated_in_this_frame = false;
-            }
+        if reset_sources.insert(resources.source)
+            && let Ok(mut tc) = tcs.get_mut(resources.tile_cache_manager)
+        {
+            tc.is_updated_in_this_frame = false;
         }
     }
 }

@@ -27,10 +27,10 @@ pub(crate) fn request_tile_content(
     priority: Priority,
 ) -> bool {
     let data_requester_entity_id = tile.data_requester_id;
-    if let Some(id) = data_requester_entity_id {
-        if requesters.contains(id) {
-            return false;
-        }
+    if let Some(id) = data_requester_entity_id
+        && requesters.contains(id)
+    {
+        return false;
     }
     let (content_url, extension) = match tile.make_content_url(base_url) {
         Ok(url) => url,

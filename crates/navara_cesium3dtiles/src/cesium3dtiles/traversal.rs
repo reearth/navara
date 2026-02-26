@@ -288,11 +288,10 @@ fn mark_leaves(
         .map(|id| Cesium3dTilesJsonTileSetStateMapKey::new(layer_id, id))
     {
         // Check the child tree state.
-        let is_loaded = sync_json_tilesets
-            .get_tileset_state(&key)
-            .is_some_and(|state| state.has_rendered_tiles && !state.should_remove);
 
-        is_loaded
+        sync_json_tilesets
+            .get_tileset_state(&key)
+            .is_some_and(|state| state.has_rendered_tiles && !state.should_remove)
     } else {
         false
     };
@@ -488,34 +487,33 @@ fn mark_rendered_tiles(
         }
     } else if touched && (leaf || state.should_preload) {
         // Handle JSON child tiles
-        if let Some(uri) = &tile.uri.as_ref() {
-            if tile
+        if let Some(uri) = &tile.uri.as_ref()
+            && tile
                 .data_requester_id
                 .and_then(|id| requesters.get(id).ok())
                 .is_none()
-            {
-                // spawn a data requester to load the child tileset json.
-                let url = construct_child_tile_url(base_url, uri.as_str())
-                    .as_str()
-                    .to_string();
+        {
+            // spawn a data requester to load the child tileset json.
+            let url = construct_child_tile_url(base_url, uri.as_str())
+                .as_str()
+                .to_string();
 
-                let e = commands
-                    .spawn((
-                        Cesium3dTilesMetadataDataRequesterMarker(layer_id),
-                        Cesium3dTileContentDataRequesterMarker,
-                        priority,
-                        Cesium3dTilesTreeOrder {
-                            index: next_tree_order,
-                            distance: TileOrderByDistance {
-                                distance_from_camera: tile.state.distance_from_camera,
-                                sse: tile.state.sse,
-                            },
+            let e = commands
+                .spawn((
+                    Cesium3dTilesMetadataDataRequesterMarker(layer_id),
+                    Cesium3dTileContentDataRequesterMarker,
+                    priority,
+                    Cesium3dTilesTreeOrder {
+                        index: next_tree_order,
+                        distance: TileOrderByDistance {
+                            distance_from_camera: tile.state.distance_from_camera,
+                            sse: tile.state.sse,
                         },
-                        DataRequester::from_store(url, buf, DataRequesterExtension::Json),
-                    ))
-                    .id();
-                tile.data_requester_id = Some(e);
-            }
+                    },
+                    DataRequester::from_store(url, buf, DataRequesterExtension::Json),
+                ))
+                .id();
+            tile.data_requester_id = Some(e);
         }
     }
 
@@ -582,16 +580,15 @@ fn remove_resources_if_no_rendered_tile(
         .rendered_tile_id
         .and_then(|id| rendered_tiles.get(id).ok())
         .is_none()
+        && let Some(data_requester_id) = tile.data_requester_id.take()
     {
-        if let Some(data_requester_id) = tile.data_requester_id.take() {
-            let _ = commands
-                .get_entity(data_requester_id)
-                .as_mut()
-                .map(|e| e.insert(Deleted));
-            if !tile.is_renderable_content {
-                let key = Cesium3dTilesJsonTileSetStateMapKey::new(layer_id, data_requester_id);
-                sync_json_tilesets.mark_for_removal(key);
-            }
+        let _ = commands
+            .get_entity(data_requester_id)
+            .as_mut()
+            .map(|e| e.insert(Deleted));
+        if !tile.is_renderable_content {
+            let key = Cesium3dTilesJsonTileSetStateMapKey::new(layer_id, data_requester_id);
+            sync_json_tilesets.mark_for_removal(key);
         }
     }
 }

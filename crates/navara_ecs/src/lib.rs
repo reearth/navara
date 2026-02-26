@@ -282,28 +282,28 @@ impl App {
 
     pub fn get_layer_type(&self, layer_id: &String) -> Option<&str> {
         let mut layer_type = None;
-        if let Some(layer_desc_store) = self.app.world().get_resource::<LayerDescStore>() {
-            if let Some(desc) = layer_desc_store.map.get(layer_id) {
-                layer_type = match desc {
-                    LayerDescription::Tiles(_) => Some("tiles"),
-                    LayerDescription::Terrain(_) => Some("terrain"),
-                    LayerDescription::GeoJson(_) => Some("geojson"),
-                    LayerDescription::B3dm(_) => Some("b3dm"),
-                    LayerDescription::Pnts(_) => Some("pnts"),
-                    LayerDescription::Mvt(_) => Some("mvt"),
-                    LayerDescription::Cesium3dTiles(_) => Some("cesium3dtiles"),
-                };
-            }
+        if let Some(layer_desc_store) = self.app.world().get_resource::<LayerDescStore>()
+            && let Some(desc) = layer_desc_store.map.get(layer_id)
+        {
+            layer_type = match desc {
+                LayerDescription::Tiles(_) => Some("tiles"),
+                LayerDescription::Terrain(_) => Some("terrain"),
+                LayerDescription::GeoJson(_) => Some("geojson"),
+                LayerDescription::B3dm(_) => Some("b3dm"),
+                LayerDescription::Pnts(_) => Some("pnts"),
+                LayerDescription::Mvt(_) => Some("mvt"),
+                LayerDescription::Cesium3dTiles(_) => Some("cesium3dtiles"),
+            };
         }
 
         layer_type
     }
 
     pub fn get_layer_description(&self, layer_id: &str) -> Option<LayerDescription> {
-        if let Some(layer_desc_store) = self.app.world().get_resource::<LayerDescStore>() {
-            if let Some(desc) = layer_desc_store.map.get(layer_id) {
-                return Some(desc.clone());
-            }
+        if let Some(layer_desc_store) = self.app.world().get_resource::<LayerDescStore>()
+            && let Some(desc) = layer_desc_store.map.get(layer_id)
+        {
+            return Some(desc.clone());
         }
 
         None
@@ -927,7 +927,7 @@ impl App {
         let _ = world.get_resource::<RasterTileQuadtree>()?;
         let _ = world.get_resource::<BufferStore>()?;
 
-        let result = world.resource_scope(|world, mut qt: Mut<RasterTileQuadtree>| {
+        world.resource_scope(|world, mut qt: Mut<RasterTileQuadtree>| {
             world.resource_scope(|world, mut buf: Mut<BufferStore>| {
                 let mut state: SystemState<TileTerrainDataRequesterQuery> = SystemState::new(world);
                 let query = state.get(world);
@@ -939,9 +939,7 @@ impl App {
                     &LngLat::new(lle.lat.val(), lle.lng.val()),
                 )
             })
-        });
-
-        result
+        })
     }
 
     pub fn add_terrain_height_observer(&mut self, lle: LLE<FloatType, Radians>) -> u64 {
