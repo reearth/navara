@@ -179,8 +179,8 @@ export abstract class MeshLayerDeclaration<
     | Object3D
     | { raw: Object3D },
   CustomEvent extends BaseEventMap = BaseEventMap,
-  Instance extends
-    MeshBaseInstance<InstanceObj> = MeshBaseInstance<InstanceObj>,
+  Instance extends MeshBaseInstance<InstanceObj> =
+    MeshBaseInstance<InstanceObj>,
 > extends LayerDeclaration<Config, UpdateConfig, Instance, CustomEvent> {
   public position?: XYZ;
   public scale?: XYZ;

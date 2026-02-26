@@ -229,7 +229,7 @@ export class SpherePoints extends Points {
           float Pz = vCenterView.z + zLocal * Rv;
 
           // write depth
-          #ifdef USE_LOGDEPTHBUF
+          #if defined(USE_LOGDEPTHBUF) || defined(USE_LOGARITHMIC_DEPTH_BUFFER)
             if (vIsPerspective == 0.0) {
               gl_FragDepth = gl_FragCoord.z;
             } else {

@@ -11,9 +11,8 @@ import {
 } from "react";
 
 type ViewContextValues<
-  CustomLayerDescriptions extends
-    | Record<string, unknown>
-    | undefined = undefined,
+  CustomLayerDescriptions extends Record<string, unknown> | undefined =
+    undefined,
 > = {
   view?: ThreeView<CustomLayerDescriptions>;
 };
@@ -22,9 +21,8 @@ const ViewContext = createContext<ViewContextValues | undefined>(undefined);
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const useViewContext = <
-  CustomLayerDescriptions extends
-    | Record<string, unknown>
-    | undefined = undefined,
+  CustomLayerDescriptions extends Record<string, unknown> | undefined =
+    undefined,
 >() => {
   const ctx = useContext(ViewContext);
   if (!ctx) {
