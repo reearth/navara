@@ -1,8 +1,8 @@
 use navara_core::EncodedVec3;
 
 use crate::{
-    helpers::vec::{append_flatten_vec3_with_index, unpack_flatten_vec3},
     FloatAttribute, UintAttribute,
+    helpers::vec::{append_flatten_vec3_with_index, unpack_flatten_vec3},
 };
 
 use super::{

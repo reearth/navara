@@ -4,8 +4,8 @@ use navara_feature_component::polyline::{
 };
 use navara_geometry::PolylineGeometryAttributes;
 use navara_wasm_types::{
-    polyline::{ConstructedPolylineGeometry, PolylineGeometry, TransferablePolylineBatchedFeature},
     PolylineMaterial,
+    polyline::{ConstructedPolylineGeometry, PolylineGeometry, TransferablePolylineBatchedFeature},
 };
 use wasm_bindgen::prelude::wasm_bindgen;
 
@@ -111,37 +111,37 @@ fn construct_polyline(
             .data
             .append(&mut batch_indices);
 
-        if let (Some(ref mut combined), Some(ref mut geo)) = (
+        if let (Some(combined), Some(geo)) = (
             &mut combined_attributes.position_high,
             &mut constructed_geometry.attributes.position_high,
         ) {
             combined.data.append(&mut geo.data);
         }
-        if let (Some(ref mut combined), Some(ref mut geo)) = (
+        if let (Some(combined), Some(geo)) = (
             &mut combined_attributes.position_low,
             &mut constructed_geometry.attributes.position_low,
         ) {
             combined.data.append(&mut geo.data);
         }
-        if let (Some(ref mut combined), Some(ref mut geo)) = (
+        if let (Some(combined), Some(geo)) = (
             &mut combined_attributes.start_high,
             &mut constructed_geometry.attributes.start_high,
         ) {
             combined.data.append(&mut geo.data);
         }
-        if let (Some(ref mut combined), Some(ref mut geo)) = (
+        if let (Some(combined), Some(geo)) = (
             &mut combined_attributes.start_low,
             &mut constructed_geometry.attributes.start_low,
         ) {
             combined.data.append(&mut geo.data);
         }
-        if let (Some(ref mut combined), Some(ref mut geo)) = (
+        if let (Some(combined), Some(geo)) = (
             &mut combined_attributes.end_high,
             &mut constructed_geometry.attributes.end_high,
         ) {
             combined.data.append(&mut geo.data);
         }
-        if let (Some(ref mut combined), Some(ref mut geo)) = (
+        if let (Some(combined), Some(geo)) = (
             &mut combined_attributes.end_low,
             &mut constructed_geometry.attributes.end_low,
         ) {

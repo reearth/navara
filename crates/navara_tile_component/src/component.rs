@@ -1,5 +1,5 @@
 use bevy_ecs::component::Component;
-use navara_core::{Extent, Radians, LLE};
+use navara_core::{Extent, LLE, Radians};
 use navara_math::FloatType;
 
 use crate::TileHandle;

@@ -1,4 +1,4 @@
-use crate::{tile_triangles, ReturnedConstructedTerrainMesh};
+use crate::{ReturnedConstructedTerrainMesh, tile_triangles};
 use navara_core::{Aabb, ElevationDecoder, Ellipsoid, Extent, Radians};
 use navara_math::FloatType;
 

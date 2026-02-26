@@ -2,13 +2,13 @@ use std::hash::Hash;
 
 use approx::AbsDiffEq;
 pub use bevy_math::{
-    swizzles::*, DMat2 as RawDMat2, DMat3 as RawDMat3, DMat4 as RawDMat4, DQuat as RawDQuat,
-    DVec2 as RawDVec2, DVec3 as RawDVec3, DVec4 as RawDVec4, Dir2 as RawDir2, Dir3A as RawDir3,
+    DMat2 as RawDMat2, DMat3 as RawDMat3, DMat4 as RawDMat4, DQuat as RawDQuat, DVec2 as RawDVec2,
+    DVec3 as RawDVec3, DVec4 as RawDVec4, Dir2 as RawDir2, Dir3A as RawDir3,
     EulerRot as RawEulerRot, Mat2 as RawMat2, Mat3 as RawMat3, Mat4 as RawMat4, Quat as RawQuat,
-    Vec2 as RawVec2, Vec3 as RawVec3, Vec4 as RawVec4,
+    Vec2 as RawVec2, Vec3 as RawVec3, Vec4 as RawVec4, swizzles::*,
 };
 
-use crate::{FloatType, EPSILON10};
+use crate::{EPSILON10, FloatType};
 
 pub type Vec4 = RawDVec4;
 pub type Vec3 = RawDVec3;

@@ -2,13 +2,14 @@ use std::sync::Arc;
 
 use bevy_ecs::{component::Component, entity::Entity, system::Commands};
 use geo_types::{Geometry, LineString, MultiLineString, MultiPoint, MultiPolygon, Point, Polygon};
-use geozero::mvt::{tile, Message, Tile as MvtTile};
 use geozero::ToGeo;
+use geozero::mvt::{Message, Tile as MvtTile, tile};
 use navara_buffer_store::BufferStore;
 use navara_component::OrderByDistance;
+use navara_core::{CRS, TileXYZ};
 use navara_core::{Extent, Radians};
-use navara_core::{TileXYZ, CRS};
 use navara_feature_component::{
+    BatchedFeatureMarker,
     batch::{BatchIndex, BatchTable, BatchedFeature, FeatureBatchId, GlobalBatchIds, MvtLayerData},
     billboard::{BillboardGeometry, BillboardMarker},
     id::FeatureId,
@@ -16,7 +17,6 @@ use navara_feature_component::{
     polygon::{PolygonGeometry, PolygonMarker},
     polyline::{PolylineGeometry, PolylineMarker},
     text::{TextGeometry, TextMarker},
-    BatchedFeatureMarker,
 };
 use navara_geometry::{Hierarchy, WindingOrder};
 use navara_layer::LayerId;

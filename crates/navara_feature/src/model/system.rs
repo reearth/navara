@@ -7,10 +7,10 @@ use navara_buffer_store::BufferStore;
 use navara_component::Deleted;
 use navara_core::{Aabb, WGS84_64};
 use navara_feature_component::{
+    DeletedFeatureMarker,
     batch::{BatchTable, FeatureBatchId, FeatureBatchIdMap, GlobalBatchIds},
     id::FeatureId,
     render::{ModelRenderInformation, RenderableFeature, TransferableModelGeometry},
-    DeletedFeatureMarker,
 };
 use navara_layer::{LayerId, LayerStore};
 use navara_material::ModelMaterial;

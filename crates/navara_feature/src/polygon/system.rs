@@ -15,15 +15,15 @@ use navara_layer::{LayerId, LayerStore};
 use navara_material::{PolygonInternalMaterial, PolygonMaterial};
 use navara_math::{FloatType, Transform, Vec3};
 use navara_tile_component::{
-    sample_terrain_height_within_extent, OverscaledTileHandle, RasterTileQuadtree, TileExtent,
-    TileMeshMarker,
+    OverscaledTileHandle, RasterTileQuadtree, TileExtent, TileMeshMarker,
+    sample_terrain_height_within_extent,
 };
 
 use navara_feature_component::{
+    BatchedFeatureMarker,
     batch::BatchedFeature,
     id::FeatureId,
     render::{PolygonRenderInformation, RenderableFeature},
-    BatchedFeatureMarker,
 };
 use navara_worker::construct_polygon_batched_feature::{
     ConstructPolygonBatchedFeatureMarker, ConstructPolygonBatchedFeatureParameters,

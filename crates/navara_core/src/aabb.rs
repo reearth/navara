@@ -1,4 +1,4 @@
-use crate::{Angle, Extent, Meters, Radians, LLE, WGS84_64};
+use crate::{Angle, Extent, LLE, Meters, Radians, WGS84_64};
 use bevy_ecs::component::Component;
 use navara_math::{FloatType, Vec3};
 
@@ -240,9 +240,9 @@ impl Aabb {
 #[cfg(test)]
 mod test {
     use approx::assert_abs_diff_eq;
-    use navara_math::{Vec3, EPSILON7};
+    use navara_math::{EPSILON7, Vec3};
 
-    use crate::{Angle, Extent, Meters, LLE, WGS84_64};
+    use crate::{Angle, Extent, LLE, Meters, WGS84_64};
 
     use super::{Aabb, Plane};
 

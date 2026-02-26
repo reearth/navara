@@ -20,10 +20,10 @@ use navara_tile_component::{
 use navara_window::Window;
 
 use crate::{
-    component::MVTFeatureMarker,
-    data_requester::{request_mvt_data, MvtDataRequesterQuery},
-    layer::tile_cache_manager::TileCacheManager,
     SourceId,
+    component::MVTFeatureMarker,
+    data_requester::{MvtDataRequesterQuery, request_mvt_data},
+    layer::tile_cache_manager::TileCacheManager,
 };
 
 use super::render::RenderedTile;

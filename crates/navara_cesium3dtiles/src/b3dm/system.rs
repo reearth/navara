@@ -51,7 +51,7 @@ use navara_layer::{
     UpdateB3dmLayerMarker,
 };
 use navara_material::{Appearance, ModelMaterial};
-use navara_math::{Quat, Transform, Vec3, PI_OVER_TWO};
+use navara_math::{PI_OVER_TWO, Quat, Transform, Vec3};
 use navara_parser::b3dm::BatchTable as B3dmBatchTable;
 use navara_parser::{b3dm::B3dm, glb::BinaryReader};
 
@@ -60,8 +60,8 @@ use crate::{
 };
 
 use super::{
-    requester::{B3dmDataRequesterMarker, B3dmLayerDataRequesterMarker},
     RenderedCesium3dTileContentB3dmMarker,
+    requester::{B3dmDataRequesterMarker, B3dmLayerDataRequesterMarker},
 };
 
 /// Spawns data requesters for standalone B3DM layers (not part of 3D Tiles).

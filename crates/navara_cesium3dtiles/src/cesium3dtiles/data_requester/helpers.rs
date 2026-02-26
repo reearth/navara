@@ -6,9 +6,9 @@ use navara_data_requester::{DataRequester, DataRequesterExtension};
 use url::Url;
 
 use crate::{
-    b3dm::B3dmDataRequesterMarker, cesium3dtiles::types::Cesium3dTileContentRequesterQuery,
-    glb::GlbDataRequesterMarker, pnts::PntsDataRequesterMarker, Cesium3dTileContent,
-    TileOrderByDistance,
+    Cesium3dTileContent, TileOrderByDistance, b3dm::B3dmDataRequesterMarker,
+    cesium3dtiles::types::Cesium3dTileContentRequesterQuery, glb::GlbDataRequesterMarker,
+    pnts::PntsDataRequesterMarker,
 };
 
 #[derive(Component)]

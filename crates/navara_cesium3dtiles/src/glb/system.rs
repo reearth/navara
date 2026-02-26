@@ -39,13 +39,13 @@ use navara_feature_component::{
 };
 use navara_layer::{Cesium3dTilesLayer, LayerId};
 use navara_material::{Appearance, ModelMaterial};
-use navara_math::{Quat, Transform, Vec3, PI_OVER_TWO};
+use navara_math::{PI_OVER_TWO, Quat, Transform, Vec3};
 
 use crate::{
     Cesium3dTileContentDataRequesterMarker, RenderedCesium3dTileContent, TileOrderByDistance,
 };
 
-use super::{requester::GlbDataRequesterMarker, RenderedCesium3dTileContentGlbMarker};
+use super::{RenderedCesium3dTileContentGlbMarker, requester::GlbDataRequesterMarker};
 
 /// Constructs model entities from GLB tile data.
 ///

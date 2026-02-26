@@ -1,7 +1,7 @@
-use navara_core::{Extent, Radians, CRS, WGS84_64};
+use navara_core::{CRS, Extent, Radians, WGS84_64};
 use navara_geometry::{
-    create_flat_polyline_geometry, create_polyline_geometry, FlatPolylineGeometryOptions,
-    PolylineGeometryOptions,
+    FlatPolylineGeometryOptions, PolylineGeometryOptions, create_flat_polyline_geometry,
+    create_polyline_geometry,
 };
 use navara_material::PolylineMaterial;
 use navara_math::Vec3;

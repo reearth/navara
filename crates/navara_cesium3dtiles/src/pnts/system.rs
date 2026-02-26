@@ -60,8 +60,8 @@ use crate::{
 };
 
 use super::{
-    requester::{PntsDataRequesterMarker, PntsLayerDataRequesterMarker},
     RenderedCesium3dTileContentPntsMarker,
+    requester::{PntsDataRequesterMarker, PntsLayerDataRequesterMarker},
 };
 
 pub fn request_model_by_pnts_layer(

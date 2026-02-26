@@ -4,7 +4,7 @@
 //! system, particularly for coordinating between parent and child tilesets.
 
 use bevy_ecs::{entity::Entity, resource::Resource};
-use std::collections::{hash_map, HashMap};
+use std::collections::{HashMap, hash_map};
 
 /// Key for identifying a nested tileset's state.
 ///

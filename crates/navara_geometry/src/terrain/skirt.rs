@@ -2,8 +2,8 @@ use std::collections::HashMap;
 
 use crate::Geometry;
 use navara_core::{
-    get_ellipsoid_terrain_level_zero_maximum_geometric_error, get_level_maximum_geometric_error,
-    Ellipsoid, Meters, XYZ,
+    Ellipsoid, Meters, XYZ, get_ellipsoid_terrain_level_zero_maximum_geometric_error,
+    get_level_maximum_geometric_error,
 };
 use navara_math::FloatType;
 

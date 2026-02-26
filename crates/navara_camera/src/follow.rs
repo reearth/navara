@@ -1,14 +1,14 @@
 use bevy_ecs::{message::MessageReader, system::Res};
 use bevy_input::{
-    mouse::{MouseButton, MouseMotion, MouseWheel},
     ButtonInput,
+    mouse::{MouseButton, MouseMotion, MouseWheel},
 };
-use navara_core::{east_north_up_to_fixed_frame, CRS, WGS84_64};
-use navara_math::{Quat, Transform, Vec2, Vec3, EPSILON3};
+use navara_core::{CRS, WGS84_64, east_north_up_to_fixed_frame};
+use navara_math::{EPSILON3, Quat, Transform, Vec2, Vec3};
 
 use crate::{
-    system::{apply_look_at, commit},
     CameraController, Orbit,
+    system::{apply_look_at, commit},
 };
 
 pub(crate) fn handle_follow(

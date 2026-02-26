@@ -5,7 +5,7 @@ use bevy_ecs::{
     system::ResMut,
 };
 
-use bevy_input::{mouse::MouseMotion, ButtonState};
+use bevy_input::{ButtonState, mouse::MouseMotion};
 use navara_math::RawVec2;
 
 pub type MouseButton = bevy_input::mouse::MouseButton;

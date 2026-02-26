@@ -1369,7 +1369,7 @@ impl<'a> From<&'a navara_material::RasterTileInternalMaterial> for RasterTileInt
                     .map(|t| {
                         t.map(|t| TextureFragment {
                             ind: t.index().index(),
-                            gen: t.generation().to_bits(),
+                            r#gen: t.generation().to_bits(),
                         })
                     })
                     .collect()

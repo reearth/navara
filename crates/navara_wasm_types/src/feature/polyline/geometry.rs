@@ -1,6 +1,6 @@
 use wasm_bindgen::prelude::*;
 
-use crate::{copy_u32_array, ExtentRadianF32, FloatAttribute, UintAttribute};
+use crate::{ExtentRadianF32, FloatAttribute, UintAttribute, copy_u32_array};
 
 #[wasm_bindgen]
 pub struct ConstructedPolylineGeometry {

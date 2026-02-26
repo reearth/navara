@@ -35,9 +35,9 @@
 //!    - Feature batch ID mappings
 
 use crate::{
+    Cesium3dTilesJsonTileSetStateMap, Cesium3dTilesTreeOrder, RenderedCesium3dTileContent,
     b3dm::RenderedCesium3dTileContentB3dmMarker, cesium3dtiles::traversal::select_tiles,
     glb::RenderedCesium3dTileContentGlbMarker, pnts::RenderedCesium3dTileContentPntsMarker,
-    Cesium3dTilesJsonTileSetStateMap, Cesium3dTilesTreeOrder, RenderedCesium3dTileContent,
 };
 use bevy_ecs::{
     change_detection::DetectChanges,
@@ -67,9 +67,9 @@ use navara_parser::cesium3dtiles;
 use navara_window::Window;
 
 use super::{
+    Cesium3dTilesMetadata, Cesium3dTilesMetadataDataRequesterMarker, Cesium3dTilesTree,
     traversal::mark_rendered_tiles_invisible,
     types::{Cesium3dTileContentRequesterQuery, ChangedCesium3dTileContentRequesterQuery},
-    Cesium3dTilesMetadata, Cesium3dTilesMetadataDataRequesterMarker, Cesium3dTilesTree,
 };
 
 /// Spawns a data requester to fetch the root tileset.json for newly added Cesium 3D Tiles layers.

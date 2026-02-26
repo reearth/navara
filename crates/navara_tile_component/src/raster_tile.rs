@@ -2,19 +2,19 @@ use bevy_ecs::prelude::*;
 use navara_buffer_store::BufferStore;
 use navara_component::Deleted;
 use navara_core::{
-    get_ellipsoid_terrain_level_zero_maximum_geometric_error, get_level_maximum_geometric_error,
     Aabb, Ellipsoid, Extent, LngLat, Radians, TileRegion, TileXYZ, WGS84_64,
+    get_ellipsoid_terrain_level_zero_maximum_geometric_error, get_level_maximum_geometric_error,
 };
 use navara_data_requester::{DataRequester, DataRequesterStatus};
 use navara_geometry::{ReturnedConstructedTerrainMesh, UpsamplableTerrainGeometry};
 use navara_math::Vec3;
 
 use navara_mesh::CachedMeshHandle;
-use navara_quadtree::{children_coords, Coords};
+use navara_quadtree::{Coords, children_coords};
 
 use crate::{
-    raster_tile_texture_fragment::TileTextureFragmentQuery, terrain::TerrainData,
-    terrain_data_requester::TileTerrainDataRequesterQuery, RasterTileQuadtree, Tile, TileHandle,
+    RasterTileQuadtree, Tile, TileHandle, raster_tile_texture_fragment::TileTextureFragmentQuery,
+    terrain::TerrainData, terrain_data_requester::TileTerrainDataRequesterQuery,
 };
 
 use navara_layer::TerrainLayer;
@@ -573,7 +573,7 @@ mod test {
 
     use super::RasterTileQuadtree;
 
-    use super::{find_contained_child, RasterTile};
+    use super::{RasterTile, find_contained_child};
 
     fn setup_tile(qt: &mut RasterTileQuadtree, coords: Coords<usize>) {
         let children = qt.qt.initialize_children(coords, &|v| {
