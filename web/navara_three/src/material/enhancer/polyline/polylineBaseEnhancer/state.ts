@@ -15,6 +15,7 @@ export const DEFAULT_BASE_PROPS: Required<
 > = {
   color: 0xffffff,
   width: 1,
+  maxWidth: 1000,
   clampToGround: false,
   useGroundNormals: false,
   isTexturized: false,
@@ -36,6 +37,7 @@ export const DEFAULT_BASE_STATE: PolylineBaseState = {
   pickable: DEFAULT_BASE_PROPS.pickable,
   minMaxHeight: [0, 0],
   width: DEFAULT_BASE_PROPS.width,
+  maxWidth: DEFAULT_BASE_PROPS.maxWidth,
   color: DEFAULT_BASE_PROPS.color,
   batchColorEnabled: DEFAULT_BASE_PROPS.batchColorEnabled,
   useBatchTexture: DEFAULT_BASE_PROPS.useBatchTexture,
@@ -70,6 +72,7 @@ export const updateState = (
     pickable: props.pickable ?? currentState.pickable,
     minMaxHeight: props.minMaxHeight ?? currentState.minMaxHeight,
     width: props.width ?? currentState.width,
+    maxWidth: props.maxWidth ?? currentState.maxWidth,
     color: props.color ?? currentState.color,
     // Batch flags can only transition from false to true, never back
     batchColorEnabled:
