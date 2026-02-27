@@ -1,4 +1,5 @@
 import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../../helpers/attributions";
@@ -10,11 +11,18 @@ import {
 import { addDateControl } from "../../../helpers/control";
 
 const run = async () => {
-  const view = new ThreeView({ debug: true, shadow: true });
+  const view = new ThreeView({
+    debug: true,
+    shadow: true,
+  });
+
+  const defaultPlugin = new DefaultPlugin();
+  view.addPlugin(defaultPlugin);
+
   await view.init();
 
-  const atmospheres = view.addDefaultAtmosphereLayers();
-  atmospheres.sun.update({
+  const defaultAtmospheres = defaultPlugin.addDefaultPhotorealLayers();
+  defaultAtmospheres.sun.update({
     sun: { intensity: 2, castShadow: true, shadowIntensity: 0.9 },
   });
 

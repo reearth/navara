@@ -1,3 +1,4 @@
+import type { DefaultPlugin } from "@navara/three_default_plugin";
 import { useViewContext } from "@navara/three_react";
 import { useEffect, useState } from "react";
 
@@ -62,7 +63,11 @@ const LABELS = {
   },
 } satisfies LanguageDictionary;
 
-export const PhotorealisticScene = () => {
+export const PhotorealisticScene = ({
+  defaultPlugin,
+}: {
+  defaultPlugin: DefaultPlugin;
+}) => {
   const { translate } = useI18n(LABELS);
   // UI state
   const [sceneTime, setSceneTime] = useState<number[]>([8]);
@@ -202,6 +207,7 @@ export const PhotorealisticScene = () => {
   return (
     <>
       <Layers
+        defaultPlugin={defaultPlugin}
         buildingsVisible={buildingsVisible}
         buildingColorAttribute={buildingColorAttribute}
         cloudsEffectVisible={cloudsVisible}

@@ -124,6 +124,12 @@ importers:
       '@navara/three':
         specifier: workspace:*
         version: link:../../navara_three
+      '@navara/three_default_layers':
+        specifier: workspace:*
+        version: link:../../navara_three_default_layers
+      '@navara/three_default_plugin':
+        specifier: workspace:*
+        version: link:../../navara_three_default_plugin
       three:
         specifier: ^0.183.1
         version: 0.183.1
@@ -146,6 +152,9 @@ importers:
       '@navara/three':
         specifier: workspace:*
         version: link:../../navara_three
+      '@navara/three_default_plugin':
+        specifier: workspace:*
+        version: link:../../navara_three_default_plugin
       '@navara/three_react':
         specifier: workspace:*
         version: link:../../navara_three_react
@@ -218,6 +227,12 @@ importers:
         specifier: ^0.52.4
         version: 0.52.4(three@0.183.1)
     devDependencies:
+      '@navara/three_default_layers':
+        specifier: workspace:*
+        version: link:../navara_three_default_layers
+      '@navara/three_default_plugin':
+        specifier: workspace:*
+        version: link:../navara_three_default_plugin
       '@navara/three_react':
         specifier: workspace:*
         version: link:../navara_three_react
@@ -315,6 +330,46 @@ importers:
       three:
         specifier: ^0.183.1
         version: 0.183.1
+
+  web/navara_three_default_layers:
+    dependencies:
+      '@navara/core':
+        specifier: workspace:*
+        version: link:../navara_core
+      '@navara/three':
+        specifier: workspace:*
+        version: link:../navara_three
+      '@navara/three_api':
+        specifier: workspace:*
+        version: link:../navara_three_api
+      '@takram/three-atmosphere':
+        specifier: ^0.14.0
+        version: 0.14.0(@react-three/fiber@9.1.2(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(three@0.183.1))(postprocessing@6.38.3(three@0.183.1))(react@19.2.4)(three@0.183.1)
+      '@takram/three-geospatial':
+        specifier: ^0.6.0
+        version: 0.6.0(@react-three/fiber@9.1.2(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(three@0.183.1))(react@19.2.4)(three@0.183.1)
+    devDependencies:
+      '@types/three':
+        specifier: ^0.183.1
+        version: 0.183.1
+      three:
+        specifier: ^0.183.1
+        version: 0.183.1
+      vite-plugin-glsl:
+        specifier: ^1.5.1
+        version: 1.5.5(@rollup/pluginutils@5.2.0(rollup@4.44.0))(esbuild@0.27.3)(vite@7.3.1(@types/node@24.10.13)(jiti@1.21.7)(terser@5.43.1)(tsx@4.21.0))
+
+  web/navara_three_default_plugin:
+    dependencies:
+      '@navara/core':
+        specifier: workspace:*
+        version: link:../navara_core
+      '@navara/three':
+        specifier: workspace:*
+        version: link:../navara_three
+      '@navara/three_default_layers':
+        specifier: workspace:*
+        version: link:../navara_three_default_layers
 
   web/navara_three_react:
     dependencies:
@@ -10177,6 +10232,13 @@ snapshots:
     optionalDependencies:
       '@rollup/pluginutils': 5.2.0(rollup@4.44.0)
       esbuild: 0.25.5
+
+  vite-plugin-glsl@1.5.5(@rollup/pluginutils@5.2.0(rollup@4.44.0))(esbuild@0.27.3)(vite@7.3.1(@types/node@24.10.13)(jiti@1.21.7)(terser@5.43.1)(tsx@4.21.0)):
+    dependencies:
+      vite: 7.3.1(@types/node@24.10.13)(jiti@1.21.7)(terser@5.43.1)(tsx@4.21.0)
+    optionalDependencies:
+      '@rollup/pluginutils': 5.2.0(rollup@4.44.0)
+      esbuild: 0.27.3
 
   vite-plugin-static-copy@3.2.0(vite@7.3.1(@types/node@24.10.13)(jiti@1.21.7)(terser@5.43.1)(tsx@4.21.0)):
     dependencies:
