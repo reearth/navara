@@ -1,20 +1,25 @@
+import { Mesh } from "three";
+
 import {
-  MeshLayerDeclaration,
-  type MeshLayerConfig,
+  MeshLayerDeclarationForSelectiveEffect,
+  type MeshLayerConfigWithSelectiveEffect,
+  type MeshLayerUpdateWithSelectiveEffect,
   ViewContext,
-  type MeshLayerUpdate,
 } from "../../core";
+import { injectSelectiveEffectHandlers } from "../../core/SelectiveEffectMaskContext";
 import { DefaultArcLineConfig, ArcLine, type ArcLineConfig } from "../../mesh";
 
 type LayerDescription = {
   arcLines?: Partial<ArcLineConfig> | Partial<ArcLineConfig>[];
 };
 
-export type ArclineMeshLayerConfig = MeshLayerConfig & LayerDescription;
+export type ArclineMeshLayerConfig = MeshLayerConfigWithSelectiveEffect &
+  LayerDescription;
 
-export type ArclineMeshLayerUpdate = MeshLayerUpdate & LayerDescription;
+export type ArclineMeshLayerUpdate = MeshLayerUpdateWithSelectiveEffect &
+  LayerDescription;
 
-export class ArclineMeshLayer extends MeshLayerDeclaration<
+export class ArclineMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
   ArclineMeshLayerConfig,
   ArclineMeshLayerUpdate,
   ArcLine
@@ -28,6 +33,20 @@ export class ArclineMeshLayer extends MeshLayerDeclaration<
 
   protected getPassKey() {
     return "mrt" as const;
+  }
+
+  /**
+   * Override onCreate to inject selective effect handlers on sub-meshes.
+   * ArcLine is an Object3D containing Mesh children — onBeforeRender is only
+   * called on Mesh instances, so the base class's setupMeshOnBeforeRender
+   * (which targets the top-level Object3D) is insufficient.
+   */
+  override onCreate() {
+    super.onCreate();
+
+    if (this._instance && this.config.effectIds?.length) {
+      this.injectHandlersOnSubMeshes();
+    }
   }
 
   createMesh() {
@@ -68,6 +87,12 @@ export class ArclineMeshLayer extends MeshLayerDeclaration<
         ? updates.arcLines
         : [updates.arcLines];
       this._instance.updateConfig(updateConfigs);
+
+      // Re-inject handlers on sub-meshes (updateConfig may rebuild them)
+      if (this.config.effectIds?.length) {
+        this.injectHandlersOnSubMeshes();
+      }
+
       this.emit("_needsUpdate");
     }
 
@@ -83,5 +108,23 @@ export class ArclineMeshLayer extends MeshLayerDeclaration<
       this._instance.dispose();
       this._instance = undefined;
     }
+  }
+
+  /**
+   * Inject selective effect handlers on each sub-mesh of the ArcLine.
+   * Uses a flag to prevent double-injection on sub-meshes that survived
+   * an updateConfig rebuild.
+   */
+  private injectHandlersOnSubMeshes(): void {
+    if (!this._instance) return;
+    this._instance.traverse((child) => {
+      if (child instanceof Mesh && !child.userData._selectiveEffectInjected) {
+        injectSelectiveEffectHandlers(child, {
+          registry: this.view.selectiveEffectRegistry,
+          layerId: this.id,
+        });
+        child.userData._selectiveEffectInjected = true;
+      }
+    });
   }
 }

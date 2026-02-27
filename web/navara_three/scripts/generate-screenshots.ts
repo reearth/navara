@@ -61,6 +61,12 @@ const PAGE_CONFIGS: Record<string, PageConfig> = {
   "use-cases-photorealistic": {
     waitTime: 50000,
   },
+  "selective-bloom-effect-arcline": {
+    waitTime: 10000,
+  },
+  "selective-outline-effect-arcline": {
+    waitTime: 10000,
+  },
 };
 
 class ScreenshotGenerator {
