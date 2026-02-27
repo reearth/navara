@@ -4,6 +4,8 @@ import type {
   TransferableTile,
 } from "@navara/engine";
 
+import type { RemoveFreeRecursively } from "../types";
+
 export class TransferableTileLike {
   cached_mesh_handle?: CachedMeshHandleLike | undefined;
   coords: TileXYZLike;
@@ -22,7 +24,7 @@ export class TransferableTileLike {
   free(): void {}
 }
 
-export class TileXYZLike implements TileXYZ {
+export class TileXYZLike implements RemoveFreeRecursively<TileXYZ> {
   x: number;
   y: number;
   z: number;
@@ -32,8 +34,6 @@ export class TileXYZLike implements TileXYZ {
     this.y = t.y;
     this.z = t.z;
   }
-
-  free(): void {}
 }
 
 export class CachedMeshHandleLike {

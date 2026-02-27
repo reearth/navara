@@ -13,7 +13,6 @@ use entity::ReconstructableEntity;
 use feature::{
     ReturnedTransferablePolygonBatchedFeature, ReturnedTransferablePolylineBatchedFeature,
 };
-use nanoid::nanoid;
 use navara_buffer_store::Handle;
 use navara_ecs::App;
 use navara_geometry::Hierarchy;
@@ -23,6 +22,7 @@ use navara_tile_component::TileHandle;
 use navara_wasm_utils::set_panic_hook;
 use polygon::TransferablePolygonBatchedFeature;
 use polyline::TransferablePolylineBatchedFeature;
+use rand::RngExt;
 use wasm_bindgen::prelude::*;
 
 pub use camera::*;
@@ -197,12 +197,11 @@ impl Core {
     pub fn add_layer(&mut self, layer: JsValue) -> String {
         let layer_id = generate_id();
         // TODO: Improve an undesirable cloning the layer.
-        if let Some(ld) = LayerDescription::from(layer.clone()) {
-            if let Some(layer_type) = ld.r#type {
-                if let Some(l) = LayerDescription::to(&layer_id, layer_type.as_str(), layer, None) {
-                    self.app.add_layer(layer_id.as_str(), l);
-                }
-            }
+        if let Some(ld) = LayerDescription::from(layer.clone())
+            && let Some(layer_type) = ld.r#type
+            && let Some(l) = LayerDescription::to(&layer_id, layer_type.as_str(), layer, None)
+        {
+            self.app.add_layer(layer_id.as_str(), l);
         }
 
         layer_id
@@ -671,7 +670,9 @@ impl Core {
 
 #[wasm_bindgen(js_name = generateId)]
 pub fn generate_id() -> String {
-    nanoid!()
+    let mut rng = rand::rng();
+    let id: u128 = rng.random();
+    format!("{:032x}", id)
 }
 
 #[wasm_bindgen(start)]

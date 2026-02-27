@@ -1,6 +1,6 @@
 use bevy_ecs::{
     entity::Entity,
-    event::EventReader,
+    message::MessageReader,
     query::{Added, Or, With, Without},
     system::{Commands, Query, ResMut},
 };
@@ -10,9 +10,9 @@ use navara_event_store::EventStore;
 use navara_feature_component::batch::BatchTable;
 
 use crate::{
-    component::WorkerTaskMarker, DelegatedWorkerTask, DelegatedWorkerTaskMarker,
-    DelegatedWorkerTasksResult, WorkerTaskCompleted, WorkerTaskCompletedEvent,
-    WorkerTaskDelegateeMarker,
+    DelegatedWorkerTask, DelegatedWorkerTaskMarker, DelegatedWorkerTasksResult,
+    WorkerTaskCompleted, WorkerTaskCompletedEvent, WorkerTaskDelegateeMarker,
+    component::WorkerTaskMarker,
 };
 
 pub fn commit(
@@ -31,7 +31,7 @@ pub fn commit(
 #[allow(clippy::type_complexity)]
 pub fn handle_completed_event(
     mut commands: Commands,
-    mut loaded_ev: EventReader<WorkerTaskCompletedEvent>,
+    mut loaded_ev: MessageReader<WorkerTaskCompletedEvent>,
     mut buf: ResMut<BufferStore>,
     mut batch_table: ResMut<BatchTable>,
     constructors: Query<

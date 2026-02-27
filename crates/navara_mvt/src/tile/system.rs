@@ -19,18 +19,18 @@ use navara_tile_component::{TerrainInformationQuadtree, VectorTile, VectorTileQu
 use navara_window::Window;
 
 use crate::{
+    MvtSourceResources,
     component::MVTFeatureMarker,
     data_requester::{ChangedMvtDataRequesterQuery, MvtDataRequesterQuery},
-    geometry::{construct_geometry_multi_layer, MatchedLayerInfo},
+    geometry::{MatchedLayerInfo, construct_geometry_multi_layer},
     layer::{resource::LayerResources, tile_cache_manager::TileCacheManager},
-    MvtSourceResources,
 };
 
 use super::{
     render::RenderedTile,
     traverse::{
-        activate_all_renderable_features, are_all_renderable_features_active,
-        prepare_tile_resource, spawn_tile_entity, traverse_tile, TraversalResult,
+        TraversalResult, activate_all_renderable_features, are_all_renderable_features_active,
+        prepare_tile_resource, spawn_tile_entity, traverse_tile,
     },
 };
 
@@ -422,10 +422,10 @@ pub fn clear_caches(
     // we may have skipped some sources above due to !is_updated_in_this_frame
     let mut reset_sources = std::collections::HashSet::new();
     for (_, resources) in &layers {
-        if reset_sources.insert(resources.source) {
-            if let Ok(mut tc) = tcs.get_mut(resources.tile_cache_manager) {
-                tc.is_updated_in_this_frame = false;
-            }
+        if reset_sources.insert(resources.source)
+            && let Ok(mut tc) = tcs.get_mut(resources.tile_cache_manager)
+        {
+            tc.is_updated_in_this_frame = false;
         }
     }
 }

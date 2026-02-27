@@ -2,11 +2,11 @@ use bevy_ecs::prelude::*;
 use navara_buffer_store::BufferStore;
 use navara_core::LngLat;
 use navara_event_store::EventStore;
-use navara_math::{EqualEpsilon, EPSILON3};
+use navara_math::{EPSILON3, EqualEpsilon};
 use navara_tile_component::RasterTileQuadtree;
 use navara_tile_component::{
-    compute_terrain_height_at_point, TerrainHeightObserver, TileMeshMarker,
-    TileTerrainDataRequesterQuery,
+    TerrainHeightObserver, TileMeshMarker, TileTerrainDataRequesterQuery,
+    compute_terrain_height_at_point,
 };
 
 pub fn update_height_observers(

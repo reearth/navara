@@ -21,7 +21,7 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v6
-            - uses: dtolnay/rust-toolchain@1.86.0
+            - uses: dtolnay/rust-toolchain@1.93.0
 
             - name: Install cargo-audit
               uses: taiki-e/install-action@v2
@@ -39,6 +39,6 @@ jobs:
             - uses: pnpm/action-setup@v4
               with:
                 run_install: false
-            - uses: actions/setup-node@v5
+            - uses: actions/setup-node@v6
             # --ignore-registry-errors: audit will fail only if the registry actually successfully responds with found vulnerabilities
             - run: pnpm audit --audit-level=high --ignore-registry-errors

@@ -1,11 +1,11 @@
 use std::collections::{HashMap, VecDeque};
 
 use navara_core::{Ellipsoid, EllipsoidTangentPlane};
-use navara_math::{chord_length, EqualEpsilon, FloatType, Vec2, Vec3, EPSILON10};
+use navara_math::{EPSILON10, EqualEpsilon, FloatType, Vec2, Vec3, chord_length};
 
 use crate::helpers::vec::{unique_with_delta_e, unpack_flatten_vec3};
 
-use super::{types::Polygon, HierarchyDVec3, PolygonResource, WindingOrder};
+use super::{HierarchyDVec3, PolygonResource, WindingOrder, types::Polygon};
 
 // Ref: https://github.com/CesiumGS/cesium/blob/6c2e520420b95bcb6c8eba0f02c76347cee1dd4b/packages/engine/Source/Core/PolygonGeometry.js#L1163
 pub fn project_to_2d(
@@ -416,7 +416,7 @@ fn subdivide_line(p0: Vec3, p1: Vec3, min_distance: f64) -> Vec<f64> {
 #[cfg(test)]
 mod test {
     use navara_core::WGS84_64;
-    use navara_math::{Vec3, RADIANS_PER_DEGREE};
+    use navara_math::{RADIANS_PER_DEGREE, Vec3};
 
     use crate::polygon::helpers::calculate_wall_indices;
 

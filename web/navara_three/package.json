@@ -22,8 +22,8 @@
     "test": "vitest --passWithNoTests --watch=false",
     "lint": "eslint . --fix",
     "lint:check": "eslint .",
-    "format": "prettier --write --ignore-path ../../.gitignore .",
-    "format:check": "prettier --check --ignore-path ../../.gitignore .",
+    "format": "prettier --write --ignore-path ../../.gitignore --ignore-path ../../.prettierignore .",
+    "format:check": "prettier --check --ignore-path ../../.gitignore --ignore-path ../../.prettierignore .",
     "screenshots": "tsx scripts/generate-screenshots.ts"
   },
   "license": "MIT OR Apache-2.0",

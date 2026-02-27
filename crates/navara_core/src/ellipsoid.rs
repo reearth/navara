@@ -1,6 +1,6 @@
 use navara_math::{FloatType, One, Vec3};
 
-use crate::{scale_to_geodetic_surface, Float, Meters, Rad, Radians, LLE, XYZ};
+use crate::{Float, LLE, Meters, Rad, Radians, XYZ, scale_to_geodetic_surface};
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Ellipsoid<F: Float> {

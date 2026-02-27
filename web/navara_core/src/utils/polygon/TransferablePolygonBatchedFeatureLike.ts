@@ -4,7 +4,9 @@ import type {
   TransferablePolygonBatchedFeature,
 } from "@navara/engine";
 
-export class TransferablePolygonBatchedFeatureLike implements TransferablePolygonBatchedFeature {
+import type { RemoveFreeRecursively } from "../../types";
+
+export class TransferablePolygonBatchedFeatureLike implements RemoveFreeRecursively<TransferablePolygonBatchedFeature> {
   batch_ids: Uint32Array;
   batch_indices: Uint32Array;
   crs: CRS;
@@ -68,6 +70,4 @@ export class TransferablePolygonBatchedFeatureLike implements TransferablePolygo
   transferHolesTotalSizes(): Uint32Array {
     throw new Error();
   }
-
-  free(): void {}
 }

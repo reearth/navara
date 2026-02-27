@@ -2,8 +2,8 @@ use std::collections::HashMap;
 
 use crate::Geometry;
 use navara_core::{
-    get_ellipsoid_terrain_level_zero_maximum_geometric_error, get_level_maximum_geometric_error,
-    Ellipsoid, Meters, XYZ,
+    Ellipsoid, Meters, XYZ, get_ellipsoid_terrain_level_zero_maximum_geometric_error,
+    get_level_maximum_geometric_error,
 };
 use navara_math::FloatType;
 
@@ -58,7 +58,7 @@ fn edge_key(a: u32, b: u32) -> u64 {
 ///
 /// `triangles` is [i0, i1, i2, i3, i4, i5, ...] (3 per triangle).
 pub fn compute_boundary_edges(triangles: &[u32]) -> Vec<Edge> {
-    assert!(triangles.len() % 3 == 0);
+    assert!(triangles.len().is_multiple_of(3));
 
     let mut map: HashMap<u64, EdgeInfo> = HashMap::new();
 

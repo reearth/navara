@@ -8,10 +8,10 @@ use navara_buffer_store::BufferStore;
 use navara_component::{Deleted, OrderByDistance};
 use navara_core::CRS;
 use navara_feature_component::{
+    BatchedFeatureMarker,
     batch::{BatchTable, BatchedFeature, FeatureBatchId, FeatureBatchIdMap, GlobalBatchIds},
     id::FeatureId,
     render::{PolylineRenderInformation, RenderableFeature},
-    BatchedFeatureMarker,
 };
 use navara_layer::{LayerId, LayerStore};
 use navara_material::{PolylineInternalMaterial, PolylineMaterial};
@@ -19,8 +19,8 @@ use navara_math::{Transform, Vec3};
 
 use navara_feature_component::polyline::{PolylineGeometry, PolylineMarker};
 use navara_tile_component::{
-    sample_terrain_height_within_extent, OverscaledTileHandle, RasterTileQuadtree, TileExtent,
-    TileMeshMarker,
+    OverscaledTileHandle, RasterTileQuadtree, TileExtent, TileMeshMarker,
+    sample_terrain_height_within_extent,
 };
 use navara_worker::construct_polyline_batched_feature::{
     ConstructPolylineBatchedFeatureMarker, ConstructPolylineBatchedFeatureParameters,

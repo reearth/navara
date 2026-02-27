@@ -15,15 +15,15 @@ use navara_layer::{LayerId, LayerStore};
 use navara_material::{PolygonInternalMaterial, PolygonMaterial};
 use navara_math::{FloatType, Transform, Vec3};
 use navara_tile_component::{
-    sample_terrain_height_within_extent, OverscaledTileHandle, RasterTileQuadtree, TileExtent,
-    TileMeshMarker,
+    OverscaledTileHandle, RasterTileQuadtree, TileExtent, TileMeshMarker,
+    sample_terrain_height_within_extent,
 };
 
 use navara_feature_component::{
+    BatchedFeatureMarker,
     batch::BatchedFeature,
     id::FeatureId,
     render::{PolygonRenderInformation, RenderableFeature},
-    BatchedFeatureMarker,
 };
 use navara_worker::construct_polygon_batched_feature::{
     ConstructPolygonBatchedFeatureMarker, ConstructPolygonBatchedFeatureParameters,
@@ -207,11 +207,9 @@ pub fn update_polygon(
             material.update(&updated.material);
             render_info.should_recalculate_height = should_recalculate_height;
 
-            if should_recalculate_height {
-                if let Some(extent) = extent {
-                    let aabb = Aabb::from_extent_f64(*extent, 0., 0.);
-                    *bounding_sphere = Some(get_bounding_sphere(&aabb));
-                }
+            if should_recalculate_height && let Some(extent) = extent {
+                let aabb = Aabb::from_extent_f64(*extent, 0., 0.);
+                *bounding_sphere = Some(get_bounding_sphere(&aabb));
             }
         }
         commands.entity(e).remove::<UpdatePolygon>();

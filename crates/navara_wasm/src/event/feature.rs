@@ -3,16 +3,16 @@ use serde::Serialize;
 use wasm_bindgen::prelude::*;
 
 use crate::{
+    Transform,
     geometry::{
         TransferableModelGeometry, TransferablePointGeometry, TransferablePolygonGeometry,
         TransferablePolygonOutlineGeometry, TransferablePolylineGeometry,
     },
-    Transform,
 };
 use navara_wasm_types::{
-    polygon::TransferablePolygonBatchedFeature, polyline::TransferablePolylineBatchedFeature, Aabb,
-    BillboardMaterial, BoundingSphere, ModelMaterial, PointMaterial, PolygonMaterial,
-    PolylineMaterial, TextMaterial, CRS,
+    Aabb, BillboardMaterial, BoundingSphere, CRS, ModelMaterial, PointMaterial, PolygonMaterial,
+    PolylineMaterial, TextMaterial, polygon::TransferablePolygonBatchedFeature,
+    polyline::TransferablePolylineBatchedFeature,
 };
 
 #[wasm_bindgen]

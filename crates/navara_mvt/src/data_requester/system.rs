@@ -9,7 +9,7 @@ use navara_data_requester::{DataRequester, DataRequesterExtension};
 use navara_layer::MvtLayer;
 use navara_tile_component::VectorTileQuadtree;
 
-use crate::{layer::tile_cache_manager::TileCacheManager, MvtSourceResources};
+use crate::{MvtSourceResources, layer::tile_cache_manager::TileCacheManager};
 
 use super::{MvtDataRequesterMarker, SingleMvtDataRequesterMarker};
 

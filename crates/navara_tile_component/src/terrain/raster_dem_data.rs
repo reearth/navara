@@ -2,15 +2,15 @@ use bevy_ecs::entity::Entity;
 use martini::Martini;
 use navara_buffer_store::{BufferStore, Handle};
 use navara_core::{
-    Aabb, ElevationDecoder, Ellipsoid, Extent, LngLat, Meters, Radians, TileRegion, LLE, XYZ,
+    Aabb, ElevationDecoder, Ellipsoid, Extent, LLE, LngLat, Meters, Radians, TileRegion, XYZ,
 };
 use navara_geometry::{
-    decode_height_from_dem, tile_triangles_with_terrain, Geometry, ReturnedConstructedTerrainMesh,
-    UpsamplableTerrainGeometry, UpsampledTerrainGeometry,
+    Geometry, ReturnedConstructedTerrainMesh, UpsamplableTerrainGeometry, UpsampledTerrainGeometry,
+    decode_height_from_dem, tile_triangles_with_terrain,
 };
 use navara_math::FloatType;
 
-use crate::{raster_tile::RasterTile, terrain_data_requester::TileTerrainDataRequesterQuery, Tile};
+use crate::{Tile, raster_tile::RasterTile, terrain_data_requester::TileTerrainDataRequesterQuery};
 
 use super::TerrainData;
 
@@ -251,7 +251,7 @@ fn compute_terrain_height_from_tile(
 mod test {
     use navara_core::{Angle, LngLat, TileXYZ};
 
-    use super::{compute_terrain_height_from_tile, RasterTile};
+    use super::{RasterTile, compute_terrain_height_from_tile};
 
     #[test]
     fn it_should_compute_terrain_height_from_tile() {

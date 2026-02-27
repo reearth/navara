@@ -1,15 +1,17 @@
-import type { ReturnedConstructedTerrainMesh, Vec3 } from "@navara/engine";
+import type { ReturnedConstructedTerrainMesh } from "@navara/engine";
+
+import type { RemoveFreeRecursively } from "../types";
 
 import { Vec3Like } from "./Vec3Like";
 
-export class ReturnedConstructedTerrainMeshLike implements ReturnedConstructedTerrainMesh {
+export class ReturnedConstructedTerrainMeshLike implements RemoveFreeRecursively<ReturnedConstructedTerrainMesh> {
   vertices: Float32Array;
   uvs: Float32Array;
   indices: Uint32Array;
   heights: Float32Array;
   max_height: number;
   min_height: number;
-  rtc_translation: Vec3 | undefined;
+  rtc_translation: Vec3Like | undefined;
   skirt_vertices: Float32Array | undefined;
   skirt_uvs: Float32Array | undefined;
   skirt_indices: Uint32Array | undefined;
@@ -65,6 +67,4 @@ export class ReturnedConstructedTerrainMeshLike implements ReturnedConstructedTe
       this.skirt_indices_to_edge !== undefined
     );
   }
-
-  free(): void {}
 }

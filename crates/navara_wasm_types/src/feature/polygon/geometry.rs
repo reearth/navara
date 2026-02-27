@@ -1,6 +1,6 @@
 use wasm_bindgen::prelude::*;
 
-use crate::{copy_f32_array, copy_u32_array, ExtentRadianF32, FloatAttribute, UintAttribute, Vec3};
+use crate::{ExtentRadianF32, FloatAttribute, UintAttribute, Vec3, copy_f32_array, copy_u32_array};
 
 #[wasm_bindgen]
 #[derive(Clone, Debug, Default, PartialEq)]

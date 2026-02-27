@@ -4,11 +4,11 @@ use navara_geometry::{
 };
 use navara_math::{FloatType, Vec3};
 use navara_wasm_types::{
+    ExtentRadianF32, PolygonMaterial,
     polygon::{
         ConstructedPolygonGeometry, ConstructedPolygonOutlineGeometry, PolygonGeometry,
         TransferablePolygonBatchedFeature,
     },
-    ExtentRadianF32, PolygonMaterial,
 };
 use wasm_bindgen::prelude::wasm_bindgen;
 

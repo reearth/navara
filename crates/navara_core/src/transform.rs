@@ -1,8 +1,8 @@
 // Ref: https://github.com/CesiumGS/cesium/blob/6c2e520420b95bcb6c8eba0f02c76347cee1dd4b/packages/engine/Source/Core/Transforms.js
 
-use navara_math::{EqualEpsilon, FloatType, Mat4, Vec3, Vec4, EPSILON14};
+use navara_math::{EPSILON14, EqualEpsilon, FloatType, Mat4, Vec3, Vec4};
 
-use crate::{vec3_to_xyz, xyz_to_vec3, Ellipsoid};
+use crate::{Ellipsoid, vec3_to_xyz, xyz_to_vec3};
 
 #[derive(Debug)]
 enum LocalFrame {
@@ -156,16 +156,16 @@ pub fn north_west_up_to_fixed_frame(origin: Vec3, ellipsoid: Ellipsoid<FloatType
 #[cfg(test)]
 mod test {
     use approx::assert_abs_diff_eq;
-    use navara_math::{AbsDiffEqVec4, Vec3, Vec4, EPSILON5};
+    use navara_math::{AbsDiffEqVec4, EPSILON5, Vec3, Vec4};
 
     const EPSILON5_VEC4: Vec4 = Vec4::new(EPSILON5, EPSILON5, EPSILON5, EPSILON5);
 
     use crate::{
+        UNIT_SPHERE_64,
         transform::{
             north_east_down_to_fixed_frame, north_up_east_to_fixed_frame,
             north_west_up_to_fixed_frame,
         },
-        UNIT_SPHERE_64,
     };
 
     use super::east_north_up_to_fixed_frame;

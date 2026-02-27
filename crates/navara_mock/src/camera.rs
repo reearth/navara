@@ -1,5 +1,5 @@
 use navara_camera::Orbit;
-use navara_core::{vec3_to_xyz, Radians, LLE, WGS84_64};
+use navara_core::{LLE, Radians, WGS84_64, vec3_to_xyz};
 use navara_math::{Quat, Transform, Vec3};
 
 pub fn update_camera_transform(r: f64) -> (Vec3, LLE<f64, Radians>) {
