@@ -1,5 +1,3 @@
-import { Mesh } from "three";
-
 import {
   MeshLayerDeclarationForSelectiveEffect,
   type MeshLayerConfigWithSelectiveEffect,
@@ -7,6 +5,8 @@ import {
   ViewContext,
   injectSelectiveEffectHandlers,
 } from "@navara/three";
+import { Mesh } from "three";
+
 
 import { DefaultArcLineConfig, ArcLine, type ArcLineConfig } from "./arcLine";
 

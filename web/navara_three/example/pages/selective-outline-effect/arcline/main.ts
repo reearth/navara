@@ -1,8 +1,12 @@
 import ThreeView, {
   Color,
   JAPAN_GSI_ELEVATION_DECODER,
-  type ArclineMeshLayer,
 } from "@navara/three";
+import type { ArclineMeshLayer } from "@navara/three_default_layers";
+import {
+  DefaultPlugin,
+  type DefaultLayerDescriptions,
+} from "@navara/three_default_plugin";
 
 import { showAttributions } from "../../../helpers/attributions";
 import { TERRAIN_DATASETS, TILE_DATASETS } from "../../../helpers/constants";
@@ -10,11 +14,18 @@ import { TERRAIN_DATASETS, TILE_DATASETS } from "../../../helpers/constants";
 const TOKYO = { lng: 139.757, lat: 35.676 };
 
 const run = async () => {
-  const view = new ThreeView({ debug: true, shadow: true });
+  const view = new ThreeView<DefaultLayerDescriptions>({
+    debug: true,
+    shadow: true,
+  });
+
+  const defaultPlugin = new DefaultPlugin();
+  view.addPlugin(defaultPlugin);
+
   await view.init();
 
-  const atmospheres = view.addDefaultAtmosphereLayers();
-  atmospheres.sun.update({
+  const defaultAtmospheres = defaultPlugin.addDefaultPhotorealLayers();
+  defaultAtmospheres.sun.update({
     sun: { intensity: 1, castShadow: true },
   });
 
