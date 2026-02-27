@@ -1,7 +1,4 @@
-import ThreeView, {
-  Color,
-  JAPAN_GSI_ELEVATION_DECODER,
-} from "@navara/three";
+import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
 import type { ArclineMeshLayer } from "@navara/three_default_layers";
 import {
   DefaultPlugin,

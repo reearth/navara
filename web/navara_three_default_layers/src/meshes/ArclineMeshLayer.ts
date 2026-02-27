@@ -7,7 +7,6 @@ import {
 } from "@navara/three";
 import { Mesh } from "three";
 
-
 import { DefaultArcLineConfig, ArcLine, type ArcLineConfig } from "./arcLine";
 
 type LayerDescription = {
