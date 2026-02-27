@@ -57,7 +57,7 @@ export class FontManager {
   private _loaded = new Set<string>();
   /** Cache shaped text results to avoid redundant WASM calls. Key: "fontUrl\0text" */
   private _shapeCache = new Map<string, ShapeTextResult>();
-  /** Cache atlas data per font to avoid redundant 1MB copies. */
+  /** Cache atlas data per font to avoid redundant copies. */
   private _atlasCache = new Map<string, FontAtlasData>();
   /** Tracks whether the atlas cache is stale (new glyphs may have been rasterized). */
   private _atlasDirty = new Set<string>();
@@ -135,7 +135,6 @@ export class FontManager {
     this._shapeCache.set(cacheKey, shaped);
 
     // Only mark atlas dirty if shapeText introduced glyphs we haven't seen before.
-    // After ~20 unique labels, all Latin characters are covered and no more atlas copies needed.
     let knownSet = this._knownGlyphs.get(fontUrl);
     if (!knownSet) {
       knownSet = new Set();
@@ -190,6 +189,11 @@ export class FontManager {
    * Creates the texture on first call; updates it in-place when the atlas grows.
    */
   getAtlasTexture(fontUrl: string): DataTexture | null {
+    if (!this._atlasDirty.has(fontUrl)) {
+      const cached = this._textureCache.get(fontUrl);
+      if (cached) return cached;
+    } 
+
     const atlasData = this.getAtlas(fontUrl);
     if (!atlasData) return null;
 
