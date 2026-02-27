@@ -344,23 +344,20 @@ importers:
         version: link:../navara_three_api
       '@takram/three-atmosphere':
         specifier: ^0.14.0
-        version: 0.14.0(@react-three/fiber@9.1.2(@types/react@19.1.13)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)(three@0.178.0))(postprocessing@6.37.8(three@0.178.0))(react@19.1.1)(three@0.178.0)
+        version: 0.14.0(@react-three/fiber@9.1.2(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(three@0.183.1))(postprocessing@6.38.3(three@0.183.1))(react@19.2.4)(three@0.183.1)
       '@takram/three-geospatial':
-        specifier: ^0.4.0
-        version: 0.4.0(@react-three/fiber@9.1.2(@types/react@19.1.13)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)(three@0.178.0))(react@19.1.1)(three@0.178.0)
-      tiny-invariant:
-        specifier: ^1.3.3
-        version: 1.3.3
+        specifier: ^0.6.0
+        version: 0.6.0(@react-three/fiber@9.1.2(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(three@0.183.1))(react@19.2.4)(three@0.183.1)
     devDependencies:
       '@types/three':
-        specifier: ^0.178.0
-        version: 0.178.1
+        specifier: ^0.183.1
+        version: 0.183.1
       three:
-        specifier: ^0.178.0
-        version: 0.178.0
+        specifier: ^0.183.1
+        version: 0.183.1
       vite-plugin-glsl:
         specifier: ^1.5.1
-        version: 1.5.1(rollup@4.44.0)(vite@7.1.5(@types/node@24.0.14)(jiti@1.21.7)(terser@5.43.1)(tsx@4.20.5))
+        version: 1.5.5(@rollup/pluginutils@5.2.0(rollup@4.44.0))(esbuild@0.27.3)(vite@7.3.1(@types/node@24.10.13)(jiti@1.21.7)(terser@5.43.1)(tsx@4.21.0))
 
   web/navara_three_default_plugin:
     dependencies:
@@ -10235,6 +10232,13 @@ snapshots:
     optionalDependencies:
       '@rollup/pluginutils': 5.2.0(rollup@4.44.0)
       esbuild: 0.25.5
+
+  vite-plugin-glsl@1.5.5(@rollup/pluginutils@5.2.0(rollup@4.44.0))(esbuild@0.27.3)(vite@7.3.1(@types/node@24.10.13)(jiti@1.21.7)(terser@5.43.1)(tsx@4.21.0)):
+    dependencies:
+      vite: 7.3.1(@types/node@24.10.13)(jiti@1.21.7)(terser@5.43.1)(tsx@4.21.0)
+    optionalDependencies:
+      '@rollup/pluginutils': 5.2.0(rollup@4.44.0)
+      esbuild: 0.27.3
 
   vite-plugin-static-copy@3.2.0(vite@7.3.1(@types/node@24.10.13)(jiti@1.21.7)(terser@5.43.1)(tsx@4.21.0)):
     dependencies:
