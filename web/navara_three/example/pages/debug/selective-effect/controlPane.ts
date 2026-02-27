@@ -1,10 +1,12 @@
 import ThreeView, {
   Color,
+  type ArclineMeshLayer,
   type BoxMeshLayer,
   type BoxMeshLayerUpdate,
   type CylinderMeshLayer,
   type CylinderMeshLayerUpdate,
   type Layer,
+  type LayerHandle,
   type PlaneMeshLayer,
   type PlaneMeshLayerUpdate,
   type SphereMeshLayer,
@@ -24,6 +26,7 @@ import type {
   SceneLayers,
 } from "./sceneLayers";
 import {
+  ARCLINE_CONFIG,
   CAMERA_FOCUS_POSITIONS,
   CUBE_CONFIG,
   SPHERE_CONFIG,
@@ -109,6 +112,7 @@ export const createControlPane = ({
   cylinderLayer,
   tubeLayer,
   planeLayer,
+  arclineLayer,
   polygonLayer,
   chiyodaLayer,
   chuoLayer,
@@ -197,6 +201,17 @@ export const createControlPane = ({
       visible: true,
     },
   });
+
+  // ArcLine category
+  const arcLineFolder = pane.addFolder({ title: "ArcLine" });
+  setupArclineFolder(
+    arcLineFolder,
+    arclineLayer,
+    postEffectBloom.id,
+    postEffectOutline.id,
+    view,
+    CAMERA_FOCUS_POSITIONS.arcline,
+  );
 
   // GeoJson category
   const geoJsonFolder = pane.addFolder({ title: "GeoJson" });
@@ -643,4 +658,95 @@ const setupPolygonFolder = (
 
   // Apply initial state
   updatePolygonState();
+};
+
+/**
+ * Setup ArcLine folder (Tokyo metro area arcs)
+ */
+const setupArclineFolder = (
+  parent: FolderApi,
+  arclineLayer: LayerHandle<ArclineMeshLayer>,
+  bloomId: string,
+  outlineId: string,
+  view: ThreeView,
+  focusPosition: CameraPosition,
+) => {
+  const params = {
+    srcColor: ARCLINE_CONFIG.srcColor.toHex(),
+    tgtColor: ARCLINE_CONFIG.tgtColor.toHex(),
+    selectiveEffectOcclusion: ARCLINE_CONFIG.selectiveEffectOcclusion,
+    bloomEnabled: ARCLINE_CONFIG.bloomEnabled,
+    outlineEnabled: ARCLINE_CONFIG.outlineEnabled,
+    visible: true,
+  };
+
+  const folder = parent.addFolder({ title: "ArcLine (Tokyo)" });
+
+  folder.addButton({ title: "Focus" }).on("click", () => {
+    view.setCamera(focusPosition);
+  });
+
+  const updateArclineState = () => {
+    arclineLayer.update({
+      effectIds: getEffectIds(
+        params.bloomEnabled,
+        params.outlineEnabled,
+        bloomId,
+        outlineId,
+      ),
+      selectiveEffectOcclusion: params.selectiveEffectOcclusion,
+      arcLines: [
+        {
+          srcColor: new Color().setHex(params.srcColor),
+          tgtColor: new Color().setHex(params.tgtColor),
+        },
+      ],
+    });
+  };
+
+  folder.addBinding(params, "visible").on("change", (ev) => {
+    arclineLayer.update({ visible: ev.value });
+  });
+
+  folder
+    .addBinding(params, "srcColor", {
+      color: { type: "int" },
+      label: "Src Color",
+    })
+    .on("change", () => {
+      updateArclineState();
+    });
+
+  folder
+    .addBinding(params, "tgtColor", {
+      color: { type: "int" },
+      label: "Tgt Color",
+    })
+    .on("change", () => {
+      updateArclineState();
+    });
+
+  folder
+    .addBinding(params, "selectiveEffectOcclusion", {
+      label: "Occlusion Mode",
+      options: OCCLUSION_MODE_OPTIONS,
+    })
+    .on("change", () => {
+      updateArclineState();
+    });
+
+  folder
+    .addBinding(params, "bloomEnabled", { label: "Bloom" })
+    .on("change", () => {
+      updateArclineState();
+    });
+
+  folder
+    .addBinding(params, "outlineEnabled", { label: "Outline" })
+    .on("change", () => {
+      updateArclineState();
+    });
+
+  // Apply initial state
+  updateArclineState();
 };
