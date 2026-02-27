@@ -81,11 +81,24 @@ export class ArclineMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
   }
 
   onUpdateConfig(updates: ArclineMeshLayerUpdate): void {
-    if (this.config.arcLines && updates.arcLines && this._instance) {
-      Object.assign(this.config.arcLines, updates.arcLines);
+    if (updates.arcLines && this._instance) {
       const updateConfigs = Array.isArray(updates.arcLines)
         ? updates.arcLines
         : [updates.arcLines];
+      const currentConfigs = Array.isArray(this.config.arcLines)
+        ? [...this.config.arcLines]
+        : this.config.arcLines
+          ? [this.config.arcLines]
+          : [];
+
+      updateConfigs.forEach((cfg, i) => {
+        if (currentConfigs[i]) {
+          Object.assign(currentConfigs[i], cfg);
+        } else {
+          currentConfigs[i] = { ...cfg };
+        }
+      });
+      this.config.arcLines = currentConfigs;
       this._instance.updateConfig(updateConfigs);
 
       // Re-inject handlers on sub-meshes (updateConfig may rebuild them)
