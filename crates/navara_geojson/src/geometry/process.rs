@@ -5,16 +5,14 @@ use navara_buffer_store::BufferStore;
 use navara_core::CRS;
 use navara_feature_component::{
     BatchedFeatureMarker,
-    batch::{BatchIndex, BatchTable, BatchedFeature, FeatureBatchId, GlobalBatchIds},
-    billboard::{BillboardGeometry, BillboardMarker},
-    id::FeatureId,
-    point::{PointGeometry, PointMarker},
-    polygon::{PolygonGeometry, PolygonMarker},
-    polyline::{PolylineGeometry, PolylineMarker},
-    text::{TextGeometry, TextMarker},
+    batch::{BatchIndex, BatchTable},
+    billboard::BillboardGeometry,
+    point::PointGeometry,
+    polygon::PolygonGeometry,
+    polyline::PolylineGeometry,
+    text::TextGeometry,
 };
 use navara_geometry::{Hierarchy, WindingOrder};
-use navara_layer::LayerId;
 use navara_material::Appearance;
 use navara_math::Vec3;
 use navara_parser::geojson::{GeoJson, Geometry, Value};
@@ -94,46 +92,9 @@ pub fn construct_geometry(
         }
     }
 
-    // Spawn a BatchedFeature parent entity for each group
-    let mut result = Vec::new();
-    for (kind, feature_ids, global_batch_ids) in builder.groups {
-        if feature_ids.is_empty() {
-            continue;
-        }
-
-        let feature_batch_id = builder
-            .batch_ids_by_kind
-            .iter()
-            .find(|(k, _)| *k == kind)
-            .map(|(_, id)| *id)
-            .unwrap_or(0);
-
-        let batch_length = global_batch_ids.len() as u32;
-        let global_batch_ids = GlobalBatchIds {
-            handle: buf.new_u32(global_batch_ids),
-            batch_length,
-        };
-
-        let batched = BatchedFeature {
-            features: feature_ids,
-            default_active: true,
-            ..Default::default()
-        };
-
-        if let Some(entity) = spawn_batched_entity(
-            commands,
-            batched,
-            kind,
-            appearances,
-            layer_id,
-            FeatureBatchId(feature_batch_id),
-            global_batch_ids,
-        ) {
-            result.push(entity);
-        }
-    }
-
-    result
+    builder
+        .groups
+        .finalize(commands, buf, appearances, layer_id, true)
 }
 
 /// Process a single GeoJSON geometry, spawning child entities for each matching appearance.
@@ -145,40 +106,38 @@ fn process_geometry(
     appearances: &[Appearance],
     properties: &Option<serde_json::Map<String, serde_json::Value>>,
 ) {
+    // Handle GeometryCollection by recursing into each sub-geometry
+    if let Value::GeometryCollection(geoms) = &geometry.value {
+        for g in geoms {
+            process_geometry(commands, buf, builder, g, appearances, properties);
+        }
+        return;
+    }
+
+    // Prepare feature data lazily — only committed when add_entity is first called.
+    builder.begin_feature(properties);
+
     for appearance in appearances {
         match appearance {
             Appearance::Point(_) => {
-                spawn_point_children(
-                    commands,
-                    builder,
-                    geometry,
-                    properties,
-                    GeometryAppearanceKind::Point,
-                );
+                spawn_point_children(commands, builder, geometry, GeometryAppearanceKind::Point);
             }
             Appearance::Billboard(_) => {
                 spawn_point_children(
                     commands,
                     builder,
                     geometry,
-                    properties,
                     GeometryAppearanceKind::Billboard,
                 );
             }
             Appearance::Text(_) => {
-                spawn_point_children(
-                    commands,
-                    builder,
-                    geometry,
-                    properties,
-                    GeometryAppearanceKind::Text,
-                );
+                spawn_point_children(commands, builder, geometry, GeometryAppearanceKind::Text);
             }
             Appearance::Polyline(_) => {
-                spawn_polyline_children(commands, buf, builder, geometry, properties);
+                spawn_polyline_children(commands, buf, builder, geometry);
             }
             Appearance::Polygon(_) => {
-                spawn_polygon_children(commands, buf, builder, geometry, properties);
+                spawn_polygon_children(commands, buf, builder, geometry);
             }
             _ => {}
         }
@@ -190,7 +149,6 @@ fn spawn_point_children(
     commands: &mut Commands,
     builder: &mut GeometryBuilder,
     geometry: &Geometry,
-    properties: &Option<serde_json::Map<String, serde_json::Value>>,
     kind: GeometryAppearanceKind,
 ) {
     let spawn_one = |commands: &mut Commands, builder: &mut GeometryBuilder, coord: Vec3| {
@@ -202,7 +160,6 @@ fn spawn_point_children(
                         coords: coord,
                         crs: CRS::Geographic,
                     },
-                    BatchIndex(0), // placeholder, updated below
                 ))
                 .id(),
             GeometryAppearanceKind::Billboard => commands
@@ -212,7 +169,6 @@ fn spawn_point_children(
                         coords: coord,
                         crs: CRS::Geographic,
                     },
-                    BatchIndex(0),
                 ))
                 .id(),
             GeometryAppearanceKind::Text => commands
@@ -222,13 +178,12 @@ fn spawn_point_children(
                         coords: coord,
                         crs: CRS::Geographic,
                     },
-                    BatchIndex(0),
                 ))
                 .id(),
             _ => unreachable!(),
         };
 
-        let batch_index = builder.add_feature(kind, properties, entity);
+        let batch_index = builder.add_entity(kind, entity);
         commands.entity(entity).insert(BatchIndex(batch_index));
     };
 
@@ -251,7 +206,6 @@ fn spawn_polyline_children(
     buf: &mut BufferStore,
     builder: &mut GeometryBuilder,
     geometry: &Geometry,
-    properties: &Option<serde_json::Map<String, serde_json::Value>>,
 ) {
     let kind = GeometryAppearanceKind::Polyline;
 
@@ -263,11 +217,10 @@ fn spawn_polyline_children(
             .spawn((
                 BatchedFeatureMarker,
                 PolylineGeometry::with_buf(buf, flat_coords, CRS::Geographic),
-                BatchIndex(0),
             ))
             .id();
 
-        let batch_index = builder.add_feature(kind, properties, entity);
+        let batch_index = builder.add_entity(kind, entity);
         commands.entity(entity).insert(BatchIndex(batch_index));
     };
 
@@ -290,7 +243,6 @@ fn spawn_polygon_children(
     buf: &mut BufferStore,
     builder: &mut GeometryBuilder,
     geometry: &Geometry,
-    properties: &Option<serde_json::Map<String, serde_json::Value>>,
 ) {
     let kind = GeometryAppearanceKind::Polygon;
 
@@ -312,11 +264,10 @@ fn spawn_polygon_children(
                     .transfer(buf),
                     crs: CRS::Geographic,
                 },
-                BatchIndex(0),
             ))
             .id();
 
-        let batch_index = builder.add_feature(kind, properties, entity);
+        let batch_index = builder.add_entity(kind, entity);
         commands.entity(entity).insert(BatchIndex(batch_index));
     };
 
@@ -333,126 +284,6 @@ fn spawn_polygon_children(
     }
 }
 
-/// Spawn a `BatchedFeature` parent entity with the appropriate marker and material.
-#[allow(clippy::too_many_arguments)]
-fn spawn_batched_entity(
-    commands: &mut Commands,
-    batched: BatchedFeature,
-    kind: GeometryAppearanceKind,
-    appearances: &[Appearance],
-    layer_id: &str,
-    feature_batch_id: FeatureBatchId,
-    global_batch_ids: GlobalBatchIds,
-) -> Option<Entity> {
-    match kind {
-        GeometryAppearanceKind::Point => {
-            let Appearance::Point(mat) = appearances
-                .iter()
-                .find(|a| matches!(a, Appearance::Point(_)))?
-            else {
-                return None;
-            };
-            Some(
-                commands
-                    .spawn((
-                        PointMarker,
-                        batched,
-                        FeatureId::default(),
-                        LayerId(layer_id.to_string()),
-                        mat.clone(),
-                        feature_batch_id,
-                        global_batch_ids,
-                    ))
-                    .id(),
-            )
-        }
-        GeometryAppearanceKind::Billboard => {
-            let Appearance::Billboard(mat) = appearances
-                .iter()
-                .find(|a| matches!(a, Appearance::Billboard(_)))?
-            else {
-                return None;
-            };
-            Some(
-                commands
-                    .spawn((
-                        BillboardMarker,
-                        batched,
-                        FeatureId::default(),
-                        LayerId(layer_id.to_string()),
-                        mat.clone(),
-                        feature_batch_id,
-                        global_batch_ids,
-                    ))
-                    .id(),
-            )
-        }
-        GeometryAppearanceKind::Text => {
-            let Appearance::Text(mat) = appearances
-                .iter()
-                .find(|a| matches!(a, Appearance::Text(_)))?
-            else {
-                return None;
-            };
-            Some(
-                commands
-                    .spawn((
-                        TextMarker,
-                        batched,
-                        FeatureId::default(),
-                        LayerId(layer_id.to_string()),
-                        mat.clone(),
-                        feature_batch_id,
-                        global_batch_ids,
-                    ))
-                    .id(),
-            )
-        }
-        GeometryAppearanceKind::Polyline => {
-            let Appearance::Polyline(mat) = appearances
-                .iter()
-                .find(|a| matches!(a, Appearance::Polyline(_)))?
-            else {
-                return None;
-            };
-            Some(
-                commands
-                    .spawn((
-                        PolylineMarker,
-                        batched,
-                        FeatureId::default(),
-                        LayerId(layer_id.to_string()),
-                        mat.clone(),
-                        feature_batch_id,
-                        global_batch_ids,
-                    ))
-                    .id(),
-            )
-        }
-        GeometryAppearanceKind::Polygon => {
-            let Appearance::Polygon(mat) = appearances
-                .iter()
-                .find(|a| matches!(a, Appearance::Polygon(_)))?
-            else {
-                return None;
-            };
-            Some(
-                commands
-                    .spawn((
-                        PolygonMarker,
-                        batched,
-                        FeatureId::default(),
-                        LayerId(layer_id.to_string()),
-                        mat.clone(),
-                        feature_batch_id,
-                        global_batch_ids,
-                    ))
-                    .id(),
-            )
-        }
-    }
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
@@ -464,7 +295,7 @@ mod test {
     use navara_core::CRS;
     use navara_feature_component::{
         BatchedFeatureMarker,
-        batch::{BatchTable, BatchedFeature, GlobalBatchIds},
+        batch::{BatchTable, BatchedFeature, FeatureBatchId, GlobalBatchIds},
         billboard::{BillboardGeometry, BillboardMarker},
         point::{PointGeometry, PointMarker},
         polygon::{PolygonGeometry, PolygonMarker},
@@ -1122,6 +953,76 @@ mod test {
     }
 
     #[test]
+    fn it_should_handle_geometry_collection() {
+        // GeometryCollection containing a Point and a LineString
+        let mut app = run_construct(
+            r#"{
+    "type": "FeatureCollection",
+    "features": [
+        {
+            "type": "Feature",
+            "properties": {"name": "collection"},
+            "geometry": {
+                "type": "GeometryCollection",
+                "geometries": [
+                    {
+                        "type": "Point",
+                        "coordinates": [139.75, 35.68]
+                    },
+                    {
+                        "type": "LineString",
+                        "coordinates": [[139.75, 35.68], [139.76, 35.69]]
+                    },
+                    {
+                        "type": "Polygon",
+                        "coordinates": [
+                            [
+                                [139.75, 35.68],
+                                [139.76, 35.68],
+                                [139.76, 35.69],
+                                [139.75, 35.69],
+                                [139.75, 35.68]
+                            ]
+                        ]
+                    }
+                ]
+            }
+        }
+    ]
+}"#,
+            vec![
+                Appearance::Point(PointMaterial::default()),
+                Appearance::Polyline(PolylineMaterial::default()),
+                Appearance::Polygon(PolygonMaterial::default()),
+            ],
+        );
+
+        // Point from GeometryCollection
+        let mut point_query = app
+            .world_mut()
+            .query_filtered::<&BatchedFeature, With<PointMarker>>();
+        let points: Vec<_> = point_query.iter(app.world()).collect();
+        assert_eq!(points.len(), 1);
+        assert_eq!(points[0].features.len(), 1);
+
+        // LineString from GeometryCollection
+        let mut polyline_query = app
+            .world_mut()
+            .query_filtered::<&BatchedFeature, With<PolylineMarker>>();
+        let polylines: Vec<_> = polyline_query.iter(app.world()).collect();
+        assert_eq!(polylines.len(), 1);
+        assert_eq!(polylines[0].features.len(), 1);
+
+        // Polygon from GeometryCollection
+        let mut polygon_query = app
+            .world_mut()
+            .query_filtered::<&BatchedFeature, With<PolygonMarker>>();
+        let polygons: Vec<_> = polygon_query.iter(app.world()).collect();
+        assert_eq!(polygons.len(), 1);
+        assert_eq!(polygons[0].features.len(), 1);
+    }
+
+    #[test]
     fn it_should_handle_all_geometry_types_with_all_appearances() {
         let mut app = run_construct(
             r#"{
@@ -1282,5 +1183,61 @@ mod test {
             .world_mut()
             .query_filtered::<&PolygonGeometry, With<BatchedFeatureMarker>>();
         assert_eq!(polygon_children.iter(app.world()).count(), 3);
+    }
+
+    #[test]
+    fn it_should_have_separate_feature_batch_id_per_appearance() {
+        // A Point feature with Point + Billboard + Text appearances gets separate
+        // feature_batch_ids per kind, with properties duplicated into each batch.
+        let mut app = run_construct(
+            r#"{
+    "type": "FeatureCollection",
+    "features": [
+        {
+            "type": "Feature",
+            "properties": {"name": "shared"},
+            "geometry": {
+                "coordinates": [139.75, 35.68],
+                "type": "Point"
+            }
+        }
+    ]
+}"#,
+            vec![
+                Appearance::Point(PointMaterial::default()),
+                Appearance::Billboard(BillboardMaterial::default()),
+                Appearance::Text(TextMaterial::default()),
+            ],
+        );
+
+        // Each BatchedFeature parent should have its own FeatureBatchId
+        let mut point_query = app
+            .world_mut()
+            .query_filtered::<&FeatureBatchId, With<PointMarker>>();
+        let point_batch_id = point_query.iter(app.world()).next().unwrap().0;
+
+        let mut billboard_query = app
+            .world_mut()
+            .query_filtered::<&FeatureBatchId, With<BillboardMarker>>();
+        let billboard_batch_id = billboard_query.iter(app.world()).next().unwrap().0;
+
+        let mut text_query = app
+            .world_mut()
+            .query_filtered::<&FeatureBatchId, With<TextMarker>>();
+        let text_batch_id = text_query.iter(app.world()).next().unwrap().0;
+
+        // Each batch has its own copy of the properties
+        let batch_table = app.world().resource::<BatchTable>();
+        for batch_id in [point_batch_id, billboard_batch_id, text_batch_id] {
+            let batch_value = batch_table.get(&batch_id).unwrap();
+            let properties = batch_value.properties.as_ref().unwrap();
+            match properties {
+                navara_feature_component::batch::BatchProperty::Values(values) => {
+                    assert_eq!(values.len(), 1);
+                    assert_eq!(values[0], serde_json::json!({"name": "shared"}));
+                }
+                _ => panic!("Expected BatchProperty::Values"),
+            }
+        }
     }
 }

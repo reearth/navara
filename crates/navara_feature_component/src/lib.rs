@@ -2,6 +2,7 @@
 
 pub mod batch;
 pub mod billboard;
+pub mod geometry_builder;
 pub mod id;
 mod marker;
 pub mod model;
