@@ -30,6 +30,8 @@ const run = async () => {
   });
 
   // Selective outline effect
+  // NOTE: ArcLineConfig does not support effectIds yet, so outline is not applied to arclines.
+  // This example demonstrates the intended API once support is added.
   view.addLayer({
     type: "effect",
     selectiveOutline: {

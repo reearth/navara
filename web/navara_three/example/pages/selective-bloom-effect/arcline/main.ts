@@ -30,6 +30,8 @@ const run = async () => {
   });
 
   // Selective bloom effect
+  // NOTE: ArcLineConfig does not support effectIds yet, so bloom is not applied to arclines.
+  // This example demonstrates the intended API once support is added.
   view.addLayer({
     type: "effect",
     selectiveBloom: {

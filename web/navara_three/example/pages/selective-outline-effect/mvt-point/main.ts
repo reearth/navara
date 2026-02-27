@@ -40,7 +40,7 @@ const run = async () => {
 
   view.addDefaultEffectLayers();
 
-  // MVT point with outline (Wakayama heliports)
+  // MVT point with outline (Wakayama facilities)
   const layer = view.addLayer({
     type: "mvt",
     data: { url: MVT_DATASETS.plateauWakayamaGen.url },
