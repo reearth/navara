@@ -4,6 +4,7 @@ import ThreeView, {
   LayerHandle,
 } from "@navara/three";
 import type { CloudsEffectLayer } from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../helpers/attributions";
@@ -16,10 +17,13 @@ import { addCameraControl, addDateControl } from "../../helpers/control";
 import { addFieldsToFolder, type FolderFields } from "../../helpers/panel";
 
 export const run = async (view: ThreeView) => {
+  const defaultPlugin = new DefaultPlugin();
+  view.addPlugin(defaultPlugin);
+
   await view.init();
+  defaultPlugin.addDefaultPhotorealLayers();
 
   const defaultEffects = view.addDefaultEffectLayers();
-  view.addDefaultAtmosphereLayers();
 
   // Add clouds effect layer explicitly
   const cloudsLayer = view.addLayer<CloudsEffectLayer>({

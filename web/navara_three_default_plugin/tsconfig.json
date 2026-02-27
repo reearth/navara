@@ -1,0 +1,17 @@
+{
+  "extends": "../tsconfig.common.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "paths": {
+      "@navara/three_default_plugin": ["./src"],
+      "@navara/three_default_layers": ["../navara_three_default_layers/src"],
+      "@navara/three": ["../navara_three/src"],
+      "@navara/core": ["../navara_core/src"],
+      "@navara/engine": ["../../node_modules/navara_wasm"],
+      "@navara/engine-worker": ["../../node_modules/navara_wasm_worker"],
+      "@navara/engine-api": ["../../node_modules/navara_wasm_api"]
+    }
+  },
+  "include": ["src"],
+  "exclude": ["./dist", "./node_modules"]
+}

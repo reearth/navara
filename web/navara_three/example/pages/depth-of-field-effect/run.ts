@@ -3,6 +3,7 @@ import ThreeView, {
   DepthOfFieldEffectLayer,
   DEFAULT_DEPTH_OF_FIELD_OPTIONS,
 } from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../helpers/attributions";
@@ -14,9 +15,12 @@ import {
 } from "../../helpers/control";
 
 export const run = async (view: ThreeView) => {
+  const defaultPlugin = new DefaultPlugin();
+  view.addPlugin(defaultPlugin);
+
   await view.init();
 
-  const defaultAtmospheres = view.addDefaultAtmosphereLayers();
+  const defaultAtmospheres = defaultPlugin.addDefaultPhotorealLayers();
   defaultAtmospheres.sun.update({
     sun: {
       intensity: 1,

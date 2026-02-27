@@ -1,18 +1,20 @@
 import ThreeView, {
   Color,
-  type BoxMeshLayer,
-  type BoxMeshLayerUpdate,
-  type CylinderMeshLayer,
-  type CylinderMeshLayerUpdate,
   type Layer,
-  type PlaneMeshLayer,
-  type PlaneMeshLayerUpdate,
-  type SphereMeshLayer,
-  type SphereMeshLayerUpdate,
-  type TubeMeshLayer,
-  type TubeMeshLayerUpdate,
   type SelectiveEffectOcclusion,
 } from "@navara/three";
+import type {
+  BoxMeshLayer,
+  BoxMeshLayerUpdate,
+  CylinderMeshLayer,
+  CylinderMeshLayerUpdate,
+  PlaneMeshLayer,
+  PlaneMeshLayerUpdate,
+  SphereMeshLayer,
+  SphereMeshLayerUpdate,
+  TubeMeshLayer,
+  TubeMeshLayerUpdate,
+} from "@navara/three_default_layers";
 import { Pane, type FolderApi } from "tweakpane";
 
 import { TILES_3D_DATASETS } from "../../../helpers/constants";

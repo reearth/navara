@@ -1,0 +1,29 @@
+{
+  "name": "@navara/three_default_plugin",
+  "type": "module",
+  "version": "0.0.0",
+  "private": true,
+  "main": "dist/index.umd.cjs",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "src",
+    "dist"
+  ],
+  "scripts": {
+    "build": "vite build --watch=false",
+    "build:dev": "vite build --mode development",
+    "build:dev:watch": "pnpm build:dev --watch",
+    "test": "vitest --passWithNoTests --watch=false",
+    "lint": "eslint . --fix",
+    "lint:check": "eslint .",
+    "format": "prettier --write --ignore-path ../../.gitignore .",
+    "format:check": "prettier --check --ignore-path ../../.gitignore ."
+  },
+  "license": "MIT OR Apache-2.0",
+  "dependencies": {
+    "@navara/core": "workspace:*",
+    "@navara/three": "workspace:*",
+    "@navara/three_default_layers": "workspace:*"
+  }
+}

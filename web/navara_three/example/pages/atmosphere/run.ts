@@ -7,8 +7,6 @@ import ThreeView, {
   type CloudsOptions,
   type LayerDescription,
   type SSAOQualityMode,
-  SkyMeshLayer,
-  StarsLayer,
   LayerHandle,
   SunLightLayer,
   AmbientLightLayer,
@@ -20,6 +18,8 @@ import ThreeView, {
   SSAOEffectLayer,
   LightProbeLayer,
 } from "@navara/three";
+import { SkyMeshLayer, StarsLayer } from "@navara/three_default_layers";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 import { SphericalHarmonics3 } from "three";
 import { Pane } from "tweakpane";
 
@@ -47,10 +47,12 @@ import { ATMOSPHERE_EXAMPLE_OPTIONS } from "./main";
 type DefaultEffects = ReturnType<ThreeView["addDefaultEffectLayers"]>;
 
 export const run = async (view: ThreeView) => {
+  const plugin = new DefaultPlugin();
+  view.addPlugin(plugin);
   await view.init();
 
   const defaultEffects = view.addDefaultEffectLayers();
-  const defaultLayers = view.addDefaultAtmosphereLayers();
+  const defaultLayers = plugin.addDefaultPhotorealLayers();
 
   defaultEffects.aerialPerspective.update({
     aerialPerspective: {

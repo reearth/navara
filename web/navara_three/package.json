@@ -50,6 +50,8 @@
     "troika-three-text": "^0.52.4"
   },
   "devDependencies": {
+    "@navara/three_default_layers": "workspace:*",
+    "@navara/three_default_plugin": "workspace:*",
     "@navara/three_react": "workspace:*",
     "@playwright/test": "^1.58.2",
     "@radix-ui/react-label": "^2.1.8",
