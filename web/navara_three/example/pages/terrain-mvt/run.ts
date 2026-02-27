@@ -14,15 +14,9 @@ import { SH_COEFFICIENTS } from "../../helpers/sh";
 export const run = async (view: ThreeView) => {
   await view.init();
 
-  // Add atmosphere layers
-  const defaultAtmosphere = view.addDefaultAtmosphereLayers();
+  view.addLayer({ type: "light", ambient: {} });
 
-  defaultAtmosphere.sun.update({
-    sun: {},
-    visible: false,
-  });
-
-  view.toneMappingExposure = 5;
+  view.toneMappingExposure = 3;
 
   view.addLayer({
     type: "effect",

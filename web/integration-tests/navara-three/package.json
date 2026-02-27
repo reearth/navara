@@ -17,6 +17,8 @@
   "license": "MIT OR Apache-2.0",
   "dependencies": {
     "@navara/three": "workspace:*",
+    "@navara/three_default_layers": "workspace:*",
+    "@navara/three_default_plugin": "workspace:*",
     "@navara/engine": "workspace:*",
     "@navara/engine-api": "workspace:*",
     "@navara/engine-worker": "workspace:*",

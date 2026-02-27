@@ -1,4 +1,5 @@
 import ThreeView from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../helpers/attributions";
@@ -33,9 +34,12 @@ const gGeoLayersDef: MaterialLayerDescription[] = [
 ];
 
 export const run = async (view: ThreeView) => {
+  const defaultPlugin = new DefaultPlugin();
+  view.addPlugin(defaultPlugin);
+
   await view.init();
 
-  view.addDefaultAtmosphereLayers();
+  defaultPlugin.addDefaultPhotorealLayers();
 
   view.setCamera({
     lat: 35.4904441833,

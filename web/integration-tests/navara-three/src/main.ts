@@ -2,14 +2,21 @@ import ThreeView, {
   Color,
   geodeticToVector3,
   degreeToRadian,
-  type SphereMeshLayer,
   ToneMappingMode,
   JAPAN_GSI_ELEVATION_DECODER,
 } from "@navara/three";
+import type { SphereMeshLayer } from "@navara/three_default_layers";
+import {
+  DefaultPlugin,
+  type DefaultLayerDescriptions,
+} from "@navara/three_default_plugin";
 
 async function main() {
   // Create the view - this tests that the main export works
-  const view = new ThreeView({});
+  const view = new ThreeView<DefaultLayerDescriptions>({});
+
+  const plugin = new DefaultPlugin();
+  view.addPlugin(plugin);
 
   // Initialize the view - this tests WASM loading
   await view.init();
@@ -20,7 +27,7 @@ async function main() {
   view.atmosphere.date.setHours(12);
 
   // Add default atmosphere layers - tests layer system
-  const atmosphere = view.addDefaultAtmosphereLayers();
+  const atmosphere = plugin.addDefaultPhotorealLayers();
   const effects = view.addDefaultEffectLayers();
 
   // Simplify by removing sky mesh (use aerial perspective for sky)
@@ -77,7 +84,7 @@ async function main() {
  * Add a sphere that rotates around the globe.
  * Tests: SphereMeshLayer, geodeticToVector3, LLE, degreeToRadian APIs
  */
-function addRotatingSphere(view: ThreeView) {
+function addRotatingSphere(view: ThreeView<DefaultLayerDescriptions>) {
   // Create a sphere mesh layer
   const sphereLayer = view.addLayer<SphereMeshLayer>({
     type: "mesh",

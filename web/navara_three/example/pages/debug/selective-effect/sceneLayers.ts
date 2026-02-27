@@ -3,16 +3,19 @@ import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
   degreeToRadian,
   geodeticToVector3,
-  type ArclineMeshLayer,
-  type BoxMeshLayer,
-  type CylinderMeshLayer,
   type LayerHandle,
-  type PlaneMeshLayer,
-  type SphereMeshLayer,
-  type TubeMeshLayer,
   type SelectiveEffectOcclusion,
   Layer,
 } from "@navara/three";
+import type {
+  ArclineMeshLayer,
+  BoxMeshLayer,
+  CylinderMeshLayer,
+  PlaneMeshLayer,
+  SphereMeshLayer,
+  TubeMeshLayer,
+} from "@navara/three_default_layers";
+import type { DefaultLayerDescriptions } from "@navara/three_default_plugin";
 import type { FeatureCollection } from "geojson";
 import { Vector3 } from "three";
 
@@ -250,7 +253,7 @@ export type EffectIds = {
 };
 
 export const createSceneLayers = (
-  view: ThreeView,
+  view: ThreeView<DefaultLayerDescriptions>,
   effectIds: EffectIds,
 ): SceneLayers => {
   const tokyoStationPosition = geodeticToVector3({
@@ -558,7 +561,7 @@ export const createSceneLayers = (
 };
 
 type CreateGeoJsonPolygonLayerOptions = {
-  view: ThreeView;
+  view: ThreeView<DefaultLayerDescriptions>;
   feature: FeatureCollection;
   polygon: GeoJsonPolygonState;
 };
