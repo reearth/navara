@@ -31,6 +31,7 @@ pub fn shape_text(font_data: &[u8], text: &str) -> Option<(Vec<ShapedGlyph>, u16
 
     let mut buffer = rustybuzz::UnicodeBuffer::new();
     buffer.push_str(text);
+    buffer.guess_segment_properties();
 
     let output = rustybuzz::shape(&face, &[], buffer);
 
