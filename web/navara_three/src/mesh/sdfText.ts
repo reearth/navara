@@ -1,8 +1,11 @@
 import { Unimplemented } from "@navara/core";
-import type { TextMaterial as NavaraTextMaterial, Transform } from "@navara/engine";
+import type {
+  TextMaterial as NavaraTextMaterial,
+  Transform,
+} from "@navara/engine";
 import { encodePosition } from "@navara/engine-api";
-import sdfTextVertexShader from "@shaders/glsl/sdfText.vert.glsl";
 import sdfTextFragmentShader from "@shaders/glsl/sdfText.frag.glsl";
+import sdfTextVertexShader from "@shaders/glsl/sdfText.vert.glsl";
 import {
   BufferAttribute,
   Color,
@@ -24,6 +27,7 @@ import type {
   GlyphMetrics,
   ShapeTextResult,
 } from "../font/FontManager";
+
 import type { PickableMesh } from "./pickableMesh";
 
 /** Must match Rust SDF_PX_SIZE in navara_font/src/resource.rs */
@@ -36,7 +40,10 @@ const SDF_PX_SIZE = 64.0;
  * sampling from a per-font SDF atlas texture. Uses billboard rendering
  * so text always faces the camera.
  */
-export class SDFTextMesh extends Mesh< InstancedBufferGeometry, ShaderMaterial > implements PickableMesh {
+export class SDFTextMesh
+  extends Mesh<InstancedBufferGeometry, ShaderMaterial>
+  implements PickableMesh
+{
   private _fontManager: FontManager;
   private _fontUrl: string;
   private _text = "";
@@ -60,7 +67,14 @@ export class SDFTextMesh extends Mesh< InstancedBufferGeometry, ShaderMaterial >
     this._fontUrl = fontUrl;
 
     this.geometry = this._createBaseGeometry();
-    this.material = this._createMaterial(position, RTE, material, transform, batchId, active);
+    this.material = this._createMaterial(
+      position,
+      RTE,
+      material,
+      transform,
+      batchId,
+      active,
+    );
     this.frustumCulled = false;
   }
 
@@ -100,7 +114,11 @@ export class SDFTextMesh extends Mesh< InstancedBufferGeometry, ShaderMaterial >
 
     // Skip texture creation if using a shared atlas from the parent container
     if (!this._sharedAtlas) {
-      this._updateAtlasTexture(atlasData.data, atlasData.width, atlasData.height);
+      this._updateAtlasTexture(
+        atlasData.data,
+        atlasData.width,
+        atlasData.height,
+      );
     }
 
     this.visible = true;
@@ -109,7 +127,7 @@ export class SDFTextMesh extends Mesh< InstancedBufferGeometry, ShaderMaterial >
   /**
    * Update visual properties: color, size, visibility, etc.
    */
-  setColor(color: Color): void {
+  setColor(_color: Color): void {
     // this.material.uniforms.uColor.value.set(color.r, color.g, color.b);
   }
 
@@ -160,7 +178,7 @@ export class SDFTextMesh extends Mesh< InstancedBufferGeometry, ShaderMaterial >
     const nextColor = material.color ?? 0xffffff;
     if (nextColor !== prev.color) {
       prev.color = nextColor;
-      let color = new Color().setHex(nextColor);
+      const color = new Color().setHex(nextColor);
       this.material.uniforms.uColor.value.set(color.r, color.g, color.b);
     }
 
@@ -275,13 +293,9 @@ export class SDFTextMesh extends Mesh< InstancedBufferGeometry, ShaderMaterial >
     material: NavaraTextMaterial,
     transform: Transform,
     batchId: number | undefined,
-    active: boolean,
+    _active: boolean,
   ): ShaderMaterial {
-    const rtcCenter = new Vector3(
-      transform.tx,
-      transform.ty,
-      transform.tz,
-    );
+    const rtcCenter = new Vector3(transform.tx, transform.ty, transform.tz);
 
     const m = new ShaderMaterial({
       vertexShader: sdfTextVertexShader,
@@ -289,15 +303,19 @@ export class SDFTextMesh extends Mesh< InstancedBufferGeometry, ShaderMaterial >
       uniforms: {
         uAtlas: { value: null },
         uSdfThreshold: { value: 0.5 },
-        uColor: { value:  new Color(1, 1, 1) },
+        uColor: { value: new Color(1, 1, 1) },
         uOpacity: { value: 1.0 },
         uFontSizePx: { value: 16.0 },
         uTextWidth: { value: 0.0 },
         uTextHeight: { value: 0.0 },
-        uCenter: { value: material.center ? new Vector2(material.center.x, material.center.y) : new Vector2(0.0, 0.0) },
+        uCenter: {
+          value: material.center
+            ? new Vector2(material.center.x, material.center.y)
+            : new Vector2(0.0, 0.0),
+        },
         uScaleByDistance: { value: material.scaleByDistance ? 1.0 : 0.0 },
         uAddHeight: { value: material.height ?? 0.0 },
-        uOffsetDepth: { value: material.offsetDepth ?? true ? 1.0 : 0.0 },
+        uOffsetDepth: { value: (material.offsetDepth ?? true) ? 1.0 : 0.0 },
         uRTCCenter: { value: rtcCenter },
         uEyeRTELow: { value: new Vector3() },
         uEyeRTEHigh: { value: new Vector3() },
@@ -316,22 +334,18 @@ export class SDFTextMesh extends Mesh< InstancedBufferGeometry, ShaderMaterial >
         low: (position as { low: Float32Array }).low,
         high: (position as { high: Float32Array }).high,
       };
-      m.uniforms.uRTEPositionLOW = { value:  new Vector3(p.low[0], p.low[1], p.low[2] ?? 0.0) };
-      m.uniforms.uRTEPositionHIGH = { value:  new Vector3(p.high[0], p.high[1], p.high[2] ?? 0.0) };
-    } else 
-    {
+      m.uniforms.uRTEPositionLOW = {
+        value: new Vector3(p.low[0], p.low[1], p.low[2] ?? 0.0),
+      };
+      m.uniforms.uRTEPositionHIGH = {
+        value: new Vector3(p.high[0], p.high[1], p.high[2] ?? 0.0),
+      };
+    } else {
       const p = position as Float32Array;
       m.uniforms.uRTCPosition = { value: new Vector3(p[0], p[1], p[2] ?? 0.0) };
     }
 
-    m.onBeforeRender = (
-      _renderer,
-      _scene,
-      camera,
-      _geometry,
-      _mat,
-      _group,
-    ) => {
+    m.onBeforeRender = (_renderer, _scene, camera, _geometry, _mat, _group) => {
       const pCam = camera as PerspectiveCamera;
       m.uniforms.uFarPlane.value = pCam.far;
 
@@ -388,10 +402,8 @@ export class SDFTextMesh extends Mesh< InstancedBufferGeometry, ShaderMaterial >
     for (const glyph of glyphs) {
       const m = metricsMap.get(glyph.glyphId);
       if (m && m.atlasW > 0 && m.atlasH > 0) {
-        const x =
-          (cursorX + glyph.xOffset) * fontUnitToSdfPx + m.bearingX;
-        const y =
-          (cursorY + glyph.yOffset) * fontUnitToSdfPx + m.bearingY;
+        const x = (cursorX + glyph.xOffset) * fontUnitToSdfPx + m.bearingX;
+        const y = (cursorY + glyph.yOffset) * fontUnitToSdfPx + m.bearingY;
 
         renderable.push({
           offsetX: x,
@@ -464,7 +476,13 @@ export class SDFTextMesh extends Mesh< InstancedBufferGeometry, ShaderMaterial >
       this._atlasTexture.dispose();
     }
 
-    const tex = new DataTexture(data, width, height, RedFormat, UnsignedByteType);
+    const tex = new DataTexture(
+      data,
+      width,
+      height,
+      RedFormat,
+      UnsignedByteType,
+    );
     tex.minFilter = LinearFilter;
     tex.magFilter = LinearFilter;
     tex.generateMipmaps = false;

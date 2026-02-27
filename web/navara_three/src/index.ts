@@ -49,7 +49,6 @@ import {
 import { LayerHandle } from "./core/LayerHandle";
 import { Registries } from "./core/Registries";
 import { getDevicePixelRatio, isMobileDevice } from "./device";
-import { FontManager } from "./font";
 import {
   processEvent,
   type BufferLoader,
@@ -61,6 +60,8 @@ import {
   type WorkerTaskHandler,
 } from "./event";
 import { TEXTURE_LOADER } from "./event/loaders";
+import { FontManager, FontWorkerClient } from "./font";
+import FontWorkerURL from "./font/fontWorker?url&worker";
 import { registerInputEvents } from "./input";
 import { Layer, type LayerEvent } from "./layer";
 import { SunLightLayer, AmbientLightLayer, SkyLightProbeLayer } from "./layers";
@@ -130,6 +131,8 @@ import { isWorker, convertScreenPos } from "./utils";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 /** @ts-ignore ignore: https://v3.vitejs.dev/guide/features.html#import-with-query-suffixes  */
 import WorkerURL from "./worker?url&worker";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+/** @ts-ignore */
 
 export type { CameraOptions, CameraEvent } from "./camera";
 
@@ -891,7 +894,9 @@ export default class ThreeView<
     this._core = new Core(newId());
     this._core.start();
 
-    this._fontManager.setCore(this._core);
+    const fontClient = new FontWorkerClient(FontWorkerURL);
+    await fontClient.ready();
+    this._fontManager.setClient(fontClient);
     this.viewContext.fontManager = this._fontManager;
 
     this.globe = new Globe(this._globeHandler, this._options);

@@ -1,6 +1,6 @@
 use guillotiere::Size;
 
-use crate::resource::{GlyphMetrics, SDFAtlas, LRU_MIN_AGE, SDF_PX_SIZE};
+use crate::resource::{GlyphMetrics, LRU_MIN_AGE, SDF_PX_SIZE, SDFAtlas};
 
 /// Ensure all required glyphs (by glyph ID, post-shaping) are in the atlas.
 ///
@@ -36,6 +36,7 @@ pub fn ensure_glyphs_in_atlas(
         });
 
         let Some(alloc) = alloc else {
+            #[cfg(feature = "bevy")]
             bevy_log::warn!(
                 "Atlas full: could not allocate {}x{} for glyph {} even after eviction",
                 metrics.width,

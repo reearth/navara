@@ -1,0 +1,20 @@
+[package]
+name = "navara_wasm_font_worker"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+wasm-bindgen.workspace = true
+js-sys.workspace = true
+navara_font = { path = "../navara_font", default-features = false }
+navara_wasm_utils.workspace = true
+
+[package.metadata.wasm-pack.profile.profiling]
+wasm-opt = false
+
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = ['-O4']

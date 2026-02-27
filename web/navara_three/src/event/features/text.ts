@@ -21,11 +21,24 @@ export async function renderText(
   if (fontUrl && fontManager) {
     await fontManager.loadFont(fontUrl);
 
-    const textGroup = new InstancedSdfTextMesh(m, buf, fontManager, fontUrl, uniforms, {
-      renderOrder: FEATURE_RENDER_ORDER,
-      viewContext,
-      layerId,
-    });
+    // Pre-prepare the text in the worker so cache is populated before mesh construction
+    const text = m.material.text ?? "";
+    if (text) {
+      await fontManager.prepareText(fontUrl, text);
+    }
+
+    const textGroup = new InstancedSdfTextMesh(
+      m,
+      buf,
+      fontManager,
+      fontUrl,
+      uniforms,
+      {
+        renderOrder: FEATURE_RENDER_ORDER,
+        viewContext,
+        layerId,
+      },
+    );
 
     console.log("Created InstancedSdfTextMesh with font", fontUrl);
 

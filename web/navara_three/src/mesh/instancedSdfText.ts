@@ -1,13 +1,16 @@
+import {
+  type TextMesh as NavaraTextMesh,
+  type TextMaterial as NavaraTextMaterial,
+} from "@navara/engine";
 import invariant from "tiny-invariant";
-import { type TextMesh as NavaraTextMesh } from "@navara/engine";
 
 import { type BufferLoader } from "../event";
 import type { FontManager } from "../font/FontManager";
 import type { CommonUniforms } from "../uniforms";
 
 import { InstancedMesh, type InstancedMeshOptions } from "./instanced";
-import { SDFTextMesh } from "./sdfText";
 import type { PickableMesh } from "./pickableMesh";
+import { SDFTextMesh } from "./sdfText";
 
 type PositionsInfo = {
   position:
@@ -23,7 +26,10 @@ type PositionsInfo = {
   RTE: boolean;
 };
 
-export class InstancedSdfTextMesh extends InstancedMesh<SDFTextMesh> implements PickableMesh {
+export class InstancedSdfTextMesh
+  extends InstancedMesh<SDFTextMesh>
+  implements PickableMesh
+{
   private _fontUrl: string;
   private _fontManager: FontManager;
 
@@ -55,7 +61,8 @@ export class InstancedSdfTextMesh extends InstancedMesh<SDFTextMesh> implements 
       return;
     }
 
-    const { position, nPositions, positionSize, batchIDs, batchIDSize, RTE } = positionInfo;
+    const { position, nPositions, positionSize, batchIDs, batchIDSize, RTE } =
+      positionInfo;
 
     const material = m.material;
     const transform = m.transform;
@@ -73,15 +80,31 @@ export class InstancedSdfTextMesh extends InstancedMesh<SDFTextMesh> implements 
 
     for (let i = 0; i < nPositions; i++) {
       const batchIdIdx = i * batchIDSize;
-      const batchId = batchIDs ?  batchIDs[batchIdIdx] : undefined;
+      const batchId = batchIDs ? batchIDs[batchIdIdx] : undefined;
       const posIdx = i * positionSize;
-      const pos = RTE ? {
-            high: (position as { high: Float32Array }).high.subarray(posIdx, posIdx + positionSize),
-            low: (position as { low: Float32Array }).low.subarray(posIdx, posIdx + positionSize),
+      const pos = RTE
+        ? {
+            high: (position as { high: Float32Array }).high.subarray(
+              posIdx,
+              posIdx + positionSize,
+            ),
+            low: (position as { low: Float32Array }).low.subarray(
+              posIdx,
+              posIdx + positionSize,
+            ),
           }
         : (position as Float32Array).subarray(posIdx, posIdx + positionSize);
 
-      const mesh = new SDFTextMesh(pos, material, transform, fontManager, this._fontUrl, batchId, RTE, active);
+      const mesh = new SDFTextMesh(
+        pos,
+        material,
+        transform,
+        fontManager,
+        this._fontUrl,
+        batchId,
+        RTE,
+        active,
+      );
       mesh.renderOrder = this.renderOrder;
 
       if (sharedTex) {
@@ -103,8 +126,24 @@ export class InstancedSdfTextMesh extends InstancedMesh<SDFTextMesh> implements 
     this.setActive(true);
 
     const material = m.material;
+    const text = material.text ?? "";
 
-    // Pre-shape new text to prime cache, then refresh the shared atlas texture
+    // If the text hasn't been prepared in the worker yet, schedule async preparation
+    if (text && !this._fontManager.isTextPrepared(this._fontUrl, text)) {
+      this._fontManager.prepareText(this._fontUrl, text).then(() => {
+        this._applyUpdate(material, active, needRender);
+      });
+      return;
+    }
+
+    this._applyUpdate(material, active, needRender);
+  }
+
+  private _applyUpdate(
+    material: NavaraTextMaterial,
+    active: boolean,
+    needRender?: () => void,
+  ) {
     const text = material.text ?? "";
     if (text) {
       this._fontManager.shapeText(this._fontUrl, text);
@@ -192,5 +231,4 @@ export class InstancedSdfTextMesh extends InstancedMesh<SDFTextMesh> implements 
 
     return null;
   }
-
 }

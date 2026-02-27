@@ -1,4 +1,3 @@
-use bevy_ecs::resource::Resource;
 use guillotiere::{AllocId, AtlasAllocator, Size};
 use rustc_hash::FxHashMap;
 
@@ -97,7 +96,8 @@ pub struct FontEntry {
 /// Each font entry owns its own SDF atlas so that different fonts
 /// don't compete for atlas space and the TypeScript side can receive
 /// a single atlas texture per font.
-#[derive(Default, Resource)]
+#[derive(Default)]
+#[cfg_attr(feature = "bevy", derive(bevy_ecs::resource::Resource))]
 pub struct FontCache {
     /// Loaded fonts keyed by their URL
     pub fonts: FxHashMap<String, FontEntry>,

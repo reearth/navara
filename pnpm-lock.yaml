@@ -24,6 +24,9 @@ importers:
       '@navara/engine-api':
         specifier: workspace:*
         version: link:web/wasm/navara_engine_api
+      '@navara/engine-font-worker':
+        specifier: workspace:*
+        version: link:web/wasm/navara_font_worker
       '@navara/engine-worker':
         specifier: workspace:*
         version: link:web/wasm/navara_engine_worker
@@ -352,6 +355,8 @@ importers:
   web/wasm/navara_engine_api: {}
 
   web/wasm/navara_engine_worker: {}
+
+  web/wasm/navara_font_worker: {}
 
 packages:
 

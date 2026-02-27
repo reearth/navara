@@ -1,4 +1,5 @@
 export { FontManager } from "./FontManager";
+export { FontWorkerClient } from "./FontWorkerClient";
 export type {
   FontAtlasData,
   GlyphMetrics,
