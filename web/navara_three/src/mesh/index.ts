@@ -3,8 +3,6 @@ export * from "./model";
 export * from "./polygon";
 export * from "./polyline";
 export * from "./polygonOutline";
-export * from "./point";
-export * from "./billboard";
 export * from "./featureMesh";
 export * from "./batchedFeature";
 export * from "./instanced";
