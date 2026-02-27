@@ -15,8 +15,7 @@ import {
 
 import type { ViewEvents } from "..";
 import type { ViewContext } from "../core";
-import { updateEffectLinks, unlinkEffects } from "../core/SelectiveEffectHelper";
-import { injectSelectiveEffectHandlers } from "../core/SelectiveEffectMaskContext";
+import { SelectiveEffectLifecycle } from "../core/SelectiveEffectLifecycle";
 import type { BufferLoader } from "../event";
 import { createPolylineMaterialEnhancer } from "../material/enhancer";
 import type { CommonUniforms } from "../uniforms";
@@ -63,8 +62,8 @@ export class PolylineMesh extends BatchedFeatureMesh<
   private _layerId: string;
   /** Material enhancer for managing shader state */
   private _enhancedMaterial?: ReturnType<typeof createPolylineMaterialEnhancer>;
-  /** Previous effectIds for SelectiveEffect registry diff */
-  private _prevEffectIds?: string[];
+  /** SelectiveEffect lifecycle management (effectIds registry + mask-pass handlers) */
+  private _seLifecycle?: SelectiveEffectLifecycle;
   /** Flag indicating geometry initialization failed - mesh should never be visible */
   private _geometryInitFailed = false;
 
@@ -321,11 +320,13 @@ export class PolylineMesh extends BatchedFeatureMesh<
 
     viewEvents.emit("_csmMounted", this.material);
 
-    // Setup selective effect handlers (wraps existing RTE callback on this.onBeforeRender)
-    injectSelectiveEffectHandlers(this, {
-      registry: this._viewContext?.selectiveEffectRegistry,
-      layerId: this._layerId,
-    });
+    // Setup selective effect lifecycle (mask-pass handlers + effectIds registry tracking)
+    this._seLifecycle = new SelectiveEffectLifecycle(
+      this,
+      this._viewContext?.selectiveEffectRegistry,
+      this._layerId,
+    );
+    this._seLifecycle.injectHandlers();
 
     this._initBatchedMaterial();
 
@@ -400,9 +401,8 @@ export class PolylineMesh extends BatchedFeatureMesh<
     this.castShadow = !!material.castShadow;
     this.receiveShadow = !!material.receiveShadow;
 
-    // SelectiveEffect: effectIds handling (needs prev state for registry)
-    const updatedEffectIds = updateEffectLinks(this, this._viewContext.selectiveEffectRegistry, this._layerId, this._prevEffectIds, material.effectIds);
-    if (updatedEffectIds !== undefined) this._prevEffectIds = updatedEffectIds;
+    // SelectiveEffect: effectIds handling
+    this._seLifecycle?.update(material.effectIds);
 
     const base = enhancer.states();
 
@@ -483,8 +483,7 @@ export class PolylineMesh extends BatchedFeatureMesh<
 
   dispose(viewEvents: EventHandler<ViewEvents>) {
     // Clean up SelectiveEffect registry links
-    unlinkEffects(this, this._viewContext?.selectiveEffectRegistry, this._layerId, this._prevEffectIds);
-    this._prevEffectIds = undefined;
+    this._seLifecycle?.dispose();
 
     viewEvents.emit("_csmUnmounted", this.material);
   }

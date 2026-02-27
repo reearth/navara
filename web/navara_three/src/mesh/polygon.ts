@@ -16,8 +16,8 @@ import {
 
 import { PolygonOutlineMesh, type ViewEvents } from "..";
 import type { ViewContext } from "../core";
-import { ensureSelectiveEffectUserData , updateEffectLinks, unlinkEffects } from "../core/SelectiveEffectHelper";
-import { injectSelectiveEffectHandlers } from "../core/SelectiveEffectMaskContext";
+import { ensureSelectiveEffectUserData } from "../core/SelectiveEffectHelper";
+import { SelectiveEffectLifecycle } from "../core/SelectiveEffectLifecycle";
 import type { BufferLoader } from "../event";
 import type { PolygonMaterialProps } from "../material/enhancer/polygon";
 import { createPolygonMaterialEnhancer } from "../material/enhancer/polygon/polygonMaterialEnhancer";
@@ -61,8 +61,8 @@ export class PolygonMesh extends BatchedFeatureMesh<
 
   /** Enhanced material with encapsulated state */
   private _enhancedMaterial?: ReturnType<typeof createPolygonMaterialEnhancer>;
-  /** Previous effectIds for SelectiveEffect registry updates */
-  private _prevEffectIds?: string[];
+  /** SelectiveEffect lifecycle management (effectIds registry + mask-pass handlers) */
+  private _seLifecycle?: SelectiveEffectLifecycle;
 
   constructor(
     viewContext: ViewContext,
@@ -363,12 +363,13 @@ export class PolygonMesh extends BatchedFeatureMesh<
     // Initialize SelectiveEffect shader uniforms
     ensureSelectiveEffectUserData(material);
 
-    // Setup selective effect handlers (automatically wraps existing RTE callback)
-    injectSelectiveEffectHandlers(this, {
-      registry: this._viewContext?.selectiveEffectRegistry,
-      layerId: this._layerId,
-    });
-    // Note: No need to manually assign handlers - function modifies object in place
+    // Setup selective effect lifecycle (mask-pass handlers + effectIds registry tracking)
+    this._seLifecycle = new SelectiveEffectLifecycle(
+      this,
+      this._viewContext?.selectiveEffectRegistry,
+      this._layerId,
+    );
+    this._seLifecycle.injectHandlers();
 
     // ========== SelectiveEffect integration end ==========
 
@@ -415,9 +416,8 @@ export class PolygonMesh extends BatchedFeatureMesh<
     this.castShadow = !!material.castShadow;
     this.receiveShadow = !!material.receiveShadow;
 
-    // SelectiveEffect: effectIds handling (needs prev state for registry)
-    const updatedEffectIds = updateEffectLinks(this, this._viewContext.selectiveEffectRegistry, this._layerId, this._prevEffectIds, material.effectIds);
-    if (updatedEffectIds !== undefined) this._prevEffectIds = updatedEffectIds;
+    // SelectiveEffect: effectIds handling
+    this._seLifecycle?.update(material.effectIds);
 
     const { base } = enhancer.states();
 
@@ -633,8 +633,7 @@ export class PolygonMesh extends BatchedFeatureMesh<
 
   dispose(viewEvents: EventHandler<ViewEvents>) {
     // Clean up SelectiveEffect registry links
-    unlinkEffects(this, this._viewContext?.selectiveEffectRegistry, this._layerId, this._prevEffectIds);
-    this._prevEffectIds = undefined;
+    this._seLifecycle?.dispose();
 
     viewEvents.emit("_csmUnmounted", this.material);
     this.customDepthMaterial?.dispose();
