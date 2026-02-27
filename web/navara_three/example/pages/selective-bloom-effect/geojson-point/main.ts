@@ -65,7 +65,7 @@ const run = async () => {
       size: 100,
       scaleByDistance: true,
       clampToGround: true,
-      color: new Color().setHex(0xff0000),
+      color: new Color().setHex(0x0066ff),
       center: { x: 0, y: -0.5 },
       effectIds: [bloomEffect.id],
       emissiveIntensity: 0.5,
