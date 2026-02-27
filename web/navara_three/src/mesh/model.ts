@@ -26,7 +26,7 @@ import type { ViewContext } from "../core";
 import {
   getSelectiveEffectConfig,
   SelectiveEffectOcclusionMode,
-} from "../core/SelectiveEffectHelper";
+ updateEffectLinks } from "../core/SelectiveEffectHelper";
 import {
   getMaskPassContext,
   MaskPassPhase,
@@ -44,7 +44,6 @@ import type { ModelMaterialProps, PntsProps } from "../material/enhancer/model";
 import type { UniformValue } from "../material/types";
 import type { CustomObject3DEventMap } from "../object3DEvent";
 import type { CommonUniforms } from "../uniforms";
-import { arraysEqual } from "../utils";
 
 import {
   getBatchDataTexture,
@@ -472,15 +471,8 @@ export class ModelMesh
     }
 
     // SelectiveEffect: effectIds handling at ModelMesh level
-    if (!arraysEqual(this.prevEffectIds, material.effectIds)) {
-      this.viewContext.selectiveEffectRegistry?.updateLinksForObject(
-        this,
-        material.effectIds ?? [],
-        this.prevEffectIds,
-        this._layerId,
-      );
-      this.prevEffectIds = material.effectIds ? [...material.effectIds] : [];
-    }
+    const updatedEffectIds = updateEffectLinks(this, this.viewContext.selectiveEffectRegistry, this._layerId, this.prevEffectIds, material.effectIds);
+    if (updatedEffectIds !== undefined) this.prevEffectIds = updatedEffectIds;
   }
 
   /**

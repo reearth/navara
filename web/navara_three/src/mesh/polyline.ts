@@ -15,10 +15,11 @@ import {
 
 import type { ViewEvents } from "..";
 import type { ViewContext } from "../core";
+import { updateEffectLinks, unlinkEffects } from "../core/SelectiveEffectHelper";
+import { injectSelectiveEffectHandlers } from "../core/SelectiveEffectMaskContext";
 import type { BufferLoader } from "../event";
 import { createPolylineMaterialEnhancer } from "../material/enhancer";
 import type { CommonUniforms } from "../uniforms";
-import { arraysEqual } from "../utils";
 
 import {
   BatchedFeatureMesh,
@@ -320,6 +321,12 @@ export class PolylineMesh extends BatchedFeatureMesh<
 
     viewEvents.emit("_csmMounted", this.material);
 
+    // Setup selective effect handlers (wraps existing RTE callback on this.onBeforeRender)
+    injectSelectiveEffectHandlers(this, {
+      registry: this._viewContext?.selectiveEffectRegistry,
+      layerId: this._layerId,
+    });
+
     this._initBatchedMaterial();
 
     this._update(meshMaterial, mesh.active);
@@ -394,15 +401,8 @@ export class PolylineMesh extends BatchedFeatureMesh<
     this.receiveShadow = !!material.receiveShadow;
 
     // SelectiveEffect: effectIds handling (needs prev state for registry)
-    if (!arraysEqual(this._prevEffectIds, material.effectIds)) {
-      this._viewContext.selectiveEffectRegistry?.updateLinksForObject(
-        this,
-        material.effectIds ?? [],
-        this._prevEffectIds ?? [],
-        this._layerId,
-      );
-      this._prevEffectIds = material.effectIds ? [...material.effectIds] : [];
-    }
+    const updatedEffectIds = updateEffectLinks(this, this._viewContext.selectiveEffectRegistry, this._layerId, this._prevEffectIds, material.effectIds);
+    if (updatedEffectIds !== undefined) this._prevEffectIds = updatedEffectIds;
 
     const base = enhancer.states();
 
@@ -482,6 +482,10 @@ export class PolylineMesh extends BatchedFeatureMesh<
   }
 
   dispose(viewEvents: EventHandler<ViewEvents>) {
+    // Clean up SelectiveEffect registry links
+    unlinkEffects(this, this._viewContext?.selectiveEffectRegistry, this._layerId, this._prevEffectIds);
+    this._prevEffectIds = undefined;
+
     viewEvents.emit("_csmUnmounted", this.material);
   }
 }

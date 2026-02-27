@@ -23,10 +23,11 @@ import {
 import invariant from "tiny-invariant";
 
 import type { ViewContext } from "../core";
+import { updateEffectLinks, unlinkEffects } from "../core/SelectiveEffectHelper";
+import { injectSelectiveEffectHandlers } from "../core/SelectiveEffectMaskContext";
 import type { BufferLoader } from "../event";
 import { TEXTURE_LOADER } from "../event/loaders";
 import { getImageDataFromImageBitmap } from "../tasks/getImageDataFromImageBitmap";
-import { arraysEqual } from "../utils";
 
 import { PickableMesh } from "./pickableMesh";
 
@@ -86,6 +87,12 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
 
     // Create Material
     this.material = await this._initMaterial(positionsInfo, m);
+
+    // Setup selective effect handlers for mask pass participation
+    injectSelectiveEffectHandlers(this, {
+      registry: this._viewContext?.selectiveEffectRegistry,
+      layerId: this._layerId,
+    });
 
     this.frustumCulled = false; // Disable since bounding box doesn't account for instance positions
   }
@@ -233,18 +240,10 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     }
 
     // SelectiveEffect: effectIds handling at container level
-    // SpriteMaterial doesn't support emissive, so only effectIds is handled
     const ud = this.userData as InstancedSpriteUserData;
     ud.prev ??= {};
-    if (!arraysEqual(ud.prev.effectIds, m.material.effectIds)) {
-      this._viewContext.selectiveEffectRegistry?.updateLinksForObject(
-        this,
-        m.material.effectIds ?? [],
-        ud.prev.effectIds ?? [],
-        this._layerId,
-      );
-      ud.prev.effectIds = m.material.effectIds ? [...m.material.effectIds] : [];
-    }
+    const updatedEffectIds = updateEffectLinks(this, this._viewContext.selectiveEffectRegistry, this._layerId, ud.prev.effectIds, m.material.effectIds);
+    if (updatedEffectIds !== undefined) ud.prev.effectIds = updatedEffectIds;
   }
 
   private _initGeometry(
@@ -645,6 +644,11 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
   }
 
   dispose(): void {
+    // Clean up SelectiveEffect registry links
+    const ud = this.userData as InstancedSpriteUserData;
+    unlinkEffects(this, this._viewContext?.selectiveEffectRegistry, this._layerId, ud.prev?.effectIds);
+    if (ud.prev) ud.prev.effectIds = undefined;
+
     this.geometry?.dispose();
 
     const shaderMaterial = this.material as ShaderMaterial;

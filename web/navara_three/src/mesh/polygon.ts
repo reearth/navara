@@ -16,13 +16,12 @@ import {
 
 import { PolygonOutlineMesh, type ViewEvents } from "..";
 import type { ViewContext } from "../core";
-import { ensureSelectiveEffectUserData } from "../core/SelectiveEffectHelper";
+import { ensureSelectiveEffectUserData , updateEffectLinks, unlinkEffects } from "../core/SelectiveEffectHelper";
 import { injectSelectiveEffectHandlers } from "../core/SelectiveEffectMaskContext";
 import type { BufferLoader } from "../event";
 import type { PolygonMaterialProps } from "../material/enhancer/polygon";
 import { createPolygonMaterialEnhancer } from "../material/enhancer/polygon/polygonMaterialEnhancer";
 import type { CommonUniforms } from "../uniforms";
-import { arraysEqual } from "../utils";
 
 import {
   BatchedFeatureMesh,
@@ -417,15 +416,8 @@ export class PolygonMesh extends BatchedFeatureMesh<
     this.receiveShadow = !!material.receiveShadow;
 
     // SelectiveEffect: effectIds handling (needs prev state for registry)
-    if (!arraysEqual(this._prevEffectIds, material.effectIds)) {
-      this._viewContext.selectiveEffectRegistry?.updateLinksForObject(
-        this,
-        material.effectIds ?? [],
-        this._prevEffectIds ?? [],
-        this._layerId,
-      );
-      this._prevEffectIds = material.effectIds ? [...material.effectIds] : [];
-    }
+    const updatedEffectIds = updateEffectLinks(this, this._viewContext.selectiveEffectRegistry, this._layerId, this._prevEffectIds, material.effectIds);
+    if (updatedEffectIds !== undefined) this._prevEffectIds = updatedEffectIds;
 
     const { base } = enhancer.states();
 
@@ -641,15 +633,8 @@ export class PolygonMesh extends BatchedFeatureMesh<
 
   dispose(viewEvents: EventHandler<ViewEvents>) {
     // Clean up SelectiveEffect registry links
-    if (this._viewContext?.selectiveEffectRegistry && this._prevEffectIds) {
-      this._viewContext.selectiveEffectRegistry.updateLinksForObject(
-        this,
-        [], // New effectIds: empty array (removing all links)
-        this._prevEffectIds, // Previous effectIds
-        this._layerId,
-      );
-      this._prevEffectIds = undefined;
-    }
+    unlinkEffects(this, this._viewContext?.selectiveEffectRegistry, this._layerId, this._prevEffectIds);
+    this._prevEffectIds = undefined;
 
     viewEvents.emit("_csmUnmounted", this.material);
     this.customDepthMaterial?.dispose();
