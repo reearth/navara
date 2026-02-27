@@ -1004,7 +1004,7 @@ impl App {
         self.app
             .world()
             .get_resource::<navara_font::FontCache>()
-            .map_or(false, |cache| cache.is_loaded(url))
+            .is_some_and(|cache| cache.is_loaded(url))
     }
 
     /// Get the SDF atlas pixel data and dimensions for a loaded font.
@@ -1021,6 +1021,7 @@ impl App {
 
     /// Get glyph metrics for all glyphs currently in a font's atlas.
     /// Returns a Vec of (glyph_id, atlas_x, atlas_y, atlas_w, atlas_h, bearing_x, bearing_y, advance).
+    #[allow(clippy::type_complexity)]
     pub fn get_font_glyph_metrics(
         &self,
         url: &str,
@@ -1056,18 +1057,16 @@ impl App {
 
     /// Shape text and ensure all glyphs are in the atlas.
     /// Returns (shaped_glyphs, units_per_em).
+    #[allow(clippy::type_complexity)]
     pub fn shape_text(
         &mut self,
         url: &str,
         text: &str,
     ) -> Option<(Vec<(u32, i32, i32, i32, i32, u32)>, u16)> {
-        let Some(mut font_cache) = self
+        let mut font_cache = self
             .app
             .world_mut()
-            .get_resource_mut::<navara_font::FontCache>()
-        else {
-            return None;
-        };
+            .get_resource_mut::<navara_font::FontCache>()?;
         let current_frame = font_cache.current_frame;
         let entry = font_cache.get_mut(url)?;
 

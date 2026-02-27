@@ -321,7 +321,10 @@ export async function processRenderableFeatureChanged(
   if (obj instanceof InstancedSpriteMesh && billboard) {
     await processBillboardChanged(obj, billboard, buf, active);
   }
-  if ((obj instanceof InstancedTextMesh || obj instanceof InstancedSdfTextMesh) && text) {
+  if (
+    (obj instanceof InstancedTextMesh || obj instanceof InstancedSdfTextMesh) &&
+    text
+  ) {
     processTextChanged(obj, text, buf, active, renderFlag);
   }
   if (obj instanceof ModelMesh && model) {
