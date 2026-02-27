@@ -96,7 +96,25 @@ export class ArclineMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
       this.emit("_needsUpdate");
     }
 
+    // Detect effectIds transition for sub-mesh handler injection
+    const prevEffectIds = this.config.effectIds ?? [];
+
+    // super.onUpdateConfig handles _effectIds, registry links, and setupMeshOnBeforeRender
     super.onUpdateConfig(updates);
+
+    // Synchronize config.effectIds so arcLines update path uses the correct value
+    if (updates.effectIds !== undefined) {
+      this.config.effectIds = updates.effectIds;
+
+      const hadNoEffects = prevEffectIds.length === 0;
+      const nowHasEffects = (updates.effectIds?.length ?? 0) > 0;
+
+      // Base class calls setupMeshOnBeforeRender for top-level Object3D,
+      // but ArcLine needs per-child Mesh injection
+      if (hadNoEffects && nowHasEffects && this._instance) {
+        this.injectHandlersOnSubMeshes();
+      }
+    }
   }
 
   onResize(width: number, height: number): void {
