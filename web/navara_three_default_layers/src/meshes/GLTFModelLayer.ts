@@ -87,6 +87,7 @@ export type AnimationState = {
 export type GLTFModelLayerEvent = {
   load: () => void;
   animationReady: () => void;
+  _needsUpdate: () => void;
 };
 
 export class GLTFModelLayer extends MeshLayerDeclaration<
