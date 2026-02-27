@@ -7,6 +7,7 @@ import ThreeView, {
   type Cesium3dTilesLayer,
   type ShadowMode,
 } from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../helpers/attributions";
@@ -23,10 +24,12 @@ export async function run() {
     shadow: true,
   });
 
+  const defaultPlugin = new DefaultPlugin();
+  view.addPlugin(defaultPlugin);
+
   await view.init();
 
-  // Add atmosphere layers
-  const defaultLayers = view.addDefaultAtmosphereLayers();
+  const defaultAtmospheres = defaultPlugin.addDefaultPhotorealLayers();
   view.addDefaultEffectLayers();
 
   view.toneMappingExposure = 10;
@@ -61,7 +64,7 @@ export async function run() {
 
   addCameraControl(view, pane);
   addDateControl(view, pane);
-  addViewShadowControl(view, defaultLayers.sun, pane);
+  addViewShadowControl(view, defaultAtmospheres.sun, pane);
   addBuildingModelControl(view, pane);
 
   showAttributions([

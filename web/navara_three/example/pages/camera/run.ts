@@ -4,6 +4,10 @@ import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
   type LatLngHeight,
 } from "@navara/three";
+import {
+  DefaultPlugin,
+  type DefaultLayerDescriptions,
+} from "@navara/three_default_plugin";
 import { Vector3 } from "three";
 import { Pane, FolderApi } from "tweakpane";
 
@@ -23,12 +27,14 @@ const gCameraParams = {
 let gCameraParamsPane: FolderApi | undefined = undefined;
 let gIgnoreChange = false;
 
-export const run = async (view: ThreeView) => {
+export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
+  const plugin = new DefaultPlugin();
+  view.addPlugin(plugin);
   await view.init();
 
   view.atmosphere.date.setHours(8);
 
-  view.addDefaultAtmosphereLayers();
+  plugin.addDefaultPhotorealLayers();
 
   view.addLayer({
     type: "mesh",

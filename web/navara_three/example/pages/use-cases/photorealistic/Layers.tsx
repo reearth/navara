@@ -3,6 +3,8 @@ import {
   JAPAN_GSI_ELEVATION_DECODER,
   Color,
 } from "@navara/three";
+import type { RainMeshLayerConfig } from "@navara/three_default_layers";
+import type { DefaultPlugin } from "@navara/three_default_plugin";
 import { Layer, useViewContext } from "@navara/three_react";
 import { useEffect, useMemo, type FC } from "react";
 import { SphericalHarmonics3, Vector2 } from "three";
@@ -19,6 +21,7 @@ import { useNightContext } from "./NightContext";
 import { QUALITY, type QualityFlags } from "./quality";
 
 export type SceneLayerToggles = {
+  defaultPlugin: DefaultPlugin;
   buildingsVisible?: boolean;
   buildingColorAttribute?: BuildingColorAttribute;
   cloudsEffectVisible?: boolean;
@@ -31,6 +34,7 @@ export type SceneLayerToggles = {
 };
 
 export const Layers: FC<SceneLayerToggles> = ({
+  defaultPlugin,
   buildingsVisible = true,
   buildingColorAttribute = "bldg:measuredHeight",
   cloudsEffectVisible = true,
@@ -43,7 +47,7 @@ export const Layers: FC<SceneLayerToggles> = ({
 }) => {
   const { view } = useViewContext();
 
-  const defaultLayers = useDefaultLayers(view);
+  const defaultLayers = useDefaultLayers(view, defaultPlugin);
 
   const { isNight } = useNightContext();
 
@@ -90,7 +94,7 @@ export const Layers: FC<SceneLayerToggles> = ({
   );
 
   const rainDesc = useMemo(
-    (): LayerDescription => ({
+    (): RainMeshLayerConfig => ({
       type: "mesh",
       visible: rainVisible,
       rain: {
@@ -159,7 +163,7 @@ export const Layers: FC<SceneLayerToggles> = ({
   // Night scene tuning inspired by example/pages/night
   useEffect(() => {
     // Boost stars and enable at night; keep subtle in day
-    defaultLayers?.atmosphere?.stars.update({
+    defaultLayers?.atmosphere?.stars?.update({
       stars: isNight
         ? { intensity: 50, pointSize: 1.5 }
         : { intensity: 1, pointSize: 1 },
@@ -168,7 +172,7 @@ export const Layers: FC<SceneLayerToggles> = ({
 
   useEffect(() => {
     if (!defaultLayers) return;
-    defaultLayers.atmosphere?.sun.update({
+    defaultLayers.atmosphere?.sun?.update({
       sun: {
         castShadow: true,
         ...QUALITY[quality]?.sun,

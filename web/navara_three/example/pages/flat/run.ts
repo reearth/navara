@@ -1,4 +1,5 @@
 import ThreeView, { Color, ToneMappingMode } from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../helpers/attributions";
@@ -6,9 +7,12 @@ import { TILE_DATASETS, TILES_3D_DATASETS } from "../../helpers/constants";
 import { addCameraControl, addDateControl } from "../../helpers/control";
 
 export const run = async (view: ThreeView) => {
+  const defaultPlugin = new DefaultPlugin();
+  view.addPlugin(defaultPlugin);
+
   await view.init();
 
-  const defaultAtmospheres = view.addDefaultAtmosphereLayers();
+  const defaultAtmospheres = defaultPlugin.addDefaultPhotorealLayers();
   defaultAtmospheres.sun.update({
     sun: {
       castShadow: true,

@@ -1,11 +1,17 @@
 import ThreeView, {
   ToneMappingMode,
-  type ArclineMeshLayer,
-  type GlowGlobeMeshLayer,
   Color,
   geodeticToVector3,
   degreeToRadian,
 } from "@navara/three";
+import type {
+  ArclineMeshLayer,
+  GlowGlobeMeshLayer,
+} from "@navara/three_default_layers";
+import {
+  DefaultPlugin,
+  type DefaultLayerDescriptions,
+} from "@navara/three_default_plugin";
 import type { FeatureCollection, MultiLineString } from "geojson";
 
 import { showAttributions } from "../../../helpers/attributions";
@@ -90,10 +96,12 @@ const constructData = async () => {
 };
 
 export async function run() {
-  const view = new ThreeView({
+  const view = new ThreeView<DefaultLayerDescriptions>({
     backgroundColor: new Color().setStyle("#0b0a0d"),
   });
 
+  const plugin = new DefaultPlugin();
+  view.addPlugin(plugin);
   await view.init();
 
   view.atmosphere.date.setHours(8);
