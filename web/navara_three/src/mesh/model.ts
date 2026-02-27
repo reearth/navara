@@ -26,7 +26,8 @@ import type { ViewContext } from "../core";
 import {
   getSelectiveEffectConfig,
   SelectiveEffectOcclusionMode,
- updateEffectLinks } from "../core/SelectiveEffectHelper";
+} from "../core/SelectiveEffectHelper";
+import { SelectiveEffectLifecycle } from "../core/SelectiveEffectLifecycle";
 import {
   getMaskPassContext,
   MaskPassPhase,
@@ -92,7 +93,8 @@ export class ModelMesh
   // model credit for attribution
   credit: string | undefined;
 
-  private prevEffectIds: string[] = [];
+  /** SelectiveEffect lifecycle management (effectIds registry tracking) */
+  private _seLifecycle?: SelectiveEffectLifecycle;
 
   constructor(
     gltfInfo: {
@@ -113,6 +115,13 @@ export class ModelMesh
     this.credit = gltfInfo.credit;
     this.add(gltfInfo.scene);
     this.init(m, buf, viewEvents);
+    // Setup selective effect lifecycle (effectIds registry tracking only; no handler injection
+    // because Model uses its own setupMeshOnBeforeRender for per-child-mesh mask pass control)
+    this._seLifecycle = new SelectiveEffectLifecycle(
+      this,
+      this.viewContext?.selectiveEffectRegistry,
+      this._layerId,
+    );
     this.addEventListener("removedFromWorld", () => {
       this.dispose(viewEvents);
     });
@@ -470,9 +479,8 @@ export class ModelMesh
       }
     }
 
-    // SelectiveEffect: effectIds handling at ModelMesh level
-    const updatedEffectIds = updateEffectLinks(this, this.viewContext.selectiveEffectRegistry, this._layerId, this.prevEffectIds, material.effectIds);
-    if (updatedEffectIds !== undefined) this.prevEffectIds = updatedEffectIds;
+    // SelectiveEffect: effectIds handling
+    this._seLifecycle?.update(material.effectIds);
   }
 
   /**
@@ -546,6 +554,9 @@ export class ModelMesh
   }
 
   dispose(viewEvents: EventHandler<ViewEvents>) {
+    // Clean up SelectiveEffect registry links
+    this._seLifecycle?.dispose();
+
     this.traverseMesh((m) => {
       viewEvents.emit("_csmUnmounted", m.material);
     });

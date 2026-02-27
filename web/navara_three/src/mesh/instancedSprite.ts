@@ -23,20 +23,12 @@ import {
 import invariant from "tiny-invariant";
 
 import type { ViewContext } from "../core";
-import { updateEffectLinks, unlinkEffects } from "../core/SelectiveEffectHelper";
-import { injectSelectiveEffectHandlers } from "../core/SelectiveEffectMaskContext";
+import { SelectiveEffectLifecycle } from "../core/SelectiveEffectLifecycle";
 import type { BufferLoader } from "../event";
 import { TEXTURE_LOADER } from "../event/loaders";
 import { getImageDataFromImageBitmap } from "../tasks/getImageDataFromImageBitmap";
 
 import { PickableMesh } from "./pickableMesh";
-
-/** UserData type for InstancedSpriteMesh */
-type InstancedSpriteUserData = {
-  prev?: {
-    effectIds?: string[];
-  };
-};
 
 export type InstancedSpriteOptions = {
   renderOrder?: number;
@@ -67,6 +59,8 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
   private _viewContext: ViewContext;
   /** Layer ID for SelectiveEffect handling */
   private _layerId: string;
+  /** SelectiveEffect lifecycle management (effectIds registry + mask-pass handlers) */
+  private _seLifecycle?: SelectiveEffectLifecycle;
 
   constructor(options: InstancedSpriteOptions) {
     super();
@@ -88,11 +82,13 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     // Create Material
     this.material = await this._initMaterial(positionsInfo, m);
 
-    // Setup selective effect handlers for mask pass participation
-    injectSelectiveEffectHandlers(this, {
-      registry: this._viewContext?.selectiveEffectRegistry,
-      layerId: this._layerId,
-    });
+    // Setup selective effect lifecycle (mask-pass handlers + effectIds registry tracking)
+    this._seLifecycle = new SelectiveEffectLifecycle(
+      this,
+      this._viewContext?.selectiveEffectRegistry,
+      this._layerId,
+    );
+    this._seLifecycle.injectHandlers();
 
     this.frustumCulled = false; // Disable since bounding box doesn't account for instance positions
   }
@@ -239,11 +235,8 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
       material.uniformsNeedUpdate = true;
     }
 
-    // SelectiveEffect: effectIds handling at container level
-    const ud = this.userData as InstancedSpriteUserData;
-    ud.prev ??= {};
-    const updatedEffectIds = updateEffectLinks(this, this._viewContext.selectiveEffectRegistry, this._layerId, ud.prev.effectIds, m.material.effectIds);
-    if (updatedEffectIds !== undefined) ud.prev.effectIds = updatedEffectIds;
+    // SelectiveEffect: effectIds handling
+    this._seLifecycle?.update(m.material.effectIds);
   }
 
   private _initGeometry(
@@ -645,9 +638,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
 
   dispose(): void {
     // Clean up SelectiveEffect registry links
-    const ud = this.userData as InstancedSpriteUserData;
-    unlinkEffects(this, this._viewContext?.selectiveEffectRegistry, this._layerId, ud.prev?.effectIds);
-    if (ud.prev) ud.prev.effectIds = undefined;
+    this._seLifecycle?.dispose();
 
     this.geometry?.dispose();
 
