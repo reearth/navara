@@ -33,7 +33,7 @@ const run = async () => {
     type: "effect",
     selectiveOutline: {
       color: new Color().setHex(0xff0000),
-      thickness: 2.0,
+      thickness: 1.0,
       edgeStrength: 1.0,
     },
   });
@@ -48,7 +48,7 @@ const run = async () => {
       size: 500,
       scaleByDistance: true,
       clampToGround: true,
-      color: new Color().setStyle("#ff0000"),
+      color: new Color().setHex(0xffcc00),
       center: { x: 0, y: -0.5 },
       effectIds: [outlineEffect.id],
       emissiveIntensity: 0.5,
@@ -63,7 +63,7 @@ const run = async () => {
       const color = (() => {
         if (type === "陸上競技場") return new Color().setHex(0x0000ff);
         if (type?.endsWith("河川敷")) return new Color().setHex(0x00ff00);
-        return new Color().setHex(0xff0000);
+        return new Color().setHex(0xffcc00);
       })();
 
       return { color };
