@@ -64,6 +64,13 @@ export class FontManager {
   private _textureCache = new Map<string, DataTexture>();
   /** Tracks in-flight prepareText promises to deduplicate. */
   private _preparePending = new Map<string, Promise<void>>();
+  /** Microtask batch queue: per-font list of texts awaiting worker dispatch. */
+  private _batchQueue = new Map<
+    string,
+    { text: string; cacheKey: string; resolve: () => void }[]
+  >();
+  /** Whether a microtask flush is already scheduled. */
+  private _batchScheduled = false;
 
   setClient(client: FontWorkerClient) {
     this._client = client;
@@ -106,8 +113,25 @@ export class FontManager {
     if (this._preparePending.has(cacheKey))
       return this._preparePending.get(cacheKey);
 
-    const promise = this._doPrepareText(fontUrl, text, cacheKey);
+    // Queue into microtask batch instead of dispatching immediately.
+    // All synchronous prepareText() calls (e.g. from a FeatureEvaluator loop)
+    // are coalesced into a single worker message.
+    const promise = new Promise<void>((resolve) => {
+      let queue = this._batchQueue.get(fontUrl);
+      if (!queue) {
+        queue = [];
+        this._batchQueue.set(fontUrl, queue);
+      }
+      queue.push({ text, cacheKey, resolve });
+    });
+
     this._preparePending.set(cacheKey, promise);
+
+    if (!this._batchScheduled) {
+      this._batchScheduled = true;
+      queueMicrotask(() => this._flushBatch());
+    }
+
     try {
       await promise;
     } finally {
@@ -214,40 +238,63 @@ export class FontManager {
     }
   }
 
-  private async _doPrepareText(
-    fontUrl: string,
-    text: string,
-    cacheKey: string,
-  ): Promise<void> {
+  private async _flushBatch(): Promise<void> {
+    this._batchScheduled = false;
     const client = this._client;
     if (!client) return;
 
-    const result = await client.prepareText(fontUrl, text);
+    // Snapshot and clear the queue so new calls during await start a fresh batch
+    const queue = this._batchQueue;
+    this._batchQueue = new Map();
 
-    if (result.shapeResult) {
-      this._shapeCache.set(cacheKey, result.shapeResult);
-    }
+    for (const [fontUrl, entries] of queue) {
+      const texts = entries.map((e) => e.text);
 
-    if (result.atlas) {
-      this._atlasCache.set(fontUrl, result.atlas);
+      try {
+        const batchResult = await client.prepareTextBatch(fontUrl, texts);
 
-      // Track new glyph IDs for dirty detection
-      let knownSet = this._knownGlyphs.get(fontUrl);
-      if (!knownSet) {
-        knownSet = new Set();
-        this._knownGlyphs.set(fontUrl, knownSet);
-      }
-      let hasNewGlyphs = false;
-      if (result.shapeResult) {
-        for (const m of result.shapeResult.metrics) {
-          if (!knownSet.has(m.glyphId)) {
-            knownSet.add(m.glyphId);
-            hasNewGlyphs = true;
+        // Cache each per-text result
+        for (const item of batchResult.results) {
+          const cacheKey = fontUrl + "\0" + item.text;
+          if (item.shapeResult) {
+            this._shapeCache.set(cacheKey, item.shapeResult);
           }
         }
-      }
-      if (hasNewGlyphs) {
-        this._atlasDirty.add(fontUrl);
+
+        // Update atlas once for the entire batch
+        if (batchResult.atlas) {
+          this._atlasCache.set(fontUrl, batchResult.atlas);
+
+          let knownSet = this._knownGlyphs.get(fontUrl);
+          if (!knownSet) {
+            knownSet = new Set();
+            this._knownGlyphs.set(fontUrl, knownSet);
+          }
+          let hasNewGlyphs = false;
+          for (const item of batchResult.results) {
+            if (item.shapeResult) {
+              for (const m of item.shapeResult.metrics) {
+                if (!knownSet.has(m.glyphId)) {
+                  knownSet.add(m.glyphId);
+                  hasNewGlyphs = true;
+                }
+              }
+            }
+          }
+          if (hasNewGlyphs) {
+            this._atlasDirty.add(fontUrl);
+          }
+        }
+
+        // Resolve all queued promises for this font
+        for (const entry of entries) {
+          entry.resolve();
+        }
+      } catch {
+        // On error, resolve anyway to avoid hanging promises
+        for (const entry of entries) {
+          entry.resolve();
+        }
       }
     }
   }

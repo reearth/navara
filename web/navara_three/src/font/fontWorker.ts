@@ -107,6 +107,108 @@ ctx.onmessage = async (e: MessageEvent) => {
         break;
       }
 
+      case "prepareTextBatch": {
+        const { fontUrl, texts } = msg.payload as {
+          fontUrl: string;
+          texts: string[];
+        };
+
+        const results: {
+          text: string;
+          shapeResult: {
+            glyphs: {
+              glyphId: number;
+              xAdvance: number;
+              yAdvance: number;
+              xOffset: number;
+              yOffset: number;
+              cluster: number;
+            }[];
+            metrics: {
+              glyphId: number;
+              atlasX: number;
+              atlasY: number;
+              atlasW: number;
+              atlasH: number;
+              bearingX: number;
+              bearingY: number;
+              advance: number;
+            }[];
+            unitsPerEm: number;
+          } | null;
+        }[] = [];
+        let anyAtlasChanged = false;
+
+        for (const text of texts) {
+          const sr = shapeText(fontUrl, text);
+          if (sr?.atlas_changed) anyAtlasChanged = true;
+
+          const glyphs = sr?.glyphs.map((g: WasmShapedGlyph) => ({
+            glyphId: g.glyph_id,
+            xAdvance: g.x_advance,
+            yAdvance: g.y_advance,
+            xOffset: g.x_offset,
+            yOffset: g.y_offset,
+            cluster: g.cluster,
+          }));
+
+          const metrics = sr?.metrics.map((m: WasmGlyphMetrics) => ({
+            glyphId: m.glyph_id,
+            atlasX: m.atlas_x,
+            atlasY: m.atlas_y,
+            atlasW: m.atlas_w,
+            atlasH: m.atlas_h,
+            bearingX: m.bearing_x,
+            bearingY: m.bearing_y,
+            advance: m.advance,
+          }));
+
+          results.push({
+            text,
+            shapeResult:
+              sr && glyphs && metrics
+                ? { glyphs, metrics, unitsPerEm: sr.units_per_em }
+                : null,
+          });
+        }
+
+        tickFrame();
+
+        // One atlas transfer for the entire batch
+        let batchAtlasData: ArrayBuffer | null = null;
+        let batchAtlasWidth = 0;
+        let batchAtlasHeight = 0;
+        if (anyAtlasChanged) {
+          const atlas = getFontAtlasView(fontUrl);
+          if (atlas) {
+            batchAtlasData = atlas.data.slice().buffer;
+            batchAtlasWidth = atlas.width;
+            batchAtlasHeight = atlas.height;
+          }
+        }
+
+        const batchResponse = {
+          id,
+          type: "result" as const,
+          payload: {
+            results,
+            atlas: batchAtlasData
+              ? {
+                  data: batchAtlasData,
+                  width: batchAtlasWidth,
+                  height: batchAtlasHeight,
+                }
+              : null,
+          },
+        };
+
+        const batchTransfers: Transferable[] = batchAtlasData
+          ? [batchAtlasData]
+          : [];
+        ctx.postMessage(batchResponse, batchTransfers);
+        break;
+      }
+
       case "tickFrame": {
         tickFrame();
         ctx.postMessage({ id, type: "result", payload: null });

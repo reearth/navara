@@ -5,6 +5,11 @@ export type PrepareTextResult = {
   atlas: FontAtlasData | null;
 };
 
+export type BatchPrepareTextResult = {
+  results: { text: string; shapeResult: ShapeTextResult | null }[];
+  atlas: FontAtlasData | null;
+};
+
 /**
  * Main-thread client that communicates with the dedicated font Web Worker.
  * Uses a request/response protocol with incrementing message IDs.
@@ -73,6 +78,31 @@ export class FontWorkerClient {
       shapeResult: raw.shapeResult,
       atlas,
     };
+  }
+
+  /** Shape multiple texts in one worker round-trip. */
+  async prepareTextBatch(
+    fontUrl: string,
+    texts: string[],
+  ): Promise<BatchPrepareTextResult> {
+    const raw = (await this._send("prepareTextBatch", {
+      fontUrl,
+      texts,
+    })) as {
+      results: { text: string; shapeResult: ShapeTextResult | null }[];
+      atlas: { data: ArrayBuffer; width: number; height: number } | null;
+    };
+
+    let atlas: FontAtlasData | null = null;
+    if (raw.atlas) {
+      atlas = {
+        data: new Uint8Array(raw.atlas.data),
+        width: raw.atlas.width,
+        height: raw.atlas.height,
+      };
+    }
+
+    return { results: raw.results, atlas };
   }
 
   dispose(): void {
