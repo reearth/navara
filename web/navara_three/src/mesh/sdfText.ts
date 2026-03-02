@@ -31,7 +31,7 @@ import type {
 import type { PickableMesh } from "./pickableMesh";
 
 /** Must match Rust SDF_PX_SIZE in navara_font/src/resource.rs */
-const SDF_PX_SIZE = 64.0;
+const SDF_PX_SIZE = 32.0;
 
 /**
  * A text mesh that renders glyphs from an SDF atlas using instanced geometry.
@@ -283,9 +283,18 @@ export class SDFTextMesh
     geo.setAttribute("position", new BufferAttribute(positions, 3));
     geo.setAttribute("uv", new BufferAttribute(uvs, 2));
 
-    geo.setAttribute("glyphOffset", new InstancedBufferAttribute(new Float32Array(), 2));
-    geo.setAttribute("glyphSize", new InstancedBufferAttribute(new Float32Array(), 2));
-    geo.setAttribute("glyphUvRect", new InstancedBufferAttribute(new Float32Array(), 4));
+    geo.setAttribute(
+      "glyphOffset",
+      new InstancedBufferAttribute(new Float32Array(), 2),
+    );
+    geo.setAttribute(
+      "glyphSize",
+      new InstancedBufferAttribute(new Float32Array(), 2),
+    );
+    geo.setAttribute(
+      "glyphUvRect",
+      new InstancedBufferAttribute(new Float32Array(), 4),
+    );
 
     geo.instanceCount = 0;
 
@@ -457,7 +466,7 @@ export class SDFTextMesh
     if (this.geometry.instanceCount < count) {
       this.geometry.dispose();
       this.geometry = this._createBaseGeometry();
-    } 
+    }
 
     if (this.geometry.hasAttribute("glyphOffset")) {
       this.geometry.deleteAttribute("glyphOffset");

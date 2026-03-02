@@ -12,7 +12,8 @@ pub fn ensure_glyphs_in_atlas(
     glyph_ids: &[u16],
     atlas: &mut SDFAtlas,
     current_frame: u64,
-) {
+) -> bool {
+    let mut new_glyphs = false;
     for &glyph_id in glyph_ids {
         // Always touch the glyph for LRU, even if already present
         atlas.touch(glyph_id, current_frame);
@@ -50,17 +51,16 @@ pub fn ensure_glyphs_in_atlas(
         let atlas_x = rect.min.x;
         let atlas_y = rect.min.y;
 
-        // Copy single-channel SDF data into the atlas pixel buffer
+        // Copy single-channel SDF data into the atlas pixel buffer (R8 format)
         for y in (0..metrics.height).rev() {
             for x in 0..metrics.width {
                 let src_idx = y * metrics.width + x;
                 let dst_x = atlas_x as usize + x;
-                let dst_y = atlas_y as usize + (metrics.height - 1 - y); // Flip Y for top-left origin
-                let dst_idx = dst_y * atlas.width as usize + dst_x; // 1 byte per pixel for single-channel SDF
+                let dst_y = atlas_y as usize + (metrics.height - 1 - y);
+                let dst_idx = dst_y * atlas.width as usize + dst_x;
 
                 if src_idx < sdf_data.len() && dst_idx < atlas.pixel_data.len() {
-                    let v = sdf_data[src_idx];
-                    atlas.pixel_data[dst_idx] = v;
+                    atlas.pixel_data[dst_idx] = sdf_data[src_idx];
                 }
             }
         }
@@ -78,7 +78,9 @@ pub fn ensure_glyphs_in_atlas(
                 advance: metrics.advance_width,
             },
         );
+        new_glyphs = true;
     }
+    new_glyphs
 }
 
 /// Evict glyphs that haven't been used for at least `min_age` frames.

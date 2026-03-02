@@ -61,7 +61,7 @@ import {
 } from "./event";
 import { TEXTURE_LOADER } from "./event/loaders";
 import { FontManager, FontWorkerClient } from "./font";
-import FontWorkerURL from "./font/fontWorker?url&worker";
+import FontWorkerURL from "./font/fontWorker?worker&url";
 import { registerInputEvents } from "./input";
 import { Layer, type LayerEvent } from "./layer";
 import { SunLightLayer, AmbientLightLayer, SkyLightProbeLayer } from "./layers";
@@ -917,9 +917,9 @@ export default class ThreeView<
         this.onPick.bind(this),
         this.renderPassOrchestrator.effectComposer.inputBuffer,
         this.globe,
-        // {
-        //   debug: true,
-        // },
+        {
+          debug: true,
+        },
       );
       this._pickHelper.enablePick(this._options.picking ?? true);
     }

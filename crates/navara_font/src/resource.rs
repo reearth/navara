@@ -6,7 +6,7 @@ pub const DEFAULT_ATLAS_SIZE: i32 = 1024;
 
 /// Font size in pixels used for SDF rasterization.
 /// A single SDF glyph at this size can render both small and large text.
-pub const SDF_PX_SIZE: f32 = 64.0;
+pub const SDF_PX_SIZE: f32 = 32.0;
 
 /// Number of frames a glyph must be unused before it becomes evictable.
 pub const LRU_MIN_AGE: u64 = 120;

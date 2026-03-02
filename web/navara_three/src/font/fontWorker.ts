@@ -3,10 +3,9 @@
 import init, {
   loadFont,
   shapeText,
-  getFontAtlas,
+  getFontAtlasView,
   tickFrame,
   type ShapeTextResult as WasmShapeTextResult,
-  type FontAtlas as WasmFontAtlas,
   type WasmShapedGlyph,
   type WasmGlyphMetrics,
 } from "@navara/engine-font-worker";
@@ -52,7 +51,6 @@ ctx.onmessage = async (e: MessageEvent) => {
           fontUrl,
           text,
         );
-        const atlas: WasmFontAtlas | undefined = getFontAtlas(fontUrl);
         tickFrame();
 
         // Convert WASM class instances to plain objects for structured clone
@@ -76,15 +74,18 @@ ctx.onmessage = async (e: MessageEvent) => {
           advance: m.advance,
         }));
 
-        // Copy atlas data to a transferable ArrayBuffer
+        // Only copy atlas when new glyphs were actually rasterized
         let atlasData: ArrayBuffer | null = null;
         let atlasWidth = 0;
         let atlasHeight = 0;
-        if (atlas) {
-          const srcData = new Uint8Array(atlas.data);
-          atlasData = srcData.buffer.slice(0);
-          atlasWidth = atlas.width;
-          atlasHeight = atlas.height;
+        if (shapeResult?.atlas_changed) {
+          const atlas = getFontAtlasView(fontUrl);
+          if (atlas) {
+            // Single copy from WASM memory view into a transferable buffer
+            atlasData = atlas.data.slice().buffer;
+            atlasWidth = atlas.width;
+            atlasHeight = atlas.height;
+          }
         }
 
         const response = {

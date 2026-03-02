@@ -57,6 +57,7 @@ pub struct ShapeTextResult {
     pub glyphs: Vec<WasmShapedGlyph>,
     pub metrics: Vec<WasmGlyphMetrics>,
     pub units_per_em: u16,
+    pub atlas_changed: bool,
 }
 
 // ---------------------------------------------------------------------------
@@ -109,7 +110,12 @@ pub fn shape_text(url: &str, text: &str) -> Option<ShapeTextResult> {
         let (shaped, units_per_em) = shaping::shape_text(&entry.data, text)?;
 
         let glyph_ids: Vec<u16> = shaped.iter().map(|g| g.glyph_id as u16).collect();
-        atlas::ensure_glyphs_in_atlas(&entry.sdf_font, &glyph_ids, &mut entry.atlas, current_frame);
+        let atlas_changed = atlas::ensure_glyphs_in_atlas(
+            &entry.sdf_font,
+            &glyph_ids,
+            &mut entry.atlas,
+            current_frame,
+        );
 
         let glyphs: Vec<WasmShapedGlyph> = shaped
             .iter()
@@ -123,19 +129,24 @@ pub fn shape_text(url: &str, text: &str) -> Option<ShapeTextResult> {
             })
             .collect();
 
-        let metrics: Vec<WasmGlyphMetrics> = entry
-            .atlas
-            .glyph_map
+        // Only return metrics for glyphs in the shaped text (not entire atlas)
+        let mut unique_ids = glyph_ids.clone();
+        unique_ids.sort_unstable();
+        unique_ids.dedup();
+
+        let metrics: Vec<WasmGlyphMetrics> = unique_ids
             .iter()
-            .map(|(&glyph_id, m)| WasmGlyphMetrics {
-                glyph_id,
-                atlas_x: m.atlas_x,
-                atlas_y: m.atlas_y,
-                atlas_w: m.atlas_w,
-                atlas_h: m.atlas_h,
-                bearing_x: m.bearing_x,
-                bearing_y: m.bearing_y,
-                advance: m.advance,
+            .filter_map(|&gid| {
+                entry.atlas.glyph_map.get(&gid).map(|m| WasmGlyphMetrics {
+                    glyph_id: gid,
+                    atlas_x: m.atlas_x,
+                    atlas_y: m.atlas_y,
+                    atlas_w: m.atlas_w,
+                    atlas_h: m.atlas_h,
+                    bearing_x: m.bearing_x,
+                    bearing_y: m.bearing_y,
+                    advance: m.advance,
+                })
             })
             .collect();
 
@@ -143,11 +154,12 @@ pub fn shape_text(url: &str, text: &str) -> Option<ShapeTextResult> {
             glyphs,
             metrics,
             units_per_em,
+            atlas_changed,
         })
     })
 }
 
-/// Get the SDF atlas pixel data for a loaded font.
+/// Get the SDF atlas pixel data for a loaded font (copies into a new Uint8Array).
 #[wasm_bindgen(js_name = getFontAtlas)]
 pub fn get_font_atlas(url: &str) -> Option<FontAtlas> {
     FONT_CACHE.with(|cache| {
@@ -155,6 +167,26 @@ pub fn get_font_atlas(url: &str) -> Option<FontAtlas> {
         let entry = cache.get(url)?;
         Some(FontAtlas {
             data: copy_u8_array(&entry.atlas.pixel_data),
+            width: entry.atlas.width,
+            height: entry.atlas.height,
+        })
+    })
+}
+
+/// Get a zero-copy view into the atlas pixel data in WASM linear memory.
+/// The returned Uint8Array is only valid until the next WASM allocation.
+/// Caller must copy/slice the data before any further WASM calls.
+#[wasm_bindgen(js_name = getFontAtlasView)]
+pub fn get_font_atlas_view(url: &str) -> Option<FontAtlas> {
+    FONT_CACHE.with(|cache| {
+        let cache = cache.borrow();
+        let entry = cache.get(url)?;
+        // SAFETY: view is valid until next WASM allocation. The worker is
+        // single-threaded and no WASM calls happen between this return
+        // and the JS-side .slice() copy.
+        let view = unsafe { js_sys::Uint8Array::view(&entry.atlas.pixel_data) };
+        Some(FontAtlas {
+            data: view,
             width: entry.atlas.width,
             height: entry.atlas.height,
         })

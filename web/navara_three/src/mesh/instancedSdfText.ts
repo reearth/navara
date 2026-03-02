@@ -2,6 +2,7 @@ import {
   type TextMesh as NavaraTextMesh,
   type TextMaterial as NavaraTextMaterial,
 } from "@navara/engine";
+import { Color } from "three";
 import invariant from "tiny-invariant";
 
 import { type BufferLoader } from "../event";
@@ -11,8 +12,6 @@ import type { CommonUniforms } from "../uniforms";
 import { InstancedMesh, type InstancedMeshOptions } from "./instanced";
 import type { PickableMesh } from "./pickableMesh";
 import { SDFTextMesh } from "./sdfText";
-import { Color } from "three";
-
 
 type PositionsInfo = {
   position:
@@ -271,5 +270,4 @@ export class InstancedSdfTextMesh
       mesh.setHeight(height);
     }
   }
-
 }
