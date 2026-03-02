@@ -34,6 +34,16 @@ void main() {
     // Horizon culling discard
     if (vHorizonCulled == 1) discard;
 
+    // Logarithmic depth buffer
+    gl_FragDepth = log(vFragDepth) / log(uFarPlane + 1.0);
+    if (uOffsetDepth) { gl_FragDepth -= 0.2; }
+
+    // Picking mode
+    if (nvr_uPickable > 0.0) {
+        gl_FragColor = vec4(nvr_batchIdToColor(nvr_uBatchId), 1.0);
+        return;
+    }
+
     // Sample SDF value from atlas (R channel)
     float dist = texture2D(uAtlas, vAtlasUv).r;
 
@@ -46,16 +56,7 @@ void main() {
 
     alpha *= uOpacity;
 
-    // Logarithmic depth buffer
-    gl_FragDepth = log(vFragDepth) / log(uFarPlane + 1.0);
-    if (uOffsetDepth) { gl_FragDepth -= 0.2; }
-
-    // Picking mode
-    if (nvr_uPickable > 0.0) {
-        gl_FragColor = vec4(nvr_batchIdToColor(nvr_uBatchId), 1.0);
-    } else {
-        gl_FragColor = vec4(uColor, alpha);
-    }
+    gl_FragColor = vec4(uColor, alpha);
 
     #ifndef USE_SHADOWMAP_DEPTH
         vec3 normal = screenSpaceNormal();

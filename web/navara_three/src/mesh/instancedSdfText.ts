@@ -11,6 +11,8 @@ import type { CommonUniforms } from "../uniforms";
 import { InstancedMesh, type InstancedMeshOptions } from "./instanced";
 import type { PickableMesh } from "./pickableMesh";
 import { SDFTextMesh } from "./sdfText";
+import { Color } from "three";
+
 
 type PositionsInfo = {
   position:
@@ -231,4 +233,43 @@ export class InstancedSdfTextMesh
 
     return null;
   }
+
+  setTextByBatchIndex(batchIndex: number, text: string) {
+    const mesh = this.meshes()[batchIndex];
+
+    if (mesh) {
+      // If the text hasn't been prepared in the worker yet, schedule async preparation
+      if (text && !this._fontManager.isTextPrepared(this._fontUrl, text)) {
+        this._fontManager.prepareText(this._fontUrl, text).then(() => {
+          mesh.setText(text);
+        });
+        return;
+      }
+      mesh.setText(text);
+      // console.log(`Updated text of batch ${batchIndex} to "${text}"`);
+    }
+  }
+
+  setFeatureColorByBatchIndex(batchIndex: number, color: Color) {
+    const mesh = this.meshes()[batchIndex];
+    if (mesh) {
+      mesh.setColor(color);
+    }
+  }
+
+  setFeatureShowByBatchIndex(batchIndex: number, rawVisible: boolean) {
+    const mesh = this.meshes()[batchIndex];
+    if (mesh) {
+      mesh.visible = rawVisible;
+      this.markVisibility(mesh);
+    }
+  }
+
+  setFeatureHeightByBatchIndex(batchIndex: number, height: number) {
+    const mesh = this.meshes()[batchIndex];
+    if (mesh) {
+      mesh.setHeight(height);
+    }
+  }
+
 }

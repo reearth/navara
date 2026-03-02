@@ -79,9 +79,6 @@ export class SDFTextMesh
   }
 
   /**
-   * Set text to render. Shapes via WASM, rebuilds instanced geometry, updates atlas texture.
-   */
-  /**
    * Set a shared atlas texture. When set, setText() will skip creating its own texture.
    * The caller is responsible for the texture lifecycle.
    */
@@ -91,6 +88,9 @@ export class SDFTextMesh
     this.material.uniforms.uAtlas.value = tex;
   }
 
+  /**
+   * Set text to render. Shapes via WASM, rebuilds instanced geometry, updates atlas texture.
+   */
   setText(text: string): void {
     if (text === this._text) return;
     this._text = text;
@@ -127,8 +127,8 @@ export class SDFTextMesh
   /**
    * Update visual properties: color, size, visibility, etc.
    */
-  setColor(_color: Color): void {
-    // this.material.uniforms.uColor.value.set(color.r, color.g, color.b);
+  setColor(color: Color): void {
+    this.material.uniforms.uColor.value.set(color.r, color.g, color.b);
   }
 
   setFontSize(sizePx: number): void {
@@ -282,6 +282,11 @@ export class SDFTextMesh
 
     geo.setAttribute("position", new BufferAttribute(positions, 3));
     geo.setAttribute("uv", new BufferAttribute(uvs, 2));
+
+    geo.setAttribute("glyphOffset", new InstancedBufferAttribute(new Float32Array(), 2));
+    geo.setAttribute("glyphSize", new InstancedBufferAttribute(new Float32Array(), 2));
+    geo.setAttribute("glyphUvRect", new InstancedBufferAttribute(new Float32Array(), 4));
+
     geo.instanceCount = 0;
 
     return geo;
@@ -448,18 +453,36 @@ export class SDFTextMesh
       glyphUvRectData[i * 4 + 3] = (g.atlasY + g.atlasH) / atlasHeight;
     }
 
+    // Recreate geometry if instance count increased beyond current capacity
+    if (this.geometry.instanceCount < count) {
+      this.geometry.dispose();
+      this.geometry = this._createBaseGeometry();
+    } 
+
+    if (this.geometry.hasAttribute("glyphOffset")) {
+      this.geometry.deleteAttribute("glyphOffset");
+    }
     this.geometry.setAttribute(
       "glyphOffset",
       new InstancedBufferAttribute(glyphOffsetData, 2),
     );
+
+    if (this.geometry.hasAttribute("glyphSize")) {
+      this.geometry.deleteAttribute("glyphSize");
+    }
     this.geometry.setAttribute(
       "glyphSize",
       new InstancedBufferAttribute(glyphSizeData, 2),
     );
+
+    if (this.geometry.hasAttribute("glyphUvRect")) {
+      this.geometry.deleteAttribute("glyphUvRect");
+    }
     this.geometry.setAttribute(
       "glyphUvRect",
       new InstancedBufferAttribute(glyphUvRectData, 4),
     );
+
     this.geometry.instanceCount = count;
 
     // Update text dimension uniforms for centering

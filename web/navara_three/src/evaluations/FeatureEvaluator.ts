@@ -22,6 +22,7 @@ import {
   type ModelBatchedAttributeName,
   type BatchedAttributeName,
   InstancedSpriteMesh,
+  InstancedSdfTextMesh,
 } from "../mesh";
 
 type AvailableMaterialProperty = ExtractProperties<
@@ -388,7 +389,7 @@ export class FeatureEvaluator {
       if (m instanceof InstancedMesh) {
         switch (target.attribute) {
           case "text": {
-            if (!(m instanceof InstancedTextMesh)) continue;
+            if (!(m instanceof InstancedTextMesh) && !(m instanceof InstancedSdfTextMesh)) continue;
             for (let i = 0; i < target.array.length; i++) {
               const v = target.array[i];
 
