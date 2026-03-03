@@ -1,0 +1,32 @@
+import { ShaderMaterial } from "three";
+
+import type { ShaderName } from "../../MaterialEnhancer";
+
+import type { InstancedSpriteBaseProps } from "./types";
+
+/**
+ * Shaders that the instancedSprite base enhancer supports.
+ * InstancedSprites use ShaderMaterial with custom shaders.
+ */
+export const AVAILABLE_SHADERS = ["shader"] satisfies ShaderName[];
+
+/**
+ * Material types that the instancedSprite base enhancer supports.
+ */
+export type SupportedMaterial = ShaderMaterial;
+
+/**
+ * Update material properties that affect the Three.js material directly.
+ * These properties are not handled by shader uniforms.
+ */
+export function updateMaterialProps(
+  material: SupportedMaterial,
+  props: InstancedSpriteBaseProps,
+): void {
+  if (props.transparent !== undefined) {
+    material.transparent = props.transparent;
+  }
+  if (props.depthTest !== undefined) {
+    material.depthTest = props.depthTest;
+  }
+}
