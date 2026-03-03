@@ -13,7 +13,10 @@ export type { PolygonMaterialProps } from "./polygon";
 
 // Shadow map depth enhancers
 export { createShadowMapDepthEnhancer } from "./shadowMap";
-export type { ShadowMapDepthProps } from "./shadowMap";
+export type {
+  ShadowMapDepthProps,
+  ShadowMapDepthSupportedMaterial,
+} from "./shadowMap";
 
 // Polyline enhancers
 export { createPolylineMaterialEnhancer } from "./polyline";

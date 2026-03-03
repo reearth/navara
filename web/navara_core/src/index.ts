@@ -12,3 +12,4 @@ export * from "./observed";
 export * from "./abstracts";
 export * from "./color";
 export * from "./globe";
+export * from "./plugin";

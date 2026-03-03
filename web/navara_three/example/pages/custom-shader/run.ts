@@ -9,6 +9,7 @@ import ThreeView, {
   eastNorthUpToFixedFrame,
   geodeticToVector3,
 } from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 import {
   Color,
   ShaderLib,
@@ -119,16 +120,20 @@ export const run = async (view: ThreeView<MarchingCubesLayerConfig>) => {
   // Register custom MarchingCubesLayer
   view.registerMesh("marchingCubes", MarchingCubesLayer);
 
+  const defaultPlugin = new DefaultPlugin();
+  view.addPlugin(defaultPlugin);
+
   await view.init();
 
-  const defaultEffects = view.addDefaultEffectLayers();
-  const defaultLayers = view.addDefaultAtmosphereLayers();
-
-  defaultLayers.sun.update({
+  const defaultAtmospheres = defaultPlugin.addDefaultPhotorealLayers();
+  defaultAtmospheres.sun.update({
     sun: {
+      intensity: 1,
       castShadow: true,
     },
   });
+
+  const defaultEffects = view.addDefaultEffectLayers();
 
   // Add clouds effect layer explicitly
   const cloudsLayer = view.addLayer<CloudsEffectLayer>({

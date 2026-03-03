@@ -1,13 +1,17 @@
 import ThreeView, { Color } from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 
 import { showAttributions } from "../../helpers/attributions";
 import { TILE_DATASETS } from "../../helpers/constants";
 import { addCtrlPanel } from "../../helpers/panel";
 
 export const run = async (view: ThreeView) => {
+  const defaultPlugin = new DefaultPlugin();
+  view.addPlugin(defaultPlugin);
+
   await view.init();
 
-  view.addDefaultAtmosphereLayers();
+  defaultPlugin.addDefaultPhotorealLayers();
 
   addCtrlPanel(
     [

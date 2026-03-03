@@ -1,4 +1,5 @@
 import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../../helpers/attributions";
@@ -6,10 +7,16 @@ import { TERRAIN_DATASETS, TILE_DATASETS } from "../../../helpers/constants";
 import { addDateControl } from "../../../helpers/control";
 
 const run = async () => {
-  const view = new ThreeView({ debug: true });
+  const view = new ThreeView({
+    debug: true,
+  });
+
+  const defaultPlugin = new DefaultPlugin();
+  view.addPlugin(defaultPlugin);
+
   await view.init();
 
-  view.addDefaultAtmosphereLayers();
+  defaultPlugin.addDefaultPhotorealLayers();
 
   view.setCamera({
     lng: 138.753,

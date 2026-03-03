@@ -1,14 +1,17 @@
+import { DefaultPlugin } from "@navara/three_default_plugin";
 import { ViewProvider } from "@navara/three_react";
-import { StrictMode } from "react";
+import { StrictMode, useMemo } from "react";
 import { createRoot } from "react-dom/client";
 
 import { Layers } from "./Layers";
 
 export const App = () => {
+  const defaultPlugin = useMemo(() => new DefaultPlugin(), []);
+  const plugins = useMemo(() => [defaultPlugin], [defaultPlugin]);
   return (
     <StrictMode>
-      <ViewProvider shadow debug>
-        <Layers />
+      <ViewProvider shadow debug plugins={plugins}>
+        <Layers defaultPlugin={defaultPlugin} />
       </ViewProvider>
     </StrictMode>
   );
