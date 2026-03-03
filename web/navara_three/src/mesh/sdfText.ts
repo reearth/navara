@@ -257,6 +257,26 @@ export class SDFTextMesh
     } else {
       this.material.uniforms.uShowBackground.value = false;
     }
+
+    const nextBGRadius = material.cornerRadius ?? 0;
+    if (nextBGRadius !== prev.cornerRadius) {
+      prev.cornerRadius = nextBGRadius;
+      this.material.uniforms.uBackgroundRadius.value = nextBGRadius;
+    }
+
+    const nextBGOutlineColor = material.borderColor ?? 0x000000;
+    if (nextBGOutlineColor !== prev.backgroundOutlineColor) {
+      prev.backgroundOutlineColor = nextBGOutlineColor;
+      const color = new Color().setHex(nextBGOutlineColor);
+      this.material.uniforms.uBackgroundOutlineColor.value.set(color.r, color.g, color.b);
+    }
+
+    const nextBGOutlineWidth = material.borderWidth ?? 0;
+    if (nextBGOutlineWidth !== prev.backgroundOutlineWidth) {
+      prev.backgroundOutlineWidth = nextBGOutlineWidth;
+      this.material.uniforms.uBackgroundOutlineWidth.value = nextBGOutlineWidth;
+    }
+
   }
 
   // --- FeatureMesh interface ---
@@ -358,6 +378,9 @@ export class SDFTextMesh
         uColor: { value: new Color(1, 1, 1) },
         uShowBackground: { value: 0.0 },
         uBackgroundColor: { value: new Color(1, 0, 0) },
+        uBackgroundOutlineColor: { value: new Color(1, 0, 0) },
+        uBackgroundOutlineWidth: { value: 0.1 },
+        uBackgroundRadius: { value: 0.1 },
         uBackGroundInstanceID: { value: this._nInstances },
         uBgYBounds: { value: new Vector2(0.0, 1.0) },
         uOutlineColor: { value: new Color(1, 0, 0) },

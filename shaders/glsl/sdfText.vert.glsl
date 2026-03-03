@@ -32,6 +32,7 @@ uniform bool uShowBackground;
 varying vec2 vAtlasUv;
 varying float vFragDepth;
 flat varying int vBackGroundSprite; // Whether this vertex belongs to the background sprite (1) or a glyph (0)
+flat varying float vBackGroundRatio;
 
 // Distance scaling normalization factor (matches instancedSprite convention)
 const float DISTANCE_SCALE_FACTOR = 100000.0;
@@ -77,6 +78,9 @@ void main() {
         vec4 newMvPosition = mvPosition + vec4(bgLocalPos * uFontSizePx, 0.0, 0.0);
 
         gl_Position = projectionMatrix * newMvPosition;
+
+        vAtlasUv = uv;
+        vBackGroundRatio = uTextWidth / bgHeight; // Pass the aspect ratio of the background sprite to the fragment shader for proper corner radius scaling
     } else {
         vBackGroundSprite = 0;
         // --- Per-glyph vertex position ---
@@ -97,10 +101,10 @@ void main() {
 
         gl_Position = projectionMatrix * newMvPosition;
 
+        // Atlas UV interpolation: map unit quad UV [0,1] to atlas sub-rect
+        vAtlasUv = mix(glyphUvRect.xy, glyphUvRect.zw, uv);
     }
 
-    // Atlas UV interpolation: map unit quad UV [0,1] to atlas sub-rect
-    vAtlasUv = mix(glyphUvRect.xy, glyphUvRect.zw, uv);
 
     vFragDepth = gl_Position.w + 1.0;
 }

@@ -22,6 +22,7 @@ varying vec2 vAtlasUv;
 varying float vFragDepth;
 flat varying int vHorizonCulled;
 flat varying int vBackGroundSprite;
+flat varying float vBackGroundRatio;
 
 // Uniforms
 uniform sampler2D uAtlas;
@@ -33,6 +34,9 @@ uniform float uOutlineOpacity;
 uniform bool uOffsetDepth;
 uniform float uFarPlane;
 uniform vec3 uBackgroundColor;
+uniform float uBackgroundRadius;
+uniform float uBackgroundOutlineWidth;
+uniform vec3 uBackgroundOutlineColor;
 
 void main() {
     // Horizon culling discard
@@ -49,8 +53,17 @@ void main() {
     }
     
     if (vBackGroundSprite == 1) {
-        // This is the background sprite, so we render it with a solid color and no SDF sampling
-        gl_FragColor = vec4(uBackgroundColor, 1.0);
+        vec2 p = abs(vAtlasUv - vec2(0.5));
+        vec2 cornerCenter = vec2(0.5 - uBackgroundRadius);
+        // p = p - cornerCenter;
+
+        if ((p.x > (0.5 - uBackgroundOutlineWidth / vBackGroundRatio)) ||
+            (p.y > (0.5 - uBackgroundOutlineWidth))) {
+            gl_FragColor = vec4(uBackgroundOutlineColor, 1.0);
+        } else {
+            gl_FragColor = vec4(uBackgroundColor, 1.0);
+        }
+
         return;
     }
 
