@@ -275,8 +275,7 @@ type ActualLayerDescription = _ActualLayerDescription;
  * ```
  */
 export default class ThreeView<
-  CustomLayerDescriptions extends Record<string, unknown> | undefined =
-    undefined,
+  CustomLayerDescriptions extends object | undefined = undefined,
   LayerDescription extends ActualLayerDescription =
     CustomLayerDescriptions extends undefined
       ? ActualLayerDescription

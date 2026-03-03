@@ -43,7 +43,6 @@ import type { TileMesh } from "../mesh";
 export type { Promise as WorkerPoolPromise } from "@navara/worker";
 
 export type LayerDescription =
-  // | MVTLayer
   | ResourceLayerDescription
   | MeshLayerDeclarationDescription
   | LightLayerDeclarationDescription
