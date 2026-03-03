@@ -101,7 +101,6 @@ mod test {
     #[derive(Resource, Default)]
     struct BuilderTestOutput {
         groups: Vec<GeometryGroup>,
-        batch_ids_by_kind: Vec<(GeometryAppearanceKind, u32)>,
     }
 
     fn run_builder_test(
@@ -124,7 +123,6 @@ mod test {
                     MvtGeometryBuilder::new(&mut batch_table, "test_layer", keys, values, 0);
                 setup_fn(&mut commands, &mut builder);
                 out.groups = std::mem::take(&mut builder.groups.groups);
-                out.batch_ids_by_kind = builder.groups.batch_ids_by_kind;
             },
         );
         app.update();
@@ -136,7 +134,6 @@ mod test {
         let app = run_builder_test(|_, _| {});
         let out = app.world().resource::<BuilderTestOutput>();
         assert!(out.groups.is_empty());
-        assert!(out.batch_ids_by_kind.is_empty());
     }
 
     #[test]
@@ -172,7 +169,6 @@ mod test {
         });
         let out = app.world().resource::<BuilderTestOutput>();
         assert!(out.groups.is_empty());
-        assert!(out.batch_ids_by_kind.is_empty());
     }
 
     #[test]
@@ -210,8 +206,8 @@ mod test {
             builder.add_entity(GeometryAppearanceKind::Billboard, e2);
         });
         let out = app.world().resource::<BuilderTestOutput>();
-        assert_eq!(out.batch_ids_by_kind.len(), 2);
-        assert_ne!(out.batch_ids_by_kind[0].1, out.batch_ids_by_kind[1].1);
+        assert_eq!(out.groups.len(), 2);
+        assert_ne!(out.groups[0].batch_id, out.groups[1].batch_id);
     }
 
     #[test]

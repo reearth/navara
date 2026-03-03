@@ -6,11 +6,9 @@ use navara_core::CRS;
 use navara_feature_component::{
     BatchedFeatureMarker,
     batch::{BatchIndex, BatchTable},
-    billboard::BillboardGeometry,
-    point::PointGeometry,
+    geometry_builder::spawn_point_entity,
     polygon::PolygonGeometry,
     polyline::PolylineGeometry,
-    text::TextGeometry,
 };
 use navara_geometry::{Hierarchy, WindingOrder};
 use navara_material::Appearance;
@@ -64,31 +62,20 @@ pub fn construct_geometry(
         GeoJson::FeatureCollection(features) => {
             for feature in features {
                 if let Some(geometry) = &feature.geometry {
-                    process_geometry(
-                        commands,
-                        buf,
-                        &mut builder,
-                        geometry,
-                        appearances,
-                        &feature.properties,
-                    );
+                    builder.begin_feature(&feature.properties);
+                    process_geometry(commands, buf, &mut builder, geometry, appearances);
                 }
             }
         }
         GeoJson::Feature(feature) => {
             if let Some(geometry) = &feature.geometry {
-                process_geometry(
-                    commands,
-                    buf,
-                    &mut builder,
-                    geometry,
-                    appearances,
-                    &feature.properties,
-                );
+                builder.begin_feature(&feature.properties);
+                process_geometry(commands, buf, &mut builder, geometry, appearances);
             }
         }
         GeoJson::Geometry(geometry) => {
-            process_geometry(commands, buf, &mut builder, geometry, appearances, &None);
+            builder.begin_feature(&None);
+            process_geometry(commands, buf, &mut builder, geometry, appearances);
         }
     }
 
@@ -98,24 +85,25 @@ pub fn construct_geometry(
 }
 
 /// Process a single GeoJSON geometry, spawning child entities for each matching appearance.
+///
+/// `begin_feature` must be called by the caller before invoking this function.
+/// GeometryCollection recurses without resetting feature state, so all
+/// sub-geometries share a single feature's batch indices and properties.
 fn process_geometry(
     commands: &mut Commands,
     buf: &mut BufferStore,
     builder: &mut GeometryBuilder,
     geometry: &Geometry,
     appearances: &[Appearance],
-    properties: &Option<serde_json::Map<String, serde_json::Value>>,
 ) {
-    // Handle GeometryCollection by recursing into each sub-geometry
+    // Handle GeometryCollection by recursing into each sub-geometry.
+    // No begin_feature here — sub-geometries share the parent feature's state.
     if let Value::GeometryCollection(geoms) = &geometry.value {
         for g in geoms {
-            process_geometry(commands, buf, builder, g, appearances, properties);
+            process_geometry(commands, buf, builder, g, appearances);
         }
         return;
     }
-
-    // Prepare feature data lazily — only committed when add_entity is first called.
-    builder.begin_feature(properties);
 
     for appearance in appearances {
         match appearance {
@@ -152,37 +140,7 @@ fn spawn_point_children(
     kind: GeometryAppearanceKind,
 ) {
     let spawn_one = |commands: &mut Commands, builder: &mut GeometryBuilder, coord: Vec3| {
-        let entity = match kind {
-            GeometryAppearanceKind::Point => commands
-                .spawn((
-                    BatchedFeatureMarker,
-                    PointGeometry {
-                        coords: coord,
-                        crs: CRS::Geographic,
-                    },
-                ))
-                .id(),
-            GeometryAppearanceKind::Billboard => commands
-                .spawn((
-                    BatchedFeatureMarker,
-                    BillboardGeometry {
-                        coords: coord,
-                        crs: CRS::Geographic,
-                    },
-                ))
-                .id(),
-            GeometryAppearanceKind::Text => commands
-                .spawn((
-                    BatchedFeatureMarker,
-                    TextGeometry {
-                        coords: coord,
-                        crs: CRS::Geographic,
-                    },
-                ))
-                .id(),
-            _ => unreachable!(),
-        };
-
+        let entity = spawn_point_entity(commands, coord, CRS::Geographic, kind);
         let batch_index = builder.add_entity(kind, entity);
         commands.entity(entity).insert(BatchIndex(batch_index));
     };
@@ -1020,6 +978,70 @@ mod test {
         let polygons: Vec<_> = polygon_query.iter(app.world()).collect();
         assert_eq!(polygons.len(), 1);
         assert_eq!(polygons[0].features.len(), 1);
+    }
+
+    #[test]
+    fn geometry_collection_sub_geometries_share_single_feature() {
+        // A GeometryCollection with two Points inside a single Feature should
+        // produce two child entities that share the same batch index (one feature).
+        let mut app = run_construct(
+            r#"{
+    "type": "FeatureCollection",
+    "features": [
+        {
+            "type": "Feature",
+            "properties": {"name": "collection"},
+            "geometry": {
+                "type": "GeometryCollection",
+                "geometries": [
+                    {
+                        "type": "Point",
+                        "coordinates": [139.75, 35.68]
+                    },
+                    {
+                        "type": "Point",
+                        "coordinates": [139.76, 35.69]
+                    }
+                ]
+            }
+        }
+    ]
+}"#,
+            vec![Appearance::Point(PointMaterial::default())],
+        );
+
+        // Both points come from one feature → one BatchedFeature parent with 2 children
+        let mut batched_query = app
+            .world_mut()
+            .query_filtered::<&BatchedFeature, With<PointMarker>>();
+        let batched: Vec<_> = batched_query.iter(app.world()).collect();
+        assert_eq!(batched.len(), 1);
+        assert_eq!(batched[0].features.len(), 2);
+
+        // Both children should share batch index 0 (same feature)
+        let mut child_query = app
+            .world_mut()
+            .query_filtered::<&BatchIndex, With<BatchedFeatureMarker>>();
+        let indices: Vec<_> = child_query.iter(app.world()).map(|b| b.0).collect();
+        assert_eq!(indices.len(), 2);
+        assert_eq!(indices[0], 0);
+        assert_eq!(indices[1], 0);
+
+        // Properties should be stored once (not duplicated per sub-geometry)
+        let mut batch_id_query = app
+            .world_mut()
+            .query_filtered::<&FeatureBatchId, With<PointMarker>>();
+        let feature_batch_id = batch_id_query.iter(app.world()).next().unwrap().0;
+        let batch_table = app.world().resource::<BatchTable>();
+        let batch_value = batch_table.get(&feature_batch_id).unwrap();
+        let properties = batch_value.properties.as_ref().unwrap();
+        match properties {
+            navara_feature_component::batch::BatchProperty::Values(values) => {
+                assert_eq!(values.len(), 1); // one feature, not two
+                assert_eq!(values[0], serde_json::json!({"name": "collection"}));
+            }
+            _ => panic!("Expected BatchProperty::Values"),
+        }
     }
 
     #[test]

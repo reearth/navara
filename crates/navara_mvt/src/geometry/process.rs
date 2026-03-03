@@ -11,12 +11,9 @@ use navara_core::{Extent, Radians};
 use navara_feature_component::{
     BatchedFeatureMarker,
     batch::{BatchIndex, BatchTable},
-    billboard::BillboardGeometry,
-    geometry_builder::GeometryAppearanceKind,
-    point::PointGeometry,
+    geometry_builder::{GeometryAppearanceKind, spawn_point_entity},
     polygon::PolygonGeometry,
     polyline::PolylineGeometry,
-    text::TextGeometry,
 };
 use navara_geometry::{Hierarchy, WindingOrder};
 use navara_material::Appearance;
@@ -277,38 +274,9 @@ fn spawn_single_point(
     kind: GeometryAppearanceKind,
 ) {
     let (x, y) = converter.project_point(point.x(), point.y());
+    let coords = Vec3::new(x, y, 0.0 as FloatType);
 
-    let entity = match kind {
-        GeometryAppearanceKind::Point => commands
-            .spawn((
-                BatchedFeatureMarker,
-                PointGeometry {
-                    coords: Vec3::new(x, y, 0.0 as FloatType),
-                    crs: CRS::Geographic,
-                },
-            ))
-            .id(),
-        GeometryAppearanceKind::Billboard => commands
-            .spawn((
-                BatchedFeatureMarker,
-                BillboardGeometry {
-                    coords: Vec3::new(x, y, 0.0 as FloatType),
-                    crs: CRS::Geographic,
-                },
-            ))
-            .id(),
-        GeometryAppearanceKind::Text => commands
-            .spawn((
-                BatchedFeatureMarker,
-                TextGeometry {
-                    coords: Vec3::new(x, y, 0.0 as FloatType),
-                    crs: CRS::Geographic,
-                },
-            ))
-            .id(),
-        _ => return,
-    };
-
+    let entity = spawn_point_entity(commands, coords, CRS::Geographic, kind);
     let batch_index = builder.add_entity(kind, entity);
     commands.entity(entity).insert(BatchIndex(batch_index));
 }
@@ -1106,5 +1074,85 @@ mod test {
                 _ => panic!("Expected BatchProperty::Mvt"),
             }
         }
+    }
+
+    #[test]
+    fn geometry_collection_sub_geometries_share_single_feature() {
+        // MVT doesn't natively produce GeometryCollections, but
+        // process_feature_geometry handles them defensively. Verify that
+        // sub-geometries share a single feature's batch state.
+        let mut app = App::new();
+        app.init_resource::<BufferStore>();
+        app.init_resource::<BatchTable>();
+
+        #[derive(Resource, Default)]
+        struct Out {
+            entity_count: usize,
+            feature_count: u32,
+        }
+        app.init_resource::<Out>();
+
+        app.add_systems(
+            Update,
+            |mut commands: Commands,
+             mut batch_table: ResMut<BatchTable>,
+             mut buf: ResMut<BufferStore>,
+             mut out: ResMut<Out>| {
+                let keys = Arc::new(vec!["name".to_string()]);
+                let values = Arc::new(vec![tile::Value {
+                    string_value: Some("gc_test".to_string()),
+                    ..Default::default()
+                }]);
+                let mut builder =
+                    MvtGeometryBuilder::new(&mut batch_table, "test_layer", keys, values, 1);
+
+                let xyz = TileXYZ { x: 0, y: 0, z: 0 };
+                let mut converter = PosConverter::new(xyz, 4096);
+
+                // One feature with tags
+                builder.begin_feature(vec![0, 0]);
+
+                // Build a GeometryCollection with two Points
+                let gc = Geometry::GeometryCollection(geo_types::GeometryCollection(vec![
+                    Geometry::Point(Point::new(2048.0, 2048.0)),
+                    Geometry::Point(Point::new(1024.0, 1024.0)),
+                ]));
+
+                let appearances = [Appearance::Point(PointMaterial::default())];
+                process_feature_geometry(
+                    &mut commands,
+                    &mut buf,
+                    &mut builder,
+                    &gc,
+                    &mut converter,
+                    &appearances,
+                );
+
+                // Two child entities from the GeometryCollection
+                let point_group = builder
+                    .groups
+                    .groups
+                    .iter()
+                    .find(|g| g.kind == GeometryAppearanceKind::Point);
+                if let Some(group) = point_group {
+                    out.entity_count = group.entities.len();
+                }
+
+                // feature_count should be 1 (one feature, not two)
+                let group = builder
+                    .groups
+                    .groups
+                    .iter()
+                    .find(|g| g.kind == GeometryAppearanceKind::Point);
+                if let Some(g) = group {
+                    out.feature_count = g.feature_count;
+                }
+            },
+        );
+        app.update();
+
+        let out = app.world().resource::<Out>();
+        assert_eq!(out.entity_count, 2);
+        assert_eq!(out.feature_count, 1);
     }
 }
