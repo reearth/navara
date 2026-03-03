@@ -24,10 +24,14 @@ uniform float uTextWidth;
 uniform float uTextHeight;
 uniform vec2 uCenter;
 uniform float uAddHeight;
+uniform int uBackGroundInstanceID; // The instance ID of the background sprite.
+uniform vec2 uBgYBounds; // (minY, maxY) of actual glyph bounding box in normalized text space
+uniform bool uShowBackground;
 
 // Varyings
 varying vec2 vAtlasUv;
 varying float vFragDepth;
+flat varying int vBackGroundSprite; // Whether this vertex belongs to the background sprite (1) or a glyph (0)
 
 // Distance scaling normalization factor (matches instancedSprite convention)
 const float DISTANCE_SCALE_FACTOR = 100000.0;
@@ -62,23 +66,38 @@ void main() {
 
     vec2 center = clamp(uCenter, vec2(-0.5), vec2(0.5)); // Ensure center is within the bounds of the sprite
 
-    // --- Per-glyph vertex position ---
-    // position.xy is the unit quad [-0.5, 0.5].
-    // glyphOffset is the glyph bbox min corner (left/bottom), so remap
-    // the centered quad to [0,1] before applying glyph size/offset.
-    vec2 localPos = (position.xy + vec2(0.5)) * glyphSize + glyphOffset;
+    if (uShowBackground && gl_InstanceID == uBackGroundInstanceID) {
+        vBackGroundSprite = 1;
 
-    // Apply centering: shift entire text block by anchor point
-    localPos.x -= center.x * uTextWidth;
-    localPos.y -= (1.0 - center.y) * uTextHeight;
+        float bgHeight = uBgYBounds.y - uBgYBounds.x;
+        vec2 bgLocalPos = (position.xy + vec2(0.5)) * vec2(uTextWidth, bgHeight) + vec2(0.0, uBgYBounds.x);
+        bgLocalPos.x -= center.x * uTextWidth;
+        bgLocalPos.y -= (1.0 - center.y) * uTextHeight;
 
-    float scaleFactor = uFontSizePx;
+        vec4 newMvPosition = mvPosition + vec4(bgLocalPos * uFontSizePx, 0.0, 0.0);
 
-    // Apply billboard transform (screen-aligned, scaled)
-    vec4 delta = vec4(localPos * scaleFactor, 0.0, 0.0);
-    vec4 newMvPosition = mvPosition + delta;
+        gl_Position = projectionMatrix * newMvPosition;
+    } else {
+        vBackGroundSprite = 0;
+        // --- Per-glyph vertex position ---
+        // position.xy is the unit quad [-0.5, 0.5].
+        // glyphOffset is the glyph bbox min corner (left/bottom), so remap
+        // the centered quad to [0,1] before applying glyph size/offset.
+        vec2 localPos = (position.xy + vec2(0.5)) * glyphSize + glyphOffset;
 
-    gl_Position = projectionMatrix * newMvPosition;
+        // Apply centering: shift entire text block by anchor point
+        localPos.x -= center.x * uTextWidth;
+        localPos.y -= (1.0 - center.y) * uTextHeight;
+
+        float scaleFactor = uFontSizePx;
+
+        // Apply billboard transform (screen-aligned, scaled)
+        vec4 delta = vec4(localPos * scaleFactor, 0.0, 0.0);
+        vec4 newMvPosition = mvPosition + delta;
+
+        gl_Position = projectionMatrix * newMvPosition;
+
+    }
 
     // Atlas UV interpolation: map unit quad UV [0,1] to atlas sub-rect
     vAtlasUv = mix(glyphUvRect.xy, glyphUvRect.zw, uv);

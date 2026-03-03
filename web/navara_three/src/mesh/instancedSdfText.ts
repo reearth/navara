@@ -259,7 +259,7 @@ export class InstancedSdfTextMesh
   setFeatureShowByBatchIndex(batchIndex: number, rawVisible: boolean) {
     const mesh = this.meshes()[batchIndex];
     if (mesh) {
-      mesh.visible = rawVisible;
+      mesh._setFeatureShow(rawVisible);
       this.markVisibility(mesh);
     }
   }

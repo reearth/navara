@@ -21,14 +21,18 @@
 varying vec2 vAtlasUv;
 varying float vFragDepth;
 flat varying int vHorizonCulled;
+flat varying int vBackGroundSprite;
 
 // Uniforms
 uniform sampler2D uAtlas;
 uniform float uSdfThreshold;
 uniform vec3 uColor;
-uniform float uOpacity;
+uniform vec3 uOutlineColor;
+uniform float uOutlineWidth;
+uniform float uOutlineOpacity;
 uniform bool uOffsetDepth;
 uniform float uFarPlane;
+uniform vec3 uBackgroundColor;
 
 void main() {
     // Horizon culling discard
@@ -43,20 +47,32 @@ void main() {
         gl_FragColor = vec4(nvr_batchIdToColor(nvr_uBatchId), 1.0);
         return;
     }
+    
+    if (vBackGroundSprite == 1) {
+        // This is the background sprite, so we render it with a solid color and no SDF sampling
+        gl_FragColor = vec4(uBackgroundColor, 1.0);
+        return;
+    }
 
     // Sample SDF value from atlas (R channel)
     float dist = texture2D(uAtlas, vAtlasUv).r;
-
-    // Anti-aliased edge using screen-space derivatives of the SDF distance.
-    // fwidth gives resolution-independent smoothing width.
     float edgeWidth = fwidth(dist) * 0.5;
-    float alpha = smoothstep(uSdfThreshold - edgeWidth, uSdfThreshold + edgeWidth, dist);
 
-    if (alpha < 0.01) discard;
+    float outlineWidth = clamp(uOutlineWidth, 0.0, 0.4);
 
-    alpha *= uOpacity;
+    if (dist > uSdfThreshold) { // Inside the glyph
+        float alpha = smoothstep(uSdfThreshold - edgeWidth,
+                                 uSdfThreshold + edgeWidth,
+                                 dist);
 
-    gl_FragColor = vec4(uColor, alpha);
+        gl_FragColor = vec4(uColor, alpha);
+    } else if (dist <= uSdfThreshold && dist >= uSdfThreshold - outlineWidth) { // In the outline region
+        float alpha = smoothstep(uSdfThreshold - outlineWidth - edgeWidth,
+                                 uSdfThreshold - outlineWidth + edgeWidth,
+                                 dist);
+        gl_FragColor = vec4(uOutlineColor, alpha * uOutlineOpacity);
+    } else // Outside the glyph and outline
+        discard;
 
     #ifndef USE_SHADOWMAP_DEPTH
         vec3 normal = screenSpaceNormal();

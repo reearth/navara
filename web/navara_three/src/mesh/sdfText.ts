@@ -31,7 +31,7 @@ import type {
 import type { PickableMesh } from "./pickableMesh";
 
 /** Must match Rust SDF_PX_SIZE in navara_font/src/resource.rs */
-const SDF_PX_SIZE = 32.0;
+const SDF_PX_SIZE = 64.0;
 
 /**
  * A text mesh that renders glyphs from an SDF atlas using instanced geometry.
@@ -50,6 +50,7 @@ export class SDFTextMesh
   private _atlasTexture: DataTexture | null = null;
   /** When true, the atlas texture is shared and should not be disposed by this mesh. */
   private _sharedAtlas = false;
+  private _nInstances = 0;
 
   constructor(
     position: Float32Array | { high: Float32Array; low: Float32Array },
@@ -97,6 +98,7 @@ export class SDFTextMesh
 
     if (!text) {
       this.geometry.instanceCount = 0;
+      this._nInstances = 0;
       this.visible = false;
       return;
     }
@@ -104,6 +106,7 @@ export class SDFTextMesh
     const shapeResult = this._fontManager.shapeText(this._fontUrl, text);
     if (!shapeResult) {
       this.geometry.instanceCount = 0;
+      this._nInstances = 0;
       return;
     }
 
@@ -219,6 +222,41 @@ export class SDFTextMesh
       prev.height = nextHeight;
       this.setHeight(nextHeight);
     }
+
+    const nextOutlineWidth = material.outlineWidth ?? 0;
+    if (nextOutlineWidth !== prev.outlineWidth) {
+      prev.outlineWidth = nextOutlineWidth;
+      this.material.uniforms.uOutlineWidth.value = nextOutlineWidth;
+    }
+
+    const nextOutlineColor = material.outlineColor ?? 0x000000;
+    if (nextOutlineColor !== prev.outlineColor) {
+      prev.outlineColor = nextOutlineColor;
+      const color = new Color().setHex(nextOutlineColor);
+      this.material.uniforms.uOutlineColor.value.set(color.r, color.g, color.b);
+    }
+
+    const nextOutlineOpacity = material.outlineOpacity ?? 1.0;
+    if (nextOutlineOpacity !== prev.outlineOpacity) {
+      prev.outlineOpacity = nextOutlineOpacity;
+      this.material.uniforms.uOutlineOpacity.value = nextOutlineOpacity;
+    }
+
+    if (this.material.uniforms.uBackGroundInstanceID.value !== 0) {
+      this.material.uniforms.uBackGroundInstanceID.value = 0;
+    }
+
+    const nextBGColor = material.backgroundColor;
+    if (nextBGColor !== undefined) {
+      if (nextBGColor !== prev.backgroundColor) {
+        prev.backgroundColor = nextBGColor;
+        const color = new Color().setHex(nextBGColor);
+        this.material.uniforms.uBackgroundColor.value.set(color.r, color.g, color.b);
+        this.material.uniforms.uShowBackground.value = true;
+      }
+    } else {
+      this.material.uniforms.uShowBackground.value = false;
+    }
   }
 
   // --- FeatureMesh interface ---
@@ -318,7 +356,13 @@ export class SDFTextMesh
         uAtlas: { value: null },
         uSdfThreshold: { value: 0.5 },
         uColor: { value: new Color(1, 1, 1) },
-        uOpacity: { value: 1.0 },
+        uShowBackground: { value: 0.0 },
+        uBackgroundColor: { value: new Color(1, 0, 0) },
+        uBackGroundInstanceID: { value: this._nInstances },
+        uBgYBounds: { value: new Vector2(0.0, 1.0) },
+        uOutlineColor: { value: new Color(1, 0, 0) },
+        uOutlineWidth: { value: 0.1 },
+        uOutlineOpacity: { value: 0.1 },
         uFontSizePx: { value: 16.0 },
         uTextWidth: { value: 0.0 },
         uTextHeight: { value: 0.0 },
@@ -441,29 +485,42 @@ export class SDFTextMesh
     const textWidth = cursorX * fontUnitToSdfPx;
     const textHeight = SDF_PX_SIZE;
 
-    const glyphOffsetData = new Float32Array(count * 2);
-    const glyphSizeData = new Float32Array(count * 2);
-    const glyphUvRectData = new Float32Array(count * 4);
+    const glyphOffsetData = new Float32Array((count + 1) * 2);
+    const glyphSizeData = new Float32Array((count + 1) * 2);
+    const glyphUvRectData = new Float32Array((count + 1) * 4);
 
+    // Compute actual Y bounding box of all rendered glyphs
+    let bgMinY = Infinity;
+    let bgMaxY = -Infinity;
+
+    // Index 0 is reserved for the background instance (drawn first).
+    // Glyph data starts at index 1.
     for (let i = 0; i < count; i++) {
       const g = renderable[i];
+      const j = i + 1; // offset by 1 to leave index 0 for background
 
       // Normalize by SDF_PX_SIZE so 1 unit = 1 em
-      glyphOffsetData[i * 2] = g.offsetX / SDF_PX_SIZE;
-      glyphOffsetData[i * 2 + 1] = g.offsetY / SDF_PX_SIZE;
+      const normOffsetY = g.offsetY / SDF_PX_SIZE;
+      const normSizeY = g.atlasH / SDF_PX_SIZE;
 
-      glyphSizeData[i * 2] = g.atlasW / SDF_PX_SIZE;
-      glyphSizeData[i * 2 + 1] = g.atlasH / SDF_PX_SIZE;
+      glyphOffsetData[j * 2] = g.offsetX / SDF_PX_SIZE;
+      glyphOffsetData[j * 2 + 1] = normOffsetY;
+
+      glyphSizeData[j * 2] = g.atlasW / SDF_PX_SIZE;
+      glyphSizeData[j * 2 + 1] = normSizeY;
+
+      bgMinY = Math.min(bgMinY, normOffsetY);
+      bgMaxY = Math.max(bgMaxY, normOffsetY + normSizeY);
 
       // UV rect in atlas
-      glyphUvRectData[i * 4] = g.atlasX / atlasWidth;
-      glyphUvRectData[i * 4 + 1] = g.atlasY / atlasHeight;
-      glyphUvRectData[i * 4 + 2] = (g.atlasX + g.atlasW) / atlasWidth;
-      glyphUvRectData[i * 4 + 3] = (g.atlasY + g.atlasH) / atlasHeight;
+      glyphUvRectData[j * 4] = g.atlasX / atlasWidth;
+      glyphUvRectData[j * 4 + 1] = g.atlasY / atlasHeight;
+      glyphUvRectData[j * 4 + 2] = (g.atlasX + g.atlasW) / atlasWidth;
+      glyphUvRectData[j * 4 + 3] = (g.atlasY + g.atlasH) / atlasHeight;
     }
 
     // Recreate geometry if instance count increased beyond current capacity
-    if (this.geometry.instanceCount < count) {
+    if (this.geometry.instanceCount < count + 1) {
       this.geometry.dispose();
       this.geometry = this._createBaseGeometry();
     }
@@ -492,11 +549,16 @@ export class SDFTextMesh
       new InstancedBufferAttribute(glyphUvRectData, 4),
     );
 
-    this.geometry.instanceCount = count;
+    this.geometry.instanceCount = count + 1;
+    this._nInstances = count + 1;
 
     // Update text dimension uniforms for centering
     this.material.uniforms.uTextWidth.value = textWidth / SDF_PX_SIZE;
     this.material.uniforms.uTextHeight.value = textHeight / SDF_PX_SIZE;
+    this.material.uniforms.uBgYBounds.value.set(
+      bgMinY === Infinity ? 0.0 : bgMinY,
+      bgMaxY === -Infinity ? 1.0 : bgMaxY,
+    );
   }
 
   private _updateAtlasTexture(
