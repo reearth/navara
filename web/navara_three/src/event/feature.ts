@@ -16,7 +16,7 @@ import {
 import type { ViewContext } from "../core/ViewContext";
 import type { LayersManager } from "../layersManager";
 import {
-  InstancedSdfTextMesh,
+  BatchedSdfTextMesh,
   InstancedSpriteMesh,
   InstancedTextMesh,
   ModelMesh,
@@ -322,7 +322,7 @@ export async function processRenderableFeatureChanged(
     await processBillboardChanged(obj, billboard, buf, active);
   }
   if (
-    (obj instanceof InstancedTextMesh || obj instanceof InstancedSdfTextMesh) &&
+    (obj instanceof InstancedTextMesh || obj instanceof BatchedSdfTextMesh) &&
     text
   ) {
     processTextChanged(obj, text, buf, active, renderFlag);

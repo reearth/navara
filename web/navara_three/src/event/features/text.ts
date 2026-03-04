@@ -2,7 +2,7 @@ import { type TextMesh as NavaraTextMesh } from "@navara/engine";
 
 import type { BufferLoader } from "..";
 import type { ViewContext } from "../../core";
-import { InstancedSdfTextMesh, InstancedTextMesh } from "../../mesh";
+import { BatchedSdfTextMesh, InstancedTextMesh } from "../../mesh";
 import { FEATURE_RENDER_ORDER } from "../../renderOrder";
 import type { RenderFlag } from "../../type";
 import type { CommonUniforms } from "../../uniforms";
@@ -27,7 +27,7 @@ export async function renderText(
       await fontManager.prepareText(fontUrl, text);
     }
 
-    const textGroup = new InstancedSdfTextMesh(
+    const textGroup = new BatchedSdfTextMesh(
       m,
       buf,
       fontManager,
@@ -39,8 +39,6 @@ export async function renderText(
         layerId,
       },
     );
-
-    console.log("Created InstancedSdfTextMesh with font", fontUrl);
 
     return textGroup;
   }
@@ -56,7 +54,7 @@ export async function renderText(
 }
 
 export function processTextChanged(
-  obj: InstancedTextMesh | InstancedSdfTextMesh,
+  obj: InstancedTextMesh | BatchedSdfTextMesh,
   m: NavaraTextMesh,
   buf: BufferLoader,
   active: boolean,

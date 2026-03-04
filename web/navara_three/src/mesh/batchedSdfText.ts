@@ -27,7 +27,7 @@ type PositionsInfo = {
   RTE: boolean;
 };
 
-export class InstancedSdfTextMesh
+export class BatchedSdfTextMesh
   extends InstancedMesh<SDFTextMesh>
   implements PickableMesh
 {
