@@ -127,6 +127,8 @@ export type {
   ColorTuple,
   LUT,
   Globe,
+  Observed,
+  ObservedEvent,
 } from "@navara/core";
 export { CameraDirection } from "@navara/engine";
 // CSM exports for advanced users

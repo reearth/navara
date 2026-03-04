@@ -22,16 +22,15 @@
   },
   "license": "MIT OR Apache-2.0",
   "peerDependencies": {
-    "three": "^0.183.1"
+    "three": "^0.183.1",
+    "@navara/three": "workspace:*"
   },
   "dependencies": {
-    "@navara/core": "workspace:*",
-    "@navara/three": "workspace:*",
-    "@navara/three_api": "workspace:*",
     "@takram/three-atmosphere": "^0.14.0",
     "@takram/three-geospatial": "^0.6.0"
   },
   "devDependencies": {
+    "@navara/three": "workspace:*",
     "@types/three": "^0.183.1",
     "three": "^0.183.1",
     "vite-plugin-glsl": "^1.5.1"

@@ -663,6 +663,9 @@ pub struct PolygonMaterial {
     #[wasm_bindgen(js_name = surfaceShow)]
     #[serde(rename = "surfaceShow")]
     pub surface_show: Option<bool>,
+    /// Whether to compute outline geometry. Only effective at initial load time.
+    /// When not set, inferred from `outlineShow`.
+    pub outline: Option<bool>,
     /// Currently, this property is supported only in GeoJSON.
     #[wasm_bindgen(js_name = outlineShow)]
     #[serde(rename = "outlineShow")]
@@ -729,6 +732,7 @@ impl PolygonMaterial {
         height: Option<f32>,
         extruded_height: Option<f32>,
         wireframe: Option<bool>,
+        outline: Option<bool>,
         per_position_height: Option<bool>,
         __internal__: Option<PolygonInternalMaterial>,
     ) -> Self {
@@ -751,6 +755,7 @@ impl PolygonMaterial {
             transparent: None,
 
             surface_show: None,
+            outline,
             outline_show: None,
             outline_color: None,
             outline_width: None,
@@ -802,6 +807,7 @@ impl PolygonMaterial {
             transparent: self.transparent.unwrap_or(other.transparent),
 
             surface_show: self.surface_show.unwrap_or(other.surface_show),
+            outline: self.outline.unwrap_or(other.outline),
             outline_show: self.outline_show.unwrap_or(other.outline_show),
             outline_color: self.outline_color.unwrap_or(other.outline_color),
             outline_width: self.outline_width.unwrap_or(other.outline_width),
@@ -848,6 +854,9 @@ impl From<PolygonMaterial> for navara_material::PolygonMaterial {
             transparent: val.transparent.unwrap_or(default.transparent),
 
             surface_show: val.surface_show.unwrap_or(default.surface_show),
+            outline: val
+                .outline
+                .unwrap_or_else(|| val.outline_show.unwrap_or(default.outline)),
             outline_show: val.outline_show.unwrap_or(default.outline_show),
             outline_color: val.outline_color.unwrap_or(default.outline_color),
             outline_width: val.outline_width.unwrap_or(default.outline_width),
@@ -889,6 +898,7 @@ impl<'a> From<&'a navara_material::PolygonMaterial> for PolygonMaterial {
             transparent: Some(value.transparent),
 
             surface_show: Some(value.surface_show),
+            outline: Some(value.outline),
             outline_show: Some(value.outline_show),
             outline_color: Some(value.outline_color),
             outline_width: Some(value.outline_width),
@@ -928,6 +938,7 @@ impl From<navara_material::PolygonMaterial> for PolygonMaterial {
             transparent: Some(value.transparent),
 
             surface_show: Some(value.surface_show),
+            outline: Some(value.outline),
             outline_show: Some(value.outline_show),
             outline_color: Some(value.outline_color),
             outline_width: Some(value.outline_width),

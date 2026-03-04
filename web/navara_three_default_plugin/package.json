@@ -21,8 +21,11 @@
     "format:check": "prettier --check --ignore-path ../../.gitignore ."
   },
   "license": "MIT OR Apache-2.0",
-  "dependencies": {
-    "@navara/core": "workspace:*",
+  "peerDependencies": {
+    "@navara/three": "workspace:*",
+    "@navara/three_default_layers": "workspace:*"
+  },
+  "devDependencies": {
     "@navara/three": "workspace:*",
     "@navara/three_default_layers": "workspace:*"
   }
