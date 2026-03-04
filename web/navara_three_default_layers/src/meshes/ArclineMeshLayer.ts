@@ -31,16 +31,24 @@ export class ArclineMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
     this.config = config;
   }
 
+  protected getPassKey() {
+    return "mrt" as const;
+  }
+
   /**
    * Override onCreate to inject selective effect handlers on sub-meshes.
    * ArcLine is an Object3D containing Mesh children — onBeforeRender is only
    * called on Mesh instances, so the base class's setupMeshOnBeforeRender
    * (which targets the top-level Object3D) is insufficient.
+   *
+   * Handlers are injected unconditionally because ArcLine is always in the
+   * MRT scene (getPassKey → "mrt"). Without handlers, sub-meshes would render
+   * to mask RTs with default material state during BaseMRT passes.
    */
   override onCreate() {
     super.onCreate();
 
-    if (this._instance && this.config.effectIds?.length) {
+    if (this._instance) {
       this.injectHandlersOnSubMeshes();
     }
   }
@@ -116,7 +124,7 @@ export class ArclineMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
 
       this._instance.updateConfig(updateConfigs);
 
-      // Re-link (potentially rebuilt) sub-meshes and inject handlers
+      // Re-link (potentially rebuilt) sub-meshes
       if (nextEffectIds.length > 0) {
         this.view.selectiveEffectRegistry?.updateLinksForObject(
           this._instance,
@@ -124,8 +132,11 @@ export class ArclineMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
           [],
           this.id,
         );
-        this.injectHandlersOnSubMeshes();
       }
+
+      // Always re-inject handlers — ArcLine is always in MRT,
+      // so new sub-meshes need handlers regardless of effectIds
+      this.injectHandlersOnSubMeshes();
 
       this.emit("_needsUpdate");
     }
@@ -136,15 +147,6 @@ export class ArclineMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
     // Synchronize config.effectIds
     if (updates.effectIds !== undefined) {
       this.config.effectIds = updates.effectIds;
-
-      const hadNoEffects = currentEffectIds.length === 0;
-      const nowHasEffects = nextEffectIds.length > 0;
-
-      // Base class calls setupMeshOnBeforeRender for top-level Object3D,
-      // but ArcLine needs per-child Mesh injection
-      if (hadNoEffects && nowHasEffects && this._instance) {
-        this.injectHandlersOnSubMeshes();
-      }
     }
   }
 
