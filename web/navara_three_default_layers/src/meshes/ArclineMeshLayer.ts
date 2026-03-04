@@ -85,14 +85,6 @@ export class ArclineMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
   }
 
   onUpdateConfig(updates: ArclineMeshLayerUpdate): void {
-    // Compute next effectIds upfront to avoid using stale this.config.effectIds
-    // (super.onUpdateConfig hasn't been called yet at this point)
-    const currentEffectIds = this.config.effectIds ?? [];
-    const nextEffectIds =
-      updates.effectIds !== undefined
-        ? (updates.effectIds ?? [])
-        : currentEffectIds;
-
     if (updates.arcLines && this._instance) {
       const updateConfigs = Array.isArray(updates.arcLines)
         ? updates.arcLines
@@ -112,28 +104,9 @@ export class ArclineMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
       });
       this.config.arcLines = currentConfigs;
 
-      // Unlink old sub-meshes before potential rebuild to clear stale cache entries
-      if (currentEffectIds.length > 0) {
-        this.view.selectiveEffectRegistry?.updateLinksForObject(
-          this._instance,
-          [],
-          currentEffectIds,
-          this.id,
-        );
-      }
-
+      this.unlinkBeforeRebuild();
       this._instance.updateConfig(updateConfigs);
-
-      // Re-link (potentially rebuilt) sub-meshes.
-      // Always relink here because this block unlinks all currentEffectIds first.
-      if (nextEffectIds.length > 0) {
-        this.view.selectiveEffectRegistry?.updateLinksForObject(
-          this._instance,
-          nextEffectIds,
-          [],
-          this.id,
-        );
-      }
+      this.relinkAfterRebuild();
 
       // Always re-inject handlers — ArcLine is always in MRT,
       // so new sub-meshes need handlers regardless of effectIds
