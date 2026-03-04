@@ -578,7 +578,7 @@ impl App {
         {
             return self
                 .get_internal_batch_table(entity, &in_batch_len, &in_batch_id)
-                .map(|(lid, prop)| (Some(lid), Some(prop)))
+                .map(|(properties, layer_id)| (Some(properties), Some(layer_id)))
                 .unwrap_or((None, None));
         };
 
