@@ -23,6 +23,9 @@ pub fn get_units_per_em(font_data: &[u8]) -> Option<u16> {
 ///
 /// Returns positioned glyph info.
 /// Use the `units_per_em` cached on `FontEntry` for unit conversion.
+///
+/// TODO: Cache the `rustybuzz::Face` in `FontEntry` to avoid re-parsing on every call.
+/// This requires solving the self-referential borrow (`Face<'a>` borrows from `data: Vec<u8>`).
 pub fn shape_text(font_data: &[u8], text: &str) -> Option<Vec<ShapedGlyph>> {
     let face = rustybuzz::Face::from_slice(font_data, 0)?;
 

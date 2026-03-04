@@ -45,9 +45,9 @@ pub struct SDFAtlas {
     /// Atlas height in pixels
     pub height: u32,
     /// Map from glyph ID (post-shaping) to its metrics/position in the atlas
-    pub glyph_map: FxHashMap<u16, GlyphMetrics>,
+    pub glyph_map: FxHashMap<u32, GlyphMetrics>,
     /// LRU tracking: glyph ID → last frame the glyph was used
-    pub last_used: FxHashMap<u16, u64>,
+    pub last_used: FxHashMap<u32, u64>,
 }
 
 impl SDFAtlas {
@@ -63,12 +63,12 @@ impl SDFAtlas {
     }
 
     /// Mark a glyph as used this frame (for LRU tracking).
-    pub fn touch(&mut self, glyph_id: u16, current_frame: u64) {
+    pub fn touch(&mut self, glyph_id: u32, current_frame: u64) {
         self.last_used.insert(glyph_id, current_frame);
     }
 
     /// Check if a glyph is already in the atlas.
-    pub fn contains(&self, glyph_id: u16) -> bool {
+    pub fn contains(&self, glyph_id: u32) -> bool {
         self.glyph_map.contains_key(&glyph_id)
     }
 }

@@ -54,8 +54,6 @@ void main() {
     
     if (vBackGroundSprite == 1) {
         vec2 p = abs(vAtlasUv - vec2(0.5));
-        vec2 cornerCenter = vec2(0.5 - uBackgroundRadius);
-        // p = p - cornerCenter;
 
         if ((p.x > (0.5 - uBackgroundOutlineWidth / vBackGroundRatio)) ||
             (p.y > (0.5 - uBackgroundOutlineWidth))) {

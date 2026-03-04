@@ -9,7 +9,7 @@ use crate::resource::{GlyphMetrics, LRU_MIN_AGE, SDF_PX_SIZE, SDFAtlas};
 /// If the atlas is full, evicts the coldest unused glyphs before retrying.
 pub fn ensure_glyphs_in_atlas(
     sdf_font: &fontsdf::Font,
-    glyph_ids: &[u16],
+    glyph_ids: &[u32],
     atlas: &mut SDFAtlas,
     current_frame: u64,
 ) -> bool {
@@ -22,7 +22,8 @@ pub fn ensure_glyphs_in_atlas(
             continue;
         }
 
-        let (metrics, sdf_data) = sdf_font.rasterize_indexed_sdf(glyph_id, SDF_PX_SIZE);
+        // fontsdf uses u16 glyph indices (OpenType maxp table limits glyphs to 65535)
+        let (metrics, sdf_data) = sdf_font.rasterize_indexed_sdf(glyph_id as u16, SDF_PX_SIZE);
 
         if metrics.width == 0 || metrics.height == 0 {
             continue;
@@ -37,6 +38,8 @@ pub fn ensure_glyphs_in_atlas(
         });
 
         let Some(alloc) = alloc else {
+            #[cfg(debug_assertions)]
+            eprintln!("SDF atlas: failed to allocate space for glyph {glyph_id} after eviction");
             continue;
         };
 
@@ -79,7 +82,7 @@ pub fn ensure_glyphs_in_atlas(
 ///
 /// Frees atlas space by deallocating the coldest glyphs first.
 fn evict_cold_glyphs(atlas: &mut SDFAtlas, current_frame: u64, min_age: u64) {
-    let evictable: Vec<(u16, u64)> = atlas
+    let evictable: Vec<(u32, u64)> = atlas
         .last_used
         .iter()
         .filter_map(|(&glyph_id, &last_frame)| {

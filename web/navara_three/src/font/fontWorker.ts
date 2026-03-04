@@ -116,6 +116,15 @@ ctx.onmessage = async (e: MessageEvent) => {
         ctx.postMessage({ id, type: "result", payload: null });
         break;
       }
+
+      default: {
+        ctx.postMessage({
+          id,
+          type: "error",
+          payload: { message: `Unknown message type: ${msgType}` },
+        });
+        break;
+      }
     }
   } catch (err) {
     ctx.postMessage({

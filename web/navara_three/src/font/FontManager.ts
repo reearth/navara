@@ -1,6 +1,7 @@
 import { DataTexture, LinearFilter, RedFormat, UnsignedByteType } from "three";
 
 import type { FontWorkerClient } from "./FontWorkerClient";
+import { LRUMap } from "./LRUMap";
 
 /** Glyph metrics from the SDF atlas. */
 export type GlyphMetrics = {
@@ -51,6 +52,9 @@ export function createSdfAtlasTexture(
   return tex;
 }
 
+/** Maximum number of shaped text results to cache before LRU eviction. */
+const SHAPE_CACHE_MAX_SIZE = 10_000;
+
 /**
  * Manages font loading, text shaping, and SDF atlas access.
  *
@@ -64,8 +68,8 @@ export class FontManager {
   private _pending = new Map<string, Promise<void>>();
   /** Tracks fonts that have been successfully loaded. */
   private _loaded = new Set<string>();
-  /** Cache shaped text results to avoid redundant worker calls. */
-  private _shapeCache = new Map<string, ShapeTextResult>();
+  /** Cache shaped text results to avoid redundant worker calls (LRU-evicted). */
+  private _shapeCache = new LRUMap<string, ShapeTextResult>(SHAPE_CACHE_MAX_SIZE);
   /** Cache atlas data per font to avoid redundant copies. */
   private _atlasCache = new Map<string, FontAtlasData>();
   /** Tracks whether the atlas cache is stale (new glyphs may have been rasterized). */

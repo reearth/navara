@@ -37,6 +37,13 @@ flat varying float vBackGroundRatio;
 // Distance scaling normalization factor (matches instancedSprite convention)
 const float DISTANCE_SCALE_FACTOR = 100000.0;
 
+float getScaleFactor(float baseSizePx, vec4 mv) {
+    if (uScaleByDistance > 0.5) {
+        return baseSizePx * (1.0 + (length(mv.xyz) / DISTANCE_SCALE_FACTOR));
+    }
+    return baseSizePx;
+}
+
 void main() {
 #ifdef USE_RTE
     vec3 absTransformed = uRTEPositionHIGH + uRTEPositionLOW;
@@ -75,7 +82,8 @@ void main() {
         bgLocalPos.x -= center.x * uTextWidth;
         bgLocalPos.y -= (1.0 - center.y) * uTextHeight;
 
-        vec4 newMvPosition = mvPosition + vec4(bgLocalPos * uFontSizePx, 0.0, 0.0);
+        float bgScale = getScaleFactor(uFontSizePx, mvPosition);
+        vec4 newMvPosition = mvPosition + vec4(bgLocalPos * bgScale, 0.0, 0.0);
 
         gl_Position = projectionMatrix * newMvPosition;
 
@@ -93,7 +101,7 @@ void main() {
         localPos.x -= center.x * uTextWidth;
         localPos.y -= (1.0 - center.y) * uTextHeight;
 
-        float scaleFactor = uFontSizePx;
+        float scaleFactor = getScaleFactor(uFontSizePx, mvPosition);
 
         // Apply billboard transform (screen-aligned, scaled)
         vec4 delta = vec4(localPos * scaleFactor, 0.0, 0.0);
@@ -104,7 +112,6 @@ void main() {
         // Atlas UV interpolation: map unit quad UV [0,1] to atlas sub-rect
         vAtlasUv = mix(glyphUvRect.xy, glyphUvRect.zw, uv);
     }
-
 
     vFragDepth = gl_Position.w + 1.0;
 }

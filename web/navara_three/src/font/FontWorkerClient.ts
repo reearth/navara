@@ -34,6 +34,8 @@ export class FontWorkerClient {
     };
     this._worker.onerror = (e) => {
       console.error("FontWorkerClient: worker error", e);
+      // Reject all pending requests so callers don't hang indefinitely.
+      this.dispose();
     };
 
     // Trigger WASM init by sending a tickFrame

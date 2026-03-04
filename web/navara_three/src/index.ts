@@ -61,6 +61,8 @@ import {
 } from "./event";
 import { TEXTURE_LOADER } from "./event/loaders";
 import { FontManager, FontWorkerClient } from "./font";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+/** @ts-ignore ignore: https://v3.vitejs.dev/guide/features.html#import-with-query-suffixes */
 import FontWorkerURL from "./font/fontWorker?worker&url";
 import { registerInputEvents } from "./input";
 import { Layer, type LayerEvent } from "./layer";
@@ -131,8 +133,6 @@ import { isWorker, convertScreenPos } from "./utils";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 /** @ts-ignore ignore: https://v3.vitejs.dev/guide/features.html#import-with-query-suffixes  */
 import WorkerURL from "./worker?url&worker";
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-/** @ts-ignore */
 
 export type { CameraOptions, CameraEvent } from "./camera";
 

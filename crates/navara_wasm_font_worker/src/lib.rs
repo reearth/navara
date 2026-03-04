@@ -29,7 +29,7 @@ pub struct FontAtlas {
 #[wasm_bindgen]
 #[derive(Clone)]
 pub struct WasmGlyphMetrics {
-    pub glyph_id: u16,
+    pub glyph_id: u32,
     pub atlas_x: i32,
     pub atlas_y: i32,
     pub atlas_w: u32,
@@ -73,7 +73,7 @@ fn transfer_u8_array(byte_length: usize, f: &js_sys::Function) -> Vec<u8> {
 }
 
 fn copy_u8_array(buf: &[u8]) -> js_sys::Uint8Array {
-    let array = js_sys::Uint8Array::new(&JsValue::from(buf.len()));
+    let array = js_sys::Uint8Array::new_with_length(buf.len() as u32);
     array.copy_from(buf);
     array
 }
@@ -108,7 +108,7 @@ pub fn shape_text(url: &str, text: &str) -> Option<ShapeTextResult> {
         let shaped = shaping::shape_text(&entry.data, text)?;
         let units_per_em = entry.units_per_em;
 
-        let glyph_ids: Vec<u16> = shaped.iter().map(|g| g.glyph_id as u16).collect();
+        let glyph_ids: Vec<u32> = shaped.iter().map(|g| g.glyph_id).collect();
         let atlas_changed = atlas::ensure_glyphs_in_atlas(
             &entry.sdf_font,
             &glyph_ids,

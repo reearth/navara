@@ -133,7 +133,6 @@ export class SDFTextMesh
     this.material.uniforms.uFontSizePx.value = sizePx;
   }
 
-
   setScaleByDistance(enabled: boolean): void {
     this.material.uniforms.uScaleByDistance.value = enabled ? 1.0 : 0.0;
   }
@@ -183,7 +182,7 @@ export class SDFTextMesh
       this.setFontSize(nextFontSize);
     }
 
-    const nextCenterX = material.center?.x ?? 0.5;
+    const nextCenterX = material.center?.x ?? 0;
     const nextCenterY = material.center?.y ?? 0;
     if (nextCenterX !== prev.centerX || nextCenterY !== prev.centerY) {
       prev.centerX = nextCenterX;
