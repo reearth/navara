@@ -2,7 +2,7 @@ import {
   MeshLayerDeclarationForSelectiveEffect,
   type MeshLayerConfigWithSelectiveEffect,
   type MeshLayerUpdateWithSelectiveEffect,
-  ViewContext,
+  type ViewContext,
   injectSelectiveEffectHandlers,
 } from "@navara/three";
 import { Mesh } from "three";
@@ -29,10 +29,6 @@ export class ArclineMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
   constructor(view: ViewContext, config: ArclineMeshLayerConfig) {
     super(view, config);
     this.config = config;
-  }
-
-  protected getPassKey() {
-    return "mrt" as const;
   }
 
   /**
