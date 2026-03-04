@@ -17,7 +17,12 @@ pub(super) trait UniqueId {
             retry_count -= 1;
         }
 
-        if retry_count > 0 { Some(key) } else { None }
+        if retry_count > 0 {
+            self.hashset().insert(key);
+            Some(key)
+        } else {
+            None
+        }
     }
 }
 
