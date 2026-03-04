@@ -3,11 +3,12 @@ use geozero::mvt::tile;
 
 use navara_buffer_store::{BufferStore, Handle};
 use navara_component::Deleted;
-use rand::RngExt;
 
 use navara_parser::b3dm::{BatchTable as B3dmBatchTable, PropertyValue};
 use rustc_hash::FxHashMap;
 use std::sync::Arc;
+
+use crate::unique_id::{UniqueFeatureId, UniqueGlobalBatchId, UniqueId};
 
 #[derive(Component, Debug, Default)]
 pub struct BatchedFeature {
@@ -208,6 +209,8 @@ impl BatchTableValue {
 #[derive(Resource)]
 pub struct BatchTable {
     map: FxHashMap<u32, Option<BatchTableValue>>,
+    unique_feature_batch_id: UniqueFeatureId,
+    unique_global_batch_id: UniqueGlobalBatchId,
 }
 
 impl Default for BatchTable {
@@ -220,6 +223,8 @@ impl BatchTable {
     pub fn new() -> Self {
         Self {
             map: FxHashMap::default(),
+            unique_feature_batch_id: UniqueFeatureId::new(),
+            unique_global_batch_id: UniqueGlobalBatchId::new(),
         }
     }
 
@@ -231,21 +236,11 @@ impl BatchTable {
         self.len() > 0
     }
 
+    /// Store the feature property to `map`.
     pub fn add(&mut self, value: Option<BatchTableValue>) -> Option<u32> {
-        let mut rng = rand::rng();
-        let mut key = rng.random_range(1..0xffffff);
-        let mut retry_count = 10;
-        while self.map.contains_key(&key) && retry_count > 0 {
-            key = rng.random_range(1..0xffffff);
-            retry_count -= 1;
-        }
-
-        if retry_count > 0 {
-            self.map.insert(key, value);
-            Some(key)
-        } else {
-            None
-        }
+        let key = self.unique_feature_batch_id.get()?;
+        self.map.insert(key, value);
+        Some(key)
     }
 
     pub fn init_values(&mut self, layer_id: Option<String>) -> Option<u32> {
@@ -262,6 +257,12 @@ impl BatchTable {
             properties: Some(BatchProperty::Mvt(mvt_data)),
             layer_id,
         }))
+    }
+
+    pub fn gen_global_batch_id(&mut self) -> Option<u32> {
+        let key = self.unique_global_batch_id.get()?;
+
+        Some(key)
     }
 
     pub fn add_values(&mut self, key: u32, props: serde_json::Value) {

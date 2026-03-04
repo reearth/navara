@@ -19,6 +19,8 @@ export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
 
   plugin.addDefaultPhotorealLayers();
 
+  view.atmosphere.date.setHours(8);
+
   view.addLayer({
     type: "mesh",
     axesHelper: {
