@@ -1071,7 +1071,8 @@ impl App {
         let entry = font_cache.get_mut(url)?;
 
         // Shape text
-        let (glyphs, units_per_em) = navara_font::shaping::shape_text(&entry.data, text)?;
+        let glyphs = navara_font::shaping::shape_text(&entry.data, text)?;
+        let units_per_em = entry.units_per_em;
 
         // Ensure all shaped glyphs are in the atlas
         let glyph_ids: Vec<u16> = glyphs.iter().map(|g| g.glyph_id as u16).collect();

@@ -89,6 +89,8 @@ pub struct FontEntry {
     pub sdf_font: fontsdf::Font,
     /// Per-font SDF atlas
     pub atlas: SDFAtlas,
+    /// Cached units-per-em (parsed once at load time)
+    pub units_per_em: u16,
 }
 
 /// Cache of loaded fonts, keyed by URL.
@@ -121,12 +123,14 @@ impl FontCache {
     /// Store a newly loaded font. Parses the font data and creates a fresh atlas.
     pub fn insert(&mut self, url: String, data: Vec<u8>) -> Result<(), &'static str> {
         let sdf_font = fontsdf::Font::from_bytes(&data)?;
+        let units_per_em = crate::shaping::get_units_per_em(&data).unwrap_or(1000);
         self.fonts.insert(
             url,
             FontEntry {
                 data,
                 sdf_font,
                 atlas: SDFAtlas::default(),
+                units_per_em,
             },
         );
         Ok(())

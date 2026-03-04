@@ -58,8 +58,6 @@ export class FontManager {
   private _atlasCache = new Map<string, FontAtlasData>();
   /** Tracks whether the atlas cache is stale (new glyphs may have been rasterized). */
   private _atlasDirty = new Set<string>();
-  /** Tracks known rasterized glyph IDs per font to detect atlas mutations. */
-  private _knownGlyphs = new Map<string, Set<number>>();
   /** Shared GPU texture per font — all meshes using the same font share one DataTexture. */
   private _textureCache = new Map<string, DataTexture>();
   /** Tracks in-flight prepareText promises to deduplicate. */
@@ -209,7 +207,6 @@ export class FontManager {
     this._shapeCache.clear();
     this._atlasCache.clear();
     this._atlasDirty.clear();
-    this._knownGlyphs.clear();
     for (const tex of this._textureCache.values()) {
       tex.dispose();
     }
@@ -219,11 +216,10 @@ export class FontManager {
   }
 
   private async _fetchAndLoad(url: string): Promise<void> {
-    console.log(`FontManager: fetching font from ${url}`);
     const client = this._client;
     if (!client) throw new Error("FontManager: worker client not initialized");
 
-    const response = await fetch(url, { priority: "low" });
+    const response = await fetch(url);
     if (!response.ok) {
       throw new Error(
         `FontManager: failed to fetch font from ${url}: ${response.status}`,
@@ -264,34 +260,16 @@ export class FontManager {
         // Update atlas once for the entire batch
         if (batchResult.atlas) {
           this._atlasCache.set(fontUrl, batchResult.atlas);
-
-          let knownSet = this._knownGlyphs.get(fontUrl);
-          if (!knownSet) {
-            knownSet = new Set();
-            this._knownGlyphs.set(fontUrl, knownSet);
-          }
-          let hasNewGlyphs = false;
-          for (const item of batchResult.results) {
-            if (item.shapeResult) {
-              for (const m of item.shapeResult.metrics) {
-                if (!knownSet.has(m.glyphId)) {
-                  knownSet.add(m.glyphId);
-                  hasNewGlyphs = true;
-                }
-              }
-            }
-          }
-          if (hasNewGlyphs) {
-            this._atlasDirty.add(fontUrl);
-          }
+          this._atlasDirty.add(fontUrl);
         }
 
         // Resolve all queued promises for this font
         for (const entry of entries) {
           entry.resolve();
         }
-      } catch {
-        // On error, resolve anyway to avoid hanging promises
+      } catch (err) {
+        console.error("FontManager: batch prepare failed", err);
+        // Resolve anyway to avoid hanging promises
         for (const entry of entries) {
           entry.resolve();
         }

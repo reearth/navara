@@ -147,11 +147,6 @@ export class InstancedSdfTextMesh
     active: boolean,
     needRender?: () => void,
   ) {
-    const text = material.text ?? "";
-    if (text) {
-      this._fontManager.shapeText(this._fontUrl, text);
-    }
-
     // Update shared texture (in-place update if atlas grew)
     const sharedTex = this._fontManager.getAtlasTexture(this._fontUrl);
     if (sharedTex) {
@@ -254,7 +249,6 @@ export class InstancedSdfTextMesh
         return;
       }
       mesh.setText(text);
-      // console.log(`Updated text of batch ${batchIndex} to "${text}"`);
     }
   }
 

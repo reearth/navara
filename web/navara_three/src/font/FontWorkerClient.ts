@@ -1,10 +1,5 @@
 import type { ShapeTextResult, FontAtlasData } from "./FontManager";
 
-export type PrepareTextResult = {
-  shapeResult: ShapeTextResult | null;
-  atlas: FontAtlasData | null;
-};
-
 export type BatchPrepareTextResult = {
   results: { text: string; shapeResult: ShapeTextResult | null }[];
   atlas: FontAtlasData | null;
@@ -55,29 +50,6 @@ export class FontWorkerClient {
     return this._send("loadFont", { url, data }, [data]) as Promise<{
       ok: boolean;
     }>;
-  }
-
-  /** Shape text and get atlas data from the worker. */
-  async prepareText(fontUrl: string, text: string): Promise<PrepareTextResult> {
-    const raw = (await this._send("prepareText", { fontUrl, text })) as {
-      shapeResult: ShapeTextResult | null;
-      atlas: { data: ArrayBuffer; width: number; height: number } | null;
-    };
-
-    // Convert the transferred ArrayBuffer back to Uint8Array
-    let atlas: FontAtlasData | null = null;
-    if (raw.atlas) {
-      atlas = {
-        data: new Uint8Array(raw.atlas.data),
-        width: raw.atlas.width,
-        height: raw.atlas.height,
-      };
-    }
-
-    return {
-      shapeResult: raw.shapeResult,
-      atlas,
-    };
   }
 
   /** Shape multiple texts in one worker round-trip. */

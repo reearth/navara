@@ -24,9 +24,9 @@ uniform float uTextWidth;
 uniform float uTextHeight;
 uniform vec2 uCenter;
 uniform float uAddHeight;
-uniform int uBackGroundInstanceID; // The instance ID of the background sprite.
+// Instance 0 is reserved for the background quad.
 uniform vec2 uBgYBounds; // (minY, maxY) of actual glyph bounding box in normalized text space
-uniform bool uShowBackground;
+uniform float uShowBackground;
 
 // Varyings
 varying vec2 vAtlasUv;
@@ -67,7 +67,7 @@ void main() {
 
     vec2 center = clamp(uCenter, vec2(-0.5), vec2(0.5)); // Ensure center is within the bounds of the sprite
 
-    if (uShowBackground && gl_InstanceID == uBackGroundInstanceID) {
+    if (uShowBackground > 0.5 && gl_InstanceID == 0) {
         vBackGroundSprite = 1;
 
         float bgHeight = uBgYBounds.y - uBgYBounds.x;

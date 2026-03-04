@@ -19,6 +19,47 @@ async function ensureWasm(): Promise<void> {
   await wasmReady;
 }
 
+function convertGlyphs(glyphs: WasmShapedGlyph[]) {
+  return glyphs.map((g) => ({
+    glyphId: g.glyph_id,
+    xAdvance: g.x_advance,
+    yAdvance: g.y_advance,
+    xOffset: g.x_offset,
+    yOffset: g.y_offset,
+    cluster: g.cluster,
+  }));
+}
+
+function convertMetrics(metrics: WasmGlyphMetrics[]) {
+  return metrics.map((m) => ({
+    glyphId: m.glyph_id,
+    atlasX: m.atlas_x,
+    atlasY: m.atlas_y,
+    atlasW: m.atlas_w,
+    atlasH: m.atlas_h,
+    bearingX: m.bearing_x,
+    bearingY: m.bearing_y,
+    advance: m.advance,
+  }));
+}
+
+function convertShapeResult(sr: WasmShapeTextResult | undefined) {
+  if (!sr) return null;
+  return {
+    glyphs: convertGlyphs(sr.glyphs),
+    metrics: convertMetrics(sr.metrics),
+    unitsPerEm: sr.units_per_em,
+  };
+}
+
+function snapshotAtlas(fontUrl: string) {
+  const atlas = getFontAtlasView(fontUrl);
+  if (!atlas) return null;
+  // Single copy from WASM memory view into a transferable buffer
+  const data = atlas.data.slice().buffer;
+  return { data, width: atlas.width, height: atlas.height };
+}
+
 const ctx = self as unknown as DedicatedWorkerGlobalScope;
 
 ctx.onmessage = async (e: MessageEvent) => {
@@ -40,172 +81,33 @@ ctx.onmessage = async (e: MessageEvent) => {
         break;
       }
 
-      case "prepareText": {
-        const { fontUrl, text } = msg.payload as {
-          fontUrl: string;
-          text: string;
-        };
-
-        // Shape text + rasterize glyphs into atlas (all in WASM)
-        const shapeResult: WasmShapeTextResult | undefined = shapeText(
-          fontUrl,
-          text,
-        );
-        tickFrame();
-
-        // Convert WASM class instances to plain objects for structured clone
-        const glyphs = shapeResult?.glyphs.map((g: WasmShapedGlyph) => ({
-          glyphId: g.glyph_id,
-          xAdvance: g.x_advance,
-          yAdvance: g.y_advance,
-          xOffset: g.x_offset,
-          yOffset: g.y_offset,
-          cluster: g.cluster,
-        }));
-
-        const metrics = shapeResult?.metrics.map((m: WasmGlyphMetrics) => ({
-          glyphId: m.glyph_id,
-          atlasX: m.atlas_x,
-          atlasY: m.atlas_y,
-          atlasW: m.atlas_w,
-          atlasH: m.atlas_h,
-          bearingX: m.bearing_x,
-          bearingY: m.bearing_y,
-          advance: m.advance,
-        }));
-
-        // Only copy atlas when new glyphs were actually rasterized
-        let atlasData: ArrayBuffer | null = null;
-        let atlasWidth = 0;
-        let atlasHeight = 0;
-        if (shapeResult?.atlas_changed) {
-          const atlas = getFontAtlasView(fontUrl);
-          if (atlas) {
-            // Single copy from WASM memory view into a transferable buffer
-            atlasData = atlas.data.slice().buffer;
-            atlasWidth = atlas.width;
-            atlasHeight = atlas.height;
-          }
-        }
-
-        const response = {
-          id,
-          type: "result" as const,
-          payload: {
-            shapeResult: shapeResult
-              ? { glyphs, metrics, unitsPerEm: shapeResult.units_per_em }
-              : null,
-            atlas: atlasData
-              ? { data: atlasData, width: atlasWidth, height: atlasHeight }
-              : null,
-          },
-        };
-
-        // Transfer atlas ArrayBuffer for zero-copy
-        const transfers: Transferable[] = atlasData ? [atlasData] : [];
-        ctx.postMessage(response, transfers);
-        break;
-      }
-
       case "prepareTextBatch": {
         const { fontUrl, texts } = msg.payload as {
           fontUrl: string;
           texts: string[];
         };
 
-        const results: {
-          text: string;
-          shapeResult: {
-            glyphs: {
-              glyphId: number;
-              xAdvance: number;
-              yAdvance: number;
-              xOffset: number;
-              yOffset: number;
-              cluster: number;
-            }[];
-            metrics: {
-              glyphId: number;
-              atlasX: number;
-              atlasY: number;
-              atlasW: number;
-              atlasH: number;
-              bearingX: number;
-              bearingY: number;
-              advance: number;
-            }[];
-            unitsPerEm: number;
-          } | null;
-        }[] = [];
         let anyAtlasChanged = false;
-
-        for (const text of texts) {
+        const results = texts.map((text) => {
           const sr = shapeText(fontUrl, text);
           if (sr?.atlas_changed) anyAtlasChanged = true;
-
-          const glyphs = sr?.glyphs.map((g: WasmShapedGlyph) => ({
-            glyphId: g.glyph_id,
-            xAdvance: g.x_advance,
-            yAdvance: g.y_advance,
-            xOffset: g.x_offset,
-            yOffset: g.y_offset,
-            cluster: g.cluster,
-          }));
-
-          const metrics = sr?.metrics.map((m: WasmGlyphMetrics) => ({
-            glyphId: m.glyph_id,
-            atlasX: m.atlas_x,
-            atlasY: m.atlas_y,
-            atlasW: m.atlas_w,
-            atlasH: m.atlas_h,
-            bearingX: m.bearing_x,
-            bearingY: m.bearing_y,
-            advance: m.advance,
-          }));
-
-          results.push({
-            text,
-            shapeResult:
-              sr && glyphs && metrics
-                ? { glyphs, metrics, unitsPerEm: sr.units_per_em }
-                : null,
-          });
-        }
+          return { text, shapeResult: convertShapeResult(sr) };
+        });
 
         tickFrame();
 
         // One atlas transfer for the entire batch
-        let batchAtlasData: ArrayBuffer | null = null;
-        let batchAtlasWidth = 0;
-        let batchAtlasHeight = 0;
-        if (anyAtlasChanged) {
-          const atlas = getFontAtlasView(fontUrl);
-          if (atlas) {
-            batchAtlasData = atlas.data.slice().buffer;
-            batchAtlasWidth = atlas.width;
-            batchAtlasHeight = atlas.height;
-          }
-        }
+        const atlas = anyAtlasChanged ? snapshotAtlas(fontUrl) : null;
 
-        const batchResponse = {
-          id,
-          type: "result" as const,
-          payload: {
-            results,
-            atlas: batchAtlasData
-              ? {
-                  data: batchAtlasData,
-                  width: batchAtlasWidth,
-                  height: batchAtlasHeight,
-                }
-              : null,
+        const transfers: Transferable[] = atlas ? [atlas.data] : [];
+        ctx.postMessage(
+          {
+            id,
+            type: "result" as const,
+            payload: { results, atlas },
           },
-        };
-
-        const batchTransfers: Transferable[] = batchAtlasData
-          ? [batchAtlasData]
-          : [];
-        ctx.postMessage(batchResponse, batchTransfers);
+          transfers,
+        );
         break;
       }
 

@@ -107,7 +107,8 @@ pub fn shape_text(url: &str, text: &str) -> Option<ShapeTextResult> {
         let current_frame = cache.current_frame;
         let entry = cache.get_mut(url)?;
 
-        let (shaped, units_per_em) = shaping::shape_text(&entry.data, text)?;
+        let shaped = shaping::shape_text(&entry.data, text)?;
+        let units_per_em = entry.units_per_em;
 
         let glyph_ids: Vec<u16> = shaped.iter().map(|g| g.glyph_id as u16).collect();
         let atlas_changed = atlas::ensure_glyphs_in_atlas(
