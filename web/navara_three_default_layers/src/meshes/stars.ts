@@ -1,5 +1,8 @@
-import { EventHandler } from "@navara/core";
-import { STARS_ASSETS_URL, STARS_RENDER_ORDER } from "@navara/three";
+import {
+  EventHandler,
+  STARS_ASSETS_URL,
+  STARS_RENDER_ORDER,
+} from "@navara/three";
 import {
   StarsGeometry,
   StarsMaterial,

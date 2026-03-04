@@ -2,6 +2,25 @@ import { encodePosition } from "@navara/engine-api";
 import { Matrix4, Vector3 } from "three";
 
 /**
+ * Encodes a position into high and low precision Vector3 components for RTE (Relative-To-Eye) rendering.
+ * This enables GPU double precision emulation by splitting a position into two float components.
+ * @param original - Position to encode
+ * @param resultHigh - Vector3 to store the high precision component (reused to avoid GC)
+ * @param resultLow - Vector3 to store the low precision component (reused to avoid GC)
+ */
+export function encodePositionRTE(
+  original: Vector3,
+  resultHigh = new Vector3(),
+  resultLow = new Vector3(),
+): { high: Vector3; low: Vector3 } {
+  const encoded = encodePosition(original.x, original.y, original.z);
+  resultHigh.set(encoded.high.x, encoded.high.y, encoded.high.z);
+  resultLow.set(encoded.low.x, encoded.low.y, encoded.low.z);
+  encoded.free();
+  return { high: resultHigh, low: resultLow };
+}
+
+/**
  * Calculates the model-view matrix for Relative-To-Eye (RTE) rendering, which improves precision for distant objects.
  * @param objectMatrixWorld - The object's world transformation matrix
  * @param matrixWorldInverse - The camera's inverse world matrix

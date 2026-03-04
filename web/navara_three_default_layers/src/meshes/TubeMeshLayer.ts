@@ -1,5 +1,5 @@
-import type { XYZ } from "@navara/core";
 import {
+  type XYZ,
   Color,
   MeshLayerDeclarationForSelectiveEffect,
   type MeshLayerConfigWithSelectiveEffect,

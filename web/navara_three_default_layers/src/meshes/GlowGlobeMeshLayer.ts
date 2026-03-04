@@ -1,10 +1,11 @@
-import { getWGS84SemiMajorAxis, getWGS84Flattening } from "@navara/engine-api";
 import {
   Color,
   MeshLayerDeclaration,
   type MeshLayerConfig,
   type ViewContext,
   type MeshLayerUpdate,
+  getWGS84SemiMajorAxis,
+  getWGS84Flattening,
 } from "@navara/three";
 import GlowGlobeFS from "@shaders/glsl/glowGlobe.frag.glsl";
 import GlowGlobeVS from "@shaders/glsl/glowGlobe.vert.glsl";

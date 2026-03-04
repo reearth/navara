@@ -1,6 +1,6 @@
-import { Plugin } from "@navara/core";
 import type ThreeView from "@navara/three";
 import {
+  Plugin,
   type LayerHandle,
   type SkyLightProbeLayer,
   type SunLightLayer,
