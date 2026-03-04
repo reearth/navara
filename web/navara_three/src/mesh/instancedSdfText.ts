@@ -33,6 +33,7 @@ export class InstancedSdfTextMesh
 {
   private _fontUrl: string;
   private _fontManager: FontManager;
+  private _needRender?: () => void;
 
   constructor(
     m: NavaraTextMesh,
@@ -125,6 +126,7 @@ export class InstancedSdfTextMesh
     needRender?: () => void,
   ) {
     this.setActive(true);
+    if (needRender) this._needRender = needRender;
 
     const material = m.material;
     const text = material.text ?? "";
@@ -240,7 +242,14 @@ export class InstancedSdfTextMesh
       // If the text hasn't been prepared in the worker yet, schedule async preparation
       if (text && !this._fontManager.isTextPrepared(this._fontUrl, text)) {
         this._fontManager.prepareText(this._fontUrl, text).then(() => {
+          // Refresh the shared atlas texture if the worker rasterized new glyphs
+          const sharedTex = this._fontManager.getAtlasTexture(this._fontUrl);
+          if (sharedTex) {
+            mesh.setAtlasTexture(sharedTex);
+          }
           mesh.setText(text);
+          this.markVisibility(mesh);
+          this._needRender?.();
         });
         return;
       }
