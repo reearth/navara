@@ -77,6 +77,14 @@ export class ArclineMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
   }
 
   onUpdateConfig(updates: ArclineMeshLayerUpdate): void {
+    // Compute next effectIds upfront to avoid using stale this.config.effectIds
+    // (super.onUpdateConfig hasn't been called yet at this point)
+    const currentEffectIds = this.config.effectIds ?? [];
+    const nextEffectIds =
+      updates.effectIds !== undefined
+        ? (updates.effectIds ?? [])
+        : currentEffectIds;
+
     if (updates.arcLines && this._instance) {
       const updateConfigs = Array.isArray(updates.arcLines)
         ? updates.arcLines
@@ -95,28 +103,42 @@ export class ArclineMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
         }
       });
       this.config.arcLines = currentConfigs;
+
+      // Unlink old sub-meshes before potential rebuild to clear stale cache entries
+      if (currentEffectIds.length > 0) {
+        this.view.selectiveEffectRegistry?.updateLinksForObject(
+          this._instance,
+          [],
+          currentEffectIds,
+          this.id,
+        );
+      }
+
       this._instance.updateConfig(updateConfigs);
 
-      // Re-inject handlers on sub-meshes (updateConfig may rebuild them)
-      if (this.config.effectIds?.length) {
+      // Re-link (potentially rebuilt) sub-meshes and inject handlers
+      if (nextEffectIds.length > 0) {
+        this.view.selectiveEffectRegistry?.updateLinksForObject(
+          this._instance,
+          nextEffectIds,
+          [],
+          this.id,
+        );
         this.injectHandlersOnSubMeshes();
       }
 
       this.emit("_needsUpdate");
     }
 
-    // Detect effectIds transition for sub-mesh handler injection
-    const prevEffectIds = this.config.effectIds ?? [];
-
     // super.onUpdateConfig handles _effectIds, registry links, and setupMeshOnBeforeRender
     super.onUpdateConfig(updates);
 
-    // Synchronize config.effectIds so arcLines update path uses the correct value
+    // Synchronize config.effectIds
     if (updates.effectIds !== undefined) {
       this.config.effectIds = updates.effectIds;
 
-      const hadNoEffects = prevEffectIds.length === 0;
-      const nowHasEffects = (updates.effectIds?.length ?? 0) > 0;
+      const hadNoEffects = currentEffectIds.length === 0;
+      const nowHasEffects = nextEffectIds.length > 0;
 
       // Base class calls setupMeshOnBeforeRender for top-level Object3D,
       // but ArcLine needs per-child Mesh injection
