@@ -143,9 +143,6 @@ export function getRayPlaneIntersection(
 
   const intersection = nvGetRayPlaneIntersection(wasmRay, wasmPlane);
 
-  wasmRay.free();
-  wasmPlane.free();
-
   if (intersection) {
     const result = new Vector3(intersection.x, intersection.y, intersection.z);
     intersection.free();
