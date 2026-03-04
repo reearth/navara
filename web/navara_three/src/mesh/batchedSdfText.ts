@@ -70,13 +70,6 @@ export class BatchedSdfTextMesh
     const transform = m.transform;
     const active = m.active;
 
-    // Pre-shape text once to prime the FontManager cache.
-    // All subsequent shapeText() calls from individual meshes will hit the cache.
-    const text = material.text ?? "";
-    if (text) {
-      fontManager.shapeText(this._fontUrl, text);
-    }
-
     // Get the font-level shared atlas texture (one DataTexture per font, shared across all groups)
     const sharedTex = fontManager.getAtlasTexture(this._fontUrl);
 
@@ -125,7 +118,6 @@ export class BatchedSdfTextMesh
     active: boolean,
     needRender?: () => void,
   ) {
-    this.setActive(true);
     if (needRender) this._needRender = needRender;
 
     const material = m.material;

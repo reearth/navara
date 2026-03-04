@@ -36,7 +36,6 @@ pub struct WasmGlyphMetrics {
     pub atlas_h: u32,
     pub bearing_x: f32,
     pub bearing_y: f32,
-    pub advance: f32,
 }
 
 /// A single shaped glyph with positioning info.
@@ -48,7 +47,6 @@ pub struct WasmShapedGlyph {
     pub y_advance: i32,
     pub x_offset: i32,
     pub y_offset: i32,
-    pub cluster: u32,
 }
 
 /// Result of shaping text: glyph positions + atlas metrics.
@@ -126,7 +124,6 @@ pub fn shape_text(url: &str, text: &str) -> Option<ShapeTextResult> {
                 y_advance: g.y_advance,
                 x_offset: g.x_offset,
                 y_offset: g.y_offset,
-                cluster: g.cluster,
             })
             .collect();
 
@@ -146,7 +143,6 @@ pub fn shape_text(url: &str, text: &str) -> Option<ShapeTextResult> {
                     atlas_h: m.atlas_h,
                     bearing_x: m.bearing_x,
                     bearing_y: m.bearing_y,
-                    advance: m.advance,
                 })
             })
             .collect();

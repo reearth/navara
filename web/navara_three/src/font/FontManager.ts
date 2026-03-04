@@ -11,7 +11,6 @@ export type GlyphMetrics = {
   atlasH: number;
   bearingX: number;
   bearingY: number;
-  advance: number;
 };
 
 /** A single shaped glyph with positioning info. */
@@ -21,14 +20,13 @@ export type ShapedGlyph = {
   yAdvance: number;
   xOffset: number;
   yOffset: number;
-  cluster: number;
 };
 
 /** Result from shaping text: glyph positions + atlas metrics. */
 export type ShapeTextResult = {
   glyphs: ShapedGlyph[];
   metrics: GlyphMetrics[];
-  /** Font units per em (needed for converting font-unit advances to SDF pixel space) */
+  /** Font units per em (needed for converting font-unit to pixel space) */
   unitsPerEm: number;
 };
 
@@ -91,11 +89,6 @@ export class FontManager {
     } finally {
       this._pending.delete(url);
     }
-  }
-
-  /** Check if a font has been loaded and is ready for use. */
-  isFontLoaded(url: string): boolean {
-    return this._loaded.has(url);
   }
 
   /**

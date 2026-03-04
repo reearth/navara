@@ -26,7 +26,6 @@ function convertGlyphs(glyphs: WasmShapedGlyph[]) {
     yAdvance: g.y_advance,
     xOffset: g.x_offset,
     yOffset: g.y_offset,
-    cluster: g.cluster,
   }));
 }
 
@@ -39,7 +38,6 @@ function convertMetrics(metrics: WasmGlyphMetrics[]) {
     atlasH: m.atlas_h,
     bearingX: m.bearing_x,
     bearingY: m.bearing_y,
-    advance: m.advance,
   }));
 }
 

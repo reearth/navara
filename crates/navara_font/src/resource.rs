@@ -28,8 +28,6 @@ pub struct GlyphMetrics {
     pub bearing_x: f32,
     /// Vertical bearing (offset from baseline to glyph bottom edge)
     pub bearing_y: f32,
-    /// Horizontal advance width
-    pub advance: f32,
 }
 
 /// Per-font SDF texture atlas.

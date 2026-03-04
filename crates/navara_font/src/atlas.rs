@@ -68,7 +68,6 @@ pub fn ensure_glyphs_in_atlas(
                 atlas_h: metrics.height as u32,
                 bearing_x: metrics.xmin as f32,
                 bearing_y: metrics.ymin as f32,
-                advance: metrics.advance_width,
             },
         );
         new_glyphs = true;

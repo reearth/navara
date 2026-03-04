@@ -11,8 +11,6 @@ pub struct ShapedGlyph {
     pub x_offset: i32,
     /// Vertical offset before drawing (in font units)
     pub y_offset: i32,
-    /// Index into the original text string (cluster)
-    pub cluster: u32,
 }
 
 /// Get the units-per-em value from raw font data.
@@ -46,7 +44,6 @@ pub fn shape_text(font_data: &[u8], text: &str) -> Option<Vec<ShapedGlyph>> {
             y_advance: pos.y_advance,
             x_offset: pos.x_offset,
             y_offset: pos.y_offset,
-            cluster: info.cluster,
         })
         .collect();
 
