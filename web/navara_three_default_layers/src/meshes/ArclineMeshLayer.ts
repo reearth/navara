@@ -92,10 +92,6 @@ export class ArclineMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
       updates.effectIds !== undefined
         ? (updates.effectIds ?? [])
         : currentEffectIds;
-    const effectIdsChanged =
-      updates.effectIds !== undefined &&
-      (currentEffectIds.length !== nextEffectIds.length ||
-        currentEffectIds.some((id, i) => id !== nextEffectIds[i]));
 
     if (updates.arcLines && this._instance) {
       const updateConfigs = Array.isArray(updates.arcLines)
@@ -129,8 +125,8 @@ export class ArclineMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
       this._instance.updateConfig(updateConfigs);
 
       // Re-link (potentially rebuilt) sub-meshes.
-      // If effectIds actually changed, base class relinks after super.onUpdateConfig().
-      if (!effectIdsChanged && nextEffectIds.length > 0) {
+      // Always relink here because this block unlinks all currentEffectIds first.
+      if (nextEffectIds.length > 0) {
         this.view.selectiveEffectRegistry?.updateLinksForObject(
           this._instance,
           nextEffectIds,
