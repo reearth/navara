@@ -11,6 +11,7 @@ export class PolygonMaterialLike {
   show?: boolean;
   perPositionHeight?: boolean;
   wireframe?: boolean;
+  outline?: boolean;
   __internal__?: PolygonInternalMaterial | undefined;
 
   constructor(material: PolygonMaterial) {
@@ -26,6 +27,7 @@ export class PolygonMaterialLike {
     this.perPositionHeight = material.perPositionHeight;
 
     this.wireframe = material.wireframe;
+    this.outline = material.outline;
   }
 
   free(): void {}
