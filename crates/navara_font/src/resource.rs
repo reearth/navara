@@ -89,7 +89,7 @@ pub struct FontEntry {
     pub sdf_font: fontsdf::Font,
     /// Per-font SDF atlas
     pub atlas: SDFAtlas,
-    /// Cached units-per-em (parsed once at load time)
+    /// Used for converting font units to pixels
     pub units_per_em: u16,
 }
 
@@ -99,7 +99,6 @@ pub struct FontEntry {
 /// don't compete for atlas space and the TypeScript side can receive
 /// a single atlas texture per font.
 #[derive(Default)]
-#[cfg_attr(feature = "bevy", derive(bevy_ecs::resource::Resource))]
 pub struct FontCache {
     /// Loaded fonts keyed by their URL
     pub fonts: FxHashMap<String, FontEntry>,

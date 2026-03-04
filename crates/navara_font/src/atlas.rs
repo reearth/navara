@@ -37,13 +37,6 @@ pub fn ensure_glyphs_in_atlas(
         });
 
         let Some(alloc) = alloc else {
-            #[cfg(feature = "bevy")]
-            bevy_log::warn!(
-                "Atlas full: could not allocate {}x{} for glyph {} even after eviction",
-                metrics.width,
-                metrics.height,
-                glyph_id,
-            );
             continue;
         };
 

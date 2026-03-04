@@ -251,7 +251,11 @@ export class SDFTextMesh
       if (nextBGColor !== prev.backgroundColor) {
         prev.backgroundColor = nextBGColor;
         const color = new Color().setHex(nextBGColor);
-        this.material.uniforms.uBackgroundColor.value.set(color.r, color.g, color.b);
+        this.material.uniforms.uBackgroundColor.value.set(
+          color.r,
+          color.g,
+          color.b,
+        );
         this.material.uniforms.uShowBackground.value = true;
       }
     } else {
@@ -268,7 +272,11 @@ export class SDFTextMesh
     if (nextBGOutlineColor !== prev.backgroundOutlineColor) {
       prev.backgroundOutlineColor = nextBGOutlineColor;
       const color = new Color().setHex(nextBGOutlineColor);
-      this.material.uniforms.uBackgroundOutlineColor.value.set(color.r, color.g, color.b);
+      this.material.uniforms.uBackgroundOutlineColor.value.set(
+        color.r,
+        color.g,
+        color.b,
+      );
     }
 
     const nextBGOutlineWidth = material.borderWidth ?? 0;
@@ -276,7 +284,6 @@ export class SDFTextMesh
       prev.backgroundOutlineWidth = nextBGOutlineWidth;
       this.material.uniforms.uBackgroundOutlineWidth.value = nextBGOutlineWidth;
     }
-
   }
 
   // --- FeatureMesh interface ---

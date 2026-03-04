@@ -7,7 +7,7 @@ use navara_data_requester::DataRequesterPlugin;
 use navara_event::EventPlugin;
 use navara_feature::FeaturePlugin;
 use navara_fog::FogPlugin;
-use navara_font::FontPlugin;
+
 use navara_frame::FramePlugin;
 use navara_geojson::GeoJsonPlugin;
 use navara_globe::GlobePlugin;
@@ -49,8 +49,6 @@ impl bevy_app::Plugin for Plugin {
         app.add_plugins(Cesium3dTilesPlugin);
         app.add_plugins(MvtPlugin);
         app.add_plugins(WorkerPlugin);
-        app.add_plugins(FontPlugin);
-
         // custom systems
         app.add_systems(Startup, startup);
         app.add_systems(Update, update);
