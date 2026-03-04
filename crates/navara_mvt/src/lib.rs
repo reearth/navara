@@ -23,8 +23,6 @@ impl Plugin for MvtPlugin {
             .add_systems(
                 Update,
                 (
-                    data_requester::system::request_single_mvt,
-                    layer::system::construct_single_mvt,
                     layer::system::update_mvt_layer,
                     layer::system::delete_mvt_layer,
                 )
