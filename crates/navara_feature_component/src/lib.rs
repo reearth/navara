@@ -11,5 +11,6 @@ pub mod polygon;
 pub mod polyline;
 pub mod render;
 pub mod text;
+mod unique_id;
 
 pub use marker::*;

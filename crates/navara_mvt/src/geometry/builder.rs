@@ -72,10 +72,7 @@ impl<'a> MvtGeometryBuilder<'a> {
             self.groups.register_kind(kind, batch_id);
         }
 
-        let global_batch_id = self
-            .batch_table
-            .init_values(Some(self.layer_id.to_owned()))
-            .unwrap_or(0);
+        let global_batch_id = self.batch_table.gen_global_batch_id().unwrap_or(0);
 
         let (batch_index, commit_batch_id) =
             self.groups.track_entity(kind, entity, global_batch_id);

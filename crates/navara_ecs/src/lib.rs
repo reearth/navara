@@ -518,7 +518,7 @@ impl App {
         entity: Entity,
         in_batch_len: &usize,
         in_batch_id: &usize,
-    ) -> Option<V> {
+    ) -> Option<(V, String)> {
         let world = self.app.world_mut();
         let mut query = world.query::<&RenderableFeature>();
 
@@ -551,7 +551,7 @@ impl App {
         let batch_value = batch_table.get(&feature_batch_id)?;
         let batch_prop = batch_value.properties.as_ref()?;
 
-        match batch_prop {
+        let properties = match batch_prop {
             BatchProperty::Cesium3dTileset(in_batch_table) => {
                 let batch_table_json = in_batch_table.json().ok()?;
                 get_prop_from_batch_table(
@@ -563,7 +563,9 @@ impl App {
             }
             BatchProperty::Values(values) => json_value_to_property(values.get(*in_batch_id)?),
             BatchProperty::Mvt(mvt_layer_data) => mvt_layer_data.get_properties(*in_batch_id),
-        }
+        }?;
+
+        Some((properties, batch_value.layer_id.clone()?))
     }
 
     pub fn get_batch_prop<V: PropertyValue>(
@@ -574,18 +576,10 @@ impl App {
         if let Some((entity, in_batch_id, in_batch_len)) =
             self.search_feature_entity_by_global_batch_id(batch_id)
         {
-            let properties: Option<V> =
-                self.get_internal_batch_table(entity, &in_batch_len, &in_batch_id);
-            if properties.is_some() {
-                // Get layer_id from batch table
-                let layer_id = self
-                    .app
-                    .world()
-                    .get_resource::<BatchTable>()
-                    .and_then(|bt| bt.get(batch_id))
-                    .and_then(|bv| bv.layer_id.clone());
-                return (properties, layer_id);
-            }
+            return self
+                .get_internal_batch_table(entity, &in_batch_len, &in_batch_id)
+                .map(|(lid, prop)| (Some(lid), Some(prop)))
+                .unwrap_or((None, None));
         };
 
         // For other features like GeoJSON and MVT point

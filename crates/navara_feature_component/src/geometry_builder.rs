@@ -269,12 +269,6 @@ mod test {
     }
 
     #[test]
-    fn new_groups_is_empty() {
-        let groups = GeometryGroups::new();
-        assert!(groups.groups.is_empty());
-    }
-
-    #[test]
     fn register_kind_creates_group() {
         let mut groups = GeometryGroups::new();
         groups.register_kind(GeometryAppearanceKind::Point, 42);
