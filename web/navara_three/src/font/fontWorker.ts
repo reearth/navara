@@ -58,12 +58,14 @@ function snapshotAtlas(fontUrl: string) {
   return { data, width: atlas.width, height: atlas.height };
 }
 
+type FontWorkerMessageType = "loadFont" | "prepareTextBatch" | "tickFrame";
+
 const ctx = self as unknown as DedicatedWorkerGlobalScope;
 
 ctx.onmessage = async (e: MessageEvent) => {
   const msg = e.data;
   const id: number = msg.id;
-  const msgType: string = msg.type;
+  const msgType: FontWorkerMessageType = msg.type;
 
   try {
     await ensureWasm();
@@ -101,7 +103,7 @@ ctx.onmessage = async (e: MessageEvent) => {
         ctx.postMessage(
           {
             id,
-            type: "result" as const,
+            type: "result",
             payload: { results, atlas },
           },
           transfers,

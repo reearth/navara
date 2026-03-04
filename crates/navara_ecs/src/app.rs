@@ -7,7 +7,6 @@ use navara_data_requester::DataRequesterPlugin;
 use navara_event::EventPlugin;
 use navara_feature::FeaturePlugin;
 use navara_fog::FogPlugin;
-
 use navara_frame::FramePlugin;
 use navara_geojson::GeoJsonPlugin;
 use navara_globe::GlobePlugin;

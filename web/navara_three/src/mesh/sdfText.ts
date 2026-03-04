@@ -12,20 +12,18 @@ import {
   DataTexture,
   InstancedBufferAttribute,
   InstancedBufferGeometry,
-  LinearFilter,
   Mesh,
   PerspectiveCamera,
-  RedFormat,
   ShaderMaterial,
-  UnsignedByteType,
   Vector2,
   Vector3,
 } from "three";
 
-import type {
-  FontManager,
-  GlyphMetrics,
-  ShapeTextResult,
+import {
+  createSdfAtlasTexture,
+  type FontManager,
+  type GlyphMetrics,
+  type ShapeTextResult,
 } from "../font/FontManager";
 
 import type { PickableMesh } from "./pickableMesh";
@@ -50,7 +48,6 @@ export class SDFTextMesh
   private _atlasTexture: DataTexture | null = null;
   /** When true, the atlas texture is shared and should not be disposed by this mesh. */
   private _sharedAtlas = false;
-  private _nInstances = 0;
 
   constructor(
     position: Float32Array | { high: Float32Array; low: Float32Array },
@@ -98,7 +95,6 @@ export class SDFTextMesh
 
     if (!text) {
       this.geometry.instanceCount = 0;
-      this._nInstances = 0;
       this.visible = false;
       return;
     }
@@ -106,7 +102,6 @@ export class SDFTextMesh
     const shapeResult = this._fontManager.shapeText(this._fontUrl, text);
     if (!shapeResult) {
       this.geometry.instanceCount = 0;
-      this._nInstances = 0;
       return;
     }
 
@@ -138,9 +133,6 @@ export class SDFTextMesh
     this.material.uniforms.uFontSizePx.value = sizePx;
   }
 
-  setOpacity(opacity: number): void {
-    this.material.uniforms.uOpacity.value = opacity;
-  }
 
   setScaleByDistance(enabled: boolean): void {
     this.material.uniforms.uScaleByDistance.value = enabled ? 1.0 : 0.0;
@@ -240,10 +232,6 @@ export class SDFTextMesh
     if (nextOutlineOpacity !== prev.outlineOpacity) {
       prev.outlineOpacity = nextOutlineOpacity;
       this.material.uniforms.uOutlineOpacity.value = nextOutlineOpacity;
-    }
-
-    if (this.material.uniforms.uBackGroundInstanceID.value !== 0) {
-      this.material.uniforms.uBackGroundInstanceID.value = 0;
     }
 
     const nextBGColor = material.backgroundColor;
@@ -388,7 +376,6 @@ export class SDFTextMesh
         uBackgroundOutlineColor: { value: new Color(1, 0, 0) },
         uBackgroundOutlineWidth: { value: 0.1 },
         uBackgroundRadius: { value: 0.1 },
-        uBackGroundInstanceID: { value: this._nInstances },
         uBgYBounds: { value: new Vector2(0.0, 1.0) },
         uOutlineColor: { value: new Color(1, 0, 0) },
         uOutlineWidth: { value: 0.1 },
@@ -580,7 +567,6 @@ export class SDFTextMesh
     );
 
     this.geometry.instanceCount = count + 1;
-    this._nInstances = count + 1;
 
     // Update text dimension uniforms for centering
     this.material.uniforms.uTextWidth.value = textWidth / SDF_PX_SIZE;
@@ -600,18 +586,7 @@ export class SDFTextMesh
       this._atlasTexture.dispose();
     }
 
-    const tex = new DataTexture(
-      data,
-      width,
-      height,
-      RedFormat,
-      UnsignedByteType,
-    );
-    tex.minFilter = LinearFilter;
-    tex.magFilter = LinearFilter;
-    tex.generateMipmaps = false;
-    tex.needsUpdate = true;
-
+    const tex = createSdfAtlasTexture(data, width, height);
     this._atlasTexture = tex;
     this.material.uniforms.uAtlas.value = tex;
   }

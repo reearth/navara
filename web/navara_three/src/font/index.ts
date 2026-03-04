@@ -1,4 +1,4 @@
-export { FontManager } from "./FontManager";
+export { FontManager, createSdfAtlasTexture } from "./FontManager";
 export { FontWorkerClient } from "./FontWorkerClient";
 export type {
   FontAtlasData,

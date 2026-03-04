@@ -141,13 +141,9 @@ export class BatchedSdfTextMesh
   ) {
     // Update shared texture (in-place update if atlas grew)
     const sharedTex = this._fontManager.getAtlasTexture(this._fontUrl);
-    if (sharedTex) {
-      for (const mesh of this.meshes()) {
-        mesh.setAtlasTexture(sharedTex);
-      }
-    }
 
     for (const mesh of this.meshes()) {
+      if (sharedTex) mesh.setAtlasTexture(sharedTex);
       mesh.update(material, active);
       this.markVisibility(mesh);
     }
@@ -241,6 +237,8 @@ export class BatchedSdfTextMesh
         return;
       }
       mesh.setText(text);
+      this.markVisibility(mesh);
+      this._needRender?.();
     }
   }
 

@@ -3,7 +3,6 @@ mod attribute;
 mod camera;
 mod entity;
 mod event;
-
 mod geometry;
 mod input;
 mod property_value;

@@ -37,6 +37,20 @@ export type FontAtlasData = {
   height: number;
 };
 
+/** Create a single-channel SDF atlas DataTexture with standard filtering. */
+export function createSdfAtlasTexture(
+  data: Uint8Array,
+  width: number,
+  height: number,
+): DataTexture {
+  const tex = new DataTexture(data, width, height, RedFormat, UnsignedByteType);
+  tex.minFilter = LinearFilter;
+  tex.magFilter = LinearFilter;
+  tex.generateMipmaps = false;
+  tex.needsUpdate = true;
+  return tex;
+}
+
 /**
  * Manages font loading, text shaping, and SDF atlas access.
  *
@@ -50,7 +64,7 @@ export class FontManager {
   private _pending = new Map<string, Promise<void>>();
   /** Tracks fonts that have been successfully loaded. */
   private _loaded = new Set<string>();
-  /** Cache shaped text results to avoid redundant worker calls. Key: "fontUrl\0text" */
+  /** Cache shaped text results to avoid redundant worker calls. */
   private _shapeCache = new Map<string, ShapeTextResult>();
   /** Cache atlas data per font to avoid redundant copies. */
   private _atlasCache = new Map<string, FontAtlasData>();
@@ -99,7 +113,7 @@ export class FontManager {
     if (!this._client) return;
     if (!text) return;
 
-    const cacheKey = fontUrl + "\0" + text;
+    const cacheKey = this._cacheKey(fontUrl, text);
     if (this._shapeCache.has(cacheKey)) return;
     if (this._preparePending.has(cacheKey))
       return this._preparePending.get(cacheKey);
@@ -132,8 +146,7 @@ export class FontManager {
 
   /** Check if text has been prepared (sync). */
   isTextPrepared(fontUrl: string, text: string): boolean {
-    const cacheKey = fontUrl + "\0" + text;
-    return this._shapeCache.has(cacheKey);
+    return this._shapeCache.has(this._cacheKey(fontUrl, text));
   }
 
   /**
@@ -141,8 +154,7 @@ export class FontManager {
    * Call prepareText() first.
    */
   shapeText(fontUrl: string, text: string): ShapeTextResult | undefined {
-    const cacheKey = fontUrl + "\0" + text;
-    return this._shapeCache.get(cacheKey);
+    return this._shapeCache.get(this._cacheKey(fontUrl, text));
   }
 
   /** Get the SDF atlas data for a loaded font from cache. */
@@ -177,17 +189,11 @@ export class FontManager {
       return existing;
     }
 
-    const tex = new DataTexture(
+    const tex = createSdfAtlasTexture(
       atlasData.data,
       atlasData.width,
       atlasData.height,
-      RedFormat,
-      UnsignedByteType,
     );
-    tex.minFilter = LinearFilter;
-    tex.magFilter = LinearFilter;
-    tex.generateMipmaps = false;
-    tex.needsUpdate = true;
     this._textureCache.set(fontUrl, tex);
     this._atlasDirty.delete(fontUrl);
     return tex;
@@ -206,6 +212,10 @@ export class FontManager {
     this._textureCache.clear();
     this._client?.dispose();
     this._client = undefined;
+  }
+
+  private _cacheKey(fontUrl: string, text: string): string {
+    return fontUrl + "\0" + text;
   }
 
   private async _fetchAndLoad(url: string): Promise<void> {
@@ -236,7 +246,10 @@ export class FontManager {
     const queue = this._batchQueue;
     this._batchQueue = new Map();
 
-    for (const [fontUrl, entries] of queue) {
+    const processFontBatch = async (
+      fontUrl: string,
+      entries: { text: string; cacheKey: string; resolve: () => void }[],
+    ) => {
       const texts = entries.map((e) => e.text);
 
       try {
@@ -244,7 +257,7 @@ export class FontManager {
 
         // Cache each per-text result
         for (const item of batchResult.results) {
-          const cacheKey = fontUrl + "\0" + item.text;
+          const cacheKey = this._cacheKey(fontUrl, item.text);
           if (item.shapeResult) {
             this._shapeCache.set(cacheKey, item.shapeResult);
           }
@@ -255,18 +268,20 @@ export class FontManager {
           this._atlasCache.set(fontUrl, batchResult.atlas);
           this._atlasDirty.add(fontUrl);
         }
-
-        // Resolve all queued promises for this font
-        for (const entry of entries) {
-          entry.resolve();
-        }
       } catch (err) {
         console.error("FontManager: batch prepare failed", err);
-        // Resolve anyway to avoid hanging promises
-        for (const entry of entries) {
-          entry.resolve();
-        }
       }
-    }
+
+      // Resolve all queued promises for this font
+      for (const entry of entries) {
+        entry.resolve();
+      }
+    };
+
+    await Promise.all(
+      [...queue].map(([fontUrl, entries]) =>
+        processFontBatch(fontUrl, entries),
+      ),
+    );
   }
 }
