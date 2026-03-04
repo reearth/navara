@@ -1,40 +1,15 @@
 use bevy_ecs::{
     entity::Entity,
     query::{Added, With, Without},
-    system::{Commands, Query, ResMut},
+    system::{Commands, Query},
 };
-use navara_buffer_store::BufferStore;
 use navara_component::{Deleted, Ignored, OrderByDistance, Priority, Requested};
-use navara_data_requester::{DataRequester, DataRequesterExtension};
-use navara_layer::MvtLayer;
+use navara_data_requester::DataRequester;
 use navara_tile_component::VectorTileQuadtree;
 
 use crate::{MvtSourceResources, layer::tile_cache_manager::TileCacheManager};
 
-use super::{MvtDataRequesterMarker, SingleMvtDataRequesterMarker};
-
-/// Handle only one MVT file for debug.
-pub fn request_single_mvt(
-    mut commands: Commands,
-    mut buf: ResMut<BufferStore>,
-    mvt_layers: Query<(Entity, &MvtLayer), Added<MvtLayer>>,
-) {
-    for (e, layer) in &mvt_layers {
-        if layer.has_template_url() {
-            continue;
-        }
-
-        commands.spawn((
-            SingleMvtDataRequesterMarker(e),
-            Priority::Medium,
-            DataRequester::from_store(
-                layer.data.as_ref().unwrap().url.clone(),
-                &mut buf,
-                DataRequesterExtension::Mvt,
-            ),
-        ));
-    }
-}
+use super::MvtDataRequesterMarker;
 
 const MAX_PENDINGS: u32 = 10;
 

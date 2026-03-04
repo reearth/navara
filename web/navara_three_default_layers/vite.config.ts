@@ -30,14 +30,7 @@ export default defineConfig((env) => {
       ...common.build,
       rollupOptions: {
         ...common.build.rollupOptions,
-        external: [
-          ...(common.build.rollupOptions.external as string[]),
-          "three",
-          /^three\//,
-          "@navara/three",
-          "@navara/three_api",
-          /^@takram\//,
-        ],
+        external: ["three", "@navara/three"],
       },
     },
   };

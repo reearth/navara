@@ -1,6 +1,9 @@
-import type { XYZ } from "@navara/core";
-import { createReplacer } from "@navara/three";
-import { eastNorthUpToFixedFrame, vector3ToGeodetic } from "@navara/three_api";
+import type { XYZ } from "@navara/three";
+import {
+  createReplacer,
+  eastNorthUpToFixedFrame,
+  vector3ToGeodetic,
+} from "@navara/three";
 import SimpleLightShaderChunk from "@shaders/glsl/chunks/simple_lights.glsl";
 import {
   BufferGeometry,

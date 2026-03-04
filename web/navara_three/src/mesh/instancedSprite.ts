@@ -2,22 +2,17 @@ import {
   PointMesh as NavaraPointMesh,
   BillboardMesh as NavaraBillboardMesh,
 } from "@navara/engine";
-import { encodePosition } from "@navara/engine-api";
-import instancedSpriteFragmentShader from "@shaders/glsl/instancedSprite.frag.glsl";
-import instancedSpriteVertexShader from "@shaders/glsl/instancedSprite.vert.glsl";
 import {
   InstancedBufferAttribute,
   InstancedBufferGeometry,
   Mesh,
   ShaderMaterial,
   BufferAttribute,
-  Vector3,
   DataArrayTexture,
   UnsignedByteType,
   RGBAFormat,
   LinearFilter,
   Color,
-  Vector2,
   PerspectiveCamera,
 } from "three";
 import invariant from "tiny-invariant";
@@ -26,6 +21,7 @@ import type { ViewContext } from "../core";
 import { SelectiveEffectLifecycle } from "../core/SelectiveEffectLifecycle";
 import type { BufferLoader } from "../event";
 import { TEXTURE_LOADER } from "../event/loaders";
+import { createInstancedSpriteMaterialEnhancer } from "../material/enhancer";
 import { getImageDataFromImageBitmap } from "../tasks/getImageDataFromImageBitmap";
 
 import { PickableMesh } from "./pickableMesh";
@@ -61,6 +57,10 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
   private _layerId: string;
   /** SelectiveEffect lifecycle management (effectIds registry + mask-pass handlers) */
   private _seLifecycle?: SelectiveEffectLifecycle;
+  /** Material enhancer for encapsulated state management */
+  private _enhancedMaterial?: ReturnType<
+    typeof createInstancedSpriteMaterialEnhancer
+  >;
 
   constructor(options: InstancedSpriteOptions) {
     super();
@@ -93,25 +93,33 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     this.frustumCulled = false; // Disable since bounding box doesn't account for instance positions
   }
 
-  // TODO: cleanup
   async _update(
     m: NavaraPointMesh | NavaraBillboardMesh,
     buf: BufferLoader,
     active: boolean,
   ) {
+    const enhancer = this.getEnhancer();
     const material = this.material as ShaderMaterial;
-    let uniformsChanged = false;
 
+    // Update visibility (combines show + active)
     if (material.visible !== m.material.show) {
       material.visible = m.material.show ?? true;
       material.visible = material.visible && active;
     }
 
-    if (material.uniforms.uScale.value !== (m.material.size ?? 100.0)) {
-      material.uniforms.uScale.value = m.material.size ?? 100.0;
-      uniformsChanged = true;
-    }
+    // Update enhancer state for uniform-backed properties
+    enhancer.update({
+      base: {
+        scale: m.material.size ?? 100.0,
+        center: [m.material.center?.x ?? 0.0, m.material.center?.y ?? 0.0],
+        scaleByDistance: m.material.scaleByDistance ?? true,
+        offsetDepth: m.material.offsetDepth ?? true,
+        transparent: m.material.transparent ?? true,
+        depthTest: m.material.depthTest ?? true,
+      },
+    });
 
+    // Color (per-instance attribute)
     if (this._initialColor.getHex() !== (m.material.color ?? 0xffffff)) {
       this._initialColor.setHex(m.material.color ?? 0xffffff);
       const colorAttr = this.geometry.getAttribute(
@@ -129,17 +137,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
       colorAttr.needsUpdate = true;
     }
 
-    if (
-      material.uniforms.uCenter.value.x !== (m.material.center?.x ?? 0.0) ||
-      material.uniforms.uCenter.value.y !== (m.material.center?.y ?? 0.0)
-    ) {
-      material.uniforms.uCenter.value.set(
-        m.material.center?.x ?? 0.0,
-        m.material.center?.y ?? 0.0,
-      );
-      uniformsChanged = true;
-    }
-
+    // Height (per-instance attribute)
     if (this._initialHeight !== (m.material.height ?? 0.0)) {
       this._initialHeight = m.material.height ?? 0.0;
       const heightAttr = this.geometry.getAttribute(
@@ -152,30 +150,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
       heightAttr.needsUpdate = true;
     }
 
-    if (
-      material.uniforms.uScaleByDistance.value !==
-      (m.material.scaleByDistance ?? true)
-    ) {
-      material.uniforms.uScaleByDistance.value =
-        m.material.scaleByDistance ?? true;
-      uniformsChanged = true;
-    }
-
-    if (material.depthTest !== (m.material.depthTest ?? true)) {
-      material.depthTest = m.material.depthTest ?? true;
-    }
-
-    if (
-      material.uniforms.uOffsetDepth.value !== (m.material.offsetDepth ?? true)
-    ) {
-      material.uniforms.uOffsetDepth.value = m.material.offsetDepth ?? true;
-      uniformsChanged = true;
-    }
-
-    if (material.transparent !== (m.material.transparent ?? true)) {
-      material.transparent = m.material.transparent ?? true;
-    }
-
+    // Position updates (per-instance attributes)
     {
       const positionsInfo = this.extractPositions(m, buf);
 
@@ -206,19 +181,15 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
       }
     }
 
-    // Alpha test and url is only relevant for billboards
+    // Billboard-specific updates
     if (m instanceof NavaraBillboardMesh) {
-      if (
-        material.uniforms.uAlphaTest.value !== (m.material.alphaTest ?? 0.0)
-      ) {
-        material.uniforms.uAlphaTest.value = m.material.alphaTest ?? 0.0;
-        uniformsChanged = true;
-      }
+      enhancer.update({
+        base: { alphaTest: m.material.alphaTest ?? 0.0 },
+      });
 
       if (m.material.url) {
         const layerIndex = await this.uploadTexture(m.material.url, material);
         if (layerIndex !== undefined) {
-          uniformsChanged = true;
           const layerAttr = this.geometry.getAttribute(
             "instanceLayer",
           ) as InstancedBufferAttribute;
@@ -231,10 +202,6 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
       }
     }
 
-    if (uniformsChanged) {
-      material.uniformsNeedUpdate = true;
-    }
-
     // SelectiveEffect: effectIds handling
     this._seLifecycle?.update(m.material.effectIds);
   }
@@ -245,40 +212,24 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
   ) {
     invariant(positionsInfo.batchIDs, "Batch IDs not found!");
 
+    // prettier-ignore
     const vertices = new Float32Array([
-      -0.5,
-      -0.5,
-      0.0, // v0
-      0.5,
-      -0.5,
-      0.0, // v1
-      0.5,
-      0.5,
-      0.0, // v2
-      -0.5,
-      -0.5,
-      0.0, // v3
-      0.5,
-      0.5,
-      0.0, // v4
-      -0.5,
-      0.5,
-      0.0, // v5
+      -0.5, -0.5, 0.0, // v0
+       0.5, -0.5, 0.0, // v1
+       0.5,  0.5, 0.0, // v2
+      -0.5, -0.5, 0.0, // v3
+       0.5,  0.5, 0.0, // v4
+      -0.5,  0.5, 0.0, // v5
     ]);
 
+    // prettier-ignore
     const uvs = new Float32Array([
-      0.0,
-      0.0, // v0
-      1.0,
-      0.0, // v1
-      1.0,
-      1.0, // v2
-      0.0,
-      0.0, // v3
-      1.0,
-      1.0, // v4
-      0.0,
-      1.0, // v5
+      0.0, 0.0, // v0
+      1.0, 0.0, // v1
+      1.0, 1.0, // v2
+      0.0, 0.0, // v3
+      1.0, 1.0, // v4
+      0.0, 1.0, // v5
     ]);
 
     const instanceCount = positionsInfo.nPositions;
@@ -374,41 +325,35 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     positionsInfo: PositionsInfo,
     m: NavaraPointMesh | NavaraBillboardMesh,
   ) {
-    const rtcCenter = new Vector3(
-      m.transform.tx,
-      m.transform.ty,
-      m.transform.tz,
-    );
-    const material: ShaderMaterial = new ShaderMaterial({
-      uniforms: {
-        uRTCCenter: { value: rtcCenter },
-        uEyeRTELow: { value: new Vector3(0, 0, 0) },
-        uEyeRTEHigh: { value: new Vector3(0, 0, 0) },
-        uOffsetDepth: { value: m.material.offsetDepth ?? true },
-        uScaleByDistance: { value: m.material.scaleByDistance ?? true },
-        uCenter: {
-          value: new Vector2(
-            m.material.center?.x ?? 0.0,
-            m.material.center?.y ?? 0.0,
-          ),
-        },
-        uAlphaTest: {
-          value:
-            m instanceof NavaraBillboardMesh
-              ? (m.material.alphaTest ?? 0.0)
-              : 0.0,
-        },
-        uScale: { value: m.material.size ?? 100.0 },
-        uFarPlane: { value: 0.0 },
-        uAspect: { value: 1.0 },
-        nvr_uPickable: { value: 0.0 },
+    const isBillboard = m instanceof NavaraBillboardMesh;
+    const material = new ShaderMaterial();
+
+    // Create enhancer
+    const enhancer = createInstancedSpriteMaterialEnhancer(material);
+    this._enhancedMaterial = enhancer;
+
+    // Mount with initial props
+    enhancer.mount({
+      base: {
+        useRTE: positionsInfo.RTE,
+        billboard: isBillboard,
+        scale: m.material.size ?? 100.0,
+        center: [m.material.center?.x ?? 0.0, m.material.center?.y ?? 0.0],
+        scaleByDistance: m.material.scaleByDistance ?? true,
+        offsetDepth: m.material.offsetDepth ?? true,
+        alphaTest: isBillboard ? (m.material.alphaTest ?? 0.0) : 0.0,
+        pickable: false,
+        transparent: m.material.transparent ?? true,
+        depthTest: m.material.depthTest ?? true,
+        rtcCenter: [m.transform.tx, m.transform.ty, m.transform.tz],
       },
-      vertexShader: instancedSpriteVertexShader,
-      fragmentShader: instancedSpriteFragmentShader,
-      transparent: m.material.transparent ?? true,
-      depthTest: m.material.depthTest ?? true,
     });
 
+    // Initialize uniforms early so they're available before onBeforeCompile
+    const mutates = enhancer.mutates();
+    mutates.updateUniforms(material.uniforms, enhancer.states());
+
+    // Set up onBeforeRender for per-frame updates (farPlane + RTE eye position)
     material.onBeforeRender = (
       _renderer,
       _scene,
@@ -418,34 +363,25 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
       _group,
     ) => {
       const pCam = camera as PerspectiveCamera;
-      material.uniforms.uFarPlane.value = pCam.far;
+      mutates.updateFarPlane(pCam.far);
 
       if (positionsInfo.RTE) {
-        material.defines.USE_RTE = 1;
-        const encodedCamPos = encodePosition(
+        mutates.updateRteUniforms(
           camera.position.x,
           camera.position.y,
           camera.position.z,
-        );
-        material.uniforms.uEyeRTELow.value.set(
-          encodedCamPos.low.x,
-          encodedCamPos.low.y,
-          encodedCamPos.low.z,
-        );
-        material.uniforms.uEyeRTEHigh.value.set(
-          encodedCamPos.high.x,
-          encodedCamPos.high.y,
-          encodedCamPos.high.z,
+          enhancer.states(),
         );
       }
     };
 
-    if (m instanceof NavaraBillboardMesh) {
-      material.defines.BILLBOARD = 1;
-      if (m.material.url) {
-        material.uniforms.uTexture = { value: null };
-        await this.uploadTexture(m.material.url, material);
-      }
+    // Set custom program cache key and onBeforeCompile
+    material.customProgramCacheKey = enhancer.programCacheKey;
+    material.onBeforeCompile = enhancer.transformShader;
+
+    // Handle billboard texture
+    if (isBillboard && m.material.url) {
+      await this.uploadTexture(m.material.url, material);
     }
 
     material.visible = m.material.show ?? true;
@@ -542,11 +478,10 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
       let newTextureArray: DataArrayTexture;
       const width = newTexture.image.width;
       const height = newTexture.image.height;
-      material.uniforms.uAspect.value = width / height;
       const pixelData = await this.extractPixelData(newTexture, true);
 
       const existingTextureArray = material.uniforms.uTexture
-        .value as DataArrayTexture;
+        ?.value as DataArrayTexture;
       if (existingTextureArray) {
         // make sure new texture has same dimensions as existing one, otherwise we cannot update the texture array
         if (
@@ -585,8 +520,13 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
       newTextureArray.minFilter = LinearFilter;
       newTextureArray.magFilter = LinearFilter;
 
-      material.uniforms.uTexture.value = newTextureArray;
-      material.uniformsNeedUpdate = true;
+      // Sync texture and aspect ratio via enhancer
+      this.getEnhancer().update({
+        base: {
+          texture: { value: newTextureArray },
+          aspect: width / height,
+        },
+      });
 
       newTexture.dispose();
       this._loadedUrls.add(url);
@@ -598,9 +538,19 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
   }
 
   _setPickable(pickable: boolean): void {
-    const mat = this.material as ShaderMaterial;
-    mat.uniforms.nvr_uPickable.value = pickable ? 1.0 : 0.0;
-    mat.uniformsNeedUpdate = true;
+    this.getEnhancer().update({ base: { pickable } });
+  }
+
+  /**
+   * Get the enhancer, throwing if not initialized.
+   */
+  private getEnhancer(): NonNullable<typeof this._enhancedMaterial> {
+    if (!this._enhancedMaterial) {
+      throw new Error(
+        "InstancedSpriteMesh material enhancer is not initialized. This usually indicates a failure during construction or geometry/material setup.",
+      );
+    }
+    return this._enhancedMaterial;
   }
 
   setFeatureColorByBatchId(batchId: number, color: Color) {
