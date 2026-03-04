@@ -172,7 +172,6 @@ export function FloodLayer({
       polygon: {
         color: DEFAULT_POLY_COLOR,
         clampToGround: false,
-        outlineShow: false,
         water: waterSurface,
         perPositionHeight: true,
         height: -22.0,

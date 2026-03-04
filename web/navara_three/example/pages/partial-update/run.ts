@@ -59,7 +59,9 @@ export const run = async (view: ThreeView) => {
         type: "Polygon",
       },
     },
-    polygon: {},
+    polygon: {
+      outline: true,
+    },
   });
 
   gB3dmLayer = view.addLayer({

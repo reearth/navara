@@ -74,6 +74,7 @@ pub fn construct_polygon_feature(
             extruded_height: material.extruded_height.unwrap_or_default(),
             per_position_height: material.per_position_height,
             use_rte,
+            outline: material.outline,
             ..Default::default()
         },
         polygon_resource,
