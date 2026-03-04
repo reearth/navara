@@ -307,14 +307,11 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
     );
 
     // Encode the world position as high/low components
-    const encoded = encodePositionRTE(
-      worldPosition.x,
-      worldPosition.y,
-      worldPosition.z,
+    encodePositionRTE(
+      worldPosition,
+      this.modelPositionHigh,
+      this.modelPositionLow,
     );
-
-    this.modelPositionHigh.set(encoded.high.x, encoded.high.y, encoded.high.z);
-    this.modelPositionLow.set(encoded.low.x, encoded.low.y, encoded.low.z);
   }
 
   private setupRTEShadersForMesh(mesh: Mesh): void {

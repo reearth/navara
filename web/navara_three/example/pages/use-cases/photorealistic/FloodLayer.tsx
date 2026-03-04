@@ -2,7 +2,6 @@ import { Color } from "@navara/three";
 import type {
   Layer as NavaraLayer,
   LayerDescription,
-  FeatureEvaluator,
   FeatureUpdatedParams,
 } from "@navara/three";
 import { Layer } from "@navara/three_react";
@@ -160,8 +159,7 @@ export function FloodLayer({
       });
     };
     // Attach per-feature evaluator: set color + show based on availability
-    const handler = ({ evaluator }: { evaluator: FeatureEvaluator }) =>
-      onUpdate(evaluator);
+    const handler = (params: FeatureUpdatedParams) => onUpdate(params);
     layer.on("featureUpdated", handler);
     return () => layer.off("featureUpdated", handler);
   };

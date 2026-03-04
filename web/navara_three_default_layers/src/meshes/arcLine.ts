@@ -546,6 +546,8 @@ export class ArcLine extends Object3D {
     const instanceSrcColor = geo.getAttribute("aInstanceSrcColor");
     const instanceTgtColor = geo.getAttribute("aInstanceTgtColor");
 
+    const rteHigh = new Vector3();
+    const rteLow = new Vector3();
     for (let i = 0; i < numInstances; i++) {
       const geom1 = config.geometry[i * 2];
       const geom2 = config.geometry[i * 2 + 1];
@@ -566,33 +568,13 @@ export class ArcLine extends Object3D {
       const dist = pos1.distanceTo(pos2);
 
       // Encode positions as high/low precision components for RTE
-      const encoded1 = encodePositionRTE(pos1.x, pos1.y, pos1.z);
-      const encoded2 = encodePositionRTE(pos2.x, pos2.y, pos2.z);
+      encodePositionRTE(pos1, rteHigh, rteLow);
+      instanceSourceHigh.setXYZ(i, rteHigh.x, rteHigh.y, rteHigh.z);
+      instanceSourceLow.setXYZ(i, rteLow.x, rteLow.y, rteLow.z);
 
-      instanceSourceHigh.setXYZ(
-        i,
-        encoded1.high.x,
-        encoded1.high.y,
-        encoded1.high.z,
-      );
-      instanceSourceLow.setXYZ(
-        i,
-        encoded1.low.x,
-        encoded1.low.y,
-        encoded1.low.z,
-      );
-      instanceTargetHigh.setXYZ(
-        i,
-        encoded2.high.x,
-        encoded2.high.y,
-        encoded2.high.z,
-      );
-      instanceTargetLow.setXYZ(
-        i,
-        encoded2.low.x,
-        encoded2.low.y,
-        encoded2.low.z,
-      );
+      encodePositionRTE(pos2, rteHigh, rteLow);
+      instanceTargetHigh.setXYZ(i, rteHigh.x, rteHigh.y, rteHigh.z);
+      instanceTargetLow.setXYZ(i, rteLow.x, rteLow.y, rteLow.z);
 
       this.fillInstanceCommonData(
         i,

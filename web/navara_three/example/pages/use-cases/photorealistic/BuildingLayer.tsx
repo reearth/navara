@@ -3,7 +3,6 @@ import type {
   Layer as NavaraLayer,
   LayerDescription,
   ColorTuple,
-  FeatureEvaluator,
   FeatureUpdatedParams,
 } from "@navara/three";
 import { Layer } from "@navara/three_react";
@@ -151,8 +150,7 @@ export function BuildingTilesLayer({
         return { color: fallback };
       });
     };
-    const handler = ({ evaluator }: { evaluator: FeatureEvaluator }) =>
-      onFeatureUpdated(evaluator);
+    const handler = (params: FeatureUpdatedParams) => onFeatureUpdated(params);
     layer.on("featureUpdated", handler);
     return () => layer.off("featureUpdated", handler);
   };

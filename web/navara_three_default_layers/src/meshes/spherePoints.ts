@@ -140,15 +140,17 @@ export class SpherePoints extends Points {
       "position_3d_low",
     ) as BufferAttribute;
 
+    const rteHigh = new Vector3();
+    const rteLow = new Vector3();
     for (let i = 0; i < points.length; i++) {
       const p = points[i];
 
       // Encode position to RTE high/low components
-      const encoded = encodePositionRTE(p.x, p.y, p.z);
+      encodePositionRTE(p, rteHigh, rteLow);
 
       // Set RTE attributes
-      posHigh.setXYZ(i, encoded.high.x, encoded.high.y, encoded.high.z);
-      posLow.setXYZ(i, encoded.low.x, encoded.low.y, encoded.low.z);
+      posHigh.setXYZ(i, rteHigh.x, rteHigh.y, rteHigh.z);
+      posLow.setXYZ(i, rteLow.x, rteLow.y, rteLow.z);
 
       // Also set standard position (sum of high + low) for bounding calculations
       pos.setXYZ(i, p.x, p.y, p.z);
