@@ -1,4 +1,3 @@
-import { encodePosition } from "@navara/engine-api";
 import {
   MeshLayerDeclaration,
   type MeshLayerConfig,
@@ -9,6 +8,7 @@ import {
   setupRTEBeforeRender,
   type RTEUserData,
   createReplacer,
+  encodePositionRTE,
 } from "@navara/three";
 import ProjectVertexRteModel from "@shaders/glsl/chunks/project_vertex_rte_model.glsl";
 import RteUniformParsVertex from "@shaders/glsl/chunks/rte_uniform_pars_vertex.glsl";
@@ -307,7 +307,7 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
     );
 
     // Encode the world position as high/low components
-    const encoded = encodePosition(
+    const encoded = encodePositionRTE(
       worldPosition.x,
       worldPosition.y,
       worldPosition.z,
@@ -315,8 +315,6 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
 
     this.modelPositionHigh.set(encoded.high.x, encoded.high.y, encoded.high.z);
     this.modelPositionLow.set(encoded.low.x, encoded.low.y, encoded.low.z);
-
-    encoded.free();
   }
 
   private setupRTEShadersForMesh(mesh: Mesh): void {

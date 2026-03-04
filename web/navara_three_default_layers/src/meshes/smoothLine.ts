@@ -1,12 +1,13 @@
-import type { LatLngHeight } from "@navara/core";
-import { encodePosition } from "@navara/engine-api";
-import { createReplacer, overrideLineMaterialForMRT } from "@navara/three";
+import type { LatLngHeight } from "@navara/three";
 import {
+  createReplacer,
+  overrideLineMaterialForMRT,
   geodeticToVector3,
   degreeToRadian,
   calcCameraPosition,
   calcModelMatrixRTE,
-} from "@navara/three_api";
+  encodePositionRTE,
+} from "@navara/three";
 import {
   Object3D,
   CatmullRomCurve3,
@@ -150,14 +151,13 @@ export class SmoothLine extends Object3D {
     const positionsLow = new Float32Array(points.length * 3);
 
     for (let i = 0; i < points.length; i++) {
-      const encoded = encodePosition(points[i].x, points[i].y, points[i].z);
+      const encoded = encodePositionRTE(points[i].x, points[i].y, points[i].z);
       positionsHigh[3 * i + 0] = encoded.high.x;
       positionsHigh[3 * i + 1] = encoded.high.y;
       positionsHigh[3 * i + 2] = encoded.high.z;
       positionsLow[3 * i + 0] = encoded.low.x;
       positionsLow[3 * i + 1] = encoded.low.y;
       positionsLow[3 * i + 2] = encoded.low.z;
-      encoded.free();
     }
 
     return { positionsHigh, positionsLow };

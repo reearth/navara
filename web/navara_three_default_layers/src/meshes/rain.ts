@@ -1,4 +1,4 @@
-import { eastNorthUpToFixedFrame, vector3ToGeodetic } from "@navara/three_api";
+import { eastNorthUpToFixedFrame, vector3ToGeodetic } from "@navara/three";
 import fragmentShader from "@shaders/glsl/rain.frag.glsl";
 import vertexShader from "@shaders/glsl/rain.vert.glsl";
 import {

@@ -3,8 +3,8 @@ import type {
   Layer as NavaraLayer,
   LayerDescription,
   ColorTuple,
-  FeatureEvaluatorCallback,
   FeatureEvaluator,
+  FeatureUpdatedParams,
 } from "@navara/three";
 import { Layer } from "@navara/three_react";
 import { useEffect, useMemo, useRef } from "react";
@@ -99,7 +99,7 @@ export function BuildingTilesLayer({
 
   const onReady = (layer: NavaraLayer) => {
     layerRef.current = layer;
-    const onFeatureUpdated: FeatureEvaluatorCallback = (evaluator) => {
+    const onFeatureUpdated = ({ evaluator }: FeatureUpdatedParams) => {
       const fallback = new Color().setHex(0xffffff);
       const { colorBy, heightDomain } = paramsRef.current;
 

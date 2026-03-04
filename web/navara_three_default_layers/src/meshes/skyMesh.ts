@@ -1,5 +1,4 @@
-import { EventHandler, Observed } from "@navara/core";
-import { SKY_RENDER_ORDER } from "@navara/three";
+import { EventHandler, type Observed, SKY_RENDER_ORDER } from "@navara/three";
 import {
   SkyMaterial,
   type AtmosphereShadowLength,

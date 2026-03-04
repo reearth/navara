@@ -1,16 +1,14 @@
-import type { LatLng } from "@navara/core";
-import { encodePosition } from "@navara/engine-api";
+import type { LatLng } from "@navara/three";
 import {
   Color,
   overrideShaderMaterialForMRT,
   setupRTEBeforeRender,
-} from "@navara/three";
-import {
   getWGS84SemiMajorAxis,
   getWGS84EccentricitySquared,
   geodeticToVector3,
   degreeToRadian,
-} from "@navara/three_api";
+  encodePositionRTE,
+} from "@navara/three";
 import ArclineFragShader from "@shaders/glsl/arcLine.frag.glsl";
 import ArclineVertShader from "@shaders/glsl/arcLine.vert.glsl";
 import {
@@ -568,8 +566,8 @@ export class ArcLine extends Object3D {
       const dist = pos1.distanceTo(pos2);
 
       // Encode positions as high/low precision components for RTE
-      const encoded1 = encodePosition(pos1.x, pos1.y, pos1.z);
-      const encoded2 = encodePosition(pos2.x, pos2.y, pos2.z);
+      const encoded1 = encodePositionRTE(pos1.x, pos1.y, pos1.z);
+      const encoded2 = encodePositionRTE(pos2.x, pos2.y, pos2.z);
 
       instanceSourceHigh.setXYZ(
         i,
@@ -595,9 +593,6 @@ export class ArcLine extends Object3D {
         encoded2.low.y,
         encoded2.low.z,
       );
-
-      encoded1.free();
-      encoded2.free();
 
       this.fillInstanceCommonData(
         i,
