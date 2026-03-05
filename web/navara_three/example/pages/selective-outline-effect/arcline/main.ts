@@ -1,15 +1,20 @@
 import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import type { ArclineMeshLayer } from "@navara/three_default_layers";
+import {
+  DefaultPlugin,
+  type DefaultLayerDescriptions,
+} from "@navara/three_default_plugin";
 
 import { showAttributions } from "../../../helpers/attributions";
-import {
-  TERRAIN_DATASETS,
-  TILE_DATASETS,
-  TILES_3D_DATASETS,
-} from "../../../helpers/constants";
+import { TERRAIN_DATASETS, TILE_DATASETS } from "../../../helpers/constants";
+
+const TOKYO = { lng: 139.757, lat: 35.676 };
 
 const run = async () => {
-  const view = new ThreeView({ debug: true, shadow: true });
+  const view = new ThreeView<DefaultLayerDescriptions>({
+    debug: true,
+    shadow: true,
+  });
 
   const defaultPlugin = new DefaultPlugin();
   view.addPlugin(defaultPlugin);
@@ -24,11 +29,11 @@ const run = async () => {
   view.atmosphere.date.setHours(8);
 
   view.setCamera({
-    lng: 139.7511,
-    lat: 35.6736,
-    height: 902,
-    heading: 64.4,
-    pitch: -36,
+    lng: 130,
+    lat: 30,
+    height: 1500000,
+    heading: 0,
+    pitch: -60,
     roll: 0,
   });
 
@@ -37,29 +42,34 @@ const run = async () => {
     type: "effect",
     selectiveOutline: {
       color: new Color().setHex(0xff0000),
-      thickness: 1.0,
+      thickness: 0.5,
       edgeStrength: 1.0,
     },
   });
 
   view.addDefaultEffectLayers();
 
-  // Cesium 3D Tiles with outline (Chiyoda buildings)
-  view.addLayer({
-    type: "cesium3dtiles",
-    data: { url: TILES_3D_DATASETS.plateauChiyoda.url },
-    model: {
-      show: true,
-      color: new Color().setHex(0xffffff),
-      metalness: 0.1,
-      roughness: 0.1,
-      castShadow: true,
-      receiveShadow: true,
-      effectIds: [outlineEffect.id],
-      emissiveColor: new Color().setHex(0xffffff),
-      emissiveIntensity: 0.3,
-      selectiveEffectOcclusion: "normal",
-    },
+  // Arc lines with outline (Tokyo to Asian cities)
+  view.addLayer<ArclineMeshLayer>({
+    type: "mesh",
+    effectIds: [outlineEffect.id],
+    arcLines: [
+      {
+        thickness: 2,
+        segments: 64,
+        arcHeightScale: 0.3,
+        srcColor: new Color().setHex(0xffffff),
+        tgtColor: new Color().setHex(0xff6600),
+        geometry: [
+          TOKYO,
+          { lng: 126.44, lat: 37.46 }, // Seoul
+          TOKYO,
+          { lng: 121.23, lat: 25.08 }, // Taipei
+          TOKYO,
+          { lng: 113.92, lat: 22.31 }, // Hong Kong
+        ],
+      },
+    ],
   });
 
   // Base layers
@@ -81,11 +91,7 @@ const run = async () => {
     rasterTile: { maxZoom: 23 },
   });
 
-  showAttributions([
-    TILE_DATASETS.openstreetmap,
-    TERRAIN_DATASETS.gsi,
-    TILES_3D_DATASETS.plateauChiyoda,
-  ]);
+  showAttributions([TILE_DATASETS.openstreetmap, TERRAIN_DATASETS.gsi]);
 };
 
 run();

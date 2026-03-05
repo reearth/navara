@@ -37,7 +37,7 @@ const run = async () => {
     type: "effect",
     selectiveOutline: {
       color: new Color().setHex(0xff0000),
-      thickness: 2.0,
+      thickness: 1.0,
       edgeStrength: 1.0,
     },
   });
