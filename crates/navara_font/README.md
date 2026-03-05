@@ -1,32 +1,56 @@
-# Navara Font
+# navara_font
 
+SDF text rendering pipeline for Navara. Handles font loading, text shaping, and glyph atlas management.
 
-### Workflow of font rendering in navara:
+## Pipeline Overview
 
-1. user provides a URL for a font file (.ttf),
-   and the string to render with some style properties (will figure out the actual properties later),
-   and a WGS84 coordinate position for the text to be on the globe.
+```
+Font file (.ttf/.otf)
+        |
+        v
+  +-----------+     +-----------+     +-------------+
+  | rustybuzz |---->| fontsdf   |---->| guillotiere |
+  | (shaping) |     | (SDF      |     | (atlas      |
+  |           |     |  rasterize)|    |  packing)   |
+  +-----------+     +-----------+     +-------------+
+        |                                    |
+        v                                    v
+  ShapedGlyph[]                     SDF Atlas (R8 texture)
+  (glyph IDs +                     (glyph positions +
+   advances/offsets)                 pixel data)
+        |                                    |
+        +------ sent to TypeScript ----------+
+                        |
+                        v
+              Instanced billboard quads
+              (one quad per glyph, sampled
+               from the shared atlas)
+```
 
-2. if the font is not the current active font:
-    - navara fetches the font file
-    - generate SDF atlas for the font
+## How It Works
 
-3. get proper shaping info from harfbuzz that will be used to properly render the text
+1. **Font Loading** — Font bytes are stored in `FontCache`. Each font gets its own `FontEntry` with a parsed `fontsdf::Font` and a dedicated `SDFAtlas`.
 
-<hr>
+2. **Text Shaping** — `rustybuzz` (Rust port of HarfBuzz) takes a string and produces `ShapedGlyph`s: glyph IDs with advance/offset values in font units. This handles complex scripts (Arabic, CJK, ligatures).
 
-#### This workflow will be split between rust and typescript side:
+3. **SDF Rasterization** — For each new glyph ID, `fontsdf` rasterizes a signed distance field at `SDF_PX_SIZE` (64px). The single-channel SDF encodes distance to the glyph edge, allowing sharp rendering at any scale.
 
-Rust side:
-- responsible for fetching the font file and generating the SDF atlas and querying shaping info from harfbuzz
+4. **Atlas Packing** — `guillotiere` packs SDF bitmaps into a shared atlas texture (2048x2048 R8). Glyphs are tracked by LRU timestamps and evicted after 120 unused frames to reclaim space.
 
-- fetching and atlas generation should be done only once (if user didn't change the font or style probs that affect the SDF atlas)
+5. **Rendering** (TypeScript side) — Each text label is an `InstancedBufferGeometry` with one quad per glyph. The vertex shader positions quads using shaping data; the fragment shader samples the atlas and applies SDF thresholding for crisp edges, outlines, and backgrounds.
 
-- querying the shaping info will be done upon any text feature added/changed and sent back to typescript
+## Modules
 
-TypeScript side:
-- will get the sdf atlas (only once per font)
+| Module | Purpose |
+|---|---|
+| `resource.rs` | `FontCache`, `FontEntry`, `SDFAtlas`, `GlyphMetrics` — data structures and constants |
+| `shaping.rs` | `shape_text()` — rustybuzz text shaping, returns positioned glyphs |
+| `atlas.rs` | `ensure_glyphs_in_atlas()` — SDF rasterization, atlas packing, LRU eviction |
 
-- make rect meshes for the characters (using instancing) (similar to how InstancedSprite worked)
+## Key Constants
 
-- receive shaping info, puts them into instance attrib data
+| Constant | Value | Purpose |
+|---|---|---|
+| `SDF_PX_SIZE` | 64 | Rasterization size for each glyph SDF |
+| `DEFAULT_ATLAS_SIZE` | 2048 | Atlas texture dimensions (2048x2048) |
+| `LRU_MIN_AGE` | 120 | Frames before an unused glyph can be evicted |

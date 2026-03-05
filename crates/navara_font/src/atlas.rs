@@ -94,9 +94,6 @@ fn evict_cold_glyphs(atlas: &mut SDFAtlas, current_frame: u64, min_age: u64) {
         })
         .collect();
 
-    // Sort by last_used ascending (coldest first)
-    // evictable.sort_by_key(|&(_, frame)| frame); // not necessary since we just want to evict all that are old enough
-
     for (glyph_id, _) in evictable {
         if let Some(metrics) = atlas.glyph_map.remove(&glyph_id) {
             atlas.allocator.deallocate(metrics.alloc_id);

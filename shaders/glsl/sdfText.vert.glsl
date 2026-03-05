@@ -9,7 +9,6 @@ attribute vec4 glyphUvRect;  // Atlas UV sub-rect: (u0, v0, u1, v1)
 
 // Uniforms
 #ifdef USE_RTE
-    // TODO: do the calculation on CPU and just pass in the final position as a single attribute
     uniform vec3 uRTEPositionLOW;
     uniform vec3 uRTEPositionHIGH;
     uniform vec3 uEyeRTEHigh;

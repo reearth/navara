@@ -19,28 +19,44 @@ export async function renderText(
 
   // Use SDF pipeline when a font URL is specified and FontManager is available
   if (fontUrl && fontManager) {
-    await fontManager.loadFont(fontUrl);
+    try {
+      await fontManager.loadFont(fontUrl);
 
-    // Pre-prepare the text in the worker so cache is populated before mesh construction
-    const text = m.material.text ?? "";
-    if (text) {
-      await fontManager.prepareText(fontUrl, text);
-    }
+      // Pre-prepare the text in the worker so cache is populated before mesh construction
+      const text = m.material.text ?? "";
+      if (text) {
+        await fontManager.prepareText(fontUrl, text);
+      }
 
-    const textGroup = new BatchedSdfTextMesh(
-      m,
-      buf,
-      fontManager,
-      fontUrl,
-      uniforms,
-      {
+      const textGroup = new BatchedSdfTextMesh(
+        m,
+        buf,
+        fontManager,
+        fontUrl,
+        uniforms,
+        {
+          renderOrder: FEATURE_RENDER_ORDER,
+          viewContext,
+          layerId,
+        },
+      );
+
+      return textGroup;
+    } catch (e) {
+      console.warn(
+        `Failed to load or prepare font "${fontUrl}". Falling back to non-SDF text. Error:`,
+        e,
+      );
+
+      // Fallback to Troika-based text
+      const textGroup = new InstancedTextMesh(m, buf, uniforms, {
         renderOrder: FEATURE_RENDER_ORDER,
         viewContext,
         layerId,
-      },
-    );
+      });
 
-    return textGroup;
+      return textGroup;
+    }
   }
 
   // Fallback to Troika-based text

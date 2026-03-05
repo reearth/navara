@@ -417,7 +417,7 @@ export class SDFTextMesh
             ? new Vector2(material.center.x, material.center.y)
             : new Vector2(0.0, 0.0),
         },
-        uScaleByDistance: { value: material.scaleByDistance },
+        uScaleByDistance: { value: material.scaleByDistance ?? false },
         uFov: { value: 1.0 },
         uScreenHeightPx: { value: 1080.0 },
         uAddHeight: { value: material.height ?? 0.0 },

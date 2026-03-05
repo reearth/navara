@@ -48,6 +48,7 @@ impl bevy_app::Plugin for Plugin {
         app.add_plugins(Cesium3dTilesPlugin);
         app.add_plugins(MvtPlugin);
         app.add_plugins(WorkerPlugin);
+
         // custom systems
         app.add_systems(Startup, startup);
         app.add_systems(Update, update);
