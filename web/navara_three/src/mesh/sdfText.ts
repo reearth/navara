@@ -279,12 +279,6 @@ export class SDFTextMesh
       this.material.uniforms.uShowBackground.value = false;
     }
 
-    const nextBGRadius = material.cornerRadius ?? 0;
-    if (nextBGRadius !== prev.cornerRadius) {
-      prev.cornerRadius = nextBGRadius;
-      this.material.uniforms.uBackgroundRadius.value = nextBGRadius;
-    }
-
     const nextBGOutlineColor = material.borderColor ?? 0x000000;
     if (nextBGOutlineColor !== prev.backgroundOutlineColor) {
       prev.backgroundOutlineColor = nextBGOutlineColor;
@@ -404,7 +398,6 @@ export class SDFTextMesh
         uBackgroundColor: { value: new Color(1, 0, 0) },
         uBackgroundOutlineColor: { value: new Color(1, 0, 0) },
         uBackgroundOutlineWidth: { value: 0.1 },
-        uBackgroundRadius: { value: 0.1 },
         uBgYBounds: { value: new Vector2(0.0, 1.0) },
         uOutlineColor: { value: new Color(1, 0, 0) },
         uOutlineWidth: { value: 0.1 },

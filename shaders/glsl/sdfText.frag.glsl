@@ -34,7 +34,6 @@ uniform float uOutlineOpacity;
 uniform bool uOffsetDepth;
 uniform float uFarPlane;
 uniform vec3 uBackgroundColor;
-uniform float uBackgroundRadius;
 uniform float uBackgroundOutlineWidth;
 uniform vec3 uBackgroundOutlineColor;
 

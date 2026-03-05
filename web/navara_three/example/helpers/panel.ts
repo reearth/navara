@@ -57,6 +57,13 @@ const addFeatureUpdateHandler = (
     } else if (layerDesc.type == "mvt") {
       if (layerDesc.point && layerDesc.point.color !== undefined) {
         defaultColor = layerDesc.point.color;
+      } else if (
+        layerDesc.billboard &&
+        layerDesc.billboard.color !== undefined
+      ) {
+        defaultColor = layerDesc.billboard.color;
+      } else if (layerDesc.text && layerDesc.text.color !== undefined) {
+        defaultColor = layerDesc.text.color;
       } else if (layerDesc.polyline && layerDesc.polyline.color !== undefined) {
         defaultColor = layerDesc.polyline.color;
       } else if (layerDesc.polygon && layerDesc.polygon.color !== undefined) {
