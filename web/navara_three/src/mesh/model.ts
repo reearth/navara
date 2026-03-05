@@ -26,6 +26,8 @@ import type { ViewContext } from "../core";
 import {
   getSelectiveEffectConfig,
   SelectiveEffectOcclusionMode,
+  updateEffectLinks,
+  unlinkEffects,
 } from "../core/SelectiveEffectHelper";
 import {
   getMaskPassContext,
@@ -44,7 +46,6 @@ import type { ModelMaterialProps, PntsProps } from "../material/enhancer/model";
 import type { UniformValue } from "../material/types";
 import type { CustomObject3DEventMap } from "../object3DEvent";
 import type { CommonUniforms } from "../uniforms";
-import { arraysEqual } from "../utils";
 
 import {
   getBatchDataTexture,
@@ -93,7 +94,8 @@ export class ModelMesh
   // model credit for attribution
   credit: string | undefined;
 
-  private prevEffectIds: string[] = [];
+  /** Previous effectIds for SelectiveEffect registry diff */
+  private _prevEffectIds?: string[];
 
   constructor(
     gltfInfo: {
@@ -471,16 +473,15 @@ export class ModelMesh
       }
     }
 
-    // SelectiveEffect: effectIds handling at ModelMesh level
-    if (!arraysEqual(this.prevEffectIds, material.effectIds)) {
-      this.viewContext.selectiveEffectRegistry?.updateLinksForObject(
-        this,
-        material.effectIds ?? [],
-        this.prevEffectIds,
-        this._layerId,
-      );
-      this.prevEffectIds = material.effectIds ? [...material.effectIds] : [];
-    }
+    // SelectiveEffect: effectIds handling
+    const updated = updateEffectLinks(
+      this,
+      this.viewContext.selectiveEffectRegistry,
+      this._layerId,
+      this._prevEffectIds,
+      material.effectIds,
+    );
+    if (updated !== undefined) this._prevEffectIds = updated;
   }
 
   /**
@@ -554,6 +555,15 @@ export class ModelMesh
   }
 
   dispose(viewEvents: EventHandler<ViewEvents>) {
+    // Clean up SelectiveEffect registry links
+    unlinkEffects(
+      this,
+      this.viewContext.selectiveEffectRegistry,
+      this._layerId,
+      this._prevEffectIds,
+    );
+    this._prevEffectIds = undefined;
+
     this.traverseMesh((m) => {
       viewEvents.emit("_csmUnmounted", m.material);
     });

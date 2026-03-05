@@ -18,11 +18,12 @@ import {
 import invariant from "tiny-invariant";
 
 import type { ViewContext } from "../core";
+import { updateEffectLinks, unlinkEffects } from "../core/SelectiveEffectHelper";
+import { injectSelectiveEffectHandlers } from "../core/SelectiveEffectMaskContext";
 import type { BufferLoader } from "../event";
 import { TEXTURE_LOADER } from "../event/loaders";
 import { createInstancedSpriteMaterialEnhancer } from "../material/enhancer";
 import { getImageDataFromImageBitmap } from "../tasks/getImageDataFromImageBitmap";
-import { arraysEqual } from "../utils";
 
 import { PickableMesh } from "./pickableMesh";
 
@@ -55,12 +56,12 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
   private _viewContext: ViewContext;
   /** Layer ID for SelectiveEffect handling */
   private _layerId: string;
+  /** Previous effectIds for SelectiveEffect registry diff */
+  private _prevEffectIds?: string[];
   /** Material enhancer for encapsulated state management */
   private _enhancedMaterial?: ReturnType<
     typeof createInstancedSpriteMaterialEnhancer
   >;
-  /** Previous effectIds for SelectiveEffect registry updates */
-  private _prevEffectIds?: string[];
 
   constructor(options: InstancedSpriteOptions) {
     super();
@@ -81,6 +82,33 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
 
     // Create Material
     this.material = await this._initMaterial(positionsInfo, m);
+
+    // SE uniform refs for combined mask pass output
+    const mat = this.material as ShaderMaterial;
+    const seBloomRef = { value: 0 };
+    const seOutlineRef = { value: 0 };
+    mat.uniforms.uBloomMaskPass = seBloomRef;
+    mat.uniforms.uOutlineMaskPass = seOutlineRef;
+
+    // Inject selective effect mask-pass handlers
+    injectSelectiveEffectHandlers(this, {
+      registry: this._viewContext?.selectiveEffectRegistry,
+      layerId: this._layerId,
+      shaderUniforms: {
+        uBloomMaskPass: seBloomRef,
+        uOutlineMaskPass: seOutlineRef,
+      },
+    });
+
+    // Register initial effectIds (from first init data)
+    const initUpdated = updateEffectLinks(
+      this,
+      this._viewContext.selectiveEffectRegistry,
+      this._layerId,
+      this._prevEffectIds,
+      m.material.effectIds,
+    );
+    if (initUpdated !== undefined) this._prevEffectIds = initUpdated;
 
     this.frustumCulled = false; // Disable since bounding box doesn't account for instance positions
   }
@@ -194,18 +222,15 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
       }
     }
 
-    // SelectiveEffect: effectIds handling (needs prev state for registry)
-    if (!arraysEqual(this._prevEffectIds, m.material.effectIds)) {
-      this._viewContext.selectiveEffectRegistry?.updateLinksForObject(
-        this,
-        m.material.effectIds ?? [],
-        this._prevEffectIds ?? [],
-        this._layerId,
-      );
-      this._prevEffectIds = m.material.effectIds
-        ? [...m.material.effectIds]
-        : [];
-    }
+    // SelectiveEffect: effectIds handling
+    const updated = updateEffectLinks(
+      this,
+      this._viewContext.selectiveEffectRegistry,
+      this._layerId,
+      this._prevEffectIds,
+      m.material.effectIds,
+    );
+    if (updated !== undefined) this._prevEffectIds = updated;
   }
 
   private _initGeometry(
@@ -589,6 +614,15 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
   }
 
   dispose(): void {
+    // Clean up SelectiveEffect registry links
+    unlinkEffects(
+      this,
+      this._viewContext.selectiveEffectRegistry,
+      this._layerId,
+      this._prevEffectIds,
+    );
+    this._prevEffectIds = undefined;
+
     this.geometry?.dispose();
 
     const shaderMaterial = this.material as ShaderMaterial;
@@ -604,17 +638,6 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     }
 
     shaderMaterial.dispose();
-
-    // Clean up SelectiveEffect registry links
-    if (this._viewContext?.selectiveEffectRegistry && this._prevEffectIds) {
-      this._viewContext.selectiveEffectRegistry.updateLinksForObject(
-        this,
-        [], // New effectIds: empty array (removing all links)
-        this._prevEffectIds, // Previous effectIds
-        this._layerId,
-      );
-      this._prevEffectIds = undefined;
-    }
 
     // Clear internal collections to release references
     this._batchIdToInstance.clear();

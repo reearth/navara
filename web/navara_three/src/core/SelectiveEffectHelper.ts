@@ -18,6 +18,7 @@ import {
 import { Color } from "three";
 
 import { BufferView } from "../bufferView";
+import { arraysEqual } from "../utils";
 
 // ============================================================================
 // Constants
@@ -680,4 +681,42 @@ export function applyDepthClip(
   depthClipMaterial.uniforms.tBaseDepth.value = baseDepthTexture;
   renderer.setRenderTarget(outputRT);
   renderer.render(depthClipScene, fullscreenCamera);
+}
+
+// ============================================================================
+// Standalone helpers for effectIds management in meshes
+// ============================================================================
+
+/**
+ * Detect effectIds changes and update registry links.
+ * Returns the new prevEffectIds snapshot if changed, or undefined if unchanged.
+ */
+export function updateEffectLinks(
+  target: Object3D,
+  registry: SelectiveEffectHelper | undefined,
+  layerId: string,
+  prevEffectIds: string[] | undefined,
+  newEffectIds: string[] | undefined,
+): string[] | undefined {
+  if (arraysEqual(prevEffectIds, newEffectIds)) return undefined;
+  registry?.updateLinksForObject(
+    target,
+    newEffectIds ?? [],
+    prevEffectIds ?? [],
+    layerId,
+  );
+  return newEffectIds ? [...newEffectIds] : [];
+}
+
+/**
+ * Unlink all effect links from registry on dispose.
+ */
+export function unlinkEffects(
+  target: Object3D,
+  registry: SelectiveEffectHelper | undefined,
+  layerId: string,
+  prevEffectIds: string[] | undefined,
+): void {
+  if (!registry || !prevEffectIds) return;
+  registry.updateLinksForObject(target, [], prevEffectIds, layerId);
 }

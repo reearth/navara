@@ -15,10 +15,11 @@ import {
 
 import type { ViewEvents } from "..";
 import type { ViewContext } from "../core";
+import { updateEffectLinks, unlinkEffects } from "../core/SelectiveEffectHelper";
+import { injectSelectiveEffectHandlers } from "../core/SelectiveEffectMaskContext";
 import type { BufferLoader } from "../event";
 import { createPolylineMaterialEnhancer } from "../material/enhancer";
 import type { CommonUniforms } from "../uniforms";
-import { arraysEqual } from "../utils";
 
 import {
   BatchedFeatureMesh,
@@ -320,6 +321,22 @@ export class PolylineMesh extends BatchedFeatureMesh<
 
     viewEvents.emit("_csmMounted", this.material);
 
+    // SE uniform refs for combined mask pass output
+    const seBloomRef = { value: 0 };
+    const seOutlineRef = { value: 0 };
+    this.material.uniforms.uBloomMaskPass = seBloomRef;
+    this.material.uniforms.uOutlineMaskPass = seOutlineRef;
+
+    // Inject selective effect mask-pass handlers
+    injectSelectiveEffectHandlers(this, {
+      registry: this._viewContext?.selectiveEffectRegistry,
+      layerId: this._layerId,
+      shaderUniforms: {
+        uBloomMaskPass: seBloomRef,
+        uOutlineMaskPass: seOutlineRef,
+      },
+    });
+
     this._initBatchedMaterial();
 
     this._update(meshMaterial, mesh.active);
@@ -393,16 +410,15 @@ export class PolylineMesh extends BatchedFeatureMesh<
     this.castShadow = !!material.castShadow;
     this.receiveShadow = !!material.receiveShadow;
 
-    // SelectiveEffect: effectIds handling (needs prev state for registry)
-    if (!arraysEqual(this._prevEffectIds, material.effectIds)) {
-      this._viewContext.selectiveEffectRegistry?.updateLinksForObject(
-        this,
-        material.effectIds ?? [],
-        this._prevEffectIds ?? [],
-        this._layerId,
-      );
-      this._prevEffectIds = material.effectIds ? [...material.effectIds] : [];
-    }
+    // SelectiveEffect: effectIds handling
+    const updated = updateEffectLinks(
+      this,
+      this._viewContext.selectiveEffectRegistry,
+      this._layerId,
+      this._prevEffectIds,
+      material.effectIds,
+    );
+    if (updated !== undefined) this._prevEffectIds = updated;
 
     const base = enhancer.states();
 
@@ -482,6 +498,15 @@ export class PolylineMesh extends BatchedFeatureMesh<
   }
 
   dispose(viewEvents: EventHandler<ViewEvents>) {
+    // Clean up SelectiveEffect registry links
+    unlinkEffects(
+      this,
+      this._viewContext.selectiveEffectRegistry,
+      this._layerId,
+      this._prevEffectIds,
+    );
+    this._prevEffectIds = undefined;
+
     viewEvents.emit("_csmUnmounted", this.material);
   }
 }
