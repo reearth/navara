@@ -462,8 +462,10 @@ export class SelectiveEffectHelper {
       // Guard: only attach once per object to avoid duplicate listeners on repeated link() calls.
       if (!obj.userData._effectCacheCleanupAttached) {
         obj.addEventListener("removed", () => {
-          for (const cache of this.effectObjectCache.values()) {
-            cache.delete(obj);
+          if (hasSelectiveEffectConfig(obj)) {
+            for (const id of obj.userData.selectiveEffectConfig.effectIds) {
+              this.disposeFromCache(id, obj);
+            }
           }
         });
         obj.userData._effectCacheCleanupAttached = true;
@@ -486,8 +488,6 @@ export class SelectiveEffectHelper {
       return;
     }
 
-    const effectKey = this.effectKeys.get(effectId);
-
     const unlinkObject = (obj: Mesh | Points | Line) => {
       // Use type guard to check and narrow type
       if (!hasSelectiveEffectConfig(obj)) {
@@ -499,13 +499,22 @@ export class SelectiveEffectHelper {
       // Remove this effectId from the object's effectIds
       config.effectIds = config.effectIds.filter((id) => id !== effectId);
 
-      // Remove from cache (by effectKey)
-      if (effectKey) {
-        this.effectObjectCache.get(effectKey)?.delete(obj);
-      }
+      // Remove from cache
+      this.disposeFromCache(effectId, obj);
     };
 
     this.forEachRenderableObject(sourceObject, unlinkObject);
+  }
+
+  /**
+   * Remove an object from the effectObjectCache for a specific effectId.
+   * Shared by unlink() and the auto-cleanup "removed" event listener in link().
+   */
+  private disposeFromCache(effectId: string, obj: Object3D): void {
+    const effectKey = this.effectKeys.get(effectId);
+    if (effectKey) {
+      this.effectObjectCache.get(effectKey)?.delete(obj);
+    }
   }
 
   /**
