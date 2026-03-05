@@ -1,7 +1,6 @@
-import { Pass as PostProcessingPass } from "postprocessing";
 import {
   Mesh,
-  OrthographicCamera,
+  type OrthographicCamera,
   PlaneGeometry,
   Scene,
   ShaderMaterial,
@@ -9,11 +8,8 @@ import {
   WebGLRenderTarget,
   type WebGLRenderer,
   RGBAFormat,
-  DepthTexture,
-  UnsignedShortType,
 } from "three";
 
-import { BufferView } from "../../bufferView";
 import type {
   EffectLayerConfig,
   EffectLayerUpdate,
@@ -26,10 +22,12 @@ import { UnrealBloomPassRGBA } from "../../postprocessing";
 
 import {
   SelectiveEffectLayer,
-  createDepthClipMaterial,
   createFullscreenQuad,
-  applyDepthClip,
 } from "./SelectiveEffectLayer";
+import {
+  SelectiveEffectPass,
+  type SelectiveEffectProcessor,
+} from "./SelectiveEffectPass";
 
 // Selective Bloom configuration
 export type SelectiveBloomEffectConfig = {
@@ -73,7 +71,8 @@ export class SelectiveBloomEffectLayer extends SelectiveEffectLayer<
   static insertAfter = ["mrt"];
   static insertBefore = ["transparent"];
 
-  private bloomPass?: SelectiveBloomPass;
+  private effectPass?: SelectiveEffectPass;
+  private bloomProcessor?: BloomProcessor;
 
   // Getters that derive values from config (single source of truth)
   get bloomStrength(): number {
@@ -126,29 +125,38 @@ export class SelectiveBloomEffectLayer extends SelectiveEffectLayer<
   }
 
   createPass() {
-    const rawPass = new SelectiveBloomPass(this);
-    this.bloomPass = rawPass;
+    const renderer =
+      this.viewContext.renderPassOrchestrator.effectComposer.getRenderer();
+    const renderSize = renderer.getSize(new Vector2());
+    const resolutionScale = this.getResolutionScale();
+    const initialWidth = Math.floor(renderSize.x * resolutionScale);
+    const initialHeight = Math.floor(renderSize.y * resolutionScale);
+
+    const processor = new BloomProcessor(
+      initialWidth,
+      initialHeight,
+      this.bloomStrength,
+      this.bloomRadius,
+      this.bloomThreshold,
+      this.debugMode,
+    );
+    this.bloomProcessor = processor;
+
+    const debugViewsEnabled =
+      this.getDebugViews() ||
+      this.viewContext.debugOptions.selectiveEffectMask ||
+      false;
+
+    const rawPass = new SelectiveEffectPass(
+      this,
+      SELECTIVE_BLOOM_EFFECT_KEY,
+      processor,
+      { resolutionScale, debugViewsEnabled },
+    );
+    this.effectPass = rawPass;
     const pass = new Pass(rawPass, null, { enabled: true });
 
-    return pass as Pass<SelectiveBloomPass, null> & BaseInstance;
-  }
-
-  /**
-   * Override: Don't register simple maskRT.
-   * SelectiveBloomPass registers occlusion-specific RTs directly.
-   */
-  protected override registerMaskRenderTarget(): void {
-    // Skip simple registration - SelectiveBloomPass handles occlusion-specific RTs
-  }
-
-  /**
-   * Override: Unregister occlusion-specific RTs.
-   */
-  protected override unregisterMaskRenderTarget(): void {
-    const customRenderPass = this.getCustomRenderPass();
-    if (customRenderPass?.removeOcclusionMaskRenderTargets) {
-      customRenderPass.removeOcclusionMaskRenderTargets(this.getEffectKey());
-    }
+    return pass as Pass<SelectiveEffectPass, null> & BaseInstance;
   }
 
   onUpdateConfig(updates: SelectiveBloomEffectUpdate): void {
@@ -176,19 +184,26 @@ export class SelectiveBloomEffectLayer extends SelectiveEffectLayer<
 
       if (next.debugMode !== undefined) {
         this.config.selectiveBloom.debugMode = next.debugMode;
+        this.bloomProcessor?.setDebugMode(next.debugMode);
       }
 
       if (next.debugViews !== undefined) {
         this.config.selectiveBloom.debugViews = next.debugViews;
         this.updateDebugViews(next.debugViews);
+        this.effectPass?.updateDebugViews(
+          next.debugViews ||
+            this.viewContext.debugOptions.selectiveEffectMask ||
+            false,
+        );
       }
 
       if (next.resolutionScale !== undefined) {
         this.config.selectiveBloom.resolutionScale = next.resolutionScale;
         this.updateResolutionScale(next.resolutionScale);
+        this.effectPass?.updateResolutionScale(next.resolutionScale);
       }
 
-      this.bloomPass?.setParameters(
+      this.bloomProcessor?.setParameters(
         this.bloomStrength,
         this.bloomRadius,
         this.bloomThreshold,
@@ -197,68 +212,45 @@ export class SelectiveBloomEffectLayer extends SelectiveEffectLayer<
   }
 }
 
-/**
- * Custom PostProcessing Pass for PostEffect Bloom
- * Renders only objects with Bloom effect enabled
- */
-class SelectiveBloomPass extends PostProcessingPass {
-  private layer: SelectiveBloomEffectLayer;
-  private bloom: UnrealBloomPassRGBA;
+// ============================================================
+// BloomProcessor - implements SelectiveEffectProcessor
+// ============================================================
 
-  // DepthEnabled pass render targets
-  private depthEnabledMaskRT: WebGLRenderTarget;
-  private depthClipRT: WebGLRenderTarget;
-  private depthClipMaterial: ShaderMaterial;
-  private depthClipScene: Scene;
+class BloomProcessor implements SelectiveEffectProcessor {
+  readonly depthEnabledResultRT: WebGLRenderTarget;
+  readonly silhouetteResultRT: WebGLRenderTarget;
+  readonly maskChannel: number;
 
-  // Silhouette pass render target (no depth clip)
-  private silhouetteMaskRT: WebGLRenderTarget;
+  private readonly bloom: UnrealBloomPassRGBA;
+  private readonly compositeMaterial: ShaderMaterial;
+  private readonly compositeScene: Scene;
+  private readonly copyMaterial: ShaderMaterial;
+  private readonly copyScene: Scene;
+  private readonly fullscreenCamera: OrthographicCamera;
+  private readonly fullscreenGeometry: PlaneGeometry;
 
-  // Intermediate bloom results
-  private depthEnabledBloomRT: WebGLRenderTarget;
-  private silhouetteBloomRT: WebGLRenderTarget;
-
-  // Copy material for transferring bloom results
-  private copyMaterial: ShaderMaterial;
-  private copyScene: Scene;
-
-  private fullscreenCamera: OrthographicCamera;
-  private fullscreenGeometry: PlaneGeometry;
-
-  private compositeScene: Scene;
-  private compositeMaterial: ShaderMaterial;
-
-  private size = new Vector2();
-
-  // Debug views
-  private debugView1?: BufferView;
-  private debugView2?: BufferView;
-
-  constructor(layer: SelectiveBloomEffectLayer) {
-    super("SelectiveBloomPass");
-    this.layer = layer;
-
-    const renderer =
-      layer.viewContext.renderPassOrchestrator.effectComposer.getRenderer();
-    const renderSize = renderer.getSize(new Vector2());
-    const resolutionScale =
-      layer.layerConfig.selectiveBloom?.resolutionScale ?? 1.0;
-    const initialWidth = Math.floor(renderSize.x * resolutionScale);
-    const initialHeight = Math.floor(renderSize.y * resolutionScale);
-
-    // Create shared fullscreen rendering infrastructure
+  constructor(
+    initialWidth: number,
+    initialHeight: number,
+    strength: number,
+    radius: number,
+    threshold: number,
+    debugMode: number,
+    maskChannel = 0,
+  ) {
+    this.maskChannel = maskChannel;
+    // Fullscreen rendering infrastructure
     const fullscreenQuad = createFullscreenQuad();
     this.fullscreenCamera = fullscreenQuad.camera;
     this.fullscreenGeometry = fullscreenQuad.geometry;
 
     // Composite material to blend bloom with base scene
-    // Blends two bloom results: DepthEnabled + Silhouette
     this.compositeMaterial = new ShaderMaterial({
       uniforms: {
         tBase: { value: null },
         tDepthEnabledBloom: { value: null },
         tSilhouetteBloom: { value: null },
-        debugMode: { value: 0 },
+        debugMode: { value: debugMode },
       },
       vertexShader: `
         varying vec2 vUv;
@@ -307,21 +299,9 @@ class SelectiveBloomPass extends PostProcessingPass {
     });
 
     this.compositeScene = new Scene();
-    const compositeQuad = new Mesh(
-      this.fullscreenGeometry,
-      this.compositeMaterial,
+    this.compositeScene.add(
+      new Mesh(this.fullscreenGeometry, this.compositeMaterial),
     );
-    this.compositeScene.add(compositeQuad);
-
-    // Depth clip material: clips mask by Base depth before blur (shared implementation)
-    this.depthClipMaterial = createDepthClipMaterial();
-
-    this.depthClipScene = new Scene();
-    const depthClipQuad = new Mesh(
-      this.fullscreenGeometry,
-      this.depthClipMaterial,
-    );
-    this.depthClipScene.add(depthClipQuad);
 
     // Copy material for transferring bloom results between render targets
     this.copyMaterial = new ShaderMaterial({
@@ -347,44 +327,10 @@ class SelectiveBloomPass extends PostProcessingPass {
     });
 
     this.copyScene = new Scene();
-    const copyQuad = new Mesh(this.fullscreenGeometry, this.copyMaterial);
-    this.copyScene.add(copyQuad);
+    this.copyScene.add(new Mesh(this.fullscreenGeometry, this.copyMaterial));
 
-    // Render target for DepthEnabled mask with depth texture
-    this.depthEnabledMaskRT = new WebGLRenderTarget(
-      initialWidth,
-      initialHeight,
-      {
-        format: RGBAFormat,
-        depthBuffer: true,
-        stencilBuffer: true,
-      },
-    );
-    this.depthEnabledMaskRT.texture.name = `SelectiveEffectMask_selectiveBloom_DepthEnabled_${layer.id}`;
-    this.depthEnabledMaskRT.depthTexture = new DepthTexture(
-      initialWidth,
-      initialHeight,
-      UnsignedShortType,
-    );
-
-    // Render target for depth-clipped mask (no depth buffer needed)
-    this.depthClipRT = new WebGLRenderTarget(initialWidth, initialHeight, {
-      format: RGBAFormat,
-      depthBuffer: false,
-      stencilBuffer: false,
-    });
-    this.depthClipRT.texture.name = `SelectiveBloom_DepthClip_${layer.id}`;
-
-    // Render target for Silhouette mask (no depth clip needed)
-    this.silhouetteMaskRT = new WebGLRenderTarget(initialWidth, initialHeight, {
-      format: RGBAFormat,
-      depthBuffer: true,
-      stencilBuffer: true,
-    });
-    this.silhouetteMaskRT.texture.name = `SelectiveEffectMask_selectiveBloom_Silhouette_${layer.id}`;
-
-    // Intermediate bloom result render targets
-    this.depthEnabledBloomRT = new WebGLRenderTarget(
+    // Bloom result RTs
+    this.depthEnabledResultRT = new WebGLRenderTarget(
       initialWidth,
       initialHeight,
       {
@@ -393,9 +339,10 @@ class SelectiveBloomPass extends PostProcessingPass {
         stencilBuffer: false,
       },
     );
-    this.depthEnabledBloomRT.texture.name = `SelectiveBloom_DepthEnabledResult_${layer.id}`;
+    this.depthEnabledResultRT.texture.name =
+      "SelectiveBloom_DepthEnabledResult";
 
-    this.silhouetteBloomRT = new WebGLRenderTarget(
+    this.silhouetteResultRT = new WebGLRenderTarget(
       initialWidth,
       initialHeight,
       {
@@ -404,32 +351,16 @@ class SelectiveBloomPass extends PostProcessingPass {
         stencilBuffer: false,
       },
     );
-    this.silhouetteBloomRT.texture.name = `SelectiveBloom_SilhouetteResult_${layer.id}`;
+    this.silhouetteResultRT.texture.name = "SelectiveBloom_SilhouetteResult";
 
+    // UnrealBloomPass
     this.bloom = new UnrealBloomPassRGBA(
       new Vector2(initialWidth, initialHeight),
-      layer.bloomStrength,
-      layer.bloomRadius,
-      layer.bloomThreshold,
+      strength,
+      radius,
+      threshold,
     );
     this.bloom.renderToScreen = false;
-
-    this.size.set(initialWidth, initialHeight);
-
-    // Register occlusion-specific mask RTs with CustomRenderPass
-    // This enables context-based mask rendering during BaseMRT phase
-    const customRenderPass = layer.getCustomRenderPass();
-    if (customRenderPass?.setOcclusionMaskRenderTargets) {
-      customRenderPass.setOcclusionMaskRenderTargets(
-        SELECTIVE_BLOOM_EFFECT_KEY,
-        {
-          normal: this.depthEnabledMaskRT,
-          silhouette: this.silhouetteMaskRT,
-        },
-      );
-    }
-
-    this.needsSwap = true;
   }
 
   setParameters(strength: number, radius: number, threshold: number): void {
@@ -438,171 +369,47 @@ class SelectiveBloomPass extends PostProcessingPass {
     this.bloom.threshold = threshold;
   }
 
-  private updateSizes(width: number, height: number): void {
-    if (this.size.x === width && this.size.y === height) {
-      return;
-    }
-
-    this.size.set(width, height);
-
-    // DepthEnabled mask RT
-    this.depthEnabledMaskRT.setSize(width, height);
-    if (this.depthEnabledMaskRT.depthTexture) {
-      this.depthEnabledMaskRT.depthTexture.dispose();
-      this.depthEnabledMaskRT.depthTexture = new DepthTexture(
-        width,
-        height,
-        UnsignedShortType,
-      );
-    }
-
-    // Depth clip RT
-    this.depthClipRT.setSize(width, height);
-
-    // Silhouette mask RT
-    this.silhouetteMaskRT.setSize(width, height);
-
-    // Bloom result RTs
-    this.depthEnabledBloomRT.setSize(width, height);
-    this.silhouetteBloomRT.setSize(width, height);
-
-    this.bloom.setSize(width, height);
+  setDebugMode(mode: number): void {
+    this.compositeMaterial.uniforms.debugMode.value = mode;
   }
 
-  render(
+  processEffect(
+    renderer: WebGLRenderer,
+    maskRT: WebGLRenderTarget,
+    resultRT: WebGLRenderTarget,
+    deltaTime: number,
+  ): void {
+    // Apply bloom (UnrealBloomPassRGBA uses readBuffer as input, ignores writeBuffer)
+    this.bloom.render(renderer, resultRT, maskRT, deltaTime, false);
+
+    // Copy bloom output to resultRT (bloom stores result in internal RT)
+    const bloomOutput = this.bloom.renderTargetsHorizontal[0];
+    if (bloomOutput) {
+      this.copyMaterial.uniforms.tSource.value = bloomOutput.texture;
+      renderer.setRenderTarget(resultRT);
+      renderer.render(this.copyScene, this.fullscreenCamera);
+    }
+  }
+
+  renderComposite(
     renderer: WebGLRenderer,
     inputBuffer: WebGLRenderTarget,
     outputBuffer: WebGLRenderTarget | null,
-    deltaTime?: number,
   ): void {
-    // Step 1: Update sizes
-    this.updateSizes(inputBuffer.width, inputBuffer.height);
-
-    // Set bloom parameters
-    this.setParameters(
-      this.layer.bloomStrength,
-      this.layer.bloomRadius,
-      this.layer.bloomThreshold,
-    );
-
-    // Get bloom output helper
-    const getBloomOutput = (): WebGLRenderTarget | undefined => {
-      return this.bloom.renderTargetsHorizontal[0];
-    };
-
-    // ========================================
-    // Pass 1: DepthEnabled objects (with depth clip)
-    // ========================================
-    // Mask is pre-rendered by CustomRenderPass during BaseMRT phase
-
-    // Apply depth clip to DepthEnabled mask (shared implementation)
-    applyDepthClip(
-      renderer,
-      this.depthClipMaterial,
-      this.depthClipScene,
-      this.fullscreenCamera,
-      this.depthEnabledMaskRT,
-      this.layer.getBaseDepthTexture(),
-      this.depthClipRT,
-    );
-
-    // Step 4a: Apply Bloom to depth-clipped mask
-    // Note: UnrealBloomPassRGBA ignores writeBuffer and uses readBuffer as input
-    this.bloom.render(
-      renderer,
-      this.depthEnabledBloomRT, // writeBuffer (ignored by UnrealBloomPassRGBA)
-      this.depthClipRT, // readBuffer (actual input)
-      deltaTime ?? 0,
-      false,
-    );
-
-    // Copy bloom result to depthEnabledBloomRT
-    const depthEnabledBloomOutput = getBloomOutput();
-    if (depthEnabledBloomOutput) {
-      // Copy from bloom internal RT to our result RT
-      this.copyTexture(
-        renderer,
-        depthEnabledBloomOutput,
-        this.depthEnabledBloomRT,
-      );
-    }
-
-    // ========================================
-    // Pass 2: Silhouette objects (no depth clip)
-    // ========================================
-    // Mask is pre-rendered by CustomRenderPass during BaseMRT phase
-
-    // Apply Bloom directly (no depth clip)
-    // Note: UnrealBloomPassRGBA ignores writeBuffer and uses readBuffer as input
-    this.bloom.render(
-      renderer,
-      this.silhouetteBloomRT, // writeBuffer (ignored by UnrealBloomPassRGBA)
-      this.silhouetteMaskRT, // readBuffer (actual input)
-      deltaTime ?? 0,
-      false,
-    );
-
-    // Copy bloom result to silhouetteBloomRT
-    const silhouetteBloomOutput = getBloomOutput();
-    if (silhouetteBloomOutput) {
-      this.copyTexture(renderer, silhouetteBloomOutput, this.silhouetteBloomRT);
-    }
-
-    // ========================================
-    // Step 5: Composite both bloom results
-    // ========================================
     this.compositeMaterial.uniforms.tBase.value = inputBuffer.texture;
     this.compositeMaterial.uniforms.tDepthEnabledBloom.value =
-      this.depthEnabledBloomRT.texture;
+      this.depthEnabledResultRT.texture;
     this.compositeMaterial.uniforms.tSilhouetteBloom.value =
-      this.silhouetteBloomRT.texture;
-    this.compositeMaterial.uniforms.debugMode.value = this.layer.debugMode;
+      this.silhouetteResultRT.texture;
 
-    renderer.setRenderTarget(this.renderToScreen ? null : outputBuffer);
+    renderer.setRenderTarget(outputBuffer);
     renderer.render(this.compositeScene, this.fullscreenCamera);
-
-    // Optional debug views
-    if (this.layer.layerConfig.selectiveBloom?.debugViews) {
-      if (!this.debugView1) {
-        this.debugView1 = new BufferView(
-          this.depthEnabledMaskRT.width,
-          this.depthEnabledMaskRT.height,
-        );
-      }
-
-      if (!this.debugView2) {
-        this.debugView2 = new BufferView(
-          this.silhouetteMaskRT.width,
-          this.silhouetteMaskRT.height,
-        );
-      }
-
-      this.debugView1.render(renderer, this.depthEnabledMaskRT);
-      this.debugView2.render(renderer, this.silhouetteMaskRT);
-    } else {
-      // Dispose debug views when debugViews is disabled
-      if (this.debugView1) {
-        this.debugView1.dispose();
-        this.debugView1 = undefined;
-      }
-      if (this.debugView2) {
-        this.debugView2.dispose();
-        this.debugView2 = undefined;
-      }
-    }
   }
 
-  /**
-   * Copy texture from source RT to destination RT using copy shader
-   */
-  private copyTexture(
-    renderer: WebGLRenderer,
-    source: WebGLRenderTarget,
-    dest: WebGLRenderTarget,
-  ): void {
-    this.copyMaterial.uniforms.tSource.value = source.texture;
-    renderer.setRenderTarget(dest);
-    renderer.render(this.copyScene, this.fullscreenCamera);
+  onResize(width: number, height: number): void {
+    this.depthEnabledResultRT.setSize(width, height);
+    this.silhouetteResultRT.setSize(width, height);
+    this.bloom.setSize(width, height);
   }
 
   dispose(): void {
@@ -610,28 +417,11 @@ class SelectiveBloomPass extends PostProcessingPass {
       this.bloom.dispose();
     }
 
-    // DepthEnabled mask RT
-    this.depthEnabledMaskRT.depthTexture?.dispose();
-    this.depthEnabledMaskRT.dispose();
+    this.depthEnabledResultRT.dispose();
+    this.silhouetteResultRT.dispose();
 
-    // Depth clip RT
-    this.depthClipRT.dispose();
-
-    // Silhouette mask RT
-    this.silhouetteMaskRT.dispose();
-
-    // Bloom result RTs
-    this.depthEnabledBloomRT.dispose();
-    this.silhouetteBloomRT.dispose();
-
-    // Materials and geometry
     this.fullscreenGeometry.dispose();
     this.compositeMaterial.dispose();
-    this.depthClipMaterial.dispose();
     this.copyMaterial.dispose();
-
-    // Debug views
-    this.debugView1?.dispose();
-    this.debugView2?.dispose();
   }
 }

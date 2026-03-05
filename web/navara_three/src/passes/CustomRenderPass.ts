@@ -319,49 +319,22 @@ export class CustomRenderPass extends RenderPass {
   }
 
   // ============================================================================
-  // MaskPassContext Management (delegated to SelectiveEffectMaskController)
+  // Combined Mask RT Access (delegated to SelectiveEffectMaskController)
   // ============================================================================
 
   /**
-   * Set mask render targets for selective effect rendering.
-   * Called by SelectiveEffectLayer to register their mask RTs.
-   *
-   * @param effectKey - Effect key (e.g., "selectiveBloom", "selectiveOutline")
-   * @param rt - WebGLRenderTarget for mask rendering
+   * Get the combined Normal mask RT from MaskController.
+   * Contains vec4(bloomColor.rgb, outlineA) for Normal occlusion mode.
    */
-  setMaskRenderTarget(effectKey: string, rt: WebGLRenderTarget): void {
-    this.maskController.setMaskRenderTarget(effectKey, rt);
+  getCombinedNormalMaskRT(): WebGLRenderTarget | undefined {
+    return this.maskController.getCombinedNormalMaskRT();
   }
 
   /**
-   * Remove mask render target.
-   *
-   * @param effectKey - Effect key to remove
+   * Get the combined Silhouette mask RT from MaskController.
+   * Contains vec4(bloomColor.rgb, outlineA) for Silhouette occlusion mode.
    */
-  removeMaskRenderTarget(effectKey: string): void {
-    this.maskController.removeMaskRenderTarget(effectKey);
-  }
-
-  /**
-   * Set occlusion mode-specific mask render targets.
-   * Used by effects that need separate Normal and Silhouette masks (selectiveBloom, selectiveOutline).
-   *
-   * @param effectKey - Effect key (e.g., "selectiveBloom", "selectiveOutline")
-   * @param targets - Object with optional normal and silhouette WebGLRenderTargets
-   */
-  setOcclusionMaskRenderTargets(
-    effectKey: string,
-    targets: { normal?: WebGLRenderTarget; silhouette?: WebGLRenderTarget },
-  ): void {
-    this.maskController.setOcclusionMaskRenderTargets(effectKey, targets);
-  }
-
-  /**
-   * Remove occlusion mode-specific mask render targets.
-   *
-   * @param effectKey - Effect key to remove
-   */
-  removeOcclusionMaskRenderTargets(effectKey: string): void {
-    this.maskController.removeOcclusionMaskRenderTargets(effectKey);
+  getCombinedSilhouetteMaskRT(): WebGLRenderTarget | undefined {
+    return this.maskController.getCombinedSilhouetteMaskRT();
   }
 }

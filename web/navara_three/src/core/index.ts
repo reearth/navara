@@ -61,9 +61,7 @@ export {
   ensureSelectiveEffectUserData,
   parseSelectiveEffectOcclusion,
   // Utility functions
-  createDepthClipMaterial,
   createFullscreenQuad,
-  applyDepthClip,
 } from "./SelectiveEffectHelper";
 export { SelectiveEffectManager } from "./SelectiveEffectManager";
 export { SelectiveEffectMaskController } from "./SelectiveEffectMaskController";
