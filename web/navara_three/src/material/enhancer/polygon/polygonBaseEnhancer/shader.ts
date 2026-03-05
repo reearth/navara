@@ -54,6 +54,14 @@ export const transformShader = (
   // Assign uniform refs to shader.uniforms via mutates
   mutates.updateUniforms(shader.uniforms, state);
 
+  // Assign SE uniform refs from material.userData to shader.uniforms
+  if (material.userData.uBloomMaskPass) {
+    shader.uniforms.uBloomMaskPass = material.userData.uBloomMaskPass;
+  }
+  if (material.userData.uOutlineMaskPass) {
+    shader.uniforms.uOutlineMaskPass = material.userData.uOutlineMaskPass;
+  }
+
   // Transform vertex shader
   shader.vertexShader = createReplacer(shader.vertexShader)
     .replace(
@@ -155,6 +163,8 @@ uniform bool useGroundNormals;
 uniform sampler2D uGlobeNormal;
 uniform float nvr_uPickable;
 uniform bool uIsTexturized;
+uniform float uBloomMaskPass;
+uniform float uOutlineMaskPass;
 ${POLYGON_BASE_SHADER_MARKERS.fragment.UNIFORM_END}
 
 in float nvr_vBatchId;
@@ -204,6 +214,15 @@ ${POLYGON_BASE_SHADER_MARKERS.fragment.NORMAL_END}
     .replace(
       "vec3 outgoingLight = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse + totalEmissiveRadiance;",
       `
+// Selective effect mask pass — combined bloom+outline output
+if (uBloomMaskPass > 0.5 || uOutlineMaskPass > 0.5) {
+  gl_FragColor = vec4(
+    diffuseColor.rgb * uBloomMaskPass,
+    uOutlineMaskPass
+  );
+  return;
+}
+
 vec3 outgoingLight;
 if(uClampToGround && !useGroundNormals) {
   // Without lighting

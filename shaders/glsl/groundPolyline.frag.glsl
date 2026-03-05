@@ -35,6 +35,8 @@ uniform vec4 frustumRatio;
 uniform float logDepthBufFC;
 uniform mat4 inverseProjectionMatrix;
 uniform float nvr_uPickable;
+uniform float uBloomMaskPass;
+uniform float uOutlineMaskPass;
 uniform vec2 nvr_uPickingCoord; // Screen coordinate for picking (in pixels)
 
 layout(location = 1) out vec4 normalBuffer;
@@ -114,6 +116,15 @@ void main() {
     }
 
     vec4 diffuseColor = vec4( color, 1. );
+
+    // Selective effect mask pass — combined bloom+outline output
+    if (uBloomMaskPass > 0.5 || uOutlineMaskPass > 0.5) {
+        gl_FragColor = vec4(
+            diffuseColor.rgb * uBloomMaskPass,
+            uOutlineMaskPass
+        );
+        return;
+    }
 
     ReflectedLight reflectedLight = ReflectedLight( vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ) );
 	vec3 totalEmissiveRadiance = vec3(1.);
