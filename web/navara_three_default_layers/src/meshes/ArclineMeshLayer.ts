@@ -104,9 +104,28 @@ export class ArclineMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
       });
       this.config.arcLines = currentConfigs;
 
-      this.unlinkBeforeRebuild();
+      // Unlink old sub-meshes before potential rebuild to clear stale cache entries,
+      // then relink after rebuild so new sub-meshes get selectiveEffectConfig.
+      const effectIds = this.config.effectIds ?? [];
+      if (effectIds.length > 0) {
+        this.view.selectiveEffectRegistry?.updateLinksForObject(
+          this._instance,
+          [],
+          effectIds,
+          this.id,
+        );
+      }
+
       this._instance.updateConfig(updateConfigs);
-      this.relinkAfterRebuild();
+
+      if (effectIds.length > 0) {
+        this.view.selectiveEffectRegistry?.updateLinksForObject(
+          this._instance,
+          effectIds,
+          [],
+          this.id,
+        );
+      }
 
       // Always re-inject handlers — ArcLine is always in MRT,
       // so new sub-meshes need handlers regardless of effectIds

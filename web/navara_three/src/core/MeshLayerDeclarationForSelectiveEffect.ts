@@ -278,38 +278,6 @@ export abstract class MeshLayerDeclarationForSelectiveEffect<
     // Note: onPassKeyChange() is already called by super.onUpdateConfig()
   }
 
-  /**
-   * Unlink current effectIds from the object tree before a child rebuild.
-   * Call this before an operation that may dispose/recreate child meshes
-   * so that stale references are removed from the SelectiveEffectHelper cache.
-   */
-  protected unlinkBeforeRebuild(): void {
-    if (this._effectIds.length > 0 && this.raw) {
-      this.view.selectiveEffectRegistry?.updateLinksForObject(
-        this.raw,
-        [],
-        this._effectIds,
-        this.id,
-      );
-    }
-  }
-
-  /**
-   * Re-link current effectIds to the object tree after a child rebuild.
-   * Call this after an operation that may have created new child meshes
-   * so that the new meshes get selectiveEffectConfig linked.
-   */
-  protected relinkAfterRebuild(): void {
-    if (this._effectIds.length > 0 && this.raw) {
-      this.view.selectiveEffectRegistry?.updateLinksForObject(
-        this.raw,
-        this._effectIds,
-        [],
-        this.id,
-      );
-    }
-  }
-
   override onDestroy(): void {
     // ----------------------------------------------------------------------------
     // SelectiveEffect: cleanup
