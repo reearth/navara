@@ -80,6 +80,7 @@ const run = async () => {
         clampToGround: false,
         castShadow: true,
         receiveShadow: true,
+        outline: true,
         outlineShow: params.outlineShow,
         outlineWidth: 2,
         outlineColor: new Color().setHex(0xff00ff),

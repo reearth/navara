@@ -306,6 +306,7 @@ pub struct PolygonMaterial {
     pub transparent: bool,
 
     pub surface_show: bool,
+    pub outline: bool,
     pub outline_show: bool,
     pub outline_color: u32,
     pub outline_width: f32,
@@ -346,6 +347,7 @@ impl Default for PolygonMaterial {
             transparent: false,
 
             surface_show: true,
+            outline: false,
             outline_show: false,
             outline_color: 0xffffff,
             outline_width: 1.,

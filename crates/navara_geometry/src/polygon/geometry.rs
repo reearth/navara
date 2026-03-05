@@ -27,6 +27,7 @@ pub struct PolygonGeometryOptions {
     pub height: f32,
     pub per_position_height: bool,
     pub use_rte: bool,
+    pub outline: bool,
 }
 
 impl Default for PolygonGeometryOptions {
@@ -44,6 +45,7 @@ impl Default for PolygonGeometryOptions {
             height: 1.,
             per_position_height: false,
             use_rte: true, // Default to true for individual features
+            outline: false,
         }
     }
 }
@@ -270,8 +272,15 @@ pub fn create_polygon_geometry(
         return None;
     }
 
-    let outline_geometry =
-        outlines_from_hierarchy(&hierarchies, granularity as f64, per_position_height);
+    let outline_geometry = if options.outline {
+        Some(outlines_from_hierarchy(
+            &hierarchies,
+            granularity as f64,
+            per_position_height,
+        ))
+    } else {
+        None
+    };
 
     let mut geometries = vec![];
 
@@ -396,7 +405,7 @@ pub fn create_polygon_geometry(
             attributes: combined_attributes,
             indices,
         },
-        outline: Some(outline_geometry),
+        outline: outline_geometry,
     })
 }
 
