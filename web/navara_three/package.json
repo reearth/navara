@@ -13,7 +13,6 @@
   "scripts": {
     "start": "vite",
     "dev": "vite -c vite.config.example.ts --host",
-    "dev:example": "vite -c vite.config.example.ts --host",
     "build": "vite build -c vite.config.ts",
     "build:dev": "vite build --mode development",
     "build:dev:watch": "pnpm build:dev --watch",
