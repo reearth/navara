@@ -10,6 +10,8 @@
 
 uniform vec3 color;
 uniform float nvr_uPickable;
+uniform float uBloomMaskPass;
+uniform float uOutlineMaskPass;
 
 in float nvr_vBatchId;
 in vec3 vNormal;
@@ -22,6 +24,16 @@ void main() {
     #include chunks/show_fragment;
     
     vec4 diffuseColor = vec4(color, 1.);
+
+    // Selective effect mask pass — combined bloom+outline output
+    if (uBloomMaskPass > 0.5 || uOutlineMaskPass > 0.5) {
+        gl_FragColor = vec4(
+            diffuseColor.rgb * uBloomMaskPass,
+            uOutlineMaskPass
+        );
+        return;
+    }
+
     #include <clipping_planes_fragment>
 
     ReflectedLight reflectedLight = ReflectedLight( vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ) );
