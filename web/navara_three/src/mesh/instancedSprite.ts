@@ -18,7 +18,8 @@ import {
 import invariant from "tiny-invariant";
 
 import type { ViewContext } from "../core";
-import { SelectiveEffectLifecycle } from "../core/SelectiveEffectLifecycle";
+import { updateEffectLinks, unlinkEffects } from "../core/SelectiveEffectHelper";
+import { injectSelectiveEffectHandlers } from "../core/SelectiveEffectMaskContext";
 import type { BufferLoader } from "../event";
 import { TEXTURE_LOADER } from "../event/loaders";
 import { createInstancedSpriteMaterialEnhancer } from "../material/enhancer";
@@ -55,8 +56,8 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
   private _viewContext: ViewContext;
   /** Layer ID for SelectiveEffect handling */
   private _layerId: string;
-  /** SelectiveEffect lifecycle management (effectIds registry + mask-pass handlers) */
-  private _seLifecycle?: SelectiveEffectLifecycle;
+  /** Previous effectIds for SelectiveEffect registry diff */
+  private _prevEffectIds?: string[];
   /** Material enhancer for encapsulated state management */
   private _enhancedMaterial?: ReturnType<
     typeof createInstancedSpriteMaterialEnhancer
@@ -82,13 +83,32 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     // Create Material
     this.material = await this._initMaterial(positionsInfo, m);
 
-    // Setup selective effect lifecycle (mask-pass handlers + effectIds registry tracking)
-    this._seLifecycle = new SelectiveEffectLifecycle(
+    // SE uniform refs for combined mask pass output
+    const mat = this.material as ShaderMaterial;
+    const seBloomRef = { value: 0 };
+    const seOutlineRef = { value: 0 };
+    mat.uniforms.uBloomMaskPass = seBloomRef;
+    mat.uniforms.uOutlineMaskPass = seOutlineRef;
+
+    // Inject selective effect mask-pass handlers
+    injectSelectiveEffectHandlers(this, {
+      registry: this._viewContext?.selectiveEffectRegistry,
+      layerId: this._layerId,
+      shaderUniforms: {
+        uBloomMaskPass: seBloomRef,
+        uOutlineMaskPass: seOutlineRef,
+      },
+    });
+
+    // Register initial effectIds (from first init data)
+    const initUpdated = updateEffectLinks(
       this,
-      this._viewContext?.selectiveEffectRegistry,
+      this._viewContext.selectiveEffectRegistry,
       this._layerId,
+      this._prevEffectIds,
+      m.material.effectIds,
     );
-    this._seLifecycle.injectHandlers();
+    if (initUpdated !== undefined) this._prevEffectIds = initUpdated;
 
     this.frustumCulled = false; // Disable since bounding box doesn't account for instance positions
   }
@@ -203,7 +223,14 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     }
 
     // SelectiveEffect: effectIds handling
-    this._seLifecycle?.update(m.material.effectIds);
+    const updated = updateEffectLinks(
+      this,
+      this._viewContext.selectiveEffectRegistry,
+      this._layerId,
+      this._prevEffectIds,
+      m.material.effectIds,
+    );
+    if (updated !== undefined) this._prevEffectIds = updated;
   }
 
   private _initGeometry(
@@ -588,7 +615,13 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
 
   dispose(): void {
     // Clean up SelectiveEffect registry links
-    this._seLifecycle?.dispose();
+    unlinkEffects(
+      this,
+      this._viewContext.selectiveEffectRegistry,
+      this._layerId,
+      this._prevEffectIds,
+    );
+    this._prevEffectIds = undefined;
 
     this.geometry?.dispose();
 
