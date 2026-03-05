@@ -459,17 +459,9 @@ export class SelectiveEffectHelper {
 
       // Auto-cleanup: when object is removed from scene graph, unlink from cache.
       // This prevents stale references in effectObjectCache when sub-meshes are rebuilt.
-      // Guard: only attach once per object to avoid duplicate listeners on repeated link() calls.
-      if (!obj.userData._effectCacheCleanupAttached) {
-        obj.addEventListener("removed", () => {
-          if (hasSelectiveEffectConfig(obj)) {
-            for (const id of obj.userData.selectiveEffectConfig.effectIds) {
-              this.disposeFromCache(id, obj);
-            }
-          }
-        });
-        obj.userData._effectCacheCleanupAttached = true;
-      }
+      obj.addEventListener("removed", () => {
+        this.disposeFromCache(effectId, obj);
+      });
     };
 
     this.forEachRenderableObject(sourceObject, linkObject);
