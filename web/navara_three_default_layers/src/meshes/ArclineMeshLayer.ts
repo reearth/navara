@@ -154,11 +154,20 @@ export class ArclineMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
     if (!this._instance) return;
     this._instance.traverse((child) => {
       if (child instanceof Mesh && !child.userData._selectiveEffectInjected) {
-        injectSelectiveEffectHandlers(child, {
-          registry: this.view.selectiveEffectRegistry,
-          layerId: this.id,
-        });
-        child.userData._selectiveEffectInjected = true;
+        // Get SE uniform refs from the sub-mesh's ShaderMaterial
+        const mat = child.material;
+        if ("uniforms" in mat) {
+          const uniforms = mat.uniforms;
+          injectSelectiveEffectHandlers(child, {
+            registry: this.view.selectiveEffectRegistry,
+            layerId: this.id,
+            shaderUniforms: {
+              uBloomMaskPass: uniforms.uBloomMaskPass,
+              uOutlineMaskPass: uniforms.uOutlineMaskPass,
+            },
+          });
+          child.userData._selectiveEffectInjected = true;
+        }
       }
     });
   }

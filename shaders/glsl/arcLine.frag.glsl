@@ -4,6 +4,9 @@ in vec3 vColor;
 in float vLineDistance;
 in vec4 vDash; // x=dashed, y=dashSize, z=gapSize, w=dashOffset
 
+uniform float uBloomMaskPass;
+uniform float uOutlineMaskPass;
+
 #include <logdepthbuf_pars_fragment>
 
 void main() {
@@ -29,7 +32,16 @@ void main() {
   // Ensure normal faces camera
   if (normal.z < 0.0) normal = -normal;
   
-  gl_FragColor = vec4(vColor, vOpacity);
-  
   #include <logdepthbuf_fragment>
+
+  // Selective effect mask pass — combined bloom+outline output
+  if (uBloomMaskPass > 0.5 || uOutlineMaskPass > 0.5) {
+    gl_FragColor = vec4(
+      vColor * uBloomMaskPass,
+      uOutlineMaskPass
+    );
+    return;
+  }
+
+  gl_FragColor = vec4(vColor, vOpacity);
 }

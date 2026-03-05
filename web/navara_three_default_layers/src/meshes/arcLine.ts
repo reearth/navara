@@ -639,6 +639,8 @@ export class ArcLine extends Object3D {
       u_cameraPositionHigh: { value: new Vector3() },
       u_cameraPositionLow: { value: new Vector3() },
       modelViewMatrixRTE: { value: new Matrix4() },
+      uBloomMaskPass: { value: 0 },
+      uOutlineMaskPass: { value: 0 },
     };
 
     material.depthTest = true;

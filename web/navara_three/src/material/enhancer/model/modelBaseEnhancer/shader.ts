@@ -126,17 +126,12 @@ ${MODEL_BASE_SHADER_MARKERS.fragment.NORMAL_END}
     .replace(
       "vec3 outgoingLight = totalDiffuse + totalSpecular + totalEmissiveRadiance;",
       `
-// Bloom mask pass: output only emissive radiance
-// Pass separation handles occlusion mode
-if (uBloomMaskPass > 0.5) {
-  gl_FragColor = vec4(totalEmissiveRadiance, 1.0);
-  return;
-}
-
-// Outline mask pass: output white
-// Uses original material to ensure depthTexture is written correctly
-if (uOutlineMaskPass > 0.5) {
-  gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+// Selective effect mask pass — combined bloom+outline output
+if (uBloomMaskPass > 0.5 || uOutlineMaskPass > 0.5) {
+  gl_FragColor = vec4(
+    totalEmissiveRadiance * uBloomMaskPass,
+    uOutlineMaskPass
+  );
   return;
 }
 

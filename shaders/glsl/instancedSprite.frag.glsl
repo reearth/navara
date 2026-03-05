@@ -30,6 +30,8 @@ varying float vFragDepth;
 
 uniform bool uOffsetDepth;
 uniform float nvr_uPickable;
+uniform float uBloomMaskPass;
+uniform float uOutlineMaskPass;
 uniform float uAlphaTest;
 uniform float uFarPlane;
 
@@ -53,7 +55,16 @@ void main() {
     #endif
 
     if (alpha <= uAlphaTest) { discard; };
-    
+
+    // Selective effect mask pass — combined bloom+outline output
+    if (uBloomMaskPass > 0.5 || uOutlineMaskPass > 0.5) {
+        gl_FragColor = vec4(
+            color.rgb * uBloomMaskPass,
+            uOutlineMaskPass
+        );
+        return;
+    }
+
     if (nvr_uPickable > 0.0 && alpha > 0.0) {
         vec3 pickColor = nvr_batchIdToColor(vBatchID);
         color = vec4(pickColor.xyz, 1.0);
