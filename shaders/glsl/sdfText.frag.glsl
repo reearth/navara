@@ -69,23 +69,35 @@ void main() {
 
     // Sample SDF value from atlas (R channel)
     float dist = texture2D(uAtlas, vAtlasUv).r;
-    float edgeWidth = fwidth(dist) * 0.5;
+    float edgeWidth = fwidth(dist);
 
     float outlineWidth = clamp(uOutlineWidth, 0.0, 0.4);
 
-    if (dist > uSdfThreshold) { // Inside the glyph
+    if (outlineWidth > 0.0) {
+        // Glyph fill alpha (smooth transition at glyph edge)
+        float fillAlpha = smoothstep(uSdfThreshold - edgeWidth,
+                                     uSdfThreshold + edgeWidth,
+                                     dist);
+
+        // Outline alpha (smooth transition at outer outline edge)
+        float outerEdge = uSdfThreshold - outlineWidth;
+        float outlineAlpha = smoothstep(outerEdge - edgeWidth,
+                                        outerEdge + edgeWidth,
+                                        dist);
+
+        if (outlineAlpha <= 0.0) discard;
+
+        // Blend: fill on top of outline
+        vec3 color = mix(uOutlineColor, uColor, fillAlpha);
+        float alpha = mix(outlineAlpha * uOutlineOpacity, 1.0, fillAlpha);
+        gl_FragColor = vec4(color, alpha);
+    } else {
         float alpha = smoothstep(uSdfThreshold - edgeWidth,
                                  uSdfThreshold + edgeWidth,
                                  dist);
-
+        if (alpha <= 0.0) discard;
         gl_FragColor = vec4(uColor, alpha);
-    } else if (dist <= uSdfThreshold && dist >= uSdfThreshold - outlineWidth) { // In the outline region
-        float alpha = smoothstep(uSdfThreshold - outlineWidth - edgeWidth,
-                                 uSdfThreshold - outlineWidth + edgeWidth,
-                                 dist);
-        gl_FragColor = vec4(uOutlineColor, alpha * uOutlineOpacity);
-    } else // Outside the glyph and outline
-        discard;
+    }
 
     #ifndef USE_SHADOWMAP_DEPTH
         vec3 normal = screenSpaceNormal();
