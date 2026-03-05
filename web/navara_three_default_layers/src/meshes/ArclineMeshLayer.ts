@@ -104,20 +104,11 @@ export class ArclineMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
       });
       this.config.arcLines = currentConfigs;
 
-      // Unlink old sub-meshes before potential rebuild to clear stale cache entries,
-      // then relink after rebuild so new sub-meshes get selectiveEffectConfig.
-      const effectIds = this.config.effectIds ?? [];
-      if (effectIds.length > 0) {
-        this.view.selectiveEffectRegistry?.updateLinksForObject(
-          this._instance,
-          [],
-          effectIds,
-          this.id,
-        );
-      }
-
       this._instance.updateConfig(updateConfigs);
 
+      // Relink after rebuild so new sub-meshes get selectiveEffectConfig.
+      // Old sub-meshes are auto-cleaned via "removed" event listener in link().
+      const effectIds = this.config.effectIds ?? [];
       if (effectIds.length > 0) {
         this.view.selectiveEffectRegistry?.updateLinksForObject(
           this._instance,
