@@ -159,24 +159,6 @@ export class SelectiveBloomEffectLayer extends SelectiveEffectLayer<
     return pass as Pass<SelectiveEffectPass, null> & BaseInstance;
   }
 
-  /**
-   * Override: Don't register simple maskRT.
-   * SelectiveEffectPass registers occlusion-specific RTs directly.
-   */
-  protected override registerMaskRenderTarget(): void {
-    // Skip simple registration - SelectiveEffectPass handles occlusion-specific RTs
-  }
-
-  /**
-   * Override: Unregister occlusion-specific RTs.
-   */
-  protected override unregisterMaskRenderTarget(): void {
-    const customRenderPass = this.getCustomRenderPass();
-    if (customRenderPass?.removeOcclusionMaskRenderTargets) {
-      customRenderPass.removeOcclusionMaskRenderTargets(this.getEffectKey());
-    }
-  }
-
   onUpdateConfig(updates: SelectiveBloomEffectUpdate): void {
     super.onUpdateConfig(updates);
 
@@ -237,6 +219,7 @@ export class SelectiveBloomEffectLayer extends SelectiveEffectLayer<
 class BloomProcessor implements SelectiveEffectProcessor {
   readonly depthEnabledResultRT: WebGLRenderTarget;
   readonly silhouetteResultRT: WebGLRenderTarget;
+  readonly maskChannel: number;
 
   private readonly bloom: UnrealBloomPassRGBA;
   private readonly compositeMaterial: ShaderMaterial;
@@ -253,7 +236,9 @@ class BloomProcessor implements SelectiveEffectProcessor {
     radius: number,
     threshold: number,
     debugMode: number,
+    maskChannel = 0,
   ) {
+    this.maskChannel = maskChannel;
     // Fullscreen rendering infrastructure
     const fullscreenQuad = createFullscreenQuad();
     this.fullscreenCamera = fullscreenQuad.camera;

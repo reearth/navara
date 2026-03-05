@@ -151,24 +151,6 @@ export class SelectiveOutlineEffectLayer extends SelectiveEffectLayer<
     return pass as Pass<SelectiveEffectPass, null> & BaseInstance;
   }
 
-  /**
-   * Override: Don't register simple maskRT.
-   * SelectiveEffectPass registers occlusion-specific RTs directly.
-   */
-  protected override registerMaskRenderTarget(): void {
-    // Skip simple registration - SelectiveEffectPass handles occlusion-specific RTs
-  }
-
-  /**
-   * Override: Unregister occlusion-specific RTs.
-   */
-  protected override unregisterMaskRenderTarget(): void {
-    const customRenderPass = this.getCustomRenderPass();
-    if (customRenderPass?.removeOcclusionMaskRenderTargets) {
-      customRenderPass.removeOcclusionMaskRenderTargets(this.getEffectKey());
-    }
-  }
-
   onUpdateConfig(updates: SelectiveOutlineEffectUpdate): void {
     super.onUpdateConfig(updates);
 
@@ -224,6 +206,7 @@ export class SelectiveOutlineEffectLayer extends SelectiveEffectLayer<
 class OutlineProcessor implements SelectiveEffectProcessor {
   readonly depthEnabledResultRT: WebGLRenderTarget;
   readonly silhouetteResultRT: WebGLRenderTarget;
+  readonly maskChannel = 1; // A → grayscale for outline
 
   private readonly edgeDetectMaterial: ShaderMaterial;
   private readonly edgeDetectScene: Scene;
