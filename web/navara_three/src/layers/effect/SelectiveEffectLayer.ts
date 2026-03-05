@@ -12,12 +12,8 @@ import type { CustomRenderPass } from "../../passes";
 
 import type { MRTPassEffectLayer } from "./MRTPassEffectLayer";
 
-// Re-export utilities from SelectiveEffectHelper for backward compatibility
-export {
-  createDepthClipMaterial,
-  createFullscreenQuad,
-  applyDepthClip,
-} from "../../core/SelectiveEffectHelper";
+// Re-export utility used by SelectiveEffectPass
+export { createFullscreenQuad } from "../../core/SelectiveEffectHelper";
 
 // Base configuration for selective effect layers
 // Note: resolutionScale and debugViews are defined in each effect-specific config (e.g., bloom, outline)
@@ -105,36 +101,19 @@ export abstract class SelectiveEffectLayer<
   }
 
   /**
-   * Register this layer's maskRT with CustomRenderPass.
-   * This enables context-based mask rendering during BaseMRT phase.
-   *
-   * Override this method in subclasses that need occlusion mode-specific RTs
-   * (e.g., PostEffectBloomLayer, PostEffectOutlineLayer).
+   * Register mask render targets.
+   * Combined RTs are owned by MaskController — no per-effect registration needed.
    */
   protected registerMaskRenderTarget(): void {
-    const mrtPass = this.findLayer<MRTPassEffectLayer>("mrt");
-    const customRenderPass = mrtPass?.raw as CustomRenderPass | undefined;
-
-    if (customRenderPass?.setMaskRenderTarget) {
-      customRenderPass.setMaskRenderTarget(
-        this.getEffectKey(),
-        this.resources.maskRT,
-      );
-    }
+    // Combined RTs are owned by MaskController
   }
 
   /**
-   * Unregister this layer's maskRT from CustomRenderPass.
-   *
-   * Override this method in subclasses that need occlusion mode-specific RTs.
+   * Unregister mask render targets.
+   * Combined RTs are owned by MaskController — no per-effect registration needed.
    */
   protected unregisterMaskRenderTarget(): void {
-    const mrtPass = this.findLayer<MRTPassEffectLayer>("mrt");
-    const customRenderPass = mrtPass?.raw as CustomRenderPass | undefined;
-
-    if (customRenderPass?.removeMaskRenderTarget) {
-      customRenderPass.removeMaskRenderTarget(this.getEffectKey());
-    }
+    // Combined RTs are owned by MaskController
   }
 
   /**

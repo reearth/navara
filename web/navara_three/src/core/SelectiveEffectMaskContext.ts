@@ -1,4 +1,11 @@
-import type { Material, Mesh, Object3D, WebGLRenderTarget } from "three";
+import {
+  NoBlending,
+  type Blending,
+  type Color,
+  type Material,
+  type Mesh,
+  type Object3D,
+} from "three";
 
 import {
   SELECTIVE_BLOOM_EFFECT_KEY,
@@ -42,7 +49,7 @@ export type MaskPassPhaseType =
  *
  * SoT Hierarchy:
  * - SelectiveEffectManager: Source of truth for layer configurations
- * - SelectiveEffectHelper: Resource management (maskRTs) and object cache
+ * - SelectiveEffectHelper: Object-effect link cache
  * - MaskPassContext: Runtime state for current frame's mask rendering
  */
 export type MaskPassContext = {
@@ -55,9 +62,6 @@ export type MaskPassContext = {
   /** Current occlusion mode filter (Normal, Silhouette, or undefined for all) */
   currentOcclusionMode: SelectiveEffectOcclusionValue | undefined;
 
-  /** Mask render targets by effect key */
-  maskRenderTargets: ReadonlyMap<string, WebGLRenderTarget>;
-
   /** SelectiveEffectHelper reference for occlusion lookups and effect checks */
   registry: SelectiveEffectHelper | undefined;
 };
@@ -69,7 +73,6 @@ const DEFAULT_CONTEXT: MaskPassContext = {
   phase: MaskPassPhase.None,
   activeEffects: [],
   currentOcclusionMode: undefined,
-  maskRenderTargets: new Map(),
   registry: undefined,
 };
 
@@ -207,6 +210,15 @@ export function evaluateMaskPassParticipation(
 // ============================================================================
 
 /**
+ * Type guard for materials with a color property (MeshStandardMaterial, MeshBasicMaterial, etc.)
+ */
+function hasMaterialColor(
+  material: Material,
+): material is Material & { color: Color } {
+  return "color" in material;
+}
+
+/**
  * Apply render state for mask pass skip.
  * Used when mesh doesn't contribute to current mask pass.
  *
@@ -322,6 +334,14 @@ export function injectSelectiveEffectHandlers(
   let savedDepthTest: boolean | undefined;
   let savedDepthWrite: boolean | undefined;
 
+  // Standard material channel control (color/opacity/transparent manipulation)
+  let savedColorR: number | undefined;
+  let savedColorG: number | undefined;
+  let savedColorB: number | undefined;
+  let savedOpacity: number | undefined;
+  let savedTransparent: boolean | undefined;
+  let savedBlending: Blending | undefined;
+
   // Wrapped onBeforeRender with proper `this` binding
   object.onBeforeRender = (
     renderer,
@@ -348,6 +368,17 @@ export function injectSelectiveEffectHandlers(
     const ctx = getMaskPassContext();
 
     if (ctx.phase !== MaskPassPhase.BaseMRT) {
+      // Reset SE shader uniforms to prevent residual from previous mask pass
+      if (shaderUniforms) {
+        if (shaderUniforms.uBloomMaskPass)
+          shaderUniforms.uBloomMaskPass.value = 0;
+        if (shaderUniforms.uOutlineMaskPass)
+          shaderUniforms.uOutlineMaskPass.value = 0;
+        if (shaderUniforms.uSelectiveEffectOcclusion) {
+          shaderUniforms.uSelectiveEffectOcclusion.value =
+            SELECTIVE_EFFECT_OCCLUSION_SKIP;
+        }
+      }
       return; // Not in BaseMRT → skip all processing
     }
 
@@ -391,8 +422,8 @@ export function injectSelectiveEffectHandlers(
     if (evaluation.shouldRender) {
       applyMaskPassRenderState(material, evaluation.isSilhouette);
 
-      // Update shader uniforms if present (for model.ts advanced pattern)
       if (shaderUniforms) {
+        // Custom shader: control via uniforms (polygon, polyline, instancedSprite, model)
         if (shaderUniforms.uBloomMaskPass) {
           shaderUniforms.uBloomMaskPass.value = evaluation.bloomActive ? 1 : 0;
         }
@@ -407,6 +438,29 @@ export function injectSelectiveEffectHandlers(
               ? SelectiveEffectOcclusionMode.Silhouette
               : SelectiveEffectOcclusionMode.Normal;
         }
+      } else if (hasMaterialColor(material)) {
+        // Standard material (Box, Sphere): control via material properties
+        // Combined mask buffer expects vec4(bloomRGB, outlineA)
+        // - bloom-only:   vec4(color, 0.0)
+        // - outline-only: vec4(0,0,0, 1.0)
+        // - both:         vec4(color, 1.0)
+        savedColorR = material.color.r;
+        savedColorG = material.color.g;
+        savedColorB = material.color.b;
+        savedOpacity = material.opacity;
+        savedTransparent = material.transparent;
+        savedBlending = material.blending;
+
+        // CRITICAL: Set transparent=true to disable Three.js OPAQUE shader path.
+        // When OPAQUE is active, alpha output is hardcoded to 1.0 regardless of opacity.
+        // NoBlending prevents alpha blending with the mask RT clear color.
+        material.transparent = true;
+        material.blending = NoBlending;
+
+        if (!evaluation.bloomActive) {
+          material.color.setRGB(0, 0, 0);
+        }
+        material.opacity = evaluation.outlineActive ? 1.0 : 0.0;
       }
     } else {
       applyMaskPassSkipState(material);
@@ -450,6 +504,29 @@ export function injectSelectiveEffectHandlers(
       savedColorWrite = undefined;
       savedDepthTest = undefined;
       savedDepthWrite = undefined;
+    }
+
+    // 3. Restore standard material channel control state
+    if (
+      savedColorR !== undefined &&
+      savedColorG !== undefined &&
+      savedColorB !== undefined &&
+      savedOpacity !== undefined &&
+      savedTransparent !== undefined &&
+      savedBlending !== undefined &&
+      hasMaterialColor(material)
+    ) {
+      material.color.setRGB(savedColorR, savedColorG, savedColorB);
+      material.opacity = savedOpacity;
+      material.transparent = savedTransparent;
+      material.blending = savedBlending;
+
+      savedColorR = undefined;
+      savedColorG = undefined;
+      savedColorB = undefined;
+      savedOpacity = undefined;
+      savedTransparent = undefined;
+      savedBlending = undefined;
     }
   };
 }
