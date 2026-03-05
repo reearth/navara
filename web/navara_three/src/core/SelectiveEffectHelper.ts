@@ -458,7 +458,6 @@ export class SelectiveEffectHelper {
       }
 
       // Auto-cleanup: when object is removed from scene graph, unlink from cache.
-      // This prevents stale references in effectObjectCache when sub-meshes are rebuilt.
       obj.addEventListener("removed", () => {
         this.disposeFromCache(effectId, obj);
       });
