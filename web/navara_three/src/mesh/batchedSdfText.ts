@@ -129,6 +129,8 @@ export class BatchedSdfTextMesh
         "Number of positions in the updated geometry must match the number of existing meshes",
       );
 
+      const transform = m.transform;
+
       for (let i = 0; i < nPositions; i++) {
         const posIdx = i * positionSize;
         const pos = RTE
@@ -143,7 +145,7 @@ export class BatchedSdfTextMesh
               ),
             }
           : (position as Float32Array).subarray(posIdx, posIdx + positionSize);
-        this.meshes()[i].setPosition(pos, RTE);
+        this.meshes()[i].setPosition(pos, RTE, transform);
       }
     }
 

@@ -1,5 +1,6 @@
 #include "chunks/horizon_culling_pars_vertex.glsl"
 #include "chunks/sprite_height_pars_vertex.glsl"
+#include "chunks/pixelToWorld.glsl"
 
 // Per-instance attributes
 attribute vec2 glyphOffset;  // Glyph position in normalized text space
@@ -9,17 +10,19 @@ attribute vec4 glyphUvRect;  // Atlas UV sub-rect: (u0, v0, u1, v1)
 // Uniforms
 #ifdef USE_RTE
     // TODO: do the calculation on CPU and just pass in the final position as a single attribute
-    uniform vec3 uRTEPositionLOW; 
+    uniform vec3 uRTEPositionLOW;
     uniform vec3 uRTEPositionHIGH;
     uniform vec3 uEyeRTEHigh;
     uniform vec3 uEyeRTELow;
 #else
-    uniform vec3 uRTCPosition; 
+    uniform vec3 uRTCPosition;
     uniform vec3 uRTCCenter;
 #endif
 
 uniform float uFontSizePx;
 uniform bool uScaleByDistance;
+uniform float uFov;
+uniform float uScreenHeightPx;
 uniform float uTextWidth;
 uniform float uTextHeight;
 uniform vec2 uCenter;
@@ -33,16 +36,6 @@ varying vec2 vAtlasUv;
 varying float vFragDepth;
 flat varying int vBackGroundSprite; // Whether this vertex belongs to the background sprite (1) or a glyph (0)
 flat varying float vBackGroundRatio;
-
-// Distance scaling normalization factor (matches instancedSprite convention)
-const float DISTANCE_SCALE_FACTOR = 100000.0;
-
-float getScaleFactor(float baseSizePx, vec4 mv) {
-    if (uScaleByDistance) {
-        return baseSizePx * (1.0 + (length(mv.xyz) / DISTANCE_SCALE_FACTOR));
-    }
-    return baseSizePx;
-}
 
 void main() {
 #ifdef USE_RTE
@@ -72,6 +65,14 @@ void main() {
 
     mvPosition += mvr_getMvHeightOffset(absTransformed, uAddHeight);
 
+    // Compute scale factor: when scaleByDistance is on, convert pixel size to
+    // world units so text maintains constant screen-pixel size at any distance.
+    // Normalized text height is 1.0, so no fontSizeWorld division is needed.
+    float scaleFactor = uFontSizePx;
+    if (uScaleByDistance) {
+        scaleFactor = nvr_pxToWorld(uFontSizePx, uFov, uScreenHeightPx, absTransformed, cameraPosition);
+    }
+
     vec2 center = clamp(uCenter, vec2(-0.5), vec2(0.5)); // Ensure center is within the bounds of the sprite
 
     if (uShowBackground && gl_InstanceID == 0) {
@@ -80,10 +81,9 @@ void main() {
         float bgHeight = uBgYBounds.y - uBgYBounds.x;
         vec2 bgLocalPos = (position.xy + vec2(0.5)) * vec2(uTextWidth, bgHeight) + vec2(0.0, uBgYBounds.x);
         bgLocalPos.x -= center.x * uTextWidth;
-        bgLocalPos.y -= (1.0 - center.y) * uTextHeight;
+        bgLocalPos.y -= center.y * uTextHeight;
 
-        float bgScale = getScaleFactor(uFontSizePx, mvPosition);
-        vec4 newMvPosition = mvPosition + vec4(bgLocalPos * bgScale, 0.0, 0.0);
+        vec4 newMvPosition = mvPosition + vec4(bgLocalPos * scaleFactor, 0.0, 0.0);
 
         gl_Position = projectionMatrix * newMvPosition;
 
@@ -99,9 +99,7 @@ void main() {
 
         // Apply centering: shift entire text block by anchor point
         localPos.x -= center.x * uTextWidth;
-        localPos.y -= (1.0 - center.y) * uTextHeight;
-
-        float scaleFactor = getScaleFactor(uFontSizePx, mvPosition);
+        localPos.y -= center.y * uTextHeight;
 
         // Apply billboard transform (screen-aligned, scaled)
         vec4 delta = vec4(localPos * scaleFactor, 0.0, 0.0);

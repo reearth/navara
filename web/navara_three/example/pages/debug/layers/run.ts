@@ -205,8 +205,6 @@ const geoLayersDef: MaterialLayerDescription[] = [
       clampToGround: true,
       depthTest: true,
       text: "hello world!!!",
-      // font: "/font/LoveDays-2v7Oe.ttf",
-      font: "https://raw.githubusercontent.com/loveencounterflow/jizura-fonts/master/fonts/Roboto/Roboto-Black.ttf",
       backgroundColor: new Color().setStyle("#0a70c2"),
       borderColor: new Color().setStyle("#f8e43c"),
       borderWidth: 0.08, // 0 ~ 0.5, the ratio of the border to the height

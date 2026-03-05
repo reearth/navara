@@ -43,8 +43,10 @@ void main() {
     if (vHorizonCulled == 1) discard;
 
     // Logarithmic depth buffer
-    gl_FragDepth = log(vFragDepth) / log(uFarPlane + 1.0);
-    if (uOffsetDepth) { gl_FragDepth -= 0.2; }
+    // When offsetDepth is enabled, multiply input by 0.8 to shift depth slightly
+    // closer to camera.
+    float depthInput = uOffsetDepth ? vFragDepth * 0.8 : vFragDepth;
+    gl_FragDepth = log(depthInput) / log(uFarPlane + 1.0);
 
     // Picking mode
     if (nvr_uPickable > 0.0) {

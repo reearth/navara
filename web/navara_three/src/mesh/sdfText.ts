@@ -148,6 +148,7 @@ export class SDFTextMesh
   setPosition(
     position: Float32Array | { high: Float32Array; low: Float32Array },
     RTE: boolean,
+    transform: Transform,
   ): void {
     if (RTE) {
       const p = position as { high: Float32Array; low: Float32Array };
@@ -164,6 +165,13 @@ export class SDFTextMesh
     } else {
       const p = position as Float32Array;
       this.material.uniforms.uRTCPosition.value.set(p[0], p[1], p[2] ?? 0.0);
+
+      const rtcCenter = new Vector3(transform.tx, transform.ty, transform.tz);
+      this.material.uniforms.uRTCCenter.value.set(
+        rtcCenter.x,
+        rtcCenter.y,
+        rtcCenter.z,
+      );
     }
   }
 
@@ -410,6 +418,8 @@ export class SDFTextMesh
             : new Vector2(0.0, 0.0),
         },
         uScaleByDistance: { value: material.scaleByDistance },
+        uFov: { value: 1.0 },
+        uScreenHeightPx: { value: 1080.0 },
         uAddHeight: { value: material.height ?? 0.0 },
         uOffsetDepth: { value: material.offsetDepth ?? true },
         uRTCCenter: { value: rtcCenter },
@@ -440,9 +450,13 @@ export class SDFTextMesh
       m.uniforms.uRTCPosition = { value: new Vector3(p[0], p[1], p[2] ?? 0.0) };
     }
 
-    m.onBeforeRender = (_renderer, _scene, camera, _geometry, _mat, _group) => {
+    m.onBeforeRender = (renderer, _scene, camera, _geometry, _mat, _group) => {
       const pCam = camera as PerspectiveCamera;
       m.uniforms.uFarPlane.value = pCam.far;
+      m.uniforms.uFov.value = pCam.fov * (Math.PI / 180.0);
+      m.uniforms.uScreenHeightPx.value = renderer.getDrawingBufferSize(
+        new Vector2(),
+      ).height;
 
       if (RTE) {
         const encodedCamPos = encodePosition(

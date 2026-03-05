@@ -307,3 +307,14 @@ export const LUT_DATASETS = {
     attributionUrl: "https://rawpedia.rawtherapee.com/Film_Simulation",
   },
 } satisfies Record<string, Dataset>;
+
+export const FONT_DATASETS = {
+  jizuraMincho: {
+    url: "https://raw.githubusercontent.com/loveencounterflow/jizura-fonts/master/fonts/fonts-japanese-mincho.ttf",
+    attribution: "Jizura Mincho - loveencounterflow",
+  },
+  jizuraGothic: {
+    url: "https://raw.githubusercontent.com/loveencounterflow/jizura-fonts/master/fonts/fonts-japanese-gothic.ttf",
+    attribution: "Jizura Gothic - loveencounterflow",
+  },
+} satisfies Record<string, Dataset>;

@@ -6,6 +6,7 @@ import {
   TERRAIN_DATASETS,
   TILE_DATASETS,
   VECTOR_DATASETS,
+  FONT_DATASETS,
 } from "../../../helpers/constants";
 import { addDateControl } from "../../../helpers/control";
 
@@ -82,11 +83,13 @@ const run = async () => {
       data: { url: VECTOR_DATASETS.gsiExperimentalVector.url },
       text: {
         lang: "ja",
+        font: FONT_DATASETS.jizuraGothic.url,
         color: new Color().setStyle("#ffffff"),
-        scaleByDistance: true,
+        scaleByDistance: false,
+        offsetDepth: true,
         clampToGround: true,
-        size: params.size,
-        center: { x: 0.5, y: 0 },
+        size: 5000,
+        center: { x: 0.0, y: 0.0 },
       },
       vectorTile: {
         maxZoom: 16,
