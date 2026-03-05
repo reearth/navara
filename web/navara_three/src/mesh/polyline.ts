@@ -15,7 +15,8 @@ import {
 
 import type { ViewEvents } from "..";
 import type { ViewContext } from "../core";
-import { SelectiveEffectLifecycle } from "../core/SelectiveEffectLifecycle";
+import { updateEffectLinks, unlinkEffects } from "../core/SelectiveEffectHelper";
+import { injectSelectiveEffectHandlers } from "../core/SelectiveEffectMaskContext";
 import type { BufferLoader } from "../event";
 import { createPolylineMaterialEnhancer } from "../material/enhancer";
 import type { CommonUniforms } from "../uniforms";
@@ -62,8 +63,8 @@ export class PolylineMesh extends BatchedFeatureMesh<
   private _layerId: string;
   /** Material enhancer for managing shader state */
   private _enhancedMaterial?: ReturnType<typeof createPolylineMaterialEnhancer>;
-  /** SelectiveEffect lifecycle management (effectIds registry + mask-pass handlers) */
-  private _seLifecycle?: SelectiveEffectLifecycle;
+  /** Previous effectIds for SelectiveEffect registry diff */
+  private _prevEffectIds?: string[];
   /** Flag indicating geometry initialization failed - mesh should never be visible */
   private _geometryInitFailed = false;
 
@@ -320,13 +321,21 @@ export class PolylineMesh extends BatchedFeatureMesh<
 
     viewEvents.emit("_csmMounted", this.material);
 
-    // Setup selective effect lifecycle (mask-pass handlers + effectIds registry tracking)
-    this._seLifecycle = new SelectiveEffectLifecycle(
-      this,
-      this._viewContext?.selectiveEffectRegistry,
-      this._layerId,
-    );
-    this._seLifecycle.injectHandlers();
+    // SE uniform refs for combined mask pass output
+    const seBloomRef = { value: 0 };
+    const seOutlineRef = { value: 0 };
+    this.material.uniforms.uBloomMaskPass = seBloomRef;
+    this.material.uniforms.uOutlineMaskPass = seOutlineRef;
+
+    // Inject selective effect mask-pass handlers
+    injectSelectiveEffectHandlers(this, {
+      registry: this._viewContext?.selectiveEffectRegistry,
+      layerId: this._layerId,
+      shaderUniforms: {
+        uBloomMaskPass: seBloomRef,
+        uOutlineMaskPass: seOutlineRef,
+      },
+    });
 
     this._initBatchedMaterial();
 
@@ -402,7 +411,14 @@ export class PolylineMesh extends BatchedFeatureMesh<
     this.receiveShadow = !!material.receiveShadow;
 
     // SelectiveEffect: effectIds handling
-    this._seLifecycle?.update(material.effectIds);
+    const updated = updateEffectLinks(
+      this,
+      this._viewContext.selectiveEffectRegistry,
+      this._layerId,
+      this._prevEffectIds,
+      material.effectIds,
+    );
+    if (updated !== undefined) this._prevEffectIds = updated;
 
     const base = enhancer.states();
 
@@ -483,7 +499,13 @@ export class PolylineMesh extends BatchedFeatureMesh<
 
   dispose(viewEvents: EventHandler<ViewEvents>) {
     // Clean up SelectiveEffect registry links
-    this._seLifecycle?.dispose();
+    unlinkEffects(
+      this,
+      this._viewContext.selectiveEffectRegistry,
+      this._layerId,
+      this._prevEffectIds,
+    );
+    this._prevEffectIds = undefined;
 
     viewEvents.emit("_csmUnmounted", this.material);
   }
