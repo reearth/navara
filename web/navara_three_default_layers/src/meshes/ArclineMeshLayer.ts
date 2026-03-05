@@ -130,7 +130,7 @@ export class ArclineMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
 
     // Synchronize config.effectIds
     if (updates.effectIds !== undefined) {
-      this.config.effectIds = [...updates.effectIds];
+      this.config.effectIds = [...(updates.effectIds ?? [])];
     }
   }
 
