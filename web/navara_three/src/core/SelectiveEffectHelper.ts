@@ -456,6 +456,14 @@ export class SelectiveEffectHelper {
         }
         cache.add(obj);
       }
+
+      // Auto-cleanup: when object is removed from scene graph, unlink from cache
+      // This prevents stale references in effectObjectCache when sub-meshes are rebuilt.
+      obj.addEventListener("removed", () => {
+        if (effectKey) {
+          this.effectObjectCache.get(effectKey)?.delete(obj);
+        }
+      });
     };
 
     this.forEachRenderableObject(sourceObject, linkObject);
