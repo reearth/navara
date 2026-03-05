@@ -134,7 +134,7 @@ export class SDFTextMesh
   }
 
   setScaleByDistance(enabled: boolean): void {
-    this.material.uniforms.uScaleByDistance.value = enabled ? 1.0 : 0.0;
+    this.material.uniforms.uScaleByDistance.value = enabled;
   }
 
   setCenter(x: number, y: number): void {
@@ -143,6 +143,28 @@ export class SDFTextMesh
 
   setHeight(height: number): void {
     this.material.uniforms.uAddHeight.value = height;
+  }
+
+  setPosition(
+    position: Float32Array | { high: Float32Array; low: Float32Array },
+    RTE: boolean,
+  ): void {
+    if (RTE) {
+      const p = position as { high: Float32Array; low: Float32Array };
+      this.material.uniforms.uRTEPositionLOW.value.set(
+        p.low[0],
+        p.low[1],
+        p.low[2] ?? 0.0,
+      );
+      this.material.uniforms.uRTEPositionHIGH.value.set(
+        p.high[0],
+        p.high[1],
+        p.high[2] ?? 0.0,
+      );
+    } else {
+      const p = position as Float32Array;
+      this.material.uniforms.uRTCPosition.value.set(p[0], p[1], p[2] ?? 0.0);
+    }
   }
 
   /**
@@ -370,7 +392,7 @@ export class SDFTextMesh
         uAtlas: { value: null },
         uSdfThreshold: { value: 0.5 },
         uColor: { value: new Color(1, 1, 1) },
-        uShowBackground: { value: 0.0 },
+        uShowBackground: { value: false },
         uBackgroundColor: { value: new Color(1, 0, 0) },
         uBackgroundOutlineColor: { value: new Color(1, 0, 0) },
         uBackgroundOutlineWidth: { value: 0.1 },
@@ -387,9 +409,9 @@ export class SDFTextMesh
             ? new Vector2(material.center.x, material.center.y)
             : new Vector2(0.0, 0.0),
         },
-        uScaleByDistance: { value: material.scaleByDistance ? 1.0 : 0.0 },
+        uScaleByDistance: { value: material.scaleByDistance },
         uAddHeight: { value: material.height ?? 0.0 },
-        uOffsetDepth: { value: (material.offsetDepth ?? true) ? 1.0 : 0.0 },
+        uOffsetDepth: { value: material.offsetDepth ?? true },
         uRTCCenter: { value: rtcCenter },
         uEyeRTELow: { value: new Vector3() },
         uEyeRTEHigh: { value: new Vector3() },
@@ -399,7 +421,6 @@ export class SDFTextMesh
       },
       transparent: true,
       depthTest: true,
-      visible: true,
     });
 
     if (RTE) {

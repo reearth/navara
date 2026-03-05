@@ -114,11 +114,38 @@ export class BatchedSdfTextMesh
 
   _update(
     m: NavaraTextMesh,
-    _buf: BufferLoader,
+    buf: BufferLoader,
     active: boolean,
     needRender?: () => void,
   ) {
     if (needRender) this._needRender = needRender;
+
+    const positionInfo = this.extractPositions(m, buf);
+    if (positionInfo) {
+      const { position, nPositions, positionSize, RTE } = positionInfo;
+
+      invariant(
+        nPositions === this.meshes().length,
+        "Number of positions in the updated geometry must match the number of existing meshes",
+      );
+
+      for (let i = 0; i < nPositions; i++) {
+        const posIdx = i * positionSize;
+        const pos = RTE
+          ? {
+              high: (position as { high: Float32Array }).high.subarray(
+                posIdx,
+                posIdx + positionSize,
+              ),
+              low: (position as { low: Float32Array }).low.subarray(
+                posIdx,
+                posIdx + positionSize,
+              ),
+            }
+          : (position as Float32Array).subarray(posIdx, posIdx + positionSize);
+        this.meshes()[i].setPosition(pos, RTE);
+      }
+    }
 
     const material = m.material;
     const text = material.text ?? "";

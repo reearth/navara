@@ -69,7 +69,9 @@ export class FontManager {
   /** Tracks fonts that have been successfully loaded. */
   private _loaded = new Set<string>();
   /** Cache shaped text results to avoid redundant worker calls (LRU-evicted). */
-  private _shapeCache = new LRUMap<string, ShapeTextResult>(SHAPE_CACHE_MAX_SIZE);
+  private _shapeCache = new LRUMap<string, ShapeTextResult>(
+    SHAPE_CACHE_MAX_SIZE,
+  );
   /** Cache atlas data per font to avoid redundant copies. */
   private _atlasCache = new Map<string, FontAtlasData>();
   /** Tracks whether the atlas cache is stale (new glyphs may have been rasterized). */
@@ -276,7 +278,6 @@ export class FontManager {
         console.error("FontManager: batch prepare failed", err);
       }
 
-      // Resolve all queued promises for this font
       for (const entry of entries) {
         entry.resolve();
       }

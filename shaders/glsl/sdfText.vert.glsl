@@ -19,14 +19,14 @@ attribute vec4 glyphUvRect;  // Atlas UV sub-rect: (u0, v0, u1, v1)
 #endif
 
 uniform float uFontSizePx;
-uniform float uScaleByDistance;
+uniform bool uScaleByDistance;
 uniform float uTextWidth;
 uniform float uTextHeight;
 uniform vec2 uCenter;
 uniform float uAddHeight;
 // Instance 0 is reserved for the background quad.
 uniform vec2 uBgYBounds; // (minY, maxY) of actual glyph bounding box in normalized text space
-uniform float uShowBackground;
+uniform bool uShowBackground;
 
 // Varyings
 varying vec2 vAtlasUv;
@@ -38,7 +38,7 @@ flat varying float vBackGroundRatio;
 const float DISTANCE_SCALE_FACTOR = 100000.0;
 
 float getScaleFactor(float baseSizePx, vec4 mv) {
-    if (uScaleByDistance > 0.5) {
+    if (uScaleByDistance) {
         return baseSizePx * (1.0 + (length(mv.xyz) / DISTANCE_SCALE_FACTOR));
     }
     return baseSizePx;
@@ -74,7 +74,7 @@ void main() {
 
     vec2 center = clamp(uCenter, vec2(-0.5), vec2(0.5)); // Ensure center is within the bounds of the sprite
 
-    if (uShowBackground > 0.5 && gl_InstanceID == 0) {
+    if (uShowBackground && gl_InstanceID == 0) {
         vBackGroundSprite = 1;
 
         float bgHeight = uBgYBounds.y - uBgYBounds.x;
