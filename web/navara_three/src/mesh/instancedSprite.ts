@@ -18,7 +18,10 @@ import {
 import invariant from "tiny-invariant";
 
 import type { ViewContext } from "../core";
-import { updateEffectLinks, unlinkEffects } from "../core/SelectiveEffectHelper";
+import {
+  updateEffectLinks,
+  unlinkEffects,
+} from "../core/SelectiveEffectHelper";
 import { injectSelectiveEffectHandlers } from "../core/SelectiveEffectMaskContext";
 import type { BufferLoader } from "../event";
 import { TEXTURE_LOADER } from "../event/loaders";

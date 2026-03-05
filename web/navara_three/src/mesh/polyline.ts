@@ -15,7 +15,10 @@ import {
 
 import type { ViewEvents } from "..";
 import type { ViewContext } from "../core";
-import { updateEffectLinks, unlinkEffects } from "../core/SelectiveEffectHelper";
+import {
+  updateEffectLinks,
+  unlinkEffects,
+} from "../core/SelectiveEffectHelper";
 import { injectSelectiveEffectHandlers } from "../core/SelectiveEffectMaskContext";
 import type { BufferLoader } from "../event";
 import { createPolylineMaterialEnhancer } from "../material/enhancer";
