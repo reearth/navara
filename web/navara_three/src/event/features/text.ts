@@ -1,8 +1,8 @@
 import { type TextMesh as NavaraTextMesh } from "@navara/engine";
 
 import type { BufferLoader } from "..";
-import { FONT_DATASETS } from "../../../example/helpers/constants";
 import type { ViewContext } from "../../core";
+import { DEFAULT_FONT_URL } from "../../font";
 import { BatchedSdfTextMesh } from "../../mesh";
 import { FEATURE_RENDER_ORDER } from "../../renderOrder";
 import type { RenderFlag } from "../../type";
@@ -17,9 +17,8 @@ export async function renderText(
 ) {
   const fontUrl =
     m.material.font == undefined || m.material.font === ""
-      ? FONT_DATASETS.NotoSansJP.url
+      ? DEFAULT_FONT_URL
       : m.material.font;
-  console.log(`Rendering text with font: ${fontUrl}`);
   const fontManager = viewContext.fontManager;
 
   // Use SDF pipeline when a font URL is specified and FontManager is available
