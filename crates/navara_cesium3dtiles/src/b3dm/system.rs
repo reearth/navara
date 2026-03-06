@@ -87,15 +87,9 @@ fn generate_global_batch_ids(
     batch_table_res: &mut BatchTable,
     batch_length: usize,
     global_batch_ids: &mut Vec<u32>,
-    layer_id: &str,
 ) {
     for _i in 0..batch_length {
-        let g_id = batch_table_res
-            .add(Some(BatchTableValue {
-                properties: None,
-                layer_id: Some(layer_id.to_owned()),
-            }))
-            .unwrap_or(0);
+        let g_id = batch_table_res.gen_global_batch_id().unwrap_or(0);
         global_batch_ids.push(g_id);
     }
 }
@@ -137,12 +131,7 @@ pub fn construct_model_by_b3dm_layer(
             };
 
         let mut global_batch_ids = Vec::with_capacity(batch_length);
-        generate_global_batch_ids(
-            &mut batch_table_res,
-            batch_length,
-            &mut global_batch_ids,
-            &layer.layer_id,
-        );
+        generate_global_batch_ids(&mut batch_table_res, batch_length, &mut global_batch_ids);
 
         let feature_batch_id = if batch_length > 0 {
             {
@@ -332,12 +321,7 @@ pub fn construct_model_by_cesium3dtiles_layer(
             };
 
         let mut global_batch_ids = Vec::with_capacity(batch_length);
-        generate_global_batch_ids(
-            &mut batch_table_res,
-            batch_length,
-            &mut global_batch_ids,
-            &layer.layer_id,
-        );
+        generate_global_batch_ids(&mut batch_table_res, batch_length, &mut global_batch_ids);
 
         let feature_batch_id = if batch_length > 0 {
             {
