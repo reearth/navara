@@ -345,7 +345,6 @@ export function injectSelectiveEffectHandlers(
   let savedColorB: number | undefined;
   let savedOpacity: number | undefined;
   let savedTransparent: boolean | undefined;
-  let savedBlending: Blending | undefined;
 
   // Wrapped onBeforeRender with proper `this` binding
   object.onBeforeRender = (
@@ -467,13 +466,11 @@ export function injectSelectiveEffectHandlers(
         savedColorB = material.color.b;
         savedOpacity = material.opacity;
         savedTransparent = material.transparent;
-        savedBlending = material.blending;
 
         // CRITICAL: Set transparent=true to disable Three.js OPAQUE shader path.
         // When OPAQUE is active, alpha output is hardcoded to 1.0 regardless of opacity.
-        // NoBlending prevents alpha blending with the mask RT clear color.
+        // Blending is already set to NoBlending by applyMaskPassRenderState() above.
         material.transparent = true;
-        material.blending = NoBlending;
 
         if (!evaluation.bloomActive) {
           material.color.setRGB(0, 0, 0);
@@ -535,20 +532,17 @@ export function injectSelectiveEffectHandlers(
       savedColorB !== undefined &&
       savedOpacity !== undefined &&
       savedTransparent !== undefined &&
-      savedBlending !== undefined &&
       hasMaterialColor(material)
     ) {
       material.color.setRGB(savedColorR, savedColorG, savedColorB);
       material.opacity = savedOpacity;
       material.transparent = savedTransparent;
-      material.blending = savedBlending;
 
       savedColorR = undefined;
       savedColorG = undefined;
       savedColorB = undefined;
       savedOpacity = undefined;
       savedTransparent = undefined;
-      savedBlending = undefined;
     }
   };
 }
