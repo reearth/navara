@@ -2,7 +2,6 @@ import { type TextMesh as NavaraTextMesh } from "@navara/engine";
 
 import type { BufferLoader } from "..";
 import type { ViewContext } from "../../core";
-import { DEFAULT_FONT_URL } from "../../font";
 import { BatchedSdfTextMesh } from "../../mesh";
 import { FEATURE_RENDER_ORDER } from "../../renderOrder";
 import type { RenderFlag } from "../../type";
@@ -15,10 +14,11 @@ export async function renderText(
   viewContext: ViewContext,
   layerId: string,
 ) {
-  const fontUrl =
-    m.material.font == undefined || m.material.font === ""
-      ? DEFAULT_FONT_URL
-      : m.material.font;
+  const fontUrl = m.material.font;
+  if (!fontUrl || fontUrl === "") {
+    console.warn("material.font is required for text rendering but was not set.");
+    return;
+  }
   const fontManager = viewContext.fontManager;
 
   // Use SDF pipeline when a font URL is specified and FontManager is available

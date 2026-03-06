@@ -170,7 +170,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
       clampToGround: true,
       depthTest: true,
       text: "hello 京都",
-      // font: "/font/LoveDays-2v7Oe.ttf",
+      font: FONT_DATASETS.NotoSansJP.url,
       backgroundColor: new Color().setStyle("#0a70c2"),
       borderColor: new Color().setStyle("#f8e43c"),
       borderWidth: 0.08, // 0 ~ 0.5, the ratio of the border to the height
@@ -255,6 +255,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
       clampToGround: true,
       depthTest: true,
       text: "Mt.Everest",
+      font: FONT_DATASETS.Roboto.url,
       backgroundColor: new Color().setStyle("#a4e996"),
       borderColor: new Color().setStyle("#4aac3b"),
       borderWidth: 0.1, // 0 ~ 0.5, the ratio of the border to the height
