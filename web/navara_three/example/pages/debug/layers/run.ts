@@ -13,6 +13,7 @@ import {
   TILES_3D_DATASETS,
   MVT_DATASETS,
   GEOJSON_DATASETS,
+  FONT_DATASETS,
 } from "../../../helpers/constants";
 import { addDateControl, addCameraControl } from "../../../helpers/control";
 import {
@@ -205,6 +206,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
       clampToGround: true,
       depthTest: true,
       text: "hello world!!!",
+      font: FONT_DATASETS.Borel.url,
       backgroundColor: new Color().setStyle("#0a70c2"),
       borderColor: new Color().setStyle("#f8e43c"),
       borderWidth: 0.08, // 0 ~ 0.5, the ratio of the border to the height
@@ -223,7 +225,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
       outlineOffset: { x: 4, y: 0 }, // px
       outlineOpacity: 1.0,
       outlineWidth: 4, // px
-      offsetDepth: false,
+      offsetDepth: true,
     },
   },
 

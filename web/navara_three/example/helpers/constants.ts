@@ -314,9 +314,14 @@ export const FONT_DATASETS = {
     attribution: "Noto Sans JP - Google Fonts",
     attributionUrl: "https://fonts.google.com/noto/specimen/Noto+Sans+JP",
   },
-  inter: {
-    url: "/fonts/inter/Inter[opsz,wght].ttf",
-    attribution: "Inter - Google Fonts",
-    attributionUrl: "https://fonts.google.com/specimen/Inter",
+  Roboto: {
+    url: "/fonts/roboto/Roboto[wdth,wght].ttf",
+    attribution: "Roboto - Google Fonts",
+    attributionUrl: "https://fonts.google.com/specimen/Roboto",
+  },
+  Borel: {
+    url: "/fonts/borel/Borel-Regular.ttf",
+    attribution: "Borel - Google Fonts",
+    attributionUrl: "https://fonts.google.com/specimen/Borel",
   },
 } satisfies Record<string, Dataset>;

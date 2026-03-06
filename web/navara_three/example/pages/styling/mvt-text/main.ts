@@ -83,7 +83,7 @@ const run = async () => {
       data: { url: VECTOR_DATASETS.gsiExperimentalVector.url },
       text: {
         lang: "ja",
-        font: FONT_DATASETS.jizuraGothic.url,
+        font: FONT_DATASETS.NotoSansJP.url,
         color: new Color().setStyle("#ffffff"),
         scaleByDistance: true,
         clampToGround: true,

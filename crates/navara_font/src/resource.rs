@@ -119,11 +119,9 @@ impl FontCache {
 
     /// Store a newly loaded font. Parses the font data and creates a fresh atlas.
     pub fn insert(&mut self, url: String, data: Vec<u8>) -> Result<(), &'static str> {
-        let raster_font = fontdue::Font::from_bytes(
-            data.as_slice(),
-            fontdue::FontSettings::default(),
-        )
-        .map_err(|_| "Failed to parse font with fontdue")?;
+        let raster_font =
+            fontdue::Font::from_bytes(data.as_slice(), fontdue::FontSettings::default())
+                .map_err(|_| "Failed to parse font with fontdue")?;
         let units_per_em = crate::shaping::get_units_per_em(&data).unwrap_or(1000);
         self.fonts.insert(
             url,

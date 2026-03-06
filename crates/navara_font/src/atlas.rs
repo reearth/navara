@@ -1,5 +1,5 @@
 use guillotiere::Size;
-use sdf_glyph_renderer::{clamp_to_u8, BitmapGlyph};
+use sdf_glyph_renderer::{BitmapGlyph, clamp_to_u8};
 
 use crate::resource::{GlyphMetrics, LRU_MIN_AGE, SDF_PX_SIZE, SDFAtlas};
 
