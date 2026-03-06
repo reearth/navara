@@ -79,6 +79,14 @@ type AggregatedResultValue<K = EvaluatableMaterialPropertyKey> = {
 };
 
 /**
+ * Callback function type for feature evaluator operations.
+ */
+export type FeatureEvaluatorCallback = (
+  batchId: number,
+  properties: Record<string, unknown> | undefined,
+) => Partial<EvaluatedValue>;
+
+/**
  * Provides access to feature data and allows dynamic styling of features based on their properties.
  * Received through the `featureCreated` and `featureUpdated` events on a Layer.
  *
@@ -245,12 +253,7 @@ export class FeatureEvaluator {
    * });
    * ```
    */
-  evaluate(
-    f: (
-      batchId: number,
-      property: Record<string, unknown> | undefined,
-    ) => Partial<EvaluatedValue>,
-  ) {
+  evaluate(f: FeatureEvaluatorCallback) {
     const result = new Map<
       EvaluatableMaterialPropertyKey,
       {

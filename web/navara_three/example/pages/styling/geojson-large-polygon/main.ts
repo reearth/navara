@@ -79,6 +79,7 @@ const run = async () => {
         height: 0,
         extrudedHeight: 0,
         clampToGround: false,
+        outline: true,
         outlineShow: params.outlineShow,
         outlineWidth: 2,
         outlineColor: new Color().setHex(0xff00ff),

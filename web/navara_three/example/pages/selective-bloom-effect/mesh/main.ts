@@ -3,20 +3,33 @@ import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
   degreeToRadian,
   geodeticToVector3,
-  type BoxMeshLayer,
-  type SphereMeshLayer,
 } from "@navara/three";
+import type {
+  BoxMeshLayer,
+  SphereMeshLayer,
+} from "@navara/three_default_layers";
+import {
+  DefaultPlugin,
+  type DefaultLayerDescriptions,
+} from "@navara/three_default_plugin";
 import { Vector3 } from "three";
 
 import { showAttributions } from "../../../helpers/attributions";
 import { TERRAIN_DATASETS, TILE_DATASETS } from "../../../helpers/constants";
 
 const run = async () => {
-  const view = new ThreeView({ debug: true, shadow: true });
+  const view = new ThreeView<DefaultLayerDescriptions>({
+    debug: true,
+    shadow: true,
+  });
+
+  const defaultPlugin = new DefaultPlugin();
+  view.addPlugin(defaultPlugin);
+
   await view.init();
 
-  const atmospheres = view.addDefaultAtmosphereLayers();
-  atmospheres.sun.update({
+  const defaultAtmospheres = defaultPlugin.addDefaultPhotorealLayers();
+  defaultAtmospheres.sun.update({
     sun: { intensity: 1, castShadow: true },
   });
 

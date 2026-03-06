@@ -3,15 +3,18 @@ import {
   Color,
   JAPAN_GSI_ELEVATION_DECODER,
 } from "@navara/three";
+import type { DefaultPlugin } from "@navara/three_default_plugin";
 import { Layer, useViewContext } from "@navara/three_react";
 import { useMemo, type FC } from "react";
 
 import { useDefaultLayers } from "./hooks";
 
-export const Layers: FC = () => {
+export const Layers: FC<{ defaultPlugin: DefaultPlugin }> = ({
+  defaultPlugin,
+}) => {
   const { view } = useViewContext();
 
-  const defaultLayers = useDefaultLayers(view);
+  const defaultLayers = useDefaultLayers(view, defaultPlugin);
 
   // Descriptions
   const baseTiles = useMemo<LayerDescription>(

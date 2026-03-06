@@ -2,10 +2,6 @@ import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
   type LayerHandle,
   type PickedFeature,
-  type SphereMeshLayer,
-  type TubeMeshLayer,
-  type CylinderMeshLayer,
-  type GLTFModelLayer,
   type Nullable,
   type XYZ,
   type MapMouseEvent,
@@ -27,6 +23,16 @@ import ThreeView, {
   EllipsoidGeodesic,
   Color,
 } from "@navara/three";
+import type {
+  SphereMeshLayer,
+  TubeMeshLayer,
+  CylinderMeshLayer,
+  GLTFModelLayer,
+} from "@navara/three_default_layers";
+import {
+  DefaultPlugin,
+  type DefaultLayerDescriptions,
+} from "@navara/three_default_plugin";
 import { Mesh, Vector2, Vector3, Object3D, Group, ArrowHelper } from "three";
 import { Pane, FolderApi } from "tweakpane";
 
@@ -89,10 +95,12 @@ let gPickedPos: Nullable<Vector3> = null;
 
 const gPopup = new FloatingDialog();
 
-export const run = async (view: ThreeView) => {
+export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
+  const plugin = new DefaultPlugin();
+  view.addPlugin(plugin);
   await view.init();
 
-  view.addDefaultAtmosphereLayers();
+  plugin.addDefaultPhotorealLayers();
 
   gView = view;
 
@@ -194,7 +202,7 @@ export const run = async (view: ThreeView) => {
   ]);
 };
 
-const addRunningObject = (view: ThreeView) => {
+const addRunningObject = (view: ThreeView<DefaultLayerDescriptions>) => {
   const sphere = placeOneBall(view, new Vector3(0, 0, 0), 0xffffff);
   if (!sphere) {
     return;
@@ -228,7 +236,7 @@ const addRunningObject = (view: ThreeView) => {
   animateFunc();
 };
 
-const testScreenToWorld = (view: ThreeView) => {
+const testScreenToWorld = (view: ThreeView<DefaultLayerDescriptions>) => {
   const onMouseMove = (event: MouseEvent) => {
     if (!gPaneParams.convertScreenToWorld) {
       return;
@@ -250,7 +258,7 @@ const testScreenToWorld = (view: ThreeView) => {
 };
 
 const placeOneBall = (
-  view: ThreeView,
+  view: ThreeView<DefaultLayerDescriptions>,
   pos: Vector3 | undefined,
   color: number,
 ): Mesh | undefined => {
@@ -270,7 +278,7 @@ const placeOneBall = (
   }
 };
 
-const addTestModelForNormal = (view: ThreeView) => {
+const addTestModelForNormal = (view: ThreeView<DefaultLayerDescriptions>) => {
   const pos = geodeticToVector3({
     lat: degreeToRadian(43.0618),
     lng: degreeToRadian(141.3545),
@@ -324,7 +332,9 @@ const addTestModelForNormal = (view: ThreeView) => {
   }
 };
 
-const addTestModelForTerrainHeight = (view: ThreeView) => {
+const addTestModelForTerrainHeight = (
+  view: ThreeView<DefaultLayerDescriptions>,
+) => {
   const pos = geodeticToVector3({
     lat: degreeToRadian(gFujiPos[0]),
     lng: degreeToRadian(gFujiPos[1]),
@@ -549,7 +559,7 @@ const onTransformChange = () => {
   }
 };
 
-const testRayPlane = (view: ThreeView) => {
+const testRayPlane = (view: ThreeView<DefaultLayerDescriptions>) => {
   let center: Vector3 | undefined = undefined;
   let radius: number | undefined = undefined;
   let height: number | undefined = undefined;
@@ -642,7 +652,10 @@ const testRayPlane = (view: ThreeView) => {
   view.on("mouseup", onMouseUp);
 };
 
-const makeCylinder = (view: ThreeView, center: Vector3): Mesh | undefined => {
+const makeCylinder = (
+  view: ThreeView<DefaultLayerDescriptions>,
+  center: Vector3,
+): Mesh | undefined => {
   const cylinderLayer = view.addLayer<CylinderMeshLayer>({
     type: "mesh",
     cylinder: {
@@ -725,7 +738,10 @@ const onDistPosChange = () => {
   geodesic.dispose();
 };
 
-const updatePolylineMesh = (view: ThreeView, curvePoints: XYZ[]) => {
+const updatePolylineMesh = (
+  view: ThreeView<DefaultLayerDescriptions>,
+  curvePoints: XYZ[],
+) => {
   if (!gPolylineLayer) return;
 
   // Calculate appropriate tube radius based on camera distance to keep visual thickness constant
@@ -769,7 +785,7 @@ const updatePolylineMesh = (view: ThreeView, curvePoints: XYZ[]) => {
   gMouseBall?.scale.set(mouseBallRadius, mouseBallRadius, mouseBallRadius);
 };
 
-const addCameraListener = (view: ThreeView) => {
+const addCameraListener = (view: ThreeView<DefaultLayerDescriptions>) => {
   // Update tube thickness when camera moves
   view.camera.on("move", () => {
     if (!gPolylineLayer || !view.camera || gPolylinePoints.length === 0) return;
@@ -790,7 +806,7 @@ const addCameraListener = (view: ThreeView) => {
   });
 };
 
-const createPolylineMesh = (view: ThreeView) => {
+const createPolylineMesh = (view: ThreeView<DefaultLayerDescriptions>) => {
   // Create initial points for the curve
   const points: XYZ[] = Array.from({ length: 2 }, () => ({
     x: 0,
@@ -812,7 +828,7 @@ const createPolylineMesh = (view: ThreeView) => {
   });
 };
 
-const testSampleTerrainHeight = (view: ThreeView) => {
+const testSampleTerrainHeight = (view: ThreeView<DefaultLayerDescriptions>) => {
   const onMouseMove = (event: MapMouseEvent) => {
     const mapPos = event.map;
 
@@ -879,7 +895,7 @@ const onRegisterChange = () => {
   }
 };
 
-const testShowModelInfo = (view: ThreeView) => {
+const testShowModelInfo = (view: ThreeView<DefaultLayerDescriptions>) => {
   view.on("pick", (info) => {
     if (!info) {
       gPickedPos = null;

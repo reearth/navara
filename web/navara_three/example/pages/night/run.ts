@@ -4,7 +4,6 @@ import ThreeView, {
   type LayerHandle,
   type LightProbeLayer,
   type SkyLightProbeLayer,
-  type StarsLayer,
   type FogLightEffectLayer,
   type LayerDescription,
   type FogLightDefinition,
@@ -12,6 +11,8 @@ import ThreeView, {
   geodeticToVector3,
   Color,
 } from "@navara/three";
+import type { StarsLayer } from "@navara/three_default_layers";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 import type { FeatureCollection, Point } from "geojson";
 import { SphericalHarmonics3 } from "three";
 import { Pane } from "tweakpane";
@@ -27,6 +28,8 @@ import { addCameraControl, addDateControl } from "../../helpers/control";
 import { SH_COEFFICIENTS } from "../../helpers/sh";
 
 export const run = async (view: ThreeView) => {
+  const plugin = new DefaultPlugin();
+  view.addPlugin(plugin);
   await view.init();
 
   // Night scene configuration
@@ -39,14 +42,15 @@ export const run = async (view: ThreeView) => {
   view.addDefaultEffectLayers();
 
   // Configure atmosphere for night scene
-  const defaultAtmosphere = view.addDefaultAtmosphereLayers();
+  const defaultAtmosphere = plugin.addDefaultPhotorealLayers();
+  const starsLayer = defaultAtmosphere.stars;
   defaultAtmosphere.sun.update({
     sun: {
       castShadow: true,
     },
   });
 
-  defaultAtmosphere.stars.update({
+  starsLayer.update({
     stars: {
       intensity: 50,
       pointSize: 2,
@@ -130,7 +134,7 @@ export const run = async (view: ThreeView) => {
   addNightLightProbeControl(view, pane);
 
   // Stars controls
-  addStarsControl(view, defaultAtmosphere.stars, pane);
+  addStarsControl(view, starsLayer, pane);
 
   // Sky Light Probe controls
   addSkyLightProbeControl(view, defaultAtmosphere.skyLightProbe, pane);

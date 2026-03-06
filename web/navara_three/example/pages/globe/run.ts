@@ -1,4 +1,8 @@
 import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
+import {
+  DefaultPlugin,
+  type DefaultLayerDescriptions,
+} from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../helpers/attributions";
@@ -11,14 +15,16 @@ import { addCameraControl, addDateControl } from "../../helpers/control";
 import { addFieldsToFolder, type FolderFields } from "../../helpers/panel";
 
 export async function run() {
-  const view = new ThreeView({});
+  const view = new ThreeView<DefaultLayerDescriptions>({});
 
+  const plugin = new DefaultPlugin();
+  view.addPlugin(plugin);
   await view.init();
 
   view.toneMappingExposure = 10;
 
   // Add atmosphere layers
-  const defaultAtmosphere = view.addDefaultAtmosphereLayers();
+  const defaultAtmosphere = plugin.addDefaultPhotorealLayers();
   const defaultEffects = view.addDefaultEffectLayers();
 
   defaultAtmosphere.sky.delete();

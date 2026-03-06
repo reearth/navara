@@ -3,15 +3,19 @@ import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
   degreeToRadian,
   geodeticToVector3,
-  type BoxMeshLayer,
-  type CylinderMeshLayer,
   type LayerHandle,
-  type PlaneMeshLayer,
-  type SphereMeshLayer,
-  type TubeMeshLayer,
   type SelectiveEffectOcclusion,
   Layer,
 } from "@navara/three";
+import type {
+  ArclineMeshLayer,
+  BoxMeshLayer,
+  CylinderMeshLayer,
+  PlaneMeshLayer,
+  SphereMeshLayer,
+  TubeMeshLayer,
+} from "@navara/three_default_layers";
+import type { DefaultLayerDescriptions } from "@navara/three_default_plugin";
 import type { FeatureCollection } from "geojson";
 import { Vector3 } from "three";
 
@@ -105,6 +109,17 @@ export const CHUO_CONFIG = {
 } as const;
 
 /**
+ * ArcLine mesh initial configuration (東京都心)
+ */
+export const ARCLINE_CONFIG = {
+  srcColor: new Color().setHex(0x00ffcc),
+  tgtColor: new Color().setHex(0xff6600),
+  selectiveEffectOcclusion: "normal" satisfies SelectiveEffectOcclusion,
+  bloomEnabled: true,
+  outlineEnabled: false,
+} as const;
+
+/**
  * GeoJSON Polygon initial configuration (お台場)
  */
 export const POLYGON_CONFIG = {
@@ -194,6 +209,14 @@ export const CAMERA_FOCUS_POSITIONS = {
     pitch: -40,
     roll: 0,
   },
+  arcline: {
+    lng: 130,
+    lat: 30,
+    height: 1500000,
+    heading: 0,
+    pitch: -60,
+    roll: 0,
+  },
 } as const satisfies Record<string, CameraPosition>;
 
 export type GeoJsonPolygonState = {
@@ -218,6 +241,7 @@ export type SceneLayers = {
   cylinderLayer: LayerHandle<CylinderMeshLayer>;
   tubeLayer: LayerHandle<TubeMeshLayer>;
   planeLayer: LayerHandle<PlaneMeshLayer>;
+  arclineLayer: LayerHandle<ArclineMeshLayer>;
   polygonLayer: GeoJsonPolygonLayer;
   chiyodaLayer: Layer;
   chuoLayer: Layer;
@@ -229,7 +253,7 @@ export type EffectIds = {
 };
 
 export const createSceneLayers = (
-  view: ThreeView,
+  view: ThreeView<DefaultLayerDescriptions>,
   effectIds: EffectIds,
 ): SceneLayers => {
   const tokyoStationPosition = geodeticToVector3({
@@ -398,6 +422,34 @@ export const createSceneLayers = (
     selectiveEffectOcclusion: "normal",
   });
 
+  // ArcLine at Tokyo metro area (東京都心)
+  const arclineEffectIds: string[] = [];
+  if (ARCLINE_CONFIG.bloomEnabled) arclineEffectIds.push(effectIds.bloomId);
+  if (ARCLINE_CONFIG.outlineEnabled) arclineEffectIds.push(effectIds.outlineId);
+
+  const arclineLayer = view.addLayer<ArclineMeshLayer>({
+    type: "mesh",
+    effectIds: arclineEffectIds,
+    selectiveEffectOcclusion: ARCLINE_CONFIG.selectiveEffectOcclusion,
+    arcLines: [
+      {
+        thickness: 10,
+        segments: 64,
+        arcHeightScale: 0.3,
+        srcColor: ARCLINE_CONFIG.srcColor.clone(),
+        tgtColor: ARCLINE_CONFIG.tgtColor.clone(),
+        geometry: [
+          { lng: 139.767, lat: 35.681 }, // Tokyo
+          { lng: 126.44, lat: 37.46 }, // Seoul
+          { lng: 139.767, lat: 35.681 }, // Tokyo
+          { lng: 121.23, lat: 25.08 }, // Taipei
+          { lng: 139.767, lat: 35.681 }, // Tokyo
+          { lng: 113.92, lat: 22.31 }, // Hong Kong
+        ],
+      },
+    ],
+  });
+
   // GeoJSON Polygon at Odaiba (お台場)
   const odaibaFeature: FeatureCollection = {
     type: "FeatureCollection",
@@ -501,6 +553,7 @@ export const createSceneLayers = (
     cylinderLayer,
     tubeLayer,
     planeLayer,
+    arclineLayer,
     polygonLayer,
     chiyodaLayer,
     chuoLayer,
@@ -508,7 +561,7 @@ export const createSceneLayers = (
 };
 
 type CreateGeoJsonPolygonLayerOptions = {
-  view: ThreeView;
+  view: ThreeView<DefaultLayerDescriptions>;
   feature: FeatureCollection;
   polygon: GeoJsonPolygonState;
 };

@@ -1,4 +1,4 @@
-import { EventManager, EventHandler, Globe } from "@navara/core";
+import { EventManager, EventHandler, Globe, Plugin } from "@navara/core";
 import type {
   CameraPosition,
   ColorMap,
@@ -42,6 +42,7 @@ import {
   LayerDeclaration,
   ViewContext,
   SelectiveEffectHelper,
+  type MeshLayerConfig,
   type MeshLayerConstructor,
   type LightLayerConstructor,
   type EffectLayerConstructor,
@@ -88,23 +89,7 @@ import {
 } from "./layers/effect";
 import { AerialPerspectiveEffectLayer } from "./layers/effect/AerialPerspectiveEffectLayer";
 import { FinalCopyEffectLayer } from "./layers/effect/FinalCopyEffectLayer";
-import { ArrowHelperLayer } from "./layers/helpers/ArrowHelperLayer";
-import { AxesHelperLayer } from "./layers/helpers/AxesHelperLayer";
 import { LightProbeLayer } from "./layers/light/LightProbeLayer";
-import { ArclineMeshLayer } from "./layers/mesh/ArclineMeshLayer";
-import { BoxMeshLayer } from "./layers/mesh/BoxMeshLayer";
-import { CylinderMeshLayer } from "./layers/mesh/CylinderMeshLayer";
-import { GlowGlobeMeshLayer } from "./layers/mesh/GlowGlobeMeshLayer";
-import { GLTFModelLayer } from "./layers/mesh/GLTFModelLayer";
-import { PlaneMeshLayer } from "./layers/mesh/PlaneMeshLayer";
-import { RainMeshLayer } from "./layers/mesh/RainMeshLayer";
-import { SkyBoxMeshLayer } from "./layers/mesh/SkyBoxMeshLayer";
-import { SkyMeshLayer } from "./layers/mesh/SkyMeshLayer";
-import { SmoothLineMeshLayer } from "./layers/mesh/SmoothLineMeshLayer";
-import { SnowMeshLayer } from "./layers/mesh/SnowMeshLayer";
-import { SphereMeshLayer } from "./layers/mesh/SphereMeshLayer";
-import { StarsLayer } from "./layers/mesh/StarsLayer";
-import { TubeMeshLayer } from "./layers/mesh/TubeMeshLayer";
 import { LayersManager } from "./layersManager";
 import { overrideMaterialsForMRT } from "./material";
 import { RenderPassOrchestrator } from "./orchestrators/RenderPassOrchestrator";
@@ -123,7 +108,6 @@ import {
   type WorkerPoolPromises,
   type RenderFlag,
   type TileMapByHandle,
-  type MeshLayerDeclarationDescription,
   type LightLayerDeclarationDescription,
   type EffectLayerDeclarationDescription,
   type DrapedMaterialCache,
@@ -136,7 +120,7 @@ import WorkerURL from "./worker?url&worker";
 
 export type { CameraOptions, CameraEvent } from "./camera";
 
-export { ColorMap, EventHandler } from "@navara/core";
+export { ColorMap, EventHandler, Plugin } from "@navara/core";
 export type {
   Nullable,
   XYZ,
@@ -147,6 +131,8 @@ export type {
   ColorTuple,
   LUT,
   Globe,
+  Observed,
+  ObservedEvent,
 } from "@navara/core";
 export { CameraDirection } from "@navara/engine";
 // CSM exports for advanced users
@@ -166,6 +152,7 @@ export * from "./layers";
 export * from "./lights";
 export * from "./passes";
 export * from "./evaluations";
+export { SKY_RENDER_ORDER, STARS_RENDER_ORDER } from "./renderOrder";
 export * from "@navara/three_api";
 export * from "./Color";
 export {
@@ -173,7 +160,8 @@ export {
   isMobileDevice,
   type DevicePixelRatioOptions,
 } from "./device";
-export { type BlendMode } from "./utils";
+export { type BlendMode, createReplacer } from "./utils";
+export type { CustomObject3DEventMap } from "./object3DEvent";
 
 // NOTE:
 // This overrides all materials to output a normal buffer, meaning Navara operates using MRT (Multiple Render Targets).
@@ -294,8 +282,7 @@ type ActualLayerDescription = _ActualLayerDescription;
  * ```
  */
 export default class ThreeView<
-  CustomLayerDescriptions extends Record<string, unknown> | undefined =
-    undefined,
+  CustomLayerDescriptions extends object | undefined = undefined,
   LayerDescription extends ActualLayerDescription =
     CustomLayerDescriptions extends undefined
       ? ActualLayerDescription
@@ -560,6 +547,7 @@ export default class ThreeView<
   /** Helper for managing selective post-processing effects that apply to specific objects. */
   public selectiveEffectHelper: SelectiveEffectHelper;
   private viewContext!: ViewContext;
+  private plugins: Plugin[] = [];
 
   constructor(options: Options = {}) {
     super();
@@ -926,6 +914,8 @@ export default class ThreeView<
 
     await this.initializeRenderPass();
 
+    await Promise.all(this.plugins.map((p) => p.init(this)));
+
     this._startMainLoop();
 
     const size = new Vector2();
@@ -1196,9 +1186,9 @@ export default class ThreeView<
   ): L extends LayerDeclaration ? LayerHandle<L> : Layer {
     // Check if this is a mesh layer
     if (l.type === "mesh") {
-      return this.addMeshLayer(
-        l as MeshLayerDeclarationDescription,
-      ) as L extends LayerDeclaration ? LayerHandle<L> : never; // TODO: Remove this cast later.
+      return this.addMeshLayer(l) as L extends LayerDeclaration
+        ? LayerHandle<L>
+        : never; // TODO: Remove this cast later.
     }
 
     // Check if this is a light layer
@@ -1256,28 +1246,8 @@ export default class ThreeView<
   }
 
   private registerBuiltIns(): void {
-    this.registerBuiltInMeshes();
     this.registerBuiltInLights();
     this.registerBuiltInEffects();
-  }
-
-  private registerBuiltInMeshes(): void {
-    this.registerMesh("rain", RainMeshLayer);
-    this.registerMesh("snow", SnowMeshLayer);
-    this.registerMesh("sky", SkyMeshLayer);
-    this.registerMesh("skyBox", SkyBoxMeshLayer);
-    this.registerMesh("stars", StarsLayer);
-    this.registerMesh("box", BoxMeshLayer);
-    this.registerMesh("sphere", SphereMeshLayer);
-    this.registerMesh("glowGlobe", GlowGlobeMeshLayer);
-    this.registerMesh("cylinder", CylinderMeshLayer);
-    this.registerMesh("tube", TubeMeshLayer);
-    this.registerMesh("plane", PlaneMeshLayer);
-    this.registerMesh("gltfModel", GLTFModelLayer);
-    this.registerMesh("axesHelper", AxesHelperLayer);
-    this.registerMesh("arrowHelper", ArrowHelperLayer);
-    this.registerMesh("arcLines", ArclineMeshLayer);
-    this.registerMesh("smoothLines", SmoothLineMeshLayer);
   }
 
   private registerBuiltInLights(): void {
@@ -1315,7 +1285,7 @@ export default class ThreeView<
     this.registerEffect("final", FinalCopyEffectLayer);
   }
 
-  private addMeshLayer(config: MeshLayerDeclarationDescription): LayerHandle {
+  private addMeshLayer(config: MeshLayerConfig): LayerHandle {
     // Find which mesh type from config
     const meshType = this.registries.mesh.findMeshType(config);
     if (!meshType) {
@@ -1455,6 +1425,19 @@ export default class ThreeView<
   }
 
   /**
+   * Adds a plugin to the view. Plugins are initialized during `init()`.
+   * Must be called before `init()`.
+   * @param plugin - The plugin instance to add
+   * @returns This view instance for chaining
+   */
+  addPlugin(plugin: Plugin): this {
+    if (this._initialized)
+      throw new Error("Plugin must be added before `view.init()`.");
+    this.plugins.push(plugin);
+    return this;
+  }
+
+  /**
    * Find the sun light layer in the current layers
    */
   private findSunLightLayer(): SunLightLayer | null {
@@ -1489,39 +1472,6 @@ export default class ThreeView<
       return;
     }
     sunLightLayer._removeMaterialFromShadows(material);
-  }
-
-  /**
-   * Adds the default atmosphere layers including sky, stars, and sun lighting.
-   * @returns Handles to the created sky, skyEnv, stars, skyLightProbe, and sun layers
-   */
-  // TODO: Handle this in plugin system.
-  addDefaultAtmosphereLayers() {
-    return {
-      sky: this.addLayer<SkyMeshLayer>({
-        type: "mesh",
-        sky: {},
-      } as LayerDescription),
-      skyEnv: this.addLayer<SkyMeshLayer>({
-        type: "mesh",
-        sky: {
-          envMap: true,
-          sunAngularRadius: 0.1,
-        },
-      } as LayerDescription),
-      stars: this.addLayer<StarsLayer>({
-        type: "mesh",
-        stars: {},
-      } as LayerDescription),
-      skyLightProbe: this.addLayer<SkyLightProbeLayer>({
-        type: "light",
-        skyLightProbe: {},
-      } as LayerDescription),
-      sun: this.addLayer<SunLightLayer>({
-        type: "light",
-        sun: {},
-      } as LayerDescription),
-    };
   }
 
   /**

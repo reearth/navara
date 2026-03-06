@@ -110,6 +110,7 @@ export default defineConfig((env) => {
       assetsDir: "./",
     },
     resolve: {
+      dedupe: ["react", "react-dom"],
       alias: {
         ...common.resolve?.alias,
         "@shaders": normalizePath(path.resolve(__dirname, "../../shaders")),
@@ -125,6 +126,9 @@ export default defineConfig((env) => {
               ),
               "@navara/three_csm": normalizePath(
                 path.resolve(__dirname, "../navara_three_csm/src"),
+              ),
+              "@navara/three_default_plugin": normalizePath(
+                path.resolve(__dirname, "../navara_three_default_plugin/src"),
               ),
               "@navara/three_react": normalizePath(
                 path.resolve(__dirname, "../navara_three_react/src"),

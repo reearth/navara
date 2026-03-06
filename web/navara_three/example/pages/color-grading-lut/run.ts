@@ -6,6 +6,7 @@ import ThreeView, {
   DEFAULT_COLOR_GRADING_LUT_OPTIONS,
   JAPAN_GSI_ELEVATION_DECODER,
 } from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../helpers/attributions";
@@ -24,19 +25,22 @@ import {
 let gColorGradingLUTLayer: LayerHandle<ColorGradingLUTEffectLayer>;
 
 export const run = async (view: ThreeView) => {
+  const defaultPlugin = new DefaultPlugin();
+  view.addPlugin(defaultPlugin);
+
   await view.init();
 
-  view.toneMappingExposure = 10;
-
-  view.addDefaultEffectLayers();
-
-  const defaultAtmospheres = view.addDefaultAtmosphereLayers();
+  const defaultAtmospheres = defaultPlugin.addDefaultPhotorealLayers();
   defaultAtmospheres.sun.update({
     sun: {
       intensity: 1,
       castShadow: true,
     },
   });
+
+  view.toneMappingExposure = 10;
+
+  view.addDefaultEffectLayers();
 
   gColorGradingLUTLayer = view.addLayer<ColorGradingLUTEffectLayer>({
     type: "effect",
