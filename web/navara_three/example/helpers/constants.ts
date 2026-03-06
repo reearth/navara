@@ -309,12 +309,14 @@ export const LUT_DATASETS = {
 } satisfies Record<string, Dataset>;
 
 export const FONT_DATASETS = {
-  jizuraMincho: {
-    url: "https://raw.githubusercontent.com/loveencounterflow/jizura-fonts/master/fonts/fonts-japanese-mincho.ttf",
-    attribution: "Jizura Mincho - loveencounterflow",
+  NotoSansJP: {
+    url: "/fonts/notosansjp/NotoSansJP[wght].ttf",
+    attribution: "Noto Sans JP - Google Fonts",
+    attributionUrl: "https://fonts.google.com/noto/specimen/Noto+Sans+JP",
   },
-  jizuraGothic: {
-    url: "https://raw.githubusercontent.com/loveencounterflow/jizura-fonts/master/fonts/fonts-japanese-gothic.ttf",
-    attribution: "Jizura Gothic - loveencounterflow",
+  inter: {
+    url: "/fonts/inter/Inter[opsz,wght].ttf",
+    attribution: "Inter - Google Fonts",
+    attributionUrl: "https://fonts.google.com/specimen/Inter",
   },
 } satisfies Record<string, Dataset>;
