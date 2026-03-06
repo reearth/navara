@@ -1,14 +1,22 @@
 use guillotiere::Size;
+use sdf_glyph_renderer::{clamp_to_u8, BitmapGlyph};
 
 use crate::resource::{GlyphMetrics, LRU_MIN_AGE, SDF_PX_SIZE, SDFAtlas};
 
+/// SDF buffer: padding pixels around the glyph bitmap for SDF generation.
+const SDF_BUFFER: usize = 6;
+
+/// SDF radius: max distance (in pixels) captured by the distance field.
+const SDF_RADIUS: usize = 6;
+
 /// Ensure all required glyphs (by glyph ID, post-shaping) are in the atlas.
 ///
-/// For each glyph ID not yet in the atlas, rasterizes its SDF and packs it.
+/// For each glyph ID not yet in the atlas, rasterizes a bitmap with fontdue,
+/// then generates an SDF using sdf_glyph_renderer (TinySDF/Felzenszwalb algorithm).
 /// Updates LRU timestamps for all requested glyphs.
 /// If the atlas is full, evicts the coldest unused glyphs before retrying.
 pub fn ensure_glyphs_in_atlas(
-    sdf_font: &fontsdf::Font,
+    raster_font: &fontdue::Font,
     glyph_ids: &[u32],
     atlas: &mut SDFAtlas,
     current_frame: u64,
@@ -22,14 +30,34 @@ pub fn ensure_glyphs_in_atlas(
             continue;
         }
 
-        // fontsdf uses u16 glyph indices (OpenType maxp table limits glyphs to 65535)
-        let (metrics, sdf_data) = sdf_font.rasterize_indexed_sdf(glyph_id as u16, SDF_PX_SIZE);
+        // Rasterize glyph to bitmap using fontdue
+        let (metrics, bitmap) = raster_font.rasterize_indexed(glyph_id as u16, SDF_PX_SIZE);
 
         if metrics.width == 0 || metrics.height == 0 {
             continue;
         }
 
-        let alloc_size = Size::new(metrics.width as i32, metrics.height as i32);
+        // Generate SDF from bitmap using sdf_glyph_renderer (Felzenszwalb algorithm)
+        let Ok(glyph_bitmap) =
+            BitmapGlyph::from_unbuffered(&bitmap, metrics.width, metrics.height, SDF_BUFFER)
+        else {
+            continue;
+        };
+
+        let sdf_f64 = glyph_bitmap.render_sdf(SDF_RADIUS);
+
+        // Convert f64 SDF to u8 [0, 255].
+        // sdf_glyph_renderer convention: positive = outside, negative = inside.
+        // clamp_to_u8 with cutoff=0.5 maps: inside → high values (>128), outside → low values (<128).
+        let Ok(sdf_data) = clamp_to_u8(&sdf_f64, 0.5) else {
+            continue;
+        };
+
+        // The SDF output includes the buffer on all sides
+        let sdf_w = metrics.width + SDF_BUFFER * 2;
+        let sdf_h = metrics.height + SDF_BUFFER * 2;
+
+        let alloc_size = Size::new(sdf_w as i32, sdf_h as i32);
 
         // Try to allocate; if full, evict cold glyphs and retry
         let alloc = atlas.allocator.allocate(alloc_size).or_else(|| {
@@ -47,12 +75,12 @@ pub fn ensure_glyphs_in_atlas(
         let atlas_x = rect.min.x;
         let atlas_y = rect.min.y;
 
-        // Copy single-channel SDF data into the atlas pixel buffer (R8 format)
-        for y in (0..metrics.height).rev() {
-            for x in 0..metrics.width {
-                let src_idx = y * metrics.width + x;
+        // Copy SDF data into the atlas pixel buffer (R8 format), Y-flipped for OpenGL
+        for y in 0..sdf_h {
+            for x in 0..sdf_w {
+                let src_idx = y * sdf_w + x;
                 let dst_x = atlas_x as usize + x;
-                let dst_y = atlas_y as usize + (metrics.height - 1 - y);
+                let dst_y = atlas_y as usize + (sdf_h - 1 - y);
                 let dst_idx = dst_y * atlas.width as usize + dst_x;
 
                 if src_idx < sdf_data.len() && dst_idx < atlas.pixel_data.len() {
@@ -67,10 +95,11 @@ pub fn ensure_glyphs_in_atlas(
                 alloc_id: alloc.id,
                 atlas_x,
                 atlas_y,
-                atlas_w: metrics.width as u32,
-                atlas_h: metrics.height as u32,
-                bearing_x: metrics.xmin as f32,
-                bearing_y: metrics.ymin as f32,
+                atlas_w: sdf_w as u32,
+                atlas_h: sdf_h as u32,
+                // Adjust bearings to account for the SDF buffer
+                bearing_x: metrics.xmin as f32 - SDF_BUFFER as f32,
+                bearing_y: metrics.ymin as f32 - SDF_BUFFER as f32,
             },
         );
         new_glyphs = true;

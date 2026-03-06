@@ -110,7 +110,7 @@ pub fn shape_text(url: &str, text: &str) -> Option<ShapeTextResult> {
 
         let glyph_ids: Vec<u32> = shaped.iter().map(|g| g.glyph_id).collect();
         let atlas_changed = atlas::ensure_glyphs_in_atlas(
-            &entry.sdf_font,
+            &entry.raster_font,
             &glyph_ids,
             &mut entry.atlas,
             current_frame,

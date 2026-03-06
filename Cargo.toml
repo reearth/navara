@@ -63,7 +63,8 @@ console_error_panic_hook = "0.1.7"
 
 # --- Font ---
 rustybuzz = "0.20.1"
-fontsdf = "0.5.3"
+fontdue = "0.9.3"
+sdf_glyph_renderer = "1.0.2"
 guillotiere = "0.6.2"
 
 # --- Testing ---

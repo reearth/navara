@@ -6,6 +6,7 @@ license.workspace = true
 
 [dependencies]
 rustybuzz.workspace = true
-fontsdf.workspace = true
+fontdue.workspace = true
+sdf_glyph_renderer.workspace = true
 guillotiere.workspace = true
 rustc-hash.workspace = true

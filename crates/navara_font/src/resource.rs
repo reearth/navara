@@ -83,8 +83,8 @@ impl Default for SDFAtlas {
 pub struct FontEntry {
     /// Raw font file bytes (kept alive for rustybuzz references)
     pub data: Vec<u8>,
-    /// Parsed fontsdf font (for SDF rasterization by glyph ID)
-    pub sdf_font: fontsdf::Font,
+    /// Parsed fontdue font (for bitmap rasterization by glyph ID)
+    pub raster_font: fontdue::Font,
     /// Per-font SDF atlas
     pub atlas: SDFAtlas,
     /// Used for converting font units to pixels
@@ -119,13 +119,17 @@ impl FontCache {
 
     /// Store a newly loaded font. Parses the font data and creates a fresh atlas.
     pub fn insert(&mut self, url: String, data: Vec<u8>) -> Result<(), &'static str> {
-        let sdf_font = fontsdf::Font::from_bytes(&data)?;
+        let raster_font = fontdue::Font::from_bytes(
+            data.as_slice(),
+            fontdue::FontSettings::default(),
+        )
+        .map_err(|_| "Failed to parse font with fontdue")?;
         let units_per_em = crate::shaping::get_units_per_em(&data).unwrap_or(1000);
         self.fonts.insert(
             url,
             FontEntry {
                 data,
-                sdf_font,
+                raster_font,
                 atlas: SDFAtlas::default(),
                 units_per_em,
             },
