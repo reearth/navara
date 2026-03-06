@@ -80,8 +80,8 @@ const run = async () => {
       if (updatedFeatures.has(evaluator.id)) return;
       updatedFeatures.add(evaluator.id);
 
-      evaluator.evaluate((_batchId, property) => {
-        const railwayClass = String(property?.["N02_001"] ?? "");
+      evaluator.evaluate(({ properties }) => {
+        const railwayClass = String(properties?.["N02_001"] ?? "");
 
         // Color by railway class (N02_001)
         const colorMap: Record<string, string> = {

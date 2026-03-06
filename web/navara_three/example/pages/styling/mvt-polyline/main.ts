@@ -77,8 +77,8 @@ const run = async () => {
       if (updatedFeatures.has(evaluator.id)) return;
       updatedFeatures.add(evaluator.id);
 
-      evaluator.evaluate((_batchId, property) => {
-        const rawAttributes = property?.["attributes"];
+      evaluator.evaluate(({ properties }) => {
+        const rawAttributes = properties?.["attributes"];
         const attrs =
           typeof rawAttributes === "string" ? JSON.parse(rawAttributes) : {};
         const generics = attrs["gen:genericAttribute"] as unknown[];

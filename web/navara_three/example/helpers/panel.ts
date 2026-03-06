@@ -68,8 +68,8 @@ const addFeatureUpdateHandler = (
   };
 
   layer.on("featureUpdated", ({ evaluator }) => {
-    evaluator.evaluate((batchId, property) => {
-      const gmlId = property?.["gml_id"];
+    evaluator.evaluate(({ batchId, properties }) => {
+      const gmlId = properties?.["gml_id"];
       if (gmlId && selectedFeatures.has(gmlId as string)) {
         return {
           color: new Color().setHex(0x00ffff),

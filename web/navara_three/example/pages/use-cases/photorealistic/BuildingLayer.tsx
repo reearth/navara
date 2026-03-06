@@ -102,13 +102,13 @@ export function BuildingTilesLayer({
       const fallback = new Color().setHex(0xffffff);
       const { colorBy, heightDomain } = paramsRef.current;
 
-      evaluator.evaluate((_batchId, property) => {
+      evaluator.evaluate(({ properties }) => {
         if (colorBy === "none") {
           return { color: fallback };
         }
 
         if (colorBy === "bldg:measuredHeight") {
-          const v = readProperty(property, "bldg:measuredHeight");
+          const v = readProperty(properties, "bldg:measuredHeight");
           let h = typeof v === "number" ? v : Number(v);
           if (!Number.isFinite(h)) {
             h = 0;
@@ -124,7 +124,7 @@ export function BuildingTilesLayer({
           colorBy === "uro:BuildingDetailAttribute_uro:fireproofStructureType"
         ) {
           const raw = readProperty(
-            property,
+            properties,
             "uro:BuildingDetailAttribute_uro:fireproofStructureType",
           );
           const key = String(raw ?? "不明");
@@ -138,7 +138,7 @@ export function BuildingTilesLayer({
           "荒川水系荒川（国管理区間）_L2（想定最大規模）_浸水ランクコード"
         ) {
           const raw = readProperty(
-            property,
+            properties,
             "荒川水系荒川（国管理区間）_L2（想定最大規模）_浸水ランクコード",
           );
           const n = typeof raw === "number" ? raw : Number(raw);

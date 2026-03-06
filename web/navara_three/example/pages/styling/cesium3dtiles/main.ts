@@ -101,9 +101,9 @@ const run = async () => {
 
     // Feature evaluator: style buildings based on measured height
     layer.on("featureUpdated", ({ evaluator }) => {
-      evaluator.evaluate((_batchId, property) => {
+      evaluator.evaluate(({ properties }) => {
         const measuredHeight =
-          (property?.["bldg:measuredHeight"] as number) ?? 0;
+          (properties?.["bldg:measuredHeight"] as number) ?? 0;
 
         // Determine visibility by height bucket
         const show = (() => {

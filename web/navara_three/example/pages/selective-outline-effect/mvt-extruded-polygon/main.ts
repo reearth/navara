@@ -62,9 +62,9 @@ const run = async () => {
   });
 
   layer.on("featureUpdated", ({ evaluator }) => {
-    evaluator.evaluate((_batchId, property) => {
+    evaluator.evaluate(({ properties }) => {
       const attributes = JSON.parse(
-        (property?.["attributes"] as string) ?? "{}",
+        (properties?.["attributes"] as string) ?? "{}",
       );
       const minHeight = attributes["urf:minimumBuildingHeight"];
       const maxHeight = attributes["urf:maximumBuildingHeight"];

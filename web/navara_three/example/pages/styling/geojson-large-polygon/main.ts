@@ -91,8 +91,8 @@ const run = async () => {
       if (updatedFeatures.has(evaluator.id)) return;
       updatedFeatures.add(evaluator.id);
 
-      evaluator.evaluate((_batchId, property) => {
-        const rank = Number(property?.["A31a_205"] ?? 1);
+      evaluator.evaluate(({ properties }) => {
+        const rank = Number(properties?.["A31a_205"] ?? 1);
         const depth = FLOOD_DEPTH_BY_RANK[rank - 1];
 
         const [r, g, b] = FLOOD_RANK_COLOR_MAP[rank];

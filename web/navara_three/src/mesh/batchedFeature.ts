@@ -44,6 +44,7 @@ export class BatchedFeatureMesh<
   extends Mesh<Buf, M, E>
   implements FeatureMesh, PickableMesh
 {
+  batchLength?: number;
   static _isBatchedAttributeName(v: string): v is BatchedAttributeName {
     return BATCHED_ATTRIBUTE_NAMES.includes(v as BatchedAttributeName);
   }
@@ -66,10 +67,10 @@ export class BatchedFeatureMesh<
     initBatchedMaterial(this.material, FEATURE_BATCH_TEXTURE_CONFIG);
   }
 
-  _initBatchDataTexture(batchLength: number): void {
+  _initBatchDataTexture(): void {
     const config: BatchTextureConfig = {
       ...FEATURE_BATCH_TEXTURE_CONFIG,
-      batchLength: batchLength,
+      batchLength: this.batchLength ?? 0,
     };
 
     initBatchDataTexture(this.material, config);

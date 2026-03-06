@@ -109,8 +109,8 @@ const run = async () => {
       if (updatedFeatures.has(evaluator.id)) return;
       updatedFeatures.add(evaluator.id);
 
-      evaluator.evaluate((_batchId, property) => {
-        const num = (property?.["No"] as number) ?? 0;
+      evaluator.evaluate(({ properties }) => {
+        const num = (properties?.["No"] as number) ?? 0;
 
         // Generate color based on feature number
         const idx = num % 6;

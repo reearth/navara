@@ -62,8 +62,8 @@ const run = async () => {
   });
 
   layer.on("featureUpdated", ({ evaluator }) => {
-    evaluator.evaluate((_batchId, property) => {
-      const type = property?.["備考"] as string;
+    evaluator.evaluate(({ properties }) => {
+      const type = properties?.["備考"] as string;
 
       const color = (() => {
         if (type === "陸上競技場") return new Color().setHex(0x0000ff);

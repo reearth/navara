@@ -77,8 +77,8 @@ const run = async () => {
       if (updatedFeatures.has(evaluator.id)) return;
       updatedFeatures.add(evaluator.id);
 
-      evaluator.evaluate((_batchId, property) => {
-        const type = property?.["備考"] as string;
+      evaluator.evaluate(({ properties }) => {
+        const type = properties?.["備考"] as string;
 
         // Color based on heliport type
         const color = (() => {

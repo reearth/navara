@@ -111,13 +111,13 @@ export function FloodLayer({
   const onReady = (layer: NavaraLayer) => {
     layerRef.current = layer;
     const onUpdate = ({ evaluator }: FeatureUpdatedParams) => {
-      evaluator.evaluate((_batchId, property) => {
-        const kind = (property?.["kind"] as string) || "";
+      evaluator.evaluate(({ properties }) => {
+        const kind = (properties?.["kind"] as string) || "";
         const color =
           kind === "point" ? DEFAULT_POINT_COLOR : DEFAULT_POLY_COLOR;
 
         // Check if feature is available at current time
-        const availabilities = property?.["availabilities"] as
+        const availabilities = properties?.["availabilities"] as
           | Record<"start" | "end", string>[]
           | undefined;
 
