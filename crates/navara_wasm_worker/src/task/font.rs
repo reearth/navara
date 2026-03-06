@@ -1,89 +1,17 @@
 use std::cell::RefCell;
 
 use navara_font::{FontCache, atlas, shaping};
-use navara_wasm_utils::set_panic_hook;
+use navara_wasm_types::{
+    FontAtlas, ShapeTextResult, WasmGlyphMetrics, WasmShapedGlyph, copy_u8_array,
+    transfer_u8_array,
+};
 use wasm_bindgen::prelude::*;
 
 thread_local! {
     static FONT_CACHE: RefCell<FontCache> = RefCell::new(FontCache::default());
 }
 
-#[wasm_bindgen(start)]
-pub fn start() {
-    set_panic_hook();
-}
-
-// ---------------------------------------------------------------------------
-// WASM types (mirrored from navara_wasm/src/font.rs)
-// ---------------------------------------------------------------------------
-
-/// SDF atlas data returned to TypeScript.
-#[wasm_bindgen(getter_with_clone)]
-pub struct FontAtlas {
-    pub data: js_sys::Uint8Array,
-    pub width: u32,
-    pub height: u32,
-}
-
-/// A single glyph's metrics in the atlas.
-#[wasm_bindgen]
-#[derive(Clone)]
-pub struct WasmGlyphMetrics {
-    pub glyph_id: u32,
-    pub atlas_x: i32,
-    pub atlas_y: i32,
-    pub atlas_w: u32,
-    pub atlas_h: u32,
-    pub bearing_x: f32,
-    pub bearing_y: f32,
-}
-
-/// A single shaped glyph with positioning info.
-#[wasm_bindgen]
-#[derive(Clone)]
-pub struct WasmShapedGlyph {
-    pub glyph_id: u32,
-    pub x_advance: i32,
-    pub y_advance: i32,
-    pub x_offset: i32,
-    pub y_offset: i32,
-}
-
-/// Result of shaping text: glyph positions + atlas metrics.
-#[wasm_bindgen(getter_with_clone)]
-pub struct ShapeTextResult {
-    pub glyphs: Vec<WasmShapedGlyph>,
-    pub metrics: Vec<WasmGlyphMetrics>,
-    pub units_per_em: u16,
-    pub atlas_changed: bool,
-}
-
-// ---------------------------------------------------------------------------
-// Helpers (inlined from navara_wasm_types/src/view.rs)
-// ---------------------------------------------------------------------------
-
-fn transfer_u8_array(byte_length: usize, f: &js_sys::Function) -> Vec<u8> {
-    let buffer = vec![0; byte_length];
-    unsafe {
-        let array = js_sys::Uint8Array::view(&buffer);
-        f.call1(&JsValue::NULL, &JsValue::from(array))
-            .expect("The callback function should not throw");
-    }
-    buffer
-}
-
-fn copy_u8_array(buf: &[u8]) -> js_sys::Uint8Array {
-    let array = js_sys::Uint8Array::new_with_length(buf.len() as u32);
-    array.copy_from(buf);
-    array
-}
-
-// ---------------------------------------------------------------------------
-// Exposed WASM functions
-// ---------------------------------------------------------------------------
-
 /// Load font bytes into the FontCache.
-/// Uses the same transfer-callback pattern as navara_wasm Core.loadFont.
 #[wasm_bindgen(js_name = loadFont)]
 pub fn load_font(url: String, byte_length: usize, f: &js_sys::Function) -> bool {
     let data = transfer_u8_array(byte_length, f);
@@ -97,7 +25,6 @@ pub fn is_font_loaded(url: &str) -> bool {
 }
 
 /// Shape text and ensure all glyphs are rasterized into the atlas.
-/// Returns shaped glyphs + atlas metrics, or None if font isn't loaded.
 #[wasm_bindgen(js_name = shapeText)]
 pub fn shape_text(url: &str, text: &str) -> Option<ShapeTextResult> {
     FONT_CACHE.with(|cache| {
@@ -127,7 +54,6 @@ pub fn shape_text(url: &str, text: &str) -> Option<ShapeTextResult> {
             })
             .collect();
 
-        // Only return metrics for glyphs in the shaped text (not entire atlas)
         let mut unique_ids = glyph_ids.clone();
         unique_ids.sort_unstable();
         unique_ids.dedup();

@@ -30,7 +30,7 @@ function watchPackages(packageNames: string[]): PluginOption {
 
 export const commonConfig = (name: string, env: ConfigEnv): UserConfig => ({
   plugins: [
-    watchPackages(["@navara/engine", "@navara/engine-worker", "@navara/engine-font-worker", "@navara/engine-api"]),
+    watchPackages(["@navara/engine", "@navara/engine-worker", "@navara/engine-api"]),
     tsconfig(),
     dts({ bundleTypes: true }),
     ...(
@@ -54,7 +54,7 @@ export const commonConfig = (name: string, env: ConfigEnv): UserConfig => ({
     outDir: "dist",
     emptyOutDir: false,
     rollupOptions: {
-      external: ["@navara/engine", "@navara/engine-worker", "@navara/engine-font-worker", "@navara/engine-api"],
+      external: ["@navara/engine", "@navara/engine-worker", "@navara/engine-api"],
     },
     watch:
       env.mode === "watch"

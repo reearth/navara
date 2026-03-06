@@ -10,9 +10,6 @@
       "@navara/csm": ["../navara_csm/src"],
       "@navara/three_react": ["../navara_three_react/src"],
       "@navara/engine": ["../../node_modules/navara_wasm"],
-      "@navara/engine-font-worker": [
-        "../../node_modules/navara_wasm_font_worker"
-      ],
       "@navara/engine-worker": ["../../node_modules/navara_wasm_worker"],
       "@navara/engine-api": ["../../node_modules/navara_wasm_api"],
       "@shaders/*": ["../../shaders"],

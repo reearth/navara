@@ -4,17 +4,17 @@
 # Build all WASM crates in a single cargo invocation to share compilation artifacts
 [tasks.build-rust-all-wasm]
 script = ['''
-cargo build --release --target wasm32-unknown-unknown -p navara_wasm -p navara_wasm_worker -p navara_wasm_font_worker -p navara_wasm_api
+cargo build --release --target wasm32-unknown-unknown -p navara_wasm -p navara_wasm_worker -p navara_wasm_api
 ''']
 
 [tasks.build-debug-rust-all-wasm]
 script = ['''
-cargo build --release --features debug --target wasm32-unknown-unknown -p navara_wasm -p navara_wasm_worker -p navara_wasm_font_worker -p navara_wasm_api
+cargo build --release --features debug --target wasm32-unknown-unknown -p navara_wasm -p navara_wasm_worker -p navara_wasm_api
 ''']
 
 [tasks.build-dev-rust-all-wasm]
 script = ['''
-cargo build --features debug  --target wasm32-unknown-unknown -p navara_wasm -p navara_wasm_worker -p navara_wasm_font_worker -p navara_wasm_api
+cargo build --features debug  --target wasm32-unknown-unknown -p navara_wasm -p navara_wasm_worker -p navara_wasm_api
 ''']
 
 # Generate JS bindings for each WASM module

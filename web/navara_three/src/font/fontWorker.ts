@@ -8,7 +8,7 @@ import init, {
   type ShapeTextResult as WasmShapeTextResult,
   type WasmShapedGlyph,
   type WasmGlyphMetrics,
-} from "@navara/engine-font-worker";
+} from "@navara/engine-worker";
 
 let wasmReady: Promise<unknown> | undefined;
 
