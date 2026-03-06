@@ -16,7 +16,9 @@ export async function renderText(
 ) {
   const fontUrl = m.material.font;
   if (!fontUrl || fontUrl === "") {
-    console.warn("material.font is required for text rendering but was not set.");
+    console.warn(
+      "material.font is required for text rendering but was not set.",
+    );
     return;
   }
   const fontManager = viewContext.fontManager;

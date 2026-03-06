@@ -31,6 +31,9 @@ import type { PickableMesh } from "./pickableMesh";
 /** Must match Rust SDF_PX_SIZE in navara_font/src/resource.rs */
 const SDF_PX_SIZE = 64.0;
 
+/** Must match Rust SDF_RADIUS in navara_font/src/atlas.rs */
+const SDF_RADIUS = 6.0;
+
 /**
  * A text mesh that renders glyphs from an SDF atlas using instanced geometry.
  *
@@ -212,8 +215,8 @@ export class SDFTextMesh
       this.setFontSize(nextFontSize);
     }
 
-    const nextCenterX = material.center?.x ?? 0;
-    const nextCenterY = material.center?.y ?? 0;
+    const nextCenterX = material.center?.x ?? 0.5;
+    const nextCenterY = material.center?.y ?? 0.0;
     if (nextCenterX !== prev.centerX || nextCenterY !== prev.centerY) {
       prev.centerX = nextCenterX;
       prev.centerY = nextCenterY;
@@ -247,7 +250,8 @@ export class SDFTextMesh
     const nextOutlineWidth = material.outlineWidth ?? 0;
     if (nextOutlineWidth !== prev.outlineWidth) {
       prev.outlineWidth = nextOutlineWidth;
-      this.material.uniforms.uOutlineWidth.value = nextOutlineWidth;
+      this.material.uniforms.uOutlineWidth.value =
+        (nextOutlineWidth * 0.5) / SDF_RADIUS;
     }
 
     const nextOutlineColor = material.outlineColor ?? 0x000000;
@@ -400,15 +404,17 @@ export class SDFTextMesh
         uBackgroundOutlineWidth: { value: 0.1 },
         uBgYBounds: { value: new Vector2(0.0, 1.0) },
         uOutlineColor: { value: new Color(1, 0, 0) },
-        uOutlineWidth: { value: 0.1 },
-        uOutlineOpacity: { value: 0.1 },
+        uOutlineWidth: {
+          value: ((material.outlineWidth ?? 0) * 0.5) / SDF_RADIUS,
+        },
+        uOutlineOpacity: { value: material.outlineOpacity ?? 1.0 },
         uFontSizePx: { value: 16.0 },
         uTextWidth: { value: 0.0 },
         uTextHeight: { value: 0.0 },
         uCenter: {
           value: material.center
             ? new Vector2(material.center.x, material.center.y)
-            : new Vector2(0.0, 0.0),
+            : new Vector2(0.5, 0.0),
         },
         uScaleByDistance: { value: material.scaleByDistance ?? false },
         uFov: { value: 1.0 },
