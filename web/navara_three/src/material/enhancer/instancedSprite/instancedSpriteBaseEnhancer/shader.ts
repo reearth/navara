@@ -47,10 +47,10 @@ export const transformShader = (
 
   // Assign SE uniform refs from material.uniforms to shader.uniforms
   // (instancedSprite sets SE refs on material.uniforms, not material.userData)
-  if (material.uniforms.uBloomMaskPass) {
+  if (material.uniforms?.uBloomMaskPass) {
     shader.uniforms.uBloomMaskPass = material.uniforms.uBloomMaskPass;
   }
-  if (material.uniforms.uOutlineMaskPass) {
+  if (material.uniforms?.uOutlineMaskPass) {
     shader.uniforms.uOutlineMaskPass = material.uniforms.uOutlineMaskPass;
   }
 };
