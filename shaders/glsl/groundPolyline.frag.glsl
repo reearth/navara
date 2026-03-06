@@ -58,6 +58,8 @@ void main() {
     vec2 sampleCoord = usePickingCoord ? nvr_uPickingCoord : gl_FragCoord.xy;
     float logDepthOrDepth = unpackRGBAToDepth(texture(tGlobeDepth, sampleCoord / viewport.xy));
 
+    bool isMaskPass = uBloomMaskPass > 0.5 || uOutlineMaskPass > 0.5;
+
     // Discard sky
     if (logDepthOrDepth == 1.0) {
         discard;
@@ -118,7 +120,10 @@ void main() {
     vec4 diffuseColor = vec4( color, 1. );
 
     // Selective effect mask pass — combined bloom+outline output
-    if (uBloomMaskPass > 0.5 || uOutlineMaskPass > 0.5) {
+    // Write globe surface depth (from tGlobeDepth) instead of shadow volume geometry
+    // depth, so the depth clip in SelectiveEffectPass works correctly.
+    if (isMaskPass) {
+        gl_FragDepth = logDepthOrDepth;
         gl_FragColor = vec4(
             diffuseColor.rgb * uBloomMaskPass,
             uOutlineMaskPass

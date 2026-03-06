@@ -38,7 +38,7 @@ export class ArclineMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
   /**
    * Override onCreate to inject selective effect handlers on sub-meshes.
    * ArcLine is an Object3D containing Mesh children — onBeforeRender is only
-   * called on Mesh instances, so the base class's setupMeshOnBeforeRender
+   * called on Mesh instances, so the base class's injectHandlers
    * (which targets the top-level Object3D) is insufficient.
    *
    * Handlers are injected unconditionally because ArcLine is always in the
@@ -125,7 +125,7 @@ export class ArclineMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
       this.emit("_needsUpdate");
     }
 
-    // super.onUpdateConfig handles _effectIds, registry links, and setupMeshOnBeforeRender
+    // super.onUpdateConfig handles _effectIds, registry links, and handler injection
     super.onUpdateConfig(updates);
 
     // Synchronize config.effectIds

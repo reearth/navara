@@ -25,6 +25,8 @@ void main() {
     
     vec4 diffuseColor = vec4(color, 1.);
 
+    #include <clipping_planes_fragment>
+
     // Selective effect mask pass — combined bloom+outline output
     if (uBloomMaskPass > 0.5 || uOutlineMaskPass > 0.5) {
         gl_FragColor = vec4(
@@ -33,8 +35,6 @@ void main() {
         );
         return;
     }
-
-    #include <clipping_planes_fragment>
 
     ReflectedLight reflectedLight = ReflectedLight( vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ) );
 	vec3 totalEmissiveRadiance = vec3(0.);

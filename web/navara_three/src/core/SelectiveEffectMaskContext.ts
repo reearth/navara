@@ -246,6 +246,10 @@ export function applyMaskPassRenderState(
   material.depthTest = !isSilhouette;
   material.depthWrite = !isSilhouette;
   material.colorWrite = true;
+  // Disable blending so mask colors are written as-is.
+  // Without this, transparent materials (e.g. instancedSprite) use SRC_ALPHA
+  // blending, which zeroes out bloom-only output (alpha=0).
+  material.blending = NoBlending;
 }
 
 /**
@@ -333,6 +337,7 @@ export function injectSelectiveEffectHandlers(
   let savedColorWrite: boolean | undefined;
   let savedDepthTest: boolean | undefined;
   let savedDepthWrite: boolean | undefined;
+  let savedMaterialBlending: Blending | undefined;
 
   // Standard material channel control (color/opacity/transparent manipulation)
   let savedColorR: number | undefined;
@@ -378,6 +383,10 @@ export function injectSelectiveEffectHandlers(
           shaderUniforms.uSelectiveEffectOcclusion.value =
             SELECTIVE_EFFECT_OCCLUSION_SKIP;
         }
+        // Force Three.js to re-upload uniforms for ShaderMaterial
+        if ("uniformsNeedUpdate" in material) {
+          material.uniformsNeedUpdate = true;
+        }
       }
       return; // Not in BaseMRT → skip all processing
     }
@@ -386,6 +395,7 @@ export function injectSelectiveEffectHandlers(
     savedColorWrite = material.colorWrite;
     savedDepthTest = material.depthTest;
     savedDepthWrite = material.depthWrite;
+    savedMaterialBlending = material.blending;
 
     // 4. Type-safe config retrieval (using type guard)
     const config = getSelectiveEffectConfig(object);
@@ -402,6 +412,10 @@ export function injectSelectiveEffectHandlers(
         if (shaderUniforms.uSelectiveEffectOcclusion) {
           shaderUniforms.uSelectiveEffectOcclusion.value =
             SELECTIVE_EFFECT_OCCLUSION_SKIP;
+        }
+        // Force Three.js to re-upload uniforms for ShaderMaterial
+        if ("uniformsNeedUpdate" in material) {
+          material.uniformsNeedUpdate = true;
         }
       }
       applyMaskPassSkipState(material);
@@ -437,6 +451,10 @@ export function injectSelectiveEffectHandlers(
             evaluation.isSilhouette
               ? SelectiveEffectOcclusionMode.Silhouette
               : SelectiveEffectOcclusionMode.Normal;
+        }
+        // Force Three.js to re-upload uniforms for ShaderMaterial
+        if ("uniformsNeedUpdate" in material) {
+          material.uniformsNeedUpdate = true;
         }
       } else if (hasMaterialColor(material)) {
         // Standard material (Box, Sphere): control via material properties
@@ -499,11 +517,15 @@ export function injectSelectiveEffectHandlers(
       material.colorWrite = savedColorWrite;
       material.depthTest = savedDepthTest;
       material.depthWrite = savedDepthWrite;
+      if (savedMaterialBlending !== undefined) {
+        material.blending = savedMaterialBlending;
+      }
 
       // Clear saved flags
       savedColorWrite = undefined;
       savedDepthTest = undefined;
       savedDepthWrite = undefined;
+      savedMaterialBlending = undefined;
     }
 
     // 3. Restore standard material channel control state
