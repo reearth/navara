@@ -1,8 +1,9 @@
 import { type TextMesh as NavaraTextMesh } from "@navara/engine";
 
 import type { BufferLoader } from "..";
+import { FONT_DATASETS } from "../../../example/helpers/constants";
 import type { ViewContext } from "../../core";
-import { BatchedSdfTextMesh, InstancedTextMesh } from "../../mesh";
+import { BatchedSdfTextMesh } from "../../mesh";
 import { FEATURE_RENDER_ORDER } from "../../renderOrder";
 import type { RenderFlag } from "../../type";
 import type { CommonUniforms } from "../../uniforms";
@@ -14,11 +15,15 @@ export async function renderText(
   viewContext: ViewContext,
   layerId: string,
 ) {
-  const fontUrl = m.material.font;
+  const fontUrl =
+    m.material.font == undefined || m.material.font === ""
+      ? FONT_DATASETS.NotoSansJP.url
+      : m.material.font;
+  console.log(`Rendering text with font: ${fontUrl}`);
   const fontManager = viewContext.fontManager;
 
   // Use SDF pipeline when a font URL is specified and FontManager is available
-  if (fontUrl && fontManager) {
+  if (fontManager) {
     try {
       await fontManager.loadFont(fontUrl);
 
@@ -43,34 +48,13 @@ export async function renderText(
 
       return textGroup;
     } catch (e) {
-      console.warn(
-        `Failed to load or prepare font "${fontUrl}". Falling back to non-SDF text. Error:`,
-        e,
-      );
-
-      // Fallback to Troika-based text
-      const textGroup = new InstancedTextMesh(m, buf, uniforms, {
-        renderOrder: FEATURE_RENDER_ORDER,
-        viewContext,
-        layerId,
-      });
-
-      return textGroup;
+      console.warn(`Failed to load or prepare font "${fontUrl}". Error:`, e);
     }
   }
-
-  // Fallback to Troika-based text
-  const textGroup = new InstancedTextMesh(m, buf, uniforms, {
-    renderOrder: FEATURE_RENDER_ORDER,
-    viewContext,
-    layerId,
-  });
-
-  return textGroup;
 }
 
 export function processTextChanged(
-  obj: InstancedTextMesh | BatchedSdfTextMesh,
+  obj: BatchedSdfTextMesh,
   m: NavaraTextMesh,
   buf: BufferLoader,
   active: boolean,

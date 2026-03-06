@@ -14,7 +14,6 @@ import { Color } from "../Color";
 import type { FeatureHandler } from "../event";
 import {
   InstancedMesh,
-  InstancedTextMesh,
   isFeatureMesh,
   ModelMesh,
   type ModelMaterial,
@@ -392,11 +391,7 @@ export class FeatureEvaluator {
       if (m instanceof InstancedMesh) {
         switch (target.attribute) {
           case "text": {
-            if (
-              !(m instanceof InstancedTextMesh) &&
-              !(m instanceof BatchedSdfTextMesh)
-            )
-              continue;
+            if (!(m instanceof BatchedSdfTextMesh)) continue;
             for (let i = 0; i < target.array.length; i++) {
               const v = target.array[i];
 

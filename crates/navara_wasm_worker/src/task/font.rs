@@ -2,8 +2,7 @@ use std::cell::RefCell;
 
 use navara_font::{FontCache, atlas, shaping};
 use navara_wasm_types::{
-    FontAtlas, ShapeTextResult, WasmGlyphMetrics, WasmShapedGlyph, copy_u8_array,
-    transfer_u8_array,
+    FontAtlas, ShapeTextResult, WasmGlyphMetrics, WasmShapedGlyph, copy_u8_array, transfer_u8_array,
 };
 use wasm_bindgen::prelude::*;
 

@@ -18,7 +18,6 @@ import type { LayersManager } from "../layersManager";
 import {
   BatchedSdfTextMesh,
   InstancedSpriteMesh,
-  InstancedTextMesh,
   ModelMesh,
   PolygonMesh,
   PolylineMesh,
@@ -321,10 +320,7 @@ export async function processRenderableFeatureChanged(
   if (obj instanceof InstancedSpriteMesh && billboard) {
     await processBillboardChanged(obj, billboard, buf, active);
   }
-  if (
-    (obj instanceof InstancedTextMesh || obj instanceof BatchedSdfTextMesh) &&
-    text
-  ) {
+  if (obj instanceof BatchedSdfTextMesh && text) {
     processTextChanged(obj, text, buf, active, renderFlag);
   }
   if (obj instanceof ModelMesh && model) {
