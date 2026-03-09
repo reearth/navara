@@ -134,7 +134,10 @@ export type FeatureEvaluatorCallback = (
 export class FeatureEvaluator {
   private handler: FeatureHandler;
   private featureId: FeatureId;
-  private cachedBatchedProperties?: Map<number, Record<string, unknown>>;
+  private cachedBatchedProperties?: Map<
+    number,
+    Record<string, unknown> | undefined
+  >;
   private batchIds: number[] = [];
 
   /**
@@ -196,9 +199,7 @@ export class FeatureEvaluator {
           batchId: number,
           properties: Record<string, unknown> | undefined,
         ) => {
-          if (properties) {
-            this.cachedBatchedProperties?.set(batchIdx, properties);
-          }
+          this.cachedBatchedProperties?.set(batchIdx, properties);
           this.batchIds[batchIdx] = batchId;
           f({ batchIndex: batchIdx, batchId, properties });
         },
@@ -367,7 +368,7 @@ export class FeatureEvaluator {
       } else {
         mesh._updateBatchAttribute(
           batchIndex,
-          attribute as ModelBatchedAttributeName,
+          attribute as BatchedAttributeName,
           value,
         );
       }
