@@ -324,4 +324,9 @@ export const FONT_DATASETS = {
     attribution: "Borel - Google Fonts",
     attributionUrl: "https://fonts.google.com/specimen/Borel",
   },
+  SourceCodePro: {
+    url: "https://raw.githubusercontent.com/adobe-fonts/source-code-pro/refs/heads/release/OTF/SourceCodePro-Bold.otf",
+    attribution: "Source Code Pro - Adobe Fonts",
+    attributionUrl: "https://github.com/adobe-fonts/source-code-pro",
+  },
 } satisfies Record<string, Dataset>;
