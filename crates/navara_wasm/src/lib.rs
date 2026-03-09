@@ -405,8 +405,6 @@ impl Core {
 
     #[wasm_bindgen(js_name = readPropertyByGlobalBatchId)]
     pub fn read_property_by_global_batch_id(&mut self, batch_id: u32) -> BatchPropResult {
-        use property_value::JsPropertyValue;
-
         let (properties, layer_id) = self
             .app
             .read_property_by_global_batch_id::<JsPropertyValue>(&batch_id);
@@ -425,9 +423,6 @@ impl Core {
         renderable_feature_bits: u64,
         callback: &js_sys::Function,
     ) -> Result<(), JsValue> {
-        use navara_ecs::BatchProperties;
-        use property_value::JsPropertyValue;
-
         let this = JsValue::NULL;
         self.app
             .read_all_batched_properties::<JsPropertyValue, JsValue, _>(

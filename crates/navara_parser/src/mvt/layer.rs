@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use geozero::mvt::tile;
 use navara_property::PropertyValue;
+use rustc_hash::FxHashMap;
 
 /// Raw MVT layer data for lazy property parsing.
 /// Properties are only parsed when accessed via `get_property`.
@@ -90,13 +91,17 @@ impl MvtLayerData {
         let tags = self.feature_tags.get(feature_index)?;
 
         let mut result: Vec<Option<V>> = keys.iter().map(|_| None).collect();
+        let mut indexed_keys = FxHashMap::default();
+        for (i, k) in keys.iter().enumerate() {
+            indexed_keys.insert(k, i);
+        }
 
         for pair in tags.chunks(2) {
             if let [key_idx, value_idx] = pair {
                 let key = self.keys.get(*key_idx as usize)?;
-                if let Some(pos) = keys.iter().position(|k| k == key) {
+                if let Some(pos) = indexed_keys.get(key) {
                     let value = self.values.get(*value_idx as usize)?;
-                    result[pos] = Some(tile_value_to_property(value));
+                    result[*pos] = Some(tile_value_to_property(value));
                 }
             }
         }

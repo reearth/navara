@@ -230,7 +230,7 @@ export class FeatureEvaluator {
     keys: string[],
     f: (info: FeatureInfo) => void,
   ) {
-    const cacheKey = keys.join("");
+    const cacheKey = keys.join("|");
     if (this.filterCacheKey === cacheKey && this.cachedFilteredProperties) {
       for (const [batchIndex, filtered] of this.cachedFilteredProperties) {
         f({
