@@ -3,15 +3,12 @@ import type {
   TextMaterial as NavaraTextMaterial,
   Transform,
 } from "@navara/engine";
-import { encodePosition } from "@navara/engine-api";
 import {
   createSdfAtlasTexture,
   type FontManager,
   type GlyphMetrics,
   type ShapeTextResult,
 } from "@navara/font";
-import sdfTextFragmentShader from "@shaders/glsl/sdfText.frag.glsl";
-import sdfTextVertexShader from "@shaders/glsl/sdfText.vert.glsl";
 import {
   BufferAttribute,
   Color,
@@ -22,17 +19,20 @@ import {
   PerspectiveCamera,
   ShaderMaterial,
   Vector2,
-  Vector3,
 } from "three";
 
+import type { MaterialEnhancer } from "../material/enhancer/MaterialEnhancer";
+import {
+  createSdfTextMaterialEnhancer,
+  type SdfTextBaseMutates,
+  type SdfTextBaseProps,
+  type SdfTextBaseState,
+} from "../material/enhancer/sdfText";
 
 import type { PickableMesh } from "./pickableMesh";
 
 /** Must match Rust SDF_PX_SIZE in navara_font/src/resource.rs */
 const SDF_PX_SIZE = 64.0;
-
-/** Must match Rust SDF_RADIUS in navara_font/src/atlas.rs */
-const SDF_RADIUS = 6.0;
 
 /**
  * A text mesh that renders glyphs from an SDF atlas using instanced geometry.
@@ -52,6 +52,14 @@ export class SDFTextMesh
   /** When true, the atlas texture is shared and should not be disposed by this mesh. */
   private _sharedAtlas = false;
 
+  private _enhancer: MaterialEnhancer<
+    ShaderMaterial,
+    { base?: SdfTextBaseProps },
+    SdfTextBaseState,
+    SdfTextBaseMutates,
+    readonly ["shader"]
+  >;
+
   constructor(
     position: Float32Array | { high: Float32Array; low: Float32Array },
     material: NavaraTextMaterial,
@@ -60,7 +68,7 @@ export class SDFTextMesh
     fontUrl: string,
     batchId: number | undefined,
     RTE: boolean,
-    active: boolean,
+    _active: boolean,
   ) {
     super();
 
@@ -68,14 +76,75 @@ export class SDFTextMesh
     this._fontUrl = fontUrl;
 
     this.geometry = this._createBaseGeometry();
-    this.material = this._createMaterial(
-      position,
-      RTE,
-      material,
-      transform,
-      batchId,
-      active,
-    );
+
+    // Create empty ShaderMaterial — enhancer will set shaders and uniforms
+    const mat = new ShaderMaterial({
+      transparent: true,
+      depthTest: true,
+    });
+
+    this._enhancer = createSdfTextMaterialEnhancer(mat);
+
+    // Mount enhancer with initial props
+    this._enhancer.mount({
+      base: {
+        useRTE: RTE,
+        color: material.color ?? 0xffffff,
+        fontSize: material.size ?? 16.0,
+        center: material.center
+          ? [material.center.x, material.center.y]
+          : undefined,
+        scaleByDistance: material.scaleByDistance ?? false,
+        addHeight: material.height ?? 0.0,
+        offsetDepth: material.offsetDepth ?? true,
+        outlineWidth: material.outlineWidth ?? 0,
+        outlineColor: material.outlineColor ?? 0x000000,
+        outlineOpacity: material.outlineOpacity ?? 1.0,
+        showBackground: material.backgroundColor !== undefined,
+        backgroundColor: material.backgroundColor,
+        backgroundOutlineColor: material.borderColor ?? 0x000000,
+        backgroundOutlineWidth: material.borderWidth ?? 0.1,
+        depthTest: material.depthTest ?? true,
+        rtcCenter: [transform.tx, transform.ty, transform.tz],
+      },
+    });
+
+    // Populate uniforms early (before onBeforeCompile fires)
+    const mutates = this._enhancer.mutates();
+    mutates.updateUniforms(mat.uniforms, this._enhancer.states());
+
+    // Set batch ID
+    if (batchId !== undefined) {
+      mutates.setBatchId(batchId);
+    }
+
+    // Set position
+    mutates.setPosition(position, RTE, [
+      transform.tx,
+      transform.ty,
+      transform.tz,
+    ]);
+
+    // Register shader hook
+    mat.onBeforeCompile = this._enhancer.transformShader;
+    mat.customProgramCacheKey = this._enhancer.programCacheKey;
+
+    // Per-frame camera updates
+    const state = this._enhancer.states();
+    mat.onBeforeRender = (renderer, _scene, camera) => {
+      const pCam = camera as PerspectiveCamera;
+      mutates.updatePerFrame(
+        pCam.fov * (Math.PI / 180.0),
+        renderer.getDrawingBufferSize(new Vector2()).height,
+        pCam.far,
+        camera.position.x,
+        camera.position.y,
+        camera.position.z,
+        state,
+      );
+    };
+
+    this.material = mat;
     this.frustumCulled = false;
   }
 
@@ -86,7 +155,7 @@ export class SDFTextMesh
   setAtlasTexture(tex: DataTexture): void {
     this._atlasTexture = tex;
     this._sharedAtlas = true;
-    this.material.uniforms.uAtlas.value = tex;
+    this._enhancer.mutates().setAtlasTexture({ value: tex });
   }
 
   /**
@@ -129,23 +198,25 @@ export class SDFTextMesh
    * Update visual properties: color, size, visibility, etc.
    */
   setColor(color: Color): void {
-    this.material.uniforms.uColor.value.set(color.r, color.g, color.b);
+    this._enhancer.update({
+      base: { color: color.getHex() },
+    });
   }
 
   setFontSize(sizePx: number): void {
-    this.material.uniforms.uFontSizePx.value = sizePx;
+    this._enhancer.update({ base: { fontSize: sizePx } });
   }
 
   setScaleByDistance(enabled: boolean): void {
-    this.material.uniforms.uScaleByDistance.value = enabled;
+    this._enhancer.update({ base: { scaleByDistance: enabled } });
   }
 
   setCenter(x: number, y: number): void {
-    this.material.uniforms.uCenter.value.set(x, y);
+    this._enhancer.update({ base: { center: [x, y] } });
   }
 
   setHeight(height: number): void {
-    this.material.uniforms.uAddHeight.value = height;
+    this._enhancer.update({ base: { addHeight: height } });
   }
 
   setPosition(
@@ -153,36 +224,15 @@ export class SDFTextMesh
     RTE: boolean,
     transform: Transform,
   ): void {
-    if (RTE) {
-      const p = position as { high: Float32Array; low: Float32Array };
-      this.material.uniforms.uRTEPositionLOW.value.set(
-        p.low[0],
-        p.low[1],
-        p.low[2] ?? 0.0,
-      );
-      this.material.uniforms.uRTEPositionHIGH.value.set(
-        p.high[0],
-        p.high[1],
-        p.high[2] ?? 0.0,
-      );
-    } else {
-      const p = position as Float32Array;
-      this.material.uniforms.uRTCPosition.value.set(p[0], p[1], p[2] ?? 0.0);
-
-      const rtcCenter = new Vector3(transform.tx, transform.ty, transform.tz);
-      this.material.uniforms.uRTCCenter.value.set(
-        rtcCenter.x,
-        rtcCenter.y,
-        rtcCenter.z,
-      );
-    }
+    this._enhancer
+      .mutates()
+      .setPosition(position, RTE, [transform.tx, transform.ty, transform.tz]);
   }
 
   /**
    * Apply material properties from WASM TextMaterial.
-   * Maps relevant properties to SDFTextMesh setters, with change tracking.
+   * Maps relevant properties to enhancer updates, with change tracking.
    */
-  // TODO: cleanup
   update(material: NavaraTextMaterial, _active: boolean): void {
     if (!this.userData.prev) {
       this.userData.prev = {};
@@ -202,17 +252,22 @@ export class SDFTextMesh
       this.setText(nextText ?? "");
     }
 
+    // Build props for enhancer update
+    const baseProps: SdfTextBaseProps = {};
+    let hasUpdate = false;
+
     const nextColor = material.color ?? 0xffffff;
     if (nextColor !== prev.color) {
       prev.color = nextColor;
-      const color = new Color().setHex(nextColor);
-      this.material.uniforms.uColor.value.set(color.r, color.g, color.b);
+      baseProps.color = nextColor;
+      hasUpdate = true;
     }
 
     const nextFontSize = material.size ?? 16.0;
     if (nextFontSize !== prev.fontSize) {
       prev.fontSize = nextFontSize;
-      this.setFontSize(nextFontSize);
+      baseProps.fontSize = nextFontSize;
+      hasUpdate = true;
     }
 
     const nextCenterX = material.center?.x ?? 0.5;
@@ -220,84 +275,89 @@ export class SDFTextMesh
     if (nextCenterX !== prev.centerX || nextCenterY !== prev.centerY) {
       prev.centerX = nextCenterX;
       prev.centerY = nextCenterY;
-      this.setCenter(nextCenterX, nextCenterY);
+      baseProps.center = [nextCenterX, nextCenterY];
+      hasUpdate = true;
     }
 
     const nextScaleByDistance = material.scaleByDistance ?? false;
     if (nextScaleByDistance !== prev.scaleByDistance) {
       prev.scaleByDistance = nextScaleByDistance;
-      this.setScaleByDistance(nextScaleByDistance);
+      baseProps.scaleByDistance = nextScaleByDistance;
+      hasUpdate = true;
     }
 
     const nextDepthTest = material.depthTest ?? true;
     if (nextDepthTest !== prev.depthTest) {
       prev.depthTest = nextDepthTest;
-      this.material.depthTest = nextDepthTest;
+      baseProps.depthTest = nextDepthTest;
+      hasUpdate = true;
     }
 
     const nextOffsetDepth = material.offsetDepth ?? true;
     if (nextOffsetDepth !== prev.offsetDepth) {
       prev.offsetDepth = nextOffsetDepth;
-      this.material.uniforms.uOffsetDepth.value = nextOffsetDepth;
+      baseProps.offsetDepth = nextOffsetDepth;
+      hasUpdate = true;
     }
 
     const nextHeight = material.height ?? 0;
     if (nextHeight !== prev.height) {
       prev.height = nextHeight;
-      this.setHeight(nextHeight);
+      baseProps.addHeight = nextHeight;
+      hasUpdate = true;
     }
 
     const nextOutlineWidth = material.outlineWidth ?? 0;
     if (nextOutlineWidth !== prev.outlineWidth) {
       prev.outlineWidth = nextOutlineWidth;
-      this.material.uniforms.uOutlineWidth.value =
-        (nextOutlineWidth * 0.5) / SDF_RADIUS;
+      baseProps.outlineWidth = nextOutlineWidth;
+      hasUpdate = true;
     }
 
     const nextOutlineColor = material.outlineColor ?? 0x000000;
     if (nextOutlineColor !== prev.outlineColor) {
       prev.outlineColor = nextOutlineColor;
-      const color = new Color().setHex(nextOutlineColor);
-      this.material.uniforms.uOutlineColor.value.set(color.r, color.g, color.b);
+      baseProps.outlineColor = nextOutlineColor;
+      hasUpdate = true;
     }
 
     const nextOutlineOpacity = material.outlineOpacity ?? 1.0;
     if (nextOutlineOpacity !== prev.outlineOpacity) {
       prev.outlineOpacity = nextOutlineOpacity;
-      this.material.uniforms.uOutlineOpacity.value = nextOutlineOpacity;
+      baseProps.outlineOpacity = nextOutlineOpacity;
+      hasUpdate = true;
     }
 
     const nextBGColor = material.backgroundColor;
     if (nextBGColor !== undefined) {
       if (nextBGColor !== prev.backgroundColor) {
         prev.backgroundColor = nextBGColor;
-        const color = new Color().setHex(nextBGColor);
-        this.material.uniforms.uBackgroundColor.value.set(
-          color.r,
-          color.g,
-          color.b,
-        );
-        this.material.uniforms.uShowBackground.value = true;
+        baseProps.showBackground = true;
+        baseProps.backgroundColor = nextBGColor;
+        hasUpdate = true;
       }
-    } else {
-      this.material.uniforms.uShowBackground.value = false;
+    } else if (prev.backgroundColor !== undefined) {
+      prev.backgroundColor = undefined;
+      baseProps.showBackground = false;
+      hasUpdate = true;
     }
 
     const nextBGOutlineColor = material.borderColor ?? 0x000000;
     if (nextBGOutlineColor !== prev.backgroundOutlineColor) {
       prev.backgroundOutlineColor = nextBGOutlineColor;
-      const color = new Color().setHex(nextBGOutlineColor);
-      this.material.uniforms.uBackgroundOutlineColor.value.set(
-        color.r,
-        color.g,
-        color.b,
-      );
+      baseProps.backgroundOutlineColor = nextBGOutlineColor;
+      hasUpdate = true;
     }
 
     const nextBGOutlineWidth = material.borderWidth ?? 0;
     if (nextBGOutlineWidth !== prev.backgroundOutlineWidth) {
       prev.backgroundOutlineWidth = nextBGOutlineWidth;
-      this.material.uniforms.uBackgroundOutlineWidth.value = nextBGOutlineWidth;
+      baseProps.backgroundOutlineWidth = nextBGOutlineWidth;
+      hasUpdate = true;
+    }
+
+    if (hasUpdate) {
+      this._enhancer.update({ base: baseProps });
     }
   }
 
@@ -308,7 +368,8 @@ export class SDFTextMesh
   }
 
   _getFeatureColor(): Color {
-    return this.material.uniforms.uColor.value.clone();
+    const state = this._enhancer.states();
+    return new Color(state.color[0], state.color[1], state.color[2]);
   }
 
   _setFeatureShow(visible: boolean): void {
@@ -330,7 +391,7 @@ export class SDFTextMesh
   // --- PickableMesh interface ---
 
   _setPickable(pickable: boolean): void {
-    this.material.uniforms.nvr_uPickable.value = pickable ? 1.0 : 0.0;
+    this._enhancer.update({ base: { pickable } });
   }
 
   // --- Cleanup ---
@@ -379,104 +440,6 @@ export class SDFTextMesh
     geo.instanceCount = 0;
 
     return geo;
-  }
-
-  private _createMaterial(
-    position: Float32Array | { high: Float32Array; low: Float32Array },
-    RTE: boolean,
-    material: NavaraTextMaterial,
-    transform: Transform,
-    batchId: number | undefined,
-    _active: boolean,
-  ): ShaderMaterial {
-    const rtcCenter = new Vector3(transform.tx, transform.ty, transform.tz);
-
-    const m = new ShaderMaterial({
-      vertexShader: sdfTextVertexShader,
-      fragmentShader: sdfTextFragmentShader,
-      uniforms: {
-        uAtlas: { value: null },
-        uSdfThreshold: { value: 0.5 },
-        uColor: { value: new Color(1, 1, 1) },
-        uShowBackground: { value: false },
-        uBackgroundColor: { value: new Color(1, 0, 0) },
-        uBackgroundOutlineColor: { value: new Color(1, 0, 0) },
-        uBackgroundOutlineWidth: { value: 0.1 },
-        uBgYBounds: { value: new Vector2(0.0, 1.0) },
-        uOutlineColor: { value: new Color(1, 0, 0) },
-        uOutlineWidth: {
-          value: ((material.outlineWidth ?? 0) * 0.5) / SDF_RADIUS,
-        },
-        uOutlineOpacity: { value: material.outlineOpacity ?? 1.0 },
-        uFontSizePx: { value: 16.0 },
-        uTextWidth: { value: 0.0 },
-        uTextHeight: { value: 0.0 },
-        uCenter: {
-          value: material.center
-            ? new Vector2(material.center.x, material.center.y)
-            : new Vector2(0.5, 0.0),
-        },
-        uScaleByDistance: { value: material.scaleByDistance ?? false },
-        uFov: { value: 1.0 },
-        uScreenHeightPx: { value: 1080.0 },
-        uAddHeight: { value: material.height ?? 0.0 },
-        uOffsetDepth: { value: material.offsetDepth ?? true },
-        uRTCCenter: { value: rtcCenter },
-        uEyeRTELow: { value: new Vector3() },
-        uEyeRTEHigh: { value: new Vector3() },
-        uFarPlane: { value: 1000.0 },
-        nvr_uBatchId: { value: batchId ?? 0 },
-        nvr_uPickable: { value: 0.0 },
-      },
-      transparent: true,
-      depthTest: true,
-    });
-
-    if (RTE) {
-      m.defines = { USE_RTE: 1 };
-      const p = {
-        low: (position as { low: Float32Array }).low,
-        high: (position as { high: Float32Array }).high,
-      };
-      m.uniforms.uRTEPositionLOW = {
-        value: new Vector3(p.low[0], p.low[1], p.low[2] ?? 0.0),
-      };
-      m.uniforms.uRTEPositionHIGH = {
-        value: new Vector3(p.high[0], p.high[1], p.high[2] ?? 0.0),
-      };
-    } else {
-      const p = position as Float32Array;
-      m.uniforms.uRTCPosition = { value: new Vector3(p[0], p[1], p[2] ?? 0.0) };
-    }
-
-    m.onBeforeRender = (renderer, _scene, camera, _geometry, _mat, _group) => {
-      const pCam = camera as PerspectiveCamera;
-      m.uniforms.uFarPlane.value = pCam.far;
-      m.uniforms.uFov.value = pCam.fov * (Math.PI / 180.0);
-      m.uniforms.uScreenHeightPx.value = renderer.getDrawingBufferSize(
-        new Vector2(),
-      ).height;
-
-      if (RTE) {
-        const encodedCamPos = encodePosition(
-          camera.position.x,
-          camera.position.y,
-          camera.position.z,
-        );
-        m.uniforms.uEyeRTELow.value.set(
-          encodedCamPos.low.x,
-          encodedCamPos.low.y,
-          encodedCamPos.low.z,
-        );
-        m.uniforms.uEyeRTEHigh.value.set(
-          encodedCamPos.high.x,
-          encodedCamPos.high.y,
-          encodedCamPos.high.z,
-        );
-      }
-    };
-
-    return m;
   }
 
   private _buildGlyphInstances(
@@ -601,13 +564,15 @@ export class SDFTextMesh
 
     this.geometry.instanceCount = count + 1;
 
-    // Update text dimension uniforms for centering
-    this.material.uniforms.uTextWidth.value = textWidth / SDF_PX_SIZE;
-    this.material.uniforms.uTextHeight.value = textHeight / SDF_PX_SIZE;
-    this.material.uniforms.uBgYBounds.value.set(
-      bgMinY === Infinity ? 0.0 : bgMinY,
-      bgMaxY === -Infinity ? 1.0 : bgMaxY,
-    );
+    // Update text dimension uniforms via mutates
+    this._enhancer
+      .mutates()
+      .updateTextDimensions(
+        textWidth / SDF_PX_SIZE,
+        textHeight / SDF_PX_SIZE,
+        bgMinY === Infinity ? 0.0 : bgMinY,
+        bgMaxY === -Infinity ? 1.0 : bgMaxY,
+      );
   }
 
   private _updateAtlasTexture(
@@ -621,6 +586,6 @@ export class SDFTextMesh
 
     const tex = createSdfAtlasTexture(data, width, height);
     this._atlasTexture = tex;
-    this.material.uniforms.uAtlas.value = tex;
+    this._enhancer.mutates().setAtlasTexture({ value: tex });
   }
 }

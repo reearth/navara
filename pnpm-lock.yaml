@@ -181,6 +181,9 @@ importers:
 
   web/navara_font:
     dependencies:
+      '@navara/worker':
+        specifier: workspace:*
+        version: link:../navara_worker
       three:
         specifier: ^0.183.1
         version: 0.183.1

@@ -2,7 +2,7 @@
   "extends": "../tsconfig.common.json",
   "compilerOptions": {
     "paths": {
-      "@navara/worker": ["../navara_worker/src"],
+      "@navara/worker": ["../navara_worker/src"]
     }
   },
   "include": ["./src"]

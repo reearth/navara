@@ -1,5 +1,6 @@
-import type { ShapeTextResult, FontAtlasData } from "./FontManager";
 import type { ConcurrencyManager } from "@navara/worker";
+
+import type { ShapeTextResult, FontAtlasData } from "./FontManager";
 
 export type BatchPrepareTextResult = {
   results: { text: string; shapeResult: ShapeTextResult | null }[];

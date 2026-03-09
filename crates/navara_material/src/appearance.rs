@@ -185,12 +185,12 @@ pub struct TextMaterial {
     pub font: String,
     pub background_color: Option<u32>,
     pub border_color: u32,
-    pub border_width: f32,  // 0 ~ 0.5, the ratio of the border to the height
+    pub border_width: f32, // 0 ~ 0.5, the ratio of the border to the height
     // pub corner_radius: f32, // 0 ~ 0.5, the ratio of the corner radius to the height
     // pub padding: Vec2,
     // outline
     // pub outline_blur: f32,    // outlineBlur Defalut:0
-    pub outline_color: u32,   // outlineColor Defalut:black
+    pub outline_color: u32, // outlineColor Defalut:black
     // pub outline_offset: Vec2, // outlineOffset Default: (0,0)
     pub outline_opacity: f32, // outlineOpacity Default:1
     pub outline_width: f32,   // outlineWidth Default:0
