@@ -23,7 +23,6 @@ navara_math.workspace = true
 navara_geometry.workspace = true
 navara_feature_component.workspace = true
 navara_material.workspace = true
-navara_font.workspace = true
 
 [package.metadata.wasm-pack.profile.profiling]
 wasm-opt = false
