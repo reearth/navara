@@ -108,10 +108,10 @@ const run = async () => {
 
       const uniqueLabels = new Set<string>();
 
-      evaluator.evaluate((_batchId, property) => {
-        const text = (property?.["knj"] ?? property?.["name"]) as string;
-        const ftCode = property?.["ftCode"] as number;
-        const annoCtg = property?.["annoCtg"] as number;
+      evaluator.evaluate(({ properties }) => {
+        const text = (properties?.["knj"] ?? properties?.["name"]) as string;
+        const ftCode = properties?.["ftCode"] as number;
+        const annoCtg = properties?.["annoCtg"] as number;
 
         // Filter by feature code and annotation category
         if (

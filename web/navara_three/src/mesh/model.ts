@@ -20,6 +20,7 @@ import {
   type NormalBufferAttributes,
   PointsMaterial,
 } from "three";
+import invariant from "tiny-invariant";
 
 import type { ViewEvents } from "..";
 import type { ViewContext } from "../core";
@@ -92,6 +93,7 @@ export class ModelMesh
 
   // model credit for attribution
   credit: string | undefined;
+  batchLength?: number;
 
   private prevEffectIds: string[] = [];
 
@@ -112,6 +114,7 @@ export class ModelMesh
     this._layerId = layerId;
     this._uniforms = uniforms;
     this.credit = gltfInfo.credit;
+    this.batchLength = m.batch_length;
     this.add(gltfInfo.scene);
     this.init(m, buf, viewEvents);
     this.addEventListener("removedFromWorld", () => {
@@ -172,11 +175,12 @@ export class ModelMesh
 
   _initBatchDataTexture(
     mesh: Mesh<BufferGeometry<NormalBufferAttributes>, ModelMaterial>,
-    batchLength: number,
   ): void {
+    invariant(this.batchLength != null);
+
     const config: BatchTextureConfig = {
       ...MODEL_BATCH_TEXTURE_CONFIG,
-      batchLength,
+      batchLength: this.batchLength,
     };
 
     initBatchDataTexture(mesh.material, config);

@@ -74,8 +74,8 @@ const run = async () => {
 
     // Feature evaluator: style polygons based on fire prevention type
     layer.on("featureUpdated", ({ evaluator }) => {
-      evaluator.evaluate((_batchId, property) => {
-        const functionType = property?.["urf_function"] as string;
+      evaluator.evaluate(({ properties }) => {
+        const functionType = properties?.["urf_function"] as string;
 
         const color = (() => {
           // Fireproof area

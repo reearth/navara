@@ -81,7 +81,7 @@ export async function run() {
   });
 
   chiyodaSubway.on("featureUpdated", ({ evaluator }) => {
-    evaluator.evaluate((_batchId, properties) => {
+    evaluator.evaluate(({ properties }) => {
       const gmlId = properties?.["gml_id"] as string;
       if (selectedGMLId === gmlId) {
         return {
