@@ -110,6 +110,7 @@ export default defineConfig((env) => {
       assetsDir: "./",
     },
     resolve: {
+      dedupe: ["react", "react-dom"],
       alias: {
         ...common.resolve?.alias,
         "@shaders": normalizePath(path.resolve(__dirname, "../../shaders")),

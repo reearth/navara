@@ -82,7 +82,7 @@ class ScreenshotGenerator {
       }
     } catch (_err) {
       console.error(`❌ Dev server is not running at ${this.config.serverUrl}`);
-      console.error("Please start the dev server with: pnpm run dev:example");
+      console.error("Please start the dev server with: pnpm run dev");
       process.exit(1);
     }
 
