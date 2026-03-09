@@ -303,9 +303,12 @@ export class FeatureEvaluator {
    * });
    * ```
    */
-  evaluate(f: FeatureEvaluatorCallback, options?: { 
-    filters?: string[]
-  }) {
+  evaluate(
+    f: FeatureEvaluatorCallback,
+    options?: {
+      filters?: string[];
+    },
+  ) {
     const evaluate = (info: FeatureInfo) => {
       const evaluated = f(info);
       this.applyEvaluatedValues(info.batchIndex, info.batchId, evaluated);
