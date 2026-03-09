@@ -272,7 +272,8 @@ export class FeatureEvaluator {
    *
    * Note: Evaluated styles override the layer's default styles.
    *
-   * @param f - Callback function that receives feature info, returns style values
+   * @param f Callback function that receives feature info, returns style values
+   * @param options.filters - Root property's keys that get only the matched property values.
    *
    * @example
    * ```typescript
@@ -302,7 +303,9 @@ export class FeatureEvaluator {
    * });
    * ```
    */
-  evaluate(f: FeatureEvaluatorCallback, options?: { filters?: string[] }) {
+  evaluate(f: FeatureEvaluatorCallback, options?: { 
+    filters?: string[]
+  }) {
     const evaluate = (info: FeatureInfo) => {
       const evaluated = f(info);
       this.applyEvaluatedValues(info.batchIndex, info.batchId, evaluated);
