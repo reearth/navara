@@ -90,30 +90,33 @@ const run = async () => {
 
     // Feature evaluator: style polygons based on height attributes
     layer.on("featureUpdated", ({ evaluator }) => {
-      evaluator.evaluate(({ properties }) => {
-        const attributes = JSON.parse(
-          (properties?.["attributes"] as string) ?? "{}",
-        );
-        const minHeight = attributes["urf:minimumBuildingHeight"];
-        const maxHeight = attributes["urf:maximumBuildingHeight"];
-        const extrudedHeight = Math.max(maxHeight ?? minHeight ?? 0, 1);
+      evaluator.evaluate(
+        ({ properties }) => {
+          const attributes = JSON.parse(
+            (properties?.["attributes"] as string) ?? "{}",
+          );
+          const minHeight = attributes["urf:minimumBuildingHeight"];
+          const maxHeight = attributes["urf:maximumBuildingHeight"];
+          const extrudedHeight = Math.max(maxHeight ?? minHeight ?? 0, 1);
 
-        // Color and scale based on height category
-        const [color, scale] = (() => {
-          if (extrudedHeight <= 1)
-            return [currentColors["< 1m"], currentScales["< 1m"]];
-          if (extrudedHeight < 10)
-            return [currentColors["< 10m"], currentScales["< 10m"]];
-          if (extrudedHeight < 30)
-            return [currentColors["< 30m"], currentScales["< 30m"]];
-          return [currentColors[">= 30m"], currentScales[">= 30m"]];
-        })();
+          // Color and scale based on height category
+          const [color, scale] = (() => {
+            if (extrudedHeight <= 1)
+              return [currentColors["< 1m"], currentScales["< 1m"]];
+            if (extrudedHeight < 10)
+              return [currentColors["< 10m"], currentScales["< 10m"]];
+            if (extrudedHeight < 30)
+              return [currentColors["< 30m"], currentScales["< 30m"]];
+            return [currentColors[">= 30m"], currentScales[">= 30m"]];
+          })();
 
-        return {
-          color: new Color().setStyle(color),
-          extrudedHeight: extrudedHeight * scale,
-        };
-      });
+          return {
+            color: new Color().setStyle(color),
+            extrudedHeight: extrudedHeight * scale,
+          };
+        },
+        { filters: ["attributes"] },
+      );
     });
 
     return layer;

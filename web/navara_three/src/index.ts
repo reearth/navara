@@ -517,8 +517,10 @@ export default class ThreeView<
     markFeatureIsRendered: (type, bits) => {
       this._core?.markFeatureIsRendered(type, bits);
     },
-    readPropertiesFromFeature: (featureId, f) =>
-      this._core?.readPropertiesFromFeature(featureId, f),
+    readAllBatchedProperties: (featureId, f) =>
+      this._core?.readAllBatchedProperties(featureId, f),
+    readFilteredBatchedProperties: (featureId, keys, f) =>
+      this._core?.readFilteredBatchedProperties(featureId, keys, f),
   };
   private _meshHandler: MeshHandler = {
     setTileMeshPrepared: (handle: bigint) => {
@@ -1751,7 +1753,7 @@ export default class ThreeView<
     this._renderFlag.forceUpdate = true;
 
     if (pickArr.length > 0) {
-      const prop = this._core?.getBatchProp(pickArr[0]);
+      const prop = this._core?.readPropertyByGlobalBatchId(pickArr[0]);
       if (prop) {
         const pickedFeature: PickedFeature = {
           properties: prop.properties,

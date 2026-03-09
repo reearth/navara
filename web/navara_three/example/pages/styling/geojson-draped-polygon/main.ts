@@ -109,19 +109,22 @@ const run = async () => {
       if (updatedFeatures.has(evaluator.id)) return;
       updatedFeatures.add(evaluator.id);
 
-      evaluator.evaluate(({ properties }) => {
-        const num = (properties?.["No"] as number) ?? 0;
+      evaluator.evaluate(
+        ({ properties }) => {
+          const num = (properties?.["No"] as number) ?? 0;
 
-        // Generate color based on feature number
-        const idx = num % 6;
-        const r = Math.abs(Math.sin(idx + 0));
-        const g = Math.abs(Math.sin(idx + 1));
-        const b = Math.abs(Math.sin(idx + 2));
+          // Generate color based on feature number
+          const idx = num % 6;
+          const r = Math.abs(Math.sin(idx + 0));
+          const g = Math.abs(Math.sin(idx + 1));
+          const b = Math.abs(Math.sin(idx + 2));
 
-        return {
-          color: new Color().setRGB(r, g, b),
-        };
-      });
+          return {
+            color: new Color().setRGB(r, g, b),
+          };
+        },
+        { filters: ["No"] },
+      );
     });
 
     return layer;

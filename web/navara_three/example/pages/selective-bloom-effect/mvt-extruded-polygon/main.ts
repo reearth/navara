@@ -62,23 +62,26 @@ const run = async () => {
   });
 
   layer.on("featureUpdated", ({ evaluator }) => {
-    evaluator.evaluate(({ properties }) => {
-      const attributes = JSON.parse(
-        (properties?.["attributes"] as string) ?? "{}",
-      );
-      const minHeight = attributes["urf:minimumBuildingHeight"];
-      const maxHeight = attributes["urf:maximumBuildingHeight"];
-      const extrudedHeight = Math.max(maxHeight ?? minHeight ?? 0, 1);
+    evaluator.evaluate(
+      ({ properties }) => {
+        const attributes = JSON.parse(
+          (properties?.["attributes"] as string) ?? "{}",
+        );
+        const minHeight = attributes["urf:minimumBuildingHeight"];
+        const maxHeight = attributes["urf:maximumBuildingHeight"];
+        const extrudedHeight = Math.max(maxHeight ?? minHeight ?? 0, 1);
 
-      const color = (() => {
-        if (extrudedHeight <= 1) return new Color().setHex(0x00ff00);
-        if (extrudedHeight < 10) return new Color().setHex(0xffff00);
-        if (extrudedHeight < 30) return new Color().setHex(0xff00ff);
-        return new Color().setHex(0xff0000);
-      })();
+        const color = (() => {
+          if (extrudedHeight <= 1) return new Color().setHex(0x00ff00);
+          if (extrudedHeight < 10) return new Color().setHex(0xffff00);
+          if (extrudedHeight < 30) return new Color().setHex(0xff00ff);
+          return new Color().setHex(0xff0000);
+        })();
 
-      return { color, extrudedHeight: extrudedHeight * 100 };
-    });
+        return { color, extrudedHeight: extrudedHeight * 100 };
+      },
+      { filters: ["attributes"] },
+    );
   });
 
   // Base layers
