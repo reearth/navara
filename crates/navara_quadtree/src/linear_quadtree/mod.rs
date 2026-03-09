@@ -1,6 +1,6 @@
 mod id;
 
-use fxhash::FxHashMap;
+use rustc_hash::FxHashMap;
 use std::fmt::Debug;
 
 use num::PrimInt;

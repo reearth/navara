@@ -4,10 +4,10 @@ use bevy_ecs::{
     query::{With, Without},
     system::Query,
 };
-use fxhash::{FxHashMap, FxHashSet};
 use navara_component::Deleted;
 use navara_mesh::Mesh;
 use navara_tile_component::{TileHandle, TileMeshMarker};
+use rustc_hash::{FxHashMap, FxHashSet};
 
 /// This struct caches an information that is necessary in rendering.
 /// Of course, we can store these value in the tile of TileQuadtree,

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use rustc_hash::FxHashMap;
 
 use crate::Geometry;
 use navara_core::{
@@ -60,7 +60,7 @@ fn edge_key(a: u32, b: u32) -> u64 {
 pub fn compute_boundary_edges(triangles: &[u32]) -> Vec<Edge> {
     assert!(triangles.len().is_multiple_of(3));
 
-    let mut map: HashMap<u64, EdgeInfo> = HashMap::new();
+    let mut map: FxHashMap<u64, EdgeInfo> = FxHashMap::default();
 
     let mut process_edge = |i1: u32, i2: u32| {
         let key = edge_key(i1, i2);

@@ -17,6 +17,7 @@ use navara_occluder::ellipsoidal_occluder::EllipsoidalOccluder;
 use navara_camera::{CameraFrustum, CameraMarker};
 use navara_tile_component::{TerrainInformationQuadtree, VectorTile, VectorTileQuadtree};
 use navara_window::Window;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
     MvtSourceResources,
@@ -237,8 +238,7 @@ pub fn transfer_mesh(
     mvt_data_requester: MvtDataRequesterQuery,
 ) {
     // Group layers by source entity, storing resource info for direct iteration
-    let mut sources: std::collections::HashMap<Entity, SourceData> =
-        std::collections::HashMap::new();
+    let mut sources: FxHashMap<Entity, SourceData> = FxHashMap::default();
 
     for (layer_entity, layer, resources) in &layers {
         sources
@@ -341,7 +341,7 @@ pub fn clear_caches(
     features: Query<(&FeatureId, &LayerId)>,
 ) {
     // Track which sources we've already processed to avoid duplicate work.
-    let mut processed_sources = std::collections::HashSet::new();
+    let mut processed_sources = FxHashSet::default();
 
     for (_layer, resources) in &layers {
         // Skip if we've already processed this source
@@ -420,7 +420,7 @@ pub fn clear_caches(
 
     // Reset the update flag for all sources - need to iterate again since
     // we may have skipped some sources above due to !is_updated_in_this_frame
-    let mut reset_sources = std::collections::HashSet::new();
+    let mut reset_sources = FxHashSet::default();
     for (_, resources) in &layers {
         if reset_sources.insert(resources.source)
             && let Ok(mut tc) = tcs.get_mut(resources.tile_cache_manager)

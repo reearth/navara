@@ -1,9 +1,9 @@
 //! Resource types for shared MVT source caching.
 
 use bevy_ecs::prelude::*;
-use fxhash::FxHashMap;
 use navara_layer::MvtLayer;
 use navara_material::Appearance;
+use rustc_hash::FxHashMap;
 
 /// Configuration for tile traversal derived from layer properties.
 ///
