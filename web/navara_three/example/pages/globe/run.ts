@@ -81,17 +81,20 @@ export async function run() {
   });
 
   chiyodaSubway.on("featureUpdated", ({ evaluator }) => {
-    evaluator.evaluate(({ properties }) => {
-      const gmlId = properties?.["gml_id"] as string;
-      if (selectedGMLId === gmlId) {
+    evaluator.evaluate(
+      ({ properties }) => {
+        const gmlId = properties?.["gml_id"] as string;
+        if (selectedGMLId === gmlId) {
+          return {
+            color: new Color().setHex(0xff00ff),
+          };
+        }
         return {
-          color: new Color().setHex(0xff00ff),
+          color: new Color().setHex(0xffffff),
         };
-      }
-      return {
-        color: new Color().setHex(0xffffff),
-      };
-    });
+      },
+      { filters: ["gml_id"] },
+    );
   });
 
   view.setCamera({

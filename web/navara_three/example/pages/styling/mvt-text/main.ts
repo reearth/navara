@@ -108,31 +108,34 @@ const run = async () => {
 
       const uniqueLabels = new Set<string>();
 
-      evaluator.evaluate(({ properties }) => {
-        const text = (properties?.["knj"] ?? properties?.["name"]) as string;
-        const ftCode = properties?.["ftCode"] as number;
-        const annoCtg = properties?.["annoCtg"] as number;
+      evaluator.evaluate(
+        ({ properties }) => {
+          const text = (properties?.["knj"] ?? properties?.["name"]) as string;
+          const ftCode = properties?.["ftCode"] as number;
+          const annoCtg = properties?.["annoCtg"] as number;
 
-        // Filter by feature code and annotation category
-        if (
-          !ALLOWED_FT_CODE.includes(ftCode) ||
-          (annoCtg && !ALLOWED_ANNO_CTG.includes(annoCtg))
-        ) {
-          return { text: "", show: false };
-        }
+          // Filter by feature code and annotation category
+          if (
+            !ALLOWED_FT_CODE.includes(ftCode) ||
+            (annoCtg && !ALLOWED_ANNO_CTG.includes(annoCtg))
+          ) {
+            return { text: "", show: false };
+          }
 
-        // Deduplicate labels
-        if (uniqueLabels.has(text)) {
-          return { text: "", show: false };
-        }
+          // Deduplicate labels
+          if (uniqueLabels.has(text)) {
+            return { text: "", show: false };
+          }
 
-        uniqueLabels.add(text);
+          uniqueLabels.add(text);
 
-        return {
-          text,
-          show: !!text,
-        };
-      });
+          return {
+            text,
+            show: !!text,
+          };
+        },
+        { filters: ["knj", "name", "ftCode", "annoCtg"] },
+      );
     });
 
     return layer;
