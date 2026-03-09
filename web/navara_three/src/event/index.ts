@@ -139,13 +139,18 @@ export type FeatureHandler = {
     type: "point" | "polyline" | "polygon" | "model",
     bits: bigint,
   ) => void;
-  readPropertiesFromFeature(
+  readAllBatchedProperties(
     bits: bigint,
     callback: (
       batchIdx: number,
       batchId: number,
       properties?: Record<string, unknown>,
     ) => void,
+  ): void;
+  readFilteredBatchedProperties(
+    bits: bigint,
+    keys: string[],
+    callback: (batchIdx: number, batchId: number, filtered?: unknown[]) => void,
   ): void;
 };
 

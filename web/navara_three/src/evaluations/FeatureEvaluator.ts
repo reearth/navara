@@ -138,6 +138,11 @@ export class FeatureEvaluator {
     number,
     Record<string, unknown> | undefined
   >;
+  private filterCacheKey?: string;
+  private cachedFilteredProperties?: Map<
+    number,
+    Record<string, unknown> | undefined
+  >;
   private batchIds: number[] = [];
 
   /**
@@ -192,7 +197,7 @@ export class FeatureEvaluator {
       }
     } else {
       this.cachedBatchedProperties = new Map();
-      this.handler.readPropertiesFromFeature(
+      this.handler.readAllBatchedProperties(
         this.featureId,
         (
           batchIdx: number,
@@ -202,6 +207,53 @@ export class FeatureEvaluator {
           this.cachedBatchedProperties?.set(batchIdx, properties);
           this.batchIds[batchIdx] = batchId;
           f({ batchIndex: batchIdx, batchId, properties });
+        },
+      );
+    }
+  }
+
+  /**
+   * Reads only the specified root properties of this feature.
+   * This is more efficient than `readFeatureProperties` when only a few properties are needed.
+   *
+   * @param keys - Array of property key names to read
+   * @param f - Callback function that receives feature info for each batch
+   *
+   * @example
+   * ```typescript
+   * evaluator.readFilteredFeatureProperties(["height", "name"], ({ batchId, properties }) => {
+   *   const { height, name } = properties;
+   * });
+   * ```
+   */
+  readFilteredFeatureProperties(
+    keys: string[],
+    f: (info: FeatureInfo) => void,
+  ) {
+    const cacheKey = keys.join("");
+    if (this.filterCacheKey === cacheKey && this.cachedFilteredProperties) {
+      for (const [batchIndex, filtered] of this.cachedFilteredProperties) {
+        f({
+          batchIndex,
+          batchId: this.batchIds[batchIndex],
+          properties: filtered,
+        });
+      }
+    } else {
+      this.cachedFilteredProperties = new Map();
+      this.filterCacheKey = cacheKey;
+
+      this.handler.readFilteredBatchedProperties(
+        this.featureId,
+        keys,
+        (batchIndex: number, batchId: number, filtered?: unknown[]) => {
+          const properties: Record<string, unknown> = {};
+          for (let i = 0; i < keys.length; i++) {
+            properties[keys[i]] = filtered?.[i];
+          }
+          this.cachedFilteredProperties?.set(batchIndex, properties);
+          this.batchIds[batchIndex] = batchId;
+          f({ batchIndex, batchId, properties });
         },
       );
     }
@@ -250,11 +302,17 @@ export class FeatureEvaluator {
    * });
    * ```
    */
-  evaluate(f: FeatureEvaluatorCallback) {
-    this.readFeatureProperties((info) => {
+  evaluate(f: FeatureEvaluatorCallback, options?: { filters?: string[] }) {
+    const evaluate = (info: FeatureInfo) => {
       const evaluated = f(info);
       this.applyEvaluatedValues(info.batchIndex, info.batchId, evaluated);
-    });
+    };
+
+    if (options?.filters) {
+      this.readFilteredFeatureProperties(options.filters, evaluate);
+    } else {
+      this.readFeatureProperties(evaluate);
+    }
   }
 
   private applyEvaluatedValues(

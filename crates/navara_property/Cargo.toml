@@ -1,16 +1,12 @@
 [package]
-name = "navara_b3dm"
+name = "navara_property"
 version = "0.1.0"
 edition.workspace = true
 license.workspace = true
 
 [dependencies]
-binrw.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-navara_bin.workspace = true
-navara_glb.workspace = true
-navara_property.workspace = true
 
 [dev-dependencies]
 approx.workspace = true

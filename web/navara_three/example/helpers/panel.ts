@@ -68,27 +68,30 @@ const addFeatureUpdateHandler = (
   };
 
   layer.on("featureUpdated", ({ evaluator }) => {
-    evaluator.evaluate(({ batchId, properties }) => {
-      const gmlId = properties?.["gml_id"];
-      if (gmlId && selectedFeatures.has(gmlId as string)) {
-        return {
-          color: new Color().setHex(0x00ffff),
-        };
-      } else if (batchId !== undefined && selectedBatchIds.has(batchId)) {
-        return {
-          color: new Color().setHex(0x00ffff),
-        };
-      }
+    evaluator.evaluate(
+      ({ batchId, properties }) => {
+        const gmlId = properties?.["gml_id"];
+        if (gmlId && selectedFeatures.has(gmlId as string)) {
+          return {
+            color: new Color().setHex(0x00ffff),
+          };
+        } else if (batchId !== undefined && selectedBatchIds.has(batchId)) {
+          return {
+            color: new Color().setHex(0x00ffff),
+          };
+        }
 
-      // Dynamically get the current default color
-      let defaultColor = getDefaultColor();
-      if (isNumber(defaultColor)) {
-        defaultColor = new Color().setHex(defaultColor);
-      }
-      return {
-        color: defaultColor,
-      };
-    });
+        // Dynamically get the current default color
+        let defaultColor = getDefaultColor();
+        if (isNumber(defaultColor)) {
+          defaultColor = new Color().setHex(defaultColor);
+        }
+        return {
+          color: defaultColor,
+        };
+      },
+      { filters: ["gml_id"] },
+    );
   });
 };
 

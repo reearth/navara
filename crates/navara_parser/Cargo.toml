@@ -6,7 +6,12 @@ license.workspace = true
 
 [dependencies]
 geojson_lib.workspace = true
+geozero.workspace = true
 navara_cesiumtiles.workspace = true
 navara_b3dm.workspace = true
 navara_pnts.workspace = true
 navara_glb.workspace = true
+navara_property.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true

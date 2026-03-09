@@ -81,13 +81,16 @@ const run = async () => {
       if (updatedFeatures.has(evaluator.id)) return;
       updatedFeatures.add(evaluator.id);
 
-      evaluator.evaluate(({ properties }) => {
-        const isStopped = (properties?.["N05_005e"] as string) === "9999";
+      evaluator.evaluate(
+        ({ properties }) => {
+          const isStopped = (properties?.["N05_005e"] as string) === "9999";
 
-        return {
-          color: new Color().setHex(isStopped ? 0xff0000 : 0xffffff),
-        };
-      });
+          return {
+            color: new Color().setHex(isStopped ? 0xff0000 : 0xffffff),
+          };
+        },
+        { filters: ["N05_005e"] },
+      );
     });
 
     return layer;

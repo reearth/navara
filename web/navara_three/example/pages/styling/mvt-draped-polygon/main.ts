@@ -74,25 +74,28 @@ const run = async () => {
 
     // Feature evaluator: style polygons based on fire prevention type
     layer.on("featureUpdated", ({ evaluator }) => {
-      evaluator.evaluate(({ properties }) => {
-        const functionType = properties?.["urf_function"] as string;
+      evaluator.evaluate(
+        ({ properties }) => {
+          const functionType = properties?.["urf_function"] as string;
 
-        const color = (() => {
-          // Fireproof area
-          if (functionType === "防火地域") {
-            return currentColors["防火地域"];
-          }
-          // Semi-fireproof area
-          if (functionType === "準防火地域") {
-            return currentColors["準防火地域"];
-          }
-          return currentColors["その他"];
-        })();
+          const color = (() => {
+            // Fireproof area
+            if (functionType === "防火地域") {
+              return currentColors["防火地域"];
+            }
+            // Semi-fireproof area
+            if (functionType === "準防火地域") {
+              return currentColors["準防火地域"];
+            }
+            return currentColors["その他"];
+          })();
 
-        return {
-          color: new Color().setStyle(color),
-        };
-      });
+          return {
+            color: new Color().setStyle(color),
+          };
+        },
+        { filters: ["urf_function"] },
+      );
     });
 
     return layer;

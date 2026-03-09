@@ -14,7 +14,7 @@ use feature::{
     ReturnedTransferablePolygonBatchedFeature, ReturnedTransferablePolylineBatchedFeature,
 };
 use navara_buffer_store::Handle;
-use navara_ecs::App;
+use navara_ecs::{App, BatchProperties};
 use navara_geometry::Hierarchy;
 use navara_input::Key;
 use navara_math::FloatType;
@@ -33,6 +33,8 @@ pub use navara_wasm_types::*;
 pub use types::*;
 pub use vector_tile::*;
 use worker::DelegatedWorkerTasksResult;
+
+use crate::property_value::JsPropertyValue;
 
 #[wasm_bindgen]
 extern "C" {
@@ -401,11 +403,13 @@ impl Core {
         })
     }
 
-    #[wasm_bindgen(js_name = getBatchProp)]
-    pub fn get_batch_prop(&mut self, batch_id: u32) -> BatchPropResult {
+    #[wasm_bindgen(js_name = readPropertyByGlobalBatchId)]
+    pub fn read_property_by_global_batch_id(&mut self, batch_id: u32) -> BatchPropResult {
         use property_value::JsPropertyValue;
 
-        let (properties, layer_id) = self.app.get_batch_prop::<JsPropertyValue>(&batch_id);
+        let (properties, layer_id) = self
+            .app
+            .read_property_by_global_batch_id::<JsPropertyValue>(&batch_id);
 
         let properties_js = properties.map(|v| v.0).unwrap_or(JsValue::NULL);
 
@@ -415,24 +419,64 @@ impl Core {
         }
     }
 
-    #[wasm_bindgen(js_name = readPropertiesFromFeature)]
-    pub fn read_properties_from_feature(
+    #[wasm_bindgen(js_name = readAllBatchedProperties)]
+    pub fn read_all_batched_properties(
         &mut self,
         renderable_feature_bits: u64,
         callback: &js_sys::Function,
     ) -> Result<(), JsValue> {
+        use navara_ecs::BatchProperties;
         use property_value::JsPropertyValue;
 
         let this = JsValue::NULL;
         self.app
-            .read_properties_by_global_batch_ids::<JsPropertyValue, JsValue, _>(
+            .read_all_batched_properties::<JsPropertyValue, JsValue, _>(
                 renderable_feature_bits,
-                &|batch_idx, batch_id, v: Option<JsPropertyValue>| {
+                None,
+                &|batch_idx, batch_id, props| {
                     let batch_idx = JsValue::from(batch_idx as u32);
                     let batch_id = JsValue::from(batch_id);
-                    match v {
-                        Some(v) => callback.call3(&this, &batch_idx, &batch_id, &v.0)?,
-                        None => callback.call2(&this, &batch_idx, &batch_id)?,
+                    match props {
+                        BatchProperties::All(Some(v)) => {
+                            callback.call3(&this, &batch_idx, &batch_id, &v.0)?
+                        }
+                        _ => callback.call2(&this, &batch_idx, &batch_id)?,
+                    };
+                    Ok(())
+                },
+            )?;
+        Ok(())
+    }
+
+    #[wasm_bindgen(js_name = readFilteredBatchedProperties)]
+    pub fn read_filtered_batched_properties(
+        &mut self,
+        renderable_feature_bits: u64,
+        keys: Vec<JsValue>,
+        callback: &js_sys::Function,
+    ) -> Result<(), JsValue> {
+        let keys: Vec<String> = keys.iter().filter_map(|k| k.as_string()).collect();
+
+        let this = JsValue::NULL;
+        self.app
+            .read_all_batched_properties::<JsPropertyValue, JsValue, _>(
+                renderable_feature_bits,
+                Some(&keys),
+                &|batch_idx, batch_id, props| {
+                    let batch_idx = JsValue::from(batch_idx as u32);
+                    let batch_id = JsValue::from(batch_id);
+                    match props {
+                        BatchProperties::Filtered(Some(values)) => {
+                            let arr = js_sys::Array::new_with_length(values.len() as u32);
+                            for (i, val) in values.into_iter().enumerate() {
+                                match val {
+                                    Some(v) => arr.set(i as u32, v.0),
+                                    None => arr.set(i as u32, JsValue::UNDEFINED),
+                                }
+                            }
+                            callback.call3(&this, &batch_idx, &batch_id, &arr.into())?
+                        }
+                        _ => callback.call2(&this, &batch_idx, &batch_id)?,
                     };
                     Ok(())
                 },

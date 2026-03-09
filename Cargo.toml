@@ -114,6 +114,7 @@ navara_wasm_utils = { path = "crates/navara_wasm_utils" }
 navara_wasm_worker = { path = "crates/navara_wasm_worker" }
 navara_window = { path = "crates/navara_window" }
 navara_worker = { path = "crates/navara_worker" }
+navara_property = { path = "crates/navara_property" }
 
 [workspace.metadata.wasm-pack.profile.dev.wasm-bindgen]
 dwarf-debug-info = true

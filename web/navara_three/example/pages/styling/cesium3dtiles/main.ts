@@ -101,48 +101,51 @@ const run = async () => {
 
     // Feature evaluator: style buildings based on measured height
     layer.on("featureUpdated", ({ evaluator }) => {
-      evaluator.evaluate(({ properties }) => {
-        const measuredHeight =
-          (properties?.["bldg:measuredHeight"] as number) ?? 0;
+      evaluator.evaluate(
+        ({ properties }) => {
+          const measuredHeight =
+            (properties?.["bldg:measuredHeight"] as number) ?? 0;
 
-        // Determine visibility by height bucket
-        const show = (() => {
-          if (measuredHeight < 30) return currentShow["< 30m"];
-          if (measuredHeight < 60) return currentShow["< 60m"];
-          if (measuredHeight < 90) return currentShow["< 90m"];
-          return currentShow[">= 90m"];
-        })();
+          // Determine visibility by height bucket
+          const show = (() => {
+            if (measuredHeight < 30) return currentShow["< 30m"];
+            if (measuredHeight < 60) return currentShow["< 60m"];
+            if (measuredHeight < 90) return currentShow["< 90m"];
+            return currentShow[">= 90m"];
+          })();
 
-        // Determine color: either by colormap or by threshold
-        const color = (() => {
-          if (colorModeParams.colorMap !== "None") {
-            // Gradation by height using color map
-            const min = 3;
-            const max = 235;
-            const t = Math.max(
-              0,
-              Math.min(1, (measuredHeight - min) / (max - min)),
-            );
-            const colorMap =
-              colorModeParams.colorMap === "YlGnBu"
-                ? YlGnBu_COLOR_MAP
-                : PLATEAU_COLOR_MAP;
-            const [r, g, b] = colorMap.linear(t);
-            return new Color().setRGB(r, g, b);
-          }
+          // Determine color: either by colormap or by threshold
+          const color = (() => {
+            if (colorModeParams.colorMap !== "None") {
+              // Gradation by height using color map
+              const min = 3;
+              const max = 235;
+              const t = Math.max(
+                0,
+                Math.min(1, (measuredHeight - min) / (max - min)),
+              );
+              const colorMap =
+                colorModeParams.colorMap === "YlGnBu"
+                  ? YlGnBu_COLOR_MAP
+                  : PLATEAU_COLOR_MAP;
+              const [r, g, b] = colorMap.linear(t);
+              return new Color().setRGB(r, g, b);
+            }
 
-          // Threshold-based coloring
-          if (measuredHeight < 30)
-            return new Color().setStyle(currentColors["< 30m"]);
-          if (measuredHeight < 60)
-            return new Color().setStyle(currentColors["< 60m"]);
-          if (measuredHeight < 90)
-            return new Color().setStyle(currentColors["< 90m"]);
-          return new Color().setStyle(currentColors[">= 90m"]);
-        })();
+            // Threshold-based coloring
+            if (measuredHeight < 30)
+              return new Color().setStyle(currentColors["< 30m"]);
+            if (measuredHeight < 60)
+              return new Color().setStyle(currentColors["< 60m"]);
+            if (measuredHeight < 90)
+              return new Color().setStyle(currentColors["< 90m"]);
+            return new Color().setStyle(currentColors[">= 90m"]);
+          })();
 
-        return { color, show };
-      });
+          return { color, show };
+        },
+        { filters: ["bldg:measuredHeight"] },
+      );
     });
 
     return layer;
