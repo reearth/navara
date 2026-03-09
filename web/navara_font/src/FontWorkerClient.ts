@@ -1,4 +1,5 @@
 import type { ShapeTextResult, FontAtlasData } from "./FontManager";
+import type { ConcurrencyManager } from "@navara/worker";
 
 export type BatchPrepareTextResult = {
   results: { text: string; shapeResult: ShapeTextResult | null }[];
@@ -11,6 +12,7 @@ export type BatchPrepareTextResult = {
  */
 export class FontWorkerClient {
   private _worker: Worker;
+  private _concurrencyManager: ConcurrencyManager;
   private _nextId = 0;
   private _pending = new Map<
     number,
@@ -18,8 +20,11 @@ export class FontWorkerClient {
   >();
   private _ready: Promise<void>;
 
-  constructor(workerUrl: string | URL) {
+  constructor(workerUrl: string | URL, concurrencyManager: ConcurrencyManager) {
+    this._concurrencyManager = concurrencyManager;
+
     this._worker = new Worker(workerUrl, { type: "module" });
+
     this._worker.onmessage = (e: MessageEvent) => {
       const { id, type, payload } = e.data;
       const pending = this._pending.get(id);
@@ -32,6 +37,7 @@ export class FontWorkerClient {
         pending.resolve(payload);
       }
     };
+
     this._worker.onerror = (e) => {
       console.error("FontWorkerClient: worker error", e);
       // Reject all pending requests so callers don't hang indefinitely.
@@ -40,6 +46,7 @@ export class FontWorkerClient {
 
     // Trigger WASM init by sending a tickFrame
     this._ready = this._send("tickFrame", undefined).then(() => undefined);
+    this._concurrencyManager.increment();
   }
 
   /** Wait for the WASM module to be initialized in the worker. */
@@ -85,6 +92,7 @@ export class FontWorkerClient {
       pending.reject(new Error("FontWorkerClient disposed"));
     }
     this._pending.clear();
+    this._concurrencyManager.decrement();
   }
 
   private _send(

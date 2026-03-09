@@ -2,11 +2,11 @@ import {
   type TextMesh as NavaraTextMesh,
   type TextMaterial as NavaraTextMaterial,
 } from "@navara/engine";
+import type { FontManager } from "@navara/font";
 import { Color } from "three";
 import invariant from "tiny-invariant";
 
 import { type BufferLoader } from "../event";
-import type { FontManager } from "../font/FontManager";
 import type { CommonUniforms } from "../uniforms";
 
 import { InstancedMesh, type InstancedMeshOptions } from "./instanced";

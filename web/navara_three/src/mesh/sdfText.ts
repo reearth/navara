@@ -4,6 +4,12 @@ import type {
   Transform,
 } from "@navara/engine";
 import { encodePosition } from "@navara/engine-api";
+import {
+  createSdfAtlasTexture,
+  type FontManager,
+  type GlyphMetrics,
+  type ShapeTextResult,
+} from "@navara/font";
 import sdfTextFragmentShader from "@shaders/glsl/sdfText.frag.glsl";
 import sdfTextVertexShader from "@shaders/glsl/sdfText.vert.glsl";
 import {
@@ -19,12 +25,6 @@ import {
   Vector3,
 } from "three";
 
-import {
-  createSdfAtlasTexture,
-  type FontManager,
-  type GlyphMetrics,
-  type ShapeTextResult,
-} from "../font/FontManager";
 
 import type { PickableMesh } from "./pickableMesh";
 

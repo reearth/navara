@@ -179,11 +179,24 @@ importers:
         specifier: ^7.4.3
         version: 7.4.3
 
+  web/navara_font:
+    dependencies:
+      three:
+        specifier: ^0.183.1
+        version: 0.183.1
+    devDependencies:
+      '@types/three':
+        specifier: ^0.183.1
+        version: 0.183.1
+
   web/navara_three:
     dependencies:
       '@navara/core':
         specifier: workspace:*
         version: link:../navara_core
+      '@navara/font':
+        specifier: workspace:*
+        version: link:../navara_font
       '@navara/three_api':
         specifier: workspace:*
         version: link:../navara_three_api

@@ -1,7 +1,13 @@
+#![doc = include_str!("../README.md")]
+
+pub mod atlas;
+pub mod resource;
+pub mod shaping;
+
 use std::cell::RefCell;
 
-use navara_font::{FontCache, atlas, shaping};
 use navara_wasm_utils::set_panic_hook;
+pub use resource::{FontCache, FontEntry, GlyphMetrics, SDFAtlas};
 use wasm_bindgen::prelude::*;
 
 thread_local! {
@@ -14,7 +20,7 @@ pub fn start() {
 }
 
 // ---------------------------------------------------------------------------
-// WASM types (mirrored from navara_wasm/src/font.rs)
+// WASM types
 // ---------------------------------------------------------------------------
 
 /// SDF atlas data returned to TypeScript.
