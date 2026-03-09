@@ -10,4 +10,4 @@ bevy = ["dep:bevy_ecs"]
 [dependencies]
 num.workspace = true
 bevy_ecs = { workspace = true, optional = true }
-fxhash.workspace = true
+rustc-hash.workspace = true

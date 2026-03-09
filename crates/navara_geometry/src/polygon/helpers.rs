@@ -1,4 +1,6 @@
-use std::collections::{HashMap, VecDeque};
+use std::collections::VecDeque;
+
+use rustc_hash::FxHashMap;
 
 use navara_core::{Ellipsoid, EllipsoidTangentPlane};
 use navara_math::{EPSILON10, EqualEpsilon, FloatType, Vec2, Vec3, chord_length};
@@ -180,7 +182,7 @@ pub fn compute_subdivision(
     let min_distance = chord_length(granularity, radius);
     let min_distance_sqrt = min_distance * min_distance;
 
-    let mut edges: HashMap<(usize, usize), usize> = HashMap::new();
+    let mut edges: FxHashMap<(usize, usize), usize> = FxHashMap::default();
 
     let mut subdivided_indices = vec![];
     let mut subdivided_positions = positions

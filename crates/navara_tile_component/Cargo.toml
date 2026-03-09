@@ -8,7 +8,7 @@ license.workspace = true
 bevy_app.workspace = true
 bevy_ecs.workspace = true
 bevy_log.workspace = true
-fxhash.workspace = true
+rustc-hash.workspace = true
 navara_quadtree = { workspace = true, features = ["bevy"] }
 navara_core.workspace = true
 navara_geometry.workspace = true
