@@ -46,19 +46,3 @@ use rustc_hash::{FxHashMap, FxHashSet};
 let mut map: FxHashMap<Entity, MyValue> = FxHashMap::default();
 let mut set: FxHashSet<u64> = FxHashSet::default();
 ```
-
-## Codebase Examples
-
-### Internal keys (use `FxHashMap`):
-
-- `Cesium3dTilesJsonTileSetStateMap` — keyed by `(Entity, Entity)` struct
-- `compute_boundary_edges` in `terrain/skirt.rs` — keyed by `u64` edge key
-- `compute_subdivision` in `polygon/helpers.rs` — keyed by `(usize, usize)` edge pair
-- `ClippedCoordMap` in `terrain/upsample` — keyed by internally-generated quantized string
-
-### External keys (keep `std::HashMap`):
-
-- `Cesium3dTilesComponent` — URL query params from network
-- `LayerStore` / `LayerDescStore` — layer IDs from developer API
-- `RenderedTile` in `navara_mvt` — MVT layer names from tile data
-- `navara_cesiumtiles::Tileset` — tileset metadata deserialized from external JSON
