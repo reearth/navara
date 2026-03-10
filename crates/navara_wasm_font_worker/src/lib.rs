@@ -188,26 +188,6 @@ pub fn get_font_atlas(url: &str) -> Option<FontAtlas> {
     })
 }
 
-/// Get a zero-copy view into the atlas pixel data in WASM linear memory.
-/// The returned Uint8Array is only valid until the next WASM allocation.
-/// Caller must copy/slice the data before any further WASM calls.
-#[wasm_bindgen(js_name = getFontAtlasView)]
-pub fn get_font_atlas_view(url: &str) -> Option<FontAtlas> {
-    FONT_CACHE.with(|cache| {
-        let cache = cache.borrow();
-        let entry = cache.get(url)?;
-        // SAFETY: view is valid until next WASM allocation. The worker is
-        // single-threaded and no WASM calls happen between this return
-        // and the JS-side .slice() copy.
-        let view = unsafe { js_sys::Uint8Array::view(&entry.atlas.pixel_data) };
-        Some(FontAtlas {
-            data: view,
-            width: entry.atlas.width,
-            height: entry.atlas.height,
-        })
-    })
-}
-
 /// Increment the frame counter for LRU tracking.
 #[wasm_bindgen(js_name = tickFrame)]
 pub fn tick_frame() {

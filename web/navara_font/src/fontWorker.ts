@@ -3,7 +3,7 @@
 import init, {
   loadFont,
   shapeText,
-  getFontAtlasView,
+  getFontAtlas,
   tickFrame,
   type ShapeTextResult as WasmShapeTextResult,
   type WasmShapedGlyph,
@@ -52,11 +52,9 @@ function convertShapeResult(sr: WasmShapeTextResult | undefined) {
 }
 
 function snapshotAtlas(fontUrl: string) {
-  const atlas = getFontAtlasView(fontUrl);
+  const atlas = getFontAtlas(fontUrl);
   if (!atlas) return null;
-  // Single copy from WASM memory view into a transferable buffer
-  const data = atlas.data.slice().buffer;
-  return { data, width: atlas.width, height: atlas.height };
+  return { data: atlas.data.buffer, width: atlas.width, height: atlas.height };
 }
 
 type FontWorkerMessageType =
