@@ -1,9 +1,9 @@
 import {
+  Mesh,
   NoBlending,
   type Blending,
   type Color,
   type Material,
-  type Mesh,
   type Object3D,
 } from "three";
 
@@ -308,17 +308,16 @@ export function injectSelectiveEffectHandlers(
 ): void {
   const { registry, layerId, shaderUniforms } = options;
 
-  const mesh = object as Mesh;
-  const material = mesh.material as Material | Material[] | undefined;
-
-  // Guard: Check if material exists
-  if (!material) {
+  // Guard: Check if object is a Mesh with material
+  if (!(object instanceof Mesh)) {
     console.warn(
-      "injectSelectiveEffectHandlers: object has no material",
+      "injectSelectiveEffectHandlers: object is not a Mesh",
       object,
     );
     return;
   }
+
+  const material = object.material;
 
   // Guard: Check if material is an array (not supported)
   if (Array.isArray(material)) {

@@ -51,6 +51,12 @@ export type SelectiveOutlineEffectUpdate = {
   };
 } & EffectLayerUpdate;
 
+function isSelectiveOutlineConfig(
+  config: EffectLayerConfig,
+): config is SelectiveOutlineEffectConfig {
+  return "selectiveOutline" in config;
+}
+
 const DEFAULT_COLOR = 0xffffff;
 const DEFAULT_THICKNESS = 1.0;
 const DEFAULT_EDGE_STRENGTH = 1.0;
@@ -98,12 +104,12 @@ export class SelectiveOutlineEffectLayer extends SelectiveEffectLayer<
   }
 
   constructor(view: ViewContext, config: EffectLayerConfig) {
-    const baseConfig = config as Partial<SelectiveOutlineEffectConfig>;
-    const outlineConfig =
-      "selectiveOutline" in config ? baseConfig.selectiveOutline : undefined;
+    const outlineConfig = isSelectiveOutlineConfig(config)
+      ? config.selectiveOutline
+      : undefined;
 
     const postEffectConfig: SelectiveOutlineEffectConfig = {
-      ...(config as SelectiveOutlineEffectConfig),
+      ...config,
       selectiveEffect: true,
       selectiveOutline: {
         color: outlineConfig?.color ?? new Color().setHex(DEFAULT_COLOR),

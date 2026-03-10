@@ -53,6 +53,12 @@ export type SelectiveBloomEffectUpdate = {
   };
 } & EffectLayerUpdate;
 
+function isSelectiveBloomConfig(
+  config: EffectLayerConfig,
+): config is SelectiveBloomEffectConfig {
+  return "selectiveBloom" in config;
+}
+
 // Default bloom parameters for mask-based selective bloom
 const DEFAULT_STRENGTH = 0.8;
 const DEFAULT_RADIUS = 0.2;
@@ -104,12 +110,12 @@ export class SelectiveBloomEffectLayer extends SelectiveEffectLayer<
   }
 
   constructor(view: ViewContext, config: EffectLayerConfig) {
-    const baseConfig = config as Partial<SelectiveBloomEffectConfig>;
-    const bloomConfig =
-      "selectiveBloom" in config ? baseConfig.selectiveBloom : undefined;
+    const bloomConfig = isSelectiveBloomConfig(config)
+      ? config.selectiveBloom
+      : undefined;
 
     const postEffectConfig: SelectiveBloomEffectConfig = {
-      ...(config as SelectiveBloomEffectConfig),
+      ...config,
       selectiveEffect: true,
       selectiveBloom: {
         strength: bloomConfig?.strength ?? DEFAULT_STRENGTH,

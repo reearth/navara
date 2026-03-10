@@ -94,31 +94,12 @@ export abstract class SelectiveEffectLayer<
       },
     );
 
-    // Register maskRT with CustomRenderPass for context-based mask rendering
-    this.registerMaskRenderTarget();
-
     super.onCreate();
   }
 
   /**
-   * Register mask render targets.
-   * Combined RTs are owned by MaskController — no per-effect registration needed.
-   */
-  protected registerMaskRenderTarget(): void {
-    // Combined RTs are owned by MaskController
-  }
-
-  /**
-   * Unregister mask render targets.
-   * Combined RTs are owned by MaskController — no per-effect registration needed.
-   */
-  protected unregisterMaskRenderTarget(): void {
-    // Combined RTs are owned by MaskController
-  }
-
-  /**
-   * Get CustomRenderPass for mask registration.
-   * Used by subclasses and Pass classes for occlusion-specific RT registration.
+   * Get CustomRenderPass for combined mask RT access.
+   * Used by SelectiveEffectPass to read combined Normal/Silhouette mask RTs.
    */
   public getCustomRenderPass(): CustomRenderPass | undefined {
     const mrtPass = this.findLayer<MRTPassEffectLayer>("mrt");
@@ -187,9 +168,6 @@ export abstract class SelectiveEffectLayer<
   }
 
   onDestroy(): void {
-    // Unregister maskRT from CustomRenderPass
-    this.unregisterMaskRenderTarget();
-
     if (this.view.selectiveEffectRegistry) {
       this.view.selectiveEffectRegistry.destroy(this.id);
     }
