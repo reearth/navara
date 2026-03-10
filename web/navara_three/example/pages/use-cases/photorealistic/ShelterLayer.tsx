@@ -65,12 +65,15 @@ export const ShelterLayer: FC<{ visible?: boolean }> = ({
   const onTextLayerReady = (layer: NavaraLayer) => {
     textLayerRef.current = layer;
     layer.on("featureUpdated", ({ evaluator }) => {
-      evaluator.evaluate((_batchId, property) => {
-        const name = (property?.["名称"] as string) ?? "";
-        // Hide when there's no name
-        if (!name) return { text: "" };
-        return { text: name };
-      });
+      evaluator.evaluate(
+        ({ properties }) => {
+          const name = (properties?.["名称"] as string) ?? "";
+          // Hide when there's no name
+          if (!name) return { text: "" };
+          return { text: name };
+        },
+        { filters: ["名称"] },
+      );
     });
   };
 

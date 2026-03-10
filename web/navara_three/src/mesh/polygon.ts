@@ -97,6 +97,8 @@ export class PolygonMesh extends BatchedFeatureMesh<
     // TODO: Need to calculate bounding sphere by position_high and position_low.
     this.frustumCulled = false;
 
+    this.batchLength = mesh.batch_length;
+
     // Register cleanup listener first (before any potential early returns)
     // This ensures dispose() is called even if geometry initialization fails
     this.addEventListener("removedFromWorld", () => {
@@ -582,9 +584,9 @@ export class PolygonMesh extends BatchedFeatureMesh<
     super._updateBatchAttribute(batchId, attribute, value);
   }
 
-  _initBatchDataTexture(batchLength: number): void {
+  _initBatchDataTexture(): void {
     // Call parent to create the texture
-    super._initBatchDataTexture(batchLength);
+    super._initBatchDataTexture();
 
     // Update the enhancer with the new batchDataTexture
     const texture = this._getBatchDataTexture();

@@ -42,7 +42,9 @@ pub fn children_coords<U: PrimInt + Default + Sync + Send + 'static>(
 
 #[cfg(test)]
 pub(crate) mod test {
-    use std::{collections::HashSet, hash::Hash};
+    use std::hash::Hash;
+
+    use rustc_hash::FxHashSet;
 
     pub(crate) fn unordered_elements_are<T, X, Y>(x: X, y: Y) -> bool
     where
@@ -51,8 +53,8 @@ pub(crate) mod test {
         Y: IntoIterator<Item = T>,
         Y::Item: PartialEq + Eq + Hash,
     {
-        let hs1: HashSet<T> = HashSet::from_iter(x);
-        let hs2: HashSet<T> = HashSet::from_iter(y);
+        let hs1: FxHashSet<T> = FxHashSet::from_iter(x);
+        let hs2: FxHashSet<T> = FxHashSet::from_iter(y);
         hs1 == hs2
     }
 }

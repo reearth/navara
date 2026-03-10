@@ -2,15 +2,14 @@
 
 extern crate alloc;
 
-mod property_value;
 mod types;
 
 pub use navara_bin::*;
-pub use property_value::PropertyValue;
 
 use alloc::vec::Vec;
 use binrw::BinRead;
 use navara_glb::Glb;
+use navara_property::{PropertyValue, json_value_to_property_value};
 use serde::{Deserialize, Serialize};
 use types::{ComponentType, DataType};
 
@@ -84,6 +83,79 @@ pub struct BatchTable {
 impl BatchTable {
     pub fn json(&self) -> Result<serde_json::Value, serde_json::Error> {
         parse_json_to_struct(&self.json_data)
+    }
+
+    /// Parse the batch table JSON, retaining only the specified top-level keys.
+    /// This avoids keeping large array-valued properties in memory for keys that
+    /// are not needed.
+    pub fn json_filtered(&self, keys: &[String]) -> Result<serde_json::Value, serde_json::Error> {
+        let value: serde_json::Value = parse_json_to_struct(&self.json_data)?;
+        if let serde_json::Value::Object(map) = value {
+            let filtered: serde_json::Map<String, serde_json::Value> = map
+                .into_iter()
+                .filter(|(k, _)| keys.iter().any(|requested| requested == k))
+                .collect();
+            Ok(serde_json::Value::Object(filtered))
+        } else {
+            Ok(value)
+        }
+    }
+
+    /// Get all properties for a batch index as a single PropertyValue map.
+    pub fn get_property<V: PropertyValue>(
+        &self,
+        batch_table_json: &serde_json::Value,
+        batch_id: usize,
+    ) -> Option<V> {
+        let mut prop = V::empty_map();
+
+        if let serde_json::Value::Object(map) = batch_table_json {
+            for (key, value) in map {
+                match value {
+                    serde_json::Value::Object(_) => {
+                        if let Ok(v) = self.read_property_from_binary::<V>(batch_id, value) {
+                            V::insert(&mut prop, key.clone(), v);
+                        }
+                    }
+                    serde_json::Value::Array(arr) => {
+                        if let Some(v) = json_value_to_property_value::<V>(&arr[batch_id]) {
+                            V::insert(&mut prop, key.clone(), v);
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        Some(V::finalize_map(prop))
+    }
+
+    /// Get filtered properties for a batch index, returning `Vec<Option<V>>` matching key order.
+    pub fn get_filtered_properties<V: PropertyValue>(
+        &self,
+        batch_table_json: &serde_json::Value,
+        batch_idx: usize,
+        keys: &[String],
+    ) -> Option<Vec<Option<V>>> {
+        if let serde_json::Value::Object(map) = batch_table_json {
+            let result = keys
+                .iter()
+                .map(|key| {
+                    map.get(key).and_then(|value| match value {
+                        serde_json::Value::Object(_) => {
+                            self.read_property_from_binary::<V>(batch_idx, value).ok()
+                        }
+                        serde_json::Value::Array(arr) => {
+                            json_value_to_property_value::<V>(&arr[batch_idx])
+                        }
+                        _ => None,
+                    })
+                })
+                .collect();
+            Some(result)
+        } else {
+            None
+        }
     }
 
     pub fn read_property_from_binary<V: PropertyValue>(
@@ -185,7 +257,7 @@ mod tests {
     use approx::assert_abs_diff_eq;
     #[cfg(test)]
     use navara_glb::mock::create_mock_glb_data;
-    use serde_json::{Number, Value};
+    use serde_json::{Number, Value, json};
 
     fn create_mock_b3dm_data() -> Vec<u8> {
         // Feature Table JSON
@@ -409,6 +481,82 @@ mod tests {
                 assert(property_value, v.clone());
             }
         }
+    }
+
+    #[test]
+    fn it_should_get_property_combining_array_and_binary() {
+        let data = create_mock_b3dm_data();
+        let b3dm = B3dm::from_data(&data).unwrap();
+        let batch_table_json = b3dm.batch_table.json().unwrap();
+
+        // batch_id 0
+        let prop: Value = b3dm.batch_table.get_property(&batch_table_json, 0).unwrap();
+        let map = prop.as_object().unwrap();
+
+        // Array-based property
+        assert_eq!(map["some_property"], json!(1));
+        // Binary BYTE SCALAR
+        assert_eq!(map["test_property_byte"], json!(1));
+        // Binary FLOAT SCALAR
+        assert_abs_diff_eq!(
+            map["test_property_float"].as_f64().unwrap(),
+            2.0,
+            epsilon = 1e-6
+        );
+        // Binary FLOAT VEC3
+        let vec3 = map["test_property_vec3"].as_array().unwrap();
+        assert_abs_diff_eq!(vec3[0].as_f64().unwrap(), 3.0, epsilon = 1e-6);
+        assert_abs_diff_eq!(vec3[1].as_f64().unwrap(), 4.0, epsilon = 1e-6);
+        assert_abs_diff_eq!(vec3[2].as_f64().unwrap(), 5.0, epsilon = 1e-6);
+
+        // batch_id 4 (last)
+        let prop: Value = b3dm.batch_table.get_property(&batch_table_json, 4).unwrap();
+        let map = prop.as_object().unwrap();
+        assert_eq!(map["some_property"], json!(5));
+        assert_eq!(map["test_property_byte"], json!(5));
+        assert_abs_diff_eq!(
+            map["test_property_float"].as_f64().unwrap(),
+            2.4,
+            epsilon = 1e-6
+        );
+    }
+
+    #[test]
+    fn it_should_get_filtered_properties_with_ordering_and_missing() {
+        let data = create_mock_b3dm_data();
+        let b3dm = B3dm::from_data(&data).unwrap();
+        let batch_table_json = b3dm.batch_table.json().unwrap();
+
+        let keys = vec![
+            "test_property_float".to_string(),
+            "nonexistent".to_string(),
+            "some_property".to_string(),
+        ];
+
+        let result: Vec<Option<Value>> = b3dm
+            .batch_table
+            .get_filtered_properties(&batch_table_json, 0, &keys)
+            .unwrap();
+
+        assert_eq!(result.len(), 3);
+        // Matches key order
+        assert_abs_diff_eq!(
+            result[0].as_ref().unwrap().as_f64().unwrap(),
+            2.0,
+            epsilon = 1e-6
+        );
+        assert!(result[1].is_none());
+        assert_eq!(result[2], Some(json!(1)));
+    }
+
+    #[test]
+    fn it_should_return_none_for_filtered_properties_on_non_object() {
+        let data = create_mock_b3dm_data();
+        let b3dm = B3dm::from_data(&data).unwrap();
+        let result: Option<Vec<Option<Value>>> =
+            b3dm.batch_table
+                .get_filtered_properties(&Value::Array(vec![]), 0, &["a".into()]);
+        assert!(result.is_none());
     }
 
     #[test]

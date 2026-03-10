@@ -4,9 +4,10 @@ use bevy_ecs::entity::Entity;
 use geozero::mvt::tile;
 
 use navara_feature_component::{
-    batch::{BatchTable, MvtLayerData},
+    batch::BatchTable,
     geometry_builder::{GeometryAppearanceKind, GeometryGroups},
 };
+use navara_parser::mvt::MvtLayerData;
 
 /// Accumulates feature entities and batch IDs during MVT geometry construction.
 ///

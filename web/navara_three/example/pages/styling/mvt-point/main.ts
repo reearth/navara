@@ -77,26 +77,29 @@ const run = async () => {
       if (updatedFeatures.has(evaluator.id)) return;
       updatedFeatures.add(evaluator.id);
 
-      evaluator.evaluate((_batchId, property) => {
-        const type = property?.["備考"] as string;
+      evaluator.evaluate(
+        ({ properties }) => {
+          const type = properties?.["備考"] as string;
 
-        // Color based on heliport type
-        const color = (() => {
-          // Athletic field (陸上競技場)
-          if (type === "陸上競技場") {
-            return 0x0000ff;
-          }
-          // Riverbed (河川敷)
-          if (type?.endsWith("河川敷")) {
-            return 0x00ff00;
-          }
-          return 0xff0000;
-        })();
+          // Color based on heliport type
+          const color = (() => {
+            // Athletic field (陸上競技場)
+            if (type === "陸上競技場") {
+              return 0x0000ff;
+            }
+            // Riverbed (河川敷)
+            if (type?.endsWith("河川敷")) {
+              return 0x00ff00;
+            }
+            return 0xff0000;
+          })();
 
-        return {
-          color: new Color().setHex(color),
-        };
-      });
+          return {
+            color: new Color().setHex(color),
+          };
+        },
+        { filters: ["備考"] },
+      );
     });
 
     return layer;

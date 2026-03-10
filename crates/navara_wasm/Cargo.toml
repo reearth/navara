@@ -41,6 +41,7 @@ navara_wasm_utils.workspace = true
 navara_wasm_transferable.workspace = true
 navara_quadtree.workspace = true
 navara_globe.workspace = true
+navara_property.workspace = true
 rand.workspace = true
 getrandom.workspace = true
 

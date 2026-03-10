@@ -4,7 +4,8 @@
 //! system, particularly for coordinating between parent and child tilesets.
 
 use bevy_ecs::{entity::Entity, resource::Resource};
-use std::collections::{HashMap, hash_map};
+use rustc_hash::FxHashMap;
+use std::collections::hash_map;
 
 /// Key for identifying a nested tileset's state.
 ///
@@ -63,7 +64,7 @@ pub struct Cesium3dTileSetState {
 /// Failure to clean up entries would cause a memory leak.
 #[derive(Default, Debug, Resource)]
 pub struct Cesium3dTilesJsonTileSetStateMap {
-    tileset_state_map: HashMap<Cesium3dTilesJsonTileSetStateMapKey, Cesium3dTileSetState>,
+    tileset_state_map: FxHashMap<Cesium3dTilesJsonTileSetStateMapKey, Cesium3dTileSetState>,
     needs_update: bool,
 }
 

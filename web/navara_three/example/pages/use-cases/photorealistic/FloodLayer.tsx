@@ -111,52 +111,55 @@ export function FloodLayer({
   const onReady = (layer: NavaraLayer) => {
     layerRef.current = layer;
     const onUpdate = ({ evaluator }: FeatureUpdatedParams) => {
-      evaluator.evaluate((_batchId, property) => {
-        const kind = (property?.["kind"] as string) || "";
-        const color =
-          kind === "point" ? DEFAULT_POINT_COLOR : DEFAULT_POLY_COLOR;
+      evaluator.evaluate(
+        ({ properties }) => {
+          const kind = (properties?.["kind"] as string) || "";
+          const color =
+            kind === "point" ? DEFAULT_POINT_COLOR : DEFAULT_POLY_COLOR;
 
-        // Check if feature is available at current time
-        const availabilities = property?.["availabilities"] as
-          | Record<"start" | "end", string>[]
-          | undefined;
+          // Check if feature is available at current time
+          const availabilities = properties?.["availabilities"] as
+            | Record<"start" | "end", string>[]
+            | undefined;
 
-        // If no availabilities specified, feature is always shown
-        if (!availabilities || availabilities.length === 0) {
+          // If no availabilities specified, feature is always shown
+          if (!availabilities || availabilities.length === 0) {
+            return {
+              color,
+              show: true,
+            };
+          }
+
+          // Check availability against current time
+          const currentTimeISO = currentTimeRef.current;
+          if (!currentTimeISO) {
+            return {
+              color: new Color(),
+              show: false,
+            };
+          }
+
+          const currentDate = new Date(currentTimeISO);
+          const isAvailable = availabilities.some((av) => {
+            const start = new Date(av["start"] ?? "");
+            const end = new Date(av["end"] ?? "");
+            return currentDate >= start && currentDate < end;
+          });
+
+          if (!isAvailable) {
+            return {
+              color: new Color(),
+              show: false,
+            };
+          }
+
           return {
             color,
             show: true,
           };
-        }
-
-        // Check availability against current time
-        const currentTimeISO = currentTimeRef.current;
-        if (!currentTimeISO) {
-          return {
-            color: new Color(),
-            show: false,
-          };
-        }
-
-        const currentDate = new Date(currentTimeISO);
-        const isAvailable = availabilities.some((av) => {
-          const start = new Date(av["start"] ?? "");
-          const end = new Date(av["end"] ?? "");
-          return currentDate >= start && currentDate < end;
-        });
-
-        if (!isAvailable) {
-          return {
-            color: new Color(),
-            show: false,
-          };
-        }
-
-        return {
-          color,
-          show: true,
-        };
-      });
+        },
+        { filters: ["kind", "availabilities"] },
+      );
     };
     // Attach per-feature evaluator: set color + show based on availability
     const handler = (params: FeatureUpdatedParams) => onUpdate(params);

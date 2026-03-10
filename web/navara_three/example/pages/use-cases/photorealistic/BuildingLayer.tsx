@@ -102,53 +102,63 @@ export function BuildingTilesLayer({
       const fallback = new Color().setHex(0xffffff);
       const { colorBy, heightDomain } = paramsRef.current;
 
-      evaluator.evaluate((_batchId, property) => {
-        if (colorBy === "none") {
-          return { color: fallback };
-        }
-
-        if (colorBy === "bldg:measuredHeight") {
-          const v = readProperty(property, "bldg:measuredHeight");
-          let h = typeof v === "number" ? v : Number(v);
-          if (!Number.isFinite(h)) {
-            h = 0;
+      evaluator.evaluate(
+        ({ properties }) => {
+          if (colorBy === "none") {
+            return { color: fallback };
           }
-          const t01 =
-            (h - heightDomain.min) /
-            Math.max(1e-6, heightDomain.max - heightDomain.min);
-          const color = rampFromColorMap(t01);
-          return { color };
-        }
 
-        if (
-          colorBy === "uro:BuildingDetailAttribute_uro:fireproofStructureType"
-        ) {
-          const raw = readProperty(
-            property,
+          if (colorBy === "bldg:measuredHeight") {
+            const v = readProperty(properties, "bldg:measuredHeight");
+            let h = typeof v === "number" ? v : Number(v);
+            if (!Number.isFinite(h)) {
+              h = 0;
+            }
+            const t01 =
+              (h - heightDomain.min) /
+              Math.max(1e-6, heightDomain.max - heightDomain.min);
+            const color = rampFromColorMap(t01);
+            return { color };
+          }
+
+          if (
+            colorBy === "uro:BuildingDetailAttribute_uro:fireproofStructureType"
+          ) {
+            const raw = readProperty(
+              properties,
+              "uro:BuildingDetailAttribute_uro:fireproofStructureType",
+            );
+            const key = String(raw ?? "不明");
+            const tuple =
+              FIREPROOF_COLOR_MAP[key] ?? FIREPROOF_COLOR_MAP["不明"];
+            const [r, g, b] = tuple;
+            return { color: new Color().setRGB(r / 255, g / 255, b / 255) };
+          }
+
+          if (
+            colorBy ===
+            "荒川水系荒川（国管理区間）_L2（想定最大規模）_浸水ランクコード"
+          ) {
+            const raw = readProperty(
+              properties,
+              "荒川水系荒川（国管理区間）_L2（想定最大規模）_浸水ランクコード",
+            );
+            const n = typeof raw === "number" ? raw : Number(raw);
+            if (!Number.isFinite(n)) return { color: fallback };
+            const [r, g, b] = FLOOD_RANK_COLOR_MAP[n];
+            return { color: new Color().setRGB(r / 255, g / 255, b / 255) };
+          }
+
+          return { color: fallback };
+        },
+        {
+          filters: [
+            "bldg:measuredHeight",
             "uro:BuildingDetailAttribute_uro:fireproofStructureType",
-          );
-          const key = String(raw ?? "不明");
-          const tuple = FIREPROOF_COLOR_MAP[key] ?? FIREPROOF_COLOR_MAP["不明"];
-          const [r, g, b] = tuple;
-          return { color: new Color().setRGB(r / 255, g / 255, b / 255) };
-        }
-
-        if (
-          colorBy ===
-          "荒川水系荒川（国管理区間）_L2（想定最大規模）_浸水ランクコード"
-        ) {
-          const raw = readProperty(
-            property,
             "荒川水系荒川（国管理区間）_L2（想定最大規模）_浸水ランクコード",
-          );
-          const n = typeof raw === "number" ? raw : Number(raw);
-          if (!Number.isFinite(n)) return { color: fallback };
-          const [r, g, b] = FLOOD_RANK_COLOR_MAP[n];
-          return { color: new Color().setRGB(r / 255, g / 255, b / 255) };
-        }
-
-        return { color: fallback };
-      });
+          ],
+        },
+      );
     };
     const handler = (params: FeatureUpdatedParams) => onFeatureUpdated(params);
     layer.on("featureUpdated", handler);

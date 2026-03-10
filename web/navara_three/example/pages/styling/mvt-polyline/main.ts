@@ -77,36 +77,39 @@ const run = async () => {
       if (updatedFeatures.has(evaluator.id)) return;
       updatedFeatures.add(evaluator.id);
 
-      evaluator.evaluate((_batchId, property) => {
-        const rawAttributes = property?.["attributes"];
-        const attrs =
-          typeof rawAttributes === "string" ? JSON.parse(rawAttributes) : {};
-        const generics = attrs["gen:genericAttribute"] as unknown[];
+      evaluator.evaluate(
+        ({ properties }) => {
+          const rawAttributes = properties?.["attributes"];
+          const attrs =
+            typeof rawAttributes === "string" ? JSON.parse(rawAttributes) : {};
+          const generics = attrs["gen:genericAttribute"] as unknown[];
 
-        // Find tree presence info
-        const treeInfo = generics?.find(
-          (g) =>
-            g &&
-            typeof g === "object" &&
-            "name" in g &&
-            g.name === "樹木の有無",
-        ) as { value: { value: string }[] } | undefined;
+          // Find tree presence info
+          const treeInfo = generics?.find(
+            (g) =>
+              g &&
+              typeof g === "object" &&
+              "name" in g &&
+              g.name === "樹木の有無",
+          ) as { value: { value: string }[] } | undefined;
 
-        const code = treeInfo?.value[0]?.value;
+          const code = treeInfo?.value[0]?.value;
 
-        // Color based on street tree presence
-        const color = (() => {
-          // Has street trees
-          if (code === "1") {
-            return 0x00ff00;
-          }
-          return 0x777777;
-        })();
+          // Color based on street tree presence
+          const color = (() => {
+            // Has street trees
+            if (code === "1") {
+              return 0x00ff00;
+            }
+            return 0x777777;
+          })();
 
-        return {
-          color: new Color().setHex(color),
-        };
-      });
+          return {
+            color: new Color().setHex(color),
+          };
+        },
+        { filters: ["attributes"] },
+      );
     });
 
     return layer;

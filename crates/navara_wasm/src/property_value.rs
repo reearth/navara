@@ -1,5 +1,5 @@
 use js_sys::{Array, Object, Reflect};
-use navara_parser::b3dm::PropertyValue;
+use navara_property::PropertyValue;
 use wasm_bindgen::JsValue;
 
 /// A newtype wrapper around JsValue that implements PropertyValue.

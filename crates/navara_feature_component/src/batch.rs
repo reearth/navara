@@ -1,12 +1,10 @@
 use bevy_ecs::{component::Component, entity::Entity, prelude::Resource, system::Commands};
-use geozero::mvt::tile;
 
 use navara_buffer_store::{BufferStore, Handle};
 use navara_component::Deleted;
 
-use navara_parser::b3dm::{BatchTable as B3dmBatchTable, PropertyValue};
+use navara_parser::{b3dm::BatchTable as B3dmBatchTable, mvt::MvtLayerData};
 use rustc_hash::FxHashMap;
-use std::sync::Arc;
 
 use crate::unique_id::{UniqueFeatureId, UniqueGlobalBatchId, UniqueId};
 
@@ -104,84 +102,6 @@ impl FeatureBatchIdMap {
             return true;
         }
         false
-    }
-}
-
-/// Raw MVT layer data for lazy property parsing.
-/// Properties are only parsed when accessed via `get_property`.
-#[derive(Debug, Clone)]
-pub struct MvtLayerData {
-    /// Property key names (shared across all features in the layer)
-    pub keys: Arc<Vec<String>>,
-    /// Property values (shared across all features in the layer) - raw MVT format for lazy conversion
-    pub values: Arc<Vec<tile::Value>>,
-    /// Per-feature tags: pairs of (key_index, value_index) into keys and values
-    pub feature_tags: Vec<Vec<u32>>,
-}
-
-/// A single MVT property value (mirrors protobuf tile::Value)
-#[derive(Debug, Clone)]
-pub enum MvtValue {
-    String(String),
-    Float(f32),
-    Double(f64),
-    Int(i64),
-    UInt(u64),
-    SInt(i64),
-    Bool(bool),
-}
-
-impl MvtValue {
-    pub fn to_value<V: PropertyValue>(&self) -> V {
-        match self {
-            MvtValue::String(s) => V::from_string(s.clone()),
-            MvtValue::Float(f) => V::from_f32(*f),
-            MvtValue::Double(d) => V::from_f64(*d),
-            MvtValue::Int(i) => V::from_i64(*i),
-            MvtValue::UInt(u) => V::from_u64(*u),
-            MvtValue::SInt(i) => V::from_i64(*i),
-            MvtValue::Bool(b) => V::from_bool(*b),
-        }
-    }
-}
-
-/// Convert raw MVT tile::Value to PropertyValue
-fn tile_value_to_property<V: PropertyValue>(value: &tile::Value) -> V {
-    if let Some(s) = &value.string_value {
-        V::from_string(s.clone())
-    } else if let Some(f) = value.float_value {
-        V::from_f32(f)
-    } else if let Some(d) = value.double_value {
-        V::from_f64(d)
-    } else if let Some(i) = value.int_value {
-        V::from_i64(i)
-    } else if let Some(u) = value.uint_value {
-        V::from_u64(u)
-    } else if let Some(i) = value.sint_value {
-        V::from_i64(i)
-    } else if let Some(b) = value.bool_value {
-        V::from_bool(b)
-    } else {
-        V::null()
-    }
-}
-
-impl MvtLayerData {
-    /// Get properties for a specific feature index.
-    /// Properties are converted lazily from raw MVT format.
-    pub fn get_properties<V: PropertyValue>(&self, feature_index: usize) -> Option<V> {
-        let tags = self.feature_tags.get(feature_index)?;
-        let mut props = V::empty_map();
-
-        for pair in tags.chunks(2) {
-            if let [key_idx, value_idx] = pair {
-                let key = self.keys.get(*key_idx as usize)?;
-                let value = self.values.get(*value_idx as usize)?;
-                V::insert(&mut props, key.clone(), tile_value_to_property(value));
-            }
-        }
-
-        Some(V::finalize_map(props))
     }
 }
 

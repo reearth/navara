@@ -82,6 +82,7 @@ export class PolylineMesh extends BatchedFeatureMesh<
     super(new BufferGeometry<Attributes>(), new ShaderMaterial());
     this._viewContext = viewContext;
     this._layerId = layerId;
+    this.batchLength = mesh.batch_length;
 
     const geometryResult = this.initGeometry(mesh, buf);
 
@@ -345,9 +346,9 @@ export class PolylineMesh extends BatchedFeatureMesh<
     this._update(meshMaterial, mesh.active);
   }
 
-  _initBatchDataTexture(batchLength: number): void {
+  _initBatchDataTexture(): void {
     // Call parent to create the texture
-    super._initBatchDataTexture(batchLength);
+    super._initBatchDataTexture();
 
     // Update the enhancer with the new batchDataTexture
     const texture = this._getBatchDataTexture();

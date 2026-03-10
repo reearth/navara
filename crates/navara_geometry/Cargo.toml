@@ -19,3 +19,4 @@ approx.workspace = true
 navara_core.workspace = true
 navara_math.workspace = true
 navara_buffer_store.workspace = true
+rustc-hash.workspace = true
