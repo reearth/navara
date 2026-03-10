@@ -26,8 +26,8 @@
     "@navara/three": "workspace:*"
   },
   "dependencies": {
-    "@takram/three-atmosphere": "^0.14.0",
-    "@takram/three-geospatial": "^0.6.0"
+    "@takram/three-atmosphere": "^0.17.0",
+    "@takram/three-geospatial": "^0.7.0"
   },
   "devDependencies": {
     "@navara/three": "workspace:*",
