@@ -10,10 +10,7 @@ import {
   MeshLambertMaterial,
   OrthographicCamera,
   PlaneGeometry,
-  Scene,
-  ShaderMaterial,
   type WebGLRenderer,
-  type Texture,
 } from "three";
 import { Color } from "three";
 
@@ -590,58 +587,8 @@ export class SelectiveEffectHelper {
 }
 
 // ============================================================================
-// Shared types and utilities for SelectiveEffect passes
-// (Integrated from SelectiveEffectUtils.ts)
+// Shared utilities for SelectiveEffect passes
 // ============================================================================
-
-/**
- * Create depth clip material for clipping mask by base scene depth
- * Shared between Bloom and Outline passes
- */
-export function createDepthClipMaterial(): ShaderMaterial {
-  return new ShaderMaterial({
-    uniforms: {
-      tMask: { value: null },
-      tMaskDepth: { value: null },
-      tBaseDepth: { value: null },
-    },
-    vertexShader: `
-      varying vec2 vUv;
-      void main() {
-        vUv = uv;
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-      }
-    `,
-    fragmentShader: `
-      #include <packing>
-
-      uniform sampler2D tMask;
-      uniform sampler2D tMaskDepth;
-      uniform sampler2D tBaseDepth;
-
-      varying vec2 vUv;
-
-      void main() {
-        vec4 maskColor = texture2D(tMask, vUv);
-
-        // Simple depth comparison (pass separation handles occlusion mode)
-        float baseDepth = unpackRGBAToDepth(texture2D(tBaseDepth, vUv));
-        float maskDepth = texture2D(tMaskDepth, vUv).r;
-
-        // If mask is behind Base, clip (output black)
-        if (maskDepth > baseDepth + 0.0001) {
-          gl_FragColor = vec4(0.0);
-          return;
-        }
-
-        // Mask is in front of Base, pass through
-        gl_FragColor = maskColor;
-      }
-    `,
-    depthTest: false,
-    depthWrite: false,
-  });
-}
 
 /**
  * Create fullscreen rendering infrastructure
@@ -654,33 +601,6 @@ export function createFullscreenQuad(): {
     camera: new OrthographicCamera(-1, 1, 1, -1, 0, 1),
     geometry: new PlaneGeometry(2, 2),
   };
-}
-
-/**
- * Apply depth clip to a mask render target
- *
- * @param renderer - WebGL renderer
- * @param depthClipMaterial - Depth clip shader material
- * @param depthClipScene - Scene containing the depth clip quad
- * @param fullscreenCamera - Orthographic camera for fullscreen rendering
- * @param maskRT - Source mask render target (with depth texture)
- * @param baseDepthTexture - Base scene depth texture (RGBA packed)
- * @param outputRT - Output render target for clipped result
- */
-export function applyDepthClip(
-  renderer: WebGLRenderer,
-  depthClipMaterial: ShaderMaterial,
-  depthClipScene: Scene,
-  fullscreenCamera: OrthographicCamera,
-  maskRT: WebGLRenderTarget,
-  baseDepthTexture: Texture | null,
-  outputRT: WebGLRenderTarget,
-): void {
-  depthClipMaterial.uniforms.tMask.value = maskRT.texture;
-  depthClipMaterial.uniforms.tMaskDepth.value = maskRT.depthTexture;
-  depthClipMaterial.uniforms.tBaseDepth.value = baseDepthTexture;
-  renderer.setRenderTarget(outputRT);
-  renderer.render(depthClipScene, fullscreenCamera);
 }
 
 // ============================================================================
