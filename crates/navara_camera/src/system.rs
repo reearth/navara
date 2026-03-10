@@ -1066,7 +1066,7 @@ pub fn update_frustum(
     for (e, mut frustum, transform, controller) in query.iter_mut() {
         if controller.auto_adjust_near_far {
             let distance = transform.translation.length();
-            if frustum.adjust_near_far(distance, controller) {
+            if frustum.adjust_near_far(distance) {
                 events.camera_frustum_updated = Some(e);
             }
         }
