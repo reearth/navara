@@ -90,6 +90,8 @@ export class SelectiveEffectMaskController {
     if (!bloomActive && !outlineActive) {
       // Clear combined RTs to avoid stale mask data from previous frames
       this.clearCombinedRTs(renderer);
+      // Restore render target to match normal path behavior
+      renderer.setRenderTarget(baseRT);
       return;
     }
 
@@ -161,7 +163,6 @@ export class SelectiveEffectMaskController {
     }
 
     renderer.setClearColor(savedClearColor, savedClearAlpha);
-    renderer.setRenderTarget(null);
   }
 
   /**

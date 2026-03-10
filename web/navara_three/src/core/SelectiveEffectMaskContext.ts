@@ -310,10 +310,7 @@ export function injectSelectiveEffectHandlers(
 
   // Guard: Check if object is a Mesh with material
   if (!(object instanceof Mesh)) {
-    console.warn(
-      "injectSelectiveEffectHandlers: object is not a Mesh",
-      object,
-    );
+    console.warn("injectSelectiveEffectHandlers: object is not a Mesh", object);
     return;
   }
 

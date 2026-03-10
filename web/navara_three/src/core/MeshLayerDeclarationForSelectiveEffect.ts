@@ -1,5 +1,5 @@
 import type { BaseEventMap } from "@navara/core";
-import { Object3D } from "three";
+import { Mesh, Object3D } from "three";
 
 import { arraysEqual } from "../utils";
 
@@ -105,6 +105,11 @@ export abstract class MeshLayerDeclarationForSelectiveEffect<
   private injectHandlers(): void {
     const raw = this.raw;
     if (!raw || this._hasInjectedHandlers) return;
+
+    // Guard: Only inject on Mesh instances.
+    // Non-Mesh containers (e.g. ArcLine extends Object3D) handle
+    // sub-mesh injection via injectHandlersOnSubMeshes() override.
+    if (!(raw instanceof Mesh)) return;
 
     injectSelectiveEffectHandlers(raw, {
       registry: this.view.selectiveEffectRegistry,
