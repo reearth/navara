@@ -7,7 +7,7 @@ use navara_layer::{
     UpdateGeoJsonLayerMarker, UpdateMvtLayerMarker, UpdatePntsLayerMarker,
     UpdateRasterTileLayerMarker,
 };
-use navara_material::{Appearance, ElevationHeatmapConfig};
+use navara_material::{Appearance, ElevationHeatmapConfig, HillshadeConfig};
 
 #[derive(Debug, Clone, PartialEq, Message)]
 pub struct AddLayerEvent(pub LayerDescription);
@@ -17,6 +17,7 @@ pub struct UpdateLayerEvent {
     pub layer_id: LayerId,
     pub appearance: Appearance,
     pub elevation_heatmap_config: Option<ElevationHeatmapConfig>,
+    pub hillshade_config: Option<HillshadeConfig>,
 }
 
 #[derive(Debug, Clone, PartialEq, Message)]
@@ -103,6 +104,7 @@ pub fn process_update_events(
                     appearance: ev.appearance.clone(),
                     layer_id: ev.layer_id.0.clone(),
                     elevation_heatmap_config: ev.elevation_heatmap_config.clone(),
+                    hillshade_config: ev.hillshade_config.clone(),
                 });
             }
             _ => {}

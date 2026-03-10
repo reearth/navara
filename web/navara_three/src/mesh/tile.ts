@@ -14,12 +14,14 @@ import type {
   Globe,
 } from "@navara/engine";
 import ElevationParsFragment from "@shaders/glsl/chunks/elevation_pars_fragment.glsl";
+import HillshadeParsFragment from "@shaders/glsl/chunks/hillshade_pars_fragment.glsl";
 import SpecularParsFragment from "@shaders/glsl/chunks/spucular_pars_fragment.glsl";
 import WaterParsFragment from "@shaders/glsl/chunks/water_pars_fragment.glsl?raw";
 import {
   BufferAttribute,
   BufferGeometry,
   Color,
+  DataTexture,
   NearestFilter,
   Mesh,
   MeshBasicMaterial,
@@ -27,8 +29,8 @@ import {
   OrthographicCamera,
   RGBAFormat,
   SRGBColorSpace,
-  LinearSRGBColorSpace,
   Texture,
+  UnsignedByteType,
   Vector2,
   Vector3,
   Vector4,
@@ -40,6 +42,8 @@ import {
   Box3,
   Box3Helper,
   Sphere,
+  NoColorSpace,
+  ClampToEdgeWrapping,
 } from "three";
 
 import { PolygonMesh, type ViewEvents } from "..";
@@ -51,7 +55,6 @@ import type {
   Scenes,
   TexturizedSceneByTileCoordinates,
 } from "../scene";
-import { computeVertexNormalsAsync } from "../tasks/computeVertexNormalsAsync";
 import type { TextureOptions } from "../textures";
 import type { MeshCache, TileMapByHandle } from "../type";
 import type { CommonUniforms } from "../uniforms";
@@ -91,6 +94,69 @@ export class TileMesh
   texturizedSceneRenderTargets: WebGLRenderTarget[] = [];
 
   private warnedExceededTextures = false;
+
+  /**
+   * Process hillshade backfill event: create texture and bind to material
+   * Called when Rust completes DEM backfill operation
+   */
+  static processHillshadeBackfilled(
+    event: {
+      ind: number;
+      gen: number;
+      backfilled_handle: number;
+      tile_handle: bigint;
+    },
+    bytes: Uint8Array,
+    loadedTexs: Map<string, Texture>,
+    tileMapByHandle: Map<bigint, TileMesh>,
+  ): void {
+    const size = Math.sqrt(bytes.length / 4);
+    // Verify size is valid (should be original_size + 2, e.g., 258 or 514)
+    if (!Number.isInteger(size) || size < 3) {
+      console.warn(`Invalid backfilled DEM size: ${size}×${size}`);
+      return;
+    }
+
+    // Create Three.js DataTexture directly from RGBA bytes (no canvas overhead)
+    const texture = new DataTexture(
+      bytes,
+      size,
+      size,
+      RGBAFormat,
+      UnsignedByteType,
+    );
+    texture.colorSpace = NoColorSpace;
+    texture.minFilter = NearestFilter;
+    texture.magFilter = NearestFilter;
+    texture.generateMipmaps = false;
+    texture.flipY = true; // Flip Y to match texture coordinate system
+    texture.needsUpdate = true;
+
+    // Use entity ind and gen to create ID (same format as other textures)
+    const id = `${event.ind}_${event.gen}`;
+    loadedTexs.set(id, texture);
+
+    // IMPORTANT: Directly bind the texture to the material's uniform
+    // This prevents seams when texture loads before mesh update
+    const tileMesh = tileMapByHandle.get(event.tile_handle);
+    if (tileMesh && tileMesh.material.userData) {
+      const material = tileMesh.material as TileMaterial;
+      const textureFragments = material.userData.textureFragments?.value as
+        | (string | null)[]
+        | undefined;
+
+      if (textureFragments && material.userData.textures) {
+        // Find which texture slot this entity corresponds to
+        const slotIndex = textureFragments.findIndex((fragId) => fragId === id);
+
+        if (slotIndex >= 0) {
+          // Directly update the texture uniform
+          material.userData.textures.value[slotIndex] = texture;
+          material.needsUpdate = true;
+        }
+      }
+    }
+  }
 
   constructor(
     mesh: MeshAdded,
@@ -363,7 +429,7 @@ export class TileMesh
 
     // Create terrain-only geometry (for shadow rendering)
     // Use .slice() to copy arrays since we need the originals for combined geometry
-    let terrainGeometry = new BufferGeometry();
+    const terrainGeometry = new BufferGeometry();
     terrainGeometry.setAttribute(
       "position",
       new BufferAttribute(position.slice(), 3),
@@ -375,11 +441,6 @@ export class TileMesh
     }
 
     terrainGeometry.setIndex(new BufferAttribute(indices.slice(), 1));
-
-    // Compute normals on terrain-only geometry first
-    if (globe.shouldComputeNormalFromVertex) {
-      terrainGeometry = await computeVertexNormalsAsync(terrainGeometry);
-    }
 
     const aabb_center = new Vector3(
       mesh.aabb.center.x,
@@ -393,7 +454,6 @@ export class TileMesh
     );
 
     const geometry = this.createSkirtMesh(
-      globe,
       mesh,
       buf,
       terrainGeometry,
@@ -469,7 +529,6 @@ export class TileMesh
   // Append the skirt geometry into the mesh after the normal is computed only without the skirt.
   // Because the skirt geometry should use the same normal as the edge vertex to create a smooth shadow.
   createSkirtMesh(
-    globe: Globe,
     mesh: EventMesh,
     buf: BufferLoader,
     terrainGeometry: BufferGeometry,
@@ -500,7 +559,6 @@ export class TileMesh
       geometry = new BufferGeometry();
 
       // Combine vertices: terrain vertices + skirt vertices
-      const terrainVertexCount = position.length / 3;
       const combinedPosition = new Float32Array(
         position.length + (skirtPosition?.length ?? 0),
       );
@@ -528,39 +586,6 @@ export class TileMesh
       combinedIndices.set(indices);
       combinedIndices.set(skirtIndices, indices.length);
       geometry.setIndex(new BufferAttribute(combinedIndices, 1));
-
-      // Copy normals from terrain geometry and add skirt normals
-      if (globe.shouldComputeNormalFromVertex) {
-        const terrainNormals = terrainGeometry.getAttribute("normal");
-        if (skirtIndicesToEdge) {
-          const skirtVertexCount = skirtPosition.length / 3;
-          const combinedNormals = new Float32Array(
-            terrainNormals.array.length + skirtVertexCount * 3,
-          );
-          // Copy terrain normals
-          combinedNormals.set(terrainNormals.array as Float32Array);
-
-          // Copy normals from edge vertices to skirt vertices
-          for (let i = 0; i < skirtIndicesToEdge.length; i++) {
-            const edgeVertexIdx = skirtIndicesToEdge[i];
-            const skirtVertexIdx = terrainVertexCount + i;
-            combinedNormals[skirtVertexIdx * 3] = (
-              terrainNormals.array as Float32Array
-            )[edgeVertexIdx * 3];
-            combinedNormals[skirtVertexIdx * 3 + 1] = (
-              terrainNormals.array as Float32Array
-            )[edgeVertexIdx * 3 + 1];
-            combinedNormals[skirtVertexIdx * 3 + 2] = (
-              terrainNormals.array as Float32Array
-            )[edgeVertexIdx * 3 + 2];
-          }
-
-          geometry.setAttribute(
-            "normal",
-            new BufferAttribute(combinedNormals, 3),
-          );
-        }
-      }
 
       // Clean up
       skirtPosition.set([]);
@@ -659,6 +684,18 @@ export class TileMesh
       shader.uniforms.uLogBase = m.userData.logBase;
       shader.uniforms.uLogBoundary = m.userData.logBoundary;
 
+      // Hillshade uniforms
+      shader.uniforms.uIsHillshades = m.userData.isHillshades;
+      shader.uniforms.uHillshadeRGBScaler = m.userData.hillshadeRGBScaler;
+      shader.uniforms.uHillshadeBoundary = m.userData.hillshadeBoundary;
+      shader.uniforms.uHillshadeMinOffset = m.userData.hillshadeMinOffset;
+      shader.uniforms.uHillshadeMaxOffset = m.userData.hillshadeMaxOffset;
+      shader.uniforms.uHillshadeEpsilon = m.userData.hillshadeEpsilon;
+      shader.uniforms.uHillshadeOffset = m.userData.hillshadeOffset;
+      shader.uniforms.uHillshadeExaggeration = m.userData.hillshadeExaggeration;
+      shader.uniforms.uHillshadeZooms = m.userData.hillshadeZooms;
+      shader.uniforms.uHillshadeDimension = m.userData.hillshadeDimension;
+
       // Add UV transform uniforms to the shader
       shader.vertexShader = createReplacer(shader.vertexShader)
         .replace(
@@ -709,6 +746,9 @@ vUv = vUv * uScale + uOffset;
   uniform bool uSpeculars[${maxTextures}];
   uniform sampler2D uTextures[${maxTextures}];
   uniform bool uIsElevationHeatmaps[${maxTextures}];
+  uniform bool uIsHillshades[${maxTextures}];
+  uniform float uHillshadeZooms[${maxTextures}];
+  uniform vec2 uHillshadeDimension;
   uniform sampler2D uWaterNormalMap;
   uniform float uPickable;
   uniform float uIor;
@@ -722,6 +762,8 @@ vUv = vUv * uScale + uOffset;
   // uColorMapTexture is used for elevation heatmap color mapping
   ${ElevationParsFragment}
 
+  // Hillshade: compute normals from DEM
+  ${HillshadeParsFragment}
   `,
         )
         .replaceWithCondition(
@@ -758,9 +800,8 @@ vUv = vUv * uScale + uOffset;
     #ifdef USE_ELEVATION_HEATMAP
       // Check if this is an elevation heatmap texture
       if (uIsElevationHeatmaps[${idx}]) {
-        // For elevation heatmap: decode DEM data and apply color mapping
-        vec4 elevationColor = texture2D(uTextures[${idx}], texUv);
-        float normalized_h = decodeElevationNormal(elevationColor);
+        // For elevation heatmap: decode DEM data with bilinear interpolation and apply color mapping
+        float normalized_h = sampleElevationBilinear(uTextures[${idx}], texUv);
         ${texColorVar} = vec4(texture2D(uColorMapTexture, vec2(normalized_h, 0.5)).rgb, 1.0);
       }
       else {
@@ -806,6 +847,60 @@ vUv = vUv * uScale + uOffset;
         .replaceWithCondition(
           "#include <normal_fragment_maps>",
           `
+  vec3 N = normalize(vPosition);
+  normal = normalize(normalMatrix * N);
+
+  #ifdef USE_HILLSHADE
+    // Override normal with DEM-derived normal for hillshade layers
+    ${Array.from(
+      { length: maxTextures },
+      (_, i) => `
+    if (uIsHillshades[${i}]) {
+      // Calculate texelSize based on content size
+      // Standard UV mapping: UV [0,1] maps to pixel centers [first, last]
+      // So texelSize (UV distance between adjacent pixels) = 1 ~ (N - 1)
+      // For 258x258 padded texture with 256 content pixels: texelSize = 1~255
+      ivec2 actualTexSize = textureSize(uTextures[${i}], 0);
+      ivec2 contentSize = isPowerOfTwo(actualTexSize.x) ? actualTexSize : actualTexSize - ivec2(2);
+      vec2 texelSize = vec2(1.0) / (vec2(contentSize) - vec2(1.0));
+
+      vec4 testColor = texelFetch(uTextures[${i}], ivec2(0), 0);
+      bool hasTexture = length(testColor.rgb) > 0.01;
+
+      if (hasTexture) {
+        // Second check: Is this valid land data (not ocean/no-data)?
+        float testHeight = sampleHeightBilinear(uTextures[${i}], vUv);
+
+        // This preserves original vertex normals for ocean/no-data areas
+        if (testHeight >= 0.0) {
+          // Use vUv directly - it already contains global UV transform when using parent texture
+          // Rust handles parent/child fallback at tile level (is_all_texture_ready)
+          vec3 demNormal = computeNormalFromDEM(uTextures[${i}], vUv, texelSize, uHillshadeZooms[${i}]);
+
+          vec3 up = vec3(0.0, 0.0, 1.0);  // World up
+          vec3 T = normalize(cross(up, N));
+
+          // Handle poles where N is parallel to up
+          if (length(T) < 0.001) {
+            T = vec3(1.0, 0.0, 0.0);  // Fallback for poles
+          }
+
+          vec3 B = normalize(cross(N, T));
+
+          // Construct TBN matrix (tangent space to world space)
+          mat3 TBN = mat3(T, B, N);
+
+          // Transform DEM normal from tangent space to world space
+          vec3 worldDemNormal = normalize(TBN * demNormal);
+
+          // Transform to view space
+          normal = normalize(normalMatrix * worldDemNormal);
+        }
+      }
+    }`,
+    ).join("\n")}
+  #endif
+
   vec3 origNormal = vec3(normal);
   vec3 specular;
   if(useWater) {
@@ -1145,12 +1240,65 @@ if (uPickable > 0.) {
       };
     }
 
+    // Hillshade uniforms
+    if (!m.userData.isHillshades) {
+      m.userData.isHillshades = {
+        value: [...new Array(maxTextures)].fill(false),
+      };
+    }
+    if (!m.userData.hillshadeRGBScaler) {
+      m.userData.hillshadeRGBScaler = {
+        value: new Vector3(0, 0, 0),
+      };
+    }
+    if (!m.userData.hillshadeBoundary) {
+      m.userData.hillshadeBoundary = {
+        value: 0.0,
+      };
+    }
+    if (!m.userData.hillshadeMinOffset) {
+      m.userData.hillshadeMinOffset = {
+        value: 0.0,
+      };
+    }
+    if (!m.userData.hillshadeMaxOffset) {
+      m.userData.hillshadeMaxOffset = {
+        value: 0.0,
+      };
+    }
+    if (!m.userData.hillshadeEpsilon) {
+      m.userData.hillshadeEpsilon = {
+        value: 0.01,
+      };
+    }
+    if (!m.userData.hillshadeOffset) {
+      m.userData.hillshadeOffset = {
+        value: 0.0,
+      };
+    }
+    if (!m.userData.hillshadeExaggeration) {
+      m.userData.hillshadeExaggeration = {
+        value: 1.0, // Default exaggeration factor (1.0 = natural terrain, 0.5-2.0 recommended range)
+      };
+    }
+    if (!m.userData.hillshadeZooms) {
+      m.userData.hillshadeZooms = {
+        value: [...new Array(maxTextures)].fill(14.0), // Default zoom level for each layer
+      };
+    }
+    if (!m.userData.hillshadeDimension) {
+      m.userData.hillshadeDimension = {
+        value: new Vector2(512, 512), // Default texture dimensions
+      };
+    }
+
     // Reset all texture properties
     for (let i = 0; i < m.userData.shows.value.length; i++) {
       m.userData.shows.value[i] = 0;
       m.userData.colors.value[i] = new Color();
       m.userData.opacities.value[i] = 1;
       m.userData.isElevationHeatmaps.value[i] = false; // Reset elevation heatmap flags
+      m.userData.isHillshades.value[i] = false; // Reset hillshade flags
     }
 
     // All properties have same length.
@@ -1174,6 +1322,26 @@ if (uPickable > 0.) {
           mat.isElevationHeatmaps[i] !== 0;
       }
     }
+
+    // Update hillshade parameters from Rust material
+    if (mat.isHillshades && mat.isHillshades.length > 0) {
+      for (let i = 0; i < Math.min(mat.isHillshades.length, maxTextures); i++) {
+        m.userData.isHillshades.value[i] = mat.isHillshades[i] !== 0;
+      }
+    }
+
+    // Hillshade decoder (from hillshade_config)
+    m.userData.hillshadeRGBScaler.value.set(
+      mat.hillshadeRScaler,
+      mat.hillshadeGScaler,
+      mat.hillshadeBScaler,
+    );
+    m.userData.hillshadeBoundary.value = mat.hillshadeBoundary;
+    m.userData.hillshadeMinOffset.value = mat.hillshadeMinOffset;
+    m.userData.hillshadeMaxOffset.value = mat.hillshadeMaxOffset;
+    m.userData.hillshadeEpsilon.value = mat.hillshadeEpsilon;
+    m.userData.hillshadeOffset.value = mat.hillshadeOffset;
+    m.userData.hillshadeExaggeration.value = mat.hillshadeExaggeration;
 
     m.userData.elevationRGBScaler.value.set(
       mat.elevationRScaler,
@@ -1202,11 +1370,15 @@ if (uPickable > 0.) {
       m.userData.defines = {
         USE_UV: 1,
         USE_ELEVATION_HEATMAP: 0,
+        USE_HILLSHADE: 0,
       };
     }
 
     m.userData.defines.USE_ELEVATION_HEATMAP =
       m.userData.isElevationHeatmaps.value.some((v: boolean) => v === true);
+    m.userData.defines.USE_HILLSHADE = m.userData.isHillshades.value.some(
+      (v: boolean) => v === true,
+    );
   }
 
   private setupTextureFragments(
@@ -1282,29 +1454,50 @@ if (uPickable > 0.) {
         continue;
       }
 
+      const layerZoom = mat.tileZoomLevels && mat.tileZoomLevels[i];
+
       // Use LinearSRGBColorSpace for elevation heatmap textures to preserve RGB values for DEM data
       // For regular textures, use SRGBColorSpace for proper color display
       const isElevationHeatmap =
         mat.isElevationHeatmaps && mat.isElevationHeatmaps[i];
-      const targetColorSpace = isElevationHeatmap
-        ? LinearSRGBColorSpace
-        : SRGBColorSpace;
+      const isHillshade = mat.isHillshades && mat.isHillshades[i];
+
+      // Set hillshade parameters (zoom level and texture dimensions)
+      if (isHillshade && layerZoom !== undefined) {
+        m.userData.hillshadeZooms.value[i] = layerZoom;
+
+        // Set texture dimensions (Rust-side backfill provides 258x258 with padding)
+        // DataTexture has .width/.height directly, Texture has them via .image
+        const width =
+          (t as DataTexture).width ??
+          (t.image as HTMLImageElement | undefined)?.width;
+        const height =
+          (t as DataTexture).height ??
+          (t.image as HTMLImageElement | undefined)?.height;
+        if (width && height) {
+          m.userData.hillshadeDimension.value.set(width, height);
+        }
+      }
+      const isDEMTexture = isElevationHeatmap || isHillshade;
+      const targetColorSpace = isDEMTexture ? NoColorSpace : SRGBColorSpace;
 
       if (t.colorSpace !== targetColorSpace) {
         t.colorSpace = targetColorSpace;
         // CRITICAL: DEM textures must use NearestFilter to prevent interpolation
         // Linear interpolation between ocean RGB(128,0,0) and land RGB(0,0,5)
         // produces intermediate values like RGB(64,0,2) which decode to ~42000m!
-        t.minFilter = isElevationHeatmap
+        t.minFilter = isDEMTexture
           ? NearestFilter
           : (textureOptions.minFilter as MinificationTextureFilter);
-        t.magFilter = isElevationHeatmap
+        t.magFilter = isDEMTexture
           ? NearestFilter
           : (textureOptions.magFilter as MagnificationTextureFilter);
         t.anisotropy = textureOptions.maxAnisotropy;
-        t.generateMipmaps = isElevationHeatmap
-          ? false
-          : textureOptions.useMipmaps;
+        t.generateMipmaps = isDEMTexture ? false : textureOptions.useMipmaps;
+
+        if (isDEMTexture) {
+          t.wrapS = t.wrapT = ClampToEdgeWrapping; // Prevent bleeding of edge pixels for DEM textures
+        }
         t.needsUpdate = true;
       }
 

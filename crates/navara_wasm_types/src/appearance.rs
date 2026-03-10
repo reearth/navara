@@ -1356,6 +1356,41 @@ pub struct RasterTileInternalMaterial {
     #[wasm_bindgen(js_name = logBoundary)]
     #[serde(rename = "logBoundary")]
     pub log_boundary: f64,
+
+    // Hillshade fields
+    #[wasm_bindgen(getter_with_clone, js_name = isHillshades)]
+    #[serde(rename = "isHillshades")]
+    pub is_hillshades: Vec<u8>,
+    #[wasm_bindgen(js_name = hillshadeRScaler)]
+    #[serde(rename = "hillshadeRScaler")]
+    pub hillshade_r_scaler: f64,
+    #[wasm_bindgen(js_name = hillshadeGScaler)]
+    #[serde(rename = "hillshadeGScaler")]
+    pub hillshade_g_scaler: f64,
+    #[wasm_bindgen(js_name = hillshadeBScaler)]
+    #[serde(rename = "hillshadeBScaler")]
+    pub hillshade_b_scaler: f64,
+    #[wasm_bindgen(js_name = hillshadeBoundary)]
+    #[serde(rename = "hillshadeBoundary")]
+    pub hillshade_boundary: f64,
+    #[wasm_bindgen(js_name = hillshadeEpsilon)]
+    #[serde(rename = "hillshadeEpsilon")]
+    pub hillshade_epsilon: f64,
+    #[wasm_bindgen(js_name = hillshadeMaxOffset)]
+    #[serde(rename = "hillshadeMaxOffset")]
+    pub hillshade_max_offset: f64,
+    #[wasm_bindgen(js_name = hillshadeMinOffset)]
+    #[serde(rename = "hillshadeMinOffset")]
+    pub hillshade_min_offset: f64,
+    #[wasm_bindgen(js_name = hillshadeOffset)]
+    #[serde(rename = "hillshadeOffset")]
+    pub hillshade_offset: f64,
+    #[wasm_bindgen(getter_with_clone, js_name = tileZoomLevels)]
+    #[serde(rename = "tileZoomLevels")]
+    pub tile_zoom_levels: Vec<u8>,
+    #[wasm_bindgen(js_name = hillshadeExaggeration)]
+    #[serde(rename = "hillshadeExaggeration")]
+    pub hillshade_exaggeration: f32,
 }
 
 #[wasm_bindgen]
@@ -1452,6 +1487,55 @@ impl<'a> From<&'a navara_material::RasterTileInternalMaterial> for RasterTileInt
                 .as_ref()
                 .map(|c| c.log_boundary)
                 .unwrap_or(10.0),
+
+            // Hillshade fields
+            is_hillshades: m.is_hillshades.iter().map(|b| b.to_u8()).collect(),
+            hillshade_r_scaler: m
+                .hillshade_config
+                .as_ref()
+                .map(|c| c.elevation_decoder.r_scaler)
+                .unwrap_or(0.0),
+            hillshade_g_scaler: m
+                .hillshade_config
+                .as_ref()
+                .map(|c| c.elevation_decoder.g_scaler)
+                .unwrap_or(0.0),
+            hillshade_b_scaler: m
+                .hillshade_config
+                .as_ref()
+                .map(|c| c.elevation_decoder.b_scaler)
+                .unwrap_or(0.0),
+            hillshade_boundary: m
+                .hillshade_config
+                .as_ref()
+                .map(|c| c.elevation_decoder.boundary)
+                .unwrap_or(0.0),
+            hillshade_epsilon: m
+                .hillshade_config
+                .as_ref()
+                .map(|c| c.elevation_decoder.epsilon)
+                .unwrap_or(0.01),
+            hillshade_max_offset: m
+                .hillshade_config
+                .as_ref()
+                .map(|c| c.elevation_decoder.max_offset)
+                .unwrap_or(0.0),
+            hillshade_min_offset: m
+                .hillshade_config
+                .as_ref()
+                .map(|c| c.elevation_decoder.min_offset)
+                .unwrap_or(0.0),
+            hillshade_offset: m
+                .hillshade_config
+                .as_ref()
+                .map(|c| c.elevation_decoder.offset)
+                .unwrap_or(0.0),
+            tile_zoom_levels: m.tile_zoom_levels.clone(),
+            hillshade_exaggeration: m
+                .hillshade_config
+                .as_ref()
+                .map(|c| c.exaggeration)
+                .unwrap_or(1.0),
         }
     }
 }
@@ -1635,6 +1719,18 @@ pub struct ElevationHeatmapMaterial {
     #[wasm_bindgen(js_name = logBoundary)]
     #[serde(rename = "logBoundary")]
     pub log_boundary: f64,
+}
+
+#[wasm_bindgen]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HillshadeMaterial {
+    #[wasm_bindgen(js_name = elevationDecoder)]
+    #[serde(rename = "elevationDecoder")]
+    pub elevation_decoder: Option<ElevationDecoder>,
+    /// Exaggeration factor for hillshade effect (default: 1.0)
+    pub exaggeration: Option<f32>,
+    /// Zoom level of the DEM tiles (used to calculate worldMetersPerTexel)
+    pub zoom: Option<u8>,
 }
 
 #[wasm_bindgen]

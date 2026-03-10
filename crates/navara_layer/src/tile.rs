@@ -1,6 +1,6 @@
 use crate::LayerData;
 use bevy_ecs::component::Component;
-use navara_material::{Appearance, ElevationHeatmapConfig, RasterTileMaterial};
+use navara_material::{Appearance, ElevationHeatmapConfig, HillshadeConfig, RasterTileMaterial};
 
 #[derive(Debug, Clone, PartialEq, Default, Component)]
 pub struct TilesLayer {
@@ -8,6 +8,7 @@ pub struct TilesLayer {
     pub data: Option<LayerData>,
     pub appearance: Option<Appearance>,
     pub elevation_heatmap_config: Option<ElevationHeatmapConfig>,
+    pub hillshade_config: Option<HillshadeConfig>,
 }
 
 impl TilesLayer {
@@ -31,6 +32,7 @@ pub struct UpdateRasterTileLayerMarker {
     pub layer_id: String,
     pub appearance: Appearance,
     pub elevation_heatmap_config: Option<ElevationHeatmapConfig>,
+    pub hillshade_config: Option<HillshadeConfig>,
 }
 
 #[derive(Debug, Component)]

@@ -56,6 +56,19 @@ export const run = async (view: ThreeView) => {
     },
   });
 
+  view.addLayer({
+    type: "tiles",
+    data: {
+      url: TERRAIN_DATASETS.mapterhorn.url,
+    },
+    rasterTile: {
+      maxZoom: 15,
+    },
+    hillshade: {
+      elevationDecoder: TERRARIUM_ELEVATION_DECODER(),
+    },
+  });
+
   // Set the elevation colormap on the globe
   view.globe.elevationColormap = PLATEAU_COLOR_MAP;
 

@@ -32,6 +32,7 @@ pub struct Events {
     pub renderable_feature_changed: Vec<RenderableFeatureChangedEvent>,
     pub renderable_feature_removed: Vec<RenderableFeatureRemovedEvent>,
     pub update_sample_terrain_height: Vec<TerrainHeightUpdatedEvent>,
+    pub hillshade_backfilled: Vec<HillshadeBackfilledEvent>,
 }
 
 #[wasm_bindgen]
@@ -160,6 +161,15 @@ pub struct EntityEvent {
     pub r#gen: u32,
 }
 
+#[wasm_bindgen]
+#[derive(Debug, Clone, Serialize)]
+pub struct HillshadeBackfilledEvent {
+    pub ind: u32,
+    pub r#gen: u32,
+    pub backfilled_handle: i32, // Handle to backfilled DEM buffer in BufferStore
+    pub tile_handle: TileHandle, // Handle of the tile that owns this texture
+}
+
 impl From<navara_event::Events<'_>> for Events {
     fn from(ev: navara_event::Events) -> Self {
         Self {
@@ -218,6 +228,18 @@ impl From<navara_event::Events<'_>> for Events {
                 .update_sample_terrain_height
                 .into_iter()
                 .map(|ev| ev.into())
+                .collect(),
+            hillshade_backfilled: ev
+                .hillshade_backfilled
+                .into_iter()
+                .map(
+                    |(entity_event, handle, tile_handle)| HillshadeBackfilledEvent {
+                        ind: entity_event.ind,
+                        r#gen: entity_event.r#gen,
+                        backfilled_handle: handle,
+                        tile_handle,
+                    },
+                )
                 .collect(),
         }
     }

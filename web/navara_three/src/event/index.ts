@@ -16,6 +16,7 @@ import {
   type ObjectTransformEvent,
   type DataRequestEvent,
   type CameraFrustum,
+  type HillshadeBackfilledEvent,
   TextureFragmentRequestedEvent,
   TextureFragmentStatus,
   DataRequesterRemovedEvent,
@@ -37,6 +38,7 @@ import { Layer, type ViewEvents } from "..";
 import { ThreeViewCamera } from "../camera";
 import type { ViewContext } from "../core";
 import type { LayersManager } from "../layersManager";
+import { TileMesh } from "../mesh/tile";
 import type { AbortableTextureLoader } from "../loaders/AbortableTextureLoader";
 import type { Scenes, TexturizedSceneByTileCoordinates } from "../scene";
 import { getImageDataFromImageBitmap } from "../tasks/getImageDataFromImageBitmap";
@@ -200,6 +202,10 @@ export function processEvent(
 
   eventManager.forEachStack("update_sample_terrain_height", (ev) =>
     viewEvents.emit("_sample_terrain_height_received", ev),
+  );
+
+  eventManager.forEachStack("hillshade_backfilled", (ev) =>
+    processHillshadeBackfilled(ev, buf, loadedTexs, tileMapByHandle),
   );
 
   eventManager.processTransactionEvents(
@@ -735,4 +741,25 @@ export function setTransform(
   }
   obj.quaternion.set(qx, qy, qz, qw);
   obj.scale.set(sx, sy, sz);
+}
+
+function processHillshadeBackfilled(
+  event: HillshadeBackfilledEvent | undefined,
+  buf: BufferLoader,
+  loadedTexs: Map<string, Texture>,
+  tileMapByHandle: TileMapByHandle,
+) {
+  if (!event) return;
+
+  // Get the backfilled (size+2)×(size+2) RGBA data from BufferStore
+  const bytes = buf.u8(event.backfilled_handle);
+  if (!bytes) return;
+
+  // Delegate to TileMesh static method for texture processing
+  TileMesh.processHillshadeBackfilled(
+    event,
+    bytes,
+    loadedTexs,
+    tileMapByHandle,
+  );
 }

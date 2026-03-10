@@ -6,15 +6,15 @@ use navara_layer::{
     TerrainDataType, TerrainLayer, TilesLayer,
 };
 
-use navara_material::{Appearance, ElevationHeatmapConfig};
+use navara_material::{Appearance, ElevationHeatmapConfig, HillshadeConfig};
 use navara_parser::geojson::GeoJson;
 use serde::Deserialize;
 use wasm_bindgen::prelude::*;
 
 use navara_wasm_types::{
-    BillboardMaterial, ElevationHeatmapMaterial, EllipsoidTerrainMaterial, ModelMaterial,
-    PointMaterial, PolygonMaterial, PolylineMaterial, RasterTerrainMaterial, RasterTileMaterial,
-    TextMaterial, VectorTileMaterial,
+    BillboardMaterial, ElevationHeatmapMaterial, EllipsoidTerrainMaterial, HillshadeMaterial,
+    ModelMaterial, PointMaterial, PolygonMaterial, PolylineMaterial, RasterTerrainMaterial,
+    RasterTileMaterial, TextMaterial, VectorTileMaterial,
 };
 
 #[wasm_bindgen]
@@ -32,6 +32,8 @@ pub struct TileLayerDescription {
     #[wasm_bindgen(getter_with_clone, js_name = elevationHeatmap)]
     #[serde(rename = "elevationHeatmap")]
     pub elevation_heatmap: Option<ElevationHeatmapMaterial>,
+    #[wasm_bindgen(getter_with_clone)]
+    pub hillshade: Option<HillshadeMaterial>,
 }
 
 impl TileLayerDescription {
@@ -640,12 +642,21 @@ impl LayerDescription {
                         })
                     });
 
+                // Parse hillshade config
+                let hillshade_config = layer.hillshade.as_ref().and_then(|hillshade| {
+                    Some(HillshadeConfig {
+                        elevation_decoder: hillshade.elevation_decoder?.into(),
+                        exaggeration: hillshade.exaggeration.unwrap_or(1.0),
+                    })
+                });
+
                 Some(navara_layer::LayerDescription::Tiles(Box::new(
                     TilesLayer {
                         layer_id: layer_id.to_string(),
                         data: data.map(|d| LayerData { url: d.url }),
                         appearance: layer.appearance(old_desc),
                         elevation_heatmap_config,
+                        hillshade_config,
                     },
                 )))
             }

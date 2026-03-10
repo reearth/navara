@@ -149,6 +149,7 @@ pub fn traverse_tile(
             handle,
             texture_fragment,
             Priority::High,
+            buf,
         );
     }
 
@@ -465,6 +466,7 @@ pub fn prepare_tile_resource(
             handle,
             texture_fragment,
             Priority::High,
+            buf,
         );
     }
 

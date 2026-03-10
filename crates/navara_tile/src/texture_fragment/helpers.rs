@@ -1,13 +1,17 @@
 use bevy_ecs::system::{Commands, Query};
 
+use navara_buffer_store::BufferStore;
 use navara_component::{Order, OrderByDistance, Priority};
 use navara_core::tile_url;
+use navara_data_requester::{DataRequester, DataRequesterExtension, DataRequesterStatus};
 use navara_layer::TilesLayer;
 use navara_material::Appearance;
 use navara_texture_fragment::TextureFragment;
 use navara_tile_component::{
     RasterTile, TileHandle, TileTextureFragmentMarker, TileTextureFragmentQuery,
 };
+
+use super::HillshadeTextureMarker;
 
 pub(crate) fn request_texture_fragment(
     commands: &mut Commands,
@@ -16,6 +20,7 @@ pub(crate) fn request_texture_fragment(
     handle: TileHandle,
     texture_fragment: &TileTextureFragmentQuery,
     priority: Priority,
+    buf: &mut BufferStore,
 ) {
     let tiles_len = tiles.iter().len();
     if matches!(leaf.texture_fragment_entity_ids.as_ref(), Some(e) if e.len() == tiles_len && e.iter().all(|e| e.is_some_and(|e| texture_fragment.contains(e))))
@@ -64,15 +69,47 @@ pub(crate) fn request_texture_fragment(
         &leaf.coords,
         tms,
     );
-    let entity = commands.spawn((
-        TileTextureFragmentMarker(handle),
-        TextureFragment::new(url),
-        OrderByDistance {
-            sse: leaf.sse,
-            distance: leaf.distance_from_camera,
-        },
-        priority,
-    ));
+
+    // Check if current layer is a hillshade texture (needs backfill)
+    let is_hillshade = next_tile.hillshade_config.is_some();
+
+    // Choose different path based on whether it's hillshade
+    let entity = if is_hillshade {
+        // Hillshade texture: use DataRequester (can backfill in Rust)
+        let extension = if url.ends_with(".webp") {
+            DataRequesterExtension::WebP
+        } else {
+            DataRequesterExtension::Png
+        };
+
+        commands.spawn((
+            TileTextureFragmentMarker(handle),
+            HillshadeTextureMarker, // Mark this as a hillshade texture for backfill system
+            DataRequester {
+                handle: buf.new_handle(),
+                url,
+                extension,
+                status: DataRequesterStatus::Pending,
+            },
+            OrderByDistance {
+                sse: leaf.sse,
+                distance: leaf.distance_from_camera,
+            },
+            priority,
+        ))
+    } else {
+        // Regular texture: continue using TextureFragment (no change to existing functionality)
+        commands.spawn((
+            TileTextureFragmentMarker(handle),
+            TextureFragment::new(url),
+            OrderByDistance {
+                sse: leaf.sse,
+                distance: leaf.distance_from_camera,
+            },
+            priority,
+        ))
+    };
+
     let id = entity.id();
 
     leaf.texture_fragment_entity_ids

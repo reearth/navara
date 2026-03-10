@@ -62,6 +62,7 @@ pub struct Events<'a> {
     >,
     pub renderable_feature_removed: Vec<ReconstructableComponentEvent<&'a LayerId>>,
     pub update_sample_terrain_height: Vec<ReconstructableComponentEvent<&'a TerrainHeightObserver>>,
+    pub hillshade_backfilled: Vec<(EntityEvent, i32, u64)>, // (entity, backfilled_handle, tile_handle)
 }
 
 impl<'a> Events<'a> {
@@ -170,6 +171,13 @@ impl<'a> Events<'a> {
                 events.update_sample_terrain_height.push(e);
                 is_changed = true;
             }
+        }
+
+        for (entity, backfilled_handle, tile_handle) in store.hillshade_backfilled.iter() {
+            events
+                .hillshade_backfilled
+                .push(((*entity).into(), *backfilled_handle, *tile_handle));
+            is_changed = true;
         }
 
         is_changed.then_some(events)

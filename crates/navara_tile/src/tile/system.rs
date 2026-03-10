@@ -2,7 +2,7 @@ use bevy_ecs::prelude::*;
 use navara_buffer_store::BufferStore;
 use navara_component::{Deleted, Order, OrderByDistance, Priority, Rendered};
 use navara_core::{Aabb, TileXYZ, WGS84_64};
-use navara_data_requester::DataRequesterStatus;
+use navara_data_requester::{DataRequester, DataRequesterStatus};
 use navara_fog::Fog;
 use navara_frame::FrameManager;
 use navara_geometry::{
@@ -15,6 +15,7 @@ use navara_math::{FloatType, Transform};
 use navara_mesh::{CachedMeshHandle, Mesh, MeshBundle, ObjectBundle};
 use navara_occluder::ellipsoidal_occluder::EllipsoidalOccluder;
 
+use crate::texture_fragment::HillshadeDEMState;
 use navara_camera::{CameraFrustum, CameraMarker};
 use navara_tile_component::{
     ChangedTileTerrainDataRequesterQuery, ChangedTileTextureFragmentQuery, RasterTile,
@@ -213,6 +214,7 @@ pub fn update_tiles(
                 zero_tile_handle,
                 &texture_fragment,
                 Priority::High,
+                &mut buf,
             );
         }
         TraversalResult::ChildrenMeshesPrepared => {
@@ -238,6 +240,7 @@ pub fn transfer_mesh(
         Or<(Added<RenderedTile>, Without<Rendered>)>,
     >,
     texture_fragment: TileTextureFragmentQuery,
+    data_requesters: Query<&DataRequester>,
     terrain_data_requester: TileTerrainDataRequesterQuery,
     tile_layers: Query<(&TilesLayer, &Order)>,
     terrain_layer: Query<&TerrainLayer>,
@@ -303,19 +306,42 @@ pub fn transfer_mesh(
         // Elevation Heatmap fields
         let mut is_elevation_heatmaps = Vec::with_capacity(tile_layers_len);
         let mut shared_heatmap_config = None;
+
+        // Hillshade fields
+        let mut is_hillshades = Vec::with_capacity(tile_layers_len);
+        let mut shared_hillshade_config = None;
+
+        // Tile zoom levels and center latitude for Web Mercator scale correction
+        let mut tile_zoom_levels = Vec::with_capacity(tile_layers_len);
+        let current_zoom = tile.coords.z as u8;
+
         let mut tile_show_bounding_box = false;
 
         for (i, (l, _)) in tile_layers.iter().sort::<&Order>().enumerate() {
+            // Check if texture is ready: TextureFragment OR DataRequester (for hillshade)
             let should_show = texture_fragment_entity_ids
                 .as_ref()
                 .and_then(|ids| ids.get(i))
-                .and_then(|tex| tex.and_then(|tex| texture_fragment.get(tex).ok()))
-                .is_some_and(|(_, tex)| tex.is_succeeded());
+                .and_then(|tex| {
+                    tex.and_then(|entity| {
+                        // Try TextureFragment first
+                        if let Ok((_, tf)) = texture_fragment.get(entity) {
+                            return Some(tf.is_succeeded());
+                        }
+                        // Try DataRequester second (for hillshade)
+                        if let Ok(dr) = data_requesters.get(entity) {
+                            return Some(dr.status == DataRequesterStatus::Success);
+                        }
+                        None
+                    })
+                })
+                .unwrap_or(false);
             let a = l.appearance().unwrap();
             shows.push(should_show && a.show);
             opacities.push(a.opacity.clamp(0., 1.));
             colors.push(a.color);
             tile_show_bounding_box = tile_show_bounding_box || a.show_bounding_box;
+            tile_zoom_levels.push(current_zoom);
 
             // Mark whether this layer is an elevation heatmap
             if let Some(heatmap_config) = &l.elevation_heatmap_config {
@@ -326,6 +352,17 @@ pub fn transfer_mesh(
                 }
             } else {
                 is_elevation_heatmaps.push(false);
+            }
+
+            // Mark whether this layer is a hillshade
+            if let Some(hillshade_config) = &l.hillshade_config {
+                is_hillshades.push(true);
+                // Use the first hillshade config as shared configuration
+                if shared_hillshade_config.is_none() {
+                    shared_hillshade_config = Some(hillshade_config);
+                }
+            } else {
+                is_hillshades.push(false);
             }
         }
 
@@ -352,6 +389,13 @@ pub fn transfer_mesh(
             // Elevation Heatmap fields
             is_elevation_heatmaps,
             elevation_heatmap_config: shared_heatmap_config.cloned(),
+
+            // Hillshade fields
+            is_hillshades,
+            hillshade_config: shared_hillshade_config.cloned(),
+
+            // Tile zoom levels
+            tile_zoom_levels,
         };
 
         let terrain_req = match tile.terrain_data.as_ref() {
@@ -758,6 +802,8 @@ pub fn update_mesh_material(
     qt: ResMut<RasterTileQuadtree>,
     rendered_tiles: Query<(&RenderedTile, &OrderByDistance), With<Rendered>>,
     mut texture_fragment: ParamSet<(TileTextureFragmentQuery, ChangedTileTextureFragmentQuery)>,
+    data_requesters: Query<&DataRequester>,
+    hillshade_backfilled: Query<&HillshadeDEMState, Added<HillshadeDEMState>>,
     mut tile_layers: ParamSet<(
         Query<(&TilesLayer, &Order)>,
         Query<&TilesLayer, Changed<TilesLayer>>,
@@ -775,7 +821,13 @@ pub fn update_mesh_material(
     let are_tile_layers_updated = !tile_layers.p1().is_empty();
     let are_tile_layers_removed = !tile_layers.p2().is_empty();
     let are_texture_fragments_updated = !texture_fragment.p1().is_empty();
-    if !are_tile_layers_updated && !are_texture_fragments_updated && !are_tile_layers_removed {
+    let are_hillshades_backfilled = !hillshade_backfilled.is_empty();
+    // Check for hillshade backfill completion to trigger mesh updates after backfill
+    if !are_tile_layers_updated
+        && !are_texture_fragments_updated
+        && !are_tile_layers_removed
+        && !are_hillshades_backfilled
+    {
         return;
     }
 
@@ -804,26 +856,27 @@ pub fn update_mesh_material(
         };
 
         let mut parent_z = None;
-        let texture_fragment_entity_ids = if tile.is_texture_ready(&texture_fragment, true) {
-            texture_fragment_entity_ids
-        } else {
-            // Use the parent tile if this tile doesn't have a tile.
-            match cached_rendered_tile
-                .ready_parent_tile_handle
-                .and_then(|h| qt.qt.get(h))
-                .and_then(|parent_tile| {
-                    parent_tile
-                        .texture_fragment_entity_ids
-                        .as_ref()
-                        .map(|v| (v, parent_tile.coords.z))
-                }) {
-                Some((v, parent_z_)) => {
-                    parent_z = Some(parent_z_);
-                    v
+        let texture_fragment_entity_ids =
+            if tile.is_all_texture_ready(&texture_fragment, &data_requesters, true) {
+                texture_fragment_entity_ids
+            } else {
+                // Use the parent tile if this tile doesn't have a tile.
+                match cached_rendered_tile
+                    .ready_parent_tile_handle
+                    .and_then(|h| qt.qt.get(h))
+                    .and_then(|parent_tile| {
+                        parent_tile
+                            .texture_fragment_entity_ids
+                            .as_ref()
+                            .map(|v| (v, parent_tile.coords.z))
+                    }) {
+                    Some((v, parent_z_)) => {
+                        parent_z = Some(parent_z_);
+                        v
+                    }
+                    None => texture_fragment_entity_ids,
                 }
-                None => texture_fragment_entity_ids,
-            }
-        };
+            };
 
         let Some((tile_mesh_marker, _, appearance)) = cached_rendered_tile
             .mesh_entity
@@ -842,6 +895,8 @@ pub fn update_mesh_material(
         let prev_colors = &appearance.colors;
         let prev_opacities = &appearance.opacities;
         let prev_is_elevation_heatmaps = &appearance.is_elevation_heatmaps;
+        let prev_is_hillshades = &appearance.is_hillshades;
+        let prev_tile_zoom_levels = &appearance.tile_zoom_levels;
 
         let tile_layers_len = tile_layers.iter().len();
         let mut shows = Vec::with_capacity(tile_layers_len);
@@ -849,12 +904,32 @@ pub fn update_mesh_material(
         let mut colors = Vec::with_capacity(tile_layers_len);
         let mut is_elevation_heatmaps = Vec::with_capacity(tile_layers_len);
         let mut elevation_heatmap_config = None;
+
+        // Hillshade fields
+        let mut is_hillshades = Vec::with_capacity(tile_layers_len);
+        let mut hillshade_config = None;
+        // Tile zoom levels (per-layer, JS will handle upsampling fallback)
+        let mut tile_zoom_levels = Vec::with_capacity(tile_layers_len);
+        let current_zoom = tile.coords.z as u8;
+
         for (i, (l, _)) in tile_layers.iter().sort::<&Order>().enumerate() {
-            // If this tile isn't ready, the remaining tiles aren't ready either.
+            // Check if texture is ready: TextureFragment OR DataRequester (for hillshade)
             let should_show = texture_fragment_entity_ids
                 .get(i)
-                .and_then(|tex| tex.and_then(|tex| texture_fragment.get(tex).ok()))
-                .is_some_and(|(_, tex)| tex.is_succeeded());
+                .and_then(|tex| {
+                    tex.and_then(|entity| {
+                        // Try TextureFragment first
+                        if let Ok((_, tf)) = texture_fragment.get(entity) {
+                            return Some(tf.is_succeeded());
+                        }
+                        // Try DataRequester second (for hillshade)
+                        if let Ok(dr) = data_requesters.get(entity) {
+                            return Some(dr.status == DataRequesterStatus::Success);
+                        }
+                        None
+                    })
+                })
+                .unwrap_or(false);
 
             let a = l.appearance().unwrap();
             let next_show = should_show && a.show;
@@ -863,6 +938,7 @@ pub fn update_mesh_material(
 
             // Check if this layer is an elevation heatmap
             let is_heatmap = l.elevation_heatmap_config.is_some();
+            let is_hillshade_layer_check = l.hillshade_config.is_some();
 
             if prev_shows.get(i) != Some(&next_show)
                 || prev_opacities.get(i) != Some(&next_opacity)
@@ -870,6 +946,8 @@ pub fn update_mesh_material(
                 || prev_texture_fragments.as_ref().and_then(|t| t.get(i))
                     != texture_fragment_entity_ids.get(i)
                 || prev_is_elevation_heatmaps.get(i) != Some(&is_heatmap)
+                || prev_is_hillshades.get(i) != Some(&is_hillshade_layer_check)
+                || prev_tile_zoom_levels.get(i) != Some(&current_zoom)
             {
                 needs_update = true;
             }
@@ -883,10 +961,29 @@ pub fn update_mesh_material(
             if is_heatmap && elevation_heatmap_config.is_none() {
                 elevation_heatmap_config = l.elevation_heatmap_config.clone();
             }
+
+            // Mark whether this layer is a hillshade
+            let is_hillshade_layer = l.hillshade_config.is_some();
+            is_hillshades.push(is_hillshade_layer);
+
+            // Use the first hillshade_config we find (they should all be the same)
+            if is_hillshade_layer && hillshade_config.is_none() {
+                hillshade_config = l.hillshade_config.clone();
+            }
+
+            // Use parent's zoom if we're using parent texture, otherwise current zoom
+            // This is important for hillshade: when using parent texture, zoom affects normal calculation
+            let zoom_for_layer = parent_z.map(|z| z as u8).unwrap_or(current_zoom);
+            tile_zoom_levels.push(zoom_for_layer);
         }
 
         // Check if elevation_heatmap_config changed
         if appearance.elevation_heatmap_config != elevation_heatmap_config {
+            needs_update = true;
+        }
+
+        // Check if hillshade_config changed
+        if appearance.hillshade_config != hillshade_config {
             needs_update = true;
         }
 
@@ -917,6 +1014,9 @@ pub fn update_mesh_material(
         appearance.colors = colors;
         appearance.is_elevation_heatmaps = is_elevation_heatmaps;
         appearance.elevation_heatmap_config = elevation_heatmap_config;
+        appearance.is_hillshades = is_hillshades;
+        appearance.hillshade_config = hillshade_config;
+        appearance.tile_zoom_levels = tile_zoom_levels;
     }
 }
 

@@ -15,6 +15,18 @@ pub struct ElevationHeatmapConfig {
     pub log_boundary: f64,
 }
 
+/// Configuration for hillshade rendering.
+/// Computes normals from DEM gradients to fix tile boundary seams.
+/// The computed normals are used with existing scene lighting.
+#[derive(Debug, Clone, PartialEq)]
+pub struct HillshadeConfig {
+    pub elevation_decoder: ElevationDecoder,
+
+    /// Exaggeration factor for hillshade effect (default: 1.0)
+    /// Higher values make terrain appear more dramatic, lower values flatten it. Recommended range is 0.5 to 2.0.
+    pub exaggeration: f32,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Appearance {
     Point(PointMaterial),
@@ -555,6 +567,13 @@ pub struct RasterTileInternalMaterial {
     // Elevation Heatmap fields
     pub is_elevation_heatmaps: Vec<bool>, // Per-layer flags: which texture slots are elevation heatmaps
     pub elevation_heatmap_config: Option<ElevationHeatmapConfig>, // Shared config for all heatmap layers
+
+    // Hillshade fields
+    pub is_hillshades: Vec<bool>, // Per-layer flags: which texture slots are hillshades
+    pub hillshade_config: Option<HillshadeConfig>, // Shared config for all hillshade layers
+
+    // Tile zoom levels (per-layer)
+    pub tile_zoom_levels: Vec<u8>, // Zoom level for each texture layer
 }
 
 #[derive(Debug, Clone, PartialEq, Component)]
