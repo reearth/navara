@@ -193,9 +193,5 @@ pub fn get_font_atlas(url: &str) -> Option<FontAtlas> {
 pub fn tick_frame() {
     FONT_CACHE.with(|cache| {
         cache.borrow_mut().current_frame += 1;
-        log(format!("entries {}", cache.borrow().fonts.len()).as_str());
-        for (url, entry) in &cache.borrow().fonts {
-            log(format!("{}: {} bytes", url, entry.atlas.pixel_data.len()).as_str());
-        }
     });
 }
