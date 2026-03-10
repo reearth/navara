@@ -87,7 +87,11 @@ export class SelectiveEffectMaskController {
     const outlineActive =
       registry.getObjectsForEffect(SELECTIVE_OUTLINE_EFFECT_KEY).size > 0;
 
-    if (!bloomActive && !outlineActive) return;
+    if (!bloomActive && !outlineActive) {
+      // Clear combined RTs to avoid stale mask data from previous frames
+      this.clearCombinedRTs(renderer);
+      return;
+    }
 
     // Build active effects list
     const activeEffects: string[] = [];
@@ -136,6 +140,29 @@ export class SelectiveEffectMaskController {
   // ============================================================================
   // Internal
   // ============================================================================
+
+  /**
+   * Clear combined RTs to prevent stale mask data when no effects are active.
+   */
+  private clearCombinedRTs(renderer: WebGLRenderer): void {
+    if (!this.combinedNormalMaskRT && !this.combinedSilhouetteMaskRT) return;
+
+    const savedClearColor = renderer.getClearColor(new Color());
+    const savedClearAlpha = renderer.getClearAlpha();
+    renderer.setClearColor(0x000000, 0);
+
+    if (this.combinedNormalMaskRT) {
+      renderer.setRenderTarget(this.combinedNormalMaskRT);
+      renderer.clear();
+    }
+    if (this.combinedSilhouetteMaskRT) {
+      renderer.setRenderTarget(this.combinedSilhouetteMaskRT);
+      renderer.clear();
+    }
+
+    renderer.setClearColor(savedClearColor, savedClearAlpha);
+    renderer.setRenderTarget(null);
+  }
 
   /**
    * Render a combined mask pass for a specific occlusion mode.
