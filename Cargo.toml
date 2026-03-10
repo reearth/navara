@@ -33,7 +33,6 @@ url = "2.5.8"
 cfg-if = "1.0.4"
 radians = "0.3.1"
 itertools = "0.14.0"
-fxhash = "0.2.1"
 rustc-hash = "2.1.1"
 num = "0.4.3"
 regex = "1.12.3"
@@ -120,6 +119,7 @@ navara_wasm_utils = { path = "crates/navara_wasm_utils" }
 navara_wasm_worker = { path = "crates/navara_wasm_worker" }
 navara_window = { path = "crates/navara_window" }
 navara_worker = { path = "crates/navara_worker" }
+navara_property = { path = "crates/navara_property" }
 
 
 [workspace.metadata.wasm-pack.profile.dev.wasm-bindgen]

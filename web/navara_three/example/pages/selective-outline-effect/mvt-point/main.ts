@@ -62,17 +62,20 @@ const run = async () => {
   });
 
   layer.on("featureUpdated", ({ evaluator }) => {
-    evaluator.evaluate((_batchId, property) => {
-      const type = property?.["備考"] as string;
+    evaluator.evaluate(
+      ({ properties }) => {
+        const type = properties?.["備考"] as string;
 
-      const color = (() => {
-        if (type === "陸上競技場") return new Color().setHex(0x0000ff);
-        if (type?.endsWith("河川敷")) return new Color().setHex(0x00ff00);
-        return new Color().setHex(0xffcc00);
-      })();
+        const color = (() => {
+          if (type === "陸上競技場") return new Color().setHex(0x0000ff);
+          if (type?.endsWith("河川敷")) return new Color().setHex(0x00ff00);
+          return new Color().setHex(0xffcc00);
+        })();
 
-      return { color };
-    });
+        return { color };
+      },
+      { filters: ["備考"] },
+    );
   });
 
   // Base layers

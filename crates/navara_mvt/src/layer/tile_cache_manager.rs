@@ -1,6 +1,6 @@
 use bevy_ecs::{component::Component, entity::Entity};
-use fxhash::FxHashMap;
 use navara_tile_component::TileHandle;
+use rustc_hash::FxHashMap;
 
 // Manage the tiles that are going to be rendered.
 #[derive(Default, Component)]

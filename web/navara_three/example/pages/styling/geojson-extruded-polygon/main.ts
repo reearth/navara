@@ -92,17 +92,21 @@ const run = async () => {
       if (updatedFeatures.has(evaluator.id)) return;
       updatedFeatures.add(evaluator.id);
 
-      evaluator.evaluate((_batchId, property) => {
-        const height = (property?.["height"] as number) ?? 0;
-        const color = (property?.["color"] as string) ?? "#ffffff";
-        const extrudedHeight = (property?.["extrudedHeight"] as number) ?? 0;
+      evaluator.evaluate(
+        ({ properties }) => {
+          const height = (properties?.["height"] as number) ?? 0;
+          const color = (properties?.["color"] as string) ?? "#ffffff";
+          const extrudedHeight =
+            (properties?.["extrudedHeight"] as number) ?? 0;
 
-        return {
-          height,
-          extrudedHeight,
-          color: new Color().setStyle(color),
-        };
-      });
+          return {
+            height,
+            extrudedHeight,
+            color: new Color().setStyle(color),
+          };
+        },
+        { filters: ["height", "color", "extrudedHeight"] },
+      );
     });
 
     return layer;

@@ -24,6 +24,7 @@ pub struct PointMesh {
     #[wasm_bindgen(getter_with_clone)]
     pub geometry: TransferablePointGeometry,
     pub active: bool,
+    pub batch_length: u32,
 }
 
 #[wasm_bindgen]
@@ -35,6 +36,7 @@ pub struct BillboardMesh {
     #[wasm_bindgen(getter_with_clone)]
     pub geometry: TransferablePointGeometry,
     pub active: bool,
+    pub batch_length: u32,
 }
 
 #[wasm_bindgen]
@@ -46,6 +48,7 @@ pub struct TextMesh {
     #[wasm_bindgen(getter_with_clone)]
     pub geometry: TransferablePointGeometry,
     pub active: bool,
+    pub batch_length: u32,
 }
 
 #[wasm_bindgen]
@@ -59,6 +62,7 @@ pub struct PolylineMesh {
     pub active: bool,
     /// Whether the polyline should be rendered as a texturized draped feature
     pub should_be_texturized: bool,
+    pub batch_length: u32,
 }
 
 #[wasm_bindgen]
@@ -74,6 +78,7 @@ pub struct PolygonMesh {
     pub active: bool,
     #[wasm_bindgen(getter_with_clone)]
     pub bounding_sphere: Option<BoundingSphere>,
+    pub batch_length: u32,
 }
 
 #[wasm_bindgen]
@@ -87,6 +92,7 @@ pub struct ModelMesh {
     #[wasm_bindgen(getter_with_clone)]
     pub geometry: TransferableModelGeometry,
     pub active: bool,
+    pub batch_length: u32,
 }
 
 #[wasm_bindgen]
@@ -114,6 +120,7 @@ impl<'a> From<&'a navara_feature_component::render::RenderableFeature> for Rende
                 transform,
                 geometry,
                 active,
+                batch_length,
                 ..
             } => Self {
                 point: Some(PointMesh {
@@ -121,6 +128,7 @@ impl<'a> From<&'a navara_feature_component::render::RenderableFeature> for Rende
                     transform: transform.into(),
                     geometry: geometry.into(),
                     active: *active,
+                    batch_length: *batch_length,
                 }),
                 ..Default::default()
             },
@@ -129,6 +137,7 @@ impl<'a> From<&'a navara_feature_component::render::RenderableFeature> for Rende
                 transform,
                 geometry,
                 active,
+                batch_length,
                 ..
             } => Self {
                 billboard: Some(BillboardMesh {
@@ -136,6 +145,7 @@ impl<'a> From<&'a navara_feature_component::render::RenderableFeature> for Rende
                     transform: transform.into(),
                     geometry: geometry.into(),
                     active: *active,
+                    batch_length: *batch_length,
                 }),
                 ..Default::default()
             },
@@ -144,6 +154,7 @@ impl<'a> From<&'a navara_feature_component::render::RenderableFeature> for Rende
                 transform,
                 geometry,
                 active,
+                batch_length,
                 ..
             } => Self {
                 text: Some(TextMesh {
@@ -151,6 +162,7 @@ impl<'a> From<&'a navara_feature_component::render::RenderableFeature> for Rende
                     transform: transform.into(),
                     geometry: geometry.into(),
                     active: *active,
+                    batch_length: *batch_length,
                 }),
                 ..Default::default()
             },
@@ -160,6 +172,7 @@ impl<'a> From<&'a navara_feature_component::render::RenderableFeature> for Rende
                 geometry,
                 active,
                 render_info,
+                batch_length,
                 ..
             } => Self {
                 polyline: Some(PolylineMesh {
@@ -168,6 +181,7 @@ impl<'a> From<&'a navara_feature_component::render::RenderableFeature> for Rende
                     transform: transform.into(),
                     active: *active,
                     should_be_texturized: render_info.should_be_texturized,
+                    batch_length: *batch_length,
                 }),
                 ..Default::default()
             },
@@ -178,6 +192,7 @@ impl<'a> From<&'a navara_feature_component::render::RenderableFeature> for Rende
                 transform,
                 active,
                 bounding_sphere,
+                batch_length,
                 ..
             } => Self {
                 polygon: Some(PolygonMesh {
@@ -187,6 +202,7 @@ impl<'a> From<&'a navara_feature_component::render::RenderableFeature> for Rende
                     transform: transform.into(),
                     active: *active,
                     bounding_sphere: bounding_sphere.as_ref().map(|bs| (*bs).into()),
+                    batch_length: *batch_length,
                 }),
                 ..Default::default()
             },
@@ -197,6 +213,7 @@ impl<'a> From<&'a navara_feature_component::render::RenderableFeature> for Rende
                 geometry,
                 active,
                 aabb,
+                batch_length,
                 ..
             } => Self {
                 model: Some(ModelMesh {
@@ -206,6 +223,7 @@ impl<'a> From<&'a navara_feature_component::render::RenderableFeature> for Rende
                     aabb: aabb.clone().into(),
                     geometry: geometry.into(),
                     active: *active,
+                    batch_length: *batch_length,
                 }),
                 ..Default::default()
             },

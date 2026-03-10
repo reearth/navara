@@ -80,29 +80,32 @@ const run = async () => {
       if (updatedFeatures.has(evaluator.id)) return;
       updatedFeatures.add(evaluator.id);
 
-      evaluator.evaluate((_batchId, property) => {
-        const railwayClass = String(property?.["N02_001"] ?? "");
+      evaluator.evaluate(
+        ({ properties }) => {
+          const railwayClass = String(properties?.["N02_001"] ?? "");
 
-        // Color by railway class (N02_001)
-        const colorMap: Record<string, string> = {
-          "11": "#2563eb", // JR Railway - blue
-          "12": "#dc2626", // Private Railway - red
-          "13": "#92400e", // Cable Railway - brown
-          "14": "#9333ea", // Suspended Monorail - purple
-          "15": "#0891b2", // Straddling Monorail - cyan
-          "16": "#16a34a", // Guide Rail Railway - green
-          "17": "#eab308", // Trackless Railway - yellow
-          "21": "#ea580c", // Tramway - orange
-          "22": "#ec4899", // Suspended Monorail (tramway) - pink
-          "23": "#84cc16", // Straddling Monorail (tramway) - lime
-          "24": "#065f46", // Guide Rail System - dark green
-          "25": "#d946ef", // Maglev - magenta
-        };
+          // Color by railway class (N02_001)
+          const colorMap: Record<string, string> = {
+            "11": "#2563eb", // JR Railway - blue
+            "12": "#dc2626", // Private Railway - red
+            "13": "#92400e", // Cable Railway - brown
+            "14": "#9333ea", // Suspended Monorail - purple
+            "15": "#0891b2", // Straddling Monorail - cyan
+            "16": "#16a34a", // Guide Rail Railway - green
+            "17": "#eab308", // Trackless Railway - yellow
+            "21": "#ea580c", // Tramway - orange
+            "22": "#ec4899", // Suspended Monorail (tramway) - pink
+            "23": "#84cc16", // Straddling Monorail (tramway) - lime
+            "24": "#065f46", // Guide Rail System - dark green
+            "25": "#d946ef", // Maglev - magenta
+          };
 
-        return {
-          color: new Color().setStyle(colorMap[railwayClass] ?? "#888888"),
-        };
-      });
+          return {
+            color: new Color().setStyle(colorMap[railwayClass] ?? "#888888"),
+          };
+        },
+        { filters: ["N02_001"] },
+      );
     });
 
     return layer;

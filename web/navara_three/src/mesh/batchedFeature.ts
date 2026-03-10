@@ -8,6 +8,7 @@ import {
   type Vector2,
   type NormalBufferAttributes,
 } from "three";
+import invariant from "tiny-invariant";
 
 import type { CustomObject3DEventMap } from "../object3DEvent";
 
@@ -44,6 +45,7 @@ export class BatchedFeatureMesh<
   extends Mesh<Buf, M, E>
   implements FeatureMesh, PickableMesh
 {
+  batchLength?: number;
   static _isBatchedAttributeName(v: string): v is BatchedAttributeName {
     return BATCHED_ATTRIBUTE_NAMES.includes(v as BatchedAttributeName);
   }
@@ -66,10 +68,12 @@ export class BatchedFeatureMesh<
     initBatchedMaterial(this.material, FEATURE_BATCH_TEXTURE_CONFIG);
   }
 
-  _initBatchDataTexture(batchLength: number): void {
+  _initBatchDataTexture(): void {
+    invariant(this.batchLength != null);
+
     const config: BatchTextureConfig = {
       ...FEATURE_BATCH_TEXTURE_CONFIG,
-      batchLength: batchLength,
+      batchLength: this.batchLength,
     };
 
     initBatchDataTexture(this.material, config);
