@@ -108,6 +108,7 @@ export class FontManager {
     }
 
     const promise = this._fetchAndLoad(url);
+    this._refCount.set(url, 1);
     this._pending.set(url, promise);
 
     this._shapeCache.set(
@@ -118,7 +119,6 @@ export class FontManager {
     try {
       await promise;
       this._loaded.add(url);
-      this._refCount.set(url, 1);
     } finally {
       this._pending.delete(url);
     }
