@@ -28,6 +28,7 @@ import {
   type SdfTextBaseProps,
   type SdfTextBaseState,
 } from "../material/enhancer/sdfText";
+import { SDF_RADIUS } from "../material/enhancer/sdfText/sdfTextBaseEnhancer/types";
 
 import type { PickableMesh } from "./pickableMesh";
 
@@ -161,8 +162,8 @@ export class SDFTextMesh
   /**
    * Set text to render. Shapes via WASM, rebuilds instanced geometry, updates atlas texture.
    */
-  setText(text: string): void {
-    if (text === this._text) return;
+  setText(text: string, forceUpdate = false): void {
+    if (text === this._text && !forceUpdate) return;
     this._text = text;
 
     if (!text) {
@@ -197,6 +198,18 @@ export class SDFTextMesh
   /**
    * Update visual properties: color, size, visibility, etc.
    */
+  setFont(fontUrl: string): void {
+    if (fontUrl === this._fontUrl) return;
+    this._fontUrl = fontUrl;
+
+    // Clear current atlas since it's tied to the previous font
+    if (!this._sharedAtlas) {
+      this._atlasTexture?.dispose();
+      this._atlasTexture = null;
+      this._enhancer.mutates().setAtlasTexture({ value: null });
+    }
+  }
+
   setColor(color: Color): void {
     this._enhancer.update({
       base: { color: color.getHex() },
@@ -233,125 +246,144 @@ export class SDFTextMesh
    * Apply material properties from WASM TextMaterial.
    * Maps relevant properties to enhancer updates, with change tracking.
    */
-  update(material: NavaraTextMaterial, _active: boolean): void {
-    if (!this.userData.prev) {
-      this.userData.prev = {};
-    }
-    const prev = this.userData.prev;
+  update(
+    material: NavaraTextMaterial,
+    active: boolean,
+    forceUpdate = false,
+  ): void {
+    this.visible = (material.show ?? true) && active;
+    if (!this.visible) return;
 
-    const nextVisible = material.show ?? true;
-    if (prev.visible !== nextVisible) {
-      this.visible = nextVisible;
-      prev.visible = nextVisible;
-    }
-    if (!nextVisible) return;
+    const fontUrl = material.font ?? this._fontUrl;
+    this.setFont(fontUrl);
 
     const nextText = material.text;
-    if (nextText !== prev.text) {
-      prev.text = nextText;
-      this.setText(nextText ?? "");
+    if (nextText !== undefined && nextText !== "") {
+      this.setText(nextText, forceUpdate);
+    } else if (forceUpdate) {
+      // Font changed — re-render existing text with the new font
+      this.setText(this._text, true);
     }
+
+    const state = this._enhancer.states();
 
     // Build props for enhancer update
     const baseProps: SdfTextBaseProps = {};
     let hasUpdate = false;
 
     const nextColor = material.color ?? 0xffffff;
-    if (nextColor !== prev.color) {
-      prev.color = nextColor;
+    if (
+      nextColor !==
+      new Color()
+        .setRGB(state.color[0], state.color[1], state.color[2])
+        .getHex()
+    ) {
       baseProps.color = nextColor;
       hasUpdate = true;
     }
 
     const nextFontSize = material.size ?? 16.0;
-    if (nextFontSize !== prev.fontSize) {
-      prev.fontSize = nextFontSize;
+    if (nextFontSize !== state.fontSize) {
       baseProps.fontSize = nextFontSize;
       hasUpdate = true;
     }
 
     const nextCenterX = material.center?.x ?? 0.5;
     const nextCenterY = material.center?.y ?? 0.0;
-    if (nextCenterX !== prev.centerX || nextCenterY !== prev.centerY) {
-      prev.centerX = nextCenterX;
-      prev.centerY = nextCenterY;
+    if (nextCenterX !== state.center[0] || nextCenterY !== state.center[1]) {
       baseProps.center = [nextCenterX, nextCenterY];
       hasUpdate = true;
     }
 
     const nextScaleByDistance = material.scaleByDistance ?? false;
-    if (nextScaleByDistance !== prev.scaleByDistance) {
-      prev.scaleByDistance = nextScaleByDistance;
+    if (nextScaleByDistance !== state.scaleByDistance) {
       baseProps.scaleByDistance = nextScaleByDistance;
       hasUpdate = true;
     }
 
     const nextDepthTest = material.depthTest ?? true;
-    if (nextDepthTest !== prev.depthTest) {
-      prev.depthTest = nextDepthTest;
+    if (nextDepthTest !== state.depthTest) {
       baseProps.depthTest = nextDepthTest;
       hasUpdate = true;
     }
 
     const nextOffsetDepth = material.offsetDepth ?? true;
-    if (nextOffsetDepth !== prev.offsetDepth) {
-      prev.offsetDepth = nextOffsetDepth;
+    if (nextOffsetDepth !== state.offsetDepth) {
       baseProps.offsetDepth = nextOffsetDepth;
       hasUpdate = true;
     }
 
     const nextHeight = material.height ?? 0;
-    if (nextHeight !== prev.height) {
-      prev.height = nextHeight;
+    if (nextHeight !== state.addHeight) {
       baseProps.addHeight = nextHeight;
       hasUpdate = true;
     }
 
     const nextOutlineWidth = material.outlineWidth ?? 0;
-    if (nextOutlineWidth !== prev.outlineWidth) {
-      prev.outlineWidth = nextOutlineWidth;
+    if ((nextOutlineWidth * 0.5) / SDF_RADIUS !== state.outlineWidth) {
       baseProps.outlineWidth = nextOutlineWidth;
       hasUpdate = true;
     }
 
     const nextOutlineColor = material.outlineColor ?? 0x000000;
-    if (nextOutlineColor !== prev.outlineColor) {
-      prev.outlineColor = nextOutlineColor;
+    if (
+      nextOutlineColor !==
+      new Color()
+        .setRGB(
+          state.outlineColor[0],
+          state.outlineColor[1],
+          state.outlineColor[2],
+        )
+        .getHex()
+    ) {
       baseProps.outlineColor = nextOutlineColor;
       hasUpdate = true;
     }
 
     const nextOutlineOpacity = material.outlineOpacity ?? 1.0;
-    if (nextOutlineOpacity !== prev.outlineOpacity) {
-      prev.outlineOpacity = nextOutlineOpacity;
+    if (nextOutlineOpacity !== state.outlineOpacity) {
       baseProps.outlineOpacity = nextOutlineOpacity;
       hasUpdate = true;
     }
 
     const nextBGColor = material.backgroundColor;
     if (nextBGColor !== undefined) {
-      if (nextBGColor !== prev.backgroundColor) {
-        prev.backgroundColor = nextBGColor;
+      if (
+        nextBGColor !==
+        new Color()
+          .setRGB(
+            state.backgroundColor[0],
+            state.backgroundColor[1],
+            state.backgroundColor[2],
+          )
+          .getHex()
+      ) {
         baseProps.showBackground = true;
         baseProps.backgroundColor = nextBGColor;
         hasUpdate = true;
       }
-    } else if (prev.backgroundColor !== undefined) {
-      prev.backgroundColor = undefined;
+    } else if (state.showBackground) {
       baseProps.showBackground = false;
       hasUpdate = true;
     }
 
     const nextBGOutlineColor = material.borderColor ?? 0x000000;
-    if (nextBGOutlineColor !== prev.backgroundOutlineColor) {
-      prev.backgroundOutlineColor = nextBGOutlineColor;
+    if (
+      nextBGOutlineColor !==
+      new Color()
+        .setRGB(
+          state.backgroundOutlineColor[0],
+          state.backgroundOutlineColor[1],
+          state.backgroundOutlineColor[2],
+        )
+        .getHex()
+    ) {
       baseProps.backgroundOutlineColor = nextBGOutlineColor;
       hasUpdate = true;
     }
 
     const nextBGOutlineWidth = material.borderWidth ?? 0;
-    if (nextBGOutlineWidth !== prev.backgroundOutlineWidth) {
-      prev.backgroundOutlineWidth = nextBGOutlineWidth;
+    if (nextBGOutlineWidth !== state.backgroundOutlineWidth) {
       baseProps.backgroundOutlineWidth = nextBGOutlineWidth;
       hasUpdate = true;
     }

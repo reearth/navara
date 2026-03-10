@@ -88,6 +88,8 @@ export class FontManager {
   /** Whether a microtask flush is already scheduled. */
   private _batchScheduled = false;
 
+  private _refCount = new Map<string, number>();
+
   setClient(client: FontWorkerClient) {
     this._client = client;
   }
@@ -97,7 +99,10 @@ export class FontManager {
    * Returns immediately if the font is already loaded. Deduplicates concurrent requests.
    */
   async loadFont(url: string): Promise<void> {
-    if (this._loaded.has(url)) return;
+    if (this._loaded.has(url)) {
+      this._refCount.set(url, (this._refCount.get(url) ?? 0) + 1);
+      return;
+    }
     if (this._pending.has(url)) return this._pending.get(url);
 
     const promise = this._fetchAndLoad(url);
@@ -106,8 +111,34 @@ export class FontManager {
     try {
       await promise;
       this._loaded.add(url);
+      this._refCount.set(url, 1);
     } finally {
       this._pending.delete(url);
+    }
+  }
+
+  async unloadFont(url: string) {
+    const count = this._refCount.get(url);
+    if (!count) return; // Not loaded or already fully unloaded
+    if (count === 1) {
+      this._loaded.delete(url);
+      this._refCount.delete(url);
+      this._shapeCache.clear();
+      this._atlasCache.delete(url);
+      this._atlasDirty.delete(url);
+      const tex = this._textureCache.get(url);
+      if (tex) {
+        tex.dispose();
+        this._textureCache.delete(url);
+      }
+      if (this._client) {
+        const result = await this._client.unloadFont(url);
+        if (!result.ok) {
+          console.warn(`Failed to unload font "${url}" in worker`);
+        }
+      }
+    } else {
+      this._refCount.set(url, count - 1);
     }
   }
 
@@ -209,6 +240,7 @@ export class FontManager {
     this._pending.clear();
     this._preparePending.clear();
     this._loaded.clear();
+    this._refCount.clear();
     this._shapeCache.clear();
     this._atlasCache.clear();
     this._atlasDirty.clear();

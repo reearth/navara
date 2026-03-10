@@ -79,7 +79,7 @@ const run = async () => {
   // Track updated features to prevent duplicate evaluations
   let updatedFeatures = new Set<bigint>();
 
-  const params = { size: 20 };
+  const params = { size: 20, font: FONT_DATASETS.NotoSansJP.url };
 
   // MVT text layer: Symbols from GSI vector tiles
   const addMvtLayer = () => {
@@ -90,7 +90,7 @@ const run = async () => {
       data: { url: VECTOR_DATASETS.gsiExperimentalVector.url },
       text: {
         lang: "ja",
-        font: FONT_DATASETS.NotoSansJP.url,
+        font: params.font,
         color: new Color().setStyle("#ffffff"),
         scaleByDistance: true,
         clampToGround: true,
@@ -163,6 +163,18 @@ const run = async () => {
     .addBinding(params, "size", { min: 10, max: 50, step: 1 })
     .on("change", ({ value }) => {
       layer?.update({ text: { size: value } });
+    });
+
+  pane
+    .addBinding(params, "font", {
+      options: {
+        "Noto Sans JP": FONT_DATASETS.NotoSansJP.url,
+        Roboto: FONT_DATASETS.Roboto.url,
+        "Source Code Pro": FONT_DATASETS.SourceCodePro.url,
+      },
+    })
+    .on("change", ({ value }) => {
+      layer?.update({ text: { font: value } });
     });
 
   showAttributions([

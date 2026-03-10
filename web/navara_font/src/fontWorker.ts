@@ -8,6 +8,7 @@ import init, {
   type ShapeTextResult as WasmShapeTextResult,
   type WasmShapedGlyph,
   type WasmGlyphMetrics,
+  unloadFont,
 } from "@navara/engine-font-worker";
 
 let wasmReady: Promise<unknown> | undefined;
@@ -58,7 +59,11 @@ function snapshotAtlas(fontUrl: string) {
   return { data, width: atlas.width, height: atlas.height };
 }
 
-type FontWorkerMessageType = "loadFont" | "prepareTextBatch" | "tickFrame";
+type FontWorkerMessageType =
+  | "loadFont"
+  | "unloadFont"
+  | "prepareTextBatch"
+  | "tickFrame";
 
 const ctx = self as unknown as DedicatedWorkerGlobalScope;
 
@@ -77,6 +82,13 @@ ctx.onmessage = async (e: MessageEvent) => {
         const ok = loadFont(url, bytes.length, (buf: Uint8Array) => {
           buf.set(bytes);
         });
+        ctx.postMessage({ id, type: "result", payload: { ok } });
+        break;
+      }
+
+      case "unloadFont": {
+        const { url } = msg.payload as { url: string };
+        const ok = unloadFont(url);
         ctx.postMessage({ id, type: "result", payload: { ok } });
         break;
       }

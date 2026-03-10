@@ -321,7 +321,7 @@ export async function processRenderableFeatureChanged(
     await processBillboardChanged(obj, billboard, buf, active);
   }
   if (obj instanceof BatchedSdfTextMesh && text) {
-    processTextChanged(obj, text, buf, active, renderFlag);
+    await processTextChanged(obj, text, buf, active, renderFlag);
   }
   if (obj instanceof ModelMesh && model) {
     processModelChanged(obj, model, active);

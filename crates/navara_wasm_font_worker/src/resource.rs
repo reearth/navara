@@ -134,4 +134,11 @@ impl FontCache {
         );
         Ok(())
     }
+
+    pub fn remove(&mut self, url: &str) -> Result<(), String> {
+        self.fonts
+            .remove(url)
+            .ok_or_else(|| format!("Font not found: {}", url))?;
+        Ok(())
+    }
 }

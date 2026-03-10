@@ -62,6 +62,10 @@ export class FontWorkerClient {
     }>;
   }
 
+  async unloadFont(url: string): Promise<{ ok: boolean }> {
+    return this._send("unloadFont", { url }) as Promise<{ ok: boolean }>;
+  }
+
   /** Shape multiple texts in one worker round-trip. */
   async prepareTextBatch(
     fontUrl: string,

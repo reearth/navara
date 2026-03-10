@@ -112,13 +112,16 @@ export class BatchedSdfTextMesh
     }
   }
 
-  _update(
+  async _update(
     m: NavaraTextMesh,
     buf: BufferLoader,
     active: boolean,
     needRender?: () => void,
   ) {
     if (needRender) this._needRender = needRender;
+
+    const material = m.material;
+    const text = material.text ?? "";
 
     const positionInfo = this.extractPositions(m, buf);
     if (positionInfo) {
@@ -130,7 +133,6 @@ export class BatchedSdfTextMesh
       );
 
       const transform = m.transform;
-
       for (let i = 0; i < nPositions; i++) {
         const posIdx = i * positionSize;
         const pos = RTE
@@ -149,31 +151,41 @@ export class BatchedSdfTextMesh
       }
     }
 
-    const material = m.material;
-    const text = material.text ?? "";
+    const fontUrl = m.material.font ?? this._fontUrl;
+    const needFontUpdate = fontUrl !== this._fontUrl;
+
+    if (needFontUpdate) {
+      await this._fontManager.loadFont(fontUrl);
+      await this._fontManager.unloadFont(this._fontUrl);
+    }
+    this._fontUrl = fontUrl;
 
     // If the text hasn't been prepared in the worker yet, schedule async preparation
-    if (text && !this._fontManager.isTextPrepared(this._fontUrl, text)) {
+    if (
+      (needFontUpdate || text) &&
+      !this._fontManager.isTextPrepared(this._fontUrl, text)
+    ) {
       this._fontManager.prepareText(this._fontUrl, text).then(() => {
-        this._applyUpdate(material, active, needRender);
+        this._applyUpdate(material, active, needRender, needFontUpdate);
       });
       return;
     }
 
-    this._applyUpdate(material, active, needRender);
+    this._applyUpdate(material, active, needRender, needFontUpdate);
   }
 
   private _applyUpdate(
     material: NavaraTextMaterial,
     active: boolean,
     needRender?: () => void,
+    forceUpdate = false,
   ) {
     // Update shared texture (in-place update if atlas grew)
     const sharedTex = this._fontManager.getAtlasTexture(this._fontUrl);
 
     for (const mesh of this.meshes()) {
       if (sharedTex) mesh.setAtlasTexture(sharedTex);
-      mesh.update(material, active);
+      mesh.update(material, active, forceUpdate);
       this.markVisibility(mesh);
     }
 
@@ -251,6 +263,7 @@ export class BatchedSdfTextMesh
     const mesh = this.meshes()[batchIndex];
 
     if (mesh) {
+      mesh.setFont(this._fontUrl);
       // If the text hasn't been prepared in the worker yet, schedule async preparation
       if (text && !this._fontManager.isTextPrepared(this._fontUrl, text)) {
         this._fontManager.prepareText(this._fontUrl, text).then(() => {

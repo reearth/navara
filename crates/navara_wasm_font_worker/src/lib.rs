@@ -19,6 +19,12 @@ pub fn start() {
     set_panic_hook();
 }
 
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_namespace = console)]
+    fn log(s: &str);
+}
+
 // ---------------------------------------------------------------------------
 // WASM types
 // ---------------------------------------------------------------------------
@@ -94,6 +100,12 @@ fn copy_u8_array(buf: &[u8]) -> js_sys::Uint8Array {
 pub fn load_font(url: String, byte_length: usize, f: &js_sys::Function) -> bool {
     let data = transfer_u8_array(byte_length, f);
     FONT_CACHE.with(|cache| cache.borrow_mut().insert(url, data).is_ok())
+}
+
+/// Unload a font from the FontCache, freeing its atlas memory.
+#[wasm_bindgen(js_name = unloadFont)]
+pub fn unload_font(url: String) -> bool {
+    FONT_CACHE.with(|cache| cache.borrow_mut().remove(&url).is_ok())
 }
 
 /// Check if a font is loaded.
@@ -201,5 +213,9 @@ pub fn get_font_atlas_view(url: &str) -> Option<FontAtlas> {
 pub fn tick_frame() {
     FONT_CACHE.with(|cache| {
         cache.borrow_mut().current_frame += 1;
+        log(format!("entries {}", cache.borrow().fonts.len()).as_str());
+        for (url, entry) in &cache.borrow().fonts {
+            log(format!("{}: {} bytes", url, entry.atlas.pixel_data.len()).as_str());
+        }
     });
 }
