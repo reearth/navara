@@ -305,4 +305,8 @@ export class BatchedSdfTextMesh
       mesh.setHeight(height);
     }
   }
+
+  dispose() {
+    this._fontManager.unloadFont(this._fontUrl);
+  }
 }

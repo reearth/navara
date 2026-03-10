@@ -69,9 +69,7 @@ export class FontManager {
   /** Tracks fonts that have been successfully loaded. */
   private _loaded = new Set<string>();
   /** Cache shaped text results to avoid redundant worker calls (LRU-evicted). */
-  private _shapeCache = new LRUMap<string, ShapeTextResult>(
-    SHAPE_CACHE_MAX_SIZE,
-  );
+  private _shapeCache = new Map<string, LRUMap<string, ShapeTextResult>>();
   /** Cache atlas data per font to avoid redundant copies. */
   private _atlasCache = new Map<string, FontAtlasData>();
   /** Tracks whether the atlas cache is stale (new glyphs may have been rasterized). */
@@ -103,10 +101,19 @@ export class FontManager {
       this._refCount.set(url, (this._refCount.get(url) ?? 0) + 1);
       return;
     }
-    if (this._pending.has(url)) return this._pending.get(url);
+
+    if (this._pending.has(url)) {
+      this._refCount.set(url, (this._refCount.get(url) ?? 0) + 1);
+      return this._pending.get(url);
+    }
 
     const promise = this._fetchAndLoad(url);
     this._pending.set(url, promise);
+
+    this._shapeCache.set(
+      url,
+      new LRUMap<string, ShapeTextResult>(SHAPE_CACHE_MAX_SIZE),
+    );
 
     try {
       await promise;
@@ -123,7 +130,7 @@ export class FontManager {
     if (count === 1) {
       this._loaded.delete(url);
       this._refCount.delete(url);
-      this._shapeCache.clear();
+      this._shapeCache.delete(url);
       this._atlasCache.delete(url);
       this._atlasDirty.delete(url);
       const tex = this._textureCache.get(url);
@@ -151,7 +158,7 @@ export class FontManager {
     if (!text) return;
 
     const cacheKey = this._cacheKey(fontUrl, text);
-    if (this._shapeCache.has(cacheKey)) return;
+    if (this._shapeCache.get(fontUrl)?.has(text) ?? false) return;
     if (this._preparePending.has(cacheKey))
       return this._preparePending.get(cacheKey);
 
@@ -183,7 +190,7 @@ export class FontManager {
 
   /** Check if text has been prepared (sync). */
   isTextPrepared(fontUrl: string, text: string): boolean {
-    return this._shapeCache.has(this._cacheKey(fontUrl, text));
+    return this._shapeCache.get(fontUrl)?.has(text) ?? false;
   }
 
   /**
@@ -191,7 +198,7 @@ export class FontManager {
    * Call prepareText() first.
    */
   shapeText(fontUrl: string, text: string): ShapeTextResult | undefined {
-    return this._shapeCache.get(this._cacheKey(fontUrl, text));
+    return this._shapeCache.get(fontUrl)?.get(text);
   }
 
   /** Get the SDF atlas data for a loaded font from cache. */
@@ -295,9 +302,8 @@ export class FontManager {
 
         // Cache each per-text result
         for (const item of batchResult.results) {
-          const cacheKey = this._cacheKey(fontUrl, item.text);
           if (item.shapeResult) {
-            this._shapeCache.set(cacheKey, item.shapeResult);
+            this._shapeCache.get(fontUrl)?.set(item.text, item.shapeResult);
           }
         }
 
