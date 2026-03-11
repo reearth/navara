@@ -40,7 +40,7 @@ import {
   type SmoothLineMeshLayerConfig,
 } from "@navara/three_default_layers";
 
-export class DefaultPlugin extends Plugin {
+export class DefaultPlugin extends Plugin<ThreeView<DefaultLayerDescriptions>> {
   private view?: ThreeView<DefaultLayerDescriptions>;
 
   async init(view: ThreeView<DefaultLayerDescriptions>) {
