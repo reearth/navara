@@ -1,4 +1,4 @@
-import type { DataTexture } from "three";
+import { type DataTexture, Color } from "three";
 import { describe, expect, it, vi } from "vitest";
 
 import type { ShaderUniforms } from "../../MaterialEnhancer";
@@ -19,18 +19,18 @@ describe("sdfTextBaseEnhancer/mutates", () => {
     it("should sync core refs from state", () => {
       const state: SdfTextBaseState = {
         ...DEFAULT_BASE_STATE,
-        color: [1, 0, 0],
+        color: new Color(0xff0000),
         fontSize: 24,
         center: [0.5, 0.5],
         scaleByDistance: true,
         addHeight: 50,
         offsetDepth: false,
         outlineWidth: 0.1,
-        outlineColor: [0, 1, 0],
+        outlineColor: new Color(0x00ff00),
         outlineOpacity: 0.8,
         showBackground: true,
-        backgroundColor: [0, 0, 1],
-        backgroundOutlineColor: [1, 1, 0],
+        backgroundColor: new Color(0x0000ff),
+        backgroundOutlineColor: new Color(0xffff00),
         backgroundOutlineWidth: 0.2,
         pickable: true,
       };
@@ -40,9 +40,7 @@ describe("sdfTextBaseEnhancer/mutates", () => {
       const uniforms: ShaderUniforms = {};
       mutates.updateUniforms(uniforms, state);
 
-      expect(uniforms.uColor?.value.r).toBe(1);
-      expect(uniforms.uColor?.value.g).toBe(0);
-      expect(uniforms.uColor?.value.b).toBe(0);
+      expect(uniforms.uColor?.value.getHex()).toBe(0xff0000);
       expect(uniforms.uFontSizePx?.value).toBe(24);
       expect(uniforms.uCenter?.value.x).toBe(0.5);
       expect(uniforms.uCenter?.value.y).toBe(0.5);
@@ -50,13 +48,11 @@ describe("sdfTextBaseEnhancer/mutates", () => {
       expect(uniforms.uAddHeight?.value).toBe(50);
       expect(uniforms.uOffsetDepth?.value).toBe(false);
       expect(uniforms.uOutlineWidth?.value).toBe(0.1);
-      expect(uniforms.uOutlineColor?.value.r).toBe(0);
-      expect(uniforms.uOutlineColor?.value.g).toBe(1);
+      expect(uniforms.uOutlineColor?.value.getHex()).toBe(0x00ff00);
       expect(uniforms.uOutlineOpacity?.value).toBe(0.8);
       expect(uniforms.uShowBackground?.value).toBe(true);
-      expect(uniforms.uBackgroundColor?.value.b).toBe(1);
-      expect(uniforms.uBackgroundOutlineColor?.value.r).toBe(1);
-      expect(uniforms.uBackgroundOutlineColor?.value.g).toBe(1);
+      expect(uniforms.uBackgroundColor?.value.getHex()).toBe(0x0000ff);
+      expect(uniforms.uBackgroundOutlineColor?.value.getHex()).toBe(0xffff00);
       expect(uniforms.uBackgroundOutlineWidth?.value).toBe(0.2);
       expect(uniforms.nvr_uPickable?.value).toBe(1.0);
     });

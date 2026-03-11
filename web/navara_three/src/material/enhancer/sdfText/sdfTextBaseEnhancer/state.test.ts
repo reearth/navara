@@ -20,9 +20,7 @@ describe("sdfTextBaseEnhancer / state", () => {
 
     it("updates color from hex to RGB tuple", () => {
       const state = updateState({ color: 0xff0000 }, DEFAULT_BASE_STATE);
-      expect(state.color[0]).toBeCloseTo(1.0);
-      expect(state.color[1]).toBeCloseTo(0.0);
-      expect(state.color[2]).toBeCloseTo(0.0);
+      expect(state.color.getHex()).toBe(0xff0000);
     });
 
     it("updates fontSize", () => {
@@ -57,9 +55,7 @@ describe("sdfTextBaseEnhancer / state", () => {
 
     it("updates outlineColor from hex", () => {
       const state = updateState({ outlineColor: 0x00ff00 }, DEFAULT_BASE_STATE);
-      expect(state.outlineColor[0]).toBeCloseTo(0.0);
-      expect(state.outlineColor[1]).toBeCloseTo(1.0);
-      expect(state.outlineColor[2]).toBeCloseTo(0.0);
+      expect(state.outlineColor.getHex()).toBe(0x00ff00);
     });
 
     it("updates outlineOpacity", () => {
@@ -77,9 +73,7 @@ describe("sdfTextBaseEnhancer / state", () => {
         { backgroundColor: 0x0000ff },
         DEFAULT_BASE_STATE,
       );
-      expect(state.backgroundColor[0]).toBeCloseTo(0.0);
-      expect(state.backgroundColor[1]).toBeCloseTo(0.0);
-      expect(state.backgroundColor[2]).toBeCloseTo(1.0);
+      expect(state.backgroundColor.getHex()).toBe(0x0000ff);
     });
 
     it("updates backgroundOutlineColor from hex", () => {
@@ -87,9 +81,7 @@ describe("sdfTextBaseEnhancer / state", () => {
         { backgroundOutlineColor: 0xffff00 },
         DEFAULT_BASE_STATE,
       );
-      expect(state.backgroundOutlineColor[0]).toBeCloseTo(1.0);
-      expect(state.backgroundOutlineColor[1]).toBeCloseTo(1.0);
-      expect(state.backgroundOutlineColor[2]).toBeCloseTo(0.0);
+      expect(state.backgroundOutlineColor.getHex()).toBe(0xffff00);
     });
 
     it("updates backgroundOutlineWidth", () => {

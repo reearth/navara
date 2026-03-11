@@ -12,12 +12,12 @@ import {
 import { degreeToRadian } from "@navara/three_api";
 import {
   BufferAttribute,
-  Color,
-  DataTexture,
+  type Color,
+  type DataTexture,
+  type PerspectiveCamera,
   InstancedBufferAttribute,
   InstancedBufferGeometry,
   Mesh,
-  PerspectiveCamera,
   ShaderMaterial,
   Vector2,
 } from "three";

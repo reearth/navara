@@ -3,7 +3,7 @@ import {
   type TextMaterial as NavaraTextMaterial,
 } from "@navara/engine";
 import type { FontManager } from "@navara/font";
-import { Color } from "three";
+import { type Color } from "three";
 import invariant from "tiny-invariant";
 
 import { type BufferLoader } from "../event";
@@ -303,9 +303,6 @@ export class BatchedSdfTextMesh
   }
 
   dispose() {
-    for (const mesh of this.meshes()) {
-      mesh.dispose();
-    }
     this._fontManager.unloadFont(this._fontUrl);
   }
 }

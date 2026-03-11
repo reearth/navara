@@ -39,7 +39,6 @@ export type SdfTextBaseProps = {
 
 /**
  * Immutable state snapshot for the sdfText base enhancer.
- * Colors are stored as [r, g, b] tuples (0-1 range).
  */
 export type SdfTextBaseState = Readonly<{
   // Immutable after mount
