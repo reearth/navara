@@ -58,7 +58,7 @@ export function createSdfTextBaseEnhancer(
         state && mutates,
         "mount() must be called before transformShader",
       );
-      transformShader(shader, state, mutates, material);
+      transformShader(shader, state, mutates);
     },
 
     mount: (props: SdfTextBaseProps): void => {
@@ -106,10 +106,7 @@ export function createSdfTextBaseEnhancer(
 
     programCacheKey: (): string => {
       invariant(state, "mount() must be called before programCacheKey");
-      return JSON.stringify({
-        useRTE: state.useRTE,
-        userDataDefines: material.userData?.defines ?? undefined,
-      });
+      return JSON.stringify({ useRTE: state.useRTE });
     },
   };
 }

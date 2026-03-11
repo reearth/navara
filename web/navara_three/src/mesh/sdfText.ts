@@ -9,6 +9,7 @@ import {
   type GlyphMetrics,
   type ShapeTextResult,
 } from "@navara/font";
+import { degreeToRadian } from "@navara/three_api";
 import {
   BufferAttribute,
   Color,
@@ -81,7 +82,6 @@ export class SDFTextMesh
     // Create empty ShaderMaterial — enhancer will set shaders and uniforms
     const mat = new ShaderMaterial({
       transparent: true,
-      depthTest: true,
     });
 
     this._enhancer = createSdfTextMaterialEnhancer(mat);
@@ -135,7 +135,7 @@ export class SDFTextMesh
     mat.onBeforeRender = (renderer, _scene, camera) => {
       const pCam = camera as PerspectiveCamera;
       mutates.updatePerFrame(
-        pCam.fov * (Math.PI / 180.0),
+        degreeToRadian(pCam.fov),
         renderer.getDrawingBufferSize(new Vector2()).height,
         pCam.far,
         camera.position.x,
@@ -272,12 +272,7 @@ export class SDFTextMesh
     let hasUpdate = false;
 
     const nextColor = material.color ?? 0xffffff;
-    if (
-      nextColor !==
-      new Color()
-        .setRGB(state.color[0], state.color[1], state.color[2])
-        .getHex()
-    ) {
+    if (nextColor !== state.color.getHex()) {
       baseProps.color = nextColor;
       hasUpdate = true;
     }
@@ -326,16 +321,7 @@ export class SDFTextMesh
     }
 
     const nextOutlineColor = material.outlineColor ?? 0x000000;
-    if (
-      nextOutlineColor !==
-      new Color()
-        .setRGB(
-          state.outlineColor[0],
-          state.outlineColor[1],
-          state.outlineColor[2],
-        )
-        .getHex()
-    ) {
+    if (nextOutlineColor !== state.outlineColor.getHex()) {
       baseProps.outlineColor = nextOutlineColor;
       hasUpdate = true;
     }
@@ -348,16 +334,7 @@ export class SDFTextMesh
 
     const nextBGColor = material.backgroundColor;
     if (nextBGColor !== undefined) {
-      if (
-        nextBGColor !==
-        new Color()
-          .setRGB(
-            state.backgroundColor[0],
-            state.backgroundColor[1],
-            state.backgroundColor[2],
-          )
-          .getHex()
-      ) {
+      if (nextBGColor !== state.backgroundColor.getHex()) {
         baseProps.showBackground = true;
         baseProps.backgroundColor = nextBGColor;
         hasUpdate = true;
@@ -368,16 +345,7 @@ export class SDFTextMesh
     }
 
     const nextBGOutlineColor = material.borderColor ?? 0x000000;
-    if (
-      nextBGOutlineColor !==
-      new Color()
-        .setRGB(
-          state.backgroundOutlineColor[0],
-          state.backgroundOutlineColor[1],
-          state.backgroundOutlineColor[2],
-        )
-        .getHex()
-    ) {
+    if (nextBGOutlineColor !== state.backgroundOutlineColor.getHex()) {
       baseProps.backgroundOutlineColor = nextBGOutlineColor;
       hasUpdate = true;
     }
@@ -401,7 +369,7 @@ export class SDFTextMesh
 
   _getFeatureColor(): Color {
     const state = this._enhancer.states();
-    return new Color(state.color[0], state.color[1], state.color[2]);
+    return state.color;
   }
 
   _setFeatureShow(visible: boolean): void {

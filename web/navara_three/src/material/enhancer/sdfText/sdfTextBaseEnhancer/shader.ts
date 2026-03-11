@@ -2,7 +2,6 @@ import sdfTextFragmentShader from "@shaders/glsl/sdfText.frag.glsl";
 import sdfTextVertexShader from "@shaders/glsl/sdfText.vert.glsl";
 import type { WebGLProgramParametersWithUniforms } from "three";
 
-import type { SupportedMaterial } from "./material";
 import type { SdfTextBaseMutates, SdfTextBaseState } from "./types";
 
 /**
@@ -17,7 +16,6 @@ export const transformShader = (
   shader: WebGLProgramParametersWithUniforms,
   state: SdfTextBaseState,
   mutates: SdfTextBaseMutates,
-  material: SupportedMaterial,
 ): void => {
   // Set shaders — sdfText always uses the same shader pair
   shader.vertexShader = sdfTextVertexShader;
@@ -28,11 +26,6 @@ export const transformShader = (
 
   if (state.useRTE) {
     shader.defines.USE_RTE = 1;
-  }
-
-  // Merge defines from material.userData.defines
-  if (material.userData?.defines) {
-    Object.assign(shader.defines, material.userData.defines);
   }
 
   // Assign uniform refs to shader.uniforms via mutates

@@ -46,18 +46,18 @@ export type SdfTextBaseState = Readonly<{
   useRTE: boolean;
 
   // Mutable
-  color: [number, number, number];
+  color: Color;
   fontSize: number;
   center: [number, number];
   scaleByDistance: boolean;
   addHeight: number;
   offsetDepth: boolean;
   outlineWidth: number; // pre-converted: (raw * 0.5) / SDF_RADIUS
-  outlineColor: [number, number, number];
+  outlineColor: Color;
   outlineOpacity: number;
   showBackground: boolean;
-  backgroundColor: [number, number, number];
-  backgroundOutlineColor: [number, number, number];
+  backgroundColor: Color;
+  backgroundOutlineColor: Color;
   backgroundOutlineWidth: number;
   pickable: boolean;
 

@@ -6,9 +6,8 @@ import {
   type SdfTextBaseState,
 } from "./types";
 
-const hexToRgb = (hex: number): [number, number, number] => {
-  const c = new Color().setHex(hex);
-  return [c.r, c.g, c.b];
+const hexToColor = (hex: number): Color => {
+  return new Color().setHex(hex);
 };
 
 export const DEFAULT_BASE_PROPS: Required<
@@ -35,18 +34,18 @@ export const DEFAULT_BASE_PROPS: Required<
 /** Default state derived from DEFAULT_BASE_PROPS */
 export const DEFAULT_BASE_STATE: SdfTextBaseState = {
   useRTE: DEFAULT_BASE_PROPS.useRTE,
-  color: hexToRgb(DEFAULT_BASE_PROPS.color),
+  color: hexToColor(DEFAULT_BASE_PROPS.color),
   fontSize: DEFAULT_BASE_PROPS.fontSize,
   center: DEFAULT_BASE_PROPS.center,
   scaleByDistance: DEFAULT_BASE_PROPS.scaleByDistance,
   addHeight: DEFAULT_BASE_PROPS.addHeight,
   offsetDepth: DEFAULT_BASE_PROPS.offsetDepth,
   outlineWidth: (DEFAULT_BASE_PROPS.outlineWidth * 0.5) / SDF_RADIUS,
-  outlineColor: hexToRgb(DEFAULT_BASE_PROPS.outlineColor),
+  outlineColor: hexToColor(DEFAULT_BASE_PROPS.outlineColor),
   outlineOpacity: DEFAULT_BASE_PROPS.outlineOpacity,
   showBackground: DEFAULT_BASE_PROPS.showBackground,
-  backgroundColor: hexToRgb(DEFAULT_BASE_PROPS.backgroundColor),
-  backgroundOutlineColor: hexToRgb(DEFAULT_BASE_PROPS.backgroundOutlineColor),
+  backgroundColor: hexToColor(DEFAULT_BASE_PROPS.backgroundColor),
+  backgroundOutlineColor: hexToColor(DEFAULT_BASE_PROPS.backgroundOutlineColor),
   backgroundOutlineWidth: DEFAULT_BASE_PROPS.backgroundOutlineWidth,
   pickable: DEFAULT_BASE_PROPS.pickable,
   depthTest: DEFAULT_BASE_PROPS.depthTest,
@@ -66,7 +65,7 @@ export const updateState = (
     useRTE: currentState.useRTE,
     // Mutable
     color:
-      props.color !== undefined ? hexToRgb(props.color) : currentState.color,
+      props.color !== undefined ? hexToColor(props.color) : currentState.color,
     fontSize: props.fontSize ?? currentState.fontSize,
     center: props.center ?? currentState.center,
     scaleByDistance: props.scaleByDistance ?? currentState.scaleByDistance,
@@ -78,17 +77,17 @@ export const updateState = (
         : currentState.outlineWidth,
     outlineColor:
       props.outlineColor !== undefined
-        ? hexToRgb(props.outlineColor)
+        ? hexToColor(props.outlineColor)
         : currentState.outlineColor,
     outlineOpacity: props.outlineOpacity ?? currentState.outlineOpacity,
     showBackground: props.showBackground ?? currentState.showBackground,
     backgroundColor:
       props.backgroundColor !== undefined
-        ? hexToRgb(props.backgroundColor)
+        ? hexToColor(props.backgroundColor)
         : currentState.backgroundColor,
     backgroundOutlineColor:
       props.backgroundOutlineColor !== undefined
-        ? hexToRgb(props.backgroundOutlineColor)
+        ? hexToColor(props.backgroundOutlineColor)
         : currentState.backgroundOutlineColor,
     backgroundOutlineWidth:
       props.backgroundOutlineWidth ?? currentState.backgroundOutlineWidth,

@@ -1,10 +1,5 @@
 import { encodePosition } from "@navara/engine-api";
-import {
-  Color as ThreeColor,
-  DataTexture,
-  Vector2 as ThreeVector2,
-  Vector3 as ThreeVector3,
-} from "three";
+import { Color, DataTexture, Vector2, Vector3 } from "three";
 
 import type { UniformValue } from "../../../types";
 
@@ -28,35 +23,35 @@ export const createBaseMutates = (
   batchId?: number,
 ): SdfTextBaseMutates => {
   const refs: SdfTextBaseRefs = {
-    uColor: { value: new ThreeColor(1, 1, 1) },
+    uColor: { value: new Color(1, 1, 1) },
     uFontSizePx: { value: 16.0 },
-    uCenter: { value: new ThreeVector2(0.5, 0.0) },
+    uCenter: { value: new Vector2(0.5, 0.0) },
     uScaleByDistance: { value: false },
     uAddHeight: { value: 0.0 },
     uOffsetDepth: { value: true },
     uSdfThreshold: { value: 0.5 },
     uOutlineWidth: { value: 0.0 },
-    uOutlineColor: { value: new ThreeColor(1, 0, 0) },
+    uOutlineColor: { value: new Color(1, 0, 0) },
     uOutlineOpacity: { value: 1.0 },
     uShowBackground: { value: false },
-    uBackgroundColor: { value: new ThreeColor(1, 0, 0) },
-    uBackgroundOutlineColor: { value: new ThreeColor(1, 0, 0) },
+    uBackgroundColor: { value: new Color(1, 0, 0) },
+    uBackgroundOutlineColor: { value: new Color(1, 0, 0) },
     uBackgroundOutlineWidth: { value: 0.1 },
     uFov: { value: 1.0 },
     uScreenHeightPx: { value: 1080.0 },
     uFarPlane: { value: 1000.0 },
     uTextWidth: { value: 0.0 },
     uTextHeight: { value: 0.0 },
-    uBgYBounds: { value: new ThreeVector2(0.0, 1.0) },
+    uBgYBounds: { value: new Vector2(0.0, 1.0) },
     uRTCCenter: {
-      value: new ThreeVector3(
+      value: new Vector3(
         rtcCenter?.[0] ?? 0,
         rtcCenter?.[1] ?? 0,
         rtcCenter?.[2] ?? 0,
       ),
     },
-    uEyeRTELow: { value: new ThreeVector3(0, 0, 0) },
-    uEyeRTEHigh: { value: new ThreeVector3(0, 0, 0) },
+    uEyeRTELow: { value: new Vector3(0, 0, 0) },
+    uEyeRTEHigh: { value: new Vector3(0, 0, 0) },
     nvr_uBatchId: { value: batchId ?? 0 },
     nvr_uPickable: { value: 0.0 },
     uAtlas: { value: null },
@@ -64,38 +59,26 @@ export const createBaseMutates = (
 
   // Conditional position uniforms based on RTE mode
   if (useRTE) {
-    refs.uRTEPositionLOW = { value: new ThreeVector3(0, 0, 0) };
-    refs.uRTEPositionHIGH = { value: new ThreeVector3(0, 0, 0) };
+    refs.uRTEPositionLOW = { value: new Vector3(0, 0, 0) };
+    refs.uRTEPositionHIGH = { value: new Vector3(0, 0, 0) };
   } else {
-    refs.uRTCPosition = { value: new ThreeVector3(0, 0, 0) };
+    refs.uRTCPosition = { value: new Vector3(0, 0, 0) };
   }
 
   return {
     update: (state: SdfTextBaseState) => {
-      refs.uColor.value.setRGB(state.color[0], state.color[1], state.color[2]);
+      refs.uColor.value.set(state.color);
       refs.uFontSizePx.value = state.fontSize;
       refs.uCenter.value.set(state.center[0], state.center[1]);
       refs.uScaleByDistance.value = state.scaleByDistance;
       refs.uAddHeight.value = state.addHeight;
       refs.uOffsetDepth.value = state.offsetDepth;
       refs.uOutlineWidth.value = state.outlineWidth;
-      refs.uOutlineColor.value.setRGB(
-        state.outlineColor[0],
-        state.outlineColor[1],
-        state.outlineColor[2],
-      );
+      refs.uOutlineColor.value.set(state.outlineColor);
       refs.uOutlineOpacity.value = state.outlineOpacity;
       refs.uShowBackground.value = state.showBackground;
-      refs.uBackgroundColor.value.setRGB(
-        state.backgroundColor[0],
-        state.backgroundColor[1],
-        state.backgroundColor[2],
-      );
-      refs.uBackgroundOutlineColor.value.setRGB(
-        state.backgroundOutlineColor[0],
-        state.backgroundOutlineColor[1],
-        state.backgroundOutlineColor[2],
-      );
+      refs.uBackgroundColor.value.set(state.backgroundColor);
+      refs.uBackgroundOutlineColor.value.set(state.backgroundOutlineColor);
       refs.uBackgroundOutlineWidth.value = state.backgroundOutlineWidth;
       refs.nvr_uPickable.value = state.pickable ? 1.0 : 0.0;
     },

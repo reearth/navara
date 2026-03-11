@@ -1,13 +1,14 @@
 #![doc = include_str!("../README.md")]
 
 pub mod atlas;
-pub mod resource;
+pub mod cache;
 pub mod shaping;
 
 use std::cell::RefCell;
 
+pub use atlas::{GlyphMetrics, SDFAtlas};
+pub use cache::{FontCache, FontEntry};
 use navara_wasm_utils::set_panic_hook;
-pub use resource::{FontCache, FontEntry, GlyphMetrics, SDFAtlas};
 use wasm_bindgen::prelude::*;
 
 thread_local! {
@@ -99,19 +100,19 @@ fn copy_u8_array(buf: &[u8]) -> js_sys::Uint8Array {
 #[wasm_bindgen(js_name = loadFont)]
 pub fn load_font(url: String, byte_length: usize, f: &js_sys::Function) -> bool {
     let data = transfer_u8_array(byte_length, f);
-    FONT_CACHE.with(|cache| cache.borrow_mut().insert(url, data).is_ok())
+    FONT_CACHE.with(|cache| cache.borrow_mut().load_font(url, data).is_ok())
 }
 
 /// Unload a font from the FontCache, freeing its atlas memory.
 #[wasm_bindgen(js_name = unloadFont)]
 pub fn unload_font(url: String) -> bool {
-    FONT_CACHE.with(|cache| cache.borrow_mut().remove(&url).is_ok())
+    FONT_CACHE.with(|cache| cache.borrow_mut().unload_font(&url).is_ok())
 }
 
 /// Check if a font is loaded.
 #[wasm_bindgen(js_name = isFontLoaded)]
 pub fn is_font_loaded(url: &str) -> bool {
-    FONT_CACHE.with(|cache| cache.borrow().is_loaded(url))
+    FONT_CACHE.with(|cache| cache.borrow().is_font_loaded(url))
 }
 
 /// Shape text and ensure all glyphs are rasterized into the atlas.
@@ -127,12 +128,9 @@ pub fn shape_text(url: &str, text: &str) -> Option<ShapeTextResult> {
         let units_per_em = entry.units_per_em;
 
         let glyph_ids: Vec<u32> = shaped.iter().map(|g| g.glyph_id).collect();
-        let atlas_changed = atlas::ensure_glyphs_in_atlas(
-            &entry.raster_font,
-            &glyph_ids,
-            &mut entry.atlas,
-            current_frame,
-        );
+        let atlas = &mut entry.atlas;
+        let atlas_changed =
+            atlas.ensure_glyphs_in_atlas(&entry.raster_font, &glyph_ids, current_frame);
 
         let glyphs: Vec<WasmShapedGlyph> = shaped
             .iter()
