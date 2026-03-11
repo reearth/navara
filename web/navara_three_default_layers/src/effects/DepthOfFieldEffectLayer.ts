@@ -2,9 +2,10 @@ import {
   EffectLayerDeclaration,
   type EffectLayerConfig,
   type EffectLayerUpdate,
-} from "../../core/EffectLayerDeclaration";
-import type { ViewContext } from "../../core/ViewContext";
-import { DepthOfField, type DepthOfFieldOptions } from "../../effects";
+  type ViewContext,
+  DepthOfField,
+  type DepthOfFieldOptions,
+} from "@navara/three";
 
 type LayerDescription = {
   depthOfField?: Omit<DepthOfFieldOptions, "enabled">;

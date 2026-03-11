@@ -39,7 +39,9 @@ const SCENES = {
 
 let gCurSceneName: keyof typeof SCENES = "ToranomonHillsBIM";
 
-export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
+export type LayerDescriptions = DefaultLayerDescriptions;
+
+export const run = async (view: ThreeView<LayerDescriptions>) => {
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
   await view.init();
@@ -47,7 +49,6 @@ export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
   view.atmosphere.date.setHours(8);
   view.toneMappingExposure = 10;
 
-  view.addDefaultEffectLayers();
   const defaultLayers = plugin.addDefaultPhotorealLayers();
 
   const sunLightLayer = defaultLayers.sun;
@@ -128,7 +129,7 @@ export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
 };
 
 const updateModelLayerPos = (
-  view: ThreeView,
+  view: ThreeView<LayerDescriptions>,
   modelLayer: LayerHandle<GLTFModelLayer>,
   lle: number[],
 ) => {
@@ -161,7 +162,7 @@ const updateModelLayerPos = (
 };
 
 const add3DTilesSceneControl = (
-  view: ThreeView,
+  view: ThreeView<LayerDescriptions>,
   pane: Pane,
   modelLayer: LayerHandle<GLTFModelLayer>,
 ) => {

@@ -1,12 +1,17 @@
 import ThreeView, {
   Color,
-  ColorGradingLUTEffectLayer,
   type BlendMode,
   LayerHandle,
-  DEFAULT_COLOR_GRADING_LUT_OPTIONS,
   JAPAN_GSI_ELEVATION_DECODER,
 } from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import {
+  ColorGradingLUTEffectLayer,
+  DEFAULT_COLOR_GRADING_LUT_OPTIONS,
+} from "@navara/three_default_layers";
+import {
+  DefaultPlugin,
+  type DefaultLayerDescriptions,
+} from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../helpers/attributions";
@@ -24,7 +29,9 @@ import {
 
 let gColorGradingLUTLayer: LayerHandle<ColorGradingLUTEffectLayer>;
 
-export const run = async (view: ThreeView) => {
+export type LayerDescriptions = DefaultLayerDescriptions;
+
+export const run = async (view: ThreeView<LayerDescriptions>) => {
   const defaultPlugin = new DefaultPlugin();
   view.addPlugin(defaultPlugin);
 
@@ -39,8 +46,6 @@ export const run = async (view: ThreeView) => {
   });
 
   view.toneMappingExposure = 10;
-
-  view.addDefaultEffectLayers();
 
   gColorGradingLUTLayer = view.addLayer<ColorGradingLUTEffectLayer>({
     type: "effect",

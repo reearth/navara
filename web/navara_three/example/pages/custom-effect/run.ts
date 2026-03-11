@@ -183,7 +183,9 @@ class VignetteEffectLayer extends EffectLayerDeclaration<
 // Step 3: Use the custom effect layer in the application
 // ============================================================
 
-export const run = async (view: ThreeView<VignetteEffectConfig>) => {
+export type LayerDescriptions = VignetteEffectConfig;
+
+export const run = async (view: ThreeView<LayerDescriptions>) => {
   const defaultPlugin = new DefaultPlugin();
   view.addPlugin(defaultPlugin);
 
@@ -199,9 +201,6 @@ export const run = async (view: ThreeView<VignetteEffectConfig>) => {
 
   // Register the custom effect layer
   view.registerEffect("vignette", VignetteEffectLayer);
-
-  // Add default effect and light layers
-  view.addDefaultEffectLayers();
 
   // Set initial camera position
   view.setCamera({

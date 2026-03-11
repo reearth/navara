@@ -2,9 +2,10 @@ import {
   EffectLayerDeclaration,
   type EffectLayerConfig,
   type EffectLayerUpdate,
-} from "../../core/EffectLayerDeclaration";
-import type { ViewContext } from "../../core/ViewContext";
-import { LensFlare, type LensFlareOptions } from "../../effects";
+  type ViewContext,
+  LensFlare,
+  type LensFlareOptions,
+} from "@navara/three";
 
 type LayerDescription = {
   lensFlare?: Omit<LensFlareOptions, "enabled">;

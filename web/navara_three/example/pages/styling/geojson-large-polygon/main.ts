@@ -3,6 +3,10 @@ import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
   ToneMappingMode,
 } from "@navara/three";
+import {
+  DefaultPlugin,
+  type DefaultLayerDescriptions,
+} from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../../helpers/attributions";
@@ -14,8 +18,15 @@ import {
 } from "../../../helpers/constants";
 import { addDateControl } from "../../../helpers/control";
 
+type LayerDescriptions = DefaultLayerDescriptions;
+
 const run = async () => {
-  const view = new ThreeView({ debug: true, hideUnderground: false });
+  const view = new ThreeView<LayerDescriptions>({
+    debug: true,
+    hideUnderground: false,
+  });
+  view.addPlugin(new DefaultPlugin());
+
   await view.init();
 
   view.addLayer({

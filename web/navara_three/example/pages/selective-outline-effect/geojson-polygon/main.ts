@@ -39,8 +39,6 @@ const run = async () => {
     },
   });
 
-  view.addDefaultEffectLayers();
-
   // GeoJSON polygon with outline (Odaiba)
   const odaibaFeature: FeatureCollection = {
     type: "FeatureCollection",

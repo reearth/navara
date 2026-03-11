@@ -3,8 +3,11 @@ import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
   LayerHandle,
 } from "@navara/three";
-import type { CloudsEffectLayer } from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import type { CloudsEffectLayer } from "@navara/three_default_layers";
+import {
+  DefaultPlugin,
+  type DefaultLayerDescriptions,
+} from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../helpers/attributions";
@@ -16,14 +19,15 @@ import {
 import { addCameraControl, addDateControl } from "../../helpers/control";
 import { addFieldsToFolder, type FolderFields } from "../../helpers/panel";
 
-export const run = async (view: ThreeView) => {
+export type LayerDescriptions = DefaultLayerDescriptions;
+
+export const run = async (view: ThreeView<LayerDescriptions>) => {
   const defaultPlugin = new DefaultPlugin();
   view.addPlugin(defaultPlugin);
 
   await view.init();
-  defaultPlugin.addDefaultPhotorealLayers();
 
-  const defaultEffects = view.addDefaultEffectLayers();
+  const defaultEffects = defaultPlugin.addDefaultPhotorealLayers();
 
   // Add clouds effect layer explicitly
   const cloudsLayer = view.addLayer<CloudsEffectLayer>({

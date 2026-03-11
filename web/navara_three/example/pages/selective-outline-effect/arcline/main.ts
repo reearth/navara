@@ -47,8 +47,6 @@ const run = async () => {
     },
   });
 
-  view.addDefaultEffectLayers();
-
   // Arc lines with outline (Tokyo to Asian cities)
   view.addLayer<ArclineMeshLayer>({
     type: "mesh",
