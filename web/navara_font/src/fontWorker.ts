@@ -17,40 +17,56 @@ async function ensureWasm(): Promise<void> {
 }
 
 function convertGlyphs(glyphs: WasmShapedGlyph[]) {
-  return glyphs.map((g) => ({
-    glyphId: g.glyph_id,
-    xAdvance: g.x_advance,
-    yAdvance: g.y_advance,
-    xOffset: g.x_offset,
-    yOffset: g.y_offset,
-  }));
+  return glyphs.map((g) => {
+    const out = {
+      glyphId: g.glyph_id,
+      xAdvance: g.x_advance,
+      yAdvance: g.y_advance,
+      xOffset: g.x_offset,
+      yOffset: g.y_offset,
+    };
+    g.free();
+    return out;
+  });
 }
 
 function convertMetrics(metrics: WasmGlyphMetrics[]) {
-  return metrics.map((m) => ({
-    glyphId: m.glyph_id,
-    atlasX: m.atlas_x,
-    atlasY: m.atlas_y,
-    atlasW: m.atlas_w,
-    atlasH: m.atlas_h,
-    bearingX: m.bearing_x,
-    bearingY: m.bearing_y,
-  }));
+  return metrics.map((m) => {
+    const out = {
+      glyphId: m.glyph_id,
+      atlasX: m.atlas_x,
+      atlasY: m.atlas_y,
+      atlasW: m.atlas_w,
+      atlasH: m.atlas_h,
+      bearingX: m.bearing_x,
+      bearingY: m.bearing_y,
+    };
+    m.free();
+    return out;
+  });
 }
 
 function convertShapeResult(sr: WasmShapeTextResult | undefined) {
   if (!sr) return null;
-  return {
+  const result = {
     glyphs: convertGlyphs(sr.glyphs),
     metrics: convertMetrics(sr.metrics),
     unitsPerEm: sr.units_per_em,
   };
+  sr.free();
+  return result;
 }
 
 function snapshotAtlas(fontUrl: string) {
   const atlas = fontCache.getFontAtlas(fontUrl);
   if (!atlas) return null;
-  return { data: atlas.data.buffer, width: atlas.width, height: atlas.height };
+  const snapshot = {
+    data: atlas.data.buffer,
+    width: atlas.width,
+    height: atlas.height,
+  };
+  atlas.free();
+  return snapshot;
 }
 
 type FontWorkerMessageType =

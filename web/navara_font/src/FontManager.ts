@@ -81,7 +81,12 @@ export class FontManager {
   /** Microtask batch queue: per-font list of texts awaiting worker dispatch. */
   private _batchQueue = new Map<
     string,
-    { text: string; cacheKey: string; resolve: () => void }[]
+    {
+      text: string;
+      cacheKey: string;
+      resolve: () => void;
+      reject: (reason: unknown) => void;
+    }[]
   >();
   /** Whether a microtask flush is already scheduled. */
   private _batchScheduled = false;
@@ -119,6 +124,10 @@ export class FontManager {
     try {
       await promise;
       this._loaded.add(url);
+    } catch (err) {
+      this._refCount.delete(url);
+      this._shapeCache.delete(url);
+      throw err;
     } finally {
       this._pending.delete(url);
     }
@@ -165,13 +174,13 @@ export class FontManager {
     // Queue into microtask batch instead of dispatching immediately.
     // All synchronous prepareText() calls (e.g. from a FeatureEvaluator loop)
     // are coalesced into a single worker message.
-    const promise = new Promise<void>((resolve) => {
+    const promise = new Promise<void>((resolve, reject) => {
       let queue = this._batchQueue.get(fontUrl);
       if (!queue) {
         queue = [];
         this._batchQueue.set(fontUrl, queue);
       }
-      queue.push({ text, cacheKey, resolve });
+      queue.push({ text, cacheKey, resolve, reject });
     });
 
     this._preparePending.set(cacheKey, promise);
@@ -293,7 +302,12 @@ export class FontManager {
 
     const processFontBatch = async (
       fontUrl: string,
-      entries: { text: string; cacheKey: string; resolve: () => void }[],
+      entries: {
+        text: string;
+        cacheKey: string;
+        resolve: () => void;
+        reject: (reason: unknown) => void;
+      }[],
     ) => {
       const texts = entries.map((e) => e.text);
 
@@ -312,12 +326,14 @@ export class FontManager {
           this._atlasCache.set(fontUrl, batchResult.atlas);
           this._atlasDirty.add(fontUrl);
         }
-      } catch (err) {
-        console.error("FontManager: batch prepare failed", err);
-      }
 
-      for (const entry of entries) {
-        entry.resolve();
+        for (const entry of entries) {
+          entry.resolve();
+        }
+      } catch (err) {
+        for (const entry of entries) {
+          entry.reject(err);
+        }
       }
     };
 

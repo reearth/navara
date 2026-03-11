@@ -36,6 +36,9 @@ import type { PickableMesh } from "./pickableMesh";
 /** Must match Rust SDF_PX_SIZE in navara_font/src/resource.rs */
 const SDF_PX_SIZE = 64.0;
 
+/** Reusable Vector2 to avoid per-frame allocations in onBeforeRender. */
+const _tmpSize = new Vector2();
+
 /**
  * A text mesh that renders glyphs from an SDF atlas using instanced geometry.
  *
@@ -136,7 +139,7 @@ export class SDFTextMesh
       const pCam = camera as PerspectiveCamera;
       mutates.updatePerFrame(
         degreeToRadian(pCam.fov),
-        renderer.getDrawingBufferSize(new Vector2()).height,
+        renderer.getDrawingBufferSize(_tmpSize).height,
         pCam.far,
         camera.position.x,
         camera.position.y,
@@ -581,7 +584,10 @@ export class SDFTextMesh
     height: number,
   ): void {
     if (this._atlasTexture) {
-      this._atlasTexture.dispose();
+      // Update existing texture in-place (atlas dimensions are constant)
+      this._atlasTexture.image = { data, width, height };
+      this._atlasTexture.needsUpdate = true;
+      return;
     }
 
     const tex = createSdfAtlasTexture(data, width, height);
