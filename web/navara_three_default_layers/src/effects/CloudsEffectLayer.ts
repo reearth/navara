@@ -1,15 +1,14 @@
-import { RGBADepthPacking } from "three";
-import invariant from "tiny-invariant";
-
 import {
   EffectLayerDeclaration,
   type EffectLayerConfig,
   type EffectLayerUpdate,
-} from "../../core/EffectLayerDeclaration";
-import type { ViewContext } from "../../core/ViewContext";
-import { Clouds, type CloudsOptions } from "../../effects";
-
-import type { MRTPassEffectLayer } from "./MRTPassEffectLayer";
+  type ViewContext,
+  Clouds,
+  type CloudsOptions,
+  type MRTPassEffectLayer,
+} from "@navara/three";
+import { RGBADepthPacking } from "three";
+import invariant from "tiny-invariant";
 
 type LayerDescription = {
   clouds?: Omit<CloudsOptions, "enabled">;

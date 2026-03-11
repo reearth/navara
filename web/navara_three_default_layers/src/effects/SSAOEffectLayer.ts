@@ -2,9 +2,10 @@ import {
   EffectLayerDeclaration,
   type EffectLayerConfig,
   type EffectLayerUpdate,
-} from "../../core/EffectLayerDeclaration";
-import type { ViewContext } from "../../core/ViewContext";
-import { SSAO, type SSAOOptions } from "../../effects";
+  type ViewContext,
+  SSAO,
+  type SSAOOptions,
+} from "@navara/three";
 
 type LayerDescription = {
   ssao?: Omit<SSAOOptions, "enabled">;

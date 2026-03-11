@@ -2,12 +2,10 @@ import {
   EffectLayerDeclaration,
   type EffectLayerConfig,
   type EffectLayerUpdate,
-} from "../../core/EffectLayerDeclaration";
-import type { ViewContext } from "../../core/ViewContext";
-import {
+  type ViewContext,
   RainDropEffect,
   type RainDropOptions,
-} from "../../effects/rainDropEffect/effect";
+} from "@navara/three";
 
 type LayerDescription = {
   rainDrop?: Omit<RainDropOptions, "enabled">;

@@ -14,8 +14,10 @@ import {
 import { addCameraControl, addDateControl } from "../../helpers/control";
 import { addFieldsToFolder, type FolderFields } from "../../helpers/panel";
 
+export type LayerDescriptions = DefaultLayerDescriptions;
+
 export async function run() {
-  const view = new ThreeView<DefaultLayerDescriptions>({});
+  const view = new ThreeView<LayerDescriptions>({});
 
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
@@ -24,10 +26,9 @@ export async function run() {
   view.toneMappingExposure = 10;
 
   // Add atmosphere layers
-  const defaultAtmosphere = plugin.addDefaultPhotorealLayers();
-  const defaultEffects = view.addDefaultEffectLayers();
+  const defaultEffects = plugin.addDefaultPhotorealLayers();
 
-  defaultAtmosphere.sky.delete();
+  defaultEffects.sky.delete();
   defaultEffects.aerialPerspective.update({
     aerialPerspective: {
       sky: true,
@@ -119,7 +120,7 @@ export async function run() {
   ]);
 }
 
-const addGlobeControl = (view: ThreeView, pane: Pane) => {
+const addGlobeControl = (view: ThreeView<LayerDescriptions>, pane: Pane) => {
   if (!view.globe) {
     console.warn("Globe API not available");
     return;

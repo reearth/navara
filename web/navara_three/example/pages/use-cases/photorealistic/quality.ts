@@ -1,9 +1,9 @@
+import type { SunLightLayerConfig } from "@navara/three";
 import type {
   CloudsConfig,
   RainDropConfig,
   SSRConfig,
-  SunLightLayerConfig,
-} from "@navara/three";
+} from "@navara/three_default_layers";
 
 export type QualityFlags = "ultra" | "high" | "medium" | "low";
 

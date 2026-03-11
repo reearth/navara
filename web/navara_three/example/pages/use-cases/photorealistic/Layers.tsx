@@ -4,7 +4,10 @@ import {
   Color,
 } from "@navara/three";
 import type { RainMeshLayerConfig } from "@navara/three_default_layers";
-import type { DefaultPlugin } from "@navara/three_default_plugin";
+import type {
+  DefaultPlugin,
+  DefaultEffectLayerDeclarationDescription,
+} from "@navara/three_default_plugin";
 import { Layer, useViewContext } from "@navara/three_react";
 import { useEffect, useMemo, type FC } from "react";
 import { SphericalHarmonics3, Vector2 } from "three";
@@ -77,7 +80,7 @@ export const Layers: FC<SceneLayerToggles> = ({
   );
 
   const cloudsEffect = useMemo(
-    (): LayerDescription => ({
+    (): LayerDescription | DefaultEffectLayerDeclarationDescription => ({
       type: "effect",
       clouds: {
         coverage: cloudsEffectVisible ? 0.5 : 0,
@@ -106,7 +109,7 @@ export const Layers: FC<SceneLayerToggles> = ({
   );
 
   const rainDropEffect = useMemo(
-    (): LayerDescription => ({
+    (): LayerDescription | DefaultEffectLayerDeclarationDescription => ({
       type: "effect",
       rainDrop: {
         opacity: 0.5,
@@ -122,7 +125,7 @@ export const Layers: FC<SceneLayerToggles> = ({
   );
 
   const ssrEffect = useMemo(
-    (): LayerDescription => ({
+    (): LayerDescription | DefaultEffectLayerDeclarationDescription => ({
       type: "effect",
       ssr: {
         iterations: QUALITY[quality]?.ssr?.iterations,
@@ -163,7 +166,7 @@ export const Layers: FC<SceneLayerToggles> = ({
   // Night scene tuning inspired by example/pages/night
   useEffect(() => {
     // Boost stars and enable at night; keep subtle in day
-    defaultLayers?.atmosphere?.stars?.update({
+    defaultLayers?.stars?.update({
       stars: isNight
         ? { intensity: 50, pointSize: 1.5 }
         : { intensity: 1, pointSize: 1 },
@@ -172,7 +175,7 @@ export const Layers: FC<SceneLayerToggles> = ({
 
   useEffect(() => {
     if (!defaultLayers) return;
-    defaultLayers.atmosphere?.sun?.update({
+    defaultLayers.sun?.update({
       sun: {
         castShadow: true,
         ...QUALITY[quality]?.sun,
@@ -182,7 +185,7 @@ export const Layers: FC<SceneLayerToggles> = ({
 
   useEffect(() => {
     if (!defaultLayers) return;
-    defaultLayers.atmosphere.skyEnv.update({
+    defaultLayers.skyEnv.update({
       sky: {
         sunAngularRadius: cloudsEffectVisible ? 0.0001 : 0.1,
       },
@@ -192,7 +195,7 @@ export const Layers: FC<SceneLayerToggles> = ({
   // Clouds shadow: enable/disable aerial perspective irradiance
   useEffect(() => {
     if (!defaultLayers) return;
-    defaultLayers.effects?.aerialPerspective?.update?.({
+    defaultLayers.aerialPerspective?.update?.({
       aerialPerspective: { irradiance: !!cloudShadow },
     });
   }, [defaultLayers, cloudShadow]);

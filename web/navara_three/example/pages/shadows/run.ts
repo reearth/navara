@@ -30,7 +30,6 @@ export async function run() {
   await view.init();
 
   const defaultAtmospheres = defaultPlugin.addDefaultPhotorealLayers();
-  view.addDefaultEffectLayers();
 
   view.toneMappingExposure = 10;
 

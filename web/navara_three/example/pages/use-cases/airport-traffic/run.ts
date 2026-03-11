@@ -95,8 +95,10 @@ const constructData = async () => {
   return { arcLines };
 };
 
+export type LayerDescriptions = DefaultLayerDescriptions;
+
 export async function run() {
-  const view = new ThreeView<DefaultLayerDescriptions>({
+  const view = new ThreeView<LayerDescriptions>({
     backgroundColor: new Color().setStyle("#0b0a0d"),
   });
 

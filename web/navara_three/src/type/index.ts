@@ -19,24 +19,12 @@ import type {
   LightProbeLayerConfig,
 } from "../layers";
 import type {
-  AerialPerspectiveConfig,
-  CloudsConfig,
   FinalCopyPassConfig,
-  FogLightConfig,
-  FXAAConfig,
-  LensFlareConfig,
   MRTPassConfig,
-  RainDropConfig,
   SelectiveBloomEffectConfig,
   SelectiveOutlineEffectConfig,
   SkyEnvMapPassConfig,
-  SMAAConfig,
-  SSAOConfig,
-  SSRConfig,
-  ToneMappingConfig,
   TransparentPassConfig,
-  DepthOfFieldConfig,
-  ColorGradingLUTConfig,
 } from "../layers/effect";
 import type { TileMesh } from "../mesh";
 
@@ -57,24 +45,13 @@ export type LightLayerDeclarationDescription =
   | LightProbeLayerConfig;
 
 export type EffectLayerDeclarationDescription =
-  | AerialPerspectiveConfig
-  | CloudsConfig
   | FinalCopyPassConfig
-  | FogLightConfig
-  | FXAAConfig
-  | LensFlareConfig
   | MRTPassConfig
   | SkyEnvMapPassConfig
-  | RainDropConfig
   | SelectiveBloomEffectConfig
   | SelectiveOutlineEffectConfig
-  | SMAAConfig
-  | SSAOConfig
-  | SSRConfig
-  | ToneMappingConfig
-  | TransparentPassConfig
-  | DepthOfFieldConfig
-  | ColorGradingLUTConfig;
+  | SkyEnvMapPassConfig
+  | TransparentPassConfig;
 
 // export type MVTLayer = {
 //   type: "mvt";

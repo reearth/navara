@@ -42,8 +42,6 @@ const run = async () => {
     },
   });
 
-  view.addDefaultEffectLayers();
-
   // MVT polygon with outline (Height Control District)
   const layer = view.addLayer({
     type: "mvt",
