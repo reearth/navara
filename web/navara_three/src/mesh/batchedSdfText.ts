@@ -13,19 +13,27 @@ import { InstancedMesh, type InstancedMeshOptions } from "./instanced";
 import type { PickableMesh } from "./pickableMesh";
 import { SDFTextMesh } from "./sdfText";
 
-type PositionsInfo = {
-  position:
-    | Float32Array<ArrayBufferLike>
-    | {
-        high: Float32Array<ArrayBufferLike>;
-        low: Float32Array<ArrayBufferLike>;
-      };
+type PositionsInfoBase = {
   batchIDs: Float32Array<ArrayBufferLike> | null;
   positionSize: number;
   batchIDSize: number;
   nPositions: number;
-  RTE: boolean;
 };
+
+type PositionsInfo = PositionsInfoBase &
+  (
+    | {
+        RTE: true;
+        position: {
+          high: Float32Array<ArrayBufferLike>;
+          low: Float32Array<ArrayBufferLike>;
+        };
+      }
+    | {
+        RTE: false;
+        position: Float32Array<ArrayBufferLike>;
+      }
+  );
 
 export class BatchedSdfTextMesh
   extends InstancedMesh<SDFTextMesh>
@@ -79,16 +87,10 @@ export class BatchedSdfTextMesh
       const posIdx = i * positionSize;
       const pos = RTE
         ? {
-            high: (position as { high: Float32Array }).high.subarray(
-              posIdx,
-              posIdx + positionSize,
-            ),
-            low: (position as { low: Float32Array }).low.subarray(
-              posIdx,
-              posIdx + positionSize,
-            ),
+            high: position.high.subarray(posIdx, posIdx + positionSize),
+            low: position.low.subarray(posIdx, posIdx + positionSize),
           }
-        : (position as Float32Array).subarray(posIdx, posIdx + positionSize);
+        : position.subarray(posIdx, posIdx + positionSize);
 
       const mesh = new SDFTextMesh(
         pos,
@@ -137,16 +139,10 @@ export class BatchedSdfTextMesh
         const posIdx = i * positionSize;
         const pos = RTE
           ? {
-              high: (position as { high: Float32Array }).high.subarray(
-                posIdx,
-                posIdx + positionSize,
-              ),
-              low: (position as { low: Float32Array }).low.subarray(
-                posIdx,
-                posIdx + positionSize,
-              ),
+              high: position.high.subarray(posIdx, posIdx + positionSize),
+              low: position.low.subarray(posIdx, posIdx + positionSize),
             }
-          : (position as Float32Array).subarray(posIdx, posIdx + positionSize);
+          : position.subarray(posIdx, posIdx + positionSize);
         this.meshes()[i].setPosition(pos, RTE, transform);
       }
     }
@@ -307,6 +303,9 @@ export class BatchedSdfTextMesh
   }
 
   dispose() {
+    for (const mesh of this.meshes()) {
+      mesh.dispose();
+    }
     this._fontManager.unloadFont(this._fontUrl);
   }
 }
