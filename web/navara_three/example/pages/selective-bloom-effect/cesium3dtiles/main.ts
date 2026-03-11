@@ -42,8 +42,6 @@ const run = async () => {
     },
   });
 
-  view.addDefaultEffectLayers();
-
   // Cesium 3D Tiles with bloom (Chiyoda buildings)
   view.addLayer({
     type: "cesium3dtiles",

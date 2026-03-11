@@ -25,6 +25,8 @@ import {
   type MaterialLayerDescription,
 } from "../../../helpers/panel";
 
+export type LayerDescriptions = DefaultLayerDescriptions;
+
 const geoLayersDef: MaterialLayerDescription[] = [
   {
     type: "tiles",
@@ -552,7 +554,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
   },
 ];
 
-export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
+export const run = async (view: ThreeView<LayerDescriptions>) => {
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
   await view.init();

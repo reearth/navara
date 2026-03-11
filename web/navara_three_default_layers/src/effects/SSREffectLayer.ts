@@ -1,14 +1,13 @@
-import invariant from "tiny-invariant";
-
 import {
   EffectLayerDeclaration,
   type EffectLayerConfig,
   type EffectLayerUpdate,
-} from "../../core/EffectLayerDeclaration";
-import type { ViewContext } from "../../core/ViewContext";
-import { SSR, type SSROptions } from "../../effects/ssr";
-
-import type { MRTPassEffectLayer } from "./MRTPassEffectLayer";
+  type ViewContext,
+  SSR,
+  type SSROptions,
+  type MRTPassEffectLayer,
+} from "@navara/three";
+import invariant from "tiny-invariant";
 
 type LayerDescription = {
   ssr?: Omit<SSROptions, "enabled" | "geometryBuffer">;

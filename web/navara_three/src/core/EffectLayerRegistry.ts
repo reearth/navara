@@ -20,7 +20,7 @@ export class EffectLayerRegistry extends LayerRegistry<
   ): EffectLayerDeclaration {
     const EffectClass = this.getConstructor(effectType);
     if (!EffectClass) {
-      throw new Error(`Unknown effect type: ${name}`);
+      throw new Error(`Unknown effect type: ${effectType}`);
     }
     return new EffectClass(this.view, config);
   }

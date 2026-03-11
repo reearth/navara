@@ -3,7 +3,6 @@ import ThreeView, {
   LayerHandle,
   SunLightLayer,
   AmbientLightLayer,
-  ColorGradingLUTEffectLayer,
   type BlendMode,
   ToneMappingMode,
 } from "@navara/three";
@@ -11,6 +10,7 @@ import {
   SkyBoxMeshLayer,
   StarsLayer,
   DEFAULT_SKY_BOX_OPTIONS,
+  ColorGradingLUTEffectLayer,
 } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
@@ -30,7 +30,9 @@ const gPaneParams = {
   sunColor: DEFAULT_SKY_BOX_OPTIONS.sunColor.toHex(),
 };
 
-export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
+export type LayerDescriptions = DefaultLayerDescriptions;
+
+export const run = async (view: ThreeView<LayerDescriptions>) => {
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
   await view.init();

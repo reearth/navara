@@ -27,7 +27,9 @@ const gCameraParams = {
 let gCameraParamsPane: FolderApi | undefined = undefined;
 let gIgnoreChange = false;
 
-export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
+export type LayerDescriptions = DefaultLayerDescriptions;
+
+export const run = async (view: ThreeView<LayerDescriptions>) => {
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
   await view.init();
@@ -109,7 +111,10 @@ export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
   showAttributions([TERRAIN_DATASETS.gsi, TILE_DATASETS.openstreetmap]);
 };
 
-const addChangeCameraOption = (pane: Pane, view: ThreeView) => {
+const addChangeCameraOption = (
+  pane: Pane,
+  view: ThreeView<LayerDescriptions>,
+) => {
   const cameraParams = gCameraParams;
 
   const folder = pane.addFolder({
@@ -147,7 +152,10 @@ const addChangeCameraOption = (pane: Pane, view: ThreeView) => {
   folder.addBinding(cameraParams, "roll").on("change", changeFunc);
 };
 
-const addMoveCameraOption = (pane: Pane, view: ThreeView) => {
+const addMoveCameraOption = (
+  pane: Pane,
+  view: ThreeView<LayerDescriptions>,
+) => {
   const cameraParams = {
     amount: 100,
   };
@@ -182,7 +190,10 @@ const addMoveCameraOption = (pane: Pane, view: ThreeView) => {
   });
 };
 
-const addMoveCameraWithDirOption = (pane: Pane, view: ThreeView) => {
+const addMoveCameraWithDirOption = (
+  pane: Pane,
+  view: ThreeView<LayerDescriptions>,
+) => {
   const cameraParams = {
     amount: 100,
     dir_x: 0,
@@ -212,7 +223,7 @@ const addMoveCameraWithDirOption = (pane: Pane, view: ThreeView) => {
   });
 };
 
-const addFlyToOption = (pane: Pane, view: ThreeView) => {
+const addFlyToOption = (pane: Pane, view: ThreeView<LayerDescriptions>) => {
   const cameraParams = {
     longitude: 127.7,
     latitude: 26.2,
@@ -257,7 +268,7 @@ const addFlyToOption = (pane: Pane, view: ThreeView) => {
   });
 };
 
-const addLookAtOption = (pane: Pane, view: ThreeView) => {
+const addLookAtOption = (pane: Pane, view: ThreeView<LayerDescriptions>) => {
   const cameraParams = {
     longitude: 138.7306671143,
     latitude: 35.3624725342,
@@ -298,7 +309,10 @@ const addLookAtOption = (pane: Pane, view: ThreeView) => {
   });
 };
 
-const addCameraControlOptions = (pane: Pane, view: ThreeView) => {
+const addCameraControlOptions = (
+  pane: Pane,
+  view: ThreeView<LayerDescriptions>,
+) => {
   const controlParams = {
     autoAdjustNearFar: true,
     minimumZoomDistance: 6356752,
@@ -401,7 +415,7 @@ const addCameraControlOptions = (pane: Pane, view: ThreeView) => {
     .on("change", applyOptions);
 };
 
-const addRotateOption = (pane: Pane, view: ThreeView) => {
+const addRotateOption = (pane: Pane, view: ThreeView<LayerDescriptions>) => {
   const cameraParams = {
     axis_x: 0.0,
     axis_y: 0.0,

@@ -358,6 +358,9 @@ importers:
       '@takram/three-geospatial':
         specifier: ^0.7.0
         version: 0.7.0(@react-three/fiber@9.1.2(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(three@0.183.1))(react@19.2.4)(three@0.183.1)
+      tiny-invariant:
+        specifier: ^1.3.3
+        version: 1.3.3
     devDependencies:
       '@navara/three':
         specifier: workspace:*

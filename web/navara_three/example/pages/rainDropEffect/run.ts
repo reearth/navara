@@ -1,21 +1,24 @@
-import ThreeView, { RainDropEffectLayer } from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import ThreeView from "@navara/three";
+import { RainDropEffectLayer } from "@navara/three_default_layers";
+import {
+  DefaultPlugin,
+  type DefaultLayerDescriptions,
+} from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../helpers/attributions";
 import { TILE_DATASETS } from "../../helpers/constants";
 import { addHidePaneKeyShortcut } from "../../helpers/control";
 
-export const run = async (view: ThreeView) => {
+export type LayerDescriptions = DefaultLayerDescriptions;
+
+export const run = async (view: ThreeView<LayerDescriptions>) => {
   const defaultPlugin = new DefaultPlugin();
   view.addPlugin(defaultPlugin);
 
   await view.init();
 
   view.animation = true;
-
-  // Enable default effect chain (tone mapping/AA etc.)
-  view.addDefaultEffectLayers();
 
   defaultPlugin.addDefaultPhotorealLayers();
 

@@ -2,9 +2,10 @@ import {
   EffectLayerDeclaration,
   type EffectLayerConfig,
   type EffectLayerUpdate,
-} from "../../core/EffectLayerDeclaration";
-import type { ViewContext } from "../../core/ViewContext";
-import { ColorGradingLUT, type ColorGradingLUTOptions } from "../../effects";
+  type ViewContext,
+  ColorGradingLUT,
+  type ColorGradingLUTOptions,
+} from "@navara/three";
 
 type LayerDescription = {
   colorGradingLUT?: ColorGradingLUTOptions;

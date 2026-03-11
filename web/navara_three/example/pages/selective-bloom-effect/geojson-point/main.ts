@@ -39,8 +39,6 @@ const run = async () => {
     },
   });
 
-  view.addDefaultEffectLayers();
-
   // GeoJSON points with bloom (Odaiba area landmarks)
   const odaibaPoints: FeatureCollection = {
     type: "FeatureCollection",

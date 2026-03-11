@@ -6,6 +6,7 @@ import {
   type Layer as NavaraLayer,
   type LayerDescription,
 } from "@navara/three";
+import type { DefaultEffectLayerDeclarationDescription } from "@navara/three_default_plugin";
 import { Layer, useViewContext } from "@navara/three_react";
 import type { FeatureCollection, Point } from "geojson";
 import { useEffect, useMemo, useRef, useState, type FC } from "react";
@@ -102,7 +103,10 @@ export const ShelterLayer: FC<{ visible?: boolean }> = ({
     };
   }, [visible]);
 
-  const fogLayerDesc = useMemo((): LayerDescription | null => {
+  const fogLayerDesc = useMemo(():
+    | LayerDescription
+    | DefaultEffectLayerDeclarationDescription
+    | null => {
     if (!view || fogLights.length === 0) return null;
     return {
       type: "effect",

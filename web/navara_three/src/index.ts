@@ -50,6 +50,7 @@ import {
   type MeshLayerConstructor,
   type LightLayerConstructor,
   type EffectLayerConstructor,
+  UnknownLayerTypeError,
 } from "./core";
 import { LayerHandle } from "./core/LayerHandle";
 import { Registries } from "./core/Registries";
@@ -69,25 +70,13 @@ import { registerInputEvents } from "./input";
 import { Layer, type LayerEvent } from "./layer";
 import { SunLightLayer, AmbientLightLayer, SkyLightProbeLayer } from "./layers";
 import {
-  CloudsEffectLayer,
-  FogLightEffectLayer,
-  FXAAEffectLayer,
-  LensFlareEffectLayer,
   MRTPassEffectLayer,
-  SkyEnvMapEffectLayer,
-  SMAAEffectLayer,
-  SSAOEffectLayer,
-  SSREffectLayer,
   SelectiveBloomEffectLayer,
   SelectiveOutlineEffectLayer,
+  SkyEnvMapEffectLayer,
   TestSelectiveEffectLayer,
-  ToneMappingEffectLayer,
-  RainDropEffectLayer,
   TransparentPassEffectLayer,
-  DepthOfFieldEffectLayer,
-  ColorGradingLUTEffectLayer,
 } from "./layers/effect";
-import { AerialPerspectiveEffectLayer } from "./layers/effect/AerialPerspectiveEffectLayer";
 import { FinalCopyEffectLayer } from "./layers/effect/FinalCopyEffectLayer";
 import { LightProbeLayer } from "./layers/light/LightProbeLayer";
 import { LayersManager } from "./layersManager";
@@ -154,11 +143,6 @@ export * from "./evaluations";
 export { SKY_RENDER_ORDER, STARS_RENDER_ORDER } from "./renderOrder";
 export * from "@navara/three_api";
 export * from "./Color";
-export {
-  getDevicePixelRatio,
-  isMobileDevice,
-  type DevicePixelRatioOptions,
-} from "./device";
 export { type BlendMode, createReplacer } from "./utils";
 export type { CustomObject3DEventMap } from "./object3DEvent";
 
@@ -727,7 +711,7 @@ export default class ThreeView<
       this.atmosphere,
       this.layersManager,
       this.renderPassOrchestrator,
-      createDefaultConcurrencyManager(),
+      createDefaultConcurrencyManager(this.isMobileOptimized()),
       {
         meshes: this._meshes,
         drapedMaterials: this._drapedFeatureMaterials,
@@ -849,6 +833,16 @@ export default class ThreeView<
    */
   get normalTexture() {
     return this.renderPass.gbufferRenderTarget.textures[1];
+  }
+
+  /**
+   * Returns whether mobile optimizations should be applied.
+   * If `mobileOptimization` option is explicitly set, returns that value;
+   * otherwise falls back to auto-detecting via `isMobileDevice()`.
+   */
+  isMobileOptimized(): boolean {
+    const opt = this._options.mobileOptimization;
+    return opt ?? isMobileDevice();
   }
 
   /**
@@ -1262,16 +1256,6 @@ export default class ThreeView<
     this.registerEffect("skyEnvMap", SkyEnvMapEffectLayer);
     this.registerEffect("mrt", MRTPassEffectLayer);
 
-    this.registerEffect("aerialPerspective", AerialPerspectiveEffectLayer);
-    this.registerEffect("rainDrop", RainDropEffectLayer);
-    this.registerEffect("clouds", CloudsEffectLayer);
-    this.registerEffect("fogLight", FogLightEffectLayer);
-    this.registerEffect("lensFlare", LensFlareEffectLayer);
-    this.registerEffect("ssao", SSAOEffectLayer);
-    this.registerEffect("ssr", SSREffectLayer);
-    this.registerEffect("depthOfField", DepthOfFieldEffectLayer);
-    this.registerEffect("colorGradingLUT", ColorGradingLUTEffectLayer);
-
     // SelectiveEffect effects
     this.registerEffect("testSelectiveEffect", TestSelectiveEffectLayer);
     this.registerEffect("selectiveBloom", SelectiveBloomEffectLayer);
@@ -1280,9 +1264,6 @@ export default class ThreeView<
     // this.registerEffect("opaque", OpaquePassEffectLayer);
     this.registerEffect("transparent", TransparentPassEffectLayer);
 
-    this.registerEffect("toneMapping", ToneMappingEffectLayer);
-    this.registerEffect("smaa", SMAAEffectLayer);
-    this.registerEffect("fxaa", FXAAEffectLayer);
     this.registerEffect("final", FinalCopyEffectLayer);
   }
 
@@ -1290,7 +1271,7 @@ export default class ThreeView<
     // Find which mesh type from config
     const meshType = this.registries.mesh.findMeshType(config);
     if (!meshType) {
-      throw new Error("No mesh type specified in configuration");
+      throw new UnknownLayerTypeError(config);
     }
 
     // Extract layer config and mesh-specific config
@@ -1332,7 +1313,7 @@ export default class ThreeView<
     // Find which light type from config
     const lightType = this.registries.light.findLightType(config);
     if (!lightType) {
-      throw new Error("No light type specified in configuration");
+      throw new UnknownLayerTypeError(config);
     }
 
     // Extract layer config and light-specific config
@@ -1368,7 +1349,7 @@ export default class ThreeView<
     // Find which effect type from config
     const effectType = this.registries.effect.findEffectType(config);
     if (!effectType) {
-      throw new Error("No effect type specified in configuration");
+      throw new UnknownLayerTypeError(config);
     }
 
     // Extract layer config and effect-specific config
@@ -1473,56 +1454,6 @@ export default class ThreeView<
       return;
     }
     sunLightLayer._removeMaterialFromShadows(material);
-  }
-
-  /**
-   * Adds default post-processing effect layers including aerial perspective, tone mapping, and anti-aliasing.
-   * On mobile devices (when mobileOptimization is enabled), uses lighter-weight effects.
-   * @returns Handles to the created aerialPerspective, lensFlare, toneMapping, and antialiasing layers
-   */
-  addDefaultEffectLayers(): {
-    aerialPerspective: LayerHandle<AerialPerspectiveEffectLayer>;
-    lensFlare: LayerHandle<LensFlareEffectLayer> | undefined;
-    toneMapping: LayerHandle<ToneMappingEffectLayer>;
-    antialiasing: LayerHandle<SMAAEffectLayer> | LayerHandle<FXAAEffectLayer>;
-  } {
-    const mobile = this._options?.mobileOptimization ? isMobileDevice() : false;
-
-    const aerialPerspective = this.addLayer<AerialPerspectiveEffectLayer>({
-      type: "effect",
-      aerialPerspective: {},
-    } as LayerDescription);
-
-    // Skip lens flare on mobile - expensive effect with limited benefit
-    const lensFlare = mobile
-      ? undefined
-      : this.addLayer<LensFlareEffectLayer>({
-          type: "effect",
-          lensFlare: {},
-        } as LayerDescription);
-
-    const toneMapping = this.addLayer<ToneMappingEffectLayer>({
-      type: "effect",
-      toneMapping: {},
-    } as LayerDescription);
-
-    // Use FXAA on mobile (faster), SMAA on desktop (higher quality)
-    const antialiasing = mobile
-      ? this.addLayer<FXAAEffectLayer>({
-          type: "effect",
-          fxaa: {},
-        } as LayerDescription)
-      : this.addLayer<SMAAEffectLayer>({
-          type: "effect",
-          smaa: {},
-        } as LayerDescription);
-
-    return {
-      aerialPerspective,
-      lensFlare,
-      toneMapping,
-      antialiasing,
-    };
   }
 
   /**
