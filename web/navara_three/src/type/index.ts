@@ -50,7 +50,6 @@ export type EffectLayerDeclarationDescription =
   | SkyEnvMapPassConfig
   | SelectiveBloomEffectConfig
   | SelectiveOutlineEffectConfig
-  | SkyEnvMapPassConfig
   | TransparentPassConfig;
 
 // export type MVTLayer = {

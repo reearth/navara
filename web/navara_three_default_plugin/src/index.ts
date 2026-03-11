@@ -1,7 +1,6 @@
 import type ThreeView from "@navara/three";
 import {
   Plugin,
-  isMobileDevice,
   type LayerHandle,
   type SkyLightProbeLayer,
   type SunLightLayer,
@@ -126,7 +125,7 @@ export class DefaultPlugin extends Plugin<ThreeView<DefaultLayerDescriptions>> {
     }
 
     const view = this.view;
-    const mobile = isMobileDevice();
+    const mobile = view.isMobileOptimized();
 
     // Mesh & light layers
     const sky = view.addLayer<SkyMeshLayer>({

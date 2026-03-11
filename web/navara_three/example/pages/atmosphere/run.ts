@@ -11,7 +11,6 @@ import ThreeView, {
   SunLightLayer,
   AmbientLightLayer,
   SkyLightProbeLayer,
-  isMobileDevice,
   type TextureChannel,
   LightProbeLayer,
 } from "@navara/three";
@@ -47,8 +46,6 @@ import {
   type FolderFields,
 } from "../../helpers/panel";
 import { SH_COEFFICIENTS } from "../../helpers/sh";
-
-import { ATMOSPHERE_EXAMPLE_OPTIONS } from "./main";
 
 export type LayerDescriptions = DefaultLayerDescriptions;
 
@@ -164,7 +161,7 @@ export const run = async (view: ThreeView<LayerDescriptions>) => {
     defaultEffects.aerialPerspective,
   );
   addCloudsControl(view, pane, cloudsLayer);
-  addAAControl(pane, defaultEffects);
+  addAAControl(view, pane, defaultEffects);
   addIBLControl(view, pane);
   addEffectsControl(view, pane, defaultEffects);
 
@@ -1040,11 +1037,13 @@ const addCloudsControl = (
   );
 };
 
-const addAAControl = (pane: Pane, defaultEffects: DefaultEffects) => {
-  // Determine the current AA effect type based on device
-  const isMobile = isMobileDevice();
-  const currentEffect =
-    isMobile && ATMOSPHERE_EXAMPLE_OPTIONS.mobileOptimization ? "fxaa" : "smaa";
+const addAAControl = (
+  view: ThreeView<LayerDescriptions>,
+  pane: Pane,
+  defaultEffects: DefaultEffects,
+) => {
+  // Determine the current AA effect type based on view's mobile optimization setting
+  const currentEffect = view.isMobileOptimized() ? "fxaa" : "smaa";
 
   const PARAMS = {
     enable: false,

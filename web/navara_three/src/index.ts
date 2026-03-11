@@ -50,7 +50,7 @@ import {
 } from "./core";
 import { LayerHandle } from "./core/LayerHandle";
 import { Registries } from "./core/Registries";
-import { getDevicePixelRatio } from "./device";
+import { getDevicePixelRatio, isMobileDevice } from "./device";
 import {
   processEvent,
   type BufferLoader,
@@ -139,11 +139,6 @@ export * from "./evaluations";
 export { SKY_RENDER_ORDER, STARS_RENDER_ORDER } from "./renderOrder";
 export * from "@navara/three_api";
 export * from "./Color";
-export {
-  getDevicePixelRatio,
-  isMobileDevice,
-  type DevicePixelRatioOptions,
-} from "./device";
 export { type BlendMode, createReplacer } from "./utils";
 export type { CustomObject3DEventMap } from "./object3DEvent";
 
@@ -707,7 +702,7 @@ export default class ThreeView<
       this.atmosphere,
       this.layersManager,
       this.renderPassOrchestrator,
-      createDefaultConcurrencyManager(),
+      createDefaultConcurrencyManager(this.isMobileOptimized()),
       {
         meshes: this._meshes,
         drapedMaterials: this._drapedFeatureMaterials,
@@ -829,6 +824,16 @@ export default class ThreeView<
    */
   get normalTexture() {
     return this.renderPass.gbufferRenderTarget.textures[1];
+  }
+
+  /**
+   * Returns whether mobile optimizations should be applied.
+   * If `mobileOptimization` option is explicitly set, returns that value;
+   * otherwise falls back to auto-detecting via `isMobileDevice()`.
+   */
+  isMobileOptimized(): boolean {
+    const opt = this._options.mobileOptimization;
+    return opt ?? isMobileDevice();
   }
 
   /**
