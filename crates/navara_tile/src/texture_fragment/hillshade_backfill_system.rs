@@ -1,20 +1,82 @@
 use bevy_ecs::{
     component::Component,
     entity::Entity,
-    query::{Changed, With},
+    query::{Added, Changed, With, Without},
     system::{Commands, Query, ResMut},
 };
 use navara_buffer_store::BufferStore;
+use navara_component::{Deleted, Ignored, OrderByDistance, Priority, Requested};
 use navara_data_requester::{DataRequester, DataRequesterStatus};
 use navara_event_store::EventStore;
 use navara_tile_component::{RasterTileQuadtree, TileTextureFragmentMarker};
 
-use crate::dem_backfill::backfill_dem_texture;
+use crate::dem_backfill::{BackfillDirection, backfill_dem_texture};
+
+const MAX_HILLSHADE_PENDINGS: u32 = 10;
 
 /// Marker component to identify hillshade DEM texture requests
 /// This distinguishes hillshade DataRequesters from other types
 #[derive(Debug, Clone, Copy, Component)]
 pub struct HillshadeTextureMarker;
+
+/// System that limits concurrent hillshade DataRequester entities
+/// Prevents too many simultaneous requests by pruning lowest-priority tiles
+/// Works similarly to filter_requestable_texture_fragment but for hillshade DataRequesters
+#[allow(clippy::type_complexity)]
+pub fn filter_requestable_hillshade_data_requester(
+    mut commands: Commands,
+    mut qt: ResMut<RasterTileQuadtree>,
+    hillshade_requesters: Query<
+        (
+            Entity,
+            &TileTextureFragmentMarker,
+            &DataRequester,
+            &OrderByDistance,
+            &Priority,
+        ),
+        (
+            Added<TileTextureFragmentMarker>,
+            With<HillshadeTextureMarker>,
+            Without<Deleted>,
+        ),
+    >,
+    requested_hillshades: Query<
+        Entity,
+        (
+            With<TileTextureFragmentMarker>,
+            With<HillshadeTextureMarker>,
+            With<Requested>,
+            Without<Deleted>,
+        ),
+    >,
+) {
+    let pendings = requested_hillshades.iter().count();
+    let num_skip = (MAX_HILLSHADE_PENDINGS as i32 - pendings as i32).max(0);
+
+    // Limit the number of hillshade requests in this frame
+    // Sort by priority and distance, then mark excess entities for deletion
+    for (e, marker, _, _, _) in hillshade_requesters
+        .iter()
+        .sort::<(&Priority, &OrderByDistance)>()
+        .skip(num_skip as usize)
+    {
+        let handle = marker.0;
+        let tile = qt.qt.get_mut(handle);
+        if let Some(tile) = tile {
+            commands.entity(e).insert((Deleted, Ignored));
+
+            // Remove this hillshade request from tile's texture_fragment_entity_ids
+            if let Some(ids) = tile.texture_fragment_entity_ids.as_mut() {
+                let idx = ids
+                    .iter()
+                    .enumerate()
+                    .find_map(|(i, id)| id.and_then(|id| (id == e).then_some(i)))
+                    .unwrap();
+                ids.remove(idx);
+            }
+        }
+    }
+}
 
 /// Component to track DEM backfill state for hillshade textures
 #[derive(Debug, Clone, Component)]
@@ -52,6 +114,15 @@ pub fn backfill_hillshade_on_loaded(
 
         let tile_handle = marker.0;
 
+        // Create lookup function to find already-backfilled neighbors
+        // This allows us to prefer backfilled buffers (258x258) over original (256x256)
+        let backfilled_lookup = |neighbor_tile_handle: u64| -> Option<i32> {
+            existing_backfills
+                .iter()
+                .find(|(_, _, marker)| marker.0 == neighbor_tile_handle)
+                .map(|(_, state, _)| state.backfilled_handle)
+        };
+
         // Perform backfill
         if let Some(backfilled_handle) = backfill_dem_texture(
             &qt,
@@ -59,6 +130,7 @@ pub fn backfill_hillshade_on_loaded(
             tile_handle,
             data_req.handle,
             &all_data_requesters,
+            &backfilled_lookup,
         ) {
             // Store state on the entity
             commands.entity(entity).insert(HillshadeDEMState {
@@ -71,43 +143,56 @@ pub fn backfill_hillshade_on_loaded(
                 .hillshade_backfilled
                 .push((entity, backfilled_handle, tile_handle));
 
+            // Remove original DEM buffer (256x256) to save memory
+            // After backfill, only the padded buffer (258x258) is needed
+            // get_neighbor_dem_handle now prefers backfilled_handle, so neighbors will use that
+            buf.remove(&data_req.handle);
+
             // Bidirectional backfill: Update neighbors' padding with current tile's edge data
             // This ensures seamless transitions between tiles
             let (x, y, z): (usize, usize, usize) = decode_quadleaf_handle(tile_handle);
-            let neighbors: [((usize, usize, usize), usize); 4] = [
-                ((x.wrapping_sub(1), y, z), 0), // West neighbor, direction 0 (update their right edge)
-                ((x + 1, y, z), 1), // East neighbor, direction 1 (update their left edge)
-                ((x, y.wrapping_sub(1), z), 2), // North neighbor, direction 2 (update their bottom edge)
-                ((x, y + 1, z), 3), // South neighbor, direction 3 (update their top edge)
+            let neighbors: [((usize, usize, usize), BackfillDirection); 4] = [
+                ((x.wrapping_sub(1), y, z), BackfillDirection::Right), // West neighbor: update their right edge
+                ((x + 1, y, z), BackfillDirection::Left), // East neighbor: update their left edge
+                ((x, y.wrapping_sub(1), z), BackfillDirection::Bottom), // North neighbor: update their bottom edge
+                ((x, y + 1, z), BackfillDirection::Top), // South neighbor: update their top edge
             ];
 
-            // Clone current tile's data to avoid borrow conflicts
-            if let Some(current_bytes) = buf.get_u8(&backfilled_handle) {
-                let current_bytes_cloned = current_bytes.to_vec();
+            // Extract only the edge data we need (~1KB per edge instead of 260KB full texture)
+            // Pre-extract all 4 edges to avoid holding immutable borrow during neighbor updates
+            let edges = if let Some(current_bytes) = buf.get_u8(&backfilled_handle) {
+                extract_edges_for_neighbors(current_bytes)
+            } else {
+                continue;
+            };
 
-                for ((nx, ny, nz), direction) in neighbors {
-                    if let Some(neighbor_handle) = encode_quadleaf_handle((nx, ny, nz)) {
-                        // Find neighbor's existing backfilled buffer
-                        for (_neighbor_entity, neighbor_state, neighbor_marker) in
-                            existing_backfills.iter_mut()
-                        {
-                            if neighbor_marker.0 == neighbor_handle {
-                                // Update neighbor's padding with current tile's edge
-                                // Note: This updates the buffer data for future texture loads,
-                                // but doesn't affect already-created DataTextures (they copied the bytes).
-                                // Seams will be eliminated when neighbor's texture reloads or mesh updates.
-                                if let Some(neighbor_bytes) =
-                                    buf.get_u8_mut(&neighbor_state.backfilled_handle)
-                                {
-                                    copy_edge_bidirectional(
-                                        neighbor_bytes,
-                                        &current_bytes_cloned,
-                                        direction,
-                                    );
-                                    // No event needed - buffer update doesn't affect existing DataTextures
-                                }
-                                break;
+            // Process each neighbor
+            for ((nx, ny, nz), direction) in neighbors {
+                if let Some(neighbor_handle) = encode_quadleaf_handle((nx, ny, nz)) {
+                    // Find neighbor's existing backfilled buffer
+                    for (neighbor_entity, neighbor_state, neighbor_marker) in
+                        existing_backfills.iter_mut()
+                    {
+                        if neighbor_marker.0 == neighbor_handle {
+                            // Update neighbor's padding with current tile's edge
+                            if let Some(neighbor_bytes) =
+                                buf.get_u8_mut(&neighbor_state.backfilled_handle)
+                            {
+                                copy_edge_bidirectional(
+                                    neighbor_bytes,
+                                    &edges[direction as usize],
+                                    direction,
+                                );
+
+                                // Notify JS to reload the neighbor's texture with updated data
+                                // DataTexture copies bytes, so we must recreate it to see updated padding
+                                events.hillshade_backfilled.push((
+                                    neighbor_entity,
+                                    neighbor_state.backfilled_handle,
+                                    neighbor_handle,
+                                ));
                             }
+                            break;
                         }
                     }
                 }
@@ -116,78 +201,149 @@ pub fn backfill_hillshade_on_loaded(
     }
 }
 
-/// Copy edge data from source to destination's padding (for bidirectional backfill)
-/// direction: 0=update dst's right edge, 1=left, 2=bottom, 3=top
-fn copy_edge_bidirectional(dst: &mut [u8], src: &[u8], direction: usize) {
+/// Copy edge data from pre-extracted edge to destination's padding (for bidirectional backfill)
+/// src is already extracted edge data (content_size * 4 bytes), not full texture
+/// direction: which edge of the neighbor tile to update
+fn copy_edge_bidirectional(dst: &mut [u8], src_edge: &[u8], direction: BackfillDirection) {
     let dst_size = ((dst.len() / 4) as f64).sqrt() as usize;
-    let src_size = ((src.len() / 4) as f64).sqrt() as usize;
-    let content_size = dst_size - 2; // Assuming both are padded (258x258)
+    let content_size = dst_size - 2; // 256 for 258x258 padded texture
+
+    // src_edge should be content_size * 4 bytes (e.g., 256 * 4 = 1024 bytes)
+    let expected_edge_len = content_size * 4;
+    if src_edge.len() != expected_edge_len {
+        return; // Invalid edge data
+    }
 
     match direction {
-        0 => {
-            // Update dst's right padding (x=content_size+1) from src's left edge (x=1)
+        BackfillDirection::Right => {
+            // Update dst's right padding (x=content_size+1) from src's left edge
             for y in 0..content_size {
-                let src_x = 1; // src's left edge (first content pixel)
-                let src_y = y + 1;
-                let src_idx = (src_y * src_size + src_x) * 4;
-
+                let src_idx = y * 4; // Source is linear edge data
                 let dst_x = content_size + 1; // dst's right padding
                 let dst_y = y + 1;
                 let dst_idx = (dst_y * dst_size + dst_x) * 4;
 
-                if src_idx + 4 <= src.len() && dst_idx + 4 <= dst.len() {
-                    dst[dst_idx..dst_idx + 4].copy_from_slice(&src[src_idx..src_idx + 4]);
+                if dst_idx + 4 <= dst.len() {
+                    dst[dst_idx..dst_idx + 4].copy_from_slice(&src_edge[src_idx..src_idx + 4]);
                 }
             }
         }
-        1 => {
-            // Update dst's left padding (x=0) from src's right edge (x=content_size)
+        BackfillDirection::Left => {
+            // Update dst's left padding (x=0) from src's right edge
             for y in 0..content_size {
-                let src_x = content_size; // src's right edge (last content pixel)
-                let src_y = y + 1;
-                let src_idx = (src_y * src_size + src_x) * 4;
-
+                let src_idx = y * 4; // Source is linear edge data
                 let dst_x = 0; // dst's left padding
                 let dst_y = y + 1;
                 let dst_idx = (dst_y * dst_size + dst_x) * 4;
 
-                if src_idx + 4 <= src.len() && dst_idx + 4 <= dst.len() {
-                    dst[dst_idx..dst_idx + 4].copy_from_slice(&src[src_idx..src_idx + 4]);
+                if dst_idx + 4 <= dst.len() {
+                    dst[dst_idx..dst_idx + 4].copy_from_slice(&src_edge[src_idx..src_idx + 4]);
                 }
             }
         }
-        2 => {
-            // Update dst's bottom padding (y=content_size+1) from src's top edge (y=1)
+        BackfillDirection::Bottom => {
+            // Update dst's bottom padding (y=content_size+1) from src's top edge
             for x in 0..content_size {
-                let src_x = x + 1;
-                let src_y = 1; // src's top edge
-                let src_idx = (src_y * src_size + src_x) * 4;
-
+                let src_idx = x * 4; // Source is linear edge data
                 let dst_x = x + 1;
                 let dst_y = content_size + 1; // dst's bottom padding
                 let dst_idx = (dst_y * dst_size + dst_x) * 4;
 
-                if src_idx + 4 <= src.len() && dst_idx + 4 <= dst.len() {
-                    dst[dst_idx..dst_idx + 4].copy_from_slice(&src[src_idx..src_idx + 4]);
+                if dst_idx + 4 <= dst.len() {
+                    dst[dst_idx..dst_idx + 4].copy_from_slice(&src_edge[src_idx..src_idx + 4]);
                 }
             }
         }
-        3 => {
-            // Update dst's top padding (y=0) from src's bottom edge (y=content_size)
+        BackfillDirection::Top => {
+            // Update dst's top padding (y=0) from src's bottom edge
             for x in 0..content_size {
-                let src_x = x + 1;
-                let src_y = content_size; // src's bottom edge
-                let src_idx = (src_y * src_size + src_x) * 4;
-
+                let src_idx = x * 4; // Source is linear edge data
                 let dst_x = x + 1;
                 let dst_y = 0; // dst's top padding
                 let dst_idx = (dst_y * dst_size + dst_x) * 4;
 
-                if src_idx + 4 <= src.len() && dst_idx + 4 <= dst.len() {
-                    dst[dst_idx..dst_idx + 4].copy_from_slice(&src[src_idx..src_idx + 4]);
+                if dst_idx + 4 <= dst.len() {
+                    dst[dst_idx..dst_idx + 4].copy_from_slice(&src_edge[src_idx..src_idx + 4]);
                 }
             }
         }
-        _ => {}
+    }
+}
+
+/// Extract 4 edges from current tile for updating neighbors
+/// Returns array indexed by BackfillDirection (the edge to update on neighbor):
+/// [edge_for_left, edge_for_right, edge_for_top, edge_for_bottom]
+fn extract_edges_for_neighbors(src: &[u8]) -> [Vec<u8>; 4] {
+    let src_size = ((src.len() / 4) as f64).sqrt() as usize;
+    let content_size = src_size - 2; // 256 for 258x258 padded texture
+
+    // Preallocate edge buffers (each edge: content_size pixels * 4 bytes RGBA)
+    let mut for_neighbor_left = Vec::with_capacity(content_size * 4); // Current right -> neighbor left
+    let mut for_neighbor_right = Vec::with_capacity(content_size * 4); // Current left -> neighbor right
+    let mut for_neighbor_top = Vec::with_capacity(content_size * 4); // Current bottom -> neighbor top
+    let mut for_neighbor_bottom = Vec::with_capacity(content_size * 4); // Current top -> neighbor bottom
+
+    // Extract left edge (x=1) -> for updating west neighbor's right padding
+    for y in 0..content_size {
+        let src_x = 1;
+        let src_y = y + 1;
+        let src_idx = (src_y * src_size + src_x) * 4;
+        if src_idx + 4 <= src.len() {
+            for_neighbor_right.extend_from_slice(&src[src_idx..src_idx + 4]);
+        }
+    }
+
+    // Extract right edge (x=content_size) -> for updating east neighbor's left padding
+    for y in 0..content_size {
+        let src_x = content_size;
+        let src_y = y + 1;
+        let src_idx = (src_y * src_size + src_x) * 4;
+        if src_idx + 4 <= src.len() {
+            for_neighbor_left.extend_from_slice(&src[src_idx..src_idx + 4]);
+        }
+    }
+
+    // Extract top edge (y=1) -> for updating north neighbor's bottom padding
+    for x in 0..content_size {
+        let src_x = x + 1;
+        let src_y = 1;
+        let src_idx = (src_y * src_size + src_x) * 4;
+        if src_idx + 4 <= src.len() {
+            for_neighbor_bottom.extend_from_slice(&src[src_idx..src_idx + 4]);
+        }
+    }
+
+    // Extract bottom edge (y=content_size) -> for updating south neighbor's top padding
+    for x in 0..content_size {
+        let src_x = x + 1;
+        let src_y = content_size;
+        let src_idx = (src_y * src_size + src_x) * 4;
+        if src_idx + 4 <= src.len() {
+            for_neighbor_top.extend_from_slice(&src[src_idx..src_idx + 4]);
+        }
+    }
+
+    // Return in order matching BackfillDirection enum values
+    [
+        for_neighbor_left,   // BackfillDirection::Left = 0
+        for_neighbor_right,  // BackfillDirection::Right = 1
+        for_neighbor_top,    // BackfillDirection::Top = 2
+        for_neighbor_bottom, // BackfillDirection::Bottom = 3
+    ]
+}
+
+/// System that cleans up backfilled DEM buffers when hillshade entities are deleted
+/// This prevents memory leaks by removing the padded buffers from BufferStore
+pub fn cleanup_hillshade_backfilled_buffers(
+    mut commands: Commands,
+    mut buf: ResMut<BufferStore>,
+    query: Query<(Entity, &HillshadeDEMState), With<Deleted>>,
+) {
+    for (entity, state) in query.iter() {
+        // Remove the backfilled buffer (padded 258x258 texture)
+        buf.remove(&state.backfilled_handle);
+
+        // Despawn the entity to complete cleanup
+        commands.entity(entity).despawn();
     }
 }

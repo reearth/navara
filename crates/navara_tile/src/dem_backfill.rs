@@ -5,12 +5,14 @@ use navara_quadtree::{decode_quadleaf_handle, encode_quadleaf_handle};
 use navara_tile_component::{RasterTileQuadtree, TileHandle, TileTextureFragmentMarker};
 
 /// Direction for DEM border backfill
-#[derive(Debug, Clone, Copy)]
-enum BackfillDirection {
-    Left,
-    Right,
-    Top,
-    Bottom,
+/// For initial backfill: indicates which border of the current tile to fill
+/// For bidirectional backfill: indicates which border of the neighbor tile to update
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BackfillDirection {
+    Left = 0,
+    Right = 1,
+    Top = 2,
+    Bottom = 3,
 }
 
 /// Backfill DEM texture borders from neighbor tiles
@@ -18,7 +20,7 @@ enum BackfillDirection {
 /// This function:
 /// 1. Expands the original 256×256 DEM texture to 258×258 with 1-pixel padding
 /// 2. Copies the central content
-/// 3. Tries to fill borders from 4 neighboring tiles
+/// 3. Tries to fill borders from 4 neighboring tiles (prefers backfilled if available)
 /// 4. Falls back to edge replication if neighbors are not loaded
 ///
 /// Returns the handle to the new padded buffer (258×258×4 bytes)
@@ -28,6 +30,7 @@ pub fn backfill_dem_texture<F: Component>(
     tile_handle: TileHandle,
     dem_buffer_handle: Handle,
     data_requesters: &Query<(&DataRequester, &TileTextureFragmentMarker, &F)>,
+    backfilled_handle_lookup: &dyn Fn(TileHandle) -> Option<Handle>,
 ) -> Option<Handle> {
     let (x, y, z): (usize, usize, usize) = decode_quadleaf_handle(tile_handle);
 
@@ -66,7 +69,7 @@ pub fn backfill_dem_texture<F: Component>(
         if let Some(neighbor_handle) = encode_quadleaf_handle((nx, ny, nz))
             && qt.qt.get(neighbor_handle).is_some()
             && let Some(neighbor_dem_handle) =
-                get_neighbor_dem_handle(neighbor_handle, data_requesters)
+                get_neighbor_dem_handle(neighbor_handle, data_requesters, backfilled_handle_lookup)
             && let Some(neighbor_bytes) = buf.get_u8(&neighbor_dem_handle)
         {
             // Overwrite the fallback data with real neighbor data
@@ -78,15 +81,22 @@ pub fn backfill_dem_texture<F: Component>(
     Some(buf.new_u8(padded_bytes))
 }
 
-/// Try to find the DEM buffer handle from a neighbor tile using DataRequester query
-/// This searches for a hillshade DataRequester component that references the neighbor tile
+/// Try to find the DEM buffer handle from a neighbor tile
+/// Prefers backfilled handle (258x258 with padding) if available,
+/// otherwise returns original handle (256x256) from DataRequester
 fn get_neighbor_dem_handle<F: Component>(
     neighbor_handle: TileHandle,
     data_requesters: &Query<(&DataRequester, &TileTextureFragmentMarker, &F)>,
+    backfilled_handle_lookup: &dyn Fn(TileHandle) -> Option<Handle>,
 ) -> Option<Handle> {
     use navara_data_requester::DataRequesterStatus;
 
-    // Search for hillshade DataRequester that belongs to the neighbor tile
+    // First, try to get backfilled handle (preferred, as it has padding)
+    if let Some(backfilled_handle) = backfilled_handle_lookup(neighbor_handle) {
+        return Some(backfilled_handle);
+    }
+
+    // Fallback: Search for original DataRequester handle
     for (data_req, marker, _) in data_requesters.iter() {
         if marker.0 == neighbor_handle {
             // Only use neighbor's data if it has been successfully loaded

@@ -618,7 +618,7 @@ export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
     },
     rasterTile: {
       maxZoom: 15,
-      show: false, // Don't render DEM as color
+      minZoom: 5,
     },
     hillshade: {
       elevationDecoder:

@@ -452,7 +452,7 @@ export function processEvent(
           await processRequestedData(event, buf, abortControllers);
           break;
         case "remove":
-          processDataRequesterRemoved(event, buf, abortControllers);
+          processDataRequesterRemoved(event, buf, abortControllers, loadedTexs);
           break;
       }
     },
@@ -466,7 +466,7 @@ export function processEvent(
         }
       },
       onAbort: (event) => {
-        processDataRequesterRemoved(event, buf, abortControllers);
+        processDataRequesterRemoved(event, buf, abortControllers, loadedTexs);
       },
     },
   );
@@ -670,11 +670,18 @@ function processDataRequesterRemoved(
   req: DataRequesterRemovedEvent,
   buf: BufferLoader,
   abortControllers: AbortControllers,
+  loadedTexs?: Map<string, Texture>,
 ) {
   const id = generate_id_from_entity(req);
   const abortController = abortControllers.get(id);
   buf.remove(req.handle);
   abortController?.abort();
+
+  // Also remove from loadedTexs if this DataRequester had a hillshade DataTexture
+  if (loadedTexs) {
+    loadedTexs.get(id)?.dispose();
+    loadedTexs.delete(id);
+  }
 }
 
 async function processTextureFragmentRequested(
@@ -755,10 +762,16 @@ function processHillshadeBackfilled(
   const bytes = buf.u8(event.backfilled_handle);
   if (!bytes) return;
 
+  // IMPORTANT: Copy the data for JS ownership
+  // Rust retains the original backfilled_handle for bidirectional backfill:
+  // - When neighbors load later, they need to read this tile's edges
+  // - Rust's cleanup_hillshade_backfilled_buffers will remove it when entity is deleted
+  const copiedBytes = new Uint8Array(bytes);
+
   // Delegate to TileMesh static method for texture processing
   TileMesh.processHillshadeBackfilled(
     event,
-    bytes,
+    copiedBytes,
     loadedTexs,
     tileMapByHandle,
   );

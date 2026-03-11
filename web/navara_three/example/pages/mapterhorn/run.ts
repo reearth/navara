@@ -63,7 +63,7 @@ export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
     data: { url: TERRAIN_DATASETS.mapterhorn.url },
     rasterTile: {
       maxZoom: 15,
-      show: false, // Don't render DEM as color
+      minZoom: 5,
     },
     hillshade: {
       elevationDecoder: TERRARIUM_ELEVATION_DECODER(),

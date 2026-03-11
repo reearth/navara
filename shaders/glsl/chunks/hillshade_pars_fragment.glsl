@@ -10,7 +10,7 @@
   uniform float uHillshadeEpsilon; // Scale factor for height conversion
   uniform float uHillshadeOffset; // Additive offset (applied after epsilon)
   uniform float uHillshadeExaggeration; // Terrain exaggeration factor (recommended: 0.3-2.0)
-  // uHillshadeZoom and uHillshadeDimension are declared in tile.ts as global uniforms
+  // uHillshadeZoom is declared in tile.ts as global uniform
 
   // Decode height from RGB DEM texture
   float decodeHeightForHillshade(vec4 color) {
@@ -76,7 +76,8 @@
 
     // MapLibre's zoom-based scaling formula
     // Reference: hillshade_prepare.fragment.glsl:61-67
-    float tileSize = uHillshadeDimension.x - 2.0;
+    ivec2 texSize = textureSize(demTexture, 0);
+    float tileSize = float(texSize.x) - 2.0; // Remove padding to get content size (e.g., 258 - 2 = 256)
     float exaggerationFactor = layerZoom < 2.0 ? 0.4 : layerZoom < 4.5 ? 0.35 : 0.3;
     float exaggeration = layerZoom < 15.0 ? (layerZoom - 15.0) * exaggerationFactor : 0.0;
 

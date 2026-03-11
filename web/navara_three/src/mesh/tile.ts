@@ -12,6 +12,7 @@ import type {
   TextureFragment,
   MeshChanged,
   Globe,
+  HillshadeBackfilledEvent,
 } from "@navara/engine";
 import ElevationParsFragment from "@shaders/glsl/chunks/elevation_pars_fragment.glsl";
 import HillshadeParsFragment from "@shaders/glsl/chunks/hillshade_pars_fragment.glsl";
@@ -43,7 +44,6 @@ import {
   Box3Helper,
   Sphere,
   NoColorSpace,
-  ClampToEdgeWrapping,
 } from "three";
 
 import { PolygonMesh, type ViewEvents } from "..";
@@ -100,16 +100,13 @@ export class TileMesh
    * Called when Rust completes DEM backfill operation
    */
   static processHillshadeBackfilled(
-    event: {
-      ind: number;
-      gen: number;
-      backfilled_handle: number;
-      tile_handle: bigint;
-    },
+    event: HillshadeBackfilledEvent | undefined,
     bytes: Uint8Array,
     loadedTexs: Map<string, Texture>,
     tileMapByHandle: Map<bigint, TileMesh>,
   ): void {
+    if (!event) return;
+
     const size = Math.sqrt(bytes.length / 4);
     // Verify size is valid (should be original_size + 2, e.g., 258 or 514)
     if (!Number.isInteger(size) || size < 3) {
@@ -117,7 +114,22 @@ export class TileMesh
       return;
     }
 
-    // Create Three.js DataTexture directly from RGBA bytes (no canvas overhead)
+    // Use entity ind and gen to create ID (same format as other textures)
+    const id = `${event.ind}_${event.gen}`;
+
+    // Check if texture already exists (bidirectional backfill may update existing tiles)
+    const existingTexture = loadedTexs.get(id);
+    if (existingTexture && existingTexture instanceof DataTexture) {
+      // Update existing DataTexture with new data (bidirectional backfill updated padding)
+      const existingData = existingTexture.image.data as Uint8Array;
+      if (existingData.length === bytes.length) {
+        existingData.set(bytes);
+        existingTexture.needsUpdate = true;
+        return;
+      }
+    }
+
+    // Create new Three.js DataTexture from RGBA bytes
     const texture = new DataTexture(
       bytes,
       size,
@@ -132,8 +144,6 @@ export class TileMesh
     texture.flipY = true; // Flip Y to match texture coordinate system
     texture.needsUpdate = true;
 
-    // Use entity ind and gen to create ID (same format as other textures)
-    const id = `${event.ind}_${event.gen}`;
     loadedTexs.set(id, texture);
 
     // IMPORTANT: Directly bind the texture to the material's uniform
@@ -619,16 +629,10 @@ export class TileMesh
     uniforms: CommonUniforms,
     globe: Globe,
   ): TileMaterial {
-    const hasNormal = !!globe.shouldComputeNormalFromVertex;
-    const m = hasNormal
-      ? new MeshLambertMaterial({
-          stencilWrite: false,
-          color: globe.color,
-        })
-      : new MeshBasicMaterial({
-          stencilWrite: false,
-          color: globe.color,
-        });
+    const m = new MeshLambertMaterial({
+      stencilWrite: false,
+      color: globe.color,
+    });
 
     m.userData.uPickable = {
       value: 0,
@@ -694,7 +698,6 @@ export class TileMesh
       shader.uniforms.uHillshadeOffset = m.userData.hillshadeOffset;
       shader.uniforms.uHillshadeExaggeration = m.userData.hillshadeExaggeration;
       shader.uniforms.uHillshadeZooms = m.userData.hillshadeZooms;
-      shader.uniforms.uHillshadeDimension = m.userData.hillshadeDimension;
 
       // Add UV transform uniforms to the shader
       shader.vertexShader = createReplacer(shader.vertexShader)
@@ -766,7 +769,7 @@ vUv = vUv * uScale + uOffset;
   ${HillshadeParsFragment}
   `,
         )
-        .replaceWithCondition(
+        .replace(
           "#include <lights_lambert_pars_fragment>",
           `
         #include <lights_lambert_pars_fragment>
@@ -774,7 +777,6 @@ vUv = vUv * uScale + uOffset;
         ${WaterParsFragment}
         ${SpecularParsFragment}
         `,
-          hasNormal,
         )
         .replace(
           "#include <map_fragment>",
@@ -797,6 +799,13 @@ vUv = vUv * uScale + uOffset;
     // For raster textures, use transformed UV
     vec2 texUv = ${idx} >= ${this.texturizedSceneIndexFrom} ? vOrigUv : vUv;
 
+    #ifdef USE_HILLSHADE
+      // Skip hillshade textures for color rendering (they're only used for normals)
+      if (uIsHillshades[${idx}]) {
+        ${texColorVar} = vec4(0.0); // Transparent, no color contribution
+      }
+      else
+    #endif
     #ifdef USE_ELEVATION_HEATMAP
       // Check if this is an elevation heatmap texture
       if (uIsElevationHeatmaps[${idx}]) {
@@ -808,8 +817,10 @@ vUv = vUv * uScale + uOffset;
         ${texColorVar} = texture2D(uTextures[${idx}], texUv) * vec4(uColors[${idx}], 1.0);
       }
     #else
-      // For regular textures: use color as-is
-      ${texColorVar} = texture2D(uTextures[${idx}], texUv) * vec4(uColors[${idx}], 1.0);
+      {
+        // For regular textures: use color as-is
+        ${texColorVar} = texture2D(uTextures[${idx}], texUv) * vec4(uColors[${idx}], 1.0);
+      }
     #endif
 
     float currentReflectivity = uReflectivities[${idx}];
@@ -844,7 +855,7 @@ vUv = vUv * uScale + uOffset;
   diffuseColor.rgb = sampledDiffuseColor.rgb;
   `,
         )
-        .replaceWithCondition(
+        .replace(
           "#include <normal_fragment_maps>",
           `
   vec3 N = normalize(vPosition);
@@ -929,15 +940,13 @@ vUv = vUv * uScale + uOffset;
    #include <normal_fragment_maps>
   }
   `,
-          hasNormal,
         )
-        .replaceWithCondition(
+        .replace(
           "vec3 outgoingLight = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse + totalEmissiveRadiance;",
           `
           vec3 outgoingLight = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse + totalEmissiveRadiance;
           outgoingLight += specular;
         `,
-          hasNormal,
         )
         .replace(
           "#include <envmap_fragment>",
@@ -956,11 +965,10 @@ if (uPickable > 0.) {
             "outgoingLight += envColor.xyz * specularStrength * tileReflectivity;",
           ).source,
         )
-        .replaceWithCondition(
+        .replace(
           "outputBuffer1 = vec4(packNormalToVec2(normal), reflectivity, roughnessFactor);",
           `vec3 finalNormal = mix(origNormal, normalize(origNormal * 0.7 + normal), applyWaterNormals);
           outputBuffer1 = vec4(packNormalToVec2(finalNormal), tileReflectivity, tileRoughness);`,
-          hasNormal,
         ).source;
     };
 
@@ -1286,11 +1294,6 @@ if (uPickable > 0.) {
         value: [...new Array(maxTextures)].fill(14.0), // Default zoom level for each layer
       };
     }
-    if (!m.userData.hillshadeDimension) {
-      m.userData.hillshadeDimension = {
-        value: new Vector2(512, 512), // Default texture dimensions
-      };
-    }
 
     // Reset all texture properties
     for (let i = 0; i < m.userData.shows.value.length; i++) {
@@ -1456,8 +1459,6 @@ if (uPickable > 0.) {
 
       const layerZoom = mat.tileZoomLevels && mat.tileZoomLevels[i];
 
-      // Use LinearSRGBColorSpace for elevation heatmap textures to preserve RGB values for DEM data
-      // For regular textures, use SRGBColorSpace for proper color display
       const isElevationHeatmap =
         mat.isElevationHeatmaps && mat.isElevationHeatmaps[i];
       const isHillshade = mat.isHillshades && mat.isHillshades[i];
@@ -1465,18 +1466,6 @@ if (uPickable > 0.) {
       // Set hillshade parameters (zoom level and texture dimensions)
       if (isHillshade && layerZoom !== undefined) {
         m.userData.hillshadeZooms.value[i] = layerZoom;
-
-        // Set texture dimensions (Rust-side backfill provides 258x258 with padding)
-        // DataTexture has .width/.height directly, Texture has them via .image
-        const width =
-          (t as DataTexture).width ??
-          (t.image as HTMLImageElement | undefined)?.width;
-        const height =
-          (t as DataTexture).height ??
-          (t.image as HTMLImageElement | undefined)?.height;
-        if (width && height) {
-          m.userData.hillshadeDimension.value.set(width, height);
-        }
       }
       const isDEMTexture = isElevationHeatmap || isHillshade;
       const targetColorSpace = isDEMTexture ? NoColorSpace : SRGBColorSpace;
@@ -1495,9 +1484,6 @@ if (uPickable > 0.) {
         t.anisotropy = textureOptions.maxAnisotropy;
         t.generateMipmaps = isDEMTexture ? false : textureOptions.useMipmaps;
 
-        if (isDEMTexture) {
-          t.wrapS = t.wrapT = ClampToEdgeWrapping; // Prevent bleeding of edge pixels for DEM textures
-        }
         t.needsUpdate = true;
       }
 
