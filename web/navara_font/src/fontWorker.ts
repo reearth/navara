@@ -1,23 +1,19 @@
 /// <reference lib="webworker" />
 
 import init, {
-  loadFont,
-  shapeText,
-  getFontAtlas,
-  tickFrame,
+  FontCache,
   type ShapeTextResult as WasmShapeTextResult,
   type WasmShapedGlyph,
   type WasmGlyphMetrics,
-  unloadFont,
 } from "@navara/engine-font-worker";
 
-let wasmReady: Promise<unknown> | undefined;
+let fontCache: FontCache;
 
 async function ensureWasm(): Promise<void> {
-  if (!wasmReady) {
-    wasmReady = init();
+  if (!fontCache) {
+    await init();
+    fontCache = new FontCache();
   }
-  await wasmReady;
 }
 
 function convertGlyphs(glyphs: WasmShapedGlyph[]) {
@@ -52,7 +48,7 @@ function convertShapeResult(sr: WasmShapeTextResult | undefined) {
 }
 
 function snapshotAtlas(fontUrl: string) {
-  const atlas = getFontAtlas(fontUrl);
+  const atlas = fontCache.getFontAtlas(fontUrl);
   if (!atlas) return null;
   return { data: atlas.data.buffer, width: atlas.width, height: atlas.height };
 }
@@ -77,7 +73,7 @@ ctx.onmessage = async (e: MessageEvent) => {
       case "loadFont": {
         const { url, data } = msg.payload as { url: string; data: ArrayBuffer };
         const bytes = new Uint8Array(data);
-        const ok = loadFont(url, bytes.length, (buf: Uint8Array) => {
+        const ok = fontCache.loadFont(url, bytes.length, (buf: Uint8Array) => {
           buf.set(bytes);
         });
         ctx.postMessage({ id, type: "result", payload: { ok } });
@@ -86,7 +82,7 @@ ctx.onmessage = async (e: MessageEvent) => {
 
       case "unloadFont": {
         const { url } = msg.payload as { url: string };
-        const ok = unloadFont(url);
+        const ok = fontCache.unloadFont(url);
         ctx.postMessage({ id, type: "result", payload: { ok } });
         break;
       }
@@ -99,12 +95,12 @@ ctx.onmessage = async (e: MessageEvent) => {
 
         let anyAtlasChanged = false;
         const results = texts.map((text) => {
-          const sr = shapeText(fontUrl, text);
+          const sr = fontCache.shapeText(fontUrl, text);
           if (sr?.atlas_changed) anyAtlasChanged = true;
           return { text, shapeResult: convertShapeResult(sr) };
         });
 
-        tickFrame();
+        fontCache.tickFrame();
 
         // One atlas transfer for the entire batch
         const atlas = anyAtlasChanged ? snapshotAtlas(fontUrl) : null;
@@ -122,7 +118,7 @@ ctx.onmessage = async (e: MessageEvent) => {
       }
 
       case "tickFrame": {
-        tickFrame();
+        fontCache.tickFrame();
         ctx.postMessage({ id, type: "result", payload: null });
         break;
       }

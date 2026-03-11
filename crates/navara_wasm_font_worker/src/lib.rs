@@ -4,16 +4,10 @@ pub mod atlas;
 pub mod cache;
 pub mod shaping;
 
-use std::cell::RefCell;
-
 pub use atlas::{GlyphMetrics, SDFAtlas};
 pub use cache::{FontCache, FontEntry};
 use navara_wasm_utils::set_panic_hook;
 use wasm_bindgen::prelude::*;
-
-thread_local! {
-    static FONT_CACHE: RefCell<FontCache> = RefCell::new(FontCache::default());
-}
 
 #[wasm_bindgen(start)]
 pub fn start() {
@@ -72,7 +66,7 @@ pub struct ShapeTextResult {
 }
 
 // ---------------------------------------------------------------------------
-// Helpers (inlined from navara_wasm_types/src/view.rs)
+// Helpers
 // ---------------------------------------------------------------------------
 
 fn transfer_u8_array(byte_length: usize, f: &js_sys::Function) -> Vec<u8> {
@@ -92,37 +86,45 @@ fn copy_u8_array(buf: &[u8]) -> js_sys::Uint8Array {
 }
 
 // ---------------------------------------------------------------------------
-// Exposed WASM functions
+// WASM methods on FontCache
 // ---------------------------------------------------------------------------
 
-/// Load font bytes into the FontCache.
-/// Uses the same transfer-callback pattern as navara_wasm Core.loadFont.
-#[wasm_bindgen(js_name = loadFont)]
-pub fn load_font(url: String, byte_length: usize, f: &js_sys::Function) -> bool {
-    let data = transfer_u8_array(byte_length, f);
-    FONT_CACHE.with(|cache| cache.borrow_mut().load_font(url, data).is_ok())
-}
+#[wasm_bindgen]
+impl FontCache {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Self {
+        Self::default()
+    }
 
-/// Unload a font from the FontCache, freeing its atlas memory.
-#[wasm_bindgen(js_name = unloadFont)]
-pub fn unload_font(url: String) -> bool {
-    FONT_CACHE.with(|cache| cache.borrow_mut().unload_font(&url).is_ok())
-}
+    /// Load font bytes into the cache.
+    #[wasm_bindgen(js_name = loadFont)]
+    pub fn wasm_load_font(
+        &mut self,
+        url: String,
+        byte_length: usize,
+        f: &js_sys::Function,
+    ) -> bool {
+        let data = transfer_u8_array(byte_length, f);
+        self.load_font(url, data).is_ok()
+    }
 
-/// Check if a font is loaded.
-#[wasm_bindgen(js_name = isFontLoaded)]
-pub fn is_font_loaded(url: &str) -> bool {
-    FONT_CACHE.with(|cache| cache.borrow().is_font_loaded(url))
-}
+    /// Unload a font from the cache, freeing its atlas memory.
+    #[wasm_bindgen(js_name = unloadFont)]
+    pub fn wasm_unload_font(&mut self, url: String) -> bool {
+        self.unload_font(&url).is_ok()
+    }
 
-/// Shape text and ensure all glyphs are rasterized into the atlas.
-/// Returns shaped glyphs + atlas metrics, or None if font isn't loaded.
-#[wasm_bindgen(js_name = shapeText)]
-pub fn shape_text(url: &str, text: &str) -> Option<ShapeTextResult> {
-    FONT_CACHE.with(|cache| {
-        let mut cache = cache.borrow_mut();
-        let current_frame = cache.current_frame;
-        let entry = cache.get_mut(url)?;
+    /// Check if a font is loaded.
+    #[wasm_bindgen(js_name = isFontLoaded)]
+    pub fn wasm_is_font_loaded(&self, url: &str) -> bool {
+        self.is_font_loaded(url)
+    }
+
+    /// Shape text and ensure all glyphs are rasterized into the atlas.
+    #[wasm_bindgen(js_name = shapeText)]
+    pub fn wasm_shape_text(&mut self, url: &str, text: &str) -> Option<ShapeTextResult> {
+        let current_frame = self.current_frame;
+        let entry = self.get_mut(url)?;
 
         let shaped = shaping::shape_text(&entry.data, text)?;
         let units_per_em = entry.units_per_em;
@@ -143,7 +145,6 @@ pub fn shape_text(url: &str, text: &str) -> Option<ShapeTextResult> {
             })
             .collect();
 
-        // Only return metrics for glyphs in the shaped text (not entire atlas)
         let mut unique_ids = glyph_ids.clone();
         unique_ids.sort_unstable();
         unique_ids.dedup();
@@ -169,27 +170,22 @@ pub fn shape_text(url: &str, text: &str) -> Option<ShapeTextResult> {
             units_per_em,
             atlas_changed,
         })
-    })
-}
+    }
 
-/// Get the SDF atlas pixel data for a loaded font (copies into a new Uint8Array).
-#[wasm_bindgen(js_name = getFontAtlas)]
-pub fn get_font_atlas(url: &str) -> Option<FontAtlas> {
-    FONT_CACHE.with(|cache| {
-        let cache = cache.borrow();
-        let entry = cache.get(url)?;
+    /// Get the SDF atlas pixel data for a loaded font (copies into a new Uint8Array).
+    #[wasm_bindgen(js_name = getFontAtlas)]
+    pub fn wasm_get_font_atlas(&self, url: &str) -> Option<FontAtlas> {
+        let entry = self.get(url)?;
         Some(FontAtlas {
             data: copy_u8_array(&entry.atlas.pixel_data),
             width: entry.atlas.width,
             height: entry.atlas.height,
         })
-    })
-}
+    }
 
-/// Increment the frame counter for LRU tracking.
-#[wasm_bindgen(js_name = tickFrame)]
-pub fn tick_frame() {
-    FONT_CACHE.with(|cache| {
-        cache.borrow_mut().current_frame += 1;
-    });
+    /// Increment the frame counter for LRU tracking.
+    #[wasm_bindgen(js_name = tickFrame)]
+    pub fn wasm_tick_frame(&mut self) {
+        self.current_frame += 1;
+    }
 }

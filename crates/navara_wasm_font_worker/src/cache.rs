@@ -1,5 +1,6 @@
 use crate::atlas::SDFAtlas;
 use std::collections::HashMap as StdHashMap;
+use wasm_bindgen::prelude::*;
 
 /// Number of frames a glyph must be unused before it becomes evictable.
 pub const LRU_MIN_AGE: u64 = 120;
@@ -21,11 +22,12 @@ pub struct FontEntry {
 /// Each font entry owns its own SDF atlas so that different fonts
 /// don't compete for atlas space and the TypeScript side can receive
 /// a single atlas texture per font.
+#[wasm_bindgen]
 #[derive(Default)]
 pub struct FontCache {
-    /// Loaded fonts keyed by their URL
+    #[wasm_bindgen(skip)]
     pub fonts: StdHashMap<String, FontEntry>,
-    /// Frame counter for LRU tracking (incremented each update cycle)
+    #[wasm_bindgen(skip)]
     pub current_frame: u64,
 }
 
