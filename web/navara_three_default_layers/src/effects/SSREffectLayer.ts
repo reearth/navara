@@ -3,11 +3,11 @@ import {
   type EffectLayerConfig,
   type EffectLayerUpdate,
   type ViewContext,
-  SSR,
-  type SSROptions,
   type MRTPassEffectLayer,
 } from "@navara/three";
 import invariant from "tiny-invariant";
+
+import { SSR, type SSROptions } from "./ssr";
 
 type LayerDescription = {
   ssr?: Omit<SSROptions, "enabled" | "geometryBuffer">;

@@ -232,7 +232,7 @@ export function processEvent(
             textureOptions,
             texturizedSceneByTileCoordinates,
             tileMapByHandle,
-            viewEvents,
+            viewContext,
             uniforms,
           );
           meshHandler.setTileMeshPrepared(event.tile_handle);

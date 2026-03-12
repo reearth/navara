@@ -1,4 +1,10 @@
 import {
+  type Atmosphere,
+  Pass,
+  CustomEffectPass,
+  type EffectOptions,
+} from "@navara/three";
+import {
   AerialPerspectiveEffect,
   type AtmosphereOverlay,
   type AtmosphereShadow,
@@ -6,11 +12,6 @@ import {
 } from "@takram/three-atmosphere";
 import { type PerspectiveCamera, Texture } from "three";
 import invariant from "tiny-invariant";
-
-import type { Atmosphere } from "../atmosphere";
-import { Pass, type EffectOptions } from "../effects";
-
-import { CustomEffectPass } from "./CustomEffectPass";
 
 export type AerialPerspectiveOptions = {
   inscatter?: boolean;
@@ -70,7 +71,7 @@ export class AerialPerspective extends Pass<
   }
 
   onUpdate = () => {
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   };
 
   init() {
@@ -81,22 +82,17 @@ export class AerialPerspective extends Pass<
     this.sun = !!this.options.sun;
     this.moon = !!this.options.moon;
 
-    if (this.atmosphere.textures) {
-      this.onTextureLoaded();
-    } else {
-      this.atmosphere.on("_textureLoaded", this.onTextureLoaded);
-    }
+    this.atmosphere.onTexturesReady(() => this.onTextureLoaded());
 
-    this.atmosphere._overlay.on("changed", this.onOverlayChanged);
-    this.atmosphere._shadow.on("changed", this.onShadowChanged);
-    this.atmosphere._shadowLength.on("changed", this.onShadowLengthChanged);
-    this.atmosphere._enableShadows.on("changed", this.onEnableShadowChanged);
+    this.atmosphere.overlay.on("changed", this.onOverlayChanged);
+    this.atmosphere.shadow.on("changed", this.onShadowChanged);
+    this.atmosphere.shadowLength.on("changed", this.onShadowLengthChanged);
+    this.atmosphere.enableShadows.on("changed", this.onEnableShadowChanged);
   }
 
   onTextureLoaded = () => {
     invariant(this.atmosphere.textures);
     Object.assign(this.rawEffect, this.atmosphere.textures);
-    this.atmosphere.off("_textureLoaded", this.onTextureLoaded);
   };
 
   onOverlayChanged = (v: AtmosphereOverlay | null) => {
@@ -115,7 +111,7 @@ export class AerialPerspective extends Pass<
   onEnableShadowChanged = (v: boolean) => {
     this.cloudsShadows = v;
     if (v) {
-      this.rawEffect.shadow = this.atmosphere._shadow.value;
+      this.rawEffect.shadow = this.atmosphere.shadow.value;
     } else {
       this.rawEffect.shadow = null;
     }

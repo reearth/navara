@@ -2,10 +2,10 @@ import {
   degreeToRadian,
   geodeticToVector3,
   Color,
-  type FogLightDefinition,
   type Layer as NavaraLayer,
   type LayerDescription,
 } from "@navara/three";
+import type { FogLightDefinition } from "@navara/three_default_layers";
 import type { DefaultEffectLayerDeclarationDescription } from "@navara/three_default_plugin";
 import { Layer, useViewContext } from "@navara/three_react";
 import type { FeatureCollection, Point } from "geojson";

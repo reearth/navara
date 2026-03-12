@@ -1,10 +1,10 @@
+// eslint-disable-next-line @typescript-eslint/triple-slash-reference
+/// <reference path="../external/types/n8ao.d.ts" />
+
 import type { Nullable } from "@navara/core";
+import { Color, Pass, type EffectOptions } from "@navara/three";
 import { N8AOPostPass, type QualityMode } from "n8ao";
 import { Scene, type Camera } from "three";
-
-import { Color } from "../Color";
-
-import { Pass, type EffectOptions } from "./effect";
 
 export { ToneMappingMode } from "postprocessing";
 
@@ -89,7 +89,7 @@ export class SSAO extends Pass<N8AOPostPass, unknown, SSAOOptions> {
     if (!this.rawPass) return;
     this.rawPass.setQualityMode(v);
 
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
   get halfRes() {
     return this.options.halfRes ?? !!DEFAULT_SSAO_OPTIONS.halfRes;
@@ -100,7 +100,7 @@ export class SSAO extends Pass<N8AOPostPass, unknown, SSAOOptions> {
     if (!this.rawPass) return;
     this.rawPass.configuration.halfRes = v;
 
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
   get samples() {
     return this.options.samples ?? DEFAULT_SSAO_OPTIONS.samples;
@@ -112,7 +112,7 @@ export class SSAO extends Pass<N8AOPostPass, unknown, SSAOOptions> {
     this.rawPass.configuration.aoSamples =
       v ?? this.rawPass.configuration.aoSamples;
 
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
   get radius() {
     return this.options.radius ?? DEFAULT_SSAO_OPTIONS.radius;
@@ -124,7 +124,7 @@ export class SSAO extends Pass<N8AOPostPass, unknown, SSAOOptions> {
     this.rawPass.configuration.aoRadius =
       v ?? this.rawPass.configuration.aoRadius;
 
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
   get intensity() {
     return this.options.intensity ?? DEFAULT_SSAO_OPTIONS.intensity;
@@ -135,7 +135,7 @@ export class SSAO extends Pass<N8AOPostPass, unknown, SSAOOptions> {
     if (!this.rawPass) return;
     this.rawPass.configuration.intensity = v;
 
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
   get color() {
     return this.options.color ?? DEFAULT_SSAO_OPTIONS.color;
@@ -146,6 +146,6 @@ export class SSAO extends Pass<N8AOPostPass, unknown, SSAOOptions> {
     if (!this.rawPass) return;
     this.rawPass.configuration.color = v.raw;
 
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 }

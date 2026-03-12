@@ -50,7 +50,6 @@ export function renderFeature(
   buf: BufferLoader,
   uniforms: CommonUniforms,
   tileHandle: TileHandle | undefined,
-  viewEvents: EventHandler<ViewEvents>,
   viewContext: ViewContext,
   layerId: string,
 ): Promise<Mesh | Sprite | Object3D | undefined> | undefined {
@@ -61,24 +60,10 @@ export function renderFeature(
     return renderBillboard(f.billboard, buf, viewContext, layerId);
   }
   if (f.model) {
-    return renderModel(
-      f.model,
-      buf,
-      uniforms,
-      viewEvents,
-      viewContext,
-      layerId,
-    );
+    return renderModel(f.model, buf, uniforms, viewContext, layerId);
   }
   if (f.polyline) {
-    return renderPolyline(
-      f.polyline,
-      buf,
-      uniforms,
-      viewEvents,
-      viewContext,
-      layerId,
-    );
+    return renderPolyline(f.polyline, buf, uniforms, viewContext, layerId);
   }
   if (f.polygon) {
     return renderPolygon(
@@ -86,7 +71,6 @@ export function renderFeature(
       buf,
       uniforms,
       tileHandle,
-      viewEvents,
       viewContext,
       layerId,
     );
@@ -140,7 +124,6 @@ export async function processRenderableFeatureAdded(
     buf,
     uniforms,
     tileHandle,
-    viewEvents,
     viewContext,
     featureLayerId,
   )

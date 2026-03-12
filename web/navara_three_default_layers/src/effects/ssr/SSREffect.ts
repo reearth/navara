@@ -1,5 +1,6 @@
 // Research and development by https://github.com/takram-design-engineering
 
+import { blendFunction, type BlendMode } from "@navara/three";
 import fragmentShader from "@shaders/glsl/ssrEffect.frag.glsl?raw";
 import {
   Effect,
@@ -16,8 +17,6 @@ import {
   type TextureDataType,
   type WebGLRenderer,
 } from "three";
-
-import { blendFunction, type BlendMode } from "../../utils";
 
 import {
   ConeTracingPass,

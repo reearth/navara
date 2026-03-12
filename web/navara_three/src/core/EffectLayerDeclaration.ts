@@ -68,7 +68,7 @@ export type EffectBaseInstance<Instance extends object = object> =
  *   set offset(v: number) {
  *     this.options.offset = v;
  *     if (this.rawEffect) this.rawEffect.offset = v;
- *     this.emit("_needsUpdate");
+ *     this.emit("needsUpdate");
  *   }
  * }
  * ```

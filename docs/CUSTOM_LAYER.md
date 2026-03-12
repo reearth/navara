@@ -105,7 +105,7 @@ class MyMeshLayer extends MeshLayerDeclaration<
       if (updates.myMesh.color !== undefined) {
         this._instance.material.color.set(updates.myMesh.color.raw);
       }
-      this.emit("_needsUpdate");
+      this.emit("needsUpdate");
     }
     super.onUpdateConfig(updates);
   }

@@ -143,7 +143,9 @@ export * from "./evaluations";
 export { SKY_RENDER_ORDER, STARS_RENDER_ORDER } from "./renderOrder";
 export * from "@navara/three_api";
 export * from "./Color";
-export { type BlendMode, createReplacer } from "./utils";
+export { type BlendMode, blendFunction, createReplacer } from "./utils";
+export { Atmosphere, type AtmosphereOptions } from "./atmosphere";
+export type { Quality } from "./quality";
 export type { CustomObject3DEventMap } from "./object3DEvent";
 
 // NOTE:
@@ -232,11 +234,6 @@ export type ViewEvents = {
   postRender: (t: number) => void;
   /** @private Emitted when terrain height sampling completes. */
   _sample_terrain_height_received: (ev: TerrainHeightUpdatedEvent) => void;
-  /** @private Emitted when a material is mounted for CSM shadows. */
-  _csmMounted: (material: Material) => void;
-  /** @private Emitted when a material is unmounted from CSM shadows. */
-  _csmUnmounted: (material: Material) => void;
-
   /** Emitted on mouse down with map coordinates. */
   mousedown: (event: MapMouseEvent) => void;
   /** Emitted when mouse enters the canvas with map coordinates. */
@@ -699,7 +696,7 @@ export default class ThreeView<
     }
 
     this.atmosphere = new Atmosphere(this.renderer, options.atmosphere);
-    this.atmosphere.on("_needsUpdate", this.forceUpdate);
+    this.atmosphere.on("needsUpdate", this.forceUpdate);
 
     // Initialize SelectiveEffectHelper
     this.selectiveEffectHelper = new SelectiveEffectHelper(width, height);
@@ -716,7 +713,12 @@ export default class ThreeView<
         meshes: this._meshes,
         drapedMaterials: this._drapedFeatureMaterials,
       },
-      this,
+      {
+        applyShadowMaterial: (material: Material) =>
+          this.setupCSMForMaterial(material),
+        removeShadowMaterial: (material: Material) =>
+          this.removeCSMForMaterial(material),
+      },
       this.selectiveEffectHelper,
       {
         selectiveEffectMask: this._options.selectiveEffects?.debugViews,
@@ -784,14 +786,6 @@ export default class ThreeView<
       type: "effect",
       final: {},
     } as LayerDescription);
-
-    // Set up CSM material mounting listener
-    this.on("_csmMounted", (material: Material) => {
-      this.setupCSMForMaterial(material);
-    });
-    this.on("_csmUnmounted", (material: Material) => {
-      this.removeCSMForMaterial(material);
-    });
   }
 
   private get renderPass() {
@@ -1298,7 +1292,7 @@ export default class ThreeView<
     }
 
     // Trigger re-render
-    meshLayer.on("_needsUpdate", this.forceUpdate);
+    meshLayer.on("needsUpdate", this.forceUpdate);
 
     const l = new LayerHandle(meshLayer);
 
@@ -1332,7 +1326,7 @@ export default class ThreeView<
     }
 
     // Trigger re-render
-    lightLayer.on("_needsUpdate", this.forceUpdate);
+    lightLayer.on("needsUpdate", this.forceUpdate);
 
     const l = new LayerHandle(lightLayer);
 
@@ -1368,7 +1362,7 @@ export default class ThreeView<
     }
 
     // Trigger re-render
-    effectLayer.on("_needsUpdate", this.forceUpdate);
+    effectLayer.on("needsUpdate", this.forceUpdate);
 
     const l = new LayerHandle(effectLayer);
 

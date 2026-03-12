@@ -1,7 +1,5 @@
+import { type BlendMode, Effect, type EffectOptions } from "@navara/three";
 import type { Camera, Texture } from "three";
-
-import type { BlendMode } from "../../utils";
-import { Effect, type EffectOptions } from "../effect";
 
 import {
   SSREffect as SSREffectImpl,
@@ -167,7 +165,7 @@ export class SSR extends Effect<SSREffectImpl, SSROptions> {
   set geometryBuffer(v: Texture | null) {
     this.rawEffect.geometryBuffer = v;
     this.options.geometryBuffer = v;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get resolutionScale(): number {
@@ -177,7 +175,7 @@ export class SSR extends Effect<SSREffectImpl, SSROptions> {
     if (!this.rawEffect) return;
     this.options.resolutionScale = v;
     this.rawEffect.resolutionScale = v;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get iterations(): number {
@@ -187,7 +185,7 @@ export class SSR extends Effect<SSREffectImpl, SSROptions> {
     if (!this.rawEffect) return;
     this.options.iterations = v;
     this.rawEffect.iterations = v;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get binarySearchIterations(): number {
@@ -200,7 +198,7 @@ export class SSR extends Effect<SSREffectImpl, SSROptions> {
     if (!this.rawEffect) return;
     this.options.binarySearchIterations = v;
     this.rawEffect.binarySearchIterations = v;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get pixelZSize(): number {
@@ -210,7 +208,7 @@ export class SSR extends Effect<SSREffectImpl, SSROptions> {
     if (!this.rawEffect) return;
     this.options.pixelZSize = v;
     this.rawEffect.pixelZSize = v;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get pixelStride(): number {
@@ -220,7 +218,7 @@ export class SSR extends Effect<SSREffectImpl, SSROptions> {
     if (!this.rawEffect) return;
     this.options.pixelStride = v;
     this.rawEffect.pixelStride = v;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get pixelStrideZCutoff(): number {
@@ -232,7 +230,7 @@ export class SSR extends Effect<SSREffectImpl, SSROptions> {
     if (!this.rawEffect) return;
     this.options.pixelStrideZCutoff = v;
     this.rawEffect.pixelStrideZCutoff = v;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get maxRayDistance(): number {
@@ -242,7 +240,7 @@ export class SSR extends Effect<SSREffectImpl, SSROptions> {
     if (!this.rawEffect) return;
     this.options.maxRayDistance = v;
     this.rawEffect.maxRayDistance = v;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get screenEdgeFadeStart(): number {
@@ -255,7 +253,7 @@ export class SSR extends Effect<SSREffectImpl, SSROptions> {
     if (!this.rawEffect) return;
     this.options.screenEdgeFadeStart = v;
     this.rawEffect.screenEdgeFadeStart = v;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get eyeFadeStart(): number {
@@ -265,7 +263,7 @@ export class SSR extends Effect<SSREffectImpl, SSROptions> {
     if (!this.rawEffect) return;
     this.options.eyeFadeStart = v;
     this.rawEffect.eyeFadeStart = v;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get eyeFadeEnd(): number {
@@ -275,7 +273,7 @@ export class SSR extends Effect<SSREffectImpl, SSROptions> {
     if (!this.rawEffect) return;
     this.options.eyeFadeEnd = v;
     this.rawEffect.eyeFadeEnd = v;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get jitter(): number {
@@ -285,7 +283,7 @@ export class SSR extends Effect<SSREffectImpl, SSROptions> {
     if (!this.rawEffect) return;
     this.options.jitter = v;
     this.rawEffect.jitter = v;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get useConeTracing(): boolean {
@@ -295,7 +293,7 @@ export class SSR extends Effect<SSREffectImpl, SSROptions> {
     if (!this.rawEffect) return;
     this.options.useConeTracing = v;
     this.rawEffect.useConeTracing = v;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get coneTracingFadeStart(): number {
@@ -308,7 +306,7 @@ export class SSR extends Effect<SSREffectImpl, SSROptions> {
     if (!this.rawEffect) return;
     this.options.coneTracingFadeStart = v;
     this.rawEffect.coneTracingFadeStart = v;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get coneTracingFadeEnd(): number {
@@ -320,7 +318,7 @@ export class SSR extends Effect<SSREffectImpl, SSROptions> {
     if (!this.rawEffect) return;
     this.options.coneTracingFadeEnd = v;
     this.rawEffect.coneTracingFadeEnd = v;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get coneTracingMaxDistance(): number {
@@ -333,7 +331,7 @@ export class SSR extends Effect<SSREffectImpl, SSROptions> {
     if (!this.rawEffect) return;
     this.options.coneTracingMaxDistance = v;
     this.rawEffect.coneTracingMaxDistance = v;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get coneTracingIteration(): number {
@@ -346,7 +344,7 @@ export class SSR extends Effect<SSREffectImpl, SSROptions> {
     if (!this.rawEffect) return;
     this.options.coneTracingIteration = v;
     this.rawEffect.coneTracingIteration = v;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get coneTracingIor(): number {
@@ -356,6 +354,6 @@ export class SSR extends Effect<SSREffectImpl, SSROptions> {
     if (!this.rawEffect) return;
     this.options.coneTracingIor = v;
     this.rawEffect.coneTracingIor = v;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 }

@@ -3,9 +3,9 @@ import {
   type EffectLayerConfig,
   type EffectLayerUpdate,
   type ViewContext,
-  ToneMapping,
-  type ToneMappingOptions,
 } from "@navara/three";
+
+import { ToneMapping, type ToneMappingOptions } from "./toneMapping";
 
 type LayerDescription = {
   toneMapping?: Omit<ToneMappingOptions, "enabled">;

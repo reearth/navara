@@ -3,7 +3,6 @@ import type { FontManager } from "@navara/font";
 import type { ConcurrencyManager } from "@navara/worker";
 import type { Material, Object3D, PerspectiveCamera } from "three";
 
-import type { ViewEvents } from "..";
 import type { Atmosphere } from "../atmosphere";
 import { Color } from "../Color";
 import type { LayersManager } from "../layersManager";
@@ -29,13 +28,14 @@ type Private = {
 
 // Restrict public API for a layer declaration.
 export class ViewContext {
-  private eventHandler?: EventHandler<ViewEvents>;
   public selectiveEffectRegistry?: SelectiveEffectHelper;
   public debugOptions: ViewDebugOptions;
   public globe?: Globe;
   public fontManager?: FontManager;
 
   private readonly selectiveEffects: SelectiveEffectManager;
+  private _applyShadowMaterial?: (material: Material) => void;
+  private _removeShadowMaterial?: (material: Material) => void;
 
   constructor(
     public scenes: Scenes,
@@ -45,11 +45,15 @@ export class ViewContext {
     public renderPassOrchestrator: RenderPassOrchestrator,
     public concurrencyManager: ConcurrencyManager,
     public _privates: Private,
-    eventHandler?: EventHandler<ViewEvents>,
+    shadowCallbacks?: {
+      applyShadowMaterial: (material: Material) => void;
+      removeShadowMaterial: (material: Material) => void;
+    },
     selectiveEffectHelper?: SelectiveEffectHelper,
     debugOptions?: ViewDebugOptions,
   ) {
-    this.eventHandler = eventHandler;
+    this._applyShadowMaterial = shadowCallbacks?.applyShadowMaterial;
+    this._removeShadowMaterial = shadowCallbacks?.removeShadowMaterial;
     this.selectiveEffectRegistry = selectiveEffectHelper;
     this.debugOptions = debugOptions ?? {};
 
@@ -66,8 +70,12 @@ export class ViewContext {
     this.camera = camera;
   }
 
-  emit(event: "_csmMounted" | "_csmUnmounted", material: Material): void {
-    this.eventHandler?.emit(event, material);
+  applyShadowMaterial(material: Material): void {
+    this._applyShadowMaterial?.(material);
+  }
+
+  removeShadowMaterial(material: Material): void {
+    this._removeShadowMaterial?.(material);
   }
 
   registerLayerEffects(
