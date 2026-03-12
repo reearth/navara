@@ -146,7 +146,7 @@ export class SkyBoxMeshLayer extends MeshLayerDeclaration<
         Object.assign(origin, cfg);
       }
 
-      this.emit("_needsUpdate");
+      this.emit("needsUpdate");
     }
 
     super.onUpdateConfig(updates);
@@ -166,7 +166,7 @@ export class SkyBoxMeshLayer extends MeshLayerDeclaration<
 
     material.uniforms["uSunDirView"].value = new Vector3(v.x, v.y, v.z);
 
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   protected disposeMesh(): void {

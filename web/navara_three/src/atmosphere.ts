@@ -10,6 +10,7 @@ import {
   type PrecomputedTextures,
 } from "@takram/three-atmosphere";
 import { Vector3, Matrix4, type WebGLRenderer } from "three";
+import invariant from "tiny-invariant";
 
 import { ATMOSPHERE_ASSETS_URL, STBN_URL } from "./constants";
 
@@ -17,12 +18,12 @@ import { ATMOSPHERE_ASSETS_URL, STBN_URL } from "./constants";
  * Events emitted by the {@link Atmosphere} class.
  */
 export type AtmosphereEvents = {
-  /** @private */
-  _needsUpdate: () => void;
-  /** @private */
-  _textureLoaded: () => void;
-  /** @private */
-  _disposed: () => void;
+  /** Emitted when the atmosphere needs to trigger a re-render. */
+  needsUpdate: () => void;
+  /** Emitted when precomputed atmosphere textures have been loaded. */
+  textureLoaded: () => void;
+  /** Emitted when the atmosphere is disposed. */
+  disposed: () => void;
   /** Emitted when the sun direction changes. */
   sunChanged: (sunDirection: Vector3) => void;
 };
@@ -82,22 +83,10 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
   textures?: PrecomputedTextures;
 
   // Variables that come from Clouds.
-  /**
-   * @private
-   */
-  _overlay = new Observed<AtmosphereOverlay | null>(null);
-  /**
-   * @private
-   */
-  _shadow = new Observed<AtmosphereShadow | null>(null);
-  /**
-   * @private
-   */
-  _shadowLength = new Observed<AtmosphereShadowLength | null>(null);
-  /**
-   * @private
-   */
-  _enableShadows = new Observed<boolean>(true);
+  overlay = new Observed<AtmosphereOverlay | null>(null);
+  shadow = new Observed<AtmosphereShadow | null>(null);
+  shadowLength = new Observed<AtmosphereShadowLength | null>(null);
+  enableShadows = new Observed<boolean>(true);
 
   /**
    * @private
@@ -129,7 +118,7 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
    */
   onUpdate = () => {
     this.needsUpdate = true;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   };
 
   /**
@@ -148,7 +137,7 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
           DEFAULT_ATMOSPHERE_OPTIONS.atmosphereAssetsUrl,
       );
 
-    this.emit("_textureLoaded");
+    this.emit("textureLoaded");
   }
 
   /**
@@ -162,7 +151,22 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
    * @private
    */
   _dispose() {
-    this.emit("_disposed");
+    this.emit("disposed");
+  }
+
+  /**
+   * Invokes the callback with precomputed textures immediately if already loaded,
+   * or registers a one-time listener to invoke it once textures are ready.
+   */
+  onTexturesReady(callback: (textures: PrecomputedTextures) => void): void {
+    if (this.textures) {
+      callback(this.textures);
+    } else {
+      this.once("textureLoaded", () => {
+        invariant(this.textures);
+        callback(this.textures);
+      });
+    }
   }
 
   /**

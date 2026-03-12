@@ -43,7 +43,6 @@
     "@takram/three-clouds": "^0.7.1",
     "@takram/three-geospatial": "^0.7.0",
     "@takram/three-geospatial-effects": "^0.6.0",
-    "n8ao": "^1.10.1",
     "stats.js": "^0.17.0",
     "three-stdlib": "^2.36.1",
     "troika-three-text": "^0.52.4"

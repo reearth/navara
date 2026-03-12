@@ -3,9 +3,9 @@ import {
   type EffectLayerConfig,
   type EffectLayerUpdate,
   type ViewContext,
-  DepthOfField,
-  type DepthOfFieldOptions,
 } from "@navara/three";
+
+import { DepthOfField, type DepthOfFieldOptions } from "./depthOfField";
 
 type LayerDescription = {
   depthOfField?: Omit<DepthOfFieldOptions, "enabled">;

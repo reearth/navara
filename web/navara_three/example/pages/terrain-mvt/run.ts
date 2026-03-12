@@ -1,8 +1,5 @@
-import ThreeView, {
-  Color,
-  JAPAN_GSI_ELEVATION_DECODER,
-  ToneMappingMode,
-} from "@navara/three";
+import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
+import { ToneMappingMode } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
   type DefaultLayerDescriptions,

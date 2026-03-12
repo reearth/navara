@@ -81,7 +81,7 @@ class Vignette extends Effect<VignetteEffect, VignetteOptions> {
     this.options.technique = v;
     if (!this.rawEffect) return;
     this.rawEffect.technique = selectTechnique(v);
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get offset(): number {
@@ -93,7 +93,7 @@ class Vignette extends Effect<VignetteEffect, VignetteOptions> {
     this.options.offset = v;
     if (!this.rawEffect) return;
     this.rawEffect.offset = v;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get darkness(): number {
@@ -105,7 +105,7 @@ class Vignette extends Effect<VignetteEffect, VignetteOptions> {
     this.options.darkness = v;
     if (!this.rawEffect) return;
     this.rawEffect.darkness = v;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 }
 

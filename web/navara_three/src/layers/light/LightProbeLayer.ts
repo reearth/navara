@@ -71,7 +71,7 @@ export class LightProbeLayer extends LightLayerDeclaration<
         this._instance.sh = sh;
       }
 
-      this.emit("_needsUpdate");
+      this.emit("needsUpdate");
     }
 
     super.onUpdateConfig(updates);

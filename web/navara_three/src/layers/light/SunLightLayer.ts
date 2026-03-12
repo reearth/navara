@@ -1,5 +1,4 @@
 import { Material } from "three";
-import invariant from "tiny-invariant";
 
 import { Color } from "../../Color";
 import {
@@ -44,21 +43,11 @@ export class SunLightLayer extends LightLayerDeclaration<
     } as SunLightOptions);
 
     // Set up atmosphere integration
-    if (this.view.atmosphere.textures) {
-      sunLight.setTransmittanceTexture(
-        this.view.atmosphere.textures.transmittanceTexture,
-      );
-    } else {
-      const textureLoaded = () => {
-        invariant(this.view.atmosphere.textures);
-        sunLight.setTransmittanceTexture(
-          this.view.atmosphere.textures.transmittanceTexture,
-        );
-      };
-      this.view.atmosphere.on("_textureLoaded", textureLoaded);
-    }
+    this.view.atmosphere.onTexturesReady((t) =>
+      sunLight.setTransmittanceTexture(t.transmittanceTexture),
+    );
 
-    sunLight.on("_needsUpdate", () => this.emit("_needsUpdate"));
+    sunLight.on("needsUpdate", () => this.emit("needsUpdate"));
     sunLight.on("_csmChanged", this.updateSceneLights.bind(this));
 
     return sunLight;

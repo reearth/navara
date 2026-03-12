@@ -1,7 +1,6 @@
+import { Effect, type EffectOptions } from "@navara/three";
 import { DepthOfFieldEffect, BlendFunction } from "postprocessing";
 import type { Camera } from "three";
-
-import { Effect, type EffectOptions } from "./effect";
 
 export type DepthOfFieldOptions = {
   /** Normalized focus distance that defines where the focus plane is, Range is [0.0, 1.0]. */
@@ -50,7 +49,7 @@ export class DepthOfField extends Effect<
     this.options.focusDistance = v;
     if (!this.rawEffect) return;
     this.rawEffect.cocMaterial.uniforms.focusDistance.value = v;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get focalLength() {
@@ -64,7 +63,7 @@ export class DepthOfField extends Effect<
     this.options.focalLength = v;
     if (!this.rawEffect) return;
     this.rawEffect.cocMaterial.uniforms.focalLength.value = v;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get bokehScale() {
@@ -76,6 +75,6 @@ export class DepthOfField extends Effect<
     this.options.bokehScale = v;
     if (!this.rawEffect) return;
     this.rawEffect.bokehScale = v;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 }

@@ -1,10 +1,9 @@
+import { Effect, type EffectOptions } from "@navara/three";
 import {
   LensFlareEffect,
   lensFlareEffectOptionsDefaults,
 } from "@takram/three-geospatial-effects";
 import type { Camera } from "three";
-
-import { Effect, type EffectOptions } from "./effect";
 
 export { ToneMappingMode } from "postprocessing";
 
@@ -35,6 +34,6 @@ export class LensFlare extends Effect<LensFlareEffect, LensFlareOptions> {
     this.options.intensity = v;
     if (!this.rawEffect) return;
     this.rawEffect.intensity = v;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 }

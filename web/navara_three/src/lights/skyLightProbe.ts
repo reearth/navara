@@ -6,7 +6,7 @@ import {
 import { Vector3 } from "three";
 
 export type SkyLightProbeEvents = {
-  _needsUpdate: () => void;
+  needsUpdate: () => void;
 };
 
 export type SkyLightProbeOptions = {
@@ -43,7 +43,7 @@ export class SkyLightProbe extends EventHandler<SkyLightProbeEvents> {
   }
   set visible(v: boolean) {
     this.raw.visible = v;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get intensity() {
@@ -51,7 +51,7 @@ export class SkyLightProbe extends EventHandler<SkyLightProbeEvents> {
   }
   set intensity(v: number) {
     this.raw.intensity = v;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   update() {

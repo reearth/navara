@@ -1,4 +1,3 @@
-import type { EventHandler } from "@navara/core";
 import { ModelMesh as NavaraModelMesh } from "@navara/engine";
 import {
   BufferGeometry,
@@ -14,7 +13,6 @@ import {
 } from "three";
 
 import type { BufferLoader } from "../";
-import type { ViewEvents } from "../..";
 import type { ViewContext } from "../../core";
 import { ModelMesh } from "../../mesh/model";
 import type { CommonUniforms } from "../../uniforms";
@@ -28,7 +26,6 @@ export async function renderModel(
   m: NavaraModelMesh,
   buf: BufferLoader,
   uniforms: CommonUniforms,
-  viewEvents: EventHandler<ViewEvents>,
   viewContext: ViewContext,
   layerId: string,
 ) {
@@ -151,7 +148,6 @@ export async function renderModel(
     m,
     uniforms,
     buf,
-    viewEvents,
     viewContext,
     layerId,
   );

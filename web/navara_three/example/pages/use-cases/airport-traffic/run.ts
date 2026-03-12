@@ -1,12 +1,12 @@
 import ThreeView, {
-  ToneMappingMode,
   Color,
   geodeticToVector3,
   degreeToRadian,
 } from "@navara/three";
-import type {
-  ArclineMeshLayer,
-  GlowGlobeMeshLayer,
+import {
+  ToneMappingMode,
+  type ArclineMeshLayer,
+  type GlowGlobeMeshLayer,
 } from "@navara/three_default_layers";
 import {
   DefaultPlugin,

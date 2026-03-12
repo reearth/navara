@@ -43,7 +43,7 @@ export class AmbientLightLayer extends LightLayerDeclaration<
 
     const light = new AmbientLight(options);
 
-    light.on("_needsUpdate", () => this.emit("_needsUpdate"));
+    light.on("needsUpdate", () => this.emit("needsUpdate"));
 
     return light;
   }
