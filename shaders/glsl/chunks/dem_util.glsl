@@ -99,21 +99,21 @@ float decodeDEMHeight(vec4 color, vec3 rgbScaler, float boundary, float minOffse
 
 // Perform bilinear interpolation on 4 decoded height values
 // Handles invalid data (negative values) and artifact detection
-// Returns interpolated height or invalidValue if center is invalid
+// Returns interpolated height or invalidValue if the base (top-left) sample is invalid
 float interpolateDEMHeights(float h00, float h10, float h01, float h11, vec2 frac, float invalidValue) {
-  // Handle invalid data
-  if (h00 < 0.0) return invalidValue; // Center is invalid, return immediately
+  // Handle invalid data: if the base (top-left) sample is invalid, bail out
+  if (h00 < 0.0) return invalidValue;
 
   // Check for abnormal height jumps (RGB encoding boundary artifacts)
   // Use fixed threshold for artifact detection (~1000m is unrealistic for adjacent pixels)
   float maxReasonableDiff = 1000.0;
-
-  // Replace neighbors with large jumps (likely RGB artifacts)
+  
+  // Replace neighbors with large jumps relative to the base sample (likely RGB artifacts)
   if (h10 > 0.0 && abs(h10 - h00) > maxReasonableDiff) h10 = h00;
   if (h01 > 0.0 && abs(h01 - h00) > maxReasonableDiff) h01 = h00;
   if (h11 > 0.0 && abs(h11 - h00) > maxReasonableDiff) h11 = h00;
 
-  // Replace invalid neighbors with center value
+  // Replace invalid neighbors with the base sample value
   if (h10 < 0.0) h10 = h00;
   if (h01 < 0.0) h01 = h00;
   if (h11 < 0.0) h11 = h00;

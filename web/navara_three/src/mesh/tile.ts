@@ -96,6 +96,29 @@ export class TileMesh
   private warnedExceededTextures = false;
 
   /**
+   * Create and configure a DataTexture for hillshade DEM data
+   */
+  private static createHillshadeDataTexture(
+    bytes: Uint8Array,
+    size: number,
+  ): DataTexture {
+    const texture = new DataTexture(
+      bytes,
+      size,
+      size,
+      RGBAFormat,
+      UnsignedByteType,
+    );
+    texture.colorSpace = NoColorSpace;
+    texture.minFilter = NearestFilter;
+    texture.magFilter = NearestFilter;
+    texture.generateMipmaps = false;
+    texture.flipY = true; // Flip Y to match texture coordinate system
+    texture.needsUpdate = true;
+    return texture;
+  }
+
+  /**
    * Process hillshade backfill event: create texture and bind to material
    * Called when Rust completes DEM backfill operation
    */
@@ -117,6 +140,8 @@ export class TileMesh
     // Use entity ind and gen to create ID (same format as other textures)
     const id = `${event.ind}_${event.gen}`;
 
+    let texture: DataTexture;
+
     // Check if texture already exists (bidirectional backfill may update existing tiles)
     const existingTexture = loadedTexs.get(id);
     if (existingTexture && existingTexture instanceof DataTexture) {
@@ -125,29 +150,17 @@ export class TileMesh
       if (existingData.length === bytes.length) {
         existingData.set(bytes);
         existingTexture.needsUpdate = true;
-        return;
+        texture = existingTexture;
+      } else {
+        texture = TileMesh.createHillshadeDataTexture(bytes, size);
+        loadedTexs.set(id, texture);
       }
+    } else {
+      texture = TileMesh.createHillshadeDataTexture(bytes, size);
+      loadedTexs.set(id, texture);
     }
 
-    // Create new Three.js DataTexture from RGBA bytes
-    const texture = new DataTexture(
-      bytes,
-      size,
-      size,
-      RGBAFormat,
-      UnsignedByteType,
-    );
-    texture.colorSpace = NoColorSpace;
-    texture.minFilter = NearestFilter;
-    texture.magFilter = NearestFilter;
-    texture.generateMipmaps = false;
-    texture.flipY = true; // Flip Y to match texture coordinate system
-    texture.needsUpdate = true;
-
-    loadedTexs.set(id, texture);
-
-    // IMPORTANT: Directly bind the texture to the material's uniform
-    // This prevents seams when texture loads before mesh update
+    // Directly bind the texture to the material's uniform
     const tileMesh = tileMapByHandle.get(event.tile_handle);
     if (tileMesh && tileMesh.material.userData) {
       const material = tileMesh.material as TileMaterial;
@@ -162,7 +175,6 @@ export class TileMesh
         if (slotIndex >= 0) {
           // Directly update the texture uniform
           material.userData.textures.value[slotIndex] = texture;
-          material.needsUpdate = true;
         }
       }
     }
@@ -609,7 +621,6 @@ export class TileMesh
     } else {
       // No skirt data - use terrain geometry directly
       geometry = terrainGeometry;
-      terrainGeometry.dispose();
     }
 
     // Clean up original buffers
@@ -1535,6 +1546,8 @@ if (uPickable > 0.) {
       this.remove(this.shadowMesh);
       this.shadowMesh = undefined;
     }
+
+    this.geometry.dispose();
 
     // Detach any observers we attached on texturized scenes
     if (this.texturizedScenes?.userData?.childrenObserver) {

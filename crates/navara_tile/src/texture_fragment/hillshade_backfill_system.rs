@@ -66,12 +66,12 @@ pub fn filter_requestable_hillshade_data_requester(
             commands.entity(e).insert((Deleted, Ignored));
 
             // Remove this hillshade request from tile's texture_fragment_entity_ids
-            if let Some(ids) = tile.texture_fragment_entity_ids.as_mut() {
-                let idx = ids
+            if let Some(ids) = tile.texture_fragment_entity_ids.as_mut()
+                && let Some(idx) = ids
                     .iter()
                     .enumerate()
                     .find_map(|(i, id)| id.and_then(|id| (id == e).then_some(i)))
-                    .unwrap();
+            {
                 ids.remove(idx);
             }
         }
