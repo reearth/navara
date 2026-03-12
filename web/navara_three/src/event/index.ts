@@ -32,13 +32,23 @@ import {
 } from "@navara/engine";
 import { radianToDegree } from "@navara/three_api";
 import { canWorkerProcessImmediately } from "@navara/worker";
-import { Mesh, Material, Object3D, Texture, Sprite } from "three";
+import {
+  Mesh,
+  Material,
+  Object3D,
+  Texture,
+  Sprite,
+  DataTexture,
+  RGBAFormat,
+  UnsignedByteType,
+  NoColorSpace,
+  NearestFilter,
+} from "three";
 
 import { Layer, type ViewEvents } from "..";
 import { ThreeViewCamera } from "../camera";
 import type { ViewContext } from "../core";
 import type { LayersManager } from "../layersManager";
-import { TileMesh } from "../mesh/tile";
 import type { AbortableTextureLoader } from "../loaders/AbortableTextureLoader";
 import type { Scenes, TexturizedSceneByTileCoordinates } from "../scene";
 import { getImageDataFromImageBitmap } from "../tasks/getImageDataFromImageBitmap";
@@ -768,11 +778,107 @@ function processHillshadeBackfilled(
   // - Rust's cleanup_hillshade_backfilled_buffers will remove it when entity is deleted
   const copiedBytes = new Uint8Array(bytes);
 
-  // Delegate to TileMesh static method for texture processing
-  TileMesh.processHillshadeBackfilled(
-    event,
-    copiedBytes,
-    loadedTexs,
-    tileMapByHandle,
+  // Validate buffer format and size
+  // Buffer must be RGBA (4 bytes per pixel)
+  if (copiedBytes.length % 4 !== 0) {
+    console.warn(
+      `Invalid DEM buffer: length ${copiedBytes.length} is not a multiple of 4 (RGBA)`,
+    );
+    return;
+  }
+
+  const size = Math.sqrt(copiedBytes.length / 4);
+  // Verify size is a valid integer (should be original_size + 2, e.g., 258 or 514)
+  if (!Number.isInteger(size) || size < 3) {
+    console.warn(`Invalid backfilled DEM size: ${size}×${size}`);
+    return;
+  }
+
+  // Verify buffer length exactly matches expected dimensions
+  // This catches cases where length is wrong but sqrt happens to be an integer
+  const expectedLength = size * size * 4;
+  if (copiedBytes.length !== expectedLength) {
+    console.warn(
+      `DEM buffer size mismatch: expected ${expectedLength} bytes (${size}×${size}×4), got ${copiedBytes.length}`,
+    );
+    return;
+  }
+
+  // Use entity ind and gen to create ID (same format as other textures)
+  const id = `${event.ind}_${event.gen}`;
+
+  let texture: DataTexture;
+
+  // Check if texture already exists (bidirectional backfill may update existing tiles)
+  const existingTexture = loadedTexs.get(id);
+  if (existingTexture && existingTexture instanceof DataTexture) {
+    // Update existing DataTexture with new data (bidirectional backfill updated padding)
+    const existingData = existingTexture.image.data as Uint8Array;
+    if (existingData.length === copiedBytes.length) {
+      existingData.set(copiedBytes);
+      existingTexture.needsUpdate = true;
+      texture = existingTexture;
+    } else {
+      // Size mismatch - need to create new texture
+      // Dispose old texture before replacing
+      existingTexture.dispose();
+      texture = createHillshadeDataTexture(copiedBytes, size);
+      loadedTexs.set(id, texture);
+    }
+  } else {
+    // No existing DataTexture - dispose old texture if it exists (might be regular Texture)
+    if (existingTexture) {
+      existingTexture.dispose();
+    }
+    texture = createHillshadeDataTexture(copiedBytes, size);
+    loadedTexs.set(id, texture);
+  }
+
+  // Directly bind the texture to the material's uniform
+  // Update ALL tiles that reference this texture fragment ID (not just event.tile_handle)
+  // This is important because child tiles may reuse parent's textureFragments via readyParentTileHandle
+  for (const tileMesh of tileMapByHandle.values()) {
+    if (!tileMesh.material.userData) continue;
+
+    const material = tileMesh.material as unknown as {
+      userData: {
+        textureFragments?: { value: (string | null)[] };
+        textures?: { value: Texture[] };
+      };
+    };
+    const textureFragments = material.userData.textureFragments?.value;
+
+    if (textureFragments && material.userData.textures) {
+      // Find which texture slot this entity corresponds to
+      const slotIndex = textureFragments.findIndex((fragId) => fragId === id);
+
+      if (slotIndex >= 0) {
+        // Directly update the texture uniform
+        material.userData.textures.value[slotIndex] = texture;
+      }
+    }
+  }
+}
+
+/**
+ * Create and configure a DataTexture for hillshade DEM data
+ */
+function createHillshadeDataTexture(
+  bytes: Uint8Array,
+  size: number,
+): DataTexture {
+  const texture = new DataTexture(
+    bytes,
+    size,
+    size,
+    RGBAFormat,
+    UnsignedByteType,
   );
+  texture.colorSpace = NoColorSpace;
+  texture.minFilter = NearestFilter;
+  texture.magFilter = NearestFilter;
+  texture.generateMipmaps = false;
+  texture.flipY = true; // Flip Y to match texture coordinate system
+  texture.needsUpdate = true;
+  return texture;
 }

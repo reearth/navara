@@ -1,4 +1,5 @@
 use bevy_ecs::system::{Commands, Query};
+use url::Url;
 
 use navara_buffer_store::BufferStore;
 use navara_component::{Order, OrderByDistance, Priority};
@@ -76,11 +77,11 @@ pub(crate) fn request_texture_fragment(
     // Choose different path based on whether it's hillshade
     let entity = if is_hillshade {
         // Hillshade texture: use DataRequester (can backfill in Rust)
-        let extension = if url.ends_with(".webp") {
-            DataRequesterExtension::WebP
-        } else {
-            DataRequesterExtension::Png
-        };
+        // Use robust extension detection that handles query strings correctly
+        let extension = Url::parse(&url)
+            .ok()
+            .map(|parsed_url| DataRequesterExtension::from_url(&parsed_url))
+            .unwrap_or(DataRequesterExtension::Png); // Fallback to PNG if URL parsing fails
 
         commands.spawn((
             TileTextureFragmentMarker(handle),

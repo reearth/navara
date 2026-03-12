@@ -8,7 +8,6 @@ import type {
   TextureFragment,
   MeshChanged,
   Globe,
-  HillshadeBackfilledEvent,
 } from "@navara/engine";
 import ElevationParsFragment from "@shaders/glsl/chunks/elevation_pars_fragment.glsl";
 import HillshadeParsFragment from "@shaders/glsl/chunks/hillshade_pars_fragment.glsl";
@@ -18,7 +17,6 @@ import {
   BufferAttribute,
   BufferGeometry,
   Color,
-  DataTexture,
   NearestFilter,
   Mesh,
   MeshBasicMaterial,
@@ -27,7 +25,6 @@ import {
   RGBAFormat,
   SRGBColorSpace,
   Texture,
-  UnsignedByteType,
   Vector2,
   Vector3,
   Vector4,
@@ -91,101 +88,6 @@ export class TileMesh
   texturizedSceneRenderTargets: WebGLRenderTarget[] = [];
 
   private warnedExceededTextures = false;
-
-  /**
-   * Create and configure a DataTexture for hillshade DEM data
-   */
-  private static createHillshadeDataTexture(
-    bytes: Uint8Array,
-    size: number,
-  ): DataTexture {
-    const texture = new DataTexture(
-      bytes,
-      size,
-      size,
-      RGBAFormat,
-      UnsignedByteType,
-    );
-    texture.colorSpace = NoColorSpace;
-    texture.minFilter = NearestFilter;
-    texture.magFilter = NearestFilter;
-    texture.generateMipmaps = false;
-    texture.flipY = true; // Flip Y to match texture coordinate system
-    texture.needsUpdate = true;
-    return texture;
-  }
-
-  /**
-   * Process hillshade backfill event: create texture and bind to material
-   * Called when Rust completes DEM backfill operation
-   */
-  static processHillshadeBackfilled(
-    event: HillshadeBackfilledEvent | undefined,
-    bytes: Uint8Array,
-    loadedTexs: Map<string, Texture>,
-    tileMapByHandle: Map<bigint, TileMesh>,
-  ): void {
-    if (!event) return;
-
-    const size = Math.sqrt(bytes.length / 4);
-    // Verify size is valid (should be original_size + 2, e.g., 258 or 514)
-    if (!Number.isInteger(size) || size < 3) {
-      console.warn(`Invalid backfilled DEM size: ${size}×${size}`);
-      return;
-    }
-
-    // Use entity ind and gen to create ID (same format as other textures)
-    const id = `${event.ind}_${event.gen}`;
-
-    let texture: DataTexture;
-
-    // Check if texture already exists (bidirectional backfill may update existing tiles)
-    const existingTexture = loadedTexs.get(id);
-    if (existingTexture && existingTexture instanceof DataTexture) {
-      // Update existing DataTexture with new data (bidirectional backfill updated padding)
-      const existingData = existingTexture.image.data as Uint8Array;
-      if (existingData.length === bytes.length) {
-        existingData.set(bytes);
-        existingTexture.needsUpdate = true;
-        texture = existingTexture;
-      } else {
-        // Size mismatch - need to create new texture
-        // Dispose old texture before replacing
-        existingTexture.dispose();
-        texture = TileMesh.createHillshadeDataTexture(bytes, size);
-        loadedTexs.set(id, texture);
-      }
-    } else {
-      // No existing DataTexture - dispose old texture if it exists (might be regular Texture)
-      if (existingTexture) {
-        existingTexture.dispose();
-      }
-      texture = TileMesh.createHillshadeDataTexture(bytes, size);
-      loadedTexs.set(id, texture);
-    }
-
-    // Directly bind the texture to the material's uniform
-    // Update ALL tiles that reference this texture fragment ID (not just event.tile_handle)
-    // This is important because child tiles may reuse parent's textureFragments via readyParentTileHandle
-    for (const tileMesh of tileMapByHandle.values()) {
-      if (!tileMesh.material.userData) continue;
-
-      const material = tileMesh.material as TileMaterial;
-      const textureFragments = material.userData.textureFragments?.value as
-        | (string | null)[]
-        | undefined;
-
-      if (textureFragments && material.userData.textures) {
-        // Find which texture slot this entity corresponds to
-        const slotIndex = textureFragments.findIndex((fragId) => fragId === id);
-
-        if (slotIndex >= 0) {
-          // Directly update the texture uniform
-          material.userData.textures.value[slotIndex] = texture;
-        }
-      }
-    }
-  }
 
   constructor(
     mesh: MeshAdded,

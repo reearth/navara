@@ -184,8 +184,8 @@ pub fn backfill_hillshade_on_loaded(
                                     direction,
                                 );
 
-                                // Notify JS to reload the neighbor's texture with updated data
-                                // DataTexture copies bytes, so we must recreate it to see updated padding
+                                // Notify JS that this neighbor's backfilled buffer has updated padding,
+                                // so the existing DataTexture should re-upload/refresh its data (e.g. via needsUpdate)
                                 events.hillshade_backfilled.push((
                                     neighbor_entity,
                                     neighbor_state.backfilled_handle,
