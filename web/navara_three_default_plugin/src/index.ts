@@ -1,10 +1,5 @@
 import type ThreeView from "@navara/three";
-import {
-  Plugin,
-  type LayerHandle,
-  type SkyLightProbeLayer,
-  type SunLightLayer,
-} from "@navara/three";
+import { Plugin, type LayerHandle } from "@navara/three";
 import {
   RainMeshLayer,
   SnowMeshLayer,
@@ -62,6 +57,14 @@ import {
   type SSAOConfig,
   type SSRConfig,
   type ToneMappingConfig,
+  SunLightLayer,
+  AmbientLightLayer,
+  SkyLightProbeLayer,
+  LightProbeLayer,
+  type SunLightLayerConfig,
+  type AmbientLightLayerConfig,
+  type SkyLightProbeLayerConfig,
+  type LightProbeLayerConfig,
 } from "@navara/three_default_layers";
 
 export class DefaultPlugin extends Plugin<ThreeView<DefaultLayerDescriptions>> {
@@ -87,6 +90,12 @@ export class DefaultPlugin extends Plugin<ThreeView<DefaultLayerDescriptions>> {
     view.registerMesh("arrowHelper", ArrowHelperLayer);
     view.registerMesh("arcLines", ArclineMeshLayer);
     view.registerMesh("smoothLines", SmoothLineMeshLayer);
+
+    // Register light layers
+    view.registerLight("sun", SunLightLayer);
+    view.registerLight("ambient", AmbientLightLayer);
+    view.registerLight("skyLightProbe", SkyLightProbeLayer);
+    view.registerLight("lightProbe", LightProbeLayer);
 
     // Register effect layers
     view.registerEffect("aerialPerspective", AerialPerspectiveEffectLayer);
@@ -198,7 +207,14 @@ export class DefaultPlugin extends Plugin<ThreeView<DefaultLayerDescriptions>> {
 
 export type DefaultLayerDescriptions =
   | DefaultMeshLayerDeclarationDescription
+  | DefaultLightLayerDeclarationDescription
   | DefaultEffectLayerDeclarationDescription;
+
+export type DefaultLightLayerDeclarationDescription =
+  | SunLightLayerConfig
+  | SkyLightProbeLayerConfig
+  | AmbientLightLayerConfig
+  | LightProbeLayerConfig;
 
 export type DefaultEffectLayerDeclarationDescription =
   | AerialPerspectiveConfig

@@ -1,5 +1,5 @@
-import type { SunLightLayerConfig } from "@navara/three";
 import type {
+  SunLightLayerConfig,
   CloudsConfig,
   RainDropConfig,
   SSRConfig,

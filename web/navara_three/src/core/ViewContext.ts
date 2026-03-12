@@ -1,4 +1,5 @@
 import type { Globe } from "@navara/core";
+import { EventHandler } from "@navara/core";
 import type { ConcurrencyManager } from "@navara/worker";
 import type { Material, Object3D, PerspectiveCamera } from "three";
 
@@ -25,15 +26,18 @@ type Private = {
   drapedMaterials: DrapedMaterialCache;
 };
 
+type ViewContextEvents = {
+  unstableShadowApplied: (material: Material) => void;
+  unstableShadowRemoved: (material: Material) => void;
+};
+
 // Restrict public API for a layer declaration.
-export class ViewContext {
+export class ViewContext extends EventHandler<ViewContextEvents> {
   public selectiveEffectRegistry?: SelectiveEffectHelper;
   public debugOptions: ViewDebugOptions;
   public globe?: Globe;
 
   private readonly selectiveEffects: SelectiveEffectManager;
-  private _applyShadowMaterial?: (material: Material) => void;
-  private _removeShadowMaterial?: (material: Material) => void;
 
   constructor(
     public scenes: Scenes,
@@ -43,15 +47,10 @@ export class ViewContext {
     public renderPassOrchestrator: RenderPassOrchestrator,
     public concurrencyManager: ConcurrencyManager,
     public _privates: Private,
-    shadowCallbacks?: {
-      applyShadowMaterial: (material: Material) => void;
-      removeShadowMaterial: (material: Material) => void;
-    },
     selectiveEffectHelper?: SelectiveEffectHelper,
     debugOptions?: ViewDebugOptions,
   ) {
-    this._applyShadowMaterial = shadowCallbacks?.applyShadowMaterial;
-    this._removeShadowMaterial = shadowCallbacks?.removeShadowMaterial;
+    super();
     this.selectiveEffectRegistry = selectiveEffectHelper;
     this.debugOptions = debugOptions ?? {};
 
@@ -69,11 +68,11 @@ export class ViewContext {
   }
 
   applyShadowMaterial(material: Material): void {
-    this._applyShadowMaterial?.(material);
+    this.emit("unstableShadowApplied", material);
   }
 
   removeShadowMaterial(material: Material): void {
-    this._removeShadowMaterial?.(material);
+    this.emit("unstableShadowRemoved", material);
   }
 
   registerLayerEffects(

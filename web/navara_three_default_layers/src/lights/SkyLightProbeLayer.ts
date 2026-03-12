@@ -1,12 +1,11 @@
-// No additional imports needed from three
-
 import {
   LightLayerDeclaration,
   type LightLayerConfig,
   ViewContext,
   type LightLayerUpdate,
-} from "../../core";
-import { SkyLightProbe, type SkyLightProbeOptions } from "../../lights";
+} from "@navara/three";
+
+import { SkyLightProbe, type SkyLightProbeOptions } from "./skyLightProbe";
 
 type LayerDescription = {
   skyLightProbe?: SkyLightProbeOptions;

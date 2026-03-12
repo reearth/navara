@@ -12,12 +12,7 @@ import type { Promise as WorkerPoolPromise } from "@navara/worker";
 import type { Mesh, Sprite, Object3D, Material } from "three";
 
 import type { Color } from "../Color";
-import type {
-  SunLightLayerConfig,
-  SkyLightProbeLayerConfig,
-  AmbientLightLayerConfig,
-  LightProbeLayerConfig,
-} from "../layers";
+import type { LightLayerConfig } from "../core";
 import type {
   FinalCopyPassConfig,
   MRTPassConfig,
@@ -38,11 +33,7 @@ export type LayerDescription =
 
 export type MeshLayerDeclarationDescription = { type: "mesh" };
 
-export type LightLayerDeclarationDescription =
-  | SunLightLayerConfig
-  | SkyLightProbeLayerConfig
-  | AmbientLightLayerConfig
-  | LightProbeLayerConfig;
+export type LightLayerDeclarationDescription = LightLayerConfig;
 
 export type EffectLayerDeclarationDescription =
   | FinalCopyPassConfig
