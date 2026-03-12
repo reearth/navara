@@ -28,7 +28,6 @@ import {
   ClampToEdgeWrapping,
   RepeatWrapping,
   Group,
-  Material,
   PCFShadowMap,
 } from "three";
 import invariant from "tiny-invariant";
@@ -64,7 +63,6 @@ import {
 import { TEXTURE_LOADER } from "./event/loaders";
 import { registerInputEvents } from "./input";
 import { Layer, type LayerEvent } from "./layer";
-import { SunLightLayer, AmbientLightLayer, SkyLightProbeLayer } from "./layers";
 import {
   MRTPassEffectLayer,
   SelectiveBloomEffectLayer,
@@ -74,7 +72,6 @@ import {
   TransparentPassEffectLayer,
 } from "./layers/effect";
 import { FinalCopyEffectLayer } from "./layers/effect/FinalCopyEffectLayer";
-import { LightProbeLayer } from "./layers/light/LightProbeLayer";
 import { LayersManager } from "./layersManager";
 import { overrideMaterialsForMRT } from "./material";
 import { RenderPassOrchestrator } from "./orchestrators/RenderPassOrchestrator";
@@ -133,13 +130,14 @@ export * from "./shaders";
 export * from "./material";
 export * from "./core";
 export * from "./layers";
-export * from "./lights";
 export * from "./passes";
 export * from "./evaluations";
 export { SKY_RENDER_ORDER, STARS_RENDER_ORDER } from "./renderOrder";
 export * from "@navara/three_api";
 export * from "./Color";
-export { type BlendMode, createReplacer } from "./utils";
+export { type BlendMode, blendFunction, createReplacer } from "./utils";
+export { Atmosphere, type AtmosphereOptions } from "./atmosphere";
+export type { Quality } from "./quality";
 export type { CustomObject3DEventMap } from "./object3DEvent";
 
 // NOTE:
@@ -228,11 +226,6 @@ export type ViewEvents = {
   postRender: (t: number) => void;
   /** @private Emitted when terrain height sampling completes. */
   _sample_terrain_height_received: (ev: TerrainHeightUpdatedEvent) => void;
-  /** @private Emitted when a material is mounted for CSM shadows. */
-  _csmMounted: (material: Material) => void;
-  /** @private Emitted when a material is unmounted from CSM shadows. */
-  _csmUnmounted: (material: Material) => void;
-
   /** Emitted on mouse down with map coordinates. */
   mousedown: (event: MapMouseEvent) => void;
   /** Emitted when mouse enters the canvas with map coordinates. */
@@ -690,7 +683,7 @@ export default class ThreeView<
     }
 
     this.atmosphere = new Atmosphere(this.renderer, options.atmosphere);
-    this.atmosphere.on("_needsUpdate", this.forceUpdate);
+    this.atmosphere.on("needsUpdate", this.forceUpdate);
 
     // Initialize SelectiveEffectHelper
     this.selectiveEffectHelper = new SelectiveEffectHelper(width, height);
@@ -707,7 +700,6 @@ export default class ThreeView<
         meshes: this._meshes,
         drapedMaterials: this._drapedFeatureMaterials,
       },
-      this,
       this.selectiveEffectHelper,
       {
         selectiveEffectMask: this._options.selectiveEffects?.debugViews,
@@ -775,14 +767,6 @@ export default class ThreeView<
       type: "effect",
       final: {},
     } as LayerDescription);
-
-    // Set up CSM material mounting listener
-    this.on("_csmMounted", (material: Material) => {
-      this.setupCSMForMaterial(material);
-    });
-    this.on("_csmUnmounted", (material: Material) => {
-      this.removeCSMForMaterial(material);
-    });
   }
 
   private get renderPass() {
@@ -1226,15 +1210,7 @@ export default class ThreeView<
   }
 
   private registerBuiltIns(): void {
-    this.registerBuiltInLights();
     this.registerBuiltInEffects();
-  }
-
-  private registerBuiltInLights(): void {
-    this.registerLight("sun", SunLightLayer);
-    this.registerLight("ambient", AmbientLightLayer);
-    this.registerLight("skyLightProbe", SkyLightProbeLayer);
-    this.registerLight("lightProbe", LightProbeLayer);
   }
 
   private registerBuiltInEffects(): void {
@@ -1283,7 +1259,7 @@ export default class ThreeView<
     }
 
     // Trigger re-render
-    meshLayer.on("_needsUpdate", this.forceUpdate);
+    meshLayer.on("needsUpdate", this.forceUpdate);
 
     const l = new LayerHandle(meshLayer);
 
@@ -1317,7 +1293,7 @@ export default class ThreeView<
     }
 
     // Trigger re-render
-    lightLayer.on("_needsUpdate", this.forceUpdate);
+    lightLayer.on("needsUpdate", this.forceUpdate);
 
     const l = new LayerHandle(lightLayer);
 
@@ -1353,7 +1329,7 @@ export default class ThreeView<
     }
 
     // Trigger re-render
-    effectLayer.on("_needsUpdate", this.forceUpdate);
+    effectLayer.on("needsUpdate", this.forceUpdate);
 
     const l = new LayerHandle(effectLayer);
 
@@ -1402,43 +1378,6 @@ export default class ThreeView<
       throw new Error("Plugin must be added before `view.init()`.");
     this.plugins.push(plugin);
     return this;
-  }
-
-  /**
-   * Find the sun light layer in the current layers
-   */
-  private findSunLightLayer(): SunLightLayer | null {
-    // Look through registered layers for sun light layer
-    for (const layer of this.layersManager.getDeclarationLayers()) {
-      const layerInstance = layer.ref;
-      // Check if it's a SunLightLayer
-      if (layerInstance instanceof SunLightLayer) {
-        return layerInstance;
-      }
-    }
-    return null;
-  }
-
-  /**
-   * Setup CSM for a single material
-   */
-  private setupCSMForMaterial(material: Material): void {
-    const sunLightLayer = this.findSunLightLayer();
-    if (!sunLightLayer) {
-      return;
-    }
-    sunLightLayer._setupMaterialForShadows(material);
-  }
-
-  /**
-   * Remove CSM for a single material
-   */
-  private removeCSMForMaterial(material: Material): void {
-    const sunLightLayer = this.findSunLightLayer();
-    if (!sunLightLayer) {
-      return;
-    }
-    sunLightLayer._removeMaterialFromShadows(material);
   }
 
   /**

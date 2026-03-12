@@ -2,17 +2,16 @@ import {
   degreeToRadian,
   geodeticToVector3,
   Color,
-  type FogLightDefinition,
   type Layer as NavaraLayer,
-  type LayerDescription,
 } from "@navara/three";
-import type { DefaultEffectLayerDeclarationDescription } from "@navara/three_default_plugin";
+import type { FogLightDefinition } from "@navara/three_default_layers";
 import { Layer, useViewContext } from "@navara/three_react";
 import type { FeatureCollection, Point } from "geojson";
 import { useEffect, useMemo, useRef, useState, type FC } from "react";
 
 import { UC_PHOTOREALISTIC_DATASETS } from "./datasets";
 import { useNightContext } from "./NightContext";
+import type { LayerDescriptions } from "./type";
 
 export const ShelterLayer: FC<{ visible?: boolean }> = ({
   visible = false,
@@ -78,7 +77,7 @@ export const ShelterLayer: FC<{ visible?: boolean }> = ({
     });
   };
 
-  const textLayerDesc = useMemo((): LayerDescription | null => {
+  const textLayerDesc = useMemo((): LayerDescriptions | null => {
     return {
       type: "mvt",
       data: {
@@ -102,10 +101,7 @@ export const ShelterLayer: FC<{ visible?: boolean }> = ({
     };
   }, [visible]);
 
-  const fogLayerDesc = useMemo(():
-    | LayerDescription
-    | DefaultEffectLayerDeclarationDescription
-    | null => {
+  const fogLayerDesc = useMemo((): LayerDescriptions | null => {
     if (!view || fogLights.length === 0) return null;
     return {
       type: "effect",

@@ -2,17 +2,17 @@ import ThreeView, {
   EventHandler,
   JAPAN_GSI_ELEVATION_DECODER,
   type LayerHandle,
-  type LightProbeLayer,
-  type SkyLightProbeLayer,
   type LayerDescription,
-  type FogLightDefinition,
   degreeToRadian,
   geodeticToVector3,
   Color,
 } from "@navara/three";
 import type {
+  LightProbeLayer,
+  SkyLightProbeLayer,
   StarsLayer,
   FogLightEffectLayer,
+  FogLightDefinition,
 } from "@navara/three_default_layers";
 import {
   DefaultPlugin,

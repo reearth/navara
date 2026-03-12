@@ -1,11 +1,10 @@
-import { LightProbe, SphericalHarmonics3, Vector3 } from "three";
-
 import {
   LightLayerDeclaration,
   type LightLayerConfig,
   type LightLayerUpdate,
   type ViewContext,
-} from "../../core";
+} from "@navara/three";
+import { LightProbe, SphericalHarmonics3, Vector3 } from "three";
 
 type LayerDescription = {
   lightProbe?: {
@@ -71,7 +70,7 @@ export class LightProbeLayer extends LightLayerDeclaration<
         this._instance.sh = sh;
       }
 
-      this.emit("_needsUpdate");
+      this.emit("needsUpdate");
     }
 
     super.onUpdateConfig(updates);

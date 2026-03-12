@@ -1,8 +1,8 @@
-import ThreeView, {
-  Color,
+import ThreeView, { Color } from "@navara/three";
+import {
+  DepthOfFieldEffectLayer,
   DEFAULT_DEPTH_OF_FIELD_OPTIONS,
-} from "@navara/three";
-import { DepthOfFieldEffectLayer } from "@navara/three_default_layers";
+} from "@navara/three_default_layers";
 import {
   DefaultPlugin,
   type DefaultLayerDescriptions,

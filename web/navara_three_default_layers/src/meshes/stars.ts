@@ -11,7 +11,7 @@ import {
 import { Points, Matrix4, Vector3 } from "three";
 
 export type StarsEvents = {
-  _needsUpdate: () => void;
+  needsUpdate: () => void;
 };
 
 export type StarsOptions = {
@@ -86,7 +86,7 @@ export class Stars extends EventHandler<StarsEvents> {
   set visible(v: boolean) {
     this.options.visible = v;
     this.raw.visible = v;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get pointSize() {
@@ -95,7 +95,7 @@ export class Stars extends EventHandler<StarsEvents> {
   set pointSize(v: number) {
     this.options.pointSize = v;
     this.raw.material.pointSize = v;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get intensity() {
@@ -104,7 +104,7 @@ export class Stars extends EventHandler<StarsEvents> {
   set intensity(v: number) {
     this.options.intensity = v;
     this.raw.material.intensity = v;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get background() {
@@ -113,6 +113,6 @@ export class Stars extends EventHandler<StarsEvents> {
   set background(v: boolean) {
     this.options.background = v;
     this.raw.material.background = v;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 }

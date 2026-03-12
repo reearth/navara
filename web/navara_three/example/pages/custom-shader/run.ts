@@ -85,7 +85,7 @@ export class MarchingCubesLayer extends MeshLayerDeclaration<
 
     // Setup shadow if needed
     if (cubes.castShadow || cubes.receiveShadow) {
-      this.view.emit("_csmMounted", cfg.material);
+      this.view.applyShadowMaterial(cfg.material);
     }
 
     return cubes;
@@ -103,7 +103,7 @@ export class MarchingCubesLayer extends MeshLayerDeclaration<
         this._instance.receiveShadow = cfg.receiveShadow;
       }
 
-      this.emit("_needsUpdate");
+      this.emit("needsUpdate");
     }
 
     super.onUpdateConfig(updates);

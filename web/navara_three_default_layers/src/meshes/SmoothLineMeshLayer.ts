@@ -71,7 +71,7 @@ export class SmoothLineMeshLayer extends MeshLayerDeclaration<
         ? updates.smoothLines
         : [updates.smoothLines];
       this._instance.updateConfig(updateConfigs);
-      this.emit("_needsUpdate");
+      this.emit("needsUpdate");
     }
 
     super.onUpdateConfig(updates);

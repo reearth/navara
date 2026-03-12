@@ -1,8 +1,4 @@
-import {
-  generate_id_from_entity,
-  type TileHandle,
-  type EventHandler,
-} from "@navara/core";
+import { generate_id_from_entity, type TileHandle } from "@navara/core";
 import { orthoCameraTransform } from "@navara/engine";
 import type {
   MeshAdded,
@@ -46,7 +42,8 @@ import {
   NoColorSpace,
 } from "three";
 
-import { PolygonMesh, type ViewEvents } from "..";
+import { PolygonMesh } from "..";
+import type { ViewContext } from "../core";
 import { setTransform, type BufferLoader, type TileHandler } from "../event";
 import { generateMixOverlaidTexturesMacro } from "../material";
 import type { CustomObject3DEventMap } from "../object3DEvent";
@@ -406,6 +403,8 @@ export class TileMesh
     }
   };
 
+  private _viewContext?: ViewContext;
+
   async _init(
     scenes: Scenes,
     meshes: MeshCache,
@@ -414,9 +413,11 @@ export class TileMesh
     loadedTexes: Map<string, Texture>,
     textureOptions: TextureOptions,
     tileMapByHandle: TileMapByHandle,
-    viewEvents: EventHandler<ViewEvents>,
+    viewContext: ViewContext,
     uniforms: CommonUniforms,
   ) {
+    this._viewContext = viewContext;
+
     await this.createMesh(
       scenes,
       meshes,
@@ -429,13 +430,12 @@ export class TileMesh
       textureOptions,
       tileMapByHandle,
       mesh.ready_parent_tile_handle,
-      viewEvents,
       uniforms,
       mesh.globe,
     );
 
     this.addEventListener("removedFromWorld", () => {
-      this.dispose(viewEvents, tileMapByHandle);
+      this.dispose(tileMapByHandle);
     });
   }
 
@@ -451,7 +451,6 @@ export class TileMesh
     textureOptions: TextureOptions,
     tileMapByHandle: TileMapByHandle,
     readyParentTileHandle: TileHandle | undefined,
-    viewEvents: EventHandler<ViewEvents>,
     uniforms: CommonUniforms,
     globe: Globe,
   ) {
@@ -507,7 +506,7 @@ export class TileMesh
     }
     this.geometry = geometry;
 
-    this.material = this.initMaterial(mat, viewEvents, uniforms, globe);
+    this.material = this.initMaterial(mat, uniforms, globe);
 
     if (!this.material.userData.uvTransform) {
       this.material.userData.uvTransform = {
@@ -646,7 +645,6 @@ export class TileMesh
 
   private initMaterial(
     _mat: RasterTileInternalMaterial,
-    viewEvents: EventHandler<ViewEvents>,
     uniforms: CommonUniforms,
     globe: Globe,
   ): TileMaterial {
@@ -990,7 +988,7 @@ if (uPickable > 0.) {
         ).source;
     };
 
-    viewEvents.emit("_csmMounted", m);
+    this._viewContext?.applyShadowMaterial(m);
 
     return m;
   }
@@ -1541,11 +1539,8 @@ if (uPickable > 0.) {
     this.material.userData.uPickable.value = pickable ? 1 : 0;
   }
 
-  dispose(
-    viewEvents: EventHandler<ViewEvents>,
-    tileMapByHandle?: TileMapByHandle,
-  ) {
-    viewEvents.emit("_csmUnmounted", this.material);
+  dispose(tileMapByHandle?: TileMapByHandle) {
+    this._viewContext?.removeShadowMaterial(this.material);
 
     // Dispose shadow mesh geometry (it's separate from main geometry)
     if (this.shadowMesh) {

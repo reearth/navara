@@ -1,11 +1,10 @@
-import { Camera, PerspectiveCamera, OrthographicCamera, Vector3 } from "three";
-
-import { Color } from "../../Color";
 import {
+  Color,
   Pass as PassWrapper,
   type EffectEvents,
   type EffectOptions,
-} from "../effect";
+} from "@navara/three";
+import { Camera, PerspectiveCamera, OrthographicCamera, Vector3 } from "three";
 
 import { FogLightDownsampledPass } from "./FogLightDownsampledPass";
 import {
@@ -132,7 +131,7 @@ export class FogLight extends PassWrapper<
   set lights(lights: FogLightDefinition[]) {
     this.options.lights = lights;
     this.updateLights();
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get fogDensity(): number {
@@ -144,7 +143,7 @@ export class FogLight extends PassWrapper<
   set fogDensity(value: number) {
     this.options.fogDensity = value;
     this.updateFogDensity();
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get useSurfaceLighting(): boolean {
@@ -158,7 +157,7 @@ export class FogLight extends PassWrapper<
   set useSurfaceLighting(value: boolean) {
     this.options.useSurfaceLighting = value;
     this.updateUseSurfaceLighting();
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   private updateUseSurfaceLighting(): void {
@@ -186,7 +185,7 @@ export class FogLight extends PassWrapper<
 
   set maxLightsPerTile(value: number) {
     this.rawEffect.maxLightsPerTile = value;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get extentScale(): number {
@@ -195,7 +194,7 @@ export class FogLight extends PassWrapper<
 
   set extentScale(value: number) {
     this.rawEffect.extentScale = value;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get maxFar(): number {
@@ -204,7 +203,7 @@ export class FogLight extends PassWrapper<
 
   set maxFar(value: number) {
     this.rawEffect.maxFar = value;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get debugShowGrid(): boolean {
@@ -212,6 +211,6 @@ export class FogLight extends PassWrapper<
   }
   set debugShowGrid(v: boolean) {
     this.rawEffect.debugShowGrid = v;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 }

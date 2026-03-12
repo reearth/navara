@@ -3,9 +3,9 @@ import {
   type EffectLayerConfig,
   type EffectLayerUpdate,
   type ViewContext,
-  LensFlare,
-  type LensFlareOptions,
 } from "@navara/three";
+
+import { LensFlare, type LensFlareOptions } from "./lensFlare";
 
 type LayerDescription = {
   lensFlare?: Omit<LensFlareOptions, "enabled">;

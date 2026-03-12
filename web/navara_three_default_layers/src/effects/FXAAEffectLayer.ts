@@ -2,8 +2,9 @@ import {
   EffectLayerDeclaration,
   type EffectLayerConfig,
   type EffectLayerUpdate,
-  FXAA,
 } from "@navara/three";
+
+import { FXAA } from "./aa";
 
 type LayerDescription = {
   // eslint-disable-next-line @typescript-eslint/no-empty-object-type

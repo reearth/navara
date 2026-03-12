@@ -5,8 +5,10 @@ import {
   type TextureChannel,
 } from "@takram/three-clouds";
 
+export type { TextureChannel };
+
 export type CloudLayerEvents = {
-  _needsUpdate: () => void;
+  needsUpdate: () => void;
 };
 
 export type CloudLayerOptions = Pick<
@@ -57,7 +59,7 @@ export class CloudLayer extends EventHandler<CloudLayerEvents> {
   }
 
   onUpdate() {
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get channel() {

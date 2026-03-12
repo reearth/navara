@@ -1,16 +1,12 @@
-import ThreeView, {
-  Color,
-  LayerHandle,
+import ThreeView, { Color, LayerHandle, type BlendMode } from "@navara/three";
+import {
   SunLightLayer,
   AmbientLightLayer,
-  type BlendMode,
-  ToneMappingMode,
-} from "@navara/three";
-import {
   SkyBoxMeshLayer,
   StarsLayer,
   DEFAULT_SKY_BOX_OPTIONS,
   ColorGradingLUTEffectLayer,
+  ToneMappingMode,
 } from "@navara/three_default_layers";
 import {
   DefaultPlugin,

@@ -1,11 +1,12 @@
-import { Color } from "../../Color";
+import { Color } from "@navara/three";
 import {
   LightLayerDeclaration,
   type LightLayerConfig,
   ViewContext,
   type LightLayerUpdate,
-} from "../../core";
-import { AmbientLight, type AmbientLightOptions } from "../../lights";
+} from "@navara/three";
+
+import { AmbientLight, type AmbientLightOptions } from "./ambientLight";
 
 type LayerDescription = {
   ambient?: Omit<AmbientLightOptions, "color"> & {
@@ -43,7 +44,7 @@ export class AmbientLightLayer extends LightLayerDeclaration<
 
     const light = new AmbientLight(options);
 
-    light.on("_needsUpdate", () => this.emit("_needsUpdate"));
+    light.on("needsUpdate", () => this.emit("needsUpdate"));
 
     return light;
   }

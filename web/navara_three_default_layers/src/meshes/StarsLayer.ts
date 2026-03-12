@@ -4,7 +4,6 @@ import {
   ViewContext,
   type MeshLayerUpdate,
 } from "@navara/three";
-import invariant from "tiny-invariant";
 
 import { Stars, type StarsOptions } from "./stars";
 
@@ -45,17 +44,9 @@ export class StarsLayer extends MeshLayerDeclaration<
     const stars = Stars.fromUrl(assetsUrl, starsOptions);
     this._stars = stars;
 
-    if (this.view.atmosphere.textures) {
-      stars.setTextures(this.view.atmosphere.textures);
-    } else {
-      const textureLoaded = () => {
-        invariant(this.view.atmosphere.textures);
-        stars.setTextures(this.view.atmosphere.textures);
-      };
-      this.view.atmosphere.on("_textureLoaded", textureLoaded);
-    }
+    this.view.atmosphere.onTexturesReady((t) => stars.setTextures(t));
 
-    stars.on("_needsUpdate", () => this.emit("_needsUpdate"));
+    stars.on("needsUpdate", () => this.emit("needsUpdate"));
 
     return stars;
   }

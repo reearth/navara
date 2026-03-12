@@ -1,14 +1,11 @@
-// No additional imports needed from three
-
-import invariant from "tiny-invariant";
-
 import {
   LightLayerDeclaration,
   type LightLayerConfig,
   ViewContext,
   type LightLayerUpdate,
-} from "../../core";
-import { SkyLightProbe, type SkyLightProbeOptions } from "../../lights";
+} from "@navara/three";
+
+import { SkyLightProbe, type SkyLightProbeOptions } from "./skyLightProbe";
 
 type LayerDescription = {
   skyLightProbe?: SkyLightProbeOptions;
@@ -36,17 +33,9 @@ export class SkyLightProbeLayer extends LightLayerDeclaration<
     const skyLightProbe = new SkyLightProbe(skyLightProbeConfig);
 
     // Set up atmosphere integration
-    if (this.view.atmosphere.textures) {
-      skyLightProbe.setTextures(this.view.atmosphere.textures);
-    } else {
-      const textureLoaded = () => {
-        invariant(this.view.atmosphere.textures);
-        skyLightProbe.setTextures(this.view.atmosphere.textures);
-      };
-      this.view.atmosphere.on("_textureLoaded", textureLoaded);
-    }
+    this.view.atmosphere.onTexturesReady((t) => skyLightProbe.setTextures(t));
 
-    skyLightProbe.on("_needsUpdate", () => this.emit("_needsUpdate"));
+    skyLightProbe.on("needsUpdate", () => this.emit("needsUpdate"));
 
     return skyLightProbe;
   }

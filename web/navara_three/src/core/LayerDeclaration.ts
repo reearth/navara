@@ -31,7 +31,7 @@ export type BaseInstance = { visible: boolean };
  */
 export type LayerDeclarationEvents = {
   /** @internal Emitted when the layer needs to trigger a re-render. */
-  _needsUpdate: () => void;
+  needsUpdate: () => void;
 };
 
 /**
@@ -105,7 +105,7 @@ export abstract class LayerDeclaration<
 
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   /**

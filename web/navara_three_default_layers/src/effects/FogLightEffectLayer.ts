@@ -3,11 +3,11 @@ import {
   type EffectLayerConfig,
   type EffectLayerUpdate,
   type ViewContext,
-  FogLight,
-  type FogLightOptions,
   type MRTPassEffectLayer,
 } from "@navara/three";
 import invariant from "tiny-invariant";
+
+import { FogLight, type FogLightOptions } from "./fogLight";
 
 type LayerDescription = {
   fogLight?: Omit<FogLightOptions, "enabled">;

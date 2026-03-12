@@ -1,6 +1,5 @@
+import { Effect, type EffectEvents, type EffectOptions } from "@navara/three";
 import { type Camera } from "three";
-
-import { Effect, type EffectEvents, type EffectOptions } from "../effect";
 
 import {
   RainDropPostEffect,
@@ -98,7 +97,7 @@ export class RainDropEffect extends Effect<
   set opacity(v: number) {
     this.options.opacity = v;
     this.rawEffect.blendMode.opacity.value = v;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get dropGridSize(): number {
@@ -110,7 +109,7 @@ export class RainDropEffect extends Effect<
   set dropGridSize(value: number) {
     this.options.dropGridSize = value;
     this.rawEffect.dropGridSize = value;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get dropDensity(): number {
@@ -122,7 +121,7 @@ export class RainDropEffect extends Effect<
   set dropDensity(value: number) {
     this.options.dropDensity = value;
     this.rawEffect.dropDensity = value;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get dropLayers(): number {
@@ -134,7 +133,7 @@ export class RainDropEffect extends Effect<
   set dropLayers(value: number) {
     this.options.dropLayers = value;
     this.rawEffect.dropLayers = value;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get dropSizeFactor(): number {
@@ -147,7 +146,7 @@ export class RainDropEffect extends Effect<
   set dropSizeFactor(value: number) {
     this.options.dropSizeFactor = value;
     this.rawEffect.dropSizeFactor = value;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get noiseScale(): number {
@@ -159,7 +158,7 @@ export class RainDropEffect extends Effect<
   set noiseScale(value: number) {
     this.options.noiseScale = value;
     this.rawEffect.noiseScale = value;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get refractionStrength(): number {
@@ -172,7 +171,7 @@ export class RainDropEffect extends Effect<
   set refractionStrength(value: number) {
     this.options.refractionStrength = value;
     this.rawEffect.refractionStrength = value;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get minDropStrength(): number {
@@ -185,7 +184,7 @@ export class RainDropEffect extends Effect<
   set minDropStrength(value: number) {
     this.options.minDropStrength = value;
     this.rawEffect.minDropStrength = value;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get dropFadeStart(): number {
@@ -198,7 +197,7 @@ export class RainDropEffect extends Effect<
   set dropFadeStart(value: number) {
     this.options.dropFadeStart = value;
     this.rawEffect.dropFadeStart = value;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get dropFadeEnd(): number {
@@ -210,7 +209,7 @@ export class RainDropEffect extends Effect<
   set dropFadeEnd(value: number) {
     this.options.dropFadeEnd = value;
     this.rawEffect.dropFadeEnd = value;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get dropThresholdFactor(): number {
@@ -223,7 +222,7 @@ export class RainDropEffect extends Effect<
   set dropThresholdFactor(value: number) {
     this.options.dropThresholdFactor = value;
     this.rawEffect.dropThresholdFactor = value;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get gridDensityLow(): number {
@@ -236,7 +235,7 @@ export class RainDropEffect extends Effect<
   set gridDensityLow(value: number) {
     this.options.gridDensityLow = value;
     this.rawEffect.gridDensityLow = value;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get gridDensityHigh(): number {
@@ -249,7 +248,7 @@ export class RainDropEffect extends Effect<
   set gridDensityHigh(value: number) {
     this.options.gridDensityHigh = value;
     this.rawEffect.gridDensityHigh = value;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get jitterStrengthLow(): number {
@@ -262,7 +261,7 @@ export class RainDropEffect extends Effect<
   set jitterStrengthLow(value: number) {
     this.options.jitterStrengthLow = value;
     this.rawEffect.jitterStrengthLow = value;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get jitterStrengthHigh(): number {
@@ -275,6 +274,6 @@ export class RainDropEffect extends Effect<
   set jitterStrengthHigh(value: number) {
     this.options.jitterStrengthHigh = value;
     this.rawEffect.jitterStrengthHigh = value;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 }

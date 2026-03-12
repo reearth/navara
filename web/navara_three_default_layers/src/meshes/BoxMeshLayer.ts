@@ -97,7 +97,7 @@ export class BoxMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
     mesh.receiveShadow = cfg.receiveShadow ?? false;
 
     // Emit CSM event for shadow map integration
-    this.view.emit("_csmMounted", material);
+    this.view.applyShadowMaterial(material);
 
     return mesh;
   }
@@ -173,7 +173,7 @@ export class BoxMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
         updates.selectiveEffectOcclusion = cfg.selectiveEffectOcclusion;
       }
 
-      this.emit("_needsUpdate");
+      this.emit("needsUpdate");
     }
 
     super.onUpdateConfig(updates);
@@ -182,7 +182,7 @@ export class BoxMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
   protected disposeMesh(): void {
     if (this._instance) {
       // Emit CSM event for shadow map cleanup
-      this.view.emit("_csmUnmounted", this._instance.material);
+      this.view.removeShadowMaterial(this._instance.material);
 
       this._instance.geometry.dispose();
       this._instance.material.dispose();

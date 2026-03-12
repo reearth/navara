@@ -1,8 +1,7 @@
-import type { EventHandler, TileHandle } from "@navara/core";
+import type { TileHandle } from "@navara/core";
 import type { PolygonMesh as NavaraPolygonMesh } from "@navara/engine";
 
 import type { BufferLoader } from "../";
-import type { ViewEvents } from "../..";
 import type { ViewContext } from "../../core";
 import { PolygonMesh } from "../../mesh";
 import type { CommonUniforms } from "../../uniforms";
@@ -12,7 +11,6 @@ export async function renderPolygon(
   buf: BufferLoader,
   uniforms: CommonUniforms,
   tileHandle: TileHandle | undefined,
-  viewEvents: EventHandler<ViewEvents>,
   viewContext: ViewContext,
   layerId: string,
 ) {
@@ -20,7 +18,6 @@ export async function renderPolygon(
     mesh,
     buf,
     tileHandle,
-    viewEvents,
   );
 }
 

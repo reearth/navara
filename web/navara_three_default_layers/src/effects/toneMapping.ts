@@ -1,7 +1,6 @@
+import { Effect, type EffectOptions } from "@navara/three";
 import { ToneMappingMode, ToneMappingEffect } from "postprocessing";
 import type { Camera } from "three";
-
-import { Effect, type EffectOptions } from "./effect";
 
 export { ToneMappingMode } from "postprocessing";
 
@@ -30,6 +29,6 @@ export class ToneMapping extends Effect<ToneMappingEffect, ToneMappingOptions> {
     this.options.mode = v;
     if (!this.rawEffect) return;
     this.rawEffect.mode = v;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 }

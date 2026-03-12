@@ -3,9 +3,9 @@ import {
   type EffectLayerConfig,
   type EffectLayerUpdate,
   type ViewContext,
-  RainDropEffect,
-  type RainDropOptions,
 } from "@navara/three";
+
+import { RainDropEffect, type RainDropOptions } from "./rainDropEffect";
 
 type LayerDescription = {
   rainDrop?: Omit<RainDropOptions, "enabled">;

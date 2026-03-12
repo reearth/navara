@@ -7,7 +7,7 @@ import {
 import { Mesh, PlaneGeometry, Vector3 } from "three";
 
 export type SkyMeshEvents = {
-  _needsUpdate: () => void;
+  needsUpdate: () => void;
 };
 
 export type SkyMeshOptions = {
@@ -98,7 +98,7 @@ export class SkyMesh extends EventHandler<SkyMeshEvents> {
   set visible(v: boolean) {
     this.options.visible = v;
     this.raw.visible = v;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get sun() {
@@ -106,7 +106,7 @@ export class SkyMesh extends EventHandler<SkyMeshEvents> {
   }
   set sun(v: boolean) {
     this.raw.material.sun = v;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get moon() {
@@ -114,7 +114,7 @@ export class SkyMesh extends EventHandler<SkyMeshEvents> {
   }
   set moon(v: boolean) {
     this.raw.material.moon = v;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get moonScale() {
@@ -123,7 +123,7 @@ export class SkyMesh extends EventHandler<SkyMeshEvents> {
   set moonScale(v: number) {
     this.options.moonScale = v;
     this.raw.material.moonAngularRadius = BASE_MOON_ANGULAR_RADIUS * v;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get moonIntensity() {
@@ -132,7 +132,7 @@ export class SkyMesh extends EventHandler<SkyMeshEvents> {
   set moonIntensity(v: number) {
     this.options.moonIntensity = v;
     this.raw.material.lunarRadianceScale = v;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get sunAngularRadius() {
@@ -141,7 +141,7 @@ export class SkyMesh extends EventHandler<SkyMeshEvents> {
   set sunAngularRadius(v: number) {
     this.options.sunAngularRadius = v;
     this.raw.material.sunAngularRadius = v;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   dispose() {

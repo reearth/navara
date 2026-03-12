@@ -43,7 +43,7 @@ view.addPlugin(plugin);   // Register before init()
 await view.init();        // Calls plugin.init(view) for each registered plugin
 ```
 
-Light and effect layers are registered by `@navara/three` itself, while mesh layers are provided through the plugin system like `@navara/three_default_plugin`, for example.
+Light, effect, and mesh layers are registered through the plugin system (e.g., `@navara/three_default_plugin`). Core effect layers (MRT, selective effects, final copy) are registered by `@navara/three` itself.
 
 Multiple plugins can be composed together:
 
@@ -105,7 +105,7 @@ class MyMeshLayer extends MeshLayerDeclaration<
       if (updates.myMesh.color !== undefined) {
         this._instance.material.color.set(updates.myMesh.color.raw);
       }
-      this.emit("_needsUpdate");
+      this.emit("needsUpdate");
     }
     super.onUpdateConfig(updates);
   }
