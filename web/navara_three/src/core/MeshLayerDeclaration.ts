@@ -95,7 +95,7 @@ export type MeshBaseInstance<Instance extends object = object> =
  *
  *     // Enable CSM shadows if needed
  *     if (mesh.castShadow) {
- *       this.view.emit("_csmMounted", material);
+ *       this.view.applyShadowMaterial(material);
  *     }
  *
  *     return mesh;
@@ -106,7 +106,7 @@ export type MeshBaseInstance<Instance extends object = object> =
  *       if (updates.myMesh.color !== undefined) {
  *         this._instance.material.color.set(updates.myMesh.color.raw);
  *       }
- *       this.emit("_needsUpdate");
+ *       this.emit("needsUpdate");
  *     }
  *     super.onUpdateConfig(updates);
  *   }

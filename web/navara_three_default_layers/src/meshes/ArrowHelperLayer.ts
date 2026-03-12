@@ -87,7 +87,7 @@ export class ArrowHelperLayer extends MeshLayerDeclaration<
         this._instance.setColor(color);
       }
 
-      this.emit("_needsUpdate");
+      this.emit("needsUpdate");
     }
 
     super.onUpdateConfig(updates);

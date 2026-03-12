@@ -87,7 +87,7 @@ export type AnimationState = {
 export type GLTFModelLayerEvent = {
   load: () => void;
   animationReady: () => void;
-  _needsUpdate: () => void;
+  needsUpdate: () => void;
 };
 
 export class GLTFModelLayer extends MeshLayerDeclaration<
@@ -200,7 +200,7 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
       targetGroup.add(gltf.scene);
       this.setupModel(targetGroup);
 
-      this.emit("_needsUpdate");
+      this.emit("needsUpdate");
       this.emit("load");
     } catch (error) {
       console.warn("Failed to load GLTF model:", error);
@@ -250,10 +250,10 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
         // Setup CSM for materials if shadows are enabled
         if (Array.isArray(child.material)) {
           child.material.forEach((mat) => {
-            this.view.emit("_csmMounted", mat);
+            this.view.applyShadowMaterial(mat);
           });
         } else {
-          this.view.emit("_csmMounted", child.material);
+          this.view.applyShadowMaterial(child.material);
         }
       }
     });
@@ -433,7 +433,7 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
         }
       }
 
-      this.emit("_needsUpdate");
+      this.emit("needsUpdate");
     }
 
     // Handle position updates for RTE mode
@@ -461,7 +461,7 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
     if (this._instance) {
       this._instance.traverse((child) => {
         if (child instanceof Mesh) {
-          this.view.emit("_csmUnmounted", child.material);
+          this.view.removeShadowMaterial(child.material);
 
           child.geometry.dispose();
           if (child.material) {
@@ -764,7 +764,7 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
     action.setEffectiveTimeScale(this.animationSpeed);
     action.reset().play();
     this.currentAction = action;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   /**
@@ -797,7 +797,7 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
     fromAction.crossFadeTo(toAction, duration, true);
     toAction.play();
     this.currentAction = toAction;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   /**
@@ -839,7 +839,7 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
     });
 
     // Notify rendering update
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   /**
@@ -880,7 +880,7 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
     // Exit blend mode
     this.isBlendMode = false;
 
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   /**
@@ -939,7 +939,7 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
     });
 
     // Notify rendering update
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   // ========================================
@@ -1015,7 +1015,7 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
       });
     }
 
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   // ========================================

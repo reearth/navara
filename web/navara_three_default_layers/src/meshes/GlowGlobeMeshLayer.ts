@@ -153,7 +153,7 @@ export class GlowGlobeMeshLayer extends MeshLayerDeclaration<
       },
     };
 
-    this.view.emit("_csmMounted", material);
+    this.view.applyShadowMaterial(material);
     return new Mesh(geometry, material);
   }
 
@@ -208,7 +208,7 @@ export class GlowGlobeMeshLayer extends MeshLayerDeclaration<
         Object.assign(origin, cfg);
       }
 
-      this.emit("_needsUpdate");
+      this.emit("needsUpdate");
     }
 
     super.onUpdateConfig(updates);
@@ -216,7 +216,7 @@ export class GlowGlobeMeshLayer extends MeshLayerDeclaration<
 
   protected disposeMesh(): void {
     if (this._instance) {
-      this.view.emit("_csmUnmounted", this._instance.material);
+      this.view.removeShadowMaterial(this._instance.material);
       this._instance.geometry.dispose();
       this._instance.material.dispose();
 

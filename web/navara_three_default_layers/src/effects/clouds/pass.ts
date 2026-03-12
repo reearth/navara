@@ -1,5 +1,13 @@
 import type { Nullable } from "@navara/core";
 import {
+  type Atmosphere,
+  CLOUD_ASSETS_URL,
+  STBN_URL,
+  CustomEffectPass,
+  Pass,
+  type EffectOptions,
+} from "@navara/three";
+import {
   CLOUD_SHAPE_DETAIL_TEXTURE_SIZE,
   CLOUD_SHAPE_TEXTURE_SIZE,
   CloudLayers,
@@ -27,12 +35,7 @@ import {
 } from "three";
 import invariant from "tiny-invariant";
 
-import type { Atmosphere } from "../atmosphere";
-import { CloudLayer, type CloudLayerOptions } from "../clouds";
-import { CLOUD_ASSETS_URL, STBN_URL } from "../constants";
-
-import { CustomEffectPass } from "./CustomEffectPass";
-import { Pass, type EffectOptions } from "./effect";
+import { CloudLayer, type CloudLayerOptions } from "./layer";
 
 export type * from "@takram/three-clouds";
 
@@ -154,7 +157,7 @@ export class Clouds extends Pass<
 
     this.atmosphere = atmosphere;
 
-    this.atmosphere._enableShadows.value = this.shadows;
+    this.atmosphere.enableShadows.value = this.shadows;
 
     this.init();
   }
@@ -216,7 +219,7 @@ export class Clouds extends Pass<
     this.shadowCascadeCount = this.options.shadowCascadeCount;
 
     this.loadAll().then(() => {
-      this.emit("_needsUpdate");
+      this.emit("needsUpdate");
     });
 
     this.inner.events.addEventListener(
@@ -225,11 +228,11 @@ export class Clouds extends Pass<
         if (!this.rawEffect || !this.atmosphere) return;
         switch (event.property) {
           case "atmosphereOverlay":
-            this.atmosphere._overlay.value = this.rawEffect.atmosphereOverlay;
+            this.atmosphere.overlay.value = this.rawEffect.atmosphereOverlay;
             break;
           case "atmosphereShadow":
             if (!this.shadows) break;
-            this.atmosphere._shadow.value = this.inner.atmosphereShadow;
+            this.atmosphere.shadow.value = this.inner.atmosphereShadow;
             // Denoise shadow artifact.
             new STBNLoader().load(this.options.stbnUrl, (data) => {
               if (!this.rawEffect) return;
@@ -237,7 +240,7 @@ export class Clouds extends Pass<
             });
             break;
           case "atmosphereShadowLength":
-            this.atmosphere._shadowLength.value =
+            this.atmosphere.shadowLength.value =
               this.inner.atmosphereShadowLength;
             break;
         }
@@ -245,24 +248,19 @@ export class Clouds extends Pass<
       },
     );
 
-    if (this.atmosphere.textures) {
-      this.onTextureLoaded();
-    } else {
-      this.atmosphere.on("_textureLoaded", this.onTextureLoaded);
-    }
+    this.atmosphere.onTexturesReady(() => this.onTextureLoaded());
 
-    this.atmosphere.on("_disposed", this.onDisposed);
+    this.atmosphere.on("disposed", this.onDisposed);
   }
 
   private onTextureLoaded = () => {
     invariant(this.atmosphere.textures);
     Object.assign(this.rawEffect, this.atmosphere.textures);
-    this.atmosphere.off("_textureLoaded", this.onTextureLoaded);
   };
 
   private onDisposed = () => {
     this.dispose();
-    this.atmosphere?.off("_disposed", this.onDisposed);
+    this.atmosphere?.off("disposed", this.onDisposed);
   };
 
   _update() {
@@ -270,9 +268,9 @@ export class Clouds extends Pass<
   }
 
   dispose() {
-    this.atmosphere._overlay.value = null;
-    this.atmosphere._shadow.value = null;
-    this.atmosphere._shadowLength.value = null;
+    this.atmosphere.overlay.value = null;
+    this.atmosphere.shadow.value = null;
+    this.atmosphere.shadowLength.value = null;
     super.dispose();
   }
 
@@ -287,9 +285,9 @@ export class Clouds extends Pass<
     for (let i = 0; i < 4; i++) {
       const layer = layers[i];
       // Propagate
-      layer.on("_needsUpdate", () => {
+      layer.on("needsUpdate", () => {
         this.rawEffect.cloudLayers[i].set(layer.impl);
-        this.emit("_needsUpdate");
+        this.emit("needsUpdate");
       });
     }
 
@@ -382,7 +380,7 @@ export class Clouds extends Pass<
   set qualityPreset(v: CloudsQualityPreset) {
     this.rawEffect.qualityPreset = v;
 
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get localWeatherVelocity() {
@@ -391,7 +389,7 @@ export class Clouds extends Pass<
   set localWeatherVelocity(v: Vector2) {
     this.rawEffect.localWeatherVelocity.copy(v);
 
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get coverage() {
@@ -400,7 +398,7 @@ export class Clouds extends Pass<
   set coverage(v: number) {
     this.rawEffect.coverage = v;
 
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get lightShafts() {
@@ -409,7 +407,7 @@ export class Clouds extends Pass<
   set lightShafts(v: boolean) {
     this.rawEffect.lightShafts = v;
 
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   // Processing
@@ -419,7 +417,7 @@ export class Clouds extends Pass<
   }
   set resolutionScale(v: number) {
     this.rawEffect.resolutionScale = v;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get maxIterationCount() {
@@ -427,7 +425,7 @@ export class Clouds extends Pass<
   }
   set maxIterationCount(v: number) {
     this.rawEffect.clouds.maxIterationCount = v;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get minStepSize() {
@@ -435,7 +433,7 @@ export class Clouds extends Pass<
   }
   set minStepSize(v: number) {
     this.rawEffect.clouds.minStepSize = v;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get maxStepSize() {
@@ -443,7 +441,7 @@ export class Clouds extends Pass<
   }
   set maxStepSize(v: number) {
     this.rawEffect.clouds.maxStepSize = v;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   // Shadow
@@ -453,9 +451,9 @@ export class Clouds extends Pass<
   }
   set shadows(v: boolean) {
     this.options.shadows = v;
-    this.atmosphere._enableShadows.value = v;
+    this.atmosphere.enableShadows.value = v;
 
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get shadowCascadeCount() {
@@ -464,7 +462,7 @@ export class Clouds extends Pass<
   set shadowCascadeCount(v: number) {
     this.rawEffect.shadow.cascadeCount = v;
 
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get shadowMapSize() {
@@ -473,7 +471,7 @@ export class Clouds extends Pass<
   set shadowMapSize(v: Vector2) {
     this.rawEffect.shadow.mapSize = v;
 
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get shadowFarScale() {
@@ -482,7 +480,7 @@ export class Clouds extends Pass<
   set shadowFarScale(v: number) {
     this.rawEffect.shadow.farScale = v;
 
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   // Haze
@@ -493,7 +491,7 @@ export class Clouds extends Pass<
   set haze(v: boolean) {
     this.rawEffect.haze = v;
 
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get hazeDensityScale() {
@@ -502,7 +500,7 @@ export class Clouds extends Pass<
   set hazeDensityScale(v: number) {
     this.rawEffect.clouds.hazeDensityScale = v;
 
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get hazeExponent() {
@@ -511,7 +509,7 @@ export class Clouds extends Pass<
   set hazeExponent(v: number) {
     this.rawEffect.clouds.hazeExponent = v;
 
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get hazeScatteringCoefficient() {
@@ -520,7 +518,7 @@ export class Clouds extends Pass<
   set hazeScatteringCoefficient(v: number) {
     this.rawEffect.clouds.hazeScatteringCoefficient = v;
 
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get hazeAbsorptionCoefficient() {
@@ -529,7 +527,7 @@ export class Clouds extends Pass<
   set hazeAbsorptionCoefficient(v: number) {
     this.rawEffect.clouds.hazeAbsorptionCoefficient = v;
 
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   // Weather and shape
@@ -539,7 +537,7 @@ export class Clouds extends Pass<
   }
   set localWeatherRepeat(v: Vector2) {
     this.rawEffect.localWeatherRepeat.copy(v);
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get localWeatherOffset() {
@@ -547,7 +545,7 @@ export class Clouds extends Pass<
   }
   set localWeatherOffset(v: Vector2) {
     this.rawEffect.localWeatherOffset.copy(v);
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get shapeRepeat() {
@@ -555,7 +553,7 @@ export class Clouds extends Pass<
   }
   set shapeRepeat(v: Vector3) {
     this.rawEffect.shapeRepeat.copy(v);
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get shapeOffset() {
@@ -563,7 +561,7 @@ export class Clouds extends Pass<
   }
   set shapeOffset(v: Vector3) {
     this.rawEffect.shapeOffset.copy(v);
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get shapeDetailRepeat() {
@@ -571,7 +569,7 @@ export class Clouds extends Pass<
   }
   set shapeDetailRepeat(v: Vector3) {
     this.rawEffect.shapeDetailRepeat.copy(v);
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get shapeDetailOffset() {
@@ -579,7 +577,7 @@ export class Clouds extends Pass<
   }
   set shapeDetailOffset(v: Vector3) {
     this.rawEffect.shapeDetailOffset.copy(v);
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get turbulenceRepeat() {
@@ -587,7 +585,7 @@ export class Clouds extends Pass<
   }
   set turbulenceRepeat(v: Vector2) {
     this.rawEffect.turbulenceRepeat.copy(v);
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get turbulenceDisplacement() {
@@ -595,7 +593,7 @@ export class Clouds extends Pass<
   }
   set turbulenceDisplacement(v: number) {
     this.rawEffect.turbulenceDisplacement = v;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   // Scattering
@@ -605,7 +603,7 @@ export class Clouds extends Pass<
   }
   set scatteringCoefficient(v: number) {
     this.rawEffect.scatteringCoefficient = v;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get absorptionCoefficient() {
@@ -613,7 +611,7 @@ export class Clouds extends Pass<
   }
   set absorptionCoefficient(v: number) {
     this.rawEffect.absorptionCoefficient = v;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get scatterAnisotropy1() {
@@ -621,7 +619,7 @@ export class Clouds extends Pass<
   }
   set scatterAnisotropy1(v: number) {
     this.rawEffect.scatterAnisotropy1 = v;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get scatterAnisotropy2() {
@@ -629,7 +627,7 @@ export class Clouds extends Pass<
   }
   set scatterAnisotropy2(v: number) {
     this.rawEffect.scatterAnisotropy2 = v;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get scatterAnisotropyMix() {
@@ -637,7 +635,7 @@ export class Clouds extends Pass<
   }
   set scatterAnisotropyMix(v: number) {
     this.rawEffect.scatterAnisotropyMix = v;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get skyLightScale() {
@@ -645,7 +643,7 @@ export class Clouds extends Pass<
   }
   set skyLightScale(v: number) {
     this.rawEffect.skyLightScale = v;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get groundBounceScale() {
@@ -653,7 +651,7 @@ export class Clouds extends Pass<
   }
   set groundBounceScale(v: number) {
     this.rawEffect.groundBounceScale = v;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get powderScale() {
@@ -661,7 +659,7 @@ export class Clouds extends Pass<
   }
   set powderScale(v: number) {
     this.rawEffect.powderScale = v;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get powderExponent() {
@@ -669,7 +667,7 @@ export class Clouds extends Pass<
   }
   set powderExponent(v: number) {
     this.rawEffect.powderExponent = v;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   /**

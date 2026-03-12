@@ -5,7 +5,6 @@ import ThreeView, {
   type LightProbeLayer,
   type SkyLightProbeLayer,
   type LayerDescription,
-  type FogLightDefinition,
   degreeToRadian,
   geodeticToVector3,
   Color,
@@ -13,6 +12,7 @@ import ThreeView, {
 import type {
   StarsLayer,
   FogLightEffectLayer,
+  FogLightDefinition,
 } from "@navara/three_default_layers";
 import {
   DefaultPlugin,

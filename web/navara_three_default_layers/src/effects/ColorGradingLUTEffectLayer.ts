@@ -3,9 +3,12 @@ import {
   type EffectLayerConfig,
   type EffectLayerUpdate,
   type ViewContext,
+} from "@navara/three";
+
+import {
   ColorGradingLUT,
   type ColorGradingLUTOptions,
-} from "@navara/three";
+} from "./colorGradingLUT";
 
 type LayerDescription = {
   colorGradingLUT?: ColorGradingLUTOptions;
@@ -46,7 +49,7 @@ export class ColorGradingLUTEffectLayer extends EffectLayerDeclaration<
     });
 
     // Listen for internal updates from the effect and propagate them
-    pass.on("_needsUpdate", () => this.emit("_needsUpdate"));
+    pass.on("needsUpdate", () => this.emit("needsUpdate"));
 
     return pass;
   }

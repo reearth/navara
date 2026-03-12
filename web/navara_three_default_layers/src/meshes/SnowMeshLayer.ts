@@ -41,7 +41,7 @@ export class SnowMeshLayer extends MeshLayerDeclaration<
     if (this.config.snow && updates.snow && this._instance) {
       Object.assign(this.config.snow, updates.snow);
       this._instance.updateConfig(updates.snow);
-      this.emit("_needsUpdate");
+      this.emit("needsUpdate");
     }
 
     super.onUpdateConfig(updates);

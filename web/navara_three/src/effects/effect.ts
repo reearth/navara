@@ -15,7 +15,7 @@ export const DEFAULT_EFFECT_OPTIONS: Required<EffectOptions> = {
 };
 
 export type EffectEvents = {
-  _needsUpdate: () => void;
+  needsUpdate: () => void;
 };
 
 export class Pass<
@@ -54,9 +54,9 @@ export class Pass<
     this.rawPass.enabled = v;
 
     this.emit(
-      "_needsUpdate",
+      "needsUpdate",
       // I'm not sure why we need this cast, but it is necessary actually.
-      ...([] as Parameters<Ev["_needsUpdate"]>),
+      ...([] as Parameters<Ev["needsUpdate"]>),
     );
   }
 

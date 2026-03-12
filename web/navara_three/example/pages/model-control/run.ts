@@ -1,12 +1,14 @@
 import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
-  ToneMappingMode,
   geodeticToVector3,
   degreeToRadian,
   geodeticSurfaceNormal,
   Color,
 } from "@navara/three";
-import type { GLTFModelLayer } from "@navara/three_default_layers";
+import {
+  ToneMappingMode,
+  type GLTFModelLayer,
+} from "@navara/three_default_layers";
 import {
   DefaultPlugin,
   type DefaultLayerDescriptions,

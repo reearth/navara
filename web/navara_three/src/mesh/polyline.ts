@@ -1,4 +1,3 @@
-import type { EventHandler } from "@navara/core";
 import {
   PolylineMesh as NavaraPolylineMesh,
   PolylineMaterial,
@@ -13,7 +12,6 @@ import {
   Vector2,
 } from "three";
 
-import type { ViewEvents } from "..";
 import type { ViewContext } from "../core";
 import type { BufferLoader } from "../event";
 import { createPolylineMaterialEnhancer } from "../material/enhancer";
@@ -71,7 +69,6 @@ export class PolylineMesh extends BatchedFeatureMesh<
     mesh: NavaraPolylineMesh,
     buf: BufferLoader,
     uniforms: CommonUniforms,
-    viewEvents: EventHandler<ViewEvents>,
     viewContext: ViewContext,
     layerId: string,
   ) {
@@ -91,10 +88,10 @@ export class PolylineMesh extends BatchedFeatureMesh<
       this.visible = false;
     }
 
-    this.initMaterial(mesh, uniforms, viewEvents, geometryResult.useRTE);
+    this.initMaterial(mesh, uniforms, geometryResult.useRTE);
 
     this.addEventListener("removedFromWorld", () => {
-      this.dispose(viewEvents);
+      this.dispose();
     });
   }
 
@@ -236,7 +233,6 @@ export class PolylineMesh extends BatchedFeatureMesh<
   private initMaterial(
     mesh: NavaraPolylineMesh,
     uniforms: CommonUniforms,
-    viewEvents: EventHandler<ViewEvents>,
     useRTE: boolean,
   ) {
     const meshMaterial = mesh.material;
@@ -319,7 +315,7 @@ export class PolylineMesh extends BatchedFeatureMesh<
     // Set onBeforeCompile to use enhancer
     this.material.onBeforeCompile = enhancer.transformShader;
 
-    viewEvents.emit("_csmMounted", this.material);
+    this._viewContext.applyShadowMaterial(this.material);
 
     this._initBatchedMaterial();
 
@@ -482,7 +478,7 @@ export class PolylineMesh extends BatchedFeatureMesh<
     this.visible = visible;
   }
 
-  dispose(viewEvents: EventHandler<ViewEvents>) {
-    viewEvents.emit("_csmUnmounted", this.material);
+  dispose() {
+    this._viewContext.removeShadowMaterial(this.material);
   }
 }

@@ -3,9 +3,9 @@ import {
   type EffectLayerConfig,
   type EffectLayerUpdate,
   type ViewContext,
-  SSAO,
-  type SSAOOptions,
 } from "@navara/three";
+
+import { SSAO, type SSAOOptions } from "./ssao";
 
 type LayerDescription = {
   ssao?: Omit<SSAOOptions, "enabled">;

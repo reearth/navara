@@ -1,3 +1,4 @@
+import { Effect, type Quality, type EffectOptions } from "@navara/three";
 import {
   EdgeDetectionMode as PostProcessingEdgeDetectionMode,
   FXAAEffect,
@@ -5,10 +6,6 @@ import {
   SMAAPreset,
 } from "postprocessing";
 import type { Camera } from "three";
-
-import type { Quality } from "../quality";
-
-import { Effect, type EffectOptions } from "./effect";
 
 export { ToneMappingMode } from "postprocessing";
 
@@ -77,7 +74,7 @@ export class SMAA extends Effect<SMAAEffect, AntialiasOptions> {
 
     this.rawEffect.applyPreset(selectSMAAPreset(this.options.quality));
 
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get edgeDetectionMode() {
@@ -90,6 +87,6 @@ export class SMAA extends Effect<SMAAEffect, AntialiasOptions> {
     this.rawEffect.edgeDetectionMaterial.edgeDetectionMode =
       selectSMAAEdgeDetectionMode(this.options.edgeDetectionMode);
 
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 }

@@ -3,12 +3,15 @@ import {
   type EffectLayerConfig,
   type EffectLayerUpdate,
   type ViewContext,
-  AerialPerspective,
-  type AerialPerspectiveOptions,
   type MRTPassEffectLayer,
 } from "@navara/three";
 import { RGBADepthPacking } from "three";
 import invariant from "tiny-invariant";
+
+import {
+  AerialPerspective,
+  type AerialPerspectiveOptions,
+} from "./aerialPerspective";
 
 type LayerDescription = {
   aerialPerspective?: Omit<AerialPerspectiveOptions, "enabled">;

@@ -1,5 +1,7 @@
+import type { Color } from "@navara/three";
 import FogLightFragment from "@shaders/glsl/fogLight.frag.glsl?raw";
 import { resolveIncludes } from "@takram/three-geospatial";
+import { depth, packing, transform } from "@takram/three-geospatial/shaders";
 import {
   Effect as PostProcessingEffect,
   BlendFunction,
@@ -26,9 +28,6 @@ import {
   Frustum,
   Sphere,
 } from "three";
-
-import type { Color } from "../../Color";
-import { depth, packing, transform } from "../../shaders";
 
 export type FogLightDefinition = {
   position: { x: number; y: number; z: number };

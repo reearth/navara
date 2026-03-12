@@ -1,11 +1,13 @@
+import {
+  blendFunction,
+  type BlendMode,
+  Effect,
+  type EffectOptions,
+} from "@navara/three";
 import { LookupTexture, RawImageData, LUT3DEffect } from "postprocessing";
 import { type Camera, TextureLoader } from "three";
 import { LUT3dlLoader } from "three/examples/jsm/loaders/LUT3dlLoader.js";
 import { LUTCubeLoader } from "three/examples/jsm/loaders/LUTCubeLoader.js";
-
-import { blendFunction, type BlendMode } from "../utils/blendModes";
-
-import { Effect, type EffectOptions } from "./effect";
 
 export type ColorGradingLUTOptions = {
   /** URL of the LUT file to load, supported formats are .cube, .3dl, .png, .jpg, .jpeg
@@ -64,7 +66,7 @@ export class ColorGradingLUT extends Effect<
 
           effect.lut = lut;
           t.texture3D.dispose();
-          this.emit("_needsUpdate");
+          this.emit("needsUpdate");
         },
         undefined,
         (err) => {
@@ -93,7 +95,7 @@ export class ColorGradingLUT extends Effect<
 
           effect.lut = lut;
           t.texture3D.dispose();
-          this.emit("_needsUpdate");
+          this.emit("needsUpdate");
         },
         undefined,
         (err) => {
@@ -138,7 +140,7 @@ export class ColorGradingLUT extends Effect<
 
           effect.lut = lut;
           t.dispose();
-          this.emit("_needsUpdate");
+          this.emit("needsUpdate");
         },
         undefined,
         (err) => {
@@ -165,7 +167,7 @@ export class ColorGradingLUT extends Effect<
 
     this.options.blendMode = mode;
     this.rawEffect.blendMode.blendFunction = blendFunction(mode);
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   set opacity(value: number) {
@@ -174,7 +176,7 @@ export class ColorGradingLUT extends Effect<
 
     this.options.opacity = value;
     this.rawEffect.blendMode.opacity.value = value;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   dispose() {

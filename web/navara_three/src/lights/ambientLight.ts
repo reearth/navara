@@ -2,7 +2,7 @@ import { EventHandler } from "@navara/core";
 import { AmbientLight as AmbientLightImpl, Color } from "three";
 
 export type AmbientLightEvents = {
-  _needsUpdate: () => void;
+  needsUpdate: () => void;
 };
 
 export type AmbientLightOptions = {
@@ -32,7 +32,7 @@ export class AmbientLight extends EventHandler<AmbientLightEvents> {
   }
   set color(v: Color) {
     this.raw.color.copy(v);
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get intensity() {
@@ -40,7 +40,7 @@ export class AmbientLight extends EventHandler<AmbientLightEvents> {
   }
   set intensity(v: number) {
     this.raw.intensity = v;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get visible() {
@@ -48,6 +48,6 @@ export class AmbientLight extends EventHandler<AmbientLightEvents> {
   }
   set visible(v: boolean) {
     this.raw.visible = v;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 }

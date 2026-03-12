@@ -57,7 +57,7 @@ export class RainMeshLayer extends MeshLayerDeclaration<
     if (this.config.rain && updates.rain && this._instance) {
       Object.assign(this.config.rain, updates.rain);
       this._instance.updateConfig(updates.rain);
-      this.emit("_needsUpdate");
+      this.emit("needsUpdate");
     }
 
     super.onUpdateConfig(updates);
