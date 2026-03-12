@@ -17,6 +17,8 @@ export const DEFAULT_BASE_PROPS: Required<
   transparent: true,
   depthTest: true,
   aspect: 1.0,
+  fov: 50.0,
+  screenHeight: 1080,
 };
 
 /** Default state derived from DEFAULT_BASE_PROPS */
@@ -32,6 +34,8 @@ export const DEFAULT_BASE_STATE: InstancedSpriteBaseState = {
   transparent: DEFAULT_BASE_PROPS.transparent,
   depthTest: DEFAULT_BASE_PROPS.depthTest,
   aspect: DEFAULT_BASE_PROPS.aspect,
+  fov: DEFAULT_BASE_PROPS.fov,
+  screenHeight: DEFAULT_BASE_PROPS.screenHeight,
 };
 
 /**
@@ -60,5 +64,7 @@ export const updateState = (
     transparent: props.transparent ?? currentState.transparent,
     depthTest: props.depthTest ?? currentState.depthTest,
     aspect: props.aspect ?? currentState.aspect,
+    fov: props.fov ?? currentState.fov,
+    screenHeight: props.screenHeight ?? currentState.screenHeight,
   };
 };

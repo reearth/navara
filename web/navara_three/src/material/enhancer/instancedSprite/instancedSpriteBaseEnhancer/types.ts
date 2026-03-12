@@ -27,6 +27,8 @@ export type InstancedSpriteBaseProps = {
   rtcCenter?: [number, number, number];
   texture?: UniformValue<DataArrayTexture | null>;
   aspect?: number;
+  fov?: number;
+  screenHeight?: number;
 };
 
 /**
@@ -52,6 +54,8 @@ export type InstancedSpriteBaseState = Readonly<{
 
   // External ref state
   aspect: number;
+  fov: number;
+  screenHeight: number;
 }>;
 
 /**
@@ -71,6 +75,8 @@ export type InstancedSpriteBaseRefs = {
   uFarPlane: UniformValue<number>;
   uAspect: UniformValue<number>;
   nvr_uPickable: UniformValue<number>;
+  uFov: UniformValue<number>;
+  uScreenHeight: UniformValue<number>;
 
   // External ref - only present in billboard mode
   uTexture?: UniformValue<DataArrayTexture | null>;
@@ -99,6 +105,17 @@ export type InstancedSpriteBaseMutates = Mutates<
      * Update far plane per-frame from camera.
      */
     updateFarPlane: (far: number) => void;
+
+    /**
+     * Update FOV per-frame from camera.
+     */
+    updateFov: (fov: number) => void;
+
+    /**
+     * Update screen height per-frame from renderer size.
+     */
+    updateScreenHeight: (height: number) => void;
+
     /**
      * Set texture external ref.
      */

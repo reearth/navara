@@ -1,5 +1,6 @@
 #include "chunks/horizon_culling_pars_vertex.glsl"
 #include "chunks/sprite_height_pars_vertex.glsl"
+#include "chunks/pixelToWorld.glsl"
 
 #ifdef USE_RTE
     attribute vec3 instancePositionLOW; 
@@ -25,14 +26,8 @@ uniform float uScale;
 uniform bool uScaleByDistance;
 uniform vec2 uCenter;
 uniform float uAspect; // Aspect ratio of the billboard texture
-
-// Normalization factor used when scaling sprites by camera distance.
-// mvPosition is assumed to be in world units roughly corresponding to meters
-// on a globe-scale scene. A smaller factor increases how quickly sprites grow
-// with distance. This was reduced from 1,000,000.0 to 100,000.0 to make
-// distance-based scaling more noticeable at typical camera altitudes; adjust
-// this value if you need to match prior visual behavior.
-const float DISTANCE_SCALE_FACTOR = 100000.0;
+uniform float uFov;
+uniform float uScreenHeight;
 
 varying vec2 vUv;
 varying vec3 vColor;
@@ -79,14 +74,16 @@ void main() {
 
     mvPosition += mvr_getMvHeightOffset(absTransformed, instanceHeight);
     vec2 center = clamp(uCenter, vec2(-0.5), vec2(0.5)); // Ensure center is within the bounds of the sprite
+
     float clampedScale = max(0.0, uScale); // Prevent negative scaling
     // This makes it always face the camera
     if (uScaleByDistance) {
-        float scale = clampedScale * (1.0 + (length(mvPosition.xyz) / DISTANCE_SCALE_FACTOR));
-        mvPosition.xy += (((position.xy - center)) * vec2(uAspect, 1.0) * scale);
+        clampedScale = nvr_pxToWorld(clampedScale, uFov, uScreenHeight, absTransformed, cameraPosition);
+        mvPosition.xy += (((position.xy - center)) * vec2(uAspect, 1.0) * clampedScale);
     } else {
         mvPosition.xy += (((position.xy - center)) * vec2(uAspect, 1.0) * clampedScale);
     }
+
     gl_Position = projectionMatrix * mvPosition;
     vFragDepth = gl_Position.w + 1.0;
 }
