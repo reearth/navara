@@ -2,10 +2,12 @@ import ThreeView, {
   Color,
   geodeticToVector3,
   degreeToRadian,
-  ToneMappingMode,
   JAPAN_GSI_ELEVATION_DECODER,
 } from "@navara/three";
-import type { SphereMeshLayer } from "@navara/three_default_layers";
+import {
+  ToneMappingMode,
+  type SphereMeshLayer,
+} from "@navara/three_default_layers";
 import {
   DefaultPlugin,
   type DefaultLayerDescriptions,
