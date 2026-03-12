@@ -195,6 +195,7 @@ impl RasterTile {
         data_requesters: &Query<&navara_data_requester::DataRequester>,
         has_tile_layer: bool,
     ) -> bool {
+        // If TileLayer is None, texture is considered ready
         if !has_tile_layer {
             return true;
         }
@@ -202,8 +203,7 @@ impl RasterTile {
         self.texture_fragment_entity_ids
             .as_ref()
             .map(|e| {
-                // All layers must be ready
-                e.iter().all(|e| {
+                e.iter().any(|e| {
                     e.and_then(|e| {
                         // Check TextureFragment first
                         if let Ok(t) = texture_fragment.get(e) {

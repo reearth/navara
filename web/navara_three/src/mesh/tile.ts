@@ -152,10 +152,17 @@ export class TileMesh
         existingTexture.needsUpdate = true;
         texture = existingTexture;
       } else {
+        // Size mismatch - need to create new texture
+        // Dispose old texture before replacing
+        existingTexture.dispose();
         texture = TileMesh.createHillshadeDataTexture(bytes, size);
         loadedTexs.set(id, texture);
       }
     } else {
+      // No existing DataTexture - dispose old texture if it exists (might be regular Texture)
+      if (existingTexture) {
+        existingTexture.dispose();
+      }
       texture = TileMesh.createHillshadeDataTexture(bytes, size);
       loadedTexs.set(id, texture);
     }
@@ -897,8 +904,6 @@ vUv = vUv * uScale + uOffset;
 
         // This preserves original vertex normals for ocean/no-data areas
         if (testHeight >= 0.0) {
-          // Use vUv directly - it already contains global UV transform when using parent texture
-          // Rust handles parent/child fallback at tile level (is_all_texture_ready)
           vec3 demNormal = computeNormalFromDEM(uTextures[${i}], vUv, texelSize, uHillshadeZooms[${i}]);
 
           vec3 up = vec3(0.0, 0.0, 1.0);  // World up
