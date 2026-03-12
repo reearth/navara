@@ -32,7 +32,6 @@ import {
   ClampToEdgeWrapping,
   RepeatWrapping,
   Group,
-  Material,
   PCFShadowMap,
 } from "three";
 import invariant from "tiny-invariant";
@@ -68,7 +67,6 @@ import {
 import { TEXTURE_LOADER } from "./event/loaders";
 import { registerInputEvents } from "./input";
 import { Layer, type LayerEvent } from "./layer";
-import { SunLightLayer, AmbientLightLayer, SkyLightProbeLayer } from "./layers";
 import {
   MRTPassEffectLayer,
   SelectiveBloomEffectLayer,
@@ -78,7 +76,6 @@ import {
   TransparentPassEffectLayer,
 } from "./layers/effect";
 import { FinalCopyEffectLayer } from "./layers/effect/FinalCopyEffectLayer";
-import { LightProbeLayer } from "./layers/light/LightProbeLayer";
 import { LayersManager } from "./layersManager";
 import { overrideMaterialsForMRT } from "./material";
 import { RenderPassOrchestrator } from "./orchestrators/RenderPassOrchestrator";
@@ -137,7 +134,6 @@ export * from "./shaders";
 export * from "./material";
 export * from "./core";
 export * from "./layers";
-export * from "./lights";
 export * from "./passes";
 export * from "./evaluations";
 export { SKY_RENDER_ORDER, STARS_RENDER_ORDER } from "./renderOrder";
@@ -713,12 +709,6 @@ export default class ThreeView<
         meshes: this._meshes,
         drapedMaterials: this._drapedFeatureMaterials,
       },
-      {
-        applyShadowMaterial: (material: Material) =>
-          this.setupCSMForMaterial(material),
-        removeShadowMaterial: (material: Material) =>
-          this.removeCSMForMaterial(material),
-      },
       this.selectiveEffectHelper,
       {
         selectiveEffectMask: this._options.selectiveEffects?.debugViews,
@@ -1235,15 +1225,7 @@ export default class ThreeView<
   }
 
   private registerBuiltIns(): void {
-    this.registerBuiltInLights();
     this.registerBuiltInEffects();
-  }
-
-  private registerBuiltInLights(): void {
-    this.registerLight("sun", SunLightLayer);
-    this.registerLight("ambient", AmbientLightLayer);
-    this.registerLight("skyLightProbe", SkyLightProbeLayer);
-    this.registerLight("lightProbe", LightProbeLayer);
   }
 
   private registerBuiltInEffects(): void {
@@ -1411,43 +1393,6 @@ export default class ThreeView<
       throw new Error("Plugin must be added before `view.init()`.");
     this.plugins.push(plugin);
     return this;
-  }
-
-  /**
-   * Find the sun light layer in the current layers
-   */
-  private findSunLightLayer(): SunLightLayer | null {
-    // Look through registered layers for sun light layer
-    for (const layer of this.layersManager.getDeclarationLayers()) {
-      const layerInstance = layer.ref;
-      // Check if it's a SunLightLayer
-      if (layerInstance instanceof SunLightLayer) {
-        return layerInstance;
-      }
-    }
-    return null;
-  }
-
-  /**
-   * Setup CSM for a single material
-   */
-  private setupCSMForMaterial(material: Material): void {
-    const sunLightLayer = this.findSunLightLayer();
-    if (!sunLightLayer) {
-      return;
-    }
-    sunLightLayer._setupMaterialForShadows(material);
-  }
-
-  /**
-   * Remove CSM for a single material
-   */
-  private removeCSMForMaterial(material: Material): void {
-    const sunLightLayer = this.findSunLightLayer();
-    if (!sunLightLayer) {
-      return;
-    }
-    sunLightLayer._removeMaterialFromShadows(material);
   }
 
   /**

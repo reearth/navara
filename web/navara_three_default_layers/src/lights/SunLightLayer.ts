@@ -1,13 +1,13 @@
-import { Material } from "three";
-
-import { Color } from "../../Color";
+import { Color } from "@navara/three";
 import {
   LightLayerDeclaration,
   type LightLayerConfig,
   ViewContext,
   type LightLayerUpdate,
-} from "../../core";
-import { SunLight, type SunLightOptions } from "../../lights";
+} from "@navara/three";
+import { Material } from "three";
+
+import { SunLight, type SunLightOptions } from "./sunLight";
 
 type LayerDescription = {
   /**
@@ -118,6 +118,14 @@ export class SunLightLayer extends LightLayerDeclaration<
 
     // Add initial lights to scene
     this.updateSceneLights();
+
+    // Listen for shadow material events from ViewContext
+    this.view.on("unstableShadowApplied", (m: Material) => {
+      this._instance?.setupMaterialForCSM(m);
+    });
+    this.view.on("unstableShadowRemoved", (m: Material) => {
+      this._instance?.removeMaterialFromCSM(m);
+    });
   }
 
   update(_time: number): void {
@@ -179,35 +187,5 @@ export class SunLightLayer extends LightLayerDeclaration<
     if (this.raw) {
       this.raw.removeFromParent();
     }
-  }
-
-  // CSM Coordination Methods
-
-  /**
-   * Setup a material for CSM shadows
-   */
-  _setupMaterialForShadows(material: Material): void {
-    this._instance?.setupMaterialForCSM(material);
-  }
-
-  /**
-   * Remove a material from CSM shadows
-   */
-  _removeMaterialFromShadows(material: Material): void {
-    this._instance?.removeMaterialFromCSM(material);
-  }
-
-  /**
-   * Get CSM instance for advanced usage
-   */
-  _getCSM() {
-    return this._instance?.getCSM();
-  }
-
-  /**
-   * Get CSM helper for debug visualization
-   */
-  _getCSMHelper() {
-    return this._instance?.getCSMHelper();
   }
 }

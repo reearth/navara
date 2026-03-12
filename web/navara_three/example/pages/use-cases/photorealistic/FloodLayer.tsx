@@ -1,13 +1,10 @@
 import { Color } from "@navara/three";
-import type {
-  Layer as NavaraLayer,
-  LayerDescription,
-  FeatureUpdatedParams,
-} from "@navara/three";
+import type { Layer as NavaraLayer, FeatureUpdatedParams } from "@navara/three";
 import { Layer } from "@navara/three_react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { czmlToGeoJSON, type GeoJSONFC } from "./czml";
+import type { LayerDescriptions } from "./type";
 
 export type FloodLayerProps = {
   url: string;
@@ -167,7 +164,7 @@ export function FloodLayer({
     return () => layer.off("featureUpdated", handler);
   };
 
-  const layerDesc = useMemo((): LayerDescription | null => {
+  const layerDesc = useMemo((): LayerDescriptions | null => {
     if (!fc || !visible) return null;
     return {
       type: "geojson",

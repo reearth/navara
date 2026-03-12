@@ -1,11 +1,10 @@
-import { LightProbe, SphericalHarmonics3, Vector3 } from "three";
-
 import {
   LightLayerDeclaration,
   type LightLayerConfig,
   type LightLayerUpdate,
   type ViewContext,
-} from "../../core";
+} from "@navara/three";
+import { LightProbe, SphericalHarmonics3, Vector3 } from "three";
 
 type LayerDescription = {
   lightProbe?: {
