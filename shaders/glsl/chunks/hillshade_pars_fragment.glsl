@@ -10,7 +10,7 @@
   uniform float uHillshadeEpsilon; // Scale factor for height conversion
   uniform float uHillshadeOffset; // Additive offset (applied after epsilon)
   uniform float uHillshadeExaggeration; // Terrain exaggeration factor (recommended: 0.3-2.0)
-  // uHillshadeZoom is declared in tile.ts as global uniform
+  // uHillshadeZooms (array uniform) is declared in tile.ts as a global uniform
 
   // Decode height from RGB DEM texture
   float decodeHeightForHillshade(vec4 color) {

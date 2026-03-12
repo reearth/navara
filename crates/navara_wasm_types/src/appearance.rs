@@ -1729,8 +1729,6 @@ pub struct HillshadeMaterial {
     pub elevation_decoder: Option<ElevationDecoder>,
     /// Exaggeration factor for hillshade effect (default: 1.0)
     pub exaggeration: Option<f32>,
-    /// Zoom level of the DEM tiles (used to calculate worldMetersPerTexel)
-    pub zoom: Option<u8>,
 }
 
 #[wasm_bindgen]

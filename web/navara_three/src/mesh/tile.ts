@@ -161,8 +161,11 @@ export class TileMesh
     }
 
     // Directly bind the texture to the material's uniform
-    const tileMesh = tileMapByHandle.get(event.tile_handle);
-    if (tileMesh && tileMesh.material.userData) {
+    // Update ALL tiles that reference this texture fragment ID (not just event.tile_handle)
+    // This is important because child tiles may reuse parent's textureFragments via readyParentTileHandle
+    for (const tileMesh of tileMapByHandle.values()) {
+      if (!tileMesh.material.userData) continue;
+
       const material = tileMesh.material as TileMaterial;
       const textureFragments = material.userData.textureFragments?.value as
         | (string | null)[]
@@ -762,7 +765,6 @@ vUv = vUv * uScale + uOffset;
   uniform bool uIsElevationHeatmaps[${maxTextures}];
   uniform bool uIsHillshades[${maxTextures}];
   uniform float uHillshadeZooms[${maxTextures}];
-  uniform vec2 uHillshadeDimension;
   uniform sampler2D uWaterNormalMap;
   uniform float uPickable;
   uniform float uIor;

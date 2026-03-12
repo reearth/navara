@@ -109,11 +109,13 @@ impl RasterTile {
         &self,
         qt: &RasterTileQuadtree,
         texture_fragment: &TileTextureFragmentQuery,
+        data_requesters: &Query<&navara_data_requester::DataRequester>,
         terrain_data_requester: &TileTerrainDataRequesterQuery,
         terrain_layer: &Option<&TerrainLayer>,
         has_tile_layer: bool,
     ) -> ReadyState {
-        let is_texture_loaded = self.is_texture_ready(texture_fragment, has_tile_layer);
+        let is_texture_loaded =
+            self.is_texture_ready(texture_fragment, data_requesters, has_tile_layer);
 
         let data_requester_entity_id = self
             .terrain_data
@@ -190,36 +192,9 @@ impl RasterTile {
     pub fn is_texture_ready(
         &self,
         texture_fragment: &TileTextureFragmentQuery,
-        has_tile_layer: bool,
-    ) -> bool {
-        // If TileLayer is None, texture is considered ready
-        if !has_tile_layer {
-            return true;
-        }
-
-        // Note: This only checks TextureFragment status.
-        // For DataRequester-based textures (like hillshade), we check separately.
-        self.texture_fragment_entity_ids
-            .as_ref()
-            .map(|e| {
-                e.iter().any(|e| {
-                    e.and_then(|e| texture_fragment.get(e).map(|t| t.1.is_succeeded()).ok())
-                        .unwrap_or(false)
-                })
-            })
-            .unwrap_or(false)
-    }
-
-    /// Check if all textures (TextureFragment or DataRequester) are ready for this tile
-    /// Returns true only when every layer has a ready texture
-    pub fn is_all_texture_ready(
-        &self,
-        texture_fragment: &TileTextureFragmentQuery,
         data_requesters: &Query<&navara_data_requester::DataRequester>,
         has_tile_layer: bool,
     ) -> bool {
-        use navara_data_requester::DataRequesterStatus;
-
         if !has_tile_layer {
             return true;
         }

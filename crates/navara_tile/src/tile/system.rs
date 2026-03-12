@@ -65,8 +65,11 @@ pub fn update_tiles(
     )>,
     texture_fragment: TileTextureFragmentQuery,
     changed_texture_fragment: ChangedTileTextureFragmentQuery,
-    terrain_data_requester: TileTerrainDataRequesterQuery,
-    changed_terrain_data_requester: ChangedTileTerrainDataRequesterQuery,
+    data_requesters: Query<&DataRequester>,
+    mut terrain_data_requester_set: ParamSet<(
+        TileTerrainDataRequesterQuery,
+        ChangedTileTerrainDataRequesterQuery,
+    )>,
     occluder: Query<Ref<EllipsoidalOccluder>>,
     mut meshes_set: ParamSet<(
         // All meshes
@@ -83,12 +86,13 @@ pub fn update_tiles(
     )>,
 ) {
     let is_texture_fragment_changed = !changed_texture_fragment.is_empty();
-    let is_data_requester_changed = !changed_terrain_data_requester.is_empty();
+    let is_data_requester_changed = !terrain_data_requester_set.p1().is_empty();
     let is_mesh_changed = !meshes_set.p1().is_empty();
     let is_tile_layer_added = !tiles_set.p1().is_empty();
     let is_terrain_layer_added = !terrain_layer_set.p1().is_empty();
 
     let mut meshes = meshes_set.p0();
+    let terrain_data_requester = terrain_data_requester_set.p0();
 
     // TODO: Think how to support multiple terrain layer.(Is it possible?)
     let terrain_layer = terrain_layer_set.p0();
@@ -137,11 +141,11 @@ pub fn update_tiles(
     let zero_tile_handle = zero_tile.handle();
 
     let has_tile_layer = !tiles.is_empty();
-    let is_texture_ready = qt
-        .qt
-        .get_mut(zero_tile_handle)
-        .unwrap()
-        .is_texture_ready(&texture_fragment, has_tile_layer);
+    let is_texture_ready = qt.qt.get_mut(zero_tile_handle).unwrap().is_texture_ready(
+        &texture_fragment,
+        &data_requesters,
+        has_tile_layer,
+    );
 
     let traversal_result = traverse_tile(
         &mut commands,
@@ -155,6 +159,7 @@ pub fn update_tiles(
         &camera,
         &frustum,
         &texture_fragment,
+        &data_requesters,
         &terrain_data_requester,
         &window,
         &WGS84_64,
@@ -857,7 +862,7 @@ pub fn update_mesh_material(
 
         let mut parent_z = None;
         let texture_fragment_entity_ids =
-            if tile.is_all_texture_ready(&texture_fragment, &data_requesters, true) {
+            if tile.is_texture_ready(&texture_fragment, &data_requesters, true) {
                 texture_fragment_entity_ids
             } else {
                 // Use the parent tile if this tile doesn't have a tile.

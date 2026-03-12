@@ -48,6 +48,7 @@ pub fn traverse_tile(
     camera: &Transform,
     frustum: &CameraFrustum,
     texture_fragment: &TileTextureFragmentQuery,
+    data_requesters: &Query<&navara_data_requester::DataRequester>,
     terrain_data_requester: &TileTerrainDataRequesterQuery,
     window: &Window,
     ellipsoid: &Ellipsoid<FloatType>,
@@ -103,6 +104,7 @@ pub fn traverse_tile(
     let tile_ready_state = tile.is_ready(
         qt,
         texture_fragment,
+        data_requesters,
         terrain_data_requester,
         terrain_layer,
         has_tile_layer,
@@ -230,6 +232,7 @@ pub fn traverse_tile(
                 camera,
                 frustum,
                 texture_fragment,
+                data_requesters,
                 terrain_data_requester,
                 window,
                 ellipsoid,
