@@ -1,8 +1,5 @@
-import ThreeView, {
-  JAPAN_GSI_ELEVATION_DECODER,
-  CloudsEffectLayer,
-  Color,
-} from "@navara/three";
+import ThreeView, { JAPAN_GSI_ELEVATION_DECODER, Color } from "@navara/three";
+import { CloudsEffectLayer } from "@navara/three_default_layers";
 import type {
   ArclineMeshLayer,
   SmoothLineMeshLayer,
@@ -234,7 +231,9 @@ const gSmoothLinesDef = [
   },
 ];
 
-export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
+export type LayerDescriptions = DefaultLayerDescriptions;
+
+export const run = async (view: ThreeView<LayerDescriptions>) => {
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
   await view.init();
@@ -299,7 +298,7 @@ function intToHexColor(num: number) {
   return "#" + num.toString(16).padStart(6, "0");
 }
 
-const addArcLines = (view: ThreeView<DefaultLayerDescriptions>, pane: Pane) => {
+const addArcLines = (view: ThreeView<LayerDescriptions>, pane: Pane) => {
   const arcLineLayer = view.addLayer<ArclineMeshLayer>({
     type: "mesh",
     arcLines: gArcLinesDef,
@@ -516,10 +515,7 @@ const addArcLines = (view: ThreeView<DefaultLayerDescriptions>, pane: Pane) => {
   dashAnimFunc();
 };
 
-const addSmoothLines = (
-  view: ThreeView<DefaultLayerDescriptions>,
-  pane: Pane,
-) => {
+const addSmoothLines = (view: ThreeView<LayerDescriptions>, pane: Pane) => {
   const smoothLineLayer = view.addLayer<SmoothLineMeshLayer>({
     type: "mesh",
     smoothLines: gSmoothLinesDef,

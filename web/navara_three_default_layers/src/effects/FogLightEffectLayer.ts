@@ -1,14 +1,13 @@
-import invariant from "tiny-invariant";
-
 import {
   EffectLayerDeclaration,
   type EffectLayerConfig,
   type EffectLayerUpdate,
-} from "../../core/EffectLayerDeclaration";
-import type { ViewContext } from "../../core/ViewContext";
-import { FogLight, type FogLightOptions } from "../../effects/fogLight/effect";
-
-import type { MRTPassEffectLayer } from "./MRTPassEffectLayer";
+  type ViewContext,
+  FogLight,
+  type FogLightOptions,
+  type MRTPassEffectLayer,
+} from "@navara/three";
+import invariant from "tiny-invariant";
 
 type LayerDescription = {
   fogLight?: Omit<FogLightOptions, "enabled">;

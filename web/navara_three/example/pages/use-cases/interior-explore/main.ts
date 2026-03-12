@@ -1,9 +1,8 @@
 import ThreeView, { Color } from "@navara/three";
-import type { DefaultLayerDescriptions } from "@navara/three_default_plugin";
 
-import { run } from "./run";
+import { run, type LayerDescriptions } from "./run";
 
-const view = new ThreeView<DefaultLayerDescriptions>({
+const view = new ThreeView<LayerDescriptions>({
   shadow: true,
   backgroundColor: new Color().setStyle("#475668"),
 });

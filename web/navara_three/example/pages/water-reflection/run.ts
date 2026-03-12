@@ -2,9 +2,12 @@ import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
   Color,
   type LayerDescription,
-  SSREffectLayer,
 } from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import { SSREffectLayer } from "@navara/three_default_layers";
+import {
+  DefaultPlugin,
+  type DefaultLayerDescriptions,
+} from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../helpers/attributions";
@@ -17,18 +20,15 @@ import {
 import { addCameraControl, addDateControl } from "../../helpers/control";
 import { addFieldsToFolder, type FolderFields } from "../../helpers/panel";
 
-import { type ReflectiveBoxLayerConfig } from "./layers";
+export type LayerDescriptions = DefaultLayerDescriptions;
 
-export const run = async (view: ThreeView<ReflectiveBoxLayerConfig>) => {
+export const run = async (view: ThreeView<LayerDescriptions>) => {
   const defaultPlugin = new DefaultPlugin();
   view.addPlugin(defaultPlugin);
 
   await view.init();
 
   view.toneMappingExposure = 10;
-
-  // Add default effect layers
-  view.addDefaultEffectLayers();
 
   const defaultAtmospheres = defaultPlugin.addDefaultPhotorealLayers();
   defaultAtmospheres.sun.update({
@@ -110,7 +110,7 @@ export const run = async (view: ThreeView<ReflectiveBoxLayerConfig>) => {
   ]);
 };
 
-const addSSRControls = (view: ThreeView, pane: Pane) => {
+const addSSRControls = (view: ThreeView<LayerDescriptions>, pane: Pane) => {
   // Add SSR effect layer
   let ssrLayer = view.addLayer<SSREffectLayer>({
     type: "effect",
@@ -301,7 +301,7 @@ const addSSRControls = (view: ThreeView, pane: Pane) => {
   );
 };
 
-const addWaterControls = (view: ThreeView, pane: Pane) => {
+const addWaterControls = (view: ThreeView<LayerDescriptions>, pane: Pane) => {
   // Store the layer description object
   const mvtLayerDescription: LayerDescription = {
     type: "mvt",

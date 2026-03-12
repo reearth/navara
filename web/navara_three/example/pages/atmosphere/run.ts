@@ -11,15 +11,20 @@ import ThreeView, {
   SunLightLayer,
   AmbientLightLayer,
   SkyLightProbeLayer,
-  isMobileDevice,
   type TextureChannel,
+  LightProbeLayer,
+} from "@navara/three";
+import {
+  SkyMeshLayer,
+  StarsLayer,
   AerialPerspectiveEffectLayer,
   CloudsEffectLayer,
   SSAOEffectLayer,
-  LightProbeLayer,
-} from "@navara/three";
-import { SkyMeshLayer, StarsLayer } from "@navara/three_default_layers";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+} from "@navara/three_default_layers";
+import {
+  DefaultPlugin,
+  type DefaultLayerDescriptions,
+} from "@navara/three_default_plugin";
 import { SphericalHarmonics3 } from "three";
 import { Pane } from "tweakpane";
 
@@ -42,17 +47,16 @@ import {
 } from "../../helpers/panel";
 import { SH_COEFFICIENTS } from "../../helpers/sh";
 
-import { ATMOSPHERE_EXAMPLE_OPTIONS } from "./main";
+export type LayerDescriptions = DefaultLayerDescriptions;
 
-type DefaultEffects = ReturnType<ThreeView["addDefaultEffectLayers"]>;
+type DefaultEffects = ReturnType<DefaultPlugin["addDefaultPhotorealLayers"]>;
 
-export const run = async (view: ThreeView) => {
+export const run = async (view: ThreeView<LayerDescriptions>) => {
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
   await view.init();
 
-  const defaultEffects = view.addDefaultEffectLayers();
-  const defaultLayers = plugin.addDefaultPhotorealLayers();
+  const defaultEffects = plugin.addDefaultPhotorealLayers();
 
   defaultEffects.aerialPerspective.update({
     aerialPerspective: {
@@ -67,10 +71,10 @@ export const run = async (view: ThreeView) => {
   });
 
   // Cast to specific layer types for easier access and updates
-  const skyLayer = defaultLayers.sky;
-  const starsLayer = defaultLayers.stars;
-  const sunLightLayer = defaultLayers.sun;
-  const skyLightProbeLayer = defaultLayers.skyLightProbe;
+  const skyLayer = defaultEffects.sky;
+  const starsLayer = defaultEffects.stars;
+  const sunLightLayer = defaultEffects.sun;
+  const skyLightProbeLayer = defaultEffects.skyLightProbe;
 
   sunLightLayer.update({
     sun: {
@@ -157,7 +161,7 @@ export const run = async (view: ThreeView) => {
     defaultEffects.aerialPerspective,
   );
   addCloudsControl(view, pane, cloudsLayer);
-  addAAControl(pane, defaultEffects);
+  addAAControl(view, pane, defaultEffects);
   addIBLControl(view, pane);
   addEffectsControl(view, pane, defaultEffects);
 
@@ -170,7 +174,7 @@ export const run = async (view: ThreeView) => {
   ]);
 };
 
-const addTileControl = (view: ThreeView, pane: Pane) => {
+const addTileControl = (view: ThreeView<LayerDescriptions>, pane: Pane) => {
   const PARAMS = {
     type: TILE_DATASETS.gsiSeamlessphoto.url,
   };
@@ -215,7 +219,7 @@ const addTileControl = (view: ThreeView, pane: Pane) => {
 };
 
 const addCloudsTilesControl = (
-  view: ThreeView,
+  view: ThreeView<LayerDescriptions>,
   pane: Pane,
   tileChangeBinding: EventHandler,
 ) => {
@@ -390,7 +394,7 @@ const addAtmosphereControl = (
 };
 
 const addCloudsControl = (
-  view: ThreeView,
+  view: ThreeView<LayerDescriptions>,
   pane: Pane,
   cloudsLayerHandle: LayerHandle<CloudsEffectLayer>,
 ) => {
@@ -1033,11 +1037,13 @@ const addCloudsControl = (
   );
 };
 
-const addAAControl = (pane: Pane, defaultEffects: DefaultEffects) => {
-  // Determine the current AA effect type based on device
-  const isMobile = isMobileDevice();
-  const currentEffect =
-    isMobile && ATMOSPHERE_EXAMPLE_OPTIONS.mobileOptimization ? "fxaa" : "smaa";
+const addAAControl = (
+  view: ThreeView<LayerDescriptions>,
+  pane: Pane,
+  defaultEffects: DefaultEffects,
+) => {
+  // Determine the current AA effect type based on view's mobile optimization setting
+  const currentEffect = view.isMobileOptimized() ? "fxaa" : "smaa";
 
   const PARAMS = {
     enable: false,
@@ -1124,7 +1130,7 @@ const addAAControl = (pane: Pane, defaultEffects: DefaultEffects) => {
 };
 
 // Advanced
-const addIBLControl = (view: ThreeView, pane: Pane) => {
+const addIBLControl = (view: ThreeView<LayerDescriptions>, pane: Pane) => {
   const PARAMS = {
     enable: false,
     sh: "debug",
@@ -1181,7 +1187,7 @@ const addIBLControl = (view: ThreeView, pane: Pane) => {
 };
 
 const addEffectsControl = (
-  view: ThreeView,
+  view: ThreeView<LayerDescriptions>,
   pane: Pane,
   defaultEffects: DefaultEffects,
 ) => {

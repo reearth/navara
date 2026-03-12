@@ -43,8 +43,6 @@ const run = async () => {
     },
   });
 
-  view.addDefaultEffectLayers();
-
   // MVT point with bloom (Wakayama facilities)
   const layer = view.addLayer({
     type: "mvt",

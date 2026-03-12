@@ -2,9 +2,10 @@ import {
   EffectLayerDeclaration,
   type EffectLayerConfig,
   type EffectLayerUpdate,
-} from "../../core/EffectLayerDeclaration";
-import type { ViewContext } from "../../core/ViewContext";
-import { SMAA, type AntialiasOptions } from "../../effects";
+  type ViewContext,
+  SMAA,
+  type AntialiasOptions,
+} from "@navara/three";
 
 type LayerDescription = {
   smaa?: Omit<AntialiasOptions, "enabled">;

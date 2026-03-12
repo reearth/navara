@@ -1,4 +1,4 @@
-import ThreeView, { Plugin, type Options } from "@navara/three";
+import ThreeView, { type Plugin, type Options } from "@navara/three";
 import {
   createContext,
   useContext,
