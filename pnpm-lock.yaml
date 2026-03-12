@@ -333,6 +333,9 @@ importers:
       '@navara/core':
         specifier: workspace:*
         version: link:../navara_core
+      '@navara/three_csm':
+        specifier: workspace:*
+        version: link:../navara_three_csm
       '@takram/three-atmosphere':
         specifier: ^0.17.0
         version: 0.17.0(@react-three/fiber@9.1.2(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(three@0.183.1))(postprocessing@6.38.3(three@0.183.1))(react@19.2.4)(three@0.183.1)

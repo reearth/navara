@@ -1,9 +1,8 @@
-import ThreeView, {
-  Color,
+import ThreeView, { Color, LayerHandle } from "@navara/three";
+import {
   AmbientLightLayer,
-  LayerHandle,
-} from "@navara/three";
-import { GlowGlobeMeshLayer } from "@navara/three_default_layers";
+  GlowGlobeMeshLayer,
+} from "@navara/three_default_layers";
 import {
   DefaultPlugin,
   type DefaultLayerDescriptions,

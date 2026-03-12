@@ -1,13 +1,6 @@
-import {
-  type LayerDescription,
-  JAPAN_GSI_ELEVATION_DECODER,
-  Color,
-} from "@navara/three";
+import { JAPAN_GSI_ELEVATION_DECODER, Color } from "@navara/three";
 import type { RainMeshLayerConfig } from "@navara/three_default_layers";
-import type {
-  DefaultPlugin,
-  DefaultEffectLayerDeclarationDescription,
-} from "@navara/three_default_plugin";
+import type { DefaultPlugin } from "@navara/three_default_plugin";
 import { Layer, useViewContext } from "@navara/three_react";
 import { useEffect, useMemo, type FC } from "react";
 import { SphericalHarmonics3, Vector2 } from "three";
@@ -22,6 +15,7 @@ import { BUILDING_DATASETS, UC_PHOTOREALISTIC_DATASETS } from "./datasets";
 import { useDefaultLayers } from "./hooks";
 import { useNightContext } from "./NightContext";
 import { QUALITY, type QualityFlags } from "./quality";
+import type { LayerDescriptions } from "./type";
 
 export type SceneLayerToggles = {
   defaultPlugin: DefaultPlugin;
@@ -56,7 +50,7 @@ export const Layers: FC<SceneLayerToggles> = ({
 
   // Descriptions
   const baseTiles = useMemo(
-    (): LayerDescription => ({
+    (): LayerDescriptions => ({
       type: "tiles",
       data: { url: UC_PHOTOREALISTIC_DATASETS.baseRaster.url },
       rasterTile: { minZoom: 2, maxZoom: 18 },
@@ -65,7 +59,7 @@ export const Layers: FC<SceneLayerToggles> = ({
   );
 
   const terrain = useMemo(
-    (): LayerDescription => ({
+    (): LayerDescriptions => ({
       type: "terrain",
       data: { url: UC_PHOTOREALISTIC_DATASETS.terrain.url },
       rasterTerrain: {
@@ -80,7 +74,7 @@ export const Layers: FC<SceneLayerToggles> = ({
   );
 
   const cloudsEffect = useMemo(
-    (): LayerDescription | DefaultEffectLayerDeclarationDescription => ({
+    (): LayerDescriptions => ({
       type: "effect",
       clouds: {
         coverage: cloudsEffectVisible ? 0.5 : 0,
@@ -109,7 +103,7 @@ export const Layers: FC<SceneLayerToggles> = ({
   );
 
   const rainDropEffect = useMemo(
-    (): LayerDescription | DefaultEffectLayerDeclarationDescription => ({
+    (): LayerDescriptions => ({
       type: "effect",
       rainDrop: {
         opacity: 0.5,
@@ -125,7 +119,7 @@ export const Layers: FC<SceneLayerToggles> = ({
   );
 
   const ssrEffect = useMemo(
-    (): LayerDescription | DefaultEffectLayerDeclarationDescription => ({
+    (): LayerDescriptions => ({
       type: "effect",
       ssr: {
         iterations: QUALITY[quality]?.ssr?.iterations,
@@ -137,7 +131,7 @@ export const Layers: FC<SceneLayerToggles> = ({
   );
 
   const mvtLayerDescription = useMemo(
-    (): LayerDescription => ({
+    (): LayerDescriptions => ({
       type: "mvt",
       data: {
         url: UC_PHOTOREALISTIC_DATASETS.waterMvt.url,
@@ -201,7 +195,7 @@ export const Layers: FC<SceneLayerToggles> = ({
   }, [defaultLayers, cloudShadow]);
 
   const nightLightProbe = useMemo(
-    (): LayerDescription => ({
+    (): LayerDescriptions => ({
       type: "light",
       lightProbe: {
         sh: new SphericalHarmonics3().set(SH_COEFFICIENTS.night),
