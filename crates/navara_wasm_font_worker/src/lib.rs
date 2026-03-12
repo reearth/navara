@@ -6,6 +6,7 @@ pub mod shaping;
 
 pub use atlas::{GlyphMetrics, SDFAtlas};
 pub use cache::{FontCache, FontEntry};
+use navara_wasm_types::{copy_u8_array, transfer_u8_array};
 use navara_wasm_utils::set_panic_hook;
 use wasm_bindgen::prelude::*;
 
@@ -63,26 +64,6 @@ pub struct ShapeTextResult {
     pub metrics: Vec<WasmGlyphMetrics>,
     pub units_per_em: u16,
     pub atlas_changed: bool,
-}
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-fn transfer_u8_array(byte_length: usize, f: &js_sys::Function) -> Vec<u8> {
-    let buffer = vec![0; byte_length];
-    unsafe {
-        let array = js_sys::Uint8Array::view(&buffer);
-        f.call1(&JsValue::NULL, &JsValue::from(array))
-            .expect("The callback function should not throw");
-    }
-    buffer
-}
-
-fn copy_u8_array(buf: &[u8]) -> js_sys::Uint8Array {
-    let array = js_sys::Uint8Array::new_with_length(buf.len() as u32);
-    array.copy_from(buf);
-    array
 }
 
 // ---------------------------------------------------------------------------

@@ -171,7 +171,6 @@ export class SDFTextMesh
 
     if (!text) {
       this.geometry.instanceCount = 0;
-      this.visible = false;
       return;
     }
 
@@ -194,8 +193,6 @@ export class SDFTextMesh
         atlasData.height,
       );
     }
-
-    this.visible = true;
   }
 
   /**
@@ -251,12 +248,9 @@ export class SDFTextMesh
    */
   update(
     material: NavaraTextMaterial,
-    active: boolean,
+    _active: boolean,
     forceUpdate = false,
   ): void {
-    this.visible = (material.show ?? true) && active;
-    if (!this.visible) return;
-
     const fontUrl = material.font ?? this._fontUrl;
     this.setFont(fontUrl);
 
@@ -267,6 +261,9 @@ export class SDFTextMesh
       // Font changed — re-render existing text with the new font
       this.setText(this._text, true);
     }
+
+    this.visible = (material.show ?? true) && !!this._text;
+    if (!this.visible) return;
 
     const state = this._enhancer.states();
 

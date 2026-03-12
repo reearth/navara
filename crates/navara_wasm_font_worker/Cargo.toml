@@ -16,7 +16,7 @@ wasm-bindgen.workspace = true
 js-sys.workspace = true
 rustc-hash.workspace = true
 navara_wasm_utils.workspace = true
-
+navara_wasm_types.workspace = true
 
 [package.metadata.wasm-pack.profile.profiling]
 wasm-opt = false
