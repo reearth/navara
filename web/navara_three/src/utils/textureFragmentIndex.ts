@@ -89,9 +89,10 @@ export function removeTextureFragmentIndex(tileMesh: TileMesh): void {
 /**
  * Get all tile meshes and slot indices that use a specific texture fragment
  * Returns undefined if no tiles use this fragment
+ * Returns a read-only view to prevent accidental index corruption
  */
 export function getTextureFragmentSlots(
   fragmentId: string,
-): Set<TextureSlot> | undefined {
+): ReadonlySet<TextureSlot> | undefined {
   return textureFragmentIndex.get(fragmentId);
 }

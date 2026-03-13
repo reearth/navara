@@ -796,18 +796,19 @@ vUv = vUv * uScale + uOffset;
       { length: maxTextures },
       (_, i) => `
     if (uIsHillshades[${i}]) {
-      // Calculate texelSize based on content size
-      // Standard UV mapping: UV [0,1] maps to pixel centers [first, last]
-      // So texelSize (UV distance between adjacent pixels) = 1 ~ (N - 1)
-      // For 258x258 padded texture with 256 content pixels: texelSize = 1~255
+      // First check: Is there a valid texture bound?
       ivec2 actualTexSize = textureSize(uTextures[${i}], 0);
-      ivec2 contentSize = isPowerOfTwo(actualTexSize.x) ? actualTexSize : actualTexSize - ivec2(2);
-      vec2 texelSize = vec2(1.0) / (vec2(contentSize) - vec2(1.0));
-
       vec4 testColor = texelFetch(uTextures[${i}], ivec2(0), 0);
-      bool hasTexture = length(testColor.rgb) > 0.01;
+      bool hasTexture = length(testColor.rgb) > 0.01 && actualTexSize.x > 2;
 
       if (hasTexture) {
+        // Calculate texelSize based on content size
+        // Standard UV mapping: UV [0,1] maps to pixel centers [first, last]
+        // So texelSize (UV distance between adjacent pixels) = 1 ~ (N - 1)
+        // For 258x258 padded texture with 256 content pixels: texelSize = 1~255
+        ivec2 contentSize = isPowerOfTwo(actualTexSize.x) ? actualTexSize : actualTexSize - ivec2(2);
+        vec2 texelSize = vec2(1.0) / (vec2(contentSize) - vec2(1.0));
+
         // Second check: Is this valid land data (not ocean/no-data)?
         float testHeight = sampleHeightBilinear(uTextures[${i}], vUv);
 

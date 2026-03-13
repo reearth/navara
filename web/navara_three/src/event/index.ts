@@ -804,8 +804,7 @@ function processHillshadeBackfilled(
     return;
   }
 
-  // Use entity ind and gen to create ID (same format as other textures)
-  const id = `${event.ind}_${event.gen}`;
+  const id = generate_id_from_entity(event);
 
   let texture: DataTexture;
 
