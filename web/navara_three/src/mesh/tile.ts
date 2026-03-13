@@ -796,12 +796,10 @@ vUv = vUv * uScale + uOffset;
       { length: maxTextures },
       (_, i) => `
     if (uIsHillshades[${i}]) {
-      // First check: Is there a valid texture bound?
+      // Check if there's a valid texture bound (size > 2 to avoid 1×1 placeholders)
       ivec2 actualTexSize = textureSize(uTextures[${i}], 0);
-      vec4 testColor = texelFetch(uTextures[${i}], ivec2(0), 0);
-      bool hasTexture = length(testColor.rgb) > 0.01 && actualTexSize.x > 2;
 
-      if (hasTexture) {
+      if (actualTexSize.x > 2) {
         // Calculate texelSize based on content size
         // Standard UV mapping: UV [0,1] maps to pixel centers [first, last]
         // So texelSize (UV distance between adjacent pixels) = 1 ~ (N - 1)
@@ -1481,14 +1479,13 @@ if (uPickable > 0.) {
 
     this._viewContext?.removeShadowMaterial(this.material);
 
-    // Dispose shadow mesh geometry (it's separate from main geometry)
+    // Note: geometry disposal (including shadowMesh.geometry) is handled by
+    // disposeObject3D() in event/index.ts before removedFromWorld is dispatched.
+    // We only need to remove shadowMesh from the scene graph here.
     if (this.shadowMesh) {
-      this.shadowMesh.geometry.dispose();
       this.remove(this.shadowMesh);
       this.shadowMesh = undefined;
     }
-
-    this.geometry.dispose();
 
     // Detach any observers we attached on texturized scenes
     if (this.texturizedScenes?.userData?.childrenObserver) {

@@ -862,7 +862,7 @@ pub fn update_mesh_material(
 
         let mut parent_z = None;
         let texture_fragment_entity_ids =
-            if tile.is_all_texture_ready(&texture_fragment, &data_requesters, true) {
+            if tile.is_any_texture_ready(&texture_fragment, &data_requesters, true) {
                 texture_fragment_entity_ids
             } else {
                 // Use the parent tile if this tile doesn't have a tile.

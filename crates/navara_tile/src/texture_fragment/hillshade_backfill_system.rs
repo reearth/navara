@@ -8,7 +8,9 @@ use navara_buffer_store::BufferStore;
 use navara_component::{Deleted, Ignored, OrderByDistance, Priority, Requested};
 use navara_data_requester::{DataRequester, DataRequesterStatus};
 use navara_event_store::EventStore;
+use navara_quadtree::{decode_quadleaf_handle, encode_quadleaf_handle};
 use navara_tile_component::{RasterTileQuadtree, TileTextureFragmentMarker};
+use std::collections::HashMap;
 
 use crate::dem_backfill::{BackfillDirection, backfill_dem_texture};
 
@@ -104,7 +106,11 @@ pub fn backfill_hillshade_on_loaded(
     )>,
     mut existing_backfills: Query<(Entity, &mut HillshadeDEMState, &TileTextureFragmentMarker)>,
 ) {
-    use navara_quadtree::{decode_quadleaf_handle, encode_quadleaf_handle};
+    // Precompute a lookup of already-backfilled neighbors
+    let backfilled_by_tile: HashMap<u64, i32> = existing_backfills
+        .iter()
+        .map(|(_, state, marker)| (marker.0, state.backfilled_handle))
+        .collect();
 
     for (entity, data_req, marker) in query.iter() {
         // Only process successfully loaded hillshade DataRequesters
@@ -117,10 +123,7 @@ pub fn backfill_hillshade_on_loaded(
         // Create lookup function to find already-backfilled neighbors
         // This allows us to prefer backfilled buffers (258x258) over original (256x256)
         let backfilled_lookup = |neighbor_tile_handle: u64| -> Option<i32> {
-            existing_backfills
-                .iter()
-                .find(|(_, _, marker)| marker.0 == neighbor_tile_handle)
-                .map(|(_, state, _)| state.backfilled_handle)
+            backfilled_by_tile.get(&neighbor_tile_handle).copied()
         };
 
         // Perform backfill

@@ -109,9 +109,9 @@ float interpolateDEMHeights(float h00, float h10, float h01, float h11, vec2 fra
   float maxReasonableDiff = 1000.0;
   
   // Replace neighbors with large jumps relative to the base sample (likely RGB artifacts)
-  if (h10 > 0.0 && abs(h10 - h00) > maxReasonableDiff) h10 = h00;
-  if (h01 > 0.0 && abs(h01 - h00) > maxReasonableDiff) h01 = h00;
-  if (h11 > 0.0 && abs(h11 - h00) > maxReasonableDiff) h11 = h00;
+  if (h10 >= 0.0 && abs(h10 - h00) > maxReasonableDiff) h10 = h00;
+  if (h01 >= 0.0 && abs(h01 - h00) > maxReasonableDiff) h01 = h00;
+  if (h11 >= 0.0 && abs(h11 - h00) > maxReasonableDiff) h11 = h00;
 
   // Replace invalid neighbors with the base sample value
   if (h10 < 0.0) h10 = h00;
