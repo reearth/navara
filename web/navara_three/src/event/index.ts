@@ -842,7 +842,10 @@ function processHillshadeBackfilled(
     for (const { tileMesh, slotIndex } of slots) {
       const material = tileMesh.material;
 
-      if (material.userData?.textures?.value[slotIndex]) {
+      if (
+        material.userData?.textures?.value &&
+        slotIndex < material.userData.textures.value.length
+      ) {
         material.userData.textures.value[slotIndex] = texture;
       }
     }

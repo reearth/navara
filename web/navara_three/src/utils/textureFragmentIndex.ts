@@ -1,6 +1,6 @@
 /**
  * Reverse index for efficient texture fragment → tile mesh lookups
- * Optimizes hillshade backfill updates from O(numTiles × numLayers) to O(1)
+ * Optimizes hillshade backfill updates from O(numTiles × numLayers) to O(affectedTiles)
  */
 
 import type { TileMesh } from "../mesh/tile";
@@ -17,8 +17,15 @@ export interface TextureSlot {
 const textureFragmentIndex = new Map<string, Set<TextureSlot>>();
 
 /**
+ * Bidirectional index: tileMesh → Set of fragment IDs it uses
+ * Enables O(numLayersForTile) removal instead of O(total indexed slots)
+ */
+const tileMeshToFragmentIds = new Map<TileMesh, Set<string>>();
+
+/**
  * Update the index when a tile's textureFragments change
  * Call this from TileMesh.setupTextureFragments()
+ * Complexity: O(numLayersForTile)
  */
 export function updateTextureFragmentIndex(
   tileMesh: TileMesh,
@@ -26,6 +33,8 @@ export function updateTextureFragmentIndex(
 ): void {
   // Remove this tileMesh from all previous entries
   removeTextureFragmentIndex(tileMesh);
+
+  const newFragmentIds = new Set<string>();
 
   // Add this tileMesh to new entries
   for (let slotIndex = 0; slotIndex < textureFragmentIds.length; slotIndex++) {
@@ -38,15 +47,30 @@ export function updateTextureFragmentIndex(
       textureFragmentIndex.set(fragmentId, slots);
     }
     slots.add({ tileMesh, slotIndex });
+    newFragmentIds.add(fragmentId);
+  }
+
+  // Update bidirectional index
+  if (newFragmentIds.size > 0) {
+    tileMeshToFragmentIds.set(tileMesh, newFragmentIds);
   }
 }
 
 /**
  * Remove a tileMesh from the index (called when tile is disposed or updated)
+ * Complexity: O(numLayersForTile)
  */
 export function removeTextureFragmentIndex(tileMesh: TileMesh): void {
-  // Iterate through all entries and remove references to this tileMesh
-  for (const [fragmentId, slots] of textureFragmentIndex.entries()) {
+  // Use bidirectional index for fast lookup
+  const fragmentIds = tileMeshToFragmentIds.get(tileMesh);
+  if (!fragmentIds) return;
+
+  // Remove this tileMesh from each fragmentId it uses
+  for (const fragmentId of fragmentIds) {
+    const slots = textureFragmentIndex.get(fragmentId);
+    if (!slots) continue;
+
+    // Remove all slots belonging to this tileMesh
     for (const slot of slots) {
       if (slot.tileMesh === tileMesh) {
         slots.delete(slot);
@@ -57,6 +81,9 @@ export function removeTextureFragmentIndex(tileMesh: TileMesh): void {
       textureFragmentIndex.delete(fragmentId);
     }
   }
+
+  // Remove from bidirectional index
+  tileMeshToFragmentIds.delete(tileMesh);
 }
 
 /**
