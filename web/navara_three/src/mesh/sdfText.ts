@@ -245,10 +245,7 @@ export class SDFTextMesh
    * Apply material properties from WASM TextMaterial.
    * Maps relevant properties to enhancer updates, with change tracking.
    */
-  update(
-    material: NavaraTextMaterial,
-    forceUpdate = false,
-  ): void {
+  update(material: NavaraTextMaterial, forceUpdate = false): void {
     const fontUrl = material.font ?? this._fontUrl;
     this.setFont(fontUrl);
 

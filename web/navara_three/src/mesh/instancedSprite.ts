@@ -85,10 +85,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     this.frustumCulled = false; // Disable since bounding box doesn't account for instance positions
   }
 
-  async _update(
-    m: NavaraPointMesh | NavaraBillboardMesh,
-    buf: BufferLoader,
-  ) {
+  async _update(m: NavaraPointMesh | NavaraBillboardMesh, buf: BufferLoader) {
     const enhancer = this.getEnhancer();
     const material = this.material as ShaderMaterial;
 

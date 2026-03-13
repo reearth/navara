@@ -16,10 +16,7 @@ import initCore, {
   type TerrainHeightUpdatedEvent,
   type TextureFragmentStatus,
 } from "@navara/engine";
-import { FontManager, FontWorkerClient } from "@navara/font";
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-/** @ts-ignore ignore: https://v3.vitejs.dev/guide/features.html#import-with-query-suffixes */
-import FontWorkerURL from "@navara/font/fontWorker?worker&url";
+import { FontManager } from "@navara/font";
 import { initNavaraApi } from "@navara/three_api";
 import { initializeWorkerPool } from "@navara/worker";
 import {
@@ -861,9 +858,9 @@ export default class ThreeView<
     this._core = new Core(newId());
     this._core.start();
 
-    const fontClient = new FontWorkerClient(FontWorkerURL, concurrencyManager);
-    await fontClient.ready();
-    this._fontManager.setClient(fontClient);
+    this._fontManager.setConcurrencyManager(
+      this.viewContext.concurrencyManager,
+    );
     this.viewContext.fontManager = this._fontManager;
 
     this.globe = new Globe(this._globeHandler, this._options);

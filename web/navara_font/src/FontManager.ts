@@ -1,6 +1,12 @@
+import FontWorkerURL from "@navara/font/fontWorker?worker&url";
+import type { ConcurrencyManager } from "@navara/worker";
 import { DataTexture, LinearFilter, RedFormat, UnsignedByteType } from "three";
 
-import type { FontWorkerClient } from "./FontWorkerClient";
+import { FontWorkerClient } from "./FontWorkerClient";
+
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+/** @ts-ignore ignore: https://v3.vitejs.dev/guide/features.html#import-with-query-suffixes */
+
 import { LRUMap } from "./LRUMap";
 
 /** Glyph metrics from the SDF atlas. */
@@ -64,6 +70,8 @@ const SHAPE_CACHE_MAX_SIZE = 10_000;
  */
 export class FontManager {
   private _client: FontWorkerClient | undefined;
+  private _clientPromise: Promise<FontWorkerClient> | undefined;
+  private _concurrencyManager: ConcurrencyManager | undefined;
   /** Tracks in-flight fetch promises to avoid duplicate requests. */
   private _pending = new Map<string, Promise<void>>();
   /** Tracks fonts that have been successfully loaded. */
@@ -93,8 +101,29 @@ export class FontManager {
 
   private _refCount = new Map<string, number>();
 
-  setClient(client: FontWorkerClient) {
-    this._client = client;
+  setConcurrencyManager(concurrencyManager: ConcurrencyManager) {
+    this._concurrencyManager = concurrencyManager;
+  }
+
+  private _ensureClient(): Promise<FontWorkerClient> {
+    if (this._client) return Promise.resolve(this._client);
+    if (this._clientPromise) return this._clientPromise;
+    if (!this._concurrencyManager) {
+      return Promise.reject(
+        new Error("FontManager: concurrencyManager not set"),
+      );
+    }
+    const cm = this._concurrencyManager;
+    this._clientPromise = (async () => {
+      const client = new FontWorkerClient(FontWorkerURL, cm);
+      await client.ready();
+      this._client = client;
+      return client;
+    })();
+    this._clientPromise.catch(() => {
+      this._clientPromise = undefined;
+    });
+    return this._clientPromise;
   }
 
   /**
@@ -163,7 +192,6 @@ export class FontManager {
    * Must be called (and awaited) before shapeText() will return data for this text.
    */
   async prepareText(fontUrl: string, text: string): Promise<void> {
-    if (!this._client) return;
     if (!text) return;
 
     const cacheKey = this._cacheKey(fontUrl, text);
@@ -273,8 +301,7 @@ export class FontManager {
   }
 
   private async _fetchAndLoad(url: string): Promise<void> {
-    const client = this._client;
-    if (!client) throw new Error("FontManager: worker client not initialized");
+    const client = await this._ensureClient();
 
     const response = await fetch(url);
     if (!response.ok) {
@@ -293,8 +320,7 @@ export class FontManager {
 
   private async _flushBatch(): Promise<void> {
     this._batchScheduled = false;
-    const client = this._client;
-    if (!client) return;
+    const client = await this._ensureClient();
 
     // Snapshot and clear the queue so new calls during await start a fresh batch
     const queue = this._batchQueue;

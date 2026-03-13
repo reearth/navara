@@ -112,11 +112,7 @@ export class BatchedSdfTextMesh
     }
   }
 
-  async _update(
-    m: NavaraTextMesh,
-    buf: BufferLoader,
-    needRender?: () => void,
-  ) {
+  async _update(m: NavaraTextMesh, buf: BufferLoader, needRender?: () => void) {
     if (needRender) this._needRender = needRender;
 
     const material = m.material;
