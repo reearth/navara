@@ -1420,21 +1420,36 @@ if (uPickable > 0.) {
       const isDEMTexture = isElevationHeatmap || isHillshade;
       const targetColorSpace = isDEMTexture ? NoColorSpace : SRGBColorSpace;
 
-      if (t.colorSpace !== targetColorSpace) {
+      // Update colorSpace if needed
+      const colorSpaceChanged = t.colorSpace !== targetColorSpace;
+      if (colorSpaceChanged) {
         t.colorSpace = targetColorSpace;
-        // CRITICAL: DEM textures must use NearestFilter to prevent interpolation
-        // Linear interpolation between ocean RGB(128,0,0) and land RGB(0,0,5)
-        // produces intermediate values like RGB(64,0,2) which decode to ~42000m!
-        t.minFilter = isDEMTexture
-          ? NearestFilter
-          : (textureOptions.minFilter as MinificationTextureFilter);
-        t.magFilter = isDEMTexture
-          ? NearestFilter
-          : (textureOptions.magFilter as MagnificationTextureFilter);
-        t.anisotropy = textureOptions.maxAnisotropy;
-        t.generateMipmaps = isDEMTexture ? false : textureOptions.useMipmaps;
-
         t.needsUpdate = true;
+      }
+
+      // CRITICAL: DEM textures must use NearestFilter to prevent interpolation
+      // Linear interpolation between ocean RGB(128,0,0) and land RGB(0,0,5)
+      // produces intermediate values like RGB(64,0,2) which decode to ~42000m!
+      // Always apply these settings for DEM textures, independent of colorSpace change
+      if (isDEMTexture) {
+        if (t.minFilter !== NearestFilter) {
+          t.minFilter = NearestFilter;
+          t.needsUpdate = true;
+        }
+        if (t.magFilter !== NearestFilter) {
+          t.magFilter = NearestFilter;
+          t.needsUpdate = true;
+        }
+        if (t.generateMipmaps !== false) {
+          t.generateMipmaps = false;
+          t.needsUpdate = true;
+        }
+      } else if (colorSpaceChanged) {
+        // Regular textures: only update sampler settings when first binding
+        t.minFilter = textureOptions.minFilter as MinificationTextureFilter;
+        t.magFilter = textureOptions.magFilter as MagnificationTextureFilter;
+        t.anisotropy = textureOptions.maxAnisotropy;
+        t.generateMipmaps = textureOptions.useMipmaps;
       }
 
       textures[i] = t;
