@@ -76,7 +76,6 @@ export class BatchedSdfTextMesh
 
     const material = m.material;
     const transform = m.transform;
-    const active = m.active;
 
     // Get the font-level shared atlas texture (one DataTexture per font, shared across all groups)
     const sharedTex = fontManager.getAtlasTexture(this._fontUrl);
@@ -100,7 +99,6 @@ export class BatchedSdfTextMesh
         this._fontUrl,
         batchId,
         RTE,
-        active,
       );
       mesh.renderOrder = this.renderOrder;
 
@@ -108,7 +106,7 @@ export class BatchedSdfTextMesh
         mesh.setAtlasTexture(sharedTex);
       }
 
-      mesh.update(material, active);
+      mesh.update(material);
 
       this.addWithBatchIndex(mesh, i);
     }
@@ -117,7 +115,6 @@ export class BatchedSdfTextMesh
   async _update(
     m: NavaraTextMesh,
     buf: BufferLoader,
-    active: boolean,
     needRender?: () => void,
   ) {
     if (needRender) this._needRender = needRender;
@@ -162,17 +159,16 @@ export class BatchedSdfTextMesh
       !this._fontManager.isTextPrepared(this._fontUrl, text)
     ) {
       this._fontManager.prepareText(this._fontUrl, text).then(() => {
-        this._applyUpdate(material, active, needRender, needFontUpdate);
+        this._applyUpdate(material, needRender, needFontUpdate);
       });
       return;
     }
 
-    this._applyUpdate(material, active, needRender, needFontUpdate);
+    this._applyUpdate(material, needRender, needFontUpdate);
   }
 
   private _applyUpdate(
     material: NavaraTextMaterial,
-    active: boolean,
     needRender?: () => void,
     forceUpdate = false,
   ) {
@@ -181,7 +177,7 @@ export class BatchedSdfTextMesh
 
     for (const mesh of this.meshes()) {
       if (sharedTex) mesh.setAtlasTexture(sharedTex);
-      mesh.update(material, active, forceUpdate);
+      mesh.update(material, forceUpdate);
       this.markVisibility(mesh);
     }
 

@@ -290,21 +290,19 @@ export async function processRenderableFeatureChanged(
     }
   }
 
-  const active =
-    (point ?? billboard ?? text ?? polyline ?? polygon ?? model)?.active ??
-    true;
+  const active = (polyline ?? polygon ?? model)?.active ?? true;
 
   // Capture visibility before material updates to detect changes
   const prevVisible = obj.visible;
 
   if (obj instanceof InstancedSpriteMesh && point) {
-    processPointChanged(obj, point, buf, active);
+    processPointChanged(obj, point, buf);
   }
   if (obj instanceof InstancedSpriteMesh && billboard) {
-    await processBillboardChanged(obj, billboard, buf, active);
+    await processBillboardChanged(obj, billboard, buf);
   }
   if (obj instanceof BatchedSdfTextMesh && text) {
-    await processTextChanged(obj, text, buf, active, renderFlag);
+    await processTextChanged(obj, text, buf, renderFlag);
   }
   if (obj instanceof ModelMesh && model) {
     processModelChanged(obj, model, active);

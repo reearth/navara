@@ -88,15 +88,12 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
   async _update(
     m: NavaraPointMesh | NavaraBillboardMesh,
     buf: BufferLoader,
-    active: boolean,
   ) {
     const enhancer = this.getEnhancer();
     const material = this.material as ShaderMaterial;
 
-    // Update visibility (combines show + active)
     if (material.visible !== m.material.show) {
       material.visible = m.material.show ?? true;
-      material.visible = material.visible && active;
     }
 
     // Update enhancer state for uniform-backed properties

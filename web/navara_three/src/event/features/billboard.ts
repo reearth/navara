@@ -27,7 +27,6 @@ export async function processBillboardChanged(
   obj: InstancedSpriteMesh,
   m: NavaraBillboardMesh,
   buf: BufferLoader,
-  active: boolean,
 ) {
-  await obj._update(m, buf, active);
+  await obj._update(m, buf);
 }

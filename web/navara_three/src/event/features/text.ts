@@ -58,10 +58,9 @@ export async function processTextChanged(
   obj: BatchedSdfTextMesh,
   m: NavaraTextMesh,
   buf: BufferLoader,
-  active: boolean,
   renderFlag: RenderFlag,
 ) {
-  await obj._update(m, buf, active, () => {
+  await obj._update(m, buf, () => {
     renderFlag.forceUpdate = true;
   });
 }

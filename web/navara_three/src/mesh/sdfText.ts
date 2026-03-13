@@ -73,7 +73,6 @@ export class SDFTextMesh
     fontUrl: string,
     batchId: number | undefined,
     RTE: boolean,
-    _active: boolean,
   ) {
     super();
 
@@ -248,7 +247,6 @@ export class SDFTextMesh
    */
   update(
     material: NavaraTextMaterial,
-    _active: boolean,
     forceUpdate = false,
   ): void {
     const fontUrl = material.font ?? this._fontUrl;
