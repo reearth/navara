@@ -43,6 +43,10 @@ import { PolygonMesh } from "..";
 import type { ViewContext } from "../core";
 import { setTransform, type BufferLoader, type TileHandler } from "../event";
 import { generateMixOverlaidTexturesMacro } from "../material";
+import {
+  updateTextureFragmentIndex,
+  removeTextureFragmentIndex,
+} from "../utils/textureFragmentIndex";
 import type { CustomObject3DEventMap } from "../object3DEvent";
 import type {
   SceneGroup,
@@ -502,6 +506,10 @@ export class TileMesh
         new BufferAttribute(combinedPosition, 3),
       );
 
+      // Provide dummy normals (shader computes normals from vPosition)
+      const combinedNormals = new Float32Array(combinedPosition.length);
+      geometry.setAttribute("normal", new BufferAttribute(combinedNormals, 3));
+
       // Combine UVs
       if (uv) {
         const combinedUv = new Float32Array(uv.length + (skirtUv?.length ?? 0));
@@ -832,7 +840,7 @@ vUv = vUv * uScale + uOffset;
   #endif
 
   vec3 origNormal = vec3(normal);
-  vec3 specular;
+  vec3 specular = vec3(0.0);
   if(useWater) {
     specular = computeWaterSpecular(
       uWaterNormalMap,
@@ -854,9 +862,6 @@ vUv = vUv * uScale + uOffset;
       waterSpecularStrength,
       uIor
     );
-    #include <normal_fragment_maps>
-  } else {
-   #include <normal_fragment_maps>
   }
   `,
         )
@@ -1326,11 +1331,19 @@ if (uPickable > 0.) {
     const m = this.material;
 
     if (!textureFragments || !textureFragments.length) {
-      if (!readyParentTileHandle) return;
+      if (!readyParentTileHandle) {
+        // No fragments - remove from index
+        updateTextureFragmentIndex(this, []);
+        return;
+      }
 
       m.userData.textureFragments = tileMapByHandle.get(
         readyParentTileHandle,
       )?.material.userData.textureFragments;
+
+      // Update index with parent's texture fragments
+      const parentFragments = m.userData.textureFragments?.value ?? [];
+      updateTextureFragmentIndex(this, parentFragments);
       return;
     }
 
@@ -1344,6 +1357,9 @@ if (uPickable > 0.) {
     m.userData.textureFragments = {
       value: texturesFragmentIds,
     };
+
+    // Update reverse index for efficient texture fragment lookups
+    updateTextureFragmentIndex(this, texturesFragmentIds);
   }
 
   private setupTextures(
@@ -1458,6 +1474,9 @@ if (uPickable > 0.) {
   }
 
   dispose(tileMapByHandle?: TileMapByHandle) {
+    // Remove from texture fragment index
+    removeTextureFragmentIndex(this);
+
     this._viewContext?.removeShadowMaterial(this.material);
 
     // Dispose shadow mesh geometry (it's separate from main geometry)

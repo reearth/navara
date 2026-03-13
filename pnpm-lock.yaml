@@ -417,8 +417,6 @@ importers:
 
   web/wasm/navara_engine_worker: {}
 
-  web/wasm/navara_font_worker: {}
-
 packages:
 
   '@acemir/cssom@0.9.31':

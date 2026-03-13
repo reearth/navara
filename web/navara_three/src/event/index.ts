@@ -53,6 +53,7 @@ import type { AbortableTextureLoader } from "../loaders/AbortableTextureLoader";
 import type { Scenes, TexturizedSceneByTileCoordinates } from "../scene";
 import { getImageDataFromImageBitmap } from "../tasks/getImageDataFromImageBitmap";
 import type { TextureOptions } from "../textures";
+import { getTextureFragmentSlots } from "../utils/textureFragmentIndex";
 import type {
   AbortControllers,
   MeshCache,
@@ -215,7 +216,7 @@ export function processEvent(
   );
 
   eventManager.forEachStack("hillshade_backfilled", (ev) =>
-    processHillshadeBackfilled(ev, buf, loadedTexs, tileMapByHandle),
+    processHillshadeBackfilled(ev, buf, loadedTexs),
   );
 
   eventManager.processTransactionEvents(
@@ -764,7 +765,6 @@ function processHillshadeBackfilled(
   event: HillshadeBackfilledEvent | undefined,
   buf: BufferLoader,
   loadedTexs: Map<string, Texture>,
-  tileMapByHandle: TileMapByHandle,
 ) {
   if (!event) return;
 
@@ -834,26 +834,15 @@ function processHillshadeBackfilled(
     loadedTexs.set(id, texture);
   }
 
-  // Directly bind the texture to the material's uniform
-  // Update ALL tiles that reference this texture fragment ID (not just event.tile_handle)
+  // Directly bind the texture to the material's uniform using reverse index
+  // Update ONLY the tiles that reference this texture fragment ID (O(1) lookup)
   // This is important because child tiles may reuse parent's textureFragments via readyParentTileHandle
-  for (const tileMesh of tileMapByHandle.values()) {
-    if (!tileMesh.material.userData) continue;
+  const slots = getTextureFragmentSlots(id);
+  if (slots) {
+    for (const { tileMesh, slotIndex } of slots) {
+      const material = tileMesh.material;
 
-    const material = tileMesh.material as unknown as {
-      userData: {
-        textureFragments?: { value: (string | null)[] };
-        textures?: { value: Texture[] };
-      };
-    };
-    const textureFragments = material.userData.textureFragments?.value;
-
-    if (textureFragments && material.userData.textures) {
-      // Find which texture slot this entity corresponds to
-      const slotIndex = textureFragments.findIndex((fragId) => fragId === id);
-
-      if (slotIndex >= 0) {
-        // Directly update the texture uniform
+      if (material.userData?.textures?.value[slotIndex]) {
         material.userData.textures.value[slotIndex] = texture;
       }
     }

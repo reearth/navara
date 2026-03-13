@@ -2,7 +2,7 @@ use bevy_ecs::{
     component::Component,
     entity::Entity,
     query::{Added, Changed, With, Without},
-    system::{Commands, Query, ResMut},
+    system::{Commands, Query, Res, ResMut},
 };
 use navara_buffer_store::BufferStore;
 use navara_component::{Deleted, Ignored, OrderByDistance, Priority, Requested};
@@ -91,7 +91,7 @@ pub struct HillshadeDEMState {
 pub fn backfill_hillshade_on_loaded(
     mut commands: Commands,
     mut buf: ResMut<BufferStore>,
-    qt: ResMut<RasterTileQuadtree>,
+    qt: Res<RasterTileQuadtree>,
     mut events: ResMut<EventStore>,
     query: Query<
         (Entity, &DataRequester, &TileTextureFragmentMarker),
