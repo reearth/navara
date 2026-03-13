@@ -38,6 +38,11 @@ pub fn backfill_dem_texture<F: Component>(
     let bytes = buf.get_u8(&dem_buffer_handle)?;
     let size = ((bytes.len() / 4) as f64).sqrt() as usize;
 
+    // Validate that the buffer length matches a perfect-square RGBA texture
+    if size * size * 4 != bytes.len() {
+        return None;
+    }
+
     // Create new padded buffer: (size+2)^2 * 4
     let padded_size = size + 2;
     let mut padded_bytes = vec![0u8; padded_size * padded_size * 4];
@@ -98,17 +103,14 @@ fn get_neighbor_dem_handle<F: Component>(
 
     // Fallback: Search for original DataRequester handle
     for (data_req, marker, _) in data_requesters.iter() {
-        if marker.0 == neighbor_handle {
-            // Only use neighbor's data if it has been successfully loaded
-            // This prevents using incomplete/pending data for backfill
-            if data_req.status == DataRequesterStatus::Success {
-                return Some(data_req.handle);
-            } else {
-                // Neighbor found but not ready yet, return None to use edge replication
-                return None;
-            }
+        // Only use neighbor's data if it has been successfully loaded
+        // This prevents using incomplete/pending data for backfill
+        if marker.0 == neighbor_handle && data_req.status == DataRequesterStatus::Success {
+            return Some(data_req.handle);
         }
     }
+
+    // No successfully loaded neighbor found; fall back to edge replication
     None
 }
 
