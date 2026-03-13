@@ -1332,7 +1332,8 @@ if (uPickable > 0.) {
 
     if (!textureFragments || !textureFragments.length) {
       if (!readyParentTileHandle) {
-        // No fragments - remove from index
+        // No fragments - clear material state and remove from index
+        m.userData.textureFragments = { value: [] };
         updateTextureFragmentIndex(this, []);
         return;
       }
