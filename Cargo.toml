@@ -13,19 +13,19 @@ license = "MIT/Apache-2.0"
 
 [workspace.dependencies]
 # --- Bevy ---
-bevy_app = "0.18.0"
-bevy_ecs = { version = "0.18.0", features = ["serialize"] }
-bevy_input = { version = "0.18.0", features = ["mouse", "keyboard"] }
-bevy_log = "0.18.0"
-bevy_math = "0.18.0"
-bevy_transform = "0.18.0"
+bevy_app = "0.18.1"
+bevy_ecs = { version = "0.18.1", features = ["serialize"] }
+bevy_input = { version = "0.18.1", features = ["mouse", "keyboard"] }
+bevy_log = "0.18.1"
+bevy_math = "0.18.1"
+bevy_transform = "0.18.1"
 
 # --- Serialization ---
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = { version = "1.0.149", features = ["alloc", "float_roundtrip", "indexmap"] }
 serde_repr = "0.1.20"
 serde-wasm-bindgen = "0.6.5"
-binrw = { version = "0.15.0", default-features = false }
+binrw = { version = "0.15.1", default-features = false }
 
 # --- Utility ---
 approx = "0.5.1"
@@ -51,18 +51,18 @@ instant = { version = "0.1.13", features = ["wasm-bindgen", "inaccurate"] }
 
 # --- Random ---
 rand = "0.10.0"
-getrandom = { version = "0.4.1", features = ["wasm_js"] }
+getrandom = { version = "0.4.2", features = ["wasm_js"] }
 
 # --- WASM ---
-wasm-bindgen = "=0.2.113"
-js-sys = "0.3.90"
+wasm-bindgen = "=0.2.114"
+js-sys = "0.3.91"
 gloo-utils = { version = "0.2.0", features = ["serde"] }
-web-sys = { version = "0.3.90", features = ["console"] }
+web-sys = { version = "0.3.91", features = ["console"] }
 console_error_panic_hook = "0.1.7"
 
 # --- Testing ---
-wasm-bindgen-test = "0.3.63"
-image = { version = "0.25.9", default-features = false, features = ["png"] }
+wasm-bindgen-test = "0.3.64"
+image = { version = "0.25.10", default-features = false, features = ["png"] }
 
 # --- External Git Dependencies ---
 cesiumtiles = { git = "https://github.com/reearth/cesiumtiles-rs.git" }
