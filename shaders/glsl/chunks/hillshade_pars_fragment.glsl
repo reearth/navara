@@ -1,4 +1,4 @@
-#ifdef USE_HILLSHADE
+#if USE_HILLSHADE
   #include dem_util;
 
   // Hillshade-specific uniforms for DEM decoding

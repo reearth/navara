@@ -141,11 +141,11 @@ pub fn update_tiles(
     let zero_tile_handle = zero_tile.handle();
 
     let has_tile_layer = !tiles.is_empty();
-    let is_texture_ready = qt.qt.get_mut(zero_tile_handle).unwrap().is_texture_ready(
-        &texture_fragment,
-        &data_requesters,
-        has_tile_layer,
-    );
+    let is_texture_ready = qt
+        .qt
+        .get_mut(zero_tile_handle)
+        .unwrap()
+        .is_any_texture_ready(&texture_fragment, &data_requesters, has_tile_layer);
 
     let traversal_result = traverse_tile(
         &mut commands,
@@ -862,7 +862,7 @@ pub fn update_mesh_material(
 
         let mut parent_z = None;
         let texture_fragment_entity_ids =
-            if tile.is_texture_ready(&texture_fragment, &data_requesters, true) {
+            if tile.is_all_texture_ready(&texture_fragment, &data_requesters, true) {
                 texture_fragment_entity_ids
             } else {
                 // Use the parent tile if this tile doesn't have a tile.
@@ -945,6 +945,10 @@ pub fn update_mesh_material(
             let is_heatmap = l.elevation_heatmap_config.is_some();
             let is_hillshade_layer_check = l.hillshade_config.is_some();
 
+            // Use parent's zoom if we're using parent texture, otherwise current zoom
+            // This is important for hillshade: when using parent texture, zoom affects normal calculation
+            let zoom_for_layer = parent_z.map(|z| z as u8).unwrap_or(current_zoom);
+
             if prev_shows.get(i) != Some(&next_show)
                 || prev_opacities.get(i) != Some(&next_opacity)
                 || prev_colors.get(i) != Some(&next_color)
@@ -952,7 +956,7 @@ pub fn update_mesh_material(
                     != texture_fragment_entity_ids.get(i)
                 || prev_is_elevation_heatmaps.get(i) != Some(&is_heatmap)
                 || prev_is_hillshades.get(i) != Some(&is_hillshade_layer_check)
-                || prev_tile_zoom_levels.get(i) != Some(&current_zoom)
+                || prev_tile_zoom_levels.get(i) != Some(&zoom_for_layer)
             {
                 needs_update = true;
             }
@@ -976,9 +980,6 @@ pub fn update_mesh_material(
                 hillshade_config = l.hillshade_config.clone();
             }
 
-            // Use parent's zoom if we're using parent texture, otherwise current zoom
-            // This is important for hillshade: when using parent texture, zoom affects normal calculation
-            let zoom_for_layer = parent_z.map(|z| z as u8).unwrap_or(current_zoom);
             tile_zoom_levels.push(zoom_for_layer);
         }
 

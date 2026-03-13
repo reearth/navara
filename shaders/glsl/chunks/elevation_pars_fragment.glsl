@@ -1,4 +1,4 @@
-#ifdef USE_ELEVATION_HEATMAP
+#if USE_ELEVATION_HEATMAP
   #include branchFreeTernary;
   #include dem_util;
 

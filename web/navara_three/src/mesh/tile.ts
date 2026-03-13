@@ -564,6 +564,7 @@ export class TileMesh
     m.userData.defines ??= {};
     m.userData.defines.USE_UV = 1;
     m.userData.defines.USE_ELEVATION_HEATMAP = 0;
+    m.userData.defines.USE_HILLSHADE = 0;
 
     m.envMap = uniforms.tSkyEnvMap.value ?? null;
     m.combine = AddOperation;
@@ -719,14 +720,14 @@ vUv = vUv * uScale + uOffset;
     // For raster textures, use transformed UV
     vec2 texUv = ${idx} >= ${this.texturizedSceneIndexFrom} ? vOrigUv : vUv;
 
-    #ifdef USE_HILLSHADE
+    #if USE_HILLSHADE
       // Skip hillshade textures for color rendering (they're only used for normals)
       if (uIsHillshades[${idx}]) {
         ${texColorVar} = vec4(0.0); // Transparent, no color contribution
       }
       else
     #endif
-    #ifdef USE_ELEVATION_HEATMAP
+    #if USE_ELEVATION_HEATMAP
       // Check if this is an elevation heatmap texture
       if (uIsElevationHeatmaps[${idx}]) {
         // For elevation heatmap: decode DEM data with bilinear interpolation and apply color mapping
@@ -781,7 +782,7 @@ vUv = vUv * uScale + uOffset;
   vec3 N = normalize(vPosition);
   normal = normalize(normalMatrix * N);
 
-  #ifdef USE_HILLSHADE
+  #if USE_HILLSHADE
     // Override normal with DEM-derived normal for hillshade layers
     ${Array.from(
       { length: maxTextures },
@@ -1295,11 +1296,26 @@ if (uPickable > 0.) {
       };
     }
 
-    m.userData.defines.USE_ELEVATION_HEATMAP =
-      m.userData.isElevationHeatmaps.value.some((v: boolean) => v === true);
-    m.userData.defines.USE_HILLSHADE = m.userData.isHillshades.value.some(
+    const prevHeatmap = m.userData.defines.USE_ELEVATION_HEATMAP;
+    const prevHillshade = m.userData.defines.USE_HILLSHADE;
+
+    const newHeatmap = m.userData.isElevationHeatmaps.value.some(
       (v: boolean) => v === true,
-    );
+    )
+      ? 1
+      : 0;
+    const newHillshade = m.userData.isHillshades.value.some(
+      (v: boolean) => v === true,
+    )
+      ? 1
+      : 0;
+
+    m.userData.defines.USE_ELEVATION_HEATMAP = newHeatmap;
+    m.userData.defines.USE_HILLSHADE = newHillshade;
+
+    if (prevHeatmap !== newHeatmap || prevHillshade !== newHillshade) {
+      this.material.needsUpdate = true;
+    }
   }
 
   private setupTextureFragments(
