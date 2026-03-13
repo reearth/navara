@@ -1,15 +1,18 @@
 import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
   LayerHandle,
-  RainDropEffectLayer,
-  SSREffectLayer,
-  CloudsEffectLayer,
   type LayerDescription,
   degreeToRadian,
   geodeticToVector3,
   Color,
 } from "@navara/three";
-import { RainMeshLayer, SnowMeshLayer } from "@navara/three_default_layers";
+import {
+  RainMeshLayer,
+  SnowMeshLayer,
+  RainDropEffectLayer,
+  SSREffectLayer,
+  CloudsEffectLayer,
+} from "@navara/three_default_layers";
 import {
   DefaultPlugin,
   type DefaultLayerDescriptions,
@@ -27,13 +30,14 @@ import {
 import { addDateControl, addHidePaneKeyShortcut } from "../../helpers/control";
 import { addFieldsToFolder, type FolderFields } from "../../helpers/panel";
 
-export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
+export type LayerDescriptions = DefaultLayerDescriptions;
+
+export const run = async (view: ThreeView<LayerDescriptions>) => {
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
   await view.init();
 
-  const defaultEffects = view.addDefaultEffectLayers();
-  plugin.addDefaultPhotorealLayers();
+  const defaultEffects = plugin.addDefaultPhotorealLayers();
 
   // Add clouds effect layer explicitly
   const cloudsLayer = view.addLayer<CloudsEffectLayer>({
@@ -180,10 +184,7 @@ export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
   ]);
 };
 
-const addWaterControl = (
-  view: ThreeView<DefaultLayerDescriptions>,
-  pane: Pane,
-) => {
+const addWaterControl = (view: ThreeView<LayerDescriptions>, pane: Pane) => {
   const PARAMS = {
     "visible flood model": true,
     "visible river model": true,
@@ -249,10 +250,7 @@ const addWaterControl = (
   });
 };
 
-const addCameraControl = (
-  view: ThreeView<DefaultLayerDescriptions>,
-  pane: Pane,
-) => {
+const addCameraControl = (view: ThreeView<LayerDescriptions>, pane: Pane) => {
   const PARAMS = {
     autoRotation: false,
   };
@@ -276,7 +274,7 @@ const addCameraControl = (
 };
 
 const addWeatherControl = (
-  view: ThreeView<DefaultLayerDescriptions>,
+  view: ThreeView<LayerDescriptions>,
   pane: Pane,
   rainDropEffect: LayerHandle<RainDropEffectLayer>,
 ) => {

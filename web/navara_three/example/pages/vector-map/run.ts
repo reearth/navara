@@ -12,7 +12,9 @@ import {
   VECTOR_DATASETS,
 } from "../../helpers/constants";
 
-export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
+export type LayerDescriptions = DefaultLayerDescriptions;
+
+export const run = async (view: ThreeView<LayerDescriptions>) => {
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
   await view.init();

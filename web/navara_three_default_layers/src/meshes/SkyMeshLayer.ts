@@ -4,7 +4,6 @@ import {
   ViewContext,
   type MeshLayerUpdate,
 } from "@navara/three";
-import invariant from "tiny-invariant";
 
 import { SkyMesh, type SkyMeshOptions } from "./skyMesh";
 
@@ -43,18 +42,10 @@ export class SkyMeshLayer extends MeshLayerDeclaration<
     this._skyMesh = skyMesh;
 
     // Set up atmosphere integration
-    if (this.view.atmosphere.textures) {
-      skyMesh.setTextures(this.view.atmosphere.textures);
-    } else {
-      const textureLoaded = () => {
-        invariant(this.view.atmosphere.textures);
-        skyMesh.setTextures(this.view.atmosphere.textures);
-      };
-      this.view.atmosphere.on("_textureLoaded", textureLoaded);
-    }
-    skyMesh.setShadowLengthHandler(this.view.atmosphere._shadowLength);
+    this.view.atmosphere.onTexturesReady((t) => skyMesh.setTextures(t));
+    skyMesh.setShadowLengthHandler(this.view.atmosphere.shadowLength);
 
-    skyMesh.on("_needsUpdate", () => this.emit("_needsUpdate"));
+    skyMesh.on("needsUpdate", () => this.emit("needsUpdate"));
 
     return skyMesh;
   }

@@ -1,4 +1,4 @@
-import { EventHandler, Unimplemented } from "@navara/core";
+import { Unimplemented } from "@navara/core";
 import {
   ModelMaterial as NavaraModelMaterial,
   ModelMesh as NavaraModelMesh,
@@ -22,13 +22,11 @@ import {
 } from "three";
 import invariant from "tiny-invariant";
 
-import type { ViewEvents } from "..";
 import type { ViewContext } from "../core";
 import {
   getSelectiveEffectConfig,
   SelectiveEffectOcclusionMode,
   updateEffectLinks,
-  unlinkEffects,
 } from "../core/SelectiveEffectHelper";
 import {
   getMaskPassContext,
@@ -107,7 +105,6 @@ export class ModelMesh
     m: NavaraModelMesh,
     uniforms: CommonUniforms,
     buf: BufferLoader,
-    viewEvents: EventHandler<ViewEvents>,
     viewContext: ViewContext,
     layerId: string,
   ) {
@@ -118,9 +115,9 @@ export class ModelMesh
     this.credit = gltfInfo.credit;
     this.batchLength = m.batch_length;
     this.add(gltfInfo.scene);
-    this.init(m, buf, viewEvents);
+    this.init(m, buf);
     this.addEventListener("removedFromWorld", () => {
-      this.dispose(viewEvents);
+      this.dispose();
     });
   }
 
@@ -138,11 +135,7 @@ export class ModelMesh
     }
   }
 
-  private init(
-    m: NavaraModelMesh,
-    buf: BufferLoader,
-    viewEvents: EventHandler<ViewEvents>,
-  ) {
+  private init(m: NavaraModelMesh, buf: BufferLoader) {
     const batchIdsData = m.geometry.batch_ids;
     const dataSize = batchIdsData?.size ?? 0;
     const batchIds = batchIdsData
@@ -153,12 +146,7 @@ export class ModelMesh
 
     // For Cesium 3D Tiles
     if (batchIds) {
-      this.overrideCesium3DTilesMaterial(
-        meshMaterial,
-        batchIds,
-        dataSize,
-        viewEvents,
-      );
+      this.overrideCesium3DTilesMaterial(meshMaterial, batchIds, dataSize);
     }
 
     if (meshMaterial.__internal__?.pointCloud) {
@@ -238,7 +226,6 @@ export class ModelMesh
     meshMaterial: NavaraModelMaterial,
     batchIds: Uint32Array<ArrayBufferLike>,
     dataSize: number,
-    viewEvents: EventHandler<ViewEvents>,
   ) {
     const uniforms = this._uniforms;
 
@@ -305,7 +292,7 @@ export class ModelMesh
       // Setup onBeforeRender for SelectiveEffect state handling
       this.setupMeshOnBeforeRender(mesh, enhancer);
 
-      viewEvents.emit("_csmMounted", mesh.material);
+      this.viewContext.applyShadowMaterial(mesh.material);
     });
   }
 
@@ -558,18 +545,9 @@ export class ModelMesh
     // This method is intentionally a no-op to avoid breaking existing callers.
   }
 
-  dispose(viewEvents: EventHandler<ViewEvents>) {
-    // Clean up SelectiveEffect registry links
-    unlinkEffects(
-      this,
-      this.viewContext.selectiveEffectRegistry,
-      this._layerId,
-      this._prevEffectIds,
-    );
-    this._prevEffectIds = undefined;
-
+  dispose() {
     this.traverseMesh((m) => {
-      viewEvents.emit("_csmUnmounted", m.material);
+      this.viewContext.removeShadowMaterial(m.material);
     });
   }
 }

@@ -12,31 +12,14 @@ import type { Promise as WorkerPoolPromise } from "@navara/worker";
 import type { Mesh, Sprite, Object3D, Material } from "three";
 
 import type { Color } from "../Color";
+import type { LightLayerConfig } from "../core";
 import type {
-  SunLightLayerConfig,
-  SkyLightProbeLayerConfig,
-  AmbientLightLayerConfig,
-  LightProbeLayerConfig,
-} from "../layers";
-import type {
-  AerialPerspectiveConfig,
-  CloudsConfig,
   FinalCopyPassConfig,
-  FogLightConfig,
-  FXAAConfig,
-  LensFlareConfig,
   MRTPassConfig,
-  RainDropConfig,
   SelectiveBloomEffectConfig,
   SelectiveOutlineEffectConfig,
   SkyEnvMapPassConfig,
-  SMAAConfig,
-  SSAOConfig,
-  SSRConfig,
-  ToneMappingConfig,
   TransparentPassConfig,
-  DepthOfFieldConfig,
-  ColorGradingLUTConfig,
 } from "../layers/effect";
 import type { TileMesh } from "../mesh";
 
@@ -50,31 +33,15 @@ export type LayerDescription =
 
 export type MeshLayerDeclarationDescription = { type: "mesh" };
 
-export type LightLayerDeclarationDescription =
-  | SunLightLayerConfig
-  | SkyLightProbeLayerConfig
-  | AmbientLightLayerConfig
-  | LightProbeLayerConfig;
+export type LightLayerDeclarationDescription = LightLayerConfig;
 
 export type EffectLayerDeclarationDescription =
-  | AerialPerspectiveConfig
-  | CloudsConfig
   | FinalCopyPassConfig
-  | FogLightConfig
-  | FXAAConfig
-  | LensFlareConfig
   | MRTPassConfig
   | SkyEnvMapPassConfig
-  | RainDropConfig
   | SelectiveBloomEffectConfig
   | SelectiveOutlineEffectConfig
-  | SMAAConfig
-  | SSAOConfig
-  | SSRConfig
-  | ToneMappingConfig
-  | TransparentPassConfig
-  | DepthOfFieldConfig
-  | ColorGradingLUTConfig;
+  | TransparentPassConfig;
 
 // export type MVTLayer = {
 //   type: "mvt";

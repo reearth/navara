@@ -1,7 +1,5 @@
-import ThreeView, {
-  TERRARIUM_ELEVATION_DECODER,
-  ToneMappingMode,
-} from "@navara/three";
+import ThreeView, { TERRARIUM_ELEVATION_DECODER } from "@navara/three";
+import { ToneMappingMode } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
   type DefaultLayerDescriptions,
@@ -12,7 +10,9 @@ import { showAttributions } from "../../helpers/attributions";
 import { TERRAIN_DATASETS, TILE_DATASETS } from "../../helpers/constants";
 import { addDateControl } from "../../helpers/control";
 
-export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
+export type LayerDescriptions = DefaultLayerDescriptions;
+
+export const run = async (view: ThreeView<LayerDescriptions>) => {
   view.addPlugin(new DefaultPlugin());
 
   await view.init();

@@ -1,8 +1,9 @@
-import ThreeView, {
-  Color,
-  JAPAN_GSI_ELEVATION_DECODER,
-  ToneMappingMode,
-} from "@navara/three";
+import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
+import { ToneMappingMode } from "@navara/three_default_layers";
+import {
+  DefaultPlugin,
+  type DefaultLayerDescriptions,
+} from "@navara/three_default_plugin";
 import { SphericalHarmonics3 } from "three";
 import { Pane } from "tweakpane";
 
@@ -11,7 +12,11 @@ import { TERRAIN_DATASETS, VECTOR_DATASETS } from "../../helpers/constants";
 import { addCameraControl } from "../../helpers/control";
 import { SH_COEFFICIENTS } from "../../helpers/sh";
 
-export const run = async (view: ThreeView) => {
+export type LayerDescriptions = DefaultLayerDescriptions;
+
+export const run = async (view: ThreeView<LayerDescriptions>) => {
+  view.addPlugin(new DefaultPlugin());
+
   await view.init();
 
   view.addLayer({ type: "light", ambient: {} });

@@ -81,7 +81,7 @@ class Vignette extends Effect<VignetteEffect, VignetteOptions> {
     this.options.technique = v;
     if (!this.rawEffect) return;
     this.rawEffect.technique = selectTechnique(v);
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get offset(): number {
@@ -93,7 +93,7 @@ class Vignette extends Effect<VignetteEffect, VignetteOptions> {
     this.options.offset = v;
     if (!this.rawEffect) return;
     this.rawEffect.offset = v;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 
   get darkness(): number {
@@ -105,7 +105,7 @@ class Vignette extends Effect<VignetteEffect, VignetteOptions> {
     this.options.darkness = v;
     if (!this.rawEffect) return;
     this.rawEffect.darkness = v;
-    this.emit("_needsUpdate");
+    this.emit("needsUpdate");
   }
 }
 
@@ -183,7 +183,9 @@ class VignetteEffectLayer extends EffectLayerDeclaration<
 // Step 3: Use the custom effect layer in the application
 // ============================================================
 
-export const run = async (view: ThreeView<VignetteEffectConfig>) => {
+export type LayerDescriptions = VignetteEffectConfig;
+
+export const run = async (view: ThreeView<LayerDescriptions>) => {
   const defaultPlugin = new DefaultPlugin();
   view.addPlugin(defaultPlugin);
 
@@ -199,9 +201,6 @@ export const run = async (view: ThreeView<VignetteEffectConfig>) => {
 
   // Register the custom effect layer
   view.registerEffect("vignette", VignetteEffectLayer);
-
-  // Add default effect and light layers
-  view.addDefaultEffectLayers();
 
   // Set initial camera position
   view.setCamera({

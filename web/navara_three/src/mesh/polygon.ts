@@ -1,4 +1,4 @@
-import type { EventHandler, TileHandle } from "@navara/core";
+import type { TileHandle } from "@navara/core";
 import {
   PolygonMesh as NavaraPolygonMesh,
   PolygonMaterial,
@@ -14,7 +14,7 @@ import {
   Vector3,
 } from "three";
 
-import { PolygonOutlineMesh, type ViewEvents } from "..";
+import { PolygonOutlineMesh } from "..";
 import type { ViewContext } from "../core";
 import {
   ensureSelectiveEffectUserData,
@@ -92,7 +92,6 @@ export class PolygonMesh extends BatchedFeatureMesh<
     mesh: NavaraPolygonMesh,
     buf: BufferLoader,
     tileHandle: TileHandle | undefined,
-    viewEvents: EventHandler<ViewEvents>,
   ) {
     // TODO: Need to calculate bounding sphere by position_high and position_low.
     this.frustumCulled = false;
@@ -102,7 +101,7 @@ export class PolygonMesh extends BatchedFeatureMesh<
     // Register cleanup listener first (before any potential early returns)
     // This ensures dispose() is called even if geometry initialization fails
     this.addEventListener("removedFromWorld", () => {
-      this.dispose(viewEvents);
+      this.dispose();
     });
 
     const { success, useRTE } = this.initGeometry(mesh, buf);
@@ -110,7 +109,7 @@ export class PolygonMesh extends BatchedFeatureMesh<
       console.warn("PolygonMesh.init: geometry initialization failed");
       return this;
     }
-    this.initMaterial(mesh, this._uniforms, tileHandle, viewEvents, useRTE);
+    this.initMaterial(mesh, this._uniforms, tileHandle, useRTE);
     this.initDepthMaterial();
 
     if (mesh.bounding_sphere) {
@@ -273,7 +272,6 @@ export class PolygonMesh extends BatchedFeatureMesh<
     mesh: NavaraPolygonMesh,
     uniforms: CommonUniforms,
     tileHandle: TileHandle | undefined,
-    viewEvents: EventHandler<ViewEvents>,
     useRTE: boolean,
   ) {
     const meshMaterial = mesh.material;
@@ -390,7 +388,7 @@ export class PolygonMesh extends BatchedFeatureMesh<
     // Set up onBeforeCompile using the enhancer's transformShader
     material.onBeforeCompile = enhancer.transformShader;
 
-    viewEvents.emit("_csmMounted", material);
+    this._viewContext.applyShadowMaterial(material);
 
     this._initBatchedMaterial();
 
@@ -647,7 +645,7 @@ export class PolygonMesh extends BatchedFeatureMesh<
     return this.getEnhancer().states().base.clampToGround;
   }
 
-  dispose(viewEvents: EventHandler<ViewEvents>) {
+  dispose() {
     // Clean up SelectiveEffect registry links
     unlinkEffects(
       this,
@@ -657,7 +655,7 @@ export class PolygonMesh extends BatchedFeatureMesh<
     );
     this._prevEffectIds = undefined;
 
-    viewEvents.emit("_csmUnmounted", this.material);
+    this._viewContext.removeShadowMaterial(this.material);
     this.customDepthMaterial?.dispose();
   }
 }

@@ -120,10 +120,12 @@ impl CameraFrustum {
     /// - Zone 1 (Near ground): near = 1.0, far = 1e6
     /// - Zone 2 (Mid altitude): near = 100.0, far = 1e8
     /// - Zone 3 (Far/Space): near = 1000.0, far = 1e9
-    pub fn adjust_near_far(&mut self, distance: FloatType, controller: &CameraController) -> bool {
-        let range = controller.maximum_zoom_distance - controller.minimum_zoom_distance;
-        let threshold1 = controller.minimum_zoom_distance + range / 1000.;
-        let threshold2 = controller.minimum_zoom_distance + range / 30.;
+    pub fn adjust_near_far(&mut self, distance: FloatType) -> bool {
+        let base = WGS84_B_64;
+
+        // Ref: https://en.wikipedia.org/wiki/K%C3%A1rm%C3%A1n_line
+        let threshold1 = base + 50_000.0;
+        let threshold2 = base + 100_000.0;
 
         let (new_near, new_far) = if distance < threshold1 {
             (1.0, 1e6)

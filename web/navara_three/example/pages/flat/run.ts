@@ -1,12 +1,18 @@
-import ThreeView, { Color, ToneMappingMode } from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import ThreeView, { Color } from "@navara/three";
+import { ToneMappingMode } from "@navara/three_default_layers";
+import {
+  DefaultPlugin,
+  type DefaultLayerDescriptions,
+} from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../helpers/attributions";
 import { TILE_DATASETS, TILES_3D_DATASETS } from "../../helpers/constants";
 import { addCameraControl, addDateControl } from "../../helpers/control";
 
-export const run = async (view: ThreeView) => {
+export type LayerDescriptions = DefaultLayerDescriptions;
+
+export const run = async (view: ThreeView<LayerDescriptions>) => {
   const defaultPlugin = new DefaultPlugin();
   view.addPlugin(defaultPlugin);
 
@@ -16,6 +22,13 @@ export const run = async (view: ThreeView) => {
   defaultAtmospheres.sun.update({
     sun: {
       castShadow: true,
+    },
+  });
+
+  view.toneMappingExposure = 5;
+  defaultAtmospheres.toneMapping.update({
+    toneMapping: {
+      mode: ToneMappingMode.NEUTRAL,
     },
   });
 
@@ -33,14 +46,6 @@ export const run = async (view: ThreeView) => {
     ellipsoid: {
       castShadow: true,
       receiveShadow: true,
-    },
-  });
-
-  view.toneMappingExposure = 5;
-  view.addLayer({
-    type: "effect",
-    toneMapping: {
-      mode: ToneMappingMode.NEUTRAL,
     },
   });
 

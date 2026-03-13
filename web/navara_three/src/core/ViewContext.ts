@@ -1,8 +1,8 @@
-import type { EventHandler, Globe } from "@navara/core";
+import type { Globe } from "@navara/core";
+import { EventHandler } from "@navara/core";
 import type { ConcurrencyManager } from "@navara/worker";
 import type { Material, Object3D, PerspectiveCamera } from "three";
 
-import type { ViewEvents } from "..";
 import type { Atmosphere } from "../atmosphere";
 import { Color } from "../Color";
 import type { LayersManager } from "../layersManager";
@@ -26,9 +26,13 @@ type Private = {
   drapedMaterials: DrapedMaterialCache;
 };
 
+type ViewContextEvents = {
+  unstableShadowApplied: (material: Material) => void;
+  unstableShadowRemoved: (material: Material) => void;
+};
+
 // Restrict public API for a layer declaration.
-export class ViewContext {
-  private eventHandler?: EventHandler<ViewEvents>;
+export class ViewContext extends EventHandler<ViewContextEvents> {
   public selectiveEffectRegistry?: SelectiveEffectHelper;
   public debugOptions: ViewDebugOptions;
   public globe?: Globe;
@@ -43,11 +47,10 @@ export class ViewContext {
     public renderPassOrchestrator: RenderPassOrchestrator,
     public concurrencyManager: ConcurrencyManager,
     public _privates: Private,
-    eventHandler?: EventHandler<ViewEvents>,
     selectiveEffectHelper?: SelectiveEffectHelper,
     debugOptions?: ViewDebugOptions,
   ) {
-    this.eventHandler = eventHandler;
+    super();
     this.selectiveEffectRegistry = selectiveEffectHelper;
     this.debugOptions = debugOptions ?? {};
 
@@ -64,8 +67,12 @@ export class ViewContext {
     this.camera = camera;
   }
 
-  emit(event: "_csmMounted" | "_csmUnmounted", material: Material): void {
-    this.eventHandler?.emit(event, material);
+  applyShadowMaterial(material: Material): void {
+    this.emit("unstableShadowApplied", material);
+  }
+
+  removeShadowMaterial(material: Material): void {
+    this.emit("unstableShadowRemoved", material);
   }
 
   registerLayerEffects(

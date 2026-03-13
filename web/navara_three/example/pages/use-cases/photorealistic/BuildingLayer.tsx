@@ -1,7 +1,6 @@
 import { Color } from "@navara/three";
 import type {
   Layer as NavaraLayer,
-  LayerDescription,
   ColorTuple,
   FeatureUpdatedParams,
 } from "@navara/three";
@@ -12,6 +11,8 @@ import {
   FLOOD_RANK_COLOR_MAP,
   PLATEAU_COLOR_MAP,
 } from "../../../helpers/colors";
+
+import type { LayerDescriptions } from "./type";
 
 export type BuildingColorAttribute =
   | "none"
@@ -79,7 +80,7 @@ export function BuildingTilesLayer({
   paramsRef.current.colorBy = colorBy;
   paramsRef.current.heightDomain = heightDomain;
 
-  const layerDesc = useMemo((): LayerDescription | null => {
+  const layerDesc = useMemo((): LayerDescriptions | null => {
     if (!visible) return null;
     return {
       type: "cesium3dtiles",

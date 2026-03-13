@@ -1,5 +1,6 @@
 export { LayerRegistry } from "./LayerRegistry";
 export { Registries } from "./Registries";
+export * from "./layerErrors";
 export {
   LayerDeclaration,
   type LayerDeclarationConfig,

@@ -39,8 +39,6 @@ const run = async () => {
     },
   });
 
-  view.addDefaultEffectLayers();
-
   // GeoJSON polylines with outline (Odaiba area paths)
   const odaibaPaths: FeatureCollection = {
     type: "FeatureCollection",

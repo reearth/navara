@@ -54,8 +54,6 @@ const run = async () => {
     },
   });
 
-  view.addDefaultEffectLayers();
-
   // Mesh layers with outline
   const tokyoStationPosition = geodeticToVector3({
     lat: degreeToRadian(35.681236),

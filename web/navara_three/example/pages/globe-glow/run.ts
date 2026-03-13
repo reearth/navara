@@ -1,9 +1,8 @@
-import ThreeView, {
-  Color,
+import ThreeView, { Color, LayerHandle } from "@navara/three";
+import {
   AmbientLightLayer,
-  LayerHandle,
-} from "@navara/three";
-import { GlowGlobeMeshLayer } from "@navara/three_default_layers";
+  GlowGlobeMeshLayer,
+} from "@navara/three_default_layers";
 import {
   DefaultPlugin,
   type DefaultLayerDescriptions,
@@ -25,7 +24,9 @@ const gPaneParams = {
   visible: true,
 };
 
-export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
+export type LayerDescriptions = DefaultLayerDescriptions;
+
+export const run = async (view: ThreeView<LayerDescriptions>) => {
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
   await view.init();
@@ -62,7 +63,7 @@ export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
   addPanel(view, pane);
 };
 
-function addPanel(view: ThreeView<DefaultLayerDescriptions>, pane: Pane) {
+function addPanel(view: ThreeView<LayerDescriptions>, pane: Pane) {
   if (!gGlowGlobeMeshLayer) return;
 
   const folder = pane.addFolder({ title: "Glow Globe Layer" });

@@ -4,12 +4,15 @@ import ThreeView, {
   MeshLayerDeclaration,
   type MeshLayerConfig,
   type ViewContext,
-  type CloudsEffectLayer,
   degreeToRadian,
   eastNorthUpToFixedFrame,
   geodeticToVector3,
 } from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import type { CloudsEffectLayer } from "@navara/three_default_layers";
+import {
+  DefaultPlugin,
+  type DefaultLayerDescriptions,
+} from "@navara/three_default_plugin";
 import {
   Color,
   ShaderLib,
@@ -82,7 +85,7 @@ export class MarchingCubesLayer extends MeshLayerDeclaration<
 
     // Setup shadow if needed
     if (cubes.castShadow || cubes.receiveShadow) {
-      this.view.emit("_csmMounted", cfg.material);
+      this.view.applyShadowMaterial(cfg.material);
     }
 
     return cubes;
@@ -100,7 +103,7 @@ export class MarchingCubesLayer extends MeshLayerDeclaration<
         this._instance.receiveShadow = cfg.receiveShadow;
       }
 
-      this.emit("_needsUpdate");
+      this.emit("needsUpdate");
     }
 
     super.onUpdateConfig(updates);
@@ -116,7 +119,11 @@ export class MarchingCubesLayer extends MeshLayerDeclaration<
   }
 }
 
-export const run = async (view: ThreeView<MarchingCubesLayerConfig>) => {
+export type LayerDescriptions =
+  | MarchingCubesLayerConfig
+  | DefaultLayerDescriptions;
+
+export const run = async (view: ThreeView<LayerDescriptions>) => {
   // Register custom MarchingCubesLayer
   view.registerMesh("marchingCubes", MarchingCubesLayer);
 
@@ -125,15 +132,13 @@ export const run = async (view: ThreeView<MarchingCubesLayerConfig>) => {
 
   await view.init();
 
-  const defaultAtmospheres = defaultPlugin.addDefaultPhotorealLayers();
-  defaultAtmospheres.sun.update({
+  const defaultEffects = defaultPlugin.addDefaultPhotorealLayers();
+  defaultEffects.sun.update({
     sun: {
       intensity: 1,
       castShadow: true,
     },
   });
-
-  const defaultEffects = view.addDefaultEffectLayers();
 
   // Add clouds effect layer explicitly
   const cloudsLayer = view.addLayer<CloudsEffectLayer>({

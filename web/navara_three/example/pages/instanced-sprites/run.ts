@@ -1,4 +1,9 @@
-import ThreeView, { AmbientLightLayer, Color } from "@navara/three";
+import ThreeView, { Color } from "@navara/three";
+import { AmbientLightLayer } from "@navara/three_default_layers";
+import {
+  DefaultPlugin,
+  type DefaultLayerDescriptions,
+} from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 
 import { TILE_DATASETS, VECTOR_DATASETS } from "../../helpers/constants";
@@ -92,7 +97,9 @@ const layers: MaterialLayerDescription[] = [
   },
 ];
 
-export const run = async (view: ThreeView) => {
+export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
+  view.addPlugin(new DefaultPlugin());
+
   await view.init();
 
   view.addLayer<AmbientLightLayer>({

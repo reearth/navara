@@ -122,7 +122,7 @@ export class ArclineMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
       // so new sub-meshes need handlers regardless of effectIds
       this.injectHandlersOnSubMeshes();
 
-      this.emit("_needsUpdate");
+      this.emit("needsUpdate");
     }
 
     // super.onUpdateConfig handles _effectIds, registry links, and handler injection

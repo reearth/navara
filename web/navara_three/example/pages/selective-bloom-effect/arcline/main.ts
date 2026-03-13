@@ -47,8 +47,6 @@ const run = async () => {
     },
   });
 
-  view.addDefaultEffectLayers();
-
   // Arc lines with bloom (Tokyo to Asian cities)
   view.addLayer<ArclineMeshLayer>({
     type: "mesh",

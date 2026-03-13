@@ -2,17 +2,22 @@ import ThreeView, {
   EventHandler,
   JAPAN_GSI_ELEVATION_DECODER,
   type LayerHandle,
-  type LightProbeLayer,
-  type SkyLightProbeLayer,
-  type FogLightEffectLayer,
   type LayerDescription,
-  type FogLightDefinition,
   degreeToRadian,
   geodeticToVector3,
   Color,
 } from "@navara/three";
-import type { StarsLayer } from "@navara/three_default_layers";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import type {
+  LightProbeLayer,
+  SkyLightProbeLayer,
+  StarsLayer,
+  FogLightEffectLayer,
+  FogLightDefinition,
+} from "@navara/three_default_layers";
+import {
+  DefaultPlugin,
+  type DefaultLayerDescriptions,
+} from "@navara/three_default_plugin";
 import type { FeatureCollection, Point } from "geojson";
 import { SphericalHarmonics3 } from "three";
 import { Pane } from "tweakpane";
@@ -27,7 +32,9 @@ import {
 import { addCameraControl, addDateControl } from "../../helpers/control";
 import { SH_COEFFICIENTS } from "../../helpers/sh";
 
-export const run = async (view: ThreeView) => {
+export type LayerDescriptions = DefaultLayerDescriptions;
+
+export const run = async (view: ThreeView<LayerDescriptions>) => {
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
   await view.init();
@@ -37,9 +44,6 @@ export const run = async (view: ThreeView) => {
 
   // Set background to dark night sky
   // Note: Background should be set through renderer or effect layers, not scene directly
-
-  // Add default effect layers
-  view.addDefaultEffectLayers();
 
   // Configure atmosphere for night scene
   const defaultAtmosphere = plugin.addDefaultPhotorealLayers();
@@ -154,7 +158,10 @@ export const run = async (view: ThreeView) => {
   ]);
 };
 
-const addNightLightProbeControl = (view: ThreeView, pane: Pane) => {
+const addNightLightProbeControl = (
+  view: ThreeView<LayerDescriptions>,
+  pane: Pane,
+) => {
   const lightProbeLayer = view.addLayer<LightProbeLayer>({
     type: "light",
     lightProbe: {
@@ -195,7 +202,7 @@ const addNightLightProbeControl = (view: ThreeView, pane: Pane) => {
 };
 
 const addStarsControl = (
-  view: ThreeView,
+  view: ThreeView<LayerDescriptions>,
   starsLayer: LayerHandle<StarsLayer>,
   pane: Pane,
 ) => {
@@ -247,7 +254,7 @@ const addStarsControl = (
 };
 
 const addSkyLightProbeControl = (
-  view: ThreeView,
+  view: ThreeView<LayerDescriptions>,
   skyLightProbeLayer: LayerHandle<SkyLightProbeLayer>,
   pane: Pane,
 ) => {
@@ -305,7 +312,10 @@ const addSkyLightProbeControl = (
   return skyLightProbeFolder;
 };
 
-const add3DTilesSceneControl = (view: ThreeView, pane: Pane) => {
+const add3DTilesSceneControl = (
+  view: ThreeView<LayerDescriptions>,
+  pane: Pane,
+) => {
   const SCENES = {
     "Chiyoda & Chuo": {
       tiles: [
@@ -448,7 +458,10 @@ const loadGeoJSONLights = async (
   }
 };
 
-const addTokyoPointsFogLightControl = async (view: ThreeView, pane: Pane) => {
+const addTokyoPointsFogLightControl = async (
+  view: ThreeView<LayerDescriptions>,
+  pane: Pane,
+) => {
   // Load Tokyo Points light data using common function
   const tokyoPointsLights = await loadGeoJSONLights(
     LOCAL_DATASETS.tokyoPoints100GeoJSON.url,
@@ -621,7 +634,7 @@ const addTokyoPointsFogLightControl = async (view: ThreeView, pane: Pane) => {
 };
 
 const addFogLightControl = async (
-  view: ThreeView,
+  view: ThreeView<LayerDescriptions>,
   pane: Pane,
   sceneChangeHandler?: EventHandler,
 ) => {

@@ -1,4 +1,3 @@
-import type { EventHandler } from "@navara/core";
 import {
   PolylineMesh as NavaraPolylineMesh,
   PolylineMaterial,
@@ -13,11 +12,9 @@ import {
   Vector2,
 } from "three";
 
-import type { ViewEvents } from "..";
 import type { ViewContext } from "../core";
 import {
   updateEffectLinks,
-  unlinkEffects,
 } from "../core/SelectiveEffectHelper";
 import { injectSelectiveEffectHandlers } from "../core/SelectiveEffectMaskContext";
 import type { BufferLoader } from "../event";
@@ -75,7 +72,6 @@ export class PolylineMesh extends BatchedFeatureMesh<
     mesh: NavaraPolylineMesh,
     buf: BufferLoader,
     uniforms: CommonUniforms,
-    viewEvents: EventHandler<ViewEvents>,
     viewContext: ViewContext,
     layerId: string,
   ) {
@@ -95,10 +91,10 @@ export class PolylineMesh extends BatchedFeatureMesh<
       this.visible = false;
     }
 
-    this.initMaterial(mesh, uniforms, viewEvents, geometryResult.useRTE);
+    this.initMaterial(mesh, uniforms, geometryResult.useRTE);
 
     this.addEventListener("removedFromWorld", () => {
-      this.dispose(viewEvents);
+      this.dispose();
     });
   }
 
@@ -240,7 +236,6 @@ export class PolylineMesh extends BatchedFeatureMesh<
   private initMaterial(
     mesh: NavaraPolylineMesh,
     uniforms: CommonUniforms,
-    viewEvents: EventHandler<ViewEvents>,
     useRTE: boolean,
   ) {
     const meshMaterial = mesh.material;
@@ -323,7 +318,7 @@ export class PolylineMesh extends BatchedFeatureMesh<
     // Set onBeforeCompile to use enhancer
     this.material.onBeforeCompile = enhancer.transformShader;
 
-    viewEvents.emit("_csmMounted", this.material);
+    this._viewContext.applyShadowMaterial(this.material);
 
     // SE uniform refs for combined mask pass output
     const seBloomRef = { value: 0 };
@@ -501,16 +496,7 @@ export class PolylineMesh extends BatchedFeatureMesh<
     this.visible = visible;
   }
 
-  dispose(viewEvents: EventHandler<ViewEvents>) {
-    // Clean up SelectiveEffect registry links
-    unlinkEffects(
-      this,
-      this._viewContext.selectiveEffectRegistry,
-      this._layerId,
-      this._prevEffectIds,
-    );
-    this._prevEffectIds = undefined;
-
-    viewEvents.emit("_csmUnmounted", this.material);
+  dispose() {
+    this._viewContext.removeShadowMaterial(this.material);
   }
 }

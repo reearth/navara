@@ -3,10 +3,9 @@ import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
   Layer,
   LayerHandle,
-  SunLightLayer,
   type Cesium3dTilesLayer,
-  type ShadowMode,
 } from "@navara/three";
+import { SunLightLayer, type ShadowMode } from "@navara/three_default_layers";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 
@@ -30,7 +29,6 @@ export async function run() {
   await view.init();
 
   const defaultAtmospheres = defaultPlugin.addDefaultPhotorealLayers();
-  view.addDefaultEffectLayers();
 
   view.toneMappingExposure = 10;
 

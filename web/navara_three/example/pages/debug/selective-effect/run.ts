@@ -28,7 +28,9 @@ export type PostEffects = {
   postEffectBloom: Layer;
 };
 
-export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
+export type LayerDescriptions = DefaultLayerDescriptions;
+
+export const run = async (view: ThreeView<LayerDescriptions>) => {
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
   await view.init();
@@ -79,7 +81,6 @@ export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
     },
   });
 
-  view.addDefaultEffectLayers();
   const {
     cubeLayer,
     sphereLayer,
