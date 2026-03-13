@@ -13,9 +13,7 @@ import {
 } from "three";
 
 import type { ViewContext } from "../core";
-import {
-  updateEffectLinks,
-} from "../core/SelectiveEffectHelper";
+import { updateEffectLinks } from "../core/SelectiveEffectHelper";
 import { injectSelectiveEffectHandlers } from "../core/SelectiveEffectMaskContext";
 import type { BufferLoader } from "../event";
 import { createPolylineMaterialEnhancer } from "../material/enhancer";
