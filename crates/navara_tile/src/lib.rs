@@ -42,8 +42,8 @@ impl Plugin for TilePlugin {
                     data_requester::system::filter_requestable_data_requester,
                     texture_fragment::filter_requestable_hillshade_data_requester,
                     texture_fragment::backfill_hillshade_on_loaded,
-                    texture_fragment::cleanup_hillshade_backfilled_buffers,
                     tile::system::clear_caches,
+                    texture_fragment::cleanup_hillshade_backfilled_buffers,
                     terrain::system::update_height_observers,
                 )
                     .chain(),

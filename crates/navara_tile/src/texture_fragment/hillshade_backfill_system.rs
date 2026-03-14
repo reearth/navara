@@ -353,7 +353,9 @@ pub fn cleanup_hillshade_backfilled_buffers(
         // Remove the backfilled buffer (padded 258x258 texture)
         buf.remove(&state.backfilled_handle);
 
-        // Despawn the entity to complete cleanup
-        commands.entity(entity).despawn();
+        // Remove the HillshadeDEMState component but keep the entity alive
+        // so that other systems (e.g. data requester cleanup in PostUpdate)
+        // can still process it and emit necessary removal events.
+        commands.entity(entity).remove::<HillshadeDEMState>();
     }
 }
