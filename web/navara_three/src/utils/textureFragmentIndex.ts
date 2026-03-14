@@ -89,7 +89,8 @@ export function removeTextureFragmentIndex(tileMesh: TileMesh): void {
 /**
  * Get all tile meshes and slot indices that use a specific texture fragment
  * Returns undefined if no tiles use this fragment
- * Returns a read-only view to prevent accidental index corruption
+ * Returns the internal Set typed as ReadonlySet.
+ * This provides compile-time protection only; callers must not mutate it.
  */
 export function getTextureFragmentSlots(
   fragmentId: string,

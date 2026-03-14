@@ -688,7 +688,6 @@ function processDataRequesterRemoved(
   buf.remove(req.handle);
   abortController?.abort();
 
-  // Also remove from loadedTexs if this DataRequester had a hillshade DataTexture
   if (loadedTexs) {
     loadedTexs.get(id)?.dispose();
     loadedTexs.delete(id);
