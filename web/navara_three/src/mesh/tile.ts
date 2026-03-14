@@ -372,6 +372,10 @@ export class TileMesh
       new BufferAttribute(position.slice(), 3),
     );
 
+    // Provide dummy normals (shader computes normals from vPosition)
+    const normals = new Float32Array(position.length);
+    terrainGeometry.setAttribute("normal", new BufferAttribute(normals, 3));
+
     const uv = buf.f32(mesh.uvs);
     if (uv) {
       terrainGeometry.setAttribute("uv", new BufferAttribute(uv.slice(), 2));

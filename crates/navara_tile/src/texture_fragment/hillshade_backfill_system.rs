@@ -74,7 +74,8 @@ pub fn filter_requestable_hillshade_data_requester(
                     .enumerate()
                     .find_map(|(i, id)| id.and_then(|id| (id == e).then_some(i)))
             {
-                ids.remove(idx);
+                // Clear the slot instead of removing it to keep layer indices stable
+                ids[idx] = None;
             }
         }
     }
@@ -104,12 +105,13 @@ pub fn backfill_hillshade_on_loaded(
         &TileTextureFragmentMarker,
         &HillshadeTextureMarker,
     )>,
-    mut existing_backfills: Query<(Entity, &mut HillshadeDEMState, &TileTextureFragmentMarker)>,
+    existing_backfills: Query<(Entity, &mut HillshadeDEMState, &TileTextureFragmentMarker)>,
 ) {
-    // Precompute a lookup of already-backfilled neighbors
-    let backfilled_by_tile: HashMap<u64, i32> = existing_backfills
+    // Precompute a lookup for bidirectional neighbor updates: tile_handle -> (Entity, backfilled_handle)
+    // This avoids scanning existing_backfills for each neighbor (O(numBackfilledTiles) per neighbor).
+    let backfilled_neighbors_by_tile: HashMap<u64, (Entity, i32)> = existing_backfills
         .iter()
-        .map(|(_, state, marker)| (marker.0, state.backfilled_handle))
+        .map(|(entity, state, marker)| (marker.0, (entity, state.backfilled_handle)))
         .collect();
 
     for (entity, data_req, marker) in query.iter() {
@@ -123,7 +125,9 @@ pub fn backfill_hillshade_on_loaded(
         // Create lookup function to find already-backfilled neighbors
         // This allows us to prefer backfilled buffers (258x258) over original (256x256)
         let backfilled_lookup = |neighbor_tile_handle: u64| -> Option<i32> {
-            backfilled_by_tile.get(&neighbor_tile_handle).copied()
+            backfilled_neighbors_by_tile
+                .get(&neighbor_tile_handle)
+                .map(|(_, handle)| *handle)
         };
 
         // Perform backfill
@@ -172,30 +176,25 @@ pub fn backfill_hillshade_on_loaded(
             // Process each neighbor
             for ((nx, ny, nz), direction) in neighbors {
                 if let Some(neighbor_handle) = encode_quadleaf_handle((nx, ny, nz)) {
-                    // Find neighbor's existing backfilled buffer
-                    for (neighbor_entity, neighbor_state, neighbor_marker) in
-                        existing_backfills.iter_mut()
+                    // Find neighbor's existing backfilled buffer in O(1) using the precomputed map
+                    if let Some((neighbor_entity, neighbor_backfilled_handle)) =
+                        backfilled_neighbors_by_tile.get(&neighbor_handle)
                     {
-                        if neighbor_marker.0 == neighbor_handle {
-                            // Update neighbor's padding with current tile's edge
-                            if let Some(neighbor_bytes) =
-                                buf.get_u8_mut(&neighbor_state.backfilled_handle)
-                            {
-                                copy_edge_bidirectional(
-                                    neighbor_bytes,
-                                    &edges[direction as usize],
-                                    direction,
-                                );
+                        // Update neighbor's padding with current tile's edge
+                        if let Some(neighbor_bytes) = buf.get_u8_mut(neighbor_backfilled_handle) {
+                            copy_edge_bidirectional(
+                                neighbor_bytes,
+                                &edges[direction as usize],
+                                direction,
+                            );
 
-                                // Notify JS that this neighbor's backfilled buffer has updated padding,
-                                // so the existing DataTexture should re-upload/refresh its data (e.g. via needsUpdate)
-                                events.hillshade_backfilled.push((
-                                    neighbor_entity,
-                                    neighbor_state.backfilled_handle,
-                                    neighbor_handle,
-                                ));
-                            }
-                            break;
+                            // Notify JS that this neighbor's backfilled buffer has updated padding,
+                            // so the existing DataTexture should re-upload/refresh its data (e.g. via needsUpdate)
+                            events.hillshade_backfilled.push((
+                                *neighbor_entity,
+                                *neighbor_backfilled_handle,
+                                neighbor_handle,
+                            ));
                         }
                     }
                 }
