@@ -1,5 +1,5 @@
 #if USE_HILLSHADE
-  #include dem_util;
+  #include "dem_util.glsl"
 
   // Hillshade-specific uniforms for DEM decoding
   // Note: All uniforms are declared in tile.ts

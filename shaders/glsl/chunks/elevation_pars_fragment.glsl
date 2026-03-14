@@ -1,6 +1,6 @@
 #if USE_ELEVATION_HEATMAP
-  #include branchFreeTernary;
-  #include dem_util;
+  #include "branchFreeTernary.glsl"
+  #include "dem_util.glsl"
 
   uniform sampler2D uColorMapTexture;
   uniform vec3 uElevationRGBScaler;

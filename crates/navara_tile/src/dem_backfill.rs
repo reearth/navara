@@ -1,6 +1,6 @@
 use bevy_ecs::{component::Component, system::Query};
 use navara_buffer_store::{BufferStore, Handle};
-use navara_data_requester::DataRequester;
+use navara_data_requester::{DataRequester, DataRequesterStatus};
 use navara_quadtree::{decode_quadleaf_handle, encode_quadleaf_handle};
 use navara_tile_component::{RasterTileQuadtree, TileHandle, TileTextureFragmentMarker};
 
@@ -94,8 +94,6 @@ fn get_neighbor_dem_handle<F: Component>(
     data_requesters: &Query<(&DataRequester, &TileTextureFragmentMarker, &F)>,
     backfilled_handle_lookup: &dyn Fn(TileHandle) -> Option<Handle>,
 ) -> Option<Handle> {
-    use navara_data_requester::DataRequesterStatus;
-
     // First, try to get backfilled handle (preferred, as it has padding)
     if let Some(backfilled_handle) = backfilled_handle_lookup(neighbor_handle) {
         return Some(backfilled_handle);
