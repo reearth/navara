@@ -96,3 +96,8 @@ export function getTextureFragmentSlots(
 ): ReadonlySet<TextureSlot> | undefined {
   return textureFragmentIndex.get(fragmentId);
 }
+
+export function __resetTextureFragmentIndexForTests(): void {
+  textureFragmentIndex.clear();
+  tileMeshToFragmentIds.clear();
+}

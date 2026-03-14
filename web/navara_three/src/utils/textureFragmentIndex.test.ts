@@ -1,8 +1,9 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import {
   updateTextureFragmentIndex,
   removeTextureFragmentIndex,
   getTextureFragmentSlots,
+  __resetTextureFragmentIndexForTests,
 } from "./textureFragmentIndex";
 import type { TileMesh } from "../mesh/tile";
 
@@ -22,8 +23,11 @@ function getSlotIndexes(fragmentId: string, tileMesh: TileMesh): number[] {
 
 describe("textureFragmentIndex", () => {
   beforeEach(() => {
-    // The module stores its state in a global Map.
-    // To avoid cross-test pollution, each test removes the tile meshes it creates.
+    __resetTextureFragmentIndexForTests();
+  });
+
+  afterEach(() => {
+    __resetTextureFragmentIndexForTests();
   });
 
   it("indexes texture fragments for a tile mesh", () => {

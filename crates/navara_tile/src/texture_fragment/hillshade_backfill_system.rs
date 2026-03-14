@@ -110,10 +110,12 @@ pub fn backfill_hillshade_on_loaded(
 ) {
     // Precompute a lookup for bidirectional neighbor updates: tile_handle -> (Entity, backfilled_handle)
     // This avoids scanning existing_backfills for each neighbor (O(numBackfilledTiles) per neighbor).
-    let backfilled_neighbors_by_tile: HashMap<u64, (Entity, i32)> = existing_backfills
+    let mut backfilled_neighbors_by_tile: HashMap<u64, (Entity, i32)> = existing_backfills
         .iter()
         .map(|(entity, state, marker)| (marker.0, (entity, state.backfilled_handle)))
         .collect();
+
+    let mut handles_to_remove = Vec::new();
 
     for (entity, data_req, marker) in query.iter() {
         // Only process successfully loaded hillshade DataRequesters
@@ -140,6 +142,10 @@ pub fn backfill_hillshade_on_loaded(
             &all_data_requesters,
             &backfilled_lookup,
         ) {
+            // Record this newly created backfill so subsequent tiles in this system run
+            // can treat it as an already-backfilled neighbor.
+            backfilled_neighbors_by_tile.insert(tile_handle, (entity, backfilled_handle));
+
             // Store state on the entity
             commands.entity(entity).insert(HillshadeDEMState {
                 original_handle: data_req.handle,
@@ -151,10 +157,7 @@ pub fn backfill_hillshade_on_loaded(
                 .hillshade_backfilled
                 .push((entity, backfilled_handle, tile_handle));
 
-            // Remove original DEM buffer (256x256) to save memory
-            // After backfill, only the padded buffer (258x258) is needed
-            // get_neighbor_dem_handle now prefers backfilled_handle, so neighbors will use that
-            buf.remove(&data_req.handle);
+            handles_to_remove.push(data_req.handle);
 
             // Bidirectional backfill: Update neighbors' padding with current tile's edge data
             // This ensures seamless transitions between tiles
@@ -201,6 +204,10 @@ pub fn backfill_hillshade_on_loaded(
                 }
             }
         }
+    }
+
+    for handle in handles_to_remove {
+        buf.remove(&handle);
     }
 }
 
