@@ -74,8 +74,9 @@ pub fn filter_requestable_hillshade_data_requester(
                     .enumerate()
                     .find_map(|(i, id)| id.and_then(|id| (id == e).then_some(i)))
             {
-                // Clear the slot instead of removing it to keep layer indices stable
-                ids[idx] = None;
+                // Remove the slot so texture_fragment_entity_ids stays dense and new requests
+                // are not prevented from reusing freed positions.
+                ids.remove(idx);
             }
         }
     }
