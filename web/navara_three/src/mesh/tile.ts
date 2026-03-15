@@ -828,7 +828,7 @@ vUv = vUv * uScale + uOffset;
         float testHeight = sampleHeightBilinear(uTextures[${i}], vUv);
 
         // This preserves original vertex normals for ocean/no-data areas
-        if (testHeight >= 0.0) {
+        if (isValidHeight(testHeight)) {
           vec3 demNormal = computeNormalFromDEM(uTextures[${i}], vUv, texelSize, uHillshadeZooms[${i}]);
 
           vec3 up = vec3(0.0, 0.0, 1.0);  // World up

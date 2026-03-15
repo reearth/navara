@@ -32,12 +32,16 @@
 
     // Decode heights at 4 sample points
     float h00 = decodeHeightForHillshade(texelFetch(demTexture, data.p00, 0));
+    if(!isValidHeight(h00)) {
+      return invalidHeight;
+    }
+
     float h10 = decodeHeightForHillshade(texelFetch(demTexture, data.p10, 0));
     float h01 = decodeHeightForHillshade(texelFetch(demTexture, data.p01, 0));
     float h11 = decodeHeightForHillshade(texelFetch(demTexture, data.p11, 0));
 
     // Perform bilinear interpolation with artifact detection
-    return interpolateDEMHeights(h00, h10, h01, h11, data.frac, h00);
+    return interpolateDEMHeights(h00, h10, h01, h11, data.frac);
   }
 
   // Compute normal from DEM using Sobel operator (MapLibre-style)
@@ -60,15 +64,15 @@
     float i = sampleHeightBilinear(demTexture, uv + vec2( texelSize.x, -texelSize.y));
 
     // Handle invalid data (ocean/no-data marked as -1.0)
-    if (e < 0.0) return vec3(0.0, 0.0, 1.0); // Flat normal for invalid areas
-    if (a < 0.0) a = e;
-    if (b < 0.0) b = e;
-    if (c < 0.0) c = e;
-    if (d < 0.0) d = e;
-    if (f < 0.0) f = e;
-    if (g < 0.0) g = e;
-    if (h < 0.0) h = e;
-    if (i < 0.0) i = e;
+    if (!isValidHeight(e)) return vec3(0.0, 0.0, 1.0); // Flat normal for invalid areas
+    if (!isValidHeight(a)) a = e;
+    if (!isValidHeight(b)) b = e;
+    if (!isValidHeight(c)) c = e;
+    if (!isValidHeight(d)) d = e;
+    if (!isValidHeight(f)) f = e;
+    if (!isValidHeight(g)) g = e;
+    if (!isValidHeight(h)) h = e;
+    if (!isValidHeight(i)) i = e;
 
     // Sobel operator for gradient calculation
     float dX = (c + f + f + i) - (a + d + d + g);

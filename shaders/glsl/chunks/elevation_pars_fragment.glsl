@@ -46,17 +46,20 @@
     // Prepare bilinear sampling data (pixel coordinates and interpolation weights)
     DEMBilinearData data = prepareDEMBilinear(demTexture, uv);
 
+    float h = invalidHeight; // Default to invalid height
+
     // Decode heights at 4 sample points
     float h00 = decodeRawHeightForElevation(texelFetch(demTexture, data.p00, 0));
-    float h10 = decodeRawHeightForElevation(texelFetch(demTexture, data.p10, 0));
-    float h01 = decodeRawHeightForElevation(texelFetch(demTexture, data.p01, 0));
-    float h11 = decodeRawHeightForElevation(texelFetch(demTexture, data.p11, 0));
+    if(isValidHeight(h00)) {
+      float h10 = decodeRawHeightForElevation(texelFetch(demTexture, data.p10, 0));
+      float h01 = decodeRawHeightForElevation(texelFetch(demTexture, data.p01, 0));
+      float h11 = decodeRawHeightForElevation(texelFetch(demTexture, data.p11, 0));
 
-    // Perform bilinear interpolation with artifact detection
-    float h = interpolateDEMHeights(h00, h10, h01, h11, data.frac, 0.0);
+      // Perform bilinear interpolation with artifact detection
+      h = interpolateDEMHeights(h00, h10, h01, h11, data.frac);
+    }
 
-    // Handle invalid data
-    if (h < 0.0) {
+    if (!isValidHeight(h)) {
       return 0.0;
     }
 

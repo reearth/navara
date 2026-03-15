@@ -11,6 +11,12 @@ bool isPowerOfTwo(int n) {
   return n > 0 && ((n & (n - 1)) == 0);
 }
 
+// Sentinel value for invalid/no-data heights
+const float invalidHeight = -999999.0; 
+bool isValidHeight(float h) {
+  return h > -999998.0; // Allow some tolerance for floating-point comparisons
+}
+
 // Structure to hold bilinear sampling data
 struct DEMBilinearData {
   ivec2 p00, p10, p01, p11;  // Pixel coordinates for 4 samples
@@ -70,7 +76,7 @@ DEMBilinearData prepareDEMBilinear(sampler2D demTexture, vec2 uv) {
 //   maxOffset: Offset to add when value > boundary
 //   epsilon: Multiplicative scaling factor
 //   offset: Additive offset (applied after epsilon scaling)
-// Returns: Height in meters, or -1.0 for invalid/no-data
+// Returns: Height in meters, or invalidHeight for invalid/no-data
 float decodeDEMHeight(vec4 color, vec3 rgbScaler, float boundary, float minOffset, float maxOffset, float epsilon, float offset) {
   vec3 rgb = color.rgb * 255.0;
   float x = dot(rgb, rgbScaler);
@@ -86,12 +92,7 @@ float decodeDEMHeight(vec4 color, vec3 rgbScaler, float boundary, float minOffse
     // Apply epsilon scaling and additive offset
     h = h * epsilon + offset;
   } else {
-    h = -1.0;  // At boundary = invalid/no-data
-  }
-
-  // Final check: negative heights are marked as invalid
-  if (h < 0.0) {
-    h = -1.0;
+    h = invalidHeight;  // At boundary = invalid/no-data
   }
 
   return h;
@@ -100,9 +101,9 @@ float decodeDEMHeight(vec4 color, vec3 rgbScaler, float boundary, float minOffse
 // Perform bilinear interpolation on 4 decoded height values
 // Handles invalid data (negative values) and artifact detection
 // Returns interpolated height or invalidValue if the base (top-left) sample is invalid
-float interpolateDEMHeights(float h00, float h10, float h01, float h11, vec2 frac, float invalidValue) {
+float interpolateDEMHeights(float h00, float h10, float h01, float h11, vec2 frac) {
   // Handle invalid data: if the base (top-left) sample is invalid, bail out
-  if (h00 < 0.0) return invalidValue;
+  if (!isValidHeight(h00)) return invalidHeight;
 
   // Check for abnormal height jumps (RGB encoding boundary artifacts)
   // Use fixed threshold for artifact detection (~1000m is unrealistic for adjacent pixels)
@@ -114,9 +115,9 @@ float interpolateDEMHeights(float h00, float h10, float h01, float h11, vec2 fra
   if (h11 >= 0.0 && abs(h11 - h00) > maxReasonableDiff) h11 = h00;
 
   // Replace invalid neighbors with the base sample value
-  if (h10 < 0.0) h10 = h00;
-  if (h01 < 0.0) h01 = h00;
-  if (h11 < 0.0) h11 = h00;
+  if (!isValidHeight(h10)) h10 = h00;
+  if (!isValidHeight(h01)) h01 = h00;
+  if (!isValidHeight(h11)) h11 = h00;
 
   // Bilinear interpolation
   float h0 = mix(h00, h10, frac.x);
