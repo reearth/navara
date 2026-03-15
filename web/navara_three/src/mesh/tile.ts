@@ -1482,12 +1482,24 @@ if (uPickable > 0.) {
           t.generateMipmaps = false;
           t.needsUpdate = true;
         }
-      } else if (colorSpaceChanged) {
+      } else {
         // Regular textures: only update sampler settings when first binding
-        t.minFilter = textureOptions.minFilter as MinificationTextureFilter;
-        t.magFilter = textureOptions.magFilter as MagnificationTextureFilter;
-        t.anisotropy = textureOptions.maxAnisotropy;
-        t.generateMipmaps = textureOptions.useMipmaps;
+        if (t.minFilter !== textureOptions.minFilter) {
+          t.minFilter = textureOptions.minFilter as MinificationTextureFilter;
+          t.needsUpdate = true;
+        }
+        if (t.magFilter !== textureOptions.magFilter) {
+          t.magFilter = textureOptions.magFilter as MagnificationTextureFilter;
+          t.needsUpdate = true;
+        }
+        if (t.anisotropy !== textureOptions.maxAnisotropy) {
+          t.anisotropy = textureOptions.maxAnisotropy;
+          t.needsUpdate = true;
+        }
+        if (t.generateMipmaps !== textureOptions.useMipmaps) {
+          t.generateMipmaps = textureOptions.useMipmaps;
+          t.needsUpdate = true;
+        }
       }
 
       textures[i] = t;
