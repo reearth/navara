@@ -346,7 +346,11 @@ export class TileMesh
     );
 
     this.addEventListener("removedFromWorld", () => {
-      this.dispose(tileMapByHandle);
+      this.dispose(
+        tileMapByHandle,
+        textureFragmentIndex,
+        tileMeshToFragmentIds,
+      );
     });
   }
 
