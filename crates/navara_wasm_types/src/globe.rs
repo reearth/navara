@@ -22,10 +22,6 @@ pub struct Globe {
     #[wasm_bindgen(js_name = hideUnderground)]
     pub hide_underground: bool,
 
-    /// Whether to compute normals from vertex positions. Initialization only.
-    #[wasm_bindgen(js_name = shouldComputeNormalFromVertex)]
-    pub should_compute_normal_from_vertex: bool,
-
     /// Whether materials should be transparent.
     /// Note that blending works only for resource layer.
     pub transparent: bool,
@@ -51,7 +47,6 @@ impl Globe {
         segments: f32,
         color: u32,
         hide_underground: bool,
-        should_compute_normal_from_vertex: bool,
         transparent: bool,
         opacity: f32,
         wireframe: bool,
@@ -62,7 +57,6 @@ impl Globe {
             segments,
             color,
             hide_underground,
-            should_compute_normal_from_vertex,
             transparent,
             opacity,
             wireframe,
@@ -78,7 +72,6 @@ impl From<&navara_globe::Globe> for Globe {
             segments: val.segments as f32,
             color: val.color,
             hide_underground: val.hide_underground,
-            should_compute_normal_from_vertex: val.should_compute_normal_from_vertex,
             transparent: val.transparent,
             opacity: val.opacity,
             wireframe: val.wireframe,
@@ -100,7 +93,6 @@ impl From<&Globe> for navara_globe::Globe {
             segments: val.segments as usize,
             color: val.color,
             hide_underground: val.hide_underground,
-            should_compute_normal_from_vertex: val.should_compute_normal_from_vertex,
             transparent: val.transparent,
             opacity: val.opacity,
             wireframe: val.wireframe,

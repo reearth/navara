@@ -429,9 +429,6 @@ export default class ThreeView<
     getHideUnderground: () => {
       return this._core?.getGlobeHideUnderground();
     },
-    getShouldComputeNormalFromVertex: () => {
-      return this._core?.getGlobeShouldComputeNormalFromVertex();
-    },
     getOpacity: () => {
       return this._core?.getGlobeOpacity();
     },
@@ -455,9 +452,6 @@ export default class ThreeView<
     },
     setHideUnderground: (value: boolean) => {
       this._core?.setGlobeHideUnderground(value);
-    },
-    setShouldComputeNormalFromVertex: (value: boolean) => {
-      this._core?.setGlobeShouldComputeNormalFromVertex(value);
     },
     setOpacity: (value: number) => {
       this._core?.setGlobeOpacity(value);
