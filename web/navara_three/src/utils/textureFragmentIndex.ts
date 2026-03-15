@@ -1,6 +1,5 @@
 /**
  * Reverse index for efficient texture fragment → tile mesh lookups
- * Optimizes hillshade backfill updates from O(numTiles × numLayers) to O(affectedTiles)
  */
 
 import type { TileMesh } from "../mesh/tile";
@@ -11,28 +10,21 @@ export interface TextureSlot {
 }
 
 /**
- * Global reverse index: texture fragment id → Set of {tileMesh, slotIndex}
- * Updated when TileMesh.setupTextureFragments is called
- */
-const textureFragmentIndex = new Map<string, Set<TextureSlot>>();
-
-/**
- * Bidirectional index: tileMesh → Set of fragment IDs it uses
- * Enables O(numLayersForTile) removal instead of O(total indexed slots)
- */
-const tileMeshToFragmentIds = new Map<TileMesh, Set<string>>();
-
-/**
  * Update the index when a tile's textureFragments change
  * Call this from TileMesh.setupTextureFragments()
- * Complexity: O(numLayersForTile)
  */
 export function updateTextureFragmentIndex(
+  textureFragmentIndex: Map<string, Set<TextureSlot>>,
+  tileMeshToFragmentIds: Map<TileMesh, Set<string>>,
   tileMesh: TileMesh,
   textureFragmentIds: (string | null)[],
 ): void {
   // Remove this tileMesh from all previous entries
-  removeTextureFragmentIndex(tileMesh);
+  removeTextureFragmentIndex(
+    textureFragmentIndex,
+    tileMeshToFragmentIds,
+    tileMesh,
+  );
 
   const newFragmentIds = new Set<string>();
 
@@ -58,9 +50,12 @@ export function updateTextureFragmentIndex(
 
 /**
  * Remove a tileMesh from the index (called when tile is disposed or updated)
- * Complexity: O(numLayersForTile)
  */
-export function removeTextureFragmentIndex(tileMesh: TileMesh): void {
+export function removeTextureFragmentIndex(
+  textureFragmentIndex: Map<string, Set<TextureSlot>>,
+  tileMeshToFragmentIds: Map<TileMesh, Set<string>>,
+  tileMesh: TileMesh,
+): void {
   // Use bidirectional index for fast lookup
   const fragmentIds = tileMeshToFragmentIds.get(tileMesh);
   if (!fragmentIds) return;
@@ -93,12 +88,8 @@ export function removeTextureFragmentIndex(tileMesh: TileMesh): void {
  * This provides compile-time protection only; callers must not mutate it.
  */
 export function getTextureFragmentSlots(
+  textureFragmentIndex: Map<string, Set<TextureSlot>>,
   fragmentId: string,
 ): ReadonlySet<TextureSlot> | undefined {
   return textureFragmentIndex.get(fragmentId);
-}
-
-export function __resetTextureFragmentIndexForTests(): void {
-  textureFragmentIndex.clear();
-  tileMeshToFragmentIds.clear();
 }

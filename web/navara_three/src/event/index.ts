@@ -53,7 +53,10 @@ import type { AbortableTextureLoader } from "../loaders/AbortableTextureLoader";
 import type { Scenes, TexturizedSceneByTileCoordinates } from "../scene";
 import { getImageDataFromImageBitmap } from "../tasks/getImageDataFromImageBitmap";
 import type { TextureOptions } from "../textures";
-import { getTextureFragmentSlots } from "../utils/textureFragmentIndex";
+import {
+  type TextureSlot,
+  getTextureFragmentSlots,
+} from "../utils/textureFragmentIndex";
 import type {
   AbortControllers,
   MeshCache,
@@ -74,6 +77,7 @@ import {
   processWorkerTaskDelegatedEvent,
   processWorkerTaskRemovedEvent,
 } from "./worker";
+import type { TileMesh } from "../mesh/tile";
 
 export type BufferLoader = {
   u8: (handle: number) => Uint8Array | null;
@@ -190,6 +194,8 @@ export function processEvent(
   drapedFeatureMaterials: Map<string, Material>,
   texturizedSceneByTileCoordinates: TexturizedSceneByTileCoordinates,
   tileMapByHandle: TileMapByHandle,
+  textureFragmentIndex: Map<string, Set<TextureSlot>>,
+  tileMeshToFragmentIds: Map<TileMesh, Set<string>>,
   textureOptions: TextureOptions,
   renderFlag: RenderFlag,
   viewEvents: EventHandler<ViewEvents>,
@@ -216,7 +222,7 @@ export function processEvent(
   );
 
   eventManager.forEachStack("hillshade_backfilled", (ev) =>
-    processHillshadeBackfilled(ev, buf, loadedTexs),
+    processHillshadeBackfilled(ev, buf, loadedTexs, textureFragmentIndex),
   );
 
   eventManager.processTransactionEvents(
@@ -249,6 +255,8 @@ export function processEvent(
             textureOptions,
             texturizedSceneByTileCoordinates,
             tileMapByHandle,
+            textureFragmentIndex,
+            tileMeshToFragmentIds,
             viewContext,
             uniforms,
           );
@@ -264,6 +272,8 @@ export function processEvent(
             loadedTexs,
             textureOptions,
             tileMapByHandle,
+            textureFragmentIndex,
+            tileMeshToFragmentIds,
           );
           break;
       }
@@ -764,6 +774,7 @@ function processHillshadeBackfilled(
   event: HillshadeBackfilledEvent | undefined,
   buf: BufferLoader,
   loadedTexs: Map<string, Texture>,
+  textureFragmentIndex: Map<string, Set<TextureSlot>>,
 ) {
   if (!event) return;
 
@@ -835,7 +846,7 @@ function processHillshadeBackfilled(
   // Directly bind the texture to the material's uniform using reverse index
   // Update ONLY the tiles that reference this texture fragment ID (O(1) lookup)
   // This is important because child tiles may reuse parent's textureFragments via readyParentTileHandle
-  const slots = getTextureFragmentSlots(id);
+  const slots = getTextureFragmentSlots(textureFragmentIndex, id);
   if (slots) {
     for (const { tileMesh, slotIndex } of slots) {
       const material = tileMesh.material;

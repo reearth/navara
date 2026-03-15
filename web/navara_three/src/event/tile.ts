@@ -10,6 +10,7 @@ import type { MeshCache, TileMapByHandle } from "../type";
 import type { CommonUniforms } from "../uniforms";
 
 import type { BufferLoader, TileHandler } from ".";
+import type { TextureSlot } from "../utils";
 
 export async function processMeshAdded(
   scenes: Scenes,
@@ -21,6 +22,8 @@ export async function processMeshAdded(
   textureOptions: TextureOptions,
   texturizedSceneByTileCoordinates: TexturizedSceneByTileCoordinates,
   tileMapByHandle: TileMapByHandle,
+  textureFragmentIndex: Map<string, Set<TextureSlot>>,
+  tileMeshToFragmentIds: Map<TileMesh, Set<string>>,
   viewContext: ViewContext,
   uniforms: CommonUniforms,
 ) {
@@ -39,6 +42,8 @@ export async function processMeshAdded(
     loadedTexes,
     textureOptions,
     tileMapByHandle,
+    textureFragmentIndex,
+    tileMeshToFragmentIds,
     viewContext,
     uniforms,
   );
@@ -50,10 +55,20 @@ export function processMeshChanged(
   loadedTexes: Map<string, Texture>,
   textureOptions: TextureOptions,
   tileMapByHandle: TileMapByHandle,
+  textureFragmentIndex: Map<string, Set<TextureSlot>>,
+  tileMeshToFragmentIds: Map<TileMesh, Set<string>>,
 ) {
   const id = generate_id_from_entity(mesh);
   const m = meshes.get(id);
   if (!m || !(m instanceof TileMesh)) return;
 
-  m._update(mesh, loadedTexes, textureOptions, tileMapByHandle, mesh.globe);
+  m._update(
+    mesh,
+    loadedTexes,
+    textureOptions,
+    tileMapByHandle,
+    textureFragmentIndex,
+    tileMeshToFragmentIds,
+    mesh.globe,
+  );
 }

@@ -95,7 +95,8 @@ import {
   type DrapedMaterialCache,
 } from "./type";
 import type { CommonUniforms } from "./uniforms";
-import { isWorker, convertScreenPos } from "./utils";
+import { isWorker, convertScreenPos, type TextureSlot } from "./utils";
+import type { TileMesh } from "./mesh/tile";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 /** @ts-ignore ignore: https://v3.vitejs.dev/guide/features.html#import-with-query-suffixes  */
 import WorkerURL from "./worker?url&worker";
@@ -302,6 +303,16 @@ export default class ThreeView<
   private _loadedTexs = new Map<string, Texture>();
   private _texturizedSceneByTileCoordinates: TexturizedSceneByTileCoordinates;
   private _tileMapByHandle: TileMapByHandle = new Map();
+  // fragment id → Set of {tileMesh, slotIndex}
+  private _textureFragmentIndex: Map<string, Set<TextureSlot>> = new Map<
+    string,
+    Set<TextureSlot>
+  >();
+  // tileMesh → Set of fragment IDs it uses
+  private _tileMeshToFragmentIds: Map<TileMesh, Set<string>> = new Map<
+    TileMesh,
+    Set<string>
+  >();
   private _initialized = false;
 
   private _buf: BufferLoader = {
@@ -1060,6 +1071,8 @@ export default class ThreeView<
       this._drapedFeatureMaterials,
       this._texturizedSceneByTileCoordinates,
       this._tileMapByHandle,
+      this._textureFragmentIndex,
+      this._tileMeshToFragmentIds,
       this._defaultTextureOptions,
       this._renderFlag,
       this,

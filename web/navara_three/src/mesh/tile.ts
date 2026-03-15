@@ -44,6 +44,7 @@ import type { ViewContext } from "../core";
 import { setTransform, type BufferLoader, type TileHandler } from "../event";
 import { generateMixOverlaidTexturesMacro } from "../material";
 import {
+  type TextureSlot,
   updateTextureFragmentIndex,
   removeTextureFragmentIndex,
 } from "../utils/textureFragmentIndex";
@@ -319,6 +320,8 @@ export class TileMesh
     loadedTexes: Map<string, Texture>,
     textureOptions: TextureOptions,
     tileMapByHandle: TileMapByHandle,
+    textureFragmentIndex: Map<string, Set<TextureSlot>>,
+    tileMeshToFragmentIds: Map<TileMesh, Set<string>>,
     viewContext: ViewContext,
     uniforms: CommonUniforms,
   ) {
@@ -335,6 +338,8 @@ export class TileMesh
       mesh.transform,
       textureOptions,
       tileMapByHandle,
+      textureFragmentIndex,
+      tileMeshToFragmentIds,
       mesh.ready_parent_tile_handle,
       uniforms,
       mesh.globe,
@@ -356,6 +361,8 @@ export class TileMesh
     transform: Transform | undefined,
     textureOptions: TextureOptions,
     tileMapByHandle: TileMapByHandle,
+    textureFragmentIndex: Map<string, Set<TextureSlot>>,
+    tileMeshToFragmentIds: Map<TileMesh, Set<string>>,
     readyParentTileHandle: TileHandle | undefined,
     uniforms: CommonUniforms,
     globe: Globe,
@@ -435,6 +442,8 @@ export class TileMesh
       mat.texture_fragments(),
       tileMapByHandle,
       readyParentTileHandle,
+      textureFragmentIndex,
+      tileMeshToFragmentIds,
     );
     this.setupTextures(loadedTexes, textureOptions, maxTextures, mat);
 
@@ -909,6 +918,8 @@ if (uPickable > 0.) {
     loadedTexes: Map<string, Texture>,
     textureOptions: TextureOptions,
     tileMapByHandle: TileMapByHandle,
+    textureFragmentIndex: Map<string, Set<TextureSlot>>,
+    tileMeshToFragmentIds: Map<TileMesh, Set<string>>,
     globe: Globe,
   ) {
     const changedMaterial = mesh.material;
@@ -931,6 +942,8 @@ if (uPickable > 0.) {
         changedMaterial?.texture_fragments(),
         tileMapByHandle,
         readyParentTileHandle,
+        textureFragmentIndex,
+        tileMeshToFragmentIds,
       );
       this.setUniforms(changedMaterial, maxTextures);
       this.setupTextures(
@@ -1330,6 +1343,8 @@ if (uPickable > 0.) {
     textureFragments: TextureFragment[] | undefined,
     tileMapByHandle: TileMapByHandle,
     readyParentTileHandle: TileHandle | undefined,
+    textureFragmentIndex: Map<string, Set<TextureSlot>>,
+    tileMeshToFragmentIds: Map<TileMesh, Set<string>>,
   ) {
     const m = this.material;
 
@@ -1337,7 +1352,12 @@ if (uPickable > 0.) {
       if (!readyParentTileHandle) {
         // No fragments - clear material state and remove from index
         m.userData.textureFragments = { value: [] };
-        updateTextureFragmentIndex(this, []);
+        updateTextureFragmentIndex(
+          textureFragmentIndex,
+          tileMeshToFragmentIds,
+          this,
+          [],
+        );
         return;
       }
 
@@ -1347,7 +1367,12 @@ if (uPickable > 0.) {
 
       // Update index with parent's texture fragments
       const parentFragments = m.userData.textureFragments?.value ?? [];
-      updateTextureFragmentIndex(this, parentFragments);
+      updateTextureFragmentIndex(
+        textureFragmentIndex,
+        tileMeshToFragmentIds,
+        this,
+        parentFragments,
+      );
       return;
     }
 
@@ -1363,7 +1388,12 @@ if (uPickable > 0.) {
     };
 
     // Update reverse index for efficient texture fragment lookups
-    updateTextureFragmentIndex(this, texturesFragmentIds);
+    updateTextureFragmentIndex(
+      textureFragmentIndex,
+      tileMeshToFragmentIds,
+      this,
+      texturesFragmentIds,
+    );
   }
 
   private setupTextures(
@@ -1492,9 +1522,19 @@ if (uPickable > 0.) {
     this.material.userData.uPickable.value = pickable ? 1 : 0;
   }
 
-  dispose(tileMapByHandle?: TileMapByHandle) {
+  dispose(
+    tileMapByHandle?: TileMapByHandle,
+    textureFragmentIndex?: Map<string, Set<TextureSlot>>,
+    tileMeshToFragmentIds?: Map<TileMesh, Set<string>>,
+  ) {
     // Remove from texture fragment index
-    removeTextureFragmentIndex(this);
+    if (textureFragmentIndex && tileMeshToFragmentIds) {
+      removeTextureFragmentIndex(
+        textureFragmentIndex,
+        tileMeshToFragmentIds,
+        this,
+      );
+    }
 
     this._viewContext?.removeShadowMaterial(this.material);
 
