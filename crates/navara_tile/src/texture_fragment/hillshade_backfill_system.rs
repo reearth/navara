@@ -106,7 +106,7 @@ pub fn backfill_hillshade_on_loaded(
         &TileTextureFragmentMarker,
         &HillshadeTextureMarker,
     )>,
-    existing_backfills: Query<(Entity, &mut HillshadeDEMState, &TileTextureFragmentMarker)>,
+    existing_backfills: Query<(Entity, &HillshadeDEMState, &TileTextureFragmentMarker)>,
 ) {
     // Precompute a lookup for bidirectional neighbor updates: tile_handle -> (Entity, backfilled_handle)
     // This avoids scanning existing_backfills for each neighbor (O(numBackfilledTiles) per neighbor).
