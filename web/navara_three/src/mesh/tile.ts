@@ -479,8 +479,10 @@ export class TileMesh
     meshes.set(id, this);
   }
 
-  // Append the skirt geometry into the mesh after the normal is computed only without the skirt.
-  // Because the skirt geometry should use the same normal as the edge vertex to create a smooth shadow.
+  // Create combined geometry (terrain + skirt) for rendering.
+  // Normals are computed dynamically in the fragment shader from vPosition,
+  // so both terrain and skirt vertices receive dummy normal attributes.
+  // Shadow casting is handled separately by shadowMesh (terrain-only, no skirt).
   createSkirtMesh(
     mesh: EventMesh,
     buf: BufferLoader,

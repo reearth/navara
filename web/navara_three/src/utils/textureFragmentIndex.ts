@@ -35,7 +35,7 @@ export function updateTextureFragmentIndex(
 
     let slots = textureFragmentIndex.get(fragmentId);
     if (!slots) {
-      slots = new Set();
+      slots = new Set<TextureSlot>();
       textureFragmentIndex.set(fragmentId, slots);
     }
     slots.add({ tileMesh, slotIndex });
