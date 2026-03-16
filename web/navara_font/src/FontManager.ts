@@ -3,10 +3,6 @@ import type { ConcurrencyManager } from "@navara/worker";
 import { DataTexture, LinearFilter, RedFormat, UnsignedByteType } from "three";
 
 import { FontWorkerClient } from "./FontWorkerClient";
-
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-/** @ts-ignore ignore: https://v3.vitejs.dev/guide/features.html#import-with-query-suffixes */
-
 import { LRUMap } from "./LRUMap";
 
 /** Glyph metrics from the SDF atlas. */
