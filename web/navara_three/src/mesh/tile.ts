@@ -19,7 +19,6 @@ import {
   Color,
   NearestFilter,
   Mesh,
-  MeshBasicMaterial,
   MeshLambertMaterial,
   OrthographicCamera,
   RGBAFormat,
@@ -61,7 +60,7 @@ import { createReplacer } from "../utils";
 
 import type { PickableMesh } from "./pickableMesh";
 
-export type TileMaterial = MeshBasicMaterial | MeshLambertMaterial;
+export type TileMaterial = MeshLambertMaterial;
 
 const PREV_RENDERER_CLEAR_COLOR = new Color();
 
