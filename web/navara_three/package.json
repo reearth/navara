@@ -27,8 +27,8 @@
   },
   "license": "MIT OR Apache-2.0",
   "peerDependencies": {
-    "three": "^0.183.2",
-    "postprocessing": "^6.38.3"
+    "postprocessing": "^6.38.3",
+    "three": "^0.183.2"
   },
   "dependencies": {
     "@navara/core": "workspace:*",
@@ -55,6 +55,7 @@
     "@radix-ui/react-label": "^2.1.8",
     "@radix-ui/react-separator": "^1.1.8",
     "@radix-ui/react-slot": "^1.2.4",
+    "@tailwindcss/postcss": "^4.2.1",
     "@tweakpane/core": "^2.0.5",
     "@types/stats.js": "^0.17.4",
     "@types/three": "^0.183.1",
@@ -65,11 +66,11 @@
     "lucide-react": "^0.577.0",
     "playwright": "^1.58.2",
     "postcss": "^8.5.8",
+    "postprocessing": "^6.38.3",
     "tailwind-merge": "^3.5.0",
     "tailwindcss": "^4.2.1",
     "tailwindcss-animate": "^1.0.7",
     "three": "^0.183.2",
-    "postprocessing": "^6.38.3",
     "tsx": "^4.21.0",
     "tweakpane": "^4.0.5",
     "vite-plugin-glsl": "^1.5.5",
