@@ -26,9 +26,10 @@
   }
 
   // Sample height with manual bilinear interpolation in decoded height space
-  float sampleHeightBilinear(sampler2D demTexture, vec2 uv) {
+  // texSize: actual texture size obtained via textureSize(demTexture, 0)
+  float sampleHeightBilinear(sampler2D demTexture, vec2 uv, ivec2 texSize) {
     // Prepare bilinear sampling data (pixel coordinates and interpolation weights)
-    DEMBilinearData data = prepareDEMBilinear(demTexture, uv);
+    DEMBilinearData data = prepareDEMBilinear(texSize, uv);
 
     // Decode heights at 4 sample points
     float h00 = decodeHeightForHillshade(texelFetch(demTexture, data.p00, 0));
@@ -47,21 +48,24 @@
   // Compute normal from DEM using Sobel operator (MapLibre-style)
   // Reference: maplibre-gl-js/src/shaders/hillshade_prepare.fragment.glsl
   vec3 computeNormalFromDEM(sampler2D demTexture, vec2 uv, vec2 texelSize, float layerZoom) {
+    // Get texture size once to avoid repeated textureSize calls
+    ivec2 texSize = textureSize(demTexture, 0);
+
     // Sample 3x3 grid of heights with bilinear interpolation
     // Grid layout:
     //   a  b  c
     //   d  e  f
     //   g  h  i
     // Texture has 1-pixel padding with backfilled neighbor data, so we can sample freely
-    float a = sampleHeightBilinear(demTexture, uv + vec2(-texelSize.x,  texelSize.y));
-    float b = sampleHeightBilinear(demTexture, uv + vec2(0.0,           texelSize.y));
-    float c = sampleHeightBilinear(demTexture, uv + vec2( texelSize.x,  texelSize.y));
-    float d = sampleHeightBilinear(demTexture, uv + vec2(-texelSize.x,  0.0));
-    float e = sampleHeightBilinear(demTexture, uv);
-    float f = sampleHeightBilinear(demTexture, uv + vec2( texelSize.x,  0.0));
-    float g = sampleHeightBilinear(demTexture, uv + vec2(-texelSize.x, -texelSize.y));
-    float h = sampleHeightBilinear(demTexture, uv + vec2(0.0,          -texelSize.y));
-    float i = sampleHeightBilinear(demTexture, uv + vec2( texelSize.x, -texelSize.y));
+    float a = sampleHeightBilinear(demTexture, uv + vec2(-texelSize.x,  texelSize.y), texSize);
+    float b = sampleHeightBilinear(demTexture, uv + vec2(0.0,           texelSize.y), texSize);
+    float c = sampleHeightBilinear(demTexture, uv + vec2( texelSize.x,  texelSize.y), texSize);
+    float d = sampleHeightBilinear(demTexture, uv + vec2(-texelSize.x,  0.0), texSize);
+    float e = sampleHeightBilinear(demTexture, uv, texSize);
+    float f = sampleHeightBilinear(demTexture, uv + vec2( texelSize.x,  0.0), texSize);
+    float g = sampleHeightBilinear(demTexture, uv + vec2(-texelSize.x, -texelSize.y), texSize);
+    float h = sampleHeightBilinear(demTexture, uv + vec2(0.0,          -texelSize.y), texSize);
+    float i = sampleHeightBilinear(demTexture, uv + vec2( texelSize.x, -texelSize.y), texSize);
 
     // Handle invalid data (ocean/no-data marked as -1.0)
     if (!isValidHeight(e)) return vec3(0.0, 0.0, 1.0); // Flat normal for invalid areas
@@ -80,7 +84,6 @@
 
     // MapLibre's zoom-based scaling formula
     // Reference: hillshade_prepare.fragment.glsl:61-67
-    ivec2 texSize = textureSize(demTexture, 0);
     float tileSize = float(texSize.x) - 2.0; // Remove padding to get content size (e.g., 258 - 2 = 256)
     float exaggerationFactor = layerZoom < 2.0 ? 0.4 : layerZoom < 4.5 ? 0.35 : 0.3;
     float exaggeration = layerZoom < 15.0 ? (layerZoom - 15.0) * exaggerationFactor : 0.0;

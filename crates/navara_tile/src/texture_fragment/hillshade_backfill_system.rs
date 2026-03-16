@@ -153,9 +153,10 @@ pub fn backfill_hillshade_on_loaded(
             });
 
             // Notify JS that backfill is complete and texture data is ready
+            // None = full update (initial backfill)
             events
                 .hillshade_backfilled
-                .push((entity, backfilled_handle, tile_handle));
+                .push((entity, backfilled_handle, tile_handle, None));
 
             handles_to_remove.push(data_req.handle);
 
@@ -192,12 +193,17 @@ pub fn backfill_hillshade_on_loaded(
                                 direction,
                             );
 
-                            // Notify JS that this neighbor's backfilled buffer has updated padding,
-                            // so the existing DataTexture should re-upload/refresh its data (e.g. via needsUpdate)
+                            // Create edge-only buffer for efficient transmission to JS
+                            // Contains all 4 edges (left, right, top, bottom) in order
+                            let edge_data = create_edge_data_buffer(neighbor_bytes);
+                            let edge_data_handle = buf.new_u8(edge_data);
+
+                            // Notify JS with edge-only update (4KB instead of 260KB)
                             events.hillshade_backfilled.push((
                                 *neighbor_entity,
                                 *neighbor_backfilled_handle,
                                 neighbor_handle,
+                                Some(edge_data_handle),
                             ));
                         }
                     }
@@ -278,6 +284,58 @@ fn copy_edge_bidirectional(dst: &mut [u8], src_edge: &[u8], direction: BackfillD
             }
         }
     }
+}
+
+/// Create edge-only buffer for efficient JS transmission
+/// Returns a flat buffer containing all 4 edges (left, right, top, bottom) in order
+/// Total size: content_size * 4 bytes/edge * 4 edges = ~4KB for 256x256 content
+fn create_edge_data_buffer(src: &[u8]) -> Vec<u8> {
+    let src_size = ((src.len() / 4) as f64).sqrt() as usize;
+    let content_size = src_size - 2; // 256 for 258x258 padded texture
+
+    let mut buffer = Vec::with_capacity(content_size * 4 * 4); // 4 edges * content_size * 4 bytes RGBA
+
+    // Left edge (x=0, padding column)
+    for y in 0..content_size {
+        let x = 0;
+        let src_y = y + 1;
+        let idx = (src_y * src_size + x) * 4;
+        if idx + 4 <= src.len() {
+            buffer.extend_from_slice(&src[idx..idx + 4]);
+        }
+    }
+
+    // Right edge (x=content_size+1, padding column)
+    for y in 0..content_size {
+        let x = content_size + 1;
+        let src_y = y + 1;
+        let idx = (src_y * src_size + x) * 4;
+        if idx + 4 <= src.len() {
+            buffer.extend_from_slice(&src[idx..idx + 4]);
+        }
+    }
+
+    // Top edge (y=0, padding row)
+    for x in 0..content_size {
+        let src_x = x + 1;
+        let y = 0;
+        let idx = (y * src_size + src_x) * 4;
+        if idx + 4 <= src.len() {
+            buffer.extend_from_slice(&src[idx..idx + 4]);
+        }
+    }
+
+    // Bottom edge (y=content_size+1, padding row)
+    for x in 0..content_size {
+        let src_x = x + 1;
+        let y = content_size + 1;
+        let idx = (y * src_size + src_x) * 4;
+        if idx + 4 <= src.len() {
+            buffer.extend_from_slice(&src[idx..idx + 4]);
+        }
+    }
+
+    buffer
 }
 
 /// Extract 4 edges from current tile for updating neighbors

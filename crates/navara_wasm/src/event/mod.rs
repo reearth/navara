@@ -168,6 +168,10 @@ pub struct HillshadeBackfilledEvent {
     pub r#gen: u32,
     pub backfilled_handle: i32, // Handle to backfilled DEM buffer in BufferStore
     pub tile_handle: TileHandle, // Handle of the tile that owns this texture
+    /// Edge-only data handle for incremental updates
+    /// -1 = full update (initial backfill, use backfilled_handle)
+    /// >= 0 = edge-only update (bidirectional backfill, 4KB of edge data)
+    pub edge_data_handle: i32,
 }
 
 impl From<navara_event::Events<'_>> for Events {
@@ -232,14 +236,15 @@ impl From<navara_event::Events<'_>> for Events {
             hillshade_backfilled: ev
                 .hillshade_backfilled
                 .into_iter()
-                .map(
-                    |(entity_event, handle, tile_handle)| HillshadeBackfilledEvent {
+                .map(|(entity_event, handle, tile_handle, edge_data_handle)| {
+                    HillshadeBackfilledEvent {
                         ind: entity_event.ind,
                         r#gen: entity_event.r#gen,
                         backfilled_handle: handle,
                         tile_handle,
-                    },
-                )
+                        edge_data_handle: edge_data_handle.unwrap_or(-1),
+                    }
+                })
                 .collect(),
         }
     }

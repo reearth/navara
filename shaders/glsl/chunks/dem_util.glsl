@@ -26,9 +26,8 @@ struct DEMBilinearData {
 // Prepare bilinear sampling data from texture and UV coordinates
 // Handles both padded and non-padded textures
 // Returns pixel coordinates and interpolation weights
-DEMBilinearData prepareDEMBilinear(sampler2D demTexture, vec2 uv) {
-  // Get actual texture size
-  ivec2 actualTexSize = textureSize(demTexture, 0);
+// texSize: actual texture size obtained via textureSize(demTexture, 0)
+DEMBilinearData prepareDEMBilinear(ivec2 actualTexSize, vec2 uv) {
   vec2 paddedTexSize = vec2(actualTexSize);
 
   // Detect if texture has padding by checking if it's a power of 2

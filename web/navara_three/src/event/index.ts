@@ -776,7 +776,58 @@ function processHillshadeBackfilled(
 ) {
   if (!event) return;
 
-  // Get the backfilled (size+2)×(size+2) RGBA data from BufferStore
+  const id = generate_id_from_entity(event);
+  const isEdgeOnlyUpdate = event.edge_data_handle >= 0;
+
+  if (isEdgeOnlyUpdate) {
+    // Edge-only update: update only the 4 padding edges (bidirectional backfill)
+    const edgeBytes = buf.removeU8(event.edge_data_handle);
+    if (!edgeBytes) return;
+
+    const existingTexture = loadedTexs.get(id);
+    if (!existingTexture || !(existingTexture instanceof DataTexture)) {
+      // No existing texture to update - skip this edge update
+      // This shouldn't happen in normal flow
+      return;
+    }
+
+    const existingData = existingTexture.image.data as Uint8Array;
+    const size = existingTexture.image.width; // e.g., 258
+    const contentSize = size - 2; // e.g., 256
+
+    // Validate edge data size (should be contentSize * 4 bytes/pixel * 4 edges)
+    const expectedEdgeLength = contentSize * 4 * 4;
+    if (edgeBytes.length !== expectedEdgeLength) {
+      console.warn(
+        `Invalid edge data size: expected ${expectedEdgeLength} bytes, got ${edgeBytes.length}`,
+      );
+      return;
+    }
+
+    // Update all 4 padding edges with new data
+    updateTextureEdges(existingData, edgeBytes, size);
+
+    existingTexture.needsUpdate = true;
+
+    // Update material bindings (already bound, just mark texture as updated)
+    const slots = getTextureFragmentSlots(textureFragmentIndex, id);
+    if (slots) {
+      for (const { tileMesh, slotIndex } of slots) {
+        const material = tileMesh.material;
+        if (
+          material.userData?.textures?.value &&
+          slotIndex < material.userData.textures.value.length
+        ) {
+          // Texture reference already set, just ensure needsUpdate propagates
+          material.userData.textures.value[slotIndex] = existingTexture;
+        }
+      }
+    }
+
+    return;
+  }
+
+  // Full update: create or replace entire texture (initial backfill)
   const bytes = buf.u8(event.backfilled_handle);
   if (!bytes) return;
 
@@ -812,14 +863,12 @@ function processHillshadeBackfilled(
     return;
   }
 
-  const id = generate_id_from_entity(event);
-
   let texture: DataTexture;
 
-  // Check if texture already exists (bidirectional backfill may update existing tiles)
+  // Check if texture already exists (shouldn't for initial backfill, but handle gracefully)
   const existingTexture = loadedTexs.get(id);
   if (existingTexture && existingTexture instanceof DataTexture) {
-    // Update existing DataTexture with new data (bidirectional backfill updated padding)
+    // Update existing DataTexture with new data
     const existingData = existingTexture.image.data as Uint8Array;
     if (existingData.length === copiedBytes.length) {
       existingData.set(copiedBytes);
@@ -856,6 +905,49 @@ function processHillshadeBackfilled(
         material.userData.textures.value[slotIndex] = texture;
       }
     }
+  }
+}
+
+/**
+ * Update the 4 padding edges of a DataTexture from edge-only buffer
+ * @param textureData - The Uint8Array backing the DataTexture
+ * @param edgeBytes - Buffer containing 4 edges (left, right, top, bottom) sequentially
+ * @param size - Texture size (e.g., 258 for padded 256×256 content)
+ */
+function updateTextureEdges(
+  textureData: Uint8Array,
+  edgeBytes: Uint8Array,
+  size: number,
+): void {
+  const contentSize = size - 2; // e.g., 256 for 258×258 padded texture
+  let offset = 0;
+
+  // Update left edge (x=0)
+  for (let y = 0; y < contentSize; y++) {
+    const dstIdx = ((y + 1) * size + 0) * 4;
+    textureData.set(edgeBytes.subarray(offset, offset + 4), dstIdx);
+    offset += 4;
+  }
+
+  // Update right edge (x=contentSize+1)
+  for (let y = 0; y < contentSize; y++) {
+    const dstIdx = ((y + 1) * size + (contentSize + 1)) * 4;
+    textureData.set(edgeBytes.subarray(offset, offset + 4), dstIdx);
+    offset += 4;
+  }
+
+  // Update top edge (y=0)
+  for (let x = 0; x < contentSize; x++) {
+    const dstIdx = (0 * size + (x + 1)) * 4;
+    textureData.set(edgeBytes.subarray(offset, offset + 4), dstIdx);
+    offset += 4;
+  }
+
+  // Update bottom edge (y=contentSize+1)
+  for (let x = 0; x < contentSize; x++) {
+    const dstIdx = ((contentSize + 1) * size + (x + 1)) * 4;
+    textureData.set(edgeBytes.subarray(offset, offset + 4), dstIdx);
+    offset += 4;
   }
 }
 

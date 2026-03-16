@@ -42,9 +42,10 @@
   }
 
   // Sample elevation with bilinear interpolation in decoded height space
-  float sampleElevationBilinear(sampler2D demTexture, vec2 uv) {
+  // texSize: actual texture size obtained via textureSize(demTexture, 0)
+  float sampleElevationBilinear(sampler2D demTexture, vec2 uv, ivec2 texSize) {
     // Prepare bilinear sampling data (pixel coordinates and interpolation weights)
-    DEMBilinearData data = prepareDEMBilinear(demTexture, uv);
+    DEMBilinearData data = prepareDEMBilinear(texSize, uv);
 
     float h = invalidHeight; // Default to invalid height
 

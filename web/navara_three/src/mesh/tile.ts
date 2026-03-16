@@ -755,7 +755,8 @@ vUv = vUv * uScale + uOffset;
       // Check if this is an elevation heatmap texture
       if (uIsElevationHeatmaps[${idx}]) {
         // For elevation heatmap: decode DEM data with bilinear interpolation and apply color mapping
-        float normalized_h = sampleElevationBilinear(uTextures[${idx}], texUv);
+        ivec2 demTexSize = textureSize(uTextures[${idx}], 0);
+        float normalized_h = sampleElevationBilinear(uTextures[${idx}], texUv, demTexSize);
         ${texColorVar} = vec4(texture2D(uColorMapTexture, vec2(normalized_h, 0.5)).rgb, 1.0);
       }
       else {
@@ -824,7 +825,7 @@ vUv = vUv * uScale + uOffset;
         vec2 texelSize = vec2(1.0) / (vec2(contentSize) - vec2(1.0));
 
         // Second check: Is this valid land data (not ocean/no-data)?
-        float testHeight = sampleHeightBilinear(uTextures[${i}], vUv);
+        float testHeight = sampleHeightBilinear(uTextures[${i}], vUv, actualTexSize);
 
         // This preserves original vertex normals for ocean/no-data areas
         if (isValidHeight(testHeight)) {
