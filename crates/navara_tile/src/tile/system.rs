@@ -346,7 +346,19 @@ pub fn transfer_mesh(
             opacities.push(a.opacity.clamp(0., 1.));
             colors.push(a.color);
             tile_show_bounding_box = tile_show_bounding_box || a.show_bounding_box;
-            tile_zoom_levels.push(current_zoom);
+
+            let mut parent_z = None;
+            let has_tile_layer = !tile_layers.is_empty();
+            // Only use parent zoom if current tile textures aren't ready (fallback to parent)
+            if !tile.is_any_texture_ready(&texture_fragment, &data_requesters, has_tile_layer) {
+                parent_z = ready_parent_tile
+                    .and_then(|h| qt.qt.get(h))
+                    .map(|parent_tile| parent_tile.coords.z);
+            }
+            // Use parent's zoom if we're using parent texture, otherwise current zoom
+            // This is important for hillshade: when using parent texture, zoom affects normal calculation
+            let zoom_for_layer = parent_z.map(|z| z as u8).unwrap_or(current_zoom);
+            tile_zoom_levels.push(zoom_for_layer);
 
             // Mark whether this layer is an elevation heatmap
             if let Some(heatmap_config) = &l.elevation_heatmap_config {

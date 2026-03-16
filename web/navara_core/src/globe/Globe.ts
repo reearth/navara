@@ -15,6 +15,11 @@ export type GlobeHandler = {
   getOpacity: () => number | undefined;
   getWireframe: () => boolean | undefined;
   getElevationColormap: () => Float32Array | undefined;
+  /**
+   * @deprecated This flag is no longer used. Kept for backward compatibility
+   *             and will be removed in a future major release.
+   */
+  shouldComputeNormalFromVertex?: () => boolean | undefined;
   setTransparent: (value: boolean) => void;
   setMaxSse: (value: number) => void;
   setSegments: (value: number) => void;
