@@ -5,6 +5,7 @@ import {
   DepthTexture,
   LinearFilter,
   NoBlending,
+  RGBADepthPacking,
   RGBAFormat,
   ShaderMaterial,
   Texture,
@@ -103,6 +104,10 @@ export class AllDepthCopyPass extends Pass {
 
   get texture(): Texture {
     return this._renderTarget.texture;
+  }
+
+  get depthPacking(): DepthPackingStrategies {
+    return RGBADepthPacking; // This depth texture is always packed as RGBA.
   }
 
   /**

@@ -1,3 +1,4 @@
+import type { DepthPackingStrategies, Texture } from "three";
 import invariant from "tiny-invariant";
 
 import {
@@ -55,6 +56,30 @@ export class MRTPassEffectLayer extends EffectLayerDeclaration<
     );
 
     return pass;
+  }
+
+  get normalBuffer(): Texture | undefined {
+    return this.raw?.gbufferRenderTarget.textures[1];
+  }
+
+  get depthBuffer(): Texture | undefined {
+    return this.raw?.allDepthCopyPass.texture;
+  }
+
+  get depthBufferPacking(): DepthPackingStrategies | undefined {
+    return this.raw?.allDepthCopyPass.depthPacking;
+  }
+
+  get globeNormalBuffer(): Texture | undefined {
+    return this.raw?.globeNormalCopyPass.texture;
+  }
+
+  get globeDepthBuffer(): Texture | undefined {
+    return this.raw?.globeDepthCopyPass.texture;
+  }
+
+  get globeDepthBufferPacking(): DepthPackingStrategies | undefined {
+    return this.raw?.globeDepthCopyPass.depthPacking;
   }
 
   onUpdateConfig(updates: MRTPassUpdate): void {

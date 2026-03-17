@@ -22,7 +22,7 @@
   },
   "license": "MIT OR Apache-2.0",
   "peerDependencies": {
-    "three": "^0.183.1",
+    "three": "^0.183.2",
     "postprocessing": "^6.38.3",
     "@navara/three": "workspace:*"
   },
@@ -40,7 +40,7 @@
     "@navara/three": "workspace:*",
     "@types/three": "^0.183.1",
     "postprocessing": "^6.38.3",
-    "three": "^0.183.1",
-    "vite-plugin-glsl": "^1.5.1"
+    "three": "^0.183.2",
+    "vite-plugin-glsl": "^1.5.5"
   }
 }
