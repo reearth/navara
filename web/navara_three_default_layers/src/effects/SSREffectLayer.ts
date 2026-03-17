@@ -35,11 +35,11 @@ export class SSREffectLayer extends EffectLayerDeclaration<
 
   createPass() {
     const mrtPass = this.findLayer<MRTPassEffectLayer>("mrt");
-    invariant(mrtPass?.raw);
+    invariant(mrtPass?.normalBuffer);
 
     const pass = new SSR(this.view.camera, {
       ...this.config.ssr,
-      geometryBuffer: mrtPass.raw.gbufferRenderTarget.textures[1],
+      geometryBuffer: mrtPass.normalBuffer,
       enabled: this.config.visible ?? true,
     });
 

@@ -5,7 +5,6 @@ import {
   type ViewContext,
   type MRTPassEffectLayer,
 } from "@navara/three";
-import { RGBADepthPacking } from "three";
 import invariant from "tiny-invariant";
 
 import {
@@ -38,12 +37,12 @@ export class AerialPerspectiveEffectLayer extends EffectLayerDeclaration<
 
   createPass() {
     const mrtPass = this.findLayer<MRTPassEffectLayer>("mrt");
-    invariant(mrtPass?.raw);
+    invariant(mrtPass?.normalBuffer && mrtPass.depthBuffer);
 
     const pass = new AerialPerspective(
       this.view.atmosphere,
       this.view.camera,
-      mrtPass.raw.gbufferRenderTarget.textures[1],
+      mrtPass.normalBuffer,
       {
         ...this.config.aerialPerspective,
         enabled: this.config.visible ?? true,
@@ -51,8 +50,8 @@ export class AerialPerspectiveEffectLayer extends EffectLayerDeclaration<
     );
 
     pass.raw.setCustomDepthTexture(
-      mrtPass.raw.allDepthCopyPass.texture,
-      RGBADepthPacking,
+      mrtPass.depthBuffer,
+      mrtPass.depthBufferPacking,
     );
 
     return pass;
