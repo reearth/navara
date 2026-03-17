@@ -186,7 +186,7 @@ importers:
         version: link:../navara_worker
       three:
         specifier: ^0.183.1
-        version: 0.183.1
+        version: 0.183.2
     devDependencies:
       '@types/three':
         specifier: ^0.183.1
