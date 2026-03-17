@@ -35,12 +35,12 @@ export class FogLightEffectLayer extends EffectLayerDeclaration<
 
   createPass(): FogLight {
     const mrtPass = this.findLayer<MRTPassEffectLayer>("mrt");
-    invariant(mrtPass?.raw);
+    invariant(mrtPass?.normalBuffer);
 
     const config = this.config.fogLight ?? {};
     return new FogLight(this.view.camera, {
       ...config,
-      normalBuffer: mrtPass.raw.gbufferRenderTarget.textures[1],
+      normalBuffer: mrtPass.normalBuffer,
       enabled: this.config.visible ?? true,
     });
   }
