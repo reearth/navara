@@ -46,6 +46,7 @@ export async function renderText(
           layerId,
         },
       );
+      textGroup.setActive(m.active);
 
       return textGroup;
     } catch (e) {
@@ -59,8 +60,10 @@ export async function processTextChanged(
   m: NavaraTextMesh,
   buf: BufferLoader,
   renderFlag: RenderFlag,
+  active: boolean,
 ) {
   await obj._update(m, buf, () => {
     renderFlag.forceUpdate = true;
   });
+  obj.setActive(active);
 }
