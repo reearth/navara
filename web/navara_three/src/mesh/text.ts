@@ -65,8 +65,8 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
     };
     this.userData.useRTE = useRTE;
 
-    this.userData.scaleByDistance = {
-      value: meshMaterial.scaleByDistance ? 1.0 : 0.0,
+    this.userData.sizeInMeters = {
+      value: meshMaterial.sizeInMeters ? 1.0 : 0.0,
     };
     this.userData.fontSizePx = {
       value: meshMaterial.size ?? 1.0,
@@ -161,7 +161,7 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
 
     txt.material.depthFunc = LessDepth;
     (txt.material as Material).onBeforeCompile = (shader) => {
-      shader.uniforms.nvr_uScaleByDistance = this.userData.scaleByDistance;
+      shader.uniforms.nvr_uSizeInMeters = this.userData.sizeInMeters;
       shader.uniforms.nvr_uFontSizePx = this.userData.fontSizePx;
       shader.uniforms.nvr_uFontSizeWorld = this.userData.fontSizeWorld;
       shader.uniforms.nvr_uBatchId = { value: this.userData.batchId };
@@ -193,7 +193,7 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
           `uniform vec3 diffuse;`,
           `
             uniform vec3 diffuse;
-            uniform float nvr_uScaleByDistance;
+            uniform float nvr_uSizeInMeters;
             uniform float nvr_uFontSizePx;
             uniform float nvr_uFontSizeWorld;
             uniform float nvr_uFov;
@@ -222,7 +222,7 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
               vec3 anchorCameraRelative = (rtePosHigh - u_cameraPositionHigh) + (rtePosLow - u_cameraPositionLow);
 
               // Calculate scale using world position approximation
-              if (nvr_uScaleByDistance > 0.0) {
+              if (nvr_uSizeInMeters < 1.0) {
                 float worldSize = nvr_pxToWorld(nvr_uFontSizePx, nvr_uFov, nvr_uScreenHeightPx, absTransformed, cameraPosition);
                 scaleFactor = worldSize / nvr_uFontSizeWorld;
               }
@@ -248,7 +248,7 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
             } else {
               ${RtcSpriteVertex}
 
-              if (nvr_uScaleByDistance > 0.0) {
+              if (nvr_uSizeInMeters < 1.0) {
                 float worldSize = nvr_pxToWorld(nvr_uFontSizePx, nvr_uFov, nvr_uScreenHeightPx, absTransformed, cameraPosition);
                 scaleFactor = worldSize / nvr_uFontSizeWorld;
               }
@@ -322,7 +322,7 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
 
     background.material.depthFunc = LessDepth;
     background.material.onBeforeCompile = (shader) => {
-      shader.uniforms.nvr_uScaleByDistance = this.userData.scaleByDistance;
+      shader.uniforms.nvr_uSizeInMeters = this.userData.sizeInMeters;
       shader.uniforms.nvr_uFontSizePx = this.userData.fontSizePx;
       shader.uniforms.nvr_uFontSizeWorld = this.userData.fontSizeWorld;
       shader.uniforms.nvr_uCornerRadius = this.userData.cornerRadius;
@@ -358,7 +358,7 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
         .replace(
           `void main() {`,
           `
-        uniform float nvr_uScaleByDistance;
+        uniform float nvr_uSizeInMeters;
         uniform float nvr_uFontSizePx;
         uniform float nvr_uFontSizeWorld;
         uniform float nvr_uFov;
@@ -393,7 +393,7 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
           vec3 anchorCameraRelative = highDiff + lowDiff;
 
           // Calculate scale using world position approximation
-          if (nvr_uScaleByDistance > 0.0) {
+          if (nvr_uSizeInMeters < 1.0) {
             float worldSize = nvr_pxToWorld(nvr_uFontSizePx, nvr_uFov, nvr_uScreenHeightPx, absTransformed, cameraPosition);
             scaleFactor = worldSize / nvr_uFontSizeWorld;
           }
@@ -419,7 +419,7 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
         } else {
           ${RtcSpriteVertex}
 
-          if (nvr_uScaleByDistance > 0.0) {
+          if (nvr_uSizeInMeters < 1.0) {
             float worldSize = nvr_pxToWorld(nvr_uFontSizePx, nvr_uFov, nvr_uScreenHeightPx, absTransformed, cameraPosition);
             scaleFactor = worldSize / nvr_uFontSizeWorld;
           }
@@ -647,10 +647,10 @@ export class TextMesh extends Group implements FeatureMesh, PickableMesh {
       bNeedUpdateBg = true;
     }
 
-    const nextScaleByDistance = material.scaleByDistance ? 1 : 0;
-    if (nextScaleByDistance !== prev.scaleByDistance) {
-      this.userData.scaleByDistance.value = nextScaleByDistance;
-      prev.scaleByDistance = nextScaleByDistance;
+    const nextSizeInMeters = material.sizeInMeters ? 1 : 0;
+    if (nextSizeInMeters !== prev.sizeInMeters) {
+      this.userData.sizeInMeters.value = nextSizeInMeters;
+      prev.sizeInMeters = nextSizeInMeters;
     }
 
     const nextFontSize = material.size ?? 1.0;

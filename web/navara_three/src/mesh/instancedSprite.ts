@@ -105,7 +105,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
       base: {
         scale: m.material.size ?? 100.0,
         center: [m.material.center?.x ?? 0.0, m.material.center?.y ?? 0.0],
-        scaleByDistance: m.material.scaleByDistance ?? true,
+        sizeInMeters: m.material.sizeInMeters ?? true,
         offsetDepth: m.material.offsetDepth ?? true,
         transparent: m.material.transparent ?? true,
         depthTest: m.material.depthTest ?? true,
@@ -342,7 +342,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
         billboard: isBillboard,
         scale: m.material.size ?? 100.0,
         center: [m.material.center?.x ?? 0.0, m.material.center?.y ?? 0.0],
-        scaleByDistance: m.material.scaleByDistance ?? true,
+        sizeInMeters: m.material.sizeInMeters ?? true,
         offsetDepth: m.material.offsetDepth ?? true,
         alphaTest: isBillboard ? (m.material.alphaTest ?? 0.0) : 0.0,
         pickable: false,

@@ -38,7 +38,7 @@ export const createBaseMutates = (
     uEyeRTEHigh: { value: new ThreeVector3(0, 0, 0) },
     uScale: { value: 100.0 },
     uCenter: { value: new ThreeVector2(0, 0) },
-    uScaleByDistance: { value: true },
+    uSizeInMeters: { value: true },
     uOffsetDepth: { value: true },
     uAlphaTest: { value: 0.0 },
     uFarPlane: { value: 0.0 },
@@ -57,7 +57,7 @@ export const createBaseMutates = (
     update: (state: InstancedSpriteBaseState) => {
       refs.uScale.value = state.scale;
       refs.uCenter.value.set(state.center[0], state.center[1]);
-      refs.uScaleByDistance.value = state.scaleByDistance;
+      refs.uSizeInMeters.value = state.sizeInMeters;
       refs.uOffsetDepth.value = state.offsetDepth;
       refs.uAlphaTest.value = state.alphaTest;
       refs.uAspect.value = state.aspect;
@@ -72,7 +72,7 @@ export const createBaseMutates = (
       uniforms.uEyeRTEHigh = refs.uEyeRTEHigh;
       uniforms.uScale = refs.uScale;
       uniforms.uCenter = refs.uCenter;
-      uniforms.uScaleByDistance = refs.uScaleByDistance;
+      uniforms.uSizeInMeters = refs.uSizeInMeters;
       uniforms.uOffsetDepth = refs.uOffsetDepth;
       uniforms.uAlphaTest = refs.uAlphaTest;
       uniforms.uFarPlane = refs.uFarPlane;

@@ -14,7 +14,7 @@ export type InstancedSpriteBaseProps = {
   // Mutable state
   scale?: number;
   center?: [number, number];
-  scaleByDistance?: boolean;
+  sizeInMeters?: boolean;
   offsetDepth?: boolean;
   alphaTest?: number;
   pickable?: boolean;
@@ -43,7 +43,7 @@ export type InstancedSpriteBaseState = Readonly<{
   // Mutable
   scale: number;
   center: [number, number];
-  scaleByDistance: boolean;
+  sizeInMeters: boolean;
   offsetDepth: boolean;
   alphaTest: number;
   pickable: boolean;
@@ -69,7 +69,7 @@ export type InstancedSpriteBaseRefs = {
   uEyeRTEHigh: UniformValue<Vector3>;
   uScale: UniformValue<number>;
   uCenter: UniformValue<Vector2>;
-  uScaleByDistance: UniformValue<boolean>;
+  uSizeInMeters: UniformValue<boolean>;
   uOffsetDepth: UniformValue<boolean>;
   uAlphaTest: UniformValue<number>;
   uFarPlane: UniformValue<number>;

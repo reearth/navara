@@ -189,7 +189,7 @@ export const addCtrlPanel = (
     clampToGround: false,
     useGroundNormals: false,
     wireframe: false,
-    scaleByDistance: true,
+    sizeInMeters: true,
     shouldRotateInDefault: true,
     roughness: 1.0,
     metalness: 0.0,
@@ -369,8 +369,8 @@ export const addCtrlPanel = (
         material.wireframe = paneParams.wireframe;
       }
 
-      if ("scaleByDistance" in material) {
-        material.scaleByDistance = paneParams.scaleByDistance;
+      if ("sizeInMeters" in material) {
+        material.sizeInMeters = paneParams.sizeInMeters;
       }
 
       if ("shouldRotateInDefault" in material) {
@@ -552,9 +552,9 @@ function createParamCtrl(
       f.addBinding(paneParams, "wireframe").on("change", changeFunc);
     }
 
-    if ("scaleByDistance" in material) {
-      paneParams.scaleByDistance = material.scaleByDistance;
-      f.addBinding(paneParams, "scaleByDistance").on("change", changeFunc);
+    if ("sizeInMeters" in material) {
+      paneParams.sizeInMeters = material.sizeInMeters;
+      f.addBinding(paneParams, "sizeInMeters").on("change", changeFunc);
     }
 
     if ("shouldRotateInDefault" in material) {
