@@ -3,7 +3,6 @@ import {
   geodeticToVector3,
   Color,
   type Layer as NavaraLayer,
-  type FeatureUpdatedParams,
 } from "@navara/three";
 import type { FogLightDefinition } from "@navara/three_default_layers";
 import { Layer, useViewContext } from "@navara/three_react";
@@ -65,52 +64,17 @@ export const ShelterLayer: FC<{ visible?: boolean }> = ({
 
   const onTextLayerReady = (layer: NavaraLayer) => {
     textLayerRef.current = layer;
-    const updatedFeatures = new Set<bigint>();
-    const uniqueLabels = new Set<string>();
-    let refreshFrame: number | null = null;
-
-    const refreshVisibleLabels = () => {
-      updatedFeatures.clear();
-      uniqueLabels.clear();
-      if (refreshFrame != null) return;
-      // Tile unloads can invalidate the current dedupe choice, so
-      // re-evaluate the remaining live labels once on the next frame.
-      refreshFrame = requestAnimationFrame(() => {
-        refreshFrame = null;
-        layer.forceUpdate();
-      });
-    };
-
-    const handleFeatureUpdated = ({ evaluator }: FeatureUpdatedParams) => {
-      if (updatedFeatures.has(evaluator.id)) return;
-      updatedFeatures.add(evaluator.id);
+    layer.on("featureUpdated", ({ evaluator }) => {
       evaluator.evaluate(
         ({ properties }) => {
           const name = (properties?.["名称"] as string) ?? "";
-          // Hide when there's no name or duplicate
-          if (!name || uniqueLabels.has(name)) return { text: "", show: false };
-          uniqueLabels.add(name);
-          return { text: name, show: true };
+          // Hide when there's no name
+          if (!name) return { text: "" };
+          return { text: name };
         },
         { filters: ["名称"] },
       );
-    };
-
-    const handleFeatureRemoved = () => {
-      refreshVisibleLabels();
-    };
-
-    layer.on("featureUpdated", handleFeatureUpdated);
-    layer.on("featureRemoved", handleFeatureRemoved);
-
-    return () => {
-      if (refreshFrame != null) cancelAnimationFrame(refreshFrame);
-      layer.off("featureUpdated", handleFeatureUpdated);
-      layer.off("featureRemoved", handleFeatureRemoved);
-      if (textLayerRef.current === layer) {
-        textLayerRef.current = null;
-      }
-    };
+    });
   };
 
   const textLayerDesc = useMemo((): LayerDescriptions | null => {

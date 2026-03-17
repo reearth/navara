@@ -1,8 +1,4 @@
-import ThreeView, {
-  Color,
-  JAPAN_GSI_ELEVATION_DECODER,
-  type FeatureUpdatedParams,
-} from "@navara/three";
+import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 
@@ -88,8 +84,7 @@ const run = async () => {
   // MVT text layer: Symbols from GSI vector tiles
   const addMvtLayer = () => {
     updatedFeatures = new Set<bigint>();
-    const uniqueLabels = new Set<string>();
-    let refreshFrame: number | null = null;
+
     const layer = view.addLayer({
       type: "mvt",
       data: { url: VECTOR_DATASETS.gsiExperimentalVector.url },
@@ -108,21 +103,12 @@ const run = async () => {
       },
     });
 
-    const refreshVisibleLabels = () => {
-      updatedFeatures.clear();
-      uniqueLabels.clear();
-      if (refreshFrame != null) return;
-      // Tile unloads can change which duplicate label should remain visible.
-      refreshFrame = requestAnimationFrame(() => {
-        refreshFrame = null;
-        layer.forceUpdate();
-      });
-    };
-
     // Feature evaluator: filter and style text labels
-    const handleFeatureUpdated = ({ evaluator }: FeatureUpdatedParams) => {
+    layer.on("featureUpdated", ({ evaluator }) => {
       if (updatedFeatures.has(evaluator.id)) return;
       updatedFeatures.add(evaluator.id);
+
+      const uniqueLabels = new Set<string>();
 
       evaluator.evaluate(
         ({ properties }) => {
@@ -152,12 +138,6 @@ const run = async () => {
         },
         { filters: ["knj", "name", "ftCode", "annoCtg"] },
       );
-    };
-
-    layer.on("featureUpdated", handleFeatureUpdated);
-    layer.on("featureRemoved", refreshVisibleLabels);
-    layer.on("deleted", () => {
-      if (refreshFrame != null) cancelAnimationFrame(refreshFrame);
     });
 
     return layer;
