@@ -51,7 +51,6 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
   private _initialColor: Color = new Color(0xffffff);
   private _initialHeight = 0.0;
   private _loadedUrls = new Set<string>();
-  private _active = true;
   /** ViewContext for SelectiveEffect handling */
   private _viewContext: ViewContext;
   /** Layer ID for SelectiveEffect handling */
@@ -68,11 +67,6 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     this.renderOrder = options.renderOrder ?? this.renderOrder;
     this._viewContext = options.viewContext;
     this._layerId = options.layerId;
-  }
-
-  setActive(active: boolean) {
-    this._active = active;
-    this.updateVisibility();
   }
 
   async _init(m: NavaraPointMesh | NavaraBillboardMesh, buf: BufferLoader) {
@@ -97,7 +91,6 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
 
     if (material.visible !== m.material.show) {
       material.visible = m.material.show ?? true;
-      this.updateVisibility();
     }
 
     // Update enhancer state for uniform-backed properties
@@ -388,15 +381,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     }
 
     material.visible = m.material.show ?? true;
-    this.updateVisibility();
     return material;
-  }
-
-  private updateVisibility() {
-    const material = this.material;
-    const materialVisible =
-      material instanceof ShaderMaterial ? material.visible : true;
-    this.visible = this._active && materialVisible;
   }
 
   private extractPositions(

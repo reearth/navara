@@ -17,7 +17,6 @@ export async function renderPoint(
     layerId,
   });
   await mesh._init(m, buf);
-  mesh.setActive(m.active);
 
   return mesh;
 }
@@ -26,8 +25,6 @@ export function processPointChanged(
   obj: InstancedSpriteMesh,
   m: NavaraPointMesh,
   buf: BufferLoader,
-  active: boolean,
 ) {
   obj._update(m, buf);
-  obj.setActive(active);
 }
