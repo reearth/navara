@@ -40,7 +40,7 @@ export const DEFAULT_BASE_STATE: SdfTextBaseState = {
   scaleByDistance: DEFAULT_BASE_PROPS.scaleByDistance,
   addHeight: DEFAULT_BASE_PROPS.addHeight,
   offsetDepth: DEFAULT_BASE_PROPS.offsetDepth,
-  outlineWidth: (DEFAULT_BASE_PROPS.outlineWidth * 0.5) / SDF_RADIUS,
+  outlineWidth: DEFAULT_BASE_PROPS.outlineWidth / SDF_RADIUS,
   outlineColor: hexToColor(DEFAULT_BASE_PROPS.outlineColor),
   outlineOpacity: DEFAULT_BASE_PROPS.outlineOpacity,
   showBackground: DEFAULT_BASE_PROPS.showBackground,
@@ -73,7 +73,7 @@ export const updateState = (
     offsetDepth: props.offsetDepth ?? currentState.offsetDepth,
     outlineWidth:
       props.outlineWidth !== undefined
-        ? (props.outlineWidth * 0.5) / SDF_RADIUS
+        ? props.outlineWidth / SDF_RADIUS
         : currentState.outlineWidth,
     outlineColor:
       props.outlineColor !== undefined

@@ -310,7 +310,7 @@ export class SDFTextMesh
     }
 
     const nextOutlineWidth = material.outlineWidth ?? 0;
-    if ((nextOutlineWidth * 0.5) / SDF_RADIUS !== state.outlineWidth) {
+    if (nextOutlineWidth / SDF_RADIUS !== state.outlineWidth) {
       baseProps.outlineWidth = nextOutlineWidth;
       hasUpdate = true;
     }

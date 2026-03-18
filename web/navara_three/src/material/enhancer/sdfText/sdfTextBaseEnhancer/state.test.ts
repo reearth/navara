@@ -50,7 +50,7 @@ describe("sdfTextBaseEnhancer / state", () => {
 
     it("converts outlineWidth using SDF_RADIUS", () => {
       const state = updateState({ outlineWidth: 2.0 }, DEFAULT_BASE_STATE);
-      expect(state.outlineWidth).toBeCloseTo((2.0 * 0.5) / SDF_RADIUS);
+      expect(state.outlineWidth).toBeCloseTo(2.0 / SDF_RADIUS);
     });
 
     it("updates outlineColor from hex", () => {

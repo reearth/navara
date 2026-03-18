@@ -8,10 +8,10 @@ use crate::cache::LRU_MIN_AGE;
 pub const DEFAULT_ATLAS_SIZE: i32 = 1024 * 2;
 
 /// SDF buffer: padding pixels around the glyph bitmap for SDF generation.
-const SDF_BUFFER: usize = 6;
+const SDF_BUFFER: usize = 12;
 
 /// SDF radius: max distance (in pixels) captured by the distance field.
-const SDF_RADIUS: usize = 6;
+const SDF_RADIUS: usize = 35;
 
 /// Font size in pixels used for SDF rasterization.
 /// A single SDF glyph at this size can render both small and large text.

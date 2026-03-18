@@ -4,7 +4,7 @@ import type { UniformValue } from "../../../types";
 import type { Mutates } from "../../MaterialEnhancer";
 
 /** Must match Rust SDF_RADIUS in navara_font/src/atlas.rs */
-export const SDF_RADIUS = 6.0;
+export const SDF_RADIUS = 35.0;
 
 /**
  * Props for the sdfText base enhancer.
@@ -51,7 +51,7 @@ export type SdfTextBaseState = Readonly<{
   scaleByDistance: boolean;
   addHeight: number;
   offsetDepth: boolean;
-  outlineWidth: number; // pre-converted: (raw * 0.5) / SDF_RADIUS
+  outlineWidth: number; // pre-converted: raw / SDF_RADIUS
   outlineColor: Color;
   outlineOpacity: number;
   showBackground: boolean;
