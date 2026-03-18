@@ -290,8 +290,9 @@ export async function processRenderableFeatureChanged(
     }
   }
 
-  const active = (point ?? billboard ?? text ?? polyline ?? polygon ?? model)
-    ?.active ?? true;
+  const active =
+    (point ?? billboard ?? text ?? polyline ?? polygon ?? model)?.active ??
+    true;
 
   // Capture visibility before material updates to detect changes
   const prevVisible = obj.visible;
