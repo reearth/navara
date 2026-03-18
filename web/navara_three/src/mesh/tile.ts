@@ -807,7 +807,7 @@ vUv = vUv * uScale + uOffset;
           "#include <normal_fragment_maps>",
           `
   vec3 N = normalize(vPosition);
-  normal = normalize(normalMatrix * N);
+  normal = normalize(mat3(viewMatrix) * N);
 
   #if USE_HILLSHADE
     // Override normal with DEM-derived normal for hillshade layers

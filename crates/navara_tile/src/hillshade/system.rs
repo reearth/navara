@@ -144,40 +144,40 @@ pub fn backfill_hillshade_on_loaded(
             {
                 // Only update if neighbor is successfully loaded
                 if neighbor_dr.status == DataRequesterStatus::Success {
-                        // Event for neighbor (current tile's edge -> neighbor)
-                        // direction is where to update on the neighbor, we need the opposite edge from current tile
-                        let opposite_dir = match direction {
-                            EdgeDirection::Left => EdgeDirection::Right,
-                            EdgeDirection::Right => EdgeDirection::Left,
-                            EdgeDirection::Top => EdgeDirection::Bottom,
-                            EdgeDirection::Bottom => EdgeDirection::Top,
-                        };
+                    // Event for neighbor (current tile's edge -> neighbor)
+                    // direction is where to update on the neighbor, we need the opposite edge from current tile
+                    let opposite_dir = match direction {
+                        EdgeDirection::Left => EdgeDirection::Right,
+                        EdgeDirection::Right => EdgeDirection::Left,
+                        EdgeDirection::Top => EdgeDirection::Bottom,
+                        EdgeDirection::Bottom => EdgeDirection::Top,
+                    };
 
-                        // Extract current tile's edge for neighbor (only allocates edge bytes)
-                        let Some(current_bytes) = buf.get_u8(&data_req.handle) else {
-                            continue;
-                        };
-                        let edge_for_neighbor = extract_single_edge(current_bytes, opposite_dir);
+                    // Extract current tile's edge for neighbor (only allocates edge bytes)
+                    let Some(current_bytes) = buf.get_u8(&data_req.handle) else {
+                        continue;
+                    };
+                    let edge_for_neighbor = extract_single_edge(current_bytes, opposite_dir);
+                    edges_to_store.push((
+                        edge_for_neighbor,
+                        neighbor_handle,
+                        neighbor_entity,
+                        direction as u8,
+                    ));
+
+                    // Extract neighbor's edge for current tile (only allocates edge bytes)
+                    if let Some(neighbor_bytes) = buf.get_u8(&neighbor_dr.handle) {
+                        // direction is what we update on neighbor, same edge from neighbor updates the opposite on current
+                        // For West neighbor (direction=Right): neighbor's Right edge -> current's Left edge
+                        let edge_for_current = extract_single_edge(neighbor_bytes, direction);
                         edges_to_store.push((
-                            edge_for_neighbor,
-                            neighbor_handle,
-                            neighbor_entity,
-                            direction as u8,
+                            edge_for_current,
+                            tile_handle,
+                            entity,
+                            opposite_dir as u8,
                         ));
-
-                        // Extract neighbor's edge for current tile (only allocates edge bytes)
-                        if let Some(neighbor_bytes) = buf.get_u8(&neighbor_dr.handle) {
-                            // direction is what we update on neighbor, same edge from neighbor updates the opposite on current
-                            // For West neighbor (direction=Right): neighbor's Right edge -> current's Left edge
-                            let edge_for_current = extract_single_edge(neighbor_bytes, direction);
-                            edges_to_store.push((
-                                edge_for_current,
-                                tile_handle,
-                                entity,
-                                opposite_dir as u8,
-                            ));
-                        }
                     }
+                }
             }
         }
 

@@ -56,7 +56,7 @@ export function processHillshadeBackfilled(
 
   // Use target_entity if provided (edge updates), otherwise use event entity (initialization)
   const entityId =
-    event.target_entity_ind > 0
+    event.target_entity_ind !== 0 || event.target_entity_gen !== 0
       ? `${event.target_entity_ind}_${event.target_entity_gen}`
       : generate_id_from_entity(event);
 
