@@ -391,11 +391,7 @@ pub fn traverse_tile(
                     continue;
                 }
 
-                let needs_activation_update = if are_all_children_mesh_prepared {
-                    activation_state.is_some_and(|state| !state.all_active)
-                } else {
-                    activation_state.is_some_and(|state| state.any_active)
-                };
+                let needs_activation_update = activation_state.is_some_and(|state| state.all_active != are_all_children_mesh_prepared);
 
                 if needs_activation_update {
                     activate_all_renderable_features(
