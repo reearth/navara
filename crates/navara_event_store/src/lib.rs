@@ -24,9 +24,7 @@ pub struct EventStore {
     pub renderable_feature_changed: Vec<Entity>,
     pub renderable_feature_removed: Vec<Entity>,
     pub update_sample_terrain_height: Vec<Entity>,
-    /// (entity, backfilled_handle, tile_handle, edge_data_handle)
-    /// edge_data_handle: Some(handle) for edge-only update, None for full update
-    pub hillshade_backfilled: Vec<(Entity, i32, u64, Option<i32>)>,
+    pub hillshade_backfilled: Vec<Entity>,
 }
 
 impl EventStore {

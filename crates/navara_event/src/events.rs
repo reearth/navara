@@ -12,7 +12,10 @@ use navara_material::RasterTileInternalMaterial;
 use navara_math::Transform;
 use navara_mesh::Mesh;
 use navara_texture_fragment::TextureFragment;
-use navara_tile_component::{OverscaledTileHandle, TerrainHeightObserver, TileMeshMarker};
+use navara_tile_component::{
+    HillshadeBackfillEventData, HillshadeBackfillEvents, OverscaledTileHandle,
+    TerrainHeightObserver, TileMeshMarker,
+};
 use navara_worker::DelegatedWorkerTasksParameters;
 
 #[derive(Debug, Default)]
@@ -62,10 +65,7 @@ pub struct Events<'a> {
     >,
     pub renderable_feature_removed: Vec<ReconstructableComponentEvent<&'a LayerId>>,
     pub update_sample_terrain_height: Vec<ReconstructableComponentEvent<&'a TerrainHeightObserver>>,
-    /// (entity, backfilled_handle, tile_handle, edge_data_handle)
-    /// edge_data_handle: Some(handle) = incremental update (4 edges only, 4KB)
-    ///                   None = full update (entire 258×258 texture, 260KB)
-    pub hillshade_backfilled: Vec<(EntityEvent, i32, u64, Option<i32>)>,
+    pub hillshade_backfilled: Vec<ReconstructableComponentEvent<&'a HillshadeBackfillEventData>>,
 }
 
 impl<'a> Events<'a> {
@@ -176,16 +176,17 @@ impl<'a> Events<'a> {
             }
         }
 
-        for (entity, backfilled_handle, tile_handle, edge_data_handle) in
-            store.hillshade_backfilled.iter()
-        {
-            events.hillshade_backfilled.push((
-                (*entity).into(),
-                *backfilled_handle,
-                *tile_handle,
-                *edge_data_handle,
-            ));
-            is_changed = true;
+        for entity in store.hillshade_backfilled.iter() {
+            // Read HillshadeBackfillEvents component from entity
+            if let Some(backfill_events) = world.get::<HillshadeBackfillEvents>(*entity) {
+                // Push each event data as a separate ReconstructableComponentEvent
+                for event_data in &backfill_events.events {
+                    events
+                        .hillshade_backfilled
+                        .push(ReconstructableComponentEvent::new(*entity, event_data));
+                    is_changed = true;
+                }
+            }
         }
 
         is_changed.then_some(events)

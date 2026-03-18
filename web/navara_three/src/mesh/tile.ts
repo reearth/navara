@@ -1402,11 +1402,11 @@ if (uPickable > 0.) {
     );
   }
 
-  private setupTextures(
+  setupTextures(
     loadedTexes: Map<string, Texture>,
     textureOptions: TextureOptions,
     maxTextures: number,
-    mat: RasterTileInternalMaterial,
+    mat: Partial<RasterTileInternalMaterial> | RasterTileInternalMaterial,
   ) {
     const m = this.material;
 

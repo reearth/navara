@@ -44,13 +44,6 @@ impl BufferStore {
         }
     }
 
-    pub fn get_u8_mut(&mut self, handle: &Handle) -> Option<&mut [u8]> {
-        match self.buffers.get_mut(handle)? {
-            Buffer::U8(b) => Some(b),
-            _ => None,
-        }
-    }
-
     pub fn get_u32(&self, handle: &Handle) -> Option<&[u32]> {
         match self.buffers.get(handle)? {
             Buffer::U32(b) => Some(b),

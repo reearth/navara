@@ -15,7 +15,6 @@ use navara_math::{FloatType, Transform};
 use navara_mesh::{CachedMeshHandle, Mesh, MeshBundle, ObjectBundle};
 use navara_occluder::ellipsoidal_occluder::EllipsoidalOccluder;
 
-use crate::texture_fragment::HillshadeDEMState;
 use navara_camera::{CameraFrustum, CameraMarker};
 use navara_tile_component::{
     ChangedTileTerrainDataRequesterQuery, ChangedTileTextureFragmentQuery, RasterTile,
@@ -820,7 +819,6 @@ pub fn update_mesh_material(
     rendered_tiles: Query<(&RenderedTile, &OrderByDistance), With<Rendered>>,
     mut texture_fragment: ParamSet<(TileTextureFragmentQuery, ChangedTileTextureFragmentQuery)>,
     data_requesters: Query<&DataRequester>,
-    hillshade_backfilled: Query<&HillshadeDEMState, Added<HillshadeDEMState>>,
     mut tile_layers: ParamSet<(
         Query<(&TilesLayer, &Order)>,
         Query<&TilesLayer, Changed<TilesLayer>>,
@@ -838,13 +836,7 @@ pub fn update_mesh_material(
     let are_tile_layers_updated = !tile_layers.p1().is_empty();
     let are_tile_layers_removed = !tile_layers.p2().is_empty();
     let are_texture_fragments_updated = !texture_fragment.p1().is_empty();
-    let are_hillshades_backfilled = !hillshade_backfilled.is_empty();
-    // Check for hillshade backfill completion to trigger mesh updates after backfill
-    if !are_tile_layers_updated
-        && !are_texture_fragments_updated
-        && !are_tile_layers_removed
-        && !are_hillshades_backfilled
-    {
+    if !are_tile_layers_updated && !are_texture_fragments_updated && !are_tile_layers_removed {
         return;
     }
 
@@ -933,17 +925,9 @@ pub fn update_mesh_material(
             // Check if texture is ready: TextureFragment OR DataRequester (for hillshade)
             let should_show = texture_fragment_entity_ids
                 .get(i)
-                .and_then(|tex| {
-                    tex.and_then(|entity| {
-                        // Try TextureFragment first
-                        if let Ok((_, tf)) = texture_fragment.get(entity) {
-                            return Some(tf.is_succeeded());
-                        }
-                        // Try DataRequester second (for hillshade)
-                        if let Ok(dr) = data_requesters.get(entity) {
-                            return Some(dr.status == DataRequesterStatus::Success);
-                        }
-                        None
+                .and_then(|entity| {
+                    entity.map(|e| {
+                        RasterTile::is_texture_entity_ready(e, &texture_fragment, &data_requesters)
                     })
                 })
                 .unwrap_or(false);

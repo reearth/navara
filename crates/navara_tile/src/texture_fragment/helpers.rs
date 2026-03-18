@@ -4,7 +4,7 @@ use url::Url;
 use navara_buffer_store::BufferStore;
 use navara_component::{Order, OrderByDistance, Priority};
 use navara_core::tile_url;
-use navara_data_requester::{DataRequester, DataRequesterExtension, DataRequesterStatus};
+use navara_data_requester::{DataRequester, DataRequesterExtension};
 use navara_layer::TilesLayer;
 use navara_material::Appearance;
 use navara_texture_fragment::TextureFragment;
@@ -12,7 +12,7 @@ use navara_tile_component::{
     RasterTile, TileHandle, TileTextureFragmentMarker, TileTextureFragmentQuery,
 };
 
-use super::HillshadeTextureMarker;
+use crate::hillshade::HillshadeTextureMarker;
 
 pub(crate) fn request_texture_fragment(
     commands: &mut Commands,
@@ -86,12 +86,7 @@ pub(crate) fn request_texture_fragment(
         commands.spawn((
             TileTextureFragmentMarker(handle),
             HillshadeTextureMarker, // Mark this as a hillshade texture for backfill system
-            DataRequester {
-                handle: buf.new_handle(),
-                url,
-                extension,
-                status: DataRequesterStatus::Pending,
-            },
+            DataRequester::from_store(url, buf, extension),
             OrderByDistance {
                 sse: leaf.sse,
                 distance: leaf.distance_from_camera,

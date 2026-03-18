@@ -1,7 +1,7 @@
 #![doc = include_str!("../README.md")]
 
 pub mod data_requester;
-pub mod dem_backfill;
+pub mod hillshade;
 pub mod texture_fragment;
 
 use bevy_app::{App, Plugin, PreUpdate, Update};
@@ -40,10 +40,9 @@ impl Plugin for TilePlugin {
                     tile::system::update_mesh_material,
                     texture_fragment::system::filter_requestable_texture_fragment,
                     data_requester::system::filter_requestable_data_requester,
-                    texture_fragment::filter_requestable_hillshade_data_requester,
-                    texture_fragment::backfill_hillshade_on_loaded,
+                    hillshade::filter_requestable_hillshade_data_requester,
+                    hillshade::backfill_hillshade_on_loaded,
                     tile::system::clear_caches,
-                    texture_fragment::cleanup_hillshade_backfilled_buffers,
                     terrain::system::update_height_observers,
                 )
                     .chain(),

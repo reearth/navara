@@ -166,12 +166,12 @@ pub struct EntityEvent {
 pub struct HillshadeBackfilledEvent {
     pub ind: u32,
     pub r#gen: u32,
-    pub backfilled_handle: i32, // Handle to backfilled DEM buffer in BufferStore
     pub tile_handle: TileHandle, // Handle of the tile that owns this texture
-    /// Edge-only data handle for incremental updates
-    /// -1 = full update (initial backfill, use backfilled_handle)
-    /// >= 0 = edge-only update (bidirectional backfill, 4KB of edge data)
-    pub edge_data_handle: i32,
+    pub edge_data_handle: i32,   // Edge data handle (one edge), -1 when no edge update
+    pub original_handle: i32,    // Original DEM data (256×256 RGBA), -1 when None
+    pub target_entity_ind: u32,  // Target entity ind (DataRequester), 0 when None
+    pub target_entity_gen: u32,  // Target entity gen, 0 when None
+    pub edge_direction: u8,      // 0=Left, 1=Right, 2=Top, 3=Bottom, 255=N/A
 }
 
 impl From<navara_event::Events<'_>> for Events {
@@ -236,15 +236,7 @@ impl From<navara_event::Events<'_>> for Events {
             hillshade_backfilled: ev
                 .hillshade_backfilled
                 .into_iter()
-                .map(|(entity_event, handle, tile_handle, edge_data_handle)| {
-                    HillshadeBackfilledEvent {
-                        ind: entity_event.ind,
-                        r#gen: entity_event.r#gen,
-                        backfilled_handle: handle,
-                        tile_handle,
-                        edge_data_handle: edge_data_handle.unwrap_or(-1),
-                    }
-                })
+                .map(|ev| ev.into())
                 .collect(),
         }
     }
@@ -476,6 +468,36 @@ impl From<navara_texture_fragment::TextureFragmentStatus> for TextureFragmentSta
             navara_texture_fragment::TextureFragmentStatus::Pending => {
                 TextureFragmentStatus::Pending
             }
+        }
+    }
+}
+
+impl<'a>
+    From<
+        navara_event_store::ReconstructableComponentEvent<
+            &'a navara_tile_component::HillshadeBackfillEventData,
+        >,
+    > for HillshadeBackfilledEvent
+{
+    fn from(
+        ev: navara_event_store::ReconstructableComponentEvent<
+            &'a navara_tile_component::HillshadeBackfillEventData,
+        >,
+    ) -> Self {
+        let (target_ind, target_gen) = ev
+            .comp
+            .target_entity
+            .map(|e| (e.index().index(), e.generation().to_bits()))
+            .unwrap_or((0, 0));
+        Self {
+            ind: ev.ind,
+            r#gen: ev.r#gen,
+            tile_handle: ev.comp.tile_handle,
+            edge_data_handle: ev.comp.edge_data_handle,
+            original_handle: ev.comp.original_handle.unwrap_or(-1),
+            target_entity_ind: target_ind,
+            target_entity_gen: target_gen,
+            edge_direction: ev.comp.edge_direction,
         }
     }
 }

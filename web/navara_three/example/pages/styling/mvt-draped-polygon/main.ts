@@ -50,6 +50,17 @@ const run = async () => {
     },
   });
 
+  view.addLayer({
+    type: "tiles",
+    data: { url: TERRAIN_DATASETS.gsi.url },
+    rasterTile: {
+      maxZoom: 15,
+    },
+    hillshade: {
+      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+    },
+  });
+
   // Color parameters for different fire prevention district types
   const colorParams = {
     防火地域: "#0000ff",

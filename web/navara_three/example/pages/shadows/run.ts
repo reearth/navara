@@ -47,6 +47,18 @@ export async function run() {
     },
   });
 
+  view.addLayer({
+    type: "tiles",
+    data: { url: TERRAIN_DATASETS.gsi.url },
+    rasterTile: {
+      maxZoom: 15,
+      minZoom: 6,
+    },
+    hillshade: {
+      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+    },
+  });
+
   // Add tile layer
   view.addLayer({
     type: "tiles",

@@ -189,6 +189,23 @@ impl RasterTile {
         })
     }
 
+    /// Check if a single texture entity is ready (either TextureFragment or DataRequester)
+    pub fn is_texture_entity_ready(
+        entity: Entity,
+        texture_fragment: &TileTextureFragmentQuery,
+        data_requesters: &Query<&navara_data_requester::DataRequester>,
+    ) -> bool {
+        // Check TextureFragment first
+        if let Ok(t) = texture_fragment.get(entity) {
+            return t.1.is_succeeded();
+        }
+        // Check DataRequester second (for hillshade)
+        if let Ok(dr) = data_requesters.get(entity) {
+            return dr.status == DataRequesterStatus::Success;
+        }
+        false
+    }
+
     pub fn is_any_texture_ready(
         &self,
         texture_fragment: &TileTextureFragmentQuery,
@@ -204,16 +221,8 @@ impl RasterTile {
             .as_ref()
             .map(|e| {
                 e.iter().any(|e| {
-                    e.and_then(|e| {
-                        // Check TextureFragment first
-                        if let Ok(t) = texture_fragment.get(e) {
-                            return Some(t.1.is_succeeded());
-                        }
-                        // Check DataRequester second (for hillshade)
-                        if let Ok(dr) = data_requesters.get(e) {
-                            return Some(dr.status == DataRequesterStatus::Success);
-                        }
-                        None
+                    e.map(|entity| {
+                        Self::is_texture_entity_ready(entity, texture_fragment, data_requesters)
                     })
                     .unwrap_or(false)
                 })

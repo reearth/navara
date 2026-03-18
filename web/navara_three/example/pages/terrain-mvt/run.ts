@@ -67,6 +67,18 @@ export const run = async (view: ThreeView<LayerDescriptions>) => {
     },
   });
 
+  view.addLayer({
+    type: "tiles",
+    data: { url: TERRAIN_DATASETS.gsi.url },
+    rasterTile: {
+      maxZoom: 15,
+      minZoom: 5,
+    },
+    hillshade: {
+      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+    },
+  });
+
   // view.addLayer({
   //   type: "terrain",
   //   ellipsoid: {},

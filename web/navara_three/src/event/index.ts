@@ -16,7 +16,6 @@ import {
   type ObjectTransformEvent,
   type DataRequestEvent,
   type CameraFrustum,
-  type HillshadeBackfilledEvent,
   TextureFragmentRequestedEvent,
   TextureFragmentStatus,
   DataRequesterRemovedEvent,
@@ -32,18 +31,7 @@ import {
 } from "@navara/engine";
 import { radianToDegree } from "@navara/three_api";
 import { canWorkerProcessImmediately } from "@navara/worker";
-import {
-  Mesh,
-  Material,
-  Object3D,
-  Texture,
-  Sprite,
-  DataTexture,
-  RGBAFormat,
-  UnsignedByteType,
-  NoColorSpace,
-  NearestFilter,
-} from "three";
+import { Mesh, Material, Object3D, Texture, Sprite } from "three";
 
 import { Layer, type ViewEvents } from "..";
 import { ThreeViewCamera } from "../camera";
@@ -53,10 +41,7 @@ import type { AbortableTextureLoader } from "../loaders/AbortableTextureLoader";
 import type { Scenes, TexturizedSceneByTileCoordinates } from "../scene";
 import { getImageDataFromImageBitmap } from "../tasks/getImageDataFromImageBitmap";
 import type { TextureOptions } from "../textures";
-import {
-  type TextureSlot,
-  getTextureFragmentSlots,
-} from "../utils/textureFragmentIndex";
+import { type TextureSlot } from "../utils/textureFragmentIndex";
 import type {
   AbortControllers,
   MeshCache,
@@ -71,6 +56,7 @@ import {
   processRenderableFeatureAdded,
   processRenderableFeatureChanged,
 } from "./feature";
+import { processHillshadeBackfilled } from "./hillshade";
 import { ABORTABLE_IMAGE_LOADER, ABORTABLE_TEXTURE_LOADER } from "./loaders";
 import { processMeshAdded, processMeshChanged } from "./tile";
 import {
@@ -220,7 +206,13 @@ export function processEvent(
   );
 
   eventManager.forEachStack("hillshade_backfilled", (ev) =>
-    processHillshadeBackfilled(ev, buf, loadedTexs, textureFragmentIndex),
+    processHillshadeBackfilled(
+      ev,
+      buf,
+      loadedTexs,
+      textureFragmentIndex,
+      textureOptions,
+    ),
   );
 
   eventManager.processTransactionEvents(
@@ -766,210 +758,4 @@ export function setTransform(
   }
   obj.quaternion.set(qx, qy, qz, qw);
   obj.scale.set(sx, sy, sz);
-}
-
-function processHillshadeBackfilled(
-  event: HillshadeBackfilledEvent | undefined,
-  buf: BufferLoader,
-  loadedTexs: Map<string, Texture>,
-  textureFragmentIndex: Map<string, Set<TextureSlot>>,
-) {
-  if (!event) return;
-
-  const id = generate_id_from_entity(event);
-  const isEdgeOnlyUpdate = event.edge_data_handle >= 0;
-
-  if (isEdgeOnlyUpdate) {
-    // Edge-only update: update only the 4 padding edges (bidirectional backfill)
-    const edgeBytes = buf.removeU8(event.edge_data_handle);
-    if (!edgeBytes) return;
-
-    const existingTexture = loadedTexs.get(id);
-    if (!existingTexture || !(existingTexture instanceof DataTexture)) {
-      // No existing texture to update - skip this edge update
-      // This shouldn't happen in normal flow
-      return;
-    }
-
-    const existingData = existingTexture.image.data as Uint8Array;
-    const size = existingTexture.image.width; // e.g., 258
-    const contentSize = size - 2; // e.g., 256
-
-    // Validate edge data size (should be contentSize * 4 bytes/pixel * 4 edges)
-    const expectedEdgeLength = contentSize * 4 * 4;
-    if (edgeBytes.length !== expectedEdgeLength) {
-      console.warn(
-        `Invalid edge data size: expected ${expectedEdgeLength} bytes, got ${edgeBytes.length}`,
-      );
-      return;
-    }
-
-    // Update all 4 padding edges with new data
-    updateTextureEdges(existingData, edgeBytes, size);
-
-    existingTexture.needsUpdate = true;
-
-    // Update material bindings (already bound, just mark texture as updated)
-    const slots = getTextureFragmentSlots(textureFragmentIndex, id);
-    if (slots) {
-      for (const { tileMesh, slotIndex } of slots) {
-        const material = tileMesh.material;
-        if (
-          material.userData?.textures?.value &&
-          slotIndex < material.userData.textures.value.length
-        ) {
-          // Texture reference already set, just ensure needsUpdate propagates
-          material.userData.textures.value[slotIndex] = existingTexture;
-        }
-      }
-    }
-
-    return;
-  }
-
-  // Full update: create or replace entire texture (initial backfill)
-  const bytes = buf.u8(event.backfilled_handle);
-  if (!bytes) return;
-
-  // IMPORTANT: Copy the data for JS ownership
-  // Rust retains the original backfilled_handle for bidirectional backfill:
-  // - When neighbors load later, they need to read this tile's edges
-  // - Rust's cleanup_hillshade_backfilled_buffers will remove it when entity is deleted
-  const copiedBytes = new Uint8Array(bytes);
-
-  // Validate buffer format and size
-  // Buffer must be RGBA (4 bytes per pixel)
-  if (copiedBytes.length % 4 !== 0) {
-    console.warn(
-      `Invalid DEM buffer: length ${copiedBytes.length} is not a multiple of 4 (RGBA)`,
-    );
-    return;
-  }
-
-  const size = Math.sqrt(copiedBytes.length / 4);
-  // Verify size is a valid integer (should be original_size + 2, e.g., 258 or 514)
-  if (!Number.isInteger(size) || size < 3) {
-    console.warn(`Invalid backfilled DEM size: ${size}×${size}`);
-    return;
-  }
-
-  // Verify buffer length exactly matches expected dimensions
-  // This catches cases where length is wrong but sqrt happens to be an integer
-  const expectedLength = size * size * 4;
-  if (copiedBytes.length !== expectedLength) {
-    console.warn(
-      `DEM buffer size mismatch: expected ${expectedLength} bytes (${size}×${size}×4), got ${copiedBytes.length}`,
-    );
-    return;
-  }
-
-  let texture: DataTexture;
-
-  // Check if texture already exists (shouldn't for initial backfill, but handle gracefully)
-  const existingTexture = loadedTexs.get(id);
-  if (existingTexture && existingTexture instanceof DataTexture) {
-    // Update existing DataTexture with new data
-    const existingData = existingTexture.image.data as Uint8Array;
-    if (existingData.length === copiedBytes.length) {
-      existingData.set(copiedBytes);
-      existingTexture.needsUpdate = true;
-      texture = existingTexture;
-    } else {
-      // Size mismatch - need to create new texture
-      // Dispose old texture before replacing
-      existingTexture.dispose();
-      texture = createHillshadeDataTexture(copiedBytes, size);
-      loadedTexs.set(id, texture);
-    }
-  } else {
-    // No existing DataTexture - dispose old texture if it exists (might be regular Texture)
-    if (existingTexture) {
-      existingTexture.dispose();
-    }
-    texture = createHillshadeDataTexture(copiedBytes, size);
-    loadedTexs.set(id, texture);
-  }
-
-  // Directly bind the texture to the material's uniform using reverse index
-  // Update ONLY the tiles that reference this texture fragment ID (O(1) lookup)
-  // This is important because child tiles may reuse parent's textureFragments via readyParentTileHandle
-  const slots = getTextureFragmentSlots(textureFragmentIndex, id);
-  if (slots) {
-    for (const { tileMesh, slotIndex } of slots) {
-      const material = tileMesh.material;
-
-      if (
-        material.userData?.textures?.value &&
-        slotIndex < material.userData.textures.value.length
-      ) {
-        material.userData.textures.value[slotIndex] = texture;
-      }
-    }
-  }
-}
-
-/**
- * Update the 4 padding edges of a DataTexture from edge-only buffer
- * @param textureData - The Uint8Array backing the DataTexture
- * @param edgeBytes - Buffer containing 4 edges (left, right, top, bottom) sequentially
- * @param size - Texture size (e.g., 258 for padded 256×256 content)
- */
-function updateTextureEdges(
-  textureData: Uint8Array,
-  edgeBytes: Uint8Array,
-  size: number,
-): void {
-  const contentSize = size - 2; // e.g., 256 for 258×258 padded texture
-  let offset = 0;
-
-  // Update left edge (x=0)
-  for (let y = 0; y < contentSize; y++) {
-    const dstIdx = ((y + 1) * size + 0) * 4;
-    textureData.set(edgeBytes.subarray(offset, offset + 4), dstIdx);
-    offset += 4;
-  }
-
-  // Update right edge (x=contentSize+1)
-  for (let y = 0; y < contentSize; y++) {
-    const dstIdx = ((y + 1) * size + (contentSize + 1)) * 4;
-    textureData.set(edgeBytes.subarray(offset, offset + 4), dstIdx);
-    offset += 4;
-  }
-
-  // Update top edge (y=0)
-  for (let x = 0; x < contentSize; x++) {
-    const dstIdx = (0 * size + (x + 1)) * 4;
-    textureData.set(edgeBytes.subarray(offset, offset + 4), dstIdx);
-    offset += 4;
-  }
-
-  // Update bottom edge (y=contentSize+1)
-  for (let x = 0; x < contentSize; x++) {
-    const dstIdx = ((contentSize + 1) * size + (x + 1)) * 4;
-    textureData.set(edgeBytes.subarray(offset, offset + 4), dstIdx);
-    offset += 4;
-  }
-}
-
-/**
- * Create and configure a DataTexture for hillshade DEM data
- */
-function createHillshadeDataTexture(
-  bytes: Uint8Array,
-  size: number,
-): DataTexture {
-  const texture = new DataTexture(
-    bytes,
-    size,
-    size,
-    RGBAFormat,
-    UnsignedByteType,
-  );
-  texture.colorSpace = NoColorSpace;
-  texture.minFilter = NearestFilter;
-  texture.magFilter = NearestFilter;
-  texture.generateMipmaps = false;
-  texture.flipY = true; // Flip Y to match texture coordinate system
-  texture.needsUpdate = true;
-  return texture;
 }
