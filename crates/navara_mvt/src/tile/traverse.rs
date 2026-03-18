@@ -364,7 +364,7 @@ pub fn traverse_tile(
             }
 
             for (i, child) in children.iter().enumerate() {
-                let are_active = are_all_renderable_features_active(
+                let activation_state = get_renderable_feature_activation_state(
                     tc,
                     child,
                     rendered_tiles,
@@ -377,7 +377,7 @@ pub fn traverse_tile(
 
                 // If this child is not renderable, skip rendering this child.
                 if prepared_children_indices.contains(&i) || hidden_children_indices.contains(&i) {
-                    if matches!(are_active, Some(true)) {
+                    if activation_state.is_some_and(|state| state.any_active) {
                         tile.is_rendered = false;
                         activate_all_renderable_features(
                             tc,
@@ -391,8 +391,13 @@ pub fn traverse_tile(
                     continue;
                 }
 
-                // To avoid committing unnecessary events, invoke `activate` only when `is_active` is true.
-                if are_active.is_some_and(|v| v != are_all_children_mesh_prepared) {
+                let needs_activation_update = if are_all_children_mesh_prepared {
+                    activation_state.is_some_and(|state| !state.all_active)
+                } else {
+                    activation_state.is_some_and(|state| state.any_active)
+                };
+
+                if needs_activation_update {
                     activate_all_renderable_features(
                         tc,
                         child,
@@ -530,14 +535,70 @@ pub fn are_all_renderable_features_active(
     features: &Query<&FeatureId, With<MVTFeatureMarker>>,
     renderable_features: &mut Query<&mut RenderableFeature>,
 ) -> Option<bool> {
+    get_renderable_feature_activation_state(
+        tc,
+        handle,
+        rendered_tiles,
+        features,
+        renderable_features,
+    )
+    .map(|state| state.all_active)
+}
+
+struct RenderableFeatureState {
+    active: bool,
+}
+
+#[derive(Clone, Copy)]
+struct RenderableFeatureActivationState {
+    all_active: bool,
+    any_active: bool,
+}
+
+fn get_renderable_feature_activation_state(
+    tc: &TileCacheManager,
+    handle: &TileHandle,
+    rendered_tiles: &Query<&RenderedTile>,
+    features: &Query<&FeatureId, With<MVTFeatureMarker>>,
+    renderable_features: &mut Query<&mut RenderableFeature>,
+) -> Option<RenderableFeatureActivationState> {
+    get_renderable_feature_states(tc, handle, rendered_tiles, features, renderable_features).map(
+        |states| RenderableFeatureActivationState {
+            all_active: states.iter().all(|state| state.active),
+            any_active: states.iter().any(|state| state.active),
+        },
+    )
+}
+
+fn get_renderable_feature_states(
+    tc: &TileCacheManager,
+    handle: &TileHandle,
+    rendered_tiles: &Query<&RenderedTile>,
+    features: &Query<&FeatureId, With<MVTFeatureMarker>>,
+    renderable_features: &mut Query<&mut RenderableFeature>,
+) -> Option<Vec<RenderableFeatureState>> {
     tc.rendered_tile_caches
         .get(handle)
         .and_then(|e| rendered_tiles.get(*e).ok())
-        // Assume that all values have same activation with first one.
-        .and_then(|v| v.feature_ids.as_ref().and_then(|i| i.first()))
-        .and_then(|e| features.get(*e).ok())
-        .and_then(|f| f.0)
-        .and_then(|id| renderable_features.get(id).ok().map(|r| r.is_active()))
+        .and_then(|v| v.feature_ids.as_ref())
+        .and_then(|es| {
+            es.iter()
+                .map(|e| features.get(*e).ok())
+                .collect::<Option<Vec<_>>>()
+        })
+        .and_then(|fs| fs.iter().map(|f| f.0).collect::<Option<Vec<_>>>())
+        .and_then(|ids| {
+            ids.into_iter()
+                .map(|id| {
+                    renderable_features
+                        .get(id)
+                        .ok()
+                        .map(|feature| RenderableFeatureState {
+                            active: feature.is_active(),
+                        })
+                })
+                .collect::<Option<Vec<_>>>()
+        })
 }
 
 pub fn are_all_features_rendered(renderable_features: Option<Vec<&RenderableFeature>>) -> bool {

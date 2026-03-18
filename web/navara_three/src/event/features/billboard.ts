@@ -19,6 +19,7 @@ export async function renderBillboard(
     layerId,
   });
   await mesh._init(m, buf);
+  mesh.setActive(m.active);
 
   return mesh;
 }
@@ -27,6 +28,8 @@ export async function processBillboardChanged(
   obj: InstancedSpriteMesh,
   m: NavaraBillboardMesh,
   buf: BufferLoader,
+  active: boolean,
 ) {
   await obj._update(m, buf);
+  obj.setActive(active);
 }
