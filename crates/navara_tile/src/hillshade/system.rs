@@ -11,6 +11,7 @@ use navara_event_store::EventStore;
 use navara_quadtree::{decode_quadleaf_handle, encode_quadleaf_handle};
 use navara_tile_component::{HillshadeBackfillEventData, HillshadeBackfillEvents};
 use navara_tile_component::{RasterTileQuadtree, TileTextureFragmentMarker};
+use std::collections::HashMap;
 
 const MAX_HILLSHADE_PENDINGS: u32 = 10;
 
@@ -99,6 +100,11 @@ pub fn backfill_hillshade_on_loaded(
         &HillshadeTextureMarker,
     )>,
 ) {
+    let tile_map: HashMap<u64, (Entity, &DataRequester)> = all_data_requesters
+        .iter()
+        .map(|(entity, dr, marker, _)| (marker.0, (entity, dr)))
+        .collect();
+
     for (entity, data_req, marker) in query.iter() {
         // Only process successfully loaded hillshade DataRequesters
         if data_req.status != DataRequesterStatus::Success {
@@ -121,12 +127,6 @@ pub fn backfill_hillshade_on_loaded(
             edge_direction: 255, // N/A for initialization
         });
 
-        // Get current tile's DEM data (256x256 RGBA)
-        // Clone to avoid borrow checker issues when we need to mutate buf later
-        let Some(current_bytes) = buf.get_u8(&data_req.handle).map(|b| b.to_vec()) else {
-            continue;
-        };
-
         // Check 4 neighbors and update their edges
         let neighbors: [(usize, usize, usize, EdgeDirection); 4] = [
             (x.wrapping_sub(1), y, z, EdgeDirection::Right), // West neighbor needs our left edge on their right
@@ -135,17 +135,15 @@ pub fn backfill_hillshade_on_loaded(
             (x, y + 1, z, EdgeDirection::Top), // South neighbor needs our bottom edge on their top
         ];
 
+        let mut edges_to_store: Vec<(Vec<u8>, u64, Entity, u8)> = Vec::new();
+
         for (nx, ny, nz, direction) in neighbors {
             if let Some(neighbor_handle) = encode_quadleaf_handle((nx, ny, nz))
                 && qt.qt.get(neighbor_handle).is_some()
+                && let Some(&(neighbor_entity, neighbor_dr)) = tile_map.get(&neighbor_handle)
             {
-                // Find neighbor's DataRequester entity
-                if let Some((neighbor_entity, neighbor_dr, _, _)) = all_data_requesters
-                    .iter()
-                    .find(|(_, _, m, _)| m.0 == neighbor_handle)
-                {
-                    // Only update if neighbor is successfully loaded
-                    if neighbor_dr.status == DataRequesterStatus::Success {
+                // Only update if neighbor is successfully loaded
+                if neighbor_dr.status == DataRequesterStatus::Success {
                         // Event for neighbor (current tile's edge -> neighbor)
                         // direction is where to update on the neighbor, we need the opposite edge from current tile
                         let opposite_dir = match direction {
@@ -154,37 +152,45 @@ pub fn backfill_hillshade_on_loaded(
                             EdgeDirection::Top => EdgeDirection::Bottom,
                             EdgeDirection::Bottom => EdgeDirection::Top,
                         };
-                        let edge_for_neighbor = extract_single_edge(&current_bytes, opposite_dir);
-                        let edge_handle = buf.new_u8(edge_for_neighbor);
 
-                        event_data_list.push(HillshadeBackfillEventData {
-                            tile_handle: neighbor_handle,
-                            edge_data_handle: edge_handle,
-                            original_handle: None,
-                            target_entity: Some(neighbor_entity),
-                            edge_direction: direction as u8,
-                        });
+                        // Extract current tile's edge for neighbor (only allocates edge bytes)
+                        let Some(current_bytes) = buf.get_u8(&data_req.handle) else {
+                            continue;
+                        };
+                        let edge_for_neighbor = extract_single_edge(current_bytes, opposite_dir);
+                        edges_to_store.push((
+                            edge_for_neighbor,
+                            neighbor_handle,
+                            neighbor_entity,
+                            direction as u8,
+                        ));
 
-                        // Event for current tile (neighbor's edge -> current)
-                        if let Some(neighbor_bytes) =
-                            buf.get_u8(&neighbor_dr.handle).map(|b| b.to_vec())
-                        {
+                        // Extract neighbor's edge for current tile (only allocates edge bytes)
+                        if let Some(neighbor_bytes) = buf.get_u8(&neighbor_dr.handle) {
                             // direction is what we update on neighbor, same edge from neighbor updates the opposite on current
                             // For West neighbor (direction=Right): neighbor's Right edge -> current's Left edge
-                            let edge_for_current = extract_single_edge(&neighbor_bytes, direction);
-                            let edge_handle = buf.new_u8(edge_for_current);
-
-                            event_data_list.push(HillshadeBackfillEventData {
+                            let edge_for_current = extract_single_edge(neighbor_bytes, direction);
+                            edges_to_store.push((
+                                edge_for_current,
                                 tile_handle,
-                                edge_data_handle: edge_handle,
-                                original_handle: None,
-                                target_entity: Some(entity),
-                                edge_direction: opposite_dir as u8,
-                            });
+                                entity,
+                                opposite_dir as u8,
+                            ));
                         }
                     }
-                }
             }
+        }
+
+        // Now store all edges in BufferStore and create events
+        for (edge_bytes, target_handle, target_entity, edge_dir) in edges_to_store {
+            let edge_handle = buf.new_u8(edge_bytes);
+            event_data_list.push(HillshadeBackfillEventData {
+                tile_handle: target_handle,
+                edge_data_handle: edge_handle,
+                original_handle: None,
+                target_entity: Some(target_entity),
+                edge_direction: edge_dir,
+            });
         }
 
         // Add all events to the entity and push to EventStore once
@@ -207,7 +213,22 @@ enum EdgeDirection {
 /// Extract a single edge from original DEM texture based on direction
 /// Returns edge data as Vec<u8> (content_size * 4 bytes RGBA)
 fn extract_single_edge(src: &[u8], direction: EdgeDirection) -> Vec<u8> {
-    let src_size = ((src.len() / 4) as f64).sqrt() as usize;
+    if src.len() < 16 {
+        // Too small to be a meaningful tile; treat as invalid.
+        return Vec::new();
+    }
+    if !src.len().is_multiple_of(4) {
+        // Not a multiple of 4 bytes; cannot be RGBA pixels.
+        return Vec::new();
+    }
+    let pixels = src.len() / 4;
+    let src_size = (pixels as f64).sqrt() as usize;
+    // Require perfect square and a minimum side length (e.g. 4x4).
+    if src_size < 4 || src_size * src_size * 4 != src.len() {
+        // Unexpected tile shape/size; skip edge extraction.
+        return Vec::new();
+    }
+
     let mut edge = Vec::with_capacity(src_size * 4);
 
     match direction {
