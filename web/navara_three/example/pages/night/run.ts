@@ -36,7 +36,7 @@ export type LayerDescriptions = DefaultLayerDescriptions;
 
 export const run = async (view: ThreeView<LayerDescriptions>) => {
   const plugin = new DefaultPlugin();
-  view.addPlugin(plugin);
+  await view.addPlugin(plugin);
   await view.init();
 
   // Night scene configuration

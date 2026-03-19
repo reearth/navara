@@ -9,7 +9,7 @@ const run = async () => {
   const view = new ThreeView({ debug: true, shadow: true });
 
   const defaultPlugin = new DefaultPlugin();
-  view.addPlugin(defaultPlugin);
+  await view.addPlugin(defaultPlugin);
 
   await view.init();
 

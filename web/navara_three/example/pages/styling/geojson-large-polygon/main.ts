@@ -22,7 +22,7 @@ const run = async () => {
     debug: true,
     hideUnderground: false,
   });
-  view.addPlugin(new DefaultPlugin());
+  await view.addPlugin(new DefaultPlugin());
 
   await view.init();
 

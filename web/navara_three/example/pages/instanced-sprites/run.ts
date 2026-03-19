@@ -98,7 +98,7 @@ const layers: MaterialLayerDescription[] = [
 ];
 
 export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
-  view.addPlugin(new DefaultPlugin());
+  await view.addPlugin(new DefaultPlugin());
 
   await view.init();
 

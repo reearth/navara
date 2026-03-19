@@ -53,7 +53,7 @@ type DefaultEffects = ReturnType<DefaultPlugin["addDefaultPhotorealLayers"]>;
 
 export const run = async (view: ThreeView<LayerDescriptions>) => {
   const plugin = new DefaultPlugin();
-  view.addPlugin(plugin);
+  await view.addPlugin(plugin);
   await view.init();
 
   const defaultEffects = plugin.addDefaultPhotorealLayers();

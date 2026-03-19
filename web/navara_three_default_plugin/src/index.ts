@@ -68,6 +68,8 @@ import {
 } from "@navara/three_default_layers";
 
 export class DefaultPlugin extends Plugin<ThreeView<DefaultLayerDescriptions>> {
+  static id = "DefaultPlugin";
+
   private view?: ThreeView<DefaultLayerDescriptions>;
 
   async init(view: ThreeView<DefaultLayerDescriptions>) {
@@ -110,6 +112,10 @@ export class DefaultPlugin extends Plugin<ThreeView<DefaultLayerDescriptions>> {
     view.registerEffect("toneMapping", ToneMappingEffectLayer);
     view.registerEffect("smaa", SMAAEffectLayer);
     view.registerEffect("fxaa", FXAAEffectLayer);
+  }
+
+  async dispose(): Promise<void> {
+    this.view = undefined;
   }
 
   /**

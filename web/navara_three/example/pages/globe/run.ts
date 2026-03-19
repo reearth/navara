@@ -20,7 +20,7 @@ export async function run() {
   const view = new ThreeView<LayerDescriptions>({});
 
   const plugin = new DefaultPlugin();
-  view.addPlugin(plugin);
+  await view.addPlugin(plugin);
   await view.init();
 
   view.toneMappingExposure = 10;

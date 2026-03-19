@@ -21,7 +21,7 @@ let gMvtLayer: Layer;
 
 export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
   const defaultPlugin = new DefaultPlugin();
-  view.addPlugin(defaultPlugin);
+  await view.addPlugin(defaultPlugin);
 
   await view.init();
 

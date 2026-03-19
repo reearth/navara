@@ -59,16 +59,14 @@ export const ViewProvider: FC<PropsWithChildren<ViewProviderProps>> = ({
     const innerCanvas = canvas && "current" in canvas ? canvas.current : canvas;
 
     const v = new ThreeView({ canvas: innerCanvas, ...opts });
-    if (plugins) {
-      for (const plugin of plugins) {
-        v.addPlugin(plugin);
-      }
-    }
     setView(v);
     viewRef.current = v;
 
     (async () => {
       try {
+        if (plugins) {
+          await v.addPlugins(plugins);
+        }
         await v.init();
         setIsReady(true);
       } catch (e) {

@@ -13,7 +13,7 @@ import { addDateControl } from "../../helpers/control";
 export type LayerDescriptions = DefaultLayerDescriptions;
 
 export const run = async (view: ThreeView<LayerDescriptions>) => {
-  view.addPlugin(new DefaultPlugin());
+  await view.addPlugin(new DefaultPlugin());
 
   await view.init();
 

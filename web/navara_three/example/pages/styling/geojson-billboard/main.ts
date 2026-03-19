@@ -15,7 +15,7 @@ const run = async () => {
     debug: true,
   });
   const defaultPlugin = new DefaultPlugin();
-  view.addPlugin(defaultPlugin);
+  await view.addPlugin(defaultPlugin);
 
   await view.init();
 

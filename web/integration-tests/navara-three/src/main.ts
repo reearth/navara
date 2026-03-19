@@ -20,7 +20,7 @@ async function main() {
   const view = new ThreeView<LayerDescriptions>({});
 
   const plugin = new DefaultPlugin();
-  view.addPlugin(plugin);
+  await view.addPlugin(plugin);
 
   // Initialize the view - this tests WASM loading
   await view.init();

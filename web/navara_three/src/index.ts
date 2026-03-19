@@ -1,4 +1,10 @@
-import { EventManager, EventHandler, Globe, Plugin } from "@navara/core";
+import {
+  EventManager,
+  EventHandler,
+  Globe,
+  Plugin,
+  PluginManager,
+} from "@navara/core";
 import type {
   CameraPosition,
   ColorMap,
@@ -102,7 +108,7 @@ import WorkerURL from "./worker?url&worker";
 
 export type { CameraOptions, CameraEvent } from "./camera";
 
-export { ColorMap, EventHandler, Plugin } from "@navara/core";
+export { ColorMap, EventHandler, Plugin, PluginManager } from "@navara/core";
 export type {
   Nullable,
   XYZ,
@@ -516,7 +522,8 @@ export default class ThreeView<
   /** Helper for managing selective post-processing effects that apply to specific objects. */
   public selectiveEffectHelper: SelectiveEffectHelper;
   private viewContext!: ViewContext;
-  private plugins: Plugin[] = [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private pluginManager = new PluginManager<ThreeView<any>>(this);
 
   constructor(options: Options = {}) {
     super();
@@ -879,8 +886,6 @@ export default class ThreeView<
 
     await this.initializeRenderPass();
 
-    await Promise.all(this.plugins.map((p) => p.init(this)));
-
     this._startMainLoop();
 
     const size = new Vector2();
@@ -938,6 +943,7 @@ export default class ThreeView<
    */
   dispose() {
     this._disposed = true;
+    void this.pluginManager.disposeAll();
     if (!isWorker()) window.removeEventListener("resize", this._handleResize);
     if (this._eventDisposer) {
       this._eventDisposer();
@@ -1368,16 +1374,33 @@ export default class ThreeView<
   }
 
   /**
-   * Adds a plugin to the view. Plugins are initialized during `init()`.
-   * Must be called before `init()`.
+   * Adds a plugin to the view and initializes it immediately.
+   * Can be called before or after `init()`.
    * @param plugin - The plugin instance to add
    * @returns This view instance for chaining
    */
-  addPlugin(plugin: Plugin): this {
-    if (this._initialized)
-      throw new Error("Plugin must be added before `view.init()`.");
-    this.plugins.push(plugin);
+  async addPlugin(plugin: Plugin): Promise<this> {
+    await this.pluginManager.addPlugin(plugin);
     return this;
+  }
+
+  /**
+   * Adds multiple plugins sequentially.
+   * @param plugins - The plugin instances to add
+   * @returns This view instance for chaining
+   */
+  async addPlugins(plugins: Plugin[]): Promise<this> {
+    await this.pluginManager.addPlugins(plugins);
+    return this;
+  }
+
+  /**
+   * Removes a plugin by id and calls its `dispose()` method.
+   * @param id - The `id` of the plugin to remove
+   * @returns `true` if the plugin was found and removed
+   */
+  async removePlugin(id: string): Promise<boolean> {
+    return this.pluginManager.removePlugin(id);
   }
 
   /**

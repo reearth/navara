@@ -26,21 +26,29 @@ All three are available to plugins, giving external packages the same capabiliti
 
 ### Plugin base class (`@navara/core`)
 
-A minimal `Plugin` base class that any package can extend:
+A `Plugin` base class that any package can extend. Concrete plugins **must** define a static `id` for uniqueness enforcement:
 
 ```typescript
-export class Plugin {
-  async init(_view: unknown): Promise<void> {}
+export abstract class Plugin<TView = unknown> {
+  static id;
+  abstract init(view: TView): Promise<void>;
+  async dispose(): Promise<void> {}
 }
 ```
 
 ### Plugin lifecycle (`@navara/three`)
 
-Plugins are registered before initialization and initialized during `view.init()`:
+Plugins are added with `await view.addPlugin()`, which initializes them immediately. They can be added before or after `view.init()`:
 
 ```typescript
-view.addPlugin(plugin);   // Register before init()
-await view.init();        // Calls plugin.init(view) for each registered plugin
+await view.addPlugin(plugin);  // Calls plugin.init(view) immediately
+await view.init();
+```
+
+Plugins are unique by `id` — adding a duplicate throws an error. Plugins can also be removed:
+
+```typescript
+await view.removePlugin("MyPlugin"); // Calls plugin.dispose(), then removes
 ```
 
 Light, effect, and mesh layers are registered through the plugin system (e.g., `@navara/three_default_plugin`). Core effect layers (MRT, selective effects, final copy) are registered by `@navara/three` itself.
@@ -48,8 +56,8 @@ Light, effect, and mesh layers are registered through the plugin system (e.g., `
 Multiple plugins can be composed together:
 
 ```typescript
-view.addPlugin(new DefaultPlugin());
-view.addPlugin(new MyPlugin());
+await view.addPlugin(new DefaultPlugin());
+await view.addPlugin(new MyPlugin());
 await view.init();
 ```
 
@@ -126,11 +134,17 @@ type CustomLayerDescriptions =
   | MyMeshDescription
   | ...
 
-class MyPlugin extends Plugin {
+class MyPlugin extends Plugin<ThreeView<CustomLayerDescriptions>> {
+  static id = "MyPlugin";
+
   async init(view: ThreeView<CustomLayerDescriptions>) {
     view.registerMesh("myMesh", MyMeshLayer);
     view.registerLight("myLight", MyCustomLightLayer);
     view.registerEffect("myEffect", MyCustomEffectLayer);
+  }
+
+  async dispose() {
+    // Clean up resources if needed
   }
 }
 ```
@@ -144,6 +158,6 @@ import ThreeView from "@navara/three";
 import { DefaultPlugin, type DefaultLayerDescriptions } from "@navara/three_default_plugin";
 
 const view = new ThreeView<DefaultLayerDescriptions>({ /* options */ });
-view.addPlugin(new DefaultPlugin());
+await view.addPlugin(new DefaultPlugin());
 await view.init();
 ```

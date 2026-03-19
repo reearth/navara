@@ -24,7 +24,7 @@ export async function run() {
   });
 
   const defaultPlugin = new DefaultPlugin();
-  view.addPlugin(defaultPlugin);
+  await view.addPlugin(defaultPlugin);
 
   await view.init();
 

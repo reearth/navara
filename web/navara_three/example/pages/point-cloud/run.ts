@@ -35,7 +35,7 @@ const gGeoLayersDef: MaterialLayerDescription[] = [
 
 export const run = async (view: ThreeView) => {
   const defaultPlugin = new DefaultPlugin();
-  view.addPlugin(defaultPlugin);
+  await view.addPlugin(defaultPlugin);
 
   await view.init();
 

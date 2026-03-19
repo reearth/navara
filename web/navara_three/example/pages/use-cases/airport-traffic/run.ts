@@ -103,7 +103,7 @@ export async function run() {
   });
 
   const plugin = new DefaultPlugin();
-  view.addPlugin(plugin);
+  await view.addPlugin(plugin);
   await view.init();
 
   view.atmosphere.date.setHours(8);
