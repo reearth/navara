@@ -64,7 +64,9 @@ export function processHillshadeBackfilled(
 
   // 1. Create texture if original data is provided
   if (event.original_handle >= 0) {
-    const originalBytes = buf.u8(event.original_handle);
+    // Use removeU8 to delete original DEM data after reading
+    // Rust side keeps only 4 edges (4KB), original data (256KB) is deleted here
+    const originalBytes = buf.removeU8(event.original_handle);
     if (!originalBytes) {
       return;
     }
@@ -121,9 +123,15 @@ export function processHillshadeBackfilled(
     texture = dataTexture;
     loadedTexs.set(entityId, texture);
 
+    // Deduplicate tileMeshes: same mesh may appear in multiple slots
+    // Avoid redundant rebinding when mesh uses same fragment in multiple texture slots
     const slots = getTextureFragmentSlots(textureFragmentIndex, entityId);
     if (slots) {
+      const uniqueMeshes = new Set<TileMesh>();
       for (const { tileMesh } of slots) {
+        uniqueMeshes.add(tileMesh);
+      }
+      for (const tileMesh of uniqueMeshes) {
         rebindTexturesForTileMesh(tileMesh, loadedTexs, textureOptions);
       }
     }

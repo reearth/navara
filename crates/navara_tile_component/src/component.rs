@@ -64,3 +64,19 @@ pub struct HillshadeBackfillEventData {
 pub struct HillshadeBackfillEvents {
     pub events: Vec<HillshadeBackfillEventData>,
 }
+
+/// Marker component indicating that hillshade edges have been extracted
+/// Once this is added, the original DEM data has been deleted and only edge data remains
+#[derive(Component, Debug, Clone, Copy)]
+pub struct HillshadeEdgesExtracted;
+
+/// Component storing handles to the 4 edge buffers of a hillshade tile
+/// Each edge is 256×4 bytes (RGBA) for a 256×256 DEM texture
+/// Edges are extracted after first load to save memory (4KB instead of 256KB per tile)
+#[derive(Component, Debug, Clone, Copy)]
+pub struct HillshadeEdges {
+    pub left: i32,   // Edge direction 0
+    pub right: i32,  // Edge direction 1
+    pub top: i32,    // Edge direction 2
+    pub bottom: i32, // Edge direction 3
+}

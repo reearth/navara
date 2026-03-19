@@ -9,7 +9,9 @@ use navara_component::{Deleted, Ignored, OrderByDistance, Priority, Requested};
 use navara_data_requester::{DataRequester, DataRequesterStatus};
 use navara_event_store::EventStore;
 use navara_quadtree::{decode_quadleaf_handle, encode_quadleaf_handle};
-use navara_tile_component::{HillshadeBackfillEventData, HillshadeBackfillEvents};
+use navara_tile_component::{
+    HillshadeBackfillEventData, HillshadeBackfillEvents, HillshadeEdges, HillshadeEdgesExtracted,
+};
 use navara_tile_component::{RasterTileQuadtree, TileTextureFragmentMarker};
 use std::collections::HashMap;
 
@@ -19,6 +21,24 @@ const MAX_HILLSHADE_PENDINGS: u32 = 10;
 /// This distinguishes hillshade DataRequesters from other types
 #[derive(Debug, Clone, Copy, Component)]
 pub struct HillshadeTextureMarker;
+
+/// Extracted edge data from a hillshade DEM texture
+/// Contains all 4 edges for sharing with neighbors
+struct ExtractedEdges {
+    left: Vec<u8>,
+    right: Vec<u8>,
+    top: Vec<u8>,
+    bottom: Vec<u8>,
+}
+
+/// Edge direction for hillshade texture updates
+#[derive(Debug, Clone, Copy)]
+enum EdgeDirection {
+    Left = 0,
+    Right = 1,
+    Top = 2,
+    Bottom = 3,
+}
 
 /// System that limits concurrent hillshade DataRequester entities
 /// Prevents too many simultaneous requests by pruning lowest-priority tiles
@@ -83,7 +103,7 @@ pub fn filter_requestable_hillshade_data_requester(
 
 /// System that runs after DataRequester loads hillshade DEM data
 /// Sends edge data to JS for texture edge updates
-#[allow(clippy::type_complexity)]
+#[allow(clippy::type_complexity, clippy::too_many_arguments)]
 pub fn backfill_hillshade_on_loaded(
     mut commands: Commands,
     mut buf: ResMut<BufferStore>,
@@ -99,6 +119,8 @@ pub fn backfill_hillshade_on_loaded(
         &TileTextureFragmentMarker,
         &HillshadeTextureMarker,
     )>,
+    edges_query: Query<&HillshadeEdges>,
+    extracted_query: Query<(), With<HillshadeEdgesExtracted>>,
 ) {
     let tile_map: HashMap<u64, (Entity, &DataRequester)> = all_data_requesters
         .iter()
@@ -113,76 +135,43 @@ pub fn backfill_hillshade_on_loaded(
 
         let tile_handle = marker.0;
         let (x, y, z): (usize, usize, usize) = decode_quadleaf_handle(tile_handle);
-
-        // Collect all events for this entity in a Vec
         let mut event_data_list = Vec::new();
 
-        // 1. First event: initialization with original data
-        // This creates the DataTexture in JS
-        event_data_list.push(HillshadeBackfillEventData {
+        // Extract edges on first load (sends original data to JS and extracts edges)
+        let edges_extracted = extracted_query.contains(entity);
+        let extracted_edges = if !edges_extracted {
+            event_data_list.push(HillshadeBackfillEventData {
+                tile_handle,
+                edge_data_handle: -1,
+                original_handle: Some(data_req.handle),
+                target_entity: None,
+                edge_direction: 255,
+            });
+
+            extract_edges_on_first_load(&buf, data_req)
+        } else {
+            None
+        };
+
+        // Collect edge exchanges with all loaded neighbors
+        let edges_to_store = collect_neighbor_edge_exchanges(
+            entity,
             tile_handle,
-            edge_data_handle: -1, // No edge data for initial creation
-            original_handle: Some(data_req.handle),
-            target_entity: None, // Not needed for initialization (uses event's own entity)
-            edge_direction: 255, // N/A for initialization
-        });
+            x,
+            y,
+            z,
+            &extracted_edges,
+            &tile_map,
+            &edges_query,
+            &qt,
+            &buf,
+        );
 
-        // Check 4 neighbors and update their edges
-        let neighbors: [(usize, usize, usize, EdgeDirection); 4] = [
-            (x.wrapping_sub(1), y, z, EdgeDirection::Right), // West neighbor needs our left edge on their right
-            (x + 1, y, z, EdgeDirection::Left), // East neighbor needs our right edge on their left
-            (x, y.wrapping_sub(1), z, EdgeDirection::Bottom), // North neighbor needs our top edge on their bottom
-            (x, y + 1, z, EdgeDirection::Top), // South neighbor needs our bottom edge on their top
-        ];
-
-        let mut edges_to_store: Vec<(Vec<u8>, u64, Entity, u8)> = Vec::new();
-
-        for (nx, ny, nz, direction) in neighbors {
-            if let Some(neighbor_handle) = encode_quadleaf_handle((nx, ny, nz))
-                && qt.qt.get(neighbor_handle).is_some()
-                && let Some(&(neighbor_entity, neighbor_dr)) = tile_map.get(&neighbor_handle)
-            {
-                // Only update if neighbor is successfully loaded
-                if neighbor_dr.status == DataRequesterStatus::Success {
-                    // Event for neighbor (current tile's edge -> neighbor)
-                    // direction is where to update on the neighbor, we need the opposite edge from current tile
-                    let opposite_dir = match direction {
-                        EdgeDirection::Left => EdgeDirection::Right,
-                        EdgeDirection::Right => EdgeDirection::Left,
-                        EdgeDirection::Top => EdgeDirection::Bottom,
-                        EdgeDirection::Bottom => EdgeDirection::Top,
-                    };
-
-                    // Extract current tile's edge for neighbor (only allocates edge bytes)
-                    let Some(current_bytes) = buf.get_u8(&data_req.handle) else {
-                        continue;
-                    };
-                    let edge_for_neighbor = extract_single_edge(current_bytes, opposite_dir);
-                    edges_to_store.push((
-                        edge_for_neighbor,
-                        neighbor_handle,
-                        neighbor_entity,
-                        direction as u8,
-                    ));
-
-                    // Extract neighbor's edge for current tile (only allocates edge bytes)
-                    if let Some(neighbor_bytes) = buf.get_u8(&neighbor_dr.handle) {
-                        // direction is what we update on neighbor, same edge from neighbor updates the opposite on current
-                        // For West neighbor (direction=Right): neighbor's Right edge -> current's Left edge
-                        let edge_for_current = extract_single_edge(neighbor_bytes, direction);
-                        edges_to_store.push((
-                            edge_for_current,
-                            tile_handle,
-                            entity,
-                            opposite_dir as u8,
-                        ));
-                    }
-                }
-            }
-        }
-
-        // Now store all edges in BufferStore and create events
+        // Store all collected edges in BufferStore and create events
         for (edge_bytes, target_handle, target_entity, edge_dir) in edges_to_store {
+            if edge_bytes.is_empty() {
+                continue;
+            }
             let edge_handle = buf.new_u8(edge_bytes);
             event_data_list.push(HillshadeBackfillEventData {
                 tile_handle: target_handle,
@@ -193,7 +182,12 @@ pub fn backfill_hillshade_on_loaded(
             });
         }
 
-        // Add all events to the entity and push to EventStore once
+        // Store extracted edges (original data will be cleaned by JS side)
+        if let Some(edges) = extracted_edges {
+            store_extracted_edges(entity, edges, &mut commands, &mut buf);
+        }
+
+        // Add all events to entity and push to EventStore
         commands.entity(entity).insert(HillshadeBackfillEvents {
             events: event_data_list,
         });
@@ -201,13 +195,173 @@ pub fn backfill_hillshade_on_loaded(
     }
 }
 
-/// Edge direction for hillshade texture updates
-#[derive(Debug, Clone, Copy)]
-enum EdgeDirection {
-    Left = 0,
-    Right = 1,
-    Top = 2,
-    Bottom = 3,
+/// System that cleans up hillshade edge data when entities are deleted
+/// Removes the 4 edge buffers from BufferStore to prevent memory leaks
+pub fn cleanup_hillshade_edges(
+    mut buf: ResMut<BufferStore>,
+    removed: Query<&HillshadeEdges, (With<Deleted>, With<HillshadeTextureMarker>)>,
+) {
+    for edges in removed.iter() {
+        // Remove all 4 edge buffers
+        buf.remove(&edges.left);
+        buf.remove(&edges.right);
+        buf.remove(&edges.top);
+        buf.remove(&edges.bottom);
+    }
+}
+
+/// Extract edges on first load and create initialization event
+/// Returns the extracted edges for reuse with neighbors
+fn extract_edges_on_first_load(
+    buf: &BufferStore,
+    data_req: &DataRequester,
+) -> Option<ExtractedEdges> {
+    buf.get_u8(&data_req.handle)
+        .map(|original_bytes| ExtractedEdges {
+            left: extract_single_edge(original_bytes, EdgeDirection::Left),
+            right: extract_single_edge(original_bytes, EdgeDirection::Right),
+            top: extract_single_edge(original_bytes, EdgeDirection::Top),
+            bottom: extract_single_edge(original_bytes, EdgeDirection::Bottom),
+        })
+}
+
+/// Get edge data from tile (either from extracted_edges or stored handles)
+fn get_edge_from_tile(
+    entity: Entity,
+    direction: EdgeDirection,
+    extracted_edges: &Option<ExtractedEdges>,
+    edges_query: &Query<&HillshadeEdges>,
+    buf: &BufferStore,
+) -> Option<Vec<u8>> {
+    if let Some(edges) = extracted_edges {
+        // Use freshly extracted edges (first time loading)
+        Some(match direction {
+            EdgeDirection::Left => edges.left.clone(),
+            EdgeDirection::Right => edges.right.clone(),
+            EdgeDirection::Top => edges.top.clone(),
+            EdgeDirection::Bottom => edges.bottom.clone(),
+        })
+    } else if let Ok(edges) = edges_query.get(entity) {
+        // Use stored edge handles (subsequent loads)
+        let edge_handle = match direction {
+            EdgeDirection::Left => edges.left,
+            EdgeDirection::Right => edges.right,
+            EdgeDirection::Top => edges.top,
+            EdgeDirection::Bottom => edges.bottom,
+        };
+        Some(
+            buf.get_u8(&edge_handle)
+                .map(|b| b.to_vec())
+                .unwrap_or_default(),
+        )
+    } else {
+        None
+    }
+}
+
+/// Collect edge exchanges with all loaded neighbors
+/// Returns list of (edge_bytes, target_tile_handle, target_entity, edge_direction)
+#[allow(clippy::too_many_arguments)]
+fn collect_neighbor_edge_exchanges(
+    entity: Entity,
+    tile_handle: u64,
+    x: usize,
+    y: usize,
+    z: usize,
+    extracted_edges: &Option<ExtractedEdges>,
+    tile_map: &HashMap<u64, (Entity, &DataRequester)>,
+    edges_query: &Query<&HillshadeEdges>,
+    qt: &RasterTileQuadtree,
+    buf: &BufferStore,
+) -> Vec<(Vec<u8>, u64, Entity, u8)> {
+    let neighbors: [(usize, usize, usize, EdgeDirection); 4] = [
+        (x.wrapping_sub(1), y, z, EdgeDirection::Right),
+        (x + 1, y, z, EdgeDirection::Left),
+        (x, y.wrapping_sub(1), z, EdgeDirection::Bottom),
+        (x, y + 1, z, EdgeDirection::Top),
+    ];
+
+    let mut edges_to_store = Vec::new();
+
+    for (nx, ny, nz, direction) in neighbors {
+        if let Some(neighbor_handle) = encode_quadleaf_handle((nx, ny, nz))
+            && qt.qt.get(neighbor_handle).is_some()
+            && let Some(&(neighbor_entity, neighbor_dr)) = tile_map.get(&neighbor_handle)
+            && neighbor_dr.status == DataRequesterStatus::Success
+        {
+            let opposite_dir = match direction {
+                EdgeDirection::Left => EdgeDirection::Right,
+                EdgeDirection::Right => EdgeDirection::Left,
+                EdgeDirection::Top => EdgeDirection::Bottom,
+                EdgeDirection::Bottom => EdgeDirection::Top,
+            };
+
+            // Current tile's edge -> neighbor
+            if let Some(edge_for_neighbor) =
+                get_edge_from_tile(entity, opposite_dir, extracted_edges, edges_query, buf)
+            {
+                edges_to_store.push((
+                    edge_for_neighbor,
+                    neighbor_handle,
+                    neighbor_entity,
+                    direction as u8,
+                ));
+            }
+
+            // Neighbor's edge -> current tile
+            let edge_for_current = if let Ok(neighbor_edges) = edges_query.get(neighbor_entity) {
+                // Neighbor already has extracted edges stored, use them
+                let edge_handle = match direction {
+                    EdgeDirection::Left => neighbor_edges.left,
+                    EdgeDirection::Right => neighbor_edges.right,
+                    EdgeDirection::Top => neighbor_edges.top,
+                    EdgeDirection::Bottom => neighbor_edges.bottom,
+                };
+                buf.get_u8(&edge_handle)
+                    .map(|b| b.to_vec())
+                    .unwrap_or_default()
+            } else {
+                // Neighbor loaded in the same frame: HillshadeEdges component not yet available
+                // (inserted via commands, takes effect next frame), but original data still exists
+                // (JS-side removeU8 is async). Extract edge from neighbor's original DEM data.
+                buf.get_u8(&neighbor_dr.handle)
+                    .map(|bytes| extract_single_edge(bytes, direction))
+                    .unwrap_or_default()
+            };
+
+            if !edge_for_current.is_empty() {
+                edges_to_store.push((edge_for_current, tile_handle, entity, opposite_dir as u8));
+            }
+        }
+    }
+
+    edges_to_store
+}
+
+/// Store extracted edges in BufferStore
+/// Original DEM data is deleted by JS side after processing the event
+fn store_extracted_edges(
+    entity: Entity,
+    extracted_edges: ExtractedEdges,
+    commands: &mut Commands,
+    buf: &mut BufferStore,
+) {
+    // Store edges in BufferStore (4KB per tile)
+    let left_handle = buf.new_u8(extracted_edges.left);
+    let right_handle = buf.new_u8(extracted_edges.right);
+    let top_handle = buf.new_u8(extracted_edges.top);
+    let bottom_handle = buf.new_u8(extracted_edges.bottom);
+
+    // Mark edges as extracted and store edge handles
+    commands.entity(entity).insert((
+        HillshadeEdgesExtracted,
+        HillshadeEdges {
+            left: left_handle,
+            right: right_handle,
+            top: top_handle,
+            bottom: bottom_handle,
+        },
+    ));
 }
 
 /// Extract a single edge from original DEM texture based on direction
