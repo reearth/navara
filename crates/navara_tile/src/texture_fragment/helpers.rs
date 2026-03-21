@@ -14,18 +14,29 @@ use navara_tile_component::{
 
 use crate::hillshade::HillshadeTextureMarker;
 
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn request_texture_fragment(
     commands: &mut Commands,
     leaf: &mut RasterTile,
     tiles: &Query<(&TilesLayer, &Order)>,
     handle: TileHandle,
     texture_fragment: &TileTextureFragmentQuery,
+    data_requesters: &Query<&DataRequester>,
     priority: Priority,
     buf: &mut BufferStore,
 ) {
     let tiles_len = tiles.iter().len();
-    if matches!(leaf.texture_fragment_entity_ids.as_ref(), Some(e) if e.len() == tiles_len && e.iter().all(|e| e.is_some_and(|e| texture_fragment.contains(e))))
-    {
+    if matches!(
+        leaf.texture_fragment_entity_ids.as_ref(),
+        Some(e)
+            if e.len() == tiles_len
+                && e.iter().all(|e| {
+                    e.is_some_and(|e| {
+                        texture_fragment.contains(e)
+                            || data_requesters.get(e).is_ok()
+                    })
+                })
+    ) {
         return;
     }
 
@@ -34,7 +45,8 @@ pub(crate) fn request_texture_fragment(
         .texture_fragment_entity_ids
         .as_ref()
         .and_then(|ids| ids.last())
-        && texture_fragment.get(*e).is_ok_and(|t| t.1.is_pending())
+        && (texture_fragment.get(*e).is_ok_and(|t| t.1.is_pending())
+            || data_requesters.get(*e).is_ok_and(|r| r.is_pending()))
     {
         return;
     }

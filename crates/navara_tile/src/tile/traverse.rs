@@ -150,6 +150,7 @@ pub fn traverse_tile(
             tiles,
             handle,
             texture_fragment,
+            data_requesters,
             Priority::High,
             buf,
         );
@@ -172,6 +173,7 @@ pub fn traverse_tile(
                 tc,
                 tiles,
                 texture_fragment,
+                data_requesters,
                 terrain_data_requester,
                 if is_renderable {
                     Priority::Medium
@@ -368,6 +370,7 @@ pub fn traverse_tile(
                 tc,
                 tiles,
                 texture_fragment,
+                data_requesters,
                 terrain_data_requester,
                 Priority::Extreme,
             );
@@ -440,6 +443,7 @@ pub fn prepare_tile_resource(
     tc: &mut TileCacheManager,
     tiles: &Query<(&TilesLayer, &Order)>,
     texture_fragment: &TileTextureFragmentQuery,
+    data_requesters: &Query<&navara_data_requester::DataRequester>,
     terrain_data_requester: &TileTerrainDataRequesterQuery,
     priority: Priority,
 ) {
@@ -468,6 +472,7 @@ pub fn prepare_tile_resource(
             tiles,
             handle,
             texture_fragment,
+            data_requesters,
             Priority::High,
             buf,
         );

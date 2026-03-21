@@ -111,14 +111,22 @@ pub fn backfill_hillshade_on_loaded(
     mut events: ResMut<EventStore>,
     query: Query<
         (Entity, &DataRequester, &TileTextureFragmentMarker),
-        (Changed<DataRequester>, With<HillshadeTextureMarker>),
+        (
+            Changed<DataRequester>,
+            With<HillshadeTextureMarker>,
+            Without<Deleted>,
+            Without<Ignored>,
+        ),
     >,
-    all_data_requesters: Query<(
-        Entity,
-        &DataRequester,
-        &TileTextureFragmentMarker,
-        &HillshadeTextureMarker,
-    )>,
+    all_data_requesters: Query<
+        (
+            Entity,
+            &DataRequester,
+            &TileTextureFragmentMarker,
+            &HillshadeTextureMarker,
+        ),
+        (Without<Deleted>, Without<Ignored>),
+    >,
     edges_query: Query<&HillshadeEdges>,
     extracted_query: Query<(), With<HillshadeEdgesExtracted>>,
 ) {
@@ -259,6 +267,47 @@ fn get_edge_from_tile(
     }
 }
 
+/// Get neighbor tile coordinates with bounds checking
+/// Returns None if neighbor is out of valid range
+/// X wraps around, Y does not
+fn get_neighbor_coords(
+    x: usize,
+    y: usize,
+    z: usize,
+    direction: EdgeDirection,
+) -> Option<(usize, usize, usize)> {
+    let tile_count = 1_usize << z; // 2^z tiles per axis at zoom level z
+
+    match direction {
+        EdgeDirection::Left => {
+            // West: wrap X coordinate
+            let nx = if x == 0 { tile_count - 1 } else { x - 1 };
+            Some((nx, y, z))
+        }
+        EdgeDirection::Right => {
+            // East: wrap X coordinate
+            let nx = if x + 1 >= tile_count { 0 } else { x + 1 };
+            Some((nx, y, z))
+        }
+        EdgeDirection::Top => {
+            // North: Y does not wrap, check bounds
+            if y == 0 {
+                None // No tile north of y=0
+            } else {
+                Some((x, y - 1, z))
+            }
+        }
+        EdgeDirection::Bottom => {
+            // South: Y does not wrap, check bounds
+            if y + 1 >= tile_count {
+                None // No tile south of max Y
+            } else {
+                Some((x, y + 1, z))
+            }
+        }
+    }
+}
+
 /// Collect edge exchanges with all loaded neighbors
 /// Returns list of (edge_bytes, target_tile_handle, target_entity, edge_direction)
 #[allow(clippy::too_many_arguments)]
@@ -274,64 +323,89 @@ fn collect_neighbor_edge_exchanges(
     qt: &RasterTileQuadtree,
     buf: &BufferStore,
 ) -> Vec<(Vec<u8>, u64, Entity, u8)> {
-    let neighbors: [(usize, usize, usize, EdgeDirection); 4] = [
-        (x.wrapping_sub(1), y, z, EdgeDirection::Right),
-        (x + 1, y, z, EdgeDirection::Left),
-        (x, y.wrapping_sub(1), z, EdgeDirection::Bottom),
-        (x, y + 1, z, EdgeDirection::Top),
+    // Define neighbor directions (coordinates will be computed with bounds checking)
+    let neighbor_directions = [
+        EdgeDirection::Left,   // West neighbor
+        EdgeDirection::Right,  // East neighbor
+        EdgeDirection::Top,    // North neighbor
+        EdgeDirection::Bottom, // South neighbor
     ];
 
     let mut edges_to_store = Vec::new();
 
-    for (nx, ny, nz, direction) in neighbors {
-        if let Some(neighbor_handle) = encode_quadleaf_handle((nx, ny, nz))
-            && qt.qt.get(neighbor_handle).is_some()
-            && let Some(&(neighbor_entity, neighbor_dr)) = tile_map.get(&neighbor_handle)
-            && neighbor_dr.status == DataRequesterStatus::Success
+    for direction in neighbor_directions {
+        // Get neighbor coordinates with bounds checking and wrapping
+        let Some((nx, ny, nz)) = get_neighbor_coords(x, y, z, direction) else {
+            continue; // Skip out-of-bounds neighbors
+        };
+
+        // Map direction from current tile's perspective to neighbor's perspective
+        let neighbor_edge_dir = match direction {
+            EdgeDirection::Left => EdgeDirection::Right, // West neighbor needs edge on their right
+            EdgeDirection::Right => EdgeDirection::Left, // East neighbor needs edge on their left
+            EdgeDirection::Top => EdgeDirection::Bottom, // North neighbor needs edge on their bottom
+            EdgeDirection::Bottom => EdgeDirection::Top, // South neighbor needs edge on their top
+        };
+        // Encode neighbor coordinates and check if tile exists
+        let Some(neighbor_handle) = encode_quadleaf_handle((nx, ny, nz)) else {
+            continue;
+        };
+
+        if qt.qt.get(neighbor_handle).is_none() {
+            continue; // Neighbor tile not loaded
+        }
+
+        let Some(&(neighbor_entity, neighbor_dr)) = tile_map.get(&neighbor_handle) else {
+            continue; // Neighbor not in hillshade map
+        };
+
+        if neighbor_dr.status != DataRequesterStatus::Success {
+            continue; // Neighbor not successfully loaded
+        }
+
+        // Opposite direction: edge direction on current tile that neighbor needs
+        let opposite_dir = match neighbor_edge_dir {
+            EdgeDirection::Left => EdgeDirection::Right,
+            EdgeDirection::Right => EdgeDirection::Left,
+            EdgeDirection::Top => EdgeDirection::Bottom,
+            EdgeDirection::Bottom => EdgeDirection::Top,
+        };
+
+        // Current tile's edge -> neighbor
+        if let Some(edge_for_neighbor) =
+            get_edge_from_tile(entity, opposite_dir, extracted_edges, edges_query, buf)
         {
-            let opposite_dir = match direction {
-                EdgeDirection::Left => EdgeDirection::Right,
-                EdgeDirection::Right => EdgeDirection::Left,
-                EdgeDirection::Top => EdgeDirection::Bottom,
-                EdgeDirection::Bottom => EdgeDirection::Top,
+            edges_to_store.push((
+                edge_for_neighbor,
+                neighbor_handle,
+                neighbor_entity,
+                neighbor_edge_dir as u8,
+            ));
+        }
+
+        // Neighbor's edge -> current tile
+        let edge_for_current = if let Ok(neighbor_edges) = edges_query.get(neighbor_entity) {
+            // Neighbor already has extracted edges stored, use them
+            let edge_handle = match neighbor_edge_dir {
+                EdgeDirection::Left => neighbor_edges.left,
+                EdgeDirection::Right => neighbor_edges.right,
+                EdgeDirection::Top => neighbor_edges.top,
+                EdgeDirection::Bottom => neighbor_edges.bottom,
             };
+            buf.get_u8(&edge_handle)
+                .map(|b| b.to_vec())
+                .unwrap_or_default()
+        } else {
+            // Neighbor loaded in the same frame: HillshadeEdges component not yet available
+            // (inserted via commands, takes effect next frame), but original data still exists
+            // (JS-side removeU8 is async). Extract edge from neighbor's original DEM data.
+            buf.get_u8(&neighbor_dr.handle)
+                .map(|bytes| extract_single_edge(bytes, neighbor_edge_dir))
+                .unwrap_or_default()
+        };
 
-            // Current tile's edge -> neighbor
-            if let Some(edge_for_neighbor) =
-                get_edge_from_tile(entity, opposite_dir, extracted_edges, edges_query, buf)
-            {
-                edges_to_store.push((
-                    edge_for_neighbor,
-                    neighbor_handle,
-                    neighbor_entity,
-                    direction as u8,
-                ));
-            }
-
-            // Neighbor's edge -> current tile
-            let edge_for_current = if let Ok(neighbor_edges) = edges_query.get(neighbor_entity) {
-                // Neighbor already has extracted edges stored, use them
-                let edge_handle = match direction {
-                    EdgeDirection::Left => neighbor_edges.left,
-                    EdgeDirection::Right => neighbor_edges.right,
-                    EdgeDirection::Top => neighbor_edges.top,
-                    EdgeDirection::Bottom => neighbor_edges.bottom,
-                };
-                buf.get_u8(&edge_handle)
-                    .map(|b| b.to_vec())
-                    .unwrap_or_default()
-            } else {
-                // Neighbor loaded in the same frame: HillshadeEdges component not yet available
-                // (inserted via commands, takes effect next frame), but original data still exists
-                // (JS-side removeU8 is async). Extract edge from neighbor's original DEM data.
-                buf.get_u8(&neighbor_dr.handle)
-                    .map(|bytes| extract_single_edge(bytes, direction))
-                    .unwrap_or_default()
-            };
-
-            if !edge_for_current.is_empty() {
-                edges_to_store.push((edge_for_current, tile_handle, entity, opposite_dir as u8));
-            }
+        if !edge_for_current.is_empty() {
+            edges_to_store.push((edge_for_current, tile_handle, entity, opposite_dir as u8));
         }
     }
 

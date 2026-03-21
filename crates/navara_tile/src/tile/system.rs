@@ -207,6 +207,7 @@ pub fn update_tiles(
                 &mut tc,
                 tiles,
                 &texture_fragment,
+                &data_requesters,
                 &terrain_data_requester,
                 Priority::Extreme,
             );
@@ -217,6 +218,7 @@ pub fn update_tiles(
                 tiles,
                 zero_tile_handle,
                 &texture_fragment,
+                &data_requesters,
                 Priority::High,
                 &mut buf,
             );
