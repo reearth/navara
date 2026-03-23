@@ -16,6 +16,13 @@ class NoNamePlugin extends Plugin<{ name: string }> {
   async init(_view: { name: string }) {}
 }
 
+class ErrorPlugin extends Plugin<{ name: string }> {
+  static id = "ErrorPlugin"
+  async init(_view: { name: string }) {
+    throw new Error();
+  }
+}
+
 describe("PluginManager", () => {
   const view = { name: "test-view" };
 
@@ -92,5 +99,18 @@ describe("PluginManager", () => {
 
     expect(manager.getPlugin("TestPlugin")).toBe(plugin);
     expect(manager.getPlugin("Unknown")).toBeUndefined();
+  });
+
+  it("should not have the added plugin when an error occurs", async () => {
+    const manager = new PluginManager(view);
+    const plugin = new ErrorPlugin();
+
+    try {
+      await manager.addPlugin(plugin);
+    } catch {
+      // noop
+    }
+
+    expect(manager.getPlugin("ErrorPlugin")).toBeUndefined();
   });
 });

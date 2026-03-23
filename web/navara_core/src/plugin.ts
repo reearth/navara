@@ -20,7 +20,7 @@ export abstract class Plugin<TView = unknown> {
 
   abstract init(view: TView): Promise<void>;
 
-  async dispose(): Promise<void> {}
+  dispose() {}
 }
 
 /**
@@ -51,8 +51,8 @@ export class PluginManager<TView> {
       throw new Error(`Plugin "${name}" is already registered.`);
     }
 
-    this.plugins.set(name, plugin);
     await plugin.init(this.view);
+    this.plugins.set(name, plugin);
   }
 
   /** Add multiple plugins sequentially. */
@@ -67,7 +67,7 @@ export class PluginManager<TView> {
     const plugin = this.plugins.get(name);
     if (!plugin) return false;
 
-    await plugin.dispose();
+    plugin.dispose();
     this.plugins.delete(name);
     return true;
   }
@@ -83,9 +83,9 @@ export class PluginManager<TView> {
   }
 
   /** Dispose all plugins and clear the registry. */
-  async disposeAll(): Promise<void> {
+  disposeAll() {
     for (const plugin of this.plugins.values()) {
-      await plugin.dispose();
+      plugin.dispose();
     }
     this.plugins.clear();
   }

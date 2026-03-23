@@ -30,9 +30,9 @@ A `Plugin` base class that any package can extend. Concrete plugins **must** def
 
 ```typescript
 export abstract class Plugin<TView = unknown> {
-  static id;
+  static id: string;
   abstract init(view: TView): Promise<void>;
-  async dispose(): Promise<void> {}
+  dispose() {}
 }
 ```
 
@@ -143,7 +143,7 @@ class MyPlugin extends Plugin<ThreeView<CustomLayerDescriptions>> {
     view.registerEffect("myEffect", MyCustomEffectLayer);
   }
 
-  async dispose() {
+  dispose() {
     // Clean up resources if needed
   }
 }

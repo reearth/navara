@@ -522,8 +522,7 @@ export default class ThreeView<
   /** Helper for managing selective post-processing effects that apply to specific objects. */
   public selectiveEffectHelper: SelectiveEffectHelper;
   private viewContext!: ViewContext;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private pluginManager = new PluginManager<ThreeView<any>>(this);
+  private pluginManager = new PluginManager<ThreeView<CustomLayerDescriptions>>(this);
 
   constructor(options: Options = {}) {
     super();
@@ -943,7 +942,7 @@ export default class ThreeView<
    */
   dispose() {
     this._disposed = true;
-    void this.pluginManager.disposeAll();
+    this.pluginManager.disposeAll();
     if (!isWorker()) window.removeEventListener("resize", this._handleResize);
     if (this._eventDisposer) {
       this._eventDisposer();

@@ -114,10 +114,6 @@ export class DefaultPlugin extends Plugin<ThreeView<DefaultLayerDescriptions>> {
     view.registerEffect("fxaa", FXAAEffectLayer);
   }
 
-  async dispose(): Promise<void> {
-    this.view = undefined;
-  }
-
   /**
    * Add default layers automatically to make the photorealistic scene.
    * This method must be invoked after `view.init()`.
