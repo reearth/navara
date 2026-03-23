@@ -17,7 +17,7 @@ class NoNamePlugin extends Plugin<{ name: string }> {
 }
 
 class ErrorPlugin extends Plugin<{ name: string }> {
-  static id = "ErrorPlugin"
+  static id = "ErrorPlugin";
   async init(_view: { name: string }) {
     throw new Error();
   }

@@ -522,7 +522,9 @@ export default class ThreeView<
   /** Helper for managing selective post-processing effects that apply to specific objects. */
   public selectiveEffectHelper: SelectiveEffectHelper;
   private viewContext!: ViewContext;
-  private pluginManager = new PluginManager<ThreeView<CustomLayerDescriptions>>(this);
+  private pluginManager = new PluginManager<ThreeView<CustomLayerDescriptions>>(
+    this,
+  );
 
   constructor(options: Options = {}) {
     super();
