@@ -8,8 +8,7 @@ use navara_feature_component::batch::BatchTable;
 use navara_material::Appearance;
 use navara_tile_component::{TileHandle, VectorTile};
 use navara_vector_tile::{
-    ReadyState, TileCacheManager, VectorTileSource,
-    data_requester::VectorTileDataRequesterQuery,
+    ReadyState, TileCacheManager, VectorTileSource, data_requester::VectorTileDataRequesterQuery,
 };
 
 use crate::{

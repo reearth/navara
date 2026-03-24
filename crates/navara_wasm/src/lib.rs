@@ -224,6 +224,11 @@ impl Core {
         self.app.delete_layer(layer_id.as_str());
     }
 
+    #[wasm_bindgen(js_name = getLayerIndex)]
+    pub fn get_layer_index(&self, layer_id: &str) -> Option<usize> {
+        self.app.get_layer_index(layer_id)
+    }
+
     #[wasm_bindgen(js_name = triggerTextureFragmentLoaded)]
     pub fn trigger_texture_fragment_loaded(&mut self, bits: u64, status: TextureFragmentStatus) {
         self.app

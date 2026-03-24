@@ -25,12 +25,12 @@ use navara_globe::Globe;
 use navara_layer::{LayerDescStore, LayerDescription, LayerId};
 use navara_material::{PolygonMaterial, PolylineMaterial};
 use navara_math::{FloatType, Transform, Vec3};
-use navara_vector_tile::LayerResources;
 use navara_texture_fragment::{TextureFragmentLoadedEvent, TextureFragmentStatus};
 use navara_tile_component::{
     MartiniComponent, RasterTile, RasterTileQuadtree, TerrainHeightObserver, TileHandle,
     TileTerrainDataRequesterQuery, VectorTile, VectorTileQuadtree, compute_terrain_height_at_point,
 };
+use navara_vector_tile::LayerResources;
 use navara_window::{Window, WindowResizeEvent};
 use navara_worker::{
     DelegatedWorkerTasksResult, WorkerTaskCompleted, WorkerTaskCompletedEvent, WorkerTaskMarker,
@@ -275,17 +275,26 @@ impl App {
     }
 
     pub fn add_layer(&mut self, layer_id: &str, desc: LayerDescription) {
-        self.set_layer_description(layer_id, desc.clone());
+        if let Some(mut layer_desc_store) =
+            self.app.world_mut().get_resource_mut::<LayerDescStore>()
+        {
+            layer_desc_store.add(layer_id.to_owned(), desc.clone());
+        }
 
         self.app
             .world_mut()
             .write_message(navara_layer_event::AddLayerEvent(desc));
     }
 
-    pub fn get_layer_type(&self, layer_id: &String) -> Option<&str> {
+    pub fn get_layer_index(&self, layer_id: &str) -> Option<usize> {
+        let store = self.app.world().get_resource::<LayerDescStore>()?;
+        store.get_order(layer_id).copied()
+    }
+
+    pub fn get_layer_type(&self, layer_id: &str) -> Option<&str> {
         let mut layer_type = None;
         if let Some(layer_desc_store) = self.app.world().get_resource::<LayerDescStore>()
-            && let Some(desc) = layer_desc_store.map.get(layer_id)
+            && let Some(desc) = layer_desc_store.get(layer_id)
         {
             layer_type = match desc {
                 LayerDescription::Tiles(_) => Some("tiles"),
@@ -303,22 +312,12 @@ impl App {
 
     pub fn get_layer_description(&self, layer_id: &str) -> Option<LayerDescription> {
         if let Some(layer_desc_store) = self.app.world().get_resource::<LayerDescStore>()
-            && let Some(desc) = layer_desc_store.map.get(layer_id)
+            && let Some(desc) = layer_desc_store.get(layer_id)
         {
             return Some(desc.clone());
         }
 
         None
-    }
-
-    pub fn set_layer_description(&mut self, layer_id: &str, desc: LayerDescription) {
-        if let Some(mut layer_desc_store) =
-            self.app.world_mut().get_resource_mut::<LayerDescStore>()
-        {
-            layer_desc_store
-                .map
-                .insert(layer_id.to_owned(), desc.clone());
-        }
     }
 
     pub fn update_layer(&mut self, layer_id: &str, mut desc: LayerDescription) {
@@ -394,7 +393,11 @@ impl App {
             }
         }
 
-        self.set_layer_description(layer_id, desc);
+        if let Some(mut layer_desc_store) =
+            self.app.world_mut().get_resource_mut::<LayerDescStore>()
+        {
+            layer_desc_store.update(layer_id.to_owned(), desc.clone());
+        }
     }
 
     pub fn delete_layer(&mut self, layer_id: &str) {

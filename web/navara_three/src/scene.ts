@@ -43,13 +43,23 @@ export class TexturizedSceneByTileCoordinates {
     return scene;
   }
 
-  add(handle: TileHandle, layerId: string, mesh: Mesh, fromParent = false) {
+  add(
+    handle: TileHandle,
+    layerId: string,
+    mesh: Mesh,
+    layerIndex: number,
+    fromParent = false,
+  ) {
     const scenes = this.get(handle);
     let scene = scenes.children.find((o) => o.userData.layerId === layerId);
     if (!scene) {
       scene = new Scene();
       scene.userData.layerId = layerId;
+      scene.userData.layerIndex = layerIndex;
       scenes.add(scene);
+      scenes.children.sort(
+        (a, b) => a.userData.layerIndex - b.userData.layerIndex,
+      );
     }
     if (scene.children.length && fromParent) {
       const idx = scene.children.findIndex((o) => o.userData.fromParent);
@@ -66,6 +76,7 @@ export class TexturizedSceneByTileCoordinates {
   }
 
   addFromParentScene(handle: TileHandle, layerId: string, parentScene: Scene) {
+    const layerIndex = parentScene.userData.layerIndex as number;
     for (const child of parentScene.children) {
       if (child.userData.fromParent) continue;
 
@@ -73,7 +84,7 @@ export class TexturizedSceneByTileCoordinates {
       const nm = m.clone();
       // Mark this mesh as inherited from the parent.
       nm.userData.fromParent = true;
-      this.add(handle, layerId, nm, true);
+      this.add(handle, layerId, nm, layerIndex, true);
     }
   }
 

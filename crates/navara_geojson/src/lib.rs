@@ -4,7 +4,6 @@ use bevy_app::{App, Plugin, Update};
 use bevy_ecs::schedule::IntoScheduleConfigs;
 use navara_layer::{LayerDescStore, LayerStore};
 use navara_vector_tile::VectorTileSet;
-use std::collections::HashMap;
 
 mod geometry;
 mod system;
@@ -14,10 +13,9 @@ pub struct GeoJsonPlugin;
 
 impl Plugin for GeoJsonPlugin {
     fn build(&self, app: &mut App) {
+        // TODO: Carve out those layer management structs into `navara_layer_event` plugin.
         app.insert_resource(LayerStore::new());
-        app.insert_resource(LayerDescStore {
-            map: HashMap::new(),
-        });
+        app.insert_resource(LayerDescStore::new());
         app.add_systems(
             Update,
             (

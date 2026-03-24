@@ -43,7 +43,12 @@ import {
 import { renderPolyline, processPolylineChanged } from "./features/polyline";
 import { renderText, processTextChanged } from "./features/text";
 
-import { setTransform, type BufferLoader, type FeatureHandler } from ".";
+import {
+  setTransform,
+  type BufferLoader,
+  type FeatureHandler,
+  type LayerHandler,
+} from ".";
 
 export function renderFeature(
   f: RenderableFeature,
@@ -246,6 +251,7 @@ export async function processRenderableFeatureChanged(
   layersManager: LayersManager,
   viewContext: ViewContext,
   updatedAt: number,
+  layerHandler?: LayerHandler,
 ) {
   const id = generate_id_from_entity(ev);
   const obj = meshes.get(id);
@@ -330,7 +336,17 @@ export async function processRenderableFeatureChanged(
       (obj instanceof PolylineMesh && obj.draped)
     ) {
       if (obj.visible) {
-        texturizedSceneByTileCoordinates.add(tileHandle, layerId, obj as Mesh);
+        const layerIndex = layerHandler?.getLayerIndex(layerId);
+        // Timing issue: `layerIndex` will be undefined if the layer is removed after this feature update event.
+        if (layerIndex) {
+          texturizedSceneByTileCoordinates.add(
+            tileHandle,
+            layerId,
+            obj as Mesh,
+            layerIndex,
+            false,
+          );
+        }
       }
     } else {
       texturizedSceneByTileCoordinates.remove(tileHandle, layerId);
