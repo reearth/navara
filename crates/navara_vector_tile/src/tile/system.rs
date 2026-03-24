@@ -14,9 +14,7 @@ use navara_occluder::ellipsoidal_occluder::EllipsoidalOccluder;
 
 use navara_camera::{CameraFrustum, CameraMarker};
 use navara_layer::{LayerId, LayerStore, TerrainLayer};
-use navara_tile_component::{
-    TerrainInformationQuadtree, VectorTile, VectorTileQuadtree,
-};
+use navara_tile_component::{TerrainInformationQuadtree, VectorTile, VectorTileQuadtree};
 use navara_window::Window;
 use rustc_hash::FxHashSet;
 
