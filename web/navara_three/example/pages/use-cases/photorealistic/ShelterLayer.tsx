@@ -86,7 +86,7 @@ export const ShelterLayer: FC<{ visible?: boolean }> = ({
       // Render labels using instanced text anchored at point positions.
       text: {
         color: new Color().setStyle("#ffffff"),
-        font: FONT_DATASETS.NotoSansJP.url,
+        font: FONT_DATASETS.LineSeedJP.url,
         size: 15,
         clampToGround: true,
         scaleByDistance: true,

@@ -90,12 +90,14 @@ const run = async () => {
       data: { url: VECTOR_DATASETS.gsiExperimentalVector.url },
       text: {
         lang: "ja",
-        font: FONT_DATASETS.NotoSansJP.url,
+        font: FONT_DATASETS.LineSeedJP.url,
         color: new Color().setStyle("#ffffff"),
         scaleByDistance: true,
         clampToGround: true,
         size: params.size,
         center: { x: 0.5, y: 0.0 },
+        outlineColor: new Color().setStyle("#000000"),
+        outlineWidth: 2,
       },
       vectorTile: {
         maxZoom: 16,

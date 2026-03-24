@@ -309,10 +309,10 @@ export const LUT_DATASETS = {
 } satisfies Record<string, Dataset>;
 
 export const FONT_DATASETS = {
-  NotoSansJP: {
-    url: "/fonts/notosansjp/NotoSansJP[wght].ttf",
-    attribution: "Noto Sans JP - Google Fonts",
-    attributionUrl: "https://fonts.google.com/noto/specimen/Noto+Sans+JP",
+  LineSeedJP: {
+    url: "/fonts/lineseedjp/LINESeedJP-Bold.ttf",
+    attribution: "LINE Seed JP - Google Fonts",
+    attributionUrl: "https://fonts.google.com/specimen/LINE+Seed+JP",
   },
   Roboto: {
     url: "/fonts/roboto/Roboto[wdth,wght].ttf",
