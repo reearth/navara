@@ -329,8 +329,11 @@ export class SDFTextMesh
 
     const nextBGColor = material.backgroundColor;
     if (nextBGColor !== undefined) {
-      if (nextBGColor !== state.backgroundColor.getHex()) {
+      if (!state.showBackground) {
         baseProps.showBackground = true;
+        hasUpdate = true;
+      }
+      if (nextBGColor !== state.backgroundColor.getHex()) {
         baseProps.backgroundColor = nextBGColor;
         hasUpdate = true;
       }

@@ -316,11 +316,24 @@ export class FontManager {
 
   private async _flushBatch(): Promise<void> {
     this._batchScheduled = false;
-    const client = await this._ensureClient();
 
     // Snapshot and clear the queue so new calls during await start a fresh batch
     const queue = this._batchQueue;
     this._batchQueue = new Map();
+
+    let client: FontWorkerClient;
+    try {
+      client = await this._ensureClient();
+    } catch (err) {
+      // If we fail to obtain a client, reject all queued entries so their
+      // corresponding promises do not remain pending indefinitely.
+      for (const [, entries] of queue) {
+        for (const entry of entries) {
+          entry.reject(err);
+        }
+      }
+      return;
+    }
 
     const processFontBatch = async (
       fontUrl: string,
