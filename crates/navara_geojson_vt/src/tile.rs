@@ -257,7 +257,7 @@ fn transform_point(x: f64, y: f64, z2: f64, tile_x: f64, tile_y: f64, extent: f6
 }
 
 /// Rewinds a polygon ring to ensure correct winding order.
-/// Outer rings should be clockwise (area > 0), inner rings counter-clockwise.
+/// Outer rings should be clockwise (area < 0), inner rings counter-clockwise (area > 0).
 fn rewind(ring: &mut [[f64; 2]], clockwise: bool) {
     let len = ring.len();
     if len < 2 {
@@ -272,7 +272,7 @@ fn rewind(ring: &mut [[f64; 2]], clockwise: bool) {
         j = i;
     }
 
-    // area > 0 means clockwise in screen coords
+    // area > 0 means counter-clockwise in tile coords (Y-down)
     if (area > 0.0) != clockwise {
         return; // Already correct winding
     }
