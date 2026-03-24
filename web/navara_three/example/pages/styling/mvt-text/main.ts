@@ -95,6 +95,8 @@ const run = async () => {
         scaleByDistance: true,
         clampToGround: true,
         size: params.size,
+        outlineColor: new Color().setStyle("#000000"),
+        outlineWidth: 2,
         center: { x: 0.5, y: 0.0 },
       },
       vectorTile: {
