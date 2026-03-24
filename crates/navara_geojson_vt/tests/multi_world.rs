@@ -19,9 +19,7 @@ fn get_first_point(geojson: &GeoJson) -> [f64; 2] {
             ..Default::default()
         },
     );
-    let tile = index
-        .get_tile(0, 0, 0)
-        .expect("z0 tile should exist");
+    let tile = index.get_tile(0, 0, 0).expect("z0 tile should exist");
     for f in &tile.features {
         if let TileGeometry::Points(pts) = &f.geometry {
             return pts[0];
@@ -101,9 +99,7 @@ fn test_multi_world_both_points() {
             ..Default::default()
         },
     );
-    let tile = index
-        .get_tile(0, 0, 0)
-        .expect("z0 tile should exist");
+    let tile = index.get_tile(0, 0, 0).expect("z0 tile should exist");
     assert_eq!(tile.features.len(), 2);
 
     // Extract point coordinates from each feature

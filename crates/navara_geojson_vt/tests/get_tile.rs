@@ -166,17 +166,19 @@ fn test_us_states_z9_tile() {
         .expect("z9/148/192 should exist (on-demand drill-down)");
 
     // JS expects a single Pennsylvania polygon filling the tile.
-    let expected_geom =
-        serde_json::json!([[[-64, 4160], [-64, -64], [4160, -64], [4160, 4160], [-64, 4160]]]);
+    let expected_geom = serde_json::json!([[
+        [-64, 4160],
+        [-64, -64],
+        [4160, -64],
+        [4160, 4160],
+        [-64, 4160]
+    ]]);
     let expected_tags = serde_json::json!({"name": "Pennsylvania", "density": 284.3});
 
     assert_eq!(tile.features.len(), 1);
     assert_eq!(geom_type_num(&tile.features[0].geometry), 3);
     assert_eq!(geom_to_js_value(&tile.features[0].geometry), expected_geom);
-    assert_eq!(
-        props_to_tags(&tile.features[0].properties),
-        expected_tags
-    );
+    assert_eq!(props_to_tags(&tile.features[0].properties), expected_tags);
 }
 
 #[test]
@@ -212,7 +214,10 @@ fn test_us_states_tile_count() {
     // Rust skips empty tiles (those with 0 features/0 points after simplification).
     // Count only tiles with features for a meaningful comparison.
     let non_empty = index.tiles().filter(|t| !t.features.is_empty()).count();
-    assert_eq!(non_empty, 29, "Non-empty tiles after drill-down should match JS");
+    assert_eq!(
+        non_empty, 29,
+        "Non-empty tiles after drill-down should match JS"
+    );
 }
 
 // ── Unbuffered tile edge tests ───────────────────────────────────────
@@ -279,9 +284,7 @@ fn test_unbuffered_top_bottom_edges() {
 
     // JS: getTile(2, 1, 0).features === [{geometry: [[[0, 4096], [4096, 4096]]], type: 2, tags: null}]
     {
-        let tile = index
-            .get_tile(2, 1, 0)
-            .expect("z2/1/0 should exist");
+        let tile = index.get_tile(2, 1, 0).expect("z2/1/0 should exist");
         assert_eq!(tile.features.len(), 1);
         assert_eq!(geom_type_num(&tile.features[0].geometry), 2);
         assert_eq!(
@@ -331,14 +334,18 @@ fn test_polygon_clipping_on_boundary() {
     );
 
     // JS: getTile(5, 19, 9).features === [{geometry: [[[3072, 3072], ...]], type: 3, tags: null}]
-    let tile = index
-        .get_tile(5, 19, 9)
-        .expect("z5/19/9 should exist");
+    let tile = index.get_tile(5, 19, 9).expect("z5/19/9 should exist");
     assert_eq!(tile.features.len(), 1);
     assert_eq!(geom_type_num(&tile.features[0].geometry), 3);
     assert_eq!(
         geom_to_js_value(&tile.features[0].geometry),
-        serde_json::json!([[[3072, 3072], [5120, 3072], [5120, 5120], [3072, 5120], [3072, 3072]]])
+        serde_json::json!([[
+            [3072, 3072],
+            [5120, 3072],
+            [5120, 5120],
+            [3072, 5120],
+            [3072, 3072]
+        ]])
     );
     assert_eq!(
         props_to_tags(&tile.features[0].properties),

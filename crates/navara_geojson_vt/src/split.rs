@@ -88,8 +88,16 @@ pub fn split_tile(
         let y_max = y_min + 2.0 * tile_size;
 
         // Distribute features into 4 quadrants in a single pass
-        let [tl, bl, tr, br] =
-            clip_to_quadrants(&tile_features, x_min, x_mid, x_max, y_min, y_mid, y_max, buf);
+        let [tl, bl, tr, br] = clip_to_quadrants(
+            &tile_features,
+            x_min,
+            x_mid,
+            x_max,
+            y_min,
+            y_mid,
+            y_max,
+            buf,
+        );
 
         if !tl.is_empty() {
             stack.push((tl, z + 1, 2 * x, 2 * y));
@@ -200,7 +208,9 @@ mod tests {
             &mut tiles,
             &mut sources,
             &options,
-            0, 0, 0,
+            0,
+            0,
+            0,
             Some((3, 4, 3)),
         );
 
@@ -248,7 +258,9 @@ mod tests {
             &mut tiles,
             &mut sources,
             &options,
-            0, 0, 0,
+            0,
+            0,
+            0,
             Some((2, 2, 2)),
         );
 
@@ -266,9 +278,9 @@ mod tests {
                 "Non-ancestor z1/0/0 should retain source for future drill-down"
             );
             // And no z2 children should exist under it
-            let has_z2_child = tiles.values().any(|t| {
-                t.z == 2 && (t.x == 0 || t.x == 1) && (t.y == 0 || t.y == 1)
-            });
+            let has_z2_child = tiles
+                .values()
+                .any(|t| t.z == 2 && (t.x == 0 || t.x == 1) && (t.y == 0 || t.y == 1));
             assert!(
                 !has_z2_child,
                 "Non-ancestor branch should not produce z2 children"

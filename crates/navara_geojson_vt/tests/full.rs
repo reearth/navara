@@ -239,19 +239,31 @@ fn test_us_states_tiles() {
 fn test_empty_collection() {
     let geojson = load_geojson("empty.json");
     let index = GeoJsonVt::new(&geojson, gen_tiles_opts());
-    assert_eq!(index.tile_count(), 0, "Empty collection should produce 0 tiles");
+    assert_eq!(
+        index.tile_count(),
+        0,
+        "Empty collection should produce 0 tiles"
+    );
 }
 
 #[test]
 fn test_null_geometry() {
     let geojson = load_geojson("feature-null-geometry.json");
     let index = GeoJsonVt::new(&geojson, gen_tiles_opts());
-    assert_eq!(index.tile_count(), 0, "Null geometry should produce 0 tiles");
+    assert_eq!(
+        index.tile_count(),
+        0,
+        "Null geometry should produce 0 tiles"
+    );
 }
 
 #[test]
 fn test_empty_coords() {
     let geojson = load_geojson("empty-coords.json");
     let index = GeoJsonVt::new(&geojson, gen_tiles_opts());
-    assert_eq!(index.tile_count(), 0, "Empty coordinates should produce 0 tiles");
+    assert_eq!(
+        index.tile_count(),
+        0,
+        "Empty coordinates should produce 0 tiles"
+    );
 }
