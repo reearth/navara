@@ -240,6 +240,10 @@ fn add_line(
         *num_points += 1;
     }
 
+    if pts.is_empty() {
+        return;
+    }
+
     if is_polygon {
         rewind(&mut pts, is_outer);
     }
