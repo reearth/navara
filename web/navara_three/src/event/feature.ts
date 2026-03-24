@@ -338,7 +338,7 @@ export async function processRenderableFeatureChanged(
       if (obj.visible) {
         const layerIndex = layerHandler?.getLayerIndex(layerId);
         // Timing issue: `layerIndex` will be undefined if the layer is removed after this feature update event.
-        if (layerIndex) {
+        if (layerIndex != null) {
           texturizedSceneByTileCoordinates.add(
             tileHandle,
             layerId,

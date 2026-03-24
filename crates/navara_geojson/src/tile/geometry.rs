@@ -536,7 +536,7 @@ mod test {
 
         // Verify batch table has entries (properties are stored there)
         let batch_table = app.world().resource::<BatchTable>();
-        assert!(batch_table.is_empty());
+        assert!(!batch_table.is_empty());
     }
 
     #[test]

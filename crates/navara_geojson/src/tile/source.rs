@@ -42,11 +42,14 @@ impl VectorTileSource for GeoJsonTileSource {
         _data_requesters: &VectorTileDataRequesterQuery,
         _priority: Priority,
     ) -> bool {
-        let key = self.vt.key(
-            tile.coords.z as u32,
-            tile.coords.x as u32,
-            tile.coords.y as u32,
-        );
+        let key = self
+            .vt
+            .key(
+                tile.coords.z as u32,
+                tile.coords.x as u32,
+                tile.coords.y as u32,
+            )
+            .expect("The tile key is overflowed");
 
         // Check if already prepared
         if self.prepared.contains(&key) {

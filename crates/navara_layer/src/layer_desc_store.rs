@@ -7,6 +7,7 @@ use std::collections::HashMap;
 pub struct LayerDescStore {
     map: HashMap<String, LayerDescription>,
     order: HashMap<String, usize>,
+    next_index: usize,
 }
 
 impl LayerDescStore {
@@ -15,7 +16,8 @@ impl LayerDescStore {
     }
 
     pub fn add(&mut self, layer_id: String, desc: LayerDescription) {
-        let index = self.order.len();
+        let index = self.next_index;
+        self.next_index += 1;
         self.order.insert(layer_id.clone(), index);
         self.map.insert(layer_id, desc);
     }
