@@ -87,6 +87,7 @@ navara_feature_component = { path = "crates/navara_feature_component" }
 navara_fog = { path = "crates/navara_fog" }
 navara_frame = { path = "crates/navara_frame" }
 navara_geojson = { path = "crates/navara_geojson" }
+navara_geojson_vt = { path = "crates/navara_geojson_vt" }
 navara_geometry = { path = "crates/navara_geometry" }
 navara_glb = { path = "crates/navara_glb" }
 navara_globe = { path = "crates/navara_globe" }
@@ -104,6 +105,7 @@ navara_pnts = { path = "crates/navara_pnts" }
 navara_quadtree = { path = "crates/navara_quadtree" }
 navara_texture_fragment = { path = "crates/navara_texture_fragment" }
 navara_tile = { path = "crates/navara_tile" }
+navara_vector_tile = { path = "crates/navara_vector_tile" }
 navara_tile_component = { path = "crates/navara_tile_component" }
 navara_wasm = { path = "crates/navara_wasm" }
 navara_wasm_api = { path = "crates/navara_wasm_api" }

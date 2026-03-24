@@ -1,24 +1,3 @@
-use bevy_ecs::{
-    component::Component,
-    query::{Added, Changed, Or, Without},
-    system::Query,
-};
-use navara_component::Deleted;
-use navara_data_requester::DataRequester;
-use navara_tile_component::TileHandle;
-
-#[derive(Component)]
-pub struct MvtDataRequesterMarker(pub TileHandle);
-
-pub type MvtDataRequesterQuery<'world, 'state, 'a> =
-    Query<'world, 'state, (&'a MvtDataRequesterMarker, &'a DataRequester), Without<Deleted>>;
-
-pub type ChangedMvtDataRequesterQuery<'world, 'state, 'a> = Query<
-    'world,
-    'state,
-    (&'a MvtDataRequesterMarker, &'a DataRequester),
-    (
-        Or<(Added<DataRequester>, Changed<DataRequester>)>,
-        Without<Deleted>,
-    ),
->;
+// Re-export with backward-compatible aliases
+pub use navara_vector_tile::data_requester::VectorTileDataRequesterMarker as MvtDataRequesterMarker;
+pub use navara_vector_tile::data_requester::VectorTileDataRequesterQuery as MvtDataRequesterQuery;

@@ -17,8 +17,8 @@ pub type RemovedFeaturesByLayer = HashMap<String, Vec<Entity>>;
 
 #[derive(Component, Default)]
 pub struct RenderedTile {
-    pub(crate) tile_handle: TileHandle,
-    pub(crate) feature_ids: Option<Vec<Entity>>,
+    pub tile_handle: TileHandle,
+    pub feature_ids: Option<Vec<Entity>>,
 }
 
 impl RenderedTile {

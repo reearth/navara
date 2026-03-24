@@ -9,6 +9,7 @@ pub struct TileCacheManager {
     pub requested_tile_caches: FxHashMap<TileHandle, Entity>,
     pub last_rendered_frame: usize,
     pub is_updated_in_this_frame: bool,
+    pub needs_update: bool,
 }
 
 impl TileCacheManager {

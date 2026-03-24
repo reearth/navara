@@ -1,10 +1,8 @@
 use bevy_ecs::prelude::*;
-use navara_buffer_store::BufferStore;
-use navara_camera::CameraFrustum;
 use navara_component::{OrderByDistance, Priority};
 use navara_core::Ellipsoid;
 
-use navara_data_requester::DataRequesterStatus;
+use navara_buffer_store::BufferStore;
 use navara_feature_component::{id::FeatureId, render::RenderableFeature};
 use navara_fog::Fog;
 use navara_frame::FrameManager;
@@ -20,10 +18,8 @@ use navara_tile_component::{
 use navara_window::Window;
 
 use crate::{
-    SourceId,
-    component::MVTFeatureMarker,
-    data_requester::{MvtDataRequesterQuery, request_mvt_data},
-    layer::tile_cache_manager::TileCacheManager,
+    component::VectorTileFeatureMarker, data_requester::VectorTileDataRequesterQuery,
+    layer::tile_cache_manager::TileCacheManager, source::ReadyState, source_cache::SourceId,
 };
 
 use super::render::RenderedTile;
@@ -38,6 +34,7 @@ use super::render::RenderedTile;
 // 7. If children couldn't be rendered completely, use this tile instead.
 // 8. If all children is rendered, use children.
 // 9. If the tile is overscaled, it's leaf is marked just in quadtree, but it isn't actually rendered. It reuses a parent tile.
+
 #[allow(clippy::too_many_arguments)]
 pub fn traverse_tile(
     command: &mut Commands,
@@ -45,16 +42,15 @@ pub fn traverse_tile(
     handle: TileHandle,
     qt: &mut VectorTileQuadtree,
     tc: &mut TileCacheManager,
-    buf: &mut BufferStore,
     frame: &FrameManager,
     camera: &Transform,
-    frustum: &CameraFrustum,
+    frustum: &navara_camera::CameraFrustum,
     window: &Window,
     ellipsoid: &Ellipsoid<FloatType>,
     occluder: &EllipsoidalOccluder,
-    mvt_data_requester: &MvtDataRequesterQuery,
+    data_requesters: &VectorTileDataRequesterQuery,
     rendered_tiles: &Query<&RenderedTile>,
-    features: &Query<&FeatureId, With<MVTFeatureMarker>>,
+    features: &Query<&FeatureId, With<VectorTileFeatureMarker>>,
     renderable_features: &mut Query<&mut RenderableFeature>,
     fog: &Fog,
     // This is used to keep rendering current children when parent tile isn't ready after you zoomed out.
@@ -63,12 +59,14 @@ pub fn traverse_tile(
     terrain_qt: &TerrainInformationQuadtree,
     ready_parent_tile_handle: Option<TileHandle>,
     globe: &Globe,
+    source: &mut dyn crate::source::VectorTileSource,
+    buf: &mut BufferStore,
 ) -> TraversalResult {
     let tile = qt.qt.get_mut(handle).unwrap();
     tile.ready_parent_tile_handle = ready_parent_tile_handle;
     tile.is_rendered = false;
 
-    let traversal_config = &source_id.traversal_config;
+    let traversal_config = source_id.traversal_config();
 
     // Clamped to ground polygon need to be overscaled, since it is rendered as texture.
     let is_texturized = traversal_config.has_clamp_to_ground;
@@ -87,7 +85,7 @@ pub fn traverse_tile(
         },
         Some,
     );
-    begine_traverse_tile(ellipsoid, occluder, camera, tile, terrain_info);
+    begin_traverse_tile(ellipsoid, occluder, camera, tile, terrain_info);
 
     let is_culled_by_frustum = !tile.intersect_with_camera_frustum(frustum);
     if is_culled_by_frustum {
@@ -110,14 +108,9 @@ pub fn traverse_tile(
         return TraversalResult::NotFound;
     }
 
-    let data_requester = tile
-        .data_requester_entity_id
-        .and_then(|e| mvt_data_requester.get(e).ok());
-    let is_tile_ready =
-        data_requester.is_some_and(|(_, data_requester)| tile.is_ready(&data_requester.status));
-    let is_tile_failed = data_requester.is_some_and(|(_, data_requester)| {
-        matches!(data_requester.status, DataRequesterStatus::Fail)
-    });
+    let ready_state = source.ready_state(tile, data_requesters);
+    let is_tile_ready = matches!(ready_state, ReadyState::Success);
+    let is_tile_failed = matches!(ready_state, ReadyState::Failed);
 
     let is_rendered_last_frame = tc.rendered_tile_caches.contains_key(&handle);
 
@@ -179,14 +172,14 @@ pub fn traverse_tile(
         }
 
         if !meets_sse_ancestors {
-            prepare_tile_resource(
+            let tile = qt.qt.get_mut(handle).unwrap();
+            source.prepare_tile(
                 command,
                 tile,
-                buf,
-                &source_id.url,
                 handle,
                 tc,
-                mvt_data_requester,
+                buf,
+                data_requesters,
                 Priority::Low,
             );
         }
@@ -240,14 +233,13 @@ pub fn traverse_tile(
                 *child,
                 qt,
                 tc,
-                buf,
                 frame,
                 camera,
                 frustum,
                 window,
                 ellipsoid,
                 occluder,
-                mvt_data_requester,
+                data_requesters,
                 rendered_tiles,
                 features,
                 renderable_features,
@@ -257,6 +249,8 @@ pub fn traverse_tile(
                 terrain_qt,
                 ready_parent_tile_handle,
                 globe,
+                source,
+                buf,
             );
 
             if matches!(traversal_result, TraversalResult::NotFound) {
@@ -393,6 +387,8 @@ pub fn traverse_tile(
 
                 // To avoid committing unnecessary events, invoke `activate` only when `is_active` is true.
                 if are_active.is_some_and(|v| v != are_all_children_mesh_prepared) {
+                    // Re-run this traverse if `active` is updated, because the child tiles are updated depending on the parent state.
+                    tc.needs_update = true;
                     activate_all_renderable_features(
                         tc,
                         child,
@@ -422,6 +418,10 @@ pub fn traverse_tile(
         }
     }
 
+    if is_overscaled {
+        return TraversalResult::Overscaled;
+    }
+
     if is_tile_failed {
         return TraversalResult::Failed;
     }
@@ -433,14 +433,13 @@ pub fn traverse_tile(
         }
 
         let tile = qt.qt.get_mut(handle).unwrap();
-        prepare_tile_resource(
+        source.prepare_tile(
             command,
             tile,
-            buf,
-            &source_id.url,
             handle,
             tc,
-            mvt_data_requester,
+            buf,
+            data_requesters,
             Priority::Medium,
         );
 
@@ -475,7 +474,7 @@ pub fn get_renderable_feature<'a>(
     tc: &TileCacheManager,
     handle: &TileHandle,
     rendered_tiles: &Query<&RenderedTile>,
-    features: &Query<&FeatureId, With<MVTFeatureMarker>>,
+    features: &Query<&FeatureId, With<VectorTileFeatureMarker>>,
     renderable_features: &'a mut Query<&mut RenderableFeature>,
 ) -> Option<Vec<&'a RenderableFeature>> {
     tc.rendered_tile_caches
@@ -499,7 +498,7 @@ pub fn activate_all_renderable_features(
     tc: &TileCacheManager,
     handle: &TileHandle,
     rendered_tiles: &Query<&RenderedTile>,
-    features: &Query<&FeatureId, With<MVTFeatureMarker>>,
+    features: &Query<&FeatureId, With<VectorTileFeatureMarker>>,
     renderable_features: &mut Query<&mut RenderableFeature>,
     active: bool,
 ) {
@@ -527,7 +526,7 @@ pub fn are_all_renderable_features_active(
     tc: &TileCacheManager,
     handle: &TileHandle,
     rendered_tiles: &Query<&RenderedTile>,
-    features: &Query<&FeatureId, With<MVTFeatureMarker>>,
+    features: &Query<&FeatureId, With<VectorTileFeatureMarker>>,
     renderable_features: &mut Query<&mut RenderableFeature>,
 ) -> Option<bool> {
     tc.rendered_tile_caches
@@ -574,30 +573,7 @@ pub fn spawn_tile_entity(
     tc.rendered_tile_caches.insert(tile_handle, e.id());
 }
 
-/// Prepare some resource that is necessary to render the tile.
-/// This returns whether the resource is requested or not.
-#[allow(clippy::too_many_arguments)]
-pub fn prepare_tile_resource(
-    commands: &mut Commands,
-    tile: &mut VectorTile,
-    buf: &mut BufferStore,
-    url: &str,
-    handle: TileHandle,
-    tc: &mut TileCacheManager,
-    data_requesters: &MvtDataRequesterQuery,
-    priority: Priority,
-) -> bool {
-    let requested_mvt =
-        request_mvt_data(commands, tile, buf, url, handle, data_requesters, priority);
-
-    if let Some(e) = requested_mvt {
-        tc.requested_tile_caches.insert(handle, e);
-    }
-
-    requested_mvt.is_some()
-}
-
-fn begine_traverse_tile(
+fn begin_traverse_tile(
     ellipsoid: &Ellipsoid<FloatType>,
     occluder: &EllipsoidalOccluder,
     _camera: &Transform,
@@ -609,7 +585,7 @@ fn begine_traverse_tile(
     tile.update_tile_occludee_point(ellipsoid, occluder);
 }
 
-pub(super) enum TraversalResult {
+pub enum TraversalResult {
     TileRendered,
     ChildrenRendered,
     ChildrenMeshPrepared,

@@ -7,32 +7,32 @@ use navara_component::{Deleted, Ignored, OrderByDistance, Priority, Requested};
 use navara_data_requester::DataRequester;
 use navara_tile_component::VectorTileQuadtree;
 
-use crate::{MvtSourceResources, layer::tile_cache_manager::TileCacheManager};
+use crate::{VectorTileSourceResources, layer::tile_cache_manager::TileCacheManager};
 
-use super::MvtDataRequesterMarker;
+use super::VectorTileDataRequesterMarker;
 
 const MAX_PENDINGS: u32 = 10;
 
 #[allow(clippy::type_complexity)]
-pub(crate) fn filter_requestable_data_requester(
+pub fn filter_requestable_data_requester(
     mut commands: Commands,
-    layers: Query<&MvtSourceResources>,
+    layers: Query<&VectorTileSourceResources>,
     mut qts: Query<&mut VectorTileQuadtree>,
     mut tcs: Query<&mut TileCacheManager>,
     data_requesters: Query<
         (
             Entity,
-            &MvtDataRequesterMarker,
+            &VectorTileDataRequesterMarker,
             &DataRequester,
             &OrderByDistance,
             &Priority,
         ),
-        (Added<MvtDataRequesterMarker>, Without<Deleted>),
+        (Added<VectorTileDataRequesterMarker>, Without<Deleted>),
     >,
     requested_data_requesters: Query<
         Entity,
         (
-            With<MvtDataRequesterMarker>,
+            With<VectorTileDataRequesterMarker>,
             With<DataRequester>,
             With<Requested>,
             Without<Deleted>,
@@ -42,7 +42,6 @@ pub(crate) fn filter_requestable_data_requester(
     let pendings = requested_data_requesters.iter().count();
     let num_skip = (MAX_PENDINGS as i32 - pendings as i32).max(0);
 
-    // Limit the number of requests in this frame
     for (e, marker, _, _, _) in data_requesters
         .iter()
         .sort::<(&Priority, &OrderByDistance)>()
@@ -57,7 +56,6 @@ pub(crate) fn filter_requestable_data_requester(
                 continue;
             };
 
-            // Check if this layer has same data requester.
             if tc.requested_tile_caches.get(&handle) != Some(&e) {
                 continue;
             }

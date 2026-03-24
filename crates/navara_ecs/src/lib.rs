@@ -22,10 +22,10 @@ use navara_feature_component::{
 };
 use navara_frame::FrameManager;
 use navara_globe::Globe;
-use navara_layer::{LayerDescStore, LayerDescription, LayerId, MvtLayer};
+use navara_layer::{LayerDescStore, LayerDescription, LayerId};
 use navara_material::{PolygonMaterial, PolylineMaterial};
 use navara_math::{FloatType, Transform, Vec3};
-use navara_mvt::MvtLayerResources;
+use navara_vector_tile::LayerResources;
 use navara_texture_fragment::{TextureFragmentLoadedEvent, TextureFragmentStatus};
 use navara_tile_component::{
     MartiniComponent, RasterTile, RasterTileQuadtree, TerrainHeightObserver, TileHandle,
@@ -446,21 +446,20 @@ impl App {
         tile.get_parent_tile(qt)
     }
 
-    // TODO: Support other type of vector tile.
     pub fn get_vector_tiles(&mut self, handle: TileHandle) -> Vec<(String, &VectorTile)> {
         let world = self.app.world_mut();
-        let mut layers = world.query::<(&MvtLayer, &MvtLayerResources)>();
+        let mut layers = world.query::<&LayerResources>();
         let mut qts = world.query::<&VectorTileQuadtree>();
 
         let mut result = vec![];
-        for (layer, resource) in layers.iter(world) {
+        for resource in layers.iter(world) {
             let Ok(qt) = qts.get(world, resource.quadtree) else {
                 continue;
             };
             let Some(tile) = qt.qt.get(handle) else {
                 continue;
             };
-            result.push((layer.layer_id.clone(), tile));
+            result.push((resource.layer_id.clone(), tile));
         }
 
         result

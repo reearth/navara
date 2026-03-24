@@ -1,36 +1,27 @@
 [package]
-name = "navara_mvt"
+name = "navara_vector_tile"
 version = "0.1.0"
 edition.workspace = true
 license.workspace = true
 
 [dependencies]
-geozero.workspace = true
-prost.workspace = true
 bevy_app.workspace = true
 bevy_ecs.workspace = true
 bevy_log.workspace = true
-geo-types.workspace = true
 rustc-hash.workspace = true
 serde_json.workspace = true
 navara_core.workspace = true
-navara_material.workspace = true
 navara_math.workspace = true
-navara_parser.workspace = true
-navara_feature_component.workspace = true
 navara_buffer_store.workspace = true
 navara_data_requester.workspace = true
-navara_event_store.workspace = true
-navara_geometry.workspace = true
-navara_layer.workspace = true
+navara_feature_component.workspace = true
 navara_component.workspace = true
 navara_tile_component.workspace = true
-navara_quadtree.workspace = true
 navara_camera.workspace = true
 navara_window.workspace = true
 navara_occluder.workspace = true
 navara_frame.workspace = true
-navara_worker.workspace = true
 navara_fog.workspace = true
 navara_globe.workspace = true
-navara_vector_tile.workspace = true
+navara_layer.workspace = true
+navara_material.workspace = true
