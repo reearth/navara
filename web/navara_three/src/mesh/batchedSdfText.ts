@@ -154,9 +154,15 @@ export class BatchedSdfTextMesh
       (needFontUpdate || text) &&
       !this._fontManager.isTextPrepared(this._fontUrl, text)
     ) {
-      this._fontManager.prepareText(this._fontUrl, text).then(() => {
-        this._applyUpdate(material, needRender, needFontUpdate);
-      });
+      this._fontManager
+        .prepareText(this._fontUrl, text)
+        .then(() => {
+          this._applyUpdate(material, needRender, needFontUpdate);
+        })
+        .catch((err: unknown) => {
+          console.error("Failed to prepare text:", err);
+          needRender?.();
+        });
       return;
     }
 
@@ -254,16 +260,22 @@ export class BatchedSdfTextMesh
       mesh.setFont(this._fontUrl);
       // If the text hasn't been prepared in the worker yet, schedule async preparation
       if (text && !this._fontManager.isTextPrepared(this._fontUrl, text)) {
-        this._fontManager.prepareText(this._fontUrl, text).then(() => {
-          // Refresh the shared atlas texture if the worker rasterized new glyphs
-          const sharedTex = this._fontManager.getAtlasTexture(this._fontUrl);
-          if (sharedTex) {
-            mesh.setAtlasTexture(sharedTex);
-          }
-          mesh.setText(text);
-          this.markVisibility(mesh);
-          this._needRender?.();
-        });
+        this._fontManager
+          .prepareText(this._fontUrl, text)
+          .then(() => {
+            // Refresh the shared atlas texture if the worker rasterized new glyphs
+            const sharedTex = this._fontManager.getAtlasTexture(this._fontUrl);
+            if (sharedTex) {
+              mesh.setAtlasTexture(sharedTex);
+            }
+            mesh.setText(text);
+            this.markVisibility(mesh);
+            this._needRender?.();
+          })
+          .catch((err: unknown) => {
+            console.error("Failed to prepare text:", err);
+            this._needRender?.();
+          });
         return;
       }
       mesh.setText(text);
@@ -295,6 +307,8 @@ export class BatchedSdfTextMesh
   }
 
   dispose() {
-    this._fontManager.unloadFont(this._fontUrl);
+    void this._fontManager.unloadFont(this._fontUrl).catch((err: unknown) => {
+      console.error("Failed to unload font during dispose:", err);
+    });
   }
 }
