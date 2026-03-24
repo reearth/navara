@@ -391,7 +391,8 @@ pub fn traverse_tile(
                     continue;
                 }
 
-                let needs_activation_update = activation_state.is_some_and(|state| state.all_active != are_all_children_mesh_prepared);
+                let needs_activation_update = activation_state
+                    .is_some_and(|state| state.all_active != are_all_children_mesh_prepared);
 
                 if needs_activation_update {
                     activate_all_renderable_features(
@@ -573,28 +574,20 @@ fn get_renderable_feature_states(
     features: &Query<&FeatureId, With<MVTFeatureMarker>>,
     renderable_features: &mut Query<&mut RenderableFeature>,
 ) -> Option<Vec<RenderableFeatureState>> {
-    tc.rendered_tile_caches
-        .get(handle)
-        .and_then(|e| rendered_tiles.get(*e).ok())
-        .and_then(|v| v.feature_ids.as_ref())
-        .and_then(|es| {
-            es.iter()
-                .map(|e| features.get(*e).ok())
-                .collect::<Option<Vec<_>>>()
-        })
-        .and_then(|fs| fs.iter().map(|f| f.0).collect::<Option<Vec<_>>>())
-        .and_then(|ids| {
-            ids.into_iter()
-                .map(|id| {
-                    renderable_features
-                        .get(id)
-                        .ok()
-                        .map(|feature| RenderableFeatureState {
-                            active: feature.is_active(),
-                        })
-                })
-                .collect::<Option<Vec<_>>>()
-        })
+    let rendered_tile_entity = tc.rendered_tile_caches.get(handle)?;
+    let rendered_tile = rendered_tiles.get(*rendered_tile_entity).ok()?;
+    let tile_feature_ids = rendered_tile.feature_ids.as_ref()?;
+
+    let mut states = Vec::with_capacity(tile_feature_ids.len());
+
+    for feature_id in tile_feature_ids {
+        let feature = features.get(*feature_id).ok()?;
+        let renderable_feature = renderable_features.get(feature.0?).ok()?;
+        states.push(RenderableFeatureState {
+            active: renderable_feature.is_active(),
+        });
+    }
+    Some(states)
 }
 
 pub fn are_all_features_rendered(renderable_features: Option<Vec<&RenderableFeature>>) -> bool {
