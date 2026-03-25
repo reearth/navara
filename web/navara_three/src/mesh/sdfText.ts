@@ -97,7 +97,7 @@ export class SDFTextMesh
         center: material.center
           ? [material.center.x, material.center.y]
           : undefined,
-        scaleByDistance: material.scaleByDistance ?? false,
+        sizeInMeters: material.sizeInMeters ?? false,
         addHeight: material.height ?? 0.0,
         offsetDepth: material.offsetDepth ?? true,
         outlineWidth: material.outlineWidth ?? 0,
@@ -219,8 +219,8 @@ export class SDFTextMesh
     this._enhancer.update({ base: { fontSize: sizePx } });
   }
 
-  setScaleByDistance(enabled: boolean): void {
-    this._enhancer.update({ base: { scaleByDistance: enabled } });
+  setSizeInMeters(enabled: boolean): void {
+    this._enhancer.update({ base: { sizeInMeters: enabled } });
   }
 
   setCenter(x: number, y: number): void {
@@ -285,9 +285,9 @@ export class SDFTextMesh
       hasUpdate = true;
     }
 
-    const nextScaleByDistance = material.scaleByDistance ?? false;
-    if (nextScaleByDistance !== state.scaleByDistance) {
-      baseProps.scaleByDistance = nextScaleByDistance;
+    const nextSizeInMeters = material.sizeInMeters ?? false;
+    if (nextSizeInMeters !== state.sizeInMeters) {
+      baseProps.sizeInMeters = nextSizeInMeters;
       hasUpdate = true;
     }
 

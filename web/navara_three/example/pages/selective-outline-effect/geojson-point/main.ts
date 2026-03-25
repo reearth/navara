@@ -66,7 +66,7 @@ const run = async () => {
     data: odaibaPoints,
     point: {
       size: 100,
-      scaleByDistance: true,
+      sizeInMeters: true,
       clampToGround: true,
       color: new Color().setHex(0x0066ff),
       center: { x: 0, y: -0.5 },

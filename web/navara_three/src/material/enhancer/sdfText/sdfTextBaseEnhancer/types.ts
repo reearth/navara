@@ -17,7 +17,7 @@ export type SdfTextBaseProps = {
   color?: number; // hex color
   fontSize?: number;
   center?: [number, number];
-  scaleByDistance?: boolean;
+  sizeInMeters?: boolean;
   addHeight?: number;
   offsetDepth?: boolean;
   outlineWidth?: number; // raw width, converted in state via SDF_RADIUS
@@ -48,7 +48,7 @@ export type SdfTextBaseState = Readonly<{
   color: Color;
   fontSize: number;
   center: [number, number];
-  scaleByDistance: boolean;
+  sizeInMeters: boolean;
   addHeight: number;
   offsetDepth: boolean;
   outlineWidth: number; // pre-converted: raw / SDF_RADIUS
@@ -73,7 +73,7 @@ export type SdfTextBaseRefs = {
   uColor: UniformValue<Color>;
   uFontSizePx: UniformValue<number>;
   uCenter: UniformValue<Vector2>;
-  uScaleByDistance: UniformValue<boolean>;
+  uSizeInMeters: UniformValue<boolean>;
   uAddHeight: UniformValue<number>;
   uOffsetDepth: UniformValue<boolean>;
   uSdfThreshold: UniformValue<number>;

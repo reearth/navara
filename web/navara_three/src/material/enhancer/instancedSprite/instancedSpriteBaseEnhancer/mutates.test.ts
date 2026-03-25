@@ -21,7 +21,7 @@ describe("instancedSpriteBaseEnhancer/mutates", () => {
         ...DEFAULT_BASE_STATE,
         scale: 50,
         center: [0.5, 0.5],
-        scaleByDistance: false,
+        sizeInMeters: false,
         offsetDepth: false,
         alphaTest: 0.3,
         pickable: true,
@@ -36,7 +36,7 @@ describe("instancedSpriteBaseEnhancer/mutates", () => {
       expect(uniforms.uScale?.value).toBe(50);
       expect(uniforms.uCenter?.value.x).toBe(0.5);
       expect(uniforms.uCenter?.value.y).toBe(0.5);
-      expect(uniforms.uScaleByDistance?.value).toBe(false);
+      expect(uniforms.uSizeInMeters?.value).toBe(false);
       expect(uniforms.uOffsetDepth?.value).toBe(false);
       expect(uniforms.uAlphaTest?.value).toBe(0.3);
       expect(uniforms.nvr_uPickable?.value).toBe(1.0);

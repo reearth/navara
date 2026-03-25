@@ -26,7 +26,7 @@ export const createBaseMutates = (
     uColor: { value: new Color(1, 1, 1) },
     uFontSizePx: { value: 16.0 },
     uCenter: { value: new Vector2(0.5, 0.0) },
-    uScaleByDistance: { value: false },
+    uSizeInMeters: { value: false },
     uAddHeight: { value: 0.0 },
     uOffsetDepth: { value: true },
     uSdfThreshold: { value: 0.5 },
@@ -70,7 +70,7 @@ export const createBaseMutates = (
       refs.uColor.value.set(state.color);
       refs.uFontSizePx.value = state.fontSize;
       refs.uCenter.value.set(state.center[0], state.center[1]);
-      refs.uScaleByDistance.value = state.scaleByDistance;
+      refs.uSizeInMeters.value = state.sizeInMeters;
       refs.uAddHeight.value = state.addHeight;
       refs.uOffsetDepth.value = state.offsetDepth;
       refs.uOutlineWidth.value = state.outlineWidth;
@@ -87,7 +87,7 @@ export const createBaseMutates = (
       uniforms.uColor = refs.uColor;
       uniforms.uFontSizePx = refs.uFontSizePx;
       uniforms.uCenter = refs.uCenter;
-      uniforms.uScaleByDistance = refs.uScaleByDistance;
+      uniforms.uSizeInMeters = refs.uSizeInMeters;
       uniforms.uAddHeight = refs.uAddHeight;
       uniforms.uOffsetDepth = refs.uOffsetDepth;
       uniforms.uSdfThreshold = refs.uSdfThreshold;

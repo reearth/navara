@@ -22,7 +22,7 @@ describe("sdfTextBaseEnhancer/mutates", () => {
         color: new Color(0xff0000),
         fontSize: 24,
         center: [0.5, 0.5],
-        scaleByDistance: true,
+        sizeInMeters: true,
         addHeight: 50,
         offsetDepth: false,
         outlineWidth: 0.1,
@@ -44,7 +44,7 @@ describe("sdfTextBaseEnhancer/mutates", () => {
       expect(uniforms.uFontSizePx?.value).toBe(24);
       expect(uniforms.uCenter?.value.x).toBe(0.5);
       expect(uniforms.uCenter?.value.y).toBe(0.5);
-      expect(uniforms.uScaleByDistance?.value).toBe(true);
+      expect(uniforms.uSizeInMeters?.value).toBe(true);
       expect(uniforms.uAddHeight?.value).toBe(50);
       expect(uniforms.uOffsetDepth?.value).toBe(false);
       expect(uniforms.uOutlineWidth?.value).toBe(0.1);
