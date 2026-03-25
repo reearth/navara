@@ -557,7 +557,7 @@ fn get_renderable_feature_activation_state(
     tc: &TileCacheManager,
     handle: &TileHandle,
     rendered_tiles: &Query<&RenderedTile>,
-    features: &Query<&FeatureId, With<MVTFeatureMarker>>,
+    features: &Query<&FeatureId, With<VectorTileFeatureMarker>>,
     renderable_features: &mut Query<&mut RenderableFeature>,
 ) -> Option<RenderableFeatureActivationState> {
     let rendered_tile_entity = tc.rendered_tile_caches.get(handle)?;
