@@ -199,8 +199,9 @@ impl GeoJsonVt {
             z0 -= 1;
             x0 >>= 1;
             y0 >>= 1;
-            let ancestor_key = tile_key(x0, y0, z0);
-            if let Some(ancestor_tile) = self.tiles.get(&ancestor_key) {
+            if let Some(ancestor_key) = self.key(x0, y0, z0)
+                && let Some(ancestor_tile) = self.tiles.get(&ancestor_key)
+            {
                 if self.intersect_with_ancestor(ancestor_tile, z, x, y) {
                     return PredictState::Intersected;
                 }
