@@ -44,8 +44,8 @@ export const createBaseMutates = (
     uFarPlane: { value: 0.0 },
     uAspect: { value: 1.0 },
     nvr_uPickable: { value: 0.0 },
-    uFov: { value: 1.0 },
-    uScreenHeight: { value: 1080 },
+    uFovRad: { value: 1.0 },
+    uScreenHeightPx: { value: 1080 },
   };
 
   // Conditionally create texture ref for billboard mode
@@ -61,8 +61,8 @@ export const createBaseMutates = (
       refs.uOffsetDepth.value = state.offsetDepth;
       refs.uAlphaTest.value = state.alphaTest;
       refs.uAspect.value = state.aspect;
-      refs.uFov.value = state.fov;
-      refs.uScreenHeight.value = state.screenHeight;
+      refs.uFovRad.value = state.fovRad;
+      refs.uScreenHeightPx.value = state.screenHeightPx;
       refs.nvr_uPickable.value = state.pickable ? 1.0 : 0.0;
     },
 
@@ -77,8 +77,8 @@ export const createBaseMutates = (
       uniforms.uAlphaTest = refs.uAlphaTest;
       uniforms.uFarPlane = refs.uFarPlane;
       uniforms.uAspect = refs.uAspect;
-      uniforms.uFov = refs.uFov;
-      uniforms.uScreenHeight = refs.uScreenHeight;
+      uniforms.uFovRad = refs.uFovRad;
+      uniforms.uScreenHeightPx = refs.uScreenHeightPx;
       uniforms.nvr_uPickable = refs.nvr_uPickable;
 
       if (refs.uTexture) {
@@ -107,11 +107,11 @@ export const createBaseMutates = (
     },
 
     updateFov: (fov: number) => {
-      refs.uFov.value = fov;
+      refs.uFovRad.value = fov;
     },
 
     updateScreenHeight: (height: number) => {
-      refs.uScreenHeight.value = height;
+      refs.uScreenHeightPx.value = height;
     },
 
     setTexture: (texture: UniformValue<DataArrayTexture | null>) => {

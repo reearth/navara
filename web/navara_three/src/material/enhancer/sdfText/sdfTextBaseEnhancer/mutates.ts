@@ -37,7 +37,7 @@ export const createBaseMutates = (
     uBackgroundColor: { value: new Color(1, 0, 0) },
     uBackgroundOutlineColor: { value: new Color(1, 0, 0) },
     uBackgroundOutlineWidth: { value: 0.1 },
-    uFov: { value: 1.0 },
+    uFovRad: { value: 1.0 },
     uScreenHeightPx: { value: 1080.0 },
     uFarPlane: { value: 1000.0 },
     uTextWidth: { value: 0.0 },
@@ -98,7 +98,7 @@ export const createBaseMutates = (
       uniforms.uBackgroundColor = refs.uBackgroundColor;
       uniforms.uBackgroundOutlineColor = refs.uBackgroundOutlineColor;
       uniforms.uBackgroundOutlineWidth = refs.uBackgroundOutlineWidth;
-      uniforms.uFov = refs.uFov;
+      uniforms.uFovRad = refs.uFovRad;
       uniforms.uScreenHeightPx = refs.uScreenHeightPx;
       uniforms.uFarPlane = refs.uFarPlane;
       uniforms.uTextWidth = refs.uTextWidth;
@@ -123,16 +123,16 @@ export const createBaseMutates = (
     },
 
     updatePerFrame: (
-      fov: number,
-      screenHeight: number,
+      fovRad: number,
+      screenHeightPx: number,
       farPlane: number,
       cameraX: number,
       cameraY: number,
       cameraZ: number,
       state: SdfTextBaseState,
     ) => {
-      refs.uFov.value = fov;
-      refs.uScreenHeightPx.value = screenHeight;
+      refs.uFovRad.value = fovRad;
+      refs.uScreenHeightPx.value = screenHeightPx;
       refs.uFarPlane.value = farPlane;
 
       if (state.useRTE) {

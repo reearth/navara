@@ -138,7 +138,7 @@ describe("sdfTextBaseEnhancer/mutates", () => {
       const uniforms: ShaderUniforms = {};
       mutates.updateUniforms(uniforms, state);
 
-      expect(uniforms.uFov?.value).toBe(1.5);
+      expect(uniforms.uFovRad?.value).toBe(1.5);
       expect(uniforms.uScreenHeightPx?.value).toBe(1080);
       expect(uniforms.uFarPlane?.value).toBe(10000);
     });

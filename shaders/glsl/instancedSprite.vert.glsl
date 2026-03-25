@@ -26,8 +26,8 @@ uniform float uScale;
 uniform bool uSizeInMeters;
 uniform vec2 uCenter;
 uniform float uAspect; // Aspect ratio of the billboard texture
-uniform float uFov;
-uniform float uScreenHeight;
+uniform float uFovRad;
+uniform float uScreenHeightPx;
 
 varying vec2 vUv;
 varying vec3 vColor;
@@ -78,7 +78,7 @@ void main() {
     float clampedScale = max(0.0, uScale); // Prevent negative scaling
     // This makes it always face the camera
     if (!uSizeInMeters) {
-        clampedScale = nvr_pxToWorld(clampedScale, uFov, uScreenHeight, absTransformed, cameraPosition);
+        clampedScale = nvr_pxToWorld(clampedScale, uFovRad, uScreenHeightPx, absTransformed, cameraPosition);
         mvPosition.xy += (((position.xy - center)) * vec2(uAspect, 1.0) * clampedScale);
     } else {
         mvPosition.xy += (((position.xy - center)) * vec2(uAspect, 1.0) * clampedScale);

@@ -84,7 +84,7 @@ export type SdfTextBaseRefs = {
   uBackgroundColor: UniformValue<Color>;
   uBackgroundOutlineColor: UniformValue<Color>;
   uBackgroundOutlineWidth: UniformValue<number>;
-  uFov: UniformValue<number>;
+  uFovRad: UniformValue<number>;
   uScreenHeightPx: UniformValue<number>;
   uFarPlane: UniformValue<number>;
   uTextWidth: UniformValue<number>;
@@ -116,8 +116,8 @@ export type SdfTextBaseMutates = Mutates<
      * Update per-frame camera uniforms (FOV, screen height, far plane, RTE eye).
      */
     updatePerFrame: (
-      fov: number,
-      screenHeight: number,
+      fovRad: number,
+      screenHeightPx: number,
       farPlane: number,
       cameraX: number,
       cameraY: number,

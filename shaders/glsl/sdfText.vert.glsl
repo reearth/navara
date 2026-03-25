@@ -20,7 +20,7 @@ attribute vec4 glyphUvRect;  // Atlas UV sub-rect: (u0, v0, u1, v1)
 
 uniform float uFontSize;
 uniform bool uSizeInMeters;
-uniform float uFov;
+uniform float uFovRad;
 uniform float uScreenHeightPx;
 uniform float uTextWidth;
 uniform float uTextHeight;
@@ -69,7 +69,7 @@ void main() {
     // Normalized text height is 1.0, so no fontSizeWorld division is needed.
     float scaleFactor = uFontSize;
     if (!uSizeInMeters) {
-        scaleFactor = nvr_pxToWorld(uFontSize, uFov, uScreenHeightPx, absTransformed, cameraPosition);
+        scaleFactor = nvr_pxToWorld(uFontSize, uFovRad, uScreenHeightPx, absTransformed, cameraPosition);
     }
 
     vec2 center = clamp(uCenter, vec2(-0.5), vec2(0.5)); // Ensure center is within the bounds of the sprite

@@ -174,7 +174,7 @@ describe("instancedSpriteBaseEnhancer/mutates", () => {
   });
 
   describe("updateFov", () => {
-    it("should update uFov value", () => {
+    it("should update uFovRad value", () => {
       const state: InstancedSpriteBaseState = { ...DEFAULT_BASE_STATE };
       const mutates = createBaseMutates(false, false);
       mutates.update(state);
@@ -184,7 +184,7 @@ describe("instancedSpriteBaseEnhancer/mutates", () => {
       const uniforms: ShaderUniforms = {};
       mutates.updateUniforms(uniforms, state);
 
-      expect(uniforms.uFov?.value).toBe(75);
+      expect(uniforms.uFovRad?.value).toBe(75);
     });
 
     it("should not replace the uniform ref", () => {
@@ -194,17 +194,17 @@ describe("instancedSpriteBaseEnhancer/mutates", () => {
 
       const uniforms: ShaderUniforms = {};
       mutates.updateUniforms(uniforms, state);
-      const initialRef = uniforms.uFov;
+      const initialRef = uniforms.uFovRad;
 
       mutates.updateFov(90);
 
-      expect(uniforms.uFov).toBe(initialRef);
-      expect(uniforms.uFov?.value).toBe(90);
+      expect(uniforms.uFovRad).toBe(initialRef);
+      expect(uniforms.uFovRad?.value).toBe(90);
     });
   });
 
   describe("updateScreenHeight", () => {
-    it("should update uScreenHeight value", () => {
+    it("should update uScreenHeightPx value", () => {
       const state: InstancedSpriteBaseState = { ...DEFAULT_BASE_STATE };
       const mutates = createBaseMutates(false, false);
       mutates.update(state);
@@ -214,7 +214,7 @@ describe("instancedSpriteBaseEnhancer/mutates", () => {
       const uniforms: ShaderUniforms = {};
       mutates.updateUniforms(uniforms, state);
 
-      expect(uniforms.uScreenHeight?.value).toBe(720);
+      expect(uniforms.uScreenHeightPx?.value).toBe(720);
     });
 
     it("should not replace the uniform ref", () => {
@@ -224,12 +224,12 @@ describe("instancedSpriteBaseEnhancer/mutates", () => {
 
       const uniforms: ShaderUniforms = {};
       mutates.updateUniforms(uniforms, state);
-      const initialRef = uniforms.uScreenHeight;
+      const initialRef = uniforms.uScreenHeightPx;
 
       mutates.updateScreenHeight(1440);
 
-      expect(uniforms.uScreenHeight).toBe(initialRef);
-      expect(uniforms.uScreenHeight?.value).toBe(1440);
+      expect(uniforms.uScreenHeightPx).toBe(initialRef);
+      expect(uniforms.uScreenHeightPx?.value).toBe(1440);
     });
   });
 });
