@@ -1,7 +1,9 @@
 use std::sync::Arc;
 
 use crate::Options;
-use crate::types::{InternalFeature, InternalGeometry, Ring, Tile, TileFeature, TileGeometry};
+use crate::types::{
+    BBox, InternalFeature, InternalGeometry, Ring, Tile, TileFeature, TileGeometry,
+};
 
 /// Creates an output Tile from internal features.
 ///
@@ -29,6 +31,12 @@ pub fn create_tile(
     let tile_y = y as f64;
     let extent = options.extent as f64;
 
+    let mut features_bbox = if features.is_empty() {
+        None
+    } else {
+        Some(BBox::new())
+    };
+
     let mut num_points: u32 = 0;
     let mut num_simplified: u32 = 0;
 
@@ -50,6 +58,11 @@ pub fn create_tile(
                 properties: f.properties.clone(),
             });
         }
+
+        if let Some(bbox) = &mut features_bbox {
+            bbox.extend(f.bbox.min_x, f.bbox.min_y);
+            bbox.extend(f.bbox.max_x, f.bbox.max_y);
+        }
     }
 
     Tile {
@@ -59,6 +72,7 @@ pub fn create_tile(
         y,
         num_points,
         num_simplified,
+        features_bbox,
     }
 }
 
@@ -257,7 +271,7 @@ fn transform_point(x: f64, y: f64, z2: f64, tile_x: f64, tile_y: f64, extent: f6
 }
 
 /// Rewinds a polygon ring to ensure correct winding order.
-/// Outer rings should be clockwise (area > 0), inner rings counter-clockwise.
+/// Outer rings should be clockwise (area < 0), inner rings counter-clockwise (area > 0).
 fn rewind(ring: &mut [[f64; 2]], clockwise: bool) {
     let len = ring.len();
     if len < 2 {
@@ -272,7 +286,7 @@ fn rewind(ring: &mut [[f64; 2]], clockwise: bool) {
         j = i;
     }
 
-    // area > 0 means clockwise in screen coords
+    // area > 0 means counter-clockwise in tile coords (Y-down)
     if (area > 0.0) != clockwise {
         return; // Already correct winding
     }
@@ -383,5 +397,35 @@ mod tests {
             }
             _ => panic!("Expected Polygons geometry"),
         }
+    }
+
+    #[test]
+    fn test_create_tile_features_bbox() {
+        let feature = Arc::new(InternalFeature {
+            geometry: InternalGeometry::Point([0.25, 0.75, 0.0]),
+            bbox: BBox {
+                min_x: 0.25,
+                min_y: 0.75,
+                max_x: 0.25,
+                max_y: 0.75,
+            },
+            properties: Arc::new(serde_json::Value::Null),
+            source_index: 0,
+        });
+
+        let opts = default_options();
+        let tile = create_tile(&[feature], 0, 0, 0, &opts);
+        let bbox = tile.features_bbox.unwrap();
+        assert!((bbox.min_x - 0.25).abs() < 1e-10);
+        assert!((bbox.min_y - 0.75).abs() < 1e-10);
+        assert!((bbox.max_x - 0.25).abs() < 1e-10);
+        assert!((bbox.max_y - 0.75).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_create_tile_empty_features_bbox() {
+        let opts = default_options();
+        let tile = create_tile(&[], 0, 0, 0, &opts);
+        assert!(tile.features_bbox.is_none());
     }
 }

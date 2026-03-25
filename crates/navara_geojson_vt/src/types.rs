@@ -25,6 +25,13 @@ impl BBox {
         self.max_x = self.max_x.max(x);
         self.max_y = self.max_y.max(y);
     }
+
+    pub fn intersects(&self, other: &BBox) -> bool {
+        self.min_x <= other.max_x
+            && self.max_x >= other.min_x
+            && self.min_y <= other.max_y
+            && self.max_y >= other.min_y
+    }
 }
 
 impl Default for BBox {
@@ -119,4 +126,83 @@ pub struct Tile {
     pub num_points: u32,
     /// Number of points kept after simplification filtering.
     pub num_simplified: u32,
+    /// Tight bounding box of source features in [0,1] normalized space.
+    pub features_bbox: Option<BBox>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_bbox_intersects_overlapping() {
+        let a = BBox {
+            min_x: 0.0,
+            min_y: 0.0,
+            max_x: 0.5,
+            max_y: 0.5,
+        };
+        let b = BBox {
+            min_x: 0.25,
+            min_y: 0.25,
+            max_x: 0.75,
+            max_y: 0.75,
+        };
+        assert!(a.intersects(&b));
+        assert!(b.intersects(&a));
+    }
+
+    #[test]
+    fn test_bbox_intersects_disjoint() {
+        let a = BBox {
+            min_x: 0.0,
+            min_y: 0.0,
+            max_x: 0.25,
+            max_y: 0.25,
+        };
+        let b = BBox {
+            min_x: 0.5,
+            min_y: 0.5,
+            max_x: 1.0,
+            max_y: 1.0,
+        };
+        assert!(!a.intersects(&b));
+        assert!(!b.intersects(&a));
+    }
+
+    #[test]
+    fn test_bbox_intersects_touching_edge() {
+        let a = BBox {
+            min_x: 0.0,
+            min_y: 0.0,
+            max_x: 0.5,
+            max_y: 0.5,
+        };
+        let b = BBox {
+            min_x: 0.5,
+            min_y: 0.0,
+            max_x: 1.0,
+            max_y: 0.5,
+        };
+        assert!(a.intersects(&b));
+        assert!(b.intersects(&a));
+    }
+
+    #[test]
+    fn test_bbox_intersects_containment() {
+        let outer = BBox {
+            min_x: 0.0,
+            min_y: 0.0,
+            max_x: 1.0,
+            max_y: 1.0,
+        };
+        let inner = BBox {
+            min_x: 0.25,
+            min_y: 0.25,
+            max_x: 0.75,
+            max_y: 0.75,
+        };
+        assert!(outer.intersects(&inner));
+        assert!(inner.intersects(&outer));
+    }
 }

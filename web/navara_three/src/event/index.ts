@@ -33,7 +33,7 @@ import { radianToDegree } from "@navara/three_api";
 import { canWorkerProcessImmediately } from "@navara/worker";
 import { Mesh, Material, Object3D, Texture, Sprite } from "three";
 
-import { Layer, type ViewEvents } from "..";
+import { BatchedSdfTextMesh, Layer, type ViewEvents } from "..";
 import { ThreeViewCamera } from "../camera";
 import type { ViewContext } from "../core";
 import type { LayersManager } from "../layersManager";
@@ -520,6 +520,10 @@ function processObjectRemoved(
   // Sprite, Mesh, and Group are all subclasses of Object3D
   if (m instanceof Object3D) {
     disposeObject3D(m);
+  }
+
+  if (m instanceof BatchedSdfTextMesh) {
+    m.dispose();
   }
 
   // Custom event not in Object3DEventMap

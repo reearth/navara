@@ -60,6 +60,12 @@ gloo-utils = { version = "0.2.0", features = ["serde"] }
 web-sys = { version = "0.3.91", features = ["console"] }
 console_error_panic_hook = "0.1.7"
 
+# --- Font ---
+rustybuzz = "0.20.1"
+fontdue = "0.9.3"
+sdf_glyph_renderer = "1.0.2"
+guillotiere = "0.6.2"
+
 # --- Testing ---
 wasm-bindgen-test = "0.3.64"
 image = { version = "0.25.10", default-features = false, features = ["png"] }
@@ -116,6 +122,7 @@ navara_wasm_worker = { path = "crates/navara_wasm_worker" }
 navara_window = { path = "crates/navara_window" }
 navara_worker = { path = "crates/navara_worker" }
 navara_property = { path = "crates/navara_property" }
+
 
 [workspace.metadata.wasm-pack.profile.dev.wasm-bindgen]
 dwarf-debug-info = true

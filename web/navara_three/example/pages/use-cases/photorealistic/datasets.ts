@@ -6,6 +6,8 @@ import {
   LOCAL_DATASETS,
 } from "../../../helpers/constants";
 
+export { FONT_DATASETS } from "../../../helpers/constants";
+
 /**
  * Central bundle of all data layers used in the photorealistic example.
  *

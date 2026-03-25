@@ -363,7 +363,7 @@ pub fn traverse_tile(
             }
 
             for (i, child) in children.iter().enumerate() {
-                let are_active = are_all_renderable_features_active(
+                let activation_state = get_renderable_feature_activation_state(
                     tc,
                     child,
                     rendered_tiles,
@@ -376,7 +376,7 @@ pub fn traverse_tile(
 
                 // If this child is not renderable, skip rendering this child.
                 if prepared_children_indices.contains(&i) || hidden_children_indices.contains(&i) {
-                    if matches!(are_active, Some(true)) {
+                    if activation_state.is_some_and(|state| state.any_active) {
                         tile.is_rendered = false;
                         activate_all_renderable_features(
                             tc,
@@ -390,10 +390,13 @@ pub fn traverse_tile(
                     continue;
                 }
 
-                // To avoid committing unnecessary events, invoke `activate` only when `is_active` is true.
-                if are_active.is_some_and(|v| v != are_all_children_mesh_prepared) {
+                let needs_activation_update = activation_state
+                    .is_some_and(|state| state.all_active != are_all_children_mesh_prepared);
+
+                if needs_activation_update {
                     // Re-run this traverse if `active` is updated, because the child tiles are updated depending on the parent state.
                     tc.needs_update = true;
+
                     activate_all_renderable_features(
                         tc,
                         child,
@@ -534,14 +537,51 @@ pub fn are_all_renderable_features_active(
     features: &Query<&FeatureId, With<VectorTileFeatureMarker>>,
     renderable_features: &mut Query<&mut RenderableFeature>,
 ) -> Option<bool> {
-    tc.rendered_tile_caches
-        .get(handle)
-        .and_then(|e| rendered_tiles.get(*e).ok())
-        // Assume that all values have same activation with first one.
-        .and_then(|v| v.feature_ids.as_ref().and_then(|i| i.first()))
-        .and_then(|e| features.get(*e).ok())
-        .and_then(|f| f.0)
-        .and_then(|id| renderable_features.get(id).ok().map(|r| r.is_active()))
+    get_renderable_feature_activation_state(
+        tc,
+        handle,
+        rendered_tiles,
+        features,
+        renderable_features,
+    )
+    .map(|state| state.all_active)
+}
+
+#[derive(Clone, Copy)]
+struct RenderableFeatureActivationState {
+    all_active: bool,
+    any_active: bool,
+}
+
+fn get_renderable_feature_activation_state(
+    tc: &TileCacheManager,
+    handle: &TileHandle,
+    rendered_tiles: &Query<&RenderedTile>,
+    features: &Query<&FeatureId, With<MVTFeatureMarker>>,
+    renderable_features: &mut Query<&mut RenderableFeature>,
+) -> Option<RenderableFeatureActivationState> {
+    let rendered_tile_entity = tc.rendered_tile_caches.get(handle)?;
+    let rendered_tile = rendered_tiles.get(*rendered_tile_entity).ok()?;
+    let tile_feature_ids = rendered_tile.feature_ids.as_ref()?;
+
+    let mut all_active = true;
+    let mut any_active = false;
+
+    for feature_id in tile_feature_ids {
+        let feature = features.get(*feature_id).ok()?;
+        let renderable_feature = renderable_features.get(feature.0?).ok()?;
+        let active = renderable_feature.is_active();
+        all_active = all_active && active;
+        any_active = any_active || active;
+        if any_active && !all_active {
+            break;
+        }
+    }
+
+    Some(RenderableFeatureActivationState {
+        all_active,
+        any_active,
+    })
 }
 
 pub fn are_all_features_rendered(renderable_features: Option<Vec<&RenderableFeature>>) -> bool {

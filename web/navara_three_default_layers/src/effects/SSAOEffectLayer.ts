@@ -53,8 +53,8 @@ export class SSAOEffectLayer extends EffectLayerDeclaration<
     // To support it, N8AOPostPass needs to allow taking `RGBADepthPacking` in `setDepthTexture`.
     // Ref: https://github.com/N8python/n8ao/blob/master/src/N8AOPostPass.js#L533
     // const mrtPass = this.findLayer<MRTPassEffectLayer>("mrt");
-    // invariant(mrtPass?.raw);
-    // pass.raw.setDepthTexture(mrtPass.raw.allDepthCopyPass.texture, RGBADepthPacking);
+    // invariant(mrtPass?.depthBuffer);
+    // pass.raw.setDepthTexture(mrtPass.depthBuffer, mrtPass.depthBufferPacking);
 
     return pass;
   }

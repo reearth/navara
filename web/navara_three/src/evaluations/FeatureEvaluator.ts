@@ -13,7 +13,6 @@ import { Color } from "../Color";
 import type { FeatureHandler } from "../event";
 import {
   InstancedMesh,
-  InstancedTextMesh,
   isFeatureMesh,
   ModelMesh,
   type ModelMaterial,
@@ -21,6 +20,7 @@ import {
   type ModelBatchedAttributeName,
   type BatchedAttributeName,
   InstancedSpriteMesh,
+  BatchedSdfTextMesh,
 } from "../mesh";
 
 type AvailableMaterialProperty = ExtractProperties<
@@ -351,7 +351,7 @@ export class FeatureEvaluator {
       if (evaluated.height != null) {
         obj.setFeatureHeightByBatchIndex(batchIndex, evaluated.height);
       }
-      if (evaluated.text != null && obj instanceof InstancedTextMesh) {
+      if (evaluated.text != null && obj instanceof BatchedSdfTextMesh) {
         obj.setTextByBatchIndex(batchIndex, evaluated.text);
       }
       return;

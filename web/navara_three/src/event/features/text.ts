@@ -2,7 +2,7 @@ import { type TextMesh as NavaraTextMesh } from "@navara/engine";
 
 import type { BufferLoader } from "..";
 import type { ViewContext } from "../../core";
-import { InstancedTextMesh } from "../../mesh";
+import { BatchedSdfTextMesh } from "../../mesh";
 import { FEATURE_RENDER_ORDER } from "../../renderOrder";
 import type { RenderFlag } from "../../type";
 import type { CommonUniforms } from "../../uniforms";
@@ -14,23 +14,56 @@ export async function renderText(
   viewContext: ViewContext,
   layerId: string,
 ) {
-  const textGroup = new InstancedTextMesh(m, buf, uniforms, {
-    renderOrder: FEATURE_RENDER_ORDER,
-    viewContext,
-    layerId,
-  });
+  const fontUrl = m.material.font;
+  if (!fontUrl || fontUrl === "") {
+    console.warn(
+      "material.font is required for text rendering but was not set.",
+    );
+    return;
+  }
+  const fontManager = viewContext.fontManager;
 
-  return textGroup;
+  // Use SDF pipeline when a font URL is specified and FontManager is available
+  if (fontManager) {
+    try {
+      await fontManager.loadFont(fontUrl);
+
+      // Pre-prepare the text in the worker so cache is populated before mesh construction
+      const text = m.material.text ?? "";
+      if (text) {
+        await fontManager.prepareText(fontUrl, text);
+      }
+
+      const textGroup = new BatchedSdfTextMesh(
+        m,
+        buf,
+        fontManager,
+        fontUrl,
+        uniforms,
+        {
+          renderOrder: FEATURE_RENDER_ORDER,
+          viewContext,
+          layerId,
+        },
+      );
+      textGroup.setActive(m.active);
+
+      return textGroup;
+    } catch (e) {
+      console.warn(`Failed to load or prepare font "${fontUrl}". Error:`, e);
+    }
+  }
 }
 
-export function processTextChanged(
-  obj: InstancedTextMesh,
+export async function processTextChanged(
+  obj: BatchedSdfTextMesh,
   m: NavaraTextMesh,
   buf: BufferLoader,
-  active: boolean,
   renderFlag: RenderFlag,
+  active: boolean,
 ) {
-  obj._update(m, buf, active, () => {
+  await obj._update(m, buf, () => {
     renderFlag.forceUpdate = true;
   });
+  obj.setActive(active);
 }
