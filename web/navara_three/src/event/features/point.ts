@@ -17,6 +17,7 @@ export async function renderPoint(
     layerId,
   });
   await mesh._init(m, buf);
+  mesh.setActive(m.active);
 
   return mesh;
 }
@@ -27,5 +28,6 @@ export function processPointChanged(
   buf: BufferLoader,
   active: boolean,
 ) {
-  obj._update(m, buf, active);
+  obj._update(m, buf);
+  obj.setActive(active);
 }
