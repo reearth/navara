@@ -5,7 +5,8 @@ A Rust port of [maplibre/geojson-vt](https://github.com/maplibre/geojson-vt) —
 ## Features
 
 - **Pre-indexing**: Splits GeoJSON features into tiles up to a configurable `index_max_zoom` level, building a spatial index for fast tile retrieval.
-- **On-demand drill-down**: For zoom levels beyond `index_max_zoom`, dynamically generates tiles by splitting from the nearest indexed ancestor tile up to `max_zoom`.
+- **On-demand drill-down**: For zoom levels beyond `index_max_zoom`, dynamically generates tiles by splitting from the nearest indexed ancestor tile up to `max_zoom`. An intersection check against the ancestor's feature bounding box skips splitting entirely when the requested tile falls outside the data extent.
+- **Tile prediction**: `predict()` checks whether a tile is likely to contain features without triggering drill-down, returning `Matched`, `Intersected`, or `NotFound`.
 
 ## Cache Strategy
 
