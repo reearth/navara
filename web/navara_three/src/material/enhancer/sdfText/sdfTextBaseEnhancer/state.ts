@@ -17,7 +17,7 @@ export const DEFAULT_BASE_PROPS: Required<
   color: 0xffffff,
   fontSize: 16.0,
   center: [0.5, 0.0],
-  sizeInMeters: false,
+  sizeInMeters: true,
   addHeight: 0.0,
   offsetDepth: true,
   outlineWidth: 0,

@@ -215,8 +215,8 @@ export class SDFTextMesh
     });
   }
 
-  setFontSize(sizePx: number): void {
-    this._enhancer.update({ base: { fontSize: sizePx } });
+  setFontSize(size: number): void {
+    this._enhancer.update({ base: { fontSize: size } });
   }
 
   setSizeInMeters(enabled: boolean): void {
