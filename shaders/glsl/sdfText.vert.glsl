@@ -18,7 +18,7 @@ attribute vec4 glyphUvRect;  // Atlas UV sub-rect: (u0, v0, u1, v1)
     uniform vec3 uRTCCenter;
 #endif
 
-uniform float uFontSizePx;
+uniform float uFontSize;
 uniform bool uSizeInMeters;
 uniform float uFov;
 uniform float uScreenHeightPx;
@@ -67,9 +67,9 @@ void main() {
     // Compute scale factor: when sizeInMeters is off, convert pixel size to
     // world units so text maintains constant screen-pixel size at any distance.
     // Normalized text height is 1.0, so no fontSizeWorld division is needed.
-    float scaleFactor = uFontSizePx;
+    float scaleFactor = uFontSize;
     if (!uSizeInMeters) {
-        scaleFactor = nvr_pxToWorld(uFontSizePx, uFov, uScreenHeightPx, absTransformed, cameraPosition);
+        scaleFactor = nvr_pxToWorld(uFontSize, uFov, uScreenHeightPx, absTransformed, cameraPosition);
     }
 
     vec2 center = clamp(uCenter, vec2(-0.5), vec2(0.5)); // Ensure center is within the bounds of the sprite

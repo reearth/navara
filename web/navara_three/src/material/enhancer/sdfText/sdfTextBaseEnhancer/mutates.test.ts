@@ -41,7 +41,7 @@ describe("sdfTextBaseEnhancer/mutates", () => {
       mutates.updateUniforms(uniforms, state);
 
       expect(uniforms.uColor?.value.getHex()).toBe(0xff0000);
-      expect(uniforms.uFontSizePx?.value).toBe(24);
+      expect(uniforms.uFontSize?.value).toBe(24);
       expect(uniforms.uCenter?.value.x).toBe(0.5);
       expect(uniforms.uCenter?.value.y).toBe(0.5);
       expect(uniforms.uSizeInMeters?.value).toBe(true);

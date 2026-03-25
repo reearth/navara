@@ -71,7 +71,7 @@ export type SdfTextBaseState = Readonly<{
  */
 export type SdfTextBaseRefs = {
   uColor: UniformValue<Color>;
-  uFontSizePx: UniformValue<number>;
+  uFontSize: UniformValue<number>;
   uCenter: UniformValue<Vector2>;
   uSizeInMeters: UniformValue<boolean>;
   uAddHeight: UniformValue<number>;
