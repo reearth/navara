@@ -26,7 +26,7 @@ export const createBaseMutates = (
     uColor: { value: new Color(1, 1, 1) },
     uFontSize: { value: 16.0 },
     uCenter: { value: new Vector2(0.5, 0.0) },
-    uSizeInMeters: { value: false },
+    uSizeInMeters: { value: true },
     uAddHeight: { value: 0.0 },
     uOffsetDepth: { value: true },
     uSdfThreshold: { value: 0.5 },
