@@ -1,6 +1,10 @@
 import instancedSpriteFragmentShader from "@shaders/glsl/instancedSprite.frag.glsl";
 import instancedSpriteVertexShader from "@shaders/glsl/instancedSprite.vert.glsl";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("@navara/three_api", () => ({
+  degreeToRadian: (degree: number) => (degree * Math.PI) / 180,
+}));
 
 import { createInstancedSpriteBaseEnhancer, type SupportedMaterial } from ".";
 

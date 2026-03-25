@@ -7,6 +7,10 @@ import { createBaseMutates } from "./mutates";
 import { DEFAULT_BASE_STATE } from "./state";
 import type { InstancedSpriteBaseState } from "./types";
 
+vi.mock("@navara/three_api", () => ({
+  degreeToRadian: (degree: number) => (degree * Math.PI) / 180,
+}));
+
 vi.mock("@navara/engine-api", () => ({
   encodePosition: (_x: number, _y: number, _z: number) => ({
     high: { x: 1000, y: 2000, z: 3000 },
@@ -166,6 +170,66 @@ describe("instancedSpriteBaseEnhancer/mutates", () => {
       mutates.updateUniforms(uniforms, state);
 
       expect(uniforms.uFarPlane?.value).toBe(1000);
+    });
+  });
+
+  describe("updateFov", () => {
+    it("should update uFov value", () => {
+      const state: InstancedSpriteBaseState = { ...DEFAULT_BASE_STATE };
+      const mutates = createBaseMutates(false, false);
+      mutates.update(state);
+
+      mutates.updateFov(75);
+
+      const uniforms: ShaderUniforms = {};
+      mutates.updateUniforms(uniforms, state);
+
+      expect(uniforms.uFov?.value).toBe(75);
+    });
+
+    it("should not replace the uniform ref", () => {
+      const state: InstancedSpriteBaseState = { ...DEFAULT_BASE_STATE };
+      const mutates = createBaseMutates(false, false);
+      mutates.update(state);
+
+      const uniforms: ShaderUniforms = {};
+      mutates.updateUniforms(uniforms, state);
+      const initialRef = uniforms.uFov;
+
+      mutates.updateFov(90);
+
+      expect(uniforms.uFov).toBe(initialRef);
+      expect(uniforms.uFov?.value).toBe(90);
+    });
+  });
+
+  describe("updateScreenHeight", () => {
+    it("should update uScreenHeight value", () => {
+      const state: InstancedSpriteBaseState = { ...DEFAULT_BASE_STATE };
+      const mutates = createBaseMutates(false, false);
+      mutates.update(state);
+
+      mutates.updateScreenHeight(720);
+
+      const uniforms: ShaderUniforms = {};
+      mutates.updateUniforms(uniforms, state);
+
+      expect(uniforms.uScreenHeight?.value).toBe(720);
+    });
+
+    it("should not replace the uniform ref", () => {
+      const state: InstancedSpriteBaseState = { ...DEFAULT_BASE_STATE };
+      const mutates = createBaseMutates(false, false);
+      mutates.update(state);
+
+      const uniforms: ShaderUniforms = {};
+      mutates.updateUniforms(uniforms, state);
+      const initialRef = uniforms.uScreenHeight;
+
+      mutates.updateScreenHeight(1440);
+
+      expect(uniforms.uScreenHeight).toBe(initialRef);
+      expect(uniforms.uScreenHeight?.value).toBe(1440);
     });
   });
 });
