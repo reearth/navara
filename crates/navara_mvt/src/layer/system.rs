@@ -154,21 +154,36 @@ fn create_new_source(
 
 pub fn update_mvt_layer(
     mut commands: Commands,
-    mut layers: Query<&mut MvtLayer>,
+    mut layers: Query<(&mut MvtLayer, Option<&LayerResources>)>,
     layer_store: Res<LayerStore>,
     updated: Query<(Entity, &UpdateMvtLayerMarker)>,
     mut features: Query<&mut RenderableFeature, Without<Deleted>>,
+    mut tile_sources: Query<&mut TileSource>,
 ) {
     for (e, u) in &updated {
         let layer_id = u.layer_id.clone();
 
-        for mut layer in &mut layers {
+        for (mut layer, layer_res) in &mut layers {
             if layer.layer_id != layer_id {
                 continue;
             }
 
             for appearance in &mut layer.appearances {
                 appearance.set(&u.appearance);
+            }
+
+            // Sync updated appearances to MvtSource.layers for newly loaded tiles
+            if let Some(layer_res) = layer_res
+                && let Ok(mut tile_source) = tile_sources.get_mut(layer_res.source)
+                && let Some(mvt_source) = tile_source.downcast_mut::<MvtSource>()
+            {
+                for owned in &mut mvt_source.layers {
+                    if owned.layer_id == layer_id {
+                        for appearance in &mut owned.appearances {
+                            appearance.set(&u.appearance);
+                        }
+                    }
+                }
             }
         }
 
@@ -256,6 +271,7 @@ pub fn delete_mvt_layer(
     tc: Query<&TileCacheManager>,
     mut sources: Query<&mut VectorTileSourceResources>,
     mut source_cache: ResMut<VectorTileSourceCache>,
+    mut tile_sources: Query<&mut TileSource>,
 ) {
     for (e, d) in &deleted {
         layer_store.remove(&d.0);
@@ -277,6 +293,12 @@ pub fn delete_mvt_layer(
                     &mut sources,
                     &mut source_cache,
                 );
+                // Remove layer from MvtSource.layers so new tiles won't generate geometry for it
+                if let Ok(mut tile_source) = tile_sources.get_mut(resource.source)
+                    && let Some(mvt_source) = tile_source.downcast_mut::<MvtSource>()
+                {
+                    mvt_source.layers.retain(|l| l.layer_id != d.0);
+                }
             }
             commands.entity(layer_entity).despawn();
         }

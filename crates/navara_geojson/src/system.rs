@@ -15,7 +15,7 @@ use navara_feature_component::{
 
 use navara_tile_component::VectorTileQuadtree;
 use navara_vector_tile::{
-    LayerResources, RenderedTile, TileCacheManager, VectorTileSourceCache,
+    LayerResources, RenderedTile, TileCacheManager, TileSource, VectorTileSourceCache,
     VectorTileSourceResources,
 };
 
@@ -32,6 +32,7 @@ use navara_data_requester::{DataRequester, DataRequesterExtension, DataRequester
 use navara_parser::geojson::GeoJson;
 
 use crate::geometry;
+use crate::tile::source::GeoJsonTileSource;
 
 #[allow(clippy::type_complexity)]
 pub fn construct_feature(
@@ -59,6 +60,8 @@ pub fn update_geo_json_layer(
     layer_store: Res<LayerStore>,
     updated: Query<(Entity, &UpdateGeoJsonLayerMarker)>,
     mut features: Query<&mut RenderableFeature>,
+    layers: Query<(&GeoJsonLayer, Option<&LayerResources>)>,
+    mut tile_sources: Query<&mut TileSource>,
 ) {
     for (e, u) in &updated {
         let layer_id = u.layer_id.clone();
@@ -130,6 +133,21 @@ pub fn update_geo_json_layer(
                 }
             }
         }
+        // Sync appearances to GeoJsonTileSource for tiled layers
+        for (layer, layer_res) in &layers {
+            if layer.layer_id != layer_id {
+                continue;
+            }
+            if let Some(layer_res) = layer_res
+                && let Ok(mut tile_source) = tile_sources.get_mut(layer_res.source)
+                && let Some(geojson_source) = tile_source.downcast_mut::<GeoJsonTileSource>()
+            {
+                for appearance in geojson_source.appearances.iter_mut() {
+                    appearance.set(&u.appearance);
+                }
+            }
+        }
+
         // Only despawn the update marker when all features have been rendered,
         // so unrendered features can be retried next frame.
         if all_rendered {
