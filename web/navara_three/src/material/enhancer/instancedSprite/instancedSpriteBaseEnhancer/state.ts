@@ -1,5 +1,3 @@
-import { degreeToRadian } from "@navara/three_api";
-
 import type {
   InstancedSpriteBaseProps,
   InstancedSpriteBaseState,
@@ -19,7 +17,7 @@ export const DEFAULT_BASE_PROPS: Required<
   transparent: true,
   depthTest: true,
   aspect: 1.0,
-  fov: degreeToRadian(50.0),
+  fov: 1.0,
   screenHeight: 1080,
 };
 

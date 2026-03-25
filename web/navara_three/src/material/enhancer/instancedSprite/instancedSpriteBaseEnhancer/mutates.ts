@@ -1,5 +1,4 @@
 import { encodePosition } from "@navara/engine-api";
-import { degreeToRadian } from "@navara/three_api";
 import {
   DataArrayTexture,
   Vector2 as ThreeVector2,
@@ -45,7 +44,7 @@ export const createBaseMutates = (
     uFarPlane: { value: 0.0 },
     uAspect: { value: 1.0 },
     nvr_uPickable: { value: 0.0 },
-    uFov: { value: degreeToRadian(50.0) },
+    uFov: { value: 1.0 },
     uScreenHeight: { value: 1080 },
   };
 
