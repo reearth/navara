@@ -26,11 +26,8 @@ pub enum ReadyState {
 pub trait VectorTileSource: Send + Sync + 'static {
     /// Returns self as `&mut dyn Any` for downcasting.
     fn as_any_mut(&mut self) -> &mut dyn Any;
+
     /// Check tile availability and create a DataRequester entity.
-    ///
-    /// For MVT: creates a network DataRequester (Pending status).
-    /// For GeoJSON: checks VtIndex, creates immediate Success DataRequester.
-    ///
     /// Returns true if a request was initiated.
     fn prepare_tile(
         &mut self,
@@ -44,10 +41,6 @@ pub trait VectorTileSource: Send + Sync + 'static {
     ) -> bool;
 
     /// Construct geometry entities from tile data.
-    ///
-    /// For MVT: decode protobuf from BufferStore, build geometry.
-    /// For GeoJSON: look up tile in VtIndex, build flat polygons.
-    ///
     /// Returns entity IDs of spawned feature entities, or None if no features.
     fn construct_geometry(
         &mut self,
@@ -61,13 +54,16 @@ pub trait VectorTileSource: Send + Sync + 'static {
     ) -> Option<Vec<Entity>>;
 
     /// Check tile readiness. Each source defines its own logic:
-    /// - MVT: maps DataRequesterStatus to ReadyState
-    /// - GeoJSON: checks VT index; returns Failed for empty tiles
     fn ready_state(
         &self,
         tile: &VectorTile,
         data_requesters: &VectorTileDataRequesterQuery,
     ) -> ReadyState;
+
+    /// Whether this tile should be upscaled from a parent tile.
+    fn should_upscale(&self, _tile: &VectorTile) -> bool {
+        true
+    }
 
     /// Called when tiles are evicted from the viewport cache.
     /// Sources should release any internal caches for these tiles.

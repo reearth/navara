@@ -39,11 +39,9 @@ pub fn setup_tiled_geojson(
             _ => continue,
         };
 
-        // TODO: Use a higher zoom level to reduce the rendering pressure, but increasing the max zoom occupies CPU
-        //       because it needs to split the tile into more detail. We have to run GeoJsonVt in the worker.
         let opts = GeoJsonVtOptions {
-            max_zoom: 5,
-            tolerance: 0.0,
+            // Avoid to stop the tile splitting unexpectedly.
+            index_max_points: 0,
             ..Default::default()
         };
         let max_zoom = opts.max_zoom;

@@ -1,6 +1,6 @@
 use bevy_ecs::prelude::*;
 use navara_buffer_store::BufferStore;
-use navara_component::{OrderByDistance, Priority, Rendered};
+use navara_component::{Deleted, OrderByDistance, Priority, Rendered};
 use navara_core::{TileXYZ, WGS84_64};
 use navara_feature_component::{
     batch::BatchTable, batch::BatchedFeature, id::FeatureId, render::RenderableFeature,
@@ -44,7 +44,7 @@ pub fn update_tiles(
     mut buf: ResMut<BufferStore>,
     frame: Res<FrameManager>,
     window: Res<Window>,
-    mut source_query: Query<(Ref<VectorTileSourceResources>, &mut TileSource)>,
+    mut source_query: Query<(Ref<VectorTileSourceResources>, &mut TileSource), Without<Deleted>>,
     mut camera_set: ParamSet<(
         Query<(&CameraMarker, Ref<Transform>, &CameraFrustum)>,
         Query<&Fog>,
@@ -217,7 +217,7 @@ pub fn transfer_mesh(
     mut buf: ResMut<BufferStore>,
     qts: Query<&VectorTileQuadtree>,
     tcs: Query<&TileCacheManager>,
-    mut source_query: Query<(&VectorTileSourceResources, &mut TileSource)>,
+    mut source_query: Query<(&VectorTileSourceResources, &mut TileSource), Without<Deleted>>,
     mut rendered_tiles: Query<(Entity, &mut RenderedTile, &OrderByDistance), Without<Rendered>>,
     data_requester: VectorTileDataRequesterQuery,
 ) {

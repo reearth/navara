@@ -63,7 +63,12 @@ pub fn traverse_tile(
     buf: &mut BufferStore,
 ) -> TraversalResult {
     let tile = qt.qt.get_mut(handle).unwrap();
-    tile.ready_parent_tile_handle = ready_parent_tile_handle;
+    tile.ready_parent_tile_handle = if source.should_upscale(tile) {
+        ready_parent_tile_handle
+    } else {
+        // Clear parent handle if the source says this tile shouldn't upscale
+        None
+    };
     tile.is_rendered = false;
 
     let traversal_config = source_id.traversal_config();

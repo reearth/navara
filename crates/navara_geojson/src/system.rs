@@ -8,8 +8,15 @@ use navara_component::{Deleted, Priority};
 
 use navara_feature_component::{
     batch::{BatchTable, BatchedFeature},
+    id::FeatureId,
     polygon::UpdatePolygon,
     render::RenderableFeature,
+};
+
+use navara_tile_component::VectorTileQuadtree;
+use navara_vector_tile::{
+    LayerResources, RenderedTile, TileCacheManager, VectorTileSourceCache,
+    VectorTileSourceResources,
 };
 
 use navara_buffer_store::BufferStore;
@@ -136,26 +143,49 @@ pub fn delete_geo_json_layer(
     mut commands: Commands,
     mut layer_store: ResMut<LayerStore>,
     deleted: Query<(Entity, &DeleteGeoJsonLayerMarker)>,
-    layers: Query<(Entity, &GeoJsonLayer)>,
+    layers: Query<(Entity, &GeoJsonLayer, Option<&LayerResources>)>,
     batched_features: Query<(Entity, &LayerId, &BatchedFeature), Without<RenderableFeature>>,
+    // For tiled layer cleanup (passed to LayerResources::destroy):
+    feature_ids: Query<(&FeatureId, &LayerId)>,
+    all_batched_features: Query<&BatchedFeature>,
+    mut rendered_tiles: Query<&mut RenderedTile>,
+    mut qts: Query<&mut VectorTileQuadtree>,
+    tc: Query<&TileCacheManager>,
+    mut sources: Query<&mut VectorTileSourceResources>,
+    mut source_cache: ResMut<VectorTileSourceCache>,
 ) {
     for (e, d) in &deleted {
-        // delete BatchedFeature entities with this layer id
-        for (entity, l_id, batched) in batched_features.iter() {
-            if l_id.0 == d.0 {
-                batched.despawn_recursively(&mut commands);
-                commands.entity(entity).insert(Deleted);
-            }
-        }
-
-        // delete stored layer id
         layer_store.remove(&d.0);
 
-        for (e, l) in &layers {
-            if l.layer_id != d.0 {
+        for (layer_entity, layer, resource) in &layers {
+            if layer.layer_id != d.0 {
                 continue;
             }
-            commands.entity(e).despawn();
+
+            if let Some(resource) = resource {
+                // Tiled path: delegate to LayerResources::destroy()
+                resource.destroy(
+                    layer_entity,
+                    &LayerId(layer.layer_id.clone()),
+                    &mut commands,
+                    &mut qts,
+                    &tc,
+                    &feature_ids,
+                    &all_batched_features,
+                    &mut rendered_tiles,
+                    &mut sources,
+                    &mut source_cache,
+                );
+            } else {
+                // Non-tiled path: clean up BatchedFeature entities
+                for (entity, l_id, batched) in batched_features.iter() {
+                    if l_id.0 == d.0 {
+                        batched.despawn_recursively(&mut commands);
+                        commands.entity(entity).insert(Deleted);
+                    }
+                }
+            }
+            commands.entity(layer_entity).despawn();
         }
 
         commands.entity(e).despawn();

@@ -5,7 +5,7 @@ use navara_buffer_store::BufferStore;
 use navara_component::{OrderByDistance, Priority};
 use navara_data_requester::DataRequester;
 use navara_feature_component::batch::BatchTable;
-use navara_geojson_vt::{GeoJsonVt, TileKey};
+use navara_geojson_vt::{GeoJsonVt, PredictState, TileKey};
 use navara_material::Appearance;
 use navara_tile_component::{TileHandle, VectorTile};
 use navara_vector_tile::{
@@ -56,6 +56,12 @@ impl VectorTileSource for GeoJsonTileSource {
             return false;
         }
 
+        self.vt.get_tile(
+            tile.coords.z as u32,
+            tile.coords.x as u32,
+            tile.coords.y as u32,
+        );
+
         tc.needs_update = true;
 
         self.prepared.insert(key);
@@ -97,12 +103,40 @@ impl VectorTileSource for GeoJsonTileSource {
         tile: &VectorTile,
         _data_requesters: &VectorTileDataRequesterQuery,
     ) -> ReadyState {
-        // Check if tile has data in the VT index (non-mutating check)
-        if !self.vt.within(tile.coords.z as u32) {
-            return ReadyState::Failed; // No data at this location
-        }
+        let key = self
+            .vt
+            .key(
+                tile.coords.z as u32,
+                tile.coords.x as u32,
+                tile.coords.y as u32,
+            )
+            .expect("The tile key is overflowed");
 
-        ReadyState::Success
+        if self.vt.has_tile(
+            tile.coords.z as u32,
+            tile.coords.x as u32,
+            tile.coords.y as u32,
+        ) {
+            ReadyState::Success
+        } else if self.prepared.contains(&key) {
+            // prepare_tile was called but no tile was generated — area has no features.
+            ReadyState::Failed
+        } else {
+            // Not yet prepared (or was evicted). Return Pending so the traversal
+            // calls prepare_tile() instead of treating the tile as permanently failed.
+            ReadyState::Pending
+        }
+    }
+
+    fn should_upscale(&self, tile: &VectorTile) -> bool {
+        !matches!(
+            self.vt.predict(
+                tile.coords.z as u32,
+                tile.coords.x as u32,
+                tile.coords.y as u32,
+            ),
+            PredictState::NotFound
+        )
     }
 
     fn evict_tile(&mut self, handle: TileHandle) {

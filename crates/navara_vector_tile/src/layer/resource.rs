@@ -3,6 +3,7 @@ use bevy_ecs::{
     entity::Entity,
     system::{Commands, Query, ResMut},
 };
+use navara_component::Deleted;
 use navara_feature_component::{batch::BatchedFeature, id::FeatureId};
 use navara_layer::LayerId;
 use navara_tile_component::VectorTileQuadtree;
@@ -93,7 +94,7 @@ impl LayerResources {
             }
             commands.entity(self.quadtree).despawn();
             commands.entity(self.tile_cache_manager).despawn();
-            commands.entity(self.source).despawn();
+            commands.entity(self.source).insert(Deleted).despawn();
 
             // Remove from cache
             if let Ok(source) = sources.get(self.source) {

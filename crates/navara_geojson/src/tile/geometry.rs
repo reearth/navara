@@ -194,6 +194,7 @@ mod test {
             y: 0,
             num_points: 0,
             num_simplified: 0,
+            features_bbox: None,
         }
     }
 
