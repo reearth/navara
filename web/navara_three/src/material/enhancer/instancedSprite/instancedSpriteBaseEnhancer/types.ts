@@ -107,14 +107,14 @@ export type InstancedSpriteBaseMutates = Mutates<
     updateFarPlane: (far: number) => void;
 
     /**
-     * Update FOV per-frame from camera.
+     * Update FOV per-frame from camera, in radians.
      */
-    updateFov: (fov: number) => void;
+    updateFovRad: (fovRad: number) => void;
 
     /**
-     * Update screen height per-frame from renderer size.
+     * Update screen height per-frame from renderer size, in pixels.
      */
-    updateScreenHeight: (height: number) => void;
+    updateScreenHeightPx: (height: number) => void;
 
     /**
      * Set texture external ref.

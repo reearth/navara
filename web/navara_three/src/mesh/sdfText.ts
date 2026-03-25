@@ -97,7 +97,7 @@ export class SDFTextMesh
         center: material.center
           ? [material.center.x, material.center.y]
           : undefined,
-        sizeInMeters: material.sizeInMeters ?? false,
+        sizeInMeters: material.sizeInMeters ?? true,
         addHeight: material.height ?? 0.0,
         offsetDepth: material.offsetDepth ?? true,
         outlineWidth: material.outlineWidth ?? 0,
@@ -285,7 +285,7 @@ export class SDFTextMesh
       hasUpdate = true;
     }
 
-    const nextSizeInMeters = material.sizeInMeters ?? false;
+    const nextSizeInMeters = material.sizeInMeters ?? true;
     if (nextSizeInMeters !== state.sizeInMeters) {
       baseProps.sizeInMeters = nextSizeInMeters;
       hasUpdate = true;

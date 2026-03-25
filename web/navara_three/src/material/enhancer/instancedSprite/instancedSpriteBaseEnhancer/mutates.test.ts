@@ -174,13 +174,13 @@ describe("instancedSpriteBaseEnhancer/mutates", () => {
     });
   });
 
-  describe("updateFov", () => {
+  describe("updateFovRad", () => {
     it("should update uFovRad value", () => {
       const state: InstancedSpriteBaseState = { ...DEFAULT_BASE_STATE };
       const mutates = createBaseMutates(false, false);
       mutates.update(state);
 
-      mutates.updateFov(degreeToRadian(75));
+      mutates.updateFovRad(degreeToRadian(75));
 
       const uniforms: ShaderUniforms = {};
       mutates.updateUniforms(uniforms, state);
@@ -197,20 +197,20 @@ describe("instancedSpriteBaseEnhancer/mutates", () => {
       mutates.updateUniforms(uniforms, state);
       const initialRef = uniforms.uFovRad;
 
-      mutates.updateFov(degreeToRadian(90));
+      mutates.updateFovRad(degreeToRadian(90));
 
       expect(uniforms.uFovRad).toBe(initialRef);
       expect(uniforms.uFovRad?.value).toBe(degreeToRadian(90));
     });
   });
 
-  describe("updateScreenHeight", () => {
+  describe("updateScreenHeightPx", () => {
     it("should update uScreenHeightPx value", () => {
       const state: InstancedSpriteBaseState = { ...DEFAULT_BASE_STATE };
       const mutates = createBaseMutates(false, false);
       mutates.update(state);
 
-      mutates.updateScreenHeight(720);
+      mutates.updateScreenHeightPx(720);
 
       const uniforms: ShaderUniforms = {};
       mutates.updateUniforms(uniforms, state);
@@ -227,7 +227,7 @@ describe("instancedSpriteBaseEnhancer/mutates", () => {
       mutates.updateUniforms(uniforms, state);
       const initialRef = uniforms.uScreenHeightPx;
 
-      mutates.updateScreenHeight(1440);
+      mutates.updateScreenHeightPx(1440);
 
       expect(uniforms.uScreenHeightPx).toBe(initialRef);
       expect(uniforms.uScreenHeightPx?.value).toBe(1440);

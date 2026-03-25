@@ -106,11 +106,11 @@ export const createBaseMutates = (
       refs.uFarPlane.value = far;
     },
 
-    updateFov: (fov: number) => {
-      refs.uFovRad.value = fov;
+    updateFovRad: (fovRad: number) => {
+      refs.uFovRad.value = fovRad;
     },
 
-    updateScreenHeight: (height: number) => {
+    updateScreenHeightPx: (height: number) => {
       refs.uScreenHeightPx.value = height;
     },
 
