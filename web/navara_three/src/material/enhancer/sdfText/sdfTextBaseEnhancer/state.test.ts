@@ -9,7 +9,7 @@ describe("sdfTextBaseEnhancer / state", () => {
       const state = updateState({ fontSize: 24 }, DEFAULT_BASE_STATE);
       expect(state.fontSize).toBe(24);
       expect(state.center).toEqual([0.5, 0.0]);
-      expect(state.sizeInMeters).toBe(false);
+      expect(state.sizeInMeters).toBe(true);
     });
 
     it("preserves immutable fields (useRTE) from currentState", () => {
