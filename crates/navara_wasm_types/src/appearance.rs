@@ -289,22 +289,25 @@ pub struct TextMaterial {
     #[wasm_bindgen(js_name = borderWidth)]
     #[serde(rename = "borderWidth")]
     pub border_width: Option<f32>,
-    #[wasm_bindgen(js_name = cornerRadius)]
-    #[serde(rename = "cornerRadius")]
-    pub corner_radius: Option<f32>,
-    pub padding: Option<Vec2>,
+    // TODO: support cornerRadius and padding later
+    // #[wasm_bindgen(js_name = cornerRadius)]
+    // #[serde(rename = "cornerRadius")]
+    // pub corner_radius: Option<f32>,
+    // pub padding: Option<Vec2>,
     // outline
+    // TODO: support outlineBlur and outlineOffset later.
     /// Outline blur radius in CSS pixels. Defaults to `0.0`.
-    #[wasm_bindgen(js_name = outlineBlur)]
-    #[serde(rename = "outlineBlur")]
-    pub outline_blur: Option<f32>,
+    // #[wasm_bindgen(js_name = outlineBlur)]
+    // #[serde(rename = "outlineBlur")]
+    // pub outline_blur: Option<f32>,
     #[wasm_bindgen(js_name = outlineColor)]
     #[serde(rename = "outlineColor")]
     pub outline_color: Option<u32>, // outlineColor Defalut:black
+    // TODO: support outlineOffset later.
     /// Pixel offset `[x, y]` in CSS pixels. Defaults to `(0.0, 0.0)`.
-    #[wasm_bindgen(js_name = outlineOffset)]
-    #[serde(rename = "outlineOffset")]
-    pub outline_offset: Option<Vec2>,
+    // #[wasm_bindgen(js_name = outlineOffset)]
+    // #[serde(rename = "outlineOffset")]
+    // pub outline_offset: Option<Vec2>,
     #[wasm_bindgen(js_name = outlineOpacity)]
     #[serde(rename = "outlineOpacity")]
     pub outline_opacity: Option<f32>, // outlineOpacity Default:1
@@ -335,14 +338,14 @@ impl From<TextMaterial> for navara_material::TextMaterial {
             background_color: val.background_color,
             border_color: val.border_color.unwrap_or(default.border_color),
             border_width: val.border_width.unwrap_or(default.border_width),
-            corner_radius: val.corner_radius.unwrap_or(default.corner_radius),
-            padding: val.padding.unwrap_or(default.padding.into()).into(),
-            outline_blur: val.outline_blur.unwrap_or(default.outline_blur),
+            // corner_radius: val.corner_radius.unwrap_or(default.corner_radius),
+            // padding: val.padding.unwrap_or(default.padding.into()).into(),
+            // outline_blur: val.outline_blur.unwrap_or(default.outline_blur),
             outline_color: val.outline_color.unwrap_or(default.outline_color),
-            outline_offset: val
-                .outline_offset
-                .unwrap_or(default.outline_offset.into())
-                .into(),
+            // outline_offset: val
+            //     .outline_offset
+            //     .unwrap_or(default.outline_offset.into())
+            //     .into(),
             outline_opacity: val.outline_opacity.unwrap_or(default.outline_opacity),
             outline_width: val.outline_width.unwrap_or(default.outline_width),
             lang: val.lang.unwrap_or(default.lang),
@@ -366,11 +369,11 @@ impl<'a> From<&'a navara_material::TextMaterial> for TextMaterial {
             background_color: value.background_color,
             border_color: Some(value.border_color),
             border_width: Some(value.border_width),
-            corner_radius: Some(value.corner_radius),
-            padding: Some(value.padding.into()),
-            outline_blur: Some(value.outline_blur),
+            // corner_radius: Some(value.corner_radius),
+            // padding: Some(value.padding.into()),
+            // outline_blur: Some(value.outline_blur),
             outline_color: Some(value.outline_color),
-            outline_offset: Some(value.outline_offset.into()),
+            // outline_offset: Some(value.outline_offset.into()),
             outline_opacity: Some(value.outline_opacity),
             outline_width: Some(value.outline_width),
             lang: Some(value.lang.clone()),
@@ -395,14 +398,14 @@ impl TextMaterial {
             background_color: self.background_color.or(other.background_color),
             border_color: self.border_color.unwrap_or(other.border_color),
             border_width: self.border_width.unwrap_or(other.border_width),
-            corner_radius: self.corner_radius.unwrap_or(other.corner_radius),
-            padding: self.padding.unwrap_or(other.padding.into()).into(),
-            outline_blur: self.outline_blur.unwrap_or(other.outline_blur),
+            // corner_radius: self.corner_radius.unwrap_or(other.corner_radius),
+            // padding: self.padding.unwrap_or(other.padding.into()).into(),
+            // outline_blur: self.outline_blur.unwrap_or(other.outline_blur),
             outline_color: self.outline_color.unwrap_or(other.outline_color),
-            outline_offset: self
-                .outline_offset
-                .unwrap_or(other.outline_offset.into())
-                .into(),
+            // outline_offset: self
+            //     .outline_offset
+            //     .unwrap_or(other.outline_offset.into())
+            //     .into(),
             outline_opacity: self.outline_opacity.unwrap_or(other.outline_opacity),
             outline_width: self.outline_width.unwrap_or(other.outline_width),
             lang: self.lang.clone().unwrap_or(other.lang.clone()),

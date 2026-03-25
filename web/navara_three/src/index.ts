@@ -16,6 +16,7 @@ import initCore, {
   type TerrainHeightUpdatedEvent,
   type TextureFragmentStatus,
 } from "@navara/engine";
+import { FontManager } from "@navara/font";
 import { initNavaraApi } from "@navara/three_api";
 import { initializeWorkerPool } from "@navara/worker";
 import {
@@ -268,6 +269,10 @@ export default class ThreeView<
   globe!: Globe;
   /** The atmosphere renderer that handles sky, sun, and atmospheric scattering effects. */
   atmosphere: Atmosphere;
+  /** Manages font loading, text shaping, and SDF atlas access. */
+  get fontManager(): FontManager {
+    return this._fontManager;
+  }
 
   /** Layer handle for the sky environment map effect layer. Used for sky reflections. */
   skyEnvMapLayer?: LayerHandle<SkyEnvMapEffectLayer>;
@@ -286,6 +291,7 @@ export default class ThreeView<
   private _drapedFeatureMaterials: DrapedMaterialCache = new Map();
 
   private _core: Core | undefined;
+  private _fontManager = new FontManager();
   private _options: Options;
   private _stats: RendererStats | undefined;
   private _eventDisposer: (() => void) | undefined;
@@ -852,6 +858,11 @@ export default class ThreeView<
     this._core = new Core(newId());
     this._core.start();
 
+    this._fontManager.setConcurrencyManager(
+      this.viewContext.concurrencyManager,
+    );
+    this.viewContext.fontManager = this._fontManager;
+
     this.globe = new Globe(this._globeHandler, this._options);
     this.viewContext.setGlobe(this.globe);
 
@@ -954,6 +965,7 @@ export default class ThreeView<
 
     // Dispose SelectiveEffectHelper
     this.selectiveEffectHelper.dispose();
+    this._fontManager.dispose();
     this.atmosphere._dispose();
 
     this.renderer.setAnimationLoop(null);

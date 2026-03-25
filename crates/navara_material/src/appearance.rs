@@ -182,13 +182,13 @@ pub struct TextMaterial {
     pub font: String,
     pub background_color: Option<u32>,
     pub border_color: u32,
-    pub border_width: f32,  // 0 ~ 0.5, the ratio of the border to the height
-    pub corner_radius: f32, // 0 ~ 0.5, the ratio of the corner radius to the height
-    pub padding: Vec2,
+    pub border_width: f32, // 0 ~ 0.5, the ratio of the border to the height
+    // pub corner_radius: f32, // 0 ~ 0.5, the ratio of the corner radius to the height
+    // pub padding: Vec2,
     // outline
-    pub outline_blur: f32,    // outlineBlur Defalut:0
-    pub outline_color: u32,   // outlineColor Defalut:black
-    pub outline_offset: Vec2, // outlineOffset Default: (0,0)
+    // pub outline_blur: f32,    // outlineBlur Defalut:0
+    pub outline_color: u32, // outlineColor Defalut:black
+    // pub outline_offset: Vec2, // outlineOffset Default: (0,0)
     pub outline_opacity: f32, // outlineOpacity Default:1
     pub outline_width: f32,   // outlineWidth Default:0
     pub lang: String,
@@ -211,11 +211,11 @@ impl Default for TextMaterial {
             background_color: None,
             border_color: 0x000000,
             border_width: 0.05,
-            corner_radius: 0.1,
-            padding: Vec2::new(5.0, 2.0),
-            outline_blur: 0.0,
+            // corner_radius: 0.1,
+            // padding: Vec2::new(5.0, 2.0),
+            // outline_blur: 0.0,
             outline_color: 0x000000,
-            outline_offset: Vec2::new(0.0, 0.0),
+            // outline_offset: Vec2::new(0.0, 0.0),
             outline_opacity: 1.0,
             outline_width: 0.0,
             lang: "".to_string(),

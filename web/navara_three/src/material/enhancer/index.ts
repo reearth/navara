@@ -35,3 +35,12 @@ export type {
   InstancedSpriteBaseProps,
   InstancedSpriteBaseState,
 } from "./instancedSprite";
+
+// SdfText enhancers
+export { createSdfTextMaterialEnhancer } from "./sdfText";
+export type { SdfTextMaterialProps } from "./sdfText";
+export type {
+  SdfTextBaseMutates,
+  SdfTextBaseProps,
+  SdfTextBaseState,
+} from "./sdfText";

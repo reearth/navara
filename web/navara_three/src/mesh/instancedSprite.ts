@@ -52,6 +52,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
   private _initialColor: Color = new Color(0xffffff);
   private _initialHeight = 0.0;
   private _loadedUrls = new Set<string>();
+  private _active = true;
   /** ViewContext for SelectiveEffect handling */
   private _viewContext: ViewContext;
   /** Layer ID for SelectiveEffect handling */
@@ -70,6 +71,11 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     this._layerId = options.layerId;
   }
 
+  setActive(active: boolean) {
+    this._active = active;
+    this.updateVisibility();
+  }
+
   async _init(m: NavaraPointMesh | NavaraBillboardMesh, buf: BufferLoader) {
     const positionsInfo = this.extractPositions(m, buf);
     if (positionsInfo === null) {
@@ -86,18 +92,13 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     this.frustumCulled = false; // Disable since bounding box doesn't account for instance positions
   }
 
-  async _update(
-    m: NavaraPointMesh | NavaraBillboardMesh,
-    buf: BufferLoader,
-    active: boolean,
-  ) {
+  async _update(m: NavaraPointMesh | NavaraBillboardMesh, buf: BufferLoader) {
     const enhancer = this.getEnhancer();
     const material = this.material as ShaderMaterial;
 
-    // Update visibility (combines show + active)
     if (material.visible !== m.material.show) {
       material.visible = m.material.show ?? true;
-      material.visible = material.visible && active;
+      this.updateVisibility();
     }
 
     // Update enhancer state for uniform-backed properties
@@ -390,7 +391,15 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     }
 
     material.visible = m.material.show ?? true;
+    this.updateVisibility();
     return material;
+  }
+
+  private updateVisibility() {
+    const material = this.material;
+    const materialVisible =
+      material instanceof ShaderMaterial ? material.visible : true;
+    this.visible = this._active && materialVisible;
   }
 
   private extractPositions(

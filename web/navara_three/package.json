@@ -32,6 +32,7 @@
   },
   "dependencies": {
     "@navara/core": "workspace:*",
+    "@navara/font": "workspace:*",
     "@navara/three_api": "workspace:*",
     "@navara/three_csm": "workspace:*",
     "@navara/worker": "workspace:*",

@@ -17,6 +17,7 @@ import {
   TILES_3D_DATASETS,
   MVT_DATASETS,
   GEOJSON_DATASETS,
+  FONT_DATASETS,
 } from "../../../helpers/constants";
 import { addDateControl, addCameraControl } from "../../../helpers/control";
 import {
@@ -171,20 +172,20 @@ const geoLayersDef: MaterialLayerDescription[] = [
       clampToGround: true,
       depthTest: true,
       text: "hello 京都",
-      // font: "/font/LoveDays-2v7Oe.ttf",
+      font: FONT_DATASETS.LineSeedJP.url,
       backgroundColor: new Color().setStyle("#0a70c2"),
       borderColor: new Color().setStyle("#f8e43c"),
       borderWidth: 0.08, // 0 ~ 0.5, the ratio of the border to the height
-      cornerRadius: 0.1, // 0 ~ 0.5, the ratio of the corner radius to the height
+      // cornerRadius: 0.1, // 0 ~ 0.5, the ratio of the corner radius to the height
       size: 50,
       center: {
         x: 0.5,
         y: 0,
       },
-      padding: {
-        x: 10,
-        y: 0,
-      },
+      // padding: {
+      //   x: 10,
+      //   y: 0,
+      // },
       offsetDepth: true,
     },
   },
@@ -211,26 +212,26 @@ const geoLayersDef: MaterialLayerDescription[] = [
       clampToGround: true,
       depthTest: true,
       text: "hello world!!!",
-      // font: "/font/LoveDays-2v7Oe.ttf",
+      font: FONT_DATASETS.Borel.url,
       backgroundColor: new Color().setStyle("#0a70c2"),
       borderColor: new Color().setStyle("#f8e43c"),
       borderWidth: 0.08, // 0 ~ 0.5, the ratio of the border to the height
-      cornerRadius: 0.1, // 0 ~ 0.5, the ratio of the corner radius to the height
+      // cornerRadius: 0.1, // 0 ~ 0.5, the ratio of the corner radius to the height
       size: 50,
       center: {
         x: 0.5,
         y: 0,
       },
-      padding: {
-        x: 10,
-        y: 0,
-      },
-      outlineBlur: 0, // px
+      // padding: {
+      //   x: 10,
+      //   y: 0,
+      // },
+      // outlineBlur: 0, // px
       outlineColor: new Color().setStyle("#000000"),
-      outlineOffset: { x: 4, y: 0 }, // px
+      // outlineOffset: { x: 4, y: 0 }, // px
       outlineOpacity: 1.0,
       outlineWidth: 4, // px
-      offsetDepth: false,
+      offsetDepth: true,
     },
   },
 
@@ -256,15 +257,16 @@ const geoLayersDef: MaterialLayerDescription[] = [
       clampToGround: true,
       depthTest: true,
       text: "Mt.Everest",
+      font: FONT_DATASETS.SourceCodePro.url,
       backgroundColor: new Color().setStyle("#a4e996"),
       borderColor: new Color().setStyle("#4aac3b"),
       borderWidth: 0.1, // 0 ~ 0.5, the ratio of the border to the height
-      cornerRadius: 0.1, // 0 ~ 0.5, the ratio of the corner radius to the height
+      // cornerRadius: 0.1, // 0 ~ 0.5, the ratio of the corner radius to the height
       size: 30,
-      padding: {
-        x: 5,
-        y: 0,
-      },
+      // padding: {
+      //   x: 5,
+      //   y: 0,
+      // },
       offsetDepth: false,
     },
   },

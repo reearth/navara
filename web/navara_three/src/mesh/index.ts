@@ -1,4 +1,3 @@
-export * from "./text";
 export * from "./model";
 export * from "./polygon";
 export * from "./polyline";
@@ -6,9 +5,10 @@ export * from "./polygonOutline";
 export * from "./featureMesh";
 export * from "./batchedFeature";
 export * from "./instanced";
-export * from "./instancedText";
 export * from "./batchTexture";
 export * from "./tile";
 export * from "./pickableMesh";
 export * from "./rtcRteHelper";
 export * from "./instancedSprite";
+export * from "./sdfText";
+export * from "./batchedSdfText";

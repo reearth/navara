@@ -1,0 +1,205 @@
+/// Douglas-Peucker simplification: computes importance values and stores them
+/// in z-coordinates of the flat [x, y, z, ...] coordinate array.
+///
+/// After running, each intermediate point's z-coordinate holds the maximum
+/// squared perpendicular distance to the baseline, which serves as its
+/// "importance" for zoom-dependent filtering.
+pub fn simplify(coords: &mut [f64], first: usize, last: usize, sq_tolerance: f64) {
+    let mut max_sq_dist = sq_tolerance;
+    let mid = first + ((last - first) >> 1);
+    let mut min_pos_to_mid = last - first;
+    let mut index = None;
+
+    let ax = coords[first];
+    let ay = coords[first + 1];
+    let bx = coords[last];
+    let by = coords[last + 1];
+
+    let mut i = first + 3;
+    while i < last {
+        let d = get_sq_seg_dist(coords[i], coords[i + 1], ax, ay, bx, by);
+
+        if d > max_sq_dist {
+            index = Some(i);
+            max_sq_dist = d;
+        } else if d == max_sq_dist {
+            // Workaround: choose pivot close to middle to reduce recursion depth
+            // https://github.com/mapbox/geojson-vt/issues/104
+            let pos_to_mid = (i as isize - mid as isize).unsigned_abs();
+            if pos_to_mid < min_pos_to_mid {
+                index = Some(i);
+                min_pos_to_mid = pos_to_mid;
+            }
+        }
+
+        i += 3;
+    }
+
+    if max_sq_dist > sq_tolerance
+        && let Some(idx) = index
+    {
+        if idx - first > 3 {
+            simplify(coords, first, idx, sq_tolerance);
+        }
+        coords[idx + 2] = max_sq_dist;
+        if last - idx > 3 {
+            simplify(coords, idx, last, sq_tolerance);
+        }
+    }
+}
+
+/// Squared distance from point (px, py) to segment (x, y)-(bx, by).
+fn get_sq_seg_dist(px: f64, py: f64, mut x: f64, mut y: f64, bx: f64, by: f64) -> f64 {
+    let mut dx = bx - x;
+    let mut dy = by - y;
+
+    if dx != 0.0 || dy != 0.0 {
+        let t = ((px - x) * dx + (py - y) * dy) / (dx * dx + dy * dy);
+
+        if t > 1.0 {
+            x = bx;
+            y = by;
+        } else if t > 0.0 {
+            x += dx * t;
+            y += dy * t;
+        }
+    }
+
+    dx = px - x;
+    dy = py - y;
+
+    dx * dx + dy * dy
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_simplify_straight_line() {
+        // Points on a straight line: middle points should keep z=0
+        let mut coords = vec![
+            0.0, 0.0, 0.0, // first
+            0.5, 0.5, 0.0, // middle (on the line)
+            1.0, 1.0, 0.0, // last
+        ];
+        simplify(&mut coords, 0, 6, 1e-10);
+        // Middle point is on the line, distance = 0, shouldn't be marked
+        assert_eq!(coords[5], 0.0);
+    }
+
+    #[test]
+    fn test_simplify_with_deviation() {
+        // Middle point deviates from the line
+        let mut coords = vec![
+            0.0, 0.0, 0.0, // first
+            0.5, 1.0, 0.0, // middle (deviates upward)
+            1.0, 0.0, 0.0, // last
+        ];
+        simplify(&mut coords, 0, 6, 1e-20);
+        // Middle point should have its importance set
+        assert!(coords[5] > 0.0);
+    }
+
+    /// Exact port of `simplifies points correctly with the given tolerance` from
+    /// Ref: https://github.com/maplibre/geojson-vt/blob/main/src/simplify.test.ts#L45
+    #[test]
+    fn test_simplify_matches_js_reference() {
+        #[rustfmt::skip]
+        let points: &[[f64; 2]] = &[
+            [0.22455,0.25015],[0.22691,0.24419],[0.23331,0.24145],[0.23498,0.23606],
+            [0.24421,0.23276],[0.26259,0.21531],[0.26776,0.21381],[0.27357,0.20184],
+            [0.27312,0.19216],[0.27762,0.18903],[0.28036,0.18141],[0.28651,0.17774],
+            [0.29241,0.15937],[0.29691,0.15564],[0.31495,0.15137],[0.31975,0.14516],
+            [0.33033,0.13757],[0.34148,0.13996],[0.36998,0.13789],[0.38739,0.14251],
+            [0.39128,0.13939],[0.40952,0.14114],[0.41482,0.13975],[0.42772,0.12730],
+            [0.43960,0.11974],[0.47493,0.10787],[0.48651,0.10675],[0.48920,0.10945],
+            [0.49379,0.10863],[0.50474,0.11966],[0.51296,0.12235],[0.51863,0.12089],
+            [0.52409,0.12688],[0.52957,0.12786],[0.53421,0.14093],[0.53927,0.14724],
+            [0.56769,0.14891],[0.57525,0.15726],[0.58062,0.15815],[0.60153,0.15685],
+            [0.61774,0.15986],[0.62200,0.16704],[0.62955,0.19460],[0.63890,0.19561],
+            [0.64126,0.20081],[0.65177,0.20456],[0.67155,0.22255],[0.68368,0.21745],
+            [0.69525,0.21915],[0.70064,0.21798],[0.70312,0.21436],[0.71226,0.21587],
+            [0.72149,0.21281],[0.72781,0.21336],[0.72998,0.20873],[0.73532,0.20820],
+            [0.73994,0.20477],[0.76998,0.20842],[0.77960,0.21687],[0.78420,0.21816],
+            [0.80024,0.21462],[0.81053,0.21973],[0.81719,0.22682],[0.82077,0.23617],
+            [0.82723,0.23616],[0.82989,0.23989],[0.85100,0.24894],[0.85988,0.25549],
+            [0.86521,0.26853],[0.85795,0.28030],[0.86548,0.29145],[0.86681,0.29866],
+            [0.86468,0.30271],[0.86779,0.30617],[0.85987,0.31137],[0.86008,0.31435],
+            [0.85829,0.31494],[0.85810,0.32760],[0.85454,0.33540],[0.86092,0.34300],
+            [0.85643,0.35015],[0.85142,0.35296],[0.84984,0.35959],[0.85456,0.36553],
+            [0.84974,0.37038],[0.84409,0.37189],[0.84475,0.38044],[0.84152,0.38367],
+            [0.83957,0.39040],[0.84559,0.39905],[0.84840,0.40755],[0.84371,0.41130],
+            [0.84409,0.41988],[0.83951,0.43276],[0.84133,0.44104],[0.84762,0.44922],
+            [0.84716,0.45844],[0.85138,0.46279],[0.85397,0.47115],[0.86636,0.48077],
+        ];
+
+        #[rustfmt::skip]
+        let expected: &[[f64; 2]] = &[
+            [0.22455,0.25015],[0.26776,0.21381],[0.29691,0.15564],[0.33033,0.13757],
+            [0.40952,0.14114],[0.43960,0.11974],[0.48651,0.10675],[0.52957,0.12786],
+            [0.53927,0.14724],[0.56769,0.14891],[0.61774,0.15986],[0.62955,0.19460],
+            [0.67155,0.22255],[0.72781,0.21336],[0.73994,0.20477],[0.76998,0.20842],
+            [0.78420,0.21816],[0.80024,0.21462],[0.82077,0.23617],[0.85988,0.25549],
+            [0.86521,0.26853],[0.85795,0.28030],[0.86779,0.30617],[0.85829,0.31494],
+            [0.85454,0.33540],[0.86092,0.34300],[0.84984,0.35959],[0.85456,0.36553],
+            [0.84409,0.37189],[0.83957,0.39040],[0.84840,0.40755],[0.83951,0.43276],
+            [0.85397,0.47115],[0.86636,0.48077],
+        ];
+
+        // Build flat coords with z=0, then mark first and last as z=1
+        let mut coords: Vec<f64> = Vec::with_capacity(points.len() * 3);
+        for p in points {
+            coords.push(p[0]);
+            coords.push(p[1]);
+            coords.push(0.0);
+        }
+        coords[2] = 1.0;
+        *coords.last_mut().unwrap() = 1.0;
+
+        let last = coords.len() - 3;
+        simplify(&mut coords, 0, last, 0.001 * 0.001);
+
+        // Filter points where z > 0.005^2
+        let threshold = 0.005 * 0.005;
+        let result: Vec<[f64; 2]> = coords
+            .chunks(3)
+            .filter(|c| c[2] > threshold)
+            .map(|c| [c[0], c[1]])
+            .collect();
+
+        assert_eq!(result, expected);
+    }
+
+    /// Port of `does not throw max call stack error on bad long input` from
+    /// `simplify.test.ts`. JS passes `coords.length` which reads undefined
+    /// for the last-point coords; in Rust we use `len - 3` (last valid point).
+    /// The intent is to verify no stack overflow on large repetitive input.
+    /// Ref: https://github.com/maplibre/geojson-vt/blob/main/src/simplify.test.ts#L64
+    #[test]
+    fn test_no_stack_overflow_on_large_input() {
+        let mut coords: Vec<f64> = Vec::with_capacity(1400 * 8);
+        for _ in 0..1400 {
+            coords.extend_from_slice(&[0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0]);
+        }
+        // Align to stride-3 boundary and use last valid point index
+        let last = (coords.len() / 3) * 3 - 3;
+        coords.truncate(last + 3);
+        // Should complete without stack overflow
+        simplify(&mut coords, 0, last, 2e-15);
+    }
+
+    #[test]
+    fn test_get_sq_seg_dist_on_segment() {
+        // Point on the segment
+        let d = get_sq_seg_dist(0.5, 0.5, 0.0, 0.0, 1.0, 1.0);
+        assert!(d < 1e-10);
+    }
+
+    #[test]
+    fn test_get_sq_seg_dist_off_segment() {
+        // Point perpendicular to segment midpoint
+        let d = get_sq_seg_dist(0.5, 0.0, 0.0, 0.5, 1.0, 0.5);
+        assert!((d - 0.25).abs() < 1e-10);
+    }
+}
