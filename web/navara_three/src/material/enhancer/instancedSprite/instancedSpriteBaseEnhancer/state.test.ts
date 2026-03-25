@@ -1,10 +1,6 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { DEFAULT_BASE_STATE, updateState } from "./state";
-
-vi.mock("@navara/three_api", () => ({
-  degreeToRadian: (degree: number) => (degree * Math.PI) / 180,
-}));
 
 describe("instancedSpriteBaseEnhancer / state", () => {
   describe("updateState", () => {

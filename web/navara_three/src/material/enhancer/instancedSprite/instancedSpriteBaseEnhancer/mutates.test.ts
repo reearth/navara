@@ -1,3 +1,4 @@
+import { degreeToRadian } from "@navara/three_api";
 import type { DataArrayTexture } from "three";
 import { describe, expect, it, vi } from "vitest";
 
@@ -179,12 +180,12 @@ describe("instancedSpriteBaseEnhancer/mutates", () => {
       const mutates = createBaseMutates(false, false);
       mutates.update(state);
 
-      mutates.updateFov(75);
+      mutates.updateFov(degreeToRadian(75));
 
       const uniforms: ShaderUniforms = {};
       mutates.updateUniforms(uniforms, state);
 
-      expect(uniforms.uFovRad?.value).toBe(75);
+      expect(uniforms.uFovRad?.value).toBe(degreeToRadian(75));
     });
 
     it("should not replace the uniform ref", () => {
@@ -196,10 +197,10 @@ describe("instancedSpriteBaseEnhancer/mutates", () => {
       mutates.updateUniforms(uniforms, state);
       const initialRef = uniforms.uFovRad;
 
-      mutates.updateFov(90);
+      mutates.updateFov(degreeToRadian(90));
 
       expect(uniforms.uFovRad).toBe(initialRef);
-      expect(uniforms.uFovRad?.value).toBe(90);
+      expect(uniforms.uFovRad?.value).toBe(degreeToRadian(90));
     });
   });
 

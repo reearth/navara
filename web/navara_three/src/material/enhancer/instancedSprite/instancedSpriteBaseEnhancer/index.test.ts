@@ -1,14 +1,10 @@
 import { ShaderMaterial } from "three";
 import type { DataArrayTexture } from "three";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
 import type { InstancedSpriteBaseProps } from "./types";
 
 import { createInstancedSpriteBaseEnhancer } from "./index";
-
-vi.mock("@navara/three_api", () => ({
-  degreeToRadian: (degree: number) => (degree * Math.PI) / 180,
-}));
 
 describe("instancedSpriteBaseEnhancer", () => {
   let enhancer: ReturnType<typeof createInstancedSpriteBaseEnhancer>;
