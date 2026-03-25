@@ -324,7 +324,9 @@ const geoLayersDef: MaterialLayerDescription[] = [
     type: "geojson",
     data: {
       type: "Feature",
-      properties: {},
+      properties: {
+        id: "1",
+      },
       geometry: {
         coordinates: [
           [
