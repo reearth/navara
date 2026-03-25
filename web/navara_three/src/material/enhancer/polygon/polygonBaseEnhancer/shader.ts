@@ -151,7 +151,6 @@ vPosition = (modelMatrix * vec4(transformed, 1.0)).xyz;
 ${POLYGON_BASE_SHADER_MARKERS.fragment.UNIFORM_START}
 uniform vec3 diffuse;
 uniform bool uClampToGround;
-uniform bool useGroundNormals;
 uniform sampler2D uGlobeNormal;
 uniform float nvr_uPickable;
 uniform bool uIsTexturized;
@@ -205,7 +204,7 @@ ${POLYGON_BASE_SHADER_MARKERS.fragment.NORMAL_END}
       "vec3 outgoingLight = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse + totalEmissiveRadiance;",
       `
 vec3 outgoingLight;
-if(uClampToGround && !useGroundNormals) {
+if(uClampToGround) {
   // Without lighting
   outgoingLight = diffuseColor.xyz;
 } else {

@@ -98,7 +98,6 @@ const run = async () => {
         color: new Color().setStyle("#00aaff"),
         height: 0,
         clampToGround: true,
-        useGroundNormals: true,
         wireframe: false,
         opacity: params.opacity,
       },

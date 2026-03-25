@@ -35,7 +35,6 @@ describe("polygonBaseEnhancer/state", () => {
           useRTE: true, // ignored - useRTE preserves currentState
           isTexturized: true,
           clampToGround: true,
-          useGroundNormals: true,
           pickable: true,
           minMaxHeight: [10, 100],
           addExtrudedHeight: 50,
@@ -48,37 +47,12 @@ describe("polygonBaseEnhancer/state", () => {
           // useRTE stays false because updateState preserves currentState.useRTE
           isTexturized: true,
           clampToGround: true,
-          useGroundNormals: false, // disabled when isTexturized is true
           pickable: true,
           minMaxHeight: [10, 100],
           addExtrudedHeight: 50,
           addHeight: 20,
           reflectivity: 0.5,
           roughness: 0.3,
-        }),
-      },
-      {
-        name: "enables useGroundNormals when not texturized",
-        props: {
-          isTexturized: false,
-          useGroundNormals: true,
-        },
-        currentState: DEFAULT_BASE_STATE,
-        expected: createExpectedState({
-          isTexturized: false,
-          useGroundNormals: true,
-        }),
-      },
-      {
-        name: "disables useGroundNormals when texturized",
-        props: {
-          isTexturized: true,
-          useGroundNormals: true,
-        },
-        currentState: DEFAULT_BASE_STATE,
-        expected: createExpectedState({
-          isTexturized: true,
-          useGroundNormals: false,
         }),
       },
       {

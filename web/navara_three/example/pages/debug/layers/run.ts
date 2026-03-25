@@ -372,7 +372,6 @@ const geoLayersDef: MaterialLayerDescription[] = [
       height: 0,
       extrudedHeight: 5000,
       clampToGround: true,
-      useGroundNormals: true,
       wireframe: false,
       outlineColor: new Color().setStyle("#00ff00"),
       outlineWidth: 3,
@@ -411,7 +410,6 @@ const geoLayersDef: MaterialLayerDescription[] = [
       height: 0,
       extrudedHeight: 0,
       clampToGround: false,
-      useGroundNormals: false,
       wireframe: false,
       outlineColor: new Color().setStyle("#aaff00"),
       outlineWidth: 3,
@@ -513,7 +511,6 @@ const geoLayersDef: MaterialLayerDescription[] = [
       height: 10,
       extrudedHeight: 0,
       clampToGround: true,
-      useGroundNormals: true,
       wireframe: false,
     },
     vectorTile: {

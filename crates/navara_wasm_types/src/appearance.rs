@@ -638,9 +638,6 @@ pub struct PolygonMaterial {
     #[wasm_bindgen(js_name = clampToGround)]
     #[serde(rename = "clampToGround")]
     pub clamp_to_ground: Option<bool>,
-    #[wasm_bindgen(js_name = useGroundNormals)]
-    #[serde(rename = "useGroundNormals")]
-    pub use_ground_normals: Option<bool>,
     pub height: Option<f32>,
     #[wasm_bindgen(js_name = extrudedHeight)]
     #[serde(rename = "extrudedHeight")]
@@ -731,7 +728,6 @@ impl PolygonMaterial {
         receive_shadow: Option<bool>,
         color: Option<u32>,
         clamp_to_ground: Option<bool>,
-        use_ground_normals: Option<bool>,
         height: Option<f32>,
         extruded_height: Option<f32>,
         wireframe: Option<bool>,
@@ -745,7 +741,6 @@ impl PolygonMaterial {
             receive_shadow,
             color,
             clamp_to_ground,
-            use_ground_normals,
             height,
             extruded_height,
             wireframe,
@@ -791,7 +786,6 @@ impl PolygonMaterial {
             receive_shadow: self.receive_shadow.unwrap_or(other.receive_shadow),
             color: self.color.unwrap_or(other.color),
             clamp_to_ground: self.clamp_to_ground.unwrap_or(other.clamp_to_ground),
-            use_ground_normals: self.use_ground_normals.unwrap_or(other.use_ground_normals),
             height: self.height.unwrap_or(other.height),
             extruded_height: self.extruded_height.or(other.extruded_height),
             wireframe: self.wireframe.unwrap_or(other.wireframe),
@@ -842,7 +836,6 @@ impl From<PolygonMaterial> for navara_material::PolygonMaterial {
             receive_shadow: val.receive_shadow.unwrap_or(default.receive_shadow),
             color: val.color.unwrap_or(default.color),
             clamp_to_ground: val.clamp_to_ground.unwrap_or(default.clamp_to_ground),
-            use_ground_normals: val.use_ground_normals.unwrap_or(default.use_ground_normals),
             height: val.height.unwrap_or(default.height),
             extruded_height: val.extruded_height,
             wireframe: val.wireframe.unwrap_or(default.wireframe),
@@ -888,7 +881,6 @@ impl<'a> From<&'a navara_material::PolygonMaterial> for PolygonMaterial {
             receive_shadow: Some(value.receive_shadow),
             color: Some(value.color),
             clamp_to_ground: Some(value.clamp_to_ground),
-            use_ground_normals: Some(value.use_ground_normals),
             height: Some(value.height),
             extruded_height: value.extruded_height,
             wireframe: Some(value.wireframe),
@@ -928,7 +920,6 @@ impl From<navara_material::PolygonMaterial> for PolygonMaterial {
             receive_shadow: Some(value.receive_shadow),
             color: Some(value.color),
             clamp_to_ground: Some(value.clamp_to_ground),
-            use_ground_normals: Some(value.use_ground_normals),
             height: Some(value.height),
             extruded_height: value.extruded_height,
             wireframe: Some(value.wireframe),

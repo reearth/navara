@@ -8,7 +8,6 @@ export function toPolygonMaterialLike(like: PolygonMaterialLike) {
     like.receiveShadow,
     like.color,
     like.clampToGround,
-    like.useGroundNormals,
     like.height,
     like.extrudedHeight,
     like.wireframe,
