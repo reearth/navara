@@ -5,7 +5,6 @@ import {
   type ViewContext,
   type MRTPassEffectLayer,
 } from "@navara/three";
-import { RGBADepthPacking } from "three";
 import invariant from "tiny-invariant";
 
 import { Clouds, type CloudsOptions } from "./clouds";
@@ -40,10 +39,10 @@ export class CloudsEffectLayer extends EffectLayerDeclaration<
     });
 
     const mrtPass = this.findLayer<MRTPassEffectLayer>("mrt");
-    invariant(mrtPass?.raw);
+    invariant(mrtPass?.depthBuffer);
     pass.raw.setCustomDepthTexture(
-      mrtPass.raw.allDepthCopyPass.texture,
-      RGBADepthPacking,
+      mrtPass.depthBuffer,
+      mrtPass.depthBufferPacking,
     );
 
     return pass;

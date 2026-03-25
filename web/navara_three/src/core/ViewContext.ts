@@ -1,5 +1,6 @@
 import type { Globe } from "@navara/core";
 import { EventHandler } from "@navara/core";
+import type { FontManager } from "@navara/font";
 import type { ConcurrencyManager } from "@navara/worker";
 import type { Material, Object3D, PerspectiveCamera } from "three";
 
@@ -36,6 +37,7 @@ export class ViewContext extends EventHandler<ViewContextEvents> {
   public selectiveEffectRegistry?: SelectiveEffectHelper;
   public debugOptions: ViewDebugOptions;
   public globe?: Globe;
+  public fontManager?: FontManager;
 
   private readonly selectiveEffects: SelectiveEffectManager;
 
