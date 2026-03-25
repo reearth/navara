@@ -1,4 +1,5 @@
 import { encodePosition } from "@navara/engine-api";
+import { degreeToRadian } from "@navara/three_api";
 import {
   DataArrayTexture,
   Vector2 as ThreeVector2,
@@ -12,7 +13,6 @@ import type {
   InstancedSpriteBaseRefs,
   InstancedSpriteBaseState,
 } from "./types";
-import { degreeToRadian } from "@navara/three_api";
 
 /**
  * Create mutation functions for the instancedSprite base enhancer.

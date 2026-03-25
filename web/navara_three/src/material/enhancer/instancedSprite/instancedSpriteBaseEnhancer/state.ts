@@ -1,4 +1,5 @@
 import { degreeToRadian } from "@navara/three_api";
+
 import type {
   InstancedSpriteBaseProps,
   InstancedSpriteBaseState,
