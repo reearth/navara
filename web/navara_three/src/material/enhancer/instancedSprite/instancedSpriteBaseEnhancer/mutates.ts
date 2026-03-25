@@ -12,6 +12,7 @@ import type {
   InstancedSpriteBaseRefs,
   InstancedSpriteBaseState,
 } from "./types";
+import { degreeToRadian } from "@navara/three_api";
 
 /**
  * Create mutation functions for the instancedSprite base enhancer.
@@ -44,7 +45,7 @@ export const createBaseMutates = (
     uFarPlane: { value: 0.0 },
     uAspect: { value: 1.0 },
     nvr_uPickable: { value: 0.0 },
-    uFov: { value: 50.0 },
+    uFov: { value: degreeToRadian(50.0) },
     uScreenHeight: { value: 1080 },
   };
 
@@ -81,8 +82,6 @@ export const createBaseMutates = (
       uniforms.uScreenHeight = refs.uScreenHeight;
       uniforms.nvr_uPickable = refs.nvr_uPickable;
 
-      console.log(`fov uniform value: ${refs.uFov.value}`);
-      console.log(`screenHeight uniform value: ${refs.uScreenHeight.value}`);
       if (refs.uTexture) {
         uniforms.uTexture = refs.uTexture;
       }

@@ -47,6 +47,9 @@ type PositionsInfo = {
   RTE: boolean;
 };
 
+/** Reusable Vector2 to avoid per-frame allocations in onBeforeRender. */
+const _tmpSize = new Vector2();
+
 export class InstancedSpriteMesh extends Mesh implements PickableMesh {
   private _batchIdToInstance = new Map<number, number>();
   private _initialColor: Color = new Color(0xffffff);
@@ -370,7 +373,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
       mutates.updateFarPlane(pCam.far);
       mutates.updateFov((pCam.fov * Math.PI) / 180);
       mutates.updateScreenHeight(
-        _renderer.getDrawingBufferSize(new Vector2()).y,
+        _renderer.getDrawingBufferSize(_tmpSize).y,
       );
 
       if (positionsInfo.RTE) {
