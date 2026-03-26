@@ -22,8 +22,8 @@
   },
   "license": "MIT OR Apache-2.0",
   "peerDependencies": {
-    "three": "^0.183.2",
-    "react": "^18 || ^19",
+    "three": "0.183.2",
+    "react": "19.2.4",
     "@navara/three": "workspace:*"
   },
   "dependencies": {},

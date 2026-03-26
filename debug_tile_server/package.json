@@ -4,8 +4,8 @@
   },
   "dependencies": {
     "@hono/node-server": "1.19.11",
-    "canvas": "3.2.1",
-    "hono": "4.12.7"
+    "canvas": "3.2.2",
+    "hono": "4.12.8"
   },
   "devDependencies": {
     "@types/node": "24.12.0",
