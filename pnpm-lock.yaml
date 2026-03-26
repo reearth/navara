@@ -133,6 +133,9 @@ importers:
       '@navara/three_default_plugin':
         specifier: workspace:*
         version: link:../../navara_three_default_plugin
+      postprocessing:
+        specifier: 6.38.3
+        version: 6.38.3(three@0.183.2)
       three:
         specifier: 0.183.2
         version: 0.183.2

@@ -22,7 +22,8 @@
     "@navara/engine": "workspace:*",
     "@navara/engine-api": "workspace:*",
     "@navara/engine-worker": "workspace:*",
-    "three": "0.183.2"
+    "three": "0.183.2",
+    "postprocessing": "6.38.3"
   },
   "devDependencies": {
     "@types/three": "0.183.1"

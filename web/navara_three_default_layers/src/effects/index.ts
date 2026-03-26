@@ -73,3 +73,5 @@ export {
   type ToneMappingConfig,
   type ToneMappingUpdate,
 } from "./ToneMappingEffectLayer";
+
+export { ToneMappingMode } from "postprocessing";
