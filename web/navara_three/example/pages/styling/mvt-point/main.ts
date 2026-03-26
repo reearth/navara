@@ -70,6 +70,9 @@ const run = async () => {
         color: new Color().setStyle("#ff0000"),
         center: { x: 0, y: -0.5 },
       },
+      vectorTile: {
+        maxZoom: 16,
+      },
     });
 
     // Feature evaluator: style points based on properties
