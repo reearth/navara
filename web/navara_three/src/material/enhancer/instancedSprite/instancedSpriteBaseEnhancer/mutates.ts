@@ -61,8 +61,6 @@ export const createBaseMutates = (
       refs.uOffsetDepth.value = state.offsetDepth;
       refs.uAlphaTest.value = state.alphaTest;
       refs.uAspect.value = state.aspect;
-      refs.uFovRad.value = state.fovRad;
-      refs.uScreenHeightPx.value = state.screenHeightPx;
       refs.nvr_uPickable.value = state.pickable ? 1.0 : 0.0;
     },
 

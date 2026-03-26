@@ -373,7 +373,9 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
       const pCam = camera as PerspectiveCamera;
       mutates.updateFarPlane(pCam.far);
       mutates.updateFovRad(degreeToRadian(pCam.fov));
-      mutates.updateScreenHeightPx(_renderer.getDrawingBufferSize(_tmpSize).y);
+      mutates.updateScreenHeightPx(
+        _renderer.getDrawingBufferSize(_tmpSize).y / _renderer.getPixelRatio(),
+      );
 
       if (positionsInfo.RTE) {
         mutates.updateRteUniforms(
