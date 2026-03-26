@@ -1,4 +1,3 @@
-import FontWorkerURL from "@navara/font/fontWorker?worker&url";
 import type { ConcurrencyManager } from "@navara/worker";
 import { DataTexture, LinearFilter, RedFormat, UnsignedByteType } from "three";
 
@@ -65,6 +64,7 @@ const SHAPE_CACHE_MAX_SIZE = 10_000;
  * (DataTexture creation/update) stays on the main thread.
  */
 export class FontManager {
+  private _workerUrl: string | URL;
   private _client: FontWorkerClient | undefined;
   private _clientPromise: Promise<FontWorkerClient> | undefined;
   private _concurrencyManager: ConcurrencyManager | undefined;
@@ -97,6 +97,10 @@ export class FontManager {
 
   private _refCount = new Map<string, number>();
 
+  constructor(workerUrl: string | URL) {
+    this._workerUrl = workerUrl;
+  }
+
   setConcurrencyManager(concurrencyManager: ConcurrencyManager) {
     this._concurrencyManager = concurrencyManager;
   }
@@ -111,7 +115,7 @@ export class FontManager {
     }
     const cm = this._concurrencyManager;
     this._clientPromise = (async () => {
-      const client = new FontWorkerClient(FontWorkerURL, cm);
+      const client = new FontWorkerClient(this._workerUrl, cm);
       await client.ready();
       this._client = client;
       return client;
