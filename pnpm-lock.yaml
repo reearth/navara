@@ -402,7 +402,7 @@ importers:
   web/navara_three_react:
     dependencies:
       react:
-        specifier: 19.2.4
+        specifier: '>=19'
         version: 19.2.4
     devDependencies:
       '@navara/three':
