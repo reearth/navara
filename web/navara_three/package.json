@@ -27,8 +27,8 @@
   },
   "license": "MIT OR Apache-2.0",
   "peerDependencies": {
-    "postprocessing": "6.38.3",
-    "three": "0.183.2"
+    "postprocessing": ">=6.38.0",
+    "three": ">=0.183.0"
   },
   "dependencies": {
     "@navara/core": "workspace:*",
