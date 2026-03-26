@@ -6,14 +6,13 @@ use bevy_ecs::{
 };
 use navara_buffer_store::BufferStore;
 use navara_component::{Deleted, Ignored, OrderByDistance, Priority, Requested};
-use navara_data_requester::{DataRequester, DataRequesterStatus};
+use navara_data_requester::DataRequester;
 use navara_event_store::EventStore;
 use navara_quadtree::{decode_quadleaf_handle, encode_quadleaf_handle};
 use navara_tile_component::{
     HillshadeBackfillEventData, HillshadeBackfillEvents, HillshadeEdges, HillshadeEdgesExtracted,
 };
 use navara_tile_component::{RasterTileQuadtree, TileTextureFragmentMarker};
-use std::collections::HashMap;
 
 const MAX_HILLSHADE_PENDINGS: u32 = 10;
 
@@ -51,7 +50,6 @@ pub fn filter_requestable_hillshade_data_requester(
         (
             Entity,
             &TileTextureFragmentMarker,
-            &DataRequester,
             &OrderByDistance,
             &Priority,
         ),
@@ -76,7 +74,7 @@ pub fn filter_requestable_hillshade_data_requester(
 
     // Limit the number of hillshade requests in this frame
     // Sort by priority and distance, then mark excess entities for deletion
-    for (e, marker, _, _, _) in hillshade_requesters
+    for (e, marker, _, _) in hillshade_requesters
         .iter()
         .sort::<(&Priority, &OrderByDistance)>()
         .skip(num_skip as usize)
@@ -86,16 +84,23 @@ pub fn filter_requestable_hillshade_data_requester(
         if let Some(tile) = tile {
             commands.entity(e).insert((Deleted, Ignored));
 
-            // Remove this hillshade request from tile's texture_fragment_entity_ids
-            if let Some(ids) = tile.texture_fragment_entity_ids.as_mut()
-                && let Some(idx) = ids
+            // Find and remove from both arrays to maintain alignment
+            if let Some(hillshade_ids) = tile.hillshade_entity_ids.as_mut()
+                && let Some(idx) = hillshade_ids
                     .iter()
                     .enumerate()
                     .find_map(|(i, id)| id.and_then(|id| (id == e).then_some(i)))
             {
-                // Remove the slot so texture_fragment_entity_ids stays dense and new requests
-                // are not prevented from reusing freed positions.
-                ids.remove(idx);
+                // Remove from both arrays at same index
+                hillshade_ids.remove(idx);
+
+                // texture_fragment_entity_ids MUST exist and have same length
+                // because request_texture_fragment always pushes to both arrays
+                if let Some(tex_ids) = tile.texture_fragment_entity_ids.as_mut()
+                    && idx < tex_ids.len()
+                {
+                    tex_ids.remove(idx);
+                }
             }
         }
     }
@@ -118,26 +123,20 @@ pub fn backfill_hillshade_on_loaded(
             Without<Ignored>,
         ),
     >,
-    all_data_requesters: Query<
-        (
-            Entity,
-            &DataRequester,
-            &TileTextureFragmentMarker,
-            &HillshadeTextureMarker,
-        ),
-        (Without<Deleted>, Without<Ignored>),
-    >,
     edges_query: Query<&HillshadeEdges>,
     extracted_query: Query<(), With<HillshadeEdgesExtracted>>,
+    data_requesters: Query<
+        &DataRequester,
+        (
+            With<HillshadeTextureMarker>,
+            Without<Deleted>,
+            Without<Ignored>,
+        ),
+    >,
 ) {
-    let tile_map: HashMap<u64, (Entity, &DataRequester)> = all_data_requesters
-        .iter()
-        .map(|(entity, dr, marker, _)| (marker.0, (entity, dr)))
-        .collect();
-
     for (entity, data_req, marker) in query.iter() {
         // Only process successfully loaded hillshade DataRequesters
-        if data_req.status != DataRequesterStatus::Success {
+        if !data_req.is_succeeded() {
             continue;
         }
 
@@ -169,9 +168,9 @@ pub fn backfill_hillshade_on_loaded(
             y,
             z,
             &extracted_edges,
-            &tile_map,
             &edges_query,
             &qt,
+            &data_requesters,
             &buf,
         );
 
@@ -310,7 +309,7 @@ fn get_neighbor_coords(
 
 /// Collect edge exchanges with all loaded neighbors
 /// Returns list of (edge_bytes, target_tile_handle, target_entity, edge_direction)
-#[allow(clippy::too_many_arguments)]
+#[allow(clippy::type_complexity, clippy::too_many_arguments)]
 fn collect_neighbor_edge_exchanges(
     entity: Entity,
     tile_handle: u64,
@@ -318,9 +317,16 @@ fn collect_neighbor_edge_exchanges(
     y: usize,
     z: usize,
     extracted_edges: &Option<ExtractedEdges>,
-    tile_map: &HashMap<u64, (Entity, &DataRequester)>,
     edges_query: &Query<&HillshadeEdges>,
     qt: &RasterTileQuadtree,
+    data_requesters: &Query<
+        &DataRequester,
+        (
+            With<HillshadeTextureMarker>,
+            Without<Deleted>,
+            Without<Ignored>,
+        ),
+    >,
     buf: &BufferStore,
 ) -> Vec<(Vec<u8>, u64, Entity, u8)> {
     // Define neighbor directions (coordinates will be computed with bounds checking)
@@ -351,15 +357,24 @@ fn collect_neighbor_edge_exchanges(
             continue;
         };
 
-        if qt.qt.get(neighbor_handle).is_none() {
+        let Some(neighbor_tile) = qt.qt.get(neighbor_handle) else {
             continue; // Neighbor tile not loaded
-        }
-
-        let Some(&(neighbor_entity, neighbor_dr)) = tile_map.get(&neighbor_handle) else {
-            continue; // Neighbor not in hillshade map
         };
 
-        if neighbor_dr.status != DataRequesterStatus::Success {
+        // Get the first hillshade entity from neighbor (only support one hillshade per tile for now)
+        let Some(neighbor_entity) = neighbor_tile
+            .hillshade_entity_ids
+            .as_ref()
+            .and_then(|ids| ids.iter().find_map(|&id| id))
+        else {
+            continue; // Neighbor doesn't have hillshade
+        };
+
+        let Ok(neighbor_dr) = data_requesters.get(neighbor_entity) else {
+            continue; // Neighbor hillshade entity not found in query
+        };
+
+        if !neighbor_dr.is_succeeded() {
             continue; // Neighbor not successfully loaded
         }
 

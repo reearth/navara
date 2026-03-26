@@ -13,6 +13,7 @@ import ElevationParsFragment from "@shaders/glsl/chunks/elevation_pars_fragment.
 import HillshadeParsFragment from "@shaders/glsl/chunks/hillshade_pars_fragment.glsl";
 import SpecularParsFragment from "@shaders/glsl/chunks/spucular_pars_fragment.glsl";
 import WaterParsFragment from "@shaders/glsl/chunks/water_pars_fragment.glsl?raw";
+import { generateHillshadeNormalShader } from "../shaders/hillshadeNormal";
 import {
   BufferAttribute,
   BufferGeometry,
@@ -382,10 +383,6 @@ export class TileMesh
       new BufferAttribute(position.slice(), 3),
     );
 
-    // Provide dummy normals (shader computes normals from vPosition)
-    const normals = new Float32Array(position.length);
-    terrainGeometry.setAttribute("normal", new BufferAttribute(normals, 3));
-
     const uv = buf.f32(mesh.uvs);
     if (uv) {
       terrainGeometry.setAttribute("uv", new BufferAttribute(uv.slice(), 2));
@@ -523,10 +520,6 @@ export class TileMesh
         "position",
         new BufferAttribute(combinedPosition, 3),
       );
-
-      // Provide dummy normals (shader computes normals from vPosition)
-      const combinedNormals = new Float32Array(combinedPosition.length);
-      geometry.setAttribute("normal", new BufferAttribute(combinedNormals, 3));
 
       // Combine UVs
       if (uv) {
@@ -809,53 +802,7 @@ vUv = vUv * uScale + uOffset;
   vec3 N = normalize(vPosition);
   normal = normalize(mat3(viewMatrix) * N);
 
-  #if USE_HILLSHADE
-    // Override normal with DEM-derived normal for hillshade layers
-    ${Array.from(
-      { length: maxTextures },
-      (_, i) => `
-    if (uIsHillshades[${i}]) {
-      // Check if there's a valid texture bound (size > 2 to avoid 1×1 placeholders)
-      ivec2 actualTexSize = textureSize(uTextures[${i}], 0);
-
-      if (actualTexSize.x > 2) {
-        // Calculate texelSize based on content size
-        // Standard UV mapping: UV [0,1] maps to pixel centers [first, last]
-        // So texelSize (UV distance between adjacent pixels) = 1 ~ (N - 1)
-        // For 258x258 padded texture with 256 content pixels: texelSize = 1~255
-        ivec2 contentSize = isPowerOfTwo(actualTexSize.x) ? actualTexSize : actualTexSize - ivec2(2);
-        vec2 texelSize = vec2(1.0) / (vec2(contentSize) - vec2(1.0));
-
-        // Second check: Is this valid land data (not ocean/no-data)?
-        float testHeight = sampleHeightBilinear(uTextures[${i}], vUv, actualTexSize);
-
-        // This preserves original vertex normals for ocean/no-data areas
-        if (isValidHeight(testHeight)) {
-          vec3 demNormal = computeNormalFromDEM(uTextures[${i}], vUv, texelSize, uHillshadeZooms[${i}]);
-
-          vec3 up = vec3(0.0, 0.0, 1.0);  // World up
-          vec3 T = normalize(cross(up, N));
-
-          // Handle poles where N is parallel to up
-          if (length(T) < 0.001) {
-            T = vec3(1.0, 0.0, 0.0);  // Fallback for poles
-          }
-
-          vec3 B = normalize(cross(N, T));
-
-          // Construct TBN matrix (tangent space to world space)
-          mat3 TBN = mat3(T, B, N);
-
-          // Transform DEM normal from tangent space to world space
-          vec3 worldDemNormal = normalize(TBN * demNormal);
-
-          // Transform to view space
-          normal = normalize(normalMatrix * worldDemNormal);
-        }
-      }
-    }`,
-    ).join("\n")}
-  #endif
+  ${generateHillshadeNormalShader(maxTextures)}
 
   vec3 origNormal = vec3(normal);
   vec3 specular = vec3(0.0);
@@ -1529,6 +1476,34 @@ if (uPickable > 0.) {
       m.userData.colors.value[lastIndex] = new Color(0xffffff);
       m.userData.opacities.value[lastIndex] = 1.0;
     }
+  }
+
+  /**
+   * Rebind textures for this TileMesh by calling setupTextures
+   * This ensures texture updates go through the standard texture management system
+   * Used by hillshade backfill and other dynamic texture updates
+   */
+  rebindTextures(
+    loadedTexs: Map<string, Texture>,
+    textureOptions: TextureOptions,
+  ) {
+    const material = this.material;
+    if (!material || !material.userData) return;
+
+    // Create a minimal material object with the required fields from current material
+    const materialData: Partial<RasterTileInternalMaterial> = {
+      tileZoomLevels: material.userData.hillshadeZooms?.value,
+      isElevationHeatmaps: material.userData.isElevationHeatmaps?.value,
+      isHillshades: material.userData.isHillshades?.value,
+    };
+
+    // Call setupTextures to properly bind textures through standard flow
+    this.setupTextures(
+      loadedTexs,
+      textureOptions,
+      this.maxTextures,
+      materialData,
+    );
   }
 
   _setPickable(pickable: boolean): void {

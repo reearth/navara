@@ -37,6 +37,7 @@ pub struct RasterTile {
     pub visited_at: usize,
     pub terrain_data: Option<Box<dyn TerrainData>>,
     pub texture_fragment_entity_ids: Option<Vec<Option<Entity>>>,
+    pub hillshade_entity_ids: Option<Vec<Option<Entity>>>,
     pub occludee_point_in_scaled_space: Option<Vec3>,
     pub cached_mesh_handle: Option<CachedMeshHandle>,
     /// Whether it's upsampled tile or not.
@@ -61,6 +62,7 @@ impl Clone for RasterTile {
             visited_at: self.visited_at,
             terrain_data: self.terrain_data.as_ref().map(|t| t.box_clone()),
             texture_fragment_entity_ids: self.texture_fragment_entity_ids.clone(),
+            hillshade_entity_ids: self.hillshade_entity_ids.clone(),
             occludee_point_in_scaled_space: self.occludee_point_in_scaled_space,
             cached_mesh_handle: self.cached_mesh_handle.clone(),
             upsampled: self.upsampled,
@@ -93,6 +95,7 @@ impl RasterTile {
             visited_at: 0,
             terrain_data: None,
             texture_fragment_entity_ids: None,
+            hillshade_entity_ids: None,
             occludee_point_in_scaled_space: None,
             cached_mesh_handle: None,
             upsampled: false,
@@ -115,7 +118,7 @@ impl RasterTile {
         has_tile_layer: bool,
     ) -> ReadyState {
         let is_texture_loaded =
-            self.is_any_texture_ready(texture_fragment, data_requesters, has_tile_layer);
+            self.is_texture_ready(texture_fragment, data_requesters, has_tile_layer);
 
         let data_requester_entity_id = self
             .terrain_data
@@ -201,9 +204,27 @@ impl RasterTile {
         }
         // Check DataRequester second (for hillshade)
         if let Ok(dr) = data_requesters.get(entity) {
-            return dr.status == DataRequesterStatus::Success;
+            return dr.is_succeeded();
         }
         false
+    }
+
+    /// Helper to check if hillshade layers are configured
+    fn has_hillshade_layers(&self) -> bool {
+        self.hillshade_entity_ids.is_some()
+    }
+
+    pub fn is_texture_ready(
+        &self,
+        texture_fragment: &TileTextureFragmentQuery,
+        data_requesters: &Query<&navara_data_requester::DataRequester>,
+        has_tile_layer: bool,
+    ) -> bool {
+        if self.has_hillshade_layers() {
+            self.is_all_texture_ready(texture_fragment, data_requesters, has_tile_layer)
+        } else {
+            self.is_any_texture_ready(texture_fragment, data_requesters, has_tile_layer)
+        }
     }
 
     pub fn is_any_texture_ready(
@@ -217,6 +238,9 @@ impl RasterTile {
             return true;
         }
 
+        // This function is only called when there are NO hillshade layers
+        // (see is_texture_ready() which routes to is_all_texture_ready() if hillshades exist)
+        // So we only need to check texture_fragment_entity_ids
         self.texture_fragment_entity_ids
             .as_ref()
             .map(|e| {
@@ -228,6 +252,77 @@ impl RasterTile {
                 })
             })
             .unwrap_or(false)
+    }
+
+    /// Check if ALL texture layers are ready
+    /// When hillshade is present, we need to wait for both base texture AND hillshade
+    /// to avoid flickering when they load at different times
+    pub fn is_all_texture_ready(
+        &self,
+        texture_fragment: &TileTextureFragmentQuery,
+        data_requesters: &Query<&navara_data_requester::DataRequester>,
+        has_tile_layer: bool,
+    ) -> bool {
+        // If TileLayer is None, texture is considered ready
+        if !has_tile_layer {
+            return true;
+        }
+
+        let tex_ids = self.texture_fragment_entity_ids.as_ref();
+        let hill_ids = self.hillshade_entity_ids.as_ref();
+
+        // If no arrays, nothing to check
+        if tex_ids.is_none() && hill_ids.is_none() {
+            return true;
+        }
+
+        // Get the length (both arrays should have same length)
+        let len = tex_ids
+            .map(|ids| ids.len())
+            .or_else(|| hill_ids.map(|ids| ids.len()))
+            .unwrap_or(0);
+
+        if len == 0 {
+            return false;
+        }
+
+        // Check each layer index: at that index, either texture OR hillshade must be ready
+        for i in 0..len {
+            let tex_entity = tex_ids.and_then(|ids| ids.get(i)).and_then(|&e| e);
+            let hill_entity = hill_ids.and_then(|ids| ids.get(i)).and_then(|&e| e);
+
+            // At this index, check if either entity is ready
+            let tex_ready = tex_entity
+                .map(|e| Self::is_texture_entity_ready(e, texture_fragment, data_requesters))
+                .unwrap_or(false);
+            let hill_ready = hill_entity
+                .map(|e| Self::is_texture_entity_ready(e, texture_fragment, data_requesters))
+                .unwrap_or(false);
+
+            // Check if this is a real layer or just a skipped layer
+            // If both arrays don't have this index, it's truly skipped
+            let has_tex_slot = tex_ids.is_some_and(|ids| i < ids.len());
+            let has_hill_slot = hill_ids.is_some_and(|ids| i < ids.len());
+
+            if !has_tex_slot && !has_hill_slot {
+                // No slot in either array, truly skipped
+                continue;
+            }
+
+            // If both entities are None but slots exist, check if it's a hillshade layer that exceeded max_zoom
+            if tex_entity.is_none() && hill_entity.is_none() {
+                // Both None but slots exist - this might be a hillshade layer that exceeded max_zoom
+                // We need parent fallback
+                return false;
+            }
+
+            if !tex_ready && !hill_ready {
+                // At least one entity exists but none are ready
+                return false;
+            }
+        }
+
+        true
     }
 
     pub fn is_terrain_ready(
@@ -346,6 +441,12 @@ impl RasterTile {
         if let Some(fragments) = self.texture_fragment_entity_ids.take() {
             for fragment in fragments.into_iter().flatten() {
                 commands.entity(fragment).insert(Deleted);
+            }
+        }
+
+        if let Some(hillshade_entities) = self.hillshade_entity_ids.take() {
+            for hillshade_entity in hillshade_entities.into_iter().flatten() {
+                commands.entity(hillshade_entity).insert(Deleted);
             }
         }
 

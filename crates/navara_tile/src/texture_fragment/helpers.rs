@@ -26,27 +26,55 @@ pub(crate) fn request_texture_fragment(
     buf: &mut BufferStore,
 ) {
     let tiles_len = tiles.iter().len();
-    if matches!(
-        leaf.texture_fragment_entity_ids.as_ref(),
-        Some(e)
-            if e.len() == tiles_len
-                && e.iter().all(|e| {
-                    e.is_some_and(|e| {
-                        texture_fragment.contains(e)
-                            || data_requesters.get(e).is_ok()
+
+    // Check if all layers have entities (either in texture_fragment_entity_ids or hillshade_entity_ids)
+    let all_layers_requested = leaf
+        .texture_fragment_entity_ids
+        .as_ref()
+        .zip(leaf.hillshade_entity_ids.as_ref())
+        .is_some_and(|(tex_ids, hill_ids)| {
+            tex_ids.len() == tiles_len
+                && hill_ids.len() == tiles_len
+                && tex_ids
+                    .iter()
+                    .zip(hill_ids.iter())
+                    .all(|(tex_opt, hill_opt)| {
+                        // Check texture entity (TextureFragment only)
+                        if let Some(tex_e) = tex_opt {
+                            texture_fragment.contains(*tex_e)
+                        }
+                        // Check hillshade entity (DataRequester only)
+                        else if let Some(hill_e) = hill_opt {
+                            data_requesters.get(*hill_e).is_ok()
+                        } else {
+                            // Both None means this layer was skipped (exceeded max/min zoom)
+                            // This is a valid state, not missing
+                            true
+                        }
                     })
-                })
-    ) {
+        });
+
+    if all_layers_requested {
         return;
     }
 
     // Wait until previous request is ready.
+    // Check last texture fragment entity
     if let Some(Some(e)) = leaf
         .texture_fragment_entity_ids
         .as_ref()
         .and_then(|ids| ids.last())
         && (texture_fragment.get(*e).is_ok_and(|t| t.1.is_pending())
             || data_requesters.get(*e).is_ok_and(|r| r.is_pending()))
+    {
+        return;
+    }
+    // Check last hillshade entity
+    if let Some(Some(e)) = leaf
+        .hillshade_entity_ids
+        .as_ref()
+        .and_then(|ids| ids.last())
+        && data_requesters.get(*e).is_ok_and(|r| r.is_pending())
     {
         return;
     }
@@ -62,7 +90,11 @@ pub(crate) fn request_texture_fragment(
     // since selected tile has multiple layers.
     for (next, _) in tiles.iter().skip(idx) {
         if !next.is_over_min_zoom(leaf.coords.z) || next.is_over_max_zoom(leaf.coords.z) {
+            // Push None to both arrays to maintain alignment
             leaf.texture_fragment_entity_ids
+                .get_or_insert_with(|| Vec::with_capacity(tiles_len))
+                .push(None);
+            leaf.hillshade_entity_ids
                 .get_or_insert_with(|| Vec::with_capacity(tiles_len))
                 .push(None);
             next_tile = None;
@@ -120,7 +152,25 @@ pub(crate) fn request_texture_fragment(
 
     let id = entity.id();
 
-    leaf.texture_fragment_entity_ids
-        .get_or_insert_with(|| Vec::with_capacity(tiles_len))
-        .push(Some(id));
+    if is_hillshade {
+        // Store hillshade entity in dedicated array for efficient neighbor lookup
+        leaf.hillshade_entity_ids
+            .get_or_insert_with(|| Vec::with_capacity(tiles_len))
+            .push(Some(id));
+
+        // Push None to texture_fragment_entity_ids to maintain index alignment
+        leaf.texture_fragment_entity_ids
+            .get_or_insert_with(|| Vec::with_capacity(tiles_len))
+            .push(None);
+    } else {
+        // Regular texture: store in texture_fragment_entity_ids only
+        leaf.texture_fragment_entity_ids
+            .get_or_insert_with(|| Vec::with_capacity(tiles_len))
+            .push(Some(id));
+
+        // Push None to hillshade_entity_ids to maintain index alignment
+        leaf.hillshade_entity_ids
+            .get_or_insert_with(|| Vec::with_capacity(tiles_len))
+            .push(None);
+    }
 }

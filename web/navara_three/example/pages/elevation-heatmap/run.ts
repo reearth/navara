@@ -70,7 +70,7 @@ export const run = async (view: ThreeView<LayerDescriptions>) => {
       url: TERRAIN_DATASETS.mapterhorn.url,
     },
     rasterTile: {
-      maxZoom: 15,
+      maxZoom: 17,
       minZoom: 5,
     },
     hillshade: {
@@ -87,7 +87,7 @@ export const run = async (view: ThreeView<LayerDescriptions>) => {
       url: TERRAIN_DATASETS.mapterhorn.url,
     },
     rasterTile: {
-      maxZoom: 15,
+      maxZoom: 17,
     },
     elevationHeatmap: {
       maxHeight: 3000,

@@ -140,11 +140,11 @@ pub fn update_tiles(
     let zero_tile_handle = zero_tile.handle();
 
     let has_tile_layer = !tiles.is_empty();
-    let is_texture_ready = qt
-        .qt
-        .get_mut(zero_tile_handle)
-        .unwrap()
-        .is_any_texture_ready(&texture_fragment, &data_requesters, has_tile_layer);
+    let is_texture_ready = qt.qt.get_mut(zero_tile_handle).unwrap().is_texture_ready(
+        &texture_fragment,
+        &data_requesters,
+        has_tile_layer,
+    );
 
     let traversal_result = traverse_tile(
         &mut commands,
@@ -324,24 +324,31 @@ pub fn transfer_mesh(
         let mut tile_show_bounding_box = false;
 
         for (i, (l, _)) in tile_layers.iter().sort::<&Order>().enumerate() {
-            // Check if texture is ready: TextureFragment OR DataRequester (for hillshade)
-            let should_show = texture_fragment_entity_ids
+            // Check if texture is ready: check texture_fragment_entity_ids OR hillshade_entity_ids
+            let mut should_show = false;
+
+            // Check texture_fragment_entity_ids first
+            if let Some(tex_entity) = texture_fragment_entity_ids
                 .as_ref()
                 .and_then(|ids| ids.get(i))
-                .and_then(|tex| {
-                    tex.and_then(|entity| {
-                        // Try TextureFragment first
-                        if let Ok((_, tf)) = texture_fragment.get(entity) {
-                            return Some(tf.is_succeeded());
-                        }
-                        // Try DataRequester second (for hillshade)
-                        if let Ok(dr) = data_requesters.get(entity) {
-                            return Some(dr.status == DataRequesterStatus::Success);
-                        }
-                        None
-                    })
-                })
-                .unwrap_or(false);
+                .and_then(|&e| e)
+                && let Ok((_, tf)) = texture_fragment.get(tex_entity)
+            {
+                should_show = tf.is_succeeded();
+            }
+
+            // If no texture fragment, check hillshade_entity_ids
+            if !should_show
+                && let Some(hill_entity) = tile
+                    .hillshade_entity_ids
+                    .as_ref()
+                    .and_then(|ids| ids.get(i))
+                    .and_then(|&e| e)
+                && let Ok(dr) = data_requesters.get(hill_entity)
+            {
+                should_show = dr.is_succeeded();
+            }
+
             let a = l.appearance().unwrap();
             shows.push(should_show && a.show);
             opacities.push(a.opacity.clamp(0., 1.));
@@ -351,7 +358,7 @@ pub fn transfer_mesh(
             let mut parent_z = None;
             let has_tile_layer = !tile_layers.is_empty();
             // Only use parent zoom if current tile textures aren't ready (fallback to parent)
-            if !tile.is_any_texture_ready(&texture_fragment, &data_requesters, has_tile_layer) {
+            if !tile.is_texture_ready(&texture_fragment, &data_requesters, has_tile_layer) {
                 parent_z = ready_parent_tile
                     .and_then(|h| qt.qt.get(h))
                     .map(|parent_tile| parent_tile.coords.z);
@@ -803,12 +810,40 @@ pub fn delete_layer(
         let tile = qt.qt.get_mut(rendered_tile.tile_handle).unwrap();
         for (removed_idx, idx) in deleted_layers.iter().enumerate() {
             let target_idx = idx - removed_idx;
-            if let Some(Some(e)) = tile
-                .texture_fragment_entity_ids
-                .as_mut()
-                .and_then(|ids| (ids.len() > target_idx).then(|| ids.remove(target_idx)))
-            {
-                commands.entity(e).insert(Deleted);
+
+            // Must remove from BOTH arrays at the same index to maintain alignment
+            let tex_ids = tile.texture_fragment_entity_ids.as_mut();
+            let hill_ids = tile.hillshade_entity_ids.as_mut();
+
+            match (tex_ids, hill_ids) {
+                (Some(tex), Some(hill)) => {
+                    // Remove from both arrays if index is valid
+                    if target_idx < tex.len() && target_idx < hill.len() {
+                        if let Some(e) = tex.remove(target_idx) {
+                            commands.entity(e).insert(Deleted);
+                        }
+                        if let Some(e) = hill.remove(target_idx) {
+                            commands.entity(e).insert(Deleted);
+                        }
+                    }
+                }
+                (Some(tex), None) => {
+                    if target_idx < tex.len()
+                        && let Some(e) = tex.remove(target_idx)
+                    {
+                        commands.entity(e).insert(Deleted);
+                    }
+                }
+                (None, Some(hill)) => {
+                    if target_idx < hill.len()
+                        && let Some(e) = hill.remove(target_idx)
+                    {
+                        commands.entity(e).insert(Deleted);
+                    }
+                }
+                (None, None) => {
+                    // Both None - nothing to do
+                }
             }
         }
     }
@@ -860,33 +895,51 @@ pub fn update_mesh_material(
             continue;
         };
 
-        let texture_fragment_entity_ids = match &tile.texture_fragment_entity_ids {
+        let texture_fragment_entity_ids_original = match &tile.texture_fragment_entity_ids {
             Some(texture_fragment_entity_ids) => texture_fragment_entity_ids,
             // Use a parent texture if this tile hasn't been prepared yet.
             None => &vec![],
         };
 
         let mut parent_z = None;
+
+        // Merge texture_fragment_entity_ids and hillshade_entity_ids with per-layer parent fallback
+        let mut merged_current_fragments = Vec::new();
+
+        // Get parent tile for texture fallback from ready_parent_tile_handle
+        let parent_tile = cached_rendered_tile
+            .ready_parent_tile_handle
+            .and_then(|h| qt.qt.get(h));
+
+        // Merge current tile's arrays
+        // Use all-or-nothing approach: if tile isn't ready, use parent for ALL layers
+        let hill_ids = tile.hillshade_entity_ids.as_ref();
+        for i in 0..texture_fragment_entity_ids_original.len() {
+            let tex = texture_fragment_entity_ids_original.get(i).and_then(|&e| e);
+            let hill = hill_ids.and_then(|ids| ids.get(i).and_then(|&e| e));
+            merged_current_fragments.push(tex.or(hill));
+        }
+
+        // Use parent if tile isn't ready (all-or-nothing to respect single UV transform)
         let texture_fragment_entity_ids =
-            if tile.is_any_texture_ready(&texture_fragment, &data_requesters, true) {
-                texture_fragment_entity_ids
-            } else {
-                // Use the parent tile if this tile doesn't have a tile.
-                match cached_rendered_tile
-                    .ready_parent_tile_handle
-                    .and_then(|h| qt.qt.get(h))
-                    .and_then(|parent_tile| {
-                        parent_tile
-                            .texture_fragment_entity_ids
-                            .as_ref()
-                            .map(|v| (v, parent_tile.coords.z))
-                    }) {
-                    Some((v, parent_z_)) => {
-                        parent_z = Some(parent_z_);
-                        v
+            if tile.is_texture_ready(&texture_fragment, &data_requesters, true) {
+                &merged_current_fragments
+            } else if let Some(parent) = parent_tile {
+                parent_z = Some(parent.coords.z);
+
+                // Use parent's merged fragments for ALL layers
+                merged_current_fragments.clear();
+                if let Some(parent_tex_ids) = &parent.texture_fragment_entity_ids {
+                    let parent_hill_ids = parent.hillshade_entity_ids.as_ref();
+                    for i in 0..parent_tex_ids.len() {
+                        let tex = parent_tex_ids.get(i).and_then(|&e| e);
+                        let hill = parent_hill_ids.and_then(|ids| ids.get(i).and_then(|&e| e));
+                        merged_current_fragments.push(tex.or(hill));
                     }
-                    None => texture_fragment_entity_ids,
                 }
+                &merged_current_fragments
+            } else {
+                &merged_current_fragments
             };
 
         let Some((tile_mesh_marker, _, appearance)) = cached_rendered_tile

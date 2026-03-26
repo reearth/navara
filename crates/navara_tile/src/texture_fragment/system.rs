@@ -46,13 +46,22 @@ pub(crate) fn filter_requestable_texture_fragment(
         if let Some(tile) = tile {
             commands.entity(e).insert((Deleted, Ignored));
 
-            if let Some(ids) = tile.texture_fragment_entity_ids.as_mut() {
-                let idx = ids
+            if let Some(tex_ids) = tile.texture_fragment_entity_ids.as_mut()
+                && let Some(idx) = tex_ids
                     .iter()
                     .enumerate()
                     .find_map(|(i, id)| id.and_then(|id| (id == e).then_some(i)))
-                    .unwrap();
-                ids.remove(idx);
+            {
+                // Remove from both arrays at same index to maintain alignment
+                tex_ids.remove(idx);
+
+                // hillshade_entity_ids MUST exist and have same length
+                // because request_texture_fragment always pushes to both arrays
+                if let Some(hill_ids) = tile.hillshade_entity_ids.as_mut()
+                    && idx < hill_ids.len()
+                {
+                    hill_ids.remove(idx);
+                }
             }
         }
     }

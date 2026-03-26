@@ -10,40 +10,12 @@ import {
 } from "three";
 
 import type { TileMesh } from "../mesh/tile";
-import type { RasterTileInternalMaterial } from "@navara/engine";
 import type { TextureOptions } from "../textures";
 import type { BufferLoader } from "./index";
 import {
   getTextureFragmentSlots,
   type TextureSlot,
 } from "../utils/textureFragmentIndex";
-
-/**
- * Rebind textures for a TileMesh by calling its setupTextures method
- * This ensures texture updates go through the standard texture management system
- * instead of directly modifying material.userData
- */
-function rebindTexturesForTileMesh(
-  tileMesh: TileMesh,
-  loadedTexs: Map<string, Texture>,
-  textureOptions: TextureOptions,
-) {
-  const material = tileMesh.material;
-  if (!material || !material.userData) return;
-
-  // Get material data to pass to setupTextures
-  const maxTextures = tileMesh.maxTextures;
-
-  // Create a minimal material object with the required fields
-  const materialData: Partial<RasterTileInternalMaterial> = {
-    tileZoomLevels: material.userData.hillshadeZooms?.value,
-    isElevationHeatmaps: material.userData.isElevationHeatmaps?.value,
-    isHillshades: material.userData.isHillshades?.value,
-  };
-
-  // Call setupTextures to properly bind textures through standard flow
-  tileMesh.setupTextures(loadedTexs, textureOptions, maxTextures, materialData);
-}
 
 export function processHillshadeBackfilled(
   event: HillshadeBackfilledEvent | undefined,
@@ -132,7 +104,7 @@ export function processHillshadeBackfilled(
         uniqueMeshes.add(tileMesh);
       }
       for (const tileMesh of uniqueMeshes) {
-        rebindTexturesForTileMesh(tileMesh, loadedTexs, textureOptions);
+        tileMesh.rebindTextures(loadedTexs, textureOptions);
       }
     }
   }

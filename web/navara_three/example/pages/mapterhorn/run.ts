@@ -62,7 +62,7 @@ export const run = async (view: ThreeView<LayerDescriptions>) => {
     type: "tiles",
     data: { url: TERRAIN_DATASETS.mapterhorn.url },
     rasterTile: {
-      maxZoom: 15,
+      maxZoom: 17,
       minZoom: 5,
     },
     hillshade: {
