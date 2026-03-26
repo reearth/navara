@@ -1,8 +1,5 @@
 import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
-import {
-  DefaultPlugin,
-  type DefaultLayerDescriptions,
-} from "@navara/three_default_plugin";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 
 import { showAttributions } from "../../../helpers/attributions";
 import {
@@ -12,30 +9,30 @@ import {
 } from "../../../helpers/constants";
 
 const run = async () => {
-  const view = new ThreeView<DefaultLayerDescriptions>({
-    debug: true,
-    shadow: true,
-  });
+  const view = new ThreeView({ debug: true, shadow: true });
+
   const defaultPlugin = new DefaultPlugin();
   view.addPlugin(defaultPlugin);
+
   await view.init();
 
   const defaultAtmospheres = defaultPlugin.addDefaultPhotorealLayers();
   defaultAtmospheres.sun.update({
     sun: { intensity: 1, castShadow: true },
   });
+
   view.atmosphere.date.setHours(8);
 
   view.setCamera({
-    lng: 139.767,
-    lat: 35.681,
-    height: 1000,
+    lng: 139.6,
+    lat: 35.48,
+    height: 20000,
     heading: 0,
-    pitch: -45,
+    pitch: -48,
     roll: 0,
   });
 
-  // Effect Layer
+  // Selective bloom effect
   const bloomEffect = view.addLayer({
     type: "effect",
     selectiveBloom: true,
@@ -45,21 +42,43 @@ const run = async () => {
     bloomThreshold: 0.0,
   });
 
-  // MVT extruded polygon layer with bloom
-  view.addLayer({
+  // MVT polygon with bloom (Height Control District)
+  const layer = view.addLayer({
     type: "mvt",
     data: { url: MVT_DATASETS.plateauTokyoHeightControl.url },
     polygon: {
-      effectIds: [bloomEffect.id],
-      emissiveColor: new Color().setHex(0x44ff44),
-      emissiveIntensity: 0.5,
-      color: new Color().setHex(0x44ff44),
       height: 0,
-      extrudedHeight: 50,
+      extrudedHeight: 0,
+      clampToGround: false,
       castShadow: true,
       receiveShadow: true,
+      effectIds: [bloomEffect.id],
+      emissiveIntensity: 0.5,
     },
     vectorTile: { maxZoom: 16 },
+  });
+
+  layer.on("featureUpdated", ({ evaluator }) => {
+    evaluator.evaluate(
+      ({ properties }) => {
+        const attributes = JSON.parse(
+          (properties?.["attributes"] as string) ?? "{}",
+        );
+        const minHeight = attributes["urf:minimumBuildingHeight"];
+        const maxHeight = attributes["urf:maximumBuildingHeight"];
+        const extrudedHeight = Math.max(maxHeight ?? minHeight ?? 0, 1);
+
+        const color = (() => {
+          if (extrudedHeight <= 1) return new Color().setHex(0x00ff00);
+          if (extrudedHeight < 10) return new Color().setHex(0xffff00);
+          if (extrudedHeight < 30) return new Color().setHex(0xff00ff);
+          return new Color().setHex(0xff0000);
+        })();
+
+        return { color, extrudedHeight: extrudedHeight * 100 };
+      },
+      { filters: ["attributes"] },
+    );
   });
 
   // Base layers
@@ -67,19 +86,23 @@ const run = async () => {
     type: "terrain",
     data: { url: TERRAIN_DATASETS.gsi.url },
     rasterTerrain: {
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
       maxZoom: 15,
+      minZoom: 5,
+      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+      castShadow: true,
+      receiveShadow: true,
     },
   });
+
   view.addLayer({
     type: "tiles",
-    data: { url: TILE_DATASETS.gsiSeamlessphoto.url },
-    rasterTile: { maxZoom: 18 },
+    data: { url: TILE_DATASETS.openstreetmap.url },
+    rasterTile: { maxZoom: 23 },
   });
 
   showAttributions([
+    TILE_DATASETS.openstreetmap,
     TERRAIN_DATASETS.gsi,
-    TILE_DATASETS.gsiSeamlessphoto,
     MVT_DATASETS.plateauTokyoHeightControl,
   ]);
 };

@@ -8,31 +8,36 @@ import {
 import { showAttributions } from "../../../helpers/attributions";
 import { TERRAIN_DATASETS, TILE_DATASETS } from "../../../helpers/constants";
 
+const TOKYO = { lng: 139.757, lat: 35.676 };
+
 const run = async () => {
   const view = new ThreeView<DefaultLayerDescriptions>({
     debug: true,
     shadow: true,
   });
+
   const defaultPlugin = new DefaultPlugin();
   view.addPlugin(defaultPlugin);
+
   await view.init();
 
   const defaultAtmospheres = defaultPlugin.addDefaultPhotorealLayers();
   defaultAtmospheres.sun.update({
     sun: { intensity: 1, castShadow: true },
   });
+
   view.atmosphere.date.setHours(8);
 
   view.setCamera({
-    lng: 139.7,
-    lat: 35.6,
-    height: 50000,
+    lng: 130,
+    lat: 30,
+    height: 1500000,
     heading: 0,
-    pitch: -45,
+    pitch: -60,
     roll: 0,
   });
 
-  // Effect Layer
+  // Selective bloom effect
   const bloomEffect = view.addLayer({
     type: "effect",
     selectiveBloom: true,
@@ -42,7 +47,7 @@ const run = async () => {
     bloomThreshold: 0.0,
   });
 
-  // Arc lines from Tokyo to destinations
+  // Arc lines with bloom (Tokyo to Asian cities)
   view.addLayer<ArclineMeshLayer>({
     type: "mesh",
     effectIds: [bloomEffect.id],
@@ -52,17 +57,14 @@ const run = async () => {
         segments: 64,
         arcHeightScale: 0.3,
         srcColor: new Color().setHex(0xffffff),
-        tgtColor: new Color().setHex(0xff4444),
+        tgtColor: new Color().setHex(0xff6600),
         geometry: [
-          // Tokyo to Osaka
-          { lng: 139.767, lat: 35.681 },
-          { lng: 135.502, lat: 34.693 },
-          // Tokyo to Sapporo
-          { lng: 139.767, lat: 35.681 },
-          { lng: 141.347, lat: 43.065 },
-          // Tokyo to Fukuoka
-          { lng: 139.767, lat: 35.681 },
-          { lng: 130.418, lat: 33.59 },
+          TOKYO,
+          { lng: 126.44, lat: 37.46 }, // Seoul
+          TOKYO,
+          { lng: 121.23, lat: 25.08 }, // Taipei
+          TOKYO,
+          { lng: 113.92, lat: 22.31 }, // Hong Kong
         ],
       },
     ],
@@ -73,17 +75,21 @@ const run = async () => {
     type: "terrain",
     data: { url: TERRAIN_DATASETS.gsi.url },
     rasterTerrain: {
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
       maxZoom: 15,
+      minZoom: 5,
+      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+      castShadow: true,
+      receiveShadow: true,
     },
   });
+
   view.addLayer({
     type: "tiles",
     data: { url: TILE_DATASETS.openstreetmap.url },
-    rasterTile: { maxZoom: 19 },
+    rasterTile: { maxZoom: 23 },
   });
 
-  showAttributions([TERRAIN_DATASETS.gsi, TILE_DATASETS.openstreetmap]);
+  showAttributions([TILE_DATASETS.openstreetmap, TERRAIN_DATASETS.gsi]);
 };
 
 run();

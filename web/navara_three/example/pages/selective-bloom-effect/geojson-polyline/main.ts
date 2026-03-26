@@ -1,60 +1,35 @@
 import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
-import {
-  DefaultPlugin,
-  type DefaultLayerDescriptions,
-} from "@navara/three_default_plugin";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 import type { FeatureCollection } from "geojson";
 
 import { showAttributions } from "../../../helpers/attributions";
 import { TERRAIN_DATASETS, TILE_DATASETS } from "../../../helpers/constants";
 
-const tokyoToYokohamaLine: FeatureCollection = {
-  type: "FeatureCollection",
-  features: [
-    {
-      type: "Feature",
-      properties: {},
-      geometry: {
-        type: "LineString",
-        coordinates: [
-          [139.767, 35.681],
-          [139.74, 35.66],
-          [139.72, 35.63],
-          [139.69, 35.59],
-          [139.67, 35.55],
-          [139.64, 35.51],
-          [139.63, 35.47],
-        ],
-      },
-    },
-  ],
-};
-
 const run = async () => {
-  const view = new ThreeView<DefaultLayerDescriptions>({
-    debug: true,
-    shadow: true,
-  });
+  const view = new ThreeView({ debug: true, shadow: true });
+
   const defaultPlugin = new DefaultPlugin();
   view.addPlugin(defaultPlugin);
+
   await view.init();
 
   const defaultAtmospheres = defaultPlugin.addDefaultPhotorealLayers();
   defaultAtmospheres.sun.update({
     sun: { intensity: 1, castShadow: true },
   });
+
   view.atmosphere.date.setHours(8);
 
   view.setCamera({
-    lng: 139.7,
-    lat: 35.5,
-    height: 30000,
+    lng: 139.775,
+    lat: 35.621,
+    height: 1000,
     heading: 0,
-    pitch: -45,
+    pitch: -55,
     roll: 0,
   });
 
-  // Effect Layer
+  // Selective bloom effect
   const bloomEffect = view.addLayer({
     type: "effect",
     selectiveBloom: true,
@@ -64,18 +39,48 @@ const run = async () => {
     bloomThreshold: 0.0,
   });
 
-  // Polyline from Tokyo to Yokohama with bloom
+  // GeoJSON polylines with bloom (Odaiba area paths)
+  const odaibaPaths: FeatureCollection = {
+    type: "FeatureCollection",
+    features: [
+      {
+        type: "Feature",
+        properties: { name: "Path A" },
+        geometry: {
+          type: "LineString",
+          coordinates: [
+            [139.772, 35.625],
+            [139.775, 35.628],
+            [139.778, 35.627],
+          ],
+        },
+      },
+      {
+        type: "Feature",
+        properties: { name: "Path B" },
+        geometry: {
+          type: "LineString",
+          coordinates: [
+            [139.774, 35.63],
+            [139.776, 35.628],
+            [139.778, 35.63],
+          ],
+        },
+      },
+    ],
+  };
+
   view.addLayer({
     type: "geojson",
-    data: tokyoToYokohamaLine,
+    data: odaibaPaths,
     polyline: {
+      width: 30,
+      height: 20,
+      clampToGround: true,
+      useGroundNormals: true,
+      color: new Color().setHex(0xff9900),
       effectIds: [bloomEffect.id],
-      emissiveColor: new Color().setHex(0x00ffff),
-      emissiveIntensity: 0.8,
-      color: new Color().setHex(0x00ffff),
-      width: 5,
-      maxWidth: 10000,
-      height: 500,
+      emissiveIntensity: 0.5,
     },
   });
 
@@ -84,17 +89,21 @@ const run = async () => {
     type: "terrain",
     data: { url: TERRAIN_DATASETS.gsi.url },
     rasterTerrain: {
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
       maxZoom: 15,
+      minZoom: 5,
+      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+      castShadow: true,
+      receiveShadow: true,
     },
   });
+
   view.addLayer({
     type: "tiles",
     data: { url: TILE_DATASETS.openstreetmap.url },
-    rasterTile: { maxZoom: 19 },
+    rasterTile: { maxZoom: 23 },
   });
 
-  showAttributions([TERRAIN_DATASETS.gsi, TILE_DATASETS.openstreetmap]);
+  showAttributions([TILE_DATASETS.openstreetmap, TERRAIN_DATASETS.gsi]);
 };
 
 run();

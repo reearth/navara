@@ -1,8 +1,5 @@
 import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
-import {
-  DefaultPlugin,
-  type DefaultLayerDescriptions,
-} from "@navara/three_default_plugin";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 
 import { showAttributions } from "../../../helpers/attributions";
 import {
@@ -12,30 +9,31 @@ import {
 } from "../../../helpers/constants";
 
 const run = async () => {
-  const view = new ThreeView<DefaultLayerDescriptions>({
-    debug: true,
-    shadow: true,
-  });
+  const view = new ThreeView({ debug: true, shadow: true });
+
   const defaultPlugin = new DefaultPlugin();
   view.addPlugin(defaultPlugin);
+
   await view.init();
 
   const defaultAtmospheres = defaultPlugin.addDefaultPhotorealLayers();
   defaultAtmospheres.sun.update({
     sun: { intensity: 1, castShadow: true },
   });
+
   view.atmosphere.date.setHours(8);
 
+  // Camera position for Wakayama
   view.setCamera({
-    lng: 139.767,
-    lat: 35.681,
-    height: 1000,
+    lng: 135.18,
+    lat: 34.07,
+    height: 15000,
     heading: 0,
     pitch: -45,
     roll: 0,
   });
 
-  // Effect Layer
+  // Selective bloom effect
   const bloomEffect = view.addLayer({
     type: "effect",
     selectiveBloom: true,
@@ -45,19 +43,36 @@ const run = async () => {
     bloomThreshold: 0.0,
   });
 
-  // MVT point layer with bloom
-  view.addLayer({
+  // MVT point with bloom (Wakayama facilities)
+  const layer = view.addLayer({
     type: "mvt",
     data: { url: MVT_DATASETS.plateauWakayamaGen.url },
     point: {
-      effectIds: [bloomEffect.id],
-      emissiveColor: new Color().setHex(0xff0000),
-      emissiveIntensity: 0.8,
-      color: new Color().setHex(0xff0000),
       size: 500,
       scaleByDistance: true,
       clampToGround: true,
+      color: new Color().setHex(0xffcc00),
+      center: { x: 0, y: -0.5 },
+      effectIds: [bloomEffect.id],
+      emissiveIntensity: 0.5,
     },
+  });
+
+  layer.on("featureUpdated", ({ evaluator }) => {
+    evaluator.evaluate(
+      ({ properties }) => {
+        const type = properties?.["備考"] as string;
+
+        const color = (() => {
+          if (type === "陸上競技場") return new Color().setHex(0x0000ff);
+          if (type?.endsWith("河川敷")) return new Color().setHex(0x00ff00);
+          return new Color().setHex(0xffcc00);
+        })();
+
+        return { color };
+      },
+      { filters: ["備考"] },
+    );
   });
 
   // Base layers
@@ -65,19 +80,23 @@ const run = async () => {
     type: "terrain",
     data: { url: TERRAIN_DATASETS.gsi.url },
     rasterTerrain: {
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
       maxZoom: 15,
+      minZoom: 5,
+      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+      castShadow: true,
+      receiveShadow: true,
     },
   });
+
   view.addLayer({
     type: "tiles",
     data: { url: TILE_DATASETS.openstreetmap.url },
-    rasterTile: { maxZoom: 19 },
+    rasterTile: { maxZoom: 23 },
   });
 
   showAttributions([
-    TERRAIN_DATASETS.gsi,
     TILE_DATASETS.openstreetmap,
+    TERRAIN_DATASETS.gsi,
     MVT_DATASETS.plateauWakayamaGen,
   ]);
 };

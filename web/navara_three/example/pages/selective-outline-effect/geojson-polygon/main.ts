@@ -1,48 +1,23 @@
 import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
-import {
-  DefaultPlugin,
-  type DefaultLayerDescriptions,
-} from "@navara/three_default_plugin";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 import type { FeatureCollection } from "geojson";
 
 import { showAttributions } from "../../../helpers/attributions";
 import { TERRAIN_DATASETS, TILE_DATASETS } from "../../../helpers/constants";
 
-const odaibaFeature: FeatureCollection = {
-  type: "FeatureCollection",
-  features: [
-    {
-      type: "Feature",
-      properties: {},
-      geometry: {
-        type: "Polygon",
-        coordinates: [
-          [
-            [139.775, 35.63],
-            [139.785, 35.63],
-            [139.785, 35.625],
-            [139.775, 35.625],
-            [139.775, 35.63],
-          ],
-        ],
-      },
-    },
-  ],
-};
-
 const run = async () => {
-  const view = new ThreeView<DefaultLayerDescriptions>({
-    debug: true,
-    shadow: true,
-  });
+  const view = new ThreeView({ debug: true, shadow: true });
+
   const defaultPlugin = new DefaultPlugin();
   view.addPlugin(defaultPlugin);
+
   await view.init();
 
   const defaultAtmospheres = defaultPlugin.addDefaultPhotorealLayers();
   defaultAtmospheres.sun.update({
     sun: { intensity: 1, castShadow: true },
   });
+
   view.atmosphere.date.setHours(8);
 
   view.setCamera({
@@ -54,7 +29,7 @@ const run = async () => {
     roll: 0,
   });
 
-  // Effect Layer
+  // Selective outline effect
   const outlineEffect = view.addLayer({
     type: "effect",
     selectiveOutline: true,
@@ -64,18 +39,40 @@ const run = async () => {
     outlineEdgeStrength: 1.0,
   });
 
-  // Odaiba orange polygon with outline
+  // GeoJSON polygon with outline (Odaiba)
+  const odaibaFeature: FeatureCollection = {
+    type: "FeatureCollection",
+    features: [
+      {
+        type: "Feature",
+        properties: {},
+        geometry: {
+          type: "Polygon",
+          coordinates: [
+            [
+              [139.773, 35.628],
+              [139.777, 35.628],
+              [139.777, 35.631],
+              [139.773, 35.631],
+              [139.773, 35.628],
+            ],
+          ],
+        },
+      },
+    ],
+  };
+
   view.addLayer({
     type: "geojson",
     data: odaibaFeature,
     polygon: {
+      show: true,
+      color: new Color().setHex(0xffa500),
+      extrudedHeight: 80,
+      clampToGround: false,
       effectIds: [outlineEffect.id],
       emissiveColor: new Color().setHex(0xffa500),
       emissiveIntensity: 0.5,
-      color: new Color().setHex(0xffa500),
-      extrudedHeight: 80,
-      castShadow: true,
-      receiveShadow: true,
     },
   });
 
@@ -84,17 +81,21 @@ const run = async () => {
     type: "terrain",
     data: { url: TERRAIN_DATASETS.gsi.url },
     rasterTerrain: {
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
       maxZoom: 15,
+      minZoom: 5,
+      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+      castShadow: true,
+      receiveShadow: true,
     },
   });
+
   view.addLayer({
     type: "tiles",
-    data: { url: TILE_DATASETS.gsiSeamlessphoto.url },
-    rasterTile: { maxZoom: 18 },
+    data: { url: TILE_DATASETS.openstreetmap.url },
+    rasterTile: { maxZoom: 23 },
   });
 
-  showAttributions([TERRAIN_DATASETS.gsi, TILE_DATASETS.gsiSeamlessphoto]);
+  showAttributions([TILE_DATASETS.openstreetmap, TERRAIN_DATASETS.gsi]);
 };
 
 run();

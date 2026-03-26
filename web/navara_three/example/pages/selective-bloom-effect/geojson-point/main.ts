@@ -1,69 +1,35 @@
 import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
-import {
-  DefaultPlugin,
-  type DefaultLayerDescriptions,
-} from "@navara/three_default_plugin";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 import type { FeatureCollection } from "geojson";
 
 import { showAttributions } from "../../../helpers/attributions";
 import { TERRAIN_DATASETS, TILE_DATASETS } from "../../../helpers/constants";
 
-const tokyoPoints: FeatureCollection = {
-  type: "FeatureCollection",
-  features: [
-    {
-      type: "Feature",
-      properties: { name: "Tokyo Station" },
-      geometry: { type: "Point", coordinates: [139.7671, 35.6812] },
-    },
-    {
-      type: "Feature",
-      properties: { name: "Shibuya" },
-      geometry: { type: "Point", coordinates: [139.7016, 35.658] },
-    },
-    {
-      type: "Feature",
-      properties: { name: "Shinjuku" },
-      geometry: { type: "Point", coordinates: [139.7003, 35.6897] },
-    },
-    {
-      type: "Feature",
-      properties: { name: "Ikebukuro" },
-      geometry: { type: "Point", coordinates: [139.7109, 35.7295] },
-    },
-    {
-      type: "Feature",
-      properties: { name: "Ueno" },
-      geometry: { type: "Point", coordinates: [139.7745, 35.7141] },
-    },
-  ],
-};
-
 const run = async () => {
-  const view = new ThreeView<DefaultLayerDescriptions>({
-    debug: true,
-    shadow: true,
-  });
+  const view = new ThreeView({ debug: true, shadow: true });
+
   const defaultPlugin = new DefaultPlugin();
   view.addPlugin(defaultPlugin);
+
   await view.init();
 
   const defaultAtmospheres = defaultPlugin.addDefaultPhotorealLayers();
   defaultAtmospheres.sun.update({
     sun: { intensity: 1, castShadow: true },
   });
+
   view.atmosphere.date.setHours(8);
 
   view.setCamera({
-    lng: 139.767,
-    lat: 35.681,
+    lng: 139.775,
+    lat: 35.621,
     height: 1000,
     heading: 0,
-    pitch: -45,
+    pitch: -55,
     roll: 0,
   });
 
-  // Effect Layer
+  // Selective bloom effect
   const bloomEffect = view.addLayer({
     type: "effect",
     selectiveBloom: true,
@@ -73,18 +39,39 @@ const run = async () => {
     bloomThreshold: 0.0,
   });
 
-  // Points around Tokyo area with bloom
+  // GeoJSON points with bloom (Odaiba area landmarks)
+  const odaibaPoints: FeatureCollection = {
+    type: "FeatureCollection",
+    features: [
+      {
+        type: "Feature",
+        properties: { name: "A" },
+        geometry: { type: "Point", coordinates: [139.775, 35.628] },
+      },
+      {
+        type: "Feature",
+        properties: { name: "B" },
+        geometry: { type: "Point", coordinates: [139.777, 35.63] },
+      },
+      {
+        type: "Feature",
+        properties: { name: "C" },
+        geometry: { type: "Point", coordinates: [139.773, 35.626] },
+      },
+    ],
+  };
+
   view.addLayer({
     type: "geojson",
-    data: tokyoPoints,
+    data: odaibaPoints,
     point: {
-      effectIds: [bloomEffect.id],
-      emissiveColor: new Color().setHex(0xff00ff),
-      emissiveIntensity: 0.8,
-      color: new Color().setHex(0xff00ff),
-      size: 500,
+      size: 100,
       scaleByDistance: true,
       clampToGround: true,
+      color: new Color().setHex(0x0066ff),
+      center: { x: 0, y: -0.5 },
+      effectIds: [bloomEffect.id],
+      emissiveIntensity: 0.5,
     },
   });
 
@@ -93,17 +80,21 @@ const run = async () => {
     type: "terrain",
     data: { url: TERRAIN_DATASETS.gsi.url },
     rasterTerrain: {
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
       maxZoom: 15,
+      minZoom: 5,
+      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+      castShadow: true,
+      receiveShadow: true,
     },
   });
+
   view.addLayer({
     type: "tiles",
-    data: { url: TILE_DATASETS.gsiSeamlessphoto.url },
-    rasterTile: { maxZoom: 18 },
+    data: { url: TILE_DATASETS.openstreetmap.url },
+    rasterTile: { maxZoom: 23 },
   });
 
-  showAttributions([TERRAIN_DATASETS.gsi, TILE_DATASETS.gsiSeamlessphoto]);
+  showAttributions([TILE_DATASETS.openstreetmap, TERRAIN_DATASETS.gsi]);
 };
 
 run();

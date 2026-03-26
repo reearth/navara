@@ -1,9 +1,13 @@
 import ThreeView, {
   Color,
   JAPAN_GSI_ELEVATION_DECODER,
-  geodeticToVector3,
   degreeToRadian,
+  geodeticToVector3,
 } from "@navara/three";
+import type {
+  BoxMeshLayer,
+  SphereMeshLayer,
+} from "@navara/three_default_layers";
 import {
   DefaultPlugin,
   type DefaultLayerDescriptions,
@@ -18,14 +22,17 @@ const run = async () => {
     debug: true,
     shadow: true,
   });
+
   const defaultPlugin = new DefaultPlugin();
   view.addPlugin(defaultPlugin);
+
   await view.init();
 
   const defaultAtmospheres = defaultPlugin.addDefaultPhotorealLayers();
   defaultAtmospheres.sun.update({
     sun: { intensity: 1, castShadow: true },
   });
+
   view.atmosphere.date.setHours(8);
 
   view.setCamera({
@@ -37,7 +44,7 @@ const run = async () => {
     roll: 0,
   });
 
-  // Effect Layer
+  // Selective outline effect
   const outlineEffect = view.addLayer({
     type: "effect",
     selectiveOutline: true,
@@ -47,42 +54,55 @@ const run = async () => {
     outlineEdgeStrength: 1.0,
   });
 
-  // Box (red, emissive) at Tokyo Station
-  const boxPosition = geodeticToVector3({
-    lat: degreeToRadian(35.6812),
-    lng: degreeToRadian(139.7671),
+  // Mesh layers with outline
+  const tokyoStationPosition = geodeticToVector3({
+    lat: degreeToRadian(35.681236),
+    lng: degreeToRadian(139.767125),
     height: 200,
   });
-  view.addLayer({
+
+  view.addLayer<BoxMeshLayer>({
     type: "mesh",
     box: {
-      width: 100,
-      height: 100,
-      depth: 100,
+      width: 200,
+      height: 200,
+      depth: 200,
       color: new Color().setHex(0xff0000),
-      emissiveColor: new Color().setHex(0xff0000),
       emissiveIntensity: 1.0,
+      opacity: 1.0,
+      transparent: true,
+      castShadow: true,
+      receiveShadow: true,
       effectIds: [outlineEffect.id],
     },
-    position: { x: boxPosition.x, y: boxPosition.y, z: boxPosition.z },
+    position: {
+      x: tokyoStationPosition.x,
+      y: tokyoStationPosition.y,
+      z: tokyoStationPosition.z,
+    },
   });
 
-  // Sphere (blue, emissive) near Tokyo Station
-  const spherePosition = new Vector3(
-    boxPosition.x,
-    boxPosition.y,
-    boxPosition.z,
-  ).add(new Vector3(-500, 0, -600));
-  view.addLayer({
+  const spherePosition = tokyoStationPosition
+    .clone()
+    .add(new Vector3(-500, 0, -600));
+
+  view.addLayer<SphereMeshLayer>({
     type: "mesh",
     sphere: {
-      radius: 80,
-      color: new Color().setHex(0x0000ff),
-      emissiveColor: new Color().setHex(0x0000ff),
+      radius: 100,
+      color: new Color().setHex(0x00aaff),
       emissiveIntensity: 1.0,
+      opacity: 1.0,
+      transparent: true,
+      castShadow: true,
+      receiveShadow: true,
       effectIds: [outlineEffect.id],
     },
-    position: { x: spherePosition.x, y: spherePosition.y, z: spherePosition.z },
+    position: {
+      x: spherePosition.x,
+      y: spherePosition.y,
+      z: spherePosition.z,
+    },
   });
 
   // Base layers
@@ -90,17 +110,21 @@ const run = async () => {
     type: "terrain",
     data: { url: TERRAIN_DATASETS.gsi.url },
     rasterTerrain: {
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
       maxZoom: 15,
+      minZoom: 5,
+      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+      castShadow: true,
+      receiveShadow: true,
     },
   });
+
   view.addLayer({
     type: "tiles",
-    data: { url: TILE_DATASETS.gsiSeamlessphoto.url },
-    rasterTile: { maxZoom: 18 },
+    data: { url: TILE_DATASETS.openstreetmap.url },
+    rasterTile: { maxZoom: 23 },
   });
 
-  showAttributions([TERRAIN_DATASETS.gsi, TILE_DATASETS.gsiSeamlessphoto]);
+  showAttributions([TILE_DATASETS.openstreetmap, TERRAIN_DATASETS.gsi]);
 };
 
 run();
