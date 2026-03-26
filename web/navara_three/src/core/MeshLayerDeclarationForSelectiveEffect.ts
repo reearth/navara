@@ -29,12 +29,12 @@ import type { ViewContext } from "./ViewContext";
 
 export type MeshLayerConfigWithSelectiveEffect = MeshLayerConfig & {
   effectIds?: string[];
-  selectiveEffectOcclusion?: SelectiveEffectOcclusion | null;
+  // selectiveEffectOcclusion is now on Effect Layer config (SelectiveEffectLayerConfig)
 };
 
 export type MeshLayerUpdateWithSelectiveEffect = MeshLayerUpdate & {
   effectIds?: string[];
-  selectiveEffectOcclusion?: SelectiveEffectOcclusion | null;
+  // selectiveEffectOcclusion is now on Effect Layer config (SelectiveEffectLayerConfig)
 };
 
 export abstract class MeshLayerDeclarationForSelectiveEffect<
@@ -82,8 +82,8 @@ export abstract class MeshLayerDeclarationForSelectiveEffect<
     const resolvedConfig = config ?? ({} as Config);
     super(view, resolvedConfig);
     this._effectIds = resolvedConfig.effectIds ?? [];
-    this._initialSelectiveEffectOcclusion =
-      resolvedConfig.selectiveEffectOcclusion;
+    // @deprecated SE Redesign — selectiveEffectOcclusion moved to Effect Layer config
+    this._initialSelectiveEffectOcclusion = undefined;
   }
 
   protected override getPassKey(): PassKey {
@@ -267,20 +267,19 @@ export abstract class MeshLayerDeclarationForSelectiveEffect<
       }
     }
 
-    // Update selectiveEffectOcclusion (SoT is SelectiveEffectManager via ViewContext)
-    if (updates.selectiveEffectOcclusion !== undefined) {
-      if (updates.selectiveEffectOcclusion === null) {
-        // Clear occlusion setting (reset to Normal)
-        this.view.clearLayerSelectiveEffectOcclusion(this.id);
-      } else {
-        const occlusion = parseSelectiveEffectOcclusion(
-          updates.selectiveEffectOcclusion,
-        );
-        if (occlusion !== undefined) {
-          this.view.setLayerSelectiveEffectOcclusion(this.id, occlusion);
-        }
-      }
-    }
+    // @deprecated SE Redesign — selectiveEffectOcclusion moved to Effect Layer config
+    // if (updates.selectiveEffectOcclusion !== undefined) {
+    //   if (updates.selectiveEffectOcclusion === null) {
+    //     this.view.clearLayerSelectiveEffectOcclusion(this.id);
+    //   } else {
+    //     const occlusion = parseSelectiveEffectOcclusion(
+    //       updates.selectiveEffectOcclusion,
+    //     );
+    //     if (occlusion !== undefined) {
+    //       this.view.setLayerSelectiveEffectOcclusion(this.id, occlusion);
+    //     }
+    //   }
+    // }
 
     // Note: onPassKeyChange() is already called by super.onUpdateConfig()
   }

@@ -5,7 +5,6 @@ import {
   type MeshLayerConfigWithSelectiveEffect,
   type MeshLayerUpdateWithSelectiveEffect,
   type ViewContext,
-  type SelectiveEffectOcclusion,
   type CustomObject3DEventMap,
 } from "@navara/three";
 import {
@@ -35,7 +34,6 @@ type LayerDescription = {
     castShadow?: boolean;
     receiveShadow?: boolean;
     effectIds?: string[];
-    selectiveEffectOcclusion?: SelectiveEffectOcclusion;
   };
 };
 
@@ -53,12 +51,9 @@ export class TubeMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
   private config: TubeMeshLayerConfig;
 
   constructor(view: ViewContext, config: TubeMeshLayerConfig) {
-    // Propagate initial effectIds/selectiveEffectOcclusion to base MeshLayer
+    // Propagate initial effectIds to base MeshLayer
     if (config.tube?.effectIds) {
       config.effectIds = config.tube.effectIds;
-    }
-    if (config.tube?.selectiveEffectOcclusion !== undefined) {
-      config.selectiveEffectOcclusion = config.tube.selectiveEffectOcclusion;
     }
     super(view, config);
     this.config = config;
@@ -184,14 +179,10 @@ export class TubeMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
         this._instance.receiveShadow = cfg.receiveShadow;
       }
 
-      // Propagate effectIds/selectiveEffectOcclusion to base MeshLayer
+      // Propagate effectIds to base MeshLayer
       if (cfg.effectIds !== undefined) {
         updates.effectIds = cfg.effectIds;
       }
-      if (cfg.selectiveEffectOcclusion !== undefined) {
-        updates.selectiveEffectOcclusion = cfg.selectiveEffectOcclusion;
-      }
-
       this.emit("needsUpdate");
     }
 

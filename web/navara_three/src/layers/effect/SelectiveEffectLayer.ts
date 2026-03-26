@@ -24,6 +24,8 @@ export {
 // Note: resolutionScale and debugViews are defined in each effect-specific config (e.g., bloom, outline)
 export type SelectiveEffectLayerConfig = {
   selectiveEffect: true;
+  /** Occlusion mode for all effects in this layer (shared setting) */
+  selectiveEffectOcclusion?: "normal" | "silhouette";
 } & EffectLayerConfig;
 
 export type SelectiveEffectLayerUpdate = EffectLayerUpdate;
