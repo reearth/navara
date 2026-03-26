@@ -3,5 +3,11 @@
   "extends": [
     "github>reearth/renovate-config",
     ":pinVersions"
+  ],
+  "packageRules": [
+    {
+      "matchDepTypes": ["peerDependencies"],
+      "rangeStrategy": "widen"
+    }
   ]
 }
