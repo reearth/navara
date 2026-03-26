@@ -142,6 +142,8 @@ export class TexturizedSceneByTileCoordinates {
     scene.userData.removed = true;
 
     scene.clear();
+
+    this.setNeedsUpdate(handle, true);
   }
 
   delete(handle: TileHandle) {
