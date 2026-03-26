@@ -22,7 +22,7 @@
   },
   "license": "MIT OR Apache-2.0",
   "peerDependencies": {
-    "three": "^0.183.2"
+    "three": ">=0.183.0"
   },
   "dependencies": {},
   "devDependencies": {

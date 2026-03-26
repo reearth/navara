@@ -34,10 +34,10 @@
   "license": "MIT OR Apache-2.0",
   "dependencies": {
     "@navara/worker": "workspace:*",
-    "three": "0.183.1"
+    "three": "0.183.2"
   },
   "devDependencies": {
     "@types/three": "0.183.1",
-    "three": "0.183.1"
+    "three": "0.183.2"
   }
 }
