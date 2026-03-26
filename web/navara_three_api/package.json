@@ -22,13 +22,13 @@
   },
   "license": "MIT OR Apache-2.0",
   "peerDependencies": {
-    "three": "^0.183.2"
+    "three": ">=0.183.0"
   },
   "dependencies": {
     "@navara/core": "workspace:*"
   },
   "devDependencies": {
-    "@types/three": "^0.183.1",
-    "three": "^0.183.2"
+    "@types/three": "0.183.1",
+    "three": "0.183.2"
   }
 }
