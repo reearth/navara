@@ -1,5 +1,8 @@
 import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
-import { DefaultPlugin, type DefaultLayerDescriptions } from "@navara/three_default_plugin";
+import {
+  DefaultPlugin,
+  type DefaultLayerDescriptions,
+} from "@navara/three_default_plugin";
 import type { FeatureCollection } from "geojson";
 
 import { showAttributions } from "../../../helpers/attributions";
@@ -21,7 +24,7 @@ const tokyoToYokohamaLine: FeatureCollection = {
           [139.6917, 35.5654],
           [139.6726, 35.5391],
           [139.6503, 35.5101],
-          [139.6380, 35.4660],
+          [139.638, 35.466],
         ],
       },
     },
@@ -29,7 +32,10 @@ const tokyoToYokohamaLine: FeatureCollection = {
 };
 
 const run = async () => {
-  const view = new ThreeView<DefaultLayerDescriptions>({ debug: true, shadow: true });
+  const view = new ThreeView<DefaultLayerDescriptions>({
+    debug: true,
+    shadow: true,
+  });
   const defaultPlugin = new DefaultPlugin();
   view.addPlugin(defaultPlugin);
   await view.init();

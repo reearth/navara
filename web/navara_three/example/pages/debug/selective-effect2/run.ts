@@ -1,4 +1,9 @@
-import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER, geodeticToVector3, degreeToRadian } from "@navara/three";
+import ThreeView, {
+  Color,
+  JAPAN_GSI_ELEVATION_DECODER,
+  geodeticToVector3,
+  degreeToRadian,
+} from "@navara/three";
 import {
   DefaultPlugin,
   type DefaultLayerDescriptions,
@@ -83,7 +88,11 @@ export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
   });
 
   // Sphere near Tokyo Station (bloom + outline)
-  const spherePosition = new Vector3(boxPosition.x, boxPosition.y, boxPosition.z).add(new Vector3(-500, 0, -600));
+  const spherePosition = new Vector3(
+    boxPosition.x,
+    boxPosition.y,
+    boxPosition.z,
+  ).add(new Vector3(-500, 0, -600));
   view.addLayer({
     type: "mesh",
     sphere: {

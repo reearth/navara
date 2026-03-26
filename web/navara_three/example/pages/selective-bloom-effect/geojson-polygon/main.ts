@@ -1,5 +1,8 @@
 import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
-import { DefaultPlugin, type DefaultLayerDescriptions } from "@navara/three_default_plugin";
+import {
+  DefaultPlugin,
+  type DefaultLayerDescriptions,
+} from "@navara/three_default_plugin";
 import type { FeatureCollection } from "geojson";
 
 import { showAttributions } from "../../../helpers/attributions";
@@ -28,7 +31,10 @@ const odaibaFeature: FeatureCollection = {
 };
 
 const run = async () => {
-  const view = new ThreeView<DefaultLayerDescriptions>({ debug: true, shadow: true });
+  const view = new ThreeView<DefaultLayerDescriptions>({
+    debug: true,
+    shadow: true,
+  });
   const defaultPlugin = new DefaultPlugin();
   view.addPlugin(defaultPlugin);
   await view.init();

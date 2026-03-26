@@ -1,11 +1,17 @@
 import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
-import { DefaultPlugin, type DefaultLayerDescriptions } from "@navara/three_default_plugin";
+import {
+  DefaultPlugin,
+  type DefaultLayerDescriptions,
+} from "@navara/three_default_plugin";
 
 import { showAttributions } from "../../../helpers/attributions";
 import { TERRAIN_DATASETS, TILE_DATASETS } from "../../../helpers/constants";
 
 const run = async () => {
-  const view = new ThreeView<DefaultLayerDescriptions>({ debug: true, shadow: true });
+  const view = new ThreeView<DefaultLayerDescriptions>({
+    debug: true,
+    shadow: true,
+  });
   const defaultPlugin = new DefaultPlugin();
   view.addPlugin(defaultPlugin);
   await view.init();
@@ -58,7 +64,7 @@ const run = async () => {
 
           // Tokyo to Sendai
           { lng: 139.7671, lat: 35.6812 },
-          { lng: 140.8720, lat: 38.2604 },
+          { lng: 140.872, lat: 38.2604 },
         ],
       },
     ],

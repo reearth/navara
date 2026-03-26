@@ -1,12 +1,23 @@
-import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER, geodeticToVector3, degreeToRadian } from "@navara/three";
-import { DefaultPlugin, type DefaultLayerDescriptions } from "@navara/three_default_plugin";
+import ThreeView, {
+  Color,
+  JAPAN_GSI_ELEVATION_DECODER,
+  geodeticToVector3,
+  degreeToRadian,
+} from "@navara/three";
+import {
+  DefaultPlugin,
+  type DefaultLayerDescriptions,
+} from "@navara/three_default_plugin";
 import { Vector3 } from "three";
 
 import { showAttributions } from "../../../helpers/attributions";
 import { TERRAIN_DATASETS, TILE_DATASETS } from "../../../helpers/constants";
 
 const run = async () => {
-  const view = new ThreeView<DefaultLayerDescriptions>({ debug: true, shadow: true });
+  const view = new ThreeView<DefaultLayerDescriptions>({
+    debug: true,
+    shadow: true,
+  });
   const defaultPlugin = new DefaultPlugin();
   view.addPlugin(defaultPlugin);
   await view.init();
@@ -57,7 +68,11 @@ const run = async () => {
   });
 
   // Sphere (blue, emissive) near Tokyo Station
-  const spherePosition = new Vector3(boxPosition.x, boxPosition.y, boxPosition.z).add(new Vector3(-500, 0, -600));
+  const spherePosition = new Vector3(
+    boxPosition.x,
+    boxPosition.y,
+    boxPosition.z,
+  ).add(new Vector3(-500, 0, -600));
   view.addLayer({
     type: "mesh",
     sphere: {
