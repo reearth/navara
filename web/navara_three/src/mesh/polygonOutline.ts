@@ -301,7 +301,7 @@ export class PolygonOutlineMesh extends Line2 implements FeatureMesh {
 
     // Update visibility
     const nextVisible =
-      (material.show ?? true) && (material.outlineShow ?? false) && active;
+      (material.show ?? true) && (material.outlineShow ?? true) && active;
     if (prev.visible !== nextVisible) {
       this.visible = nextVisible;
       prev.visible = nextVisible;
