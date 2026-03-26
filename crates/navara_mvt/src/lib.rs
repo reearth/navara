@@ -7,7 +7,6 @@ use navara_vector_tile::VectorTileSet;
 mod data_requester;
 mod geometry;
 mod layer;
-mod pos_converter;
 pub mod source;
 mod source_cache;
 

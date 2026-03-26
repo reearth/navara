@@ -2,6 +2,7 @@ import type { PolygonInternalMaterial, PolygonMaterial } from "@navara/engine";
 
 export class PolygonMaterialLike {
   clampToGround?: boolean;
+  tiled?: boolean;
   castShadow?: boolean;
   receiveShadow?: boolean;
   color?: number;
@@ -15,6 +16,7 @@ export class PolygonMaterialLike {
 
   constructor(material: PolygonMaterial) {
     this.clampToGround = material.clampToGround;
+    this.tiled = material.tiled;
     this.receiveShadow = material.receiveShadow;
     this.castShadow = material.castShadow;
     this.color = material.color;

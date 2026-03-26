@@ -2,6 +2,7 @@ use bevy_ecs::{entity::Entity, system::Commands};
 use navara_buffer_store::BufferStore;
 use navara_component::OrderByDistance;
 use navara_core::CRS;
+use navara_core::TileXYZ;
 use navara_feature_component::{
     BatchedFeatureMarker,
     batch::{BatchIndex, BatchTable},
@@ -11,7 +12,7 @@ use navara_geojson_vt::types::TileGeometry;
 use navara_geometry::{Hierarchy, WindingOrder};
 use navara_material::Appearance;
 use navara_tile_component::{OverscaledTileHandle, TileExtent, TileHandle};
-use navara_vector_tile::VectorTileFeatureMarker;
+use navara_vector_tile::{PosConverter, VectorTileFeatureMarker};
 
 use crate::geometry::builder::{GeometryAppearanceKind, GeometryBuilder};
 
@@ -39,7 +40,20 @@ pub(crate) fn construct_geojson_tile_geometry(
         return None;
     }
 
-    let half_extent = extent as f64 / 2.0;
+    // Determine whether polygons should use flat [-1,1] coordinates (clamped)
+    // or geographic lon/lat coordinates (non-clamped 3D rendering).
+    let flat = appearances
+        .iter()
+        .any(|a| matches!(a, Appearance::Polygon(p) if p.clamp_to_ground));
+
+    let converter = PosConverter::new(
+        TileXYZ {
+            x: tile.x as usize,
+            y: tile.y as usize,
+            z: tile.z as usize,
+        },
+        extent,
+    );
 
     let mut builder = GeometryBuilder::new(batch_table, layer_id);
 
@@ -59,14 +73,26 @@ pub(crate) fn construct_geojson_tile_geometry(
                         continue;
                     }
 
-                    let outer_ring = tile_coords_to_flat(&polygon[0], half_extent);
+                    let outer_ring = if !flat {
+                        converter.project_points(&polygon[0])
+                    } else {
+                        converter.project_points_on_center(&polygon[0])
+                    };
 
                     let holes: Vec<Hierarchy> = polygon[1..]
                         .iter()
                         .map(|ring| Hierarchy {
-                            outer_ring: tile_coords_to_flat(ring, half_extent),
+                            outer_ring: if !flat {
+                                converter.project_points(ring)
+                            } else {
+                                converter.project_points_on_center(ring)
+                            },
                             holes: None,
-                            expected_winding_order: WindingOrder::Clockwise,
+                            expected_winding_order: if flat {
+                                WindingOrder::Clockwise
+                            } else {
+                                WindingOrder::CounterClockwise
+                            },
                         })
                         .collect();
 
@@ -81,7 +107,11 @@ pub(crate) fn construct_geojson_tile_geometry(
                                 hierarchy: Hierarchy {
                                     outer_ring,
                                     holes: if holes.is_empty() { None } else { Some(holes) },
-                                    expected_winding_order: WindingOrder::CounterClockwise,
+                                    expected_winding_order: if flat {
+                                        WindingOrder::CounterClockwise
+                                    } else {
+                                        WindingOrder::Clockwise
+                                    },
                                 }
                                 .transfer(buf),
                                 crs: CRS::Geographic,
@@ -118,22 +148,6 @@ pub(crate) fn construct_geojson_tile_geometry(
     } else {
         Some(entities)
     }
-}
-
-/// Convert tile coordinates [0, extent] to normalized [-1, 1] flat coordinates.
-///
-/// This matches MVT's PosConverter::project_points_on_center behavior:
-/// - x = (tile_x - extent/2) / (extent/2)
-/// - y = -(tile_y - extent/2) / (extent/2)
-/// - z = 0
-fn tile_coords_to_flat(points: &[[f64; 2]], half_extent: f64) -> Vec<f64> {
-    let mut ret = Vec::with_capacity(points.len() * 3);
-    for pt in points {
-        ret.push((pt[0] - half_extent) / half_extent);
-        ret.push(-(pt[1] - half_extent) / half_extent);
-        ret.push(0.0);
-    }
-    ret
 }
 
 #[cfg(test)]
@@ -205,6 +219,13 @@ mod test {
         })]
     }
 
+    fn polygon_appearances_non_clamped() -> Vec<Appearance> {
+        vec![Appearance::Polygon(PolygonMaterial {
+            clamp_to_ground: false,
+            ..Default::default()
+        })]
+    }
+
     #[derive(Resource)]
     struct TestInput {
         tile: VtTile,
@@ -252,41 +273,6 @@ mod test {
         app.add_systems(Update, test_system);
         app.update();
         app
-    }
-
-    // ── tile_coords_to_flat unit tests ──────────────────────────────────
-
-    #[test]
-    fn tile_coords_center_maps_to_origin() {
-        let half = 2048.0;
-        let result = tile_coords_to_flat(&[[2048.0, 2048.0]], half);
-        assert_eq!(result, vec![0.0, 0.0, 0.0]);
-    }
-
-    #[test]
-    fn tile_coords_corners_map_to_normalized() {
-        let half = 2048.0;
-        let result = tile_coords_to_flat(&[[0.0, 0.0], [4096.0, 4096.0]], half);
-        // (0 - 2048)/2048 = -1, -(0 - 2048)/2048 = 1
-        assert_eq!(result[0], -1.0); // x
-        assert_eq!(result[1], 1.0); // y (inverted)
-        assert_eq!(result[2], 0.0); // z
-        // (4096 - 2048)/2048 = 1, -(4096 - 2048)/2048 = -1
-        assert_eq!(result[3], 1.0);
-        assert_eq!(result[4], -1.0);
-        assert_eq!(result[5], 0.0);
-    }
-
-    #[test]
-    fn tile_coords_empty_returns_empty() {
-        let result = tile_coords_to_flat(&[], 2048.0);
-        assert!(result.is_empty());
-    }
-
-    #[test]
-    fn tile_coords_produces_three_components_per_point() {
-        let result = tile_coords_to_flat(&[[100.0, 200.0], [300.0, 400.0]], 2048.0);
-        assert_eq!(result.len(), 6);
     }
 
     // ── construct_geojson_tile_geometry tests ───────────────────────────
@@ -578,5 +564,43 @@ mod test {
         let batched: Vec<_> = batched_query.iter(app.world()).collect();
         assert_eq!(batched.len(), 1);
         assert_eq!(batched[0].features.len(), 2);
+    }
+
+    #[test]
+    fn non_clamped_polygon_uses_geographic_projection() {
+        // With clamp_to_ground=false, coordinates should be geographic (lon/lat),
+        // not flat [-1, 1]. For tile z=0, x=0, y=0, the centre of the tile
+        // (extent/2, extent/2) should map approximately to (0, 0) in geographic.
+        let outer = vec![
+            [0.0, 0.0],
+            [4096.0, 0.0],
+            [4096.0, 4096.0],
+            [0.0, 4096.0],
+            [0.0, 0.0],
+        ];
+        let tile = make_tile(vec![polygon_feature(vec![outer])]);
+        let mut app = run_construct(tile, polygon_appearances_non_clamped());
+
+        // Should still produce a polygon entity
+        let mut child_query = app
+            .world_mut()
+            .query_filtered::<&PolygonGeometry, With<BatchedFeatureMarker>>();
+        let geoms: Vec<_> = child_query.iter(app.world()).collect();
+        assert_eq!(geoms.len(), 1);
+
+        // The outer ring values should NOT be in [-1, 1] range (geographic coords
+        // for z=0 tile span [-180, 180] lon and ~[-85, 85] lat).
+        let buf = app.world().resource::<BufferStore>();
+        let ring = buf.get_f64(&geoms[0].hierarchy.outer_ring).unwrap();
+        // First point (tile 0,0) should be ~ -180 lon
+        assert!(ring[0] < -100.0, "expected geographic lon, got {}", ring[0]);
+
+        // Non-flat (3D globe) path must use Clockwise for outer rings so that
+        // align_winding_order correctly re-winds after the Y-axis flip.
+        assert_eq!(
+            geoms[0].hierarchy.expected_winding_order,
+            WindingOrder::Clockwise,
+            "non-clamped outer ring should hint Clockwise (same as MVT non-flat path)"
+        );
     }
 }

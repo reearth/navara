@@ -19,9 +19,7 @@ use navara_geometry::{Hierarchy, WindingOrder};
 use navara_material::Appearance;
 use navara_math::{FloatType, Vec3};
 use navara_tile_component::{OverscaledTileHandle, TileExtent, TileHandle};
-use navara_vector_tile::VectorTileFeatureMarker;
-
-use crate::pos_converter::PosConverter;
+use navara_vector_tile::{PosConverter, VectorTileFeatureMarker};
 
 use super::builder::MvtGeometryBuilder;
 

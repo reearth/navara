@@ -4,6 +4,7 @@ use bevy_ecs::schedule::{IntoScheduleConfigs, SystemSet};
 pub mod component;
 pub mod data_requester;
 pub mod layer;
+pub mod pos_converter;
 pub mod source;
 pub mod source_cache;
 pub mod tile;
@@ -11,6 +12,7 @@ pub mod tile;
 pub use component::*;
 pub use layer::resource::LayerResources;
 pub use layer::tile_cache_manager::TileCacheManager;
+pub use pos_converter::{AsXYZ, PosConverter};
 pub use source::{ReadyState, TileSource, VectorTileSource};
 pub use source_cache::{
     SourceId, TraversalConfig, VectorTileSourceCache, VectorTileSourceResources,

@@ -3,6 +3,49 @@ use navara_core::TileXYZ;
 use navara_math::FloatType;
 use std::f64::consts::PI;
 
+/// Trait for types that can provide x, y, z coordinates.
+pub trait AsXYZ {
+    fn x(&self) -> f64;
+    fn y(&self) -> f64;
+    fn z(&self) -> f64;
+}
+
+impl AsXYZ for [f64; 2] {
+    fn x(&self) -> f64 {
+        self[0]
+    }
+    fn y(&self) -> f64 {
+        self[1]
+    }
+    fn z(&self) -> f64 {
+        0.0
+    }
+}
+
+impl AsXYZ for [f64; 3] {
+    fn x(&self) -> f64 {
+        self[0]
+    }
+    fn y(&self) -> f64 {
+        self[1]
+    }
+    fn z(&self) -> f64 {
+        self[2]
+    }
+}
+
+impl AsXYZ for Coord<f64> {
+    fn x(&self) -> f64 {
+        self.x
+    }
+    fn y(&self) -> f64 {
+        self.y
+    }
+    fn z(&self) -> f64 {
+        0.0
+    }
+}
+
 #[derive(Debug)]
 pub struct PosConverter {
     x0: f64,
@@ -35,8 +78,6 @@ impl PosConverter {
         converter
     }
 
-    // --- f64 versions for geozero compatibility ---
-
     /// Project a single point from tile coordinates (f64) to geographic coordinates.
     pub fn project_point(&self, px: f64, py: f64) -> (FloatType, FloatType) {
         let x = (px + self.x0) * self.scale_x - 180.0;
@@ -46,33 +87,32 @@ impl PosConverter {
         (x as FloatType, y as FloatType)
     }
 
-    /// Project a slice of f64 coordinates to geographic coordinates.
-    pub fn project_points(&self, points: &[Coord<f64>]) -> Vec<FloatType> {
+    /// Project a slice of coordinates to geographic coordinates.
+    pub fn project_points<P: AsXYZ>(&self, points: &[P]) -> Vec<FloatType> {
         let mut ret = Vec::with_capacity(points.len() * 3);
 
         for pt in points {
-            let (x, y) = self.project_point(pt.x, pt.y);
+            let (x, y) = self.project_point(pt.x(), pt.y());
             ret.push(x);
             ret.push(y);
-            ret.push(0.0_f64);
+            ret.push(pt.z());
         }
 
         ret
     }
 
-    /// Construct points based on the extent center (f64 version).
-    pub fn project_points_on_center(&self, points: &[Coord<f64>]) -> Vec<FloatType> {
+    /// Construct points based on the extent center.
+    pub fn project_points_on_center<P: AsXYZ>(&self, points: &[P]) -> Vec<FloatType> {
         let half_extent = self.extent as f64 / 2.0;
         let mut ret = Vec::with_capacity(points.len() * 3);
 
         for pt in points {
-            let x = (pt.x - half_extent) / half_extent;
-            let y = -(pt.y - half_extent) / half_extent;
-            let z = 0.0;
+            let x = (pt.x() - half_extent) / half_extent;
+            let y = -(pt.y() - half_extent) / half_extent;
 
             ret.push(x);
             ret.push(y);
-            ret.push(z);
+            ret.push(pt.z());
         }
 
         ret

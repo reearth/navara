@@ -126,7 +126,7 @@ fn process_geometry(
             }
             Appearance::Polygon(p) => {
                 // Skip clamped polygons - they go through the tiled rendering pipeline
-                if !p.clamp_to_ground {
+                if !p.clamp_to_ground && !p.tiled {
                     spawn_polygon_children(commands, buf, builder, geometry);
                 }
             }
