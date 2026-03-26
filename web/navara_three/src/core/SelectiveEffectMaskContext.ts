@@ -22,12 +22,15 @@ import {
  * Mask pass phase identifiers
  * - none: No mask pass active (normal rendering)
  * - baseMRT: Mask rendering during BaseMRT phase (CustomRenderPass)
+ *
+ * @deprecated SE Redesign - will be removed
  */
 export const MaskPassPhase = {
   None: "none",
   BaseMRT: "baseMRT",
 } as const;
 
+/** @deprecated SE Redesign - will be removed */
 export type MaskPassPhaseType =
   (typeof MaskPassPhase)[keyof typeof MaskPassPhase];
 
@@ -44,6 +47,8 @@ export type MaskPassPhaseType =
  * - SelectiveEffectManager: Source of truth for layer configurations
  * - SelectiveEffectHelper: Resource management (maskRTs) and object cache
  * - MaskPassContext: Runtime state for current frame's mask rendering
+ *
+ * @deprecated SE Redesign - will be removed
  */
 export type MaskPassContext = {
   /** Current mask pass phase */
@@ -87,6 +92,7 @@ let currentContext: MaskPassContext = { ...DEFAULT_CONTEXT };
  * Get the current mask pass context.
  * Used by mesh onBeforeRender callbacks to determine rendering behavior.
  *
+ * @deprecated SE Redesign - will be removed
  * @returns Current MaskPassContext (readonly)
  */
 export function getMaskPassContext(): Readonly<MaskPassContext> {
@@ -97,6 +103,7 @@ export function getMaskPassContext(): Readonly<MaskPassContext> {
  * Set mask pass context for the current frame.
  * Called by CustomRenderPass at the start of BaseMRT phase.
  *
+ * @deprecated SE Redesign - will be removed
  * @param ctx - Partial context to merge with current state
  */
 export function setMaskPassContext(ctx: Partial<MaskPassContext>): void {
@@ -109,6 +116,8 @@ export function setMaskPassContext(ctx: Partial<MaskPassContext>): void {
 /**
  * Reset mask pass context to default state.
  * Called by CustomRenderPass after BaseMRT phase completes.
+ *
+ * @deprecated SE Redesign - will be removed
  */
 export function resetMaskPassContext(): void {
   currentContext = { ...DEFAULT_CONTEXT };
@@ -120,6 +129,8 @@ export function resetMaskPassContext(): void {
 
 /**
  * Result of mask pass participation evaluation.
+ *
+ * @deprecated SE Redesign - will be removed
  */
 export type MaskPassEvaluation = {
   /** Whether this mesh should render to the current mask pass */
@@ -140,6 +151,7 @@ export type MaskPassEvaluation = {
  * This function determines whether a mesh should render to the current mask pass
  * based on its SelectiveEffectConfig, the active effects in the context, and occlusion mode.
  *
+ * @deprecated SE Redesign - will be removed
  * @param config - SelectiveEffectConfig from the mesh (or undefined)
  * @param registry - SelectiveEffectHelper for effect lookups
  * @param layerId - Layer ID for occlusion mode lookup
@@ -210,6 +222,7 @@ export function evaluateMaskPassParticipation(
  * Apply render state for mask pass skip.
  * Used when mesh doesn't contribute to current mask pass.
  *
+ * @deprecated SE Redesign - will be removed
  * @param material - Material to modify
  */
 export function applyMaskPassSkipState(material: Material): void {
@@ -222,6 +235,7 @@ export function applyMaskPassSkipState(material: Material): void {
  * Apply render state for mask pass rendering.
  * Sets depth behavior based on occlusion mode.
  *
+ * @deprecated SE Redesign - will be removed
  * @param material - Material to modify
  * @param isSilhouette - Whether Silhouette occlusion mode is active
  */
@@ -240,6 +254,7 @@ export function applyMaskPassRenderState(
  * Restore material to normal rendering state.
  * Called after mask pass or when not in mask pass.
  *
+ * @deprecated SE Redesign - will be removed
  * @param material - Material to restore
  */
 export function restoreMaterialState(material: Material): void {
@@ -254,6 +269,8 @@ export function restoreMaterialState(material: Material): void {
 
 /**
  * Options for injectSelectiveEffectHandlers
+ *
+ * @deprecated SE Redesign - will be removed
  */
 export type SelectiveEffectHandlerOptions = {
   /** Optional registry for occlusion lookup */
@@ -283,6 +300,7 @@ export type SelectiveEffectHandlerOptions = {
  * - Material array guard prevents crashes on multi-material meshes
  * - Uses `.call(object, ...)` for proper `this` binding
  *
+ * @deprecated SE Redesign - will be removed
  * @param object - Mesh object to inject handlers into
  * @param options - Handler options (registry, layerId, optional shaderUniforms)
  */

@@ -61,6 +61,9 @@ const DEFAULT_EDGE_STRENGTH = 1.0;
  * Selective Outline Effect Layer
  * Renders selective outline using mask-based filtering.
  * Masks are pre-rendered by CustomRenderPass during BaseMRT phase.
+ *
+ * @deprecated SE Redesign — Mask RT creation and MaskController registration
+ * will be replaced by the new SE architecture. Outline processing logic (Sobel edge detection) is retained.
  */
 export class SelectiveOutlineEffectLayer extends SelectiveEffectLayer<
   SelectiveOutlineEffectConfig,
@@ -129,19 +132,24 @@ export class SelectiveOutlineEffectLayer extends SelectiveEffectLayer<
   /**
    * Override: Don't register simple maskRT.
    * SelectiveOutlinePass registers occlusion-specific RTs directly.
+   *
+   * @deprecated SE Redesign — mask RT registration commented out.
    */
   protected override registerMaskRenderTarget(): void {
-    // Skip simple registration - SelectiveOutlinePass handles occlusion-specific RTs
+    // @deprecated SE Redesign — skip mask registration
   }
 
   /**
    * Override: Unregister occlusion-specific RTs.
+   *
+   * @deprecated SE Redesign — mask RT unregistration commented out.
    */
   protected override unregisterMaskRenderTarget(): void {
-    const customRenderPass = this.getCustomRenderPass();
-    if (customRenderPass?.removeOcclusionMaskRenderTargets) {
-      customRenderPass.removeOcclusionMaskRenderTargets(this.getEffectKey());
-    }
+    // @deprecated SE Redesign — commented out occlusion mask RT unregistration
+    // const customRenderPass = this.getCustomRenderPass();
+    // if (customRenderPass?.removeOcclusionMaskRenderTargets) {
+    //   customRenderPass.removeOcclusionMaskRenderTargets(this.getEffectKey());
+    // }
   }
 
   onUpdateConfig(updates: SelectiveOutlineEffectUpdate): void {
@@ -379,7 +387,9 @@ class SelectiveOutlinePass extends PostProcessingPass {
     );
     this.compositeScene.add(compositeQuad);
 
-    // Separate render targets for DepthEnabled and Silhouette passes
+    // @deprecated SE Redesign — Mask RT creation commented out.
+    // These render targets were used for mask-based selective rendering
+    // via CustomRenderPass during BaseMRT phase.
 
     // DepthEnabled mask with accessible depth texture (for depth clip)
     this.depthEnabledMaskRT = new WebGLRenderTarget(
@@ -436,18 +446,17 @@ class SelectiveOutlinePass extends PostProcessingPass {
 
     this.size.set(initialWidth, initialHeight);
 
-    // Register occlusion-specific mask RTs with CustomRenderPass
-    // This enables context-based mask rendering during BaseMRT phase
-    const customRenderPass = layer.getCustomRenderPass();
-    if (customRenderPass?.setOcclusionMaskRenderTargets) {
-      customRenderPass.setOcclusionMaskRenderTargets(
-        SELECTIVE_OUTLINE_EFFECT_KEY,
-        {
-          normal: this.depthEnabledMaskRT,
-          silhouette: this.silhouetteMaskRT,
-        },
-      );
-    }
+    // @deprecated SE Redesign — commented out occlusion mask RT registration with CustomRenderPass.
+    // const customRenderPass = layer.getCustomRenderPass();
+    // if (customRenderPass?.setOcclusionMaskRenderTargets) {
+    //   customRenderPass.setOcclusionMaskRenderTargets(
+    //     SELECTIVE_OUTLINE_EFFECT_KEY,
+    //     {
+    //       normal: this.depthEnabledMaskRT,
+    //       silhouette: this.silhouetteMaskRT,
+    //     },
+    //   );
+    // }
 
     this.needsSwap = true;
   }

@@ -64,6 +64,9 @@ const DEFAULT_THRESHOLD = 0.0;
  * Selective Bloom Effect Layer
  * Renders selective bloom using mask-based filtering.
  * Masks are pre-rendered by CustomRenderPass during BaseMRT phase.
+ *
+ * @deprecated SE Redesign — Mask RT creation and MaskController registration
+ * will be replaced by the new SE architecture. Bloom processing logic is retained.
  */
 export class SelectiveBloomEffectLayer extends SelectiveEffectLayer<
   SelectiveBloomEffectConfig,
@@ -136,19 +139,24 @@ export class SelectiveBloomEffectLayer extends SelectiveEffectLayer<
   /**
    * Override: Don't register simple maskRT.
    * SelectiveBloomPass registers occlusion-specific RTs directly.
+   *
+   * @deprecated SE Redesign — mask RT registration commented out.
    */
   protected override registerMaskRenderTarget(): void {
-    // Skip simple registration - SelectiveBloomPass handles occlusion-specific RTs
+    // @deprecated SE Redesign — skip mask registration
   }
 
   /**
    * Override: Unregister occlusion-specific RTs.
+   *
+   * @deprecated SE Redesign — mask RT unregistration commented out.
    */
   protected override unregisterMaskRenderTarget(): void {
-    const customRenderPass = this.getCustomRenderPass();
-    if (customRenderPass?.removeOcclusionMaskRenderTargets) {
-      customRenderPass.removeOcclusionMaskRenderTargets(this.getEffectKey());
-    }
+    // @deprecated SE Redesign — commented out occlusion mask RT unregistration
+    // const customRenderPass = this.getCustomRenderPass();
+    // if (customRenderPass?.removeOcclusionMaskRenderTargets) {
+    //   customRenderPass.removeOcclusionMaskRenderTargets(this.getEffectKey());
+    // }
   }
 
   onUpdateConfig(updates: SelectiveBloomEffectUpdate): void {
@@ -350,6 +358,9 @@ class SelectiveBloomPass extends PostProcessingPass {
     const copyQuad = new Mesh(this.fullscreenGeometry, this.copyMaterial);
     this.copyScene.add(copyQuad);
 
+    // @deprecated SE Redesign — Mask RT creation commented out.
+    // These render targets were used for mask-based selective rendering
+    // via CustomRenderPass during BaseMRT phase.
     // Render target for DepthEnabled mask with depth texture
     this.depthEnabledMaskRT = new WebGLRenderTarget(
       initialWidth,
@@ -416,18 +427,17 @@ class SelectiveBloomPass extends PostProcessingPass {
 
     this.size.set(initialWidth, initialHeight);
 
-    // Register occlusion-specific mask RTs with CustomRenderPass
-    // This enables context-based mask rendering during BaseMRT phase
-    const customRenderPass = layer.getCustomRenderPass();
-    if (customRenderPass?.setOcclusionMaskRenderTargets) {
-      customRenderPass.setOcclusionMaskRenderTargets(
-        SELECTIVE_BLOOM_EFFECT_KEY,
-        {
-          normal: this.depthEnabledMaskRT,
-          silhouette: this.silhouetteMaskRT,
-        },
-      );
-    }
+    // @deprecated SE Redesign — commented out occlusion mask RT registration with CustomRenderPass.
+    // const customRenderPass = layer.getCustomRenderPass();
+    // if (customRenderPass?.setOcclusionMaskRenderTargets) {
+    //   customRenderPass.setOcclusionMaskRenderTargets(
+    //     SELECTIVE_BLOOM_EFFECT_KEY,
+    //     {
+    //       normal: this.depthEnabledMaskRT,
+    //       silhouette: this.silhouetteMaskRT,
+    //     },
+    //   );
+    // }
 
     this.needsSwap = true;
   }

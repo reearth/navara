@@ -163,6 +163,8 @@ function hasEffectOfKey(
 
 /**
  * Check if Bloom effect is enabled
+ *
+ * @deprecated SE Redesign - will be removed
  */
 export function hasSelectiveBloomEffect(
   config: SelectiveEffectConfig | undefined,
@@ -173,6 +175,8 @@ export function hasSelectiveBloomEffect(
 
 /**
  * Check if Outline effect is enabled
+ *
+ * @deprecated SE Redesign - will be removed
  */
 export function hasSelectiveOutlineEffect(
   config: SelectiveEffectConfig | undefined,
@@ -196,6 +200,8 @@ export function getSelectiveEffectConfig(
 /**
  * Initialize shader uniforms for SelectiveEffect on material.userData.
  * Values are 0 by default, set during mask passes via onBeforeRender.
+ *
+ * @deprecated SE Redesign - will be removed
  */
 export function ensureSelectiveEffectUserData(
   material: MeshStandardMaterial | MeshPhysicalMaterial | MeshLambertMaterial,
@@ -231,6 +237,8 @@ export function resolveSelectiveEffectOcclusion(
 
 /**
  * Helper for managing selective effect render targets and metadata
+ *
+ * @deprecated SE Redesign - will be removed
  */
 export class SelectiveEffectHelper {
   private resources = new Map<string, SelectiveEffectResources>();
@@ -596,6 +604,8 @@ export class SelectiveEffectHelper {
 /**
  * Create depth clip material for clipping mask by base scene depth
  * Shared between Bloom and Outline passes
+ *
+ * @deprecated SE Redesign - will be removed
  */
 export function createDepthClipMaterial(): ShaderMaterial {
   return new ShaderMaterial({
@@ -644,6 +654,8 @@ export function createDepthClipMaterial(): ShaderMaterial {
 
 /**
  * Create fullscreen rendering infrastructure
+ *
+ * @deprecated SE Redesign - will be removed
  */
 export function createFullscreenQuad(): {
   camera: OrthographicCamera;
@@ -658,6 +670,7 @@ export function createFullscreenQuad(): {
 /**
  * Apply depth clip to a mask render target
  *
+ * @deprecated SE Redesign - will be removed
  * @param renderer - WebGL renderer
  * @param depthClipMaterial - Depth clip shader material
  * @param depthClipScene - Scene containing the depth clip quad

@@ -13,14 +13,16 @@ import {
 import {
   type SelectiveEffectOcclusion,
   parseSelectiveEffectOcclusion,
-  getSelectiveEffectConfig,
+  // @deprecated SE Redesign - getSelectiveEffectConfig unused after body comment-out
+  // getSelectiveEffectConfig,
 } from "./SelectiveEffectHelper";
 import {
-  getMaskPassContext,
-  MaskPassPhase,
-  evaluateMaskPassParticipation,
-  applyMaskPassSkipState,
-  applyMaskPassRenderState,
+  // @deprecated SE Redesign - unused after setupMeshOnBeforeRender body comment-out
+  // getMaskPassContext,
+  // MaskPassPhase,
+  // evaluateMaskPassParticipation,
+  // applyMaskPassSkipState,
+  // applyMaskPassRenderState,
   restoreMaterialState,
 } from "./SelectiveEffectMaskContext";
 import type { ViewContext } from "./ViewContext";
@@ -128,73 +130,78 @@ export abstract class MeshLayerDeclarationForSelectiveEffect<
   /**
    * Setup onBeforeRender callback for MaskPass context-based rendering.
    * This enables Box, Sphere, and other standard meshes to participate in mask rendering.
+   *
+   * @deprecated SE Redesign - will be removed
    */
   private setupMeshOnBeforeRender(): void {
-    const raw = this.raw;
-    if (!raw) return;
-
-    // Guard: Only setup once to avoid multi-wrapping
-    if (this._hasSetupOnBeforeRender) return;
-
-    // Store original onBeforeRender in instance property for later restoration
-    this._originalOnBeforeRender = raw.onBeforeRender;
-
-    raw.onBeforeRender = (
-      renderer,
-      scene,
-      camera,
-      geometry,
-      material,
-      group,
-    ) => {
-      // Call original if exists
-      if (this._originalOnBeforeRender) {
-        this._originalOnBeforeRender.call(
-          raw,
-          renderer,
-          scene,
-          camera,
-          geometry,
-          material,
-          group,
-        );
-      }
-
-      // Check MaskPassContext
-      const ctx = getMaskPassContext();
-
-      if (ctx.phase !== MaskPassPhase.BaseMRT) {
-        // Not in mask pass - restore normal state
-        this.forEachMaterial(restoreMaterialState);
-        return;
-      }
-
-      // Evaluate mask pass participation using shared helper
-      const config = getSelectiveEffectConfig(raw);
-      const registry = ctx.registry ?? this.view.selectiveEffectRegistry;
-      const evaluation = evaluateMaskPassParticipation(
-        config,
-        registry,
-        this.id,
-        ctx,
-      );
-
-      // Apply appropriate render state
-      if (evaluation.shouldRender) {
-        this.forEachMaterial((m) =>
-          applyMaskPassRenderState(m, evaluation.isSilhouette),
-        );
-      } else {
-        this.forEachMaterial(applyMaskPassSkipState);
-      }
-    };
-
-    this._hasSetupOnBeforeRender = true;
+    // @deprecated SE Redesign - body commented out, method kept for compilation
+    // const raw = this.raw;
+    // if (!raw) return;
+    //
+    // // Guard: Only setup once to avoid multi-wrapping
+    // if (this._hasSetupOnBeforeRender) return;
+    //
+    // // Store original onBeforeRender in instance property for later restoration
+    // this._originalOnBeforeRender = raw.onBeforeRender;
+    //
+    // raw.onBeforeRender = (
+    //   renderer,
+    //   scene,
+    //   camera,
+    //   geometry,
+    //   material,
+    //   group,
+    // ) => {
+    //   // Call original if exists
+    //   if (this._originalOnBeforeRender) {
+    //     this._originalOnBeforeRender.call(
+    //       raw,
+    //       renderer,
+    //       scene,
+    //       camera,
+    //       geometry,
+    //       material,
+    //       group,
+    //     );
+    //   }
+    //
+    //   // Check MaskPassContext
+    //   const ctx = getMaskPassContext();
+    //
+    //   if (ctx.phase !== MaskPassPhase.BaseMRT) {
+    //     // Not in mask pass - restore normal state
+    //     this.forEachMaterial(restoreMaterialState);
+    //     return;
+    //   }
+    //
+    //   // Evaluate mask pass participation using shared helper
+    //   const config = getSelectiveEffectConfig(raw);
+    //   const registry = ctx.registry ?? this.view.selectiveEffectRegistry;
+    //   const evaluation = evaluateMaskPassParticipation(
+    //     config,
+    //     registry,
+    //     this.id,
+    //     ctx,
+    //   );
+    //
+    //   // Apply appropriate render state
+    //   if (evaluation.shouldRender) {
+    //     this.forEachMaterial((m) =>
+    //       applyMaskPassRenderState(m, evaluation.isSilhouette),
+    //     );
+    //   } else {
+    //     this.forEachMaterial(applyMaskPassSkipState);
+    //   }
+    // };
+    //
+    // this._hasSetupOnBeforeRender = true;
   }
 
   /**
    * Restore original onBeforeRender callback.
    * Called when effectIds becomes empty or on destroy.
+   *
+   * @deprecated SE Redesign - will be removed
    */
   private restoreOnBeforeRender(): void {
     const raw = this.raw;

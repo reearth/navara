@@ -8,6 +8,7 @@ import {
 } from "../../core/EffectLayerDeclaration";
 import { type SelectiveEffectResources } from "../../core/SelectiveEffectHelper";
 import type { ViewContext } from "../../core/ViewContext";
+// @deprecated SE Redesign — CustomRenderPass import kept for getCustomRenderPass signature
 import type { CustomRenderPass } from "../../passes";
 
 import type { MRTPassEffectLayer } from "./MRTPassEffectLayer";
@@ -32,6 +33,9 @@ export type SelectiveEffectLayerUpdate = EffectLayerUpdate;
  * Provides resource management, mask RT registration with CustomRenderPass,
  * and debug visualization helpers.
  * Mask rendering is handled by CustomRenderPass via MaskPassContext.
+ *
+ * @deprecated SE Redesign — Mask RT registration and CustomRenderPass integration
+ * will be replaced by the new SE architecture.
  */
 export abstract class SelectiveEffectLayer<
   Config extends SelectiveEffectLayerConfig = SelectiveEffectLayerConfig,
@@ -98,8 +102,9 @@ export abstract class SelectiveEffectLayer<
       },
     );
 
-    // Register maskRT with CustomRenderPass for context-based mask rendering
-    this.registerMaskRenderTarget();
+    // @deprecated SE Redesign — mask RT registration with CustomRenderPass
+    // will be replaced by the new SE architecture.
+    // this.registerMaskRenderTarget();
 
     super.onCreate();
   }
@@ -110,52 +115,65 @@ export abstract class SelectiveEffectLayer<
    *
    * Override this method in subclasses that need occlusion mode-specific RTs
    * (e.g., PostEffectBloomLayer, PostEffectOutlineLayer).
+   *
+   * @deprecated SE Redesign — mask RT registration will be replaced by the new SE architecture.
    */
   protected registerMaskRenderTarget(): void {
-    const mrtPass = this.findLayer<MRTPassEffectLayer>("mrt");
-    const customRenderPass = mrtPass?.raw as CustomRenderPass | undefined;
-
-    if (customRenderPass?.setMaskRenderTarget) {
-      customRenderPass.setMaskRenderTarget(
-        this.getEffectKey(),
-        this.resources.maskRT,
-      );
-    }
+    // @deprecated SE Redesign — commented out mask RT registration
+    // const mrtPass = this.findLayer<MRTPassEffectLayer>("mrt");
+    // const customRenderPass = mrtPass?.raw as CustomRenderPass | undefined;
+    //
+    // if (customRenderPass?.setMaskRenderTarget) {
+    //   customRenderPass.setMaskRenderTarget(
+    //     this.getEffectKey(),
+    //     this.resources.maskRT,
+    //   );
+    // }
   }
 
   /**
    * Unregister this layer's maskRT from CustomRenderPass.
    *
    * Override this method in subclasses that need occlusion mode-specific RTs.
+   *
+   * @deprecated SE Redesign — mask RT unregistration will be replaced by the new SE architecture.
    */
   protected unregisterMaskRenderTarget(): void {
-    const mrtPass = this.findLayer<MRTPassEffectLayer>("mrt");
-    const customRenderPass = mrtPass?.raw as CustomRenderPass | undefined;
-
-    if (customRenderPass?.removeMaskRenderTarget) {
-      customRenderPass.removeMaskRenderTarget(this.getEffectKey());
-    }
+    // @deprecated SE Redesign — commented out mask RT unregistration
+    // const mrtPass = this.findLayer<MRTPassEffectLayer>("mrt");
+    // const customRenderPass = mrtPass?.raw as CustomRenderPass | undefined;
+    //
+    // if (customRenderPass?.removeMaskRenderTarget) {
+    //   customRenderPass.removeMaskRenderTarget(this.getEffectKey());
+    // }
   }
 
   /**
    * Get CustomRenderPass for mask registration.
    * Used by subclasses and Pass classes for occlusion-specific RT registration.
+   *
+   * @deprecated SE Redesign — CustomRenderPass access will be replaced by the new SE architecture.
    */
   public getCustomRenderPass(): CustomRenderPass | undefined {
-    const mrtPass = this.findLayer<MRTPassEffectLayer>("mrt");
-    return mrtPass?.raw as CustomRenderPass | undefined;
+    // @deprecated SE Redesign — commented out CustomRenderPass access
+    // const mrtPass = this.findLayer<MRTPassEffectLayer>("mrt");
+    // return mrtPass?.raw as CustomRenderPass | undefined;
+    return undefined;
   }
 
   /**
    * Render debug mask visualization
+   *
+   * @deprecated SE Redesign — debug mask visualization will be replaced by the new SE architecture.
    */
   public renderDebugMask(): void {
-    if (!this.resources.maskDebug) return;
-
-    this.resources.maskDebug.render(
-      this.view.renderPassOrchestrator.effectComposer.getRenderer(),
-      this.resources.maskRT,
-    );
+    // @deprecated SE Redesign — commented out mask debug rendering
+    // if (!this.resources.maskDebug) return;
+    //
+    // this.resources.maskDebug.render(
+    //   this.view.renderPassOrchestrator.effectComposer.getRenderer(),
+    //   this.resources.maskRT,
+    // );
   }
 
   /**
@@ -208,8 +226,8 @@ export abstract class SelectiveEffectLayer<
   }
 
   onDestroy(): void {
-    // Unregister maskRT from CustomRenderPass
-    this.unregisterMaskRenderTarget();
+    // @deprecated SE Redesign — mask RT unregistration commented out
+    // this.unregisterMaskRenderTarget();
 
     if (this.view.selectiveEffectRegistry) {
       this.view.selectiveEffectRegistry.destroy(this.id);

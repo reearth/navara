@@ -9,10 +9,7 @@ import { Mesh, Sprite, Object3D, Material } from "three";
 
 import type { ViewEvents } from "..";
 import { Color } from "../Color";
-import {
-  parseSelectiveEffectOcclusion,
-  type SelectiveEffectOcclusion,
-} from "../core/SelectiveEffectHelper";
+// @deprecated SE Redesign: parseSelectiveEffectOcclusion / SelectiveEffectOcclusion no longer needed here
 import type { ViewContext } from "../core/ViewContext";
 import type { LayersManager } from "../layersManager";
 import {
@@ -207,11 +204,8 @@ export async function processRenderableFeatureAdded(
     viewContext.registerLayerEffects(
       featureLayerId,
       material.effectIds ?? [],
-      parseSelectiveEffectOcclusion(
-        material.selectiveEffectOcclusion as
-          | SelectiveEffectOcclusion
-          | undefined,
-      ),
+      // @deprecated SE Redesign: selectiveEffectOcclusion removed from WASM material
+      undefined,
       material.emissiveIntensity,
     );
   }
@@ -280,14 +274,7 @@ export async function processRenderableFeatureChanged(
       );
     }
 
-    if (material.selectiveEffectOcclusion !== undefined) {
-      const occlusion = parseSelectiveEffectOcclusion(
-        material.selectiveEffectOcclusion as SelectiveEffectOcclusion,
-      );
-      if (occlusion !== undefined) {
-        viewContext.setLayerSelectiveEffectOcclusion(layerId, occlusion);
-      }
-    }
+    // @deprecated SE Redesign: selectiveEffectOcclusion removed from WASM material
   }
 
   const active =

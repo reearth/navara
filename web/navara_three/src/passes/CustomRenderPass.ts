@@ -61,8 +61,7 @@ export class CustomRenderPass extends RenderPass {
   private debugNormalCopyPass?: NormalCopyPass;
   private allowTransparent: boolean;
 
-  // SelectiveEffect context for mask rendering
-  private selectiveEffectRegistry?: SelectiveEffectHelper;
+  // @deprecated SE Redesign - selectiveEffectRegistry field removed (was only used by mask pass)
   private maskController = new SelectiveEffectMaskController();
 
   constructor(
@@ -102,8 +101,7 @@ export class CustomRenderPass extends RenderPass {
     this.disableShadow = !!options?.disableShadow;
     this.allowTransparent = options?.allowTransparent ?? true;
 
-    // SelectiveEffect context for mask rendering
-    this.selectiveEffectRegistry = options?.selectiveEffectRegistry;
+    // @deprecated SE Redesign - selectiveEffectRegistry assignment removed (was only used by mask pass)
 
     this.globeNormalCopyPass = new NormalCopyPass();
     this.globeNormalCopyPass.setNormalTexture(
@@ -222,14 +220,15 @@ export class CustomRenderPass extends RenderPass {
       this._renderWithLight(renderer, this._scenes.mrt);
     }
 
-    // Render to maskRTs after main MRT scene rendering
-    // Uses context-based mesh self-determination (no traverse needed)
-    this.maskController.renderMaskPasses(
-      renderer,
-      renderTarget,
-      () => this._renderWithLight(renderer, this._scenes.mrt),
-      this.selectiveEffectRegistry,
-    );
+    // @deprecated SE Redesign - mask pass rendering disabled
+    // // Render to maskRTs after main MRT scene rendering
+    // // Uses context-based mesh self-determination (no traverse needed)
+    // this.maskController.renderMaskPasses(
+    //   renderer,
+    //   renderTarget,
+    //   () => this._renderWithLight(renderer, this._scenes.mrt),
+    //   this._selectiveEffectRegistry,
+    // );
 
     this.debugNormalCopyPass?.render(renderer, null, null);
 

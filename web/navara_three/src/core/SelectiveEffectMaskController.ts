@@ -17,6 +17,8 @@ import {
  * This separates SelectiveEffect-specific logic from CustomRenderPass,
  * keeping CustomRenderPass focused on BaseMRT rendering while
  * SelectiveEffectMaskController handles effect-specific knowledge.
+ *
+ * @deprecated SE Redesign - will be removed
  */
 export class SelectiveEffectMaskController {
   // Simple mask RTs (single RT per effect, both occlusion modes to same RT)

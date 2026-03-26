@@ -20,6 +20,7 @@ type SelectiveEffectManagerOptions = {
   selectiveEffectRegistry?: SelectiveEffectHelper;
 };
 
+/** @deprecated SE Redesign - will be removed */
 export class SelectiveEffectManager {
   private readonly layerConfigs = new Map<string, LayerEffectConfig>();
 
