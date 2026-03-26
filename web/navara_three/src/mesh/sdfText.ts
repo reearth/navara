@@ -138,7 +138,8 @@ export class SDFTextMesh
       const pCam = camera as PerspectiveCamera;
       mutates.updatePerFrame(
         degreeToRadian(pCam.fov),
-        renderer.getDrawingBufferSize(_tmpSize).height,
+        renderer.getDrawingBufferSize(_tmpSize).height /
+          renderer.getPixelRatio(),
         pCam.far,
         camera.position.x,
         camera.position.y,

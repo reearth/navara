@@ -78,7 +78,7 @@ void main() {
     float clampedScale = max(0.0, uScale); // Prevent negative scaling
     // This makes it always face the camera
     if (!uSizeInMeters) {
-        clampedScale = nvr_pxToWorld(clampedScale, uFovRad, uScreenHeightPx, absTransformed, cameraPosition);
+        clampedScale = nvr_pxToWorld(clampedScale, uFovRad, uScreenHeightPx, vec3(0.0, 0.0, mvPosition.z), vec3(0.0, 0.0, 0.0));
         mvPosition.xy += (((position.xy - center)) * vec2(uAspect, 1.0) * clampedScale);
     } else {
         mvPosition.xy += (((position.xy - center)) * vec2(uAspect, 1.0) * clampedScale);

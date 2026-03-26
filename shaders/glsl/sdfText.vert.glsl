@@ -69,7 +69,7 @@ void main() {
     // Normalized text height is 1.0, so no fontSizeWorld division is needed.
     float scaleFactor = uFontSize;
     if (!uSizeInMeters) {
-        scaleFactor = nvr_pxToWorld(uFontSize, uFovRad, uScreenHeightPx, absTransformed, cameraPosition);
+        scaleFactor = nvr_pxToWorld(uFontSize, uFovRad, uScreenHeightPx, vec3(0.0, 0.0, mvPosition.z), vec3(0.0, 0.0, 0.0));
     }
 
     vec2 center = clamp(uCenter, vec2(-0.5), vec2(0.5)); // Ensure center is within the bounds of the sprite
