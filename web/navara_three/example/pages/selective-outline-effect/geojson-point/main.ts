@@ -32,11 +32,12 @@ const run = async () => {
   // Selective outline effect
   const outlineEffect = view.addLayer({
     type: "effect",
-    selectiveOutline: true,
+    selectiveOutline: {
+      color: new Color().setHex(0xff0000),
+      thickness: 2.0,
+      edgeStrength: 1.0,
+    },
     selectiveEffectOcclusion: "normal",
-    outlineColor: new Color().setHex(0xff0000),
-    outlineThickness: 2.0,
-    outlineEdgeStrength: 1.0,
   });
 
   // GeoJSON points with outline (Odaiba area landmarks)

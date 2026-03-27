@@ -35,11 +35,12 @@ const run = async () => {
   // Selective bloom effect
   const bloomEffect = view.addLayer({
     type: "effect",
-    selectiveBloom: true,
+    selectiveBloom: {
+      strength: 1.0,
+      radius: 0.5,
+      threshold: 0.0,
+    },
     selectiveEffectOcclusion: "normal",
-    bloomStrength: 1.0,
-    bloomRadius: 0.5,
-    bloomThreshold: 0.0,
   });
 
   // MVT polygon with bloom (Height Control District)

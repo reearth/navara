@@ -32,24 +32,22 @@ import {
   applyDepthClip,
 } from "./SelectiveEffectLayer";
 
-// Selective Bloom configuration (flat structure)
+// Selective Bloom configuration
+export type SelectiveBloomConfig = {
+  strength?: number;
+  radius?: number;
+  threshold?: number;
+  debugMode?: number; // 0: normal, 1: base only, 2: bloom only, 3: bloom enhanced
+  resolutionScale?: number;
+  debugViews?: boolean;
+};
+
 export type SelectiveBloomEffectConfig = {
-  selectiveBloom: true;
-  bloomStrength?: number;
-  bloomRadius?: number;
-  bloomThreshold?: number;
-  bloomDebugMode?: number; // 0: normal, 1: base only, 2: bloom only, 3: bloom enhanced
-  bloomResolutionScale?: number;
-  bloomDebugViews?: boolean;
+  selectiveBloom: SelectiveBloomConfig;
 } & SelectiveEffectLayerConfig;
 
 export type SelectiveBloomEffectUpdate = {
-  bloomStrength?: number;
-  bloomRadius?: number;
-  bloomThreshold?: number;
-  bloomDebugMode?: number;
-  bloomResolutionScale?: number;
-  bloomDebugViews?: boolean;
+  selectiveBloom?: Partial<SelectiveBloomConfig>;
 } & EffectLayerUpdate;
 
 // Default bloom parameters for mask-based selective bloom
@@ -75,21 +73,25 @@ export class SelectiveBloomEffectLayer extends SelectiveEffectLayer<
 
   private bloomPass?: SelectiveBloomPass;
 
+  private get bloom(): SelectiveBloomConfig {
+    return this.config.selectiveBloom;
+  }
+
   // Getters that derive values from config (single source of truth)
   get bloomStrength(): number {
-    return this.config.bloomStrength ?? DEFAULT_STRENGTH;
+    return this.bloom.strength ?? DEFAULT_STRENGTH;
   }
 
   get bloomRadius(): number {
-    return this.config.bloomRadius ?? DEFAULT_RADIUS;
+    return this.bloom.radius ?? DEFAULT_RADIUS;
   }
 
   get bloomThreshold(): number {
-    return this.config.bloomThreshold ?? DEFAULT_THRESHOLD;
+    return this.bloom.threshold ?? DEFAULT_THRESHOLD;
   }
 
   get debugMode(): number {
-    return this.config.bloomDebugMode ?? 0;
+    return this.bloom.debugMode ?? 0;
   }
 
   protected getEffectKey(): string {
@@ -97,26 +99,28 @@ export class SelectiveBloomEffectLayer extends SelectiveEffectLayer<
   }
 
   protected getResolutionScale(): number {
-    return this.config.bloomResolutionScale ?? 1.0;
+    return this.bloom.resolutionScale ?? 1.0;
   }
 
   protected getDebugViews(): boolean {
-    return this.config.bloomDebugViews ?? false;
+    return this.bloom.debugViews ?? false;
   }
 
   constructor(view: ViewContext, config: EffectLayerConfig) {
-    const c = config as Partial<SelectiveBloomEffectConfig>;
+    const c =
+      (config as Partial<SelectiveBloomEffectConfig>).selectiveBloom ?? {};
 
     const postEffectConfig: SelectiveBloomEffectConfig = {
       ...(config as SelectiveBloomEffectConfig),
       selectiveEffect: true,
-      selectiveBloom: true,
-      bloomStrength: c.bloomStrength ?? DEFAULT_STRENGTH,
-      bloomRadius: c.bloomRadius ?? DEFAULT_RADIUS,
-      bloomThreshold: c.bloomThreshold ?? DEFAULT_THRESHOLD,
-      bloomDebugMode: c.bloomDebugMode ?? 0,
-      bloomResolutionScale: c.bloomResolutionScale ?? 1.0,
-      bloomDebugViews: c.bloomDebugViews ?? false,
+      selectiveBloom: {
+        strength: c.strength ?? DEFAULT_STRENGTH,
+        radius: c.radius ?? DEFAULT_RADIUS,
+        threshold: c.threshold ?? DEFAULT_THRESHOLD,
+        debugMode: c.debugMode ?? 0,
+        resolutionScale: c.resolutionScale ?? 1.0,
+        debugViews: c.debugViews ?? false,
+      },
     };
 
     super(view, postEffectConfig);
@@ -156,30 +160,33 @@ export class SelectiveBloomEffectLayer extends SelectiveEffectLayer<
   onUpdateConfig(updates: SelectiveBloomEffectUpdate): void {
     super.onUpdateConfig(updates);
 
+    const bloomUpdates = updates.selectiveBloom;
+    if (!bloomUpdates) return;
+
     let changed = false;
 
-    if (updates.bloomStrength !== undefined) {
-      this.config.bloomStrength = updates.bloomStrength;
+    if (bloomUpdates.strength !== undefined) {
+      this.config.selectiveBloom.strength = bloomUpdates.strength;
       changed = true;
     }
-    if (updates.bloomRadius !== undefined) {
-      this.config.bloomRadius = updates.bloomRadius;
+    if (bloomUpdates.radius !== undefined) {
+      this.config.selectiveBloom.radius = bloomUpdates.radius;
       changed = true;
     }
-    if (updates.bloomThreshold !== undefined) {
-      this.config.bloomThreshold = updates.bloomThreshold;
+    if (bloomUpdates.threshold !== undefined) {
+      this.config.selectiveBloom.threshold = bloomUpdates.threshold;
       changed = true;
     }
-    if (updates.bloomDebugMode !== undefined) {
-      this.config.bloomDebugMode = updates.bloomDebugMode;
+    if (bloomUpdates.debugMode !== undefined) {
+      this.config.selectiveBloom.debugMode = bloomUpdates.debugMode;
     }
-    if (updates.bloomDebugViews !== undefined) {
-      this.config.bloomDebugViews = updates.bloomDebugViews;
-      this.updateDebugViews(updates.bloomDebugViews);
+    if (bloomUpdates.debugViews !== undefined) {
+      this.config.selectiveBloom.debugViews = bloomUpdates.debugViews;
+      this.updateDebugViews(bloomUpdates.debugViews);
     }
-    if (updates.bloomResolutionScale !== undefined) {
-      this.config.bloomResolutionScale = updates.bloomResolutionScale;
-      this.updateResolutionScale(updates.bloomResolutionScale);
+    if (bloomUpdates.resolutionScale !== undefined) {
+      this.config.selectiveBloom.resolutionScale = bloomUpdates.resolutionScale;
+      this.updateResolutionScale(bloomUpdates.resolutionScale);
     }
 
     if (changed) {
@@ -236,7 +243,8 @@ class SelectiveBloomPass extends PostProcessingPass {
     const renderer =
       layer.viewContext.renderPassOrchestrator.effectComposer.getRenderer();
     const renderSize = renderer.getSize(new Vector2());
-    const resolutionScale = layer.layerConfig.bloomResolutionScale ?? 1.0;
+    const resolutionScale =
+      layer.layerConfig.selectiveBloom.resolutionScale ?? 1.0;
     const initialWidth = Math.floor(renderSize.x * resolutionScale);
     const initialHeight = Math.floor(renderSize.y * resolutionScale);
 
@@ -558,7 +566,7 @@ class SelectiveBloomPass extends PostProcessingPass {
     renderer.render(this.compositeScene, this.fullscreenCamera);
 
     // Optional debug views
-    if (this.layer.layerConfig.bloomDebugViews) {
+    if (this.layer.layerConfig.selectiveBloom.debugViews) {
       if (!this.debugView1) {
         this.debugView1 = new BufferView(
           this.depthEnabledMaskRT.width,

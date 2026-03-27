@@ -40,11 +40,12 @@ const run = async () => {
   // Selective outline effect
   const outlineEffect = view.addLayer({
     type: "effect",
-    selectiveOutline: true,
+    selectiveOutline: {
+      color: new Color().setHex(0xff0000),
+      thickness: 0.5,
+      edgeStrength: 1.0,
+    },
     selectiveEffectOcclusion: "normal",
-    outlineColor: new Color().setHex(0xff0000),
-    outlineThickness: 0.5,
-    outlineEdgeStrength: 1.0,
   });
 
   // Arc lines with outline (Tokyo to Asian cities)

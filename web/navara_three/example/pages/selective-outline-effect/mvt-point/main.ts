@@ -36,11 +36,12 @@ const run = async () => {
   // Selective outline effect
   const outlineEffect = view.addLayer({
     type: "effect",
-    selectiveOutline: true,
+    selectiveOutline: {
+      color: new Color().setHex(0xff0000),
+      thickness: 1.0,
+      edgeStrength: 1.0,
+    },
     selectiveEffectOcclusion: "normal",
-    outlineColor: new Color().setHex(0xff0000),
-    outlineThickness: 1.0,
-    outlineEdgeStrength: 1.0,
   });
 
   // MVT point with outline (Wakayama facilities)

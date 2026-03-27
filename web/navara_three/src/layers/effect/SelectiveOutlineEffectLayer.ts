@@ -32,22 +32,21 @@ import {
   applyDepthClip,
 } from "./SelectiveEffectLayer";
 
-// Selective Outline configuration (flat structure)
+// Selective Outline configuration
+export type SelectiveOutlineConfig = {
+  color?: Color;
+  thickness?: number;
+  edgeStrength?: number;
+  resolutionScale?: number;
+  debugViews?: boolean;
+};
+
 export type SelectiveOutlineEffectConfig = {
-  selectiveOutline: true;
-  outlineColor?: Color;
-  outlineThickness?: number;
-  outlineEdgeStrength?: number;
-  outlineResolutionScale?: number;
-  outlineDebugViews?: boolean;
+  selectiveOutline: SelectiveOutlineConfig;
 } & SelectiveEffectLayerConfig;
 
 export type SelectiveOutlineEffectUpdate = {
-  outlineColor?: Color;
-  outlineThickness?: number;
-  outlineEdgeStrength?: number;
-  outlineResolutionScale?: number;
-  outlineDebugViews?: boolean;
+  selectiveOutline?: Partial<SelectiveOutlineConfig>;
 } & EffectLayerUpdate;
 
 const DEFAULT_COLOR = 0xffffff;
@@ -72,18 +71,22 @@ export class SelectiveOutlineEffectLayer extends SelectiveEffectLayer<
 
   private outlinePass?: SelectiveOutlinePass;
 
+  private get outline(): SelectiveOutlineConfig {
+    return this.config.selectiveOutline;
+  }
+
   // Getters that derive values from config (single source of truth)
   get outlineColor(): Color {
-    const color = this.config.outlineColor;
+    const color = this.outline.color;
     return color instanceof Color ? color : new Color().setHex(DEFAULT_COLOR);
   }
 
   get outlineThickness(): number {
-    return this.config.outlineThickness ?? DEFAULT_THICKNESS;
+    return this.outline.thickness ?? DEFAULT_THICKNESS;
   }
 
   get outlineEdgeStrength(): number {
-    return this.config.outlineEdgeStrength ?? DEFAULT_EDGE_STRENGTH;
+    return this.outline.edgeStrength ?? DEFAULT_EDGE_STRENGTH;
   }
 
   protected getEffectKey(): string {
@@ -91,25 +94,27 @@ export class SelectiveOutlineEffectLayer extends SelectiveEffectLayer<
   }
 
   protected getResolutionScale(): number {
-    return this.config.outlineResolutionScale ?? 1.0;
+    return this.outline.resolutionScale ?? 1.0;
   }
 
   protected getDebugViews(): boolean {
-    return this.config.outlineDebugViews ?? false;
+    return this.outline.debugViews ?? false;
   }
 
   constructor(view: ViewContext, config: EffectLayerConfig) {
-    const c = config as Partial<SelectiveOutlineEffectConfig>;
+    const c =
+      (config as Partial<SelectiveOutlineEffectConfig>).selectiveOutline ?? {};
 
     const postEffectConfig: SelectiveOutlineEffectConfig = {
       ...(config as SelectiveOutlineEffectConfig),
       selectiveEffect: true,
-      selectiveOutline: true,
-      outlineColor: c.outlineColor ?? new Color().setHex(DEFAULT_COLOR),
-      outlineThickness: c.outlineThickness ?? DEFAULT_THICKNESS,
-      outlineEdgeStrength: c.outlineEdgeStrength ?? DEFAULT_EDGE_STRENGTH,
-      outlineResolutionScale: c.outlineResolutionScale ?? 1.0,
-      outlineDebugViews: c.outlineDebugViews ?? false,
+      selectiveOutline: {
+        color: c.color ?? new Color().setHex(DEFAULT_COLOR),
+        thickness: c.thickness ?? DEFAULT_THICKNESS,
+        edgeStrength: c.edgeStrength ?? DEFAULT_EDGE_STRENGTH,
+        resolutionScale: c.resolutionScale ?? 1.0,
+        debugViews: c.debugViews ?? false,
+      },
     };
 
     super(view, postEffectConfig);
@@ -149,27 +154,31 @@ export class SelectiveOutlineEffectLayer extends SelectiveEffectLayer<
   onUpdateConfig(updates: SelectiveOutlineEffectUpdate): void {
     super.onUpdateConfig(updates);
 
+    const outlineUpdates = updates.selectiveOutline;
+    if (!outlineUpdates) return;
+
     let changed = false;
 
-    if (updates.outlineColor !== undefined) {
-      this.config.outlineColor = updates.outlineColor;
+    if (outlineUpdates.color !== undefined) {
+      this.config.selectiveOutline.color = outlineUpdates.color;
       changed = true;
     }
-    if (updates.outlineThickness !== undefined) {
-      this.config.outlineThickness = updates.outlineThickness;
+    if (outlineUpdates.thickness !== undefined) {
+      this.config.selectiveOutline.thickness = outlineUpdates.thickness;
       changed = true;
     }
-    if (updates.outlineEdgeStrength !== undefined) {
-      this.config.outlineEdgeStrength = updates.outlineEdgeStrength;
+    if (outlineUpdates.edgeStrength !== undefined) {
+      this.config.selectiveOutline.edgeStrength = outlineUpdates.edgeStrength;
       changed = true;
     }
-    if (updates.outlineDebugViews !== undefined) {
-      this.config.outlineDebugViews = updates.outlineDebugViews;
-      this.updateDebugViews(updates.outlineDebugViews);
+    if (outlineUpdates.debugViews !== undefined) {
+      this.config.selectiveOutline.debugViews = outlineUpdates.debugViews;
+      this.updateDebugViews(outlineUpdates.debugViews);
     }
-    if (updates.outlineResolutionScale !== undefined) {
-      this.config.outlineResolutionScale = updates.outlineResolutionScale;
-      this.updateResolutionScale(updates.outlineResolutionScale);
+    if (outlineUpdates.resolutionScale !== undefined) {
+      this.config.selectiveOutline.resolutionScale =
+        outlineUpdates.resolutionScale;
+      this.updateResolutionScale(outlineUpdates.resolutionScale);
     }
 
     if (changed) {
@@ -222,7 +231,8 @@ class SelectiveOutlinePass extends PostProcessingPass {
     const renderer =
       layer.viewContext.renderPassOrchestrator.effectComposer.getRenderer();
     const renderSize = renderer.getSize(new Vector2());
-    const resolutionScale = layer.layerConfig.outlineResolutionScale ?? 1.0;
+    const resolutionScale =
+      layer.layerConfig.selectiveOutline.resolutionScale ?? 1.0;
     const initialWidth = Math.floor(renderSize.x * resolutionScale);
     const initialHeight = Math.floor(renderSize.y * resolutionScale);
 
@@ -536,7 +546,7 @@ class SelectiveOutlinePass extends PostProcessingPass {
     renderer.render(this.compositeScene, this.fullscreenCamera);
 
     // Optional debug views
-    if (this.layer.layerConfig.outlineDebugViews) {
+    if (this.layer.layerConfig.selectiveOutline.debugViews) {
       if (!this.debugView1) {
         this.debugView1 = new BufferView(
           this.depthEnabledMaskRT.width,

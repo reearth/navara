@@ -41,28 +41,30 @@ export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
   date.setHours(8);
   view.atmosphere.date = date;
 
-  // --- Effect Layer definitions (new flat API) ---
+  // --- Effect Layer definitions ---
 
   const bloomEffect = view.addLayer({
     type: "effect",
-    selectiveBloom: true,
+    selectiveBloom: {
+      strength: 1.0,
+      radius: 0.5,
+      threshold: 0.0,
+      debugViews: true,
+      resolutionScale: 1.0,
+    },
     selectiveEffectOcclusion: "normal",
-    bloomStrength: 1.0,
-    bloomRadius: 0.5,
-    bloomThreshold: 0.0,
-    bloomDebugViews: true,
-    bloomResolutionScale: 1.0,
   });
 
   const outlineEffect = view.addLayer({
     type: "effect",
-    selectiveOutline: true,
+    selectiveOutline: {
+      color: new Color().setHex(0xff0000),
+      thickness: 2.0,
+      edgeStrength: 1.0,
+      debugViews: false,
+      resolutionScale: 1.0,
+    },
     selectiveEffectOcclusion: "normal",
-    outlineColor: new Color().setHex(0xff0000),
-    outlineThickness: 2.0,
-    outlineEdgeStrength: 1.0,
-    outlineDebugViews: false,
-    outlineResolutionScale: 1.0,
   });
 
   // --- Mesh Layers (effectIds reference effect layer IDs) ---
