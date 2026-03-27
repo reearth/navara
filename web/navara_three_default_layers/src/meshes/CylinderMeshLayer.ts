@@ -1,15 +1,17 @@
 import {
   Color,
+  DrapedMesh,
   MeshLayerDeclarationForSelectiveEffect,
   type MeshLayerConfigWithSelectiveEffect,
   type MeshLayerUpdateWithSelectiveEffect,
   type ViewContext,
   type SelectiveEffectOcclusion,
   type CustomObject3DEventMap,
+  type PassKey,
 } from "@navara/three";
 import {
   CylinderGeometry,
-  Mesh,
+  MeshBasicMaterial,
   MeshLambertMaterial,
   type Object3DEventMap,
 } from "three";
@@ -35,6 +37,11 @@ type LayerDescription = {
     receiveShadow?: boolean;
     effectIds?: string[];
     selectiveEffectOcclusion?: SelectiveEffectOcclusion;
+    /**
+     * To drape the mesh properly on the terrain,
+     * the mesh must cover the terrain.
+     */
+    draped?: boolean;
   };
 };
 
@@ -44,10 +51,12 @@ export type CylinderMeshLayerConfig = MeshLayerConfigWithSelectiveEffect &
 export type CylinderMeshLayerUpdate = MeshLayerUpdateWithSelectiveEffect &
   LayerDescription;
 
+type CylinderMeshMaterial = MeshLambertMaterial | MeshBasicMaterial;
+
 export class CylinderMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
   CylinderMeshLayerConfig,
   CylinderMeshLayerUpdate,
-  Mesh<CylinderGeometry, MeshLambertMaterial, CylinderMeshEventMap>
+  DrapedMesh<CylinderGeometry, CylinderMeshMaterial, CylinderMeshEventMap>
 > {
   private config: CylinderMeshLayerConfig;
 
@@ -82,21 +91,13 @@ export class CylinderMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
     );
 
     // Create material from properties
-    const colorValue = cfg.color ?? new Color().setStyle("#ffffff");
-    const emissiveColorValue = cfg.emissiveColor ? cfg.emissiveColor.raw : 0;
-    const material = new MeshLambertMaterial({
-      color: colorValue.raw,
-      emissive: emissiveColorValue,
-      emissiveIntensity: cfg.emissiveIntensity ?? 1,
-      opacity: cfg.opacity ?? 1,
-      transparent: cfg.transparent ?? false,
-    });
+    const material = this.createMaterial(cfg);
 
-    const mesh = new Mesh<
+    const mesh = new DrapedMesh<
       CylinderGeometry,
-      MeshLambertMaterial,
+      CylinderMeshMaterial,
       CylinderMeshEventMap
-    >(geometry, material);
+    >(geometry, material, cfg.draped ?? false);
 
     mesh.castShadow = cfg.castShadow ?? false;
     mesh.receiveShadow = cfg.receiveShadow ?? false;
@@ -106,10 +107,56 @@ export class CylinderMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
     return mesh;
   }
 
+  private createMaterial(
+    cfg: NonNullable<CylinderMeshLayerConfig["cylinder"]>,
+  ): CylinderMeshMaterial {
+    const colorValue = cfg.color ?? new Color().setStyle("#ffffff");
+    if (cfg.draped) {
+      return new MeshBasicMaterial({
+        color: colorValue.raw,
+        opacity: cfg.opacity ?? 1,
+        transparent: cfg.transparent ?? false,
+      });
+    }
+    const emissiveColorValue = cfg.emissiveColor ? cfg.emissiveColor.raw : 0;
+    return new MeshLambertMaterial({
+      color: colorValue.raw,
+      emissive: emissiveColorValue,
+      emissiveIntensity: cfg.emissiveIntensity ?? 1,
+      opacity: cfg.opacity ?? 1,
+      transparent: cfg.transparent ?? false,
+    });
+  }
+
+  protected override getPassKey(): PassKey {
+    if (this.config.cylinder?.draped) {
+      return "draped";
+    }
+    return super.getPassKey();
+  }
+
   onUpdateConfig(updates: CylinderMeshLayerUpdate): void {
     if (updates.cylinder && this._instance) {
       const cfg = updates.cylinder;
       const origin = this.config.cylinder;
+
+      // Handle draped change BEFORE super.onUpdateConfig() so getPassKey() returns correct value
+      if (cfg.draped !== undefined && origin) {
+        const wasChanged = origin.draped !== cfg.draped;
+        origin.draped = cfg.draped;
+        this._instance.drapedEnable = cfg.draped;
+
+        // Swap material between lit and unlit
+        if (wasChanged) {
+          this.view.removeShadowMaterial(this._instance.material);
+          this._instance.material.dispose();
+          const newMaterial = this.createMaterial(origin);
+          this._instance.material = newMaterial;
+          if (!cfg.draped) {
+            this.view.applyShadowMaterial(newMaterial);
+          }
+        }
+      }
 
       // Update geometry if dimensions changed
       if (
@@ -149,20 +196,19 @@ export class CylinderMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
         cfg.transparent !== undefined
       ) {
         const material = this._instance.material;
+        if (cfg.color !== undefined) {
+          material.color.set(cfg.color.raw);
+        }
+        if (cfg.opacity !== undefined) material.opacity = cfg.opacity;
+        if (cfg.transparent !== undefined)
+          material.transparent = cfg.transparent;
         if (material instanceof MeshLambertMaterial) {
-          if (cfg.color !== undefined) {
-            const colorValue = cfg.color.raw;
-            material.color.set(colorValue);
-          }
           if (cfg.emissiveColor !== undefined)
             material.emissive.set(cfg.emissiveColor.raw);
           if (cfg.emissiveIntensity !== undefined)
             material.emissiveIntensity = cfg.emissiveIntensity;
-          if (cfg.opacity !== undefined) material.opacity = cfg.opacity;
-          if (cfg.transparent !== undefined)
-            material.transparent = cfg.transparent;
-          material.needsUpdate = true;
         }
+        material.needsUpdate = true;
       }
 
       if (cfg.castShadow !== undefined) {

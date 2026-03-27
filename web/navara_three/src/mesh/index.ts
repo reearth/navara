@@ -12,3 +12,4 @@ export * from "./rtcRteHelper";
 export * from "./instancedSprite";
 export * from "./sdfText";
 export * from "./batchedSdfText";
+export * from "./DrapedMesh";

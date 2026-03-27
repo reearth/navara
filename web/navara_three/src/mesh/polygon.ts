@@ -277,17 +277,10 @@ export class PolygonMesh extends BatchedFeatureMesh<
     this.castShadow = !!meshMaterial.castShadow;
     this.receiveShadow = !!meshMaterial.receiveShadow;
 
-    const clampToGround = meshMaterial.clampToGround;
     // This mesh is texturized if it has a tile handle (terrain attachment).
     const isTexturized = !!tileHandle;
     const material = this.material;
 
-    const shouldClipByStencil = !isTexturized && clampToGround;
-
-    material.stencilWrite = false;
-    material.colorWrite = !shouldClipByStencil;
-    material.depthWrite = !clampToGround;
-    material.depthTest = !clampToGround;
     material.vertexColors = false;
     this.visible = !!meshMaterial.show;
 

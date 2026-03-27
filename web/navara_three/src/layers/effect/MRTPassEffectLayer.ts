@@ -45,7 +45,6 @@ export class MRTPassEffectLayer extends EffectLayerDeclaration<
       scenes,
       camera,
       this.view._privates.meshes,
-      this.view._privates.drapedMaterials,
       this.view.renderPassOrchestrator.effectComposer.inputBuffer,
       this.view.globe,
       {
