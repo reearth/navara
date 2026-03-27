@@ -1,7 +1,11 @@
 export type Nullable<T> = T | null | undefined;
 
 export type RemoveFreeRecursively<T> = T extends { free: any }
-  ? { [K in keyof T as K extends "free" | symbol ? never : K]: RemoveFreeRecursively<T[K]> }
+  ? {
+      [K in keyof T as K extends "free" | symbol
+        ? never
+        : K]: RemoveFreeRecursively<T[K]>;
+    }
   : T;
 
 // wasm-bindgen generate a getter and setter, so need to extract it as a property.

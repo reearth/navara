@@ -5,7 +5,9 @@
       "@navara/engine": ["../../node_modules/navara_wasm"],
       "@navara/engine-worker": ["../../node_modules/navara_wasm_worker"],
       "@navara/engine-api": ["../../node_modules/navara_wasm_api"],
-      "@navara/engine-font-worker": ["../../node_modules/navara_wasm_font_worker"],
+      "@navara/engine-font-worker": [
+        "../../node_modules/navara_wasm_font_worker"
+      ],
       "@shaders/*": ["../../shaders"]
     }
   },

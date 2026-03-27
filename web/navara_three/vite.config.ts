@@ -23,7 +23,11 @@ export default defineConfig((env) => {
         bundleTypes: {
           // TODO: Remove this once we publish these modules on NPM,
           // since these modules should be loaded automatically by package manager.
-          bundledPackages: ["@navara/core", "@navara/three_api", "@navara/worker"],
+          bundledPackages: [
+            "@navara/core",
+            "@navara/three_api",
+            "@navara/worker",
+          ],
         },
       }),
       viteStaticCopy({
