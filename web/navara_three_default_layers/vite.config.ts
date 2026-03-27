@@ -22,7 +22,6 @@ export default defineConfig((env) => {
     resolve: {
       ...common.resolve,
       alias: {
-        ...common.resolve.alias,
         "@shaders": normalizePath(path.resolve(__dirname, "../../shaders")),
       },
     },

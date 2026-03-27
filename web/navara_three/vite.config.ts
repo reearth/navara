@@ -23,7 +23,7 @@ export default defineConfig((env) => {
         bundleTypes: {
           // TODO: Remove this once we publish these modules on NPM,
           // since these modules should be loaded automatically by package manager.
-          bundledPackages: ["@navara/core", "@navara/three_api"],
+          bundledPackages: ["@navara/core", "@navara/three_api", "@navara/worker"],
         },
       }),
       viteStaticCopy({
@@ -41,7 +41,6 @@ export default defineConfig((env) => {
     resolve: {
       ...common.resolve,
       alias: {
-        ...common.resolve.alias,
         "@shaders": normalizePath(path.resolve(__dirname, "../../shaders")),
       },
     },

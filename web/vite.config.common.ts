@@ -28,7 +28,7 @@ function watchPackages(packageNames: string[]): PluginOption {
   };
 }
 
-export const commonConfig = (name: string, env: ConfigEnv): UserConfig => ({
+export const commonConfig = (name: string, env: ConfigEnv) => ({
   plugins: [
     watchPackages(["@navara/engine", "@navara/engine-worker", "@navara/engine-font-worker", "@navara/engine-api"]),
     tsconfig(),
@@ -66,4 +66,4 @@ export const commonConfig = (name: string, env: ConfigEnv): UserConfig => ({
   test: {
     environment: "jsdom",
   }
-});
+}) satisfies UserConfig;
