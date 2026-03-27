@@ -38,63 +38,64 @@ export class DrapedMesh<
   process(render: () => void): void {
     if (!this.enabled()) return;
 
-    let m;
+    const run = (m: Material) => {
+      // Save original material state
+      const origStencilFunc = m.stencilFunc;
+      const origStencilFail = m.stencilFail;
+      const origStencilZPass = m.stencilZPass;
+      const origStencilZFail = m.stencilZFail;
+      const origSide = m.side;
+      const origColorWrite = m.colorWrite;
+      const origDepthWrite = m.depthWrite;
+      const origStencilWrite = m.stencilWrite;
+      const origDepthTest = m.depthTest;
+
+      // Back face pass
+      m.stencilFunc = AlwaysStencilFunc;
+      m.stencilFail = KeepStencilOp;
+      m.stencilZPass = KeepStencilOp;
+      m.stencilZFail = IncrementWrapStencilOp;
+      m.side = BackSide;
+      m.colorWrite = false;
+      m.depthWrite = false;
+      m.stencilWrite = true;
+      m.depthTest = true;
+
+      render();
+
+      // Front face pass
+      m.side = FrontSide;
+      m.stencilZFail = DecrementWrapStencilOp;
+
+      render();
+
+      // Final pass
+      m.stencilFunc = NotEqualStencilFunc;
+      m.stencilFail = ZeroStencilOp;
+      m.stencilZFail = ZeroStencilOp;
+      m.stencilZPass = ZeroStencilOp;
+      m.side = BackSide;
+      m.colorWrite = true;
+      m.depthTest = false;
+
+      render();
+
+      // Restore original material state
+      m.stencilFunc = origStencilFunc;
+      m.stencilFail = origStencilFail;
+      m.stencilZPass = origStencilZPass;
+      m.stencilZFail = origStencilZFail;
+      m.side = origSide;
+      m.colorWrite = origColorWrite;
+      m.depthWrite = origDepthWrite;
+      m.stencilWrite = origStencilWrite;
+      m.depthTest = origDepthTest;
+    };
+
     if (Array.isArray(this.material)) {
-      m = this.material[0];
+      this.material.map(run);
     } else {
-      m = this.material;
+      run(this.material);
     }
-
-    // Save original material state
-    const origStencilFunc = m.stencilFunc;
-    const origStencilFail = m.stencilFail;
-    const origStencilZPass = m.stencilZPass;
-    const origStencilZFail = m.stencilZFail;
-    const origSide = m.side;
-    const origColorWrite = m.colorWrite;
-    const origDepthWrite = m.depthWrite;
-    const origStencilWrite = m.stencilWrite;
-    const origDepthTest = m.depthTest;
-
-    // Back face pass
-    m.stencilFunc = AlwaysStencilFunc;
-    m.stencilFail = KeepStencilOp;
-    m.stencilZPass = KeepStencilOp;
-    m.stencilZFail = IncrementWrapStencilOp;
-    m.side = BackSide;
-    m.colorWrite = false;
-    m.depthWrite = false;
-    m.stencilWrite = true;
-    m.depthTest = true;
-
-    render();
-
-    // Front face pass
-    m.side = FrontSide;
-    m.stencilZFail = DecrementWrapStencilOp;
-
-    render();
-
-    // Final pass
-    m.stencilFunc = NotEqualStencilFunc;
-    m.stencilFail = ZeroStencilOp;
-    m.stencilZFail = ZeroStencilOp;
-    m.stencilZPass = ZeroStencilOp;
-    m.side = BackSide;
-    m.colorWrite = true;
-    m.depthTest = false;
-
-    render();
-
-    // Restore original material state
-    m.stencilFunc = origStencilFunc;
-    m.stencilFail = origStencilFail;
-    m.stencilZPass = origStencilZPass;
-    m.stencilZFail = origStencilZFail;
-    m.side = origSide;
-    m.colorWrite = origColorWrite;
-    m.depthWrite = origDepthWrite;
-    m.stencilWrite = origStencilWrite;
-    m.depthTest = origDepthTest;
   }
 }

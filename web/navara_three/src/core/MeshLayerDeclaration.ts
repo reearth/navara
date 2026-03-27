@@ -253,7 +253,6 @@ export abstract class MeshLayerDeclaration<
     if (this.matrix) {
       this.raw.matrixAutoUpdate = false;
       this.raw.matrix.copy(this.matrix);
-      this.raw.updateMatrix();
     }
     if (this.position) this.raw.position.copy(this.position);
     if (this.scale) this.raw.scale.copy(this.scale);
@@ -291,7 +290,6 @@ export abstract class MeshLayerDeclaration<
       this.raw.matrixAutoUpdate = false;
       this.raw.matrix.copy(updates.matrix);
       this.matrix = updates.matrix;
-      this.raw.updateMatrix();
     }
     if (updates.matrixWorld) {
       this.raw.matrixAutoUpdate = false;
