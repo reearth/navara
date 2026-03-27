@@ -17,12 +17,12 @@ DrapedMesh uses a three-pass stencil test to determine where the mesh intersects
 ```
 Pass 1: Back-face pass
   - Renders back faces of the mesh
-  - Decrements stencil buffer where depth test fails (behind terrain)
+  - Increments stencil buffer where depth test fails (behind terrain)
   - Color and depth writes disabled
 
 Pass 2: Front-face pass
   - Renders front faces of the mesh
-  - Increments stencil buffer where depth test fails (behind terrain)
+  - Decrements stencil buffer where depth test fails (behind terrain)
   - Color and depth writes disabled
 
 Pass 3: Final pass
