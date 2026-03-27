@@ -6,16 +6,14 @@ import glsl from "vite-plugin-glsl";
 import { viteStaticCopy } from "vite-plugin-static-copy";
 import tsconfig from "vite-tsconfig-paths";
 
-import { commonConfig } from "../vite.config.common";
+import { commonConfig, composePlugins } from "../vite.config.common";
 
 export default defineConfig((env) => {
   const common = commonConfig("Navara", env);
   return {
     ...common,
     base: "./",
-
-    // Note: Plugin doesn't include common config.
-    plugins: [
+    plugins: composePlugins(env, [
       tsconfig({ configNames: ["tsconfig.build.json"] }),
       glsl(),
       dts({
@@ -38,7 +36,7 @@ export default defineConfig((env) => {
           },
         ],
       }),
-    ],
+    ]),
     worker: {
       plugins: () => [...common.plugins],
     },
