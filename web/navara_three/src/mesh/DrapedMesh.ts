@@ -27,7 +27,7 @@ export class DrapedMesh<
   }
 
   enabled() {
-    return this.drapedEnable && this.visible
+    return this.drapedEnable && this.visible;
   }
 
   /**
@@ -40,10 +40,10 @@ export class DrapedMesh<
 
     let m;
     if (Array.isArray(this.material)) {
-      m = this.material[0]
+      m = this.material[0];
     } else {
-      m = this.material
-    };
+      m = this.material;
+    }
 
     // Save original material state
     const origStencilFunc = m.stencilFunc;
