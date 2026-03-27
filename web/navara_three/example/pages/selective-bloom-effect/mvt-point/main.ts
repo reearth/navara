@@ -56,6 +56,9 @@ const run = async () => {
       effectIds: [bloomEffect.id],
       emissiveIntensity: 0.5,
     },
+    vectorTile: {
+      maxZoom: 16,
+    },
   });
 
   layer.on("featureUpdated", ({ evaluator }) => {
