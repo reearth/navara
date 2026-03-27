@@ -95,7 +95,6 @@ import {
   type TileMapByHandle,
   type LightLayerDeclarationDescription,
   type EffectLayerDeclarationDescription,
-  type DrapedMaterialCache,
 } from "./type";
 import type { CommonUniforms } from "./uniforms";
 import { isWorker, convertScreenPos } from "./utils";
@@ -289,8 +288,6 @@ export default class ThreeView<
   renderPassOrchestrator: RenderPassOrchestrator;
 
   private _scenes: Scenes;
-  // Store draped feature's materials
-  private _drapedFeatureMaterials: DrapedMaterialCache = new Map();
 
   private _core: Core | undefined;
   private _fontManager = new FontManager(FontWorkerURL);
@@ -711,7 +708,6 @@ export default class ThreeView<
       createDefaultConcurrencyManager(this.isMobileOptimized()),
       {
         meshes: this._meshes,
-        drapedMaterials: this._drapedFeatureMaterials,
       },
       this.selectiveEffectHelper,
       {
@@ -884,7 +880,6 @@ export default class ThreeView<
         this.camera.raw,
         this._scenes,
         this._meshes,
-        this._drapedFeatureMaterials,
         this.onPick.bind(this),
         this.renderPassOrchestrator.effectComposer.inputBuffer,
         this.globe,
@@ -1076,7 +1071,6 @@ export default class ThreeView<
       this._workerPoolPromises,
       events,
       this._uniforms,
-      this._drapedFeatureMaterials,
       this._texturizedSceneByTileCoordinates,
       this._tileMapByHandle,
       this._defaultTextureOptions,
