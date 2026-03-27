@@ -23,9 +23,8 @@ pub trait Tile {
     fn bounding_region(&self) -> Option<&TileBoundingRegion<FloatType>>;
     fn aabb(&self) -> &Aabb;
     fn max_height(&self) -> FloatType;
-    fn set_max_height(&mut self, v: FloatType);
     fn min_height(&self) -> FloatType;
-    fn set_min_height(&mut self, _v: FloatType);
+    fn update_heights(&mut self, max_height: FloatType, min_height: FloatType);
     fn has_terrain(&self) -> bool;
 
     /// This is cached children, the children might be removed after the tile is cleared.
@@ -156,8 +155,7 @@ pub trait Tile {
             let is_tile_some = match qt.qt.get_mut(c) {
                 Some(tile) => {
                     if !tile.has_terrain() {
-                        tile.set_max_height(parent_max_height);
-                        tile.set_min_height(parent_min_height);
+                        tile.update_heights(parent_max_height, parent_min_height);
                     }
                     true
                 }

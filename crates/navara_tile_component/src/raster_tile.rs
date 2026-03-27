@@ -387,18 +387,20 @@ impl Tile for RasterTile {
             .and_then(|t| t.current_min_height())
             .unwrap_or(self.min_height)
     }
-    fn set_max_height(&mut self, v: f64) {
-        self.max_height = v;
-        if let Some(bounding_region) = &mut self.bounding_region {
-            bounding_region.maximum_height = v;
+    fn update_heights(&mut self, max_height: f64, min_height: f64) {
+        if self.max_height == max_height && self.min_height == min_height {
+            return;
         }
-    }
-    fn set_min_height(&mut self, v: f64) {
-        self.min_height = v;
+        self.max_height = max_height;
+        self.min_height = min_height;
         if let Some(bounding_region) = &mut self.bounding_region {
-            bounding_region.minimum_height = v;
+            bounding_region.maximum_height = max_height;
+            bounding_region.minimum_height = min_height;
         }
+        self.aabb.update(self.extent, min_height, max_height);
+        self.occludee_point_in_scaled_space = None;
     }
+
     fn has_terrain(&self) -> bool {
         self.terrain_data.is_some()
     }
