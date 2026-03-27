@@ -1,5 +1,6 @@
 import type { BaseEventMap, XYZ } from "@navara/core";
-import { Object3D } from "three";
+import { Matrix4, Object3D } from "three";
+import invariant from "tiny-invariant";
 
 import type { Scenes } from "../scene";
 
@@ -16,17 +17,19 @@ export type MeshLayerConfig = {
   position?: XYZ;
   scale?: XYZ;
   rotation?: XYZ;
+  matrix?: Matrix4;
+  matrixWorld?: Matrix4;
 } & LayerDeclarationConfig;
 
 export type MeshLayerUpdate = Pick<
   MeshLayerConfig,
-  "position" | "scale" | "rotation"
+  "position" | "scale" | "rotation" | "matrix" | "matrixWorld"
 > &
   LayerDeclarationConfigUpdate;
 
 export type PassKey = keyof Pick<
   Scenes,
-  "opaque" | "transparent" | "mrt" | "skyEnvMap"
+  "opaque" | "transparent" | "mrt" | "skyEnvMap" | "draped"
 >;
 
 export type MeshBaseInstance<Instance extends object = object> =
@@ -185,6 +188,8 @@ export abstract class MeshLayerDeclaration<
   public position?: XYZ;
   public scale?: XYZ;
   public rotation?: XYZ;
+  public matrix?: Matrix4;
+  public matrixWorld?: Matrix4;
   private prevPassKey?: PassKey;
 
   constructor(view: ViewContext, config?: Config) {
@@ -193,6 +198,8 @@ export abstract class MeshLayerDeclaration<
     this.position = resolvedConfig.position;
     this.scale = resolvedConfig.scale;
     this.rotation = resolvedConfig.rotation;
+    this.matrix = resolvedConfig.matrix;
+    this.matrixWorld = resolvedConfig.matrixWorld;
   }
 
   /**
@@ -235,18 +242,21 @@ export abstract class MeshLayerDeclaration<
 
   onCreate() {
     this._instance = this.createMesh();
+    invariant(this.raw);
 
-    if (this.position) {
-      this.raw?.position.copy(this.position);
+    if (this.matrixWorld) {
+      this.raw.matrixAutoUpdate = false;
+      this.raw.matrixWorldAutoUpdate = false;
+      this.raw.matrixWorld.copy(this.matrixWorld);
     }
-
-    if (this.scale) {
-      this.raw?.scale.copy(this.scale);
+    if (this.matrix) {
+      this.raw.matrixAutoUpdate = false;
+      this.raw.matrix.copy(this.matrix);
     }
-
-    if (this.rotation) {
-      this.raw?.rotation.set(this.rotation.x, this.rotation.y, this.rotation.z);
-    }
+    if (this.position) this.raw.position.copy(this.position);
+    if (this.scale) this.raw.scale.copy(this.scale);
+    if (this.rotation)
+      this.raw.rotation.set(this.rotation.x, this.rotation.y, this.rotation.z);
 
     this._instance.visible = this.visible;
 
@@ -273,20 +283,31 @@ export abstract class MeshLayerDeclaration<
 
   onUpdateConfig(updates: UpdateConfig): void {
     super.onUpdateConfig(updates);
+    invariant(this.raw);
 
+    if (updates.matrixWorld) {
+      this.raw.matrixAutoUpdate = false;
+      this.raw.matrixWorldAutoUpdate = false;
+      this.raw.matrixWorld.copy(updates.matrixWorld);
+    }
+    if (updates.matrix) {
+      this.raw.matrixAutoUpdate = false;
+      this.raw.matrix.copy(updates.matrix);
+    }
+    if (updates.matrixWorld !== undefined)
+      this.matrixWorld = updates.matrixWorld;
+    if (updates.matrix !== undefined) this.matrix = updates.matrix;
     if (updates.position !== undefined) {
       this.position = updates.position;
-      this.raw?.position.copy(updates.position);
+      this.raw.position.copy(updates.position);
     }
-
     if (updates.scale !== undefined) {
       this.scale = updates.scale;
-      this.raw?.scale.copy(updates.scale);
+      this.raw.scale.copy(updates.scale);
     }
-
     if (updates.rotation !== undefined) {
       this.rotation = updates.rotation;
-      this.raw?.rotation.set(
+      this.raw.rotation.set(
         updates.rotation.x,
         updates.rotation.y,
         updates.rotation.z,

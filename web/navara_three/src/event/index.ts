@@ -31,7 +31,7 @@ import {
 } from "@navara/engine";
 import { radianToDegree } from "@navara/three_api";
 import { canWorkerProcessImmediately } from "@navara/worker";
-import { Mesh, Material, Object3D, Texture, Sprite } from "three";
+import { Mesh, Object3D, Texture, Sprite } from "three";
 
 import { BatchedSdfTextMesh, Layer, type ViewEvents } from "..";
 import { ThreeViewCamera } from "../camera";
@@ -178,7 +178,6 @@ export function processEvent(
   workerPoolPromises: WorkerPoolPromises,
   event: Events | undefined,
   uniforms: CommonUniforms,
-  drapedFeatureMaterials: Map<string, Material>,
   texturizedSceneByTileCoordinates: TexturizedSceneByTileCoordinates,
   tileMapByHandle: TileMapByHandle,
   textureOptions: TextureOptions,
@@ -341,7 +340,6 @@ export function processEvent(
             meshes,
             buf,
             uniforms,
-            drapedFeatureMaterials,
             texturizedSceneByTileCoordinates,
             featureHandler,
             viewEvents,
@@ -365,7 +363,6 @@ export function processEvent(
           await processRenderableFeatureChanged(
             event,
             meshes,
-            drapedFeatureMaterials,
             texturizedSceneByTileCoordinates,
             renderFlag,
             buf,
