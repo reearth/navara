@@ -1,6 +1,7 @@
 //! Shared helpers for integration tests.
 
 pub use geojson_lib::GeoJson;
+use navara_geojson_vt::Options;
 pub use navara_geojson_vt::types::{Tile, TileGeometry};
 pub use serde::Deserialize;
 
@@ -14,6 +15,17 @@ pub fn fixture_path(name: &str) -> std::path::PathBuf {
 pub fn load_geojson(name: &str) -> GeoJson {
     let data = std::fs::read_to_string(fixture_path(name)).unwrap();
     serde_json::from_str(&data).unwrap()
+}
+
+/// Options matching maplibre/geojson-vt defaults.
+pub fn gen_tiles_opts() -> Options {
+    Options {
+        index_max_zoom: 0,
+        index_max_points: 10_000,
+        max_zoom: 14,
+        tolerance: 3.0,
+        ..Default::default()
+    }
 }
 
 /// JS fixture feature format.

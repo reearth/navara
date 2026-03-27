@@ -3,23 +3,21 @@ use bevy_ecs::{
     entity::Entity,
     system::{Commands, Query, ResMut},
 };
+use navara_component::Deleted;
 use navara_feature_component::{batch::BatchedFeature, id::FeatureId};
 use navara_layer::LayerId;
 use navara_tile_component::VectorTileQuadtree;
 
-use crate::source_cache::{MvtSourceCache, MvtSourceResources};
+use crate::source_cache::{VectorTileSourceCache, VectorTileSourceResources};
 use crate::tile::RenderedTile;
 
 use super::tile_cache_manager::TileCacheManager;
 
-/// Resources associated with a single MVT layer.
-///
-/// With shared sources, multiple layers may reference the same `quadtree` and
-/// `tile_cache_manager` entities. The `source` field points to the shared
-/// `MvtSourceResources` that owns these entities.
+/// Resources associated with a single vector tile layer.
 #[derive(Component)]
 pub struct LayerResources {
-    /// Reference to the shared `MvtSourceResources` entity.
+    pub layer_id: String,
+    /// Reference to the shared [`VectorTileSourceResources`] entity.
     /// When multiple layers share the same URL, they reference the same source.
     pub source: Entity,
 
@@ -50,8 +48,8 @@ impl LayerResources {
         features: &Query<(&FeatureId, &LayerId)>,
         batched_features: &Query<&BatchedFeature>,
         rendered_tiles: &mut Query<&mut RenderedTile>,
-        sources: &mut Query<&mut MvtSourceResources>,
-        source_cache: &mut ResMut<MvtSourceCache>,
+        sources: &mut Query<&mut VectorTileSourceResources>,
+        source_cache: &mut ResMut<VectorTileSourceCache>,
     ) {
         // Remove this layer from the source's references
         let is_last_layer = if let Ok(mut source) = sources.get_mut(self.source) {
@@ -61,7 +59,7 @@ impl LayerResources {
             true
         };
 
-        // Remove features belonging to this specific layer from rendered tiles
+        // Source not found - treat as if we're the only layer from rendered tiles
         if let Ok(tc_ref) = tc.get(self.tile_cache_manager) {
             for rendered_tile_entity in tc_ref.rendered_tile_caches.values() {
                 if let Ok(mut rendered_tile) = rendered_tiles.get_mut(*rendered_tile_entity) {
@@ -96,7 +94,7 @@ impl LayerResources {
             }
             commands.entity(self.quadtree).despawn();
             commands.entity(self.tile_cache_manager).despawn();
-            commands.entity(self.source).despawn();
+            commands.entity(self.source).insert(Deleted).despawn();
 
             // Remove from cache
             if let Ok(source) = sources.get(self.source) {

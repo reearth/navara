@@ -8,8 +8,15 @@ use navara_component::{Deleted, Priority};
 
 use navara_feature_component::{
     batch::{BatchTable, BatchedFeature},
+    id::FeatureId,
     polygon::UpdatePolygon,
     render::RenderableFeature,
+};
+
+use navara_tile_component::VectorTileQuadtree;
+use navara_vector_tile::{
+    LayerResources, RenderedTile, TileCacheManager, TileSource, VectorTileSourceCache,
+    VectorTileSourceResources,
 };
 
 use navara_buffer_store::BufferStore;
@@ -25,6 +32,7 @@ use navara_data_requester::{DataRequester, DataRequesterExtension, DataRequester
 use navara_parser::geojson::GeoJson;
 
 use crate::geometry;
+use crate::tile::source::GeoJsonTileSource;
 
 #[allow(clippy::type_complexity)]
 pub fn construct_feature(
@@ -52,6 +60,8 @@ pub fn update_geo_json_layer(
     layer_store: Res<LayerStore>,
     updated: Query<(Entity, &UpdateGeoJsonLayerMarker)>,
     mut features: Query<&mut RenderableFeature>,
+    layers: Query<(&GeoJsonLayer, Option<&LayerResources>)>,
+    mut tile_sources: Query<&mut TileSource>,
 ) {
     for (e, u) in &updated {
         let layer_id = u.layer_id.clone();
@@ -123,6 +133,21 @@ pub fn update_geo_json_layer(
                 }
             }
         }
+        // Sync appearances to GeoJsonTileSource for tiled layers
+        for (layer, layer_res) in &layers {
+            if layer.layer_id != layer_id {
+                continue;
+            }
+            if let Some(layer_res) = layer_res
+                && let Ok(mut tile_source) = tile_sources.get_mut(layer_res.source)
+                && let Some(geojson_source) = tile_source.downcast_mut::<GeoJsonTileSource>()
+            {
+                for appearance in geojson_source.appearances.iter_mut() {
+                    appearance.set(&u.appearance);
+                }
+            }
+        }
+
         // Only despawn the update marker when all features have been rendered,
         // so unrendered features can be retried next frame.
         if all_rendered {
@@ -136,26 +161,49 @@ pub fn delete_geo_json_layer(
     mut commands: Commands,
     mut layer_store: ResMut<LayerStore>,
     deleted: Query<(Entity, &DeleteGeoJsonLayerMarker)>,
-    layers: Query<(Entity, &GeoJsonLayer)>,
+    layers: Query<(Entity, &GeoJsonLayer, Option<&LayerResources>)>,
     batched_features: Query<(Entity, &LayerId, &BatchedFeature), Without<RenderableFeature>>,
+    // For tiled layer cleanup (passed to LayerResources::destroy):
+    feature_ids: Query<(&FeatureId, &LayerId)>,
+    all_batched_features: Query<&BatchedFeature>,
+    mut rendered_tiles: Query<&mut RenderedTile>,
+    mut qts: Query<&mut VectorTileQuadtree>,
+    tc: Query<&TileCacheManager>,
+    mut sources: Query<&mut VectorTileSourceResources>,
+    mut source_cache: ResMut<VectorTileSourceCache>,
 ) {
     for (e, d) in &deleted {
-        // delete BatchedFeature entities with this layer id
-        for (entity, l_id, batched) in batched_features.iter() {
-            if l_id.0 == d.0 {
-                batched.despawn_recursively(&mut commands);
-                commands.entity(entity).insert(Deleted);
-            }
-        }
-
-        // delete stored layer id
         layer_store.remove(&d.0);
 
-        for (e, l) in &layers {
-            if l.layer_id != d.0 {
+        for (layer_entity, layer, resource) in &layers {
+            if layer.layer_id != d.0 {
                 continue;
             }
-            commands.entity(e).despawn();
+
+            if let Some(resource) = resource {
+                // Tiled path: delegate to LayerResources::destroy()
+                resource.destroy(
+                    layer_entity,
+                    &LayerId(layer.layer_id.clone()),
+                    &mut commands,
+                    &mut qts,
+                    &tc,
+                    &feature_ids,
+                    &all_batched_features,
+                    &mut rendered_tiles,
+                    &mut sources,
+                    &mut source_cache,
+                );
+            } else {
+                // Non-tiled path: clean up BatchedFeature entities
+                for (entity, l_id, batched) in batched_features.iter() {
+                    if l_id.0 == d.0 {
+                        batched.despawn_recursively(&mut commands);
+                        commands.entity(entity).insert(Deleted);
+                    }
+                }
+            }
+            commands.entity(layer_entity).despawn();
         }
 
         commands.entity(e).despawn();
