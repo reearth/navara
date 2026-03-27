@@ -2,14 +2,15 @@
   "extends": "../tsconfig.common.json",
   "compilerOptions": {
     "paths": {
+      "@navara/engine": ["../../node_modules/navara_wasm"],
+      "@navara/engine-worker": ["../../node_modules/navara_wasm_worker"],
+      "@navara/engine-api": ["../../node_modules/navara_wasm_api"],
+      "@navara/engine-font-worker": [
+        "../../node_modules/navara_wasm_font_worker"
+      ],
       "@shaders/*": ["../../shaders"]
     }
   },
   "include": ["src"],
-  "exclude": ["./dist", "./node_modules"],
-  "references": [
-    {
-      "path": "./tsconfig.node.json"
-    }
-  ]
+  "exclude": ["./dist", "./node_modules"]
 }

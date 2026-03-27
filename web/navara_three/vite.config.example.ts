@@ -66,6 +66,7 @@ const pageInfos: PageInfo[] = examplePages.map(({ name }) => ({
 export default defineConfig((env) => {
   const common = commonConfig("NavaraExample", env);
   return {
+    ...common,
     envPrefix: "NAVARA",
     plugins: [
       glsl(),
@@ -112,7 +113,6 @@ export default defineConfig((env) => {
     resolve: {
       dedupe: ["react", "react-dom"],
       alias: {
-        ...common.resolve?.alias,
         "@shaders": normalizePath(path.resolve(__dirname, "../../shaders")),
         // For dev server, import packages directly from source to avoid bundling.
         ...(env.command === "serve"
