@@ -89,11 +89,11 @@ export class BoxMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
     // Create material from properties
     const material = this.createMaterial(cfg);
 
-    const mesh = new DrapedMesh<
-      BoxGeometry,
-      BoxMeshMaterial,
-      BoxMeshEventMap
-    >(geometry, material, cfg.draped ?? false);
+    const mesh = new DrapedMesh<BoxGeometry, BoxMeshMaterial, BoxMeshEventMap>(
+      geometry,
+      material,
+      cfg.draped ?? false,
+    );
 
     mesh.castShadow = cfg.castShadow ?? false;
     mesh.receiveShadow = cfg.receiveShadow ?? false;

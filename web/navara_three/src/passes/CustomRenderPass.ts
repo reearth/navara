@@ -9,7 +9,6 @@ import {
   type WebGLRenderer,
 } from "three";
 
-
 import type { SelectiveEffectHelper } from "../core/SelectiveEffectHelper";
 import { SelectiveEffectMaskController } from "../core/SelectiveEffectMaskController";
 import { RenderPass } from "../effects";
