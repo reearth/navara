@@ -57,6 +57,9 @@ const run = async () => {
       emissiveIntensity: 0.5,
       selectiveEffectOcclusion: "normal",
     },
+    vectorTile: {
+      maxZoom: 16,
+    },
   });
 
   layer.on("featureUpdated", ({ evaluator }) => {

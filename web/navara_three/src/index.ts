@@ -17,6 +17,7 @@ import initCore, {
   type TextureFragmentStatus,
 } from "@navara/engine";
 import { FontManager } from "@navara/font";
+import FontWorkerURL from "@navara/font/fontWorker?worker&url";
 import { initNavaraApi } from "@navara/three_api";
 import { initializeWorkerPool } from "@navara/worker";
 import {
@@ -56,6 +57,7 @@ import {
   type BufferLoader,
   type FeatureHandler,
   type GlobeHandler,
+  type LayerHandler,
   type MeshHandler,
   type TextureFragmentHandler,
   type TileHandler,
@@ -291,7 +293,7 @@ export default class ThreeView<
   private _drapedFeatureMaterials: DrapedMaterialCache = new Map();
 
   private _core: Core | undefined;
-  private _fontManager = new FontManager();
+  private _fontManager = new FontManager(FontWorkerURL);
   private _options: Options;
   private _stats: RendererStats | undefined;
   private _eventDisposer: (() => void) | undefined;
@@ -508,6 +510,11 @@ export default class ThreeView<
   private _meshHandler: MeshHandler = {
     setTileMeshPrepared: (handle: bigint) => {
       this._core?.setTileMeshPrepared(handle);
+    },
+  };
+  private _layerHandler: LayerHandler = {
+    getLayerIndex: (layerId: string) => {
+      return this._core?.getLayerIndex(layerId);
     },
   };
   private _eventManager = new EventManager();
@@ -1078,6 +1085,7 @@ export default class ThreeView<
       this.layersManager,
       this.viewContext,
       updatedAt,
+      this._layerHandler,
     );
     events?.free();
 

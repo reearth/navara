@@ -62,15 +62,6 @@ fn assert_tiles_match(index: &GeoJsonVt, expected_name: &str) {
     }
 }
 
-/// Options matching JS `genTiles` defaults: `{indexMaxZoom: 0, indexMaxPoints: 10000}`.
-fn gen_tiles_opts() -> Options {
-    Options {
-        index_max_zoom: 0,
-        index_max_points: 10_000,
-        ..Default::default()
-    }
-}
-
 // ── Exact match tests ────────────────────────────────────────────────
 
 #[test]
@@ -109,7 +100,7 @@ fn test_us_states_tiles() {
         Options {
             index_max_zoom: 7,
             index_max_points: 200,
-            ..Default::default()
+            ..gen_tiles_opts()
         },
     );
     assert_tiles_match(&index, "us-states-tiles.json");

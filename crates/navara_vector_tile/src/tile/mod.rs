@@ -1,5 +1,5 @@
-mod render;
+pub mod render;
 pub mod system;
-mod traverse;
+pub mod traverse;
 
 pub use render::*;

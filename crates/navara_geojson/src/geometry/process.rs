@@ -124,8 +124,11 @@ fn process_geometry(
             Appearance::Polyline(_) => {
                 spawn_polyline_children(commands, buf, builder, geometry);
             }
-            Appearance::Polygon(_) => {
-                spawn_polygon_children(commands, buf, builder, geometry);
+            Appearance::Polygon(p) => {
+                // Skip clamped polygons - they go through the tiled rendering pipeline
+                if !p.clamp_to_ground && !p.tiled {
+                    spawn_polygon_children(commands, buf, builder, geometry);
+                }
             }
             _ => {}
         }
@@ -632,7 +635,10 @@ mod test {
         }
     ]
 }"#,
-            vec![Appearance::Polygon(PolygonMaterial::default())],
+            vec![Appearance::Polygon(PolygonMaterial {
+                clamp_to_ground: false,
+                ..Default::default()
+            })],
         );
 
         let mut batched_query = app
@@ -683,7 +689,10 @@ mod test {
         }
     ]
 }"#,
-            vec![Appearance::Polygon(PolygonMaterial::default())],
+            vec![Appearance::Polygon(PolygonMaterial {
+                clamp_to_ground: false,
+                ..Default::default()
+            })],
         );
 
         let mut batched_query = app
@@ -806,7 +815,10 @@ mod test {
         }
     ]
 }"#,
-            vec![Appearance::Polygon(PolygonMaterial::default())],
+            vec![Appearance::Polygon(PolygonMaterial {
+                clamp_to_ground: false,
+                ..Default::default()
+            })],
         );
 
         let mut batched_query = app
@@ -951,7 +963,10 @@ mod test {
             vec![
                 Appearance::Point(PointMaterial::default()),
                 Appearance::Polyline(PolylineMaterial::default()),
-                Appearance::Polygon(PolygonMaterial::default()),
+                Appearance::Polygon(PolygonMaterial {
+                    clamp_to_ground: false,
+                    ..Default::default()
+                }),
             ],
         );
 
@@ -1135,7 +1150,10 @@ mod test {
                 Appearance::Billboard(BillboardMaterial::default()),
                 Appearance::Text(TextMaterial::default()),
                 Appearance::Polyline(PolylineMaterial::default()),
-                Appearance::Polygon(PolygonMaterial::default()),
+                Appearance::Polygon(PolygonMaterial {
+                    clamp_to_ground: false,
+                    ..Default::default()
+                }),
             ],
         );
 

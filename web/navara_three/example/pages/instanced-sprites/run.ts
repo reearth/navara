@@ -92,7 +92,7 @@ const layers: MaterialLayerDescription[] = [
       transparent: true,
     },
     vectorTile: {
-      maxZoom: 4,
+      maxZoom: 6,
     },
   },
 ];

@@ -33,3 +33,4 @@ navara_frame.workspace = true
 navara_worker.workspace = true
 navara_fog.workspace = true
 navara_globe.workspace = true
+navara_vector_tile.workspace = true

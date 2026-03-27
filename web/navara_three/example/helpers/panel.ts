@@ -2,6 +2,7 @@ import ThreeView, {
   type LayerDescription,
   type Layer,
   Color,
+  type Nullable,
 } from "@navara/three";
 import { isNumber } from "lodash-es";
 import {
@@ -11,6 +12,10 @@ import {
   type BindingParams,
   type InputBindingApi,
 } from "tweakpane";
+
+const getIdFromProperties = (properties: Nullable<Record<string, unknown>>) => {
+  return properties?.["id"] ?? properties?.["gml_id"];
+};
 
 export type MaterialLayerDescription = Exclude<
   LayerDescription,
@@ -77,8 +82,8 @@ const addFeatureUpdateHandler = (
   layer.on("featureUpdated", ({ evaluator }) => {
     evaluator.evaluate(
       ({ batchId, properties }) => {
-        const gmlId = properties?.["gml_id"];
-        if (gmlId && selectedFeatures.has(gmlId as string)) {
+        const id = getIdFromProperties(properties);
+        if (id && selectedFeatures.has(id as string)) {
           return {
             color: new Color().setHex(0x00ffff),
           };
@@ -97,7 +102,7 @@ const addFeatureUpdateHandler = (
           color: defaultColor,
         };
       },
-      { filters: ["gml_id"] },
+      { filters: ["id", "gml_id"] },
     );
   });
 };
@@ -110,10 +115,10 @@ export const addCtrlPanel = (
   const layerInstMap = new Map<string, Layer>();
 
   view.on("pick", (info) => {
-    const gmlId = info?.properties?.["gml_id"];
-    if (gmlId) {
-      // if gml_id exists, use it for selection
-      selectedFeatures.add(gmlId as string);
+    const id = getIdFromProperties(info?.properties);
+    if (id) {
+      // if id exists, use it for selection
+      selectedFeatures.add(id as string);
 
       if (isNumber(info?.batchId)) {
         const layerId = info?.layerId;

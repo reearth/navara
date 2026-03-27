@@ -226,7 +226,6 @@ function addGeojsonLayerFolder(pane: Pane) {
     height: 1,
     extrudedHeight: 0,
     clampToGround: true,
-    useGroundNormals: false,
     wireframe: false,
     opacity: 1,
     transparent: false,
@@ -283,11 +282,6 @@ function addGeojsonLayerFolder(pane: Pane) {
     .addBinding(geoParams, "clampToGround", { label: "clampToGround" })
     .on("change", (v) =>
       gGeojsonLayer.update({ polygon: { clampToGround: v.value } }),
-    );
-  polygonFolder
-    .addBinding(geoParams, "useGroundNormals", { label: "useGroundNormals" })
-    .on("change", (v) =>
-      gGeojsonLayer.update({ polygon: { useGroundNormals: v.value } }),
     );
   polygonFolder
     .addBinding(geoParams, "wireframe", { label: "wireframe" })

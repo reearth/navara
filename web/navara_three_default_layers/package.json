@@ -22,25 +22,25 @@
   },
   "license": "MIT OR Apache-2.0",
   "peerDependencies": {
-    "three": "^0.183.2",
-    "postprocessing": "^6.38.3",
+    "three": ">=0.183.0",
+    "postprocessing": ">=6.38.0",
     "@navara/three": "workspace:*"
   },
   "dependencies": {
     "@navara/core": "workspace:*",
     "@navara/three_csm": "workspace:*",
-    "@takram/three-atmosphere": "^0.17.0",
-    "@takram/three-clouds": "^0.7.1",
-    "@takram/three-geospatial": "^0.7.0",
-    "@takram/three-geospatial-effects": "^0.6.0",
-    "n8ao": "^1.10.1",
-    "tiny-invariant": "^1.3.3"
+    "@takram/three-atmosphere": "0.17.1",
+    "@takram/three-clouds": "0.7.3",
+    "@takram/three-geospatial": "0.7.1",
+    "@takram/three-geospatial-effects": "0.6.1",
+    "n8ao": "1.10.1",
+    "tiny-invariant": "1.3.3"
   },
   "devDependencies": {
     "@navara/three": "workspace:*",
-    "@types/three": "^0.183.1",
-    "postprocessing": "^6.38.3",
-    "three": "^0.183.2",
-    "vite-plugin-glsl": "^1.5.5"
+    "@types/three": "0.183.1",
+    "postprocessing": "6.38.3",
+    "three": "0.183.2",
+    "vite-plugin-glsl": "1.5.6"
   }
 }

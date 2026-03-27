@@ -13,62 +13,62 @@ license = "MIT/Apache-2.0"
 
 [workspace.dependencies]
 # --- Bevy ---
-bevy_app = "0.18.1"
-bevy_ecs = { version = "0.18.1", features = ["serialize"] }
-bevy_input = { version = "0.18.1", features = ["mouse", "keyboard"] }
-bevy_log = "0.18.1"
-bevy_math = "0.18.1"
-bevy_transform = "0.18.1"
+bevy_app = "=0.18.1"
+bevy_ecs = { version = "=0.18.1", features = ["serialize"] }
+bevy_input = { version = "=0.18.1", features = ["mouse", "keyboard"] }
+bevy_log = "=0.18.1"
+bevy_math = "=0.18.1"
+bevy_transform = "=0.18.1"
 
 # --- Serialization ---
-serde = { version = "1.0.228", features = ["derive"] }
-serde_json = { version = "1.0.149", features = ["alloc", "float_roundtrip", "indexmap"] }
-serde_repr = "0.1.20"
-serde-wasm-bindgen = "0.6.5"
-binrw = { version = "0.15.1", default-features = false }
+serde = { version = "=1.0.228", features = ["derive"] }
+serde_json = { version = "=1.0.149", features = ["alloc", "float_roundtrip", "indexmap"] }
+serde_repr = "=0.1.20"
+serde-wasm-bindgen = "=0.6.5"
+binrw = { version = "=0.15.1", default-features = false }
 
 # --- Utility ---
-approx = "0.5.1"
-url = "2.5.8"
-cfg-if = "1.0.4"
-radians = "0.3.1"
-itertools = "0.14.0"
-rustc-hash = "2.1.1"
-num = "0.4.3"
-regex = "1.12.3"
+approx = "=0.5.1"
+url = "=2.5.8"
+cfg-if = "=1.0.4"
+radians = "=0.3.1"
+itertools = "=0.14.0"
+rustc-hash = "=2.1.1"
+num = "=0.4.3"
+regex = "=1.12.3"
 
 # --- Geo ---
-geo-types = "0.7.18"
-geojson_lib = { package = "geojson", version = "0.24.2" }
-earcutr = "0.5.0"
+geo-types = "=0.7.18"
+geojson_lib = { package = "geojson", version = "=0.24.2" }
+earcutr = "=0.5.0"
 # geozero = { version = "0.15.1", default-features = false, features = ["with-mvt", "with-geo"] }
 # TODO: Replace to original later
 geozero = { git = "https://github.com/keiya01/geozero.git", branch = "fix/ccw-mvt", default-features = false, features = ["with-mvt", "with-geo"] }
-prost = "0.14.3"
+prost = "=0.14.3"
 
 # --- Time ---
-instant = { version = "0.1.13", features = ["wasm-bindgen", "inaccurate"] }
+instant = { version = "=0.1.13", features = ["wasm-bindgen", "inaccurate"] }
 
 # --- Random ---
-rand = "0.10.0"
-getrandom = { version = "0.4.2", features = ["wasm_js"] }
+rand = "=0.10.0"
+getrandom = { version = "=0.4.2", features = ["wasm_js"] }
 
 # --- WASM ---
 wasm-bindgen = "=0.2.114"
-js-sys = "0.3.91"
-gloo-utils = { version = "0.2.0", features = ["serde"] }
-web-sys = { version = "0.3.91", features = ["console"] }
-console_error_panic_hook = "0.1.7"
+js-sys = "=0.3.91"
+gloo-utils = { version = "=0.2.0", features = ["serde"] }
+web-sys = { version = "=0.3.91", features = ["console"] }
+console_error_panic_hook = "=0.1.7"
 
 # --- Font ---
-rustybuzz = "0.20.1"
-fontdue = "0.9.3"
-sdf_glyph_renderer = "1.0.2"
-guillotiere = "0.6.2"
+rustybuzz = "=0.20.1"
+fontdue = "=0.9.3"
+sdf_glyph_renderer = "=1.0.2"
+guillotiere = "=0.6.2"
 
 # --- Testing ---
-wasm-bindgen-test = "0.3.64"
-image = { version = "0.25.10", default-features = false, features = ["png"] }
+wasm-bindgen-test = "=0.3.64"
+image = { version = "=0.25.10", default-features = false, features = ["png"] }
 
 # --- External Git Dependencies ---
 cesiumtiles = { git = "https://github.com/reearth/cesiumtiles-rs.git" }
@@ -93,6 +93,7 @@ navara_feature_component = { path = "crates/navara_feature_component" }
 navara_fog = { path = "crates/navara_fog" }
 navara_frame = { path = "crates/navara_frame" }
 navara_geojson = { path = "crates/navara_geojson" }
+navara_geojson_vt = { path = "crates/navara_geojson_vt" }
 navara_geometry = { path = "crates/navara_geometry" }
 navara_glb = { path = "crates/navara_glb" }
 navara_globe = { path = "crates/navara_globe" }
@@ -110,6 +111,7 @@ navara_pnts = { path = "crates/navara_pnts" }
 navara_quadtree = { path = "crates/navara_quadtree" }
 navara_texture_fragment = { path = "crates/navara_texture_fragment" }
 navara_tile = { path = "crates/navara_tile" }
+navara_vector_tile = { path = "crates/navara_vector_tile" }
 navara_tile_component = { path = "crates/navara_tile_component" }
 navara_wasm = { path = "crates/navara_wasm" }
 navara_wasm_api = { path = "crates/navara_wasm_api" }
