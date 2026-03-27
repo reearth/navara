@@ -21,6 +21,7 @@ use crate::wrap::wrap;
 #[derive(Debug, Clone)]
 pub struct Options {
     /// Maximum zoom level to preserve detail on. Affects simplification tolerance.
+    /// The higher zoom level would improve the performance, but unexpected tile splitting might occur.
     pub max_zoom: u32,
     /// Maximum zoom level for pre-indexing. Tiles beyond this are generated on demand.
     pub index_max_zoom: u32,
@@ -37,12 +38,12 @@ pub struct Options {
 impl Default for Options {
     fn default() -> Self {
         Self {
-            max_zoom: 14,
+            max_zoom: 12,
             index_max_zoom: 5,
             index_max_points: 100_000,
             extent: 4096,
             buffer: 64,
-            tolerance: 3.0,
+            tolerance: 2.0,
         }
     }
 }

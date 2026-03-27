@@ -226,6 +226,53 @@ mod tests {
     }
 
     #[test]
+    fn ancestor_returns_leaf_at_target_zoom() {
+        let mut qt: Box<dyn GeoSpacialQuadtree<u32, String>> = Box::new(LinearQuadtree::new());
+
+        // Build a chain: z=0 -> z=1 -> z=2
+        qt.initialize_zero(&|(x, y, z)| zxy_string((z, x, y)));
+        qt.initialize_children((0, 0, 0), &|(x, y, z)| zxy_string((z, x, y)));
+        qt.initialize_children((0, 0, 1), &|(x, y, z)| zxy_string((z, x, y)));
+
+        // ancestor at same zoom returns self
+        let leaf = qt.ancestor((0, 0, 2), 2);
+        assert!(leaf.is_some());
+        assert_eq!(
+            qt.get(leaf.unwrap().handle()).unwrap(),
+            &zxy_string((2, 0, 0))
+        );
+
+        // ancestor at z=1 from z=2
+        let leaf = qt.ancestor((0, 0, 2), 1);
+        assert!(leaf.is_some());
+        assert_eq!(
+            qt.get(leaf.unwrap().handle()).unwrap(),
+            &zxy_string((1, 0, 0))
+        );
+
+        // ancestor at z=0 (root) from z=2
+        let leaf = qt.ancestor((0, 0, 2), 0);
+        assert!(leaf.is_some());
+        assert_eq!(
+            qt.get(leaf.unwrap().handle()).unwrap(),
+            &zxy_string((0, 0, 0))
+        );
+
+        // ancestor matches parent when target_z = z - 1
+        let parent = qt.parent((1, 0, 2));
+        let ancestor = qt.ancestor((1, 0, 2), 1);
+        assert_eq!(parent.unwrap().handle(), ancestor.unwrap().handle());
+
+        // ancestor returns None when the target leaf doesn't exist
+        let leaf = qt.ancestor((3, 3, 2), 0);
+        // root (0,0,0) exists, and ancestor_coords((3,3,2), 0) = (0,0,0)
+        assert!(leaf.is_some());
+        let leaf = qt.ancestor((3, 3, 2), 1);
+        // ancestor_coords((3,3,2), 1) = (1,1,1) which exists
+        assert!(leaf.is_some());
+    }
+
+    #[test]
     fn it_should_not_get_unxepected_children() {
         let mut qt: Box<dyn GeoSpacialQuadtree<u32, String>> = Box::new(LinearQuadtree::new());
 

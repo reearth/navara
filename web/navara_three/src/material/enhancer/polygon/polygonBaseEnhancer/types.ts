@@ -24,7 +24,6 @@ export type PolygonBaseProps = {
 
   // Clamp to ground
   clampToGround?: boolean;
-  useGroundNormals?: boolean;
   isTexturized?: boolean;
 
   // Picking
@@ -62,7 +61,6 @@ export type PolygonBaseState = Readonly<
     useRTE: boolean;
     isTexturized: boolean;
     clampToGround: boolean;
-    useGroundNormals: boolean;
     pickable: boolean;
     minMaxHeight: [number, number] | undefined;
     addExtrudedHeight: number;
@@ -87,7 +85,6 @@ export type PolygonBaseRefs = {
   uAddExtrudedHeight: UniformValue<number>;
   uAddHeight: UniformValue<number>;
   uClampToGround: UniformValue<boolean>;
-  useGroundNormals: UniformValue<boolean>;
   nvr_uPickable: UniformValue<number>;
   uIsTexturized: UniformValue<boolean>;
   reflectivity: UniformValue<number>;

@@ -189,7 +189,6 @@ export const run = async (view: ThreeView<LayerDescriptions>) => {
     polygon: {
       color: new Color().setStyle("#00aaff"),
       clampToGround: true,
-      useGroundNormals: true,
     },
   });
 

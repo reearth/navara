@@ -158,6 +158,10 @@ export type MeshHandler = {
   setTileMeshPrepared: (handle: bigint) => void;
 };
 
+export type LayerHandler = {
+  getLayerIndex: (layerId: string) => number | undefined;
+};
+
 export function processEvent(
   eventManager: EventManager,
   scenes: Scenes,
@@ -183,6 +187,7 @@ export function processEvent(
   layersManager: LayersManager,
   viewContext: ViewContext,
   updatedAt: number,
+  layerHandler?: LayerHandler,
 ) {
   eventManager.pushEvents(event);
 
@@ -368,6 +373,7 @@ export function processEvent(
             layersManager,
             viewContext,
             updatedAt,
+            layerHandler,
           );
           break;
       }

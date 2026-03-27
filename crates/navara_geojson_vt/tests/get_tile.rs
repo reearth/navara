@@ -26,7 +26,7 @@ fn test_get_tile_empty_index() {
 
 fn us_states_index() -> GeoJsonVt {
     let geojson = load_geojson("us-states.json");
-    GeoJsonVt::new(&geojson, Options::default())
+    GeoJsonVt::new(&geojson, gen_tiles_opts())
 }
 
 #[test]

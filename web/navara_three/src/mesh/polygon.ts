@@ -308,8 +308,6 @@ export class PolygonMesh extends BatchedFeatureMesh<
     const enhancer = this._enhancedMaterial;
 
     // Initialize material state with separated base and water props
-    // Note: Pass raw values for clampToGround and useGroundNormals.
-    // The enhancer handles the !isTexturized && logic internally.
     const initialProps: PolygonMaterialProps = {
       base: {
         color: mcolor,
@@ -318,7 +316,6 @@ export class PolygonMesh extends BatchedFeatureMesh<
         wireframe: meshMaterial.wireframe,
         minMaxHeight,
         clampToGround: meshMaterial.clampToGround,
-        useGroundNormals: meshMaterial.useGroundNormals,
         isTexturized,
         reflectivity: meshMaterial.reflectivity,
         roughness: meshMaterial.roughness,
@@ -443,7 +440,6 @@ export class PolygonMesh extends BatchedFeatureMesh<
             ? [minMaxHeights[0], minMaxHeights[1]]
             : undefined,
         clampToGround: !!material.clampToGround,
-        useGroundNormals: !!material.useGroundNormals,
         isTexturized,
         reflectivity: material.reflectivity,
         roughness: material.roughness,

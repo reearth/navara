@@ -18,7 +18,6 @@ const DEFAULT_BASE_REFS: PolygonBaseRefs = {
   uAddExtrudedHeight: { value: 0 },
   uAddHeight: { value: 0 },
   uClampToGround: { value: false },
-  useGroundNormals: { value: false },
   nvr_uPickable: { value: 0 },
   uIsTexturized: { value: false },
   reflectivity: { value: 0 },
@@ -49,7 +48,6 @@ export const createBaseMutates = (useRTE: boolean): PolygonBaseMutates => {
       refs.uAddExtrudedHeight.value = state.addExtrudedHeight;
       refs.uAddHeight.value = state.addHeight;
       refs.uClampToGround.value = state.clampToGround;
-      refs.useGroundNormals.value = state.useGroundNormals;
       refs.nvr_uPickable.value = state.pickable ? 1 : 0;
       refs.uIsTexturized.value = state.isTexturized;
       refs.reflectivity.value = state.reflectivity;
@@ -61,7 +59,6 @@ export const createBaseMutates = (useRTE: boolean): PolygonBaseMutates => {
         uniforms.uGlobeNormal = refs.uGlobeNormal;
       }
       uniforms.nvr_uPickable = refs.nvr_uPickable;
-      uniforms.useGroundNormals = refs.useGroundNormals;
       uniforms.reflectivity = refs.reflectivity;
       uniforms.roughness = refs.roughness;
 

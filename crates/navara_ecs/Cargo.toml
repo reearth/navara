@@ -33,6 +33,7 @@ navara_window.workspace = true
 navara_math.workspace = true
 navara_cesium3dtiles.workspace = true
 navara_mvt.workspace = true
+navara_vector_tile.workspace = true
 navara_worker.workspace = true
 navara_core.workspace = true
 navara_frame.workspace = true

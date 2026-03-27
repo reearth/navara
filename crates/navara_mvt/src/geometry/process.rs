@@ -19,9 +19,7 @@ use navara_geometry::{Hierarchy, WindingOrder};
 use navara_material::Appearance;
 use navara_math::{FloatType, Vec3};
 use navara_tile_component::{OverscaledTileHandle, TileExtent, TileHandle};
-
-use crate::component::MVTFeatureMarker;
-use crate::pos_converter::PosConverter;
+use navara_vector_tile::{PosConverter, VectorTileFeatureMarker};
 
 use super::builder::MvtGeometryBuilder;
 
@@ -165,7 +163,7 @@ fn process_layer_multi(
         }
         commands
             .entity(entity)
-            .insert((order.clone(), MVTFeatureMarker));
+            .insert((order.clone(), VectorTileFeatureMarker));
     }
 
     entities
@@ -683,10 +681,10 @@ mod test {
         // MVT: default_active should be false
         assert!(!batched[0].default_active);
 
-        // Should have MVTFeatureMarker
+        // Should have VectorTileFeatureMarker
         let mut mvt_query = app
             .world_mut()
-            .query_filtered::<&MVTFeatureMarker, With<PointMarker>>();
+            .query_filtered::<&VectorTileFeatureMarker, With<PointMarker>>();
         assert_eq!(mvt_query.iter(app.world()).count(), 1);
 
         // 2 child entities with PointGeometry
@@ -740,20 +738,20 @@ mod test {
         assert_eq!(texts.len(), 1);
         assert_eq!(texts[0].features.len(), 2);
 
-        // Each parent should have MVTFeatureMarker
+        // Each parent should have VectorTileFeatureMarker
         let mut mvt_point = app
             .world_mut()
-            .query_filtered::<&MVTFeatureMarker, With<PointMarker>>();
+            .query_filtered::<&VectorTileFeatureMarker, With<PointMarker>>();
         assert_eq!(mvt_point.iter(app.world()).count(), 1);
 
         let mut mvt_billboard = app
             .world_mut()
-            .query_filtered::<&MVTFeatureMarker, With<BillboardMarker>>();
+            .query_filtered::<&VectorTileFeatureMarker, With<BillboardMarker>>();
         assert_eq!(mvt_billboard.iter(app.world()).count(), 1);
 
         let mut mvt_text = app
             .world_mut()
-            .query_filtered::<&MVTFeatureMarker, With<TextMarker>>();
+            .query_filtered::<&VectorTileFeatureMarker, With<TextMarker>>();
         assert_eq!(mvt_text.iter(app.world()).count(), 1);
 
         // Child entities: 2 per appearance kind = 6 total
@@ -1016,8 +1014,8 @@ mod test {
             .query_filtered::<&PolygonGeometry, With<BatchedFeatureMarker>>();
         assert_eq!(polygon_children.iter(app.world()).count(), 3);
 
-        // All 5 parent entities should have MVTFeatureMarker
-        let mut mvt_query = app.world_mut().query::<&MVTFeatureMarker>();
+        // All 5 parent entities should have VectorTileFeatureMarker
+        let mut mvt_query = app.world_mut().query::<&VectorTileFeatureMarker>();
         assert_eq!(mvt_query.iter(app.world()).count(), 5);
     }
 
