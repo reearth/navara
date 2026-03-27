@@ -8,7 +8,7 @@ describe("instancedSpriteBaseEnhancer / state", () => {
       const state = updateState({ scale: 50 }, DEFAULT_BASE_STATE);
       expect(state.scale).toBe(50);
       expect(state.center).toEqual([0.0, 0.0]);
-      expect(state.scaleByDistance).toBe(true);
+      expect(state.sizeInMeters).toBe(true);
     });
 
     it("preserves immutable fields (useRTE) from currentState", () => {
@@ -33,9 +33,9 @@ describe("instancedSpriteBaseEnhancer / state", () => {
       expect(state.center).toEqual([0.5, 0.5]);
     });
 
-    it("updates scaleByDistance", () => {
-      const state = updateState({ scaleByDistance: false }, DEFAULT_BASE_STATE);
-      expect(state.scaleByDistance).toBe(false);
+    it("updates sizeInMeters", () => {
+      const state = updateState({ sizeInMeters: false }, DEFAULT_BASE_STATE);
+      expect(state.sizeInMeters).toBe(false);
     });
 
     it("updates offsetDepth", () => {

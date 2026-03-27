@@ -89,7 +89,7 @@ export const ShelterLayer: FC<{ visible?: boolean }> = ({
         font: FONT_DATASETS.LineSeedJP.url,
         size: 15,
         clampToGround: true,
-        scaleByDistance: true,
+        sizeInMeters: false,
         height: 10,
         depthTest: false,
         outlineWidth: 2,

@@ -22,7 +22,7 @@ describe("sdfTextBaseEnhancer/mutates", () => {
         color: new Color(0xff0000),
         fontSize: 24,
         center: [0.5, 0.5],
-        scaleByDistance: true,
+        sizeInMeters: true,
         addHeight: 50,
         offsetDepth: false,
         outlineWidth: 0.1,
@@ -41,10 +41,10 @@ describe("sdfTextBaseEnhancer/mutates", () => {
       mutates.updateUniforms(uniforms, state);
 
       expect(uniforms.uColor?.value.getHex()).toBe(0xff0000);
-      expect(uniforms.uFontSizePx?.value).toBe(24);
+      expect(uniforms.uFontSize?.value).toBe(24);
       expect(uniforms.uCenter?.value.x).toBe(0.5);
       expect(uniforms.uCenter?.value.y).toBe(0.5);
-      expect(uniforms.uScaleByDistance?.value).toBe(true);
+      expect(uniforms.uSizeInMeters?.value).toBe(true);
       expect(uniforms.uAddHeight?.value).toBe(50);
       expect(uniforms.uOffsetDepth?.value).toBe(false);
       expect(uniforms.uOutlineWidth?.value).toBe(0.1);
@@ -138,7 +138,7 @@ describe("sdfTextBaseEnhancer/mutates", () => {
       const uniforms: ShaderUniforms = {};
       mutates.updateUniforms(uniforms, state);
 
-      expect(uniforms.uFov?.value).toBe(1.5);
+      expect(uniforms.uFovRad?.value).toBe(1.5);
       expect(uniforms.uScreenHeightPx?.value).toBe(1080);
       expect(uniforms.uFarPlane?.value).toBe(10000);
     });

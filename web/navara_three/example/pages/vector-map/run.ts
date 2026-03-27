@@ -60,13 +60,13 @@ export const run = async (view: ThreeView<LayerDescriptions>) => {
     },
     point: {
       size: 1000,
-      scaleByDistance: false,
+      sizeInMeters: false,
       color: new Color().setStyle("#ff0000"),
     },
     // text: {
     //   color: new Color().setStyle("#ff00ff"),
     //   size: 30,
-    //   scaleByDistance: true,
+    //   sizeInMeters: true,
     //   text: "MVT",
     // },
     polyline: {

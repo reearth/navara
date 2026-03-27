@@ -7,20 +7,17 @@ use crate::{ElevationDecoder, TextureFragment, Vec2, Vec3 as WasmVec3};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PointMaterial {
     pub show: Option<bool>,
-    /// size in meters.
+    /// size in pixels/meters (units are determined by `sizeInMeters`).
     pub size: Option<f32>,
     pub color: Option<u32>,
     /// anchor point of the sprite, range is (-0.5, -0.5) to (0.5, 0.5).
     /// Default is (0.0, 0.0) which means the center of the sprite.
     pub center: Option<Vec2>,
     pub height: Option<f32>,
-    #[wasm_bindgen(js_name = scaleByDistance)]
-    #[serde(rename = "scaleByDistance")]
-    /// Whether to scale the point based on distance from the camera.
-    /// When true, the point size will be adjusted to reduce attenuation with distance, so distant points
-    /// have a minimum apparent size and points gradually grow larger as their distance increases.
-    /// The size is scaled by a factor of the form (1.0 + (distance / predefined constant)).
-    pub scale_by_distance: Option<bool>,
+    #[wasm_bindgen(js_name = sizeInMeters)]
+    #[serde(rename = "sizeInMeters")]
+    /// Whether the size is specified in meters. If false, the size is in pixels. Default is true.
+    pub size_in_meters: Option<bool>,
     #[wasm_bindgen(js_name = clampToGround)]
     #[serde(rename = "clampToGround")]
     pub clamp_to_ground: Option<bool>,
@@ -60,7 +57,7 @@ impl From<PointMaterial> for navara_material::PointMaterial {
             color: val.color.unwrap_or(default.color),
             center: val.center.unwrap_or(default.center.into()).into(),
             height: val.height.unwrap_or(default.height),
-            scale_by_distance: val.scale_by_distance.unwrap_or(default.scale_by_distance),
+            size_in_meters: val.size_in_meters.unwrap_or(default.size_in_meters),
             clamp_to_ground: val.clamp_to_ground.unwrap_or(default.clamp_to_ground),
             depth_test: val.depth_test.unwrap_or(default.depth_test),
             offset_depth: val.offset_depth.unwrap_or(default.offset_depth),
@@ -82,7 +79,7 @@ impl<'a> From<&'a navara_material::PointMaterial> for PointMaterial {
             color: Some(value.color),
             center: Some(value.center.into()),
             height: Some(value.height),
-            scale_by_distance: Some(value.scale_by_distance),
+            size_in_meters: Some(value.size_in_meters),
             clamp_to_ground: Some(value.clamp_to_ground),
             depth_test: Some(value.depth_test),
             offset_depth: Some(value.offset_depth),
@@ -103,7 +100,7 @@ impl PointMaterial {
             color: self.color.unwrap_or(other.color),
             center: self.center.unwrap_or(other.center.into()).into(),
             height: self.height.unwrap_or(other.height),
-            scale_by_distance: self.scale_by_distance.unwrap_or(other.scale_by_distance),
+            size_in_meters: self.size_in_meters.unwrap_or(other.size_in_meters),
             clamp_to_ground: self.clamp_to_ground.unwrap_or(other.clamp_to_ground),
             depth_test: self.depth_test.unwrap_or(other.depth_test),
             offset_depth: self.offset_depth.unwrap_or(other.offset_depth),
@@ -130,7 +127,7 @@ pub struct NearFar {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BillboardMaterial {
     pub show: Option<bool>,
-    /// size in meters.
+    /// size in pixels/meters (units are determined by `sizeInMeters`).
     pub size: Option<f32>,
     pub color: Option<u32>,
     /// anchor point of the sprite, range is (-0.5, -0.5) to (0.5, 0.5).
@@ -139,13 +136,10 @@ pub struct BillboardMaterial {
     pub height: Option<f32>,
     #[wasm_bindgen(getter_with_clone)]
     pub url: Option<String>,
-    #[wasm_bindgen(js_name = scaleByDistance)]
-    #[serde(rename = "scaleByDistance")]
-    /// Whether to scale the billboard based on distance from the camera.
-    /// When true, the billboard size will be adjusted to reduce attenuation with distance, so distant billboards
-    /// have a minimum apparent size and billboards gradually grow larger as their distance increases.
-    /// The size is scaled by a factor of the form (1.0 + (distance / predefined constant)).
-    pub scale_by_distance: Option<bool>,
+    #[wasm_bindgen(js_name = sizeInMeters)]
+    #[serde(rename = "sizeInMeters")]
+    /// Whether the size is specified in meters. If false, the size is in pixels. Default is true.
+    pub size_in_meters: Option<bool>,
     #[wasm_bindgen(js_name = clampToGround)]
     #[serde(rename = "clampToGround")]
     pub clamp_to_ground: Option<bool>,
@@ -189,7 +183,7 @@ impl From<BillboardMaterial> for navara_material::BillboardMaterial {
             center: val.center.unwrap_or(default.center.into()).into(),
             height: val.height.unwrap_or(default.height),
             url: val.url.unwrap_or(default.url),
-            scale_by_distance: val.scale_by_distance.unwrap_or(default.scale_by_distance),
+            size_in_meters: val.size_in_meters.unwrap_or(default.size_in_meters),
             clamp_to_ground: val.clamp_to_ground.unwrap_or(default.clamp_to_ground),
             depth_test: val.depth_test.unwrap_or(default.depth_test),
             offset_depth: val.offset_depth.unwrap_or(default.offset_depth),
@@ -213,7 +207,7 @@ impl<'a> From<&'a navara_material::BillboardMaterial> for BillboardMaterial {
             center: Some(value.center.into()),
             height: Some(value.height),
             url: Some(value.url.clone()),
-            scale_by_distance: Some(value.scale_by_distance),
+            size_in_meters: Some(value.size_in_meters),
             clamp_to_ground: Some(value.clamp_to_ground),
             depth_test: Some(value.depth_test),
             offset_depth: Some(value.offset_depth),
@@ -239,7 +233,7 @@ impl BillboardMaterial {
             center: self.center.unwrap_or(other.center.into()).into(),
             height: self.height.unwrap_or(other.height),
             url: self.url.clone().unwrap_or(other.url.clone()),
-            scale_by_distance: self.scale_by_distance.unwrap_or(other.scale_by_distance),
+            size_in_meters: self.size_in_meters.unwrap_or(other.size_in_meters),
             clamp_to_ground: self.clamp_to_ground.unwrap_or(other.clamp_to_ground),
             depth_test: self.depth_test.unwrap_or(other.depth_test),
             offset_depth: self.offset_depth.unwrap_or(other.offset_depth),
@@ -260,13 +254,15 @@ impl BillboardMaterial {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TextMaterial {
     pub show: Option<bool>,
+    /// size in pixels/meters (units are determined by `sizeInMeters`).
     pub size: Option<f32>,
     pub color: Option<u32>,
     pub center: Option<Vec2>,
     pub height: Option<f32>,
-    #[wasm_bindgen(js_name = scaleByDistance)]
-    #[serde(rename = "scaleByDistance")]
-    pub scale_by_distance: Option<bool>,
+    /// Whether the size is specified in meters. If false, the size is in pixels. Default is true.
+    #[wasm_bindgen(js_name = sizeInMeters)]
+    #[serde(rename = "sizeInMeters")]
+    pub size_in_meters: Option<bool>,
     #[wasm_bindgen(js_name = clampToGround)]
     #[serde(rename = "clampToGround")]
     pub clamp_to_ground: Option<bool>,
@@ -333,7 +329,7 @@ impl From<TextMaterial> for navara_material::TextMaterial {
             color: val.color.unwrap_or(default.color),
             center: val.center.unwrap_or(default.center.into()).into(),
             height: val.height.unwrap_or(default.height),
-            scale_by_distance: val.scale_by_distance.unwrap_or(default.scale_by_distance),
+            size_in_meters: val.size_in_meters.unwrap_or(default.size_in_meters),
             clamp_to_ground: val.clamp_to_ground.unwrap_or(default.clamp_to_ground),
             depth_test: val.depth_test.unwrap_or(default.depth_test),
             offset_depth: val.offset_depth.unwrap_or(default.offset_depth),
@@ -364,7 +360,7 @@ impl<'a> From<&'a navara_material::TextMaterial> for TextMaterial {
             color: Some(value.color),
             center: Some(value.center.into()),
             height: Some(value.height),
-            scale_by_distance: Some(value.scale_by_distance),
+            size_in_meters: Some(value.size_in_meters),
             clamp_to_ground: Some(value.clamp_to_ground),
             depth_test: Some(value.depth_test),
             offset_depth: Some(value.offset_depth),
@@ -393,7 +389,7 @@ impl TextMaterial {
             color: self.color.unwrap_or(other.color),
             center: self.center.unwrap_or(other.center.into()).into(),
             height: self.height.unwrap_or(other.height),
-            scale_by_distance: self.scale_by_distance.unwrap_or(other.scale_by_distance),
+            size_in_meters: self.size_in_meters.unwrap_or(other.size_in_meters),
             clamp_to_ground: self.clamp_to_ground.unwrap_or(other.clamp_to_ground),
             depth_test: self.depth_test.unwrap_or(other.depth_test),
             offset_depth: self.offset_depth.unwrap_or(other.offset_depth),

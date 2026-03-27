@@ -24,9 +24,9 @@ export const createBaseMutates = (
 ): SdfTextBaseMutates => {
   const refs: SdfTextBaseRefs = {
     uColor: { value: new Color(1, 1, 1) },
-    uFontSizePx: { value: 16.0 },
+    uFontSize: { value: 16.0 },
     uCenter: { value: new Vector2(0.5, 0.0) },
-    uScaleByDistance: { value: false },
+    uSizeInMeters: { value: true },
     uAddHeight: { value: 0.0 },
     uOffsetDepth: { value: true },
     uSdfThreshold: { value: 0.5 },
@@ -37,7 +37,7 @@ export const createBaseMutates = (
     uBackgroundColor: { value: new Color(1, 0, 0) },
     uBackgroundOutlineColor: { value: new Color(1, 0, 0) },
     uBackgroundOutlineWidth: { value: 0.1 },
-    uFov: { value: 1.0 },
+    uFovRad: { value: 1.0 },
     uScreenHeightPx: { value: 1080.0 },
     uFarPlane: { value: 1000.0 },
     uTextWidth: { value: 0.0 },
@@ -68,9 +68,9 @@ export const createBaseMutates = (
   return {
     update: (state: SdfTextBaseState) => {
       refs.uColor.value.set(state.color);
-      refs.uFontSizePx.value = state.fontSize;
+      refs.uFontSize.value = state.fontSize;
       refs.uCenter.value.set(state.center[0], state.center[1]);
-      refs.uScaleByDistance.value = state.scaleByDistance;
+      refs.uSizeInMeters.value = state.sizeInMeters;
       refs.uAddHeight.value = state.addHeight;
       refs.uOffsetDepth.value = state.offsetDepth;
       refs.uOutlineWidth.value = state.outlineWidth;
@@ -85,9 +85,9 @@ export const createBaseMutates = (
 
     updateUniforms: (uniforms) => {
       uniforms.uColor = refs.uColor;
-      uniforms.uFontSizePx = refs.uFontSizePx;
+      uniforms.uFontSize = refs.uFontSize;
       uniforms.uCenter = refs.uCenter;
-      uniforms.uScaleByDistance = refs.uScaleByDistance;
+      uniforms.uSizeInMeters = refs.uSizeInMeters;
       uniforms.uAddHeight = refs.uAddHeight;
       uniforms.uOffsetDepth = refs.uOffsetDepth;
       uniforms.uSdfThreshold = refs.uSdfThreshold;
@@ -98,7 +98,7 @@ export const createBaseMutates = (
       uniforms.uBackgroundColor = refs.uBackgroundColor;
       uniforms.uBackgroundOutlineColor = refs.uBackgroundOutlineColor;
       uniforms.uBackgroundOutlineWidth = refs.uBackgroundOutlineWidth;
-      uniforms.uFov = refs.uFov;
+      uniforms.uFovRad = refs.uFovRad;
       uniforms.uScreenHeightPx = refs.uScreenHeightPx;
       uniforms.uFarPlane = refs.uFarPlane;
       uniforms.uTextWidth = refs.uTextWidth;
@@ -123,16 +123,16 @@ export const createBaseMutates = (
     },
 
     updatePerFrame: (
-      fov: number,
-      screenHeight: number,
+      fovRad: number,
+      screenHeightPx: number,
       farPlane: number,
       cameraX: number,
       cameraY: number,
       cameraZ: number,
       state: SdfTextBaseState,
     ) => {
-      refs.uFov.value = fov;
-      refs.uScreenHeightPx.value = screenHeight;
+      refs.uFovRad.value = fovRad;
+      refs.uScreenHeightPx.value = screenHeightPx;
       refs.uFarPlane.value = farPlane;
 
       if (state.useRTE) {

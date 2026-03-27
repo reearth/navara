@@ -17,7 +17,7 @@ export type SdfTextBaseProps = {
   color?: number; // hex color
   fontSize?: number;
   center?: [number, number];
-  scaleByDistance?: boolean;
+  sizeInMeters?: boolean;
   addHeight?: number;
   offsetDepth?: boolean;
   outlineWidth?: number; // raw width, converted in state via SDF_RADIUS
@@ -48,7 +48,7 @@ export type SdfTextBaseState = Readonly<{
   color: Color;
   fontSize: number;
   center: [number, number];
-  scaleByDistance: boolean;
+  sizeInMeters: boolean;
   addHeight: number;
   offsetDepth: boolean;
   outlineWidth: number; // pre-converted: raw / SDF_RADIUS
@@ -71,9 +71,9 @@ export type SdfTextBaseState = Readonly<{
  */
 export type SdfTextBaseRefs = {
   uColor: UniformValue<Color>;
-  uFontSizePx: UniformValue<number>;
+  uFontSize: UniformValue<number>;
   uCenter: UniformValue<Vector2>;
-  uScaleByDistance: UniformValue<boolean>;
+  uSizeInMeters: UniformValue<boolean>;
   uAddHeight: UniformValue<number>;
   uOffsetDepth: UniformValue<boolean>;
   uSdfThreshold: UniformValue<number>;
@@ -84,7 +84,7 @@ export type SdfTextBaseRefs = {
   uBackgroundColor: UniformValue<Color>;
   uBackgroundOutlineColor: UniformValue<Color>;
   uBackgroundOutlineWidth: UniformValue<number>;
-  uFov: UniformValue<number>;
+  uFovRad: UniformValue<number>;
   uScreenHeightPx: UniformValue<number>;
   uFarPlane: UniformValue<number>;
   uTextWidth: UniformValue<number>;
@@ -116,8 +116,8 @@ export type SdfTextBaseMutates = Mutates<
      * Update per-frame camera uniforms (FOV, screen height, far plane, RTE eye).
      */
     updatePerFrame: (
-      fov: number,
-      screenHeight: number,
+      fovRad: number,
+      screenHeightPx: number,
       farPlane: number,
       cameraX: number,
       cameraY: number,
