@@ -151,6 +151,7 @@ export type MeshBaseInstance<Instance extends object = object> =
  * - `"transparent"` - Transparent rendering pass.
  * - `"mrt"` - Multiple Render Target scene, used for selective effects (bloom, outline).
  * - `"skyEnvMap"` - Sky environment map scene.
+ * - `"draped"` - This is only for `DrapedMesh`. The mesh is clamped to the terrain.
  *
  * ## Lifecycle
  *
@@ -159,7 +160,7 @@ export type MeshBaseInstance<Instance extends object = object> =
  *    The base class applies position/scale/rotation and adds it to the scene
  *    determined by {@link getPassKey}.
  * 3. **{@link onUpdateConfig}** - Called when `handle.update()` is invoked. The base class
- *    handles `visible`, `position`, `scale`, and `rotation`; override to handle your
+ *    handles `visible`, `matrix`, `matrixWorld`, `position`, `scale`, and `rotation`; override to handle your
  *    custom properties. Always call `super.onUpdateConfig(updates)`.
  * 4. **{@link update}** - Optional per-frame callback for animation.
  * 5. **{@link onResize}** - Optional callback when the viewport is resized.
@@ -245,13 +246,14 @@ export abstract class MeshLayerDeclaration<
     invariant(this.raw);
 
     if (this.matrixWorld) {
-      this.raw.matrixAutoUpdate = false;
       this.raw.matrixWorldAutoUpdate = false;
       this.raw.matrixWorld.copy(this.matrixWorld);
+      this.raw.updateMatrixWorld();
     }
     if (this.matrix) {
       this.raw.matrixAutoUpdate = false;
       this.raw.matrix.copy(this.matrix);
+      this.raw.updateMatrix();
     }
     if (this.position) this.raw.position.copy(this.position);
     if (this.scale) this.raw.scale.copy(this.scale);
@@ -285,18 +287,19 @@ export abstract class MeshLayerDeclaration<
     super.onUpdateConfig(updates);
     invariant(this.raw);
 
+    if (updates.matrix) {
+      this.raw.matrixAutoUpdate = false;
+      this.raw.matrix.copy(updates.matrix);
+      this.matrix = updates.matrix;
+      this.raw.updateMatrix();
+    }
     if (updates.matrixWorld) {
       this.raw.matrixAutoUpdate = false;
       this.raw.matrixWorldAutoUpdate = false;
       this.raw.matrixWorld.copy(updates.matrixWorld);
-    }
-    if (updates.matrix) {
-      this.raw.matrixAutoUpdate = false;
-      this.raw.matrix.copy(updates.matrix);
-    }
-    if (updates.matrixWorld !== undefined)
       this.matrixWorld = updates.matrixWorld;
-    if (updates.matrix !== undefined) this.matrix = updates.matrix;
+      this.raw.updateMatrixWorld();
+    }
     if (updates.position !== undefined) {
       this.position = updates.position;
       this.raw.position.copy(updates.position);

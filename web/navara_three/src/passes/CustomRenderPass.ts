@@ -262,7 +262,7 @@ export class CustomRenderPass extends RenderPass {
     const children = [...drapedScene.children];
 
     for (const child of children) {
-      if (!(child instanceof DrapedMesh)) continue;
+      if (!(child instanceof DrapedMesh) || !child.enabled()) continue;
 
       drapedScene.remove(child);
       this.drapedTempScene.add(child);

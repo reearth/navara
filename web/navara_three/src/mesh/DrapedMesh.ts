@@ -26,16 +26,24 @@ export class DrapedMesh<
     this.drapedEnable = enable;
   }
 
+  enabled() {
+    return this.drapedEnable && this.visible
+  }
+
   /**
    * Run the stencil-test draping passes for this mesh.
    * The caller supplies a `render` callback that performs the actual draw call
    * (e.g. `renderer.render(scene, camera)`).
    */
   process(render: () => void): void {
-    if (!this.drapedEnable || !this.visible) return;
+    if (!this.enabled()) return;
 
-    const m = this.material;
-    if (Array.isArray(m)) return;
+    let m;
+    if (Array.isArray(this.material)) {
+      m = this.material[0]
+    } else {
+      m = this.material
+    };
 
     // Save original material state
     const origStencilFunc = m.stencilFunc;
