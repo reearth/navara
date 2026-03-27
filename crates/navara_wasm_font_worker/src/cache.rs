@@ -2,6 +2,23 @@ use crate::atlas::SDFAtlas;
 use std::collections::HashMap as StdHashMap;
 use wasm_bindgen::prelude::*;
 
+/// Detect WOFF2/WOFF1 by magic bytes and decompress to raw TTF/OTF.
+/// Returns the data unchanged if it is already a raw font.
+fn maybe_decompress_font(data: Vec<u8>) -> Result<Vec<u8>, String> {
+    if data.len() >= 4 {
+        let tag = &data[..4];
+        if tag == b"wOF2" {
+            return wuff::decompress_woff2(&data)
+                .map_err(|e| format!("Failed to decompress WOFF2: {:?}", e));
+        }
+        if tag == b"wOFF" {
+            return wuff::decompress_woff1(&data)
+                .map_err(|e| format!("Failed to decompress WOFF1: {:?}", e));
+        }
+    }
+    Ok(data)
+}
+
 /// Number of frames a glyph must be unused before it becomes evictable.
 pub const LRU_MIN_AGE: u64 = 120;
 
@@ -46,6 +63,7 @@ impl FontCache {
 
     /// Store a newly loaded font. Parses the font data and creates a fresh atlas.
     pub fn load_font(&mut self, url: String, data: Vec<u8>) -> Result<(), String> {
+        let data = maybe_decompress_font(data)?;
         let raster_font =
             fontdue::Font::from_bytes(data.as_slice(), fontdue::FontSettings::default())
                 .map_err(|e| format!("Failed to parse font with fontdue: {}", e))?;
