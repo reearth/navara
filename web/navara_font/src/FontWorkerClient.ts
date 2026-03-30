@@ -1,11 +1,10 @@
 import type { ConcurrencyManager } from "@navara/worker";
 
-import type { ShapeTextResult, FontAtlasData } from "./FontManager";
-
-export type BatchPrepareTextResult = {
-  results: { text: string; shapeResult: ShapeTextResult | null }[];
-  atlas: FontAtlasData | null;
-};
+import type {
+  ShapeTextResult,
+  FontAtlasData,
+  BatchPrepareTextResult,
+} from "./types";
 
 /**
  * Main-thread client that communicates with the dedicated font Web Worker.

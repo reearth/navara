@@ -6,4 +6,4 @@ export type {
   GlyphMetrics,
   ShapedGlyph,
   ShapeTextResult,
-} from "./FontManager";
+} from "./types";

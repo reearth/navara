@@ -3,41 +3,7 @@ import { DataTexture, LinearFilter, RedFormat, UnsignedByteType } from "three";
 
 import { FontWorkerClient } from "./FontWorkerClient";
 import { LRUMap } from "./LRUMap";
-
-/** Glyph metrics from the SDF atlas. */
-export type GlyphMetrics = {
-  glyphId: number;
-  atlasX: number;
-  atlasY: number;
-  atlasW: number;
-  atlasH: number;
-  bearingX: number;
-  bearingY: number;
-};
-
-/** A single shaped glyph with positioning info. */
-export type ShapedGlyph = {
-  glyphId: number;
-  xAdvance: number;
-  yAdvance: number;
-  xOffset: number;
-  yOffset: number;
-};
-
-/** Result from shaping text: glyph positions + atlas metrics. */
-export type ShapeTextResult = {
-  glyphs: ShapedGlyph[];
-  metrics: GlyphMetrics[];
-  /** Font units per em (needed for converting font-unit to pixel space) */
-  unitsPerEm: number;
-};
-
-/** SDF atlas texture data. */
-export type FontAtlasData = {
-  data: Uint8Array;
-  width: number;
-  height: number;
-};
+import type { FontAtlasData, ShapeTextResult } from "./types";
 
 /** Create a single-channel SDF atlas DataTexture with standard filtering. */
 export function createSdfAtlasTexture(
