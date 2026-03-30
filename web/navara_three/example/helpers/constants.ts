@@ -404,8 +404,7 @@ export const FONT_DATASETS = {
   NotoSansGeorgian: {
     url: "/fonts/woff2/noto-sans/noto-sans-georgian.woff2",
     attribution: "Noto Sans Georgian - Google Fonts",
-    attributionUrl:
-      "https://fonts.google.com/noto/specimen/Noto+Sans+Georgian",
+    attributionUrl: "https://fonts.google.com/noto/specimen/Noto+Sans+Georgian",
   },
   NotoSansBengali: {
     url: "/fonts/woff2/noto-sans/noto-sans-bengali.woff2",
@@ -430,8 +429,7 @@ export const FONT_DATASETS = {
   NotoSansArmenian: {
     url: "/fonts/woff2/noto-sans/noto-sans-armenian.woff2",
     attribution: "Noto Sans Armenian - Google Fonts",
-    attributionUrl:
-      "https://fonts.google.com/noto/specimen/Noto+Sans+Armenian",
+    attributionUrl: "https://fonts.google.com/noto/specimen/Noto+Sans+Armenian",
   },
   NotoSansMyanmar: {
     url: "/fonts/woff2/noto-sans/noto-sans-myanmar.woff2",

@@ -71,6 +71,8 @@ export class FontManager {
   private _families = new Map<string, FontFamily>();
   /** Caches resolved font URL per (fontIdentifier, text) pair. */
   private _resolvedUrls = new Map<string, string>();
+  /** Maps font URL → atlas key (family name or URL for standalone fonts). */
+  private _atlasKeys = new Map<string, string>();
 
   constructor(workerUrl: string | URL) {
     this._workerUrl = workerUrl;
@@ -175,8 +177,9 @@ export class FontManager {
   /**
    * Load a font from a URL. Fetches the font file and sends it to the worker.
    * Returns immediately if the font is already loaded. Deduplicates concurrent requests.
+   * `atlasKey`: optional shared atlas identifier (e.g. font family name).
    */
-  async loadFont(url: string): Promise<void> {
+  async loadFont(url: string, atlasKey?: string): Promise<void> {
     if (this._loaded.has(url)) {
       this._refCount.set(url, (this._refCount.get(url) ?? 0) + 1);
       return;
@@ -187,7 +190,7 @@ export class FontManager {
       return this._pending.get(url);
     }
 
-    const promise = this._fetchAndLoad(url);
+    const promise = this._fetchAndLoad(url, atlasKey);
     this._refCount.set(url, 1);
     this._pending.set(url, promise);
 
@@ -199,6 +202,7 @@ export class FontManager {
     try {
       await promise;
       this._loaded.add(url);
+      this._atlasKeys.set(url, atlasKey ?? url);
     } catch (err) {
       this._refCount.delete(url);
       this._shapeCache.delete(url);
@@ -212,16 +216,27 @@ export class FontManager {
     const count = this._refCount.get(url);
     if (!count) return; // Not loaded or already fully unloaded
     if (count === 1) {
+      const atlasKey = this._atlasKeys.get(url) ?? url;
+
       this._loaded.delete(url);
       this._refCount.delete(url);
       this._shapeCache.delete(url);
-      this._atlasCache.delete(url);
-      this._atlasDirty.delete(url);
-      const tex = this._textureCache.get(url);
-      if (tex) {
-        tex.dispose();
-        this._textureCache.delete(url);
+      this._atlasKeys.delete(url);
+
+      // Only clean up atlas/texture when no other loaded font shares the same atlas key
+      const stillReferenced = [...this._atlasKeys.values()].some(
+        (k) => k === atlasKey,
+      );
+      if (!stillReferenced) {
+        this._atlasCache.delete(atlasKey);
+        this._atlasDirty.delete(atlasKey);
+        const tex = this._textureCache.get(atlasKey);
+        if (tex) {
+          tex.dispose();
+          this._textureCache.delete(atlasKey);
+        }
       }
+
       if (this._client) {
         const result = await this._client.unloadFont(url);
         if (!result.ok) {
@@ -243,8 +258,12 @@ export class FontManager {
 
     const fontUrl = this._resolveFontUrl(fontIdentifier, text);
 
-    // Ensure the resolved font is loaded
-    await this.loadFont(fontUrl);
+    // Ensure the resolved font is loaded. When loading a family face,
+    // pass the family name as atlas key so all faces share one atlas.
+    const atlasKey = this._families.has(fontIdentifier)
+      ? fontIdentifier
+      : undefined;
+    await this.loadFont(fontUrl, atlasKey);
 
     const cacheKey = this._cacheKey(fontUrl, text);
     if (this._shapeCache.get(fontUrl)?.has(text) ?? false) return;
@@ -299,14 +318,11 @@ export class FontManager {
   /**
    * Get the SDF atlas data for a loaded font from cache.
    * Accepts either a font URL or a registered font family name.
-   * When a family name is provided without text, returns undefined —
-   * use the overload with text to resolve the correct face.
+   * For families, the atlas is shared across all faces.
    */
   getAtlas(fontIdentifier: string, text?: string): FontAtlasData | undefined {
-    const fontUrl = text
-      ? this._resolveFontUrl(fontIdentifier, text)
-      : fontIdentifier;
-    return this._atlasCache.get(fontUrl);
+    const key = this._resolveAtlasKey(fontIdentifier, text);
+    return this._atlasCache.get(key);
   }
 
   /**
@@ -314,23 +330,20 @@ export class FontManager {
    * Returns the same texture instance for all callers using the same font.
    * Creates the texture on first call; updates it in-place when the atlas grows.
    * Accepts either a font URL or a registered font family name.
-   * When a family name is provided without text, returns null —
-   * use the overload with text to resolve the correct face.
+   * For families, all faces share the same texture.
    */
   getAtlasTexture(fontIdentifier: string, text?: string): DataTexture | null {
-    const fontUrl = text
-      ? this._resolveFontUrl(fontIdentifier, text)
-      : fontIdentifier;
+    const key = this._resolveAtlasKey(fontIdentifier, text);
 
-    if (!this._atlasDirty.has(fontUrl)) {
-      const cached = this._textureCache.get(fontUrl);
+    if (!this._atlasDirty.has(key)) {
+      const cached = this._textureCache.get(key);
       if (cached) return cached;
     }
 
-    const atlasData = this._atlasCache.get(fontUrl);
+    const atlasData = this._atlasCache.get(key);
     if (!atlasData) return null;
 
-    const existing = this._textureCache.get(fontUrl);
+    const existing = this._textureCache.get(key);
     if (existing) {
       // Update in-place if atlas data changed
       existing.image = {
@@ -339,7 +352,7 @@ export class FontManager {
         height: atlasData.height,
       };
       existing.needsUpdate = true;
-      this._atlasDirty.delete(fontUrl);
+      this._atlasDirty.delete(key);
       return existing;
     }
 
@@ -348,8 +361,8 @@ export class FontManager {
       atlasData.width,
       atlasData.height,
     );
-    this._textureCache.set(fontUrl, tex);
-    this._atlasDirty.delete(fontUrl);
+    this._textureCache.set(key, tex);
+    this._atlasDirty.delete(key);
     return tex;
   }
 
@@ -375,6 +388,7 @@ export class FontManager {
     this._textureCache.clear();
     this._families.clear();
     this._resolvedUrls.clear();
+    this._atlasKeys.clear();
     this._client?.dispose();
     this._client = undefined;
   }
@@ -383,7 +397,19 @@ export class FontManager {
     return fontUrl + "\0" + text;
   }
 
-  private async _fetchAndLoad(url: string): Promise<void> {
+  /** Resolve a font identifier to its atlas key.
+   *  Family names are their own atlas key; font URLs are looked up via _atlasKeys. */
+  private _resolveAtlasKey(fontIdentifier: string, text?: string): string {
+    // If it's a registered family name, that IS the atlas key
+    if (this._families.has(fontIdentifier)) return fontIdentifier;
+    // For font URLs, resolve via the atlas key map (falls back to URL itself)
+    const fontUrl = text
+      ? this._resolveFontUrl(fontIdentifier, text)
+      : fontIdentifier;
+    return this._atlasKeys.get(fontUrl) ?? fontUrl;
+  }
+
+  private async _fetchAndLoad(url: string, atlasKey?: string): Promise<void> {
     const client = await this._ensureClient();
 
     const response = await fetch(url);
@@ -394,7 +420,7 @@ export class FontManager {
     }
 
     const arrayBuffer = await response.arrayBuffer();
-    const result = await client.loadFont(url, arrayBuffer);
+    const result = await client.loadFont(url, arrayBuffer, atlasKey);
 
     if (!result.ok) {
       throw new Error(`FontManager: WASM failed to load font from ${url}`);
@@ -443,10 +469,12 @@ export class FontManager {
           }
         }
 
-        // Update atlas once for the entire batch
+        // Update atlas once for the entire batch, keyed by atlas key
+        // (family name for font-family faces, or font URL for standalone fonts)
         if (batchResult.atlas) {
-          this._atlasCache.set(fontUrl, batchResult.atlas);
-          this._atlasDirty.add(fontUrl);
+          const atlasKey = batchResult.atlasKey;
+          this._atlasCache.set(atlasKey, batchResult.atlas);
+          this._atlasDirty.add(atlasKey);
         }
 
         for (const entry of entries) {

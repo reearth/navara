@@ -87,11 +87,20 @@ ctx.onmessage = async (e: MessageEvent) => {
 
     switch (msgType) {
       case "loadFont": {
-        const { url, data } = msg.payload as { url: string; data: ArrayBuffer };
+        const { url, data, atlasKey } = msg.payload as {
+          url: string;
+          data: ArrayBuffer;
+          atlasKey?: string;
+        };
         const bytes = new Uint8Array(data);
-        const ok = fontCache.loadFont(url, bytes.length, (buf: Uint8Array) => {
-          buf.set(bytes);
-        });
+        const ok = fontCache.loadFont(
+          url,
+          bytes.length,
+          (buf: Uint8Array) => {
+            buf.set(bytes);
+          },
+          atlasKey,
+        );
         ctx.postMessage({ id, type: "result", payload: { ok } });
         break;
       }
@@ -118,15 +127,17 @@ ctx.onmessage = async (e: MessageEvent) => {
 
         fontCache.tickFrame();
 
-        // One atlas transfer for the entire batch
-        const atlas = anyAtlasChanged ? snapshotAtlas(fontUrl) : null;
+        // Snapshot atlas by atlas key (family name or URL) so shared atlases
+        // are returned correctly for font-family faces.
+        const atlasKey = fontCache.getAtlasKey(fontUrl) ?? fontUrl;
+        const atlas = anyAtlasChanged ? snapshotAtlas(atlasKey) : null;
 
         const transfers: Transferable[] = atlas ? [atlas.data] : [];
         ctx.postMessage(
           {
             id,
             type: "result",
-            payload: { results, atlas },
+            payload: { results, atlas, atlasKey },
           },
           transfers,
         );

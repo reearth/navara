@@ -36,11 +36,11 @@ pub struct GlyphMetrics {
     pub bearing_y: f32,
 }
 
-/// Per-font SDF texture atlas.
+/// SDF texture atlas that can be shared by multiple fonts.
 ///
-/// Each loaded font gets its own atlas. Glyphs are keyed by glyph ID
-/// (post-shaping, not Unicode codepoint) so that contextual forms
-/// (Arabic positional variants, ligatures, etc.) are stored correctly.
+/// Glyphs are keyed by a composite `u64` of `(font_index, glyph_id)` so that
+/// different fonts sharing the same atlas never collide on glyph IDs.
+/// For standalone fonts (one atlas per URL) the font_index is always 0.
 pub struct SDFAtlas {
     /// Rectangle packer for allocating glyph regions
     pub allocator: AtlasAllocator,
@@ -50,10 +50,16 @@ pub struct SDFAtlas {
     pub width: u32,
     /// Atlas height in pixels
     pub height: u32,
-    /// Map from glyph ID (post-shaping) to its metrics/position in the atlas
-    pub glyph_map: FxHashMap<u32, GlyphMetrics>,
-    /// LRU tracking: glyph ID → last frame the glyph was used
-    pub last_used: FxHashMap<u32, u64>,
+    /// Map from composite key `(font_index << 32 | glyph_id)` to metrics
+    pub glyph_map: FxHashMap<u64, GlyphMetrics>,
+    /// LRU tracking: composite key → last frame the glyph was used
+    pub last_used: FxHashMap<u64, u64>,
+}
+
+/// Pack a font index and glyph ID into a single u64 key.
+#[inline]
+pub fn composite_key(font_index: u32, glyph_id: u32) -> u64 {
+    (font_index as u64) << 32 | glyph_id as u64
 }
 
 impl SDFAtlas {
@@ -69,25 +75,31 @@ impl SDFAtlas {
     }
 
     /// Mark a glyph as used this frame (for LRU tracking).
-    pub fn touch(&mut self, glyph_id: u32, current_frame: u64) {
-        self.last_used.insert(glyph_id, current_frame);
+    pub fn touch(&mut self, key: u64, current_frame: u64) {
+        self.last_used.insert(key, current_frame);
     }
 
     /// Check if a glyph is already in the atlas.
-    pub fn contains(&self, glyph_id: u32) -> bool {
-        self.glyph_map.contains_key(&glyph_id)
+    pub fn contains(&self, key: u64) -> bool {
+        self.glyph_map.contains_key(&key)
+    }
+
+    /// Get metrics for a glyph by its composite key.
+    pub fn get_metrics(&self, key: u64) -> Option<&GlyphMetrics> {
+        self.glyph_map.get(&key)
     }
 
     /// Remove a glyph from the atlas, freeing its allocated space.
-    pub fn remove(&mut self, glyph_id: u32) {
-        if let Some(metrics) = self.glyph_map.remove(&glyph_id) {
+    pub fn remove(&mut self, key: u64) {
+        if let Some(metrics) = self.glyph_map.remove(&key) {
             self.allocator.deallocate(metrics.alloc_id);
-            self.last_used.remove(&glyph_id);
+            self.last_used.remove(&key);
         }
     }
 
-    /// Ensure all required glyphs (by glyph ID, post-shaping) are in the atlas.
+    /// Ensure all required glyphs are in the atlas.
     ///
+    /// `font_index` distinguishes glyphs from different fonts sharing the same atlas.
     /// For each glyph ID not yet in the atlas, rasterizes a bitmap with fontdue,
     /// then generates an SDF using sdf_glyph_renderer (TinySDF/Felzenszwalb algorithm).
     /// Updates LRU timestamps for all requested glyphs.
@@ -95,15 +107,18 @@ impl SDFAtlas {
     pub fn ensure_glyphs_in_atlas(
         &mut self,
         raster_font: &fontdue::Font,
+        font_index: u32,
         glyph_ids: &[u32],
         current_frame: u64,
     ) -> bool {
         let mut new_glyphs = false;
         for &glyph_id in glyph_ids {
-            // Always touch the glyph for LRU, even if already present
-            self.touch(glyph_id, current_frame);
+            let key = composite_key(font_index, glyph_id);
 
-            if self.contains(glyph_id) {
+            // Always touch the glyph for LRU, even if already present
+            self.touch(key, current_frame);
+
+            if self.contains(key) {
                 continue;
             }
 
@@ -145,7 +160,7 @@ impl SDFAtlas {
             let Some(alloc) = alloc else {
                 #[cfg(debug_assertions)]
                 eprintln!(
-                    "SDF atlas: failed to allocate space for glyph {glyph_id} after eviction"
+                    "SDF atlas: failed to allocate space for glyph {glyph_id} (font {font_index}) after eviction"
                 );
                 continue;
             };
@@ -169,7 +184,7 @@ impl SDFAtlas {
             }
 
             self.glyph_map.insert(
-                glyph_id,
+                key,
                 GlyphMetrics {
                     alloc_id: alloc.id,
                     atlas_x,
@@ -190,20 +205,20 @@ impl SDFAtlas {
     ///
     /// Frees atlas space by deallocating the coldest glyphs first.
     fn evict_cold_glyphs(&mut self, current_frame: u64, min_age: u64) {
-        let evictable: Vec<(u32, u64)> = self
+        let evictable: Vec<(u64, u64)> = self
             .last_used
             .iter()
-            .filter_map(|(&glyph_id, &last_frame)| {
+            .filter_map(|(&key, &last_frame)| {
                 if current_frame.saturating_sub(last_frame) >= min_age {
-                    Some((glyph_id, last_frame))
+                    Some((key, last_frame))
                 } else {
                     None
                 }
             })
             .collect();
 
-        for (glyph_id, _) in evictable {
-            self.remove(glyph_id);
+        for (key, _) in evictable {
+            self.remove(key);
         }
     }
 }

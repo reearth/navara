@@ -284,7 +284,10 @@ export class BatchedSdfTextMesh
 
       mesh.setFont(fontUrl);
       // If the text hasn't been prepared in the worker yet, schedule async preparation
-      if (text && !this._fontManager.isTextPrepared(this._fontIdentifier, text)) {
+      if (
+        text &&
+        !this._fontManager.isTextPrepared(this._fontIdentifier, text)
+      ) {
         this._fontManager
           .prepareText(this._fontIdentifier, text)
           .then(() => {
@@ -293,8 +296,7 @@ export class BatchedSdfTextMesh
               this._fontIdentifier,
               text,
             );
-            const sharedTex =
-              this._fontManager.getAtlasTexture(resolvedUrl);
+            const sharedTex = this._fontManager.getAtlasTexture(resolvedUrl);
             if (sharedTex) {
               mesh.setAtlasTexture(sharedTex);
             }

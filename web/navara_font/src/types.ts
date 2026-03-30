@@ -36,6 +36,8 @@ export type FontAtlasData = {
 export type BatchPrepareTextResult = {
   results: { text: string; shapeResult: ShapeTextResult | null }[];
   atlas: FontAtlasData | null;
+  /** The atlas key used for this batch (family name or font URL). */
+  atlasKey: string;
 };
 
 type UnicodeRange = {
