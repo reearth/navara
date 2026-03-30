@@ -39,6 +39,9 @@ export class BatchedSdfTextMesh
   extends InstancedMesh<SDFTextMesh>
   implements PickableMesh
 {
+  /** The font identifier from material — may be a family name or a URL. */
+  private _fontIdentifier: string;
+  /** The resolved concrete font URL (always a real URL, never a family name). */
   private _fontUrl: string;
   private _fontManager: FontManager;
   private _needRender?: () => void;
@@ -47,12 +50,17 @@ export class BatchedSdfTextMesh
     m: NavaraTextMesh,
     buf: BufferLoader,
     fontManager: FontManager,
-    fontUrl: string,
+    fontIdentifier: string,
     _uniforms: CommonUniforms,
     options: InstancedMeshOptions,
   ) {
     super(options);
-    this._fontUrl = fontUrl;
+    this._fontIdentifier = fontIdentifier;
+    // Resolve the identifier to a concrete URL if text is available at construction time.
+    const text = m.material.text ?? "";
+    this._fontUrl = text
+      ? fontManager.resolvedFontUrl(fontIdentifier, text)
+      : fontIdentifier;
     this._fontManager = fontManager;
     this.initMeshes(m, buf, fontManager);
   }
@@ -140,22 +148,29 @@ export class BatchedSdfTextMesh
       }
     }
 
-    const fontUrl = m.material.font ?? this._fontUrl;
+    const fontIdentifier = m.material.font ?? this._fontIdentifier;
+    // Resolve font families to a concrete URL; raw URLs pass through unchanged.
+    const fontUrl = text
+      ? this._fontManager.resolvedFontUrl(fontIdentifier, text)
+      : fontIdentifier;
     const needFontUpdate = fontUrl !== this._fontUrl;
 
     if (needFontUpdate) {
-      await this._fontManager.loadFont(fontUrl);
+      if (!this._fontManager.isFamily(fontIdentifier)) {
+        await this._fontManager.loadFont(fontUrl);
+      }
       await this._fontManager.unloadFont(this._fontUrl);
     }
+    this._fontIdentifier = fontIdentifier;
     this._fontUrl = fontUrl;
 
     // If the text hasn't been prepared in the worker yet, schedule async preparation
     if (
       (needFontUpdate || text) &&
-      !this._fontManager.isTextPrepared(this._fontUrl, text)
+      !this._fontManager.isTextPrepared(this._fontIdentifier, text)
     ) {
       this._fontManager
-        .prepareText(this._fontUrl, text)
+        .prepareText(this._fontIdentifier, text)
         .then(() => {
           this._applyUpdate(material, needRender, needFontUpdate);
         })
@@ -257,17 +272,33 @@ export class BatchedSdfTextMesh
     const mesh = this.meshes()[batchIndex];
 
     if (mesh) {
-      mesh.setFont(this._fontUrl);
+      // Resolve the font identifier to a concrete URL using the actual text.
+      const fontUrl = text
+        ? this._fontManager.resolvedFontUrl(this._fontIdentifier, text)
+        : this._fontUrl;
+
+      // Update the resolved URL if a different face was picked for this text
+      if (fontUrl !== this._fontUrl) {
+        this._fontUrl = fontUrl;
+      }
+
+      mesh.setFont(fontUrl);
       // If the text hasn't been prepared in the worker yet, schedule async preparation
-      if (text && !this._fontManager.isTextPrepared(this._fontUrl, text)) {
+      if (text && !this._fontManager.isTextPrepared(this._fontIdentifier, text)) {
         this._fontManager
-          .prepareText(this._fontUrl, text)
+          .prepareText(this._fontIdentifier, text)
           .then(() => {
             // Refresh the shared atlas texture if the worker rasterized new glyphs
-            const sharedTex = this._fontManager.getAtlasTexture(this._fontUrl);
+            const resolvedUrl = this._fontManager.resolvedFontUrl(
+              this._fontIdentifier,
+              text,
+            );
+            const sharedTex =
+              this._fontManager.getAtlasTexture(resolvedUrl);
             if (sharedTex) {
               mesh.setAtlasTexture(sharedTex);
             }
+            mesh.setFont(resolvedUrl);
             mesh.setText(text);
             this.markVisibility(mesh);
             this._needRender?.();

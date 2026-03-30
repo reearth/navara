@@ -3,7 +3,12 @@ import { DataTexture, LinearFilter, RedFormat, UnsignedByteType } from "three";
 
 import { FontWorkerClient } from "./FontWorkerClient";
 import { LRUMap } from "./LRUMap";
-import type { FontAtlasData, ShapeTextResult } from "./types";
+import type {
+  FontAtlasData,
+  FontFace,
+  FontFamily,
+  ShapeTextResult,
+} from "./types";
 
 /** Create a single-channel SDF atlas DataTexture with standard filtering. */
 export function createSdfAtlasTexture(
@@ -62,6 +67,10 @@ export class FontManager {
   private _batchScheduled = false;
 
   private _refCount = new Map<string, number>();
+  /** Registered font families, keyed by family name. */
+  private _families = new Map<string, FontFamily>();
+  /** Caches resolved font URL per (fontIdentifier, text) pair. */
+  private _resolvedUrls = new Map<string, string>();
 
   constructor(workerUrl: string | URL) {
     this._workerUrl = workerUrl;
@@ -69,6 +78,77 @@ export class FontManager {
 
   setConcurrencyManager(concurrencyManager: ConcurrencyManager) {
     this._concurrencyManager = concurrencyManager;
+  }
+
+  /**
+   * Register a font family with multiple faces.
+   * No font files are loaded until text is prepared.
+   */
+  registerFontFamily(family: FontFamily): void {
+    this._families.set(family.family, family);
+  }
+
+  /** Remove a registered font family. */
+  unregisterFontFamily(family: string): void {
+    this._families.delete(family);
+  }
+
+  /** Check whether a font identifier is a registered family name. */
+  isFamily(fontIdentifier: string): boolean {
+    return this._families.has(fontIdentifier);
+  }
+
+  /**
+   * Resolve a font identifier to a concrete font URL.
+   * If the identifier is a registered family name, picks the best-matching
+   * face based on unicode range coverage of the text's codepoints.
+   * Otherwise returns the identifier as-is (assumed to be a URL).
+   */
+  private _resolveFontUrl(fontIdentifier: string, text: string): string {
+    const family = this._families.get(fontIdentifier);
+    if (!family) return fontIdentifier;
+
+    const cacheKey = this._cacheKey(fontIdentifier, text);
+    const cached = this._resolvedUrls.get(cacheKey);
+    if (cached) return cached;
+
+    const url = this._pickBestFace(family.faces, text);
+    this._resolvedUrls.set(cacheKey, url);
+    return url;
+  }
+
+  /**
+   * Pick the font face whose unicode ranges cover the most codepoints in the text.
+   * Falls back to the first face if none match.
+   */
+  private _pickBestFace(faces: FontFace[], text: string): string {
+    if (faces.length === 0) {
+      throw new Error("FontManager: font family has no faces");
+    }
+    if (faces.length === 1) return faces[0].url;
+
+    let bestUrl = faces[0].url;
+    let bestCount = 0;
+
+    for (const face of faces) {
+      let count = 0;
+      for (const ch of text) {
+        const cp = ch.codePointAt(0);
+        if (cp === undefined) continue;
+        for (const range of face.unicodeRanges) {
+          if (cp >= range.from && cp <= range.to) {
+            count++;
+            break;
+          }
+        }
+      }
+      if (count > bestCount) {
+        bestCount = count;
+        bestUrl = face.url;
+      }
+    }
+
+    return bestUrl;
   }
 
   private _ensureClient(): Promise<FontWorkerClient> {
@@ -156,9 +236,15 @@ export class FontManager {
   /**
    * Prepare text for rendering: shapes text and updates atlas in the worker.
    * Must be called (and awaited) before shapeText() will return data for this text.
+   * Accepts either a font URL or a registered font family name.
    */
-  async prepareText(fontUrl: string, text: string): Promise<void> {
+  async prepareText(fontIdentifier: string, text: string): Promise<void> {
     if (!text) return;
+
+    const fontUrl = this._resolveFontUrl(fontIdentifier, text);
+
+    // Ensure the resolved font is loaded
+    await this.loadFont(fontUrl);
 
     const cacheKey = this._cacheKey(fontUrl, text);
     if (this._shapeCache.get(fontUrl)?.has(text) ?? false) return;
@@ -191,21 +277,35 @@ export class FontManager {
     }
   }
 
-  /** Check if text has been prepared (sync). */
-  isTextPrepared(fontUrl: string, text: string): boolean {
+  /**
+   * Check if text has been prepared (sync).
+   * Accepts either a font URL or a registered font family name.
+   */
+  isTextPrepared(fontIdentifier: string, text: string): boolean {
+    const fontUrl = this._resolveFontUrl(fontIdentifier, text);
     return this._shapeCache.get(fontUrl)?.has(text) ?? false;
   }
 
   /**
    * Get shaped text from cache. Returns undefined if not yet prepared.
    * Call prepareText() first.
+   * Accepts either a font URL or a registered font family name.
    */
-  shapeText(fontUrl: string, text: string): ShapeTextResult | undefined {
+  shapeText(fontIdentifier: string, text: string): ShapeTextResult | undefined {
+    const fontUrl = this._resolveFontUrl(fontIdentifier, text);
     return this._shapeCache.get(fontUrl)?.get(text);
   }
 
-  /** Get the SDF atlas data for a loaded font from cache. */
-  getAtlas(fontUrl: string): FontAtlasData | undefined {
+  /**
+   * Get the SDF atlas data for a loaded font from cache.
+   * Accepts either a font URL or a registered font family name.
+   * When a family name is provided without text, returns undefined —
+   * use the overload with text to resolve the correct face.
+   */
+  getAtlas(fontIdentifier: string, text?: string): FontAtlasData | undefined {
+    const fontUrl = text
+      ? this._resolveFontUrl(fontIdentifier, text)
+      : fontIdentifier;
     return this._atlasCache.get(fontUrl);
   }
 
@@ -213,14 +313,21 @@ export class FontManager {
    * Get a shared GPU DataTexture for a font's atlas.
    * Returns the same texture instance for all callers using the same font.
    * Creates the texture on first call; updates it in-place when the atlas grows.
+   * Accepts either a font URL or a registered font family name.
+   * When a family name is provided without text, returns null —
+   * use the overload with text to resolve the correct face.
    */
-  getAtlasTexture(fontUrl: string): DataTexture | null {
+  getAtlasTexture(fontIdentifier: string, text?: string): DataTexture | null {
+    const fontUrl = text
+      ? this._resolveFontUrl(fontIdentifier, text)
+      : fontIdentifier;
+
     if (!this._atlasDirty.has(fontUrl)) {
       const cached = this._textureCache.get(fontUrl);
       if (cached) return cached;
     }
 
-    const atlasData = this.getAtlas(fontUrl);
+    const atlasData = this._atlasCache.get(fontUrl);
     if (!atlasData) return null;
 
     const existing = this._textureCache.get(fontUrl);
@@ -246,6 +353,14 @@ export class FontManager {
     return tex;
   }
 
+  /**
+   * Resolve a font identifier + text to the concrete font URL.
+   * Useful for callers that need the resolved URL (e.g., for atlas texture lookups).
+   */
+  resolvedFontUrl(fontIdentifier: string, text: string): string {
+    return this._resolveFontUrl(fontIdentifier, text);
+  }
+
   dispose() {
     this._pending.clear();
     this._preparePending.clear();
@@ -258,6 +373,8 @@ export class FontManager {
       tex.dispose();
     }
     this._textureCache.clear();
+    this._families.clear();
+    this._resolvedUrls.clear();
     this._client?.dispose();
     this._client = undefined;
   }

@@ -16,7 +16,7 @@ import initCore, {
   type TerrainHeightUpdatedEvent,
   type TextureFragmentStatus,
 } from "@navara/engine";
-import { FontManager } from "@navara/font";
+import { FontManager, type FontFamily } from "@navara/font";
 import FontWorkerURL from "@navara/font/fontWorker?worker&url";
 import { initNavaraApi } from "@navara/three_api";
 import { initializeWorkerPool } from "@navara/worker";
@@ -142,6 +142,7 @@ export { type BlendMode, blendFunction, createReplacer } from "./utils";
 export { Atmosphere, type AtmosphereOptions } from "./atmosphere";
 export type { Quality } from "./quality";
 export type { CustomObject3DEventMap } from "./object3DEvent";
+export type { FontFamily, FontFace } from "@navara/font";
 
 // NOTE:
 // This overrides all materials to output a normal buffer, meaning Navara operates using MRT (Multiple Render Targets).
@@ -274,6 +275,38 @@ export default class ThreeView<
   /** Manages font loading, text shaping, and SDF atlas access. */
   get fontManager(): FontManager {
     return this._fontManager;
+  }
+
+  /**
+   * Register a font family with multiple faces.
+   * Each face covers a set of unicode ranges and points to a separate font file URL.
+   * When a text label uses this family name as its font, only the font file
+   * matching the label's characters will be loaded.
+   *
+   * @example
+   * ```ts
+   * view.addFontFamily({
+   *   family: "MapFont",
+   *   faces: [
+   *     { family: "MapFont", style: "normal", weight: 400,
+   *       unicodeRanges: [{ from: 0x0000, to: 0x024F }],
+   *       url: "/fonts/latin.woff2" },
+   *     { family: "MapFont", style: "normal", weight: 400,
+   *       unicodeRanges: [{ from: 0x4E00, to: 0x9FFF }],
+   *       url: "/fonts/cjk.woff2" },
+   *   ],
+   * });
+   * ```
+   */
+  addFontFamily(family: FontFamily): this {
+    this._fontManager.registerFontFamily(family);
+    return this;
+  }
+
+  /** Remove a previously registered font family by name. */
+  removeFontFamily(family: string): this {
+    this._fontManager.unregisterFontFamily(family);
+    return this;
   }
 
   /** Layer handle for the sky environment map effect layer. Used for sky reflections. */

@@ -26,10 +26,13 @@ export async function renderText(
   // Use SDF pipeline when a font URL is specified and FontManager is available
   if (fontManager) {
     try {
-      await fontManager.loadFont(fontUrl);
-
-      // Pre-prepare the text in the worker so cache is populated before mesh construction
+      // Pre-prepare the text in the worker so cache is populated before mesh construction.
+      // For font families, prepareText resolves the family name to a concrete URL and loads it.
+      // For raw URLs, we load the font file first.
       const text = m.material.text ?? "";
+      if (!fontManager.isFamily(fontUrl)) {
+        await fontManager.loadFont(fontUrl);
+      }
       if (text) {
         await fontManager.prepareText(fontUrl, text);
       }

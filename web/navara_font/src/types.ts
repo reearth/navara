@@ -50,3 +50,8 @@ export type FontFace = {
   unicodeRanges: UnicodeRange[];
   url: string;
 };
+
+export type FontFamily = {
+  family: string;
+  faces: FontFace[];
+};
