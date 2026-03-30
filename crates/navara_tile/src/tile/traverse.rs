@@ -101,6 +101,8 @@ pub fn traverse_tile(
         return TraversalResult::Culled;
     }
 
+    let has_hillshade_config = tiles.iter().any(|(l, _)| l.hillshade_config.is_some());
+
     let tile_ready_state = tile.is_ready(
         qt,
         texture_fragment,
@@ -108,6 +110,7 @@ pub fn traverse_tile(
         terrain_data_requester,
         terrain_layer,
         has_tile_layer,
+        has_hillshade_config,
     );
     let is_tile_ready = tile_ready_state.is_tile_ready;
 

@@ -108,6 +108,7 @@ impl RasterTile {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn is_ready(
         &self,
         qt: &RasterTileQuadtree,
@@ -116,9 +117,14 @@ impl RasterTile {
         terrain_data_requester: &TileTerrainDataRequesterQuery,
         terrain_layer: &Option<&TerrainLayer>,
         has_tile_layer: bool,
+        has_hillshade_config: bool,
     ) -> ReadyState {
-        let is_texture_loaded =
-            self.is_texture_ready(texture_fragment, data_requesters, has_tile_layer);
+        let is_texture_loaded = self.is_texture_ready(
+            texture_fragment,
+            data_requesters,
+            has_tile_layer,
+            has_hillshade_config,
+        );
 
         let data_requester_entity_id = self
             .terrain_data
@@ -209,18 +215,14 @@ impl RasterTile {
         false
     }
 
-    /// Helper to check if hillshade layers are configured
-    fn has_hillshade_layers(&self) -> bool {
-        self.hillshade_entity_ids.is_some()
-    }
-
     pub fn is_texture_ready(
         &self,
         texture_fragment: &TileTextureFragmentQuery,
         data_requesters: &Query<&navara_data_requester::DataRequester>,
         has_tile_layer: bool,
+        has_hillshade_config: bool,
     ) -> bool {
-        if self.has_hillshade_layers() {
+        if has_hillshade_config {
             self.is_all_texture_ready(texture_fragment, data_requesters, has_tile_layer)
         } else {
             self.is_any_texture_ready(texture_fragment, data_requesters, has_tile_layer)
@@ -291,6 +293,13 @@ impl RasterTile {
             let tex_entity = tex_ids.and_then(|ids| ids.get(i)).and_then(|&e| e);
             let hill_entity = hill_ids.and_then(|ids| ids.get(i)).and_then(|&e| e);
 
+            // If both entities are None but slots exist, check if it's a hillshade layer that exceeded max_zoom
+            if tex_entity.is_none() && hill_entity.is_none() {
+                // Both None but slots exist - this might be a hillshade layer that exceeded max_zoom
+                // We need parent fallback
+                return false;
+            }
+
             // At this index, check if either entity is ready
             let tex_ready = tex_entity
                 .map(|e| Self::is_texture_entity_ready(e, texture_fragment, data_requesters))
@@ -299,25 +308,11 @@ impl RasterTile {
                 .map(|e| Self::is_texture_entity_ready(e, texture_fragment, data_requesters))
                 .unwrap_or(false);
 
-            // Check if this is a real layer or just a skipped layer
-            // If both arrays don't have this index, it's truly skipped
-            let has_tex_slot = tex_ids.is_some_and(|ids| i < ids.len());
-            let has_hill_slot = hill_ids.is_some_and(|ids| i < ids.len());
-
-            if !has_tex_slot && !has_hill_slot {
-                // No slot in either array, truly skipped
-                continue;
-            }
-
-            // If both entities are None but slots exist, check if it's a hillshade layer that exceeded max_zoom
-            if tex_entity.is_none() && hill_entity.is_none() {
-                // Both None but slots exist - this might be a hillshade layer that exceeded max_zoom
-                // We need parent fallback
+            if tex_entity.is_some() && !tex_ready {
                 return false;
             }
 
-            if !tex_ready && !hill_ready {
-                // At least one entity exists but none are ready
+            if hill_entity.is_some() && !hill_ready {
                 return false;
             }
         }

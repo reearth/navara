@@ -13,7 +13,7 @@ import ElevationParsFragment from "@shaders/glsl/chunks/elevation_pars_fragment.
 import HillshadeParsFragment from "@shaders/glsl/chunks/hillshade_pars_fragment.glsl";
 import SpecularParsFragment from "@shaders/glsl/chunks/spucular_pars_fragment.glsl";
 import WaterParsFragment from "@shaders/glsl/chunks/water_pars_fragment.glsl?raw";
-import { generateHillshadeNormalShader } from "../shaders/hillshadeNormal";
+
 import {
   BufferAttribute,
   BufferGeometry,
@@ -42,7 +42,10 @@ import {
 import { PolygonMesh } from "..";
 import type { ViewContext } from "../core";
 import { setTransform, type BufferLoader, type TileHandler } from "../event";
-import { generateMixOverlaidTexturesMacro } from "../material";
+import {
+  generateMixOverlaidTexturesMacro,
+  generateHillshadeNormalShader,
+} from "../material";
 import {
   type TextureSlot,
   updateTextureFragmentIndex,
