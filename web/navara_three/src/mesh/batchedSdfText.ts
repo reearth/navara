@@ -41,8 +41,6 @@ export class BatchedSdfTextMesh
 {
   /** The font identifier from material — may be a family name or a URL. */
   private _fontIdentifier: string;
-  /** The resolved concrete font URL (always a real URL, never a family name). */
-  private _fontUrl: string;
   private _fontManager: FontManager;
   private _needRender?: () => void;
 
@@ -56,17 +54,12 @@ export class BatchedSdfTextMesh
   ) {
     super(options);
     this._fontIdentifier = fontIdentifier;
-    // Resolve the identifier to a concrete URL if text is available at construction time.
-    const text = m.material.text ?? "";
-    this._fontUrl = text
-      ? fontManager.resolvedFontUrl(fontIdentifier, text)
-      : fontIdentifier;
     this._fontManager = fontManager;
     this.initMeshes(m, buf, fontManager);
   }
 
   get fontUrl(): string {
-    return this._fontUrl;
+    return this._fontIdentifier;
   }
 
   private initMeshes(
@@ -86,7 +79,7 @@ export class BatchedSdfTextMesh
     const transform = m.transform;
 
     // Get the font-level shared atlas texture (one DataTexture per font, shared across all groups)
-    const sharedTex = fontManager.getAtlasTexture(this._fontUrl);
+    const sharedTex = fontManager.getAtlasTexture(this._fontIdentifier);
 
     for (let i = 0; i < nPositions; i++) {
       const batchIdIdx = i * batchIDSize;
@@ -104,7 +97,7 @@ export class BatchedSdfTextMesh
         material,
         transform,
         fontManager,
-        this._fontUrl,
+        this._fontIdentifier,
         batchId,
         RTE,
       );
@@ -149,20 +142,15 @@ export class BatchedSdfTextMesh
     }
 
     const fontIdentifier = m.material.font ?? this._fontIdentifier;
-    // Resolve font families to a concrete URL; raw URLs pass through unchanged.
-    const fontUrl = text
-      ? this._fontManager.resolvedFontUrl(fontIdentifier, text)
-      : fontIdentifier;
-    const needFontUpdate = fontUrl !== this._fontUrl;
+    const needFontUpdate = fontIdentifier !== this._fontIdentifier;
 
     if (needFontUpdate) {
       if (!this._fontManager.isFamily(fontIdentifier)) {
-        await this._fontManager.loadFont(fontUrl);
+        await this._fontManager.loadFont(fontIdentifier);
       }
-      await this._fontManager.unloadFont(this._fontUrl);
+      await this._fontManager.unloadFont(this._fontIdentifier);
     }
     this._fontIdentifier = fontIdentifier;
-    this._fontUrl = fontUrl;
 
     // If the text hasn't been prepared in the worker yet, schedule async preparation
     if (
@@ -190,7 +178,7 @@ export class BatchedSdfTextMesh
     forceUpdate = false,
   ) {
     // Update shared texture (in-place update if atlas grew)
-    const sharedTex = this._fontManager.getAtlasTexture(this._fontUrl);
+    const sharedTex = this._fontManager.getAtlasTexture(this._fontIdentifier);
 
     for (const mesh of this.meshes()) {
       if (sharedTex) mesh.setAtlasTexture(sharedTex);
@@ -272,17 +260,6 @@ export class BatchedSdfTextMesh
     const mesh = this.meshes()[batchIndex];
 
     if (mesh) {
-      // Resolve the font identifier to a concrete URL using the actual text.
-      const fontUrl = text
-        ? this._fontManager.resolvedFontUrl(this._fontIdentifier, text)
-        : this._fontUrl;
-
-      // Update the resolved URL if a different face was picked for this text
-      if (fontUrl !== this._fontUrl) {
-        this._fontUrl = fontUrl;
-      }
-
-      mesh.setFont(fontUrl);
       // If the text hasn't been prepared in the worker yet, schedule async preparation
       if (
         text &&
@@ -292,15 +269,12 @@ export class BatchedSdfTextMesh
           .prepareText(this._fontIdentifier, text)
           .then(() => {
             // Refresh the shared atlas texture if the worker rasterized new glyphs
-            const resolvedUrl = this._fontManager.resolvedFontUrl(
+            const sharedTex = this._fontManager.getAtlasTexture(
               this._fontIdentifier,
-              text,
             );
-            const sharedTex = this._fontManager.getAtlasTexture(resolvedUrl);
             if (sharedTex) {
               mesh.setAtlasTexture(sharedTex);
             }
-            mesh.setFont(resolvedUrl);
             mesh.setText(text);
             this.markVisibility(mesh);
             this._needRender?.();
@@ -340,8 +314,10 @@ export class BatchedSdfTextMesh
   }
 
   dispose() {
-    void this._fontManager.unloadFont(this._fontUrl).catch((err: unknown) => {
-      console.error("Failed to unload font during dispose:", err);
-    });
+    void this._fontManager
+      .unloadFont(this._fontIdentifier)
+      .catch((err: unknown) => {
+        console.error("Failed to unload font during dispose:", err);
+      });
   }
 }

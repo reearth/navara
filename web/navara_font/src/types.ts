@@ -1,6 +1,8 @@
 /** Glyph metrics from the SDF atlas. */
 export type GlyphMetrics = {
   glyphId: number;
+  /** Unique font index within the atlas (distinguishes glyphs from different fonts). */
+  fontIndex: number;
   atlasX: number;
   atlasY: number;
   atlasW: number;
@@ -12,6 +14,8 @@ export type GlyphMetrics = {
 /** A single shaped glyph with positioning info. */
 export type ShapedGlyph = {
   glyphId: number;
+  /** Unique font index within the atlas (distinguishes glyphs from different fonts). */
+  fontIndex: number;
   xAdvance: number;
   yAdvance: number;
   xOffset: number;
@@ -24,6 +28,8 @@ export type ShapeTextResult = {
   metrics: GlyphMetrics[];
   /** Font units per em (needed for converting font-unit to pixel space) */
   unitsPerEm: number;
+  /** Font index of the font that produced this result. */
+  fontIndex: number;
 };
 
 /** SDF atlas texture data. */

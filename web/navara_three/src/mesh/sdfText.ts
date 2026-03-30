@@ -447,10 +447,14 @@ export class SDFTextMesh
   ): void {
     const { glyphs, metrics, unitsPerEm } = shapeResult;
 
-    // Build glyph ID -> metrics lookup
+    // Build composite (fontIndex, glyphId) -> metrics lookup.
+    // This supports glyphs from multiple fonts sharing the same atlas
+    // (e.g. font-family faces). fontIndex distinguishes glyph IDs that
+    // would otherwise collide across different fonts.
     const metricsMap = new Map<number, GlyphMetrics>();
     for (const m of metrics) {
-      metricsMap.set(m.glyphId, m);
+      const key = (m.fontIndex ?? 0) * 0x10000 + m.glyphId;
+      metricsMap.set(key, m);
     }
 
     const fontUnitToSdfPx = SDF_PX_SIZE / unitsPerEm;
@@ -469,7 +473,9 @@ export class SDFTextMesh
     }[] = [];
 
     for (const glyph of glyphs) {
-      const m = metricsMap.get(glyph.glyphId);
+      const m = metricsMap.get(
+        (glyph.fontIndex ?? 0) * 0x10000 + glyph.glyphId,
+      );
       if (m && m.atlasW > 0 && m.atlasH > 0) {
         const x = (cursorX + glyph.xOffset) * fontUnitToSdfPx + m.bearingX;
         const y = (cursorY + glyph.yOffset) * fontUnitToSdfPx + m.bearingY;

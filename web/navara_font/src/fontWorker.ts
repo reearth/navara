@@ -20,6 +20,7 @@ function convertGlyphs(glyphs: WasmShapedGlyph[]) {
   return glyphs.map((g) => {
     const out = {
       glyphId: g.glyph_id,
+      fontIndex: g.font_index,
       xAdvance: g.x_advance,
       yAdvance: g.y_advance,
       xOffset: g.x_offset,
@@ -34,6 +35,7 @@ function convertMetrics(metrics: WasmGlyphMetrics[]) {
   return metrics.map((m) => {
     const out = {
       glyphId: m.glyph_id,
+      fontIndex: m.font_index,
       atlasX: m.atlas_x,
       atlasY: m.atlas_y,
       atlasW: m.atlas_w,
@@ -52,6 +54,7 @@ function convertShapeResult(sr: WasmShapeTextResult | undefined) {
     glyphs: convertGlyphs(sr.glyphs),
     metrics: convertMetrics(sr.metrics),
     unitsPerEm: sr.units_per_em,
+    fontIndex: sr.font_index,
   };
   sr.free();
   return result;

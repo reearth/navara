@@ -38,6 +38,7 @@ pub struct FontAtlas {
 #[derive(Clone)]
 pub struct WasmGlyphMetrics {
     pub glyph_id: u32,
+    pub font_index: u32,
     pub atlas_x: i32,
     pub atlas_y: i32,
     pub atlas_w: u32,
@@ -51,6 +52,7 @@ pub struct WasmGlyphMetrics {
 #[derive(Clone)]
 pub struct WasmShapedGlyph {
     pub glyph_id: u32,
+    pub font_index: u32,
     pub x_advance: i32,
     pub y_advance: i32,
     pub x_offset: i32,
@@ -63,6 +65,7 @@ pub struct ShapeTextResult {
     pub glyphs: Vec<WasmShapedGlyph>,
     pub metrics: Vec<WasmGlyphMetrics>,
     pub units_per_em: u16,
+    pub font_index: u32,
     pub atlas_changed: bool,
 }
 
@@ -134,6 +137,7 @@ impl FontCache {
             .iter()
             .map(|g| WasmShapedGlyph {
                 glyph_id: g.glyph_id,
+                font_index,
                 x_advance: g.x_advance,
                 y_advance: g.y_advance,
                 x_offset: g.x_offset,
@@ -152,6 +156,7 @@ impl FontCache {
                 let key = atlas::composite_key(font_index, gid);
                 atlas.get_metrics(key).map(|m| WasmGlyphMetrics {
                     glyph_id: gid,
+                    font_index,
                     atlas_x: m.atlas_x,
                     atlas_y: m.atlas_y,
                     atlas_w: m.atlas_w,
@@ -166,6 +171,7 @@ impl FontCache {
             glyphs,
             metrics,
             units_per_em,
+            font_index,
             atlas_changed,
         })
     }

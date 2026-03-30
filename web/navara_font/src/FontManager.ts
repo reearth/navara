@@ -7,6 +7,8 @@ import type {
   FontAtlasData,
   FontFace,
   FontFamily,
+  GlyphMetrics,
+  ShapedGlyph,
   ShapeTextResult,
 } from "./types";
 
@@ -69,8 +71,6 @@ export class FontManager {
   private _refCount = new Map<string, number>();
   /** Registered font families, keyed by family name. */
   private _families = new Map<string, FontFamily>();
-  /** Caches resolved font URL per (fontIdentifier, text) pair. */
-  private _resolvedUrls = new Map<string, string>();
   /** Maps font URL → atlas key (family name or URL for standalone fonts). */
   private _atlasKeys = new Map<string, string>();
 
@@ -101,56 +101,57 @@ export class FontManager {
   }
 
   /**
-   * Resolve a font identifier to a concrete font URL.
-   * If the identifier is a registered family name, picks the best-matching
-   * face based on unicode range coverage of the text's codepoints.
-   * Otherwise returns the identifier as-is (assumed to be a URL).
+   * Segment text into runs where each run maps to a specific font face.
+   * For each character, the first face whose unicodeRanges contain the
+   * codepoint wins. Consecutive characters mapping to the same face are
+   * grouped into a single segment. Falls back to the first face for
+   * codepoints not covered by any face.
    */
-  private _resolveFontUrl(fontIdentifier: string, text: string): string {
-    const family = this._families.get(fontIdentifier);
-    if (!family) return fontIdentifier;
-
-    const cacheKey = this._cacheKey(fontIdentifier, text);
-    const cached = this._resolvedUrls.get(cacheKey);
-    if (cached) return cached;
-
-    const url = this._pickBestFace(family.faces, text);
-    this._resolvedUrls.set(cacheKey, url);
-    return url;
-  }
-
-  /**
-   * Pick the font face whose unicode ranges cover the most codepoints in the text.
-   * Falls back to the first face if none match.
-   */
-  private _pickBestFace(faces: FontFace[], text: string): string {
+  private _segmentTextByFace(
+    faces: FontFace[],
+    text: string,
+  ): { url: string; text: string }[] {
     if (faces.length === 0) {
       throw new Error("FontManager: font family has no faces");
     }
-    if (faces.length === 1) return faces[0].url;
+    if (faces.length === 1) return [{ url: faces[0].url, text }];
 
-    let bestUrl = faces[0].url;
-    let bestCount = 0;
+    const segments: { url: string; text: string }[] = [];
+    let currentUrl: string | null = null;
+    let currentChars: string[] = [];
 
-    for (const face of faces) {
-      let count = 0;
-      for (const ch of text) {
-        const cp = ch.codePointAt(0);
-        if (cp === undefined) continue;
-        for (const range of face.unicodeRanges) {
-          if (cp >= range.from && cp <= range.to) {
-            count++;
-            break;
-          }
+    for (const ch of text) {
+      const cp = ch.codePointAt(0)!;
+      const url = this._findFaceForCodepoint(faces, cp);
+
+      if (url !== currentUrl) {
+        if (currentUrl !== null && currentChars.length > 0) {
+          segments.push({ url: currentUrl, text: currentChars.join("") });
         }
-      }
-      if (count > bestCount) {
-        bestCount = count;
-        bestUrl = face.url;
+        currentUrl = url;
+        currentChars = [ch];
+      } else {
+        currentChars.push(ch);
       }
     }
 
-    return bestUrl;
+    if (currentUrl !== null && currentChars.length > 0) {
+      segments.push({ url: currentUrl, text: currentChars.join("") });
+    }
+
+    return segments;
+  }
+
+  /** Find the first face whose unicode ranges contain the given codepoint. */
+  private _findFaceForCodepoint(faces: FontFace[], codepoint: number): string {
+    for (const face of faces) {
+      for (const range of face.unicodeRanges) {
+        if (codepoint >= range.from && codepoint <= range.to) {
+          return face.url;
+        }
+      }
+    }
+    return faces[0].url;
   }
 
   private _ensureClient(): Promise<FontWorkerClient> {
@@ -252,17 +253,52 @@ export class FontManager {
    * Prepare text for rendering: shapes text and updates atlas in the worker.
    * Must be called (and awaited) before shapeText() will return data for this text.
    * Accepts either a font URL or a registered font family name.
+   *
+   * For font families, segments the text by face (per unicode ranges),
+   * shapes each segment with the correct face, and stitches the results.
+   * All faces share a single atlas so the renderer uses one texture.
    */
   async prepareText(fontIdentifier: string, text: string): Promise<void> {
     if (!text) return;
 
-    const fontUrl = this._resolveFontUrl(fontIdentifier, text);
+    const family = this._families.get(fontIdentifier);
+    if (family) {
+      return this._prepareFamilyText(fontIdentifier, family, text);
+    }
 
-    // Ensure the resolved font is loaded. When loading a family face,
-    // pass the family name as atlas key so all faces share one atlas.
-    const atlasKey = this._families.has(fontIdentifier)
+    return this._prepareSingleFontText(fontIdentifier, text);
+  }
+
+  /**
+   * Check if text has been prepared (sync).
+   * Accepts either a font URL or a registered font family name.
+   */
+  isTextPrepared(fontIdentifier: string, text: string): boolean {
+    // For families, the stitched result is cached under the family name
+    const cacheKey = this._families.has(fontIdentifier)
       ? fontIdentifier
-      : undefined;
+      : fontIdentifier;
+    return this._shapeCache.get(cacheKey)?.has(text) ?? false;
+  }
+
+  /**
+   * Get shaped text from cache. Returns undefined if not yet prepared.
+   * Call prepareText() first.
+   * Accepts either a font URL or a registered font family name.
+   */
+  shapeText(fontIdentifier: string, text: string): ShapeTextResult | undefined {
+    const cacheKey = this._families.has(fontIdentifier)
+      ? fontIdentifier
+      : fontIdentifier;
+    return this._shapeCache.get(cacheKey)?.get(text);
+  }
+
+  /** Prepare text for a single standalone font (non-family path). */
+  private async _prepareSingleFontText(
+    fontUrl: string,
+    text: string,
+    atlasKey?: string,
+  ): Promise<void> {
     await this.loadFont(fontUrl, atlasKey);
 
     const cacheKey = this._cacheKey(fontUrl, text);
@@ -270,9 +306,6 @@ export class FontManager {
     if (this._preparePending.has(cacheKey))
       return this._preparePending.get(cacheKey);
 
-    // Queue into microtask batch instead of dispatching immediately.
-    // All synchronous prepareText() calls (e.g. from a FeatureEvaluator loop)
-    // are coalesced into a single worker message.
     const promise = new Promise<void>((resolve, reject) => {
       let queue = this._batchQueue.get(fontUrl);
       if (!queue) {
@@ -296,23 +329,83 @@ export class FontManager {
     }
   }
 
-  /**
-   * Check if text has been prepared (sync).
-   * Accepts either a font URL or a registered font family name.
-   */
-  isTextPrepared(fontIdentifier: string, text: string): boolean {
-    const fontUrl = this._resolveFontUrl(fontIdentifier, text);
-    return this._shapeCache.get(fontUrl)?.has(text) ?? false;
+  /** Prepare text for a font family: segment, shape per-face, stitch. */
+  private async _prepareFamilyText(
+    familyName: string,
+    family: FontFamily,
+    text: string,
+  ): Promise<void> {
+    // Already stitched and cached?
+    if (this._shapeCache.get(familyName)?.has(text)) return;
+
+    const pendingKey = this._cacheKey(familyName, text);
+    if (this._preparePending.has(pendingKey))
+      return this._preparePending.get(pendingKey);
+
+    const promise = (async () => {
+      const segments = this._segmentTextByFace(family.faces, text);
+
+      // Load all needed faces and prepare each segment
+      await Promise.all(
+        segments.map((seg) =>
+          this._prepareSingleFontText(seg.url, seg.text, familyName),
+        ),
+      );
+
+      // Stitch per-segment results into one combined result
+      const stitched = this._stitchSegments(segments);
+
+      if (!this._shapeCache.has(familyName)) {
+        this._shapeCache.set(
+          familyName,
+          new LRUMap<string, ShapeTextResult>(SHAPE_CACHE_MAX_SIZE),
+        );
+      }
+      this._shapeCache.get(familyName)!.set(text, stitched);
+    })();
+
+    this._preparePending.set(pendingKey, promise);
+    try {
+      await promise;
+    } finally {
+      this._preparePending.delete(pendingKey);
+    }
   }
 
-  /**
-   * Get shaped text from cache. Returns undefined if not yet prepared.
-   * Call prepareText() first.
-   * Accepts either a font URL or a registered font family name.
-   */
-  shapeText(fontIdentifier: string, text: string): ShapeTextResult | undefined {
-    const fontUrl = this._resolveFontUrl(fontIdentifier, text);
-    return this._shapeCache.get(fontUrl)?.get(text);
+  /** Combine shaped results from multiple face segments into one result. */
+  private _stitchSegments(
+    segments: { url: string; text: string }[],
+  ): ShapeTextResult {
+    const allGlyphs: ShapedGlyph[] = [];
+    const metricsMap = new Map<string, GlyphMetrics>();
+    let unitsPerEm = 0;
+    let fontIndex = 0;
+
+    for (const seg of segments) {
+      const result = this._shapeCache.get(seg.url)?.get(seg.text);
+      if (!result) continue;
+
+      if (unitsPerEm === 0) {
+        unitsPerEm = result.unitsPerEm;
+        fontIndex = result.fontIndex;
+      }
+
+      allGlyphs.push(...result.glyphs);
+
+      for (const m of result.metrics) {
+        const key = `${m.fontIndex}:${m.glyphId}`;
+        if (!metricsMap.has(key)) {
+          metricsMap.set(key, m);
+        }
+      }
+    }
+
+    return {
+      glyphs: allGlyphs,
+      metrics: [...metricsMap.values()],
+      unitsPerEm,
+      fontIndex,
+    };
   }
 
   /**
@@ -367,11 +460,16 @@ export class FontManager {
   }
 
   /**
-   * Resolve a font identifier + text to the concrete font URL.
-   * Useful for callers that need the resolved URL (e.g., for atlas texture lookups).
+   * Resolve a font identifier + text to a concrete font URL.
+   * For families, returns the URL of the first face that covers the text's
+   * first codepoint. For standalone fonts, returns the identifier as-is.
    */
   resolvedFontUrl(fontIdentifier: string, text: string): string {
-    return this._resolveFontUrl(fontIdentifier, text);
+    const family = this._families.get(fontIdentifier);
+    if (!family || family.faces.length === 0) return fontIdentifier;
+    if (!text) return family.faces[0].url;
+    const cp = text.codePointAt(0)!;
+    return this._findFaceForCodepoint(family.faces, cp);
   }
 
   dispose() {
@@ -387,7 +485,6 @@ export class FontManager {
     }
     this._textureCache.clear();
     this._families.clear();
-    this._resolvedUrls.clear();
     this._atlasKeys.clear();
     this._client?.dispose();
     this._client = undefined;
@@ -399,14 +496,11 @@ export class FontManager {
 
   /** Resolve a font identifier to its atlas key.
    *  Family names are their own atlas key; font URLs are looked up via _atlasKeys. */
-  private _resolveAtlasKey(fontIdentifier: string, text?: string): string {
+  private _resolveAtlasKey(fontIdentifier: string, _text?: string): string {
     // If it's a registered family name, that IS the atlas key
     if (this._families.has(fontIdentifier)) return fontIdentifier;
     // For font URLs, resolve via the atlas key map (falls back to URL itself)
-    const fontUrl = text
-      ? this._resolveFontUrl(fontIdentifier, text)
-      : fontIdentifier;
-    return this._atlasKeys.get(fontUrl) ?? fontUrl;
+    return this._atlasKeys.get(fontIdentifier) ?? fontIdentifier;
   }
 
   private async _fetchAndLoad(url: string, atlasKey?: string): Promise<void> {
