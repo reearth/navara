@@ -87,10 +87,29 @@ impl<F: Float, U: Unit<F>> Extent<F, U> {
     }
 
     pub fn contains(&self, point: &LngLat<F, U>) -> bool {
-        point.lng >= self.west
-            && point.lng <= self.east
-            && point.lat >= self.south
-            && point.lat <= self.north
+        let lng_in = if self.west <= self.east {
+            point.lng >= self.west && point.lng <= self.east
+        } else {
+            // Antimeridian wrapping: extent spans across ±180°
+            point.lng >= self.west || point.lng <= self.east
+        };
+        lng_in && point.lat >= self.south && point.lat <= self.north
+    }
+
+    /// Returns true if `self` fully contains `other`
+    /// (all four corners of `other` are within `self`).
+    /// Handles antimeridian-wrapping extents where `west > east`.
+    pub fn contains_extent(&self, other: &Self) -> bool {
+        let self_wraps = self.west > self.east;
+        let other_wraps = other.west > other.east;
+
+        let lng_contained = match (self_wraps, other_wraps) {
+            (false, false) => self.west <= other.west && self.east >= other.east,
+            (true, false) => other.west >= self.west || other.east <= self.east,
+            (false, true) => false,
+            (true, true) => self.west <= other.west && self.east >= other.east,
+        };
+        lng_contained && self.south <= other.south && self.north >= other.north
     }
 
     pub fn intersects(&self, other: Self) -> bool {
@@ -223,6 +242,166 @@ mod test {
         assert!(e1.intersects(e2));
         assert!(e1.intersects(e3));
         assert!(!e2.intersects(e3));
+    }
+
+    #[test]
+    fn contains_extent_fully_inside() {
+        use crate::Angle;
+        let outer: Extent<f64, Radians> = Extent {
+            west: Angle::new(0.0),
+            south: Angle::new(0.0),
+            east: Angle::new(1.0),
+            north: Angle::new(1.0),
+        };
+        let inner: Extent<f64, Radians> = Extent {
+            west: Angle::new(0.2),
+            south: Angle::new(0.2),
+            east: Angle::new(0.8),
+            north: Angle::new(0.8),
+        };
+        assert!(outer.contains_extent(&inner));
+        assert!(!inner.contains_extent(&outer));
+    }
+
+    #[test]
+    fn contains_extent_identical() {
+        use crate::Angle;
+        let e: Extent<f64, Radians> = Extent {
+            west: Angle::new(0.0),
+            south: Angle::new(0.0),
+            east: Angle::new(1.0),
+            north: Angle::new(1.0),
+        };
+        assert!(e.contains_extent(&e));
+    }
+
+    #[test]
+    fn contains_extent_partial_overlap_returns_false() {
+        use crate::Angle;
+        let a: Extent<f64, Radians> = Extent {
+            west: Angle::new(0.0),
+            south: Angle::new(0.0),
+            east: Angle::new(1.0),
+            north: Angle::new(1.0),
+        };
+        let b: Extent<f64, Radians> = Extent {
+            west: Angle::new(0.5),
+            south: Angle::new(0.5),
+            east: Angle::new(1.5),
+            north: Angle::new(1.5),
+        };
+        assert!(a.intersects(b));
+        assert!(!a.contains_extent(&b));
+        assert!(!b.contains_extent(&a));
+    }
+
+    #[test]
+    fn contains_extent_disjoint_returns_false() {
+        use crate::Angle;
+        let a: Extent<f64, Radians> = Extent {
+            west: Angle::new(0.0),
+            south: Angle::new(0.0),
+            east: Angle::new(1.0),
+            north: Angle::new(1.0),
+        };
+        let b: Extent<f64, Radians> = Extent {
+            west: Angle::new(2.0),
+            south: Angle::new(2.0),
+            east: Angle::new(3.0),
+            north: Angle::new(3.0),
+        };
+        assert!(!a.contains_extent(&b));
+        assert!(!b.contains_extent(&a));
+    }
+
+    #[test]
+    fn contains_wrapping_extent_point_inside() {
+        use crate::Angle;
+        // Extent spanning the antimeridian: west=170°, east=-170° (in radians)
+        let wrapping: Extent<f64, Radians> = Extent {
+            west: Angle::new(170_f64.to_radians()),
+            south: Angle::new(-10_f64.to_radians()),
+            east: Angle::new(-170_f64.to_radians()),
+            north: Angle::new(10_f64.to_radians()),
+        };
+        // Point at 175° should be inside
+        let inside = LngLat {
+            lng: Angle::new(175_f64.to_radians()),
+            lat: Angle::new(0_f64.to_radians()),
+        };
+        assert!(wrapping.contains(&inside));
+
+        // Point at -175° should be inside
+        let inside2 = LngLat {
+            lng: Angle::new(-175_f64.to_radians()),
+            lat: Angle::new(0_f64.to_radians()),
+        };
+        assert!(wrapping.contains(&inside2));
+
+        // Point at 0° should be outside
+        let outside = LngLat {
+            lng: Angle::new(0_f64.to_radians()),
+            lat: Angle::new(0_f64.to_radians()),
+        };
+        assert!(!wrapping.contains(&outside));
+    }
+
+    #[test]
+    fn contains_extent_antimeridian_wrapping() {
+        use crate::Angle;
+        // Self wraps: [170°, -170°]
+        let wrapping: Extent<f64, Radians> = Extent {
+            west: Angle::new(170_f64.to_radians()),
+            south: Angle::new(-10_f64.to_radians()),
+            east: Angle::new(-170_f64.to_radians()),
+            north: Angle::new(10_f64.to_radians()),
+        };
+
+        // Non-wrapping inner extent at [172°, 178°] — fits in west lobe
+        let inner_west: Extent<f64, Radians> = Extent {
+            west: Angle::new(172_f64.to_radians()),
+            south: Angle::new(-5_f64.to_radians()),
+            east: Angle::new(178_f64.to_radians()),
+            north: Angle::new(5_f64.to_radians()),
+        };
+        assert!(wrapping.contains_extent(&inner_west));
+
+        // Non-wrapping inner extent at [-178°, -172°] — fits in east lobe
+        let inner_east: Extent<f64, Radians> = Extent {
+            west: Angle::new(-178_f64.to_radians()),
+            south: Angle::new(-5_f64.to_radians()),
+            east: Angle::new(-172_f64.to_radians()),
+            north: Angle::new(5_f64.to_radians()),
+        };
+        assert!(wrapping.contains_extent(&inner_east));
+
+        // Non-wrapping extent clearly outside
+        let outside: Extent<f64, Radians> = Extent {
+            west: Angle::new(0_f64.to_radians()),
+            south: Angle::new(-5_f64.to_radians()),
+            east: Angle::new(10_f64.to_radians()),
+            north: Angle::new(5_f64.to_radians()),
+        };
+        assert!(!wrapping.contains_extent(&outside));
+
+        // Non-wrapping self cannot contain a wrapping other
+        let non_wrapping: Extent<f64, Radians> = Extent {
+            west: Angle::new(0_f64.to_radians()),
+            south: Angle::new(-90_f64.to_radians()),
+            east: Angle::new(90_f64.to_radians()),
+            north: Angle::new(90_f64.to_radians()),
+        };
+        assert!(!non_wrapping.contains_extent(&wrapping));
+
+        // Both wrap: larger wrapping contains smaller wrapping
+        let larger_wrapping: Extent<f64, Radians> = Extent {
+            west: Angle::new(160_f64.to_radians()),
+            south: Angle::new(-20_f64.to_radians()),
+            east: Angle::new(-160_f64.to_radians()),
+            north: Angle::new(20_f64.to_radians()),
+        };
+        assert!(larger_wrapping.contains_extent(&wrapping));
+        assert!(!wrapping.contains_extent(&larger_wrapping));
     }
 
     #[test]

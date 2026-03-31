@@ -1,3 +1,4 @@
+// NOTE: Coupled with crates/navara_feature/src/geometry/point.rs::pixel_to_world
 #include "chunks/horizon_culling_pars_vertex.glsl"
 #include "chunks/sprite_height_pars_vertex.glsl"
 #include "chunks/pixelToWorld.glsl"

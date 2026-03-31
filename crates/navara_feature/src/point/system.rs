@@ -1,7 +1,7 @@
 use bevy_ecs::{
     entity::Entity,
     query::{Added, With, Without},
-    system::{Commands, Query, ResMut},
+    system::{Commands, Query, Res, ResMut},
 };
 use navara_buffer_store::BufferStore;
 use navara_component::Deleted;
@@ -10,17 +10,25 @@ use navara_feature_component::{
     batch::{BatchTable, BatchedFeature, FeatureBatchId, FeatureBatchIdMap, GlobalBatchIds},
     batched_geometry::BatchedPointGeometry,
     id::FeatureId,
-    render::{RenderInformation, RenderableFeature, TransferablePointGeometry},
+    render::{PointRenderInformation, RenderableFeature, TransferablePointGeometry},
 };
 use navara_layer::{LayerId, LayerStore};
 use navara_material::PointMaterial;
-use navara_math::Vec3;
+use navara_math::{Transform, Vec3};
+use navara_window::Window;
 
-use navara_tile_component::{RasterTileQuadtree, TileMeshMarker, TileTerrainDataRequesterQuery};
+use navara_camera::{CameraFrustum, CameraMarker};
+use navara_occluder::ellipsoidal_occluder::EllipsoidalOccluder;
+use navara_tile_component::{
+    RasterTileQuadtree, TileExtent, TileMeshMarker, TileTerrainDataRequesterQuery,
+};
 
 use navara_feature_component::point::PointMarker;
 
-use crate::geometry::point::{PositionBuffer, resolve_terrain_height};
+use crate::geometry::point::{
+    PositionBuffer, collect_changed_tile_extents, resolve_absolute_heights_and_build_positions,
+    resolve_tiled_heights_and_build_positions, should_update_for_changed_terrain,
+};
 
 #[allow(clippy::type_complexity)]
 pub fn transfer_batched_mesh(
@@ -40,6 +48,7 @@ pub fn transfer_batched_mesh(
         (With<PointMarker>, Added<BatchedFeature>, Without<Deleted>),
     >,
     mut layer_store: ResMut<LayerStore>,
+    mut buf: ResMut<BufferStore>,
 ) {
     for (
         batched_feature_entity,
@@ -59,6 +68,8 @@ pub fn transfer_batched_mesh(
 
         let crs = batched_point_geom.crs.clone();
 
+        let terrain_heights = buf.new_f64(vec![0.0; feature_len]);
+
         // Create the renderable feature entity
         let entity = commands
             .spawn((
@@ -71,8 +82,8 @@ pub fn transfer_batched_mesh(
                     material: material.clone(),
                     transform,
                     feature_id: batched_feature_entity,
-                    render_info: RenderInformation {
-                        current_terrain_height: 0.,
+                    render_info: PointRenderInformation {
+                        terrain_heights,
                         is_rendered: false,
                         should_recalculate_height: true,
                     },
@@ -92,10 +103,9 @@ pub fn transfer_batched_mesh(
     }
 }
 
-// TODO: We might get the terrain height in the shader from a depth buffer.
-// TODO: This system is executed whenever a tile is added.
-//       This isn't efficient, so we need to update this system
-//       to execute only when the layer's bounding box is within the camera frustum.
+/// Update terrain heights for batched point features.
+/// Uses TileExtent-based batch lookup for tiled (MVT) features,
+/// and per-point traversal for GeoJSON features.
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn update_height_by_terrain_for_batched(
     mut qt: ResMut<RasterTileQuadtree>,
@@ -104,50 +114,71 @@ pub fn update_height_by_terrain_for_batched(
         (&PointMarker, &mut RenderableFeature),
         With<BatchedFeatureMarker>,
     >,
-    batched_features: Query<&BatchedPointGeometry, (With<PointMarker>, Without<Deleted>)>,
+    batched_features: Query<
+        (&BatchedPointGeometry, Option<&TileExtent>),
+        (With<PointMarker>, Without<Deleted>),
+    >,
     tile_meshes: Query<&TileMeshMarker, Added<TileMeshMarker>>,
     terrain_data_requester: TileTerrainDataRequesterQuery,
+    camera_query: Query<(&CameraFrustum, &Transform), With<CameraMarker>>,
+    occluder_query: Query<&EllipsoidalOccluder>,
+    window: Res<Window>,
 ) {
-    let is_tile_meshes_empty = tile_meshes.is_empty();
+    let changed_extents = collect_changed_tile_extents(&qt, tile_meshes.iter());
+    let camera = camera_query.iter().next();
+    let frustum = camera.map(|(f, _)| f);
+    let camera_position = camera
+        .map(|(_, t)| t.transform_point(Vec3::ZERO))
+        .unwrap_or(Vec3::ZERO);
+    let occluder = occluder_query.iter().next();
+    let screen_height = window.height;
 
     for (_, mut feature) in &mut renderable_features {
-        match feature.as_ref() {
-            RenderableFeature::Point {
-                render_info,
-                material,
-                active,
-                ..
-            } => {
-                if !render_info.is_rendered {
-                    continue;
-                }
-                if (is_tile_meshes_empty || !material.clamp_to_ground)
-                    && !render_info.should_recalculate_height
-                {
-                    continue;
-                }
-                if !material.show || !active {
-                    continue;
-                }
-            }
-            _ => continue,
+        let (show, clamp_to_ground, is_rendered, active, feature_id, should_recalculate) =
+            match feature.as_ref() {
+                RenderableFeature::Point {
+                    material,
+                    active,
+                    feature_id,
+                    render_info,
+                    ..
+                } => (
+                    material.show,
+                    material.clamp_to_ground,
+                    render_info.is_rendered,
+                    *active,
+                    *feature_id,
+                    render_info.should_recalculate_height,
+                ),
+                _ => continue,
+            };
+
+        if !is_rendered || !show || !active {
+            continue;
+        }
+        let Ok((batched_point_geom, tile_extent)) = batched_features.get(feature_id) else {
+            continue;
         };
+        if !should_recalculate
+            && !should_update_for_changed_terrain(
+                clamp_to_ground,
+                &changed_extents,
+                batched_point_geom,
+                tile_extent,
+            )
+        {
+            continue;
+        }
 
         match feature.as_mut() {
             RenderableFeature::Point {
-                coordinates: _,
-                crs: _,
                 material,
-                feature_id,
                 render_info,
                 geometry,
                 transform,
                 ..
             } => {
                 render_info.should_recalculate_height = false;
-                let Ok(batched_point_geom) = batched_features.get(*feature_id) else {
-                    continue;
-                };
 
                 let feature_len = batched_point_geom.coords.len();
                 let rtc_center = if geometry.position_3d_high.is_some() {
@@ -156,25 +187,44 @@ pub fn update_height_by_terrain_for_batched(
                     Some(transform.translation)
                 };
                 let mut positions = PositionBuffer::new(rtc_center, feature_len);
+                let mut heights = buf
+                    .remove_f64(&render_info.terrain_heights)
+                    .unwrap_or_default();
 
-                for coords in &batched_point_geom.coords {
-                    let terrain_height = resolve_terrain_height(
-                        *coords,
+                if let Some(te) = tile_extent {
+                    resolve_tiled_heights_and_build_positions(
+                        &te.extent,
+                        &batched_point_geom.coords,
                         &batched_point_geom.crs,
+                        material.height,
                         material.clamp_to_ground,
+                        &mut heights,
                         &mut qt,
                         &mut buf,
                         &terrain_data_requester,
+                        &mut positions,
                     );
-                    render_info.current_terrain_height = terrain_height;
-                    positions.push_from_crs(
-                        *coords,
+                } else {
+                    resolve_absolute_heights_and_build_positions(
+                        &batched_point_geom.coords,
                         &batched_point_geom.crs,
                         material.height,
-                        terrain_height,
+                        material.clamp_to_ground,
+                        material.size,
+                        material.size_in_meters,
+                        frustum,
+                        occluder,
+                        camera_position,
+                        screen_height,
+                        &mut heights,
+                        &mut qt,
+                        &mut buf,
+                        &terrain_data_requester,
+                        &mut positions,
                     );
                 }
 
+                render_info.terrain_heights = buf.new_f64(heights);
                 positions.apply_to(&mut buf, geometry);
             }
             _ => unreachable!(),
