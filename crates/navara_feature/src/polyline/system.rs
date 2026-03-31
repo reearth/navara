@@ -219,6 +219,7 @@ pub fn remove_batched_feature(
             Entity,
             &FeatureId,
             &BatchedFeature,
+            &FeatureBatchId,
             &GlobalBatchIds,
             Option<&navara_feature_component::batched_geometry::BatchedPolylineGeometry>,
         ),
@@ -229,8 +230,14 @@ pub fn remove_batched_feature(
     mut batch_table_res: ResMut<BatchTable>,
     mut feature_batch_id_map: ResMut<FeatureBatchIdMap>,
 ) {
-    for (feature_id, rendered_feature_id, batched_feature, global_batch_ids, batched_geom) in
-        &removed_features
+    for (
+        feature_id,
+        rendered_feature_id,
+        batched_feature,
+        feature_batch_id,
+        global_batch_ids,
+        batched_geom,
+    ) in &removed_features
     {
         // Clean up RenderableFeature if it exists (tessellation completed and transferred)
         if let Some(rendered_feature_id) = rendered_feature_id.0 {
@@ -254,7 +261,8 @@ pub fn remove_batched_feature(
             geom.remove_from_buf(&mut buf);
         }
 
-        // Always clean up GlobalBatchIds and despawn the BatchedFeature entity
+        // Always clean up BatchTable, GlobalBatchIds, and despawn the BatchedFeature entity
+        batch_table_res.remove(&feature_batch_id.0);
         buf.remove(&global_batch_ids.handle);
         commands.entity(feature_id).despawn();
     }
