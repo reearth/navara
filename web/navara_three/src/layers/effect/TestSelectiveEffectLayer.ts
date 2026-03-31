@@ -84,7 +84,7 @@ export class TestSelectiveEffectLayer extends SelectiveEffectLayer<
 
 /**
  * Custom PostProcessing Pass for TestPostEffect
- * Masks are pre-rendered by CustomRenderPass during BaseMRT phase
+ * @deprecated SE Redesign — Mask-based pipeline is disabled.
  */
 class TestSelectivePass extends PostProcessingPass {
   private layer: TestSelectiveEffectLayer;

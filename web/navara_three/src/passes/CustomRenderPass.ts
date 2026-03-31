@@ -213,16 +213,6 @@ export class CustomRenderPass extends RenderPass {
       this._renderWithLight(renderer, this._scenes.mrt);
     }
 
-    // @deprecated SE Redesign - mask pass rendering disabled
-    // // Render to maskRTs after main MRT scene rendering
-    // // Uses context-based mesh self-determination (no traverse needed)
-    // this.maskController.renderMaskPasses(
-    //   renderer,
-    //   renderTarget,
-    //   () => this._renderWithLight(renderer, this._scenes.mrt),
-    //   this._selectiveEffectRegistry,
-    // );
-
     this.debugNormalCopyPass?.render(renderer, null, null);
 
     const finalTarget = this.renderToScreen ? null : inputBuffer;

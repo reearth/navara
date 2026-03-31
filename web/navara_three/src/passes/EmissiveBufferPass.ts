@@ -257,5 +257,6 @@ export class EmissiveBufferPass extends CustomRenderPass {
     this.emissiveRT.dispose();
     this.debugCanvases?.container.remove();
     this.debugCanvases = undefined;
+    this._pixelBuffer = undefined;
   }
 }

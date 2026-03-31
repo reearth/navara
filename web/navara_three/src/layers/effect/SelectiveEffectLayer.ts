@@ -151,15 +151,9 @@ export abstract class SelectiveEffectLayer<
   }
 
   /**
-   * Get CustomRenderPass for mask registration.
-   * Used by subclasses and Pass classes for occlusion-specific RT registration.
-   *
-   * @deprecated SE Redesign — CustomRenderPass access will be replaced by the new SE architecture.
+   * @deprecated SE Redesign — Mask-based pipeline is disabled. Always returns undefined.
    */
   public getCustomRenderPass(): CustomRenderPass | undefined {
-    // @deprecated SE Redesign — commented out CustomRenderPass access
-    // const mrtPass = this.findLayer<MRTPassEffectLayer>("mrt");
-    // return mrtPass?.raw as CustomRenderPass | undefined;
     return undefined;
   }
 

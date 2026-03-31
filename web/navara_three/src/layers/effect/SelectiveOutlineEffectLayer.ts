@@ -55,11 +55,10 @@ const DEFAULT_EDGE_STRENGTH = 1.0;
 
 /**
  * Selective Outline Effect Layer
- * Renders selective outline using mask-based filtering.
- * Masks are pre-rendered by CustomRenderPass during BaseMRT phase.
  *
- * @deprecated SE Redesign — Mask RT creation and MaskController registration
- * will be replaced by the new SE architecture. Outline processing logic (Sobel edge detection) is retained.
+ * @deprecated SE Redesign — Mask-based pipeline is disabled.
+ * Will be replaced by EmissiveBuffer + EffectIds Buffer architecture.
+ * Outline processing logic (Sobel edge detection) is retained for reuse.
  */
 export class SelectiveOutlineEffectLayer extends SelectiveEffectLayer<
   SelectiveOutlineEffectConfig,

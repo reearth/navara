@@ -19,7 +19,11 @@ export function setupEmissiveBufferUniforms(
   material.userData.uEmissiveColor = { value: new ThreeColor(emissiveColor) };
   material.userData.uEmissiveIntensity = { value: emissiveIntensity };
 
-  material.onBeforeCompile = (shader) => {
+  const prevOnBeforeCompile = material.onBeforeCompile;
+  material.onBeforeCompile = (shader, renderer) => {
+    // Chain previous onBeforeCompile if it exists
+    prevOnBeforeCompile.call(material, shader, renderer);
+
     shader.uniforms.uEmissiveOnly = material.userData.uEmissiveOnly;
     shader.uniforms.uEmissiveColor = material.userData.uEmissiveColor;
     shader.uniforms.uEmissiveIntensity = material.userData.uEmissiveIntensity;

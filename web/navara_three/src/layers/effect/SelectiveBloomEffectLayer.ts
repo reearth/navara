@@ -57,11 +57,10 @@ const DEFAULT_THRESHOLD = 0.0;
 
 /**
  * Selective Bloom Effect Layer
- * Renders selective bloom using mask-based filtering.
- * Masks are pre-rendered by CustomRenderPass during BaseMRT phase.
  *
- * @deprecated SE Redesign — Mask RT creation and MaskController registration
- * will be replaced by the new SE architecture. Bloom processing logic is retained.
+ * @deprecated SE Redesign — Mask-based pipeline is disabled.
+ * Will be replaced by EmissiveBuffer + EffectIds Buffer architecture.
+ * Bloom processing logic is retained for reuse.
  */
 export class SelectiveBloomEffectLayer extends SelectiveEffectLayer<
   SelectiveBloomEffectConfig,
