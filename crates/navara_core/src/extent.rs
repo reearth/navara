@@ -338,5 +338,4 @@ mod test {
         assert!(e1.ratio(&e2) > 1.);
         // assert!(!e2.intersects(e3));
     }
-
 }

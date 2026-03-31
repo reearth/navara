@@ -240,7 +240,6 @@ pub fn resolve_absolute_heights_and_build_positions(
 const MIN_TERRAIN_HEIGHT: f32 = -500.0;
 const MAX_TERRAIN_HEIGHT: f32 = 8850.0;
 
-
 /// Rust-side equivalent of `nvr_pxToWorld` in `shaders/glsl/chunks/pixelToWorld.glsl`.
 /// If the shader changes, update this function.
 fn pixel_to_world(
