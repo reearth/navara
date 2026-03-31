@@ -18,11 +18,18 @@ graph TB
             R1[remove_batched_feature<br/>Cleans up on Deleted]
             T1 --> U1 --> R1
         end
-        subgraph "Polyline / Polygon (Update, chained)"
-            T2["transfer_batched_mesh<br/>Spawns worker task, then reads result<br/>when completed"]
-            U2["update_height_by_terrain / update_polygon"]
+        subgraph "Polyline (Update, chained)"
+            T2["transfer_batched_mesh<br/>Spawns worker task, then reads result"]
+            U2[update_height_by_terrain]
             R2[remove_batched_feature]
             T2 --> U2 --> R2
+        end
+        subgraph "Polygon (Update, chained)"
+            T4["transfer_batched_mesh<br/>Spawns worker task, then reads result"]
+            UP[update_polygon<br/>Apply material changes]
+            U4[update_height_by_terrain<br/>Recalculate min_max_heights]
+            R4[remove_batched_feature]
+            T4 --> UP --> U4 --> R4
         end
         subgraph "Model (Update, chained)"
             T3["transfer_mesh<br/>Detects Added&lt;ModelGeometry&gt;<br/>Direct transfer"]
@@ -40,9 +47,11 @@ graph TB
 
     EXT --> T1
     EXT --> T2
+    EXT --> T4
     EXT_MODEL --> T3
     T1 -->|spawn| RF
     T2 -->|spawn| RF
+    T4 -->|spawn| RF
     T3 -->|spawn| RF
     RF --> C --> ES
 ```
@@ -107,13 +116,23 @@ commands.spawn((
 
 3. **`remove_batched_feature`** — Triggered when `Deleted` is inserted on a `BatchedFeature` entity. Destroys RenderableFeature geometry buffers, removes batch ID mappings, cleans up BufferStore handles, and despawns entities.
 
-### Polyline / Polygon — Worker-based Transfer (3-stage chain)
+### Polyline — Worker-based Transfer (3-stage chain)
 
-1. **`transfer_batched_mesh`** — Uses `is_added()` change detection on `BatchedFeature`. On first detection, spawns a worker task entity (e.g., `ConstructPolylineBatchedFeatureWorkerTaskBundle`) for tessellation. On subsequent frames, checks if the worker task has completed. When the result is ready, reads the tessellated geometry and spawns `RenderableFeature::Polyline` / `Polygon`.
+1. **`transfer_batched_mesh`** — Uses `is_added()` change detection on `BatchedFeature`. On first detection, spawns a worker task entity (`ConstructPolylineBatchedFeatureWorkerTaskBundle`) for tessellation. On subsequent frames, checks if the worker task has completed. When the result is ready, reads the tessellated geometry and spawns `RenderableFeature::Polyline`.
 
-2. **`update_height_by_terrain`** (polyline) / **`update_polygon`** (polygon) — Adjusts terrain height or applies material updates.
+2. **`update_height_by_terrain`** — Samples terrain height within the polyline's extent and updates `min_max_heights` for the shader.
 
 3. **`remove_batched_feature`** — Same as point types, plus cleans up worker task results if tessellation completed but the RenderableFeature was not yet created.
+
+### Polygon — Worker-based Transfer (4-stage chain)
+
+1. **`transfer_batched_mesh`** — Uses `is_added()` change detection on `BatchedFeature`. On first detection, spawns a worker task entity (`ConstructPolygonBatchedFeatureWorkerTaskBundle`) for tessellation. When the result is ready, reads the tessellated geometry and spawns `RenderableFeature::Polygon`.
+
+2. **`update_polygon`** — Applies material changes (e.g., from `UpdatePolygon` events) to existing rendered polygons.
+
+3. **`update_height_by_terrain`** — Recalculates `min_max_heights` from material height/extruded_height and updates bounding sphere.
+
+4. **`remove_batched_feature`** — Same as point types, plus cleans up worker task results if tessellation completed but the RenderableFeature was not yet created.
 
 ### Model — Direct Transfer (2-stage chain)
 
