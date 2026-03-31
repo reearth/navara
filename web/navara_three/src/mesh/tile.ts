@@ -19,6 +19,7 @@ import {
   BufferAttribute,
   BufferGeometry,
   Color,
+  DataTexture,
   NearestFilter,
   Mesh,
   MeshLambertMaterial,
@@ -1423,9 +1424,18 @@ if (uPickable > 0.) {
       // Read zoom level from texture.userData (set by hillshade.ts when texture was created)
       if (isHillshade) {
         const layerZoom = t.userData.hillshadeZoom;
-        if (layerZoom !== undefined) {
+        if (
+          layerZoom !== undefined &&
+          t instanceof DataTexture &&
+          t.image &&
+          "width" in t.image
+        ) {
+          // Derive content pixel width from texture (subtract 2-pixel padding)
+          // Hillshade textures are padded: contentSize = paddedSize - 2
+          const contentPixelWidth = t.image.width - 2;
           const metersPerTexel =
-            (EARTH_CIRCUMFERENCE * cosLat) / (256 * Math.pow(2, layerZoom));
+            (EARTH_CIRCUMFERENCE * cosLat) /
+            (contentPixelWidth * Math.pow(2, layerZoom));
           m.userData.metersPerTexel.value[i] = metersPerTexel;
         }
       }
