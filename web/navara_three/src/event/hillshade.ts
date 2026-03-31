@@ -28,8 +28,10 @@ export function processHillshadeBackfilled(
   if (!event) return;
 
   // Use target_entity if provided (edge updates), otherwise use event entity (initialization)
+  // Note: u32::MAX (0xFFFFFFFF = 4294967295) is used as sentinel for None
   const entityId =
-    event.target_entity_ind !== 0 || event.target_entity_gen !== 0
+    event.target_entity_ind !== 0xffffffff &&
+    event.target_entity_gen !== 0xffffffff
       ? `${event.target_entity_ind}_${event.target_entity_gen}`
       : generate_id_from_entity(event);
 
