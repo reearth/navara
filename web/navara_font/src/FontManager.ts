@@ -274,11 +274,7 @@ export class FontManager {
    * Accepts either a font URL or a registered font family name.
    */
   isTextPrepared(fontIdentifier: string, text: string): boolean {
-    // For families, the stitched result is cached under the family name
-    const cacheKey = this._families.has(fontIdentifier)
-      ? fontIdentifier
-      : fontIdentifier;
-    return this._shapeCache.get(cacheKey)?.has(text) ?? false;
+    return this._shapeCache.get(fontIdentifier)?.has(text) ?? false;
   }
 
   /**
@@ -287,10 +283,7 @@ export class FontManager {
    * Accepts either a font URL or a registered font family name.
    */
   shapeText(fontIdentifier: string, text: string): ShapeTextResult | undefined {
-    const cacheKey = this._families.has(fontIdentifier)
-      ? fontIdentifier
-      : fontIdentifier;
-    return this._shapeCache.get(cacheKey)?.get(text);
+    return this._shapeCache.get(fontIdentifier)?.get(text);
   }
 
   /** Prepare text for a single standalone font (non-family path). */
@@ -379,16 +372,12 @@ export class FontManager {
     const allGlyphs: ShapedGlyph[] = [];
     const metricsMap = new Map<string, GlyphMetrics>();
     let unitsPerEm = 0;
-    let fontIndex = 0;
 
     for (const seg of segments) {
       const result = this._shapeCache.get(seg.url)?.get(seg.text);
       if (!result) continue;
 
-      if (unitsPerEm === 0) {
-        unitsPerEm = result.unitsPerEm;
-        fontIndex = result.fontIndex;
-      }
+      if (unitsPerEm === 0) unitsPerEm = result.unitsPerEm;
 
       allGlyphs.push(...result.glyphs);
 
@@ -404,7 +393,6 @@ export class FontManager {
       glyphs: allGlyphs,
       metrics: [...metricsMap.values()],
       unitsPerEm,
-      fontIndex,
     };
   }
 
@@ -413,8 +401,8 @@ export class FontManager {
    * Accepts either a font URL or a registered font family name.
    * For families, the atlas is shared across all faces.
    */
-  getAtlas(fontIdentifier: string, text?: string): FontAtlasData | undefined {
-    const key = this._resolveAtlasKey(fontIdentifier, text);
+  getAtlas(fontIdentifier: string): FontAtlasData | undefined {
+    const key = this._resolveAtlasKey(fontIdentifier);
     return this._atlasCache.get(key);
   }
 
@@ -425,8 +413,8 @@ export class FontManager {
    * Accepts either a font URL or a registered font family name.
    * For families, all faces share the same texture.
    */
-  getAtlasTexture(fontIdentifier: string, text?: string): DataTexture | null {
-    const key = this._resolveAtlasKey(fontIdentifier, text);
+  getAtlasTexture(fontIdentifier: string): DataTexture | null {
+    const key = this._resolveAtlasKey(fontIdentifier);
 
     if (!this._atlasDirty.has(key)) {
       const cached = this._textureCache.get(key);
@@ -496,7 +484,7 @@ export class FontManager {
 
   /** Resolve a font identifier to its atlas key.
    *  Family names are their own atlas key; font URLs are looked up via _atlasKeys. */
-  private _resolveAtlasKey(fontIdentifier: string, _text?: string): string {
+  private _resolveAtlasKey(fontIdentifier: string): string {
     // If it's a registered family name, that IS the atlas key
     if (this._families.has(fontIdentifier)) return fontIdentifier;
     // For font URLs, resolve via the atlas key map (falls back to URL itself)

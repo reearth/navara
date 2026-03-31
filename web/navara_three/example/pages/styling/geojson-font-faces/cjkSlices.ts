@@ -3,9 +3,6 @@ import type { FontFace } from "@navara/font";
 type UnicodeRange = { from: number; to: number };
 
 const face = (url: string, unicodeRanges: UnicodeRange[]): FontFace => ({
-  family: "WorldCities",
-  style: "normal",
-  weight: 400,
   url,
   unicodeRanges,
 });

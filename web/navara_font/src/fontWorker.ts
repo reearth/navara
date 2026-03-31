@@ -54,7 +54,6 @@ function convertShapeResult(sr: WasmShapeTextResult | undefined) {
     glyphs: convertGlyphs(sr.glyphs),
     metrics: convertMetrics(sr.metrics),
     unitsPerEm: sr.units_per_em,
-    fontIndex: sr.font_index,
   };
   sr.free();
   return result;

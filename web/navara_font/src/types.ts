@@ -28,8 +28,6 @@ export type ShapeTextResult = {
   metrics: GlyphMetrics[];
   /** Font units per em (needed for converting font-unit to pixel space) */
   unitsPerEm: number;
-  /** Font index of the font that produced this result. */
-  fontIndex: number;
 };
 
 /** SDF atlas texture data. */
@@ -52,9 +50,6 @@ type UnicodeRange = {
 };
 
 export type FontFace = {
-  family: string;
-  style: string;
-  weight: number;
   unicodeRanges: UnicodeRange[];
   url: string;
 };

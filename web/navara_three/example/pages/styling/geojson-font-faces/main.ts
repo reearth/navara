@@ -26,9 +26,6 @@ const WORLD_FONT_FAMILY: FontFamily = {
   faces: [
     // Latin (Basic Latin + Latin-1 Supplement + common punctuation/symbols)
     {
-      family: "WorldCities",
-      style: "normal",
-      weight: 400,
       url: FONT_DATASETS.RobotoLatin.url,
       unicodeRanges: [
         { from: 0x0000, to: 0x00ff },
@@ -47,9 +44,6 @@ const WORLD_FONT_FAMILY: FontFamily = {
     },
     // Latin Extended
     {
-      family: "WorldCities",
-      style: "normal",
-      weight: 400,
       url: FONT_DATASETS.RobotoLatinExt.url,
       unicodeRanges: [
         { from: 0x0100, to: 0x02ba },
@@ -69,9 +63,6 @@ const WORLD_FONT_FAMILY: FontFamily = {
     },
     // Cyrillic
     {
-      family: "WorldCities",
-      style: "normal",
-      weight: 400,
       url: FONT_DATASETS.RobotoCyrillic.url,
       unicodeRanges: [
         { from: 0x0301, to: 0x0301 },
@@ -83,9 +74,6 @@ const WORLD_FONT_FAMILY: FontFamily = {
     },
     // Cyrillic Extended
     {
-      family: "WorldCities",
-      style: "normal",
-      weight: 400,
       url: FONT_DATASETS.RobotoCyrillicExt.url,
       unicodeRanges: [
         { from: 0x0460, to: 0x052f },
@@ -98,9 +86,6 @@ const WORLD_FONT_FAMILY: FontFamily = {
     },
     // Greek
     {
-      family: "WorldCities",
-      style: "normal",
-      weight: 400,
       url: FONT_DATASETS.RobotoGreek.url,
       unicodeRanges: [
         { from: 0x0370, to: 0x0377 },
@@ -113,9 +98,6 @@ const WORLD_FONT_FAMILY: FontFamily = {
     },
     // Vietnamese
     {
-      family: "WorldCities",
-      style: "normal",
-      weight: 400,
       url: FONT_DATASETS.RobotoVietnamese.url,
       unicodeRanges: [
         { from: 0x0102, to: 0x0103 },
@@ -148,9 +130,6 @@ const WORLD_FONT_FAMILY: FontFamily = {
     ...notoSansKRSlices,
     // Arabic
     {
-      family: "WorldCities",
-      style: "normal",
-      weight: 400,
       url: FONT_DATASETS.NotoSansArabic.url,
       unicodeRanges: [
         { from: 0x0600, to: 0x06ff }, // Arabic
@@ -162,92 +141,54 @@ const WORLD_FONT_FAMILY: FontFamily = {
     },
     // Thai
     {
-      family: "WorldCities",
-      style: "normal",
-      weight: 400,
       url: FONT_DATASETS.NotoSansThai.url,
       unicodeRanges: [{ from: 0x0e00, to: 0x0e7f }],
     },
     // Devanagari (Hindi, Nepali)
     {
-      family: "WorldCities",
-      style: "normal",
-      weight: 400,
       url: FONT_DATASETS.NotoSansDevanagari.url,
       unicodeRanges: [
         { from: 0x0900, to: 0x097f }, // Devanagari
         { from: 0xa8e0, to: 0xa8ff }, // Devanagari Extended
       ],
     },
-    // Hebrew
-    {
-      family: "WorldCities",
-      style: "normal",
-      weight: 400,
-      url: FONT_DATASETS.NotoSansHebrew.url,
-      unicodeRanges: [{ from: 0x0590, to: 0x05ff }],
-    },
     // Armenian
     {
-      family: "WorldCities",
-      style: "normal",
-      weight: 400,
       url: FONT_DATASETS.NotoSansArmenian.url,
       unicodeRanges: [{ from: 0x0530, to: 0x058f }],
     },
     // Georgian
     {
-      family: "WorldCities",
-      style: "normal",
-      weight: 400,
       url: FONT_DATASETS.NotoSansGeorgian.url,
       unicodeRanges: [{ from: 0x10a0, to: 0x10ff }],
     },
     // Bengali
     {
-      family: "WorldCities",
-      style: "normal",
-      weight: 400,
       url: FONT_DATASETS.NotoSansBengali.url,
       unicodeRanges: [{ from: 0x0980, to: 0x09ff }],
     },
     // Tamil
     {
-      family: "WorldCities",
-      style: "normal",
-      weight: 400,
       url: FONT_DATASETS.NotoSansTamil.url,
       unicodeRanges: [{ from: 0x0b80, to: 0x0bff }],
     },
     // Telugu
     {
-      family: "WorldCities",
-      style: "normal",
-      weight: 400,
       url: FONT_DATASETS.NotoSansTelugu.url,
       unicodeRanges: [{ from: 0x0c00, to: 0x0c7f }],
     },
     // Kannada
     {
-      family: "WorldCities",
-      style: "normal",
-      weight: 400,
       url: FONT_DATASETS.NotoSansKannada.url,
       unicodeRanges: [{ from: 0x0c80, to: 0x0cff }],
     },
     // Myanmar
     {
-      family: "WorldCities",
-      style: "normal",
-      weight: 400,
       url: FONT_DATASETS.NotoSansMyanmar.url,
       unicodeRanges: [{ from: 0x1000, to: 0x109f }],
     },
     // Lao
     {
-      family: "WorldCities",
-      style: "normal",
-      weight: 400,
       url: FONT_DATASETS.NotoSansLao.url,
       unicodeRanges: [{ from: 0x0e80, to: 0x0eff }],
     },
@@ -306,9 +247,9 @@ const run = async () => {
         clampToGround: true,
         depthTest: true,
         center: { x: 0.5, y: 0.0 },
-        // outlineColor: new Color().setStyle("#000000"),
-        // outlineWidth: 5,
-        // outlineOpacity: 1.0,
+        outlineColor: new Color().setStyle("#000000"),
+        outlineWidth: 5,
+        outlineOpacity: 0.5,
       },
     });
 
