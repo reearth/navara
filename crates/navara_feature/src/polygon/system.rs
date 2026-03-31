@@ -9,18 +9,14 @@ use navara_component::{Deleted, OrderByDistance};
 use navara_core::{Aabb, BoundingSphere, CRS, WGS84_64};
 use navara_feature_component::{
     batch::{BatchTable, FeatureBatchId, FeatureBatchIdMap, GlobalBatchIds},
-    polygon::{PolygonGeometry, PolygonMarker, UpdatePolygon},
+    polygon::{PolygonMarker, UpdatePolygon},
 };
 use navara_layer::{LayerId, LayerStore};
 use navara_material::{PolygonInternalMaterial, PolygonMaterial};
-use navara_math::{FloatType, Transform, Vec3};
-use navara_tile_component::{
-    OverscaledTileHandle, RasterTileQuadtree, TileExtent, TileMeshMarker,
-    sample_terrain_height_within_extent,
-};
+use navara_math::{Transform, Vec3};
+use navara_tile_component::{OverscaledTileHandle, TileExtent};
 
 use navara_feature_component::{
-    BatchedFeatureMarker,
     batch::BatchedFeature,
     id::FeatureId,
     render::{PolygonRenderInformation, RenderableFeature},
@@ -216,109 +212,6 @@ pub fn update_polygon(
     }
 }
 
-// TODO: This system is executed whenever a tile is added.
-//       This isn't efficient, so we need to update this system
-//       to execute only when the layer's bounding box is within the camera frustum.
-#[allow(clippy::too_many_arguments)]
-pub fn update_height_by_terrain(
-    mut qt: ResMut<RasterTileQuadtree>,
-    mut renderable_features: Query<(&PolygonMarker, &mut RenderableFeature)>,
-    tile_meshes: Query<&TileMeshMarker, Added<TileMeshMarker>>,
-) {
-    let is_tile_meshes_empty = tile_meshes.is_empty();
-
-    for (_, mut feature) in &mut renderable_features {
-        match feature.as_ref() {
-            RenderableFeature::Polygon {
-                render_info,
-                material,
-                active,
-                ..
-            } => {
-                if render_info.should_be_texturized {
-                    continue;
-                }
-
-                if is_tile_meshes_empty && material.clamp_to_ground {
-                    continue;
-                }
-
-                if !material.clamp_to_ground && !render_info.should_recalculate_height {
-                    continue;
-                }
-
-                if !material.show || !active {
-                    continue;
-                }
-            }
-            _ => continue,
-        };
-        match feature.as_mut() {
-            RenderableFeature::Polygon {
-                material,
-                extent,
-                render_info,
-                bounding_sphere,
-                ..
-            } => {
-                render_info.should_recalculate_height = false;
-
-                let Some(distance_to_center_from_ellipsoid_surface) =
-                    render_info.distance_to_center_from_ellipsoid_surface
-                else {
-                    continue;
-                };
-                let Some(extent) = extent else {
-                    continue;
-                };
-
-                let (min_height, max_height) =
-                    if material.clamp_to_ground && !render_info.should_be_texturized {
-                        let (min, max) = sample_terrain_height_within_extent(&mut qt, *extent);
-                        (min, max)
-                    } else {
-                        (
-                            material.height as f64,
-                            material.extruded_height.unwrap_or(0.) as f64,
-                        )
-                    };
-
-                let internal = material.internal.as_mut().unwrap();
-                internal.min_max_heights = calc_min_max_height(
-                    min_height,
-                    max_height,
-                    material.clamp_to_ground,
-                    distance_to_center_from_ellipsoid_surface,
-                );
-
-                let aabb = Aabb::from_extent_f64(*extent, 0., 0.);
-                *bounding_sphere = Some(get_bounding_sphere(&aabb));
-            }
-            _ => unreachable!(),
-        };
-    }
-}
-
-fn calc_min_max_height(
-    height: FloatType,
-    extruded_height: FloatType,
-    clamp_to_ground: bool,
-    distance_to_center_from_ellipsoid_surface: FloatType,
-) -> Vec<FloatType> {
-    let height = if clamp_to_ground {
-        height.min(distance_to_center_from_ellipsoid_surface)
-    } else {
-        height
-    };
-    let extruded_height = if clamp_to_ground {
-        extruded_height
-    } else {
-        height + extruded_height
-    };
-
-    vec![height, extruded_height]
-}
-
 fn get_bounding_sphere(aabb: &Aabb) -> BoundingSphere {
     // Use AABB center and extents directly without height adjustment
     let bs_center = aabb.center;
@@ -335,7 +228,13 @@ pub fn remove_batched_feature(
     mut commands: Commands,
     mut removed_renderable_features: Query<&mut RenderableFeature>,
     removed_features: Query<
-        (Entity, &FeatureId, &BatchedFeature, &GlobalBatchIds),
+        (
+            Entity,
+            &FeatureId,
+            &BatchedFeature,
+            &GlobalBatchIds,
+            Option<&navara_feature_component::batched_geometry::BatchedPolygonGeometry>,
+        ),
         (With<PolygonMarker>, With<Deleted>),
     >,
     worker_task_results: Query<&ConstructPolygonBatchedFeatureResult>,
@@ -343,7 +242,9 @@ pub fn remove_batched_feature(
     mut batch_table_res: ResMut<BatchTable>,
     mut feature_batch_id_map: ResMut<FeatureBatchIdMap>,
 ) {
-    for (feature_id, rendered_feature_id, batched_feature, global_batch_ids) in &removed_features {
+    for (feature_id, rendered_feature_id, batched_feature, global_batch_ids, batched_geom) in
+        &removed_features
+    {
         // Clean up RenderableFeature if it exists (tessellation completed and transferred)
         if let Some(rendered_feature_id) = rendered_feature_id.0 {
             if let Ok(mut feature) = removed_renderable_features.get_mut(rendered_feature_id) {
@@ -364,20 +265,13 @@ pub fn remove_batched_feature(
             }
         }
 
+        // Clean up BatchedPolygonGeometry handles in BufferStore
+        if let Some(geom) = batched_geom {
+            geom.remove_from_buf(&mut buf);
+        }
+
         // Always clean up GlobalBatchIds and despawn the BatchedFeature entity
         buf.remove(&global_batch_ids.handle);
         commands.entity(feature_id).despawn();
-    }
-}
-
-#[allow(clippy::type_complexity)]
-pub fn cleanup_deleted_batched_children(
-    mut commands: Commands,
-    mut buf: ResMut<BufferStore>,
-    deleted: Query<(Entity, &PolygonGeometry), (With<BatchedFeatureMarker>, With<Deleted>)>,
-) {
-    for (entity, geometry) in &deleted {
-        geometry.remove_from_buf(&mut buf);
-        commands.entity(entity).despawn();
     }
 }

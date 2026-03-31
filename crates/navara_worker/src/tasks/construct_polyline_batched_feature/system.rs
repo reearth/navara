@@ -6,26 +6,24 @@ use bevy_ecs::{
 };
 use navara_buffer_store::BufferStore;
 use navara_component::Deleted;
-use navara_core::{Extent, Radians};
-use navara_feature_component::{
-    polyline::construct_polyline_feature, render::TransferablePolylineGeometry,
-};
-use navara_geometry::PolylineGeometryAttributes;
+use navara_feature_component::polyline::PolylineGeometry;
 use navara_material::PolylineMaterial;
-use navara_math::FloatType;
 
 use super::{ConstructPolylineBatchedFeatureParameters, ConstructPolylineBatchedFeatureResult};
 
+/// Construct polyline geometry from per-feature child entities on a worker thread.
+///
+/// TODO: Implement this system when we support Bevy rendering engine.
 #[allow(clippy::type_complexity)]
 pub(crate) fn construct_polyline_batched_feature(
-    mut commands: Commands,
-    mut buf: ResMut<BufferStore>,
-    polylines: Query<(
-        &navara_feature_component::polyline::PolylineGeometry,
+    _commands: Commands,
+    _buf: ResMut<BufferStore>,
+    _polylines: Query<(
+        &PolylineGeometry,
         &PolylineMaterial,
         &navara_feature_component::batch::BatchId,
     )>,
-    constructors: Query<
+    _constructors: Query<
         (Entity, &ConstructPolylineBatchedFeatureParameters),
         (
             Added<WorkerTaskMarker>,
@@ -33,152 +31,5 @@ pub(crate) fn construct_polyline_batched_feature(
             Without<Deleted>,
         ),
     >,
-    features: Query<&navara_feature_component::batch::BatchedFeature>,
 ) {
-    for (e, constructor) in &constructors {
-        let batched_feature = features.get(constructor.batched_feature).unwrap();
-
-        let Ok((_geometry, material, _batch_id)) =
-            polylines.get(*batched_feature.features.first().unwrap())
-        else {
-            continue;
-        };
-        let use_rte = !constructor.flat;
-        let mut combined_attributes = if use_rte {
-            PolylineGeometryAttributes::with_batch_id_and_rte()
-        } else {
-            PolylineGeometryAttributes::with_batch_id()
-        };
-        let mut indices = vec![];
-        let mut index_offset = 0;
-
-        let mut combined_extent: Option<Extent<f64, Radians>> = None;
-        for feature_id in &batched_feature.features {
-            let Ok((geometry, _material, batch_id)) = polylines.get(*feature_id) else {
-                continue;
-            };
-
-            let Some((extent, mut constructed_geometry)) = construct_polyline_feature(
-                material,
-                buf.remove_f64(&geometry.coords).unwrap(),
-                &geometry.crs,
-                use_rte,
-            ) else {
-                continue;
-            };
-
-            let position_length = constructed_geometry.attributes.position.data.len()
-                / constructed_geometry.attributes.position.size as usize;
-            if position_length == 0 {
-                continue;
-            }
-
-            combined_extent = Some(match combined_extent {
-                Some(e) => e.union(extent),
-                None => extent,
-            });
-
-            combined_attributes
-                .position
-                .data
-                .append(&mut constructed_geometry.attributes.position.data);
-            combined_attributes
-                .start
-                .data
-                .append(&mut constructed_geometry.attributes.start.data);
-            combined_attributes
-                .forward_offset
-                .data
-                .append(&mut constructed_geometry.attributes.forward_offset.data);
-            combined_attributes
-                .start_normals
-                .data
-                .append(&mut constructed_geometry.attributes.start_normals.data);
-            combined_attributes
-                .end_normal_and_texture_coordinate_normalization_x
-                .data
-                .append(
-                    &mut constructed_geometry
-                        .attributes
-                        .end_normal_and_texture_coordinate_normalization_x
-                        .data,
-                );
-            combined_attributes
-                .right_normal_and_texture_coordinate_normalization_y
-                .data
-                .append(
-                    &mut constructed_geometry
-                        .attributes
-                        .right_normal_and_texture_coordinate_normalization_y
-                        .data,
-                );
-            combined_attributes
-                .batch_ids
-                .as_mut()
-                .unwrap()
-                .data
-                // TODO: Avoid cast
-                .append(&mut vec![batch_id.0 as FloatType; position_length]);
-
-            if let (Some(ref mut combined), Some(ref mut geo)) = (
-                &mut combined_attributes.position_high,
-                &mut constructed_geometry.attributes.position_high,
-            ) {
-                combined.data.append(&mut geo.data);
-            }
-            if let (Some(ref mut combined), Some(ref mut geo)) = (
-                &mut combined_attributes.position_low,
-                &mut constructed_geometry.attributes.position_low,
-            ) {
-                combined.data.append(&mut geo.data);
-            }
-            if let (Some(ref mut combined), Some(ref mut geo)) = (
-                &mut combined_attributes.start_high,
-                &mut constructed_geometry.attributes.start_high,
-            ) {
-                combined.data.append(&mut geo.data);
-            }
-            if let (Some(ref mut combined), Some(ref mut geo)) = (
-                &mut combined_attributes.start_low,
-                &mut constructed_geometry.attributes.start_low,
-            ) {
-                combined.data.append(&mut geo.data);
-            }
-            if let (Some(ref mut combined), Some(ref mut geo)) = (
-                &mut combined_attributes.end_high,
-                &mut constructed_geometry.attributes.end_high,
-            ) {
-                combined.data.append(&mut geo.data);
-            }
-            if let (Some(ref mut combined), Some(ref mut geo)) = (
-                &mut combined_attributes.end_low,
-                &mut constructed_geometry.attributes.end_low,
-            ) {
-                combined.data.append(&mut geo.data);
-            }
-
-            if index_offset == 0 {
-                indices.append(&mut constructed_geometry.indices);
-            } else {
-                for i in constructed_geometry.indices {
-                    indices.push(i + index_offset);
-                }
-            }
-
-            index_offset += position_length as u32;
-        }
-
-        commands
-            .entity(e)
-            .insert(ConstructPolylineBatchedFeatureResult {
-                extent: combined_extent.unwrap(),
-                geometry: TransferablePolylineGeometry::with_buf(
-                    &mut buf,
-                    navara_geometry::PolylineGeometry {
-                        attributes: combined_attributes,
-                        indices,
-                    },
-                ),
-            });
-    }
 }

@@ -8,7 +8,6 @@ use navara_buffer_store::BufferStore;
 use navara_component::{Deleted, OrderByDistance};
 use navara_core::CRS;
 use navara_feature_component::{
-    BatchedFeatureMarker,
     batch::{BatchTable, BatchedFeature, FeatureBatchId, FeatureBatchIdMap, GlobalBatchIds},
     id::FeatureId,
     render::{PolylineRenderInformation, RenderableFeature},
@@ -17,7 +16,7 @@ use navara_layer::{LayerId, LayerStore};
 use navara_material::{PolylineInternalMaterial, PolylineMaterial};
 use navara_math::{Transform, Vec3};
 
-use navara_feature_component::polyline::{PolylineGeometry, PolylineMarker};
+use navara_feature_component::polyline::PolylineMarker;
 use navara_tile_component::{
     OverscaledTileHandle, RasterTileQuadtree, TileExtent, TileMeshMarker,
     sample_terrain_height_within_extent,
@@ -216,7 +215,13 @@ pub fn remove_batched_feature(
     mut commands: Commands,
     mut removed_renderable_features: Query<&mut RenderableFeature>,
     removed_features: Query<
-        (Entity, &FeatureId, &BatchedFeature, &GlobalBatchIds),
+        (
+            Entity,
+            &FeatureId,
+            &BatchedFeature,
+            &GlobalBatchIds,
+            Option<&navara_feature_component::batched_geometry::BatchedPolylineGeometry>,
+        ),
         (With<PolylineMarker>, With<Deleted>),
     >,
     worker_task_results: Query<&ConstructPolylineBatchedFeatureResult>,
@@ -224,7 +229,9 @@ pub fn remove_batched_feature(
     mut batch_table_res: ResMut<BatchTable>,
     mut feature_batch_id_map: ResMut<FeatureBatchIdMap>,
 ) {
-    for (feature_id, rendered_feature_id, batched_feature, global_batch_ids) in &removed_features {
+    for (feature_id, rendered_feature_id, batched_feature, global_batch_ids, batched_geom) in
+        &removed_features
+    {
         // Clean up RenderableFeature if it exists (tessellation completed and transferred)
         if let Some(rendered_feature_id) = rendered_feature_id.0 {
             if let Ok(mut feature) = removed_renderable_features.get_mut(rendered_feature_id) {
@@ -242,20 +249,13 @@ pub fn remove_batched_feature(
             }
         }
 
+        // Clean up BatchedPolylineGeometry handles in BufferStore
+        if let Some(geom) = batched_geom {
+            geom.remove_from_buf(&mut buf);
+        }
+
         // Always clean up GlobalBatchIds and despawn the BatchedFeature entity
         buf.remove(&global_batch_ids.handle);
         commands.entity(feature_id).despawn();
-    }
-}
-
-#[allow(clippy::type_complexity)]
-pub fn cleanup_deleted_batched_children(
-    mut commands: Commands,
-    mut buf: ResMut<BufferStore>,
-    deleted: Query<(Entity, &PolylineGeometry), (With<BatchedFeatureMarker>, With<Deleted>)>,
-) {
-    for (entity, geometry) in &deleted {
-        geometry.remove_from_buf(&mut buf);
-        commands.entity(entity).despawn();
     }
 }

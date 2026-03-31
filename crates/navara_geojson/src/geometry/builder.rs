@@ -1,4 +1,6 @@
-use bevy_ecs::entity::Entity;
+use navara_core::{CRS, EncodedVec3, WGS84_64};
+use navara_geometry::{Hierarchy, WindingOrder};
+use navara_math::Vec3;
 
 use navara_feature_component::batch::BatchTable;
 pub(crate) use navara_feature_component::geometry_builder::GeometryAppearanceKind;
@@ -12,7 +14,7 @@ use navara_feature_component::geometry_builder::GeometryGroups;
 /// kind's batch.
 ///
 /// Properties are stored lazily: `begin_feature` prepares the data, but it is
-/// only committed to the batch table when `add_entity` is first called for that
+/// only committed to the batch table when geometry is first added for that
 /// kind. This avoids phantom batch entries for features whose geometry does
 /// not match any appearance.
 pub(crate) struct GeometryBuilder<'a> {
@@ -45,12 +47,8 @@ impl<'a> GeometryBuilder<'a> {
         self.groups.begin_feature();
     }
 
-    /// Add an entity to the group for the given appearance kind.
-    ///
-    /// Lazily commits the pending feature properties to this kind's batch on
-    /// first call per kind per feature. Returns the per-kind batch index for
-    /// this feature (to be used as `BatchIndex` on the child entity).
-    pub(crate) fn add_entity(&mut self, kind: GeometryAppearanceKind, entity: Entity) -> u32 {
+    /// Ensure a kind is registered, lazily initializing its batch in the table.
+    fn ensure_kind(&mut self, kind: GeometryAppearanceKind) {
         if !self.groups.has_kind(kind) {
             let batch_id = self
                 .batch_table
@@ -58,17 +56,64 @@ impl<'a> GeometryBuilder<'a> {
                 .unwrap_or(0);
             self.groups.register_kind(kind, batch_id);
         }
+    }
 
-        let global_batch_id = self.batch_table.gen_global_batch_id().unwrap_or(0);
-
-        let (batch_index, commit_batch_id) =
-            self.groups.track_entity(kind, entity, global_batch_id);
-
+    /// Commit pending properties if this is the first geometry for this kind in the current feature.
+    fn maybe_commit_props(&mut self, commit_batch_id: Option<u32>) {
         if let Some(batch_id) = commit_batch_id {
             let props = self.pending_properties.clone().unwrap();
             self.batch_table.add_values(batch_id, props);
         }
+    }
 
+    /// Accumulate point geometry with RTE encoding (GeoJSON direct, no tile).
+    pub(crate) fn add_point(
+        &mut self,
+        kind: GeometryAppearanceKind,
+        coords: Vec3,
+        crs: CRS,
+        height: f32,
+    ) -> u32 {
+        self.ensure_kind(kind);
+        let global_batch_id = self.batch_table.gen_global_batch_id().unwrap_or(0);
+        let world_pos = crs.to_vec3(WGS84_64, coords, height);
+        let enc = EncodedVec3::encode(world_pos);
+        let high = [enc.high.x as f32, enc.high.y as f32, enc.high.z as f32];
+        let low = [enc.low.x as f32, enc.low.y as f32, enc.low.z as f32];
+        let (batch_index, commit_batch_id) =
+            self.groups
+                .track_point_rte(kind, coords, crs, high, low, global_batch_id);
+        self.maybe_commit_props(commit_batch_id);
+        batch_index
+    }
+
+    /// Accumulate polyline geometry without spawning a child entity.
+    pub(crate) fn add_polyline(&mut self, points: Vec<f64>, crs: CRS) -> u32 {
+        let kind = GeometryAppearanceKind::Polyline;
+        self.ensure_kind(kind);
+        let global_batch_id = self.batch_table.gen_global_batch_id().unwrap_or(0);
+        let (batch_index, commit_batch_id) =
+            self.groups
+                .track_polyline(kind, points, crs, global_batch_id);
+        self.maybe_commit_props(commit_batch_id);
+        batch_index
+    }
+
+    /// Accumulate polygon geometry without spawning a child entity.
+    pub(crate) fn add_polygon(
+        &mut self,
+        outer_ring: Vec<f64>,
+        holes: &[Hierarchy],
+        winding_order: WindingOrder,
+        crs: CRS,
+    ) -> u32 {
+        let kind = GeometryAppearanceKind::Polygon;
+        self.ensure_kind(kind);
+        let global_batch_id = self.batch_table.gen_global_batch_id().unwrap_or(0);
+        let (batch_index, commit_batch_id) =
+            self.groups
+                .track_polygon(kind, outer_ring, holes, winding_order, crs, global_batch_id);
+        self.maybe_commit_props(commit_batch_id);
         batch_index
     }
 }
@@ -118,59 +163,7 @@ mod test {
     }
 
     #[test]
-    fn add_entity_assigns_sequential_batch_indices() {
-        let app = run_builder_test(|commands, builder| {
-            let e1 = commands.spawn_empty().id();
-            let e2 = commands.spawn_empty().id();
-            let e3 = commands.spawn_empty().id();
-
-            builder.begin_feature(&None);
-            let idx1 = builder.add_entity(GeometryAppearanceKind::Point, e1);
-
-            builder.begin_feature(&None);
-            let idx2 = builder.add_entity(GeometryAppearanceKind::Point, e2);
-
-            builder.begin_feature(&None);
-            let idx3 = builder.add_entity(GeometryAppearanceKind::Point, e3);
-
-            assert_eq!(idx1, 0);
-            assert_eq!(idx2, 1);
-            assert_eq!(idx3, 2);
-        });
-        let out = app.world().resource::<BuilderTestOutput>();
-        assert_eq!(out.groups.len(), 1);
-        assert_eq!(out.groups[0].entities.len(), 3);
-        assert_eq!(out.groups[0].global_batch_ids.len(), 3);
-    }
-
-    #[test]
-    fn add_entity_groups_entities_by_kind() {
-        let app = run_builder_test(|commands, builder| {
-            let e1 = commands.spawn_empty().id();
-            let e2 = commands.spawn_empty().id();
-            let e3 = commands.spawn_empty().id();
-
-            builder.begin_feature(&None);
-            builder.add_entity(GeometryAppearanceKind::Point, e1);
-
-            builder.begin_feature(&None);
-            builder.add_entity(GeometryAppearanceKind::Polyline, e2);
-
-            builder.begin_feature(&None);
-            builder.add_entity(GeometryAppearanceKind::Point, e3);
-        });
-        let out = app.world().resource::<BuilderTestOutput>();
-        assert_eq!(out.groups.len(), 2);
-        assert_eq!(out.groups[0].kind, GeometryAppearanceKind::Point);
-        assert_eq!(out.groups[0].entities.len(), 2);
-        assert_eq!(out.groups[0].global_batch_ids.len(), 2);
-        assert_eq!(out.groups[1].kind, GeometryAppearanceKind::Polyline);
-        assert_eq!(out.groups[1].entities.len(), 1);
-        assert_eq!(out.groups[1].global_batch_ids.len(), 1);
-    }
-
-    #[test]
-    fn begin_feature_without_add_entity_does_not_store_properties() {
+    fn begin_feature_without_add_does_not_store_properties() {
         let app = run_builder_test(|_, builder| {
             builder.begin_feature(&None);
         });
@@ -179,16 +172,20 @@ mod test {
     }
 
     #[test]
-    fn begin_feature_stores_properties_in_batch_table() {
+    fn add_point_stores_properties_in_batch_table() {
         let props = Some(serde_json::Map::from_iter([(
             "name".to_string(),
             serde_json::Value::String("test".to_string()),
         )]));
 
-        let app = run_builder_test(move |commands, builder| {
-            let entity = commands.spawn_empty().id();
+        let app = run_builder_test(move |_commands, builder| {
             builder.begin_feature(&props);
-            builder.add_entity(GeometryAppearanceKind::Point, entity);
+            builder.add_point(
+                GeometryAppearanceKind::Point,
+                Vec3::new(1., 2., 0.),
+                CRS::Geographic,
+                0.0,
+            );
         });
 
         let out = app.world().resource::<BuilderTestOutput>();
@@ -208,78 +205,23 @@ mod test {
 
     #[test]
     fn batch_ids_separate_per_kind() {
-        let app = run_builder_test(|commands, builder| {
-            let e1 = commands.spawn_empty().id();
-            let e2 = commands.spawn_empty().id();
-
+        let app = run_builder_test(|_commands, builder| {
             builder.begin_feature(&None);
-            builder.add_entity(GeometryAppearanceKind::Point, e1);
-            builder.add_entity(GeometryAppearanceKind::Billboard, e2);
+            builder.add_point(
+                GeometryAppearanceKind::Point,
+                Vec3::new(1., 2., 0.),
+                CRS::Geographic,
+                0.0,
+            );
+            builder.add_point(
+                GeometryAppearanceKind::Billboard,
+                Vec3::new(1., 2., 0.),
+                CRS::Geographic,
+                0.0,
+            );
         });
         let out = app.world().resource::<BuilderTestOutput>();
         assert_eq!(out.groups.len(), 2);
         assert_ne!(out.groups[0].batch_id, out.groups[1].batch_id);
-    }
-
-    #[test]
-    fn per_kind_batch_indices_skip_unmatched_features() {
-        let app = run_builder_test(|commands, builder| {
-            // Feature 0: Point → Point + Billboard appearances
-            builder.begin_feature(&None);
-            let e0a = commands.spawn_empty().id();
-            let idx0a = builder.add_entity(GeometryAppearanceKind::Point, e0a);
-            let e0b = commands.spawn_empty().id();
-            let idx0b = builder.add_entity(GeometryAppearanceKind::Billboard, e0b);
-            assert_eq!(idx0a, 0);
-            assert_eq!(idx0b, 0);
-
-            // Feature 1: LineString → Polyline appearance
-            builder.begin_feature(&None);
-            let e1 = commands.spawn_empty().id();
-            let idx1 = builder.add_entity(GeometryAppearanceKind::Polyline, e1);
-            assert_eq!(idx1, 0);
-
-            // Feature 2: Point → Point + Billboard appearances
-            builder.begin_feature(&None);
-            let e2a = commands.spawn_empty().id();
-            let idx2a = builder.add_entity(GeometryAppearanceKind::Point, e2a);
-            let e2b = commands.spawn_empty().id();
-            let idx2b = builder.add_entity(GeometryAppearanceKind::Billboard, e2b);
-            assert_eq!(idx2a, 1);
-            assert_eq!(idx2b, 1);
-
-            // Feature 3: Polygon → no matching appearance
-            builder.begin_feature(&None);
-
-            // Feature 4: LineString → Polyline appearance
-            builder.begin_feature(&None);
-            let e4 = commands.spawn_empty().id();
-            let idx4 = builder.add_entity(GeometryAppearanceKind::Polyline, e4);
-            assert_eq!(idx4, 1);
-        });
-
-        let out = app.world().resource::<BuilderTestOutput>();
-        assert_eq!(out.groups.len(), 3);
-
-        let point_group = out
-            .groups
-            .iter()
-            .find(|g| g.kind == GeometryAppearanceKind::Point)
-            .unwrap();
-        assert_eq!(point_group.entities.len(), 2);
-
-        let billboard_group = out
-            .groups
-            .iter()
-            .find(|g| g.kind == GeometryAppearanceKind::Billboard)
-            .unwrap();
-        assert_eq!(billboard_group.entities.len(), 2);
-
-        let polyline_group = out
-            .groups
-            .iter()
-            .find(|g| g.kind == GeometryAppearanceKind::Polyline)
-            .unwrap();
-        assert_eq!(polyline_group.entities.len(), 2);
     }
 }

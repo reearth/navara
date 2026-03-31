@@ -656,6 +656,49 @@ impl TransferablePointGeometry {
     }
 }
 
+impl From<&crate::batched_geometry::BatchedPointGeometry> for TransferablePointGeometry {
+    fn from(geom: &crate::batched_geometry::BatchedPointGeometry) -> Self {
+        use crate::batched_geometry::PointEncoding;
+        match geom.encoding {
+            PointEncoding::Rtc => Self {
+                position: Some(TransferableFloatAttribute {
+                    data: geom.encoded_a,
+                    size: 3,
+                }),
+                position_3d_high: None,
+                position_3d_low: None,
+                batch_ids: TransferableFloatAttribute {
+                    data: geom.batch_ids,
+                    size: 1,
+                },
+                batch_index: TransferableUintAttribute {
+                    data: geom.batch_indices,
+                    size: 1,
+                },
+            },
+            PointEncoding::Rte => Self {
+                position: None,
+                position_3d_high: Some(TransferableFloatAttribute {
+                    data: geom.encoded_a,
+                    size: 3,
+                }),
+                position_3d_low: Some(TransferableFloatAttribute {
+                    data: geom.encoded_b.unwrap(),
+                    size: 3,
+                }),
+                batch_ids: TransferableFloatAttribute {
+                    data: geom.batch_ids,
+                    size: 1,
+                },
+                batch_index: TransferableUintAttribute {
+                    data: geom.batch_indices,
+                    size: 1,
+                },
+            },
+        }
+    }
+}
+
 #[derive(Component, Clone, Debug, Default, PartialEq)]
 pub struct TransferableSingleGeometry {
     pub batch_id: Option<u32>,
