@@ -145,6 +145,7 @@ pub fn transfer_batched_mesh(
                 transform: Transform::from_translation(translation),
                 feature_id: batched_feature_entity,
                 render_info: PolygonRenderInformation {
+                    should_recalculate_height: true,
                     distance_to_center_from_ellipsoid_surface,
                     is_rendered: false,
                     should_be_texturized: clamp_to_ground && tile_coordinates.is_some(),
@@ -189,6 +190,7 @@ pub fn update_polygon(
 
         if let RenderableFeature::Polygon {
             material,
+            render_info,
             extent,
             bounding_sphere,
             ..
@@ -199,6 +201,7 @@ pub fn update_polygon(
                 || material.height != updated.material.height
                 || material.extruded_height != updated.material.extruded_height;
             material.update(&updated.material);
+            render_info.should_recalculate_height = should_recalculate_height;
 
             if should_recalculate_height && let Some(extent) = extent {
                 let aabb = Aabb::from_extent_f64(*extent, 0., 0.);
@@ -207,6 +210,92 @@ pub fn update_polygon(
         }
         commands.entity(e).remove::<UpdatePolygon>();
     }
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn update_height_by_terrain(
+    mut renderable_features: Query<(&PolygonMarker, &mut RenderableFeature)>,
+) {
+    for (_, mut feature) in &mut renderable_features {
+        match feature.as_ref() {
+            RenderableFeature::Polygon {
+                render_info,
+                material,
+                active,
+                ..
+            } => {
+                if render_info.should_be_texturized {
+                    continue;
+                }
+
+                if !material.clamp_to_ground && !render_info.should_recalculate_height {
+                    continue;
+                }
+
+                if !material.show || !active {
+                    continue;
+                }
+            }
+            _ => continue,
+        };
+        match feature.as_mut() {
+            RenderableFeature::Polygon {
+                material,
+                extent,
+                render_info,
+                bounding_sphere,
+                ..
+            } => {
+                render_info.should_recalculate_height = false;
+
+                let Some(distance_to_center_from_ellipsoid_surface) =
+                    render_info.distance_to_center_from_ellipsoid_surface
+                else {
+                    continue;
+                };
+                let Some(extent) = extent else {
+                    continue;
+                };
+
+                let (min_height, max_height) = (
+                    material.height as f64,
+                    material.extruded_height.unwrap_or(0.) as f64,
+                );
+
+                let internal = material.internal.as_mut().unwrap();
+                internal.min_max_heights = calc_min_max_height(
+                    min_height,
+                    max_height,
+                    material.clamp_to_ground,
+                    distance_to_center_from_ellipsoid_surface,
+                );
+
+                let aabb = Aabb::from_extent_f64(*extent, 0., 0.);
+                *bounding_sphere = Some(get_bounding_sphere(&aabb));
+            }
+            _ => unreachable!(),
+        };
+    }
+}
+
+fn calc_min_max_height(
+    height: f64,
+    extruded_height: f64,
+    clamp_to_ground: bool,
+    distance_to_center_from_ellipsoid_surface: f64,
+) -> Vec<f64> {
+    let height = if clamp_to_ground {
+        height.min(distance_to_center_from_ellipsoid_surface)
+    } else {
+        height
+    };
+    let extruded_height = if clamp_to_ground {
+        extruded_height
+    } else {
+        height + extruded_height
+    };
+
+    vec![height, extruded_height]
 }
 
 fn get_bounding_sphere(aabb: &Aabb) -> BoundingSphere {

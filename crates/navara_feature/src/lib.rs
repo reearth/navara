@@ -73,6 +73,7 @@ impl Plugin for FeaturePlugin {
                 (
                     polygon::system::transfer_batched_mesh,
                     polygon::system::update_polygon,
+                    polygon::system::update_height_by_terrain,
                     polygon::system::remove_batched_feature,
                 )
                     .chain(),
