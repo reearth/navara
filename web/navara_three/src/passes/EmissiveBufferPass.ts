@@ -3,7 +3,6 @@ import {
   WebGLRenderer,
   WebGLRenderTarget,
   PerspectiveCamera,
-  Material,
   Mesh,
   Object3D,
   Scene,
@@ -45,11 +44,10 @@ export class EmissiveBufferPass extends CustomRenderPass {
     camera: PerspectiveCamera,
     scenes: Scenes,
     meshes: MeshCache,
-    drapedFeatureMaterials: Map<string, Material>,
     inputBuffer: WebGLRenderTarget,
     globe: Globe,
   ) {
-    super(scenes, camera, meshes, drapedFeatureMaterials, inputBuffer, globe, {
+    super(scenes, camera, meshes, inputBuffer, globe, {
       disableShadow: true,
       allowTransparent: false,
     });

@@ -67,7 +67,7 @@ const run = async () => {
         color: new Color().setStyle("#ffffff"),
         size: params.size,
         height: 1,
-        scaleByDistance: true,
+        sizeInMeters: true,
         clampToGround: true,
         depthTest: true,
         url: "/example.png",

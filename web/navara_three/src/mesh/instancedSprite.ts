@@ -2,6 +2,7 @@ import {
   PointMesh as NavaraPointMesh,
   BillboardMesh as NavaraBillboardMesh,
 } from "@navara/engine";
+import { degreeToRadian } from "@navara/three_api";
 import {
   InstancedBufferAttribute,
   InstancedBufferGeometry,
@@ -14,6 +15,7 @@ import {
   LinearFilter,
   Color,
   PerspectiveCamera,
+  Vector2,
 } from "three";
 import invariant from "tiny-invariant";
 
@@ -45,6 +47,9 @@ type PositionsInfo = {
   nPositions: number;
   RTE: boolean;
 };
+
+/** Reusable Vector2 to avoid per-frame allocations in onBeforeRender. */
+const _tmpSize = new Vector2();
 
 export class InstancedSpriteMesh extends Mesh implements PickableMesh {
   private _batchIdToInstance = new Map<number, number>();
@@ -105,7 +110,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
       base: {
         scale: m.material.size ?? 100.0,
         center: [m.material.center?.x ?? 0.0, m.material.center?.y ?? 0.0],
-        scaleByDistance: m.material.scaleByDistance ?? true,
+        sizeInMeters: m.material.sizeInMeters ?? true,
         offsetDepth: m.material.offsetDepth ?? true,
         transparent: m.material.transparent ?? true,
         depthTest: m.material.depthTest ?? true,
@@ -342,7 +347,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
         billboard: isBillboard,
         scale: m.material.size ?? 100.0,
         center: [m.material.center?.x ?? 0.0, m.material.center?.y ?? 0.0],
-        scaleByDistance: m.material.scaleByDistance ?? true,
+        sizeInMeters: m.material.sizeInMeters ?? true,
         offsetDepth: m.material.offsetDepth ?? true,
         alphaTest: isBillboard ? (m.material.alphaTest ?? 0.0) : 0.0,
         pickable: false,
@@ -367,6 +372,10 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     ) => {
       const pCam = camera as PerspectiveCamera;
       mutates.updateFarPlane(pCam.far);
+      mutates.updateFovRad(degreeToRadian(pCam.fov));
+      mutates.updateScreenHeightPx(
+        _renderer.getDrawingBufferSize(_tmpSize).y / _renderer.getPixelRatio(),
+      );
 
       if (positionsInfo.RTE) {
         mutates.updateRteUniforms(

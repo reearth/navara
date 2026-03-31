@@ -101,6 +101,14 @@ impl PosConverter {
         ret
     }
 
+    /// Project a single point from tile coordinates to center-based coordinates.
+    pub fn project_point_on_center(&self, px: f64, py: f64) -> (FloatType, FloatType) {
+        let half_extent = self.extent as f64 / 2.0;
+        let x = (px - half_extent) / half_extent;
+        let y = -(py - half_extent) / half_extent;
+        (x, y)
+    }
+
     /// Construct points based on the extent center.
     pub fn project_points_on_center<P: AsXYZ>(&self, points: &[P]) -> Vec<FloatType> {
         let half_extent = self.extent as f64 / 2.0;

@@ -1,19 +1,10 @@
 import { Globe } from "@navara/core";
 import { DepthCopyPass } from "postprocessing";
 import {
-  AlwaysStencilFunc,
-  BackSide,
-  DecrementWrapStencilOp,
   DepthTexture,
-  FrontSide,
-  IncrementWrapStencilOp,
-  KeepStencilOp,
-  Material,
-  NotEqualStencilFunc,
   RGBADepthPacking,
   Scene,
   WebGLRenderTarget,
-  ZeroStencilOp,
   type PerspectiveCamera,
   type WebGLRenderer,
 } from "three";
@@ -21,6 +12,7 @@ import {
 import type { SelectiveEffectHelper } from "../core/SelectiveEffectHelper";
 import { SelectiveEffectMaskController } from "../core/SelectiveEffectMaskController";
 import { RenderPass } from "../effects";
+import { DrapedMesh } from "../mesh/DrapedMesh";
 import type { Scenes } from "../scene";
 import type { MeshCache } from "../type";
 
@@ -40,7 +32,6 @@ export type CustomRenderPassOptions = {
 export class CustomRenderPass extends RenderPass {
   protected _camera: PerspectiveCamera;
   protected _scenes: Scenes;
-  protected _drapedFeatureMaterials: Map<string, Material>;
   protected _meshes: MeshCache;
   gbufferRenderTarget: WebGLRenderTarget;
   private copyPass: RenderTargetCopyPass;
@@ -50,6 +41,7 @@ export class CustomRenderPass extends RenderPass {
   disableShadow: boolean;
   private globe: Globe;
   private combinedScene = new Scene();
+  private drapedTempScene = new Scene();
 
   // Used to render only the shadow map
   private shadowScene = new Scene();
@@ -71,7 +63,6 @@ export class CustomRenderPass extends RenderPass {
     scenes: Scenes,
     camera: PerspectiveCamera,
     meshes: MeshCache,
-    drapedFeatureMaterials: Map<string, Material>,
     inputBuffer: WebGLRenderTarget,
     globe: Globe,
     options?: CustomRenderPassOptions,
@@ -85,7 +76,6 @@ export class CustomRenderPass extends RenderPass {
     this._scenes = scenes;
     this._camera = camera;
     this._meshes = meshes;
-    this._drapedFeatureMaterials = drapedFeatureMaterials;
     this.globe = globe;
 
     this.gbufferRenderTarget = inputBuffer.clone();
@@ -135,7 +125,7 @@ export class CustomRenderPass extends RenderPass {
     inputBuffer: WebGLRenderTarget | null,
     _outputBuffer: WebGLRenderTarget | null,
   ) {
-    const shouldDrapeByStencilTest = this._drapedFeatureMaterials.size !== 0;
+    const shouldDrapeByStencilTest = this._scenes.draped.children.length !== 0;
 
     const renderTarget = this.gbufferRenderTarget;
 
@@ -275,53 +265,21 @@ export class CustomRenderPass extends RenderPass {
   // - https://www.isprs.org/proceedings/XXXVII/congress/2_pdf/5_WG-II-5/06.pdf
   // - http://wscg.zcu.cz/WSCG2007/Papers_2007/journal/B17-full.pdf
   protected _renderDrapedMesh(renderer: WebGLRenderer) {
-    const drapedFeaturesScene = this._scenes.draped;
+    const drapedScene = this._scenes.draped;
+    const children = [...drapedScene.children];
 
-    for (const [k, m] of this._drapedFeatureMaterials) {
-      if (this._meshes.get(k)?.visible === false || !m.visible) continue;
+    for (const child of children) {
+      if (!(child instanceof DrapedMesh) || !child.enabled()) continue;
 
-      // Back face
-      m.stencilFunc = AlwaysStencilFunc;
-      m.stencilFail = KeepStencilOp;
-      m.stencilZPass = KeepStencilOp;
-      m.stencilZFail = IncrementWrapStencilOp;
-      m.side = BackSide;
-      m.colorWrite = false;
-      m.depthWrite = false;
-      m.stencilWrite = true;
-      m.depthTest = true;
+      drapedScene.remove(child);
+      this.drapedTempScene.add(child);
 
-      const mesh = this._meshes.get(k);
-      if (!mesh) return;
+      child.process(() =>
+        this._renderWithLight(renderer, this.drapedTempScene),
+      );
 
-      drapedFeaturesScene.add(mesh);
-
-      this._renderWithLight(renderer, drapedFeaturesScene);
-
-      // Front face
-      m.side = FrontSide;
-      m.stencilZFail = DecrementWrapStencilOp;
-
-      this._renderWithLight(renderer, drapedFeaturesScene);
-
-      // Final
-      m.stencilFunc = NotEqualStencilFunc;
-      m.stencilFail = ZeroStencilOp;
-      m.stencilZFail = ZeroStencilOp;
-      m.stencilZPass = ZeroStencilOp;
-      m.side = BackSide;
-      m.colorWrite = true;
-      m.depthTest = false;
-
-      this._renderWithLight(renderer, drapedFeaturesScene);
-
-      drapedFeaturesScene.remove(mesh);
-
-      // Reset
-      m.colorWrite = false;
-      m.depthWrite = false;
-      m.depthTest = false;
-      m.stencilWrite = false;
+      this.drapedTempScene.remove(child);
+      drapedScene.add(child);
     }
   }
 

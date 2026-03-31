@@ -92,7 +92,7 @@ const run = async () => {
         lang: "ja",
         font: FONT_DATASETS.LineSeedJP.url,
         color: new Color().setStyle("#ffffff"),
-        scaleByDistance: true,
+        sizeInMeters: false,
         clampToGround: true,
         size: params.size,
         center: { x: 0.5, y: 0.0 },

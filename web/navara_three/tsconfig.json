@@ -25,10 +25,5 @@
     }
   },
   "include": ["src", "example"],
-  "exclude": ["./dist", "./node_modules"],
-  "references": [
-    {
-      "path": "./tsconfig.node.json"
-    }
-  ]
+  "exclude": ["./dist", "./node_modules"]
 }

@@ -97,7 +97,7 @@ export class SDFTextMesh
         center: material.center
           ? [material.center.x, material.center.y]
           : undefined,
-        scaleByDistance: material.scaleByDistance ?? false,
+        sizeInMeters: material.sizeInMeters ?? true,
         addHeight: material.height ?? 0.0,
         offsetDepth: material.offsetDepth ?? true,
         outlineWidth: material.outlineWidth ?? 0,
@@ -138,7 +138,7 @@ export class SDFTextMesh
       const pCam = camera as PerspectiveCamera;
       mutates.updatePerFrame(
         degreeToRadian(pCam.fov),
-        renderer.getDrawingBufferSize(_tmpSize).height,
+        renderer.getDrawingBufferSize(_tmpSize).y / renderer.getPixelRatio(),
         pCam.far,
         camera.position.x,
         camera.position.y,
@@ -215,12 +215,12 @@ export class SDFTextMesh
     });
   }
 
-  setFontSize(sizePx: number): void {
-    this._enhancer.update({ base: { fontSize: sizePx } });
+  setFontSize(size: number): void {
+    this._enhancer.update({ base: { fontSize: size } });
   }
 
-  setScaleByDistance(enabled: boolean): void {
-    this._enhancer.update({ base: { scaleByDistance: enabled } });
+  setSizeInMeters(enabled: boolean): void {
+    this._enhancer.update({ base: { sizeInMeters: enabled } });
   }
 
   setCenter(x: number, y: number): void {
@@ -285,9 +285,9 @@ export class SDFTextMesh
       hasUpdate = true;
     }
 
-    const nextScaleByDistance = material.scaleByDistance ?? false;
-    if (nextScaleByDistance !== state.scaleByDistance) {
-      baseProps.scaleByDistance = nextScaleByDistance;
+    const nextSizeInMeters = material.sizeInMeters ?? true;
+    if (nextSizeInMeters !== state.sizeInMeters) {
+      baseProps.sizeInMeters = nextSizeInMeters;
       hasUpdate = true;
     }
 

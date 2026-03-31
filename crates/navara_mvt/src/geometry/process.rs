@@ -1,9 +1,8 @@
 use std::sync::Arc;
 
 use bevy_ecs::{entity::Entity, system::Commands};
-use geo_types::{Geometry, LineString, MultiLineString, MultiPoint, MultiPolygon, Point, Polygon};
-use geozero::ToGeo;
-use geozero::mvt::{Message, Tile as MvtTile, tile};
+use geozero::GeomProcessor;
+use geozero::mvt::{Message, Tile as MvtTile, process_geom, tile};
 use navara_buffer_store::BufferStore;
 use navara_component::OrderByDistance;
 use navara_core::{CRS, TileXYZ};
@@ -125,25 +124,19 @@ fn process_layer_multi(
         feature_count,
     );
 
-    for feature in &mut mvt_layer.features {
-        let geom = match feature.to_geo() {
-            Ok(g) => g,
-            Err(_) => continue,
-        };
-
-        let tags = std::mem::take(&mut feature.tags);
-
-        // Prepare feature data lazily — only committed when add_entity is first called.
-        builder.begin_feature(tags);
-
-        process_feature_geometry(
-            commands,
-            buf,
+    {
+        let mut processor = MvtFeatureProcessor::new(
+            &mut *commands,
+            &mut *buf,
             &mut builder,
-            &geom,
             &mut converter,
             target_layer.appearances,
         );
+        for feature in &mut mvt_layer.features {
+            let tags = std::mem::take(&mut feature.tags);
+            processor.builder.begin_feature(tags);
+            let _ = process_geom(feature, &mut processor);
+        }
     }
 
     let entities = builder.groups.finalize(
@@ -169,249 +162,254 @@ fn process_layer_multi(
     entities
 }
 
-/// Process all appearances for a single feature's geometry.
-///
-/// Unlike the old code which used `break` after the first point-like appearance,
-/// this iterates ALL appearances, creating child entities for each matching one.
-fn process_feature_geometry(
-    commands: &mut Commands,
-    buf: &mut BufferStore,
-    builder: &mut MvtGeometryBuilder,
-    geom: &Geometry<f64>,
-    converter: &mut PosConverter,
-    appearances: &[Appearance],
-) {
-    // Handle GeometryCollection by recursing into each sub-geometry
-    if let Geometry::GeometryCollection(geoms) = geom {
-        for g in &geoms.0 {
-            process_feature_geometry(commands, buf, builder, g, converter, appearances);
-        }
-        return;
-    }
+// ============================================================================
+// GeomProcessor implementation: spawn entities directly during MVT decoding
+// ============================================================================
 
-    for appearance in appearances {
-        match appearance {
-            Appearance::Point(_) => {
-                spawn_point_children(
-                    commands,
-                    builder,
-                    geom,
-                    converter,
-                    GeometryAppearanceKind::Point,
-                );
-            }
-            Appearance::Billboard(_) => {
-                spawn_point_children(
-                    commands,
-                    builder,
-                    geom,
-                    converter,
-                    GeometryAppearanceKind::Billboard,
-                );
-            }
-            Appearance::Text(_) => {
-                spawn_point_children(
-                    commands,
-                    builder,
-                    geom,
-                    converter,
-                    GeometryAppearanceKind::Text,
-                );
-            }
-            Appearance::Polyline(app) => {
-                spawn_polyline_children(
-                    commands,
-                    buf,
-                    builder,
-                    geom,
-                    converter,
-                    app.clamp_to_ground,
-                );
-            }
-            Appearance::Polygon(app) => {
-                spawn_polygon_children(
-                    commands,
-                    buf,
-                    builder,
-                    geom,
-                    converter,
-                    app.clamp_to_ground,
-                );
-            }
-            _ => {}
-        }
-    }
-}
+/// A [`GeomProcessor`] that spawns ECS entities directly as MVT geometry is decoded,
+/// eliminating the intermediate `geo_types::Geometry` allocation.
+struct MvtFeatureProcessor<'a, 'w, 's, 'bt> {
+    commands: &'a mut Commands<'w, 's>,
+    buf: &'a mut BufferStore,
+    builder: &'a mut MvtGeometryBuilder<'bt>,
+    converter: &'a mut PosConverter,
+    appearances: &'a [Appearance],
 
-/// Spawn child entities for point-like geometry (Point, Billboard, Text).
-fn spawn_point_children(
-    commands: &mut Commands,
-    builder: &mut MvtGeometryBuilder,
-    geom: &Geometry<f64>,
-    converter: &mut PosConverter,
-    kind: GeometryAppearanceKind,
-) {
-    match geom {
-        Geometry::Point(point) => {
-            spawn_single_point(commands, builder, point, converter, kind);
-        }
-        Geometry::MultiPoint(MultiPoint(points)) => {
-            for point in points {
-                spawn_single_point(commands, builder, point, converter, kind);
-            }
-        }
-        _ => {}
-    }
-}
-
-fn spawn_single_point(
-    commands: &mut Commands,
-    builder: &mut MvtGeometryBuilder,
-    point: &Point<f64>,
-    converter: &mut PosConverter,
-    kind: GeometryAppearanceKind,
-) {
-    let (x, y) = converter.project_point(point.x(), point.y());
-    let coords = Vec3::new(x, y, 0.0 as FloatType);
-
-    let entity = spawn_point_entity(commands, coords, CRS::Geographic, kind);
-    let batch_index = builder.add_entity(kind, entity);
-    commands.entity(entity).insert(BatchIndex(batch_index));
-}
-
-/// Spawn child entities for polyline geometry.
-fn spawn_polyline_children(
-    commands: &mut Commands,
-    buf: &mut BufferStore,
-    builder: &mut MvtGeometryBuilder,
-    geom: &Geometry<f64>,
-    converter: &mut PosConverter,
+    /// Pre-projected coordinates for current linestring/ring.
+    projected: Vec<FloatType>,
+    /// Polygon outer ring.
+    outer_ring: Vec<FloatType>,
+    /// Polygon hole rings, built as `Hierarchy` in `linestring_end`.
+    holes: Vec<Hierarchy>,
+    /// Whether the polyline/polygon appearance uses `clamp_to_ground`.
     flat: bool,
-) {
-    match geom {
-        Geometry::LineString(line) => {
-            spawn_single_line(commands, buf, builder, line, converter, flat);
-        }
-        Geometry::MultiLineString(MultiLineString(lines)) => {
-            for line in lines {
-                spawn_single_line(commands, buf, builder, line, converter, flat);
-            }
-        }
-        _ => {}
-    }
+    /// Whether we are inside a point/multipoint geometry.
+    in_point: bool,
+    /// Whether linestring_end should push to rings (polygon) vs spawn polyline.
+    in_polygon: bool,
 }
 
-fn spawn_single_line(
-    commands: &mut Commands,
-    buf: &mut BufferStore,
-    builder: &mut MvtGeometryBuilder,
-    line: &LineString<f64>,
-    converter: &mut PosConverter,
-    flat: bool,
-) {
-    let geo_points = if flat {
-        converter.project_points_on_center(&line.0)
-    } else {
-        converter.project_points(&line.0)
-    };
-
-    if geo_points.is_empty() {
-        return;
-    }
-
-    let entity = commands
-        .spawn((
-            BatchedFeatureMarker,
-            PolylineGeometry::with_buf(buf, geo_points, CRS::Geographic),
-        ))
-        .id();
-
-    let batch_index = builder.add_entity(GeometryAppearanceKind::Polyline, entity);
-    commands.entity(entity).insert(BatchIndex(batch_index));
-}
-
-/// Spawn child entities for polygon geometry.
-fn spawn_polygon_children(
-    commands: &mut Commands,
-    buf: &mut BufferStore,
-    builder: &mut MvtGeometryBuilder,
-    geom: &Geometry<f64>,
-    converter: &mut PosConverter,
-    flat: bool,
-) {
-    match geom {
-        Geometry::Polygon(polygon) => {
-            spawn_single_polygon(commands, buf, builder, polygon, converter, flat);
-        }
-        Geometry::MultiPolygon(MultiPolygon(polygons)) => {
-            for polygon in polygons {
-                spawn_single_polygon(commands, buf, builder, polygon, converter, flat);
-            }
-        }
-        _ => {}
-    }
-}
-
-fn spawn_single_polygon(
-    commands: &mut Commands,
-    buf: &mut BufferStore,
-    builder: &mut MvtGeometryBuilder,
-    polygon: &Polygon<f64>,
-    converter: &mut PosConverter,
-    flat: bool,
-) {
-    let outer_vec = if flat {
-        converter.project_points_on_center(&polygon.exterior().0)
-    } else {
-        converter.project_points(&polygon.exterior().0)
-    };
-
-    let interiors = polygon.interiors();
-    let mut holes: Vec<Hierarchy> = Vec::new();
-
-    // In the MVT spec, the outer ring of a polygon is clockwise,
-    // which is based on the origin being at the top-left.
-    for interior in interiors {
-        holes.push(Hierarchy {
-            outer_ring: if flat {
-                converter.project_points_on_center(&interior.0)
-            } else {
-                converter.project_points(&interior.0)
-            },
-            holes: None,
-            expected_winding_order: if flat {
-                WindingOrder::Clockwise
-            } else {
-                WindingOrder::CounterClockwise
-            },
+impl<'a, 'w, 's, 'bt> MvtFeatureProcessor<'a, 'w, 's, 'bt> {
+    fn new(
+        commands: &'a mut Commands<'w, 's>,
+        buf: &'a mut BufferStore,
+        builder: &'a mut MvtGeometryBuilder<'bt>,
+        converter: &'a mut PosConverter,
+        appearances: &'a [Appearance],
+    ) -> Self {
+        let flat = appearances.iter().any(|a| match a {
+            Appearance::Polyline(app) => app.clamp_to_ground,
+            Appearance::Polygon(app) => app.clamp_to_ground,
+            _ => false,
         });
+        Self {
+            commands,
+            buf,
+            builder,
+            converter,
+            appearances,
+            projected: Vec::new(),
+            outer_ring: Vec::new(),
+            holes: Vec::new(),
+            flat,
+            in_point: false,
+            in_polygon: false,
+        }
     }
 
-    if outer_vec.is_empty() {
-        return;
+    fn spawn_point(&mut self, x: f64, y: f64, kind: GeometryAppearanceKind) {
+        let (px, py) = self.converter.project_point(x, y);
+        let coords = Vec3::new(px, py, 0.0 as FloatType);
+        let entity = spawn_point_entity(self.commands, coords, CRS::Geographic, kind);
+        let batch_index = self.builder.add_entity(kind, entity);
+        self.commands.entity(entity).insert(BatchIndex(batch_index));
     }
 
-    let entity = commands
-        .spawn((
-            BatchedFeatureMarker,
-            PolygonGeometry {
-                hierarchy: Hierarchy {
-                    outer_ring: outer_vec,
-                    holes: Some(holes),
-                    expected_winding_order: if flat {
-                        WindingOrder::CounterClockwise
-                    } else {
-                        WindingOrder::Clockwise
-                    },
+    fn spawn_points_from_coord(&mut self, x: f64, y: f64) {
+        let appearances = self.appearances;
+        for appearance in appearances {
+            match appearance {
+                Appearance::Point(_) => {
+                    self.spawn_point(x, y, GeometryAppearanceKind::Point);
                 }
-                .transfer(buf),
-                crs: CRS::Geographic,
-            },
-        ))
-        .id();
+                Appearance::Billboard(_) => {
+                    self.spawn_point(x, y, GeometryAppearanceKind::Billboard);
+                }
+                Appearance::Text(_) => {
+                    self.spawn_point(x, y, GeometryAppearanceKind::Text);
+                }
+                _ => {}
+            }
+        }
+    }
 
-    let batch_index = builder.add_entity(GeometryAppearanceKind::Polygon, entity);
-    commands.entity(entity).insert(BatchIndex(batch_index));
+    fn spawn_polyline(&mut self) {
+        for appearance in self.appearances {
+            let Appearance::Polyline(_) = appearance else {
+                continue;
+            };
+
+            let geo_points = std::mem::take(&mut self.projected);
+
+            if geo_points.is_empty() {
+                break;
+            }
+            let entity = self
+                .commands
+                .spawn((
+                    BatchedFeatureMarker,
+                    PolylineGeometry::with_buf(self.buf, geo_points, CRS::Geographic),
+                ))
+                .id();
+            let batch_index = self
+                .builder
+                .add_entity(GeometryAppearanceKind::Polyline, entity);
+            self.commands.entity(entity).insert(BatchIndex(batch_index));
+            break;
+        }
+    }
+
+    fn spawn_polygon(&mut self) {
+        if self.outer_ring.is_empty() {
+            return;
+        }
+        for appearance in self.appearances {
+            let Appearance::Polygon(_) = appearance else {
+                continue;
+            };
+            let outer_vec = std::mem::take(&mut self.outer_ring);
+            let holes = std::mem::take(&mut self.holes);
+            if outer_vec.is_empty() {
+                break;
+            }
+            let entity = self
+                .commands
+                .spawn((
+                    BatchedFeatureMarker,
+                    PolygonGeometry {
+                        hierarchy: Hierarchy {
+                            outer_ring: outer_vec,
+                            holes: Some(holes),
+                            expected_winding_order: if self.flat {
+                                WindingOrder::CounterClockwise
+                            } else {
+                                WindingOrder::Clockwise
+                            },
+                        }
+                        .transfer(self.buf),
+                        crs: CRS::Geographic,
+                    },
+                ))
+                .id();
+            let batch_index = self
+                .builder
+                .add_entity(GeometryAppearanceKind::Polygon, entity);
+            self.commands.entity(entity).insert(BatchIndex(batch_index));
+            break;
+        }
+    }
+}
+
+impl<'a, 'w, 's, 'bt> GeomProcessor for MvtFeatureProcessor<'a, 'w, 's, 'bt> {
+    fn multi_dim(&self) -> bool {
+        true
+    }
+
+    fn coordinate(
+        &mut self,
+        x: f64,
+        y: f64,
+        _z: Option<f64>,
+        _m: Option<f64>,
+        _t: Option<f64>,
+        _tm: Option<u64>,
+        _idx: usize,
+    ) -> geozero::error::Result<()> {
+        if self.in_point {
+            self.spawn_points_from_coord(x, y);
+        } else if self.flat {
+            let (cx, cy) = self.converter.project_point_on_center(x, y);
+            self.projected.push(cx);
+            self.projected.push(cy);
+            self.projected.push(0.0);
+        } else {
+            let (gx, gy) = self.converter.project_point(x, y);
+            self.projected.push(gx);
+            self.projected.push(gy);
+            self.projected.push(0.0);
+        }
+        Ok(())
+    }
+
+    fn point_begin(&mut self, _idx: usize) -> geozero::error::Result<()> {
+        self.in_point = true;
+        Ok(())
+    }
+
+    fn point_end(&mut self, _idx: usize) -> geozero::error::Result<()> {
+        self.in_point = false;
+        Ok(())
+    }
+
+    fn multipoint_begin(&mut self, _size: usize, _idx: usize) -> geozero::error::Result<()> {
+        self.in_point = true;
+        Ok(())
+    }
+
+    fn multipoint_end(&mut self, _idx: usize) -> geozero::error::Result<()> {
+        self.in_point = false;
+        Ok(())
+    }
+
+    fn linestring_begin(
+        &mut self,
+        _tagged: bool,
+        size: usize,
+        _idx: usize,
+    ) -> geozero::error::Result<()> {
+        self.projected.clear();
+        self.projected.reserve(size * 3);
+        Ok(())
+    }
+
+    fn linestring_end(&mut self, _tagged: bool, _idx: usize) -> geozero::error::Result<()> {
+        if self.in_polygon {
+            if self.outer_ring.is_empty() {
+                self.outer_ring = std::mem::take(&mut self.projected);
+            } else {
+                self.holes.push(Hierarchy {
+                    outer_ring: std::mem::take(&mut self.projected),
+                    holes: None,
+                    expected_winding_order: if self.flat {
+                        WindingOrder::Clockwise
+                    } else {
+                        WindingOrder::CounterClockwise
+                    },
+                });
+            }
+        } else {
+            self.spawn_polyline();
+        }
+        Ok(())
+    }
+
+    fn polygon_begin(
+        &mut self,
+        _tagged: bool,
+        _size: usize,
+        _idx: usize,
+    ) -> geozero::error::Result<()> {
+        self.in_polygon = true;
+        self.outer_ring.clear();
+        self.holes.clear();
+        Ok(())
+    }
+
+    fn polygon_end(&mut self, _tagged: bool, _idx: usize) -> geozero::error::Result<()> {
+        self.spawn_polygon();
+        self.in_polygon = false;
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -1072,85 +1070,5 @@ mod test {
                 _ => panic!("Expected BatchProperty::Mvt"),
             }
         }
-    }
-
-    #[test]
-    fn geometry_collection_sub_geometries_share_single_feature() {
-        // MVT doesn't natively produce GeometryCollections, but
-        // process_feature_geometry handles them defensively. Verify that
-        // sub-geometries share a single feature's batch state.
-        let mut app = App::new();
-        app.init_resource::<BufferStore>();
-        app.init_resource::<BatchTable>();
-
-        #[derive(Resource, Default)]
-        struct Out {
-            entity_count: usize,
-            feature_count: u32,
-        }
-        app.init_resource::<Out>();
-
-        app.add_systems(
-            Update,
-            |mut commands: Commands,
-             mut batch_table: ResMut<BatchTable>,
-             mut buf: ResMut<BufferStore>,
-             mut out: ResMut<Out>| {
-                let keys = Arc::new(vec!["name".to_string()]);
-                let values = Arc::new(vec![tile::Value {
-                    string_value: Some("gc_test".to_string()),
-                    ..Default::default()
-                }]);
-                let mut builder =
-                    MvtGeometryBuilder::new(&mut batch_table, "test_layer", keys, values, 1);
-
-                let xyz = TileXYZ { x: 0, y: 0, z: 0 };
-                let mut converter = PosConverter::new(xyz, 4096);
-
-                // One feature with tags
-                builder.begin_feature(vec![0, 0]);
-
-                // Build a GeometryCollection with two Points
-                let gc = Geometry::GeometryCollection(geo_types::GeometryCollection(vec![
-                    Geometry::Point(Point::new(2048.0, 2048.0)),
-                    Geometry::Point(Point::new(1024.0, 1024.0)),
-                ]));
-
-                let appearances = [Appearance::Point(PointMaterial::default())];
-                process_feature_geometry(
-                    &mut commands,
-                    &mut buf,
-                    &mut builder,
-                    &gc,
-                    &mut converter,
-                    &appearances,
-                );
-
-                // Two child entities from the GeometryCollection
-                let point_group = builder
-                    .groups
-                    .groups
-                    .iter()
-                    .find(|g| g.kind == GeometryAppearanceKind::Point);
-                if let Some(group) = point_group {
-                    out.entity_count = group.entities.len();
-                }
-
-                // feature_count should be 1 (one feature, not two)
-                let group = builder
-                    .groups
-                    .groups
-                    .iter()
-                    .find(|g| g.kind == GeometryAppearanceKind::Point);
-                if let Some(g) = group {
-                    out.feature_count = g.feature_count;
-                }
-            },
-        );
-        app.update();
-
-        let out = app.world().resource::<Out>();
-        assert_eq!(out.entity_count, 2);
-        assert_eq!(out.feature_count, 1);
     }
 }

@@ -44,9 +44,9 @@ const geoLayersDef: MaterialLayerDescription[] = [
     },
     point: {
       color: new Color().setStyle("#ff00ff"),
-      size: 5000.0,
+      size: 70.0,
       height: 1,
-      scaleByDistance: true,
+      sizeInMeters: false,
       clampToGround: true,
       transparent: false,
       depthTest: true,
@@ -102,9 +102,9 @@ const geoLayersDef: MaterialLayerDescription[] = [
     },
     point: {
       color: new Color().setStyle("#ffffff"),
-      size: 7300.0,
+      size: 70.0,
       height: 1,
-      scaleByDistance: true,
+      sizeInMeters: false,
       clampToGround: true,
       transparent: false,
       depthTest: true,
@@ -138,9 +138,9 @@ const geoLayersDef: MaterialLayerDescription[] = [
     },
     billboard: {
       color: new Color().setStyle("#ffffff"),
-      size: 5000.0,
+      size: 70.0,
       height: 1,
-      scaleByDistance: true,
+      sizeInMeters: false,
       clampToGround: true,
       depthTest: true,
       transparent: true,
@@ -168,7 +168,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
     text: {
       color: new Color().setStyle("#ffffff"),
       height: 1,
-      scaleByDistance: true,
+      sizeInMeters: false,
       clampToGround: true,
       depthTest: true,
       text: "hello 京都",
@@ -208,7 +208,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
     text: {
       color: new Color().setStyle("#ffffff"),
       height: 1,
-      scaleByDistance: true,
+      sizeInMeters: false,
       clampToGround: true,
       depthTest: true,
       text: "hello world!!!",
@@ -253,7 +253,7 @@ const geoLayersDef: MaterialLayerDescription[] = [
     text: {
       color: new Color().setStyle("#000000"),
       height: 1,
-      scaleByDistance: true,
+      sizeInMeters: false,
       clampToGround: true,
       depthTest: true,
       text: "Mt.Everest",
@@ -468,14 +468,14 @@ const geoLayersDef: MaterialLayerDescription[] = [
     },
     point: {
       color: new Color().setStyle("#ff0000"),
-      size: 10000.0,
+      size: 70.0,
       height: 1,
       // TODO: This should be abstracted like top-left/center/right, bottom-left/center/right
       center: {
         x: 0.0,
         y: 0.0,
       },
-      scaleByDistance: false,
+      sizeInMeters: false,
       clampToGround: true,
       depthTest: true,
     },

@@ -10,7 +10,7 @@ export const DEFAULT_BASE_PROPS: Required<
   billboard: false,
   scale: 100.0,
   center: [0.0, 0.0],
-  scaleByDistance: true,
+  sizeInMeters: true,
   offsetDepth: true,
   alphaTest: 0.0,
   pickable: false,
@@ -20,6 +20,8 @@ export const DEFAULT_BASE_PROPS: Required<
   transparent: true,
   depthTest: true,
   aspect: 1.0,
+  fovRad: 1.0,
+  screenHeightPx: 1080,
 };
 
 /** Default state derived from DEFAULT_BASE_PROPS */
@@ -28,7 +30,7 @@ export const DEFAULT_BASE_STATE: InstancedSpriteBaseState = {
   billboard: DEFAULT_BASE_PROPS.billboard,
   scale: DEFAULT_BASE_PROPS.scale,
   center: DEFAULT_BASE_PROPS.center,
-  scaleByDistance: DEFAULT_BASE_PROPS.scaleByDistance,
+  sizeInMeters: DEFAULT_BASE_PROPS.sizeInMeters,
   offsetDepth: DEFAULT_BASE_PROPS.offsetDepth,
   alphaTest: DEFAULT_BASE_PROPS.alphaTest,
   pickable: DEFAULT_BASE_PROPS.pickable,
@@ -38,6 +40,8 @@ export const DEFAULT_BASE_STATE: InstancedSpriteBaseState = {
   transparent: DEFAULT_BASE_PROPS.transparent,
   depthTest: DEFAULT_BASE_PROPS.depthTest,
   aspect: DEFAULT_BASE_PROPS.aspect,
+  fovRad: DEFAULT_BASE_PROPS.fovRad,
+  screenHeightPx: DEFAULT_BASE_PROPS.screenHeightPx,
 };
 
 /**
@@ -59,7 +63,7 @@ export const updateState = (
     // Mutable
     scale: props.scale ?? currentState.scale,
     center: props.center ?? currentState.center,
-    scaleByDistance: props.scaleByDistance ?? currentState.scaleByDistance,
+    sizeInMeters: props.sizeInMeters ?? currentState.sizeInMeters,
     offsetDepth: props.offsetDepth ?? currentState.offsetDepth,
     alphaTest: props.alphaTest ?? currentState.alphaTest,
     pickable: props.pickable ?? currentState.pickable,
@@ -69,5 +73,7 @@ export const updateState = (
     transparent: props.transparent ?? currentState.transparent,
     depthTest: props.depthTest ?? currentState.depthTest,
     aspect: props.aspect ?? currentState.aspect,
+    fovRad: props.fovRad ?? currentState.fovRad,
+    screenHeightPx: props.screenHeightPx ?? currentState.screenHeightPx,
   };
 };

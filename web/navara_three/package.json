@@ -13,7 +13,8 @@
   "scripts": {
     "start": "vite",
     "dev": "vite -c vite.config.example.ts --host",
-    "build": "vite build -c vite.config.ts",
+    "type-check": "tsc && tsc -p tsconfig.node.json",
+    "build": "pnpm type-check && vite build -c vite.config.ts",
     "build:dev": "vite build --mode development",
     "build:dev:watch": "pnpm build:dev --watch",
     "build:example": "tsc && vite build -c vite.config.example.ts",

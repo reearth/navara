@@ -10,6 +10,7 @@ export {
   MeshLayerDeclaration,
   type MeshLayerUpdate,
   type MeshLayerConfig,
+  type PassKey,
 } from "./MeshLayerDeclaration";
 export {
   MeshLayerDeclarationForSelectiveEffect,

@@ -14,7 +14,7 @@ export type InstancedSpriteBaseProps = {
   // Mutable state
   scale?: number;
   center?: [number, number];
-  scaleByDistance?: boolean;
+  sizeInMeters?: boolean;
   offsetDepth?: boolean;
   alphaTest?: number;
   pickable?: boolean;
@@ -32,6 +32,8 @@ export type InstancedSpriteBaseProps = {
   rtcCenter?: [number, number, number];
   texture?: UniformValue<DataArrayTexture | null>;
   aspect?: number;
+  fovRad?: number;
+  screenHeightPx?: number;
 };
 
 /**
@@ -46,7 +48,7 @@ export type InstancedSpriteBaseState = Readonly<{
   // Mutable
   scale: number;
   center: [number, number];
-  scaleByDistance: boolean;
+  sizeInMeters: boolean;
   offsetDepth: boolean;
   alphaTest: number;
   pickable: boolean;
@@ -60,6 +62,8 @@ export type InstancedSpriteBaseState = Readonly<{
 
   // External ref state
   aspect: number;
+  fovRad: number;
+  screenHeightPx: number;
 }>;
 
 /**
@@ -73,7 +77,7 @@ export type InstancedSpriteBaseRefs = {
   uEyeRTEHigh: UniformValue<Vector3>;
   uScale: UniformValue<number>;
   uCenter: UniformValue<Vector2>;
-  uScaleByDistance: UniformValue<boolean>;
+  uSizeInMeters: UniformValue<boolean>;
   uOffsetDepth: UniformValue<boolean>;
   uAlphaTest: UniformValue<number>;
   uFarPlane: UniformValue<number>;
@@ -82,6 +86,8 @@ export type InstancedSpriteBaseRefs = {
   uEmissiveOnly: UniformValue<number>;
   uEmissiveColor: UniformValue<Color>;
   uEmissiveIntensity: UniformValue<number>;
+  uFovRad: UniformValue<number>;
+  uScreenHeightPx: UniformValue<number>;
 
   // External ref - only present in billboard mode
   uTexture?: UniformValue<DataArrayTexture | null>;
@@ -110,6 +116,17 @@ export type InstancedSpriteBaseMutates = Mutates<
      * Update far plane per-frame from camera.
      */
     updateFarPlane: (far: number) => void;
+
+    /**
+     * Update FOV per-frame from camera, in radians.
+     */
+    updateFovRad: (fovRad: number) => void;
+
+    /**
+     * Update screen height per-frame from renderer size, in pixels.
+     */
+    updateScreenHeightPx: (height: number) => void;
+
     /**
      * Set texture external ref.
      */
