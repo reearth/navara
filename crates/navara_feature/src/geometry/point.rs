@@ -660,14 +660,11 @@ mod tests {
 
     /// Helper: create a frustum and occluder for a camera at the given ECEF position,
     /// looking toward the Earth's center.
-    fn make_frustum_and_occluder(
-        camera_ecef: Vec3,
-    ) -> (CameraFrustum, EllipsoidalOccluder, Vec3) {
+    fn make_frustum_and_occluder(camera_ecef: Vec3) -> (CameraFrustum, EllipsoidalOccluder, Vec3) {
         use navara_core::Angle;
         use navara_math::Transform;
 
-        let transform = Transform::from_translation(camera_ecef)
-            .looking_at(Vec3::ZERO, Vec3::Y);
+        let transform = Transform::from_translation(camera_ecef).looking_at(Vec3::ZERO, Vec3::Y);
         let fov_deg = 60.0;
         let frustum = CameraFrustum::new(
             &transform,
@@ -722,7 +719,10 @@ mod tests {
             cam_pos,
             800.0,
         );
-        assert!(!visible, "point on opposite side of globe should not be visible");
+        assert!(
+            !visible,
+            "point on opposite side of globe should not be visible"
+        );
     }
 
     #[test]
