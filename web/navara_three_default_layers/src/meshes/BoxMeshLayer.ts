@@ -38,6 +38,10 @@ type LayerDescription = {
     castShadow?: boolean;
     receiveShadow?: boolean;
     effectIds?: string[];
+    /**
+     * To drape the mesh properly on the terrain,
+     * the mesh must cover the terrain.
+     */
     draped?: boolean;
   };
 };
