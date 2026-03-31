@@ -21,6 +21,11 @@ const MAX_HILLSHADE_PENDINGS: u32 = 10;
 #[derive(Debug, Clone, Copy, Component)]
 pub struct HillshadeTextureMarker;
 
+/// Marker component indicating that HillshadeBackfillEvents have been extracted
+/// Used to delay cleanup until after read_events() has accessed the data
+#[derive(Debug, Clone, Copy, Component)]
+pub(crate) struct HillshadeEventsExtracted;
+
 /// Query type for cleanup_hillshade_edges system
 type CleanupHillshadeEdgesQuery<'w, 's> =
     Query<'w, 's, (Entity, &'static HillshadeEdges), (With<Deleted>, With<HillshadeTextureMarker>)>;
@@ -221,6 +226,30 @@ pub fn cleanup_hillshade_edges(
         buf.remove(&edges.bottom);
         // Ensure this cleanup runs only once per entity by removing HillshadeEdges
         commands.entity(entity).remove::<HillshadeEdges>();
+    }
+}
+
+/// System that cleans up HillshadeBackfillEvents after events are dispatched
+/// Prevents memory leaks and stale event re-emission
+/// Uses a two-phase approach: mark in first frame, cleanup in second frame
+pub(crate) fn cleanup_hillshade_backfill_events(
+    mut commands: Commands,
+    query: Query<(Entity, Option<&HillshadeEventsExtracted>), With<HillshadeBackfillEvents>>,
+) {
+    for (entity, extracted_marker) in query.iter() {
+        if extracted_marker.is_some() {
+            // Frame N+1: Marker exists, safe to cleanup
+            // Frame N: backfill_hillshade_on_loaded → insert(HillshadeBackfillEvents)
+            // Frame N: read_events() → extracts events
+            // Frame N: this system → adds HillshadeEventsExtracted marker
+            // Frame N+1: this system → removes both components
+            commands.entity(entity).remove::<HillshadeBackfillEvents>();
+            commands.entity(entity).remove::<HillshadeEventsExtracted>();
+        } else {
+            // Frame N: Just added, mark as extracted but don't cleanup yet
+            // This allows read_events() to access data before removal
+            commands.entity(entity).insert(HillshadeEventsExtracted);
+        }
     }
 }
 

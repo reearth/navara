@@ -124,18 +124,22 @@ export function processHillshadeBackfilled(
 
   // 2. Update edges if edge data is provided
   if (event.edge_data_handle >= 0) {
-    const edgeBytes = buf.removeU8(event.edge_data_handle);
+    // Read edge data without removing from BufferStore yet (to avoid data loss if texture doesn't exist)
+    const edgeBytes = buf.u8(event.edge_data_handle);
     if (!edgeBytes) {
       return;
     }
 
     if (!texture || !(texture instanceof DataTexture)) {
-      // Silently skip - this can happen if neighbor hasn't loaded yet
+      // Don't remove buffer - texture might be created later
+      // Buffer will be cleaned up by Rust side when tile is deleted
       return;
     }
 
     // Validate edge data: one edge (size pixels × 4 bytes RGBA)
     if (edgeBytes.length % 4 !== 0) {
+      // Invalid data, safe to remove
+      buf.remove(event.edge_data_handle);
       return;
     }
 
@@ -146,8 +150,8 @@ export function processHillshadeBackfilled(
     // Texture should be padded (edgeSize + 2)
     const expectedTexSize = edgeSize + 2;
     if (texSize !== expectedTexSize) {
-      // Silently skip - different zoom levels have different texture sizes
-      // Example: 258×258 tile receiving edge from 66×66 neighbor
+      // Size mismatch - different zoom levels, safe to remove this edge data
+      buf.remove(event.edge_data_handle);
       return;
     }
 
@@ -155,6 +159,9 @@ export function processHillshadeBackfilled(
     // 0=Left, 1=Right, 2=Top, 3=Bottom
     updatePaddingEdge(textureData, edgeBytes, texSize, event.edge_direction);
     texture.needsUpdate = true;
+
+    // Successfully applied, now safe to remove from BufferStore
+    buf.remove(event.edge_data_handle);
   }
 }
 

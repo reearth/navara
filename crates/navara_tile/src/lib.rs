@@ -45,6 +45,7 @@ impl Plugin for TilePlugin {
                     tile::system::clear_caches,
                     terrain::system::update_height_observers,
                     hillshade::cleanup_hillshade_edges,
+                    hillshade::cleanup_hillshade_backfill_events,
                 )
                     .chain(),
             );
