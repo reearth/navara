@@ -21,6 +21,10 @@ const MAX_HILLSHADE_PENDINGS: u32 = 10;
 #[derive(Debug, Clone, Copy, Component)]
 pub struct HillshadeTextureMarker;
 
+/// Query type for cleanup_hillshade_edges system
+type CleanupHillshadeEdgesQuery<'w, 's> =
+    Query<'w, 's, (Entity, &'static HillshadeEdges), (With<Deleted>, With<HillshadeTextureMarker>)>;
+
 /// Extracted edge data from a hillshade DEM texture
 /// Contains all 4 edges for sharing with neighbors
 struct ExtractedEdges {
@@ -205,15 +209,18 @@ pub fn backfill_hillshade_on_loaded(
 /// System that cleans up hillshade edge data when entities are deleted
 /// Removes the 4 edge buffers from BufferStore to prevent memory leaks
 pub fn cleanup_hillshade_edges(
+    mut commands: Commands,
     mut buf: ResMut<BufferStore>,
-    removed: Query<&HillshadeEdges, (With<Deleted>, With<HillshadeTextureMarker>)>,
+    removed: CleanupHillshadeEdgesQuery,
 ) {
-    for edges in removed.iter() {
+    for (entity, edges) in removed.iter() {
         // Remove all 4 edge buffers
         buf.remove(&edges.left);
         buf.remove(&edges.right);
         buf.remove(&edges.top);
         buf.remove(&edges.bottom);
+        // Ensure this cleanup runs only once per entity by removing HillshadeEdges
+        commands.entity(entity).remove::<HillshadeEdges>();
     }
 }
 

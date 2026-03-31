@@ -1425,7 +1425,7 @@ if (uPickable > 0.) {
       // Read zoom level from texture.userData (set by hillshade.ts when texture was created)
       if (isHillshade) {
         const layerZoom = t.userData.hillshadeZoom;
-        if (layerZoom !== undefined && m.userData.metersPerTexel) {
+        if (layerZoom !== undefined) {
           const metersPerTexel =
             (EARTH_CIRCUMFERENCE * cosLat) / (256 * Math.pow(2, layerZoom));
           m.userData.metersPerTexel.value[i] = metersPerTexel;
