@@ -1,9 +1,9 @@
 use navara_buffer_store::BufferStore;
-use navara_core::{Aabb, CRS, EncodedVec3, WGS84_64};
+use navara_core::{CRS, EncodedVec3, WGS84_64};
 use navara_feature_component::render::TransferablePointGeometry;
-use navara_math::{Transform, Vec3};
+use navara_math::Vec3;
 use navara_tile_component::{
-    RasterTileQuadtree, TileExtent, TileTerrainDataRequesterQuery, compute_terrain_height_at_point,
+    RasterTileQuadtree, TileTerrainDataRequesterQuery, compute_terrain_height_at_point,
 };
 
 /// Holds position data encoded as either RTC or RTE f32 values.
@@ -25,23 +25,6 @@ impl PositionBuffer {
             Self::Rte {
                 high: Vec::with_capacity(capacity * 3),
                 low: Vec::with_capacity(capacity * 3),
-            }
-        }
-    }
-
-    /// Consumes this buffer and creates a `TransferablePointGeometry`.
-    pub fn transfer(
-        self,
-        buf: &mut BufferStore,
-        batch_indices: Vec<u32>,
-        batch_ids: Vec<f32>,
-    ) -> TransferablePointGeometry {
-        match self {
-            Self::Rtc { coords, .. } => {
-                TransferablePointGeometry::with_buf_rtc(buf, coords, batch_indices, batch_ids)
-            }
-            Self::Rte { high, low } => {
-                TransferablePointGeometry::with_buf_rte(buf, high, low, batch_indices, batch_ids)
             }
         }
     }
@@ -95,26 +78,6 @@ impl PositionBuffer {
     }
 }
 
-/// Computes the AABB center from a tile extent for RTC positioning.
-/// Returns `None` for the RTE path (when no tile extent exists).
-pub fn compute_rtc_center(tile_extent: Option<&TileExtent>) -> Option<Vec3> {
-    tile_extent.map(|extent_component| {
-        let aabb = Aabb::from_extent_f64(extent_component.extent, 0., 1.);
-        aabb.center
-    })
-}
-
-/// Builds a transform for a point feature.
-/// RTC: translation at center + uniform scale. RTE: identity translation + uniform scale.
-pub fn build_transform(rtc_center: Option<Vec3>, size: f32) -> Transform {
-    let scale = Vec3::new(size as f64, size as f64, size as f64);
-    if let Some(center) = rtc_center {
-        Transform::from_translation(center).with_scale(scale)
-    } else {
-        Transform::from_scale(scale)
-    }
-}
-
 /// Returns terrain height for a point, or 0.0 if `clamp_to_ground` is false.
 pub fn resolve_terrain_height(
     coords: Vec3,
@@ -142,25 +105,6 @@ mod tests {
     use super::*;
     use approx::assert_abs_diff_eq;
     use navara_math::{EPSILON4, EPSILON12};
-
-    #[test]
-    fn compute_rtc_center_returns_none_without_tile_extent() {
-        assert!(compute_rtc_center(None).is_none());
-    }
-
-    #[test]
-    fn compute_rtc_center_returns_center_for_tile_extent() {
-        use navara_core::{Angle, Extent, Radians};
-        let extent = Extent {
-            west: Angle::<f64, Radians>::new(0.0),
-            east: Angle::<f64, Radians>::new(0.1),
-            south: Angle::<f64, Radians>::new(0.0),
-            north: Angle::<f64, Radians>::new(0.1),
-        };
-        let tile_extent = TileExtent::new(extent);
-        let center = compute_rtc_center(Some(&tile_extent));
-        assert!(center.is_some());
-    }
 
     #[test]
     fn push_from_crs_rtc_encodes_relative() {
@@ -225,55 +169,15 @@ mod tests {
     }
 
     #[test]
-    fn build_transform_rtc_has_translation_and_scale() {
-        let center = Vec3::new(100.0, 200.0, 300.0);
-        let t = build_transform(Some(center), 5.0);
-        assert_eq!(t.translation, center);
-        assert_eq!(t.scale, Vec3::new(5.0, 5.0, 5.0));
-    }
-
-    #[test]
-    fn build_transform_rte_has_zero_translation_and_scale() {
-        let t = build_transform(None, 3.0);
-        assert_eq!(t.translation, Vec3::ZERO);
-        assert_eq!(t.scale, Vec3::new(3.0, 3.0, 3.0));
-    }
-
-    #[test]
-    fn build_point_geometry_rtc_sets_position() {
-        let mut store = BufferStore::default();
-        let center = Vec3::new(100.0, 200.0, 300.0);
-        let mut positions = PositionBuffer::new(Some(center), 1);
-        positions.push_from_crs(Vec3::new(101.0, 202.0, 303.0), &CRS::Geocentric, 0.0, 0.0);
-        let geom = positions.transfer(&mut store, vec![0], vec![1.0]);
-        assert!(geom.position.is_some());
-        assert!(geom.position_3d_high.is_none());
-        assert!(geom.position_3d_low.is_none());
-    }
-
-    #[test]
-    fn build_point_geometry_rte_sets_high_low() {
-        let mut store = BufferStore::default();
-        let mut positions = PositionBuffer::new(None, 1);
-        positions.push_from_crs(
-            Vec3::new(1_000_000.0, 2_000_000.0, 3_000_000.0),
-            &CRS::Geocentric,
-            0.0,
-            0.0,
-        );
-        let geom = positions.transfer(&mut store, vec![0], vec![1.0]);
-        assert!(geom.position.is_none());
-        assert!(geom.position_3d_high.is_some());
-        assert!(geom.position_3d_low.is_some());
-    }
-
-    #[test]
     fn apply_to_rtc_replaces_buffer() {
         let mut store = BufferStore::default();
         let center = Vec3::new(100.0, 200.0, 300.0);
-        let mut initial = PositionBuffer::new(Some(center), 1);
-        initial.push_from_crs(Vec3::new(101.0, 202.0, 303.0), &CRS::Geocentric, 0.0, 0.0);
-        let mut geom = initial.transfer(&mut store, vec![0], vec![1.0]);
+        let mut geom = TransferablePointGeometry::with_buf_rtc(
+            &mut store,
+            vec![1.0, 2.0, 3.0],
+            vec![0],
+            vec![1.0],
+        );
 
         let mut updated = PositionBuffer::new(Some(center), 1);
         updated.push_from_crs(Vec3::new(110.0, 220.0, 330.0), &CRS::Geocentric, 0.0, 0.0);
@@ -290,14 +194,13 @@ mod tests {
     #[test]
     fn apply_to_rte_replaces_buffer() {
         let mut store = BufferStore::default();
-        let mut initial = PositionBuffer::new(None, 1);
-        initial.push_from_crs(
-            Vec3::new(1_000_000.0, 2_000_000.0, 3_000_000.0),
-            &CRS::Geocentric,
-            0.0,
-            0.0,
+        let mut geom = TransferablePointGeometry::with_buf_rte(
+            &mut store,
+            vec![1.0, 2.0, 3.0],
+            vec![0.1, 0.2, 0.3],
+            vec![0],
+            vec![1.0],
         );
-        let mut geom = initial.transfer(&mut store, vec![0], vec![1.0]);
 
         let mut updated = PositionBuffer::new(None, 1);
         updated.push_from_crs(

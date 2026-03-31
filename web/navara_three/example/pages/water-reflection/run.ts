@@ -361,7 +361,6 @@ const addWaterControls = (view: ThreeView<LayerDescriptions>, pane: Pane) => {
       height: 55,
       extrudedHeight: 1,
       clampToGround: false,
-      useGroundNormals: true,
       wireframe: false,
       reflectivity: 0.02,
       roughness: 0.2,

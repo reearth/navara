@@ -2,6 +2,7 @@ import {
   PointMesh as NavaraPointMesh,
   BillboardMesh as NavaraBillboardMesh,
 } from "@navara/engine";
+import { degreeToRadian } from "@navara/three_api";
 import {
   InstancedBufferAttribute,
   InstancedBufferGeometry,
@@ -14,6 +15,7 @@ import {
   LinearFilter,
   Color,
   PerspectiveCamera,
+  Vector2,
 } from "three";
 import invariant from "tiny-invariant";
 
@@ -46,11 +48,15 @@ type PositionsInfo = {
   RTE: boolean;
 };
 
+/** Reusable Vector2 to avoid per-frame allocations in onBeforeRender. */
+const _tmpSize = new Vector2();
+
 export class InstancedSpriteMesh extends Mesh implements PickableMesh {
   private _batchIdToInstance = new Map<number, number>();
   private _initialColor: Color = new Color(0xffffff);
   private _initialHeight = 0.0;
   private _loadedUrls = new Set<string>();
+  private _active = true;
   /** ViewContext for SelectiveEffect handling */
   private _viewContext: ViewContext;
   /** Layer ID for SelectiveEffect handling */
@@ -69,6 +75,11 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     this._layerId = options.layerId;
   }
 
+  setActive(active: boolean) {
+    this._active = active;
+    this.updateVisibility();
+  }
+
   async _init(m: NavaraPointMesh | NavaraBillboardMesh, buf: BufferLoader) {
     const positionsInfo = this.extractPositions(m, buf);
     if (positionsInfo === null) {
@@ -85,18 +96,13 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     this.frustumCulled = false; // Disable since bounding box doesn't account for instance positions
   }
 
-  async _update(
-    m: NavaraPointMesh | NavaraBillboardMesh,
-    buf: BufferLoader,
-    active: boolean,
-  ) {
+  async _update(m: NavaraPointMesh | NavaraBillboardMesh, buf: BufferLoader) {
     const enhancer = this.getEnhancer();
     const material = this.material as ShaderMaterial;
 
-    // Update visibility (combines show + active)
     if (material.visible !== m.material.show) {
       material.visible = m.material.show ?? true;
-      material.visible = material.visible && active;
+      this.updateVisibility();
     }
 
     // Update enhancer state for uniform-backed properties
@@ -104,7 +110,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
       base: {
         scale: m.material.size ?? 100.0,
         center: [m.material.center?.x ?? 0.0, m.material.center?.y ?? 0.0],
-        scaleByDistance: m.material.scaleByDistance ?? true,
+        sizeInMeters: m.material.sizeInMeters ?? true,
         offsetDepth: m.material.offsetDepth ?? true,
         transparent: m.material.transparent ?? true,
         depthTest: m.material.depthTest ?? true,
@@ -341,7 +347,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
         billboard: isBillboard,
         scale: m.material.size ?? 100.0,
         center: [m.material.center?.x ?? 0.0, m.material.center?.y ?? 0.0],
-        scaleByDistance: m.material.scaleByDistance ?? true,
+        sizeInMeters: m.material.sizeInMeters ?? true,
         offsetDepth: m.material.offsetDepth ?? true,
         alphaTest: isBillboard ? (m.material.alphaTest ?? 0.0) : 0.0,
         pickable: false,
@@ -366,6 +372,10 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     ) => {
       const pCam = camera as PerspectiveCamera;
       mutates.updateFarPlane(pCam.far);
+      mutates.updateFovRad(degreeToRadian(pCam.fov));
+      mutates.updateScreenHeightPx(
+        _renderer.getDrawingBufferSize(_tmpSize).y / _renderer.getPixelRatio(),
+      );
 
       if (positionsInfo.RTE) {
         mutates.updateRteUniforms(
@@ -387,7 +397,15 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     }
 
     material.visible = m.material.show ?? true;
+    this.updateVisibility();
     return material;
+  }
+
+  private updateVisibility() {
+    const material = this.material;
+    const materialVisible =
+      material instanceof ShaderMaterial ? material.visible : true;
+    this.visible = this._active && materialVisible;
   }
 
   private extractPositions(

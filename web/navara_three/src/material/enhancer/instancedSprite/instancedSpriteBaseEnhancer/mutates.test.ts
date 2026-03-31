@@ -1,3 +1,4 @@
+import { degreeToRadian } from "@navara/three_api";
 import type { DataArrayTexture } from "three";
 import { describe, expect, it, vi } from "vitest";
 
@@ -6,6 +7,10 @@ import type { ShaderUniforms } from "../../MaterialEnhancer";
 import { createBaseMutates } from "./mutates";
 import { DEFAULT_BASE_STATE } from "./state";
 import type { InstancedSpriteBaseState } from "./types";
+
+vi.mock("@navara/three_api", () => ({
+  degreeToRadian: (degree: number) => (degree * Math.PI) / 180,
+}));
 
 vi.mock("@navara/engine-api", () => ({
   encodePosition: (_x: number, _y: number, _z: number) => ({
@@ -21,7 +26,7 @@ describe("instancedSpriteBaseEnhancer/mutates", () => {
         ...DEFAULT_BASE_STATE,
         scale: 50,
         center: [0.5, 0.5],
-        scaleByDistance: false,
+        sizeInMeters: false,
         offsetDepth: false,
         alphaTest: 0.3,
         pickable: true,
@@ -36,7 +41,7 @@ describe("instancedSpriteBaseEnhancer/mutates", () => {
       expect(uniforms.uScale?.value).toBe(50);
       expect(uniforms.uCenter?.value.x).toBe(0.5);
       expect(uniforms.uCenter?.value.y).toBe(0.5);
-      expect(uniforms.uScaleByDistance?.value).toBe(false);
+      expect(uniforms.uSizeInMeters?.value).toBe(false);
       expect(uniforms.uOffsetDepth?.value).toBe(false);
       expect(uniforms.uAlphaTest?.value).toBe(0.3);
       expect(uniforms.nvr_uPickable?.value).toBe(1.0);
@@ -166,6 +171,66 @@ describe("instancedSpriteBaseEnhancer/mutates", () => {
       mutates.updateUniforms(uniforms, state);
 
       expect(uniforms.uFarPlane?.value).toBe(1000);
+    });
+  });
+
+  describe("updateFovRad", () => {
+    it("should update uFovRad value", () => {
+      const state: InstancedSpriteBaseState = { ...DEFAULT_BASE_STATE };
+      const mutates = createBaseMutates(false, false);
+      mutates.update(state);
+
+      mutates.updateFovRad(degreeToRadian(75));
+
+      const uniforms: ShaderUniforms = {};
+      mutates.updateUniforms(uniforms, state);
+
+      expect(uniforms.uFovRad?.value).toBe(degreeToRadian(75));
+    });
+
+    it("should not replace the uniform ref", () => {
+      const state: InstancedSpriteBaseState = { ...DEFAULT_BASE_STATE };
+      const mutates = createBaseMutates(false, false);
+      mutates.update(state);
+
+      const uniforms: ShaderUniforms = {};
+      mutates.updateUniforms(uniforms, state);
+      const initialRef = uniforms.uFovRad;
+
+      mutates.updateFovRad(degreeToRadian(90));
+
+      expect(uniforms.uFovRad).toBe(initialRef);
+      expect(uniforms.uFovRad?.value).toBe(degreeToRadian(90));
+    });
+  });
+
+  describe("updateScreenHeightPx", () => {
+    it("should update uScreenHeightPx value", () => {
+      const state: InstancedSpriteBaseState = { ...DEFAULT_BASE_STATE };
+      const mutates = createBaseMutates(false, false);
+      mutates.update(state);
+
+      mutates.updateScreenHeightPx(720);
+
+      const uniforms: ShaderUniforms = {};
+      mutates.updateUniforms(uniforms, state);
+
+      expect(uniforms.uScreenHeightPx?.value).toBe(720);
+    });
+
+    it("should not replace the uniform ref", () => {
+      const state: InstancedSpriteBaseState = { ...DEFAULT_BASE_STATE };
+      const mutates = createBaseMutates(false, false);
+      mutates.update(state);
+
+      const uniforms: ShaderUniforms = {};
+      mutates.updateUniforms(uniforms, state);
+      const initialRef = uniforms.uScreenHeightPx;
+
+      mutates.updateScreenHeightPx(1440);
+
+      expect(uniforms.uScreenHeightPx).toBe(initialRef);
+      expect(uniforms.uScreenHeightPx?.value).toBe(1440);
     });
   });
 });

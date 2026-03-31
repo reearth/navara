@@ -16,6 +16,8 @@ import initCore, {
   type TerrainHeightUpdatedEvent,
   type TextureFragmentStatus,
 } from "@navara/engine";
+import { FontManager } from "@navara/font";
+import FontWorkerURL from "@navara/font/fontWorker?worker&url";
 import { initNavaraApi } from "@navara/three_api";
 import { initializeWorkerPool } from "@navara/worker";
 import {
@@ -55,6 +57,7 @@ import {
   type BufferLoader,
   type FeatureHandler,
   type GlobeHandler,
+  type LayerHandler,
   type MeshHandler,
   type TextureFragmentHandler,
   type TileHandler,
@@ -92,7 +95,6 @@ import {
   type TileMapByHandle,
   type LightLayerDeclarationDescription,
   type EffectLayerDeclarationDescription,
-  type DrapedMaterialCache,
 } from "./type";
 import type { CommonUniforms } from "./uniforms";
 import { isWorker, convertScreenPos, type TextureSlot } from "./utils";
@@ -269,6 +271,10 @@ export default class ThreeView<
   globe!: Globe;
   /** The atmosphere renderer that handles sky, sun, and atmospheric scattering effects. */
   atmosphere: Atmosphere;
+  /** Manages font loading, text shaping, and SDF atlas access. */
+  get fontManager(): FontManager {
+    return this._fontManager;
+  }
 
   /** Layer handle for the sky environment map effect layer. Used for sky reflections. */
   skyEnvMapLayer?: LayerHandle<SkyEnvMapEffectLayer>;
@@ -283,10 +289,9 @@ export default class ThreeView<
   renderPassOrchestrator: RenderPassOrchestrator;
 
   private _scenes: Scenes;
-  // Store draped feature's materials
-  private _drapedFeatureMaterials: DrapedMaterialCache = new Map();
 
   private _core: Core | undefined;
+  private _fontManager = new FontManager(FontWorkerURL);
   private _options: Options;
   private _stats: RendererStats | undefined;
   private _eventDisposer: (() => void) | undefined;
@@ -509,6 +514,11 @@ export default class ThreeView<
       this._core?.setTileMeshPrepared(handle);
     },
   };
+  private _layerHandler: LayerHandler = {
+    getLayerIndex: (layerId: string) => {
+      return this._core?.getLayerIndex(layerId);
+    },
+  };
   private _eventManager = new EventManager();
   private _pickHelper?: PickHelper;
   private _terrainPicker: TerrainPicker;
@@ -703,7 +713,6 @@ export default class ThreeView<
       createDefaultConcurrencyManager(this.isMobileOptimized()),
       {
         meshes: this._meshes,
-        drapedMaterials: this._drapedFeatureMaterials,
       },
       this.selectiveEffectHelper,
       {
@@ -857,6 +866,11 @@ export default class ThreeView<
     this._core = new Core(newId());
     this._core.start();
 
+    this._fontManager.setConcurrencyManager(
+      this.viewContext.concurrencyManager,
+    );
+    this.viewContext.fontManager = this._fontManager;
+
     this.globe = new Globe(this._globeHandler, this._options);
     this.viewContext.setGlobe(this.globe);
 
@@ -871,7 +885,6 @@ export default class ThreeView<
         this.camera.raw,
         this._scenes,
         this._meshes,
-        this._drapedFeatureMaterials,
         this.onPick.bind(this),
         this.renderPassOrchestrator.effectComposer.inputBuffer,
         this.globe,
@@ -959,6 +972,7 @@ export default class ThreeView<
 
     // Dispose SelectiveEffectHelper
     this.selectiveEffectHelper.dispose();
+    this._fontManager.dispose();
     this.atmosphere._dispose();
 
     this.renderer.setAnimationLoop(null);
@@ -1062,7 +1076,6 @@ export default class ThreeView<
       this._workerPoolPromises,
       events,
       this._uniforms,
-      this._drapedFeatureMaterials,
       this._texturizedSceneByTileCoordinates,
       this._tileMapByHandle,
       this._textureFragmentIndex,
@@ -1073,6 +1086,7 @@ export default class ThreeView<
       this.layersManager,
       this.viewContext,
       updatedAt,
+      this._layerHandler,
     );
     events?.free();
 

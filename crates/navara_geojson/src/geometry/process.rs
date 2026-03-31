@@ -3,13 +3,7 @@ use bevy_ecs::system::Commands;
 
 use navara_buffer_store::BufferStore;
 use navara_core::CRS;
-use navara_feature_component::{
-    BatchedFeatureMarker,
-    batch::{BatchIndex, BatchTable},
-    geometry_builder::spawn_point_entity,
-    polygon::PolygonGeometry,
-    polyline::PolylineGeometry,
-};
+use navara_feature_component::batch::BatchTable;
 use navara_geometry::{Hierarchy, WindingOrder};
 use navara_material::Appearance;
 use navara_math::Vec3;
@@ -63,19 +57,19 @@ pub fn construct_geometry(
             for feature in features {
                 if let Some(geometry) = &feature.geometry {
                     builder.begin_feature(&feature.properties);
-                    process_geometry(commands, buf, &mut builder, geometry, appearances);
+                    process_geometry(&mut builder, geometry, appearances);
                 }
             }
         }
         GeoJson::Feature(feature) => {
             if let Some(geometry) = &feature.geometry {
                 builder.begin_feature(&feature.properties);
-                process_geometry(commands, buf, &mut builder, geometry, appearances);
+                process_geometry(&mut builder, geometry, appearances);
             }
         }
         GeoJson::Geometry(geometry) => {
             builder.begin_feature(&None);
-            process_geometry(commands, buf, &mut builder, geometry, appearances);
+            process_geometry(&mut builder, geometry, appearances);
         }
     }
 
@@ -84,14 +78,12 @@ pub fn construct_geometry(
         .finalize(commands, buf, appearances, layer_id, true)
 }
 
-/// Process a single GeoJSON geometry, spawning child entities for each matching appearance.
+/// Process a single GeoJSON geometry, accumulating it into the builder.
 ///
 /// `begin_feature` must be called by the caller before invoking this function.
 /// GeometryCollection recurses without resetting feature state, so all
 /// sub-geometries share a single feature's batch indices and properties.
 fn process_geometry(
-    commands: &mut Commands,
-    buf: &mut BufferStore,
     builder: &mut GeometryBuilder,
     geometry: &Geometry,
     appearances: &[Appearance],
@@ -100,142 +92,91 @@ fn process_geometry(
     // No begin_feature here — sub-geometries share the parent feature's state.
     if let Value::GeometryCollection(geoms) = &geometry.value {
         for g in geoms {
-            process_geometry(commands, buf, builder, g, appearances);
+            process_geometry(builder, g, appearances);
         }
         return;
     }
 
     for appearance in appearances {
         match appearance {
-            Appearance::Point(_) => {
-                spawn_point_children(commands, builder, geometry, GeometryAppearanceKind::Point);
+            Appearance::Point(m) => {
+                accumulate_point_rte(builder, geometry, GeometryAppearanceKind::Point, m.height);
             }
-            Appearance::Billboard(_) => {
-                spawn_point_children(
-                    commands,
+            Appearance::Billboard(m) => {
+                accumulate_point_rte(
                     builder,
                     geometry,
                     GeometryAppearanceKind::Billboard,
+                    m.height,
                 );
             }
-            Appearance::Text(_) => {
-                spawn_point_children(commands, builder, geometry, GeometryAppearanceKind::Text);
+            Appearance::Text(m) => {
+                accumulate_point_rte(builder, geometry, GeometryAppearanceKind::Text, m.height);
             }
             Appearance::Polyline(_) => {
-                spawn_polyline_children(commands, buf, builder, geometry);
+                accumulate_polyline(builder, geometry);
             }
-            Appearance::Polygon(_) => {
-                spawn_polygon_children(commands, buf, builder, geometry);
+            Appearance::Polygon(p) => {
+                // Skip clamped polygons - they go through the tiled rendering pipeline
+                if !p.clamp_to_ground && !p.tiled {
+                    accumulate_polygon(builder, geometry);
+                }
             }
             _ => {}
         }
     }
 }
 
-/// Spawn child entities for point-like geometry (Point, Billboard, Text).
-fn spawn_point_children(
-    commands: &mut Commands,
+/// Accumulate point geometry with RTE encoding (GeoJSON direct path).
+fn accumulate_point_rte(
     builder: &mut GeometryBuilder,
     geometry: &Geometry,
     kind: GeometryAppearanceKind,
+    height: f32,
 ) {
-    let spawn_one = |commands: &mut Commands, builder: &mut GeometryBuilder, coord: Vec3| {
-        let entity = spawn_point_entity(commands, coord, CRS::Geographic, kind);
-        let batch_index = builder.add_entity(kind, entity);
-        commands.entity(entity).insert(BatchIndex(batch_index));
-    };
-
     match &geometry.value {
         Value::Point(f) => {
-            spawn_one(commands, builder, coords(f));
+            builder.add_point(kind, coords(f), CRS::Geographic, height);
         }
         Value::MultiPoint(fs) => {
             for f in fs {
-                spawn_one(commands, builder, coords(f));
+                builder.add_point(kind, coords(f), CRS::Geographic, height);
             }
         }
         _ => {}
     }
 }
 
-/// Spawn child entities for polyline geometry.
-fn spawn_polyline_children(
-    commands: &mut Commands,
-    buf: &mut BufferStore,
-    builder: &mut GeometryBuilder,
-    geometry: &Geometry,
-) {
-    let kind = GeometryAppearanceKind::Polyline;
-
-    let spawn_one = |commands: &mut Commands,
-                     buf: &mut BufferStore,
-                     builder: &mut GeometryBuilder,
-                     flat_coords: Vec<f64>| {
-        let entity = commands
-            .spawn((
-                BatchedFeatureMarker,
-                PolylineGeometry::with_buf(buf, flat_coords, CRS::Geographic),
-            ))
-            .id();
-
-        let batch_index = builder.add_entity(kind, entity);
-        commands.entity(entity).insert(BatchIndex(batch_index));
-    };
-
+/// Accumulate polyline geometry into the builder.
+fn accumulate_polyline(builder: &mut GeometryBuilder, geometry: &Geometry) {
     match &geometry.value {
         Value::LineString(f) => {
-            spawn_one(commands, buf, builder, multi_flat_coords(f));
+            builder.add_polyline(multi_flat_coords(f), CRS::Geographic);
         }
         Value::MultiLineString(fs) => {
             for f in fs {
-                spawn_one(commands, buf, builder, multi_flat_coords(f));
+                builder.add_polyline(multi_flat_coords(f), CRS::Geographic);
             }
         }
         _ => {}
     }
 }
 
-/// Spawn child entities for polygon geometry.
-fn spawn_polygon_children(
-    commands: &mut Commands,
-    buf: &mut BufferStore,
-    builder: &mut GeometryBuilder,
-    geometry: &Geometry,
-) {
-    let kind = GeometryAppearanceKind::Polygon;
-
-    let spawn_one = |commands: &mut Commands,
-                     buf: &mut BufferStore,
-                     builder: &mut GeometryBuilder,
-                     f: &[Vec<Vec<f64>>]| {
-        let entity = commands
-            .spawn((
-                BatchedFeatureMarker,
-                PolygonGeometry {
-                    hierarchy: Hierarchy {
-                        outer_ring: f
-                            .first()
-                            .map_or_else(std::vec::Vec::new, |v| multi_flat_coords(v)),
-                        holes: get_polygon_holes(f),
-                        expected_winding_order: WindingOrder::Unknown,
-                    }
-                    .transfer(buf),
-                    crs: CRS::Geographic,
-                },
-            ))
-            .id();
-
-        let batch_index = builder.add_entity(kind, entity);
-        commands.entity(entity).insert(BatchIndex(batch_index));
+/// Accumulate polygon geometry into the builder.
+fn accumulate_polygon(builder: &mut GeometryBuilder, geometry: &Geometry) {
+    let accumulate_one = |builder: &mut GeometryBuilder, f: &[Vec<Vec<f64>>]| {
+        let outer_ring = f.first().map_or_else(Vec::new, |v| multi_flat_coords(v));
+        let holes = get_polygon_holes(f).unwrap_or_default();
+        builder.add_polygon(outer_ring, &holes, WindingOrder::Unknown, CRS::Geographic);
     };
 
     match &geometry.value {
         Value::Polygon(f) => {
-            spawn_one(commands, buf, builder, f);
+            accumulate_one(builder, f);
         }
         Value::MultiPolygon(fs) => {
             for f in fs {
-                spawn_one(commands, buf, builder, f);
+                accumulate_one(builder, f);
             }
         }
         _ => {}
@@ -250,15 +191,14 @@ mod test {
     use bevy_ecs::query::With;
     use bevy_ecs::system::{Commands, ResMut};
     use navara_buffer_store::BufferStore;
-    use navara_core::CRS;
     use navara_feature_component::{
-        BatchedFeatureMarker,
         batch::{BatchTable, BatchedFeature, FeatureBatchId, GlobalBatchIds},
-        billboard::{BillboardGeometry, BillboardMarker},
-        point::{PointGeometry, PointMarker},
-        polygon::{PolygonGeometry, PolygonMarker},
-        polyline::{PolylineGeometry, PolylineMarker},
-        text::{TextGeometry, TextMarker},
+        batched_geometry::{BatchedPointGeometry, BatchedPolygonGeometry, BatchedPolylineGeometry},
+        billboard::BillboardMarker,
+        point::PointMarker,
+        polygon::PolygonMarker,
+        polyline::PolylineMarker,
+        text::TextMarker,
     };
     use navara_material::{
         Appearance, BillboardMaterial, PointMaterial, PolygonMaterial, PolylineMaterial,
@@ -405,15 +345,14 @@ mod test {
             .query_filtered::<&BatchedFeature, With<PointMarker>>();
         let batched_features: Vec<_> = batched_query.iter(app.world()).collect();
         assert_eq!(batched_features.len(), 1);
-        assert_eq!(batched_features[0].features.len(), 2);
 
-        // Should have 2 child entities with BatchedFeatureMarker + PointGeometry
-        let mut child_query = app
+        // Should have BatchedPointGeometry on the parent with 2 coords
+        let mut geom_query = app
             .world_mut()
-            .query_filtered::<&PointGeometry, With<BatchedFeatureMarker>>();
-        let children: Vec<_> = child_query.iter(app.world()).collect();
-        assert_eq!(children.len(), 2);
-        assert_eq!(children[0].crs, CRS::Geographic);
+            .query_filtered::<&BatchedPointGeometry, With<PointMarker>>();
+        let geoms: Vec<_> = geom_query.iter(app.world()).collect();
+        assert_eq!(geoms.len(), 1);
+        assert_eq!(geoms[0].coords.len(), 2);
 
         // Verify GlobalBatchIds
         let mut global_ids_query = app
@@ -451,12 +390,13 @@ mod test {
             .query_filtered::<&BatchedFeature, With<PointMarker>>();
         let batched_features: Vec<_> = batched_query.iter(app.world()).collect();
         assert_eq!(batched_features.len(), 1);
-        assert_eq!(batched_features[0].features.len(), 2);
 
-        let mut child_query = app
+        let mut geom_query = app
             .world_mut()
-            .query_filtered::<&PointGeometry, With<BatchedFeatureMarker>>();
-        assert_eq!(child_query.iter(app.world()).count(), 2);
+            .query_filtered::<&BatchedPointGeometry, With<PointMarker>>();
+        let geoms: Vec<_> = geom_query.iter(app.world()).collect();
+        assert_eq!(geoms.len(), 1);
+        assert_eq!(geoms[0].coords.len(), 2);
     }
 
     #[test]
@@ -491,12 +431,13 @@ mod test {
             .query_filtered::<&BatchedFeature, With<BillboardMarker>>();
         let batched_features: Vec<_> = batched_query.iter(app.world()).collect();
         assert_eq!(batched_features.len(), 1);
-        assert_eq!(batched_features[0].features.len(), 2);
 
-        let mut child_query = app
+        let mut geom_query = app
             .world_mut()
-            .query_filtered::<&BillboardGeometry, With<BatchedFeatureMarker>>();
-        assert_eq!(child_query.iter(app.world()).count(), 2);
+            .query_filtered::<&BatchedPointGeometry, With<BillboardMarker>>();
+        let geoms: Vec<_> = geom_query.iter(app.world()).collect();
+        assert_eq!(geoms.len(), 1);
+        assert_eq!(geoms[0].coords.len(), 2);
     }
 
     #[test]
@@ -523,12 +464,13 @@ mod test {
             .query_filtered::<&BatchedFeature, With<TextMarker>>();
         let batched_features: Vec<_> = batched_query.iter(app.world()).collect();
         assert_eq!(batched_features.len(), 1);
-        assert_eq!(batched_features[0].features.len(), 1);
 
-        let mut child_query = app
+        let mut geom_query = app
             .world_mut()
-            .query_filtered::<&TextGeometry, With<BatchedFeatureMarker>>();
-        assert_eq!(child_query.iter(app.world()).count(), 1);
+            .query_filtered::<&BatchedPointGeometry, With<TextMarker>>();
+        let geoms: Vec<_> = geom_query.iter(app.world()).collect();
+        assert_eq!(geoms.len(), 1);
+        assert_eq!(geoms[0].coords.len(), 1);
     }
 
     #[test]
@@ -570,12 +512,14 @@ mod test {
             .query_filtered::<&BatchedFeature, With<PolylineMarker>>();
         let batched_features: Vec<_> = batched_query.iter(app.world()).collect();
         assert_eq!(batched_features.len(), 1);
-        assert_eq!(batched_features[0].features.len(), 2);
 
-        let mut child_query = app
+        let mut geom_query = app
             .world_mut()
-            .query_filtered::<&PolylineGeometry, With<BatchedFeatureMarker>>();
-        assert_eq!(child_query.iter(app.world()).count(), 2);
+            .query_filtered::<&BatchedPolylineGeometry, With<PolylineMarker>>();
+        let geoms: Vec<_> = geom_query.iter(app.world()).collect();
+        assert_eq!(geoms.len(), 1);
+        let buf = app.world().resource::<BufferStore>();
+        assert_eq!(geoms[0].feature_count(buf), 2);
     }
 
     #[test]
@@ -605,7 +549,14 @@ mod test {
             .query_filtered::<&BatchedFeature, With<PolylineMarker>>();
         let batched_features: Vec<_> = batched_query.iter(app.world()).collect();
         assert_eq!(batched_features.len(), 1);
-        assert_eq!(batched_features[0].features.len(), 2);
+
+        let mut geom_query = app
+            .world_mut()
+            .query_filtered::<&BatchedPolylineGeometry, With<PolylineMarker>>();
+        let geoms: Vec<_> = geom_query.iter(app.world()).collect();
+        assert_eq!(geoms.len(), 1);
+        let buf = app.world().resource::<BufferStore>();
+        assert_eq!(geoms[0].feature_count(buf), 2);
     }
 
     #[test]
@@ -632,7 +583,10 @@ mod test {
         }
     ]
 }"#,
-            vec![Appearance::Polygon(PolygonMaterial::default())],
+            vec![Appearance::Polygon(PolygonMaterial {
+                clamp_to_ground: false,
+                ..Default::default()
+            })],
         );
 
         let mut batched_query = app
@@ -640,12 +594,14 @@ mod test {
             .query_filtered::<&BatchedFeature, With<PolygonMarker>>();
         let batched_features: Vec<_> = batched_query.iter(app.world()).collect();
         assert_eq!(batched_features.len(), 1);
-        assert_eq!(batched_features[0].features.len(), 1);
 
-        let mut child_query = app
+        let mut geom_query = app
             .world_mut()
-            .query_filtered::<&PolygonGeometry, With<BatchedFeatureMarker>>();
-        assert_eq!(child_query.iter(app.world()).count(), 1);
+            .query_filtered::<&BatchedPolygonGeometry, With<PolygonMarker>>();
+        let geoms: Vec<_> = geom_query.iter(app.world()).collect();
+        assert_eq!(geoms.len(), 1);
+        let buf = app.world().resource::<BufferStore>();
+        assert_eq!(geoms[0].feature_count(buf), 1);
     }
 
     #[test]
@@ -683,7 +639,10 @@ mod test {
         }
     ]
 }"#,
-            vec![Appearance::Polygon(PolygonMaterial::default())],
+            vec![Appearance::Polygon(PolygonMaterial {
+                clamp_to_ground: false,
+                ..Default::default()
+            })],
         );
 
         let mut batched_query = app
@@ -691,7 +650,14 @@ mod test {
             .query_filtered::<&BatchedFeature, With<PolygonMarker>>();
         let batched_features: Vec<_> = batched_query.iter(app.world()).collect();
         assert_eq!(batched_features.len(), 1);
-        assert_eq!(batched_features[0].features.len(), 2);
+
+        let mut geom_query = app
+            .world_mut()
+            .query_filtered::<&BatchedPolygonGeometry, With<PolygonMarker>>();
+        let geoms: Vec<_> = geom_query.iter(app.world()).collect();
+        assert_eq!(geoms.len(), 1);
+        let buf = app.world().resource::<BufferStore>();
+        assert_eq!(geoms[0].feature_count(buf), 2);
     }
 
     #[test]
@@ -713,7 +679,13 @@ mod test {
             .query_filtered::<&BatchedFeature, With<PointMarker>>();
         let batched_features: Vec<_> = batched_query.iter(app.world()).collect();
         assert_eq!(batched_features.len(), 1);
-        assert_eq!(batched_features[0].features.len(), 1);
+
+        let mut geom_query = app
+            .world_mut()
+            .query_filtered::<&BatchedPointGeometry, With<PointMarker>>();
+        let geoms: Vec<_> = geom_query.iter(app.world()).collect();
+        assert_eq!(geoms.len(), 1);
+        assert_eq!(geoms[0].coords.len(), 1);
     }
 
     #[test]
@@ -731,7 +703,13 @@ mod test {
             .query_filtered::<&BatchedFeature, With<PointMarker>>();
         let batched_features: Vec<_> = batched_query.iter(app.world()).collect();
         assert_eq!(batched_features.len(), 1);
-        assert_eq!(batched_features[0].features.len(), 1);
+
+        let mut geom_query = app
+            .world_mut()
+            .query_filtered::<&BatchedPointGeometry, With<PointMarker>>();
+        let geoms: Vec<_> = geom_query.iter(app.world()).collect();
+        assert_eq!(geoms.len(), 1);
+        assert_eq!(geoms[0].coords.len(), 1);
     }
 
     #[test]
@@ -806,7 +784,10 @@ mod test {
         }
     ]
 }"#,
-            vec![Appearance::Polygon(PolygonMaterial::default())],
+            vec![Appearance::Polygon(PolygonMaterial {
+                clamp_to_ground: false,
+                ..Default::default()
+            })],
         );
 
         let mut batched_query = app
@@ -814,12 +795,15 @@ mod test {
             .query_filtered::<&BatchedFeature, With<PolygonMarker>>();
         let batched_features: Vec<_> = batched_query.iter(app.world()).collect();
         assert_eq!(batched_features.len(), 1);
-        assert_eq!(batched_features[0].features.len(), 1);
 
-        let mut child_query = app
+        let mut geom_query = app
             .world_mut()
-            .query_filtered::<&PolygonGeometry, With<BatchedFeatureMarker>>();
-        assert_eq!(child_query.iter(app.world()).count(), 1);
+            .query_filtered::<&BatchedPolygonGeometry, With<PolygonMarker>>();
+        let geoms: Vec<_> = geom_query.iter(app.world()).collect();
+        assert_eq!(geoms.len(), 1);
+        let buf = app.world().resource::<BufferStore>();
+        assert_eq!(geoms[0].feature_count(buf), 1);
+        assert_eq!(geoms[0].holes_boundaries(buf).unwrap()[0], 1);
     }
 
     #[test]
@@ -951,17 +935,26 @@ mod test {
             vec![
                 Appearance::Point(PointMaterial::default()),
                 Appearance::Polyline(PolylineMaterial::default()),
-                Appearance::Polygon(PolygonMaterial::default()),
+                Appearance::Polygon(PolygonMaterial {
+                    clamp_to_ground: false,
+                    ..Default::default()
+                }),
             ],
         );
 
-        // Point from GeometryCollection
+        // Point from GeometryCollection - no child entities, coords on parent
         let mut point_query = app
             .world_mut()
             .query_filtered::<&BatchedFeature, With<PointMarker>>();
         let points: Vec<_> = point_query.iter(app.world()).collect();
         assert_eq!(points.len(), 1);
-        assert_eq!(points[0].features.len(), 1);
+
+        let mut point_geom_query = app
+            .world_mut()
+            .query_filtered::<&BatchedPointGeometry, With<PointMarker>>();
+        let point_geoms: Vec<_> = point_geom_query.iter(app.world()).collect();
+        assert_eq!(point_geoms.len(), 1);
+        assert_eq!(point_geoms[0].coords.len(), 1);
 
         // LineString from GeometryCollection
         let mut polyline_query = app
@@ -969,7 +962,14 @@ mod test {
             .query_filtered::<&BatchedFeature, With<PolylineMarker>>();
         let polylines: Vec<_> = polyline_query.iter(app.world()).collect();
         assert_eq!(polylines.len(), 1);
-        assert_eq!(polylines[0].features.len(), 1);
+
+        let mut polyline_geom = app
+            .world_mut()
+            .query_filtered::<&BatchedPolylineGeometry, With<PolylineMarker>>();
+        let polyline_geoms: Vec<_> = polyline_geom.iter(app.world()).collect();
+        assert_eq!(polyline_geoms.len(), 1);
+        let buf = app.world().resource::<BufferStore>();
+        assert_eq!(polyline_geoms[0].feature_count(buf), 1);
 
         // Polygon from GeometryCollection
         let mut polygon_query = app
@@ -977,7 +977,14 @@ mod test {
             .query_filtered::<&BatchedFeature, With<PolygonMarker>>();
         let polygons: Vec<_> = polygon_query.iter(app.world()).collect();
         assert_eq!(polygons.len(), 1);
-        assert_eq!(polygons[0].features.len(), 1);
+
+        let mut polygon_geom = app
+            .world_mut()
+            .query_filtered::<&BatchedPolygonGeometry, With<PolygonMarker>>();
+        let polygon_geoms: Vec<_> = polygon_geom.iter(app.world()).collect();
+        assert_eq!(polygon_geoms.len(), 1);
+        let buf = app.world().resource::<BufferStore>();
+        assert_eq!(polygon_geoms[0].feature_count(buf), 1);
     }
 
     #[test]
@@ -1010,22 +1017,20 @@ mod test {
             vec![Appearance::Point(PointMaterial::default())],
         );
 
-        // Both points come from one feature → one BatchedFeature parent with 2 children
+        // Both points come from one feature → one BatchedFeature parent with coords on parent
         let mut batched_query = app
             .world_mut()
             .query_filtered::<&BatchedFeature, With<PointMarker>>();
         let batched: Vec<_> = batched_query.iter(app.world()).collect();
         assert_eq!(batched.len(), 1);
-        assert_eq!(batched[0].features.len(), 2);
 
-        // Both children should share batch index 0 (same feature)
-        let mut child_query = app
+        // Both points accumulated into BatchedPointGeometry on parent
+        let mut geom_query = app
             .world_mut()
-            .query_filtered::<&BatchIndex, With<BatchedFeatureMarker>>();
-        let indices: Vec<_> = child_query.iter(app.world()).map(|b| b.0).collect();
-        assert_eq!(indices.len(), 2);
-        assert_eq!(indices[0], 0);
-        assert_eq!(indices[1], 0);
+            .query_filtered::<&BatchedPointGeometry, With<PointMarker>>();
+        let geoms: Vec<_> = geom_query.iter(app.world()).collect();
+        assert_eq!(geoms.len(), 1);
+        assert_eq!(geoms[0].coords.len(), 2);
 
         // Properties should be stored once (not duplicated per sub-geometry)
         let mut batch_id_query = app
@@ -1135,76 +1140,85 @@ mod test {
                 Appearance::Billboard(BillboardMaterial::default()),
                 Appearance::Text(TextMaterial::default()),
                 Appearance::Polyline(PolylineMaterial::default()),
-                Appearance::Polygon(PolygonMaterial::default()),
+                Appearance::Polygon(PolygonMaterial {
+                    clamp_to_ground: false,
+                    ..Default::default()
+                }),
             ],
         );
 
         // Point/MultiPoint features match Point, Billboard, and Text appearances.
-        // Point: 1 (Point) + 2 (MultiPoint) = 3 children
+        // Point: 1 (Point) + 2 (MultiPoint) = 3 coords on parent
         let mut point_batched = app
             .world_mut()
             .query_filtered::<&BatchedFeature, With<PointMarker>>();
         let point_features: Vec<_> = point_batched.iter(app.world()).collect();
         assert_eq!(point_features.len(), 1);
-        assert_eq!(point_features[0].features.len(), 3);
 
-        // Billboard: same 3 children from Point/MultiPoint
+        let mut point_geom = app
+            .world_mut()
+            .query_filtered::<&BatchedPointGeometry, With<PointMarker>>();
+        let point_geoms: Vec<_> = point_geom.iter(app.world()).collect();
+        assert_eq!(point_geoms.len(), 1);
+        assert_eq!(point_geoms[0].coords.len(), 3);
+
+        // Billboard: same 3 coords from Point/MultiPoint
         let mut billboard_batched = app
             .world_mut()
             .query_filtered::<&BatchedFeature, With<BillboardMarker>>();
         let billboard_features: Vec<_> = billboard_batched.iter(app.world()).collect();
         assert_eq!(billboard_features.len(), 1);
-        assert_eq!(billboard_features[0].features.len(), 3);
 
-        // Text: same 3 children from Point/MultiPoint
+        let mut billboard_geom = app
+            .world_mut()
+            .query_filtered::<&BatchedPointGeometry, With<BillboardMarker>>();
+        let billboard_geoms: Vec<_> = billboard_geom.iter(app.world()).collect();
+        assert_eq!(billboard_geoms.len(), 1);
+        assert_eq!(billboard_geoms[0].coords.len(), 3);
+
+        // Text: same 3 coords from Point/MultiPoint
         let mut text_batched = app
             .world_mut()
             .query_filtered::<&BatchedFeature, With<TextMarker>>();
         let text_features: Vec<_> = text_batched.iter(app.world()).collect();
         assert_eq!(text_features.len(), 1);
-        assert_eq!(text_features[0].features.len(), 3);
 
-        // Polyline: 1 (LineString) + 2 (MultiLineString) = 3 children
+        let mut text_geom = app
+            .world_mut()
+            .query_filtered::<&BatchedPointGeometry, With<TextMarker>>();
+        let text_geoms: Vec<_> = text_geom.iter(app.world()).collect();
+        assert_eq!(text_geoms.len(), 1);
+        assert_eq!(text_geoms[0].coords.len(), 3);
+
+        // Polyline: 1 (LineString) + 2 (MultiLineString) = 3 accumulated
         let mut polyline_batched = app
             .world_mut()
             .query_filtered::<&BatchedFeature, With<PolylineMarker>>();
         let polyline_features: Vec<_> = polyline_batched.iter(app.world()).collect();
         assert_eq!(polyline_features.len(), 1);
-        assert_eq!(polyline_features[0].features.len(), 3);
 
-        // Polygon: 1 (Polygon) + 2 (MultiPolygon) = 3 children
+        let mut polyline_geom = app
+            .world_mut()
+            .query_filtered::<&BatchedPolylineGeometry, With<PolylineMarker>>();
+        let polyline_geoms: Vec<_> = polyline_geom.iter(app.world()).collect();
+        assert_eq!(polyline_geoms.len(), 1);
+        let buf = app.world().resource::<BufferStore>();
+        assert_eq!(polyline_geoms[0].feature_count(buf), 3);
+
+        // Polygon: 1 (Polygon) + 2 (MultiPolygon) = 3 accumulated
         let mut polygon_batched = app
             .world_mut()
             .query_filtered::<&BatchedFeature, With<PolygonMarker>>();
         let polygon_features: Vec<_> = polygon_batched.iter(app.world()).collect();
         assert_eq!(polygon_features.len(), 1);
-        assert_eq!(polygon_features[0].features.len(), 3);
 
-        // Verify child entity component types
-        let mut point_children = app
+        let mut polygon_geom = app
             .world_mut()
-            .query_filtered::<&PointGeometry, With<BatchedFeatureMarker>>();
-        assert_eq!(point_children.iter(app.world()).count(), 3);
-
-        let mut billboard_children = app
-            .world_mut()
-            .query_filtered::<&BillboardGeometry, With<BatchedFeatureMarker>>();
-        assert_eq!(billboard_children.iter(app.world()).count(), 3);
-
-        let mut text_children = app
-            .world_mut()
-            .query_filtered::<&TextGeometry, With<BatchedFeatureMarker>>();
-        assert_eq!(text_children.iter(app.world()).count(), 3);
-
-        let mut polyline_children = app
-            .world_mut()
-            .query_filtered::<&PolylineGeometry, With<BatchedFeatureMarker>>();
-        assert_eq!(polyline_children.iter(app.world()).count(), 3);
-
-        let mut polygon_children = app
-            .world_mut()
-            .query_filtered::<&PolygonGeometry, With<BatchedFeatureMarker>>();
-        assert_eq!(polygon_children.iter(app.world()).count(), 3);
+            .query_filtered::<&BatchedPolygonGeometry, With<PolygonMarker>>();
+        let polygon_geoms: Vec<_> = polygon_geom.iter(app.world()).collect();
+        assert_eq!(polygon_geoms.len(), 1);
+        let buf = app.world().resource::<BufferStore>();
+        assert_eq!(polygon_geoms[0].feature_count(buf), 3);
     }
 
     #[test]

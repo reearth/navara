@@ -49,13 +49,16 @@ const run = async () => {
     data: { url: MVT_DATASETS.plateauWakayamaGen.url },
     point: {
       size: 500,
-      scaleByDistance: true,
+      sizeInMeters: true,
       clampToGround: true,
       color: new Color().setHex(0xffcc00),
       center: { x: 0, y: -0.5 },
       effectIds: [bloomEffect.id],
       emissiveIntensity: 0.5,
       selectiveEffectOcclusion: "normal",
+    },
+    vectorTile: {
+      maxZoom: 16,
     },
   });
 

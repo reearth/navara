@@ -11,7 +11,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "vite build --watch=false",
+    "build": "tsc && vite build --watch=false",
     "build:dev": "vite build --mode development",
     "build:dev:watch": "pnpm build:dev --watch",
     "test": "vitest --passWithNoTests --watch=false",
@@ -22,16 +22,16 @@
   },
   "license": "MIT OR Apache-2.0",
   "peerDependencies": {
-    "three": "^0.183.2",
-    "react": "^18 || ^19",
+    "three": ">=0.183.0",
+    "react": ">=19",
     "@navara/three": "workspace:*"
   },
   "dependencies": {},
   "devDependencies": {
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3",
-    "@types/three": "^0.183.1",
-    "three": "^0.183.2",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "@types/three": "0.183.1",
+    "three": "0.183.2",
     "@navara/three": "workspace:*"
   }
 }

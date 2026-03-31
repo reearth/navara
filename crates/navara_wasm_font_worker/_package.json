@@ -1,0 +1,16 @@
+{
+  "name": "@navara/engine-font-worker",
+  "type": "module",
+  "version": "0.1.0",
+  "license": "MIT/Apache-2.0",
+  "files": [
+    "navara_wasm_font_worker_bg.wasm",
+    "navara_wasm_font_worker.js",
+    "navara_wasm_font_worker.d.ts"
+  ],
+  "main": "navara_wasm_font_worker.js",
+  "types": "navara_wasm_font_worker.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}

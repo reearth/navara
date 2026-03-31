@@ -119,6 +119,21 @@ impl TransferablePolylineBatchedFeature {
         }
     }
 
+    /// Create from taken polyline geometry data (retrieved from BufferStore).
+    /// All fields are moved, zero clones.
+    pub fn from_batched(
+        geom: navara_feature_component::batched_geometry::TakenPolylineGeometry,
+    ) -> Self {
+        let length = geom.batch_indices.len();
+        Self {
+            points: geom.points,
+            points_sizes: geom.points_sizes,
+            batch_indices: geom.batch_indices,
+            length,
+            ..Default::default()
+        }
+    }
+
     pub fn add(&mut self, points: &mut Vec<f64>, batch_index: BatchIndex) {
         self.points_sizes.push(points.len() as u32);
         self.points.append(points);

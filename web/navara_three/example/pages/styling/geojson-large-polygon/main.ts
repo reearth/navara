@@ -102,6 +102,7 @@ const run = async () => {
         outlineShow: params.outlineShow,
         outlineWidth: 2,
         outlineColor: new Color().setHex(0xff00ff),
+        tiled: true,
       },
     });
 

@@ -1,11 +1,10 @@
 #![doc = include_str!("../README.md")]
 
 use bevy_ecs::{
-    component::Component,
     entity::Entity,
     query::{With, Without},
     system::SystemState,
-    world::{EntityRef, Mut},
+    world::Mut,
 };
 use navara_buffer_store::{BufferStore, Handle};
 use navara_camera::{
@@ -17,20 +16,24 @@ use navara_core::{CRS, ElevationDecoder, LLE, LngLat, Radians, WGS84_64};
 use navara_data_requester::DataRequester;
 use navara_event::Events;
 use navara_feature_component::{
-    batch::{BatchedFeature, FeatureBatchIdMap, GlobalBatchIds},
+    batch::{FeatureBatchIdMap, GlobalBatchIds},
+    batched_geometry::{
+        BatchedPolygonGeometry, BatchedPolylineGeometry, TakenPolygonGeometry,
+        TakenPolylineGeometry,
+    },
     render::RenderableFeature,
 };
 use navara_frame::FrameManager;
 use navara_globe::Globe;
-use navara_layer::{LayerDescStore, LayerDescription, LayerId, MvtLayer};
+use navara_layer::{LayerDescStore, LayerDescription, LayerId};
 use navara_material::{PolygonMaterial, PolylineMaterial};
 use navara_math::{FloatType, Transform, Vec3};
-use navara_mvt::MvtLayerResources;
 use navara_texture_fragment::{TextureFragmentLoadedEvent, TextureFragmentStatus};
 use navara_tile_component::{
     MartiniComponent, RasterTile, RasterTileQuadtree, TerrainHeightObserver, TileHandle,
     TileTerrainDataRequesterQuery, VectorTile, VectorTileQuadtree, compute_terrain_height_at_point,
 };
+use navara_vector_tile::LayerResources;
 use navara_window::{Window, WindowResizeEvent};
 use navara_worker::{
     DelegatedWorkerTasksResult, WorkerTaskCompleted, WorkerTaskCompletedEvent, WorkerTaskMarker,
@@ -275,17 +278,26 @@ impl App {
     }
 
     pub fn add_layer(&mut self, layer_id: &str, desc: LayerDescription) {
-        self.set_layer_description(layer_id, desc.clone());
+        if let Some(mut layer_desc_store) =
+            self.app.world_mut().get_resource_mut::<LayerDescStore>()
+        {
+            layer_desc_store.add(layer_id.to_owned(), desc.clone());
+        }
 
         self.app
             .world_mut()
             .write_message(navara_layer_event::AddLayerEvent(desc));
     }
 
-    pub fn get_layer_type(&self, layer_id: &String) -> Option<&str> {
+    pub fn get_layer_index(&self, layer_id: &str) -> Option<usize> {
+        let store = self.app.world().get_resource::<LayerDescStore>()?;
+        store.get_order(layer_id).copied()
+    }
+
+    pub fn get_layer_type(&self, layer_id: &str) -> Option<&str> {
         let mut layer_type = None;
         if let Some(layer_desc_store) = self.app.world().get_resource::<LayerDescStore>()
-            && let Some(desc) = layer_desc_store.map.get(layer_id)
+            && let Some(desc) = layer_desc_store.get(layer_id)
         {
             layer_type = match desc {
                 LayerDescription::Tiles(_) => Some("tiles"),
@@ -303,22 +315,12 @@ impl App {
 
     pub fn get_layer_description(&self, layer_id: &str) -> Option<LayerDescription> {
         if let Some(layer_desc_store) = self.app.world().get_resource::<LayerDescStore>()
-            && let Some(desc) = layer_desc_store.map.get(layer_id)
+            && let Some(desc) = layer_desc_store.get(layer_id)
         {
             return Some(desc.clone());
         }
 
         None
-    }
-
-    pub fn set_layer_description(&mut self, layer_id: &str, desc: LayerDescription) {
-        if let Some(mut layer_desc_store) =
-            self.app.world_mut().get_resource_mut::<LayerDescStore>()
-        {
-            layer_desc_store
-                .map
-                .insert(layer_id.to_owned(), desc.clone());
-        }
     }
 
     pub fn update_layer(&mut self, layer_id: &str, mut desc: LayerDescription) {
@@ -400,7 +402,11 @@ impl App {
             }
         }
 
-        self.set_layer_description(layer_id, desc);
+        if let Some(mut layer_desc_store) =
+            self.app.world_mut().get_resource_mut::<LayerDescStore>()
+        {
+            layer_desc_store.update(layer_id.to_owned(), desc.clone());
+        }
     }
 
     pub fn delete_layer(&mut self, layer_id: &str) {
@@ -452,21 +458,20 @@ impl App {
         tile.get_parent_tile(qt)
     }
 
-    // TODO: Support other type of vector tile.
     pub fn get_vector_tiles(&mut self, handle: TileHandle) -> Vec<(String, &VectorTile)> {
         let world = self.app.world_mut();
-        let mut layers = world.query::<(&MvtLayer, &MvtLayerResources)>();
+        let mut layers = world.query::<&LayerResources>();
         let mut qts = world.query::<&VectorTileQuadtree>();
 
         let mut result = vec![];
-        for (layer, resource) in layers.iter(world) {
+        for resource in layers.iter(world) {
             let Ok(qt) = qts.get(world, resource.quadtree) else {
                 continue;
             };
             let Some(tile) = qt.qt.get(handle) else {
                 continue;
             };
-            result.push((layer.layer_id.clone(), tile));
+            result.push((resource.layer_id.clone(), tile));
         }
 
         result
@@ -490,35 +495,45 @@ impl App {
         world.get_resource_mut::<BufferStore>()
     }
 
-    fn get_batched_features_with_material<C: Component + Clone>(
-        &self,
+    /// Take polygon geometry data from BufferStore via the `BatchedPolygonGeometry` component.
+    /// Returns owned Vecs ready for WASM transfer, along with batch IDs and material.
+    pub fn take_batched_polygon_geometry(
+        &mut self,
         batched_feature_id: u64,
-    ) -> Option<(Vec<EntityRef<'_>>, GlobalBatchIds, C)> {
+    ) -> Option<(TakenPolygonGeometry, GlobalBatchIds, PolygonMaterial)> {
         let entity = Entity::from_bits(batched_feature_id);
-        let world = self.app.world();
-        let (batched_feature, batch_ids, material) = world
-            .get_entity(entity)
-            .ok()?
-            .get_components::<(&BatchedFeature, &GlobalBatchIds, &C)>()
-            .ok()?;
-
-        let features = world.get_entity(&batched_feature.features[..]).ok()?;
-
-        Some((features, batch_ids.clone(), material.clone()))
+        let world = self.app.world_mut();
+        // Read small component data (handles + CRS) and drop the entity borrow
+        let (geom, batch_ids, material) = {
+            let entity_ref = world.get_entity(entity).ok()?;
+            let batch_ids = entity_ref.get::<GlobalBatchIds>()?.clone();
+            let material = entity_ref.get::<PolygonMaterial>()?.clone();
+            let geom = entity_ref.get::<BatchedPolygonGeometry>()?.clone();
+            (geom, batch_ids, material)
+        };
+        let mut buf = world.get_resource_mut::<BufferStore>()?;
+        let taken = geom.take_from_buf(&mut buf);
+        Some((taken, batch_ids, material))
     }
 
-    pub fn get_batched_features_for_polyline(
-        &self,
+    /// Take polyline geometry data from BufferStore via the `BatchedPolylineGeometry` component.
+    /// Returns owned Vecs ready for WASM transfer, along with batch IDs and material.
+    pub fn take_batched_polyline_geometry(
+        &mut self,
         batched_feature_id: u64,
-    ) -> Option<(Vec<EntityRef<'_>>, GlobalBatchIds, PolylineMaterial)> {
-        self.get_batched_features_with_material(batched_feature_id)
-    }
-
-    pub fn get_batched_features_for_polygon(
-        &self,
-        batched_feature_id: u64,
-    ) -> Option<(Vec<EntityRef<'_>>, GlobalBatchIds, PolygonMaterial)> {
-        self.get_batched_features_with_material(batched_feature_id)
+    ) -> Option<(TakenPolylineGeometry, GlobalBatchIds, PolylineMaterial)> {
+        let entity = Entity::from_bits(batched_feature_id);
+        let world = self.app.world_mut();
+        let (geom, batch_ids, material) = {
+            let entity_ref = world.get_entity(entity).ok()?;
+            let batch_ids = entity_ref.get::<GlobalBatchIds>()?.clone();
+            let material = entity_ref.get::<PolylineMaterial>()?.clone();
+            let geom = entity_ref.get::<BatchedPolylineGeometry>()?.clone();
+            (geom, batch_ids, material)
+        };
+        let mut buf = world.get_resource_mut::<BufferStore>()?;
+        let taken = geom.take_from_buf(&mut buf);
+        Some((taken, batch_ids, material))
     }
 
     pub fn search_feature_entity_by_global_batch_id(

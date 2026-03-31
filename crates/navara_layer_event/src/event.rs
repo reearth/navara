@@ -58,7 +58,7 @@ pub fn process_update_events(
     mut events: MessageReader<UpdateLayerEvent>,
 ) {
     for ev in events.read() {
-        let layer_desc = match layer_desc_store.map.get(&ev.layer_id.0) {
+        let layer_desc = match layer_desc_store.get(&ev.layer_id.0) {
             Some(l) => l,
             None => continue,
         };
@@ -119,7 +119,7 @@ pub fn process_delete_events(
 ) {
     for ev in events.read() {
         let DeleteLayerEvent(layer_id) = ev;
-        let layer_desc = match layer_desc_store.map.get(&layer_id.0) {
+        let layer_desc = match layer_desc_store.get(&layer_id.0) {
             Some(l) => l,
             None => continue,
         };
@@ -145,6 +145,6 @@ pub fn process_delete_events(
             _ => {}
         };
         // delete stored value in LayerDescStore.
-        layer_desc_store.map.remove(&layer_id.0);
+        layer_desc_store.delete(&layer_id.0);
     }
 }

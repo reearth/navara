@@ -7,20 +7,17 @@ use crate::{ElevationDecoder, TextureFragment, Vec2, Vec3 as WasmVec3};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PointMaterial {
     pub show: Option<bool>,
-    /// size in meters.
+    /// size in pixels/meters (units are determined by `sizeInMeters`).
     pub size: Option<f32>,
     pub color: Option<u32>,
     /// anchor point of the sprite, range is (-0.5, -0.5) to (0.5, 0.5).
     /// Default is (0.0, 0.0) which means the center of the sprite.
     pub center: Option<Vec2>,
     pub height: Option<f32>,
-    #[wasm_bindgen(js_name = scaleByDistance)]
-    #[serde(rename = "scaleByDistance")]
-    /// Whether to scale the point based on distance from the camera.
-    /// When true, the point size will be adjusted to reduce attenuation with distance, so distant points
-    /// have a minimum apparent size and points gradually grow larger as their distance increases.
-    /// The size is scaled by a factor of the form (1.0 + (distance / predefined constant)).
-    pub scale_by_distance: Option<bool>,
+    #[wasm_bindgen(js_name = sizeInMeters)]
+    #[serde(rename = "sizeInMeters")]
+    /// Whether the size is specified in meters. If false, the size is in pixels. Default is true.
+    pub size_in_meters: Option<bool>,
     #[wasm_bindgen(js_name = clampToGround)]
     #[serde(rename = "clampToGround")]
     pub clamp_to_ground: Option<bool>,
@@ -60,7 +57,7 @@ impl From<PointMaterial> for navara_material::PointMaterial {
             color: val.color.unwrap_or(default.color),
             center: val.center.unwrap_or(default.center.into()).into(),
             height: val.height.unwrap_or(default.height),
-            scale_by_distance: val.scale_by_distance.unwrap_or(default.scale_by_distance),
+            size_in_meters: val.size_in_meters.unwrap_or(default.size_in_meters),
             clamp_to_ground: val.clamp_to_ground.unwrap_or(default.clamp_to_ground),
             depth_test: val.depth_test.unwrap_or(default.depth_test),
             offset_depth: val.offset_depth.unwrap_or(default.offset_depth),
@@ -82,7 +79,7 @@ impl<'a> From<&'a navara_material::PointMaterial> for PointMaterial {
             color: Some(value.color),
             center: Some(value.center.into()),
             height: Some(value.height),
-            scale_by_distance: Some(value.scale_by_distance),
+            size_in_meters: Some(value.size_in_meters),
             clamp_to_ground: Some(value.clamp_to_ground),
             depth_test: Some(value.depth_test),
             offset_depth: Some(value.offset_depth),
@@ -103,7 +100,7 @@ impl PointMaterial {
             color: self.color.unwrap_or(other.color),
             center: self.center.unwrap_or(other.center.into()).into(),
             height: self.height.unwrap_or(other.height),
-            scale_by_distance: self.scale_by_distance.unwrap_or(other.scale_by_distance),
+            size_in_meters: self.size_in_meters.unwrap_or(other.size_in_meters),
             clamp_to_ground: self.clamp_to_ground.unwrap_or(other.clamp_to_ground),
             depth_test: self.depth_test.unwrap_or(other.depth_test),
             offset_depth: self.offset_depth.unwrap_or(other.offset_depth),
@@ -130,7 +127,7 @@ pub struct NearFar {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BillboardMaterial {
     pub show: Option<bool>,
-    /// size in meters.
+    /// size in pixels/meters (units are determined by `sizeInMeters`).
     pub size: Option<f32>,
     pub color: Option<u32>,
     /// anchor point of the sprite, range is (-0.5, -0.5) to (0.5, 0.5).
@@ -139,13 +136,10 @@ pub struct BillboardMaterial {
     pub height: Option<f32>,
     #[wasm_bindgen(getter_with_clone)]
     pub url: Option<String>,
-    #[wasm_bindgen(js_name = scaleByDistance)]
-    #[serde(rename = "scaleByDistance")]
-    /// Whether to scale the billboard based on distance from the camera.
-    /// When true, the billboard size will be adjusted to reduce attenuation with distance, so distant billboards
-    /// have a minimum apparent size and billboards gradually grow larger as their distance increases.
-    /// The size is scaled by a factor of the form (1.0 + (distance / predefined constant)).
-    pub scale_by_distance: Option<bool>,
+    #[wasm_bindgen(js_name = sizeInMeters)]
+    #[serde(rename = "sizeInMeters")]
+    /// Whether the size is specified in meters. If false, the size is in pixels. Default is true.
+    pub size_in_meters: Option<bool>,
     #[wasm_bindgen(js_name = clampToGround)]
     #[serde(rename = "clampToGround")]
     pub clamp_to_ground: Option<bool>,
@@ -189,7 +183,7 @@ impl From<BillboardMaterial> for navara_material::BillboardMaterial {
             center: val.center.unwrap_or(default.center.into()).into(),
             height: val.height.unwrap_or(default.height),
             url: val.url.unwrap_or(default.url),
-            scale_by_distance: val.scale_by_distance.unwrap_or(default.scale_by_distance),
+            size_in_meters: val.size_in_meters.unwrap_or(default.size_in_meters),
             clamp_to_ground: val.clamp_to_ground.unwrap_or(default.clamp_to_ground),
             depth_test: val.depth_test.unwrap_or(default.depth_test),
             offset_depth: val.offset_depth.unwrap_or(default.offset_depth),
@@ -213,7 +207,7 @@ impl<'a> From<&'a navara_material::BillboardMaterial> for BillboardMaterial {
             center: Some(value.center.into()),
             height: Some(value.height),
             url: Some(value.url.clone()),
-            scale_by_distance: Some(value.scale_by_distance),
+            size_in_meters: Some(value.size_in_meters),
             clamp_to_ground: Some(value.clamp_to_ground),
             depth_test: Some(value.depth_test),
             offset_depth: Some(value.offset_depth),
@@ -239,7 +233,7 @@ impl BillboardMaterial {
             center: self.center.unwrap_or(other.center.into()).into(),
             height: self.height.unwrap_or(other.height),
             url: self.url.clone().unwrap_or(other.url.clone()),
-            scale_by_distance: self.scale_by_distance.unwrap_or(other.scale_by_distance),
+            size_in_meters: self.size_in_meters.unwrap_or(other.size_in_meters),
             clamp_to_ground: self.clamp_to_ground.unwrap_or(other.clamp_to_ground),
             depth_test: self.depth_test.unwrap_or(other.depth_test),
             offset_depth: self.offset_depth.unwrap_or(other.offset_depth),
@@ -260,13 +254,15 @@ impl BillboardMaterial {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TextMaterial {
     pub show: Option<bool>,
+    /// size in pixels/meters (units are determined by `sizeInMeters`).
     pub size: Option<f32>,
     pub color: Option<u32>,
     pub center: Option<Vec2>,
     pub height: Option<f32>,
-    #[wasm_bindgen(js_name = scaleByDistance)]
-    #[serde(rename = "scaleByDistance")]
-    pub scale_by_distance: Option<bool>,
+    /// Whether the size is specified in meters. If false, the size is in pixels. Default is true.
+    #[wasm_bindgen(js_name = sizeInMeters)]
+    #[serde(rename = "sizeInMeters")]
+    pub size_in_meters: Option<bool>,
     #[wasm_bindgen(js_name = clampToGround)]
     #[serde(rename = "clampToGround")]
     pub clamp_to_ground: Option<bool>,
@@ -293,22 +289,25 @@ pub struct TextMaterial {
     #[wasm_bindgen(js_name = borderWidth)]
     #[serde(rename = "borderWidth")]
     pub border_width: Option<f32>,
-    #[wasm_bindgen(js_name = cornerRadius)]
-    #[serde(rename = "cornerRadius")]
-    pub corner_radius: Option<f32>,
-    pub padding: Option<Vec2>,
+    // TODO: support cornerRadius and padding later
+    // #[wasm_bindgen(js_name = cornerRadius)]
+    // #[serde(rename = "cornerRadius")]
+    // pub corner_radius: Option<f32>,
+    // pub padding: Option<Vec2>,
     // outline
+    // TODO: support outlineBlur and outlineOffset later.
     /// Outline blur radius in CSS pixels. Defaults to `0.0`.
-    #[wasm_bindgen(js_name = outlineBlur)]
-    #[serde(rename = "outlineBlur")]
-    pub outline_blur: Option<f32>,
+    // #[wasm_bindgen(js_name = outlineBlur)]
+    // #[serde(rename = "outlineBlur")]
+    // pub outline_blur: Option<f32>,
     #[wasm_bindgen(js_name = outlineColor)]
     #[serde(rename = "outlineColor")]
     pub outline_color: Option<u32>, // outlineColor Defalut:black
+    // TODO: support outlineOffset later.
     /// Pixel offset `[x, y]` in CSS pixels. Defaults to `(0.0, 0.0)`.
-    #[wasm_bindgen(js_name = outlineOffset)]
-    #[serde(rename = "outlineOffset")]
-    pub outline_offset: Option<Vec2>,
+    // #[wasm_bindgen(js_name = outlineOffset)]
+    // #[serde(rename = "outlineOffset")]
+    // pub outline_offset: Option<Vec2>,
     #[wasm_bindgen(js_name = outlineOpacity)]
     #[serde(rename = "outlineOpacity")]
     pub outline_opacity: Option<f32>, // outlineOpacity Default:1
@@ -330,7 +329,7 @@ impl From<TextMaterial> for navara_material::TextMaterial {
             color: val.color.unwrap_or(default.color),
             center: val.center.unwrap_or(default.center.into()).into(),
             height: val.height.unwrap_or(default.height),
-            scale_by_distance: val.scale_by_distance.unwrap_or(default.scale_by_distance),
+            size_in_meters: val.size_in_meters.unwrap_or(default.size_in_meters),
             clamp_to_ground: val.clamp_to_ground.unwrap_or(default.clamp_to_ground),
             depth_test: val.depth_test.unwrap_or(default.depth_test),
             offset_depth: val.offset_depth.unwrap_or(default.offset_depth),
@@ -339,14 +338,14 @@ impl From<TextMaterial> for navara_material::TextMaterial {
             background_color: val.background_color,
             border_color: val.border_color.unwrap_or(default.border_color),
             border_width: val.border_width.unwrap_or(default.border_width),
-            corner_radius: val.corner_radius.unwrap_or(default.corner_radius),
-            padding: val.padding.unwrap_or(default.padding.into()).into(),
-            outline_blur: val.outline_blur.unwrap_or(default.outline_blur),
+            // corner_radius: val.corner_radius.unwrap_or(default.corner_radius),
+            // padding: val.padding.unwrap_or(default.padding.into()).into(),
+            // outline_blur: val.outline_blur.unwrap_or(default.outline_blur),
             outline_color: val.outline_color.unwrap_or(default.outline_color),
-            outline_offset: val
-                .outline_offset
-                .unwrap_or(default.outline_offset.into())
-                .into(),
+            // outline_offset: val
+            //     .outline_offset
+            //     .unwrap_or(default.outline_offset.into())
+            //     .into(),
             outline_opacity: val.outline_opacity.unwrap_or(default.outline_opacity),
             outline_width: val.outline_width.unwrap_or(default.outline_width),
             lang: val.lang.unwrap_or(default.lang),
@@ -361,7 +360,7 @@ impl<'a> From<&'a navara_material::TextMaterial> for TextMaterial {
             color: Some(value.color),
             center: Some(value.center.into()),
             height: Some(value.height),
-            scale_by_distance: Some(value.scale_by_distance),
+            size_in_meters: Some(value.size_in_meters),
             clamp_to_ground: Some(value.clamp_to_ground),
             depth_test: Some(value.depth_test),
             offset_depth: Some(value.offset_depth),
@@ -370,11 +369,11 @@ impl<'a> From<&'a navara_material::TextMaterial> for TextMaterial {
             background_color: value.background_color,
             border_color: Some(value.border_color),
             border_width: Some(value.border_width),
-            corner_radius: Some(value.corner_radius),
-            padding: Some(value.padding.into()),
-            outline_blur: Some(value.outline_blur),
+            // corner_radius: Some(value.corner_radius),
+            // padding: Some(value.padding.into()),
+            // outline_blur: Some(value.outline_blur),
             outline_color: Some(value.outline_color),
-            outline_offset: Some(value.outline_offset.into()),
+            // outline_offset: Some(value.outline_offset.into()),
             outline_opacity: Some(value.outline_opacity),
             outline_width: Some(value.outline_width),
             lang: Some(value.lang.clone()),
@@ -390,7 +389,7 @@ impl TextMaterial {
             color: self.color.unwrap_or(other.color),
             center: self.center.unwrap_or(other.center.into()).into(),
             height: self.height.unwrap_or(other.height),
-            scale_by_distance: self.scale_by_distance.unwrap_or(other.scale_by_distance),
+            size_in_meters: self.size_in_meters.unwrap_or(other.size_in_meters),
             clamp_to_ground: self.clamp_to_ground.unwrap_or(other.clamp_to_ground),
             depth_test: self.depth_test.unwrap_or(other.depth_test),
             offset_depth: self.offset_depth.unwrap_or(other.offset_depth),
@@ -399,14 +398,14 @@ impl TextMaterial {
             background_color: self.background_color.or(other.background_color),
             border_color: self.border_color.unwrap_or(other.border_color),
             border_width: self.border_width.unwrap_or(other.border_width),
-            corner_radius: self.corner_radius.unwrap_or(other.corner_radius),
-            padding: self.padding.unwrap_or(other.padding.into()).into(),
-            outline_blur: self.outline_blur.unwrap_or(other.outline_blur),
+            // corner_radius: self.corner_radius.unwrap_or(other.corner_radius),
+            // padding: self.padding.unwrap_or(other.padding.into()).into(),
+            // outline_blur: self.outline_blur.unwrap_or(other.outline_blur),
             outline_color: self.outline_color.unwrap_or(other.outline_color),
-            outline_offset: self
-                .outline_offset
-                .unwrap_or(other.outline_offset.into())
-                .into(),
+            // outline_offset: self
+            //     .outline_offset
+            //     .unwrap_or(other.outline_offset.into())
+            //     .into(),
             outline_opacity: self.outline_opacity.unwrap_or(other.outline_opacity),
             outline_width: self.outline_width.unwrap_or(other.outline_width),
             lang: self.lang.clone().unwrap_or(other.lang.clone()),
@@ -635,9 +634,9 @@ pub struct PolygonMaterial {
     #[wasm_bindgen(js_name = clampToGround)]
     #[serde(rename = "clampToGround")]
     pub clamp_to_ground: Option<bool>,
-    #[wasm_bindgen(js_name = useGroundNormals)]
-    #[serde(rename = "useGroundNormals")]
-    pub use_ground_normals: Option<bool>,
+    #[wasm_bindgen(js_name = tiled)]
+    #[serde(rename = "tiled")]
+    pub tiled: Option<bool>,
     pub height: Option<f32>,
     #[wasm_bindgen(js_name = extrudedHeight)]
     #[serde(rename = "extrudedHeight")]
@@ -728,7 +727,7 @@ impl PolygonMaterial {
         receive_shadow: Option<bool>,
         color: Option<u32>,
         clamp_to_ground: Option<bool>,
-        use_ground_normals: Option<bool>,
+        tiled: Option<bool>,
         height: Option<f32>,
         extruded_height: Option<f32>,
         wireframe: Option<bool>,
@@ -742,7 +741,7 @@ impl PolygonMaterial {
             receive_shadow,
             color,
             clamp_to_ground,
-            use_ground_normals,
+            tiled,
             height,
             extruded_height,
             wireframe,
@@ -788,7 +787,7 @@ impl PolygonMaterial {
             receive_shadow: self.receive_shadow.unwrap_or(other.receive_shadow),
             color: self.color.unwrap_or(other.color),
             clamp_to_ground: self.clamp_to_ground.unwrap_or(other.clamp_to_ground),
-            use_ground_normals: self.use_ground_normals.unwrap_or(other.use_ground_normals),
+            tiled: self.tiled.unwrap_or(other.tiled),
             height: self.height.unwrap_or(other.height),
             extruded_height: self.extruded_height.or(other.extruded_height),
             wireframe: self.wireframe.unwrap_or(other.wireframe),
@@ -839,7 +838,7 @@ impl From<PolygonMaterial> for navara_material::PolygonMaterial {
             receive_shadow: val.receive_shadow.unwrap_or(default.receive_shadow),
             color: val.color.unwrap_or(default.color),
             clamp_to_ground: val.clamp_to_ground.unwrap_or(default.clamp_to_ground),
-            use_ground_normals: val.use_ground_normals.unwrap_or(default.use_ground_normals),
+            tiled: val.tiled.unwrap_or(default.tiled),
             height: val.height.unwrap_or(default.height),
             extruded_height: val.extruded_height,
             wireframe: val.wireframe.unwrap_or(default.wireframe),
@@ -885,7 +884,7 @@ impl<'a> From<&'a navara_material::PolygonMaterial> for PolygonMaterial {
             receive_shadow: Some(value.receive_shadow),
             color: Some(value.color),
             clamp_to_ground: Some(value.clamp_to_ground),
-            use_ground_normals: Some(value.use_ground_normals),
+            tiled: Some(value.tiled),
             height: Some(value.height),
             extruded_height: value.extruded_height,
             wireframe: Some(value.wireframe),
@@ -925,7 +924,7 @@ impl From<navara_material::PolygonMaterial> for PolygonMaterial {
             receive_shadow: Some(value.receive_shadow),
             color: Some(value.color),
             clamp_to_ground: Some(value.clamp_to_ground),
-            use_ground_normals: Some(value.use_ground_normals),
+            tiled: Some(value.tiled),
             height: Some(value.height),
             extruded_height: value.extruded_height,
             wireframe: Some(value.wireframe),

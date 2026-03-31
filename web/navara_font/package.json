@@ -1,0 +1,44 @@
+{
+  "name": "@navara/font",
+  "type": "module",
+  "version": "0.0.0",
+  "private": true,
+  "main": "dist/index.umd.cjs",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.umd.cjs",
+      "types": "./dist/index.d.ts"
+    },
+    "./fontWorker": {
+      "import": "./src/fontWorker.ts",
+      "default": "./src/fontWorker.ts"
+    }
+  },
+  "files": [
+    "src",
+    "dist"
+  ],
+  "scripts": {
+    "type-check": "tsc && tsc -p tsconfig.node.json",
+    "build": "pnpm type-check && vite build --watch=false",
+    "build:dev": "vite build --mode development",
+    "build:dev:watch": "pnpm build:dev --watch",
+    "test": "vitest --passWithNoTests --watch=false",
+    "lint": "eslint . --fix",
+    "lint:check": "eslint .",
+    "format": "prettier --write --ignore-path ../../.gitignore --ignore-path ../../.prettierignore .",
+    "format:check": "prettier --check --ignore-path ../../.gitignore --ignore-path ../../.prettierignore ."
+  },
+  "license": "MIT OR Apache-2.0",
+  "dependencies": {
+    "@navara/worker": "workspace:*",
+    "three": "0.183.2"
+  },
+  "devDependencies": {
+    "@types/three": "0.183.1",
+    "three": "0.183.2"
+  }
+}

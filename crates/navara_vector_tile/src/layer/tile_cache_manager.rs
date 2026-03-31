@@ -1,0 +1,19 @@
+use bevy_ecs::{component::Component, entity::Entity};
+use navara_tile_component::TileHandle;
+use rustc_hash::FxHashMap;
+
+// Manage the tiles that are going to be rendered.
+#[derive(Default, Component)]
+pub struct TileCacheManager {
+    pub rendered_tile_caches: FxHashMap<TileHandle, Entity>,
+    pub requested_tile_caches: FxHashMap<TileHandle, Entity>,
+    pub last_rendered_frame: usize,
+    pub is_updated_in_this_frame: bool,
+    pub needs_update: bool,
+}
+
+impl TileCacheManager {
+    pub fn has_same_rendered_tile(&self, handle: &TileHandle, target: &Entity) -> bool {
+        self.rendered_tile_caches.get(handle) == Some(target)
+    }
+}

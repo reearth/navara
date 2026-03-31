@@ -2,6 +2,7 @@ import ThreeView, {
   type LayerDescription,
   type Layer,
   Color,
+  type Nullable,
 } from "@navara/three";
 import { isNumber } from "lodash-es";
 import {
@@ -11,6 +12,10 @@ import {
   type BindingParams,
   type InputBindingApi,
 } from "tweakpane";
+
+const getIdFromProperties = (properties: Nullable<Record<string, unknown>>) => {
+  return properties?.["id"] ?? properties?.["gml_id"];
+};
 
 export type MaterialLayerDescription = Exclude<
   LayerDescription,
@@ -57,6 +62,13 @@ const addFeatureUpdateHandler = (
     } else if (layerDesc.type == "mvt") {
       if (layerDesc.point && layerDesc.point.color !== undefined) {
         defaultColor = layerDesc.point.color;
+      } else if (
+        layerDesc.billboard &&
+        layerDesc.billboard.color !== undefined
+      ) {
+        defaultColor = layerDesc.billboard.color;
+      } else if (layerDesc.text && layerDesc.text.color !== undefined) {
+        defaultColor = layerDesc.text.color;
       } else if (layerDesc.polyline && layerDesc.polyline.color !== undefined) {
         defaultColor = layerDesc.polyline.color;
       } else if (layerDesc.polygon && layerDesc.polygon.color !== undefined) {
@@ -70,8 +82,8 @@ const addFeatureUpdateHandler = (
   layer.on("featureUpdated", ({ evaluator }) => {
     evaluator.evaluate(
       ({ batchId, properties }) => {
-        const gmlId = properties?.["gml_id"];
-        if (gmlId && selectedFeatures.has(gmlId as string)) {
+        const id = getIdFromProperties(properties);
+        if (id && selectedFeatures.has(id as string)) {
           return {
             color: new Color().setHex(0x00ffff),
           };
@@ -90,7 +102,7 @@ const addFeatureUpdateHandler = (
           color: defaultColor,
         };
       },
-      { filters: ["gml_id"] },
+      { filters: ["id", "gml_id"] },
     );
   });
 };
@@ -103,10 +115,10 @@ export const addCtrlPanel = (
   const layerInstMap = new Map<string, Layer>();
 
   view.on("pick", (info) => {
-    const gmlId = info?.properties?.["gml_id"];
-    if (gmlId) {
-      // if gml_id exists, use it for selection
-      selectedFeatures.add(gmlId as string);
+    const id = getIdFromProperties(info?.properties);
+    if (id) {
+      // if id exists, use it for selection
+      selectedFeatures.add(id as string);
 
       if (isNumber(info?.batchId)) {
         const layerId = info?.layerId;
@@ -189,7 +201,7 @@ export const addCtrlPanel = (
     clampToGround: false,
     useGroundNormals: false,
     wireframe: false,
-    scaleByDistance: true,
+    sizeInMeters: true,
     shouldRotateInDefault: true,
     roughness: 1.0,
     metalness: 0.0,
@@ -369,8 +381,8 @@ export const addCtrlPanel = (
         material.wireframe = paneParams.wireframe;
       }
 
-      if ("scaleByDistance" in material) {
-        material.scaleByDistance = paneParams.scaleByDistance;
+      if ("sizeInMeters" in material) {
+        material.sizeInMeters = paneParams.sizeInMeters;
       }
 
       if ("shouldRotateInDefault" in material) {
@@ -552,9 +564,9 @@ function createParamCtrl(
       f.addBinding(paneParams, "wireframe").on("change", changeFunc);
     }
 
-    if ("scaleByDistance" in material) {
-      paneParams.scaleByDistance = material.scaleByDistance;
-      f.addBinding(paneParams, "scaleByDistance").on("change", changeFunc);
+    if ("sizeInMeters" in material) {
+      paneParams.sizeInMeters = material.sizeInMeters;
+      f.addBinding(paneParams, "sizeInMeters").on("change", changeFunc);
     }
 
     if ("shouldRotateInDefault" in material) {

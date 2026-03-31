@@ -5,7 +5,6 @@ import {
   PerspectiveCamera,
   Object3D,
   Mesh,
-  Material,
   Scene,
   RGBAFormat,
   Color,
@@ -43,13 +42,12 @@ export class PickHelper extends CustomRenderPass {
     camera: PerspectiveCamera,
     scenes: Scenes,
     meshes: MeshCache,
-    drapedFeatureMaterials: Map<string, Material>,
     onPickCallback: (pickArr: number[]) => void,
     inputBuffer: WebGLRenderTarget,
     globe: Globe,
     options?: PickHelperOptions,
   ) {
-    super(scenes, camera, meshes, drapedFeatureMaterials, inputBuffer, globe, {
+    super(scenes, camera, meshes, inputBuffer, globe, {
       disableShadow: true,
       allowTransparent: false,
     });

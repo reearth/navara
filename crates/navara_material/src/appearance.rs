@@ -78,8 +78,7 @@ pub struct PointMaterial {
     pub color: u32,
     pub center: Vec2,
     pub height: f32,
-    /// near, far
-    pub scale_by_distance: bool,
+    pub size_in_meters: bool,
     pub clamp_to_ground: bool,
     pub depth_test: bool,
     pub offset_depth: bool,
@@ -102,7 +101,7 @@ impl Default for PointMaterial {
             center: Vec2::new(0.0, 0.),
             clamp_to_ground: true,
             height: 1.,
-            scale_by_distance: true,
+            size_in_meters: true,
             depth_test: true,
             offset_depth: true,
             transparent: true,
@@ -132,8 +131,7 @@ pub struct BillboardMaterial {
     pub center: Vec2,
     pub height: f32,
     pub url: String,
-    /// near, far
-    pub scale_by_distance: bool,
+    pub size_in_meters: bool,
     pub clamp_to_ground: bool,
     pub depth_test: bool,
     pub offset_depth: bool,
@@ -158,7 +156,7 @@ impl Default for BillboardMaterial {
             clamp_to_ground: true,
             height: 1.,
             url: "".to_string(),
-            scale_by_distance: true,
+            size_in_meters: true,
             depth_test: true,
             offset_depth: true,
             transparent: false,
@@ -188,8 +186,7 @@ pub struct TextMaterial {
     pub color: u32,
     pub center: Vec2,
     pub height: f32,
-    /// near, far
-    pub scale_by_distance: bool,
+    pub size_in_meters: bool,
     pub clamp_to_ground: bool,
     pub depth_test: bool,
     pub offset_depth: bool,
@@ -197,13 +194,13 @@ pub struct TextMaterial {
     pub font: String,
     pub background_color: Option<u32>,
     pub border_color: u32,
-    pub border_width: f32,  // 0 ~ 0.5, the ratio of the border to the height
-    pub corner_radius: f32, // 0 ~ 0.5, the ratio of the corner radius to the height
-    pub padding: Vec2,
+    pub border_width: f32, // 0 ~ 0.5, the ratio of the border to the height
+    // pub corner_radius: f32, // 0 ~ 0.5, the ratio of the corner radius to the height
+    // pub padding: Vec2,
     // outline
-    pub outline_blur: f32,    // outlineBlur Defalut:0
-    pub outline_color: u32,   // outlineColor Defalut:black
-    pub outline_offset: Vec2, // outlineOffset Default: (0,0)
+    // pub outline_blur: f32,    // outlineBlur Defalut:0
+    pub outline_color: u32, // outlineColor Defalut:black
+    // pub outline_offset: Vec2, // outlineOffset Default: (0,0)
     pub outline_opacity: f32, // outlineOpacity Default:1
     pub outline_width: f32,   // outlineWidth Default:0
     pub lang: String,
@@ -218,7 +215,7 @@ impl Default for TextMaterial {
             center: Vec2::new(0.5, 0.),
             clamp_to_ground: true,
             height: 1.,
-            scale_by_distance: true,
+            size_in_meters: true,
             depth_test: true,
             offset_depth: true,
             text: "".to_string(),
@@ -226,11 +223,11 @@ impl Default for TextMaterial {
             background_color: None,
             border_color: 0x000000,
             border_width: 0.05,
-            corner_radius: 0.1,
-            padding: Vec2::new(5.0, 2.0),
-            outline_blur: 0.0,
+            // corner_radius: 0.1,
+            // padding: Vec2::new(5.0, 2.0),
+            // outline_blur: 0.0,
             outline_color: 0x000000,
-            outline_offset: Vec2::new(0.0, 0.0),
+            // outline_offset: Vec2::new(0.0, 0.0),
             outline_opacity: 1.0,
             outline_width: 0.0,
             lang: "".to_string(),
@@ -306,7 +303,7 @@ pub struct PolygonMaterial {
     pub receive_shadow: bool,
     pub color: u32,
     pub clamp_to_ground: bool,
-    pub use_ground_normals: bool,
+    pub tiled: bool,
     pub height: f32,
     pub extruded_height: Option<f32>,
     pub wireframe: bool,
@@ -347,7 +344,7 @@ impl Default for PolygonMaterial {
             receive_shadow: false,
             color: 0xffffff,
             clamp_to_ground: true,
-            use_ground_normals: false,
+            tiled: false,
             height: 1.,
             extruded_height: None,
             wireframe: false,

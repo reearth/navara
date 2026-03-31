@@ -65,7 +65,7 @@ const layers: MaterialLayerDescription[] = [
       color: new Color().setStyle("#ffffff"),
       size: 10000,
       height: 1,
-      scaleByDistance: false,
+      sizeInMeters: true,
       clampToGround: true,
       depthTest: true,
       alphaTest: 0.5,
@@ -82,7 +82,7 @@ const layers: MaterialLayerDescription[] = [
     },
     point: {
       size: 10000,
-      scaleByDistance: false,
+      sizeInMeters: true,
       clampToGround: true,
       color: new Color().setStyle("#991f3d"),
       center: { x: 0.0, y: 0.0 },
@@ -92,7 +92,7 @@ const layers: MaterialLayerDescription[] = [
       transparent: true,
     },
     vectorTile: {
-      maxZoom: 4,
+      maxZoom: 6,
     },
   },
 ];

@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use num::PrimInt;
 
-use crate::{Coords, QuadLeafHandle, child_coords, utils::to_int};
+use crate::{Coords, QuadLeafHandle, ancestor_coords, child_coords, parent_coords, utils::to_int};
 
 #[cfg(feature = "bevy")]
 pub trait Resource: bevy_ecs::prelude::Resource {}
@@ -72,14 +72,13 @@ where
     }
 
     /// Get a parent of specified coordinates.
-    fn parent(&self, (x, y, z): Coords<U>) -> Option<Box<dyn GeoSpacialQuadLeaf<U>>> {
-        self.leaf((
-            x >> 1,
-            y >> 1,
-            z.checked_sub(&U::one())
-                .or_else(|| Some(U::zero()))
-                .unwrap(),
-        ))
+    fn parent(&self, coords: Coords<U>) -> Option<Box<dyn GeoSpacialQuadLeaf<U>>> {
+        self.leaf(parent_coords(coords))
+    }
+
+    /// Get an ancestor at the given target zoom level.
+    fn ancestor(&self, coords: Coords<U>, target_z: U) -> Option<Box<dyn GeoSpacialQuadLeaf<U>>> {
+        self.leaf(ancestor_coords(coords, target_z))
     }
 
     /// Get children of specified coordinates.

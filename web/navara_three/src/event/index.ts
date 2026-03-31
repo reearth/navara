@@ -31,9 +31,9 @@ import {
 } from "@navara/engine";
 import { radianToDegree } from "@navara/three_api";
 import { canWorkerProcessImmediately } from "@navara/worker";
-import { Mesh, Material, Object3D, Texture, Sprite } from "three";
+import { Mesh, Object3D, Texture, Sprite } from "three";
 
-import { Layer, type ViewEvents } from "..";
+import { BatchedSdfTextMesh, Layer, type ViewEvents } from "..";
 import { ThreeViewCamera } from "../camera";
 import type { ViewContext } from "../core";
 import type { LayersManager } from "../layersManager";
@@ -159,6 +159,10 @@ export type MeshHandler = {
   setTileMeshPrepared: (handle: bigint) => void;
 };
 
+export type LayerHandler = {
+  getLayerIndex: (layerId: string) => number | undefined;
+};
+
 export function processEvent(
   eventManager: EventManager,
   scenes: Scenes,
@@ -175,7 +179,6 @@ export function processEvent(
   workerPoolPromises: WorkerPoolPromises,
   event: Events | undefined,
   uniforms: CommonUniforms,
-  drapedFeatureMaterials: Map<string, Material>,
   texturizedSceneByTileCoordinates: TexturizedSceneByTileCoordinates,
   tileMapByHandle: TileMapByHandle,
   textureFragmentIndex: Map<string, Set<TextureSlot>>,
@@ -186,6 +189,7 @@ export function processEvent(
   layersManager: LayersManager,
   viewContext: ViewContext,
   updatedAt: number,
+  layerHandler?: LayerHandler,
 ) {
   eventManager.pushEvents(event);
 
@@ -354,7 +358,6 @@ export function processEvent(
             meshes,
             buf,
             uniforms,
-            drapedFeatureMaterials,
             texturizedSceneByTileCoordinates,
             featureHandler,
             viewEvents,
@@ -378,7 +381,6 @@ export function processEvent(
           await processRenderableFeatureChanged(
             event,
             meshes,
-            drapedFeatureMaterials,
             texturizedSceneByTileCoordinates,
             renderFlag,
             buf,
@@ -386,6 +388,7 @@ export function processEvent(
             layersManager,
             viewContext,
             updatedAt,
+            layerHandler,
           );
           break;
       }
@@ -532,6 +535,10 @@ function processObjectRemoved(
   // Sprite, Mesh, and Group are all subclasses of Object3D
   if (m instanceof Object3D) {
     disposeObject3D(m);
+  }
+
+  if (m instanceof BatchedSdfTextMesh) {
+    m.dispose();
   }
 
   // Custom event not in Object3DEventMap

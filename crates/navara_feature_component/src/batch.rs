@@ -10,7 +10,6 @@ use crate::unique_id::{UniqueFeatureId, UniqueGlobalBatchId, UniqueId};
 
 #[derive(Component, Debug, Default)]
 pub struct BatchedFeature {
-    pub features: Vec<Entity>,
     pub construct_polygon_feature: Option<Entity>,
     pub construct_polyline_feature: Option<Entity>,
     /// Whether the feature should be active (visible) immediately when transferred.
@@ -19,23 +18,8 @@ pub struct BatchedFeature {
 }
 
 impl BatchedFeature {
-    /// Marks all child feature entities as `Deleted` for cleanup by dedicated systems.
-    ///
-    /// This method does NOT directly despawn entities because child entities may hold
-    /// BufferStore handles (e.g., `PolylineGeometry.coords`, `PolygonGeometry.hierarchy`)
-    /// that must be properly removed before despawning to avoid memory leaks.
-    ///
-    /// Cleanup systems will:
-    /// 1. Query for entities with geometry components and `Deleted` marker
-    /// 2. Remove buffer handles via `remove_from_buf` methods
-    /// 3. Despawn the entities
-    #[allow(clippy::too_many_arguments)]
+    /// Marks worker task entities as `Deleted` for cleanup.
     pub fn despawn_recursively(&self, commands: &mut Commands) {
-        for f in &self.features {
-            if let Ok(mut e) = commands.get_entity(*f) {
-                e.insert(Deleted);
-            }
-        }
         if let Some(e) = self.construct_polyline_feature {
             let _ = commands.get_entity(e).as_mut().map(|e| e.insert(Deleted));
         }
@@ -153,7 +137,7 @@ impl BatchTable {
     }
 
     pub fn is_empty(&self) -> bool {
-        self.len() > 0
+        self.len() == 0
     }
 
     /// Store the feature property to `map`.

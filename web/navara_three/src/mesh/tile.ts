@@ -93,7 +93,6 @@ export class TileMesh
   // Private camera for this tile to prevent conflicts with other tiles
   private camera = new OrthographicCamera();
 
-  // Next: Resolution should be updated according to `overscaled` value.
   texturizedSceneRenderTargets: WebGLRenderTarget[] = [];
 
   private warnedExceededTextures = false;
@@ -152,7 +151,7 @@ export class TileMesh
       const parentHandle = state.ready_parent_tile_handle;
       const layerId = state.layer_id;
 
-      if (!parentHandle) continue;
+      if (parentHandle == null) continue;
 
       this.tileStates.push({
         parentHandle,

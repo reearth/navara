@@ -1,5 +1,6 @@
 import type { Globe } from "@navara/core";
 import { EventHandler } from "@navara/core";
+import type { FontManager } from "@navara/font";
 import type { ConcurrencyManager } from "@navara/worker";
 import type { Material, Object3D, PerspectiveCamera } from "three";
 
@@ -8,7 +9,7 @@ import { Color } from "../Color";
 import type { LayersManager } from "../layersManager";
 import type { RenderPassOrchestrator } from "../orchestrators";
 import type { Scenes } from "../scene";
-import type { DrapedMaterialCache, MeshCache } from "../type";
+import type { MeshCache } from "../type";
 
 import {
   getSelectiveEffectConfig,
@@ -23,7 +24,6 @@ export type ViewDebugOptions = {
 
 type Private = {
   meshes: MeshCache;
-  drapedMaterials: DrapedMaterialCache;
 };
 
 type ViewContextEvents = {
@@ -36,6 +36,7 @@ export class ViewContext extends EventHandler<ViewContextEvents> {
   public selectiveEffectRegistry?: SelectiveEffectHelper;
   public debugOptions: ViewDebugOptions;
   public globe?: Globe;
+  public fontManager?: FontManager;
 
   private readonly selectiveEffects: SelectiveEffectManager;
 

@@ -28,17 +28,38 @@ function watchPackages(packageNames: string[]): PluginOption {
   };
 }
 
-export const commonConfig = (name: string, env: ConfigEnv): UserConfig => ({
-  plugins: [
-    watchPackages(["@navara/engine", "@navara/engine-worker", "@navara/engine-api"]),
+function getPluginName(plugin: PluginOption): string | undefined {
+  if (plugin && typeof plugin === "object" && "name" in plugin) {
+    return plugin.name;
+  }
+  return undefined;
+}
+
+export function composePlugins(
+  env: ConfigEnv,
+  additionalPlugins: PluginOption[] = [],
+): PluginOption[] {
+  const basePlugins: PluginOption[] = [
+    watchPackages(["@navara/engine", "@navara/engine-worker", "@navara/engine-font-worker", "@navara/engine-api"]),
     tsconfig(),
     dts({ bundleTypes: true }),
-    ...(
-      env.mode !== "production" ? [
-    wasm(),
-    topLevelAwait(),
-    ]: [])
-  ],
+    ...(env.mode !== "production" ? [wasm(), topLevelAwait()] : []),
+  ];
+
+  const overrideNames = new Set(
+    additionalPlugins.map(getPluginName).filter((n): n is string => n != null),
+  );
+
+  const filtered = basePlugins.filter((p) => {
+    const name = getPluginName(p);
+    return name == null || !overrideNames.has(name);
+  });
+
+  return [...filtered, ...additionalPlugins];
+}
+
+export const commonConfig = (name: string, env: ConfigEnv) => ({
+  plugins: composePlugins(env),
   resolve: {
     mainFields: ["module"],
   },
@@ -54,7 +75,7 @@ export const commonConfig = (name: string, env: ConfigEnv): UserConfig => ({
     outDir: "dist",
     emptyOutDir: false,
     rollupOptions: {
-      external: ["@navara/engine", "@navara/engine-worker", "@navara/engine-api"],
+      external: ["@navara/engine", "@navara/engine-worker", "@navara/engine-font-worker", "@navara/engine-api"],
     },
     watch:
       env.mode === "watch"
@@ -66,4 +87,4 @@ export const commonConfig = (name: string, env: ConfigEnv): UserConfig => ({
   test: {
     environment: "jsdom",
   }
-});
+}) satisfies UserConfig;

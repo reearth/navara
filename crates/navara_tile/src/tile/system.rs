@@ -536,9 +536,7 @@ pub fn transfer_mesh(
                 .expect("This line is invoked only in the tile has terrain");
             terrain_data.set_current_max_height(max_height);
             terrain_data.set_current_min_height(min_height);
-            tile.set_max_height(max_height);
-            tile.set_min_height(min_height);
-            tile.aabb.update(tile.extent, min_height, max_height);
+            tile.update_heights(max_height, min_height);
 
             terrain_info.max_height = max_height;
             terrain_info.min_height = min_height;

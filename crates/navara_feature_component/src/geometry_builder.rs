@@ -3,13 +3,18 @@ use bevy_ecs::system::Commands;
 use bevy_log::warn;
 use navara_buffer_store::BufferStore;
 use navara_core::CRS;
+use navara_geometry::{Hierarchy, WindingOrder};
 use navara_layer::LayerId;
 use navara_material::Appearance;
-use navara_math::Vec3;
+use navara_math::{Transform, Vec3};
 
 use crate::{
     BatchedFeatureMarker,
     batch::{BatchedFeature, FeatureBatchId, GlobalBatchIds},
+    batched_geometry::{
+        EncodedPointPositions, PointGeometryAccumulator, PolygonGeometryAccumulator,
+        PolylineGeometryAccumulator,
+    },
     billboard::{BillboardGeometry, BillboardMarker},
     id::FeatureId,
     point::{PointGeometry, PointMarker},
@@ -28,24 +33,79 @@ pub enum GeometryAppearanceKind {
     Polygon,
 }
 
-/// A group of feature entities sharing the same appearance kind,
-/// with per-kind batch state for tracking indices during construction.
+/// Pre-accumulated geometry data using Vec-based accumulators.
+/// Converted to handle-based ECS components at finalize time.
+pub enum AccumulatedGeometry {
+    None,
+    Points(PointGeometryAccumulator),
+    Polylines(PolylineGeometryAccumulator),
+    Polygons(PolygonGeometryAccumulator),
+}
+
+/// A group of features sharing the same [`GeometryAppearanceKind`], accumulating
+/// geometry and batch state during construction.
+///
+/// # Lifecycle
+///
+/// 1. A format-specific builder (e.g., `GeometryBuilder` for GeoJSON,
+///    `MvtGeometryBuilder` for MVT) calls [`GeometryGroups::register_kind`] to
+///    create a `GeometryGroup` for each appearance kind encountered.
+/// 2. For each feature, the builder calls [`GeometryGroups::begin_feature`] to
+///    reset the `committed` flag, then calls one of the `track_*` methods
+///    (`track_point_rtc`, `track_point_rte`, `track_polyline`, `track_polygon`)
+///    to accumulate geometry into this group's [`AccumulatedGeometry`].
+/// 3. On the first geometry item for a feature within this kind,
+///    `committed` is set to `true`, `feature_count` is incremented, and
+///    `current_batch_index` is assigned. Subsequent geometry items from the
+///    same feature (e.g., points in a MultiPoint) reuse the same batch index.
+/// 4. [`GeometryGroups::finalize`] converts each group's accumulated data into
+///    handle-based ECS components and spawns a `BatchedFeature` entity with
+///    the appropriate marker and material.
+///
 pub struct GeometryGroup {
     pub kind: GeometryAppearanceKind,
-    pub entities: Vec<Entity>,
+    /// Per-geometry-item unique IDs used for GPU picking.
+    /// For point-like kinds with MultiPoint geometries, this contains one
+    /// entry per vertex (not per feature).
     pub global_batch_ids: Vec<u32>,
+    /// The [`BatchTable`](crate::batch::BatchTable) row ID for this kind's
+    /// batch, used for property/tag storage.
     pub batch_id: u32,
+    /// Number of distinct features accumulated (one per `begin_feature` that
+    /// produced geometry for this kind).
     pub feature_count: u32,
     /// Whether the current feature has been committed to this kind's batch.
     pub committed: bool,
-    /// Batch index assigned to the current feature for this kind.
+    /// Batch index assigned to the current feature for this kind, shared by
+    /// all geometry items of that feature within this kind.
     pub current_batch_index: u32,
+    /// Pre-accumulated geometry data.
+    pub accumulated: AccumulatedGeometry,
 }
 
-/// Accumulates feature entities grouped by appearance kind during geometry construction.
+/// Accumulates feature entities grouped by appearance kind during geometry
+/// construction.
 ///
-/// Used by both GeoJSON and MVT builders to collect child entities into groups
+/// Used by both GeoJSON and MVT builders to collect geometry into groups
 /// before spawning `BatchedFeature` parents.
+///
+/// # Usage
+///
+/// ```rust,ignore
+/// let mut groups = GeometryGroups::new();
+///
+/// // Register kinds (called by format-specific builder's ensure_kind)
+/// groups.register_kind(GeometryAppearanceKind::Point, batch_id);
+///
+/// // Per feature:
+/// groups.begin_feature();
+/// groups.track_point_rte(kind, coords, crs, high, low, global_batch_id);
+///
+/// // After all features:
+/// let entities = groups.finalize(commands, buf, appearances, layer_id, true);
+/// // `entities` are BatchedFeature entities with geometry components,
+/// // ready to be picked up by navara_feature's transfer_batched_mesh systems.
+/// ```
 pub struct GeometryGroups {
     pub groups: Vec<GeometryGroup>,
 }
@@ -64,12 +124,12 @@ impl GeometryGroups {
     pub fn register_kind(&mut self, kind: GeometryAppearanceKind, batch_id: u32) {
         self.groups.push(GeometryGroup {
             kind,
-            entities: Vec::new(),
             global_batch_ids: Vec::new(),
             batch_id,
             feature_count: 0,
             committed: false,
             current_batch_index: 0,
+            accumulated: AccumulatedGeometry::None,
         });
     }
 
@@ -80,14 +140,88 @@ impl GeometryGroups {
         }
     }
 
-    /// Track an entity for a kind. Returns `(batch_index, commit_batch_id)`.
-    ///
-    /// If `commit_batch_id` is `Some(id)`, the caller should commit pending
-    /// feature data (properties or tags) to that batch ID.
-    pub fn track_entity(
+    /// Accumulate a point with RTC-encoded position.
+    /// `rtc_pos`: pre-computed `(world_pos - center)` as f32 triplet.
+    /// Returns `(batch_index, commit_batch_id)`.
+    pub fn track_point_rtc(
         &mut self,
         kind: GeometryAppearanceKind,
-        entity: Entity,
+        coords: Vec3,
+        crs: CRS,
+        rtc_pos: [f32; 3],
+        rtc_center: Vec3,
+        global_batch_id: u32,
+    ) -> (u32, Option<u32>) {
+        let group = self.groups.iter_mut().find(|g| g.kind == kind).unwrap();
+        let (batch_index, commit_batch_id) = Self::advance_feature(group, global_batch_id);
+        Self::ensure_point_geom(&mut group.accumulated, &crs);
+        let geom = match &mut group.accumulated {
+            AccumulatedGeometry::Points(g) => g,
+            _ => unreachable!(),
+        };
+        geom.coords.push(coords);
+        geom.batch_indices.push(batch_index);
+        geom.batch_ids.push(global_batch_id as f32);
+        geom.encoded
+            .push_rtc(rtc_pos[0], rtc_pos[1], rtc_pos[2], rtc_center);
+        (batch_index, commit_batch_id)
+    }
+
+    /// Accumulate a point with RTE-encoded position.
+    /// `high`/`low`: pre-computed `EncodedVec3` f32 triplets.
+    /// Returns `(batch_index, commit_batch_id)`.
+    pub fn track_point_rte(
+        &mut self,
+        kind: GeometryAppearanceKind,
+        coords: Vec3,
+        crs: CRS,
+        high: [f32; 3],
+        low: [f32; 3],
+        global_batch_id: u32,
+    ) -> (u32, Option<u32>) {
+        let group = self.groups.iter_mut().find(|g| g.kind == kind).unwrap();
+        let (batch_index, commit_batch_id) = Self::advance_feature(group, global_batch_id);
+        Self::ensure_point_geom(&mut group.accumulated, &crs);
+        let geom = match &mut group.accumulated {
+            AccumulatedGeometry::Points(g) => g,
+            _ => unreachable!(),
+        };
+        geom.coords.push(coords);
+        geom.batch_indices.push(batch_index);
+        geom.batch_ids.push(global_batch_id as f32);
+        geom.encoded.push_rte(high, low);
+        (batch_index, commit_batch_id)
+    }
+
+    /// Advance the per-feature batch index for a group.
+    fn advance_feature(group: &mut GeometryGroup, global_batch_id: u32) -> (u32, Option<u32>) {
+        let commit_batch_id = if !group.committed {
+            group.current_batch_index = group.feature_count;
+            group.feature_count += 1;
+            group.committed = true;
+            Some(group.batch_id)
+        } else {
+            None
+        };
+        let batch_index = group.current_batch_index;
+        group.global_batch_ids.push(global_batch_id);
+        (batch_index, commit_batch_id)
+    }
+
+    /// Ensure the accumulated geometry is initialized as Points.
+    fn ensure_point_geom(accumulated: &mut AccumulatedGeometry, crs: &CRS) {
+        if !matches!(accumulated, AccumulatedGeometry::Points(_)) {
+            *accumulated = AccumulatedGeometry::Points(PointGeometryAccumulator::new(crs.clone()));
+        }
+    }
+
+    /// Accumulate polyline geometry without spawning a child entity.
+    /// Returns `(batch_index, commit_batch_id)`.
+    pub fn track_polyline(
+        &mut self,
+        kind: GeometryAppearanceKind,
+        points: Vec<f64>,
+        crs: CRS,
         global_batch_id: u32,
     ) -> (u32, Option<u32>) {
         let group = self.groups.iter_mut().find(|g| g.kind == kind).unwrap();
@@ -103,12 +237,70 @@ impl GeometryGroups {
 
         let batch_index = group.current_batch_index;
         group.global_batch_ids.push(global_batch_id);
-        group.entities.push(entity);
+
+        let acc = match &mut group.accumulated {
+            AccumulatedGeometry::Polylines(g) => g,
+            _ => {
+                group.accumulated =
+                    AccumulatedGeometry::Polylines(PolylineGeometryAccumulator::new(crs.clone()));
+                match &mut group.accumulated {
+                    AccumulatedGeometry::Polylines(g) => g,
+                    _ => unreachable!(),
+                }
+            }
+        };
+        acc.points_sizes.push(points.len() as u32);
+        acc.points.extend(points);
+        acc.batch_indices.push(batch_index);
+
+        (batch_index, commit_batch_id)
+    }
+
+    /// Accumulate polygon geometry without spawning a child entity.
+    /// Returns `(batch_index, commit_batch_id)`.
+    pub fn track_polygon(
+        &mut self,
+        kind: GeometryAppearanceKind,
+        outer_ring: Vec<f64>,
+        holes: &[Hierarchy],
+        winding_order: WindingOrder,
+        crs: CRS,
+        global_batch_id: u32,
+    ) -> (u32, Option<u32>) {
+        let group = self.groups.iter_mut().find(|g| g.kind == kind).unwrap();
+
+        let commit_batch_id = if !group.committed {
+            group.current_batch_index = group.feature_count;
+            group.feature_count += 1;
+            group.committed = true;
+            Some(group.batch_id)
+        } else {
+            None
+        };
+
+        let batch_index = group.current_batch_index;
+        group.global_batch_ids.push(global_batch_id);
+
+        let acc = match &mut group.accumulated {
+            AccumulatedGeometry::Polygons(g) => g,
+            _ => {
+                group.accumulated =
+                    AccumulatedGeometry::Polygons(PolygonGeometryAccumulator::new(crs.clone()));
+                match &mut group.accumulated {
+                    AccumulatedGeometry::Polygons(g) => g,
+                    _ => unreachable!(),
+                }
+            }
+        };
+        acc.add(outer_ring, holes, winding_order, batch_index);
 
         (batch_index, commit_batch_id)
     }
 
     /// Finalize by spawning `BatchedFeature` parent entities.
+    ///
+    /// Point positions must be pre-encoded by the caller (via `track_point_rtc`
+    /// or `track_point_rte`) before calling this method.
     pub fn finalize(
         self,
         commands: &mut Commands,
@@ -120,20 +312,20 @@ impl GeometryGroups {
         let mut result = Vec::new();
 
         for group in self.groups {
-            if group.entities.is_empty() {
+            if group.global_batch_ids.is_empty() {
                 continue;
             }
 
             let batch_length = group.global_batch_ids.len() as u32;
+
+            let batched = BatchedFeature {
+                default_active,
+                ..Default::default()
+            };
+
             let global_batch_ids = GlobalBatchIds {
                 handle: buf.new_u32(group.global_batch_ids),
                 batch_length,
-            };
-
-            let batched = BatchedFeature {
-                features: group.entities,
-                default_active,
-                ..Default::default()
             };
 
             if let Some(entity) = spawn_batched_entity(
@@ -145,6 +337,20 @@ impl GeometryGroups {
                 FeatureBatchId(group.batch_id),
                 global_batch_ids,
             ) {
+                // Convert accumulator to handle-based component and insert.
+                match group.accumulated {
+                    AccumulatedGeometry::Points(mut acc) => {
+                        set_point_transform(&mut acc, appearances, group.kind);
+                        commands.entity(entity).insert(acc.into_component(buf));
+                    }
+                    AccumulatedGeometry::Polylines(acc) => {
+                        commands.entity(entity).insert(acc.into_component(buf));
+                    }
+                    AccumulatedGeometry::Polygons(acc) => {
+                        commands.entity(entity).insert(acc.into_component(buf));
+                    }
+                    AccumulatedGeometry::None => {}
+                }
                 result.push(entity);
             }
         }
@@ -157,6 +363,47 @@ impl Default for GeometryGroups {
     fn default() -> Self {
         Self::new()
     }
+}
+
+/// Set the transform on a `PointGeometryAccumulator` from its encoded center + material size.
+fn set_point_transform(
+    acc: &mut PointGeometryAccumulator,
+    appearances: &[Appearance],
+    kind: GeometryAppearanceKind,
+) {
+    let size = match kind {
+        GeometryAppearanceKind::Point => appearances.iter().find_map(|a| {
+            if let Appearance::Point(m) = a {
+                Some(m.size)
+            } else {
+                None
+            }
+        }),
+        GeometryAppearanceKind::Billboard => appearances.iter().find_map(|a| {
+            if let Appearance::Billboard(m) = a {
+                Some(m.size)
+            } else {
+                None
+            }
+        }),
+        GeometryAppearanceKind::Text => appearances.iter().find_map(|a| {
+            if let Appearance::Text(m) = a {
+                Some(m.size)
+            } else {
+                None
+            }
+        }),
+        _ => None,
+    }
+    .unwrap_or(1.0);
+
+    let scale = Vec3::new(size as f64, size as f64, size as f64);
+    acc.transform = match &acc.encoded {
+        EncodedPointPositions::Rtc { center, .. } => {
+            Transform::from_translation(*center).with_scale(scale)
+        }
+        _ => Transform::from_scale(scale),
+    };
 }
 
 /// Spawn a point-like child entity with the appropriate geometry component.
@@ -239,34 +486,11 @@ fn spawn_batched_entity(
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::batched_geometry::{BatchedPointGeometry, BatchedPolygonGeometry};
     use bevy_app::{App, Update};
     use bevy_ecs::prelude::Resource;
     use bevy_ecs::system::{Commands, ResMut};
-
-    #[derive(Resource, Default)]
-    struct GroupsTestOutput {
-        groups: Vec<GeometryGroup>,
-    }
-
-    fn run_groups_test(
-        setup: impl FnOnce(&mut Commands, &mut GeometryGroups) + Send + Sync + 'static,
-    ) -> App {
-        let mut app = App::new();
-        app.init_resource::<GroupsTestOutput>();
-
-        let setup = std::sync::Mutex::new(Some(setup));
-        app.add_systems(
-            Update,
-            move |mut commands: Commands, mut out: ResMut<GroupsTestOutput>| {
-                let setup_fn = setup.lock().unwrap().take().unwrap();
-                let mut groups = GeometryGroups::new();
-                setup_fn(&mut commands, &mut groups);
-                out.groups = std::mem::take(&mut groups.groups);
-            },
-        );
-        app.update();
-        app
-    }
+    use navara_geometry::WindingOrder;
 
     #[test]
     fn register_kind_creates_group() {
@@ -293,57 +517,358 @@ mod test {
         assert!(!groups.groups[0].committed);
     }
 
+    // ── track_point / track_polyline / track_polygon tests ───────────
+
     #[test]
-    fn track_entity_returns_commit_on_first_call_per_feature() {
-        let app = run_groups_test(|commands, groups| {
-            groups.register_kind(GeometryAppearanceKind::Point, 42);
+    fn track_point_accumulates_coords_and_indices() {
+        let mut groups = GeometryGroups::new();
+        groups.register_kind(GeometryAppearanceKind::Point, 42);
 
-            groups.begin_feature();
-            let e1 = commands.spawn_empty().id();
-            let (idx1, commit1) = groups.track_entity(GeometryAppearanceKind::Point, e1, 100);
-            assert_eq!(idx1, 0);
-            assert_eq!(commit1, Some(42));
+        groups.begin_feature();
+        let (idx0, commit0) = groups.track_point_rte(
+            GeometryAppearanceKind::Point,
+            Vec3::new(1., 2., 0.),
+            CRS::Geographic,
+            [0.; 3],
+            [0.; 3],
+            100,
+        );
+        assert_eq!(idx0, 0);
+        assert_eq!(commit0, Some(42));
 
-            // Second entity for same feature+kind: no commit
-            let e2 = commands.spawn_empty().id();
-            let (idx2, commit2) = groups.track_entity(GeometryAppearanceKind::Point, e2, 101);
-            assert_eq!(idx2, 0); // same batch index (same feature)
-            assert!(commit2.is_none());
+        groups.begin_feature();
+        let (idx1, commit1) = groups.track_point_rte(
+            GeometryAppearanceKind::Point,
+            Vec3::new(3., 4., 0.),
+            CRS::Geographic,
+            [0.; 3],
+            [0.; 3],
+            101,
+        );
+        assert_eq!(idx1, 1);
+        assert_eq!(commit1, Some(42));
 
-            // New feature
-            groups.begin_feature();
-            let e3 = commands.spawn_empty().id();
-            let (idx3, commit3) = groups.track_entity(GeometryAppearanceKind::Point, e3, 102);
-            assert_eq!(idx3, 1);
-            assert_eq!(commit3, Some(42));
-        });
-        let out = app.world().resource::<GroupsTestOutput>();
-        assert_eq!(out.groups.len(), 1);
-        assert_eq!(out.groups[0].entities.len(), 3);
+        let group = &groups.groups[0];
+        assert_eq!(group.global_batch_ids, vec![100, 101]);
+
+        match &group.accumulated {
+            AccumulatedGeometry::Points(acc) => {
+                assert_eq!(acc.coords.len(), 2);
+                assert_eq!(acc.coords[0], Vec3::new(1., 2., 0.));
+                assert_eq!(acc.coords[1], Vec3::new(3., 4., 0.));
+                assert_eq!(acc.batch_indices, vec![0, 1]);
+            }
+            _ => panic!("expected AccumulatedGeometry::Points"),
+        }
     }
 
     #[test]
-    fn track_entity_groups_entities_by_kind() {
-        let app = run_groups_test(|commands, groups| {
-            groups.register_kind(GeometryAppearanceKind::Point, 1);
-            groups.register_kind(GeometryAppearanceKind::Polyline, 2);
+    fn track_point_multipoint_shares_batch_index() {
+        let mut groups = GeometryGroups::new();
+        groups.register_kind(GeometryAppearanceKind::Point, 1);
 
-            groups.begin_feature();
-            let e1 = commands.spawn_empty().id();
-            groups.track_entity(GeometryAppearanceKind::Point, e1, 10);
-            let e2 = commands.spawn_empty().id();
-            groups.track_entity(GeometryAppearanceKind::Polyline, e2, 20);
+        // First feature has two points (multipoint)
+        groups.begin_feature();
+        let (idx0, commit0) = groups.track_point_rte(
+            GeometryAppearanceKind::Point,
+            Vec3::new(1., 1., 0.),
+            CRS::Geographic,
+            [0.; 3],
+            [0.; 3],
+            10,
+        );
+        assert_eq!(idx0, 0);
+        assert_eq!(commit0, Some(1));
 
-            groups.begin_feature();
-            let e3 = commands.spawn_empty().id();
-            groups.track_entity(GeometryAppearanceKind::Point, e3, 11);
-        });
-        let out = app.world().resource::<GroupsTestOutput>();
-        assert_eq!(out.groups.len(), 2);
-        assert_eq!(out.groups[0].kind, GeometryAppearanceKind::Point);
-        assert_eq!(out.groups[0].entities.len(), 2);
-        assert_eq!(out.groups[0].global_batch_ids, vec![10, 11]);
-        assert_eq!(out.groups[1].kind, GeometryAppearanceKind::Polyline);
-        assert_eq!(out.groups[1].entities.len(), 1);
+        let (idx0b, commit0b) = groups.track_point_rte(
+            GeometryAppearanceKind::Point,
+            Vec3::new(2., 2., 0.),
+            CRS::Geographic,
+            [0.; 3],
+            [0.; 3],
+            11,
+        );
+        assert_eq!(idx0b, 0); // same batch index for same feature
+        assert!(commit0b.is_none());
+
+        // Second feature
+        groups.begin_feature();
+        let (idx1, _) = groups.track_point_rte(
+            GeometryAppearanceKind::Point,
+            Vec3::new(3., 3., 0.),
+            CRS::Geographic,
+            [0.; 3],
+            [0.; 3],
+            12,
+        );
+        assert_eq!(idx1, 1);
+
+        match &groups.groups[0].accumulated {
+            AccumulatedGeometry::Points(acc) => {
+                assert_eq!(acc.coords.len(), 3);
+                assert_eq!(acc.batch_indices, vec![0, 0, 1]);
+            }
+            _ => panic!("expected Points"),
+        }
+    }
+
+    #[test]
+    fn track_point_rtc_accumulates_encoded_positions() {
+        let mut groups = GeometryGroups::new();
+        groups.register_kind(GeometryAppearanceKind::Point, 1);
+
+        let center = Vec3::new(100., 200., 300.);
+
+        groups.begin_feature();
+        groups.track_point_rtc(
+            GeometryAppearanceKind::Point,
+            Vec3::new(1., 2., 0.),
+            CRS::Geographic,
+            [10.0, 20.0, 30.0],
+            center,
+            100,
+        );
+
+        groups.begin_feature();
+        groups.track_point_rtc(
+            GeometryAppearanceKind::Point,
+            Vec3::new(3., 4., 0.),
+            CRS::Geographic,
+            [40.0, 50.0, 60.0],
+            center,
+            101,
+        );
+
+        match &groups.groups[0].accumulated {
+            AccumulatedGeometry::Points(acc) => {
+                assert_eq!(acc.coords.len(), 2);
+                assert_eq!(acc.batch_ids, vec![100.0, 101.0]);
+                match &acc.encoded {
+                    EncodedPointPositions::Rtc { coords, center: c } => {
+                        assert_eq!(coords, &[10.0, 20.0, 30.0, 40.0, 50.0, 60.0]);
+                        assert_eq!(*c, center);
+                    }
+                    _ => panic!("expected Rtc"),
+                }
+            }
+            _ => panic!("expected Points"),
+        }
+    }
+
+    #[test]
+    fn track_point_rte_accumulates_encoded_positions() {
+        let mut groups = GeometryGroups::new();
+        groups.register_kind(GeometryAppearanceKind::Point, 1);
+
+        groups.begin_feature();
+        groups.track_point_rte(
+            GeometryAppearanceKind::Point,
+            Vec3::new(1., 2., 0.),
+            CRS::Geographic,
+            [1.0, 2.0, 3.0],
+            [0.1, 0.2, 0.3],
+            100,
+        );
+
+        match &groups.groups[0].accumulated {
+            AccumulatedGeometry::Points(acc) => {
+                assert_eq!(acc.coords.len(), 1);
+                match &acc.encoded {
+                    EncodedPointPositions::Rte { high, low } => {
+                        assert_eq!(high, &[1.0, 2.0, 3.0]);
+                        assert_eq!(low, &[0.1, 0.2, 0.3]);
+                    }
+                    _ => panic!("expected Rte"),
+                }
+            }
+            _ => panic!("expected Points"),
+        }
+    }
+
+    #[test]
+    fn track_polyline_accumulates_flat_arrays() {
+        let mut groups = GeometryGroups::new();
+        groups.register_kind(GeometryAppearanceKind::Polyline, 5);
+
+        groups.begin_feature();
+        let line1 = vec![0., 0., 0., 1., 1., 0.]; // 2 points * 3 coords
+        let (idx0, _) =
+            groups.track_polyline(GeometryAppearanceKind::Polyline, line1, CRS::Geographic, 50);
+        assert_eq!(idx0, 0);
+
+        groups.begin_feature();
+        let line2 = vec![2., 2., 0., 3., 3., 0., 4., 4., 0.]; // 3 points
+        let (idx1, _) =
+            groups.track_polyline(GeometryAppearanceKind::Polyline, line2, CRS::Geographic, 51);
+        assert_eq!(idx1, 1);
+
+        match &groups.groups[0].accumulated {
+            AccumulatedGeometry::Polylines(acc) => {
+                assert_eq!(acc.points.len(), 15); // 6 + 9
+                assert_eq!(acc.points_sizes, vec![6, 9]);
+                assert_eq!(acc.batch_indices, vec![0, 1]);
+            }
+            _ => panic!("expected Polylines"),
+        }
+    }
+
+    #[test]
+    fn track_polygon_accumulates_with_holes() {
+        let mut groups = GeometryGroups::new();
+        groups.register_kind(GeometryAppearanceKind::Polygon, 10);
+
+        // Feature 1: polygon with no holes
+        groups.begin_feature();
+        let outer1 = vec![0., 0., 0., 1., 0., 0., 1., 1., 0., 0., 1., 0.]; // 4 verts
+        let (idx0, _) = groups.track_polygon(
+            GeometryAppearanceKind::Polygon,
+            outer1,
+            &[],
+            WindingOrder::Clockwise,
+            CRS::Geographic,
+            60,
+        );
+        assert_eq!(idx0, 0);
+
+        // Feature 2: polygon with 1 hole
+        groups.begin_feature();
+        let outer2 = vec![10., 10., 0., 20., 10., 0., 20., 20., 0.]; // 3 verts
+        let hole = Hierarchy {
+            outer_ring: vec![12., 12., 0., 18., 12., 0., 18., 18., 0.],
+            holes: None,
+            expected_winding_order: WindingOrder::CounterClockwise,
+        };
+        let (idx1, _) = groups.track_polygon(
+            GeometryAppearanceKind::Polygon,
+            outer2,
+            &[hole],
+            WindingOrder::Clockwise,
+            CRS::Geographic,
+            61,
+        );
+        assert_eq!(idx1, 1);
+
+        match &groups.groups[0].accumulated {
+            AccumulatedGeometry::Polygons(acc) => {
+                assert_eq!(acc.outer_ring_sizes, vec![12, 9]);
+                assert_eq!(acc.outer_rings.len(), 21); // 12 + 9
+                assert_eq!(acc.holes_boundaries, vec![0, 1]); // 0 holes, 1 hole
+                assert_eq!(acc.holes_total_sizes, vec![0, 9]); // 0, 9 floats
+                assert_eq!(acc.holes_sizes, vec![9]); // 1 hole of 9 floats
+                assert_eq!(acc.holes.len(), 9);
+                assert_eq!(acc.batch_indices, vec![0, 1]);
+                // outer1 CW, outer2 CW, hole CCW
+                assert_eq!(
+                    acc.expected_winding_orders,
+                    vec![
+                        WindingOrder::Clockwise as u8,
+                        WindingOrder::Clockwise as u8,
+                        WindingOrder::CounterClockwise as u8,
+                    ]
+                );
+            }
+            _ => panic!("expected Polygons"),
+        }
+    }
+
+    #[test]
+    fn finalize_inserts_batched_point_geometry_on_parent() {
+        use navara_material::PointMaterial;
+
+        let mut app = App::new();
+        app.init_resource::<BufferStore>();
+
+        #[derive(Resource, Default)]
+        struct Out(Vec<Entity>);
+        app.init_resource::<Out>();
+
+        app.add_systems(
+            Update,
+            |mut commands: Commands, mut buf: ResMut<BufferStore>, mut out: ResMut<Out>| {
+                let mut groups = GeometryGroups::new();
+                groups.register_kind(GeometryAppearanceKind::Point, 1);
+
+                groups.begin_feature();
+                groups.track_point_rte(
+                    GeometryAppearanceKind::Point,
+                    Vec3::new(1., 2., 0.),
+                    CRS::Geographic,
+                    [0.; 3],
+                    [0.; 3],
+                    100,
+                );
+
+                groups.begin_feature();
+                groups.track_point_rte(
+                    GeometryAppearanceKind::Point,
+                    Vec3::new(3., 4., 0.),
+                    CRS::Geographic,
+                    [0.; 3],
+                    [0.; 3],
+                    101,
+                );
+
+                let appearances = vec![Appearance::Point(PointMaterial::default())];
+                out.0 = groups.finalize(&mut commands, &mut buf, &appearances, "test", false);
+            },
+        );
+        app.update();
+
+        let out = app.world().resource::<Out>();
+        assert_eq!(out.0.len(), 1);
+
+        // Verify BatchedPointGeometry is on the parent entity
+        let mut query = app
+            .world_mut()
+            .query::<(&BatchedPointGeometry, &BatchedFeature)>();
+        let (geom, _batched) = query.iter(app.world()).next().unwrap();
+        assert_eq!(geom.coords.len(), 2);
+        let buf = app.world().resource::<BufferStore>();
+        assert_eq!(geom.batch_indices(buf).unwrap(), &[0, 1]);
+    }
+
+    #[test]
+    fn finalize_inserts_batched_polygon_geometry_on_parent() {
+        use navara_material::PolygonMaterial;
+
+        let mut app = App::new();
+        app.init_resource::<BufferStore>();
+
+        #[derive(Resource, Default)]
+        struct Out(Vec<Entity>);
+        app.init_resource::<Out>();
+
+        app.add_systems(
+            Update,
+            |mut commands: Commands, mut buf: ResMut<BufferStore>, mut out: ResMut<Out>| {
+                let mut groups = GeometryGroups::new();
+                groups.register_kind(GeometryAppearanceKind::Polygon, 1);
+
+                groups.begin_feature();
+                groups.track_polygon(
+                    GeometryAppearanceKind::Polygon,
+                    vec![0., 0., 0., 1., 0., 0., 1., 1., 0.],
+                    &[],
+                    WindingOrder::Clockwise,
+                    CRS::Geographic,
+                    200,
+                );
+
+                let appearances = vec![Appearance::Polygon(PolygonMaterial::default())];
+                out.0 = groups.finalize(&mut commands, &mut buf, &appearances, "test", false);
+            },
+        );
+        app.update();
+
+        let out = app.world().resource::<Out>();
+        assert_eq!(out.0.len(), 1);
+
+        let mut query = app
+            .world_mut()
+            .query::<(&BatchedPolygonGeometry, &BatchedFeature)>();
+        let (geom, _batched) = query.iter(app.world()).next().unwrap();
+        let buf = app.world().resource::<BufferStore>();
+        assert_eq!(geom.feature_count(buf), 1);
+        assert_eq!(geom.batch_indices(buf).unwrap(), &[0]);
     }
 }

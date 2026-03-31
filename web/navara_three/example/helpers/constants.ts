@@ -307,3 +307,26 @@ export const LUT_DATASETS = {
     attributionUrl: "https://rawpedia.rawtherapee.com/Film_Simulation",
   },
 } satisfies Record<string, Dataset>;
+
+export const FONT_DATASETS = {
+  LineSeedJP: {
+    url: "/fonts/lineseedjp/LINESeedJP-Bold.ttf",
+    attribution: "LINE Seed JP - Google Fonts",
+    attributionUrl: "https://fonts.google.com/specimen/LINE+Seed+JP",
+  },
+  Roboto: {
+    url: "/fonts/roboto/Roboto[wdth,wght].ttf",
+    attribution: "Roboto - Google Fonts",
+    attributionUrl: "https://fonts.google.com/specimen/Roboto",
+  },
+  Borel: {
+    url: "/fonts/borel/Borel-Regular.ttf",
+    attribution: "Borel - Google Fonts",
+    attributionUrl: "https://fonts.google.com/specimen/Borel",
+  },
+  SourceCodePro: {
+    url: "https://raw.githubusercontent.com/adobe-fonts/source-code-pro/refs/heads/release/OTF/SourceCodePro-Bold.otf",
+    attribution: "Source Code Pro - Adobe Fonts",
+    attributionUrl: "https://github.com/adobe-fonts/source-code-pro",
+  },
+} satisfies Record<string, Dataset>;

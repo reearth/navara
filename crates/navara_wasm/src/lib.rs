@@ -15,7 +15,6 @@ use feature::{
 };
 use navara_buffer_store::Handle;
 use navara_ecs::{App, BatchProperties};
-use navara_geometry::Hierarchy;
 use navara_input::Key;
 use navara_math::FloatType;
 use navara_tile_component::TileHandle;
@@ -224,6 +223,11 @@ impl Core {
         self.app.delete_layer(layer_id.as_str());
     }
 
+    #[wasm_bindgen(js_name = getLayerIndex)]
+    pub fn get_layer_index(&self, layer_id: &str) -> Option<usize> {
+        self.app.get_layer_index(layer_id)
+    }
+
     #[wasm_bindgen(js_name = triggerTextureFragmentLoaded)]
     pub fn trigger_texture_fragment_loaded(&mut self, bits: u64, status: TextureFragmentStatus) {
         self.app
@@ -338,29 +342,13 @@ impl Core {
         &mut self,
         batched_feature_id: u64,
     ) -> Option<ReturnedTransferablePolygonBatchedFeature> {
-        let (features, batch_id, material) = self
-            .app
-            .get_batched_features_for_polygon(batched_feature_id)?;
+        let (batched_geom, batch_ids_component, material) =
+            self.app.take_batched_polygon_geometry(batched_feature_id)?;
 
-        let mut transferable = TransferablePolygonBatchedFeature::empty(features.len());
+        let mut transferable = TransferablePolygonBatchedFeature::from_batched(batched_geom);
 
-        let mut coords_handle_and_batch_ids = vec![];
-
-        for f in &features {
-            let geometry = f.get::<navara_feature_component::polygon::PolygonGeometry>()?;
-            let batch_index = f.get::<navara_feature_component::batch::BatchIndex>()?;
-
-            coords_handle_and_batch_ids.push((geometry.hierarchy.clone(), batch_index.clone()));
-        }
-
-        let mut buf_store = self.app.get_buffer_store_mut()?;
-        for (hierarchy, batch_index) in coords_handle_and_batch_ids {
-            let mut hierarchy = Hierarchy::from_transferred(&hierarchy, &mut buf_store)?;
-
-            transferable.add(&mut hierarchy, batch_index);
-        }
-
-        transferable.add_batch_id(&mut buf_store.get_u32(&batch_id.handle)?.to_vec());
+        let buf_store = self.app.get_buffer_store()?;
+        transferable.add_batch_id(&mut buf_store.get_u32(&batch_ids_component.handle)?.to_vec());
 
         Some(ReturnedTransferablePolygonBatchedFeature {
             transferable,
@@ -373,29 +361,14 @@ impl Core {
         &mut self,
         batched_feature_id: u64,
     ) -> Option<ReturnedTransferablePolylineBatchedFeature> {
-        let (features, batch_id, material) = self
+        let (batched_geom, batch_ids_component, material) = self
             .app
-            .get_batched_features_for_polyline(batched_feature_id)?;
+            .take_batched_polyline_geometry(batched_feature_id)?;
 
-        let mut transferable = TransferablePolylineBatchedFeature::empty(features.len());
+        let mut transferable = TransferablePolylineBatchedFeature::from_batched(batched_geom);
 
-        let mut coords_handle = vec![];
-
-        for f in &features {
-            let geometry = f.get::<navara_feature_component::polyline::PolylineGeometry>()?;
-            let batch_index = f.get::<navara_feature_component::batch::BatchIndex>()?;
-
-            coords_handle.push((geometry.coords, batch_index.clone()));
-        }
-
-        let mut buf_store = self.app.get_buffer_store_mut()?;
-        for (coords, batch_index) in coords_handle {
-            let mut points = buf_store.remove_f64(&coords)?;
-
-            transferable.add(&mut points, batch_index);
-        }
-
-        transferable.add_batch_id(&mut buf_store.get_u32(&batch_id.handle)?.to_vec());
+        let buf_store = self.app.get_buffer_store()?;
+        transferable.add_batch_id(&mut buf_store.get_u32(&batch_ids_component.handle)?.to_vec());
 
         Some(ReturnedTransferablePolylineBatchedFeature {
             transferable,

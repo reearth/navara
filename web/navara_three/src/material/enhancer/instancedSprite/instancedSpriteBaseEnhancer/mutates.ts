@@ -38,12 +38,14 @@ export const createBaseMutates = (
     uEyeRTEHigh: { value: new ThreeVector3(0, 0, 0) },
     uScale: { value: 100.0 },
     uCenter: { value: new ThreeVector2(0, 0) },
-    uScaleByDistance: { value: true },
+    uSizeInMeters: { value: true },
     uOffsetDepth: { value: true },
     uAlphaTest: { value: 0.0 },
     uFarPlane: { value: 0.0 },
     uAspect: { value: 1.0 },
     nvr_uPickable: { value: 0.0 },
+    uFovRad: { value: 1.0 },
+    uScreenHeightPx: { value: 1080 },
   };
 
   // Conditionally create texture ref for billboard mode
@@ -55,7 +57,7 @@ export const createBaseMutates = (
     update: (state: InstancedSpriteBaseState) => {
       refs.uScale.value = state.scale;
       refs.uCenter.value.set(state.center[0], state.center[1]);
-      refs.uScaleByDistance.value = state.scaleByDistance;
+      refs.uSizeInMeters.value = state.sizeInMeters;
       refs.uOffsetDepth.value = state.offsetDepth;
       refs.uAlphaTest.value = state.alphaTest;
       refs.uAspect.value = state.aspect;
@@ -68,11 +70,13 @@ export const createBaseMutates = (
       uniforms.uEyeRTEHigh = refs.uEyeRTEHigh;
       uniforms.uScale = refs.uScale;
       uniforms.uCenter = refs.uCenter;
-      uniforms.uScaleByDistance = refs.uScaleByDistance;
+      uniforms.uSizeInMeters = refs.uSizeInMeters;
       uniforms.uOffsetDepth = refs.uOffsetDepth;
       uniforms.uAlphaTest = refs.uAlphaTest;
       uniforms.uFarPlane = refs.uFarPlane;
       uniforms.uAspect = refs.uAspect;
+      uniforms.uFovRad = refs.uFovRad;
+      uniforms.uScreenHeightPx = refs.uScreenHeightPx;
       uniforms.nvr_uPickable = refs.nvr_uPickable;
 
       if (refs.uTexture) {
@@ -98,6 +102,14 @@ export const createBaseMutates = (
 
     updateFarPlane: (far: number) => {
       refs.uFarPlane.value = far;
+    },
+
+    updateFovRad: (fovRad: number) => {
+      refs.uFovRad.value = fovRad;
+    },
+
+    updateScreenHeightPx: (height: number) => {
+      refs.uScreenHeightPx.value = height;
     },
 
     setTexture: (texture: UniformValue<DataArrayTexture | null>) => {

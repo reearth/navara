@@ -9,7 +9,7 @@ import { Layer, useViewContext } from "@navara/three_react";
 import type { FeatureCollection, Point } from "geojson";
 import { useEffect, useMemo, useRef, useState, type FC } from "react";
 
-import { UC_PHOTOREALISTIC_DATASETS } from "./datasets";
+import { UC_PHOTOREALISTIC_DATASETS, FONT_DATASETS } from "./datasets";
 import { useNightContext } from "./NightContext";
 import type { LayerDescriptions } from "./type";
 
@@ -86,9 +86,10 @@ export const ShelterLayer: FC<{ visible?: boolean }> = ({
       // Render labels using instanced text anchored at point positions.
       text: {
         color: new Color().setStyle("#ffffff"),
+        font: FONT_DATASETS.LineSeedJP.url,
         size: 15,
         clampToGround: true,
-        scaleByDistance: true,
+        sizeInMeters: false,
         height: 10,
         depthTest: false,
         outlineWidth: 2,

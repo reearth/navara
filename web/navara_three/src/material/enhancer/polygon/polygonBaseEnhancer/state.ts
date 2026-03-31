@@ -13,7 +13,6 @@ export const DEFAULT_BASE_PROPS: Required<
   addExtrudedHeight: 0,
   addHeight: 0,
   clampToGround: false,
-  useGroundNormals: false,
   isTexturized: false,
   pickable: false,
   reflectivity: 0,
@@ -33,7 +32,6 @@ export const DEFAULT_BASE_STATE: PolygonBaseState = {
   useRTE: DEFAULT_BASE_PROPS.useRTE,
   isTexturized: DEFAULT_BASE_PROPS.isTexturized,
   clampToGround: DEFAULT_BASE_PROPS.clampToGround,
-  useGroundNormals: DEFAULT_BASE_PROPS.useGroundNormals,
   pickable: DEFAULT_BASE_PROPS.pickable,
   minMaxHeight: undefined,
   addExtrudedHeight: DEFAULT_BASE_PROPS.addExtrudedHeight,
@@ -66,10 +64,6 @@ export const updateState = (
     useRTE: currentState.useRTE,
     isTexturized,
     clampToGround: props.clampToGround ?? currentState.clampToGround,
-    // Ground normals are only applicable when not texturized
-    useGroundNormals:
-      !isTexturized &&
-      (props.useGroundNormals ?? currentState.useGroundNormals),
     pickable: props.pickable ?? currentState.pickable,
     minMaxHeight: props.minMaxHeight ?? currentState.minMaxHeight,
     addExtrudedHeight:

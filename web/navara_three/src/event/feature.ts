@@ -5,7 +5,7 @@ import {
   type RenderableFeature,
   RenderableFeatureChangedEvent,
 } from "@navara/engine";
-import { Mesh, Sprite, Object3D, Material } from "three";
+import { Mesh, Sprite, Object3D } from "three";
 
 import type { ViewEvents } from "..";
 import { Color } from "../Color";
@@ -16,8 +16,8 @@ import {
 import type { ViewContext } from "../core/ViewContext";
 import type { LayersManager } from "../layersManager";
 import {
+  BatchedSdfTextMesh,
   InstancedSpriteMesh,
-  InstancedTextMesh,
   ModelMesh,
   PolygonMesh,
   PolylineMesh,
@@ -43,7 +43,12 @@ import {
 import { renderPolyline, processPolylineChanged } from "./features/polyline";
 import { renderText, processTextChanged } from "./features/text";
 
-import { setTransform, type BufferLoader, type FeatureHandler } from ".";
+import {
+  setTransform,
+  type BufferLoader,
+  type FeatureHandler,
+  type LayerHandler,
+} from ".";
 
 export function renderFeature(
   f: RenderableFeature,
@@ -93,7 +98,6 @@ export async function processRenderableFeatureAdded(
   meshes: MeshCache,
   buf: BufferLoader,
   uniforms: CommonUniforms,
-  drapedFeatureMaterials: Map<string, Material>,
   texturizedSceneByTileCoordinates: TexturizedSceneByTileCoordinates,
   featureHandler: FeatureHandler,
   viewEvents: EventHandler<ViewEvents>,
@@ -175,13 +179,6 @@ export async function processRenderableFeatureAdded(
     });
   }
 
-  if (obj instanceof PolygonMesh && obj.clampToGround && !tileHandle) {
-    drapedFeatureMaterials.set(id, obj.material);
-    obj.addEventListener("removedFromWorld", () => {
-      drapedFeatureMaterials.delete(id);
-    });
-  }
-
   if (obj instanceof PolygonMesh && polygon && polygon.outline_geometry) {
     const outline = await renderPolygonOutline(polygon, buf, viewEvents);
     outline.renderOrder = FEATURE_RENDER_ORDER;
@@ -238,7 +235,6 @@ export async function processRenderableFeatureAdded(
 export async function processRenderableFeatureChanged(
   ev: RenderableFeatureChangedEvent,
   meshes: MeshCache,
-  drapedFeatureMaterials: Map<string, Material>,
   texturizedSceneByTileCoordinates: TexturizedSceneByTileCoordinates,
   renderFlag: RenderFlag,
   buf: BufferLoader,
@@ -246,6 +242,7 @@ export async function processRenderableFeatureChanged(
   layersManager: LayersManager,
   viewContext: ViewContext,
   updatedAt: number,
+  layerHandler?: LayerHandler,
 ) {
   const id = generate_id_from_entity(ev);
   const obj = meshes.get(id);
@@ -303,8 +300,8 @@ export async function processRenderableFeatureChanged(
   if (obj instanceof InstancedSpriteMesh && billboard) {
     await processBillboardChanged(obj, billboard, buf, active);
   }
-  if (obj instanceof InstancedTextMesh && text) {
-    processTextChanged(obj, text, buf, active, renderFlag);
+  if (obj instanceof BatchedSdfTextMesh && text) {
+    await processTextChanged(obj, text, buf, renderFlag, active);
   }
   if (obj instanceof ModelMesh && model) {
     processModelChanged(obj, model, active);
@@ -330,29 +327,22 @@ export async function processRenderableFeatureChanged(
       (obj instanceof PolylineMesh && obj.draped)
     ) {
       if (obj.visible) {
-        texturizedSceneByTileCoordinates.add(tileHandle, layerId, obj as Mesh);
+        const layerIndex = layerHandler?.getLayerIndex(layerId);
+        // Timing issue: `layerIndex` will be undefined if the layer is removed after this feature update event.
+        if (layerIndex != null) {
+          texturizedSceneByTileCoordinates.add(
+            tileHandle,
+            layerId,
+            obj as Mesh,
+            layerIndex,
+            false,
+          );
+        }
       }
     } else {
       texturizedSceneByTileCoordinates.remove(tileHandle, layerId);
     }
     texturizedSceneByTileCoordinates.setNeedsUpdate(tileHandle, true);
-  }
-  if (obj instanceof PolygonMesh && !tileHandle) {
-    if (obj.clampToGround) {
-      if (!drapedFeatureMaterials.has(id)) {
-        obj.material.stencilWrite = false;
-        obj.material.depthWrite = false;
-        obj.material.depthTest = false;
-        obj.material.colorWrite = false;
-        drapedFeatureMaterials.set(id, obj.material);
-      }
-    } else {
-      obj.material.depthWrite = true;
-      obj.material.depthTest = true;
-      obj.material.stencilWrite = false;
-      obj.material.colorWrite = true;
-      drapedFeatureMaterials.delete(id);
-    }
   }
 
   // Emit visibility changed event if visibility actually changed after material updates

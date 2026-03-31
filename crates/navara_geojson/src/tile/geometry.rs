@@ -1,0 +1,588 @@
+use bevy_ecs::{entity::Entity, system::Commands};
+use navara_buffer_store::BufferStore;
+use navara_component::OrderByDistance;
+use navara_core::CRS;
+use navara_core::TileXYZ;
+use navara_feature_component::batch::BatchTable;
+use navara_geojson_vt::types::TileGeometry;
+use navara_geometry::{Hierarchy, WindingOrder};
+use navara_material::Appearance;
+use navara_tile_component::{OverscaledTileHandle, TileExtent, TileHandle};
+use navara_vector_tile::{PosConverter, VectorTileFeatureMarker};
+
+use crate::geometry::builder::GeometryBuilder;
+
+/// Construct polygon entities from GeoJsonVt tile features.
+///
+/// Converts tile-local coordinates [0, extent] to normalized [-1, 1] space
+/// (same as MVT's PosConverter::project_points_on_center) and spawns
+/// flat polygon geometry entities for clamped rendering.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn construct_geojson_tile_geometry(
+    commands: &mut Commands,
+    batch_table: &mut BatchTable,
+    buf: &mut BufferStore,
+    tile: &navara_geojson_vt::types::Tile,
+    extent: u32,
+    layer_id: &str,
+    appearances: &[Appearance],
+    tile_info: Option<(
+        TileHandle,
+        navara_core::Extent<navara_math::FloatType, navara_core::Radians>,
+    )>,
+    order: &OrderByDistance,
+) -> Option<Vec<Entity>> {
+    if tile.features.is_empty() {
+        return None;
+    }
+
+    // Determine whether polygons should use flat [-1,1] coordinates (clamped)
+    // or geographic lon/lat coordinates (non-clamped 3D rendering).
+    let flat = appearances
+        .iter()
+        .any(|a| matches!(a, Appearance::Polygon(p) if p.clamp_to_ground));
+
+    let converter = PosConverter::new(
+        TileXYZ {
+            x: tile.x as usize,
+            y: tile.y as usize,
+            z: tile.z as usize,
+        },
+        extent,
+    );
+
+    let mut builder = GeometryBuilder::new(batch_table, layer_id);
+
+    for feature in &tile.features {
+        let props_map = match feature.properties.as_ref() {
+            serde_json::Value::Object(m) => Some(m.clone()),
+            _ => None,
+        };
+        builder.begin_feature(&props_map);
+
+        // Other geometry type will be added.
+        #[allow(clippy::single_match)]
+        match &feature.geometry {
+            TileGeometry::Polygons(polygons) => {
+                for polygon in polygons {
+                    if polygon.is_empty() {
+                        continue;
+                    }
+
+                    let outer_ring = if !flat {
+                        converter.project_points(&polygon[0])
+                    } else {
+                        converter.project_points_on_center(&polygon[0])
+                    };
+
+                    let holes: Vec<Hierarchy> = polygon[1..]
+                        .iter()
+                        .map(|ring| Hierarchy {
+                            outer_ring: if !flat {
+                                converter.project_points(ring)
+                            } else {
+                                converter.project_points_on_center(ring)
+                            },
+                            holes: None,
+                            expected_winding_order: if flat {
+                                WindingOrder::Clockwise
+                            } else {
+                                WindingOrder::CounterClockwise
+                            },
+                        })
+                        .collect();
+
+                    if outer_ring.is_empty() {
+                        continue;
+                    }
+
+                    let winding_order = if flat {
+                        WindingOrder::CounterClockwise
+                    } else {
+                        WindingOrder::Clockwise
+                    };
+                    builder.add_polygon(outer_ring, &holes, winding_order, CRS::Geographic);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    let entities = builder
+        .groups
+        .finalize(commands, buf, appearances, layer_id, false);
+
+    for &entity in &entities {
+        if let Some((tile_handle, tile_extent)) = tile_info {
+            commands.entity(entity).insert((
+                OverscaledTileHandle::new(tile_handle),
+                TileExtent::new(tile_extent),
+            ));
+        }
+        commands
+            .entity(entity)
+            .insert((order.clone(), VectorTileFeatureMarker));
+    }
+
+    if entities.is_empty() {
+        None
+    } else {
+        Some(entities)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    use std::sync::Arc;
+
+    use bevy_app::{App, Update};
+    use bevy_ecs::prelude::Resource;
+    use bevy_ecs::query::With;
+    use bevy_ecs::system::{Commands, ResMut};
+    use navara_feature_component::{
+        batch::{BatchTable, BatchedFeature},
+        batched_geometry::BatchedPolygonGeometry,
+        polygon::PolygonMarker,
+    };
+    use navara_geojson_vt::types::{Tile as VtTile, TileFeature};
+    use navara_material::PolygonMaterial;
+
+    // ── helpers ──────────────────────────────────────────────────────────
+
+    fn polygon_feature(coords: Vec<Vec<[f64; 2]>>) -> TileFeature {
+        TileFeature {
+            geometry: TileGeometry::Polygons(vec![coords]),
+            properties: Arc::new(serde_json::json!({})),
+        }
+    }
+
+    fn polygon_feature_with_props(
+        coords: Vec<Vec<[f64; 2]>>,
+        props: serde_json::Value,
+    ) -> TileFeature {
+        TileFeature {
+            geometry: TileGeometry::Polygons(vec![coords]),
+            properties: Arc::new(props),
+        }
+    }
+
+    fn point_feature(coords: Vec<[f64; 2]>) -> TileFeature {
+        TileFeature {
+            geometry: TileGeometry::Points(coords),
+            properties: Arc::new(serde_json::json!({})),
+        }
+    }
+
+    fn line_feature(coords: Vec<Vec<[f64; 2]>>) -> TileFeature {
+        TileFeature {
+            geometry: TileGeometry::Lines(coords),
+            properties: Arc::new(serde_json::json!({})),
+        }
+    }
+
+    fn make_tile(features: Vec<TileFeature>) -> VtTile {
+        VtTile {
+            features,
+            z: 0,
+            x: 0,
+            y: 0,
+            num_points: 0,
+            num_simplified: 0,
+            features_bbox: None,
+        }
+    }
+
+    fn polygon_appearances() -> Vec<Appearance> {
+        vec![Appearance::Polygon(PolygonMaterial {
+            clamp_to_ground: true,
+            ..Default::default()
+        })]
+    }
+
+    fn polygon_appearances_non_clamped() -> Vec<Appearance> {
+        vec![Appearance::Polygon(PolygonMaterial {
+            clamp_to_ground: false,
+            ..Default::default()
+        })]
+    }
+
+    #[derive(Resource)]
+    struct TestInput {
+        tile: VtTile,
+        extent: u32,
+        appearances: Vec<Appearance>,
+    }
+
+    #[derive(Resource, Default)]
+    struct TestOutput(Option<Vec<Entity>>);
+
+    fn test_system(
+        mut commands: Commands,
+        mut batch_table: ResMut<BatchTable>,
+        mut buf: ResMut<BufferStore>,
+        input: bevy_ecs::system::Res<TestInput>,
+        mut out: ResMut<TestOutput>,
+    ) {
+        let order = OrderByDistance {
+            sse: 0.0,
+            distance: 0.0,
+        };
+        out.0 = construct_geojson_tile_geometry(
+            &mut commands,
+            &mut batch_table,
+            &mut buf,
+            &input.tile,
+            input.extent,
+            "test_layer",
+            &input.appearances,
+            None,
+            &order,
+        );
+    }
+
+    fn run_construct(tile: VtTile, appearances: Vec<Appearance>) -> App {
+        let mut app = App::new();
+        app.init_resource::<BufferStore>();
+        app.init_resource::<BatchTable>();
+        app.init_resource::<TestOutput>();
+        app.insert_resource(TestInput {
+            tile,
+            extent: 4096,
+            appearances,
+        });
+        app.add_systems(Update, test_system);
+        app.update();
+        app
+    }
+
+    // ── construct_geojson_tile_geometry tests ───────────────────────────
+
+    #[test]
+    fn empty_tile_returns_none() {
+        let tile = make_tile(vec![]);
+        let app = run_construct(tile, polygon_appearances());
+        let out = app.world().resource::<TestOutput>();
+        assert!(out.0.is_none());
+    }
+
+    #[test]
+    fn single_polygon_creates_batched_feature() {
+        let outer = vec![
+            [0.0, 0.0],
+            [4096.0, 0.0],
+            [4096.0, 4096.0],
+            [0.0, 4096.0],
+            [0.0, 0.0],
+        ];
+        let tile = make_tile(vec![polygon_feature(vec![outer])]);
+        let mut app = run_construct(tile, polygon_appearances());
+
+        // One BatchedFeature parent with PolygonMarker and BatchedPolygonGeometry
+        let mut query = app
+            .world_mut()
+            .query_filtered::<(&BatchedFeature, &BatchedPolygonGeometry), With<PolygonMarker>>();
+        let results: Vec<_> = query.iter(app.world()).collect();
+        assert_eq!(results.len(), 1);
+        let (batched, geom) = results[0];
+        assert!(!batched.default_active);
+        let buf = app.world().resource::<BufferStore>();
+        assert_eq!(geom.feature_count(buf), 1); // 1 polygon
+        assert_eq!(geom.batch_indices(buf).unwrap(), &[0]);
+
+        // Parent should have VectorTileFeatureMarker
+        let mut marker_query = app
+            .world_mut()
+            .query_filtered::<&VectorTileFeatureMarker, With<PolygonMarker>>();
+        assert_eq!(marker_query.iter(app.world()).count(), 1);
+
+        // Should return entity IDs
+        let out = app.world().resource::<TestOutput>();
+        let entities = out.0.as_ref().unwrap();
+        assert_eq!(entities.len(), 1);
+    }
+
+    #[test]
+    fn multiple_features_create_multiple_children() {
+        let outer1 = vec![
+            [0.0, 0.0],
+            [2048.0, 0.0],
+            [2048.0, 2048.0],
+            [0.0, 2048.0],
+            [0.0, 0.0],
+        ];
+        let outer2 = vec![
+            [2048.0, 2048.0],
+            [4096.0, 2048.0],
+            [4096.0, 4096.0],
+            [2048.0, 4096.0],
+            [2048.0, 2048.0],
+        ];
+        let tile = make_tile(vec![
+            polygon_feature(vec![outer1]),
+            polygon_feature(vec![outer2]),
+        ]);
+        let mut app = run_construct(tile, polygon_appearances());
+
+        // One BatchedFeature parent with 2 polygon features accumulated
+        let mut query = app
+            .world_mut()
+            .query_filtered::<(&BatchedFeature, &BatchedPolygonGeometry), With<PolygonMarker>>();
+        let results: Vec<_> = query.iter(app.world()).collect();
+        assert_eq!(results.len(), 1);
+        let (_batched, geom) = results[0];
+        let buf = app.world().resource::<BufferStore>();
+        assert_eq!(geom.feature_count(buf), 2); // 2 polygons accumulated
+        assert_eq!(geom.batch_indices(buf).unwrap(), &[0, 1]);
+    }
+
+    #[test]
+    fn polygon_with_hole_creates_single_polygon_entry() {
+        let outer = vec![
+            [0.0, 0.0],
+            [4096.0, 0.0],
+            [4096.0, 4096.0],
+            [0.0, 4096.0],
+            [0.0, 0.0],
+        ];
+        let hole = vec![
+            [1024.0, 1024.0],
+            [3072.0, 1024.0],
+            [3072.0, 3072.0],
+            [1024.0, 3072.0],
+            [1024.0, 1024.0],
+        ];
+        let tile = make_tile(vec![polygon_feature(vec![outer, hole])]);
+        let mut app = run_construct(tile, polygon_appearances());
+
+        // One polygon entry with 1 hole
+        let mut query = app
+            .world_mut()
+            .query_filtered::<&BatchedPolygonGeometry, With<PolygonMarker>>();
+        let geoms: Vec<_> = query.iter(app.world()).collect();
+        assert_eq!(geoms.len(), 1);
+        let buf = app.world().resource::<BufferStore>();
+        assert_eq!(geoms[0].feature_count(buf), 1);
+        assert_eq!(geoms[0].holes_boundaries(buf).unwrap(), &[1]); // 1 hole
+    }
+
+    #[test]
+    fn non_polygon_geometry_produces_no_entities() {
+        let tile = make_tile(vec![
+            point_feature(vec![[2048.0, 2048.0]]),
+            line_feature(vec![vec![[0.0, 0.0], [4096.0, 4096.0]]]),
+        ]);
+        let app = run_construct(tile, polygon_appearances());
+        let out = app.world().resource::<TestOutput>();
+        assert!(out.0.is_none());
+    }
+
+    #[test]
+    fn empty_polygon_ring_is_skipped() {
+        // A polygon with an empty outer ring should be skipped
+        let tile = make_tile(vec![polygon_feature(vec![vec![]])]);
+        let app = run_construct(tile, polygon_appearances());
+        let out = app.world().resource::<TestOutput>();
+        assert!(out.0.is_none());
+    }
+
+    #[test]
+    fn mismatched_appearance_produces_no_entities() {
+        let outer = vec![
+            [0.0, 0.0],
+            [4096.0, 0.0],
+            [4096.0, 4096.0],
+            [0.0, 4096.0],
+            [0.0, 0.0],
+        ];
+        let tile = make_tile(vec![polygon_feature(vec![outer])]);
+        // Use a non-polygon appearance
+        let app = run_construct(
+            tile,
+            vec![Appearance::Polyline(
+                navara_material::PolylineMaterial::default(),
+            )],
+        );
+        let out = app.world().resource::<TestOutput>();
+        assert!(out.0.is_none());
+    }
+
+    #[test]
+    fn tile_info_attaches_overscaled_handle_and_extent() {
+        // Use a dedicated system that passes tile_info
+        let mut app = App::new();
+        app.init_resource::<BufferStore>();
+        app.init_resource::<BatchTable>();
+        app.init_resource::<TestOutput>();
+
+        let outer = vec![
+            [0.0, 0.0],
+            [4096.0, 0.0],
+            [4096.0, 4096.0],
+            [0.0, 4096.0],
+            [0.0, 0.0],
+        ];
+        let tile = make_tile(vec![polygon_feature(vec![outer])]);
+
+        app.insert_resource(TestInput {
+            tile,
+            extent: 4096,
+            appearances: polygon_appearances(),
+        });
+
+        app.add_systems(
+            Update,
+            |mut commands: Commands,
+             mut batch_table: ResMut<BatchTable>,
+             mut buf: ResMut<BufferStore>,
+             input: bevy_ecs::system::Res<TestInput>,
+             mut out: ResMut<TestOutput>| {
+                let order = OrderByDistance {
+                    sse: 0.0,
+                    distance: 0.0,
+                };
+                let tile_handle: TileHandle = 42;
+                let tile_extent = navara_core::Extent::default();
+                out.0 = construct_geojson_tile_geometry(
+                    &mut commands,
+                    &mut batch_table,
+                    &mut buf,
+                    &input.tile,
+                    input.extent,
+                    "test_layer",
+                    &input.appearances,
+                    Some((tile_handle, tile_extent)),
+                    &order,
+                );
+            },
+        );
+        app.update();
+
+        // Should have OverscaledTileHandle and TileExtent on the parent entity
+        let mut handle_query = app.world_mut().query::<&OverscaledTileHandle>();
+        assert_eq!(handle_query.iter(app.world()).count(), 1);
+
+        let mut extent_query = app.world_mut().query::<&TileExtent>();
+        assert_eq!(extent_query.iter(app.world()).count(), 1);
+    }
+
+    #[test]
+    fn order_by_distance_is_attached_to_entities() {
+        let outer = vec![
+            [0.0, 0.0],
+            [4096.0, 0.0],
+            [4096.0, 4096.0],
+            [0.0, 4096.0],
+            [0.0, 0.0],
+        ];
+        let tile = make_tile(vec![polygon_feature(vec![outer])]);
+        let mut app = run_construct(tile, polygon_appearances());
+
+        let mut order_query = app
+            .world_mut()
+            .query_filtered::<&OrderByDistance, With<PolygonMarker>>();
+        assert_eq!(order_query.iter(app.world()).count(), 1);
+    }
+
+    #[test]
+    fn feature_properties_are_stored_in_batch_table() {
+        let outer = vec![
+            [0.0, 0.0],
+            [4096.0, 0.0],
+            [4096.0, 4096.0],
+            [0.0, 4096.0],
+            [0.0, 0.0],
+        ];
+        let tile = make_tile(vec![polygon_feature_with_props(
+            vec![outer],
+            serde_json::json!({"name": "test_polygon", "id": 42}),
+        )]);
+        let app = run_construct(tile, polygon_appearances());
+
+        // Verify batch table has entries (properties are stored there)
+        let batch_table = app.world().resource::<BatchTable>();
+        assert!(!batch_table.is_empty());
+    }
+
+    #[test]
+    fn multipolygon_creates_multiple_polygon_entries_from_single_feature() {
+        // A feature with multiple polygon geometries (Polygons variant wraps Vec<Vec<Vec<...>>>)
+        let poly1_outer = vec![
+            [0.0, 0.0],
+            [2048.0, 0.0],
+            [2048.0, 2048.0],
+            [0.0, 2048.0],
+            [0.0, 0.0],
+        ];
+        let poly2_outer = vec![
+            [2048.0, 2048.0],
+            [4096.0, 2048.0],
+            [4096.0, 4096.0],
+            [2048.0, 4096.0],
+            [2048.0, 2048.0],
+        ];
+        // Create a feature with two separate polygon rings
+        let feature = TileFeature {
+            geometry: TileGeometry::Polygons(vec![vec![poly1_outer], vec![poly2_outer]]),
+            properties: Arc::new(serde_json::json!({})),
+        };
+        let tile = make_tile(vec![feature]);
+        let mut app = run_construct(tile, polygon_appearances());
+
+        // Two polygon entries accumulated into a single BatchedPolygonGeometry
+        let mut query = app
+            .world_mut()
+            .query_filtered::<(&BatchedFeature, &BatchedPolygonGeometry), With<PolygonMarker>>();
+        let results: Vec<_> = query.iter(app.world()).collect();
+        assert_eq!(results.len(), 1);
+        let (_batched, geom) = results[0];
+        let buf = app.world().resource::<BufferStore>();
+        assert_eq!(geom.feature_count(buf), 2); // 2 polygons
+        // Both polygons share batch_index 0 (same feature in multipolygon)
+        assert_eq!(geom.batch_indices(buf).unwrap(), &[0, 0]);
+    }
+
+    #[test]
+    fn non_clamped_polygon_uses_geographic_projection() {
+        // With clamp_to_ground=false, coordinates should be geographic (lon/lat),
+        // not flat [-1, 1]. For tile z=0, x=0, y=0, the centre of the tile
+        // (extent/2, extent/2) should map approximately to (0, 0) in geographic.
+        let outer = vec![
+            [0.0, 0.0],
+            [4096.0, 0.0],
+            [4096.0, 4096.0],
+            [0.0, 4096.0],
+            [0.0, 0.0],
+        ];
+        let tile = make_tile(vec![polygon_feature(vec![outer])]);
+        let mut app = run_construct(tile, polygon_appearances_non_clamped());
+
+        // Should produce a BatchedPolygonGeometry
+        let mut query = app
+            .world_mut()
+            .query_filtered::<&BatchedPolygonGeometry, With<PolygonMarker>>();
+        let geoms: Vec<_> = query.iter(app.world()).collect();
+        assert_eq!(geoms.len(), 1);
+        let buf = app.world().resource::<BufferStore>();
+        let outer_rings = geoms[0].outer_rings(buf).unwrap();
+
+        // The outer ring values should NOT be in [-1, 1] range (geographic coords
+        // for z=0 tile span [-180, 180] lon and ~[-85, 85] lat).
+        // First point (tile 0,0) should be ~ -180 lon
+        assert!(
+            outer_rings[0] < -100.0,
+            "expected geographic lon, got {}",
+            outer_rings[0]
+        );
+
+        // Non-flat (3D globe) path must use Clockwise for outer rings so that
+        // align_winding_order correctly re-winds after the Y-axis flip.
+        let winding = geoms[0].expected_winding_orders(buf).unwrap();
+        assert_eq!(
+            winding[0],
+            WindingOrder::Clockwise as u8,
+            "non-clamped outer ring should hint Clockwise (same as MVT non-flat path)"
+        );
+    }
+}

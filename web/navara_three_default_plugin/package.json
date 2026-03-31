@@ -11,7 +11,8 @@
     "dist"
   ],
   "scripts": {
-    "build": "vite build --watch=false",
+    "type-check": "tsc && tsc -p tsconfig.node.json",
+    "build": "pnpm type-check && vite build --watch=false",
     "build:dev": "vite build --mode development",
     "build:dev:watch": "pnpm build:dev --watch",
     "test": "vitest --passWithNoTests --watch=false",
