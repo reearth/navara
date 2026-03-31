@@ -28,7 +28,6 @@ pub struct ModelRenderInformation {
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct PolygonRenderInformation {
-    pub should_recalculate_height: bool,
     pub distance_to_center_from_ellipsoid_surface: Option<FloatType>,
     pub is_rendered: bool,
     pub should_be_texturized: bool,

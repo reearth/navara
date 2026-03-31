@@ -145,7 +145,6 @@ pub fn transfer_batched_mesh(
                 transform: Transform::from_translation(translation),
                 feature_id: batched_feature_entity,
                 render_info: PolygonRenderInformation {
-                    should_recalculate_height: true,
                     distance_to_center_from_ellipsoid_surface,
                     is_rendered: false,
                     should_be_texturized: clamp_to_ground && tile_coordinates.is_some(),
@@ -190,7 +189,6 @@ pub fn update_polygon(
 
         if let RenderableFeature::Polygon {
             material,
-            render_info,
             extent,
             bounding_sphere,
             ..
@@ -201,7 +199,6 @@ pub fn update_polygon(
                 || material.height != updated.material.height
                 || material.extruded_height != updated.material.extruded_height;
             material.update(&updated.material);
-            render_info.should_recalculate_height = should_recalculate_height;
 
             if should_recalculate_height && let Some(extent) = extent {
                 let aabb = Aabb::from_extent_f64(*extent, 0., 0.);

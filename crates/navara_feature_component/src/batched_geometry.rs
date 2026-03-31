@@ -74,10 +74,7 @@ impl EncodedPointPositions {
                 let l = buf.new_f32(low);
                 (PointEncoding::Rte, h, Some(l))
             }
-            Self::Empty => {
-                let h = buf.new_f32(Vec::new());
-                (PointEncoding::Rte, h, None)
-            }
+            Self::Empty => unreachable!("into_handles called on empty EncodedPointPositions"),
         }
     }
 }
@@ -270,6 +267,16 @@ impl BatchedPointGeometry {
     /// Read batch_indices from BufferStore (read-only).
     pub fn batch_indices<'a>(&self, buf: &'a BufferStore) -> Option<&'a [u32]> {
         buf.get_u32(&self.batch_indices)
+    }
+
+    /// Remove all buffers from store (cleanup without returning data).
+    pub fn remove_from_buf(&self, buf: &mut BufferStore) {
+        buf.remove(&self.batch_indices);
+        buf.remove(&self.batch_ids);
+        buf.remove(&self.encoded_a);
+        if let Some(encoded_b) = &self.encoded_b {
+            buf.remove(encoded_b);
+        }
     }
 }
 

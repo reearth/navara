@@ -187,14 +187,19 @@ pub fn remove_batched_feature(
     mut commands: Commands,
     mut removed_renderable_features: Query<&mut RenderableFeature>,
     removed_features: Query<
-        (Entity, &FeatureId, &GlobalBatchIds),
+        (
+            Entity,
+            &FeatureId,
+            &GlobalBatchIds,
+            Option<&BatchedPointGeometry>,
+        ),
         (With<BatchedFeature>, With<PointMarker>, With<Deleted>),
     >,
     mut buf: ResMut<BufferStore>,
     mut batch_table_res: ResMut<BatchTable>,
     mut feature_batch_id_map: ResMut<FeatureBatchIdMap>,
 ) {
-    for (feature_id, rendered_feature_id, global_batch_ids) in &removed_features {
+    for (feature_id, rendered_feature_id, global_batch_ids, batched_geom) in &removed_features {
         // Clean up RenderableFeature if it exists
         if let Some(rendered_feature_id) = rendered_feature_id.0 {
             if let Ok(mut feature) = removed_renderable_features.get_mut(rendered_feature_id) {
@@ -203,6 +208,10 @@ pub fn remove_batched_feature(
             feature_batch_id_map.remove(&rendered_feature_id, &mut buf, &mut batch_table_res);
             // Mark RenderableFeature as Deleted so event::despawn will clean it up
             commands.entity(rendered_feature_id).insert(Deleted);
+        }
+
+        if let Some(geom) = batched_geom {
+            geom.remove_from_buf(&mut buf);
         }
 
         // Always clean up GlobalBatchIds and despawn the BatchedFeature entity
