@@ -77,7 +77,7 @@ export function generateHillshadeNormalShader(maxTextures: number): string {
           vec3 worldDemNormal = normalize(TBN * demNormal);
 
           // Transform to view space
-          normal = normalize(normalMatrix * worldDemNormal);
+          normal = normalize(mat3(viewMatrix) * worldDemNormal);
         }
       }
     }`,
