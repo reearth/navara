@@ -1,5 +1,6 @@
 import { encodePosition } from "@navara/engine-api";
 import {
+  Color as ThreeColor,
   DataArrayTexture,
   Vector2 as ThreeVector2,
   Vector3 as ThreeVector3,
@@ -44,6 +45,9 @@ export const createBaseMutates = (
     uFarPlane: { value: 0.0 },
     uAspect: { value: 1.0 },
     nvr_uPickable: { value: 0.0 },
+    uEmissiveOnly: { value: 0 },
+    uEmissiveColor: { value: new ThreeColor(0, 0, 0) },
+    uEmissiveIntensity: { value: 0 },
   };
 
   // Conditionally create texture ref for billboard mode
@@ -60,6 +64,9 @@ export const createBaseMutates = (
       refs.uAlphaTest.value = state.alphaTest;
       refs.uAspect.value = state.aspect;
       refs.nvr_uPickable.value = state.pickable ? 1.0 : 0.0;
+      refs.uEmissiveOnly.value = state.emissiveOnly ? 1 : 0;
+      refs.uEmissiveColor.value.set(state.emissiveColor);
+      refs.uEmissiveIntensity.value = state.emissiveIntensity;
     },
 
     updateUniforms: (uniforms) => {
@@ -74,6 +81,9 @@ export const createBaseMutates = (
       uniforms.uFarPlane = refs.uFarPlane;
       uniforms.uAspect = refs.uAspect;
       uniforms.nvr_uPickable = refs.nvr_uPickable;
+      uniforms.uEmissiveOnly = refs.uEmissiveOnly;
+      uniforms.uEmissiveColor = refs.uEmissiveColor;
+      uniforms.uEmissiveIntensity = refs.uEmissiveIntensity;
 
       if (refs.uTexture) {
         uniforms.uTexture = refs.uTexture;

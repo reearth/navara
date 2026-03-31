@@ -1,4 +1,4 @@
-import type { Matrix4, Texture, Vector3 } from "three";
+import type { Color, Matrix4, Texture, Vector3 } from "three";
 
 import type { UniformValue } from "../../../types";
 import type { BatchTextureFlags } from "../../batchTexture";
@@ -28,6 +28,9 @@ export type PolygonBaseProps = {
 
   // Picking
   pickable?: boolean;
+
+  // Emissive-only rendering (for EmissiveBufferPass)
+  emissiveOnly?: boolean;
 
   // Reflectivity
   reflectivity?: number;
@@ -62,6 +65,9 @@ export type PolygonBaseState = Readonly<
     isTexturized: boolean;
     clampToGround: boolean;
     pickable: boolean;
+    emissiveOnly: boolean;
+    emissiveColor: number;
+    emissiveIntensity: number;
     minMaxHeight: [number, number] | undefined;
     addExtrudedHeight: number;
     addHeight: number;
@@ -86,6 +92,9 @@ export type PolygonBaseRefs = {
   uAddHeight: UniformValue<number>;
   uClampToGround: UniformValue<boolean>;
   nvr_uPickable: UniformValue<number>;
+  uEmissiveOnly: UniformValue<number>;
+  uEmissiveColor: UniformValue<Color>;
+  uEmissiveIntensity: UniformValue<number>;
   uIsTexturized: UniformValue<boolean>;
   reflectivity: UniformValue<number>;
   roughness: UniformValue<number>;

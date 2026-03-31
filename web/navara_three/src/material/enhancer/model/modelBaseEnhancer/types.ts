@@ -1,4 +1,4 @@
-import type { Texture } from "three";
+import type { Color, Texture } from "three";
 
 import type { SelectiveEffectOcclusionValue } from "../../../../core";
 import type { UniformValue } from "../../../types";
@@ -21,6 +21,9 @@ export type ModelBaseProps = {
   // Picking
   pickable?: boolean;
 
+  // Emissive-only rendering (for EmissiveBufferPass)
+  emissiveOnly?: boolean;
+
   // Batch texture
   batchDataTexture?: UniformValue<Texture | null>;
 
@@ -42,6 +45,9 @@ export type ModelBaseProps = {
  */
 export type ModelBaseState = Readonly<{
   pickable: boolean;
+  emissiveOnly: boolean;
+  emissiveColor: number;
+  emissiveIntensity: number;
   // Batch texture state - when true, material.color is white and colors come from batch texture
   batchColorEnabled: boolean;
   useBatchTexture: boolean;
@@ -61,6 +67,9 @@ export type ModelBaseState = Readonly<{
  */
 export type ModelBaseRefs = {
   nvr_uPickable: UniformValue<number>;
+  uEmissiveOnly: UniformValue<number>;
+  uEmissiveColor: UniformValue<Color>;
+  uEmissiveIntensity: UniformValue<number>;
   uBloomMaskPass: UniformValue<number>;
   uOutlineMaskPass: UniformValue<number>;
   uSelectiveEffectOcclusion: UniformValue<SelectiveEffectOcclusionValue>;

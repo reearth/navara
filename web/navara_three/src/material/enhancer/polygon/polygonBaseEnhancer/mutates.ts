@@ -1,5 +1,9 @@
 import type { Matrix4, Texture, Vector3 } from "three";
-import { Matrix4 as ThreeMatrix4, Vector3 as ThreeVector3 } from "three";
+import {
+  Color as ThreeColor,
+  Matrix4 as ThreeMatrix4,
+  Vector3 as ThreeVector3,
+} from "three";
 
 import type { UniformValue } from "../../../types";
 
@@ -13,12 +17,16 @@ import type {
  * Default refs with initial values.
  * These are cloned in createBaseMutates and synced from state via update().
  */
-const DEFAULT_BASE_REFS: PolygonBaseRefs = {
+const DEFAULT_BASE_REFS: Omit<
+  PolygonBaseRefs,
+  "uEmissiveColor" | "uEmissiveIntensity"
+> = {
   uMinMaxHeight: { value: undefined },
   uAddExtrudedHeight: { value: 0 },
   uAddHeight: { value: 0 },
   uClampToGround: { value: false },
   nvr_uPickable: { value: 0 },
+  uEmissiveOnly: { value: 0 },
   uIsTexturized: { value: false },
   reflectivity: { value: 0 },
   roughness: { value: 0 },
@@ -33,6 +41,10 @@ const DEFAULT_BASE_REFS: PolygonBaseRefs = {
 export const createBaseMutates = (useRTE: boolean): PolygonBaseMutates => {
   // Clone defaults so each enhancer instance gets independent ref objects
   const refs = structuredClone(DEFAULT_BASE_REFS) as PolygonBaseRefs;
+
+  // Emissive refs (Color can't be structuredClone'd)
+  refs.uEmissiveColor = { value: new ThreeColor(0, 0, 0) };
+  refs.uEmissiveIntensity = { value: 0 };
 
   // Conditionally create RTE refs (useRTE can't change after mount)
   if (useRTE) {
@@ -49,6 +61,9 @@ export const createBaseMutates = (useRTE: boolean): PolygonBaseMutates => {
       refs.uAddHeight.value = state.addHeight;
       refs.uClampToGround.value = state.clampToGround;
       refs.nvr_uPickable.value = state.pickable ? 1 : 0;
+      refs.uEmissiveOnly.value = state.emissiveOnly ? 1 : 0;
+      refs.uEmissiveColor.value.set(state.emissiveColor);
+      refs.uEmissiveIntensity.value = state.emissiveIntensity;
       refs.uIsTexturized.value = state.isTexturized;
       refs.reflectivity.value = state.reflectivity;
       refs.roughness.value = state.roughness;
@@ -59,6 +74,9 @@ export const createBaseMutates = (useRTE: boolean): PolygonBaseMutates => {
         uniforms.uGlobeNormal = refs.uGlobeNormal;
       }
       uniforms.nvr_uPickable = refs.nvr_uPickable;
+      uniforms.uEmissiveOnly = refs.uEmissiveOnly;
+      uniforms.uEmissiveColor = refs.uEmissiveColor;
+      uniforms.uEmissiveIntensity = refs.uEmissiveIntensity;
       uniforms.reflectivity = refs.reflectivity;
       uniforms.roughness = refs.roughness;
 

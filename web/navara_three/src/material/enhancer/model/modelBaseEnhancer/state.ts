@@ -11,6 +11,7 @@ export const DEFAULT_BASE_PROPS: Required<
   emissiveColor: 0,
   emissiveIntensity: 0,
   pickable: false,
+  emissiveOnly: false,
   batchColorEnabled: false,
   useBatchTexture: false,
   useBatchColorShow: false,
@@ -22,6 +23,9 @@ export const DEFAULT_BASE_PROPS: Required<
 /** Default state derived from DEFAULT_BASE_PROPS */
 export const DEFAULT_BASE_STATE: ModelBaseState = {
   pickable: DEFAULT_BASE_PROPS.pickable,
+  emissiveOnly: false,
+  emissiveColor: DEFAULT_BASE_PROPS.emissiveColor,
+  emissiveIntensity: DEFAULT_BASE_PROPS.emissiveIntensity,
   batchColorEnabled: DEFAULT_BASE_PROPS.batchColorEnabled,
   useBatchTexture: DEFAULT_BASE_PROPS.useBatchTexture,
   useBatchColorShow: DEFAULT_BASE_PROPS.useBatchColorShow,
@@ -43,6 +47,9 @@ export const updateState = (
   currentState: ModelBaseState,
 ): ModelBaseState => ({
   pickable: props.pickable ?? currentState.pickable,
+  emissiveOnly: props.emissiveOnly ?? currentState.emissiveOnly,
+  emissiveColor: props.emissiveColor ?? currentState.emissiveColor,
+  emissiveIntensity: props.emissiveIntensity ?? currentState.emissiveIntensity,
   // Batch flags can only transition from false to true, never back
   batchColorEnabled: props.batchColorEnabled ?? currentState.batchColorEnabled,
   useBatchTexture: props.useBatchTexture ?? currentState.useBatchTexture,

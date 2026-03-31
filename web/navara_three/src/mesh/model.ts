@@ -516,6 +516,12 @@ export class ModelMesh
     }
   }
 
+  _setEmissiveOnly(emissiveOnly: boolean): void {
+    for (const enhancer of this._enhancers.values()) {
+      enhancer.update({ base: { emissiveOnly } });
+    }
+  }
+
   _setFeatureHeight(_height: number) {
     // Height adjustment via batch textures is currently not implemented.
     // This method is intentionally a no-op to avoid breaking existing callers.

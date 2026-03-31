@@ -1,4 +1,4 @@
-import type { DataArrayTexture, Vector2, Vector3 } from "three";
+import type { Color, DataArrayTexture, Vector2, Vector3 } from "three";
 
 import type { UniformValue } from "../../../types";
 import type { Mutates } from "../../MaterialEnhancer";
@@ -18,6 +18,11 @@ export type InstancedSpriteBaseProps = {
   offsetDepth?: boolean;
   alphaTest?: number;
   pickable?: boolean;
+
+  // Emissive-only rendering (for EmissiveBufferPass)
+  emissiveOnly?: boolean;
+  emissiveColor?: number;
+  emissiveIntensity?: number;
 
   // Material properties (set directly on material, not via uniforms)
   transparent?: boolean;
@@ -45,6 +50,9 @@ export type InstancedSpriteBaseState = Readonly<{
   offsetDepth: boolean;
   alphaTest: number;
   pickable: boolean;
+  emissiveOnly: boolean;
+  emissiveColor: number;
+  emissiveIntensity: number;
 
   // Material properties
   transparent: boolean;
@@ -71,6 +79,9 @@ export type InstancedSpriteBaseRefs = {
   uFarPlane: UniformValue<number>;
   uAspect: UniformValue<number>;
   nvr_uPickable: UniformValue<number>;
+  uEmissiveOnly: UniformValue<number>;
+  uEmissiveColor: UniformValue<Color>;
+  uEmissiveIntensity: UniformValue<number>;
 
   // External ref - only present in billboard mode
   uTexture?: UniformValue<DataArrayTexture | null>;

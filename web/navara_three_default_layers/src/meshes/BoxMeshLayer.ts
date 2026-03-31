@@ -13,6 +13,11 @@ import {
   type Object3DEventMap,
 } from "three";
 
+import {
+  setupEmissiveBufferUniforms,
+  syncEmissiveBufferUniforms,
+} from "./emissiveBufferSetup";
+
 type BoxMeshEventMap = Object3DEventMap & CustomObject3DEventMap;
 
 type LayerDescription = {
@@ -83,6 +88,14 @@ export class BoxMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
       transparent: cfg.transparent ?? false,
     });
 
+    // Set up emissive buffer uniforms for EmissiveBufferPass support
+    const hexEmissiveColor = cfg.emissiveColor?.raw ?? 0x000000;
+    setupEmissiveBufferUniforms(
+      material,
+      hexEmissiveColor,
+      cfg.emissiveIntensity ?? 0,
+    );
+
     const mesh = new Mesh<BoxGeometry, MeshLambertMaterial, BoxMeshEventMap>(
       geometry,
       material,
@@ -145,6 +158,11 @@ export class BoxMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
             material.emissive.set(cfg.emissiveColor.raw);
           if (cfg.emissiveIntensity !== undefined)
             material.emissiveIntensity = cfg.emissiveIntensity;
+          syncEmissiveBufferUniforms(
+            material,
+            cfg.emissiveColor?.raw,
+            cfg.emissiveIntensity,
+          );
           if (cfg.opacity !== undefined) material.opacity = cfg.opacity;
           if (cfg.transparent !== undefined)
             material.transparent = cfg.transparent;

@@ -7,7 +7,7 @@ import {
   type EffectLayerUpdate,
 } from "../../core/EffectLayerDeclaration";
 import type { ViewContext } from "../../core/ViewContext";
-import { CustomRenderPass } from "../../passes";
+import { CustomRenderPass, EmissiveBufferPass } from "../../passes";
 
 type LayerDescription = {
   mrt?: {
@@ -28,6 +28,7 @@ export class MRTPassEffectLayer extends EffectLayerDeclaration<
   // No insertAfter/Before - this is typically the first pass
 
   private config: MRTPassConfig;
+  private emissiveBufferPass?: EmissiveBufferPass;
 
   constructor(view: ViewContext, config: MRTPassConfig) {
     super(view, config);
@@ -40,6 +41,9 @@ export class MRTPassEffectLayer extends EffectLayerDeclaration<
     const camera = this.view.camera;
 
     invariant(this.view.globe);
+
+    const renderer =
+      this.view.renderPassOrchestrator.effectComposer.getRenderer();
 
     const pass = new CustomRenderPass(
       scenes,
@@ -55,11 +59,27 @@ export class MRTPassEffectLayer extends EffectLayerDeclaration<
       },
     );
 
+    // Create EmissiveBufferPass (independent RT, PickHelper pattern)
+    this.emissiveBufferPass = new EmissiveBufferPass(
+      renderer,
+      camera,
+      scenes,
+      this.view._privates.meshes,
+      this.view._privates.drapedMaterials,
+      this.view.renderPassOrchestrator.effectComposer.inputBuffer,
+      this.view.globe,
+    );
+    pass.emissiveBufferPass = this.emissiveBufferPass;
+
     return pass;
   }
 
   get normalBuffer(): Texture | undefined {
     return this.raw?.gbufferRenderTarget.textures[1];
+  }
+
+  get emissiveBuffer(): Texture | undefined {
+    return this.emissiveBufferPass?.texture;
   }
 
   get depthBuffer(): Texture | undefined {

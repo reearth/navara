@@ -153,6 +153,9 @@ uniform vec3 diffuse;
 uniform bool uClampToGround;
 uniform sampler2D uGlobeNormal;
 uniform float nvr_uPickable;
+// uEmissiveOnly is declared by overrideMaterialsForMRT
+uniform vec3 uEmissiveColor;
+uniform float uEmissiveIntensity;
 uniform bool uIsTexturized;
 ${POLYGON_BASE_SHADER_MARKERS.fragment.UNIFORM_END}
 
@@ -219,6 +222,10 @@ if(uClampToGround) {
       "#include <dithering_fragment>",
       `
 #include <dithering_fragment>
+if (uEmissiveOnly > 0.5) {
+  gl_FragColor = vec4(uEmissiveColor, uEmissiveIntensity);
+  return;
+}
 if (nvr_uPickable > 0.0 && diffuseColor.a > 0.0) {
   vec3 pickColor = nvr_batchIdToColor(nvr_vBatchId);
   gl_FragColor = vec4(pickColor.xyz, 1.0);

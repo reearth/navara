@@ -13,6 +13,11 @@ import {
   type Object3DEventMap,
 } from "three";
 
+import {
+  setupEmissiveBufferUniforms,
+  syncEmissiveBufferUniforms,
+} from "./emissiveBufferSetup";
+
 type CylinderMeshEventMap = Object3DEventMap & CustomObject3DEventMap;
 
 type LayerDescription = {
@@ -86,6 +91,13 @@ export class CylinderMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
       transparent: cfg.transparent ?? false,
     });
 
+    const hexEmissiveColor = cfg.emissiveColor?.raw ?? 0x000000;
+    setupEmissiveBufferUniforms(
+      material,
+      hexEmissiveColor,
+      cfg.emissiveIntensity ?? 0,
+    );
+
     const mesh = new Mesh<
       CylinderGeometry,
       MeshLambertMaterial,
@@ -152,6 +164,11 @@ export class CylinderMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
             material.emissive.set(cfg.emissiveColor.raw);
           if (cfg.emissiveIntensity !== undefined)
             material.emissiveIntensity = cfg.emissiveIntensity;
+          syncEmissiveBufferUniforms(
+            material,
+            cfg.emissiveColor?.raw,
+            cfg.emissiveIntensity,
+          );
           if (cfg.opacity !== undefined) material.opacity = cfg.opacity;
           if (cfg.transparent !== undefined)
             material.transparent = cfg.transparent;

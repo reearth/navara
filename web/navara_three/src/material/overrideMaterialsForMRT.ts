@@ -117,11 +117,19 @@ function injectGBuffer(
       uniform float roughness;
     #endif // USE_ROUGHNESS
 
+    // Emissive buffer toggle (for EmissiveBufferPass)
+    uniform float uEmissiveOnly;
+
     ${packing}
     ${
       createReplacer(shader.fragmentShader).replace(
         /}\s*$/, // Assume the last curly brace is of main()
         /* glsl */ `
+          // EmissiveBufferPass: output transparent black for non-emissive materials
+          if (uEmissiveOnly > 0.5) {
+            gl_FragColor = vec4(0.0);
+            return;
+          }
           #ifndef USE_SHADOWMAP_DEPTH
             ${outputBuffer1};
           #endif

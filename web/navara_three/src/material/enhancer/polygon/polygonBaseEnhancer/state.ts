@@ -15,6 +15,7 @@ export const DEFAULT_BASE_PROPS: Required<
   clampToGround: false,
   isTexturized: false,
   pickable: false,
+  emissiveOnly: false,
   reflectivity: 0,
   roughness: 0,
   emissiveColor: 0,
@@ -33,6 +34,9 @@ export const DEFAULT_BASE_STATE: PolygonBaseState = {
   isTexturized: DEFAULT_BASE_PROPS.isTexturized,
   clampToGround: DEFAULT_BASE_PROPS.clampToGround,
   pickable: DEFAULT_BASE_PROPS.pickable,
+  emissiveOnly: false,
+  emissiveColor: DEFAULT_BASE_PROPS.emissiveColor,
+  emissiveIntensity: DEFAULT_BASE_PROPS.emissiveIntensity,
   minMaxHeight: undefined,
   addExtrudedHeight: DEFAULT_BASE_PROPS.addExtrudedHeight,
   addHeight: DEFAULT_BASE_PROPS.addHeight,
@@ -65,6 +69,10 @@ export const updateState = (
     isTexturized,
     clampToGround: props.clampToGround ?? currentState.clampToGround,
     pickable: props.pickable ?? currentState.pickable,
+    emissiveOnly: props.emissiveOnly ?? currentState.emissiveOnly,
+    emissiveColor: props.emissiveColor ?? currentState.emissiveColor,
+    emissiveIntensity:
+      props.emissiveIntensity ?? currentState.emissiveIntensity,
     minMaxHeight: props.minMaxHeight ?? currentState.minMaxHeight,
     addExtrudedHeight:
       props.addExtrudedHeight ?? currentState.addExtrudedHeight,

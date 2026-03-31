@@ -4,11 +4,16 @@ import ThreeView, {
   geodeticToVector3,
   degreeToRadian,
 } from "@navara/three";
+import type {
+  BoxMeshLayer,
+  SphereMeshLayer,
+} from "@navara/three_default_layers";
 import {
   DefaultPlugin,
   type DefaultLayerDescriptions,
 } from "@navara/three_default_plugin";
 import { Vector3 } from "three";
+import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../../helpers/attributions";
 import {
@@ -75,7 +80,7 @@ export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
     lng: degreeToRadian(139.7671),
     height: 200,
   });
-  view.addLayer({
+  const boxLayer = view.addLayer<BoxMeshLayer>({
     type: "mesh",
     box: {
       width: 200,
@@ -95,7 +100,7 @@ export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
     boxPosition.y,
     boxPosition.z,
   ).add(new Vector3(-500, 0, -600));
-  view.addLayer({
+  const sphereLayer = view.addLayer<SphereMeshLayer>({
     type: "mesh",
     sphere: {
       radius: 150,
@@ -108,11 +113,13 @@ export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
   });
 
   // 3D Tiles: Chiyoda (outline only)
-  view.addLayer({
+  const chiyodaLayer = view.addLayer({
     type: "cesium3dtiles",
     data: { url: TILES_3D_DATASETS.plateauChiyoda.url },
     model: {
       color: new Color().setHex(0xffffff),
+      emissiveColor: new Color().setHex(0xffffff),
+      emissiveIntensity: 0.0,
       effectIds: [outlineEffect.id],
     },
   });
@@ -148,4 +155,97 @@ export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
     TILES_3D_DATASETS.plateauChiyoda,
     TILES_3D_DATASETS.plateauChuo,
   ]);
+
+  // --- Debug Controls ---
+  const emissiveBufferPass = view.mrtPassLayer.ref.raw?.emissiveBufferPass;
+
+  // Enable emissive buffer debug view by default
+  emissiveBufferPass?.enableDebugView(true);
+
+  const pane = new Pane({ title: "Selective Effect Debug" });
+
+  const debugParams = {
+    emissiveBuffer: true,
+  };
+
+  pane
+    .addBinding(debugParams, "emissiveBuffer", { label: "Emissive Buffer" })
+    .on("change", (ev) => {
+      emissiveBufferPass?.enableDebugView(ev.value);
+    });
+
+  // --- Mesh Emissive Controls ---
+  const boxFolder = pane.addFolder({ title: "Box", expanded: true });
+  const boxParams = {
+    emissiveColor: "#ff0000",
+    emissiveIntensity: 1.0,
+  };
+  boxFolder
+    .addBinding(boxParams, "emissiveColor", { label: "Emissive Color" })
+    .on("change", (ev) => {
+      boxLayer.update({
+        box: { emissiveColor: new Color().setStyle(ev.value) },
+      });
+    });
+  boxFolder
+    .addBinding(boxParams, "emissiveIntensity", {
+      label: "Intensity",
+      min: 0,
+      max: 2,
+      step: 0.1,
+    })
+    .on("change", (ev) => {
+      boxLayer.update({ box: { emissiveIntensity: ev.value } });
+    });
+
+  const sphereFolder = pane.addFolder({ title: "Sphere", expanded: true });
+  const sphereParams = {
+    emissiveColor: "#0000ff",
+    emissiveIntensity: 1.0,
+  };
+  sphereFolder
+    .addBinding(sphereParams, "emissiveColor", { label: "Emissive Color" })
+    .on("change", (ev) => {
+      sphereLayer.update({
+        sphere: { emissiveColor: new Color().setStyle(ev.value) },
+      });
+    });
+  sphereFolder
+    .addBinding(sphereParams, "emissiveIntensity", {
+      label: "Intensity",
+      min: 0,
+      max: 2,
+      step: 0.1,
+    })
+    .on("change", (ev) => {
+      sphereLayer.update({ sphere: { emissiveIntensity: ev.value } });
+    });
+
+  const cesiumFolder = pane.addFolder({
+    title: "Cesium3D Chiyoda",
+    expanded: true,
+  });
+  const cesiumParams = {
+    emissiveColor: "#ffffff",
+    emissiveIntensity: 0.0,
+  };
+  cesiumFolder
+    .addBinding(cesiumParams, "emissiveColor", { label: "Emissive Color" })
+    .on("change", (ev) => {
+      view.updateLayerById(chiyodaLayer.id, {
+        model: { emissiveColor: new Color().setStyle(ev.value) },
+      });
+    });
+  cesiumFolder
+    .addBinding(cesiumParams, "emissiveIntensity", {
+      label: "Intensity",
+      min: 0,
+      max: 2,
+      step: 0.1,
+    })
+    .on("change", (ev) => {
+      view.updateLayerById(chiyodaLayer.id, {
+        model: { emissiveIntensity: ev.value },
+      });
+    });
 };

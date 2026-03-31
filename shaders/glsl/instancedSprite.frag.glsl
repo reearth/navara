@@ -30,6 +30,9 @@ varying float vFragDepth;
 
 uniform bool uOffsetDepth;
 uniform float nvr_uPickable;
+uniform float uEmissiveOnly;
+uniform vec3 uEmissiveColor;
+uniform float uEmissiveIntensity;
 uniform float uAlphaTest;
 uniform float uFarPlane;
 
@@ -53,7 +56,12 @@ void main() {
     #endif
 
     if (alpha <= uAlphaTest) { discard; };
-    
+
+    if (uEmissiveOnly > 0.5) {
+        gl_FragColor = vec4(uEmissiveColor, uEmissiveIntensity);
+        return;
+    }
+
     if (nvr_uPickable > 0.0 && alpha > 0.0) {
         vec3 pickColor = nvr_batchIdToColor(vBatchID);
         color = vec4(pickColor.xyz, 1.0);

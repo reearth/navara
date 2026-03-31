@@ -534,6 +534,11 @@ export class PolygonMesh extends BatchedFeatureMesh<
     this.needsUpdate();
   }
 
+  _setEmissiveOnly(emissiveOnly: boolean): void {
+    this.getEnhancer().update({ base: { emissiveOnly } });
+    this.needsUpdate();
+  }
+
   _updateBatchAttribute(
     batchId: number,
     attribute: BatchedAttributeName,
