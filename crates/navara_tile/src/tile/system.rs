@@ -813,12 +813,26 @@ pub fn delete_layer(
 
             match (tex_ids, hill_ids) {
                 (Some(tex), Some(hill)) => {
-                    // Remove from both arrays if index is valid
-                    if target_idx < tex.len() && target_idx < hill.len() {
-                        if let Some(e) = tex.remove(target_idx) {
+                    // Remove from each array independently if the index is valid
+                    if target_idx < tex.len()
+                        && let Some(e) = tex.remove(target_idx)
+                    {
+                        commands.entity(e).insert(Deleted);
+                    }
+                    if target_idx < hill.len()
+                        && let Some(e) = hill.remove(target_idx)
+                    {
+                        commands.entity(e).insert(Deleted);
+                    }
+                    // After per-index removals, ensure the two vectors remain aligned in length
+                    if tex.len() > hill.len() {
+                        let extra = tex.split_off(hill.len());
+                        for e in extra.into_iter().flatten() {
                             commands.entity(e).insert(Deleted);
                         }
-                        if let Some(e) = hill.remove(target_idx) {
+                    } else if hill.len() > tex.len() {
+                        let extra = hill.split_off(tex.len());
+                        for e in extra.into_iter().flatten() {
                             commands.entity(e).insert(Deleted);
                         }
                     }

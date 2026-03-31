@@ -79,10 +79,31 @@ pub(crate) fn request_texture_fragment(
         return;
     }
 
-    let idx = leaf
+    // Calculate idx as max length to handle case where hillshade is enabled after regular textures
+    // This prevents misalignment when texture_fragment_entity_ids and hillshade_entity_ids have different lengths
+    let tex_len = leaf
         .texture_fragment_entity_ids
         .as_ref()
         .map_or(0, |ids| ids.len());
+    let hill_len = leaf
+        .hillshade_entity_ids
+        .as_ref()
+        .map_or(0, |ids| ids.len());
+    let idx = tex_len.max(hill_len);
+
+    // Ensure both arrays have same length before processing by padding shorter one with None
+    if tex_len < idx {
+        let tex_ids = leaf
+            .texture_fragment_entity_ids
+            .get_or_insert_with(|| Vec::with_capacity(tiles_len));
+        tex_ids.resize(idx, None);
+    }
+    if hill_len < idx {
+        let hill_ids = leaf
+            .hillshade_entity_ids
+            .get_or_insert_with(|| Vec::with_capacity(tiles_len));
+        hill_ids.resize(idx, None);
+    }
 
     let mut next_tile = None;
 
