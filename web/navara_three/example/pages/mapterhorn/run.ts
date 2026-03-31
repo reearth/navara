@@ -67,6 +67,7 @@ export const run = async (view: ThreeView<LayerDescriptions>) => {
     },
     hillshade: {
       elevationDecoder: TERRARIUM_ELEVATION_DECODER(),
+      exaggeration: 1.0,
     },
   });
 

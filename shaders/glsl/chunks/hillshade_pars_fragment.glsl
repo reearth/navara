@@ -10,7 +10,6 @@
   uniform float uHillshadeEpsilon; // Scale factor for height conversion
   uniform float uHillshadeOffset; // Additive offset (applied after epsilon)
   uniform float uHillshadeExaggeration; // Terrain exaggeration factor (recommended: 0.3-2.0)
-  // uHillshadeZooms (array uniform) is declared in tile.ts as a global uniform
 
   // Decode height from RGB DEM texture
   float decodeHeightForHillshade(vec4 color) {
@@ -45,9 +44,9 @@
     return interpolateDEMHeights(h00, h10, h01, h11, data.frac);
   }
 
-  // Compute normal from DEM using Sobel operator (MapLibre-style)
-  // Reference: maplibre-gl-js/src/shaders/hillshade_prepare.fragment.glsl
-  vec3 computeNormalFromDEM(sampler2D demTexture, vec2 uv, vec2 texelSize, float layerZoom) {
+  // Compute normal from DEM using Sobel operator
+  // Uses real-world meters-per-texel for accurate hillshade across zoom levels
+  vec3 computeNormalFromDEM(sampler2D demTexture, vec2 uv, vec2 texelSize, float metersPerTexel) {
     // Get texture size once to avoid repeated textureSize calls
     ivec2 texSize = textureSize(demTexture, 0);
 
@@ -82,20 +81,15 @@
     float dX = (c + f + f + i) - (a + d + d + g);
     float dY = (g + h + h + i) - (a + b + b + c);
 
-    // MapLibre's zoom-based scaling formula
-    // Reference: hillshade_prepare.fragment.glsl:61-67
-    float tileSize = float(texSize.x) - 2.0; // Remove padding to get content size (e.g., 258 - 2 = 256)
-    float exaggerationFactor = layerZoom < 2.0 ? 0.4 : layerZoom < 4.5 ? 0.35 : 0.3;
-    float exaggeration = layerZoom < 15.0 ? (layerZoom - 15.0) * exaggerationFactor : 0.0;
-
-    // Apply MapLibre's derivative calculation
-    vec2 deriv = vec2(dX, dY) * tileSize / pow(2.0, exaggeration + (28.2562 - layerZoom));
+    // Calculate slope using real-world distance
+    // Sobel kernel has 4 weighted samples, so divide by 4 to normalize
+    // Then divide by metersPerTexel to get slope (rise over run)
+    float slopeX = (dX / 4.0) / metersPerTexel;
+    float slopeY = (dY / 4.0) / metersPerTexel;
 
     // Apply user exaggeration
-    deriv *= uHillshadeExaggeration;
-
-    float slopeX = deriv.x;
-    float slopeY = deriv.y;
+    slopeX *= uHillshadeExaggeration;
+    slopeY *= uHillshadeExaggeration;
 
     // Construct normal vector
     vec3 normal = vec3(-slopeX, slopeY, 1.0);

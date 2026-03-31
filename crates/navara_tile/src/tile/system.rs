@@ -318,11 +318,6 @@ pub fn transfer_mesh(
         // Hillshade fields
         let mut is_hillshades = Vec::with_capacity(tile_layers_len);
         let mut shared_hillshade_config = None;
-
-        // Tile zoom levels and center latitude for Web Mercator scale correction
-        let mut tile_zoom_levels = Vec::with_capacity(tile_layers_len);
-        let current_zoom = tile.coords.z as u8;
-
         let mut tile_show_bounding_box = false;
 
         for (i, (l, _)) in tile_layers.iter().sort::<&Order>().enumerate() {
@@ -356,30 +351,6 @@ pub fn transfer_mesh(
             opacities.push(a.opacity.clamp(0., 1.));
             colors.push(a.color);
             tile_show_bounding_box = tile_show_bounding_box || a.show_bounding_box;
-
-            let mut parent_z = None;
-            let has_tile_layer = !tile_layers.is_empty();
-            let has_hillshade_config = tile_layers
-                .iter()
-                .any(|(l, _)| l.hillshade_config.is_some());
-
-            let is_tex_ready = tile.is_texture_ready(
-                &texture_fragment,
-                &data_requesters,
-                has_tile_layer,
-                has_hillshade_config,
-            );
-
-            // Only use parent zoom if current tile textures aren't ready (fallback to parent)
-            if !is_tex_ready {
-                parent_z = ready_parent_tile
-                    .and_then(|h| qt.qt.get(h))
-                    .map(|parent_tile| parent_tile.coords.z);
-            }
-            // Use parent's zoom if we're using parent texture, otherwise current zoom
-            // This is important for hillshade: when using parent texture, zoom affects normal calculation
-            let zoom_for_layer = parent_z.map(|z| z as u8).unwrap_or(current_zoom);
-            tile_zoom_levels.push(zoom_for_layer);
 
             // Mark whether this layer is an elevation heatmap
             if let Some(heatmap_config) = &l.elevation_heatmap_config {
@@ -448,9 +419,6 @@ pub fn transfer_mesh(
             // Hillshade fields
             is_hillshades,
             hillshade_config: shared_hillshade_config.cloned(),
-
-            // Tile zoom levels
-            tile_zoom_levels,
         };
 
         let terrain_req = match tile.terrain_data.as_ref() {
@@ -1016,7 +984,6 @@ pub fn update_mesh_material(
         let prev_opacities = &appearance.opacities;
         let prev_is_elevation_heatmaps = &appearance.is_elevation_heatmaps;
         let prev_is_hillshades = &appearance.is_hillshades;
-        let prev_tile_zoom_levels = &appearance.tile_zoom_levels;
 
         let tile_layers_len = tile_layers.iter().len();
         let mut shows = Vec::with_capacity(tile_layers_len);
@@ -1028,9 +995,6 @@ pub fn update_mesh_material(
         // Hillshade fields
         let mut is_hillshades = Vec::with_capacity(tile_layers_len);
         let mut hillshade_config = None;
-        // Tile zoom levels (per-layer, JS will handle upsampling fallback)
-        let mut tile_zoom_levels = Vec::with_capacity(tile_layers_len);
-        let current_zoom = tile.coords.z as u8;
 
         for (i, (l, _)) in tile_layers.iter().sort::<&Order>().enumerate() {
             // Check if texture is ready: TextureFragment OR DataRequester (for hillshade)
@@ -1052,10 +1016,6 @@ pub fn update_mesh_material(
             let is_heatmap = l.elevation_heatmap_config.is_some();
             let is_hillshade_layer_check = l.hillshade_config.is_some();
 
-            // Use parent's zoom if we're using parent texture, otherwise current zoom
-            // This is important for hillshade: when using parent texture, zoom affects normal calculation
-            let zoom_for_layer = parent_z.map(|z| z as u8).unwrap_or(current_zoom);
-
             if prev_shows.get(i) != Some(&next_show)
                 || prev_opacities.get(i) != Some(&next_opacity)
                 || prev_colors.get(i) != Some(&next_color)
@@ -1063,7 +1023,6 @@ pub fn update_mesh_material(
                     != texture_fragment_entity_ids.get(i)
                 || prev_is_elevation_heatmaps.get(i) != Some(&is_heatmap)
                 || prev_is_hillshades.get(i) != Some(&is_hillshade_layer_check)
-                || prev_tile_zoom_levels.get(i) != Some(&zoom_for_layer)
             {
                 needs_update = true;
             }
@@ -1086,8 +1045,6 @@ pub fn update_mesh_material(
             if is_hillshade_layer && hillshade_config.is_none() {
                 hillshade_config = l.hillshade_config.clone();
             }
-
-            tile_zoom_levels.push(zoom_for_layer);
         }
 
         // Check if elevation_heatmap_config changed
@@ -1129,7 +1086,6 @@ pub fn update_mesh_material(
         appearance.elevation_heatmap_config = elevation_heatmap_config;
         appearance.is_hillshades = is_hillshades;
         appearance.hillshade_config = hillshade_config;
-        appearance.tile_zoom_levels = tile_zoom_levels;
     }
 }
 

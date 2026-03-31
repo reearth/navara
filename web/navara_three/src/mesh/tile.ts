@@ -9,6 +9,7 @@ import type {
   MeshChanged,
   Globe,
 } from "@navara/engine";
+import { getWGS84SemiMajorAxis } from "@navara/three_api";
 import ElevationParsFragment from "@shaders/glsl/chunks/elevation_pars_fragment.glsl";
 import HillshadeParsFragment from "@shaders/glsl/chunks/hillshade_pars_fragment.glsl";
 import SpecularParsFragment from "@shaders/glsl/chunks/spucular_pars_fragment.glsl";
@@ -641,7 +642,7 @@ export class TileMesh
       shader.uniforms.uHillshadeEpsilon = m.userData.hillshadeEpsilon;
       shader.uniforms.uHillshadeOffset = m.userData.hillshadeOffset;
       shader.uniforms.uHillshadeExaggeration = m.userData.hillshadeExaggeration;
-      shader.uniforms.uHillshadeZooms = m.userData.hillshadeZooms;
+      shader.uniforms.uMetersPerTexel = m.userData.metersPerTexel;
 
       // Add UV transform uniforms to the shader
       shader.vertexShader = createReplacer(shader.vertexShader)
@@ -694,7 +695,7 @@ vUv = vUv * uScale + uOffset;
   uniform sampler2D uTextures[${maxTextures}];
   uniform bool uIsElevationHeatmaps[${maxTextures}];
   uniform bool uIsHillshades[${maxTextures}];
-  uniform float uHillshadeZooms[${maxTextures}];
+  uniform float uMetersPerTexel[${maxTextures}];
   uniform sampler2D uWaterNormalMap;
   uniform float uPickable;
   uniform float uIor;
@@ -1182,12 +1183,12 @@ if (uPickable > 0.) {
     }
     if (!m.userData.hillshadeExaggeration) {
       m.userData.hillshadeExaggeration = {
-        value: 1.0, // Default exaggeration factor (1.0 = natural terrain, 0.5-2.0 recommended range)
+        value: 1.0,
       };
     }
-    if (!m.userData.hillshadeZooms) {
-      m.userData.hillshadeZooms = {
-        value: [...new Array(maxTextures)].fill(14.0), // Default zoom level for each layer
+    if (!m.userData.metersPerTexel) {
+      m.userData.metersPerTexel = {
+        value: [...new Array(maxTextures)].fill(1.0),
       };
     }
 
@@ -1366,6 +1367,12 @@ if (uPickable > 0.) {
       };
     }
 
+    if (!m.userData.metersPerTexel) {
+      m.userData.metersPerTexel = {
+        value: [...new Array(maxTextures)].fill(1.0),
+      };
+    }
+
     // Reset
     for (let i = 0; i < maxTextures; i++) {
       m.userData.textures.value[i] = null;
@@ -1384,6 +1391,19 @@ if (uPickable > 0.) {
 
     const textures = m.userData.textures.value;
 
+    // Calculate tile's center latitude for metersPerTexel calculation
+    const tile = this.tileHandler.getTile(this.handle);
+    let cosLat = 1.0; // Default to equator if tile not found
+    const EARTH_CIRCUMFERENCE = 2.0 * Math.PI * getWGS84SemiMajorAxis();
+
+    if (tile) {
+      const coords = tile.coords;
+      const tileSize = 1 << coords.z;
+      const centerY = (coords.y + 0.5) / tileSize;
+      const latRad = Math.atan(Math.sinh(Math.PI * (1 - 2 * centerY)));
+      cosLat = Math.cos(latRad);
+    }
+
     // Setting tile textures
     for (let i = 0; i < textureFragmentsLen; i++) {
       if (i >= this.texturizedSceneIndexFrom) {
@@ -1397,16 +1417,21 @@ if (uPickable > 0.) {
         continue;
       }
 
-      const layerZoom = mat.tileZoomLevels && mat.tileZoomLevels[i];
-
       const isElevationHeatmap =
         mat.isElevationHeatmaps && mat.isElevationHeatmaps[i];
       const isHillshade = mat.isHillshades && mat.isHillshades[i];
 
-      // Set hillshade parameters (zoom level and texture dimensions)
-      if (isHillshade && layerZoom !== undefined) {
-        m.userData.hillshadeZooms.value[i] = layerZoom;
+      // Set hillshade parameters (zoom level and metersPerTexel)
+      // Read zoom level from texture.userData (set by hillshade.ts when texture was created)
+      if (isHillshade) {
+        const layerZoom = t.userData.hillshadeZoom;
+        if (layerZoom !== undefined && m.userData.metersPerTexel) {
+          const metersPerTexel =
+            (EARTH_CIRCUMFERENCE * cosLat) / (256 * Math.pow(2, layerZoom));
+          m.userData.metersPerTexel.value[i] = metersPerTexel;
+        }
       }
+
       const isDEMTexture = isElevationHeatmap || isHillshade;
       const targetColorSpace = isDEMTexture ? NoColorSpace : SRGBColorSpace;
 
@@ -1495,7 +1520,6 @@ if (uPickable > 0.) {
 
     // Create a minimal material object with the required fields from current material
     const materialData: Partial<RasterTileInternalMaterial> = {
-      tileZoomLevels: material.userData.hillshadeZooms?.value,
       isElevationHeatmaps: material.userData.isElevationHeatmaps?.value,
       isHillshades: material.userData.isHillshades?.value,
     };

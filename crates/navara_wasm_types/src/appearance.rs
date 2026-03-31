@@ -1385,9 +1385,6 @@ pub struct RasterTileInternalMaterial {
     #[wasm_bindgen(js_name = hillshadeOffset)]
     #[serde(rename = "hillshadeOffset")]
     pub hillshade_offset: f64,
-    #[wasm_bindgen(getter_with_clone, js_name = tileZoomLevels)]
-    #[serde(rename = "tileZoomLevels")]
-    pub tile_zoom_levels: Vec<u8>,
     #[wasm_bindgen(js_name = hillshadeExaggeration)]
     #[serde(rename = "hillshadeExaggeration")]
     pub hillshade_exaggeration: f32,
@@ -1530,7 +1527,6 @@ impl<'a> From<&'a navara_material::RasterTileInternalMaterial> for RasterTileInt
                 .as_ref()
                 .map(|c| c.elevation_decoder.offset)
                 .unwrap_or(0.0),
-            tile_zoom_levels: m.tile_zoom_levels.clone(),
             hillshade_exaggeration: m
                 .hillshade_config
                 .as_ref()

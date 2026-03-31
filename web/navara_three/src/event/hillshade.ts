@@ -11,7 +11,7 @@ import {
 
 import type { TileMesh } from "../mesh/tile";
 import type { TextureOptions } from "../textures";
-import type { BufferLoader } from "./index";
+import type { BufferLoader, TileHandler } from "./index";
 import {
   getTextureFragmentSlots,
   type TextureSlot,
@@ -23,6 +23,7 @@ export function processHillshadeBackfilled(
   loadedTexs: Map<string, Texture>,
   textureFragmentIndex: Map<string, Set<TextureSlot>>,
   textureOptions: TextureOptions,
+  tileHandler: TileHandler,
 ) {
   if (!event) return;
 
@@ -86,6 +87,16 @@ export function processHillshadeBackfilled(
     dataTexture.generateMipmaps = false;
     dataTexture.flipY = true;
     dataTexture.needsUpdate = true;
+
+    // Store zoom level in userData for later retrieval in setupTextures
+    const tileHandleBigInt =
+      typeof event.tile_handle === "bigint"
+        ? event.tile_handle
+        : BigInt(event.tile_handle);
+    const ownerTile = tileHandler.getTile(tileHandleBigInt);
+    if (ownerTile) {
+      dataTexture.userData.hillshadeZoom = ownerTile.coords.z;
+    }
 
     // Dispose old texture if exists
     if (texture) {

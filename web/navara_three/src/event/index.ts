@@ -212,6 +212,7 @@ export function processEvent(
       loadedTexs,
       textureFragmentIndex,
       textureOptions,
+      tileHandler,
     ),
   );
 

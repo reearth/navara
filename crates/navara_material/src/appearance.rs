@@ -571,9 +571,6 @@ pub struct RasterTileInternalMaterial {
     // Hillshade fields
     pub is_hillshades: Vec<bool>, // Per-layer flags: which texture slots are hillshades
     pub hillshade_config: Option<HillshadeConfig>, // Shared config for all hillshade layers
-
-    // Tile zoom levels (per-layer)
-    pub tile_zoom_levels: Vec<u8>, // Zoom level for each texture layer
 }
 
 #[derive(Debug, Clone, PartialEq, Component)]
