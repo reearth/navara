@@ -242,12 +242,11 @@ pub fn update_mvt_layer(
                         }
                     }
                     Appearance::Polygon(polygon) => {
-                        if let RenderableFeature::Polygon { render_info, .. } = f.as_mut() {
+                        if let RenderableFeature::Polygon { .. } = f.as_ref() {
                             commands.spawn(UpdatePolygon {
                                 material: polygon.clone(),
                                 feature_id: *id,
                             });
-                            render_info.should_recalculate_height = true;
                         }
                     }
                     _ => {}
