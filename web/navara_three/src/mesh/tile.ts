@@ -481,7 +481,6 @@ export class TileMesh
 
   // Create combined geometry (terrain + skirt) for rendering.
   // Normals are computed dynamically in the fragment shader from vPosition,
-  // so both terrain and skirt vertices receive dummy normal attributes.
   // Shadow casting is handled separately by shadowMesh (terrain-only, no skirt).
   createSkirtMesh(
     mesh: EventMesh,

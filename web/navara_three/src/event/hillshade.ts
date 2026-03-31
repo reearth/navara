@@ -17,6 +17,20 @@ import {
   type TextureSlot,
 } from "../utils/textureFragmentIndex";
 
+/**
+ * Pending edge update waiting for texture creation
+ */
+interface PendingEdgeUpdate {
+  edgeBytes: Uint8Array;
+  edgeDirection: number;
+}
+
+/**
+ * Queue of pending edge updates keyed by entityId
+ * Edge updates can arrive before texture creation due to out-of-order event processing
+ */
+const pendingEdgeUpdates = new Map<string, PendingEdgeUpdate[]>();
+
 export function processHillshadeBackfilled(
   event: HillshadeBackfilledEvent | undefined,
   buf: BufferLoader,
@@ -108,6 +122,32 @@ export function processHillshadeBackfilled(
     texture = dataTexture;
     loadedTexs.set(entityId, texture);
 
+    // Apply any pending edge updates that arrived before texture creation
+    const pending = pendingEdgeUpdates.get(entityId);
+    if (pending && pending.length > 0) {
+      const textureData = dataTexture.image.data as Uint8Array;
+      const texSize = dataTexture.image.width;
+
+      for (const update of pending) {
+        const edgeSize = update.edgeBytes.length / 4;
+        const expectedTexSize = edgeSize + 2;
+
+        // Only apply if size matches (same zoom level)
+        if (texSize === expectedTexSize) {
+          updatePaddingEdge(
+            textureData,
+            update.edgeBytes,
+            texSize,
+            update.edgeDirection,
+          );
+          dataTexture.needsUpdate = true;
+        }
+      }
+
+      // Clear pending updates for this entity
+      pendingEdgeUpdates.delete(entityId);
+    }
+
     // Deduplicate tileMeshes: same mesh may appear in multiple slots
     // Avoid redundant rebinding when mesh uses same fragment in multiple texture slots
     const slots = getTextureFragmentSlots(textureFragmentIndex, entityId);
@@ -124,22 +164,27 @@ export function processHillshadeBackfilled(
 
   // 2. Update edges if edge data is provided
   if (event.edge_data_handle >= 0) {
-    // Read edge data without removing from BufferStore yet (to avoid data loss if texture doesn't exist)
-    const edgeBytes = buf.u8(event.edge_data_handle);
+    // Read edge data and remove from BufferStore immediately to prevent leaks
+    const edgeBytes = buf.removeU8(event.edge_data_handle);
     if (!edgeBytes) {
-      return;
-    }
-
-    if (!texture || !(texture instanceof DataTexture)) {
-      // Don't remove buffer - texture might be created later
-      // Buffer will be cleaned up by Rust side when tile is deleted
       return;
     }
 
     // Validate edge data: one edge (size pixels × 4 bytes RGBA)
     if (edgeBytes.length % 4 !== 0) {
-      // Invalid data, safe to remove
-      buf.remove(event.edge_data_handle);
+      // Invalid data, already removed from buffer
+      return;
+    }
+
+    if (!texture || !(texture instanceof DataTexture)) {
+      // Texture doesn't exist yet - queue this edge update for later application
+      // Copy the edge data since we've removed it from BufferStore
+      const pending = pendingEdgeUpdates.get(entityId) || [];
+      pending.push({
+        edgeBytes: new Uint8Array(edgeBytes), // Make a copy
+        edgeDirection: event.edge_direction,
+      });
+      pendingEdgeUpdates.set(entityId, pending);
       return;
     }
 
@@ -150,8 +195,7 @@ export function processHillshadeBackfilled(
     // Texture should be padded (edgeSize + 2)
     const expectedTexSize = edgeSize + 2;
     if (texSize !== expectedTexSize) {
-      // Size mismatch - different zoom levels, safe to remove this edge data
-      buf.remove(event.edge_data_handle);
+      // Size mismatch - different zoom levels, discard this edge data
       return;
     }
 
@@ -159,9 +203,6 @@ export function processHillshadeBackfilled(
     // 0=Left, 1=Right, 2=Top, 3=Bottom
     updatePaddingEdge(textureData, edgeBytes, texSize, event.edge_direction);
     texture.needsUpdate = true;
-
-    // Successfully applied, now safe to remove from BufferStore
-    buf.remove(event.edge_data_handle);
   }
 }
 
