@@ -105,9 +105,7 @@ impl FontCache {
         let atlas_key = atlas_key.unwrap_or_else(|| url.clone());
 
         // Create the atlas if it doesn't exist yet (first face in the family, or standalone font)
-        self.atlases
-            .entry(atlas_key.clone())
-            .or_insert_with(SDFAtlas::default);
+        self.atlases.entry(atlas_key.clone()).or_default();
 
         let font_index = self.next_font_index;
         self.next_font_index += 1;

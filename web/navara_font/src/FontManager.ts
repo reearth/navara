@@ -121,7 +121,7 @@ export class FontManager {
     let currentChars: string[] = [];
 
     for (const ch of text) {
-      const cp = ch.codePointAt(0)!;
+      const cp = ch.codePointAt(0) ?? 0;
       const url = this._findFaceForCodepoint(faces, cp);
 
       if (url !== currentUrl) {
@@ -348,13 +348,14 @@ export class FontManager {
       // Stitch per-segment results into one combined result
       const stitched = this._stitchSegments(segments);
 
-      if (!this._shapeCache.has(familyName)) {
-        this._shapeCache.set(
-          familyName,
-          new LRUMap<string, ShapeTextResult>(SHAPE_CACHE_MAX_SIZE),
+      let familyShapeCache = this._shapeCache.get(familyName);
+      if (!familyShapeCache) {
+        familyShapeCache = new LRUMap<string, ShapeTextResult>(
+          SHAPE_CACHE_MAX_SIZE,
         );
+        this._shapeCache.set(familyName, familyShapeCache);
       }
-      this._shapeCache.get(familyName)!.set(text, stitched);
+      familyShapeCache.set(text, stitched);
     })();
 
     this._preparePending.set(pendingKey, promise);
@@ -456,7 +457,7 @@ export class FontManager {
     const family = this._families.get(fontIdentifier);
     if (!family || family.faces.length === 0) return fontIdentifier;
     if (!text) return family.faces[0].url;
-    const cp = text.codePointAt(0)!;
+    const cp = text.codePointAt(0) ?? 0;
     return this._findFaceForCodepoint(family.faces, cp);
   }
 
