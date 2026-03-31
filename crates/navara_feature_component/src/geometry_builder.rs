@@ -42,25 +42,70 @@ pub enum AccumulatedGeometry {
     Polygons(PolygonGeometryAccumulator),
 }
 
-/// A group of feature entities sharing the same appearance kind,
-/// with per-kind batch state for tracking indices during construction.
+/// A group of features sharing the same [`GeometryAppearanceKind`], accumulating
+/// geometry and batch state during construction.
+///
+/// # Lifecycle
+///
+/// 1. A format-specific builder (e.g., `GeometryBuilder` for GeoJSON,
+///    `MvtGeometryBuilder` for MVT) calls [`GeometryGroups::register_kind`] to
+///    create a `GeometryGroup` for each appearance kind encountered.
+/// 2. For each feature, the builder calls [`GeometryGroups::begin_feature`] to
+///    reset the `committed` flag, then calls one of the `track_*` methods
+///    (`track_point_rtc`, `track_point_rte`, `track_polyline`, `track_polygon`)
+///    to accumulate geometry into this group's [`AccumulatedGeometry`].
+/// 3. On the first geometry item for a feature within this kind,
+///    `committed` is set to `true`, `feature_count` is incremented, and
+///    `current_batch_index` is assigned. Subsequent geometry items from the
+///    same feature (e.g., points in a MultiPoint) reuse the same batch index.
+/// 4. [`GeometryGroups::finalize`] converts each group's accumulated data into
+///    handle-based ECS components and spawns a `BatchedFeature` entity with
+///    the appropriate marker and material.
+///
 pub struct GeometryGroup {
     pub kind: GeometryAppearanceKind,
+    /// Per-geometry-item unique IDs used for GPU picking.
+    /// For point-like kinds with MultiPoint geometries, this contains one
+    /// entry per vertex (not per feature).
     pub global_batch_ids: Vec<u32>,
+    /// The [`BatchTable`](crate::batch::BatchTable) row ID for this kind's
+    /// batch, used for property/tag storage.
     pub batch_id: u32,
+    /// Number of distinct features accumulated (one per `begin_feature` that
+    /// produced geometry for this kind).
     pub feature_count: u32,
     /// Whether the current feature has been committed to this kind's batch.
     pub committed: bool,
-    /// Batch index assigned to the current feature for this kind.
+    /// Batch index assigned to the current feature for this kind, shared by
+    /// all geometry items of that feature within this kind.
     pub current_batch_index: u32,
     /// Pre-accumulated geometry data.
     pub accumulated: AccumulatedGeometry,
 }
 
-/// Accumulates feature entities grouped by appearance kind during geometry construction.
+/// Accumulates feature entities grouped by appearance kind during geometry
+/// construction.
 ///
-/// Used by both GeoJSON and MVT builders to collect child entities into groups
+/// Used by both GeoJSON and MVT builders to collect geometry into groups
 /// before spawning `BatchedFeature` parents.
+///
+/// # Usage
+///
+/// ```rust,ignore
+/// let mut groups = GeometryGroups::new();
+///
+/// // Register kinds (called by format-specific builder's ensure_kind)
+/// groups.register_kind(GeometryAppearanceKind::Point, batch_id);
+///
+/// // Per feature:
+/// groups.begin_feature();
+/// groups.track_point_rte(kind, coords, crs, high, low, global_batch_id);
+///
+/// // After all features:
+/// let entities = groups.finalize(commands, buf, appearances, layer_id, true);
+/// // `entities` are BatchedFeature entities with geometry components,
+/// // ready to be picked up by navara_feature's transfer_batched_mesh systems.
+/// ```
 pub struct GeometryGroups {
     pub groups: Vec<GeometryGroup>,
 }
