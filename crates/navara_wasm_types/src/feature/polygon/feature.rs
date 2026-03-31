@@ -233,6 +233,26 @@ impl TransferablePolygonBatchedFeature {
         }
     }
 
+    /// Create from taken polygon geometry data (retrieved from BufferStore).
+    /// All fields are moved, zero clones.
+    pub fn from_batched(
+        geom: navara_feature_component::batched_geometry::TakenPolygonGeometry,
+    ) -> Self {
+        let length = geom.batch_indices.len();
+        Self {
+            outer_ring: geom.outer_rings,
+            outer_ring_sizes: geom.outer_ring_sizes,
+            holes: geom.holes,
+            holes_total_sizes: geom.holes_total_sizes,
+            holes_sizes: geom.holes_sizes,
+            holes_boundaries: geom.holes_boundaries,
+            batch_indices: geom.batch_indices,
+            expected_winding_orders: geom.expected_winding_orders,
+            length,
+            ..Default::default()
+        }
+    }
+
     pub fn add(&mut self, hierarchy: &mut Hierarchy, batch_index: BatchIndex) {
         self.outer_ring_sizes
             .push(hierarchy.outer_ring.len() as u32);
