@@ -111,4 +111,9 @@ export class MRTPassEffectLayer extends EffectLayerDeclaration<
       // TODO: Support
     }
   }
+
+  onDestroy(): void {
+    this.emissiveBufferPass?.dispose();
+    super.onDestroy();
+  }
 }

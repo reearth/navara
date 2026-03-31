@@ -520,6 +520,10 @@ export class ModelMesh
     for (const enhancer of this._enhancers.values()) {
       enhancer.update({ base: { emissiveOnly } });
     }
+    // PNTS enhancer has no emissive support — hide during emissive pass
+    for (const [points] of this._pntsEnhancers) {
+      points.visible = !emissiveOnly;
+    }
   }
 
   _setFeatureHeight(_height: number) {

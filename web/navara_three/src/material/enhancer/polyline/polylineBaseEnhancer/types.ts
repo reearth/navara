@@ -93,6 +93,9 @@ export type PolylineBaseRefs = {
   color: UniformValue<Color>;
   useGroundNormals: UniformValue<boolean>;
   nvr_uPickable: UniformValue<number>;
+  uEmissiveOnly: UniformValue<number>;
+  uEmissiveColor: UniformValue<Color>;
+  uEmissiveIntensity: UniformValue<number>;
   nvr_uPickingCoord: UniformValue<Vector2>;
 
   // Optional uniforms

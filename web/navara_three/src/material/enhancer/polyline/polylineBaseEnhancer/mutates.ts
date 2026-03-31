@@ -19,12 +19,16 @@ import type {
  * Default refs with initial values.
  * These are cloned in createBaseMutates and synced from state via update().
  */
-const DEFAULT_BASE_REFS: PolylineBaseRefs = {
+const DEFAULT_BASE_REFS: Omit<
+  PolylineBaseRefs,
+  "uEmissiveColor" | "uEmissiveIntensity"
+> = {
   minMaxHeightAndWidth: { value: [0, 0, 1] },
   maxWidth: { value: 10000 },
   color: { value: new ThreeColor(0xffffff) },
   useGroundNormals: { value: false },
   nvr_uPickable: { value: 0 },
+  uEmissiveOnly: { value: 0 },
   nvr_uPickingCoord: { value: new ThreeVector2(-1, -1) },
 };
 
@@ -41,6 +45,10 @@ export const createBaseMutates = (useRTE: boolean): PolylineBaseMutates => {
   // Restore Three.js objects (structuredClone creates plain objects for Three.js types)
   refs.color.value = new ThreeColor(0xffffff);
   refs.nvr_uPickingCoord.value = new ThreeVector2(-1, -1);
+
+  // Emissive refs (Color can't be structuredClone'd)
+  refs.uEmissiveColor = { value: new ThreeColor(0, 0, 0) };
+  refs.uEmissiveIntensity = { value: 0 };
 
   // Conditionally create RTE refs (useRTE can't change after mount)
   if (useRTE) {
@@ -60,6 +68,9 @@ export const createBaseMutates = (useRTE: boolean): PolylineBaseMutates => {
       refs.maxWidth.value = state.maxWidth;
       refs.useGroundNormals.value = state.useGroundNormals;
       refs.nvr_uPickable.value = state.pickable ? 1 : 0;
+      refs.uEmissiveOnly.value = state.emissiveOnly ? 1 : 0;
+      refs.uEmissiveColor.value.set(state.emissiveColor);
+      refs.uEmissiveIntensity.value = state.emissiveIntensity;
 
       // Update color uniform using Color.setHex()
       refs.color.value.setHex(state.color);
@@ -74,6 +85,9 @@ export const createBaseMutates = (useRTE: boolean): PolylineBaseMutates => {
       uniforms.color = refs.color;
       uniforms.useGroundNormals = refs.useGroundNormals;
       uniforms.nvr_uPickable = refs.nvr_uPickable;
+      uniforms.uEmissiveOnly = refs.uEmissiveOnly;
+      uniforms.uEmissiveColor = refs.uEmissiveColor;
+      uniforms.uEmissiveIntensity = refs.uEmissiveIntensity;
       uniforms.nvr_uPickingCoord = refs.nvr_uPickingCoord;
 
       // Optional uniforms

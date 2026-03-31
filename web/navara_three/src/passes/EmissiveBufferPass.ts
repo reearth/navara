@@ -70,6 +70,9 @@ export class EmissiveBufferPass extends CustomRenderPass {
     return this.emissiveRT.texture;
   }
 
+  private _savedOpaqueVisible = true;
+  private _savedGlobeVisible = true;
+
   private toggleEmissiveOnly(emissiveOnly: boolean): void {
     for (const [_key, obj] of this._meshes) {
       if (isEmissiveOnlyMesh(obj)) {
@@ -85,9 +88,17 @@ export class EmissiveBufferPass extends CustomRenderPass {
       }
     });
 
-    // Hide non-emissive scenes during emissive render
-    this._scenes.opaque.visible = !emissiveOnly;
-    this._scenes.globe.visible = !emissiveOnly;
+    if (emissiveOnly) {
+      // Save original visible state before hiding
+      this._savedOpaqueVisible = this._scenes.opaque.visible;
+      this._savedGlobeVisible = this._scenes.globe.visible;
+      this._scenes.opaque.visible = false;
+      this._scenes.globe.visible = false;
+    } else {
+      // Restore original visible state
+      this._scenes.opaque.visible = this._savedOpaqueVisible;
+      this._scenes.globe.visible = this._savedGlobeVisible;
+    }
   }
 
   public processRender(): void {
