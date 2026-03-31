@@ -80,7 +80,7 @@ Model features follow a different pattern — they don't use `BatchedFeature` or
 
 ### Example (conceptual)
 
-```rust
+```rust,ignore
 commands.spawn((
     PointMarker,
     point_material.clone(),
