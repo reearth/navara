@@ -148,6 +148,8 @@ pub fn resolve_tiled_heights_and_build_positions(
                 handle,
                 &lng_lat,
             );
+        } else {
+            terrain_heights[i] = 0.0;
         }
         positions.push_from_crs(*c, crs, material_height, terrain_heights[i]);
     }
@@ -189,12 +191,17 @@ pub fn resolve_absolute_heights_and_build_positions(
     let leaf_handles = collect_terrain_leaves(qt);
 
     for (i, c) in coords.iter().enumerate() {
+        if !clamp_to_ground {
+            terrain_heights[i] = 0.0;
+            positions.push_from_crs(*c, crs, material_height, terrain_heights[i]);
+            continue;
+        }
+
         if let (Some(f), Some(o)) = (frustum, occluder)
             && !is_point_visible(
                 *c,
                 crs,
                 material_height,
-                clamp_to_ground,
                 size,
                 size_in_meters,
                 f,
@@ -207,23 +214,21 @@ pub fn resolve_absolute_heights_and_build_positions(
             continue;
         }
 
-        if clamp_to_ground {
-            let lng_lat = crs.to_lng_lat(WGS84_64, *c);
-            if let Some(height) = leaf_handles
-                .iter()
-                .find(|h| qt.qt.get(**h).is_some_and(|t| t.extent.contains(&lng_lat)))
-                .map(|handle| {
-                    compute_terrain_height_by_tile_handle(
-                        qt,
-                        buf,
-                        terrain_data_requester,
-                        *handle,
-                        &lng_lat,
-                    )
-                })
-            {
-                terrain_heights[i] = height;
-            }
+        let lng_lat = crs.to_lng_lat(WGS84_64, *c);
+        if let Some(height) = leaf_handles
+            .iter()
+            .find(|h| qt.qt.get(**h).is_some_and(|t| t.extent.contains(&lng_lat)))
+            .map(|handle| {
+                compute_terrain_height_by_tile_handle(
+                    qt,
+                    buf,
+                    terrain_data_requester,
+                    *handle,
+                    &lng_lat,
+                )
+            })
+        {
+            terrain_heights[i] = height;
         }
         positions.push_from_crs(*c, crs, material_height, terrain_heights[i]);
     }
@@ -275,7 +280,6 @@ pub fn is_point_visible(
     coords: Vec3,
     crs: &CRS,
     material_height: f32,
-    clamp_to_ground: bool,
     size: f32,
     size_in_meters: bool,
     frustum: &CameraFrustum,
@@ -285,12 +289,10 @@ pub fn is_point_visible(
 ) -> bool {
     // For clamp-to-ground, terrain height is unknown. Model the possible height range
     // as a sphere centered at the midpoint, with radius covering the full range.
-    let (test_height, height_radius) = if clamp_to_ground {
+    let (test_height, height_radius) = {
         let midpoint = (MIN_TERRAIN_HEIGHT + MAX_TERRAIN_HEIGHT) / 2.0;
         let half_range = (MAX_TERRAIN_HEIGHT - MIN_TERRAIN_HEIGHT) / 2.0;
         (material_height + midpoint, half_range as FloatType)
-    } else {
-        (material_height, 0.0)
     };
     let world_pos = crs.to_vec3(WGS84_64, coords, test_height);
 
@@ -652,5 +654,96 @@ mod tests {
             Vec3::new(100.0, 200.0, 300.0),
         );
         assert_abs_diff_eq!(radius, MIN_PIXEL_MODE_RADIUS, epsilon = 1e-10);
+    }
+
+    // --- is_point_visible tests ---
+
+    /// Helper: create a frustum and occluder for a camera at the given ECEF position,
+    /// looking toward the Earth's center.
+    fn make_frustum_and_occluder(
+        camera_ecef: Vec3,
+    ) -> (CameraFrustum, EllipsoidalOccluder, Vec3) {
+        use navara_core::Angle;
+        use navara_math::Transform;
+
+        let transform = Transform::from_translation(camera_ecef)
+            .looking_at(Vec3::ZERO, Vec3::Y);
+        let fov_deg = 60.0;
+        let frustum = CameraFrustum::new(
+            &transform,
+            0.1,
+            1e9,
+            Angle::new(fov_deg).rad().val(),
+            1.0,
+            1.0,
+        );
+        let occluder = EllipsoidalOccluder::new(&camera_ecef, WGS84_64);
+        (frustum, occluder, camera_ecef)
+    }
+
+    #[test]
+    fn is_point_visible_in_front_of_camera() {
+        use navara_core::WGS84_A_64;
+        // Camera above (0°N, 0°E) at 2x Earth radius
+        let camera_ecef = Vec3::new(WGS84_A_64 * 2.0, 0.0, 0.0);
+        let (frustum, occluder, cam_pos) = make_frustum_and_occluder(camera_ecef);
+
+        // Point at (0°N, 0°E) on the surface — directly below the camera
+        let visible = is_point_visible(
+            Vec3::new(0.0, 0.0, 0.0), // lng=0, lat=0 in Geographic CRS
+            &CRS::Geographic,
+            0.0,
+            16.0,
+            false,
+            &frustum,
+            &occluder,
+            cam_pos,
+            800.0,
+        );
+        assert!(visible, "point directly below camera should be visible");
+    }
+
+    #[test]
+    fn is_point_visible_behind_camera() {
+        use navara_core::WGS84_A_64;
+        // Camera above (0°N, 0°E)
+        let camera_ecef = Vec3::new(WGS84_A_64 * 2.0, 0.0, 0.0);
+        let (frustum, occluder, cam_pos) = make_frustum_and_occluder(camera_ecef);
+
+        // Point at (0°N, 180°E) — opposite side of the globe, behind the camera
+        let visible = is_point_visible(
+            Vec3::new(180.0, 0.0, 0.0),
+            &CRS::Geographic,
+            0.0,
+            16.0,
+            false,
+            &frustum,
+            &occluder,
+            cam_pos,
+            800.0,
+        );
+        assert!(!visible, "point on opposite side of globe should not be visible");
+    }
+
+    #[test]
+    fn is_point_visible_occluded_by_horizon() {
+        use navara_core::WGS84_A_64;
+        // Camera very close to surface above (0°N, 0°E)
+        let camera_ecef = Vec3::new(WGS84_A_64 * 1.001, 0.0, 0.0);
+        let (frustum, occluder, cam_pos) = make_frustum_and_occluder(camera_ecef);
+
+        // Point at (0°N, 90°E) — on the limb/far side, occluded by Earth's curvature
+        let visible = is_point_visible(
+            Vec3::new(90.0, 0.0, 0.0),
+            &CRS::Geographic,
+            0.0,
+            1.0,
+            true, // small meter-size to avoid bounding sphere passing frustum
+            &frustum,
+            &occluder,
+            cam_pos,
+            800.0,
+        );
+        assert!(!visible, "point past the horizon should be occluded");
     }
 }
