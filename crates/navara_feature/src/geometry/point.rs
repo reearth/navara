@@ -240,7 +240,6 @@ pub fn resolve_absolute_heights_and_build_positions(
 const MIN_TERRAIN_HEIGHT: f32 = -500.0;
 const MAX_TERRAIN_HEIGHT: f32 = 8850.0;
 
-const MIN_PIXEL_MODE_RADIUS: FloatType = 10.0;
 
 /// Rust-side equivalent of `nvr_pxToWorld` in `shaders/glsl/chunks/pixelToWorld.glsl`.
 /// If the shader changes, update this function.
@@ -251,7 +250,7 @@ fn pixel_to_world(
     distance: FloatType,
 ) -> FloatType {
     let world_per_pixel = sse_denominator * distance / screen_height;
-    (pixel_size * world_per_pixel).max(MIN_PIXEL_MODE_RADIUS)
+    pixel_size * world_per_pixel
 }
 
 fn compute_sprite_radius(
@@ -503,12 +502,12 @@ mod tests {
     }
 
     #[test]
-    fn pixel_to_world_clamps_to_minimum_radius() {
+    fn pixel_to_world_small_value_not_clamped() {
         // With very small pixel_size and close distance, the computed value
-        // should be clamped to MIN_PIXEL_MODE_RADIUS (10.0).
+        // is returned as-is (matching the shader behavior, which has no clamp).
         let result = pixel_to_world(1.0, 0.5, 1000.0, 1.0);
-        // 1.0 * 0.5 * 1.0 / 1000.0 = 0.0005 — well below MIN_PIXEL_MODE_RADIUS
-        assert_abs_diff_eq!(result, MIN_PIXEL_MODE_RADIUS, epsilon = 1e-10);
+        // 1.0 * 0.5 * 1.0 / 1000.0 = 0.0005
+        assert_abs_diff_eq!(result, 0.0005, epsilon = 1e-10);
     }
 
     #[test]
@@ -521,15 +520,14 @@ mod tests {
 
         let result = pixel_to_world(pixel_size, sse_denominator, screen_height, distance);
         let expected = pixel_size * sse_denominator * distance / screen_height;
-        assert!(result > MIN_PIXEL_MODE_RADIUS);
         assert_abs_diff_eq!(result, expected, epsilon = 1e-6);
     }
 
     #[test]
-    fn pixel_to_world_zero_distance_returns_min() {
-        // distance = 0 → computed = 0 → clamped to MIN_PIXEL_MODE_RADIUS
+    fn pixel_to_world_zero_distance_returns_zero() {
+        // distance = 0 → computed = 0 (matches shader: no clamp applied)
         let result = pixel_to_world(16.0, 1.0, 800.0, 0.0);
-        assert_abs_diff_eq!(result, MIN_PIXEL_MODE_RADIUS, epsilon = 1e-10);
+        assert_abs_diff_eq!(result, 0.0, epsilon = 1e-10);
     }
 
     #[test]
@@ -540,8 +538,6 @@ mod tests {
 
         let r1 = pixel_to_world(10.0, sse_denominator, screen_height, distance);
         let r2 = pixel_to_world(20.0, sse_denominator, screen_height, distance);
-        // Both should exceed MIN so linear scaling holds
-        assert!(r1 > MIN_PIXEL_MODE_RADIUS);
         assert_abs_diff_eq!(r2, r1 * 2.0, epsilon = 1e-10);
     }
 
@@ -553,7 +549,6 @@ mod tests {
 
         let r1 = pixel_to_world(pixel_size, sse_denominator, screen_height, 100_000.0);
         let r2 = pixel_to_world(pixel_size, sse_denominator, screen_height, 200_000.0);
-        assert!(r1 > MIN_PIXEL_MODE_RADIUS);
         assert_abs_diff_eq!(r2, r1 * 2.0, epsilon = 1e-6);
     }
 
@@ -643,8 +638,8 @@ mod tests {
     }
 
     #[test]
-    fn compute_sprite_radius_pixel_mode_zero_distance_returns_min() {
-        // Camera at same position as world_pos → distance = 0 → clamped to MIN
+    fn compute_sprite_radius_pixel_mode_zero_distance_returns_zero() {
+        // Camera at same position as world_pos → distance = 0 → returns 0 (matches shader)
         let radius = compute_sprite_radius(
             16.0,
             false,
@@ -653,7 +648,7 @@ mod tests {
             Vec3::new(100.0, 200.0, 300.0),
             Vec3::new(100.0, 200.0, 300.0),
         );
-        assert_abs_diff_eq!(radius, MIN_PIXEL_MODE_RADIUS, epsilon = 1e-10);
+        assert_abs_diff_eq!(radius, 0.0, epsilon = 1e-10);
     }
 
     // --- is_point_visible tests ---

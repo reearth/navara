@@ -493,8 +493,9 @@ pub fn sample_terrain_height_within_extent(
     (min_height, max_height)
 }
 
-/// Collect all deepest ready terrain leaf tiles from the quadtree.
-/// Returns handles of tiles that have cached mesh, terrain data, and are not upsampled.
+/// Collect the deepest ready terrain tiles from the quadtree.
+/// Returns handles of the deepest tiles (not necessarily quadtree leaves) that
+/// have cached mesh, terrain data, and are not upsampled.
 /// Used to batch-resolve terrain heights without per-point tree traversal.
 pub fn collect_terrain_leaves(qt: &RasterTileQuadtree) -> Vec<TileHandle> {
     find_contained_children(qt, &|t| {
