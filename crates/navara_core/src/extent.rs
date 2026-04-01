@@ -86,6 +86,8 @@ impl<F: Float, U: Unit<F>> Extent<F, U> {
         }
     }
 
+    /// Note: Assumes non-wrapping extents (west <= east).
+    /// XYZ tiles are split at the antimeridian, so wrapping extents never occur in practice.
     pub fn contains(&self, point: &LngLat<F, U>) -> bool {
         point.lng >= self.west
             && point.lng <= self.east
@@ -93,6 +95,19 @@ impl<F: Float, U: Unit<F>> Extent<F, U> {
             && point.lat <= self.north
     }
 
+    /// Returns true if `self` fully contains `other`
+    /// (all four corners of `other` are within `self`).
+    /// Note: Assumes non-wrapping extents (west <= east).
+    /// XYZ tiles are split at the antimeridian, so wrapping extents never occur in practice.
+    pub fn contains_extent(&self, other: &Self) -> bool {
+        self.west <= other.west
+            && self.east >= other.east
+            && self.south <= other.south
+            && self.north >= other.north
+    }
+
+    /// Note: Assumes non-wrapping extents (west <= east).
+    /// XYZ tiles are split at the antimeridian, so wrapping extents never occur in practice.
     pub fn intersects(&self, other: Self) -> bool {
         // West-south point
         (self.west <= other.west
@@ -223,6 +238,76 @@ mod test {
         assert!(e1.intersects(e2));
         assert!(e1.intersects(e3));
         assert!(!e2.intersects(e3));
+    }
+
+    #[test]
+    fn contains_extent_fully_inside() {
+        use crate::Angle;
+        let outer: Extent<f64, Radians> = Extent {
+            west: Angle::new(0.0),
+            south: Angle::new(0.0),
+            east: Angle::new(1.0),
+            north: Angle::new(1.0),
+        };
+        let inner: Extent<f64, Radians> = Extent {
+            west: Angle::new(0.2),
+            south: Angle::new(0.2),
+            east: Angle::new(0.8),
+            north: Angle::new(0.8),
+        };
+        assert!(outer.contains_extent(&inner));
+        assert!(!inner.contains_extent(&outer));
+    }
+
+    #[test]
+    fn contains_extent_identical() {
+        use crate::Angle;
+        let e: Extent<f64, Radians> = Extent {
+            west: Angle::new(0.0),
+            south: Angle::new(0.0),
+            east: Angle::new(1.0),
+            north: Angle::new(1.0),
+        };
+        assert!(e.contains_extent(&e));
+    }
+
+    #[test]
+    fn contains_extent_partial_overlap_returns_false() {
+        use crate::Angle;
+        let a: Extent<f64, Radians> = Extent {
+            west: Angle::new(0.0),
+            south: Angle::new(0.0),
+            east: Angle::new(1.0),
+            north: Angle::new(1.0),
+        };
+        let b: Extent<f64, Radians> = Extent {
+            west: Angle::new(0.5),
+            south: Angle::new(0.5),
+            east: Angle::new(1.5),
+            north: Angle::new(1.5),
+        };
+        assert!(a.intersects(b));
+        assert!(!a.contains_extent(&b));
+        assert!(!b.contains_extent(&a));
+    }
+
+    #[test]
+    fn contains_extent_disjoint_returns_false() {
+        use crate::Angle;
+        let a: Extent<f64, Radians> = Extent {
+            west: Angle::new(0.0),
+            south: Angle::new(0.0),
+            east: Angle::new(1.0),
+            north: Angle::new(1.0),
+        };
+        let b: Extent<f64, Radians> = Extent {
+            west: Angle::new(2.0),
+            south: Angle::new(2.0),
+            east: Angle::new(3.0),
+            north: Angle::new(3.0),
+        };
+        assert!(!a.contains_extent(&b));
+        assert!(!b.contains_extent(&a));
     }
 
     #[test]
