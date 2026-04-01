@@ -460,10 +460,6 @@ export class PolylineMesh extends BatchedFeatureMesh<
     }
   }
 
-  _setEmissiveOnly(emissiveOnly: boolean): void {
-    this.getEnhancer().update({ base: { emissiveOnly } });
-    this.needsUpdate();
-  }
 
   _getDefaultBatchAttributeValues(): DefaultBatchAttributeValues {
     return {

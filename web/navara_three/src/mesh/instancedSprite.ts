@@ -562,9 +562,6 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     this.getEnhancer().update({ base: { pickable } });
   }
 
-  _setEmissiveOnly(emissiveOnly: boolean): void {
-    this.getEnhancer().update({ base: { emissiveOnly } });
-  }
 
   /**
    * Get the enhancer, throwing if not initialized.
