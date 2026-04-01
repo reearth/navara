@@ -27,11 +27,6 @@ export type PolylineBaseProps = {
   // Picking
   pickable?: boolean;
 
-  // Emissive-only rendering (for EmissiveBufferPass)
-  emissiveOnly?: boolean;
-  emissiveColor?: number;
-  emissiveIntensity?: number;
-
   // External uniforms (passed from CommonUniforms)
   // Note: These use tuple types matching CommonUniforms, not Three.js Vector types
   globeNormalTexture?: UniformValue<Texture | null>;
@@ -67,9 +62,6 @@ export type PolylineBaseState = Readonly<
     clampToGround: boolean;
     useGroundNormals: boolean;
     pickable: boolean;
-    emissiveOnly: boolean;
-    emissiveColor: number;
-    emissiveIntensity: number;
     minMaxHeight: [number, number];
     width: number;
     maxWidth: number;
@@ -93,9 +85,6 @@ export type PolylineBaseRefs = {
   color: UniformValue<Color>;
   useGroundNormals: UniformValue<boolean>;
   nvr_uPickable: UniformValue<number>;
-  uEmissiveOnly: UniformValue<number>;
-  uEmissiveColor: UniformValue<Color>;
-  uEmissiveIntensity: UniformValue<number>;
   nvr_uPickingCoord: UniformValue<Vector2>;
 
   // Optional uniforms

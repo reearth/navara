@@ -32,6 +32,10 @@ export type PolygonBaseProps = {
   // Emissive-only rendering (for EmissiveBufferPass)
   emissiveOnly?: boolean;
 
+  // EffectIds Buffer rendering
+  effectIdsMode?: boolean;
+  effectIdsMask?: number;
+
   // Reflectivity
   reflectivity?: number;
   roughness?: number;
@@ -68,6 +72,8 @@ export type PolygonBaseState = Readonly<
     emissiveOnly: boolean;
     emissiveColor: number;
     emissiveIntensity: number;
+    effectIdsMode: boolean;
+    effectIdsMask: number;
     minMaxHeight: [number, number] | undefined;
     addExtrudedHeight: number;
     addHeight: number;
@@ -95,6 +101,8 @@ export type PolygonBaseRefs = {
   uEmissiveOnly: UniformValue<number>;
   uEmissiveColor: UniformValue<Color>;
   uEmissiveIntensity: UniformValue<number>;
+  uEffectIdsMode: UniformValue<number>;
+  uEffectIdsMask: UniformValue<number>;
   uIsTexturized: UniformValue<boolean>;
   reflectivity: UniformValue<number>;
   roughness: UniformValue<number>;

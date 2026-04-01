@@ -119,12 +119,23 @@ function injectGBuffer(
 
     // Emissive buffer toggle (for EmissiveBufferPass)
     uniform float uEmissiveOnly;
+    // EffectIds buffer toggle (for EffectIdsBufferPass)
+    uniform float uEffectIdsMode;
+    uniform float uEffectIdsMask;
 
     ${packing}
     ${
       createReplacer(shader.fragmentShader).replace(
         /}\s*$/, // Assume the last curly brace is of main()
         /* glsl */ `
+          // EffectIdsBufferPass: output slot bits as RGB for non-enhanced materials
+          if (uEffectIdsMode > 0.5) {
+            float r = mod(floor(uEffectIdsMask / 1.0), 2.0);
+            float g = mod(floor(uEffectIdsMask / 2.0), 2.0);
+            float b = mod(floor(uEffectIdsMask / 4.0), 2.0);
+            gl_FragColor = vec4(r, g, b, 1.0);
+            return;
+          }
           // EmissiveBufferPass: output transparent black for non-emissive materials
           if (uEmissiveOnly > 0.5) {
             gl_FragColor = vec4(0.0);

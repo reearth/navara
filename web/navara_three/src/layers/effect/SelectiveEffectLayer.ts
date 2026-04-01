@@ -104,9 +104,9 @@ export abstract class SelectiveEffectLayer<
       },
     );
 
-    // @deprecated SE Redesign — mask RT registration with CustomRenderPass
-    // will be replaced by the new SE architecture.
-    // this.registerMaskRenderTarget();
+    // Register effect slot for EffectIds Buffer
+    const mrtLayer = this.findLayer<MRTPassEffectLayer>("mrt");
+    mrtLayer?.effectSlotRegistry.register(this.id);
 
     super.onCreate();
   }
@@ -222,8 +222,9 @@ export abstract class SelectiveEffectLayer<
   }
 
   onDestroy(): void {
-    // @deprecated SE Redesign — mask RT unregistration commented out
-    // this.unregisterMaskRenderTarget();
+    // Unregister effect slot
+    const mrtLayer = this.findLayer<MRTPassEffectLayer>("mrt");
+    mrtLayer?.effectSlotRegistry.unregister(this.id);
 
     if (this.view.selectiveEffectRegistry) {
       this.view.selectiveEffectRegistry.destroy(this.id);

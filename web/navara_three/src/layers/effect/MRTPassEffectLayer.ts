@@ -6,8 +6,13 @@ import {
   type EffectLayerConfig,
   type EffectLayerUpdate,
 } from "../../core/EffectLayerDeclaration";
+import { EffectSlotRegistry } from "../../core/EffectSlotRegistry";
 import type { ViewContext } from "../../core/ViewContext";
-import { CustomRenderPass, EmissiveBufferPass } from "../../passes";
+import {
+  CustomRenderPass,
+  EmissiveBufferPass,
+  EffectIdsBufferPass,
+} from "../../passes";
 
 type LayerDescription = {
   mrt?: {
@@ -29,6 +34,8 @@ export class MRTPassEffectLayer extends EffectLayerDeclaration<
 
   private config: MRTPassConfig;
   private emissiveBufferPass?: EmissiveBufferPass;
+  private effectIdsBufferPass?: EffectIdsBufferPass;
+  private _slotRegistry = new EffectSlotRegistry();
 
   constructor(view: ViewContext, config: MRTPassConfig) {
     super(view, config);
@@ -69,6 +76,18 @@ export class MRTPassEffectLayer extends EffectLayerDeclaration<
     );
     pass.emissiveBufferPass = this.emissiveBufferPass;
 
+    // Create EffectIdsBufferPass (independent RT, PickHelper pattern)
+    this.effectIdsBufferPass = new EffectIdsBufferPass(
+      renderer,
+      camera,
+      scenes,
+      this.view._privates.meshes,
+      this.view.renderPassOrchestrator.effectComposer.inputBuffer,
+      this.view.globe,
+      this._slotRegistry,
+    );
+    pass.effectIdsBufferPass = this.effectIdsBufferPass;
+
     return pass;
   }
 
@@ -78,6 +97,14 @@ export class MRTPassEffectLayer extends EffectLayerDeclaration<
 
   get emissiveBuffer(): Texture | undefined {
     return this.emissiveBufferPass?.texture;
+  }
+
+  get effectIdsBuffer(): Texture | undefined {
+    return this.effectIdsBufferPass?.texture;
+  }
+
+  get effectSlotRegistry(): EffectSlotRegistry {
+    return this._slotRegistry;
   }
 
   get depthBuffer(): Texture | undefined {
@@ -114,6 +141,8 @@ export class MRTPassEffectLayer extends EffectLayerDeclaration<
 
   onDestroy(): void {
     this.emissiveBufferPass?.dispose();
+    this.effectIdsBufferPass?.dispose();
+    this._slotRegistry.clear();
     super.onDestroy();
   }
 }

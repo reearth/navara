@@ -24,6 +24,10 @@ export type ModelBaseProps = {
   // Emissive-only rendering (for EmissiveBufferPass)
   emissiveOnly?: boolean;
 
+  // EffectIds Buffer rendering
+  effectIdsMode?: boolean;
+  effectIdsMask?: number;
+
   // Batch texture
   batchDataTexture?: UniformValue<Texture | null>;
 
@@ -48,6 +52,8 @@ export type ModelBaseState = Readonly<{
   emissiveOnly: boolean;
   emissiveColor: number;
   emissiveIntensity: number;
+  effectIdsMode: boolean;
+  effectIdsMask: number;
   // Batch texture state - when true, material.color is white and colors come from batch texture
   batchColorEnabled: boolean;
   useBatchTexture: boolean;
@@ -70,6 +76,8 @@ export type ModelBaseRefs = {
   uEmissiveOnly: UniformValue<number>;
   uEmissiveColor: UniformValue<Color>;
   uEmissiveIntensity: UniformValue<number>;
+  uEffectIdsMode: UniformValue<number>;
+  uEffectIdsMask: UniformValue<number>;
   uBloomMaskPass: UniformValue<number>;
   uOutlineMaskPass: UniformValue<number>;
   uSelectiveEffectOcclusion: UniformValue<SelectiveEffectOcclusionValue>;

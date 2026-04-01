@@ -27,6 +27,8 @@ const DEFAULT_BASE_REFS: Omit<
   uClampToGround: { value: false },
   nvr_uPickable: { value: 0 },
   uEmissiveOnly: { value: 0 },
+  uEffectIdsMode: { value: 0 },
+  uEffectIdsMask: { value: 0 },
   uIsTexturized: { value: false },
   reflectivity: { value: 0 },
   roughness: { value: 0 },
@@ -64,6 +66,8 @@ export const createBaseMutates = (useRTE: boolean): PolygonBaseMutates => {
       refs.uEmissiveOnly.value = state.emissiveOnly ? 1 : 0;
       refs.uEmissiveColor.value.set(state.emissiveColor);
       refs.uEmissiveIntensity.value = state.emissiveIntensity;
+      refs.uEffectIdsMode.value = state.effectIdsMode ? 1 : 0;
+      refs.uEffectIdsMask.value = state.effectIdsMask;
       refs.uIsTexturized.value = state.isTexturized;
       refs.reflectivity.value = state.reflectivity;
       refs.roughness.value = state.roughness;
@@ -77,6 +81,8 @@ export const createBaseMutates = (useRTE: boolean): PolygonBaseMutates => {
       uniforms.uEmissiveOnly = refs.uEmissiveOnly;
       uniforms.uEmissiveColor = refs.uEmissiveColor;
       uniforms.uEmissiveIntensity = refs.uEmissiveIntensity;
+      uniforms.uEffectIdsMode = refs.uEffectIdsMode;
+      uniforms.uEffectIdsMask = refs.uEffectIdsMask;
       uniforms.reflectivity = refs.reflectivity;
       uniforms.roughness = refs.roughness;
 

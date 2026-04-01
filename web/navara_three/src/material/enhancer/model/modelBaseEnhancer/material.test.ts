@@ -30,14 +30,15 @@ describe("modelBaseEnhancer/material", () => {
       expect(material.roughness).toBe(0.2);
     });
 
-    it("should update emissive properties when provided", () => {
+    it("should not update material emissive (managed via custom uniforms for EmissiveBuffer)", () => {
       const material = new MeshStandardMaterial();
       updateMaterialProps(material, {
         emissiveColor: 0xff0000,
         emissiveIntensity: 0.5,
       });
-      expect(material.emissive.getHex()).toBe(0xff0000);
-      expect(material.emissiveIntensity).toBe(0.5);
+      // Material.emissive is not set — emissive is managed via custom uniforms only
+      expect(material.emissive.getHex()).toBe(0x000000);
+      expect(material.emissiveIntensity).toBe(1); // Three.js default
     });
   });
 });

@@ -55,6 +55,8 @@ export class CustomRenderPass extends RenderPass {
 
   /** EmissiveBufferPass (independent RT, set by MRTPassEffectLayer) */
   emissiveBufferPass?: import("./EmissiveBufferPass").EmissiveBufferPass;
+  /** EffectIdsBufferPass (independent RT, set by MRTPassEffectLayer) */
+  effectIdsBufferPass?: import("./EffectIdsBufferPass").EffectIdsBufferPass;
 
   // @deprecated SE Redesign - selectiveEffectRegistry field removed (was only used by mask pass)
   private maskController = new SelectiveEffectMaskController();
@@ -230,9 +232,11 @@ export class CustomRenderPass extends RenderPass {
     this.allDepthCopyPass.copyDepth(clearDepth);
     this.allDepthCopyPass.render(renderer, null, null);
 
-    // Render emissive buffer (independent RT, PickHelper pattern)
+    // Render selective effect buffers (independent RTs, PickHelper pattern)
     this.emissiveBufferPass?.processRender();
     this.emissiveBufferPass?.renderDebugView();
+    this.effectIdsBufferPass?.processRender();
+    this.effectIdsBufferPass?.renderDebugView();
   }
 
   setDepthTexture(depthTexture: DepthTexture): void {
@@ -248,6 +252,7 @@ export class CustomRenderPass extends RenderPass {
     this.globeNormalCopyPass.setSize(width, height);
     this.debugNormalCopyPass?.setSize(width, height);
     this.emissiveBufferPass?.setSize(width, height);
+    this.effectIdsBufferPass?.setSize(width, height);
   }
 
   // Drape a feature on the terrain by stencil test.

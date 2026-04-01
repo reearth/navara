@@ -16,6 +16,8 @@ export const DEFAULT_BASE_PROPS: Required<
   isTexturized: false,
   pickable: false,
   emissiveOnly: false,
+  effectIdsMode: false,
+  effectIdsMask: 0,
   reflectivity: 0,
   roughness: 0,
   emissiveColor: 0,
@@ -37,6 +39,8 @@ export const DEFAULT_BASE_STATE: PolygonBaseState = {
   emissiveOnly: false,
   emissiveColor: DEFAULT_BASE_PROPS.emissiveColor,
   emissiveIntensity: DEFAULT_BASE_PROPS.emissiveIntensity,
+  effectIdsMode: false,
+  effectIdsMask: 0,
   minMaxHeight: undefined,
   addExtrudedHeight: DEFAULT_BASE_PROPS.addExtrudedHeight,
   addHeight: DEFAULT_BASE_PROPS.addHeight,
@@ -73,6 +77,8 @@ export const updateState = (
     emissiveColor: props.emissiveColor ?? currentState.emissiveColor,
     emissiveIntensity:
       props.emissiveIntensity ?? currentState.emissiveIntensity,
+    effectIdsMode: props.effectIdsMode ?? currentState.effectIdsMode,
+    effectIdsMask: props.effectIdsMask ?? currentState.effectIdsMask,
     minMaxHeight: props.minMaxHeight ?? currentState.minMaxHeight,
     addExtrudedHeight:
       props.addExtrudedHeight ?? currentState.addExtrudedHeight,

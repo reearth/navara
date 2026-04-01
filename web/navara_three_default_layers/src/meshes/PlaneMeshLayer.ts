@@ -13,6 +13,7 @@ import {
   type Object3DEventMap,
 } from "three";
 
+import { setupEffectIdsBufferUniforms } from "./effectIdsBufferSetup";
 import {
   setupEmissiveBufferUniforms,
   syncEmissiveBufferUniforms,
@@ -75,11 +76,8 @@ export class PlaneMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
 
     // Create material from properties
     const colorValue = cfg.color ?? new Color().setStyle("#ffffff");
-    const emissiveColorValue = cfg.emissiveColor ? cfg.emissiveColor.raw : 0;
     const material = new MeshLambertMaterial({
       color: colorValue.raw,
-      emissive: emissiveColorValue,
-      emissiveIntensity: cfg.emissiveIntensity ?? 1,
       opacity: cfg.opacity ?? 1,
       transparent: cfg.transparent ?? false,
     });
@@ -90,6 +88,7 @@ export class PlaneMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
       hexEmissiveColor,
       cfg.emissiveIntensity ?? 0,
     );
+    setupEffectIdsBufferUniforms(material);
 
     const mesh = new Mesh<
       PlaneGeometry,
@@ -145,10 +144,6 @@ export class PlaneMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
             const colorValue = cfg.color.raw;
             material.color.set(colorValue);
           }
-          if (cfg.emissiveColor !== undefined)
-            material.emissive.set(cfg.emissiveColor.raw);
-          if (cfg.emissiveIntensity !== undefined)
-            material.emissiveIntensity = cfg.emissiveIntensity;
           syncEmissiveBufferUniforms(
             material,
             cfg.emissiveColor?.raw,

@@ -15,6 +15,7 @@ import {
   type Object3DEventMap,
 } from "three";
 
+import { setupEffectIdsBufferUniforms } from "./effectIdsBufferSetup";
 import {
   setupEmissiveBufferUniforms,
   syncEmissiveBufferUniforms,
@@ -89,7 +90,7 @@ export class BoxMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
     // Create material from properties
     const material = this.createMaterial(cfg);
 
-    // Set up emissive buffer uniforms for EmissiveBufferPass support
+    // Set up selective effect buffer uniforms
     if (material instanceof MeshLambertMaterial) {
       const hexEmissiveColor = cfg.emissiveColor?.raw ?? 0x000000;
       setupEmissiveBufferUniforms(
@@ -97,6 +98,7 @@ export class BoxMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
         hexEmissiveColor,
         cfg.emissiveIntensity ?? 0,
       );
+      setupEffectIdsBufferUniforms(material);
     }
 
     const mesh = new DrapedMesh<BoxGeometry, BoxMeshMaterial, BoxMeshEventMap>(
@@ -125,11 +127,8 @@ export class BoxMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
         transparent: cfg.transparent ?? false,
       });
     }
-    const emissiveColorValue = cfg.emissiveColor ? cfg.emissiveColor.raw : 0;
     return new MeshLambertMaterial({
       color: colorValue.raw,
-      emissive: emissiveColorValue,
-      emissiveIntensity: cfg.emissiveIntensity ?? 1,
       opacity: cfg.opacity ?? 1,
       transparent: cfg.transparent ?? false,
     });
@@ -206,10 +205,6 @@ export class BoxMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
         if (cfg.transparent !== undefined)
           material.transparent = cfg.transparent;
         if (material instanceof MeshLambertMaterial) {
-          if (cfg.emissiveColor !== undefined)
-            material.emissive.set(cfg.emissiveColor.raw);
-          if (cfg.emissiveIntensity !== undefined)
-            material.emissiveIntensity = cfg.emissiveIntensity;
           syncEmissiveBufferUniforms(
             material,
             cfg.emissiveColor?.raw,

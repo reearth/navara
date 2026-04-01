@@ -46,7 +46,7 @@ import type { UniformValue } from "../material/types";
 import type { CustomObject3DEventMap } from "../object3DEvent";
 import type { CommonUniforms } from "../uniforms";
 // @deprecated SE Redesign
-// import { arraysEqual } from "../utils";
+import { arraysEqual } from "../utils";
 
 import {
   getBatchDataTexture,
@@ -76,9 +76,7 @@ export class ModelMesh
   implements FeatureMesh, PickableMesh
 {
   private viewContext: ViewContext;
-  // @deprecated SE Redesign - will be reused after redesign
   /** Layer ID for SelectiveEffect handling */
-  // @ts-expect-error SE Redesign: field retained for upcoming redesign, temporarily unused
   private _layerId: string;
   private _uniforms: CommonUniforms;
 
@@ -99,7 +97,7 @@ export class ModelMesh
   batchLength?: number;
 
   // @deprecated SE Redesign
-  // private prevEffectIds: string[] = [];
+  private prevEffectIds: string[] = [];
 
   constructor(
     gltfInfo: {
@@ -438,17 +436,21 @@ export class ModelMesh
       }
     }
 
-    // @deprecated SE Redesign
-    // SelectiveEffect: effectIds handling at ModelMesh level
-    // if (!arraysEqual(this.prevEffectIds, material.effectIds)) {
-    //   this.viewContext.selectiveEffectRegistry?.updateLinksForObject(
-    //     this,
-    //     material.effectIds ?? [],
-    //     this.prevEffectIds,
-    //     this._layerId,
-    //   );
-    //   this.prevEffectIds = material.effectIds ? [...material.effectIds] : [];
-    // }
+    // SE Redesign: keep effectIds link for EffectIds Buffer
+    // material.effectIds may be undefined for 3D Tiles — fall back to layer-level effectIds
+    const effectIds =
+      material.effectIds ??
+      this.viewContext.getLayerEffects(this._layerId) ??
+      [];
+    if (!arraysEqual(this.prevEffectIds, effectIds)) {
+      this.viewContext.selectiveEffectRegistry?.updateLinksForObject(
+        this,
+        effectIds,
+        this.prevEffectIds,
+        this._layerId,
+      );
+      this.prevEffectIds = [...effectIds];
+    }
   }
 
   /**
@@ -523,6 +525,24 @@ export class ModelMesh
     // PNTS enhancer has no emissive support — hide during emissive pass
     for (const [points] of this._pntsEnhancers) {
       points.visible = !emissiveOnly;
+    }
+  }
+
+  _getEffectIds(): readonly string[] {
+    return (
+      this.viewContext.getLayerEffects(this._layerId) ?? this.prevEffectIds
+    );
+  }
+
+  _setEffectIdsMode(enabled: boolean, mask: number): void {
+    for (const enhancer of this._enhancers.values()) {
+      enhancer.update({
+        base: { effectIdsMode: enabled, effectIdsMask: mask },
+      });
+    }
+    // PNTS enhancer has no effectIds support — hide during effectIds pass
+    for (const [points] of this._pntsEnhancers) {
+      points.visible = !enabled;
     }
   }
 

@@ -35,9 +35,6 @@ uniform vec4 frustumRatio;
 uniform float logDepthBufFC;
 uniform mat4 inverseProjectionMatrix;
 uniform float nvr_uPickable;
-uniform float uEmissiveOnly;
-uniform vec3 uEmissiveColor;
-uniform float uEmissiveIntensity;
 uniform vec2 nvr_uPickingCoord; // Screen coordinate for picking (in pixels)
 
 layout(location = 1) out vec4 normalBuffer;
@@ -108,11 +105,6 @@ void main() {
 
     if (abs(widthwiseDistance) > halfMaxWidth || distanceFromStart <= 0.0 || distanceFromEnd <= 0.0) {
         discard;
-    }
-
-    if(uEmissiveOnly > 0.5) {
-        gl_FragColor = vec4(uEmissiveColor, uEmissiveIntensity);
-        return;
     }
 
     if(nvr_uPickable > 0.0) {

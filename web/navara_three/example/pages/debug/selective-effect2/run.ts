@@ -54,7 +54,7 @@ export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
       strength: 1.0,
       radius: 0.5,
       threshold: 0.0,
-      debugViews: true,
+      debugViews: false,
       resolutionScale: 1.0,
     },
     selectiveEffectOcclusion: "normal",
@@ -158,20 +158,29 @@ export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
 
   // --- Debug Controls ---
   const emissiveBufferPass = view.mrtPassLayer.ref.raw?.emissiveBufferPass;
+  const effectIdsBufferPass = view.mrtPassLayer.ref.raw?.effectIdsBufferPass;
 
-  // Enable emissive buffer debug view by default
+  // Enable debug views by default
   emissiveBufferPass?.enableDebugView(true);
+  effectIdsBufferPass?.enableDebugView(true);
 
   const pane = new Pane({ title: "Selective Effect Debug" });
 
   const debugParams = {
     emissiveBuffer: true,
+    effectIdsBuffer: true,
   };
 
   pane
     .addBinding(debugParams, "emissiveBuffer", { label: "Emissive Buffer" })
     .on("change", (ev) => {
       emissiveBufferPass?.enableDebugView(ev.value);
+    });
+
+  pane
+    .addBinding(debugParams, "effectIdsBuffer", { label: "EffectIds Buffer" })
+    .on("change", (ev) => {
+      effectIdsBufferPass?.enableDebugView(ev.value);
     });
 
   // --- Mesh Emissive Controls ---

@@ -10,9 +10,6 @@
 
 uniform vec3 color;
 uniform float nvr_uPickable;
-uniform float uEmissiveOnly;
-uniform vec3 uEmissiveColor;
-uniform float uEmissiveIntensity;
 
 in float nvr_vBatchId;
 in vec3 vNormal;
@@ -45,11 +42,6 @@ void main() {
     #include <opaque_fragment>
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
-
-    if(uEmissiveOnly > 0.5) {
-        gl_FragColor = vec4(uEmissiveColor, uEmissiveIntensity);
-        return;
-    }
 
     if(nvr_uPickable > 0.0) {
         vec3 pickColor = nvr_batchIdToColor(nvr_vBatchId);

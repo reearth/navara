@@ -41,8 +41,7 @@ export function setupEmissiveBufferUniforms(
 }
 
 /**
- * Sync emissive buffer uniforms when material properties change.
- * Call this in onUpdateConfig after updating material.emissive / material.emissiveIntensity.
+ * Sync emissive buffer custom uniforms when emissive config changes.
  */
 export function syncEmissiveBufferUniforms(
   material: MeshLambertMaterial | MeshStandardMaterial,

@@ -532,6 +532,17 @@ export class PolygonMesh extends BatchedFeatureMesh<
     this.needsUpdate();
   }
 
+  _getEffectIds(): readonly string[] {
+    return this._viewContext.getLayerEffects(this._layerId) ?? [];
+  }
+
+  _setEffectIdsMode(enabled: boolean, mask: number): void {
+    this.getEnhancer().update({
+      base: { effectIdsMode: enabled, effectIdsMask: mask },
+    });
+    this.needsUpdate();
+  }
+
   _updateBatchAttribute(
     batchId: number,
     attribute: BatchedAttributeName,
