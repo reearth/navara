@@ -18,18 +18,14 @@ import {
 } from "../utils/textureFragmentIndex";
 
 /**
- * Pending edge update waiting for texture creation
+ * Queue of pending edge updates keyed by entityId and edgeDirection
+ * Outer map: entityId -> inner map of edge updates
+ * Inner map: edgeDirection (0=Left, 1=Right, 2=Top, 3=Bottom) -> edge bytes
+ *
+ * Only stores the most recent update per direction to prevent unbounded growth.
+ * Edge updates can arrive before texture creation due to out-of-order event processing.
  */
-interface PendingEdgeUpdate {
-  edgeBytes: Uint8Array;
-  edgeDirection: number;
-}
-
-/**
- * Queue of pending edge updates keyed by entityId
- * Edge updates can arrive before texture creation due to out-of-order event processing
- */
-const pendingEdgeUpdates = new Map<string, PendingEdgeUpdate[]>();
+const pendingEdgeUpdates = new Map<string, Map<number, Uint8Array>>();
 
 export function processHillshadeBackfilled(
   event: HillshadeBackfilledEvent | undefined,
@@ -124,22 +120,17 @@ export function processHillshadeBackfilled(
 
     // Apply any pending edge updates that arrived before texture creation
     const pending = pendingEdgeUpdates.get(entityId);
-    if (pending && pending.length > 0) {
+    if (pending && pending.size > 0) {
       const textureData = dataTexture.image.data as Uint8Array;
       const texSize = dataTexture.image.width;
 
-      for (const update of pending) {
-        const edgeSize = update.edgeBytes.length / 4;
+      for (const [edgeDirection, edgeBytes] of pending) {
+        const edgeSize = edgeBytes.length / 4;
         const expectedTexSize = edgeSize + 2;
 
         // Only apply if size matches (same zoom level)
         if (texSize === expectedTexSize) {
-          updatePaddingEdge(
-            textureData,
-            update.edgeBytes,
-            texSize,
-            update.edgeDirection,
-          );
+          updatePaddingEdge(textureData, edgeBytes, texSize, edgeDirection);
           dataTexture.needsUpdate = true;
         }
       }
@@ -178,13 +169,14 @@ export function processHillshadeBackfilled(
 
     if (!texture || !(texture instanceof DataTexture)) {
       // Texture doesn't exist yet - queue this edge update for later application
-      // Copy the edge data since we've removed it from BufferStore
-      const pending = pendingEdgeUpdates.get(entityId) || [];
-      pending.push({
-        edgeBytes: new Uint8Array(edgeBytes), // Make a copy
-        edgeDirection: event.edge_direction,
-      });
-      pendingEdgeUpdates.set(entityId, pending);
+      // Store at most one update per direction (newer replaces older)
+      let pending = pendingEdgeUpdates.get(entityId);
+      if (!pending) {
+        pending = new Map<number, Uint8Array>();
+        pendingEdgeUpdates.set(entityId, pending);
+      }
+      // Copy and store edge data, replacing any previous update for this direction
+      pending.set(event.edge_direction, new Uint8Array(edgeBytes));
       return;
     }
 
