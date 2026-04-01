@@ -1,11 +1,13 @@
 import { describe, it, expect, beforeEach } from "vitest";
+
+import type { TileMesh } from "../mesh/tile";
+
 import {
   updateTextureFragmentIndex,
   removeTextureFragmentIndex,
   getTextureFragmentSlots,
+  type TextureSlot,
 } from "./textureFragmentIndex";
-import type { TileMesh } from "../mesh/tile";
-import type { TextureSlot } from "./textureFragmentIndex";
 
 function createTileMesh(id: string): TileMesh {
   return { id } as unknown as TileMesh;

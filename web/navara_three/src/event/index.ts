@@ -189,6 +189,7 @@ export function processEvent(
   layersManager: LayersManager,
   viewContext: ViewContext,
   updatedAt: number,
+  pendingHillshadeEdges: Map<string, Map<number, Uint8Array>>,
   layerHandler?: LayerHandler,
 ) {
   eventManager.pushEvents(event);
@@ -217,6 +218,7 @@ export function processEvent(
       textureFragmentIndex,
       textureOptions,
       tileHandler,
+      pendingHillshadeEdges,
     ),
   );
 
@@ -467,7 +469,13 @@ export function processEvent(
           await processRequestedData(event, buf, abortControllers);
           break;
         case "remove":
-          processDataRequesterRemoved(event, buf, abortControllers, loadedTexs);
+          processDataRequesterRemoved(
+            event,
+            buf,
+            abortControllers,
+            loadedTexs,
+            pendingHillshadeEdges,
+          );
           break;
       }
     },
@@ -481,7 +489,13 @@ export function processEvent(
         }
       },
       onAbort: (event) => {
-        processDataRequesterRemoved(event, buf, abortControllers, loadedTexs);
+        processDataRequesterRemoved(
+          event,
+          buf,
+          abortControllers,
+          loadedTexs,
+          pendingHillshadeEdges,
+        );
       },
     },
   );
@@ -690,6 +704,7 @@ function processDataRequesterRemoved(
   buf: BufferLoader,
   abortControllers: AbortControllers,
   loadedTexs?: Map<string, Texture>,
+  pendingHillshadeEdges?: Map<string, Map<number, Uint8Array>>,
 ) {
   const id = generate_id_from_entity(req);
   const abortController = abortControllers.get(id);
@@ -699,6 +714,12 @@ function processDataRequesterRemoved(
   if (loadedTexs) {
     loadedTexs.get(id)?.dispose();
     loadedTexs.delete(id);
+  }
+
+  // Clean up any pending hillshade edge updates for this entity
+  // Prevents memory leak when tiles are removed before texture creation
+  if (pendingHillshadeEdges) {
+    pendingHillshadeEdges.delete(id);
   }
 }
 

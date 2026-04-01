@@ -17,16 +17,6 @@ import {
   type TextureSlot,
 } from "../utils/textureFragmentIndex";
 
-/**
- * Queue of pending edge updates keyed by entityId and edgeDirection
- * Outer map: entityId -> inner map of edge updates
- * Inner map: edgeDirection (0=Left, 1=Right, 2=Top, 3=Bottom) -> edge bytes
- *
- * Only stores the most recent update per direction to prevent unbounded growth.
- * Edge updates can arrive before texture creation due to out-of-order event processing.
- */
-const pendingEdgeUpdates = new Map<string, Map<number, Uint8Array>>();
-
 export function processHillshadeBackfilled(
   event: HillshadeBackfilledEvent | undefined,
   buf: BufferLoader,
@@ -34,6 +24,7 @@ export function processHillshadeBackfilled(
   textureFragmentIndex: Map<string, Set<TextureSlot>>,
   textureOptions: TextureOptions,
   tileHandler: TileHandler,
+  pendingEdgeUpdates: Map<string, Map<number, Uint8Array>>,
 ) {
   if (!event) return;
 

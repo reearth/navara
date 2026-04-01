@@ -14,7 +14,6 @@ import ElevationParsFragment from "@shaders/glsl/chunks/elevation_pars_fragment.
 import HillshadeParsFragment from "@shaders/glsl/chunks/hillshade_pars_fragment.glsl";
 import SpecularParsFragment from "@shaders/glsl/chunks/spucular_pars_fragment.glsl";
 import WaterParsFragment from "@shaders/glsl/chunks/water_pars_fragment.glsl?raw";
-
 import {
   BufferAttribute,
   BufferGeometry,
@@ -48,11 +47,6 @@ import {
   generateMixOverlaidTexturesMacro,
   generateHillshadeNormalShader,
 } from "../material";
-import {
-  type TextureSlot,
-  updateTextureFragmentIndex,
-  removeTextureFragmentIndex,
-} from "../utils/textureFragmentIndex";
 import type { CustomObject3DEventMap } from "../object3DEvent";
 import type {
   SceneGroup,
@@ -63,6 +57,11 @@ import type { TextureOptions } from "../textures";
 import type { MeshCache, TileMapByHandle } from "../type";
 import type { CommonUniforms } from "../uniforms";
 import { createReplacer } from "../utils";
+import {
+  type TextureSlot,
+  updateTextureFragmentIndex,
+  removeTextureFragmentIndex,
+} from "../utils/textureFragmentIndex";
 
 import type { PickableMesh } from "./pickableMesh";
 

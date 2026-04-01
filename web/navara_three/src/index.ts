@@ -77,6 +77,7 @@ import {
 import { FinalCopyEffectLayer } from "./layers/effect/FinalCopyEffectLayer";
 import { LayersManager } from "./layersManager";
 import { overrideMaterialsForMRT } from "./material";
+import type { TileMesh } from "./mesh/tile";
 import { RenderPassOrchestrator } from "./orchestrators/RenderPassOrchestrator";
 import { PickHelper } from "./pick/pickHelper";
 import { TerrainPicker } from "./pick/pickTerrain";
@@ -98,7 +99,6 @@ import {
 } from "./type";
 import type { CommonUniforms } from "./uniforms";
 import { isWorker, convertScreenPos, type TextureSlot } from "./utils";
-import type { TileMesh } from "./mesh/tile";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 /** @ts-ignore ignore: https://v3.vitejs.dev/guide/features.html#import-with-query-suffixes  */
 import WorkerURL from "./worker?url&worker";
@@ -318,6 +318,10 @@ export default class ThreeView<
     TileMesh,
     Set<string>
   >();
+  // Pending hillshade edge updates: entityId → (edgeDirection → edge bytes)
+  // Scoped to this view instance to prevent cross-view contamination
+  private _pendingHillshadeEdges: Map<string, Map<number, Uint8Array>> =
+    new Map<string, Map<number, Uint8Array>>();
   private _initialized = false;
 
   private _buf: BufferLoader = {
@@ -1086,6 +1090,7 @@ export default class ThreeView<
       this.layersManager,
       this.viewContext,
       updatedAt,
+      this._pendingHillshadeEdges,
       this._layerHandler,
     );
     events?.free();

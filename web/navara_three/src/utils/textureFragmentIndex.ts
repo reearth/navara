@@ -4,10 +4,10 @@
 
 import type { TileMesh } from "../mesh/tile";
 
-export interface TextureSlot {
+export type TextureSlot = {
   tileMesh: TileMesh;
   slotIndex: number;
-}
+};
 
 /**
  * Update the index when a tile's textureFragments change
