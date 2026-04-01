@@ -75,6 +75,15 @@ export class TileMesh
     layerId: string;
   }[];
 
+  // Track previous parent state to avoid unnecessary re-cloning and re-rendering
+  private prevParentState = new Map<
+    string,
+    {
+      parentHandle: TileHandle;
+      parentChildCount: number;
+    }
+  >();
+
   // Separate mesh for shadow casting (uses terrain-only geometry without skirt)
   private shadowMesh?: Mesh<BufferGeometry, TileMaterial>;
 
@@ -135,37 +144,62 @@ export class TileMesh
   }
 
   private updateTexturizedSceneByTileState() {
-    const prevStates = [...(this.tileStates ?? [])];
-    this.tileStates = [];
     const tileStates = this.tileHandler.getVectorTileStates(this.handle) ?? [];
+    const newTileStates: NonNullable<typeof this.tileStates> = [];
+    const newParentState: typeof this.prevParentState = new Map();
+
+    let changed = false;
+
     for (const state of tileStates) {
       const parentHandle = state.ready_parent_tile_handle;
       const layerId = state.layer_id;
 
       if (parentHandle == null) continue;
 
-      this.tileStates.push({
+      newTileStates.push({
         parentHandle,
         layerId,
         isRendered: state.is_rendered,
       });
 
-      const scene = this.texturizedSceneByTileCoordinates.findSceneByLayerId(
-        parentHandle,
-        layerId,
-      );
-      if (!scene) continue;
-      this.texturizedSceneByTileCoordinates.addFromParentScene(
-        this.handle,
-        layerId,
-        scene,
-      );
+      const parentScene =
+        this.texturizedSceneByTileCoordinates.findSceneByLayerId(
+          parentHandle,
+          layerId,
+        );
+      if (!parentScene) continue;
+
+      const parentChildCount = parentScene.children.length;
+      const prev = this.prevParentState.get(layerId);
+
+      // Only clone when parent changed or parent scene content changed
+      if (
+        !prev ||
+        prev.parentHandle !== parentHandle ||
+        prev.parentChildCount !== parentChildCount
+      ) {
+        this.texturizedSceneByTileCoordinates.addFromParentScene(
+          this.handle,
+          layerId,
+          parentScene,
+        );
+        changed = true;
+      }
+
+      newParentState.set(layerId, { parentHandle, parentChildCount });
+    }
+
+    // Detect removed layers
+    if (this.prevParentState.size !== newParentState.size) {
+      changed = true;
+    }
+
+    if (changed || (this.tileStates?.length ?? 0) !== newTileStates.length) {
       this.texturizedSceneByTileCoordinates.setNeedsUpdate(this.handle, true);
     }
 
-    if (prevStates.length !== this.tileStates.length) {
-      this.texturizedSceneByTileCoordinates.setNeedsUpdate(this.handle, true);
-    }
+    this.tileStates = newTileStates;
+    this.prevParentState = newParentState;
   }
 
   private _onBeforeRender = () => {
