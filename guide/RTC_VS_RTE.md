@@ -453,5 +453,5 @@ void main() {
 
 ### Further Reading
 
-- **Navara Architecture**: See [docs/ARCHITECTURE.md](ARCHITECTURE.md)
+- **Navara Architecture**: See [ARCHITECTURE.md](ARCHITECTURE.md)
 - **IEEE 754 Float Precision**: Understanding floating-point limitations

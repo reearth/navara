@@ -114,6 +114,22 @@ impl CameraFrustum {
         true
     }
 
+    /// Returns true if the point is inside or on the boundary of all frustum planes.
+    pub fn contains_point(&self, point: Vec3) -> bool {
+        self.planes
+            .iter()
+            .all(|p| p.get_distance_to_point(point) >= 0.0)
+    }
+
+    /// Returns true if a sphere (center + radius) intersects the frustum.
+    /// A sphere is considered visible if its center is within `radius` distance
+    /// of the forward side of every frustum plane.
+    pub fn contains_sphere(&self, center: Vec3, radius: FloatType) -> bool {
+        self.planes
+            .iter()
+            .all(|p| p.get_distance_to_point(center) >= -radius)
+    }
+
     /// Adjusts the near and far clipping planes based on camera distance from Earth.
     /// Uses linear division to create three zones between minimum and maximum zoom distance.
     ///
@@ -732,5 +748,37 @@ mod test {
         // Out of bottom
         let aabb = Aabb::from_vec3(&[Vec3::new(-100., -100., 10.), Vec3::new(-120., -120., 10.)]);
         debug_assert!(!frustum.intersection_with_aabb(&aabb));
+    }
+
+    #[test]
+    fn contains_point_inside_frustum() {
+        let camera = Transform::from_xyz(0., 0., -10.);
+        let camera = camera.looking_at(Vec3::new(0., 0., 0.), Vec3::Y);
+        let frustum = CameraFrustum::new(&camera, 0.1, 1000., Angle::new(50.).rad().val(), 1., 1.);
+
+        // Point in front of camera, within frustum
+        assert!(frustum.contains_point(Vec3::new(0., 0., 10.)));
+        // Point behind camera
+        assert!(!frustum.contains_point(Vec3::new(0., 0., -20.)));
+        // Point far to the side
+        assert!(!frustum.contains_point(Vec3::new(100., 100., 10.)));
+    }
+
+    #[test]
+    fn contains_sphere_partially_overlapping() {
+        let camera = Transform::from_xyz(0., 0., -10.);
+        let camera = camera.looking_at(Vec3::new(0., 0., 0.), Vec3::Y);
+        let frustum = CameraFrustum::new(&camera, 0.1, 1000., Angle::new(50.).rad().val(), 1., 1.);
+
+        // Point behind camera but large sphere reaches into frustum
+        // Near plane is at z = -9.9, point is at z = -15 (5.1 behind near plane)
+        // With radius 10, sphere extends to z = -5 which is in front of near plane
+        assert!(frustum.contains_sphere(Vec3::new(0., 0., -15.), 10.0));
+
+        // Point far behind camera, sphere too small to reach
+        assert!(!frustum.contains_sphere(Vec3::new(0., 0., -100.), 5.0));
+
+        // Point in frustum, any radius works
+        assert!(frustum.contains_sphere(Vec3::new(0., 0., 10.), 1.0));
     }
 }

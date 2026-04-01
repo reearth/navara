@@ -51,6 +51,7 @@ type PositionsInfo = {
 /** Reusable Vector2 to avoid per-frame allocations in onBeforeRender. */
 const _tmpSize = new Vector2();
 
+// Coupled with crates/navara_feature/src/geometry/point.rs::pixel_to_world
 export class InstancedSpriteMesh extends Mesh implements PickableMesh {
   private _batchIdToInstance = new Map<number, number>();
   private _initialColor: Color = new Color(0xffffff);
