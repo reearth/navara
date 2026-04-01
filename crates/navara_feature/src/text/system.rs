@@ -187,9 +187,7 @@ pub fn update_height_by_terrain_for_batched(
                     Some(transform.translation)
                 };
                 let mut positions = PositionBuffer::new(rtc_center, feature_len);
-                let mut heights = buf
-                    .remove_f64(&render_info.terrain_heights)
-                    .unwrap_or_default();
+                let mut heights = buf.remove_f64(&render_info.terrain_heights).unwrap();
 
                 if let Some(te) = tile_extent {
                     resolve_tiled_heights_and_build_positions(
@@ -224,7 +222,7 @@ pub fn update_height_by_terrain_for_batched(
                     );
                 }
 
-                render_info.terrain_heights = buf.new_f64(heights);
+                buf.set_f64(render_info.terrain_heights, heights);
                 positions.apply_to(&mut buf, geometry);
             }
             _ => unreachable!(),
