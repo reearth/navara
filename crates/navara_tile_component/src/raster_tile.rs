@@ -611,6 +611,55 @@ pub fn sample_terrain_height_within_extent(
     (min_height, max_height)
 }
 
+/// Collect the deepest ready terrain tiles from the quadtree.
+/// Returns handles of the deepest tiles (not necessarily quadtree leaves) that
+/// have cached mesh, terrain data, and are not upsampled.
+/// Used to batch-resolve terrain heights without per-point tree traversal.
+pub fn collect_terrain_leaves(qt: &RasterTileQuadtree) -> Vec<TileHandle> {
+    find_contained_children(qt, &|t| {
+        t.cached_mesh_handle.is_some() && !t.upsampled && t.terrain_data.is_some()
+    })
+}
+
+/// Find the deepest raster tile whose extent fully contains the given extent.
+/// This is used to find the best-matching terrain tile for a vector tile feature,
+/// avoiding per-point quadtree traversal.
+///
+/// Uses containment (not intersection) so the returned tile's DEM grid covers
+/// all points within the given extent.
+pub fn find_raster_tile_for_extent(
+    qt: &RasterTileQuadtree,
+    extent: &Extent<FloatType, Radians>,
+) -> Option<TileHandle> {
+    find_contained_child(qt, &|t| {
+        t.extent.contains_extent(extent)
+            && t.cached_mesh_handle.is_some()
+            && !t.upsampled
+            && t.terrain_data.is_some()
+    })
+}
+
+/// Compute terrain height for a single point from a known tile.
+/// Returns 0.0 if height cannot be determined.
+pub fn compute_terrain_height_by_tile_handle(
+    qt: &mut RasterTileQuadtree,
+    buf: &mut BufferStore,
+    terrain_data_requesters: &TileTerrainDataRequesterQuery,
+    tile_handle: TileHandle,
+    point: &LngLat<FloatType, Radians>,
+) -> f64 {
+    let Some(tile) = qt.qt.get_mut(tile_handle) else {
+        return 0.0;
+    };
+    let extent = tile.extent;
+    let Some(terrain_data) = tile.terrain_data.as_mut() else {
+        return 0.0;
+    };
+    terrain_data
+        .compute_height_at_point(&extent, buf, terrain_data_requesters, point)
+        .unwrap_or(0.0)
+}
+
 /// Find a child that the tile contains.
 fn find_contained_child(
     qt: &RasterTileQuadtree,
@@ -740,5 +789,104 @@ mod test {
         });
         let child = qt.qt.get(h.unwrap());
         assert_eq!(child.unwrap().coords, TileXYZ { x: 3, y: 1, z: 2 });
+    }
+
+    use super::find_raster_tile_for_extent;
+    use navara_mesh::CachedMeshHandle;
+
+    /// Mark a tile as having terrain data and a cached mesh so it's eligible
+    /// for `find_raster_tile_for_extent`.
+    fn mark_tile_ready(qt: &mut RasterTileQuadtree, coords: Coords<usize>) {
+        use crate::terrain::RasterDEMData;
+        let handle = qt.qt.leaf(coords).unwrap().handle();
+        let tile = qt.qt.get_mut(handle).unwrap();
+        tile.cached_mesh_handle = Some(CachedMeshHandle {
+            vertices: 0,
+            indices: 0,
+            uvs: 0,
+            heights: None,
+        });
+        tile.terrain_data = Some(Box::new(RasterDEMData::default()));
+    }
+
+    fn setup_qt_with_ready_tiles() -> RasterTileQuadtree {
+        let mut qt = RasterTileQuadtree::new_with_linear_qt();
+        qt.qt.initialize_zero(&|v| {
+            RasterTile::new(
+                TileXYZ {
+                    x: v.0,
+                    y: v.1,
+                    z: v.2,
+                },
+                0.,
+                0.,
+            )
+        });
+        setup_tile(&mut qt, (0, 0, 0));
+        setup_tile(&mut qt, (0, 0, 1));
+        setup_tile(&mut qt, (1, 0, 1));
+        setup_tile(&mut qt, (0, 1, 1));
+        setup_tile(&mut qt, (1, 1, 1));
+        qt
+    }
+
+    #[test]
+    fn find_raster_tile_for_extent_returns_deepest_matching_tile() {
+        let mut qt = setup_qt_with_ready_tiles();
+
+        // Mark a z=2 tile as ready (tile 3,1,2 covers roughly east/north quadrant)
+        mark_tile_ready(&mut qt, (3, 1, 2));
+
+        let tile_3_1_2 = qt.qt.get(qt.qt.leaf((3, 1, 2)).unwrap().handle()).unwrap();
+        let target_extent = tile_3_1_2.extent;
+
+        let result = find_raster_tile_for_extent(&qt, &target_extent);
+        assert!(result.is_some());
+        let found = qt.qt.get(result.unwrap()).unwrap();
+        assert_eq!(found.coords, TileXYZ { x: 3, y: 1, z: 2 });
+    }
+
+    #[test]
+    fn find_raster_tile_for_extent_returns_none_when_no_tile_ready() {
+        let qt = setup_qt_with_ready_tiles();
+        // No tiles are marked ready (no cached_mesh_handle or terrain_data)
+        let extent = qt
+            .qt
+            .get(qt.qt.leaf((3, 1, 2)).unwrap().handle())
+            .unwrap()
+            .extent;
+        let result = find_raster_tile_for_extent(&qt, &extent);
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn find_raster_tile_for_extent_skips_upsampled_tiles() {
+        let mut qt = setup_qt_with_ready_tiles();
+        mark_tile_ready(&mut qt, (3, 1, 2));
+
+        // Mark the tile as upsampled
+        let handle = qt.qt.leaf((3, 1, 2)).unwrap().handle();
+        qt.qt.get_mut(handle).unwrap().upsampled = true;
+
+        let extent = qt.qt.get(handle).unwrap().extent;
+        let result = find_raster_tile_for_extent(&qt, &extent);
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn collect_terrain_leaves_returns_ready_tiles() {
+        use super::collect_terrain_leaves;
+
+        let mut qt = setup_qt_with_ready_tiles();
+
+        // No tiles ready → empty
+        assert!(collect_terrain_leaves(&qt).is_empty());
+
+        // Mark two tiles as ready
+        mark_tile_ready(&mut qt, (3, 1, 2));
+        mark_tile_ready(&mut qt, (0, 0, 2));
+
+        let leaves = collect_terrain_leaves(&qt);
+        assert_eq!(leaves.len(), 2);
     }
 }

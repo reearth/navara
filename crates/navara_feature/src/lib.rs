@@ -4,6 +4,7 @@ use bevy_app::{App, Plugin, PostUpdate, PreUpdate, Update};
 use bevy_ecs::schedule::IntoScheduleConfigs;
 use navara_feature_component::batch::{BatchTable, FeatureBatchIdMap};
 use navara_geometry::PolygonResource;
+use navara_tile::TileSet;
 
 mod billboard;
 mod event;
@@ -28,7 +29,7 @@ impl Plugin for FeaturePlugin {
                 Update,
                 (
                     point::system::transfer_batched_mesh,
-                    point::system::update_height_by_terrain_for_batched,
+                    point::system::update_height_by_terrain_for_batched.after(TileSet),
                     point::system::remove_batched_feature,
                 )
                     .chain(),
@@ -37,7 +38,7 @@ impl Plugin for FeaturePlugin {
                 Update,
                 (
                     billboard::system::transfer_batched_mesh,
-                    billboard::system::update_height_by_terrain_for_batched,
+                    billboard::system::update_height_by_terrain_for_batched.after(TileSet),
                     billboard::system::remove_batched_feature,
                 )
                     .chain(),
@@ -46,7 +47,7 @@ impl Plugin for FeaturePlugin {
                 Update,
                 (
                     text::system::transfer_batched_mesh,
-                    text::system::update_height_by_terrain_for_batched,
+                    text::system::update_height_by_terrain_for_batched.after(TileSet),
                     text::system::remove_batched_feature,
                 )
                     .chain(),
@@ -63,7 +64,7 @@ impl Plugin for FeaturePlugin {
                 Update,
                 (
                     polyline::system::transfer_batched_mesh,
-                    polyline::system::update_height_by_terrain,
+                    polyline::system::update_height_by_terrain.after(TileSet),
                     polyline::system::remove_batched_feature,
                 )
                     .chain(),
@@ -73,7 +74,7 @@ impl Plugin for FeaturePlugin {
                 (
                     polygon::system::transfer_batched_mesh,
                     polygon::system::update_polygon,
-                    polygon::system::update_height_by_terrain,
+                    polygon::system::update_height_by_terrain.after(TileSet),
                     polygon::system::remove_batched_feature,
                 )
                     .chain(),

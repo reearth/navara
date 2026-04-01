@@ -5,9 +5,14 @@ pub mod hillshade;
 pub mod texture_fragment;
 
 use bevy_app::{App, Plugin, PreUpdate, Update};
-use bevy_ecs::schedule::IntoScheduleConfigs;
+use bevy_ecs::schedule::{IntoScheduleConfigs, SystemSet};
 use navara_tile_component::{CachedMartini, RasterTileQuadtree, TerrainInformationQuadtree};
 use tile::{event::MeshPreparedEvent, tile_cache_manager::TileCacheManager};
+
+/// System set for raster tile processing.
+/// Feature systems that depend on terrain data should run `.after(TileSet)`.
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct TileSet;
 
 pub mod terrain;
 pub mod tile;
@@ -47,7 +52,8 @@ impl Plugin for TilePlugin {
                     hillshade::cleanup_hillshade_edges,
                     hillshade::cleanup_hillshade_backfill_events,
                 )
-                    .chain(),
+                    .chain()
+                    .in_set(TileSet),
             );
     }
 }
