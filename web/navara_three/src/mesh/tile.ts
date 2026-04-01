@@ -80,7 +80,8 @@ export class TileMesh
     string,
     {
       parentHandle: TileHandle;
-      parentChildCount: number;
+      parentSceneRevision: number;
+      isRendered: boolean;
     }
   >();
 
@@ -169,14 +170,14 @@ export class TileMesh
         );
       if (!parentScene) continue;
 
-      const parentChildCount = parentScene.children.length;
+      const parentSceneRevision = parentScene.revision;
       const prev = this.prevParentState.get(layerId);
 
-      // Only clone when parent changed or parent scene content changed
+      // Re-clone when parent changed or parent scene content changed
       if (
         !prev ||
         prev.parentHandle !== parentHandle ||
-        prev.parentChildCount !== parentChildCount
+        prev.parentSceneRevision !== parentSceneRevision
       ) {
         this.texturizedSceneByTileCoordinates.addFromParentScene(
           this.handle,
@@ -186,7 +187,16 @@ export class TileMesh
         changed = true;
       }
 
-      newParentState.set(layerId, { parentHandle, parentChildCount });
+      // isRendered flip changes visibility (parent fallback <-> own mesh)
+      if (prev && prev.isRendered !== state.is_rendered) {
+        changed = true;
+      }
+
+      newParentState.set(layerId, {
+        parentHandle,
+        parentSceneRevision,
+        isRendered: state.is_rendered,
+      });
     }
 
     // Detect removed layers
@@ -215,7 +225,7 @@ export class TileMesh
     this.texturizedSceneByTileCoordinates.setNeedsUpdate(this.handle, false);
 
     // Warn if MVT layers exceed available slots
-    const numScenes = this.texturizedScenes.children.length;
+    const numScenes = this.texturizedScenes.tileScenes.length;
     if (numScenes > this.numTexturizedVector) {
       if (!this.warnedExceededTextures) {
         this.warnedExceededTextures = true;
@@ -230,13 +240,13 @@ export class TileMesh
     }
 
     let i = -1;
-    for (const texturizedScene of this.texturizedScenes.children) {
+    for (const texturizedScene of this.texturizedScenes.tileScenes) {
       i++;
 
-      if (texturizedScene.userData.removed) {
+      if (texturizedScene.removed) {
         this.updateTexturizedSceneTextureVisibility(
           false,
-          texturizedScene.userData.layerId,
+          texturizedScene.layerId,
         );
         continue;
       }
@@ -244,14 +254,14 @@ export class TileMesh
       if (!texturizedScene.children.length) {
         this.updateTexturizedSceneTextureVisibility(
           false,
-          texturizedScene.userData.layerId,
+          texturizedScene.layerId,
         );
         continue;
       }
 
       this.updateTexturizedSceneTextureVisibility(
         true,
-        texturizedScene.userData.layerId,
+        texturizedScene.layerId,
       );
 
       const renderTarget = this.texturizedSceneRenderTargets[i];
@@ -266,7 +276,7 @@ export class TileMesh
 
       // Get the parent tile's zoom level if available
       const tileStates = this.tileStates;
-      const layerId = texturizedScene.userData.layerId;
+      const layerId = texturizedScene.layerId;
       const state = tileStates?.find((s) => s.layerId === layerId);
       const parentHandle =
         // Parent tile should be used if this tile isn't available, or
@@ -982,42 +992,42 @@ if (uPickable > 0.) {
   }
 
   private _setupSceneObserver() {
-    if (this.texturizedScenes.userData.childrenObserver) {
+    if (this.texturizedScenes.childrenObserver) {
       this.texturizedScenes.removeEventListener(
         "childadded",
-        this.texturizedScenes.userData.childrenObserver,
+        this.texturizedScenes.childrenObserver,
       );
       this.texturizedScenes.removeEventListener(
         "childremoved",
-        this.texturizedScenes.userData.childrenObserver,
+        this.texturizedScenes.childrenObserver,
       );
-      this.texturizedScenes.userData.childrenObserver = undefined;
+      this.texturizedScenes.childrenObserver = undefined;
     }
 
     const parentObserver = () => {
-      for (const texturizedScene of this.texturizedScenes.children) {
-        if (texturizedScene.userData.childrenObserver) {
+      for (const texturizedScene of this.texturizedScenes.tileScenes) {
+        if (texturizedScene.childrenObserver) {
           texturizedScene.removeEventListener(
             "childadded",
-            texturizedScene.userData.childrenObserver,
+            texturizedScene.childrenObserver,
           );
           texturizedScene.removeEventListener(
             "childremoved",
-            texturizedScene.userData.childrenObserver,
+            texturizedScene.childrenObserver,
           );
-          texturizedScene.userData.childrenObserver = undefined;
+          texturizedScene.childrenObserver = undefined;
         }
 
         const observer = () => {
           if (texturizedScene.children.length === 0) {
             this.updateTexturizedSceneTextureVisibility(
               false,
-              texturizedScene.userData.layerId,
+              texturizedScene.layerId,
             );
           } else {
             this.updateTexturizedSceneTextureVisibility(
               true,
-              texturizedScene.userData.layerId,
+              texturizedScene.layerId,
             );
           }
           this.texturizedSceneByTileCoordinates.setNeedsUpdate(
@@ -1026,14 +1036,14 @@ if (uPickable > 0.) {
           );
         };
 
-        texturizedScene.userData.childrenObserver = observer;
+        texturizedScene.childrenObserver = observer;
 
         texturizedScene.addEventListener("childadded", observer);
         texturizedScene.addEventListener("childremoved", observer);
       }
     };
 
-    this.texturizedScenes.userData.childrenObserver = parentObserver;
+    this.texturizedScenes.childrenObserver = parentObserver;
 
     this.texturizedScenes.addEventListener("childadded", parentObserver);
     this.texturizedScenes.addEventListener("childremoved", parentObserver);
@@ -1049,8 +1059,8 @@ if (uPickable > 0.) {
     const textures = m.userData.textures?.value;
     if (!textures) return;
 
-    const sceneIdx = this.texturizedScenes.children.findIndex(
-      (c) => c.userData.layerId === layerId,
+    const sceneIdx = this.texturizedScenes.tileScenes.findIndex(
+      (c) => c.layerId === layerId,
     );
     if (sceneIdx === -1) return;
 
@@ -1059,7 +1069,7 @@ if (uPickable > 0.) {
     if (textures[lastIdx]) {
       m.userData.shows.value[lastIdx] = visible ? 1 : 0;
 
-      const mesh = this.texturizedScenes.children[sceneIdx].children[0];
+      const mesh = this.texturizedScenes.tileScenes[sceneIdx].children[0];
       if (mesh instanceof PolygonMesh) {
         // Use PolygonMesh getters that expose material enhancer state
         m.userData.reflectivities.value[lastIdx] = mesh.reflectivity;
@@ -1360,7 +1370,7 @@ if (uPickable > 0.) {
       textures[lastIndex] = texturizedSceneTexture;
 
       m.userData.shows.value[lastIndex] =
-        (this.texturizedScenes.children[i]?.children.length ?? 0 > 0) ? 1 : 0;
+        (this.texturizedScenes.tileScenes[i]?.children.length ?? 0 > 0) ? 1 : 0;
       m.userData.colors.value[lastIndex] = new Color(0xffffff);
       m.userData.opacities.value[lastIndex] = 1.0;
     }
@@ -1386,22 +1396,22 @@ if (uPickable > 0.) {
     }
 
     // Detach any observers we attached on texturized scenes
-    if (this.texturizedScenes?.userData?.childrenObserver) {
+    if (this.texturizedScenes?.childrenObserver) {
       this.texturizedScenes.removeEventListener(
         "childadded",
-        this.texturizedScenes.userData.childrenObserver,
+        this.texturizedScenes.childrenObserver,
       );
       this.texturizedScenes.removeEventListener(
         "childremoved",
-        this.texturizedScenes.userData.childrenObserver,
+        this.texturizedScenes.childrenObserver,
       );
-      this.texturizedScenes.userData.childrenObserver = undefined;
+      this.texturizedScenes.childrenObserver = undefined;
     }
-    for (const s of this.texturizedScenes?.children ?? []) {
-      if (s.userData?.childrenObserver) {
-        s.removeEventListener("childadded", s.userData.childrenObserver);
-        s.removeEventListener("childremoved", s.userData.childrenObserver);
-        s.userData.childrenObserver = undefined;
+    for (const s of this.texturizedScenes?.tileScenes ?? []) {
+      if (s.childrenObserver) {
+        s.removeEventListener("childadded", s.childrenObserver);
+        s.removeEventListener("childremoved", s.childrenObserver);
+        s.childrenObserver = undefined;
       }
     }
 
