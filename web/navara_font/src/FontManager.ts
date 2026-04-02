@@ -270,6 +270,7 @@ export class FontManager {
         (k) => k === atlasKey,
       );
       if (!stillReferenced) {
+        this._shapeCache.delete(atlasKey);
         this._atlasCache.delete(atlasKey);
         this._atlasDirty.delete(atlasKey);
         const tex = this._textureCache.get(atlasKey);
