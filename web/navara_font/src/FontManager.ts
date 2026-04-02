@@ -439,16 +439,7 @@ export class FontManager {
       for (const m of result.metrics) {
         const key = `${m.fontIndex}:${m.glyphId}`;
         if (!metricsMap.has(key)) {
-          metricsMap.set(
-            key,
-            scale === 1
-              ? m
-              : {
-                  ...m,
-                  bearingX: m.bearingX * scale,
-                  bearingY: m.bearingY * scale,
-                },
-          );
+          metricsMap.set(key, m);
         }
       }
     }

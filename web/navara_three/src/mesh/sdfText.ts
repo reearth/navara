@@ -451,9 +451,10 @@ export class SDFTextMesh
     // This supports glyphs from multiple fonts sharing the same atlas
     // (e.g. font-family faces). fontIndex distinguishes glyph IDs that
     // would otherwise collide across different fonts.
-    const metricsMap = new Map<number, GlyphMetrics>();
+    // Key layout mirrors the Rust side: (font_index as u64) << 32 | glyph_id.
+    const metricsMap = new Map<bigint, GlyphMetrics>();
     for (const m of metrics) {
-      const key = (m.fontIndex ?? 0) * 0x10000 + m.glyphId;
+      const key = (BigInt(m.fontIndex) << 32n) | BigInt(m.glyphId);
       metricsMap.set(key, m);
     }
 
@@ -474,7 +475,7 @@ export class SDFTextMesh
 
     for (const glyph of glyphs) {
       const m = metricsMap.get(
-        (glyph.fontIndex ?? 0) * 0x10000 + glyph.glyphId,
+        (BigInt(glyph.fontIndex) << 32n) | BigInt(glyph.glyphId),
       );
       if (m && m.atlasW > 0 && m.atlasH > 0) {
         const x = (cursorX + glyph.xOffset) * fontUnitToSdfPx + m.bearingX;
