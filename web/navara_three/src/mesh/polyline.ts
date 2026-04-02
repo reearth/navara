@@ -460,7 +460,6 @@ export class PolylineMesh extends BatchedFeatureMesh<
     }
   }
 
-
   _getDefaultBatchAttributeValues(): DefaultBatchAttributeValues {
     return {
       color: this.color,

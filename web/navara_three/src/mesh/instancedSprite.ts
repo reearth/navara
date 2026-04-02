@@ -562,7 +562,6 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     this.getEnhancer().update({ base: { pickable } });
   }
 
-
   /**
    * Get the enhancer, throwing if not initialized.
    */
