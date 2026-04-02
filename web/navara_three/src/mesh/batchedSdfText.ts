@@ -285,6 +285,12 @@ export class BatchedSdfTextMesh
         text &&
         !this._fontManager.isTextPrepared(this._fontIdentifier, text)
       ) {
+        // Capture the intended visibility before the async font prep begins.
+        // A concurrent processTextChanged → mesh.update(material) call may
+        // reset mesh.visible to false (because this._text is still empty)
+        // while the font is loading.
+        const intendedVisible = mesh.visible;
+
         this._fontManager
           .prepareText(this._fontIdentifier, text, this._loadedFaceUrls)
           .then(() => {
@@ -296,6 +302,8 @@ export class BatchedSdfTextMesh
               mesh.setAtlasTexture(sharedTex);
             }
             mesh.setText(text);
+            // Restore intended visibility now that text content is available
+            mesh.visible = intendedVisible;
             this.markVisibility(mesh);
             this._needRender?.();
           })

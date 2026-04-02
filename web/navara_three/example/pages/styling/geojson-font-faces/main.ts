@@ -297,12 +297,7 @@ const run = async () => {
       layer?.update({ text: { size: value } });
     });
 
-  showAttributions([
-    TILE_DATASETS.openstreetmap,
-    TERRAIN_DATASETS.mapterhorn,
-    FONT_DATASETS.RobotoLatin,
-    FONT_DATASETS.NotoSansJP,
-  ]);
+  showAttributions([TILE_DATASETS.openstreetmap, TERRAIN_DATASETS.mapterhorn]);
 };
 
 run();
