@@ -48,6 +48,7 @@ export type SelectiveBloomEffectUpdate = {
 const DEFAULT_STRENGTH = 0.8;
 const DEFAULT_RADIUS = 0.2;
 const DEFAULT_THRESHOLD = 0.0;
+const DEFAULT_BLOOM_RESOLUTION_SCALE = 0.5;
 
 /**
  * Selective Bloom Effect Layer
@@ -90,7 +91,7 @@ export class SelectiveBloomEffectLayer extends SelectiveEffectLayer<
   }
 
   protected getResolutionScale(): number {
-    return this.bloom.resolutionScale ?? 1.0;
+    return this.bloom.resolutionScale ?? DEFAULT_BLOOM_RESOLUTION_SCALE;
   }
 
   protected getDebugViews(): boolean {
@@ -109,7 +110,7 @@ export class SelectiveBloomEffectLayer extends SelectiveEffectLayer<
         radius: c.radius ?? DEFAULT_RADIUS,
         threshold: c.threshold ?? DEFAULT_THRESHOLD,
         debugMode: c.debugMode ?? 0,
-        resolutionScale: c.resolutionScale ?? 1.0,
+        resolutionScale: c.resolutionScale ?? DEFAULT_BLOOM_RESOLUTION_SCALE,
         debugViews: c.debugViews ?? false,
       },
     };
@@ -196,7 +197,8 @@ class SelectiveBloomPass extends PostProcessingPass {
       layer.viewContext.renderPassOrchestrator.effectComposer.getRenderer();
     const renderSize = renderer.getSize(new Vector2());
     const resolutionScale =
-      layer.layerConfig.selectiveBloom.resolutionScale ?? 1.0;
+      layer.layerConfig.selectiveBloom.resolutionScale ??
+      DEFAULT_BLOOM_RESOLUTION_SCALE;
     const initialWidth = Math.floor(renderSize.x * resolutionScale);
     const initialHeight = Math.floor(renderSize.y * resolutionScale);
 

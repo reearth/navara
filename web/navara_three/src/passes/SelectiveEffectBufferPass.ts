@@ -57,6 +57,9 @@ export class SelectiveEffectBufferPass {
   private _savedOpaqueVisible = true;
   private _savedGlobeVisible = true;
 
+  // Cache of non-enhanced meshes found during traverse (reused for OFF toggle)
+  private _nonEnhancedMeshes: Mesh[] = [];
+
   // Debug views
   private _emissivePixelBuffer?: Float32Array;
   private _effectIdsPixelBuffer?: Float32Array;
@@ -112,45 +115,56 @@ export class SelectiveEffectBufferPass {
 
   // --- Render ---
 
-  private toggleSEBufferMode(enabled: boolean): void {
+  private enableSEBufferMode(): void {
     // Enhanced meshes via interface
     for (const [_key, obj] of this._meshes) {
       if (isSelectiveEffectBufferMesh(obj)) {
-        if (enabled) {
-          const mask = this.computeMaskForObject(obj);
-          obj._setSelectiveEffectBufferMode(true, mask);
-        } else {
-          obj._setSelectiveEffectBufferMode(false, 0);
-        }
+        const mask = this.computeMaskForObject(obj);
+        obj._setSelectiveEffectBufferMode(true, mask);
       }
     }
 
     // Non-enhanced meshes (Box/Sphere/Cylinder etc.) via material.userData
-    const modeValue = enabled ? 1 : 0;
+    // Traverse scene once and cache hits for disableSEBufferMode()
+    this._nonEnhancedMeshes.length = 0;
     this._scenes.mrt.traverse((obj: Object3D) => {
       if (
         obj instanceof Mesh &&
         obj.material?.userData?.uSelectiveEffectBufferMode
       ) {
-        obj.material.userData.uSelectiveEffectBufferMode.value = modeValue;
-        if (enabled) {
-          const mask = this.computeMaskForObject(obj);
-          obj.material.userData.uEffectIdsMask.value = mask;
-        } else {
-          obj.material.userData.uEffectIdsMask.value = 0;
-        }
+        obj.material.userData.uSelectiveEffectBufferMode.value = 1;
+        const mask = this.computeMaskForObject(obj);
+        obj.material.userData.uEffectIdsMask.value = mask;
+        this._nonEnhancedMeshes.push(obj);
       }
     });
 
-    if (enabled) {
-      this._savedOpaqueVisible = this._scenes.opaque.visible;
-      this._savedGlobeVisible = this._scenes.globe.visible;
-      this._scenes.opaque.visible = false;
-      this._scenes.globe.visible = false;
-    } else {
-      this._scenes.opaque.visible = this._savedOpaqueVisible;
-      this._scenes.globe.visible = this._savedGlobeVisible;
+    // Hide non-MRT scenes
+    this._savedOpaqueVisible = this._scenes.opaque.visible;
+    this._savedGlobeVisible = this._scenes.globe.visible;
+    this._scenes.opaque.visible = false;
+    this._scenes.globe.visible = false;
+  }
+
+  private disableSEBufferMode(): void {
+    // Enhanced meshes
+    for (const [_key, obj] of this._meshes) {
+      if (isSelectiveEffectBufferMesh(obj)) {
+        obj._setSelectiveEffectBufferMode(false, 0);
+      }
     }
+
+    // Non-enhanced meshes — use cache from enableSEBufferMode(), no traverse needed
+    for (const mesh of this._nonEnhancedMeshes) {
+      const mat = mesh.material;
+      if (Array.isArray(mat)) continue;
+      mat.userData.uSelectiveEffectBufferMode.value = 0;
+      mat.userData.uEffectIdsMask.value = 0;
+    }
+
+    // Restore scene visibility
+    this._scenes.opaque.visible = this._savedOpaqueVisible;
+    this._scenes.globe.visible = this._savedGlobeVisible;
   }
 
   private computeMaskForObject(obj: Object3D): number {
@@ -165,19 +179,22 @@ export class SelectiveEffectBufferPass {
   }
 
   public processRender(): void {
+    // Skip entire pass when no effect slots are registered
+    if (this._slotRegistry.size === 0) return;
+
     this._renderer.getClearColor(this._tempClearColor);
     const orgClearAlpha = this._renderer.getClearAlpha();
 
     this._renderer.setClearColor(0x000000, 0);
 
-    this.toggleSEBufferMode(true);
+    this.enableSEBufferMode();
 
     // Single render to Selective Effect MRT (writes Emissive + EffectIds simultaneously)
     this._renderer.setRenderTarget(this.selectiveEffectMRT);
     this._renderer.clear();
     this._renderer.render(this._scenes.mrt, this._camera);
 
-    this.toggleSEBufferMode(false);
+    this.disableSEBufferMode();
 
     this._renderer.setClearColor(this._tempClearColor, orgClearAlpha);
   }
