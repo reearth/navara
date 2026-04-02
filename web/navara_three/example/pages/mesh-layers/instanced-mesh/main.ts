@@ -151,7 +151,7 @@ const run = async () => {
   folder.addButton({ title: "Remove First 100" }).on("click", () => {
     const count = Math.min(100, boxesLayer.ref.count);
     for (let i = 0; i < count; i++) {
-      boxesLayer.ref.remove(0);
+      boxesLayer.ref.removeAt(0);
     }
   });
 

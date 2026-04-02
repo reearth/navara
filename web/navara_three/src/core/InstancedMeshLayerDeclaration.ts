@@ -183,7 +183,7 @@ export abstract class InstancedMeshLayerDeclaration<
    * Remove an instance by index.
    * Uses swap-with-last for O(1) removal. Order is not preserved.
    */
-  remove(index: number): void {
+  removeAt(index: number): void {
     const mesh = this.raw;
     invariant(mesh, "Layer must be created before removing instances");
 
