@@ -448,19 +448,6 @@ export class FontManager {
     return tex;
   }
 
-  /**
-   * Resolve a font identifier + text to a concrete font URL.
-   * For families, returns the URL of the first face that covers the text's
-   * first codepoint. For standalone fonts, returns the identifier as-is.
-   */
-  resolvedFontUrl(fontIdentifier: string, text: string): string {
-    const family = this._families.get(fontIdentifier);
-    if (!family || family.faces.length === 0) return fontIdentifier;
-    if (!text) return family.faces[0].url;
-    const cp = text.codePointAt(0) ?? 0;
-    return this._findFaceForCodepoint(family.faces, cp);
-  }
-
   dispose() {
     this._pending.clear();
     this._preparePending.clear();
