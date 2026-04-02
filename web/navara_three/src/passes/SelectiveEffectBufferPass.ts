@@ -130,6 +130,7 @@ export class SelectiveEffectBufferPass {
     this._scenes.mrt.traverse((obj: Object3D) => {
       if (
         obj instanceof Mesh &&
+        !Array.isArray(obj.material) &&
         obj.material?.userData?.uSelectiveEffectBufferMode
       ) {
         obj.material.userData.uSelectiveEffectBufferMode.value = 1;
