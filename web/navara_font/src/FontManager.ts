@@ -379,9 +379,7 @@ export class FontManager {
 
       // Load all needed faces and prepare each segment
       await Promise.all(
-        segments.map((seg) =>
-          this._prepareSingleFontText(seg.url, seg.text),
-        ),
+        segments.map((seg) => this._prepareSingleFontText(seg.url, seg.text)),
       );
 
       // Stitch per-segment results into one combined result
