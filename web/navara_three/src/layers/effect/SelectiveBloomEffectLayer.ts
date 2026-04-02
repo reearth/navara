@@ -355,7 +355,7 @@ class SelectiveBloomPass extends PostProcessingPass {
       renderer.setRenderTarget(this.renderToScreen ? null : outputBuffer);
       this.compositeMaterial.uniforms.tBase.value = inputBuffer.texture;
       this.compositeMaterial.uniforms.tBloom.value = null;
-      this.compositeMaterial.uniforms.debugMode.value = 0;
+      this.compositeMaterial.uniforms.debugMode.value = 1;
       renderer.render(this.compositeScene, this.fullscreenCamera);
       return;
     }

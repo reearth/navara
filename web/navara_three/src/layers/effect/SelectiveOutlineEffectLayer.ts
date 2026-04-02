@@ -303,6 +303,7 @@ class SelectiveOutlinePass extends PostProcessingPass {
         outlineColor: { value: new Color().setHex(0xffffff).raw },
         thickness: { value: 1.0 },
         resolution: { value: new Vector2(initialWidth, initialHeight) },
+        bypass: { value: 0 },
       },
       vertexShader: `
         varying vec2 vUv;
@@ -317,6 +318,7 @@ class SelectiveOutlinePass extends PostProcessingPass {
         uniform vec3 outlineColor;
         uniform float thickness;
         uniform vec2 resolution;
+        uniform int bypass;
 
         varying vec2 vUv;
 
@@ -331,6 +333,10 @@ class SelectiveOutlinePass extends PostProcessingPass {
 
         void main() {
           vec4 baseColor = texture2D(tBase, vUv);
+          if (bypass > 0) {
+            gl_FragColor = baseColor;
+            return;
+          }
           vec2 texel = 1.0 / resolution;
 
           float edge = clamp(sampleEdge(vUv, texel), 0.0, 1.0);
@@ -403,10 +409,11 @@ class SelectiveOutlinePass extends PostProcessingPass {
     const effectIdsBuffer = this.layer.getEffectIdsBuffer();
     const slot = this.layer.getEffectSlot();
 
-    // Passthrough if buffers not available
+    // Passthrough if buffers not available — bypass composite to avoid null tEdge sampling
     if (!effectIdsBuffer || slot < 0) {
       this.compositeMaterial.uniforms.tBase.value = inputBuffer.texture;
       this.compositeMaterial.uniforms.tEdge.value = null;
+      this.compositeMaterial.uniforms.bypass.value = 1;
       renderer.setRenderTarget(this.renderToScreen ? null : outputBuffer);
       renderer.render(this.compositeScene, this.fullscreenCamera);
       return;
@@ -427,6 +434,7 @@ class SelectiveOutlinePass extends PostProcessingPass {
     // Step 3: Composite outline with base scene
     this.compositeMaterial.uniforms.tBase.value = inputBuffer.texture;
     this.compositeMaterial.uniforms.tEdge.value = this.edgeRT.texture;
+    this.compositeMaterial.uniforms.bypass.value = 0;
 
     renderer.setRenderTarget(this.renderToScreen ? null : outputBuffer);
     renderer.render(this.compositeScene, this.fullscreenCamera);

@@ -78,6 +78,9 @@ export class ModelMesh
     PntsMaterialEnhancer
   >();
 
+  /** Cached visibility of PNTS objects before SE buffer mode is enabled */
+  private _savedPntsVisibility = new Map<Points, boolean>();
+
   // model credit for attribution
   credit: string | undefined;
   batchLength?: number;
@@ -453,8 +456,18 @@ export class ModelMesh
       });
     }
     // PNTS enhancer has no Selective Effect buffer support — hide during buffer pass
-    for (const [points] of this._pntsEnhancers) {
-      points.visible = !enabled;
+    if (enabled) {
+      this._savedPntsVisibility.clear();
+      for (const [points] of this._pntsEnhancers) {
+        this._savedPntsVisibility.set(points, points.visible);
+        points.visible = false;
+      }
+    } else {
+      for (const [points] of this._pntsEnhancers) {
+        const saved = this._savedPntsVisibility.get(points);
+        points.visible = saved ?? true;
+      }
+      this._savedPntsVisibility.clear();
     }
   }
 

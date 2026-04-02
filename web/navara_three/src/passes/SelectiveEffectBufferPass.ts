@@ -194,6 +194,7 @@ export class SelectiveEffectBufferPass {
 
     this.disableSEBufferMode();
 
+    this._renderer.setRenderTarget(null);
     this._renderer.setClearColor(this._tempClearColor, orgClearAlpha);
   }
 

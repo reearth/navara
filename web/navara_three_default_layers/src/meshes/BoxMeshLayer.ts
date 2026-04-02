@@ -156,6 +156,15 @@ export class BoxMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
           if (!cfg.draped) {
             this.view.applyShadowMaterial(newMaterial);
           }
+          // Re-setup SE buffer uniforms for the new material
+          if (newMaterial instanceof MeshLambertMaterial) {
+            const hexEmissiveColor = origin.emissiveColor?.raw ?? 0x000000;
+            setupSelectiveEffectBufferUniforms(
+              newMaterial,
+              hexEmissiveColor,
+              origin.emissiveIntensity ?? 0,
+            );
+          }
         }
       }
 

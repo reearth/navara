@@ -137,6 +137,17 @@ export class SelectiveEffectHelper {
   }
 
   /**
+   * Unregister an effect key for an effect ID
+   */
+  unregisterEffectKey(effectId: string): void {
+    const effectKey = this.effectKeys.get(effectId);
+    this.effectKeys.delete(effectId);
+    if (effectKey) {
+      this.effectObjectCache.delete(effectKey);
+    }
+  }
+
+  /**
    * Get effect key for an effect ID
    */
   getEffectKey(effectId: string): string | undefined {

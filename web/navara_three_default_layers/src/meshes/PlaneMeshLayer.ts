@@ -5,6 +5,8 @@ import {
   type MeshLayerUpdateWithSelectiveEffect,
   type ViewContext,
   type CustomObject3DEventMap,
+  setupSelectiveEffectBufferUniforms,
+  syncSelectiveEffectBufferUniforms,
 } from "@navara/three";
 import {
   Mesh,
@@ -79,6 +81,14 @@ export class PlaneMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
       transparent: cfg.transparent ?? false,
     });
 
+    // Set up selective effect buffer uniforms
+    const hexEmissiveColor = cfg.emissiveColor?.raw ?? 0x000000;
+    setupSelectiveEffectBufferUniforms(
+      material,
+      hexEmissiveColor,
+      cfg.emissiveIntensity ?? 0,
+    );
+
     const mesh = new Mesh<
       PlaneGeometry,
       MeshLambertMaterial,
@@ -133,10 +143,11 @@ export class PlaneMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
             const colorValue = cfg.color.raw;
             material.color.set(colorValue);
           }
-          if (cfg.emissiveColor !== undefined)
-            material.emissive.set(cfg.emissiveColor.raw);
-          if (cfg.emissiveIntensity !== undefined)
-            material.emissiveIntensity = cfg.emissiveIntensity;
+          syncSelectiveEffectBufferUniforms(
+            material,
+            cfg.emissiveColor?.raw,
+            cfg.emissiveIntensity,
+          );
           if (cfg.opacity !== undefined) material.opacity = cfg.opacity;
           if (cfg.transparent !== undefined)
             material.transparent = cfg.transparent;

@@ -137,7 +137,9 @@ ${MODEL_BASE_SHADER_MARKERS.fragment.OUTGOING_LIGHT_END}
 #include <dithering_fragment>
 if (uSelectiveEffectBufferMode > 0.5) {
   gl_FragColor = vec4(uEmissiveColor, uEmissiveIntensity);
-  outputBuffer1 = vec4(uEffectIdsMask, 0.0, 0.0, 1.0);
+  #ifndef USE_SHADOWMAP_DEPTH
+    outputBuffer1 = vec4(uEffectIdsMask, 0.0, 0.0, 1.0);
+  #endif
   return;
 }
 if (nvr_uPickable > 0.0 && diffuseColor.a > 0.0) {

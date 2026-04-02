@@ -1687,7 +1687,10 @@ export default class ThreeView<
 
   /**
    * Enables or disables debug views for selective post-processing effects.
-   * Debug views are now managed by SelectiveEffectBufferPass via MRTPassEffectLayer.
+   *
+   * TODO: Currently a no-op. Wire to SelectiveEffectBufferPass
+   * (enableEmissiveDebugView/enableEffectIdsDebugView) via MRTPassEffectLayer in a separate PR.
+   *
    * @param enabled - Whether to enable debug views
    */
   setSelectiveEffectDebugViews(enabled: boolean): void {

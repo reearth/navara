@@ -20,8 +20,7 @@ export type SelectiveEffectLayerConfig = {
    * - "normal": Standard depth test (default)
    * - "silhouette": Renders behind occluders
    *
-   * Note: Currently stored in ViewContext but not yet wired
-   * into the buffer-based pipeline. Will be implemented with Silhouette support.
+   * TODO: Not yet wired into the buffer-based pipeline. Implement in a separate PR.
    */
   selectiveEffectOcclusion?: "normal" | "silhouette";
 } & EffectLayerConfig;
@@ -88,6 +87,9 @@ export abstract class SelectiveEffectLayer<
   }
 
   onDestroy(): void {
+    // Unregister effect key
+    this.view.selectiveEffectRegistry?.unregisterEffectKey(this.id);
+
     // Unregister effect slot
     const mrtLayer = this.findLayer<MRTPassEffectLayer>("mrt");
     mrtLayer?.effectSlotRegistry.unregister(this.id);

@@ -7,6 +7,8 @@ import {
   type ViewContext,
   type CustomObject3DEventMap,
   type PassKey,
+  setupSelectiveEffectBufferUniforms,
+  syncSelectiveEffectBufferUniforms,
 } from "@navara/three";
 import {
   CylinderGeometry,
@@ -87,6 +89,16 @@ export class CylinderMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
     // Create material from properties
     const material = this.createMaterial(cfg);
 
+    // Set up selective effect buffer uniforms
+    if (material instanceof MeshLambertMaterial) {
+      const hexEmissiveColor = cfg.emissiveColor?.raw ?? 0x000000;
+      setupSelectiveEffectBufferUniforms(
+        material,
+        hexEmissiveColor,
+        cfg.emissiveIntensity ?? 0,
+      );
+    }
+
     const mesh = new DrapedMesh<
       CylinderGeometry,
       CylinderMeshMaterial,
@@ -149,6 +161,15 @@ export class CylinderMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
           if (!cfg.draped) {
             this.view.applyShadowMaterial(newMaterial);
           }
+          // Re-setup SE buffer uniforms for the new material
+          if (newMaterial instanceof MeshLambertMaterial) {
+            const hexEmissiveColor = origin.emissiveColor?.raw ?? 0x000000;
+            setupSelectiveEffectBufferUniforms(
+              newMaterial,
+              hexEmissiveColor,
+              origin.emissiveIntensity ?? 0,
+            );
+          }
         }
       }
 
@@ -197,10 +218,11 @@ export class CylinderMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
         if (cfg.transparent !== undefined)
           material.transparent = cfg.transparent;
         if (material instanceof MeshLambertMaterial) {
-          if (cfg.emissiveColor !== undefined)
-            material.emissive.set(cfg.emissiveColor.raw);
-          if (cfg.emissiveIntensity !== undefined)
-            material.emissiveIntensity = cfg.emissiveIntensity;
+          syncSelectiveEffectBufferUniforms(
+            material,
+            cfg.emissiveColor?.raw,
+            cfg.emissiveIntensity,
+          );
         }
         material.needsUpdate = true;
       }

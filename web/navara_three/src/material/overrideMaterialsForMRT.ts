@@ -131,7 +131,9 @@ function injectGBuffer(
           // for configured meshes), bitmask for effectIds.
           if (uSelectiveEffectBufferMode > 0.5) {
             gl_FragColor = vec4(0.0);
-            outputBuffer1 = vec4(uEffectIdsMask, 0.0, 0.0, 1.0);
+            #ifndef USE_SHADOWMAP_DEPTH
+              outputBuffer1 = vec4(uEffectIdsMask, 0.0, 0.0, 1.0);
+            #endif
             return;
           }
           #ifndef USE_SHADOWMAP_DEPTH
