@@ -3,18 +3,14 @@ use navara_buffer_store::BufferStore;
 use navara_component::OrderByDistance;
 use navara_core::CRS;
 use navara_core::TileXYZ;
-use navara_feature_component::{
-    BatchedFeatureMarker,
-    batch::{BatchIndex, BatchTable},
-    polygon::PolygonGeometry,
-};
+use navara_feature_component::batch::BatchTable;
 use navara_geojson_vt::types::TileGeometry;
 use navara_geometry::{Hierarchy, WindingOrder};
 use navara_material::Appearance;
 use navara_tile_component::{OverscaledTileHandle, TileExtent, TileHandle};
 use navara_vector_tile::{PosConverter, VectorTileFeatureMarker};
 
-use crate::geometry::builder::{GeometryAppearanceKind, GeometryBuilder};
+use crate::geometry::builder::GeometryBuilder;
 
 /// Construct polygon entities from GeoJsonVt tile features.
 ///
@@ -100,27 +96,12 @@ pub(crate) fn construct_geojson_tile_geometry(
                         continue;
                     }
 
-                    let entity = commands
-                        .spawn((
-                            BatchedFeatureMarker,
-                            PolygonGeometry {
-                                hierarchy: Hierarchy {
-                                    outer_ring,
-                                    holes: if holes.is_empty() { None } else { Some(holes) },
-                                    expected_winding_order: if flat {
-                                        WindingOrder::CounterClockwise
-                                    } else {
-                                        WindingOrder::Clockwise
-                                    },
-                                }
-                                .transfer(buf),
-                                crs: CRS::Geographic,
-                            },
-                        ))
-                        .id();
-
-                    let batch_index = builder.add_entity(GeometryAppearanceKind::Polygon, entity);
-                    commands.entity(entity).insert(BatchIndex(batch_index));
+                    let winding_order = if flat {
+                        WindingOrder::CounterClockwise
+                    } else {
+                        WindingOrder::Clockwise
+                    };
+                    builder.add_polygon(outer_ring, &holes, winding_order, CRS::Geographic);
                 }
             }
             _ => {}
@@ -162,7 +143,8 @@ mod test {
     use bevy_ecs::system::{Commands, ResMut};
     use navara_feature_component::{
         batch::{BatchTable, BatchedFeature},
-        polygon::{PolygonGeometry, PolygonMarker},
+        batched_geometry::BatchedPolygonGeometry,
+        polygon::PolygonMarker,
     };
     use navara_geojson_vt::types::{Tile as VtTile, TileFeature};
     use navara_material::PolygonMaterial;
@@ -297,21 +279,17 @@ mod test {
         let tile = make_tile(vec![polygon_feature(vec![outer])]);
         let mut app = run_construct(tile, polygon_appearances());
 
-        // One BatchedFeature parent with PolygonMarker
-        let mut batched_query = app
+        // One BatchedFeature parent with PolygonMarker and BatchedPolygonGeometry
+        let mut query = app
             .world_mut()
-            .query_filtered::<&BatchedFeature, With<PolygonMarker>>();
-        let batched: Vec<_> = batched_query.iter(app.world()).collect();
-        assert_eq!(batched.len(), 1);
-        assert_eq!(batched[0].features.len(), 1);
-        // Tiled GeoJSON features use default_active = false (activated by tile visibility)
-        assert!(!batched[0].default_active);
-
-        // One child entity with PolygonGeometry
-        let mut child_query = app
-            .world_mut()
-            .query_filtered::<&PolygonGeometry, With<BatchedFeatureMarker>>();
-        assert_eq!(child_query.iter(app.world()).count(), 1);
+            .query_filtered::<(&BatchedFeature, &BatchedPolygonGeometry), With<PolygonMarker>>();
+        let results: Vec<_> = query.iter(app.world()).collect();
+        assert_eq!(results.len(), 1);
+        let (batched, geom) = results[0];
+        assert!(!batched.default_active);
+        let buf = app.world().resource::<BufferStore>();
+        assert_eq!(geom.feature_count(buf), 1); // 1 polygon
+        assert_eq!(geom.batch_indices(buf).unwrap(), &[0]);
 
         // Parent should have VectorTileFeatureMarker
         let mut marker_query = app
@@ -347,23 +325,20 @@ mod test {
         ]);
         let mut app = run_construct(tile, polygon_appearances());
 
-        // One BatchedFeature parent with 2 child features
-        let mut batched_query = app
+        // One BatchedFeature parent with 2 polygon features accumulated
+        let mut query = app
             .world_mut()
-            .query_filtered::<&BatchedFeature, With<PolygonMarker>>();
-        let batched: Vec<_> = batched_query.iter(app.world()).collect();
-        assert_eq!(batched.len(), 1);
-        assert_eq!(batched[0].features.len(), 2);
-
-        // Two child entities with PolygonGeometry
-        let mut child_query = app
-            .world_mut()
-            .query_filtered::<&PolygonGeometry, With<BatchedFeatureMarker>>();
-        assert_eq!(child_query.iter(app.world()).count(), 2);
+            .query_filtered::<(&BatchedFeature, &BatchedPolygonGeometry), With<PolygonMarker>>();
+        let results: Vec<_> = query.iter(app.world()).collect();
+        assert_eq!(results.len(), 1);
+        let (_batched, geom) = results[0];
+        let buf = app.world().resource::<BufferStore>();
+        assert_eq!(geom.feature_count(buf), 2); // 2 polygons accumulated
+        assert_eq!(geom.batch_indices(buf).unwrap(), &[0, 1]);
     }
 
     #[test]
-    fn polygon_with_hole_creates_single_child() {
+    fn polygon_with_hole_creates_single_polygon_entry() {
         let outer = vec![
             [0.0, 0.0],
             [4096.0, 0.0],
@@ -381,11 +356,15 @@ mod test {
         let tile = make_tile(vec![polygon_feature(vec![outer, hole])]);
         let mut app = run_construct(tile, polygon_appearances());
 
-        // One child with polygon geometry (hole is part of the same polygon)
-        let mut child_query = app
+        // One polygon entry with 1 hole
+        let mut query = app
             .world_mut()
-            .query_filtered::<&PolygonGeometry, With<BatchedFeatureMarker>>();
-        assert_eq!(child_query.iter(app.world()).count(), 1);
+            .query_filtered::<&BatchedPolygonGeometry, With<PolygonMarker>>();
+        let geoms: Vec<_> = query.iter(app.world()).collect();
+        assert_eq!(geoms.len(), 1);
+        let buf = app.world().resource::<BufferStore>();
+        assert_eq!(geoms[0].feature_count(buf), 1);
+        assert_eq!(geoms[0].holes_boundaries(buf).unwrap(), &[1]); // 1 hole
     }
 
     #[test]
@@ -527,7 +506,7 @@ mod test {
     }
 
     #[test]
-    fn multipolygon_creates_multiple_children_from_single_feature() {
+    fn multipolygon_creates_multiple_polygon_entries_from_single_feature() {
         // A feature with multiple polygon geometries (Polygons variant wraps Vec<Vec<Vec<...>>>)
         let poly1_outer = vec![
             [0.0, 0.0],
@@ -551,19 +530,17 @@ mod test {
         let tile = make_tile(vec![feature]);
         let mut app = run_construct(tile, polygon_appearances());
 
-        // Two polygon child entities from a single TileFeature with two polygons
-        let mut child_query = app
+        // Two polygon entries accumulated into a single BatchedPolygonGeometry
+        let mut query = app
             .world_mut()
-            .query_filtered::<&PolygonGeometry, With<BatchedFeatureMarker>>();
-        assert_eq!(child_query.iter(app.world()).count(), 2);
-
-        // BatchedFeature.features holds child entities, so len() == 2
-        let mut batched_query = app
-            .world_mut()
-            .query_filtered::<&BatchedFeature, With<PolygonMarker>>();
-        let batched: Vec<_> = batched_query.iter(app.world()).collect();
-        assert_eq!(batched.len(), 1);
-        assert_eq!(batched[0].features.len(), 2);
+            .query_filtered::<(&BatchedFeature, &BatchedPolygonGeometry), With<PolygonMarker>>();
+        let results: Vec<_> = query.iter(app.world()).collect();
+        assert_eq!(results.len(), 1);
+        let (_batched, geom) = results[0];
+        let buf = app.world().resource::<BufferStore>();
+        assert_eq!(geom.feature_count(buf), 2); // 2 polygons
+        // Both polygons share batch_index 0 (same feature in multipolygon)
+        assert_eq!(geom.batch_indices(buf).unwrap(), &[0, 0]);
     }
 
     #[test]
@@ -581,25 +558,30 @@ mod test {
         let tile = make_tile(vec![polygon_feature(vec![outer])]);
         let mut app = run_construct(tile, polygon_appearances_non_clamped());
 
-        // Should still produce a polygon entity
-        let mut child_query = app
+        // Should produce a BatchedPolygonGeometry
+        let mut query = app
             .world_mut()
-            .query_filtered::<&PolygonGeometry, With<BatchedFeatureMarker>>();
-        let geoms: Vec<_> = child_query.iter(app.world()).collect();
+            .query_filtered::<&BatchedPolygonGeometry, With<PolygonMarker>>();
+        let geoms: Vec<_> = query.iter(app.world()).collect();
         assert_eq!(geoms.len(), 1);
+        let buf = app.world().resource::<BufferStore>();
+        let outer_rings = geoms[0].outer_rings(buf).unwrap();
 
         // The outer ring values should NOT be in [-1, 1] range (geographic coords
         // for z=0 tile span [-180, 180] lon and ~[-85, 85] lat).
-        let buf = app.world().resource::<BufferStore>();
-        let ring = buf.get_f64(&geoms[0].hierarchy.outer_ring).unwrap();
         // First point (tile 0,0) should be ~ -180 lon
-        assert!(ring[0] < -100.0, "expected geographic lon, got {}", ring[0]);
+        assert!(
+            outer_rings[0] < -100.0,
+            "expected geographic lon, got {}",
+            outer_rings[0]
+        );
 
         // Non-flat (3D globe) path must use Clockwise for outer rings so that
         // align_winding_order correctly re-winds after the Y-axis flip.
+        let winding = geoms[0].expected_winding_orders(buf).unwrap();
         assert_eq!(
-            geoms[0].hierarchy.expected_winding_order,
-            WindingOrder::Clockwise,
+            winding[0],
+            WindingOrder::Clockwise as u8,
             "non-clamped outer ring should hint Clockwise (same as MVT non-flat path)"
         );
     }

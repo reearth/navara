@@ -12,6 +12,7 @@ navara_event_store.workspace = true
 navara_math.workspace = true
 navara_material.workspace = true
 navara_core.workspace = true
+navara_tile.workspace = true
 navara_tile_component.workspace = true
 navara_mesh.workspace = true
 navara_buffer_store.workspace = true
@@ -22,6 +23,9 @@ navara_layer.workspace = true
 navara_mvt.workspace = true
 navara_worker.workspace = true
 navara_component.workspace = true
+navara_camera.workspace = true
+navara_occluder.workspace = true
+navara_window.workspace = true
 
 [dev-dependencies]
 approx.workspace = true

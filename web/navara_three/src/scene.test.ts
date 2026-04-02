@@ -1,7 +1,7 @@
-import { Mesh, Scene, BoxGeometry, MeshBasicMaterial } from "three";
+import { Mesh, BoxGeometry, MeshBasicMaterial } from "three";
 import { describe, it, expect, vi } from "vitest";
 
-import { TexturizedSceneByTileCoordinates } from "./scene";
+import { TexturizedSceneByTileCoordinates, TileScene } from "./scene";
 
 function createMockRenderer() {
   return {
@@ -26,7 +26,7 @@ function getGroup(ts: TexturizedSceneByTileCoordinates, handle: bigint) {
 }
 
 describe("add", () => {
-  it("add creates a new Scene with userData.layerId inside SceneGroup", () => {
+  it("add creates a new TileScene with layerId inside SceneGroup", () => {
     const ts = new TexturizedSceneByTileCoordinates(createMockRenderer());
     const handle = 1n;
     const mesh = createMesh();
@@ -34,9 +34,9 @@ describe("add", () => {
     ts.add(handle, "layer-a", mesh, 0);
 
     const group = getGroup(ts, handle);
-    expect(group.children).toHaveLength(1);
-    expect(group.children[0].userData.layerId).toBe("layer-a");
-    expect(group.children[0]).toBeInstanceOf(Scene);
+    expect(group.tileScenes).toHaveLength(1);
+    expect(group.tileScenes[0].layerId).toBe("layer-a");
+    expect(group.tileScenes[0]).toBeInstanceOf(TileScene);
   });
 
   it("add with same layerId reuses existing Scene", () => {
@@ -47,24 +47,11 @@ describe("add", () => {
     ts.add(handle, "layer-a", createMesh(), 0);
 
     const group = getGroup(ts, handle);
-    expect(group.children).toHaveLength(1);
-    expect(group.children[0].children).toHaveLength(2);
+    expect(group.tileScenes).toHaveLength(1);
+    expect(group.tileScenes[0].children).toHaveLength(2);
   });
 
   it("scenes are sorted by layerIndex", () => {
-    const ts = new TexturizedSceneByTileCoordinates(createMockRenderer());
-    const handle = 1n;
-
-    ts.add(handle, "layer-b", createMesh(), 2);
-    ts.add(handle, "layer-a", createMesh(), 0);
-
-    const group = getGroup(ts, handle);
-    expect(group.children).toHaveLength(2);
-    expect(group.children[0].userData.layerIndex).toBe(0);
-    expect(group.children[1].userData.layerIndex).toBe(2);
-  });
-
-  it("three layers added in reverse order are sorted correctly", () => {
     const ts = new TexturizedSceneByTileCoordinates(createMockRenderer());
     const handle = 1n;
 
@@ -73,43 +60,34 @@ describe("add", () => {
     ts.add(handle, "a", createMesh(), 0);
 
     const group = getGroup(ts, handle);
-    expect(group.children.map((c) => c.userData.layerIndex)).toEqual([0, 1, 2]);
-    expect(group.children.map((c) => c.userData.layerId)).toEqual([
-      "a",
-      "b",
-      "c",
-    ]);
+    expect(group.tileScenes.map((c) => c.layerIndex)).toEqual([0, 1, 2]);
+    expect(group.tileScenes.map((c) => c.layerId)).toEqual(["a", "b", "c"]);
   });
 
-  it("addFromParentScene inherits layerIndex from parent scene", () => {
-    const ts = new TexturizedSceneByTileCoordinates(createMockRenderer());
-    const parentHandle = 1n;
-    const childHandle = 2n;
-
-    ts.add(parentHandle, "layer-x", createMesh(), 5);
-    ts.add(childHandle, "layer-y", createMesh(), 0);
-
-    const parentScene = ts.findSceneByLayerId(parentHandle, "layer-x");
-    if (!parentScene) throw new Error("parent scene not found");
-    ts.addFromParentScene(childHandle, "layer-x", parentScene);
-
-    const group = getGroup(ts, childHandle);
-    expect(group.children[0].userData.layerIndex).toBe(0);
-    expect(group.children[1].userData.layerIndex).toBe(5);
-  });
-
-  it("remove marks scene as removed and clears children", () => {
+  it("revision increments on add", () => {
     const ts = new TexturizedSceneByTileCoordinates(createMockRenderer());
     const handle = 1n;
 
     ts.add(handle, "layer-a", createMesh(), 0);
+    const scene = ts.findSceneByLayerId(handle, "layer-a");
+    expect(scene?.revision).toBe(1);
+
+    ts.add(handle, "layer-a", createMesh(), 0);
+    expect(scene?.revision).toBe(2);
+  });
+
+  it("remove marks scene as removed, clears children, and increments revision", () => {
+    const ts = new TexturizedSceneByTileCoordinates(createMockRenderer());
+    const handle = 1n;
+
+    ts.add(handle, "layer-a", createMesh(), 0);
+    const scene = ts.findSceneByLayerId(handle, "layer-a");
+    const revBefore = scene?.revision;
     ts.remove(handle, "layer-a");
 
-    const scene = ts.map
-      .get(handle)
-      ?.children.find((c) => c.userData.layerId === "layer-a");
-    expect(scene?.userData.removed).toBe(true);
+    expect(scene?.removed).toBe(true);
     expect(scene?.children).toHaveLength(0);
+    expect(scene?.revision).toBe((revBefore ?? 0) + 1);
   });
 
   it("delete removes the entire SceneGroup for a tile handle", () => {
@@ -190,15 +168,15 @@ describe("hasCurrentMesh", () => {
 });
 
 describe("findSceneByLayerId", () => {
-  it("returns the Scene for a known layerId", () => {
+  it("returns the TileScene for a known layerId", () => {
     const ts = new TexturizedSceneByTileCoordinates(createMockRenderer());
     const handle = 1n;
 
     ts.add(handle, "layer-a", createMesh(), 0);
 
     const scene = ts.findSceneByLayerId(handle, "layer-a");
-    expect(scene).toBeInstanceOf(Scene);
-    expect(scene?.userData.layerId).toBe("layer-a");
+    expect(scene).toBeInstanceOf(TileScene);
+    expect(scene?.layerId).toBe("layer-a");
   });
 
   it("returns undefined for unknown layerId", () => {
@@ -241,26 +219,47 @@ describe("getNeedsUpdate / setNeedsUpdate", () => {
   });
 });
 
-describe("add with fromParent replacement", () => {
-  it("fromParent=true replaces existing parent mesh", () => {
+describe("addFromParentScene", () => {
+  it("inherits layerIndex from parent scene", () => {
     const ts = new TexturizedSceneByTileCoordinates(createMockRenderer());
-    const handle = 1n;
+    const parentHandle = 1n;
+    const childHandle = 2n;
 
-    const parentMesh1 = createMesh();
-    parentMesh1.userData.fromParent = true;
-    ts.add(handle, "layer-a", parentMesh1, 0, true);
+    ts.add(parentHandle, "layer-x", createMesh(), 5);
+    ts.add(childHandle, "layer-y", createMesh(), 0);
 
-    const parentMesh2 = createMesh();
-    parentMesh2.userData.fromParent = true;
-    ts.add(handle, "layer-a", parentMesh2, 0, true);
+    const parentScene = ts.findSceneByLayerId(parentHandle, "layer-x");
+    if (!parentScene) throw new Error("parent scene not found");
+    ts.addFromParentScene(childHandle, "layer-x", parentScene);
 
-    const scene = ts.findSceneByLayerId(handle, "layer-a");
-    if (!scene) throw new Error("scene not found");
+    const group = getGroup(ts, childHandle);
+    expect(group.tileScenes[0].layerIndex).toBe(0);
+    expect(group.tileScenes[1].layerIndex).toBe(5);
+  });
 
-    // Only the latest parent mesh should remain
-    const parentChildren = scene.children.filter((c) => c.userData.fromParent);
-    expect(parentChildren).toHaveLength(1);
-    expect(parentChildren[0]).toBe(parentMesh2);
+  it("replaces existing fromParent mesh with new clone", () => {
+    const ts = new TexturizedSceneByTileCoordinates(createMockRenderer());
+    const parentHandle = 1n;
+    const childHandle = 2n;
+
+    // Add a mesh to parent
+    ts.add(parentHandle, "layer-a", createMesh(), 0);
+
+    const parentScene = ts.findSceneByLayerId(parentHandle, "layer-a");
+    if (!parentScene) throw new Error("parent scene not found");
+
+    // First clone
+    ts.addFromParentScene(childHandle, "layer-a", parentScene);
+    const childScene = ts.findSceneByLayerId(childHandle, "layer-a");
+    expect(
+      childScene?.children.filter((c) => c.userData.fromParent),
+    ).toHaveLength(1);
+
+    // Re-clone replaces existing fromParent mesh
+    ts.addFromParentScene(childHandle, "layer-a", parentScene);
+    expect(
+      childScene?.children.filter((c) => c.userData.fromParent),
+    ).toHaveLength(1);
   });
 });
 

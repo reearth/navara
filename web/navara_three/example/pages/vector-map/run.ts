@@ -59,7 +59,7 @@ export const run = async (view: ThreeView<LayerDescriptions>) => {
       url: VECTOR_DATASETS.gsiExperimentalVector.url,
     },
     point: {
-      size: 1000,
+      size: 10,
       sizeInMeters: false,
       color: new Color().setStyle("#ff0000"),
     },

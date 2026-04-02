@@ -11,9 +11,9 @@ Navara is a high-performance 3D globe map engine prototype that combines Rust's 
 - **TypeScript Frontend** - Three.js-based rendering with comprehensive web integration
 - **cargo-make** - Unified build orchestration across languages
 
-📖 **Detailed Architecture**: See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for comprehensive system design and communication patterns.
-📚 **Crate Reference**: See [docs/CRATES.md](docs/CRATES.md) for detailed documentation of all 40+ Rust crates.
-⚠️ **WASM API Policy**: See [docs/WASM_API_POLICY.md](docs/WASM_API_POLICY.md) for rules on designing TypeScript APIs that wrap WASM modules.
+📖 **Detailed Architecture**: See [guide/ARCHITECTURE.md](guide/ARCHITECTURE.md) for comprehensive system design and communication patterns.
+📚 **Crate Reference**: See [guide/CRATES.md](guide/CRATES.md) for detailed documentation of all 40+ Rust crates.
+⚠️ **WASM API Policy**: See [guide/WASM_API_POLICY.md](guide/WASM_API_POLICY.md) for rules on designing TypeScript APIs that wrap WASM modules.
 
 ## Essential Commands
 

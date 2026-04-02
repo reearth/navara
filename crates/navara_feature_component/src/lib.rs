@@ -1,6 +1,7 @@
 #![doc = include_str!("../README.md")]
 
 pub mod batch;
+pub mod batched_geometry;
 pub mod billboard;
 pub mod geometry_builder;
 pub mod id;

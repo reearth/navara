@@ -9,7 +9,7 @@ import type {
   MvtLayerDescription,
 } from "@navara/engine";
 import type { Promise as WorkerPoolPromise } from "@navara/worker";
-import type { Mesh, Sprite, Object3D, Material } from "three";
+import type { Mesh, Sprite, Object3D } from "three";
 
 import type { Color } from "../Color";
 import type { LightLayerConfig } from "../core";
@@ -109,7 +109,6 @@ export type ResourceLayerDescription =
   | MvtLayer;
 
 export type MeshCache = Map<string, Mesh | Sprite | Object3D>;
-export type DrapedMaterialCache = Map<string, Material>;
 
 // Make a reference of TileMesh by TileHandle.
 export type TileMapByHandle = Map<TileHandle, TileMesh>;

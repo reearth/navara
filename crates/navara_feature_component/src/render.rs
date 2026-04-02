@@ -14,8 +14,8 @@ use crate::model::ModelBin;
 use crate::batch::BatchTable;
 
 #[derive(Clone, Debug, Default, PartialEq)]
-pub struct RenderInformation {
-    pub current_terrain_height: FloatType,
+pub struct PointRenderInformation {
+    pub terrain_heights: Handle,
     pub should_recalculate_height: bool,
     pub is_rendered: bool,
 }
@@ -53,7 +53,7 @@ pub enum RenderableFeature {
         material: PointMaterial,
         transform: Transform,
         feature_id: Entity,
-        render_info: RenderInformation,
+        render_info: PointRenderInformation,
         geometry: TransferablePointGeometry,
         feature_batch_id: u32,
         batch_length: u32,
@@ -65,7 +65,7 @@ pub enum RenderableFeature {
         material: BillboardMaterial,
         transform: Transform,
         feature_id: Entity,
-        render_info: RenderInformation,
+        render_info: PointRenderInformation,
         geometry: TransferablePointGeometry,
         feature_batch_id: u32,
         batch_length: u32,
@@ -77,7 +77,7 @@ pub enum RenderableFeature {
         material: TextMaterial,
         transform: Transform,
         feature_id: Entity,
-        render_info: RenderInformation,
+        render_info: PointRenderInformation,
         geometry: TransferablePointGeometry,
         feature_batch_id: u32,
         batch_length: u32,
@@ -170,26 +170,32 @@ impl RenderableFeature {
             RenderableFeature::Point {
                 geometry,
                 feature_batch_id,
+                render_info,
                 ..
             } => {
                 geometry.remove_from_buf(buf, batch_table_res);
                 batch_table_res.remove(feature_batch_id);
+                buf.remove(&render_info.terrain_heights);
             }
             RenderableFeature::Billboard {
                 geometry,
                 feature_batch_id,
+                render_info,
                 ..
             } => {
                 geometry.remove_from_buf(buf, batch_table_res);
                 batch_table_res.remove(feature_batch_id);
+                buf.remove(&render_info.terrain_heights);
             }
             RenderableFeature::Text {
                 geometry,
                 feature_batch_id,
+                render_info,
                 ..
             } => {
                 geometry.remove_from_buf(buf, batch_table_res);
                 batch_table_res.remove(feature_batch_id);
+                buf.remove(&render_info.terrain_heights);
             }
             RenderableFeature::Polyline {
                 geometry,
@@ -653,6 +659,49 @@ impl TransferablePointGeometry {
         };
 
         buf.remove(&self.batch_index.data);
+    }
+}
+
+impl From<&crate::batched_geometry::BatchedPointGeometry> for TransferablePointGeometry {
+    fn from(geom: &crate::batched_geometry::BatchedPointGeometry) -> Self {
+        use crate::batched_geometry::PointEncoding;
+        match geom.encoding {
+            PointEncoding::Rtc => Self {
+                position: Some(TransferableFloatAttribute {
+                    data: geom.encoded_a,
+                    size: 3,
+                }),
+                position_3d_high: None,
+                position_3d_low: None,
+                batch_ids: TransferableFloatAttribute {
+                    data: geom.batch_ids,
+                    size: 1,
+                },
+                batch_index: TransferableUintAttribute {
+                    data: geom.batch_indices,
+                    size: 1,
+                },
+            },
+            PointEncoding::Rte => Self {
+                position: None,
+                position_3d_high: Some(TransferableFloatAttribute {
+                    data: geom.encoded_a,
+                    size: 3,
+                }),
+                position_3d_low: Some(TransferableFloatAttribute {
+                    data: geom.encoded_b.unwrap(),
+                    size: 3,
+                }),
+                batch_ids: TransferableFloatAttribute {
+                    data: geom.batch_ids,
+                    size: 1,
+                },
+                batch_index: TransferableUintAttribute {
+                    data: geom.batch_indices,
+                    size: 1,
+                },
+            },
+        }
     }
 }
 
