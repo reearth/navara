@@ -391,9 +391,7 @@ class SelectiveBloomPass extends PostProcessingPass {
   }
 
   dispose(): void {
-    if (typeof this.bloom.dispose === "function") {
-      this.bloom.dispose();
-    }
+    this.bloom.dispose();
     this.bloomSourceRT.dispose();
     this.fullscreenGeometry.dispose();
     this.extractMaterial.dispose();

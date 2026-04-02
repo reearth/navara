@@ -12,14 +12,13 @@ import {
 
 import type { EffectSlotRegistry } from "../core/EffectSlotRegistry";
 import { getSelectiveEffectConfig } from "../core/SelectiveEffectHelper";
+import type { Scenes } from "../scene";
+import type { MeshCache } from "../type";
 // --- Selective Effect Buffer Mesh interface ---
 
 /** Interface for meshes that support Selective Effect buffer rendering. */
 export type SelectiveEffectBufferMesh = {
-  _setSelectiveEffectBufferMode(
-    enabled: boolean,
-    effectIdsMask: number,
-  ): void;
+  _setSelectiveEffectBufferMode(enabled: boolean, effectIdsMask: number): void;
   _getEffectIds(): readonly string[];
 };
 
@@ -34,8 +33,6 @@ const isSelectiveEffectBufferMesh = (
     typeof (v as SelectiveEffectBufferMesh)._getEffectIds === "function"
   );
 };
-import type { Scenes } from "../scene";
-import type { MeshCache } from "../type";
 
 /**
  * SelectiveEffectBufferPass — Dedicated Selective Effect MRT for emissive + effectIds.
