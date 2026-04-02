@@ -54,8 +54,7 @@ export {
   parseSelectiveEffectOcclusion,
   createFullscreenQuad,
 } from "./SelectiveEffectHelper";
-export { SelectiveEffectManager } from "./SelectiveEffectManager";
 export {
-  setupSEBufferUniforms,
-  syncSEBufferUniforms,
+  setupSelectiveEffectBufferUniforms,
+  syncSelectiveEffectBufferUniforms,
 } from "./emissiveBufferSetup";

@@ -68,13 +68,13 @@ describe("modelBaseEnhancer/state", () => {
         }),
       },
       {
-        name: "applies seBufferMode",
+        name: "applies selectiveEffectBufferMode",
         props: {
-          seBufferMode: true,
+          selectiveEffectBufferMode: true,
         },
         currentState: DEFAULT_BASE_STATE,
         expected: createExpectedState({
-          seBufferMode: true,
+          selectiveEffectBufferMode: true,
         }),
       },
     ];

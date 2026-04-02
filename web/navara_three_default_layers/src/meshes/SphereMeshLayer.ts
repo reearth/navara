@@ -5,8 +5,8 @@ import {
   type MeshLayerUpdateWithSelectiveEffect,
   type ViewContext,
   type CustomObject3DEventMap,
-  setupSEBufferUniforms,
-  syncSEBufferUniforms,
+  setupSelectiveEffectBufferUniforms,
+  syncSelectiveEffectBufferUniforms,
 } from "@navara/three";
 import {
   Mesh,
@@ -86,7 +86,7 @@ export class SphereMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
 
     // Set up selective effect buffer uniforms
     const hexEmissiveColor = cfg.emissiveColor?.raw ?? 0x000000;
-    setupSEBufferUniforms(
+    setupSelectiveEffectBufferUniforms(
       material,
       hexEmissiveColor,
       cfg.emissiveIntensity ?? 0,
@@ -151,7 +151,7 @@ export class SphereMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
           const colorValue = cfg.color.raw;
           material.color.set(colorValue);
         }
-        syncSEBufferUniforms(
+        syncSelectiveEffectBufferUniforms(
           material,
           cfg.emissiveColor?.raw,
           cfg.emissiveIntensity,

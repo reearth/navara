@@ -58,9 +58,9 @@ type SupportedMaterial = WaterSupportedMaterial;
  * // Get state directly via states() - refresh after updates
  * const { base, water } = enhancer.states();
  *
- * // Update mask pass state per-frame via mutates()
+ * // Update Selective Effect buffer state per-frame via mutates()
  * const { base: baseMutates } = enhancer.mutates();
- * baseMutates.setMaskPassState(bloom, outline, occlusion);
+ * baseMutates.update({ selectiveEffectBufferMode: true, effectIdsMask: mask });
  *
  * // Update props (then call states() again to get fresh state)
  * enhancer.update({ base: { height: 100 } });

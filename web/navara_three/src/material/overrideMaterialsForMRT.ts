@@ -117,8 +117,8 @@ function injectGBuffer(
       uniform float roughness;
     #endif // USE_ROUGHNESS
 
-    // SE Buffer mode toggle (for SelectiveEffectBufferPass)
-    uniform float uSEBufferMode;
+    // Selective Effect buffer mode toggle (for SelectiveEffectBufferPass)
+    uniform float uSelectiveEffectBufferMode;
     uniform float uEffectIdsMask;
 
     ${packing}
@@ -129,7 +129,7 @@ function injectGBuffer(
           // SelectiveEffectBufferPass: output emissive + effectIds for non-enhanced materials.
           // Default: transparent black for emissive (overridden by emissiveBufferSetup
           // for configured meshes), bitmask for effectIds.
-          if (uSEBufferMode > 0.5) {
+          if (uSelectiveEffectBufferMode > 0.5) {
             gl_FragColor = vec4(0.0);
             outputBuffer1 = vec4(uEffectIdsMask, 0.0, 0.0, 1.0);
             return;

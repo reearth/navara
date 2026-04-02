@@ -9,7 +9,7 @@ export const DEFAULT_BASE_PROPS: Required<
   emissiveColor: 0,
   emissiveIntensity: 0,
   pickable: false,
-  seBufferMode: false,
+  selectiveEffectBufferMode: false,
   effectIdsMask: 0,
   batchColorEnabled: false,
   useBatchTexture: false,
@@ -19,7 +19,7 @@ export const DEFAULT_BASE_PROPS: Required<
 /** Default state derived from DEFAULT_BASE_PROPS */
 export const DEFAULT_BASE_STATE: ModelBaseState = {
   pickable: DEFAULT_BASE_PROPS.pickable,
-  seBufferMode: false,
+  selectiveEffectBufferMode: false,
   emissiveColor: DEFAULT_BASE_PROPS.emissiveColor,
   emissiveIntensity: DEFAULT_BASE_PROPS.emissiveIntensity,
   effectIdsMask: 0,
@@ -41,7 +41,8 @@ export const updateState = (
   currentState: ModelBaseState,
 ): ModelBaseState => ({
   pickable: props.pickable ?? currentState.pickable,
-  seBufferMode: props.seBufferMode ?? currentState.seBufferMode,
+  selectiveEffectBufferMode:
+    props.selectiveEffectBufferMode ?? currentState.selectiveEffectBufferMode,
   emissiveColor: props.emissiveColor ?? currentState.emissiveColor,
   emissiveIntensity: props.emissiveIntensity ?? currentState.emissiveIntensity,
   effectIdsMask: props.effectIdsMask ?? currentState.effectIdsMask,

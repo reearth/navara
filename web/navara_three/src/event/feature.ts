@@ -200,7 +200,6 @@ export async function processRenderableFeatureAdded(
     viewContext.registerLayerEffects(
       featureLayerId,
       material.effectIds ?? [],
-      undefined,
       material.emissiveIntensity,
     );
   }

@@ -709,9 +709,6 @@ export default class ThreeView<
         meshes: this._meshes,
       },
       this.selectiveEffectHelper,
-      {
-        selectiveEffectMask: this._options.selectiveEffects?.debugViews,
-      },
     );
     this.registries = new Registries(this.viewContext);
 

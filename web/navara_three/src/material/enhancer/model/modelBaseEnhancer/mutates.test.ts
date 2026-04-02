@@ -47,15 +47,15 @@ describe("modelBaseEnhancer/mutates", () => {
 
     const testCases: TestCase[] = [
       {
-        name: "seBufferMode true → uSEBufferMode = 1",
-        stateOverride: { seBufferMode: true },
-        uniformKey: "uSEBufferMode",
+        name: "selectiveEffectBufferMode true → uSelectiveEffectBufferMode = 1",
+        stateOverride: { selectiveEffectBufferMode: true },
+        uniformKey: "uSelectiveEffectBufferMode",
         expected: 1,
       },
       {
-        name: "seBufferMode false → uSEBufferMode = 0",
-        stateOverride: { seBufferMode: false },
-        uniformKey: "uSEBufferMode",
+        name: "selectiveEffectBufferMode false → uSelectiveEffectBufferMode = 0",
+        stateOverride: { selectiveEffectBufferMode: false },
+        uniformKey: "uSelectiveEffectBufferMode",
         expected: 0,
       },
     ];

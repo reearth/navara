@@ -502,9 +502,9 @@ export class PolygonMesh extends BatchedFeatureMesh<
     return this._viewContext.getLayerEffects(this._layerId) ?? [];
   }
 
-  _setSEBufferMode(enabled: boolean, effectIdsMask: number): void {
+  _setSelectiveEffectBufferMode(enabled: boolean, effectIdsMask: number): void {
     this.getEnhancer().update({
-      base: { seBufferMode: enabled, effectIdsMask },
+      base: { selectiveEffectBufferMode: enabled, effectIdsMask },
     });
     this.needsUpdate();
   }

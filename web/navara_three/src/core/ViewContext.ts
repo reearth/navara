@@ -14,12 +14,15 @@ import type { MeshCache } from "../type";
 import {
   getSelectiveEffectConfig,
   type SelectiveEffectHelper,
-  type SelectiveEffectOcclusionValue,
 } from "./SelectiveEffectHelper";
-import { SelectiveEffectManager } from "./SelectiveEffectManager";
 
-export type ViewDebugOptions = {
-  selectiveEffectMask?: boolean;
+/** Default emissive intensity when Bloom is enabled */
+const DEFAULT_EMISSIVE_INTENSITY = 0.3;
+
+type LayerEffectConfig = {
+  effectIds: string[];
+  emissiveIntensity: number;
+  emissiveColor?: Color;
 };
 
 type Private = {
@@ -34,11 +37,11 @@ type ViewContextEvents = {
 // Restrict public API for a layer declaration.
 export class ViewContext extends EventHandler<ViewContextEvents> {
   public selectiveEffectRegistry?: SelectiveEffectHelper;
-  public debugOptions: ViewDebugOptions;
   public globe?: Globe;
   public fontManager?: FontManager;
 
-  private readonly selectiveEffects: SelectiveEffectManager;
+  // Layer-level selective effect configuration
+  private readonly layerEffectConfigs = new Map<string, LayerEffectConfig>();
 
   constructor(
     public scenes: Scenes,
@@ -49,15 +52,9 @@ export class ViewContext extends EventHandler<ViewContextEvents> {
     public concurrencyManager: ConcurrencyManager,
     public _privates: Private,
     selectiveEffectHelper?: SelectiveEffectHelper,
-    debugOptions?: ViewDebugOptions,
   ) {
     super();
     this.selectiveEffectRegistry = selectiveEffectHelper;
-    this.debugOptions = debugOptions ?? {};
-
-    this.selectiveEffects = new SelectiveEffectManager({
-      selectiveEffectRegistry: this.selectiveEffectRegistry,
-    });
   }
 
   setGlobe(globe: Globe) {
@@ -76,45 +73,34 @@ export class ViewContext extends EventHandler<ViewContextEvents> {
     this.emit("unstableShadowRemoved", material);
   }
 
+  // --- Selective Effect layer config ---
+
   registerLayerEffects(
     layerId: string,
     effectIds: string[],
-    selectiveEffectOcclusion?: SelectiveEffectOcclusionValue,
     emissiveIntensity?: number,
   ): void {
-    this.selectiveEffects.registerLayerEffects(
-      layerId,
-      effectIds,
-      selectiveEffectOcclusion,
-      emissiveIntensity,
-    );
+    const config = this.ensureLayerEffectConfig(layerId);
+    config.effectIds = effectIds;
+    if (emissiveIntensity !== undefined) {
+      config.emissiveIntensity = emissiveIntensity;
+    }
   }
 
   getLayerEffects(layerId: string): string[] | undefined {
-    return this.selectiveEffects.getLayerEffects(layerId);
+    return this.layerEffectConfigs.get(layerId)?.effectIds;
   }
 
   setLayerEmissiveColor(
     layerId: string,
     emissiveColor: Color | undefined,
   ): void {
-    this.selectiveEffects.setLayerEmissiveColor(layerId, emissiveColor);
-  }
-
-  setLayerSelectiveEffectOcclusion(
-    layerId: string,
-    selectiveEffectOcclusion: SelectiveEffectOcclusionValue,
-  ): void {
-    // Delegate to Manager (the single SoT for occlusion)
-    this.selectiveEffects.setLayerOcclusion(layerId, selectiveEffectOcclusion);
-  }
-
-  clearLayerSelectiveEffectOcclusion(layerId: string): void {
-    this.selectiveEffects.clearLayerOcclusion(layerId);
+    const config = this.ensureLayerEffectConfig(layerId);
+    config.emissiveColor = emissiveColor;
   }
 
   unregisterLayerEffects(layerId: string): void {
-    this.selectiveEffects.unregisterLayerEffects(layerId);
+    this.layerEffectConfigs.delete(layerId);
   }
 
   updateLayerEffects(
@@ -122,28 +108,40 @@ export class ViewContext extends EventHandler<ViewContextEvents> {
     effectIds: string[] | undefined,
     emissiveIntensity?: number,
   ): void {
-    this.selectiveEffects.updateLayerEffects(
-      layerId,
-      effectIds,
-      emissiveIntensity,
-    );
+    const config = this.ensureLayerEffectConfig(layerId);
+    config.effectIds = effectIds ?? [];
+    if (emissiveIntensity !== undefined) {
+      config.emissiveIntensity = emissiveIntensity;
+    }
   }
+
+  private ensureLayerEffectConfig(layerId: string): LayerEffectConfig {
+    let config = this.layerEffectConfigs.get(layerId);
+    if (!config) {
+      config = {
+        effectIds: [],
+        emissiveIntensity: DEFAULT_EMISSIVE_INTENSITY,
+      };
+      this.layerEffectConfigs.set(layerId, config);
+    }
+    return config;
+  }
+
+  // --- Selective Effect object management ---
 
   /**
    * Apply selective effects to a specific Object3D.
    * Useful for pick-based effect application where you have a reference to the object.
    *
    * @param object - The Object3D to apply effects to
-   * @param effectIds - Effect IDs to apply (e.g., ["selectiveBloom"], ["selectiveOutline"], ["selectiveBloom", "selectiveOutline"])
-   * @param layerId - Optional layer ID for occlusion resolution.
-   *                  Resolution order: argument > existing config > Normal occlusion
+   * @param effectIds - Effect IDs to apply
+   * @param layerId - Optional layer ID. Resolution order: argument > existing config > empty string
    */
   applyEffectToObject(
     object: Object3D,
     effectIds: string[],
     layerId?: string,
   ): void {
-    // Resolve layerId: argument > existing config > undefined (Normal occlusion)
     const resolvedLayerId =
       layerId ?? getSelectiveEffectConfig(object)?.layerId;
 

@@ -7,8 +7,8 @@ import {
   type ViewContext,
   type CustomObject3DEventMap,
   type PassKey,
-  setupSEBufferUniforms,
-  syncSEBufferUniforms,
+  setupSelectiveEffectBufferUniforms,
+  syncSelectiveEffectBufferUniforms,
 } from "@navara/three";
 import {
   BoxGeometry,
@@ -89,7 +89,7 @@ export class BoxMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
     // Set up selective effect buffer uniforms
     if (material instanceof MeshLambertMaterial) {
       const hexEmissiveColor = cfg.emissiveColor?.raw ?? 0x000000;
-      setupSEBufferUniforms(
+      setupSelectiveEffectBufferUniforms(
         material,
         hexEmissiveColor,
         cfg.emissiveIntensity ?? 0,
@@ -200,7 +200,7 @@ export class BoxMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
         if (cfg.transparent !== undefined)
           material.transparent = cfg.transparent;
         if (material instanceof MeshLambertMaterial) {
-          syncSEBufferUniforms(
+          syncSelectiveEffectBufferUniforms(
             material,
             cfg.emissiveColor?.raw,
             cfg.emissiveIntensity,

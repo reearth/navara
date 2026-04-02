@@ -358,7 +358,7 @@ export class ModelMesh
       }
     }
 
-    // SE Redesign: keep effectIds link for EffectIds Buffer
+    // Update effectIds link for Selective Effect buffer rendering
     // material.effectIds may be undefined for 3D Tiles — fall back to layer-level effectIds
     const effectIds =
       material.effectIds ??
@@ -446,13 +446,13 @@ export class ModelMesh
     );
   }
 
-  _setSEBufferMode(enabled: boolean, effectIdsMask: number): void {
+  _setSelectiveEffectBufferMode(enabled: boolean, effectIdsMask: number): void {
     for (const enhancer of this._enhancers.values()) {
       enhancer.update({
-        base: { seBufferMode: enabled, effectIdsMask },
+        base: { selectiveEffectBufferMode: enabled, effectIdsMask },
       });
     }
-    // PNTS enhancer has no SE buffer support — hide during SE buffer pass
+    // PNTS enhancer has no Selective Effect buffer support — hide during buffer pass
     for (const [points] of this._pntsEnhancers) {
       points.visible = !enabled;
     }

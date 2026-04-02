@@ -22,7 +22,7 @@ export const SELECTIVE_OUTLINE_EFFECT_KEY = "selectiveOutline" as const;
 // ============================================================================
 
 /**
- * Sentinel value for "no mask pass active".
+ * Sentinel value for "no Selective Effect buffer pass active".
  */
 export const SELECTIVE_EFFECT_OCCLUSION_SKIP = -1 as const;
 
@@ -128,7 +128,6 @@ export function getSelectiveEffectConfig(
 export class SelectiveEffectHelper {
   private effectKeys = new Map<string, string>(); // effectId -> effectKey
   private effectObjectCache = new Map<string, Set<Object3D>>(); // effectKey -> objects
-  private occlusionCache = new Map<string, SelectiveEffectOcclusionValue>();
 
   /**
    * Register an effect key for an effect ID
@@ -142,34 +141,6 @@ export class SelectiveEffectHelper {
    */
   getEffectKey(effectId: string): string | undefined {
     return this.effectKeys.get(effectId);
-  }
-
-  /**
-   * Sync occlusion cache from SelectiveEffectManager
-   */
-  syncOcclusionCache(
-    layerId: string,
-    occlusion: SelectiveEffectOcclusionValue,
-  ): void {
-    this.occlusionCache.set(layerId, occlusion);
-  }
-
-  /**
-   * Clear occlusion cache for a layer
-   */
-  clearOcclusionCache(layerId: string): void {
-    this.occlusionCache.delete(layerId);
-  }
-
-  /**
-   * Get occlusion setting for a layer (from cache)
-   */
-  getLayerSelectiveEffectOcclusion(
-    layerId: string,
-  ): SelectiveEffectOcclusionValue {
-    return (
-      this.occlusionCache.get(layerId) ?? SelectiveEffectOcclusionMode.Normal
-    );
   }
 
   /**

@@ -6,16 +6,16 @@ import {
 } from "three";
 
 /**
- * Set up SE buffer uniforms on a standard Three.js material.
- * Injects uSEBufferMode/uEmissiveColor/uEmissiveIntensity/uEffectIdsMask via onBeforeCompile.
+ * Set up Selective Effect buffer uniforms on a standard Three.js material.
+ * Injects uSelectiveEffectBufferMode/uEmissiveColor/uEmissiveIntensity/uEffectIdsMask via onBeforeCompile.
  * Used by non-enhancer meshes (Box, Sphere, etc.) for SelectiveEffectBufferPass support.
  */
-export function setupSEBufferUniforms(
+export function setupSelectiveEffectBufferUniforms(
   material: MeshLambertMaterial | MeshStandardMaterial,
   emissiveColor: ColorRepresentation,
   emissiveIntensity: number,
 ): void {
-  material.userData.uSEBufferMode = { value: 0 };
+  material.userData.uSelectiveEffectBufferMode = { value: 0 };
   material.userData.uEmissiveColor = { value: new ThreeColor(emissiveColor) };
   material.userData.uEmissiveIntensity = { value: emissiveIntensity };
   material.userData.uEffectIdsMask = { value: 0 };
@@ -25,27 +25,28 @@ export function setupSEBufferUniforms(
     // Chain previous onBeforeCompile if it exists
     prevOnBeforeCompile.call(material, shader, renderer);
 
-    shader.uniforms.uSEBufferMode = material.userData.uSEBufferMode;
+    shader.uniforms.uSelectiveEffectBufferMode =
+      material.userData.uSelectiveEffectBufferMode;
     shader.uniforms.uEmissiveColor = material.userData.uEmissiveColor;
     shader.uniforms.uEmissiveIntensity = material.userData.uEmissiveIntensity;
     shader.uniforms.uEffectIdsMask = material.userData.uEffectIdsMask;
 
-    // uSEBufferMode and uEffectIdsMask are already declared by overrideMaterialsForMRT.
+    // uSelectiveEffectBufferMode and uEffectIdsMask are already declared by overrideMaterialsForMRT.
     // Add uEmissiveColor/uEmissiveIntensity declarations and override the
     // default vec4(0.0) early-return with emissive color output.
     shader.fragmentShader =
       `uniform vec3 uEmissiveColor;\nuniform float uEmissiveIntensity;\n` +
       shader.fragmentShader.replace(
-        /if \(uSEBufferMode > 0\.5\) \{[^}]*\}/,
-        `if (uSEBufferMode > 0.5) { gl_FragColor = vec4(uEmissiveColor, uEmissiveIntensity); outputBuffer1 = vec4(uEffectIdsMask, 0.0, 0.0, 1.0); return; }`,
+        /if \(uSelectiveEffectBufferMode > 0\.5\) \{[^}]*\}/,
+        `if (uSelectiveEffectBufferMode > 0.5) { gl_FragColor = vec4(uEmissiveColor, uEmissiveIntensity); outputBuffer1 = vec4(uEffectIdsMask, 0.0, 0.0, 1.0); return; }`,
       );
   };
 }
 
 /**
- * Sync SE buffer custom uniforms when emissive config changes.
+ * Sync Selective Effect buffer custom uniforms when emissive config changes.
  */
-export function syncSEBufferUniforms(
+export function syncSelectiveEffectBufferUniforms(
   material: MeshLambertMaterial | MeshStandardMaterial,
   emissiveColor?: ColorRepresentation,
   emissiveIntensity?: number,

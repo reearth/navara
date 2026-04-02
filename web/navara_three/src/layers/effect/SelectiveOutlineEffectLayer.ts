@@ -236,7 +236,7 @@ class SelectiveOutlinePass extends PostProcessingPass {
       new Mesh(this.fullscreenGeometry, this.extractMaterial),
     );
 
-    // Edge detection material (Sobel filter) — reused from old pipeline
+    // Edge detection material (Sobel filter)
     this.edgeDetectMaterial = new ShaderMaterial({
       uniforms: {
         tMask: { value: null },
@@ -354,7 +354,7 @@ class SelectiveOutlinePass extends PostProcessingPass {
       new Mesh(this.fullscreenGeometry, this.compositeMaterial),
     );
 
-    // Render targets (2 instead of old 5+)
+    // Render targets for extract + edge detection
     this.maskRT = new WebGLRenderTarget(initialWidth, initialHeight, {
       format: RGBAFormat,
       depthBuffer: false,

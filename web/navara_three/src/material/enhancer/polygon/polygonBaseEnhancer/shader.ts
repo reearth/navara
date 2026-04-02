@@ -153,7 +153,7 @@ uniform vec3 diffuse;
 uniform bool uClampToGround;
 uniform sampler2D uGlobeNormal;
 uniform float nvr_uPickable;
-// uSEBufferMode and uEffectIdsMask are declared by overrideMaterialsForMRT
+// uSelectiveEffectBufferMode and uEffectIdsMask are declared by overrideMaterialsForMRT
 uniform vec3 uEmissiveColor;
 uniform float uEmissiveIntensity;
 uniform bool uIsTexturized;
@@ -222,7 +222,7 @@ if(uClampToGround) {
       "#include <dithering_fragment>",
       `
 #include <dithering_fragment>
-if (uSEBufferMode > 0.5) {
+if (uSelectiveEffectBufferMode > 0.5) {
   gl_FragColor = vec4(uEmissiveColor, uEmissiveIntensity);
   outputBuffer1 = vec4(uEffectIdsMask, 0.0, 0.0, 1.0);
   return;

@@ -49,8 +49,8 @@ export class CustomRenderPass extends RenderPass {
   private debugNormalCopyPass?: NormalCopyPass;
   private allowTransparent: boolean;
 
-  /** SelectiveEffectBufferPass (SE専用MRT, set by MRTPassEffectLayer) */
-  seBufferPass?: import("./SelectiveEffectBufferPass").SelectiveEffectBufferPass;
+  /** SelectiveEffectBufferPass (dedicated Selective Effect MRT, set by MRTPassEffectLayer) */
+  selectiveEffectBufferPass?: import("./SelectiveEffectBufferPass").SelectiveEffectBufferPass;
 
   constructor(
     scenes: Scenes,
@@ -221,9 +221,9 @@ export class CustomRenderPass extends RenderPass {
     this.allDepthCopyPass.copyDepth(clearDepth);
     this.allDepthCopyPass.render(renderer, null, null);
 
-    // Render SE buffer (SE専用MRT: Emissive + EffectIds in single pass)
-    this.seBufferPass?.processRender();
-    this.seBufferPass?.renderDebugView();
+    // Render Selective Effect buffer (dedicated MRT: Emissive + EffectIds in single pass)
+    this.selectiveEffectBufferPass?.processRender();
+    this.selectiveEffectBufferPass?.renderDebugView();
   }
 
   setDepthTexture(depthTexture: DepthTexture): void {
@@ -238,7 +238,7 @@ export class CustomRenderPass extends RenderPass {
     this.allDepthCopyPass.setSize(width, height);
     this.globeNormalCopyPass.setSize(width, height);
     this.debugNormalCopyPass?.setSize(width, height);
-    this.seBufferPass?.setSize(width, height);
+    this.selectiveEffectBufferPass?.setSize(width, height);
   }
 
   // Drape a feature on the terrain by stencil test.

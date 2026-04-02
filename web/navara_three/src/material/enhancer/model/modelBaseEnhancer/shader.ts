@@ -88,7 +88,7 @@ ${ShadowMapDepthVertex}
 
 ${MODEL_BASE_SHADER_MARKERS.fragment.UNIFORM_START}
 uniform float nvr_uPickable;
-// uSEBufferMode and uEffectIdsMask are declared by overrideMaterialsForMRT
+// uSelectiveEffectBufferMode and uEffectIdsMask are declared by overrideMaterialsForMRT
 uniform vec3 uEmissiveColor;
 uniform float uEmissiveIntensity;
 ${MODEL_BASE_SHADER_MARKERS.fragment.UNIFORM_END}
@@ -135,7 +135,7 @@ ${MODEL_BASE_SHADER_MARKERS.fragment.OUTGOING_LIGHT_END}
       "#include <dithering_fragment>",
       `
 #include <dithering_fragment>
-if (uSEBufferMode > 0.5) {
+if (uSelectiveEffectBufferMode > 0.5) {
   gl_FragColor = vec4(uEmissiveColor, uEmissiveIntensity);
   outputBuffer1 = vec4(uEffectIdsMask, 0.0, 0.0, 1.0);
   return;

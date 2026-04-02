@@ -14,12 +14,10 @@ import type { ViewContext } from "./ViewContext";
 
 export type MeshLayerConfigWithSelectiveEffect = MeshLayerConfig & {
   effectIds?: string[];
-  // selectiveEffectOcclusion is now on Effect Layer config (SelectiveEffectLayerConfig)
 };
 
 export type MeshLayerUpdateWithSelectiveEffect = MeshLayerUpdate & {
   effectIds?: string[];
-  // selectiveEffectOcclusion is now on Effect Layer config (SelectiveEffectLayerConfig)
 };
 
 export abstract class MeshLayerDeclarationForSelectiveEffect<
@@ -64,7 +62,7 @@ export abstract class MeshLayerDeclarationForSelectiveEffect<
     // ----------------------------------------------------------------------------
     const useSelectiveEffect = this._effectIds.length > 0;
     if (useSelectiveEffect && this.raw) {
-      // Update Helper links for mask pass rendering
+      // Update Helper links for Selective Effect buffer rendering
       this.view.selectiveEffectRegistry?.updateLinksForObject(
         this.raw,
         this._effectIds,
@@ -75,7 +73,7 @@ export abstract class MeshLayerDeclarationForSelectiveEffect<
 
     // Register with Manager (SoT) if effectIds is specified
     if (useSelectiveEffect) {
-      this.view.registerLayerEffects(this.id, this._effectIds, undefined);
+      this.view.registerLayerEffects(this.id, this._effectIds);
     }
   }
 
@@ -105,7 +103,7 @@ export abstract class MeshLayerDeclarationForSelectiveEffect<
     // SelectiveEffect: registry update (requires this.raw)
     // ----------------------------------------------------------------------------
     if (effectIdsChanged && this.raw) {
-      // Update Helper links for mask pass rendering
+      // Update Helper links for Selective Effect buffer rendering
       this.view.selectiveEffectRegistry?.updateLinksForObject(
         this.raw,
         this._effectIds,

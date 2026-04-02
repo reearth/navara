@@ -12,14 +12,35 @@ import {
 
 import type { EffectSlotRegistry } from "../core/EffectSlotRegistry";
 import { getSelectiveEffectConfig } from "../core/SelectiveEffectHelper";
-import { isSEBufferMesh } from "../mesh/seBufferMesh";
+// --- Selective Effect Buffer Mesh interface ---
+
+/** Interface for meshes that support Selective Effect buffer rendering. */
+export type SelectiveEffectBufferMesh = {
+  _setSelectiveEffectBufferMode(
+    enabled: boolean,
+    effectIdsMask: number,
+  ): void;
+  _getEffectIds(): readonly string[];
+};
+
+const isSelectiveEffectBufferMesh = (
+  v: object,
+): v is SelectiveEffectBufferMesh => {
+  return (
+    "_setSelectiveEffectBufferMode" in v &&
+    typeof (v as SelectiveEffectBufferMesh)._setSelectiveEffectBufferMode ===
+      "function" &&
+    "_getEffectIds" in v &&
+    typeof (v as SelectiveEffectBufferMesh)._getEffectIds === "function"
+  );
+};
 import type { Scenes } from "../scene";
 import type { MeshCache } from "../type";
 
 /**
- * SelectiveEffectBufferPass — SE専用 MRT for emissive + effectIds.
+ * SelectiveEffectBufferPass — Dedicated Selective Effect MRT for emissive + effectIds.
  *
- * Renders the MRT scene once with `uSEBufferMode=1`, writing:
+ * Renders the MRT scene once with `uSelectiveEffectBufferMode=1`, writing:
  *   location 0 → Emissive (HalfFloat RGBA: RGB=color, A=intensity)
  *   location 1 → EffectIds (HalfFloat RGBA: R=bitmask, GBA=reserved)
  */
@@ -30,7 +51,7 @@ export class SelectiveEffectBufferPass {
   private _meshes: MeshCache;
   private _slotRegistry: EffectSlotRegistry;
 
-  private seMRT: WebGLRenderTarget;
+  private selectiveEffectMRT: WebGLRenderTarget;
   private readonly _tempClearColor = new Color();
 
   private _savedOpaqueVisible = true;
@@ -67,24 +88,26 @@ export class SelectiveEffectBufferPass {
     const width = gl.drawingBufferWidth;
     const height = gl.drawingBufferHeight;
 
-    // SE専用 MRT: 2 attachments (HalfFloat RGBA)
-    this.seMRT = new WebGLRenderTarget(width, height, {
+    // Dedicated Selective Effect MRT: 2 attachments (HalfFloat RGBA)
+    this.selectiveEffectMRT = new WebGLRenderTarget(width, height, {
       format: RGBAFormat,
       type: HalfFloatType,
       depthBuffer: true,
       stencilBuffer: true,
     });
-    this.seMRT.textures.push(this.seMRT.texture.clone());
-    this.seMRT.textures[0].name = "SE_Emissive";
-    this.seMRT.textures[1].name = "SE_EffectIds";
+    this.selectiveEffectMRT.textures.push(
+      this.selectiveEffectMRT.texture.clone(),
+    );
+    this.selectiveEffectMRT.textures[0].name = "SelectiveEffect_Emissive";
+    this.selectiveEffectMRT.textures[1].name = "SelectiveEffect_EffectIds";
   }
 
   get emissiveTexture(): Texture {
-    return this.seMRT.textures[0];
+    return this.selectiveEffectMRT.textures[0];
   }
 
   get effectIdsTexture(): Texture {
-    return this.seMRT.textures[1];
+    return this.selectiveEffectMRT.textures[1];
   }
 
   // --- Render ---
@@ -92,12 +115,12 @@ export class SelectiveEffectBufferPass {
   private toggleSEBufferMode(enabled: boolean): void {
     // Enhanced meshes via interface
     for (const [_key, obj] of this._meshes) {
-      if (isSEBufferMesh(obj)) {
+      if (isSelectiveEffectBufferMesh(obj)) {
         if (enabled) {
           const mask = this.computeMaskForObject(obj);
-          obj._setSEBufferMode(true, mask);
+          obj._setSelectiveEffectBufferMode(true, mask);
         } else {
-          obj._setSEBufferMode(false, 0);
+          obj._setSelectiveEffectBufferMode(false, 0);
         }
       }
     }
@@ -105,8 +128,11 @@ export class SelectiveEffectBufferPass {
     // Non-enhanced meshes (Box/Sphere/Cylinder etc.) via material.userData
     const modeValue = enabled ? 1 : 0;
     this._scenes.mrt.traverse((obj: Object3D) => {
-      if (obj instanceof Mesh && obj.material?.userData?.uSEBufferMode) {
-        obj.material.userData.uSEBufferMode.value = modeValue;
+      if (
+        obj instanceof Mesh &&
+        obj.material?.userData?.uSelectiveEffectBufferMode
+      ) {
+        obj.material.userData.uSelectiveEffectBufferMode.value = modeValue;
         if (enabled) {
           const mask = this.computeMaskForObject(obj);
           obj.material.userData.uEffectIdsMask.value = mask;
@@ -128,7 +154,7 @@ export class SelectiveEffectBufferPass {
   }
 
   private computeMaskForObject(obj: Object3D): number {
-    if (isSEBufferMesh(obj)) {
+    if (isSelectiveEffectBufferMesh(obj)) {
       return this._slotRegistry.computeMask(obj._getEffectIds());
     }
     const config = getSelectiveEffectConfig(obj);
@@ -146,8 +172,8 @@ export class SelectiveEffectBufferPass {
 
     this.toggleSEBufferMode(true);
 
-    // Single render to SE MRT (writes Emissive + EffectIds simultaneously)
-    this._renderer.setRenderTarget(this.seMRT);
+    // Single render to Selective Effect MRT (writes Emissive + EffectIds simultaneously)
+    this._renderer.setRenderTarget(this.selectiveEffectMRT);
     this._renderer.clear();
     this._renderer.render(this._scenes.mrt, this._camera);
 
@@ -173,8 +199,8 @@ export class SelectiveEffectBufferPass {
       container.style.zIndex = "1000";
       document.body.appendChild(container);
 
-      const w = this.seMRT.width;
-      const h = this.seMRT.height;
+      const w = this.selectiveEffectMRT.width;
+      const h = this.selectiveEffectMRT.height;
       const panelW = SelectiveEffectBufferPass.DEBUG_PANEL_WIDTH;
 
       const labels = ["Emissive RGB", "Emissive A (intensity)"];
@@ -230,8 +256,8 @@ export class SelectiveEffectBufferPass {
       container.style.zIndex = "1000";
       document.body.appendChild(container);
 
-      const w = this.seMRT.width;
-      const h = this.seMRT.height;
+      const w = this.selectiveEffectMRT.width;
+      const h = this.selectiveEffectMRT.height;
       const panelW = 400;
 
       const canvas = document.createElement("canvas");
@@ -283,12 +309,12 @@ export class SelectiveEffectBufferPass {
     attachmentIndex: number,
     buffer: Float32Array,
   ): void {
-    const width = this.seMRT.width;
-    const height = this.seMRT.height;
+    const width = this.selectiveEffectMRT.width;
+    const height = this.selectiveEffectMRT.height;
     const gl = this._renderer.getContext() as WebGL2RenderingContext;
 
-    // Bind the SE MRT framebuffer
-    this._renderer.setRenderTarget(this.seMRT);
+    // Bind the Selective Effect MRT framebuffer
+    this._renderer.setRenderTarget(this.selectiveEffectMRT);
 
     // Switch readBuffer to the desired attachment
     gl.readBuffer(gl.COLOR_ATTACHMENT0 + attachmentIndex);
@@ -300,8 +326,8 @@ export class SelectiveEffectBufferPass {
   private renderEmissiveDebugView(): void {
     if (!this.emissiveDebugCanvases || !this._emissivePixelBuffer) return;
 
-    const width = this.seMRT.width;
-    const height = this.seMRT.height;
+    const width = this.selectiveEffectMRT.width;
+    const height = this.selectiveEffectMRT.height;
 
     this.readMRTAttachment(0, this._emissivePixelBuffer);
 
@@ -366,8 +392,8 @@ export class SelectiveEffectBufferPass {
   private renderEffectIdsDebugView(): void {
     if (!this.effectIdsDebugCanvases || !this._effectIdsPixelBuffer) return;
 
-    const width = this.seMRT.width;
-    const height = this.seMRT.height;
+    const width = this.selectiveEffectMRT.width;
+    const height = this.selectiveEffectMRT.height;
 
     this.readMRTAttachment(1, this._effectIdsPixelBuffer);
 
@@ -422,7 +448,7 @@ export class SelectiveEffectBufferPass {
   // --- Lifecycle ---
 
   setSize(width: number, height: number): void {
-    this.seMRT.setSize(width, height);
+    this.selectiveEffectMRT.setSize(width, height);
     if (this._emissivePixelBuffer) {
       this._emissivePixelBuffer = new Float32Array(width * height * 4);
     }
@@ -432,7 +458,7 @@ export class SelectiveEffectBufferPass {
   }
 
   dispose(): void {
-    this.seMRT.dispose();
+    this.selectiveEffectMRT.dispose();
     this.emissiveDebugCanvases?.container.remove();
     this.emissiveDebugCanvases = undefined;
     this._emissivePixelBuffer = undefined;

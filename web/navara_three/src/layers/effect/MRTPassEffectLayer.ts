@@ -29,7 +29,7 @@ export class MRTPassEffectLayer extends EffectLayerDeclaration<
   // No insertAfter/Before - this is typically the first pass
 
   private config: MRTPassConfig;
-  private seBufferPass?: SelectiveEffectBufferPass;
+  private selectiveEffectBufferPass?: SelectiveEffectBufferPass;
   private _slotRegistry = new EffectSlotRegistry();
 
   constructor(view: ViewContext, config: MRTPassConfig) {
@@ -58,15 +58,15 @@ export class MRTPassEffectLayer extends EffectLayerDeclaration<
       },
     );
 
-    // Create SelectiveEffectBufferPass (SE専用MRT: Emissive + EffectIds in single pass)
-    this.seBufferPass = new SelectiveEffectBufferPass(
+    // Create SelectiveEffectBufferPass (dedicated Selective Effect MRT: Emissive + EffectIds in single pass)
+    this.selectiveEffectBufferPass = new SelectiveEffectBufferPass(
       renderer,
       camera,
       scenes,
       this.view._privates.meshes,
       this._slotRegistry,
     );
-    pass.seBufferPass = this.seBufferPass;
+    pass.selectiveEffectBufferPass = this.selectiveEffectBufferPass;
 
     return pass;
   }
@@ -76,11 +76,11 @@ export class MRTPassEffectLayer extends EffectLayerDeclaration<
   }
 
   get emissiveBuffer(): Texture | undefined {
-    return this.seBufferPass?.emissiveTexture;
+    return this.selectiveEffectBufferPass?.emissiveTexture;
   }
 
   get effectIdsBuffer(): Texture | undefined {
-    return this.seBufferPass?.effectIdsTexture;
+    return this.selectiveEffectBufferPass?.effectIdsTexture;
   }
 
   get effectSlotRegistry(): EffectSlotRegistry {
@@ -120,7 +120,7 @@ export class MRTPassEffectLayer extends EffectLayerDeclaration<
   }
 
   onDestroy(): void {
-    this.seBufferPass?.dispose();
+    this.selectiveEffectBufferPass?.dispose();
     this._slotRegistry.clear();
     super.onDestroy();
   }
