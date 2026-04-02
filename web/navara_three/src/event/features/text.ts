@@ -26,17 +26,16 @@ export async function renderText(
   // Use SDF pipeline when a font URL is specified and FontManager is available
   if (fontManager) {
     try {
-      // Pre-prepare the text in the worker so cache is populated before mesh construction.
-      // For font families, prepareText resolves the family name to a concrete URL and loads it.
-      // For raw URLs, we load the font file first.
+      // Load font(s) then shape the text so the cache is populated before mesh construction.
+      // For font families, only the face URLs needed for `text` are loaded (lazy).
+      // For raw URLs, the single font file is loaded directly.
       const text = m.material.text ?? "";
+      const loadedFaceUrls = new Set<string>();
       if (fontManager.isFamily(fontUrl)) {
-        await fontManager.loadFontFamily(fontUrl);
+        if (text) await fontManager.prepareText(fontUrl, text, loadedFaceUrls);
       } else {
         await fontManager.loadFont(fontUrl);
-      }
-      if (text) {
-        await fontManager.prepareText(fontUrl, text);
+        if (text) await fontManager.prepareText(fontUrl, text);
       }
 
       const textGroup = new BatchedSdfTextMesh(
@@ -50,6 +49,7 @@ export async function renderText(
           viewContext,
           layerId,
         },
+        loadedFaceUrls,
       );
       textGroup.setActive(m.active);
 

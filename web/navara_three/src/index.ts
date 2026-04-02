@@ -280,8 +280,8 @@ export default class ThreeView<
   /**
    * Register a font family with multiple faces.
    * Each face covers a set of unicode ranges and points to a separate font file URL.
-   * When a text label uses this family name as its font, only the font file
-   * matching the label's characters will be loaded.
+   * When a text label uses this family name as its font, only the face files
+   * whose unicode ranges cover the label's characters are loaded.
    *
    * @example
    * ```ts

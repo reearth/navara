@@ -43,6 +43,12 @@ export class BatchedSdfTextMesh
   private _fontIdentifier: string;
   private _fontManager: FontManager;
   private _needRender?: () => void;
+  /**
+   * Face URLs loaded by this mesh for font-family fonts.
+   * Each URL in this set has had loadFont() called exactly once by this mesh
+   * and must be balanced with unloadFont() on dispose or font change.
+   */
+  private _loadedFaceUrls: Set<string>;
 
   constructor(
     m: NavaraTextMesh,
@@ -51,10 +57,12 @@ export class BatchedSdfTextMesh
     fontIdentifier: string,
     _uniforms: CommonUniforms,
     options: InstancedMeshOptions,
+    loadedFaceUrls?: Set<string>,
   ) {
     super(options);
     this._fontIdentifier = fontIdentifier;
     this._fontManager = fontManager;
+    this._loadedFaceUrls = loadedFaceUrls ?? new Set();
     this.initMeshes(m, buf, fontManager);
   }
 
@@ -145,15 +153,21 @@ export class BatchedSdfTextMesh
     const needFontUpdate = fontIdentifier !== this._fontIdentifier;
 
     if (needFontUpdate) {
-      if (this._fontManager.isFamily(fontIdentifier)) {
-        await this._fontManager.loadFontFamily(fontIdentifier);
-      } else {
-        await this._fontManager.loadFont(fontIdentifier);
-      }
-      if (this._fontManager.isFamily(this._fontIdentifier)) {
-        await this._fontManager.unloadFontFamily(this._fontIdentifier);
-      } else {
+      // Unload old font resources.
+      if (this._loadedFaceUrls.size > 0) {
+        await Promise.all(
+          [...this._loadedFaceUrls].map((url) =>
+            this._fontManager.unloadFont(url),
+          ),
+        );
+        this._loadedFaceUrls.clear();
+      } else if (!this._fontManager.isFamily(this._fontIdentifier)) {
         await this._fontManager.unloadFont(this._fontIdentifier);
+      }
+      // For standalone new fonts load upfront; family faces are loaded lazily
+      // by prepareText below.
+      if (!this._fontManager.isFamily(fontIdentifier)) {
+        await this._fontManager.loadFont(fontIdentifier);
       }
     }
     this._fontIdentifier = fontIdentifier;
@@ -164,7 +178,7 @@ export class BatchedSdfTextMesh
       !this._fontManager.isTextPrepared(this._fontIdentifier, text)
     ) {
       this._fontManager
-        .prepareText(this._fontIdentifier, text)
+        .prepareText(this._fontIdentifier, text, this._loadedFaceUrls)
         .then(() => {
           this._applyUpdate(material, needRender, needFontUpdate);
         })
@@ -272,7 +286,7 @@ export class BatchedSdfTextMesh
         !this._fontManager.isTextPrepared(this._fontIdentifier, text)
       ) {
         this._fontManager
-          .prepareText(this._fontIdentifier, text)
+          .prepareText(this._fontIdentifier, text, this._loadedFaceUrls)
           .then(() => {
             // Refresh the shared atlas texture if the worker rasterized new glyphs
             const sharedTex = this._fontManager.getAtlasTexture(
@@ -320,9 +334,14 @@ export class BatchedSdfTextMesh
   }
 
   dispose() {
-    const unload = this._fontManager.isFamily(this._fontIdentifier)
-      ? this._fontManager.unloadFontFamily(this._fontIdentifier)
-      : this._fontManager.unloadFont(this._fontIdentifier);
+    const unload =
+      this._loadedFaceUrls.size > 0
+        ? Promise.all(
+            [...this._loadedFaceUrls].map((url) =>
+              this._fontManager.unloadFont(url),
+            ),
+          )
+        : this._fontManager.unloadFont(this._fontIdentifier);
     void unload.catch((err: unknown) => {
       console.error("Failed to unload font during dispose:", err);
     });

@@ -90,26 +90,12 @@ export class FontManager {
     this._families.set(family.family, family);
   }
 
-  /** Remove a registered font family and release all associated resources. */
+  /**
+   * Remove a registered font family. No font resources are unloaded here —
+   * each mesh that used this family tracks its loaded face URLs and unloads
+   * them individually on dispose.
+   */
   unregisterFontFamily(familyName: string): void {
-    // Start async face unloading before removing the family entry so that
-    // unloadFontFamily can still read the face list synchronously before its
-    // first await.
-    void this.unloadFontFamily(familyName).catch((err: unknown) => {
-      console.error(
-        `FontManager: failed to unload font family "${familyName}"`,
-        err,
-      );
-    });
-
-    this._shapeCache.delete(familyName);
-    this._atlasCache.delete(familyName);
-    this._atlasDirty.delete(familyName);
-    const tex = this._textureCache.get(familyName);
-    if (tex) {
-      tex.dispose();
-      this._textureCache.delete(familyName);
-    }
     this._families.delete(familyName);
   }
 
@@ -231,29 +217,6 @@ export class FontManager {
     }
   }
 
-  /**
-   * Load all faces in a registered font family. Each face is loaded once and
-   * shares a single atlas keyed by the family name. Calling this multiple times
-   * is safe — subsequent calls increment ref-counts but do not re-fetch.
-   */
-  async loadFontFamily(familyName: string): Promise<void> {
-    const family = this._families.get(familyName);
-    if (!family) throw new Error(`FontManager: unknown family "${familyName}"`);
-    const uniqueUrls = [...new Set(family.faces.map((f) => f.url))];
-    await Promise.all(uniqueUrls.map((url) => this.loadFont(url, familyName)));
-  }
-
-  /**
-   * Unload all faces belonging to a registered font family.
-   * Mirrors loadFontFamily — each face ref-count is decremented once.
-   */
-  async unloadFontFamily(familyName: string): Promise<void> {
-    const family = this._families.get(familyName);
-    if (!family) return;
-    const uniqueUrls = [...new Set(family.faces.map((f) => f.url))];
-    await Promise.all(uniqueUrls.map((url) => this.unloadFont(url)));
-  }
-
   async unloadFont(url: string) {
     const count = this._refCount.get(url);
     if (!count) return; // Not loaded or already fully unloaded
@@ -296,15 +259,36 @@ export class FontManager {
    * Must be called (and awaited) before shapeText() will return data for this text.
    * Accepts either a font URL or a registered font family name.
    *
-   * For font families, segments the text by face (per unicode ranges),
-   * shapes each segment with the correct face, and stitches the results.
-   * All faces share a single atlas so the renderer uses one texture.
+   * For font families, face URLs are loaded lazily — only the faces whose
+   * unicode ranges cover `text` are fetched. Pass a caller-owned `loadedFaces`
+   * Set to track which URLs were loaded; the caller must call unloadFont() for
+   * each URL in the set on dispose. Passing the same set across multiple calls
+   * ensures each face URL is loaded exactly once per caller.
+   *
+   * For standalone font URLs the font must already be loaded via loadFont().
    */
-  async prepareText(fontIdentifier: string, text: string): Promise<void> {
+  async prepareText(
+    fontIdentifier: string,
+    text: string,
+    loadedFaces?: Set<string>,
+  ): Promise<void> {
     if (!text) return;
 
     const family = this._families.get(fontIdentifier);
     if (family) {
+      // Lazy path: load only the face URLs needed for this text that this
+      // caller has not loaded yet.
+      const tracker = loadedFaces ?? new Set<string>();
+      const segments = this._segmentTextByFace(family.faces, text);
+      const uniqueUrls = [...new Set(segments.map((s) => s.url))];
+      await Promise.all(
+        uniqueUrls
+          .filter((url) => !tracker.has(url))
+          .map(async (url) => {
+            await this.loadFont(url, fontIdentifier);
+            tracker.add(url);
+          }),
+      );
       return this._prepareFamilyText(fontIdentifier, family, text);
     }
 
@@ -377,7 +361,7 @@ export class FontManager {
     const promise = (async () => {
       const segments = this._segmentTextByFace(family.faces, text);
 
-      // Load all needed faces and prepare each segment
+      // Shape each segment. Face URLs were loaded lazily by prepareText above.
       await Promise.all(
         segments.map((seg) => this._prepareSingleFontText(seg.url, seg.text)),
       );
@@ -417,7 +401,11 @@ export class FontManager {
 
     for (const seg of segments) {
       const result = this._shapeCache.get(seg.url)?.get(seg.text);
-      if (!result) continue;
+      if (!result) {
+        throw new Error(
+          `FontManager: missing shape result for face "${seg.url}" text "${seg.text}"`,
+        );
+      }
 
       if (targetUnitsPerEm === 0) targetUnitsPerEm = result.unitsPerEm;
       const scale = targetUnitsPerEm / result.unitsPerEm;
@@ -442,6 +430,10 @@ export class FontManager {
           metricsMap.set(key, m);
         }
       }
+    }
+
+    if (targetUnitsPerEm === 0) {
+      throw new Error("FontManager: _stitchSegments produced unitsPerEm of 0");
     }
 
     return {
