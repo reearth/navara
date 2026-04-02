@@ -40,7 +40,8 @@ pub struct GlyphMetrics {
 ///
 /// Glyphs are keyed by a composite `u64` of `(font_index, glyph_id)` so that
 /// different fonts sharing the same atlas never collide on glyph IDs.
-/// For standalone fonts (one atlas per URL) the font_index is always 0.
+/// For standalone fonts (one atlas per URL) the font_index is the unique index
+/// assigned by `FontCache` at load time.
 pub struct SDFAtlas {
     /// Rectangle packer for allocating glyph regions
     pub allocator: AtlasAllocator,

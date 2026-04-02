@@ -287,14 +287,16 @@ export default class ThreeView<
    * ```ts
    * view.addFontFamily({
    *   family: "MapFont",
-   *   faces: [{
-   *       url: "/fonts/latin.woff2"
-   *       unicodeRanges: [{ from: 0x0000, to: 0x024F }],
+   *   faces: [
+   *     {
+   *       url: "/fonts/latin.woff2",
+   *       unicodeRanges: [{ from: 0x0000, to: 0x024f }],
    *     },
    *     {
-   *       url: "/fonts/cjk.woff2"
-   *       unicodeRanges: [{ from: 0x4E00, to: 0x9FFF }],
-   *    }],
+   *       url: "/fonts/cjk.woff2",
+   *       unicodeRanges: [{ from: 0x4e00, to: 0x9fff }],
+   *     },
+   *   ],
    * });
    * ```
    */

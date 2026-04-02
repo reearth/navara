@@ -30,7 +30,9 @@ export async function renderText(
       // For font families, prepareText resolves the family name to a concrete URL and loads it.
       // For raw URLs, we load the font file first.
       const text = m.material.text ?? "";
-      if (!fontManager.isFamily(fontUrl)) {
+      if (fontManager.isFamily(fontUrl)) {
+        await fontManager.loadFontFamily(fontUrl);
+      } else {
         await fontManager.loadFont(fontUrl);
       }
       if (text) {

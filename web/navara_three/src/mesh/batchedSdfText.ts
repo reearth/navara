@@ -58,7 +58,7 @@ export class BatchedSdfTextMesh
     this.initMeshes(m, buf, fontManager);
   }
 
-  get fontUrl(): string {
+  get fontIdentifier(): string {
     return this._fontIdentifier;
   }
 
@@ -145,10 +145,16 @@ export class BatchedSdfTextMesh
     const needFontUpdate = fontIdentifier !== this._fontIdentifier;
 
     if (needFontUpdate) {
-      if (!this._fontManager.isFamily(fontIdentifier)) {
+      if (this._fontManager.isFamily(fontIdentifier)) {
+        await this._fontManager.loadFontFamily(fontIdentifier);
+      } else {
         await this._fontManager.loadFont(fontIdentifier);
       }
-      await this._fontManager.unloadFont(this._fontIdentifier);
+      if (this._fontManager.isFamily(this._fontIdentifier)) {
+        await this._fontManager.unloadFontFamily(this._fontIdentifier);
+      } else {
+        await this._fontManager.unloadFont(this._fontIdentifier);
+      }
     }
     this._fontIdentifier = fontIdentifier;
 
@@ -314,10 +320,11 @@ export class BatchedSdfTextMesh
   }
 
   dispose() {
-    void this._fontManager
-      .unloadFont(this._fontIdentifier)
-      .catch((err: unknown) => {
-        console.error("Failed to unload font during dispose:", err);
-      });
+    const unload = this._fontManager.isFamily(this._fontIdentifier)
+      ? this._fontManager.unloadFontFamily(this._fontIdentifier)
+      : this._fontManager.unloadFont(this._fontIdentifier);
+    void unload.catch((err: unknown) => {
+      console.error("Failed to unload font during dispose:", err);
+    });
   }
 }

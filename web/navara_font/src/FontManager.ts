@@ -90,9 +90,27 @@ export class FontManager {
     this._families.set(family.family, family);
   }
 
-  /** Remove a registered font family. */
-  unregisterFontFamily(family: string): void {
-    this._families.delete(family);
+  /** Remove a registered font family and release all associated resources. */
+  unregisterFontFamily(familyName: string): void {
+    // Start async face unloading before removing the family entry so that
+    // unloadFontFamily can still read the face list synchronously before its
+    // first await.
+    void this.unloadFontFamily(familyName).catch((err: unknown) => {
+      console.error(
+        `FontManager: failed to unload font family "${familyName}"`,
+        err,
+      );
+    });
+
+    this._shapeCache.delete(familyName);
+    this._atlasCache.delete(familyName);
+    this._atlasDirty.delete(familyName);
+    const tex = this._textureCache.get(familyName);
+    if (tex) {
+      tex.dispose();
+      this._textureCache.delete(familyName);
+    }
+    this._families.delete(familyName);
   }
 
   /** Check whether a font identifier is a registered family name. */
@@ -213,6 +231,29 @@ export class FontManager {
     }
   }
 
+  /**
+   * Load all faces in a registered font family. Each face is loaded once and
+   * shares a single atlas keyed by the family name. Calling this multiple times
+   * is safe — subsequent calls increment ref-counts but do not re-fetch.
+   */
+  async loadFontFamily(familyName: string): Promise<void> {
+    const family = this._families.get(familyName);
+    if (!family) throw new Error(`FontManager: unknown family "${familyName}"`);
+    const uniqueUrls = [...new Set(family.faces.map((f) => f.url))];
+    await Promise.all(uniqueUrls.map((url) => this.loadFont(url, familyName)));
+  }
+
+  /**
+   * Unload all faces belonging to a registered font family.
+   * Mirrors loadFontFamily — each face ref-count is decremented once.
+   */
+  async unloadFontFamily(familyName: string): Promise<void> {
+    const family = this._families.get(familyName);
+    if (!family) return;
+    const uniqueUrls = [...new Set(family.faces.map((f) => f.url))];
+    await Promise.all(uniqueUrls.map((url) => this.unloadFont(url)));
+  }
+
   async unloadFont(url: string) {
     const count = this._refCount.get(url);
     if (!count) return; // Not loaded or already fully unloaded
@@ -290,10 +331,7 @@ export class FontManager {
   private async _prepareSingleFontText(
     fontUrl: string,
     text: string,
-    atlasKey?: string,
   ): Promise<void> {
-    await this.loadFont(fontUrl, atlasKey);
-
     const cacheKey = this._cacheKey(fontUrl, text);
     if (this._shapeCache.get(fontUrl)?.has(text) ?? false) return;
     if (this._preparePending.has(cacheKey))
@@ -341,7 +379,7 @@ export class FontManager {
       // Load all needed faces and prepare each segment
       await Promise.all(
         segments.map((seg) =>
-          this._prepareSingleFontText(seg.url, seg.text, familyName),
+          this._prepareSingleFontText(seg.url, seg.text),
         ),
       );
 
@@ -366,26 +404,52 @@ export class FontManager {
     }
   }
 
-  /** Combine shaped results from multiple face segments into one result. */
+  /** Combine shaped results from multiple face segments into one result.
+   *
+   * All glyph advances/offsets and bearing values are normalized to the first
+   * segment's unitsPerEm so the consumer can apply a single scale factor.
+   */
   private _stitchSegments(
     segments: { url: string; text: string }[],
   ): ShapeTextResult {
     const allGlyphs: ShapedGlyph[] = [];
     const metricsMap = new Map<string, GlyphMetrics>();
-    let unitsPerEm = 0;
+    let targetUnitsPerEm = 0;
 
     for (const seg of segments) {
       const result = this._shapeCache.get(seg.url)?.get(seg.text);
       if (!result) continue;
 
-      if (unitsPerEm === 0) unitsPerEm = result.unitsPerEm;
+      if (targetUnitsPerEm === 0) targetUnitsPerEm = result.unitsPerEm;
+      const scale = targetUnitsPerEm / result.unitsPerEm;
 
-      allGlyphs.push(...result.glyphs);
+      for (const g of result.glyphs) {
+        allGlyphs.push(
+          scale === 1
+            ? g
+            : {
+                ...g,
+                xAdvance: g.xAdvance * scale,
+                yAdvance: g.yAdvance * scale,
+                xOffset: g.xOffset * scale,
+                yOffset: g.yOffset * scale,
+              },
+        );
+      }
 
       for (const m of result.metrics) {
         const key = `${m.fontIndex}:${m.glyphId}`;
         if (!metricsMap.has(key)) {
-          metricsMap.set(key, m);
+          metricsMap.set(
+            key,
+            scale === 1
+              ? m
+              : {
+                  ...m,
+                  bearingX: m.bearingX * scale,
+                  bearingY: m.bearingY * scale,
+                },
+          );
         }
       }
     }
@@ -393,7 +457,7 @@ export class FontManager {
     return {
       glyphs: allGlyphs,
       metrics: [...metricsMap.values()],
-      unitsPerEm,
+      unitsPerEm: targetUnitsPerEm,
     };
   }
 
