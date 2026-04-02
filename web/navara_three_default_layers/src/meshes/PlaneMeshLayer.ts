@@ -13,12 +13,6 @@ import {
   type Object3DEventMap,
 } from "three";
 
-import { setupEffectIdsBufferUniforms } from "./effectIdsBufferSetup";
-import {
-  setupEmissiveBufferUniforms,
-  syncEmissiveBufferUniforms,
-} from "./emissiveBufferSetup";
-
 type PlaneMeshEventMap = Object3DEventMap & CustomObject3DEventMap;
 
 type LayerDescription = {
@@ -76,19 +70,14 @@ export class PlaneMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
 
     // Create material from properties
     const colorValue = cfg.color ?? new Color().setStyle("#ffffff");
+    const emissiveColorValue = cfg.emissiveColor ? cfg.emissiveColor.raw : 0;
     const material = new MeshLambertMaterial({
       color: colorValue.raw,
+      emissive: emissiveColorValue,
+      emissiveIntensity: cfg.emissiveIntensity ?? 1,
       opacity: cfg.opacity ?? 1,
       transparent: cfg.transparent ?? false,
     });
-
-    const hexEmissiveColor = cfg.emissiveColor?.raw ?? 0x000000;
-    setupEmissiveBufferUniforms(
-      material,
-      hexEmissiveColor,
-      cfg.emissiveIntensity ?? 0,
-    );
-    setupEffectIdsBufferUniforms(material);
 
     const mesh = new Mesh<
       PlaneGeometry,
@@ -144,11 +133,10 @@ export class PlaneMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
             const colorValue = cfg.color.raw;
             material.color.set(colorValue);
           }
-          syncEmissiveBufferUniforms(
-            material,
-            cfg.emissiveColor?.raw,
-            cfg.emissiveIntensity,
-          );
+          if (cfg.emissiveColor !== undefined)
+            material.emissive.set(cfg.emissiveColor.raw);
+          if (cfg.emissiveIntensity !== undefined)
+            material.emissiveIntensity = cfg.emissiveIntensity;
           if (cfg.opacity !== undefined) material.opacity = cfg.opacity;
           if (cfg.transparent !== undefined)
             material.transparent = cfg.transparent;
@@ -168,6 +156,7 @@ export class PlaneMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
       if (cfg.effectIds !== undefined) {
         updates.effectIds = cfg.effectIds;
       }
+
       this.emit("needsUpdate");
     }
 

@@ -15,12 +15,6 @@ import {
   type Object3DEventMap,
 } from "three";
 
-import { setupEffectIdsBufferUniforms } from "./effectIdsBufferSetup";
-import {
-  setupEmissiveBufferUniforms,
-  syncEmissiveBufferUniforms,
-} from "./emissiveBufferSetup";
-
 type CylinderMeshEventMap = Object3DEventMap & CustomObject3DEventMap;
 
 type LayerDescription = {
@@ -93,16 +87,6 @@ export class CylinderMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
     // Create material from properties
     const material = this.createMaterial(cfg);
 
-    if (material instanceof MeshLambertMaterial) {
-      const hexEmissiveColor = cfg.emissiveColor?.raw ?? 0x000000;
-      setupEmissiveBufferUniforms(
-        material,
-        hexEmissiveColor,
-        cfg.emissiveIntensity ?? 0,
-      );
-      setupEffectIdsBufferUniforms(material);
-    }
-
     const mesh = new DrapedMesh<
       CylinderGeometry,
       CylinderMeshMaterial,
@@ -128,8 +112,11 @@ export class CylinderMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
         transparent: cfg.transparent ?? false,
       });
     }
+    const emissiveColorValue = cfg.emissiveColor ? cfg.emissiveColor.raw : 0;
     return new MeshLambertMaterial({
       color: colorValue.raw,
+      emissive: emissiveColorValue,
+      emissiveIntensity: cfg.emissiveIntensity ?? 1,
       opacity: cfg.opacity ?? 1,
       transparent: cfg.transparent ?? false,
     });
@@ -210,11 +197,10 @@ export class CylinderMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
         if (cfg.transparent !== undefined)
           material.transparent = cfg.transparent;
         if (material instanceof MeshLambertMaterial) {
-          syncEmissiveBufferUniforms(
-            material,
-            cfg.emissiveColor?.raw,
-            cfg.emissiveIntensity,
-          );
+          if (cfg.emissiveColor !== undefined)
+            material.emissive.set(cfg.emissiveColor.raw);
+          if (cfg.emissiveIntensity !== undefined)
+            material.emissiveIntensity = cfg.emissiveIntensity;
         }
         material.needsUpdate = true;
       }
@@ -231,6 +217,7 @@ export class CylinderMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
       if (cfg.effectIds !== undefined) {
         updates.effectIds = cfg.effectIds;
       }
+
       this.emit("needsUpdate");
     }
 
