@@ -157,6 +157,24 @@ export abstract class SelectiveEffectLayer<
     return undefined;
   }
 
+  /** Get the emissive buffer texture from MRT pass */
+  public getEmissiveBuffer(): Texture | null {
+    const mrtLayer = this.findLayer<MRTPassEffectLayer>("mrt");
+    return mrtLayer?.emissiveBuffer ?? null;
+  }
+
+  /** Get the effectIds buffer texture from MRT pass */
+  public getEffectIdsBuffer(): Texture | null {
+    const mrtLayer = this.findLayer<MRTPassEffectLayer>("mrt");
+    return mrtLayer?.effectIdsBuffer ?? null;
+  }
+
+  /** Get this effect's slot number (0=R, 1=G, 2=B). -1 if not registered */
+  public getEffectSlot(): number {
+    const mrtLayer = this.findLayer<MRTPassEffectLayer>("mrt");
+    return mrtLayer?.effectSlotRegistry.getSlot(this.id) ?? -1;
+  }
+
   /**
    * Render debug mask visualization
    *
