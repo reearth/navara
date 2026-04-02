@@ -29,11 +29,8 @@ export type PolygonBaseProps = {
   // Picking
   pickable?: boolean;
 
-  // Emissive-only rendering (for EmissiveBufferPass)
-  emissiveOnly?: boolean;
-
-  // EffectIds Buffer rendering
-  effectIdsMode?: boolean;
+  // SE Buffer mode (for SelectiveEffectBufferPass)
+  seBufferMode?: boolean;
   effectIdsMask?: number;
 
   // Reflectivity
@@ -69,10 +66,9 @@ export type PolygonBaseState = Readonly<
     isTexturized: boolean;
     clampToGround: boolean;
     pickable: boolean;
-    emissiveOnly: boolean;
+    seBufferMode: boolean;
     emissiveColor: number;
     emissiveIntensity: number;
-    effectIdsMode: boolean;
     effectIdsMask: number;
     minMaxHeight: [number, number] | undefined;
     addExtrudedHeight: number;
@@ -98,10 +94,9 @@ export type PolygonBaseRefs = {
   uAddHeight: UniformValue<number>;
   uClampToGround: UniformValue<boolean>;
   nvr_uPickable: UniformValue<number>;
-  uEmissiveOnly: UniformValue<number>;
+  uSEBufferMode: UniformValue<number>;
   uEmissiveColor: UniformValue<Color>;
   uEmissiveIntensity: UniformValue<number>;
-  uEffectIdsMode: UniformValue<number>;
   uEffectIdsMask: UniformValue<number>;
   uIsTexturized: UniformValue<boolean>;
   reflectivity: UniformValue<number>;

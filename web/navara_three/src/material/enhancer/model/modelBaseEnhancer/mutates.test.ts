@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 
-import { SelectiveEffectOcclusionMode } from "../../../../core";
 import type { ShaderUniforms } from "../../MaterialEnhancer";
 
 import { createBaseMutates } from "./mutates";
@@ -48,40 +47,16 @@ describe("modelBaseEnhancer/mutates", () => {
 
     const testCases: TestCase[] = [
       {
-        name: "bloom true → uBloomMaskPass = 1",
-        stateOverride: { bloom: true },
-        uniformKey: "uBloomMaskPass",
+        name: "seBufferMode true → uSEBufferMode = 1",
+        stateOverride: { seBufferMode: true },
+        uniformKey: "uSEBufferMode",
         expected: 1,
       },
       {
-        name: "bloom false → uBloomMaskPass = 0",
-        stateOverride: { bloom: false },
-        uniformKey: "uBloomMaskPass",
+        name: "seBufferMode false → uSEBufferMode = 0",
+        stateOverride: { seBufferMode: false },
+        uniformKey: "uSEBufferMode",
         expected: 0,
-      },
-      {
-        name: "outline true → uOutlineMaskPass = 1",
-        stateOverride: { outline: true },
-        uniformKey: "uOutlineMaskPass",
-        expected: 1,
-      },
-      {
-        name: "outline false → uOutlineMaskPass = 0",
-        stateOverride: { outline: false },
-        uniformKey: "uOutlineMaskPass",
-        expected: 0,
-      },
-      {
-        name: "occlusion SelectiveEffectOcclusionMode.Normal → uSelectiveEffectOcclusion = SelectiveEffectOcclusionMode.Normal",
-        stateOverride: { occlusion: SelectiveEffectOcclusionMode.Normal },
-        uniformKey: "uSelectiveEffectOcclusion",
-        expected: SelectiveEffectOcclusionMode.Normal,
-      },
-      {
-        name: "occlusion SelectiveEffectOcclusionMode.Skip → uSelectiveEffectOcclusion = SelectiveEffectOcclusionMode.Normal",
-        stateOverride: { occlusion: SelectiveEffectOcclusionMode.Skip },
-        uniformKey: "uSelectiveEffectOcclusion",
-        expected: SelectiveEffectOcclusionMode.Skip,
       },
     ];
 

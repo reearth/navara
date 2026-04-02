@@ -71,7 +71,6 @@ import {
   SelectiveBloomEffectLayer,
   SelectiveOutlineEffectLayer,
   SkyEnvMapEffectLayer,
-  TestSelectiveEffectLayer,
   TransparentPassEffectLayer,
 } from "./layers/effect";
 import { FinalCopyEffectLayer } from "./layers/effect/FinalCopyEffectLayer";
@@ -696,7 +695,7 @@ export default class ThreeView<
     this.atmosphere.on("needsUpdate", this.forceUpdate);
 
     // Initialize SelectiveEffectHelper
-    this.selectiveEffectHelper = new SelectiveEffectHelper(width, height);
+    this.selectiveEffectHelper = new SelectiveEffectHelper();
 
     // Set up Registry
     this.viewContext = new ViewContext(
@@ -965,8 +964,6 @@ export default class ThreeView<
       this._terrainPicker.dispose();
     }
 
-    // Dispose SelectiveEffectHelper
-    this.selectiveEffectHelper.dispose();
     this._fontManager.dispose();
     this.atmosphere._dispose();
 
@@ -1000,9 +997,6 @@ export default class ThreeView<
     if (this._options.pixelRatio == null && pixelRatio) {
       this.renderer.setPixelRatio(pixelRatio);
     }
-
-    // Update SelectiveEffectHelper
-    this.selectiveEffectHelper.setSize(w, h);
 
     this._core?.resize(w, h, pixelRatio ?? 1);
 
@@ -1113,11 +1107,6 @@ export default class ThreeView<
     this.emit("preRender", updatedAt);
 
     this.renderPassOrchestrator.render();
-    if (this._options.selectiveEffects?.debugViews) {
-      this.selectiveEffectHelper.renderDebugViews(
-        this.renderPassOrchestrator.effectComposer.getRenderer(),
-      );
-    }
     this._pickHelper?.renderDebugCanvas();
 
     this.shadowMapViewers.render(this.renderer);
@@ -1232,7 +1221,6 @@ export default class ThreeView<
     this.registerEffect("mrt", MRTPassEffectLayer);
 
     // SelectiveEffect effects
-    this.registerEffect("testSelectiveEffect", TestSelectiveEffectLayer);
     this.registerEffect("selectiveBloom", SelectiveBloomEffectLayer);
     this.registerEffect("selectiveOutline", SelectiveOutlineEffectLayer);
     // TODO: Curve out opaque pass from MRT pass.
@@ -1702,13 +1690,12 @@ export default class ThreeView<
 
   /**
    * Enables or disables debug views for selective post-processing effects.
-   * When disabled, disposes all debug view canvas elements.
+   * Debug views are now managed by SelectiveEffectBufferPass via MRTPassEffectLayer.
    * @param enabled - Whether to enable debug views
    */
   setSelectiveEffectDebugViews(enabled: boolean): void {
     this._options.selectiveEffects ??= {};
     this._options.selectiveEffects.debugViews = enabled;
-    this.selectiveEffectHelper.setDebugViewsAll(enabled);
   }
 
   /**

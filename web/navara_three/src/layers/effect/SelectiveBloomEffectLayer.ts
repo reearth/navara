@@ -209,7 +209,7 @@ class SelectiveBloomPass extends PostProcessingPass {
       uniforms: {
         tEmissive: { value: null },
         tEffectIds: { value: null },
-        slotChannel: { value: 0 },
+        slotBit: { value: 0 },
       },
       vertexShader: `
         varying vec2 vUv;
@@ -221,19 +221,15 @@ class SelectiveBloomPass extends PostProcessingPass {
       fragmentShader: `
         uniform sampler2D tEmissive;
         uniform sampler2D tEffectIds;
-        uniform int slotChannel;
+        uniform int slotBit;
 
         varying vec2 vUv;
 
         void main() {
-          vec4 effectIds = texture2D(tEffectIds, vUv);
+          float maskValue = texture2D(tEffectIds, vUv).r;
+          float bitValue = mod(floor(maskValue / pow(2.0, float(slotBit))), 2.0);
 
-          float slotValue;
-          if (slotChannel == 0) slotValue = effectIds.r;
-          else if (slotChannel == 1) slotValue = effectIds.g;
-          else slotValue = effectIds.b;
-
-          if (slotValue > 0.5) {
+          if (bitValue > 0.5) {
             vec4 emissive = texture2D(tEmissive, vUv);
             gl_FragColor = vec4(emissive.rgb * emissive.a, 1.0);
           } else {
@@ -365,7 +361,7 @@ class SelectiveBloomPass extends PostProcessingPass {
     // Step 1: Extract bloom source from buffers
     this.extractMaterial.uniforms.tEmissive.value = emissiveBuffer;
     this.extractMaterial.uniforms.tEffectIds.value = effectIdsBuffer;
-    this.extractMaterial.uniforms.slotChannel.value = slot;
+    this.extractMaterial.uniforms.slotBit.value = slot;
 
     renderer.setRenderTarget(this.bloomSourceRT);
     renderer.render(this.extractScene, this.fullscreenCamera);

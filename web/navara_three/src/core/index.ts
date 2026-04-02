@@ -42,32 +42,20 @@ export {
 export { LayerHandle } from "./LayerHandle";
 export * from "./ViewContext";
 export {
-  // Helper class
   SelectiveEffectHelper,
-  // Types
-  type SelectiveEffectOptions,
-  type SelectiveEffectResources,
   type SelectiveEffectConfig,
   type SelectiveEffectOcclusion,
   type SelectiveEffectOcclusionValue,
-  // Constants
   SELECTIVE_BLOOM_EFFECT_KEY,
   SELECTIVE_OUTLINE_EFFECT_KEY,
   SelectiveEffectOcclusionMode,
-  // Common helpers
-  resolveSelectiveEffectOcclusion,
-  hasSelectiveBloomEffect,
-  hasSelectiveOutlineEffect,
   getSelectiveEffectConfig,
   hasSelectiveEffectConfig,
-  ensureSelectiveEffectUserData,
   parseSelectiveEffectOcclusion,
-  // Utility functions
   createFullscreenQuad,
 } from "./SelectiveEffectHelper";
 export { SelectiveEffectManager } from "./SelectiveEffectManager";
 export {
-  setupEmissiveBufferUniforms,
-  syncEmissiveBufferUniforms,
+  setupSEBufferUniforms,
+  syncSEBufferUniforms,
 } from "./emissiveBufferSetup";
-export { setupEffectIdsBufferUniforms } from "./effectIdsBufferSetup";

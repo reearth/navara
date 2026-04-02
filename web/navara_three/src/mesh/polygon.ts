@@ -498,18 +498,13 @@ export class PolygonMesh extends BatchedFeatureMesh<
     this.needsUpdate();
   }
 
-  _setEmissiveOnly(emissiveOnly: boolean): void {
-    this.getEnhancer().update({ base: { emissiveOnly } });
-    this.needsUpdate();
-  }
-
   _getEffectIds(): readonly string[] {
     return this._viewContext.getLayerEffects(this._layerId) ?? [];
   }
 
-  _setEffectIdsMode(enabled: boolean, mask: number): void {
+  _setSEBufferMode(enabled: boolean, effectIdsMask: number): void {
     this.getEnhancer().update({
-      base: { effectIdsMode: enabled, effectIdsMask: mask },
+      base: { seBufferMode: enabled, effectIdsMask },
     });
     this.needsUpdate();
   }

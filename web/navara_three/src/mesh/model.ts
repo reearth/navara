@@ -440,29 +440,19 @@ export class ModelMesh
     }
   }
 
-  _setEmissiveOnly(emissiveOnly: boolean): void {
-    for (const enhancer of this._enhancers.values()) {
-      enhancer.update({ base: { emissiveOnly } });
-    }
-    // PNTS enhancer has no emissive support — hide during emissive pass
-    for (const [points] of this._pntsEnhancers) {
-      points.visible = !emissiveOnly;
-    }
-  }
-
   _getEffectIds(): readonly string[] {
     return (
       this.viewContext.getLayerEffects(this._layerId) ?? this.prevEffectIds
     );
   }
 
-  _setEffectIdsMode(enabled: boolean, mask: number): void {
+  _setSEBufferMode(enabled: boolean, effectIdsMask: number): void {
     for (const enhancer of this._enhancers.values()) {
       enhancer.update({
-        base: { effectIdsMode: enabled, effectIdsMask: mask },
+        base: { seBufferMode: enabled, effectIdsMask },
       });
     }
-    // PNTS enhancer has no effectIds support — hide during effectIds pass
+    // PNTS enhancer has no SE buffer support — hide during SE buffer pass
     for (const [points] of this._pntsEnhancers) {
       points.visible = !enabled;
     }

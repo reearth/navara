@@ -117,10 +117,8 @@ function injectGBuffer(
       uniform float roughness;
     #endif // USE_ROUGHNESS
 
-    // Emissive buffer toggle (for EmissiveBufferPass)
-    uniform float uEmissiveOnly;
-    // EffectIds buffer toggle (for EffectIdsBufferPass)
-    uniform float uEffectIdsMode;
+    // SE Buffer mode toggle (for SelectiveEffectBufferPass)
+    uniform float uSEBufferMode;
     uniform float uEffectIdsMask;
 
     ${packing}
@@ -128,17 +126,12 @@ function injectGBuffer(
       createReplacer(shader.fragmentShader).replace(
         /}\s*$/, // Assume the last curly brace is of main()
         /* glsl */ `
-          // EffectIdsBufferPass: output slot bits as RGB for non-enhanced materials
-          if (uEffectIdsMode > 0.5) {
-            float r = mod(floor(uEffectIdsMask / 1.0), 2.0);
-            float g = mod(floor(uEffectIdsMask / 2.0), 2.0);
-            float b = mod(floor(uEffectIdsMask / 4.0), 2.0);
-            gl_FragColor = vec4(r, g, b, 1.0);
-            return;
-          }
-          // EmissiveBufferPass: output transparent black for non-emissive materials
-          if (uEmissiveOnly > 0.5) {
+          // SelectiveEffectBufferPass: output emissive + effectIds for non-enhanced materials.
+          // Default: transparent black for emissive (overridden by emissiveBufferSetup
+          // for configured meshes), bitmask for effectIds.
+          if (uSEBufferMode > 0.5) {
             gl_FragColor = vec4(0.0);
+            outputBuffer1 = vec4(uEffectIdsMask, 0.0, 0.0, 1.0);
             return;
           }
           #ifndef USE_SHADOWMAP_DEPTH

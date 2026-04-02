@@ -7,9 +7,8 @@ import {
   type ViewContext,
   type CustomObject3DEventMap,
   type PassKey,
-  setupEmissiveBufferUniforms,
-  syncEmissiveBufferUniforms,
-  setupEffectIdsBufferUniforms,
+  setupSEBufferUniforms,
+  syncSEBufferUniforms,
 } from "@navara/three";
 import {
   BoxGeometry,
@@ -90,12 +89,11 @@ export class BoxMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
     // Set up selective effect buffer uniforms
     if (material instanceof MeshLambertMaterial) {
       const hexEmissiveColor = cfg.emissiveColor?.raw ?? 0x000000;
-      setupEmissiveBufferUniforms(
+      setupSEBufferUniforms(
         material,
         hexEmissiveColor,
         cfg.emissiveIntensity ?? 0,
       );
-      setupEffectIdsBufferUniforms(material);
     }
 
     const mesh = new DrapedMesh<BoxGeometry, BoxMeshMaterial, BoxMeshEventMap>(
@@ -202,7 +200,7 @@ export class BoxMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
         if (cfg.transparent !== undefined)
           material.transparent = cfg.transparent;
         if (material instanceof MeshLambertMaterial) {
-          syncEmissiveBufferUniforms(
+          syncSEBufferUniforms(
             material,
             cfg.emissiveColor?.raw,
             cfg.emissiveIntensity,

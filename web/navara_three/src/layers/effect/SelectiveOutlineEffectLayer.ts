@@ -204,7 +204,7 @@ class SelectiveOutlinePass extends PostProcessingPass {
     this.extractMaterial = new ShaderMaterial({
       uniforms: {
         tEffectIds: { value: null },
-        slotChannel: { value: 0 },
+        slotBit: { value: 0 },
       },
       vertexShader: `
         varying vec2 vUv;
@@ -215,19 +215,15 @@ class SelectiveOutlinePass extends PostProcessingPass {
       `,
       fragmentShader: `
         uniform sampler2D tEffectIds;
-        uniform int slotChannel;
+        uniform int slotBit;
 
         varying vec2 vUv;
 
         void main() {
-          vec4 effectIds = texture2D(tEffectIds, vUv);
+          float maskValue = texture2D(tEffectIds, vUv).r;
+          float bitValue = mod(floor(maskValue / pow(2.0, float(slotBit))), 2.0);
 
-          float slotValue;
-          if (slotChannel == 0) slotValue = effectIds.r;
-          else if (slotChannel == 1) slotValue = effectIds.g;
-          else slotValue = effectIds.b;
-
-          float mask = slotValue > 0.5 ? 1.0 : 0.0;
+          float mask = bitValue > 0.5 ? 1.0 : 0.0;
           gl_FragColor = vec4(vec3(mask), 1.0);
         }
       `,
@@ -418,7 +414,7 @@ class SelectiveOutlinePass extends PostProcessingPass {
 
     // Step 1: Extract binary mask from EffectIds Buffer
     this.extractMaterial.uniforms.tEffectIds.value = effectIdsBuffer;
-    this.extractMaterial.uniforms.slotChannel.value = slot;
+    this.extractMaterial.uniforms.slotBit.value = slot;
 
     renderer.setRenderTarget(this.maskRT);
     renderer.render(this.extractScene, this.fullscreenCamera);

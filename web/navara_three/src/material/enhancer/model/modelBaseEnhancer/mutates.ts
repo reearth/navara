@@ -1,7 +1,6 @@
 import type { Texture } from "three";
 import { Color as ThreeColor } from "three";
 
-import { SELECTIVE_EFFECT_OCCLUSION_SKIP } from "../../../../core/SelectiveEffectHelper";
 import type { UniformValue } from "../../../types";
 
 import type { ModelBaseMutates, ModelBaseRefs } from "./types";
@@ -15,12 +14,8 @@ const DEFAULT_BASE_REFS: Omit<
   "uEmissiveColor" | "uEmissiveIntensity"
 > = {
   nvr_uPickable: { value: 0 },
-  uEmissiveOnly: { value: 0 },
-  uEffectIdsMode: { value: 0 },
+  uSEBufferMode: { value: 0 },
   uEffectIdsMask: { value: 0 },
-  uBloomMaskPass: { value: 0 },
-  uOutlineMaskPass: { value: 0 },
-  uSelectiveEffectOcclusion: { value: SELECTIVE_EFFECT_OCCLUSION_SKIP },
 };
 
 /**
@@ -39,27 +34,18 @@ export const createBaseMutates = (): ModelBaseMutates => {
     update: (state) => {
       // Sync refs from state
       refs.nvr_uPickable.value = state.pickable ? 1 : 0;
-      refs.uEmissiveOnly.value = state.emissiveOnly ? 1 : 0;
+      refs.uSEBufferMode.value = state.seBufferMode ? 1 : 0;
       refs.uEmissiveColor.value.set(state.emissiveColor);
       refs.uEmissiveIntensity.value = state.emissiveIntensity;
-      refs.uEffectIdsMode.value = state.effectIdsMode ? 1 : 0;
       refs.uEffectIdsMask.value = state.effectIdsMask;
-      // Selective effects - convert boolean to number
-      refs.uBloomMaskPass.value = state.bloom ? 1 : 0;
-      refs.uOutlineMaskPass.value = state.outline ? 1 : 0;
-      refs.uSelectiveEffectOcclusion.value = state.occlusion;
     },
     updateUniforms: (uniforms) => {
       // Assign core uniform refs to shader.uniforms
       uniforms.nvr_uPickable = refs.nvr_uPickable;
-      uniforms.uEmissiveOnly = refs.uEmissiveOnly;
+      uniforms.uSEBufferMode = refs.uSEBufferMode;
       uniforms.uEmissiveColor = refs.uEmissiveColor;
       uniforms.uEmissiveIntensity = refs.uEmissiveIntensity;
-      uniforms.uEffectIdsMode = refs.uEffectIdsMode;
       uniforms.uEffectIdsMask = refs.uEffectIdsMask;
-      uniforms.uBloomMaskPass = refs.uBloomMaskPass;
-      uniforms.uOutlineMaskPass = refs.uOutlineMaskPass;
-      uniforms.uSelectiveEffectOcclusion = refs.uSelectiveEffectOcclusion;
 
       // Batch texture
       if (refs.batchDataTexture) {

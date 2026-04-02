@@ -4,5 +4,4 @@ export * from "./SelectiveEffectLayer";
 export * from "./SelectiveBloomEffectLayer";
 export * from "./SelectiveOutlineEffectLayer";
 export * from "./SkyEnvMapEffectLayer";
-export * from "./TestSelectiveEffectLayer";
 export * from "./TransparentPassEffectLayer";

@@ -49,13 +49,11 @@ export abstract class SelectiveEffectLayer<
   }
 
   onCreate(): void {
-    // Register with selectiveEffectRegistry (needed for link() to work)
-    if (this.view.selectiveEffectRegistry) {
-      this.view.selectiveEffectRegistry.create(this.id, this.getEffectKey(), {
-        resolutionScale: this.getResolutionScale(),
-        debugViews: this.getDebugViews(),
-      });
-    }
+    // Register effect key (needed for link() to resolve effectId → effectKey)
+    this.view.selectiveEffectRegistry?.registerEffectKey(
+      this.id,
+      this.getEffectKey(),
+    );
 
     // Register effect slot for EffectIds Buffer
     const mrtLayer = this.findLayer<MRTPassEffectLayer>("mrt");
@@ -85,9 +83,6 @@ export abstract class SelectiveEffectLayer<
     // Unregister effect slot
     const mrtLayer = this.findLayer<MRTPassEffectLayer>("mrt");
     mrtLayer?.effectSlotRegistry.unregister(this.id);
-
-    // Unregister from selectiveEffectRegistry
-    this.view.selectiveEffectRegistry?.destroy(this.id);
 
     super.onDestroy();
   }
