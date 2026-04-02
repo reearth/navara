@@ -9,7 +9,6 @@ import { Mesh, Sprite, Object3D } from "three";
 
 import type { ViewEvents } from "..";
 import { Color } from "../Color";
-// @deprecated SE Redesign: parseSelectiveEffectOcclusion / SelectiveEffectOcclusion no longer needed here
 import type { ViewContext } from "../core/ViewContext";
 import type { LayersManager } from "../layersManager";
 import {
@@ -201,7 +200,6 @@ export async function processRenderableFeatureAdded(
     viewContext.registerLayerEffects(
       featureLayerId,
       material.effectIds ?? [],
-      // @deprecated SE Redesign: selectiveEffectOcclusion removed from WASM material
       undefined,
       material.emissiveIntensity,
     );
@@ -270,8 +268,6 @@ export async function processRenderableFeatureChanged(
         new Color().setHex(material.emissiveColor),
       );
     }
-
-    // @deprecated SE Redesign: selectiveEffectOcclusion removed from WASM material
   }
 
   const active =

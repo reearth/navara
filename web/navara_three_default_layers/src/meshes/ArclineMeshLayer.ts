@@ -3,9 +3,7 @@ import {
   type MeshLayerConfigWithSelectiveEffect,
   type MeshLayerUpdateWithSelectiveEffect,
   type ViewContext,
-  injectSelectiveEffectHandlers,
 } from "@navara/three";
-import { Mesh } from "three";
 
 import { DefaultArcLineConfig, ArcLine, type ArcLineConfig } from "./arcLine";
 
@@ -33,24 +31,6 @@ export class ArclineMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
 
   protected getPassKey() {
     return "mrt" as const;
-  }
-
-  /**
-   * Override onCreate to inject selective effect handlers on sub-meshes.
-   * ArcLine is an Object3D containing Mesh children — onBeforeRender is only
-   * called on Mesh instances, so the base class's setupMeshOnBeforeRender
-   * (which targets the top-level Object3D) is insufficient.
-   *
-   * Handlers are injected unconditionally because ArcLine is always in the
-   * MRT scene (getPassKey → "mrt"). Without handlers, sub-meshes would render
-   * to mask RTs with default material state during BaseMRT passes.
-   */
-  override onCreate() {
-    super.onCreate();
-
-    if (this._instance) {
-      this.injectHandlersOnSubMeshes();
-    }
   }
 
   createMesh() {
@@ -118,10 +98,6 @@ export class ArclineMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
         );
       }
 
-      // Always re-inject handlers — ArcLine is always in MRT,
-      // so new sub-meshes need handlers regardless of effectIds
-      this.injectHandlersOnSubMeshes();
-
       this.emit("needsUpdate");
     }
 
@@ -143,23 +119,5 @@ export class ArclineMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
       this._instance.dispose();
       this._instance = undefined;
     }
-  }
-
-  /**
-   * Inject selective effect handlers on each sub-mesh of the ArcLine.
-   * Uses a flag to prevent double-injection on sub-meshes that survived
-   * an updateConfig rebuild.
-   */
-  private injectHandlersOnSubMeshes(): void {
-    if (!this._instance) return;
-    this._instance.traverse((child) => {
-      if (child instanceof Mesh && !child.userData._selectiveEffectInjected) {
-        injectSelectiveEffectHandlers(child, {
-          registry: this.view.selectiveEffectRegistry,
-          layerId: this.id,
-        });
-        child.userData._selectiveEffectInjected = true;
-      }
-    });
   }
 }

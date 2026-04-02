@@ -130,16 +130,6 @@ ${MODEL_BASE_SHADER_MARKERS.fragment.NORMAL_END}
     .replace(
       "vec3 outgoingLight = totalDiffuse + totalSpecular + totalEmissiveRadiance;",
       `
-// @deprecated SE Redesign - mask pass conditions removed
-// if (uBloomMaskPass > 0.5) {
-//   gl_FragColor = vec4(totalEmissiveRadiance, 1.0);
-//   return;
-// }
-// if (uOutlineMaskPass > 0.5) {
-//   gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
-//   return;
-// }
-
 ${MODEL_BASE_SHADER_MARKERS.fragment.OUTGOING_LIGHT_START}
 vec3 outgoingLight = totalDiffuse + totalSpecular + totalEmissiveRadiance;
 ${MODEL_BASE_SHADER_MARKERS.fragment.OUTGOING_LIGHT_END}

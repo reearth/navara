@@ -23,19 +23,6 @@ import {
 import invariant from "tiny-invariant";
 
 import type { ViewContext } from "../core";
-// @deprecated SE Redesign
-// import {
-//   getSelectiveEffectConfig,
-//   SelectiveEffectOcclusionMode,
-// } from "../core/SelectiveEffectHelper";
-// import {
-//   getMaskPassContext,
-//   MaskPassPhase,
-//   evaluateMaskPassParticipation,
-//   applyMaskPassSkipState as applyMaskPassSkipStateBase,
-//   applyMaskPassRenderState,
-//   restoreMaterialState as restoreMaterialStateBase,
-// } from "../core/SelectiveEffectMaskContext";
 import type { BufferLoader } from "../event";
 import {
   createModelMaterialEnhancer,
@@ -45,7 +32,6 @@ import type { ModelMaterialProps, PntsProps } from "../material/enhancer/model";
 import type { UniformValue } from "../material/types";
 import type { CustomObject3DEventMap } from "../object3DEvent";
 import type { CommonUniforms } from "../uniforms";
-// @deprecated SE Redesign
 import { arraysEqual } from "../utils";
 
 import {
@@ -96,7 +82,6 @@ export class ModelMesh
   credit: string | undefined;
   batchLength?: number;
 
-  // @deprecated SE Redesign
   private prevEffectIds: string[] = [];
 
   constructor(
@@ -291,72 +276,9 @@ export class ModelMesh
 
       this.initDepthMaterial(mesh, enhancer);
 
-      // @deprecated SE Redesign
-      // Setup onBeforeRender for SelectiveEffect state handling
-      // this.setupMeshOnBeforeRender(mesh, enhancer);
-
       this.viewContext.applyShadowMaterial(mesh.material);
     });
   }
-
-  // @deprecated SE Redesign
-  // /**
-  //  * Setup onBeforeRender callback for a mesh to handle SelectiveEffect rendering
-  //  */
-  // private setupMeshOnBeforeRender(
-  //   mesh: Mesh<BufferGeometry<NormalBufferAttributes>, ModelMaterial>,
-  //   enhancer: ModelMaterialEnhancer,
-  // ): void {
-  //   mesh.onBeforeRender = () => {
-  //     const ctx = getMaskPassContext();
-  //     if (ctx.phase !== MaskPassPhase.BaseMRT) {
-  //       restoreMaterialStateBase(mesh.material);
-  //       return;
-  //     }
-  //     const config = getSelectiveEffectConfig(mesh);
-  //     const registry =
-  //       ctx.registry ?? this.viewContext?.selectiveEffectRegistry;
-  //     const layerId = this._layerId;
-  //     this.applyMaskPassState(mesh, enhancer, config, registry, layerId, ctx);
-  //   };
-  // }
-
-  // @deprecated SE Redesign
-  // /**
-  //  * Apply mask pass state based on MaskPassContext.
-  //  */
-  // private applyMaskPassState(
-  //   mesh: Mesh<BufferGeometry<NormalBufferAttributes>, ModelMaterial>,
-  //   enhancer: ModelMaterialEnhancer,
-  //   config: ReturnType<typeof getSelectiveEffectConfig>,
-  //   registry: ReturnType<typeof getMaskPassContext>["registry"],
-  //   layerId: string | undefined,
-  //   ctx: ReturnType<typeof getMaskPassContext>,
-  // ): void {
-  //   const material = mesh.material;
-  //   const evaluation = evaluateMaskPassParticipation(
-  //     config, registry, layerId, ctx,
-  //   );
-  //   if (!evaluation.shouldRender) {
-  //     enhancer.update({
-  //       base: {
-  //         bloom: false,
-  //         outline: false,
-  //         occlusion: SelectiveEffectOcclusionMode.Skip,
-  //       },
-  //     });
-  //     applyMaskPassSkipStateBase(material);
-  //     return;
-  //   }
-  //   enhancer.update({
-  //     base: {
-  //       bloom: evaluation.bloomActive,
-  //       outline: evaluation.outlineActive,
-  //       occlusion: evaluation.occlusion,
-  //     },
-  //   });
-  //   applyMaskPassRenderState(material, evaluation.isSilhouette);
-  // }
 
   private traversePoints(
     f: (

@@ -1,5 +1,5 @@
 import type { BaseEventMap } from "@navara/core";
-import { Mesh, Object3D, type Material } from "three";
+import { Object3D } from "three";
 
 import { arraysEqual } from "../utils";
 
@@ -10,21 +10,6 @@ import {
   type MeshBaseInstance,
   type PassKey,
 } from "./MeshLayerDeclaration";
-import {
-  type SelectiveEffectOcclusion,
-  parseSelectiveEffectOcclusion,
-  // @deprecated SE Redesign - getSelectiveEffectConfig unused after body comment-out
-  // getSelectiveEffectConfig,
-} from "./SelectiveEffectHelper";
-import {
-  // @deprecated SE Redesign - unused after setupMeshOnBeforeRender body comment-out
-  // getMaskPassContext,
-  // MaskPassPhase,
-  // evaluateMaskPassParticipation,
-  // applyMaskPassSkipState,
-  // applyMaskPassRenderState,
-  restoreMaterialState,
-} from "./SelectiveEffectMaskContext";
 import type { ViewContext } from "./ViewContext";
 
 export type MeshLayerConfigWithSelectiveEffect = MeshLayerConfig & {
@@ -55,35 +40,12 @@ export abstract class MeshLayerDeclarationForSelectiveEffect<
   CustomEvent,
   Instance
 > {
-  private readonly _initialSelectiveEffectOcclusion?: SelectiveEffectOcclusion | null;
   private _effectIds: string[] = [];
-  private _hasSetupOnBeforeRender = false;
-  private _originalOnBeforeRender?: Object3D["onBeforeRender"];
-
-  /**
-   * Helper to apply a function to single or array of materials.
-   */
-  private forEachMaterial(fn: (m: Material) => void): void {
-    const raw = this.raw;
-    if (!(raw instanceof Mesh)) return;
-    const mat = raw.material;
-    if (!mat) return;
-
-    if (Array.isArray(mat)) {
-      for (const m of mat) {
-        fn(m);
-      }
-    } else {
-      fn(mat);
-    }
-  }
 
   constructor(view: ViewContext, config?: Config) {
     const resolvedConfig = config ?? ({} as Config);
     super(view, resolvedConfig);
     this._effectIds = resolvedConfig.effectIds ?? [];
-    // @deprecated SE Redesign — selectiveEffectOcclusion moved to Effect Layer config
-    this._initialSelectiveEffectOcclusion = undefined;
   }
 
   protected override getPassKey(): PassKey {
@@ -111,109 +73,10 @@ export abstract class MeshLayerDeclarationForSelectiveEffect<
       );
     }
 
-    // Register with Manager (SoT) if effectIds or occlusion is specified
-    const initialOcclusion = this._initialSelectiveEffectOcclusion;
-    if (useSelectiveEffect || initialOcclusion !== undefined) {
-      const parsedOcclusion =
-        initialOcclusion !== undefined && initialOcclusion !== null
-          ? parseSelectiveEffectOcclusion(initialOcclusion)
-          : undefined;
-      this.view.registerLayerEffects(this.id, this._effectIds, parsedOcclusion);
-    }
-
+    // Register with Manager (SoT) if effectIds is specified
     if (useSelectiveEffect) {
-      // Setup onBeforeRender for MaskPass context-based rendering
-      this.setupMeshOnBeforeRender();
+      this.view.registerLayerEffects(this.id, this._effectIds, undefined);
     }
-  }
-
-  /**
-   * Setup onBeforeRender callback for MaskPass context-based rendering.
-   * This enables Box, Sphere, and other standard meshes to participate in mask rendering.
-   *
-   * @deprecated SE Redesign - will be removed
-   */
-  private setupMeshOnBeforeRender(): void {
-    // @deprecated SE Redesign - body commented out, method kept for compilation
-    // const raw = this.raw;
-    // if (!raw) return;
-    //
-    // // Guard: Only setup once to avoid multi-wrapping
-    // if (this._hasSetupOnBeforeRender) return;
-    //
-    // // Store original onBeforeRender in instance property for later restoration
-    // this._originalOnBeforeRender = raw.onBeforeRender;
-    //
-    // raw.onBeforeRender = (
-    //   renderer,
-    //   scene,
-    //   camera,
-    //   geometry,
-    //   material,
-    //   group,
-    // ) => {
-    //   // Call original if exists
-    //   if (this._originalOnBeforeRender) {
-    //     this._originalOnBeforeRender.call(
-    //       raw,
-    //       renderer,
-    //       scene,
-    //       camera,
-    //       geometry,
-    //       material,
-    //       group,
-    //     );
-    //   }
-    //
-    //   // Check MaskPassContext
-    //   const ctx = getMaskPassContext();
-    //
-    //   if (ctx.phase !== MaskPassPhase.BaseMRT) {
-    //     // Not in mask pass - restore normal state
-    //     this.forEachMaterial(restoreMaterialState);
-    //     return;
-    //   }
-    //
-    //   // Evaluate mask pass participation using shared helper
-    //   const config = getSelectiveEffectConfig(raw);
-    //   const registry = ctx.registry ?? this.view.selectiveEffectRegistry;
-    //   const evaluation = evaluateMaskPassParticipation(
-    //     config,
-    //     registry,
-    //     this.id,
-    //     ctx,
-    //   );
-    //
-    //   // Apply appropriate render state
-    //   if (evaluation.shouldRender) {
-    //     this.forEachMaterial((m) =>
-    //       applyMaskPassRenderState(m, evaluation.isSilhouette),
-    //     );
-    //   } else {
-    //     this.forEachMaterial(applyMaskPassSkipState);
-    //   }
-    // };
-    //
-    // this._hasSetupOnBeforeRender = true;
-  }
-
-  /**
-   * Restore original onBeforeRender callback.
-   * Called when effectIds becomes empty or on destroy.
-   *
-   * @deprecated SE Redesign - will be removed
-   */
-  private restoreOnBeforeRender(): void {
-    const raw = this.raw;
-    if (!raw || !this._hasSetupOnBeforeRender) return;
-
-    // Restore material state before removing callback
-    this.forEachMaterial(restoreMaterialState);
-
-    // Restore original onBeforeRender or noop (Three.js expects function)
-    raw.onBeforeRender = this._originalOnBeforeRender ?? (() => {});
-    this._originalOnBeforeRender = undefined;
-    this._hasSetupOnBeforeRender = false;
   }
 
   override onUpdateConfig(updates: UpdateConfig): void {
@@ -252,34 +115,7 @@ export abstract class MeshLayerDeclarationForSelectiveEffect<
 
       // Update Manager (SoT) with new effectIds
       this.view.updateLayerEffects(this.id, this._effectIds);
-
-      const hadNoEffects = prevEffectIds.length === 0;
-      const nowHasEffects = this._effectIds.length > 0;
-
-      // If transitioning from no effects to having effects, set up the callback
-      if (hadNoEffects && nowHasEffects) {
-        this.setupMeshOnBeforeRender();
-      }
-
-      // If transitioning from having effects to no effects, restore original callback
-      if (!hadNoEffects && !nowHasEffects) {
-        this.restoreOnBeforeRender();
-      }
     }
-
-    // @deprecated SE Redesign — selectiveEffectOcclusion moved to Effect Layer config
-    // if (updates.selectiveEffectOcclusion !== undefined) {
-    //   if (updates.selectiveEffectOcclusion === null) {
-    //     this.view.clearLayerSelectiveEffectOcclusion(this.id);
-    //   } else {
-    //     const occlusion = parseSelectiveEffectOcclusion(
-    //       updates.selectiveEffectOcclusion,
-    //     );
-    //     if (occlusion !== undefined) {
-    //       this.view.setLayerSelectiveEffectOcclusion(this.id, occlusion);
-    //     }
-    //   }
-    // }
 
     // Note: onPassKeyChange() is already called by super.onUpdateConfig()
   }
@@ -288,9 +124,6 @@ export abstract class MeshLayerDeclarationForSelectiveEffect<
     // ----------------------------------------------------------------------------
     // SelectiveEffect: cleanup
     // ----------------------------------------------------------------------------
-    // Restore original onBeforeRender before destroying
-    this.restoreOnBeforeRender();
-
     if (this._effectIds.length > 0 && this.raw) {
       this.view.selectiveEffectRegistry?.updateLinksForObject(
         this.raw,

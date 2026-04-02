@@ -7,6 +7,9 @@ import {
   type ViewContext,
   type CustomObject3DEventMap,
   type PassKey,
+  setupEmissiveBufferUniforms,
+  syncEmissiveBufferUniforms,
+  setupEffectIdsBufferUniforms,
 } from "@navara/three";
 import {
   BoxGeometry,
@@ -14,12 +17,6 @@ import {
   MeshLambertMaterial,
   type Object3DEventMap,
 } from "three";
-
-import { setupEffectIdsBufferUniforms } from "./effectIdsBufferSetup";
-import {
-  setupEmissiveBufferUniforms,
-  syncEmissiveBufferUniforms,
-} from "./emissiveBufferSetup";
 
 type BoxMeshEventMap = Object3DEventMap & CustomObject3DEventMap;
 

@@ -120,14 +120,6 @@ export class SelectiveOutlineEffectLayer extends SelectiveEffectLayer<
     return pass as Pass<SelectiveOutlinePass, null> & BaseInstance;
   }
 
-  protected override registerMaskRenderTarget(): void {
-    // Buffer-based pipeline — no mask RT needed
-  }
-
-  protected override unregisterMaskRenderTarget(): void {
-    // Buffer-based pipeline — no mask RT needed
-  }
-
   onUpdateConfig(updates: SelectiveOutlineEffectUpdate): void {
     super.onUpdateConfig(updates);
 
@@ -150,12 +142,10 @@ export class SelectiveOutlineEffectLayer extends SelectiveEffectLayer<
     }
     if (outlineUpdates.debugViews !== undefined) {
       this.config.selectiveOutline.debugViews = outlineUpdates.debugViews;
-      this.updateDebugViews(outlineUpdates.debugViews);
     }
     if (outlineUpdates.resolutionScale !== undefined) {
       this.config.selectiveOutline.resolutionScale =
         outlineUpdates.resolutionScale;
-      this.updateResolutionScale(outlineUpdates.resolutionScale);
     }
 
     if (changed) {

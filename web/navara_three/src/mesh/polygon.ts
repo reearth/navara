@@ -16,15 +16,10 @@ import {
 
 import { PolygonOutlineMesh } from "..";
 import type { ViewContext } from "../core";
-// @deprecated SE Redesign
-// import { ensureSelectiveEffectUserData } from "../core/SelectiveEffectHelper";
-// import { injectSelectiveEffectHandlers } from "../core/SelectiveEffectMaskContext";
 import type { BufferLoader } from "../event";
 import type { PolygonMaterialProps } from "../material/enhancer/polygon";
 import { createPolygonMaterialEnhancer } from "../material/enhancer/polygon/polygonMaterialEnhancer";
 import type { CommonUniforms } from "../uniforms";
-// @deprecated SE Redesign
-// import { arraysEqual } from "../utils";
 
 import {
   BatchedFeatureMesh,
@@ -64,9 +59,6 @@ export class PolygonMesh extends BatchedFeatureMesh<
 
   /** Enhanced material with encapsulated state */
   private _enhancedMaterial?: ReturnType<typeof createPolygonMaterialEnhancer>;
-  // @deprecated SE Redesign
-  // /** Previous effectIds for SelectiveEffect registry updates */
-  // private _prevEffectIds?: string[];
 
   constructor(
     viewContext: ViewContext,
@@ -352,15 +344,6 @@ export class PolygonMesh extends BatchedFeatureMesh<
       this.onBeforeShadow = callback;
     }
 
-    // @deprecated SE Redesign
-    // ========== SelectiveEffect integration ==========
-    // ensureSelectiveEffectUserData(material);
-    // injectSelectiveEffectHandlers(this, {
-    //   registry: this._viewContext?.selectiveEffectRegistry,
-    //   layerId: this._layerId,
-    // });
-    // ========== SelectiveEffect integration end ==========
-
     this.enableWater();
 
     // Set up custom program cache key based on config flags that affect shader defines
@@ -403,18 +386,6 @@ export class PolygonMesh extends BatchedFeatureMesh<
       (material.show ?? true) && (material.surfaceShow ?? true) && active;
     this.castShadow = !!material.castShadow;
     this.receiveShadow = !!material.receiveShadow;
-
-    // @deprecated SE Redesign
-    // SelectiveEffect: effectIds handling (needs prev state for registry)
-    // if (!arraysEqual(this._prevEffectIds, material.effectIds)) {
-    //   this._viewContext.selectiveEffectRegistry?.updateLinksForObject(
-    //     this,
-    //     material.effectIds ?? [],
-    //     this._prevEffectIds ?? [],
-    //     this._layerId,
-    //   );
-    //   this._prevEffectIds = material.effectIds ? [...material.effectIds] : [];
-    // }
 
     const { base } = enhancer.states();
 
@@ -644,18 +615,6 @@ export class PolygonMesh extends BatchedFeatureMesh<
   }
 
   dispose() {
-    // @deprecated SE Redesign
-    // Clean up SelectiveEffect registry links
-    // if (this._viewContext?.selectiveEffectRegistry && this._prevEffectIds) {
-    //   this._viewContext.selectiveEffectRegistry.updateLinksForObject(
-    //     this,
-    //     [], // New effectIds: empty array (removing all links)
-    //     this._prevEffectIds, // Previous effectIds
-    //     this._layerId,
-    //   );
-    //   this._prevEffectIds = undefined;
-    // }
-
     this._viewContext.removeShadowMaterial(this.material);
     this.customDepthMaterial?.dispose();
   }

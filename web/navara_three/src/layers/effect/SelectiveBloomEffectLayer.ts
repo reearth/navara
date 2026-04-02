@@ -125,14 +125,6 @@ export class SelectiveBloomEffectLayer extends SelectiveEffectLayer<
     return pass as Pass<SelectiveBloomPass, null> & BaseInstance;
   }
 
-  protected override registerMaskRenderTarget(): void {
-    // Buffer-based pipeline — no mask RT needed
-  }
-
-  protected override unregisterMaskRenderTarget(): void {
-    // Buffer-based pipeline — no mask RT needed
-  }
-
   onUpdateConfig(updates: SelectiveBloomEffectUpdate): void {
     super.onUpdateConfig(updates);
 
@@ -158,11 +150,9 @@ export class SelectiveBloomEffectLayer extends SelectiveEffectLayer<
     }
     if (bloomUpdates.debugViews !== undefined) {
       this.config.selectiveBloom.debugViews = bloomUpdates.debugViews;
-      this.updateDebugViews(bloomUpdates.debugViews);
     }
     if (bloomUpdates.resolutionScale !== undefined) {
       this.config.selectiveBloom.resolutionScale = bloomUpdates.resolutionScale;
-      this.updateResolutionScale(bloomUpdates.resolutionScale);
     }
 
     if (changed) {

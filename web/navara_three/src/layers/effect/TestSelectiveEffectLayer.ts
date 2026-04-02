@@ -87,12 +87,10 @@ export class TestSelectiveEffectLayer extends SelectiveEffectLayer<
  * @deprecated SE Redesign — Mask-based pipeline is disabled.
  */
 class TestSelectivePass extends PostProcessingPass {
-  private layer: TestSelectiveEffectLayer;
   private copyPass: PostProcessingCopyPass;
 
-  constructor(layer: TestSelectiveEffectLayer) {
+  constructor(_layer: TestSelectiveEffectLayer) {
     super("TestSelectivePass");
-    this.layer = layer;
 
     // Create CopyPass for copying input to output
     this.copyPass = new PostProcessingCopyPass();
@@ -105,13 +103,6 @@ class TestSelectivePass extends PostProcessingPass {
     inputBuffer: WebGLRenderTarget,
     outputBuffer: WebGLRenderTarget | null,
   ) {
-    // Mask is pre-rendered by CustomRenderPass during BaseMRT phase
-
-    // Render debug visualization if enabled
-    if (this.layer.layerConfig._selectiveTest?.debugViews) {
-      this.layer.renderDebugMask();
-    }
-
     // Copy input to output using CopyPass
     this.copyPass.renderToScreen = this.renderToScreen;
     this.copyPass.render(renderer, inputBuffer, outputBuffer);

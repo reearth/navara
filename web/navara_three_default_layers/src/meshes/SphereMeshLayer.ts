@@ -5,6 +5,9 @@ import {
   type MeshLayerUpdateWithSelectiveEffect,
   type ViewContext,
   type CustomObject3DEventMap,
+  setupEmissiveBufferUniforms,
+  syncEmissiveBufferUniforms,
+  setupEffectIdsBufferUniforms,
 } from "@navara/three";
 import {
   Mesh,
@@ -12,12 +15,6 @@ import {
   SphereGeometry,
   type Object3DEventMap,
 } from "three";
-
-import { setupEffectIdsBufferUniforms } from "./effectIdsBufferSetup";
-import {
-  setupEmissiveBufferUniforms,
-  syncEmissiveBufferUniforms,
-} from "./emissiveBufferSetup";
 
 type SphereMeshEventMap = Object3DEventMap & CustomObject3DEventMap;
 

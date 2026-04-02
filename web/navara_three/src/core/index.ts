@@ -63,29 +63,11 @@ export {
   ensureSelectiveEffectUserData,
   parseSelectiveEffectOcclusion,
   // Utility functions
-  createDepthClipMaterial,
   createFullscreenQuad,
-  applyDepthClip,
 } from "./SelectiveEffectHelper";
 export { SelectiveEffectManager } from "./SelectiveEffectManager";
-export { SelectiveEffectMaskController } from "./SelectiveEffectMaskController";
 export {
-  // Types
-  type MaskPassPhaseType,
-  type MaskPassContext,
-  type MaskPassEvaluation,
-  type SelectiveEffectHandlerOptions,
-  // Constants
-  MaskPassPhase,
-  // Context management
-  getMaskPassContext,
-  setMaskPassContext,
-  resetMaskPassContext,
-  // Helper functions
-  evaluateMaskPassParticipation,
-  applyMaskPassSkipState,
-  applyMaskPassRenderState,
-  restoreMaterialState,
-  // Unified handler injection
-  injectSelectiveEffectHandlers,
-} from "./SelectiveEffectMaskContext";
+  setupEmissiveBufferUniforms,
+  syncEmissiveBufferUniforms,
+} from "./emissiveBufferSetup";
+export { setupEffectIdsBufferUniforms } from "./effectIdsBufferSetup";

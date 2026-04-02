@@ -9,8 +9,6 @@ import {
   type WebGLRenderer,
 } from "three";
 
-import type { SelectiveEffectHelper } from "../core/SelectiveEffectHelper";
-import { SelectiveEffectMaskController } from "../core/SelectiveEffectMaskController";
 import { RenderPass } from "../effects";
 import { DrapedMesh } from "../mesh/DrapedMesh";
 import type { Scenes } from "../scene";
@@ -25,8 +23,6 @@ export type CustomRenderPassOptions = {
   debugNormal?: boolean;
   disableShadow?: boolean;
   allowTransparent?: boolean;
-  /** SelectiveEffectHelper for mask context (optional for backwards compatibility) */
-  selectiveEffectRegistry?: SelectiveEffectHelper;
 };
 
 export class CustomRenderPass extends RenderPass {
@@ -57,9 +53,6 @@ export class CustomRenderPass extends RenderPass {
   emissiveBufferPass?: import("./EmissiveBufferPass").EmissiveBufferPass;
   /** EffectIdsBufferPass (independent RT, set by MRTPassEffectLayer) */
   effectIdsBufferPass?: import("./EffectIdsBufferPass").EffectIdsBufferPass;
-
-  // @deprecated SE Redesign - selectiveEffectRegistry field removed (was only used by mask pass)
-  private maskController = new SelectiveEffectMaskController();
 
   constructor(
     scenes: Scenes,
@@ -95,8 +88,6 @@ export class CustomRenderPass extends RenderPass {
 
     this.disableShadow = !!options?.disableShadow;
     this.allowTransparent = options?.allowTransparent ?? true;
-
-    // @deprecated SE Redesign - selectiveEffectRegistry assignment removed (was only used by mask pass)
 
     this.globeNormalCopyPass = new NormalCopyPass();
     this.globeNormalCopyPass.setNormalTexture(
@@ -276,52 +267,5 @@ export class CustomRenderPass extends RenderPass {
       this.drapedTempScene.remove(child);
       drapedScene.add(child);
     }
-  }
-
-  // ============================================================================
-  // MaskPassContext Management (delegated to SelectiveEffectMaskController)
-  // ============================================================================
-
-  /**
-   * Set mask render targets for selective effect rendering.
-   * Called by SelectiveEffectLayer to register their mask RTs.
-   *
-   * @param effectKey - Effect key (e.g., "selectiveBloom", "selectiveOutline")
-   * @param rt - WebGLRenderTarget for mask rendering
-   */
-  setMaskRenderTarget(effectKey: string, rt: WebGLRenderTarget): void {
-    this.maskController.setMaskRenderTarget(effectKey, rt);
-  }
-
-  /**
-   * Remove mask render target.
-   *
-   * @param effectKey - Effect key to remove
-   */
-  removeMaskRenderTarget(effectKey: string): void {
-    this.maskController.removeMaskRenderTarget(effectKey);
-  }
-
-  /**
-   * Set occlusion mode-specific mask render targets.
-   * Used by effects that need separate Normal and Silhouette masks (selectiveBloom, selectiveOutline).
-   *
-   * @param effectKey - Effect key (e.g., "selectiveBloom", "selectiveOutline")
-   * @param targets - Object with optional normal and silhouette WebGLRenderTargets
-   */
-  setOcclusionMaskRenderTargets(
-    effectKey: string,
-    targets: { normal?: WebGLRenderTarget; silhouette?: WebGLRenderTarget },
-  ): void {
-    this.maskController.setOcclusionMaskRenderTargets(effectKey, targets);
-  }
-
-  /**
-   * Remove occlusion mode-specific mask render targets.
-   *
-   * @param effectKey - Effect key to remove
-   */
-  removeOcclusionMaskRenderTargets(effectKey: string): void {
-    this.maskController.removeOcclusionMaskRenderTargets(effectKey);
   }
 }
