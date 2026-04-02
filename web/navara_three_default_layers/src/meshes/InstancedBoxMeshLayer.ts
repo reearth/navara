@@ -151,6 +151,7 @@ export class InstancedBoxMeshLayer extends InstancedMeshLayerDeclaration<
       }
       if (boxesUpdate.transparent !== undefined) {
         material.transparent = boxesUpdate.transparent;
+        material.needsUpdate = true;
       }
       if (boxesUpdate.castShadow !== undefined) {
         this.raw.castShadow = boxesUpdate.castShadow;
@@ -161,10 +162,7 @@ export class InstancedBoxMeshLayer extends InstancedMeshLayerDeclaration<
 
       // Replace all instances if children provided
       if (boxesUpdate.children !== undefined) {
-        this.clear();
-        for (const childConfig of boxesUpdate.children) {
-          this.add(childConfig);
-        }
+        this.replaceAll(boxesUpdate.children);
       }
 
       // Propagate effectIds/selectiveEffectOcclusion to base class

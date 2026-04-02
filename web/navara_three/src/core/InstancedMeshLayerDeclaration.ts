@@ -47,6 +47,7 @@ const _quaternion = new Quaternion();
 const _scale = new Vector3();
 const _euler = new Euler();
 const _matrix = new Matrix4();
+const _defaultColor = new ThreeColor(0xffffff);
 
 /**
  * Abstract base class for instanced mesh layers using GPU instancing via Three.js `InstancedMesh`.
@@ -170,7 +171,11 @@ export abstract class InstancedMeshLayerDeclaration<
     const index = mesh.count;
     mesh.setMatrixAt(index, this.composeInstanceMatrix(config));
     const color = this.getInstanceColor(config);
-    if (color) mesh.setColorAt(index, color);
+    if (color) {
+      mesh.setColorAt(index, color);
+    } else if (mesh.instanceColor) {
+      mesh.setColorAt(index, _defaultColor);
+    }
     mesh.count++;
     mesh.instanceMatrix.needsUpdate = true;
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
@@ -226,7 +231,11 @@ export abstract class InstancedMeshLayerDeclaration<
     const merged = { ...this.configs[index], ...config };
     mesh.setMatrixAt(index, this.composeInstanceMatrix(merged));
     const color = this.getInstanceColor(merged);
-    if (color) mesh.setColorAt(index, color);
+    if (color) {
+      mesh.setColorAt(index, color);
+    } else if (mesh.instanceColor) {
+      mesh.setColorAt(index, _defaultColor);
+    }
     mesh.instanceMatrix.needsUpdate = true;
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
     this.configs[index] = merged;
@@ -245,6 +254,41 @@ export abstract class InstancedMeshLayerDeclaration<
     this.configs = [];
   }
 
+  /**
+   * Replace all instances in a single batch. More efficient than `clear()` + `add()` loop
+   * because it suppresses per-instance update notifications and emits a single update at the end.
+   */
+  replaceAll(configs: ChildConfig[]): void {
+    const mesh = this.raw;
+    invariant(mesh, "Layer must be created before replacing instances");
+
+    // Grow capacity if needed
+    while (configs.length > this.capacity) {
+      this.grow();
+    }
+
+    // Re-read after potential grow() which replaces the mesh
+    const currentMesh = this.raw;
+    invariant(currentMesh, "Layer must be created before replacing instances");
+    currentMesh.count = configs.length;
+
+    for (let i = 0; i < configs.length; i++) {
+      currentMesh.setMatrixAt(i, this.composeInstanceMatrix(configs[i]));
+      const color = this.getInstanceColor(configs[i]);
+      if (color) {
+        currentMesh.setColorAt(i, color);
+      } else if (currentMesh.instanceColor) {
+        // Reset to white default when no color is provided but instanceColor buffer exists
+        currentMesh.setColorAt(i, _defaultColor);
+      }
+    }
+
+    currentMesh.instanceMatrix.needsUpdate = true;
+    if (currentMesh.instanceColor) currentMesh.instanceColor.needsUpdate = true;
+    this.configs = [...configs];
+    this.requestUpdate();
+  }
+
   /** Number of active instances. */
   get count(): number {
     return this.configs.length;
@@ -252,21 +296,21 @@ export abstract class InstancedMeshLayerDeclaration<
 
   /**
    * Grow the internal buffers by replacing the InstancedMesh with a larger one.
-   * Copies existing instance data to the new mesh.
+   * Copies existing instance data to the new mesh and re-links selective effects.
    */
   private grow(): void {
-    const mesh = this.raw;
-    invariant(mesh, "Layer must be created before growing");
+    const oldMesh = this.raw;
+    invariant(oldMesh, "Layer must be created before growing");
 
     const newCapacity = Math.max(
       this.capacity * GROWTH_FACTOR,
       DEFAULT_CAPACITY,
     );
-    const oldCount = mesh.count;
+    const oldCount = oldMesh.count;
 
     const newMesh = new InstancedMesh(
-      mesh.geometry,
-      mesh.material,
+      oldMesh.geometry,
+      oldMesh.material,
       newCapacity,
     );
     newMesh.count = oldCount;
@@ -274,45 +318,48 @@ export abstract class InstancedMeshLayerDeclaration<
     // Copy instance matrices
     const matrix = new Matrix4();
     for (let i = 0; i < oldCount; i++) {
-      mesh.getMatrixAt(i, matrix);
+      oldMesh.getMatrixAt(i, matrix);
       newMesh.setMatrixAt(i, matrix);
     }
     newMesh.instanceMatrix.needsUpdate = true;
 
     // Copy instance colors if they exist
-    if (mesh.instanceColor) {
+    if (oldMesh.instanceColor) {
       const color = new ThreeColor();
       for (let i = 0; i < oldCount; i++) {
-        mesh.getColorAt(i, color);
+        oldMesh.getColorAt(i, color);
         newMesh.setColorAt(i, color);
       }
       if (newMesh.instanceColor) newMesh.instanceColor.needsUpdate = true;
     }
 
     // Copy transform and visibility
-    newMesh.position.copy(mesh.position);
-    newMesh.rotation.copy(mesh.rotation);
-    newMesh.scale.copy(mesh.scale);
-    newMesh.matrix.copy(mesh.matrix);
-    newMesh.matrixWorld.copy(mesh.matrixWorld);
-    newMesh.matrixAutoUpdate = mesh.matrixAutoUpdate;
-    newMesh.matrixWorldAutoUpdate = mesh.matrixWorldAutoUpdate;
-    newMesh.visible = mesh.visible;
-    newMesh.castShadow = mesh.castShadow;
-    newMesh.receiveShadow = mesh.receiveShadow;
+    newMesh.position.copy(oldMesh.position);
+    newMesh.rotation.copy(oldMesh.rotation);
+    newMesh.scale.copy(oldMesh.scale);
+    newMesh.matrix.copy(oldMesh.matrix);
+    newMesh.matrixWorld.copy(oldMesh.matrixWorld);
+    newMesh.matrixAutoUpdate = oldMesh.matrixAutoUpdate;
+    newMesh.matrixWorldAutoUpdate = oldMesh.matrixWorldAutoUpdate;
+    newMesh.visible = oldMesh.visible;
+    newMesh.castShadow = oldMesh.castShadow;
+    newMesh.receiveShadow = oldMesh.receiveShadow;
 
     // Swap in scene
-    const parent = mesh.parent;
+    const parent = oldMesh.parent;
     if (parent) {
-      parent.remove(mesh);
+      parent.remove(oldMesh);
       parent.add(newMesh);
     }
 
     // Dispose old instance buffers (not geometry/material — they're shared)
-    mesh.dispose();
+    oldMesh.dispose();
 
     this._instance = newMesh;
     this.capacity = newCapacity;
+
+    // Re-link selective-effect registry and onBeforeRender wiring to the new mesh
+    this.relinkSelectiveEffects(oldMesh);
   }
 
   override onDestroy(): void {

@@ -14,6 +14,7 @@ import {
   DefaultPlugin,
   type DefaultLayerDescriptions,
 } from "@navara/three_default_plugin";
+import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../../helpers/attributions";
 import { TERRAIN_DATASETS, TILE_DATASETS } from "../../../helpers/constants";
@@ -107,7 +108,7 @@ const run = async () => {
 
   const buildings = generateBuildings(BUILDING_COUNT, RADIUS);
 
-  view.addLayer<InstancedBoxMeshLayer>({
+  const boxesLayer = view.addLayer<InstancedBoxMeshLayer>({
     type: "mesh",
     boxes: {
       castShadow: true,
@@ -135,6 +136,14 @@ const run = async () => {
     type: "tiles",
     data: { url: TILE_DATASETS.openstreetmap.url },
     rasterTile: { maxZoom: 23 },
+  });
+
+  const pane = new Pane({ title: "Instanced Mesh" });
+  pane.addButton({ title: "Add 100 Buildings" }).on("click", () => {
+    const newBuildings = generateBuildings(100, RADIUS);
+    for (const b of newBuildings) {
+      boxesLayer.ref.add(b);
+    }
   });
 
   showAttributions([TILE_DATASETS.openstreetmap, TERRAIN_DATASETS.gsi]);
