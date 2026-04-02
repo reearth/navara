@@ -1,2 +1,3 @@
 public/data/**
 !public/data/.gitkeep
+!public/data/world-cities.geojson
