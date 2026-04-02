@@ -48,6 +48,8 @@ const _scale = new Vector3();
 const _euler = new Euler();
 const _matrix = new Matrix4();
 const _defaultColor = new ThreeColor(0xffffff);
+const _swapMatrix = new Matrix4();
+const _swapColor = new ThreeColor();
 
 /**
  * Abstract base class for instanced mesh layers using GPU instancing via Three.js `InstancedMesh`.
@@ -148,8 +150,8 @@ export abstract class InstancedMeshLayerDeclaration<
 
     for (let i = 0; i < configs.length; i++) {
       mesh.setMatrixAt(i, this.composeInstanceMatrix(configs[i]));
-      const color = this.getInstanceColor(configs[i]);
-      if (color) mesh.setColorAt(i, color);
+      const color = this.getInstanceColor(configs[i]) ?? _defaultColor;
+      mesh.setColorAt(i, color);
     }
 
     mesh.instanceMatrix.needsUpdate = true;
@@ -170,12 +172,8 @@ export abstract class InstancedMeshLayerDeclaration<
 
     const index = mesh.count;
     mesh.setMatrixAt(index, this.composeInstanceMatrix(config));
-    const color = this.getInstanceColor(config);
-    if (color) {
-      mesh.setColorAt(index, color);
-    } else if (mesh.instanceColor) {
-      mesh.setColorAt(index, _defaultColor);
-    }
+    const color = this.getInstanceColor(config) ?? _defaultColor;
+    mesh.setColorAt(index, color);
     mesh.count++;
     mesh.instanceMatrix.needsUpdate = true;
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
@@ -199,14 +197,12 @@ export abstract class InstancedMeshLayerDeclaration<
     const last = mesh.count - 1;
     if (index !== last) {
       // Swap with last instance
-      const lastMatrix = new Matrix4();
-      mesh.getMatrixAt(last, lastMatrix);
-      mesh.setMatrixAt(index, lastMatrix);
+      mesh.getMatrixAt(last, _swapMatrix);
+      mesh.setMatrixAt(index, _swapMatrix);
 
       if (mesh.instanceColor) {
-        const lastColor = new ThreeColor();
-        mesh.getColorAt(last, lastColor);
-        mesh.setColorAt(index, lastColor);
+        mesh.getColorAt(last, _swapColor);
+        mesh.setColorAt(index, _swapColor);
       }
 
       this.configs[index] = this.configs[last];
@@ -230,12 +226,8 @@ export abstract class InstancedMeshLayerDeclaration<
 
     const merged = { ...this.configs[index], ...config };
     mesh.setMatrixAt(index, this.composeInstanceMatrix(merged));
-    const color = this.getInstanceColor(merged);
-    if (color) {
-      mesh.setColorAt(index, color);
-    } else if (mesh.instanceColor) {
-      mesh.setColorAt(index, _defaultColor);
-    }
+    const color = this.getInstanceColor(merged) ?? _defaultColor;
+    mesh.setColorAt(index, color);
     mesh.instanceMatrix.needsUpdate = true;
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
     this.configs[index] = merged;
@@ -274,13 +266,8 @@ export abstract class InstancedMeshLayerDeclaration<
 
     for (let i = 0; i < configs.length; i++) {
       currentMesh.setMatrixAt(i, this.composeInstanceMatrix(configs[i]));
-      const color = this.getInstanceColor(configs[i]);
-      if (color) {
-        currentMesh.setColorAt(i, color);
-      } else if (currentMesh.instanceColor) {
-        // Reset to white default when no color is provided but instanceColor buffer exists
-        currentMesh.setColorAt(i, _defaultColor);
-      }
+      const color = this.getInstanceColor(configs[i]) ?? _defaultColor;
+      currentMesh.setColorAt(i, color);
     }
 
     currentMesh.instanceMatrix.needsUpdate = true;

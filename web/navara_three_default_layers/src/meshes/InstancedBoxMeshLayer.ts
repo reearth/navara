@@ -14,6 +14,8 @@ import {
   Vector3,
 } from "three";
 
+const _tempColor = new ThreeColor();
+
 /** Per-instance configuration for a single box. */
 export type BoxChildConfig = InstancedChildConfig & {
   /** Box width (X-axis). Encoded as scale in the instance matrix. */
@@ -116,7 +118,7 @@ export class InstancedBoxMeshLayer extends InstancedMeshLayerDeclaration<
 
   protected getInstanceColor(config: BoxChildConfig): ThreeColor | undefined {
     if (!config.color) return undefined;
-    return new ThreeColor(config.color.raw);
+    return _tempColor.set(config.color.raw);
   }
 
   override onCreate(): void {
