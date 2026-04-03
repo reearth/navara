@@ -41,7 +41,6 @@ const run = async () => {
       thickness: 1.0,
       edgeStrength: 1.0,
     },
-    selectiveEffectOcclusion: "normal",
   });
 
   // MVT point with outline (Wakayama facilities)

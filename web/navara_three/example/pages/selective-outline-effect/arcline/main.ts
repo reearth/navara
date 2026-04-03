@@ -45,7 +45,6 @@ const run = async () => {
       thickness: 0.5,
       edgeStrength: 1.0,
     },
-    selectiveEffectOcclusion: "normal",
   });
 
   // Arc lines with outline (Tokyo to Asian cities)

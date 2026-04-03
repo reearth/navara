@@ -45,7 +45,6 @@ const run = async () => {
       radius: 0.5,
       threshold: 0.0,
     },
-    selectiveEffectOcclusion: "normal",
   });
 
   // Arc lines with bloom (Tokyo to Asian cities)

@@ -40,7 +40,6 @@ const run = async () => {
       radius: 0.5,
       threshold: 0.0,
     },
-    selectiveEffectOcclusion: "normal",
   });
 
   // Cesium 3D Tiles with bloom (Chiyoda buildings)

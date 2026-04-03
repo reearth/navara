@@ -37,7 +37,6 @@ const run = async () => {
       thickness: 2.0,
       edgeStrength: 1.0,
     },
-    selectiveEffectOcclusion: "normal",
   });
 
   // GeoJSON points with outline (Odaiba area landmarks)

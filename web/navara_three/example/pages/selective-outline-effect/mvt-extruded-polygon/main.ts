@@ -40,7 +40,6 @@ const run = async () => {
       thickness: 1.0,
       edgeStrength: 1.0,
     },
-    selectiveEffectOcclusion: "normal",
   });
 
   // MVT polygon with outline (Height Control District)

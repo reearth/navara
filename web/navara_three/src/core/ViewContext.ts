@@ -206,29 +206,6 @@ export class ViewContext extends EventHandler<ViewContextEvents> {
       resolvedLayerId ?? "",
     );
   }
-
-  /**
-   * Remove selective effects from a specific Object3D.
-   *
-   * @param object - The Object3D to remove effects from
-   * @param effectIds - Effect IDs to remove. If undefined, removes all effects.
-   */
-  removeEffectFromObject(object: Object3D, effectIds?: string[]): void {
-    const config = getSelectiveEffectConfig(object);
-    if (!config) return;
-
-    const prevEffectIds = config.effectIds;
-    const nextEffectIds = effectIds
-      ? prevEffectIds.filter((id) => !effectIds.includes(id))
-      : [];
-
-    this.selectiveEffectRegistry?.updateLinksForObject(
-      object,
-      nextEffectIds,
-      prevEffectIds,
-      config.layerId ?? "",
-    );
-  }
 }
 
 // --- Type guards for enhanced mesh duck-typing ---

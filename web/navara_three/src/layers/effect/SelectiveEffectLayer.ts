@@ -15,8 +15,6 @@ export { createFullscreenQuad } from "../../core/SelectiveEffectHelper";
 // Base configuration for selective effect layers
 export type SelectiveEffectLayerConfig = {
   selectiveEffect: true;
-  /** Occlusion mode. Currently only "normal" is supported. */
-  selectiveEffectOcclusion?: "normal";
 } & EffectLayerConfig;
 
 export type SelectiveEffectLayerUpdate = EffectLayerUpdate;

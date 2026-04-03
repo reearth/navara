@@ -37,7 +37,6 @@ const run = async () => {
       radius: 0.5,
       threshold: 0.0,
     },
-    selectiveEffectOcclusion: "normal",
   });
 
   // GeoJSON polylines with bloom (Odaiba area paths)

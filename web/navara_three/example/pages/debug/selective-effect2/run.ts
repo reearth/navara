@@ -57,7 +57,6 @@ export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
       debugViews: false,
       resolutionScale: 1.0,
     },
-    selectiveEffectOcclusion: "normal",
   });
 
   const outlineEffect = view.addLayer({
@@ -69,7 +68,6 @@ export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
       debugViews: false,
       resolutionScale: 1.0,
     },
-    selectiveEffectOcclusion: "normal",
   });
 
   // --- Mesh Layers (effectIds reference effect layer IDs) ---
@@ -191,7 +189,6 @@ export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
   }
 
   const effectIdsView = createDebugCanvas("EffectIds (R=mask)");
-  const silhouetteView = createDebugCanvas("Silhouette (G)");
   const emissiveView = createDebugCanvas("Emissive RGB");
   const emissiveAlphaView = createDebugCanvas("Emissive A");
 
@@ -210,11 +207,10 @@ export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
 
     renderer.setRenderTarget(gbufferRT);
 
-    // EffectIds (attachment 2): R=bitmask, G=silhouette flag
+    // EffectIds (attachment 2): R=bitmask
     gl.readBuffer(gl.COLOR_ATTACHMENT0 + 2);
     gl.readPixels(0, 0, w, h, gl.RGBA, gl.FLOAT, pixels);
     drawToCanvas(effectIdsView, pixels, w, h, "bitmask");
-    drawToCanvas(silhouetteView, pixels, w, h, "green");
 
     // Emissive (attachment 3)
     gl.readBuffer(gl.COLOR_ATTACHMENT0 + 3);
@@ -231,7 +227,7 @@ export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
     pixels: Float32Array,
     w: number,
     h: number,
-    mode: "rgb" | "alpha" | "bitmask" | "green",
+    mode: "rgb" | "alpha" | "bitmask",
   ) {
     const cw = view.canvas.width;
     const ch = view.canvas.height;
@@ -248,13 +244,6 @@ export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
           imageData.data[di] = Math.min(255, pixels[si] * 255);
           imageData.data[di + 1] = Math.min(255, pixels[si + 1] * 255);
           imageData.data[di + 2] = Math.min(255, pixels[si + 2] * 255);
-          imageData.data[di + 3] = 255;
-        } else if (mode === "green") {
-          // G channel: silhouette occlusion flag (0 or 1)
-          const g = pixels[si + 1] > 0.5 ? 255 : 0;
-          imageData.data[di] = 0;
-          imageData.data[di + 1] = g;
-          imageData.data[di + 2] = 0;
           imageData.data[di + 3] = 255;
         } else if (mode === "alpha") {
           const a = Math.min(255, pixels[si + 3] * 255);

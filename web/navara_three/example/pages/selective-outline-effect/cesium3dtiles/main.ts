@@ -40,7 +40,6 @@ const run = async () => {
       thickness: 1.0,
       edgeStrength: 1.0,
     },
-    selectiveEffectOcclusion: "normal",
   });
 
   // Cesium 3D Tiles with outline (Chiyoda buildings)

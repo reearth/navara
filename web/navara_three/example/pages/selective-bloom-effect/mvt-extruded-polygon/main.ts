@@ -40,7 +40,6 @@ const run = async () => {
       radius: 0.5,
       threshold: 0.0,
     },
-    selectiveEffectOcclusion: "normal",
   });
 
   // MVT polygon with bloom (Height Control District)
