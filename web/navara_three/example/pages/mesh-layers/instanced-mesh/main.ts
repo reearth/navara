@@ -156,7 +156,7 @@ const run = async () => {
   });
 
   folder.addButton({ title: "Randomize Colors" }).on("click", () => {
-    const count = Math.min(100, boxesLayer.ref.count);
+    const count = boxesLayer.ref.count;
     for (let i = 0; i < count; i++) {
       boxesLayer.ref.updateAt(i, {
         color: new Color().setHex(Math.random() * 0xffffff),
