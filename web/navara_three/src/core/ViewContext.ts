@@ -2,7 +2,12 @@ import type { Globe } from "@navara/core";
 import { EventHandler } from "@navara/core";
 import type { FontManager } from "@navara/font";
 import type { ConcurrencyManager } from "@navara/worker";
-import type { Material, Object3D, PerspectiveCamera } from "three";
+import {
+  Mesh,
+  type Material,
+  type Object3D,
+  type PerspectiveCamera,
+} from "three";
 
 import type { Atmosphere } from "../atmosphere";
 import { Color } from "../Color";
@@ -11,6 +16,7 @@ import type { RenderPassOrchestrator } from "../orchestrators";
 import type { Scenes } from "../scene";
 import type { MeshCache } from "../type";
 
+import type { EffectSlotRegistry } from "./EffectSlotRegistry";
 import {
   getSelectiveEffectConfig,
   type SelectiveEffectHelper,
@@ -37,6 +43,7 @@ type ViewContextEvents = {
 // Restrict public API for a layer declaration.
 export class ViewContext extends EventHandler<ViewContextEvents> {
   public selectiveEffectRegistry?: SelectiveEffectHelper;
+  public effectSlotRegistry?: EffectSlotRegistry;
   public globe?: Globe;
   public fontManager?: FontManager;
 
@@ -55,6 +62,53 @@ export class ViewContext extends EventHandler<ViewContextEvents> {
   ) {
     super();
     this.selectiveEffectRegistry = selectiveEffectHelper;
+  }
+
+  /**
+   * Recompute effectIdsMask for all meshes in the MRT scene.
+   * Called when EffectSlotRegistry changes (slot register/unregister) to ensure
+   * masks stay in sync regardless of layer creation order.
+   *
+   * Handles both non-enhanced meshes (via material.userData) and enhanced meshes
+   * (via selectiveEffectConfig stored by SelectiveEffectHelper).
+   */
+  recomputeEffectIdsMasks(): void {
+    const registry = this.effectSlotRegistry;
+    if (!registry) return;
+
+    // Non-enhanced meshes: update material.userData.uEffectIdsMask
+    this.scenes.mrt.traverse((obj) => {
+      if (
+        obj instanceof Mesh &&
+        !Array.isArray(obj.material) &&
+        obj.material?.userData?.uEffectIdsMask
+      ) {
+        const config = getSelectiveEffectConfig(obj);
+        if (config) {
+          obj.material.userData.uEffectIdsMask.value = registry.computeMask(
+            config.effectIds,
+          );
+        }
+      }
+    });
+
+    // Enhanced meshes (Model/Polygon): update via MeshCache
+    for (const [, mesh] of this._privates.meshes) {
+      if (hasGetEffectIds(mesh)) {
+        const effectIds = mesh._getEffectIds();
+        const mask =
+          effectIds.length > 0 ? registry.computeMask(effectIds) : 0;
+        if (hasGetEnhancer(mesh)) {
+          // Polygon: single enhancer
+          mesh.getEnhancer().update({ base: { effectIdsMask: mask } });
+        } else if (hasEnhancers(mesh)) {
+          // Model: multiple enhancers
+          for (const enhancer of mesh._enhancers.values()) {
+            enhancer.update({ base: { effectIdsMask: mask } });
+          }
+        }
+      }
+    }
   }
 
   setGlobe(globe: Globe) {
@@ -176,4 +230,41 @@ export class ViewContext extends EventHandler<ViewContextEvents> {
       config.layerId ?? "",
     );
   }
+}
+
+// --- Type guards for enhanced mesh duck-typing ---
+
+type EffectIdsMesh = { _getEffectIds(): readonly string[] };
+type EnhancerUpdatable = {
+  update(p: { base: { effectIdsMask: number } }): void;
+};
+type PolygonLikeMesh = EffectIdsMesh & {
+  getEnhancer(): EnhancerUpdatable;
+};
+type ModelLikeMesh = EffectIdsMesh & {
+  _enhancers: Map<unknown, EnhancerUpdatable>;
+};
+
+function hasGetEffectIds(obj: unknown): obj is EffectIdsMesh {
+  return (
+    typeof obj === "object" &&
+    obj !== null &&
+    typeof (obj as Record<string, unknown>)._getEffectIds === "function"
+  );
+}
+
+function hasGetEnhancer(obj: unknown): obj is PolygonLikeMesh {
+  return (
+    typeof obj === "object" &&
+    obj !== null &&
+    typeof (obj as Record<string, unknown>).getEnhancer === "function"
+  );
+}
+
+function hasEnhancers(obj: unknown): obj is ModelLikeMesh {
+  return (
+    typeof obj === "object" &&
+    obj !== null &&
+    (obj as Record<string, unknown>)._enhancers instanceof Map
+  );
 }

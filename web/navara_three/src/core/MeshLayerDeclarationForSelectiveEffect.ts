@@ -1,5 +1,5 @@
 import type { BaseEventMap } from "@navara/core";
-import { Object3D } from "three";
+import { Mesh, Object3D } from "three";
 
 import { arraysEqual } from "../utils";
 
@@ -75,6 +75,9 @@ export abstract class MeshLayerDeclarationForSelectiveEffect<
     if (useSelectiveEffect) {
       this.view.registerLayerEffects(this.id, this._effectIds);
     }
+
+    // Compute and set effectIdsMask on material uniforms
+    this.updateEffectIdsMask();
   }
 
   override onUpdateConfig(updates: UpdateConfig): void {
@@ -113,9 +116,40 @@ export abstract class MeshLayerDeclarationForSelectiveEffect<
 
       // Update Manager (SoT) with new effectIds
       this.view.updateLayerEffects(this.id, this._effectIds);
+
+      // Recompute effectIdsMask for material uniforms
+      this.updateEffectIdsMask();
     }
 
     // Note: onPassKeyChange() is already called by super.onUpdateConfig()
+  }
+
+  /**
+   * Compute effectIdsMask from EffectSlotRegistry and set on material uniforms.
+   * Non-enhanced meshes: sets material.userData.uEffectIdsMask.value
+   * Enhanced meshes (Model/Polygon): override this method to update enhancer state.
+   */
+  protected updateEffectIdsMask(): void {
+    const registry = this.view.effectSlotRegistry;
+    if (!registry) return;
+
+    const mask =
+      this._effectIds.length > 0
+        ? registry.computeMask(this._effectIds)
+        : 0;
+    const raw = this.raw;
+    if (!raw) return;
+
+    // Set on non-enhanced mesh materials via userData
+    raw.traverse((obj) => {
+      if (
+        obj instanceof Mesh &&
+        !Array.isArray(obj.material) &&
+        obj.material?.userData?.uEffectIdsMask
+      ) {
+        obj.material.userData.uEffectIdsMask.value = mask;
+      }
+    });
   }
 
   override onDestroy(): void {

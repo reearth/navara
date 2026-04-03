@@ -14,7 +14,6 @@ const DEFAULT_BASE_REFS: Omit<
   "uEmissiveColor" | "uEmissiveIntensity"
 > = {
   nvr_uPickable: { value: 0 },
-  uSelectiveEffectBufferMode: { value: 0 },
   uEffectIdsMask: { value: 0 },
 };
 
@@ -34,9 +33,6 @@ export const createBaseMutates = (): ModelBaseMutates => {
     update: (state) => {
       // Sync refs from state
       refs.nvr_uPickable.value = state.pickable ? 1 : 0;
-      refs.uSelectiveEffectBufferMode.value = state.selectiveEffectBufferMode
-        ? 1
-        : 0;
       refs.uEmissiveColor.value.set(state.emissiveColor);
       refs.uEmissiveIntensity.value = state.emissiveIntensity;
       refs.uEffectIdsMask.value = state.effectIdsMask;
@@ -44,7 +40,6 @@ export const createBaseMutates = (): ModelBaseMutates => {
     updateUniforms: (uniforms) => {
       // Assign core uniform refs to shader.uniforms
       uniforms.nvr_uPickable = refs.nvr_uPickable;
-      uniforms.uSelectiveEffectBufferMode = refs.uSelectiveEffectBufferMode;
       uniforms.uEmissiveColor = refs.uEmissiveColor;
       uniforms.uEmissiveIntensity = refs.uEmissiveIntensity;
       uniforms.uEffectIdsMask = refs.uEffectIdsMask;

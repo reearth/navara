@@ -426,6 +426,10 @@ export class PolygonMesh extends BatchedFeatureMesh<
         roughness: material.roughness,
         emissiveColor: material.emissiveColor,
         emissiveIntensity: material.emissiveIntensity,
+        effectIdsMask:
+          this._viewContext.effectSlotRegistry?.computeMask(
+            this._getEffectIds(),
+          ) ?? 0,
       },
       water: {
         water: !!material.water,
@@ -551,13 +555,6 @@ export class PolygonMesh extends BatchedFeatureMesh<
 
   _getEffectIds(): readonly string[] {
     return this._viewContext.getLayerEffects(this._layerId) ?? [];
-  }
-
-  _setSelectiveEffectBufferMode(enabled: boolean, effectIdsMask: number): void {
-    this.getEnhancer().update({
-      base: { selectiveEffectBufferMode: enabled, effectIdsMask },
-    });
-    this.needsUpdate();
   }
 
   _updateBatchAttribute(

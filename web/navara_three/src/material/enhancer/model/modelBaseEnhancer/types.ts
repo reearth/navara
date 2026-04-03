@@ -20,8 +20,7 @@ export type ModelBaseProps = {
   // Picking
   pickable?: boolean;
 
-  // Selective Effect buffer mode (for SelectiveEffectBufferPass)
-  selectiveEffectBufferMode?: boolean;
+  // Selective Effect
   effectIdsMask?: number;
 
   // Batch texture
@@ -38,7 +37,6 @@ export type ModelBaseProps = {
  */
 export type ModelBaseState = Readonly<{
   pickable: boolean;
-  selectiveEffectBufferMode: boolean;
   emissiveColor: number;
   emissiveIntensity: number;
   effectIdsMask: number;
@@ -57,7 +55,6 @@ export type ModelBaseState = Readonly<{
  */
 export type ModelBaseRefs = {
   nvr_uPickable: UniformValue<number>;
-  uSelectiveEffectBufferMode: UniformValue<number>;
   uEmissiveColor: UniformValue<Color>;
   uEmissiveIntensity: UniformValue<number>;
   uEffectIdsMask: UniformValue<number>;

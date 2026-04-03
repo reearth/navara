@@ -37,42 +37,6 @@ describe("modelBaseEnhancer/mutates", () => {
     });
   });
 
-  describe("update syncs selective effect refs from state", () => {
-    type TestCase = {
-      name: string;
-      stateOverride: Partial<ModelBaseState>;
-      uniformKey: keyof ShaderUniforms;
-      expected: number | ((v: number) => boolean);
-    };
-
-    const testCases: TestCase[] = [
-      {
-        name: "selectiveEffectBufferMode true → uSelectiveEffectBufferMode = 1",
-        stateOverride: { selectiveEffectBufferMode: true },
-        uniformKey: "uSelectiveEffectBufferMode",
-        expected: 1,
-      },
-      {
-        name: "selectiveEffectBufferMode false → uSelectiveEffectBufferMode = 0",
-        stateOverride: { selectiveEffectBufferMode: false },
-        uniformKey: "uSelectiveEffectBufferMode",
-        expected: 0,
-      },
-    ];
-
-    it.each(testCases)("$name", ({ stateOverride, uniformKey, expected }) => {
-      const state: ModelBaseState = { ...DEFAULT_BASE_STATE, ...stateOverride };
-      const mutates = createBaseMutates();
-      mutates.update(state);
-
-      const uniforms: ShaderUniforms = {};
-      mutates.updateUniforms(uniforms, state);
-
-      const value = uniforms[uniformKey]?.value as number;
-      expect(value).toBe(expected);
-    });
-  });
-
   describe("setBatchDataTexture", () => {
     it("should assign batch data texture ref", () => {
       const mutates = createBaseMutates();

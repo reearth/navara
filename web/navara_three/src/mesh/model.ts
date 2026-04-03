@@ -78,9 +78,6 @@ export class ModelMesh
     PntsMaterialEnhancer
   >();
 
-  /** Cached visibility of PNTS objects before SE buffer mode is enabled */
-  private _savedPntsVisibility = new Map<Points, boolean>();
-
   // model credit for attribution
   credit: string | undefined;
   batchLength?: number;
@@ -375,6 +372,13 @@ export class ModelMesh
         this._layerId,
       );
       this.prevEffectIds = [...effectIds];
+
+      // Compute effectIdsMask and propagate to enhancers
+      const mask =
+        this.viewContext.effectSlotRegistry?.computeMask(effectIds) ?? 0;
+      for (const enhancer of this._enhancers.values()) {
+        enhancer.update({ base: { effectIdsMask: mask } });
+      }
     }
   }
 
@@ -447,28 +451,6 @@ export class ModelMesh
     return (
       this.viewContext.getLayerEffects(this._layerId) ?? this.prevEffectIds
     );
-  }
-
-  _setSelectiveEffectBufferMode(enabled: boolean, effectIdsMask: number): void {
-    for (const enhancer of this._enhancers.values()) {
-      enhancer.update({
-        base: { selectiveEffectBufferMode: enabled, effectIdsMask },
-      });
-    }
-    // PNTS enhancer has no Selective Effect buffer support — hide during buffer pass
-    if (enabled) {
-      this._savedPntsVisibility.clear();
-      for (const [points] of this._pntsEnhancers) {
-        this._savedPntsVisibility.set(points, points.visible);
-        points.visible = false;
-      }
-    } else {
-      for (const [points] of this._pntsEnhancers) {
-        const saved = this._savedPntsVisibility.get(points);
-        points.visible = saved ?? true;
-      }
-      this._savedPntsVisibility.clear();
-    }
   }
 
   _setFeatureHeight(_height: number) {

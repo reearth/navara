@@ -6,16 +6,15 @@ import {
 } from "three";
 
 /**
- * Set up Selective Effect buffer uniforms on a standard Three.js material.
- * Injects uSelectiveEffectBufferMode/uEmissiveColor/uEmissiveIntensity/uEffectIdsMask via onBeforeCompile.
- * Used by non-enhancer meshes (Box, Sphere, etc.) for SelectiveEffectBufferPass support.
+ * Set up Selective Effect uniforms on a standard Three.js material.
+ * Sets USE_SELECTIVE_EFFECT define and links uEmissiveColor/uEmissiveIntensity/uEffectIdsMask
+ * via onBeforeCompile. Used by non-enhancer meshes (Box, Sphere, etc.).
  */
 export function setupSelectiveEffectBufferUniforms(
   material: MeshLambertMaterial | MeshStandardMaterial,
   emissiveColor: ColorRepresentation,
   emissiveIntensity: number,
 ): void {
-  material.userData.uSelectiveEffectBufferMode = { value: 0 };
   material.userData.uEmissiveColor = { value: new ThreeColor(emissiveColor) };
   material.userData.uEmissiveIntensity = { value: emissiveIntensity };
   material.userData.uEffectIdsMask = { value: 0 };
@@ -25,11 +24,11 @@ export function setupSelectiveEffectBufferUniforms(
     // Chain previous onBeforeCompile if it exists
     prevOnBeforeCompile.call(material, shader, renderer);
 
-    // Link userData refs to shader uniforms so SelectiveEffectBufferPass can
-    // toggle mode and set values at runtime. Uniform declarations are in
-    // overrideMaterialsForMRT — no shader source modification needed here.
-    shader.uniforms.uSelectiveEffectBufferMode =
-      material.userData.uSelectiveEffectBufferMode;
+    // Enable SE shader branch (compile-time, set once)
+    shader.defines = shader.defines ?? {};
+    shader.defines.USE_SELECTIVE_EFFECT = 1;
+
+    // Link userData refs to shader uniforms for runtime value updates
     shader.uniforms.uEmissiveColor = material.userData.uEmissiveColor;
     shader.uniforms.uEmissiveIntensity = material.userData.uEmissiveIntensity;
     shader.uniforms.uEffectIdsMask = material.userData.uEffectIdsMask;

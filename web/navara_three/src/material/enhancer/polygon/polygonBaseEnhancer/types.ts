@@ -29,8 +29,7 @@ export type PolygonBaseProps = {
   // Picking
   pickable?: boolean;
 
-  // Selective Effect buffer mode (for SelectiveEffectBufferPass)
-  selectiveEffectBufferMode?: boolean;
+  // Selective Effect
   effectIdsMask?: number;
 
   // Reflectivity
@@ -66,7 +65,6 @@ export type PolygonBaseState = Readonly<
     isTexturized: boolean;
     clampToGround: boolean;
     pickable: boolean;
-    selectiveEffectBufferMode: boolean;
     emissiveColor: number;
     emissiveIntensity: number;
     effectIdsMask: number;
@@ -94,7 +92,6 @@ export type PolygonBaseRefs = {
   uAddHeight: UniformValue<number>;
   uClampToGround: UniformValue<boolean>;
   nvr_uPickable: UniformValue<number>;
-  uSelectiveEffectBufferMode: UniformValue<number>;
   uEmissiveColor: UniformValue<Color>;
   uEmissiveIntensity: UniformValue<number>;
   uEffectIdsMask: UniformValue<number>;

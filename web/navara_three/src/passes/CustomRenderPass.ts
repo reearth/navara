@@ -2,6 +2,7 @@ import { Globe } from "@navara/core";
 import { DepthCopyPass } from "postprocessing";
 import {
   DepthTexture,
+  NearestFilter,
   RGBADepthPacking,
   Scene,
   WebGLRenderTarget,
@@ -49,9 +50,6 @@ export class CustomRenderPass extends RenderPass {
   private debugNormalCopyPass?: NormalCopyPass;
   private allowTransparent: boolean;
 
-  /** SelectiveEffectBufferPass (dedicated Selective Effect MRT, set by MRTPassEffectLayer) */
-  selectiveEffectBufferPass?: import("./SelectiveEffectBufferPass").SelectiveEffectBufferPass;
-
   constructor(
     scenes: Scenes,
     camera: PerspectiveCamera,
@@ -72,6 +70,17 @@ export class CustomRenderPass extends RenderPass {
     this.globe = globe;
 
     this.gbufferRenderTarget = inputBuffer.clone();
+    // attachment 1: normal buffer
+    this.gbufferRenderTarget.textures.push(
+      this.gbufferRenderTarget.texture.clone(),
+    );
+    // attachment 2: effectIds buffer (discrete bitmask — NearestFilter required)
+    const effectIdsTexture = this.gbufferRenderTarget.texture.clone();
+    effectIdsTexture.minFilter = NearestFilter;
+    effectIdsTexture.magFilter = NearestFilter;
+    effectIdsTexture.generateMipmaps = false;
+    this.gbufferRenderTarget.textures.push(effectIdsTexture);
+    // attachment 3: emissive buffer
     this.gbufferRenderTarget.textures.push(
       this.gbufferRenderTarget.texture.clone(),
     );
@@ -220,10 +229,6 @@ export class CustomRenderPass extends RenderPass {
     this.allDepthCopyPass.setDepthTexture(finalTarget?.depthTexture ?? null);
     this.allDepthCopyPass.copyDepth(clearDepth);
     this.allDepthCopyPass.render(renderer, null, null);
-
-    // Render Selective Effect buffer (dedicated MRT: Emissive + EffectIds in single pass)
-    this.selectiveEffectBufferPass?.processRender();
-    this.selectiveEffectBufferPass?.renderDebugView();
   }
 
   setDepthTexture(depthTexture: DepthTexture): void {
@@ -238,7 +243,6 @@ export class CustomRenderPass extends RenderPass {
     this.allDepthCopyPass.setSize(width, height);
     this.globeNormalCopyPass.setSize(width, height);
     this.debugNormalCopyPass?.setSize(width, height);
-    this.selectiveEffectBufferPass?.setSize(width, height);
   }
 
   // Drape a feature on the terrain by stencil test.

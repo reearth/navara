@@ -26,7 +26,6 @@ const DEFAULT_BASE_REFS: Omit<
   uAddHeight: { value: 0 },
   uClampToGround: { value: false },
   nvr_uPickable: { value: 0 },
-  uSelectiveEffectBufferMode: { value: 0 },
   uEffectIdsMask: { value: 0 },
   uIsTexturized: { value: false },
   reflectivity: { value: 0 },
@@ -62,9 +61,6 @@ export const createBaseMutates = (useRTE: boolean): PolygonBaseMutates => {
       refs.uAddHeight.value = state.addHeight;
       refs.uClampToGround.value = state.clampToGround;
       refs.nvr_uPickable.value = state.pickable ? 1 : 0;
-      refs.uSelectiveEffectBufferMode.value = state.selectiveEffectBufferMode
-        ? 1
-        : 0;
       refs.uEmissiveColor.value.set(state.emissiveColor);
       refs.uEmissiveIntensity.value = state.emissiveIntensity;
       refs.uEffectIdsMask.value = state.effectIdsMask;
@@ -78,7 +74,6 @@ export const createBaseMutates = (useRTE: boolean): PolygonBaseMutates => {
         uniforms.uGlobeNormal = refs.uGlobeNormal;
       }
       uniforms.nvr_uPickable = refs.nvr_uPickable;
-      uniforms.uSelectiveEffectBufferMode = refs.uSelectiveEffectBufferMode;
       uniforms.uEmissiveColor = refs.uEmissiveColor;
       uniforms.uEmissiveIntensity = refs.uEmissiveIntensity;
       uniforms.uEffectIdsMask = refs.uEffectIdsMask;

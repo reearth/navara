@@ -107,6 +107,8 @@ function injectGBuffer(
   shader.fragmentShader = /* glsl */ `
     #ifndef USE_SHADOWMAP_DEPTH
       layout(location = 1) out vec4 outputBuffer1;
+      layout(location = 2) out vec4 outputBuffer2;
+      layout(location = 3) out vec4 outputBuffer3;
     #endif
 
     #if !defined(USE_ENVMAP)
@@ -117,28 +119,27 @@ function injectGBuffer(
       uniform float roughness;
     #endif // USE_ROUGHNESS
 
-    // Selective Effect buffer mode toggle (for SelectiveEffectBufferPass)
-    uniform float uSelectiveEffectBufferMode;
-    uniform float uEffectIdsMask;
-    uniform vec3 uEmissiveColor;
-    uniform float uEmissiveIntensity;
+    #ifdef USE_SELECTIVE_EFFECT
+      uniform float uEffectIdsMask;
+      uniform vec3 uEmissiveColor;
+      uniform float uEmissiveIntensity;
+    #endif
 
     ${packing}
     ${
       createReplacer(shader.fragmentShader).replace(
         /}\s*$/, // Assume the last curly brace is of main()
         /* glsl */ `
-          // SelectiveEffectBufferPass: output emissive + effectIds.
-          // uEmissiveColor/uEmissiveIntensity default to 0 for non-SE meshes.
-          if (uSelectiveEffectBufferMode > 0.5) {
-            gl_FragColor = vec4(uEmissiveColor, uEmissiveIntensity);
-            #ifndef USE_SHADOWMAP_DEPTH
-              outputBuffer1 = vec4(uEffectIdsMask, 0.0, 0.0, 1.0);
-            #endif
-            return;
-          }
           #ifndef USE_SHADOWMAP_DEPTH
             ${outputBuffer1};
+
+            #ifdef USE_SELECTIVE_EFFECT
+              outputBuffer2 = vec4(uEffectIdsMask, 0.0, 0.0, 1.0);
+              outputBuffer3 = vec4(uEmissiveColor, uEmissiveIntensity);
+            #else
+              outputBuffer2 = vec4(0.0);
+              outputBuffer3 = vec4(0.0);
+            #endif
           #endif
         }
       `,
@@ -170,6 +171,8 @@ function injectGBufferToSpriteMaterial(shader: ShaderLibShader) {
   shader.fragmentShader = /* glsl */ `
     #ifndef USE_SHADOWMAP_DEPTH
       layout(location = 1) out vec4 outputBuffer1;
+      layout(location = 2) out vec4 outputBuffer2;
+      layout(location = 3) out vec4 outputBuffer3;
     #endif
 
     varying vec3 vViewPosition;
@@ -190,6 +193,8 @@ function injectGBufferToSpriteMaterial(shader: ShaderLibShader) {
               0.0,
               0.0
             );
+            outputBuffer2 = vec4(0.0);
+            outputBuffer3 = vec4(0.0);
           #endif
         }
       `,
@@ -255,6 +260,8 @@ function injectGBufferToShaderMaterial(
   shader.fragmentShader = /* glsl */ `
     #ifndef USE_SHADOWMAP_DEPTH
       layout(location = 1) out vec4 outputBuffer1;
+      layout(location = 2) out vec4 outputBuffer2;
+      layout(location = 3) out vec4 outputBuffer3;
     #endif
 
     ${packing}
@@ -269,6 +276,8 @@ function injectGBufferToShaderMaterial(
 
           #ifndef USE_SHADOWMAP_DEPTH
             outputBuffer1 = ${outputBuffer1};
+            outputBuffer2 = vec4(0.0);
+            outputBuffer3 = vec4(0.0);
           #endif
         }
       `,
@@ -312,6 +321,8 @@ function injectGBufferToLineMaterial(lineMaterial: LineMaterial) {
   lineMaterial.fragmentShader = /* glsl */ `
     #ifndef USE_SHADOWMAP_DEPTH
       layout(location = 1) out vec4 outputBuffer1;
+      layout(location = 2) out vec4 outputBuffer2;
+      layout(location = 3) out vec4 outputBuffer3;
     #endif
 
     ${packing}
@@ -342,6 +353,8 @@ function injectGBufferToLineMaterial(lineMaterial: LineMaterial) {
               0.0,
               0.0
             );
+            outputBuffer2 = vec4(0.0);
+            outputBuffer3 = vec4(0.0);
           #endif
         }
       `,

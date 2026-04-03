@@ -41,6 +41,7 @@ export const transformShader = (
   // Set core shader defines
   shader.defines ??= {};
   shader.defines.USE_ROUGHNESS = 1;
+  shader.defines.USE_SELECTIVE_EFFECT = 1;
 
   // TODO: Handle batch texture defines in safe way.
   // Merge defines from material.userData.defines (includes batch texture row defines)
@@ -153,8 +154,8 @@ uniform vec3 diffuse;
 uniform bool uClampToGround;
 uniform sampler2D uGlobeNormal;
 uniform float nvr_uPickable;
-// uSelectiveEffectBufferMode, uEffectIdsMask, uEmissiveColor, uEmissiveIntensity
-// are declared by overrideMaterialsForMRT
+// uEffectIdsMask, uEmissiveColor, uEmissiveIntensity are declared by
+// overrideMaterialsForMRT (#ifdef USE_SELECTIVE_EFFECT block)
 uniform bool uIsTexturized;
 ${POLYGON_BASE_SHADER_MARKERS.fragment.UNIFORM_END}
 

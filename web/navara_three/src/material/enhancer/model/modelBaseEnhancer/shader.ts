@@ -29,6 +29,7 @@ export const transformShader = (
 ): void => {
   // Set core shader defines
   shader.defines ??= {};
+  shader.defines.USE_SELECTIVE_EFFECT = 1;
 
   // TODO: Handle batch texture defines in safe way.
   // Merge defines from material.userData.defines (includes batch texture row defines)
@@ -88,8 +89,8 @@ ${ShadowMapDepthVertex}
 
 ${MODEL_BASE_SHADER_MARKERS.fragment.UNIFORM_START}
 uniform float nvr_uPickable;
-// uSelectiveEffectBufferMode, uEffectIdsMask, uEmissiveColor, uEmissiveIntensity
-// are declared by overrideMaterialsForMRT
+// uEffectIdsMask, uEmissiveColor, uEmissiveIntensity are declared by
+// overrideMaterialsForMRT (#ifdef USE_SELECTIVE_EFFECT block)
 ${MODEL_BASE_SHADER_MARKERS.fragment.UNIFORM_END}
 
 in float nvr_vBatchId;

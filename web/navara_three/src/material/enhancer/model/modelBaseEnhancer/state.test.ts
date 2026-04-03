@@ -67,16 +67,6 @@ describe("modelBaseEnhancer/state", () => {
           useBatchColorShow: true,
         }),
       },
-      {
-        name: "applies selectiveEffectBufferMode",
-        props: {
-          selectiveEffectBufferMode: true,
-        },
-        currentState: DEFAULT_BASE_STATE,
-        expected: createExpectedState({
-          selectiveEffectBufferMode: true,
-        }),
-      },
     ];
 
     it.each(testCases)("$name", ({ props, currentState, expected }) => {

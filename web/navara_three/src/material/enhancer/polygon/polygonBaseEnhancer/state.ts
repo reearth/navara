@@ -15,7 +15,6 @@ export const DEFAULT_BASE_PROPS: Required<
   clampToGround: false,
   isTexturized: false,
   pickable: false,
-  selectiveEffectBufferMode: false,
   effectIdsMask: 0,
   reflectivity: 0,
   roughness: 0,
@@ -35,7 +34,6 @@ export const DEFAULT_BASE_STATE: PolygonBaseState = {
   isTexturized: DEFAULT_BASE_PROPS.isTexturized,
   clampToGround: DEFAULT_BASE_PROPS.clampToGround,
   pickable: DEFAULT_BASE_PROPS.pickable,
-  selectiveEffectBufferMode: false,
   emissiveColor: DEFAULT_BASE_PROPS.emissiveColor,
   emissiveIntensity: DEFAULT_BASE_PROPS.emissiveIntensity,
   effectIdsMask: 0,
@@ -71,8 +69,6 @@ export const updateState = (
     isTexturized,
     clampToGround: props.clampToGround ?? currentState.clampToGround,
     pickable: props.pickable ?? currentState.pickable,
-    selectiveEffectBufferMode:
-      props.selectiveEffectBufferMode ?? currentState.selectiveEffectBufferMode,
     emissiveColor: props.emissiveColor ?? currentState.emissiveColor,
     emissiveIntensity:
       props.emissiveIntensity ?? currentState.emissiveIntensity,

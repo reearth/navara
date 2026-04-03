@@ -8,7 +8,7 @@ import {
 } from "../../core/EffectLayerDeclaration";
 import { EffectSlotRegistry } from "../../core/EffectSlotRegistry";
 import type { ViewContext } from "../../core/ViewContext";
-import { CustomRenderPass, SelectiveEffectBufferPass } from "../../passes";
+import { CustomRenderPass } from "../../passes";
 
 type LayerDescription = {
   mrt?: {
@@ -29,7 +29,6 @@ export class MRTPassEffectLayer extends EffectLayerDeclaration<
   // No insertAfter/Before - this is typically the first pass
 
   private config: MRTPassConfig;
-  private selectiveEffectBufferPass?: SelectiveEffectBufferPass;
   private _slotRegistry = new EffectSlotRegistry();
 
   constructor(view: ViewContext, config: MRTPassConfig) {
@@ -44,9 +43,6 @@ export class MRTPassEffectLayer extends EffectLayerDeclaration<
 
     invariant(this.view.globe);
 
-    const renderer =
-      this.view.renderPassOrchestrator.effectComposer.getRenderer();
-
     const pass = new CustomRenderPass(
       scenes,
       camera,
@@ -58,15 +54,14 @@ export class MRTPassEffectLayer extends EffectLayerDeclaration<
       },
     );
 
-    // Create SelectiveEffectBufferPass (dedicated Selective Effect MRT: Emissive + EffectIds in single pass)
-    this.selectiveEffectBufferPass = new SelectiveEffectBufferPass(
-      renderer,
-      camera,
-      scenes,
-      this.view._privates.meshes,
-      this._slotRegistry,
-    );
-    pass.selectiveEffectBufferPass = this.selectiveEffectBufferPass;
+    // Expose EffectSlotRegistry to ViewContext for mask computation in MeshLayers
+    this.view.effectSlotRegistry = this._slotRegistry;
+
+    // Recompute effectIdsMask on all meshes when slots change
+    // (handles mesh-before-effect-layer creation order)
+    this._slotRegistry.onChange(() => {
+      this.view.recomputeEffectIdsMasks();
+    });
 
     return pass;
   }
@@ -75,12 +70,12 @@ export class MRTPassEffectLayer extends EffectLayerDeclaration<
     return this.raw?.gbufferRenderTarget.textures[1];
   }
 
-  get emissiveBuffer(): Texture | undefined {
-    return this.selectiveEffectBufferPass?.emissiveTexture;
+  get effectIdsBuffer(): Texture | undefined {
+    return this.raw?.gbufferRenderTarget.textures[2];
   }
 
-  get effectIdsBuffer(): Texture | undefined {
-    return this.selectiveEffectBufferPass?.effectIdsTexture;
+  get emissiveBuffer(): Texture | undefined {
+    return this.raw?.gbufferRenderTarget.textures[3];
   }
 
   get effectSlotRegistry(): EffectSlotRegistry {
@@ -119,13 +114,7 @@ export class MRTPassEffectLayer extends EffectLayerDeclaration<
     }
   }
 
-  setSelectiveEffectDebugViews(enabled: boolean): void {
-    this.selectiveEffectBufferPass?.enableEmissiveDebugView(enabled);
-    this.selectiveEffectBufferPass?.enableEffectIdsDebugView(enabled);
-  }
-
   onDestroy(): void {
-    this.selectiveEffectBufferPass?.dispose();
     this._slotRegistry.clear();
     super.onDestroy();
   }
