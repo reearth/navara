@@ -1,0 +1,422 @@
+---
+title: Custom Layer
+description: How to implement custom layers
+sidebar:
+  order: 21
+---
+
+In navara_three, you can implement your own mesh, effect, and light layers. For an overview of the layer concept, see [About Layer](../../../three/introduction/about-layer/).
+
+## Layer Base Classes
+
+Depending on the layer type, you inherit from the corresponding base class to implement your layer.
+
+| Layer Type | Base Class               | Factory Method     | Registration Method         |
+| ---------- | ------------------------ | ------------------ | --------------------------- |
+| Mesh       | `MeshLayerDeclaration`   | `createMesh()`     | `view.registerMesh()`       |
+| Effect     | `EffectLayerDeclaration` | `createPass()`     | `view.registerEffect()`     |
+| Light      | `LightLayerDeclaration`  | `createLight()`    | `view.registerLight()`      |
+
+All base classes inherit from `LayerDeclaration` and share a common lifecycle.
+
+## Common Lifecycle
+
+| Method                      | Timing                               | Description                                                                                    |
+| --------------------------- | ------------------------------------ | ---------------------------------------------------------------------------------------------- |
+| `constructor(view, config)` | When the layer is created            | Receives the ViewContext and configuration                                                     |
+| `onCreate()`                | When `addLayer()` is called          | Calls the factory method to create an instance and adds it to the scene. Implemented by the base class |
+| `onUpdateConfig(updates)`   | When `handle.update()` is called     | Processes partial configuration updates                                                        |
+| `onDestroy()`               | When `handle.delete()` is called     | Releases resources and removes from the scene                                                  |
+| `update(time)`              | Every frame (optional)               | Animation processing. Only called if implemented                                               |
+| `onResize(width, height)`   | On viewport resize (optional)        | Mesh layers only. Only called if implemented                                                   |
+
+## Common Properties
+
+| Property    | Type                    | Description                                                    |
+| ----------- | ----------------------- | -------------------------------------------------------------- |
+| `view`      | `ViewContext`           | Context providing access to the scene, camera, atmosphere, etc. |
+| `_instance` | `Instance \| undefined` | The created Three.js object                                    |
+| `id`        | `string`                | Unique identifier of the layer                                 |
+| `visible`   | `boolean`               | Show/hide                                                      |
+
+### ViewContext
+
+You can access the scene and camera through `this.view`.
+
+| Property / Method                     | Description                                       |
+| ------------------------------------- | ------------------------------------------------- |
+| `view.scenes.opaque`                  | Scene for opaque objects                           |
+| `view.scenes.transparent`             | Scene for transparent objects                      |
+| `view.scenes.mrt`                     | Scene for selective effects (Bloom / Outline)      |
+| `view.scenes.skyEnvMap`               | Scene for environment maps                         |
+| `view.scenes.light`                   | Scene for lights                                   |
+| `view.camera`                         | PerspectiveCamera                                  |
+| `view.atmosphere`                     | Atmosphere (sun direction, time of day, etc.)      |
+| `view.renderPassOrchestrator`         | Render pipeline management                         |
+| `view.applyShadowMaterial(material)`  | Apply CSM shadows to a material                    |
+| `view.removeShadowMaterial(material)` | Remove CSM shadows from a material                 |
+
+## Custom Mesh Layer
+
+### Type Parameters
+
+```typescript
+class MyMeshLayer extends MeshLayerDeclaration<
+  Config,      // Layer configuration type (extends MeshLayerConfig)
+  UpdateConfig, // Update configuration type (extends MeshLayerUpdate)
+  InstanceObj,  // Three.js object type (extends Object3D)
+> {}
+```
+
+### Defining Configuration Types
+
+```typescript
+import type { MeshLayerConfig, MeshLayerUpdate } from "@navara/three";
+
+type MyMeshDescription = {
+  myMesh?: {
+    radius?: number;
+    color?: Color;
+  };
+};
+
+type MyMeshConfig = MeshLayerConfig & MyMeshDescription;
+type MyMeshUpdate = MeshLayerUpdate & MyMeshDescription;
+```
+
+### Properties Managed by the Base Class
+
+`MeshLayerDeclaration` automatically handles the application of the following properties:
+
+| Property   | Type           | Description                       |
+| ---------- | ------------- | --------------------------------- |
+| `position` | `{ x, y, z }` | Position in the ECEF coordinate system |
+| `scale`    | `{ x, y, z }` | Scale                             |
+| `rotation` | `{ x, y, z }` | Rotation (Euler angles, radians)  |
+| `visible`  | `boolean`     | Show/hide                         |
+
+### Specifying the Render Pass
+
+You can override `getPassKey()` to change the scene where the mesh is rendered.
+
+| PassKey         | Description                                 |
+| --------------- | ------------------------------------------- |
+| `"opaque"`      | Opaque rendering (default)                  |
+| `"transparent"` | Transparent rendering                       |
+| `"mrt"`         | For selective effects (Bloom / Outline)     |
+| `"skyEnvMap"`   | For environment maps                        |
+
+### Implementation Example
+
+```typescript
+import {
+  MeshLayerDeclaration,
+  type MeshLayerConfig,
+  type MeshLayerUpdate,
+  type ViewContext,
+  Color,
+} from "@navara/three";
+import {
+  Mesh,
+  SphereGeometry,
+  MeshStandardMaterial,
+} from "three";
+
+// Define configuration types
+type MySphereMeshDescription = {
+  mySphere?: {
+    radius?: number;
+    color?: Color;
+    castShadow?: boolean;
+  };
+};
+type MySphereMeshConfig = MeshLayerConfig & MySphereMeshDescription;
+type MySphereMeshUpdate = MeshLayerUpdate & MySphereMeshDescription;
+
+export class MySphereMeshLayer extends MeshLayerDeclaration<
+  MySphereMeshConfig,
+  MySphereMeshUpdate,
+  Mesh<SphereGeometry, MeshStandardMaterial>
+> {
+  private config: MySphereMeshConfig;
+
+  constructor(view: ViewContext, config: MySphereMeshConfig) {
+    super(view, config);
+    this.config = config;
+  }
+
+  // Create and return the Three.js object
+  createMesh() {
+    const cfg = this.config.mySphere ?? {};
+    const geometry = new SphereGeometry(cfg.radius ?? 1);
+    const material = new MeshStandardMaterial({
+      color: cfg.color?.raw ?? 0xffffff,
+    });
+    const mesh = new Mesh(geometry, material);
+
+    // Enable shadows if configured
+    if (cfg.castShadow) {
+      mesh.castShadow = true;
+      this.view.applyShadowMaterial(material);
+    }
+
+    return mesh;
+  }
+
+  // Handle partial updates
+  onUpdateConfig(updates: MySphereMeshUpdate) {
+    if (updates.mySphere && this._instance) {
+      if (updates.mySphere.radius !== undefined) {
+        // Call recreate() when geometry needs to be recreated
+        this.recreate();
+      }
+      if (updates.mySphere.color !== undefined) {
+        this._instance.material.color.set(updates.mySphere.color.raw);
+      }
+      this.emit("needsUpdate");
+    }
+    // Base class handling (position, scale, rotation, visible)
+    super.onUpdateConfig(updates);
+  }
+
+  // Release resources
+  onDestroy() {
+    if (this._instance) {
+      this._instance.geometry.dispose();
+      this._instance.material.dispose();
+    }
+    super.onDestroy();
+  }
+}
+```
+
+### Registration and Usage
+
+```typescript
+import ThreeView from "@navara/three";
+
+const view = new ThreeView({});
+view.registerMesh("mySphere", MySphereMeshLayer);
+await view.init();
+
+const handle = view.addLayer<MySphereMeshLayer>({
+  type: "mesh",
+  mySphere: { radius: 100, color: new Color().setHex(0x00aaff) },
+  position: { x: 0, y: 0, z: 6378137 },
+});
+
+// Partial update
+handle.update({ mySphere: { color: new Color().setHex(0xff0000) } });
+```
+
+### Per-Frame Animation
+
+Implementing the `update()` method causes it to be called every frame.
+
+```typescript
+export class RotatingBoxLayer extends MeshLayerDeclaration</* ... */> {
+  createMesh() {
+    // ...
+  }
+
+  // Called every frame
+  update(time: number) {
+    if (this._instance) {
+      this._instance.rotation.y = time * 0.001;
+    }
+  }
+}
+```
+
+## Custom Effect Layer
+
+### Type Parameters
+
+```typescript
+class MyEffectLayer extends EffectLayerDeclaration<
+  Config,      // Layer configuration type (extends EffectLayerConfig)
+  UpdateConfig, // Update configuration type (extends EffectLayerUpdate)
+  InstanceObj,  // Post-processing pass type
+> {}
+```
+
+### Static Properties (Pipeline Ordering)
+
+Effect layers have static properties that control their insertion position within the render pipeline.
+
+| Property           | Type       | Description                                                                              |
+| ------------------ | ---------- | ---------------------------------------------------------------------------------------- |
+| `key`              | `string`   | **Required**. Unique key name for the effect                                             |
+| `insertAfter`      | `string[]` | Insert after the specified effects (preferred)                                           |
+| `insertBefore`     | `string[]` | Insert before the specified effects (fallback if `insertAfter` targets are not found)    |
+| `allowDuplication` | `boolean`  | Whether to allow multiple instances of the same effect                                   |
+
+The insertion order is determined by priority: `insertAfter` -> `insertBefore` -> append to end.
+
+### Implementation Example
+
+```typescript
+import {
+  EffectLayerDeclaration,
+  type EffectLayerConfig,
+  type EffectLayerUpdate,
+  type ViewContext,
+} from "@navara/three";
+
+type MyEffectDescription = {
+  myEffect?: {
+    intensity?: number;
+  };
+};
+type MyEffectConfig = EffectLayerConfig & MyEffectDescription;
+type MyEffectUpdate = EffectLayerUpdate & MyEffectDescription;
+
+export class MyEffectLayer extends EffectLayerDeclaration<
+  MyEffectConfig,
+  MyEffectUpdate,
+  MyPostProcessingPass
+> {
+  // Control ordering within the pipeline
+  static key = "myEffect";
+  static insertAfter = ["clouds"];
+  static insertBefore = ["transparent"];
+
+  private config: MyEffectConfig;
+
+  constructor(view: ViewContext, config: MyEffectConfig) {
+    super(view, config);
+    this.config = config;
+  }
+
+  // Create and return the post-processing pass
+  createPass() {
+    const cfg = this.config.myEffect ?? {};
+    return new MyPostProcessingPass({
+      intensity: cfg.intensity ?? 1.0,
+    });
+  }
+
+  onUpdateConfig(updates: MyEffectUpdate) {
+    if (updates.myEffect && this._instance) {
+      if (updates.myEffect.intensity !== undefined) {
+        this._instance.intensity = updates.myEffect.intensity;
+      }
+      this.emit("needsUpdate");
+    }
+    super.onUpdateConfig(updates);
+  }
+}
+```
+
+### Referencing Other Effect Layers
+
+You can reference other registered effect layers using `findLayer()`.
+
+```typescript
+createPass() {
+  const ssao = this.findLayer<SSAOEffectLayer>("ssao");
+  // ...
+}
+```
+
+## Custom Light Layer
+
+### Type Parameters
+
+```typescript
+class MyLightLayer extends LightLayerDeclaration<
+  Config,      // Layer configuration type (extends LightLayerConfig)
+  UpdateConfig, // Update configuration type (extends LightLayerUpdate)
+  InstanceObj,  // Three.js Light type
+> {}
+```
+
+### Properties Managed by the Base Class
+
+| Property   | Type           | Description        |
+| ---------- | ------------- | ------------------ |
+| `position` | `{ x, y, z }` | Light position     |
+| `visible`  | `boolean`     | Show/hide          |
+
+Lights are automatically added to the `view.scenes.light` scene.
+
+### Implementation Example
+
+```typescript
+import {
+  LightLayerDeclaration,
+  type LightLayerConfig,
+  type LightLayerUpdate,
+  type ViewContext,
+  Color,
+} from "@navara/three";
+import { PointLight } from "three";
+
+type MyPointLightDescription = {
+  myPointLight?: {
+    color?: Color;
+    intensity?: number;
+    distance?: number;
+  };
+};
+type MyPointLightConfig = LightLayerConfig & MyPointLightDescription;
+type MyPointLightUpdate = LightLayerUpdate & MyPointLightDescription;
+
+export class MyPointLightLayer extends LightLayerDeclaration<
+  MyPointLightConfig,
+  MyPointLightUpdate,
+  PointLight
+> {
+  private config: MyPointLightConfig;
+
+  constructor(view: ViewContext, config: MyPointLightConfig) {
+    super(view, config);
+    this.config = config;
+  }
+
+  createLight() {
+    const cfg = this.config.myPointLight ?? {};
+    const light = new PointLight(
+      cfg.color?.raw ?? 0xffffff,
+      cfg.intensity ?? 1,
+      cfg.distance ?? 0,
+    );
+    return light;
+  }
+
+  onUpdateConfig(updates: MyPointLightUpdate) {
+    if (updates.myPointLight && this._instance) {
+      if (updates.myPointLight.color !== undefined) {
+        this._instance.color.set(updates.myPointLight.color.raw);
+      }
+      if (updates.myPointLight.intensity !== undefined) {
+        this._instance.intensity = updates.myPointLight.intensity;
+      }
+      if (updates.myPointLight.distance !== undefined) {
+        this._instance.distance = updates.myPointLight.distance;
+      }
+      this.emit("needsUpdate");
+    }
+    super.onUpdateConfig(updates);
+  }
+}
+```
+
+## LayerHandle
+
+The `LayerHandle<T>` returned from `view.addLayer()` is a handle for controlling the layer.
+
+| Property / Method   | Type      | Description                                  |
+| ------------------- | --------- | -------------------------------------------- |
+| `id`                | `string`  | Unique identifier of the layer               |
+| `visible`           | `boolean` | Get/set show/hide                            |
+| `ref`               | `T`       | Direct access to the base layer instance     |
+| `update(updates)`   | `void`    | Partial configuration update                 |
+| `delete()`          | `void`    | Delete the layer. Calls `onDestroy()`        |
+
+## Related Resources
+
+- [About Layer](../../../three/introduction/about-layer/) - Layer concepts and types
+- [About Plugin](../../../three/introduction/about-plugin/) - Plugin system concepts
+- [Plugin API](../../../three/core/plugin/) - How to implement plugins
+- [three_default_layers](../../../three_default_layers/about/) - Default layer implementation examples

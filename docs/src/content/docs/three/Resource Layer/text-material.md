@@ -1,0 +1,434 @@
+---
+title: TextMaterial
+description: Text material for navara_three
+sidebar:
+  order: 38
+---
+
+`TextMaterial` represents a material for text rendering.
+
+## Properties
+
+### backgroundColor
+
+**Type:** `Color | undefined`
+
+**Description:** Specifies the text background color as a `Color` instance.
+
+**Default:** `undefined`
+
+**Example:**
+
+```typescript
+import { Color } from "@navara/three";
+
+{
+  text: {
+    backgroundColor: new Color().setHex(0xffffff) // White background
+  }
+}
+```
+
+### borderColor
+
+**Type:** `Color | undefined`
+
+**Description:** Specifies the text background border color as a `Color` instance.
+
+**Default:** `undefined`
+
+**Example:**
+
+```typescript
+import { Color } from "@navara/three";
+
+{
+  text: {
+    borderColor: new Color().setHex(0x000000) // Black border
+  }
+}
+```
+
+### borderWidth
+
+**Type:** `number | undefined`
+
+**Description:** Specifies the text border width. Specified as a ratio to the frame height, between 0 and 0.5.
+
+**Default:** `undefined`
+
+**Example:**
+
+```typescript
+{
+  text: {
+    borderWidth: 2
+  }
+}
+```
+
+### center
+
+**Type:** [`Vec2`](#vec2) | undefined
+
+**Description:** Specifies the shift amount from the center. The range is between 0 and 1.
+
+**Default:** `undefined`
+
+**Example:**
+
+```typescript
+{
+  text: {
+    center: { x: 10, y: -5 }
+  }
+}
+```
+
+### clampToGround
+
+**Type:** `boolean | undefined`
+
+**Description:** Specifies whether to clamp the text to the ground.
+
+**Default:** `undefined`
+
+**Example:**
+
+```typescript
+{
+  text: {
+    clampToGround: true
+  }
+}
+```
+
+### color
+
+**Type:** `Color | undefined`
+
+**Description:** Specifies the text color as a `Color` instance.
+
+**Default:** `undefined`
+
+**Example:**
+
+```typescript
+import { Color } from "@navara/three";
+
+{
+  text: {
+    color: new Color().setHex(0x000000)
+  }
+}
+```
+
+### cornerRadius
+
+**Type:** `number | undefined`
+
+**Description:** Specifies the corner radius of the text background. Specified as a ratio of the corner radius to the height, between 0 and 0.5.
+
+**Default:** `undefined`
+
+**Example:**
+
+```typescript
+{
+  text: {
+    cornerRadius: 5
+  }
+}
+```
+
+### depthTest
+
+**Type:** `boolean | undefined`
+
+**Description:** A variable that determines whether front-facing models occlude back-facing models.
+
+**Default:** `true`
+
+**Example:**
+
+```typescript
+{
+  text: {
+    depthTest: true
+  }
+}
+```
+
+### font
+
+**Type:** `string | undefined`
+
+**Description:** **Experimental**: Specifies the URL of a font file. Supported file formats are ttf, otf, and woff. This API loads a large font file all at once, so it may be replaced by a different API in the future.
+
+**Default:** `Roboto`
+
+**Example:**
+
+```typescript
+{
+  text: {
+    font: "https://example.com/fonts/NotoSansJP-Regular.ttf"
+  }
+}
+```
+
+You can also specify a font file obtained by using the [troika-three-text script](https://github.com/protectwise/troika/blob/main/packages/troika-three-text/find-google-font-url.js) to retrieve Google Fonts.
+
+### height
+
+**Type:** `number | undefined`
+
+**Description:** Specifies the altitude of the text. The unit is meters.
+
+**Default:** `undefined`
+
+**Example:**
+
+```typescript
+{
+  text: {
+    height: 100 // 100 meters
+  }
+}
+```
+
+### lang
+
+**Type:** `string | undefined`
+
+**Description:** Specifies the language code for text shaping (e.g., "en", "ja", "ar"). Used to correctly render text.
+
+**Default:** `undefined`
+
+**Example:**
+
+```typescript
+{
+  text: {
+    lang: "ja"
+  }
+}
+```
+
+### offsetDepth
+
+**Type:** `boolean | undefined`
+
+**Description:** Avoids overlap with the earth's surface. Use this to prevent the text from clipping into the earth's surface.
+
+**Default:** `undefined`
+
+**Example:**
+
+```typescript
+{
+  text: {
+    offsetDepth: true
+  }
+}
+```
+
+### outlineBlur
+
+**Type:** `number | undefined`
+
+**Description:** Specifies the outline blur radius in CSS pixels.
+
+**Default:** `0.0`
+
+**Example:**
+
+```typescript
+{
+  text: {
+    outlineBlur: 2
+  }
+}
+```
+
+### outlineColor
+
+**Type:** `Color | undefined`
+
+**Description:** Specifies the text outline color as a `Color` instance.
+
+**Default:** `undefined`
+
+**Example:**
+
+```typescript
+import { Color } from "@navara/three";
+
+{
+  text: {
+    outlineColor: new Color().setHex(0x000000) // Black outline
+  }
+}
+```
+
+### outlineOffset
+
+**Type:** [`Vec2`](#vec2) | undefined
+
+**Description:** Specifies the pixel offset `[x, y]` in CSS pixels.
+
+**Default:** `(0.0, 0.0)`
+
+**Example:**
+
+```typescript
+{
+  text: {
+    outlineOffset: { x: 1, y: 1 }
+  }
+}
+```
+
+### outlineOpacity
+
+**Type:** `number | undefined`
+
+**Description:** Specifies the opacity of the text outline. The range is 0.0 to 1.0.
+
+**Default:** `undefined`
+
+**Example:**
+
+```typescript
+{
+  text: {
+    outlineOpacity: 0.8
+  }
+}
+```
+
+### outlineWidth
+
+**Type:** `number | undefined`
+
+**Description:** Specifies the outline thickness in CSS pixels.
+
+**Default:** `0.0`
+
+**Example:**
+
+```typescript
+{
+  text: {
+    outlineWidth: 2
+  }
+}
+```
+
+### padding
+
+**Type:** [`Vec2`](#vec2) | undefined
+
+**Description:** Specifies the text padding. The unit is pixels.
+
+**Default:** `undefined`
+
+**Example:**
+
+```typescript
+{
+  text: {
+    padding: { x: 5, y: 3 }
+  }
+}
+```
+
+### scaleByDistance
+
+**Type:** `boolean | undefined`
+
+**Description:** Specifies whether to adjust the object size based on the distance from the camera.
+
+**Default:** `undefined`
+
+**Example:**
+
+```typescript
+{
+  text: {
+    scaleByDistance: true
+  }
+}
+```
+
+### show
+
+**Type:** `boolean | undefined`
+
+**Description:** Specifies whether to show the text.
+
+**Default:** `undefined`
+
+**Example:**
+
+```typescript
+{
+  text: {
+    show: true
+  }
+}
+```
+
+### size
+
+**Type:** `number | undefined`
+
+**Description:** Specifies the size of the text. The unit is pixels.
+
+**Default:** `undefined`
+
+**Example:**
+
+```typescript
+{
+  text: {
+    size: 16
+  }
+}
+```
+
+### text
+
+**Type:** `string | undefined`
+
+**Description:** Specifies the text content to display.
+
+**Default:** `undefined`
+
+**Example:**
+
+```typescript
+{
+  text: {
+    text: "Tokyo Station"
+  }
+}
+```
+
+## Vec2
+
+A class representing a 2D vector.
+
+### Properties
+
+#### x
+
+**Type:** `number`
+
+**Description:** X coordinate value.
+
+#### y
+
+**Type:** `number`
+
+**Description:** Y coordinate value.
