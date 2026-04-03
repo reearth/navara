@@ -126,7 +126,11 @@ export class FontManager {
 
     for (const ch of text) {
       const cp = ch.codePointAt(0) ?? 0;
-      const url = this._findFaceForCodepoint(faces, cp);
+      // make space character use current face to avoid unnecessary segmentation of whitespace
+      const url: string =
+        ch === " " && currentUrl
+          ? currentUrl
+          : this._findFaceForCodepoint(faces, cp);
 
       if (url !== currentUrl) {
         if (currentUrl !== null && currentChars.length > 0) {
