@@ -114,6 +114,74 @@ class MyMeshLayer extends MeshLayerDeclaration<
 
 See `MeshLayerDeclaration` JSDoc and the `custom-shader` example for a complete tutorial.
 
+### Instanced mesh layer
+
+Extend `InstancedMeshLayerDeclaration` to render many instances of the same geometry in a single draw call via Three.js `InstancedMesh`. Implement four abstract methods: `createGeometry()`, `createMaterial()`, `getChildConfigs()`, and `getInstanceColor()`. Optionally override `getInstanceScale()` to encode geometry-specific dimensions (e.g., width/height/depth) into the scale.
+
+```typescript
+import {
+  InstancedMeshLayerDeclaration,
+  type InstancedChildConfig,
+  type InstancedMeshLayerConfig,
+  type InstancedMeshLayerUpdate,
+  type ViewContext,
+  Color,
+} from "@navara/three";
+import { BoxGeometry, Color as ThreeColor, MeshLambertMaterial, Vector3 } from "three";
+
+type BoxChildConfig = InstancedChildConfig & {
+  width?: number;
+  height?: number;
+  depth?: number;
+  color?: Color;
+};
+
+type BoxesDescription = {
+  color?: Color;
+  children?: BoxChildConfig[];
+};
+
+type MyConfig = InstancedMeshLayerConfig & { boxes?: BoxesDescription };
+type MyUpdate = InstancedMeshLayerUpdate & { boxes?: BoxesDescription };
+
+class InstancedBoxMeshLayer extends InstancedMeshLayerDeclaration<
+  BoxGeometry, MeshLambertMaterial, MyConfig, MyUpdate, BoxChildConfig
+> {
+  private config: MyConfig;
+
+  constructor(view: ViewContext, config: MyConfig) {
+    super(view, config);
+    this.config = config;
+  }
+
+  protected createGeometry() { return new BoxGeometry(1, 1, 1); }
+
+  protected createMaterial() {
+    return new MeshLambertMaterial({ color: this.config.boxes?.color?.raw ?? 0xffffff });
+  }
+
+  protected getChildConfigs() { return this.config.boxes?.children ?? []; }
+
+  protected getInstanceColor(config: BoxChildConfig) {
+    return config.color ? new ThreeColor(config.color.raw) : undefined;
+  }
+
+  // Encode width/height/depth as scale
+  protected override getInstanceScale(config: BoxChildConfig, target: Vector3) {
+    const s = config.scale;
+    target.set(
+      (config.width ?? 1) * (s?.x ?? 1),
+      (config.height ?? 1) * (s?.y ?? 1),
+      (config.depth ?? 1) * (s?.z ?? 1),
+    );
+  }
+}
+```
+
+After creation, instances can be managed dynamically via `add()`, `removeAt()`, `updateAt()`, `clear()`, and `count`. The internal buffer grows automatically when capacity is exceeded.
+
+See `InstancedBoxMeshLayer` and the `mesh-layers/instanced-mesh` example for a complete reference.
+
 ### Bundling layers into a plugin
 
 A plugin registers layer classes so they can be used via `view.addLayer()`:
