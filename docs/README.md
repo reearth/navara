@@ -57,7 +57,7 @@ All commands are run from the root of the project, from a terminal:
 
 ## Contribution
 
-Please read [Writing rules](./WRITING_RULES.md) before your contribution.
+Please read [Writing rules](./guide/WRITING_RULES.md) before your contribution.
 
 ## 👀 Want to learn more?
 
