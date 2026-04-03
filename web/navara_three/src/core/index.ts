@@ -18,6 +18,12 @@ export {
   type MeshLayerConfigWithSelectiveEffect,
 } from "./MeshLayerDeclarationForSelectiveEffect";
 export {
+  InstancedMeshLayerDeclaration,
+  type InstancedMeshLayerConfig,
+  type InstancedMeshLayerUpdate,
+  type InstancedChildConfig,
+} from "./InstancedMeshLayerDeclaration";
+export {
   MeshLayerRegistry,
   type MeshLayerConstructor,
 } from "./MeshLayerRegistry";

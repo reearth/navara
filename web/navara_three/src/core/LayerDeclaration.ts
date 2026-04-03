@@ -103,6 +103,10 @@ export abstract class LayerDeclaration<
       }
     }
 
+    this.requestUpdate();
+  }
+
+  protected requestUpdate(): void {
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     this.emit("needsUpdate");
