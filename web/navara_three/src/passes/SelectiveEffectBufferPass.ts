@@ -333,7 +333,10 @@ export class SelectiveEffectBufferPass {
   ): void {
     const width = this.selectiveEffectMRT.width;
     const height = this.selectiveEffectMRT.height;
-    const gl = this._renderer.getContext() as WebGL2RenderingContext;
+    const gl = this._renderer.getContext();
+    if (!(gl instanceof WebGL2RenderingContext)) return;
+
+    const prevTarget = this._renderer.getRenderTarget();
 
     // Bind the Selective Effect MRT framebuffer
     this._renderer.setRenderTarget(this.selectiveEffectMRT);
@@ -343,6 +346,10 @@ export class SelectiveEffectBufferPass {
 
     // Read pixels (HalfFloat → Float32 conversion handled by WebGL)
     gl.readPixels(0, 0, width, height, gl.RGBA, gl.FLOAT, buffer);
+
+    // Restore previous state
+    gl.readBuffer(gl.COLOR_ATTACHMENT0);
+    this._renderer.setRenderTarget(prevTarget);
   }
 
   private renderEmissiveDebugView(): void {
