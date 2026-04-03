@@ -153,9 +153,8 @@ uniform vec3 diffuse;
 uniform bool uClampToGround;
 uniform sampler2D uGlobeNormal;
 uniform float nvr_uPickable;
-// uSelectiveEffectBufferMode and uEffectIdsMask are declared by overrideMaterialsForMRT
-uniform vec3 uEmissiveColor;
-uniform float uEmissiveIntensity;
+// uSelectiveEffectBufferMode, uEffectIdsMask, uEmissiveColor, uEmissiveIntensity
+// are declared by overrideMaterialsForMRT
 uniform bool uIsTexturized;
 ${POLYGON_BASE_SHADER_MARKERS.fragment.UNIFORM_END}
 

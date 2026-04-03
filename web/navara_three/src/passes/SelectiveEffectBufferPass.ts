@@ -347,8 +347,8 @@ export class SelectiveEffectBufferPass {
     // Read pixels (HalfFloat → Float32 conversion handled by WebGL)
     gl.readPixels(0, 0, width, height, gl.RGBA, gl.FLOAT, buffer);
 
-    // Restore previous state
-    gl.readBuffer(gl.COLOR_ATTACHMENT0);
+    // Restore previous state — default framebuffer uses gl.BACK, not COLOR_ATTACHMENT0
+    gl.readBuffer(prevTarget ? gl.COLOR_ATTACHMENT0 : gl.BACK);
     this._renderer.setRenderTarget(prevTarget);
   }
 

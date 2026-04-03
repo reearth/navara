@@ -88,9 +88,8 @@ ${ShadowMapDepthVertex}
 
 ${MODEL_BASE_SHADER_MARKERS.fragment.UNIFORM_START}
 uniform float nvr_uPickable;
-// uSelectiveEffectBufferMode and uEffectIdsMask are declared by overrideMaterialsForMRT
-uniform vec3 uEmissiveColor;
-uniform float uEmissiveIntensity;
+// uSelectiveEffectBufferMode, uEffectIdsMask, uEmissiveColor, uEmissiveIntensity
+// are declared by overrideMaterialsForMRT
 ${MODEL_BASE_SHADER_MARKERS.fragment.UNIFORM_END}
 
 in float nvr_vBatchId;
