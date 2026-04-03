@@ -231,7 +231,7 @@ const run = async () => {
   // Track updated features to prevent duplicate evaluations
   let updatedFeatures = new Set<bigint>();
 
-  const params = { size: 20 };
+  const params = { size: 15 };
 
   // GeoJSON text layer with font faces: city names in native scripts
   const addCityLayer = () => {
