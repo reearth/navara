@@ -67,6 +67,20 @@ describe("modelBaseEnhancer/state", () => {
           useBatchColorShow: true,
         }),
       },
+      {
+        name: "applies emissive and effectIdsMask",
+        props: {
+          emissiveColor: 0xff0000,
+          emissiveIntensity: 1.5,
+          effectIdsMask: 3,
+        },
+        currentState: DEFAULT_BASE_STATE,
+        expected: createExpectedState({
+          emissiveColor: 0xff0000,
+          emissiveIntensity: 1.5,
+          effectIdsMask: 3,
+        }),
+      },
     ];
 
     it.each(testCases)("$name", ({ props, currentState, expected }) => {

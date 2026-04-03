@@ -37,6 +37,52 @@ describe("modelBaseEnhancer/mutates", () => {
     });
   });
 
+  describe("update syncs SE uniforms from state", () => {
+    it("should sync emissiveColor ref from state", () => {
+      const state: ModelBaseState = {
+        ...DEFAULT_BASE_STATE,
+        emissiveColor: 0xff0000,
+      };
+      const mutates = createBaseMutates();
+      mutates.update(state);
+
+      const uniforms: ShaderUniforms = {};
+      mutates.updateUniforms(uniforms, state);
+
+      expect(uniforms.uEmissiveColor?.value.r).toBeCloseTo(1);
+      expect(uniforms.uEmissiveColor?.value.g).toBeCloseTo(0);
+      expect(uniforms.uEmissiveColor?.value.b).toBeCloseTo(0);
+    });
+
+    it("should sync emissiveIntensity ref from state", () => {
+      const state: ModelBaseState = {
+        ...DEFAULT_BASE_STATE,
+        emissiveIntensity: 1.5,
+      };
+      const mutates = createBaseMutates();
+      mutates.update(state);
+
+      const uniforms: ShaderUniforms = {};
+      mutates.updateUniforms(uniforms, state);
+
+      expect(uniforms.uEmissiveIntensity?.value).toBe(1.5);
+    });
+
+    it("should sync effectIdsMask ref from state", () => {
+      const state: ModelBaseState = {
+        ...DEFAULT_BASE_STATE,
+        effectIdsMask: 5, // bits 0 and 2
+      };
+      const mutates = createBaseMutates();
+      mutates.update(state);
+
+      const uniforms: ShaderUniforms = {};
+      mutates.updateUniforms(uniforms, state);
+
+      expect(uniforms.uEffectIdsMask?.value).toBe(5);
+    });
+  });
+
   describe("setBatchDataTexture", () => {
     it("should assign batch data texture ref", () => {
       const mutates = createBaseMutates();
