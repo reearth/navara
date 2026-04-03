@@ -119,6 +119,11 @@ export class MRTPassEffectLayer extends EffectLayerDeclaration<
     }
   }
 
+  setSelectiveEffectDebugViews(enabled: boolean): void {
+    this.selectiveEffectBufferPass?.enableEmissiveDebugView(enabled);
+    this.selectiveEffectBufferPass?.enableEffectIdsDebugView(enabled);
+  }
+
   onDestroy(): void {
     this.selectiveEffectBufferPass?.dispose();
     this._slotRegistry.clear();

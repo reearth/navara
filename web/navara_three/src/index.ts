@@ -1693,6 +1693,7 @@ export default class ThreeView<
   setSelectiveEffectDebugViews(enabled: boolean): void {
     this._options.selectiveEffects ??= {};
     this._options.selectiveEffects.debugViews = enabled;
+    this.mrtPassLayer.ref.setSelectiveEffectDebugViews(enabled);
   }
 
   /**
