@@ -138,7 +138,7 @@ type BoxChildConfig = InstancedChildConfig & {
 
 type BoxesDescription = {
   color?: Color;
-  children: BoxChildConfig[];
+  children?: BoxChildConfig[];
 };
 
 type MyConfig = InstancedMeshLayerConfig & { boxes?: BoxesDescription };

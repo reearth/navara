@@ -43,7 +43,7 @@ export type SharedBoxMaterialConfig = {
 
 /** The `boxes` config object containing shared material props and children. */
 export type BoxesDescription = SharedBoxMaterialConfig & {
-  children: BoxChildConfig[];
+  children?: BoxChildConfig[];
 };
 
 type LayerDescription = {

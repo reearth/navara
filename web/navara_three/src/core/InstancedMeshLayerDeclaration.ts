@@ -163,12 +163,13 @@ export abstract class InstancedMeshLayerDeclaration<
 
   /** Add a new instance. Returns the index of the added instance. */
   add(config: ChildConfig): number {
-    const mesh = this.raw;
-    invariant(mesh, "Layer must be created before adding instances");
-
-    if (mesh.count >= this.capacity) {
+    const count = this.raw?.count ?? 0;
+    if (count >= this.capacity) {
       this.grow();
     }
+
+    const mesh = this.raw;
+    invariant(mesh, "Layer must be created before adding instances");
 
     const index = mesh.count;
     mesh.setMatrixAt(index, this.composeInstanceMatrix(config));
