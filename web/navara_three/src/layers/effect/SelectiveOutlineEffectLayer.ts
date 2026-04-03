@@ -403,7 +403,12 @@ class SelectiveOutlinePass extends PostProcessingPass {
     outputBuffer: WebGLRenderTarget | null,
     _deltaTime?: number,
   ): void {
-    this.updateSizes(inputBuffer.width, inputBuffer.height);
+    const resScale =
+      this.layer.layerConfig.selectiveOutline.resolutionScale ?? 1.0;
+    this.updateSizes(
+      Math.floor(inputBuffer.width * resScale),
+      Math.floor(inputBuffer.height * resScale),
+    );
 
     // Get buffer textures
     const effectIdsBuffer = this.layer.getEffectIdsBuffer();

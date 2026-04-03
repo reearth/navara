@@ -337,7 +337,13 @@ class SelectiveBloomPass extends PostProcessingPass {
     outputBuffer: WebGLRenderTarget | null,
     deltaTime?: number,
   ): void {
-    this.updateSizes(inputBuffer.width, inputBuffer.height);
+    const resScale =
+      this.layer.layerConfig.selectiveBloom.resolutionScale ??
+      DEFAULT_BLOOM_RESOLUTION_SCALE;
+    this.updateSizes(
+      Math.floor(inputBuffer.width * resScale),
+      Math.floor(inputBuffer.height * resScale),
+    );
 
     this.setParameters(
       this.layer.bloomStrength,
