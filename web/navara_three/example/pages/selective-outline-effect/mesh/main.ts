@@ -68,7 +68,6 @@ const run = async () => {
       height: 200,
       depth: 200,
       color: new Color().setHex(0xff0000),
-      emissiveIntensity: 1.0,
       opacity: 1.0,
       transparent: true,
       castShadow: true,
@@ -91,7 +90,6 @@ const run = async () => {
     sphere: {
       radius: 100,
       color: new Color().setHex(0x00aaff),
-      emissiveIntensity: 1.0,
       opacity: 1.0,
       transparent: true,
       castShadow: true,

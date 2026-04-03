@@ -71,8 +71,6 @@ const run = async () => {
       extrudedHeight: 80,
       clampToGround: false,
       effectIds: [outlineEffect.id],
-      emissiveColor: new Color().setHex(0xffa500),
-      emissiveIntensity: 0.5,
     },
   });
 

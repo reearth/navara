@@ -80,7 +80,6 @@ const run = async () => {
       useGroundNormals: true,
       color: new Color().setHex(0xff9900),
       effectIds: [outlineEffect.id],
-      emissiveIntensity: 0.5,
     },
   });
 

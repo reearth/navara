@@ -54,8 +54,6 @@ const run = async () => {
       castShadow: true,
       receiveShadow: true,
       effectIds: [outlineEffect.id],
-      emissiveColor: new Color().setHex(0xffffff),
-      emissiveIntensity: 0.3,
     },
   });
 
