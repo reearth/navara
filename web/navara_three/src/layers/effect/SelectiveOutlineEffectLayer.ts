@@ -446,6 +446,9 @@ class SelectiveOutlinePass extends PostProcessingPass {
   }
 
   dispose(): void {
+    this.extractScene.clear();
+    this.edgeDetectScene.clear();
+    this.compositeScene.clear();
     this.maskRT.dispose();
     this.edgeRT.dispose();
     this.fullscreenGeometry.dispose();

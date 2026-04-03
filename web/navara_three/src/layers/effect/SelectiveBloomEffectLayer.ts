@@ -396,6 +396,8 @@ class SelectiveBloomPass extends PostProcessingPass {
   }
 
   dispose(): void {
+    this.extractScene.clear();
+    this.compositeScene.clear();
     this.bloom.dispose();
     this.bloomSourceRT.dispose();
     this.fullscreenGeometry.dispose();
