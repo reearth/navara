@@ -168,7 +168,7 @@ export type Options = {
   picking?: boolean;
   /** Selective post-processing effects configuration. */
   selectiveEffects?: {
-    /** Enables debug views for selective effect masks. */
+    /** Enables debug views for selective effect buffers. */
     debugViews?: boolean;
   };
   /** When true, renders every frame. When false, renders only on changes or when forceUpdate() is called. */
@@ -1687,9 +1687,6 @@ export default class ThreeView<
 
   /**
    * Enables or disables debug views for selective post-processing effects.
-   *
-   * TODO: Currently a no-op. Wire to SelectiveEffectBufferPass
-   * (enableEmissiveDebugView/enableEffectIdsDebugView) via MRTPassEffectLayer in a separate PR.
    *
    * @param enabled - Whether to enable debug views
    */

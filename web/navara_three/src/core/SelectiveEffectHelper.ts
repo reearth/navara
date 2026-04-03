@@ -18,52 +18,6 @@ export const SELECTIVE_BLOOM_EFFECT_KEY = "selectiveBloom" as const;
 export const SELECTIVE_OUTLINE_EFFECT_KEY = "selectiveOutline" as const;
 
 // ============================================================================
-// Occlusion Mode
-// ============================================================================
-
-/**
- * Sentinel value for "no Selective Effect buffer pass active".
- */
-export const SELECTIVE_EFFECT_OCCLUSION_SKIP = -1 as const;
-
-/**
- * Post effect occlusion modes (numeric values for shader uniforms)
- * - Normal: Standard depth test/write (default)
- * - Silhouette: No depth test/write, renders as silhouette
- */
-export const SelectiveEffectOcclusionMode = {
-  Normal: 0,
-  Silhouette: 2,
-  Skip: SELECTIVE_EFFECT_OCCLUSION_SKIP,
-} as const;
-
-export type SelectiveEffectOcclusionValue =
-  (typeof SelectiveEffectOcclusionMode)[keyof typeof SelectiveEffectOcclusionMode];
-
-/**
- * Post effect occlusion mode type for API layer.
- * Used in Rust/WASM API and TypeScript public interfaces.
- */
-export type SelectiveEffectOcclusion = "normal" | "silhouette";
-
-/**
- * Convert string occlusion value to numeric value for shader uniforms
- */
-export function parseSelectiveEffectOcclusion(
-  value: SelectiveEffectOcclusion | undefined,
-): SelectiveEffectOcclusionValue | undefined {
-  if (value === undefined) return undefined;
-  switch (value) {
-    case "normal":
-      return SelectiveEffectOcclusionMode.Normal;
-    case "silhouette":
-      return SelectiveEffectOcclusionMode.Silhouette;
-    default:
-      return SelectiveEffectOcclusionMode.Normal;
-  }
-}
-
-// ============================================================================
 // Types
 // ============================================================================
 

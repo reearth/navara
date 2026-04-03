@@ -15,14 +15,8 @@ export { createFullscreenQuad } from "../../core/SelectiveEffectHelper";
 // Base configuration for selective effect layers
 export type SelectiveEffectLayerConfig = {
   selectiveEffect: true;
-  /**
-   * Occlusion mode for selective effects.
-   * - "normal": Standard depth test (default)
-   * - "silhouette": Renders behind occluders
-   *
-   * TODO: Not yet wired into the buffer-based pipeline. Implement in a separate PR.
-   */
-  selectiveEffectOcclusion?: "normal" | "silhouette";
+  /** Occlusion mode. Currently only "normal" is supported. */
+  selectiveEffectOcclusion?: "normal";
 } & EffectLayerConfig;
 
 export type SelectiveEffectLayerUpdate = EffectLayerUpdate;

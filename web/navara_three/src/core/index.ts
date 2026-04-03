@@ -44,14 +44,10 @@ export * from "./ViewContext";
 export {
   SelectiveEffectHelper,
   type SelectiveEffectConfig,
-  type SelectiveEffectOcclusion,
-  type SelectiveEffectOcclusionValue,
   SELECTIVE_BLOOM_EFFECT_KEY,
   SELECTIVE_OUTLINE_EFFECT_KEY,
-  SelectiveEffectOcclusionMode,
   getSelectiveEffectConfig,
   hasSelectiveEffectConfig,
-  parseSelectiveEffectOcclusion,
   createFullscreenQuad,
 } from "./SelectiveEffectHelper";
 export {

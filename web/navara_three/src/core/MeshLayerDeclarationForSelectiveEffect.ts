@@ -47,7 +47,7 @@ export abstract class MeshLayerDeclarationForSelectiveEffect<
   }
 
   protected override getPassKey(): PassKey {
-    // Meshes with SelectiveEffect (effectIds) need to be in MRT scene for mask rendering
+    // Meshes with SelectiveEffect (effectIds) need to be in MRT scene for SE buffer rendering
     if (this._effectIds.length > 0) {
       return "mrt";
     }
@@ -58,7 +58,7 @@ export abstract class MeshLayerDeclarationForSelectiveEffect<
     super.onCreate();
 
     // ----------------------------------------------------------------------------
-    // SelectiveEffect: effectIds / occlusion wiring
+    // SelectiveEffect: effectIds wiring
     // ----------------------------------------------------------------------------
     const useSelectiveEffect = this._effectIds.length > 0;
     if (useSelectiveEffect && this.raw) {
@@ -132,7 +132,7 @@ export abstract class MeshLayerDeclarationForSelectiveEffect<
       this._effectIds = [];
     }
 
-    // Unregister layer effects (clears layerConfigs and occlusionCache)
+    // Unregister layer effects
     this.view.unregisterLayerEffects(this.id);
 
     super.onDestroy();

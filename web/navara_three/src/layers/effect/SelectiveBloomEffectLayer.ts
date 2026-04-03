@@ -381,7 +381,6 @@ class SelectiveBloomPass extends PostProcessingPass {
       this.bloomSourceRT, // writeBuffer (ignored)
       this.bloomSourceRT, // readBuffer (actual input)
       deltaTime ?? 0,
-      false,
     );
 
     // Get bloom output from internal RT
