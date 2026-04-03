@@ -8,9 +8,12 @@ import {
   BufferAttribute,
   BufferGeometry,
   Color,
+  MeshBasicMaterial,
   MeshLambertMaterial,
   RGBADepthPacking,
   Sphere,
+  SphereGeometry,
+  Mesh as ThreeMesh,
   Vector3,
 } from "three";
 
@@ -31,6 +34,9 @@ import type {
 } from "./batchTexture";
 import { setupRTECallback } from "./rtcRteHelper";
 
+/** Set to true to render bounding spheres as wireframe spheres for debugging. */
+const DEBUG_BOUNDING_SPHERE = false;
+
 type Attributes = BatchedFeatureAttributes<{
   position?: BufferAttribute; // Present when use_rte = false
   position_3d_high?: BufferAttribute; // Present when use_rte = true
@@ -50,6 +56,15 @@ export class PolygonMesh extends BatchedFeatureMesh<
     surfaceCenter: Vector3; // Center point on ellipsoid surface (without height)
     aabbRadius: number; // Horizontal extent radius from AABB
   };
+
+  /** Debug wireframe mesh visualizing the bounding sphere */
+  private _debugBoundingSphereMesh?: ThreeMesh;
+
+  /** Running min/max of per-feature batch height values */
+  private _minBatchHeight = 0;
+  private _maxBatchHeight = 0;
+  /** Running max of per-feature batch extruded height values */
+  private _maxBatchExtrudedHeight = 0;
 
   /** ViewContext for SelectiveEffect handling */
   private _viewContext: ViewContext;
@@ -85,11 +100,7 @@ export class PolygonMesh extends BatchedFeatureMesh<
     buf: BufferLoader,
     tileHandle: TileHandle | undefined,
   ) {
-    // TODO: Need to calculate bounding sphere by position_high and position_low.
-    this.frustumCulled = false;
-
     this.batchLength = mesh.batch_length;
-
     // Register cleanup listener first (before any potential early returns)
     // This ensures dispose() is called even if geometry initialization fails
     this.addEventListener("removedFromWorld", () => {
@@ -108,7 +119,10 @@ export class PolygonMesh extends BatchedFeatureMesh<
       const bs = mesh.bounding_sphere;
 
       this._baseBoundingSphere = {
-        surfaceCenter: new Vector3(bs.center_x, bs.center_y, bs.center_z),
+        // If this mesh is tile based, RTC is used. In this case, this mesh is transformed through matrixWorld.
+        surfaceCenter: useRTE
+          ? new Vector3(bs.center_x, bs.center_y, bs.center_z)
+          : new Vector3(),
         aabbRadius: bs.radius,
       };
 
@@ -384,6 +398,9 @@ export class PolygonMesh extends BatchedFeatureMesh<
     // Update mesh properties (not handled by enhancer)
     this.visible =
       (material.show ?? true) && (material.surfaceShow ?? true) && active;
+    if (this._debugBoundingSphereMesh) {
+      this._debugBoundingSphereMesh.visible = this.visible;
+    }
     this.castShadow = !!material.castShadow;
     this.receiveShadow = !!material.receiveShadow;
 
@@ -436,11 +453,15 @@ export class PolygonMesh extends BatchedFeatureMesh<
       return;
     }
 
+    if (!this.geometry.boundingSphere) {
+      this.geometry.boundingSphere = new Sphere();
+    }
+
     // Cache values to avoid multiple calls
     const { base } = this._enhancedMaterial.states();
 
     if (base.clampToGround) {
-      this.geometry.boundingSphere = new Sphere(
+      this.geometry.boundingSphere?.set(
         baseBounds.surfaceCenter,
         baseBounds.aabbRadius,
       );
@@ -451,8 +472,15 @@ export class PolygonMesh extends BatchedFeatureMesh<
 
     if (!minMaxHeight) return;
 
-    const minHeight = minMaxHeight[0] + addHeight;
-    const maxHeight = minMaxHeight[1] + addHeight + addExtrudedHeight;
+    // Compute effective min/max considering both uniform and per-feature batch values
+    const minHeight = Math.min(
+      minMaxHeight[0] + addHeight,
+      minMaxHeight[0] + this._minBatchHeight,
+    );
+    const maxHeight = Math.max(
+      minMaxHeight[1] + addHeight + addExtrudedHeight,
+      minMaxHeight[1] + this._maxBatchHeight + this._maxBatchExtrudedHeight,
+    );
 
     const heightOffset = (maxHeight - minHeight) / 2.0;
     const centerHeight = (maxHeight + minHeight) / 2.0;
@@ -472,7 +500,30 @@ export class PolygonMesh extends BatchedFeatureMesh<
     );
 
     // Update geometry bounding sphere
-    this.geometry.boundingSphere = new Sphere(center, radius);
+    this.geometry.boundingSphere?.set(center, radius);
+
+    if (DEBUG_BOUNDING_SPHERE) {
+      this._updateDebugBoundingSphereMesh(center, radius);
+    }
+  }
+
+  private _updateDebugBoundingSphereMesh(center: Vector3, radius: number) {
+    if (!this._debugBoundingSphereMesh) {
+      const geo = new SphereGeometry(1, 16, 12);
+      const mat = new MeshBasicMaterial({
+        color: 0x00ff00,
+        wireframe: true,
+        depthTest: false,
+        transparent: true,
+        opacity: 0.3,
+      });
+      this._debugBoundingSphereMesh = new ThreeMesh(geo, mat);
+      // this._debugBoundingSphereMesh.frustumCulled = false;
+      this.add(this._debugBoundingSphereMesh);
+    }
+
+    this._debugBoundingSphereMesh.position.copy(center);
+    this._debugBoundingSphereMesh.scale.setScalar(radius);
   }
 
   _getDefaultBatchAttributeValues(): DefaultBatchAttributeValues {
@@ -532,18 +583,30 @@ export class PolygonMesh extends BatchedFeatureMesh<
         this.outline?.enableBatchColorShow();
         break;
       }
-      case "height":
+      case "height": {
         this.getEnhancer().update({ base: { useBatchHeight: true } });
         this.outline?.enableBatchHeight();
+        const h = value as number;
+        if (h > this._maxBatchHeight) this._maxBatchHeight = h;
+        if (h < this._minBatchHeight) this._minBatchHeight = h;
         break;
-      case "extrudedHeight":
+      }
+      case "extrudedHeight": {
         this.getEnhancer().update({ base: { useBatchExtrudedHeight: true } });
         this.outline?.enableBatchExtrudedHeight();
+        const eh = value as number;
+        if (eh > this._maxBatchExtrudedHeight)
+          this._maxBatchExtrudedHeight = eh;
         break;
+      }
     }
 
     // Call parent to update the batch texture
     super._updateBatchAttribute(batchId, attribute, value);
+
+    if (attribute === "height" || attribute === "extrudedHeight") {
+      this._recalculateBoundingSphere();
+    }
   }
 
   _initBatchDataTexture(): void {
@@ -610,6 +673,27 @@ export class PolygonMesh extends BatchedFeatureMesh<
   }
 
   dispose() {
+    // Clean up SelectiveEffect registry links
+    const currentEffectIds = this._getEffectIds();
+    if (
+      this._viewContext?.selectiveEffectRegistry &&
+      currentEffectIds.length > 0
+    ) {
+      this._viewContext.selectiveEffectRegistry.updateLinksForObject(
+        this,
+        [], // New effectIds: empty array (removing all links)
+        [...currentEffectIds], // Previous effectIds
+        this._layerId,
+      );
+    }
+
+    if (this._debugBoundingSphereMesh) {
+      this._debugBoundingSphereMesh.geometry.dispose();
+      (this._debugBoundingSphereMesh.material as MeshBasicMaterial).dispose();
+      this.remove(this._debugBoundingSphereMesh);
+      this._debugBoundingSphereMesh = undefined;
+    }
+
     this._viewContext.removeShadowMaterial(this.material);
     this.customDepthMaterial?.dispose();
   }
