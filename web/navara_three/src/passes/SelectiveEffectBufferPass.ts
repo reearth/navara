@@ -6,6 +6,7 @@ import {
   Object3D,
   RGBAFormat,
   HalfFloatType,
+  NearestFilter,
   Color,
   type Texture,
 } from "three";
@@ -100,6 +101,11 @@ export class SelectiveEffectBufferPass {
     );
     this.selectiveEffectMRT.textures[0].name = "SelectiveEffect_Emissive";
     this.selectiveEffectMRT.textures[1].name = "SelectiveEffect_EffectIds";
+    // EffectIds is a discrete bitmask — use NearestFilter to prevent
+    // linear interpolation from blending neighboring bitmask values.
+    this.selectiveEffectMRT.textures[1].minFilter = NearestFilter;
+    this.selectiveEffectMRT.textures[1].magFilter = NearestFilter;
+    this.selectiveEffectMRT.textures[1].generateMipmaps = false;
   }
 
   get emissiveTexture(): Texture {
