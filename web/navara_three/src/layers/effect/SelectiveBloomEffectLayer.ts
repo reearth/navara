@@ -1,5 +1,6 @@
 import { Pass as PostProcessingPass } from "postprocessing";
 import {
+  HalfFloatType,
   Mesh,
   OrthographicCamera,
   PlaneGeometry,
@@ -297,8 +298,10 @@ class SelectiveBloomPass extends PostProcessingPass {
     );
 
     // Bloom source RT (extracted emissive for bloom-targeted pixels)
+    // HalfFloatType preserves HDR values (emissive intensity > 1.0)
     this.bloomSourceRT = new WebGLRenderTarget(initialWidth, initialHeight, {
       format: RGBAFormat,
+      type: HalfFloatType,
       depthBuffer: false,
       stencilBuffer: false,
     });
