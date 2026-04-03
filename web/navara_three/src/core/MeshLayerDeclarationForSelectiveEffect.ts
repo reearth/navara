@@ -134,9 +134,7 @@ export abstract class MeshLayerDeclarationForSelectiveEffect<
     if (!registry) return;
 
     const mask =
-      this._effectIds.length > 0
-        ? registry.computeMask(this._effectIds)
-        : 0;
+      this._effectIds.length > 0 ? registry.computeMask(this._effectIds) : 0;
     const raw = this.raw;
     if (!raw) return;
 

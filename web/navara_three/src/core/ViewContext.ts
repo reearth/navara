@@ -96,8 +96,7 @@ export class ViewContext extends EventHandler<ViewContextEvents> {
     for (const [, mesh] of this._privates.meshes) {
       if (hasGetEffectIds(mesh)) {
         const effectIds = mesh._getEffectIds();
-        const mask =
-          effectIds.length > 0 ? registry.computeMask(effectIds) : 0;
+        const mask = effectIds.length > 0 ? registry.computeMask(effectIds) : 0;
         if (hasGetEnhancer(mesh)) {
           // Polygon: single enhancer
           mesh.getEnhancer().update({ base: { effectIdsMask: mask } });
