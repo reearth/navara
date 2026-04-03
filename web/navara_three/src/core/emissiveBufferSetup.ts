@@ -25,21 +25,14 @@ export function setupSelectiveEffectBufferUniforms(
     // Chain previous onBeforeCompile if it exists
     prevOnBeforeCompile.call(material, shader, renderer);
 
+    // Link userData refs to shader uniforms so SelectiveEffectBufferPass can
+    // toggle mode and set values at runtime. Uniform declarations are in
+    // overrideMaterialsForMRT — no shader source modification needed here.
     shader.uniforms.uSelectiveEffectBufferMode =
       material.userData.uSelectiveEffectBufferMode;
     shader.uniforms.uEmissiveColor = material.userData.uEmissiveColor;
     shader.uniforms.uEmissiveIntensity = material.userData.uEmissiveIntensity;
     shader.uniforms.uEffectIdsMask = material.userData.uEffectIdsMask;
-
-    // uSelectiveEffectBufferMode and uEffectIdsMask are already declared by overrideMaterialsForMRT.
-    // Add uEmissiveColor/uEmissiveIntensity declarations and override the
-    // default vec4(0.0) early-return with emissive color output.
-    shader.fragmentShader =
-      `uniform vec3 uEmissiveColor;\nuniform float uEmissiveIntensity;\n` +
-      shader.fragmentShader.replace(
-        /if \(uSelectiveEffectBufferMode > 0\.5\) \{[^}]*\}/,
-        `if (uSelectiveEffectBufferMode > 0.5) { gl_FragColor = vec4(uEmissiveColor, uEmissiveIntensity); outputBuffer1 = vec4(uEffectIdsMask, 0.0, 0.0, 1.0); return; }`,
-      );
   };
 }
 

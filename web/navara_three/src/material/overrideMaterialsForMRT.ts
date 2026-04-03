@@ -120,17 +120,18 @@ function injectGBuffer(
     // Selective Effect buffer mode toggle (for SelectiveEffectBufferPass)
     uniform float uSelectiveEffectBufferMode;
     uniform float uEffectIdsMask;
+    uniform vec3 uEmissiveColor;
+    uniform float uEmissiveIntensity;
 
     ${packing}
     ${
       createReplacer(shader.fragmentShader).replace(
         /}\s*$/, // Assume the last curly brace is of main()
         /* glsl */ `
-          // SelectiveEffectBufferPass: output emissive + effectIds for non-enhanced materials.
-          // Default: transparent black for emissive (overridden by emissiveBufferSetup
-          // for configured meshes), bitmask for effectIds.
+          // SelectiveEffectBufferPass: output emissive + effectIds.
+          // uEmissiveColor/uEmissiveIntensity default to 0 for non-SE meshes.
           if (uSelectiveEffectBufferMode > 0.5) {
-            gl_FragColor = vec4(0.0);
+            gl_FragColor = vec4(uEmissiveColor, uEmissiveIntensity);
             #ifndef USE_SHADOWMAP_DEPTH
               outputBuffer1 = vec4(uEffectIdsMask, 0.0, 0.0, 1.0);
             #endif
