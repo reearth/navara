@@ -2,12 +2,7 @@ import type { Globe } from "@navara/core";
 import { EventHandler } from "@navara/core";
 import type { FontManager } from "@navara/font";
 import type { ConcurrencyManager } from "@navara/worker";
-import {
-  Mesh,
-  type Material,
-  type Object3D,
-  type PerspectiveCamera,
-} from "three";
+import { Mesh, type Material, type PerspectiveCamera } from "three";
 
 import type { Atmosphere } from "../atmosphere";
 import { Color } from "../Color";
@@ -178,33 +173,6 @@ export class ViewContext extends EventHandler<ViewContextEvents> {
       this.layerEffectConfigs.set(layerId, config);
     }
     return config;
-  }
-
-  // --- Selective Effect object management ---
-
-  /**
-   * Apply selective effects to a specific Object3D.
-   * Useful for pick-based effect application where you have a reference to the object.
-   *
-   * @param object - The Object3D to apply effects to
-   * @param effectIds - Effect IDs to apply
-   * @param layerId - Optional layer ID. Resolution order: argument > existing config > empty string
-   */
-  applyEffectToObject(
-    object: Object3D,
-    effectIds: string[],
-    layerId?: string,
-  ): void {
-    const resolvedLayerId =
-      layerId ?? getSelectiveEffectConfig(object)?.layerId;
-
-    const prevEffectIds = getSelectiveEffectConfig(object)?.effectIds ?? [];
-    this.selectiveEffectRegistry?.updateLinksForObject(
-      object,
-      effectIds,
-      prevEffectIds,
-      resolvedLayerId ?? "",
-    );
   }
 }
 
