@@ -6,11 +6,13 @@ This repository contains the developer documentation for Navara, a 3D globe map 
 
 ## 📚 Documentation Structure
 
-The documentation covers three main components of the Navara ecosystem:
+The documentation covers five main sections of the Navara ecosystem:
 
-- **navara** - Core 3D globe map engine
-- **navara_three** - Map engine for manipulating maps on the front-end side, based on Three.js
-- **navara_wasm** - WebAssembly components for high-performance map rendering
+- **engine** - Rust/WASM engine documentation (navara_wasm, navara_wasm_api)
+- **guides** - General information, about us, and community resources
+- **three** - navara_three, the main 3D rendering library based on Three.js
+- **three_default_layers** - Built-in layer documentation (Mesh, Light, Effect layers)
+- **three_default_plugin** - Default plugin documentation
 
 ## 🚀 Project Structure
 
@@ -18,18 +20,25 @@ Inside of this Astro + Starlight project, you'll see the following folders and f
 
 ```
 .
+├── guide/
+│   ├── NAVARA_THREE_INSTRUCTIONS.md
+│   ├── NAVARA_THREE_UPDATE_CHECKLIST.md
+│   ├── TRANSLATION_GUIDE.md
+│   └── WRITING_RULES.md
 ├── public/
 ├── src/
 │   ├── assets/
+│   ├── components/
 │   ├── content/
 │   │   ├── docs/
-│   │   │   ├── navara/
-│   │   │   ├── navara_three/
-│   │   │   ├── navara_wasm/
+│   │   │   ├── engine/
+│   │   │   ├── guides/
+│   │   │   ├── three/
+│   │   │   ├── three_default_layers/
+│   │   │   ├── three_default_plugin/
 │   │   │   └── ja/          # Japanese translations
 │   │   └── content.config.ts
-│   ├── components/
-│   ├── styles/
+│   ├── data/
 │   └── utils/
 ├── astro.config.mjs
 ├── package.json
