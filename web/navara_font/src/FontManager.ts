@@ -11,6 +11,7 @@ import type {
   ShapedGlyph,
   ShapeTextResult,
 } from "./types";
+import invariant from "tiny-invariant";
 
 /** Create a single-channel SDF atlas DataTexture with standard filtering. */
 export function createSdfAtlasTexture(
@@ -405,11 +406,7 @@ export class FontManager {
 
     for (const seg of segments) {
       const result = this._shapeCache.get(seg.url)?.get(seg.text);
-      if (!result) {
-        throw new Error(
-          `FontManager: missing shape result for face "${seg.url}" text "${seg.text}"`,
-        );
-      }
+      invariant(result, `FontManager: missing shape cache for ${seg.url} "${seg.text}"`);
 
       if (targetUnitsPerEm === 0) targetUnitsPerEm = result.unitsPerEm;
       const scale = targetUnitsPerEm / result.unitsPerEm;

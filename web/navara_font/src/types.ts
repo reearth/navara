@@ -3,6 +3,8 @@ export type GlyphMetrics = {
   glyphId: number;
   /** Unique font index within the atlas (distinguishes glyphs from different fonts). */
   fontIndex: number;
+  /** Pre-computed composite key (font_index, glyph_id) from WASM. */
+  compositeKey: bigint;
   atlasX: number;
   atlasY: number;
   atlasW: number;
@@ -16,6 +18,8 @@ export type ShapedGlyph = {
   glyphId: number;
   /** Unique font index within the atlas (distinguishes glyphs from different fonts). */
   fontIndex: number;
+  /** Pre-computed composite key (font_index, glyph_id) from WASM. */
+  compositeKey: bigint;
   xAdvance: number;
   yAdvance: number;
   xOffset: number;

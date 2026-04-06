@@ -15,6 +15,13 @@ pub fn start() {
     set_panic_hook();
 }
 
+/// Pack a font index and glyph ID into a single u64 composite key.
+/// Exposed to TypeScript so both sides use the same key layout.
+#[wasm_bindgen]
+pub fn composite_key(font_index: u32, glyph_id: u32) -> u64 {
+    atlas::composite_key(font_index, glyph_id)
+}
+
 #[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen(js_namespace = console)]

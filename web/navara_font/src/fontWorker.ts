@@ -2,6 +2,7 @@
 
 import init, {
   FontCache,
+  composite_key,
   type ShapeTextResult as WasmShapeTextResult,
   type WasmShapedGlyph,
   type WasmGlyphMetrics,
@@ -21,6 +22,7 @@ function convertGlyphs(glyphs: WasmShapedGlyph[]) {
     const out = {
       glyphId: g.glyph_id,
       fontIndex: g.font_index,
+      compositeKey: composite_key(g.font_index, g.glyph_id),
       xAdvance: g.x_advance,
       yAdvance: g.y_advance,
       xOffset: g.x_offset,
@@ -36,6 +38,7 @@ function convertMetrics(metrics: WasmGlyphMetrics[]) {
     const out = {
       glyphId: m.glyph_id,
       fontIndex: m.font_index,
+      compositeKey: composite_key(m.font_index, m.glyph_id),
       atlasX: m.atlas_x,
       atlasY: m.atlas_y,
       atlasW: m.atlas_w,

@@ -447,15 +447,12 @@ export class SDFTextMesh
   ): void {
     const { glyphs, metrics, unitsPerEm } = shapeResult;
 
-    // Build composite (fontIndex, glyphId) -> metrics lookup.
-    // This supports glyphs from multiple fonts sharing the same atlas
-    // (e.g. font-family faces). fontIndex distinguishes glyph IDs that
-    // would otherwise collide across different fonts.
-    // Key layout mirrors the Rust side: (font_index as u64) << 32 | glyph_id.
+    // Build composite key -> metrics lookup.
+    // Keys are pre-computed by the WASM font worker (composite_key in Rust)
+    // to ensure the key layout is always in sync between Rust and TypeScript.
     const metricsMap = new Map<bigint, GlyphMetrics>();
     for (const m of metrics) {
-      const key = (BigInt(m.fontIndex) << 32n) | BigInt(m.glyphId);
-      metricsMap.set(key, m);
+      metricsMap.set(m.compositeKey, m);
     }
 
     const fontUnitToSdfPx = SDF_PX_SIZE / unitsPerEm;
@@ -474,9 +471,7 @@ export class SDFTextMesh
     }[] = [];
 
     for (const glyph of glyphs) {
-      const m = metricsMap.get(
-        (BigInt(glyph.fontIndex) << 32n) | BigInt(glyph.glyphId),
-      );
+      const m = metricsMap.get(glyph.compositeKey);
       if (m && m.atlasW > 0 && m.atlasH > 0) {
         const x = (cursorX + glyph.xOffset) * fontUnitToSdfPx + m.bearingX;
         const y = (cursorY + glyph.yOffset) * fontUnitToSdfPx + m.bearingY;
