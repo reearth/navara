@@ -9,6 +9,7 @@ This document provides guidance for AI agents working with the navara-developer-
 | Update navara_three documentation          | [NAVARA_THREE_INSTRUCTIONS.md](./guide/NAVARA_THREE_INSTRUCTIONS.md)         |
 | Specific update scenarios                  | [NAVARA_THREE_UPDATE_CHECKLIST.md](./guide/NAVARA_THREE_UPDATE_CHECKLIST.md) |
 | Translate documentation to other languages | [TRANSLATION_GUIDE.md](./guide/TRANSLATION_GUIDE.md)                         |
+| Rules for writing                          | [WRITING_RULES.md](./guide/WRITING_RULES.md)                         |
 
 ## Documentation Structure
 
