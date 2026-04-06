@@ -1,6 +1,7 @@
 import {
   Color,
   InstancedMeshLayerDeclaration,
+  setupSelectiveEffectUniforms,
   type InstancedChildConfig,
   type InstancedMeshLayerConfig,
   type InstancedMeshLayerUpdate,
@@ -90,13 +91,15 @@ export class InstancedBoxMeshLayer extends InstancedMeshLayerDeclaration<
     const colorValue = cfg?.color ?? new Color().setStyle("#ffffff");
     const emissiveColorValue = cfg?.emissiveColor ? cfg.emissiveColor.raw : 0;
 
-    return new MeshLambertMaterial({
+    const material = new MeshLambertMaterial({
       color: colorValue.raw,
       emissive: emissiveColorValue,
       emissiveIntensity: cfg?.emissiveIntensity ?? 1,
       opacity: cfg?.opacity ?? 1,
       transparent: cfg?.transparent ?? false,
     });
+    setupSelectiveEffectUniforms(material);
+    return material;
   }
 
   protected override getInstanceScale(

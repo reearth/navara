@@ -33,8 +33,7 @@ export function setupSelectiveEffectUniforms(
 
   const prevOnBeforeCompile = material.onBeforeCompile;
   material.onBeforeCompile = (shader, renderer) => {
-    // Chain previous onBeforeCompile if it exists
-    prevOnBeforeCompile.call(material, shader, renderer);
+    prevOnBeforeCompile?.call(material, shader, renderer);
 
     // Link effectIdsMask uniform for runtime value updates
     shader.uniforms.uEffectIdsMask = material.userData.uEffectIdsMask;
