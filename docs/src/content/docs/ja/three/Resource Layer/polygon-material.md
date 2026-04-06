@@ -465,6 +465,24 @@ import { Color } from "@navara/three";
 }
 ```
 
+### tiled
+
+**Type:** `boolean | undefined`
+
+**Description:** データソースがMVTレイヤーでない場合でも、ポリゴンをXYZベクトルタイルに分割してレンダリングします。大きなポリゴンのパフォーマンスを向上させることができます。`clampToGround`を有効にすると、`tiled`は暗黙的に`true`に強制されます。`tiled`が有効な場合、アウトラインの描画はサポートされません。
+
+**Default:** `undefined`
+
+**Example:**
+
+```typescript
+{
+  polygon: {
+    tiled: true
+  }
+}
+```
+
 ### useGroundNormals
 
 **Type:** `boolean | undefined`
