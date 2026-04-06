@@ -245,9 +245,18 @@ export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
     for (let p = 0; p < pixelCount; p++) {
       const si = p * 4;
       const di = p * 4;
-      result[di] = Math.min(255, Math.max(0, Math.round(floatPixels[si] * 255)));
-      result[di + 1] = Math.min(255, Math.max(0, Math.round(floatPixels[si + 1] * 255)));
-      result[di + 2] = Math.min(255, Math.max(0, Math.round(floatPixels[si + 2] * 255)));
+      result[di] = Math.min(
+        255,
+        Math.max(0, Math.round(floatPixels[si] * 255)),
+      );
+      result[di + 1] = Math.min(
+        255,
+        Math.max(0, Math.round(floatPixels[si + 1] * 255)),
+      );
+      result[di + 2] = Math.min(
+        255,
+        Math.max(0, Math.round(floatPixels[si + 2] * 255)),
+      );
       result[di + 3] = 255;
     }
     return result;
@@ -260,7 +269,10 @@ export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
   ): Uint8Array {
     const result = new Uint8Array(pixelCount * 4);
     for (let p = 0; p < pixelCount; p++) {
-      const a = Math.min(255, Math.max(0, Math.round(floatPixels[p * 4 + 3] * 255)));
+      const a = Math.min(
+        255,
+        Math.max(0, Math.round(floatPixels[p * 4 + 3] * 255)),
+      );
       const di = p * 4;
       result[di] = a;
       result[di + 1] = a;
@@ -280,14 +292,26 @@ export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
     // EffectIds (attachment 2): bitmask color visualization
     const effectIdsFloat = readMRTFloat(gbufferRT, 2);
     if (effectIdsFloat) {
-      effectIdsView.renderFromPixels(bitmaskToRgba(effectIdsFloat, w * h), w, h);
+      effectIdsView.renderFromPixels(
+        bitmaskToRgba(effectIdsFloat, w * h),
+        w,
+        h,
+      );
     }
 
     // Emissive (attachment 3): RGB + Alpha visualization
     const emissiveFloat = readMRTFloat(gbufferRT, 3);
     if (emissiveFloat) {
-      emissiveRgbView.renderFromPixels(floatRgbToRgba(emissiveFloat, w * h), w, h);
-      emissiveAlphaView.renderFromPixels(floatAlphaToRgba(emissiveFloat, w * h), w, h);
+      emissiveRgbView.renderFromPixels(
+        floatRgbToRgba(emissiveFloat, w * h),
+        w,
+        h,
+      );
+      emissiveAlphaView.renderFromPixels(
+        floatAlphaToRgba(emissiveFloat, w * h),
+        w,
+        h,
+      );
     }
   }
 
