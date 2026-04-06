@@ -27,8 +27,16 @@ type Private = {
 };
 
 type ViewContextEvents = {
-  unstableShadowApplied: (material: Material) => void;
-  unstableShadowRemoved: (material: Material) => void;
+  /**
+   * Emitted when a material is registered for CSM shadow rendering.
+   * @experimental This event may change or be removed in future versions.
+   */
+  shadowApplied: (material: Material) => void;
+  /**
+   * Emitted when a material is unregistered from CSM shadow rendering.
+   * @experimental This event may change or be removed in future versions.
+   */
+  shadowRemoved: (material: Material) => void;
 };
 
 // Restrict public API for a layer declaration.
@@ -69,11 +77,11 @@ export class ViewContext extends EventHandler<ViewContextEvents> {
   }
 
   applyShadowMaterial(material: Material): void {
-    this.emit("unstableShadowApplied", material);
+    this.emit("shadowApplied", material);
   }
 
   removeShadowMaterial(material: Material): void {
-    this.emit("unstableShadowRemoved", material);
+    this.emit("shadowRemoved", material);
   }
 
   registerLayerEffects(

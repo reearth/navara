@@ -55,8 +55,8 @@ You can access the scene and camera through `this.view`.
 | `view.camera`                         | PerspectiveCamera                                  |
 | `view.atmosphere`                     | Atmosphere (sun direction, time of day, etc.)      |
 | `view.renderPassOrchestrator`         | Render pipeline management                         |
-| `view.applyShadowMaterial(material)`  | Apply CSM shadows to a material                    |
-| `view.removeShadowMaterial(material)` | Remove CSM shadows from a material                 |
+| `view.applyShadowMaterial(material)`  | Apply CSM shadows to a material (experimental)     |
+| `view.removeShadowMaterial(material)` | Remove CSM shadows from a material (experimental)  |
 
 ## Custom Mesh Layer
 

@@ -120,10 +120,10 @@ export class SunLightLayer extends LightLayerDeclaration<
     this.updateSceneLights();
 
     // Listen for shadow material events from ViewContext
-    this.view.on("unstableShadowApplied", (m: Material) => {
+    this.view.on("shadowApplied", (m: Material) => {
       this._instance?.setupMaterialForCSM(m);
     });
-    this.view.on("unstableShadowRemoved", (m: Material) => {
+    this.view.on("shadowRemoved", (m: Material) => {
       this._instance?.removeMaterialFromCSM(m);
     });
   }
