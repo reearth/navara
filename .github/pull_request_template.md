@@ -15,5 +15,5 @@
 - [ ] Wrote a clear PR description so reviewers can quickly understand the overview of the changes.
 - [ ] Confirmed that the proposed code does not include anything with an unknown or incompatible license.
 - [ ] Added tests for the changes.
-- [ ] Updated the API documentation.
+- [ ] Updated the [API documentation](guide/HOW_TO_WRITE_DOCUMENT.md).
 - [ ] Linked related issues.
