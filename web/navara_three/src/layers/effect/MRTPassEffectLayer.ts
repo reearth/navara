@@ -44,7 +44,6 @@ export class MRTPassEffectLayer extends EffectLayerDeclaration<
     const pass = new CustomRenderPass(
       scenes,
       camera,
-      this.view._privates.meshes,
       this.view.renderPassOrchestrator.effectComposer.inputBuffer,
       this.view.globe,
       {

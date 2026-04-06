@@ -9,7 +9,6 @@ import { Color } from "../Color";
 import type { LayersManager } from "../layersManager";
 import type { RenderPassOrchestrator } from "../orchestrators";
 import type { Scenes } from "../scene";
-import type { MeshCache } from "../type";
 
 import {
   getSelectiveEffectConfig,
@@ -20,10 +19,6 @@ import { SelectiveEffectManager } from "./SelectiveEffectManager";
 
 export type ViewDebugOptions = {
   selectiveEffectMask?: boolean;
-};
-
-type Private = {
-  meshes: MeshCache;
 };
 
 type ViewContextEvents = {
@@ -55,7 +50,6 @@ export class ViewContext extends EventHandler<ViewContextEvents> {
     public layersManager: LayersManager,
     public renderPassOrchestrator: RenderPassOrchestrator,
     public concurrencyManager: ConcurrencyManager,
-    public _privates: Private,
     selectiveEffectHelper?: SelectiveEffectHelper,
     debugOptions?: ViewDebugOptions,
   ) {

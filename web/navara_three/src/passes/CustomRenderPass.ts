@@ -14,7 +14,6 @@ import { SelectiveEffectMaskController } from "../core/SelectiveEffectMaskContro
 import { RenderPass } from "../effects";
 import { DrapedMesh } from "../mesh/DrapedMesh";
 import type { Scenes } from "../scene";
-import type { MeshCache } from "../type";
 
 import { AllDepthCopyPass, NormalCopyPass, RenderTargetCopyPass } from ".";
 
@@ -32,7 +31,6 @@ export type CustomRenderPassOptions = {
 export class CustomRenderPass extends RenderPass {
   protected _camera: PerspectiveCamera;
   protected _scenes: Scenes;
-  protected _meshes: MeshCache;
   gbufferRenderTarget: WebGLRenderTarget;
   private copyPass: RenderTargetCopyPass;
   globeDepthCopyPass: DepthCopyPass;
@@ -60,7 +58,6 @@ export class CustomRenderPass extends RenderPass {
   constructor(
     scenes: Scenes,
     camera: PerspectiveCamera,
-    meshes: MeshCache,
     inputBuffer: WebGLRenderTarget,
     globe: Globe,
     options?: CustomRenderPassOptions,
@@ -73,7 +70,6 @@ export class CustomRenderPass extends RenderPass {
 
     this._scenes = scenes;
     this._camera = camera;
-    this._meshes = meshes;
     this.globe = globe;
 
     this.gbufferRenderTarget = inputBuffer.clone();
