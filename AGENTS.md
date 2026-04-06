@@ -101,6 +101,8 @@ pnpm run test           # Run web tests
 - **`/crates/`** - All Rust crates (40+ modules)
 - **`/web/`** - TypeScript packages and generated WASM outputs
 - **`/shaders/`** - GLSL shader files
+- **`/docs/`** - User-facing API documentation site (Astro + Starlight, see [docs/AGENTS.md](docs/AGENTS.md))
+- **`/guide/`** - Internal contributor/developer documentation
 
 ### **Build Configuration**
 - **`Cargo.toml`** - Rust workspace configuration  

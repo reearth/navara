@@ -2,9 +2,13 @@ name: Tests
 
 on:
   pull_request:
+    paths-ignore:
+      - 'docs/**'
   push:
     branches:
       - main
+    paths-ignore:
+      - 'docs/**'
 
 env:
   CARGO_TERM_COLOR: always
@@ -49,7 +53,7 @@ jobs:
         run: pnpm build:example
 
       - name: Run Build library
-        run: pnpm build:example
+        run: pnpm build
 
       - name: Build Integration Tests
         run: pnpm build:integration
@@ -65,7 +69,7 @@ jobs:
       - name: Lint
         run: cargo make lint-check
 
-  doc:
+  rust-docs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
