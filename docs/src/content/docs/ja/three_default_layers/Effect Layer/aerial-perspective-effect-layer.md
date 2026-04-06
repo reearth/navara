@@ -142,15 +142,18 @@ sidebar:
 
 ```typescript
 import ThreeView from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
+const plugin = new DefaultPlugin();
+view.addPlugin(plugin);
 await view.init();
 
-// デフォルトのエフェクトレイヤーを追加（AerialPerspectiveEffectLayerを含む）
-const defaultEffects = view.addDefaultEffectLayers();
+// デフォルトのフォトリアルレイヤーを追加（AerialPerspectiveEffectLayerを含む）
+const defaultLayers = plugin.addDefaultPhotorealLayers();
 
 // 大気遠近法エフェクトの設定を更新
-defaultEffects.aerialPerspective.update({
+defaultLayers.aerialPerspective.update({
   aerialPerspective: {
     inscatter: true,
     transmittance: true,
@@ -163,15 +166,17 @@ defaultEffects.aerialPerspective.update({
 
 ```typescript
 import ThreeView, { CloudsEffectLayer } from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
+const plugin = new DefaultPlugin();
+view.addPlugin(plugin);
 await view.init();
 
-const defaultEffects = view.addDefaultEffectLayers();
-view.addDefaultAtmosphereLayers();
+const defaultLayers = plugin.addDefaultPhotorealLayers();
 
 // 雲の影を有効にする場合、irradianceを有効にする
-defaultEffects.aerialPerspective.update({
+defaultLayers.aerialPerspective.update({
   aerialPerspective: {
     inscatter: true,
     transmittance: true,

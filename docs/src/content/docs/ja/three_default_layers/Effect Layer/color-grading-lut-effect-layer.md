@@ -120,12 +120,15 @@ const colorGradingLayer = view.addLayer<ColorGradingLUTEffectLayer>({
 
 ```typescript
 import ThreeView, { ColorGradingLUTEffectLayer } from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
+const plugin = new DefaultPlugin();
+view.addPlugin(plugin);
 await view.init();
 
-view.addDefaultEffectLayers();
-view.addDefaultAtmosphereLayers();
+// デフォルトのフォトリアルレイヤーを追加
+plugin.addDefaultPhotorealLayers();
 
 // カスタムLUTでカラーグレーディングを追加
 const colorGradingLayer = view.addLayer<ColorGradingLUTEffectLayer>({

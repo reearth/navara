@@ -142,15 +142,18 @@ See [Atmosphere class](../../../three/api-reference/atmosphere/) for details on 
 
 ```typescript
 import ThreeView from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
+const plugin = new DefaultPlugin();
+view.addPlugin(plugin);
 await view.init();
 
-// Add default effect layers (includes AerialPerspectiveEffectLayer)
-const defaultEffects = view.addDefaultEffectLayers();
+// Add default photorealistic layers (includes AerialPerspectiveEffectLayer)
+const defaultLayers = plugin.addDefaultPhotorealLayers();
 
 // Update aerial perspective effect settings
-defaultEffects.aerialPerspective.update({
+defaultLayers.aerialPerspective.update({
   aerialPerspective: {
     inscatter: true,
     transmittance: true,
@@ -163,15 +166,17 @@ defaultEffects.aerialPerspective.update({
 
 ```typescript
 import ThreeView, { CloudsEffectLayer } from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
+const plugin = new DefaultPlugin();
+view.addPlugin(plugin);
 await view.init();
 
-const defaultEffects = view.addDefaultEffectLayers();
-view.addDefaultAtmosphereLayers();
+const defaultLayers = plugin.addDefaultPhotorealLayers();
 
 // Enable irradiance when using cloud shadows
-defaultEffects.aerialPerspective.update({
+defaultLayers.aerialPerspective.update({
   aerialPerspective: {
     inscatter: true,
     transmittance: true,

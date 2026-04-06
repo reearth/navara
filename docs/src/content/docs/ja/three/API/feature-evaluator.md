@@ -31,6 +31,26 @@ layer.on("featureCreated", ({ evaluator }) => {
 });
 ```
 
+## Types
+
+### FeatureInfo
+
+```typescript
+type FeatureInfo = {
+  batchIndex: number;
+  batchId: number;
+  properties: Record<string, unknown> | undefined;
+};
+```
+
+### FeatureEvaluatorCallback
+
+```typescript
+type FeatureEvaluatorCallback = (
+  info: FeatureInfo,
+) => Partial<EvaluatedValue>;
+```
+
 ## Methods
 
 ### readFeatureProperties()
@@ -41,27 +61,53 @@ layer.on("featureCreated", ({ evaluator }) => {
 
 ```typescript
 readFeatureProperties(
-  f: (batchId: number, property: Record<string, unknown> | undefined) => void
+  f: (info: FeatureInfo) => void
 ): void
 ```
 
 **Parameters:**
 
-- `f`: 各バッチの batchId とプロパティオブジェクトを受け取るコールバック関数
+- `f`: 各バッチの FeatureInfo オブジェクトを受け取るコールバック関数
 
 **Example:**
 
 ```typescript
 // すべてのプロパティをログ出力
-evaluator.readFeatureProperties((batchId, properties) => {
+evaluator.readFeatureProperties(({ batchId, properties }) => {
   console.log(`バッチ ${batchId}:`, properties);
 });
 
-evaluator.readFeatureProperties((_batchId, property) => {
-  const attributes = property?.["attributes"] ?? {};
+evaluator.readFeatureProperties(({ properties }) => {
+  const attributes = properties?.["attributes"] ?? {};
   const minHeight = attributes["minHeight"];
   const maxHeight = attributes["maxHeight"];
   console.log("高さ範囲:", minHeight, "-", maxHeight);
+});
+```
+
+### readFilteredFeatureProperties()
+
+データソースからこの地物の指定されたルートプロパティキーのみを読み取ります。少数のプロパティのみが必要な場合、`readFeatureProperties()` よりも効率的です。
+
+**Syntax:**
+
+```typescript
+readFilteredFeatureProperties(
+  keys: string[],
+  f: (info: FeatureInfo) => void
+): void
+```
+
+**Parameters:**
+
+- `keys`: 読み取るルートプロパティキーの配列
+- `f`: フィルタリングされたプロパティのみを含む FeatureInfo オブジェクトを受け取るコールバック関数
+
+**Example:**
+
+```typescript
+evaluator.readFilteredFeatureProperties(["height", "name"], ({ batchId, properties }) => {
+  console.log(`バッチ ${batchId}: height=${properties?.["height"]}, name=${properties?.["name"]}`);
 });
 ```
 
@@ -73,16 +119,18 @@ evaluator.readFeatureProperties((_batchId, property) => {
 
 ```typescript
 evaluate(
-  f: (
-    batchId: number,
-    property: Record<string, unknown> | undefined
-  ) => Partial<EvaluatedValue>
+  f: FeatureEvaluatorCallback,
+  options?: {
+    filters?: string[];
+  }
 ): void
 ```
 
 **Parameters:**
 
-- `f`: batchId とプロパティを受け取り、スタイル値を返すコールバック関数
+- `f`: FeatureInfo オブジェクトを受け取り、スタイル値を返すコールバック関数
+- `options`: オプションの設定
+  - `options.filters`: 読み取るルートプロパティキーの配列。指定した場合、一致するプロパティのみがコールバックに渡され、大規模なデータセットでのパフォーマンスが向上します。
 
 **Returns:**
 
@@ -107,8 +155,8 @@ import { Color } from "@navara/three";
 
 // 3D Tiles の建物を高さで色分け
 layer.on("featureUpdated", ({ evaluator }) => {
-  evaluator.evaluate((_batchId, property) => {
-    const measuredHeight = property?.["height"] as number;
+  evaluator.evaluate(({ properties }) => {
+    const measuredHeight = properties?.["height"] as number;
 
     const color = (() => {
       if (measuredHeight < 30) return new Color().setStyle("#00ff00");
@@ -128,9 +176,9 @@ layer.on("featureUpdated", ({ evaluator }) => {
 ```typescript
 // GeoJSON ポリゴンにプロパティベースの押し出しを適用
 layer.on("featureUpdated", ({ evaluator }) => {
-  evaluator.evaluate((_batchId, property) => {
-    const height = (property?.["height"] as number) ?? 0;
-    const extrudedHeight = (property?.["extrudedHeight"] as number) ?? 0;
+  evaluator.evaluate(({ properties }) => {
+    const height = (properties?.["height"] as number) ?? 0;
+    const extrudedHeight = (properties?.["extrudedHeight"] as number) ?? 0;
 
     return {
       height,
@@ -143,8 +191,8 @@ layer.on("featureUpdated", ({ evaluator }) => {
 ```typescript
 // MVT 地物をカテゴリプロパティで色分け
 layer.on("featureUpdated", ({ evaluator }) => {
-  evaluator.evaluate((_batchId, property) => {
-    const category = property?.["category"] as string;
+  evaluator.evaluate(({ properties }) => {
+    const category = properties?.["category"] as string;
 
     const color = (() => {
       if (category === "A") return "#0000ff";
@@ -162,8 +210,8 @@ layer.on("featureUpdated", ({ evaluator }) => {
 ```typescript
 // テキストラベルのフィルタリングとスタイリング
 layer.on("featureUpdated", ({ evaluator }) => {
-  evaluator.evaluate((_batchId, property) => {
-    const text = property?.["name"] as string;
+  evaluator.evaluate(({ properties }) => {
+    const text = properties?.["name"] as string;
 
     return {
       text,
@@ -185,8 +233,8 @@ view.on("pick", (info) => {
 
 // 選択状態に基づいて色を変更
 layer.on("featureUpdated", ({ evaluator }) => {
-  evaluator.evaluate((_batchId, property) => {
-    const id = property?.["id"] as string;
+  evaluator.evaluate(({ properties }) => {
+    const id = properties?.["id"] as string;
 
     return {
       color: new Color().setHex(selectedId === id ? 0xff0000 : 0xffffff),

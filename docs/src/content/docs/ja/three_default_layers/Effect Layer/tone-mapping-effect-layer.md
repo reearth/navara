@@ -41,12 +41,15 @@ sidebar:
 
 ```typescript
 import ThreeView from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
+const plugin = new DefaultPlugin();
+view.addPlugin(plugin);
 await view.init();
 
-// デフォルトのエフェクトレイヤーを追加（ToneMappingEffectLayerを含む）
-const defaultEffects = view.addDefaultEffectLayers();
+// デフォルトのフォトリアルレイヤーを追加（ToneMappingEffectLayerを含む）
+const defaultLayers = plugin.addDefaultPhotorealLayers();
 
 // 露出を設定
 view.toneMappingExposure = 10;
@@ -89,15 +92,17 @@ view.addLayer<ToneMappingEffectLayer>({
 
 ```typescript
 import ThreeView, { ToneMappingMode } from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
+const plugin = new DefaultPlugin();
+view.addPlugin(plugin);
 await view.init();
 
-const defaultEffects = view.addDefaultEffectLayers();
-view.addDefaultAtmosphereLayers();
+const defaultLayers = plugin.addDefaultPhotorealLayers();
 
 // トーンマッピングを有効化
-defaultEffects.toneMapping.update({
+defaultLayers.toneMapping.update({
   visible: true,
   toneMapping: {
     mode: ToneMappingMode.AGX,

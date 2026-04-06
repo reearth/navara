@@ -15,6 +15,7 @@ navara_threeでは、以下のMeshLayerタイプが利用可能です:
 |------------|------|
 | [ArclineMeshLayer](./arcline-mesh-layer) | 2点間を結ぶアーク状のラインを描画するレイヤー |
 | [BoxMeshLayer](./box-mesh-layer) | 立方体(Box)ジオメトリを描画するレイヤー |
+| [InstancedBoxMeshLayer](./instanced-box-mesh-layer) | GPU インスタンシングを使用して複数のボックスを1回の描画コールでレンダリングするレイヤー |
 | [CylinderMeshLayer](./cylinder-mesh-layer) | 円柱(Cylinder)ジオメトリを描画するレイヤー |
 | [GLTFModelLayer](./gltf-model-layer) | GLTF/GLB形式の3Dモデルを読み込み・表示するレイヤー |
 | [GlowGlobeMeshLayer](./glow-globe-mesh-layer) | 地球の周りにフレネル効果による光彩(グロー)を表示するレイヤー |

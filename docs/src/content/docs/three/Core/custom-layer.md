@@ -13,9 +13,10 @@ Depending on the layer type, you inherit from the corresponding base class to im
 
 | Layer Type | Base Class               | Factory Method     | Registration Method         |
 | ---------- | ------------------------ | ------------------ | --------------------------- |
-| Mesh       | `MeshLayerDeclaration`   | `createMesh()`     | `view.registerMesh()`       |
-| Effect     | `EffectLayerDeclaration` | `createPass()`     | `view.registerEffect()`     |
-| Light      | `LightLayerDeclaration`  | `createLight()`    | `view.registerLight()`      |
+| Mesh           | `MeshLayerDeclaration`            | `createMesh()`                          | `view.registerMesh()`       |
+| Instanced Mesh | `InstancedMeshLayerDeclaration`   | `createGeometry()` + `createMaterial()` | `view.registerMesh()`       |
+| Effect         | `EffectLayerDeclaration`          | `createPass()`                          | `view.registerEffect()`     |
+| Light          | `LightLayerDeclaration`           | `createLight()`                         | `view.registerLight()`      |
 
 All base classes inherit from `LayerDeclaration` and share a common lifecycle.
 
@@ -50,11 +51,12 @@ You can access the scene and camera through `this.view`.
 | `view.scenes.mrt`                     | Scene for selective effects (Bloom / Outline)      |
 | `view.scenes.skyEnvMap`               | Scene for environment maps                         |
 | `view.scenes.light`                   | Scene for lights                                   |
+| `view.scenes.draped`                  | Scene for terrain-draped meshes                    |
 | `view.camera`                         | PerspectiveCamera                                  |
 | `view.atmosphere`                     | Atmosphere (sun direction, time of day, etc.)      |
 | `view.renderPassOrchestrator`         | Render pipeline management                         |
-| `view.applyShadowMaterial(material)`  | Apply CSM shadows to a material                    |
-| `view.removeShadowMaterial(material)` | Remove CSM shadows from a material                 |
+| `view.applyShadowMaterial(material)`  | Apply CSM shadows to a material (experimental)     |
+| `view.removeShadowMaterial(material)` | Remove CSM shadows from a material (experimental)  |
 
 ## Custom Mesh Layer
 
@@ -105,6 +107,7 @@ You can override `getPassKey()` to change the scene where the mesh is rendered.
 | `"transparent"` | Transparent rendering                       |
 | `"mrt"`         | For selective effects (Bloom / Outline)     |
 | `"skyEnvMap"`   | For environment maps                        |
+| `"draped"`      | For terrain-draped rendering                |
 
 ### Implementation Example
 
@@ -226,6 +229,152 @@ export class RotatingBoxLayer extends MeshLayerDeclaration</* ... */> {
     }
   }
 }
+```
+
+## Custom Instanced Mesh Layer
+
+For rendering many copies of the same geometry in a single draw call, use `InstancedMeshLayerDeclaration`. All instances share one geometry and material, with per-instance variation through `instanceMatrix` and `instanceColor`.
+
+### Type Parameters
+
+```typescript
+class MyInstancedLayer extends InstancedMeshLayerDeclaration<
+  TGeometry,    // Three.js BufferGeometry type
+  TMaterial,    // Three.js Material type
+  Config,       // Layer configuration type (extends InstancedMeshLayerConfig)
+  UpdateConfig, // Update configuration type (extends InstancedMeshLayerUpdate)
+  ChildConfig,  // Per-instance configuration type (extends InstancedChildConfig)
+> {}
+```
+
+### InstancedChildConfig
+
+Common transform fields for individual instances:
+
+| Property   | Type       | Description                                                      |
+| ---------- | ---------- | ---------------------------------------------------------------- |
+| `position` | `XYZ`      | Local position relative to the parent group                      |
+| `rotation` | `XYZ`      | Local rotation (Euler angles in radians)                         |
+| `scale`    | `XYZ`      | Local scale                                                      |
+| `matrix`   | `Matrix4`  | Pre-computed transform matrix. When set, position/rotation/scale are ignored |
+
+### Abstract Methods
+
+| Method | Return Type | Description |
+| ------ | ----------- | ----------- |
+| `createGeometry()` | `TGeometry` | Create the shared geometry for all instances |
+| `createMaterial()` | `TMaterial` | Create the shared material for all instances |
+| `getChildConfigs()` | `ChildConfig[]` | Extract the initial array of instance configs from the layer config |
+| `getInstanceColor(config)` | `ThreeColor \| undefined` | Extract the per-instance color, or undefined for default white |
+
+### Optional Override Methods
+
+| Method | Description |
+| ------ | ----------- |
+| `getInstanceScale(config, target)` | Compute per-instance scale. Override to incorporate geometry-specific dimensions (e.g., width/height/depth) |
+| `composeInstanceMatrix(config)` | Compose the transform matrix for one instance. Override for custom transform logic |
+
+### Instance Management Methods
+
+| Method | Signature | Description |
+| ------ | --------- | ----------- |
+| `add(config)` | `(config: ChildConfig) => number` | Add a new instance. Returns the index |
+| `removeAt(index)` | `(index: number) => void` | Remove by index (swap-with-last, O(1)) |
+| `updateAt(index, config)` | `(index: number, config: Partial<ChildConfig>) => void` | Update an instance at the given index |
+| `clear()` | `() => void` | Remove all instances |
+| `replaceAll(configs)` | `(configs: ChildConfig[]) => void` | Batch replace all instances (single update) |
+| `count` | `number` (getter) | Number of active instances |
+
+### Implementation Example
+
+```typescript
+import {
+  InstancedMeshLayerDeclaration,
+  type InstancedMeshLayerConfig,
+  type InstancedMeshLayerUpdate,
+  type InstancedChildConfig,
+  type ViewContext,
+  Color,
+} from "@navara/three";
+import {
+  BoxGeometry,
+  MeshStandardMaterial,
+  Color as ThreeColor,
+} from "three";
+
+// Per-instance configuration
+type MyBoxChild = InstancedChildConfig & {
+  color?: Color;
+};
+
+// Layer configuration
+type MyBoxesConfig = InstancedMeshLayerConfig & {
+  boxes?: { children?: MyBoxChild[] };
+};
+type MyBoxesUpdate = InstancedMeshLayerUpdate & {
+  boxes?: { children?: MyBoxChild[] };
+};
+
+export class MyBoxesLayer extends InstancedMeshLayerDeclaration<
+  BoxGeometry,
+  MeshStandardMaterial,
+  MyBoxesConfig,
+  MyBoxesUpdate,
+  MyBoxChild
+> {
+  private config: MyBoxesConfig;
+
+  constructor(view: ViewContext, config: MyBoxesConfig) {
+    super(view, config);
+    this.config = config;
+  }
+
+  createGeometry() {
+    return new BoxGeometry(1, 1, 1);
+  }
+
+  createMaterial() {
+    return new MeshStandardMaterial();
+  }
+
+  getChildConfigs(): MyBoxChild[] {
+    return this.config.boxes?.children ?? [];
+  }
+
+  getInstanceColor(config: MyBoxChild): ThreeColor | undefined {
+    return config.color ? new ThreeColor(config.color.raw) : undefined;
+  }
+}
+```
+
+### Registration and Usage
+
+```typescript
+import ThreeView, { Color } from "@navara/three";
+
+const view = new ThreeView({});
+view.registerMesh("myBoxes", MyBoxesLayer);
+await view.init();
+
+const handle = view.addLayer<MyBoxesLayer>({
+  type: "mesh",
+  boxes: {
+    children: [
+      { position: { x: 0, y: 0, z: 100 }, color: new Color().setHex(0xff0000) },
+      { position: { x: 200, y: 0, z: 100 }, color: new Color().setHex(0x00ff00) },
+    ],
+  },
+  position: { x: 0, y: 0, z: 6378137 },
+});
+
+// Add an instance dynamically
+handle.ref.add({ position: { x: 400, y: 0, z: 100 }, color: new Color().setHex(0x0000ff) });
+
+// Update instance at index 0
+handle.ref.updateAt(0, { color: new Color().setHex(0xffff00) });
+
+// Remove instance at index 1
+handle.ref.removeAt(1);
 ```
 
 ## Custom Effect Layer

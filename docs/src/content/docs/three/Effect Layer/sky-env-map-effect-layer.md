@@ -41,12 +41,15 @@ The `SkyEnvMapEffectLayer` class is a pass that renders the sky environment map.
 
 ```typescript
 import ThreeView, { SkyEnvMapEffectLayer } from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
+const plugin = new DefaultPlugin();
+view.addPlugin(plugin);
 await view.init();
 
-// Add atmosphere layers (required for sky rendering)
-view.addDefaultAtmosphereLayers();
+// Add default photorealistic layers (required for sky rendering)
+plugin.addDefaultPhotorealLayers();
 
 // Add sky environment map effect layer
 view.addLayer<SkyEnvMapEffectLayer>({
@@ -61,11 +64,14 @@ view.addLayer<SkyEnvMapEffectLayer>({
 
 ```typescript
 import ThreeView, { SkyEnvMapEffectLayer } from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
+const plugin = new DefaultPlugin();
+view.addPlugin(plugin);
 await view.init();
 
-view.addDefaultAtmosphereLayers();
+plugin.addDefaultPhotorealLayers();
 
 // Create a high-resolution environment map
 view.addLayer<SkyEnvMapEffectLayer>({
@@ -80,12 +86,15 @@ view.addLayer<SkyEnvMapEffectLayer>({
 
 ```typescript
 import ThreeView, { SkyEnvMapEffectLayer, Color } from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
+const plugin = new DefaultPlugin();
+view.addPlugin(plugin);
 await view.init();
 
-// Add atmosphere layers
-view.addDefaultAtmosphereLayers();
+// Add default photorealistic layers
+plugin.addDefaultPhotorealLayers();
 
 // Add sky environment map (used for reflections)
 view.addLayer<SkyEnvMapEffectLayer>({

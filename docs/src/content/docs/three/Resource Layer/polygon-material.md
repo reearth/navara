@@ -211,6 +211,24 @@ import { Color } from "@navara/three";
 }
 ```
 
+### outline
+
+**Type:** `boolean | undefined`
+
+**Description:** Whether to compute outline geometry. Only effective at initial load time. When not set, inferred from `outlineShow`.
+
+**Default:** `undefined`
+
+**Example:**
+
+```typescript
+{
+  polygon: {
+    outline: true
+  }
+}
+```
+
 ### outlineColor
 
 **Type:** `Color | undefined`
@@ -461,6 +479,24 @@ import { Color } from "@navara/three";
 {
   polygon: {
     transparent: true
+  }
+}
+```
+
+### tiled
+
+**Type:** `boolean | undefined`
+
+**Description:** Splits the polygon into XYZ vector tiles for rendering, even when the data source is not an MVT layer. This can improve performance for large polygons. Enabling `clampToGround` implicitly forces `tiled` to `true`. Outline rendering is not supported when `tiled` is enabled.
+
+**Default:** `undefined`
+
+**Example:**
+
+```typescript
+{
+  polygon: {
+    tiled: true
   }
 }
 ```

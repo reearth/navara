@@ -175,20 +175,20 @@ import { Color } from "@navara/three";
 }
 ```
 
-### scaleByDistance
+### sizeInMeters
 
-**Type:** `boolean`
+**Type:** `boolean | undefined`
 
-**Description:** カメラからの距離に基づいてオブジェクトのサイズを調整するかどうかを指定します。
+**Description:** サイズをメートル単位で指定するかどうか。false の場合、サイズはピクセル単位です。
 
-**Default:** Required
+**Default:** `true`
 
 **Example:**
 
 ```typescript
 {
   point: {
-    scaleByDistance: true
+    sizeInMeters: true
   }
 }
 ```

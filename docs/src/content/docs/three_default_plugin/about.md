@@ -13,7 +13,7 @@ sidebar:
 
 ```
 navara_three (core: ThreeView, Plugin, addPlugin, registerMesh/Effect/Light)
-  ├── three_default_layers (layer implementations: 16 meshes, 12 effects, 4 lights)
+  ├── three_default_layers (layer implementations: 17 meshes, 12 effects, 4 lights)
   └── three_default_plugin (DefaultPlugin: bulk layer registration + utilities)
 ```
 
@@ -37,7 +37,7 @@ await view.init({ canvas: document.getElementById("canvas") });
 
 The following layers are automatically registered during the plugin's `init()`:
 
-**Mesh layers (16 types):** `rain`, `snow`, `sky`, `skyBox`, `stars`, `box`, `sphere`, `glowGlobe`, `cylinder`, `tube`, `plane`, `gltfModel`, `axesHelper`, `arrowHelper`, `arcLines`, `smoothLines`
+**Mesh layers (17 types):** `rain`, `snow`, `sky`, `skyBox`, `stars`, `box`, `boxes`, `sphere`, `glowGlobe`, `cylinder`, `tube`, `plane`, `gltfModel`, `axesHelper`, `arrowHelper`, `arcLines`, `smoothLines`
 
 **Effect layers (12 types):** `aerialPerspective`, `rainDrop`, `clouds`, `fogLight`, `lensFlare`, `ssao`, `ssr`, `depthOfField`, `colorGradingLUT`, `toneMapping`, `smaa`, `fxaa`
 

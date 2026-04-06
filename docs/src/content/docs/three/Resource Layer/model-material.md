@@ -27,95 +27,9 @@ sidebar:
 }
 ```
 
-### animationAutoPlay
-
-**Type:** `boolean | undefined`
-
-**Description:** Specifies whether to auto-play the animation on initial load.
-
-**Default:** `undefined`
-
-**Example:**
-
-```typescript
-{
-  model: {
-    animationAutoPlay: true
-  }
-}
-```
-
-### animationClips
-
-**Type:** `string[] | undefined`
-
-**Description:** Specifies a list of available animation clip names.
-
-**Default:** `undefined`
-
-**Example:**
-
-```typescript
-{
-  model: {
-    animationClips: ["walk", "run", "jump"]
-  }
-}
-```
-
-### animationCrossfadeDuration
-
-**Type:** `number | undefined`
-
-**Description:** Specifies the crossfade duration in seconds when switching between animation clips.
-
-**Default:** `undefined`
-
-**Example:**
-
-```typescript
-{
-  model: {
-    animationCrossfadeDuration: 0.5
-  }
-}
-```
-
-### animationEnabled
-
-**Type:** `boolean | undefined`
-
-**Description:** Specifies whether to enable animation.
-
-**Default:** `undefined`
-
-**Example:**
-
-```typescript
-{
-  model: {
-    animationEnabled: true
-  }
-}
-```
-
-### animationLoop
-
-**Type:** `boolean | undefined`
-
-**Description:** Specifies whether to loop the animation.
-
-**Default:** `undefined`
-
-**Example:**
-
-```typescript
-{
-  model: {
-    animationLoop: true
-  }
-}
-```
+:::tip[Full Animation Control]
+For advanced animation features such as `animationAutoPlay`, `animationClips`, `animationCrossfadeDuration`, `animationEnabled`, and `animationLoop`, use [GLTFModelLayer](/three_default_layers/mesh-layer/gltf-model-layer/) which provides full animation control as a mesh layer.
+:::
 
 ### animationSpeed
 

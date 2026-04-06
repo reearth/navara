@@ -21,10 +21,7 @@ The following EffectLayer types are available in navara_three:
 | [FXAAEffectLayer](./fxaa-effect-layer) | An effect that applies FXAA (Fast Approximate Anti-Aliasing) |
 | [LensFlareEffectLayer](./lens-flare-effect-layer) | An effect that generates lens flares from the sun and moon |
 | [RainDropEffectLayer](./rain-drop-effect-layer) | An effect that applies raindrop refraction to the screen |
-| [SelectiveBloomEffectLayer](./selective-bloom-effect-layer) | An effect that applies selective bloom |
-| [SelectiveOutlineEffectLayer](./selective-outline-effect-layer) | An effect that applies selective outlines |
 | [SMAAEffectLayer](./smaa-effect-layer) | An effect that applies SMAA (Subpixel Morphological Anti-Aliasing) |
-| [SkyEnvMapEffectLayer](./sky-env-map-effect-layer) | A pass that renders the sky environment map |
 | [SSAOEffectLayer](./ssao-effect-layer) | An effect that applies screen-space ambient occlusion |
 | [SSREffectLayer](./ssr-effect-layer) | An effect that generates real-time screen-space reflections |
 | [ToneMappingEffectLayer](./tone-mapping-effect-layer) | An effect that performs HDR to LDR color adjustment |
