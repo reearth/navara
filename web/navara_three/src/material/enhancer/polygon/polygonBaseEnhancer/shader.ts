@@ -154,8 +154,8 @@ uniform vec3 diffuse;
 uniform bool uClampToGround;
 uniform sampler2D uGlobeNormal;
 uniform float nvr_uPickable;
-// uEffectIdsMask, uEmissiveColor, uEmissiveIntensity are declared by
-// overrideMaterialsForMRT (#ifdef USE_SELECTIVE_EFFECT block)
+// uEffectIdsMask is declared by overrideMaterialsForMRT (#ifdef USE_SELECTIVE_EFFECT block)
+// Emissive uses Three.js built-in material.emissive / material.emissiveIntensity
 uniform bool uIsTexturized;
 ${POLYGON_BASE_SHADER_MARKERS.fragment.UNIFORM_END}
 

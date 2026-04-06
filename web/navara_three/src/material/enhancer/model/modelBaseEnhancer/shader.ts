@@ -89,8 +89,8 @@ ${ShadowMapDepthVertex}
 
 ${MODEL_BASE_SHADER_MARKERS.fragment.UNIFORM_START}
 uniform float nvr_uPickable;
-// uEffectIdsMask, uEmissiveColor, uEmissiveIntensity are declared by
-// overrideMaterialsForMRT (#ifdef USE_SELECTIVE_EFFECT block)
+// uEffectIdsMask is declared by overrideMaterialsForMRT (#ifdef USE_SELECTIVE_EFFECT block)
+// Emissive uses Three.js built-in material.emissive / material.emissiveIntensity
 ${MODEL_BASE_SHADER_MARKERS.fragment.UNIFORM_END}
 
 in float nvr_vBatchId;

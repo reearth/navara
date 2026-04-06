@@ -31,8 +31,6 @@ export abstract class SelectiveEffectLayer<
 > extends EffectLayerDeclaration<Config, UpdateConfig> {
   protected config: Config;
   protected abstract getEffectKey(): string;
-  protected abstract getResolutionScale(): number;
-  protected abstract getDebugViews(): boolean;
 
   constructor(view: ViewContext, config: Config) {
     super(view, config);
