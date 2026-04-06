@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 
+import { FontManager, createSdfAtlasTexture } from "./FontManager";
 import type {
   BatchPrepareTextResult,
   FontFamily,
@@ -102,10 +103,7 @@ function mockFetchSuccess() {
   });
 }
 
-function createShapeResult(
-  text: string,
-  unitsPerEm = 1000,
-): ShapeTextResult {
+function createShapeResult(text: string, unitsPerEm = 1000): ShapeTextResult {
   return {
     glyphs: [...text].map((_, i) => ({
       glyphId: i + 1,
@@ -153,8 +151,6 @@ function setupBatchMock(atlasKeyOverride?: string) {
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
-
-import { FontManager, createSdfAtlasTexture } from "./FontManager";
 
 const FONT_URL = "https://fonts.test/test.ttf";
 const WORKER_URL = "https://worker.test/font-worker.js";
@@ -944,9 +940,7 @@ describe("FontManager", () => {
       it("should use the single-face fast path (whole text, one segment)", async () => {
         manager.registerFontFamily({
           family: "Single",
-          faces: [
-            { url: LATIN, unicodeRanges: [{ from: 0, to: 0xffff }] },
-          ],
+          faces: [{ url: LATIN, unicodeRanges: [{ from: 0, to: 0xffff }] }],
         });
         setupTrackingMock(
           { [LATIN]: { fontIndex: 0, unitsPerEm: 1000, xAdvance: 500 } },
@@ -1194,9 +1188,7 @@ describe("FontManager", () => {
         const result = manager.shapeText("Seg", "A\u4e16B\u754cC")!;
 
         expect(result.glyphs.length).toBe(5);
-        expect(result.glyphs.map((g) => g.fontIndex)).toEqual([
-          0, 1, 0, 1, 0,
-        ]);
+        expect(result.glyphs.map((g) => g.fontIndex)).toEqual([0, 1, 0, 1, 0]);
       });
 
       it("should stitch three-face results in order", async () => {
