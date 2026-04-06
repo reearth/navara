@@ -616,6 +616,41 @@ function northWestUpToFixedFrame(origin: Vector3): Matrix4;
 
 大規模な座標系で高精度レンダリングを実現するための RTE レンダリング機能です。
 
+### encodePositionRTE(original, resultHigh?, resultLow?)
+
+位置を RTE レンダリング用の高精度・低精度 Vector3 コンポーネントにエンコードします。位置を2つの float コンポーネントに分割することで、GPU 倍精度エミュレーションを実現します。
+
+**Syntax:**
+
+```typescript
+function encodePositionRTE(
+  original: Vector3,
+  resultHigh?: Vector3,
+  resultLow?: Vector3,
+): { high: Vector3; low: Vector3 }
+```
+
+**Parameters:**
+
+- `original`: エンコードする位置
+- `resultHigh`: 高精度コンポーネントを格納するオプションの Vector3（GC 回避のため再利用可能）
+- `resultLow`: 低精度コンポーネントを格納するオプションの Vector3（GC 回避のため再利用可能）
+
+**Returns:**
+
+`high` と `low` の Vector3 コンポーネントを持つオブジェクト
+
+**Example:**
+
+```typescript
+import { encodePositionRTE } from "@navara/three_api";
+import { Vector3 } from "three";
+
+const position = new Vector3(6378137, 0, 0);
+const { high, low } = encodePositionRTE(position);
+// high + low ≈ 元の位置（GPU 精度が向上）
+```
+
 ### calcModelMatrixRTE(objectMatrixWorld, matrixWorldInverse, result?)
 
 RTE レンダリング用のモデル行列を計算します。平行移動成分をゼロにした行列を返します。

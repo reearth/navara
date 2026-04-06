@@ -31,6 +31,26 @@ layer.on("featureCreated", ({ evaluator }) => {
 });
 ```
 
+## Types
+
+### FeatureInfo
+
+```typescript
+type FeatureInfo = {
+  batchIndex: number;
+  batchId: number;
+  properties: Record<string, unknown> | undefined;
+};
+```
+
+### FeatureEvaluatorCallback
+
+```typescript
+type FeatureEvaluatorCallback = (
+  info: FeatureInfo,
+) => Partial<EvaluatedValue>;
+```
+
 ## Methods
 
 ### readFeatureProperties()
@@ -41,27 +61,53 @@ Reads the properties of this feature from the data source. The callback is invok
 
 ```typescript
 readFeatureProperties(
-  f: (batchId: number, property: Record<string, unknown> | undefined) => void
+  f: (info: FeatureInfo) => void
 ): void
 ```
 
 **Parameters:**
 
-- `f`: A callback function that receives the batchId and property object for each batch
+- `f`: A callback function that receives a FeatureInfo object for each batch
 
 **Example:**
 
 ```typescript
 // Log all properties
-evaluator.readFeatureProperties((batchId, properties) => {
+evaluator.readFeatureProperties(({ batchId, properties }) => {
   console.log(`Batch ${batchId}:`, properties);
 });
 
-evaluator.readFeatureProperties((_batchId, property) => {
-  const attributes = property?.["attributes"] ?? {};
+evaluator.readFeatureProperties(({ properties }) => {
+  const attributes = properties?.["attributes"] ?? {};
   const minHeight = attributes["minHeight"];
   const maxHeight = attributes["maxHeight"];
   console.log("Height range:", minHeight, "-", maxHeight);
+});
+```
+
+### readFilteredFeatureProperties()
+
+Reads only the specified root property keys of this feature from the data source. More efficient than `readFeatureProperties()` when only a few properties are needed.
+
+**Syntax:**
+
+```typescript
+readFilteredFeatureProperties(
+  keys: string[],
+  f: (info: FeatureInfo) => void
+): void
+```
+
+**Parameters:**
+
+- `keys`: An array of root property keys to read
+- `f`: A callback function that receives a FeatureInfo object with only the filtered properties
+
+**Example:**
+
+```typescript
+evaluator.readFilteredFeatureProperties(["height", "name"], ({ batchId, properties }) => {
+  console.log(`Batch ${batchId}: height=${properties?.["height"]}, name=${properties?.["name"]}`);
 });
 ```
 
@@ -73,16 +119,18 @@ Evaluates and applies dynamic styles to features based on their properties. The 
 
 ```typescript
 evaluate(
-  f: (
-    batchId: number,
-    property: Record<string, unknown> | undefined
-  ) => Partial<EvaluatedValue>
+  f: FeatureEvaluatorCallback,
+  options?: {
+    filters?: string[];
+  }
 ): void
 ```
 
 **Parameters:**
 
-- `f`: A callback function that receives the batchId and properties and returns style values
+- `f`: A callback function that receives a FeatureInfo object and returns style values
+- `options`: Optional configuration
+  - `options.filters`: An array of root property keys to read. When specified, only the matched properties are passed to the callback, improving performance for large datasets.
 
 **Returns:**
 
@@ -107,8 +155,8 @@ import { Color } from "@navara/three";
 
 // Color 3D Tiles buildings by height
 layer.on("featureUpdated", ({ evaluator }) => {
-  evaluator.evaluate((_batchId, property) => {
-    const measuredHeight = property?.["height"] as number;
+  evaluator.evaluate(({ properties }) => {
+    const measuredHeight = properties?.["height"] as number;
 
     const color = (() => {
       if (measuredHeight < 30) return new Color().setStyle("#00ff00");
@@ -128,9 +176,9 @@ layer.on("featureUpdated", ({ evaluator }) => {
 ```typescript
 // Apply property-based extrusion to GeoJSON polygons
 layer.on("featureUpdated", ({ evaluator }) => {
-  evaluator.evaluate((_batchId, property) => {
-    const height = (property?.["height"] as number) ?? 0;
-    const extrudedHeight = (property?.["extrudedHeight"] as number) ?? 0;
+  evaluator.evaluate(({ properties }) => {
+    const height = (properties?.["height"] as number) ?? 0;
+    const extrudedHeight = (properties?.["extrudedHeight"] as number) ?? 0;
 
     return {
       height,
@@ -143,8 +191,8 @@ layer.on("featureUpdated", ({ evaluator }) => {
 ```typescript
 // Color MVT features by category property
 layer.on("featureUpdated", ({ evaluator }) => {
-  evaluator.evaluate((_batchId, property) => {
-    const category = property?.["category"] as string;
+  evaluator.evaluate(({ properties }) => {
+    const category = properties?.["category"] as string;
 
     const color = (() => {
       if (category === "A") return "#0000ff";
@@ -162,8 +210,8 @@ layer.on("featureUpdated", ({ evaluator }) => {
 ```typescript
 // Filter and style text labels
 layer.on("featureUpdated", ({ evaluator }) => {
-  evaluator.evaluate((_batchId, property) => {
-    const text = property?.["name"] as string;
+  evaluator.evaluate(({ properties }) => {
+    const text = properties?.["name"] as string;
 
     return {
       text,
@@ -185,8 +233,8 @@ view.on("pick", (info) => {
 
 // Change color based on selection state
 layer.on("featureUpdated", ({ evaluator }) => {
-  evaluator.evaluate((_batchId, property) => {
-    const id = property?.["id"] as string;
+  evaluator.evaluate(({ properties }) => {
+    const id = properties?.["id"] as string;
 
     return {
       color: new Color().setHex(selectedId === id ? 0xff0000 : 0xffffff),

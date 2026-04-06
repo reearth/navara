@@ -21,10 +21,7 @@ navara_threeでは、以下のEffectLayerタイプが利用可能です:
 | [FXAAEffectLayer](./fxaa-effect-layer) | FXAA(Fast Approximate Anti-Aliasing)を適用するエフェクト |
 | [LensFlareEffectLayer](./lens-flare-effect-layer) | 太陽や月からのレンズフレアを生成するエフェクト |
 | [RainDropEffectLayer](./rain-drop-effect-layer) | 画面に雨粒の屈折効果を適用するエフェクト |
-| [SelectiveBloomEffectLayer](./selective-bloom-effect-layer) | 選択的なブルームエフェクトを適用するエフェクト |
-| [SelectiveOutlineEffectLayer](./selective-outline-effect-layer) | 選択的なアウトラインエフェクトを適用するエフェクト |
 | [SMAAEffectLayer](./smaa-effect-layer) | SMAA(Subpixel Morphological Anti-Aliasing)を適用するエフェクト |
-| [SkyEnvMapEffectLayer](./sky-env-map-effect-layer) | 空の環境マップをレンダリングするパス |
 | [SSAOEffectLayer](./ssao-effect-layer) | スクリーンスペースアンビエントオクルージョンを適用するエフェクト |
 | [SSREffectLayer](./ssr-effect-layer) | リアルタイムスクリーンスペース反射を生成するエフェクト |
 | [ToneMappingEffectLayer](./tone-mapping-effect-layer) | HDRからLDRへの色調整を行うエフェクト |

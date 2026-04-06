@@ -78,15 +78,18 @@ The only property that can be changed via the `update()` method after layer crea
 
 ```typescript
 import ThreeView, { SkyLightProbeLayer } from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
+const plugin = new DefaultPlugin();
+view.addPlugin(plugin);
 await view.init();
 
-// Add default atmosphere layers
-const atmosphereLayers = view.addDefaultAtmosphereLayers();
+// Add default photorealistic layers
+const defaultLayers = plugin.addDefaultPhotorealLayers();
 
 // The sky light probe automatically follows the sun's position
-atmosphereLayers.skyLightProbe.update({
+defaultLayers.skyLightProbe.update({
   skyLightProbe: {
     intensity: 1.0
   }
@@ -163,6 +166,6 @@ This enables natural environment lighting that responds to time of day and sun p
 ## Notes
 
 - SkyLightProbeLayer requires the atmosphere layer (Atmosphere) to function.
-- Using `view.addDefaultAtmosphereLayers()` automatically includes SkyLightProbeLayer.
+- Using `plugin.addDefaultPhotorealLayers()` automatically includes SkyLightProbeLayer.
 - Setting a higher intensity at night can achieve more natural nightscape lighting.
 - It can be used in combination with other light layers (AmbientLight, SunLight, etc.).

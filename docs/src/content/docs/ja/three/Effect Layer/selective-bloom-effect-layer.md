@@ -5,7 +5,7 @@ sidebar:
   order: 61
 ---
 
-The `SelectiveBloomEffectLayer` class is a layer that applies a selective bloom effect. It uses mask-based filtering to apply the bloom effect only to specific objects.
+`SelectiveBloomEffectLayer`クラスは、選択的なブルームエフェクトを適用するレイヤーです。マスクベースのフィルタリングを使用して、特定のオブジェクトにのみブルームエフェクトを適用できます。
 
 ## Properties
 
@@ -13,7 +13,7 @@ The `SelectiveBloomEffectLayer` class is a layer that applies a selective bloom 
 
 **Type:** `boolean | undefined`
 
-**Description:** Controls the visibility of the effect layer.
+**Description:** エフェクトレイヤーの表示/非表示を制御します。
 
 **Default:** `true`
 
@@ -21,7 +21,7 @@ The `SelectiveBloomEffectLayer` class is a layer that applies a selective bloom 
 
 **Type:** `number | undefined`
 
-**Description:** Specifies the strength of the bloom effect.
+**Description:** ブルームエフェクトの強度を指定します。
 
 **Default:** `0.8`
 
@@ -39,7 +39,7 @@ The `SelectiveBloomEffectLayer` class is a layer that applies a selective bloom 
 
 **Type:** `number | undefined`
 
-**Description:** Specifies the radius (blur spread) of the bloom effect.
+**Description:** ブルームエフェクトの半径(ぼかしの広がり)を指定します。
 
 **Default:** `0.2`
 
@@ -57,7 +57,7 @@ The `SelectiveBloomEffectLayer` class is a layer that applies a selective bloom 
 
 **Type:** `number | undefined`
 
-**Description:** Specifies the threshold for the bloom effect. Only pixels brighter than this value will have bloom applied.
+**Description:** ブルームエフェクトの閾値を指定します。この値より明るいピクセルにのみブルームが適用されます。
 
 **Default:** `0.0`
 
@@ -75,11 +75,11 @@ The `SelectiveBloomEffectLayer` class is a layer that applies a selective bloom 
 
 **Type:** `number | undefined`
 
-**Description:** Specifies the debug mode.
-- `0`: Normal mode
-- `1`: Show base only
-- `2`: Show bloom only
-- `3`: Show bloom emphasized (100x)
+**Description:** デバッグモードを指定します。
+- `0`: 通常モード
+- `1`: ベースのみ表示
+- `2`: ブルームのみ表示
+- `3`: ブルーム強調表示(100倍)
 
 **Default:** `0`
 
@@ -97,7 +97,7 @@ The `SelectiveBloomEffectLayer` class is a layer that applies a selective bloom 
 
 **Type:** `number | undefined`
 
-**Description:** Specifies the rendering resolution scale factor. Lower values improve performance.
+**Description:** レンダリング解像度のスケール係数を指定します。低い値でパフォーマンスが向上します。
 
 **Default:** `1.0`
 
@@ -115,7 +115,7 @@ The `SelectiveBloomEffectLayer` class is a layer that applies a selective bloom 
 
 **Type:** `boolean | undefined`
 
-**Description:** Specifies whether to enable debug views. When enabled, views of mask textures are displayed.
+**Description:** デバッグビューを有効にするかどうかを指定します。有効にすると、マスクテクスチャのビューが表示されます。
 
 **Default:** `false`
 
@@ -129,26 +129,26 @@ The `SelectiveBloomEffectLayer` class is a layer that applies a selective bloom 
 }
 ```
 
-## Applying the Effect to Objects
+## オブジェクトへのエフェクト適用
 
-To apply the selective bloom effect to specific objects, specify the bloom effect layer's ID in the target object's `effectIds` property.
+選択的ブルームエフェクトを特定のオブジェクトに適用するには、対象オブジェクトの`effectIds`プロパティにブルームエフェクトレイヤーのIDを指定します。
 
 ### effectIds
 
-An array of selective effect layer IDs to apply to the target object. When a bloom effect layer is added, a unique ID is assigned, and the effect is applied by specifying this ID in the target object's `effectIds`.
+対象オブジェクトに適用するセレクティブエフェクトレイヤーのIDの配列です。ブルームエフェクトレイヤーを追加すると一意のIDが割り当てられ、このIDを対象オブジェクトの`effectIds`に指定することでエフェクトが適用されます。
 
 ### selectiveEffectOcclusion
 
-Specifies the occlusion processing mode when applying the effect.
+エフェクト適用時のオクルージョン（遮蔽）処理モードを指定します。
 
-| Value | Description |
+| 値 | 説明 |
 |----|------|
-| `"normal"` | Normal mode. Enables depth testing and the effect is not applied to parts occluded by other objects (default) |
-| `"silhouette"` | Silhouette mode. Disables depth testing and the effect is displayed even when the object is occluded |
+| `"normal"` | 通常モード。深度テストを有効にし、他のオブジェクトに遮蔽されている部分にはエフェクトが適用されません（デフォルト） |
+| `"silhouette"` | シルエットモード。深度テストを無効にし、オブジェクトが遮蔽されていてもエフェクトが表示されます |
 
 ## Usage Examples
 
-### Adding a basic selective bloom
+### 基本的な選択的ブルームの追加
 
 ```typescript
 import ThreeView, {
@@ -160,7 +160,7 @@ import ThreeView, {
 const view = new ThreeView();
 await view.init();
 
-// Add selective bloom effect layer
+// 選択的ブルームエフェクトレイヤーを追加
 const bloomLayer = view.addLayer<SelectiveBloomEffectLayer>({
   type: "effect",
   selectiveBloom: {
@@ -170,7 +170,7 @@ const bloomLayer = view.addLayer<SelectiveBloomEffectLayer>({
   },
 });
 
-// Apply bloom effect to an object
+// オブジェクトにブルームエフェクトを適用
 const cubeLayer = view.addLayer<BoxMeshLayer>({
   type: "mesh",
   box: {
@@ -179,25 +179,28 @@ const cubeLayer = view.addLayer<BoxMeshLayer>({
     depth: 100,
     color: new Color().setHex(0xff0000),
     emissiveIntensity: 1.0,
-    effectIds: [bloomLayer.id], // Apply bloom effect
+    effectIds: [bloomLayer.id], // ブルームエフェクトを適用
     selectiveEffectOcclusion: "normal",
   },
   position: { x: 0, y: 0, z: 1000 },
 });
 ```
 
-### Strong bloom effect
+### 強いブルームエフェクト
 
 ```typescript
 import ThreeView, { SelectiveBloomEffectLayer } from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
+const plugin = new DefaultPlugin();
+view.addPlugin(plugin);
 await view.init();
 
-view.addDefaultEffectLayers();
-view.addDefaultAtmosphereLayers();
+// デフォルトのフォトリアルレイヤーを追加
+plugin.addDefaultPhotorealLayers();
 
-// Add a strong bloom effect
+// 強いブルームエフェクトを追加
 const bloomLayer = view.addLayer<SelectiveBloomEffectLayer>({
   type: "effect",
   selectiveBloom: {
@@ -208,7 +211,7 @@ const bloomLayer = view.addLayer<SelectiveBloomEffectLayer>({
 });
 ```
 
-### Performance-oriented settings
+### パフォーマンス重視の設定
 
 ```typescript
 import ThreeView, { SelectiveBloomEffectLayer } from "@navara/three";
@@ -216,19 +219,19 @@ import ThreeView, { SelectiveBloomEffectLayer } from "@navara/three";
 const view = new ThreeView();
 await view.init();
 
-// Performance-oriented settings
+// パフォーマンス重視の設定
 const bloomLayer = view.addLayer<SelectiveBloomEffectLayer>({
   type: "effect",
   selectiveBloom: {
     strength: 0.6,
     radius: 0.2,
     threshold: 0.0,
-    resolutionScale: 0.5, // Lower resolution for improved performance
+    resolutionScale: 0.5, // 低解像度でパフォーマンス向上
   },
 });
 ```
 
-### Dynamic bloom effect updates
+### ブルームエフェクトの動的更新
 
 ```typescript
 import ThreeView, { SelectiveBloomEffectLayer } from "@navara/three";
@@ -243,7 +246,7 @@ const bloomLayer = view.addLayer<SelectiveBloomEffectLayer>({
   },
 });
 
-// Update parameters later
+// 後からパラメータを更新
 bloomLayer.update({
   selectiveBloom: {
     strength: 1.2,
@@ -252,7 +255,7 @@ bloomLayer.update({
 });
 ```
 
-### Applying bloom to 3D Tiles
+### 3D Tiles へのブルーム適用
 
 ```typescript
 import ThreeView, { SelectiveBloomEffectLayer, Color } from "@navara/three";
@@ -268,7 +271,7 @@ const bloomLayer = view.addLayer<SelectiveBloomEffectLayer>({
   },
 });
 
-// Apply bloom to 3D Tiles buildings
+// 3D Tiles の建物にブルームを適用
 const buildingsLayer = view.addLayer({
   type: "cesium3dtiles",
   data: {
@@ -285,7 +288,7 @@ const buildingsLayer = view.addLayer({
 });
 ```
 
-### Applying bloom to GeoJSON models
+### GeoJSON モデルへのブルーム適用
 
 ```typescript
 import ThreeView, { SelectiveBloomEffectLayer, Color } from "@navara/three";
@@ -300,7 +303,7 @@ const bloomLayer = view.addLayer<SelectiveBloomEffectLayer>({
   },
 });
 
-// Apply bloom to GeoJSON layer models
+// GeoJSON レイヤーのモデルにブルームを適用
 const modelLayer = view.addLayer({
   type: "geojson",
   data: featureCollection,
@@ -316,10 +319,10 @@ const modelLayer = view.addLayer({
 });
 ```
 
-### Dynamically toggling the effect
+### エフェクトの動的な切り替え
 
 ```typescript
-// Initially no effects applied
+// 初期状態ではエフェクトなし
 const cubeLayer = view.addLayer<BoxMeshLayer>({
   type: "mesh",
   box: {
@@ -332,7 +335,7 @@ const cubeLayer = view.addLayer<BoxMeshLayer>({
   position: { x: 0, y: 0, z: 1000 },
 });
 
-// Add bloom effect later
+// 後からブルームエフェクトを追加
 cubeLayer.update({
   box: {
     effectIds: [bloomLayer.id],
@@ -340,7 +343,7 @@ cubeLayer.update({
   },
 });
 
-// Disable the effect
+// エフェクトを無効化
 cubeLayer.update({
   box: {
     effectIds: [],
@@ -348,9 +351,9 @@ cubeLayer.update({
 });
 ```
 
-## Notes
+## 備考
 
-- The selective bloom effect uses mask-based filtering to apply bloom only to specific objects.
-- To use the bloom effect effectively, it is important to set the object's `emissiveIntensity` appropriately.
-- The default value of `selectiveEffectOcclusion` is `"normal"`. The `"silhouette"` mode is used when you intentionally want to display occluded objects.
-- Rendering is done in two passes: DepthEnabled objects (with depth clipping) and Silhouette objects (without depth clipping), to correctly handle occlusion.
+- 選択的ブルームエフェクトは、マスクベースのフィルタリングを使用して特定のオブジェクトにのみブルームを適用します。
+- ブルームエフェクトを効果的に使用するには、オブジェクトの`emissiveIntensity`を適切に設定することが重要です。
+- `selectiveEffectOcclusion`のデフォルト値は`"normal"`です。`"silhouette"`モードは、遮蔽されているオブジェクトを意図的に表示したい場合に使用します。
+- DepthEnabled オブジェクト（深度クリップあり）と Silhouette オブジェクト（深度クリップなし）の2パスでレンダリングされ、オクルージョンを正しく処理します。

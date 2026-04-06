@@ -293,16 +293,18 @@ The `RainDropEffectLayer` class is a layer that applies raindrop refraction effe
 
 ```typescript
 import ThreeView, { RainDropEffectLayer } from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
+const plugin = new DefaultPlugin();
+view.addPlugin(plugin);
 await view.init();
 
 // Enable animation (required for raindrops to flow)
 view.animation = true;
 
-// Add default effects
-view.addDefaultEffectLayers();
-view.addDefaultAtmosphereLayers();
+// Add default photorealistic layers
+plugin.addDefaultPhotorealLayers();
 
 // Add raindrop effect layer
 const rainDropLayer = view.addLayer<RainDropEffectLayer>({

@@ -293,16 +293,18 @@ sidebar:
 
 ```typescript
 import ThreeView, { RainDropEffectLayer } from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
+const plugin = new DefaultPlugin();
+view.addPlugin(plugin);
 await view.init();
 
 // アニメーションを有効にする（雨粒が流れるため必須）
 view.animation = true;
 
-// デフォルトエフェクトを追加
-view.addDefaultEffectLayers();
-view.addDefaultAtmosphereLayers();
+// デフォルトのフォトリアルレイヤーを追加
+plugin.addDefaultPhotorealLayers();
 
 // 雨粒エフェクトレイヤーを追加
 const rainDropLayer = view.addLayer<RainDropEffectLayer>({

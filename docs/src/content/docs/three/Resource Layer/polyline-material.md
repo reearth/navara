@@ -139,6 +139,24 @@ import { Color } from "@navara/three";
 }
 ```
 
+### maxWidth
+
+**Type:** `number | undefined`
+
+**Description:** Maximum line width in pixels, clamping the rendered width regardless of zoom level. Smaller values are cheaper to render as they reduce fragment shader overdraw.
+
+**Default:** `undefined`
+
+**Example:**
+
+```typescript
+{
+  polyline: {
+    maxWidth: 10
+  }
+}
+```
+
 ### receiveShadow
 
 **Type:** `boolean | undefined`

@@ -13,7 +13,7 @@ sidebar:
 
 ```
 navara_three（コア: ThreeView, Plugin, addPlugin, registerMesh/Effect/Light）
-  ├── three_default_layers（レイヤーの実装: 16 メッシュ, 12 エフェクト, 4 ライト）
+  ├── three_default_layers（レイヤーの実装: 17 メッシュ, 12 エフェクト, 4 ライト）
   └── three_default_plugin（DefaultPlugin: レイヤーの一括登録 + ユーティリティ）
 ```
 
@@ -37,7 +37,7 @@ await view.init({ canvas: document.getElementById("canvas") });
 
 プラグインの `init()` で以下のレイヤーが自動的に登録されます：
 
-**メッシュレイヤー（16 種）:** `rain`, `snow`, `sky`, `skyBox`, `stars`, `box`, `sphere`, `glowGlobe`, `cylinder`, `tube`, `plane`, `gltfModel`, `axesHelper`, `arrowHelper`, `arcLines`, `smoothLines`
+**メッシュレイヤー（17 種）:** `rain`, `snow`, `sky`, `skyBox`, `stars`, `box`, `boxes`, `sphere`, `glowGlobe`, `cylinder`, `tube`, `plane`, `gltfModel`, `axesHelper`, `arrowHelper`, `arcLines`, `smoothLines`
 
 **エフェクトレイヤー（12 種）:** `aerialPerspective`, `rainDrop`, `clouds`, `fogLight`, `lensFlare`, `ssao`, `ssr`, `depthOfField`, `colorGradingLUT`, `toneMapping`, `smaa`, `fxaa`
 

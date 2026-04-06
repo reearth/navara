@@ -211,6 +211,24 @@ import { Color } from "@navara/three";
 }
 ```
 
+### outline
+
+**Type:** `boolean | undefined`
+
+**Description:** アウトラインジオメトリを計算するかどうか。初回読み込み時のみ有効です。未設定の場合、`outlineShow` から推測されます。
+
+**Default:** `undefined`
+
+**Example:**
+
+```typescript
+{
+  polygon: {
+    outline: true
+  }
+}
+```
+
 ### outlineColor
 
 **Type:** `Color | undefined`

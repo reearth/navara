@@ -96,7 +96,7 @@ const pointLayer = view.addLayer({
     size: 0.01,
     height: 1,
     center: { x: 0.5, y: 0 },
-    scaleByDistance: true,
+    sizeInMeters: true,
     clampToGround: true,
     depthTest: true,
   },
