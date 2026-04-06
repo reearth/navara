@@ -167,11 +167,9 @@ function injectGBufferToSpriteMaterial(shader: ShaderLibShader) {
   `;
 
   shader.fragmentShader = /* glsl */ `
-    #ifndef USE_SHADOWMAP_DEPTH
-      layout(location = 1) out vec4 outputBuffer1;
-      layout(location = 2) out vec4 outputBuffer2;
-      layout(location = 3) out vec4 outputBuffer3;
-    #endif
+    layout(location = 1) out vec4 outputBuffer1;
+    layout(location = 2) out vec4 outputBuffer2;
+    layout(location = 3) out vec4 outputBuffer3;
 
     varying vec3 vViewPosition;
 
@@ -181,19 +179,17 @@ function injectGBufferToSpriteMaterial(shader: ShaderLibShader) {
       createReplacer(shader.fragmentShader).replace(
         /}\s*$/, // Assume the last curly brace is of main()
         /* glsl */ `
-          #ifndef USE_SHADOWMAP_DEPTH
-            // Flat shading
-            vec3 fdx = dFdx( vViewPosition );
-            vec3 fdy = dFdy( vViewPosition );
-            vec3 normal = normalize( cross( fdx, fdy ) );
-            outputBuffer1 = vec4(
-              packNormalToVec2(normal),
-              0.0,
-              0.0
-            );
-            outputBuffer2 = vec4(0.0);
-            outputBuffer3 = vec4(0.0);
-          #endif
+          // Flat shading
+          vec3 fdx = dFdx( vViewPosition );
+          vec3 fdy = dFdy( vViewPosition );
+          vec3 normal = normalize( cross( fdx, fdy ) );
+          outputBuffer1 = vec4(
+            packNormalToVec2(normal),
+            0.0,
+            0.0
+          );
+          outputBuffer2 = vec4(0.0);
+          outputBuffer3 = vec4(0.0);
         }
       `,
       ).source
@@ -317,11 +313,9 @@ function injectGBufferToLineMaterial(lineMaterial: LineMaterial) {
   // LineMaterial already has proper vertex shader setup, so we only modify fragment shader
 
   lineMaterial.fragmentShader = /* glsl */ `
-    #ifndef USE_SHADOWMAP_DEPTH
-      layout(location = 1) out vec4 outputBuffer1;
-      layout(location = 2) out vec4 outputBuffer2;
-      layout(location = 3) out vec4 outputBuffer3;
-    #endif
+    layout(location = 1) out vec4 outputBuffer1;
+    layout(location = 2) out vec4 outputBuffer2;
+    layout(location = 3) out vec4 outputBuffer3;
 
     ${packing}
 
@@ -331,29 +325,25 @@ function injectGBufferToLineMaterial(lineMaterial: LineMaterial) {
           "void main() {",
           /* glsl */ `
           void main() {
-            #ifndef USE_SHADOWMAP_DEPTH
-              // Calculate screen-space normal for Line2 MRT compatibility
-              vec3 fdx = dFdx(gl_FragCoord.xyz);
-              vec3 fdy = dFdy(gl_FragCoord.xyz);
-              vec3 normal = normalize(cross(fdx, fdy));
+            // Calculate screen-space normal for Line2 MRT compatibility
+            vec3 fdx = dFdx(gl_FragCoord.xyz);
+            vec3 fdy = dFdy(gl_FragCoord.xyz);
+            vec3 normal = normalize(cross(fdx, fdy));
 
-              // Ensure normal faces camera (positive Z in screen space)
-              if (normal.z < 0.0) normal = -normal;
-            #endif
+            // Ensure normal faces camera (positive Z in screen space)
+            if (normal.z < 0.0) normal = -normal;
         `,
         )
         .replace(
           /}\s*$/, // Assume the last curly brace is of main()
           /* glsl */ `
-          #ifndef USE_SHADOWMAP_DEPTH
-            outputBuffer1 = vec4(
-              packNormalToVec2(normal),
-              0.0,
-              0.0
-            );
-            outputBuffer2 = vec4(0.0);
-            outputBuffer3 = vec4(0.0);
-          #endif
+          outputBuffer1 = vec4(
+            packNormalToVec2(normal),
+            0.0,
+            0.0
+          );
+          outputBuffer2 = vec4(0.0);
+          outputBuffer3 = vec4(0.0);
         }
       `,
         ).source

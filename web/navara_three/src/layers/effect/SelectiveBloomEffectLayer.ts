@@ -1,3 +1,4 @@
+import SelectiveEffectMaskChunk from "@shaders/glsl/chunks/selective_effect_mask.glsl?raw";
 import { Pass as PostProcessingPass } from "postprocessing";
 import {
   HalfFloatType,
@@ -228,13 +229,15 @@ class SelectiveBloomPass extends PostProcessingPass {
 
         varying vec2 vUv;
 
+        ${SelectiveEffectMaskChunk}
+
         void main() {
           float maskValue = texture2D(tEffectIds, vUv).r;
-          float bitValue = mod(floor(maskValue / pow(2.0, float(slotBit))), 2.0);
+          float bitValue = extractEffectBit(maskValue, slotBit);
 
           if (bitValue > 0.5) {
-            vec4 emissive = texture2D(tEmissive, vUv);
-            gl_FragColor = vec4(emissive.rgb * emissive.a, 1.0);
+            vec3 emissive = texture2D(tEmissive, vUv).rgb;
+            gl_FragColor = vec4(emissive, 1.0);
           } else {
             gl_FragColor = vec4(0.0, 0.0, 0.0, 0.0);
           }
@@ -366,7 +369,8 @@ class SelectiveBloomPass extends PostProcessingPass {
     if (!emissiveBuffer || !effectIdsBuffer || slot < 0) {
       renderer.setRenderTarget(this.renderToScreen ? null : outputBuffer);
       this.compositeMaterial.uniforms.tBase.value = inputBuffer.texture;
-      this.compositeMaterial.uniforms.tBloom.value = null;
+      // Bind inputBuffer as tBloom to avoid null sampler (debugMode=1 skips bloom sampling)
+      this.compositeMaterial.uniforms.tBloom.value = inputBuffer.texture;
       this.compositeMaterial.uniforms.debugMode.value = 1;
       renderer.render(this.compositeScene, this.fullscreenCamera);
       return;

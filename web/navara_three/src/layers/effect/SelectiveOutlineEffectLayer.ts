@@ -1,3 +1,4 @@
+import SelectiveEffectMaskChunk from "@shaders/glsl/chunks/selective_effect_mask.glsl?raw";
 import { Pass as PostProcessingPass } from "postprocessing";
 import {
   Mesh,
@@ -219,9 +220,11 @@ class SelectiveOutlinePass extends PostProcessingPass {
 
         varying vec2 vUv;
 
+        ${SelectiveEffectMaskChunk}
+
         void main() {
           float maskValue = texture2D(tEffectIds, vUv).r;
-          float bitValue = mod(floor(maskValue / pow(2.0, float(slotBit))), 2.0);
+          float bitValue = extractEffectBit(maskValue, slotBit);
 
           float mask = bitValue > 0.5 ? 1.0 : 0.0;
           gl_FragColor = vec4(vec3(mask), 1.0);

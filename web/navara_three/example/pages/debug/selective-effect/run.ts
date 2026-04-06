@@ -1,4 +1,5 @@
 import ThreeView, {
+  BufferView,
   Color,
   JAPAN_GSI_ELEVATION_DECODER,
   geodeticToVector3,
@@ -12,7 +13,7 @@ import {
   DefaultPlugin,
   type DefaultLayerDescriptions,
 } from "@navara/three_default_plugin";
-import { Vector3, type WebGLRenderer, type WebGLRenderTarget } from "three";
+import { Vector3, type WebGLRenderer } from "three";
 import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../../helpers/attributions";
@@ -154,144 +155,152 @@ export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
     TILES_3D_DATASETS.plateauChuo,
   ]);
 
-  // --- SE Buffer Debug View ---
+  // --- SE Buffer Debug View (using BufferView) ---
   const renderer =
     view.renderPassOrchestrator.effectComposer.getRenderer() as WebGLRenderer;
-  const gbufferRT = view.mrtPassLayer.ref.raw
-    ?.gbufferRenderTarget as WebGLRenderTarget;
 
-  const debugContainer = document.createElement("div");
-  debugContainer.style.cssText =
-    "position:absolute;top:0;left:0;display:flex;gap:2px;background:rgba(0,0,0,0.7);padding:2px;z-index:1000;";
-  document.body.appendChild(debugContainer);
+  const effectIdsView = new BufferView(150, 100, {
+    styleWidth: "150px",
+    styleHeight: "100px",
+  });
+  const emissiveRgbView = new BufferView(150, 100, {
+    styleWidth: "150px",
+    styleHeight: "100px",
+  });
+  const emissiveAlphaView = new BufferView(150, 100, {
+    styleWidth: "150px",
+    styleHeight: "100px",
+  });
 
-  function createDebugCanvas(label: string): {
-    canvas: HTMLCanvasElement;
-    ctx: CanvasRenderingContext2D;
-    wrapper: HTMLDivElement;
-  } {
-    const wrapper = document.createElement("div");
-    wrapper.style.textAlign = "center";
-    const canvas = document.createElement("canvas");
-    canvas.width = 150;
-    canvas.height = 100;
-    canvas.style.width = "150px";
-    canvas.style.height = "100px";
-    const labelEl = document.createElement("div");
-    labelEl.textContent = label;
-    labelEl.style.cssText = "color:white;font-size:10px;";
-    wrapper.appendChild(canvas);
-    wrapper.appendChild(labelEl);
-    debugContainer.appendChild(wrapper);
-    const ctx = canvas.getContext("2d");
-    if (!ctx) throw new Error("Failed to get 2D context");
-    return { canvas, ctx, wrapper };
-  }
-
-  const effectIdsView = createDebugCanvas("EffectIds (R=mask)");
-  const emissiveView = createDebugCanvas("Emissive RGB");
-  const emissiveAlphaView = createDebugCanvas("Emissive A");
+  // Position views side by side
+  effectIdsView.canvas.style.left = "0px";
+  emissiveRgbView.canvas.style.left = "155px";
+  emissiveAlphaView.canvas.style.left = "310px";
 
   let debugViewEnabled = true;
 
-  function renderDebugViews() {
-    if (!debugViewEnabled || !gbufferRT) return;
+  /** Read a HalfFloat MRT attachment as Float32Array */
+  function readMRTFloat(
+    gbufferRT: { width: number; height: number },
+    attachmentIndex: number,
+  ): Float32Array | null {
+    const gl = renderer.getContext();
+    if (!(gl instanceof WebGL2RenderingContext)) return null;
 
     const w = gbufferRT.width;
     const h = gbufferRT.height;
-    const gl = renderer.getContext();
-    if (!(gl instanceof WebGL2RenderingContext)) return;
-
     const pixels = new Float32Array(w * h * 4);
     const prevTarget = renderer.getRenderTarget();
-
-    renderer.setRenderTarget(gbufferRT);
-
-    // EffectIds (attachment 2): R=bitmask
-    gl.readBuffer(gl.COLOR_ATTACHMENT0 + 2);
+    renderer.setRenderTarget(
+      view.mrtPassLayer.ref.raw?.gbufferRenderTarget ?? null,
+    );
+    gl.readBuffer(gl.COLOR_ATTACHMENT0 + attachmentIndex);
     gl.readPixels(0, 0, w, h, gl.RGBA, gl.FLOAT, pixels);
-    drawToCanvas(effectIdsView, pixels, w, h, "bitmask");
-
-    // Emissive (attachment 3)
-    gl.readBuffer(gl.COLOR_ATTACHMENT0 + 3);
-    gl.readPixels(0, 0, w, h, gl.RGBA, gl.FLOAT, pixels);
-    drawToCanvas(emissiveView, pixels, w, h, "rgb");
-    drawToCanvas(emissiveAlphaView, pixels, w, h, "alpha");
-
     gl.readBuffer(gl.COLOR_ATTACHMENT0);
     renderer.setRenderTarget(prevTarget);
+    return pixels;
   }
 
-  function drawToCanvas(
-    view: { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D },
-    pixels: Float32Array,
-    w: number,
-    h: number,
-    mode: "rgb" | "alpha" | "bitmask",
-  ) {
-    const cw = view.canvas.width;
-    const ch = view.canvas.height;
-    const imageData = view.ctx.createImageData(cw, ch);
-
-    for (let y = 0; y < ch; y++) {
-      for (let x = 0; x < cw; x++) {
-        const sx = Math.floor((x / cw) * w);
-        const sy = Math.floor(((ch - 1 - y) / ch) * h); // flip Y
-        const si = (sy * w + sx) * 4;
-        const di = (y * cw + x) * 4;
-
-        if (mode === "rgb") {
-          imageData.data[di] = Math.min(255, pixels[si] * 255);
-          imageData.data[di + 1] = Math.min(255, pixels[si + 1] * 255);
-          imageData.data[di + 2] = Math.min(255, pixels[si + 2] * 255);
-          imageData.data[di + 3] = 255;
-        } else if (mode === "alpha") {
-          const a = Math.min(255, pixels[si + 3] * 255);
-          imageData.data[di] = a;
-          imageData.data[di + 1] = a;
-          imageData.data[di + 2] = a;
-          imageData.data[di + 3] = 255;
-        } else {
-          // bitmask: visualize R channel as distinct colors per bit
-          const mask = Math.round(pixels[si]);
-          const colors = [
-            [255, 0, 0],
-            [0, 255, 0],
-            [0, 0, 255],
-            [255, 255, 0],
-            [255, 0, 255],
-            [0, 255, 255],
-          ];
-          let r = 0,
-            g = 0,
-            b = 0;
-          for (let bit = 0; bit < 6; bit++) {
-            if (mask & (1 << bit)) {
-              r += colors[bit][0];
-              g += colors[bit][1];
-              b += colors[bit][2];
-            }
-          }
-          imageData.data[di] = Math.min(255, r);
-          imageData.data[di + 1] = Math.min(255, g);
-          imageData.data[di + 2] = Math.min(255, b);
-          imageData.data[di + 3] = mask > 0 ? 255 : 0;
+  /** Convert float pixels to Uint8Array with bitmask color visualization */
+  function bitmaskToRgba(
+    floatPixels: Float32Array,
+    pixelCount: number,
+  ): Uint8Array {
+    const result = new Uint8Array(pixelCount * 4);
+    const bitColors = [
+      [255, 0, 0],
+      [0, 255, 0],
+      [0, 0, 255],
+      [255, 255, 0],
+      [255, 0, 255],
+      [0, 255, 255],
+    ];
+    for (let p = 0; p < pixelCount; p++) {
+      const mask = Math.round(floatPixels[p * 4]); // R channel = bitmask
+      let r = 0,
+        g = 0,
+        b = 0;
+      for (let bit = 0; bit < bitColors.length; bit++) {
+        if (mask & (1 << bit)) {
+          r += bitColors[bit][0];
+          g += bitColors[bit][1];
+          b += bitColors[bit][2];
         }
       }
+      const di = p * 4;
+      result[di] = Math.min(255, r);
+      result[di + 1] = Math.min(255, g);
+      result[di + 2] = Math.min(255, b);
+      result[di + 3] = mask > 0 ? 255 : 0;
     }
-    view.ctx.putImageData(imageData, 0, 0);
+    return result;
   }
 
-  // Hook into render loop
-  const origRender = view.renderPassOrchestrator.effectComposer.render.bind(
-    view.renderPassOrchestrator.effectComposer,
-  );
-  view.renderPassOrchestrator.effectComposer.render = (
-    ...args: Parameters<typeof origRender>
-  ) => {
-    origRender(...args);
-    renderDebugViews();
-  };
+  /** Convert float pixels to Uint8Array RGB (clamped 0-255) */
+  function floatRgbToRgba(
+    floatPixels: Float32Array,
+    pixelCount: number,
+  ): Uint8Array {
+    const result = new Uint8Array(pixelCount * 4);
+    for (let p = 0; p < pixelCount; p++) {
+      const si = p * 4;
+      const di = p * 4;
+      result[di] = Math.min(255, Math.max(0, Math.round(floatPixels[si] * 255)));
+      result[di + 1] = Math.min(255, Math.max(0, Math.round(floatPixels[si + 1] * 255)));
+      result[di + 2] = Math.min(255, Math.max(0, Math.round(floatPixels[si + 2] * 255)));
+      result[di + 3] = 255;
+    }
+    return result;
+  }
+
+  /** Convert float A channel to grayscale Uint8Array */
+  function floatAlphaToRgba(
+    floatPixels: Float32Array,
+    pixelCount: number,
+  ): Uint8Array {
+    const result = new Uint8Array(pixelCount * 4);
+    for (let p = 0; p < pixelCount; p++) {
+      const a = Math.min(255, Math.max(0, Math.round(floatPixels[p * 4 + 3] * 255)));
+      const di = p * 4;
+      result[di] = a;
+      result[di + 1] = a;
+      result[di + 2] = a;
+      result[di + 3] = 255;
+    }
+    return result;
+  }
+
+  function renderDebugViews() {
+    if (!debugViewEnabled) return;
+    const gbufferRT = view.mrtPassLayer.ref.raw?.gbufferRenderTarget;
+    if (!gbufferRT) return;
+    const w = gbufferRT.width;
+    const h = gbufferRT.height;
+
+    // EffectIds (attachment 2): bitmask color visualization
+    const effectIdsFloat = readMRTFloat(gbufferRT, 2);
+    if (effectIdsFloat) {
+      effectIdsView.renderFromPixels(bitmaskToRgba(effectIdsFloat, w * h), w, h);
+    }
+
+    // Emissive (attachment 3): RGB + Alpha visualization
+    const emissiveFloat = readMRTFloat(gbufferRT, 3);
+    if (emissiveFloat) {
+      emissiveRgbView.renderFromPixels(floatRgbToRgba(emissiveFloat, w * h), w, h);
+      emissiveAlphaView.renderFromPixels(floatAlphaToRgba(emissiveFloat, w * h), w, h);
+    }
+  }
+
+  // Hook into CustomRenderPass.render (not EffectComposer.render)
+  // gbufferRT framebuffer is only reliably readable right after CustomRenderPass renders
+  const customRenderPass = view.mrtPassLayer.ref.raw;
+  if (customRenderPass) {
+    const origRender = customRenderPass.render.bind(customRenderPass);
+    customRenderPass.render = (...args: Parameters<typeof origRender>) => {
+      origRender(...args);
+      renderDebugViews();
+    };
+  }
 
   // --- Debug Controls ---
   const pane = new Pane({ title: "Selective Effect Debug" });
@@ -301,7 +310,9 @@ export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
     .addBinding(debugParams, "debugView", { label: "SE Buffer Debug" })
     .on("change", (ev) => {
       debugViewEnabled = ev.value;
-      debugContainer.style.display = ev.value ? "flex" : "none";
+      effectIdsView.canvas.style.display = ev.value ? "block" : "none";
+      emissiveRgbView.canvas.style.display = ev.value ? "block" : "none";
+      emissiveAlphaView.canvas.style.display = ev.value ? "block" : "none";
     });
 
   // --- Mesh Emissive Controls ---
