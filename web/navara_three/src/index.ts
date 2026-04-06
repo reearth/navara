@@ -1688,7 +1688,7 @@ export default class ThreeView<
   /**
    * Enables or disables debug views for selective post-processing effects.
    *
-   * @deprecated SE buffer debug views are now available via the debug/selective-effect2 example.
+   * @deprecated SE buffer debug views are now available via the debug/selective-effect example.
    * This method stores the flag but has no internal consumer. It will be removed or
    * re-implemented when a library-side debug view mechanism is added.
    *
