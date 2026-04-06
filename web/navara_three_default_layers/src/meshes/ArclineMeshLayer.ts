@@ -101,7 +101,7 @@ export class ArclineMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
       this.emit("needsUpdate");
     }
 
-    // super.onUpdateConfig handles _effectIds, registry links, and setupMeshOnBeforeRender
+    // super.onUpdateConfig handles _effectIds, registry links, and effectIdsMask
     super.onUpdateConfig(updates);
 
     // Synchronize config.effectIds

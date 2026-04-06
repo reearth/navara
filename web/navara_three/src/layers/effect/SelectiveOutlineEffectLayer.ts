@@ -163,7 +163,7 @@ export class SelectiveOutlineEffectLayer extends SelectiveEffectLayer<
  * Buffer-based Selective Outline Pass.
  *
  * Pipeline: Extract mask from EffectIds Buffer → Sobel edge detection → Composite with base.
- * Reads from EffectIds Buffer (no mask RTs, no re-rendering).
+ * Reads from EffectIds Buffer in the GBuffer MRT.
  */
 class SelectiveOutlinePass extends PostProcessingPass {
   private layer: SelectiveOutlineEffectLayer;

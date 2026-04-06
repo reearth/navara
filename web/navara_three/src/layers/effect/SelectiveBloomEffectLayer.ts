@@ -172,7 +172,7 @@ export class SelectiveBloomEffectLayer extends SelectiveEffectLayer<
  * Buffer-based Selective Bloom Pass.
  *
  * Pipeline: Extract bloom source → UnrealBloomPassRGBA blur → Composite with base.
- * Reads from EmissiveBuffer + EffectIds Buffer (no mask RTs, no re-rendering).
+ * Reads from EmissiveBuffer + EffectIds Buffer in the GBuffer MRT.
  */
 class SelectiveBloomPass extends PostProcessingPass {
   private layer: SelectiveBloomEffectLayer;
