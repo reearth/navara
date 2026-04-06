@@ -103,11 +103,16 @@ function mockFetchSuccess() {
   });
 }
 
+function makeCompositeKey(fontIndex: number, glyphId: number): bigint {
+  return (BigInt(fontIndex) << 32n) | BigInt(glyphId);
+}
+
 function createShapeResult(text: string, unitsPerEm = 1000): ShapeTextResult {
   return {
     glyphs: [...text].map((_, i) => ({
       glyphId: i + 1,
       fontIndex: 0,
+      compositeKey: makeCompositeKey(0, i + 1),
       xAdvance: 500,
       yAdvance: 0,
       xOffset: 0,
@@ -116,6 +121,7 @@ function createShapeResult(text: string, unitsPerEm = 1000): ShapeTextResult {
     metrics: [...text].map((_, i) => ({
       glyphId: i + 1,
       fontIndex: 0,
+      compositeKey: makeCompositeKey(0, i + 1),
       atlasX: i * 32,
       atlasY: 0,
       atlasW: 32,
@@ -367,7 +373,7 @@ describe("FontManager", () => {
 
       await manager.unloadFont("https://fonts.test/a.ttf");
 
-      expect((tex as Record<string, unknown>).disposed).toBe(true);
+      expect((tex as unknown as Record<string, unknown>).disposed).toBe(true);
     });
 
     it("should NOT dispose the texture when another font still shares the atlas", async () => {
@@ -381,7 +387,7 @@ describe("FontManager", () => {
       await manager.unloadFont("https://fonts.test/a.ttf");
 
       // b.ttf still references "shared", so texture stays alive
-      expect((tex as Record<string, unknown>).disposed).toBe(false);
+      expect((tex as unknown as Record<string, unknown>).disposed).toBe(false);
     });
 
     it("should clear shape cache for the unloaded font", async () => {
@@ -688,6 +694,7 @@ describe("FontManager", () => {
       const sharedMetric = {
         glyphId: 1,
         fontIndex: 0,
+        compositeKey: makeCompositeKey(0, 1),
         atlasX: 0,
         atlasY: 0,
         atlasW: 32,
@@ -707,6 +714,7 @@ describe("FontManager", () => {
                 {
                   glyphId: 1,
                   fontIndex: 0,
+                  compositeKey: makeCompositeKey(0, 1),
                   xAdvance: 500,
                   yAdvance: 0,
                   xOffset: 0,
@@ -775,6 +783,7 @@ describe("FontManager", () => {
                 glyphs: [...text].map((_, i) => ({
                   glyphId: i + 1,
                   fontIndex: cfg.fontIndex,
+                  compositeKey: makeCompositeKey(cfg.fontIndex, i + 1),
                   xAdvance: cfg.xAdvance,
                   yAdvance: 10,
                   xOffset: 20,
@@ -783,6 +792,7 @@ describe("FontManager", () => {
                 metrics: [...text].map((_, i) => ({
                   glyphId: i + 1,
                   fontIndex: cfg.fontIndex,
+                  compositeKey: makeCompositeKey(cfg.fontIndex, i + 1),
                   atlasX: i * 32,
                   atlasY: 0,
                   atlasW: 32,
@@ -1137,6 +1147,7 @@ describe("FontManager", () => {
                     {
                       glyphId: 1,
                       fontIndex: 0,
+                      compositeKey: makeCompositeKey(0, 1),
                       xAdvance: 500,
                       yAdvance: 0,
                       xOffset: 0,
@@ -1147,6 +1158,7 @@ describe("FontManager", () => {
                     {
                       glyphId: 1,
                       fontIndex: 0,
+                      compositeKey: makeCompositeKey(0, 1),
                       atlasX: fontUrl === LATIN ? 0 : 99,
                       atlasY: 0,
                       atlasW: 32,
@@ -1478,7 +1490,7 @@ describe("FontManager", () => {
 
       manager.dispose();
 
-      expect((tex as Record<string, unknown>).disposed).toBe(true);
+      expect((tex as unknown as Record<string, unknown>).disposed).toBe(true);
     });
 
     it("should dispose the worker client", async () => {
