@@ -706,9 +706,6 @@ export default class ThreeView<
       this.layersManager,
       this.renderPassOrchestrator,
       createDefaultConcurrencyManager(this.isMobileOptimized()),
-      {
-        meshes: this._meshes,
-      },
       this.selectiveEffectHelper,
       {
         selectiveEffectMask: this._options.selectiveEffects?.debugViews,

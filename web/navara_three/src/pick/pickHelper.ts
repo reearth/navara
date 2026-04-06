@@ -27,6 +27,7 @@ export class PickHelper extends CustomRenderPass {
   private pixelBuffer: Uint8Array;
   private _renderer: WebGLRenderer;
   private onPickCallback: (pickArr: number[]) => void;
+  private _meshes: MeshCache;
 
   private debugBufferView?: BufferView;
   private debugRenderTarget?: WebGLRenderTarget;
@@ -47,7 +48,7 @@ export class PickHelper extends CustomRenderPass {
     globe: Globe,
     options?: PickHelperOptions,
   ) {
-    super(scenes, camera, meshes, inputBuffer, globe, {
+    super(scenes, camera, inputBuffer, globe, {
       disableShadow: true,
       allowTransparent: false,
     });
@@ -67,6 +68,8 @@ export class PickHelper extends CustomRenderPass {
     this.mouseDownHandler = (event: MouseEvent) => this.onMouseDown(event);
     this.mouseMoveHandler = (event: MouseEvent) => this.onMouseMove(event);
     this.mouseUpHandler = (event: MouseEvent) => this.onMouseUp(event);
+
+    this._meshes = meshes;
 
     if (options?.debug) {
       const width = this._renderer.getContext().drawingBufferWidth;
