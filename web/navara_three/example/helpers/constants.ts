@@ -180,7 +180,7 @@ export const MVT_DATASETS = {
  */
 export const GEOJSON_DATASETS = {
   worldCities: {
-    url: "/data/world-cities.geojson",
+    url: "/world-cities.geojson",
     attribution: "World Major Cities",
   },
   calderdaleDefibrillators: {
