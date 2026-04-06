@@ -349,7 +349,7 @@ import { Matrix4 } from "three";
 
 ## インスタンス管理
 
-動的なインスタンス管理のために [InstancedMeshLayerDeclaration](/ja/three/core/custom-layer/#custom-instanced-mesh-layer) から継承されるメソッド:
+動的なインスタンス管理のために [InstancedMeshLayerDeclaration](../../../three/core/custom-layer/#custom-instanced-mesh-layer) から継承されるメソッド:
 
 ### handle.ref.add(config)
 

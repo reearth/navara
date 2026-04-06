@@ -28,7 +28,7 @@ import { Color } from "@navara/three";
 ```
 
 :::note
-`maxSse`、`segments`、`shouldComputeNormalFromVertex` などのグローブレベルの設定は、このマテリアルではなく [Globe](/ja/three/api/globe/) API で設定します。
+`maxSse`、`segments`、`shouldComputeNormalFromVertex` などのグローブレベルの設定は、このマテリアルではなく [Globe](../../../three/api/globe/) API で設定します。
 :::
 
 ### maxZoom

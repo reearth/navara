@@ -349,7 +349,7 @@ import { Matrix4 } from "three";
 
 ## Instance Management
 
-Methods inherited from [InstancedMeshLayerDeclaration](/three/core/custom-layer/#custom-instanced-mesh-layer) for dynamic instance management:
+Methods inherited from [InstancedMeshLayerDeclaration](../../../three/core/custom-layer/#custom-instanced-mesh-layer) for dynamic instance management:
 
 ### handle.ref.add(config)
 
