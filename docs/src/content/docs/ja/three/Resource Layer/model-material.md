@@ -28,7 +28,7 @@ sidebar:
 ```
 
 :::tip[フルアニメーション制御]
-`animationAutoPlay`、`animationClips`、`animationCrossfadeDuration`、`animationEnabled`、`animationLoop` などの高度なアニメーション機能については、メッシュレイヤーとしてフルアニメーション制御を提供する [GLTFModelLayer](/ja/three_default_layers/mesh-layer/gltf-model-layer/) を使用してください。
+`animationAutoPlay`、`animationClips`、`animationCrossfadeDuration`、`animationEnabled`、`animationLoop` などの高度なアニメーション機能については、メッシュレイヤーとしてフルアニメーション制御を提供する [GLTFModelLayer](../../../three_default_layers/mesh-layer/gltf-model-layer/) を使用してください。
 :::
 
 ### animationSpeed
