@@ -26,5 +26,10 @@ export const updateMaterialProps = (
   if (props.roughness !== undefined) {
     material.roughness = props.roughness;
   }
-  // emissive is managed via custom uniforms for EmissiveBuffer, not Material.emissive
+  if (props.emissiveColor !== undefined) {
+    material.emissive.set(props.emissiveColor);
+  }
+  if (props.emissiveIntensity !== undefined) {
+    material.emissiveIntensity = props.emissiveIntensity;
+  }
 };

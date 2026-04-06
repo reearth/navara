@@ -1,4 +1,4 @@
-import type { Color, Matrix4, Texture, Vector3 } from "three";
+import type { Matrix4, Texture, Vector3 } from "three";
 
 import type { UniformValue } from "../../../types";
 import type { BatchTextureFlags } from "../../batchTexture";
@@ -92,8 +92,6 @@ export type PolygonBaseRefs = {
   uAddHeight: UniformValue<number>;
   uClampToGround: UniformValue<boolean>;
   nvr_uPickable: UniformValue<number>;
-  uEmissiveColor: UniformValue<Color>;
-  uEmissiveIntensity: UniformValue<number>;
   uEffectIdsMask: UniformValue<number>;
   uIsTexturized: UniformValue<boolean>;
   reflectivity: UniformValue<number>;

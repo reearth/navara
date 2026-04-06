@@ -1,4 +1,4 @@
-import type { Color, Texture } from "three";
+import type { Texture } from "three";
 
 import type { UniformValue } from "../../../types";
 import type { BatchTextureFlags } from "../../batchTexture";
@@ -55,8 +55,6 @@ export type ModelBaseState = Readonly<{
  */
 export type ModelBaseRefs = {
   nvr_uPickable: UniformValue<number>;
-  uEmissiveColor: UniformValue<Color>;
-  uEmissiveIntensity: UniformValue<number>;
   uEffectIdsMask: UniformValue<number>;
 
   // Optional uniforms

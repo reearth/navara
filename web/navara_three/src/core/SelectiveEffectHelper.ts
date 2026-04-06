@@ -173,9 +173,18 @@ export class SelectiveEffectHelper {
         cache.add(obj);
       }
 
-      obj.addEventListener("removed", () => {
-        this.disposeFromCache(effectId, obj);
-      });
+      // Add cleanup listener once per object (avoid duplicates on repeated link calls)
+      if (!obj.userData._selectiveEffectCleanupRegistered) {
+        obj.userData._selectiveEffectCleanupRegistered = true;
+        obj.addEventListener("removed", () => {
+          const seConfig = obj.userData.selectiveEffectConfig;
+          if (seConfig) {
+            for (const id of seConfig.effectIds) {
+              this.disposeFromCache(id, obj);
+            }
+          }
+        });
+      }
     });
   }
 

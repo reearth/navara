@@ -57,12 +57,6 @@ export class MRTPassEffectLayer extends EffectLayerDeclaration<
     // Expose EffectSlotRegistry to ViewContext for mask computation in MeshLayers
     this.view.effectSlotRegistry = this._slotRegistry;
 
-    // Recompute effectIdsMask on all meshes when slots change
-    // (handles mesh-before-effect-layer creation order)
-    this._slotRegistry.onChange(() => {
-      this.view.recomputeEffectIdsMasks();
-    });
-
     return pass;
   }
 

@@ -12,12 +12,6 @@ export class EffectSlotRegistry {
   private idToSlot = new Map<string, number>();
   private freedSlots: number[] = [];
   private nextSlot = 0;
-  private _onChangeCallbacks: (() => void)[] = [];
-
-  /** Register a callback to be invoked when slots are added or removed. */
-  onChange(callback: () => void): void {
-    this._onChangeCallbacks.push(callback);
-  }
 
   register(effectId: string): number {
     const existing = this.idToSlot.get(effectId);
@@ -38,7 +32,6 @@ export class EffectSlotRegistry {
     }
 
     this.idToSlot.set(effectId, slot);
-    this.notifyChange();
     return slot;
   }
 
@@ -47,13 +40,6 @@ export class EffectSlotRegistry {
     if (slot === undefined) return;
     this.idToSlot.delete(effectId);
     this.freedSlots.push(slot);
-    this.notifyChange();
-  }
-
-  private notifyChange(): void {
-    for (const cb of this._onChangeCallbacks) {
-      cb();
-    }
   }
 
   get size(): number {

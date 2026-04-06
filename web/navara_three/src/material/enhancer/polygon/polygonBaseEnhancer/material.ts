@@ -26,7 +26,12 @@ export const updateMaterialProps = (
   if (props.wireframe !== undefined) {
     material.wireframe = props.wireframe;
   }
-  // emissive is managed via custom uniforms for EmissiveBuffer, not Material.emissive
+  if (props.emissiveColor !== undefined) {
+    material.emissive.set(props.emissiveColor);
+  }
+  if (props.emissiveIntensity !== undefined) {
+    material.emissiveIntensity = props.emissiveIntensity;
+  }
   if (props.reflectivity !== undefined) {
     material.reflectivity = props.reflectivity;
   }

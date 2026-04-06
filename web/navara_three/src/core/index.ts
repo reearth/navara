@@ -56,7 +56,4 @@ export {
   hasSelectiveEffectConfig,
   createFullscreenQuad,
 } from "./SelectiveEffectHelper";
-export {
-  setupSelectiveEffectBufferUniforms,
-  syncSelectiveEffectBufferUniforms,
-} from "./emissiveBufferSetup";
+export { setupSelectiveEffectUniforms } from "./emissiveBufferSetup";

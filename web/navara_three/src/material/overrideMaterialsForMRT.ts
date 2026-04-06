@@ -121,8 +121,6 @@ function injectGBuffer(
 
     #ifdef USE_SELECTIVE_EFFECT
       uniform float uEffectIdsMask;
-      uniform vec3 uEmissiveColor;
-      uniform float uEmissiveIntensity;
     #endif
 
     ${packing}
@@ -135,7 +133,7 @@ function injectGBuffer(
 
             #ifdef USE_SELECTIVE_EFFECT
               outputBuffer2 = vec4(uEffectIdsMask, 0.0, 0.0, 1.0);
-              outputBuffer3 = vec4(uEmissiveColor, uEmissiveIntensity);
+              outputBuffer3 = vec4(emissive, 1.0);
             #else
               outputBuffer2 = vec4(0.0);
               outputBuffer3 = vec4(0.0);

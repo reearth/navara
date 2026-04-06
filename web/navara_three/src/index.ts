@@ -130,6 +130,7 @@ export * from "./effects";
 export * from "./shaders";
 export * from "./material";
 export * from "./core";
+export { BufferView } from "./bufferView";
 export * from "./layers";
 export * from "./passes";
 export * from "./evaluations";
