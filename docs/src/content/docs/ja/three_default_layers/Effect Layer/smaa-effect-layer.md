@@ -100,11 +100,13 @@ view.addLayer<SMAAEffectLayer>({
 ### SMAAの品質とエッジ検出モードの動的変更
 
 ```typescript
-import { FXAAEffectLayer } from "@navara/three";
+import ThreeView, { FXAAEffectLayer } from "@navara/three";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 
+const view = new ThreeView();
 const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
+await view.init();
 
 const defaultLayers = plugin.addDefaultPhotorealLayers();
 
