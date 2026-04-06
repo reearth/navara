@@ -41,15 +41,18 @@ sidebar:
 
 ```typescript
 import ThreeView from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
+const plugin = new DefaultPlugin();
+view.addPlugin(plugin);
 await view.init();
 
-// デフォルトのエフェクトレイヤーを追加（LensFlareEffectLayerを含む）
-const defaultEffects = view.addDefaultEffectLayers();
+// デフォルトのフォトリアルレイヤーを追加（LensFlareEffectLayerを含む）
+const defaultLayers = plugin.addDefaultPhotorealLayers();
 
 // レンズフレアを有効にして強度を設定
-defaultEffects.lensFlare.update({
+defaultLayers.lensFlare.update({
   visible: true,
   lensFlare: {
     intensity: 0.005,

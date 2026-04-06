@@ -11,6 +11,7 @@ ThreeView は、Three.js と WebGL を使用して 3D マップビジュアラ�
 
 ```tsx
 import ThreeView, { JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 import { Vector3 } from "three";
 
 // Create ThreeView instance
@@ -20,12 +21,14 @@ const view = new ThreeView({
   backgroundColor: 0x0a0a0f,
   logarithmicDepthBuffer: true,
 });
+const plugin = new DefaultPlugin();
+view.addPlugin(plugin);
 
 // Initialize the view
 await view.init();
 
-// Add default atmosphere layers (sky, stars, sun, light probe)
-const atmosphereLayers = view.addDefaultAtmosphereLayers();
+// Add default photorealistic layers (sky, stars, sun, light probe)
+const defaultLayers = plugin.addDefaultPhotorealLayers();
 
 // Add terrain layer
 view.addLayer({

@@ -211,6 +211,24 @@ import { Color } from "@navara/three";
 }
 ```
 
+### outline
+
+**Type:** `boolean | undefined`
+
+**Description:** Whether to compute outline geometry. Only effective at initial load time. When not set, inferred from `outlineShow`.
+
+**Default:** `undefined`
+
+**Example:**
+
+```typescript
+{
+  polygon: {
+    outline: true
+  }
+}
+```
+
 ### outlineColor
 
 **Type:** `Color | undefined`

@@ -346,17 +346,20 @@ import { Color } from "@navara/three";
 
 ```typescript
 import ThreeView, { SunLightLayer } from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView({
   shadow: true  // Enable shadows
 });
+const plugin = new DefaultPlugin();
+view.addPlugin(plugin);
 await view.init();
 
-// Add default atmosphere layers (includes SunLightLayer)
-const atmosphereLayers = view.addDefaultAtmosphereLayers();
+// Add default photorealistic layers (includes SunLightLayer)
+const defaultLayers = plugin.addDefaultPhotorealLayers();
 
 // Update sunlight settings
-atmosphereLayers.sun.update({
+defaultLayers.sun.update({
   sun: {
     castShadow: true,
     shadowMapSize: 2048,

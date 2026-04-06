@@ -41,12 +41,15 @@ The `ToneMappingEffectLayer` class is a layer that applies a tone mapping effect
 
 ```typescript
 import ThreeView from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
+const plugin = new DefaultPlugin();
+view.addPlugin(plugin);
 await view.init();
 
-// Add default effect layers (includes ToneMappingEffectLayer)
-const defaultEffects = view.addDefaultEffectLayers();
+// Add default photorealistic layers (includes ToneMappingEffectLayer)
+const defaultLayers = plugin.addDefaultPhotorealLayers();
 
 // Set exposure
 view.toneMappingExposure = 10;
@@ -89,15 +92,17 @@ view.addLayer<ToneMappingEffectLayer>({
 
 ```typescript
 import ThreeView, { ToneMappingMode } from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
+const plugin = new DefaultPlugin();
+view.addPlugin(plugin);
 await view.init();
 
-const defaultEffects = view.addDefaultEffectLayers();
-view.addDefaultAtmosphereLayers();
+const defaultLayers = plugin.addDefaultPhotorealLayers();
 
 // Enable tone mapping
-defaultEffects.toneMapping.update({
+defaultLayers.toneMapping.update({
   visible: true,
   toneMapping: {
     mode: ToneMappingMode.AGX,

@@ -23,6 +23,7 @@ Instructions for updating navara_three documentation to match the latest API imp
 | **navara_three** | `navara/web/navara_three/src/` |
 | **navara_three_api** | `navara/web/navara_three_api/src/` |
 | **WASM Types** | `navara/web/wasm/navara_engine/navara_wasm.d.ts` |
+| **WASM API Types** | `web/wasm/navara_engine_api/navara_wasm_api.d.ts` |
 | **Examples** | `navara/web/navara_three/example/` |
 
 ### Implementation to Documentation Mapping
@@ -308,7 +309,7 @@ Caveat or limitation
 - Layers: `addLayer()`, `updateLayerById()`, `deleteLayerById()`
 - Camera: `setCamera()`, `moveCamera()`, `flyTo()`, `lookAt()`, `cameraFollow()`, `rotateAroundAxis()`, `rotateAround()`
 - Terrain: `sampleTerrainHeight()`, `observeTerrainHeightAt()`, `pickTerrainPosition()`
-- Defaults: `addDefaultAtmosphereLayers()`, `addDefaultEffectLayers()`
+- Defaults: `DefaultPlugin.addDefaultPhotorealLayers()` (via `@navara/three_default_plugin`)
 - Registration: `registerMesh()`, `registerLight()`, `registerEffect()`
 
 **Events** (`threeview-events.md`):

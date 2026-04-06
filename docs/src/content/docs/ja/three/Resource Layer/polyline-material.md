@@ -139,6 +139,24 @@ import { Color } from "@navara/three";
 }
 ```
 
+### maxWidth
+
+**Type:** `number | undefined`
+
+**Description:** ピクセル単位の最大線幅。ズームレベルに関係なくレンダリング幅を制限します。小さい値はフラグメントシェーダーのオーバードローを削減し、パフォーマンスが向上します。
+
+**Default:** `undefined`
+
+**Example:**
+
+```typescript
+{
+  polyline: {
+    maxWidth: 10
+  }
+}
+```
+
 ### receiveShadow
 
 **Type:** `boolean | undefined`

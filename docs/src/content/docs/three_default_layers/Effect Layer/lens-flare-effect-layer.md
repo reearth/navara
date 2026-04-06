@@ -41,15 +41,18 @@ The `LensFlareEffectLayer` class is a layer that generates the lens flare effect
 
 ```typescript
 import ThreeView from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
+const plugin = new DefaultPlugin();
+view.addPlugin(plugin);
 await view.init();
 
-// Add default effect layers (includes LensFlareEffectLayer)
-const defaultEffects = view.addDefaultEffectLayers();
+// Add default photorealistic layers (includes LensFlareEffectLayer)
+const defaultLayers = plugin.addDefaultPhotorealLayers();
 
 // Enable lens flare and set its intensity
-defaultEffects.lensFlare.update({
+defaultLayers.lensFlare.update({
   visible: true,
   lensFlare: {
     intensity: 0.005,

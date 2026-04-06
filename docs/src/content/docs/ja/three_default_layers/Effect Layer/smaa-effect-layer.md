@@ -59,15 +59,18 @@ sidebar:
 
 ```typescript
 import ThreeView from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
+const plugin = new DefaultPlugin();
+view.addPlugin(plugin);
 await view.init();
 
-// デフォルトのエフェクトレイヤーを追加（SMAAが含まれる）
-const defaultEffects = view.addDefaultEffectLayers();
+// デフォルトのフォトリアルレイヤーを追加（SMAAが含まれる）
+const defaultLayers = plugin.addDefaultPhotorealLayers();
 
 // SMAAを有効化して品質を設定
-defaultEffects.smaa.update({
+defaultLayers.smaa.update({
   visible: true,
   smaa: {
     quality: "high",
@@ -98,25 +101,29 @@ view.addLayer<SMAAEffectLayer>({
 
 ```typescript
 import { FXAAEffectLayer } from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 
-const defaultEffects = view.addDefaultEffectLayers();
+const plugin = new DefaultPlugin();
+view.addPlugin(plugin);
+
+const defaultLayers = plugin.addDefaultPhotorealLayers();
 
 // 品質をmediumに変更
-defaultEffects.smaa.update({
+defaultLayers.smaa.update({
   smaa: {
     quality: "medium",
   },
 });
 
 // エッジ検出モードをdepthに変更
-defaultEffects.smaa.update({
+defaultLayers.smaa.update({
   smaa: {
     edgeDetectionMode: "depth",
   },
 });
 
 // SMAAを無効にしてFXAAに切り替える
-defaultEffects.smaa.update({ visible: false });
+defaultLayers.smaa.update({ visible: false });
 view.addLayer<FXAAEffectLayer>({
   type: "effect",
   fxaa: {},

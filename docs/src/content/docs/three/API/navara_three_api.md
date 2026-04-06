@@ -616,6 +616,41 @@ function northWestUpToFixedFrame(origin: Vector3): Matrix4;
 
 RTE rendering functionality for achieving high-precision rendering in large-scale coordinate systems.
 
+### encodePositionRTE(original, resultHigh?, resultLow?)
+
+Encodes a position into high and low precision Vector3 components for RTE rendering. This enables GPU double precision emulation by splitting a position into two float components.
+
+**Syntax:**
+
+```typescript
+function encodePositionRTE(
+  original: Vector3,
+  resultHigh?: Vector3,
+  resultLow?: Vector3,
+): { high: Vector3; low: Vector3 }
+```
+
+**Parameters:**
+
+- `original`: Position to encode
+- `resultHigh`: Optional Vector3 to store the high precision component (reused to avoid GC)
+- `resultLow`: Optional Vector3 to store the low precision component (reused to avoid GC)
+
+**Returns:**
+
+Object with `high` and `low` Vector3 components
+
+**Example:**
+
+```typescript
+import { encodePositionRTE } from "@navara/three_api";
+import { Vector3 } from "three";
+
+const position = new Vector3(6378137, 0, 0);
+const { high, low } = encodePositionRTE(position);
+// high + low ≈ original position with improved GPU precision
+```
+
 ### calcModelMatrixRTE(objectMatrixWorld, matrixWorldInverse, result?)
 
 Calculates the model matrix for RTE rendering. Returns a matrix with the translation component zeroed out.

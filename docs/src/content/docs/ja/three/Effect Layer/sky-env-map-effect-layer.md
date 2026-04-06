@@ -41,12 +41,15 @@ sidebar:
 
 ```typescript
 import ThreeView, { SkyEnvMapEffectLayer } from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
+const plugin = new DefaultPlugin();
+view.addPlugin(plugin);
 await view.init();
 
-// 大気レイヤーを追加（空のレンダリングに必要）
-view.addDefaultAtmosphereLayers();
+// デフォルトのフォトリアルレイヤーを追加（空のレンダリングに必要）
+plugin.addDefaultPhotorealLayers();
 
 // 空環境マップエフェクトレイヤーを追加
 view.addLayer<SkyEnvMapEffectLayer>({
@@ -61,11 +64,15 @@ view.addLayer<SkyEnvMapEffectLayer>({
 
 ```typescript
 import ThreeView, { SkyEnvMapEffectLayer } from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
+const plugin = new DefaultPlugin();
+view.addPlugin(plugin);
 await view.init();
 
-view.addDefaultAtmosphereLayers();
+// デフォルトのフォトリアルレイヤーを追加
+plugin.addDefaultPhotorealLayers();
 
 // 高解像度の環境マップを作成
 view.addLayer<SkyEnvMapEffectLayer>({
@@ -80,12 +87,15 @@ view.addLayer<SkyEnvMapEffectLayer>({
 
 ```typescript
 import ThreeView, { SkyEnvMapEffectLayer, Color } from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
+const plugin = new DefaultPlugin();
+view.addPlugin(plugin);
 await view.init();
 
-// 大気レイヤーを追加
-view.addDefaultAtmosphereLayers();
+// デフォルトのフォトリアルレイヤーを追加
+plugin.addDefaultPhotorealLayers();
 
 // 空環境マップを追加（反射に使用される）
 view.addLayer<SkyEnvMapEffectLayer>({

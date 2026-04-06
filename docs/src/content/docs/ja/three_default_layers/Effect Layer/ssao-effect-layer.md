@@ -190,13 +190,15 @@ const ssaoLayer = view.addLayer<SSAOEffectLayer>({
 
 ```typescript
 import ThreeView, { SSAOEffectLayer, Color } from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
+const plugin = new DefaultPlugin();
+view.addPlugin(plugin);
 await view.init();
 
-// デフォルトエフェクトを追加
-const defaultEffects = view.addDefaultEffectLayers();
-view.addDefaultAtmosphereLayers();
+// デフォルトのフォトリアルレイヤーを追加
+plugin.addDefaultPhotorealLayers();
 
 // SSAOを追加
 const ssaoLayer = view.addLayer<SSAOEffectLayer>({

@@ -635,12 +635,15 @@ import { Vector3 } from "three";
 
 ```typescript
 import ThreeView, { CloudsEffectLayer } from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
+const plugin = new DefaultPlugin();
+view.addPlugin(plugin);
 await view.init();
 
-// Add atmosphere layers (required for cloud rendering)
-view.addDefaultAtmosphereLayers();
+// Add default photorealistic layers (required for cloud rendering)
+plugin.addDefaultPhotorealLayers();
 
 // Add clouds effect layer
 const cloudsLayer = view.addLayer<CloudsEffectLayer>({
@@ -656,22 +659,24 @@ const cloudsLayer = view.addLayer<CloudsEffectLayer>({
 
 ```typescript
 import ThreeView, { CloudsEffectLayer } from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView({ shadow: true });
+const plugin = new DefaultPlugin();
+view.addPlugin(plugin);
 await view.init();
 
-const defaultEffects = view.addDefaultEffectLayers();
-const defaultAtmosphere = view.addDefaultAtmosphereLayers();
+const defaultLayers = plugin.addDefaultPhotorealLayers();
 
 // Enable sunlight shadows
-defaultAtmosphere.sun.update({
+defaultLayers.sun.update({
   sun: {
     castShadow: true,
   },
 });
 
 // Enable aerial perspective irradiance (required for cloud shadows)
-defaultEffects.aerialPerspective.update({
+defaultLayers.aerialPerspective.update({
   aerialPerspective: {
     irradiance: true,
   },
@@ -691,12 +696,14 @@ const cloudsLayer = view.addLayer<CloudsEffectLayer>({
 
 ```typescript
 import ThreeView, { CloudsEffectLayer, LayerHandle } from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
+const plugin = new DefaultPlugin();
+view.addPlugin(plugin);
 await view.init();
 
-view.addDefaultEffectLayers();
-view.addDefaultAtmosphereLayers();
+plugin.addDefaultPhotorealLayers();
 
 // Use the clouds layer as fog
 const cloudsLayer = view.addLayer<CloudsEffectLayer>({
@@ -722,15 +729,18 @@ if (clouds) {
 
 ```typescript
 import ThreeView, { CloudsEffectLayer } from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 import { Vector2 } from "three";
 
 const view = new ThreeView();
+const plugin = new DefaultPlugin();
+view.addPlugin(plugin);
 await view.init();
 
 // Enable animation
 view.animation = true;
 
-view.addDefaultAtmosphereLayers();
+plugin.addDefaultPhotorealLayers();
 
 // Set cloud movement velocity and add the layer
 const cloudsLayer = view.addLayer<CloudsEffectLayer>({
@@ -746,16 +756,18 @@ const cloudsLayer = view.addLayer<CloudsEffectLayer>({
 
 ```typescript
 import ThreeView, { CloudsEffectLayer } from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 import { Vector2 } from "three";
 
 const view = new ThreeView({ animation: true, shadow: true });
+const plugin = new DefaultPlugin();
+view.addPlugin(plugin);
 await view.init();
 
-const defaultEffects = view.addDefaultEffectLayers();
-view.addDefaultAtmosphereLayers();
+const defaultLayers = plugin.addDefaultPhotorealLayers();
 
 // Enable irradiance to render cloud shadows
-defaultEffects.aerialPerspective.update({
+defaultLayers.aerialPerspective.update({
   aerialPerspective: {
     irradiance: true,
   },

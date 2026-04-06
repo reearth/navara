@@ -27,23 +27,9 @@ import { Color } from "@navara/three";
 }
 ```
 
-### maxSse
-
-**Type:** `number`
-
-**Description:** The maximum value used to determine the level of detail (LOD). Higher values improve performance but reduce visual quality.
-
-**Default:** `2`
-
-**Example:**
-
-```typescript
-{
-  rasterTile: {
-    maxSse: 4
-  }
-}
-```
+:::note
+Globe-level settings such as `maxSse`, `segments`, and `shouldComputeNormalFromVertex` are configured via the [Globe](/three/api/globe/) API, not on this material.
+:::
 
 ### maxZoom
 
@@ -93,40 +79,6 @@ import { Color } from "@navara/three";
 {
   rasterTile: {
     opacity: 0.8
-  }
-}
-```
-
-### segments
-
-**Type:** `number`
-
-**Description:** Specifies the number of polygon subdivision segments. Higher segment counts produce smoother spherical surfaces.
-
-**Example:**
-
-```typescript
-{
-  rasterTile: {
-    segments: 32
-  }
-}
-```
-
-### shouldComputeNormalFromVertex
-
-**Type:** `boolean | undefined`
-
-**Description:** Specifies whether to compute normals from vertices. This is automatically set to `true` when Terrain is added. When set to `true` without Terrain being added, sunlight shadows will be displayed.
-
-**Default:** `undefined`
-
-**Example:**
-
-```typescript
-{
-  rasterTile: {
-    shouldComputeNormalFromVertex: true
   }
 }
 ```
@@ -185,20 +137,3 @@ import { Color } from "@navara/three";
 }
 ```
 
-### wireframe
-
-**Type:** `boolean | undefined`
-
-**Description:** Specifies whether to display as wireframe.
-
-**Default:** `undefined`
-
-**Example:**
-
-```typescript
-{
-  rasterTile: {
-    wireframe: false
-  }
-}
-```

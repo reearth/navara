@@ -59,15 +59,18 @@ The `SMAAEffectLayer` class is a layer that applies the SMAA (Subpixel Morpholog
 
 ```typescript
 import ThreeView from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
+const plugin = new DefaultPlugin();
+view.addPlugin(plugin);
 await view.init();
 
-// Add default effect layers (includes SMAA)
-const defaultEffects = view.addDefaultEffectLayers();
+// Add default photorealistic layers (includes SMAA)
+const defaultLayers = plugin.addDefaultPhotorealLayers();
 
 // Enable SMAA and set quality
-defaultEffects.smaa.update({
+defaultLayers.smaa.update({
   visible: true,
   smaa: {
     quality: "high",
@@ -98,25 +101,26 @@ view.addLayer<SMAAEffectLayer>({
 
 ```typescript
 import { FXAAEffectLayer } from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 
-const defaultEffects = view.addDefaultEffectLayers();
+const defaultLayers = plugin.addDefaultPhotorealLayers();
 
 // Change quality to medium
-defaultEffects.smaa.update({
+defaultLayers.smaa.update({
   smaa: {
     quality: "medium",
   },
 });
 
 // Change edge detection mode to depth
-defaultEffects.smaa.update({
+defaultLayers.smaa.update({
   smaa: {
     edgeDetectionMode: "depth",
   },
 });
 
 // Disable SMAA and switch to FXAA
-defaultEffects.smaa.update({ visible: false });
+defaultLayers.smaa.update({ visible: false });
 view.addLayer<FXAAEffectLayer>({
   type: "effect",
   fxaa: {},

@@ -635,12 +635,15 @@ import { Vector3 } from "three";
 
 ```typescript
 import ThreeView, { CloudsEffectLayer } from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
+const plugin = new DefaultPlugin();
+view.addPlugin(plugin);
 await view.init();
 
-// 大気レイヤーを追加（雲のレンダリングに必要）
-view.addDefaultAtmosphereLayers();
+// デフォルトのフォトリアルレイヤーを追加（雲のレンダリングに必要）
+plugin.addDefaultPhotorealLayers();
 
 // 雲エフェクトレイヤーを追加
 const cloudsLayer = view.addLayer<CloudsEffectLayer>({
@@ -656,22 +659,24 @@ const cloudsLayer = view.addLayer<CloudsEffectLayer>({
 
 ```typescript
 import ThreeView, { CloudsEffectLayer } from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView({ shadow: true });
+const plugin = new DefaultPlugin();
+view.addPlugin(plugin);
 await view.init();
 
-const defaultEffects = view.addDefaultEffectLayers();
-const defaultAtmosphere = view.addDefaultAtmosphereLayers();
+const defaultLayers = plugin.addDefaultPhotorealLayers();
 
 // 太陽光の影を有効にする
-defaultAtmosphere.sun.update({
+defaultLayers.sun.update({
   sun: {
     castShadow: true,
   },
 });
 
 // 大気遠近法のirradianceを有効にする（雲の影に必要）
-defaultEffects.aerialPerspective.update({
+defaultLayers.aerialPerspective.update({
   aerialPerspective: {
     irradiance: true,
   },
@@ -691,12 +696,15 @@ const cloudsLayer = view.addLayer<CloudsEffectLayer>({
 
 ```typescript
 import ThreeView, { CloudsEffectLayer, LayerHandle } from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
+const plugin = new DefaultPlugin();
+view.addPlugin(plugin);
 await view.init();
 
-view.addDefaultEffectLayers();
-view.addDefaultAtmosphereLayers();
+// デフォルトのフォトリアルレイヤーを追加
+plugin.addDefaultPhotorealLayers();
 
 // 雲レイヤーを霧として使用
 const cloudsLayer = view.addLayer<CloudsEffectLayer>({
@@ -722,15 +730,19 @@ if (clouds) {
 
 ```typescript
 import ThreeView, { CloudsEffectLayer } from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 import { Vector2 } from "three";
 
 const view = new ThreeView();
+const plugin = new DefaultPlugin();
+view.addPlugin(plugin);
 await view.init();
 
 // アニメーションを有効にする
 view.animation = true;
 
-view.addDefaultAtmosphereLayers();
+// デフォルトのフォトリアルレイヤーを追加
+plugin.addDefaultPhotorealLayers();
 
 // 雲の移動速度を設定してレイヤーを追加
 const cloudsLayer = view.addLayer<CloudsEffectLayer>({
@@ -746,16 +758,18 @@ const cloudsLayer = view.addLayer<CloudsEffectLayer>({
 
 ```typescript
 import ThreeView, { CloudsEffectLayer } from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 import { Vector2 } from "three";
 
 const view = new ThreeView({ animation: true, shadow: true });
+const plugin = new DefaultPlugin();
+view.addPlugin(plugin);
 await view.init();
 
-const defaultEffects = view.addDefaultEffectLayers();
-view.addDefaultAtmosphereLayers();
+const defaultLayers = plugin.addDefaultPhotorealLayers();
 
 // irradianceを有効にして雲の影を描画
-defaultEffects.aerialPerspective.update({
+defaultLayers.aerialPerspective.update({
   aerialPerspective: {
     irradiance: true,
   },

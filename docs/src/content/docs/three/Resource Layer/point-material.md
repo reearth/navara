@@ -175,20 +175,20 @@ import { Color } from "@navara/three";
 }
 ```
 
-### scaleByDistance
+### sizeInMeters
 
-**Type:** `boolean`
+**Type:** `boolean | undefined`
 
-**Description:** Specifies whether to adjust the object size based on the distance from the camera.
+**Description:** Whether the size is specified in meters. If false, the size is in pixels.
 
-**Default:** Required
+**Default:** `true`
 
 **Example:**
 
 ```typescript
 {
   point: {
-    scaleByDistance: true
+    sizeInMeters: true
   }
 }
 ```

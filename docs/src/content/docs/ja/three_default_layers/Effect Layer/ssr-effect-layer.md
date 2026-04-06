@@ -390,13 +390,15 @@ const ssrLayer = view.addLayer<SSREffectLayer>({
 
 ```typescript
 import ThreeView, { SSREffectLayer, Color } from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
+const plugin = new DefaultPlugin();
+view.addPlugin(plugin);
 await view.init();
 
-// デフォルトエフェクトを追加
-view.addDefaultEffectLayers();
-view.addDefaultAtmosphereLayers();
+// デフォルトのフォトリアルレイヤーを追加
+plugin.addDefaultPhotorealLayers();
 
 // SSRエフェクトを追加
 const ssrLayer = view.addLayer<SSREffectLayer>({

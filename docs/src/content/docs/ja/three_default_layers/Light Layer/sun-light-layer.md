@@ -346,17 +346,20 @@ import { Color } from "@navara/three";
 
 ```typescript
 import ThreeView, { SunLightLayer } from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView({
   shadow: true  // シャドウを有効化
 });
+const plugin = new DefaultPlugin();
+view.addPlugin(plugin);
 await view.init();
 
-// デフォルトの大気レイヤーを追加（SunLightLayerが含まれる）
-const atmosphereLayers = view.addDefaultAtmosphereLayers();
+// デフォルトのフォトリアルレイヤーを追加（SunLightLayerが含まれる）
+const defaultLayers = plugin.addDefaultPhotorealLayers();
 
 // 太陽光の設定を更新
-atmosphereLayers.sun.update({
+defaultLayers.sun.update({
   sun: {
     castShadow: true,
     shadowMapSize: 2048,

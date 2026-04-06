@@ -93,13 +93,16 @@ const depthOfFieldLayer = view.addLayer<DepthOfFieldEffectLayer>({
 
 ```typescript
 import ThreeView, { DepthOfFieldEffectLayer, Color } from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
+const plugin = new DefaultPlugin();
+view.addPlugin(plugin);
 await view.init();
 
-// Add atmosphere layers
-const defaultAtmospheres = view.addDefaultAtmosphereLayers();
-defaultAtmospheres.sun.update({
+// Add default photorealistic layers
+const defaultLayers = plugin.addDefaultPhotorealLayers();
+defaultLayers.sun.update({
   sun: {
     intensity: 1,
     castShadow: true,

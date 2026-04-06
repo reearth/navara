@@ -15,6 +15,7 @@ The following MeshLayer types are available in navara_three:
 |------------|------|
 | [ArclineMeshLayer](./arcline-mesh-layer) | A layer that draws arc-shaped lines connecting two points |
 | [BoxMeshLayer](./box-mesh-layer) | A layer that draws box geometry |
+| [InstancedBoxMeshLayer](./instanced-box-mesh-layer) | A GPU-instanced layer that renders multiple boxes in a single draw call |
 | [CylinderMeshLayer](./cylinder-mesh-layer) | A layer that draws cylinder geometry |
 | [GLTFModelLayer](./gltf-model-layer) | A layer that loads and displays GLTF/GLB format 3D models |
 | [GlowGlobeMeshLayer](./glow-globe-mesh-layer) | A layer that displays a Fresnel-effect glow around the globe |

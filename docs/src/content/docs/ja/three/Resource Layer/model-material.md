@@ -27,95 +27,9 @@ sidebar:
 }
 ```
 
-### animationAutoPlay
-
-**Type:** `boolean | undefined`
-
-**Description:** 初回読み込み時にアニメーションを自動再生するかどうかを指定します。
-
-**Default:** `undefined`
-
-**Example:**
-
-```typescript
-{
-  model: {
-    animationAutoPlay: true
-  }
-}
-```
-
-### animationClips
-
-**Type:** `string[] | undefined`
-
-**Description:** 利用可能なアニメーションクリップの名前のリストを指定します。
-
-**Default:** `undefined`
-
-**Example:**
-
-```typescript
-{
-  model: {
-    animationClips: ["walk", "run", "jump"]
-  }
-}
-```
-
-### animationCrossfadeDuration
-
-**Type:** `number | undefined`
-
-**Description:** アニメーションクリップが切り替わる時間を秒単位で指定します。
-
-**Default:** `undefined`
-
-**Example:**
-
-```typescript
-{
-  model: {
-    animationCrossfadeDuration: 0.5
-  }
-}
-```
-
-### animationEnabled
-
-**Type:** `boolean | undefined`
-
-**Description:** アニメーションを有効にするかどうかを指定します。
-
-**Default:** `undefined`
-
-**Example:**
-
-```typescript
-{
-  model: {
-    animationEnabled: true
-  }
-}
-```
-
-### animationLoop
-
-**Type:** `boolean | undefined`
-
-**Description:** アニメーションを繰り返し再生するかどうかを指定します。
-
-**Default:** `undefined`
-
-**Example:**
-
-```typescript
-{
-  model: {
-    animationLoop: true
-  }
-}
-```
+:::tip[フルアニメーション制御]
+`animationAutoPlay`、`animationClips`、`animationCrossfadeDuration`、`animationEnabled`、`animationLoop` などの高度なアニメーション機能については、メッシュレイヤーとしてフルアニメーション制御を提供する [GLTFModelLayer](/ja/three_default_layers/mesh-layer/gltf-model-layer/) を使用してください。
+:::
 
 ### animationSpeed
 

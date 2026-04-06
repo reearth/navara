@@ -169,12 +169,14 @@ const cubeLayer = view.addLayer<BoxMeshLayer>({
 
 ```typescript
 import ThreeView, { SelectiveOutlineEffectLayer, Color } from "@navara/three";
+import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
+const plugin = new DefaultPlugin();
+view.addPlugin(plugin);
 await view.init();
 
-view.addDefaultEffectLayers();
-view.addDefaultAtmosphereLayers();
+plugin.addDefaultPhotorealLayers();
 
 // Add a thick red outline
 const outlineLayer = view.addLayer<SelectiveOutlineEffectLayer>({

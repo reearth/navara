@@ -27,23 +27,9 @@ import { Color } from "@navara/three";
 }
 ```
 
-### maxSse
-
-**Type:** `number`
-
-**Description:** 詳細レベル（LOD）の詳細度を決定するために使用される最大値です。値が高いほど、パフォーマンスは向上しますが、視覚的な品質は低下します。
-
-**Default:** `2`
-
-**Example:**
-
-```typescript
-{
-  rasterTile: {
-    maxSse: 4
-  }
-}
-```
+:::note
+`maxSse`、`segments`、`shouldComputeNormalFromVertex` などのグローブレベルの設定は、このマテリアルではなく [Globe](/ja/three/api/globe/) API で設定します。
+:::
 
 ### maxZoom
 
@@ -93,40 +79,6 @@ import { Color } from "@navara/three";
 {
   rasterTile: {
     opacity: 0.8
-  }
-}
-```
-
-### segments
-
-**Type:** `number`
-
-**Description:** ポリゴン分割のセグメント数を指定します。セグメント数が多いほど、より滑らかな球面が得られます。
-
-**Example:**
-
-```typescript
-{
-  rasterTile: {
-    segments: 32
-  }
-}
-```
-
-### shouldComputeNormalFromVertex
-
-**Type:** `boolean | undefined`
-
-**Description:** 頂点から法線を計算するかどうかを指定します。Terrain が追加されている場合は自動で`true`になります。Terrain が追加されていない場合に`true`にした場合は、太陽光の影が表示されるようになります。
-
-**Default:** `undefined`
-
-**Example:**
-
-```typescript
-{
-  rasterTile: {
-    shouldComputeNormalFromVertex: true
   }
 }
 ```
@@ -185,20 +137,3 @@ import { Color } from "@navara/three";
 }
 ```
 
-### wireframe
-
-**Type:** `boolean | undefined`
-
-**Description:** ワイヤーフレーム表示にするかどうかを指定します。
-
-**Default:** `undefined`
-
-**Example:**
-
-```typescript
-{
-  rasterTile: {
-    wireframe: false
-  }
-}
-```
