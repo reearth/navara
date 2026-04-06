@@ -25,23 +25,20 @@ locales: {
 
 ### Directory Structure
 
+Translations mirror the root directory structure under a locale subdirectory:
+
 ```
 src/content/docs/
-├── index.mdx                          # English (root)
-├── three/
-│   ├── API/
-│   │   └── atmosphere.md              # English
-│   ├── Introduction/
-│   │   └── what-is-navara-three.md    # English
-│   └── ...
+├── section-a/                         # English (root)
+│   └── page.md
+├── section-b/
+│   └── page.md
 ├── ja/                                # Japanese locale
-│   ├── index.mdx
-│   ├── three/
-│   │   ├── API/
-│   │   │   └── atmosphere.md          # Japanese
-│   │   └── ...
-│   └── ...
-└── [locale]/                          # Future locales (e.g., zh, ko, fr)
+│   ├── section-a/
+│   │   └── page.md                    # Japanese translation
+│   └── section-b/
+│       └── page.md
+└── [locale]/                          # Future locales
     └── ...                            # Same structure as root
 ```
 
@@ -49,14 +46,12 @@ src/content/docs/
 
 **Always write in English first.** English is the root locale and the source of truth.
 
-1. **Write the English document** in the root directory (e.g., `src/content/docs/three/API/new-feature.md`)
-2. **Translate to other languages** by creating the same file in locale directories (e.g., `src/content/docs/ja/three/API/new-feature.md`)
+1. **Write the English document** in the root directory
+2. **Translate to other languages** by creating the same file in locale directories
 
 ## Workflow: Translating with a Coding Agent
 
 ### Translating a single file
-
-Ask the agent to translate a specific file:
 
 ```
 Translate src/content/docs/three/API/atmosphere.md to Japanese and save it to src/content/docs/ja/three/API/atmosphere.md
@@ -139,8 +134,6 @@ console.log(`長半径: ${semiMajorAxis} m`);
 
 ## Adding a New Locale
 
-Example: adding Chinese (`zh`).
-
 ### Step 1: Update `astro.config.mjs`
 
 Add the new locale to the `locales` object and the `localeDirectories` set:
@@ -166,14 +159,10 @@ locales: {
 
 ### Step 2: Add sidebar folder translations in `src/data/folderTranslations.json`
 
-Add an entry for the new locale in the JSON dictionary:
+Add an entry for the new locale. See existing entries for the full list of folder names to translate:
 
 ```json
 {
-  "ja": {
-    "Introduction": "はじめに",
-    "API": "API リファレンス"
-  },
   "zh": {
     "Introduction": "简介",
     "API": "API 参考"
@@ -183,37 +172,16 @@ Add an entry for the new locale in the JSON dictionary:
 
 ### Step 3: Add showcase translations in `src/data/showcase.json`
 
-Add the new locale key to each item's `translations` object:
-
-```json
-{
-  "title": "Water reflection(sample project)",
-  "description": "Water reflection using navara_three",
-  "translations": {
-    "ja": {
-      "title": "水の反射(サンプルプロジェクト)",
-      "description": "navara_threeを使用した水の反射の表現"
-    },
-    "zh": {
-      "title": "水面反射(示例项目)",
-      "description": "使用 navara_three 的水面反射效果"
-    }
-  }
-}
-```
+Add the new locale key to each item's `translations` object.
 
 ### Step 4: Create the locale directory and translate content
-
-```
-src/content/docs/zh/
-```
 
 Mirror the root directory structure under the new locale directory. Every `.md` / `.mdx` file in the root should have a corresponding translated file.
 
 ### Step 5: Verify
 
 ```bash
-npm run dev
+pnpm build
 ```
 
 Check that the language switcher appears and all pages render correctly in the new locale.
