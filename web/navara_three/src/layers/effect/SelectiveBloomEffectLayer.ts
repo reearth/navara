@@ -272,12 +272,15 @@ class SelectiveBloomPass extends PostProcessingPass {
 
         void main() {
           vec4 baseColor = texture2D(tBase, vUv);
-          vec3 bloom = texture2D(tBloom, vUv).rgb;
 
           if (debugMode == 1) {
             gl_FragColor = baseColor;
             return;
-          } else if (debugMode == 2) {
+          }
+
+          vec3 bloom = texture2D(tBloom, vUv).rgb;
+
+          if (debugMode == 2) {
             gl_FragColor = vec4(bloom, 1.0);
             return;
           } else if (debugMode == 3) {

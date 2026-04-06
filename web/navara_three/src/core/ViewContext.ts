@@ -64,8 +64,8 @@ export class ViewContext extends EventHandler<ViewContextEvents> {
    * Called when EffectSlotRegistry changes (slot register/unregister) to ensure
    * masks stay in sync regardless of layer creation order.
    *
-   * Handles both non-enhanced meshes (via material.userData) and enhanced meshes
-   * (via selectiveEffectConfig stored by SelectiveEffectHelper).
+   * Handles both non-enhanced meshes (via material.userData.uEffectIdsMask) and
+   * enhanced meshes (Model/Polygon via MeshCache duck-typing and enhancer update).
    */
   recomputeEffectIdsMasks(): void {
     const registry = this.effectSlotRegistry;
