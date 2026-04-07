@@ -40,7 +40,7 @@
   "devDependencies": {
     "@navara/three": "workspace:*",
     "@types/three": "0.183.1",
-    "postprocessing": "6.38.3",
+    "postprocessing": "6.39.0",
     "three": "0.183.2",
     "vite-plugin-glsl": "1.5.6"
   }
