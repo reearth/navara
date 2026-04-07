@@ -223,8 +223,7 @@ class SelectiveOutlinePass extends PostProcessingPass {
     super("SelectiveOutlinePass");
     this.layer = layer;
 
-    const renderer =
-      layer.viewContext.renderPassOrchestrator.effectComposer.getRenderer();
+    const renderer = layer.viewContext.getRenderer();
     const renderSize = renderer.getSize(new Vector2());
     const resolutionScale =
       layer.layerConfig.selectiveOutline?.resolutionScale ?? 1.0;

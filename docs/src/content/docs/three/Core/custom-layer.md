@@ -42,21 +42,52 @@ All base classes inherit from `LayerDeclaration` and share a common lifecycle.
 
 ### ViewContext
 
-You can access the scene and camera through `this.view`.
+You can access the scene, camera, and rendering APIs through `this.view`.
 
-| Property / Method                     | Description                                       |
-| ------------------------------------- | ------------------------------------------------- |
-| `view.scenes.opaque`                  | Scene for opaque objects                           |
-| `view.scenes.transparent`             | Scene for transparent objects                      |
-| `view.scenes.mrt`                     | Scene for selective effects (Bloom / Outline)      |
-| `view.scenes.skyEnvMap`               | Scene for environment maps                         |
-| `view.scenes.light`                   | Scene for lights                                   |
-| `view.scenes.draped`                  | Scene for terrain-draped meshes                    |
-| `view.camera`                         | PerspectiveCamera                                  |
-| `view.atmosphere`                     | Atmosphere (sun direction, time of day, etc.)      |
-| `view.renderPassOrchestrator`         | Render pipeline management                         |
-| `view.applyShadowMaterial(material)`  | Apply CSM shadows to a material (experimental)     |
-| `view.removeShadowMaterial(material)` | Remove CSM shadows from a material (experimental)  |
+#### Properties
+
+| Property             | Description                                       |
+| -------------------- | ------------------------------------------------- |
+| `view.scenes.opaque`      | Scene for opaque objects                     |
+| `view.scenes.transparent` | Scene for transparent objects                |
+| `view.scenes.mrt`         | Scene for selective effects (Bloom / Outline)|
+| `view.scenes.skyEnvMap`   | Scene for environment maps                   |
+| `view.scenes.light`       | Scene for lights                             |
+| `view.scenes.draped`      | Scene for terrain-draped meshes              |
+| `view.camera`             | PerspectiveCamera                            |
+| `view.atmosphere`         | Atmosphere (sun direction, time of day, etc.)|
+| `view.globe`              | Globe instance (if set)                      |
+
+#### Pass Management
+
+| Method                                                 | Description                                        |
+| ------------------------------------------------------ | -------------------------------------------------- |
+| `view.getPass(name)`                                   | Get a post-processing pass by name                 |
+| `view.addPass(name, pass)`                             | Add a post-processing pass                         |
+| `view.insertPassBefore(targetName, name, pass)`        | Insert a pass before the target pass               |
+| `view.insertPassAfter(targetName, name, pass)`         | Insert a pass after the target pass                |
+| `view.removePass(name)`                                | Remove a post-processing pass by name              |
+
+#### Renderer Access
+
+| Method                  | Description                                         |
+| ----------------------- | --------------------------------------------------- |
+| `view.getRenderer()`    | Get the WebGLRenderer instance                      |
+| `view.getInputBuffer()` | Get the input buffer from the effect composer        |
+
+#### Shadow (Experimental)
+
+| Method                                | Description                                        |
+| ------------------------------------- | -------------------------------------------------- |
+| `view.applyShadowMaterial(material)`  | Apply CSM shadows to a material                    |
+| `view.removeShadowMaterial(material)` | Remove CSM shadows from a material                 |
+
+#### Selective Effects
+
+| Method                                                        | Description                                                   |
+| ------------------------------------------------------------- | ------------------------------------------------------------- |
+| `view.applyEffectToObject(object, effectIds, layerId?)`       | Apply selective effects (Bloom, Outline) to an Object3D       |
+| `view.removeEffectFromObject(object, effectIds?)`             | Remove selective effects from an Object3D                     |
 
 ## Custom Mesh Layer
 
