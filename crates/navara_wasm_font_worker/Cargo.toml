@@ -8,6 +8,7 @@ license.workspace = true
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
+wuff.workspace = true
 rustybuzz.workspace = true
 fontdue.workspace = true
 sdf_glyph_renderer.workspace = true
