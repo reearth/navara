@@ -741,9 +741,6 @@ export default class ThreeView<
       this.layersManager,
       this.renderPassOrchestrator,
       createDefaultConcurrencyManager(this.isMobileOptimized()),
-      {
-        meshes: this._meshes,
-      },
       this.selectiveEffectHelper,
       {
         selectiveEffectMask: this._options.selectiveEffects?.debugViews,
@@ -902,7 +899,7 @@ export default class ThreeView<
     this.viewContext.fontManager = this._fontManager;
 
     this.globe = new Globe(this._globeHandler, this._options);
-    this.viewContext.setGlobe(this.globe);
+    this.viewContext.globe = this.globe;
 
     if (!isWorker()) {
       this._eventDisposer = registerInputEvents(

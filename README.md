@@ -59,6 +59,16 @@ Please take a screenshot when you add/update an example in `navara_three/example
 pnpm navara_three screenshots {PAGE_NAME}
 ```
 
+## API Document
+
+See [docs/README.md](docs/README.md) for details.
+
+```console
+pnpm dev:docs      # Start dev server
+pnpm build:docs    # Build for production
+pnpm preview:docs  # Preview production build
+```
+
 ## License
 
 Licensed under either of

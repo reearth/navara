@@ -1,0 +1,26 @@
+[
+  {
+    "title": "Water reflection(sample project)",
+    "href": "https://navara-preview.netlify.app/water-reflection",
+    "thumbnail": "https://navara-preview.netlify.app/screenshots/water-reflection.png",
+    "description": "Water reflection using navara_three",
+    "translations": {
+      "ja": {
+        "title": "水の反射(サンプルプロジェクト)",
+        "description": "navara_threeを使用した水の反射の表現"
+      }
+    }
+  },
+  {
+    "title": "Water reflection(sample project)",
+    "href": "https://navara-preview.netlify.app/water-reflection",
+    "thumbnail": "https://navara-preview.netlify.app/screenshots/water-reflection.png",
+    "description": "Water reflection using navara_three",
+    "translations": {
+      "ja": {
+        "title": "水の反射(サンプルプロジェクト)",
+        "description": "navara_threeを使用した水の反射の表現"
+      }
+    }
+  }
+]

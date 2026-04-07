@@ -1,0 +1,18 @@
+---
+import Default from '@astrojs/starlight/components/Header.astro';
+---
+
+<Default {...Astro.props}><slot /></Default>
+
+<style>
+  :global(.site-title) {
+    span {
+      color: #000000;
+    }
+  }
+  :global([data-theme="dark"] .site-title) {
+    span {
+      color: #ffffff;
+    }
+  }
+</style>

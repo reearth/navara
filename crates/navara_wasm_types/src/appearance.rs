@@ -634,6 +634,12 @@ pub struct PolygonMaterial {
     #[wasm_bindgen(js_name = clampToGround)]
     #[serde(rename = "clampToGround")]
     pub clamp_to_ground: Option<bool>,
+    /// Splits the polygon into XYZ vector tiles for rendering, even when the
+    /// data source is not an MVT layer. This can improve performance for large
+    /// polygons.
+    ///
+    /// Enabling `clamp_to_ground` implicitly forces `tiled` to `true`.
+    /// Outline rendering is not supported when `tiled` is enabled.
     #[wasm_bindgen(js_name = tiled)]
     #[serde(rename = "tiled")]
     pub tiled: Option<bool>,

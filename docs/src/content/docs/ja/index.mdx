@@ -1,0 +1,40 @@
+---
+title: Navara
+description: Navara documentation site
+template: splash
+hero:
+  tagline: 3D globe map engine prototype built on Rust + WebAssembly + Three.js
+  actions:
+    - text: Get Started
+      link: /guides/introduction/what-is-navara/
+      icon: right-arrow
+    - text: View on GitHub
+      link: https://github.com/eukarya-inc/navara
+      icon: external
+      variant: minimal
+---
+
+import { LinkCard, CardGrid } from "@astrojs/starlight/components";
+
+<CardGrid>
+  <LinkCard
+    title="three"
+    href="/ja/three/introduction/what-is-navara-three/"
+    description="Map engine for manipulating maps on the front-end side, based on Three.js"
+  />
+  <LinkCard
+    title="three_default_layers"
+    href="/ja/three_default_layers/about/"
+    description="Default layer implementations for navara_three (mesh, effect, light)"
+  />
+  <LinkCard
+    title="three_default_plugin"
+    href="/ja/three_default_plugin/about/"
+    description="Default plugin implementations for navara_three"
+  />
+  {/* <LinkCard
+    title="engine"
+    href="/engine/introduction/what-is-navara-wasm/"
+    description="A GIS engine built on Rust and compiled to WebAssembly (WASM) to run on the frontend"
+  /> */}
+</CardGrid>

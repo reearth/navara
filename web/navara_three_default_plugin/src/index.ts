@@ -33,6 +33,8 @@ import {
   type ArrowHelperLayerConfig,
   type ArclineMeshLayerConfig,
   type SmoothLineMeshLayerConfig,
+  InstancedBoxMeshLayer,
+  type InstancedBoxMeshLayerConfig,
   AerialPerspectiveEffectLayer,
   CloudsEffectLayer,
   ColorGradingLUTEffectLayer,
@@ -90,6 +92,7 @@ export class DefaultPlugin extends Plugin<ThreeView<DefaultLayerDescriptions>> {
     view.registerMesh("arrowHelper", ArrowHelperLayer);
     view.registerMesh("arcLines", ArclineMeshLayer);
     view.registerMesh("smoothLines", SmoothLineMeshLayer);
+    view.registerMesh("boxes", InstancedBoxMeshLayer);
 
     // Register light layers
     view.registerLight("sun", SunLightLayer);
@@ -246,4 +249,5 @@ export type DefaultMeshLayerDeclarationDescription =
   | AxesHelperLayerConfig
   | ArrowHelperLayerConfig
   | ArclineMeshLayerConfig
-  | SmoothLineMeshLayerConfig;
+  | SmoothLineMeshLayerConfig
+  | InstancedBoxMeshLayerConfig;

@@ -1,0 +1,24 @@
+---
+import Default from '@astrojs/starlight/components/Pagination.astro';
+import { getFilteredSidebar, flattenSidebar } from '../utils/sidebar';
+
+const props = Astro.locals.starlightRoute;
+
+// Custom pagination based on filtered sidebar navigation
+if (props.pagination) {
+    const { sidebar } = Astro.locals.starlightRoute;
+    const pathname = Astro.url.pathname;
+
+    const filteredSidebar = getFilteredSidebar(sidebar, pathname);
+    const flattened = flattenSidebar(filteredSidebar, pathname);
+    const idx = flattened.findIndex((entry) => entry.isCurrent);
+
+    let prev = flattened[idx - 1];
+    let next = flattened[idx + 1];
+
+    const newPagination = { ...props.pagination, prev, next };
+    props.pagination = newPagination;
+}
+---
+
+<Default {...Astro.props} />
