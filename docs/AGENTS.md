@@ -1,29 +1,29 @@
 # AGENTS.md
 
-This document provides guidance for AI agents working with the navara-developer-docs codebase.
+This document provides guidance for AI agents working with the Navara documentation site (`docs/`).
 
 ## Quick Start
 
 | Task                                       | Reference                                                                    |
 | ------------------------------------------ | ---------------------------------------------------------------------------- |
-| Update navara_three documentation          | [NAVARA_THREE_INSTRUCTIONS.md](./guide/NAVARA_THREE_INSTRUCTIONS.md)         |
+| Update documentation                       | [NAVARA_THREE_INSTRUCTIONS.md](./guide/NAVARA_THREE_INSTRUCTIONS.md)         |
 | Specific update scenarios                  | [NAVARA_THREE_UPDATE_CHECKLIST.md](./guide/NAVARA_THREE_UPDATE_CHECKLIST.md) |
 | Translate documentation to other languages | [TRANSLATION_GUIDE.md](./guide/TRANSLATION_GUIDE.md)                         |
-| Rules for writing                          | [WRITING_RULES.md](./guide/WRITING_RULES.md)                         |
+| Rules for writing                          | [WRITING_RULES.md](./guide/WRITING_RULES.md)                                |
 
 ## Documentation Structure
 
 ```
-navara-developer-docs/
+docs/
 ├── AGENTS.md                         # This file - entry point for AI agents
-├── guide/
-│   ├── NAVARA_THREE_INSTRUCTIONS.md  # Comprehensive update guide
-│   ├── NAVARA_THREE_UPDATE_CHECKLIST.md  # Scenario-based checklists
-│   ├── TRANSLATION_GUIDE.md         # Translation workflow guide
-│   └── WRITING_RULES.md             # Rules for writing
-└── src/content/docs/                 # Documentation files
-    ├── (root)                        # English (default locale)
-    ├── ja/                           # Japanese locale
+├── guide/                            # Guides for writing and updating docs
+└── src/content/docs/                 # Documentation pages
+    ├── three/                        # @navara/three
+    ├── three_default_layers/         # @navara/three_default_layers
+    ├── three_default_plugin/         # @navara/three_default_plugin
+    ├── engine/                       # WASM engine
+    ├── guides/                       # General project guides
+    ├── ja/                           # Japanese locale (mirrors root structure)
     └── [locale]/                     # Future locales (e.g., zh/, ko/)
 ```
 

@@ -1,105 +1,65 @@
 # Documentation Update Checklist
 
-Scenario-based checklists for specific documentation updates. For comprehensive instructions, see [NAVARA_THREE_INSTRUCTIONS.md](./NAVARA_THREE_INSTRUCTIONS.md).
+Scenario-based checklists for specific documentation updates. For conventions, see [NAVARA_THREE_INSTRUCTIONS.md](./NAVARA_THREE_INSTRUCTIONS.md).
 
-## Table of Contents
-
-- [Adding New APIs](#adding-new-apis)
-- [Adding New Layers](#adding-new-layers)
-- [Modifying Existing APIs](#modifying-existing-apis)
-- [Validation](#validation)
-- [Code Patterns](#code-patterns)
+**Example app location:** `web/navara_three/example/`
 
 ---
 
 ## Adding New APIs
 
-### New Function (navara_three_api)
-
-**Files:** `navara_three_api/src/*.ts` → `API/navara_three_api.md`
+### New Function
 
 - [ ] Read implementation for exact signature
-- [ ] Identify section (Ellipsoid, Coordinate, etc.)
+- [ ] Identify the correct documentation page and section
 - [ ] Add documentation in logical order
 - [ ] Verify types match exactly
-- [ ] Check examples in `navara_three/example`
+- [ ] Check example apps for references: `navara_three/example`
 
-### New ThreeView Method
-
-**Files:** `navara_three/src/index.ts` → `API/threeview-functions.md`
+### New Method on a Class
 
 - [ ] Read implementation for exact signature
 - [ ] Identify category (Lifecycle, Layers, Camera, Terrain, etc.)
 - [ ] Add to appropriate section
 - [ ] Update method summary tables if present
-- [ ] Check examples in `navara_three/example`
+- [ ] Check example apps for references: `navara_three/example`
 
-### New ThreeView Property
-
-**Files:** `navara_three/src/index.ts` → `API/threeview-properties.md`
+### New Property
 
 - [ ] Read property definition for type and default
 - [ ] Add documentation with Type, Description, Default, Example
 - [ ] Note if read-only
 
-### New ThreeView Event
+### New Event
 
-**Files:** `navara_three/src/index.ts` (ViewEvents) → `API/threeview-events.md`
-
-- [ ] Read event handler type from ViewEvents
+- [ ] Read event handler type
 - [ ] Add documentation with Handler Type, Description, Example
 
 ---
 
 ## Adding New Layers
 
-### New Mesh Layer
-
-**Files:** `navara_three/src/layers/mesh/[New].ts` → `Mesh Layer/`
+### New Layer (Mesh / Light / Effect)
 
 - [ ] Read implementation for config type
-- [ ] Update `meshlayer.md` index table
+- [ ] Update the corresponding index page
 - [ ] Create new file with frontmatter
 - [ ] Document all config properties
 - [ ] Add basic and advanced examples
-- [ ] Check `navara_three/example` for references
-
-### New Light Layer
-
-**Files:** `navara_three/src/layers/light/[New].ts` → `Light Layer/`
-
-- [ ] Read implementation for config type
-- [ ] Update `lightlayer.md` index table
-- [ ] Create new file with proper format
-- [ ] Document all config properties
-- [ ] Add usage examples with imports
-
-### New Effect Layer
-
-**Files:** `navara_three/src/layers/effect/[New].ts` → `Effect Layer/`
-
-- [ ] Read implementation for config and render pass details
-- [ ] Update `effectlayer.md` index table
-- [ ] Create new file
-- [ ] Explain visual effect in English
-- [ ] Add before/after examples if applicable
+- [ ] If it belongs to a plugin package, verify it is registered in the plugin
 
 ### New Resource Layer Type
 
-**Files:** `navara_three/src/type/index.ts` → `Resource Layer/`
-
 - [ ] Read type definition
-- [ ] Update `resource-layer.md` index
+- [ ] Update the resource layer index page
 - [ ] Create new `*-layer.md` file with all properties
 - [ ] Document nested types
 - [ ] Add complete usage examples
 
 ### New Material Type
 
-**Files:** `navara_three/src/mesh/*.ts` or WASM types → `Resource Layer/`
-
-- [ ] Read material implementation/type
-- [ ] Update `resource-layer.md` material index
+- [ ] Read material implementation/type from source or WASM types
+- [ ] Update the resource layer index page
 - [ ] Create new `*-material.md` file with properties
 - [ ] Document styling options
 - [ ] Add visual examples if possible
@@ -123,7 +83,7 @@ Scenario-based checklists for specific documentation updates. For comprehensive 
 - [ ] Update **Parameters:** section
 - [ ] Update **Returns:** section
 - [ ] Update all examples
-- [ ] Check `navara_three/example` for usages
+- [ ] Check example apps for usages: `navara_three/example`
 
 ### API Removed
 
@@ -131,8 +91,8 @@ Scenario-based checklists for specific documentation updates. For comprehensive 
 - [ ] Remove documentation section
 - [ ] Remove from index tables
 - [ ] Check references in other docs
-- [ ] Add deprecation notice in `New/` if applicable
-- [ ] Update `navara_three/example`
+- [ ] Add deprecation notice if applicable
+- [ ] Update example apps if affected: `navara_three/example`
 
 ---
 
@@ -148,29 +108,39 @@ Run after any update:
 - [ ] English text is grammatically correct
 - [ ] Internal links work
 - [ ] Sidebar order numbers don't conflict
-- [ ] Examples in `navara_three/example` are consistent
 
 ---
 
-## Code Patterns
+## Code Pattern Templates
 
 ### Imports
 
 ```typescript
-// navara_three
+// Main package
 import ThreeView from "@navara/three";
 import ThreeView, { LayerType } from "@navara/three";
 
-// navara_three_api
+// API utilities
 import { initNavaraApi, functionName } from "@navara/three_api";
+
+// Plugin
+import { DefaultPlugin } from "@navara/three_default_plugin";
+```
+
+### Initialization
+
+```typescript
+const view = new ThreeView({ container: element });
+view.addPlugin(new DefaultPlugin());
+await view.init();
 ```
 
 ### Layer Addition
 
 ```typescript
 const layer = view.addLayer<LayerType>({
-  type: "mesh" | "light" | "effect" | "tiles" | "terrain" | "geojson" | "cesium3dtiles" | "mvt",
-  [config]: { /* ... */ },
+  type: "mesh",
+  config: { /* ... */ },
   position: { x: 0, y: 0, z: 0 },
 });
 ```
@@ -187,11 +157,41 @@ const unsubscribe = view.on("eventName", (param) => {
 unsubscribe();
 ```
 
-### Initialization
+---
 
-```typescript
-const view = new ThreeView({ container: element });
-await view.init();
+## Documentation Formats
+
+### Key Rules
+
+- Parameters section: No type annotations (already in Syntax); **omit entirely if no parameters** (do not write "None")
+- Returns section: Omit for `void` functions; no type prefix for others
+- Examples: Always include imports; show complete, runnable code
+
+### Frontmatter
+
+```yaml
+---
+title: PageTitle
+description: Brief description for SEO
+sidebar:
+  order: 1  # Lower numbers appear first
+---
+```
+
+### Callouts
+
+```markdown
+:::note
+Important information
+:::
+
+:::tip[Recommended]
+Recommended approach
+:::
+
+:::warning
+Caveat or limitation
+:::
 ```
 
 ---
@@ -274,15 +274,4 @@ view.on("eventName", (param) => {
 
 ```markdown
 | [LayerName](./layer-name) | `ConfigType` | Description of usage |
-```
-
-### New File Frontmatter
-
-```yaml
----
-title: PageTitle
-description: Brief description
-sidebar:
-  order: [number]
----
 ```
