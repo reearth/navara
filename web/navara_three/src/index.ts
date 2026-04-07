@@ -864,7 +864,7 @@ export default class ThreeView<
     this.viewContext.fontManager = this._fontManager;
 
     this.globe = new Globe(this._globeHandler, this._options);
-    this.viewContext.setGlobe(this.globe);
+    this.viewContext.globe = this.globe;
 
     if (!isWorker()) {
       this._eventDisposer = registerInputEvents(
