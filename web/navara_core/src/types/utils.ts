@@ -1,6 +1,6 @@
 export type Nullable<T> = T | null | undefined;
 
-export type RemoveFreeRecursively<T> = T extends object
+export type RemoveFreeRecursively<T> = T extends { free: unknown }
   ? {
       [K in keyof T as K extends "free" | symbol | number
         ? never
