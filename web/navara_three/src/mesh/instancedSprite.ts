@@ -24,7 +24,6 @@ import type { BufferLoader } from "../event";
 import { TEXTURE_LOADER } from "../event/loaders";
 import { createInstancedSpriteMaterialEnhancer } from "../material/enhancer";
 import { getImageDataFromImageBitmap } from "../tasks/getImageDataFromImageBitmap";
-import { arraysEqual } from "../utils";
 
 import { PickableMesh } from "./pickableMesh";
 
@@ -62,9 +61,6 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
   private _enhancedMaterial?: ReturnType<
     typeof createInstancedSpriteMaterialEnhancer
   >;
-  /** Previous effectIds for SelectiveEffect registry updates */
-  private _prevEffectIds?: string[];
-
   constructor(options: InstancedSpriteOptions) {
     super();
     this.renderOrder = options.renderOrder ?? this.renderOrder;
@@ -193,13 +189,6 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
           layerAttr.needsUpdate = true;
         }
       }
-    }
-
-    // SelectiveEffect: track effectIds changes
-    if (!arraysEqual(this._prevEffectIds, m.material.effectIds)) {
-      this._prevEffectIds = m.material.effectIds
-        ? [...m.material.effectIds]
-        : [];
     }
   }
 
@@ -611,8 +600,6 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     }
 
     shaderMaterial.dispose();
-
-    this._prevEffectIds = undefined;
 
     // Clear internal collections to release references
     this._batchIdToInstance.clear();

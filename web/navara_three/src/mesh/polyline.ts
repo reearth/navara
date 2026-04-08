@@ -16,7 +16,6 @@ import type { ViewContext } from "../core";
 import type { BufferLoader } from "../event";
 import { createPolylineMaterialEnhancer } from "../material/enhancer";
 import type { CommonUniforms } from "../uniforms";
-import { arraysEqual } from "../utils";
 
 import {
   BatchedFeatureMesh,
@@ -58,8 +57,6 @@ export class PolylineMesh extends BatchedFeatureMesh<
   private _viewContext: ViewContext;
   /** Material enhancer for managing shader state */
   private _enhancedMaterial?: ReturnType<typeof createPolylineMaterialEnhancer>;
-  /** Previous effectIds for SelectiveEffect registry diff */
-  private _prevEffectIds?: string[];
   /** Flag indicating geometry initialization failed - mesh should never be visible */
   private _geometryInitFailed = false;
 
@@ -385,11 +382,6 @@ export class PolylineMesh extends BatchedFeatureMesh<
     this.visible = (material.show ?? true) && active;
     this.castShadow = !!material.castShadow;
     this.receiveShadow = !!material.receiveShadow;
-
-    // SelectiveEffect: track effectIds changes
-    if (!arraysEqual(this._prevEffectIds, material.effectIds)) {
-      this._prevEffectIds = material.effectIds ? [...material.effectIds] : [];
-    }
 
     const base = enhancer.states();
 
