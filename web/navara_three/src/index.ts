@@ -896,7 +896,6 @@ export default class ThreeView<
     this._fontManager.setConcurrencyManager(
       this.viewContext.concurrencyManager,
     );
-    this.viewContext.fontManager = this._fontManager;
 
     this.globe = new Globe(this._globeHandler, this._options);
     this.viewContext.globe = this.globe;
@@ -1112,6 +1111,7 @@ export default class ThreeView<
       this.viewContext,
       updatedAt,
       this._layerHandler,
+      this._fontManager,
     );
     events?.free();
 

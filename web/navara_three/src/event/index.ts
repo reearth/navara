@@ -29,6 +29,7 @@ import {
   RenderableFeatureRemovedEvent,
   VectorTileState,
 } from "@navara/engine";
+import type { FontManager } from "@navara/font";
 import { radianToDegree } from "@navara/three_api";
 import { canWorkerProcessImmediately } from "@navara/worker";
 import { Mesh, Object3D, Texture, Sprite } from "three";
@@ -187,6 +188,7 @@ export function processEvent(
   viewContext: ViewContext,
   updatedAt: number,
   layerHandler?: LayerHandler,
+  fontManager?: FontManager,
 ) {
   eventManager.pushEvents(event);
 
@@ -346,6 +348,7 @@ export function processEvent(
             layersManager,
             viewContext,
             updatedAt,
+            fontManager,
           );
           break;
         case "remove":
