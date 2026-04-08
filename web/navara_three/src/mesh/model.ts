@@ -372,8 +372,10 @@ export class ModelMesh
         this._layerId,
       );
       this.prevEffectIds = [...effectIds];
+    }
 
-      // Compute effectIdsMask and propagate to enhancers
+    // Compute effectIdsMask every _update() to stay in sync with slot changes
+    if (effectIds.length > 0) {
       const mask =
         this.viewContext.effectSlotRegistry?.computeMask(effectIds) ?? 0;
       for (const enhancer of this._enhancers.values()) {

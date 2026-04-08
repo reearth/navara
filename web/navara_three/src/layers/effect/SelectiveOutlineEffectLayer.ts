@@ -419,7 +419,8 @@ class SelectiveOutlinePass extends PostProcessingPass {
     // Passthrough if buffers not available — bypass composite to avoid null tEdge sampling
     if (!effectIdsBuffer || slot < 0) {
       this.compositeMaterial.uniforms.tBase.value = inputBuffer.texture;
-      this.compositeMaterial.uniforms.tEdge.value = null;
+      // Bind inputBuffer to avoid null sampler (bypass=1 skips edge sampling)
+      this.compositeMaterial.uniforms.tEdge.value = inputBuffer.texture;
       this.compositeMaterial.uniforms.bypass.value = 1;
       renderer.setRenderTarget(this.renderToScreen ? null : outputBuffer);
       renderer.render(this.compositeScene, this.fullscreenCamera);
