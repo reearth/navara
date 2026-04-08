@@ -201,14 +201,8 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
       }
     }
 
-    // SelectiveEffect: effectIds handling (needs prev state for registry)
+    // SelectiveEffect: track effectIds changes
     if (!arraysEqual(this._prevEffectIds, m.material.effectIds)) {
-      this._viewContext.selectiveEffectRegistry?.updateLinksForObject(
-        this,
-        m.material.effectIds ?? [],
-        this._prevEffectIds ?? [],
-        this._layerId,
-      );
       this._prevEffectIds = m.material.effectIds
         ? [...m.material.effectIds]
         : [];
@@ -624,16 +618,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
 
     shaderMaterial.dispose();
 
-    // Clean up SelectiveEffect registry links
-    if (this._viewContext?.selectiveEffectRegistry && this._prevEffectIds) {
-      this._viewContext.selectiveEffectRegistry.updateLinksForObject(
-        this,
-        [], // New effectIds: empty array (removing all links)
-        this._prevEffectIds, // Previous effectIds
-        this._layerId,
-      );
-      this._prevEffectIds = undefined;
-    }
+    this._prevEffectIds = undefined;
 
     // Clear internal collections to release references
     this._batchIdToInstance.clear();

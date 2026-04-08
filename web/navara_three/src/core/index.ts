@@ -49,11 +49,8 @@ export { LayerHandle } from "./LayerHandle";
 export * from "./ViewContext";
 export {
   SelectiveEffectHelper,
-  type SelectiveEffectConfig,
   SELECTIVE_BLOOM_EFFECT_KEY,
   SELECTIVE_OUTLINE_EFFECT_KEY,
-  getSelectiveEffectConfig,
-  hasSelectiveEffectConfig,
   createFullscreenQuad,
 } from "./SelectiveEffectHelper";
 export { setupSelectiveEffectUniforms } from "./emissiveBufferSetup";

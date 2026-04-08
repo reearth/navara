@@ -670,20 +670,6 @@ export class PolygonMesh extends BatchedFeatureMesh<
   }
 
   dispose() {
-    // Clean up SelectiveEffect registry links
-    const currentEffectIds = this._getEffectIds();
-    if (
-      this._viewContext?.selectiveEffectRegistry &&
-      currentEffectIds.length > 0
-    ) {
-      this._viewContext.selectiveEffectRegistry.updateLinksForObject(
-        this,
-        [], // New effectIds: empty array (removing all links)
-        [...currentEffectIds], // Previous effectIds
-        this._layerId,
-      );
-    }
-
     if (this._debugBoundingSphereMesh) {
       this._debugBoundingSphereMesh.geometry.dispose();
       (this._debugBoundingSphereMesh.material as MeshBasicMaterial).dispose();

@@ -345,25 +345,6 @@ export abstract class InstancedMeshLayerDeclaration<
 
     this._instance = newMesh;
     this.capacity = newCapacity;
-
-    // Re-link selective-effect registry to the new mesh
-    if (this.view.selectiveEffectRegistry) {
-      const effectIds = this.view.getLayerEffects(this.id) ?? [];
-      if (effectIds.length > 0) {
-        this.view.selectiveEffectRegistry.updateLinksForObject(
-          oldMesh,
-          [],
-          effectIds,
-          this.id,
-        );
-        this.view.selectiveEffectRegistry.updateLinksForObject(
-          newMesh,
-          effectIds,
-          [],
-          this.id,
-        );
-      }
-    }
   }
 
   override onDestroy(): void {

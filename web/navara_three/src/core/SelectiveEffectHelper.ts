@@ -1,11 +1,4 @@
-import {
-  Object3D,
-  Mesh,
-  Points,
-  Line,
-  OrthographicCamera,
-  PlaneGeometry,
-} from "three";
+import { OrthographicCamera, PlaneGeometry } from "three";
 
 // ============================================================================
 // Constants
@@ -18,70 +11,15 @@ export const SELECTIVE_BLOOM_EFFECT_KEY = "selectiveBloom" as const;
 export const SELECTIVE_OUTLINE_EFFECT_KEY = "selectiveOutline" as const;
 
 // ============================================================================
-// Types
+// SelectiveEffectHelper — effectId ↔ effectKey mapping
 // ============================================================================
 
 /**
- * Selective Effect Config — stored in Object3D.userData.selectiveEffectConfig.
- * Represents which effects apply to an object.
- */
-export type SelectiveEffectConfig = {
-  effectIds: string[];
-  layerId?: string;
-};
-
-/**
- * Type guard to check if an object has SelectiveEffectConfig
- */
-export function hasSelectiveEffectConfig(
-  obj: unknown,
-): obj is { userData: { selectiveEffectConfig: SelectiveEffectConfig } } {
-  if (
-    typeof obj !== "object" ||
-    obj === null ||
-    !("userData" in obj) ||
-    typeof obj.userData !== "object" ||
-    obj.userData === null
-  ) {
-    return false;
-  }
-
-  const userData = obj.userData as Record<string, unknown>;
-  if (!("selectiveEffectConfig" in userData)) {
-    return false;
-  }
-
-  const config = userData.selectiveEffectConfig;
-  if (typeof config !== "object" || config === null) {
-    return false;
-  }
-
-  return true;
-}
-
-/**
- * Get SelectiveEffectConfig from an object safely
- */
-export function getSelectiveEffectConfig(
-  obj: unknown,
-): SelectiveEffectConfig | undefined {
-  if (!hasSelectiveEffectConfig(obj)) {
-    return undefined;
-  }
-  return obj.userData.selectiveEffectConfig;
-}
-
-// ============================================================================
-// SelectiveEffectHelper — object ↔ effect link management
-// ============================================================================
-
-/**
- * Manages object-to-effect linkage via userData.selectiveEffectConfig.
- * Used by ViewContext to track which objects have which effects applied.
+ * Manages effectId → effectKey mapping.
+ * Used by SelectiveEffectLayer to resolve which effect type an ID refers to.
  */
 export class SelectiveEffectHelper {
   private effectKeys = new Map<string, string>(); // effectId -> effectKey
-  private effectObjectCache = new Map<string, Set<Object3D>>(); // effectKey -> objects
 
   /**
    * Register an effect key for an effect ID
@@ -94,11 +32,7 @@ export class SelectiveEffectHelper {
    * Unregister an effect key for an effect ID
    */
   unregisterEffectKey(effectId: string): void {
-    const effectKey = this.effectKeys.get(effectId);
     this.effectKeys.delete(effectId);
-    if (effectKey) {
-      this.effectObjectCache.delete(effectKey);
-    }
   }
 
   /**
@@ -106,121 +40,6 @@ export class SelectiveEffectHelper {
    */
   getEffectKey(effectId: string): string | undefined {
     return this.effectKeys.get(effectId);
-  }
-
-  /**
-   * Update selective effect links for an object.
-   * Handles linking new effects and unlinking removed effects.
-   */
-  updateLinksForObject(
-    target: Object3D,
-    effectIds: string[],
-    prevEffectIds: string[],
-    layerId: string,
-  ): void {
-    for (const effectId of prevEffectIds) {
-      if (!effectIds.includes(effectId)) {
-        this.unlink(effectId, target);
-      }
-    }
-
-    const needsLink = effectIds.some(
-      (effectId) => !prevEffectIds.includes(effectId),
-    );
-    if (needsLink) {
-      target.updateMatrixWorld(true);
-    }
-
-    for (const effectId of effectIds) {
-      if (!prevEffectIds.includes(effectId)) {
-        this.link(effectId, target, layerId);
-      }
-    }
-  }
-
-  private link(
-    effectId: string,
-    sourceObject: Object3D,
-    layerId?: string,
-  ): void {
-    const effectKey = this.effectKeys.get(effectId);
-
-    this.forEachRenderableObject(sourceObject, (obj) => {
-      if (!obj.userData.selectiveEffectConfig) {
-        obj.userData.selectiveEffectConfig = { effectIds: [] };
-      }
-
-      if (!hasSelectiveEffectConfig(obj)) {
-        return;
-      }
-
-      const config = obj.userData.selectiveEffectConfig;
-
-      if (!config.effectIds.includes(effectId)) {
-        config.effectIds = [...config.effectIds, effectId];
-      }
-
-      if (layerId) {
-        config.layerId = layerId;
-      }
-
-      if (effectKey) {
-        let cache = this.effectObjectCache.get(effectKey);
-        if (!cache) {
-          cache = new Set();
-          this.effectObjectCache.set(effectKey, cache);
-        }
-        cache.add(obj);
-      }
-
-      // Add cleanup listener once per object (avoid duplicates on repeated link calls)
-      if (!obj.userData._selectiveEffectCleanupRegistered) {
-        obj.userData._selectiveEffectCleanupRegistered = true;
-        obj.addEventListener("removed", () => {
-          const seConfig = obj.userData.selectiveEffectConfig;
-          if (seConfig) {
-            for (const id of seConfig.effectIds) {
-              this.disposeFromCache(id, obj);
-            }
-          }
-        });
-      }
-    });
-  }
-
-  private unlink(effectId: string, sourceObject: Object3D): void {
-    this.forEachRenderableObject(sourceObject, (obj) => {
-      if (!hasSelectiveEffectConfig(obj)) {
-        return;
-      }
-
-      const config = obj.userData.selectiveEffectConfig;
-      config.effectIds = config.effectIds.filter((id) => id !== effectId);
-
-      this.disposeFromCache(effectId, obj);
-    });
-  }
-
-  private disposeFromCache(effectId: string, obj: Object3D): void {
-    const effectKey = this.effectKeys.get(effectId);
-    if (effectKey) {
-      this.effectObjectCache.get(effectKey)?.delete(obj);
-    }
-  }
-
-  private forEachRenderableObject(
-    object: Object3D,
-    callback: (obj: Mesh | Points | Line) => void,
-  ): void {
-    object.traverse((child) => {
-      if (
-        child instanceof Mesh ||
-        child instanceof Points ||
-        child instanceof Line
-      ) {
-        callback(child);
-      }
-    });
   }
 }
 

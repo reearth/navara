@@ -390,14 +390,8 @@ export class PolylineMesh extends BatchedFeatureMesh<
     this.castShadow = !!material.castShadow;
     this.receiveShadow = !!material.receiveShadow;
 
-    // SelectiveEffect: effectIds handling (needs prev state for registry)
+    // SelectiveEffect: track effectIds changes
     if (!arraysEqual(this._prevEffectIds, material.effectIds)) {
-      this._viewContext.selectiveEffectRegistry?.updateLinksForObject(
-        this,
-        material.effectIds ?? [],
-        this._prevEffectIds ?? [],
-        this._layerId,
-      );
       this._prevEffectIds = material.effectIds ? [...material.effectIds] : [];
     }
 

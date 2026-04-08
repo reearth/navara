@@ -60,19 +60,8 @@ export abstract class MeshLayerDeclarationForSelectiveEffect<
     // ----------------------------------------------------------------------------
     // SelectiveEffect: effectIds wiring
     // ----------------------------------------------------------------------------
-    const useSelectiveEffect = this._effectIds.length > 0;
-    if (useSelectiveEffect && this.raw) {
-      // Update Helper links for Selective Effect buffer rendering
-      this.view.selectiveEffectRegistry?.updateLinksForObject(
-        this.raw,
-        this._effectIds,
-        [],
-        this.id,
-      );
-    }
-
     // Register with Manager (SoT) if effectIds is specified
-    if (useSelectiveEffect) {
+    if (this._effectIds.length > 0) {
       this.view.registerLayerEffects(this.id, this._effectIds);
     }
 
@@ -105,15 +94,7 @@ export abstract class MeshLayerDeclarationForSelectiveEffect<
     // ----------------------------------------------------------------------------
     // SelectiveEffect: registry update (requires this.raw)
     // ----------------------------------------------------------------------------
-    if (effectIdsChanged && this.raw) {
-      // Update Helper links for Selective Effect buffer rendering
-      this.view.selectiveEffectRegistry?.updateLinksForObject(
-        this.raw,
-        this._effectIds,
-        prevEffectIds,
-        this.id,
-      );
-
+    if (effectIdsChanged) {
       // Update Manager (SoT) with new effectIds
       this.view.updateLayerEffects(this.id, this._effectIds);
 
@@ -147,15 +128,7 @@ export abstract class MeshLayerDeclarationForSelectiveEffect<
     // ----------------------------------------------------------------------------
     // SelectiveEffect: cleanup
     // ----------------------------------------------------------------------------
-    if (this._effectIds.length > 0 && this.raw) {
-      this.view.selectiveEffectRegistry?.updateLinksForObject(
-        this.raw,
-        [],
-        this._effectIds,
-        this.id,
-      );
-      this._effectIds = [];
-    }
+    this._effectIds = [];
 
     // Unregister layer effects
     this.view.unregisterLayerEffects(this.id);

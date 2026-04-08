@@ -358,19 +358,13 @@ export class ModelMesh
       }
     }
 
-    // Update effectIds link for Selective Effect buffer rendering
+    // Update effectIds for Selective Effect buffer rendering
     // material.effectIds may be undefined for 3D Tiles — fall back to layer-level effectIds
     const effectIds =
       material.effectIds ??
       this.viewContext.getLayerEffects(this._layerId) ??
       [];
     if (!arraysEqual(this.prevEffectIds, effectIds)) {
-      this.viewContext.selectiveEffectRegistry?.updateLinksForObject(
-        this,
-        effectIds,
-        this.prevEffectIds,
-        this._layerId,
-      );
       this.prevEffectIds = [...effectIds];
     }
 
