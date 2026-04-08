@@ -12,10 +12,8 @@ import {
   Vector2,
 } from "three";
 
-import type { ViewContext } from "../core";
-import type { BufferLoader } from "../event";
+import type { EventContext } from "../event/context";
 import { createPolylineMaterialEnhancer } from "../material/enhancer";
-import type { CommonUniforms } from "../uniforms";
 import { arraysEqual } from "../utils";
 
 import {
@@ -54,8 +52,7 @@ export class PolylineMesh extends BatchedFeatureMesh<
   BufferGeometry<Attributes>,
   ShaderMaterial
 > {
-  /** ViewContext for SelectiveEffect handling */
-  private _viewContext: ViewContext;
+  readonly ctx: EventContext;
   /** Layer ID for SelectiveEffect handling */
   private _layerId: string;
   /** Material enhancer for managing shader state */
@@ -65,19 +62,13 @@ export class PolylineMesh extends BatchedFeatureMesh<
   /** Flag indicating geometry initialization failed - mesh should never be visible */
   private _geometryInitFailed = false;
 
-  constructor(
-    mesh: NavaraPolylineMesh,
-    buf: BufferLoader,
-    uniforms: CommonUniforms,
-    viewContext: ViewContext,
-    layerId: string,
-  ) {
+  constructor(mesh: NavaraPolylineMesh, ctx: EventContext, layerId: string) {
     super(new BufferGeometry<Attributes>(), new ShaderMaterial());
-    this._viewContext = viewContext;
+    this.ctx = ctx;
     this._layerId = layerId;
     this.batchLength = mesh.batch_length;
 
-    const geometryResult = this.initGeometry(mesh, buf);
+    const geometryResult = this.initGeometry(mesh);
 
     // If geometry init failed (missing required buffers), mark as permanently invisible
     if (!geometryResult.success) {
@@ -88,7 +79,7 @@ export class PolylineMesh extends BatchedFeatureMesh<
       this.visible = false;
     }
 
-    this.initMaterial(mesh, uniforms, geometryResult.useRTE);
+    this.initMaterial(mesh, geometryResult.useRTE);
 
     this.addEventListener("removedFromWorld", () => {
       this.dispose();
@@ -97,8 +88,8 @@ export class PolylineMesh extends BatchedFeatureMesh<
 
   private initGeometry(
     mesh: NavaraPolylineMesh,
-    buf: BufferLoader,
   ): { success: true; useRTE: boolean } | { success: false; useRTE: false } {
+    const { buf } = this.ctx;
     const g = mesh.geometry;
     const position = buf.removeF32(g.position.data);
     const position_high = g.position_high
@@ -230,11 +221,8 @@ export class PolylineMesh extends BatchedFeatureMesh<
     return { success: true, useRTE };
   }
 
-  private initMaterial(
-    mesh: NavaraPolylineMesh,
-    uniforms: CommonUniforms,
-    useRTE: boolean,
-  ) {
+  private initMaterial(mesh: NavaraPolylineMesh, useRTE: boolean) {
+    const { uniforms } = this.ctx;
     const meshMaterial = mesh.material;
 
     const [minHeight, maxHeight] = meshMaterial.__internal__?.minMaxHeights ?? [
@@ -315,7 +303,7 @@ export class PolylineMesh extends BatchedFeatureMesh<
     // Set onBeforeCompile to use enhancer
     this.material.onBeforeCompile = enhancer.transformShader;
 
-    this._viewContext.applyShadowMaterial(this.material);
+    this.ctx.viewContext.applyShadowMaterial(this.material);
 
     this._initBatchedMaterial();
 
@@ -392,7 +380,7 @@ export class PolylineMesh extends BatchedFeatureMesh<
 
     // SelectiveEffect: effectIds handling (needs prev state for registry)
     if (!arraysEqual(this._prevEffectIds, material.effectIds)) {
-      this._viewContext.selectiveEffectRegistry?.updateLinksForObject(
+      this.ctx.viewContext.selectiveEffectRegistry?.updateLinksForObject(
         this,
         material.effectIds ?? [],
         this._prevEffectIds ?? [],
@@ -479,6 +467,6 @@ export class PolylineMesh extends BatchedFeatureMesh<
   }
 
   dispose() {
-    this._viewContext.removeShadowMaterial(this.material);
+    this.ctx.viewContext.removeShadowMaterial(this.material);
   }
 }

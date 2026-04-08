@@ -12,10 +12,8 @@ import {
   Sphere,
 } from "three";
 
-import type { BufferLoader } from "../";
-import type { ViewContext } from "../../core";
 import { ModelMesh } from "../../mesh/model";
-import type { CommonUniforms } from "../../uniforms";
+import type { EventContext } from "../context";
 import {
   initializeGltfLoader,
   initializeDracoLoader,
@@ -23,18 +21,16 @@ import {
 } from "../loaders";
 
 export async function renderModel(
+  ctx: EventContext,
   m: NavaraModelMesh,
-  buf: BufferLoader,
-  uniforms: CommonUniforms,
-  viewContext: ViewContext,
   layerId: string,
 ) {
-  const loader = initializeGltfLoader(viewContext.concurrencyManager);
-  const dracoLoader = initializeDracoLoader(viewContext.concurrencyManager);
+  const loader = initializeGltfLoader(ctx.viewContext.concurrencyManager);
+  const dracoLoader = initializeDracoLoader(ctx.viewContext.concurrencyManager);
 
   const { rawScene, credit } = await (async () => {
     if (m.bin) {
-      const bin = buf.removeU8(m.bin);
+      const bin = ctx.buf.removeU8(m.bin);
       if (!bin) {
         return {};
       }
@@ -143,14 +139,7 @@ export async function renderModel(
     return;
   }
 
-  const scene = new ModelMesh(
-    { scene: rawScene, credit },
-    m,
-    uniforms,
-    buf,
-    viewContext,
-    layerId,
-  );
+  const scene = new ModelMesh({ scene: rawScene, credit }, m, ctx, layerId);
 
   return scene;
 }

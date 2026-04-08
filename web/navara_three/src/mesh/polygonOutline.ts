@@ -1,4 +1,3 @@
-import type { EventHandler } from "@navara/core";
 import {
   PolygonMesh as NavaraPolygonMesh,
   PolygonMaterial,
@@ -17,8 +16,7 @@ import {
   LineSegmentsGeometry,
 } from "three-stdlib";
 
-import type { ViewEvents } from "..";
-import type { BufferLoader } from "../event";
+import type { EventContext } from "../event/context";
 import { overrideLineMaterialForMRT } from "../material";
 import { createReplacer } from "../utils/replacer";
 
@@ -56,38 +54,36 @@ class NvLineGeometry extends LineGeometry {
 }
 
 export class PolygonOutlineMesh extends Line2 implements FeatureMesh {
+  readonly ctx: EventContext;
   private resizeEventUnsubscribe?: () => void;
 
-  constructor(
-    mesh: NavaraPolygonMesh,
-    buf: BufferLoader,
-    viewEvents: EventHandler<ViewEvents>,
-  ) {
+  constructor(mesh: NavaraPolygonMesh, ctx: EventContext) {
     super(new NvLineGeometry(), new LineMaterial());
-    this.initGeometry(mesh, buf);
-    this.initMaterial(mesh, viewEvents);
+    this.ctx = ctx;
+    this.initGeometry(mesh);
+    this.initMaterial(mesh);
   }
 
-  private initGeometry(mesh: NavaraPolygonMesh, buf: BufferLoader) {
+  private initGeometry(mesh: NavaraPolygonMesh) {
     const g = mesh.outline_geometry;
     if (!g || !g.position) {
       return;
     }
-    const position = buf.removeF32(g.position.data);
+    const position = this.ctx.buf.removeF32(g.position.data);
     if (!position) {
       return;
     }
 
     const scale_normal_and_cap = g.scale_normal_and_cap
-      ? buf.removeF32(g.scale_normal_and_cap.data)
+      ? this.ctx.buf.removeF32(g.scale_normal_and_cap.data)
       : undefined;
 
     const skipIdx = g.skip_indices
-      ? (buf.removeU32(g.skip_indices) ?? undefined)
+      ? (this.ctx.buf.removeU32(g.skip_indices) ?? undefined)
       : undefined;
 
     const batchIndex = g.batch_index
-      ? buf.removeF32(g.batch_index.data)
+      ? this.ctx.buf.removeF32(g.batch_index.data)
       : undefined;
 
     // Convert position buffer to Line2 format
@@ -161,10 +157,7 @@ export class PolygonOutlineMesh extends Line2 implements FeatureMesh {
     );
   }
 
-  private initMaterial(
-    mesh: NavaraPolygonMesh,
-    viewEvents: EventHandler<ViewEvents>,
-  ) {
+  private initMaterial(mesh: NavaraPolygonMesh) {
     const meshMaterial = mesh.material;
     const material = this.material;
 
@@ -176,8 +169,9 @@ export class PolygonOutlineMesh extends Line2 implements FeatureMesh {
       material.resolution.set(w, h);
     };
 
-    viewEvents.on("resize", resizeHandler);
-    this.resizeEventUnsubscribe = () => viewEvents.off("resize", resizeHandler);
+    this.ctx.viewEvents.on("resize", resizeHandler);
+    this.resizeEventUnsubscribe = () =>
+      this.ctx.viewEvents.off("resize", resizeHandler);
 
     // Set up height adjustment uniforms
     const uMinMaxHeights = meshMaterial.__internal__?.minMaxHeights;
