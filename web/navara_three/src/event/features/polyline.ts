@@ -8,7 +8,7 @@ export async function renderPolyline(
   mesh: NavaraPolylineMesh,
   layerId: string,
 ) {
-  return new PolylineMesh(mesh, ctx, layerId);
+  return new PolylineMesh(ctx, mesh, layerId);
 }
 
 export function processPolylineChanged(

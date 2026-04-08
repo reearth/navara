@@ -139,7 +139,7 @@ export async function renderModel(
     return;
   }
 
-  const scene = new ModelMesh({ scene: rawScene, credit }, m, ctx, layerId);
+  const scene = new ModelMesh(ctx, { scene: rawScene, credit }, m, layerId);
 
   return scene;
 }

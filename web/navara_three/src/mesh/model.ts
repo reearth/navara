@@ -94,12 +94,12 @@ export class ModelMesh
   private prevEffectIds: string[] = [];
 
   constructor(
+    ctx: EventContext,
     gltfInfo: {
       scene: Group;
       credit?: string;
     },
     m: NavaraModelMesh,
-    ctx: EventContext,
     layerId: string,
   ) {
     super();

@@ -34,8 +34,8 @@ export async function renderText(
       }
 
       const textGroup = new BatchedSdfTextMesh(
-        m,
         ctx,
+        m,
         fontUrl,
         {
           renderOrder: FEATURE_RENDER_ORDER,

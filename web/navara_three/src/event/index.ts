@@ -100,7 +100,7 @@ export function processEvent(ctx: EventContext, event: Events | undefined) {
           meshHandler.setTileMeshPrepared(event.tile_handle);
           break;
         case "remove":
-          processObjectRemoved(scenes.globe, ctx, event);
+          processObjectRemoved(ctx, scenes.globe, event);
           break;
         case "change":
           processMeshChanged(ctx, event);
@@ -189,7 +189,7 @@ export function processEvent(ctx: EventContext, event: Events | undefined) {
               layer._unregisterFeatureEvaluator(removed.bits);
               layer.emit("featureRemoved", { featureId: removed.bits });
             }
-            processObjectRemoved(scenes.mrt, ctx, event);
+            processObjectRemoved(ctx, scenes.mrt, event);
           }
           break;
         case "change":
@@ -320,8 +320,8 @@ function processObjectTransformUpdated(
 }
 
 function processObjectRemoved(
-  parent: Object3D,
   ctx: EventContext,
+  parent: Object3D,
   obj: EntityEvent,
 ) {
   const { meshes } = ctx;

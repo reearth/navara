@@ -51,8 +51,8 @@ export class BatchedSdfTextMesh
   private _loadedFaceUrls: Set<string>;
 
   constructor(
-    m: NavaraTextMesh,
     ctx: EventContext,
+    m: NavaraTextMesh,
     fontIdentifier: string,
     options: InstancedMeshOptions,
     loadedFaceUrls?: Set<string>,

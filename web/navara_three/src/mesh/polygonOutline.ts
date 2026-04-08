@@ -57,7 +57,7 @@ export class PolygonOutlineMesh extends Line2 implements FeatureMesh {
   readonly ctx: EventContext;
   private resizeEventUnsubscribe?: () => void;
 
-  constructor(mesh: NavaraPolygonMesh, ctx: EventContext) {
+  constructor(ctx: EventContext, mesh: NavaraPolygonMesh) {
     super(new NvLineGeometry(), new LineMaterial());
     this.ctx = ctx;
     this.initGeometry(mesh);

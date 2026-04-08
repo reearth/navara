@@ -7,7 +7,7 @@ export async function renderPolygonOutline(
   ctx: EventContext,
   mesh: NavaraPolygonMesh,
 ) {
-  return new PolygonOutlineMesh(mesh, ctx);
+  return new PolygonOutlineMesh(ctx, mesh);
 }
 
 export function processPolygonOutlineChanged(

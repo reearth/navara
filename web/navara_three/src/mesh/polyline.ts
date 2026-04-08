@@ -62,7 +62,7 @@ export class PolylineMesh extends BatchedFeatureMesh<
   /** Flag indicating geometry initialization failed - mesh should never be visible */
   private _geometryInitFailed = false;
 
-  constructor(mesh: NavaraPolylineMesh, ctx: EventContext, layerId: string) {
+  constructor(ctx: EventContext, mesh: NavaraPolylineMesh, layerId: string) {
     super(new BufferGeometry<Attributes>(), new ShaderMaterial());
     this.ctx = ctx;
     this._layerId = layerId;
