@@ -447,10 +447,12 @@ export class SDFTextMesh
   ): void {
     const { glyphs, metrics, unitsPerEm } = shapeResult;
 
-    // Build glyph ID -> metrics lookup
-    const metricsMap = new Map<number, GlyphMetrics>();
+    // Build composite key -> metrics lookup.
+    // Keys are pre-computed by the WASM font worker (composite_key in Rust)
+    // to ensure the key layout is always in sync between Rust and TypeScript.
+    const metricsMap = new Map<bigint, GlyphMetrics>();
     for (const m of metrics) {
-      metricsMap.set(m.glyphId, m);
+      metricsMap.set(m.compositeKey, m);
     }
 
     const fontUnitToSdfPx = SDF_PX_SIZE / unitsPerEm;
@@ -469,7 +471,7 @@ export class SDFTextMesh
     }[] = [];
 
     for (const glyph of glyphs) {
-      const m = metricsMap.get(glyph.glyphId);
+      const m = metricsMap.get(glyph.compositeKey);
       if (m && m.atlasW > 0 && m.atlasH > 0) {
         const x = (cursorX + glyph.xOffset) * fontUnitToSdfPx + m.bearingX;
         const y = (cursorY + glyph.yOffset) * fontUnitToSdfPx + m.bearingY;

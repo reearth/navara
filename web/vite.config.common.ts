@@ -42,7 +42,7 @@ export function composePlugins(
   const basePlugins: PluginOption[] = [
     watchPackages(["@navara/engine", "@navara/engine-worker", "@navara/engine-font-worker", "@navara/engine-api"]),
     tsconfig(),
-    dts({ bundleTypes: true }),
+    dts({ bundleTypes: true, tsconfigPath: "./tsconfig.build.json" }),
     ...(env.mode !== "production" ? [wasm(), topLevelAwait()] : []),
   ];
 
