@@ -901,6 +901,10 @@ export default class ThreeView<
     this.globe = new Globe(this._globeHandler, this._options);
     this.viewContext.globe = this.globe;
 
+    this.viewContext._initPicking(this._meshes, () =>
+      this._core?.genGlobalBatchId(),
+    );
+
     if (!isWorker()) {
       this._eventDisposer = registerInputEvents(
         this._core,

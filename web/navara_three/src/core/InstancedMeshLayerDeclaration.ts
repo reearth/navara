@@ -11,6 +11,8 @@ import {
 } from "three";
 import invariant from "tiny-invariant";
 
+import { PickableInstancedMeshWrapper } from "../mesh/pickableMeshWrapper";
+
 import {
   MeshLayerDeclarationForSelectiveEffect,
   type MeshLayerConfigWithSelectiveEffect,
@@ -81,6 +83,12 @@ export abstract class InstancedMeshLayerDeclaration<
 > {
   protected configs: ChildConfig[] = [];
   private capacity = 0;
+  private _instancedPickWrapper?: PickableInstancedMeshWrapper;
+  private _batchIds: number[] = [];
+  /** The batch IDs assigned to each instance for picking. */
+  get batchIds(): readonly number[] {
+    return this._batchIds;
+  }
 
   /** Create the shared geometry for all instances. */
   protected abstract createGeometry(): TGeometry;
@@ -158,7 +166,26 @@ export abstract class InstancedMeshLayerDeclaration<
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
     this.configs = [...configs];
 
+    // Generate batch IDs for initial instances if pickable
+    if (this._pickable) {
+      this._batchIds = configs.map(() => this.view.genGlobalBatchId() ?? 0);
+    }
+
     return mesh;
+  }
+
+  protected override initPicking(): void {
+    if (!this._pickable) return;
+
+    const mesh = this.raw;
+    if (!mesh) return;
+
+    this._instancedPickWrapper = new PickableInstancedMeshWrapper(
+      mesh,
+      this._batchIds,
+    );
+    this.view.registerPickableMesh(this.id, this._instancedPickWrapper);
+    this._pickRegistered = true;
   }
 
   /** Add a new instance. Returns the index of the added instance. */
@@ -179,6 +206,12 @@ export abstract class InstancedMeshLayerDeclaration<
     mesh.instanceMatrix.needsUpdate = true;
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
     this.configs.push(config);
+
+    if (this._pickable) {
+      this._batchIds.push(this.view.genGlobalBatchId() ?? 0);
+      this.syncPickableWrapper();
+    }
+
     this.requestUpdate();
     return index;
   }
@@ -207,10 +240,18 @@ export abstract class InstancedMeshLayerDeclaration<
       }
 
       this.configs[index] = this.configs[last];
+
+      if (this._pickable) {
+        this._batchIds[index] = this._batchIds[last];
+      }
     }
 
     mesh.count--;
     this.configs.pop();
+    if (this._pickable) {
+      this._batchIds.pop();
+      this.syncPickableWrapper();
+    }
     mesh.instanceMatrix.needsUpdate = true;
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
     this.requestUpdate();
@@ -245,6 +286,10 @@ export abstract class InstancedMeshLayerDeclaration<
       this.requestUpdate();
     }
     this.configs = [];
+    if (this._pickable) {
+      this._batchIds = [];
+      this.syncPickableWrapper();
+    }
   }
 
   /**
@@ -274,12 +319,24 @@ export abstract class InstancedMeshLayerDeclaration<
     currentMesh.instanceMatrix.needsUpdate = true;
     if (currentMesh.instanceColor) currentMesh.instanceColor.needsUpdate = true;
     this.configs = [...configs];
+
+    if (this._pickable) {
+      this._batchIds = configs.map(() => this.view.genGlobalBatchId() ?? 0);
+      this.syncPickableWrapper();
+    }
+
     this.requestUpdate();
   }
 
   /** Number of active instances. */
   get count(): number {
     return this.configs.length;
+  }
+
+  /** Sync the pickable wrapper with the current mesh and batch IDs. */
+  private syncPickableWrapper(): void {
+    if (!this._instancedPickWrapper || !this.raw) return;
+    this._instancedPickWrapper.sync(this.raw, this._batchIds);
   }
 
   /**
@@ -348,9 +405,17 @@ export abstract class InstancedMeshLayerDeclaration<
 
     // Re-link selective-effect registry and onBeforeRender wiring to the new mesh
     this.relinkSelectiveEffects(oldMesh);
+
+    // Re-sync pickable wrapper with new mesh
+    this.syncPickableWrapper();
   }
 
   override onDestroy(): void {
+    if (this._instancedPickWrapper) {
+      this._instancedPickWrapper = undefined;
+      this._batchIds = [];
+    }
+
     const mesh = this.raw;
     if (mesh) {
       mesh.geometry.dispose();

@@ -200,6 +200,8 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
       targetGroup.add(gltf.scene);
       this.setupModel(targetGroup);
 
+      this.initPicking();
+
       this.emit("needsUpdate");
       this.emit("load");
     } catch (error) {

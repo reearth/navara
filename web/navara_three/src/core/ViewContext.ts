@@ -15,6 +15,7 @@ import { Color } from "../Color";
 import type { LayersManager } from "../layersManager";
 import type { RenderPassOrchestrator } from "../orchestrators";
 import type { Scenes } from "../scene";
+import type { MeshCache } from "../type";
 
 import type { EffectLayerDeclaration } from "./EffectLayerDeclaration";
 import type { LayerHandle } from "./LayerHandle";
@@ -62,6 +63,8 @@ export class ViewContext extends EventHandler<ViewContextEvents> {
   public fontManager?: FontManager;
 
   private readonly selectiveEffects: SelectiveEffectManager;
+  private _meshes?: MeshCache;
+  private _genGlobalBatchId?: () => number | undefined;
 
   constructor(
     /** Scene containers for different rendering passes. */
@@ -257,5 +260,44 @@ export class ViewContext extends EventHandler<ViewContextEvents> {
       prevEffectIds,
       config.layerId ?? "",
     );
+  }
+
+  // --- Picking registration ---
+
+  /**
+   * Initialize picking support by providing the mesh cache and batch ID generator.
+   * @internal Called by View during setup.
+   */
+  _initPicking(
+    meshes: MeshCache,
+    genGlobalBatchId: () => number | undefined,
+  ): void {
+    this._meshes = meshes;
+    this._genGlobalBatchId = genGlobalBatchId;
+  }
+
+  /**
+   * Generate a new unique global batch ID for picking.
+   * The returned ID is in the 24-bit RGB color range (1..0xffffff).
+   */
+  genGlobalBatchId(): number | undefined {
+    return this._genGlobalBatchId?.();
+  }
+
+  /**
+   * Register a pickable mesh so the picking system can discover it.
+   * @param key - Unique key (typically the layer ID).
+   * @param mesh - The Object3D that implements PickableMesh.
+   */
+  registerPickableMesh(key: string, mesh: Object3D): void {
+    this._meshes?.set(key, mesh);
+  }
+
+  /**
+   * Unregister a pickable mesh from the picking system.
+   * @param key - The key used during registration.
+   */
+  unregisterPickableMesh(key: string): void {
+    this._meshes?.delete(key);
   }
 }

@@ -2,6 +2,7 @@ import type { BaseEventMap, XYZ } from "@navara/core";
 import { Matrix4, Object3D } from "three";
 import invariant from "tiny-invariant";
 
+import { PickableMeshWrapper } from "../mesh/pickableMeshWrapper";
 import type { Scenes } from "../scene";
 
 import {
@@ -19,6 +20,8 @@ export type MeshLayerConfig = {
   rotation?: XYZ;
   matrix?: Matrix4;
   matrixWorld?: Matrix4;
+  /** Enable GPU picking for this mesh layer. */
+  pickable?: boolean;
 } & LayerDeclarationConfig;
 
 export type MeshLayerUpdate = Pick<
@@ -192,6 +195,13 @@ export abstract class MeshLayerDeclaration<
   public matrix?: Matrix4;
   public matrixWorld?: Matrix4;
   private prevPassKey?: PassKey;
+  /** Whether this mesh layer is registered for picking. */
+  protected _pickRegistered = false;
+  private _pickMeshWrapper?: PickableMeshWrapper;
+  /** The batch ID assigned to this mesh layer for picking. */
+  public batchId?: number;
+
+  protected _pickable: boolean;
 
   constructor(view: ViewContext, config?: Config) {
     const resolvedConfig = config ?? ({} as Config);
@@ -201,6 +211,7 @@ export abstract class MeshLayerDeclaration<
     this.rotation = resolvedConfig.rotation;
     this.matrix = resolvedConfig.matrix;
     this.matrixWorld = resolvedConfig.matrixWorld;
+    this._pickable = resolvedConfig.pickable ?? false;
   }
 
   /**
@@ -210,6 +221,11 @@ export abstract class MeshLayerDeclaration<
    * @returns The pass key: `"opaque"` (default), `"transparent"`, `"mrt"`, or `"skyEnvMap"`.
    */
   protected getPassKey(): PassKey {
+    // Pickable meshes must be in MRT scene because the opaque scene
+    // is hidden during the picking render pass.
+    if (this._pickable) {
+      return "mrt";
+    }
     return "opaque";
   }
 
@@ -262,6 +278,22 @@ export abstract class MeshLayerDeclaration<
     this._instance.visible = this.visible;
 
     this.onPassKeyChange();
+    this.initPicking();
+  }
+
+  protected initPicking(): void {
+    if (!this._pickable) return;
+
+    const raw = this.raw;
+    if (!raw) return;
+
+    const batchId = this.view.genGlobalBatchId();
+    if (batchId == null) return;
+
+    this.batchId = batchId;
+    this._pickMeshWrapper = new PickableMeshWrapper(raw, batchId);
+    this.view.registerPickableMesh(this.id, this._pickMeshWrapper);
+    this._pickRegistered = true;
   }
 
   removeFromScene(passKey: PassKey) {
@@ -329,6 +361,11 @@ export abstract class MeshLayerDeclaration<
   }
 
   onDestroy(): void {
+    if (this._pickRegistered) {
+      this.view.unregisterPickableMesh(this.id);
+      this._pickRegistered = false;
+    }
+
     if (this.raw && this.raw.parent) {
       this.raw.parent.remove(this.raw);
     }
