@@ -5,7 +5,6 @@ import {
   NearestFilter,
   RGBADepthPacking,
   Scene,
-  UnsignedByteType,
   WebGLRenderTarget,
   type PerspectiveCamera,
   type WebGLRenderer,
@@ -71,9 +70,8 @@ export class CustomRenderPass extends RenderPass {
     this.gbufferRenderTarget.textures.push(
       this.gbufferRenderTarget.texture.clone(),
     );
-    // attachment 2: effectIds buffer (discrete bitmask — NearestFilter + UnsignedByte)
+    // attachment 2: effectIds buffer (discrete bitmask — NearestFilter required)
     const effectIdsTexture = this.gbufferRenderTarget.texture.clone();
-    effectIdsTexture.type = UnsignedByteType;
     effectIdsTexture.minFilter = NearestFilter;
     effectIdsTexture.magFilter = NearestFilter;
     effectIdsTexture.generateMipmaps = false;
