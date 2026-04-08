@@ -5,6 +5,7 @@ import {
   type RenderableFeature,
   RenderableFeatureChangedEvent,
 } from "@navara/engine";
+import type { FontManager } from "@navara/font";
 import { Mesh, Sprite, Object3D } from "three";
 
 import type { ViewEvents } from "..";
@@ -57,6 +58,7 @@ export function renderFeature(
   tileHandle: TileHandle | undefined,
   viewContext: ViewContext,
   layerId: string,
+  fontManager?: FontManager,
 ): Promise<Mesh | Sprite | Object3D | undefined> | undefined {
   if (f.point) {
     return renderPoint(f.point, buf, viewContext, layerId);
@@ -81,7 +83,7 @@ export function renderFeature(
     );
   }
   if (f.text) {
-    return renderText(f.text, buf, uniforms, viewContext, layerId);
+    return renderText(f.text, buf, uniforms, layerId, fontManager);
   }
 }
 
@@ -104,6 +106,7 @@ export async function processRenderableFeatureAdded(
   layersManager: LayersManager,
   viewContext: ViewContext,
   updatedAt: number,
+  fontManager?: FontManager,
 ) {
   const id = generate_id_from_entity(ev);
   const feature = ev.feature;
@@ -130,6 +133,7 @@ export async function processRenderableFeatureAdded(
     tileHandle,
     viewContext,
     featureLayerId,
+    fontManager,
   )
     ?.then((r) => {
       const type = (() => {
