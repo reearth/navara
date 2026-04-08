@@ -1,7 +1,7 @@
 import { type TextMesh as NavaraTextMesh } from "@navara/engine";
+import type { FontManager } from "@navara/font";
 
 import type { BufferLoader } from "..";
-import type { ViewContext } from "../../core";
 import { BatchedSdfTextMesh } from "../../mesh";
 import { FEATURE_RENDER_ORDER } from "../../renderOrder";
 import type { RenderFlag } from "../../type";
@@ -11,8 +11,8 @@ export async function renderText(
   m: NavaraTextMesh,
   buf: BufferLoader,
   uniforms: CommonUniforms,
-  viewContext: ViewContext,
   layerId: string,
+  fontManager?: FontManager,
 ) {
   const fontUrl = m.material.font;
   if (!fontUrl || fontUrl === "") {
@@ -21,7 +21,6 @@ export async function renderText(
     );
     return;
   }
-  const fontManager = viewContext.fontManager;
 
   // Use SDF pipeline when a font URL is specified and FontManager is available
   if (fontManager) {
@@ -46,7 +45,6 @@ export async function renderText(
         uniforms,
         {
           renderOrder: FEATURE_RENDER_ORDER,
-          viewContext,
           layerId,
         },
         loadedFaceUrls,
