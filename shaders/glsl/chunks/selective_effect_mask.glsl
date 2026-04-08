@@ -7,5 +7,5 @@
  * @return 1.0 if the bit is set, 0.0 otherwise
  */
 float extractEffectBit(float maskValue, int bitIndex) {
-  return mod(floor(maskValue / pow(2.0, float(bitIndex))), 2.0);
+  return mod(floor(maskValue / exp2(float(bitIndex))), 2.0);
 }

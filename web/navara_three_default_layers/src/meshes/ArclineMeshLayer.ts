@@ -86,18 +86,6 @@ export class ArclineMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
 
       this._instance.updateConfig(updateConfigs);
 
-      // Relink after rebuild so new sub-meshes get selectiveEffectConfig.
-      // Old sub-meshes are auto-cleaned via "removed" event listener in link().
-      const effectIds = this.config.effectIds ?? [];
-      if (effectIds.length > 0) {
-        this.view.selectiveEffectRegistry?.updateLinksForObject(
-          this._instance,
-          effectIds,
-          [],
-          this.id,
-        );
-      }
-
       this.emit("needsUpdate");
     }
 

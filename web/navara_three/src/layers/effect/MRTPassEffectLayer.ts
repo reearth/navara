@@ -109,6 +109,7 @@ export class MRTPassEffectLayer extends EffectLayerDeclaration<
 
   onDestroy(): void {
     this._slotRegistry.clear();
+    this.view.effectSlotRegistry = undefined;
     super.onDestroy();
   }
 }

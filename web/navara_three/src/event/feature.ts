@@ -64,7 +64,7 @@ export function renderFeature(
     return renderModel(f.model, buf, uniforms, viewContext, layerId);
   }
   if (f.polyline) {
-    return renderPolyline(f.polyline, buf, uniforms, viewContext, layerId);
+    return renderPolyline(f.polyline, buf, uniforms, viewContext);
   }
   if (f.polygon) {
     return renderPolygon(

@@ -1,9 +1,9 @@
-const MAX_SLOTS = 11;
+const MAX_SLOTS = 8;
 
 /**
- * Maps effect layer IDs (string UUIDs) to integer slot numbers (0-10).
- * Slot numbers correspond to bit positions in the EffectIds Buffer bitmask.
- * HalfFloat has 11 significant bits, so 11 slots (0-10) are supported.
+ * Maps effect layer IDs (string UUIDs) to integer slot numbers (0-7).
+ * Slot numbers correspond to bit positions in the EffectIds Buffer bitmask (R channel).
+ * 8 slots fit within a single 8-bit channel, compatible with both UnsignedByte and HalfFloat RTs.
  *
  * Slots are assigned on register() and freed on unregister().
  * Freed slots are reused by subsequent registrations.

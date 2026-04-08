@@ -56,8 +56,6 @@ export class PolylineMesh extends BatchedFeatureMesh<
 > {
   /** ViewContext for SelectiveEffect handling */
   private _viewContext: ViewContext;
-  /** Layer ID for SelectiveEffect handling */
-  private _layerId: string;
   /** Material enhancer for managing shader state */
   private _enhancedMaterial?: ReturnType<typeof createPolylineMaterialEnhancer>;
   /** Previous effectIds for SelectiveEffect registry diff */
@@ -70,11 +68,9 @@ export class PolylineMesh extends BatchedFeatureMesh<
     buf: BufferLoader,
     uniforms: CommonUniforms,
     viewContext: ViewContext,
-    layerId: string,
   ) {
     super(new BufferGeometry<Attributes>(), new ShaderMaterial());
     this._viewContext = viewContext;
-    this._layerId = layerId;
     this.batchLength = mesh.batch_length;
 
     const geometryResult = this.initGeometry(mesh, buf);

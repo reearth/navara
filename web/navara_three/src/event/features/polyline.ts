@@ -10,15 +10,8 @@ export async function renderPolyline(
   buf: BufferLoader,
   uniforms: CommonUniforms,
   viewContext: ViewContext,
-  layerId: string,
 ) {
-  const polylineMesh = new PolylineMesh(
-    mesh,
-    buf,
-    uniforms,
-    viewContext,
-    layerId,
-  );
+  const polylineMesh = new PolylineMesh(mesh, buf, uniforms, viewContext);
   return polylineMesh;
 }
 

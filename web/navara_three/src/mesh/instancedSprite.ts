@@ -58,10 +58,6 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
   private _initialHeight = 0.0;
   private _loadedUrls = new Set<string>();
   private _active = true;
-  /** ViewContext for SelectiveEffect handling */
-  private _viewContext: ViewContext;
-  /** Layer ID for SelectiveEffect handling */
-  private _layerId: string;
   /** Material enhancer for encapsulated state management */
   private _enhancedMaterial?: ReturnType<
     typeof createInstancedSpriteMaterialEnhancer
@@ -72,8 +68,6 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
   constructor(options: InstancedSpriteOptions) {
     super();
     this.renderOrder = options.renderOrder ?? this.renderOrder;
-    this._viewContext = options.viewContext;
-    this._layerId = options.layerId;
   }
 
   setActive(active: boolean) {
