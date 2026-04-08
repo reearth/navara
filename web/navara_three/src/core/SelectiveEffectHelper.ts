@@ -34,13 +34,6 @@ export class SelectiveEffectHelper {
   unregisterEffectKey(effectId: string): void {
     this.effectKeys.delete(effectId);
   }
-
-  /**
-   * Get effect key for an effect ID
-   */
-  getEffectKey(effectId: string): string | undefined {
-    return this.effectKeys.get(effectId);
-  }
 }
 
 // ============================================================================

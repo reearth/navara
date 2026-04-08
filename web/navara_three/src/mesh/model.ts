@@ -32,7 +32,6 @@ import type { ModelMaterialProps, PntsProps } from "../material/enhancer/model";
 import type { UniformValue } from "../material/types";
 import type { CustomObject3DEventMap } from "../object3DEvent";
 import type { CommonUniforms } from "../uniforms";
-import { arraysEqual } from "../utils";
 
 import {
   getBatchDataTexture,
@@ -358,15 +357,13 @@ export class ModelMesh
       }
     }
 
-    // Update effectIds for Selective Effect buffer rendering
+    // Update effectIds + effectIdsMask for Selective Effect buffer rendering
     // material.effectIds may be undefined for 3D Tiles — fall back to layer-level effectIds
     const effectIds =
       material.effectIds ??
       this.viewContext.getLayerEffects(this._layerId) ??
       [];
-    if (!arraysEqual(this.prevEffectIds, effectIds)) {
-      this.prevEffectIds = [...effectIds];
-    }
+    this.prevEffectIds = effectIds;
 
     // Compute effectIdsMask every _update() to stay in sync with slot changes
     const mask =
