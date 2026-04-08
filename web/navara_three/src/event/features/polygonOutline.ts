@@ -1,16 +1,13 @@
-import type { EventHandler } from "@navara/core";
 import type { PolygonMesh as NavaraPolygonMesh } from "@navara/engine";
 
-import type { BufferLoader } from "../";
-import type { ViewEvents } from "../..";
 import { PolygonOutlineMesh } from "../../mesh";
+import type { EventContext } from "../context";
 
 export async function renderPolygonOutline(
+  ctx: EventContext,
   mesh: NavaraPolygonMesh,
-  buf: BufferLoader,
-  viewEvents: EventHandler<ViewEvents>,
 ) {
-  return new PolygonOutlineMesh(mesh, buf, viewEvents);
+  return new PolygonOutlineMesh(ctx, mesh);
 }
 
 export function processPolygonOutlineChanged(
