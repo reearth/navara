@@ -91,6 +91,7 @@ impl Plugin for Cesium3dTilesPlugin {
                 // Phase 2: Tile selection
                 cesium3dtiles::system::traverse_cesium_3d_tiles_tree,
                 cesium3dtiles::data_requester::systems::filter_requestable_data_requester,
+                cesium3dtiles::data_requester::systems::filter_requestable_metadata_requester,
                 // Phase 3: Model construction (format-specific)
                 b3dm::system::construct_model_by_cesium3dtiles_layer,
                 pnts::system::construct_model_by_cesium3dtiles_layer,

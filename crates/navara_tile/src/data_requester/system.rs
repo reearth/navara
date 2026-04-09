@@ -8,7 +8,7 @@ use navara_component::{Deleted, Ignored, OrderByDistance, Priority, Requested};
 use navara_data_requester::DataRequester;
 use navara_tile_component::{RasterTileQuadtree, TerrainDataRequesterMarker};
 
-const MAX_PENDINGS: u32 = 10;
+const MAX_PENDINGS: u32 = 50;
 
 #[allow(clippy::type_complexity)]
 pub(crate) fn filter_requestable_data_requester(
