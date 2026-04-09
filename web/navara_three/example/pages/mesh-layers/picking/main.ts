@@ -5,12 +5,14 @@ import ThreeView, {
   northUpEastToFixedFrame,
 } from "@navara/three";
 import type {
+  ArclineMeshLayer,
   BoxMeshLayer,
   CylinderMeshLayer,
   GLTFModelLayer,
   InstancedBoxMeshLayer,
   BoxChildConfig,
   PlaneMeshLayer,
+  SmoothLineMeshLayer,
   SphereMeshLayer,
   TubeMeshLayer,
 } from "@navara/three_default_layers";
@@ -81,11 +83,11 @@ const run = async () => {
 
   // Camera looks down at the rows from above
   view.setCamera({
-    lng: 139.7414158227,
-    lat: 35.6730506973,
-    height: 1019.11,
-    heading: 78.2511182859,
-    pitch: -29.7425609818,
+    lng: 139.7182864934,
+    lat: 35.6575333591,
+    height: 2622.64,
+    heading: 63.9397045575,
+    pitch: -32.0830169872,
     roll: 0,
   });
 
@@ -99,6 +101,7 @@ const run = async () => {
   // --- Layout constants ---
   // Row 1 (z = -300): Simple mesh layers (Box, Sphere, Cylinder, Plane, Tube, GLTF)
   // Row 2 (z =  300): Instanced mesh layer
+  // Row 3: Line mesh layers (ArcLine, SmoothLine) — uses geodetic coords directly
   const ROW_Y = 100; // height above ground
   const ROW1_Z = -300;
   const ROW2_Z = 300;
@@ -282,6 +285,58 @@ const run = async () => {
   }
 
   // ============================================================
+  // Row 3: Line mesh layers (geodetic coordinates, RTE rendering)
+  // ============================================================
+
+  // 7. ArcLine
+  const arcLineColor = 0x00ffaa;
+  const arcLineLayer = view.addLayer<ArclineMeshLayer>({
+    type: "mesh",
+    pickable: true,
+    arcLines: [
+      {
+        thickness: 10,
+        segments: 64,
+        arcHeightScale: 0.1,
+        srcColor: new Color().setHex(arcLineColor),
+        tgtColor: new Color().setHex(arcLineColor),
+        geometry: [
+          { lng: 139.78, lat: 35.87 },
+          { lng: 139.78, lat: 35.83 },
+        ],
+      },
+    ],
+  });
+  registerLayer(arcLineLayer, "ArcLine", arcLineColor);
+
+  // 8. SmoothLine
+  const smoothLineColor = 0xffaa00;
+  const smoothLineLayer = view.addLayer<SmoothLineMeshLayer>({
+    type: "mesh",
+    pickable: true,
+    smoothLines: [
+      {
+        tension: 0.5,
+        closed: false,
+        segments: 1,
+        lineWidth: 10,
+        color: smoothLineColor,
+        showPoints: true,
+        pointSize: 3,
+        pointColor: smoothLineColor,
+        points: [
+          { lng: 139.74, lat: 35.69, height: 200 },
+          { lng: 139.75, lat: 35.68, height: 300 },
+          { lng: 139.76, lat: 35.69, height: 250 },
+          { lng: 139.77, lat: 35.68, height: 350 },
+          { lng: 139.78, lat: 35.69, height: 200 },
+        ],
+      },
+    ],
+  });
+  registerLayer(smoothLineLayer, "SmoothLine", smoothLineColor);
+
+  // ============================================================
   // Pick event handling
   // ============================================================
 
@@ -343,6 +398,17 @@ const run = async () => {
       planeLayer.update({ plane: { color: c } });
     } else if (batchId === tubeLayer.ref.batchId) {
       tubeLayer.update({ tube: { color: c } });
+    } else if (batchId === arcLineLayer.ref.batchId) {
+      arcLineLayer.update({
+        arcLines: [
+          {
+            srcColor: c,
+            tgtColor: c,
+          },
+        ],
+      });
+    } else if (batchId === smoothLineLayer.ref.batchId) {
+      smoothLineLayer.update({ smoothLines: [{ color }] });
     } else if (batchId === gltfLayer.ref.batchId) {
       // GLTF: tint via emissive on child MeshStandardMaterials
       gltfLayer.ref.raw?.traverse((child) => {

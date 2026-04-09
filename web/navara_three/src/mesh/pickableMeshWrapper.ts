@@ -5,6 +5,7 @@ import {
   Material,
   Mesh,
   Object3D,
+  ShaderMaterial,
   type Vector2,
   type WebGLProgramParametersWithUniforms,
 } from "three";
@@ -12,12 +13,33 @@ import {
 import type { PickableMesh } from "./pickableMesh";
 
 /**
- * Inject picking shader support into a standard Three.js material.
+ * Picking uniform declarations injected into fragment shaders.
+ */
+const PICKING_UNIFORMS_DECL = /* glsl */ `
+uniform float nvr_uPickable;
+uniform float nvr_uBatchId;
+
+${BATCHID_TO_COLOR}
+`;
+
+/**
+ * Picking override block: when pickable, output batchId-encoded color.
+ * This block must be placed at the very end of main(), after all other
+ * gl_FragColor assignments, so it overrides the final output.
+ */
+const PICKING_OVERRIDE = /* glsl */ `
+if (nvr_uPickable > 0.0) {
+  gl_FragColor = vec4(nvr_batchIdToColor(nvr_uBatchId), 1.0);
+}
+`;
+
+/**
+ * Inject picking shader support into a standard Three.js material
+ * via onBeforeCompile.
  *
- * Uses a uniform `nvr_uBatchId` for the batch ID (single value per mesh)
- * and `nvr_uPickable` to toggle picking mode. When pickable, the fragment
- * shader outputs the batchId-encoded color directly, bypassing lighting
- * and tonemapping.
+ * Standard materials (MeshBasicMaterial, MeshLambertMaterial, etc.) always
+ * contain `#include <dithering_fragment>` as the last meaningful chunk
+ * before main() closes. Picking code is injected right after it.
  */
 function injectPickingShader(
   shader: WebGLProgramParametersWithUniforms,
@@ -26,29 +48,15 @@ function injectPickingShader(
   shader.uniforms.nvr_uPickable = refs.nvr_uPickable;
   shader.uniforms.nvr_uBatchId = refs.nvr_uBatchId;
 
-  // Fragment shader: inject uniforms and picking override after dithering
-  shader.fragmentShader = shader.fragmentShader
-    .replace(
-      "void main() {",
-      `
-uniform float nvr_uPickable;
-uniform float nvr_uBatchId;
+  shader.fragmentShader = shader.fragmentShader.replace(
+    "void main() {",
+    `${PICKING_UNIFORMS_DECL}\nvoid main() {`,
+  );
 
-${BATCHID_TO_COLOR}
-
-void main() {
-`,
-    )
-    .replace(
-      "#include <dithering_fragment>",
-      `
-#include <dithering_fragment>
-
-if (nvr_uPickable > 0.0) {
-  gl_FragColor = vec4(nvr_batchIdToColor(nvr_uBatchId), 1.0);
-}
-`,
-    );
+  shader.fragmentShader = shader.fragmentShader.replace(
+    "#include <dithering_fragment>",
+    `#include <dithering_fragment>\n${PICKING_OVERRIDE}`,
+  );
 }
 
 /**
@@ -76,10 +84,9 @@ void main() {
   );
 
   // Fragment shader: inject uniforms, varying, and picking override
-  shader.fragmentShader = shader.fragmentShader
-    .replace(
-      "void main() {",
-      `
+  shader.fragmentShader = shader.fragmentShader.replace(
+    "void main() {",
+    `
 uniform float nvr_uPickable;
 varying float nvr_vBatchId;
 
@@ -87,17 +94,55 @@ ${BATCHID_TO_COLOR}
 
 void main() {
 `,
-    )
-    .replace(
-      "#include <dithering_fragment>",
-      `
-#include <dithering_fragment>
+  );
+
+  shader.fragmentShader = shader.fragmentShader.replace(
+    "#include <dithering_fragment>",
+    `#include <dithering_fragment>
 
 if (nvr_uPickable > 0.0) {
   gl_FragColor = vec4(nvr_batchIdToColor(nvr_vBatchId), 1.0);
 }
 `,
-    );
+  );
+}
+
+/**
+ * Directly inject picking shader code into a ShaderMaterial's source strings.
+ *
+ * For ShaderMaterial (and its subclasses like LineMaterial), modifying the
+ * shader source directly is more reliable than `onBeforeCompile` because:
+ * 1. Other code may set onBeforeCompile (e.g. RTE injection for LineMaterial)
+ * 2. MRT overrides already modify material.fragmentShader directly
+ * 3. The material source is the ground truth for ShaderMaterial compilation
+ *
+ * The picking override is injected before the last closing brace of main()
+ * so it runs after all other gl_FragColor assignments.
+ */
+function injectPickingIntoShaderMaterial(
+  material: ShaderMaterial,
+  refs: { nvr_uPickable: { value: number }; nvr_uBatchId: { value: number } },
+): void {
+  // Add uniforms to the material's uniform map
+  material.uniforms.nvr_uPickable = refs.nvr_uPickable;
+  material.uniforms.nvr_uBatchId = refs.nvr_uBatchId;
+
+  // Inject uniform declarations before void main()
+  material.fragmentShader = material.fragmentShader.replace(
+    "void main() {",
+    `${PICKING_UNIFORMS_DECL}\nvoid main() {`,
+  );
+
+  // Inject picking override before the last closing brace of main().
+  // Custom materials (ShaderMaterial, LineMaterial) don't have
+  // #include <dithering_fragment>, so we target the last `}` instead.
+  const lastBrace = material.fragmentShader.lastIndexOf("}");
+  material.fragmentShader =
+    material.fragmentShader.slice(0, lastBrace) +
+    PICKING_OVERRIDE +
+    material.fragmentShader.slice(lastBrace);
+
+  material.needsUpdate = true;
 }
 
 /**
@@ -105,8 +150,8 @@ if (nvr_uPickable > 0.0) {
  * GPU picking system.
  *
  * Traverses the object's scene graph and injects picking shader code into every
- * child Mesh's material via `onBeforeCompile`. This works for both single meshes
- * and groups (e.g. GLTF models with multiple child meshes).
+ * child Mesh's material. For ShaderMaterial, modifies the source directly.
+ * For standard materials, uses `onBeforeCompile`.
  *
  * During the picking pass, the fragment shader outputs a batchId-encoded color
  * directly, bypassing all lighting/tonemapping calculations.
@@ -137,6 +182,16 @@ export class PickableMeshWrapper extends Object3D implements PickableMesh {
       const m = child.material;
       if (!(m instanceof Material)) return;
 
+      // For ShaderMaterial (includes LineMaterial), inject directly into
+      // the shader source. This is more reliable than onBeforeCompile
+      // because ShaderMaterial sources may already be modified by MRT
+      // overrides and RTE injection.
+      if (m instanceof ShaderMaterial) {
+        injectPickingIntoShaderMaterial(m, refs);
+        return;
+      }
+
+      // For standard materials, use onBeforeCompile
       const prevOnBeforeCompile = m.onBeforeCompile;
       const prevCacheKey = m.customProgramCacheKey?.bind(m);
 

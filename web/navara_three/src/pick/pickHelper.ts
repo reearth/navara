@@ -23,7 +23,6 @@ export type PickHelperOptions = {
 
 export class PickHelper extends CustomRenderPass {
   private element: HTMLElement;
-  private pickingTexture: WebGLRenderTarget;
   private pixelBuffer: Uint8Array;
   private _renderer: WebGLRenderer;
   private onPickCallback: (pickArr: number[]) => void;
@@ -31,6 +30,8 @@ export class PickHelper extends CustomRenderPass {
 
   private debugBufferView?: BufferView;
   private debugRenderTarget?: WebGLRenderTarget;
+  /** Full-size render target for picking (single color attachment). */
+  private pickRenderTarget: WebGLRenderTarget;
 
   private mouseMoved: boolean;
   private mouseDownHandler: (event: MouseEvent) => void;
@@ -54,11 +55,6 @@ export class PickHelper extends CustomRenderPass {
     });
 
     this.element = element;
-    this.pickingTexture = new WebGLRenderTarget(1, 1, {
-      format: RGBAFormat,
-      depthBuffer: true,
-      stencilBuffer: true,
-    });
     this.pixelBuffer = new Uint8Array(4);
     this._renderer = renderer;
     this.camera = camera;
@@ -71,9 +67,16 @@ export class PickHelper extends CustomRenderPass {
 
     this._meshes = meshes;
 
+    const width = this._renderer.getContext().drawingBufferWidth;
+    const height = this._renderer.getContext().drawingBufferHeight;
+
+    this.pickRenderTarget = new WebGLRenderTarget(width, height, {
+      format: RGBAFormat,
+      depthBuffer: true,
+      stencilBuffer: true,
+    });
+
     if (options?.debug) {
-      const width = this._renderer.getContext().drawingBufferWidth;
-      const height = this._renderer.getContext().drawingBufferHeight;
       this.debugBufferView = new BufferView(width, height);
       this.debugRenderTarget = new WebGLRenderTarget(width, height, {
         format: RGBAFormat,
@@ -183,28 +186,34 @@ export class PickHelper extends CustomRenderPass {
     const pickingCoordY = fullHeight - pixelY - 0.5; // Flip Y axis for WebGL
     const pickingCoord = new Vector2(pickingCoordX, pickingCoordY);
 
-    this._camera.setViewOffset(
-      fullWidth, // full width
-      fullHeight, // full height
-      pixelX, // rect x
-      pixelY, // rect y (screen space Y for setViewOffset)
-      1, // rect width
-      1, // rect height
-    );
+    // Render the full pick scene without setViewOffset, then read the
+    // specific pixel directly from the gbufferRenderTarget.
+    //
+    // Why not setViewOffset?
+    // setViewOffset(1x1) creates an extreme projection zoom (e.g. 3024x).
+    // LineMaterial (used by Line2/SmoothLine) and custom ShaderMaterials
+    // (used by ArcLine) expand geometry in the vertex shader using
+    // screen-space calculations. With extreme zoom, all expanded vertices
+    // project outside clip space [-1,1] and the GPU clips them entirely,
+    // even though the line visually passes through the picked pixel.
+    //
+    // Instead, render the full scene into a single-attachment render target
+    // and read the exact pixel from it.
+    this.processRender(this.pickRenderTarget, pickingCoord);
 
-    this.processRender(this.pickingTexture, pickingCoord);
-
+    // Read the picked pixel from the single-attachment pickRenderTarget.
+    // readRenderTargetPixels uses WebGL convention: Y=0 at bottom.
+    const readY = fullHeight - 1 - pixelY;
     this._renderer.readRenderTargetPixels(
-      this.pickingTexture,
-      0, // x
-      0, // y
+      this.pickRenderTarget,
+      pixelX,
+      readY,
       1, // width
       1, // height
       this.pixelBuffer,
     );
 
     this._renderer.setRenderTarget(null);
-    this._camera.clearViewOffset();
 
     const batchId =
       (this.pixelBuffer[0] << 16) +
