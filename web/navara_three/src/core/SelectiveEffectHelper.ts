@@ -410,11 +410,11 @@ export class SelectiveEffectHelper {
   link(effectId: string, sourceObject: Object3D, layerId?: string): void {
     if (!this.resources.has(effectId)) {
       // Resources not yet created for this effectId
-      // This can happen if link() is called before the SelectiveEffectLayer creates resources
+      // This can happen if link() is called before the SelectiveEffectDeclaration creates resources
       console.warn(
         `[SelectiveEffectHelper.link] effectId "${effectId}" not found in resources. ` +
           `layerId: ${layerId ?? "undefined"}, object: ${sourceObject.name || sourceObject.uuid.slice(0, 8)}. ` +
-          `Ensure SelectiveEffectLayer is created before linking objects.`,
+          `Ensure SelectiveEffectDeclaration is created before linking objects.`,
       );
       return;
     }

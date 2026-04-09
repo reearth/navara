@@ -1,7 +1,7 @@
 import ThreeView, { JAPAN_GSI_ELEVATION_DECODER, Color } from "@navara/three";
 import {
   DefaultPlugin,
-  type DefaultLayerDescriptions,
+  type DefaultDescriptions,
 } from "@navara/three_default_plugin";
 import { Vector3 } from "three";
 
@@ -12,7 +12,7 @@ import {
   VECTOR_DATASETS,
 } from "../../helpers/constants";
 
-export type LayerDescriptions = DefaultLayerDescriptions;
+export type LayerDescriptions = DefaultDescriptions;
 
 export const run = async (view: ThreeView<LayerDescriptions>) => {
   const plugin = new DefaultPlugin();

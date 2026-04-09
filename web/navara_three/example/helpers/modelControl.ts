@@ -1,5 +1,5 @@
 import ThreeView, {
-  type LayerHandle,
+  type Handle,
   geodeticToVector3,
   vector3ToGeodetic,
   degreeToRadian,
@@ -7,7 +7,7 @@ import ThreeView, {
   geodeticSurfaceNormal,
   eastNorthUpToFixedFrame,
 } from "@navara/three";
-import type { GLTFModelLayer } from "@navara/three_default_layers";
+import type { GLTFModelDeclaration } from "@navara/three_default_layers";
 import { Vector3, Quaternion, Euler, Matrix4 } from "three";
 
 export type ModelControlParams = {
@@ -24,7 +24,7 @@ export type ModelControlParams = {
 
 export const controlGLTFModel = (
   view: ThreeView,
-  modelLayer: LayerHandle<GLTFModelLayer>,
+  modelLayer: Handle<GLTFModelDeclaration>,
   params: ModelControlParams = {},
 ) => {
   const keys = new Set<string>();
@@ -165,7 +165,7 @@ const collectKey = (keyCode: string, down: boolean, keys: Set<string>) => {
 
 const updateModelTransform = (
   view: ThreeView,
-  modelLayer: LayerHandle<GLTFModelLayer>,
+  modelLayer: Handle<GLTFModelDeclaration>,
   dir: Vector3,
   deltaTime: number,
   params: ModelControlParams,

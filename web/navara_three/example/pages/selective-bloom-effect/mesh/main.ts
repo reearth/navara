@@ -5,12 +5,12 @@ import ThreeView, {
   geodeticToVector3,
 } from "@navara/three";
 import type {
-  BoxMeshLayer,
-  SphereMeshLayer,
+  BoxMeshDeclaration,
+  SphereMeshDeclaration,
 } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
-  type DefaultLayerDescriptions,
+  type DefaultDescriptions,
 } from "@navara/three_default_plugin";
 import { Vector3 } from "three";
 
@@ -18,7 +18,7 @@ import { showAttributions } from "../../../helpers/attributions";
 import { TERRAIN_DATASETS, TILE_DATASETS } from "../../../helpers/constants";
 
 const run = async () => {
-  const view = new ThreeView<DefaultLayerDescriptions>({
+  const view = new ThreeView<DefaultDescriptions>({
     debug: true,
     shadow: true,
   });
@@ -61,7 +61,7 @@ const run = async () => {
     height: 200,
   });
 
-  view.addLayer<BoxMeshLayer>({
+  view.addLayer<BoxMeshDeclaration>({
     type: "mesh",
     box: {
       width: 200,
@@ -87,7 +87,7 @@ const run = async () => {
     .clone()
     .add(new Vector3(-500, 0, -600));
 
-  view.addLayer<SphereMeshLayer>({
+  view.addLayer<SphereMeshDeclaration>({
     type: "mesh",
     sphere: {
       radius: 100,

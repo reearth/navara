@@ -1,4 +1,4 @@
 import type { LayerDescription } from "@navara/three";
-import type { DefaultLayerDescriptions } from "@navara/three_default_plugin";
+import type { DefaultDescriptions } from "@navara/three_default_plugin";
 
-export type LayerDescriptions = LayerDescription | DefaultLayerDescriptions;
+export type LayerDescriptions = LayerDescription | DefaultDescriptions;

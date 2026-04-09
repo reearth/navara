@@ -1,21 +1,21 @@
 import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
-  LayerHandle,
+  Handle,
   type LayerDescription,
   degreeToRadian,
   geodeticToVector3,
   Color,
 } from "@navara/three";
 import {
-  RainMeshLayer,
-  SnowMeshLayer,
-  RainDropEffectLayer,
-  SSREffectLayer,
-  CloudsEffectLayer,
+  RainMeshDeclaration,
+  SnowMeshDeclaration,
+  RainDropEffectDeclaration,
+  SSREffectDeclaration,
+  CloudsEffectDeclaration,
 } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
-  type DefaultLayerDescriptions,
+  type DefaultDescriptions,
 } from "@navara/three_default_plugin";
 import { Vector2 } from "three";
 import { Pane } from "tweakpane";
@@ -30,7 +30,7 @@ import {
 import { addDateControl, addHidePaneKeyShortcut } from "../../helpers/control";
 import { addFieldsToFolder, type FolderFields } from "../../helpers/panel";
 
-export type LayerDescriptions = DefaultLayerDescriptions;
+export type LayerDescriptions = DefaultDescriptions;
 
 export const run = async (view: ThreeView<LayerDescriptions>) => {
   const plugin = new DefaultPlugin();
@@ -40,7 +40,7 @@ export const run = async (view: ThreeView<LayerDescriptions>) => {
   const defaultEffects = plugin.addDefaultPhotorealLayers();
 
   // Add clouds effect layer explicitly
-  const cloudsLayer = view.addLayer<CloudsEffectLayer>({
+  const cloudsLayer = view.addLayer<CloudsEffectDeclaration>({
     type: "effect",
     clouds: {},
   });
@@ -51,7 +51,7 @@ export const run = async (view: ThreeView<LayerDescriptions>) => {
     },
   });
 
-  view.addLayer<SSREffectLayer>({
+  view.addLayer<SSREffectDeclaration>({
     type: "effect",
     visible: true,
     ssr: {},
@@ -126,7 +126,7 @@ export const run = async (view: ThreeView<LayerDescriptions>) => {
   });
 
   // Add Sample Post Effect with two circles
-  const rainDropEffect = view.addLayer<RainDropEffectLayer>({
+  const rainDropEffect = view.addLayer<RainDropEffectDeclaration>({
     type: "effect",
     rainDrop: {
       opacity: 1.0,
@@ -276,7 +276,7 @@ const addCameraControl = (view: ThreeView<LayerDescriptions>, pane: Pane) => {
 const addWeatherControl = (
   view: ThreeView<LayerDescriptions>,
   pane: Pane,
-  rainDropEffect: LayerHandle<RainDropEffectLayer>,
+  rainDropEffect: Handle<RainDropEffectDeclaration>,
 ) => {
   const position = geodeticToVector3({
     lat: degreeToRadian(35.67564356091717),
@@ -284,13 +284,13 @@ const addWeatherControl = (
     height: 10,
   });
 
-  const rain = view.addLayer<RainMeshLayer>({
+  const rain = view.addLayer<RainMeshDeclaration>({
     type: "mesh",
     visible: false,
     position: position,
     rain: {},
   });
-  const snow = view.addLayer<SnowMeshLayer>({
+  const snow = view.addLayer<SnowMeshDeclaration>({
     type: "mesh",
     visible: false,
     position: position,
@@ -304,8 +304,8 @@ const addWeatherControl = (
   };
 
   let selectedLayer:
-    | LayerHandle<RainMeshLayer>
-    | LayerHandle<SnowMeshLayer>
+    | Handle<RainMeshDeclaration>
+    | Handle<SnowMeshDeclaration>
     | null = null;
 
   const folderFields: FolderFields<typeof PARAMS> = [

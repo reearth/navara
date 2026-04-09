@@ -2,22 +2,22 @@ export * from "./ambientLight";
 export * from "./sunLight";
 export * from "./skyLightProbe";
 export {
-  AmbientLightLayer,
-  type AmbientLightLayerConfig,
-  type AmbientLightLayerUpdate,
-} from "./AmbientLightLayer";
+  AmbientLightDeclaration,
+  type AmbientLightConfig,
+  type AmbientLightUpdate,
+} from "./AmbientLightDeclaration";
 export {
-  SunLightLayer,
-  type SunLightLayerConfig,
-  type SunLightLayerUpdate,
-} from "./SunLightLayer";
+  SunLightDeclaration,
+  type SunLightConfig,
+  type SunLightUpdate,
+} from "./SunLightDeclaration";
 export {
-  SkyLightProbeLayer,
-  type SkyLightProbeLayerConfig,
-  type SkyLightProbeLayerUpdate,
-} from "./SkyLightProbeLayer";
+  SkyLightProbeDeclaration,
+  type SkyLightProbeConfig,
+  type SkyLightProbeUpdate,
+} from "./SkyLightProbeDeclaration";
 export {
-  LightProbeLayer,
-  type LightProbeLayerConfig,
-  type LightProbeLayerUpdate,
-} from "./LightProbeLayer";
+  LightProbeDeclaration,
+  type LightProbeConfig,
+  type LightProbeUpdate,
+} from "./LightProbeDeclaration";

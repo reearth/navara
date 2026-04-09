@@ -6,13 +6,13 @@ import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
 } from "@navara/three";
 import {
-  type InstancedBoxMeshLayer,
+  type InstancedBoxMeshDeclaration,
   type BoxChildConfig,
   ToneMappingMode,
 } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
-  type DefaultLayerDescriptions,
+  type DefaultDescriptions,
 } from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 
@@ -59,7 +59,7 @@ function generateBuildings(count: number, radius: number): BoxChildConfig[] {
 }
 
 const run = async () => {
-  const view = new ThreeView<DefaultLayerDescriptions>({
+  const view = new ThreeView<DefaultDescriptions>({
     debug: true,
     shadow: true,
   });
@@ -79,9 +79,9 @@ const run = async () => {
 
   view.toneMappingExposure = 2;
 
-  view.addLayer({
-    type: "light",
-    ambient: { intensity: 0.5 },
+  view.addLight({
+    type: "ambient",
+    intensity: 0.5,
   });
 
   view.setCamera({
@@ -125,13 +125,11 @@ const run = async () => {
   // Generate 5000 buildings within 10km radius
   const buildings = generateBuildings(BUILDING_COUNT, RADIUS);
 
-  const boxesLayer = view.addLayer<InstancedBoxMeshLayer>({
-    type: "mesh",
-    boxes: {
-      castShadow: true,
-      receiveShadow: true,
-      children: buildings,
-    },
+  const boxesLayer = view.addMesh<InstancedBoxMeshDeclaration>({
+    type: "boxes",
+    castShadow: true,
+    receiveShadow: true,
+    children: buildings,
     matrixWorld,
   });
 

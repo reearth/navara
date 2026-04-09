@@ -1,97 +1,97 @@
 export {
-  RainMeshLayer,
-  type RainMeshLayerConfig,
-  type RainMeshLayerUpdate,
-} from "./RainMeshLayer";
+  RainMeshDeclaration,
+  type RainMeshConfig,
+  type RainMeshUpdate,
+} from "./RainMeshDeclaration";
 export {
-  SnowMeshLayer,
-  type SnowMeshLayerConfig,
-  type SnowMeshLayerUpdate,
-} from "./SnowMeshLayer";
+  SnowMeshDeclaration,
+  type SnowMeshConfig,
+  type SnowMeshUpdate,
+} from "./SnowMeshDeclaration";
 export {
-  SkyMeshLayer,
-  type SkyMeshLayerConfig,
-  type SkyMeshLayerUpdate,
-} from "./SkyMeshLayer";
+  SkyMeshDeclaration,
+  type SkyMeshConfig,
+  type SkyMeshUpdate,
+} from "./SkyMeshDeclaration";
 export {
-  StarsLayer,
-  type StarsLayerConfig,
-  type StarsLayerUpdate,
-} from "./StarsLayer";
+  StarsDeclaration,
+  type StarsConfig,
+  type StarsUpdate,
+} from "./StarsDeclaration";
 export {
-  BoxMeshLayer,
-  type BoxMeshLayerConfig,
-  type BoxMeshLayerUpdate,
-} from "./BoxMeshLayer";
+  BoxMeshDeclaration,
+  type BoxMeshConfig,
+  type BoxMeshUpdate,
+} from "./BoxMeshDeclaration";
 export {
-  SphereMeshLayer,
-  type SphereMeshLayerConfig,
-  type SphereMeshLayerUpdate,
-} from "./SphereMeshLayer";
+  SphereMeshDeclaration,
+  type SphereMeshConfig,
+  type SphereMeshUpdate,
+} from "./SphereMeshDeclaration";
 export {
-  GlowGlobeMeshLayer,
-  type GlowGlobeMeshLayerConfig,
-  type GlowGlobeMeshLayerUpdate,
+  GlowGlobeMeshDeclaration,
+  type GlowGlobeMeshConfig,
+  type GlowGlobeMeshUpdate,
   DEFAULT_GLOW_GLOBE_OPTIONS,
-} from "./GlowGlobeMeshLayer";
+} from "./GlowGlobeMeshDeclaration";
 export {
-  CylinderMeshLayer,
-  type CylinderMeshLayerConfig,
-  type CylinderMeshLayerUpdate,
-} from "./CylinderMeshLayer";
+  CylinderMeshDeclaration,
+  type CylinderMeshConfig,
+  type CylinderMeshUpdate,
+} from "./CylinderMeshDeclaration";
 export {
-  PlaneMeshLayer,
-  type PlaneMeshLayerConfig,
-  type PlaneMeshLayerUpdate,
-} from "./PlaneMeshLayer";
+  PlaneMeshDeclaration,
+  type PlaneMeshConfig,
+  type PlaneMeshUpdate,
+} from "./PlaneMeshDeclaration";
 export {
-  GLTFModelLayer,
-  type GLTFModelLayerConfig,
-  type GLTFModelLayerUpdate,
+  GLTFModelDeclaration,
+  type GLTFModelConfig,
+  type GLTFModelUpdate,
   type AnimationDetails,
   type AnimationState,
-  type GLTFModelLayerEvent,
+  type GLTFModelEvent,
   DEFAULT_GLTF_MODEL_DESCRIPTION,
-} from "./GLTFModelLayer";
+} from "./GLTFModelDeclaration";
 export {
-  TubeMeshLayer,
-  type TubeMeshLayerConfig,
-  type TubeMeshLayerUpdate,
-} from "./TubeMeshLayer";
+  TubeMeshDeclaration,
+  type TubeMeshConfig,
+  type TubeMeshUpdate,
+} from "./TubeMeshDeclaration";
 export {
-  ArclineMeshLayer,
-  type ArclineMeshLayerConfig,
-  type ArclineMeshLayerUpdate,
-} from "./ArclineMeshLayer";
+  ArclineMeshDeclaration,
+  type ArclineMeshConfig,
+  type ArclineMeshUpdate,
+} from "./ArclineMeshDeclaration";
 export {
-  SmoothLineMeshLayer,
-  type SmoothLineMeshLayerConfig,
-  type SmoothLineMeshLayerUpdate,
-} from "./SmoothLineMeshLayer";
+  SmoothLineMeshDeclaration,
+  type SmoothLineMeshConfig,
+  type SmoothLineMeshUpdate,
+} from "./SmoothLineMeshDeclaration";
 export {
-  SkyBoxMeshLayer,
-  type SkyBoxMeshLayerConfig,
-  type SkyBoxMeshLayerUpdate,
+  SkyBoxMeshDeclaration,
+  type SkyBoxMeshConfig,
+  type SkyBoxMeshUpdate,
   DEFAULT_SKY_BOX_OPTIONS,
-} from "./SkyBoxMeshLayer";
+} from "./SkyBoxMeshDeclaration";
 export {
-  ArrowHelperLayer,
-  type ArrowHelperLayerConfig,
-  type ArrowHelperLayerUpdate,
-} from "./ArrowHelperLayer";
+  ArrowHelperDeclaration,
+  type ArrowHelperConfig,
+  type ArrowHelperUpdate,
+} from "./ArrowHelperDeclaration";
 export {
-  AxesHelperLayer,
-  type AxesHelperLayerConfig,
-  type AxesHelperLayerUpdate,
-} from "./AxesHelperLayer";
+  AxesHelperDeclaration,
+  type AxesHelperConfig,
+  type AxesHelperUpdate,
+} from "./AxesHelperDeclaration";
 export {
-  InstancedBoxMeshLayer,
-  type InstancedBoxMeshLayerConfig,
-  type InstancedBoxMeshLayerUpdate,
+  InstancedBoxMeshDeclaration,
+  type InstancedBoxMeshConfig,
+  type InstancedBoxMeshUpdate,
   type BoxChildConfig,
   type SharedBoxMaterialConfig,
   type BoxesDescription,
-} from "./InstancedBoxMeshLayer";
+} from "./InstancedBoxMeshDeclaration";
 
 // Mesh implementations
 export { SkyMesh, type SkyMeshOptions } from "./skyMesh";

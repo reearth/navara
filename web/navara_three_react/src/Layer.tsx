@@ -1,6 +1,6 @@
 import {
-  LayerDeclaration,
-  LayerHandle,
+  Declaration,
+  Handle,
   Layer as NavaraLayer,
   type LayerDescription,
 } from "@navara/three";
@@ -8,7 +8,7 @@ import { useEffect, useRef, type PropsWithChildren } from "react";
 
 import { useViewContext } from "./ViewContext";
 
-type LH<L> = L extends LayerDeclaration ? LayerHandle<L> : NavaraLayer;
+type LH<L> = L extends Declaration ? Handle<L> : NavaraLayer;
 
 type Props<L> = {
   config: LayerDescription;
@@ -46,7 +46,7 @@ export function Layer<L = NavaraLayer>({
     // Update when config changes
     if (handleRef.current) {
       // Type assertion needed because LH<L> is a conditional type that TypeScript
-      // can't fully resolve for generic L. Both LayerHandle and NavaraLayer have
+      // can't fully resolve for generic L. Both Handle and NavaraLayer have
       // compatible update methods at runtime.
       const handler = handleRef.current as NavaraLayer;
 

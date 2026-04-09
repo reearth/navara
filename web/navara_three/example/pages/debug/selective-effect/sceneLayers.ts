@@ -3,19 +3,19 @@ import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
   degreeToRadian,
   geodeticToVector3,
-  type LayerHandle,
+  type Handle,
   type SelectiveEffectOcclusion,
   Layer,
 } from "@navara/three";
 import type {
-  ArclineMeshLayer,
-  BoxMeshLayer,
-  CylinderMeshLayer,
-  PlaneMeshLayer,
-  SphereMeshLayer,
-  TubeMeshLayer,
+  ArclineMeshDeclaration,
+  BoxMeshDeclaration,
+  CylinderMeshDeclaration,
+  PlaneMeshDeclaration,
+  SphereMeshDeclaration,
+  TubeMeshDeclaration,
 } from "@navara/three_default_layers";
-import type { DefaultLayerDescriptions } from "@navara/three_default_plugin";
+import type { DefaultDescriptions } from "@navara/three_default_plugin";
 import type { FeatureCollection } from "geojson";
 import { Vector3 } from "three";
 
@@ -236,12 +236,12 @@ export type GeoJsonPolygonLayer = {
 };
 
 export type SceneLayers = {
-  cubeLayer: LayerHandle<BoxMeshLayer>;
-  sphereLayer: LayerHandle<SphereMeshLayer>;
-  cylinderLayer: LayerHandle<CylinderMeshLayer>;
-  tubeLayer: LayerHandle<TubeMeshLayer>;
-  planeLayer: LayerHandle<PlaneMeshLayer>;
-  arclineLayer: LayerHandle<ArclineMeshLayer>;
+  cubeLayer: Handle<BoxMeshDeclaration>;
+  sphereLayer: Handle<SphereMeshDeclaration>;
+  cylinderLayer: Handle<CylinderMeshDeclaration>;
+  tubeLayer: Handle<TubeMeshDeclaration>;
+  planeLayer: Handle<PlaneMeshDeclaration>;
+  arclineLayer: Handle<ArclineMeshDeclaration>;
   polygonLayer: GeoJsonPolygonLayer;
   chiyodaLayer: Layer;
   chuoLayer: Layer;
@@ -253,7 +253,7 @@ export type EffectIds = {
 };
 
 export const createSceneLayers = (
-  view: ThreeView<DefaultLayerDescriptions>,
+  view: ThreeView<DefaultDescriptions>,
   effectIds: EffectIds,
 ): SceneLayers => {
   const tokyoStationPosition = geodeticToVector3({
@@ -267,7 +267,7 @@ export const createSceneLayers = (
     .clone()
     .add(new Vector3(-500, 0, -600));
 
-  const cubeLayer = view.addLayer<BoxMeshLayer>({
+  const cubeLayer = view.addLayer<BoxMeshDeclaration>({
     type: "mesh",
     box: {
       width: 200,
@@ -288,7 +288,7 @@ export const createSceneLayers = (
     selectiveEffectOcclusion: "normal",
   });
 
-  const sphereLayer = view.addLayer<SphereMeshLayer>({
+  const sphereLayer = view.addLayer<SphereMeshDeclaration>({
     type: "mesh",
     sphere: {
       radius: 100,
@@ -314,7 +314,7 @@ export const createSceneLayers = (
     height: 200,
   });
 
-  const cylinderLayer = view.addLayer<CylinderMeshLayer>({
+  const cylinderLayer = view.addLayer<CylinderMeshDeclaration>({
     type: "mesh",
     cylinder: {
       radiusTop: 50,
@@ -369,7 +369,7 @@ export const createSceneLayers = (
     },
   ];
 
-  const tubeLayer = view.addLayer<TubeMeshLayer>({
+  const tubeLayer = view.addLayer<TubeMeshDeclaration>({
     type: "mesh",
     tube: {
       points: tubePoints,
@@ -396,7 +396,7 @@ export const createSceneLayers = (
     height: 150,
   });
 
-  const planeLayer = view.addLayer<PlaneMeshLayer>({
+  const planeLayer = view.addLayer<PlaneMeshDeclaration>({
     type: "mesh",
     plane: {
       width: 200,
@@ -427,7 +427,7 @@ export const createSceneLayers = (
   if (ARCLINE_CONFIG.bloomEnabled) arclineEffectIds.push(effectIds.bloomId);
   if (ARCLINE_CONFIG.outlineEnabled) arclineEffectIds.push(effectIds.outlineId);
 
-  const arclineLayer = view.addLayer<ArclineMeshLayer>({
+  const arclineLayer = view.addLayer<ArclineMeshDeclaration>({
     type: "mesh",
     effectIds: arclineEffectIds,
     selectiveEffectOcclusion: ARCLINE_CONFIG.selectiveEffectOcclusion,
@@ -561,7 +561,7 @@ export const createSceneLayers = (
 };
 
 type CreateGeoJsonPolygonLayerOptions = {
-  view: ThreeView<DefaultLayerDescriptions>;
+  view: ThreeView<DefaultDescriptions>;
   feature: FeatureCollection;
   polygon: GeoJsonPolygonState;
 };

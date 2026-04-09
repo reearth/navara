@@ -1,12 +1,12 @@
 import ThreeView, {
   Color,
   JAPAN_GSI_ELEVATION_DECODER,
-  LayerHandle,
+  Handle,
 } from "@navara/three";
-import type { CloudsEffectLayer } from "@navara/three_default_layers";
+import type { CloudsEffectDeclaration } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
-  type DefaultLayerDescriptions,
+  type DefaultDescriptions,
 } from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 
@@ -19,7 +19,7 @@ import {
 import { addCameraControl, addDateControl } from "../../helpers/control";
 import { addFieldsToFolder, type FolderFields } from "../../helpers/panel";
 
-export type LayerDescriptions = DefaultLayerDescriptions;
+export type LayerDescriptions = DefaultDescriptions;
 
 export const run = async (view: ThreeView<LayerDescriptions>) => {
   const defaultPlugin = new DefaultPlugin();
@@ -30,7 +30,7 @@ export const run = async (view: ThreeView<LayerDescriptions>) => {
   const defaultEffects = defaultPlugin.addDefaultPhotorealLayers();
 
   // Add clouds effect layer explicitly
-  const cloudsLayer = view.addLayer<CloudsEffectLayer>({
+  const cloudsLayer = view.addLayer<CloudsEffectDeclaration>({
     type: "effect",
     clouds: {},
   });
@@ -111,14 +111,14 @@ export const run = async (view: ThreeView<LayerDescriptions>) => {
 
 const addCloudFogControl = (
   pane: Pane,
-  cloudsLayerHandle: LayerHandle<CloudsEffectLayer>,
+  cloudsHandle: Handle<CloudsEffectDeclaration>,
 ) => {
   const PARAMS = {
     height: 2000,
     density: 0.01,
   };
 
-  const cloudsLayer = cloudsLayerHandle.ref.raw;
+  const cloudsLayer = cloudsHandle.ref.raw;
 
   if (cloudsLayer) {
     cloudsLayer.coverage = 0.3;

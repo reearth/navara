@@ -5,12 +5,12 @@ import ThreeView, {
   geodeticToVector3,
   degreeToRadian,
   geodeticSurfaceNormal,
-  LayerHandle,
+  Handle,
 } from "@navara/three";
-import type { GLTFModelLayer } from "@navara/three_default_layers";
+import type { GLTFModelDeclaration } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
-  type DefaultLayerDescriptions,
+  type DefaultDescriptions,
 } from "@navara/three_default_plugin";
 import { Vector3, Quaternion, Euler } from "three";
 import { Pane } from "tweakpane";
@@ -39,7 +39,7 @@ const SCENES = {
 
 let gCurSceneName: keyof typeof SCENES = "ToranomonHillsBIM";
 
-export type LayerDescriptions = DefaultLayerDescriptions;
+export type LayerDescriptions = DefaultDescriptions;
 
 export const run = async (view: ThreeView<LayerDescriptions>) => {
   const plugin = new DefaultPlugin();
@@ -83,7 +83,7 @@ export const run = async (view: ThreeView<LayerDescriptions>) => {
   });
 
   // Add GLTF model at Mount Fuji summit
-  const modelLayer = view.addLayer<GLTFModelLayer>({
+  const modelLayer = view.addLayer<GLTFModelDeclaration>({
     type: "mesh",
     gltfModel: {
       url: LOCAL_DATASETS.soldierGLTF.url,
@@ -130,7 +130,7 @@ export const run = async (view: ThreeView<LayerDescriptions>) => {
 
 const updateModelLayerPos = (
   view: ThreeView<LayerDescriptions>,
-  modelLayer: LayerHandle<GLTFModelLayer>,
+  modelLayer: Handle<GLTFModelDeclaration>,
   lle: number[],
 ) => {
   const startPos = geodeticToVector3({
@@ -164,7 +164,7 @@ const updateModelLayerPos = (
 const add3DTilesSceneControl = (
   view: ThreeView<LayerDescriptions>,
   pane: Pane,
-  modelLayer: LayerHandle<GLTFModelLayer>,
+  modelLayer: Handle<GLTFModelDeclaration>,
 ) => {
   const PARAMS = {
     scene: gCurSceneName,

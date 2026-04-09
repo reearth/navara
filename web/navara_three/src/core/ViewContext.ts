@@ -15,8 +15,8 @@ import type { LayersManager } from "../layersManager";
 import type { RenderPassOrchestrator } from "../orchestrators";
 import type { Scenes } from "../scene";
 
-import type { EffectLayerDeclaration } from "./EffectLayerDeclaration";
-import type { LayerHandle } from "./LayerHandle";
+import type { EffectDeclaration } from "./EffectDeclaration";
+import type { Handle } from "./Handle";
 import {
   getSelectiveEffectConfig,
   type SelectiveEffectHelper,
@@ -133,7 +133,7 @@ export class ViewContext extends EventHandler<ViewContextEvents> {
   // --- Layer query ---
 
   /** @internal Iterate over all registered effect layers. */
-  _getEffectLayers(): Generator<LayerHandle<EffectLayerDeclaration>> {
+  _getEffectLayers(): Generator<Handle<EffectDeclaration>> {
     return this.layersManager.getEffectLayers();
   }
 

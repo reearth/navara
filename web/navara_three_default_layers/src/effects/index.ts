@@ -13,65 +13,65 @@ export * from "./toneMapping";
 
 // Effect layer declarations
 export {
-  AerialPerspectiveEffectLayer,
+  AerialPerspectiveEffectDeclaration,
   type AerialPerspectiveConfig,
   type AerialPerspectiveUpdate,
-} from "./AerialPerspectiveEffectLayer";
+} from "./AerialPerspectiveEffectDeclaration";
 export {
-  CloudsEffectLayer,
+  CloudsEffectDeclaration,
   type CloudsConfig,
   type CloudsUpdate,
-} from "./CloudsEffectLayer";
+} from "./CloudsEffectDeclaration";
 export {
-  ColorGradingLUTEffectLayer,
+  ColorGradingLUTEffectDeclaration,
   DEFAULT_COLOR_GRADING_LUT_OPTIONS,
   type ColorGradingLUTConfig,
   type ColorGradingLUTUpdate,
-} from "./ColorGradingLUTEffectLayer";
+} from "./ColorGradingLUTEffectDeclaration";
 export {
-  DepthOfFieldEffectLayer,
+  DepthOfFieldEffectDeclaration,
   type DepthOfFieldConfig,
   type DepthOfFieldUpdate,
-} from "./DepthOfFieldEffectLayer";
+} from "./DepthOfFieldEffectDeclaration";
 export {
-  FogLightEffectLayer,
+  FogLightEffectDeclaration,
   type FogLightConfig,
   type FogLightUpdate,
-} from "./FogLightEffectLayer";
+} from "./FogLightEffectDeclaration";
 export {
-  FXAAEffectLayer,
+  FXAAEffectDeclaration,
   type FXAAConfig,
   type FXAAUpdate,
-} from "./FXAAEffectLayer";
+} from "./FXAAEffectDeclaration";
 export {
-  LensFlareEffectLayer,
+  LensFlareEffectDeclaration,
   type LensFlareConfig,
   type LensFlareUpdate,
-} from "./LensFlareEffectLayer";
+} from "./LensFlareEffectDeclaration";
 export {
-  RainDropEffectLayer,
+  RainDropEffectDeclaration,
   type RainDropConfig,
   type RainDropUpdate,
-} from "./RainDropEffectLayer";
+} from "./RainDropEffectDeclaration";
 export {
-  SMAAEffectLayer,
+  SMAAEffectDeclaration,
   type SMAAConfig,
   type SMAAUpdate,
-} from "./SMAAEffectLayer";
+} from "./SMAAEffectDeclaration";
 export {
-  SSAOEffectLayer,
+  SSAOEffectDeclaration,
   type SSAOConfig,
   type SSAOUpdate,
-} from "./SSAOEffectLayer";
+} from "./SSAOEffectDeclaration";
 export {
-  SSREffectLayer,
+  SSREffectDeclaration,
   type SSRConfig,
   type SSRUpdate,
-} from "./SSREffectLayer";
+} from "./SSREffectDeclaration";
 export {
-  ToneMappingEffectLayer,
+  ToneMappingEffectDeclaration,
   type ToneMappingConfig,
   type ToneMappingUpdate,
-} from "./ToneMappingEffectLayer";
+} from "./ToneMappingEffectDeclaration";
 
 export { ToneMappingMode } from "postprocessing";

@@ -34,7 +34,7 @@ export class SelectiveEffectMaskController {
 
   /**
    * Set mask render target for selective effect rendering.
-   * Called by SelectiveEffectLayer to register their mask RTs.
+   * Called by SelectiveEffectDeclaration to register their mask RTs.
    *
    * @param effectKey - Effect key (e.g., "selectiveBloom", "selectiveOutline")
    * @param rt - WebGLRenderTarget for mask rendering

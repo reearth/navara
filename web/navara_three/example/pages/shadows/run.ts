@@ -2,10 +2,10 @@ import ThreeView, {
   Color,
   JAPAN_GSI_ELEVATION_DECODER,
   Layer,
-  LayerHandle,
+  Handle,
   type Cesium3dTilesLayer,
 } from "@navara/three";
-import { SunLightLayer, type ShadowMode } from "@navara/three_default_layers";
+import { SunLightDeclaration, type ShadowMode } from "@navara/three_default_layers";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 
@@ -75,7 +75,7 @@ export async function run() {
 
 const addViewShadowControl = (
   view: ThreeView,
-  sun: LayerHandle<SunLightLayer>,
+  sun: Handle<SunLightDeclaration>,
   pane: Pane,
 ) => {
   const PARAMS = {

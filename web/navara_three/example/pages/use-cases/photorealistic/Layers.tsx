@@ -1,5 +1,5 @@
 import { JAPAN_GSI_ELEVATION_DECODER, Color } from "@navara/three";
-import type { RainMeshLayerConfig } from "@navara/three_default_layers";
+import type { RainMeshConfig } from "@navara/three_default_layers";
 import type { DefaultPlugin } from "@navara/three_default_plugin";
 import { Layer, useViewContext } from "@navara/three_react";
 import { useEffect, useMemo, type FC } from "react";
@@ -91,7 +91,7 @@ export const Layers: FC<SceneLayerToggles> = ({
   );
 
   const rainDesc = useMemo(
-    (): RainMeshLayerConfig => ({
+    (): RainMeshConfig => ({
       type: "mesh",
       visible: rainVisible,
       rain: {

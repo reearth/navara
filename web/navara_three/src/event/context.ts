@@ -129,7 +129,7 @@ export type MeshHandler = {
   setTileMeshPrepared: (handle: bigint) => void;
 };
 
-export type LayerHandler = {
+export type Handler = {
   getLayerIndex: (layerId: string) => number | undefined;
 };
 
@@ -155,7 +155,7 @@ type EventContextArgs = {
   viewEvents: EventHandler<ViewEvents>;
   layersManager: LayersManager;
   viewContext: ViewContext;
-  layerHandler?: LayerHandler;
+  layerHandler?: Handler;
   fontManager?: FontManager;
 };
 
@@ -185,7 +185,7 @@ export class EventContext {
   readonly viewEvents: EventHandler<ViewEvents>;
   readonly layersManager: LayersManager;
   readonly viewContext: ViewContext;
-  readonly layerHandler?: LayerHandler;
+  readonly layerHandler?: Handler;
   readonly fontManager?: FontManager;
 
   updatedAt = 0;

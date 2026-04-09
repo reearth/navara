@@ -1,8 +1,8 @@
 import ThreeView, { Color, Layer } from "@navara/three";
-import { AmbientLightLayer } from "@navara/three_default_layers";
+import { AmbientLightDeclaration } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
-  type DefaultLayerDescriptions,
+  type DefaultDescriptions,
 } from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 
@@ -19,13 +19,13 @@ let gB3dmLayer: Layer;
 let gPntsLayer: Layer;
 let gMvtLayer: Layer;
 
-export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
+export const run = async (view: ThreeView<DefaultDescriptions>) => {
   const defaultPlugin = new DefaultPlugin();
   view.addPlugin(defaultPlugin);
 
   await view.init();
 
-  view.addLayer<AmbientLightLayer>({
+  view.addLayer<AmbientLightDeclaration>({
     type: "light",
     ambient: {},
   });

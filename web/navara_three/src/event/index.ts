@@ -43,7 +43,7 @@ export type {
   GlobeHandler,
   FeatureHandler,
   MeshHandler,
-  LayerHandler,
+  Handler,
 } from "./context";
 export { EventContext } from "./context";
 

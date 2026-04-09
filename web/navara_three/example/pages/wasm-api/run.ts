@@ -1,6 +1,6 @@
 import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
-  type LayerHandle,
+  type Handle,
   type PickedFeature,
   type Nullable,
   type XYZ,
@@ -24,14 +24,14 @@ import ThreeView, {
   Color,
 } from "@navara/three";
 import type {
-  SphereMeshLayer,
-  TubeMeshLayer,
-  CylinderMeshLayer,
-  GLTFModelLayer,
+  SphereMeshDeclaration,
+  TubeMeshDeclaration,
+  CylinderMeshDeclaration,
+  GLTFModelDeclaration,
 } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
-  type DefaultLayerDescriptions,
+  type DefaultDescriptions,
 } from "@navara/three_default_plugin";
 import { Mesh, Vector2, Vector3, Object3D, Group, ArrowHelper } from "three";
 import { Pane, FolderApi } from "tweakpane";
@@ -77,9 +77,9 @@ const gPaneParams = {
 const gFujiPos = [35.3624725342, 138.7306671143];
 const gKitaPos = [35.6744, 138.2392];
 
-let gModelNormalHandle: Nullable<LayerHandle<GLTFModelLayer>> = undefined;
-let gModelFujiHandle: Nullable<LayerHandle<GLTFModelLayer>> = undefined;
-let gPolylineLayer: Nullable<LayerHandle<TubeMeshLayer>> = undefined;
+let gModelNormalHandle: Nullable<Handle<GLTFModelDeclaration>> = undefined;
+let gModelFujiHandle: Nullable<Handle<GLTFModelDeclaration>> = undefined;
+let gPolylineLayer: Nullable<Handle<TubeMeshDeclaration>> = undefined;
 let gMouseBall: Nullable<Mesh> = undefined;
 let gInterBall: Nullable<Mesh> = undefined;
 let gLastCameraDistance = 0;
@@ -95,7 +95,7 @@ let gPickedPos: Nullable<Vector3> = null;
 
 const gPopup = new FloatingDialog();
 
-export type LayerDescriptions = DefaultLayerDescriptions;
+export type LayerDescriptions = DefaultDescriptions;
 
 export const run = async (view: ThreeView<LayerDescriptions>) => {
   const plugin = new DefaultPlugin();
@@ -265,7 +265,7 @@ const placeOneBall = (
   color: number,
 ): Mesh | undefined => {
   if (pos) {
-    const sphereLayer = view.addLayer<SphereMeshLayer>({
+    const sphereLayer = view.addLayer<SphereMeshDeclaration>({
       type: "mesh",
       sphere: {
         radius: 1,
@@ -275,7 +275,7 @@ const placeOneBall = (
       position: { x: pos.x, y: pos.y, z: pos.z },
     });
 
-    // sphereLayer is a LayerHandle for mesh layers
+    // sphereLayer is a Handle for mesh layers
     return sphereLayer.ref.raw;
   }
 };
@@ -292,8 +292,8 @@ const addTestModelForNormal = (view: ThreeView<LayerDescriptions>) => {
     height: 0,
   });
 
-  // Add GLTF model using GLTFModelLayer with URL
-  const modelLayer = view.addLayer<GLTFModelLayer>({
+  // Add GLTF model using GLTFModelDeclaration with URL
+  const modelLayer = view.addLayer<GLTFModelDeclaration>({
     type: "mesh",
     gltfModel: {
       url: LOCAL_DATASETS.steelDrumGLTF.url,
@@ -343,8 +343,8 @@ const addTestModelForTerrainHeight = (view: ThreeView<LayerDescriptions>) => {
 
   const transformMatrix = northUpEastToFixedFrame(pos);
 
-  // Add the model using GLTFModelLayer with URL
-  const modelLayer = view.addLayer<GLTFModelLayer>({
+  // Add the model using GLTFModelDeclaration with URL
+  const modelLayer = view.addLayer<GLTFModelDeclaration>({
     type: "mesh",
     gltfModel: {
       url: LOCAL_DATASETS.steelDrumGLTF.url,
@@ -656,7 +656,7 @@ const makeCylinder = (
   view: ThreeView<LayerDescriptions>,
   center: Vector3,
 ): Mesh | undefined => {
-  const cylinderLayer = view.addLayer<CylinderMeshLayer>({
+  const cylinderLayer = view.addLayer<CylinderMeshDeclaration>({
     type: "mesh",
     cylinder: {
       radiusTop: 1,
@@ -814,7 +814,7 @@ const createPolylineMesh = (view: ThreeView<LayerDescriptions>) => {
     z: 0,
   }));
 
-  gPolylineLayer = view.addLayer<TubeMeshLayer>({
+  gPolylineLayer = view.addLayer<TubeMeshDeclaration>({
     type: "mesh",
     tube: {
       points,

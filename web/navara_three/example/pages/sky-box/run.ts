@@ -1,23 +1,23 @@
-import ThreeView, { Color, LayerHandle, type BlendMode } from "@navara/three";
+import ThreeView, { Color, Handle, type BlendMode } from "@navara/three";
 import {
-  SunLightLayer,
-  AmbientLightLayer,
-  SkyBoxMeshLayer,
-  StarsLayer,
+  SunLightDeclaration,
+  AmbientLightDeclaration,
+  SkyBoxMeshDeclaration,
+  StarsDeclaration,
   DEFAULT_SKY_BOX_OPTIONS,
-  ColorGradingLUTEffectLayer,
+  ColorGradingLUTEffectDeclaration,
   ToneMappingMode,
 } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
-  type DefaultLayerDescriptions,
+  type DefaultDescriptions,
 } from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 
 import { TILE_DATASETS, LUT_DATASETS } from "../../helpers/constants";
 import { addCameraControl, addDateControl } from "../../helpers/control";
 
-let gSkyBoxMeshLayer: LayerHandle<SkyBoxMeshLayer> | undefined = undefined;
+let gSkyBoxMeshDeclaration: Handle<SkyBoxMeshDeclaration> | undefined = undefined;
 
 const gPaneParams = {
   visible: true,
@@ -26,7 +26,7 @@ const gPaneParams = {
   sunColor: DEFAULT_SKY_BOX_OPTIONS.sunColor.toHex(),
 };
 
-export type LayerDescriptions = DefaultLayerDescriptions;
+export type LayerDescriptions = DefaultDescriptions;
 
 export const run = async (view: ThreeView<LayerDescriptions>) => {
   const plugin = new DefaultPlugin();
@@ -59,26 +59,26 @@ export const run = async (view: ThreeView<LayerDescriptions>) => {
     },
   });
 
-  view.addLayer<AmbientLightLayer>({
+  view.addLayer<AmbientLightDeclaration>({
     type: "light",
     ambient: {
       intensity: 0.1,
     },
   });
 
-  view.addLayer<SunLightLayer>({
+  view.addLayer<SunLightDeclaration>({
     type: "light",
     sun: {
       intensity: 1.0,
     },
   });
 
-  view.addLayer<StarsLayer>({
+  view.addLayer<StarsDeclaration>({
     type: "mesh",
     stars: {},
   });
 
-  gSkyBoxMeshLayer = view.addLayer<SkyBoxMeshLayer>({
+  gSkyBoxMeshDeclaration = view.addLayer<SkyBoxMeshDeclaration>({
     type: "mesh",
     skyBox: {
       dayColor: new Color().setHex(gPaneParams.dayColor),
@@ -88,7 +88,7 @@ export const run = async (view: ThreeView<LayerDescriptions>) => {
   });
 
   // adding color grading for better visuals
-  view.addLayer<ColorGradingLUTEffectLayer>({
+  view.addLayer<ColorGradingLUTEffectDeclaration>({
     type: "effect",
     colorGradingLUT: {
       url: LUT_DATASETS.Blackmagic4_6KFilmtoExtendedVideov4Cube.url,
@@ -109,14 +109,14 @@ export const run = async (view: ThreeView<LayerDescriptions>) => {
 };
 
 function addPanel(pane: Pane) {
-  if (!gSkyBoxMeshLayer) return;
+  if (!gSkyBoxMeshDeclaration) return;
 
   const folder = pane.addFolder({ title: "Sky Box Layer" });
 
   folder
     .addBinding(gPaneParams, "visible", { label: "Visible", view: "boolean" })
     .on("change", (ev) => {
-      gSkyBoxMeshLayer?.update({
+      gSkyBoxMeshDeclaration?.update({
         visible: ev.value,
       });
     });
@@ -124,7 +124,7 @@ function addPanel(pane: Pane) {
   folder
     .addBinding(gPaneParams, "dayColor", { label: "Day Color", view: "color" })
     .on("change", (ev) => {
-      gSkyBoxMeshLayer?.update({
+      gSkyBoxMeshDeclaration?.update({
         skyBox: {
           dayColor: new Color().setHex(ev.value),
         },
@@ -137,7 +137,7 @@ function addPanel(pane: Pane) {
       view: "color",
     })
     .on("change", (ev) => {
-      gSkyBoxMeshLayer?.update({
+      gSkyBoxMeshDeclaration?.update({
         skyBox: {
           nightColor: new Color().setHex(ev.value),
         },
@@ -150,7 +150,7 @@ function addPanel(pane: Pane) {
       view: "color",
     })
     .on("change", (ev) => {
-      gSkyBoxMeshLayer?.update({
+      gSkyBoxMeshDeclaration?.update({
         skyBox: {
           sunColor: new Color().setHex(ev.value),
         },

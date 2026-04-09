@@ -1,0 +1,55 @@
+import {
+  EffectDeclaration,
+  type EffectConfig,
+  type EffectUpdate,
+  type ViewContext,
+} from "@navara/three";
+
+import { ToneMapping, type ToneMappingOptions } from "./toneMapping";
+
+type LayerDescription = {
+  toneMapping?: Omit<ToneMappingOptions, "enabled">;
+};
+
+export type ToneMappingConfig = LayerDescription & EffectConfig;
+
+export type ToneMappingUpdate = LayerDescription & EffectUpdate;
+
+export class ToneMappingEffectDeclaration extends EffectDeclaration<
+  ToneMappingConfig,
+  ToneMappingUpdate,
+  ToneMapping
+> {
+  static key = "toneMapping";
+  static insertBefore = ["final"];
+
+  private config: ToneMappingConfig;
+
+  constructor(view: ViewContext, config: ToneMappingConfig) {
+    super(view, config);
+    this.config = config;
+  }
+
+  createPass() {
+    const pass = new ToneMapping(this.view.camera, {
+      ...this.config.toneMapping,
+      enabled: this.config.visible ?? true,
+    });
+
+    return pass;
+  }
+
+  onUpdateConfig(updates: ToneMappingUpdate): void {
+    super.onUpdateConfig(updates);
+
+    if (!this._instance) return;
+    Object.assign(this.config, updates);
+
+    const config = updates.toneMapping;
+    if (!config) return;
+
+    if (config.mode !== undefined) {
+      this._instance.mode = config.mode;
+    }
+  }
+}

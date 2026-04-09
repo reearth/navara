@@ -5,7 +5,7 @@ import ThreeView, {
 } from "@navara/three";
 import {
   DefaultPlugin,
-  type DefaultLayerDescriptions,
+  type DefaultDescriptions,
 } from "@navara/three_default_plugin";
 import { Vector3 } from "three";
 import { Pane } from "tweakpane";
@@ -25,7 +25,7 @@ import {
   type MaterialLayerDescription,
 } from "../../../helpers/panel";
 
-export type LayerDescriptions = DefaultLayerDescriptions;
+export type LayerDescriptions = DefaultDescriptions;
 
 const geoLayersDef: MaterialLayerDescription[] = [
   {

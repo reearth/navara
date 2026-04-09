@@ -1,17 +1,17 @@
 import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
   overrideShaderMaterialForMRT,
-  MeshLayerDeclaration,
-  type MeshLayerConfig,
+  MeshDeclaration,
+  type MeshConfig,
   type ViewContext,
   degreeToRadian,
   eastNorthUpToFixedFrame,
   geodeticToVector3,
 } from "@navara/three";
-import type { CloudsEffectLayer } from "@navara/three_default_layers";
+import type { CloudsEffectDeclaration } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
-  type DefaultLayerDescriptions,
+  type DefaultDescriptions,
 } from "@navara/three_default_plugin";
 import {
   Color,
@@ -29,8 +29,8 @@ import { ToonShaderHatching, MarchingCubes } from "three-stdlib";
 import { showAttributions } from "../../helpers/attributions";
 import { TERRAIN_DATASETS, TILE_DATASETS } from "../../helpers/constants";
 
-// Custom MarchingCubesLayer definition
-type MarchingCubesLayerDescription = {
+// Custom MarchingCubesDeclaration definition
+type MarchingCubesDeclarationDescription = {
   marchingCubes?: {
     resolution?: number;
     material: Material;
@@ -42,23 +42,23 @@ type MarchingCubesLayerDescription = {
   };
 };
 
-export type MarchingCubesLayerConfig = MeshLayerConfig &
-  MarchingCubesLayerDescription;
+export type MarchingCubesConfig = MeshConfig &
+  MarchingCubesDeclarationDescription;
 
-export type MarchingCubesLayerUpdate = Pick<
-  MeshLayerConfig,
+export type MarchingCubesUpdate = Pick<
+  MeshConfig,
   "position" | "visible"
 > &
-  MarchingCubesLayerDescription;
+  MarchingCubesDeclarationDescription;
 
-export class MarchingCubesLayer extends MeshLayerDeclaration<
-  MarchingCubesLayerConfig,
-  MarchingCubesLayerUpdate,
+export class MarchingCubesDeclaration extends MeshDeclaration<
+  MarchingCubesConfig,
+  MarchingCubesUpdate,
   MarchingCubes
 > {
-  private config: MarchingCubesLayerConfig;
+  private config: MarchingCubesConfig;
 
-  constructor(view: ViewContext, config: MarchingCubesLayerConfig) {
+  constructor(view: ViewContext, config: MarchingCubesConfig) {
     super(view, config);
     this.config = config;
   }
@@ -91,7 +91,7 @@ export class MarchingCubesLayer extends MeshLayerDeclaration<
     return cubes;
   }
 
-  onUpdateConfig(updates: MarchingCubesLayerUpdate): void {
+  onUpdateConfig(updates: MarchingCubesUpdate): void {
     if (updates.marchingCubes && this._instance) {
       const cfg = updates.marchingCubes;
 
@@ -120,12 +120,12 @@ export class MarchingCubesLayer extends MeshLayerDeclaration<
 }
 
 export type LayerDescriptions =
-  | MarchingCubesLayerConfig
-  | DefaultLayerDescriptions;
+  | MarchingCubesConfig
+  | DefaultDescriptions;
 
 export const run = async (view: ThreeView<LayerDescriptions>) => {
-  // Register custom MarchingCubesLayer
-  view.registerMesh("marchingCubes", MarchingCubesLayer);
+  // Register custom MarchingCubesDeclaration
+  view.registerMesh("marchingCubes", MarchingCubesDeclaration);
 
   const defaultPlugin = new DefaultPlugin();
   view.addPlugin(defaultPlugin);
@@ -141,7 +141,7 @@ export const run = async (view: ThreeView<LayerDescriptions>) => {
   });
 
   // Add clouds effect layer explicitly
-  const cloudsLayer = view.addLayer<CloudsEffectLayer>({
+  const cloudsLayer = view.addLayer<CloudsEffectDeclaration>({
     type: "effect",
     clouds: {},
   });
@@ -213,8 +213,8 @@ export const run = async (view: ThreeView<LayerDescriptions>) => {
 
   const matrix = eastNorthUpToFixedFrame(position);
 
-  // Use the custom MarchingCubesLayer
-  const marchingCubesLayer = view.addLayer<MarchingCubesLayer>({
+  // Use the custom MarchingCubesDeclaration
+  const marchingCubesLayer = view.addLayer<MarchingCubesDeclaration>({
     type: "mesh",
     marchingCubes: {
       resolution: 50,

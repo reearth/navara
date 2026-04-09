@@ -1,15 +1,15 @@
-import { EffectLayerDeclaration, LayerHandle } from "./core";
+import { EffectDeclaration, Handle } from "./core";
 import { Layer, type LayerEvent } from "./layer";
 
 export class LayersManager {
-  private layers = new Map<string, Layer | LayerHandle>();
+  private layers = new Map<string, Layer | Handle>();
 
-  add(l: Layer | LayerHandle) {
+  add(l: Layer | Handle) {
     this.layers.set(l.id, l);
     const deleteLayer = () => {
       this.layers.delete(l.id);
     };
-    if (l instanceof LayerHandle) {
+    if (l instanceof Handle) {
       l.on("deleted", deleteLayer);
     } else {
       l.on("deleted", deleteLayer);
@@ -50,20 +50,20 @@ export class LayersManager {
     }
   }
 
-  *getEffectLayers(): Generator<LayerHandle<EffectLayerDeclaration>> {
+  *getEffectLayers(): Generator<Handle<EffectDeclaration>> {
     for (const handle of this.layers.values()) {
-      if (!(handle instanceof LayerHandle)) continue;
+      if (!(handle instanceof Handle)) continue;
 
       const layer = handle.ref;
-      if (!(layer instanceof EffectLayerDeclaration)) continue;
+      if (!(layer instanceof EffectDeclaration)) continue;
 
-      yield handle as LayerHandle<EffectLayerDeclaration>;
+      yield handle as Handle<EffectDeclaration>;
     }
   }
 
-  *getDeclarationLayers(): Generator<LayerHandle> {
+  *getDeclarationLayers(): Generator<Handle> {
     for (const handle of this.layers.values()) {
-      if (!(handle instanceof LayerHandle)) continue;
+      if (!(handle instanceof Handle)) continue;
       yield handle;
     }
   }

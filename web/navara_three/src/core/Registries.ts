@@ -1,6 +1,6 @@
-import { EffectLayerRegistry } from "./EffectLayerRegistry";
-import { LightLayerRegistry } from "./LightLayerRegistry";
-import { MeshLayerRegistry } from "./MeshLayerRegistry";
+import { EffectRegistry } from "./EffectRegistry";
+import { LightRegistry } from "./LightRegistry";
+import { MeshRegistry } from "./MeshRegistry";
 import type { ViewContext } from "./ViewContext";
 // import { ResourceRegistry } from "./ResourceRegistry"; // TODO: Implement when needed
 
@@ -10,18 +10,18 @@ import type { ViewContext } from "./ViewContext";
  * in the Navara system.
  */
 export class Registries {
-  mesh: MeshLayerRegistry;
-  light: LightLayerRegistry;
-  effect: EffectLayerRegistry;
+  mesh: MeshRegistry;
+  light: LightRegistry;
+  effect: EffectRegistry;
   // resource: ResourceRegistry; // TODO: Implement when needed
   // pass: PassRegistry; // TODO: Implement when needed
   // material: MaterialRegistry; // TODO: Implement when needed
   // shader: ShaderRegistry; // TODO: Implement when needed
 
   constructor(view: ViewContext) {
-    this.mesh = new MeshLayerRegistry(view);
-    this.light = new LightLayerRegistry(view);
-    this.effect = new EffectLayerRegistry(view);
+    this.mesh = new MeshRegistry(view);
+    this.light = new LightRegistry(view);
+    this.effect = new EffectRegistry(view);
   }
 
   /**

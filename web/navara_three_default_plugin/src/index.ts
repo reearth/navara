@@ -1,52 +1,52 @@
 import type ThreeView from "@navara/three";
-import { Plugin, type LayerHandle } from "@navara/three";
+import { Plugin, type Handle } from "@navara/three";
 import {
-  RainMeshLayer,
-  SnowMeshLayer,
-  SkyMeshLayer,
-  SkyBoxMeshLayer,
-  StarsLayer,
-  BoxMeshLayer,
-  SphereMeshLayer,
-  GlowGlobeMeshLayer,
-  CylinderMeshLayer,
-  TubeMeshLayer,
-  PlaneMeshLayer,
-  GLTFModelLayer,
-  AxesHelperLayer,
-  ArrowHelperLayer,
-  ArclineMeshLayer,
-  SmoothLineMeshLayer,
-  type RainMeshLayerConfig,
-  type SnowMeshLayerConfig,
-  type SkyMeshLayerConfig,
-  type SkyBoxMeshLayerConfig,
-  type StarsLayerConfig,
-  type BoxMeshLayerConfig,
-  type SphereMeshLayerConfig,
-  type GlowGlobeMeshLayerConfig,
-  type CylinderMeshLayerConfig,
-  type TubeMeshLayerConfig,
-  type PlaneMeshLayerConfig,
-  type GLTFModelLayerConfig,
-  type AxesHelperLayerConfig,
-  type ArrowHelperLayerConfig,
-  type ArclineMeshLayerConfig,
-  type SmoothLineMeshLayerConfig,
-  InstancedBoxMeshLayer,
-  type InstancedBoxMeshLayerConfig,
-  AerialPerspectiveEffectLayer,
-  CloudsEffectLayer,
-  ColorGradingLUTEffectLayer,
-  DepthOfFieldEffectLayer,
-  FogLightEffectLayer,
-  FXAAEffectLayer,
-  LensFlareEffectLayer,
-  RainDropEffectLayer,
-  SMAAEffectLayer,
-  SSAOEffectLayer,
-  SSREffectLayer,
-  ToneMappingEffectLayer,
+  RainMeshDeclaration,
+  SnowMeshDeclaration,
+  SkyMeshDeclaration,
+  SkyBoxMeshDeclaration,
+  StarsDeclaration,
+  BoxMeshDeclaration,
+  SphereMeshDeclaration,
+  GlowGlobeMeshDeclaration,
+  CylinderMeshDeclaration,
+  TubeMeshDeclaration,
+  PlaneMeshDeclaration,
+  GLTFModelDeclaration,
+  AxesHelperDeclaration,
+  ArrowHelperDeclaration,
+  ArclineMeshDeclaration,
+  SmoothLineMeshDeclaration,
+  type RainMeshConfig,
+  type SnowMeshConfig,
+  type SkyMeshConfig,
+  type SkyBoxMeshConfig,
+  type StarsConfig,
+  type BoxMeshConfig,
+  type SphereMeshConfig,
+  type GlowGlobeMeshConfig,
+  type CylinderMeshConfig,
+  type TubeMeshConfig,
+  type PlaneMeshConfig,
+  type GLTFModelConfig,
+  type AxesHelperConfig,
+  type ArrowHelperConfig,
+  type ArclineMeshConfig,
+  type SmoothLineMeshConfig,
+  InstancedBoxMeshDeclaration,
+  type InstancedBoxMeshConfig,
+  AerialPerspectiveEffectDeclaration,
+  CloudsEffectDeclaration,
+  ColorGradingLUTEffectDeclaration,
+  DepthOfFieldEffectDeclaration,
+  FogLightEffectDeclaration,
+  FXAAEffectDeclaration,
+  LensFlareEffectDeclaration,
+  RainDropEffectDeclaration,
+  SMAAEffectDeclaration,
+  SSAOEffectDeclaration,
+  SSREffectDeclaration,
+  ToneMappingEffectDeclaration,
   type AerialPerspectiveConfig,
   type CloudsConfig,
   type ColorGradingLUTConfig,
@@ -59,60 +59,60 @@ import {
   type SSAOConfig,
   type SSRConfig,
   type ToneMappingConfig,
-  SunLightLayer,
-  AmbientLightLayer,
-  SkyLightProbeLayer,
-  LightProbeLayer,
-  type SunLightLayerConfig,
-  type AmbientLightLayerConfig,
-  type SkyLightProbeLayerConfig,
-  type LightProbeLayerConfig,
+  SunLightDeclaration,
+  AmbientLightDeclaration,
+  SkyLightProbeDeclaration,
+  LightProbeDeclaration,
+  type SunLightConfig,
+  type AmbientLightConfig,
+  type SkyLightProbeConfig,
+  type LightProbeConfig,
 } from "@navara/three_default_layers";
 
-export class DefaultPlugin extends Plugin<ThreeView<DefaultLayerDescriptions>> {
-  private view?: ThreeView<DefaultLayerDescriptions>;
+export class DefaultPlugin extends Plugin<ThreeView<DefaultDescriptions>> {
+  private view?: ThreeView<DefaultDescriptions>;
 
-  async init(view: ThreeView<DefaultLayerDescriptions>) {
+  async init(view: ThreeView<DefaultDescriptions>) {
     this.view = view;
 
     // Register mesh layers
-    view.registerMesh("rain", RainMeshLayer);
-    view.registerMesh("snow", SnowMeshLayer);
-    view.registerMesh("sky", SkyMeshLayer);
-    view.registerMesh("skyBox", SkyBoxMeshLayer);
-    view.registerMesh("stars", StarsLayer);
-    view.registerMesh("box", BoxMeshLayer);
-    view.registerMesh("sphere", SphereMeshLayer);
-    view.registerMesh("glowGlobe", GlowGlobeMeshLayer);
-    view.registerMesh("cylinder", CylinderMeshLayer);
-    view.registerMesh("tube", TubeMeshLayer);
-    view.registerMesh("plane", PlaneMeshLayer);
-    view.registerMesh("gltfModel", GLTFModelLayer);
-    view.registerMesh("axesHelper", AxesHelperLayer);
-    view.registerMesh("arrowHelper", ArrowHelperLayer);
-    view.registerMesh("arcLines", ArclineMeshLayer);
-    view.registerMesh("smoothLines", SmoothLineMeshLayer);
-    view.registerMesh("boxes", InstancedBoxMeshLayer);
+    view.registerMesh("rain", RainMeshDeclaration);
+    view.registerMesh("snow", SnowMeshDeclaration);
+    view.registerMesh("sky", SkyMeshDeclaration);
+    view.registerMesh("skyBox", SkyBoxMeshDeclaration);
+    view.registerMesh("stars", StarsDeclaration);
+    view.registerMesh("box", BoxMeshDeclaration);
+    view.registerMesh("sphere", SphereMeshDeclaration);
+    view.registerMesh("glowGlobe", GlowGlobeMeshDeclaration);
+    view.registerMesh("cylinder", CylinderMeshDeclaration);
+    view.registerMesh("tube", TubeMeshDeclaration);
+    view.registerMesh("plane", PlaneMeshDeclaration);
+    view.registerMesh("gltfModel", GLTFModelDeclaration);
+    view.registerMesh("axesHelper", AxesHelperDeclaration);
+    view.registerMesh("arrowHelper", ArrowHelperDeclaration);
+    view.registerMesh("arcLines", ArclineMeshDeclaration);
+    view.registerMesh("smoothLines", SmoothLineMeshDeclaration);
+    view.registerMesh("boxes", InstancedBoxMeshDeclaration);
 
     // Register light layers
-    view.registerLight("sun", SunLightLayer);
-    view.registerLight("ambient", AmbientLightLayer);
-    view.registerLight("skyLightProbe", SkyLightProbeLayer);
-    view.registerLight("lightProbe", LightProbeLayer);
+    view.registerLight("sun", SunLightDeclaration);
+    view.registerLight("ambient", AmbientLightDeclaration);
+    view.registerLight("skyLightProbe", SkyLightProbeDeclaration);
+    view.registerLight("lightProbe", LightProbeDeclaration);
 
     // Register effect layers
-    view.registerEffect("aerialPerspective", AerialPerspectiveEffectLayer);
-    view.registerEffect("rainDrop", RainDropEffectLayer);
-    view.registerEffect("clouds", CloudsEffectLayer);
-    view.registerEffect("fogLight", FogLightEffectLayer);
-    view.registerEffect("lensFlare", LensFlareEffectLayer);
-    view.registerEffect("ssao", SSAOEffectLayer);
-    view.registerEffect("ssr", SSREffectLayer);
-    view.registerEffect("depthOfField", DepthOfFieldEffectLayer);
-    view.registerEffect("colorGradingLUT", ColorGradingLUTEffectLayer);
-    view.registerEffect("toneMapping", ToneMappingEffectLayer);
-    view.registerEffect("smaa", SMAAEffectLayer);
-    view.registerEffect("fxaa", FXAAEffectLayer);
+    view.registerEffect("aerialPerspective", AerialPerspectiveEffectDeclaration);
+    view.registerEffect("rainDrop", RainDropEffectDeclaration);
+    view.registerEffect("clouds", CloudsEffectDeclaration);
+    view.registerEffect("fogLight", FogLightEffectDeclaration);
+    view.registerEffect("lensFlare", LensFlareEffectDeclaration);
+    view.registerEffect("ssao", SSAOEffectDeclaration);
+    view.registerEffect("ssr", SSREffectDeclaration);
+    view.registerEffect("depthOfField", DepthOfFieldEffectDeclaration);
+    view.registerEffect("colorGradingLUT", ColorGradingLUTEffectDeclaration);
+    view.registerEffect("toneMapping", ToneMappingEffectDeclaration);
+    view.registerEffect("smaa", SMAAEffectDeclaration);
+    view.registerEffect("fxaa", FXAAEffectDeclaration);
   }
 
   /**
@@ -120,15 +120,15 @@ export class DefaultPlugin extends Plugin<ThreeView<DefaultLayerDescriptions>> {
    * This method must be invoked after `view.init()`.
    */
   addDefaultPhotorealLayers(): {
-    sky: LayerHandle<SkyMeshLayer>;
-    skyEnv: LayerHandle<SkyMeshLayer>;
-    stars: LayerHandle<StarsLayer>;
-    skyLightProbe: LayerHandle<SkyLightProbeLayer>;
-    sun: LayerHandle<SunLightLayer>;
-    aerialPerspective: LayerHandle<AerialPerspectiveEffectLayer>;
-    lensFlare: LayerHandle<LensFlareEffectLayer> | undefined;
-    toneMapping: LayerHandle<ToneMappingEffectLayer>;
-    antialiasing: LayerHandle<SMAAEffectLayer> | LayerHandle<FXAAEffectLayer>;
+    sky: Handle<SkyMeshDeclaration>;
+    skyEnv: Handle<SkyMeshDeclaration>;
+    stars: Handle<StarsDeclaration>;
+    skyLightProbe: Handle<SkyLightProbeDeclaration>;
+    sun: Handle<SunLightDeclaration>;
+    aerialPerspective: Handle<AerialPerspectiveEffectDeclaration>;
+    lensFlare: Handle<LensFlareEffectDeclaration> | undefined;
+    toneMapping: Handle<ToneMappingEffectDeclaration>;
+    antialiasing: Handle<SMAAEffectDeclaration> | Handle<FXAAEffectDeclaration>;
   } {
     if (!this.view) {
       throw new Error(
@@ -140,58 +140,47 @@ export class DefaultPlugin extends Plugin<ThreeView<DefaultLayerDescriptions>> {
     const mobile = view.isMobileOptimized();
 
     // Mesh & light layers
-    const sky = view.addLayer<SkyMeshLayer>({
-      type: "mesh",
-      sky: {},
+    const sky = view.addMesh<SkyMeshDeclaration>({
+      type: "sky",
     });
-    const skyEnv = view.addLayer<SkyMeshLayer>({
-      type: "mesh",
-      sky: {
-        envMap: true,
-        sunAngularRadius: 0.1,
-      },
+    const skyEnv = view.addMesh<SkyMeshDeclaration>({
+      type: "sky",
+      envMap: true,
+      sunAngularRadius: 0.1,
     });
-    const stars = view.addLayer<StarsLayer>({
-      type: "mesh",
-      stars: {},
+    const stars = view.addMesh<StarsDeclaration>({
+      type: "stars",
     });
-    const skyLightProbe = view.addLayer<SkyLightProbeLayer>({
-      type: "light",
-      skyLightProbe: {},
+    const skyLightProbe = view.addLight<SkyLightProbeDeclaration>({
+      type: "skyLightProbe",
     });
-    const sun = view.addLayer<SunLightLayer>({
-      type: "light",
-      sun: {},
+    const sun = view.addLight<SunLightDeclaration>({
+      type: "sun",
     });
 
     // Effect layers
-    const aerialPerspective = view.addLayer<AerialPerspectiveEffectLayer>({
-      type: "effect",
-      aerialPerspective: {},
+    const aerialPerspective = view.addEffect<AerialPerspectiveEffectDeclaration>({
+      type: "aerialPerspective",
     });
 
     // Skip lens flare on mobile - expensive effect with limited benefit
     const lensFlare = mobile
       ? undefined
-      : view.addLayer<LensFlareEffectLayer>({
-          type: "effect",
-          lensFlare: {},
+      : view.addEffect<LensFlareEffectDeclaration>({
+          type: "lensFlare",
         });
 
-    const toneMapping = view.addLayer<ToneMappingEffectLayer>({
-      type: "effect",
-      toneMapping: {},
+    const toneMapping = view.addEffect<ToneMappingEffectDeclaration>({
+      type: "toneMapping",
     });
 
     // Use FXAA on mobile (faster), SMAA on desktop (higher quality)
     const antialiasing = mobile
-      ? view.addLayer<FXAAEffectLayer>({
-          type: "effect",
-          fxaa: {},
+      ? view.addEffect<FXAAEffectDeclaration>({
+          type: "fxaa",
         })
-      : view.addLayer<SMAAEffectLayer>({
-          type: "effect",
-          smaa: {},
+      : view.addEffect<SMAAEffectDeclaration>({
+          type: "smaa",
         });
 
     return {
@@ -208,18 +197,18 @@ export class DefaultPlugin extends Plugin<ThreeView<DefaultLayerDescriptions>> {
   }
 }
 
-export type DefaultLayerDescriptions =
-  | DefaultMeshLayerDeclarationDescription
-  | DefaultLightLayerDeclarationDescription
-  | DefaultEffectLayerDeclarationDescription;
+export type DefaultDescriptions =
+  | DefaultMeshDescription
+  | DefaultLightDescription
+  | DefaultEffectDescription;
 
-export type DefaultLightLayerDeclarationDescription =
-  | SunLightLayerConfig
-  | SkyLightProbeLayerConfig
-  | AmbientLightLayerConfig
-  | LightProbeLayerConfig;
+export type DefaultLightDescription =
+  | SunLightConfig
+  | SkyLightProbeConfig
+  | AmbientLightConfig
+  | LightProbeConfig;
 
-export type DefaultEffectLayerDeclarationDescription =
+export type DefaultEffectDescription =
   | AerialPerspectiveConfig
   | CloudsConfig
   | ColorGradingLUTConfig
@@ -233,21 +222,21 @@ export type DefaultEffectLayerDeclarationDescription =
   | SSRConfig
   | ToneMappingConfig;
 
-export type DefaultMeshLayerDeclarationDescription =
-  | RainMeshLayerConfig
-  | SnowMeshLayerConfig
-  | SkyMeshLayerConfig
-  | SkyBoxMeshLayerConfig
-  | StarsLayerConfig
-  | BoxMeshLayerConfig
-  | SphereMeshLayerConfig
-  | GlowGlobeMeshLayerConfig
-  | CylinderMeshLayerConfig
-  | TubeMeshLayerConfig
-  | PlaneMeshLayerConfig
-  | GLTFModelLayerConfig
-  | AxesHelperLayerConfig
-  | ArrowHelperLayerConfig
-  | ArclineMeshLayerConfig
-  | SmoothLineMeshLayerConfig
-  | InstancedBoxMeshLayerConfig;
+export type DefaultMeshDescription =
+  | RainMeshConfig
+  | SnowMeshConfig
+  | SkyMeshConfig
+  | SkyBoxMeshConfig
+  | StarsConfig
+  | BoxMeshConfig
+  | SphereMeshConfig
+  | GlowGlobeMeshConfig
+  | CylinderMeshConfig
+  | TubeMeshConfig
+  | PlaneMeshConfig
+  | GLTFModelConfig
+  | AxesHelperConfig
+  | ArrowHelperConfig
+  | ArclineMeshConfig
+  | SmoothLineMeshConfig
+  | InstancedBoxMeshConfig;

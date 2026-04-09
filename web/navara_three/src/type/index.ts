@@ -12,7 +12,11 @@ import type { Promise as WorkerPoolPromise } from "@navara/worker";
 import type { Mesh, Sprite, Object3D } from "three";
 
 import type { Color } from "../Color";
-import type { LightLayerConfig } from "../core";
+import type {
+  EffectConfig,
+  LightConfig,
+  MeshConfigWithSelectiveEffect,
+} from "../core";
 import type {
   FinalCopyPassConfig,
   MRTPassConfig,
@@ -27,15 +31,15 @@ export type { Promise as WorkerPoolPromise } from "@navara/worker";
 
 export type LayerDescription =
   | ResourceLayerDescription
-  | MeshLayerDeclarationDescription
-  | LightLayerDeclarationDescription
-  | EffectLayerDeclarationDescription;
+  | MeshDeclarationDescription
+  | LightDeclarationDescription
+  | EffectDeclarationDescription;
 
-export type MeshLayerDeclarationDescription = { type: "mesh" };
+export type MeshDeclarationDescription = { type: "mesh" };
 
-export type LightLayerDeclarationDescription = LightLayerConfig;
+export type LightDeclarationDescription = LightConfig;
 
-export type EffectLayerDeclarationDescription =
+export type EffectDeclarationDescription =
   | FinalCopyPassConfig
   | MRTPassConfig
   | SkyEnvMapPassConfig
@@ -127,3 +131,37 @@ export type RenderFlag = {
   forceUpdate: boolean;
   animation: boolean;
 };
+
+// Utility: extract all keys from a union type (distributive)
+type KeysOfUnion<T> = T extends unknown ? keyof T : never;
+
+// Extract layer-specific type keys from a config union by excluding common base keys
+type ExtractLayerTypeKey<ConfigUnion, BaseKeys extends string> = Exclude<
+  KeysOfUnion<ConfigUnion>,
+  BaseKeys
+>;
+
+type MeshBaseKeys = keyof MeshConfigWithSelectiveEffect;
+type LightBaseKeys = keyof LightConfig;
+type EffectBaseKeys = keyof EffectConfig | "selectiveEffect";
+
+export type MeshDescription<
+  MeshConfigs = MeshDeclarationDescription,
+> = {
+  type: ExtractLayerTypeKey<MeshConfigs, MeshBaseKeys>;
+} & Omit<MeshConfigWithSelectiveEffect, "type"> &
+  Record<string, unknown>;
+
+export type LightDescription<
+  LightConfigs = LightDeclarationDescription,
+> = {
+  type: ExtractLayerTypeKey<LightConfigs, LightBaseKeys>;
+} & Omit<LightConfig, "type"> &
+  Record<string, unknown>;
+
+export type EffectDescription<
+  EffectConfigs = EffectDeclarationDescription,
+> = {
+  type: ExtractLayerTypeKey<EffectConfigs, EffectBaseKeys>;
+} & Omit<EffectConfig, "type"> &
+  Record<string, unknown>;

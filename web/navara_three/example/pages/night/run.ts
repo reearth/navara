@@ -1,22 +1,22 @@
 import ThreeView, {
   EventHandler,
   JAPAN_GSI_ELEVATION_DECODER,
-  type LayerHandle,
+  type Handle,
   type LayerDescription,
   degreeToRadian,
   geodeticToVector3,
   Color,
 } from "@navara/three";
 import type {
-  LightProbeLayer,
-  SkyLightProbeLayer,
-  StarsLayer,
-  FogLightEffectLayer,
+  LightProbeDeclaration,
+  SkyLightProbeDeclaration,
+  StarsDeclaration,
+  FogLightEffectDeclaration,
   FogLightDefinition,
 } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
-  type DefaultLayerDescriptions,
+  type DefaultDescriptions,
 } from "@navara/three_default_plugin";
 import type { FeatureCollection, Point } from "geojson";
 import { SphericalHarmonics3 } from "three";
@@ -32,7 +32,7 @@ import {
 import { addCameraControl, addDateControl } from "../../helpers/control";
 import { SH_COEFFICIENTS } from "../../helpers/sh";
 
-export type LayerDescriptions = DefaultLayerDescriptions;
+export type LayerDescriptions = DefaultDescriptions;
 
 export const run = async (view: ThreeView<LayerDescriptions>) => {
   const plugin = new DefaultPlugin();
@@ -162,12 +162,10 @@ const addNightLightProbeControl = (
   view: ThreeView<LayerDescriptions>,
   pane: Pane,
 ) => {
-  const lightProbeLayer = view.addLayer<LightProbeLayer>({
-    type: "light",
-    lightProbe: {
-      sh: new SphericalHarmonics3().set(SH_COEFFICIENTS.night),
-      intensity: 0.05,
-    },
+  const lightProbeLayer = view.addLight<LightProbeDeclaration>({
+    type: "lightProbe",
+    sh: new SphericalHarmonics3().set(SH_COEFFICIENTS.night),
+    intensity: 0.05,
   });
 
   const lightProbeFolder = pane.addFolder({
@@ -203,7 +201,7 @@ const addNightLightProbeControl = (
 
 const addStarsControl = (
   view: ThreeView<LayerDescriptions>,
-  starsLayer: LayerHandle<StarsLayer>,
+  starsLayer: Handle<StarsDeclaration>,
   pane: Pane,
 ) => {
   const starsFolder = pane.addFolder({
@@ -255,7 +253,7 @@ const addStarsControl = (
 
 const addSkyLightProbeControl = (
   view: ThreeView<LayerDescriptions>,
-  skyLightProbeLayer: LayerHandle<SkyLightProbeLayer>,
+  skyLightProbeDeclaration: Handle<SkyLightProbeDeclaration>,
   pane: Pane,
 ) => {
   const skyLightProbeFolder = pane.addFolder({
@@ -274,7 +272,7 @@ const addSkyLightProbeControl = (
     const intensity = isAtNight
       ? skyLightProbeParams.nightIntensity
       : skyLightProbeParams.intensity;
-    skyLightProbeLayer.update({
+    skyLightProbeDeclaration.update({
       skyLightProbe: { intensity },
     });
   };
@@ -468,14 +466,12 @@ const addTokyoPointsFogLightControl = async (
   );
 
   // Create separate fog light layer for Tokyo Points
-  const tokyoPointsFogLayer = view.addLayer<FogLightEffectLayer>({
-    type: "effect",
-    fogLight: {
-      lights: tokyoPointsLights,
-      fogDensity: 2.0, // Different default density for Tokyo Points
-      useSurfaceLighting: true,
-      maxFar: view.camera.raw.far,
-    },
+  const tokyoPointsFogLayer = view.addEffect<FogLightEffectDeclaration>({
+    type: "fogLight",
+    lights: tokyoPointsLights,
+    fogDensity: 2.0, // Different default density for Tokyo Points
+    useSurfaceLighting: true,
+    maxFar: view.camera.raw.far,
     visible: false, // Initially hidden
   });
 
@@ -639,7 +635,7 @@ const addFogLightControl = async (
   sceneChangeHandler?: EventHandler,
 ) => {
   // Fetch street light data and add fog light effect
-  let fogLightLayer: LayerHandle<FogLightEffectLayer> | undefined;
+  let fogLightLayer: Handle<FogLightEffectDeclaration> | undefined;
   let streetLights: FogLightDefinition[] = [];
 
   // Function to load light data from a file using common function
@@ -656,14 +652,12 @@ const addFogLightControl = async (
     } else {
       // Create fog light layer, initially visible only at night
       const isAtNight = view.atmosphere.isAtNight(view.camera.raw.position);
-      fogLightLayer = view.addLayer<FogLightEffectLayer>({
-        type: "effect",
-        fogLight: {
-          lights: streetLights,
-          fogDensity: 0.5,
-          useSurfaceLighting: true,
-          maxFar: view.camera.raw.far,
-        },
+      fogLightLayer = view.addEffect<FogLightEffectDeclaration>({
+        type: "fogLight",
+        lights: streetLights,
+        fogDensity: 0.5,
+        useSurfaceLighting: true,
+        maxFar: view.camera.raw.far,
         visible: isAtNight,
       });
     }

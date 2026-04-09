@@ -1,21 +1,21 @@
 import ThreeView, {
   Color,
   type Layer,
-  type LayerHandle,
+  type Handle,
   type SelectiveEffectOcclusion,
 } from "@navara/three";
 import type {
-  ArclineMeshLayer,
-  BoxMeshLayer,
-  BoxMeshLayerUpdate,
-  CylinderMeshLayer,
-  CylinderMeshLayerUpdate,
-  PlaneMeshLayer,
-  PlaneMeshLayerUpdate,
-  SphereMeshLayer,
-  SphereMeshLayerUpdate,
-  TubeMeshLayer,
-  TubeMeshLayerUpdate,
+  ArclineMeshDeclaration,
+  BoxMeshDeclaration,
+  BoxMeshUpdate,
+  CylinderMeshDeclaration,
+  CylinderMeshUpdate,
+  PlaneMeshDeclaration,
+  PlaneMeshUpdate,
+  SphereMeshDeclaration,
+  SphereMeshUpdate,
+  TubeMeshDeclaration,
+  TubeMeshUpdate,
 } from "@navara/three_default_layers";
 import { Pane, type FolderApi } from "tweakpane";
 
@@ -340,26 +340,26 @@ const setupBloomFolder = (pane: Pane, postEffectBloom: Layer) => {
   });
 };
 
-type MeshLayerHandle = {
+type MeshHandle = {
   ref:
-    | BoxMeshLayer
-    | SphereMeshLayer
-    | CylinderMeshLayer
-    | TubeMeshLayer
-    | PlaneMeshLayer;
+    | BoxMeshDeclaration
+    | SphereMeshDeclaration
+    | CylinderMeshDeclaration
+    | TubeMeshDeclaration
+    | PlaneMeshDeclaration;
   update: (
     updates:
-      | BoxMeshLayerUpdate
-      | SphereMeshLayerUpdate
-      | CylinderMeshLayerUpdate
-      | TubeMeshLayerUpdate
-      | PlaneMeshLayerUpdate,
+      | BoxMeshUpdate
+      | SphereMeshUpdate
+      | CylinderMeshUpdate
+      | TubeMeshUpdate
+      | PlaneMeshUpdate,
   ) => void;
 };
 
 type MeshFolderOptions = {
   title: string;
-  layer: MeshLayerHandle;
+  layer: MeshHandle;
   configKey: "box" | "sphere" | "cylinder" | "tube" | "plane";
   bloomId: string;
   outlineId: string;
@@ -667,7 +667,7 @@ const setupPolygonFolder = (
  */
 const setupArclineFolder = (
   parent: FolderApi,
-  arclineLayer: LayerHandle<ArclineMeshLayer>,
+  arclineLayer: Handle<ArclineMeshDeclaration>,
   bloomId: string,
   outlineId: string,
   view: ThreeView,

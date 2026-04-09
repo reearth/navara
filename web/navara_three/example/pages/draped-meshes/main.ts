@@ -6,12 +6,12 @@ import ThreeView, {
   geodeticToVector3,
 } from "@navara/three";
 import type {
-  BoxMeshLayer,
-  CylinderMeshLayer,
+  BoxMeshDeclaration,
+  CylinderMeshDeclaration,
 } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
-  type DefaultLayerDescriptions,
+  type DefaultDescriptions,
 } from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 
@@ -20,7 +20,7 @@ import { TERRAIN_DATASETS, TILE_DATASETS } from "../../helpers/constants";
 import { addDateControl } from "../../helpers/control";
 
 const run = async () => {
-  const view = new ThreeView<DefaultLayerDescriptions>({
+  const view = new ThreeView<DefaultDescriptions>({
     debug: true,
     shadow: true,
   });
@@ -76,7 +76,7 @@ const run = async () => {
   const boxMatrixWorld = northUpEastToFixedFrame(boxPosition);
 
   // Box mesh layer
-  const boxLayer = view.addLayer<BoxMeshLayer>({
+  const boxLayer = view.addLayer<BoxMeshDeclaration>({
     type: "mesh",
     box: {
       width: 1000,
@@ -100,7 +100,7 @@ const run = async () => {
   const cylinderMatrixWorld = northUpEastToFixedFrame(cylinderPosition);
 
   // Cylinder mesh layer
-  const cylinderLayer = view.addLayer<CylinderMeshLayer>({
+  const cylinderLayer = view.addLayer<CylinderMeshDeclaration>({
     type: "mesh",
     cylinder: {
       radiusTop: 500,

@@ -3,18 +3,18 @@ import ThreeView, {
   Color,
   JAPAN_GSI_ELEVATION_DECODER,
   type LayerDescription,
-  LayerHandle,
+  Handle,
 } from "@navara/three";
 import {
-  SunLightLayer,
-  AmbientLightLayer,
-  SkyLightProbeLayer,
-  LightProbeLayer,
-  SkyMeshLayer,
-  StarsLayer,
-  AerialPerspectiveEffectLayer,
-  CloudsEffectLayer,
-  SSAOEffectLayer,
+  SunLightDeclaration,
+  AmbientLightDeclaration,
+  SkyLightProbeDeclaration,
+  LightProbeDeclaration,
+  SkyMeshDeclaration,
+  StarsDeclaration,
+  AerialPerspectiveEffectDeclaration,
+  CloudsEffectDeclaration,
+  SSAOEffectDeclaration,
   DEFAULT_CLOUDS_OPTIONS,
   ToneMappingMode,
   type CloudsOptions,
@@ -23,7 +23,7 @@ import {
 } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
-  type DefaultLayerDescriptions,
+  type DefaultDescriptions,
 } from "@navara/three_default_plugin";
 import { SphericalHarmonics3 } from "three";
 import { Pane } from "tweakpane";
@@ -47,7 +47,7 @@ import {
 } from "../../helpers/panel";
 import { SH_COEFFICIENTS } from "../../helpers/sh";
 
-export type LayerDescriptions = DefaultLayerDescriptions;
+export type LayerDescriptions = DefaultDescriptions;
 
 type DefaultEffects = ReturnType<DefaultPlugin["addDefaultPhotorealLayers"]>;
 
@@ -65,7 +65,7 @@ export const run = async (view: ThreeView<LayerDescriptions>) => {
   });
 
   // Add clouds effect layer explicitly
-  const cloudsLayer = view.addLayer<CloudsEffectLayer>({
+  const cloudsLayer = view.addLayer<CloudsEffectDeclaration>({
     type: "effect",
     clouds: {},
   });
@@ -74,7 +74,7 @@ export const run = async (view: ThreeView<LayerDescriptions>) => {
   const skyLayer = defaultEffects.sky;
   const starsLayer = defaultEffects.stars;
   const sunLightLayer = defaultEffects.sun;
-  const skyLightProbeLayer = defaultEffects.skyLightProbe;
+  const skyLightProbeDeclaration = defaultEffects.skyLightProbe;
 
   sunLightLayer.update({
     sun: {
@@ -83,7 +83,7 @@ export const run = async (view: ThreeView<LayerDescriptions>) => {
   });
 
   // Add an additional ambient light layer
-  const ambientLightLayer: LayerHandle<AmbientLightLayer> = view.addLayer({
+  const ambientLightLayer: Handle<AmbientLightDeclaration> = view.addLayer({
     type: "light",
     visible: false,
     ambient: {
@@ -157,7 +157,7 @@ export const run = async (view: ThreeView<LayerDescriptions>) => {
     starsLayer,
     sunLightLayer,
     ambientLightLayer,
-    skyLightProbeLayer,
+    skyLightProbeDeclaration,
     defaultEffects.aerialPerspective,
   );
   addCloudsControl(view, pane, cloudsLayer);
@@ -279,12 +279,12 @@ const addCloudsTilesControl = (
 
 const addAtmosphereControl = (
   pane: Pane,
-  skyLayer: LayerHandle<SkyMeshLayer>,
-  starsLayer: LayerHandle<StarsLayer>,
-  sunLightLayer: LayerHandle<SunLightLayer>,
-  ambientLightLayer: LayerHandle<AmbientLightLayer>,
-  _skyLightProbeLayer: LayerHandle<SkyLightProbeLayer>,
-  aerialPerspectiveLayer: LayerHandle<AerialPerspectiveEffectLayer>,
+  skyLayer: Handle<SkyMeshDeclaration>,
+  starsLayer: Handle<StarsDeclaration>,
+  sunLightLayer: Handle<SunLightDeclaration>,
+  ambientLightLayer: Handle<AmbientLightDeclaration>,
+  _skyLightProbeDeclaration: Handle<SkyLightProbeDeclaration>,
+  aerialPerspectiveLayer: Handle<AerialPerspectiveEffectDeclaration>,
 ) => {
   const PARAMS = {
     aerialPerspective: true,
@@ -396,7 +396,7 @@ const addAtmosphereControl = (
 const addCloudsControl = (
   view: ThreeView<LayerDescriptions>,
   pane: Pane,
-  cloudsLayerHandle: LayerHandle<CloudsEffectLayer>,
+  cloudsHandle: Handle<CloudsEffectDeclaration>,
 ) => {
   const BASE_PARAMS = {
     enable: true,
@@ -462,7 +462,7 @@ const addCloudsControl = (
     constantTerm: 0,
   };
 
-  const cloudsLayer = cloudsLayerHandle.ref.raw;
+  const cloudsLayer = cloudsHandle.ref.raw;
 
   const baseFields: FolderFields<typeof BASE_PARAMS> = [
     {
@@ -1141,7 +1141,7 @@ const addIBLControl = (view: ThreeView<LayerDescriptions>, pane: Pane) => {
   sh.coefficients = SH_COEFFICIENTS.debug;
 
   // Create the light probe layer but keep it hidden initially
-  const lightProbeLayer = view.addLayer<LightProbeLayer>({
+  const lightProbeLayer = view.addLayer<LightProbeDeclaration>({
     type: "light",
     lightProbe: {
       sh: sh,
@@ -1217,7 +1217,7 @@ const addEffectsControl = (
     lensFlare: { intensity: PARAMS.lensFlareIntensity },
   });
 
-  const ssao = view.addLayer<SSAOEffectLayer>({
+  const ssao = view.addLayer<SSAOEffectDeclaration>({
     type: "effect",
     visible: PARAMS.ssao,
     ssao: {},

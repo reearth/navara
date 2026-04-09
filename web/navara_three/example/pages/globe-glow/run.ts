@@ -1,18 +1,18 @@
-import ThreeView, { Color, LayerHandle } from "@navara/three";
+import ThreeView, { Color, Handle } from "@navara/three";
 import {
-  AmbientLightLayer,
-  GlowGlobeMeshLayer,
+  AmbientLightDeclaration,
+  GlowGlobeMeshDeclaration,
 } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
-  type DefaultLayerDescriptions,
+  type DefaultDescriptions,
 } from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 
 import { TILE_DATASETS } from "../../helpers/constants";
 import { addCameraControl } from "../../helpers/control";
 
-let gGlowGlobeMeshLayer: LayerHandle<GlowGlobeMeshLayer> | undefined =
+let gGlowGlobeMeshDeclaration: Handle<GlowGlobeMeshDeclaration> | undefined =
   undefined;
 
 const gPaneParams = {
@@ -24,19 +24,19 @@ const gPaneParams = {
   visible: true,
 };
 
-export type LayerDescriptions = DefaultLayerDescriptions;
+export type LayerDescriptions = DefaultDescriptions;
 
 export const run = async (view: ThreeView<LayerDescriptions>) => {
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
   await view.init();
 
-  view.addLayer<AmbientLightLayer>({
+  view.addLayer<AmbientLightDeclaration>({
     type: "light",
     ambient: {},
   });
 
-  gGlowGlobeMeshLayer = view.addLayer<GlowGlobeMeshLayer>({
+  gGlowGlobeMeshDeclaration = view.addLayer<GlowGlobeMeshDeclaration>({
     type: "mesh",
     glowGlobe: {
       radiusScale: gPaneParams.glowRadiusScale,
@@ -64,12 +64,12 @@ export const run = async (view: ThreeView<LayerDescriptions>) => {
 };
 
 function addPanel(view: ThreeView<LayerDescriptions>, pane: Pane) {
-  if (!gGlowGlobeMeshLayer) return;
+  if (!gGlowGlobeMeshDeclaration) return;
 
   const folder = pane.addFolder({ title: "Glow Globe Layer" });
 
   folder.addBinding(gPaneParams, "glowRadiusScale").on("change", (ev) => {
-    gGlowGlobeMeshLayer?.update({
+    gGlowGlobeMeshDeclaration?.update({
       glowGlobe: {
         radiusScale: ev.value,
       },
@@ -77,7 +77,7 @@ function addPanel(view: ThreeView<LayerDescriptions>, pane: Pane) {
   });
 
   folder.addBinding(gPaneParams, "glowCoefficient").on("change", (ev) => {
-    gGlowGlobeMeshLayer?.update({
+    gGlowGlobeMeshDeclaration?.update({
       glowGlobe: {
         coefficient: ev.value,
       },
@@ -85,7 +85,7 @@ function addPanel(view: ThreeView<LayerDescriptions>, pane: Pane) {
   });
 
   folder.addBinding(gPaneParams, "glowExponent").on("change", (ev) => {
-    gGlowGlobeMeshLayer?.update({
+    gGlowGlobeMeshDeclaration?.update({
       glowGlobe: {
         exponent: ev.value,
       },
@@ -95,7 +95,7 @@ function addPanel(view: ThreeView<LayerDescriptions>, pane: Pane) {
   folder
     .addBinding(gPaneParams, "glowColor", { view: "color" })
     .on("change", (ev) => {
-      gGlowGlobeMeshLayer?.update({
+      gGlowGlobeMeshDeclaration?.update({
         glowGlobe: {
           glowColor: new Color().setHex(ev.value),
         },
@@ -105,7 +105,7 @@ function addPanel(view: ThreeView<LayerDescriptions>, pane: Pane) {
   folder
     .addBinding(gPaneParams, "glowOpacity", { min: 0, max: 1 })
     .on("change", (ev) => {
-      gGlowGlobeMeshLayer?.update({
+      gGlowGlobeMeshDeclaration?.update({
         glowGlobe: {
           opacity: ev.value,
         },
@@ -113,19 +113,19 @@ function addPanel(view: ThreeView<LayerDescriptions>, pane: Pane) {
     });
 
   folder.addBinding(gPaneParams, "visible").on("change", (ev) => {
-    if (gGlowGlobeMeshLayer && gGlowGlobeMeshLayer.visible !== undefined) {
-      gGlowGlobeMeshLayer.visible = ev.value;
+    if (gGlowGlobeMeshDeclaration && gGlowGlobeMeshDeclaration.visible !== undefined) {
+      gGlowGlobeMeshDeclaration.visible = ev.value;
     }
   });
 
   folder.addButton({ title: "Delete Layer" }).on("click", (ev) => {
-    if (gGlowGlobeMeshLayer) {
-      gGlowGlobeMeshLayer.delete();
+    if (gGlowGlobeMeshDeclaration) {
+      gGlowGlobeMeshDeclaration.delete();
       view.forceUpdate();
-      gGlowGlobeMeshLayer = undefined;
+      gGlowGlobeMeshDeclaration = undefined;
       ev.target.title = "Add Layer";
     } else {
-      gGlowGlobeMeshLayer = view.addLayer<GlowGlobeMeshLayer>({
+      gGlowGlobeMeshDeclaration = view.addLayer<GlowGlobeMeshDeclaration>({
         type: "mesh",
         glowGlobe: {
           radiusScale: gPaneParams.glowRadiusScale,
