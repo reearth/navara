@@ -270,9 +270,10 @@ impl RasterTile {
         let tex_ids = self.texture_fragment_entity_ids.as_ref();
         let hill_ids = self.hillshade_entity_ids.as_ref();
 
-        // If no arrays, nothing to check
+        // If neither request array exists yet, textures/hillshades have not been requested,
+        // so this tile must not be treated as ready.
         if tex_ids.is_none() && hill_ids.is_none() {
-            return true;
+            return false;
         }
 
         // Get the length (both arrays should have same length)

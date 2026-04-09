@@ -1371,6 +1371,7 @@ if (uPickable > 0.) {
     textureOptions: TextureOptions,
     maxTextures: number,
     mat: Partial<RasterTileInternalMaterial> | RasterTileInternalMaterial,
+    preserveHillshadeUv = false,
   ) {
     const m = this.material;
 
@@ -1398,11 +1399,15 @@ if (uPickable > 0.) {
       };
     }
 
-    // Reset
+    // Reset textures (always) and hillshade UV (only if not preserving)
     for (let i = 0; i < maxTextures; i++) {
       m.userData.textures.value[i] = null;
-      m.userData.hillshadeUvOffset.value[i].set(0, 0);
-      m.userData.hillshadeUvScale.value[i].set(1, 1);
+
+      // Skip resetting hillshade UV if preserving (e.g., during rebind)
+      if (!preserveHillshadeUv) {
+        m.userData.hillshadeUvOffset.value[i].set(0, 0);
+        m.userData.hillshadeUvScale.value[i].set(1, 1);
+      }
     }
 
     const textureFragments = m.userData.textureFragments?.value;
@@ -1470,30 +1475,33 @@ if (uPickable > 0.) {
             (contentPixelWidth * Math.pow(2, layerZoom));
           m.userData.metersPerTexel.value[i] = metersPerTexel;
 
-          // Use UV transform from Rust (for hillshade-specific parent reuse)
-          // Rust calculates this based on max_zoom and ancestor lookup
-          const uvTransform = hillshadeUvTransforms[i];
-          if (uvTransform) {
-            // Rust provided a specific hillshade parent reuse transform
-            m.userData.hillshadeUvOffset.value[i].set(
-              uvTransform.offset.x,
-              uvTransform.offset.y,
-            );
-            m.userData.hillshadeUvScale.value[i].set(
-              uvTransform.scale.x,
-              uvTransform.scale.y,
-            );
-          } else {
-            // No hillshade-specific transform: use global tile UV transform (for parent fallback)
-            const globalUvTransform = this.material.userData.uvTransform;
-            m.userData.hillshadeUvOffset.value[i].set(
-              globalUvTransform.offset.x,
-              globalUvTransform.offset.y,
-            );
-            m.userData.hillshadeUvScale.value[i].set(
-              globalUvTransform.scale.x,
-              globalUvTransform.scale.y,
-            );
+          // Skip UV transform updates if preserving (e.g., during rebind)
+          if (!preserveHillshadeUv) {
+            // Use UV transform from Rust (for hillshade-specific parent reuse)
+            // Rust calculates this based on max_zoom and ancestor lookup
+            const uvTransform = hillshadeUvTransforms[i];
+            if (uvTransform) {
+              // Rust provided a specific hillshade parent reuse transform
+              m.userData.hillshadeUvOffset.value[i].set(
+                uvTransform.offset.x,
+                uvTransform.offset.y,
+              );
+              m.userData.hillshadeUvScale.value[i].set(
+                uvTransform.scale.x,
+                uvTransform.scale.y,
+              );
+            } else {
+              // No hillshade-specific transform: use global tile UV transform (for parent fallback)
+              const globalUvTransform = this.material.userData.uvTransform;
+              m.userData.hillshadeUvOffset.value[i].set(
+                globalUvTransform.offset.x,
+                globalUvTransform.offset.y,
+              );
+              m.userData.hillshadeUvScale.value[i].set(
+                globalUvTransform.scale.x,
+                globalUvTransform.scale.y,
+              );
+            }
           }
         }
       }
@@ -1576,6 +1584,7 @@ if (uPickable > 0.) {
    * Rebind textures for this TileMesh by calling setupTextures
    * This ensures texture updates go through the standard texture management system
    * Used by hillshade backfill and other dynamic texture updates
+   * Preserves existing hillshade UV transforms to avoid overwriting parent-reuse values
    */
   rebindTextures(
     loadedTexs: Map<string, Texture>,
@@ -1591,11 +1600,13 @@ if (uPickable > 0.) {
     };
 
     // Call setupTextures to properly bind textures through standard flow
+    // preserveHillshadeUv = true to avoid overwriting existing parent-reuse transforms
     this.setupTextures(
       loadedTexs,
       textureOptions,
       this.maxTextures,
       materialData,
+      true, // preserveHillshadeUv
     );
   }
 

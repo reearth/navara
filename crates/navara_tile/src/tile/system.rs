@@ -987,8 +987,9 @@ pub fn update_mesh_material(
 
         let mut hillshade_parent_zooms: std::collections::HashMap<usize, usize> =
             std::collections::HashMap::new();
-        for i in 0..merged_current_fragments.iter().len() {
-            if let Some((layer, _)) = tile_layers.iter().nth(i)
+        // Use sorted iteration to match appearance array building (same Order as later loop)
+        for (i, (layer, _)) in tile_layers.iter().sort::<&Order>().enumerate() {
+            if i < merged_current_fragments.len()
                 && layer.hillshade_config.is_some()
                 && layer.is_over_max_zoom(tile.coords.z)
                 && let Some((parent_entity, parent_zoom)) = find_hillshade_parent_entity(
