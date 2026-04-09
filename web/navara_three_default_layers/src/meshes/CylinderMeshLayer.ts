@@ -1,7 +1,7 @@
 import {
   Color,
   DrapedMesh,
-  MeshLayerDeclarationForSelectiveEffect,
+  MeshLayerDeclarationWithSelectiveEffect,
   type MeshLayerConfigWithSelectiveEffect,
   type MeshLayerUpdateWithSelectiveEffect,
   type ViewContext,
@@ -52,7 +52,7 @@ export type CylinderMeshLayerUpdate = MeshLayerUpdateWithSelectiveEffect &
 
 type CylinderMeshMaterial = MeshLambertMaterial | MeshBasicMaterial;
 
-export class CylinderMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
+export class CylinderMeshLayer extends MeshLayerDeclarationWithSelectiveEffect<
   CylinderMeshLayerConfig,
   CylinderMeshLayerUpdate,
   DrapedMesh<CylinderGeometry, CylinderMeshMaterial, CylinderMeshEventMap>

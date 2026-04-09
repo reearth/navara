@@ -12,9 +12,8 @@ import type { RenderPassOrchestrator } from "../orchestrators";
 import type { Scenes } from "../scene";
 
 import type { EffectLayerDeclaration } from "./EffectLayerDeclaration";
-import type { EffectSlotRegistry } from "./EffectSlotRegistry";
 import type { LayerHandle } from "./LayerHandle";
-import type { SelectiveEffectHelper } from "./SelectiveEffectHelper";
+import type { SelectiveEffectRegistry } from "./SelectiveEffectRegistry";
 
 /** Default emissive intensity when Bloom is enabled */
 const DEFAULT_EMISSIVE_INTENSITY = 0.3;
@@ -52,8 +51,7 @@ type ViewContextEvents = {
  *   layer/plugin code.
  */
 export class ViewContext extends EventHandler<ViewContextEvents> {
-  public selectiveEffectRegistry?: SelectiveEffectHelper;
-  public effectSlotRegistry?: EffectSlotRegistry;
+  public selectiveEffectRegistry?: SelectiveEffectRegistry;
   public globe?: Globe;
   public fontManager?: FontManager;
 
@@ -71,10 +69,10 @@ export class ViewContext extends EventHandler<ViewContextEvents> {
     private renderPassOrchestrator: RenderPassOrchestrator,
     /** Manager for scheduling work on Web Workers. */
     public concurrencyManager: ConcurrencyManager,
-    selectiveEffectHelper?: SelectiveEffectHelper,
+    selectiveEffectRegistry?: SelectiveEffectRegistry,
   ) {
     super();
-    this.selectiveEffectRegistry = selectiveEffectHelper;
+    this.selectiveEffectRegistry = selectiveEffectRegistry;
   }
 
   // --- Pass management ---

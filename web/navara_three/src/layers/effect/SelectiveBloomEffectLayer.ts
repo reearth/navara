@@ -18,7 +18,7 @@ import type {
   EffectLayerUpdate,
 } from "../../core/EffectLayerDeclaration";
 import type { BaseInstance } from "../../core/LayerDeclaration";
-import { SELECTIVE_BLOOM_EFFECT_KEY } from "../../core/SelectiveEffectHelper";
+import { SELECTIVE_BLOOM_EFFECT_KEY } from "../../core/SelectiveEffectRegistry";
 import type { ViewContext } from "../../core/ViewContext";
 import { Pass } from "../../effects";
 import { UnrealBloomPassRGBA } from "../../postprocessing";
@@ -90,14 +90,6 @@ export class SelectiveBloomEffectLayer extends SelectiveEffectLayer<
 
   protected getEffectKey(): string {
     return SELECTIVE_BLOOM_EFFECT_KEY;
-  }
-
-  protected getResolutionScale(): number {
-    return this.bloom.resolutionScale ?? DEFAULT_BLOOM_RESOLUTION_SCALE;
-  }
-
-  protected getDebugViews(): boolean {
-    return this.bloom.debugViews ?? false;
   }
 
   constructor(view: ViewContext, config: EffectLayerConfig) {

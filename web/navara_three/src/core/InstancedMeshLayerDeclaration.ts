@@ -12,10 +12,10 @@ import {
 import invariant from "tiny-invariant";
 
 import {
-  MeshLayerDeclarationForSelectiveEffect,
+  MeshLayerDeclarationWithSelectiveEffect,
   type MeshLayerConfigWithSelectiveEffect,
   type MeshLayerUpdateWithSelectiveEffect,
-} from "./MeshLayerDeclarationForSelectiveEffect";
+} from "./MeshLayerDeclarationWithSelectiveEffect";
 
 export type InstancedMeshLayerConfig = MeshLayerConfigWithSelectiveEffect;
 export type InstancedMeshLayerUpdate = MeshLayerUpdateWithSelectiveEffect;
@@ -73,7 +73,7 @@ export abstract class InstancedMeshLayerDeclaration<
   UpdateConfig extends InstancedMeshLayerUpdate = InstancedMeshLayerUpdate,
   ChildConfig extends InstancedChildConfig = InstancedChildConfig,
   CustomEvent extends BaseEventMap = BaseEventMap,
-> extends MeshLayerDeclarationForSelectiveEffect<
+> extends MeshLayerDeclarationWithSelectiveEffect<
   Config,
   UpdateConfig,
   InstancedMesh<TGeometry, TMaterial>,

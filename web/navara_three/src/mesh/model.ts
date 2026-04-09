@@ -364,7 +364,7 @@ export class ModelMesh
 
     // Compute effectIdsMask every _update() to stay in sync with slot changes
     const mask =
-      this.viewContext.effectSlotRegistry?.computeMask(effectIds) ?? 0;
+      this.viewContext.selectiveEffectRegistry?.computeMask(effectIds) ?? 0;
     for (const enhancer of this._enhancers.values()) {
       enhancer.update({ base: { effectIdsMask: mask } });
     }

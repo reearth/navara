@@ -1,7 +1,7 @@
 import {
   Color,
   DrapedMesh,
-  MeshLayerDeclarationForSelectiveEffect,
+  MeshLayerDeclarationWithSelectiveEffect,
   type MeshLayerConfigWithSelectiveEffect,
   type MeshLayerUpdateWithSelectiveEffect,
   type ViewContext,
@@ -50,7 +50,7 @@ export type BoxMeshLayerUpdate = MeshLayerUpdateWithSelectiveEffect &
 
 type BoxMeshMaterial = MeshLambertMaterial | MeshBasicMaterial;
 
-export class BoxMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
+export class BoxMeshLayer extends MeshLayerDeclarationWithSelectiveEffect<
   BoxMeshLayerConfig,
   BoxMeshLayerUpdate,
   DrapedMesh<BoxGeometry, BoxMeshMaterial, BoxMeshEventMap>

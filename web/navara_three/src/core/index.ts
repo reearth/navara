@@ -13,10 +13,10 @@ export {
   type PassKey,
 } from "./MeshLayerDeclaration";
 export {
-  MeshLayerDeclarationForSelectiveEffect,
+  MeshLayerDeclarationWithSelectiveEffect,
   type MeshLayerUpdateWithSelectiveEffect,
   type MeshLayerConfigWithSelectiveEffect,
-} from "./MeshLayerDeclarationForSelectiveEffect";
+} from "./MeshLayerDeclarationWithSelectiveEffect";
 export {
   InstancedMeshLayerDeclaration,
   type InstancedMeshLayerConfig,
@@ -48,9 +48,8 @@ export {
 export { LayerHandle } from "./LayerHandle";
 export * from "./ViewContext";
 export {
-  SelectiveEffectHelper,
+  SelectiveEffectRegistry,
   SELECTIVE_BLOOM_EFFECT_KEY,
   SELECTIVE_OUTLINE_EFFECT_KEY,
-  createFullscreenQuad,
-} from "./SelectiveEffectHelper";
-export { setupSelectiveEffectUniforms } from "./emissiveBufferSetup";
+} from "./SelectiveEffectRegistry";
+export { setupSelectiveEffectUniforms } from "../material/selectiveEffectMaterialSetup";

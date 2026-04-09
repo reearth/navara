@@ -20,7 +20,7 @@ export type MeshLayerUpdateWithSelectiveEffect = MeshLayerUpdate & {
   effectIds?: string[];
 };
 
-export abstract class MeshLayerDeclarationForSelectiveEffect<
+export abstract class MeshLayerDeclarationWithSelectiveEffect<
   Config extends MeshLayerConfigWithSelectiveEffect =
     MeshLayerConfigWithSelectiveEffect,
   UpdateConfig extends MeshLayerUpdateWithSelectiveEffect =
@@ -106,10 +106,10 @@ export abstract class MeshLayerDeclarationForSelectiveEffect<
   }
 
   /**
-   * Compute effectIdsMask from EffectSlotRegistry and set on the mesh's material.
+   * Compute effectIdsMask from SelectiveEffectRegistry and set on the mesh's material.
    */
   protected updateEffectIdsMask(): void {
-    const registry = this.view.effectSlotRegistry;
+    const registry = this.view.selectiveEffectRegistry;
     if (!registry) return;
 
     const mask =

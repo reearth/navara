@@ -42,7 +42,7 @@ import { WATER_NORMAL_URL } from "./constants/assets";
 import {
   LayerDeclaration,
   ViewContext,
-  SelectiveEffectHelper,
+  SelectiveEffectRegistry,
   type MeshLayerConfig,
   type MeshLayerConstructor,
   type LightLayerConstructor,
@@ -559,7 +559,7 @@ export default class ThreeView<
   // Registry support
   private registries: Registries;
   /** Helper for managing selective post-processing effects that apply to specific objects. */
-  public selectiveEffectHelper: SelectiveEffectHelper;
+  public selectiveEffectRegistry: SelectiveEffectRegistry;
   private viewContext!: ViewContext;
   private plugins: Plugin[] = [];
 
@@ -730,8 +730,8 @@ export default class ThreeView<
     this.atmosphere = new Atmosphere(this.renderer, options.atmosphere);
     this.atmosphere.on("needsUpdate", this.forceUpdate);
 
-    // Initialize SelectiveEffectHelper
-    this.selectiveEffectHelper = new SelectiveEffectHelper();
+    // Initialize SelectiveEffectRegistry
+    this.selectiveEffectRegistry = new SelectiveEffectRegistry();
 
     // Set up Registry
     this.viewContext = new ViewContext(
@@ -741,7 +741,7 @@ export default class ThreeView<
       this.layersManager,
       this.renderPassOrchestrator,
       createDefaultConcurrencyManager(this.isMobileOptimized()),
-      this.selectiveEffectHelper,
+      this.selectiveEffectRegistry,
     );
     this.registries = new Registries(this.viewContext);
 

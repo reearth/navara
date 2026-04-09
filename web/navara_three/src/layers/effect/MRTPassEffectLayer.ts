@@ -6,7 +6,7 @@ import {
   type EffectLayerConfig,
   type EffectLayerUpdate,
 } from "../../core/EffectLayerDeclaration";
-import { EffectSlotRegistry } from "../../core/EffectSlotRegistry";
+import { SelectiveEffectRegistry } from "../../core/SelectiveEffectRegistry";
 import type { ViewContext } from "../../core/ViewContext";
 import { CustomRenderPass } from "../../passes";
 
@@ -29,7 +29,7 @@ export class MRTPassEffectLayer extends EffectLayerDeclaration<
   // No insertAfter/Before - this is typically the first pass
 
   private config: MRTPassConfig;
-  private _slotRegistry = new EffectSlotRegistry();
+  private _registry = new SelectiveEffectRegistry();
 
   constructor(view: ViewContext, config: MRTPassConfig) {
     super(view, config);
@@ -53,8 +53,8 @@ export class MRTPassEffectLayer extends EffectLayerDeclaration<
       },
     );
 
-    // Expose EffectSlotRegistry to ViewContext for mask computation in MeshLayers
-    this.view.effectSlotRegistry = this._slotRegistry;
+    // Expose SelectiveEffectRegistry to ViewContext for mask computation and effect key resolution
+    this.view.selectiveEffectRegistry = this._registry;
 
     return pass;
   }
@@ -71,8 +71,8 @@ export class MRTPassEffectLayer extends EffectLayerDeclaration<
     return this.raw?.gbufferRenderTarget.textures[3];
   }
 
-  get effectSlotRegistry(): EffectSlotRegistry {
-    return this._slotRegistry;
+  get registry(): SelectiveEffectRegistry {
+    return this._registry;
   }
 
   get depthBuffer(): Texture | undefined {
@@ -108,8 +108,8 @@ export class MRTPassEffectLayer extends EffectLayerDeclaration<
   }
 
   onDestroy(): void {
-    this._slotRegistry.clear();
-    this.view.effectSlotRegistry = undefined;
+    this._registry.clear();
+    this.view.selectiveEffectRegistry = undefined;
     super.onDestroy();
   }
 }

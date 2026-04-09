@@ -1,6 +1,6 @@
 import {
   Color,
-  MeshLayerDeclarationForSelectiveEffect,
+  MeshLayerDeclarationWithSelectiveEffect,
   type MeshLayerConfigWithSelectiveEffect,
   type MeshLayerUpdateWithSelectiveEffect,
   type ViewContext,
@@ -42,7 +42,7 @@ export type SphereMeshLayerConfig = MeshLayerConfigWithSelectiveEffect &
 export type SphereMeshLayerUpdate = MeshLayerUpdateWithSelectiveEffect &
   LayerDescription;
 
-export class SphereMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
+export class SphereMeshLayer extends MeshLayerDeclarationWithSelectiveEffect<
   SphereMeshLayerConfig,
   SphereMeshLayerUpdate,
   Mesh<SphereGeometry, MeshLambertMaterial, SphereMeshEventMap>

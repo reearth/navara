@@ -18,7 +18,7 @@ import type {
   EffectLayerUpdate,
 } from "../../core/EffectLayerDeclaration";
 import type { BaseInstance } from "../../core/LayerDeclaration";
-import { SELECTIVE_OUTLINE_EFFECT_KEY } from "../../core/SelectiveEffectHelper";
+import { SELECTIVE_OUTLINE_EFFECT_KEY } from "../../core/SelectiveEffectRegistry";
 import type { ViewContext } from "../../core/ViewContext";
 import { Pass } from "../../effects";
 
@@ -84,14 +84,6 @@ export class SelectiveOutlineEffectLayer extends SelectiveEffectLayer<
 
   protected getEffectKey(): string {
     return SELECTIVE_OUTLINE_EFFECT_KEY;
-  }
-
-  protected getResolutionScale(): number {
-    return this.outline.resolutionScale ?? 1.0;
-  }
-
-  protected getDebugViews(): boolean {
-    return this.outline.debugViews ?? false;
   }
 
   constructor(view: ViewContext, config: EffectLayerConfig) {

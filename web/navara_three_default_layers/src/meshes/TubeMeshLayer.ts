@@ -1,7 +1,7 @@
 import {
   type XYZ,
   Color,
-  MeshLayerDeclarationForSelectiveEffect,
+  MeshLayerDeclarationWithSelectiveEffect,
   type MeshLayerConfigWithSelectiveEffect,
   type MeshLayerUpdateWithSelectiveEffect,
   type ViewContext,
@@ -44,7 +44,7 @@ export type TubeMeshLayerConfig = MeshLayerConfigWithSelectiveEffect &
 export type TubeMeshLayerUpdate = MeshLayerUpdateWithSelectiveEffect &
   LayerDescription;
 
-export class TubeMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
+export class TubeMeshLayer extends MeshLayerDeclarationWithSelectiveEffect<
   TubeMeshLayerConfig,
   TubeMeshLayerUpdate,
   Mesh<TubeGeometry, MeshLambertMaterial, TubeMeshEventMap>

@@ -1,5 +1,5 @@
 import {
-  MeshLayerDeclarationForSelectiveEffect,
+  MeshLayerDeclarationWithSelectiveEffect,
   type MeshLayerConfigWithSelectiveEffect,
   type MeshLayerUpdateWithSelectiveEffect,
   type ViewContext,
@@ -17,7 +17,7 @@ export type ArclineMeshLayerConfig = MeshLayerConfigWithSelectiveEffect &
 export type ArclineMeshLayerUpdate = MeshLayerUpdateWithSelectiveEffect &
   LayerDescription;
 
-export class ArclineMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
+export class ArclineMeshLayer extends MeshLayerDeclarationWithSelectiveEffect<
   ArclineMeshLayerConfig,
   ArclineMeshLayerUpdate,
   ArcLine

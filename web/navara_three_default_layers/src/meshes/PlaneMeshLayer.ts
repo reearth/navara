@@ -1,6 +1,6 @@
 import {
   Color,
-  MeshLayerDeclarationForSelectiveEffect,
+  MeshLayerDeclarationWithSelectiveEffect,
   type MeshLayerConfigWithSelectiveEffect,
   type MeshLayerUpdateWithSelectiveEffect,
   type ViewContext,
@@ -39,7 +39,7 @@ export type PlaneMeshLayerConfig = MeshLayerConfigWithSelectiveEffect &
 export type PlaneMeshLayerUpdate = MeshLayerUpdateWithSelectiveEffect &
   LayerDescription;
 
-export class PlaneMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
+export class PlaneMeshLayer extends MeshLayerDeclarationWithSelectiveEffect<
   PlaneMeshLayerConfig,
   PlaneMeshLayerUpdate,
   Mesh<PlaneGeometry, MeshLambertMaterial, PlaneMeshEventMap>

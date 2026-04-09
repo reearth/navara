@@ -1,4 +1,8 @@
-import type { Texture } from "three";
+import {
+  OrthographicCamera,
+  PlaneGeometry,
+  type Texture,
+} from "three";
 
 import {
   EffectLayerDeclaration,
@@ -9,15 +13,25 @@ import type { ViewContext } from "../../core/ViewContext";
 
 import type { MRTPassEffectLayer } from "./MRTPassEffectLayer";
 
-// Re-export utility from SelectiveEffectHelper
-export { createFullscreenQuad } from "../../core/SelectiveEffectHelper";
-
 // Base configuration for selective effect layers
 export type SelectiveEffectLayerConfig = {
   selectiveEffect: true;
 } & EffectLayerConfig;
 
 export type SelectiveEffectLayerUpdate = EffectLayerUpdate;
+
+/**
+ * Create fullscreen rendering infrastructure for selective effect passes.
+ */
+export function createFullscreenQuad(): {
+  camera: OrthographicCamera;
+  geometry: PlaneGeometry;
+} {
+  return {
+    camera: new OrthographicCamera(-1, 1, 1, -1, 0, 1),
+    geometry: new PlaneGeometry(2, 2),
+  };
+}
 
 /**
  * Base class for buffer-based selective effect layers (Bloom, Outline, etc.).
@@ -58,26 +72,25 @@ export abstract class SelectiveEffectLayer<
   // ---------------------------------------------------------------------------
 
   onCreate(): void {
-    // Register effectId → effectKey mapping in SelectiveEffectHelper
-    this.view.selectiveEffectRegistry?.registerEffectKey(
-      this.id,
-      this.getEffectKey(),
-    );
+    const registry = this.view.selectiveEffectRegistry;
 
-    // Allocate a slot bit in the EffectIds Buffer for this effect instance
-    const mrtLayer = this.findLayer<MRTPassEffectLayer>("mrt");
-    mrtLayer?.effectSlotRegistry.register(this.id);
+    // Register effectId → effectKey mapping
+    registry?.registerEffectKey(this.id, this.getEffectKey());
+
+    // Allocate a slot bit in the EffectIds Buffer
+    registry?.registerSlot(this.id);
 
     super.onCreate();
   }
 
   onDestroy(): void {
+    const registry = this.view.selectiveEffectRegistry;
+
     // Release effectId → effectKey mapping
-    this.view.selectiveEffectRegistry?.unregisterEffectKey(this.id);
+    registry?.unregisterEffectKey(this.id);
 
     // Release slot bit in the EffectIds Buffer
-    const mrtLayer = this.findLayer<MRTPassEffectLayer>("mrt");
-    mrtLayer?.effectSlotRegistry.unregister(this.id);
+    registry?.unregisterSlot(this.id);
 
     super.onDestroy();
   }
@@ -100,7 +113,6 @@ export abstract class SelectiveEffectLayer<
 
   /** Slot bit index for this effect instance in the EffectIds Buffer. -1 if unregistered. */
   public getEffectSlot(): number {
-    const mrtLayer = this.findLayer<MRTPassEffectLayer>("mrt");
-    return mrtLayer?.effectSlotRegistry.getSlot(this.id) ?? -1;
+    return this.view.selectiveEffectRegistry?.getSlot(this.id) ?? -1;
   }
 }

@@ -427,7 +427,7 @@ export class PolygonMesh extends BatchedFeatureMesh<
         emissiveColor: material.emissiveColor,
         emissiveIntensity: material.emissiveIntensity,
         effectIdsMask:
-          this._viewContext.effectSlotRegistry?.computeMask(
+          this._viewContext.selectiveEffectRegistry?.computeMask(
             this._viewContext.getLayerEffects(this._layerId) ?? [],
           ) ?? 0,
       },
