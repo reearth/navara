@@ -229,12 +229,12 @@ if (nvr_uPickable > 0.0 && diffuseColor.a > 0.0) {
 `,
     )
     .replace(
-      "outputBuffer1 = vec4(packNormalToVec2(normal), reflectivity, roughnessFactor);",
+      "normalBuffer = vec4(packNormalToVec2(normal), reflectivity, roughnessFactor);",
       `
 ${POLYGON_BASE_SHADER_MARKERS.fragment.FINAL_NORMAL_START}
 vec3 finalNormal = origNormal;
 ${POLYGON_BASE_SHADER_MARKERS.fragment.FINAL_NORMAL_END}
-outputBuffer1 = vec4(packNormalToVec2(finalNormal), reflectivity, roughnessFactor);
+normalBuffer = vec4(packNormalToVec2(finalNormal), reflectivity, roughnessFactor);
 `,
     ).source;
 };

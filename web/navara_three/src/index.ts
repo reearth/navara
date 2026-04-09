@@ -168,11 +168,6 @@ export type Options = {
   backgroundColor?: CoreColor;
   /** Feature picking configuration. */
   picking?: boolean;
-  /** Selective post-processing effects configuration. */
-  selectiveEffects?: {
-    /** Enables debug views for selective effect buffers. */
-    debugViews?: boolean;
-  };
   /** When true, renders every frame. When false, renders only on changes or when forceUpdate() is called. */
   animation?: boolean;
   /** Number of samples for MSAA (Multi-Sample Anti-Aliasing). 0 disables MSAA. */
@@ -1714,20 +1709,6 @@ export default class ThreeView<
    */
   set shadowMapViewersEnabled(v: boolean) {
     this.shadowMapViewers.enabled = v;
-  }
-
-  /**
-   * Enables or disables debug views for selective post-processing effects.
-   *
-   * @deprecated SE buffer debug views are now available via the debug/selective-effect example.
-   * This method stores the flag but has no internal consumer. It will be removed or
-   * re-implemented when a library-side debug view mechanism is added.
-   *
-   * @param enabled - Whether to enable debug views
-   */
-  setSelectiveEffectDebugViews(enabled: boolean): void {
-    this._options.selectiveEffects ??= {};
-    this._options.selectiveEffects.debugViews = enabled;
   }
 
   /**

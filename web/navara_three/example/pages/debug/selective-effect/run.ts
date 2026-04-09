@@ -1,5 +1,4 @@
 import ThreeView, {
-  BufferView,
   Color,
   JAPAN_GSI_ELEVATION_DECODER,
   SelectiveBloomEffectLayer,
@@ -24,6 +23,8 @@ import {
   TILES_3D_DATASETS,
   TERRAIN_DATASETS,
 } from "../../../helpers/constants";
+
+import { setupDebugViews } from "./debugView";
 
 export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
   const plugin = new DefaultPlugin();
@@ -155,174 +156,21 @@ export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
     TILES_3D_DATASETS.plateauChuo,
   ]);
 
-  // --- SE Buffer Debug View (using BufferView) ---
+  // --- SE Buffer Debug View ---
   const renderer =
     view.renderPassOrchestrator.effectComposer.getRenderer() as WebGLRenderer;
+  const debugView = setupDebugViews(
+    renderer,
+    () => view.mrtPassLayer.ref.raw?.gbufferRenderTarget,
+  );
 
-  const effectIdsView = new BufferView(150, 100, {
-    styleWidth: "150px",
-    styleHeight: "100px",
-  });
-  const emissiveRgbView = new BufferView(150, 100, {
-    styleWidth: "150px",
-    styleHeight: "100px",
-  });
-  const emissiveAlphaView = new BufferView(150, 100, {
-    styleWidth: "150px",
-    styleHeight: "100px",
-  });
-
-  // Position views side by side
-  effectIdsView.canvas.style.left = "0px";
-  emissiveRgbView.canvas.style.left = "155px";
-  emissiveAlphaView.canvas.style.left = "310px";
-
-  let debugViewEnabled = true;
-
-  /** Read a HalfFloat MRT attachment as Float32Array */
-  function readMRTFloat(
-    gbufferRT: { width: number; height: number },
-    attachmentIndex: number,
-  ): Float32Array | null {
-    const gl = renderer.getContext();
-    if (!(gl instanceof WebGL2RenderingContext)) return null;
-
-    const w = gbufferRT.width;
-    const h = gbufferRT.height;
-    const pixels = new Float32Array(w * h * 4);
-    const prevTarget = renderer.getRenderTarget();
-    renderer.setRenderTarget(
-      view.mrtPassLayer.ref.raw?.gbufferRenderTarget ?? null,
-    );
-    gl.readBuffer(gl.COLOR_ATTACHMENT0 + attachmentIndex);
-    gl.readPixels(0, 0, w, h, gl.RGBA, gl.FLOAT, pixels);
-    gl.readBuffer(gl.COLOR_ATTACHMENT0);
-    renderer.setRenderTarget(prevTarget);
-    return pixels;
-  }
-
-  /** Convert float pixels to Uint8Array with bitmask color visualization */
-  function bitmaskToRgba(
-    floatPixels: Float32Array,
-    pixelCount: number,
-  ): Uint8Array {
-    const result = new Uint8Array(pixelCount * 4);
-    const bitColors = [
-      [255, 0, 0],
-      [0, 255, 0],
-      [0, 0, 255],
-      [255, 255, 0],
-      [255, 0, 255],
-      [0, 255, 255],
-    ];
-    for (let p = 0; p < pixelCount; p++) {
-      const mask = Math.round(floatPixels[p * 4]); // R channel = bitmask
-      let r = 0,
-        g = 0,
-        b = 0;
-      for (let bit = 0; bit < bitColors.length; bit++) {
-        if (mask & (1 << bit)) {
-          r += bitColors[bit][0];
-          g += bitColors[bit][1];
-          b += bitColors[bit][2];
-        }
-      }
-      const di = p * 4;
-      result[di] = Math.min(255, r);
-      result[di + 1] = Math.min(255, g);
-      result[di + 2] = Math.min(255, b);
-      result[di + 3] = mask > 0 ? 255 : 0;
-    }
-    return result;
-  }
-
-  /** Convert float pixels to Uint8Array RGB (clamped 0-255) */
-  function floatRgbToRgba(
-    floatPixels: Float32Array,
-    pixelCount: number,
-  ): Uint8Array {
-    const result = new Uint8Array(pixelCount * 4);
-    for (let p = 0; p < pixelCount; p++) {
-      const si = p * 4;
-      const di = p * 4;
-      result[di] = Math.min(
-        255,
-        Math.max(0, Math.round(floatPixels[si] * 255)),
-      );
-      result[di + 1] = Math.min(
-        255,
-        Math.max(0, Math.round(floatPixels[si + 1] * 255)),
-      );
-      result[di + 2] = Math.min(
-        255,
-        Math.max(0, Math.round(floatPixels[si + 2] * 255)),
-      );
-      result[di + 3] = 255;
-    }
-    return result;
-  }
-
-  /** Convert float A channel to grayscale Uint8Array */
-  function floatAlphaToRgba(
-    floatPixels: Float32Array,
-    pixelCount: number,
-  ): Uint8Array {
-    const result = new Uint8Array(pixelCount * 4);
-    for (let p = 0; p < pixelCount; p++) {
-      const a = Math.min(
-        255,
-        Math.max(0, Math.round(floatPixels[p * 4 + 3] * 255)),
-      );
-      const di = p * 4;
-      result[di] = a;
-      result[di + 1] = a;
-      result[di + 2] = a;
-      result[di + 3] = 255;
-    }
-    return result;
-  }
-
-  function renderDebugViews() {
-    if (!debugViewEnabled) return;
-    const gbufferRT = view.mrtPassLayer.ref.raw?.gbufferRenderTarget;
-    if (!gbufferRT) return;
-    const w = gbufferRT.width;
-    const h = gbufferRT.height;
-
-    // EffectIds (attachment 2): bitmask color visualization
-    const effectIdsFloat = readMRTFloat(gbufferRT, 2);
-    if (effectIdsFloat) {
-      effectIdsView.renderFromPixels(
-        bitmaskToRgba(effectIdsFloat, w * h),
-        w,
-        h,
-      );
-    }
-
-    // Emissive (attachment 3): RGB + Alpha visualization
-    const emissiveFloat = readMRTFloat(gbufferRT, 3);
-    if (emissiveFloat) {
-      emissiveRgbView.renderFromPixels(
-        floatRgbToRgba(emissiveFloat, w * h),
-        w,
-        h,
-      );
-      emissiveAlphaView.renderFromPixels(
-        floatAlphaToRgba(emissiveFloat, w * h),
-        w,
-        h,
-      );
-    }
-  }
-
-  // Hook into CustomRenderPass.render (not EffectComposer.render)
-  // gbufferRT framebuffer is only reliably readable right after CustomRenderPass renders
+  // Hook into CustomRenderPass.render (gbufferRT is only readable right after)
   const customRenderPass = view.mrtPassLayer.ref.raw;
   if (customRenderPass) {
     const origRender = customRenderPass.render.bind(customRenderPass);
     customRenderPass.render = (...args: Parameters<typeof origRender>) => {
       origRender(...args);
-      renderDebugViews();
+      debugView.renderDebugViews();
     };
   }
 
@@ -333,10 +181,7 @@ export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
   pane
     .addBinding(debugParams, "debugView", { label: "SE Buffer Debug" })
     .on("change", (ev) => {
-      debugViewEnabled = ev.value;
-      effectIdsView.canvas.style.display = ev.value ? "block" : "none";
-      emissiveRgbView.canvas.style.display = ev.value ? "block" : "none";
-      emissiveAlphaView.canvas.style.display = ev.value ? "block" : "none";
+      debugView.setEnabled(ev.value);
     });
 
   // --- Effect Layer Controls ---
@@ -469,23 +314,23 @@ export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
       sphereLayer.update({ sphere: { emissiveIntensity: ev.value } });
     });
 
-  const cesiumFolder = meshFolder.addFolder({
-    title: "Cesium3D Chiyoda",
+  const tiles3DFolder = meshFolder.addFolder({
+    title: "3DTiles Chiyoda",
     expanded: true,
   });
-  const cesiumParams = {
+  const tiles3DParams = {
     emissiveColor: "#ffffff",
     emissiveIntensity: 0.0,
   };
-  cesiumFolder
-    .addBinding(cesiumParams, "emissiveColor", { label: "Emissive Color" })
+  tiles3DFolder
+    .addBinding(tiles3DParams, "emissiveColor", { label: "Emissive Color" })
     .on("change", (ev) => {
       view.updateLayerById(chiyodaLayer.id, {
         model: { emissiveColor: new Color().setStyle(ev.value) },
       });
     });
-  cesiumFolder
-    .addBinding(cesiumParams, "emissiveIntensity", {
+  tiles3DFolder
+    .addBinding(tiles3DParams, "emissiveIntensity", {
       label: "Intensity",
       min: 0,
       max: 2,

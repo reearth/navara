@@ -142,12 +142,12 @@ if (nvr_uPickable > 0.0 && diffuseColor.a > 0.0) {
 `,
     )
     .replace(
-      "outputBuffer1 = vec4(packNormalToVec2(normal), metalnessFactor, roughnessFactor)",
+      "normalBuffer = vec4(packNormalToVec2(normal), metalnessFactor, roughnessFactor)",
       `
 ${MODEL_BASE_SHADER_MARKERS.fragment.FINAL_NORMAL_START}
 vec3 finalNormal = normal;
 ${MODEL_BASE_SHADER_MARKERS.fragment.FINAL_NORMAL_END}
-outputBuffer1 = vec4(packNormalToVec2(finalNormal), metalnessFactor, roughnessFactor)
+normalBuffer = vec4(packNormalToVec2(finalNormal), metalnessFactor, roughnessFactor)
 `,
     ).source;
 };
