@@ -38,4 +38,7 @@ export function setupSelectiveEffectUniforms(
     // Link effectIdsMask uniform for runtime value updates
     shader.uniforms.uEffectIdsMask = material.userData.uEffectIdsMask;
   };
+
+  // Force recompile if the material was already rendered with the old program
+  material.needsUpdate = true;
 }
