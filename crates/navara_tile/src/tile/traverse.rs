@@ -103,6 +103,11 @@ pub fn traverse_tile(
 
     let has_hillshade_config = tiles.iter().any(|(l, _)| l.hillshade_config.is_some());
 
+    let hillshade_over_max_zoom = tiles
+        .iter()
+        .find(|(layer, _)| layer.hillshade_config.is_some())
+        .is_some_and(|(layer, _)| layer.is_over_max_zoom(tile.coords.z));
+
     let tile_ready_state = tile.is_ready(
         qt,
         texture_fragment,
@@ -111,6 +116,7 @@ pub fn traverse_tile(
         terrain_layer,
         has_tile_layer,
         has_hillshade_config,
+        hillshade_over_max_zoom,
     );
     let is_tile_ready = tile_ready_state.is_tile_ready;
 

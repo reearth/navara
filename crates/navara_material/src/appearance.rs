@@ -1,5 +1,6 @@
 use bevy_ecs::{component::Component, entity::Entity};
 use navara_core::{CRS, ElevationDecoder, calc_transform};
+use navara_geometry::TileUvTransform;
 use navara_math::{Transform, Vec2, Vec3};
 
 /// Configuration for elevation heatmap rendering.
@@ -568,6 +569,7 @@ pub struct RasterTileInternalMaterial {
     // Hillshade fields
     pub is_hillshades: Vec<bool>, // Per-layer flags: which texture slots are hillshades
     pub hillshade_config: Option<HillshadeConfig>, // Shared config for all hillshade layers
+    pub hillshade_uv_transforms: Vec<Option<TileUvTransform>>, // Per-layer UV transforms for parent texture reuse
 }
 
 #[derive(Debug, Clone, PartialEq, Component)]

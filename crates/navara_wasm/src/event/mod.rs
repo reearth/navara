@@ -11,7 +11,9 @@ use serde::Serialize;
 use wasm_bindgen::prelude::*;
 use worker::WorkerTaskDelegatedEvent;
 
-use navara_wasm_types::{CameraFrustum, Globe, LLE, RasterTileInternalMaterial, Transform, Vec2};
+use navara_wasm_types::{
+    CameraFrustum, Globe, LLE, RasterTileInternalMaterial, TileUvTransform, Transform,
+};
 
 #[wasm_bindgen(getter_with_clone)]
 #[derive(Debug, Clone, Serialize)]
@@ -89,13 +91,6 @@ pub struct Mesh {
     pub skirt_indices: Option<i32>,
     /// Mapping from skirt vertex index to edge vertex index in main geometry.
     pub skirt_indices_to_edge: Option<i32>,
-}
-
-#[wasm_bindgen]
-#[derive(Debug, Clone, Copy, Serialize)]
-pub struct TileUvTransform {
-    pub offset: Vec2,
-    pub scale: Vec2,
 }
 
 #[wasm_bindgen]
@@ -369,15 +364,6 @@ impl<'a> From<&'a navara_mesh::Mesh> for Mesh {
             skirt_uvs: m.skirt_uvs,
             skirt_indices: m.skirt_indices,
             skirt_indices_to_edge: m.skirt_indices_to_edge,
-        }
-    }
-}
-
-impl<'a> From<&'a navara_geometry::TileUvTransform> for TileUvTransform {
-    fn from(m: &'a navara_geometry::TileUvTransform) -> Self {
-        Self {
-            offset: m.offset.into(),
-            scale: m.scale.into(),
         }
     }
 }

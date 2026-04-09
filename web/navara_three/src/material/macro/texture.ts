@@ -46,6 +46,9 @@ export function generateHillshadeNormalShader(maxTextures: number): string {
       ivec2 actualTexSize = textureSize(uTextures[${i}], 0);
 
       if (actualTexSize.x > 2) {
+        // Apply per-layer UV transform for hillshade parent texture reuse
+        vec2 hillshadeUv = vOrigUv * uHillshadeUvScale[${i}] + uHillshadeUvOffset[${i}];
+
         // Calculate texelSize based on content size
         // Standard UV mapping: UV [0,1] maps to pixel centers [first, last]
         // So texelSize (UV distance between adjacent pixels) = 1 / (N - 1)
@@ -54,11 +57,11 @@ export function generateHillshadeNormalShader(maxTextures: number): string {
         vec2 texelSize = vec2(1.0) / (vec2(contentSize) - vec2(1.0));
 
         // Second check: Is this valid land data (not ocean/no-data)?
-        float testHeight = sampleHeightBilinear(uTextures[${i}], vUv, actualTexSize);
+        float testHeight = sampleHeightBilinear(uTextures[${i}], hillshadeUv, actualTexSize);
 
         // This preserves original vertex normals for ocean/no-data areas
         if (isValidHeight(testHeight)) {
-          vec3 demNormal = computeNormalFromDEM(uTextures[${i}], vUv, texelSize, uMetersPerTexel[${i}]);
+          vec3 demNormal = computeNormalFromDEM(uTextures[${i}], hillshadeUv, texelSize, uMetersPerTexel[${i}]);
 
           vec3 up = vec3(0.0, 0.0, 1.0);  // World up
           vec3 T = normalize(cross(up, N));

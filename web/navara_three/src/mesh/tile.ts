@@ -641,6 +641,8 @@ export class TileMesh
       shader.uniforms.uHillshadeOffset = m.userData.hillshadeOffset;
       shader.uniforms.uHillshadeExaggeration = m.userData.hillshadeExaggeration;
       shader.uniforms.uMetersPerTexel = m.userData.metersPerTexel;
+      shader.uniforms.uHillshadeUvOffset = m.userData.hillshadeUvOffset;
+      shader.uniforms.uHillshadeUvScale = m.userData.hillshadeUvScale;
 
       // Add UV transform uniforms to the shader
       shader.vertexShader = createReplacer(shader.vertexShader)
@@ -694,6 +696,8 @@ vUv = vUv * uScale + uOffset;
   uniform bool uIsElevationHeatmaps[${maxTextures}];
   uniform bool uIsHillshades[${maxTextures}];
   uniform float uMetersPerTexel[${maxTextures}];
+  uniform vec2 uHillshadeUvOffset[${maxTextures}];
+  uniform vec2 uHillshadeUvScale[${maxTextures}];
   uniform sampler2D uWaterNormalMap;
   uniform float uPickable;
   uniform float uIor;
@@ -1371,9 +1375,23 @@ if (uPickable > 0.) {
       };
     }
 
+    if (!m.userData.hillshadeUvOffset) {
+      m.userData.hillshadeUvOffset = {
+        value: [...new Array(maxTextures)].map(() => new Vector2(0, 0)),
+      };
+    }
+
+    if (!m.userData.hillshadeUvScale) {
+      m.userData.hillshadeUvScale = {
+        value: [...new Array(maxTextures)].map(() => new Vector2(1, 1)),
+      };
+    }
+
     // Reset
     for (let i = 0; i < maxTextures; i++) {
       m.userData.textures.value[i] = null;
+      m.userData.hillshadeUvOffset.value[i].set(0, 0);
+      m.userData.hillshadeUvScale.value[i].set(1, 1);
     }
 
     const textureFragments = m.userData.textureFragments?.value;
@@ -1400,7 +1418,11 @@ if (uPickable > 0.) {
       const centerY = (coords.y + 0.5) / tileSize;
       const latRad = Math.atan(Math.sinh(Math.PI * (1 - 2 * centerY)));
       cosLat = Math.cos(latRad);
+      // console.log(coords.z, textureFragmentsLen);
     }
+
+    // Get hillshade UV transforms from Rust (for parent texture reuse)
+    const hillshadeUvTransforms = mat.hillshadeUvTransforms?.() ?? [];
 
     // Setting tile textures
     for (let i = 0; i < textureFragmentsLen; i++) {
@@ -1421,7 +1443,7 @@ if (uPickable > 0.) {
 
       // Set hillshade parameters (zoom level and metersPerTexel)
       // Read zoom level from texture.userData (set by hillshade.ts when texture was created)
-      if (isHillshade) {
+      if (isHillshade && tile) {
         const layerZoom = t.userData.hillshadeZoom;
         if (
           layerZoom !== undefined &&
@@ -1436,6 +1458,32 @@ if (uPickable > 0.) {
             (EARTH_CIRCUMFERENCE * cosLat) /
             (contentPixelWidth * Math.pow(2, layerZoom));
           m.userData.metersPerTexel.value[i] = metersPerTexel;
+
+          // Use UV transform from Rust (for hillshade-specific parent reuse)
+          // Rust calculates this based on max_zoom and ancestor lookup
+          const uvTransform = hillshadeUvTransforms[i];
+          if (uvTransform) {
+            // Rust provided a specific hillshade parent reuse transform
+            m.userData.hillshadeUvOffset.value[i].set(
+              uvTransform.offset.x,
+              uvTransform.offset.y,
+            );
+            m.userData.hillshadeUvScale.value[i].set(
+              uvTransform.scale.x,
+              uvTransform.scale.y,
+            );
+          } else {
+            // No hillshade-specific transform: use global tile UV transform (for parent fallback)
+            const globalUvTransform = this.material.userData.uvTransform;
+            m.userData.hillshadeUvOffset.value[i].set(
+              globalUvTransform.offset.x,
+              globalUvTransform.offset.y,
+            );
+            m.userData.hillshadeUvScale.value[i].set(
+              globalUvTransform.scale.x,
+              globalUvTransform.scale.y,
+            );
+          }
         }
       }
 

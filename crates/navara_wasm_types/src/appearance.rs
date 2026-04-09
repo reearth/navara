@@ -2,7 +2,7 @@ use navara_wasm_utils::ToU8;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
-use crate::{ElevationDecoder, TextureFragment, Vec2, Vec3 as WasmVec3};
+use crate::{ElevationDecoder, TextureFragment, TileUvTransform, Vec2, Vec3 as WasmVec3};
 #[wasm_bindgen]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PointMaterial {
@@ -1387,10 +1387,24 @@ pub struct RasterTileInternalMaterial {
     #[wasm_bindgen(js_name = hillshadeExaggeration)]
     #[serde(rename = "hillshadeExaggeration")]
     pub hillshade_exaggeration: f32,
+    // Hillshade UV transforms for parent texture reuse (per-layer)
+    // Stored as raw Vec for internal use, exposed via getter
+    hillshade_uv_transforms: Vec<Option<TileUvTransform>>,
 }
 
 #[wasm_bindgen]
 impl RasterTileInternalMaterial {
+    #[wasm_bindgen(js_name = hillshadeUvTransforms)]
+    pub fn hillshade_uv_transforms(&self) -> Vec<JsValue> {
+        self.hillshade_uv_transforms
+            .iter()
+            .map(|opt| match opt {
+                Some(transform) => JsValue::from(*transform),
+                None => JsValue::NULL,
+            })
+            .collect()
+    }
+
     pub fn texture_fragments(&self) -> Option<Vec<JsValue>> {
         self.texture_fragments.as_ref().map(|ts| {
             ts.iter()
@@ -1531,6 +1545,12 @@ impl<'a> From<&'a navara_material::RasterTileInternalMaterial> for RasterTileInt
                 .as_ref()
                 .map(|c| c.exaggeration)
                 .unwrap_or(1.0),
+            // Hillshade UV transforms
+            hillshade_uv_transforms: m
+                .hillshade_uv_transforms
+                .iter()
+                .map(|opt| opt.as_ref().map(|t| t.into()))
+                .collect(),
         }
     }
 }
