@@ -274,7 +274,10 @@ export function processEvent(ctx: EventContext, event: Events | undefined) {
         switch (type) {
           case "add":
             // The image extension needs worker.
-            return !IMAGE_EXTENSIONS.includes(event.extension) || canWorkerProcessImmediately();
+            return (
+              !IMAGE_EXTENSIONS.includes(event.extension) ||
+              canWorkerProcessImmediately()
+            );
           default:
             return true;
         }
