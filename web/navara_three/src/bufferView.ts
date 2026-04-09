@@ -20,6 +20,7 @@ export class BufferView {
     this.canvas.style.top = "0px";
     this.canvas.style.left = "0px";
     this.canvas.style.zIndex = "1000";
+    this.canvas.style.pointerEvents = "none";
     document.body.appendChild(this.canvas);
 
     this.canvasForImage = document.createElement("canvas");
