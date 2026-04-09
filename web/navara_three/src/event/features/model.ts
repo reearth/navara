@@ -27,7 +27,6 @@ export async function renderModel(
   buf: BufferLoader,
   uniforms: CommonUniforms,
   viewContext: ViewContext,
-  layerId: string,
 ) {
   const loader = initializeGltfLoader(viewContext.concurrencyManager);
   const dracoLoader = initializeDracoLoader(viewContext.concurrencyManager);
@@ -149,7 +148,6 @@ export async function renderModel(
     uniforms,
     buf,
     viewContext,
-    layerId,
   );
 
   return scene;

@@ -58,14 +58,6 @@ export abstract class MeshLayerDeclarationWithSelectiveEffect<
   override onCreate() {
     super.onCreate();
 
-    // ----------------------------------------------------------------------------
-    // SelectiveEffect: effectIds wiring
-    // ----------------------------------------------------------------------------
-    // Register with Manager (SoT) if effectIds is specified
-    if (this._effectIds.length > 0) {
-      this.view.registerLayerEffects(this.id, this._effectIds);
-    }
-
     // Compute and set effectIdsMask on material uniforms
     this.updateEffectIdsMask();
 
@@ -99,9 +91,6 @@ export abstract class MeshLayerDeclarationWithSelectiveEffect<
     // SelectiveEffect: registry update (requires this.raw)
     // ----------------------------------------------------------------------------
     if (effectIdsChanged) {
-      // Update Manager (SoT) with new effectIds
-      this.view.updateLayerEffects(this.id, this._effectIds);
-
       // Recompute effectIdsMask for material uniforms
       this.updateEffectIdsMask();
     }
@@ -136,9 +125,6 @@ export abstract class MeshLayerDeclarationWithSelectiveEffect<
 
     // Unsubscribe from slot changes
     this.view.off("effectSlotsChanged", this._onSlotsChanged);
-
-    // Unregister layer effects
-    this.view.unregisterLayerEffects(this.id);
 
     super.onDestroy();
   }

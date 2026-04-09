@@ -9,7 +9,6 @@ import type { FontManager } from "@navara/font";
 import { Mesh, Sprite, Object3D } from "three";
 
 import type { ViewEvents } from "..";
-import { Color } from "../Color";
 import type { ViewContext } from "../core/ViewContext";
 import type { LayersManager } from "../layersManager";
 import {
@@ -63,7 +62,7 @@ export function renderFeature(
     return renderBillboard(f.billboard, buf, viewContext);
   }
   if (f.model) {
-    return renderModel(f.model, buf, uniforms, viewContext, layerId);
+    return renderModel(f.model, buf, uniforms, viewContext);
   }
   if (f.polyline) {
     return renderPolyline(f.polyline, buf, uniforms, viewContext);
@@ -192,22 +191,6 @@ export async function processRenderableFeatureAdded(
     });
   }
 
-  // Store layer-level effectIds as fallback for meshes that don't carry material.effectIds directly.
-  // Not SoT — mesh-level material.effectIds takes priority when available.
-  const material =
-    feature.model?.material ??
-    feature.polygon?.material ??
-    feature.polyline?.material ??
-    feature.point?.material ??
-    feature.billboard?.material;
-  if (material && viewContext.getLayerEffects(featureLayerId) === undefined) {
-    viewContext.registerLayerEffects(
-      featureLayerId,
-      material.effectIds ?? [],
-      material.emissiveIntensity,
-    );
-  }
-
   handleFeatureCreatedEventByLayerId(
     featureHandler,
     obj,
@@ -235,7 +218,7 @@ export async function processRenderableFeatureChanged(
   buf: BufferLoader,
   viewEvents: EventHandler<ViewEvents>,
   layersManager: LayersManager,
-  viewContext: ViewContext,
+  _viewContext: ViewContext,
   updatedAt: number,
   layerHandler?: LayerHandler,
 ) {
@@ -249,29 +232,6 @@ export async function processRenderableFeatureChanged(
   const tileHandle = overscaledTileHandle?.handle;
 
   const { point, billboard, text, polyline, polygon, model } = ev.feature;
-
-  // Update layer-level effectIds fallback from material.
-  // Not SoT — mesh-level material.effectIds takes priority when available.
-  const material =
-    model?.material ??
-    polygon?.material ??
-    polyline?.material ??
-    point?.material ??
-    billboard?.material;
-  if (material) {
-    viewContext.updateLayerEffects(
-      layerId,
-      material.effectIds,
-      material.emissiveIntensity,
-    );
-
-    if (material.emissiveColor !== undefined) {
-      viewContext.setLayerEmissiveColor(
-        layerId,
-        new Color().setHex(material.emissiveColor),
-      );
-    }
-  }
 
   const active =
     (point ?? billboard ?? text ?? polyline ?? polygon ?? model)?.active ??

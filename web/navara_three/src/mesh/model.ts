@@ -62,7 +62,6 @@ export class ModelMesh
 {
   private viewContext: ViewContext;
   /** Layer ID for SelectiveEffect handling */
-  private _layerId: string;
   private _uniforms: CommonUniforms;
 
   /** Enhanced materials with encapsulated state, one per child mesh */
@@ -90,11 +89,9 @@ export class ModelMesh
     uniforms: CommonUniforms,
     buf: BufferLoader,
     viewContext: ViewContext,
-    layerId: string,
   ) {
     super();
     this.viewContext = viewContext;
-    this._layerId = layerId;
     this._uniforms = uniforms;
     this.credit = gltfInfo.credit;
     this.batchLength = m.batch_length;
@@ -356,11 +353,7 @@ export class ModelMesh
     }
 
     // Update effectIdsMask for Selective Effect buffer rendering
-    // material.effectIds may be undefined for 3D Tiles — fall back to layer-level effectIds
-    const effectIds =
-      material.effectIds ??
-      this.viewContext.getLayerEffects(this._layerId) ??
-      [];
+    const effectIds = material.effectIds ?? [];
 
     // Compute effectIdsMask every _update() to stay in sync with slot changes
     const mask =

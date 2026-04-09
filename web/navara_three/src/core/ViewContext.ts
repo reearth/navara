@@ -6,7 +6,6 @@ import type { Pass as PostProcessingPass } from "postprocessing";
 import type { Material, PerspectiveCamera, WebGLRenderer } from "three";
 
 import type { Atmosphere } from "../atmosphere";
-import { Color } from "../Color";
 import type { LayersManager } from "../layersManager";
 import type { RenderPassOrchestrator } from "../orchestrators";
 import type { Scenes } from "../scene";
@@ -14,15 +13,6 @@ import type { Scenes } from "../scene";
 import type { EffectLayerDeclaration } from "./EffectLayerDeclaration";
 import type { LayerHandle } from "./LayerHandle";
 import type { SelectiveEffectRegistry } from "./SelectiveEffectRegistry";
-
-/** Default emissive intensity when Bloom is enabled */
-const DEFAULT_EMISSIVE_INTENSITY = 0.3;
-
-type LayerEffectConfig = {
-  effectIds: string[];
-  emissiveIntensity: number;
-  emissiveColor?: Color;
-};
 
 type ViewContextEvents = {
   /**
@@ -59,9 +49,6 @@ export class ViewContext extends EventHandler<ViewContextEvents> {
   public selectiveEffectRegistry?: SelectiveEffectRegistry;
   public globe?: Globe;
   public fontManager?: FontManager;
-
-  // Layer-level selective effect configuration
-  private readonly layerEffectConfigs = new Map<string, LayerEffectConfig>();
 
   constructor(
     /** Scene containers for different rendering passes. */
@@ -161,63 +148,5 @@ export class ViewContext extends EventHandler<ViewContextEvents> {
    */
   removeShadowMaterial(material: Material): void {
     this.emit("shadowRemoved", material);
-  }
-
-  // --- Selective Effect layer config ---
-  // These methods store effectIds at the layer level as a fallback for
-  // resource-layer features (geojson/mvt/3dtiles) where individual meshes
-  // don't carry material.effectIds directly. This is NOT the SoT —
-  // mesh-level material.effectIds takes priority when available.
-
-  registerLayerEffects(
-    layerId: string,
-    effectIds: string[],
-    emissiveIntensity?: number,
-  ): void {
-    const config = this.ensureLayerEffectConfig(layerId);
-    config.effectIds = effectIds;
-    if (emissiveIntensity !== undefined) {
-      config.emissiveIntensity = emissiveIntensity;
-    }
-  }
-
-  getLayerEffects(layerId: string): string[] | undefined {
-    return this.layerEffectConfigs.get(layerId)?.effectIds;
-  }
-
-  setLayerEmissiveColor(
-    layerId: string,
-    emissiveColor: Color | undefined,
-  ): void {
-    const config = this.ensureLayerEffectConfig(layerId);
-    config.emissiveColor = emissiveColor;
-  }
-
-  unregisterLayerEffects(layerId: string): void {
-    this.layerEffectConfigs.delete(layerId);
-  }
-
-  updateLayerEffects(
-    layerId: string,
-    effectIds: string[] | undefined,
-    emissiveIntensity?: number,
-  ): void {
-    const config = this.ensureLayerEffectConfig(layerId);
-    config.effectIds = effectIds ?? [];
-    if (emissiveIntensity !== undefined) {
-      config.emissiveIntensity = emissiveIntensity;
-    }
-  }
-
-  private ensureLayerEffectConfig(layerId: string): LayerEffectConfig {
-    let config = this.layerEffectConfigs.get(layerId);
-    if (!config) {
-      config = {
-        effectIds: [],
-        emissiveIntensity: DEFAULT_EMISSIVE_INTENSITY,
-      };
-      this.layerEffectConfigs.set(layerId, config);
-    }
-    return config;
   }
 }
