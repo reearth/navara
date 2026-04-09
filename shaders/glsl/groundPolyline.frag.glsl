@@ -38,6 +38,8 @@ uniform float nvr_uPickable;
 uniform vec2 nvr_uPickingCoord; // Screen coordinate for picking (in pixels)
 
 layout(location = 1) out vec4 normalBuffer;
+layout(location = 2) out vec4 effectIdBuffer;
+layout(location = 3) out vec4 emissiveBuffer;
 
 float readDepth(sampler2D depthSampler, vec2 coord) {
     float fragCoordZ = texture( depthSampler, coord ).r;
@@ -150,4 +152,6 @@ void main() {
         0.0,
         0.0
     );
+    effectIdBuffer = vec4(0.0);
+    emissiveBuffer = vec4(0.0);
 }

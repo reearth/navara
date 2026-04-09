@@ -17,6 +17,8 @@ in vec3 vNormal;
 #include chunks/show_pars_fragment;
 
 layout(location = 1) out vec4 normalBuffer;
+layout(location = 2) out vec4 effectIdBuffer;
+layout(location = 3) out vec4 emissiveBuffer;
 
 void main() {
     #include chunks/show_fragment;
@@ -53,4 +55,6 @@ void main() {
         0.0,
         0.0
     );
+    effectIdBuffer = vec4(0.0);
+    emissiveBuffer = vec4(0.0);
 }
