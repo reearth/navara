@@ -76,6 +76,10 @@ export class SelectiveEffectRegistry {
     return mask;
   }
 
+  /**
+   * Clear all slot assignments.
+   * Intended for teardown only; does not emit onSlotsChanged.
+   */
   clear(): void {
     this.idToSlot.clear();
     this.freedSlots = [];
