@@ -26,10 +26,10 @@ pub fn setup_tiled_geojson(
     mut source_cache: ResMut<VectorTileSourceCache>,
 ) {
     for (layer_entity, layer) in &geojson_layers {
-        let is_tiled = layer
-            .appearances
-            .iter()
-            .any(|a| matches!(a, Appearance::Polygon(p) if p.clamp_to_ground || p.tiled));
+        let is_tiled = layer.appearances.iter().any(|a| {
+            matches!(a, Appearance::Polygon(p) if p.clamp_to_ground || p.tiled)
+                || matches!(a, Appearance::Polyline(p) if p.clamp_to_ground)
+        });
         if !is_tiled {
             continue;
         }

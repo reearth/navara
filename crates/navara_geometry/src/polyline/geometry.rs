@@ -236,18 +236,20 @@ pub fn create_flat_polyline_geometry(
 
     let mut accumulated_length = 0.0_f32;
     let mut vertex_index = 0u32;
+    let seg_count = positions.len() - 1;
 
-    for i in 0..(positions.len() - 1) {
+    for i in 0..seg_count {
         let p0 = positions[i];
         let p1 = positions[i + 1];
 
-        // Direction vector
-        let dx = (p1.x - p0.x) as f32;
-        let dy = (p1.y - p0.y) as f32;
         let len = segment_lengths[i];
         if len < 1e-10 {
             continue;
         }
+
+        // Direction vector
+        let dx = (p1.x - p0.x) as f32;
+        let dy = (p1.y - p0.y) as f32;
 
         // Normalize direction
         let dir_x = dx / len;
@@ -270,8 +272,6 @@ pub fn create_flat_polyline_geometry(
         };
 
         // Create 4 vertices for this segment (2 at start, 2 at end)
-        // Each vertex has: position (3), start (3), forward_offset (3), start_normal (3),
-        // end_normal_and_tex_x (4), right_normal_and_tex_y (4)
 
         // Vertex 0: start, left side
         flat_positions.extend_from_slice(&[p0.x as f32, p0.y as f32, 0.0]);
