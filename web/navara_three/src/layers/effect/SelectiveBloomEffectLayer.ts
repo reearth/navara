@@ -36,7 +36,6 @@ export type SelectiveBloomConfig = {
   threshold?: number;
   debugMode?: number; // 0: normal, 1: base only, 2: bloom only, 3: bloom enhanced
   resolutionScale?: number;
-  debugViews?: boolean;
 };
 
 export type SelectiveBloomEffectConfig = {
@@ -105,7 +104,6 @@ export class SelectiveBloomEffectLayer extends SelectiveEffectLayer<
         threshold: c.threshold ?? DEFAULT_THRESHOLD,
         debugMode: c.debugMode ?? 0,
         resolutionScale: c.resolutionScale ?? DEFAULT_BLOOM_RESOLUTION_SCALE,
-        debugViews: c.debugViews ?? false,
       },
     };
 
@@ -142,9 +140,6 @@ export class SelectiveBloomEffectLayer extends SelectiveEffectLayer<
     }
     if (bloomUpdates.debugMode !== undefined) {
       this.config.selectiveBloom.debugMode = bloomUpdates.debugMode;
-    }
-    if (bloomUpdates.debugViews !== undefined) {
-      this.config.selectiveBloom.debugViews = bloomUpdates.debugViews;
     }
     if (bloomUpdates.resolutionScale !== undefined) {
       this.config.selectiveBloom.resolutionScale = bloomUpdates.resolutionScale;

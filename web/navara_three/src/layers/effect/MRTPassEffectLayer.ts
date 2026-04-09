@@ -54,7 +54,7 @@ export class MRTPassEffectLayer extends EffectLayerDeclaration<
     );
 
     // Expose SelectiveEffectRegistry to ViewContext for mask computation and effect key resolution
-    this.view.selectiveEffectRegistry = this._registry;
+    this.view.setSelectiveEffectRegistry(this._registry);
 
     return pass;
   }
@@ -109,7 +109,7 @@ export class MRTPassEffectLayer extends EffectLayerDeclaration<
 
   onDestroy(): void {
     this._registry.clear();
-    this.view.selectiveEffectRegistry = undefined;
+    this.view.setSelectiveEffectRegistry(undefined);
     super.onDestroy();
   }
 }

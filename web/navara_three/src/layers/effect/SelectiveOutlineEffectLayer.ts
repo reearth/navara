@@ -34,7 +34,6 @@ export type SelectiveOutlineConfig = {
   thickness?: number;
   edgeStrength?: number;
   resolutionScale?: number;
-  debugViews?: boolean;
 };
 
 export type SelectiveOutlineEffectConfig = {
@@ -98,7 +97,6 @@ export class SelectiveOutlineEffectLayer extends SelectiveEffectLayer<
         thickness: c.thickness ?? DEFAULT_THICKNESS,
         edgeStrength: c.edgeStrength ?? DEFAULT_EDGE_STRENGTH,
         resolutionScale: c.resolutionScale ?? 1.0,
-        debugViews: c.debugViews ?? false,
       },
     };
 
@@ -132,9 +130,6 @@ export class SelectiveOutlineEffectLayer extends SelectiveEffectLayer<
     if (outlineUpdates.edgeStrength !== undefined) {
       this.config.selectiveOutline.edgeStrength = outlineUpdates.edgeStrength;
       changed = true;
-    }
-    if (outlineUpdates.debugViews !== undefined) {
-      this.config.selectiveOutline.debugViews = outlineUpdates.debugViews;
     }
     if (outlineUpdates.resolutionScale !== undefined) {
       this.config.selectiveOutline.resolutionScale =

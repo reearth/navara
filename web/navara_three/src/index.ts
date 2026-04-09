@@ -558,8 +558,10 @@ export default class ThreeView<
 
   // Registry support
   private registries: Registries;
-  /** Helper for managing selective post-processing effects that apply to specific objects. */
-  public selectiveEffectRegistry: SelectiveEffectRegistry;
+  /** Registry for managing selective post-processing effect slots. Available after MRT layer creation. */
+  get selectiveEffectRegistry(): SelectiveEffectRegistry | undefined {
+    return this.viewContext?.selectiveEffectRegistry;
+  }
   private viewContext!: ViewContext;
   private plugins: Plugin[] = [];
 
@@ -730,9 +732,6 @@ export default class ThreeView<
     this.atmosphere = new Atmosphere(this.renderer, options.atmosphere);
     this.atmosphere.on("needsUpdate", this.forceUpdate);
 
-    // Initialize SelectiveEffectRegistry
-    this.selectiveEffectRegistry = new SelectiveEffectRegistry();
-
     // Set up Registry
     this.viewContext = new ViewContext(
       this._scenes,
@@ -741,7 +740,6 @@ export default class ThreeView<
       this.layersManager,
       this.renderPassOrchestrator,
       createDefaultConcurrencyManager(this.isMobileOptimized()),
-      this.selectiveEffectRegistry,
     );
     this.registries = new Registries(this.viewContext);
 

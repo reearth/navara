@@ -1,8 +1,4 @@
-import {
-  OrthographicCamera,
-  PlaneGeometry,
-  type Texture,
-} from "three";
+import { OrthographicCamera, PlaneGeometry, type Texture } from "three";
 
 import {
   EffectLayerDeclaration,

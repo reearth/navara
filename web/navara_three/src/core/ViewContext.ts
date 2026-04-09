@@ -69,10 +69,23 @@ export class ViewContext extends EventHandler<ViewContextEvents> {
     private renderPassOrchestrator: RenderPassOrchestrator,
     /** Manager for scheduling work on Web Workers. */
     public concurrencyManager: ConcurrencyManager,
-    selectiveEffectRegistry?: SelectiveEffectRegistry,
   ) {
     super();
-    this.selectiveEffectRegistry = selectiveEffectRegistry;
+  }
+
+  /** Set or replace the SelectiveEffectRegistry, wiring up the slotsChanged signal. */
+  setSelectiveEffectRegistry(
+    registry: SelectiveEffectRegistry | undefined,
+  ): void {
+    // Disconnect previous registry
+    if (this.selectiveEffectRegistry) {
+      this.selectiveEffectRegistry.onSlotsChanged = undefined;
+    }
+    this.selectiveEffectRegistry = registry;
+    // Connect new registry
+    if (registry) {
+      registry.onSlotsChanged = () => this.emit("effectSlotsChanged");
+    }
   }
 
   // --- Pass management ---

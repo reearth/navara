@@ -55,7 +55,6 @@ export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
       strength: 1.0,
       radius: 0.5,
       threshold: 0.0,
-      debugViews: false,
       resolutionScale: 1.0,
     },
   });
@@ -66,7 +65,6 @@ export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
       color: new Color().setHex(0xff0000),
       thickness: 2.0,
       edgeStrength: 1.0,
-      debugViews: false,
       resolutionScale: 1.0,
     },
   });
