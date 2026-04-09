@@ -2,6 +2,8 @@ import ThreeView, {
   BufferView,
   Color,
   JAPAN_GSI_ELEVATION_DECODER,
+  SelectiveBloomEffectLayer,
+  SelectiveOutlineEffectLayer,
   geodeticToVector3,
   degreeToRadian,
 } from "@navara/three";
@@ -49,7 +51,7 @@ export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
 
   // --- Effect Layer definitions ---
 
-  const bloomEffect = view.addLayer({
+  const bloomEffect = view.addLayer<SelectiveBloomEffectLayer>({
     type: "effect",
     selectiveBloom: {
       strength: 1.0,
@@ -59,7 +61,7 @@ export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
     },
   });
 
-  const outlineEffect = view.addLayer({
+  const outlineEffect = view.addLayer<SelectiveOutlineEffectLayer>({
     type: "effect",
     selectiveOutline: {
       color: new Color().setHex(0xff0000),
@@ -337,8 +339,88 @@ export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
       emissiveAlphaView.canvas.style.display = ev.value ? "block" : "none";
     });
 
+  // --- Effect Layer Controls ---
+  const effectFolder = pane.addFolder({ title: "Effects", expanded: true });
+  const bloomFolder = effectFolder.addFolder({
+    title: "Bloom",
+    expanded: true,
+  });
+  const bloomParams = {
+    strength: 1.0,
+    radius: 0.5,
+    threshold: 0.0,
+  };
+  bloomFolder
+    .addBinding(bloomParams, "strength", {
+      label: "Strength",
+      min: 0,
+      max: 3,
+      step: 0.1,
+    })
+    .on("change", (ev) => {
+      bloomEffect.update({ selectiveBloom: { strength: ev.value } });
+    });
+  bloomFolder
+    .addBinding(bloomParams, "radius", {
+      label: "Radius",
+      min: 0,
+      max: 1,
+      step: 0.05,
+    })
+    .on("change", (ev) => {
+      bloomEffect.update({ selectiveBloom: { radius: ev.value } });
+    });
+  bloomFolder
+    .addBinding(bloomParams, "threshold", {
+      label: "Threshold",
+      min: 0,
+      max: 1,
+      step: 0.05,
+    })
+    .on("change", (ev) => {
+      bloomEffect.update({ selectiveBloom: { threshold: ev.value } });
+    });
+
+  const outlineFolder = effectFolder.addFolder({
+    title: "Outline",
+    expanded: true,
+  });
+  const outlineParams = {
+    color: "#ff0000",
+    thickness: 2.0,
+    edgeStrength: 1.0,
+  };
+  outlineFolder
+    .addBinding(outlineParams, "color", { label: "Color" })
+    .on("change", (ev) => {
+      outlineEffect.update({
+        selectiveOutline: { color: new Color().setStyle(ev.value) },
+      });
+    });
+  outlineFolder
+    .addBinding(outlineParams, "thickness", {
+      label: "Thickness",
+      min: 0,
+      max: 5,
+      step: 0.5,
+    })
+    .on("change", (ev) => {
+      outlineEffect.update({ selectiveOutline: { thickness: ev.value } });
+    });
+  outlineFolder
+    .addBinding(outlineParams, "edgeStrength", {
+      label: "Edge Strength",
+      min: 0,
+      max: 3,
+      step: 0.1,
+    })
+    .on("change", (ev) => {
+      outlineEffect.update({ selectiveOutline: { edgeStrength: ev.value } });
+    });
+
   // --- Mesh Emissive Controls ---
-  const boxFolder = pane.addFolder({ title: "Box", expanded: true });
+  const meshFolder = pane.addFolder({ title: "Meshes", expanded: true });
+  const boxFolder = meshFolder.addFolder({ title: "Box", expanded: true });
   const boxParams = {
     emissiveColor: "#ff0000",
     emissiveIntensity: 1.0,
@@ -361,7 +443,10 @@ export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
       boxLayer.update({ box: { emissiveIntensity: ev.value } });
     });
 
-  const sphereFolder = pane.addFolder({ title: "Sphere", expanded: true });
+  const sphereFolder = meshFolder.addFolder({
+    title: "Sphere",
+    expanded: true,
+  });
   const sphereParams = {
     emissiveColor: "#0000ff",
     emissiveIntensity: 1.0,
@@ -384,7 +469,7 @@ export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
       sphereLayer.update({ sphere: { emissiveIntensity: ev.value } });
     });
 
-  const cesiumFolder = pane.addFolder({
+  const cesiumFolder = meshFolder.addFolder({
     title: "Cesium3D Chiyoda",
     expanded: true,
   });
