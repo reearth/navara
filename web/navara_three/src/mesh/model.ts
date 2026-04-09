@@ -352,15 +352,6 @@ export class ModelMesh
       }
     }
 
-    // Update effectIdsMask for Selective Effect buffer rendering
-    const effectIds = material.effectIds ?? [];
-
-    // Compute effectIdsMask every _update() to stay in sync with slot changes
-    const mask =
-      this.viewContext.selectiveEffectRegistry?.computeMask(effectIds) ?? 0;
-    for (const enhancer of this._enhancers.values()) {
-      enhancer.update({ base: { effectIdsMask: mask } });
-    }
   }
 
   /**
@@ -374,6 +365,10 @@ export class ModelMesh
         roughness: material.roughness,
         emissiveColor: material.emissiveColor,
         emissiveIntensity: material.emissiveIntensity,
+        effectIdsMask:
+          this.viewContext.selectiveEffectRegistry?.computeMask(
+            material.effectIds ?? [],
+          ) ?? 0,
       },
       water: {
         water: material.water,
