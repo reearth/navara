@@ -35,6 +35,11 @@ type ViewContextEvents = {
    * @experimental This event may change or be removed in future versions.
    */
   shadowRemoved: (material: Material) => void;
+  /**
+   * Emitted when effect slot assignments change in SelectiveEffectRegistry.
+   * Listeners should recompute effectIdsMask to stay in sync.
+   */
+  effectSlotsChanged: () => void;
 };
 
 /**

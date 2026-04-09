@@ -32,6 +32,9 @@ export class SelectiveEffectRegistry {
   private freedSlots: number[] = [];
   private nextSlot = 0;
 
+  /** Called when slot assignments change (register/unregister). */
+  onSlotsChanged?: () => void;
+
   // ---------------------------------------------------------------------------
   // Effect key management
   // ---------------------------------------------------------------------------
@@ -67,6 +70,7 @@ export class SelectiveEffectRegistry {
     }
 
     this.idToSlot.set(effectId, slot);
+    this.onSlotsChanged?.();
     return slot;
   }
 
@@ -75,6 +79,7 @@ export class SelectiveEffectRegistry {
     if (slot === undefined) return;
     this.idToSlot.delete(effectId);
     this.freedSlots.push(slot);
+    this.onSlotsChanged?.();
   }
 
   get slotCount(): number {

@@ -39,6 +39,7 @@ export abstract class MeshLayerDeclarationWithSelectiveEffect<
   Instance
 > {
   private _effectIds: string[] = [];
+  private _onSlotsChanged = () => this.updateEffectIdsMask();
 
   constructor(view: ViewContext, config?: Config) {
     const resolvedConfig = config ?? ({} as Config);
@@ -67,6 +68,9 @@ export abstract class MeshLayerDeclarationWithSelectiveEffect<
 
     // Compute and set effectIdsMask on material uniforms
     this.updateEffectIdsMask();
+
+    // Recompute mask when slot assignments change (effect added/removed)
+    this.view.on("effectSlotsChanged", this._onSlotsChanged);
   }
 
   override onUpdateConfig(updates: UpdateConfig): void {
@@ -129,6 +133,9 @@ export abstract class MeshLayerDeclarationWithSelectiveEffect<
     // SelectiveEffect: cleanup
     // ----------------------------------------------------------------------------
     this._effectIds = [];
+
+    // Unsubscribe from slot changes
+    this.view.off("effectSlotsChanged", this._onSlotsChanged);
 
     // Unregister layer effects
     this.view.unregisterLayerEffects(this.id);
