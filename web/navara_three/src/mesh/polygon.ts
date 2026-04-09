@@ -428,7 +428,9 @@ export class PolygonMesh extends BatchedFeatureMesh<
         emissiveIntensity: material.emissiveIntensity,
         effectIdsMask:
           this._viewContext.selectiveEffectRegistry?.computeMask(
-            this._viewContext.getLayerEffects(this._layerId) ?? [],
+            material.effectIds ??
+              this._viewContext.getLayerEffects(this._layerId) ??
+              [],
           ) ?? 0,
       },
       water: {

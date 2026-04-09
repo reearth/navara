@@ -192,8 +192,8 @@ export async function processRenderableFeatureAdded(
     });
   }
 
-  // Register initial effects from Rust material if not already registered for this layer
-  // All 5 material types in appearance.rs have post effect fields
+  // Store layer-level effectIds as fallback for meshes that don't carry material.effectIds directly.
+  // Not SoT — mesh-level material.effectIds takes priority when available.
   const material =
     feature.model?.material ??
     feature.polygon?.material ??
@@ -250,8 +250,8 @@ export async function processRenderableFeatureChanged(
 
   const { point, billboard, text, polyline, polygon, model } = ev.feature;
 
-  // Update SelectiveEffect configuration from material (Core is SoT)
-  // All 5 material types in appearance.rs have selective effect fields
+  // Update layer-level effectIds fallback from material.
+  // Not SoT — mesh-level material.effectIds takes priority when available.
   const material =
     model?.material ??
     polygon?.material ??

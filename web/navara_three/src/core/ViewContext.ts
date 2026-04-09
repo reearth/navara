@@ -164,6 +164,10 @@ export class ViewContext extends EventHandler<ViewContextEvents> {
   }
 
   // --- Selective Effect layer config ---
+  // These methods store effectIds at the layer level as a fallback for
+  // resource-layer features (geojson/mvt/3dtiles) where individual meshes
+  // don't carry material.effectIds directly. This is NOT the SoT —
+  // mesh-level material.effectIds takes priority when available.
 
   registerLayerEffects(
     layerId: string,
