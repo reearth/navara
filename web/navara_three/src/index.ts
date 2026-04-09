@@ -54,6 +54,7 @@ import { Registries } from "./core/Registries";
 import { getDevicePixelRatio, isMobileDevice } from "./device";
 import {
   processEvent,
+  EventContext,
   type BufferLoader,
   type FeatureHandler,
   type GlobeHandler,
@@ -555,6 +556,7 @@ export default class ThreeView<
   private _defaultTextureOptions: TextureOptions;
   private layersManager = new LayersManager();
   private shadowMapViewers: ShadowMapViewers;
+  private eventContext: EventContext;
 
   // Registry support
   private registries: Registries;
@@ -747,6 +749,31 @@ export default class ThreeView<
       },
     );
     this.registries = new Registries(this.viewContext);
+    this.eventContext = new EventContext({
+      eventManager: this._eventManager,
+      scenes: this._scenes,
+      camera: this.camera,
+      meshes: this._meshes,
+      abortControllers: this._abortControllers,
+      buf: this._buf,
+      texFragment: this._texFragment,
+      tileHandler: this._tileHandler,
+      workerTaskHandler: this._workerTaskHandler,
+      meshHandler: this._meshHandler,
+      featureHandler: this._featureHandler,
+      loadedTexs: this._loadedTexs,
+      workerPoolPromises: this._workerPoolPromises,
+      uniforms: this._uniforms,
+      texturizedSceneByTileCoordinates: this._texturizedSceneByTileCoordinates,
+      tileMapByHandle: this._tileMapByHandle,
+      textureOptions: this._defaultTextureOptions,
+      renderFlag: this._renderFlag,
+      viewEvents: this,
+      layersManager: this.layersManager,
+      viewContext: this.viewContext,
+      layerHandler: this._layerHandler,
+      fontManager: this._fontManager,
+    });
 
     this.on("layer", (e, id, ...args) => {
       this.layersManager.emitById(e, id, ...args);
@@ -896,7 +923,6 @@ export default class ThreeView<
     this._fontManager.setConcurrencyManager(
       this.viewContext.concurrencyManager,
     );
-    this.viewContext.fontManager = this._fontManager;
 
     this.globe = new Globe(this._globeHandler, this._options);
     this.viewContext.globe = this.globe;
@@ -1091,32 +1117,9 @@ export default class ThreeView<
       return false;
     }
 
-    processEvent(
-      this._eventManager,
-      this._scenes,
-      this.camera,
-      this._meshes,
-      this._abortControllers,
-      this._buf,
-      this._texFragment,
-      this._tileHandler,
-      this._workerTaskHandler,
-      this._meshHandler,
-      this._featureHandler,
-      this._loadedTexs,
-      this._workerPoolPromises,
-      events,
-      this._uniforms,
-      this._texturizedSceneByTileCoordinates,
-      this._tileMapByHandle,
-      this._defaultTextureOptions,
-      this._renderFlag,
-      this,
-      this.layersManager,
-      this.viewContext,
-      updatedAt,
-      this._layerHandler,
-    );
+    this.eventContext.updatedAt = updatedAt;
+
+    processEvent(this.eventContext, events);
     events?.free();
 
     this.camera.raw.updateMatrixWorld();

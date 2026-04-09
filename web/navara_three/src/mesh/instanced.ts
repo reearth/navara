@@ -1,13 +1,10 @@
 import { Color, Mesh, Object3D } from "three";
 
-import type { ViewContext } from "../core";
-
 import { isFeatureMesh } from "./featureMesh";
 import type { PickableMesh } from "./pickableMesh";
 
 export type InstancedMeshOptions = {
   renderOrder?: number;
-  viewContext: ViewContext;
   layerId: string;
 };
 

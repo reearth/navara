@@ -1,6 +1,5 @@
 import type { Globe } from "@navara/core";
 import { EventHandler } from "@navara/core";
-import type { FontManager } from "@navara/font";
 import type { ConcurrencyManager } from "@navara/worker";
 import type { Pass as PostProcessingPass } from "postprocessing";
 import type {
@@ -60,8 +59,6 @@ export class ViewContext extends EventHandler<ViewContextEvents> {
   public selectiveEffectRegistry?: SelectiveEffectHelper;
   public debugOptions: ViewDebugOptions;
   public globe?: Globe;
-  public fontManager?: FontManager;
-
   private readonly selectiveEffects: SelectiveEffectManager;
   private _meshes?: MeshCache;
   private _genGlobalBatchId?: () => number | undefined;

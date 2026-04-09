@@ -1,16 +1,9 @@
-import type {
-  Color as CoreColor,
-  ColorMap,
-  EventHandler,
-  EventManager,
-} from "@navara/core";
 import {
   generate_id_from_entity,
   IMAGE_EXTENSIONS,
   isEntityEvent,
 } from "@navara/core";
 import {
-  type Events,
   type Transform,
   type EntityEvent,
   type ObjectTransformEvent,
@@ -19,37 +12,17 @@ import {
   TextureFragmentRequestedEvent,
   TextureFragmentStatus,
   DataRequesterRemovedEvent,
-  DelegatedWorkerTasksResult,
-  TransferableTile,
-  TransferableMartini,
-  ReconstructableEntity,
-  ElevationDecoder,
-  ReturnedTransferablePolygonBatchedFeature,
-  ReturnedTransferablePolylineBatchedFeature,
   RenderableFeatureRemovedEvent,
-  VectorTileState,
+  Events,
 } from "@navara/engine";
 import { radianToDegree } from "@navara/three_api";
 import { canWorkerProcessImmediately } from "@navara/worker";
-import { Mesh, Object3D, Texture, Sprite } from "three";
+import { Mesh, Object3D, Sprite } from "three";
 
-import { BatchedSdfTextMesh, Layer, type ViewEvents } from "..";
-import { ThreeViewCamera } from "../camera";
-import type { ViewContext } from "../core";
-import type { LayersManager } from "../layersManager";
-import type { AbortableTextureLoader } from "../loaders/AbortableTextureLoader";
-import type { Scenes, TexturizedSceneByTileCoordinates } from "../scene";
+import { BatchedSdfTextMesh, Layer } from "..";
 import { getImageDataFromImageBitmap } from "../tasks/getImageDataFromImageBitmap";
-import type { TextureOptions } from "../textures";
-import type {
-  AbortControllers,
-  MeshCache,
-  WorkerPoolPromises,
-  RenderFlag,
-  TileMapByHandle,
-} from "../type";
-import type { CommonUniforms } from "../uniforms";
 
+import { EventContext } from "./context";
 import {
   checkFeatureParallel,
   processRenderableFeatureAdded,
@@ -62,144 +35,41 @@ import {
   processWorkerTaskRemovedEvent,
 } from "./worker";
 
-export type BufferLoader = {
-  u8: (handle: number) => Uint8Array | null;
-  f32: (handle: number) => Float32Array | null;
-  f64: (handle: number) => Float64Array | null;
-  u32: (handle: number) => Uint32Array | null;
-  removeU8: (handle: number) => Uint8Array | null;
-  removeF32: (handle: number) => Float32Array | null;
-  removeF64: (handle: number) => Float64Array | null;
-  removeU32: (handle: number) => Uint32Array | null;
-  setU8: (handle: number, bits: bigint, bytes: Uint8Array) => void;
-  newU8: (bytes: Uint8Array) => number | undefined;
-  newU32: (bytes: Uint32Array) => number | undefined;
-  newF32: (bytes: Float32Array) => number | undefined;
-  newF64: (bytes: Float64Array) => number | undefined;
-  remove: (handle: number) => void;
-  triggerDataRequesterFailed: (bits: bigint) => void;
-};
+export type {
+  BufferLoader,
+  TextureFragmentHandler,
+  WorkerTaskHandler,
+  TileHandler,
+  GlobeHandler,
+  FeatureHandler,
+  MeshHandler,
+  LayerHandler,
+} from "./context";
+export { EventContext } from "./context";
 
-export type TextureFragmentHandler = {
-  triggerTextureFragmentLoaded: (
-    bits: bigint,
-    status: TextureFragmentStatus,
-  ) => void;
-};
+export function processEvent(ctx: EventContext, event: Events | undefined) {
+  const {
+    eventManager,
+    scenes,
+    meshes,
+    meshHandler,
+    viewEvents,
+    layersManager,
+    viewContext,
+  } = ctx;
 
-export type WorkerTaskHandler = {
-  triggerWorkerTaskCompleted: (
-    bits: bigint,
-    result: DelegatedWorkerTasksResult,
-  ) => void;
-  hasWorkerTask: (bits: bigint) => boolean;
-};
-
-export type TileHandler = {
-  getMartini: (bits: ReconstructableEntity) => TransferableMartini | undefined;
-  getTile: (handle: bigint) => TransferableTile | undefined;
-  getParentTile: (handle: bigint) => TransferableTile | undefined;
-  getTileElevationDecoder: (handle: bigint) => ElevationDecoder | undefined;
-  getVectorTileStates: (handle: bigint) => VectorTileState[] | undefined;
-};
-
-/**
- * Handler for accessing individual Globe properties from WASM.
- * This provides a reference-based interface instead of copying the entire Globe object.
- */
-export type GlobeHandler = {
-  getTransparent: () => boolean | undefined;
-  getMaxSse: () => number | undefined;
-  getSegments: () => number | undefined;
-  getColor: () => CoreColor | undefined;
-  getHideUnderground: () => boolean | undefined;
-  getShouldComputeNormalFromVertex: () => boolean | undefined;
-  getOpacity: () => number | undefined;
-  getWireframe: () => boolean | undefined;
-  getElevationColormap: () => Float32Array | undefined;
-  setTransparent: (value: boolean) => void;
-  setMaxSse: (value: number) => void;
-  setSegments: (value: number) => void;
-  setColor: (value: CoreColor) => void;
-  setHideUnderground: (value: boolean) => void;
-  setShouldComputeNormalFromVertex: (value: boolean) => void;
-  setOpacity: (value: number) => void;
-  setWireframe: (value: boolean) => void;
-  setElevationColormap: (value: ColorMap) => void;
-};
-
-export type FeatureHandler = {
-  getTransferablePolygonBatchedFeature: (
-    bits: bigint,
-  ) => ReturnedTransferablePolygonBatchedFeature | undefined;
-  getTransferablePolylineBatchedFeature: (
-    bits: bigint,
-  ) => ReturnedTransferablePolylineBatchedFeature | undefined;
-  markFeatureIsRendered: (
-    type: "point" | "polyline" | "polygon" | "model",
-    bits: bigint,
-  ) => void;
-  readAllBatchedProperties(
-    bits: bigint,
-    callback: (
-      batchIdx: number,
-      batchId: number,
-      properties?: Record<string, unknown>,
-    ) => void,
-  ): void;
-  readFilteredBatchedProperties(
-    bits: bigint,
-    keys: string[],
-    callback: (batchIdx: number, batchId: number, filtered?: unknown[]) => void,
-  ): void;
-};
-
-export type MeshHandler = {
-  setTileMeshPrepared: (handle: bigint) => void;
-};
-
-export type LayerHandler = {
-  getLayerIndex: (layerId: string) => number | undefined;
-};
-
-export function processEvent(
-  eventManager: EventManager,
-  scenes: Scenes,
-  camera: ThreeViewCamera,
-  meshes: MeshCache,
-  abortControllers: AbortControllers,
-  buf: BufferLoader,
-  texFragment: TextureFragmentHandler,
-  tileHandler: TileHandler,
-  workerTaskHandler: WorkerTaskHandler,
-  meshHandler: MeshHandler,
-  featureHandler: FeatureHandler,
-  loadedTexs: Map<string, Texture>,
-  workerPoolPromises: WorkerPoolPromises,
-  event: Events | undefined,
-  uniforms: CommonUniforms,
-  texturizedSceneByTileCoordinates: TexturizedSceneByTileCoordinates,
-  tileMapByHandle: TileMapByHandle,
-  textureOptions: TextureOptions,
-  renderFlag: RenderFlag,
-  viewEvents: EventHandler<ViewEvents>,
-  layersManager: LayersManager,
-  viewContext: ViewContext,
-  updatedAt: number,
-  layerHandler?: LayerHandler,
-) {
   eventManager.pushEvents(event);
 
   eventManager.forEachStack("camera_transform_updated", (ev) =>
-    processCameraTransformUpdated(camera, ev),
+    processCameraTransformUpdated(ctx, ev),
   );
 
   eventManager.forEachStack("camera_frustum_updated", (ev) =>
-    processCameraFrustumUpdated(camera, ev),
+    processCameraFrustumUpdated(ctx, ev),
   );
 
   eventManager.forEachStack("object_transform_updated", (ev) =>
-    processObjectTransformUpdated(meshes, ev),
+    processObjectTransformUpdated(ctx, ev),
   );
 
   eventManager.forEachStack("update_sample_terrain_height", (ev) =>
@@ -226,32 +96,14 @@ export function processEvent(
     async ({ type, event }) => {
       switch (type) {
         case "add":
-          await processMeshAdded(
-            scenes,
-            meshes,
-            event,
-            buf,
-            tileHandler,
-            loadedTexs,
-            textureOptions,
-            texturizedSceneByTileCoordinates,
-            tileMapByHandle,
-            viewContext,
-            uniforms,
-          );
+          await processMeshAdded(ctx, event);
           meshHandler.setTileMeshPrepared(event.tile_handle);
           break;
         case "remove":
-          processObjectRemoved(scenes.globe, meshes, event);
+          processObjectRemoved(ctx, scenes.globe, event);
           break;
         case "change":
-          processMeshChanged(
-            meshes,
-            event,
-            loadedTexs,
-            textureOptions,
-            tileMapByHandle,
-          );
+          processMeshChanged(ctx, event);
           break;
       }
     },
@@ -283,17 +135,10 @@ export function processEvent(
     async ({ type, event }) => {
       switch (type) {
         case "add":
-          await processWorkerTaskDelegatedEvent(
-            event,
-            buf,
-            tileHandler,
-            featureHandler,
-            workerTaskHandler,
-            workerPoolPromises,
-          );
+          await processWorkerTaskDelegatedEvent(ctx, event);
           break;
         case "remove":
-          await processWorkerTaskRemovedEvent(event, workerPoolPromises);
+          await processWorkerTaskRemovedEvent(ctx, event);
           break;
       }
     },
@@ -309,7 +154,7 @@ export function processEvent(
         }
       },
       onAbort: async (event) => {
-        await processWorkerTaskRemovedEvent(event, workerPoolPromises);
+        await processWorkerTaskRemovedEvent(ctx, event);
       },
     },
   );
@@ -334,19 +179,7 @@ export function processEvent(
     async ({ type, event }) => {
       switch (type) {
         case "add":
-          await processRenderableFeatureAdded(
-            event,
-            scenes,
-            meshes,
-            buf,
-            uniforms,
-            texturizedSceneByTileCoordinates,
-            featureHandler,
-            viewEvents,
-            layersManager,
-            viewContext,
-            updatedAt,
-          );
+          await processRenderableFeatureAdded(ctx, event);
           break;
         case "remove":
           {
@@ -356,22 +189,11 @@ export function processEvent(
               layer._unregisterFeatureEvaluator(removed.bits);
               layer.emit("featureRemoved", { featureId: removed.bits });
             }
-            processObjectRemoved(scenes.mrt, meshes, event);
+            processObjectRemoved(ctx, scenes.mrt, event);
           }
           break;
         case "change":
-          await processRenderableFeatureChanged(
-            event,
-            meshes,
-            texturizedSceneByTileCoordinates,
-            renderFlag,
-            buf,
-            viewEvents,
-            layersManager,
-            viewContext,
-            updatedAt,
-            layerHandler,
-          );
+          await processRenderableFeatureChanged(ctx, event);
           break;
       }
     },
@@ -411,22 +233,16 @@ export function processEvent(
     async ({ type, event }) => {
       switch (type) {
         case "add":
-          await processTextureFragmentRequested(
-            event,
-            texFragment,
-            ABORTABLE_TEXTURE_LOADER,
-            loadedTexs,
-            abortControllers,
-          );
+          await processTextureFragmentRequested(ctx, event);
           break;
         case "remove":
-          processTextureFragmentRemoved(event, loadedTexs, abortControllers);
+          processTextureFragmentRemoved(ctx, event);
           break;
       }
     },
     {
       onAbort: (event) => {
-        processTextureFragmentRemoved(event, loadedTexs, abortControllers);
+        processTextureFragmentRemoved(ctx, event);
       },
     },
   );
@@ -446,10 +262,10 @@ export function processEvent(
     async ({ type, event }) => {
       switch (type) {
         case "add":
-          await processRequestedData(event, buf, abortControllers);
+          await processRequestedData(ctx, event);
           break;
         case "remove":
-          processDataRequesterRemoved(event, buf, abortControllers);
+          processDataRequesterRemoved(ctx, event);
           break;
       }
     },
@@ -463,51 +279,52 @@ export function processEvent(
         }
       },
       onAbort: (event) => {
-        processDataRequesterRemoved(event, buf, abortControllers);
+        processDataRequesterRemoved(ctx, event);
       },
     },
   );
 }
 
 function processCameraTransformUpdated(
-  camera: ThreeViewCamera,
+  ctx: EventContext,
   transform: Transform | undefined,
 ) {
   if (!transform) return;
-  setTransform(camera.raw, transform);
+  setTransform(ctx.camera.raw, transform);
 
-  camera.updateStatus();
+  ctx.camera.updateStatus();
 }
 
 function processCameraFrustumUpdated(
-  camera: ThreeViewCamera,
+  ctx: EventContext,
   frustum: CameraFrustum | undefined,
 ) {
   if (!frustum) return;
 
-  camera.raw.near = frustum.near;
-  camera.raw.far = frustum.far;
-  camera.raw.fov = radianToDegree(frustum.fov);
-  camera.raw.updateProjectionMatrix();
-  camera.emit("frustumChanged");
+  ctx.camera.raw.near = frustum.near;
+  ctx.camera.raw.far = frustum.far;
+  ctx.camera.raw.fov = radianToDegree(frustum.fov);
+  ctx.camera.raw.updateProjectionMatrix();
+  ctx.camera.emit("frustumChanged");
 }
 
 function processObjectTransformUpdated(
-  meshes: MeshCache,
+  ctx: EventContext,
   e: ObjectTransformEvent,
 ) {
   const id = generate_id_from_entity(e);
-  const m = meshes.get(id);
+  const m = ctx.meshes.get(id);
   if (m) {
     setTransform(m, e.transform);
   }
 }
 
 function processObjectRemoved(
+  ctx: EventContext,
   parent: Object3D,
-  meshes: MeshCache,
   obj: EntityEvent,
 ) {
+  const { meshes } = ctx;
   const id = generate_id_from_entity(obj);
   const m = meshes.get(id);
   if (!m) return;
@@ -587,11 +404,8 @@ function disposeObject3D(model: Object3D): void {
 }
 
 // TODO: Need to check if the cached texture is removed completely
-async function processRequestedData(
-  req: DataRequestEvent,
-  buf: BufferLoader,
-  abortControllers: AbortControllers,
-) {
+async function processRequestedData(ctx: EventContext, req: DataRequestEvent) {
+  const { buf, abortControllers } = ctx;
   const id = generate_id_from_entity(req);
 
   const abortController = (() => {
@@ -668,10 +482,10 @@ async function processRequestedData(
 }
 
 function processDataRequesterRemoved(
+  ctx: EventContext,
   req: DataRequesterRemovedEvent,
-  buf: BufferLoader,
-  abortControllers: AbortControllers,
 ) {
+  const { buf, abortControllers } = ctx;
   const id = generate_id_from_entity(req);
   const abortController = abortControllers.get(id);
   buf.remove(req.handle);
@@ -679,14 +493,12 @@ function processDataRequesterRemoved(
 }
 
 async function processTextureFragmentRequested(
+  ctx: EventContext,
   req: TextureFragmentRequestedEvent,
-  handler: TextureFragmentHandler,
-  tex: AbortableTextureLoader,
-  loadedTexes: Map<string, Texture>,
-  abortControllers: AbortControllers,
 ) {
+  const { texFragment, loadedTexs, abortControllers } = ctx;
   const id = generate_id_from_entity(req);
-  if (loadedTexes.has(id)) return;
+  if (loadedTexs.has(id)) return;
 
   const abortController = (() => {
     const a = abortControllers.get(id);
@@ -699,17 +511,16 @@ async function processTextureFragmentRequested(
     }
   })();
 
-  await tex
-    .loadAsyncWithAbort(req.url, abortController)
+  await ABORTABLE_TEXTURE_LOADER.loadAsyncWithAbort(req.url, abortController)
     .then((t) => {
-      loadedTexes.set(id, t);
-      handler.triggerTextureFragmentLoaded(
+      loadedTexs.set(id, t);
+      texFragment.triggerTextureFragmentLoaded(
         req.bits,
         TextureFragmentStatus.Success,
       );
     })
     .catch(() => {
-      handler.triggerTextureFragmentLoaded(
+      texFragment.triggerTextureFragmentLoaded(
         req.bits,
         TextureFragmentStatus.Fail,
       );
@@ -719,15 +530,12 @@ async function processTextureFragmentRequested(
     });
 }
 
-function processTextureFragmentRemoved(
-  req: EntityEvent,
-  loadedTexes: Map<string, Texture>,
-  abortControllers: AbortControllers,
-) {
+function processTextureFragmentRemoved(ctx: EventContext, req: EntityEvent) {
+  const { loadedTexs, abortControllers } = ctx;
   const id = generate_id_from_entity(req);
   const abortController = abortControllers.get(id);
-  loadedTexes.get(id)?.dispose();
-  loadedTexes.delete(id);
+  loadedTexs.get(id)?.dispose();
+  loadedTexs.delete(id);
   abortController?.abort();
 }
 

@@ -1,24 +1,22 @@
 import type { BillboardMesh as NavaraBillboardMesh } from "@navara/engine";
 
-import type { BufferLoader } from "..";
-import type { ViewContext } from "../../core";
 import { InstancedSpriteMesh } from "../../mesh";
 import { FEATURE_RENDER_ORDER } from "../../renderOrder";
+import type { EventContext } from "../context";
 
 export async function renderBillboard(
+  ctx: EventContext,
   m: NavaraBillboardMesh,
-  buf: BufferLoader,
-  viewContext: ViewContext,
   layerId: string,
 ) {
   if (!m.material.url) return;
 
   const mesh = new InstancedSpriteMesh({
     renderOrder: FEATURE_RENDER_ORDER,
-    viewContext,
+    ctx,
     layerId,
   });
-  await mesh._init(m, buf);
+  await mesh._init(m);
   mesh.setActive(m.active);
 
   return mesh;
@@ -27,9 +25,8 @@ export async function renderBillboard(
 export async function processBillboardChanged(
   obj: InstancedSpriteMesh,
   m: NavaraBillboardMesh,
-  buf: BufferLoader,
   active: boolean,
 ) {
-  await obj._update(m, buf);
+  await obj._update(m);
   obj.setActive(active);
 }
