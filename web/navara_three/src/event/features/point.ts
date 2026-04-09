@@ -8,13 +8,11 @@ import { FEATURE_RENDER_ORDER } from "../../renderOrder";
 export async function renderPoint(
   m: NavaraPointMesh,
   buf: BufferLoader,
-  viewContext: ViewContext,
-  layerId: string,
+  _viewContext: ViewContext,
+  _layerId: string,
 ) {
   const mesh = new InstancedSpriteMesh({
     renderOrder: FEATURE_RENDER_ORDER,
-    viewContext,
-    layerId,
   });
   await mesh._init(m, buf);
   mesh.setActive(m.active);

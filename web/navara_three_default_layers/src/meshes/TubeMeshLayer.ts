@@ -89,7 +89,7 @@ export class TubeMeshLayer extends MeshLayerDeclarationWithSelectiveEffect<
     const material = new MeshLambertMaterial({
       color: colorValue.raw,
       emissive: emissiveColorValue,
-      emissiveIntensity: cfg.emissiveIntensity ?? 1,
+      emissiveIntensity: cfg.emissiveIntensity ?? 0,
       opacity: cfg.opacity ?? 1,
       transparent: cfg.transparent ?? false,
     });

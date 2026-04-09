@@ -19,7 +19,6 @@ import {
 } from "three";
 import invariant from "tiny-invariant";
 
-import type { ViewContext } from "../core";
 import type { BufferLoader } from "../event";
 import { TEXTURE_LOADER } from "../event/loaders";
 import { createInstancedSpriteMaterialEnhancer } from "../material/enhancer";
@@ -29,8 +28,6 @@ import { PickableMesh } from "./pickableMesh";
 
 export type InstancedSpriteOptions = {
   renderOrder?: number;
-  viewContext: ViewContext;
-  layerId: string;
 };
 
 type PositionsInfo = {

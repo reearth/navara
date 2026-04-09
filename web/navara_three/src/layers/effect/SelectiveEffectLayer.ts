@@ -69,12 +69,17 @@ export abstract class SelectiveEffectLayer<
 
   onCreate(): void {
     const registry = this.view.selectiveEffectRegistry;
+    if (!registry) {
+      throw new Error(
+        "SelectiveEffectRegistry not initialized. Ensure MRTPassEffectLayer is added before selective effect layers.",
+      );
+    }
 
     // Register effectId → effectKey mapping
-    registry?.registerEffectKey(this.id, this.getEffectKey());
+    registry.registerEffectKey(this.id, this.getEffectKey());
 
     // Allocate a slot bit in the EffectIds Buffer
-    registry?.registerSlot(this.id);
+    registry.registerSlot(this.id);
 
     super.onCreate();
   }
