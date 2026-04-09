@@ -351,7 +351,6 @@ export class ModelMesh
         enhancer.update(pntsProps);
       }
     }
-
   }
 
   /**

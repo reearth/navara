@@ -2,6 +2,7 @@ import { Globe } from "@navara/core";
 import { DepthCopyPass } from "postprocessing";
 import {
   DepthTexture,
+  HalfFloatType,
   NearestFilter,
   RGBADepthPacking,
   Scene,
@@ -70,16 +71,20 @@ export class CustomRenderPass extends RenderPass {
     this.gbufferRenderTarget.textures.push(
       this.gbufferRenderTarget.texture.clone(),
     );
-    // attachment 2: effectIds buffer (discrete bitmask — NearestFilter required)
+    // attachment 2: effectIds buffer
+    // HalfFloatType preserves integer masks up to 11 bits (0..2047) exactly.
+    // NearestFilter is required because this stores discrete bitmask data.
     const effectIdsTexture = this.gbufferRenderTarget.texture.clone();
+    effectIdsTexture.type = HalfFloatType;
     effectIdsTexture.minFilter = NearestFilter;
     effectIdsTexture.magFilter = NearestFilter;
     effectIdsTexture.generateMipmaps = false;
     this.gbufferRenderTarget.textures.push(effectIdsTexture);
     // attachment 3: emissive buffer
-    this.gbufferRenderTarget.textures.push(
-      this.gbufferRenderTarget.texture.clone(),
-    );
+    // HalfFloatType preserves HDR emissive values for bloom extraction.
+    const emissiveTexture = this.gbufferRenderTarget.texture.clone();
+    emissiveTexture.type = HalfFloatType;
+    this.gbufferRenderTarget.textures.push(emissiveTexture);
 
     this.copyPass = new RenderTargetCopyPass(this.gbufferRenderTarget);
 

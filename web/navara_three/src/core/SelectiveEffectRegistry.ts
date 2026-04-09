@@ -2,14 +2,15 @@
 // SelectiveEffectRegistry
 // ============================================================================
 
-const MAX_SLOTS = 8;
+const MAX_SLOTS = 11;
 
 /**
  * Unified registry for selective effects.
  *
  * Manages effectId → slot bit mapping.
  * Assigns bit positions in the EffectIds Buffer bitmask (R channel).
- * 8 slots fit within a single 8-bit channel, compatible with both UnsignedByte and HalfFloat RTs.
+ * Half-float preserves integer masks up to 2047 exactly, so up to 11 slots
+ * (2^11 - 1) can be represented losslessly in a single channel.
  * Freed slots are reused by subsequent registrations.
  */
 export class SelectiveEffectRegistry {
