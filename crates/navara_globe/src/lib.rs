@@ -29,6 +29,10 @@ pub struct Globe {
     /// Used by RasterTileMaterial and RasterTerrainMaterial.
     pub hide_underground: bool,
 
+    /// Whether to compute normals from vertex positions instead of using no normal data.
+    /// Used by RasterTileMaterial and RasterTerrainMaterial.
+    pub should_compute_normal_from_vertex: bool,
+
     /// Whether materials should be transparent.
     /// Used by RasterTileMaterial and RasterTerrainMaterial.
     pub transparent: bool,
@@ -55,6 +59,7 @@ impl Default for Globe {
             segments: 10,
             color: 0xffffff,
             hide_underground: true,
+            should_compute_normal_from_vertex: true,
             transparent: false,
             opacity: 1.0,
             wireframe: false,

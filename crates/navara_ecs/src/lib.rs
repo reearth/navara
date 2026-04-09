@@ -799,6 +799,12 @@ impl App {
         }
     }
 
+    pub fn set_globe_should_compute_normal_from_vertex(&mut self, value: bool) {
+        if let Some(mut globe) = self.get_globe_mut() {
+            globe.should_compute_normal_from_vertex = value;
+        }
+    }
+
     pub fn set_globe_opacity(&mut self, value: f32) {
         if let Some(mut globe) = self.get_globe_mut() {
             globe.opacity = value;

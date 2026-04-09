@@ -38,6 +38,7 @@ import {
   Box3Helper,
   Sphere,
   NoColorSpace,
+  MeshBasicMaterial,
 } from "three";
 
 import { PolygonMesh } from "..";
@@ -65,7 +66,7 @@ import {
 
 import type { PickableMesh } from "./pickableMesh";
 
-export type TileMaterial = MeshLambertMaterial;
+export type TileMaterial = MeshBasicMaterial | MeshLambertMaterial;
 
 const PREV_RENDERER_CLEAR_COLOR = new Color();
 
@@ -571,10 +572,16 @@ export class TileMesh
     uniforms: CommonUniforms,
     globe: Globe,
   ): TileMaterial {
-    const m = new MeshLambertMaterial({
-      stencilWrite: false,
-      color: globe.color,
-    });
+    const useNormal = !!globe.useNormal;
+    const m = useNormal
+      ? new MeshLambertMaterial({
+          stencilWrite: false,
+          color: globe.color,
+        })
+      : new MeshBasicMaterial({
+          stencilWrite: false,
+          color: globe.color,
+        });
 
     m.userData.uPickable = {
       value: 0,
@@ -712,10 +719,10 @@ vUv = vUv * uScale + uOffset;
   ${ElevationParsFragment}
 
   // Hillshade: compute normals from DEM
-  ${HillshadeParsFragment}
+  ${useNormal ? HillshadeParsFragment : ""}
   `,
         )
-        .replace(
+        .replaceWithCondition(
           "#include <lights_lambert_pars_fragment>",
           `
         #include <lights_lambert_pars_fragment>
@@ -723,6 +730,7 @@ vUv = vUv * uScale + uOffset;
         ${WaterParsFragment}
         ${SpecularParsFragment}
         `,
+          useNormal,
         )
         .replace(
           "#include <map_fragment>",
@@ -802,7 +810,7 @@ vUv = vUv * uScale + uOffset;
   diffuseColor.rgb = sampledDiffuseColor.rgb;
   `,
         )
-        .replace(
+        .replaceWithCondition(
           "#include <normal_fragment_maps>",
           `
   vec3 N = normalize(vPosition);
@@ -835,13 +843,15 @@ vUv = vUv * uScale + uOffset;
     );
   }
   `,
+          useNormal,
         )
-        .replace(
+        .replaceWithCondition(
           "vec3 outgoingLight = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse + totalEmissiveRadiance;",
           `
           vec3 outgoingLight = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse + totalEmissiveRadiance;
           outgoingLight += specular;
         `,
+          useNormal,
         )
         .replace(
           "#include <envmap_fragment>",
@@ -860,10 +870,11 @@ if (uPickable > 0.) {
             "outgoingLight += envColor.xyz * specularStrength * tileReflectivity;",
           ).source,
         )
-        .replace(
+        .replaceWithCondition(
           "outputBuffer1 = vec4(packNormalToVec2(normal), reflectivity, roughnessFactor);",
           `vec3 finalNormal = mix(origNormal, normalize(origNormal * 0.7 + normal), applyWaterNormals);
           outputBuffer1 = vec4(packNormalToVec2(finalNormal), tileReflectivity, tileRoughness);`,
+          useNormal,
         ).source;
     };
 

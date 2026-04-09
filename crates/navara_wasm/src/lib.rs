@@ -610,6 +610,13 @@ impl Core {
         self.app.get_globe().map(|g| g.hide_underground)
     }
 
+    #[wasm_bindgen(js_name = getGlobeShouldComputeNormalFromVertex)]
+    pub fn get_globe_should_compute_normal_from_vertex(&self) -> Option<bool> {
+        self.app
+            .get_globe()
+            .map(|g| g.should_compute_normal_from_vertex)
+    }
+
     #[wasm_bindgen(js_name = getGlobeOpacity)]
     pub fn get_globe_opacity(&self) -> Option<f32> {
         self.app.get_globe().map(|g| g.opacity)

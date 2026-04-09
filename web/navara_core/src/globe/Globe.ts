@@ -12,6 +12,7 @@ export type GlobeHandler = {
   getSegments: () => number | undefined;
   getColor: () => Color | undefined;
   getHideUnderground: () => boolean | undefined;
+  getUseNormal: () => boolean | undefined;
   getOpacity: () => number | undefined;
   getWireframe: () => boolean | undefined;
   getElevationColormap: () => Float32Array | undefined;
@@ -20,6 +21,7 @@ export type GlobeHandler = {
   setSegments: (value: number) => void;
   setColor: (value: Color) => void;
   setHideUnderground: (value: boolean) => void;
+  setUseNormal: (value: boolean) => void;
   setOpacity: (value: number) => void;
   setWireframe: (value: boolean) => void;
   setElevationColormap: (value: ColorMap) => void;
@@ -62,6 +64,9 @@ export class Globe implements Omit<
     }
     if (options?.hideUnderground != null) {
       this.hideUnderground = options.hideUnderground;
+    }
+    if (options?.useNormal != null) {
+      this.useNormal = options.useNormal;
     }
     if (options?.transparent != null) {
       this.transparent = options.transparent;
@@ -106,6 +111,14 @@ export class Globe implements Omit<
 
   set hideUnderground(value: boolean) {
     this.handler.setHideUnderground(value);
+  }
+
+  get useNormal(): boolean {
+    return this.handler.getUseNormal() ?? true;
+  }
+
+  set useNormal(value: boolean) {
+    this.handler.setUseNormal(value);
   }
 
   get transparent(): boolean {
