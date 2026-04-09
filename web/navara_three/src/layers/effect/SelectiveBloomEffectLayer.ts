@@ -33,7 +33,6 @@ export type SelectiveBloomConfig = {
   strength?: number;
   radius?: number;
   threshold?: number;
-  debugMode?: number; // 0: normal, 1: base only, 2: bloom only, 3: bloom enhanced
   resolutionScale?: number;
 };
 
@@ -82,10 +81,6 @@ export class SelectiveBloomEffectLayer extends SelectiveEffectLayer<
     return this.bloom.threshold ?? DEFAULT_THRESHOLD;
   }
 
-  get debugMode(): number {
-    return this.bloom.debugMode ?? 0;
-  }
-
   constructor(view: ViewContext, config: EffectLayerConfig) {
     const c =
       (config as Partial<SelectiveBloomEffectConfig>).selectiveBloom ?? {};
@@ -97,7 +92,6 @@ export class SelectiveBloomEffectLayer extends SelectiveEffectLayer<
         strength: c.strength ?? DEFAULT_STRENGTH,
         radius: c.radius ?? DEFAULT_RADIUS,
         threshold: c.threshold ?? DEFAULT_THRESHOLD,
-        debugMode: c.debugMode ?? 0,
         resolutionScale: c.resolutionScale ?? DEFAULT_BLOOM_RESOLUTION_SCALE,
       },
     };
@@ -132,9 +126,6 @@ export class SelectiveBloomEffectLayer extends SelectiveEffectLayer<
     if (bloomUpdates.threshold !== undefined) {
       this.config.selectiveBloom.threshold = bloomUpdates.threshold;
       changed = true;
-    }
-    if (bloomUpdates.debugMode !== undefined) {
-      this.config.selectiveBloom.debugMode = bloomUpdates.debugMode;
     }
     if (bloomUpdates.resolutionScale !== undefined) {
       this.config.selectiveBloom.resolutionScale = bloomUpdates.resolutionScale;
@@ -238,7 +229,6 @@ class SelectiveBloomPass extends PostProcessingPass {
       uniforms: {
         tBase: { value: null },
         tBloom: { value: null },
-        debugMode: { value: 0 },
       },
       vertexShader: `
         varying vec2 vUv;
@@ -250,28 +240,12 @@ class SelectiveBloomPass extends PostProcessingPass {
       fragmentShader: `
         uniform sampler2D tBase;
         uniform sampler2D tBloom;
-        uniform int debugMode;
 
         varying vec2 vUv;
 
         void main() {
           vec4 baseColor = texture2D(tBase, vUv);
-
-          if (debugMode == 1) {
-            gl_FragColor = baseColor;
-            return;
-          }
-
           vec3 bloom = texture2D(tBloom, vUv).rgb;
-
-          if (debugMode == 2) {
-            gl_FragColor = vec4(bloom, 1.0);
-            return;
-          } else if (debugMode == 3) {
-            gl_FragColor = vec4(bloom * 100.0, 1.0);
-            return;
-          }
-
           gl_FragColor = vec4(baseColor.rgb + bloom, baseColor.a);
         }
       `,
@@ -346,13 +320,11 @@ class SelectiveBloomPass extends PostProcessingPass {
     const effectIdsBuffer = this.layer.getEffectIdsBuffer();
     const slot = this.layer.getEffectSlot();
 
-    // Passthrough if buffers not available
+    // Passthrough if buffers not available — render base without bloom
     if (!emissiveBuffer || !effectIdsBuffer || slot < 0) {
       renderer.setRenderTarget(this.renderToScreen ? null : outputBuffer);
       this.compositeMaterial.uniforms.tBase.value = inputBuffer.texture;
-      // Bind inputBuffer as tBloom to avoid null sampler (debugMode=1 skips bloom sampling)
-      this.compositeMaterial.uniforms.tBloom.value = inputBuffer.texture;
-      this.compositeMaterial.uniforms.debugMode.value = 1;
+      this.compositeMaterial.uniforms.tBloom.value = this.bloomSourceRT.texture;
       renderer.render(this.compositeScene, this.fullscreenCamera);
       return;
     }
@@ -379,8 +351,8 @@ class SelectiveBloomPass extends PostProcessingPass {
 
     // Step 3: Composite bloom with base scene
     this.compositeMaterial.uniforms.tBase.value = inputBuffer.texture;
-    this.compositeMaterial.uniforms.tBloom.value = bloomOutput?.texture ?? null;
-    this.compositeMaterial.uniforms.debugMode.value = this.layer.debugMode;
+    this.compositeMaterial.uniforms.tBloom.value =
+      bloomOutput?.texture ?? this.bloomSourceRT.texture;
 
     renderer.setRenderTarget(this.renderToScreen ? null : outputBuffer);
     renderer.render(this.compositeScene, this.fullscreenCamera);
