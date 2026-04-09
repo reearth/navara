@@ -35,14 +35,13 @@ export function createFullscreenQuad(): {
  * Manages effect key registration, EffectIds Buffer slot allocation, and
  * provides MRT buffer accessors for subclass passes.
  *
- * Subclasses implement {@link getEffectKey} and {@link createPass}.
+ * Subclasses implement {@link createPass}.
  */
 export abstract class SelectiveEffectLayer<
   Config extends SelectiveEffectLayerConfig = SelectiveEffectLayerConfig,
   UpdateConfig extends SelectiveEffectLayerUpdate = SelectiveEffectLayerUpdate,
 > extends EffectLayerDeclaration<Config, UpdateConfig> {
   protected config: Config;
-  protected abstract getEffectKey(): string;
 
   constructor(view: ViewContext, config: Config) {
     super(view, config);
@@ -75,9 +74,6 @@ export abstract class SelectiveEffectLayer<
       );
     }
 
-    // Register effectId → effectKey mapping
-    registry.registerEffectKey(this.id, this.getEffectKey());
-
     // Allocate a slot bit in the EffectIds Buffer
     registry.registerSlot(this.id);
 
@@ -86,9 +82,6 @@ export abstract class SelectiveEffectLayer<
 
   onDestroy(): void {
     const registry = this.view.selectiveEffectRegistry;
-
-    // Release effectId → effectKey mapping
-    registry?.unregisterEffectKey(this.id);
 
     // Release slot bit in the EffectIds Buffer
     registry?.unregisterSlot(this.id);

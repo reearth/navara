@@ -18,7 +18,6 @@ import type {
   EffectLayerUpdate,
 } from "../../core/EffectLayerDeclaration";
 import type { BaseInstance } from "../../core/LayerDeclaration";
-import { SELECTIVE_OUTLINE_EFFECT_KEY } from "../../core/SelectiveEffectRegistry";
 import type { ViewContext } from "../../core/ViewContext";
 import { Pass } from "../../effects";
 
@@ -79,10 +78,6 @@ export class SelectiveOutlineEffectLayer extends SelectiveEffectLayer<
 
   get outlineEdgeStrength(): number {
     return this.outline.edgeStrength ?? DEFAULT_EDGE_STRENGTH;
-  }
-
-  protected getEffectKey(): string {
-    return SELECTIVE_OUTLINE_EFFECT_KEY;
   }
 
   constructor(view: ViewContext, config: EffectLayerConfig) {

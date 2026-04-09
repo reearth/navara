@@ -47,9 +47,5 @@ export {
 } from "./EffectLayerRegistry";
 export { LayerHandle } from "./LayerHandle";
 export * from "./ViewContext";
-export {
-  SelectiveEffectRegistry,
-  SELECTIVE_BLOOM_EFFECT_KEY,
-  SELECTIVE_OUTLINE_EFFECT_KEY,
-} from "./SelectiveEffectRegistry";
+export { SelectiveEffectRegistry } from "./SelectiveEffectRegistry";
 export { setupSelectiveEffectUniforms } from "../material/selectiveEffectMaterialSetup";

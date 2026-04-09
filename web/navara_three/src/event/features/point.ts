@@ -9,7 +9,6 @@ export async function renderPoint(
   m: NavaraPointMesh,
   buf: BufferLoader,
   _viewContext: ViewContext,
-  _layerId: string,
 ) {
   const mesh = new InstancedSpriteMesh({
     renderOrder: FEATURE_RENDER_ORDER,

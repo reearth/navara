@@ -1,14 +1,4 @@
 // ============================================================================
-// Constants
-// ============================================================================
-
-/** Effect key for Bloom selective effect */
-export const SELECTIVE_BLOOM_EFFECT_KEY = "selectiveBloom" as const;
-
-/** Effect key for Outline selective effect */
-export const SELECTIVE_OUTLINE_EFFECT_KEY = "selectiveOutline" as const;
-
-// ============================================================================
 // SelectiveEffectRegistry
 // ============================================================================
 
@@ -17,16 +7,12 @@ const MAX_SLOTS = 8;
 /**
  * Unified registry for selective effects.
  *
- * Manages two mappings:
- * - **effectId → effectKey**: Resolves which effect type (e.g. "selectiveBloom") an ID refers to.
- * - **effectId → slot bit**: Assigns bit positions in the EffectIds Buffer bitmask (R channel).
- *   8 slots fit within a single 8-bit channel, compatible with both UnsignedByte and HalfFloat RTs.
- *   Freed slots are reused by subsequent registrations.
+ * Manages effectId → slot bit mapping.
+ * Assigns bit positions in the EffectIds Buffer bitmask (R channel).
+ * 8 slots fit within a single 8-bit channel, compatible with both UnsignedByte and HalfFloat RTs.
+ * Freed slots are reused by subsequent registrations.
  */
 export class SelectiveEffectRegistry {
-  // effectId → effectKey mapping
-  private effectKeys = new Map<string, string>();
-
   // effectId → slot bit mapping
   private idToSlot = new Map<string, number>();
   private freedSlots: number[] = [];
@@ -34,18 +20,6 @@ export class SelectiveEffectRegistry {
 
   /** Called when slot assignments change (register/unregister). */
   onSlotsChanged?: () => void;
-
-  // ---------------------------------------------------------------------------
-  // Effect key management
-  // ---------------------------------------------------------------------------
-
-  registerEffectKey(effectId: string, effectKey: string): void {
-    this.effectKeys.set(effectId, effectKey);
-  }
-
-  unregisterEffectKey(effectId: string): void {
-    this.effectKeys.delete(effectId);
-  }
 
   // ---------------------------------------------------------------------------
   // Slot management
@@ -102,7 +76,6 @@ export class SelectiveEffectRegistry {
   }
 
   clear(): void {
-    this.effectKeys.clear();
     this.idToSlot.clear();
     this.freedSlots = [];
     this.nextSlot = 0;

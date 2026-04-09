@@ -57,10 +57,10 @@ export function renderFeature(
   fontManager?: FontManager,
 ): Promise<Mesh | Sprite | Object3D | undefined> | undefined {
   if (f.point) {
-    return renderPoint(f.point, buf, viewContext, layerId);
+    return renderPoint(f.point, buf, viewContext);
   }
   if (f.billboard) {
-    return renderBillboard(f.billboard, buf, viewContext, layerId);
+    return renderBillboard(f.billboard, buf, viewContext);
   }
   if (f.model) {
     return renderModel(f.model, buf, uniforms, viewContext, layerId);

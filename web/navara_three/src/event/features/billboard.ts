@@ -9,7 +9,6 @@ export async function renderBillboard(
   m: NavaraBillboardMesh,
   buf: BufferLoader,
   _viewContext: ViewContext,
-  _layerId: string,
 ) {
   if (!m.material.url) return;
 

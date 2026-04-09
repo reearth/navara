@@ -1,7 +1,7 @@
 import {
-  MeshLayerDeclarationWithSelectiveEffect,
-  type MeshLayerConfigWithSelectiveEffect,
-  type MeshLayerUpdateWithSelectiveEffect,
+  MeshLayerDeclaration,
+  type MeshLayerConfig,
+  type MeshLayerUpdate,
   type ViewContext,
 } from "@navara/three";
 
@@ -11,13 +11,12 @@ type LayerDescription = {
   arcLines?: Partial<ArcLineConfig> | Partial<ArcLineConfig>[];
 };
 
-export type ArclineMeshLayerConfig = MeshLayerConfigWithSelectiveEffect &
-  LayerDescription;
+export type ArclineMeshLayerConfig = MeshLayerConfig & LayerDescription;
 
-export type ArclineMeshLayerUpdate = MeshLayerUpdateWithSelectiveEffect &
-  LayerDescription;
+export type ArclineMeshLayerUpdate = MeshLayerUpdate & LayerDescription;
 
-export class ArclineMeshLayer extends MeshLayerDeclarationWithSelectiveEffect<
+// TODO: SE not supported. ArcLine is Object3D with child Meshes; requires child traversal in a follow-up PR.
+export class ArclineMeshLayer extends MeshLayerDeclaration<
   ArclineMeshLayerConfig,
   ArclineMeshLayerUpdate,
   ArcLine
@@ -89,13 +88,7 @@ export class ArclineMeshLayer extends MeshLayerDeclarationWithSelectiveEffect<
       this.emit("needsUpdate");
     }
 
-    // super.onUpdateConfig handles _effectIds, registry links, and effectIdsMask
     super.onUpdateConfig(updates);
-
-    // Synchronize config.effectIds
-    if (updates.effectIds !== undefined) {
-      this.config.effectIds = [...(updates.effectIds ?? [])];
-    }
   }
 
   onResize(width: number, height: number): void {
