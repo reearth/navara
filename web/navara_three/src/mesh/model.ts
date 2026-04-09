@@ -81,8 +81,6 @@ export class ModelMesh
   credit: string | undefined;
   batchLength?: number;
 
-  private prevEffectIds: string[] = [];
-
   constructor(
     gltfInfo: {
       scene: Group;
@@ -357,13 +355,12 @@ export class ModelMesh
       }
     }
 
-    // Update effectIds + effectIdsMask for Selective Effect buffer rendering
+    // Update effectIdsMask for Selective Effect buffer rendering
     // material.effectIds may be undefined for 3D Tiles — fall back to layer-level effectIds
     const effectIds =
       material.effectIds ??
       this.viewContext.getLayerEffects(this._layerId) ??
       [];
-    this.prevEffectIds = effectIds;
 
     // Compute effectIdsMask every _update() to stay in sync with slot changes
     const mask =
@@ -436,12 +433,6 @@ export class ModelMesh
     for (const enhancer of this._enhancers.values()) {
       enhancer.update({ base: { pickable } });
     }
-  }
-
-  _getEffectIds(): readonly string[] {
-    return (
-      this.viewContext.getLayerEffects(this._layerId) ?? this.prevEffectIds
-    );
   }
 
   _setFeatureHeight(_height: number) {

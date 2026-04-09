@@ -428,7 +428,7 @@ export class PolygonMesh extends BatchedFeatureMesh<
         emissiveIntensity: material.emissiveIntensity,
         effectIdsMask:
           this._viewContext.effectSlotRegistry?.computeMask(
-            this._getEffectIds(),
+            this._viewContext.getLayerEffects(this._layerId) ?? [],
           ) ?? 0,
       },
       water: {
@@ -551,10 +551,6 @@ export class PolygonMesh extends BatchedFeatureMesh<
   _setPickable(pickable: boolean): void {
     this.getEnhancer().update({ base: { pickable } });
     this.needsUpdate();
-  }
-
-  _getEffectIds(): readonly string[] {
-    return this._viewContext.getLayerEffects(this._layerId) ?? [];
   }
 
   _updateBatchAttribute(
