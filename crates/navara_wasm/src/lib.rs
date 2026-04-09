@@ -610,11 +610,9 @@ impl Core {
         self.app.get_globe().map(|g| g.hide_underground)
     }
 
-    #[wasm_bindgen(js_name = getGlobeShouldComputeNormalFromVertex)]
-    pub fn get_globe_should_compute_normal_from_vertex(&self) -> Option<bool> {
-        self.app
-            .get_globe()
-            .map(|g| g.should_compute_normal_from_vertex)
+    #[wasm_bindgen(js_name = getGlobeUseNormal)]
+    pub fn get_globe_use_normal(&self) -> Option<bool> {
+        self.app.get_globe().map(|g| g.use_normal)
     }
 
     #[wasm_bindgen(js_name = getGlobeOpacity)]
@@ -655,6 +653,11 @@ impl Core {
     #[wasm_bindgen(js_name = setGlobeHideUnderground)]
     pub fn set_globe_hide_underground(&mut self, value: bool) {
         self.app.set_globe_hide_underground(value);
+    }
+
+    #[wasm_bindgen(js_name = setGlobeUseNormal)]
+    pub fn set_globe_use_normal(&mut self, value: bool) {
+        self.app.set_globe_use_normal(value);
     }
 
     #[wasm_bindgen(js_name = setGlobeOpacity)]

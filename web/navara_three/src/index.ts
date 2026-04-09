@@ -438,6 +438,9 @@ export default class ThreeView<
     getHideUnderground: () => {
       return this._core?.getGlobeHideUnderground();
     },
+    getUseNormal: () => {
+      return this._core?.getGlobeUseNormal();
+    },
     getOpacity: () => {
       return this._core?.getGlobeOpacity();
     },
@@ -461,6 +464,9 @@ export default class ThreeView<
     },
     setHideUnderground: (value: boolean) => {
       this._core?.setGlobeHideUnderground(value);
+    },
+    setUseNormal: (value: boolean) => {
+      this._core?.setGlobeUseNormal(value);
     },
     setOpacity: (value: number) => {
       this._core?.setGlobeOpacity(value);

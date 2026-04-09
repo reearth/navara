@@ -799,9 +799,9 @@ impl App {
         }
     }
 
-    pub fn set_globe_should_compute_normal_from_vertex(&mut self, value: bool) {
+    pub fn set_globe_use_normal(&mut self, value: bool) {
         if let Some(mut globe) = self.get_globe_mut() {
-            globe.should_compute_normal_from_vertex = value;
+            globe.use_normal = value;
         }
     }
 

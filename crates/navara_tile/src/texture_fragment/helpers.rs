@@ -47,8 +47,10 @@ pub(crate) fn request_texture_fragment(
                         else if let Some(hill_e) = hill_opt {
                             data_requesters.get(*hill_e).is_ok()
                         } else {
-                            // Both None means this layer was skipped (exceeded max/min zoom)
-                            // This is a valid state, not missing
+                            // Both None means this layer was skipped (for example due to
+                            // min/max zoom), so there is nothing to request for this layer.
+                            // This is treated as "already handled" for all_layers_requested,
+                            // but it does not imply the tile is texture-ready in other checks.
                             true
                         }
                     })
