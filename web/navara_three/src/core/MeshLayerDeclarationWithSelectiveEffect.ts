@@ -71,13 +71,11 @@ export abstract class MeshLayerDeclarationWithSelectiveEffect<
     // Update _effectIds BEFORE super.onUpdateConfig() so getPassKey() returns correct value
     // ----------------------------------------------------------------------------
     let effectIdsChanged = false;
-    let prevEffectIds: string[] = [];
 
     if (updates.effectIds !== undefined) {
-      prevEffectIds = this._effectIds;
       const nextEffectIds = updates.effectIds ?? [];
 
-      if (!arraysEqual(prevEffectIds, nextEffectIds)) {
+      if (!arraysEqual(this._effectIds, nextEffectIds)) {
         // Update local cache first (used by getPassKey())
         this._effectIds = [...nextEffectIds];
         effectIdsChanged = true;
