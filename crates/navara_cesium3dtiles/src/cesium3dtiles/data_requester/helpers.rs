@@ -8,7 +8,8 @@ use url::Url;
 use crate::{
     Cesium3dTileContent, Cesium3dTilesTreeOrder, TileOrderByDistance,
     b3dm::B3dmDataRequesterMarker, cesium3dtiles::types::Cesium3dTileContentRequesterQuery,
-    glb::GlbDataRequesterMarker, gltf_features::GltfFeaturesDataRequesterMarker, pnts::PntsDataRequesterMarker,
+    glb::GlbDataRequesterMarker, gltf_features::GltfFeaturesDataRequesterMarker,
+    pnts::PntsDataRequesterMarker,
 };
 
 #[derive(Component)]
@@ -114,7 +115,10 @@ pub(crate) fn request_tile_content(
         DataRequesterExtension::Gltf => {
             // Plain .gltf files (JSON + external .bin buffers) are not yet supported.
             // Only GLB (binary glTF container) is supported.
-            warn!("Plain .gltf format is not yet supported, only .glb is supported. Skipping tile: {}", content_url);
+            warn!(
+                "Plain .gltf format is not yet supported, only .glb is supported. Skipping tile: {}",
+                content_url
+            );
             false
         }
         _ => false,

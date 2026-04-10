@@ -88,7 +88,12 @@ fn read_column_value<V: PropertyValue>(col: &PropertyColumnData, index: usize) -
         return Some(V::null());
     }
     if col.element_type == "STRING" {
-        return match read_string_value(&col.values, index, col.string_offsets.as_deref(), &col.string_offset_type) {
+        return match read_string_value(
+            &col.values,
+            index,
+            col.string_offsets.as_deref(),
+            &col.string_offset_type,
+        ) {
             Some(s) if col.string_no_data.as_deref() == Some(s.as_str()) => Some(V::null()),
             Some(s) => Some(V::from_string(s)),
             None => None,
