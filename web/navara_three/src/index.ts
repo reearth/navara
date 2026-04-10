@@ -1066,6 +1066,8 @@ export default class ThreeView<
     // Update SelectiveEffectHelper
     this.selectiveEffectHelper.setSize(w, h);
 
+    this._pickHelper?.setSize(w, h);
+
     this._core?.resize(w, h, pixelRatio ?? 1);
 
     this.emit("resize", w, h);

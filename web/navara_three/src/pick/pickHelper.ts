@@ -155,6 +155,24 @@ export class PickHelper extends CustomRenderPass {
     renderer.render(scene, this._camera);
   }
 
+  override setSize(width: number, height: number) {
+    super.setSize(width, height);
+
+    // pickRenderTarget must match the drawingBuffer (device-pixel) size
+    // because onMouseClick reads pixels using drawingBuffer coordinates.
+    const dbWidth = this._renderer.getContext().drawingBufferWidth;
+    const dbHeight = this._renderer.getContext().drawingBufferHeight;
+
+    this.pickRenderTarget.setSize(dbWidth, dbHeight);
+    this.debugRenderTarget?.setSize(dbWidth, dbHeight);
+    if (this.debugBufferView) {
+      this.debugBufferView.canvas.width = dbWidth;
+      this.debugBufferView.canvas.height = dbHeight;
+      this.debugBufferView.canvasForImage.width = dbWidth;
+      this.debugBufferView.canvasForImage.height = dbHeight;
+    }
+  }
+
   public renderDebugCanvas() {
     if (!this.debugBufferView || !this.debugRenderTarget) return;
 
