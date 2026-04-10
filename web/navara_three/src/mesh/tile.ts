@@ -48,10 +48,7 @@ import {
   generateHillshadeNormalShader,
 } from "../material";
 import type { CustomObject3DEventMap } from "../object3DEvent";
-import type {
-  SceneGroup,
-  TexturizedSceneByTileCoordinates,
-} from "../scene";
+import type { SceneGroup, TexturizedSceneByTileCoordinates } from "../scene";
 
 import { setTransform } from "../event";
 import type { EventContext, TileHandler } from "../event/context";
