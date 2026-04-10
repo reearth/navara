@@ -284,6 +284,8 @@ export abstract class MeshLayerDeclaration<
   protected initPicking(): void {
     if (!this._pickable) return;
 
+    if (this._pickRegistered && this._pickMeshWrapper) return;
+
     const raw = this.raw;
     if (!raw) return;
 

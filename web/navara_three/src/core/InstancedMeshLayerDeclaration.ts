@@ -177,6 +177,8 @@ export abstract class InstancedMeshLayerDeclaration<
   protected override initPicking(): void {
     if (!this._pickable) return;
 
+    if (this._pickRegistered && this._instancedPickWrapper) return;
+
     const mesh = this.raw;
     if (!mesh) return;
 

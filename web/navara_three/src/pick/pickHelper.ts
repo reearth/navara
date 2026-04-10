@@ -205,7 +205,7 @@ export class PickHelper extends CustomRenderPass {
     const pickingCoord = new Vector2(pickingCoordX, pickingCoordY);
 
     // Render the full pick scene without setViewOffset, then read the
-    // specific pixel directly from the gbufferRenderTarget.
+    // specific pixel directly from the pickRenderTarget.
     //
     // Why not setViewOffset?
     // setViewOffset(1x1) creates an extreme projection zoom (e.g. 3024x).
@@ -244,5 +244,8 @@ export class PickHelper extends CustomRenderPass {
 
   public dispose() {
     this.enablePick(false);
+    this.pickRenderTarget.dispose();
+    this.debugRenderTarget?.dispose();
+    this.debugBufferView?.dispose();
   }
 }

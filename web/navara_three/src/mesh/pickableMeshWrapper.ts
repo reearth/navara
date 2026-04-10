@@ -179,31 +179,31 @@ export class PickableMeshWrapper extends Object3D implements PickableMesh {
     this.object.traverse((child) => {
       if (!(child instanceof Mesh)) return;
 
-      const m = child.material;
-      if (!(m instanceof Material)) return;
+      const materials = Array.isArray(child.material)
+        ? child.material
+        : [child.material];
 
-      // For ShaderMaterial (includes LineMaterial), inject directly into
-      // the shader source. This is more reliable than onBeforeCompile
-      // because ShaderMaterial sources may already be modified by MRT
-      // overrides and RTE injection.
-      if (m instanceof ShaderMaterial) {
-        injectPickingIntoShaderMaterial(m, refs);
-        return;
-      }
-
-      // For standard materials, use onBeforeCompile
-      const prevOnBeforeCompile = m.onBeforeCompile;
-      const prevCacheKey = m.customProgramCacheKey?.bind(m);
-
-      m.onBeforeCompile = (shader, renderer) => {
-        prevOnBeforeCompile?.call(m, shader, renderer);
-        injectPickingShader(shader, refs);
-      };
-
-      m.customProgramCacheKey = () =>
-        (prevCacheKey?.() ?? "") + "_nvr_pickable";
-
-      m.needsUpdate = true;
+      materials.forEach((m) => {
+        if (!(m instanceof Material)) return;
+        // For ShaderMaterial (includes LineMaterial), inject directly into
+        // the shader source. This is more reliable than onBeforeCompile
+        // because ShaderMaterial sources may already be modified by MRT
+        // overrides and RTE injection.
+        if (m instanceof ShaderMaterial) {
+          injectPickingIntoShaderMaterial(m, refs);
+          return;
+        }
+        // For standard materials, use onBeforeCompile
+        const prevOnBeforeCompile = m.onBeforeCompile;
+        const prevCacheKey = m.customProgramCacheKey?.bind(m);
+        m.onBeforeCompile = (shader, renderer) => {
+          prevOnBeforeCompile?.call(m, shader, renderer);
+          injectPickingShader(shader, refs);
+        };
+        m.customProgramCacheKey = () =>
+          (prevCacheKey?.() ?? "") + "_nvr_pickable";
+        m.needsUpdate = true;
+      });
     });
   }
 
@@ -224,6 +224,8 @@ export class PickableInstancedMeshWrapper
 {
   private refs: { nvr_uPickable: { value: number } };
   private batchIdAttr: InstancedBufferAttribute | null = null;
+  /** Set of materials that already have picking shaders installed. */
+  private injectedMaterials = new WeakSet<Material>();
 
   constructor(
     public mesh: InstancedMesh,
@@ -237,34 +239,55 @@ export class PickableInstancedMeshWrapper
 
   /** Create/update the per-instance batchId attribute on the geometry. */
   private setupBatchIdAttribute(): void {
-    const data = new Float32Array(this.mesh.count);
-    for (let i = 0; i < this.batchIds.length; i++) {
-      data[i] = this.batchIds[i] ?? 0;
+    const count = this.mesh.count;
+    const len = Math.min(this.batchIds.length, count);
+
+    if (this.batchIdAttr && this.batchIdAttr.array.length >= count) {
+      // Reuse existing buffer — zero out then fill
+      const arr = this.batchIdAttr.array as Float32Array;
+      arr.fill(0);
+      for (let i = 0; i < len; i++) {
+        arr[i] = this.batchIds[i] ?? 0;
+      }
+      this.batchIdAttr.needsUpdate = true;
+    } else {
+      // First call or buffer too small — allocate new attribute
+      const data = new Float32Array(count);
+      for (let i = 0; i < len; i++) {
+        data[i] = this.batchIds[i] ?? 0;
+      }
+      this.batchIdAttr = new InstancedBufferAttribute(data, 1);
+      this.mesh.geometry.setAttribute("batchId", this.batchIdAttr);
     }
-    this.batchIdAttr = new InstancedBufferAttribute(data, 1);
-    this.mesh.geometry.setAttribute("batchId", this.batchIdAttr);
   }
 
+  /** Install picking shader hooks on materials that haven't been injected yet. */
   private setupShader(): void {
-    const m = this.mesh.material;
-    const mat = Array.isArray(m) ? m[0] : m;
-    if (!(mat instanceof Material)) return;
+    const materials = Array.isArray(this.mesh.material)
+      ? this.mesh.material
+      : [this.mesh.material];
 
-    const prevOnBeforeCompile = mat.onBeforeCompile;
-    const prevCacheKey = mat.customProgramCacheKey?.bind(mat);
     const refs = this.refs;
 
-    mat.onBeforeCompile = (shader, renderer) => {
-      prevOnBeforeCompile?.call(mat, shader, renderer);
-      injectInstancedPickingShader(shader, refs);
-    };
+    for (const mat of materials) {
+      if (!(mat instanceof Material)) continue;
+      if (this.injectedMaterials.has(mat)) continue;
 
-    // Ensure Three.js treats this as a distinct shader program
-    mat.customProgramCacheKey = () =>
-      (prevCacheKey?.() ?? "") + "_nvr_instanced_pickable";
+      const prevOnBeforeCompile = mat.onBeforeCompile;
+      const prevCacheKey = mat.customProgramCacheKey?.bind(mat);
 
-    // Force shader recompilation
-    mat.needsUpdate = true;
+      mat.onBeforeCompile = (shader, renderer) => {
+        prevOnBeforeCompile?.call(mat, shader, renderer);
+        injectInstancedPickingShader(shader, refs);
+      };
+      // Ensure Three.js treats this as a distinct shader program
+      mat.customProgramCacheKey = () =>
+        (prevCacheKey?.() ?? "") + "_nvr_instanced_pickable";
+      // Force shader recompilation
+      mat.needsUpdate = true;
+
+      this.injectedMaterials.add(mat);
+    }
   }
 
   /** Update the wrapper after instances are added, removed, or the mesh is replaced. */
@@ -272,6 +295,7 @@ export class PickableInstancedMeshWrapper
     this.mesh = mesh;
     this.batchIds = batchIds;
     this.setupBatchIdAttribute();
+    // Only installs shader hooks on new/unseen materials; skips already-injected ones.
     this.setupShader();
   }
 
