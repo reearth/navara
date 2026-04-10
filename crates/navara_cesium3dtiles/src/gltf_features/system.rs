@@ -115,7 +115,7 @@ pub fn construct_model_by_cesium3dtiles_layer(
         let glb_parser = match GlbSchemaParser::new(glb_bin) {
             Some(parser) => parser,
             None => {
-                warn!("Failed to parse glTF JSON from GLB");
+                warn!("Failed to parse GLB binary. Plain .gltf files are not supported, only .glb");
                 continue;
             }
         };

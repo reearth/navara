@@ -244,7 +244,7 @@ export class ModelMesh
       // B3DM (1.0) uses _batchid; glTF with EXT_mesh_features (1.1) uses _FEATURE_ID_N.
       // Assign _feature_id_n to _batchid so the batch texture shader works unchanged.
       const attrs = mesh.geometry.attributes;
-      if (!attrs?._batchid) {
+      if (!attrs?._batchid && attrs["_feature_id_0"]) {
         // TODO: Support other `_feature_id_n`.
         // Need to clone, since it might be switch to different `_feature_id_n`.
         mesh.geometry.setAttribute("_batchid", attrs["_feature_id_0"].clone());

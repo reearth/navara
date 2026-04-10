@@ -41,6 +41,7 @@ use bevy_ecs::{
     entity::Entity,
     system::{Commands, Query, ResMut},
 };
+use bevy_log::warn;
 
 use navara_buffer_store::BufferStore;
 use navara_camera::CameraFrustum;
@@ -825,23 +826,11 @@ fn update_or_spawn_rendered_tile(
                     .id(),
             );
         } else if tile.uri.as_ref().unwrap().ends_with("gltf") {
-            tile.rendered_tile_id = Some(
-                commands
-                    .spawn((
-                        RenderedCesium3dTileContentGltfFeaturesMarker,
-                        TileOrderByDistance {
-                            distance_from_camera: tile.state.distance_from_camera,
-                            sse: tile.state.sse,
-                        },
-                        RenderedCesium3dTileContent {
-                            layer_id,
-                            feature_id: None,
-                            data_requester_id: tile.data_requester_id.unwrap(),
-                            is_visible: true,
-                            touched: true,
-                        },
-                    ))
-                    .id(),
+            // Plain .gltf files (JSON + external .bin buffers) are not yet supported.
+            // Only GLB (binary glTF container) is supported.
+            warn!(
+                "Plain .gltf format is not yet supported, only .glb is supported. Skipping tile: {:?}",
+                tile.uri
             );
         } else {
             // TODO: support other formats like i3dm, cmpt, etc.

@@ -23,12 +23,13 @@ Navara supports the following 3D Tiles specifications:
 
 | Feature | Description |
 | ------- | ----------- |
-| glTF content | Tiles using glTF/GLB as the content format |
+| GLB content | Tiles using GLB (binary glTF) as the content format |
 | `EXT_mesh_features` | Feature identification via FeatureId sets in glTF meshes |
 | `EXT_structural_metadata` | Access to per-feature metadata via property tables embedded in glTF assets |
 
 :::note
-Implicit tiling is not currently supported. Tilesets must use explicit tile hierarchies with `tileset.json`.
+- Only GLB (binary glTF container) is supported. Plain `.gltf` files referencing external `.bin` buffers are not yet supported.
+- Implicit tiling is not currently supported. Tilesets must use explicit tile hierarchies with `tileset.json`.
 :::
 
 ## Basic Configuration
