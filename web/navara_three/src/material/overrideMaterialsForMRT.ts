@@ -108,8 +108,8 @@ function injectGBuffer(
     // MRT layout:
     //   location 0: gl_FragColor (color)
     //   location 1: normalBuffer (normal + material props)
-    //   location 2: effectIdBuffer (effectIds: R=bitmask)       — SE only
-    //   location 3: emissiveBuffer (emissive: RGB=color×intensity) — SE only
+    //   location 2: effectIdBuffer (effectIds: R=bitmask)       — SelectiveEffect only
+    //   location 3: emissiveBuffer (emissive: RGB=color×intensity pre-multiplied by Three.js, A=unused) — SelectiveEffect only
     #ifndef USE_SHADOWMAP_DEPTH
       layout(location = 1) out vec4 normalBuffer;
       layout(location = 2) out vec4 effectIdBuffer;
@@ -176,6 +176,10 @@ function injectGBufferToSpriteMaterial(shader: ShaderLibShader) {
     layout(location = 2) out vec4 effectIdBuffer;
     layout(location = 3) out vec4 emissiveBuffer;
 
+    #ifdef USE_SELECTIVE_EFFECT
+      uniform float uEffectIdsMask;
+    #endif
+
     varying vec3 vViewPosition;
 
     ${packing}
@@ -193,8 +197,14 @@ function injectGBufferToSpriteMaterial(shader: ShaderLibShader) {
             0.0,
             0.0
           );
-          effectIdBuffer = vec4(0.0);
-          emissiveBuffer = vec4(0.0);
+
+          #ifdef USE_SELECTIVE_EFFECT
+            effectIdBuffer = vec4(uEffectIdsMask, 0.0, 0.0, 1.0);
+            emissiveBuffer = vec4(0.0);
+          #else
+            effectIdBuffer = vec4(0.0);
+            emissiveBuffer = vec4(0.0);
+          #endif
         }
       `,
       ).source
@@ -261,6 +271,10 @@ function injectGBufferToShaderMaterial(
       layout(location = 1) out vec4 normalBuffer;
       layout(location = 2) out vec4 effectIdBuffer;
       layout(location = 3) out vec4 emissiveBuffer;
+
+      #ifdef USE_SELECTIVE_EFFECT
+        uniform float uEffectIdsMask;
+      #endif
     #endif
 
     ${packing}
@@ -275,8 +289,14 @@ function injectGBufferToShaderMaterial(
 
           #ifndef USE_SHADOWMAP_DEPTH
             normalBuffer = ${normalBufferWrite};
-            effectIdBuffer = vec4(0.0);
-            emissiveBuffer = vec4(0.0);
+
+            #ifdef USE_SELECTIVE_EFFECT
+              effectIdBuffer = vec4(uEffectIdsMask, 0.0, 0.0, 1.0);
+              emissiveBuffer = vec4(0.0);
+            #else
+              effectIdBuffer = vec4(0.0);
+              emissiveBuffer = vec4(0.0);
+            #endif
           #endif
         }
       `,
@@ -322,6 +342,10 @@ function injectGBufferToLineMaterial(lineMaterial: LineMaterial) {
     layout(location = 2) out vec4 effectIdBuffer;
     layout(location = 3) out vec4 emissiveBuffer;
 
+    #ifdef USE_SELECTIVE_EFFECT
+      uniform float uEffectIdsMask;
+    #endif
+
     ${packing}
 
     ${
@@ -347,8 +371,14 @@ function injectGBufferToLineMaterial(lineMaterial: LineMaterial) {
             0.0,
             0.0
           );
-          effectIdBuffer = vec4(0.0);
-          emissiveBuffer = vec4(0.0);
+
+          #ifdef USE_SELECTIVE_EFFECT
+            effectIdBuffer = vec4(uEffectIdsMask, 0.0, 0.0, 1.0);
+            emissiveBuffer = vec4(0.0);
+          #else
+            effectIdBuffer = vec4(0.0);
+            emissiveBuffer = vec4(0.0);
+          #endif
         }
       `,
         ).source
