@@ -170,6 +170,7 @@ pub fn remove_invisible_rendered_tiles(
     mut renderable_features: Query<&mut RenderableFeature>,
 ) {
     for (entity, tile, _) in &rendered_tiles {
+        // Keep the activation of GLB tiles(Google photorealistic tiles)
         if tile.touched
             && let Some(id) = tile.feature_id
         {
@@ -183,7 +184,12 @@ pub fn remove_invisible_rendered_tiles(
                 Some(renderable_feature) => renderable_feature,
                 None => continue,
             };
-            if let RenderableFeature::Model { active, .. } = renderable_feature.as_mut() {
+            let RenderableFeature::Model { active, .. } = renderable_feature.as_ref() else {
+                continue;
+            };
+            if *active != tile.is_visible
+                && let RenderableFeature::Model { active, .. } = renderable_feature.as_mut()
+            {
                 *active = tile.is_visible;
             }
             continue;
