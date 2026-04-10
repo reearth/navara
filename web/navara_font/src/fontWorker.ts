@@ -2,6 +2,7 @@
 
 import init, {
   FontCache,
+  composite_key,
   type ShapeTextResult as WasmShapeTextResult,
   type WasmShapedGlyph,
   type WasmGlyphMetrics,
@@ -20,6 +21,8 @@ function convertGlyphs(glyphs: WasmShapedGlyph[]) {
   return glyphs.map((g) => {
     const out = {
       glyphId: g.glyph_id,
+      fontIndex: g.font_index,
+      compositeKey: composite_key(g.font_index, g.glyph_id),
       xAdvance: g.x_advance,
       yAdvance: g.y_advance,
       xOffset: g.x_offset,
@@ -34,6 +37,8 @@ function convertMetrics(metrics: WasmGlyphMetrics[]) {
   return metrics.map((m) => {
     const out = {
       glyphId: m.glyph_id,
+      fontIndex: m.font_index,
+      compositeKey: composite_key(m.font_index, m.glyph_id),
       atlasX: m.atlas_x,
       atlasY: m.atlas_y,
       atlasW: m.atlas_w,
@@ -87,11 +92,20 @@ ctx.onmessage = async (e: MessageEvent) => {
 
     switch (msgType) {
       case "loadFont": {
-        const { url, data } = msg.payload as { url: string; data: ArrayBuffer };
+        const { url, data, atlasKey } = msg.payload as {
+          url: string;
+          data: ArrayBuffer;
+          atlasKey?: string;
+        };
         const bytes = new Uint8Array(data);
-        const ok = fontCache.loadFont(url, bytes.length, (buf: Uint8Array) => {
-          buf.set(bytes);
-        });
+        const ok = fontCache.loadFont(
+          url,
+          bytes.length,
+          (buf: Uint8Array) => {
+            buf.set(bytes);
+          },
+          atlasKey,
+        );
         ctx.postMessage({ id, type: "result", payload: { ok } });
         break;
       }
@@ -118,15 +132,17 @@ ctx.onmessage = async (e: MessageEvent) => {
 
         fontCache.tickFrame();
 
-        // One atlas transfer for the entire batch
-        const atlas = anyAtlasChanged ? snapshotAtlas(fontUrl) : null;
+        // Snapshot atlas by atlas key (family name or URL) so shared atlases
+        // are returned correctly for font-family faces.
+        const atlasKey = fontCache.getAtlasKey(fontUrl) ?? fontUrl;
+        const atlas = anyAtlasChanged ? snapshotAtlas(atlasKey) : null;
 
         const transfers: Transferable[] = atlas ? [atlas.data] : [];
         ctx.postMessage(
           {
             id,
             type: "result",
-            payload: { results, atlas },
+            payload: { results, atlas, atlasKey },
           },
           transfers,
         );

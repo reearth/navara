@@ -1,0 +1,48 @@
+---
+import SidebarPersister from '@astrojs/starlight/components/SidebarPersister.astro';
+import SidebarSublist from '@astrojs/starlight/components/SidebarSublist.astro';
+import { getFilteredSidebar } from '../utils/sidebar';
+import { translateFolderName } from '../utils/translations';
+import type { SidebarEntry } from '../utils/sidebar';
+
+const { sidebar } = Astro.locals.starlightRoute;
+const { locale } = Astro.locals.starlightRoute;
+const pathname = Astro.url.pathname;
+
+/**
+ * Recursively translate sidebar entries labels based on current locale
+ */
+function translateSidebarEntries(entries: SidebarEntry[]): SidebarEntry[] {
+  return entries.map(entry => {
+    if (entry.type === 'group') {
+      return {
+        ...entry,
+        label: translateFolderName(entry.label, locale),
+        entries: translateSidebarEntries(entry.entries)
+      };
+    }
+    return entry;
+  });
+}
+
+const filteredSidebar = getFilteredSidebar(sidebar, pathname);
+const translatedSidebar = translateSidebarEntries(filteredSidebar);
+
+// Extract content title from URL, handling locale prefix
+const segments = Astro.url.pathname.split("/").filter(Boolean);
+const contentTitle = locale ? segments[1] : segments[0];
+---
+<span class="sidebar-title">
+    {contentTitle}
+</span>
+<SidebarPersister>
+    <SidebarSublist sublist={translatedSidebar} />
+</SidebarPersister>
+
+<style>
+    .sidebar-title {
+        padding-left: 0.5rem;
+        font-size: 1.3rem;
+        font-weight: bold;
+    }
+</style>

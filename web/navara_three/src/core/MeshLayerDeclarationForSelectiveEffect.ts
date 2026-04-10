@@ -126,6 +126,41 @@ export abstract class MeshLayerDeclarationForSelectiveEffect<
   }
 
   /**
+   * Re-link selective-effect state to the current `this.raw` object.
+   * Call this after replacing the underlying Object3D (e.g., during grow())
+   * so the registry, onBeforeRender wiring, and effect links stay consistent.
+   */
+  protected relinkSelectiveEffects(oldRaw: Object3D | undefined): void {
+    if (this._effectIds.length === 0) return;
+
+    const newRaw = this.raw;
+    if (!newRaw) return;
+
+    // Remove old links
+    if (oldRaw) {
+      this.view.selectiveEffectRegistry?.updateLinksForObject(
+        oldRaw,
+        [],
+        this._effectIds,
+        this.id,
+      );
+    }
+
+    // Register new links
+    this.view.selectiveEffectRegistry?.updateLinksForObject(
+      newRaw,
+      this._effectIds,
+      [],
+      this.id,
+    );
+
+    // Reset onBeforeRender flag so we can re-setup on the new object
+    this._hasSetupOnBeforeRender = false;
+    this._originalOnBeforeRender = undefined;
+    this.setupMeshOnBeforeRender();
+  }
+
+  /**
    * Setup onBeforeRender callback for MaskPass context-based rendering.
    * This enables Box, Sphere, and other standard meshes to participate in mask rendering.
    */

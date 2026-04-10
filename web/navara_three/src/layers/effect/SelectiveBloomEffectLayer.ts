@@ -238,8 +238,7 @@ class SelectiveBloomPass extends PostProcessingPass {
     super("SelectiveBloomPass");
     this.layer = layer;
 
-    const renderer =
-      layer.viewContext.renderPassOrchestrator.effectComposer.getRenderer();
+    const renderer = layer.viewContext.getRenderer();
     const renderSize = renderer.getSize(new Vector2());
     const resolutionScale =
       layer.layerConfig.selectiveBloom?.resolutionScale ?? 1.0;

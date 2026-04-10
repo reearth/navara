@@ -14,11 +14,13 @@ export type TextureSlot = {
  * Call this from TileMesh.setupTextureFragments()
  */
 export function updateTextureFragmentIndex(
-  textureFragmentIndex: Map<string, Set<TextureSlot>>,
-  tileMeshToFragmentIds: Map<TileMesh, Set<string>>,
+  textureFragmentIndex: Map<string, Set<TextureSlot>> | undefined,
+  tileMeshToFragmentIds: Map<TileMesh, Set<string>> | undefined,
   tileMesh: TileMesh,
   textureFragmentIds: (string | null)[],
 ): void {
+  if (!textureFragmentIndex || !tileMeshToFragmentIds) return;
+
   // Remove this tileMesh from all previous entries
   removeTextureFragmentIndex(
     textureFragmentIndex,

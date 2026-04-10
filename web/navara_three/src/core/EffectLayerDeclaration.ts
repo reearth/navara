@@ -285,22 +285,22 @@ export abstract class EffectLayerDeclaration<
 
     // Try insertAfter first
     for (const target of insertAfter) {
-      if (this.view.renderPassOrchestrator.getPass(target)) {
-        this.view.renderPassOrchestrator.insertPassAfter(target, key, c);
+      if (this.view.getPass(target)) {
+        this.view.insertPassAfter(target, key, c);
         return;
       }
     }
 
     // Try insertBefore if no insertAfter worked
     for (const target of insertBefore) {
-      if (this.view.renderPassOrchestrator.getPass(target)) {
-        this.view.renderPassOrchestrator.insertPassBefore(target, key, c);
+      if (this.view.getPass(target)) {
+        this.view.insertPassBefore(target, key, c);
         return;
       }
     }
 
     // Default: add to end
-    this.view.renderPassOrchestrator.addPass(key, c);
+    this.view.addPass(key, c);
   }
 
   onUpdateConfig(updates: UpdateConfig): void {
@@ -309,9 +309,7 @@ export abstract class EffectLayerDeclaration<
 
   onDestroy(): void {
     // Remove from orchestrator using the instance ID
-    if (this.view.renderPassOrchestrator) {
-      this.view.renderPassOrchestrator.removePass(this.instanceId);
-    }
+    this.view.removePass(this.instanceId);
 
     this._instance = undefined;
   }
@@ -332,7 +330,7 @@ export abstract class EffectLayerDeclaration<
   findLayer<Layer extends EffectLayerDeclaration = EffectLayerDeclaration>(
     key: string,
   ) {
-    for (const handle of this.view.layersManager.getEffectLayers()) {
+    for (const handle of this.view._getEffectLayers()) {
       const layer = handle.ref;
       if (layer.getKey() !== key) {
         continue;

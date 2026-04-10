@@ -1,24 +1,16 @@
 import type { TileHandle } from "@navara/core";
 import type { PolygonMesh as NavaraPolygonMesh } from "@navara/engine";
 
-import type { BufferLoader } from "../";
-import type { ViewContext } from "../../core";
 import { PolygonMesh } from "../../mesh";
-import type { CommonUniforms } from "../../uniforms";
+import type { EventContext } from "../context";
 
 export async function renderPolygon(
+  ctx: EventContext,
   mesh: NavaraPolygonMesh,
-  buf: BufferLoader,
-  uniforms: CommonUniforms,
   tileHandle: TileHandle | undefined,
-  viewContext: ViewContext,
   layerId: string,
 ) {
-  return new PolygonMesh(viewContext, layerId, uniforms).init(
-    mesh,
-    buf,
-    tileHandle,
-  );
+  return new PolygonMesh(ctx, layerId).init(mesh, tileHandle);
 }
 
 export function processPolygonChanged(

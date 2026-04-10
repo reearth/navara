@@ -8,20 +8,21 @@ import {
   BufferAttribute,
   BufferGeometry,
   Color,
+  MeshBasicMaterial,
   MeshLambertMaterial,
   RGBADepthPacking,
   Sphere,
+  SphereGeometry,
+  Mesh as ThreeMesh,
   Vector3,
 } from "three";
 
 import { PolygonOutlineMesh } from "..";
-import type { ViewContext } from "../core";
 import { ensureSelectiveEffectUserData } from "../core/SelectiveEffectHelper";
 import { injectSelectiveEffectHandlers } from "../core/SelectiveEffectMaskContext";
-import type { BufferLoader } from "../event";
+import type { EventContext } from "../event/context";
 import type { PolygonMaterialProps } from "../material/enhancer/polygon";
 import { createPolygonMaterialEnhancer } from "../material/enhancer/polygon/polygonMaterialEnhancer";
-import type { CommonUniforms } from "../uniforms";
 import { arraysEqual } from "../utils";
 
 import {
@@ -33,6 +34,9 @@ import type {
   DefaultBatchAttributeValues,
 } from "./batchTexture";
 import { setupRTECallback } from "./rtcRteHelper";
+
+/** Set to true to render bounding spheres as wireframe spheres for debugging. */
+const DEBUG_BOUNDING_SPHERE = false;
 
 type Attributes = BatchedFeatureAttributes<{
   position?: BufferAttribute; // Present when use_rte = false
@@ -54,66 +58,59 @@ export class PolygonMesh extends BatchedFeatureMesh<
     aabbRadius: number; // Horizontal extent radius from AABB
   };
 
-  /** ViewContext for SelectiveEffect handling */
-  private _viewContext: ViewContext;
+  /** Debug wireframe mesh visualizing the bounding sphere */
+  private _debugBoundingSphereMesh?: ThreeMesh;
+
+  /** Running min/max of per-feature batch height values */
+  private _minBatchHeight = 0;
+  private _maxBatchHeight = 0;
+  /** Running max of per-feature batch extruded height values */
+  private _maxBatchExtrudedHeight = 0;
+
+  readonly ctx: EventContext;
   /** Layer ID for SelectiveEffect handling */
   private _layerId: string;
-  private _uniforms: CommonUniforms;
 
   /** Enhanced material with encapsulated state */
   private _enhancedMaterial?: ReturnType<typeof createPolygonMaterialEnhancer>;
   /** Previous effectIds for SelectiveEffect registry updates */
   private _prevEffectIds?: string[];
 
-  constructor(
-    viewContext: ViewContext,
-    layerId: string,
-    uniforms: CommonUniforms,
-    buf: BufferGeometry<Attributes> = new BufferGeometry<Attributes>(),
-    mat: MeshLambertMaterial = new MeshLambertMaterial(),
-    enhancedMaterial?: ReturnType<typeof createPolygonMaterialEnhancer>,
-  ) {
-    super(buf, mat);
+  constructor(ctx: EventContext, layerId: string) {
+    super(new BufferGeometry<Attributes>(), new MeshLambertMaterial());
 
-    this._viewContext = viewContext;
+    this.ctx = ctx;
     this._layerId = layerId;
-    this._uniforms = uniforms;
-    this._enhancedMaterial = enhancedMaterial;
   }
 
   ready() {
     return !!this._enhancedMaterial;
   }
 
-  init(
-    mesh: NavaraPolygonMesh,
-    buf: BufferLoader,
-    tileHandle: TileHandle | undefined,
-  ) {
-    // TODO: Need to calculate bounding sphere by position_high and position_low.
-    this.frustumCulled = false;
-
+  init(mesh: NavaraPolygonMesh, tileHandle: TileHandle | undefined) {
     this.batchLength = mesh.batch_length;
-
     // Register cleanup listener first (before any potential early returns)
     // This ensures dispose() is called even if geometry initialization fails
     this.addEventListener("removedFromWorld", () => {
       this.dispose();
     });
 
-    const { success, useRTE } = this.initGeometry(mesh, buf);
+    const { success, useRTE } = this.initGeometry(mesh);
     if (!success) {
       console.warn("PolygonMesh.init: geometry initialization failed");
       return this;
     }
-    this.initMaterial(mesh, this._uniforms, tileHandle, useRTE);
+    this.initMaterial(mesh, tileHandle, useRTE);
     this.initDepthMaterial();
 
     if (mesh.bounding_sphere) {
       const bs = mesh.bounding_sphere;
 
       this._baseBoundingSphere = {
-        surfaceCenter: new Vector3(bs.center_x, bs.center_y, bs.center_z),
+        // If this mesh is tile based, RTC is used. In this case, this mesh is transformed through matrixWorld.
+        surfaceCenter: useRTE
+          ? new Vector3(bs.center_x, bs.center_y, bs.center_z)
+          : new Vector3(),
         aabbRadius: bs.radius,
       };
 
@@ -124,20 +121,18 @@ export class PolygonMesh extends BatchedFeatureMesh<
   }
 
   clone() {
-    return new PolygonMesh(
-      this._viewContext,
-      this._layerId,
-      this._uniforms,
-      this.geometry,
-      this.material,
-      this._enhancedMaterial,
-    ) as this;
+    const cloned = new PolygonMesh(this.ctx, this._layerId) as this;
+    cloned.geometry = this.geometry;
+    cloned.material = this.material;
+    cloned._enhancedMaterial = this._enhancedMaterial;
+    return cloned;
   }
 
-  private initGeometry(
-    mesh: NavaraPolygonMesh,
-    buf: BufferLoader,
-  ): { success: boolean; useRTE: boolean } {
+  private initGeometry(mesh: NavaraPolygonMesh): {
+    success: boolean;
+    useRTE: boolean;
+  } {
+    const { buf } = this.ctx;
     const g = mesh.geometry;
 
     // Check if RTE attributes are present
@@ -257,9 +252,9 @@ export class PolygonMesh extends BatchedFeatureMesh<
     }
 
     // Use shared water texture from CommonUniforms (must be enabled via Options.waterTexture.enabled)
-    if (this._uniforms?.waterTexture.value) {
+    if (this.ctx.uniforms?.waterTexture.value) {
       this._enhancedMaterial.update({
-        water: { waterNormalMap: this._uniforms.waterTexture.value },
+        water: { waterNormalMap: this.ctx.uniforms.waterTexture.value },
       });
       this.material.needsUpdate = true;
     }
@@ -267,10 +262,10 @@ export class PolygonMesh extends BatchedFeatureMesh<
 
   private initMaterial(
     mesh: NavaraPolygonMesh,
-    uniforms: CommonUniforms,
     tileHandle: TileHandle | undefined,
     useRTE: boolean,
   ) {
+    const uniforms = this.ctx.uniforms;
     const meshMaterial = mesh.material;
     const mcolor = meshMaterial.color;
 
@@ -356,7 +351,7 @@ export class PolygonMesh extends BatchedFeatureMesh<
 
     // Setup selective effect handlers (automatically wraps existing RTE callback)
     injectSelectiveEffectHandlers(this, {
-      registry: this._viewContext?.selectiveEffectRegistry,
+      registry: this.ctx.viewContext?.selectiveEffectRegistry,
       layerId: this._layerId,
     });
     // Note: No need to manually assign handlers - function modifies object in place
@@ -371,7 +366,7 @@ export class PolygonMesh extends BatchedFeatureMesh<
     // Set up onBeforeCompile using the enhancer's transformShader
     material.onBeforeCompile = enhancer.transformShader;
 
-    this._viewContext.applyShadowMaterial(material);
+    this.ctx.viewContext.applyShadowMaterial(material);
 
     this._initBatchedMaterial();
 
@@ -403,12 +398,15 @@ export class PolygonMesh extends BatchedFeatureMesh<
     // Update mesh properties (not handled by enhancer)
     this.visible =
       (material.show ?? true) && (material.surfaceShow ?? true) && active;
+    if (this._debugBoundingSphereMesh) {
+      this._debugBoundingSphereMesh.visible = this.visible;
+    }
     this.castShadow = !!material.castShadow;
     this.receiveShadow = !!material.receiveShadow;
 
     // SelectiveEffect: effectIds handling (needs prev state for registry)
     if (!arraysEqual(this._prevEffectIds, material.effectIds)) {
-      this._viewContext.selectiveEffectRegistry?.updateLinksForObject(
+      this.ctx.viewContext.selectiveEffectRegistry?.updateLinksForObject(
         this,
         material.effectIds ?? [],
         this._prevEffectIds ?? [],
@@ -466,11 +464,15 @@ export class PolygonMesh extends BatchedFeatureMesh<
       return;
     }
 
+    if (!this.geometry.boundingSphere) {
+      this.geometry.boundingSphere = new Sphere();
+    }
+
     // Cache values to avoid multiple calls
     const { base } = this._enhancedMaterial.states();
 
     if (base.clampToGround) {
-      this.geometry.boundingSphere = new Sphere(
+      this.geometry.boundingSphere?.set(
         baseBounds.surfaceCenter,
         baseBounds.aabbRadius,
       );
@@ -481,8 +483,15 @@ export class PolygonMesh extends BatchedFeatureMesh<
 
     if (!minMaxHeight) return;
 
-    const minHeight = minMaxHeight[0] + addHeight;
-    const maxHeight = minMaxHeight[1] + addHeight + addExtrudedHeight;
+    // Compute effective min/max considering both uniform and per-feature batch values
+    const minHeight = Math.min(
+      minMaxHeight[0] + addHeight,
+      minMaxHeight[0] + this._minBatchHeight,
+    );
+    const maxHeight = Math.max(
+      minMaxHeight[1] + addHeight + addExtrudedHeight,
+      minMaxHeight[1] + this._maxBatchHeight + this._maxBatchExtrudedHeight,
+    );
 
     const heightOffset = (maxHeight - minHeight) / 2.0;
     const centerHeight = (maxHeight + minHeight) / 2.0;
@@ -502,7 +511,30 @@ export class PolygonMesh extends BatchedFeatureMesh<
     );
 
     // Update geometry bounding sphere
-    this.geometry.boundingSphere = new Sphere(center, radius);
+    this.geometry.boundingSphere?.set(center, radius);
+
+    if (DEBUG_BOUNDING_SPHERE) {
+      this._updateDebugBoundingSphereMesh(center, radius);
+    }
+  }
+
+  private _updateDebugBoundingSphereMesh(center: Vector3, radius: number) {
+    if (!this._debugBoundingSphereMesh) {
+      const geo = new SphereGeometry(1, 16, 12);
+      const mat = new MeshBasicMaterial({
+        color: 0x00ff00,
+        wireframe: true,
+        depthTest: false,
+        transparent: true,
+        opacity: 0.3,
+      });
+      this._debugBoundingSphereMesh = new ThreeMesh(geo, mat);
+      // this._debugBoundingSphereMesh.frustumCulled = false;
+      this.add(this._debugBoundingSphereMesh);
+    }
+
+    this._debugBoundingSphereMesh.position.copy(center);
+    this._debugBoundingSphereMesh.scale.setScalar(radius);
   }
 
   _getDefaultBatchAttributeValues(): DefaultBatchAttributeValues {
@@ -551,18 +583,30 @@ export class PolygonMesh extends BatchedFeatureMesh<
         this.outline?.enableBatchColorShow();
         break;
       }
-      case "height":
+      case "height": {
         this.getEnhancer().update({ base: { useBatchHeight: true } });
         this.outline?.enableBatchHeight();
+        const h = value as number;
+        if (h > this._maxBatchHeight) this._maxBatchHeight = h;
+        if (h < this._minBatchHeight) this._minBatchHeight = h;
         break;
-      case "extrudedHeight":
+      }
+      case "extrudedHeight": {
         this.getEnhancer().update({ base: { useBatchExtrudedHeight: true } });
         this.outline?.enableBatchExtrudedHeight();
+        const eh = value as number;
+        if (eh > this._maxBatchExtrudedHeight)
+          this._maxBatchExtrudedHeight = eh;
         break;
+      }
     }
 
     // Call parent to update the batch texture
     super._updateBatchAttribute(batchId, attribute, value);
+
+    if (attribute === "height" || attribute === "extrudedHeight") {
+      this._recalculateBoundingSphere();
+    }
   }
 
   _initBatchDataTexture(): void {
@@ -630,8 +674,8 @@ export class PolygonMesh extends BatchedFeatureMesh<
 
   dispose() {
     // Clean up SelectiveEffect registry links
-    if (this._viewContext?.selectiveEffectRegistry && this._prevEffectIds) {
-      this._viewContext.selectiveEffectRegistry.updateLinksForObject(
+    if (this.ctx.viewContext?.selectiveEffectRegistry && this._prevEffectIds) {
+      this.ctx.viewContext.selectiveEffectRegistry.updateLinksForObject(
         this,
         [], // New effectIds: empty array (removing all links)
         this._prevEffectIds, // Previous effectIds
@@ -640,7 +684,14 @@ export class PolygonMesh extends BatchedFeatureMesh<
       this._prevEffectIds = undefined;
     }
 
-    this._viewContext.removeShadowMaterial(this.material);
+    if (this._debugBoundingSphereMesh) {
+      this._debugBoundingSphereMesh.geometry.dispose();
+      (this._debugBoundingSphereMesh.material as MeshBasicMaterial).dispose();
+      this.remove(this._debugBoundingSphereMesh);
+      this._debugBoundingSphereMesh = undefined;
+    }
+
+    this.ctx.viewContext.removeShadowMaterial(this.material);
     this.customDepthMaterial?.dispose();
   }
 }

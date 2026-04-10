@@ -42,8 +42,9 @@ import {
 } from "three";
 
 import { PolygonMesh } from "..";
+
 import type { ViewContext } from "../core";
-import { setTransform, type BufferLoader, type TileHandler } from "../event";
+import { type BufferLoader } from "../event";
 import {
   generateMixOverlaidTexturesMacro,
   generateHillshadeNormalShader,
@@ -54,8 +55,12 @@ import type {
   Scenes,
   TexturizedSceneByTileCoordinates,
 } from "../scene";
+
+import { setTransform } from "../event";
+import type { EventContext, TileHandler } from "../event/context";
+
 import type { TextureOptions } from "../textures";
-import type { MeshCache, TileMapByHandle } from "../type";
+import type { TileMapByHandle } from "../type";
 import type { CommonUniforms } from "../uniforms";
 import { createReplacer } from "../utils";
 import {
@@ -85,6 +90,16 @@ export class TileMesh
     layerId: string;
   }[];
 
+  // Track previous parent state to avoid unnecessary re-cloning and re-rendering
+  private prevParentState = new Map<
+    string,
+    {
+      parentHandle: TileHandle;
+      parentSceneRevision: number;
+      isRendered: boolean;
+    }
+  >();
+
   // Separate mesh for shadow casting (uses terrain-only geometry without skirt)
   private shadowMesh?: Mesh<BufferGeometry, TileMaterial>;
 
@@ -98,14 +113,19 @@ export class TileMesh
 
   private warnedExceededTextures = false;
 
-  constructor(
-    mesh: MeshAdded,
-    texturizedSceneByTileCoordinates: TexturizedSceneByTileCoordinates,
-    textureOptions: TextureOptions,
-    tileMapByHandle: TileMapByHandle,
-    tileHandler: TileHandler,
-  ) {
+  readonly ctx: EventContext;
+
+  constructor(ctx: EventContext, mesh: MeshAdded) {
     super();
+    this.ctx = ctx;
+
+    const {
+      texturizedSceneByTileCoordinates,
+      textureOptions,
+      tileMapByHandle,
+      tileHandler,
+    } = ctx;
+
     const handle = mesh.tile_handle;
     this.handle = handle;
 
@@ -145,37 +165,71 @@ export class TileMesh
   }
 
   private updateTexturizedSceneByTileState() {
-    const prevStates = [...(this.tileStates ?? [])];
-    this.tileStates = [];
     const tileStates = this.tileHandler.getVectorTileStates(this.handle) ?? [];
+    const newTileStates: NonNullable<typeof this.tileStates> = [];
+    const newParentState: typeof this.prevParentState = new Map();
+
+    let changed = false;
+
     for (const state of tileStates) {
       const parentHandle = state.ready_parent_tile_handle;
       const layerId = state.layer_id;
 
       if (parentHandle == null) continue;
 
-      this.tileStates.push({
+      newTileStates.push({
         parentHandle,
         layerId,
         isRendered: state.is_rendered,
       });
 
-      const scene = this.texturizedSceneByTileCoordinates.findSceneByLayerId(
+      const parentScene =
+        this.texturizedSceneByTileCoordinates.findSceneByLayerId(
+          parentHandle,
+          layerId,
+        );
+      if (!parentScene) continue;
+
+      const parentSceneRevision = parentScene.revision;
+      const prev = this.prevParentState.get(layerId);
+
+      // Re-clone when parent changed or parent scene content changed
+      if (
+        !prev ||
+        prev.parentHandle !== parentHandle ||
+        prev.parentSceneRevision !== parentSceneRevision
+      ) {
+        this.texturizedSceneByTileCoordinates.addFromParentScene(
+          this.handle,
+          layerId,
+          parentScene,
+        );
+        changed = true;
+      }
+
+      // isRendered flip changes visibility (parent fallback <-> own mesh)
+      if (prev && prev.isRendered !== state.is_rendered) {
+        changed = true;
+      }
+
+      newParentState.set(layerId, {
         parentHandle,
-        layerId,
-      );
-      if (!scene) continue;
-      this.texturizedSceneByTileCoordinates.addFromParentScene(
-        this.handle,
-        layerId,
-        scene,
-      );
+        parentSceneRevision,
+        isRendered: state.is_rendered,
+      });
+    }
+
+    // Detect removed layers
+    if (this.prevParentState.size !== newParentState.size) {
+      changed = true;
+    }
+
+    if (changed || (this.tileStates?.length ?? 0) !== newTileStates.length) {
       this.texturizedSceneByTileCoordinates.setNeedsUpdate(this.handle, true);
     }
 
-    if (prevStates.length !== this.tileStates.length) {
-      this.texturizedSceneByTileCoordinates.setNeedsUpdate(this.handle, true);
-    }
+    this.tileStates = newTileStates;
+    this.prevParentState = newParentState;
   }
 
   private _onBeforeRender = () => {
@@ -191,7 +245,7 @@ export class TileMesh
     this.texturizedSceneByTileCoordinates.setNeedsUpdate(this.handle, false);
 
     // Warn if MVT layers exceed available slots
-    const numScenes = this.texturizedScenes.children.length;
+    const numScenes = this.texturizedScenes.tileScenes.length;
     if (numScenes > this.numTexturizedVector) {
       if (!this.warnedExceededTextures) {
         this.warnedExceededTextures = true;
@@ -206,13 +260,13 @@ export class TileMesh
     }
 
     let i = -1;
-    for (const texturizedScene of this.texturizedScenes.children) {
+    for (const texturizedScene of this.texturizedScenes.tileScenes) {
       i++;
 
-      if (texturizedScene.userData.removed) {
+      if (texturizedScene.removed) {
         this.updateTexturizedSceneTextureVisibility(
           false,
-          texturizedScene.userData.layerId,
+          texturizedScene.layerId,
         );
         continue;
       }
@@ -220,14 +274,14 @@ export class TileMesh
       if (!texturizedScene.children.length) {
         this.updateTexturizedSceneTextureVisibility(
           false,
-          texturizedScene.userData.layerId,
+          texturizedScene.layerId,
         );
         continue;
       }
 
       this.updateTexturizedSceneTextureVisibility(
         true,
-        texturizedScene.userData.layerId,
+        texturizedScene.layerId,
       );
 
       const renderTarget = this.texturizedSceneRenderTargets[i];
@@ -242,7 +296,7 @@ export class TileMesh
 
       // Get the parent tile's zoom level if available
       const tileStates = this.tileStates;
-      const layerId = texturizedScene.userData.layerId;
+      const layerId = texturizedScene.layerId;
       const state = tileStates?.find((s) => s.layerId === layerId);
       const parentHandle =
         // Parent tile should be used if this tile isn't available, or
@@ -314,67 +368,44 @@ export class TileMesh
     }
   };
 
-  private _viewContext?: ViewContext;
-
-  async _init(
-    scenes: Scenes,
-    meshes: MeshCache,
-    mesh: MeshAdded,
-    buf: BufferLoader,
-    loadedTexes: Map<string, Texture>,
-    textureOptions: TextureOptions,
-    tileMapByHandle: TileMapByHandle,
-    textureFragmentIndex: Map<string, Set<TextureSlot>>,
-    tileMeshToFragmentIds: Map<TileMesh, Set<string>>,
-    viewContext: ViewContext,
-    uniforms: CommonUniforms,
-  ) {
-    this._viewContext = viewContext;
-
+  async _init(mesh: MeshAdded) {
     await this.createMesh(
-      scenes,
-      meshes,
-      buf,
-      loadedTexes,
       generate_id_from_entity(mesh),
       mesh.mesh,
       mesh.material,
       mesh.transform,
-      textureOptions,
-      tileMapByHandle,
-      textureFragmentIndex,
-      tileMeshToFragmentIds,
       mesh.ready_parent_tile_handle,
-      uniforms,
       mesh.globe,
     );
 
     this.addEventListener("removedFromWorld", () => {
       this.dispose(
-        tileMapByHandle,
-        textureFragmentIndex,
-        tileMeshToFragmentIds,
+        this.ctx.tileMapByHandle,
+        this.ctx.textureFragmentIndex,
+        this.ctx.tileMeshToFragmentIds,
       );
     });
   }
 
   private async createMesh(
-    scenes: Scenes,
-    meshes: MeshCache,
-    buf: BufferLoader,
-    loadedTexes: Map<string, Texture>,
     id: string,
     mesh: EventMesh,
     mat: RasterTileInternalMaterial,
     transform: Transform | undefined,
-    textureOptions: TextureOptions,
-    tileMapByHandle: TileMapByHandle,
-    textureFragmentIndex: Map<string, Set<TextureSlot>>,
-    tileMeshToFragmentIds: Map<TileMesh, Set<string>>,
     readyParentTileHandle: TileHandle | undefined,
-    uniforms: CommonUniforms,
     globe: Globe,
   ) {
+    const {
+      scenes,
+      meshes,
+      buf,
+      loadedTexs,
+      textureOptions,
+      tileMapByHandle,
+      uniforms,
+      textureFragmentIndex,
+      tileMeshToFragmentIds,
+    } = this.ctx;
     const position = buf.f32(mesh.vertices);
     const indices = buf.u32(mesh.indices);
     if (!position || !indices) return;
@@ -407,7 +438,6 @@ export class TileMesh
 
     const geometry = this.createSkirtMesh(
       mesh,
-      buf,
       terrainGeometry,
       position,
       uv,
@@ -449,7 +479,7 @@ export class TileMesh
       textureFragmentIndex,
       tileMeshToFragmentIds,
     );
-    this.setupTextures(loadedTexes, textureOptions, maxTextures, mat);
+    this.setupTextures(loadedTexs, textureOptions, maxTextures, mat);
 
     // Create shadow mesh if we have separate terrain geometry (i.e., skirt exists)
     // This prevents the skirt from casting unexpected shadows
@@ -485,12 +515,12 @@ export class TileMesh
   // Shadow casting is handled separately by shadowMesh (terrain-only, no skirt).
   createSkirtMesh(
     mesh: EventMesh,
-    buf: BufferLoader,
     terrainGeometry: BufferGeometry,
     position: Float32Array,
     uv: Float32Array | null,
     indices: Uint32Array,
   ) {
+    const { buf } = this.ctx;
     // Check for separate skirt data
     const skirtVerticesHandle = mesh.skirt_vertices;
     const skirtIndicesHandle = mesh.skirt_indices;
@@ -878,20 +908,20 @@ if (uPickable > 0.) {
         ).source;
     };
 
-    this._viewContext?.applyShadowMaterial(m);
+    this.ctx.viewContext?.applyShadowMaterial(m);
 
     return m;
   }
 
-  _update(
-    mesh: MeshChanged,
-    loadedTexes: Map<string, Texture>,
-    textureOptions: TextureOptions,
-    tileMapByHandle: TileMapByHandle,
-    textureFragmentIndex: Map<string, Set<TextureSlot>>,
-    tileMeshToFragmentIds: Map<TileMesh, Set<string>>,
-    globe: Globe,
-  ) {
+  _update(mesh: MeshChanged) {
+    const {
+      loadedTexs,
+      textureOptions,
+      tileMapByHandle,
+      textureFragmentIndex,
+      tileMeshToFragmentIds,
+    } = this.ctx;
+    const globe = mesh.globe;
     const changedMaterial = mesh.material;
     const tileMesh = mesh.mesh;
     const active = tileMesh.active;
@@ -917,7 +947,7 @@ if (uPickable > 0.) {
       );
       this.setUniforms(changedMaterial, maxTextures);
       this.setupTextures(
-        loadedTexes,
+        loadedTexs,
         textureOptions,
         maxTextures,
         changedMaterial,
@@ -964,42 +994,42 @@ if (uPickable > 0.) {
   }
 
   private _setupSceneObserver() {
-    if (this.texturizedScenes.userData.childrenObserver) {
+    if (this.texturizedScenes.childrenObserver) {
       this.texturizedScenes.removeEventListener(
         "childadded",
-        this.texturizedScenes.userData.childrenObserver,
+        this.texturizedScenes.childrenObserver,
       );
       this.texturizedScenes.removeEventListener(
         "childremoved",
-        this.texturizedScenes.userData.childrenObserver,
+        this.texturizedScenes.childrenObserver,
       );
-      this.texturizedScenes.userData.childrenObserver = undefined;
+      this.texturizedScenes.childrenObserver = undefined;
     }
 
     const parentObserver = () => {
-      for (const texturizedScene of this.texturizedScenes.children) {
-        if (texturizedScene.userData.childrenObserver) {
+      for (const texturizedScene of this.texturizedScenes.tileScenes) {
+        if (texturizedScene.childrenObserver) {
           texturizedScene.removeEventListener(
             "childadded",
-            texturizedScene.userData.childrenObserver,
+            texturizedScene.childrenObserver,
           );
           texturizedScene.removeEventListener(
             "childremoved",
-            texturizedScene.userData.childrenObserver,
+            texturizedScene.childrenObserver,
           );
-          texturizedScene.userData.childrenObserver = undefined;
+          texturizedScene.childrenObserver = undefined;
         }
 
         const observer = () => {
           if (texturizedScene.children.length === 0) {
             this.updateTexturizedSceneTextureVisibility(
               false,
-              texturizedScene.userData.layerId,
+              texturizedScene.layerId,
             );
           } else {
             this.updateTexturizedSceneTextureVisibility(
               true,
-              texturizedScene.userData.layerId,
+              texturizedScene.layerId,
             );
           }
           this.texturizedSceneByTileCoordinates.setNeedsUpdate(
@@ -1008,14 +1038,14 @@ if (uPickable > 0.) {
           );
         };
 
-        texturizedScene.userData.childrenObserver = observer;
+        texturizedScene.childrenObserver = observer;
 
         texturizedScene.addEventListener("childadded", observer);
         texturizedScene.addEventListener("childremoved", observer);
       }
     };
 
-    this.texturizedScenes.userData.childrenObserver = parentObserver;
+    this.texturizedScenes.childrenObserver = parentObserver;
 
     this.texturizedScenes.addEventListener("childadded", parentObserver);
     this.texturizedScenes.addEventListener("childremoved", parentObserver);
@@ -1031,8 +1061,8 @@ if (uPickable > 0.) {
     const textures = m.userData.textures?.value;
     if (!textures) return;
 
-    const sceneIdx = this.texturizedScenes.children.findIndex(
-      (c) => c.userData.layerId === layerId,
+    const sceneIdx = this.texturizedScenes.tileScenes.findIndex(
+      (c) => c.layerId === layerId,
     );
     if (sceneIdx === -1) return;
 
@@ -1041,7 +1071,7 @@ if (uPickable > 0.) {
     if (textures[lastIdx]) {
       m.userData.shows.value[lastIdx] = visible ? 1 : 0;
 
-      const mesh = this.texturizedScenes.children[sceneIdx].children[0];
+      const mesh = this.texturizedScenes.tileScenes[sceneIdx].children[0];
       if (mesh instanceof PolygonMesh) {
         // Use PolygonMesh getters that expose material enhancer state
         m.userData.reflectivities.value[lastIdx] = mesh.reflectivity;
@@ -1313,8 +1343,8 @@ if (uPickable > 0.) {
     textureFragments: TextureFragment[] | undefined,
     tileMapByHandle: TileMapByHandle,
     readyParentTileHandle: TileHandle | undefined,
-    textureFragmentIndex: Map<string, Set<TextureSlot>>,
-    tileMeshToFragmentIds: Map<TileMesh, Set<string>>,
+    textureFragmentIndex: Map<string, Set<TextureSlot>> | undefined,
+    tileMeshToFragmentIds: Map<TileMesh, Set<string>> | undefined,
   ) {
     const m = this.material;
 
@@ -1574,7 +1604,7 @@ if (uPickable > 0.) {
       textures[lastIndex] = texturizedSceneTexture;
 
       m.userData.shows.value[lastIndex] =
-        (this.texturizedScenes.children[i]?.children.length ?? 0 > 0) ? 1 : 0;
+        (this.texturizedScenes.tileScenes[i]?.children.length ?? 0 > 0) ? 1 : 0;
       m.userData.colors.value[lastIndex] = new Color(0xffffff);
       m.userData.opacities.value[lastIndex] = 1.0;
     }
@@ -1633,7 +1663,7 @@ if (uPickable > 0.) {
       );
     }
 
-    this._viewContext?.removeShadowMaterial(this.material);
+    this.ctx.viewContext?.removeShadowMaterial(this.material);
 
     // Note: geometry disposal (including shadowMesh.geometry) is handled by
     // disposeObject3D() in event/index.ts before removedFromWorld is dispatched.
@@ -1644,22 +1674,22 @@ if (uPickable > 0.) {
     }
 
     // Detach any observers we attached on texturized scenes
-    if (this.texturizedScenes?.userData?.childrenObserver) {
+    if (this.texturizedScenes?.childrenObserver) {
       this.texturizedScenes.removeEventListener(
         "childadded",
-        this.texturizedScenes.userData.childrenObserver,
+        this.texturizedScenes.childrenObserver,
       );
       this.texturizedScenes.removeEventListener(
         "childremoved",
-        this.texturizedScenes.userData.childrenObserver,
+        this.texturizedScenes.childrenObserver,
       );
-      this.texturizedScenes.userData.childrenObserver = undefined;
+      this.texturizedScenes.childrenObserver = undefined;
     }
-    for (const s of this.texturizedScenes?.children ?? []) {
-      if (s.userData?.childrenObserver) {
-        s.removeEventListener("childadded", s.userData.childrenObserver);
-        s.removeEventListener("childremoved", s.userData.childrenObserver);
-        s.userData.childrenObserver = undefined;
+    for (const s of this.texturizedScenes?.tileScenes ?? []) {
+      if (s.childrenObserver) {
+        s.removeEventListener("childadded", s.childrenObserver);
+        s.removeEventListener("childremoved", s.childrenObserver);
+        s.childrenObserver = undefined;
       }
     }
 

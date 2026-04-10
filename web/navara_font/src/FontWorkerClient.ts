@@ -1,11 +1,10 @@
 import type { ConcurrencyManager } from "@navara/worker";
 
-import type { ShapeTextResult, FontAtlasData } from "./FontManager";
-
-export type BatchPrepareTextResult = {
-  results: { text: string; shapeResult: ShapeTextResult | null }[];
-  atlas: FontAtlasData | null;
-};
+import type {
+  ShapeTextResult,
+  FontAtlasData,
+  BatchPrepareTextResult,
+} from "./types";
 
 /**
  * Main-thread client that communicates with the dedicated font Web Worker.
@@ -55,9 +54,15 @@ export class FontWorkerClient {
     return this._ready;
   }
 
-  /** Load a font file into the worker's FontCache. Transfers the ArrayBuffer. */
-  async loadFont(url: string, data: ArrayBuffer): Promise<{ ok: boolean }> {
-    return this._send("loadFont", { url, data }, [data]) as Promise<{
+  /** Load a font file into the worker's FontCache. Transfers the ArrayBuffer.
+   *  `atlasKey`: optional shared atlas identifier (e.g. font family name).
+   *  When provided, all fonts loaded with the same key share a single SDF atlas. */
+  async loadFont(
+    url: string,
+    data: ArrayBuffer,
+    atlasKey?: string,
+  ): Promise<{ ok: boolean }> {
+    return this._send("loadFont", { url, data, atlasKey }, [data]) as Promise<{
       ok: boolean;
     }>;
   }
@@ -81,6 +86,7 @@ export class FontWorkerClient {
     })) as {
       results: { text: string; shapeResult: ShapeTextResult | null }[];
       atlas: { data: ArrayBuffer; width: number; height: number } | null;
+      atlasKey: string;
     };
 
     let atlas: FontAtlasData | null = null;
@@ -92,7 +98,7 @@ export class FontWorkerClient {
       };
     }
 
-    return { results: raw.results, atlas };
+    return { results: raw.results, atlas, atlasKey: raw.atlasKey };
   }
 
   dispose(): void {

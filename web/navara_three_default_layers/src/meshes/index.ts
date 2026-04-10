@@ -84,6 +84,14 @@ export {
   type AxesHelperLayerConfig,
   type AxesHelperLayerUpdate,
 } from "./AxesHelperLayer";
+export {
+  InstancedBoxMeshLayer,
+  type InstancedBoxMeshLayerConfig,
+  type InstancedBoxMeshLayerUpdate,
+  type BoxChildConfig,
+  type SharedBoxMaterialConfig,
+  type BoxesDescription,
+} from "./InstancedBoxMeshLayer";
 
 // Mesh implementations
 export { SkyMesh, type SkyMeshOptions } from "./skyMesh";

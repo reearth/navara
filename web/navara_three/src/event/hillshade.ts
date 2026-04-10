@@ -8,7 +8,7 @@ import {
   Texture,
   UnsignedByteType,
 } from "three";
-
+import { EventContext } from "./context";
 import type { TileMesh } from "../mesh/tile";
 import type { TextureOptions } from "../textures";
 import type { BufferLoader, TileHandler } from "./index";
@@ -18,15 +18,30 @@ import {
 } from "../utils/textureFragmentIndex";
 
 export function processHillshadeBackfilled(
+  ctx: EventContext,
   event: HillshadeBackfilledEvent | undefined,
-  buf: BufferLoader,
-  loadedTexs: Map<string, Texture>,
-  textureFragmentIndex: Map<string, Set<TextureSlot>>,
-  textureOptions: TextureOptions,
-  tileHandler: TileHandler,
-  pendingEdgeUpdates: Map<string, Map<number, Uint8Array>>,
 ) {
   if (!event) return;
+
+  const {
+    loadedTexs,
+    buf,
+    textureFragmentIndex,
+    textureOptions,
+    tileHandler,
+    pendingHillshadeEdges,
+  } = ctx;
+
+  if (
+    !loadedTexs ||
+    !buf ||
+    !tileHandler ||
+    !pendingHillshadeEdges ||
+    !textureOptions ||
+    !textureFragmentIndex
+  ) {
+    return;
+  }
 
   // Use target_entity if provided (edge updates), otherwise use event entity (initialization)
   // Note: u32::MAX (0xFFFFFFFF = 4294967295) is used as sentinel for None
@@ -110,7 +125,7 @@ export function processHillshadeBackfilled(
     loadedTexs.set(entityId, texture);
 
     // Apply any pending edge updates that arrived before texture creation
-    const pending = pendingEdgeUpdates.get(entityId);
+    const pending = pendingHillshadeEdges.get(entityId);
     if (pending && pending.size > 0) {
       const textureData = dataTexture.image.data as Uint8Array;
       const texSize = dataTexture.image.width;
@@ -127,7 +142,7 @@ export function processHillshadeBackfilled(
       }
 
       // Clear pending updates for this entity
-      pendingEdgeUpdates.delete(entityId);
+      pendingHillshadeEdges.delete(entityId);
     }
 
     // Deduplicate tileMeshes: same mesh may appear in multiple slots
@@ -161,10 +176,10 @@ export function processHillshadeBackfilled(
     if (!texture || !(texture instanceof DataTexture)) {
       // Texture doesn't exist yet - queue this edge update for later application
       // Store at most one update per direction (newer replaces older)
-      let pending = pendingEdgeUpdates.get(entityId);
+      let pending = pendingHillshadeEdges.get(entityId);
       if (!pending) {
         pending = new Map<number, Uint8Array>();
-        pendingEdgeUpdates.set(entityId, pending);
+        pendingHillshadeEdges.set(entityId, pending);
       }
       // Copy and store edge data, replacing any previous update for this direction
       pending.set(event.edge_direction, new Uint8Array(edgeBytes));

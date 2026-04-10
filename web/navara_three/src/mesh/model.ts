@@ -22,7 +22,6 @@ import {
 } from "three";
 import invariant from "tiny-invariant";
 
-import type { ViewContext } from "../core";
 import {
   getSelectiveEffectConfig,
   SelectiveEffectOcclusionMode,
@@ -35,7 +34,7 @@ import {
   applyMaskPassRenderState,
   restoreMaterialState as restoreMaterialStateBase,
 } from "../core/SelectiveEffectMaskContext";
-import type { BufferLoader } from "../event";
+import type { EventContext } from "../event/context";
 import {
   createModelMaterialEnhancer,
   createPntsEnhancer,
@@ -43,7 +42,6 @@ import {
 import type { ModelMaterialProps, PntsProps } from "../material/enhancer/model";
 import type { UniformValue } from "../material/types";
 import type { CustomObject3DEventMap } from "../object3DEvent";
-import type { CommonUniforms } from "../uniforms";
 import { arraysEqual } from "../utils";
 
 import {
@@ -73,10 +71,9 @@ export class ModelMesh
   extends Object3D<CustomObject3DEventMap>
   implements FeatureMesh, PickableMesh
 {
-  private viewContext: ViewContext;
+  readonly ctx: EventContext;
   /** Layer ID for SelectiveEffect handling */
   private _layerId: string;
-  private _uniforms: CommonUniforms;
 
   /** Enhanced materials with encapsulated state, one per child mesh */
   private _enhancers = new Map<
@@ -97,24 +94,21 @@ export class ModelMesh
   private prevEffectIds: string[] = [];
 
   constructor(
+    ctx: EventContext,
     gltfInfo: {
       scene: Group;
       credit?: string;
     },
     m: NavaraModelMesh,
-    uniforms: CommonUniforms,
-    buf: BufferLoader,
-    viewContext: ViewContext,
     layerId: string,
   ) {
     super();
-    this.viewContext = viewContext;
+    this.ctx = ctx;
     this._layerId = layerId;
-    this._uniforms = uniforms;
     this.credit = gltfInfo.credit;
     this.batchLength = m.batch_length;
     this.add(gltfInfo.scene);
-    this.init(m, buf);
+    this.init(m);
     this.addEventListener("removedFromWorld", () => {
       this.dispose();
     });
@@ -134,7 +128,8 @@ export class ModelMesh
     }
   }
 
-  private init(m: NavaraModelMesh, buf: BufferLoader) {
+  private init(m: NavaraModelMesh) {
+    const { buf } = this.ctx;
     const batchIdsData = m.geometry.batch_ids;
     const dataSize = batchIdsData?.size ?? 0;
     const batchIds = batchIdsData
@@ -226,7 +221,7 @@ export class ModelMesh
     batchIds: Uint32Array<ArrayBufferLike>,
     dataSize: number,
   ) {
-    const uniforms = this._uniforms;
+    const uniforms = this.ctx.uniforms;
 
     // Build initial props using buildUpdateProps plus initial-only external refs
     const updateProps = this.buildUpdateProps(meshMaterial);
@@ -291,7 +286,7 @@ export class ModelMesh
       // Setup onBeforeRender for SelectiveEffect state handling
       this.setupMeshOnBeforeRender(mesh, enhancer);
 
-      this.viewContext.applyShadowMaterial(mesh.material);
+      this.ctx.viewContext.applyShadowMaterial(mesh.material);
     });
   }
 
@@ -312,10 +307,10 @@ export class ModelMesh
   ): void {
     mesh.onBeforeRender = () => {
       // Get MaskPassContext for current rendering state
-      const ctx = getMaskPassContext();
+      const maskCtx = getMaskPassContext();
 
       // Only process during BaseMRT phase (mask pass rendering)
-      if (ctx.phase !== MaskPassPhase.BaseMRT) {
+      if (maskCtx.phase !== MaskPassPhase.BaseMRT) {
         // Not in mask pass - restore normal material state
         restoreMaterialStateBase(mesh.material);
         return;
@@ -324,11 +319,18 @@ export class ModelMesh
       // Get SelectiveEffectConfig from mesh (link() sets config on child meshes, not parent)
       const config = getSelectiveEffectConfig(mesh);
       const registry =
-        ctx.registry ?? this.viewContext?.selectiveEffectRegistry;
+        maskCtx.registry ?? this.ctx.viewContext?.selectiveEffectRegistry;
       const layerId = this._layerId;
 
       // Context-based self-determination during BaseMRT
-      this.applyMaskPassState(mesh, enhancer, config, registry, layerId, ctx);
+      this.applyMaskPassState(
+        mesh,
+        enhancer,
+        config,
+        registry,
+        layerId,
+        maskCtx,
+      );
     };
   }
 
@@ -345,7 +347,7 @@ export class ModelMesh
     config: ReturnType<typeof getSelectiveEffectConfig>,
     registry: ReturnType<typeof getMaskPassContext>["registry"],
     layerId: string | undefined,
-    ctx: ReturnType<typeof getMaskPassContext>,
+    maskCtx: ReturnType<typeof getMaskPassContext>,
   ): void {
     const material = mesh.material;
 
@@ -354,7 +356,7 @@ export class ModelMesh
       config,
       registry,
       layerId,
-      ctx,
+      maskCtx,
     );
 
     if (!evaluation.shouldRender) {
@@ -465,7 +467,7 @@ export class ModelMesh
 
     // SelectiveEffect: effectIds handling at ModelMesh level
     if (!arraysEqual(this.prevEffectIds, material.effectIds)) {
-      this.viewContext.selectiveEffectRegistry?.updateLinksForObject(
+      this.ctx.viewContext.selectiveEffectRegistry?.updateLinksForObject(
         this,
         material.effectIds ?? [],
         this.prevEffectIds,
@@ -547,7 +549,7 @@ export class ModelMesh
 
   dispose() {
     this.traverseMesh((m) => {
-      this.viewContext.removeShadowMaterial(m.material);
+      this.ctx.viewContext.removeShadowMaterial(m.material);
     });
   }
 }

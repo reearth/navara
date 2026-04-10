@@ -6,6 +6,7 @@
       "@navara/three_default_layers": ["./src"],
       "@navara/three": ["../navara_three/src"],
       "@navara/three_api": ["../navara_three_api/src"],
+      "@navara/three_csm": ["../navara_three_csm/src"],
       "@navara/core": ["../navara_core/src"],
       "@navara/worker": ["../navara_worker/src"],
       "@navara/engine": ["../../node_modules/navara_wasm"],

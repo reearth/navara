@@ -153,7 +153,7 @@ export abstract class SelectiveEffectLayer<
     if (!this.resources.maskDebug) return;
 
     this.resources.maskDebug.render(
-      this.view.renderPassOrchestrator.effectComposer.getRenderer(),
+      this.view.getRenderer(),
       this.resources.maskRT,
     );
   }
@@ -182,8 +182,7 @@ export abstract class SelectiveEffectLayer<
     if (!this.view.selectiveEffectRegistry) return;
 
     this.resources.options.resolutionScale = resolutionScale;
-    const renderer =
-      this.view.renderPassOrchestrator.effectComposer.getRenderer();
+    const renderer = this.view.getRenderer();
     const size = renderer.getSize(new Vector2());
     this.view.selectiveEffectRegistry.setSize(size.x, size.y);
   }

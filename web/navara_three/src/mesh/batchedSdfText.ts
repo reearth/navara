@@ -6,8 +6,7 @@ import type { FontManager } from "@navara/font";
 import { type Color } from "three";
 import invariant from "tiny-invariant";
 
-import { type BufferLoader } from "../event";
-import type { CommonUniforms } from "../uniforms";
+import type { EventContext } from "../event/context";
 
 import { InstancedMesh, type InstancedMeshOptions } from "./instanced";
 import type { PickableMesh } from "./pickableMesh";
@@ -39,34 +38,40 @@ export class BatchedSdfTextMesh
   extends InstancedMesh<SDFTextMesh>
   implements PickableMesh
 {
-  private _fontUrl: string;
+  readonly ctx: EventContext;
+  /** The font identifier from material — may be a family name or a URL. */
+  private _fontIdentifier: string;
   private _fontManager: FontManager;
   private _needRender?: () => void;
+  /**
+   * Face URLs loaded by this mesh for font-family fonts.
+   * Each URL in this set has had loadFont() called exactly once by this mesh
+   * and must be balanced with unloadFont() on dispose or font change.
+   */
+  private _loadedFaceUrls: Set<string>;
 
   constructor(
+    ctx: EventContext,
     m: NavaraTextMesh,
-    buf: BufferLoader,
-    fontManager: FontManager,
-    fontUrl: string,
-    _uniforms: CommonUniforms,
+    fontIdentifier: string,
     options: InstancedMeshOptions,
+    loadedFaceUrls?: Set<string>,
   ) {
     super(options);
-    this._fontUrl = fontUrl;
-    this._fontManager = fontManager;
-    this.initMeshes(m, buf, fontManager);
+    this.ctx = ctx;
+    this._fontIdentifier = fontIdentifier;
+    invariant(ctx.fontManager);
+    this._fontManager = ctx.fontManager;
+    this._loadedFaceUrls = loadedFaceUrls ?? new Set();
+    this.initMeshes(m);
   }
 
-  get fontUrl(): string {
-    return this._fontUrl;
+  get fontIdentifier(): string {
+    return this._fontIdentifier;
   }
 
-  private initMeshes(
-    m: NavaraTextMesh,
-    buf: BufferLoader,
-    fontManager: FontManager,
-  ) {
-    const positionInfo = this.extractPositions(m, buf);
+  private initMeshes(m: NavaraTextMesh) {
+    const positionInfo = this.extractPositions(m);
     if (!positionInfo) {
       return;
     }
@@ -78,7 +83,7 @@ export class BatchedSdfTextMesh
     const transform = m.transform;
 
     // Get the font-level shared atlas texture (one DataTexture per font, shared across all groups)
-    const sharedTex = fontManager.getAtlasTexture(this._fontUrl);
+    const sharedTex = this._fontManager.getAtlasTexture(this._fontIdentifier);
 
     for (let i = 0; i < nPositions; i++) {
       const batchIdIdx = i * batchIDSize;
@@ -95,8 +100,8 @@ export class BatchedSdfTextMesh
         pos,
         material,
         transform,
-        fontManager,
-        this._fontUrl,
+        this._fontManager,
+        this._fontIdentifier,
         batchId,
         RTE,
       );
@@ -112,13 +117,13 @@ export class BatchedSdfTextMesh
     }
   }
 
-  async _update(m: NavaraTextMesh, buf: BufferLoader, needRender?: () => void) {
+  async _update(m: NavaraTextMesh, needRender?: () => void) {
     if (needRender) this._needRender = needRender;
 
     const material = m.material;
     const text = material.text ?? "";
 
-    const positionInfo = this.extractPositions(m, buf);
+    const positionInfo = this.extractPositions(m);
     if (positionInfo) {
       const { position, nPositions, positionSize, RTE } = positionInfo;
 
@@ -140,22 +145,36 @@ export class BatchedSdfTextMesh
       }
     }
 
-    const fontUrl = m.material.font ?? this._fontUrl;
-    const needFontUpdate = fontUrl !== this._fontUrl;
+    const fontIdentifier = m.material.font ?? this._fontIdentifier;
+    const needFontUpdate = fontIdentifier !== this._fontIdentifier;
 
     if (needFontUpdate) {
-      await this._fontManager.loadFont(fontUrl);
-      await this._fontManager.unloadFont(this._fontUrl);
+      // Unload old font resources.
+      if (this._loadedFaceUrls.size > 0) {
+        await Promise.all(
+          [...this._loadedFaceUrls].map((url) =>
+            this._fontManager.unloadFont(url),
+          ),
+        );
+        this._loadedFaceUrls.clear();
+      } else if (!this._fontManager.isFamily(this._fontIdentifier)) {
+        await this._fontManager.unloadFont(this._fontIdentifier);
+      }
+      // For standalone new fonts load upfront; family faces are loaded lazily
+      // by prepareText below.
+      if (!this._fontManager.isFamily(fontIdentifier)) {
+        await this._fontManager.loadFont(fontIdentifier);
+      }
     }
-    this._fontUrl = fontUrl;
+    this._fontIdentifier = fontIdentifier;
 
     // If the text hasn't been prepared in the worker yet, schedule async preparation
     if (
       (needFontUpdate || text) &&
-      !this._fontManager.isTextPrepared(this._fontUrl, text)
+      !this._fontManager.isTextPrepared(this._fontIdentifier, text)
     ) {
       this._fontManager
-        .prepareText(this._fontUrl, text)
+        .prepareText(this._fontIdentifier, text, this._loadedFaceUrls)
         .then(() => {
           this._applyUpdate(material, needRender, needFontUpdate);
         })
@@ -175,7 +194,7 @@ export class BatchedSdfTextMesh
     forceUpdate = false,
   ) {
     // Update shared texture (in-place update if atlas grew)
-    const sharedTex = this._fontManager.getAtlasTexture(this._fontUrl);
+    const sharedTex = this._fontManager.getAtlasTexture(this._fontIdentifier);
 
     for (const mesh of this.meshes()) {
       if (sharedTex) mesh.setAtlasTexture(sharedTex);
@@ -192,10 +211,8 @@ export class BatchedSdfTextMesh
     }
   }
 
-  private extractPositions(
-    m: NavaraTextMesh,
-    buf: BufferLoader,
-  ): PositionsInfo | null {
+  private extractPositions(m: NavaraTextMesh): PositionsInfo | null {
+    const { buf } = this.ctx;
     const g = m.geometry;
 
     const batchIdsData = g.batch_ids;
@@ -257,18 +274,30 @@ export class BatchedSdfTextMesh
     const mesh = this.meshes()[batchIndex];
 
     if (mesh) {
-      mesh.setFont(this._fontUrl);
       // If the text hasn't been prepared in the worker yet, schedule async preparation
-      if (text && !this._fontManager.isTextPrepared(this._fontUrl, text)) {
+      if (
+        text &&
+        !this._fontManager.isTextPrepared(this._fontIdentifier, text)
+      ) {
+        // Capture the intended visibility before the async font prep begins.
+        // A concurrent processTextChanged → mesh.update(material) call may
+        // reset mesh.visible to false (because this._text is still empty)
+        // while the font is loading.
+        const intendedVisible = mesh.visible;
+
         this._fontManager
-          .prepareText(this._fontUrl, text)
+          .prepareText(this._fontIdentifier, text, this._loadedFaceUrls)
           .then(() => {
             // Refresh the shared atlas texture if the worker rasterized new glyphs
-            const sharedTex = this._fontManager.getAtlasTexture(this._fontUrl);
+            const sharedTex = this._fontManager.getAtlasTexture(
+              this._fontIdentifier,
+            );
             if (sharedTex) {
               mesh.setAtlasTexture(sharedTex);
             }
             mesh.setText(text);
+            // Restore intended visibility now that text content is available
+            mesh.visible = intendedVisible;
             this.markVisibility(mesh);
             this._needRender?.();
           })
@@ -307,7 +336,15 @@ export class BatchedSdfTextMesh
   }
 
   dispose() {
-    void this._fontManager.unloadFont(this._fontUrl).catch((err: unknown) => {
+    const unload =
+      this._loadedFaceUrls.size > 0
+        ? Promise.all(
+            [...this._loadedFaceUrls].map((url) =>
+              this._fontManager.unloadFont(url),
+            ),
+          )
+        : this._fontManager.unloadFont(this._fontIdentifier);
+    void unload.catch((err: unknown) => {
       console.error("Failed to unload font during dispose:", err);
     });
   }

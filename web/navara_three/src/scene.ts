@@ -21,7 +21,28 @@ export type Scenes = {
   skyEnvMap: Scene;
 };
 
-export class SceneGroup extends Group {}
+export class TileScene extends Scene {
+  layerId: string;
+  layerIndex: number;
+  removed = false;
+  revision = 0;
+  childrenObserver?: () => void;
+
+  constructor(layerId: string, layerIndex: number) {
+    super();
+    this.layerId = layerId;
+    this.layerIndex = layerIndex;
+  }
+}
+
+export class SceneGroup extends Group {
+  needsUpdate = false;
+  childrenObserver?: () => void;
+
+  get tileScenes(): TileScene[] {
+    return this.children as TileScene[];
+  }
+}
 
 export class TexturizedSceneByTileCoordinates {
   map = new Map<TileHandle, SceneGroup>();
@@ -43,6 +64,13 @@ export class TexturizedSceneByTileCoordinates {
     return scene;
   }
 
+  private findTileScene(
+    handle: TileHandle,
+    layerId: string,
+  ): TileScene | undefined {
+    return this.map.get(handle)?.tileScenes.find((o) => o.layerId === layerId);
+  }
+
   add(
     handle: TileHandle,
     layerId: string,
@@ -51,37 +79,39 @@ export class TexturizedSceneByTileCoordinates {
     fromParent = false,
   ) {
     const scenes = this.get(handle);
-    let scene = scenes.children.find((o) => o.userData.layerId === layerId);
+    let scene = this.findTileScene(handle, layerId);
     if (!scene) {
-      scene = new Scene();
-      scene.userData.layerId = layerId;
-      scene.userData.layerIndex = layerIndex;
+      scene = new TileScene(layerId, layerIndex);
       scenes.add(scene);
-      scenes.children.sort(
-        (a, b) => a.userData.layerIndex - b.userData.layerIndex,
-      );
+      scenes.tileScenes.sort((a, b) => a.layerIndex - b.layerIndex);
     }
     if (scene.children.length && fromParent) {
-      const idx = scene.children.findIndex((o) => o.userData.fromParent);
-      if (idx >= 0) {
-        scene.children.splice(idx, 1);
+      const existing = scene.children.find((o) => o.userData.fromParent);
+      if (existing) {
+        scene.remove(existing);
       }
     }
 
-    scene.userData.removed = false;
+    scene.removed = false;
 
     scene.add(mesh);
+    scene.revision++;
 
     return scene;
   }
 
-  addFromParentScene(handle: TileHandle, layerId: string, parentScene: Scene) {
-    const layerIndex = parentScene.userData.layerIndex as number;
+  addFromParentScene(
+    handle: TileHandle,
+    layerId: string,
+    parentScene: TileScene,
+  ) {
+    const layerIndex = parentScene.layerIndex;
     for (const child of parentScene.children) {
       if (child.userData.fromParent) continue;
 
       const m = child as BatchedFeatureMesh;
       const nm = m.clone();
+
       // Mark this mesh as inherited from the parent.
       nm.userData.fromParent = true;
       this.add(handle, layerId, nm, layerIndex, true);
@@ -93,11 +123,7 @@ export class TexturizedSceneByTileCoordinates {
     layerId: string,
     enabledParent: boolean,
   ) {
-    const scene = this.map
-      .get(handle)
-      ?.children.find((m) => m.userData.layerId === layerId) as
-      | Scene
-      | undefined;
+    const scene = this.findTileScene(handle, layerId);
     if (!scene) return;
     for (const child of scene.children) {
       if (!child.userData.fromParent) {
@@ -111,37 +137,24 @@ export class TexturizedSceneByTileCoordinates {
     }
   }
 
-  // Find a mesh that isn's marked as inherited from the parent.
+  // Find a mesh that isn't marked as inherited from the parent.
   hasCurrentMesh(handle: TileHandle, layerId: string) {
-    const scene = this.map
-      .get(handle)
-      ?.children.find((m) => m.userData.layerId === layerId) as
-      | Scene
-      | undefined;
+    const scene = this.findTileScene(handle, layerId);
     if (!scene) return;
     return scene.children.find((o) => !o.userData.fromParent);
   }
 
   findSceneByLayerId(handle: TileHandle, layerId: string) {
-    const scene = this.map
-      .get(handle)
-      ?.children.find((m) => m.userData.layerId === layerId) as
-      | Scene
-      | undefined;
-
-    if (!scene) return;
-
-    return scene;
+    return this.findTileScene(handle, layerId);
   }
 
   remove(handle: TileHandle, layerId: string) {
-    const scene = this.map
-      .get(handle)
-      ?.children.find((c) => c.userData.layerId === layerId);
+    const scene = this.findTileScene(handle, layerId);
     if (!scene) return;
-    scene.userData.removed = true;
+    scene.removed = true;
 
     scene.clear();
+    scene.revision++;
 
     this.setNeedsUpdate(handle, true);
   }
@@ -158,12 +171,12 @@ export class TexturizedSceneByTileCoordinates {
   getNeedsUpdate(handle: TileHandle) {
     const scene = this.map.get(handle);
     if (!scene) return false;
-    return !!scene.userData.needsUpdate;
+    return scene.needsUpdate;
   }
 
   setNeedsUpdate(handle: TileHandle, v: boolean) {
     const scene = this.map.get(handle);
     if (!scene) return;
-    scene.userData.needsUpdate = v;
+    scene.needsUpdate = v;
   }
 }

@@ -19,8 +19,7 @@ import {
 } from "three";
 import invariant from "tiny-invariant";
 
-import type { ViewContext } from "../core";
-import type { BufferLoader } from "../event";
+import type { EventContext } from "../event/context";
 import { TEXTURE_LOADER } from "../event/loaders";
 import { createInstancedSpriteMaterialEnhancer } from "../material/enhancer";
 import { getImageDataFromImageBitmap } from "../tasks/getImageDataFromImageBitmap";
@@ -30,7 +29,7 @@ import { PickableMesh } from "./pickableMesh";
 
 export type InstancedSpriteOptions = {
   renderOrder?: number;
-  viewContext: ViewContext;
+  ctx: EventContext;
   layerId: string;
 };
 
@@ -58,8 +57,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
   private _initialHeight = 0.0;
   private _loadedUrls = new Set<string>();
   private _active = true;
-  /** ViewContext for SelectiveEffect handling */
-  private _viewContext: ViewContext;
+  readonly ctx: EventContext;
   /** Layer ID for SelectiveEffect handling */
   private _layerId: string;
   /** Material enhancer for encapsulated state management */
@@ -72,7 +70,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
   constructor(options: InstancedSpriteOptions) {
     super();
     this.renderOrder = options.renderOrder ?? this.renderOrder;
-    this._viewContext = options.viewContext;
+    this.ctx = options.ctx;
     this._layerId = options.layerId;
   }
 
@@ -81,8 +79,8 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     this.updateVisibility();
   }
 
-  async _init(m: NavaraPointMesh | NavaraBillboardMesh, buf: BufferLoader) {
-    const positionsInfo = this.extractPositions(m, buf);
+  async _init(m: NavaraPointMesh | NavaraBillboardMesh) {
+    const positionsInfo = this.extractPositions(m);
     if (positionsInfo === null) {
       console.warn("No position data found for InstancedSpriteMesh");
       return;
@@ -97,7 +95,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     this.frustumCulled = false; // Disable since bounding box doesn't account for instance positions
   }
 
-  async _update(m: NavaraPointMesh | NavaraBillboardMesh, buf: BufferLoader) {
+  async _update(m: NavaraPointMesh | NavaraBillboardMesh) {
     const enhancer = this.getEnhancer();
     const material = this.material as ShaderMaterial;
 
@@ -151,7 +149,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
 
     // Position updates (per-instance attributes)
     {
-      const positionsInfo = this.extractPositions(m, buf);
+      const positionsInfo = this.extractPositions(m);
 
       if (positionsInfo) {
         if (positionsInfo.RTE) {
@@ -203,7 +201,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
 
     // SelectiveEffect: effectIds handling (needs prev state for registry)
     if (!arraysEqual(this._prevEffectIds, m.material.effectIds)) {
-      this._viewContext.selectiveEffectRegistry?.updateLinksForObject(
+      this.ctx.viewContext.selectiveEffectRegistry?.updateLinksForObject(
         this,
         m.material.effectIds ?? [],
         this._prevEffectIds ?? [],
@@ -411,8 +409,8 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
 
   private extractPositions(
     m: NavaraPointMesh | NavaraBillboardMesh,
-    buf: BufferLoader,
   ): PositionsInfo | null {
+    const { buf } = this.ctx;
     const g = m.geometry;
 
     const batchIdsData = g.batch_ids;
@@ -625,8 +623,8 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     shaderMaterial.dispose();
 
     // Clean up SelectiveEffect registry links
-    if (this._viewContext?.selectiveEffectRegistry && this._prevEffectIds) {
-      this._viewContext.selectiveEffectRegistry.updateLinksForObject(
+    if (this.ctx.viewContext?.selectiveEffectRegistry && this._prevEffectIds) {
+      this.ctx.viewContext.selectiveEffectRegistry.updateLinksForObject(
         this,
         [], // New effectIds: empty array (removing all links)
         this._prevEffectIds, // Previous effectIds

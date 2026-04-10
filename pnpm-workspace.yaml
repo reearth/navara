@@ -1,7 +1,9 @@
 packages:
   - web/**
   - debug_tile_server
+  - docs
 
 onlyBuiltDependencies:
   - canvas
   - esbuild
+  - sharp

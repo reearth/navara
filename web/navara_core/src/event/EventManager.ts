@@ -4,7 +4,11 @@ import { generate_id_from_entity, isEntityEvent } from "../id";
 
 import { TransactionManager } from "./TransactionManager";
 
-export type JsEvents = Omit<Events, "free" | SymbolConstructor["dispose"]>;
+export type JsEvents = {
+  [K in keyof Events as K extends "free" | symbol | number
+    ? never
+    : K]: Events[K];
+};
 export type JsEventsKey = keyof JsEvents;
 
 type EventsStacks = {
@@ -44,6 +48,12 @@ type TransactionCallbackParams<
   | { type: "add"; event: GetJsEventValue<AddKey> }
   | { type: "remove"; event: GetJsEventValue<RemoveKey> }
   | { type: "change"; event: GetJsEventValue<ChangeKey> };
+
+const maybeFree = (ev: object | undefined) => {
+  if (ev && "free" in ev && ev.free instanceof Function) {
+    ev.free();
+  }
+};
 
 const defaultGenerateEventId = <
   AddKey extends JsEventsKey,
@@ -93,13 +103,9 @@ export class EventManager {
       const event = events?.[k];
       if (!event) continue;
       if (Array.isArray(event)) {
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-expect-error
-        this.stacks[k].push(...event);
+        (this.stacks[k] as unknown[]).push(...event);
       } else {
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-expect-error
-        this.stacks[k].push(event);
+        (this.stacks[k] as unknown[]).push(event);
       }
     }
   }
@@ -107,7 +113,7 @@ export class EventManager {
   forEachStack<Key extends JsEventsKey>(
     key: Key,
     cb: (value: GetJsEventValue<Key>) => void,
-    max = 10,
+    max = 100,
   ) {
     let idx = 0;
     for (const value of this.stacks[key]) {
@@ -117,9 +123,7 @@ export class EventManager {
 
       cb(value as GetJsEventValue<Key>);
 
-      if (value?.free && value.free instanceof Function) {
-        value.free();
-      }
+      maybeFree(value);
 
       idx++;
     }
@@ -131,7 +135,7 @@ export class EventManager {
   async forEachStackAsync<Key extends JsEventsKey>(
     key: Key,
     cb: (value: GetJsEventValue<Key>) => Promise<void>,
-    max = 20,
+    max = 100,
     shouldProcess?: (value: GetJsEventValue<Key>) => boolean,
   ) {
     const promises = [];
@@ -171,9 +175,7 @@ export class EventManager {
     await Promise.all(promises);
 
     for (const e of removedEvs) {
-      if (e?.free && e.free instanceof Function) {
-        e.free();
-      }
+      maybeFree(e);
     }
   }
 
@@ -249,7 +251,7 @@ export class EventManager {
   removeStacksByIndices(key: JsEventsKey, removedIndices: Set<number>) {
     const sortedIndices = [...removedIndices].sort((a, b) => b - a);
     for (const idx of sortedIndices) {
-      this.stacks[key][idx]?.free();
+      maybeFree(this.stacks[key][idx]);
       this.stacks[key].splice(idx, 1);
     }
   }
