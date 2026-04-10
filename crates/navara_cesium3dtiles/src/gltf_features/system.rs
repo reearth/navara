@@ -31,7 +31,6 @@ use navara_feature_component::{
     batch::{BatchProperty, BatchTable, BatchTableValue, FeatureBatchId, GlobalBatchIds},
     id::FeatureId,
     model::{ModelBin, ModelGeometry},
-    render::RenderableFeature,
 };
 use navara_layer::{Cesium3dTilesLayer, LayerId};
 use navara_material::{Appearance, ModelMaterial};
@@ -200,29 +199,9 @@ pub fn remove_invisible_rendered_tiles(
             With<Transform>,
         ),
     >,
-    mut renderable_features: Query<&mut RenderableFeature>,
 ) {
     for (entity, tile, _) in &rendered_tiles {
-        if tile.touched
-            && let Some(id) = tile.feature_id
-        {
-            let mut renderable_feature = match features
-                .get(id)
-                .ok()
-                .and_then(|renderable_feature_id| renderable_feature_id.0)
-                .and_then(|renderable_feature_id| {
-                    renderable_features.get_mut(renderable_feature_id).ok()
-                }) {
-                Some(renderable_feature) => renderable_feature,
-                None => continue,
-            };
-            if let RenderableFeature::Model { active, .. } = renderable_feature.as_mut() {
-                *active = tile.is_visible;
-            }
-            continue;
-        }
-
-        if tile.is_visible || tile.touched {
+        if tile.is_visible {
             continue;
         }
 
