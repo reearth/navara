@@ -59,29 +59,9 @@ function floatRgbToRgba(
   return result;
 }
 
-/** Convert float A channel to grayscale Uint8Array */
-function floatAlphaToRgba(
-  floatPixels: Float32Array,
-  pixelCount: number,
-): Uint8Array {
-  const result = new Uint8Array(pixelCount * 4);
-  for (let p = 0; p < pixelCount; p++) {
-    const a = Math.min(
-      255,
-      Math.max(0, Math.round(floatPixels[p * 4 + 3] * 255)),
-    );
-    const di = p * 4;
-    result[di] = a;
-    result[di + 1] = a;
-    result[di + 2] = a;
-    result[di + 3] = 255;
-  }
-  return result;
-}
-
 /**
- * Set up SE buffer debug views using BufferView.
- * Reads HalfFloat MRT attachments and visualizes EffectIds (bitmask) + Emissive (RGB/A).
+ * Set up SelectiveEffect buffer debug views using BufferView.
+ * Reads HalfFloat MRT attachments and visualizes EffectIds (bitmask) + Emissive (RGB).
  */
 export function setupDebugViews(
   renderer: WebGLRenderer,
@@ -90,7 +70,6 @@ export function setupDebugViews(
   views: {
     effectIds: BufferView;
     emissiveRgb: BufferView;
-    emissiveA: BufferView;
   };
   renderDebugViews: () => void;
   setEnabled: (enabled: boolean) => void;
@@ -103,14 +82,9 @@ export function setupDebugViews(
     styleWidth: "150px",
     styleHeight: "100px",
   });
-  const emissiveAlphaView = new BufferView(150, 100, {
-    styleWidth: "150px",
-    styleHeight: "100px",
-  });
 
   effectIdsView.canvas.style.left = "0px";
   emissiveRgbView.canvas.style.left = "155px";
-  emissiveAlphaView.canvas.style.left = "310px";
 
   let enabled = true;
 
@@ -156,11 +130,6 @@ export function setupDebugViews(
         w,
         h,
       );
-      emissiveAlphaView.renderFromPixels(
-        floatAlphaToRgba(emissiveFloat, w * h),
-        w,
-        h,
-      );
     }
   }
 
@@ -168,14 +137,12 @@ export function setupDebugViews(
     enabled = v;
     effectIdsView.canvas.style.display = v ? "block" : "none";
     emissiveRgbView.canvas.style.display = v ? "block" : "none";
-    emissiveAlphaView.canvas.style.display = v ? "block" : "none";
   }
 
   return {
     views: {
       effectIds: effectIdsView,
       emissiveRgb: emissiveRgbView,
-      emissiveA: emissiveAlphaView,
     },
     renderDebugViews,
     setEnabled,
