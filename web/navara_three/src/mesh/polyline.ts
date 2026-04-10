@@ -400,6 +400,12 @@ export class PolylineMesh extends BatchedFeatureMesh<
         maxWidth: material.maxWidth,
         clampToGround: !!material.clampToGround,
         useGroundNormals: !!material.useGroundNormals,
+        effectIdsMask:
+          this._viewContext.selectiveEffectRegistry?.computeMask(
+            material.effectIds ?? [],
+          ) ?? 0,
+        emissiveColor: material.emissiveColor ?? 0,
+        emissiveIntensity: material.emissiveIntensity ?? 0,
       },
     });
 

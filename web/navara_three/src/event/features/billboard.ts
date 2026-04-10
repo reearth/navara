@@ -8,12 +8,13 @@ import { FEATURE_RENDER_ORDER } from "../../renderOrder";
 export async function renderBillboard(
   m: NavaraBillboardMesh,
   buf: BufferLoader,
-  _viewContext: ViewContext,
+  viewContext: ViewContext,
 ) {
   if (!m.material.url) return;
 
   const mesh = new InstancedSpriteMesh({
     renderOrder: FEATURE_RENDER_ORDER,
+    viewContext,
   });
   await mesh._init(m, buf);
   mesh.setActive(m.active);

@@ -11,6 +11,12 @@
     layout(location = 2) out vec4 effectIdBuffer;
     layout(location = 3) out vec4 emissiveBuffer;
 
+    #ifdef USE_SELECTIVE_EFFECT
+        uniform float uEffectIdsMask;
+        uniform vec3 uEmissiveColor;
+        uniform float uEmissiveIntensity;
+    #endif
+
     // Pack normal to vec2 for MRT
     vec2 packNormalToVec2(vec3 normal) {
         return normal.xy * 0.5 + 0.5;
@@ -67,7 +73,13 @@ void main() {
         // Calculate screen-space normal for MRT compatibility
         vec3 normal = screenSpaceNormal();
         normalBuffer = vec4(packNormalToVec2(normal), 0.0, 0.0);
-        effectIdBuffer = vec4(0.0);
-        emissiveBuffer = vec4(0.0);
+
+        #ifdef USE_SELECTIVE_EFFECT
+            effectIdBuffer = vec4(uEffectIdsMask, 0.0, 0.0, 1.0);
+            emissiveBuffer = vec4(uEmissiveColor * uEmissiveIntensity, 1.0);
+        #else
+            effectIdBuffer = vec4(0.0);
+            emissiveBuffer = vec4(0.0);
+        #endif
     #endif
 }

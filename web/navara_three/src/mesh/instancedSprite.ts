@@ -19,6 +19,7 @@ import {
 } from "three";
 import invariant from "tiny-invariant";
 
+import type { ViewContext } from "../core";
 import type { BufferLoader } from "../event";
 import { TEXTURE_LOADER } from "../event/loaders";
 import { createInstancedSpriteMaterialEnhancer } from "../material/enhancer";
@@ -28,6 +29,7 @@ import { PickableMesh } from "./pickableMesh";
 
 export type InstancedSpriteOptions = {
   renderOrder?: number;
+  viewContext: ViewContext;
 };
 
 type PositionsInfo = {
@@ -54,6 +56,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
   private _initialHeight = 0.0;
   private _loadedUrls = new Set<string>();
   private _active = true;
+  private _viewContext: ViewContext;
   /** Material enhancer for encapsulated state management */
   private _enhancedMaterial?: ReturnType<
     typeof createInstancedSpriteMaterialEnhancer
@@ -61,6 +64,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
   constructor(options: InstancedSpriteOptions) {
     super();
     this.renderOrder = options.renderOrder ?? this.renderOrder;
+    this._viewContext = options.viewContext;
   }
 
   setActive(active: boolean) {
@@ -102,6 +106,12 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
         offsetDepth: m.material.offsetDepth ?? true,
         transparent: m.material.transparent ?? true,
         depthTest: m.material.depthTest ?? true,
+        effectIdsMask:
+          this._viewContext.selectiveEffectRegistry?.computeMask(
+            m.material.effectIds ?? [],
+          ) ?? 0,
+        emissiveColor: m.material.emissiveColor ?? 0,
+        emissiveIntensity: m.material.emissiveIntensity ?? 0,
       },
     });
 

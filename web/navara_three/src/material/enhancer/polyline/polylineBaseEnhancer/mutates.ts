@@ -25,6 +25,9 @@ const DEFAULT_BASE_REFS: PolylineBaseRefs = {
   color: { value: new ThreeColor(0xffffff) },
   useGroundNormals: { value: false },
   nvr_uPickable: { value: 0 },
+  uEffectIdsMask: { value: 0 },
+  uEmissiveColor: { value: new ThreeVector3(0, 0, 0) },
+  uEmissiveIntensity: { value: 0 },
   nvr_uPickingCoord: { value: new ThreeVector2(-1, -1) },
 };
 
@@ -40,6 +43,7 @@ export const createBaseMutates = (useRTE: boolean): PolylineBaseMutates => {
 
   // Restore Three.js objects (structuredClone creates plain objects for Three.js types)
   refs.color.value = new ThreeColor(0xffffff);
+  refs.uEmissiveColor.value = new ThreeVector3(0, 0, 0);
   refs.nvr_uPickingCoord.value = new ThreeVector2(-1, -1);
 
   // Conditionally create RTE refs (useRTE can't change after mount)
@@ -60,6 +64,14 @@ export const createBaseMutates = (useRTE: boolean): PolylineBaseMutates => {
       refs.maxWidth.value = state.maxWidth;
       refs.useGroundNormals.value = state.useGroundNormals;
       refs.nvr_uPickable.value = state.pickable ? 1 : 0;
+      refs.uEffectIdsMask.value = state.effectIdsMask;
+      const ec = state.emissiveColor;
+      refs.uEmissiveColor.value.set(
+        ((ec >> 16) & 0xff) / 255,
+        ((ec >> 8) & 0xff) / 255,
+        (ec & 0xff) / 255,
+      );
+      refs.uEmissiveIntensity.value = state.emissiveIntensity;
 
       // Update color uniform using Color.setHex()
       refs.color.value.setHex(state.color);
@@ -74,6 +86,9 @@ export const createBaseMutates = (useRTE: boolean): PolylineBaseMutates => {
       uniforms.color = refs.color;
       uniforms.useGroundNormals = refs.useGroundNormals;
       uniforms.nvr_uPickable = refs.nvr_uPickable;
+      uniforms.uEffectIdsMask = refs.uEffectIdsMask;
+      uniforms.uEmissiveColor = refs.uEmissiveColor;
+      uniforms.uEmissiveIntensity = refs.uEmissiveIntensity;
       uniforms.nvr_uPickingCoord = refs.nvr_uPickingCoord;
 
       // Optional uniforms

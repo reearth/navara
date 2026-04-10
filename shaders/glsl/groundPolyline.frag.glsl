@@ -41,6 +41,12 @@ layout(location = 1) out vec4 normalBuffer;
 layout(location = 2) out vec4 effectIdBuffer;
 layout(location = 3) out vec4 emissiveBuffer;
 
+#ifdef USE_SELECTIVE_EFFECT
+    uniform float uEffectIdsMask;
+    uniform vec3 uEmissiveColor;
+    uniform float uEmissiveIntensity;
+#endif
+
 float readDepth(sampler2D depthSampler, vec2 coord) {
     float fragCoordZ = texture( depthSampler, coord ).r;
     return fragCoordZ;
@@ -152,6 +158,11 @@ void main() {
         0.0,
         0.0
     );
-    effectIdBuffer = vec4(0.0);
-    emissiveBuffer = vec4(0.0);
+    #ifdef USE_SELECTIVE_EFFECT
+        effectIdBuffer = vec4(uEffectIdsMask, 0.0, 0.0, 1.0);
+        emissiveBuffer = vec4(uEmissiveColor * uEmissiveIntensity, 1.0);
+    #else
+        effectIdBuffer = vec4(0.0);
+        emissiveBuffer = vec4(0.0);
+    #endif
 }

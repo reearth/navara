@@ -44,6 +44,9 @@ export const createBaseMutates = (
     uFarPlane: { value: 0.0 },
     uAspect: { value: 1.0 },
     nvr_uPickable: { value: 0.0 },
+    uEffectIdsMask: { value: 0 },
+    uEmissiveColor: { value: new ThreeVector3(0, 0, 0) },
+    uEmissiveIntensity: { value: 0 },
     uFovRad: { value: 1.0 },
     uScreenHeightPx: { value: 1080 },
   };
@@ -62,6 +65,14 @@ export const createBaseMutates = (
       refs.uAlphaTest.value = state.alphaTest;
       refs.uAspect.value = state.aspect;
       refs.nvr_uPickable.value = state.pickable ? 1.0 : 0.0;
+      refs.uEffectIdsMask.value = state.effectIdsMask;
+      const c = state.emissiveColor;
+      refs.uEmissiveColor.value.set(
+        ((c >> 16) & 0xff) / 255,
+        ((c >> 8) & 0xff) / 255,
+        (c & 0xff) / 255,
+      );
+      refs.uEmissiveIntensity.value = state.emissiveIntensity;
     },
 
     updateUniforms: (uniforms) => {
@@ -78,6 +89,9 @@ export const createBaseMutates = (
       uniforms.uFovRad = refs.uFovRad;
       uniforms.uScreenHeightPx = refs.uScreenHeightPx;
       uniforms.nvr_uPickable = refs.nvr_uPickable;
+      uniforms.uEffectIdsMask = refs.uEffectIdsMask;
+      uniforms.uEmissiveColor = refs.uEmissiveColor;
+      uniforms.uEmissiveIntensity = refs.uEmissiveIntensity;
 
       if (refs.uTexture) {
         uniforms.uTexture = refs.uTexture;
