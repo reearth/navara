@@ -141,12 +141,14 @@ pub fn update_tiles(
 
     let has_tile_layer = !tiles.is_empty();
     let has_hillshade_config = tiles.iter().any(|(l, _)| l.hillshade_config.is_some());
+    let expected_layer_count = tiles.iter().len();
     let is_texture_ready = qt.qt.get_mut(zero_tile_handle).unwrap().is_texture_ready(
         &texture_fragment,
         &data_requesters,
         has_tile_layer,
         has_hillshade_config,
         false,
+        expected_layer_count,
     );
 
     let traversal_result = traverse_tile(
@@ -961,6 +963,8 @@ pub fn update_mesh_material(
             .find(|(layer, _)| layer.hillshade_config.is_some())
             .is_some_and(|(layer, _)| layer.is_over_max_zoom(tile.coords.z));
 
+        let tile_layers_len = tile_layers.iter().len();
+
         // Use parent if tile isn't ready (all-or-nothing to respect single UV transform)
         let is_ready = tile.is_texture_ready(
             &texture_fragment,
@@ -968,6 +972,7 @@ pub fn update_mesh_material(
             true,
             has_hillshade_config,
             hillshade_over_max_zoom,
+            tile_layers_len,
         );
 
         if !is_ready && let Some(parent) = parent_tile {
@@ -1007,9 +1012,22 @@ pub fn update_mesh_material(
 
         let texture_fragment_entity_ids = &merged_current_fragments;
 
-        let tile_layers_len = tile_layers.iter().len();
-        if has_hillshade_config && texture_fragment_entity_ids.len() != tile_layers_len {
-            // Serial request incomplete, skip update (continue using parent or old state)
+        if texture_fragment_entity_ids.len() != tile_layers_len {
+            // Serial request incomplete or parent has different layer count
+            // Skip update (continue using parent or old state)
+            continue;
+        }
+
+        // Check if all texture entities are ready before proceeding
+        let all_ready = texture_fragment_entity_ids.iter().all(|entity| {
+            entity
+                .map(|e| {
+                    RasterTile::is_texture_entity_ready(e, &texture_fragment, &data_requesters)
+                })
+                .unwrap_or(false)
+        });
+        if !all_ready {
+            // Some textures not ready yet, skip update (continue using parent or old state)
             continue;
         }
 

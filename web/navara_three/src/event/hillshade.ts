@@ -5,17 +5,12 @@ import {
   NearestFilter,
   NoColorSpace,
   RGBAFormat,
-  Texture,
   UnsignedByteType,
 } from "three";
 import { EventContext } from "./context";
 import type { TileMesh } from "../mesh/tile";
-import type { TextureOptions } from "../textures";
-import type { BufferLoader, TileHandler } from "./index";
-import {
-  getTextureFragmentSlots,
-  type TextureSlot,
-} from "../utils/textureFragmentIndex";
+
+import { getTextureFragmentSlots } from "../utils/textureFragmentIndex";
 
 export function processHillshadeBackfilled(
   ctx: EventContext,

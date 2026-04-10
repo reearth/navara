@@ -43,8 +43,6 @@ import {
 
 import { PolygonMesh } from "..";
 
-import type { ViewContext } from "../core";
-import { type BufferLoader } from "../event";
 import {
   generateMixOverlaidTexturesMacro,
   generateHillshadeNormalShader,
@@ -52,7 +50,6 @@ import {
 import type { CustomObject3DEventMap } from "../object3DEvent";
 import type {
   SceneGroup,
-  Scenes,
   TexturizedSceneByTileCoordinates,
 } from "../scene";
 

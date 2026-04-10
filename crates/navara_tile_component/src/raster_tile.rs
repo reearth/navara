@@ -119,6 +119,7 @@ impl RasterTile {
         has_tile_layer: bool,
         has_hillshade_config: bool,
         hillshade_over_max_zoom: bool,
+        expected_layer_count: usize,
     ) -> ReadyState {
         let is_texture_loaded = self.is_texture_ready(
             texture_fragment,
@@ -126,6 +127,7 @@ impl RasterTile {
             has_tile_layer,
             has_hillshade_config,
             hillshade_over_max_zoom,
+            expected_layer_count,
         );
 
         let data_requester_entity_id = self
@@ -224,6 +226,7 @@ impl RasterTile {
         has_tile_layer: bool,
         has_hillshade_config: bool,
         hillshade_over_max_zoom: bool,
+        expected_layer_count: usize,
     ) -> bool {
         // If TileLayer is None, texture is considered ready
         if !has_tile_layer {
@@ -231,7 +234,12 @@ impl RasterTile {
         }
 
         if has_hillshade_config {
-            self.is_all_texture_ready(texture_fragment, data_requesters, hillshade_over_max_zoom)
+            self.is_all_texture_ready(
+                texture_fragment,
+                data_requesters,
+                hillshade_over_max_zoom,
+                expected_layer_count,
+            )
         } else {
             self.is_any_texture_ready(texture_fragment, data_requesters)
         }
@@ -266,6 +274,7 @@ impl RasterTile {
         texture_fragment: &TileTextureFragmentQuery,
         data_requesters: &Query<&navara_data_requester::DataRequester>,
         hillshade_over_max_zoom: bool,
+        expected_layer_count: usize,
     ) -> bool {
         let tex_ids = self.texture_fragment_entity_ids.as_ref();
         let hill_ids = self.hillshade_entity_ids.as_ref();
@@ -282,7 +291,9 @@ impl RasterTile {
             .or_else(|| hill_ids.map(|ids| ids.len()))
             .unwrap_or(0);
 
-        if len == 0 {
+        // Check if arrays have been populated to expected layer count
+        // This prevents marking a tile as ready during serial request before all layers are requested
+        if len != expected_layer_count {
             return false;
         }
 

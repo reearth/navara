@@ -451,6 +451,8 @@ importers:
 
   web/wasm/navara_engine_worker: {}
 
+  web/wasm/navara_font_worker: {}
+
 packages:
 
   '@alloc/quick-lru@5.2.0':

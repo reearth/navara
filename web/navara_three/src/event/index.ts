@@ -22,17 +22,6 @@ import { Mesh, Object3D, Sprite } from "three";
 import { BatchedSdfTextMesh, Layer } from "..";
 import { getImageDataFromImageBitmap } from "../tasks/getImageDataFromImageBitmap";
 
-import type { TextureOptions } from "../textures";
-import { type TextureSlot } from "../utils/textureFragmentIndex";
-import type {
-  AbortControllers,
-  MeshCache,
-  WorkerPoolPromises,
-  RenderFlag,
-  TileMapByHandle,
-} from "../type";
-import type { CommonUniforms } from "../uniforms";
-
 import { EventContext } from "./context";
 import {
   checkFeatureParallel,
@@ -46,7 +35,6 @@ import {
   processWorkerTaskDelegatedEvent,
   processWorkerTaskRemovedEvent,
 } from "./worker";
-import type { TileMesh } from "../mesh/tile";
 
 export type {
   BufferLoader,
