@@ -74,7 +74,6 @@ export function renderFeature(
       uniforms,
       tileHandle,
       viewContext,
-      layerId,
     );
   }
   if (f.text) {
@@ -218,7 +217,6 @@ export async function processRenderableFeatureChanged(
   buf: BufferLoader,
   viewEvents: EventHandler<ViewEvents>,
   layersManager: LayersManager,
-  _viewContext: ViewContext,
   updatedAt: number,
   layerHandler?: LayerHandler,
 ) {

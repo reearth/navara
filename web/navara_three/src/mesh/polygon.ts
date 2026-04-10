@@ -68,8 +68,6 @@ export class PolygonMesh extends BatchedFeatureMesh<
 
   /** ViewContext for SelectiveEffect handling */
   private _viewContext: ViewContext;
-  /** Layer ID for SelectiveEffect handling */
-  private _layerId: string;
   private _uniforms: CommonUniforms;
 
   /** Enhanced material with encapsulated state */
@@ -77,7 +75,6 @@ export class PolygonMesh extends BatchedFeatureMesh<
 
   constructor(
     viewContext: ViewContext,
-    layerId: string,
     uniforms: CommonUniforms,
     buf: BufferGeometry<Attributes> = new BufferGeometry<Attributes>(),
     mat: MeshLambertMaterial = new MeshLambertMaterial(),
@@ -86,7 +83,6 @@ export class PolygonMesh extends BatchedFeatureMesh<
     super(buf, mat);
 
     this._viewContext = viewContext;
-    this._layerId = layerId;
     this._uniforms = uniforms;
     this._enhancedMaterial = enhancedMaterial;
   }
@@ -135,7 +131,6 @@ export class PolygonMesh extends BatchedFeatureMesh<
   clone() {
     return new PolygonMesh(
       this._viewContext,
-      this._layerId,
       this._uniforms,
       this.geometry,
       this.material,

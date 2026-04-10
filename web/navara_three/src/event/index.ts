@@ -371,7 +371,6 @@ export function processEvent(
             buf,
             viewEvents,
             layersManager,
-            viewContext,
             updatedAt,
             layerHandler,
           );

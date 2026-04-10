@@ -284,7 +284,7 @@ export abstract class InstancedMeshLayerDeclaration<
 
   /**
    * Grow the internal buffers by replacing the InstancedMesh with a larger one.
-   * Copies existing instance data to the new mesh and re-links selective effects.
+   * Copies existing instance data to the new mesh.
    */
   private grow(): void {
     const oldMesh = this.raw;

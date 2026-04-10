@@ -12,9 +12,8 @@ export async function renderPolygon(
   uniforms: CommonUniforms,
   tileHandle: TileHandle | undefined,
   viewContext: ViewContext,
-  layerId: string,
 ) {
-  return new PolygonMesh(viewContext, layerId, uniforms).init(
+  return new PolygonMesh(viewContext, uniforms).init(
     mesh,
     buf,
     tileHandle,
