@@ -93,6 +93,13 @@ export const TILES_3D_DATASETS = {
     attributionUrl:
       "https://www.geospatial.jp/ckan/dataset/plateau-13104-shinjuku-ku-2023",
   },
+  plateauAjigasawa: {
+    url: "https://assets.cms.plateau.reearth.io/assets/89/c2aabc-6010-4c01-97e2-ce0fd8838fb3/02321_ajigasawa-machi_city_2025_citygml_1_op_bldg_3dtiles_lod1/tileset.json",
+    attribution:
+      "3D City Model (Project PLATEAU) Ajigasawa town (FY2023) - MLIT PLATEAU",
+    attributionUrl:
+      "https://www.geospatial.jp/ckan/dataset/plateau-02321-ajigasawa-machi-2025",
+  },
   plateauChiyodaB3DM: {
     url: "https://assets.cms.plateau.reearth.io/assets/23/bf39db-cd61-4e07-9be3-065a13ddf432/13101_chiyoda-ku_pref_2023_citygml_1_op_bldg_3dtiles_13101_chiyoda-ku_lod2/data/data500.b3dm",
     attribution:

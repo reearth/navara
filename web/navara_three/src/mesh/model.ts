@@ -241,7 +241,15 @@ export class ModelMesh
       const vertCnt = mesh.geometry.attributes?.position?.count;
 
       const attrBatchIds = new Float32Array(vertCnt);
-      const internalBatchIds = mesh.geometry.attributes?._batchid?.array;
+      // B3DM (1.0) uses _batchid; glTF with EXT_mesh_features (1.1) uses _FEATURE_ID_N.
+      // Assign _feature_id_n to _batchid so the batch texture shader works unchanged.
+      const attrs = mesh.geometry.attributes;
+      if (!attrs?._batchid) {
+        // TODO: Support other `_feature_id_n`.
+        // Need to clone, since it might be switch to different `_feature_id_n`.
+        mesh.geometry.setAttribute("_batchid", attrs["_feature_id_0"].clone());
+      }
+      const internalBatchIds = attrs?._batchid?.array;
 
       if (internalBatchIds) {
         let i = 0;

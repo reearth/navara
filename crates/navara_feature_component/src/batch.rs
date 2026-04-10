@@ -3,6 +3,7 @@ use bevy_ecs::{component::Component, entity::Entity, prelude::Resource, system::
 use navara_buffer_store::{BufferStore, Handle};
 use navara_component::Deleted;
 
+pub use navara_parser::cesium3dtiles::property_table::{PropertyColumnData, PropertyTableData};
 use navara_parser::{b3dm::BatchTable as B3dmBatchTable, mvt::MvtLayerData};
 use rustc_hash::FxHashMap;
 
@@ -94,6 +95,9 @@ pub enum BatchProperty {
     Cesium3dTileset(B3dmBatchTable),
     /// Lazy MVT properties - parsed on demand
     Mvt(MvtLayerData),
+    /// 3D Tiles 1.1 property table from EXT_structural_metadata.
+    /// Properties are decoded lazily from binary buffers on demand.
+    Cesium3dTilesetV11(PropertyTableData),
 }
 
 pub struct BatchTableValue {

@@ -275,6 +275,7 @@ pub fn traverse_cesium_3d_tiles_tree(
                 continue;
             }
             let camera_pos = camera.transform_point(Vec3::ZERO);
+            let is_v1_1 = tree.is_v1_1;
             select_tiles(
                 &mut commands,
                 &mut buf,
@@ -292,6 +293,7 @@ pub fn traverse_cesium_3d_tiles_tree(
                 &renderable_features,
                 &window,
                 order,
+                is_v1_1,
             );
         }
     }
