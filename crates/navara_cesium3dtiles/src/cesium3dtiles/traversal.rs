@@ -162,7 +162,7 @@ pub fn select_tiles(
         rendered_tiles,
         features,
         renderable_features,
-        is_root_tree,
+        f64::MAX, // Root tile has no parent
     );
 
     let mut mark_as_ready_tree = |v: bool| {
@@ -201,6 +201,7 @@ pub fn select_tiles(
         rendered_tiles,
         &mut rendered_tiles_count,
         next_tree_order,
+        true, // Root tile: parent is always ready
     );
 }
 
@@ -228,12 +229,10 @@ pub fn select_tiles(
 ///
 /// # Children Traversal
 ///
-/// Children are only traversed when:
-/// - Parent tile's data is loaded (or it's the root tree)
-/// - SSE exceeds threshold (higher detail needed)
-///
-/// This ensures children aren't loaded until the parent is ready,
-/// preventing gaps in the rendered surface.
+/// Children are traversed when SSE exceeds the threshold (higher detail needed).
+/// Children are marked as leaves immediately without waiting for the parent to load,
+/// allowing parallel loading across the hierarchy. The REPLACE refinement strategy
+/// keeps the parent visible until all children are rendered, preventing visual gaps.
 #[allow(clippy::too_many_arguments)]
 fn mark_leaves(
     sync_json_tilesets: &mut ResMut<Cesium3dTilesJsonTileSetStateMap>,
@@ -248,7 +247,7 @@ fn mark_leaves(
     rendered_tiles: &mut Query<&mut RenderedCesium3dTileContent>,
     features: &Query<&FeatureId>,
     renderable_features: &Query<&RenderableFeature>,
-    is_root_tree: bool,
+    parent_geometric_error: f64,
 ) -> TraversalResult {
     tile.reset_state();
 
@@ -300,13 +299,22 @@ fn mark_leaves(
     tile.state.touched = true;
 
     if !within_frustum {
-        tile.state.should_preload = true;
+        // Keep previously-rendered tiles as leaves so mark_rendered_tiles
+        // preserves their rendered tile entity (hidden but alive).
+        if tile.state.is_rendered_last_frame {
+            tile.state.leaf = true;
+        }
         return TraversalResult::Culled;
     }
 
+    // Tiles with unrenderable content (JSON tilesets) or inverted geometric error
+    // should always be traversed through to find actual renderable content faster.
+    let can_unconditionally_refine =
+        !tile.is_renderable_content || parent_geometric_error < tile_meta.geometric_error;
+
     let meets_sse = sse <= max_sse;
 
-    if meets_sse {
+    if meets_sse && !can_unconditionally_refine {
         return TraversalResult::Selected;
     }
 
@@ -316,6 +324,7 @@ fn mark_leaves(
         }
 
         let mut all_children_rendered = true;
+        let mut any_child_in_frustum = false;
         for (i, child_tile_meta) in tile_meta_children.iter().enumerate() {
             match tile.children.as_ref().unwrap().get(i) {
                 Some(_) => {}
@@ -342,13 +351,11 @@ fn mark_leaves(
                 rendered_tiles,
                 features,
                 renderable_features,
-                is_root_tree,
+                tile_meta.geometric_error,
             ) {
                 TraversalResult::Selected => {
-                    // Need to ignore root tile, since it might not include any resource.
-                    if tile.state.is_data_loaded || is_root_tree {
-                        child_tile.state.leaf = true;
-                    }
+                    any_child_in_frustum = true;
+                    child_tile.state.leaf = true;
                     // Check the child tree state.
                     if child_tile.is_renderable_content {
                         if !child_tile.is_rendered(rendered_tiles, features, renderable_features) {
@@ -378,7 +385,22 @@ fn mark_leaves(
                     // even if the children includes a culled tile.
                     continue;
                 }
-                TraversalResult::ChildrenSelected => {}
+                TraversalResult::ChildrenSelected => {
+                    any_child_in_frustum = true;
+                }
+            }
+        }
+
+        // For REPLACE refinement, preload culled siblings when any sibling is in frustum.
+        if matches!(tile.refine, Refine::Replace)
+            && any_child_in_frustum
+            && let Some(children) = &mut tile.children
+        {
+            for child in children.iter_mut() {
+                if child.state.touched && !child.state.is_visible {
+                    child.state.leaf = true;
+                    child.state.should_preload = true;
+                }
             }
         }
 
@@ -436,6 +458,7 @@ fn mark_rendered_tiles(
     rendered_tiles: &mut Query<&mut RenderedCesium3dTileContent>,
     rendered_tiles_count: &mut u32,
     next_tree_order: usize,
+    parent_content_ready: bool,
 ) {
     let touched_last_frame = tile.state.touched_last_frame;
     tile.state.touched_last_frame = tile.state.touched;
@@ -446,23 +469,18 @@ fn mark_rendered_tiles(
 
     let touched = state.touched || touched_last_frame;
     let leaf = state.leaf;
+    let is_data_loaded = state.is_data_loaded;
 
     let mut is_rendered = touched && state.is_rendered_last_frame;
 
     let priority = if state.should_preload {
-        // Prioritize non-renderable content, since it requires additional traversals.
-        if tile.is_renderable_content {
-            Priority::VeryLow
-        } else {
-            Priority::Low
-        }
+        Priority::Medium
     } else {
-        // Use same priority for both of the JSON tree and the tile.
         Priority::High
     };
 
     if tile.is_renderable_content {
-        if touched && (leaf || state.should_preload) {
+        if touched && leaf {
             if state.is_data_loaded {
                 let is_visible = state.is_visible;
                 update_or_spawn_rendered_tile(
@@ -477,15 +495,29 @@ fn mark_rendered_tiles(
                     *rendered_tiles_count += 1;
                     is_rendered = true;
                 }
-            } else if state.is_visible || state.should_preload {
-                request_tile_content(commands, buf, base_url, tile, requesters, priority);
+            } else if (state.is_visible || state.should_preload) && parent_content_ready {
+                request_tile_content(
+                    commands,
+                    buf,
+                    base_url,
+                    tile,
+                    requesters,
+                    priority,
+                    Cesium3dTilesTreeOrder {
+                        index: next_tree_order,
+                        distance: TileOrderByDistance {
+                            distance_from_camera: tile.state.distance_from_camera,
+                            sse: tile.state.sse,
+                        },
+                    },
+                );
             } else {
                 toggle_rendered_tile_visible(rendered_tiles, tile, false, touched);
             }
         } else {
             toggle_rendered_tile_visible(rendered_tiles, tile, false, touched);
         }
-    } else if touched && (leaf || state.should_preload) {
+    } else if touched && leaf {
         // Handle JSON child tiles
         if let Some(uri) = &tile.uri.as_ref()
             && tile
@@ -530,6 +562,18 @@ fn mark_rendered_tiles(
     tile.reset_state();
     tile.state.is_rendered_last_frame = is_rendered;
 
+    let content_ready_for_children = match tile.refine {
+        Refine::Add => parent_content_ready,
+        Refine::Replace => {
+            if tile.uri.is_none() {
+                // Grouping node (no content) - pass through parent readiness
+                parent_content_ready
+            } else {
+                is_data_loaded
+            }
+        }
+    };
+
     let children = match tile.children.as_mut() {
         Some(c) => c,
         None => return,
@@ -547,6 +591,7 @@ fn mark_rendered_tiles(
             rendered_tiles,
             rendered_tiles_count,
             next_tree_order,
+            content_ready_for_children,
         );
     }
 

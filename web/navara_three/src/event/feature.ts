@@ -1,16 +1,12 @@
-import type { EventHandler, TileHandle } from "@navara/core";
+import type { TileHandle } from "@navara/core";
 import { generate_id_from_entity } from "@navara/core";
 import {
   type RenderableFeatureAddedEvent,
   type RenderableFeature,
   RenderableFeatureChangedEvent,
 } from "@navara/engine";
-import type { FontManager } from "@navara/font";
 import { Mesh, Sprite, Object3D } from "three";
 
-import type { ViewEvents } from "..";
-import type { ViewContext } from "../core/ViewContext";
-import type { LayersManager } from "../layersManager";
 import {
   BatchedSdfTextMesh,
   InstancedSpriteMesh,
@@ -19,10 +15,8 @@ import {
   PolylineMesh,
 } from "../mesh";
 import { FEATURE_RENDER_ORDER } from "../renderOrder";
-import type { Scenes, TexturizedSceneByTileCoordinates } from "../scene";
-import type { MeshCache, RenderFlag } from "../type";
-import type { CommonUniforms } from "../uniforms";
 
+import type { EventContext } from "./context";
 import {
   handleFeatureCreatedEventByLayerId,
   handleFeatureUpdatedEventByLayerId,
@@ -39,45 +33,31 @@ import {
 import { renderPolyline, processPolylineChanged } from "./features/polyline";
 import { renderText, processTextChanged } from "./features/text";
 
-import {
-  setTransform,
-  type BufferLoader,
-  type FeatureHandler,
-  type LayerHandler,
-} from ".";
+import { setTransform } from ".";
 
 export function renderFeature(
+  ctx: EventContext,
   f: RenderableFeature,
-  buf: BufferLoader,
-  uniforms: CommonUniforms,
   tileHandle: TileHandle | undefined,
-  viewContext: ViewContext,
   layerId: string,
-  fontManager?: FontManager,
 ): Promise<Mesh | Sprite | Object3D | undefined> | undefined {
   if (f.point) {
-    return renderPoint(f.point, buf, viewContext);
+    return renderPoint(ctx, f.point);
   }
   if (f.billboard) {
-    return renderBillboard(f.billboard, buf, viewContext);
+    return renderBillboard(ctx, f.billboard);
   }
   if (f.model) {
-    return renderModel(f.model, buf, uniforms, viewContext);
+    return renderModel(ctx, f.model);
   }
   if (f.polyline) {
-    return renderPolyline(f.polyline, buf, uniforms, viewContext);
+    return renderPolyline(ctx, f.polyline);
   }
   if (f.polygon) {
-    return renderPolygon(
-      f.polygon,
-      buf,
-      uniforms,
-      tileHandle,
-      viewContext,
-    );
+    return renderPolygon(ctx, f.polygon, tileHandle, layerId);
   }
   if (f.text) {
-    return renderText(f.text, buf, uniforms, layerId, fontManager);
+    return renderText(ctx, f.text, layerId);
   }
 }
 
@@ -89,19 +69,19 @@ export const checkFeatureParallel = (feature: RenderableFeature): boolean => {
 };
 
 export async function processRenderableFeatureAdded(
+  ctx: EventContext,
   ev: RenderableFeatureAddedEvent,
-  scenes: Scenes,
-  meshes: MeshCache,
-  buf: BufferLoader,
-  uniforms: CommonUniforms,
-  texturizedSceneByTileCoordinates: TexturizedSceneByTileCoordinates,
-  featureHandler: FeatureHandler,
-  viewEvents: EventHandler<ViewEvents>,
-  layersManager: LayersManager,
-  viewContext: ViewContext,
-  updatedAt: number,
-  fontManager?: FontManager,
 ) {
+  const {
+    scenes,
+    meshes,
+    texturizedSceneByTileCoordinates,
+    featureHandler,
+    viewEvents,
+    layersManager,
+    viewContext,
+    updatedAt,
+  } = ctx;
   const id = generate_id_from_entity(ev);
   const feature = ev.feature;
 
@@ -120,15 +100,7 @@ export async function processRenderableFeatureAdded(
     viewContext.concurrencyManager.increment();
   }
 
-  const obj = await renderFeature(
-    feature,
-    buf,
-    uniforms,
-    tileHandle,
-    viewContext,
-    featureLayerId,
-    fontManager,
-  )
+  const obj = await renderFeature(ctx, feature, tileHandle, featureLayerId)
     ?.then((r) => {
       const type = (() => {
         if (point || billboard || text) return "point";
@@ -178,7 +150,7 @@ export async function processRenderableFeatureAdded(
   }
 
   if (obj instanceof PolygonMesh && polygon && polygon.outline_geometry) {
-    const outline = await renderPolygonOutline(polygon, buf, viewEvents);
+    const outline = await renderPolygonOutline(ctx, polygon);
     outline.renderOrder = FEATURE_RENDER_ORDER;
     scenes.mrt.add(outline);
 
@@ -210,16 +182,17 @@ export async function processRenderableFeatureAdded(
 }
 
 export async function processRenderableFeatureChanged(
+  ctx: EventContext,
   ev: RenderableFeatureChangedEvent,
-  meshes: MeshCache,
-  texturizedSceneByTileCoordinates: TexturizedSceneByTileCoordinates,
-  renderFlag: RenderFlag,
-  buf: BufferLoader,
-  viewEvents: EventHandler<ViewEvents>,
-  layersManager: LayersManager,
-  updatedAt: number,
-  layerHandler?: LayerHandler,
 ) {
+  const {
+    meshes,
+    texturizedSceneByTileCoordinates,
+    viewEvents,
+    layersManager,
+    updatedAt,
+    layerHandler,
+  } = ctx;
   const id = generate_id_from_entity(ev);
   const obj = meshes.get(id);
   if (!obj) return;
@@ -239,13 +212,13 @@ export async function processRenderableFeatureChanged(
   const prevVisible = obj.visible;
 
   if (obj instanceof InstancedSpriteMesh && point) {
-    processPointChanged(obj, point, buf, active);
+    processPointChanged(obj, point, active);
   }
   if (obj instanceof InstancedSpriteMesh && billboard) {
-    await processBillboardChanged(obj, billboard, buf, active);
+    await processBillboardChanged(obj, billboard, active);
   }
   if (obj instanceof BatchedSdfTextMesh && text) {
-    await processTextChanged(obj, text, buf, renderFlag, active);
+    await processTextChanged(obj, text, active);
   }
   if (obj instanceof ModelMesh && model) {
     processModelChanged(obj, model, active);

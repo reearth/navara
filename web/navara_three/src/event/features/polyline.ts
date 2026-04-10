@@ -1,18 +1,13 @@
 import { PolylineMesh as NavaraPolylineMesh } from "@navara/engine";
 
-import type { BufferLoader } from "../";
-import type { ViewContext } from "../../core";
 import { PolylineMesh } from "../../mesh";
-import type { CommonUniforms } from "../../uniforms";
+import type { EventContext } from "../context";
 
 export async function renderPolyline(
+  ctx: EventContext,
   mesh: NavaraPolylineMesh,
-  buf: BufferLoader,
-  uniforms: CommonUniforms,
-  viewContext: ViewContext,
 ) {
-  const polylineMesh = new PolylineMesh(mesh, buf, uniforms, viewContext);
-  return polylineMesh;
+  return new PolylineMesh(ctx, mesh);
 }
 
 export function processPolylineChanged(

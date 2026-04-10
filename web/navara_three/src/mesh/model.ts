@@ -22,8 +22,7 @@ import {
 } from "three";
 import invariant from "tiny-invariant";
 
-import type { ViewContext } from "../core";
-import type { BufferLoader } from "../event";
+import type { EventContext } from "../event/context";
 import {
   createModelMaterialEnhancer,
   createPntsEnhancer,
@@ -31,7 +30,6 @@ import {
 import type { ModelMaterialProps, PntsProps } from "../material/enhancer/model";
 import type { UniformValue } from "../material/types";
 import type { CustomObject3DEventMap } from "../object3DEvent";
-import type { CommonUniforms } from "../uniforms";
 
 import {
   getBatchDataTexture,
@@ -60,10 +58,7 @@ export class ModelMesh
   extends Object3D<CustomObject3DEventMap>
   implements FeatureMesh, PickableMesh
 {
-  private viewContext: ViewContext;
-  /** Layer ID for SelectiveEffect handling */
-  private _uniforms: CommonUniforms;
-
+  readonly ctx: EventContext;
   /** Enhanced materials with encapsulated state, one per child mesh */
   private _enhancers = new Map<
     Mesh<BufferGeometry<NormalBufferAttributes>, ModelMaterial>,
@@ -81,22 +76,19 @@ export class ModelMesh
   batchLength?: number;
 
   constructor(
+    ctx: EventContext,
     gltfInfo: {
       scene: Group;
       credit?: string;
     },
     m: NavaraModelMesh,
-    uniforms: CommonUniforms,
-    buf: BufferLoader,
-    viewContext: ViewContext,
   ) {
     super();
-    this.viewContext = viewContext;
-    this._uniforms = uniforms;
+    this.ctx = ctx;
     this.credit = gltfInfo.credit;
     this.batchLength = m.batch_length;
     this.add(gltfInfo.scene);
-    this.init(m, buf);
+    this.init(m);
     this.addEventListener("removedFromWorld", () => {
       this.dispose();
     });
@@ -116,7 +108,8 @@ export class ModelMesh
     }
   }
 
-  private init(m: NavaraModelMesh, buf: BufferLoader) {
+  private init(m: NavaraModelMesh) {
+    const { buf } = this.ctx;
     const batchIdsData = m.geometry.batch_ids;
     const dataSize = batchIdsData?.size ?? 0;
     const batchIds = batchIdsData
@@ -208,7 +201,7 @@ export class ModelMesh
     batchIds: Uint32Array<ArrayBufferLike>,
     dataSize: number,
   ) {
-    const uniforms = this._uniforms;
+    const uniforms = this.ctx.uniforms;
 
     // Build initial props using buildUpdateProps plus initial-only external refs
     const updateProps = this.buildUpdateProps(meshMaterial);
@@ -270,7 +263,7 @@ export class ModelMesh
 
       this.initDepthMaterial(mesh, enhancer);
 
-      this.viewContext.applyShadowMaterial(mesh.material);
+      this.ctx.viewContext.applyShadowMaterial(mesh.material);
     });
   }
 
@@ -365,7 +358,7 @@ export class ModelMesh
         emissiveColor: material.emissiveColor,
         emissiveIntensity: material.emissiveIntensity,
         effectIdsMask:
-          this.viewContext.selectiveEffectRegistry?.computeMask(
+          this.ctx.viewContext.selectiveEffectRegistry?.computeMask(
             material.effectIds ?? [],
           ) ?? 0,
       },
@@ -429,7 +422,7 @@ export class ModelMesh
 
   dispose() {
     this.traverseMesh((m) => {
-      this.viewContext.removeShadowMaterial(m.material);
+      this.ctx.viewContext.removeShadowMaterial(m.material);
     });
   }
 }

@@ -11,7 +11,7 @@ use crate::{VectorTileSourceResources, layer::tile_cache_manager::TileCacheManag
 
 use super::VectorTileDataRequesterMarker;
 
-const MAX_PENDINGS: u32 = 10;
+const MAX_PENDINGS: u32 = 50;
 
 #[allow(clippy::type_complexity)]
 pub fn filter_requestable_data_requester(

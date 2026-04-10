@@ -1,20 +1,18 @@
 import { PointMesh as NavaraPointMesh } from "@navara/engine";
 
-import type { BufferLoader } from "..";
-import type { ViewContext } from "../../core";
 import { InstancedSpriteMesh } from "../../mesh";
 import { FEATURE_RENDER_ORDER } from "../../renderOrder";
+import type { EventContext } from "../context";
 
 export async function renderPoint(
+  ctx: EventContext,
   m: NavaraPointMesh,
-  buf: BufferLoader,
-  viewContext: ViewContext,
 ) {
   const mesh = new InstancedSpriteMesh({
     renderOrder: FEATURE_RENDER_ORDER,
-    viewContext,
+    ctx,
   });
-  await mesh._init(m, buf);
+  await mesh._init(m);
   mesh.setActive(m.active);
 
   return mesh;
@@ -23,9 +21,8 @@ export async function renderPoint(
 export function processPointChanged(
   obj: InstancedSpriteMesh,
   m: NavaraPointMesh,
-  buf: BufferLoader,
   active: boolean,
 ) {
-  obj._update(m, buf);
+  obj._update(m);
   obj.setActive(active);
 }

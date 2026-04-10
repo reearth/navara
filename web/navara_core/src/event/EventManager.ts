@@ -112,7 +112,7 @@ export class EventManager {
   forEachStack<Key extends JsEventsKey>(
     key: Key,
     cb: (value: GetJsEventValue<Key>) => void,
-    max = 10,
+    max = 100,
   ) {
     let idx = 0;
     for (const value of this.stacks[key]) {
@@ -134,7 +134,7 @@ export class EventManager {
   async forEachStackAsync<Key extends JsEventsKey>(
     key: Key,
     cb: (value: GetJsEventValue<Key>) => Promise<void>,
-    max = 20,
+    max = 100,
     shouldProcess?: (value: GetJsEventValue<Key>) => boolean,
   ) {
     const promises = [];
