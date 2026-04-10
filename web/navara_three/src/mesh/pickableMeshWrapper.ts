@@ -239,7 +239,7 @@ export class PickableInstancedMeshWrapper
 
   /** Create/update the per-instance batchId attribute on the geometry. */
   private setupBatchIdAttribute(): void {
-    const count = this.mesh.count;
+    const count = this.mesh.instanceMatrix.count;
     const len = Math.min(this.batchIds.length, count);
 
     if (this.batchIdAttr && this.batchIdAttr.array.length >= count) {
