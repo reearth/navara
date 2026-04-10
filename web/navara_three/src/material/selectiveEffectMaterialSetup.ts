@@ -20,11 +20,11 @@ export function setupSelectiveEffectUniforms(
   material.userData.uEffectIdsMask = { value: 0 };
 
   // Set define on material.defines so Three.js includes it in program cache key.
-  // This ensures SE and non-SE materials get separate compiled programs.
+  // This ensures SelectiveEffect and non-SelectiveEffect materials get separate compiled programs.
   material.defines = material.defines ?? {};
   material.defines.USE_SELECTIVE_EFFECT = 1;
 
-  // Include SE token in program cache key to prevent SE/non-SE program sharing
+  // Include SelectiveEffect token in program cache key to prevent program sharing
   const prevCacheKey = material.customProgramCacheKey;
   material.customProgramCacheKey = () => {
     const base = prevCacheKey ? prevCacheKey.call(material) : "";
@@ -35,7 +35,7 @@ export function setupSelectiveEffectUniforms(
   material.onBeforeCompile = (shader, renderer) => {
     prevOnBeforeCompile?.call(material, shader, renderer);
 
-    // Link effectIdsMask uniform for runtime value updates
+    // Link SelectiveEffect uniforms for runtime value updates
     shader.uniforms.uEffectIdsMask = material.userData.uEffectIdsMask;
   };
 

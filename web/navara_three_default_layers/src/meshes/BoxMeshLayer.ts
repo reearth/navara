@@ -152,7 +152,7 @@ export class BoxMeshLayer extends MeshLayerDeclarationWithSelectiveEffect<
           if (!cfg.draped) {
             this.view.applyShadowMaterial(newMaterial);
           }
-          // Re-setup SE uniforms for the new material
+          // Re-setup SelectiveEffect uniforms for the new material
           if (newMaterial instanceof MeshLambertMaterial) {
             newMaterial.emissive.set(origin.emissiveColor?.raw ?? 0x000000);
             newMaterial.emissiveIntensity = origin.emissiveIntensity ?? 0;

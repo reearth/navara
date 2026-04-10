@@ -15,7 +15,7 @@ export type ArclineMeshLayerConfig = MeshLayerConfig & LayerDescription;
 
 export type ArclineMeshLayerUpdate = MeshLayerUpdate & LayerDescription;
 
-// TODO: SE not supported. ArcLine is Object3D with child Meshes; requires child traversal in a follow-up PR.
+// TODO: SelectiveEffect not supported. ArcLine is Object3D with child Meshes; requires child traversal in a follow-up PR.
 export class ArclineMeshLayer extends MeshLayerDeclaration<
   ArclineMeshLayerConfig,
   ArclineMeshLayerUpdate,

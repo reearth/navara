@@ -48,7 +48,7 @@ export abstract class MeshLayerDeclarationWithSelectiveEffect<
   }
 
   protected override getPassKey(): PassKey {
-    // Meshes with SelectiveEffect (effectIds) need to be in MRT scene for SE buffer rendering
+    // Meshes with SelectiveEffect (effectIds) need to be in MRT scene for SelectiveEffect buffer rendering
     if (this._effectIds.length > 0) {
       return "mrt";
     }
