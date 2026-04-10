@@ -7,6 +7,30 @@ sidebar:
 
 The Cesium 3D Tiles layer is a layer for displaying large-scale 3D datasets in the 3D Tiles format. It can efficiently display building models, point clouds, photogrammetry data, and more.
 
+## Supported Specifications
+
+Navara supports the following 3D Tiles specifications:
+
+### 3D Tiles 1.0
+
+| Tile Format | Description |
+| ----------- | ----------- |
+| b3dm (Batched 3D Model) | Batched 3D models such as buildings |
+| pnts (Point Cloud) | Point cloud data |
+| Google Photorealistic 3D Tiles | Photorealistic tiles provided by Google Maps Platform |
+
+### 3D Tiles 1.1
+
+| Feature | Description |
+| ------- | ----------- |
+| glTF content | Tiles using glTF/GLB as the content format |
+| `EXT_mesh_features` | Feature identification via FeatureId sets in glTF meshes |
+| `EXT_structural_metadata` | Access to per-feature metadata via property tables embedded in glTF assets |
+
+:::note
+Implicit tiling is not currently supported. Tilesets must use explicit tile hierarchies with `tileset.json`.
+:::
+
 ## Basic Configuration
 
 | Property   | Type              | Description              |
