@@ -89,7 +89,7 @@ export function setupDebugViews(
   let enabled = true;
 
   function readMRTFloat(
-    gbufferRT: { width: number; height: number },
+    gbufferRT: WebGLRenderTarget,
     attachmentIndex: number,
   ): Float32Array | null {
     const gl = renderer.getContext();
@@ -99,7 +99,7 @@ export function setupDebugViews(
     const h = gbufferRT.height;
     const pixels = new Float32Array(w * h * 4);
     const prevTarget = renderer.getRenderTarget();
-    renderer.setRenderTarget(getGbufferRT() ?? null);
+    renderer.setRenderTarget(gbufferRT);
     gl.readBuffer(gl.COLOR_ATTACHMENT0 + attachmentIndex);
     gl.readPixels(0, 0, w, h, gl.RGBA, gl.FLOAT, pixels);
     gl.readBuffer(gl.COLOR_ATTACHMENT0);
