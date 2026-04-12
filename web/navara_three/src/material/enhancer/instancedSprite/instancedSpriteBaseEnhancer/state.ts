@@ -69,7 +69,8 @@ export const updateState = (
     pickable: props.pickable ?? currentState.pickable,
     effectIdsMask: props.effectIdsMask ?? currentState.effectIdsMask,
     emissiveColor: props.emissiveColor ?? currentState.emissiveColor,
-    emissiveIntensity: props.emissiveIntensity ?? currentState.emissiveIntensity,
+    emissiveIntensity:
+      props.emissiveIntensity ?? currentState.emissiveIntensity,
     transparent: props.transparent ?? currentState.transparent,
     depthTest: props.depthTest ?? currentState.depthTest,
     aspect: props.aspect ?? currentState.aspect,

@@ -4,10 +4,7 @@ import { InstancedSpriteMesh } from "../../mesh";
 import { FEATURE_RENDER_ORDER } from "../../renderOrder";
 import type { EventContext } from "../context";
 
-export async function renderPoint(
-  ctx: EventContext,
-  m: NavaraPointMesh,
-) {
+export async function renderPoint(ctx: EventContext, m: NavaraPointMesh) {
   const mesh = new InstancedSpriteMesh({
     renderOrder: FEATURE_RENDER_ORDER,
     ctx,

@@ -31,7 +31,6 @@ export type InstancedSpriteOptions = {
   ctx: EventContext;
 };
 
-
 type PositionsInfo = {
   position:
     | Float32Array<ArrayBufferLike>

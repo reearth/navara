@@ -20,10 +20,7 @@ import {
   decompressDraco,
 } from "../loaders";
 
-export async function renderModel(
-  ctx: EventContext,
-  m: NavaraModelMesh,
-) {
+export async function renderModel(ctx: EventContext, m: NavaraModelMesh) {
   const loader = initializeGltfLoader(ctx.viewContext.concurrencyManager);
   const dracoLoader = initializeDracoLoader(ctx.viewContext.concurrencyManager);
 
