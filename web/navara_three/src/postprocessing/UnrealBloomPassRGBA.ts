@@ -6,7 +6,7 @@
  * processing only RGB channels.
  *
  * Based on: three@0.167.1 - examples/jsm/postprocessing/UnrealBloomPass.js
- * Fork reason: Need to preserve alpha channel for per-object occlusion mode transmission
+ * Fork reason: Need to preserve alpha channel through the bloom pipeline
  * Modifications:
  *   - Gaussian blur shader processes RGBA instead of RGB
  *   - Composite shader preserves alpha channel
@@ -154,7 +154,7 @@ export class UnrealBloomPassRGBA extends Pass {
 
     // Luminosity high pass material - RGBA preserving version
     // Original LuminosityHighPassShader destroys alpha channel (sets to 1.0)
-    // This custom shader preserves alpha for maskMode transmission
+    // This custom shader preserves alpha through the bloom pipeline
     this.highPassUniforms = {
       tDiffuse: { value: null },
       luminosityThreshold: { value: threshold ?? 0.0 }, // Default 0.0 for passthrough
@@ -295,7 +295,6 @@ export class UnrealBloomPassRGBA extends Pass {
     _writeBuffer: WebGLRenderTarget,
     readBuffer: WebGLRenderTarget,
     _deltaTime?: number,
-    maskActive?: boolean,
   ): void {
     renderer.getClearColor(this._oldClearColor);
     this._oldClearAlpha = renderer.getClearAlpha();
@@ -303,8 +302,6 @@ export class UnrealBloomPassRGBA extends Pass {
     renderer.autoClear = false;
 
     renderer.setClearColor(this.clearColor, 0);
-
-    if (maskActive) renderer.state.buffers.stencil.setTest(false);
 
     // Render input to screen
     if (this.renderToScreen) {
@@ -364,8 +361,6 @@ export class UnrealBloomPassRGBA extends Pass {
     // Blend it additively over the input texture
     this._fsQuad.material = this.blendMaterial;
     this.copyUniforms.tDiffuse.value = this.renderTargetsHorizontal[0].texture;
-
-    if (maskActive) renderer.state.buffers.stencil.setTest(true);
 
     if (this.renderToScreen) {
       renderer.setRenderTarget(null);
@@ -505,8 +500,7 @@ export class UnrealBloomPassRGBA extends Pass {
             lerpBloomFactor(bloomFactors[3]) * vec4(bloomTintColors[3], 1.0) * texture2D(blurTexture4, vUv) +
             lerpBloomFactor(bloomFactors[4]) * vec4(bloomTintColors[4], 1.0) * texture2D(blurTexture5, vUv);
 
-          // Apply bloomStrength only to RGB, preserve alpha for maskMode
-          // BUGFIX: Use alpha from highest resolution MIP (blurTexture1) to preserve occlusionMode
+          // Apply bloomStrength only to RGB, preserve alpha from highest resolution MIP (blurTexture1)
           float originalAlpha = texture2D(blurTexture1, vUv).a;
           vec3 bloomRGB = bloomStrength * sum.rgb;
           gl_FragColor = vec4(bloomRGB, originalAlpha);

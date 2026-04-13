@@ -6,9 +6,8 @@ import type { EventContext } from "../context";
 export async function renderPolyline(
   ctx: EventContext,
   mesh: NavaraPolylineMesh,
-  layerId: string,
 ) {
-  return new PolylineMesh(ctx, mesh, layerId);
+  return new PolylineMesh(ctx, mesh);
 }
 
 export function processPolylineChanged(

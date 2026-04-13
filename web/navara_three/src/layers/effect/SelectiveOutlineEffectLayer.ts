@@ -1,3 +1,4 @@
+import SelectiveEffectMaskChunk from "@shaders/glsl/chunks/selective_effect_mask.glsl?raw";
 import { Pass as PostProcessingPass } from "postprocessing";
 import {
   Mesh,
@@ -9,48 +10,37 @@ import {
   WebGLRenderTarget,
   type WebGLRenderer,
   RGBAFormat,
-  DepthTexture,
-  UnsignedShortType,
 } from "three";
 
-import { BufferView } from "../../bufferView";
 import { Color } from "../../Color";
 import type {
   EffectLayerConfig,
   EffectLayerUpdate,
 } from "../../core/EffectLayerDeclaration";
 import type { BaseInstance } from "../../core/LayerDeclaration";
-import { SELECTIVE_OUTLINE_EFFECT_KEY } from "../../core/SelectiveEffectHelper";
 import type { ViewContext } from "../../core/ViewContext";
 import { Pass } from "../../effects";
 
 import {
   SelectiveEffectLayer,
-  createDepthClipMaterial,
+  type SelectiveEffectLayerConfig,
   createFullscreenQuad,
-  applyDepthClip,
 } from "./SelectiveEffectLayer";
 
 // Selective Outline configuration
+export type SelectiveOutlineConfig = {
+  color?: Color;
+  thickness?: number;
+  edgeStrength?: number;
+  resolutionScale?: number;
+};
+
 export type SelectiveOutlineEffectConfig = {
-  selectiveEffect: true;
-  selectiveOutline: {
-    color?: Color;
-    thickness?: number;
-    edgeStrength?: number;
-    resolutionScale?: number;
-    debugViews?: boolean;
-  };
-} & EffectLayerConfig;
+  selectiveOutline: SelectiveOutlineConfig;
+} & SelectiveEffectLayerConfig;
 
 export type SelectiveOutlineEffectUpdate = {
-  selectiveOutline?: {
-    color?: Color;
-    thickness?: number;
-    edgeStrength?: number;
-    resolutionScale?: number;
-    debugViews?: boolean;
-  };
+  selectiveOutline?: Partial<SelectiveOutlineConfig>;
 } & EffectLayerUpdate;
 
 const DEFAULT_COLOR = 0xffffff;
@@ -59,8 +49,9 @@ const DEFAULT_EDGE_STRENGTH = 1.0;
 
 /**
  * Selective Outline Effect Layer
- * Renders selective outline using mask-based filtering.
- * Masks are pre-rendered by CustomRenderPass during BaseMRT phase.
+ *
+ * Uses EffectIds Buffer to apply outline to selected objects.
+ * Extract mask → Sobel edge detection → Composite with base scene.
  */
 export class SelectiveOutlineEffectLayer extends SelectiveEffectLayer<
   SelectiveOutlineEffectConfig,
@@ -72,46 +63,35 @@ export class SelectiveOutlineEffectLayer extends SelectiveEffectLayer<
 
   private outlinePass?: SelectiveOutlinePass;
 
-  // Getters that derive values from config (single source of truth)
+  private get outline(): SelectiveOutlineConfig {
+    return this.config.selectiveOutline;
+  }
+
   get outlineColor(): Color {
-    const color = this.config.selectiveOutline?.color;
+    const color = this.outline.color;
     return color instanceof Color ? color : new Color().setHex(DEFAULT_COLOR);
   }
 
   get outlineThickness(): number {
-    return this.config.selectiveOutline?.thickness ?? DEFAULT_THICKNESS;
+    return this.outline.thickness ?? DEFAULT_THICKNESS;
   }
 
   get outlineEdgeStrength(): number {
-    return this.config.selectiveOutline?.edgeStrength ?? DEFAULT_EDGE_STRENGTH;
-  }
-
-  protected getEffectKey(): string {
-    return SELECTIVE_OUTLINE_EFFECT_KEY;
-  }
-
-  protected getResolutionScale(): number {
-    return this.config.selectiveOutline?.resolutionScale ?? 1.0;
-  }
-
-  protected getDebugViews(): boolean {
-    return this.config.selectiveOutline?.debugViews ?? false;
+    return this.outline.edgeStrength ?? DEFAULT_EDGE_STRENGTH;
   }
 
   constructor(view: ViewContext, config: EffectLayerConfig) {
-    const baseConfig = config as Partial<SelectiveOutlineEffectConfig>;
-    const outlineConfig =
-      "selectiveOutline" in config ? baseConfig.selectiveOutline : undefined;
+    const c =
+      (config as Partial<SelectiveOutlineEffectConfig>).selectiveOutline ?? {};
 
     const postEffectConfig: SelectiveOutlineEffectConfig = {
       ...(config as SelectiveOutlineEffectConfig),
       selectiveEffect: true,
       selectiveOutline: {
-        color: outlineConfig?.color ?? new Color().setHex(DEFAULT_COLOR),
-        thickness: outlineConfig?.thickness ?? DEFAULT_THICKNESS,
-        edgeStrength: outlineConfig?.edgeStrength ?? DEFAULT_EDGE_STRENGTH,
-        resolutionScale: outlineConfig?.resolutionScale ?? 1.0,
-        debugViews: outlineConfig?.debugViews ?? false,
+        color: c.color ?? new Color().setHex(DEFAULT_COLOR),
+        thickness: c.thickness ?? DEFAULT_THICKNESS,
+        edgeStrength: c.edgeStrength ?? DEFAULT_EDGE_STRENGTH,
+        resolutionScale: c.resolutionScale ?? 1.0,
       },
     };
 
@@ -126,57 +106,32 @@ export class SelectiveOutlineEffectLayer extends SelectiveEffectLayer<
     return pass as Pass<SelectiveOutlinePass, null> & BaseInstance;
   }
 
-  /**
-   * Override: Don't register simple maskRT.
-   * SelectiveOutlinePass registers occlusion-specific RTs directly.
-   */
-  protected override registerMaskRenderTarget(): void {
-    // Skip simple registration - SelectiveOutlinePass handles occlusion-specific RTs
-  }
-
-  /**
-   * Override: Unregister occlusion-specific RTs.
-   */
-  protected override unregisterMaskRenderTarget(): void {
-    const customRenderPass = this.getCustomRenderPass();
-    if (customRenderPass?.removeOcclusionMaskRenderTargets) {
-      customRenderPass.removeOcclusionMaskRenderTargets(this.getEffectKey());
-    }
-  }
-
   onUpdateConfig(updates: SelectiveOutlineEffectUpdate): void {
     super.onUpdateConfig(updates);
 
-    if (updates.selectiveOutline) {
-      const next = updates.selectiveOutline;
+    const outlineUpdates = updates.selectiveOutline;
+    if (!outlineUpdates) return;
 
-      if (!this.config.selectiveOutline) {
-        this.config.selectiveOutline = {};
-      }
+    let changed = false;
 
-      // Update config only - getters will derive values from config
-      if (next.color !== undefined) {
-        this.config.selectiveOutline.color = next.color;
-      }
+    if (outlineUpdates.color !== undefined) {
+      this.config.selectiveOutline.color = outlineUpdates.color;
+      changed = true;
+    }
+    if (outlineUpdates.thickness !== undefined) {
+      this.config.selectiveOutline.thickness = outlineUpdates.thickness;
+      changed = true;
+    }
+    if (outlineUpdates.edgeStrength !== undefined) {
+      this.config.selectiveOutline.edgeStrength = outlineUpdates.edgeStrength;
+      changed = true;
+    }
+    if (outlineUpdates.resolutionScale !== undefined) {
+      this.config.selectiveOutline.resolutionScale =
+        outlineUpdates.resolutionScale;
+    }
 
-      if (next.thickness !== undefined) {
-        this.config.selectiveOutline.thickness = next.thickness;
-      }
-
-      if (next.edgeStrength !== undefined) {
-        this.config.selectiveOutline.edgeStrength = next.edgeStrength;
-      }
-
-      if (next.debugViews !== undefined) {
-        this.config.selectiveOutline.debugViews = next.debugViews;
-        this.updateDebugViews(next.debugViews);
-      }
-
-      if (next.resolutionScale !== undefined) {
-        this.config.selectiveOutline.resolutionScale = next.resolutionScale;
-        this.updateResolutionScale(next.resolutionScale);
-      }
-
+    if (changed) {
       this.outlinePass?.setParameters(
         this.outlineColor,
         this.outlineThickness,
@@ -187,25 +142,22 @@ export class SelectiveOutlineEffectLayer extends SelectiveEffectLayer<
 }
 
 /**
- * Custom PostProcessing Pass for PostEffect Outline
- * Implements pass separation for per-object occlusion handling
+ * Buffer-based Selective Outline Pass.
+ *
+ * Pipeline: Extract mask from EffectIds Buffer → Sobel edge detection → Composite with base.
+ * Reads from EffectIds Buffer in the GBuffer MRT.
  */
 class SelectiveOutlinePass extends PostProcessingPass {
   private layer: SelectiveOutlineEffectLayer;
 
-  // Pass separation: separate render targets for DepthEnabled and Silhouette
-  private depthEnabledMaskRT: WebGLRenderTarget;
-  private silhouetteMaskRT: WebGLRenderTarget;
-  private depthEnabledEdgeRT: WebGLRenderTarget;
-  private silhouetteEdgeRT: WebGLRenderTarget;
-
-  // Depth clip pass: clips mask by Base depth (DepthEnabled only)
-  private depthClipRT: WebGLRenderTarget;
-  private depthClipMaterial: ShaderMaterial;
-  private depthClipScene: Scene;
+  private maskRT: WebGLRenderTarget;
+  private edgeRT: WebGLRenderTarget;
 
   private fullscreenCamera: OrthographicCamera;
   private fullscreenGeometry: PlaneGeometry;
+
+  private extractScene: Scene;
+  private extractMaterial: ShaderMaterial;
 
   private edgeDetectScene: Scene;
   private edgeDetectMaterial: ShaderMaterial;
@@ -215,10 +167,6 @@ class SelectiveOutlinePass extends PostProcessingPass {
 
   private size = new Vector2();
 
-  // Debug views
-  private debugView1?: BufferView;
-  private debugView2?: BufferView;
-
   constructor(layer: SelectiveOutlineEffectLayer) {
     super("SelectiveOutlinePass");
     this.layer = layer;
@@ -226,14 +174,51 @@ class SelectiveOutlinePass extends PostProcessingPass {
     const renderer = layer.viewContext.getRenderer();
     const renderSize = renderer.getSize(new Vector2());
     const resolutionScale =
-      layer.layerConfig.selectiveOutline?.resolutionScale ?? 1.0;
+      layer.layerConfig.selectiveOutline.resolutionScale ?? 1.0;
     const initialWidth = Math.floor(renderSize.x * resolutionScale);
     const initialHeight = Math.floor(renderSize.y * resolutionScale);
 
-    // Create shared fullscreen rendering infrastructure
     const fullscreenQuad = createFullscreenQuad();
     this.fullscreenCamera = fullscreenQuad.camera;
     this.fullscreenGeometry = fullscreenQuad.geometry;
+
+    // Extract material: reads EffectIds Buffer → binary mask
+    this.extractMaterial = new ShaderMaterial({
+      uniforms: {
+        tEffectIds: { value: null },
+        slotBit: { value: 0 },
+      },
+      vertexShader: `
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform sampler2D tEffectIds;
+        uniform int slotBit;
+
+        varying vec2 vUv;
+
+        ${SelectiveEffectMaskChunk}
+
+        void main() {
+          float maskValue = texture2D(tEffectIds, vUv).r;
+          float bitValue = extractEffectBit(maskValue, slotBit);
+
+          float mask = bitValue > 0.5 ? 1.0 : 0.0;
+          gl_FragColor = vec4(vec3(mask), 1.0);
+        }
+      `,
+      depthTest: false,
+      depthWrite: false,
+    });
+
+    this.extractScene = new Scene();
+    this.extractScene.add(
+      new Mesh(this.fullscreenGeometry, this.extractMaterial),
+    );
 
     // Edge detection material (Sobel filter)
     this.edgeDetectMaterial = new ShaderMaterial({
@@ -258,8 +243,6 @@ class SelectiveOutlinePass extends PostProcessingPass {
 
         varying vec2 vUv;
 
-        // RGB-based mask sampling (aligned with Bloom approach)
-        // - Mask presence is determined by RGB brightness (white=mask, black=no mask)
         float sampleMask(vec2 uv) {
           vec3 rgb = texture2D(tMask, uv).rgb;
           return length(rgb) > 0.1 ? 1.0 : 0.0;
@@ -267,9 +250,8 @@ class SelectiveOutlinePass extends PostProcessingPass {
 
         void main() {
           vec2 texel = 1.0 / resolution;
-          vec2 offset = texel * thickness;  // Scale sample interval by thickness
+          vec2 offset = texel * thickness;
 
-          // Sobel kernel with thickness-based offset
           float tl = sampleMask(vUv + offset * vec2(-1.0,  1.0));
           float t  = sampleMask(vUv + offset * vec2( 0.0,  1.0));
           float tr = sampleMask(vUv + offset * vec2( 1.0,  1.0));
@@ -279,7 +261,6 @@ class SelectiveOutlinePass extends PostProcessingPass {
           float b  = sampleMask(vUv + offset * vec2( 0.0, -1.0));
           float br = sampleMask(vUv + offset * vec2( 1.0, -1.0));
 
-          // Sobel operator
           float gx = -tl - 2.0*l - bl + tr + 2.0*r + br;
           float gy = -tl - 2.0*t - tr + bl + 2.0*b + br;
 
@@ -294,29 +275,19 @@ class SelectiveOutlinePass extends PostProcessingPass {
     });
 
     this.edgeDetectScene = new Scene();
-    const edgeQuad = new Mesh(this.fullscreenGeometry, this.edgeDetectMaterial);
-    this.edgeDetectScene.add(edgeQuad);
-
-    // Depth clip material: clips mask by Base depth (shared implementation)
-    this.depthClipMaterial = createDepthClipMaterial();
-
-    this.depthClipScene = new Scene();
-    const depthClipQuad = new Mesh(
-      this.fullscreenGeometry,
-      this.depthClipMaterial,
+    this.edgeDetectScene.add(
+      new Mesh(this.fullscreenGeometry, this.edgeDetectMaterial),
     );
-    this.depthClipScene.add(depthClipQuad);
 
-    // Composite material to blend outline with base scene
-    // Blends two edge results: DepthEnabled + Silhouette
+    // Composite material: blend outline with base scene
     this.compositeMaterial = new ShaderMaterial({
       uniforms: {
         tBase: { value: null },
-        tDepthEnabledEdge: { value: null },
-        tSilhouetteEdge: { value: null },
+        tEdge: { value: null },
         outlineColor: { value: new Color().setHex(0xffffff).raw },
         thickness: { value: 1.0 },
         resolution: { value: new Vector2(initialWidth, initialHeight) },
+        bypass: { value: 0 },
       },
       vertexShader: `
         varying vec2 vUv;
@@ -327,15 +298,15 @@ class SelectiveOutlinePass extends PostProcessingPass {
       `,
       fragmentShader: `
         uniform sampler2D tBase;
-        uniform sampler2D tDepthEnabledEdge;
-        uniform sampler2D tSilhouetteEdge;
+        uniform sampler2D tEdge;
         uniform vec3 outlineColor;
         uniform float thickness;
         uniform vec2 resolution;
+        uniform int bypass;
 
         varying vec2 vUv;
 
-        float sampleEdge(sampler2D tEdge, vec2 uv, vec2 texel, float thickness) {
+        float sampleEdge(vec2 uv, vec2 texel) {
           float edgeCenter = texture2D(tEdge, uv).r;
           float edgeHPos = texture2D(tEdge, uv + texel * vec2(thickness, 0.0)).r;
           float edgeHNeg = texture2D(tEdge, uv + texel * vec2(-thickness, 0.0)).r;
@@ -346,17 +317,15 @@ class SelectiveOutlinePass extends PostProcessingPass {
 
         void main() {
           vec4 baseColor = texture2D(tBase, vUv);
+          if (bypass > 0) {
+            gl_FragColor = baseColor;
+            return;
+          }
           vec2 texel = 1.0 / resolution;
 
-          // Sample both edge results with thickness-based dilation
-          float depthEnabledEdge = sampleEdge(tDepthEnabledEdge, vUv, texel, thickness);
-          float silhouetteEdge = sampleEdge(tSilhouetteEdge, vUv, texel, thickness);
+          float edge = clamp(sampleEdge(vUv, texel), 0.0, 1.0);
 
-          // Combine edges (max blend)
-          float totalEdge = clamp(max(depthEnabledEdge, silhouetteEdge), 0.0, 1.0);
-
-          // Blend outline with base
-          vec3 finalColor = mix(baseColor.rgb, outlineColor, totalEdge);
+          vec3 finalColor = mix(baseColor.rgb, outlineColor, edge);
           gl_FragColor = vec4(finalColor, baseColor.a);
         }
       `,
@@ -364,7 +333,6 @@ class SelectiveOutlinePass extends PostProcessingPass {
       depthWrite: false,
     });
 
-    // Initialize uniforms from layer configuration
     this.setParameters(
       layer.outlineColor,
       layer.outlineThickness,
@@ -372,82 +340,26 @@ class SelectiveOutlinePass extends PostProcessingPass {
     );
 
     this.compositeScene = new Scene();
-    const compositeQuad = new Mesh(
-      this.fullscreenGeometry,
-      this.compositeMaterial,
-    );
-    this.compositeScene.add(compositeQuad);
-
-    // Separate render targets for DepthEnabled and Silhouette passes
-
-    // DepthEnabled mask with accessible depth texture (for depth clip)
-    this.depthEnabledMaskRT = new WebGLRenderTarget(
-      initialWidth,
-      initialHeight,
-      {
-        format: RGBAFormat,
-        depthBuffer: true,
-        stencilBuffer: true,
-      },
-    );
-    this.depthEnabledMaskRT.texture.name = `SelectiveEffectMask_selectiveOutline_DepthEnabled_${layer.id}`;
-    this.depthEnabledMaskRT.depthTexture = new DepthTexture(
-      initialWidth,
-      initialHeight,
-      UnsignedShortType,
+    this.compositeScene.add(
+      new Mesh(this.fullscreenGeometry, this.compositeMaterial),
     );
 
-    // Silhouette mask (no depth texture needed - no depth clip for silhouette)
-    this.silhouetteMaskRT = new WebGLRenderTarget(initialWidth, initialHeight, {
-      format: RGBAFormat,
-      depthBuffer: true,
-      stencilBuffer: true,
-    });
-    this.silhouetteMaskRT.texture.name = `SelectiveEffectMask_selectiveOutline_Silhouette_${layer.id}`;
-
-    // DepthEnabled edge detection result
-    this.depthEnabledEdgeRT = new WebGLRenderTarget(
-      initialWidth,
-      initialHeight,
-      {
-        format: RGBAFormat,
-        depthBuffer: false,
-        stencilBuffer: false,
-      },
-    );
-    this.depthEnabledEdgeRT.texture.name = `SelectiveOutline_DepthEnabledEdge_${layer.id}`;
-
-    // Silhouette edge detection result
-    this.silhouetteEdgeRT = new WebGLRenderTarget(initialWidth, initialHeight, {
+    // Render targets for extract + edge detection
+    this.maskRT = new WebGLRenderTarget(initialWidth, initialHeight, {
       format: RGBAFormat,
       depthBuffer: false,
       stencilBuffer: false,
     });
-    this.silhouetteEdgeRT.texture.name = `SelectiveOutline_SilhouetteEdge_${layer.id}`;
+    this.maskRT.texture.name = `SelectiveOutline_Mask_${layer.id}`;
 
-    // Render target for depth-clipped mask (DepthEnabled only)
-    this.depthClipRT = new WebGLRenderTarget(initialWidth, initialHeight, {
+    this.edgeRT = new WebGLRenderTarget(initialWidth, initialHeight, {
       format: RGBAFormat,
       depthBuffer: false,
       stencilBuffer: false,
     });
-    this.depthClipRT.texture.name = `SelectiveOutline_DepthClip_${layer.id}`;
+    this.edgeRT.texture.name = `SelectiveOutline_Edge_${layer.id}`;
 
     this.size.set(initialWidth, initialHeight);
-
-    // Register occlusion-specific mask RTs with CustomRenderPass
-    // This enables context-based mask rendering during BaseMRT phase
-    const customRenderPass = layer.getCustomRenderPass();
-    if (customRenderPass?.setOcclusionMaskRenderTargets) {
-      customRenderPass.setOcclusionMaskRenderTargets(
-        SELECTIVE_OUTLINE_EFFECT_KEY,
-        {
-          normal: this.depthEnabledMaskRT,
-          silhouette: this.silhouetteMaskRT,
-        },
-      );
-    }
-
     this.needsSwap = true;
   }
 
@@ -462,25 +374,9 @@ class SelectiveOutlinePass extends PostProcessingPass {
     if (this.size.x === width && this.size.y === height) {
       return;
     }
-
     this.size.set(width, height);
-
-    // Update all render targets
-    this.depthEnabledMaskRT.setSize(width, height);
-    if (this.depthEnabledMaskRT.depthTexture) {
-      this.depthEnabledMaskRT.depthTexture.dispose();
-      this.depthEnabledMaskRT.depthTexture = new DepthTexture(
-        width,
-        height,
-        UnsignedShortType,
-      );
-    }
-
-    this.silhouetteMaskRT.setSize(width, height);
-    this.depthEnabledEdgeRT.setSize(width, height);
-    this.silhouetteEdgeRT.setSize(width, height);
-    this.depthClipRT.setSize(width, height);
-
+    this.maskRT.setSize(width, height);
+    this.edgeRT.setSize(width, height);
     this.edgeDetectMaterial.uniforms.resolution.value.set(width, height);
     this.compositeMaterial.uniforms.resolution.value.set(width, height);
   }
@@ -491,101 +387,58 @@ class SelectiveOutlinePass extends PostProcessingPass {
     outputBuffer: WebGLRenderTarget | null,
     _deltaTime?: number,
   ): void {
-    // Step 1: Update sizes
-    this.updateSizes(inputBuffer.width, inputBuffer.height);
-
-    // ============================================
-    // Pass 1: DepthEnabled objects (with depth clip)
-    // ============================================
-    // Mask is pre-rendered by CustomRenderPass during BaseMRT phase
-
-    // Apply depth clip to DepthEnabled mask (shared implementation)
-    applyDepthClip(
-      renderer,
-      this.depthClipMaterial,
-      this.depthClipScene,
-      this.fullscreenCamera,
-      this.depthEnabledMaskRT,
-      this.layer.getBaseDepthTexture(),
-      this.depthClipRT,
+    const resScale =
+      this.layer.layerConfig.selectiveOutline.resolutionScale ?? 1.0;
+    this.updateSizes(
+      Math.floor(inputBuffer.width * resScale),
+      Math.floor(inputBuffer.height * resScale),
     );
 
-    // Step 4a: Apply edge detection (Sobel filter) to depth-clipped mask
-    this.edgeDetectMaterial.uniforms.tMask.value = this.depthClipRT.texture;
-    renderer.setRenderTarget(this.depthEnabledEdgeRT);
+    // Get buffer textures
+    const effectIdsBuffer = this.layer.getEffectIdsBuffer();
+    const slot = this.layer.getEffectSlot();
+
+    // Passthrough if buffers not available — bypass composite to avoid null tEdge sampling
+    if (!effectIdsBuffer || slot < 0) {
+      this.compositeMaterial.uniforms.tBase.value = inputBuffer.texture;
+      // Bind inputBuffer to avoid null sampler (bypass=1 skips edge sampling)
+      this.compositeMaterial.uniforms.tEdge.value = inputBuffer.texture;
+      this.compositeMaterial.uniforms.bypass.value = 1;
+      renderer.setRenderTarget(this.renderToScreen ? null : outputBuffer);
+      renderer.render(this.compositeScene, this.fullscreenCamera);
+      return;
+    }
+
+    // Step 1: Extract binary mask from EffectIds Buffer
+    this.extractMaterial.uniforms.tEffectIds.value = effectIdsBuffer;
+    this.extractMaterial.uniforms.slotBit.value = slot;
+
+    renderer.setRenderTarget(this.maskRT);
+    renderer.render(this.extractScene, this.fullscreenCamera);
+
+    // Step 2: Sobel edge detection on mask
+    this.edgeDetectMaterial.uniforms.tMask.value = this.maskRT.texture;
+    renderer.setRenderTarget(this.edgeRT);
     renderer.render(this.edgeDetectScene, this.fullscreenCamera);
 
-    // ============================================
-    // Pass 2: Silhouette objects (no depth clip)
-    // ============================================
-    // Mask is pre-rendered by CustomRenderPass during BaseMRT phase
-
-    // Apply edge detection directly (no depth clip for Silhouette)
-    this.edgeDetectMaterial.uniforms.tMask.value =
-      this.silhouetteMaskRT.texture;
-    renderer.setRenderTarget(this.silhouetteEdgeRT);
-    renderer.render(this.edgeDetectScene, this.fullscreenCamera);
-
-    // ============================================
-    // Step 5: Composite both edge results
-    // ============================================
+    // Step 3: Composite outline with base scene
     this.compositeMaterial.uniforms.tBase.value = inputBuffer.texture;
-    this.compositeMaterial.uniforms.tDepthEnabledEdge.value =
-      this.depthEnabledEdgeRT.texture;
-    this.compositeMaterial.uniforms.tSilhouetteEdge.value =
-      this.silhouetteEdgeRT.texture;
+    this.compositeMaterial.uniforms.tEdge.value = this.edgeRT.texture;
+    this.compositeMaterial.uniforms.bypass.value = 0;
 
     renderer.setRenderTarget(this.renderToScreen ? null : outputBuffer);
     renderer.render(this.compositeScene, this.fullscreenCamera);
-
-    // Optional debug views
-    if (this.layer.layerConfig.selectiveOutline?.debugViews) {
-      if (!this.debugView1) {
-        this.debugView1 = new BufferView(
-          this.depthEnabledMaskRT.width,
-          this.depthEnabledMaskRT.height,
-        );
-      }
-
-      if (!this.debugView2) {
-        this.debugView2 = new BufferView(
-          this.silhouetteMaskRT.width,
-          this.silhouetteMaskRT.height,
-        );
-      }
-
-      this.debugView1.render(renderer, this.depthEnabledMaskRT);
-      this.debugView2.render(renderer, this.silhouetteMaskRT);
-    } else {
-      // Dispose debug views when debugViews is disabled
-      if (this.debugView1) {
-        this.debugView1.dispose();
-        this.debugView1 = undefined;
-      }
-      if (this.debugView2) {
-        this.debugView2.dispose();
-        this.debugView2 = undefined;
-      }
-    }
   }
 
   dispose(): void {
-    // Dispose all render targets
-    this.depthEnabledMaskRT.depthTexture?.dispose();
-    this.depthEnabledMaskRT.dispose();
-    this.silhouetteMaskRT.dispose();
-    this.depthEnabledEdgeRT.dispose();
-    this.silhouetteEdgeRT.dispose();
-    this.depthClipRT.dispose();
-
-    // Dispose geometry and materials
+    this.extractScene.clear();
+    this.edgeDetectScene.clear();
+    this.compositeScene.clear();
+    this.maskRT.dispose();
+    this.edgeRT.dispose();
     this.fullscreenGeometry.dispose();
-    this.depthClipMaterial.dispose();
+    this.extractMaterial.dispose();
     this.edgeDetectMaterial.dispose();
     this.compositeMaterial.dispose();
-
-    // Dispose debug views
-    this.debugView1?.dispose();
-    this.debugView2?.dispose();
   }
 }

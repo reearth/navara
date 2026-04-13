@@ -2,7 +2,9 @@
 #include "chunks/pick.glsl"
 
 #ifndef USE_SHADOWMAP_DEPTH
-    layout(location = 1) out vec4 outputBuffer1;
+    layout(location = 1) out vec4 normalBuffer;
+    layout(location = 2) out vec4 effectIdBuffer;
+    layout(location = 3) out vec4 emissiveBuffer;
 
     vec2 packNormalToVec2(vec3 normal) {
         return normal.xy * 0.5 + 0.5;
@@ -100,6 +102,8 @@ void main() {
 
     #ifndef USE_SHADOWMAP_DEPTH
         vec3 normal = screenSpaceNormal();
-        outputBuffer1 = vec4(packNormalToVec2(normal), 0.0, 0.0);
+        normalBuffer = vec4(packNormalToVec2(normal), 0.0, 0.0);
+        effectIdBuffer = vec4(0.0);
+        emissiveBuffer = vec4(0.0);
     #endif
 }

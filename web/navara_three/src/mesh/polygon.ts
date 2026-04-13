@@ -18,12 +18,9 @@ import {
 } from "three";
 
 import { PolygonOutlineMesh } from "..";
-import { ensureSelectiveEffectUserData } from "../core/SelectiveEffectHelper";
-import { injectSelectiveEffectHandlers } from "../core/SelectiveEffectMaskContext";
 import type { EventContext } from "../event/context";
 import type { PolygonMaterialProps } from "../material/enhancer/polygon";
 import { createPolygonMaterialEnhancer } from "../material/enhancer/polygon/polygonMaterialEnhancer";
-import { arraysEqual } from "../utils";
 
 import {
   BatchedFeatureMesh,
@@ -73,8 +70,6 @@ export class PolygonMesh extends BatchedFeatureMesh<
 
   /** Enhanced material with encapsulated state */
   private _enhancedMaterial?: ReturnType<typeof createPolygonMaterialEnhancer>;
-  /** Previous effectIds for SelectiveEffect registry updates */
-  private _prevEffectIds?: string[];
 
   constructor(ctx: EventContext, layerId: string) {
     super(new BufferGeometry<Attributes>(), new MeshLambertMaterial());
@@ -344,20 +339,6 @@ export class PolygonMesh extends BatchedFeatureMesh<
       this.onBeforeShadow = callback;
     }
 
-    // ========== SelectiveEffect integration ==========
-
-    // Initialize SelectiveEffect shader uniforms
-    ensureSelectiveEffectUserData(material);
-
-    // Setup selective effect handlers (automatically wraps existing RTE callback)
-    injectSelectiveEffectHandlers(this, {
-      registry: this.ctx.viewContext?.selectiveEffectRegistry,
-      layerId: this._layerId,
-    });
-    // Note: No need to manually assign handlers - function modifies object in place
-
-    // ========== SelectiveEffect integration end ==========
-
     this.enableWater();
 
     // Set up custom program cache key based on config flags that affect shader defines
@@ -404,17 +385,6 @@ export class PolygonMesh extends BatchedFeatureMesh<
     this.castShadow = !!material.castShadow;
     this.receiveShadow = !!material.receiveShadow;
 
-    // SelectiveEffect: effectIds handling (needs prev state for registry)
-    if (!arraysEqual(this._prevEffectIds, material.effectIds)) {
-      this.ctx.viewContext.selectiveEffectRegistry?.updateLinksForObject(
-        this,
-        material.effectIds ?? [],
-        this._prevEffectIds ?? [],
-        this._layerId,
-      );
-      this._prevEffectIds = material.effectIds ? [...material.effectIds] : [];
-    }
-
     const { base } = enhancer.states();
 
     // Build props from material with separated base and water sections
@@ -437,6 +407,10 @@ export class PolygonMesh extends BatchedFeatureMesh<
         roughness: material.roughness,
         emissiveColor: material.emissiveColor,
         emissiveIntensity: material.emissiveIntensity,
+        effectIdsMask:
+          this.ctx.viewContext.selectiveEffectRegistry?.computeMask(
+            material.effectIds ?? [],
+          ) ?? 0,
       },
       water: {
         water: !!material.water,
@@ -673,17 +647,6 @@ export class PolygonMesh extends BatchedFeatureMesh<
   }
 
   dispose() {
-    // Clean up SelectiveEffect registry links
-    if (this.ctx.viewContext?.selectiveEffectRegistry && this._prevEffectIds) {
-      this.ctx.viewContext.selectiveEffectRegistry.updateLinksForObject(
-        this,
-        [], // New effectIds: empty array (removing all links)
-        this._prevEffectIds, // Previous effectIds
-        this._layerId,
-      );
-      this._prevEffectIds = undefined;
-    }
-
     if (this._debugBoundingSphereMesh) {
       this._debugBoundingSphereMesh.geometry.dispose();
       (this._debugBoundingSphereMesh.material as MeshBasicMaterial).dispose();
