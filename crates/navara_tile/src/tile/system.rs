@@ -772,6 +772,11 @@ pub fn update_layer(
             if u.elevation_heatmap_config.is_some() {
                 layer.elevation_heatmap_config = u.elevation_heatmap_config.clone();
             }
+
+            // Update hillshade_config if provided
+            if u.hillshade_config.is_some() {
+                layer.hillshade_config = u.hillshade_config.clone();
+            }
         }
         commands.entity(e).despawn();
     }
