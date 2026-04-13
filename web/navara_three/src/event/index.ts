@@ -413,7 +413,7 @@ async function processRequestedData(ctx: EventContext, req: DataRequestEvent) {
 
   if (IMAGE_EXTENSIONS.includes(req.extension)) {
     await ABORTABLE_IMAGE_LOADER.loadAsyncWithAbort(req.url, abortController)
-    .then(async (img) => {
+      .then(async (img) => {
         // TODO: Get OffScreeCanvas from main thread in worker.
         const canvas = document.createElement("canvas");
         canvas.height = img.height;
