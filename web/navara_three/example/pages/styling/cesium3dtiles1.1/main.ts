@@ -41,7 +41,7 @@ const run = async () => {
     roll: 0,
   });
 
-  let selectedId: string;
+  let selectedId: string | undefined = undefined;
   view.on("pick", (info) => {
     selectedId = info?.properties?.["gml_id"] as string;
   });
