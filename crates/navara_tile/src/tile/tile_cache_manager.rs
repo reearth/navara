@@ -9,6 +9,13 @@ use navara_mesh::Mesh;
 use navara_tile_component::{TileHandle, TileMeshMarker};
 use rustc_hash::{FxHashMap, FxHashSet};
 
+/// Stores hillshade parent information for a layer when hillshade is beyond max_zoom
+#[derive(Debug, Clone, Copy)]
+pub struct HillshadeParent {
+    pub entity: Entity,
+    pub zoom: usize,
+}
+
 /// This struct caches an information that is necessary in rendering.
 /// Of course, we can store these value in the tile of TileQuadtree,
 /// but accessing it is a little bit high cost.
@@ -17,6 +24,9 @@ pub struct RenderedTileCache {
     pub mesh_entity: Option<Entity>,
     /// This tile should be used to show the parent tile instead of the child tile if the child tile is still preparing.
     pub ready_parent_tile_handle: Option<TileHandle>,
+    /// Hillshade parent entities for layers beyond max_zoom (computed during traversal)
+    /// Index corresponds to layer index, None means no parent reuse for that layer
+    pub hillshade_parents: Option<Vec<Option<HillshadeParent>>>,
     pub rendered_tile_entity: Entity,
     /// This is used to check if the mesh is prepared in client side.
     /// Because sometimes rendering engine needs to do some preparation asynchronously.

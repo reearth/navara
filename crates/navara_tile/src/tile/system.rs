@@ -197,6 +197,7 @@ pub fn update_tiles(
                 qt.qt.get_mut(zero_tile_handle).unwrap(),
                 zero_tile_handle,
                 None,
+                None,
             );
             if tc.is_rendered_tile_prepared(&zero_tile_handle) {
                 tc.activate_rendered_tile(&zero_tile_handle, &mut meshes, true);
@@ -992,21 +993,14 @@ pub fn update_mesh_material(
 
         let mut hillshade_parent_zooms: std::collections::HashMap<usize, usize> =
             std::collections::HashMap::new();
-        // Use sorted iteration to match appearance array building (same Order as later loop)
-        for (i, (layer, _)) in tile_layers.iter().sort::<&Order>().enumerate() {
-            if i < merged_current_fragments.len()
-                && layer.hillshade_config.is_some()
-                && layer.is_over_max_zoom(tile.coords.z)
-                && let Some((parent_entity, parent_zoom)) = find_hillshade_parent_entity(
-                    &qt,
-                    tile.coords,
-                    i,
-                    &texture_fragment,
-                    &data_requesters,
-                )
-            {
-                merged_current_fragments[i] = Some(parent_entity);
-                hillshade_parent_zooms.insert(i, parent_zoom);
+        if let Some(hillshade_parents) = &cached_rendered_tile.hillshade_parents {
+            for (i, parent) in hillshade_parents.iter().enumerate() {
+                if let Some(parent) = parent
+                    && i < merged_current_fragments.len()
+                {
+                    merged_current_fragments[i] = Some(parent.entity);
+                    hillshade_parent_zooms.insert(i, parent.zoom);
+                }
             }
         }
 
@@ -1015,19 +1009,6 @@ pub fn update_mesh_material(
         if texture_fragment_entity_ids.len() != tile_layers_len {
             // Serial request incomplete or parent has different layer count
             // Skip update (continue using parent or old state)
-            continue;
-        }
-
-        // Check if all texture entities are ready before proceeding
-        let all_ready = texture_fragment_entity_ids.iter().all(|entity| {
-            entity
-                .map(|e| {
-                    RasterTile::is_texture_entity_ready(e, &texture_fragment, &data_requesters)
-                })
-                .unwrap_or(false)
-        });
-        if !all_ready {
-            // Some textures not ready yet, skip update (continue using parent or old state)
             continue;
         }
 
@@ -1291,48 +1272,4 @@ pub fn clear_caches(
     for removed in removed_handles {
         tc.requested_tile_caches.remove(&removed);
     }
-}
-
-/// Find hillshade parent entity for reuse when child tile is beyond max_zoom
-/// Walks up the quadtree to find the first ancestor with a ready hillshade entity
-/// Returns Some((entity, parent_zoom)) if parent found, None otherwise
-fn find_hillshade_parent_entity(
-    qt: &RasterTileQuadtree,
-    tile_coords: TileXYZ,
-    layer_idx: usize,
-    texture_fragment: &TileTextureFragmentQuery,
-    data_requesters: &Query<&navara_data_requester::DataRequester>,
-) -> Option<(Entity, usize)> {
-    let mut current_coords = (tile_coords.x, tile_coords.y, tile_coords.z);
-
-    // Walk up the quadtree to find first ancestor with ready hillshade entity
-    // Stop when reaching zoom 0 or finding a ready parent
-    while current_coords.2 > 0 {
-        let Some(parent_node) = qt.qt.parent(current_coords) else {
-            break;
-        };
-
-        let Some(parent_tile) = qt.qt.get(parent_node.handle()) else {
-            break;
-        };
-
-        // Check if this parent has a ready hillshade entity at this layer
-        if let Some(parent_hill_ids) = &parent_tile.hillshade_entity_ids
-            && let Some(&Some(entity)) = parent_hill_ids.get(layer_idx)
-            && RasterTile::is_texture_entity_ready(entity, texture_fragment, data_requesters)
-        {
-            // Found a ready parent! Return entity and its zoom level
-            return Some((entity, parent_tile.coords.z));
-        }
-
-        // Continue searching up the tree (no zoom limit)
-        // Even if we go below max_zoom, a coarser parent is better than nothing
-        current_coords = (
-            parent_tile.coords.x,
-            parent_tile.coords.y,
-            parent_tile.coords.z,
-        );
-    }
-
-    None
 }

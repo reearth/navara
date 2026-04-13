@@ -1458,7 +1458,6 @@ if (uPickable > 0.) {
       const centerY = (coords.y + 0.5) / tileSize;
       const latRad = Math.atan(Math.sinh(Math.PI * (1 - 2 * centerY)));
       cosLat = Math.cos(latRad);
-      // console.log(coords.z, textureFragmentsLen);
     }
 
     // Get hillshade UV transforms from Rust (for parent texture reuse)
