@@ -165,7 +165,7 @@ const run = async () => {
       );
     });
 
-    return { layer, removePickHandler: () => view.on("pick", pickHandler) };
+    return { layer, removePickHandler: () => view.off("pick", pickHandler) };
   };
 
   let result: ReturnType<typeof add3DTilesLayer> | undefined =
