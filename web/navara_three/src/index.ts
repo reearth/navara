@@ -1647,7 +1647,7 @@ export default class ThreeView<
    * Handles pick events and emits the picked feature information.
    * @param pickArr - Array of picked batch IDs
    */
-  onPick(pickArr: number[]) {
+  private onPick(pickArr: number[]) {
     this._renderFlag.forceUpdate = true;
 
     if (pickArr.length > 0) {
