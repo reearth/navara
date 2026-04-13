@@ -425,12 +425,13 @@ async function processRequestedData(ctx: EventContext, req: DataRequestEvent) {
         );
 
         ctx.workerPoolPromises.set(id, promise);
-        let data;
-        try {
-          data = await promise;
-        } finally {
-          ctx.workerPoolPromises.delete(id);
-        }
+        const data = await (async () => {
+          try {
+            return await promise;
+          } finally {
+            ctx.workerPoolPromises.delete(id);
+          }
+        })();
 
         if (abortController.signal.aborted) {
           return;
