@@ -96,8 +96,7 @@ const run = async () => {
     return layer;
   };
 
-  let layer: ReturnType<typeof addGeoJsonLayer> | undefined =
-    addGeoJsonLayer();
+  let layer: ReturnType<typeof addGeoJsonLayer> | undefined = addGeoJsonLayer();
 
   // Control panel
   const pane = new Pane({ title: "GeoJSON Billboard Styling" });

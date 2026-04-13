@@ -151,8 +151,7 @@ const run = async () => {
     return layer;
   };
 
-  let layer: ReturnType<typeof add3DTilesLayer> | undefined =
-    add3DTilesLayer();
+  let layer: ReturnType<typeof add3DTilesLayer> | undefined = add3DTilesLayer();
 
   // Control panel
   const pane = new Pane({ title: "Cesium 3D Tiles Styling" });
