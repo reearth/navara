@@ -270,18 +270,6 @@ export function processEvent(ctx: EventContext, event: Events | undefined) {
       }
     },
     {
-      shouldProcess: ({ type, event }) => {
-        switch (type) {
-          case "add":
-            // The image extension needs worker.
-            return (
-              !IMAGE_EXTENSIONS.includes(event.extension) ||
-              canWorkerProcessImmediately()
-            );
-          default:
-            return true;
-        }
-      },
       onAbort: (event) => {
         processDataRequesterRemoved(ctx, event);
       },
@@ -425,15 +413,22 @@ async function processRequestedData(ctx: EventContext, req: DataRequestEvent) {
 
   if (IMAGE_EXTENSIONS.includes(req.extension)) {
     await ABORTABLE_IMAGE_LOADER.loadAsyncWithAbort(req.url, abortController)
-      .then(async (img) => {
+    .then(async (img) => {
         // TODO: Get OffScreeCanvas from main thread in worker.
         const canvas = document.createElement("canvas");
         canvas.height = img.height;
         canvas.width = img.width;
-        const data = await getImageDataFromImageBitmap(
+
+        const promise = getImageDataFromImageBitmap(
           await createImageBitmap(img),
           canvas.transferControlToOffscreen(),
         );
+
+        ctx.workerPoolPromises.set(id, promise);
+        const data = await promise.then((d) => {
+          ctx.workerPoolPromises.delete(id);
+          return d;
+        });
 
         if (abortController.signal.aborted) {
           return;
@@ -488,11 +483,17 @@ function processDataRequesterRemoved(
   ctx: EventContext,
   req: DataRequesterRemovedEvent,
 ) {
-  const { buf, abortControllers } = ctx;
+  const { buf, abortControllers, workerPoolPromises } = ctx;
   const id = generate_id_from_entity(req);
   const abortController = abortControllers.get(id);
+  const workerPool = workerPoolPromises.get(id);
+
   buf.remove(req.handle);
   abortController?.abort();
+  workerPool?.cancel();
+
+  abortControllers.delete(id);
+  workerPoolPromises.delete(id);
 }
 
 async function processTextureFragmentRequested(
