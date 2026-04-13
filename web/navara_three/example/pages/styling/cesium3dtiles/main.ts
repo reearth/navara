@@ -151,7 +151,7 @@ const run = async () => {
     return layer;
   };
 
-  let layer = add3DTilesLayer();
+  let layer: ReturnType<typeof add3DTilesLayer> | undefined = add3DTilesLayer();
 
   // Control panel
   const pane = new Pane({ title: "Cesium 3D Tiles Styling" });
@@ -162,7 +162,7 @@ const run = async () => {
   toggleBtn.on("click", () => {
     if (layer) {
       view.deleteLayerById(layer.id);
-      layer = undefined as unknown as typeof layer;
+      layer = undefined;
       toggleBtn.title = "Add Layer";
     } else {
       layer = add3DTilesLayer();

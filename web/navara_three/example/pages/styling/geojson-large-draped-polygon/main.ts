@@ -105,7 +105,7 @@ const run = async () => {
     return layer;
   };
 
-  let layer = addGeoJsonLayer();
+  let layer: ReturnType<typeof addGeoJsonLayer> | undefined = addGeoJsonLayer();
 
   // Control panel
   const pane = new Pane({ title: "GeoJSON Extruded Polygon" });
@@ -116,7 +116,7 @@ const run = async () => {
   toggleBtn.on("click", () => {
     if (layer) {
       view.deleteLayerById(layer.id);
-      layer = undefined as unknown as typeof layer;
+      layer = undefined;
       toggleBtn.title = "Add Layer";
     } else {
       layer = addGeoJsonLayer();
