@@ -111,7 +111,7 @@ pub(crate) fn request_texture_fragment(
 
     // Skip requesting a tile that doesn't match `min_zoom` and `max_zoom` conditions,
     // since selected tile has multiple layers.
-    for (next, _) in tiles.iter().skip(idx) {
+    for (next, _) in tiles.iter().sort::<&Order>().skip(idx) {
         if !next.is_over_min_zoom(leaf.coords.z) || next.is_over_max_zoom(leaf.coords.z) {
             // Push None to both arrays to maintain alignment
             leaf.texture_fragment_entity_ids
