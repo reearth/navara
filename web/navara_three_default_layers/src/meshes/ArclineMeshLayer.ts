@@ -131,7 +131,11 @@ export class ArclineMeshLayer extends MeshLayerDeclarationWithSelectiveEffect<
    * single-Mesh update doesn't work.
    */
   protected override updateEffectIdsMask(): void {
-    const mask = this.computeEffectIdsMask();
+    const registry = this.view.selectiveEffectRegistry;
+    if (!registry) return;
+
+    const mask =
+      this._effectIds.length > 0 ? registry.computeMask(this._effectIds) : 0;
     this._instance?.updateEffectIdsMask(mask);
   }
 
