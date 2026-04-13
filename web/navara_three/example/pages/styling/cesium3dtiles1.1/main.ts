@@ -168,7 +168,8 @@ const run = async () => {
     return { layer, removePickHandler: () => view.on("pick", pickHandler) };
   };
 
-  let { layer, removePickHandler } = add3DTilesLayer();
+  let result: ReturnType<typeof add3DTilesLayer> | undefined =
+    add3DTilesLayer();
 
   // Control panel
   const pane = new Pane({ title: "Cesium 3D Tiles Styling" });
@@ -177,15 +178,13 @@ const run = async () => {
   // Toggle button to add/remove layer
   const toggleBtn = pane.addButton({ title: "Remove Layer", label: "layer" });
   toggleBtn.on("click", () => {
-    if (layer) {
-      removePickHandler?.();
-      view.deleteLayerById(layer.id);
-      layer = undefined as unknown as typeof layer;
+    if (result) {
+      result.removePickHandler?.();
+      view.deleteLayerById(result.layer.id);
+      result = undefined;
       toggleBtn.title = "Add Layer";
     } else {
-      const result = add3DTilesLayer();
-      layer = result.layer;
-      removePickHandler = result.removePickHandler;
+      result = add3DTilesLayer();
       toggleBtn.title = "Remove Layer";
     }
   });
@@ -196,7 +195,7 @@ const run = async () => {
       options: { None: "None", Plateau: "Plateau", YlGnBu: "YlGnBu" },
     })
     .on("change", () => {
-      layer?.forceUpdate();
+      result?.layer.forceUpdate();
     });
 
   // Color controls
@@ -207,7 +206,7 @@ const run = async () => {
   for (const key of Object.keys(colorParams) as (keyof typeof colorParams)[]) {
     colorFolder.addBinding(colorParams, key).on("change", ({ value }) => {
       currentColors[key] = value;
-      layer?.forceUpdate();
+      result?.layer.forceUpdate();
     });
   }
 
@@ -216,7 +215,7 @@ const run = async () => {
   for (const key of Object.keys(showParams) as (keyof typeof showParams)[]) {
     showFolder.addBinding(showParams, key).on("change", ({ value }) => {
       currentShow[key] = value;
-      layer?.forceUpdate();
+      result?.layer.forceUpdate();
     });
   }
 
