@@ -725,6 +725,7 @@ fn toggle_rendered_tile_visible(
 /// - `.pnts` → [`RenderedCesium3dTileContentPntsMarker`] + [`TileTransform`] + [`Aabb`]
 /// - `.b3dm` → [`RenderedCesium3dTileContentB3dmMarker`]
 /// - `.glb`  → [`RenderedCesium3dTileContentGlbMarker`]
+/// - `.glb` 3D Tiles 1.1 → [`RenderedCesium3dTileContentGltfFeaturesMarker`]
 ///
 /// # Important
 ///
