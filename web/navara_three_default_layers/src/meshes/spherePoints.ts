@@ -314,7 +314,9 @@ function injectGBufferToSpherePointsMaterial(shader: ShaderMaterial) {
 
   shader.fragmentShader = /* glsl */ `
     #ifndef USE_SHADOWMAP_DEPTH
-      layout(location = 1) out vec4 outputBuffer1;
+      layout(location = 1) out vec4 normalBuffer;
+      layout(location = 2) out vec4 effectIdBuffer;
+      layout(location = 3) out vec4 emissiveBuffer;
     #endif
 
     ${packing}
@@ -340,11 +342,13 @@ function injectGBufferToSpherePointsMaterial(shader: ShaderMaterial) {
           /}\s*$/, // Assume the last curly brace is of main()
           /* glsl */ `
           #ifndef USE_SHADOWMAP_DEPTH
-            outputBuffer1 = vec4(
+            normalBuffer = vec4(
               packNormalToVec2(normal),
               0.0,
               0.0
             );
+            effectIdBuffer = vec4(0.0);
+            emissiveBuffer = vec4(0.0);
           #endif
         }
       `,

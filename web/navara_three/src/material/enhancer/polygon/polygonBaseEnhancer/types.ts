@@ -29,6 +29,9 @@ export type PolygonBaseProps = {
   // Picking
   pickable?: boolean;
 
+  // Selective Effect
+  effectIdsMask?: number;
+
   // Reflectivity
   reflectivity?: number;
   roughness?: number;
@@ -62,6 +65,9 @@ export type PolygonBaseState = Readonly<
     isTexturized: boolean;
     clampToGround: boolean;
     pickable: boolean;
+    emissiveColor: number;
+    emissiveIntensity: number;
+    effectIdsMask: number;
     minMaxHeight: [number, number] | undefined;
     addExtrudedHeight: number;
     addHeight: number;
@@ -86,6 +92,7 @@ export type PolygonBaseRefs = {
   uAddHeight: UniformValue<number>;
   uClampToGround: UniformValue<boolean>;
   nvr_uPickable: UniformValue<number>;
+  uEffectIdsMask: UniformValue<number>;
   uIsTexturized: UniformValue<boolean>;
   reflectivity: UniformValue<number>;
   roughness: UniformValue<number>;
