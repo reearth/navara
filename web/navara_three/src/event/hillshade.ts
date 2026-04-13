@@ -7,7 +7,7 @@ import {
   RGBAFormat,
   UnsignedByteType,
 } from "three";
-import { EventContext } from "./context";
+import type { EventContext } from "./context";
 import type { TileMesh } from "../mesh/tile";
 
 import { getTextureFragmentSlots } from "../utils/textureFragmentIndex";
