@@ -284,7 +284,7 @@ export abstract class InstancedMeshDeclaration<
 
   /**
    * Grow the internal buffers by replacing the InstancedMesh with a larger one.
-   * Copies existing instance data to the new mesh and re-links selective effects.
+   * Copies existing instance data to the new mesh.
    */
   private grow(): void {
     const oldMesh = this.raw;
@@ -345,9 +345,6 @@ export abstract class InstancedMeshDeclaration<
 
     this._instance = newMesh;
     this.capacity = newCapacity;
-
-    // Re-link selective-effect registry and onBeforeRender wiring to the new mesh
-    this.relinkSelectiveEffects(oldMesh);
   }
 
   override onDestroy(): void {

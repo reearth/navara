@@ -270,10 +270,14 @@ export function processEvent(ctx: EventContext, event: Events | undefined) {
       }
     },
     {
-      shouldProcess: ({ type }) => {
+      shouldProcess: ({ type, event }) => {
         switch (type) {
           case "add":
-            return canWorkerProcessImmediately();
+            // The image extension needs worker.
+            return (
+              !IMAGE_EXTENSIONS.includes(event.extension) ||
+              canWorkerProcessImmediately()
+            );
           default:
             return true;
         }
@@ -456,7 +460,6 @@ async function processRequestedData(ctx: EventContext, req: DataRequestEvent) {
     return;
   }
 
-  // TODO: Handle abort
   await fetch(req.url, { signal: abortController.signal })
     .then((res) => {
       if (!res.ok) throw new Error();

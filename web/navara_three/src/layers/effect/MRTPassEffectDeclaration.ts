@@ -6,6 +6,7 @@ import {
   type EffectConfig,
   type EffectUpdate,
 } from "../../core/EffectDeclaration";
+import { SelectiveEffectRegistry } from "../../core/SelectiveEffectRegistry";
 import type { ViewContext } from "../../core/ViewContext";
 import { CustomRenderPass } from "../../passes";
 
@@ -28,6 +29,7 @@ export class MRTPassEffectDeclaration extends EffectDeclaration<
   // No insertAfter/Before - this is typically the first pass
 
   private config: MRTPassConfig;
+  private _registry = new SelectiveEffectRegistry();
 
   constructor(view: ViewContext, config: MRTPassConfig) {
     super(view, config);
@@ -48,16 +50,29 @@ export class MRTPassEffectDeclaration extends EffectDeclaration<
       this.view.globe,
       {
         debugNormal: !!this.config.mrt?.debugNormal,
-        // Pass SelectiveEffect infrastructure for mask context
-        selectiveEffectRegistry: this.view.selectiveEffectRegistry,
       },
     );
+
+    // Expose SelectiveEffectRegistry to ViewContext for mask computation and effect key resolution
+    this.view.setSelectiveEffectRegistry(this._registry);
 
     return pass;
   }
 
   get normalBuffer(): Texture | undefined {
     return this.raw?.gbufferRenderTarget.textures[1];
+  }
+
+  get effectIdsBuffer(): Texture | undefined {
+    return this.raw?.gbufferRenderTarget.textures[2];
+  }
+
+  get emissiveBuffer(): Texture | undefined {
+    return this.raw?.gbufferRenderTarget.textures[3];
+  }
+
+  get registry(): SelectiveEffectRegistry {
+    return this._registry;
   }
 
   get depthBuffer(): Texture | undefined {
@@ -90,5 +105,11 @@ export class MRTPassEffectDeclaration extends EffectDeclaration<
     if (updates.mrt?.debugNormal !== undefined) {
       // TODO: Support
     }
+  }
+
+  onDestroy(): void {
+    this._registry.clear();
+    this.view.setSelectiveEffectRegistry(undefined);
+    super.onDestroy();
   }
 }

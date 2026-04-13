@@ -1,6 +1,5 @@
-import { Vector2, type Texture } from "three";
+import { OrthographicCamera, PlaneGeometry, type Texture } from "three";
 
-import { BufferView } from "../../bufferView";
 import {
   EffectDeclaration,
   type EffectConfig,
@@ -8,16 +7,8 @@ import {
 } from "../../core/EffectDeclaration";
 import { type SelectiveEffectResources } from "../../core/SelectiveEffectHelper";
 import type { ViewContext } from "../../core/ViewContext";
-import type { CustomRenderPass } from "../../passes";
 
 import type { MRTPassEffectDeclaration } from "./MRTPassEffectDeclaration";
-
-// Re-export utilities from SelectiveEffectHelper for backward compatibility
-export {
-  createDepthClipMaterial,
-  createFullscreenQuad,
-  applyDepthClip,
-} from "../../core/SelectiveEffectHelper";
 
 // Base configuration for selective effect layers
 // Note: resolutionScale and debugViews are defined in each effect-specific config (e.g., bloom, outline)
@@ -28,10 +19,25 @@ export type SelectiveEffectDeclarationConfig = {
 export type SelectiveEffectDeclarationUpdate = EffectUpdate;
 
 /**
- * Base class for selective effect layers.
- * Provides resource management, mask RT registration with CustomRenderPass,
- * and debug visualization helpers.
- * Mask rendering is handled by CustomRenderPass via MaskPassContext.
+ * Create fullscreen rendering infrastructure for selective effect passes.
+ */
+export function createFullscreenQuad(): {
+  camera: OrthographicCamera;
+  geometry: PlaneGeometry;
+} {
+  return {
+    camera: new OrthographicCamera(-1, 1, 1, -1, 0, 1),
+    geometry: new PlaneGeometry(2, 2),
+  };
+}
+
+/**
+ * Base class for buffer-based selective effect layers (Bloom, Outline, etc.).
+ *
+ * Manages effect key registration, EffectIds Buffer slot allocation, and
+ * provides MRT buffer accessors for subclass passes.
+ *
+ * Subclasses implement {@link createPass}.
  */
 export abstract class SelectiveEffectDeclaration<
   Config extends SelectiveEffectDeclarationConfig = SelectiveEffectDeclarationConfig,
@@ -39,67 +45,40 @@ export abstract class SelectiveEffectDeclaration<
 > extends EffectDeclaration<Config, UpdateConfig> {
   protected resources!: SelectiveEffectResources;
   protected config: Config;
-  protected abstract getEffectKey(): string;
-
-  /** Get resolution scale from effect-specific config (e.g., bloom.resolutionScale) */
-  protected abstract getResolutionScale(): number;
-
-  /** Get debug views flag from effect-specific config (e.g., bloom.debugViews) */
-  protected abstract getDebugViews(): boolean;
 
   constructor(view: ViewContext, config: Config) {
     super(view, config);
     this.config = config;
   }
 
-  // ============================================
+  // ---------------------------------------------------------------------------
   // Public API for Pass classes
-  // ============================================
+  // ---------------------------------------------------------------------------
 
-  /**
-   * Get the ViewContext for accessing camera, scenes, registry, etc.
-   */
+  /** ViewContext for accessing camera, scenes, renderer, registry, etc. */
   public get viewContext(): ViewContext {
     return this.view;
   }
 
-  /**
-   * Get the layer configuration
-   */
+  /** Layer configuration (typed per subclass). */
   public get layerConfig(): Config {
     return this.config;
   }
 
-  /**
-   * Get the PostEffect resources (maskRT, options, maskDebug)
-   */
-  public get selectiveEffectResources(): SelectiveEffectResources {
-    return this.resources;
-  }
+  // ---------------------------------------------------------------------------
+  // Lifecycle
+  // ---------------------------------------------------------------------------
 
   onCreate(): void {
-    // Create selective effect resources
-    if (!this.view.selectiveEffectRegistry) {
-      throw new Error("SelectiveEffectRegistry not initialized");
+    const registry = this.view.selectiveEffectRegistry;
+    if (!registry) {
+      throw new Error(
+        "SelectiveEffectRegistry not initialized. Ensure MRTPassEffectLayer is added before selective effect layers.",
+      );
     }
 
-    // Get values from effect-specific config via abstract methods
-    const debugViews =
-      this.getDebugViews() ||
-      this.view.debugOptions.selectiveEffectMask ||
-      false;
-
-    this.resources = this.view.selectiveEffectRegistry.create(
-      this.id,
-      this.getEffectKey(),
-      {
-        resolutionScale: this.getResolutionScale(),
-        debugViews,
-      },
-    );
-
-    // Register maskRT with CustomRenderPass for context-based mask rendering
-    this.registerMaskRenderTarget();
+    // Allocate a slot bit in the EffectIds Buffer
+    registry.registerSlot(this.id);
 
     super.onCreate();
   }
@@ -206,13 +185,34 @@ export abstract class SelectiveEffectDeclaration<
     }
   }
 
-  onDestroy(): void {
-    // Unregister maskRT from CustomRenderPass
-    this.unregisterMaskRenderTarget();
 
-    if (this.view.selectiveEffectRegistry) {
-      this.view.selectiveEffectRegistry.destroy(this.id);
-    }
+  onDestroy(): void {
+    const registry = this.view.selectiveEffectRegistry;
+
+    // Release slot bit in the EffectIds Buffer
+    registry?.unregisterSlot(this.id);
+
     super.onDestroy();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Buffer accessors — used by subclass passes to read MRT data
+  // ---------------------------------------------------------------------------
+
+  /** Emissive RGB buffer (MRT attachment[3]). */
+  public getEmissiveBuffer(): Texture | null {
+    const mrtLayer = this.findLayer<MRTPassEffectLayer>("mrt");
+    return mrtLayer?.emissiveBuffer ?? null;
+  }
+
+  /** EffectIds bitmask buffer (MRT attachment[2]). NearestFilter, discrete data. */
+  public getEffectIdsBuffer(): Texture | null {
+    const mrtLayer = this.findLayer<MRTPassEffectLayer>("mrt");
+    return mrtLayer?.effectIdsBuffer ?? null;
+  }
+
+  /** Slot bit index for this effect instance in the EffectIds Buffer. -1 if unregistered. */
+  public getEffectSlot(): number {
+    return this.view.selectiveEffectRegistry?.getSlot(this.id) ?? -1;
   }
 }

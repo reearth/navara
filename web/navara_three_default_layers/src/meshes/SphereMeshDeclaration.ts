@@ -4,8 +4,8 @@ import {
   type MeshConfigWithSelectiveEffect,
   type MeshUpdateWithSelectiveEffect,
   type ViewContext,
-  type SelectiveEffectOcclusion,
   type CustomObject3DEventMap,
+  setupSelectiveEffectUniforms,
 } from "@navara/three";
 import {
   Mesh,
@@ -33,7 +33,6 @@ type LayerDescription = {
     castShadow?: boolean;
     receiveShadow?: boolean;
     effectIds?: string[];
-    selectiveEffectOcclusion?: SelectiveEffectOcclusion;
   };
 };
 
@@ -54,9 +53,6 @@ export class SphereMeshDeclaration extends MeshDeclarationForSelectiveEffect<
     // Propagate initial effectIds/selectiveEffectOcclusion to base MeshLayer
     if (config.sphere?.effectIds) {
       config.effectIds = config.sphere.effectIds;
-    }
-    if (config.sphere?.selectiveEffectOcclusion !== undefined) {
-      config.selectiveEffectOcclusion = config.sphere.selectiveEffectOcclusion;
     }
     super(view, config);
     this.config = config;
@@ -81,14 +77,16 @@ export class SphereMeshDeclaration extends MeshDeclarationForSelectiveEffect<
 
     // Create material from properties
     const colorValue = cfg.color ?? new Color().setStyle("#ffffff");
-    const emissiveColorValue = cfg.emissiveColor ? cfg.emissiveColor.raw : 0;
     const material = new MeshLambertMaterial({
       color: colorValue.raw,
-      emissive: emissiveColorValue,
-      emissiveIntensity: cfg.emissiveIntensity ?? 1,
       opacity: cfg.opacity ?? 1,
       transparent: cfg.transparent ?? false,
     });
+
+    // Set up selective effect uniforms and emissive properties
+    material.emissive.set(cfg.emissiveColor?.raw ?? 0x000000);
+    material.emissiveIntensity = cfg.emissiveIntensity ?? 0;
+    setupSelectiveEffectUniforms(material);
 
     const mesh = new Mesh<
       SphereGeometry,
@@ -149,10 +147,12 @@ export class SphereMeshDeclaration extends MeshDeclarationForSelectiveEffect<
           const colorValue = cfg.color.raw;
           material.color.set(colorValue);
         }
-        if (cfg.emissiveColor !== undefined)
+        if (cfg.emissiveColor !== undefined) {
           material.emissive.set(cfg.emissiveColor.raw);
-        if (cfg.emissiveIntensity !== undefined)
+        }
+        if (cfg.emissiveIntensity !== undefined) {
           material.emissiveIntensity = cfg.emissiveIntensity;
+        }
         if (cfg.opacity !== undefined) material.opacity = cfg.opacity;
         if (cfg.transparent !== undefined)
           material.transparent = cfg.transparent;
@@ -167,14 +167,10 @@ export class SphereMeshDeclaration extends MeshDeclarationForSelectiveEffect<
         this._instance.receiveShadow = cfg.receiveShadow;
       }
 
-      // Propagate effectIds/selectiveEffectOcclusion to base MeshLayer
+      // Propagate effectIds to base MeshLayer
       if (cfg.effectIds !== undefined) {
         updates.effectIds = cfg.effectIds;
       }
-      if (cfg.selectiveEffectOcclusion !== undefined) {
-        updates.selectiveEffectOcclusion = cfg.selectiveEffectOcclusion;
-      }
-
       this.emit("needsUpdate");
     }
 

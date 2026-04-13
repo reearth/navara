@@ -23,14 +23,12 @@ import type { EventContext } from "../event/context";
 import { TEXTURE_LOADER } from "../event/loaders";
 import { createInstancedSpriteMaterialEnhancer } from "../material/enhancer";
 import { getImageDataFromImageBitmap } from "../tasks/getImageDataFromImageBitmap";
-import { arraysEqual } from "../utils";
 
 import { PickableMesh } from "./pickableMesh";
 
 export type InstancedSpriteOptions = {
   renderOrder?: number;
   ctx: EventContext;
-  layerId: string;
 };
 
 type PositionsInfo = {
@@ -58,20 +56,14 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
   private _loadedUrls = new Set<string>();
   private _active = true;
   readonly ctx: EventContext;
-  /** Layer ID for SelectiveEffect handling */
-  private _layerId: string;
   /** Material enhancer for encapsulated state management */
   private _enhancedMaterial?: ReturnType<
     typeof createInstancedSpriteMaterialEnhancer
   >;
-  /** Previous effectIds for SelectiveEffect registry updates */
-  private _prevEffectIds?: string[];
-
   constructor(options: InstancedSpriteOptions) {
     super();
     this.renderOrder = options.renderOrder ?? this.renderOrder;
     this.ctx = options.ctx;
-    this._layerId = options.layerId;
   }
 
   setActive(active: boolean) {
@@ -113,6 +105,12 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
         offsetDepth: m.material.offsetDepth ?? true,
         transparent: m.material.transparent ?? true,
         depthTest: m.material.depthTest ?? true,
+        effectIdsMask:
+          this.ctx.viewContext.selectiveEffectRegistry?.computeMask(
+            m.material.effectIds ?? [],
+          ) ?? 0,
+        emissiveColor: m.material.emissiveColor ?? 0,
+        emissiveIntensity: m.material.emissiveIntensity ?? 0,
       },
     });
 
@@ -197,19 +195,6 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
           layerAttr.needsUpdate = true;
         }
       }
-    }
-
-    // SelectiveEffect: effectIds handling (needs prev state for registry)
-    if (!arraysEqual(this._prevEffectIds, m.material.effectIds)) {
-      this.ctx.viewContext.selectiveEffectRegistry?.updateLinksForObject(
-        this,
-        m.material.effectIds ?? [],
-        this._prevEffectIds ?? [],
-        this._layerId,
-      );
-      this._prevEffectIds = m.material.effectIds
-        ? [...m.material.effectIds]
-        : [];
     }
   }
 
@@ -621,17 +606,6 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     }
 
     shaderMaterial.dispose();
-
-    // Clean up SelectiveEffect registry links
-    if (this.ctx.viewContext?.selectiveEffectRegistry && this._prevEffectIds) {
-      this.ctx.viewContext.selectiveEffectRegistry.updateLinksForObject(
-        this,
-        [], // New effectIds: empty array (removing all links)
-        this._prevEffectIds, // Previous effectIds
-        this._layerId,
-      );
-      this._prevEffectIds = undefined;
-    }
 
     // Clear internal collections to release references
     this._batchIdToInstance.clear();

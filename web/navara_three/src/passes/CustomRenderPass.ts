@@ -2,6 +2,8 @@ import { Globe } from "@navara/core";
 import { DepthCopyPass } from "postprocessing";
 import {
   DepthTexture,
+  HalfFloatType,
+  NearestFilter,
   RGBADepthPacking,
   Scene,
   WebGLRenderTarget,
@@ -9,8 +11,6 @@ import {
   type WebGLRenderer,
 } from "three";
 
-import type { SelectiveEffectHelper } from "../core/SelectiveEffectHelper";
-import { SelectiveEffectMaskController } from "../core/SelectiveEffectMaskController";
 import { RenderPass } from "../effects";
 import { DrapedMesh } from "../mesh/DrapedMesh";
 import type { Scenes } from "../scene";
@@ -24,8 +24,6 @@ export type CustomRenderPassOptions = {
   debugNormal?: boolean;
   disableShadow?: boolean;
   allowTransparent?: boolean;
-  /** SelectiveEffectHelper for mask context (optional for backwards compatibility) */
-  selectiveEffectRegistry?: SelectiveEffectHelper;
 };
 
 export class CustomRenderPass extends RenderPass {
@@ -51,10 +49,6 @@ export class CustomRenderPass extends RenderPass {
   private debugNormalCopyPass?: NormalCopyPass;
   private allowTransparent: boolean;
 
-  // SelectiveEffect context for mask rendering
-  private selectiveEffectRegistry?: SelectiveEffectHelper;
-  private maskController = new SelectiveEffectMaskController();
-
   constructor(
     scenes: Scenes,
     camera: PerspectiveCamera,
@@ -73,9 +67,24 @@ export class CustomRenderPass extends RenderPass {
     this.globe = globe;
 
     this.gbufferRenderTarget = inputBuffer.clone();
+    // attachment 1: normal buffer
     this.gbufferRenderTarget.textures.push(
       this.gbufferRenderTarget.texture.clone(),
     );
+    // attachment 2: effectIds buffer
+    // HalfFloatType preserves integer masks up to 11 bits (0..2047) exactly.
+    // NearestFilter is required because this stores discrete bitmask data.
+    const effectIdsTexture = this.gbufferRenderTarget.texture.clone();
+    effectIdsTexture.type = HalfFloatType;
+    effectIdsTexture.minFilter = NearestFilter;
+    effectIdsTexture.magFilter = NearestFilter;
+    effectIdsTexture.generateMipmaps = false;
+    this.gbufferRenderTarget.textures.push(effectIdsTexture);
+    // attachment 3: emissive buffer (RGB=color×intensity pre-multiplied by Three.js, A=unused)
+    // HalfFloatType preserves HDR emissive values for bloom extraction.
+    const emissiveTexture = this.gbufferRenderTarget.texture.clone();
+    emissiveTexture.type = HalfFloatType;
+    this.gbufferRenderTarget.textures.push(emissiveTexture);
 
     this.copyPass = new RenderTargetCopyPass(this.gbufferRenderTarget);
 
@@ -87,9 +96,6 @@ export class CustomRenderPass extends RenderPass {
 
     this.disableShadow = !!options?.disableShadow;
     this.allowTransparent = options?.allowTransparent ?? true;
-
-    // SelectiveEffect context for mask rendering
-    this.selectiveEffectRegistry = options?.selectiveEffectRegistry;
 
     this.globeNormalCopyPass = new NormalCopyPass();
     this.globeNormalCopyPass.setNormalTexture(
@@ -207,15 +213,6 @@ export class CustomRenderPass extends RenderPass {
     } else {
       this._renderWithLight(renderer, this._scenes.mrt);
     }
-
-    // Render to maskRTs after main MRT scene rendering
-    // Uses context-based mesh self-determination (no traverse needed)
-    this.maskController.renderMaskPasses(
-      renderer,
-      renderTarget,
-      () => this._renderWithLight(renderer, this._scenes.mrt),
-      this.selectiveEffectRegistry,
-    );
 
     this.debugNormalCopyPass?.render(renderer, null, null);
 

@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 
-import { SelectiveEffectOcclusionMode } from "../../../../core";
 import type { ShaderUniforms } from "../../MaterialEnhancer";
 
 import { createBaseMutates } from "./mutates";
@@ -38,63 +37,19 @@ describe("modelBaseEnhancer/mutates", () => {
     });
   });
 
-  describe("update syncs selective effect refs from state", () => {
-    type TestCase = {
-      name: string;
-      stateOverride: Partial<ModelBaseState>;
-      uniformKey: keyof ShaderUniforms;
-      expected: number | ((v: number) => boolean);
-    };
-
-    const testCases: TestCase[] = [
-      {
-        name: "bloom true → uBloomMaskPass = 1",
-        stateOverride: { bloom: true },
-        uniformKey: "uBloomMaskPass",
-        expected: 1,
-      },
-      {
-        name: "bloom false → uBloomMaskPass = 0",
-        stateOverride: { bloom: false },
-        uniformKey: "uBloomMaskPass",
-        expected: 0,
-      },
-      {
-        name: "outline true → uOutlineMaskPass = 1",
-        stateOverride: { outline: true },
-        uniformKey: "uOutlineMaskPass",
-        expected: 1,
-      },
-      {
-        name: "outline false → uOutlineMaskPass = 0",
-        stateOverride: { outline: false },
-        uniformKey: "uOutlineMaskPass",
-        expected: 0,
-      },
-      {
-        name: "occlusion SelectiveEffectOcclusionMode.Normal → uSelectiveEffectOcclusion = SelectiveEffectOcclusionMode.Normal",
-        stateOverride: { occlusion: SelectiveEffectOcclusionMode.Normal },
-        uniformKey: "uSelectiveEffectOcclusion",
-        expected: SelectiveEffectOcclusionMode.Normal,
-      },
-      {
-        name: "occlusion SelectiveEffectOcclusionMode.Skip → uSelectiveEffectOcclusion = SelectiveEffectOcclusionMode.Normal",
-        stateOverride: { occlusion: SelectiveEffectOcclusionMode.Skip },
-        uniformKey: "uSelectiveEffectOcclusion",
-        expected: SelectiveEffectOcclusionMode.Skip,
-      },
-    ];
-
-    it.each(testCases)("$name", ({ stateOverride, uniformKey, expected }) => {
-      const state: ModelBaseState = { ...DEFAULT_BASE_STATE, ...stateOverride };
+  describe("update syncs selective effect uniforms from state", () => {
+    it("should sync effectIdsMask ref from state", () => {
+      const state: ModelBaseState = {
+        ...DEFAULT_BASE_STATE,
+        effectIdsMask: 5, // bits 0 and 2
+      };
       const mutates = createBaseMutates();
       mutates.update(state);
 
       const uniforms: ShaderUniforms = {};
       mutates.updateUniforms(uniforms, state);
 
-      const value = uniforms[uniformKey]?.value as number;
-      expect(value).toBe(expected);
+      expect(uniforms.uEffectIdsMask?.value).toBe(5);
     });
   });
 

@@ -1,7 +1,5 @@
 import { describe, expect, it } from "vitest";
 
-import { SelectiveEffectOcclusionMode } from "../../../../core";
-
 import { DEFAULT_BASE_STATE, updateState } from "./state";
 import type { ModelBaseProps, ModelBaseState } from "./types";
 
@@ -70,27 +68,17 @@ describe("modelBaseEnhancer/state", () => {
         }),
       },
       {
-        name: "applies selective effect flags",
+        name: "applies emissive and effectIdsMask",
         props: {
-          bloom: true,
-          outline: true,
-          occlusion: SelectiveEffectOcclusionMode.Silhouette,
+          emissiveColor: 0xff0000,
+          emissiveIntensity: 1.5,
+          effectIdsMask: 3,
         },
         currentState: DEFAULT_BASE_STATE,
         expected: createExpectedState({
-          bloom: true,
-          outline: true,
-          occlusion: SelectiveEffectOcclusionMode.Silhouette,
-        }),
-      },
-      {
-        name: "applies bloom only",
-        props: {
-          bloom: true,
-        },
-        currentState: DEFAULT_BASE_STATE,
-        expected: createExpectedState({
-          bloom: true,
+          emissiveColor: 0xff0000,
+          emissiveIntensity: 1.5,
+          effectIdsMask: 3,
         }),
       },
     ];

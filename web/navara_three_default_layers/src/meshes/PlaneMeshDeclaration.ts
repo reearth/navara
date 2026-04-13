@@ -4,8 +4,8 @@ import {
   type MeshConfigWithSelectiveEffect,
   type MeshUpdateWithSelectiveEffect,
   type ViewContext,
-  type SelectiveEffectOcclusion,
   type CustomObject3DEventMap,
+  setupSelectiveEffectUniforms,
 } from "@navara/three";
 import {
   Mesh,
@@ -30,7 +30,6 @@ type LayerDescription = {
     castShadow?: boolean;
     receiveShadow?: boolean;
     effectIds?: string[];
-    selectiveEffectOcclusion?: SelectiveEffectOcclusion;
   };
 };
 
@@ -51,9 +50,6 @@ export class PlaneMeshDeclaration extends MeshDeclarationForSelectiveEffect<
     // Propagate initial effectIds/selectiveEffectOcclusion to base MeshLayer
     if (config.plane?.effectIds) {
       config.effectIds = config.plane.effectIds;
-    }
-    if (config.plane?.selectiveEffectOcclusion !== undefined) {
-      config.selectiveEffectOcclusion = config.plane.selectiveEffectOcclusion;
     }
     super(view, config);
     this.config = config;
@@ -79,10 +75,13 @@ export class PlaneMeshDeclaration extends MeshDeclarationForSelectiveEffect<
     const material = new MeshLambertMaterial({
       color: colorValue.raw,
       emissive: emissiveColorValue,
-      emissiveIntensity: cfg.emissiveIntensity ?? 1,
+      emissiveIntensity: cfg.emissiveIntensity ?? 0,
       opacity: cfg.opacity ?? 1,
       transparent: cfg.transparent ?? false,
     });
+
+    // Set up selective effect uniforms
+    setupSelectiveEffectUniforms(material);
 
     const mesh = new Mesh<
       PlaneGeometry,
@@ -138,10 +137,12 @@ export class PlaneMeshDeclaration extends MeshDeclarationForSelectiveEffect<
             const colorValue = cfg.color.raw;
             material.color.set(colorValue);
           }
-          if (cfg.emissiveColor !== undefined)
+          if (cfg.emissiveColor !== undefined) {
             material.emissive.set(cfg.emissiveColor.raw);
-          if (cfg.emissiveIntensity !== undefined)
+          }
+          if (cfg.emissiveIntensity !== undefined) {
             material.emissiveIntensity = cfg.emissiveIntensity;
+          }
           if (cfg.opacity !== undefined) material.opacity = cfg.opacity;
           if (cfg.transparent !== undefined)
             material.transparent = cfg.transparent;
@@ -157,12 +158,9 @@ export class PlaneMeshDeclaration extends MeshDeclarationForSelectiveEffect<
         this._instance.receiveShadow = cfg.receiveShadow;
       }
 
-      // Propagate effectIds/selectiveEffectOcclusion to base MeshLayer
+      // Propagate effectIds to base MeshLayer
       if (cfg.effectIds !== undefined) {
         updates.effectIds = cfg.effectIds;
-      }
-      if (cfg.selectiveEffectOcclusion !== undefined) {
-        updates.selectiveEffectOcclusion = cfg.selectiveEffectOcclusion;
       }
 
       this.emit("needsUpdate");

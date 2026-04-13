@@ -7,7 +7,15 @@
 #endif
 
 #ifndef USE_SHADOWMAP_DEPTH
-    layout(location = 1) out vec4 outputBuffer1;
+    layout(location = 1) out vec4 normalBuffer;
+    layout(location = 2) out vec4 effectIdBuffer;
+    layout(location = 3) out vec4 emissiveBuffer;
+
+    #ifdef USE_SELECTIVE_EFFECT
+        uniform float uEffectIdsMask;
+        uniform vec3 uEmissiveColor;
+        uniform float uEmissiveIntensity;
+    #endif
 
     // Pack normal to vec2 for MRT
     vec2 packNormalToVec2(vec3 normal) {
@@ -64,6 +72,14 @@ void main() {
     #ifndef USE_SHADOWMAP_DEPTH
         // Calculate screen-space normal for MRT compatibility
         vec3 normal = screenSpaceNormal();
-        outputBuffer1 = vec4(packNormalToVec2(normal), 0.0, 0.0);
+        normalBuffer = vec4(packNormalToVec2(normal), 0.0, 0.0);
+
+        #ifdef USE_SELECTIVE_EFFECT
+            effectIdBuffer = vec4(uEffectIdsMask, 0.0, 0.0, 1.0);
+            emissiveBuffer = vec4(uEmissiveColor * uEmissiveIntensity, 1.0);
+        #else
+            effectIdBuffer = vec4(0.0);
+            emissiveBuffer = vec4(0.0);
+        #endif
     #endif
 }

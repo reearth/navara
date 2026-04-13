@@ -6,9 +6,9 @@ use navara_data_requester::{DataRequester, DataRequesterExtension};
 use url::Url;
 
 use crate::{
-    Cesium3dTileContent, TileOrderByDistance, b3dm::B3dmDataRequesterMarker,
-    cesium3dtiles::types::Cesium3dTileContentRequesterQuery, glb::GlbDataRequesterMarker,
-    pnts::PntsDataRequesterMarker,
+    Cesium3dTileContent, Cesium3dTilesTreeOrder, TileOrderByDistance,
+    b3dm::B3dmDataRequesterMarker, cesium3dtiles::types::Cesium3dTileContentRequesterQuery,
+    glb::GlbDataRequesterMarker, pnts::PntsDataRequesterMarker,
 };
 
 #[derive(Component)]
@@ -25,6 +25,7 @@ pub(crate) fn request_tile_content(
     tile: &mut Cesium3dTileContent,
     requesters: &Cesium3dTileContentRequesterQuery,
     priority: Priority,
+    tree_order: Cesium3dTilesTreeOrder,
 ) -> bool {
     let data_requester_entity_id = tile.data_requester_id;
     if let Some(id) = data_requester_entity_id
@@ -46,6 +47,7 @@ pub(crate) fn request_tile_content(
                     Cesium3dTileContentDataRequesterMarker,
                     PntsDataRequesterMarker,
                     priority,
+                    tree_order,
                     TileOrderByDistance {
                         distance_from_camera: tile.state.distance_from_camera,
                         sse: tile.state.sse,
@@ -62,6 +64,7 @@ pub(crate) fn request_tile_content(
                     Cesium3dTileContentDataRequesterMarker,
                     B3dmDataRequesterMarker,
                     priority,
+                    tree_order,
                     TileOrderByDistance {
                         distance_from_camera: tile.state.distance_from_camera,
                         sse: tile.state.sse,
@@ -78,6 +81,7 @@ pub(crate) fn request_tile_content(
                     Cesium3dTileContentDataRequesterMarker,
                     GlbDataRequesterMarker,
                     priority,
+                    tree_order,
                     TileOrderByDistance {
                         distance_from_camera: tile.state.distance_from_camera,
                         sse: tile.state.sse,

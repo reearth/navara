@@ -1,6 +1,7 @@
 import {
   Color,
   InstancedMeshDeclaration,
+  setupSelectiveEffectUniforms,
   type InstancedChildConfig,
   type InstancedMeshConfig,
   type InstancedMeshUpdate,
@@ -38,7 +39,6 @@ export type SharedBoxMaterialConfig = {
   castShadow?: boolean;
   receiveShadow?: boolean;
   effectIds?: string[];
-  selectiveEffectOcclusion?: SelectiveEffectOcclusion;
 };
 
 /** The `boxes` config object containing shared material props and children. */
@@ -70,9 +70,6 @@ export class InstancedBoxMeshDeclaration extends InstancedMeshDeclaration<
     if (config.boxes?.effectIds) {
       config.effectIds = config.boxes.effectIds;
     }
-    if (config.boxes?.selectiveEffectOcclusion !== undefined) {
-      config.selectiveEffectOcclusion = config.boxes.selectiveEffectOcclusion;
-    }
     super(view, config);
     this.config = config;
   }
@@ -95,13 +92,15 @@ export class InstancedBoxMeshDeclaration extends InstancedMeshDeclaration<
     const colorValue = cfg?.color ?? new Color().setStyle("#ffffff");
     const emissiveColorValue = cfg?.emissiveColor ? cfg.emissiveColor.raw : 0;
 
-    return new MeshLambertMaterial({
+    const material = new MeshLambertMaterial({
       color: colorValue.raw,
       emissive: emissiveColorValue,
-      emissiveIntensity: cfg?.emissiveIntensity ?? 1,
+      emissiveIntensity: cfg?.emissiveIntensity ?? 0,
       opacity: cfg?.opacity ?? 1,
       transparent: cfg?.transparent ?? false,
     });
+    setupSelectiveEffectUniforms(material);
+    return material;
   }
 
   protected override getInstanceScale(
@@ -167,12 +166,9 @@ export class InstancedBoxMeshDeclaration extends InstancedMeshDeclaration<
         this.replaceAll(boxesUpdate.children);
       }
 
-      // Propagate effectIds/selectiveEffectOcclusion to base class
+      // Propagate effectIds to base class
       if (boxesUpdate.effectIds !== undefined) {
         updates.effectIds = boxesUpdate.effectIds;
-      }
-      if (boxesUpdate.selectiveEffectOcclusion !== undefined) {
-        updates.selectiveEffectOcclusion = boxesUpdate.selectiveEffectOcclusion;
       }
 
       // Update stored config

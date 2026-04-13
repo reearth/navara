@@ -5,9 +5,9 @@ import {
   type MeshConfigWithSelectiveEffect,
   type MeshUpdateWithSelectiveEffect,
   type ViewContext,
-  type SelectiveEffectOcclusion,
   type CustomObject3DEventMap,
   type PassKey,
+  setupSelectiveEffectUniforms,
 } from "@navara/three";
 import {
   BoxGeometry,
@@ -34,7 +34,6 @@ type LayerDescription = {
     castShadow?: boolean;
     receiveShadow?: boolean;
     effectIds?: string[];
-    selectiveEffectOcclusion?: SelectiveEffectOcclusion;
     /**
      * To drape the mesh properly on the terrain,
      * the mesh must cover the terrain.
@@ -63,9 +62,6 @@ export class BoxMeshDeclaration extends MeshDeclarationForSelectiveEffect<
     if (config.box?.effectIds) {
       config.effectIds = config.box.effectIds;
     }
-    if (config.box?.selectiveEffectOcclusion !== undefined) {
-      config.selectiveEffectOcclusion = config.box.selectiveEffectOcclusion;
-    }
     super(view, config);
     this.config = config;
   }
@@ -88,6 +84,13 @@ export class BoxMeshDeclaration extends MeshDeclarationForSelectiveEffect<
 
     // Create material from properties
     const material = this.createMaterial(cfg);
+
+    // Set up selective effect uniforms and emissive properties
+    if (material instanceof MeshLambertMaterial) {
+      material.emissive.set(cfg.emissiveColor?.raw ?? 0x000000);
+      material.emissiveIntensity = cfg.emissiveIntensity ?? 0;
+      setupSelectiveEffectUniforms(material);
+    }
 
     const mesh = new DrapedMesh<BoxGeometry, BoxMeshMaterial, BoxMeshEventMap>(
       geometry,
@@ -115,11 +118,8 @@ export class BoxMeshDeclaration extends MeshDeclarationForSelectiveEffect<
         transparent: cfg.transparent ?? false,
       });
     }
-    const emissiveColorValue = cfg.emissiveColor ? cfg.emissiveColor.raw : 0;
     return new MeshLambertMaterial({
       color: colorValue.raw,
-      emissive: emissiveColorValue,
-      emissiveIntensity: cfg.emissiveIntensity ?? 1,
       opacity: cfg.opacity ?? 1,
       transparent: cfg.transparent ?? false,
     });
@@ -151,6 +151,12 @@ export class BoxMeshDeclaration extends MeshDeclarationForSelectiveEffect<
           this._instance.material = newMaterial;
           if (!cfg.draped) {
             this.view.applyShadowMaterial(newMaterial);
+          }
+          // Re-setup SelectiveEffect uniforms for the new material
+          if (newMaterial instanceof MeshLambertMaterial) {
+            newMaterial.emissive.set(origin.emissiveColor?.raw ?? 0x000000);
+            newMaterial.emissiveIntensity = origin.emissiveIntensity ?? 0;
+            setupSelectiveEffectUniforms(newMaterial);
           }
         }
       }
@@ -196,10 +202,12 @@ export class BoxMeshDeclaration extends MeshDeclarationForSelectiveEffect<
         if (cfg.transparent !== undefined)
           material.transparent = cfg.transparent;
         if (material instanceof MeshLambertMaterial) {
-          if (cfg.emissiveColor !== undefined)
+          if (cfg.emissiveColor !== undefined) {
             material.emissive.set(cfg.emissiveColor.raw);
-          if (cfg.emissiveIntensity !== undefined)
+          }
+          if (cfg.emissiveIntensity !== undefined) {
             material.emissiveIntensity = cfg.emissiveIntensity;
+          }
         }
         material.needsUpdate = true;
       }
@@ -212,14 +220,10 @@ export class BoxMeshDeclaration extends MeshDeclarationForSelectiveEffect<
         this._instance.receiveShadow = cfg.receiveShadow;
       }
 
-      // Propagate effectIds/selectiveEffectOcclusion to base MeshLayer
+      // Propagate effectIds to base MeshLayer
       if (cfg.effectIds !== undefined) {
         updates.effectIds = cfg.effectIds;
       }
-      if (cfg.selectiveEffectOcclusion !== undefined) {
-        updates.selectiveEffectOcclusion = cfg.selectiveEffectOcclusion;
-      }
-
       this.emit("needsUpdate");
     }
 

@@ -7,6 +7,9 @@ import ThreeView, {
 import type {
   BoxMeshDeclaration,
   SphereMeshDeclaration,
+  CylinderMeshDeclaration,
+  PlaneMeshDeclaration,
+  TubeMeshDeclaration,
 } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
@@ -68,7 +71,6 @@ const run = async () => {
       height: 200,
       depth: 200,
       color: new Color().setHex(0xff0000),
-      emissiveIntensity: 1.0,
       opacity: 1.0,
       transparent: true,
       castShadow: true,
@@ -80,7 +82,6 @@ const run = async () => {
       y: tokyoStationPosition.y,
       z: tokyoStationPosition.z,
     },
-    selectiveEffectOcclusion: "normal",
   });
 
   const spherePosition = tokyoStationPosition
@@ -92,7 +93,6 @@ const run = async () => {
     sphere: {
       radius: 100,
       color: new Color().setHex(0x00aaff),
-      emissiveIntensity: 1.0,
       opacity: 1.0,
       transparent: true,
       castShadow: true,
@@ -104,7 +104,90 @@ const run = async () => {
       y: spherePosition.y,
       z: spherePosition.z,
     },
-    selectiveEffectOcclusion: "normal",
+  });
+
+  // Cylinder
+  const cylinderPosition = geodeticToVector3({
+    lat: degreeToRadian(35.681236),
+    lng: degreeToRadian(139.773),
+    height: 400,
+  });
+
+  view.addLayer<CylinderMeshDeclaration>({
+    type: "mesh",
+    cylinder: {
+      radiusTop: 50,
+      radiusBottom: 80,
+      height: 300,
+      color: new Color().setHex(0x00ff88),
+      opacity: 1.0,
+      transparent: true,
+      castShadow: true,
+      receiveShadow: true,
+      effectIds: [outlineEffect.id],
+    },
+    position: {
+      x: cylinderPosition.x,
+      y: cylinderPosition.y,
+      z: cylinderPosition.z,
+    },
+  });
+
+  // Plane
+  const planePosition = geodeticToVector3({
+    lat: degreeToRadian(35.678),
+    lng: degreeToRadian(139.767125),
+    height: 400,
+  });
+
+  view.addLayer<PlaneMeshDeclaration>({
+    type: "mesh",
+    plane: {
+      width: 200,
+      height: 200,
+      color: new Color().setHex(0xffaa00),
+      opacity: 1.0,
+      transparent: true,
+      castShadow: true,
+      receiveShadow: true,
+      effectIds: [outlineEffect.id],
+    },
+    position: {
+      x: planePosition.x,
+      y: planePosition.y,
+      z: planePosition.z,
+    },
+  });
+
+  // Tube
+  const tubeBasePosition = geodeticToVector3({
+    lat: degreeToRadian(35.678),
+    lng: degreeToRadian(139.773),
+    height: 400,
+  });
+
+  view.addLayer<TubeMeshDeclaration>({
+    type: "mesh",
+    tube: {
+      points: [
+        { x: 0, y: 0, z: 0 },
+        { x: 100, y: 200, z: 0 },
+        { x: 300, y: 100, z: 0 },
+        { x: 400, y: 300, z: 0 },
+      ],
+      radius: 20,
+      tubularSegments: 64,
+      radialSegments: 8,
+      color: new Color().setHex(0xff00ff),
+      opacity: 1.0,
+      transparent: true,
+      effectIds: [outlineEffect.id],
+    },
+    position: {
+      x: tubeBasePosition.x,
+      y: tubeBasePosition.y,
+      z: tubeBasePosition.z,
+    },
   });
 
   // Base layers
