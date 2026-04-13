@@ -170,20 +170,37 @@ fn is_no_data(col: &PropertyColumnData, index: usize) -> bool {
         .is_some_and(|bytes| bytes == no_data.as_slice())
 }
 
-/// Encode a JSON `noData` value to little-endian bytes matching the given component type.
-pub fn encode_no_data(no_data: &serde_json::Value, component_type: &str) -> Option<Vec<u8>> {
+/// Encode a single scalar JSON value to little-endian bytes matching the given component type.
+fn encode_scalar_no_data(value: &serde_json::Value, component_type: &str) -> Option<Vec<u8>> {
     match component_type {
-        "INT8" => no_data.as_i64().map(|v| (v as i8).to_le_bytes().to_vec()),
-        "UINT8" => no_data.as_u64().map(|v| (v as u8).to_le_bytes().to_vec()),
-        "INT16" => no_data.as_i64().map(|v| (v as i16).to_le_bytes().to_vec()),
-        "UINT16" => no_data.as_u64().map(|v| (v as u16).to_le_bytes().to_vec()),
-        "INT32" => no_data.as_i64().map(|v| (v as i32).to_le_bytes().to_vec()),
-        "UINT32" => no_data.as_u64().map(|v| (v as u32).to_le_bytes().to_vec()),
-        "INT64" => no_data.as_i64().map(|v| v.to_le_bytes().to_vec()),
-        "UINT64" => no_data.as_u64().map(|v: u64| v.to_le_bytes().to_vec()),
-        "FLOAT32" => no_data.as_f64().map(|v| (v as f32).to_le_bytes().to_vec()),
-        "FLOAT64" => no_data.as_f64().map(|v: f64| v.to_le_bytes().to_vec()),
+        "INT8" => value.as_i64().map(|v| (v as i8).to_le_bytes().to_vec()),
+        "UINT8" => value.as_u64().map(|v| (v as u8).to_le_bytes().to_vec()),
+        "INT16" => value.as_i64().map(|v| (v as i16).to_le_bytes().to_vec()),
+        "UINT16" => value.as_u64().map(|v| (v as u16).to_le_bytes().to_vec()),
+        "INT32" => value.as_i64().map(|v| (v as i32).to_le_bytes().to_vec()),
+        "UINT32" => value.as_u64().map(|v| (v as u32).to_le_bytes().to_vec()),
+        "INT64" => value.as_i64().map(|v| v.to_le_bytes().to_vec()),
+        "UINT64" => value.as_u64().map(|v: u64| v.to_le_bytes().to_vec()),
+        "FLOAT32" => value.as_f64().map(|v| (v as f32).to_le_bytes().to_vec()),
+        "FLOAT64" => value.as_f64().map(|v: f64| v.to_le_bytes().to_vec()),
         _ => None,
+    }
+}
+
+/// Encode a JSON `noData` value to little-endian bytes matching the given component type.
+///
+/// Supports both scalar values (for SCALAR element type) and array values
+/// (for VEC2/VEC3/VEC4/MAT2/MAT3/MAT4 element types). For arrays, each
+/// element is encoded as a scalar component and concatenated.
+pub fn encode_no_data(no_data: &serde_json::Value, component_type: &str) -> Option<Vec<u8>> {
+    if let Some(arr) = no_data.as_array() {
+        let mut bytes = Vec::new();
+        for elem in arr {
+            bytes.extend(encode_scalar_no_data(elem, component_type)?);
+        }
+        if bytes.is_empty() { None } else { Some(bytes) }
+    } else {
+        encode_scalar_no_data(no_data, component_type)
     }
 }
 
@@ -661,6 +678,24 @@ mod tests {
         assert_eq!(bytes, vec![255u8]);
 
         assert!(encode_no_data(&json!("text"), "FLOAT32").is_none());
+
+        // VEC3 noData: array of 3 FLOAT32 components
+        let bytes = encode_no_data(&json!([-1.0, -1.0, -1.0]), "FLOAT32").unwrap();
+        let expected: Vec<u8> = (-1.0f32)
+            .to_le_bytes()
+            .iter()
+            .cycle()
+            .take(12)
+            .copied()
+            .collect();
+        assert_eq!(bytes, expected);
+
+        // VEC2 noData: array of 2 UINT16 components
+        let bytes = encode_no_data(&json!([65535, 65535]), "UINT16").unwrap();
+        assert_eq!(bytes, vec![0xFF, 0xFF, 0xFF, 0xFF]);
+
+        // Empty array returns None
+        assert!(encode_no_data(&json!([]), "FLOAT32").is_none());
     }
 
     #[test]

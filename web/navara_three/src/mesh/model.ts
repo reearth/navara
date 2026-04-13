@@ -225,7 +225,8 @@ export class ModelMesh
       // Assign _FEATURE_ID_0 to _batchid so the batch texture shader works unchanged.
       // Also accept lowercase _feature_id_0 as a compatibility fallback.
       const attrs = mesh.geometry.attributes;
-      const featureIdAttribute = attrs?["_FEATURE_ID_0"] ?? attrs?["_feature_id_0"];
+      const featureIdAttribute =
+        attrs?.["_FEATURE_ID_0"] ?? attrs?.["_feature_id_0"];
       if (!attrs?._batchid && featureIdAttribute) {
         // TODO: Support other feature ID semantics such as `_FEATURE_ID_n`.
         // Need to clone, since it might be switch to different feature ID attributes.

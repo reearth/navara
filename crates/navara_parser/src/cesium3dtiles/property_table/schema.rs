@@ -31,6 +31,9 @@ impl<'a> GlbSchemaParser<'a> {
             .map(|b| u32::from_le_bytes([b[0], b[1], b[2], b[3]]) as usize)?;
         let bin_chunk_start = GLB_HEADER_SIZE + chunk_header_size + json_chunk_length;
 
+        // GLB BIN chunk type magic: 0x004E4942 ("BIN\0" in little-endian)
+        const GLB_CHUNK_TYPE_BIN: u32 = 0x004E4942;
+
         let binary = if glb_bin.len() >= bin_chunk_start + chunk_header_size {
             let bin_chunk_length = u32::from_le_bytes([
                 glb_bin[bin_chunk_start],
@@ -38,12 +41,22 @@ impl<'a> GlbSchemaParser<'a> {
                 glb_bin[bin_chunk_start + 2],
                 glb_bin[bin_chunk_start + 3],
             ]) as usize;
-            let bin_data_start = bin_chunk_start + chunk_header_size;
-            let bin_data_end = bin_data_start + bin_chunk_length;
-            if glb_bin.len() >= bin_data_end {
-                Some(&glb_bin[bin_data_start..bin_data_end])
-            } else {
+            let bin_chunk_type = u32::from_le_bytes([
+                glb_bin[bin_chunk_start + 4],
+                glb_bin[bin_chunk_start + 5],
+                glb_bin[bin_chunk_start + 6],
+                glb_bin[bin_chunk_start + 7],
+            ]);
+            if bin_chunk_type != GLB_CHUNK_TYPE_BIN {
                 None
+            } else {
+                let bin_data_start = bin_chunk_start + chunk_header_size;
+                let bin_data_end = bin_data_start + bin_chunk_length;
+                if glb_bin.len() >= bin_data_end {
+                    Some(&glb_bin[bin_data_start..bin_data_end])
+                } else {
+                    None
+                }
             }
         } else {
             None

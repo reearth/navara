@@ -1,4 +1,9 @@
-import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
+import ThreeView, {
+  Color,
+  JAPAN_GSI_ELEVATION_DECODER,
+  type Nullable,
+  type PickedFeature,
+} from "@navara/three";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 
@@ -39,11 +44,6 @@ const run = async () => {
     heading: 328.693438934,
     pitch: -38.4179591915,
     roll: 0,
-  });
-
-  let selectedId: string | undefined = undefined;
-  view.on("pick", (info) => {
-    selectedId = info?.properties?.["gml_id"] as string;
   });
 
   // Base layers
@@ -104,6 +104,14 @@ const run = async () => {
       },
     });
 
+    let selectedId: string | undefined = undefined;
+    const pickHandler = (info: Nullable<PickedFeature>) => {
+      if (info?.layerId !== layer.id) return;
+      selectedId = info?.properties?.["gml_id"] as string;
+      layer.forceUpdate();
+    };
+    view.on("pick", pickHandler);
+
     // Feature evaluator: style buildings based on measured height
     layer.on("featureUpdated", ({ evaluator }) => {
       evaluator.evaluate(
@@ -157,10 +165,10 @@ const run = async () => {
       );
     });
 
-    return layer;
+    return { layer, removePickHandler: () => view.on("pick", pickHandler) };
   };
 
-  let layer = add3DTilesLayer();
+  let { layer, removePickHandler } = add3DTilesLayer();
 
   // Control panel
   const pane = new Pane({ title: "Cesium 3D Tiles Styling" });
@@ -170,11 +178,14 @@ const run = async () => {
   const toggleBtn = pane.addButton({ title: "Remove Layer", label: "layer" });
   toggleBtn.on("click", () => {
     if (layer) {
+      removePickHandler?.();
       view.deleteLayerById(layer.id);
       layer = undefined as unknown as typeof layer;
       toggleBtn.title = "Add Layer";
     } else {
-      layer = add3DTilesLayer();
+      const result = add3DTilesLayer();
+      layer = result.layer;
+      removePickHandler = result.removePickHandler;
       toggleBtn.title = "Remove Layer";
     }
   });
