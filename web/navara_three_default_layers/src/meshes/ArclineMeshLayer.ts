@@ -1,7 +1,8 @@
 import {
-  MeshLayerDeclaration,
-  type MeshLayerConfig,
-  type MeshLayerUpdate,
+  Color,
+  MeshLayerDeclarationWithSelectiveEffect,
+  type MeshLayerConfigWithSelectiveEffect,
+  type MeshLayerUpdateWithSelectiveEffect,
   type ViewContext,
 } from "@navara/three";
 
@@ -9,14 +10,17 @@ import { DefaultArcLineConfig, ArcLine, type ArcLineConfig } from "./arcLine";
 
 type LayerDescription = {
   arcLines?: Partial<ArcLineConfig> | Partial<ArcLineConfig>[];
+  emissiveColor?: Color;
+  emissiveIntensity?: number;
 };
 
-export type ArclineMeshLayerConfig = MeshLayerConfig & LayerDescription;
+export type ArclineMeshLayerConfig = MeshLayerConfigWithSelectiveEffect &
+  LayerDescription;
 
-export type ArclineMeshLayerUpdate = MeshLayerUpdate & LayerDescription;
+export type ArclineMeshLayerUpdate = MeshLayerUpdateWithSelectiveEffect &
+  LayerDescription;
 
-// TODO: SelectiveEffect not supported. ArcLine is Object3D with child Meshes; requires child traversal in a follow-up PR.
-export class ArclineMeshLayer extends MeshLayerDeclaration<
+export class ArclineMeshLayer extends MeshLayerDeclarationWithSelectiveEffect<
   ArclineMeshLayerConfig,
   ArclineMeshLayerUpdate,
   ArcLine
@@ -60,7 +64,18 @@ export class ArclineMeshLayer extends MeshLayerDeclaration<
       }
     }
 
-    return new ArcLine(lineConfig);
+    const arcLine = new ArcLine(lineConfig);
+
+    // Enable SelectiveEffect on all sub-meshes if effectIds are configured
+    if (this.config.effectIds && this.config.effectIds.length > 0) {
+      arcLine.setupSelectiveEffect();
+      arcLine.updateEmissive(
+        this.config.emissiveColor?.toHex() ?? 0,
+        this.config.emissiveIntensity ?? 0,
+      );
+    }
+
+    return arcLine;
   }
 
   onUpdateConfig(updates: ArclineMeshLayerUpdate): void {
@@ -88,7 +103,36 @@ export class ArclineMeshLayer extends MeshLayerDeclaration<
       this.emit("needsUpdate");
     }
 
+    // Update emissive properties
+    if (this._instance) {
+      if (updates.emissiveColor !== undefined) {
+        this.config.emissiveColor = updates.emissiveColor;
+      }
+      if (updates.emissiveIntensity !== undefined) {
+        this.config.emissiveIntensity = updates.emissiveIntensity;
+      }
+      if (
+        updates.emissiveColor !== undefined ||
+        updates.emissiveIntensity !== undefined
+      ) {
+        this._instance.updateEmissive(
+          this.config.emissiveColor?.toHex() ?? 0,
+          this.config.emissiveIntensity ?? 0,
+        );
+      }
+    }
+
     super.onUpdateConfig(updates);
+  }
+
+  /**
+   * Override to update effectIdsMask on all ArcLine sub-meshes.
+   * ArcLine is Object3D with child Meshes, so the base class's
+   * single-Mesh update doesn't work.
+   */
+  protected override updateEffectIdsMask(): void {
+    const mask = this.computeEffectIdsMask();
+    this._instance?.updateEffectIdsMask(mask);
   }
 
   onResize(width: number, height: number): void {

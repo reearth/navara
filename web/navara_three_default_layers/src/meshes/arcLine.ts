@@ -86,6 +86,7 @@ export const DefaultArcLineConfig: ArcLineConfig = {
 export class ArcLine extends Object3D {
   private readonly _config: ArcLineConfig[];
   private _subMeshes: Mesh<InstancedBufferGeometry, ShaderMaterial>[] = [];
+  private _selectiveEffectEnabled = false;
 
   // Shared RTE uniforms for all sub-meshes
   private _sharedRTEUniforms = {
@@ -884,6 +885,9 @@ export class ArcLine extends Object3D {
 
       // Create new mesh
       const newMesh = this.createSubMesh(this._config[configIndex]);
+      if (this._selectiveEffectEnabled) {
+        this.setupSelectiveEffectOnMaterial(newMesh.material);
+      }
       this._subMeshes[configIndex] = newMesh;
       this.add(newMesh);
     });
@@ -953,6 +957,58 @@ export class ArcLine extends Object3D {
     this._subMeshes.forEach((mesh) => {
       mesh.material.uniforms?.uViewport.value.set(width, height);
     });
+  }
+
+  /**
+   * Enable SelectiveEffect on all sub-meshes.
+   * Sets USE_SELECTIVE_EFFECT define and uEffectIdsMask uniform on each material.
+   */
+  setupSelectiveEffect(): void {
+    this._selectiveEffectEnabled = true;
+    for (const mesh of this._subMeshes) {
+      this.setupSelectiveEffectOnMaterial(mesh.material);
+    }
+  }
+
+  /**
+   * Update effectIdsMask on all sub-meshes.
+   */
+  updateEffectIdsMask(mask: number): void {
+    for (const mesh of this._subMeshes) {
+      const uniform = mesh.material.uniforms.uEffectIdsMask;
+      if (uniform) {
+        uniform.value = mask;
+      }
+    }
+  }
+
+  /**
+   * Update emissive color and intensity on all sub-meshes.
+   */
+  updateEmissive(color: number, intensity: number): void {
+    for (const mesh of this._subMeshes) {
+      const colorUniform = mesh.material.uniforms.uEmissiveColor;
+      const intensityUniform = mesh.material.uniforms.uEmissiveIntensity;
+      if (colorUniform) {
+        colorUniform.value.set(
+          ((color >> 16) & 0xff) / 255,
+          ((color >> 8) & 0xff) / 255,
+          (color & 0xff) / 255,
+        );
+      }
+      if (intensityUniform) {
+        intensityUniform.value = intensity;
+      }
+    }
+  }
+
+  private setupSelectiveEffectOnMaterial(material: ShaderMaterial): void {
+    material.defines = material.defines ?? {};
+    material.defines.USE_SELECTIVE_EFFECT = 1;
+    material.uniforms.uEffectIdsMask = { value: 0 };
+    material.uniforms.uEmissiveColor = { value: new Vector3(0, 0, 0) };
+    material.uniforms.uEmissiveIntensity = { value: 0 };
+    material.needsUpdate = true;
   }
 
   dispose(): void {
