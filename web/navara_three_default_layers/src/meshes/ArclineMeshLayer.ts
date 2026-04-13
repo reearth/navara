@@ -66,14 +66,11 @@ export class ArclineMeshLayer extends MeshLayerDeclarationWithSelectiveEffect<
 
     const arcLine = new ArcLine(lineConfig);
 
-    // Enable SelectiveEffect on all sub-meshes if effectIds are configured
-    if (this.config.effectIds && this.config.effectIds.length > 0) {
-      arcLine.setupSelectiveEffect();
-      arcLine.updateEmissive(
-        this.config.emissiveColor?.toHex() ?? 0,
-        this.config.emissiveIntensity ?? 0,
-      );
-    }
+    // Set initial emissive values via shared uniforms
+    arcLine.updateEmissive(
+      this.config.emissiveColor?.toHex() ?? 0,
+      this.config.emissiveIntensity ?? 0,
+    );
 
     return arcLine;
   }
@@ -132,11 +129,11 @@ export class ArclineMeshLayer extends MeshLayerDeclarationWithSelectiveEffect<
    */
   protected override updateEffectIdsMask(): void {
     const registry = this.view.selectiveEffectRegistry;
-    if (!registry) return;
+    if (!registry || !this._instance) return;
 
     const mask =
       this._effectIds.length > 0 ? registry.computeMask(this._effectIds) : 0;
-    this._instance?.updateEffectIdsMask(mask);
+    this._instance.updateEffectIdsMask(mask);
   }
 
   onResize(width: number, height: number): void {
