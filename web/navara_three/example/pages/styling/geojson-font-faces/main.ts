@@ -89,7 +89,7 @@ const run = async () => {
     return layer;
   };
 
-  let layer = addCityLayer();
+  let layer: ReturnType<typeof addCityLayer> | undefined = addCityLayer();
 
   // Control panel
   const pane = new Pane({ title: "GeoJSON Font Faces" });
@@ -99,7 +99,7 @@ const run = async () => {
   toggleBtn.on("click", () => {
     if (layer) {
       view.deleteLayerById(layer.id);
-      layer = undefined as unknown as typeof layer;
+      layer = undefined;
       toggleBtn.title = "Add Layer";
     } else {
       layer = addCityLayer();
