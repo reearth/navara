@@ -7,8 +7,8 @@ use navara_feature_component::batch::{
     BatchProperty, BatchTable, BatchTableValue, FeatureBatchId, GlobalBatchIds,
 };
 use navara_math::{PI_OVER_TWO, Quat, Transform, Vec3};
-use navara_parser::b3dm::BatchTable as B3dmBatchTable;
 use navara_parser::b3dm::B3dm;
+use navara_parser::b3dm::BatchTable as B3dmBatchTable;
 use navara_parser::glb::BinaryReader;
 
 use crate::tile_content_parser::{ParseContext, ParsedTileContent, TileContentParser};
@@ -111,4 +111,3 @@ pub(crate) fn get_geometry_info_from_b3dm(
         batch_length,
     ))
 }
-
