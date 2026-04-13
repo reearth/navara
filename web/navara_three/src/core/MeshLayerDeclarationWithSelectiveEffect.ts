@@ -97,14 +97,22 @@ export abstract class MeshLayerDeclarationWithSelectiveEffect<
   }
 
   /**
-   * Compute effectIdsMask from SelectiveEffectRegistry and set on the mesh's material.
+   * Compute effectIdsMask from SelectiveEffectRegistry.
+   */
+  protected computeEffectIdsMask(): number {
+    const registry = this.view.selectiveEffectRegistry;
+    if (!registry) return 0;
+    return this._effectIds.length > 0
+      ? registry.computeMask(this._effectIds)
+      : 0;
+  }
+
+  /**
+   * Compute effectIdsMask and set on the mesh's material.
+   * Override this for non-standard mesh structures (e.g., Object3D with child meshes).
    */
   protected updateEffectIdsMask(): void {
-    const registry = this.view.selectiveEffectRegistry;
-    if (!registry) return;
-
-    const mask =
-      this._effectIds.length > 0 ? registry.computeMask(this._effectIds) : 0;
+    const mask = this.computeEffectIdsMask();
     const raw = this.raw;
     if (
       raw instanceof Mesh &&
