@@ -53,8 +53,6 @@ const run = async () => {
       castShadow: true,
       receiveShadow: true,
       effectIds: [outlineEffect.id],
-      emissiveIntensity: 0.5,
-      selectiveEffectOcclusion: "normal",
     },
     vectorTile: { maxZoom: 16 },
   });

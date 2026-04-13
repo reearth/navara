@@ -41,6 +41,7 @@ use bevy_ecs::{
     entity::Entity,
     system::{Commands, Query, ResMut},
 };
+use bevy_log::warn;
 
 use navara_buffer_store::BufferStore;
 use navara_camera::CameraFrustum;
@@ -56,6 +57,7 @@ use crate::{
     Cesium3dTileContentDataRequesterMarker, Cesium3dTilesJsonTileSetStateMap,
     Cesium3dTilesJsonTileSetStateMapKey, Cesium3dTilesTreeOrder, RenderedCesium3dTileContent,
     b3dm::RenderedCesium3dTileContentB3dmMarker, glb::RenderedCesium3dTileContentGlbMarker,
+    gltf_features::RenderedCesium3dTileContentGltfFeaturesMarker,
     pnts::RenderedCesium3dTileContentPntsMarker,
 };
 
@@ -125,6 +127,7 @@ pub fn select_tiles(
     renderable_features: &Query<&RenderableFeature>,
     window: &Window,
     current_tree_order: &Cesium3dTilesTreeOrder,
+    is_v1_1: bool,
 ) {
     let mut rendered_tiles_count = 0;
 
@@ -202,6 +205,7 @@ pub fn select_tiles(
         &mut rendered_tiles_count,
         next_tree_order,
         true, // Root tile: parent is always ready
+        is_v1_1,
     );
 }
 
@@ -459,6 +463,7 @@ fn mark_rendered_tiles(
     rendered_tiles_count: &mut u32,
     next_tree_order: usize,
     parent_content_ready: bool,
+    is_v1_1: bool,
 ) {
     let touched_last_frame = tile.state.touched_last_frame;
     tile.state.touched_last_frame = tile.state.touched;
@@ -490,6 +495,7 @@ fn mark_rendered_tiles(
                     tile,
                     is_visible,
                     touched,
+                    is_v1_1,
                 );
                 if is_visible {
                     *rendered_tiles_count += 1;
@@ -510,6 +516,7 @@ fn mark_rendered_tiles(
                             sse: tile.state.sse,
                         },
                     },
+                    is_v1_1,
                 );
             } else {
                 toggle_rendered_tile_visible(rendered_tiles, tile, false, touched);
@@ -592,6 +599,7 @@ fn mark_rendered_tiles(
             rendered_tiles_count,
             next_tree_order,
             content_ready_for_children,
+            is_v1_1,
         );
     }
 
@@ -717,6 +725,7 @@ fn toggle_rendered_tile_visible(
 /// - `.pnts` → [`RenderedCesium3dTileContentPntsMarker`] + [`TileTransform`] + [`Aabb`]
 /// - `.b3dm` → [`RenderedCesium3dTileContentB3dmMarker`]
 /// - `.glb`  → [`RenderedCesium3dTileContentGlbMarker`]
+/// - `.glb` 3D Tiles 1.1 → [`RenderedCesium3dTileContentGltfFeaturesMarker`]
 ///
 /// # Important
 ///
@@ -729,6 +738,7 @@ fn update_or_spawn_rendered_tile(
     tile: &mut Cesium3dTileContent,
     visible: bool,
     touched: bool,
+    is_v1_1: bool,
 ) {
     if toggle_rendered_tile_visible(rendered_tiles, tile, visible, touched) {
         return;
@@ -778,6 +788,25 @@ fn update_or_spawn_rendered_tile(
                     ))
                     .id(),
             );
+        } else if tile.uri.as_ref().unwrap().contains("glb") && is_v1_1 {
+            tile.rendered_tile_id = Some(
+                commands
+                    .spawn((
+                        RenderedCesium3dTileContentGltfFeaturesMarker,
+                        TileOrderByDistance {
+                            distance_from_camera: tile.state.distance_from_camera,
+                            sse: tile.state.sse,
+                        },
+                        RenderedCesium3dTileContent {
+                            layer_id,
+                            feature_id: None,
+                            data_requester_id: tile.data_requester_id.unwrap(),
+                            is_visible: true,
+                            touched: true,
+                        },
+                    ))
+                    .id(),
+            );
         } else if tile.uri.as_ref().unwrap().contains("glb") {
             tile.rendered_tile_id = Some(
                 commands
@@ -796,6 +825,13 @@ fn update_or_spawn_rendered_tile(
                         },
                     ))
                     .id(),
+            );
+        } else if tile.uri.as_ref().unwrap().ends_with("gltf") {
+            // Plain .gltf files (JSON + external .bin buffers) are not yet supported.
+            // Only GLB (binary glTF container) is supported.
+            warn!(
+                "Plain .gltf format is not yet supported, only .glb is supported. Skipping tile: {:?}",
+                tile.uri
             );
         } else {
             // TODO: support other formats like i3dm, cmpt, etc.

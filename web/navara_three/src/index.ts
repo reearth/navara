@@ -42,7 +42,7 @@ import { WATER_NORMAL_URL } from "./constants/assets";
 import {
   LayerDeclaration,
   ViewContext,
-  SelectiveEffectHelper,
+  SelectiveEffectRegistry,
   type MeshLayerConfig,
   type MeshLayerConstructor,
   type LightLayerConstructor,
@@ -72,7 +72,6 @@ import {
   SelectiveBloomEffectLayer,
   SelectiveOutlineEffectLayer,
   SkyEnvMapEffectLayer,
-  TestSelectiveEffectLayer,
   TransparentPassEffectLayer,
 } from "./layers/effect";
 import { FinalCopyEffectLayer } from "./layers/effect/FinalCopyEffectLayer";
@@ -133,6 +132,7 @@ export * from "./effects";
 export * from "./shaders";
 export * from "./material";
 export * from "./core";
+export { BufferView } from "./bufferView";
 export * from "./layers";
 export * from "./passes";
 export * from "./evaluations";
@@ -170,11 +170,6 @@ export type Options = {
   backgroundColor?: CoreColor;
   /** Feature picking configuration. */
   picking?: boolean;
-  /** Selective post-processing effects configuration. */
-  selectiveEffects?: {
-    /** Enables debug views for selective effect masks. */
-    debugViews?: boolean;
-  };
   /** When true, renders every frame. When false, renders only on changes or when forceUpdate() is called. */
   animation?: boolean;
   /** Number of samples for MSAA (Multi-Sample Anti-Aliasing). 0 disables MSAA. */
@@ -575,8 +570,10 @@ export default class ThreeView<
 
   // Registry support
   private registries: Registries;
-  /** Helper for managing selective post-processing effects that apply to specific objects. */
-  public selectiveEffectHelper: SelectiveEffectHelper;
+  /** Registry for managing selective post-processing effect slots. Available after MRT layer creation. */
+  get selectiveEffectRegistry(): SelectiveEffectRegistry | undefined {
+    return this.viewContext?.selectiveEffectRegistry;
+  }
   private viewContext!: ViewContext;
   private plugins: Plugin[] = [];
 
@@ -747,9 +744,6 @@ export default class ThreeView<
     this.atmosphere = new Atmosphere(this.renderer, options.atmosphere);
     this.atmosphere.on("needsUpdate", this.forceUpdate);
 
-    // Initialize SelectiveEffectHelper
-    this.selectiveEffectHelper = new SelectiveEffectHelper(width, height);
-
     // Set up Registry
     this.viewContext = new ViewContext(
       this._scenes,
@@ -758,10 +752,6 @@ export default class ThreeView<
       this.layersManager,
       this.renderPassOrchestrator,
       createDefaultConcurrencyManager(this.isMobileOptimized()),
-      this.selectiveEffectHelper,
-      {
-        selectiveEffectMask: this._options.selectiveEffects?.debugViews,
-      },
     );
     this.registries = new Registries(this.viewContext);
     this.eventContext = new EventContext({
@@ -1041,8 +1031,6 @@ export default class ThreeView<
       this._terrainPicker.dispose();
     }
 
-    // Dispose SelectiveEffectHelper
-    this.selectiveEffectHelper.dispose();
     this._fontManager.dispose();
     this.atmosphere._dispose();
 
@@ -1076,9 +1064,6 @@ export default class ThreeView<
     if (this._options.pixelRatio == null && pixelRatio) {
       this.renderer.setPixelRatio(pixelRatio);
     }
-
-    // Update SelectiveEffectHelper
-    this.selectiveEffectHelper.setSize(w, h);
 
     this._core?.resize(w, h, pixelRatio ?? 1);
 
@@ -1167,11 +1152,6 @@ export default class ThreeView<
     this.emit("preRender", updatedAt);
 
     this.renderPassOrchestrator.render();
-    if (this._options.selectiveEffects?.debugViews) {
-      this.selectiveEffectHelper.renderDebugViews(
-        this.renderPassOrchestrator.effectComposer.getRenderer(),
-      );
-    }
     this._pickHelper?.renderDebugCanvas();
 
     this.shadowMapViewers.render(this.renderer);
@@ -1286,7 +1266,6 @@ export default class ThreeView<
     this.registerEffect("mrt", MRTPassEffectLayer);
 
     // SelectiveEffect effects
-    this.registerEffect("testSelectiveEffect", TestSelectiveEffectLayer);
     this.registerEffect("selectiveBloom", SelectiveBloomEffectLayer);
     this.registerEffect("selectiveOutline", SelectiveOutlineEffectLayer);
     // TODO: Curve out opaque pass from MRT pass.
@@ -1687,7 +1666,7 @@ export default class ThreeView<
    * Handles pick events and emits the picked feature information.
    * @param pickArr - Array of picked batch IDs
    */
-  onPick(pickArr: number[]) {
+  private onPick(pickArr: number[]) {
     this._renderFlag.forceUpdate = true;
 
     if (pickArr.length > 0) {
@@ -1752,17 +1731,6 @@ export default class ThreeView<
    */
   set shadowMapViewersEnabled(v: boolean) {
     this.shadowMapViewers.enabled = v;
-  }
-
-  /**
-   * Enables or disables debug views for selective post-processing effects.
-   * When disabled, disposes all debug view canvas elements.
-   * @param enabled - Whether to enable debug views
-   */
-  setSelectiveEffectDebugViews(enabled: boolean): void {
-    this._options.selectiveEffects ??= {};
-    this._options.selectiveEffects.debugViews = enabled;
-    this.selectiveEffectHelper.setDebugViewsAll(enabled);
   }
 
   /**

@@ -895,9 +895,9 @@ if (uPickable > 0.) {
           ).source,
         )
         .replaceWithCondition(
-          "outputBuffer1 = vec4(packNormalToVec2(normal), reflectivity, roughnessFactor);",
+          "normalBuffer = vec4(packNormalToVec2(normal), reflectivity, roughnessFactor);",
           `vec3 finalNormal = mix(origNormal, normalize(origNormal * 0.7 + normal), applyWaterNormals);
-          outputBuffer1 = vec4(packNormalToVec2(finalNormal), tileReflectivity, tileRoughness);`,
+          normalBuffer = vec4(packNormalToVec2(finalNormal), tileReflectivity, tileRoughness);`,
           useNormal,
         ).source;
     };

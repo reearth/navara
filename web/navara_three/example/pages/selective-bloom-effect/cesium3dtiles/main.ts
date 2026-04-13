@@ -56,7 +56,6 @@ const run = async () => {
       effectIds: [bloomEffect.id],
       emissiveColor: new Color().setHex(0xffffff),
       emissiveIntensity: 0.3,
-      selectiveEffectOcclusion: "normal",
     },
   });
 

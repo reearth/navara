@@ -20,11 +20,7 @@ import {
   decompressDraco,
 } from "../loaders";
 
-export async function renderModel(
-  ctx: EventContext,
-  m: NavaraModelMesh,
-  layerId: string,
-) {
+export async function renderModel(ctx: EventContext, m: NavaraModelMesh) {
   const loader = initializeGltfLoader(ctx.viewContext.concurrencyManager);
   const dracoLoader = initializeDracoLoader(ctx.viewContext.concurrencyManager);
 
@@ -139,7 +135,7 @@ export async function renderModel(
     return;
   }
 
-  const scene = new ModelMesh(ctx, { scene: rawScene, credit }, m, layerId);
+  const scene = new ModelMesh(ctx, { scene: rawScene, credit }, m);
 
   return scene;
 }

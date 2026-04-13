@@ -59,6 +59,7 @@ pub enum DataRequesterExtension {
     Mvt,
     GeoJson,
     Glb,
+    Gltf,
 }
 
 impl DataRequesterExtension {
@@ -73,6 +74,7 @@ impl DataRequesterExtension {
             "mvt" => Self::Mvt,
             "geojson" => Self::GeoJson,
             "glb" => Self::Glb,
+            "gltf" => Self::Gltf,
             _ => unimplemented!("{}", v),
         }
     }
@@ -88,6 +90,7 @@ impl DataRequesterExtension {
             Self::Mvt => "mvt".to_string(),
             Self::GeoJson => "geojson".to_string(),
             Self::Glb => "glb".to_string(),
+            Self::Gltf => "gltf".to_string(),
         }
     }
 
@@ -99,6 +102,7 @@ impl DataRequesterExtension {
             v if v.ends_with("pnts") => Self::Pnts,
             v if v.ends_with("png") => Self::Png,
             v if v.contains(".glb") => Self::Glb,
+            v if v.ends_with("gltf") => Self::Gltf,
             v if v.ends_with("webp") => Self::WebP,
             v => unimplemented!("The extension of {} isn't supported", v),
         }

@@ -1,6 +1,5 @@
 import type { Texture } from "three";
 
-import type { SelectiveEffectOcclusionValue } from "../../../../core";
 import type { UniformValue } from "../../../types";
 import type { BatchTextureFlags } from "../../batchTexture";
 import type { Mutates } from "../../MaterialEnhancer";
@@ -21,18 +20,14 @@ export type ModelBaseProps = {
   // Picking
   pickable?: boolean;
 
+  // Selective Effect
+  effectIdsMask?: number;
+
   // Batch texture
   batchDataTexture?: UniformValue<Texture | null>;
 
   // When batchColorEnabled is true, material.color is set to white and actual colors come from batch texture
   batchColorEnabled?: boolean;
-
-  // Selective effects (bloom/outline mask pass)
-  // Boolean props - converted to number (0/1) internally for uniforms
-  bloom?: boolean;
-  outline?: boolean;
-  // When true, uses 1.0; when false, uses SELECTIVE_EFFECT_OCCLUSION_SKIP
-  occlusion?: SelectiveEffectOcclusionValue;
 } & Omit<BatchTextureFlags, "useBatchExtrudedHeight" | "useBatchHeight">;
 
 /**
@@ -42,14 +37,13 @@ export type ModelBaseProps = {
  */
 export type ModelBaseState = Readonly<{
   pickable: boolean;
+  emissiveColor: number;
+  emissiveIntensity: number;
+  effectIdsMask: number;
   // Batch texture state - when true, material.color is white and colors come from batch texture
   batchColorEnabled: boolean;
   useBatchTexture: boolean;
   useBatchColorShow: boolean;
-  // Selective effects state - stored as boolean, converted to number in mutates
-  bloom: boolean;
-  outline: boolean;
-  occlusion: SelectiveEffectOcclusionValue;
 }>;
 
 /**
@@ -61,9 +55,7 @@ export type ModelBaseState = Readonly<{
  */
 export type ModelBaseRefs = {
   nvr_uPickable: UniformValue<number>;
-  uBloomMaskPass: UniformValue<number>;
-  uOutlineMaskPass: UniformValue<number>;
-  uSelectiveEffectOcclusion: UniformValue<SelectiveEffectOcclusionValue>;
+  uEffectIdsMask: UniformValue<number>;
 
   // Optional uniforms
   batchDataTexture?: UniformValue<Texture | null>;

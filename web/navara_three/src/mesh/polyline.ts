@@ -14,7 +14,6 @@ import {
 
 import type { EventContext } from "../event/context";
 import { createPolylineMaterialEnhancer } from "../material/enhancer";
-import { arraysEqual } from "../utils";
 
 import {
   BatchedFeatureMesh,
@@ -53,19 +52,14 @@ export class PolylineMesh extends BatchedFeatureMesh<
   ShaderMaterial
 > {
   readonly ctx: EventContext;
-  /** Layer ID for SelectiveEffect handling */
-  private _layerId: string;
   /** Material enhancer for managing shader state */
   private _enhancedMaterial?: ReturnType<typeof createPolylineMaterialEnhancer>;
-  /** Previous effectIds for SelectiveEffect registry diff */
-  private _prevEffectIds?: string[];
   /** Flag indicating geometry initialization failed - mesh should never be visible */
   private _geometryInitFailed = false;
 
-  constructor(ctx: EventContext, mesh: NavaraPolylineMesh, layerId: string) {
+  constructor(ctx: EventContext, mesh: NavaraPolylineMesh) {
     super(new BufferGeometry<Attributes>(), new ShaderMaterial());
     this.ctx = ctx;
-    this._layerId = layerId;
     this.batchLength = mesh.batch_length;
 
     const geometryResult = this.initGeometry(mesh);
@@ -378,17 +372,6 @@ export class PolylineMesh extends BatchedFeatureMesh<
     this.castShadow = !!material.castShadow;
     this.receiveShadow = !!material.receiveShadow;
 
-    // SelectiveEffect: effectIds handling (needs prev state for registry)
-    if (!arraysEqual(this._prevEffectIds, material.effectIds)) {
-      this.ctx.viewContext.selectiveEffectRegistry?.updateLinksForObject(
-        this,
-        material.effectIds ?? [],
-        this._prevEffectIds ?? [],
-        this._layerId,
-      );
-      this._prevEffectIds = material.effectIds ? [...material.effectIds] : [];
-    }
-
     const base = enhancer.states();
 
     // Build update props from material
@@ -406,6 +389,12 @@ export class PolylineMesh extends BatchedFeatureMesh<
         maxWidth: material.maxWidth,
         clampToGround: !!material.clampToGround,
         useGroundNormals: !!material.useGroundNormals,
+        effectIdsMask:
+          this.ctx.viewContext.selectiveEffectRegistry?.computeMask(
+            material.effectIds ?? [],
+          ) ?? 0,
+        emissiveColor: material.emissiveColor ?? 0,
+        emissiveIntensity: material.emissiveIntensity ?? 0,
       },
     });
 

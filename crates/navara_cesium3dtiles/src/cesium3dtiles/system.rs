@@ -37,7 +37,9 @@
 use crate::{
     Cesium3dTilesJsonTileSetStateMap, Cesium3dTilesTreeOrder, RenderedCesium3dTileContent,
     b3dm::RenderedCesium3dTileContentB3dmMarker, cesium3dtiles::traversal::select_tiles,
-    glb::RenderedCesium3dTileContentGlbMarker, pnts::RenderedCesium3dTileContentPntsMarker,
+    glb::RenderedCesium3dTileContentGlbMarker,
+    gltf_features::RenderedCesium3dTileContentGltfFeaturesMarker,
+    pnts::RenderedCesium3dTileContentPntsMarker,
 };
 use bevy_ecs::{
     change_detection::DetectChanges,
@@ -275,6 +277,7 @@ pub fn traverse_cesium_3d_tiles_tree(
                 continue;
             }
             let camera_pos = camera.transform_point(Vec3::ZERO);
+            let is_v1_1 = tree.is_v1_1;
             select_tiles(
                 &mut commands,
                 &mut buf,
@@ -292,6 +295,7 @@ pub fn traverse_cesium_3d_tiles_tree(
                 &renderable_features,
                 &window,
                 order,
+                is_v1_1,
             );
         }
     }
@@ -320,6 +324,7 @@ pub fn update_cesium3dtiles_layer(
         Or<(
             With<RenderedCesium3dTileContentPntsMarker>,
             With<RenderedCesium3dTileContentB3dmMarker>,
+            With<RenderedCesium3dTileContentGltfFeaturesMarker>,
             With<RenderedCesium3dTileContentGlbMarker>,
         )>,
     >,

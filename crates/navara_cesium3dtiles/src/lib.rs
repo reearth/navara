@@ -39,6 +39,7 @@ use bevy_app::{App, Plugin, Update};
 mod b3dm;
 mod cesium3dtiles;
 mod glb;
+mod gltf_features;
 mod pnts;
 
 use bevy_ecs::schedule::IntoScheduleConfigs;
@@ -96,10 +97,12 @@ impl Plugin for Cesium3dTilesPlugin {
                 b3dm::system::construct_model_by_cesium3dtiles_layer,
                 pnts::system::construct_model_by_cesium3dtiles_layer,
                 glb::system::construct_model_by_cesium3dtiles_layer,
+                gltf_features::system::construct_model_by_cesium3dtiles_layer,
                 // Phase 4: Cleanup
                 b3dm::system::remove_invisible_rendered_tiles,
                 pnts::system::remove_invisible_rendered_tiles,
                 glb::system::remove_invisible_rendered_tiles,
+                gltf_features::system::remove_invisible_rendered_tiles,
                 cesium3dtiles::system::remove_invisible_tileset,
                 // Phase 5: Layer management
                 cesium3dtiles::system::delete_cesium3dtiles_layer,

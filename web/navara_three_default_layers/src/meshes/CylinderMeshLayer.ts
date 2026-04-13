@@ -1,13 +1,13 @@
 import {
   Color,
   DrapedMesh,
-  MeshLayerDeclarationForSelectiveEffect,
+  MeshLayerDeclarationWithSelectiveEffect,
   type MeshLayerConfigWithSelectiveEffect,
   type MeshLayerUpdateWithSelectiveEffect,
   type ViewContext,
-  type SelectiveEffectOcclusion,
   type CustomObject3DEventMap,
   type PassKey,
+  setupSelectiveEffectUniforms,
 } from "@navara/three";
 import {
   CylinderGeometry,
@@ -36,7 +36,6 @@ type LayerDescription = {
     castShadow?: boolean;
     receiveShadow?: boolean;
     effectIds?: string[];
-    selectiveEffectOcclusion?: SelectiveEffectOcclusion;
     /**
      * To drape the mesh properly on the terrain,
      * the mesh must cover the terrain.
@@ -53,7 +52,7 @@ export type CylinderMeshLayerUpdate = MeshLayerUpdateWithSelectiveEffect &
 
 type CylinderMeshMaterial = MeshLambertMaterial | MeshBasicMaterial;
 
-export class CylinderMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
+export class CylinderMeshLayer extends MeshLayerDeclarationWithSelectiveEffect<
   CylinderMeshLayerConfig,
   CylinderMeshLayerUpdate,
   DrapedMesh<CylinderGeometry, CylinderMeshMaterial, CylinderMeshEventMap>
@@ -61,13 +60,9 @@ export class CylinderMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
   private config: CylinderMeshLayerConfig;
 
   constructor(view: ViewContext, config: CylinderMeshLayerConfig) {
-    // Propagate initial effectIds/selectiveEffectOcclusion to base MeshLayer
+    // Propagate initial effectIds to base MeshLayer
     if (config.cylinder?.effectIds) {
       config.effectIds = config.cylinder.effectIds;
-    }
-    if (config.cylinder?.selectiveEffectOcclusion !== undefined) {
-      config.selectiveEffectOcclusion =
-        config.cylinder.selectiveEffectOcclusion;
     }
     super(view, config);
     this.config = config;
@@ -92,6 +87,11 @@ export class CylinderMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
 
     // Create material from properties
     const material = this.createMaterial(cfg);
+
+    // Set up selective effect uniforms
+    if (material instanceof MeshLambertMaterial) {
+      setupSelectiveEffectUniforms(material);
+    }
 
     const mesh = new DrapedMesh<
       CylinderGeometry,
@@ -122,7 +122,7 @@ export class CylinderMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
     return new MeshLambertMaterial({
       color: colorValue.raw,
       emissive: emissiveColorValue,
-      emissiveIntensity: cfg.emissiveIntensity ?? 1,
+      emissiveIntensity: cfg.emissiveIntensity ?? 0,
       opacity: cfg.opacity ?? 1,
       transparent: cfg.transparent ?? false,
     });
@@ -154,6 +154,10 @@ export class CylinderMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
           this._instance.material = newMaterial;
           if (!cfg.draped) {
             this.view.applyShadowMaterial(newMaterial);
+          }
+          // Re-setup SelectiveEffect uniforms for the new material
+          if (newMaterial instanceof MeshLambertMaterial) {
+            setupSelectiveEffectUniforms(newMaterial);
           }
         }
       }
@@ -203,10 +207,12 @@ export class CylinderMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
         if (cfg.transparent !== undefined)
           material.transparent = cfg.transparent;
         if (material instanceof MeshLambertMaterial) {
-          if (cfg.emissiveColor !== undefined)
+          if (cfg.emissiveColor !== undefined) {
             material.emissive.set(cfg.emissiveColor.raw);
-          if (cfg.emissiveIntensity !== undefined)
+          }
+          if (cfg.emissiveIntensity !== undefined) {
             material.emissiveIntensity = cfg.emissiveIntensity;
+          }
         }
         material.needsUpdate = true;
       }
@@ -219,12 +225,9 @@ export class CylinderMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
         this._instance.receiveShadow = cfg.receiveShadow;
       }
 
-      // Propagate effectIds/selectiveEffectOcclusion to base MeshLayer
+      // Propagate effectIds to base MeshLayer
       if (cfg.effectIds !== undefined) {
         updates.effectIds = cfg.effectIds;
-      }
-      if (cfg.selectiveEffectOcclusion !== undefined) {
-        updates.selectiveEffectOcclusion = cfg.selectiveEffectOcclusion;
       }
 
       this.emit("needsUpdate");
