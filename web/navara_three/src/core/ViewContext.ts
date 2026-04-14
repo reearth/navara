@@ -49,7 +49,7 @@ type ViewContextEvents = {
  */
 export class ViewContext extends EventHandler<ViewContextEvents> {
   // TODO: Consider how to handle this.
-  private _selectiveEffectRegistry;
+  private _selectiveEffectRegistry: SelectiveEffectRegistry;
   private _renderPass?: CustomRenderPass;
 
   constructor(
