@@ -68,8 +68,8 @@ export type LightBaseInstance<Instance extends object = object> =
  * > {
  *   private config: MyLightConfig;
  *
- *   constructor(view: ThreeView, config: MyLightConfig) {
- *     super(view, config);
+ *   constructor(view: ThreeView, ctx: ViewContext, config: MyLightConfig) {
+ *     super(view, ctx, config);
  *     this.config = config;
  *   }
  *
