@@ -14,7 +14,7 @@ import type { Scenes } from "../scene";
 
 import type { EffectLayerDeclaration } from "./EffectLayerDeclaration";
 import type { LayerHandle } from "./LayerHandle";
-import type { SelectiveEffectRegistry } from "./SelectiveEffectRegistry";
+import { SelectiveEffectRegistry } from "./SelectiveEffectRegistry";
 
 type ViewContextEvents = {
   /**
@@ -49,7 +49,7 @@ type ViewContextEvents = {
  */
 export class ViewContext extends EventHandler<ViewContextEvents> {
   // TODO: Consider how to handle this.
-  private _selectiveEffectRegistry?: SelectiveEffectRegistry;
+  private _selectiveEffectRegistry;
   private _renderPass?: CustomRenderPass;
 
   constructor(
@@ -67,6 +67,10 @@ export class ViewContext extends EventHandler<ViewContextEvents> {
     private _fontManager: FontManager,
   ) {
     super();
+
+    this._selectiveEffectRegistry = new SelectiveEffectRegistry(() =>
+      this.emit("effectSlotsChanged"),
+    );
   }
 
   /** Scene containers for different rendering passes. */
@@ -99,21 +103,6 @@ export class ViewContext extends EventHandler<ViewContextEvents> {
 
   get fontManager(): FontManager {
     return this._fontManager;
-  }
-
-  /** Set or replace the SelectiveEffectRegistry, wiring up the slotsChanged signal. */
-  setSelectiveEffectRegistry(
-    registry: SelectiveEffectRegistry | undefined,
-  ): void {
-    // Disconnect previous registry
-    if (this._selectiveEffectRegistry) {
-      this._selectiveEffectRegistry.onSlotsChanged = undefined;
-    }
-    this._selectiveEffectRegistry = registry;
-    // Connect new registry
-    if (registry) {
-      registry.onSlotsChanged = () => this.emit("effectSlotsChanged");
-    }
   }
 
   // --- Pass management ---
