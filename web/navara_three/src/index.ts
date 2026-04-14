@@ -753,10 +753,12 @@ export default class ThreeView<
   get camera(): ThreeViewCamera {
     return this._camera;
   }
+
   /** The globe instance that manages terrain, imagery layers, and globe-specific settings. */
   get globe(): Globe {
     return this._globe;
   }
+
   /** The atmosphere renderer that handles sky, sun, and atmospheric scattering effects. */
   get atmosphere(): Atmosphere {
     return this._atmosphere;
