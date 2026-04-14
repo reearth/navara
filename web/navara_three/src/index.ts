@@ -960,7 +960,13 @@ export default class ThreeView<
    */
   dispose() {
     this._disposed = true;
-    if (!isWorker()) window.removeEventListener("resize", this._handleResize);
+    if (!isWorker()) {
+      window.removeEventListener("resize", this._handleResize);
+      window
+        .matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`)
+        .removeEventListener("change", this._handleResize);
+    }
+
     if (this._eventDisposer) {
       this._eventDisposer();
       this._eventDisposer = undefined;
