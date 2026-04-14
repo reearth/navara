@@ -1,3 +1,4 @@
+import type ThreeView from "@navara/three";
 import {
   EffectLayerDeclaration,
   type EffectLayerConfig,
@@ -25,13 +26,13 @@ export class DepthOfFieldEffectLayer extends EffectLayerDeclaration<
 
   private config: DepthOfFieldConfig;
 
-  constructor(view: ViewContext, config: DepthOfFieldConfig) {
-    super(view, config);
+  constructor(view: ThreeView, ctx: ViewContext, config: DepthOfFieldConfig) {
+    super(view, ctx, config);
     this.config = config;
   }
 
   createPass() {
-    const pass = new DepthOfField(this.view.camera, {
+    const pass = new DepthOfField(this.view.camera.raw, {
       ...this.config.depthOfField,
       enabled: this.config.visible ?? true,
     });

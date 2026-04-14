@@ -1,3 +1,4 @@
+import type ThreeView from "@navara/three";
 import {
   EffectLayerDeclaration,
   type EffectLayerConfig,
@@ -27,13 +28,13 @@ export class CloudsEffectLayer extends EffectLayerDeclaration<
 
   private config: CloudsConfig;
 
-  constructor(view: ViewContext, config: CloudsConfig) {
-    super(view, config);
+  constructor(view: ThreeView, ctx: ViewContext, config: CloudsConfig) {
+    super(view, ctx, config);
     this.config = config;
   }
 
   createPass() {
-    const pass = new Clouds(this.view.camera, this.view.atmosphere, {
+    const pass = new Clouds(this.view.camera.raw, this.view.atmosphere, {
       ...this.config.clouds,
       enabled: this.config.visible ?? true,
     });

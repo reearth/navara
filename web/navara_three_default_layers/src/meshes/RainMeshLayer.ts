@@ -1,7 +1,8 @@
+import type ThreeView from "@navara/three";
 import {
   MeshLayerDeclaration,
   type MeshLayerConfig,
-  ViewContext,
+  type ViewContext,
   type MeshLayerUpdate,
 } from "@navara/three";
 
@@ -22,8 +23,8 @@ export class RainMeshLayer extends MeshLayerDeclaration<
 > {
   private config: RainMeshLayerConfig;
 
-  constructor(view: ViewContext, config: RainMeshLayerConfig) {
-    super(view, config);
+  constructor(view: ThreeView, ctx: ViewContext, config: RainMeshLayerConfig) {
+    super(view, ctx, config);
     this.config = config;
   }
 
@@ -65,7 +66,7 @@ export class RainMeshLayer extends MeshLayerDeclaration<
 
   update(time: number): void {
     if (this._instance) {
-      this._instance.update(time, this.view.camera);
+      this._instance.update(time, this.view.camera.raw);
     }
   }
 

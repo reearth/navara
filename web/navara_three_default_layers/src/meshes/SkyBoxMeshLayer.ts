@@ -1,3 +1,4 @@
+import type ThreeView from "@navara/three";
 import {
   Color,
   MeshLayerDeclaration,
@@ -42,8 +43,12 @@ export class SkyBoxMeshLayer extends MeshLayerDeclaration<
   Mesh<BufferGeometry, ShaderMaterial>
 > {
   private config: SkyBoxMeshLayerConfig;
-  constructor(view: ViewContext, config: SkyBoxMeshLayerConfig) {
-    super(view, config);
+  constructor(
+    view: ThreeView,
+    ctx: ViewContext,
+    config: SkyBoxMeshLayerConfig,
+  ) {
+    super(view, ctx, config);
     this.config = config;
   }
 
@@ -83,7 +88,7 @@ export class SkyBoxMeshLayer extends MeshLayerDeclaration<
       sunDirection.y,
       sunDirection.z,
       0,
-    ).applyMatrix4(this.view.camera.matrixWorldInverse);
+    ).applyMatrix4(this.view.camera.raw.matrixWorldInverse);
 
     material.uniforms = {
       uDayColor: {
@@ -162,7 +167,7 @@ export class SkyBoxMeshLayer extends MeshLayerDeclaration<
       this.view.atmosphere.sunDirection.y,
       this.view.atmosphere.sunDirection.z,
       0,
-    ).applyMatrix4(this.view.camera.matrixWorldInverse);
+    ).applyMatrix4(this.view.camera.raw.matrixWorldInverse);
 
     material.uniforms["uSunDirView"].value = new Vector3(v.x, v.y, v.z);
 

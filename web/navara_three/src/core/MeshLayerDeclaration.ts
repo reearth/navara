@@ -2,6 +2,7 @@ import type { BaseEventMap, XYZ } from "@navara/core";
 import { Matrix4, Object3D } from "three";
 import invariant from "tiny-invariant";
 
+import type ThreeView from "../index";
 import type { Scenes } from "../scene";
 
 import {
@@ -82,7 +83,7 @@ export type MeshBaseInstance<Instance extends object = object> =
  * > {
  *   private config: MyMeshConfig;
  *
- *   constructor(view: ViewContext, config: MyMeshConfig) {
+ *   constructor(view: ThreeView, config: MyMeshConfig) {
  *     super(view, config);
  *     this.config = config;
  *   }
@@ -98,7 +99,7 @@ export type MeshBaseInstance<Instance extends object = object> =
  *
  *     // Enable CSM shadows if needed
  *     if (mesh.castShadow) {
- *       this.view.applyShadowMaterial(material);
+ *       this.ctx.applyShadowMaterial(material);
  *     }
  *
  *     return mesh;
@@ -193,9 +194,9 @@ export abstract class MeshLayerDeclaration<
   public matrixWorld?: Matrix4;
   private prevPassKey?: PassKey;
 
-  constructor(view: ViewContext, config?: Config) {
+  constructor(view: ThreeView, ctx: ViewContext, config?: Config) {
     const resolvedConfig = config ?? ({} as Config);
-    super(view, resolvedConfig);
+    super(view, ctx, resolvedConfig);
     this.position = resolvedConfig.position;
     this.scale = resolvedConfig.scale;
     this.rotation = resolvedConfig.rotation;
@@ -265,7 +266,7 @@ export abstract class MeshLayerDeclaration<
   }
 
   removeFromScene(passKey: PassKey) {
-    const scenes = this.view.scenes;
+    const scenes = this.ctx.scenes;
 
     if (scenes[passKey] && this.raw) {
       scenes[passKey].remove(this.raw);
@@ -275,7 +276,7 @@ export abstract class MeshLayerDeclaration<
   addToScene(passKey: PassKey) {
     if (!this.raw) return;
 
-    const scenes = this.view.scenes;
+    const scenes = this.ctx.scenes;
 
     if (scenes[passKey]) {
       scenes[passKey].add(this.raw);

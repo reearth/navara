@@ -1,7 +1,8 @@
+import type ThreeView from "@navara/three";
 import {
   MeshLayerDeclaration,
   type MeshLayerConfig,
-  ViewContext,
+  type ViewContext,
   type MeshLayerUpdate,
 } from "@navara/three";
 
@@ -23,8 +24,8 @@ export class SkyMeshLayer extends MeshLayerDeclaration<
   private config: SkyMeshLayerConfig;
   private _skyMesh: SkyMesh | null = null;
 
-  constructor(view: ViewContext, config: SkyMeshLayerConfig) {
-    super(view, config);
+  constructor(view: ThreeView, ctx: ViewContext, config: SkyMeshLayerConfig) {
+    super(view, ctx, config);
     this.config = config;
   }
 

@@ -1,3 +1,4 @@
+import type ThreeView from "@navara/three";
 import {
   Color,
   DrapedMesh,
@@ -57,12 +58,12 @@ export class BoxMeshLayer extends MeshLayerDeclarationWithSelectiveEffect<
 > {
   private config: BoxMeshLayerConfig;
 
-  constructor(view: ViewContext, config: BoxMeshLayerConfig) {
+  constructor(view: ThreeView, ctx: ViewContext, config: BoxMeshLayerConfig) {
     // Propagate initial effectIds to base MeshLayer
     if (config.box?.effectIds) {
       config.effectIds = config.box.effectIds;
     }
-    super(view, config);
+    super(view, ctx, config);
     this.config = config;
   }
 
@@ -102,7 +103,7 @@ export class BoxMeshLayer extends MeshLayerDeclarationWithSelectiveEffect<
     mesh.receiveShadow = cfg.receiveShadow ?? false;
 
     // Emit CSM event for shadow map integration
-    this.view.applyShadowMaterial(material);
+    this.ctx.applyShadowMaterial(material);
 
     return mesh;
   }
@@ -145,12 +146,12 @@ export class BoxMeshLayer extends MeshLayerDeclarationWithSelectiveEffect<
 
         // Swap material between lit and unlit
         if (wasChanged) {
-          this.view.removeShadowMaterial(this._instance.material);
+          this.ctx.removeShadowMaterial(this._instance.material);
           this._instance.material.dispose();
           const newMaterial = this.createMaterial(origin);
           this._instance.material = newMaterial;
           if (!cfg.draped) {
-            this.view.applyShadowMaterial(newMaterial);
+            this.ctx.applyShadowMaterial(newMaterial);
           }
           // Re-setup SelectiveEffect uniforms for the new material
           if (newMaterial instanceof MeshLambertMaterial) {
@@ -233,7 +234,7 @@ export class BoxMeshLayer extends MeshLayerDeclarationWithSelectiveEffect<
   protected disposeMesh(): void {
     if (this._instance) {
       // Emit CSM event for shadow map cleanup
-      this.view.removeShadowMaterial(this._instance.material);
+      this.ctx.removeShadowMaterial(this._instance.material);
 
       this._instance.geometry.dispose();
       this._instance.material.dispose();
