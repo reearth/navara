@@ -10,6 +10,6 @@
  * ```
  */
 // DO NOT add a logic to this class as much as possible.
-export abstract class Plugin<TView = unknown> {
-  abstract init(view: TView): Promise<void>;
+export abstract class Plugin<TView = unknown, TCtx = unknown> {
+  abstract init(view: TView, ctx: TCtx): Promise<void>;
 }

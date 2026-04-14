@@ -75,6 +75,17 @@ You can access the scene, camera, and rendering APIs through `this.view`.
 | `view.getRenderer()`    | Get the WebGLRenderer instance                      |
 | `view.getInputBuffer()` | Get the input buffer from the effect composer        |
 
+#### Buffer / Texture Access
+
+| Method                         | Description                                                  |
+| ------------------------------ | ------------------------------------------------------------ |
+| `view.getRenderTarget()`       | Get the main render target (includes G-buffer)               |
+| `view.getGlobeDepthTexture()`  | Get the globe depth texture for post-processing              |
+| `view.getGlobeNormalTexture()` | Get the globe normal texture for post-processing             |
+| `view.getNormalTexture()`      | Get the scene normal texture from the G-buffer               |
+| `view.getEffectIdsTexture()`   | Get the effect IDs texture from the G-buffer                 |
+| `view.getEmissiveTexture()`    | Get the emissive texture from the G-buffer                   |
+
 #### Shadow (Experimental)
 
 | Method                                | Description                                        |
