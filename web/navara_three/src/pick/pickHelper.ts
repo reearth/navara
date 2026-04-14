@@ -202,24 +202,20 @@ export class PickHelper extends CustomRenderPass {
     const pickingCoordY = fullHeight - pixelY - 0.5; // Flip Y axis for WebGL
     const pickingCoord = new Vector2(pickingCoordX, pickingCoordY);
 
-    // Render the full pick scene without setViewOffset, then read the
-    // specific pixel directly from the pickRenderTarget.
-    //
-    // Why not setViewOffset?
-    // setViewOffset(1x1) creates an extreme projection zoom (e.g. 3024x).
-    // LineMaterial (used by Line2/SmoothLine) and custom ShaderMaterials
-    // (used by ArcLine) expand geometry in the vertex shader using
-    // screen-space calculations. With extreme zoom, all expanded vertices
-    // project outside clip space [-1,1] and the GPU clips them entirely,
-    // even though the line visually passes through the picked pixel.
-    //
-    // Instead, render the full scene into a single-attachment render target
-    // and read the exact pixel from it.
-    this.processRender(this.pickRenderTarget, pickingCoord);
-
-    // Read the picked pixel from the single-attachment pickRenderTarget.
+    // Use scissor test to limit fragment shading to the single picked pixel.
+    // We keep the projection matrix unchanged (no setViewOffset) so that
+    // LineMaterial and custom ShaderMaterials that expand geometry in
+    // screen-space still produce correct clip-space positions.
     // readRenderTargetPixels uses WebGL convention: Y=0 at bottom.
     const readY = fullHeight - 1 - pixelY;
+
+    this._renderer.setScissor(pixelX, readY, 1, 1);
+    this._renderer.setScissorTest(true);
+
+    this.processRender(this.pickRenderTarget, pickingCoord);
+
+    this._renderer.setScissorTest(false);
+
     this._renderer.readRenderTargetPixels(
       this.pickRenderTarget,
       pixelX,
