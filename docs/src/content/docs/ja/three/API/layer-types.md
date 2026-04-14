@@ -106,11 +106,11 @@ layer.forceUpdate();
 
 **FeatureCreatedParams:**
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `featureId` | `FeatureId` | 作成された地物の一意な識別子 |
-| `evaluator` | `FeatureEvaluator` | 地物のスタイリングに使用する評価クラス |
-| `credit` | `string \| undefined` | データソースのクレジット情報（オプション） |
+| Property    | Type                  | Description                                |
+| ----------- | --------------------- | ------------------------------------------ |
+| `featureId` | `FeatureId`           | 作成された地物の一意な識別子               |
+| `evaluator` | `FeatureEvaluator`    | 地物のスタイリングに使用する評価クラス     |
+| `credit`    | `string \| undefined` | データソースのクレジット情報（オプション） |
 
 **Example:**
 
@@ -132,11 +132,11 @@ layer.on("featureCreated", ({ evaluator }) => {
 
 **FeatureUpdatedParams:**
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `featureId` | `FeatureId` | 更新された地物の一意な識別子 |
+| Property    | Type               | Description                            |
+| ----------- | ------------------ | -------------------------------------- |
+| `featureId` | `FeatureId`        | 更新された地物の一意な識別子           |
 | `evaluator` | `FeatureEvaluator` | 地物のスタイリングに使用する評価クラス |
-| `updatedAt` | `number` | 更新時刻（タイムスタンプ） |
+| `updatedAt` | `number`           | 更新時刻（タイムスタンプ）             |
 
 **Example:**
 
@@ -163,8 +163,8 @@ layer.on("featureUpdated", ({ evaluator }) => {
 
 **FeatureVisibilityChangedParams:**
 
-| Property | Type | Description |
-|----------|------|-------------|
+| Property    | Type        | Description                    |
+| ----------- | ----------- | ------------------------------ |
 | `featureId` | `FeatureId` | 可視性が変更された地物の識別子 |
 
 #### featureRemoved
@@ -179,8 +179,8 @@ layer.on("featureUpdated", ({ evaluator }) => {
 
 **FeatureRemovedParams:**
 
-| Property | Type | Description |
-|----------|------|-------------|
+| Property    | Type        | Description            |
+| ----------- | ----------- | ---------------------- |
 | `featureId` | `FeatureId` | 削除された地物の識別子 |
 
 #### deleted
@@ -399,8 +399,8 @@ class MyBoxLayer extends LayerDeclaration<MyBoxConfig, MyBoxConfig, Mesh> {
   private size: number;
   private color: number;
 
-  constructor(view: ViewContext, config: MyBoxConfig) {
-    super(view, config);
+  constructor(view: ThreeView, ctx: ViewContext, config: MyBoxConfig) {
+    super(view, ctx, config);
     this.size = config.size ?? 1;
     this.color = config.color ?? 0xff0000;
   }
@@ -409,7 +409,7 @@ class MyBoxLayer extends LayerDeclaration<MyBoxConfig, MyBoxConfig, Mesh> {
     const geometry = new BoxGeometry(this.size, this.size, this.size);
     const material = new MeshBasicMaterial({ color: this.color });
     this._instance = new Mesh(geometry, material);
-    this.view.scenes.opaque.add(this._instance);
+    this.ctx.scenes.opaque.add(this._instance);
   }
 
   onUpdateConfig(updates: MyBoxConfig) {
@@ -422,7 +422,7 @@ class MyBoxLayer extends LayerDeclaration<MyBoxConfig, MyBoxConfig, Mesh> {
 
   onDestroy() {
     if (this._instance) {
-      this.view.scenes.opaque.remove(this._instance);
+      this.ctx.scenes.opaque.remove(this._instance);
       this._instance.geometry.dispose();
       (this._instance.material as MeshBasicMaterial).dispose();
     }
@@ -435,7 +435,7 @@ class MyBoxLayer extends LayerDeclaration<MyBoxConfig, MyBoxConfig, Mesh> {
 
 すべてのメッシュ・エフェクト・ライトレイヤーに共通する基本設定オプション。
 
-| Property | Type | Default | Description |
-|----------|------|---------|-------------|
-| `id` | `string \| undefined` | 自動生成 | レイヤーのカスタム ID |
-| `visible` | `boolean \| undefined` | `true` | レイヤーを表示するかどうか |
+| Property  | Type                   | Default  | Description                |
+| --------- | ---------------------- | -------- | -------------------------- |
+| `id`      | `string \| undefined`  | 自動生成 | レイヤーのカスタム ID      |
+| `visible` | `boolean \| undefined` | `true`   | レイヤーを表示するかどうか |

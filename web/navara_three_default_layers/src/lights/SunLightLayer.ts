@@ -120,7 +120,7 @@ export class SunLightLayer extends LightLayerDeclaration<
     // Add initial lights to scene
     this.updateSceneLights();
 
-    // Listen for shadow material events from ThreeView
+    // Listen for shadow material events.
     this.ctx.on("shadowApplied", (m: Material) => {
       this._instance?.setupMaterialForCSM(m);
     });
