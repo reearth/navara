@@ -14,20 +14,23 @@ All plugins are implemented by inheriting from the `Plugin` abstract class.
 ```typescript
 import { Plugin } from "@navara/three";
 
-abstract class Plugin<TView = unknown> {
-  abstract init(view: TView): Promise<void>;
+abstract class Plugin<TView = unknown, TCtx = unknown> {
+  abstract init(view: TView, ctx: TCtx): Promise<void>;
 }
 ```
 
 The `Plugin` class is intentionally designed as a minimal interface, providing only the `init()` method.
 
-| Method       | Description                                                              |
-| ------------ | ------------------------------------------------------------------------ |
-| `init(view)` | Plugin initialization. Automatically called during `view.init()`         |
+| Method            | Description                                                              |
+| ----------------- | ------------------------------------------------------------------------ |
+| `init(view, ctx)` | Plugin initialization. Automatically called during `view.init()`         |
 
 ### Generics
 
-The type parameter `TView` of `Plugin<TView>` specifies the type of the view passed to the `init()` method. Typically, you specify `ThreeView` or `ThreeView<MyLayerDescriptions>` which includes custom layer description types.
+| Parameter | Description |
+| --------- | ----------- |
+| `TView`   | The type of the view passed to `init()`. Typically `ThreeView` or `ThreeView<MyLayerDescriptions>`. |
+| `TCtx`    | The type of the context passed to `init()`. Use `ViewContext` to access the renderer, buffers, and pass management APIs. |
 
 ## Lifecycle
 
@@ -41,7 +44,7 @@ view.addPlugin(pluginA)
 view.addPlugin(pluginB)
 await view.init()
   ├── Render pass initialization
-  ├── Promise.all([pluginA.init(view), pluginB.init(view)])  ← parallel execution
+  ├── Promise.all([pluginA.init(view, ctx), pluginB.init(view, ctx)])  ← parallel execution
   └── Main loop starts
 ```
 
@@ -56,7 +59,7 @@ await view.init()
 Here is an example of a basic plugin that encapsulates layer registration.
 
 ```typescript
-import ThreeView, { Plugin } from "@navara/three";
+import ThreeView, { Plugin, type ViewContext } from "@navara/three";
 import {
   BoxMeshLayer,
   SphereMeshLayer,
@@ -65,8 +68,8 @@ import {
   FXAAEffectLayer,
 } from "@navara/three_default_layers";
 
-class MyScenePlugin extends Plugin<ThreeView> {
-  async init(view: ThreeView) {
+class MyScenePlugin extends Plugin<ThreeView, ViewContext> {
+  async init(view: ThreeView, _ctx: ViewContext) {
     // Register mesh layers
     view.registerMesh("box", BoxMeshLayer);
     view.registerMesh("sphere", SphereMeshLayer);
@@ -98,7 +101,7 @@ view.addLayer({ type: "light", sun: { intensity: 1.0 } });
 In addition to registering layers within `init()`, you can also provide methods to be called after initialization.
 
 ```typescript
-import ThreeView, { Plugin, type LayerHandle } from "@navara/three";
+import ThreeView, { Plugin, type ViewContext, type LayerHandle } from "@navara/three";
 import {
   SkyMeshLayer,
   SunLightLayer,
@@ -107,10 +110,10 @@ import {
   FXAAEffectLayer,
 } from "@navara/three_default_layers";
 
-class MyScenePlugin extends Plugin<ThreeView> {
+class MyScenePlugin extends Plugin<ThreeView, ViewContext> {
   private view?: ThreeView;
 
-  async init(view: ThreeView) {
+  async init(view: ThreeView, _ctx: ViewContext) {
     this.view = view;
 
     view.registerMesh("sky", SkyMeshLayer);
@@ -156,12 +159,12 @@ const { sky, sun } = plugin.setupScene();
 You can also create plugins that register custom layers you have implemented (see [Custom Layer](../../../three/api/custom-layer/)).
 
 ```typescript
-import ThreeView, { Plugin } from "@navara/three";
+import ThreeView, { Plugin, type ViewContext } from "@navara/three";
 import { MyCustomMeshLayer } from "./layers/MyCustomMeshLayer";
 import { MyCustomEffectLayer } from "./layers/MyCustomEffectLayer";
 
-class MyCustomPlugin extends Plugin<ThreeView> {
-  async init(view: ThreeView) {
+class MyCustomPlugin extends Plugin<ThreeView, ViewContext> {
+  async init(view: ThreeView, _ctx: ViewContext) {
     view.registerMesh("myCustomMesh", MyCustomMeshLayer);
     view.registerEffect("myCustomEffect", MyCustomEffectLayer);
   }

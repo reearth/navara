@@ -4,15 +4,17 @@ import type { FontManager } from "@navara/font";
 import type { ConcurrencyManager } from "@navara/worker";
 import type { Pass as PostProcessingPass } from "postprocessing";
 import type { Material, PerspectiveCamera, WebGLRenderer } from "three";
+import invariant from "tiny-invariant";
 
 import type { Atmosphere } from "../atmosphere";
 import type { LayersManager } from "../layersManager";
 import type { RenderPassOrchestrator } from "../orchestrators";
+import type { CustomRenderPass } from "../passes";
 import type { Scenes } from "../scene";
 
 import type { EffectLayerDeclaration } from "./EffectLayerDeclaration";
 import type { LayerHandle } from "./LayerHandle";
-import type { SelectiveEffectRegistry } from "./SelectiveEffectRegistry";
+import { SelectiveEffectRegistry } from "./SelectiveEffectRegistry";
 
 type ViewContextEvents = {
   /**
@@ -46,38 +48,60 @@ type ViewContextEvents = {
  *   layer/plugin code.
  */
 export class ViewContext extends EventHandler<ViewContextEvents> {
-  public selectiveEffectRegistry?: SelectiveEffectRegistry;
-  public globe?: Globe;
-  public fontManager?: FontManager;
+  private _selectiveEffectRegistry: SelectiveEffectRegistry;
+  private _renderPass?: CustomRenderPass;
 
   constructor(
     /** Scene containers for different rendering passes. */
-    public scenes: Scenes,
+    private _scenes: Scenes,
     /** The main perspective camera used for rendering. */
-    public camera: PerspectiveCamera,
+    private _camera: PerspectiveCamera,
     /** Atmosphere parameters (sun direction, time of day, etc.). */
-    public atmosphere: Atmosphere,
+    private _atmosphere: Atmosphere,
     private layersManager: LayersManager,
     private renderPassOrchestrator: RenderPassOrchestrator,
     /** Manager for scheduling work on Web Workers. */
-    public concurrencyManager: ConcurrencyManager,
+    private _concurrencyManager: ConcurrencyManager,
+    private _globe: Globe,
+    private _fontManager: FontManager,
   ) {
     super();
+
+    this._selectiveEffectRegistry = new SelectiveEffectRegistry(() =>
+      this.emit("effectSlotsChanged"),
+    );
   }
 
-  /** Set or replace the SelectiveEffectRegistry, wiring up the slotsChanged signal. */
-  setSelectiveEffectRegistry(
-    registry: SelectiveEffectRegistry | undefined,
-  ): void {
-    // Disconnect previous registry
-    if (this.selectiveEffectRegistry) {
-      this.selectiveEffectRegistry.onSlotsChanged = undefined;
-    }
-    this.selectiveEffectRegistry = registry;
-    // Connect new registry
-    if (registry) {
-      registry.onSlotsChanged = () => this.emit("effectSlotsChanged");
-    }
+  /** Scene containers for different rendering passes. */
+  get scenes(): Scenes {
+    return this._scenes;
+  }
+
+  /** The main perspective camera used for rendering. */
+  get camera(): PerspectiveCamera {
+    return this._camera;
+  }
+
+  /** Atmosphere parameters (sun direction, time of day, etc.). */
+  get atmosphere(): Atmosphere {
+    return this._atmosphere;
+  }
+
+  /** Manager for scheduling work on Web Workers. */
+  get concurrencyManager(): ConcurrencyManager {
+    return this._concurrencyManager;
+  }
+
+  get selectiveEffectRegistry(): SelectiveEffectRegistry {
+    return this._selectiveEffectRegistry;
+  }
+
+  get globe(): Globe {
+    return this._globe;
+  }
+
+  get fontManager(): FontManager {
+    return this._fontManager;
   }
 
   // --- Pass management ---
@@ -125,6 +149,59 @@ export class ViewContext extends EventHandler<ViewContextEvents> {
   /** Get the input buffer from the effect composer. */
   getInputBuffer() {
     return this.renderPassOrchestrator.effectComposer.inputBuffer;
+  }
+
+  /** @internal */
+  _setRenderPass(renderPass: CustomRenderPass) {
+    this._renderPass = renderPass;
+  }
+
+  /**
+   * Gets the globe depth texture for post-processing effects.
+   */
+  getGlobeDepthTexture() {
+    invariant(this._renderPass, "CustomRenderPass isn't initialized yet.");
+    return this._renderPass.globeDepthCopyPass.texture;
+  }
+
+  /**
+   * Gets the globe normal texture for post-processing effects.
+   */
+  getGlobeNormalTexture() {
+    invariant(this._renderPass, "CustomRenderPass isn't initialized yet.");
+    return this._renderPass.globeNormalCopyPass.texture;
+  }
+
+  /**
+   * Gets the main render target which includes G-buffer.
+   */
+  getRenderTarget() {
+    invariant(this._renderPass, "CustomRenderPass isn't initialized yet.");
+    return this._renderPass.gbufferRenderTarget;
+  }
+
+  /**
+   * Gets the scene normal texture from the G-buffer.
+   */
+  getNormalTexture() {
+    invariant(this._renderPass, "CustomRenderPass isn't initialized yet.");
+    return this._renderPass.gbufferRenderTarget.textures[1];
+  }
+
+  /**
+   * Gets the effect IDs texture from the G-buffer.
+   */
+  getEffectIdsTexture() {
+    invariant(this._renderPass, "CustomRenderPass isn't initialized yet.");
+    return this._renderPass.gbufferRenderTarget.textures[2];
+  }
+
+  /**
+   * Gets the emissive texture from the G-buffer.
+   */
+  getEmissiveTexture() {
+    invariant(this._renderPass, "CustomRenderPass isn't initialized yet.");
+    return this._renderPass.gbufferRenderTarget.textures[3];
   }
 
   // --- Layer query ---

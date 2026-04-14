@@ -13,6 +13,8 @@ sidebar:
 
 **Type:** `ThreeViewCamera`
 
+**Read-only** (getter)
+
 ビューの位置、向き、投影を管理するカメラコントローラー。`raw` プロパティで Three.js の `PerspectiveCamera` にアクセスできます。
 
 **Example:**
@@ -26,25 +28,11 @@ view.camera.raw.fov = 60;
 view.camera.raw.updateProjectionMatrix();
 ```
 
-### renderer
-
-**Type:** `WebGLRenderer`
-
-シーンのレンダリングに使用される Three.js WebGLRenderer インスタンス。
-
-**Example:**
-
-```tsx
-// クリアカラーを変更
-view.renderer.setClearColor(0x000000);
-
-// レンダラー情報を取得
-console.log(view.renderer.info.render);
-```
-
 ### globe
 
 **Type:** `Globe`
+
+**Read-only** (getter)
 
 地形、画像レイヤー、グローブ固有の設定を管理する Globe インスタンス。透明度、ワイヤーフレーム表示、標高ヒートマップのカラーマップなど、地球表示に関するさまざまなプロパティを制御できます。
 
@@ -69,6 +57,8 @@ view.globe.elevationColormap = customColorMap;
 ### atmosphere
 
 **Type:** `Atmosphere`
+
+**Read-only** (getter)
 
 大気システムを管理するインスタンス。太陽と月の位置計算、大気散乱テクスチャの管理を行います。`date` プロパティを変更すると、天体暦に基づいて太陽・月の方向が自動的に再計算され、`SunLightLayer` や `SkyMeshLayer` などの関連レイヤーに反映されます。
 
@@ -108,36 +98,6 @@ view.toneMappingExposure = 1.5;
 
 // 露出を下げて暗くする
 view.toneMappingExposure = 0.8;
-```
-
-### globeDepthTexture
-
-**Type:** `Texture`
-
-ポストプロセッシングエフェクト用のグローブ深度テクスチャを取得します。カスタムシェーダーやエフェクトで使用できます。
-
-**読み取り専用**
-
-**Example:**
-
-```tsx
-// カスタムシェーダーで深度テクスチャを使用
-customMaterial.uniforms.depthMap.value = view.globeDepthTexture;
-```
-
-### globeNormalTexture
-
-**Type:** `Texture`
-
-ポストプロセッシングエフェクト用のグローブ法線テクスチャを取得します。カスタムシェーダーやエフェクトで使用できます。
-
-**読み取り専用**
-
-**Example:**
-
-```tsx
-// カスタムシェーダーで法線テクスチャを使用
-customMaterial.uniforms.normalMap.value = view.globeNormalTexture;
 ```
 
 ### animation
@@ -184,21 +144,6 @@ console.log(`スクリーンサイズ: ${size.x} x ${size.y} ピクセル`);
 ```tsx
 const ratio = view.pixelRatio;
 console.log(`ピクセル比率: ${ratio}`);
-```
-
-### normalTexture
-
-**Type:** `Texture`
-
-G バッファからのシーン法線テクスチャを取得します。MRT（Multiple Render Targets）パスで生成され、ポストプロセッシングエフェクトやカスタムシェーダーで使用できます。
-
-**読み取り専用**
-
-**Example:**
-
-```tsx
-// カスタムシェーダーで法線テクスチャを使用
-customMaterial.uniforms.sceneNormal.value = view.normalTexture;
 ```
 
 ### shadowMapViewersEnabled

@@ -42,7 +42,6 @@ import { WATER_NORMAL_URL } from "./constants/assets";
 import {
   LayerDeclaration,
   ViewContext,
-  SelectiveEffectRegistry,
   type MeshLayerConfig,
   type MeshLayerConstructor,
   type LightLayerConstructor,
@@ -259,64 +258,22 @@ export default class ThreeView<
       ? ActualLayerDescription
       : ActualLayerDescription | CustomLayerDescriptions,
 > extends EventHandler<ViewEvents> {
-  /** The camera controller that manages view position, orientation, and projection. */
-  camera: ThreeViewCamera;
-  /** The Three.js WebGL renderer instance used for rendering the scene. */
-  renderer: WebGLRenderer;
-  /** The globe instance that manages terrain, imagery layers, and globe-specific settings. */
-  globe!: Globe;
-  /** The atmosphere renderer that handles sky, sun, and atmospheric scattering effects. */
-  atmosphere: Atmosphere;
-  /** Manages font loading, text shaping, and SDF atlas access. */
-  get fontManager(): FontManager {
-    return this._fontManager;
-  }
-
-  /**
-   * Register a font family with multiple faces.
-   * Each face covers a set of unicode ranges and points to a separate font file URL.
-   * When a text label uses this family name as its font, only the face files
-   * whose unicode ranges cover the label's characters are loaded.
-   *
-   * @example
-   * ```ts
-   * view.addFontFamily({
-   *   family: "MapFont",
-   *   faces: [
-   *     {
-   *       url: "/fonts/latin.woff2",
-   *       unicodeRanges: [{ from: 0x0000, to: 0x024f }],
-   *     },
-   *     {
-   *       url: "/fonts/cjk.woff2",
-   *       unicodeRanges: [{ from: 0x4e00, to: 0x9fff }],
-   *     },
-   *   ],
-   * });
-   * ```
-   */
-  addFontFamily(family: FontFamily): this {
-    this._fontManager.registerFontFamily(family);
-    return this;
-  }
-
-  /** Remove a previously registered font family by name. */
-  removeFontFamily(family: string): this {
-    this._fontManager.unregisterFontFamily(family);
-    return this;
-  }
+  private _camera: ThreeViewCamera;
+  private _renderer: WebGLRenderer;
+  private _globe!: Globe;
+  private _atmosphere: Atmosphere;
 
   /** Layer handle for the sky environment map effect layer. Used for sky reflections. */
-  skyEnvMapLayer?: LayerHandle<SkyEnvMapEffectLayer>;
+  private skyEnvMapLayer!: LayerHandle<SkyEnvMapEffectLayer>;
   /** Layer handle for the Multi-Render Target pass that outputs color and normal buffers. */
-  mrtPassLayer!: LayerHandle<MRTPassEffectLayer>;
+  private mrtPassLayer!: LayerHandle<MRTPassEffectLayer>;
   /** Layer handle for the transparent objects rendering pass. */
-  transparentPassLayer!: LayerHandle<TransparentPassEffectLayer>;
+  private transparentPassLayer!: LayerHandle<TransparentPassEffectLayer>;
   /** Layer handle for the final compositing pass that outputs to screen. */
-  finalPassLayer!: LayerHandle<FinalCopyEffectLayer>;
+  private finalPassLayer!: LayerHandle<FinalCopyEffectLayer>;
 
   /** The render pass orchestrator that manages the post-processing effect pipeline. */
-  renderPassOrchestrator: RenderPassOrchestrator;
+  private renderPassOrchestrator: RenderPassOrchestrator;
 
   private _scenes: Scenes;
 
@@ -551,16 +508,14 @@ export default class ThreeView<
   private _defaultTextureOptions: TextureOptions;
   private layersManager = new LayersManager();
   private shadowMapViewers: ShadowMapViewers;
-  private eventContext: EventContext;
+  private eventContext!: EventContext;
 
   // Registry support
-  private registries: Registries;
-  /** Registry for managing selective post-processing effect slots. Available after MRT layer creation. */
-  get selectiveEffectRegistry(): SelectiveEffectRegistry | undefined {
-    return this.viewContext?.selectiveEffectRegistry;
-  }
+  private registries!: Registries;
   private viewContext!: ViewContext;
   private plugins: Plugin[] = [];
+
+  private pixelRatioMatchedMedia?: MediaQueryList;
 
   constructor(options: Options = {}) {
     super();
@@ -602,10 +557,10 @@ export default class ThreeView<
     renderer.autoClearStencil = false;
     renderer.autoClearColor = false;
     renderer.autoClearDepth = false;
-    this.renderer = renderer;
+    this._renderer = renderer;
 
     renderer.shadowMap.enabled = !!options.shadow;
-    this.renderer.shadowMap.type = PCFShadowMap;
+    this._renderer.shadowMap.type = PCFShadowMap;
 
     // Update shadow map manually in CustomRenderPass.
     renderer.shadowMap.autoUpdate = false;
@@ -629,7 +584,7 @@ export default class ThreeView<
     }
 
     this._texturizedSceneByTileCoordinates =
-      new TexturizedSceneByTileCoordinates(this.renderer);
+      new TexturizedSceneByTileCoordinates(this._renderer);
 
     this._scenes = {
       light: new Group(),
@@ -641,10 +596,10 @@ export default class ThreeView<
       skyEnvMap: new Scene(),
     };
 
-    this.camera = new ThreeViewCamera();
+    this._camera = new ThreeViewCamera();
 
     // Setup render pass orchestrator
-    this.renderPassOrchestrator = new RenderPassOrchestrator(this.renderer, {
+    this.renderPassOrchestrator = new RenderPassOrchestrator(this._renderer, {
       halfFloat: options.halfFloat ?? true,
       multisampling: options.multisampling,
     });
@@ -655,24 +610,29 @@ export default class ThreeView<
     const bgColor = options.backgroundColor
       ? options.backgroundColor.toHex()
       : 0x0a0a0f;
-    this.renderer.setClearColor(bgColor);
+    this._renderer.setClearColor(bgColor);
 
     if (!options.disableAutoResize && !isWorker()) {
       window.addEventListener("resize", this._handleResize);
       // Observe a change in devicePixelRatio.
-      window
-        .matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`)
-        .addEventListener("change", this._handleResize);
+      this.pixelRatioMatchedMedia = window.matchMedia(
+        `(resolution: ${window.devicePixelRatio}dppx)`,
+      );
+
+      this.pixelRatioMatchedMedia.addEventListener(
+        "change",
+        this._handleResize,
+      );
     }
 
     if (options.debug) {
-      const t = options.container || this.renderer.domElement.parentElement;
+      const t = options.container || this._renderer.domElement.parentElement;
       if (t) {
         this._stats = new RendererStats({
-          beginRender: () => this.renderer.info.reset(),
+          beginRender: () => this._renderer.info.reset(),
           endRender: () => ({
-            ...this.renderer.info.render,
-            memGeometries: this.renderer.info.memory.geometries,
+            ...this._renderer.info.render,
+            memGeometries: this._renderer.info.memory.geometries,
           }),
         });
         t.appendChild(this._stats.dom);
@@ -688,7 +648,7 @@ export default class ThreeView<
       tSkyEnvMap: { value: null },
       inverseProjectionMatrix: { value: null },
       // TODO: Need to sync `fov` with WASM side
-      fov: { value: (this.camera.raw.fov * Math.PI) / 180 },
+      fov: { value: (this._camera.raw.fov * Math.PI) / 180 },
       screenHeightPx: { value: height },
       time: { value: 0 },
       colorMapTexture: { value: null },
@@ -700,12 +660,12 @@ export default class ThreeView<
     const NUM_CASCADED_SHADOW_MAPS = 6;
 
     this._defaultTextureOptions = {
-      maxAnisotropy: this.renderer.capabilities.getMaxAnisotropy(),
+      maxAnisotropy: this._renderer.capabilities.getMaxAnisotropy(),
       magFilter: LinearFilter,
       minFilter: LinearFilter,
       useMipmaps: true,
       maxTextures:
-        Math.max(this.renderer.capabilities.maxTextures, 8) -
+        Math.max(this._renderer.capabilities.maxTextures, 8) -
         NUM_CASCADED_SHADOW_MAPS,
     };
 
@@ -726,56 +686,19 @@ export default class ThreeView<
       };
     }
 
-    this.atmosphere = new Atmosphere(this.renderer, options.atmosphere);
-    this.atmosphere.on("needsUpdate", this.forceUpdate);
-
-    // Set up Registry
-    this.viewContext = new ViewContext(
-      this._scenes,
-      this.camera.raw,
-      this.atmosphere,
-      this.layersManager,
-      this.renderPassOrchestrator,
-      createDefaultConcurrencyManager(this.isMobileOptimized()),
-    );
-    this.registries = new Registries(this.viewContext);
-    this.eventContext = new EventContext({
-      eventManager: this._eventManager,
-      scenes: this._scenes,
-      camera: this.camera,
-      meshes: this._meshes,
-      abortControllers: this._abortControllers,
-      buf: this._buf,
-      texFragment: this._texFragment,
-      tileHandler: this._tileHandler,
-      workerTaskHandler: this._workerTaskHandler,
-      meshHandler: this._meshHandler,
-      featureHandler: this._featureHandler,
-      loadedTexs: this._loadedTexs,
-      workerPoolPromises: this._workerPoolPromises,
-      uniforms: this._uniforms,
-      texturizedSceneByTileCoordinates: this._texturizedSceneByTileCoordinates,
-      tileMapByHandle: this._tileMapByHandle,
-      textureOptions: this._defaultTextureOptions,
-      renderFlag: this._renderFlag,
-      viewEvents: this,
-      layersManager: this.layersManager,
-      viewContext: this.viewContext,
-      layerHandler: this._layerHandler,
-      fontManager: this._fontManager,
-    });
+    this._atmosphere = new Atmosphere(this._renderer, options.atmosphere);
+    this._atmosphere.on("needsUpdate", this.forceUpdate);
 
     this.on("layer", (e, id, ...args) => {
       this.layersManager.emitById(e, id, ...args);
     });
 
-    // Register built-in layers
-    this.registerBuiltIns();
-
     this._renderFlag.animation = !!options.animation;
 
-    this.camera.on("frustumChanged", () => {
-      this.renderPassOrchestrator.effectComposer.setMainCamera(this.camera.raw);
+    this._camera.on("frustumChanged", () => {
+      this.renderPassOrchestrator.effectComposer.setMainCamera(
+        this._camera.raw,
+      );
     });
 
     this.shadowMapViewers = new ShadowMapViewers(this._scenes.light);
@@ -785,7 +708,7 @@ export default class ThreeView<
    * Convert a mouse event to a MapMouseEvent by adding map coordinates
    */
   private convertMouseEventToMapEvent(event: MouseEvent): MapMouseEvent | null {
-    const rect = this.renderer.domElement.getBoundingClientRect();
+    const rect = this._renderer.domElement.getBoundingClientRect();
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
     const xyz = convertScreenPos(this, x, y);
@@ -805,7 +728,7 @@ export default class ThreeView<
 
   private async initializeRenderPass() {
     // Initialize atmosphere
-    await this.atmosphere._init();
+    await this._atmosphere._init();
 
     this.skyEnvMapLayer = this.addLayer<SkyEnvMapEffectLayer>({
       type: "effect",
@@ -833,39 +756,42 @@ export default class ThreeView<
     return instance;
   }
 
+  /** The camera controller that manages view position, orientation, and projection. */
+  get camera(): ThreeViewCamera {
+    return this._camera;
+  }
+
+  /** The globe instance that manages terrain, imagery layers, and globe-specific settings. */
+  get globe(): Globe {
+    return this._globe;
+  }
+
+  /** The atmosphere renderer that handles sky, sun, and atmospheric scattering effects. */
+  get atmosphere(): Atmosphere {
+    return this._atmosphere;
+  }
+
   /**
    * Gets the tone mapping exposure value.
    */
   get toneMappingExposure() {
-    return this.renderer.toneMappingExposure;
+    return this._renderer.toneMappingExposure;
   }
   /**
    * Sets the tone mapping exposure value for HDR rendering.
    */
   set toneMappingExposure(v: number) {
-    this.renderer.toneMappingExposure = v;
+    this._renderer.toneMappingExposure = v;
     this.forceUpdate();
   }
 
-  /**
-   * Gets the globe depth texture for post-processing effects.
-   */
-  get globeDepthTexture() {
+  private get globeDepthTexture() {
     return this.renderPass.globeDepthCopyPass.texture;
   }
 
-  /**
-   * Gets the globe normal texture for post-processing effects.
-   */
-  get globeNormalTexture() {
-    return this.renderPass.globeNormalCopyPass.texture;
-  }
-
-  /**
-   * Gets the scene normal texture from the G-buffer.
-   */
-  get normalTexture() {
-    return this.renderPass.gbufferRenderTarget.textures[1];
+  /** Manages font loading, text shaping, and SDF atlas access. */
+  get fontManager(): FontManager {
+    return this._fontManager;
   }
 
   /**
@@ -894,7 +820,9 @@ export default class ThreeView<
 
     this._initialized = true;
 
-    const concurrencyManager = this.viewContext.concurrencyManager;
+    const concurrencyManager = createDefaultConcurrencyManager(
+      this.isMobileOptimized(),
+    );
 
     initializeWorkerPool(WorkerURL, concurrencyManager);
 
@@ -910,27 +838,65 @@ export default class ThreeView<
     this._core = new Core(newId());
     this._core.start();
 
-    this._fontManager.setConcurrencyManager(
-      this.viewContext.concurrencyManager,
-    );
+    this._fontManager.setConcurrencyManager(concurrencyManager);
 
-    this.globe = new Globe(this._globeHandler, this._options);
-    this.viewContext.globe = this.globe;
+    this._globe = new Globe(this._globeHandler, this._options);
+
+    // Set up Registry
+    this.viewContext = new ViewContext(
+      this._scenes,
+      this._camera.raw,
+      this._atmosphere,
+      this.layersManager,
+      this.renderPassOrchestrator,
+      concurrencyManager,
+      this._globe,
+      this._fontManager,
+    );
+    this.registries = new Registries(this.viewContext);
+    this.eventContext = new EventContext({
+      eventManager: this._eventManager,
+      scenes: this._scenes,
+      camera: this._camera,
+      meshes: this._meshes,
+      abortControllers: this._abortControllers,
+      buf: this._buf,
+      texFragment: this._texFragment,
+      tileHandler: this._tileHandler,
+      workerTaskHandler: this._workerTaskHandler,
+      meshHandler: this._meshHandler,
+      featureHandler: this._featureHandler,
+      loadedTexs: this._loadedTexs,
+      workerPoolPromises: this._workerPoolPromises,
+      uniforms: this._uniforms,
+      texturizedSceneByTileCoordinates: this._texturizedSceneByTileCoordinates,
+      tileMapByHandle: this._tileMapByHandle,
+      textureOptions: this._defaultTextureOptions,
+      renderFlag: this._renderFlag,
+      viewEvents: this,
+      layersManager: this.layersManager,
+      viewContext: this.viewContext,
+      layerHandler: this._layerHandler,
+      fontManager: this._fontManager,
+    });
+
+    // Register built-in layers
+    this.registerBuiltIns();
 
     if (!isWorker()) {
       this._eventDisposer = registerInputEvents(
         this._core,
-        this.renderer.domElement,
+        this._renderer.domElement,
       );
       this._pickHelper = new PickHelper(
-        this.renderer.domElement,
-        this.renderer,
-        this.camera.raw,
+        this._renderer.domElement,
+        this._renderer,
+        this._camera.raw,
         this._scenes,
         this._meshes,
         this.onPick.bind(this),
         this.renderPassOrchestrator.effectComposer.inputBuffer,
-        this.globe,
+        this._globe,
         // {
         //   debug: true,
         // },
@@ -940,52 +906,54 @@ export default class ThreeView<
 
     await this.initializeRenderPass();
 
-    await Promise.all(this.plugins.map((p) => p.init(this)));
+    this.viewContext._setRenderPass(this.renderPass);
+
+    await Promise.all(this.plugins.map((p) => p.init(this, this.viewContext)));
 
     this._startMainLoop();
 
     const size = new Vector2();
-    this.renderer.getSize(size);
-    this.resize(size.width, size.height, this.renderer.getPixelRatio());
+    this._renderer.getSize(size);
+    this.resize(size.width, size.height, this._renderer.getPixelRatio());
 
-    this.camera.core = this._core;
+    this._camera.core = this._core;
 
-    this.renderer.domElement.addEventListener("mousedown", (event) => {
+    this._renderer.domElement.addEventListener("mousedown", (event) => {
       const mapEvent = this.convertMouseEventToMapEvent(event);
       if (mapEvent) {
         this.emit("mousedown", mapEvent);
       }
     });
 
-    this.renderer.domElement.addEventListener("mouseenter", (event) => {
+    this._renderer.domElement.addEventListener("mouseenter", (event) => {
       const mapEvent = this.convertMouseEventToMapEvent(event);
       if (mapEvent) {
         this.emit("mouseenter", mapEvent);
       }
     });
 
-    this.renderer.domElement.addEventListener("mouseleave", (event) => {
+    this._renderer.domElement.addEventListener("mouseleave", (event) => {
       const mapEvent = this.convertMouseEventToMapEvent(event);
       if (mapEvent) {
         this.emit("mouseleave", mapEvent);
       }
     });
 
-    this.renderer.domElement.addEventListener("mousemove", (event) => {
+    this._renderer.domElement.addEventListener("mousemove", (event) => {
       const mapEvent = this.convertMouseEventToMapEvent(event);
       if (mapEvent) {
         this.emit("mousemove", mapEvent);
       }
     });
 
-    this.renderer.domElement.addEventListener("mouseup", (event) => {
+    this._renderer.domElement.addEventListener("mouseup", (event) => {
       const mapEvent = this.convertMouseEventToMapEvent(event);
       if (mapEvent) {
         this.emit("mouseup", mapEvent);
       }
     });
 
-    this.renderer.domElement.addEventListener("click", (event) => {
+    this._renderer.domElement.addEventListener("click", (event) => {
       const mapEvent = this.convertMouseEventToMapEvent(event);
       if (mapEvent) {
         this.emit("click", mapEvent);
@@ -999,7 +967,14 @@ export default class ThreeView<
    */
   dispose() {
     this._disposed = true;
-    if (!isWorker()) window.removeEventListener("resize", this._handleResize);
+    if (!isWorker()) {
+      window.removeEventListener("resize", this._handleResize);
+      this.pixelRatioMatchedMedia?.removeEventListener(
+        "change",
+        this._handleResize,
+      );
+    }
+
     if (this._eventDisposer) {
       this._eventDisposer();
       this._eventDisposer = undefined;
@@ -1007,6 +982,7 @@ export default class ThreeView<
 
     if (this._pickHelper) {
       this._pickHelper.dispose();
+      this._pickHelper = undefined;
     }
 
     if (this._terrainPicker) {
@@ -1014,14 +990,45 @@ export default class ThreeView<
     }
 
     this._fontManager.dispose();
-    this.atmosphere._dispose();
+    this._atmosphere._dispose();
 
-    this.renderer.setAnimationLoop(null);
+    this.skyEnvMapLayer?.delete();
+    this.mrtPassLayer?.delete();
+    this.transparentPassLayer?.delete();
+    this.finalPassLayer?.delete();
+
+    // Abort all pending requests
+    for (const controller of this._abortControllers.values()) {
+      controller.abort();
+    }
+    this._abortControllers.clear();
+
+    // Dispose loaded textures
+    for (const tex of this._loadedTexs.values()) {
+      tex.dispose();
+    }
+    this._loadedTexs.clear();
+
+    // Clear caches and maps
+    this._meshes.clear();
+    this._workerPoolPromises.clear();
+    this._tileMapByHandle.clear();
+
+    // Clean up WASM core
+    this._core?.free();
+    this._core = undefined;
+
+    if (this._stats) {
+      this._stats.dom.remove();
+      this._stats = undefined;
+    }
+
+    this._renderer.setAnimationLoop(null);
     if (
-      "dispose" in this.renderer &&
-      typeof this.renderer.dispose === "function"
+      "dispose" in this._renderer &&
+      typeof this._renderer.dispose === "function"
     ) {
-      this.renderer.dispose();
+      this._renderer.dispose();
     }
   }
 
@@ -1039,12 +1046,12 @@ export default class ThreeView<
     const h = typeof height === "number" ? height : canvas?.height;
     if (typeof w !== "number" || typeof h !== "number") return;
 
-    this.camera.raw.aspect = w / h;
-    this.camera.raw.updateProjectionMatrix();
-    this.renderer.setSize(w, h, !isWorker());
+    this._camera.raw.aspect = w / h;
+    this._camera.raw.updateProjectionMatrix();
+    this._renderer.setSize(w, h, !isWorker());
     this.renderPassOrchestrator.setSize(w, h);
     if (this._options.pixelRatio == null && pixelRatio) {
-      this.renderer.setPixelRatio(pixelRatio);
+      this._renderer.setPixelRatio(pixelRatio);
     }
 
     this._core?.resize(w, h, pixelRatio ?? 1);
@@ -1054,13 +1061,13 @@ export default class ThreeView<
 
   private _updateUniforms() {
     const viewport = this._getCanvasSize();
-    const pixelRatio = this.renderer.getPixelRatio();
+    const pixelRatio = this._renderer.getPixelRatio();
 
     // Ref: https://github.com/CesiumGS/cesium/blob/2cf09cb06e4f7ea767da39befabcfc3444b02c49/packages/engine/Source/Core/PerspectiveFrustum.js#L208-L218
-    const fovY = this.camera.fovy ?? 1;
-    const top = this.camera.raw.near * Math.tan(0.5 * fovY);
+    const fovY = this._camera.fovy ?? 1;
+    const top = this._camera.raw.near * Math.tan(0.5 * fovY);
     const bottom = -top;
-    const right = this.camera.raw.aspect * top;
+    const right = this._camera.raw.aspect * top;
     const left = -right;
 
     this._uniforms.viewportAndPixelRatio.value = [
@@ -1069,8 +1076,8 @@ export default class ThreeView<
       pixelRatio,
     ];
     this._uniforms.frustumNearFar.value = [
-      this.camera.raw.near,
-      this.camera.raw.far,
+      this._camera.raw.near,
+      this._camera.raw.far,
     ];
     this._uniforms.frustumRatio.value = [top, bottom, right, left];
     this._uniforms.tGlobeDepth.value =
@@ -1078,12 +1085,12 @@ export default class ThreeView<
     this._uniforms.tGlobeNormal.value =
       this.renderPass.globeNormalCopyPass.texture;
     this._uniforms.tSkyEnvMap.value =
-      this.skyEnvMapLayer?.ref.raw?.getEnvMapTexture() ?? null;
+      this.skyEnvMapLayer.ref.raw?.getEnvMapTexture() ?? null;
     this._uniforms.inverseProjectionMatrix.value =
-      this.camera.raw.projectionMatrixInverse;
+      this._camera.raw.projectionMatrixInverse;
 
     // TODO: Need to sync `fov` with WASM side
-    this._uniforms.fov.value = (this.camera.raw.fov * Math.PI) / 180;
+    this._uniforms.fov.value = (this._camera.raw.fov * Math.PI) / 180;
     this._uniforms.screenHeightPx.value = viewport?.height ?? 0;
   }
 
@@ -1103,7 +1110,7 @@ export default class ThreeView<
     processEvent(this.eventContext, events);
     events?.free();
 
-    this.camera.raw.updateMatrixWorld();
+    this._camera.raw.updateMatrixWorld();
 
     this._updateUniforms();
 
@@ -1128,14 +1135,14 @@ export default class ThreeView<
   private _render(updatedAt: number) {
     this._uniforms.time.value = updatedAt;
 
-    this.atmosphere._update();
+    this._atmosphere._update();
 
     this.emit("preRender", updatedAt);
 
     this.renderPassOrchestrator.render();
     this._pickHelper?.renderDebugCanvas();
 
-    this.shadowMapViewers.render(this.renderer);
+    this.shadowMapViewers.render(this._renderer);
 
     this.emit("postRender", updatedAt);
   }
@@ -1409,11 +1416,37 @@ export default class ThreeView<
   }
 
   /**
-   * Returns the current order of effect passes for debugging purposes.
-   * @returns Array of effect pass names in execution order
+   * Register a font family with multiple faces.
+   * Each face covers a set of unicode ranges and points to a separate font file URL.
+   * When a text label uses this family name as its font, only the face files
+   * whose unicode ranges cover the label's characters are loaded.
+   *
+   * @example
+   * ```ts
+   * view.addFontFamily({
+   *   family: "MapFont",
+   *   faces: [
+   *     {
+   *       url: "/fonts/latin.woff2",
+   *       unicodeRanges: [{ from: 0x0000, to: 0x024f }],
+   *     },
+   *     {
+   *       url: "/fonts/cjk.woff2",
+   *       unicodeRanges: [{ from: 0x4e00, to: 0x9fff }],
+   *     },
+   *   ],
+   * });
+   * ```
    */
-  getEffectOrder(): string[] {
-    return this.renderPassOrchestrator.getPassNames();
+  addFontFamily(family: FontFamily): this {
+    this._fontManager.registerFontFamily(family);
+    return this;
+  }
+
+  /** Remove a previously registered font family by name. */
+  removeFontFamily(family: string): this {
+    this._fontManager.unregisterFontFamily(family);
+    return this;
   }
 
   /**
@@ -1614,14 +1647,14 @@ export default class ThreeView<
 
       this._stats?.end();
     };
-    this.renderer.setAnimationLoop(loop);
+    this._renderer.setAnimationLoop(loop);
   }
 
   private _getCanvasSize(): { width: number; height: number } | undefined {
     const element =
       this._options.container ??
-      this.renderer.domElement?.parentElement ??
-      this.renderer.domElement;
+      this._renderer.domElement?.parentElement ??
+      this._renderer.domElement;
     if (!element) return;
 
     const width = element.offsetWidth;
@@ -1690,7 +1723,7 @@ export default class ThreeView<
    */
   get screenSize() {
     const size = new Vector2();
-    this.renderer.getSize(size);
+    this._renderer.getSize(size);
     return size;
   }
 
@@ -1698,7 +1731,7 @@ export default class ThreeView<
    * Gets the current device pixel ratio.
    */
   get pixelRatio() {
-    return this.renderer.getPixelRatio();
+    return this._renderer.getPixelRatio();
   }
 
   /**
@@ -1724,9 +1757,9 @@ export default class ThreeView<
     return this._terrainPicker.pick(
       x,
       y,
-      this.renderer,
+      this._renderer,
       this.globeDepthTexture,
-      this.camera.raw,
+      this._camera.raw,
     );
   }
 }
