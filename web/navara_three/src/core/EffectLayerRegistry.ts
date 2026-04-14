@@ -1,3 +1,5 @@
+import type ThreeView from "../index";
+
 import {
   EffectLayerDeclaration,
   type EffectLayerConfig,
@@ -6,7 +8,8 @@ import { LayerRegistry } from "./LayerRegistry";
 import type { ViewContext } from "./ViewContext";
 
 export type EffectLayerConstructor = new (
-  view: ViewContext,
+  view: ThreeView,
+  ctx: ViewContext,
   config: EffectLayerConfig,
 ) => EffectLayerDeclaration;
 
@@ -22,7 +25,7 @@ export class EffectLayerRegistry extends LayerRegistry<
     if (!EffectClass) {
       throw new Error(`Unknown effect type: ${effectType}`);
     }
-    return new EffectClass(this.view, config);
+    return new EffectClass(this.view, this.ctx, config);
   }
 
   /**

@@ -1,3 +1,4 @@
+import type ThreeView from "@navara/three";
 import {
   type XYZ,
   Color,
@@ -51,12 +52,12 @@ export class TubeMeshLayer extends MeshLayerDeclarationWithSelectiveEffect<
 > {
   private config: TubeMeshLayerConfig;
 
-  constructor(view: ViewContext, config: TubeMeshLayerConfig) {
+  constructor(view: ThreeView, ctx: ViewContext, config: TubeMeshLayerConfig) {
     // Propagate initial effectIds to base MeshLayer
     if (config.tube?.effectIds) {
       config.effectIds = config.tube.effectIds;
     }
-    super(view, config);
+    super(view, ctx, config);
     this.config = config;
   }
 
@@ -105,7 +106,7 @@ export class TubeMeshLayer extends MeshLayerDeclarationWithSelectiveEffect<
     mesh.castShadow = cfg.castShadow ?? false;
     mesh.receiveShadow = cfg.receiveShadow ?? false;
 
-    this.view.applyShadowMaterial(material);
+    this.ctx.applyShadowMaterial(material);
 
     return mesh;
   }
@@ -198,7 +199,7 @@ export class TubeMeshLayer extends MeshLayerDeclarationWithSelectiveEffect<
 
   protected disposeMesh(): void {
     if (this._instance) {
-      this.view.removeShadowMaterial(this._instance.material);
+      this.ctx.removeShadowMaterial(this._instance.material);
       this._instance.geometry.dispose();
       this._instance.material.dispose();
 

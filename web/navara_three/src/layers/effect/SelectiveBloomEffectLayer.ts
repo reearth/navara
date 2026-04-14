@@ -20,6 +20,7 @@ import type {
 import type { BaseInstance } from "../../core/LayerDeclaration";
 import type { ViewContext } from "../../core/ViewContext";
 import { Pass } from "../../effects";
+import type ThreeView from "../../index";
 import { UnrealBloomPassRGBA } from "../../postprocessing";
 
 import {
@@ -81,7 +82,7 @@ export class SelectiveBloomEffectLayer extends SelectiveEffectLayer<
     return this.bloom.threshold ?? DEFAULT_THRESHOLD;
   }
 
-  constructor(view: ViewContext, config: EffectLayerConfig) {
+  constructor(view: ThreeView, ctx: ViewContext, config: EffectLayerConfig) {
     const c =
       (config as Partial<SelectiveBloomEffectConfig>).selectiveBloom ?? {};
 
@@ -96,7 +97,7 @@ export class SelectiveBloomEffectLayer extends SelectiveEffectLayer<
       },
     };
 
-    super(view, postEffectConfig);
+    super(view, ctx, postEffectConfig);
   }
 
   createPass() {

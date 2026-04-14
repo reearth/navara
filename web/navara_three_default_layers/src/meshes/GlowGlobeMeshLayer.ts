@@ -1,3 +1,4 @@
+import type ThreeView from "@navara/three";
 import {
   Color,
   MeshLayerDeclaration,
@@ -114,8 +115,12 @@ export class GlowGlobeMeshLayer extends MeshLayerDeclaration<
   Mesh<SphereGeometry, ShaderMaterial>
 > {
   private config: GlowGlobeMeshLayerConfig;
-  constructor(view: ViewContext, config: GlowGlobeMeshLayerConfig) {
-    super(view, config);
+  constructor(
+    view: ThreeView,
+    ctx: ViewContext,
+    config: GlowGlobeMeshLayerConfig,
+  ) {
+    super(view, ctx, config);
     this.config = config;
   }
 
@@ -153,7 +158,7 @@ export class GlowGlobeMeshLayer extends MeshLayerDeclaration<
       },
     };
 
-    this.view.applyShadowMaterial(material);
+    this.ctx.applyShadowMaterial(material);
     return new Mesh(geometry, material);
   }
 
@@ -216,7 +221,7 @@ export class GlowGlobeMeshLayer extends MeshLayerDeclaration<
 
   protected disposeMesh(): void {
     if (this._instance) {
-      this.view.removeShadowMaterial(this._instance.material);
+      this.ctx.removeShadowMaterial(this._instance.material);
       this._instance.geometry.dispose();
       this._instance.material.dispose();
 

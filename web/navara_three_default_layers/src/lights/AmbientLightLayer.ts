@@ -1,8 +1,9 @@
+import type ThreeView from "@navara/three";
 import { Color } from "@navara/three";
 import {
   LightLayerDeclaration,
   type LightLayerConfig,
-  ViewContext,
+  type ViewContext,
   type LightLayerUpdate,
 } from "@navara/three";
 
@@ -25,8 +26,12 @@ export class AmbientLightLayer extends LightLayerDeclaration<
 > {
   private config: AmbientLightLayerConfig;
 
-  constructor(view: ViewContext, config: AmbientLightLayerConfig) {
-    super(view, config);
+  constructor(
+    view: ThreeView,
+    ctx: ViewContext,
+    config: AmbientLightLayerConfig,
+  ) {
+    super(view, ctx, config);
     this.config = config;
   }
 

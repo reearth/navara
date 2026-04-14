@@ -5,6 +5,7 @@ import {
 import invariant from "tiny-invariant";
 
 import { Pass } from "../effects";
+import type ThreeView from "../index";
 
 import {
   LayerDeclaration,
@@ -109,13 +110,13 @@ export type EffectBaseInstance<Instance extends object = object> =
  *
  *   private config: VignetteEffectConfig;
  *
- *   constructor(view: ViewContext, config: VignetteEffectConfig) {
- *     super(view, config);
+ *   constructor(view: ThreeView, ctx: ViewContext, config: VignetteEffectConfig) {
+ *     super(view, ctx, config);
  *     this.config = config;
  *   }
  *
  *   createPass() {
- *     return new Vignette(this.view.camera, this.config.vignette);
+ *     return new Vignette(this.view.camera.raw, this.config.vignette);
  *   }
  *
  *   onUpdateConfig(updates: VignetteEffectUpdate): void {
@@ -199,8 +200,12 @@ export abstract class EffectLayerDeclaration<
 
   private instanceId: string;
 
-  constructor(view: ViewContext, config: Config = {} as Config) {
-    super(view, config);
+  constructor(
+    view: ThreeView,
+    ctx: ViewContext,
+    config: Config = {} as Config,
+  ) {
+    super(view, ctx, config);
     // Generate unique instance ID for layers that allow duplication
     this.instanceId = this.getConstructor().allowDuplication
       ? `${this.getKey()}_${Math.random().toString(36).slice(2, 9)}`
@@ -285,22 +290,22 @@ export abstract class EffectLayerDeclaration<
 
     // Try insertAfter first
     for (const target of insertAfter) {
-      if (this.view.getPass(target)) {
-        this.view.insertPassAfter(target, key, c);
+      if (this.ctx.getPass(target)) {
+        this.ctx.insertPassAfter(target, key, c);
         return;
       }
     }
 
     // Try insertBefore if no insertAfter worked
     for (const target of insertBefore) {
-      if (this.view.getPass(target)) {
-        this.view.insertPassBefore(target, key, c);
+      if (this.ctx.getPass(target)) {
+        this.ctx.insertPassBefore(target, key, c);
         return;
       }
     }
 
     // Default: add to end
-    this.view.addPass(key, c);
+    this.ctx.addPass(key, c);
   }
 
   onUpdateConfig(updates: UpdateConfig): void {
@@ -309,7 +314,7 @@ export abstract class EffectLayerDeclaration<
 
   onDestroy(): void {
     // Remove from orchestrator using the instance ID
-    this.view.removePass(this.instanceId);
+    this.ctx.removePass(this.instanceId);
 
     this._instance = undefined;
   }
@@ -330,7 +335,7 @@ export abstract class EffectLayerDeclaration<
   findLayer<Layer extends EffectLayerDeclaration = EffectLayerDeclaration>(
     key: string,
   ) {
-    for (const handle of this.view._getEffectLayers()) {
+    for (const handle of this.ctx._getEffectLayers()) {
       const layer = handle.ref;
       if (layer.getKey() !== key) {
         continue;

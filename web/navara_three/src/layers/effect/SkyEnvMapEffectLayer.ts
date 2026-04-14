@@ -4,6 +4,7 @@ import {
   type EffectLayerUpdate,
 } from "../../core/EffectLayerDeclaration";
 import type { ViewContext } from "../../core/ViewContext";
+import type ThreeView from "../../index";
 import { SkyEnvMapPass } from "../../passes";
 
 type LayerDescription = {
@@ -26,14 +27,14 @@ export class SkyEnvMapEffectLayer extends EffectLayerDeclaration<
 
   private config: SkyEnvMapPassConfig;
 
-  constructor(view: ViewContext, config: SkyEnvMapPassConfig) {
-    super(view, config);
+  constructor(view: ThreeView, ctx: ViewContext, config: SkyEnvMapPassConfig) {
+    super(view, ctx, config);
     this.config = config;
   }
 
   createPass(): SkyEnvMapPass {
-    const scenes = this.view.scenes;
-    const camera = this.view.camera;
+    const scenes = this.ctx.scenes;
+    const camera = this.view.camera.raw;
 
     const resolution = this.config.skyEnvMap?.resolution ?? 256;
 

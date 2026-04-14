@@ -58,8 +58,12 @@ export class MarchingCubesLayer extends MeshLayerDeclaration<
 > {
   private config: MarchingCubesLayerConfig;
 
-  constructor(view: ViewContext, config: MarchingCubesLayerConfig) {
-    super(view, config);
+  constructor(
+    view: ThreeView,
+    ctx: ViewContext,
+    config: MarchingCubesLayerConfig,
+  ) {
+    super(view, ctx, config);
     this.config = config;
   }
 
@@ -85,7 +89,7 @@ export class MarchingCubesLayer extends MeshLayerDeclaration<
 
     // Setup shadow if needed
     if (cubes.castShadow || cubes.receiveShadow) {
-      this.view.applyShadowMaterial(cfg.material);
+      this.ctx.applyShadowMaterial(cfg.material);
     }
 
     return cubes;

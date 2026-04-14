@@ -1,3 +1,4 @@
+import type ThreeView from "@navara/three";
 import {
   MeshLayerDeclaration,
   type MeshLayerConfig,
@@ -26,8 +27,12 @@ export class AxesHelperLayer extends MeshLayerDeclaration<
 > {
   private config: AxesHelperLayerConfig;
 
-  constructor(view: ViewContext, config: AxesHelperLayerConfig) {
-    super(view, config);
+  constructor(
+    view: ThreeView,
+    ctx: ViewContext,
+    config: AxesHelperLayerConfig,
+  ) {
+    super(view, ctx, config);
     this.config = config;
   }
 
