@@ -852,6 +852,8 @@ export default class ThreeView<
       concurrencyManager,
       this._globe,
       this._fontManager,
+      this._core,
+      this._meshes,
     );
     this.registries = new Registries(this.viewContext);
     this.eventContext = new EventContext({
@@ -882,10 +884,6 @@ export default class ThreeView<
 
     // Register built-in layers
     this.registerBuiltIns();
-
-    this.viewContext._initPicking(this._meshes, () =>
-      this._core?.genGlobalBatchId(),
-    );
 
     if (!isWorker()) {
       this._eventDisposer = registerInputEvents(
@@ -1058,7 +1056,10 @@ export default class ThreeView<
       this._renderer.setPixelRatio(pixelRatio);
     }
 
-    this._pickHelper?.setSize();
+    const drawingBufferSize = this._renderer.getDrawingBufferSize(
+      new Vector2(),
+    );
+    this._pickHelper?.setSize(drawingBufferSize.x, drawingBufferSize.y);
 
     this._core?.resize(w, h, pixelRatio ?? 1);
 

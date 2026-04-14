@@ -1,9 +1,15 @@
 import type { Globe } from "@navara/core";
 import { EventHandler } from "@navara/core";
+import type { Core } from "@navara/engine";
 import type { FontManager } from "@navara/font";
 import type { ConcurrencyManager } from "@navara/worker";
 import type { Pass as PostProcessingPass } from "postprocessing";
-import type { Material, Object3D, PerspectiveCamera, WebGLRenderer } from "three";
+import type {
+  Material,
+  Object3D,
+  PerspectiveCamera,
+  WebGLRenderer,
+} from "three";
 import invariant from "tiny-invariant";
 
 import type { Atmosphere } from "../atmosphere";
@@ -51,8 +57,6 @@ type ViewContextEvents = {
 export class ViewContext extends EventHandler<ViewContextEvents> {
   private _selectiveEffectRegistry: SelectiveEffectRegistry;
   private _renderPass?: CustomRenderPass;
-  private _meshes?: MeshCache;
-  private _genGlobalBatchId?: () => number | undefined;
 
   constructor(
     /** Scene containers for different rendering passes. */
@@ -67,6 +71,8 @@ export class ViewContext extends EventHandler<ViewContextEvents> {
     private _concurrencyManager: ConcurrencyManager,
     private _globe: Globe,
     private _fontManager: FontManager,
+    private _core: Core,
+    private _meshes: MeshCache,
   ) {
     super();
 
@@ -233,23 +239,11 @@ export class ViewContext extends EventHandler<ViewContextEvents> {
   // --- Picking registration ---
 
   /**
-   * Initialize picking support by providing the mesh cache and batch ID generator.
-   * @internal Called by View during setup.
-   */
-  _initPicking(
-    meshes: MeshCache,
-    genGlobalBatchId: () => number | undefined,
-  ): void {
-    this._meshes = meshes;
-    this._genGlobalBatchId = genGlobalBatchId;
-  }
-
-  /**
    * Generate a new unique global batch ID for picking.
    * The returned ID is in the 24-bit RGB color range (1..0xffffff).
    */
   genGlobalBatchId(): number | undefined {
-    return this._genGlobalBatchId?.();
+    return this._core?.genGlobalBatchId();
   }
 
   /**

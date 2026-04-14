@@ -155,19 +155,16 @@ export class PickHelper extends CustomRenderPass {
     renderer.render(scene, this._camera);
   }
 
-  override setSize() {
-    const dbWidth = this._renderer.getContext().drawingBufferWidth;
-    const dbHeight = this._renderer.getContext().drawingBufferHeight;
+  override setSize(width: number, height: number) {
+    super.setSize(width, height);
 
-    super.setSize(dbWidth, dbHeight);
-
-    this.pickRenderTarget.setSize(dbWidth, dbHeight);
-    this.debugRenderTarget?.setSize(dbWidth, dbHeight);
+    this.pickRenderTarget.setSize(width, height);
+    this.debugRenderTarget?.setSize(width, height);
     if (this.debugBufferView) {
-      this.debugBufferView.canvas.width = dbWidth;
-      this.debugBufferView.canvas.height = dbHeight;
-      this.debugBufferView.canvasForImage.width = dbWidth;
-      this.debugBufferView.canvasForImage.height = dbHeight;
+      this.debugBufferView.canvas.width = width;
+      this.debugBufferView.canvas.height = height;
+      this.debugBufferView.canvasForImage.width = width;
+      this.debugBufferView.canvasForImage.height = height;
     }
   }
 
