@@ -101,13 +101,3 @@ When users request direct renderer access, identify the underlying need:
 | Fully replace the rendering pipeline | Tier 2 - only when demand is validated |
 
 The most common request ("I want to pass my own renderer") is typically about **embedding**, not about controlling the rendering pipeline. This can be solved with a constructor option without exposing any rendering internals.
-
-## Comparison with Other Engines
-
-| Aspect | MapLibre GL JS | CesiumJS | Navara |
-|--------|---------------|----------|--------|
-| Renderer access | WebGL context only | Full Scene/Renderer | Via ViewContext (Tier 1) |
-| Custom layers | `CustomLayerInterface` | `Primitive` | `LayerDeclaration` + ViewContext |
-| Post-processing | Not supported | Limited | Full pass management |
-| Renderer injection | Not supported | Not supported | Planned (Tier 2) |
-| API stability risk | Low (small surface) | High (large surface) | Medium (tiered) |
