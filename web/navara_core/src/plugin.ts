@@ -3,7 +3,7 @@
  * This class doesn't have a logic, but has interfaces.
  * ```
  * class MyPlugin extends Plugin<ThreeView<MyCustomLayers>> {
- *   async init(view) {
+ *   async init(view, ctx) {
  *     // ...
  *   }
  * }
