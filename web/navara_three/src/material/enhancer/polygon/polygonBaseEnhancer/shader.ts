@@ -41,6 +41,7 @@ export const transformShader = (
   // Set core shader defines
   shader.defines ??= {};
   shader.defines.USE_ROUGHNESS = 1;
+  shader.defines.USE_SELECTIVE_EFFECT = 1;
 
   // TODO: Handle batch texture defines in safe way.
   // Merge defines from material.userData.defines (includes batch texture row defines)
@@ -153,6 +154,7 @@ uniform vec3 diffuse;
 uniform bool uClampToGround;
 uniform sampler2D uGlobeNormal;
 uniform float nvr_uPickable;
+// uEffectIdsMask is declared by overrideMaterialsForMRT (#ifdef USE_SELECTIVE_EFFECT block)
 uniform bool uIsTexturized;
 ${POLYGON_BASE_SHADER_MARKERS.fragment.UNIFORM_END}
 
@@ -226,12 +228,12 @@ if (nvr_uPickable > 0.0 && diffuseColor.a > 0.0) {
 `,
     )
     .replace(
-      "outputBuffer1 = vec4(packNormalToVec2(normal), reflectivity, roughnessFactor);",
+      "normalBuffer = vec4(packNormalToVec2(normal), reflectivity, roughnessFactor);",
       `
 ${POLYGON_BASE_SHADER_MARKERS.fragment.FINAL_NORMAL_START}
 vec3 finalNormal = origNormal;
 ${POLYGON_BASE_SHADER_MARKERS.fragment.FINAL_NORMAL_END}
-outputBuffer1 = vec4(packNormalToVec2(finalNormal), reflectivity, roughnessFactor);
+normalBuffer = vec4(packNormalToVec2(finalNormal), reflectivity, roughnessFactor);
 `,
     ).source;
 };

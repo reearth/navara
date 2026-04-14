@@ -14,20 +14,23 @@ sidebar:
 ```typescript
 import { Plugin } from "@navara/three";
 
-abstract class Plugin<TView = unknown> {
-  abstract init(view: TView): Promise<void>;
+abstract class Plugin<TView = unknown, TCtx = unknown> {
+  abstract init(view: TView, ctx: TCtx): Promise<void>;
 }
 ```
 
 `Plugin` クラスは意図的に最小限のインターフェースとして設計されており、`init()` メソッドのみを持ちます。
 
-| メソッド     | 説明                                                             |
-| ------------ | ---------------------------------------------------------------- |
-| `init(view)` | プラグインの初期化処理。`view.init()` の中で自動的に呼び出される |
+| メソッド           | 説明                                                             |
+| ------------------ | ---------------------------------------------------------------- |
+| `init(view, ctx)` | プラグインの初期化処理。`view.init()` の中で自動的に呼び出される |
 
 ### Generics
 
-`Plugin<TView>` の型パラメータ `TView` は、`init()` メソッドに渡される view の型を指定します。通常は `ThreeView` またはカスタムレイヤー記述型を含む `ThreeView<MyLayerDescriptions>` を指定します。
+| パラメータ | 説明 |
+| ---------- | ---- |
+| `TView`    | `init()` に渡される view の型。通常は `ThreeView` または `ThreeView<MyLayerDescriptions>` を指定します。 |
+| `TCtx`     | `init()` に渡されるコンテキストの型。`ViewContext` を指定すると、レンダラー、バッファ、パス管理 API にアクセスできます。 |
 
 ## ライフサイクル
 
@@ -41,7 +44,7 @@ view.addPlugin(pluginA)
 view.addPlugin(pluginB)
 await view.init()
   ├── レンダーパス初期化
-  ├── Promise.all([pluginA.init(view), pluginB.init(view)])  ← 並列実行
+  ├── Promise.all([pluginA.init(view, ctx), pluginB.init(view, ctx)])  ← 並列実行
   └── メインループ開始
 ```
 
@@ -56,7 +59,7 @@ await view.init()
 レイヤーの登録をカプセル化する基本的なプラグインの例です。
 
 ```typescript
-import ThreeView, { Plugin } from "@navara/three";
+import ThreeView, { Plugin, type ViewContext } from "@navara/three";
 import {
   BoxMeshLayer,
   SphereMeshLayer,
@@ -65,8 +68,8 @@ import {
   FXAAEffectLayer,
 } from "@navara/three_default_layers";
 
-class MyScenePlugin extends Plugin<ThreeView> {
-  async init(view: ThreeView) {
+class MyScenePlugin extends Plugin<ThreeView, ViewContext> {
+  async init(view: ThreeView, _ctx: ViewContext) {
     // メッシュレイヤーの登録
     view.registerMesh("box", BoxMeshLayer);
     view.registerMesh("sphere", SphereMeshLayer);
@@ -98,7 +101,7 @@ view.addLayer({ type: "light", sun: { intensity: 1.0 } });
 `init()` 内でレイヤーを登録するだけでなく、初期化後に呼び出すメソッドを提供することもできます。
 
 ```typescript
-import ThreeView, { Plugin, type LayerHandle } from "@navara/three";
+import ThreeView, { Plugin, type ViewContext, type LayerHandle } from "@navara/three";
 import {
   SkyMeshLayer,
   SunLightLayer,
@@ -107,10 +110,10 @@ import {
   FXAAEffectLayer,
 } from "@navara/three_default_layers";
 
-class MyScenePlugin extends Plugin<ThreeView> {
+class MyScenePlugin extends Plugin<ThreeView, ViewContext> {
   private view?: ThreeView;
 
-  async init(view: ThreeView) {
+  async init(view: ThreeView, _ctx: ViewContext) {
     this.view = view;
 
     view.registerMesh("sky", SkyMeshLayer);
@@ -156,12 +159,12 @@ const { sky, sun } = plugin.setupScene();
 独自に実装したカスタムレイヤー（[Custom Layer](../../../three/api/custom-layer/) を参照）を登録するプラグインも作成できます。
 
 ```typescript
-import ThreeView, { Plugin } from "@navara/three";
+import ThreeView, { Plugin, type ViewContext } from "@navara/three";
 import { MyCustomMeshLayer } from "./layers/MyCustomMeshLayer";
 import { MyCustomEffectLayer } from "./layers/MyCustomEffectLayer";
 
-class MyCustomPlugin extends Plugin<ThreeView> {
-  async init(view: ThreeView) {
+class MyCustomPlugin extends Plugin<ThreeView, ViewContext> {
+  async init(view: ThreeView, _ctx: ViewContext) {
     view.registerMesh("myCustomMesh", MyCustomMeshLayer);
     view.registerEffect("myCustomEffect", MyCustomEffectLayer);
   }

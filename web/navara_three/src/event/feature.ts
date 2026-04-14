@@ -7,11 +7,6 @@ import {
 } from "@navara/engine";
 import { Mesh, Sprite, Object3D } from "three";
 
-import { Color } from "../Color";
-import {
-  parseSelectiveEffectOcclusion,
-  type SelectiveEffectOcclusion,
-} from "../core/SelectiveEffectHelper";
 import {
   BatchedSdfTextMesh,
   InstancedSpriteMesh,
@@ -47,16 +42,16 @@ export function renderFeature(
   layerId: string,
 ): Promise<Mesh | Sprite | Object3D | undefined> | undefined {
   if (f.point) {
-    return renderPoint(ctx, f.point, layerId);
+    return renderPoint(ctx, f.point);
   }
   if (f.billboard) {
-    return renderBillboard(ctx, f.billboard, layerId);
+    return renderBillboard(ctx, f.billboard);
   }
   if (f.model) {
-    return renderModel(ctx, f.model, layerId);
+    return renderModel(ctx, f.model);
   }
   if (f.polyline) {
-    return renderPolyline(ctx, f.polyline, layerId);
+    return renderPolyline(ctx, f.polyline);
   }
   if (f.polygon) {
     return renderPolygon(ctx, f.polygon, tileHandle, layerId);
@@ -167,27 +162,6 @@ export async function processRenderableFeatureAdded(
     });
   }
 
-  // Register initial effects from Rust material if not already registered for this layer
-  // All 5 material types in appearance.rs have post effect fields
-  const material =
-    feature.model?.material ??
-    feature.polygon?.material ??
-    feature.polyline?.material ??
-    feature.point?.material ??
-    feature.billboard?.material;
-  if (material && viewContext.getLayerEffects(featureLayerId) === undefined) {
-    viewContext.registerLayerEffects(
-      featureLayerId,
-      material.effectIds ?? [],
-      parseSelectiveEffectOcclusion(
-        material.selectiveEffectOcclusion as
-          | SelectiveEffectOcclusion
-          | undefined,
-      ),
-      material.emissiveIntensity,
-    );
-  }
-
   handleFeatureCreatedEventByLayerId(
     featureHandler,
     obj,
@@ -216,7 +190,6 @@ export async function processRenderableFeatureChanged(
     texturizedSceneByTileCoordinates,
     viewEvents,
     layersManager,
-    viewContext,
     updatedAt,
     layerHandler,
   } = ctx;
@@ -230,38 +203,6 @@ export async function processRenderableFeatureChanged(
   const tileHandle = overscaledTileHandle?.handle;
 
   const { point, billboard, text, polyline, polygon, model } = ev.feature;
-
-  // Update SelectiveEffect configuration from material (Core is SoT)
-  // All 5 material types in appearance.rs have selective effect fields
-  const material =
-    model?.material ??
-    polygon?.material ??
-    polyline?.material ??
-    point?.material ??
-    billboard?.material;
-  if (material) {
-    viewContext.updateLayerEffects(
-      layerId,
-      material.effectIds,
-      material.emissiveIntensity,
-    );
-
-    if (material.emissiveColor !== undefined) {
-      viewContext.setLayerEmissiveColor(
-        layerId,
-        new Color().setHex(material.emissiveColor),
-      );
-    }
-
-    if (material.selectiveEffectOcclusion !== undefined) {
-      const occlusion = parseSelectiveEffectOcclusion(
-        material.selectiveEffectOcclusion as SelectiveEffectOcclusion,
-      );
-      if (occlusion !== undefined) {
-        viewContext.setLayerSelectiveEffectOcclusion(layerId, occlusion);
-      }
-    }
-  }
 
   const active =
     (point ?? billboard ?? text ?? polyline ?? polygon ?? model)?.active ??

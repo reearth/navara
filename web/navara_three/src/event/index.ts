@@ -270,14 +270,6 @@ export function processEvent(ctx: EventContext, event: Events | undefined) {
       }
     },
     {
-      shouldProcess: ({ type }) => {
-        switch (type) {
-          case "add":
-            return canWorkerProcessImmediately();
-          default:
-            return true;
-        }
-      },
       onAbort: (event) => {
         processDataRequesterRemoved(ctx, event);
       },
@@ -426,10 +418,20 @@ async function processRequestedData(ctx: EventContext, req: DataRequestEvent) {
         const canvas = document.createElement("canvas");
         canvas.height = img.height;
         canvas.width = img.width;
-        const data = await getImageDataFromImageBitmap(
+
+        const promise = getImageDataFromImageBitmap(
           await createImageBitmap(img),
           canvas.transferControlToOffscreen(),
         );
+
+        ctx.workerPoolPromises.set(id, promise);
+        const data = await (async () => {
+          try {
+            return await promise;
+          } finally {
+            ctx.workerPoolPromises.delete(id);
+          }
+        })();
 
         if (abortController.signal.aborted) {
           return;
@@ -456,7 +458,6 @@ async function processRequestedData(ctx: EventContext, req: DataRequestEvent) {
     return;
   }
 
-  // TODO: Handle abort
   await fetch(req.url, { signal: abortController.signal })
     .then((res) => {
       if (!res.ok) throw new Error();
@@ -485,11 +486,17 @@ function processDataRequesterRemoved(
   ctx: EventContext,
   req: DataRequesterRemovedEvent,
 ) {
-  const { buf, abortControllers } = ctx;
+  const { buf, abortControllers, workerPoolPromises } = ctx;
   const id = generate_id_from_entity(req);
   const abortController = abortControllers.get(id);
+  const workerPool = workerPoolPromises.get(id);
+
   buf.remove(req.handle);
   abortController?.abort();
+  workerPool?.cancel();
+
+  abortControllers.delete(id);
+  workerPoolPromises.delete(id);
 }
 
 async function processTextureFragmentRequested(

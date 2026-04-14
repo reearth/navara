@@ -13,6 +13,8 @@ This page describes all properties and events available on a ThreeView instance.
 
 **Type:** `ThreeViewCamera`
 
+**Read-only** (getter)
+
 The camera controller that manages the view's position, orientation, and projection. Access the Three.js `PerspectiveCamera` via the `raw` property.
 
 **Example:**
@@ -26,25 +28,11 @@ view.camera.raw.fov = 60;
 view.camera.raw.updateProjectionMatrix();
 ```
 
-### renderer
-
-**Type:** `WebGLRenderer`
-
-The Three.js WebGLRenderer instance used for rendering the scene.
-
-**Example:**
-
-```tsx
-// Change the clear color
-view.renderer.setClearColor(0x000000);
-
-// Get renderer information
-console.log(view.renderer.info.render);
-```
-
 ### globe
 
 **Type:** `Globe`
+
+**Read-only** (getter)
 
 The Globe instance that manages terrain, imagery layers, and globe-specific settings. Controls various properties related to globe display, including transparency, wireframe display, and elevation heatmap color maps.
 
@@ -69,6 +57,8 @@ For details, see [Globe Class](../../../three/api-reference/globe/).
 ### atmosphere
 
 **Type:** `Atmosphere`
+
+**Read-only** (getter)
 
 The instance that manages the atmosphere system. Handles sun and moon position calculations and atmospheric scattering texture management. When the `date` property is changed, sun and moon directions are automatically recalculated based on the ephemeris and reflected in related layers such as `SunLightLayer` and `SkyMeshLayer`.
 
@@ -108,36 +98,6 @@ view.toneMappingExposure = 1.5;
 
 // Decrease exposure for a darker scene
 view.toneMappingExposure = 0.8;
-```
-
-### globeDepthTexture
-
-**Type:** `Texture`
-
-Gets the globe depth texture for post-processing effects. Can be used in custom shaders and effects.
-
-**Read-only**
-
-**Example:**
-
-```tsx
-// Use the depth texture in a custom shader
-customMaterial.uniforms.depthMap.value = view.globeDepthTexture;
-```
-
-### globeNormalTexture
-
-**Type:** `Texture`
-
-Gets the globe normal texture for post-processing effects. Can be used in custom shaders and effects.
-
-**Read-only**
-
-**Example:**
-
-```tsx
-// Use the normal texture in a custom shader
-customMaterial.uniforms.normalMap.value = view.globeNormalTexture;
 ```
 
 ### animation
@@ -184,21 +144,6 @@ Gets the current device pixel ratio.
 ```tsx
 const ratio = view.pixelRatio;
 console.log(`Pixel ratio: ${ratio}`);
-```
-
-### normalTexture
-
-**Type:** `Texture`
-
-Gets the scene normal texture from the G-buffer. Generated in the MRT (Multiple Render Targets) pass and can be used in post-processing effects and custom shaders.
-
-**Read-only**
-
-**Example:**
-
-```tsx
-// Use the normal texture in a custom shader
-customMaterial.uniforms.sceneNormal.value = view.normalTexture;
 ```
 
 ### shadowMapViewersEnabled

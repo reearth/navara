@@ -14,5 +14,6 @@ navara_pnts.workspace = true
 navara_glb.workspace = true
 navara_property.workspace = true
 
-[dev-dependencies]
 serde_json.workspace = true
+
+[dev-dependencies]

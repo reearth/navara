@@ -1,33 +1,21 @@
 import type { Globe } from "@navara/core";
 import { EventHandler } from "@navara/core";
+import type { FontManager } from "@navara/font";
 import type { ConcurrencyManager } from "@navara/worker";
 import type { Pass as PostProcessingPass } from "postprocessing";
-import type {
-  Material,
-  Object3D,
-  PerspectiveCamera,
-  WebGLRenderer,
-} from "three";
+import type { Material, Object3D, PerspectiveCamera, WebGLRenderer } from "three";
+import invariant from "tiny-invariant";
 
 import type { Atmosphere } from "../atmosphere";
-import { Color } from "../Color";
 import type { LayersManager } from "../layersManager";
 import type { RenderPassOrchestrator } from "../orchestrators";
+import type { CustomRenderPass } from "../passes";
 import type { Scenes } from "../scene";
 import type { MeshCache } from "../type";
 
 import type { EffectLayerDeclaration } from "./EffectLayerDeclaration";
 import type { LayerHandle } from "./LayerHandle";
-import {
-  getSelectiveEffectConfig,
-  type SelectiveEffectHelper,
-  type SelectiveEffectOcclusionValue,
-} from "./SelectiveEffectHelper";
-import { SelectiveEffectManager } from "./SelectiveEffectManager";
-
-export type ViewDebugOptions = {
-  selectiveEffectMask?: boolean;
-};
+import { SelectiveEffectRegistry } from "./SelectiveEffectRegistry";
 
 type ViewContextEvents = {
   /**
@@ -40,6 +28,11 @@ type ViewContextEvents = {
    * @experimental This event may change or be removed in future versions.
    */
   shadowRemoved: (material: Material) => void;
+  /**
+   * Emitted when effect slot assignments change in SelectiveEffectRegistry.
+   * Listeners should recompute effectIdsMask to stay in sync.
+   */
+  effectSlotsChanged: () => void;
 };
 
 /**
@@ -56,34 +49,62 @@ type ViewContextEvents = {
  *   layer/plugin code.
  */
 export class ViewContext extends EventHandler<ViewContextEvents> {
-  public selectiveEffectRegistry?: SelectiveEffectHelper;
-  public debugOptions: ViewDebugOptions;
-  public globe?: Globe;
-  private readonly selectiveEffects: SelectiveEffectManager;
+  private _selectiveEffectRegistry: SelectiveEffectRegistry;
+  private _renderPass?: CustomRenderPass;
   private _meshes?: MeshCache;
   private _genGlobalBatchId?: () => number | undefined;
 
   constructor(
     /** Scene containers for different rendering passes. */
-    public scenes: Scenes,
+    private _scenes: Scenes,
     /** The main perspective camera used for rendering. */
-    public camera: PerspectiveCamera,
+    private _camera: PerspectiveCamera,
     /** Atmosphere parameters (sun direction, time of day, etc.). */
-    public atmosphere: Atmosphere,
+    private _atmosphere: Atmosphere,
     private layersManager: LayersManager,
     private renderPassOrchestrator: RenderPassOrchestrator,
     /** Manager for scheduling work on Web Workers. */
-    public concurrencyManager: ConcurrencyManager,
-    selectiveEffectHelper?: SelectiveEffectHelper,
-    debugOptions?: ViewDebugOptions,
+    private _concurrencyManager: ConcurrencyManager,
+    private _globe: Globe,
+    private _fontManager: FontManager,
   ) {
     super();
-    this.selectiveEffectRegistry = selectiveEffectHelper;
-    this.debugOptions = debugOptions ?? {};
 
-    this.selectiveEffects = new SelectiveEffectManager({
-      selectiveEffectRegistry: this.selectiveEffectRegistry,
-    });
+    this._selectiveEffectRegistry = new SelectiveEffectRegistry(() =>
+      this.emit("effectSlotsChanged"),
+    );
+  }
+
+  /** Scene containers for different rendering passes. */
+  get scenes(): Scenes {
+    return this._scenes;
+  }
+
+  /** The main perspective camera used for rendering. */
+  get camera(): PerspectiveCamera {
+    return this._camera;
+  }
+
+  /** Atmosphere parameters (sun direction, time of day, etc.). */
+  get atmosphere(): Atmosphere {
+    return this._atmosphere;
+  }
+
+  /** Manager for scheduling work on Web Workers. */
+  get concurrencyManager(): ConcurrencyManager {
+    return this._concurrencyManager;
+  }
+
+  get selectiveEffectRegistry(): SelectiveEffectRegistry {
+    return this._selectiveEffectRegistry;
+  }
+
+  get globe(): Globe {
+    return this._globe;
+  }
+
+  get fontManager(): FontManager {
+    return this._fontManager;
   }
 
   // --- Pass management ---
@@ -133,6 +154,59 @@ export class ViewContext extends EventHandler<ViewContextEvents> {
     return this.renderPassOrchestrator.effectComposer.inputBuffer;
   }
 
+  /** @internal */
+  _setRenderPass(renderPass: CustomRenderPass) {
+    this._renderPass = renderPass;
+  }
+
+  /**
+   * Gets the globe depth texture for post-processing effects.
+   */
+  getGlobeDepthTexture() {
+    invariant(this._renderPass, "CustomRenderPass isn't initialized yet.");
+    return this._renderPass.globeDepthCopyPass.texture;
+  }
+
+  /**
+   * Gets the globe normal texture for post-processing effects.
+   */
+  getGlobeNormalTexture() {
+    invariant(this._renderPass, "CustomRenderPass isn't initialized yet.");
+    return this._renderPass.globeNormalCopyPass.texture;
+  }
+
+  /**
+   * Gets the main render target which includes G-buffer.
+   */
+  getRenderTarget() {
+    invariant(this._renderPass, "CustomRenderPass isn't initialized yet.");
+    return this._renderPass.gbufferRenderTarget;
+  }
+
+  /**
+   * Gets the scene normal texture from the G-buffer.
+   */
+  getNormalTexture() {
+    invariant(this._renderPass, "CustomRenderPass isn't initialized yet.");
+    return this._renderPass.gbufferRenderTarget.textures[1];
+  }
+
+  /**
+   * Gets the effect IDs texture from the G-buffer.
+   */
+  getEffectIdsTexture() {
+    invariant(this._renderPass, "CustomRenderPass isn't initialized yet.");
+    return this._renderPass.gbufferRenderTarget.textures[2];
+  }
+
+  /**
+   * Gets the emissive texture from the G-buffer.
+   */
+  getEmissiveTexture() {
+    invariant(this._renderPass, "CustomRenderPass isn't initialized yet.");
+    return this._renderPass.gbufferRenderTarget.textures[3];
+  }
+
   // --- Layer query ---
 
   /** @internal Iterate over all registered effect layers. */
@@ -154,109 +228,6 @@ export class ViewContext extends EventHandler<ViewContextEvents> {
    */
   removeShadowMaterial(material: Material): void {
     this.emit("shadowRemoved", material);
-  }
-
-  registerLayerEffects(
-    layerId: string,
-    effectIds: string[],
-    selectiveEffectOcclusion?: SelectiveEffectOcclusionValue,
-    emissiveIntensity?: number,
-  ): void {
-    this.selectiveEffects.registerLayerEffects(
-      layerId,
-      effectIds,
-      selectiveEffectOcclusion,
-      emissiveIntensity,
-    );
-  }
-
-  getLayerEffects(layerId: string): string[] | undefined {
-    return this.selectiveEffects.getLayerEffects(layerId);
-  }
-
-  setLayerEmissiveColor(
-    layerId: string,
-    emissiveColor: Color | undefined,
-  ): void {
-    this.selectiveEffects.setLayerEmissiveColor(layerId, emissiveColor);
-  }
-
-  setLayerSelectiveEffectOcclusion(
-    layerId: string,
-    selectiveEffectOcclusion: SelectiveEffectOcclusionValue,
-  ): void {
-    // Delegate to Manager (the single SoT for occlusion)
-    this.selectiveEffects.setLayerOcclusion(layerId, selectiveEffectOcclusion);
-  }
-
-  clearLayerSelectiveEffectOcclusion(layerId: string): void {
-    this.selectiveEffects.clearLayerOcclusion(layerId);
-  }
-
-  unregisterLayerEffects(layerId: string): void {
-    this.selectiveEffects.unregisterLayerEffects(layerId);
-  }
-
-  updateLayerEffects(
-    layerId: string,
-    effectIds: string[] | undefined,
-    emissiveIntensity?: number,
-  ): void {
-    this.selectiveEffects.updateLayerEffects(
-      layerId,
-      effectIds,
-      emissiveIntensity,
-    );
-  }
-
-  /**
-   * Apply selective effects to a specific Object3D.
-   * Useful for pick-based effect application where you have a reference to the object.
-   *
-   * @param object - The Object3D to apply effects to
-   * @param effectIds - Effect IDs to apply (e.g., ["selectiveBloom"], ["selectiveOutline"], ["selectiveBloom", "selectiveOutline"])
-   * @param layerId - Optional layer ID for occlusion resolution.
-   *                  Resolution order: argument > existing config > Normal occlusion
-   */
-  applyEffectToObject(
-    object: Object3D,
-    effectIds: string[],
-    layerId?: string,
-  ): void {
-    // Resolve layerId: argument > existing config > undefined (Normal occlusion)
-    const resolvedLayerId =
-      layerId ?? getSelectiveEffectConfig(object)?.layerId;
-
-    const prevEffectIds = getSelectiveEffectConfig(object)?.effectIds ?? [];
-    this.selectiveEffectRegistry?.updateLinksForObject(
-      object,
-      effectIds,
-      prevEffectIds,
-      resolvedLayerId ?? "",
-    );
-  }
-
-  /**
-   * Remove selective effects from a specific Object3D.
-   *
-   * @param object - The Object3D to remove effects from
-   * @param effectIds - Effect IDs to remove. If undefined, removes all effects.
-   */
-  removeEffectFromObject(object: Object3D, effectIds?: string[]): void {
-    const config = getSelectiveEffectConfig(object);
-    if (!config) return;
-
-    const prevEffectIds = config.effectIds;
-    const nextEffectIds = effectIds
-      ? prevEffectIds.filter((id) => !effectIds.includes(id))
-      : [];
-
-    this.selectiveEffectRegistry?.updateLinksForObject(
-      object,
-      nextEffectIds,
-      prevEffectIds,
-      config.layerId ?? "",
-    );
   }
 
   // --- Picking registration ---

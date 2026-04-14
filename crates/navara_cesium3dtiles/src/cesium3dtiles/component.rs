@@ -70,6 +70,12 @@ pub struct Cesium3dTilesTree {
     pub max_num_rendered_tiles: u32,
     /// Current count of rendered tiles
     pub num_rendered_tiles: u32,
+    /// Whether this tileset is 3D Tiles version 1.1.
+    pub is_v1_1: bool,
+    /// Schema from tileset.json for resolving property types in EXT_structural_metadata.
+    /// In 3D Tiles 1.1, the schema is typically defined at the tileset level,
+    /// not embedded in each tile's glTF.
+    pub schema: Option<serde_json::Value>,
 }
 
 impl Cesium3dTilesTree {
@@ -91,6 +97,13 @@ impl Cesium3dTilesTree {
             _ => 2.,
         };
 
+        let is_v1_1 = metadata.asset.version == "1.1";
+
+        let schema = metadata
+            .schema
+            .as_ref()
+            .and_then(|s| serde_json::to_value(s).ok());
+
         Ok(Self {
             layer_id,
             base_url,
@@ -98,6 +111,8 @@ impl Cesium3dTilesTree {
             max_sse,
             max_num_rendered_tiles: 100,
             num_rendered_tiles: 0,
+            is_v1_1,
+            schema,
         })
     }
 }

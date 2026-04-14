@@ -122,7 +122,7 @@ const run = async () => {
     return layer;
   };
 
-  let layer = addMvtLayer();
+  let layer: ReturnType<typeof addMvtLayer> | undefined = addMvtLayer();
 
   // Control panel
   const pane = new Pane({ title: "MVT Extruded Polygon" });
@@ -133,7 +133,7 @@ const run = async () => {
   toggleBtn.on("click", () => {
     if (layer) {
       view.deleteLayerById(layer.id);
-      layer = undefined as unknown as typeof layer;
+      layer = undefined;
       toggleBtn.title = "Add Layer";
     } else {
       layer = addMvtLayer();

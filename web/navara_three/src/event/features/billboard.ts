@@ -7,14 +7,12 @@ import type { EventContext } from "../context";
 export async function renderBillboard(
   ctx: EventContext,
   m: NavaraBillboardMesh,
-  layerId: string,
 ) {
   if (!m.material.url) return;
 
   const mesh = new InstancedSpriteMesh({
     renderOrder: FEATURE_RENDER_ORDER,
     ctx,
-    layerId,
   });
   await mesh._init(m);
   mesh.setActive(m.active);

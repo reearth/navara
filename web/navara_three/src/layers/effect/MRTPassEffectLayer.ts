@@ -48,8 +48,6 @@ export class MRTPassEffectLayer extends EffectLayerDeclaration<
       this.view.globe,
       {
         debugNormal: !!this.config.mrt?.debugNormal,
-        // Pass SelectiveEffect infrastructure for mask context
-        selectiveEffectRegistry: this.view.selectiveEffectRegistry,
       },
     );
 
@@ -58,6 +56,14 @@ export class MRTPassEffectLayer extends EffectLayerDeclaration<
 
   get normalBuffer(): Texture | undefined {
     return this.raw?.gbufferRenderTarget.textures[1];
+  }
+
+  get effectIdsBuffer(): Texture | undefined {
+    return this.raw?.gbufferRenderTarget.textures[2];
+  }
+
+  get emissiveBuffer(): Texture | undefined {
+    return this.raw?.gbufferRenderTarget.textures[3];
   }
 
   get depthBuffer(): Texture | undefined {
@@ -90,5 +96,9 @@ export class MRTPassEffectLayer extends EffectLayerDeclaration<
     if (updates.mrt?.debugNormal !== undefined) {
       // TODO: Support
     }
+  }
+
+  onDestroy(): void {
+    super.onDestroy();
   }
 }

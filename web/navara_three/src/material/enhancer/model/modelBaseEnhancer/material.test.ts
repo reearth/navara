@@ -30,7 +30,7 @@ describe("modelBaseEnhancer/material", () => {
       expect(material.roughness).toBe(0.2);
     });
 
-    it("should update emissive properties when provided", () => {
+    it("should update material emissive when provided", () => {
       const material = new MeshStandardMaterial();
       updateMaterialProps(material, {
         emissiveColor: 0xff0000,

@@ -14,10 +14,10 @@ import invariant from "tiny-invariant";
 import { PickableInstancedMeshWrapper } from "../mesh/pickableMeshWrapper";
 
 import {
-  MeshLayerDeclarationForSelectiveEffect,
+  MeshLayerDeclarationWithSelectiveEffect,
   type MeshLayerConfigWithSelectiveEffect,
   type MeshLayerUpdateWithSelectiveEffect,
-} from "./MeshLayerDeclarationForSelectiveEffect";
+} from "./MeshLayerDeclarationWithSelectiveEffect";
 
 export type InstancedMeshLayerConfig = MeshLayerConfigWithSelectiveEffect;
 export type InstancedMeshLayerUpdate = MeshLayerUpdateWithSelectiveEffect;
@@ -75,7 +75,7 @@ export abstract class InstancedMeshLayerDeclaration<
   UpdateConfig extends InstancedMeshLayerUpdate = InstancedMeshLayerUpdate,
   ChildConfig extends InstancedChildConfig = InstancedChildConfig,
   CustomEvent extends BaseEventMap = BaseEventMap,
-> extends MeshLayerDeclarationForSelectiveEffect<
+> extends MeshLayerDeclarationWithSelectiveEffect<
   Config,
   UpdateConfig,
   InstancedMesh<TGeometry, TMaterial>,
@@ -343,7 +343,7 @@ export abstract class InstancedMeshLayerDeclaration<
 
   /**
    * Grow the internal buffers by replacing the InstancedMesh with a larger one.
-   * Copies existing instance data to the new mesh and re-links selective effects.
+   * Copies existing instance data to the new mesh.
    */
   private grow(): void {
     const oldMesh = this.raw;
@@ -404,9 +404,6 @@ export abstract class InstancedMeshLayerDeclaration<
 
     this._instance = newMesh;
     this.capacity = newCapacity;
-
-    // Re-link selective-effect registry and onBeforeRender wiring to the new mesh
-    this.relinkSelectiveEffects(oldMesh);
 
     // Re-sync pickable wrapper with new mesh
     this.syncPickableWrapper();

@@ -19,8 +19,8 @@
 //! 2. **construct_cesium_3d_tiles_tree** - Parse tileset.json into tree structure
 //! 3. **traverse_cesium_3d_tiles_tree** - Select visible tiles based on SSE
 //! 4. **filter_requestable_data_requester** - Prioritize pending data requests
-//! 5. **construct_model_by_cesium3dtiles_layer** (B3DM/PNTS/GLB) - Create models
-//! 6. **remove_invisible_rendered_tiles** (B3DM/PNTS/GLB) - Clean up invisible tiles
+//! 5. **construct_model_by_cesium3dtiles_layer** (generic) - Create models for all formats
+//! 6. **remove_invisible_rendered_tiles** (generic/GLB) - Clean up invisible tiles
 //! 7. **remove_invisible_tileset** - Clean up nested tilesets
 //! 8. **delete_cesium3dtiles_layer** - Handle layer deletion
 //! 9. **update_cesium3dtiles_layer** - Handle material updates
@@ -38,8 +38,12 @@ use bevy_app::{App, Plugin, Update};
 
 mod b3dm;
 mod cesium3dtiles;
+mod cleanup_system;
+mod construct_system;
 mod glb;
+mod gltf_features;
 mod pnts;
+mod tile_content_parser;
 
 use bevy_ecs::schedule::IntoScheduleConfigs;
 pub use cesium3dtiles::*;
@@ -47,13 +51,9 @@ pub use cesium3dtiles::*;
 /// Plugin that adds Cesium 3D Tiles support to the Navara engine.
 ///
 /// Registers all systems needed for loading, traversing, rendering, and
-/// cleaning up 3D Tiles datasets.
-///
-/// # Usage
-///
-/// ```ignore
-/// app.add_plugins(Cesium3dTilesPlugin);
-/// ```
+/// cleaning up 3D Tiles datasets. Format-specific parsing is abstracted
+/// behind the `TileContentParser` trait, with generic systems handling
+/// the common lifecycle.
 pub struct Cesium3dTilesPlugin;
 
 impl Plugin for Cesium3dTilesPlugin {
@@ -91,14 +91,17 @@ impl Plugin for Cesium3dTilesPlugin {
                 // Phase 2: Tile selection
                 cesium3dtiles::system::traverse_cesium_3d_tiles_tree,
                 cesium3dtiles::data_requester::systems::filter_requestable_data_requester,
-                // Phase 3: Model construction (format-specific)
-                b3dm::system::construct_model_by_cesium3dtiles_layer,
-                pnts::system::construct_model_by_cesium3dtiles_layer,
-                glb::system::construct_model_by_cesium3dtiles_layer,
-                // Phase 4: Cleanup
-                b3dm::system::remove_invisible_rendered_tiles,
-                pnts::system::remove_invisible_rendered_tiles,
-                glb::system::remove_invisible_rendered_tiles,
+                cesium3dtiles::data_requester::systems::filter_requestable_metadata_requester,
+                // Phase 3: Model construction (generic, format-specific parsing via trait)
+                construct_system::construct_model_by_cesium3dtiles_layer::<b3dm::parser::B3dmParser>,
+                construct_system::construct_model_by_cesium3dtiles_layer::<pnts::parser::PntsParser>,
+                construct_system::construct_model_by_cesium3dtiles_layer::<glb::parser::GlbParser>,
+                construct_system::construct_model_by_cesium3dtiles_layer::<gltf_features::parser::GltfFeaturesParser>,
+                // Phase 4: Cleanup (generic for all formats)
+                cleanup_system::remove_invisible_rendered_tiles::<b3dm::parser::B3dmParser>,
+                cleanup_system::remove_invisible_rendered_tiles::<pnts::parser::PntsParser>,
+                cleanup_system::remove_invisible_rendered_tiles::<glb::parser::GlbParser>,
+                cleanup_system::remove_invisible_rendered_tiles::<gltf_features::parser::GltfFeaturesParser>,
                 cesium3dtiles::system::remove_invisible_tileset,
                 // Phase 5: Layer management
                 cesium3dtiles::system::delete_cesium3dtiles_layer,
