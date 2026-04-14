@@ -101,3 +101,15 @@ When users request direct renderer access, identify the underlying need:
 | Fully replace the rendering pipeline | Tier 2 - only when demand is validated |
 
 The most common request ("I want to pass my own renderer") is typically about **embedding**, not about controlling the rendering pipeline. This can be solved with a constructor option without exposing any rendering internals.
+
+## Raw Access Policy
+
+Navara wraps rendering engine objects (e.g., Three.js `PerspectiveCamera`) in its own types (e.g., `ThreeViewCamera`). These wrappers expose a `raw` property for direct access to the underlying object.
+
+**Policy**: `raw` access is allowed but unstable. Navara does not restrict it at the API level — Three.js interoperability makes this impractical. Instead, the contract is documented:
+
+- **Navara-managed state wins.** Properties controlled by the ECS (position, orientation, projection) are overwritten each frame. Direct mutations via `raw` have no lasting effect.
+- **No stability guarantee.** Code using `raw` is coupled to Three.js, not to Navara. If the underlying engine changes, the consumer is responsible for updating their code.
+- **Prefer Navara APIs when available.** `camera.positionECEF` over `camera.raw.position`, `camera.far` over `camera.raw.far`, etc.
+
+`raw` is an escape hatch for cases where no Navara abstraction exists (e.g., passing a `PerspectiveCamera` to a Three.js utility). It is not a substitute for Tier 0/1 APIs.
