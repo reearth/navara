@@ -93,7 +93,7 @@ export class ViewContext extends EventHandler<ViewContextEvents> {
     return this._concurrencyManager;
   }
 
-  get selectiveEffectRegistry(): SelectiveEffectRegistry | undefined {
+  get selectiveEffectRegistry(): SelectiveEffectRegistry {
     return this._selectiveEffectRegistry;
   }
 
