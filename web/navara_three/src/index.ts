@@ -515,6 +515,8 @@ export default class ThreeView<
   private viewContext!: ViewContext;
   private plugins: Plugin[] = [];
 
+  private pixelRatioMatchedMedia?: MediaQueryList;
+
   constructor(options: Options = {}) {
     super();
 
@@ -613,9 +615,14 @@ export default class ThreeView<
     if (!options.disableAutoResize && !isWorker()) {
       window.addEventListener("resize", this._handleResize);
       // Observe a change in devicePixelRatio.
-      window
-        .matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`)
-        .addEventListener("change", this._handleResize);
+      this.pixelRatioMatchedMedia = window.matchMedia(
+        `(resolution: ${window.devicePixelRatio}dppx)`,
+      );
+
+      this.pixelRatioMatchedMedia.addEventListener(
+        "change",
+        this._handleResize,
+      );
     }
 
     if (options.debug) {
@@ -962,9 +969,10 @@ export default class ThreeView<
     this._disposed = true;
     if (!isWorker()) {
       window.removeEventListener("resize", this._handleResize);
-      window
-        .matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`)
-        .removeEventListener("change", this._handleResize);
+      this.pixelRatioMatchedMedia?.removeEventListener(
+        "change",
+        this._handleResize,
+      );
     }
 
     if (this._eventDisposer) {
@@ -983,14 +991,6 @@ export default class ThreeView<
 
     this._fontManager.dispose();
     this._atmosphere._dispose();
-
-    this._renderer.setAnimationLoop(null);
-    if (
-      "dispose" in this._renderer &&
-      typeof this._renderer.dispose === "function"
-    ) {
-      this._renderer.dispose();
-    }
 
     this.skyEnvMapLayer?.delete();
     this.mrtPassLayer?.delete();
@@ -1021,6 +1021,14 @@ export default class ThreeView<
     if (this._stats) {
       this._stats.dom.remove();
       this._stats = undefined;
+    }
+
+    this._renderer.setAnimationLoop(null);
+    if (
+      "dispose" in this._renderer &&
+      typeof this._renderer.dispose === "function"
+    ) {
+      this._renderer.dispose();
     }
   }
 
