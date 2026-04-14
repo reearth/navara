@@ -83,8 +83,8 @@ export type MeshBaseInstance<Instance extends object = object> =
  * > {
  *   private config: MyMeshConfig;
  *
- *   constructor(view: ThreeView, config: MyMeshConfig) {
- *     super(view, config);
+ *   constructor(view: ThreeView, ctx: ViewContext, config: MyMeshConfig) {
+ *     super(view, ctx, config);
  *     this.config = config;
  *   }
  *
