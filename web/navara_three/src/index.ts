@@ -986,10 +986,10 @@ export default class ThreeView<
       this._renderer.dispose();
     }
 
-    this.skyEnvMapLayer.delete();
-    this.mrtPassLayer.delete();
-    this.transparentPassLayer.delete();
-    this.finalPassLayer.delete();
+    this.skyEnvMapLayer?.delete();
+    this.mrtPassLayer?.delete();
+    this.transparentPassLayer?.delete();
+    this.finalPassLayer?.delete();
 
     // Abort all pending requests
     for (const controller of this._abortControllers.values()) {
