@@ -93,11 +93,11 @@ export class ViewContext extends EventHandler<ViewContextEvents> {
     return this._selectiveEffectRegistry;
   }
 
-  get globe(): Globe | undefined {
+  get globe(): Globe {
     return this._globe;
   }
 
-  get fontManager(): FontManager | undefined {
+  get fontManager(): FontManager {
     return this._fontManager;
   }
 
