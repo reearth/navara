@@ -232,6 +232,7 @@ const run = async () => {
       url: LOCAL_DATASETS.steelDrumGLTF.url,
       castShadow: true,
       receiveShadow: false,
+      color: new Color().setHex(0xff0000), 
     },
     position: { x: gltfPos.x, y: gltfPos.y, z: gltfPos.z },
     scale: { x: 50, y: 50, z: 50 },
