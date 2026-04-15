@@ -352,16 +352,8 @@ pub fn create_flat_polyline_geometry(
     let n = positions.len();
 
     let mut flat_positions = vec![];
-    let mut start_positions = vec![];
-    let mut forward_offsets = vec![];
-    let mut start_normals = vec![];
-    let mut end_normal_and_tex_x = vec![];
     let mut right_normal_and_tex_y = vec![];
     let mut indices = vec![];
-
-    // Accumulate segment lengths for texture-coordinate normalisation
-    let mut total_length = 0.0_f32;
-    let mut accumulated_at_point = vec![0.0_f32; n];
 
     // Precompute per-segment unit direction vectors
     let seg_count = n - 1;
@@ -378,9 +370,6 @@ pub fn create_flat_polyline_geometry(
         } else {
             seg_dirs.push((dx / len, dy / len));
         }
-
-        total_length += len;
-        accumulated_at_point[i + 1] = total_length;
     }
 
     // Helper: push one vertex into all attribute arrays.
@@ -388,24 +377,15 @@ pub fn create_flat_polyline_geometry(
     //   final_pos = position + normal * (lineWidth/2) * miter_len
     let mut vertex_count = 0u32;
     let push_vertex = |flat_positions: &mut Vec<f32>,
-                       start_positions: &mut Vec<f32>,
-                       forward_offsets: &mut Vec<f32>,
-                       start_normals_buf: &mut Vec<f32>,
-                       end_normal_and_tex_x: &mut Vec<f32>,
                        right_normal_and_tex_y: &mut Vec<f32>,
                        vertex_count: &mut u32,
                        px: f32,
                        py: f32,
                        normal: (f32, f32),
-                       miter_len: f32,
-                       tex_x: f32|
+                       miter_len: f32|
      -> u32 {
         let idx = *vertex_count;
         flat_positions.extend_from_slice(&[px, py, 0.0]);
-        start_positions.extend_from_slice(&[0.0, 0.0, 0.0]);
-        forward_offsets.extend_from_slice(&[0.0, 0.0, 0.0]);
-        start_normals_buf.extend_from_slice(&[0.0, 0.0, 0.0]);
-        end_normal_and_tex_x.extend_from_slice(&[0.0, 0.0, 0.0, tex_x]);
         right_normal_and_tex_y.extend_from_slice(&[normal.0, normal.1, 0.0, miter_len]);
         *vertex_count += 1;
         idx
@@ -439,14 +419,6 @@ pub fn create_flat_polyline_geometry(
         let py = p.y as f32;
         let miter = compute_flat_miter(&seg_dirs, i, n);
 
-        let tex_x = if total_length > 0.0 {
-            accumulated_at_point[i] / total_length
-        } else if i == 0 {
-            0.0
-        } else {
-            1.0
-        };
-
         if miter.clamped && i > 0 && i < n - 1 {
             // Sharp corner — emit 3 vertices with a bevel triangle.
             //
@@ -463,54 +435,32 @@ pub fn create_flat_polyline_geometry(
 
             if cross < 0.0 {
                 // Right turn: outside is on the left (+length) side.
-                //
-                //  incoming_left ·──────· outgoing_left     (outside)
-                //                 \    /
-                //           bevel  \  /
-                //                   \/
-                //               inside_right                (inside, shared)
-                //
                 let incoming_left = push_vertex(
                     &mut flat_positions,
-                    &mut start_positions,
-                    &mut forward_offsets,
-                    &mut start_normals,
-                    &mut end_normal_and_tex_x,
                     &mut right_normal_and_tex_y,
                     &mut vertex_count,
                     px,
                     py,
                     in_perp,
                     1.0,
-                    tex_x,
                 );
                 let inside_right = push_vertex(
                     &mut flat_positions,
-                    &mut start_positions,
-                    &mut forward_offsets,
-                    &mut start_normals,
-                    &mut end_normal_and_tex_x,
                     &mut right_normal_and_tex_y,
                     &mut vertex_count,
                     px,
                     py,
                     miter.normal,
                     -miter.length,
-                    tex_x,
                 );
                 let outgoing_left = push_vertex(
                     &mut flat_positions,
-                    &mut start_positions,
-                    &mut forward_offsets,
-                    &mut start_normals,
-                    &mut end_normal_and_tex_x,
                     &mut right_normal_and_tex_y,
                     &mut vertex_count,
                     px,
                     py,
                     out_perp,
                     1.0,
-                    tex_x,
                 );
 
                 // Bevel triangle (CCW winding)
@@ -524,54 +474,32 @@ pub fn create_flat_polyline_geometry(
                 });
             } else {
                 // Left turn: outside is on the right (−length) side.
-                //
-                //               inside_left                 (inside, shared)
-                //                   /\
-                //           bevel  /  \
-                //                 /    \
-                //  incoming_right·──────· outgoing_right    (outside)
-                //
                 let inside_left = push_vertex(
                     &mut flat_positions,
-                    &mut start_positions,
-                    &mut forward_offsets,
-                    &mut start_normals,
-                    &mut end_normal_and_tex_x,
                     &mut right_normal_and_tex_y,
                     &mut vertex_count,
                     px,
                     py,
                     miter.normal,
                     miter.length,
-                    tex_x,
                 );
                 let incoming_right = push_vertex(
                     &mut flat_positions,
-                    &mut start_positions,
-                    &mut forward_offsets,
-                    &mut start_normals,
-                    &mut end_normal_and_tex_x,
                     &mut right_normal_and_tex_y,
                     &mut vertex_count,
                     px,
                     py,
                     in_perp,
                     -1.0,
-                    tex_x,
                 );
                 let outgoing_right = push_vertex(
                     &mut flat_positions,
-                    &mut start_positions,
-                    &mut forward_offsets,
-                    &mut start_normals,
-                    &mut end_normal_and_tex_x,
                     &mut right_normal_and_tex_y,
                     &mut vertex_count,
                     px,
                     py,
                     out_perp,
                     -1.0,
-                    tex_x,
                 );
 
                 // Bevel triangle (CCW winding)
@@ -588,31 +516,21 @@ pub fn create_flat_polyline_geometry(
             // Normal miter (unclamped) or endpoint — emit 2 shared vertices.
             let left = push_vertex(
                 &mut flat_positions,
-                &mut start_positions,
-                &mut forward_offsets,
-                &mut start_normals,
-                &mut end_normal_and_tex_x,
                 &mut right_normal_and_tex_y,
                 &mut vertex_count,
                 px,
                 py,
                 miter.normal,
                 miter.length,
-                tex_x,
             );
             let right = push_vertex(
                 &mut flat_positions,
-                &mut start_positions,
-                &mut forward_offsets,
-                &mut start_normals,
-                &mut end_normal_and_tex_x,
                 &mut right_normal_and_tex_y,
                 &mut vertex_count,
                 px,
                 py,
                 miter.normal,
                 -miter.length,
-                tex_x,
             );
 
             joins.push(PointJoin {
@@ -658,17 +576,14 @@ pub fn create_flat_polyline_geometry(
             position: crate::FloatAttribute::new(flat_positions, 3),
             position_high: None,
             position_low: None,
-            start: crate::FloatAttribute::new(start_positions, 3),
+            start: None,
             start_high: None,
             start_low: None,
-            forward_offset: crate::FloatAttribute::new(forward_offsets, 3),
+            forward_offset: None,
             end_high: None,
             end_low: None,
-            start_normals: crate::FloatAttribute::new(start_normals, 3),
-            end_normal_and_texture_coordinate_normalization_x: crate::FloatAttribute::new(
-                end_normal_and_tex_x,
-                4,
-            ),
+            start_normals: None,
+            end_normal_and_texture_coordinate_normalization_x: None,
             right_normal_and_texture_coordinate_normalization_y: crate::FloatAttribute::new(
                 right_normal_and_tex_y,
                 4,

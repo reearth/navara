@@ -43,10 +43,11 @@ type Attributes = BatchedFeatureAttributes<{
   // Non-RTE mode attributes (only present when useRTE=false)
   start?: BufferAttribute;
   forward_offset?: BufferAttribute;
-  // Common attributes (always present)
-  start_normal: BufferAttribute;
+  // Common attributes (present for non-flat polylines)
+  start_normal?: BufferAttribute;
+  end_normal_and_texture_coordinate_normalization_x?: BufferAttribute;
+  // Always present
   right_normal_and_texture_coordinate_normalization_y: BufferAttribute;
-  end_normal_and_texture_coordinate_normalization_x: BufferAttribute;
   attrBatchId: BufferAttribute;
 }>;
 
@@ -111,10 +112,15 @@ export class PolylineMesh extends BatchedFeatureMesh<
     const start_low = g.start_low ? buf.removeF32(g.start_low.data) : null;
     const end_high = g.end_high ? buf.removeF32(g.end_high.data) : null;
     const end_low = g.end_low ? buf.removeF32(g.end_low.data) : null;
-    const start_normals = buf.removeF32(g.start_normals.data);
-    const end_normal_and_texture_coordinate_normalization_x = buf.removeF32(
-      g.end_normal_and_texture_coordinate_normalization_x.data,
-    );
+    const start_normals = g.start_normals
+      ? buf.removeF32(g.start_normals.data)
+      : null;
+    const end_normal_and_texture_coordinate_normalization_x =
+      g.end_normal_and_texture_coordinate_normalization_x
+        ? buf.removeF32(
+            g.end_normal_and_texture_coordinate_normalization_x.data,
+          )
+        : null;
     const right_normal_and_texture_coordinate_normalization_y = buf.removeF32(
       g.right_normal_and_texture_coordinate_normalization_y.data,
     );
@@ -128,8 +134,6 @@ export class PolylineMesh extends BatchedFeatureMesh<
 
     if (
       !position ||
-      !start_normals ||
-      !end_normal_and_texture_coordinate_normalization_x ||
       !right_normal_and_texture_coordinate_normalization_y ||
       !indices
     ) {
@@ -177,7 +181,7 @@ export class PolylineMesh extends BatchedFeatureMesh<
         geometry.setAttribute("end_3d_high", new BufferAttribute(end_high, 3));
         geometry.setAttribute("end_3d_low", new BufferAttribute(end_low, 3));
       }
-    } else {
+    } else if (g.start && g.forward_offset) {
       const start = buf.removeF32(g.start.data);
       const forward_offset = buf.removeF32(g.forward_offset.data);
 
@@ -194,17 +198,24 @@ export class PolylineMesh extends BatchedFeatureMesh<
       );
     }
 
-    geometry.setAttribute(
-      "start_normal",
-      new BufferAttribute(start_normals, g.start_normals.size),
-    );
-    geometry.setAttribute(
-      "end_normal_and_texture_coordinate_normalization_x",
-      new BufferAttribute(
-        end_normal_and_texture_coordinate_normalization_x,
-        g.end_normal_and_texture_coordinate_normalization_x.size,
-      ),
-    );
+    if (start_normals && g.start_normals) {
+      geometry.setAttribute(
+        "start_normal",
+        new BufferAttribute(start_normals, g.start_normals.size),
+      );
+    }
+    if (
+      end_normal_and_texture_coordinate_normalization_x &&
+      g.end_normal_and_texture_coordinate_normalization_x
+    ) {
+      geometry.setAttribute(
+        "end_normal_and_texture_coordinate_normalization_x",
+        new BufferAttribute(
+          end_normal_and_texture_coordinate_normalization_x,
+          g.end_normal_and_texture_coordinate_normalization_x.size,
+        ),
+      );
+    }
     geometry.setAttribute(
       "right_normal_and_texture_coordinate_normalization_y",
       new BufferAttribute(

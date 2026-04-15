@@ -5,10 +5,6 @@ in float attrBatchId;
 
 #include chunks/show_pars_vertex;
 
-in vec3 start;
-in vec3 forward_offset;
-in vec3 start_normal;
-in vec4 end_normal_and_texture_coordinate_normalization_x;
 in vec4 right_normal_and_texture_coordinate_normalization_y;
 
 #include <common>
