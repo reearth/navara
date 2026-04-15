@@ -11,7 +11,7 @@ import tsconfig from "vite-tsconfig-paths";
 
 import { commonConfig } from "../vite.config.common";
 
-import { createMpaPlugin } from "./example/vite-plugin-mpa";
+import { createMpaPlugin } from "./vite-plugin-mpa";
 
 type PageInfo = {
   name: string;
