@@ -170,30 +170,10 @@ impl RasterTile {
                 Some(DataRequesterStatus::Fail)
             );
 
-        // Check if any hillshade entity is ready
-        // Also consider None entities as ready if they correspond to layers beyond max_zoom
-        let is_hillshade_ready = self.hillshade_entity_ids.as_ref().is_some_and(|hill_ids| {
-            hill_ids.iter().enumerate().any(|(i, &entity_opt)| {
-                if let Some(entity) = entity_opt {
-                    // Entity exists, check if it's ready
-                    RasterTile::is_texture_entity_ready(entity, texture_fragment, data_requesters)
-                } else {
-                    // Entity is None, check if this layer is beyond max_zoom
-                    tiles
-                        .iter()
-                        .sort::<&Order>()
-                        .nth(i)
-                        .is_some_and(|(layer, _)| {
-                            layer.hillshade_config.is_some()
-                                && layer.is_over_max_zoom(self.coords.z)
-                        })
-                }
-            })
-        });
+        let is_hillshade_ready = self.is_hillshade_ready(tiles, texture_fragment, data_requesters);
 
         ReadyState {
-            is_tile_ready: (is_terrain_ready
-                || is_hillshade_ready
+            is_tile_ready: (is_terrain_ready && is_hillshade_ready
                 || (is_upsamplable || should_be_rendered_without_terrain)),
             is_texture_ready: is_texture_loaded,
             is_terrain_ready,
@@ -286,6 +266,46 @@ impl RasterTile {
         terrain_layer: &Option<&TerrainLayer>,
     ) -> bool {
         terrain_layer.is_some() && self.is_parent_ready(qt, terrain_data_requester)
+    }
+
+    pub fn is_hillshade_ready(
+        &self,
+        tiles: &Query<(&TilesLayer, &Order)>,
+        texture_fragment: &TileTextureFragmentQuery,
+        data_requesters: &Query<&navara_data_requester::DataRequester>,
+    ) -> bool {
+        // Check if there are any hillshade layers in the query
+        let has_hillshade_layers = tiles
+            .iter()
+            .any(|(layer, _)| layer.hillshade_config.is_some());
+
+        // If no hillshade layers exist, default to true (nothing to wait for)
+        if !has_hillshade_layers {
+            return true;
+        }
+
+        // Collect sorted tiles once for efficient iteration
+        let sorted_tiles: Vec<_> = tiles.iter().sort::<&Order>().collect();
+
+        // Has hillshade layers, check if entities are ready
+        self.hillshade_entity_ids.as_ref().is_none_or(|hill_ids| {
+            hill_ids
+                .iter()
+                .zip(sorted_tiles.iter())
+                .any(|(&entity_opt, (layer, _))| {
+                    if let Some(entity) = entity_opt {
+                        // Entity exists, check if it's ready
+                        RasterTile::is_texture_entity_ready(
+                            entity,
+                            texture_fragment,
+                            data_requesters,
+                        )
+                    } else {
+                        // Entity is None, check if this layer is beyond max_zoom
+                        layer.hillshade_config.is_some() && layer.is_over_max_zoom(self.coords.z)
+                    }
+                })
+        })
     }
 
     pub fn get_parent_tile<'a>(&self, qt: &'a RasterTileQuadtree) -> Option<&'a Self> {

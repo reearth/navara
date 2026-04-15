@@ -143,6 +143,13 @@ pub fn backfill_hillshade_on_loaded(
         ),
     >,
 ) {
+    // Collect all successfully loaded hillshade entities in this frame for deduplication
+    let newly_loaded_entities: std::collections::HashSet<Entity> = query
+        .iter()
+        .filter(|(_, data_req, _)| data_req.is_succeeded())
+        .map(|(entity, _, _)| entity)
+        .collect();
+
     for (entity, data_req, marker) in query.iter() {
         // Only process successfully loaded hillshade DataRequesters
         if !data_req.is_succeeded() {
@@ -181,6 +188,7 @@ pub fn backfill_hillshade_on_loaded(
             &qt,
             &data_requesters,
             &buf,
+            &newly_loaded_entities,
         );
 
         // Store all collected edges in BufferStore and create events
@@ -364,6 +372,7 @@ fn collect_neighbor_edge_exchanges(
         ),
     >,
     buf: &BufferStore,
+    newly_loaded_entities: &std::collections::HashSet<Entity>,
 ) -> Vec<(Vec<u8>, u64, Entity, u8)> {
     // Define neighbor directions (coordinates will be computed with bounds checking)
     let neighbor_directions = [
@@ -435,28 +444,32 @@ fn collect_neighbor_edge_exchanges(
         }
 
         // Neighbor's edge -> current tile
-        let edge_for_current = if let Ok(neighbor_edges) = edges_query.get(neighbor_entity) {
-            // Neighbor already has extracted edges stored, use them
-            let edge_handle = match neighbor_edge_dir {
-                EdgeDirection::Left => neighbor_edges.left,
-                EdgeDirection::Right => neighbor_edges.right,
-                EdgeDirection::Top => neighbor_edges.top,
-                EdgeDirection::Bottom => neighbor_edges.bottom,
+        // Skip if neighbor is also being processed this frame to avoid duplicate edge updates
+        // (neighbor will send its edge to current tile when it processes)
+        if !newly_loaded_entities.contains(&neighbor_entity) {
+            let edge_for_current = if let Ok(neighbor_edges) = edges_query.get(neighbor_entity) {
+                // Neighbor already has extracted edges stored, use them
+                let edge_handle = match neighbor_edge_dir {
+                    EdgeDirection::Left => neighbor_edges.left,
+                    EdgeDirection::Right => neighbor_edges.right,
+                    EdgeDirection::Top => neighbor_edges.top,
+                    EdgeDirection::Bottom => neighbor_edges.bottom,
+                };
+                buf.get_u8(&edge_handle)
+                    .map(|b| b.to_vec())
+                    .unwrap_or_default()
+            } else {
+                // Neighbor loaded in the same frame: HillshadeEdges component not yet available
+                // (inserted via commands, takes effect next frame), but original data still exists
+                // (JS-side removeU8 is async). Extract edge from neighbor's original DEM data.
+                buf.get_u8(&neighbor_dr.handle)
+                    .map(|bytes| extract_single_edge(bytes, neighbor_edge_dir))
+                    .unwrap_or_default()
             };
-            buf.get_u8(&edge_handle)
-                .map(|b| b.to_vec())
-                .unwrap_or_default()
-        } else {
-            // Neighbor loaded in the same frame: HillshadeEdges component not yet available
-            // (inserted via commands, takes effect next frame), but original data still exists
-            // (JS-side removeU8 is async). Extract edge from neighbor's original DEM data.
-            buf.get_u8(&neighbor_dr.handle)
-                .map(|bytes| extract_single_edge(bytes, neighbor_edge_dir))
-                .unwrap_or_default()
-        };
 
-        if !edge_for_current.is_empty() {
-            edges_to_store.push((edge_for_current, tile_handle, entity, opposite_dir as u8));
+            if !edge_for_current.is_empty() {
+                edges_to_store.push((edge_for_current, tile_handle, entity, opposite_dir as u8));
+            }
         }
     }
 

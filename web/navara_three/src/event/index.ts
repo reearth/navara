@@ -491,7 +491,13 @@ function processDataRequesterRemoved(
   ctx: EventContext,
   req: DataRequesterRemovedEvent,
 ) {
-  const { buf, abortControllers, workerPoolPromises, loadedTexs, pendingHillshadeEdges } = ctx;
+  const {
+    buf,
+    abortControllers,
+    workerPoolPromises,
+    loadedTexs,
+    pendingHillshadeEdges,
+  } = ctx;
   const id = generate_id_from_entity(req);
   const abortController = abortControllers.get(id);
   const workerPool = workerPoolPromises.get(id);

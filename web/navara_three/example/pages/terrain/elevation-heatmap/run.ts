@@ -11,16 +11,16 @@ import {
 import { SphericalHarmonics3 } from "three";
 import { Pane } from "tweakpane";
 
-import { showAttributions } from "../../helpers/attributions";
+import { showAttributions } from "../../../helpers/attributions";
 import {
   PLATEAU_COLOR_MAP,
   TURBO_COLOR_MAP,
   PLASMA_COLORMAP,
   YlGnBu_COLOR_MAP,
-} from "../../helpers/colors";
-import { TERRAIN_DATASETS } from "../../helpers/constants";
-import { addCameraControl, addDateControl } from "../../helpers/control";
-import { SH_COEFFICIENTS } from "../../helpers/sh";
+} from "../../../helpers/colors";
+import { TERRAIN_DATASETS } from "../../../helpers/constants";
+import { addCameraControl, addDateControl } from "../../../helpers/control";
+import { SH_COEFFICIENTS } from "../../../helpers/sh";
 
 export type LayerDescriptions = DefaultLayerDescriptions;
 

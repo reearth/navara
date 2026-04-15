@@ -1479,13 +1479,12 @@ if (uPickable > 0.) {
           t.image &&
           "width" in t.image
         ) {
-          // Derive content pixel width from texture (subtract 2-pixel padding)
-          // Hillshade textures are padded: contentSize = paddedSize - 2
-          const contentPixelWidth = t.image.width - 2;
+          // Pass padded texture width to Rust (calcMetersPerTexel handles padding internally)
+          // Hillshade textures are padded: paddedSize = contentSize + 2
           const metersPerTexel = this.tileHandler.calcMetersPerTexel(
             this.handle,
             layerZoom,
-            contentPixelWidth,
+            t.image.width,
           );
           m.userData.metersPerTexel.value[i] = metersPerTexel;
 

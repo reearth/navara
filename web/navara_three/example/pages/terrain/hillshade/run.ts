@@ -9,9 +9,9 @@ import {
 import { ToneMappingMode } from "@navara/three_default_layers";
 import { Pane } from "tweakpane";
 
-import { showAttributions } from "../../helpers/attributions";
-import { TERRAIN_DATASETS, TILE_DATASETS } from "../../helpers/constants";
-import { addCameraControl, addDateControl } from "../../helpers/control";
+import { showAttributions } from "../../../helpers/attributions";
+import { TERRAIN_DATASETS, TILE_DATASETS } from "../../../helpers/constants";
+import { addCameraControl, addDateControl } from "../../../helpers/control";
 
 export type LayerDescriptions = DefaultLayerDescriptions;
 
