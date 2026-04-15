@@ -274,6 +274,8 @@ function injectGBufferToShaderMaterial(
 
       #ifdef USE_SELECTIVE_EFFECT
         uniform float uEffectIdsMask;
+        uniform vec3 uEmissiveColor;
+        uniform float uEmissiveIntensity;
       #endif
     #endif
 
@@ -292,7 +294,7 @@ function injectGBufferToShaderMaterial(
 
             #ifdef USE_SELECTIVE_EFFECT
               effectIdBuffer = vec4(uEffectIdsMask, 0.0, 0.0, 1.0);
-              emissiveBuffer = vec4(0.0);
+              emissiveBuffer = vec4(uEmissiveColor * uEmissiveIntensity, 1.0);
             #else
               effectIdBuffer = vec4(0.0);
               emissiveBuffer = vec4(0.0);
