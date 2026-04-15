@@ -1,7 +1,8 @@
+import type ThreeView from "@navara/three";
 import {
   LightLayerDeclaration,
   type LightLayerConfig,
-  ViewContext,
+  type ViewContext,
   type LightLayerUpdate,
 } from "@navara/three";
 
@@ -22,8 +23,12 @@ export class SkyLightProbeLayer extends LightLayerDeclaration<
 > {
   private config: SkyLightProbeLayerConfig;
 
-  constructor(view: ViewContext, config: SkyLightProbeLayerConfig) {
-    super(view, config);
+  constructor(
+    view: ThreeView,
+    ctx: ViewContext,
+    config: SkyLightProbeLayerConfig,
+  ) {
+    super(view, ctx, config);
     this.config = config;
   }
 
@@ -60,7 +65,7 @@ export class SkyLightProbeLayer extends LightLayerDeclaration<
     this._instance.updateSunDirection(this.view.atmosphere.sunDirection);
 
     // Update position to camera position for proper lighting
-    const cameraPosition = this.view.camera.position;
+    const cameraPosition = this.view.camera.raw.position;
     this._instance.updatePosition(cameraPosition);
 
     this._instance.update();

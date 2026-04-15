@@ -168,7 +168,7 @@ export abstract class InstancedMeshLayerDeclaration<
 
     // Generate batch IDs for initial instances if pickable
     if (this._pickable) {
-      this._batchIds = configs.map(() => this.view.genGlobalBatchId() ?? 0);
+      this._batchIds = configs.map(() => this.ctx.genGlobalBatchId() ?? 0);
     }
 
     return mesh;
@@ -186,7 +186,7 @@ export abstract class InstancedMeshLayerDeclaration<
       mesh,
       this._batchIds,
     );
-    this.view.registerPickableMesh(this.id, this._instancedPickWrapper);
+    this.ctx.registerPickableMesh(this.id, this._instancedPickWrapper);
     this._pickRegistered = true;
   }
 
@@ -210,7 +210,7 @@ export abstract class InstancedMeshLayerDeclaration<
     this.configs.push(config);
 
     if (this._pickable) {
-      this._batchIds.push(this.view.genGlobalBatchId() ?? 0);
+      this._batchIds.push(this.ctx.genGlobalBatchId() ?? 0);
       this.syncPickableWrapper();
     }
 
@@ -323,7 +323,7 @@ export abstract class InstancedMeshLayerDeclaration<
     this.configs = [...configs];
 
     if (this._pickable) {
-      this._batchIds = configs.map(() => this.view.genGlobalBatchId() ?? 0);
+      this._batchIds = configs.map(() => this.ctx.genGlobalBatchId() ?? 0);
       this.syncPickableWrapper();
     }
 

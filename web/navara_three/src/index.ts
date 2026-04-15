@@ -789,11 +789,6 @@ export default class ThreeView<
     return this.renderPass.globeDepthCopyPass.texture;
   }
 
-  /** Manages font loading, text shaping, and SDF atlas access. */
-  get fontManager(): FontManager {
-    return this._fontManager;
-  }
-
   /**
    * Returns whether mobile optimizations should be applied.
    * If `mobileOptimization` option is explicitly set, returns that value;
@@ -845,17 +840,13 @@ export default class ThreeView<
     // Set up Registry
     this.viewContext = new ViewContext(
       this._scenes,
-      this._camera.raw,
-      this._atmosphere,
       this.layersManager,
       this.renderPassOrchestrator,
       concurrencyManager,
-      this._globe,
-      this._fontManager,
       this._core,
       this._meshes,
     );
-    this.registries = new Registries(this.viewContext);
+    this.registries = new Registries(this, this.viewContext);
     this.eventContext = new EventContext({
       eventManager: this._eventManager,
       scenes: this._scenes,

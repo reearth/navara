@@ -1,18 +1,10 @@
-import type { Globe } from "@navara/core";
 import { EventHandler } from "@navara/core";
 import type { Core } from "@navara/engine";
-import type { FontManager } from "@navara/font";
 import type { ConcurrencyManager } from "@navara/worker";
 import type { Pass as PostProcessingPass } from "postprocessing";
-import type {
-  Material,
-  Object3D,
-  PerspectiveCamera,
-  WebGLRenderer,
-} from "three";
+import type { Material, Object3D, WebGLRenderer } from "three";
 import invariant from "tiny-invariant";
 
-import type { Atmosphere } from "../atmosphere";
 import type { LayersManager } from "../layersManager";
 import type { RenderPassOrchestrator } from "../orchestrators";
 import type { CustomRenderPass } from "../passes";
@@ -61,16 +53,10 @@ export class ViewContext extends EventHandler<ViewContextEvents> {
   constructor(
     /** Scene containers for different rendering passes. */
     private _scenes: Scenes,
-    /** The main perspective camera used for rendering. */
-    private _camera: PerspectiveCamera,
-    /** Atmosphere parameters (sun direction, time of day, etc.). */
-    private _atmosphere: Atmosphere,
     private layersManager: LayersManager,
     private renderPassOrchestrator: RenderPassOrchestrator,
     /** Manager for scheduling work on Web Workers. */
     private _concurrencyManager: ConcurrencyManager,
-    private _globe: Globe,
-    private _fontManager: FontManager,
     private _core: Core,
     private _meshes: MeshCache,
   ) {
@@ -86,16 +72,6 @@ export class ViewContext extends EventHandler<ViewContextEvents> {
     return this._scenes;
   }
 
-  /** The main perspective camera used for rendering. */
-  get camera(): PerspectiveCamera {
-    return this._camera;
-  }
-
-  /** Atmosphere parameters (sun direction, time of day, etc.). */
-  get atmosphere(): Atmosphere {
-    return this._atmosphere;
-  }
-
   /** Manager for scheduling work on Web Workers. */
   get concurrencyManager(): ConcurrencyManager {
     return this._concurrencyManager;
@@ -103,14 +79,6 @@ export class ViewContext extends EventHandler<ViewContextEvents> {
 
   get selectiveEffectRegistry(): SelectiveEffectRegistry {
     return this._selectiveEffectRegistry;
-  }
-
-  get globe(): Globe {
-    return this._globe;
-  }
-
-  get fontManager(): FontManager {
-    return this._fontManager;
   }
 
   // --- Pass management ---

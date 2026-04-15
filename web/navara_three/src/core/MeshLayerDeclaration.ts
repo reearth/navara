@@ -2,6 +2,7 @@ import type { BaseEventMap, XYZ } from "@navara/core";
 import { Matrix4, Object3D } from "three";
 import invariant from "tiny-invariant";
 
+import type ThreeView from "../index";
 import { PickableMeshWrapper } from "../mesh/pickableMeshWrapper";
 import type { Scenes } from "../scene";
 
@@ -85,8 +86,8 @@ export type MeshBaseInstance<Instance extends object = object> =
  * > {
  *   private config: MyMeshConfig;
  *
- *   constructor(view: ViewContext, config: MyMeshConfig) {
- *     super(view, config);
+ *   constructor(view: ThreeView, ctx: ViewContext, config: MyMeshConfig) {
+ *     super(view, ctx, config);
  *     this.config = config;
  *   }
  *
@@ -101,7 +102,7 @@ export type MeshBaseInstance<Instance extends object = object> =
  *
  *     // Enable CSM shadows if needed
  *     if (mesh.castShadow) {
- *       this.view.applyShadowMaterial(material);
+ *       this.ctx.applyShadowMaterial(material);
  *     }
  *
  *     return mesh;
@@ -203,9 +204,9 @@ export abstract class MeshLayerDeclaration<
 
   protected _pickable: boolean;
 
-  constructor(view: ViewContext, config?: Config) {
+  constructor(view: ThreeView, ctx: ViewContext, config?: Config) {
     const resolvedConfig = config ?? ({} as Config);
-    super(view, resolvedConfig);
+    super(view, ctx, resolvedConfig);
     this.position = resolvedConfig.position;
     this.scale = resolvedConfig.scale;
     this.rotation = resolvedConfig.rotation;
@@ -284,17 +285,17 @@ export abstract class MeshLayerDeclaration<
     const raw = this.raw;
     if (!raw) return;
 
-    const batchId = this.view.genGlobalBatchId();
+    const batchId = this.ctx.genGlobalBatchId();
     if (batchId == null) return;
 
     this.batchId = batchId;
     this._pickMeshWrapper = new PickableMeshWrapper(raw, batchId);
-    this.view.registerPickableMesh(this.id, this._pickMeshWrapper);
+    this.ctx.registerPickableMesh(this.id, this._pickMeshWrapper);
     this._pickRegistered = true;
   }
 
   removeFromScene(passKey: PassKey) {
-    const scenes = this.view.scenes;
+    const scenes = this.ctx.scenes;
 
     if (scenes[passKey] && this.raw) {
       scenes[passKey].remove(this.raw);
@@ -304,7 +305,7 @@ export abstract class MeshLayerDeclaration<
   addToScene(passKey: PassKey) {
     if (!this.raw) return;
 
-    const scenes = this.view.scenes;
+    const scenes = this.ctx.scenes;
 
     if (scenes[passKey]) {
       scenes[passKey].add(this.raw);
@@ -359,7 +360,7 @@ export abstract class MeshLayerDeclaration<
 
   onDestroy(): void {
     if (this._pickRegistered) {
-      this.view.unregisterPickableMesh(this.id);
+      this.ctx.unregisterPickableMesh(this.id);
       this._pickRegistered = false;
     }
 

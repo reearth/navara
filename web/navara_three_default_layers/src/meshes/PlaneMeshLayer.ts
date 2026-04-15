@@ -1,3 +1,4 @@
+import type ThreeView from "@navara/three";
 import {
   Color,
   MeshLayerDeclarationWithSelectiveEffect,
@@ -46,12 +47,12 @@ export class PlaneMeshLayer extends MeshLayerDeclarationWithSelectiveEffect<
 > {
   private config: PlaneMeshLayerConfig;
 
-  constructor(view: ViewContext, config: PlaneMeshLayerConfig) {
+  constructor(view: ThreeView, ctx: ViewContext, config: PlaneMeshLayerConfig) {
     // Propagate initial effectIds to base MeshLayer
     if (config.plane?.effectIds) {
       config.effectIds = config.plane.effectIds;
     }
-    super(view, config);
+    super(view, ctx, config);
     this.config = config;
   }
 
@@ -92,7 +93,7 @@ export class PlaneMeshLayer extends MeshLayerDeclarationWithSelectiveEffect<
     mesh.castShadow = cfg.castShadow ?? false;
     mesh.receiveShadow = cfg.receiveShadow ?? false;
 
-    this.view.applyShadowMaterial(material);
+    this.ctx.applyShadowMaterial(material);
 
     return mesh;
   }
@@ -171,7 +172,7 @@ export class PlaneMeshLayer extends MeshLayerDeclarationWithSelectiveEffect<
 
   protected disposeMesh(): void {
     if (this._instance) {
-      this.view.removeShadowMaterial(this._instance.material);
+      this.ctx.removeShadowMaterial(this._instance.material);
       this._instance.geometry.dispose();
       this._instance.material.dispose();
 

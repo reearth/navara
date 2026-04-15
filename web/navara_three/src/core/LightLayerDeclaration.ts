@@ -1,6 +1,8 @@
 import type { XYZ } from "@navara/core";
 import { Light } from "three";
 
+import type ThreeView from "../index";
+
 import {
   LayerDeclaration,
   type BaseInstance,
@@ -66,8 +68,8 @@ export type LightBaseInstance<Instance extends object = object> =
  * > {
  *   private config: MyLightConfig;
  *
- *   constructor(view: ViewContext, config: MyLightConfig) {
- *     super(view, config);
+ *   constructor(view: ThreeView, ctx: ViewContext, config: MyLightConfig) {
+ *     super(view, ctx, config);
  *     this.config = config;
  *   }
  *
@@ -136,8 +138,12 @@ export abstract class LightLayerDeclaration<
 > extends LayerDeclaration<Config, UpdateConfig, Instance> {
   public position?: XYZ;
 
-  constructor(view: ViewContext, config: Config = {} as Config) {
-    super(view, config);
+  constructor(
+    view: ThreeView,
+    ctx: ViewContext,
+    config: Config = {} as Config,
+  ) {
+    super(view, ctx, config);
     this.position = config.position;
   }
 
@@ -182,7 +188,7 @@ export abstract class LightLayerDeclaration<
 
     // Add to scene
     if (this.raw) {
-      this.view.scenes.light.add(this.raw);
+      this.ctx.scenes.light.add(this.raw);
     }
   }
 

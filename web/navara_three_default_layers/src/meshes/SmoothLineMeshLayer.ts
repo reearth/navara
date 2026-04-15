@@ -1,7 +1,8 @@
+import type ThreeView from "@navara/three";
 import {
   MeshLayerDeclaration,
   type MeshLayerConfig,
-  ViewContext,
+  type ViewContext,
   type MeshLayerUpdate,
 } from "@navara/three";
 
@@ -26,8 +27,12 @@ export class SmoothLineMeshLayer extends MeshLayerDeclaration<
 > {
   private config: SmoothLineMeshLayerConfig;
 
-  constructor(view: ViewContext, config: SmoothLineMeshLayerConfig) {
-    super(view, config);
+  constructor(
+    view: ThreeView,
+    ctx: ViewContext,
+    config: SmoothLineMeshLayerConfig,
+  ) {
+    super(view, ctx, config);
     this.config = config;
   }
 

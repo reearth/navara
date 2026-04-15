@@ -1,6 +1,7 @@
 import type { BaseEventMap } from "@navara/core";
 import { Mesh, type Object3D } from "three";
 
+import type ThreeView from "../index";
 import { arraysEqual } from "../utils";
 
 import {
@@ -38,12 +39,12 @@ export abstract class MeshLayerDeclarationWithSelectiveEffect<
   CustomEvent,
   Instance
 > {
-  private _effectIds: string[] = [];
+  protected _effectIds: string[] = [];
   private _onSlotsChanged = () => this.updateEffectIdsMask();
 
-  constructor(view: ViewContext, config?: Config) {
+  constructor(view: ThreeView, ctx: ViewContext, config?: Config) {
     const resolvedConfig = config ?? ({} as Config);
-    super(view, resolvedConfig);
+    super(view, ctx, resolvedConfig);
     this._effectIds = resolvedConfig.effectIds ?? [];
   }
 
@@ -62,7 +63,7 @@ export abstract class MeshLayerDeclarationWithSelectiveEffect<
     this.updateEffectIdsMask();
 
     // Recompute mask when slot assignments change (effect added/removed)
-    this.view.on("effectSlotsChanged", this._onSlotsChanged);
+    this.ctx.on("effectSlotsChanged", this._onSlotsChanged);
   }
 
   override onUpdateConfig(updates: UpdateConfig): void {
@@ -97,10 +98,11 @@ export abstract class MeshLayerDeclarationWithSelectiveEffect<
   }
 
   /**
-   * Compute effectIdsMask from SelectiveEffectRegistry and set on the mesh's material.
+   * Compute effectIdsMask and set on the mesh's material.
+   * Override this for non-standard mesh structures (e.g., Object3D with child meshes).
    */
   protected updateEffectIdsMask(): void {
-    const registry = this.view.selectiveEffectRegistry;
+    const registry = this.ctx.selectiveEffectRegistry;
     if (!registry) return;
 
     const mask =
@@ -122,7 +124,7 @@ export abstract class MeshLayerDeclarationWithSelectiveEffect<
     this._effectIds = [];
 
     // Unsubscribe from slot changes
-    this.view.off("effectSlotsChanged", this._onSlotsChanged);
+    this.ctx.off("effectSlotsChanged", this._onSlotsChanged);
 
     super.onDestroy();
   }

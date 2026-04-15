@@ -1,3 +1,4 @@
+import type ThreeView from "@navara/three";
 import {
   MeshLayerDeclaration,
   type MeshLayerConfig,
@@ -131,8 +132,8 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
     cameraPositionLow: { value: new Vector3() },
   };
 
-  constructor(view: ViewContext, config: GLTFModelLayerConfig) {
-    super(view, config);
+  constructor(view: ThreeView, ctx: ViewContext, config: GLTFModelLayerConfig) {
+    super(view, ctx, config);
     this.config = {
       ...config,
       gltfModel: {
@@ -252,10 +253,10 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
         // Setup CSM for materials if shadows are enabled
         if (Array.isArray(child.material)) {
           child.material.forEach((mat) => {
-            this.view.applyShadowMaterial(mat);
+            this.ctx.applyShadowMaterial(mat);
           });
         } else {
-          this.view.applyShadowMaterial(child.material);
+          this.ctx.applyShadowMaterial(child.material);
         }
       }
     });
@@ -463,7 +464,7 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
     if (this._instance) {
       this._instance.traverse((child) => {
         if (child instanceof Mesh) {
-          this.view.removeShadowMaterial(child.material);
+          this.ctx.removeShadowMaterial(child.material);
 
           child.geometry.dispose();
           if (child.material) {

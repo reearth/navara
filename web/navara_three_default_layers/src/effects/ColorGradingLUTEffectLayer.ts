@@ -1,3 +1,4 @@
+import type ThreeView from "@navara/three";
 import {
   EffectLayerDeclaration,
   type EffectLayerConfig,
@@ -37,13 +38,17 @@ export class ColorGradingLUTEffectLayer extends EffectLayerDeclaration<
 
   private config: ColorGradingLUTConfig;
 
-  constructor(view: ViewContext, config: ColorGradingLUTConfig) {
-    super(view, config);
+  constructor(
+    view: ThreeView,
+    ctx: ViewContext,
+    config: ColorGradingLUTConfig,
+  ) {
+    super(view, ctx, config);
     this.config = config;
   }
 
   createPass() {
-    const pass = new ColorGradingLUT(this.view.camera, {
+    const pass = new ColorGradingLUT(this.view.camera.raw, {
       ...this.config.colorGradingLUT,
       enabled: this.config.visible ?? true,
     });

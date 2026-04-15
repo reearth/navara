@@ -1,3 +1,4 @@
+import type ThreeView from "@navara/three";
 import {
   EffectLayerDeclaration,
   type EffectLayerConfig,
@@ -26,13 +27,13 @@ export class LensFlareEffectLayer extends EffectLayerDeclaration<
 
   private config: LensFlareConfig;
 
-  constructor(view: ViewContext, config: LensFlareConfig) {
-    super(view, config);
+  constructor(view: ThreeView, ctx: ViewContext, config: LensFlareConfig) {
+    super(view, ctx, config);
     this.config = config;
   }
 
   createPass() {
-    const pass = new LensFlare(this.view.camera, {
+    const pass = new LensFlare(this.view.camera.raw, {
       ...this.config.lensFlare,
       enabled: this.config.visible ?? true,
     });

@@ -7,6 +7,7 @@ import {
   type EffectLayerUpdate,
 } from "../../core/EffectLayerDeclaration";
 import type { ViewContext } from "../../core/ViewContext";
+import type ThreeView from "../../index";
 import { CustomRenderPass } from "../../passes";
 
 type LayerDescription = {
@@ -29,22 +30,22 @@ export class MRTPassEffectLayer extends EffectLayerDeclaration<
 
   private config: MRTPassConfig;
 
-  constructor(view: ViewContext, config: MRTPassConfig) {
-    super(view, config);
+  constructor(view: ThreeView, ctx: ViewContext, config: MRTPassConfig) {
+    super(view, ctx, config);
     this.config = config;
   }
 
   createPass(): CustomRenderPass {
     // Create render pass for MRT scene
-    const scenes = this.view.scenes;
-    const camera = this.view.camera;
+    const scenes = this.ctx.scenes;
+    const camera = this.view.camera.raw;
 
     invariant(this.view.globe);
 
     const pass = new CustomRenderPass(
       scenes,
       camera,
-      this.view.getInputBuffer(),
+      this.ctx.getInputBuffer(),
       this.view.globe,
       {
         debugNormal: !!this.config.mrt?.debugNormal,

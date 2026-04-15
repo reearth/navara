@@ -1,3 +1,4 @@
+import type ThreeView from "@navara/three";
 import {
   Color,
   MeshLayerDeclarationWithSelectiveEffect,
@@ -49,12 +50,16 @@ export class SphereMeshLayer extends MeshLayerDeclarationWithSelectiveEffect<
 > {
   private config: SphereMeshLayerConfig;
 
-  constructor(view: ViewContext, config: SphereMeshLayerConfig) {
+  constructor(
+    view: ThreeView,
+    ctx: ViewContext,
+    config: SphereMeshLayerConfig,
+  ) {
     // Propagate initial effectIds to base MeshLayer
     if (config.sphere?.effectIds) {
       config.effectIds = config.sphere.effectIds;
     }
-    super(view, config);
+    super(view, ctx, config);
     this.config = config;
   }
 
@@ -97,7 +102,7 @@ export class SphereMeshLayer extends MeshLayerDeclarationWithSelectiveEffect<
     mesh.castShadow = cfg.castShadow ?? false;
     mesh.receiveShadow = cfg.receiveShadow ?? false;
 
-    this.view.applyShadowMaterial(material);
+    this.ctx.applyShadowMaterial(material);
 
     return mesh;
   }
@@ -179,7 +184,7 @@ export class SphereMeshLayer extends MeshLayerDeclarationWithSelectiveEffect<
 
   protected disposeMesh(): void {
     if (this._instance) {
-      this.view.removeShadowMaterial(this._instance.material);
+      this.ctx.removeShadowMaterial(this._instance.material);
       this._instance.geometry.dispose();
       this._instance.material.dispose();
 
