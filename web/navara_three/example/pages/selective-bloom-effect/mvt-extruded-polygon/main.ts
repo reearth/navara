@@ -53,7 +53,6 @@ const run = async () => {
       castShadow: true,
       receiveShadow: true,
       effectIds: [bloomEffect.id],
-      emissiveColor: new Color().setHex(0xffffff),
       emissiveIntensity: 0.2,
     },
     vectorTile: { maxZoom: 16 },

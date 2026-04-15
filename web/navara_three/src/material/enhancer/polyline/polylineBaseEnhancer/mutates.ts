@@ -65,7 +65,9 @@ export const createBaseMutates = (useRTE: boolean): PolylineBaseMutates => {
       refs.useGroundNormals.value = state.useGroundNormals;
       refs.nvr_uPickable.value = state.pickable ? 1 : 0;
       refs.uEffectIdsMask.value = state.effectIdsMask;
-      const ec = state.emissiveColor;
+      // Auto-inject albedo when emissiveColor not set but selective effect enabled
+      const useAlbedo = state.emissiveColor === 0 && state.effectIdsMask > 0;
+      const ec = useAlbedo ? state.color : state.emissiveColor;
       refs.uEmissiveColor.value.set(
         ((ec >> 16) & 0xff) / 255,
         ((ec >> 8) & 0xff) / 255,

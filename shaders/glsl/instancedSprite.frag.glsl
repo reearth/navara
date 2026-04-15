@@ -76,7 +76,9 @@ void main() {
 
         #ifdef USE_SELECTIVE_EFFECT
             effectIdBuffer = vec4(uEffectIdsMask, 0.0, 0.0, 1.0);
-            emissiveBuffer = vec4(uEmissiveColor * uEmissiveIntensity, 1.0);
+            vec3 nvr_seEmissive = uEmissiveColor * uEmissiveIntensity;
+            float nvr_hasEmissive = step(0.001, dot(nvr_seEmissive, vec3(1.0)));
+            emissiveBuffer = vec4(mix(color.rgb, nvr_seEmissive, nvr_hasEmissive), 1.0);
         #else
             effectIdBuffer = vec4(0.0);
             emissiveBuffer = vec4(0.0);

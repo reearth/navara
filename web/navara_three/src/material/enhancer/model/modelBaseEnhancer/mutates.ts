@@ -11,6 +11,7 @@ import type { ModelBaseMutates, ModelBaseRefs } from "./types";
 const DEFAULT_BASE_REFS: ModelBaseRefs = {
   nvr_uPickable: { value: 0 },
   uEffectIdsMask: { value: 0 },
+  uEmissiveIntensity: { value: 0 },
 };
 
 /**
@@ -26,11 +27,13 @@ export const createBaseMutates = (): ModelBaseMutates => {
       // Sync refs from state
       refs.nvr_uPickable.value = state.pickable ? 1 : 0;
       refs.uEffectIdsMask.value = state.effectIdsMask;
+      refs.uEmissiveIntensity.value = state.emissiveIntensity;
     },
     updateUniforms: (uniforms) => {
       // Assign core uniform refs to shader.uniforms
       uniforms.nvr_uPickable = refs.nvr_uPickable;
       uniforms.uEffectIdsMask = refs.uEffectIdsMask;
+      uniforms.uEmissiveIntensity = refs.uEmissiveIntensity;
 
       // Batch texture
       if (refs.batchDataTexture) {

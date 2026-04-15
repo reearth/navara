@@ -93,6 +93,7 @@ export type PolygonBaseRefs = {
   uClampToGround: UniformValue<boolean>;
   nvr_uPickable: UniformValue<number>;
   uEffectIdsMask: UniformValue<number>;
+  uEmissiveIntensity: UniformValue<number>;
   uIsTexturized: UniformValue<boolean>;
   reflectivity: UniformValue<number>;
   roughness: UniformValue<number>;
