@@ -1,3 +1,4 @@
+import type ThreeView from "@navara/three";
 import {
   EffectLayerDeclaration,
   type EffectLayerConfig,
@@ -28,8 +29,8 @@ export class FogLightEffectLayer extends EffectLayerDeclaration<
 
   private config: FogLightConfig;
 
-  constructor(view: ViewContext, config: FogLightConfig) {
-    super(view, config);
+  constructor(view: ThreeView, ctx: ViewContext, config: FogLightConfig) {
+    super(view, ctx, config);
     this.config = config;
   }
 
@@ -38,7 +39,7 @@ export class FogLightEffectLayer extends EffectLayerDeclaration<
     invariant(mrtPass?.normalBuffer);
 
     const config = this.config.fogLight ?? {};
-    return new FogLight(this.view.camera, {
+    return new FogLight(this.view.camera.raw, {
       ...config,
       normalBuffer: mrtPass.normalBuffer,
       enabled: this.config.visible ?? true,

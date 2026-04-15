@@ -65,7 +65,7 @@ function floatRgbToRgba(
  */
 export function setupDebugViews(
   renderer: WebGLRenderer,
-  getGbufferRT: () => WebGLRenderTarget | undefined,
+  gbufferRT: WebGLRenderTarget,
 ): {
   views: {
     effectIds: BufferView;
@@ -109,8 +109,6 @@ export function setupDebugViews(
 
   function renderDebugViews() {
     if (!enabled) return;
-    const gbufferRT = getGbufferRT();
-    if (!gbufferRT) return;
     const w = gbufferRT.width;
     const h = gbufferRT.height;
 

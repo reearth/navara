@@ -1,3 +1,4 @@
+import type ThreeView from "@navara/three";
 import {
   EffectLayerDeclaration,
   type EffectLayerConfig,
@@ -25,13 +26,13 @@ export class ToneMappingEffectLayer extends EffectLayerDeclaration<
 
   private config: ToneMappingConfig;
 
-  constructor(view: ViewContext, config: ToneMappingConfig) {
-    super(view, config);
+  constructor(view: ThreeView, ctx: ViewContext, config: ToneMappingConfig) {
+    super(view, ctx, config);
     this.config = config;
   }
 
   createPass() {
-    const pass = new ToneMapping(this.view.camera, {
+    const pass = new ToneMapping(this.view.camera.raw, {
       ...this.config.toneMapping,
       enabled: this.config.visible ?? true,
     });

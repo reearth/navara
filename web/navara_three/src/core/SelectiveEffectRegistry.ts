@@ -19,8 +19,10 @@ export class SelectiveEffectRegistry {
   private freedSlots: number[] = [];
   private nextSlot = 0;
 
-  /** Called when slot assignments change (register/unregister). */
-  onSlotsChanged?: () => void;
+  constructor(
+    /** Called when slot assignments change (register/unregister). */
+    private onSlotsChanged: () => void,
+  ) {}
 
   // ---------------------------------------------------------------------------
   // Slot management

@@ -31,19 +31,19 @@ export class TransparentPassEffectLayer extends EffectLayerDeclaration<
     // Create render pass for transparent objects
     const scene = new Scene();
     scene.add(this.light);
-    scene.add(this.view.scenes.transparent);
+    scene.add(this.ctx.scenes.transparent);
 
-    const camera = this.view.camera;
+    const camera = this.view.camera.raw;
 
     const pass = new RenderPass(scene, camera);
     pass.clear = false;
 
-    this.view.scenes.light.addEventListener("childadded", ({ child }) => {
+    this.ctx.scenes.light.addEventListener("childadded", ({ child }) => {
       const cloned = child.clone(true);
       this.lightsSyncMap.set(child.id, cloned);
       this.light.add(cloned);
     });
-    this.view.scenes.light.addEventListener("childremoved", ({ child }) => {
+    this.ctx.scenes.light.addEventListener("childremoved", ({ child }) => {
       this.light.remove(this.lightsSyncMap.get(child.id));
       this.lightsSyncMap.delete(child.id);
     });
@@ -54,7 +54,7 @@ export class TransparentPassEffectLayer extends EffectLayerDeclaration<
   update(_time: number): void {
     // Sync lights
     let i = 0;
-    for (const child of this.view.scenes.light.children) {
+    for (const child of this.ctx.scenes.light.children) {
       this.light.children[i].copy(child, true);
       i++;
     }

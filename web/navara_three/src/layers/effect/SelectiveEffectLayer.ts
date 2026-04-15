@@ -6,6 +6,7 @@ import {
   type EffectLayerUpdate,
 } from "../../core/EffectLayerDeclaration";
 import type { ViewContext } from "../../core/ViewContext";
+import type ThreeView from "../../index";
 
 import type { MRTPassEffectLayer } from "./MRTPassEffectLayer";
 
@@ -43,8 +44,8 @@ export abstract class SelectiveEffectLayer<
 > extends EffectLayerDeclaration<Config, UpdateConfig> {
   protected config: Config;
 
-  constructor(view: ViewContext, config: Config) {
-    super(view, config);
+  constructor(view: ThreeView, ctx: ViewContext, config: Config) {
+    super(view, ctx, config);
     this.config = config;
   }
 
@@ -52,9 +53,9 @@ export abstract class SelectiveEffectLayer<
   // Public API for Pass classes
   // ---------------------------------------------------------------------------
 
-  /** ViewContext for accessing camera, scenes, renderer, registry, etc. */
+  /** ViewContext for accessing scenes, renderer, registry, etc. */
   public get viewContext(): ViewContext {
-    return this.view;
+    return this.ctx;
   }
 
   /** Layer configuration (typed per subclass). */
@@ -67,7 +68,7 @@ export abstract class SelectiveEffectLayer<
   // ---------------------------------------------------------------------------
 
   onCreate(): void {
-    const registry = this.view.selectiveEffectRegistry;
+    const registry = this.ctx.selectiveEffectRegistry;
     if (!registry) {
       throw new Error(
         "SelectiveEffectRegistry not initialized. Ensure MRTPassEffectLayer is added before selective effect layers.",
@@ -81,7 +82,7 @@ export abstract class SelectiveEffectLayer<
   }
 
   onDestroy(): void {
-    const registry = this.view.selectiveEffectRegistry;
+    const registry = this.ctx.selectiveEffectRegistry;
 
     // Release slot bit in the EffectIds Buffer
     registry?.unregisterSlot(this.id);
@@ -107,6 +108,6 @@ export abstract class SelectiveEffectLayer<
 
   /** Slot bit index for this effect instance in the EffectIds Buffer. -1 if unregistered. */
   public getEffectSlot(): number {
-    return this.view.selectiveEffectRegistry?.getSlot(this.id) ?? -1;
+    return this.ctx.selectiveEffectRegistry?.getSlot(this.id) ?? -1;
   }
 }

@@ -1,3 +1,4 @@
+import type ThreeView from "@navara/three";
 import {
   Color,
   InstancedMeshLayerDeclaration,
@@ -64,12 +65,16 @@ export class InstancedBoxMeshLayer extends InstancedMeshLayerDeclaration<
 > {
   private config: InstancedBoxMeshLayerConfig;
 
-  constructor(view: ViewContext, config: InstancedBoxMeshLayerConfig) {
+  constructor(
+    view: ThreeView,
+    ctx: ViewContext,
+    config: InstancedBoxMeshLayerConfig,
+  ) {
     // Propagate effectIds to base class
     if (config.boxes?.effectIds) {
       config.effectIds = config.boxes.effectIds;
     }
-    super(view, config);
+    super(view, ctx, config);
     this.config = config;
   }
 
@@ -127,7 +132,7 @@ export class InstancedBoxMeshLayer extends InstancedMeshLayerDeclaration<
     if (mesh) {
       mesh.castShadow = cfg?.castShadow ?? false;
       mesh.receiveShadow = cfg?.receiveShadow ?? false;
-      this.view.applyShadowMaterial(mesh.material);
+      this.ctx.applyShadowMaterial(mesh.material);
     }
   }
 
@@ -182,7 +187,7 @@ export class InstancedBoxMeshLayer extends InstancedMeshLayerDeclaration<
 
   override onDestroy(): void {
     if (this.raw) {
-      this.view.removeShadowMaterial(this.raw.material);
+      this.ctx.removeShadowMaterial(this.raw.material);
     }
     super.onDestroy();
   }

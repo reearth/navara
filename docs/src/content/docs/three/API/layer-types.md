@@ -399,8 +399,8 @@ class MyBoxLayer extends LayerDeclaration<MyBoxConfig, MyBoxConfig, Mesh> {
   private size: number;
   private color: number;
 
-  constructor(view: ViewContext, config: MyBoxConfig) {
-    super(view, config);
+  constructor(view: ThreeView, ctx: ViewContext, config: MyBoxConfig) {
+    super(view, ctx, config);
     this.size = config.size ?? 1;
     this.color = config.color ?? 0xff0000;
   }
@@ -409,7 +409,7 @@ class MyBoxLayer extends LayerDeclaration<MyBoxConfig, MyBoxConfig, Mesh> {
     const geometry = new BoxGeometry(this.size, this.size, this.size);
     const material = new MeshBasicMaterial({ color: this.color });
     this._instance = new Mesh(geometry, material);
-    this.view.scenes.opaque.add(this._instance);
+    this.ctx.scenes.opaque.add(this._instance);
   }
 
   onUpdateConfig(updates: MyBoxConfig) {
@@ -422,7 +422,7 @@ class MyBoxLayer extends LayerDeclaration<MyBoxConfig, MyBoxConfig, Mesh> {
 
   onDestroy() {
     if (this._instance) {
-      this.view.scenes.opaque.remove(this._instance);
+      this.ctx.scenes.opaque.remove(this._instance);
       this._instance.geometry.dispose();
       (this._instance.material as MeshBasicMaterial).dispose();
     }

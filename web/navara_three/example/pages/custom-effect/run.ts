@@ -136,14 +136,14 @@ class VignetteEffectLayer extends EffectLayerDeclaration<
 
   private config: VignetteEffectConfig;
 
-  constructor(view: ViewContext, config: VignetteEffectConfig) {
-    super(view, config);
+  constructor(view: ThreeView, ctx: ViewContext, config: VignetteEffectConfig) {
+    super(view, ctx, config);
     this.config = config;
   }
 
   // Factory method to create the effect instance
   createPass() {
-    const camera = this.view.camera;
+    const camera = this.view.camera.raw;
 
     if (!camera) {
       throw new Error("Camera not available for Vignette effect");

@@ -14,7 +14,7 @@ import {
   DefaultPlugin,
   type DefaultLayerDescriptions,
 } from "@navara/three_default_plugin";
-import { Vector3, type WebGLRenderer } from "three";
+import { Vector3 } from "three";
 import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../../helpers/attributions";
@@ -24,11 +24,13 @@ import {
   TERRAIN_DATASETS,
 } from "../../../helpers/constants";
 
-import { setupDebugViews } from "./debugView";
+import { DebugPlugin } from "./DebugPlugin";
 
 export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
   const plugin = new DefaultPlugin();
+  const debugPlugin = new DebugPlugin();
   view.addPlugin(plugin);
+  view.addPlugin(debugPlugin);
   await view.init();
 
   // Camera: Tokyo Station area
@@ -168,24 +170,6 @@ export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
     TILES_3D_DATASETS.plateauChuo,
   ]);
 
-  // --- SE Buffer Debug View ---
-  const renderer =
-    view.renderPassOrchestrator.effectComposer.getRenderer() as WebGLRenderer;
-  const debugView = setupDebugViews(
-    renderer,
-    () => view.mrtPassLayer.ref.raw?.gbufferRenderTarget,
-  );
-
-  // Hook into CustomRenderPass.render (gbufferRT is only readable right after)
-  const customRenderPass = view.mrtPassLayer.ref.raw;
-  if (customRenderPass) {
-    const origRender = customRenderPass.render.bind(customRenderPass);
-    customRenderPass.render = (...args: Parameters<typeof origRender>) => {
-      origRender(...args);
-      debugView.renderDebugViews();
-    };
-  }
-
   // --- Debug Controls ---
   const pane = new Pane({ title: "Selective Effect Debug" });
 
@@ -193,7 +177,7 @@ export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
   pane
     .addBinding(debugParams, "debugView", { label: "SE Buffer Debug" })
     .on("change", (ev) => {
-      debugView.setEnabled(ev.value);
+      debugPlugin.setEnabled(ev.value);
     });
 
   // --- Effect Layer Controls ---

@@ -11,83 +11,92 @@ In navara_three, you can implement your own mesh, effect, and light layers. For 
 
 Depending on the layer type, you inherit from the corresponding base class to implement your layer.
 
-| Layer Type | Base Class               | Factory Method     | Registration Method         |
-| ---------- | ------------------------ | ------------------ | --------------------------- |
-| Mesh           | `MeshLayerDeclaration`            | `createMesh()`                          | `view.registerMesh()`       |
-| Instanced Mesh | `InstancedMeshLayerDeclaration`   | `createGeometry()` + `createMaterial()` | `view.registerMesh()`       |
-| Effect         | `EffectLayerDeclaration`          | `createPass()`                          | `view.registerEffect()`     |
-| Light          | `LightLayerDeclaration`           | `createLight()`                         | `view.registerLight()`      |
+| Layer Type     | Base Class                      | Factory Method                          | Registration Method     |
+| -------------- | ------------------------------- | --------------------------------------- | ----------------------- |
+| Mesh           | `MeshLayerDeclaration`          | `createMesh()`                          | `view.registerMesh()`   |
+| Instanced Mesh | `InstancedMeshLayerDeclaration` | `createGeometry()` + `createMaterial()` | `view.registerMesh()`   |
+| Effect         | `EffectLayerDeclaration`        | `createPass()`                          | `view.registerEffect()` |
+| Light          | `LightLayerDeclaration`         | `createLight()`                         | `view.registerLight()`  |
 
 All base classes inherit from `LayerDeclaration` and share a common lifecycle.
 
 ## Common Lifecycle
 
-| Method                      | Timing                               | Description                                                                                    |
-| --------------------------- | ------------------------------------ | ---------------------------------------------------------------------------------------------- |
-| `constructor(view, config)` | When the layer is created            | Receives the ViewContext and configuration                                                     |
-| `onCreate()`                | When `addLayer()` is called          | Calls the factory method to create an instance and adds it to the scene. Implemented by the base class |
-| `onUpdateConfig(updates)`   | When `handle.update()` is called     | Processes partial configuration updates                                                        |
-| `onDestroy()`               | When `handle.delete()` is called     | Releases resources and removes from the scene                                                  |
-| `update(time)`              | Every frame (optional)               | Animation processing. Only called if implemented                                               |
-| `onResize(width, height)`   | On viewport resize (optional)        | Mesh layers only. Only called if implemented                                                   |
+| Method                           | Timing                           | Description                                                                                            |
+| -------------------------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `constructor(view, ctx, config)` | When the layer is created        | Receives the ThreeView, ViewContext, and configuration                                                 |
+| `onCreate()`                     | When `addLayer()` is called      | Calls the factory method to create an instance and adds it to the scene. Implemented by the base class |
+| `onUpdateConfig(updates)`        | When `handle.update()` is called | Processes partial configuration updates                                                                |
+| `onDestroy()`                    | When `handle.delete()` is called | Releases resources and removes from the scene                                                          |
+| `update(time)`                   | Every frame (optional)           | Animation processing. Only called if implemented                                                       |
+| `onResize(width, height)`        | On viewport resize (optional)    | Mesh layers only. Only called if implemented                                                           |
 
 ## Common Properties
 
-| Property    | Type                    | Description                                                    |
-| ----------- | ----------------------- | -------------------------------------------------------------- |
-| `view`      | `ViewContext`           | Context providing access to the scene, camera, atmosphere, etc. |
-| `_instance` | `Instance \| undefined` | The created Three.js object                                    |
-| `id`        | `string`                | Unique identifier of the layer                                 |
-| `visible`   | `boolean`               | Show/hide                                                      |
+| Property    | Type                    | Description                                                                                |
+| ----------- | ----------------------- | ------------------------------------------------------------------------------------------ |
+| `view`      | `ThreeView`             | The ThreeView instance providing access to camera, atmosphere, globe, and other view state |
+| `ctx`       | `ViewContext`           | The view context providing access to scenes, passes, and rendering internals               |
+| `_instance` | `Instance \| undefined` | The created Three.js object                                                                |
+| `id`        | `string`                | Unique identifier of the layer                                                             |
+| `visible`   | `boolean`               | Show/hide                                                                                  |
 
-### ViewContext
+### view and ctx
 
-You can access the scene, camera, and rendering APIs through `this.view`.
+Custom layers access internal APIs through two properties: `this.view` and `this.ctx`.
 
-#### Properties
+- **`this.view`** (`ThreeView`) — High-level view state: camera, atmosphere, globe
+- **`this.ctx`** (`ViewContext`) — Rendering internals: scenes, post-processing passes, buffers, textures
 
-| Property             | Description                                       |
-| -------------------- | ------------------------------------------------- |
-| `view.scenes.opaque`      | Scene for opaque objects                     |
-| `view.scenes.transparent` | Scene for transparent objects                |
-| `view.scenes.mrt`         | Scene for selective effects (Bloom / Outline)|
-| `view.scenes.skyEnvMap`   | Scene for environment maps                   |
-| `view.scenes.light`       | Scene for lights                             |
-| `view.scenes.draped`      | Scene for terrain-draped meshes              |
-| `view.camera`             | PerspectiveCamera                            |
-| `view.atmosphere`         | Atmosphere (sun direction, time of day, etc.)|
-| `view.globe`              | Globe instance (if set)                      |
+#### view Properties
+
+See [ThreeView Properties](../../../three/api/threeview-properties/).
+
+#### ctx Properties
+
+| Property                 | Description                                   |
+| ------------------------ | --------------------------------------------- |
+| `ctx.scenes.opaque`      | Scene for opaque objects                      |
+| `ctx.scenes.transparent` | Scene for transparent objects                 |
+| `ctx.scenes.mrt`         | Scene for selective effects (Bloom / Outline) |
+| `ctx.scenes.skyEnvMap`   | Scene for environment maps                    |
+| `ctx.scenes.light`       | Scene for lights                              |
+| `ctx.scenes.draped`      | Scene for terrain-draped meshes               |
 
 #### Pass Management
 
-| Method                                                 | Description                                        |
-| ------------------------------------------------------ | -------------------------------------------------- |
-| `view.getPass(name)`                                   | Get a post-processing pass by name                 |
-| `view.addPass(name, pass)`                             | Add a post-processing pass                         |
-| `view.insertPassBefore(targetName, name, pass)`        | Insert a pass before the target pass               |
-| `view.insertPassAfter(targetName, name, pass)`         | Insert a pass after the target pass                |
-| `view.removePass(name)`                                | Remove a post-processing pass by name              |
+| Method                                         | Description                           |
+| ---------------------------------------------- | ------------------------------------- |
+| `ctx.getPass(name)`                            | Get a post-processing pass by name    |
+| `ctx.addPass(name, pass)`                      | Add a post-processing pass            |
+| `ctx.insertPassBefore(targetName, name, pass)` | Insert a pass before the target pass  |
+| `ctx.insertPassAfter(targetName, name, pass)`  | Insert a pass after the target pass   |
+| `ctx.removePass(name)`                         | Remove a post-processing pass by name |
 
 #### Renderer Access
 
-| Method                  | Description                                         |
-| ----------------------- | --------------------------------------------------- |
-| `view.getRenderer()`    | Get the WebGLRenderer instance                      |
-| `view.getInputBuffer()` | Get the input buffer from the effect composer        |
+| Method                 | Description                                   |
+| ---------------------- | --------------------------------------------- |
+| `ctx.getRenderer()`    | Get the WebGLRenderer instance                |
+| `ctx.getInputBuffer()` | Get the input buffer from the effect composer |
+
+#### Buffer / Texture Access
+
+| Method                        | Description                                      |
+| ----------------------------- | ------------------------------------------------ |
+| `ctx.getRenderTarget()`       | Get the main render target (includes G-buffer)   |
+| `ctx.getGlobeDepthTexture()`  | Get the globe depth texture for post-processing  |
+| `ctx.getGlobeNormalTexture()` | Get the globe normal texture for post-processing |
+| `ctx.getNormalTexture()`      | Get the scene normal texture from the G-buffer   |
+| `ctx.getEffectIdsTexture()`   | Get the effect IDs texture from the G-buffer     |
+| `ctx.getEmissiveTexture()`    | Get the emissive texture from the G-buffer       |
 
 #### Shadow (Experimental)
 
-| Method                                | Description                                        |
-| ------------------------------------- | -------------------------------------------------- |
-| `view.applyShadowMaterial(material)`  | Apply CSM shadows to a material                    |
-| `view.removeShadowMaterial(material)` | Remove CSM shadows from a material                 |
-
-#### Selective Effects
-
-| Method                                                        | Description                                                   |
-| ------------------------------------------------------------- | ------------------------------------------------------------- |
-| `view.applyEffectToObject(object, effectIds, layerId?)`       | Apply selective effects (Bloom, Outline) to an Object3D       |
-| `view.removeEffectFromObject(object, effectIds?)`             | Remove selective effects from an Object3D                     |
+| Method                               | Description                        |
+| ------------------------------------ | ---------------------------------- |
+| `ctx.applyShadowMaterial(material)`  | Apply CSM shadows to a material    |
+| `ctx.removeShadowMaterial(material)` | Remove CSM shadows from a material |
 
 ## Custom Mesh Layer
 
@@ -121,29 +130,29 @@ type MyMeshUpdate = MeshLayerUpdate & MyMeshDescription;
 
 `MeshLayerDeclaration` automatically handles the application of the following properties:
 
-| Property   | Type           | Description                       |
-| ---------- | ------------- | --------------------------------- |
+| Property   | Type          | Description                            |
+| ---------- | ------------- | -------------------------------------- |
 | `position` | `{ x, y, z }` | Position in the ECEF coordinate system |
-| `scale`    | `{ x, y, z }` | Scale                             |
-| `rotation` | `{ x, y, z }` | Rotation (Euler angles, radians)  |
-| `visible`  | `boolean`     | Show/hide                         |
+| `scale`    | `{ x, y, z }` | Scale                                  |
+| `rotation` | `{ x, y, z }` | Rotation (Euler angles, radians)       |
+| `visible`  | `boolean`     | Show/hide                              |
 
 ### Specifying the Render Pass
 
 You can override `getPassKey()` to change the scene where the mesh is rendered.
 
-| PassKey         | Description                                 |
-| --------------- | ------------------------------------------- |
-| `"opaque"`      | Opaque rendering (default)                  |
-| `"transparent"` | Transparent rendering                       |
-| `"mrt"`         | For selective effects (Bloom / Outline)     |
-| `"skyEnvMap"`   | For environment maps                        |
-| `"draped"`      | For terrain-draped rendering                |
+| PassKey         | Description                             |
+| --------------- | --------------------------------------- |
+| `"opaque"`      | Opaque rendering (default)              |
+| `"transparent"` | Transparent rendering                   |
+| `"mrt"`         | For selective effects (Bloom / Outline) |
+| `"skyEnvMap"`   | For environment maps                    |
+| `"draped"`      | For terrain-draped rendering            |
 
 ### Implementation Example
 
 ```typescript
-import {
+import ThreeView, {
   MeshLayerDeclaration,
   type MeshLayerConfig,
   type MeshLayerUpdate,
@@ -174,8 +183,8 @@ export class MySphereMeshLayer extends MeshLayerDeclaration<
 > {
   private config: MySphereMeshConfig;
 
-  constructor(view: ViewContext, config: MySphereMeshConfig) {
-    super(view, config);
+  constructor(view: ThreeView, ctx: ViewContext, config: MySphereMeshConfig) {
+    super(view, ctx, config);
     this.config = config;
   }
 
@@ -191,7 +200,7 @@ export class MySphereMeshLayer extends MeshLayerDeclaration<
     // Enable shadows if configured
     if (cfg.castShadow) {
       mesh.castShadow = true;
-      this.view.applyShadowMaterial(material);
+      this.ctx.applyShadowMaterial(material);
     }
 
     return mesh;
@@ -282,44 +291,44 @@ class MyInstancedLayer extends InstancedMeshLayerDeclaration<
 
 Common transform fields for individual instances:
 
-| Property   | Type       | Description                                                      |
-| ---------- | ---------- | ---------------------------------------------------------------- |
-| `position` | `XYZ`      | Local position relative to the parent group                      |
-| `rotation` | `XYZ`      | Local rotation (Euler angles in radians)                         |
-| `scale`    | `XYZ`      | Local scale                                                      |
-| `matrix`   | `Matrix4`  | Pre-computed transform matrix. When set, position/rotation/scale are ignored |
+| Property   | Type      | Description                                                                  |
+| ---------- | --------- | ---------------------------------------------------------------------------- |
+| `position` | `XYZ`     | Local position relative to the parent group                                  |
+| `rotation` | `XYZ`     | Local rotation (Euler angles in radians)                                     |
+| `scale`    | `XYZ`     | Local scale                                                                  |
+| `matrix`   | `Matrix4` | Pre-computed transform matrix. When set, position/rotation/scale are ignored |
 
 ### Abstract Methods
 
-| Method | Return Type | Description |
-| ------ | ----------- | ----------- |
-| `createGeometry()` | `TGeometry` | Create the shared geometry for all instances |
-| `createMaterial()` | `TMaterial` | Create the shared material for all instances |
-| `getChildConfigs()` | `ChildConfig[]` | Extract the initial array of instance configs from the layer config |
-| `getInstanceColor(config)` | `ThreeColor \| undefined` | Extract the per-instance color, or undefined for default white |
+| Method                     | Return Type               | Description                                                         |
+| -------------------------- | ------------------------- | ------------------------------------------------------------------- |
+| `createGeometry()`         | `TGeometry`               | Create the shared geometry for all instances                        |
+| `createMaterial()`         | `TMaterial`               | Create the shared material for all instances                        |
+| `getChildConfigs()`        | `ChildConfig[]`           | Extract the initial array of instance configs from the layer config |
+| `getInstanceColor(config)` | `ThreeColor \| undefined` | Extract the per-instance color, or undefined for default white      |
 
 ### Optional Override Methods
 
-| Method | Description |
-| ------ | ----------- |
+| Method                             | Description                                                                                                 |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | `getInstanceScale(config, target)` | Compute per-instance scale. Override to incorporate geometry-specific dimensions (e.g., width/height/depth) |
-| `composeInstanceMatrix(config)` | Compose the transform matrix for one instance. Override for custom transform logic |
+| `composeInstanceMatrix(config)`    | Compose the transform matrix for one instance. Override for custom transform logic                          |
 
 ### Instance Management Methods
 
-| Method | Signature | Description |
-| ------ | --------- | ----------- |
-| `add(config)` | `(config: ChildConfig) => number` | Add a new instance. Returns the index |
-| `removeAt(index)` | `(index: number) => void` | Remove by index (swap-with-last, O(1)) |
-| `updateAt(index, config)` | `(index: number, config: Partial<ChildConfig>) => void` | Update an instance at the given index |
-| `clear()` | `() => void` | Remove all instances |
-| `replaceAll(configs)` | `(configs: ChildConfig[]) => void` | Batch replace all instances (single update) |
-| `count` | `number` (getter) | Number of active instances |
+| Method                    | Signature                                               | Description                                 |
+| ------------------------- | ------------------------------------------------------- | ------------------------------------------- |
+| `add(config)`             | `(config: ChildConfig) => number`                       | Add a new instance. Returns the index       |
+| `removeAt(index)`         | `(index: number) => void`                               | Remove by index (swap-with-last, O(1))      |
+| `updateAt(index, config)` | `(index: number, config: Partial<ChildConfig>) => void` | Update an instance at the given index       |
+| `clear()`                 | `() => void`                                            | Remove all instances                        |
+| `replaceAll(configs)`     | `(configs: ChildConfig[]) => void`                      | Batch replace all instances (single update) |
+| `count`                   | `number` (getter)                                       | Number of active instances                  |
 
 ### Implementation Example
 
 ```typescript
-import {
+import ThreeView, {
   InstancedMeshLayerDeclaration,
   type InstancedMeshLayerConfig,
   type InstancedMeshLayerUpdate,
@@ -355,8 +364,8 @@ export class MyBoxesLayer extends InstancedMeshLayerDeclaration<
 > {
   private config: MyBoxesConfig;
 
-  constructor(view: ViewContext, config: MyBoxesConfig) {
-    super(view, config);
+  constructor(view: ThreeView, ctx: ViewContext, config: MyBoxesConfig) {
+    super(view, ctx, config);
     this.config = config;
   }
 
@@ -424,19 +433,19 @@ class MyEffectLayer extends EffectLayerDeclaration<
 
 Effect layers have static properties that control their insertion position within the render pipeline.
 
-| Property           | Type       | Description                                                                              |
-| ------------------ | ---------- | ---------------------------------------------------------------------------------------- |
-| `key`              | `string`   | **Required**. Unique key name for the effect                                             |
-| `insertAfter`      | `string[]` | Insert after the specified effects (preferred)                                           |
-| `insertBefore`     | `string[]` | Insert before the specified effects (fallback if `insertAfter` targets are not found)    |
-| `allowDuplication` | `boolean`  | Whether to allow multiple instances of the same effect                                   |
+| Property           | Type       | Description                                                                           |
+| ------------------ | ---------- | ------------------------------------------------------------------------------------- |
+| `key`              | `string`   | **Required**. Unique key name for the effect                                          |
+| `insertAfter`      | `string[]` | Insert after the specified effects (preferred)                                        |
+| `insertBefore`     | `string[]` | Insert before the specified effects (fallback if `insertAfter` targets are not found) |
+| `allowDuplication` | `boolean`  | Whether to allow multiple instances of the same effect                                |
 
 The insertion order is determined by priority: `insertAfter` -> `insertBefore` -> append to end.
 
 ### Implementation Example
 
 ```typescript
-import {
+import ThreeView, {
   EffectLayerDeclaration,
   type EffectLayerConfig,
   type EffectLayerUpdate,
@@ -463,8 +472,8 @@ export class MyEffectLayer extends EffectLayerDeclaration<
 
   private config: MyEffectConfig;
 
-  constructor(view: ViewContext, config: MyEffectConfig) {
-    super(view, config);
+  constructor(view: ThreeView, ctx: ViewContext, config: MyEffectConfig) {
+    super(view, ctx, config);
     this.config = config;
   }
 
@@ -513,17 +522,17 @@ class MyLightLayer extends LightLayerDeclaration<
 
 ### Properties Managed by the Base Class
 
-| Property   | Type           | Description        |
-| ---------- | ------------- | ------------------ |
-| `position` | `{ x, y, z }` | Light position     |
-| `visible`  | `boolean`     | Show/hide          |
+| Property   | Type          | Description    |
+| ---------- | ------------- | -------------- |
+| `position` | `{ x, y, z }` | Light position |
+| `visible`  | `boolean`     | Show/hide      |
 
-Lights are automatically added to the `view.scenes.light` scene.
+Lights are automatically added to the `ctx.scenes.light` scene.
 
 ### Implementation Example
 
 ```typescript
-import {
+import ThreeView, {
   LightLayerDeclaration,
   type LightLayerConfig,
   type LightLayerUpdate,
@@ -549,8 +558,8 @@ export class MyPointLightLayer extends LightLayerDeclaration<
 > {
   private config: MyPointLightConfig;
 
-  constructor(view: ViewContext, config: MyPointLightConfig) {
-    super(view, config);
+  constructor(view: ThreeView, ctx: ViewContext, config: MyPointLightConfig) {
+    super(view, ctx, config);
     this.config = config;
   }
 
@@ -586,13 +595,13 @@ export class MyPointLightLayer extends LightLayerDeclaration<
 
 The `LayerHandle<T>` returned from `view.addLayer()` is a handle for controlling the layer.
 
-| Property / Method   | Type      | Description                                  |
-| ------------------- | --------- | -------------------------------------------- |
-| `id`                | `string`  | Unique identifier of the layer               |
-| `visible`           | `boolean` | Get/set show/hide                            |
-| `ref`               | `T`       | Direct access to the base layer instance     |
-| `update(updates)`   | `void`    | Partial configuration update                 |
-| `delete()`          | `void`    | Delete the layer. Calls `onDestroy()`        |
+| Property / Method | Type      | Description                              |
+| ----------------- | --------- | ---------------------------------------- |
+| `id`              | `string`  | Unique identifier of the layer           |
+| `visible`         | `boolean` | Get/set show/hide                        |
+| `ref`             | `T`       | Direct access to the base layer instance |
+| `update(updates)` | `void`    | Partial configuration update             |
+| `delete()`        | `void`    | Delete the layer. Calls `onDestroy()`    |
 
 ## Related Resources
 

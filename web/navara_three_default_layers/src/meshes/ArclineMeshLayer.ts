@@ -1,3 +1,4 @@
+import type ThreeView from "@navara/three";
 import {
   MeshLayerDeclaration,
   type MeshLayerConfig,
@@ -23,8 +24,12 @@ export class ArclineMeshLayer extends MeshLayerDeclaration<
 > {
   private config: ArclineMeshLayerConfig;
 
-  constructor(view: ViewContext, config: ArclineMeshLayerConfig) {
-    super(view, config);
+  constructor(
+    view: ThreeView,
+    ctx: ViewContext,
+    config: ArclineMeshLayerConfig,
+  ) {
+    super(view, ctx, config);
     this.config = config;
   }
 

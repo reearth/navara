@@ -25,7 +25,7 @@ export class FXAAEffectLayer extends EffectLayerDeclaration<
   static insertBefore = ["final"];
 
   createPass() {
-    const camera = this.view.camera;
+    const camera = this.view.camera.raw;
 
     if (!camera) {
       throw new Error("Camera not available for FXAA effect");
