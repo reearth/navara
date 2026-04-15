@@ -80,7 +80,7 @@ export class CustomRenderPass extends RenderPass {
     effectIdsTexture.magFilter = NearestFilter;
     effectIdsTexture.generateMipmaps = false;
     this.gbufferRenderTarget.textures.push(effectIdsTexture);
-    // attachment 3: emissive buffer (RGB=color×intensity pre-multiplied by Three.js, A=unused)
+    // attachment 3: emissive buffer (RGB=diffuseColor×intensity+emissive additive, A=unused)
     // HalfFloatType preserves HDR emissive values for bloom extraction.
     const emissiveTexture = this.gbufferRenderTarget.texture.clone();
     emissiveTexture.type = HalfFloatType;

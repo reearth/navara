@@ -109,7 +109,7 @@ function injectGBuffer(
     //   location 0: gl_FragColor (color)
     //   location 1: normalBuffer (normal + material props)
     //   location 2: effectIdBuffer (effectIds: R=bitmask)       — SelectiveEffect only
-    //   location 3: emissiveBuffer (emissive: RGB=emissive or diffuseColor×intensity fallback, A=unused) — SelectiveEffect only
+    //   location 3: emissiveBuffer (emissive: RGB=diffuseColor×intensity+emissive additive, A=unused) — SelectiveEffect only
     #ifndef USE_SHADOWMAP_DEPTH
       layout(location = 1) out vec4 normalBuffer;
       layout(location = 2) out vec4 effectIdBuffer;
@@ -139,8 +139,7 @@ function injectGBuffer(
 
             #ifdef USE_SELECTIVE_EFFECT
               effectIdBuffer = vec4(uEffectIdsMask, 0.0, 0.0, 1.0);
-              float nvr_hasEmissive = step(0.001, dot(emissive, vec3(1.0)));
-              emissiveBuffer = vec4(mix(diffuseColor.rgb * uEmissiveIntensity, emissive, nvr_hasEmissive), 1.0);
+              emissiveBuffer = vec4(diffuseColor.rgb * uEmissiveIntensity + emissive, 1.0);
             #else
               effectIdBuffer = vec4(0.0);
               emissiveBuffer = vec4(0.0);
@@ -296,7 +295,7 @@ function injectGBufferToShaderMaterial(
 
             #ifdef USE_SELECTIVE_EFFECT
               effectIdBuffer = vec4(uEffectIdsMask, 0.0, 0.0, 1.0);
-              emissiveBuffer = vec4(uEmissiveColor * uEmissiveIntensity, 1.0);
+              emissiveBuffer = vec4((gl_FragColor.rgb + uEmissiveColor) * uEmissiveIntensity, 1.0);
             #else
               effectIdBuffer = vec4(0.0);
               emissiveBuffer = vec4(0.0);
@@ -315,7 +314,8 @@ function injectGBufferToShaderMaterial(
 
 // Override ShaderMaterial for MRT G-Buffer output.
 // Injects normalBuffer, effectIdBuffer, emissiveBuffer outputs and logdepthbuf modules.
-// When USE_SELECTIVE_EFFECT is defined, outputs effectIdsMask (emissive handled by user shader).
+// When USE_SELECTIVE_EFFECT is defined, outputs effectIdsMask and emissive
+// using additive blend: (gl_FragColor.rgb + uEmissiveColor) × uEmissiveIntensity.
 // Requires a `normal` variable in the shader.
 export function overrideShaderMaterialForMRT(
   material: ShaderMaterial,

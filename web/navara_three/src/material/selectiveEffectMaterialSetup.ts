@@ -5,7 +5,7 @@ const SELECTIVE_EFFECT_SETUP = Symbol("SELECTIVE_EFFECT_SETUP");
 /**
  * Set up Selective Effect defines and uniforms on a standard Three.js material.
  * Sets USE_SELECTIVE_EFFECT define so the MRT shader writes effectIds + emissive.
- * When emissiveColor is not set, the MRT shader falls back to diffuseColor × emissiveIntensity.
+ * Emissive output uses additive blend: diffuseColor × emissiveIntensity + emissive.
  * Used by non-enhancer meshes (Box, Sphere, etc.).
  *
  * Idempotent — calling multiple times on the same material is safe (no-op after first call).
