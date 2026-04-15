@@ -13,6 +13,8 @@ Navara uses a plugin system to register layer types. Before calling `init()`, yo
 
 You can also create your own mesh layers, effect layers, and light layers with full access to the Three.js scene graph. This is the same mechanism that powers Navara's built-in layers. For details, see the [Custom Layer](../../../three/Core/custom-layer/) documentation.
 
+In addition to these, Navara provides [resource layers](../../../three/Resource%20Layer/about/) for loading and displaying geographic data such as GeoJSON, MVT, and 3D Tiles. Resource layers handle the complexity of features and their attributes — parsing, spatial indexing, and attribute-based styling through [`FeatureEvaluator`](../../../three/API/feature-evaluator/). Mesh layers, on the other hand, deal only with geometry and rendering, which allows them to be optimized purely for draw performance and is suited for rendering large numbers of objects efficiently. This separation lets you choose the right tool for each use case. For more on layer types, see [About Layer](../../../three/Introduction/about-layer/).
+
 ```mermaid
 sequenceDiagram
   participant App as Application
