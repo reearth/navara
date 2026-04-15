@@ -1,3 +1,4 @@
+import type ThreeView from "@navara/three";
 import {
   EffectLayerDeclaration,
   type EffectLayerConfig,
@@ -30,8 +31,12 @@ export class AerialPerspectiveEffectLayer extends EffectLayerDeclaration<
 
   private config: AerialPerspectiveConfig;
 
-  constructor(view: ViewContext, config: AerialPerspectiveConfig) {
-    super(view, config);
+  constructor(
+    view: ThreeView,
+    ctx: ViewContext,
+    config: AerialPerspectiveConfig,
+  ) {
+    super(view, ctx, config);
     this.config = config;
   }
 
@@ -41,7 +46,7 @@ export class AerialPerspectiveEffectLayer extends EffectLayerDeclaration<
 
     const pass = new AerialPerspective(
       this.view.atmosphere,
-      this.view.camera,
+      this.view.camera.raw,
       mrtPass.normalBuffer,
       {
         ...this.config.aerialPerspective,

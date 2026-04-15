@@ -1,3 +1,4 @@
+import type ThreeView from "@navara/three";
 import {
   LightLayerDeclaration,
   type LightLayerConfig,
@@ -25,8 +26,12 @@ export class LightProbeLayer extends LightLayerDeclaration<
 > {
   private config: LightProbeLayerConfig;
 
-  constructor(view: ViewContext, config: LightProbeLayerConfig) {
-    super(view, config);
+  constructor(
+    view: ThreeView,
+    ctx: ViewContext,
+    config: LightProbeLayerConfig,
+  ) {
+    super(view, ctx, config);
     this.config = config;
   }
 

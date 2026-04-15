@@ -1,3 +1,5 @@
+import type ThreeView from "../index";
+
 import type { ViewContext } from "./ViewContext";
 
 /**
@@ -11,7 +13,10 @@ export abstract class LayerRegistry<
 > {
   protected registry = new Map<string, TConstructor>();
 
-  constructor(public view: ViewContext) {}
+  constructor(
+    public view: ThreeView,
+    public ctx: ViewContext,
+  ) {}
 
   /**
    * Register a new type with the given name and constructor

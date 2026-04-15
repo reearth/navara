@@ -81,9 +81,3 @@ layer.on("featureUpdated", (evaluator) => {
   });
 });
 ```
-
-## navara_three is Recommended For
-
-- Those who want to build web-based 3D map applications
-- Those who want to handle complex GIS data with a concise API
-- Those who want to achieve rich map expressions leveraging the Three.js ecosystem

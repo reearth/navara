@@ -97,7 +97,10 @@ const gPopup = new FloatingDialog();
 
 export type LayerDescriptions = DefaultLayerDescriptions;
 
-export const run = async (view: ThreeView<LayerDescriptions>) => {
+export const run = async (
+  view: ThreeView<LayerDescriptions>,
+  canvas: HTMLCanvasElement,
+) => {
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
   await view.init();
@@ -174,10 +177,10 @@ export const run = async (view: ThreeView<LayerDescriptions>) => {
   addRunningObject(view);
 
   // add a ball following mouse position
-  testScreenToWorld(view);
+  testScreenToWorld(view, canvas);
 
   // extrude a cylinder from the elipsoid surface
-  testRayPlane(view);
+  testRayPlane(view, canvas);
 
   // sample terrain height at mouse position
   testSampleTerrainHeight(view);
@@ -238,13 +241,16 @@ const addRunningObject = (view: ThreeView<LayerDescriptions>) => {
   animateFunc();
 };
 
-const testScreenToWorld = (view: ThreeView<LayerDescriptions>) => {
+const testScreenToWorld = (
+  view: ThreeView<LayerDescriptions>,
+  canvas: HTMLCanvasElement,
+) => {
   const onMouseMove = (event: MouseEvent) => {
     if (!gPaneParams.convertScreenToWorld) {
       return;
     }
 
-    const rect = view.renderer.domElement.getBoundingClientRect();
+    const rect = canvas.getBoundingClientRect();
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
 
@@ -256,7 +262,7 @@ const testScreenToWorld = (view: ThreeView<LayerDescriptions>) => {
     }
   };
 
-  view.renderer.domElement.addEventListener("mousemove", onMouseMove);
+  canvas.addEventListener("mousemove", onMouseMove);
 };
 
 const placeOneBall = (
@@ -559,7 +565,10 @@ const onTransformChange = () => {
   }
 };
 
-const testRayPlane = (view: ThreeView<LayerDescriptions>) => {
+const testRayPlane = (
+  view: ThreeView<LayerDescriptions>,
+  canvas: HTMLCanvasElement,
+) => {
   let center: Vector3 | undefined = undefined;
   let radius: number | undefined = undefined;
   let height: number | undefined = undefined;
@@ -574,7 +583,7 @@ const testRayPlane = (view: ThreeView<LayerDescriptions>) => {
   const onMouseMove = (event: MapMouseEvent) => {
     bMouseMoved = true;
 
-    const rect = view.renderer.domElement.getBoundingClientRect();
+    const rect = canvas.getBoundingClientRect();
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
     const screenSize = view.screenSize;

@@ -1,3 +1,4 @@
+import type ThreeView from "@navara/three";
 import {
   EffectLayerDeclaration,
   type EffectLayerConfig,
@@ -25,13 +26,13 @@ export class SMAAEffectLayer extends EffectLayerDeclaration<
 
   private config: SMAAConfig;
 
-  constructor(view: ViewContext, config: SMAAConfig) {
-    super(view, config);
+  constructor(view: ThreeView, ctx: ViewContext, config: SMAAConfig) {
+    super(view, ctx, config);
     this.config = config;
   }
 
   createPass() {
-    const pass = new SMAA(this.view.camera, {
+    const pass = new SMAA(this.view.camera.raw, {
       ...this.config.smaa,
       enabled: this.config.visible ?? true,
     });

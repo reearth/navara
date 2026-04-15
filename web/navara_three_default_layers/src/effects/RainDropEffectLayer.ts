@@ -1,3 +1,4 @@
+import type ThreeView from "@navara/three";
 import {
   EffectLayerDeclaration,
   type EffectLayerConfig,
@@ -26,14 +27,14 @@ export class RainDropEffectLayer extends EffectLayerDeclaration<
 
   private config: RainDropConfig;
 
-  constructor(view: ViewContext, config: RainDropConfig) {
-    super(view, config);
+  constructor(view: ThreeView, ctx: ViewContext, config: RainDropConfig) {
+    super(view, ctx, config);
     this.config = config;
   }
 
   createPass(): RainDropEffect {
     const cfg = this.config.rainDrop ?? {};
-    return new RainDropEffect(this.view.camera, {
+    return new RainDropEffect(this.view.camera.raw, {
       ...cfg,
       enabled: this.config.visible ?? true,
     });

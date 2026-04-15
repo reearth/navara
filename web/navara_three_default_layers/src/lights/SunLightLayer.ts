@@ -1,8 +1,9 @@
+import type ThreeView from "@navara/three";
 import { Color } from "@navara/three";
 import {
   LightLayerDeclaration,
   type LightLayerConfig,
-  ViewContext,
+  type ViewContext,
   type LightLayerUpdate,
 } from "@navara/three";
 import { Material } from "three";
@@ -28,8 +29,8 @@ export class SunLightLayer extends LightLayerDeclaration<
 > {
   private config: SunLightLayerConfig;
 
-  constructor(view: ViewContext, config: SunLightLayerConfig) {
-    super(view, config);
+  constructor(view: ThreeView, ctx: ViewContext, config: SunLightLayerConfig) {
+    super(view, ctx, config);
     this.config = config;
   }
 
@@ -37,7 +38,7 @@ export class SunLightLayer extends LightLayerDeclaration<
     const options = this.config.sun ?? {};
     const color = options.color ? options.color.raw : undefined;
 
-    const sunLight = new SunLight(this.view.camera, {
+    const sunLight = new SunLight(this.view.camera.raw, {
       ...options,
       ...(color ? { color } : {}),
     } as SunLightOptions);
@@ -119,11 +120,11 @@ export class SunLightLayer extends LightLayerDeclaration<
     // Add initial lights to scene
     this.updateSceneLights();
 
-    // Listen for shadow material events from ViewContext
-    this.view.on("shadowApplied", (m: Material) => {
+    // Listen for shadow material events.
+    this.ctx.on("shadowApplied", (m: Material) => {
       this._instance?.setupMaterialForCSM(m);
     });
-    this.view.on("shadowRemoved", (m: Material) => {
+    this.ctx.on("shadowRemoved", (m: Material) => {
       this._instance?.removeMaterialFromCSM(m);
     });
   }
@@ -135,7 +136,7 @@ export class SunLightLayer extends LightLayerDeclaration<
     this._instance.updateSunDirection(this.view.atmosphere.sunDirection);
 
     // Update position to camera position for proper lighting.
-    const cameraPosition = this.view.camera.position;
+    const cameraPosition = this.view.camera.raw.position;
     this._instance.updateTargetPosition(cameraPosition);
 
     this._instance.update();
@@ -158,12 +159,12 @@ export class SunLightLayer extends LightLayerDeclaration<
 
     // Add appropriate lights to scene
     const sceneLights = this._instance.getSceneLights();
-    this.view.scenes.light.add(sceneLights);
+    this.ctx.scenes.light.add(sceneLights);
 
     // Add CSM helper if available and enabled
     const helper = this._instance.getSceneHelper();
     if (helper) {
-      this.view.scenes.opaque.add(helper);
+      this.ctx.scenes.opaque.add(helper);
     }
   }
 

@@ -1,3 +1,4 @@
+import type ThreeView from "@navara/three";
 import {
   type XYZ,
   Color,
@@ -33,8 +34,12 @@ export class ArrowHelperLayer extends MeshLayerDeclaration<
 > {
   private config: ArrowHelperLayerConfig;
 
-  constructor(view: ViewContext, config: ArrowHelperLayerConfig) {
-    super(view, config);
+  constructor(
+    view: ThreeView,
+    ctx: ViewContext,
+    config: ArrowHelperLayerConfig,
+  ) {
+    super(view, ctx, config);
     this.config = config;
   }
 

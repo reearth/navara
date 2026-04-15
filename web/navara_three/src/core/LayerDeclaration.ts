@@ -1,6 +1,8 @@
 import { EventHandler, type BaseEventMap } from "@navara/core";
 import { generateId } from "@navara/engine";
 
+import type ThreeView from "../index";
+
 import type { ViewContext } from "./ViewContext";
 
 /**
@@ -54,7 +56,7 @@ export type LayerDeclarationEvents = {
  *     const geometry = new BoxGeometry(1, 1, 1);
  *     const material = new MeshBasicMaterial();
  *     this._instance = new Mesh(geometry, material);
- *     this.view.scenes.opaque.add(this._instance);
+ *     this.ctx.scenes.opaque.add(this._instance);
  *   }
  * }
  * ```
@@ -69,19 +71,26 @@ export abstract class LayerDeclaration<
   /** The unique identifier of this layer. */
   public readonly id: string;
 
-  /** The view context providing access to scenes, camera, and other view state. */
-  protected view: ViewContext;
+  /** The ThreeView instance providing access to camera, atmosphere, globe, and other view state. */
+  protected view: ThreeView;
+  /** The view context providing access to scenes, passes, and rendering internals. */
+  protected ctx: ViewContext;
   /** The underlying Three.js instance created by this layer. */
   protected _instance: Instance | undefined;
 
   private _visible?: boolean;
 
-  constructor(view: ViewContext, config: Config = {} as Config) {
+  constructor(
+    view: ThreeView,
+    ctx: ViewContext,
+    config: Config = {} as Config,
+  ) {
     super();
 
     this.id = config.id || generateId();
     this._visible = config.visible ?? true;
     this.view = view;
+    this.ctx = ctx;
   }
 
   /**

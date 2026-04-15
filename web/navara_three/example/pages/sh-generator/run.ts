@@ -1,14 +1,14 @@
-import type ThreeView from "@navara/three";
 import {
   PMREMGenerator,
+  WebGLRenderer,
   EquirectangularReflectionMapping,
   type WebGLCubeRenderTarget,
 } from "three";
 import { LightProbeGenerator } from "three/examples/jsm/lights/LightProbeGenerator.js";
 import { EXRLoader } from "three/examples/jsm/loaders/EXRLoader.js";
 
-export const run = async (view: ThreeView): Promise<void> => {
-  const renderer = view.renderer;
+export const run = async (): Promise<void> => {
+  const renderer = new WebGLRenderer();
 
   // Create file input element
   const fileInput = document.createElement("input");

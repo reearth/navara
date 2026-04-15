@@ -1,3 +1,4 @@
+import type ThreeView from "@navara/three";
 import {
   EffectLayerDeclaration,
   type EffectLayerConfig,
@@ -26,8 +27,8 @@ export class SSAOEffectLayer extends EffectLayerDeclaration<
 
   private config: SSAOConfig;
 
-  constructor(view: ViewContext, config: SSAOConfig) {
-    super(view, config);
+  constructor(view: ThreeView, ctx: ViewContext, config: SSAOConfig) {
+    super(view, ctx, config);
     this.config = config;
   }
 
@@ -38,9 +39,9 @@ export class SSAOEffectLayer extends EffectLayerDeclaration<
       : {};
 
     const pass = new SSAO(
-      this.view.camera,
-      this.view.getRenderer().domElement.clientWidth,
-      this.view.getRenderer().domElement.clientHeight,
+      this.view.camera.raw,
+      this.ctx.getRenderer().domElement.clientWidth,
+      this.ctx.getRenderer().domElement.clientHeight,
       {
         ...ssaoOptions,
         enabled: this.config.visible ?? true,

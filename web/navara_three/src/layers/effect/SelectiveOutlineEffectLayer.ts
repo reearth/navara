@@ -20,6 +20,7 @@ import type {
 import type { BaseInstance } from "../../core/LayerDeclaration";
 import type { ViewContext } from "../../core/ViewContext";
 import { Pass } from "../../effects";
+import type ThreeView from "../../index";
 
 import {
   SelectiveEffectLayer,
@@ -80,7 +81,7 @@ export class SelectiveOutlineEffectLayer extends SelectiveEffectLayer<
     return this.outline.edgeStrength ?? DEFAULT_EDGE_STRENGTH;
   }
 
-  constructor(view: ViewContext, config: EffectLayerConfig) {
+  constructor(view: ThreeView, ctx: ViewContext, config: EffectLayerConfig) {
     const c =
       (config as Partial<SelectiveOutlineEffectConfig>).selectiveOutline ?? {};
 
@@ -95,7 +96,7 @@ export class SelectiveOutlineEffectLayer extends SelectiveEffectLayer<
       },
     };
 
-    super(view, postEffectConfig);
+    super(view, ctx, postEffectConfig);
   }
 
   createPass() {

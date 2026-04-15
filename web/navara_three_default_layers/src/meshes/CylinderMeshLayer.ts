@@ -1,3 +1,4 @@
+import type ThreeView from "@navara/three";
 import {
   Color,
   DrapedMesh,
@@ -59,12 +60,16 @@ export class CylinderMeshLayer extends MeshLayerDeclarationWithSelectiveEffect<
 > {
   private config: CylinderMeshLayerConfig;
 
-  constructor(view: ViewContext, config: CylinderMeshLayerConfig) {
+  constructor(
+    view: ThreeView,
+    ctx: ViewContext,
+    config: CylinderMeshLayerConfig,
+  ) {
     // Propagate initial effectIds to base MeshLayer
     if (config.cylinder?.effectIds) {
       config.effectIds = config.cylinder.effectIds;
     }
-    super(view, config);
+    super(view, ctx, config);
     this.config = config;
   }
 
@@ -102,7 +107,7 @@ export class CylinderMeshLayer extends MeshLayerDeclarationWithSelectiveEffect<
     mesh.castShadow = cfg.castShadow ?? false;
     mesh.receiveShadow = cfg.receiveShadow ?? false;
 
-    this.view.applyShadowMaterial(material);
+    this.ctx.applyShadowMaterial(material);
 
     return mesh;
   }
@@ -148,12 +153,12 @@ export class CylinderMeshLayer extends MeshLayerDeclarationWithSelectiveEffect<
 
         // Swap material between lit and unlit
         if (wasChanged) {
-          this.view.removeShadowMaterial(this._instance.material);
+          this.ctx.removeShadowMaterial(this._instance.material);
           this._instance.material.dispose();
           const newMaterial = this.createMaterial(origin);
           this._instance.material = newMaterial;
           if (!cfg.draped) {
-            this.view.applyShadowMaterial(newMaterial);
+            this.ctx.applyShadowMaterial(newMaterial);
           }
           // Re-setup SelectiveEffect uniforms for the new material
           if (newMaterial instanceof MeshLambertMaterial) {
@@ -238,7 +243,7 @@ export class CylinderMeshLayer extends MeshLayerDeclarationWithSelectiveEffect<
 
   protected disposeMesh(): void {
     if (this._instance) {
-      this.view.removeShadowMaterial(this._instance.material);
+      this.ctx.removeShadowMaterial(this._instance.material);
       this._instance.geometry.dispose();
       this._instance.material.dispose();
 

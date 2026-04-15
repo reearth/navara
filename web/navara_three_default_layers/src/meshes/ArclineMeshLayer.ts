@@ -1,3 +1,4 @@
+import type ThreeView from "@navara/three";
 import {
   Color,
   MeshLayerDeclarationWithSelectiveEffect,
@@ -27,8 +28,12 @@ export class ArclineMeshLayer extends MeshLayerDeclarationWithSelectiveEffect<
 > {
   private config: ArclineMeshLayerConfig;
 
-  constructor(view: ViewContext, config: ArclineMeshLayerConfig) {
-    super(view, config);
+  constructor(
+    view: ThreeView,
+    ctx: ViewContext,
+    config: ArclineMeshLayerConfig,
+  ) {
+    super(view, ctx, config);
     this.config = config;
   }
 
