@@ -200,6 +200,7 @@ export function processHillshadeBackfilled(
 }
 
 /**
+ * TODO: define this function in Rust and use it in web worker
  * Update a padding edge of a padded texture from neighbor edge data
  * @param textureData - The Uint8Array backing the DataTexture (paddedSize×paddedSize×4 bytes)
  * @param edgeBytes - Buffer containing one edge from neighbor (contentSize pixels × 4 bytes RGBA)
@@ -257,6 +258,7 @@ export function updatePaddingEdge(
 }
 
 /**
+ * TODO: define this function in Rust and use it in web worker
  * Initialize padding by replicating content edges
  * @param paddedBytes - Padded texture data (paddedSize×paddedSize×4 bytes)
  * @param paddedSize - Padded texture size (e.g., 258)

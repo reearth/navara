@@ -74,6 +74,11 @@ export type TileHandler = {
   getParentTile: (handle: bigint) => TransferableTile | undefined;
   getTileElevationDecoder: (handle: bigint) => ElevationDecoder | undefined;
   getVectorTileStates: (handle: bigint) => VectorTileState[] | undefined;
+  calcMetersPerTexel: (
+    tileHandle: bigint,
+    textureZoom: number,
+    textureWidth: number,
+  ) => number;
 };
 
 /**

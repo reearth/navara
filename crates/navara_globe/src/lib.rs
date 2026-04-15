@@ -58,7 +58,7 @@ impl Default for Globe {
             segments: 10,
             color: 0xffffff,
             hide_underground: true,
-            use_normal: true,
+            use_normal: false,
             transparent: false,
             opacity: 1.0,
             wireframe: false,

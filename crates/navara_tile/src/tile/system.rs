@@ -140,15 +140,11 @@ pub fn update_tiles(
     let zero_tile_handle = zero_tile.handle();
 
     let has_tile_layer = !tiles.is_empty();
-    let has_hillshade_config = tiles.iter().any(|(l, _)| l.hillshade_config.is_some());
-    let expected_layer_count = tiles.iter().len();
+
     let is_texture_ready = qt.qt.get_mut(zero_tile_handle).unwrap().is_texture_ready(
         &texture_fragment,
         &data_requesters,
         has_tile_layer,
-        has_hillshade_config,
-        false,
-        expected_layer_count,
     );
 
     let traversal_result = traverse_tile(
@@ -173,6 +169,7 @@ pub fn update_tiles(
         globe.max_sse as f64,
         false,
         is_texture_ready.then_some(zero_tile_handle),
+        None,
     );
 
     let is_over_min_z = if !tiles.is_empty() {
@@ -838,18 +835,6 @@ pub fn delete_layer(
                     {
                         commands.entity(e).insert(Deleted);
                     }
-                    // After per-index removals, ensure the two vectors remain aligned in length
-                    if tex.len() > hill.len() {
-                        let extra = tex.split_off(hill.len());
-                        for e in extra.into_iter().flatten() {
-                            commands.entity(e).insert(Deleted);
-                        }
-                    } else if hill.len() > tex.len() {
-                        let extra = hill.split_off(tex.len());
-                        for e in extra.into_iter().flatten() {
-                            commands.entity(e).insert(Deleted);
-                        }
-                    }
                 }
                 (Some(tex), None) => {
                     if target_idx < tex.len()
@@ -959,27 +944,10 @@ pub fn update_mesh_material(
             merged_current_fragments.push(tex.or(hill));
         }
 
-        // Check if hillshade is beyond max_zoom
-        let has_hillshade_config = tile_layers
-            .iter()
-            .any(|(l, _)| l.hillshade_config.is_some());
-
-        let hillshade_over_max_zoom = tile_layers
-            .iter()
-            .find(|(layer, _)| layer.hillshade_config.is_some())
-            .is_some_and(|(layer, _)| layer.is_over_max_zoom(tile.coords.z));
-
         let tile_layers_len = tile_layers.iter().len();
 
         // Use parent if tile isn't ready (all-or-nothing to respect single UV transform)
-        let is_ready = tile.is_texture_ready(
-            &texture_fragment,
-            &data_requesters,
-            true,
-            has_hillshade_config,
-            hillshade_over_max_zoom,
-            tile_layers_len,
-        );
+        let is_ready = tile.is_texture_ready(&texture_fragment, &data_requesters, true);
 
         if !is_ready && let Some(parent) = parent_tile {
             parent_z = Some(parent.coords.z);

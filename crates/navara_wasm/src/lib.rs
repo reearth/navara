@@ -337,6 +337,27 @@ impl Core {
             .map(|v| v.into())
     }
 
+    /// Calculate meters per texel for hillshade normal computation
+    ///
+    /// # Arguments
+    /// * `tile_handle` - Handle of the tile (for calculating latitude)
+    /// * `texture_zoom` - Zoom level of the texture
+    /// * `texture_width` - Width of the texture in pixels (including 2-pixel padding)
+    ///
+    /// # Returns
+    /// Meters per texel value for hillshade shader
+    #[wasm_bindgen(js_name = calcMetersPerTexel)]
+    pub fn calc_meters_per_texel(
+        &mut self,
+        tile_handle: TileHandle,
+        texture_zoom: usize,
+        texture_width: u32,
+    ) -> f32 {
+        self.app
+            .calc_meters_per_texel(tile_handle, texture_zoom, texture_width)
+            .unwrap_or(1.0)
+    }
+
     #[wasm_bindgen(js_name = getTransferablePolygonBatchedFeature)]
     pub fn get_transferable_polygon_batched_feature(
         &mut self,

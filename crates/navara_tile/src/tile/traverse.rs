@@ -1,7 +1,7 @@
 use bevy_ecs::prelude::*;
 use navara_buffer_store::BufferStore;
 use navara_component::{Deleted, Order, OrderByDistance, Priority};
-use navara_core::{Ellipsoid, TileXYZ};
+use navara_core::Ellipsoid;
 
 use navara_fog::Fog;
 use navara_frame::FrameManager;
@@ -60,6 +60,8 @@ pub fn traverse_tile(
     meets_sse_ancestors: bool,
     // This is used to show parent's texture if child's texture isn't ready.
     ready_parent_tile_handle: Option<TileHandle>,
+    // This tracks the nearest ready hillshade parent for each layer.
+    ready_hillshade_parents: Option<Vec<Option<HillshadeParent>>>,
 ) -> TraversalResult {
     let has_tile_layer = !tiles.is_empty();
     match qt.qt.get(handle) {
@@ -101,15 +103,6 @@ pub fn traverse_tile(
         return TraversalResult::Culled;
     }
 
-    let has_hillshade_config = tiles.iter().any(|(l, _)| l.hillshade_config.is_some());
-
-    let hillshade_over_max_zoom = tiles
-        .iter()
-        .find(|(layer, _)| layer.hillshade_config.is_some())
-        .is_some_and(|(layer, _)| layer.is_over_max_zoom(tile.coords.z));
-
-    let expected_layer_count = tiles.iter().len();
-
     let tile_ready_state = tile.is_ready(
         qt,
         texture_fragment,
@@ -117,9 +110,7 @@ pub fn traverse_tile(
         terrain_data_requester,
         terrain_layer,
         has_tile_layer,
-        has_hillshade_config,
-        hillshade_over_max_zoom,
-        expected_layer_count,
+        tiles,
     );
     let is_tile_ready = tile_ready_state.is_tile_ready;
 
@@ -221,6 +212,16 @@ pub fn traverse_tile(
             ready_parent_tile_handle
         };
 
+        // Update hillshade parents - track nearest ready parent for each layer
+        let ready_hillshade_parents = update_ready_hillshade_parents(
+            qt,
+            handle,
+            tiles,
+            texture_fragment,
+            data_requesters,
+            ready_hillshade_parents,
+        );
+
         // Tile has several states to switch LOD smoothly.
         // 1. RenderedTile component is spawned if a tile is selected.
         // 2. Rendering engine needs to do some preparations, so the selected tile is marked as it's prepared after these preparations.
@@ -256,6 +257,7 @@ pub fn traverse_tile(
                 max_sse,
                 meets_sse,
                 ready_parent_tile_handle,
+                ready_hillshade_parents.clone(),
             );
 
             if matches!(traversal_result, TraversalResult::NotFound) {
@@ -332,17 +334,6 @@ pub fn traverse_tile(
                     }
 
                     let handle = *child;
-                    // Compute hillshade parents before borrowing tile mutably
-                    let hillshade_parents = {
-                        let tile = qt.qt.get(handle).unwrap();
-                        compute_hillshade_parents(
-                            qt,
-                            tile,
-                            tiles,
-                            texture_fragment,
-                            data_requesters,
-                        )
-                    };
                     let tile = match qt.qt.get_mut(handle) {
                         Some(t) => t,
                         None => unreachable!(),
@@ -354,7 +345,7 @@ pub fn traverse_tile(
                         tile,
                         handle,
                         ready_parent_tile_handle,
-                        hillshade_parents,
+                        ready_hillshade_parents.clone(),
                     );
                 }
             }
@@ -465,70 +456,50 @@ pub fn spawn_tile_entity(
     );
 }
 
-/// Find hillshade parent entity for a specific layer when beyond max_zoom
-fn find_hillshade_parent_entity(
+/// Update hillshade parents by tracking the nearest ready parent for each layer
+/// Similar to how ready_parent_tile_handle tracks the nearest ready parent tile
+fn update_ready_hillshade_parents(
     qt: &RasterTileQuadtree,
-    tile_coords: TileXYZ,
-    layer_idx: usize,
-    texture_fragment: &TileTextureFragmentQuery,
-    data_requesters: &Query<&navara_data_requester::DataRequester>,
-) -> Option<(Entity, usize)> {
-    let mut current_coords = (tile_coords.x, tile_coords.y, tile_coords.z);
-
-    // Walk up the quadtree to find first ancestor with ready hillshade entity
-    while current_coords.2 > 0 {
-        let Some(parent_node) = qt.qt.parent(current_coords) else {
-            break;
-        };
-
-        let Some(parent_tile) = qt.qt.get(parent_node.handle()) else {
-            break;
-        };
-
-        // Check if this parent has a ready hillshade entity at this layer
-        if let Some(parent_hill_ids) = &parent_tile.hillshade_entity_ids
-            && let Some(&Some(entity)) = parent_hill_ids.get(layer_idx)
-            && RasterTile::is_texture_entity_ready(entity, texture_fragment, data_requesters)
-        {
-            return Some((entity, parent_tile.coords.z));
-        }
-
-        current_coords = (
-            parent_tile.coords.x,
-            parent_tile.coords.y,
-            parent_tile.coords.z,
-        );
-    }
-
-    None
-}
-
-/// Compute hillshade parent entities for all layers when they are beyond max_zoom
-pub fn compute_hillshade_parents(
-    qt: &RasterTileQuadtree,
-    tile: &RasterTile,
+    handle: TileHandle,
     tiles: &Query<(&TilesLayer, &Order)>,
     texture_fragment: &TileTextureFragmentQuery,
     data_requesters: &Query<&navara_data_requester::DataRequester>,
+    ready_hillshade_parents: Option<Vec<Option<HillshadeParent>>>,
 ) -> Option<Vec<Option<HillshadeParent>>> {
     let has_hillshade = tiles.iter().any(|(l, _)| l.hillshade_config.is_some());
     if !has_hillshade {
         return None;
     }
 
-    let mut hillshade_parents = Vec::new();
+    let tile = qt.qt.get(handle)?;
+    let mut updated_parents = Vec::new();
 
     for (i, (layer, _)) in tiles.iter().sort::<&Order>().enumerate() {
-        let parent = if layer.hillshade_config.is_some() && layer.is_over_max_zoom(tile.coords.z) {
-            find_hillshade_parent_entity(qt, tile.coords, i, texture_fragment, data_requesters)
-                .map(|(entity, zoom)| HillshadeParent { entity, zoom })
+        let parent = if layer.hillshade_config.is_some() {
+            // Check if current tile has a ready hillshade entity for this layer
+            if let Some(hill_ids) = &tile.hillshade_entity_ids
+                && let Some(&Some(entity)) = hill_ids.get(i)
+                && RasterTile::is_texture_entity_ready(entity, texture_fragment, data_requesters)
+            {
+                // Current tile has ready hillshade, use it as parent
+                Some(HillshadeParent {
+                    entity,
+                    zoom: tile.coords.z,
+                })
+            } else {
+                // Current tile doesn't have ready hillshade, preserve parent's value
+                ready_hillshade_parents
+                    .as_ref()
+                    .and_then(|parents| parents.get(i).cloned())
+                    .flatten()
+            }
         } else {
             None
         };
-        hillshade_parents.push(parent);
+        updated_parents.push(parent);
     }
 
-    Some(hillshade_parents)
+    Some(updated_parents)
 }
 
 /// Prepare some resource that is necessary to render the tile.

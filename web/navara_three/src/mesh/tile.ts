@@ -9,7 +9,6 @@ import type {
   MeshChanged,
   Globe,
 } from "@navara/engine";
-import { getWGS84SemiMajorAxis } from "@navara/three_api";
 import ElevationParsFragment from "@shaders/glsl/chunks/elevation_pars_fragment.glsl";
 import HillshadeParsFragment from "@shaders/glsl/chunks/hillshade_pars_fragment.glsl";
 import SpecularParsFragment from "@shaders/glsl/chunks/spucular_pars_fragment.glsl";
@@ -596,7 +595,10 @@ export class TileMesh
     uniforms: CommonUniforms,
     globe: Globe,
   ): TileMaterial {
-    const useNormal = !!globe.useNormal;
+    let useNormal = !!globe.useNormal;
+    if (_mat.isHillshades && _mat.isHillshades.length > 0) {
+      useNormal = _mat.isHillshades.some((v) => v !== 0);
+    }
     const m = useNormal
       ? new MeshLambertMaterial({
           stencilWrite: false,
@@ -1447,19 +1449,6 @@ if (uPickable > 0.) {
 
     const textures = m.userData.textures.value;
 
-    // Calculate tile's center latitude for metersPerTexel calculation
-    const tile = this.tileHandler.getTile(this.handle);
-    let cosLat = 1.0; // Default to equator if tile not found
-    const EARTH_CIRCUMFERENCE = 2.0 * Math.PI * getWGS84SemiMajorAxis();
-
-    if (tile) {
-      const coords = tile.coords;
-      const tileSize = 1 << coords.z;
-      const centerY = (coords.y + 0.5) / tileSize;
-      const latRad = Math.atan(Math.sinh(Math.PI * (1 - 2 * centerY)));
-      cosLat = Math.cos(latRad);
-    }
-
     // Get hillshade UV transforms from Rust (for parent texture reuse)
     const hillshadeUvTransforms = mat.hillshadeUvTransforms?.() ?? [];
 
@@ -1482,7 +1471,7 @@ if (uPickable > 0.) {
 
       // Set hillshade parameters (zoom level and metersPerTexel)
       // Read zoom level from texture.userData (set by hillshade.ts when texture was created)
-      if (isHillshade && tile) {
+      if (isHillshade) {
         const layerZoom = t.userData.hillshadeZoom;
         if (
           layerZoom !== undefined &&
@@ -1493,9 +1482,11 @@ if (uPickable > 0.) {
           // Derive content pixel width from texture (subtract 2-pixel padding)
           // Hillshade textures are padded: contentSize = paddedSize - 2
           const contentPixelWidth = t.image.width - 2;
-          const metersPerTexel =
-            (EARTH_CIRCUMFERENCE * cosLat) /
-            (contentPixelWidth * Math.pow(2, layerZoom));
+          const metersPerTexel = this.tileHandler.calcMetersPerTexel(
+            this.handle,
+            layerZoom,
+            contentPixelWidth,
+          );
           m.userData.metersPerTexel.value[i] = metersPerTexel;
 
           // Skip UV transform updates if preserving (e.g., during rebind)

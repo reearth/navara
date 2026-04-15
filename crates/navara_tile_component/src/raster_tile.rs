@@ -1,6 +1,6 @@
 use bevy_ecs::prelude::*;
 use navara_buffer_store::BufferStore;
-use navara_component::Deleted;
+use navara_component::{Deleted, Order};
 use navara_core::{
     Aabb, Ellipsoid, Extent, LngLat, Radians, TileRegion, TileXYZ, WGS84_64,
     get_ellipsoid_terrain_level_zero_maximum_geometric_error, get_level_maximum_geometric_error,
@@ -17,7 +17,7 @@ use crate::{
     terrain::TerrainData, terrain_data_requester::TileTerrainDataRequesterQuery,
 };
 
-use navara_layer::TerrainLayer;
+use navara_layer::{TerrainLayer, TilesLayer};
 use navara_math::FloatType;
 
 use super::tile_bounding_region::TileBoundingRegion;
@@ -117,18 +117,10 @@ impl RasterTile {
         terrain_data_requester: &TileTerrainDataRequesterQuery,
         terrain_layer: &Option<&TerrainLayer>,
         has_tile_layer: bool,
-        has_hillshade_config: bool,
-        hillshade_over_max_zoom: bool,
-        expected_layer_count: usize,
+        tiles: &Query<(&TilesLayer, &Order)>,
     ) -> ReadyState {
-        let is_texture_loaded = self.is_texture_ready(
-            texture_fragment,
-            data_requesters,
-            has_tile_layer,
-            has_hillshade_config,
-            hillshade_over_max_zoom,
-            expected_layer_count,
-        );
+        let is_texture_loaded =
+            self.is_texture_ready(texture_fragment, data_requesters, has_tile_layer);
 
         let data_requester_entity_id = self
             .terrain_data
@@ -178,8 +170,30 @@ impl RasterTile {
                 Some(DataRequesterStatus::Fail)
             );
 
+        // Check if any hillshade entity is ready
+        // Also consider None entities as ready if they correspond to layers beyond max_zoom
+        let is_hillshade_ready = self.hillshade_entity_ids.as_ref().is_some_and(|hill_ids| {
+            hill_ids.iter().enumerate().any(|(i, &entity_opt)| {
+                if let Some(entity) = entity_opt {
+                    // Entity exists, check if it's ready
+                    RasterTile::is_texture_entity_ready(entity, texture_fragment, data_requesters)
+                } else {
+                    // Entity is None, check if this layer is beyond max_zoom
+                    tiles
+                        .iter()
+                        .sort::<&Order>()
+                        .nth(i)
+                        .is_some_and(|(layer, _)| {
+                            layer.hillshade_config.is_some()
+                                && layer.is_over_max_zoom(self.coords.z)
+                        })
+                }
+            })
+        });
+
         ReadyState {
             is_tile_ready: (is_terrain_ready
+                || is_hillshade_ready
                 || (is_upsamplable || should_be_rendered_without_terrain)),
             is_texture_ready: is_texture_loaded,
             is_terrain_ready,
@@ -224,35 +238,12 @@ impl RasterTile {
         texture_fragment: &TileTextureFragmentQuery,
         data_requesters: &Query<&navara_data_requester::DataRequester>,
         has_tile_layer: bool,
-        has_hillshade_config: bool,
-        hillshade_over_max_zoom: bool,
-        expected_layer_count: usize,
     ) -> bool {
         // If TileLayer is None, texture is considered ready
         if !has_tile_layer {
             return true;
         }
 
-        if has_hillshade_config {
-            self.is_all_texture_ready(
-                texture_fragment,
-                data_requesters,
-                hillshade_over_max_zoom,
-                expected_layer_count,
-            )
-        } else {
-            self.is_any_texture_ready(texture_fragment, data_requesters)
-        }
-    }
-
-    pub fn is_any_texture_ready(
-        &self,
-        texture_fragment: &TileTextureFragmentQuery,
-        data_requesters: &Query<&navara_data_requester::DataRequester>,
-    ) -> bool {
-        // This function is only called when there are NO hillshade layers
-        // (see is_texture_ready() which routes to is_all_texture_ready() if hillshades exist)
-        // So we only need to check texture_fragment_entity_ids
         self.texture_fragment_entity_ids
             .as_ref()
             .map(|e| {
@@ -264,72 +255,6 @@ impl RasterTile {
                 })
             })
             .unwrap_or(false)
-    }
-
-    /// Check if ALL texture layers are ready
-    /// When hillshade is present, we need to wait for both base texture AND hillshade
-    /// to avoid flickering when they load at different times
-    pub fn is_all_texture_ready(
-        &self,
-        texture_fragment: &TileTextureFragmentQuery,
-        data_requesters: &Query<&navara_data_requester::DataRequester>,
-        hillshade_over_max_zoom: bool,
-        expected_layer_count: usize,
-    ) -> bool {
-        let tex_ids = self.texture_fragment_entity_ids.as_ref();
-        let hill_ids = self.hillshade_entity_ids.as_ref();
-
-        // If neither request array exists yet, textures/hillshades have not been requested,
-        // so this tile must not be treated as ready.
-        if tex_ids.is_none() && hill_ids.is_none() {
-            return false;
-        }
-
-        // Get the length (both arrays should have same length)
-        let len = tex_ids
-            .map(|ids| ids.len())
-            .or_else(|| hill_ids.map(|ids| ids.len()))
-            .unwrap_or(0);
-
-        // Check if arrays have been populated to expected layer count
-        // This prevents marking a tile as ready during serial request before all layers are requested
-        if len != expected_layer_count {
-            return false;
-        }
-
-        // Check each layer index: at that index, either texture OR hillshade must be ready
-        for i in 0..len {
-            let tex_entity = tex_ids.and_then(|ids| ids.get(i)).and_then(|&e| e);
-            let hill_entity = hill_ids.and_then(|ids| ids.get(i)).and_then(|&e| e);
-
-            // If both entities are None but slots exist
-            if tex_entity.is_none() && hill_entity.is_none() {
-                // If hillshade is over max_zoom, this is expected (hillshade parent reuse)
-                if hillshade_over_max_zoom {
-                    continue;
-                }
-                // Otherwise, layers haven't been requested yet
-                return false;
-            }
-
-            // At this index, check if either entity is ready
-            let tex_ready = tex_entity
-                .map(|e| Self::is_texture_entity_ready(e, texture_fragment, data_requesters))
-                .unwrap_or(false);
-            let hill_ready = hill_entity
-                .map(|e| Self::is_texture_entity_ready(e, texture_fragment, data_requesters))
-                .unwrap_or(false);
-
-            if tex_entity.is_some() && !tex_ready {
-                return false;
-            }
-
-            if hill_entity.is_some() && !hill_ready {
-                return false;
-            }
-        }
-
-        true
     }
 
     pub fn is_terrain_ready(

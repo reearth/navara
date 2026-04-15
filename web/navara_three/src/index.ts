@@ -451,6 +451,12 @@ export default class ThreeView<
     getVectorTileStates: (handle) => {
       return this._core?.getVectorTileStates(handle);
     },
+    calcMetersPerTexel: (tileHandle, textureZoom, textureWidth) => {
+      return (
+        this._core?.calcMetersPerTexel(tileHandle, textureZoom, textureWidth) ??
+        1.0
+      );
+    },
   };
   private _globeHandler: GlobeHandler = {
     getTransparent: () => {
