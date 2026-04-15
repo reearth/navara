@@ -6,8 +6,7 @@ import type { FontManager } from "@navara/font";
 import { type Color } from "three";
 import invariant from "tiny-invariant";
 
-import { type BufferLoader } from "../event";
-import type { CommonUniforms } from "../uniforms";
+import type { EventContext } from "../event/context";
 
 import { InstancedMesh, type InstancedMeshOptions } from "./instanced";
 import type { PickableMesh } from "./pickableMesh";
@@ -39,6 +38,7 @@ export class BatchedSdfTextMesh
   extends InstancedMesh<SDFTextMesh>
   implements PickableMesh
 {
+  readonly ctx: EventContext;
   /** The font identifier from material — may be a family name or a URL. */
   private _fontIdentifier: string;
   private _fontManager: FontManager;
@@ -51,31 +51,27 @@ export class BatchedSdfTextMesh
   private _loadedFaceUrls: Set<string>;
 
   constructor(
+    ctx: EventContext,
     m: NavaraTextMesh,
-    buf: BufferLoader,
-    fontManager: FontManager,
     fontIdentifier: string,
-    _uniforms: CommonUniforms,
     options: InstancedMeshOptions,
     loadedFaceUrls?: Set<string>,
   ) {
     super(options);
+    this.ctx = ctx;
     this._fontIdentifier = fontIdentifier;
-    this._fontManager = fontManager;
+    invariant(ctx.fontManager);
+    this._fontManager = ctx.fontManager;
     this._loadedFaceUrls = loadedFaceUrls ?? new Set();
-    this.initMeshes(m, buf, fontManager);
+    this.initMeshes(m);
   }
 
   get fontIdentifier(): string {
     return this._fontIdentifier;
   }
 
-  private initMeshes(
-    m: NavaraTextMesh,
-    buf: BufferLoader,
-    fontManager: FontManager,
-  ) {
-    const positionInfo = this.extractPositions(m, buf);
+  private initMeshes(m: NavaraTextMesh) {
+    const positionInfo = this.extractPositions(m);
     if (!positionInfo) {
       return;
     }
@@ -87,7 +83,7 @@ export class BatchedSdfTextMesh
     const transform = m.transform;
 
     // Get the font-level shared atlas texture (one DataTexture per font, shared across all groups)
-    const sharedTex = fontManager.getAtlasTexture(this._fontIdentifier);
+    const sharedTex = this._fontManager.getAtlasTexture(this._fontIdentifier);
 
     for (let i = 0; i < nPositions; i++) {
       const batchIdIdx = i * batchIDSize;
@@ -104,7 +100,7 @@ export class BatchedSdfTextMesh
         pos,
         material,
         transform,
-        fontManager,
+        this._fontManager,
         this._fontIdentifier,
         batchId,
         RTE,
@@ -121,13 +117,13 @@ export class BatchedSdfTextMesh
     }
   }
 
-  async _update(m: NavaraTextMesh, buf: BufferLoader, needRender?: () => void) {
+  async _update(m: NavaraTextMesh, needRender?: () => void) {
     if (needRender) this._needRender = needRender;
 
     const material = m.material;
     const text = material.text ?? "";
 
-    const positionInfo = this.extractPositions(m, buf);
+    const positionInfo = this.extractPositions(m);
     if (positionInfo) {
       const { position, nPositions, positionSize, RTE } = positionInfo;
 
@@ -215,10 +211,8 @@ export class BatchedSdfTextMesh
     }
   }
 
-  private extractPositions(
-    m: NavaraTextMesh,
-    buf: BufferLoader,
-  ): PositionsInfo | null {
+  private extractPositions(m: NavaraTextMesh): PositionsInfo | null {
+    const { buf } = this.ctx;
     const g = m.geometry;
 
     const batchIdsData = g.batch_ids;

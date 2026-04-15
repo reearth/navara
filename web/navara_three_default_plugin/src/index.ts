@@ -1,5 +1,5 @@
 import type ThreeView from "@navara/three";
-import { Plugin, type LayerHandle } from "@navara/three";
+import { Plugin, type LayerHandle, type ViewContext } from "@navara/three";
 import {
   RainMeshLayer,
   SnowMeshLayer,
@@ -69,10 +69,13 @@ import {
   type LightProbeLayerConfig,
 } from "@navara/three_default_layers";
 
-export class DefaultPlugin extends Plugin<ThreeView<DefaultLayerDescriptions>> {
+export class DefaultPlugin extends Plugin<
+  ThreeView<DefaultLayerDescriptions>,
+  ViewContext
+> {
   private view?: ThreeView<DefaultLayerDescriptions>;
 
-  async init(view: ThreeView<DefaultLayerDescriptions>) {
+  async init(view: ThreeView<DefaultLayerDescriptions>, _ctx: ViewContext) {
     this.view = view;
 
     // Register mesh layers

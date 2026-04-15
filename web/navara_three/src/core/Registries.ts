@@ -1,3 +1,5 @@
+import type ThreeView from "../index";
+
 import { EffectLayerRegistry } from "./EffectLayerRegistry";
 import { LightLayerRegistry } from "./LightLayerRegistry";
 import { MeshLayerRegistry } from "./MeshLayerRegistry";
@@ -18,10 +20,10 @@ export class Registries {
   // material: MaterialRegistry; // TODO: Implement when needed
   // shader: ShaderRegistry; // TODO: Implement when needed
 
-  constructor(view: ViewContext) {
-    this.mesh = new MeshLayerRegistry(view);
-    this.light = new LightLayerRegistry(view);
-    this.effect = new EffectLayerRegistry(view);
+  constructor(view: ThreeView, ctx: ViewContext) {
+    this.mesh = new MeshLayerRegistry(view, ctx);
+    this.light = new LightLayerRegistry(view, ctx);
+    this.effect = new EffectLayerRegistry(view, ctx);
   }
 
   /**

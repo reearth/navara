@@ -25,6 +25,7 @@ import {
   DoubleSide,
   Sphere,
   Box3,
+  Color as ThreeColor,
 } from "three";
 
 export type ArcLineConfig = {
@@ -86,6 +87,13 @@ export const DefaultArcLineConfig: ArcLineConfig = {
 export class ArcLine extends Object3D {
   private readonly _config: ArcLineConfig[];
   private _subMeshes: Mesh<InstancedBufferGeometry, ShaderMaterial>[] = [];
+
+  // Shared SelectiveEffect uniforms for all sub-meshes (same ref pattern as RTE)
+  private _sharedSEUniforms = {
+    uEffectIdsMask: { value: 0 },
+    uEmissiveColor: { value: new ThreeColor(0x000000) },
+    uEmissiveIntensity: { value: 0 },
+  };
 
   // Shared RTE uniforms for all sub-meshes
   private _sharedRTEUniforms = {
@@ -649,6 +657,14 @@ export class ArcLine extends Object3D {
     // Apply MRT support for G-Buffer output
     overrideShaderMaterialForMRT(material, "normal");
 
+    // SelectiveEffect: always set define and link shared uniforms
+    material.defines = material.defines ?? {};
+    material.defines.USE_SELECTIVE_EFFECT = 1;
+    material.uniforms.uEffectIdsMask = this._sharedSEUniforms.uEffectIdsMask;
+    material.uniforms.uEmissiveColor = this._sharedSEUniforms.uEmissiveColor;
+    material.uniforms.uEmissiveIntensity =
+      this._sharedSEUniforms.uEmissiveIntensity;
+
     return material;
   }
 
@@ -953,6 +969,21 @@ export class ArcLine extends Object3D {
     this._subMeshes.forEach((mesh) => {
       mesh.material.uniforms?.uViewport.value.set(width, height);
     });
+  }
+
+  /**
+   * Update effectIdsMask via shared uniform (applies to all sub-meshes).
+   */
+  updateEffectIdsMask(mask: number): void {
+    this._sharedSEUniforms.uEffectIdsMask.value = mask;
+  }
+
+  /**
+   * Update emissive color and intensity via shared uniforms (applies to all sub-meshes).
+   */
+  updateEmissive(color: number, intensity: number): void {
+    this._sharedSEUniforms.uEmissiveColor.value.setHex(color);
+    this._sharedSEUniforms.uEmissiveIntensity.value = intensity;
   }
 
   dispose(): void {

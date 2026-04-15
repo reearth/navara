@@ -51,6 +51,8 @@ const run = async () => {
   view.addLayer<ArclineMeshLayer>({
     type: "mesh",
     effectIds: [bloomEffect.id],
+    emissiveColor: new Color().setHex(0xffffff),
+    emissiveIntensity: 0.5,
     arcLines: [
       {
         thickness: 2,

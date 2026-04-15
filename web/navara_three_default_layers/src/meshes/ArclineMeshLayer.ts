@@ -1,16 +1,18 @@
+import type ThreeView from "@navara/three";
 import {
-  MeshLayerDeclarationForSelectiveEffect,
+  Color,
+  MeshLayerDeclarationWithSelectiveEffect,
   type MeshLayerConfigWithSelectiveEffect,
   type MeshLayerUpdateWithSelectiveEffect,
   type ViewContext,
-  injectSelectiveEffectHandlers,
 } from "@navara/three";
-import { Mesh } from "three";
 
 import { DefaultArcLineConfig, ArcLine, type ArcLineConfig } from "./arcLine";
 
 type LayerDescription = {
   arcLines?: Partial<ArcLineConfig> | Partial<ArcLineConfig>[];
+  emissiveColor?: Color;
+  emissiveIntensity?: number;
 };
 
 export type ArclineMeshLayerConfig = MeshLayerConfigWithSelectiveEffect &
@@ -19,38 +21,24 @@ export type ArclineMeshLayerConfig = MeshLayerConfigWithSelectiveEffect &
 export type ArclineMeshLayerUpdate = MeshLayerUpdateWithSelectiveEffect &
   LayerDescription;
 
-export class ArclineMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
+export class ArclineMeshLayer extends MeshLayerDeclarationWithSelectiveEffect<
   ArclineMeshLayerConfig,
   ArclineMeshLayerUpdate,
   ArcLine
 > {
   private config: ArclineMeshLayerConfig;
 
-  constructor(view: ViewContext, config: ArclineMeshLayerConfig) {
-    super(view, config);
+  constructor(
+    view: ThreeView,
+    ctx: ViewContext,
+    config: ArclineMeshLayerConfig,
+  ) {
+    super(view, ctx, config);
     this.config = config;
   }
 
   protected getPassKey() {
     return "mrt" as const;
-  }
-
-  /**
-   * Override onCreate to inject selective effect handlers on sub-meshes.
-   * ArcLine is an Object3D containing Mesh children — onBeforeRender is only
-   * called on Mesh instances, so the base class's setupMeshOnBeforeRender
-   * (which targets the top-level Object3D) is insufficient.
-   *
-   * Handlers are injected unconditionally because ArcLine is always in the
-   * MRT scene (getPassKey → "mrt"). Without handlers, sub-meshes would render
-   * to mask RTs with default material state during BaseMRT passes.
-   */
-  override onCreate() {
-    super.onCreate();
-
-    if (this._instance) {
-      this.injectHandlersOnSubMeshes();
-    }
   }
 
   createMesh() {
@@ -81,7 +69,15 @@ export class ArclineMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
       }
     }
 
-    return new ArcLine(lineConfig);
+    const arcLine = new ArcLine(lineConfig);
+
+    // Set initial emissive values via shared uniforms
+    arcLine.updateEmissive(
+      this.config.emissiveColor?.toHex() ?? 0,
+      this.config.emissiveIntensity ?? 0,
+    );
+
+    return arcLine;
   }
 
   onUpdateConfig(updates: ArclineMeshLayerUpdate): void {
@@ -106,32 +102,43 @@ export class ArclineMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
 
       this._instance.updateConfig(updateConfigs);
 
-      // Relink after rebuild so new sub-meshes get selectiveEffectConfig.
-      // Old sub-meshes are auto-cleaned via "removed" event listener in link().
-      const effectIds = this.config.effectIds ?? [];
-      if (effectIds.length > 0) {
-        this.view.selectiveEffectRegistry?.updateLinksForObject(
-          this._instance,
-          effectIds,
-          [],
-          this.id,
-        );
-      }
-
-      // Always re-inject handlers — ArcLine is always in MRT,
-      // so new sub-meshes need handlers regardless of effectIds
-      this.injectHandlersOnSubMeshes();
-
       this.emit("needsUpdate");
     }
 
-    // super.onUpdateConfig handles _effectIds, registry links, and setupMeshOnBeforeRender
-    super.onUpdateConfig(updates);
-
-    // Synchronize config.effectIds
-    if (updates.effectIds !== undefined) {
-      this.config.effectIds = [...(updates.effectIds ?? [])];
+    // Update emissive properties
+    if (this._instance) {
+      if (updates.emissiveColor !== undefined) {
+        this.config.emissiveColor = updates.emissiveColor;
+      }
+      if (updates.emissiveIntensity !== undefined) {
+        this.config.emissiveIntensity = updates.emissiveIntensity;
+      }
+      if (
+        updates.emissiveColor !== undefined ||
+        updates.emissiveIntensity !== undefined
+      ) {
+        this._instance.updateEmissive(
+          this.config.emissiveColor?.toHex() ?? 0,
+          this.config.emissiveIntensity ?? 0,
+        );
+      }
     }
+
+    super.onUpdateConfig(updates);
+  }
+
+  /**
+   * Override to update effectIdsMask on all ArcLine sub-meshes.
+   * ArcLine is Object3D with child Meshes, so the base class's
+   * single-Mesh update doesn't work.
+   */
+  protected override updateEffectIdsMask(): void {
+    const registry = this.ctx.selectiveEffectRegistry;
+    if (!registry || !this._instance) return;
+
+    const mask =
+      this._effectIds.length > 0 ? registry.computeMask(this._effectIds) : 0;
+    this._instance.updateEffectIdsMask(mask);
   }
 
   onResize(width: number, height: number): void {
@@ -143,23 +150,5 @@ export class ArclineMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
       this._instance.dispose();
       this._instance = undefined;
     }
-  }
-
-  /**
-   * Inject selective effect handlers on each sub-mesh of the ArcLine.
-   * Uses a flag to prevent double-injection on sub-meshes that survived
-   * an updateConfig rebuild.
-   */
-  private injectHandlersOnSubMeshes(): void {
-    if (!this._instance) return;
-    this._instance.traverse((child) => {
-      if (child instanceof Mesh && !child.userData._selectiveEffectInjected) {
-        injectSelectiveEffectHandlers(child, {
-          registry: this.view.selectiveEffectRegistry,
-          layerId: this.id,
-        });
-        child.userData._selectiveEffectInjected = true;
-      }
-    });
   }
 }

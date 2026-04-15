@@ -39,18 +39,14 @@ import {
 } from "three";
 
 import { PolygonMesh } from "..";
-import type { ViewContext } from "../core";
-import { setTransform, type BufferLoader, type TileHandler } from "../event";
+import { setTransform } from "../event";
+import type { EventContext, TileHandler } from "../event/context";
 import { generateMixOverlaidTexturesMacro } from "../material";
 import type { CustomObject3DEventMap } from "../object3DEvent";
-import type {
-  SceneGroup,
-  Scenes,
-  TexturizedSceneByTileCoordinates,
-} from "../scene";
+import type { SceneGroup, TexturizedSceneByTileCoordinates } from "../scene";
 import { computeVertexNormalsAsync } from "../tasks/computeVertexNormalsAsync";
 import type { TextureOptions } from "../textures";
-import type { MeshCache, TileMapByHandle } from "../type";
+import type { TileMapByHandle } from "../type";
 import type { CommonUniforms } from "../uniforms";
 import { createReplacer } from "../utils";
 
@@ -98,14 +94,19 @@ export class TileMesh
 
   private warnedExceededTextures = false;
 
-  constructor(
-    mesh: MeshAdded,
-    texturizedSceneByTileCoordinates: TexturizedSceneByTileCoordinates,
-    textureOptions: TextureOptions,
-    tileMapByHandle: TileMapByHandle,
-    tileHandler: TileHandler,
-  ) {
+  readonly ctx: EventContext;
+
+  constructor(ctx: EventContext, mesh: MeshAdded) {
     super();
+    this.ctx = ctx;
+
+    const {
+      texturizedSceneByTileCoordinates,
+      textureOptions,
+      tileMapByHandle,
+      tileHandler,
+    } = ctx;
+
     const handle = mesh.tile_handle;
     this.handle = handle;
 
@@ -348,57 +349,38 @@ export class TileMesh
     }
   };
 
-  private _viewContext?: ViewContext;
-
-  async _init(
-    scenes: Scenes,
-    meshes: MeshCache,
-    mesh: MeshAdded,
-    buf: BufferLoader,
-    loadedTexes: Map<string, Texture>,
-    textureOptions: TextureOptions,
-    tileMapByHandle: TileMapByHandle,
-    viewContext: ViewContext,
-    uniforms: CommonUniforms,
-  ) {
-    this._viewContext = viewContext;
-
+  async _init(mesh: MeshAdded) {
     await this.createMesh(
-      scenes,
-      meshes,
-      buf,
-      loadedTexes,
       generate_id_from_entity(mesh),
       mesh.mesh,
       mesh.material,
       mesh.transform,
-      textureOptions,
-      tileMapByHandle,
       mesh.ready_parent_tile_handle,
-      uniforms,
       mesh.globe,
     );
 
     this.addEventListener("removedFromWorld", () => {
-      this.dispose(tileMapByHandle);
+      this.dispose(this.ctx.tileMapByHandle);
     });
   }
 
   private async createMesh(
-    scenes: Scenes,
-    meshes: MeshCache,
-    buf: BufferLoader,
-    loadedTexes: Map<string, Texture>,
     id: string,
     mesh: EventMesh,
     mat: RasterTileInternalMaterial,
     transform: Transform | undefined,
-    textureOptions: TextureOptions,
-    tileMapByHandle: TileMapByHandle,
     readyParentTileHandle: TileHandle | undefined,
-    uniforms: CommonUniforms,
     globe: Globe,
   ) {
+    const {
+      scenes,
+      meshes,
+      buf,
+      loadedTexs,
+      textureOptions,
+      tileMapByHandle,
+      uniforms,
+    } = this.ctx;
     const position = buf.f32(mesh.vertices);
     const indices = buf.u32(mesh.indices);
     if (!position || !indices) return;
@@ -437,7 +419,6 @@ export class TileMesh
     const geometry = this.createSkirtMesh(
       globe,
       mesh,
-      buf,
       terrainGeometry,
       position,
       uv,
@@ -477,7 +458,7 @@ export class TileMesh
       tileMapByHandle,
       readyParentTileHandle,
     );
-    this.setupTextures(loadedTexes, textureOptions, maxTextures, mat);
+    this.setupTextures(loadedTexs, textureOptions, maxTextures, mat);
 
     // Create shadow mesh if we have separate terrain geometry (i.e., skirt exists)
     // This prevents the skirt from casting unexpected shadows
@@ -513,12 +494,12 @@ export class TileMesh
   createSkirtMesh(
     globe: Globe,
     mesh: EventMesh,
-    buf: BufferLoader,
     terrainGeometry: BufferGeometry,
     position: Float32Array,
     uv: Float32Array | null,
     indices: Uint32Array,
   ) {
+    const { buf } = this.ctx;
     // Check for separate skirt data
     const skirtVerticesHandle = mesh.skirt_vertices;
     const skirtIndicesHandle = mesh.skirt_indices;
@@ -903,25 +884,21 @@ if (uPickable > 0.) {
           ).source,
         )
         .replaceWithCondition(
-          "outputBuffer1 = vec4(packNormalToVec2(normal), reflectivity, roughnessFactor);",
+          "normalBuffer = vec4(packNormalToVec2(normal), reflectivity, roughnessFactor);",
           `vec3 finalNormal = mix(origNormal, normalize(origNormal * 0.7 + normal), applyWaterNormals);
-          outputBuffer1 = vec4(packNormalToVec2(finalNormal), tileReflectivity, tileRoughness);`,
+          normalBuffer = vec4(packNormalToVec2(finalNormal), tileReflectivity, tileRoughness);`,
           hasNormal,
         ).source;
     };
 
-    this._viewContext?.applyShadowMaterial(m);
+    this.ctx.viewContext?.applyShadowMaterial(m);
 
     return m;
   }
 
-  _update(
-    mesh: MeshChanged,
-    loadedTexes: Map<string, Texture>,
-    textureOptions: TextureOptions,
-    tileMapByHandle: TileMapByHandle,
-    globe: Globe,
-  ) {
+  _update(mesh: MeshChanged) {
+    const { loadedTexs, textureOptions, tileMapByHandle } = this.ctx;
+    const globe = mesh.globe;
     const changedMaterial = mesh.material;
     const tileMesh = mesh.mesh;
     const active = tileMesh.active;
@@ -945,7 +922,7 @@ if (uPickable > 0.) {
       );
       this.setUniforms(changedMaterial, maxTextures);
       this.setupTextures(
-        loadedTexes,
+        loadedTexs,
         textureOptions,
         maxTextures,
         changedMaterial,
@@ -1386,7 +1363,7 @@ if (uPickable > 0.) {
   }
 
   dispose(tileMapByHandle?: TileMapByHandle) {
-    this._viewContext?.removeShadowMaterial(this.material);
+    this.ctx.viewContext?.removeShadowMaterial(this.material);
 
     // Dispose shadow mesh geometry (it's separate from main geometry)
     if (this.shadowMesh) {

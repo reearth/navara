@@ -1,3 +1,4 @@
+import type ThreeView from "@navara/three";
 import {
   EffectLayerDeclaration,
   type EffectLayerConfig,
@@ -28,8 +29,8 @@ export class SSREffectLayer extends EffectLayerDeclaration<
 
   private config: SSRConfig;
 
-  constructor(view: ViewContext, config: SSRConfig) {
-    super(view, config);
+  constructor(view: ThreeView, ctx: ViewContext, config: SSRConfig) {
+    super(view, ctx, config);
     this.config = config;
   }
 
@@ -37,7 +38,7 @@ export class SSREffectLayer extends EffectLayerDeclaration<
     const mrtPass = this.findLayer<MRTPassEffectLayer>("mrt");
     invariant(mrtPass?.normalBuffer);
 
-    const pass = new SSR(this.view.camera, {
+    const pass = new SSR(this.view.camera.raw, {
       ...this.config.ssr,
       geometryBuffer: mrtPass.normalBuffer,
       enabled: this.config.visible ?? true,

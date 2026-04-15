@@ -22,20 +22,7 @@ import {
 } from "three";
 import invariant from "tiny-invariant";
 
-import type { ViewContext } from "../core";
-import {
-  getSelectiveEffectConfig,
-  SelectiveEffectOcclusionMode,
-} from "../core/SelectiveEffectHelper";
-import {
-  getMaskPassContext,
-  MaskPassPhase,
-  evaluateMaskPassParticipation,
-  applyMaskPassSkipState as applyMaskPassSkipStateBase,
-  applyMaskPassRenderState,
-  restoreMaterialState as restoreMaterialStateBase,
-} from "../core/SelectiveEffectMaskContext";
-import type { BufferLoader } from "../event";
+import type { EventContext } from "../event/context";
 import {
   createModelMaterialEnhancer,
   createPntsEnhancer,
@@ -43,8 +30,6 @@ import {
 import type { ModelMaterialProps, PntsProps } from "../material/enhancer/model";
 import type { UniformValue } from "../material/types";
 import type { CustomObject3DEventMap } from "../object3DEvent";
-import type { CommonUniforms } from "../uniforms";
-import { arraysEqual } from "../utils";
 
 import {
   getBatchDataTexture,
@@ -73,11 +58,7 @@ export class ModelMesh
   extends Object3D<CustomObject3DEventMap>
   implements FeatureMesh, PickableMesh
 {
-  private viewContext: ViewContext;
-  /** Layer ID for SelectiveEffect handling */
-  private _layerId: string;
-  private _uniforms: CommonUniforms;
-
+  readonly ctx: EventContext;
   /** Enhanced materials with encapsulated state, one per child mesh */
   private _enhancers = new Map<
     Mesh<BufferGeometry<NormalBufferAttributes>, ModelMaterial>,
@@ -94,27 +75,20 @@ export class ModelMesh
   credit: string | undefined;
   batchLength?: number;
 
-  private prevEffectIds: string[] = [];
-
   constructor(
+    ctx: EventContext,
     gltfInfo: {
       scene: Group;
       credit?: string;
     },
     m: NavaraModelMesh,
-    uniforms: CommonUniforms,
-    buf: BufferLoader,
-    viewContext: ViewContext,
-    layerId: string,
   ) {
     super();
-    this.viewContext = viewContext;
-    this._layerId = layerId;
-    this._uniforms = uniforms;
+    this.ctx = ctx;
     this.credit = gltfInfo.credit;
     this.batchLength = m.batch_length;
     this.add(gltfInfo.scene);
-    this.init(m, buf);
+    this.init(m);
     this.addEventListener("removedFromWorld", () => {
       this.dispose();
     });
@@ -134,7 +108,8 @@ export class ModelMesh
     }
   }
 
-  private init(m: NavaraModelMesh, buf: BufferLoader) {
+  private init(m: NavaraModelMesh) {
+    const { buf } = this.ctx;
     const batchIdsData = m.geometry.batch_ids;
     const dataSize = batchIdsData?.size ?? 0;
     const batchIds = batchIdsData
@@ -226,7 +201,7 @@ export class ModelMesh
     batchIds: Uint32Array<ArrayBufferLike>,
     dataSize: number,
   ) {
-    const uniforms = this._uniforms;
+    const uniforms = this.ctx.uniforms;
 
     // Build initial props using buildUpdateProps plus initial-only external refs
     const updateProps = this.buildUpdateProps(meshMaterial);
@@ -246,7 +221,18 @@ export class ModelMesh
       const vertCnt = mesh.geometry.attributes?.position?.count;
 
       const attrBatchIds = new Float32Array(vertCnt);
-      const internalBatchIds = mesh.geometry.attributes?._batchid?.array;
+      // B3DM (1.0) uses _batchid; glTF with EXT_mesh_features (1.1) uses _FEATURE_ID_N.
+      // Assign _FEATURE_ID_0 to _batchid so the batch texture shader works unchanged.
+      // Also accept lowercase _feature_id_0 as a compatibility fallback.
+      const attrs = mesh.geometry.attributes;
+      const featureIdAttribute =
+        attrs?.["_FEATURE_ID_0"] ?? attrs?.["_feature_id_0"];
+      if (!attrs?._batchid && featureIdAttribute) {
+        // TODO: Support other feature ID semantics such as `_FEATURE_ID_n`.
+        // Need to clone, since it might be switch to different feature ID attributes.
+        mesh.geometry.setAttribute("_batchid", featureIdAttribute.clone());
+      }
+      const internalBatchIds = attrs?._batchid?.array;
 
       if (internalBatchIds) {
         let i = 0;
@@ -288,101 +274,8 @@ export class ModelMesh
 
       this.initDepthMaterial(mesh, enhancer);
 
-      // Setup onBeforeRender for SelectiveEffect state handling
-      this.setupMeshOnBeforeRender(mesh, enhancer);
-
-      this.viewContext.applyShadowMaterial(mesh.material);
+      this.ctx.viewContext.applyShadowMaterial(mesh.material);
     });
-  }
-
-  /**
-   * Setup onBeforeRender callback for a mesh to handle SelectiveEffect rendering
-   *
-   * Mesh determines its own depth/mask flags via onBeforeRender.
-   * Uses MaskPassContext for self-determination during BaseMRT phase.
-   *
-   * SoT Flow:
-   * - MaskPassContext provides runtime state (phase, activeEffects)
-   * - SelectiveEffectManager provides layer configuration (occlusion), accessed via registry
-   * - Mesh reads SoT, never modifies it
-   */
-  private setupMeshOnBeforeRender(
-    mesh: Mesh<BufferGeometry<NormalBufferAttributes>, ModelMaterial>,
-    enhancer: ModelMaterialEnhancer,
-  ): void {
-    mesh.onBeforeRender = () => {
-      // Get MaskPassContext for current rendering state
-      const ctx = getMaskPassContext();
-
-      // Only process during BaseMRT phase (mask pass rendering)
-      if (ctx.phase !== MaskPassPhase.BaseMRT) {
-        // Not in mask pass - restore normal material state
-        restoreMaterialStateBase(mesh.material);
-        return;
-      }
-
-      // Get SelectiveEffectConfig from mesh (link() sets config on child meshes, not parent)
-      const config = getSelectiveEffectConfig(mesh);
-      const registry =
-        ctx.registry ?? this.viewContext?.selectiveEffectRegistry;
-      const layerId = this._layerId;
-
-      // Context-based self-determination during BaseMRT
-      this.applyMaskPassState(mesh, enhancer, config, registry, layerId, ctx);
-    };
-  }
-
-  /**
-   * Apply mask pass state based on MaskPassContext.
-   * Called during BaseMRT phase for context-based self-determination.
-   *
-   * Uses shared helper for evaluation and render state, then applies
-   * model-specific shader uniforms via enhancer mutates.
-   */
-  private applyMaskPassState(
-    mesh: Mesh<BufferGeometry<NormalBufferAttributes>, ModelMaterial>,
-    enhancer: ModelMaterialEnhancer,
-    config: ReturnType<typeof getSelectiveEffectConfig>,
-    registry: ReturnType<typeof getMaskPassContext>["registry"],
-    layerId: string | undefined,
-    ctx: ReturnType<typeof getMaskPassContext>,
-  ): void {
-    const material = mesh.material;
-
-    // Use shared helper for evaluation
-    const evaluation = evaluateMaskPassParticipation(
-      config,
-      registry,
-      layerId,
-      ctx,
-    );
-
-    if (!evaluation.shouldRender) {
-      // Set shader uniforms to skip values via enhancer
-      enhancer.update({
-        base: {
-          bloom: false,
-          outline: false,
-          occlusion: SelectiveEffectOcclusionMode.Skip,
-        },
-      });
-
-      // Apply render state using shared helper
-      applyMaskPassSkipStateBase(material);
-      return;
-    }
-
-    // Set shader uniforms via enhancer
-    enhancer.update({
-      base: {
-        bloom: evaluation.bloomActive,
-        outline: evaluation.outlineActive,
-        occlusion: evaluation.occlusion,
-      },
-    });
-
-    // Apply render state using shared helper
-    applyMaskPassRenderState(material, evaluation.isSilhouette);
   }
 
   private traversePoints(
@@ -462,17 +355,6 @@ export class ModelMesh
         enhancer.update(pntsProps);
       }
     }
-
-    // SelectiveEffect: effectIds handling at ModelMesh level
-    if (!arraysEqual(this.prevEffectIds, material.effectIds)) {
-      this.viewContext.selectiveEffectRegistry?.updateLinksForObject(
-        this,
-        material.effectIds ?? [],
-        this.prevEffectIds,
-        this._layerId,
-      );
-      this.prevEffectIds = material.effectIds ? [...material.effectIds] : [];
-    }
   }
 
   /**
@@ -486,6 +368,10 @@ export class ModelMesh
         roughness: material.roughness,
         emissiveColor: material.emissiveColor,
         emissiveIntensity: material.emissiveIntensity,
+        effectIdsMask:
+          this.ctx.viewContext.selectiveEffectRegistry?.computeMask(
+            material.effectIds ?? [],
+          ) ?? 0,
       },
       water: {
         water: material.water,
@@ -547,7 +433,7 @@ export class ModelMesh
 
   dispose() {
     this.traverseMesh((m) => {
-      this.viewContext.removeShadowMaterial(m.material);
+      this.ctx.viewContext.removeShadowMaterial(m.material);
     });
   }
 }

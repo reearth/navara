@@ -54,8 +54,6 @@ const run = async () => {
       color: new Color().setHex(0xffcc00),
       center: { x: 0, y: -0.5 },
       effectIds: [outlineEffect.id],
-      emissiveIntensity: 0.5,
-      selectiveEffectOcclusion: "normal",
     },
     vectorTile: {
       maxZoom: 16,

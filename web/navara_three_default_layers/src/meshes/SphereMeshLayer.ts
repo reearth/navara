@@ -1,11 +1,12 @@
+import type ThreeView from "@navara/three";
 import {
   Color,
-  MeshLayerDeclarationForSelectiveEffect,
+  MeshLayerDeclarationWithSelectiveEffect,
   type MeshLayerConfigWithSelectiveEffect,
   type MeshLayerUpdateWithSelectiveEffect,
   type ViewContext,
-  type SelectiveEffectOcclusion,
   type CustomObject3DEventMap,
+  setupSelectiveEffectUniforms,
 } from "@navara/three";
 import {
   Mesh,
@@ -33,7 +34,6 @@ type LayerDescription = {
     castShadow?: boolean;
     receiveShadow?: boolean;
     effectIds?: string[];
-    selectiveEffectOcclusion?: SelectiveEffectOcclusion;
   };
 };
 
@@ -43,22 +43,23 @@ export type SphereMeshLayerConfig = MeshLayerConfigWithSelectiveEffect &
 export type SphereMeshLayerUpdate = MeshLayerUpdateWithSelectiveEffect &
   LayerDescription;
 
-export class SphereMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
+export class SphereMeshLayer extends MeshLayerDeclarationWithSelectiveEffect<
   SphereMeshLayerConfig,
   SphereMeshLayerUpdate,
   Mesh<SphereGeometry, MeshLambertMaterial, SphereMeshEventMap>
 > {
   private config: SphereMeshLayerConfig;
 
-  constructor(view: ViewContext, config: SphereMeshLayerConfig) {
-    // Propagate initial effectIds/selectiveEffectOcclusion to base MeshLayer
+  constructor(
+    view: ThreeView,
+    ctx: ViewContext,
+    config: SphereMeshLayerConfig,
+  ) {
+    // Propagate initial effectIds to base MeshLayer
     if (config.sphere?.effectIds) {
       config.effectIds = config.sphere.effectIds;
     }
-    if (config.sphere?.selectiveEffectOcclusion !== undefined) {
-      config.selectiveEffectOcclusion = config.sphere.selectiveEffectOcclusion;
-    }
-    super(view, config);
+    super(view, ctx, config);
     this.config = config;
   }
 
@@ -81,14 +82,16 @@ export class SphereMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
 
     // Create material from properties
     const colorValue = cfg.color ?? new Color().setStyle("#ffffff");
-    const emissiveColorValue = cfg.emissiveColor ? cfg.emissiveColor.raw : 0;
     const material = new MeshLambertMaterial({
       color: colorValue.raw,
-      emissive: emissiveColorValue,
-      emissiveIntensity: cfg.emissiveIntensity ?? 1,
       opacity: cfg.opacity ?? 1,
       transparent: cfg.transparent ?? false,
     });
+
+    // Set up selective effect uniforms and emissive properties
+    material.emissive.set(cfg.emissiveColor?.raw ?? 0x000000);
+    material.emissiveIntensity = cfg.emissiveIntensity ?? 0;
+    setupSelectiveEffectUniforms(material);
 
     const mesh = new Mesh<
       SphereGeometry,
@@ -99,7 +102,7 @@ export class SphereMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
     mesh.castShadow = cfg.castShadow ?? false;
     mesh.receiveShadow = cfg.receiveShadow ?? false;
 
-    this.view.applyShadowMaterial(material);
+    this.ctx.applyShadowMaterial(material);
 
     return mesh;
   }
@@ -149,10 +152,12 @@ export class SphereMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
           const colorValue = cfg.color.raw;
           material.color.set(colorValue);
         }
-        if (cfg.emissiveColor !== undefined)
+        if (cfg.emissiveColor !== undefined) {
           material.emissive.set(cfg.emissiveColor.raw);
-        if (cfg.emissiveIntensity !== undefined)
+        }
+        if (cfg.emissiveIntensity !== undefined) {
           material.emissiveIntensity = cfg.emissiveIntensity;
+        }
         if (cfg.opacity !== undefined) material.opacity = cfg.opacity;
         if (cfg.transparent !== undefined)
           material.transparent = cfg.transparent;
@@ -167,14 +172,10 @@ export class SphereMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
         this._instance.receiveShadow = cfg.receiveShadow;
       }
 
-      // Propagate effectIds/selectiveEffectOcclusion to base MeshLayer
+      // Propagate effectIds to base MeshLayer
       if (cfg.effectIds !== undefined) {
         updates.effectIds = cfg.effectIds;
       }
-      if (cfg.selectiveEffectOcclusion !== undefined) {
-        updates.selectiveEffectOcclusion = cfg.selectiveEffectOcclusion;
-      }
-
       this.emit("needsUpdate");
     }
 
@@ -183,7 +184,7 @@ export class SphereMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
 
   protected disposeMesh(): void {
     if (this._instance) {
-      this.view.removeShadowMaterial(this._instance.material);
+      this.ctx.removeShadowMaterial(this._instance.material);
       this._instance.geometry.dispose();
       this._instance.material.dispose();
 

@@ -12,6 +12,7 @@
   "dependencies": {
     "@astrojs/starlight": "0.34.8",
     "astro": "5.18.1",
+    "rehype-mermaid": "3.0.0",
     "sharp": "0.32.6"
   },
   "packageManager": "pnpm@10.33.0"

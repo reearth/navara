@@ -36,96 +36,77 @@ import { constructPolygonBatchedFeature } from "../tasks/constructPolygonBatched
 import { constructPolylineBatchedFeature } from "../tasks/constructPolylineBatchedFeature";
 import { constructTerrainMesh } from "../tasks/constructTerrainMesh";
 import { upsampleTerrainMesh } from "../tasks/upsampleTerrainMesh";
-import type { WorkerPoolPromises } from "../type";
 
-import type {
-  BufferLoader,
-  FeatureHandler,
-  TileHandler,
-  WorkerTaskHandler,
-} from ".";
+import type { EventContext } from ".";
 
 export async function processWorkerTaskDelegatedEvent(
+  ctx: EventContext,
   event: WorkerTaskDelegatedEvent,
-  bufHandler: BufferLoader,
-  tileHandler: TileHandler,
-  featureHandler: FeatureHandler,
-  workerTaskHandler: WorkerTaskHandler,
-  workerPoolPromises: WorkerPoolPromises,
 ) {
   const id = generate_id_from_entity(event);
   if (event.task.construct_terrain_mesh) {
     return await processConstructTerrainMesh(
+      ctx,
       id,
       event.bits,
       event.task.construct_terrain_mesh,
       event.task.delegator_id,
-      bufHandler,
-      tileHandler,
-      workerTaskHandler,
-      workerPoolPromises,
     );
   }
   if (event.task.upsample_terrain_mesh) {
     return await processUpsampleTerrainMesh(
+      ctx,
       id,
       event.bits,
       event.task.upsample_terrain_mesh,
       event.task.delegator_id,
-      bufHandler,
-      tileHandler,
-      workerTaskHandler,
-      workerPoolPromises,
     );
   }
   if (event.task.construct_polygon_batched_feature) {
     return await processConstructPolygonBatchedFeature(
+      ctx,
       id,
       event.bits,
       event.task.construct_polygon_batched_feature,
       event.task.delegator_id,
-      bufHandler,
-      featureHandler,
-      workerTaskHandler,
-      workerPoolPromises,
     );
   }
   if (event.task.construct_polyline_batched_feature) {
     return await processConstructPolylineBatchedFeature(
+      ctx,
       id,
       event.bits,
       event.task.construct_polyline_batched_feature,
       event.task.delegator_id,
-      bufHandler,
-      featureHandler,
-      workerTaskHandler,
-      workerPoolPromises,
     );
   }
 }
 
 export async function processWorkerTaskRemovedEvent(
+  ctx: EventContext,
   event: EntityEvent,
-  workerPoolPromises: WorkerPoolPromises,
 ) {
   const id = generate_id_from_entity(event);
-  const promise = workerPoolPromises.get(id);
+  const promise = ctx.workerPoolPromises.get(id);
   if (promise) {
     await promise.cancel();
-    workerPoolPromises.delete(id);
+    ctx.workerPoolPromises.delete(id);
   }
 }
 
 async function processConstructTerrainMesh(
+  ctx: EventContext,
   id: string,
   bits: bigint,
   params: ConstructTerrainMeshParameters,
   delegator_id: ReconstructableEntity,
-  bufHandler: BufferLoader,
-  tileHandler: TileHandler,
-  workerTaskHandler: WorkerTaskHandler,
-  workerPoolPromises: WorkerPoolPromises,
 ) {
+  const {
+    buf: bufHandler,
+    tileHandler,
+    workerTaskHandler,
+    workerPoolPromises,
+  } = ctx;
   const bytes = bufHandler.u8(params.bytes_handle);
   if (!bytes) {
     return;
@@ -211,15 +192,18 @@ async function processConstructTerrainMesh(
 }
 
 async function processUpsampleTerrainMesh(
+  ctx: EventContext,
   id: string,
   bits: bigint,
   params: UpsampleTerrainMeshParameters,
   delegator_id: ReconstructableEntity,
-  bufHandler: BufferLoader,
-  tileHandler: TileHandler,
-  workerTaskHandler: WorkerTaskHandler,
-  workerPoolPromises: WorkerPoolPromises,
 ) {
+  const {
+    buf: bufHandler,
+    tileHandler,
+    workerTaskHandler,
+    workerPoolPromises,
+  } = ctx;
   const tile = tileHandler.getTile(params.tile_handle);
   if (!tile) {
     return;
@@ -324,15 +308,18 @@ async function processUpsampleTerrainMesh(
 }
 
 async function processConstructPolygonBatchedFeature(
+  ctx: EventContext,
   id: string,
   bits: bigint,
   params: ConstructPolygonBatchedFeatureParameters,
   delegator_id: ReconstructableEntity,
-  bufHandler: BufferLoader,
-  featureHandler: FeatureHandler,
-  workerTaskHandler: WorkerTaskHandler,
-  workerPoolPromises: WorkerPoolPromises,
 ) {
+  const {
+    buf: bufHandler,
+    featureHandler,
+    workerTaskHandler,
+    workerPoolPromises,
+  } = ctx;
   const transferable = featureHandler.getTransferablePolygonBatchedFeature(
     params.batched_feature[0],
   );
@@ -495,15 +482,18 @@ async function processConstructPolygonBatchedFeature(
 }
 
 async function processConstructPolylineBatchedFeature(
+  ctx: EventContext,
   id: string,
   bits: bigint,
   params: ConstructPolylineBatchedFeatureParameters,
   delegator_id: ReconstructableEntity,
-  bufHandler: BufferLoader,
-  featureHandler: FeatureHandler,
-  workerTaskHandler: WorkerTaskHandler,
-  workerPoolPromises: WorkerPoolPromises,
 ) {
+  const {
+    buf: bufHandler,
+    featureHandler,
+    workerTaskHandler,
+    workerPoolPromises,
+  } = ctx;
   const transferable = featureHandler.getTransferablePolylineBatchedFeature(
     params.batched_feature[0],
   );

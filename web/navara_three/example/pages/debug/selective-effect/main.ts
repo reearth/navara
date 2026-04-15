@@ -1,8 +1,9 @@
 import ThreeView from "@navara/three";
+import type { DefaultLayerDescriptions } from "@navara/three_default_plugin";
 
-import { run, type LayerDescriptions } from "./run";
+import { run } from "./run";
 
-const view = new ThreeView<LayerDescriptions>({
+const view = new ThreeView<DefaultLayerDescriptions>({
   debug: true,
   shadow: true,
 });

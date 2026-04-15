@@ -1,10 +1,11 @@
+import type ThreeView from "@navara/three";
 import {
   Color,
   InstancedMeshLayerDeclaration,
+  setupSelectiveEffectUniforms,
   type InstancedChildConfig,
   type InstancedMeshLayerConfig,
   type InstancedMeshLayerUpdate,
-  type SelectiveEffectOcclusion,
   type ViewContext,
 } from "@navara/three";
 import {
@@ -38,7 +39,6 @@ export type SharedBoxMaterialConfig = {
   castShadow?: boolean;
   receiveShadow?: boolean;
   effectIds?: string[];
-  selectiveEffectOcclusion?: SelectiveEffectOcclusion;
 };
 
 /** The `boxes` config object containing shared material props and children. */
@@ -65,15 +65,16 @@ export class InstancedBoxMeshLayer extends InstancedMeshLayerDeclaration<
 > {
   private config: InstancedBoxMeshLayerConfig;
 
-  constructor(view: ViewContext, config: InstancedBoxMeshLayerConfig) {
-    // Propagate effectIds/selectiveEffectOcclusion to base class
+  constructor(
+    view: ThreeView,
+    ctx: ViewContext,
+    config: InstancedBoxMeshLayerConfig,
+  ) {
+    // Propagate effectIds to base class
     if (config.boxes?.effectIds) {
       config.effectIds = config.boxes.effectIds;
     }
-    if (config.boxes?.selectiveEffectOcclusion !== undefined) {
-      config.selectiveEffectOcclusion = config.boxes.selectiveEffectOcclusion;
-    }
-    super(view, config);
+    super(view, ctx, config);
     this.config = config;
   }
 
@@ -95,13 +96,15 @@ export class InstancedBoxMeshLayer extends InstancedMeshLayerDeclaration<
     const colorValue = cfg?.color ?? new Color().setStyle("#ffffff");
     const emissiveColorValue = cfg?.emissiveColor ? cfg.emissiveColor.raw : 0;
 
-    return new MeshLambertMaterial({
+    const material = new MeshLambertMaterial({
       color: colorValue.raw,
       emissive: emissiveColorValue,
-      emissiveIntensity: cfg?.emissiveIntensity ?? 1,
+      emissiveIntensity: cfg?.emissiveIntensity ?? 0,
       opacity: cfg?.opacity ?? 1,
       transparent: cfg?.transparent ?? false,
     });
+    setupSelectiveEffectUniforms(material);
+    return material;
   }
 
   protected override getInstanceScale(
@@ -129,7 +132,7 @@ export class InstancedBoxMeshLayer extends InstancedMeshLayerDeclaration<
     if (mesh) {
       mesh.castShadow = cfg?.castShadow ?? false;
       mesh.receiveShadow = cfg?.receiveShadow ?? false;
-      this.view.applyShadowMaterial(mesh.material);
+      this.ctx.applyShadowMaterial(mesh.material);
     }
   }
 
@@ -167,12 +170,9 @@ export class InstancedBoxMeshLayer extends InstancedMeshLayerDeclaration<
         this.replaceAll(boxesUpdate.children);
       }
 
-      // Propagate effectIds/selectiveEffectOcclusion to base class
+      // Propagate effectIds to base class
       if (boxesUpdate.effectIds !== undefined) {
         updates.effectIds = boxesUpdate.effectIds;
-      }
-      if (boxesUpdate.selectiveEffectOcclusion !== undefined) {
-        updates.selectiveEffectOcclusion = boxesUpdate.selectiveEffectOcclusion;
       }
 
       // Update stored config
@@ -187,7 +187,7 @@ export class InstancedBoxMeshLayer extends InstancedMeshLayerDeclaration<
 
   override onDestroy(): void {
     if (this.raw) {
-      this.view.removeShadowMaterial(this.raw.material);
+      this.ctx.removeShadowMaterial(this.raw.material);
     }
     super.onDestroy();
   }

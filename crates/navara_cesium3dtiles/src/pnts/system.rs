@@ -1,33 +1,7 @@
-//! PNTS (Point Cloud) Tile Processing
+//! PNTS standalone layer systems.
 //!
-//! This module handles loading and rendering of PNTS tiles, which contain
-//! point cloud data with optional Draco compression.
-//!
-//! # PNTS Format
-//!
-//! PNTS files contain:
-//! - Feature table with point positions (and optional colors, normals)
-//! - Optional 3DTILES_draco_point_compression extension for compression
-//! - RTC_CENTER for relative-to-center coordinates
-//!
-//! # Processing Pipeline
-//!
-//! 1. `RenderedCesium3dTileContent` + `RenderedCesium3dTileContentPntsMarker` spawned
-//! 2. `construct_model_by_cesium3dtiles_layer` extracts point data
-//! 3. Draco decompression is handled in the renderer (via `ModelInternalMaterial`)
-//! 4. `navara_feature::model::system::transfer_mesh` creates `RenderableFeature`
-//!
-//! # Draco Compression
-//!
-//! PNTS tiles may use Draco compression for point data. The compressed data
-//! is passed to the renderer which handles decompression. The `draco_compressed`
-//! flag in `ModelInternalMaterial` indicates this.
-//!
-//! # Point Cloud Specifics
-//!
-//! - `point_cloud = true` in `ModelInternalMaterial`
-//! - Positions are in geocentric coordinates (CRS::Geocentric)
-//! - `TileTransform` is applied during rendering (unlike B3DM/GLB)
+//! These systems handle PNTS files loaded directly as layers (not via 3D Tiles).
+//! The 3D Tiles pipeline uses the generic construct and cleanup systems instead.
 
 use bevy_ecs::{
     entity::Entity,
@@ -37,7 +11,7 @@ use bevy_ecs::{
 
 use navara_buffer_store::{BufferStore, Handle};
 use navara_component::{Deleted, Priority};
-use navara_core::{Aabb, CRS};
+use navara_core::CRS;
 use navara_data_requester::{DataRequester, DataRequesterExtension, DataRequesterStatus};
 use navara_feature_component::{
     batch::{FeatureBatchId, GlobalBatchIds},
@@ -45,24 +19,12 @@ use navara_feature_component::{
     model::{ModelBin, ModelGeometry},
     render::RenderableFeature,
 };
-use navara_layer::{
-    Cesium3dTilesLayer, DeletePntsLayerMarker, LayerId, LayerStore, PntsLayer,
-    UpdatePntsLayerMarker,
-};
+use navara_layer::{DeletePntsLayerMarker, LayerId, LayerStore, PntsLayer, UpdatePntsLayerMarker};
 use navara_material::{Appearance, ModelInternalMaterial, ModelMaterial};
 use navara_math::{Transform, Vec3};
 
-use navara_parser::pnts::*;
-
-use crate::{
-    Cesium3dTileContentDataRequesterMarker, RenderedCesium3dTileContent, TileOrderByDistance,
-    TileTransform,
-};
-
-use super::{
-    RenderedCesium3dTileContentPntsMarker,
-    requester::{PntsDataRequesterMarker, PntsLayerDataRequesterMarker},
-};
+use super::parser::get_geometry_info_from_pnts;
+use super::requester::PntsLayerDataRequesterMarker;
 
 pub fn request_model_by_pnts_layer(
     mut commands: Commands,
@@ -113,7 +75,7 @@ pub fn construct_model_by_pnts_layer(
         appearance.clamp_to_ground = false;
 
         let (draco_compressed, positions_center, positions_handle) =
-            match get_geometry_info_from_pnts(&mut buf, &req.handle) {
+            match get_geometry_info_from_pnts(&mut buf, req.handle) {
                 Some(r) => r,
                 None => continue,
             };
@@ -144,75 +106,6 @@ pub fn construct_model_by_pnts_layer(
 
         buf.remove(&req.handle);
     }
-}
-
-fn get_geometry_info_from_pnts(
-    buf: &mut BufferStore,
-    handle: &Handle,
-) -> Option<(bool, Vec3, Handle)> {
-    let pnts_bin = buf.get_u8(handle)?;
-    let mut pnts = Pnts::from_data(pnts_bin).ok()?;
-
-    let feature_table_json: serde_json::Value =
-        parse_json_to_struct(&pnts.feature_table.json).ok()?;
-
-    // Find out if the pnts uses Draco compression
-    let draco_compression_meta = feature_table_json["extensions"]
-        .as_object()
-        .and_then(|ext| {
-            if let Some(draco_meta) = ext["3DTILES_draco_point_compression"].as_object() {
-                let properties = draco_meta["properties"].as_object().unwrap();
-                let byte_offset = draco_meta["byteOffset"].as_u64().unwrap();
-                let byte_length = draco_meta["byteLength"].as_u64().unwrap();
-                Some((properties, byte_offset, byte_length))
-            } else {
-                None
-            }
-        });
-
-    let mut position_bin_data: Vec<u8>;
-    let mut draco_compressed = false;
-    if let Some((_, byte_offset, byte_length)) = draco_compression_meta {
-        // Draco compression
-        // extract the draco compressed data from featuretable's binary blob
-        position_bin_data = pnts.feature_table.binary.split_off(byte_offset as usize);
-        position_bin_data.truncate(byte_length as usize);
-        draco_compressed = true;
-    } else {
-        // No Draco compression
-        const N_POSITION_COMPONENTS: usize = 3;
-        const N_POSITION_COMPONENTS_BYTE_SIZE: usize = 4;
-
-        let positions_len = feature_table_json["POINTS_LENGTH"].as_u64()? as usize;
-        let positions_offset = feature_table_json["POSITION"]["byteOffset"].as_u64()? as usize;
-        let positions_byte_size =
-            positions_len * N_POSITION_COMPONENTS * N_POSITION_COMPONENTS_BYTE_SIZE;
-
-        // TODO: support color, normal, etc for non-draco compressed data.
-        // extract the position data from featuretable's binary blob
-        position_bin_data = pnts.feature_table.binary.split_off(positions_offset);
-        position_bin_data.truncate(positions_byte_size);
-    }
-
-    let position_bin_handle = buf.new_u8(position_bin_data);
-
-    // NOTE: buffer is removed here to prevent duplicating data.
-    buf.remove(handle);
-
-    let positions_center: Vec<f64> = match feature_table_json["RTC_CENTER"].as_array() {
-        Some(arr) => arr.iter().map(|e| e.as_f64().unwrap()).collect(),
-        None => vec![0.0, 0.0, 0.0],
-    };
-
-    Some((
-        draco_compressed,
-        Vec3::new(
-            positions_center[0],
-            positions_center[1],
-            positions_center[2],
-        ),
-        position_bin_handle,
-    ))
 }
 
 pub fn update_model_by_pnts_layer(
@@ -273,155 +166,5 @@ pub fn delete_model_by_pnts_layer(
         }
         layer_store.remove(&d.0);
         commands.entity(e).despawn();
-    }
-}
-
-/// Constructs point cloud entities from PNTS tile data.
-///
-/// Triggered when a `RenderedCesium3dTileContent` with `RenderedCesium3dTileContentPntsMarker`
-/// is added. Extracts point data and handles Draco compression flags.
-///
-/// # Spawned Components
-///
-/// - `LayerId` - Links to parent layer
-/// - `FeatureId` - Unique feature identifier (default)
-/// - `FeatureBatchId(0)` - No batch table
-/// - `GlobalBatchIds` - Empty batch IDs
-/// - `ModelGeometry` - RTC_CENTER position
-/// - `ModelMaterial` with `ModelInternalMaterial`:
-///   - `draco_compressed` - True if Draco encoded
-///   - `point_cloud = true` - Enables point cloud rendering
-/// - `ModelBin` - Handle to point data (compressed or raw)
-/// - `Transform` - Tile transform from tileset.json
-/// - `Aabb` - Bounding box for culling
-#[allow(clippy::type_complexity, clippy::too_many_arguments)]
-pub fn construct_model_by_cesium3dtiles_layer(
-    mut commands: Commands,
-    mut buf: ResMut<BufferStore>,
-    requesters: Query<
-        (
-            &Cesium3dTileContentDataRequesterMarker,
-            &PntsDataRequesterMarker,
-            &DataRequester,
-        ),
-        Without<Deleted>,
-    >,
-    mut rendered_tiles: Query<
-        (&mut RenderedCesium3dTileContent, &TileTransform, &Aabb),
-        (
-            With<RenderedCesium3dTileContentPntsMarker>,
-            Added<RenderedCesium3dTileContent>,
-        ),
-    >,
-    layers: Query<(Entity, &Cesium3dTilesLayer)>,
-) {
-    for (mut tile, transform, aabb) in &mut rendered_tiles {
-        let (_, _, req) = match requesters.get(tile.data_requester_id) {
-            Ok(v) => v,
-            Err(_) => {
-                continue;
-            }
-        };
-        // TODO: Handle fail
-        if !matches!(req.status, DataRequesterStatus::Success) {
-            continue;
-        }
-        let (_, layer) = match layers.get(tile.layer_id) {
-            Ok(l) => l,
-            Err(_) => continue,
-        };
-        let mut appearance = match &layer.appearances[0] {
-            Appearance::Model(m) => m.clone(),
-            _ => unimplemented!(),
-        };
-        appearance.should_rotate_in_default = false;
-        appearance.clamp_to_ground = false;
-
-        let (draco_compressed, postions_center, postions_handle) =
-            match get_geometry_info_from_pnts(&mut buf, &req.handle) {
-                Some(r) => r,
-                None => continue,
-            };
-
-        appearance.internal = Some(ModelInternalMaterial {
-            draco_compressed,
-            point_cloud: true,
-            point_cloud_geodetic_normal: Vec3::ZERO,
-        });
-
-        let entity = commands.spawn((
-            LayerId(layer.layer_id.to_owned()),
-            FeatureId::default(),
-            FeatureBatchId(0), // Dummy value,
-            GlobalBatchIds {
-                // Dummy value
-                handle: Handle::default(),
-                batch_length: 0,
-            },
-            ModelGeometry {
-                coords: postions_center,
-                crs: CRS::Geocentric,
-            },
-            appearance,
-            ModelBin(postions_handle),
-            transform.transform,
-            aabb.clone(),
-        ));
-        tile.feature_id = Some(entity.id());
-
-        buf.remove(&req.handle);
-    }
-}
-
-/// Remove completely invisible tiles from the scene.
-/// TODO: Preserve the constructed mesh if it is being touched like `glb::system::remove_invisible_rendered_tiles`,
-///       but it wastes a lot of memory.
-#[allow(clippy::type_complexity, clippy::too_many_arguments)]
-pub fn remove_invisible_rendered_tiles(
-    mut commands: Commands,
-    mut buf: ResMut<BufferStore>,
-    requesters: Query<
-        &DataRequester,
-        (
-            With<Cesium3dTileContentDataRequesterMarker>,
-            With<PntsDataRequesterMarker>,
-            Without<Deleted>,
-        ),
-    >,
-    rendered_tiles: Query<
-        (Entity, &RenderedCesium3dTileContent, &TileOrderByDistance),
-        With<RenderedCesium3dTileContentPntsMarker>,
-    >,
-    features: Query<
-        &FeatureId,
-        (
-            With<LayerId>,
-            With<ModelGeometry>,
-            With<ModelMaterial>,
-            With<Transform>,
-        ),
-    >,
-) {
-    for (entity, tile, _) in &rendered_tiles {
-        if tile.is_visible {
-            continue;
-        }
-
-        if let Some(feature_id) = tile.feature_id {
-            commands.entity(feature_id).insert(Deleted);
-            if let Ok(rendered_feature_id) = features.get(feature_id)
-                && let Some(rendered_feature_id) = rendered_feature_id.0
-            {
-                commands.entity(rendered_feature_id).insert(Deleted);
-            }
-        }
-
-        // Remove data requester
-        if let Ok(requester) = requesters.get(tile.data_requester_id) {
-            buf.remove(&requester.handle);
-            commands.entity(tile.data_requester_id).insert(Deleted);
-        }
-
-        commands.entity(entity).despawn();
     }
 }

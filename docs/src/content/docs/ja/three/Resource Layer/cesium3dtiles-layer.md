@@ -7,6 +7,31 @@ sidebar:
 
 Cesium 3D Tiles レイヤーは、3D Tiles フォーマットの大規模な 3D データセットを表示するためのレイヤーです。建物モデル、点群、写真測量データなどを効率的に表示できます。
 
+## 対応仕様
+
+Navara は以下の 3D Tiles 仕様に対応しています。
+
+### 3D Tiles 1.0
+
+| タイルフォーマット | 説明 |
+| ------------------ | ---- |
+| b3dm (Batched 3D Model) | 建物などのバッチ化された 3D モデル |
+| pnts (Point Cloud) | 点群データ |
+| Google Photorealistic 3D Tiles | Google Maps Platform が提供するフォトリアリスティックタイル |
+
+### 3D Tiles 1.1
+
+| 機能 | 説明 |
+| ---- | ---- |
+| GLB コンテンツ | GLB（バイナリ glTF）をコンテンツフォーマットとして使用するタイル |
+| `EXT_mesh_features` | glTF メッシュ内の FeatureId セットによるフィーチャー識別 |
+| `EXT_structural_metadata` | glTF アセットに埋め込まれたプロパティテーブルによるフィーチャーごとのメタデータへのアクセス |
+
+:::note
+- GLB（バイナリ glTF コンテナ）のみ対応しています。外部 `.bin` バッファを参照するプレーンな `.gltf` ファイルには未対応です。
+- Implicit tiling は現在サポートされていません。タイルセットは `tileset.json` による明示的なタイル階層を使用する必要があります。
+:::
+
 ## 基本設定
 
 | プロパティ | 型                | 説明                   |

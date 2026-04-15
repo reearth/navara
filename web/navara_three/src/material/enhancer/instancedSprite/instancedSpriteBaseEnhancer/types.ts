@@ -19,6 +19,11 @@ export type InstancedSpriteBaseProps = {
   alphaTest?: number;
   pickable?: boolean;
 
+  // SelectiveEffect
+  effectIdsMask?: number;
+  emissiveColor?: number;
+  emissiveIntensity?: number;
+
   // Material properties (set directly on material, not via uniforms)
   transparent?: boolean;
   depthTest?: boolean;
@@ -47,6 +52,9 @@ export type InstancedSpriteBaseState = Readonly<{
   offsetDepth: boolean;
   alphaTest: number;
   pickable: boolean;
+  effectIdsMask: number;
+  emissiveColor: number;
+  emissiveIntensity: number;
 
   // Material properties
   transparent: boolean;
@@ -75,6 +83,9 @@ export type InstancedSpriteBaseRefs = {
   uFarPlane: UniformValue<number>;
   uAspect: UniformValue<number>;
   nvr_uPickable: UniformValue<number>;
+  uEffectIdsMask: UniformValue<number>;
+  uEmissiveColor: UniformValue<Vector3>;
+  uEmissiveIntensity: UniformValue<number>;
   uFovRad: UniformValue<number>;
   uScreenHeightPx: UniformValue<number>;
 

@@ -94,6 +94,7 @@ impl App {
             }
             BatchProperty::Values(values) => json_value_to_property(values.get(*in_batch_id)?),
             BatchProperty::Mvt(mvt_layer_data) => mvt_layer_data.get_properties(*in_batch_id),
+            BatchProperty::Cesium3dTilesetV11(table) => table.get_properties(*in_batch_id),
         }?;
 
         Some((properties, batch_value.layer_id.clone()?))
@@ -226,6 +227,35 @@ impl App {
                                 batch_idx,
                                 keys,
                             );
+                            let global_batch_id = global_batch_id_array
+                                .as_ref()
+                                .and_then(|arr| arr.get(batch_idx).copied())
+                                .unwrap_or(batch_idx as u32);
+                            callback(batch_idx, global_batch_id, BatchProperties::Filtered(props))?;
+                        }
+                    }
+                }
+            }
+            BatchProperty::Cesium3dTilesetV11(property_table_data) => {
+                let Some(batch_length) = model_batch_length else {
+                    return Ok(Some(()));
+                };
+
+                match keys {
+                    None => {
+                        for batch_idx in 0..batch_length {
+                            let props: Option<V> = property_table_data.get_properties(batch_idx);
+                            let global_batch_id = global_batch_id_array
+                                .as_ref()
+                                .and_then(|arr| arr.get(batch_idx).copied())
+                                .unwrap_or(batch_idx as u32);
+                            callback(batch_idx, global_batch_id, BatchProperties::All(props))?;
+                        }
+                    }
+                    Some(keys) => {
+                        for batch_idx in 0..batch_length {
+                            let props =
+                                property_table_data.get_filtered_properties::<V>(batch_idx, keys);
                             let global_batch_id = global_batch_id_array
                                 .as_ref()
                                 .and_then(|arr| arr.get(batch_idx).copied())

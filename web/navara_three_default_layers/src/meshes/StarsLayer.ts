@@ -1,7 +1,8 @@
+import type ThreeView from "@navara/three";
 import {
   MeshLayerDeclaration,
   type MeshLayerConfig,
-  ViewContext,
+  type ViewContext,
   type MeshLayerUpdate,
 } from "@navara/three";
 
@@ -25,8 +26,8 @@ export class StarsLayer extends MeshLayerDeclaration<
   private config: StarsLayerConfig;
   private _stars: Stars | null = null;
 
-  constructor(view: ViewContext, config: StarsLayerConfig) {
-    super(view, config);
+  constructor(view: ThreeView, ctx: ViewContext, config: StarsLayerConfig) {
+    super(view, ctx, config);
     this.config = config;
   }
 

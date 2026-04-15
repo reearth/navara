@@ -1,11 +1,12 @@
+import type ThreeView from "@navara/three";
 import {
   Color,
-  MeshLayerDeclarationForSelectiveEffect,
+  MeshLayerDeclarationWithSelectiveEffect,
   type MeshLayerConfigWithSelectiveEffect,
   type MeshLayerUpdateWithSelectiveEffect,
   type ViewContext,
-  type SelectiveEffectOcclusion,
   type CustomObject3DEventMap,
+  setupSelectiveEffectUniforms,
 } from "@navara/three";
 import {
   Mesh,
@@ -30,7 +31,6 @@ type LayerDescription = {
     castShadow?: boolean;
     receiveShadow?: boolean;
     effectIds?: string[];
-    selectiveEffectOcclusion?: SelectiveEffectOcclusion;
   };
 };
 
@@ -40,22 +40,19 @@ export type PlaneMeshLayerConfig = MeshLayerConfigWithSelectiveEffect &
 export type PlaneMeshLayerUpdate = MeshLayerUpdateWithSelectiveEffect &
   LayerDescription;
 
-export class PlaneMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
+export class PlaneMeshLayer extends MeshLayerDeclarationWithSelectiveEffect<
   PlaneMeshLayerConfig,
   PlaneMeshLayerUpdate,
   Mesh<PlaneGeometry, MeshLambertMaterial, PlaneMeshEventMap>
 > {
   private config: PlaneMeshLayerConfig;
 
-  constructor(view: ViewContext, config: PlaneMeshLayerConfig) {
-    // Propagate initial effectIds/selectiveEffectOcclusion to base MeshLayer
+  constructor(view: ThreeView, ctx: ViewContext, config: PlaneMeshLayerConfig) {
+    // Propagate initial effectIds to base MeshLayer
     if (config.plane?.effectIds) {
       config.effectIds = config.plane.effectIds;
     }
-    if (config.plane?.selectiveEffectOcclusion !== undefined) {
-      config.selectiveEffectOcclusion = config.plane.selectiveEffectOcclusion;
-    }
-    super(view, config);
+    super(view, ctx, config);
     this.config = config;
   }
 
@@ -79,10 +76,13 @@ export class PlaneMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
     const material = new MeshLambertMaterial({
       color: colorValue.raw,
       emissive: emissiveColorValue,
-      emissiveIntensity: cfg.emissiveIntensity ?? 1,
+      emissiveIntensity: cfg.emissiveIntensity ?? 0,
       opacity: cfg.opacity ?? 1,
       transparent: cfg.transparent ?? false,
     });
+
+    // Set up selective effect uniforms
+    setupSelectiveEffectUniforms(material);
 
     const mesh = new Mesh<
       PlaneGeometry,
@@ -93,7 +93,7 @@ export class PlaneMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
     mesh.castShadow = cfg.castShadow ?? false;
     mesh.receiveShadow = cfg.receiveShadow ?? false;
 
-    this.view.applyShadowMaterial(material);
+    this.ctx.applyShadowMaterial(material);
 
     return mesh;
   }
@@ -138,10 +138,12 @@ export class PlaneMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
             const colorValue = cfg.color.raw;
             material.color.set(colorValue);
           }
-          if (cfg.emissiveColor !== undefined)
+          if (cfg.emissiveColor !== undefined) {
             material.emissive.set(cfg.emissiveColor.raw);
-          if (cfg.emissiveIntensity !== undefined)
+          }
+          if (cfg.emissiveIntensity !== undefined) {
             material.emissiveIntensity = cfg.emissiveIntensity;
+          }
           if (cfg.opacity !== undefined) material.opacity = cfg.opacity;
           if (cfg.transparent !== undefined)
             material.transparent = cfg.transparent;
@@ -157,12 +159,9 @@ export class PlaneMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
         this._instance.receiveShadow = cfg.receiveShadow;
       }
 
-      // Propagate effectIds/selectiveEffectOcclusion to base MeshLayer
+      // Propagate effectIds to base MeshLayer
       if (cfg.effectIds !== undefined) {
         updates.effectIds = cfg.effectIds;
-      }
-      if (cfg.selectiveEffectOcclusion !== undefined) {
-        updates.selectiveEffectOcclusion = cfg.selectiveEffectOcclusion;
       }
 
       this.emit("needsUpdate");
@@ -173,7 +172,7 @@ export class PlaneMeshLayer extends MeshLayerDeclarationForSelectiveEffect<
 
   protected disposeMesh(): void {
     if (this._instance) {
-      this.view.removeShadowMaterial(this._instance.material);
+      this.ctx.removeShadowMaterial(this._instance.material);
       this._instance.geometry.dispose();
       this._instance.material.dispose();
 

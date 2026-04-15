@@ -91,10 +91,10 @@ function injectGBuffer(
   if (type === "basic") {
     injectNormal(shader);
   }
-  const outputBuffer1 =
+  const normalBufferWrite =
     type === "physical"
       ? /* glsl */ `
-          outputBuffer1 = vec4(packNormalToVec2(normal), metalnessFactor, roughnessFactor)
+          normalBuffer = vec4(packNormalToVec2(normal), metalnessFactor, roughnessFactor)
         `
       : /* glsl */ `
           #ifdef USE_ROUGHNESS
@@ -102,11 +102,18 @@ function injectGBuffer(
           #else
             float roughnessFactor = 0.0;
           #endif
-          outputBuffer1 = vec4(packNormalToVec2(normal), reflectivity, roughnessFactor);
+          normalBuffer = vec4(packNormalToVec2(normal), reflectivity, roughnessFactor);
         `;
   shader.fragmentShader = /* glsl */ `
+    // MRT layout:
+    //   location 0: gl_FragColor (color)
+    //   location 1: normalBuffer (normal + material props)
+    //   location 2: effectIdBuffer (effectIds: R=bitmask)       — SelectiveEffect only
+    //   location 3: emissiveBuffer (emissive: RGB=color×intensity pre-multiplied by Three.js, A=unused) — SelectiveEffect only
     #ifndef USE_SHADOWMAP_DEPTH
-      layout(location = 1) out vec4 outputBuffer1;
+      layout(location = 1) out vec4 normalBuffer;
+      layout(location = 2) out vec4 effectIdBuffer;
+      layout(location = 3) out vec4 emissiveBuffer;
     #endif
 
     #if !defined(USE_ENVMAP)
@@ -117,13 +124,25 @@ function injectGBuffer(
       uniform float roughness;
     #endif // USE_ROUGHNESS
 
+    #ifdef USE_SELECTIVE_EFFECT
+      uniform float uEffectIdsMask;
+    #endif
+
     ${packing}
     ${
       createReplacer(shader.fragmentShader).replace(
         /}\s*$/, // Assume the last curly brace is of main()
         /* glsl */ `
           #ifndef USE_SHADOWMAP_DEPTH
-            ${outputBuffer1};
+            ${normalBufferWrite};
+
+            #ifdef USE_SELECTIVE_EFFECT
+              effectIdBuffer = vec4(uEffectIdsMask, 0.0, 0.0, 1.0);
+              emissiveBuffer = vec4(emissive, 1.0);
+            #else
+              effectIdBuffer = vec4(0.0);
+              emissiveBuffer = vec4(0.0);
+            #endif
           #endif
         }
       `,
@@ -153,10 +172,16 @@ function injectGBufferToSpriteMaterial(shader: ShaderLibShader) {
   `;
 
   shader.fragmentShader = /* glsl */ `
-    layout(location = 1) out vec4 outputBuffer1;
+    layout(location = 1) out vec4 normalBuffer;
+    layout(location = 2) out vec4 effectIdBuffer;
+    layout(location = 3) out vec4 emissiveBuffer;
+
+    #ifdef USE_SELECTIVE_EFFECT
+      uniform float uEffectIdsMask;
+    #endif
 
     varying vec3 vViewPosition;
-  
+
     ${packing}
 
     ${
@@ -165,13 +190,21 @@ function injectGBufferToSpriteMaterial(shader: ShaderLibShader) {
         /* glsl */ `
           // Flat shading
           vec3 fdx = dFdx( vViewPosition );
-	        vec3 fdy = dFdy( vViewPosition );
-	        vec3 normal = normalize( cross( fdx, fdy ) );
-          outputBuffer1 = vec4(
+          vec3 fdy = dFdy( vViewPosition );
+          vec3 normal = normalize( cross( fdx, fdy ) );
+          normalBuffer = vec4(
             packNormalToVec2(normal),
             0.0,
             0.0
           );
+
+          #ifdef USE_SELECTIVE_EFFECT
+            effectIdBuffer = vec4(uEffectIdsMask, 0.0, 0.0, 1.0);
+            emissiveBuffer = vec4(0.0);
+          #else
+            effectIdBuffer = vec4(0.0);
+            emissiveBuffer = vec4(0.0);
+          #endif
         }
       `,
       ).source
@@ -226,7 +259,7 @@ function injectGBufferToShaderMaterial(
   // Fragment shader
   const logdepthParsFrag = "#include <logdepthbuf_pars_fragment>";
   const logdepthFrag = "#include <logdepthbuf_fragment>";
-  const outputBuffer1 = /* glsl */ `
+  const normalBufferWrite = /* glsl */ `
           vec4(
             packNormalToVec2(${normalVariableName}),
             0.0,
@@ -235,7 +268,15 @@ function injectGBufferToShaderMaterial(
         `;
   shader.fragmentShader = /* glsl */ `
     #ifndef USE_SHADOWMAP_DEPTH
-      layout(location = 1) out vec4 outputBuffer1;
+      layout(location = 1) out vec4 normalBuffer;
+      layout(location = 2) out vec4 effectIdBuffer;
+      layout(location = 3) out vec4 emissiveBuffer;
+
+      #ifdef USE_SELECTIVE_EFFECT
+        uniform float uEffectIdsMask;
+        uniform vec3 uEmissiveColor;
+        uniform float uEmissiveIntensity;
+      #endif
     #endif
 
     ${packing}
@@ -249,7 +290,15 @@ function injectGBufferToShaderMaterial(
           ${shader.fragmentShader.includes(logdepthFrag) ? "" : logdepthFrag}
 
           #ifndef USE_SHADOWMAP_DEPTH
-            outputBuffer1 = ${outputBuffer1};
+            normalBuffer = ${normalBufferWrite};
+
+            #ifdef USE_SELECTIVE_EFFECT
+              effectIdBuffer = vec4(uEffectIdsMask, 0.0, 0.0, 1.0);
+              emissiveBuffer = vec4(uEmissiveColor * uEmissiveIntensity, 1.0);
+            #else
+              effectIdBuffer = vec4(0.0);
+              emissiveBuffer = vec4(0.0);
+            #endif
           #endif
         }
       `,
@@ -291,7 +340,13 @@ function injectGBufferToLineMaterial(lineMaterial: LineMaterial) {
   // LineMaterial already has proper vertex shader setup, so we only modify fragment shader
 
   lineMaterial.fragmentShader = /* glsl */ `
-    layout(location = 1) out vec4 outputBuffer1;
+    layout(location = 1) out vec4 normalBuffer;
+    layout(location = 2) out vec4 effectIdBuffer;
+    layout(location = 3) out vec4 emissiveBuffer;
+
+    #ifdef USE_SELECTIVE_EFFECT
+      uniform float uEffectIdsMask;
+    #endif
 
     ${packing}
 
@@ -305,7 +360,7 @@ function injectGBufferToLineMaterial(lineMaterial: LineMaterial) {
             vec3 fdx = dFdx(gl_FragCoord.xyz);
             vec3 fdy = dFdy(gl_FragCoord.xyz);
             vec3 normal = normalize(cross(fdx, fdy));
-            
+
             // Ensure normal faces camera (positive Z in screen space)
             if (normal.z < 0.0) normal = -normal;
         `,
@@ -313,11 +368,19 @@ function injectGBufferToLineMaterial(lineMaterial: LineMaterial) {
         .replace(
           /}\s*$/, // Assume the last curly brace is of main()
           /* glsl */ `
-          outputBuffer1 = vec4(
+          normalBuffer = vec4(
             packNormalToVec2(normal),
             0.0,
             0.0
           );
+
+          #ifdef USE_SELECTIVE_EFFECT
+            effectIdBuffer = vec4(uEffectIdsMask, 0.0, 0.0, 1.0);
+            emissiveBuffer = vec4(0.0);
+          #else
+            effectIdBuffer = vec4(0.0);
+            emissiveBuffer = vec4(0.0);
+          #endif
         }
       `,
         ).source

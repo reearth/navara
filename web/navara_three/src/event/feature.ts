@@ -1,4 +1,4 @@
-import type { EventHandler, TileHandle } from "@navara/core";
+import type { TileHandle } from "@navara/core";
 import { generate_id_from_entity } from "@navara/core";
 import {
   type RenderableFeatureAddedEvent,
@@ -7,14 +7,6 @@ import {
 } from "@navara/engine";
 import { Mesh, Sprite, Object3D } from "three";
 
-import type { ViewEvents } from "..";
-import { Color } from "../Color";
-import {
-  parseSelectiveEffectOcclusion,
-  type SelectiveEffectOcclusion,
-} from "../core/SelectiveEffectHelper";
-import type { ViewContext } from "../core/ViewContext";
-import type { LayersManager } from "../layersManager";
 import {
   BatchedSdfTextMesh,
   InstancedSpriteMesh,
@@ -23,10 +15,8 @@ import {
   PolylineMesh,
 } from "../mesh";
 import { FEATURE_RENDER_ORDER } from "../renderOrder";
-import type { Scenes, TexturizedSceneByTileCoordinates } from "../scene";
-import type { MeshCache, RenderFlag } from "../type";
-import type { CommonUniforms } from "../uniforms";
 
+import type { EventContext } from "./context";
 import {
   handleFeatureCreatedEventByLayerId,
   handleFeatureUpdatedEventByLayerId,
@@ -43,45 +33,31 @@ import {
 import { renderPolyline, processPolylineChanged } from "./features/polyline";
 import { renderText, processTextChanged } from "./features/text";
 
-import {
-  setTransform,
-  type BufferLoader,
-  type FeatureHandler,
-  type LayerHandler,
-} from ".";
+import { setTransform } from ".";
 
 export function renderFeature(
+  ctx: EventContext,
   f: RenderableFeature,
-  buf: BufferLoader,
-  uniforms: CommonUniforms,
   tileHandle: TileHandle | undefined,
-  viewContext: ViewContext,
   layerId: string,
 ): Promise<Mesh | Sprite | Object3D | undefined> | undefined {
   if (f.point) {
-    return renderPoint(f.point, buf, viewContext, layerId);
+    return renderPoint(ctx, f.point);
   }
   if (f.billboard) {
-    return renderBillboard(f.billboard, buf, viewContext, layerId);
+    return renderBillboard(ctx, f.billboard);
   }
   if (f.model) {
-    return renderModel(f.model, buf, uniforms, viewContext, layerId);
+    return renderModel(ctx, f.model);
   }
   if (f.polyline) {
-    return renderPolyline(f.polyline, buf, uniforms, viewContext, layerId);
+    return renderPolyline(ctx, f.polyline);
   }
   if (f.polygon) {
-    return renderPolygon(
-      f.polygon,
-      buf,
-      uniforms,
-      tileHandle,
-      viewContext,
-      layerId,
-    );
+    return renderPolygon(ctx, f.polygon, tileHandle, layerId);
   }
   if (f.text) {
-    return renderText(f.text, buf, uniforms, viewContext, layerId);
+    return renderText(ctx, f.text, layerId);
   }
 }
 
@@ -93,18 +69,19 @@ export const checkFeatureParallel = (feature: RenderableFeature): boolean => {
 };
 
 export async function processRenderableFeatureAdded(
+  ctx: EventContext,
   ev: RenderableFeatureAddedEvent,
-  scenes: Scenes,
-  meshes: MeshCache,
-  buf: BufferLoader,
-  uniforms: CommonUniforms,
-  texturizedSceneByTileCoordinates: TexturizedSceneByTileCoordinates,
-  featureHandler: FeatureHandler,
-  viewEvents: EventHandler<ViewEvents>,
-  layersManager: LayersManager,
-  viewContext: ViewContext,
-  updatedAt: number,
 ) {
+  const {
+    scenes,
+    meshes,
+    texturizedSceneByTileCoordinates,
+    featureHandler,
+    viewEvents,
+    layersManager,
+    viewContext,
+    updatedAt,
+  } = ctx;
   const id = generate_id_from_entity(ev);
   const feature = ev.feature;
 
@@ -123,14 +100,7 @@ export async function processRenderableFeatureAdded(
     viewContext.concurrencyManager.increment();
   }
 
-  const obj = await renderFeature(
-    feature,
-    buf,
-    uniforms,
-    tileHandle,
-    viewContext,
-    featureLayerId,
-  )
+  const obj = await renderFeature(ctx, feature, tileHandle, featureLayerId)
     ?.then((r) => {
       const type = (() => {
         if (point || billboard || text) return "point";
@@ -180,7 +150,7 @@ export async function processRenderableFeatureAdded(
   }
 
   if (obj instanceof PolygonMesh && polygon && polygon.outline_geometry) {
-    const outline = await renderPolygonOutline(polygon, buf, viewEvents);
+    const outline = await renderPolygonOutline(ctx, polygon);
     outline.renderOrder = FEATURE_RENDER_ORDER;
     scenes.mrt.add(outline);
 
@@ -190,27 +160,6 @@ export async function processRenderableFeatureAdded(
       obj.outline?.clear();
       obj.outline?.removeFromParent();
     });
-  }
-
-  // Register initial effects from Rust material if not already registered for this layer
-  // All 5 material types in appearance.rs have post effect fields
-  const material =
-    feature.model?.material ??
-    feature.polygon?.material ??
-    feature.polyline?.material ??
-    feature.point?.material ??
-    feature.billboard?.material;
-  if (material && viewContext.getLayerEffects(featureLayerId) === undefined) {
-    viewContext.registerLayerEffects(
-      featureLayerId,
-      material.effectIds ?? [],
-      parseSelectiveEffectOcclusion(
-        material.selectiveEffectOcclusion as
-          | SelectiveEffectOcclusion
-          | undefined,
-      ),
-      material.emissiveIntensity,
-    );
   }
 
   handleFeatureCreatedEventByLayerId(
@@ -233,17 +182,17 @@ export async function processRenderableFeatureAdded(
 }
 
 export async function processRenderableFeatureChanged(
+  ctx: EventContext,
   ev: RenderableFeatureChangedEvent,
-  meshes: MeshCache,
-  texturizedSceneByTileCoordinates: TexturizedSceneByTileCoordinates,
-  renderFlag: RenderFlag,
-  buf: BufferLoader,
-  viewEvents: EventHandler<ViewEvents>,
-  layersManager: LayersManager,
-  viewContext: ViewContext,
-  updatedAt: number,
-  layerHandler?: LayerHandler,
 ) {
+  const {
+    meshes,
+    texturizedSceneByTileCoordinates,
+    viewEvents,
+    layersManager,
+    updatedAt,
+    layerHandler,
+  } = ctx;
   const id = generate_id_from_entity(ev);
   const obj = meshes.get(id);
   if (!obj) return;
@@ -255,38 +204,6 @@ export async function processRenderableFeatureChanged(
 
   const { point, billboard, text, polyline, polygon, model } = ev.feature;
 
-  // Update SelectiveEffect configuration from material (Core is SoT)
-  // All 5 material types in appearance.rs have selective effect fields
-  const material =
-    model?.material ??
-    polygon?.material ??
-    polyline?.material ??
-    point?.material ??
-    billboard?.material;
-  if (material) {
-    viewContext.updateLayerEffects(
-      layerId,
-      material.effectIds,
-      material.emissiveIntensity,
-    );
-
-    if (material.emissiveColor !== undefined) {
-      viewContext.setLayerEmissiveColor(
-        layerId,
-        new Color().setHex(material.emissiveColor),
-      );
-    }
-
-    if (material.selectiveEffectOcclusion !== undefined) {
-      const occlusion = parseSelectiveEffectOcclusion(
-        material.selectiveEffectOcclusion as SelectiveEffectOcclusion,
-      );
-      if (occlusion !== undefined) {
-        viewContext.setLayerSelectiveEffectOcclusion(layerId, occlusion);
-      }
-    }
-  }
-
   const active =
     (point ?? billboard ?? text ?? polyline ?? polygon ?? model)?.active ??
     true;
@@ -295,13 +212,13 @@ export async function processRenderableFeatureChanged(
   const prevVisible = obj.visible;
 
   if (obj instanceof InstancedSpriteMesh && point) {
-    processPointChanged(obj, point, buf, active);
+    processPointChanged(obj, point, active);
   }
   if (obj instanceof InstancedSpriteMesh && billboard) {
-    await processBillboardChanged(obj, billboard, buf, active);
+    await processBillboardChanged(obj, billboard, active);
   }
   if (obj instanceof BatchedSdfTextMesh && text) {
-    await processTextChanged(obj, text, buf, renderFlag, active);
+    await processTextChanged(obj, text, active);
   }
   if (obj instanceof ModelMesh && model) {
     processModelChanged(obj, model, active);

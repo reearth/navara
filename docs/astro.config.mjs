@@ -1,6 +1,7 @@
 // @ts-check
 import { defineConfig } from "astro/config";
 import starlight from "@astrojs/starlight";
+import rehypeMermaid from "rehype-mermaid";
 import { readdir } from "fs/promises";
 
 // Locale directory names to exclude from sidebar generation.
@@ -33,6 +34,9 @@ const sidebar = await autogenSections();
 
 // https://astro.build/config
 export default defineConfig({
+  markdown: {
+    rehypePlugins: [[rehypeMermaid, { strategy: "inline-svg" }]],
+  },
   integrations: [
     starlight({
       title: "Navara",
@@ -47,6 +51,7 @@ export default defineConfig({
           label: "日本語",
         },
       },
+      customCss: ["./src/styles/mermaid.css"],
       components: {
         Sidebar: "./src/components/Sidebar.astro",
         Pagination: "./src/components/Pagination.astro",

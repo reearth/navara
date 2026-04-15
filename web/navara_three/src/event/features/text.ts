@@ -1,19 +1,15 @@
 import { type TextMesh as NavaraTextMesh } from "@navara/engine";
 
-import type { BufferLoader } from "..";
-import type { ViewContext } from "../../core";
 import { BatchedSdfTextMesh } from "../../mesh";
 import { FEATURE_RENDER_ORDER } from "../../renderOrder";
-import type { RenderFlag } from "../../type";
-import type { CommonUniforms } from "../../uniforms";
+import type { EventContext } from "../context";
 
 export async function renderText(
+  ctx: EventContext,
   m: NavaraTextMesh,
-  buf: BufferLoader,
-  uniforms: CommonUniforms,
-  viewContext: ViewContext,
   layerId: string,
 ) {
+  const { fontManager } = ctx;
   const fontUrl = m.material.font;
   if (!fontUrl || fontUrl === "") {
     console.warn(
@@ -21,7 +17,6 @@ export async function renderText(
     );
     return;
   }
-  const fontManager = viewContext.fontManager;
 
   // Use SDF pipeline when a font URL is specified and FontManager is available
   if (fontManager) {
@@ -39,14 +34,11 @@ export async function renderText(
       }
 
       const textGroup = new BatchedSdfTextMesh(
+        ctx,
         m,
-        buf,
-        fontManager,
         fontUrl,
-        uniforms,
         {
           renderOrder: FEATURE_RENDER_ORDER,
-          viewContext,
           layerId,
         },
         loadedFaceUrls,
@@ -63,12 +55,10 @@ export async function renderText(
 export async function processTextChanged(
   obj: BatchedSdfTextMesh,
   m: NavaraTextMesh,
-  buf: BufferLoader,
-  renderFlag: RenderFlag,
   active: boolean,
 ) {
-  await obj._update(m, buf, () => {
-    renderFlag.forceUpdate = true;
+  await obj._update(m, () => {
+    obj.ctx.renderFlag.forceUpdate = true;
   });
   obj.setActive(active);
 }
