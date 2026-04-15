@@ -2,7 +2,7 @@ import { readFileSync } from "fs";
 import { resolve } from "path";
 
 import invariant from "tiny-invariant";
-import type { Plugin } from "vite";
+import { normalizePath, type Plugin } from "vite";
 
 export type PageConfig = {
   name: string;
@@ -29,7 +29,7 @@ function renderHtml(
 }
 
 export function createMpaPlugin({ templatePath, pages }: Options): Plugin {
-  const template = readFileSync(templatePath, "utf-8");
+  let template = readFileSync(templatePath, "utf-8");
   const pageMap = new Map<string, PageConfig>();
   for (const page of pages) {
     pageMap.set(page.filename, page);
@@ -40,11 +40,11 @@ export function createMpaPlugin({ templatePath, pages }: Options): Plugin {
   const resolvedPaths = new Map<string, string>();
 
   function resolvedPath(filename: string): string {
-    return resolve(root, filename);
+    return normalizePath(resolve(root, filename));
   }
 
   return {
-    name: "example-mpa",
+    name: "mpa",
 
     configResolved(config) {
       root = config.root;
@@ -90,6 +90,14 @@ export function createMpaPlugin({ templatePath, pages }: Options): Plugin {
     },
 
     configureServer(server) {
+      server.watcher.add(templatePath);
+      server.watcher.on("change", (file) => {
+        if (normalizePath(file) === normalizePath(templatePath)) {
+          template = readFileSync(templatePath, "utf-8");
+          server.ws.send({ type: "full-reload" });
+        }
+      });
+
       server.middlewares.use((req, res, next) => {
         if (req.url === "/" || req.url === "") {
           req.url = "/index.html";
