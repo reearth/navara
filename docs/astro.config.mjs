@@ -51,7 +51,7 @@ export default defineConfig({
           label: "日本語",
         },
       },
-      customCss: ["./src/styles/mermaid-dark.css"],
+      customCss: ["./src/styles/mermaid.css"],
       components: {
         Sidebar: "./src/components/Sidebar.astro",
         Pagination: "./src/components/Pagination.astro",
