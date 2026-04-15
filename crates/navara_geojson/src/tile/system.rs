@@ -39,9 +39,19 @@ pub fn setup_tiled_geojson(
             _ => continue,
         };
 
+        // Use a much lower tolerance for layers with polyline appearances.
+        // The default tolerance (2.0) aggressively simplifies lines at lower zoom
+        // levels, removing intermediate points and leaving only 2-point segments.
+        // These short segments render as spikes when the line width exceeds the
+        // segment length.
+        let has_polyline = layer
+            .appearances
+            .iter()
+            .any(|a| matches!(a, Appearance::Polyline(_)));
         let opts = GeoJsonVtOptions {
             // Avoid to stop the tile splitting unexpectedly.
             index_max_points: 0,
+            tolerance: if has_polyline { 1.0 } else { 2.0 },
             ..Default::default()
         };
         let max_zoom = opts.max_zoom;
