@@ -29,6 +29,7 @@ import {
   Vector3,
   Vector4,
   AddOperation,
+  Object3D,
   WebGLRenderTarget,
   type MagnificationTextureFilter,
   type MinificationTextureFilter,
@@ -1360,6 +1361,10 @@ if (uPickable > 0.) {
       this.material.color.setHex(this.userData.tileOrigColor);
     }
     this.material.userData.uPickable.value = pickable ? 1 : 0;
+  }
+
+  _getRenderable(): Object3D {
+    return this;
   }
 
   dispose(tileMapByHandle?: TileMapByHandle) {

@@ -221,11 +221,6 @@ export abstract class MeshLayerDeclaration<
    * @returns The pass key: `"opaque"` (default), `"transparent"`, `"mrt"`, or `"skyEnvMap"`.
    */
   protected getPassKey(): PassKey {
-    // Pickable meshes must be in MRT scene because the opaque scene
-    // is hidden during the picking render pass.
-    if (this._pickable) {
-      return "mrt";
-    }
     return "opaque";
   }
 

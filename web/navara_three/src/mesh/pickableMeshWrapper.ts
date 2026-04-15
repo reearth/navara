@@ -210,6 +210,10 @@ export class PickableMeshWrapper extends Object3D implements PickableMesh {
   _setPickable(pickable: boolean, _pickingCoord?: Vector2): void {
     this.refs.nvr_uPickable.value = pickable ? 1 : 0;
   }
+
+  _getRenderable(): Object3D {
+    return this.object;
+  }
 }
 
 /**
@@ -301,5 +305,9 @@ export class PickableInstancedMeshWrapper
 
   _setPickable(pickable: boolean, _pickingCoord?: Vector2): void {
     this.refs.nvr_uPickable.value = pickable ? 1 : 0;
+  }
+
+  _getRenderable(): Object3D {
+    return this.mesh;
   }
 }

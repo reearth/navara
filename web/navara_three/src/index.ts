@@ -894,11 +894,8 @@ export default class ThreeView<
         this._renderer.domElement,
         this._renderer,
         this._camera.raw,
-        this._scenes,
         this._meshes,
         this.onPick.bind(this),
-        this.renderPassOrchestrator.effectComposer.inputBuffer,
-        this._globe,
         // {
         //   debug: true,
         // },

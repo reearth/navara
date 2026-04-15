@@ -18,6 +18,7 @@ import {
   InstancedBufferAttribute,
   InstancedBufferGeometry,
   Mesh,
+  Object3D,
   ShaderMaterial,
   Vector2,
 } from "three";
@@ -390,6 +391,10 @@ export class SDFTextMesh
 
   _setPickable(pickable: boolean): void {
     this._enhancer.update({ base: { pickable } });
+  }
+
+  _getRenderable(): Object3D {
+    return this;
   }
 
   // --- Cleanup ---

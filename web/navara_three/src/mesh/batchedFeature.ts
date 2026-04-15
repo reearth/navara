@@ -5,6 +5,7 @@ import {
   Color,
   Material,
   Mesh,
+  Object3D,
   type Vector2,
   type NormalBufferAttributes,
 } from "three";
@@ -134,6 +135,10 @@ export class BatchedFeatureMesh<
   _setPickable(pickable: boolean, _pickingCoord?: Vector2) {
     this.material.userData.uPickable.value = pickable ? 1.0 : 0.0;
     this.needsUpdate();
+  }
+
+  _getRenderable(): Object3D {
+    return this;
   }
 
   clone() {

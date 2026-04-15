@@ -1,36 +1,51 @@
-import type { Globe } from "@navara/core";
 import {
   WebGLRenderer,
   WebGLRenderTarget,
   PerspectiveCamera,
   Object3D,
-  Mesh,
-  Scene,
   RGBAFormat,
   Color,
+  Scene,
   Vector2,
 } from "three";
 
 import { BufferView } from "../bufferView";
-import { isPickableMesh } from "../mesh/pickableMesh";
-import { CustomRenderPass } from "../passes";
-import type { Scenes } from "../scene";
+import { isPickableMesh, type PickableMesh } from "../mesh/pickableMesh";
 import type { MeshCache } from "../type";
 
 export type PickHelperOptions = {
   debug: boolean;
 };
 
-export class PickHelper extends CustomRenderPass {
+/**
+ * GPU picking using a dedicated single-pixel render pass.
+ *
+ * The pick pass does NOT reuse the main render pipeline (globe / MRT /
+ * draped / copy passes). Instead, every pickable raw — regardless of
+ * which pass scene (opaque, mrt, ...) it normally lives in — is
+ * temporarily re-parented into a dedicated `pickScene` for the render
+ * and then restored to its original parent afterwards. This guarantees
+ * the pick buffer contains exactly the pickable content and nothing
+ * else can leak in (globe tiles, outlines, draped features, sky, etc.).
+ *
+ * Re-parenting is safe because pass scenes all have identity world
+ * transforms, so world matrices of the re-parented objects are
+ * unaffected.
+ */
+export class PickHelper {
   private element: HTMLElement;
   private pixelBuffer: Uint8Array;
   private _renderer: WebGLRenderer;
-  private onPickCallback: (pickArr: number[]) => void;
+  private _camera: PerspectiveCamera;
   private _meshes: MeshCache;
+  private onPickCallback: (pickArr: number[]) => void;
+
+  /** Dedicated scene used only during the pick render. */
+  private readonly pickScene = new Scene();
 
   private debugBufferView?: BufferView;
   private debugRenderTarget?: WebGLRenderTarget;
-  /** Full-size render target for picking (single color attachment). */
+  /** Full-size render target used for click picking with scissor restriction. */
   private pickRenderTarget: WebGLRenderTarget;
 
   private mouseMoved: boolean;
@@ -42,22 +57,15 @@ export class PickHelper extends CustomRenderPass {
     element: HTMLElement,
     renderer: WebGLRenderer,
     camera: PerspectiveCamera,
-    scenes: Scenes,
     meshes: MeshCache,
     onPickCallback: (pickArr: number[]) => void,
-    inputBuffer: WebGLRenderTarget,
-    globe: Globe,
     options?: PickHelperOptions,
   ) {
-    super(scenes, camera, inputBuffer, globe, {
-      disableShadow: true,
-      allowTransparent: false,
-    });
-
     this.element = element;
     this.pixelBuffer = new Uint8Array(4);
     this._renderer = renderer;
-    this.camera = camera;
+    this._camera = camera;
+    this._meshes = meshes;
     this.onPickCallback = onPickCallback;
 
     this.mouseMoved = false;
@@ -65,15 +73,13 @@ export class PickHelper extends CustomRenderPass {
     this.mouseMoveHandler = (event: MouseEvent) => this.onMouseMove(event);
     this.mouseUpHandler = (event: MouseEvent) => this.onMouseUp(event);
 
-    this._meshes = meshes;
-
     const width = this._renderer.getContext().drawingBufferWidth;
     const height = this._renderer.getContext().drawingBufferHeight;
 
     this.pickRenderTarget = new WebGLRenderTarget(width, height, {
       format: RGBAFormat,
       depthBuffer: true,
-      stencilBuffer: true,
+      stencilBuffer: false,
     });
 
     if (options?.debug) {
@@ -81,7 +87,7 @@ export class PickHelper extends CustomRenderPass {
       this.debugRenderTarget = new WebGLRenderTarget(width, height, {
         format: RGBAFormat,
         depthBuffer: true,
-        stencilBuffer: true,
+        stencilBuffer: false,
       });
     }
   }
@@ -112,52 +118,71 @@ export class PickHelper extends CustomRenderPass {
     }
   }
 
-  private traverseModel(obj: Object3D, callfunc: (mesh: Mesh) => void) {
-    if (obj instanceof Mesh) {
-      callfunc(obj);
-    }
+  /**
+   * Moves every pickable raw (visible, currently parented) into the
+   * dedicated `pickScene` and activates the picking uniforms on its
+   * wrapper. Returns a teardown callback that restores original parents
+   * and deactivates the uniforms.
+   */
+  private stagePickables(pickingCoord?: Vector2): () => void {
+    const restoreParents: [Object3D, Object3D][] = [];
+    const activated: PickableMesh[] = [];
 
-    if (Array.isArray(obj.children) && obj.children.length > 0) {
-      obj.children.forEach((child) => {
-        this.traverseModel(child, callfunc);
-      });
-    }
-  }
-
-  private togglePickable(pickable: boolean, pickingCoord?: Vector2) {
     for (const [_key, obj] of this._meshes) {
-      if (isPickableMesh(obj)) {
-        obj._setPickable(pickable, pickingCoord);
-      }
+      if (!isPickableMesh(obj)) continue;
+
+      const raw = obj._getRenderable();
+      const originalParent = raw.parent;
+
+      // Only pick visible, currently-parented renderables. A mesh that's
+      // hidden or detached isn't rendered in the main view, so picking
+      // it would be surprising.
+      if (!originalParent || !raw.visible) continue;
+
+      obj._setPickable(true, pickingCoord);
+      activated.push(obj);
+
+      // Scene.add auto-removes from the previous parent. Both parents
+      // are pass scenes with identity world transforms, so the raw's
+      // world matrix is unaffected.
+      this.pickScene.add(raw);
+      restoreParents.push([raw, originalParent]);
     }
 
-    // Since SkyMesh renders fullscreen quad plane, and it shows just black, this scene should be invisible.
-    // We should support picking in this scene in the future.
-    this._scenes.opaque.visible = !pickable;
+    return () => {
+      for (const [raw, parent] of restoreParents) parent.add(raw);
+      for (const w of activated) w._setPickable(false);
+    };
   }
 
+  /**
+   * Dedicated picking render: clears the target to black (batchId=0) and
+   * renders only the pickable raws, regardless of which pass scene they
+   * normally live in.
+   */
   public processRender(target: WebGLRenderTarget, pickingCoord?: Vector2) {
-    const orgClearColor = new Color();
-    this._renderer.getClearColor(orgClearColor);
+    const origClearColor = new Color();
+    this._renderer.getClearColor(origClearColor);
+    const origClearAlpha = this._renderer.getClearAlpha();
+    const origRenderTarget = this._renderer.getRenderTarget();
+    const origAutoClear = this._renderer.autoClear;
 
-    this._renderer.setClearColor(0x000000);
+    const teardown = this.stagePickables(pickingCoord);
 
-    this.togglePickable(true, pickingCoord);
+    this._renderer.setClearColor(0x000000, 1);
+    this._renderer.setRenderTarget(target);
+    this._renderer.autoClear = true;
+    this._renderer.clear(true, true, false);
+    this._renderer.render(this.pickScene, this._camera);
 
-    this.render(this._renderer, target, null);
+    teardown();
 
-    this.togglePickable(false);
-
-    this._renderer.setClearColor(orgClearColor);
+    this._renderer.setRenderTarget(origRenderTarget);
+    this._renderer.setClearColor(origClearColor, origClearAlpha);
+    this._renderer.autoClear = origAutoClear;
   }
 
-  protected _renderWithWorld(renderer: WebGLRenderer, scene: Scene) {
-    renderer.render(scene, this._camera);
-  }
-
-  override setSize(width: number, height: number) {
-    super.setSize(width, height);
-
+  public setSize(width: number, height: number) {
     this.pickRenderTarget.setSize(width, height);
     this.debugRenderTarget?.setSize(width, height);
     if (this.debugBufferView) {
@@ -171,8 +196,8 @@ export class PickHelper extends CustomRenderPass {
   public renderDebugCanvas() {
     if (!this.debugBufferView || !this.debugRenderTarget) return;
 
+    // Full-screen debug view: no view-offset so we can see everything.
     this.processRender(this.debugRenderTarget);
-
     this.debugBufferView.render(this._renderer, this.debugRenderTarget);
   }
 
@@ -185,8 +210,8 @@ export class PickHelper extends CustomRenderPass {
     const fullWidth = this._renderer.getContext().drawingBufferWidth;
     const fullHeight = this._renderer.getContext().drawingBufferHeight;
 
-    // Calculate pixel-space coordinates matching gl_FragCoord convention (pixel centers at 0.5, 1.5, 2.5, ...)
-    // Clamp to valid viewport bounds to handle edge cases where rounding puts us outside [0, width-1] or [0, height-1]
+    // gl_FragCoord-style pixel-space coords (centers at 0.5, 1.5, ...).
+    // Clamp to valid viewport bounds.
     const pixelX = Math.max(
       0,
       Math.min(Math.floor(x * pixelRatio), fullWidth - 1),
@@ -195,34 +220,29 @@ export class PickHelper extends CustomRenderPass {
       0,
       Math.min(Math.floor(y * pixelRatio), fullHeight - 1),
     );
-    const pickingCoordX = pixelX + 0.5;
-    const pickingCoordY = fullHeight - pixelY - 0.5; // Flip Y axis for WebGL
-    const pickingCoord = new Vector2(pickingCoordX, pickingCoordY);
-
-    // Use scissor test to limit fragment shading to the single picked pixel.
-    // We keep the projection matrix unchanged (no setViewOffset) so that
-    // LineMaterial and custom ShaderMaterials that expand geometry in
-    // screen-space still produce correct clip-space positions.
-    // readRenderTargetPixels uses WebGL convention: Y=0 at bottom.
+    const pickingCoord = new Vector2(
+      pixelX + 0.5,
+      fullHeight - pixelY - 0.5, // flip Y for WebGL
+    );
     const readY = fullHeight - 1 - pixelY;
 
+    // Keep the camera projection unchanged for wide lines / screen-space
+    // expanded shaders, and limit fragment work to one pixel via scissor.
     this._renderer.setScissor(pixelX, readY, 1, 1);
     this._renderer.setScissorTest(true);
 
     this.processRender(this.pickRenderTarget, pickingCoord);
 
-    this._renderer.setScissorTest(false);
-
     this._renderer.readRenderTargetPixels(
       this.pickRenderTarget,
       pixelX,
       readY,
-      1, // width
-      1, // height
+      1,
+      1,
       this.pixelBuffer,
     );
 
-    this._renderer.setRenderTarget(null);
+    this._renderer.setScissorTest(false);
 
     const batchId =
       (this.pixelBuffer[0] << 16) +

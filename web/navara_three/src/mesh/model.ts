@@ -426,6 +426,10 @@ export class ModelMesh
     }
   }
 
+  _getRenderable(): Object3D {
+    return this;
+  }
+
   _setFeatureHeight(_height: number) {
     // Height adjustment via batch textures is currently not implemented.
     // This method is intentionally a no-op to avoid breaking existing callers.
