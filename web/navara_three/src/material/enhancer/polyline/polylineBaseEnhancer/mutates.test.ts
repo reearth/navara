@@ -57,6 +57,74 @@ describe("polylineBaseEnhancer/mutates", () => {
     });
   });
 
+  describe("emissiveColor albedo fallback", () => {
+    it("should use state.color as emissiveColor when emissiveColor is 0 and effectIdsMask > 0", () => {
+      const state: PolylineBaseState = {
+        ...DEFAULT_BASE_STATE,
+        color: 0xff9900,
+        emissiveColor: 0,
+        effectIdsMask: 1,
+      };
+      const mutates = createBaseMutates(false);
+      mutates.update(state);
+
+      const uniforms: ShaderUniforms = {};
+      mutates.updateUniforms(uniforms, state);
+
+      const vec = uniforms.uEmissiveColor as {
+        value: { x: number; y: number; z: number };
+      };
+      // 0xff9900 → R=1.0, G=0.6, B=0.0
+      expect(vec.value.x).toBeCloseTo(1.0);
+      expect(vec.value.y).toBeCloseTo(0.6);
+      expect(vec.value.z).toBeCloseTo(0.0);
+    });
+
+    it("should use emissiveColor when explicitly set", () => {
+      const state: PolylineBaseState = {
+        ...DEFAULT_BASE_STATE,
+        color: 0xff9900,
+        emissiveColor: 0x0000ff,
+        effectIdsMask: 1,
+      };
+      const mutates = createBaseMutates(false);
+      mutates.update(state);
+
+      const uniforms: ShaderUniforms = {};
+      mutates.updateUniforms(uniforms, state);
+
+      const vec = uniforms.uEmissiveColor as {
+        value: { x: number; y: number; z: number };
+      };
+      // 0x0000ff → R=0.0, G=0.0, B=1.0
+      expect(vec.value.x).toBeCloseTo(0.0);
+      expect(vec.value.y).toBeCloseTo(0.0);
+      expect(vec.value.z).toBeCloseTo(1.0);
+    });
+
+    it("should not fallback when effectIdsMask is 0", () => {
+      const state: PolylineBaseState = {
+        ...DEFAULT_BASE_STATE,
+        color: 0xff9900,
+        emissiveColor: 0,
+        effectIdsMask: 0,
+      };
+      const mutates = createBaseMutates(false);
+      mutates.update(state);
+
+      const uniforms: ShaderUniforms = {};
+      mutates.updateUniforms(uniforms, state);
+
+      const vec = uniforms.uEmissiveColor as {
+        value: { x: number; y: number; z: number };
+      };
+      // emissiveColor=0 with no effect → stays black
+      expect(vec.value.x).toBe(0);
+      expect(vec.value.y).toBe(0);
+      expect(vec.value.z).toBe(0);
+    });
+  });
+
   describe("setPickingCoord", () => {
     it("should update picking coordinate uniform", () => {
       const state: PolylineBaseState = { ...DEFAULT_BASE_STATE };

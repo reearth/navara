@@ -57,5 +57,19 @@ describe("polygonBaseEnhancer/mutates", () => {
       expect(uniforms.uAddExtrudedHeight?.value).toBe(20);
       expect(uniforms.uMinMaxHeight?.value).toEqual([5, 50]);
     });
+
+    it("should sync uEmissiveIntensity ref from state", () => {
+      const state: PolygonBaseState = {
+        ...DEFAULT_BASE_STATE,
+        emissiveIntensity: 0.3,
+      };
+      const mutates = createBaseMutates(false);
+      mutates.update(state);
+
+      const uniforms: ShaderUniforms = {};
+      mutates.updateUniforms(uniforms, state);
+
+      expect(uniforms.uEmissiveIntensity?.value).toBe(0.3);
+    });
   });
 });
