@@ -81,9 +81,3 @@ layer.on("featureUpdated", (evaluator) => {
   });
 });
 ```
-
-## navara_three はこんな人におすすめ
-
-- Web ベースの 3D 地図アプリケーションを構築したい方
-- 複雑な GIS データを簡潔な API で扱いたい方
-- Three.js のエコシステムを活かしたリッチな地図表現を実現したい方
