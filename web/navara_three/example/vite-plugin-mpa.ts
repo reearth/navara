@@ -70,19 +70,22 @@ export function createMpaPlugin({ templatePath, pages }: Options): Plugin {
     },
 
     resolveId(id) {
+      const normalizedId = normalizePath(id);
       // Handle absolute paths
-      if (resolvedPaths.has(id)) {
-        return id;
+      if (resolvedPaths.has(normalizedId)) {
+        return normalizedId;
       }
       // Handle relative paths (e.g., "globe.html" or "/globe.html")
-      const normalized = id.startsWith("/") ? id.slice(1) : id;
-      if (pageMap.has(normalized)) {
-        return resolvedPath(normalized);
+      const stripped = normalizedId.startsWith("/")
+        ? normalizedId.slice(1)
+        : normalizedId;
+      if (pageMap.has(stripped)) {
+        return resolvedPath(stripped);
       }
     },
 
     load(id) {
-      const filename = resolvedPaths.get(id);
+      const filename = resolvedPaths.get(normalizePath(id));
       if (!filename) return;
       const page = pageMap.get(filename);
       if (!page) return;
@@ -99,12 +102,14 @@ export function createMpaPlugin({ templatePath, pages }: Options): Plugin {
       });
 
       server.middlewares.use((req, res, next) => {
-        if (req.url === "/" || req.url === "") {
-          req.url = "/index.html";
-        }
-
-        const urlPath = (req.url ?? "").split("?")[0];
+        const [urlPath, query] = (req.url ?? "").split("?", 2);
         let filename = urlPath.startsWith("/") ? urlPath.slice(1) : urlPath;
+
+        // Rewrite root to index.html
+        if (filename === "") {
+          filename = "index.html";
+          req.url = "/index.html" + (query ? `?${query}` : "");
+        }
 
         // Allow accessing pages without .html extension (e.g., /globe -> /globe.html)
         if (!filename.endsWith(".html") && pageMap.has(filename + ".html")) {
@@ -116,7 +121,7 @@ export function createMpaPlugin({ templatePath, pages }: Options): Plugin {
           invariant(page);
           const html = renderHtml(template, page.entry, page.data);
           server
-            .transformIndexHtml(urlPath, html)
+            .transformIndexHtml("/" + filename, html)
             .then((transformed) => {
               res.setHeader("Content-Type", "text/html");
               res.statusCode = 200;
