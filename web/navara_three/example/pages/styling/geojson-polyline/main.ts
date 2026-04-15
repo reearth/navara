@@ -70,7 +70,7 @@ const run = async () => {
         width: params.width,
         maxWidth: params.maxWidth,
         height: 1,
-        clampToGround: false,
+        clampToGround: true,
         useGroundNormals: true,
       },
     });
