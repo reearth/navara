@@ -313,8 +313,7 @@ function injectGBufferToShaderMaterial(
 
 // Override ShaderMaterial for MRT G-Buffer output.
 // Injects normalBuffer, effectIdBuffer, emissiveBuffer outputs and logdepthbuf modules.
-// When USE_SELECTIVE_EFFECT is defined, outputs effectIdsMask and emissive.
-// For standard materials, falls back to diffuseColor × uEmissiveIntensity when emissive is zero.
+// When USE_SELECTIVE_EFFECT is defined, outputs effectIdsMask (emissive handled by user shader).
 // Requires a `normal` variable in the shader.
 export function overrideShaderMaterialForMRT(
   material: ShaderMaterial,

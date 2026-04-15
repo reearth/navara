@@ -76,10 +76,10 @@ void main() {
 
         #ifdef USE_SELECTIVE_EFFECT
             effectIdBuffer = vec4(uEffectIdsMask, 0.0, 0.0, 1.0);
-            vec3 nvr_seEmissive = uEmissiveColor * uEmissiveIntensity;
-            vec3 nvr_fallbackEmissive = color.rgb * uEmissiveIntensity;
-            float nvr_hasEmissive = step(0.001, dot(nvr_seEmissive, vec3(1.0)));
-            emissiveBuffer = vec4(mix(nvr_fallbackEmissive, nvr_seEmissive, nvr_hasEmissive), 1.0);
+            vec3 nvr_fallbackEmissive = color.rgb;
+            float nvr_hasEmissive = step(0.001, dot(uEmissiveColor, vec3(1.0)));
+            vec3 nvr_selectedEmissive = mix(nvr_fallbackEmissive, uEmissiveColor, nvr_hasEmissive);
+            emissiveBuffer = vec4(nvr_selectedEmissive * uEmissiveIntensity, 1.0);
         #else
             effectIdBuffer = vec4(0.0);
             emissiveBuffer = vec4(0.0);
