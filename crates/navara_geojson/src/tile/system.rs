@@ -28,7 +28,7 @@ pub fn setup_tiled_geojson(
     for (layer_entity, layer) in &geojson_layers {
         let is_tiled = layer.appearances.iter().any(|a| {
             matches!(a, Appearance::Polygon(p) if p.clamp_to_ground || p.tiled)
-                || matches!(a, Appearance::Polyline(p) if p.clamp_to_ground)
+                || matches!(a, Appearance::Polyline(p) if p.clamp_to_ground || p.tiled)
         });
         if !is_tiled {
             continue;
