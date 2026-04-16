@@ -60,27 +60,34 @@ fn construct_polyline(
             .position
             .data
             .append(&mut constructed_geometry.attributes.position.data);
-        combined_attributes
-            .start
-            .data
-            .append(&mut constructed_geometry.attributes.start.data);
-        combined_attributes
-            .forward_offset
-            .data
-            .append(&mut constructed_geometry.attributes.forward_offset.data);
-        combined_attributes
-            .start_normals
-            .data
-            .append(&mut constructed_geometry.attributes.start_normals.data);
-        combined_attributes
-            .end_normal_and_texture_coordinate_normalization_x
-            .data
-            .append(
-                &mut constructed_geometry
-                    .attributes
-                    .end_normal_and_texture_coordinate_normalization_x
-                    .data,
-            );
+        if let (Some(combined), Some(ref mut src)) = (
+            combined_attributes.start.as_mut(),
+            constructed_geometry.attributes.start,
+        ) {
+            combined.data.append(&mut src.data);
+        }
+        if let (Some(combined), Some(ref mut src)) = (
+            combined_attributes.forward_offset.as_mut(),
+            constructed_geometry.attributes.forward_offset,
+        ) {
+            combined.data.append(&mut src.data);
+        }
+        if let (Some(combined), Some(ref mut src)) = (
+            combined_attributes.start_normals.as_mut(),
+            constructed_geometry.attributes.start_normals,
+        ) {
+            combined.data.append(&mut src.data);
+        }
+        if let (Some(combined), Some(ref mut src)) = (
+            combined_attributes
+                .end_normal_and_texture_coordinate_normalization_x
+                .as_mut(),
+            constructed_geometry
+                .attributes
+                .end_normal_and_texture_coordinate_normalization_x,
+        ) {
+            combined.data.append(&mut src.data);
+        }
         combined_attributes
             .right_normal_and_texture_coordinate_normalization_y
             .data
@@ -193,27 +200,34 @@ fn construct_flat_polyline(
             .position
             .data
             .append(&mut constructed_geometry.attributes.position.data);
-        combined_attributes
-            .start
-            .data
-            .append(&mut constructed_geometry.attributes.start.data);
-        combined_attributes
-            .forward_offset
-            .data
-            .append(&mut constructed_geometry.attributes.forward_offset.data);
-        combined_attributes
-            .start_normals
-            .data
-            .append(&mut constructed_geometry.attributes.start_normals.data);
-        combined_attributes
-            .end_normal_and_texture_coordinate_normalization_x
-            .data
-            .append(
-                &mut constructed_geometry
-                    .attributes
-                    .end_normal_and_texture_coordinate_normalization_x
-                    .data,
-            );
+        if let (Some(combined), Some(ref mut src)) = (
+            combined_attributes.start.as_mut(),
+            constructed_geometry.attributes.start,
+        ) {
+            combined.data.append(&mut src.data);
+        }
+        if let (Some(combined), Some(ref mut src)) = (
+            combined_attributes.forward_offset.as_mut(),
+            constructed_geometry.attributes.forward_offset,
+        ) {
+            combined.data.append(&mut src.data);
+        }
+        if let (Some(combined), Some(ref mut src)) = (
+            combined_attributes.start_normals.as_mut(),
+            constructed_geometry.attributes.start_normals,
+        ) {
+            combined.data.append(&mut src.data);
+        }
+        if let (Some(combined), Some(ref mut src)) = (
+            combined_attributes
+                .end_normal_and_texture_coordinate_normalization_x
+                .as_mut(),
+            constructed_geometry
+                .attributes
+                .end_normal_and_texture_coordinate_normalization_x,
+        ) {
+            combined.data.append(&mut src.data);
+        }
         combined_attributes
             .right_normal_and_texture_coordinate_normalization_y
             .data

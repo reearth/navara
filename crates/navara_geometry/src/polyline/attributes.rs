@@ -13,7 +13,7 @@ use super::{
 #[derive(Clone, Debug, PartialEq)]
 pub struct PolylineGeometryAttributes {
     pub position: FloatAttribute,
-    pub start: FloatAttribute,
+    pub start: Option<FloatAttribute>,
 
     /// RTE (Relative To Eye) high-precision component of vertex positions.
     /// Present when `use_rte = true` (e.g. GeoJSON polylines with large ECEF coordinates).
@@ -24,14 +24,14 @@ pub struct PolylineGeometryAttributes {
     pub start_high: Option<FloatAttribute>,
     /// RTE low-precision component of segment start positions.
     pub start_low: Option<FloatAttribute>,
-    pub forward_offset: FloatAttribute,
+    pub forward_offset: Option<FloatAttribute>,
     /// RTE high-precision component of segment end positions (start + forward_offset).
     pub end_high: Option<FloatAttribute>,
     /// RTE low-precision component of segment end positions.
     pub end_low: Option<FloatAttribute>,
 
-    pub start_normals: FloatAttribute,
-    pub end_normal_and_texture_coordinate_normalization_x: FloatAttribute,
+    pub start_normals: Option<FloatAttribute>,
+    pub end_normal_and_texture_coordinate_normalization_x: Option<FloatAttribute>,
     pub right_normal_and_texture_coordinate_normalization_y: FloatAttribute,
     pub batch_ids: Option<FloatAttribute>,
     pub batch_index: Option<UintAttribute>,
@@ -48,6 +48,10 @@ impl PolylineGeometryAttributes {
 
     pub fn with_batch_id_and_rte() -> Self {
         Self {
+            start: Some(FloatAttribute::new(vec![], 3)),
+            forward_offset: Some(FloatAttribute::new(vec![], 3)),
+            start_normals: Some(FloatAttribute::new(vec![], 3)),
+            end_normal_and_texture_coordinate_normalization_x: Some(FloatAttribute::new(vec![], 4)),
             batch_ids: Some(FloatAttribute::new(vec![], 1)),
             batch_index: Some(UintAttribute::new(vec![], 1)),
             position_high: Some(FloatAttribute::new(vec![], 3)),
@@ -67,14 +71,14 @@ impl Default for PolylineGeometryAttributes {
             position: FloatAttribute::new(vec![], 3),
             position_high: None,
             position_low: None,
-            start: FloatAttribute::new(vec![], 3),
+            start: None,
             start_high: None,
             start_low: None,
-            forward_offset: FloatAttribute::new(vec![], 3),
+            forward_offset: None,
             end_high: None,
             end_low: None,
-            start_normals: FloatAttribute::new(vec![], 3),
-            end_normal_and_texture_coordinate_normalization_x: FloatAttribute::new(vec![], 4),
+            start_normals: None,
+            end_normal_and_texture_coordinate_normalization_x: None,
             right_normal_and_texture_coordinate_normalization_y: FloatAttribute::new(vec![], 4),
             batch_ids: None,
             batch_index: None,
@@ -413,17 +417,17 @@ pub(super) fn generate_geometry_attributes(
         position: FloatAttribute::new(positions_array, 3),
         position_high,
         position_low,
-        start: FloatAttribute::new(starts_array, 3),
+        start: Some(FloatAttribute::new(starts_array, 3)),
         start_high,
         start_low,
-        forward_offset: FloatAttribute::new(forward_offsets, 3),
+        forward_offset: Some(FloatAttribute::new(forward_offsets, 3)),
         end_high,
         end_low,
-        start_normals: FloatAttribute::new(start_normals, 3),
-        end_normal_and_texture_coordinate_normalization_x: FloatAttribute::new(
+        start_normals: Some(FloatAttribute::new(start_normals, 3)),
+        end_normal_and_texture_coordinate_normalization_x: Some(FloatAttribute::new(
             end_normal_and_texture_coordinate_normalization_x,
             4,
-        ),
+        )),
         right_normal_and_texture_coordinate_normalization_y: FloatAttribute::new(
             right_normal_and_texture_coordinate_normalization_y,
             4,

@@ -38,9 +38,10 @@ pub(crate) fn construct_geojson_tile_geometry(
 
     // Determine whether polygons should use flat [-1,1] coordinates (clamped)
     // or geographic lon/lat coordinates (non-clamped 3D rendering).
-    let flat = appearances
-        .iter()
-        .any(|a| matches!(a, Appearance::Polygon(p) if p.clamp_to_ground));
+    let flat = appearances.iter().any(|a| {
+        matches!(a, Appearance::Polygon(p) if p.clamp_to_ground)
+            || matches!(a, Appearance::Polyline(p) if p.clamp_to_ground)
+    });
 
     let converter = PosConverter::new(
         TileXYZ {
@@ -60,8 +61,6 @@ pub(crate) fn construct_geojson_tile_geometry(
         };
         builder.begin_feature(&props_map);
 
-        // Other geometry type will be added.
-        #[allow(clippy::single_match)]
         match &feature.geometry {
             TileGeometry::Polygons(polygons) => {
                 for polygon in polygons {
@@ -104,6 +103,22 @@ pub(crate) fn construct_geojson_tile_geometry(
                     builder.add_polygon(outer_ring, &holes, winding_order, CRS::Geographic);
                 }
             }
+            TileGeometry::Lines(lines) => {
+                for line in lines {
+                    if line.is_empty() {
+                        continue;
+                    }
+                    let projected = if flat {
+                        converter.project_points_on_center(line)
+                    } else {
+                        converter.project_points(line)
+                    };
+                    if projected.is_empty() {
+                        continue;
+                    }
+                    builder.add_polyline(projected, CRS::Geographic);
+                }
+            }
             _ => {}
         }
     }
@@ -143,11 +158,12 @@ mod test {
     use bevy_ecs::system::{Commands, ResMut};
     use navara_feature_component::{
         batch::{BatchTable, BatchedFeature},
-        batched_geometry::BatchedPolygonGeometry,
+        batched_geometry::{BatchedPolygonGeometry, BatchedPolylineGeometry},
         polygon::PolygonMarker,
+        polyline::PolylineMarker,
     };
     use navara_geojson_vt::types::{Tile as VtTile, TileFeature};
-    use navara_material::PolygonMaterial;
+    use navara_material::{PolygonMaterial, PolylineMaterial};
 
     // ── helpers ──────────────────────────────────────────────────────────
 
@@ -196,6 +212,13 @@ mod test {
 
     fn polygon_appearances() -> Vec<Appearance> {
         vec![Appearance::Polygon(PolygonMaterial {
+            clamp_to_ground: true,
+            ..Default::default()
+        })]
+    }
+
+    fn polyline_appearances() -> Vec<Appearance> {
+        vec![Appearance::Polyline(PolylineMaterial {
             clamp_to_ground: true,
             ..Default::default()
         })]
@@ -584,5 +607,91 @@ mod test {
             WindingOrder::Clockwise as u8,
             "non-clamped outer ring should hint Clockwise (same as MVT non-flat path)"
         );
+    }
+
+    // ── polyline (TileGeometry::Lines) tests ───────────────────────────
+
+    #[test]
+    fn line_feature_creates_batched_polyline() {
+        let line = vec![[0.0, 0.0], [2048.0, 2048.0], [4096.0, 0.0]];
+        let tile = make_tile(vec![line_feature(vec![line])]);
+        let mut app = run_construct(tile, polyline_appearances());
+
+        let mut query = app
+            .world_mut()
+            .query_filtered::<(&BatchedFeature, &BatchedPolylineGeometry), With<PolylineMarker>>();
+        let results: Vec<_> = query.iter(app.world()).collect();
+        assert_eq!(results.len(), 1);
+        let (_batched, geom) = results[0];
+        let buf = app.world().resource::<BufferStore>();
+        assert_eq!(geom.feature_count(buf), 1);
+        assert_eq!(geom.batch_indices(buf).unwrap(), &[0]);
+
+        let out = app.world().resource::<TestOutput>();
+        assert!(out.0.is_some());
+        assert_eq!(out.0.as_ref().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn multiple_line_features_accumulate() {
+        let line1 = vec![[0.0, 0.0], [2048.0, 2048.0]];
+        let line2 = vec![[2048.0, 0.0], [4096.0, 4096.0]];
+        let tile = make_tile(vec![line_feature(vec![line1]), line_feature(vec![line2])]);
+        let mut app = run_construct(tile, polyline_appearances());
+
+        let mut query = app
+            .world_mut()
+            .query_filtered::<&BatchedPolylineGeometry, With<PolylineMarker>>();
+        let geoms: Vec<_> = query.iter(app.world()).collect();
+        assert_eq!(geoms.len(), 1);
+        let buf = app.world().resource::<BufferStore>();
+        assert_eq!(geoms[0].feature_count(buf), 2);
+        assert_eq!(geoms[0].batch_indices(buf).unwrap(), &[0, 1]);
+    }
+
+    #[test]
+    fn empty_line_is_skipped() {
+        let tile = make_tile(vec![line_feature(vec![vec![]])]);
+        let app = run_construct(tile, polyline_appearances());
+        let out = app.world().resource::<TestOutput>();
+        assert!(out.0.is_none());
+    }
+
+    #[test]
+    fn mixed_polygon_and_line_features() {
+        let outer = vec![
+            [0.0, 0.0],
+            [4096.0, 0.0],
+            [4096.0, 4096.0],
+            [0.0, 4096.0],
+            [0.0, 0.0],
+        ];
+        let line = vec![[0.0, 0.0], [4096.0, 4096.0]];
+        let tile = make_tile(vec![polygon_feature(vec![outer]), line_feature(vec![line])]);
+        let appearances = vec![
+            Appearance::Polygon(PolygonMaterial {
+                clamp_to_ground: true,
+                ..Default::default()
+            }),
+            Appearance::Polyline(PolylineMaterial {
+                clamp_to_ground: true,
+                ..Default::default()
+            }),
+        ];
+        let mut app = run_construct(tile, appearances);
+
+        // Should have both polygon and polyline entities
+        let mut poly_query = app
+            .world_mut()
+            .query_filtered::<&BatchedPolygonGeometry, With<PolygonMarker>>();
+        assert_eq!(poly_query.iter(app.world()).count(), 1);
+
+        let mut line_query = app
+            .world_mut()
+            .query_filtered::<&BatchedPolylineGeometry, With<PolylineMarker>>();
+        assert_eq!(line_query.iter(app.world()).count(), 1);
+
+        let out = app.world().resource::<TestOutput>();
+        assert_eq!(out.0.as_ref().unwrap().len(), 2);
     }
 }
