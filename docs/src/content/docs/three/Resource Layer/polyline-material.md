@@ -211,6 +211,24 @@ import { Color } from "@navara/three";
 }
 ```
 
+### tiled
+
+**Type:** `boolean | undefined`
+
+**Description:** Splits the polyline into XYZ vector tiles for rendering, even when the data source is not an MVT layer. This can improve performance for large polylines. Enabling `clampToGround` implicitly forces `tiled` to `true`.
+
+**Default:** `undefined`
+
+**Example:**
+
+```typescript
+{
+  polyline: {
+    tiled: true
+  }
+}
+```
+
 ### useGroundNormals
 
 **Type:** `boolean | undefined`

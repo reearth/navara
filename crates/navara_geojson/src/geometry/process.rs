@@ -113,11 +113,14 @@ fn process_geometry(
             Appearance::Text(m) => {
                 accumulate_point_rte(builder, geometry, GeometryAppearanceKind::Text, m.height);
             }
-            Appearance::Polyline(_) => {
-                accumulate_polyline(builder, geometry);
+            Appearance::Polyline(p) => {
+                // Skip clamped/tiled polylines - they go through the tiled rendering pipeline
+                if !p.clamp_to_ground && !p.tiled {
+                    accumulate_polyline(builder, geometry);
+                }
             }
             Appearance::Polygon(p) => {
-                // Skip clamped polygons - they go through the tiled rendering pipeline
+                // Skip clamped/tiled polygons - they go through the tiled rendering pipeline
                 if !p.clamp_to_ground && !p.tiled {
                     accumulate_polygon(builder, geometry);
                 }
@@ -504,7 +507,11 @@ mod test {
         }
     ]
 }"#,
-            vec![Appearance::Polyline(PolylineMaterial::default())],
+            vec![Appearance::Polyline(PolylineMaterial {
+                clamp_to_ground: false,
+                tiled: false,
+                ..Default::default()
+            })],
         );
 
         let mut batched_query = app
@@ -541,7 +548,11 @@ mod test {
         }
     ]
 }"#,
-            vec![Appearance::Polyline(PolylineMaterial::default())],
+            vec![Appearance::Polyline(PolylineMaterial {
+                clamp_to_ground: false,
+                tiled: false,
+                ..Default::default()
+            })],
         );
 
         let mut batched_query = app
@@ -585,6 +596,7 @@ mod test {
 }"#,
             vec![Appearance::Polygon(PolygonMaterial {
                 clamp_to_ground: false,
+                tiled: false,
                 ..Default::default()
             })],
         );
@@ -641,6 +653,7 @@ mod test {
 }"#,
             vec![Appearance::Polygon(PolygonMaterial {
                 clamp_to_ground: false,
+                tiled: false,
                 ..Default::default()
             })],
         );
@@ -738,7 +751,11 @@ mod test {
 }"#,
             vec![
                 Appearance::Point(PointMaterial::default()),
-                Appearance::Polyline(PolylineMaterial::default()),
+                Appearance::Polyline(PolylineMaterial {
+                    clamp_to_ground: false,
+                    tiled: false,
+                    ..Default::default()
+                }),
             ],
         );
 
@@ -786,6 +803,7 @@ mod test {
 }"#,
             vec![Appearance::Polygon(PolygonMaterial {
                 clamp_to_ground: false,
+                tiled: false,
                 ..Default::default()
             })],
         );
@@ -822,7 +840,11 @@ mod test {
         }
     ]
 }"#,
-            vec![Appearance::Polyline(PolylineMaterial::default())],
+            vec![Appearance::Polyline(PolylineMaterial {
+                clamp_to_ground: false,
+                tiled: false,
+                ..Default::default()
+            })],
         );
 
         let mut batched_query = app
@@ -934,9 +956,14 @@ mod test {
 }"#,
             vec![
                 Appearance::Point(PointMaterial::default()),
-                Appearance::Polyline(PolylineMaterial::default()),
+                Appearance::Polyline(PolylineMaterial {
+                    clamp_to_ground: false,
+                    tiled: false,
+                    ..Default::default()
+                }),
                 Appearance::Polygon(PolygonMaterial {
                     clamp_to_ground: false,
+                    tiled: false,
                     ..Default::default()
                 }),
             ],
@@ -1139,9 +1166,14 @@ mod test {
                 Appearance::Point(PointMaterial::default()),
                 Appearance::Billboard(BillboardMaterial::default()),
                 Appearance::Text(TextMaterial::default()),
-                Appearance::Polyline(PolylineMaterial::default()),
+                Appearance::Polyline(PolylineMaterial {
+                    clamp_to_ground: false,
+                    tiled: false,
+                    ..Default::default()
+                }),
                 Appearance::Polygon(PolygonMaterial {
                     clamp_to_ground: false,
+                    tiled: false,
                     ..Default::default()
                 }),
             ],

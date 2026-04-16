@@ -47,7 +47,7 @@ All systems run in the `Update` schedule, chained in `VectorTileSet::Prepare` or
 | 1 | `request_geojson` | For URL-based layers, spawns a `DataRequester` to fetch GeoJSON data |
 | 2 | `parse_geojson` | When fetch completes, parses the response bytes into a `GeoJson` struct and stores it in `GeoJsonLayer.data` |
 | 3 | `construct_feature` | For layers with `Added` or `Changed` GeoJSON data, calls `geometry::construct_geometry()` to build and spawn batched feature entities |
-| 4 | `setup_tiled_geojson` | For layers with `clamp_to_ground` polygon appearances, sets up tiled rendering via `navara_geojson_vt` |
+| 4 | `setup_tiled_geojson` | For layers with `clamp_to_ground` or `tiled` polygon/polyline appearances, sets up tiled rendering via `navara_geojson_vt` |
 | 5 | `update_geo_json_layer` | Applies appearance changes to existing rendered features |
 | 6 | `delete_geo_json_layer` | Removes all entities and resources for deleted layers |
 
@@ -83,13 +83,13 @@ Defined in `navara_feature_component::geometry_builder`. Groups accumulated geom
 - **`construct_geometry()`** — Main entry point. Creates a `GeometryBuilder`, iterates GeoJSON features, calls `process_geometry()` for each, then calls `finalize()`.
 - **`process_geometry()`** — Dispatches by geometry type and appearance:
   - Point/MultiPoint with Point/Billboard/Text appearance → `add_point()` (RTE encoding)
-  - LineString/MultiLineString with Polyline appearance → `add_polyline()`
+  - LineString/MultiLineString with Polyline appearance → `add_polyline()` (skips `clamp_to_ground` and `tiled` polylines — those go through the tiled rendering pipeline)
   - Polygon/MultiPolygon with Polygon appearance → `add_polygon()` (skips `clamp_to_ground` and `tiled` polygons — those go through the tiled rendering pipeline)
   - GeometryCollection → recurses without resetting feature state
 
 ## Tiled GeoJSON (Clamped Polygons)
 
-When a GeoJSON layer has a `clamp_to_ground` or `tiled` polygon appearance, the data goes through a tiled rendering pipeline instead of direct construction:
+When a GeoJSON layer has a `clamp_to_ground` or `tiled` polygon/polyline appearance, the data goes through a tiled rendering pipeline instead of direct construction:
 
 ```mermaid
 graph LR
