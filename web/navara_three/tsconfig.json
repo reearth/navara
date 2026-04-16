@@ -24,6 +24,6 @@
       "@/lib/utils": ["./example/lib/utils"]
     }
   },
-  "include": ["src", "example"],
+  "include": ["src", "example", "vite-plugin-mpa.ts"],
   "exclude": ["./dist", "./node_modules"]
 }
