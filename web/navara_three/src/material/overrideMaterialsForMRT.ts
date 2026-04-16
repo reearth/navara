@@ -109,7 +109,7 @@ function injectGBuffer(
     //   location 0: gl_FragColor (color)
     //   location 1: normalBuffer (normal + material props)
     //   location 2: effectIdBuffer (effectIds: R=bitmask)       — SelectiveEffect only
-    //   location 3: emissiveBuffer (emissive: RGB=color×intensity pre-multiplied by Three.js, A=unused) — SelectiveEffect only
+    //   location 3: emissiveBuffer (emissive: RGB=diffuseColor×intensity+emissive additive, A=unused) — SelectiveEffect only
     #ifndef USE_SHADOWMAP_DEPTH
       layout(location = 1) out vec4 normalBuffer;
       layout(location = 2) out vec4 effectIdBuffer;
@@ -126,6 +126,7 @@ function injectGBuffer(
 
     #ifdef USE_SELECTIVE_EFFECT
       uniform float uEffectIdsMask;
+      uniform float uEmissiveIntensity;
     #endif
 
     ${packing}
@@ -138,7 +139,7 @@ function injectGBuffer(
 
             #ifdef USE_SELECTIVE_EFFECT
               effectIdBuffer = vec4(uEffectIdsMask, 0.0, 0.0, 1.0);
-              emissiveBuffer = vec4(emissive, 1.0);
+              emissiveBuffer = vec4(diffuseColor.rgb * uEmissiveIntensity + emissive, 1.0);
             #else
               effectIdBuffer = vec4(0.0);
               emissiveBuffer = vec4(0.0);
@@ -294,7 +295,7 @@ function injectGBufferToShaderMaterial(
 
             #ifdef USE_SELECTIVE_EFFECT
               effectIdBuffer = vec4(uEffectIdsMask, 0.0, 0.0, 1.0);
-              emissiveBuffer = vec4(uEmissiveColor * uEmissiveIntensity, 1.0);
+              emissiveBuffer = vec4((gl_FragColor.rgb + uEmissiveColor) * uEmissiveIntensity, 1.0);
             #else
               effectIdBuffer = vec4(0.0);
               emissiveBuffer = vec4(0.0);
@@ -311,11 +312,11 @@ function injectGBufferToShaderMaterial(
   return shader;
 }
 
-// NOTE that this function just overrides ShaderMaterial roughly, so it might fail.
-// You must have `normal` variable in your shader.
-// This function inject following things.
-// - Normal buffer output.
-// - `logdepthbuf` modules.
+// Override ShaderMaterial for MRT G-Buffer output.
+// Injects normalBuffer, effectIdBuffer, emissiveBuffer outputs and logdepthbuf modules.
+// When USE_SELECTIVE_EFFECT is defined, outputs effectIdsMask and emissive
+// using additive blend: (gl_FragColor.rgb + uEmissiveColor) × uEmissiveIntensity.
+// Requires a `normal` variable in the shader.
 export function overrideShaderMaterialForMRT(
   material: ShaderMaterial,
   normalVariableName?: string,
@@ -323,7 +324,8 @@ export function overrideShaderMaterialForMRT(
   injectGBufferToShaderMaterial(material, normalVariableName);
 }
 
-// LineMaterial MRT Support following injectGBufferToSpriteMaterial pattern
+// LineMaterial MRT Support. Injects normalBuffer, effectIdBuffer, emissiveBuffer outputs.
+// When USE_SELECTIVE_EFFECT is defined, outputs effectIdsMask (emissive not supported for LineMaterial).
 function injectGBufferToLineMaterial(lineMaterial: LineMaterial) {
   if (lineMaterial[SETUP] === true) {
     return lineMaterial;

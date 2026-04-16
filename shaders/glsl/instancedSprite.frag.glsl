@@ -76,7 +76,7 @@ void main() {
 
         #ifdef USE_SELECTIVE_EFFECT
             effectIdBuffer = vec4(uEffectIdsMask, 0.0, 0.0, 1.0);
-            emissiveBuffer = vec4(uEmissiveColor * uEmissiveIntensity, 1.0);
+            emissiveBuffer = vec4((color.rgb + uEmissiveColor) * uEmissiveIntensity, 1.0);
         #else
             effectIdBuffer = vec4(0.0);
             emissiveBuffer = vec4(0.0);

@@ -80,7 +80,6 @@ const run = async () => {
       useGroundNormals: true,
       color: new Color().setHex(0xff9900),
       effectIds: [bloomEffect.id],
-      emissiveColor: new Color().setHex(0xffffff),
       emissiveIntensity: 0.5,
     },
   });

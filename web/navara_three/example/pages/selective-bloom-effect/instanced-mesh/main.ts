@@ -112,8 +112,7 @@ const run = async () => {
     boxes: {
       castShadow: true,
       receiveShadow: true,
-      emissiveIntensity: 0.3,
-      emissiveColor: new Color().setHex(0xffffff),
+      emissiveIntensity: 0.6,
       transparent: true,
       opacity: 1.0,
       children: buildings,
