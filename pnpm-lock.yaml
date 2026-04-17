@@ -173,6 +173,9 @@ importers:
       '@navara/three':
         specifier: workspace:*
         version: link:../../navara_three
+      '@navara/three_default_layers':
+        specifier: workspace:*
+        version: link:../../navara_three_default_layers
       '@navara/three_default_plugin':
         specifier: workspace:*
         version: link:../../navara_three_default_plugin

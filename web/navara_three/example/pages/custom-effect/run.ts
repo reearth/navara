@@ -5,7 +5,10 @@ import ThreeView, {
   type EffectLayerUpdate,
   type ViewContext,
 } from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import {
+  DefaultPlugin,
+  type DefaultDeclarations,
+} from "@navara/three_default_plugin";
 import { VignetteEffect, VignetteTechnique } from "postprocessing";
 import type { Camera } from "three";
 import { Pane } from "tweakpane";
@@ -183,9 +186,13 @@ class VignetteEffectLayer extends EffectLayerDeclaration<
 // Step 3: Use the custom effect layer in the application
 // ============================================================
 
-export type LayerDescriptions = VignetteEffectConfig;
+export type CustomDeclarations =
+  | DefaultDeclarations
+  | {
+      effect: VignetteEffectConfig;
+    };
 
-export const run = async (view: ThreeView<LayerDescriptions>) => {
+export const run = async (view: ThreeView<CustomDeclarations>) => {
   const defaultPlugin = new DefaultPlugin();
   view.addPlugin(defaultPlugin);
 
@@ -213,8 +220,7 @@ export const run = async (view: ThreeView<LayerDescriptions>) => {
   });
 
   // Add the custom Vignette effect layer
-  const vignetteLayer = view.addLayer<VignetteEffectLayer>({
-    type: "effect",
+  const vignetteLayer = view.addEffect<VignetteEffectLayer>({
     vignette: {
       technique: "default",
       offset: 0.5,

@@ -2,7 +2,7 @@ import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
 import { ToneMappingMode } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
-  type DefaultLayerDescriptions,
+  type DefaultDeclarations,
 } from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 
@@ -15,10 +15,10 @@ import {
 } from "../../../helpers/constants";
 import { addDateControl } from "../../../helpers/control";
 
-type LayerDescriptions = DefaultLayerDescriptions;
+type CustomDeclarations = DefaultDeclarations;
 
 const run = async () => {
-  const view = new ThreeView<LayerDescriptions>({
+  const view = new ThreeView<CustomDeclarations>({
     debug: true,
     hideUnderground: false,
   });
@@ -26,20 +26,17 @@ const run = async () => {
 
   await view.init();
 
-  view.addLayer({
-    type: "light",
+  view.addLight({
     sun: {},
   });
 
-  view.addLayer({
-    type: "effect",
+  view.addEffect({
     toneMapping: {
       mode: ToneMappingMode.NEUTRAL,
     },
   });
 
-  const bloomEffect = view.addLayer({
-    type: "effect",
+  const bloomEffect = view.addEffect({
     selectiveBloom: {
       strength: 1.0,
       radius: 0.5,

@@ -185,8 +185,7 @@ defaultLayers.aerialPerspective.update({
 });
 
 // 雲エフェクトレイヤーを追加
-view.addLayer<CloudsEffectLayer>({
-  type: "effect",
+view.addEffect<CloudsEffectLayer>({
   clouds: {
     shadows: true,
   },

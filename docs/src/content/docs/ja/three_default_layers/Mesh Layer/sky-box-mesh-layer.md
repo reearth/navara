@@ -86,8 +86,7 @@ const view = new ThreeView();
 await view.init();
 
 // デフォルト設定でスカイボックスを追加
-const skyBox = view.addLayer<SkyBoxMeshLayer>({
-  type: "mesh",
+const skyBox = view.addMesh<SkyBoxMeshLayer>({
   skyBox: {},
 });
 ```
@@ -101,8 +100,7 @@ const view = new ThreeView();
 await view.init();
 
 // カスタムカラーでスカイボックスを追加
-const skyBox = view.addLayer<SkyBoxMeshLayer>({
-  type: "mesh",
+const skyBox = view.addMesh<SkyBoxMeshLayer>({
   skyBox: {
     dayColor: new Color().setHex(0x87ceeb),    // スカイブルー
     nightColor: new Color().setHex(0x0a0a2e),   // ダークブルー

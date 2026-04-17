@@ -34,8 +34,7 @@ const view = new ThreeView();
 await view.init();
 
 // Add a 3-axis helper
-const axes = view.addLayer<AxesHelperLayer>({
-  type: "mesh",
+const axes = view.addMesh<AxesHelperLayer>({
   axesHelper: {
     size: 10,
   },

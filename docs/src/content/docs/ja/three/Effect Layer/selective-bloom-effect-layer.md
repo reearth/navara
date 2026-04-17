@@ -161,8 +161,7 @@ const view = new ThreeView();
 await view.init();
 
 // 選択的ブルームエフェクトレイヤーを追加
-const bloomLayer = view.addLayer<SelectiveBloomEffectLayer>({
-  type: "effect",
+const bloomLayer = view.addEffect<SelectiveBloomEffectLayer>({
   selectiveBloom: {
     strength: 0.8,
     radius: 0.2,
@@ -171,8 +170,7 @@ const bloomLayer = view.addLayer<SelectiveBloomEffectLayer>({
 });
 
 // オブジェクトにブルームエフェクトを適用
-const cubeLayer = view.addLayer<BoxMeshLayer>({
-  type: "mesh",
+const cubeLayer = view.addMesh<BoxMeshLayer>({
   box: {
     width: 100,
     height: 100,
@@ -201,8 +199,7 @@ await view.init();
 plugin.addDefaultPhotorealLayers();
 
 // 強いブルームエフェクトを追加
-const bloomLayer = view.addLayer<SelectiveBloomEffectLayer>({
-  type: "effect",
+const bloomLayer = view.addEffect<SelectiveBloomEffectLayer>({
   selectiveBloom: {
     strength: 1.5,
     radius: 0.5,
@@ -220,8 +217,7 @@ const view = new ThreeView();
 await view.init();
 
 // パフォーマンス重視の設定
-const bloomLayer = view.addLayer<SelectiveBloomEffectLayer>({
-  type: "effect",
+const bloomLayer = view.addEffect<SelectiveBloomEffectLayer>({
   selectiveBloom: {
     strength: 0.6,
     radius: 0.2,
@@ -239,8 +235,7 @@ import ThreeView, { SelectiveBloomEffectLayer } from "@navara/three";
 const view = new ThreeView();
 await view.init();
 
-const bloomLayer = view.addLayer<SelectiveBloomEffectLayer>({
-  type: "effect",
+const bloomLayer = view.addEffect<SelectiveBloomEffectLayer>({
   selectiveBloom: {
     strength: 0.8,
   },
@@ -263,8 +258,7 @@ import ThreeView, { SelectiveBloomEffectLayer, Color } from "@navara/three";
 const view = new ThreeView();
 await view.init();
 
-const bloomLayer = view.addLayer<SelectiveBloomEffectLayer>({
-  type: "effect",
+const bloomLayer = view.addEffect<SelectiveBloomEffectLayer>({
   selectiveBloom: {
     strength: 1.0,
     radius: 0.5,
@@ -296,8 +290,7 @@ import ThreeView, { SelectiveBloomEffectLayer, Color } from "@navara/three";
 const view = new ThreeView();
 await view.init();
 
-const bloomLayer = view.addLayer<SelectiveBloomEffectLayer>({
-  type: "effect",
+const bloomLayer = view.addEffect<SelectiveBloomEffectLayer>({
   selectiveBloom: {
     strength: 1.2,
   },
@@ -323,8 +316,7 @@ const modelLayer = view.addLayer({
 
 ```typescript
 // 初期状態ではエフェクトなし
-const cubeLayer = view.addLayer<BoxMeshLayer>({
-  type: "mesh",
+const cubeLayer = view.addMesh<BoxMeshLayer>({
   box: {
     width: 100,
     height: 100,

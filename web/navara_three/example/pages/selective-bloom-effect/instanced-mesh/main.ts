@@ -12,7 +12,7 @@ import {
 } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
-  type DefaultLayerDescriptions,
+  type DefaultDeclarations,
 } from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 
@@ -54,7 +54,7 @@ function generateBuildings(count: number, radius: number): BoxChildConfig[] {
 }
 
 const run = async () => {
-  const view = new ThreeView<DefaultLayerDescriptions>({
+  const view = new ThreeView<DefaultDeclarations>({
     debug: true,
   });
 
@@ -63,15 +63,13 @@ const run = async () => {
 
   await view.init();
 
-  view.addLayer({
-    type: "light",
+  view.addLight({
     ambient: {
       intensity: 0.5,
     },
   });
 
-  view.addLayer({
-    type: "effect",
+  view.addEffect({
     toneMapping: {
       mode: ToneMappingMode.NEUTRAL,
     },
@@ -88,8 +86,7 @@ const run = async () => {
   });
 
   // Selective bloom effect
-  const bloomEffect = view.addLayer({
-    type: "effect",
+  const bloomEffect = view.addEffect({
     selectiveBloom: {
       strength: 1.0,
       radius: 0.5,
@@ -107,8 +104,7 @@ const run = async () => {
 
   const buildings = generateBuildings(BUILDING_COUNT, RADIUS);
 
-  const boxesLayer = view.addLayer<InstancedBoxMeshLayer>({
-    type: "mesh",
+  const boxesLayer = view.addMesh<InstancedBoxMeshLayer>({
     boxes: {
       castShadow: true,
       receiveShadow: true,

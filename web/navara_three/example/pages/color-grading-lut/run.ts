@@ -10,7 +10,7 @@ import {
 } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
-  type DefaultLayerDescriptions,
+  type DefaultDeclarations,
 } from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 
@@ -29,9 +29,9 @@ import {
 
 let gColorGradingLUTLayer: LayerHandle<ColorGradingLUTEffectLayer>;
 
-export type LayerDescriptions = DefaultLayerDescriptions;
+export type CustomDeclarations = DefaultDeclarations;
 
-export const run = async (view: ThreeView<LayerDescriptions>) => {
+export const run = async (view: ThreeView<CustomDeclarations>) => {
   const defaultPlugin = new DefaultPlugin();
   view.addPlugin(defaultPlugin);
 
@@ -47,8 +47,7 @@ export const run = async (view: ThreeView<LayerDescriptions>) => {
 
   view.toneMappingExposure = 10;
 
-  gColorGradingLUTLayer = view.addLayer<ColorGradingLUTEffectLayer>({
-    type: "effect",
+  gColorGradingLUTLayer = view.addEffect<ColorGradingLUTEffectLayer>({
     colorGradingLUT: { ...DEFAULT_COLOR_GRADING_LUT_OPTIONS },
     visible: true,
   });

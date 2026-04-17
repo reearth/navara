@@ -41,14 +41,12 @@ await view.init();
 view.toneMappingExposure = 10;
 
 // Add ambient light
-view.addLayer({
-  type: "light",
+view.addLight({
   ambient: {},
 });
 
 // Add starfield
-view.addLayer({
-  type: "mesh",
+view.addMesh({
   stars: {
     intensity: 100,
     pointSize: 1.5,
@@ -56,16 +54,14 @@ view.addLayer({
 });
 
 // Add tone mapping effect
-view.addLayer({
-  type: "effect",
+view.addEffect({
   toneMapping: {
     mode: ToneMappingMode.REINHARD2,
   },
 });
 
 // Add anti-aliasing (SMAA)
-view.addLayer({
-  type: "effect",
+view.addEffect({
   smaa: {
     quality: "ultra",
   },
@@ -129,8 +125,7 @@ Using `GlowGlobeMeshLayer`, you can add a beautiful glow effect around the globe
 import type { GlowGlobeMeshLayer } from "@navara/three";
 
 // Add globe glow effect
-view.addLayer<GlowGlobeMeshLayer>({
-  type: "mesh",
+view.addMesh<GlowGlobeMeshLayer>({
   glowGlobe: {
     radiusScale: 1.2,  // Glow radius (multiplier relative to Earth's radius)
     coefficient: 0.43, // Glow intensity coefficient
@@ -262,8 +257,7 @@ Add the arch line definitions as a layer.
 ```typescript
 import type { ArclineMeshLayer } from "@navara/three";
 
-const arcLineLayer = view.addLayer<ArclineMeshLayer>({
-  type: "mesh",
+const arcLineLayer = view.addMesh<ArclineMeshLayer>({
   arcLines,
 });
 ```
@@ -408,14 +402,12 @@ async function run() {
   view.toneMappingExposure = 10;
 
   // Ambient light
-  view.addLayer({
-    type: "light",
+  view.addLight({
     ambient: {},
   });
 
   // Starfield
-  view.addLayer({
-    type: "mesh",
+  view.addMesh({
     stars: {
       intensity: 100,
       pointSize: 1.5,
@@ -423,16 +415,14 @@ async function run() {
   });
 
   // Tone mapping
-  view.addLayer({
-    type: "effect",
+  view.addEffect({
     toneMapping: {
       mode: ToneMappingMode.REINHARD2,
     },
   });
 
   // Anti-aliasing
-  view.addLayer({
-    type: "effect",
+  view.addEffect({
     smaa: {
       quality: "ultra",
     },
@@ -469,8 +459,7 @@ async function run() {
   });
 
   // Glow effect
-  view.addLayer<GlowGlobeMeshLayer>({
-    type: "mesh",
+  view.addMesh<GlowGlobeMeshLayer>({
     glowGlobe: {
       radiusScale: 1.2,
       coefficient: 0.43,
@@ -484,8 +473,7 @@ async function run() {
   const { arcLines } = await constructData();
 
   // Add arch line layer
-  const arcLineLayer = view.addLayer<ArclineMeshLayer>({
-    type: "mesh",
+  const arcLineLayer = view.addMesh<ArclineMeshLayer>({
     arcLines,
   });
 

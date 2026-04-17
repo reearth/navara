@@ -52,8 +52,7 @@ await view.init();
 plugin.addDefaultPhotorealLayers();
 
 // Add sky environment map effect layer
-view.addLayer<SkyEnvMapEffectLayer>({
-  type: "effect",
+view.addEffect<SkyEnvMapEffectLayer>({
   skyEnvMap: {
     resolution: 256,
   },
@@ -74,8 +73,7 @@ await view.init();
 plugin.addDefaultPhotorealLayers();
 
 // Create a high-resolution environment map
-view.addLayer<SkyEnvMapEffectLayer>({
-  type: "effect",
+view.addEffect<SkyEnvMapEffectLayer>({
   skyEnvMap: {
     resolution: 512,
   },
@@ -97,8 +95,7 @@ await view.init();
 plugin.addDefaultPhotorealLayers();
 
 // Add sky environment map (used for reflections)
-view.addLayer<SkyEnvMapEffectLayer>({
-  type: "effect",
+view.addEffect<SkyEnvMapEffectLayer>({
   skyEnvMap: {
     resolution: 256,
   },

@@ -380,8 +380,7 @@ const view = new ThreeView();
 await view.init();
 
 // SSRエフェクトレイヤーを追加
-const ssrLayer = view.addLayer<SSREffectLayer>({
-  type: "effect",
+const ssrLayer = view.addEffect<SSREffectLayer>({
   ssr: {},
 });
 ```
@@ -401,8 +400,7 @@ await view.init();
 plugin.addDefaultPhotorealLayers();
 
 // SSRエフェクトを追加
-const ssrLayer = view.addLayer<SSREffectLayer>({
-  type: "effect",
+const ssrLayer = view.addEffect<SSREffectLayer>({
   ssr: {
     resolutionScale: 0.5,
     iterations: 100,
@@ -448,8 +446,7 @@ const view = new ThreeView();
 await view.init();
 
 // パフォーマンス重視の設定
-const ssrLayer = view.addLayer<SSREffectLayer>({
-  type: "effect",
+const ssrLayer = view.addEffect<SSREffectLayer>({
   ssr: {
     resolutionScale: 0.25, // 低解像度でパフォーマンス向上
     iterations: 50,        // 反復回数を減らす
@@ -467,8 +464,7 @@ const view = new ThreeView();
 await view.init();
 
 // 高品質設定
-const ssrLayer = view.addLayer<SSREffectLayer>({
-  type: "effect",
+const ssrLayer = view.addEffect<SSREffectLayer>({
   ssr: {
     resolutionScale: 1.0,
     iterations: 150,

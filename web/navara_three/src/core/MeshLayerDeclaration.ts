@@ -14,7 +14,7 @@ import {
 import type { ViewContext } from "./ViewContext";
 
 export type MeshLayerConfig = {
-  type: "mesh";
+  type?: "mesh";
   position?: XYZ;
   scale?: XYZ;
   rotation?: XYZ;
@@ -122,8 +122,7 @@ export type MeshBaseInstance<Instance extends object = object> =
  * ```typescript
  * view.registerMesh("myMesh", MyMeshLayer);
  *
- * const handle = view.addLayer<MyMeshLayer>({
- *   type: "mesh",
+ * const handle = view.addMesh<MyMeshLayer>({
  *   position: { x: 0, y: 100, z: 0 },
  *   scale: { x: 10, y: 10, z: 10 },
  *   rotation: { x: 0, y: Math.PI / 4, z: 0 },

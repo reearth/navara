@@ -307,8 +307,7 @@ view.animation = true;
 plugin.addDefaultPhotorealLayers();
 
 // 雨粒エフェクトレイヤーを追加
-const rainDropLayer = view.addLayer<RainDropEffectLayer>({
-  type: "effect",
+const rainDropLayer = view.addEffect<RainDropEffectLayer>({
   rainDrop: {
     opacity: 0.85,
     dropGridSize: 14,

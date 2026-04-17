@@ -12,7 +12,7 @@ import {
 } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
-  type DefaultLayerDescriptions,
+  type DefaultDeclarations,
 } from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 
@@ -59,7 +59,7 @@ function generateBuildings(count: number, radius: number): BoxChildConfig[] {
 }
 
 const run = async () => {
-  const view = new ThreeView<DefaultLayerDescriptions>({
+  const view = new ThreeView<DefaultDeclarations>({
     debug: true,
     shadow: true,
   });
@@ -79,8 +79,7 @@ const run = async () => {
 
   view.toneMappingExposure = 2;
 
-  view.addLayer({
-    type: "light",
+  view.addLight({
     ambient: { intensity: 0.5 },
   });
 
@@ -125,8 +124,7 @@ const run = async () => {
   // Generate 5000 buildings within 10km radius
   const buildings = generateBuildings(BUILDING_COUNT, RADIUS);
 
-  const boxesLayer = view.addLayer<InstancedBoxMeshLayer>({
-    type: "mesh",
+  const boxesLayer = view.addMesh<InstancedBoxMeshLayer>({
     boxes: {
       castShadow: true,
       receiveShadow: true,
