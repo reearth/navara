@@ -58,11 +58,13 @@ export class PolylineMesh extends BatchedFeatureMesh<
   /** Flag indicating geometry initialization failed - mesh should never be visible */
   private _geometryInitFailed = false;
 
-  constructor(ctx: EventContext, mesh: NavaraPolylineMesh) {
+  constructor(ctx: EventContext) {
     super(new BufferGeometry<Attributes>(), new ShaderMaterial());
     this.ctx = ctx;
-    this.batchLength = mesh.batch_length;
+  }
 
+  init(mesh: NavaraPolylineMesh) {
+    this.batchLength = mesh.batch_length;
     const geometryResult = this.initGeometry(mesh);
 
     // If geometry init failed (missing required buffers), mark as permanently invisible
@@ -79,6 +81,8 @@ export class PolylineMesh extends BatchedFeatureMesh<
     this.addEventListener("removedFromWorld", () => {
       this.dispose();
     });
+
+    return this;
   }
 
   private initGeometry(
@@ -435,6 +439,16 @@ export class PolylineMesh extends BatchedFeatureMesh<
     return this.getEnhancer().states().isTexturized;
   }
 
+  get emissiveColor(): number {
+    return this.getEnhancer().states().emissiveColor;
+  }
+  get emissiveIntensity(): number {
+    return this.getEnhancer().states().emissiveIntensity;
+  }
+  get effectIdsMask(): number {
+    return this.getEnhancer().states().effectIdsMask;
+  }
+
   _setPickable(pickable: boolean, pickingCoord?: Vector2) {
     this.getEnhancer().update({ base: { pickable } });
     this.needsUpdate();
@@ -464,6 +478,14 @@ export class PolylineMesh extends BatchedFeatureMesh<
 
   _setFeatureShow(visible: boolean): void {
     this.visible = visible;
+  }
+
+  clone() {
+    const cloned = new PolylineMesh(this.ctx) as this;
+    cloned.geometry = this.geometry;
+    cloned.material = this.material;
+    cloned._enhancedMaterial = this._enhancedMaterial;
+    return cloned;
   }
 
   dispose() {
