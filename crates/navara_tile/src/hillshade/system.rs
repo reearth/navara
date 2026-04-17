@@ -14,7 +14,7 @@ use navara_tile_component::{
 };
 use navara_tile_component::{RasterTileQuadtree, TileTextureFragmentMarker};
 
-const MAX_HILLSHADE_PENDINGS: u32 = 10;
+const MAX_HILLSHADE_PENDINGS: u32 = 50;
 
 /// Marker component to identify hillshade DEM texture requests
 /// This distinguishes hillshade DataRequesters from other types

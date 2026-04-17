@@ -164,9 +164,16 @@ pub struct HillshadeBackfilledEvent {
     pub tile_handle: TileHandle, // Handle of the tile that owns this texture
     pub edge_data_handle: i32,   // Edge data handle (one edge), -1 when no edge update
     pub original_handle: i32,    // Original DEM data (256×256 RGBA), -1 when None
-    pub target_entity_ind: u32,  // Target entity ind (DataRequester), u32::MAX when None
-    pub target_entity_gen: u32,  // Target entity gen, u32::MAX when None
-    pub edge_direction: u8,      // 0=Left, 1=Right, 2=Top, 3=Bottom, 255=N/A
+
+    #[wasm_bindgen(readonly)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub target_entity_ind: Option<u32>, // Target entity ind (DataRequester), None when not applicable
+
+    #[wasm_bindgen(readonly)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub target_entity_gen: Option<u32>, // Target entity gen, None when not applicable
+
+    pub edge_direction: u8, // 0=Left, 1=Right, 2=Top, 3=Bottom, 255=N/A
 }
 
 impl From<navara_event::Events<'_>> for Events {
@@ -473,8 +480,8 @@ impl<'a>
         let (target_ind, target_gen) = ev
             .comp
             .target_entity
-            .map(|e| (e.index().index(), e.generation().to_bits()))
-            .unwrap_or((u32::MAX, u32::MAX)); // Use u32::MAX as sentinel (entity (0,0) is valid)
+            .map(|e| (Some(e.index().index()), Some(e.generation().to_bits())))
+            .unwrap_or((None, None));
         Self {
             ind: ev.ind,
             r#gen: ev.r#gen,
