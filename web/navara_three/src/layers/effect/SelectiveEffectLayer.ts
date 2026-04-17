@@ -12,7 +12,7 @@ import type { MRTPassEffectLayer } from "./MRTPassEffectLayer";
 
 // Base configuration for selective effect layers
 export type SelectiveEffectLayerConfig = {
-  selectiveEffect: true;
+  selectiveEffect?: true;
 } & EffectLayerConfig;
 
 export type SelectiveEffectLayerUpdate = EffectLayerUpdate;

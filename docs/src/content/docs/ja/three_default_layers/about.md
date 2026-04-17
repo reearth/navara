@@ -23,7 +23,7 @@ navara_three（コア）
 
 ## 使い方
 
-`three_default_layers` のレイヤーを使用するには、`view.addLayer()` の前に `view.registerMesh()` / `view.registerEffect()` / `view.registerLight()` でレイヤークラスを登録する必要があります。
+`three_default_layers` のレイヤーを使用するには、`view.addMesh()` / `view.addEffect()` / `view.addLight()` を呼び出す前に `view.registerMesh()` / `view.registerEffect()` / `view.registerLight()` でレイヤークラスを登録する必要があります。
 
 ```typescript
 import ThreeView from "@navara/three";
@@ -38,10 +38,10 @@ view.registerLight("sun", SunLightLayer);
 
 await view.init({ canvas: document.getElementById("canvas") });
 
-// 登録後に addLayer で使用可能
-view.addLayer({ type: "mesh", box: { width: 100, height: 100, depth: 100 } });
-view.addLayer({ type: "effect", fxaa: {} });
-view.addLayer({ type: "light", sun: { intensity: 1.0 } });
+// 登録後に addMesh / addEffect / addLight で使用可能
+view.addMesh({ box: { width: 100, height: 100, depth: 100 } });
+view.addEffect({ fxaa: {} });
+view.addLight({ sun: { intensity: 1.0 } });
 ```
 
 :::tip
@@ -61,8 +61,8 @@ view.registerMesh("box", BoxMeshLayer);
 view.registerMesh("gltfModel", GLTFModelLayer);
 
 // 登録後に使用
-view.addLayer({ type: "mesh", box: { width: 100, height: 100, depth: 100 } });
-view.addLayer({ type: "mesh", gltfModel: { url: "model.glb" } });
+view.addMesh({ box: { width: 100, height: 100, depth: 100 } });
+view.addMesh({ gltfModel: { url: "model.glb" } });
 ```
 
 詳細は [Mesh Layer Reference](../../../three_default_layers/mesh-layer/about/) を参照してください。
@@ -78,8 +78,8 @@ view.registerEffect("fxaa", FXAAEffectLayer);
 view.registerEffect("ssao", SSAOEffectLayer);
 
 // 登録後に使用
-view.addLayer({ type: "effect", fxaa: {} });
-view.addLayer({ type: "effect", ssao: {} });
+view.addEffect({ fxaa: {} });
+view.addEffect({ ssao: {} });
 ```
 
 詳細は [Effect Layer Reference](../../../three_default_layers/effect-layer/about/) を参照してください。
@@ -95,8 +95,8 @@ view.registerLight("sun", SunLightLayer);
 view.registerLight("ambient", AmbientLightLayer);
 
 // 登録後に使用
-view.addLayer({ type: "light", sun: { intensity: 1.0, castShadow: true } });
-view.addLayer({ type: "light", ambient: { intensity: 0.3 } });
+view.addLight({ sun: { intensity: 1.0, castShadow: true } });
+view.addLight({ ambient: { intensity: 0.3 } });
 ```
 
 詳細は [Light Layer Reference](../../../three_default_layers/light-layer/about/) を参照してください。

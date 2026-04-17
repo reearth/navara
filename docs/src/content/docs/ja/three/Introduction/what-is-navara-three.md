@@ -55,13 +55,13 @@ view.registerEffect("fxaa", FXAAEffectLayer);
 view.registerLight("sun", SunLightLayer);
 
 // 3D ボックスを追加
-view.addLayer({ type: "mesh", box: { width: 100, height: 100, depth: 100 } });
+view.addMesh({ box: { width: 100, height: 100, depth: 100 } });
 
 // アンチエイリアスを適用
-view.addLayer({ type: "effect", fxaa: {} });
+view.addEffect({ fxaa: {} });
 
 // 太陽光を追加
-view.addLayer({ type: "light", sun: { intensity: 1.0 } });
+view.addLight({ sun: { intensity: 1.0 } });
 ```
 
 ### 地物への動的アクセス
@@ -81,9 +81,3 @@ layer.on("featureUpdated", (evaluator) => {
   });
 });
 ```
-
-## navara_three はこんな人におすすめ
-
-- Web ベースの 3D 地図アプリケーションを構築したい方
-- 複雑な GIS データを簡潔な API で扱いたい方
-- Three.js のエコシステムを活かしたリッチな地図表現を実現したい方

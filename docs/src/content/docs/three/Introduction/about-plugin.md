@@ -28,7 +28,7 @@ navara_three is responsible for abstracting advanced GIS-related processing as A
 ```
 navara_three (core)
   ├── Abstracts advanced processing such as GIS data handling, coordinate transformations, and tile management
-  ├── Layer API (addLayer, registerMesh, registerEffect, registerLight)
+  ├── Layer API (addLayer, addMesh, addEffect, addLight, registerMesh, registerEffect, registerLight)
   └── Plugin API (addPlugin, Plugin class)
 
 three_default_layers (external module)
@@ -87,9 +87,9 @@ view.addPlugin(plugin);
 await view.init();
 
 // All default layers are now available
-view.addLayer({ type: "mesh", sky: {} });
-view.addLayer({ type: "light", sun: { intensity: 1.0 } });
-view.addLayer({ type: "effect", toneMapping: {} });
+view.addMesh({ sky: {} });
+view.addLight({ sun: { intensity: 1.0 } });
+view.addEffect({ toneMapping: {} });
 ```
 
 For details, see the [three_default_plugin documentation](../../../three_default_plugin/about/).

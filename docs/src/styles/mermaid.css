@@ -1,0 +1,10 @@
+/* Mermaid diagram background for readability in both themes */
+svg[id^="mermaid-"] {
+  background-color: white;
+  border-radius: 8px;
+  padding: 16px;
+  box-sizing: border-box;
+  width: 100%;
+  display: block;
+  margin-inline: auto;
+}

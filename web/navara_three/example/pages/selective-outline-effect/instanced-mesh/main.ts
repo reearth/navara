@@ -12,7 +12,7 @@ import {
 } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
-  type DefaultLayerDescriptions,
+  type DefaultDeclarations,
 } from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 
@@ -54,7 +54,7 @@ function generateBuildings(count: number, radius: number): BoxChildConfig[] {
 }
 
 const run = async () => {
-  const view = new ThreeView<DefaultLayerDescriptions>({
+  const view = new ThreeView<DefaultDeclarations>({
     debug: true,
     shadow: true,
   });
@@ -89,8 +89,7 @@ const run = async () => {
   });
 
   // Selective outline effect
-  const outlineEffect = view.addLayer({
-    type: "effect",
+  const outlineEffect = view.addEffect({
     selectiveOutline: {
       color: new Color().setHex(0x00ff00),
       thickness: 1.0,
@@ -108,8 +107,7 @@ const run = async () => {
 
   const buildings = generateBuildings(BUILDING_COUNT, RADIUS);
 
-  const boxesLayer = view.addLayer<InstancedBoxMeshLayer>({
-    type: "mesh",
+  const boxesLayer = view.addMesh<InstancedBoxMeshLayer>({
     boxes: {
       castShadow: true,
       receiveShadow: true,

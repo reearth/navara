@@ -11,12 +11,12 @@ sidebar:
 
 ### addLayer()
 
-navara_three に新しいレイヤーを追加します。このメソッドは、リソースレイヤー（タイル、地形、geojson など）、メッシュレイヤー（空、星、雨など）、ライトレイヤー（太陽、アンビエントなど）、エフェクトレイヤー（トーンマッピング、SSAO など）をサポートします。
+navara_three に新しいリソースレイヤーを追加します。このメソッドは、リソースレイヤー（タイル、地形、geojson など）をサポートします。メッシュレイヤーには `addMesh()`、ライトレイヤーには `addLight()`、エフェクトレイヤーには `addEffect()` を使用してください。
 
 **Syntax:**
 
 ```tsx
-addLayer<L = unknown>(l: LayerDescription): Layer | LayerHandle<L>
+addLayer(l: LayerDescription): Layer
 ```
 
 **Parameters:**
@@ -26,10 +26,10 @@ LayerDescription の詳細な型については、[Resource Layer Reference](../
 **Returns:**
 
 ```tsx
-Layer | LayerHandle<L>;
+Layer;
 ```
 
-リソースレイヤーの場合は `Layer` インスタンスを、メッシュ・ライト・エフェクトレイヤーの場合は `LayerHandle<L>` を返します。
+リソースレイヤーの `Layer` インスタンスを返します。
 
 **Example:**
 

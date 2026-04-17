@@ -1,28 +1,30 @@
 import {
   LayerDeclaration,
   LayerHandle,
+  MeshLayerDeclaration,
+  LightLayerDeclaration,
+  EffectLayerDeclaration,
   Layer as NavaraLayer,
   type LayerDescription,
+  type MeshLayerConfig,
+  type LightLayerConfig,
+  type EffectLayerConfig,
+  type BuiltInEffectDescription,
 } from "@navara/three";
 import { useEffect, useRef, type PropsWithChildren } from "react";
 
 import { useViewContext } from "./ViewContext";
 
-type LH<L> = L extends LayerDeclaration ? LayerHandle<L> : NavaraLayer;
-
-type Props<L> = {
+type LayerProps = {
   config: LayerDescription;
   // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
-  onReady?: (handle: LH<L>) => (() => void) | void;
+  onReady?: (handle: NavaraLayer) => (() => void) | void;
 };
 
-export function Layer<L = NavaraLayer>({
-  config,
-  onReady,
-}: PropsWithChildren<Props<L>>) {
+export function Layer({ config, onReady }: PropsWithChildren<LayerProps>) {
   const { view } = useViewContext();
 
-  const handleRef = useRef<LH<L> | null>(null);
+  const handleRef = useRef<NavaraLayer | null>(null);
 
   const configRef = useRef(config);
   const onReadyRef = useRef(onReady);
@@ -30,12 +32,10 @@ export function Layer<L = NavaraLayer>({
   configRef.current = config;
 
   useEffect(() => {
-    const handle = view.addLayer(configRef.current) as LH<L>;
+    const handle = view.addLayer(configRef.current);
     handleRef.current = handle;
     const unmount = onReadyRef.current?.(handle);
     return () => {
-      // TODO: Support unmount in strict mode. Currently tile layer doesn't work well(order is confused).
-      // Unmount: remove layer
       unmount?.();
       handle.delete();
       handleRef.current = null;
@@ -43,23 +43,102 @@ export function Layer<L = NavaraLayer>({
   }, [view]);
 
   useEffect(() => {
-    // Update when config changes
     if (handleRef.current) {
-      // Type assertion needed because LH<L> is a conditional type that TypeScript
-      // can't fully resolve for generic L. Both LayerHandle and NavaraLayer have
-      // compatible update methods at runtime.
-      const handler = handleRef.current as NavaraLayer;
-
       if ("data" in config) {
-        // Updating `data` isn't supported now.
-        // Also excluding this data prevents the assignment of an unnecessarily large amount of data.
         const { data: _data, ...withoutData } = config;
-        handler.update(withoutData);
+        handleRef.current.update(withoutData);
       } else {
-        handler.update(config);
+        handleRef.current.update(config);
       }
     }
   }, [config]);
 
+  return null;
+}
+
+function useDeclarationLayer<L extends LayerDeclaration>(
+  addFn: (config: Record<string, unknown>) => LayerHandle<L>,
+  config: Record<string, unknown>,
+  // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
+  onReady?: (handle: LayerHandle<L>) => (() => void) | void,
+) {
+  const handleRef = useRef<LayerHandle<L> | null>(null);
+  const configRef = useRef(config);
+  const onReadyRef = useRef(onReady);
+
+  configRef.current = config;
+
+  useEffect(() => {
+    const handle = addFn(configRef.current);
+    handleRef.current = handle;
+    const unmount = onReadyRef.current?.(handle);
+    return () => {
+      unmount?.();
+      handle.delete();
+      handleRef.current = null;
+    };
+  }, [addFn]);
+
+  useEffect(() => {
+    if (handleRef.current) {
+      handleRef.current.update(config as never);
+    }
+  }, [config]);
+}
+
+type MeshLayerProps<L extends MeshLayerDeclaration = MeshLayerDeclaration> = {
+  config: MeshLayerConfig;
+  // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
+  onReady?: (handle: LayerHandle<L>) => (() => void) | void;
+};
+
+export function MeshLayer<
+  L extends MeshLayerDeclaration = MeshLayerDeclaration,
+>({ config, onReady }: PropsWithChildren<MeshLayerProps<L>>) {
+  const { view } = useViewContext();
+  useDeclarationLayer<L>(
+    (c) => view.addMesh<L>(c as MeshLayerConfig),
+    config as Record<string, unknown>,
+    onReady,
+  );
+  return null;
+}
+
+type LightLayerProps<L extends LightLayerDeclaration = LightLayerDeclaration> =
+  {
+    config: LightLayerConfig;
+    // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
+    onReady?: (handle: LayerHandle<L>) => (() => void) | void;
+  };
+
+export function LightLayer<
+  L extends LightLayerDeclaration = LightLayerDeclaration,
+>({ config, onReady }: PropsWithChildren<LightLayerProps<L>>) {
+  const { view } = useViewContext();
+  useDeclarationLayer<L>(
+    (c) => view.addLight<L>(c as LightLayerConfig),
+    config as Record<string, unknown>,
+    onReady,
+  );
+  return null;
+}
+
+type EffectLayerProps<
+  L extends EffectLayerDeclaration = EffectLayerDeclaration,
+> = {
+  config: EffectLayerConfig | BuiltInEffectDescription;
+  // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
+  onReady?: (handle: LayerHandle<L>) => (() => void) | void;
+};
+
+export function EffectLayer<
+  L extends EffectLayerDeclaration = EffectLayerDeclaration,
+>({ config, onReady }: PropsWithChildren<EffectLayerProps<L>>) {
+  const { view } = useViewContext();
+  useDeclarationLayer<L>(
+    (c) => view.addEffect<L>(c as EffectLayerConfig | BuiltInEffectDescription),
+    config as Record<string, unknown>,
+    onReady,
+  );
   return null;
 }

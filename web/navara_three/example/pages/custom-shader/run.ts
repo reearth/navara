@@ -11,7 +11,7 @@ import ThreeView, {
 import type { CloudsEffectLayer } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
-  type DefaultLayerDescriptions,
+  type DefaultDeclarations,
 } from "@navara/three_default_plugin";
 import {
   Color,
@@ -123,11 +123,13 @@ export class MarchingCubesLayer extends MeshLayerDeclaration<
   }
 }
 
-export type LayerDescriptions =
-  | MarchingCubesLayerConfig
-  | DefaultLayerDescriptions;
+export type CustomDeclarations =
+  | DefaultDeclarations
+  | {
+      mesh: MarchingCubesLayerConfig;
+    };
 
-export const run = async (view: ThreeView<LayerDescriptions>) => {
+export const run = async (view: ThreeView<CustomDeclarations>) => {
   // Register custom MarchingCubesLayer
   view.registerMesh("marchingCubes", MarchingCubesLayer);
 
@@ -145,8 +147,7 @@ export const run = async (view: ThreeView<LayerDescriptions>) => {
   });
 
   // Add clouds effect layer explicitly
-  const cloudsLayer = view.addLayer<CloudsEffectLayer>({
-    type: "effect",
+  const cloudsLayer = view.addEffect<CloudsEffectLayer>({
     clouds: {},
   });
 
@@ -230,8 +231,7 @@ export const run = async (view: ThreeView<LayerDescriptions>) => {
   const matrix = eastNorthUpToFixedFrame(position);
 
   // Use the custom MarchingCubesLayer
-  const marchingCubesLayer = view.addLayer<MarchingCubesLayer>({
-    type: "mesh",
+  const marchingCubesLayer = view.addMesh<MarchingCubesLayer>({
     marchingCubes: {
       resolution: 50,
       material: hatchingMaterial,

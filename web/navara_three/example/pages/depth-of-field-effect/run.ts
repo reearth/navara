@@ -5,7 +5,7 @@ import {
 } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
-  type DefaultLayerDescriptions,
+  type DefaultDeclarations,
 } from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 
@@ -17,9 +17,9 @@ import {
   addCameraControl,
 } from "../../helpers/control";
 
-export type LayerDescriptions = DefaultLayerDescriptions;
+export type CustomDeclarations = DefaultDeclarations;
 
-export const run = async (view: ThreeView<LayerDescriptions>) => {
+export const run = async (view: ThreeView<CustomDeclarations>) => {
   const defaultPlugin = new DefaultPlugin();
   view.addPlugin(defaultPlugin);
 
@@ -44,8 +44,7 @@ export const run = async (view: ThreeView<LayerDescriptions>) => {
 
   const depthOfFieldDefaults = DEFAULT_DEPTH_OF_FIELD_OPTIONS;
 
-  const depthOfFieldLayer = view.addLayer<DepthOfFieldEffectLayer>({
-    type: "effect",
+  const depthOfFieldLayer = view.addEffect<DepthOfFieldEffectLayer>({
     depthOfField: { ...depthOfFieldDefaults },
     visible: true,
   });

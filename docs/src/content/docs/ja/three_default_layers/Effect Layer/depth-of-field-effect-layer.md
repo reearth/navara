@@ -82,8 +82,7 @@ const view = new ThreeView();
 await view.init();
 
 // 被写界深度エフェクトレイヤーを追加
-const depthOfFieldLayer = view.addLayer<DepthOfFieldEffectLayer>({
-  type: "effect",
+const depthOfFieldLayer = view.addEffect<DepthOfFieldEffectLayer>({
   depthOfField: { },
   visible: true,
 });
@@ -110,8 +109,7 @@ defaultLayers.sun.update({
 });
 
 // 被写界深度エフェクトを追加
-const depthOfFieldLayer = view.addLayer<DepthOfFieldEffectLayer>({
-  type: "effect",
+const depthOfFieldLayer = view.addEffect<DepthOfFieldEffectLayer>({
   depthOfField: {
     bokehScale: 7,
     focusDistance: 0.000006,

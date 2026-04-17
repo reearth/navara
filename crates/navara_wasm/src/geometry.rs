@@ -69,21 +69,21 @@ pub struct TransferablePolylineGeometry {
     #[wasm_bindgen(getter_with_clone)]
     pub position_low: Option<TransferableFloatAttribute>,
     #[wasm_bindgen(getter_with_clone)]
-    pub start: TransferableFloatAttribute,
+    pub start: Option<TransferableFloatAttribute>,
     #[wasm_bindgen(getter_with_clone)]
     pub start_high: Option<TransferableFloatAttribute>,
     #[wasm_bindgen(getter_with_clone)]
     pub start_low: Option<TransferableFloatAttribute>,
     #[wasm_bindgen(getter_with_clone)]
-    pub forward_offset: TransferableFloatAttribute,
+    pub forward_offset: Option<TransferableFloatAttribute>,
     #[wasm_bindgen(getter_with_clone)]
     pub end_high: Option<TransferableFloatAttribute>,
     #[wasm_bindgen(getter_with_clone)]
     pub end_low: Option<TransferableFloatAttribute>,
     #[wasm_bindgen(getter_with_clone)]
-    pub start_normals: TransferableFloatAttribute,
+    pub start_normals: Option<TransferableFloatAttribute>,
     #[wasm_bindgen(getter_with_clone)]
-    pub end_normal_and_texture_coordinate_normalization_x: TransferableFloatAttribute,
+    pub end_normal_and_texture_coordinate_normalization_x: Option<TransferableFloatAttribute>,
     #[wasm_bindgen(getter_with_clone)]
     pub right_normal_and_texture_coordinate_normalization_y: TransferableFloatAttribute,
     #[wasm_bindgen(getter_with_clone)]
@@ -102,14 +102,14 @@ impl TransferablePolylineGeometry {
         position: TransferableFloatAttribute,
         position_high: Option<TransferableFloatAttribute>,
         position_low: Option<TransferableFloatAttribute>,
-        start: TransferableFloatAttribute,
+        start: Option<TransferableFloatAttribute>,
         start_high: Option<TransferableFloatAttribute>,
         start_low: Option<TransferableFloatAttribute>,
-        forward_offset: TransferableFloatAttribute,
+        forward_offset: Option<TransferableFloatAttribute>,
         end_high: Option<TransferableFloatAttribute>,
         end_low: Option<TransferableFloatAttribute>,
-        start_normals: TransferableFloatAttribute,
-        end_normal_and_texture_coordinate_normalization_x: TransferableFloatAttribute,
+        start_normals: Option<TransferableFloatAttribute>,
+        end_normal_and_texture_coordinate_normalization_x: Option<TransferableFloatAttribute>,
         right_normal_and_texture_coordinate_normalization_y: TransferableFloatAttribute,
         batch_ids: Option<TransferableFloatAttribute>,
         batch_index: Option<TransferableUintAttribute>,
@@ -143,16 +143,16 @@ impl From<TransferablePolylineGeometry>
             position: val.position.into(),
             position_high: val.position_high.map(|p| p.into()),
             position_low: val.position_low.map(|p| p.into()),
-            start: val.start.into(),
+            start: val.start.map(|p| p.into()),
             start_high: val.start_high.map(|p| p.into()),
             start_low: val.start_low.map(|p| p.into()),
-            forward_offset: val.forward_offset.into(),
+            forward_offset: val.forward_offset.map(|p| p.into()),
             end_high: val.end_high.map(|p| p.into()),
             end_low: val.end_low.map(|p| p.into()),
-            start_normals: val.start_normals.into(),
+            start_normals: val.start_normals.map(|p| p.into()),
             end_normal_and_texture_coordinate_normalization_x: val
                 .end_normal_and_texture_coordinate_normalization_x
-                .into(),
+                .map(|p| p.into()),
             right_normal_and_texture_coordinate_normalization_y: val
                 .right_normal_and_texture_coordinate_normalization_y
                 .into(),
@@ -172,16 +172,17 @@ impl<'a> From<&'a navara_feature_component::render::TransferablePolylineGeometry
             position: (&val.position).into(),
             position_high: val.position_high.as_ref().map(|p| p.into()),
             position_low: val.position_low.as_ref().map(|p| p.into()),
-            start: (&val.start).into(),
+            start: val.start.as_ref().map(|p| p.into()),
             start_high: val.start_high.as_ref().map(|p| p.into()),
             start_low: val.start_low.as_ref().map(|p| p.into()),
-            forward_offset: (&val.forward_offset).into(),
+            forward_offset: val.forward_offset.as_ref().map(|p| p.into()),
             end_high: val.end_high.as_ref().map(|p| p.into()),
             end_low: val.end_low.as_ref().map(|p| p.into()),
-            start_normals: (&val.start_normals).into(),
-            end_normal_and_texture_coordinate_normalization_x: (&val
-                .end_normal_and_texture_coordinate_normalization_x)
-                .into(),
+            start_normals: val.start_normals.as_ref().map(|p| p.into()),
+            end_normal_and_texture_coordinate_normalization_x: val
+                .end_normal_and_texture_coordinate_normalization_x
+                .as_ref()
+                .map(|p| p.into()),
             right_normal_and_texture_coordinate_normalization_y: (&val
                 .right_normal_and_texture_coordinate_normalization_y)
                 .into(),

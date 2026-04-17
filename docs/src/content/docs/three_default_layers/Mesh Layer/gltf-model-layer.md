@@ -408,8 +408,7 @@ const view = new ThreeView();
 await view.init();
 
 // Add a GLTFModelLayer
-const modelLayer = view.addLayer<GLTFModelLayer>({
-  type: "mesh",
+const modelLayer = view.addMesh<GLTFModelLayer>({
   gltfModel: {
     url: "https://example.com/models/character.glb",
     castShadow: true,
@@ -422,8 +421,7 @@ const modelLayer = view.addLayer<GLTFModelLayer>({
 ### Animated Model
 
 ```typescript
-const animatedModel = view.addLayer<GLTFModelLayer>({
-  type: "mesh",
+const animatedModel = view.addMesh<GLTFModelLayer>({
   gltfModel: {
     url: "https://example.com/models/animated.glb",
     castShadow: true,
@@ -447,8 +445,7 @@ animatedModel.ref.on("animationReady", () => {
 ### Blending Multiple Animations
 
 ```typescript
-const blendedModel = view.addLayer<GLTFModelLayer>({
-  type: "mesh",
+const blendedModel = view.addMesh<GLTFModelLayer>({
   gltfModel: {
     url: "https://example.com/models/character.glb",
     animationEnabled: true,

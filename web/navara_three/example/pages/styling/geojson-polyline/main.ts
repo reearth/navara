@@ -64,7 +64,7 @@ const run = async () => {
   // Track updated features to prevent duplicate evaluations
   let updatedFeatures = new Set<bigint>();
 
-  const params = { width: 10, maxWidth: 10000 };
+  const params = { width: 10, maxWidth: 1000000 };
 
   // GeoJSON polyline layer with feature evaluator
   const addGeoJsonLayer = () => {

@@ -7,10 +7,11 @@ import {
   RGBAFormat,
   UnsignedByteType,
 } from "three";
-import type { EventContext } from "./context";
-import type { TileMesh } from "../mesh/tile";
 
+import type { TileMesh } from "../mesh/tile";
 import { getTextureFragmentSlots } from "../utils/textureFragmentIndex";
+
+import type { EventContext } from "./context";
 
 export function processHillshadeBackfilled(
   ctx: EventContext,

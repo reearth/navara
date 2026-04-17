@@ -205,7 +205,7 @@ layer.on("deleted", () => {
 
 ## LayerHandle
 
-A handle class for controlling mesh layers, light layers, and effect layers. Returned when adding a mesh, light, or effect layer with `ThreeView.addLayer()`.
+A handle class for controlling mesh layers, light layers, and effect layers. Returned when adding a layer with `ThreeView.addMesh()`, `ThreeView.addLight()`, or `ThreeView.addEffect()`.
 
 ### Properties
 
@@ -219,7 +219,7 @@ A handle class for controlling mesh layers, light layers, and effect layers. Ret
 
 ```typescript
 // SkyMeshLayer must be registered
-const skyHandle = view.addLayer<SkyMeshLayer>({ type: "mesh", sky: {} });
+const skyHandle = view.addMesh<SkyMeshLayer>({ sky: {} });
 console.log("Layer ID:", skyHandle.id);
 ```
 
@@ -249,7 +249,7 @@ skyHandle.visible = false;
 
 ```typescript
 // SkyMeshLayer must be registered
-const skyHandle = view.addLayer<SkyMeshLayer>({ type: "mesh", sky: {} });
+const skyHandle = view.addMesh<SkyMeshLayer>({ sky: {} });
 
 // Access the underlying layer instance
 const skyLayer = skyHandle.ref;
@@ -275,7 +275,7 @@ update(updates: UpdateConfig): void
 
 ```typescript
 // SkyMeshLayer must be registered
-const skyHandle = view.addLayer<SkyMeshLayer>({ type: "mesh", sky: {} });
+const skyHandle = view.addMesh<SkyMeshLayer>({ sky: {} });
 
 // Update settings
 skyHandle.update({ sunAngularRadius: 0.05 });

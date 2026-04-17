@@ -205,7 +205,7 @@ layer.on("deleted", () => {
 
 ## LayerHandle
 
-メッシュレイヤー、ライトレイヤー、エフェクトレイヤーを制御するためのハンドルクラスです。`ThreeView.addLayer()` で mesh、light、または effect レイヤーを追加した際に返されます。
+メッシュレイヤー、ライトレイヤー、エフェクトレイヤーを制御するためのハンドルクラスです。`ThreeView.addMesh()`、`ThreeView.addLight()`、`ThreeView.addEffect()` でレイヤーを追加した際に返されます。
 
 ### Properties
 
@@ -219,7 +219,7 @@ layer.on("deleted", () => {
 
 ```typescript
 // SkyMeshLayer が登録済みであること
-const skyHandle = view.addLayer<SkyMeshLayer>({ type: "mesh", sky: {} });
+const skyHandle = view.addMesh<SkyMeshLayer>({ sky: {} });
 console.log("レイヤーID:", skyHandle.id);
 ```
 
@@ -249,7 +249,7 @@ skyHandle.visible = false;
 
 ```typescript
 // SkyMeshLayer が登録済みであること
-const skyHandle = view.addLayer<SkyMeshLayer>({ type: "mesh", sky: {} });
+const skyHandle = view.addMesh<SkyMeshLayer>({ sky: {} });
 
 // 基底レイヤーインスタンスにアクセス
 const skyLayer = skyHandle.ref;
@@ -275,7 +275,7 @@ update(updates: UpdateConfig): void
 
 ```typescript
 // SkyMeshLayer が登録済みであること
-const skyHandle = view.addLayer<SkyMeshLayer>({ type: "mesh", sky: {} });
+const skyHandle = view.addMesh<SkyMeshLayer>({ sky: {} });
 
 // 設定を更新
 skyHandle.update({ sunAngularRadius: 0.05 });

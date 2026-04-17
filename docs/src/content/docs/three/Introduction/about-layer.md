@@ -13,12 +13,12 @@ In navara_three, elements displayed in the 3D scene are managed as "layers." Map
 
 navara_three has 4 types of layers:
 
-| Layer Type           | Description                                            | `type` Specification                                     |
+| Layer Type           | Description                                            | Method                                                   |
 | -------------------- | ------------------------------------------------------ | -------------------------------------------------------- |
-| **Resource Layer**   | Loads and displays geographic data from external data sources | Data format name (`"geojson"`, `"terrain"`, etc.)       |
-| **Mesh Layer**       | Adds 3D mesh objects to the scene                      | `"mesh"`                                                 |
-| **Effect Layer**     | Applies post-processing effects                        | `"effect"`                                               |
-| **Light Layer**      | Manages scene lighting                                 | `"light"`                                                |
+| **Resource Layer**   | Loads and displays geographic data from external data sources | `addLayer()` with data format name (`"geojson"`, `"terrain"`, etc.) |
+| **Mesh Layer**       | Adds 3D mesh objects to the scene                      | `addMesh()`                                              |
+| **Effect Layer**     | Applies post-processing effects                        | `addEffect()`                                            |
+| **Light Layer**      | Manages scene lighting                                 | `addLight()`                                             |
 
 ## Differences Between Resource Layers and Other Layers
 
@@ -61,7 +61,7 @@ Mesh layers, effect layers, and light layers create Three.js objects directly on
 
 **Characteristics:**
 
-- Specify `"mesh"`, `"effect"`, or `"light"` for `type`
+- Use the dedicated method for each type: `addMesh()`, `addEffect()`, or `addLight()`
 - Each layer has a single Material (configuration object)
 - The Material key name determines the layer type
 - **Layer class registration is required before use** (`registerMesh`, `registerEffect`, `registerLight`)
@@ -69,14 +69,13 @@ Mesh layers, effect layers, and light layers create Three.js objects directly on
 ```typescript
 import { BoxMeshLayer, FXAAEffectLayer, SunLightLayer } from "@navara/three_default_layers";
 
-// Register layer classes (required before addLayer)
+// Register layer classes (required before addMesh/addEffect/addLight)
 view.registerMesh("box", BoxMeshLayer);
 view.registerEffect("fxaa", FXAAEffectLayer);
 view.registerLight("sun", SunLightLayer);
 
 // Mesh layer example (BoxMeshLayer)
-const boxLayer = view.addLayer<BoxMeshLayer>({
-  type: "mesh",
+const boxLayer = view.addMesh<BoxMeshLayer>({
   box: {
     // Recognized as BoxMeshLayer by the box key
     width: 100,
@@ -85,16 +84,14 @@ const boxLayer = view.addLayer<BoxMeshLayer>({
 });
 
 // Effect layer example (FXAAEffectLayer)
-const fxaaLayer = view.addLayer<FXAAEffectLayer>({
-  type: "effect",
+const fxaaLayer = view.addEffect<FXAAEffectLayer>({
   fxaa: {
     // Recognized as FXAAEffectLayer by the fxaa key
   },
 });
 
 // Light layer example (SunLightLayer)
-const sunLayer = view.addLayer<SunLightLayer>({
-  type: "light",
+const sunLayer = view.addLight<SunLightLayer>({
   sun: {
     // Recognized as SunLightLayer by the sun key
     intensity: 1.0,
@@ -109,7 +106,7 @@ Using `DefaultPlugin` from [three_default_plugin](../../../three_default_plugin/
 
 ## Differences in Returned Handle Classes
 
-The handle class returned from `view.addLayer()` differs depending on the layer type:
+The handle class returned from `view.addLayer()` / `view.addMesh()` / `view.addEffect()` / `view.addLight()` differs depending on the layer type:
 
 | Layer Type                       | Returned Class   | Main Features                                                                    |
 | -------------------------------- | ---------------- | -------------------------------------------------------------------------------- |
@@ -144,8 +141,7 @@ geoJsonLayer.delete();
 
 ```typescript
 // BoxMeshLayer must be registered
-const boxLayer = view.addLayer<BoxMeshLayer>({
-  type: "mesh",
+const boxLayer = view.addMesh<BoxMeshLayer>({
   box: { width: 100, height: 100, depth: 100 },
 });
 
@@ -169,7 +165,7 @@ For detailed API reference, see [Layer Types](../../../three/api-reference/layer
 | Aspect              | Resource Layer                     | Mesh / Effect / Light Layer                                 |
 | ------------------- | ---------------------------------- | ----------------------------------------------------------- |
 | Purpose             | Loading and displaying external data | 3D objects, effects, lighting                              |
-| `type` Specification | Data format name                  | `"mesh"`, `"effect"`, `"light"`                             |
+| Method               | `addLayer()` with data format name | `addMesh()`, `addEffect()`, `addLight()`                   |
 | Pre-registration    | Not required                       | Required (`registerMesh` / `registerEffect` / `registerLight`) |
 | Number of Materials | Multiple depending on the data     | 1 Material per layer                                        |
 | Handle Class        | `Layer`                            | `LayerHandle<T>`                                            |

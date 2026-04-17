@@ -23,7 +23,7 @@ import {
 } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
-  type DefaultLayerDescriptions,
+  type DefaultDeclarations,
 } from "@navara/three_default_plugin";
 import { SphericalHarmonics3 } from "three";
 import { Pane } from "tweakpane";
@@ -47,11 +47,11 @@ import {
 } from "../../helpers/panel";
 import { SH_COEFFICIENTS } from "../../helpers/sh";
 
-export type LayerDescriptions = DefaultLayerDescriptions;
+export type CustomDeclarations = DefaultDeclarations;
 
 type DefaultEffects = ReturnType<DefaultPlugin["addDefaultPhotorealLayers"]>;
 
-export const run = async (view: ThreeView<LayerDescriptions>) => {
+export const run = async (view: ThreeView<CustomDeclarations>) => {
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
   await view.init();
@@ -65,8 +65,7 @@ export const run = async (view: ThreeView<LayerDescriptions>) => {
   });
 
   // Add clouds effect layer explicitly
-  const cloudsLayer = view.addLayer<CloudsEffectLayer>({
-    type: "effect",
+  const cloudsLayer = view.addEffect<CloudsEffectLayer>({
     clouds: {},
   });
 
@@ -83,8 +82,7 @@ export const run = async (view: ThreeView<LayerDescriptions>) => {
   });
 
   // Add an additional ambient light layer
-  const ambientLightLayer: LayerHandle<AmbientLightLayer> = view.addLayer({
-    type: "light",
+  const ambientLightLayer: LayerHandle<AmbientLightLayer> = view.addLight({
     visible: false,
     ambient: {
       intensity: 1,
@@ -186,7 +184,7 @@ export const run = async (view: ThreeView<LayerDescriptions>) => {
   ]);
 };
 
-const addTileControl = (view: ThreeView<LayerDescriptions>, pane: Pane) => {
+const addTileControl = (view: ThreeView<CustomDeclarations>, pane: Pane) => {
   const PARAMS = {
     type: TILE_DATASETS.gsiSeamlessphoto.url,
   };
@@ -231,7 +229,7 @@ const addTileControl = (view: ThreeView<LayerDescriptions>, pane: Pane) => {
 };
 
 const addCloudsTilesControl = (
-  view: ThreeView<LayerDescriptions>,
+  view: ThreeView<CustomDeclarations>,
   pane: Pane,
   tileChangeBinding: EventHandler,
 ) => {
@@ -406,7 +404,7 @@ const addAtmosphereControl = (
 };
 
 const addCloudsControl = (
-  view: ThreeView<LayerDescriptions>,
+  view: ThreeView<CustomDeclarations>,
   pane: Pane,
   cloudsLayerHandle: LayerHandle<CloudsEffectLayer>,
 ) => {
@@ -1050,7 +1048,7 @@ const addCloudsControl = (
 };
 
 const addAAControl = (
-  view: ThreeView<LayerDescriptions>,
+  view: ThreeView<CustomDeclarations>,
   pane: Pane,
   defaultEffects: DefaultEffects,
 ) => {
@@ -1142,7 +1140,7 @@ const addAAControl = (
 };
 
 // Advanced
-const addIBLControl = (view: ThreeView<LayerDescriptions>, pane: Pane) => {
+const addIBLControl = (view: ThreeView<CustomDeclarations>, pane: Pane) => {
   const PARAMS = {
     enable: false,
     sh: "debug",
@@ -1153,8 +1151,7 @@ const addIBLControl = (view: ThreeView<LayerDescriptions>, pane: Pane) => {
   sh.coefficients = SH_COEFFICIENTS.debug;
 
   // Create the light probe layer but keep it hidden initially
-  const lightProbeLayer = view.addLayer<LightProbeLayer>({
-    type: "light",
+  const lightProbeLayer = view.addLight<LightProbeLayer>({
     lightProbe: {
       sh: sh,
       intensity: PARAMS.intensity,
@@ -1199,7 +1196,7 @@ const addIBLControl = (view: ThreeView<LayerDescriptions>, pane: Pane) => {
 };
 
 const addEffectsControl = (
-  view: ThreeView<LayerDescriptions>,
+  view: ThreeView<CustomDeclarations>,
   pane: Pane,
   defaultEffects: DefaultEffects,
 ) => {
@@ -1229,8 +1226,7 @@ const addEffectsControl = (
     lensFlare: { intensity: PARAMS.lensFlareIntensity },
   });
 
-  const ssao = view.addLayer<SSAOEffectLayer>({
-    type: "effect",
+  const ssao = view.addEffect<SSAOEffectLayer>({
     visible: PARAMS.ssao,
     ssao: {},
   });

@@ -40,18 +40,15 @@ import {
   MeshBasicMaterial,
 } from "three";
 
-import { PolygonMesh } from "..";
-
+import { PolygonMesh, PolylineMesh } from "..";
+import { setTransform } from "../event";
+import type { EventContext, TileHandler } from "../event/context";
 import {
   generateMixOverlaidTexturesMacro,
   generateHillshadeNormalShader,
 } from "../material";
 import type { CustomObject3DEventMap } from "../object3DEvent";
 import type { SceneGroup, TexturizedSceneByTileCoordinates } from "../scene";
-
-import { setTransform } from "../event";
-import type { EventContext, TileHandler } from "../event/context";
-
 import type { TextureOptions } from "../textures";
 import type { TileMapByHandle } from "../type";
 import type { CommonUniforms } from "../uniforms";
@@ -619,6 +616,7 @@ export class TileMesh
     m.userData.defines.USE_UV = 1;
     m.userData.defines.USE_ELEVATION_HEATMAP = 0;
     m.userData.defines.USE_HILLSHADE = 0;
+    m.userData.defines.USE_SELECTIVE_EFFECT = 1;
 
     m.envMap = uniforms.tSkyEnvMap.value ?? null;
     m.combine = AddOperation;
@@ -648,6 +646,12 @@ export class TileMesh
       shader.uniforms.uApplyWaterNormals = m.userData.applyWaterNormals;
       shader.uniforms.uSpeculars = m.userData.speculars;
       shader.uniforms.uTextures = m.userData.textures;
+      shader.uniforms.uEmissiveIntensities = m.userData.emissiveIntensities;
+      shader.uniforms.uEmissiveColors = m.userData.emissiveColors;
+      shader.uniforms.uEffectIdsMasks = m.userData.effectIdsMasks;
+      // Satisfy MRT-injected single uniform declarations (tile uses per-texture arrays instead)
+      shader.uniforms.uEffectIdsMask = { value: 0 };
+      shader.uniforms.uEmissiveIntensity = { value: 0 };
       shader.uniforms.uWaterNormalMap = uniforms.waterTexture;
       shader.uniforms.uColorMapTexture = uniforms.colorMapTexture;
       shader.uniforms.uIor = { value: 1.33333 };
@@ -731,6 +735,9 @@ vUv = vUv * uScale + uOffset;
   uniform float uMetersPerTexel[${maxTextures}];
   uniform vec2 uHillshadeUvOffset[${maxTextures}];
   uniform vec2 uHillshadeUvScale[${maxTextures}];
+  uniform float uEmissiveIntensities[${maxTextures}];
+  uniform vec3 uEmissiveColors[${maxTextures}];
+  uniform float uEffectIdsMasks[${maxTextures}];
   uniform sampler2D uWaterNormalMap;
   uniform float uPickable;
   uniform float uIor;
@@ -770,6 +777,10 @@ vUv = vUv * uScale + uOffset;
   float waterSpecularStrength = 1.0;
   float applyWaterNormals = 0.0;
   bool useSpecular = false;
+  float tileEmissiveIntensity = 0.0;
+  vec3 tileEmissiveColor = vec3(0.0);
+  float tileEffectIdsMask = 0.0;
+  bool isTexturizedLayer = false;
 
   ${generateMixOverlaidTexturesMacro(
     maxTextures,
@@ -813,6 +824,9 @@ vUv = vUv * uScale + uOffset;
     float currentSpecularStrength = uSpecularStrengths[${idx}];
     float currentApplyWaterNormals = uApplyWaterNormals[${idx}];
     bool currentSpecular = uSpeculars[${idx}];
+    float currentEmissiveIntensity = uEmissiveIntensities[${idx}];
+    vec3 currentEmissiveColor = uEmissiveColors[${idx}];
+    float currentEffectIdsMask = uEffectIdsMasks[${idx}];
 
     if(${texColorVar}.a > 0.0) {
       tileReflectivity = currentReflectivity;
@@ -824,6 +838,17 @@ vUv = vUv * uScale + uOffset;
       waterSpecularStrength = currentSpecularStrength;
       applyWaterNormals = currentApplyWaterNormals;
       useSpecular = currentSpecular;
+      if (${idx} >= ${this.texturizedSceneIndexFrom}) {
+        isTexturizedLayer = true;
+        tileEmissiveIntensity = currentEmissiveIntensity;
+        tileEmissiveColor = currentEmissiveColor;
+        tileEffectIdsMask = float(int(tileEffectIdsMask) | int(currentEffectIdsMask));
+      } else {
+        isTexturizedLayer = false;
+        tileEmissiveIntensity = 0.0;
+        tileEmissiveColor = vec3(0.0);
+        tileEffectIdsMask = 0.0;
+      }
     }
 
     // Disable picking for the raster tile.
@@ -901,6 +926,17 @@ if (uPickable > 0.) {
           `vec3 finalNormal = mix(origNormal, normalize(origNormal * 0.7 + normal), applyWaterNormals);
           normalBuffer = vec4(packNormalToVec2(finalNormal), tileReflectivity, tileRoughness);`,
           useNormal,
+        )
+        .replace(
+          `effectIdBuffer = vec4(uEffectIdsMask, 0.0, 0.0, 1.0);
+              emissiveBuffer = vec4(diffuseColor.rgb * uEmissiveIntensity + emissive, 1.0);`,
+          `if (isTexturizedLayer) {
+                effectIdBuffer = vec4(tileEffectIdsMask, 0.0, 0.0, 1.0);
+                emissiveBuffer = vec4(diffuseColor.rgb * tileEmissiveIntensity + tileEmissiveColor, 1.0);
+              } else {
+                effectIdBuffer = vec4(0.0);
+                emissiveBuffer = vec4(0.0);
+              }`,
         ).source;
     };
 
@@ -1079,6 +1115,13 @@ if (uPickable > 0.) {
         m.userData.specularStrengths.value[lastIdx] = mesh.specularStrength;
         m.userData.applyWaterNormals.value[lastIdx] = mesh.applyWaterNormal;
         m.userData.speculars.value[lastIdx] = mesh.specular;
+        m.userData.emissiveIntensities.value[lastIdx] = mesh.emissiveIntensity;
+        m.userData.emissiveColors.value[lastIdx].set(mesh.emissiveColor);
+        m.userData.effectIdsMasks.value[lastIdx] = mesh.effectIdsMask;
+      } else if (mesh instanceof PolylineMesh) {
+        m.userData.emissiveIntensities.value[lastIdx] = mesh.emissiveIntensity;
+        m.userData.emissiveColors.value[lastIdx].set(mesh.emissiveColor);
+        m.userData.effectIdsMasks.value[lastIdx] = mesh.effectIdsMask;
       }
     }
   }
@@ -1144,6 +1187,21 @@ if (uPickable > 0.) {
     if (!m.userData.speculars) {
       m.userData.speculars = {
         value: [...new Array(maxTextures)].fill(false),
+      };
+    }
+    if (!m.userData.emissiveIntensities) {
+      m.userData.emissiveIntensities = {
+        value: [...new Array(maxTextures)].fill(0),
+      };
+    }
+    if (!m.userData.emissiveColors) {
+      m.userData.emissiveColors = {
+        value: [...new Array(maxTextures)].map(() => new Color()),
+      };
+    }
+    if (!m.userData.effectIdsMasks) {
+      m.userData.effectIdsMasks = {
+        value: [...new Array(maxTextures)].fill(0),
       };
     }
 

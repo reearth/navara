@@ -55,13 +55,13 @@ view.registerEffect("fxaa", FXAAEffectLayer);
 view.registerLight("sun", SunLightLayer);
 
 // Add a 3D box
-view.addLayer({ type: "mesh", box: { width: 100, height: 100, depth: 100 } });
+view.addMesh({ box: { width: 100, height: 100, depth: 100 } });
 
 // Apply anti-aliasing
-view.addLayer({ type: "effect", fxaa: {} });
+view.addEffect({ fxaa: {} });
 
 // Add sunlight
-view.addLayer({ type: "light", sun: { intensity: 1.0 } });
+view.addLight({ sun: { intensity: 1.0 } });
 ```
 
 ### Dynamic Access to Features
@@ -81,9 +81,3 @@ layer.on("featureUpdated", (evaluator) => {
   });
 });
 ```
-
-## navara_three is Recommended For
-
-- Those who want to build web-based 3D map applications
-- Those who want to handle complex GIS data with a concise API
-- Those who want to achieve rich map expressions leveraging the Three.js ecosystem

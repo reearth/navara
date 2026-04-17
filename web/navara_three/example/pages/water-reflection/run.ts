@@ -6,7 +6,7 @@ import ThreeView, {
 import { SSREffectLayer } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
-  type DefaultLayerDescriptions,
+  type DefaultDeclarations,
 } from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 
@@ -20,9 +20,9 @@ import {
 import { addCameraControl, addDateControl } from "../../helpers/control";
 import { addFieldsToFolder, type FolderFields } from "../../helpers/panel";
 
-export type LayerDescriptions = DefaultLayerDescriptions;
+export type CustomDeclarations = DefaultDeclarations;
 
-export const run = async (view: ThreeView<LayerDescriptions>) => {
+export const run = async (view: ThreeView<CustomDeclarations>) => {
   const defaultPlugin = new DefaultPlugin();
   view.addPlugin(defaultPlugin);
 
@@ -122,10 +122,9 @@ export const run = async (view: ThreeView<LayerDescriptions>) => {
   ]);
 };
 
-const addSSRControls = (view: ThreeView<LayerDescriptions>, pane: Pane) => {
+const addSSRControls = (view: ThreeView<CustomDeclarations>, pane: Pane) => {
   // Add SSR effect layer
-  let ssrLayer = view.addLayer<SSREffectLayer>({
-    type: "effect",
+  let ssrLayer = view.addEffect<SSREffectLayer>({
     ssr: {},
   });
 
@@ -155,8 +154,7 @@ const addSSRControls = (view: ThreeView<LayerDescriptions>, pane: Pane) => {
       name: "visible",
       onChange: (v) => {
         if (v.value) {
-          ssrLayer = view.addLayer<SSREffectLayer>({
-            type: "effect",
+          ssrLayer = view.addEffect<SSREffectLayer>({
             ssr: ssrParams,
           });
         } else {
@@ -313,7 +311,7 @@ const addSSRControls = (view: ThreeView<LayerDescriptions>, pane: Pane) => {
   );
 };
 
-const addWaterControls = (view: ThreeView<LayerDescriptions>, pane: Pane) => {
+const addWaterControls = (view: ThreeView<CustomDeclarations>, pane: Pane) => {
   // Store the layer description object
   const mvtLayerDescription: LayerDescription = {
     type: "mvt",

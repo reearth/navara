@@ -141,8 +141,7 @@ const view = new ThreeView();
 await view.init();
 
 // Add selective outline effect layer
-const outlineLayer = view.addLayer<SelectiveOutlineEffectLayer>({
-  type: "effect",
+const outlineLayer = view.addEffect<SelectiveOutlineEffectLayer>({
   selectiveOutline: {
     color: new Color().setHex(0xffffff),
     thickness: 1.0,
@@ -151,8 +150,7 @@ const outlineLayer = view.addLayer<SelectiveOutlineEffectLayer>({
 });
 
 // Apply outline effect to an object
-const cubeLayer = view.addLayer<BoxMeshLayer>({
-  type: "mesh",
+const cubeLayer = view.addMesh<BoxMeshLayer>({
   box: {
     width: 100,
     height: 100,
@@ -179,8 +177,7 @@ await view.init();
 plugin.addDefaultPhotorealLayers();
 
 // Add a thick red outline
-const outlineLayer = view.addLayer<SelectiveOutlineEffectLayer>({
-  type: "effect",
+const outlineLayer = view.addEffect<SelectiveOutlineEffectLayer>({
   selectiveOutline: {
     color: new Color().setHex(0xff0000),
     thickness: 2.5,
@@ -198,8 +195,7 @@ const view = new ThreeView();
 await view.init();
 
 // Performance-oriented settings
-const outlineLayer = view.addLayer<SelectiveOutlineEffectLayer>({
-  type: "effect",
+const outlineLayer = view.addEffect<SelectiveOutlineEffectLayer>({
   selectiveOutline: {
     color: new Color().setHex(0xffffff),
     thickness: 1.0,
@@ -217,8 +213,7 @@ import ThreeView, { SelectiveOutlineEffectLayer, Color } from "@navara/three";
 const view = new ThreeView();
 await view.init();
 
-const outlineLayer = view.addLayer<SelectiveOutlineEffectLayer>({
-  type: "effect",
+const outlineLayer = view.addEffect<SelectiveOutlineEffectLayer>({
   selectiveOutline: {
     color: new Color().setHex(0xffffff),
     thickness: 1.0,
@@ -242,8 +237,7 @@ import ThreeView, { SelectiveOutlineEffectLayer, Color } from "@navara/three";
 const view = new ThreeView();
 await view.init();
 
-const outlineLayer = view.addLayer<SelectiveOutlineEffectLayer>({
-  type: "effect",
+const outlineLayer = view.addEffect<SelectiveOutlineEffectLayer>({
   selectiveOutline: {
     color: new Color().setHex(0xff0000),
     thickness: 2.0,
@@ -279,8 +273,7 @@ import ThreeView, {
 const view = new ThreeView();
 await view.init();
 
-const outlineLayer = view.addLayer<SelectiveOutlineEffectLayer>({
-  type: "effect",
+const outlineLayer = view.addEffect<SelectiveOutlineEffectLayer>({
   selectiveOutline: {
     color: new Color().setHex(0x00ff00),
     thickness: 2.0,
@@ -288,8 +281,7 @@ const outlineLayer = view.addLayer<SelectiveOutlineEffectLayer>({
 });
 
 // Silhouette mode: outline is visible even behind buildings
-const highlightedCube = view.addLayer<BoxMeshLayer>({
-  type: "mesh",
+const highlightedCube = view.addMesh<BoxMeshLayer>({
   box: {
     width: 100,
     height: 100,
@@ -314,15 +306,13 @@ import ThreeView, {
 const view = new ThreeView();
 await view.init();
 
-const bloomLayer = view.addLayer<SelectiveBloomEffectLayer>({
-  type: "effect",
+const bloomLayer = view.addEffect<SelectiveBloomEffectLayer>({
   selectiveBloom: {
     strength: 1.0,
   },
 });
 
-const outlineLayer = view.addLayer<SelectiveOutlineEffectLayer>({
-  type: "effect",
+const outlineLayer = view.addEffect<SelectiveOutlineEffectLayer>({
   selectiveOutline: {
     color: new Color().setHex(0xff0000),
     thickness: 2.0,
@@ -330,8 +320,7 @@ const outlineLayer = view.addLayer<SelectiveOutlineEffectLayer>({
 });
 
 // Apply both effects
-const cubeLayer = view.addLayer<BoxMeshLayer>({
-  type: "mesh",
+const cubeLayer = view.addMesh<BoxMeshLayer>({
   box: {
     width: 100,
     height: 100,

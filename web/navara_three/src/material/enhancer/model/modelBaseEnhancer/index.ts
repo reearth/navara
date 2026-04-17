@@ -19,7 +19,7 @@ import type { ModelBaseMutates, ModelBaseProps, ModelBaseState } from "./types";
  * - Height (addHeight uniform)
  * - Picking
  * - Batch texture support
- * - SelectiveEffect uniforms (effectIdsMask, emissive)
+ * - SelectiveEffect uniforms (effectIdsMask, uEmissiveIntensity) and emissive/emissiveIntensity material syncing
  * - Shadow map depth shader
  *
  * Supports Standard and Physical materials.

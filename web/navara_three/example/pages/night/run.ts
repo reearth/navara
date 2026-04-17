@@ -16,7 +16,7 @@ import type {
 } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
-  type DefaultLayerDescriptions,
+  type DefaultDeclarations,
 } from "@navara/three_default_plugin";
 import type { FeatureCollection, Point } from "geojson";
 import { SphericalHarmonics3 } from "three";
@@ -32,9 +32,9 @@ import {
 import { addCameraControl, addDateControl } from "../../helpers/control";
 import { SH_COEFFICIENTS } from "../../helpers/sh";
 
-export type LayerDescriptions = DefaultLayerDescriptions;
+export type CustomDeclarations = DefaultDeclarations;
 
-export const run = async (view: ThreeView<LayerDescriptions>) => {
+export const run = async (view: ThreeView<CustomDeclarations>) => {
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
   await view.init();
@@ -171,11 +171,10 @@ export const run = async (view: ThreeView<LayerDescriptions>) => {
 };
 
 const addNightLightProbeControl = (
-  view: ThreeView<LayerDescriptions>,
+  view: ThreeView<CustomDeclarations>,
   pane: Pane,
 ) => {
-  const lightProbeLayer = view.addLayer<LightProbeLayer>({
-    type: "light",
+  const lightProbeLayer = view.addLight<LightProbeLayer>({
     lightProbe: {
       sh: new SphericalHarmonics3().set(SH_COEFFICIENTS.night),
       intensity: 0.05,
@@ -214,7 +213,7 @@ const addNightLightProbeControl = (
 };
 
 const addStarsControl = (
-  view: ThreeView<LayerDescriptions>,
+  view: ThreeView<CustomDeclarations>,
   starsLayer: LayerHandle<StarsLayer>,
   pane: Pane,
 ) => {
@@ -266,7 +265,7 @@ const addStarsControl = (
 };
 
 const addSkyLightProbeControl = (
-  view: ThreeView<LayerDescriptions>,
+  view: ThreeView<CustomDeclarations>,
   skyLightProbeLayer: LayerHandle<SkyLightProbeLayer>,
   pane: Pane,
 ) => {
@@ -325,7 +324,7 @@ const addSkyLightProbeControl = (
 };
 
 const add3DTilesSceneControl = (
-  view: ThreeView<LayerDescriptions>,
+  view: ThreeView<CustomDeclarations>,
   pane: Pane,
 ) => {
   const SCENES = {
@@ -471,7 +470,7 @@ const loadGeoJSONLights = async (
 };
 
 const addTokyoPointsFogLightControl = async (
-  view: ThreeView<LayerDescriptions>,
+  view: ThreeView<CustomDeclarations>,
   pane: Pane,
 ) => {
   // Load Tokyo Points light data using common function
@@ -480,8 +479,7 @@ const addTokyoPointsFogLightControl = async (
   );
 
   // Create separate fog light layer for Tokyo Points
-  const tokyoPointsFogLayer = view.addLayer<FogLightEffectLayer>({
-    type: "effect",
+  const tokyoPointsFogLayer = view.addEffect<FogLightEffectLayer>({
     fogLight: {
       lights: tokyoPointsLights,
       fogDensity: 2.0, // Different default density for Tokyo Points
@@ -646,7 +644,7 @@ const addTokyoPointsFogLightControl = async (
 };
 
 const addFogLightControl = async (
-  view: ThreeView<LayerDescriptions>,
+  view: ThreeView<CustomDeclarations>,
   pane: Pane,
   sceneChangeHandler?: EventHandler,
 ) => {
@@ -668,8 +666,7 @@ const addFogLightControl = async (
     } else {
       // Create fog light layer, initially visible only at night
       const isAtNight = view.atmosphere.isAtNight(view.camera.raw.position);
-      fogLightLayer = view.addLayer<FogLightEffectLayer>({
-        type: "effect",
+      fogLightLayer = view.addEffect<FogLightEffectLayer>({
         fogLight: {
           lights: streetLights,
           fogDensity: 0.5,

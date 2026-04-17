@@ -12,7 +12,6 @@ import type { Promise as WorkerPoolPromise } from "@navara/worker";
 import type { Mesh, Sprite, Object3D } from "three";
 
 import type { Color } from "../Color";
-import type { LightLayerConfig } from "../core";
 import type {
   FinalCopyPassConfig,
   MRTPassConfig,
@@ -25,17 +24,23 @@ import type { TileMesh } from "../mesh";
 
 export type { Promise as WorkerPoolPromise } from "@navara/worker";
 
-export type LayerDescription =
-  | ResourceLayerDescription
-  | MeshLayerDeclarationDescription
-  | LightLayerDeclarationDescription
-  | EffectLayerDeclarationDescription;
+export type LayerDescription = ResourceLayerDescription;
 
-export type MeshLayerDeclarationDescription = { type: "mesh" };
+export type Declarations = {
+  mesh?: object;
+  light?: object;
+  effect?: object;
+};
 
-export type LightLayerDeclarationDescription = LightLayerConfig;
+export type EmptyDeclarations = {
+  mesh: undefined;
+  light: undefined;
+  effect: undefined;
+};
 
-export type EffectLayerDeclarationDescription =
+export type OmitType<T> = T extends unknown ? Omit<T, "type"> : never;
+
+export type BuiltInEffectDescription =
   | FinalCopyPassConfig
   | MRTPassConfig
   | SkyEnvMapPassConfig

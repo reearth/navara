@@ -57,6 +57,51 @@ describe("polylineBaseEnhancer/mutates", () => {
     });
   });
 
+  describe("emissiveColor uniform passthrough", () => {
+    it("should pass emissiveColor=0 as vec3(0,0,0) — shader handles fallback", () => {
+      const state: PolylineBaseState = {
+        ...DEFAULT_BASE_STATE,
+        color: 0xff9900,
+        emissiveColor: 0,
+        effectIdsMask: 1,
+      };
+      const mutates = createBaseMutates(false);
+      mutates.update(state);
+
+      const uniforms: ShaderUniforms = {};
+      mutates.updateUniforms(uniforms, state);
+
+      const vec = uniforms.uEmissiveColor as {
+        value: { x: number; y: number; z: number };
+      };
+      expect(vec.value.x).toBe(0);
+      expect(vec.value.y).toBe(0);
+      expect(vec.value.z).toBe(0);
+    });
+
+    it("should pass explicit emissiveColor through to uniform", () => {
+      const state: PolylineBaseState = {
+        ...DEFAULT_BASE_STATE,
+        color: 0xff9900,
+        emissiveColor: 0x0000ff,
+        effectIdsMask: 1,
+      };
+      const mutates = createBaseMutates(false);
+      mutates.update(state);
+
+      const uniforms: ShaderUniforms = {};
+      mutates.updateUniforms(uniforms, state);
+
+      const vec = uniforms.uEmissiveColor as {
+        value: { x: number; y: number; z: number };
+      };
+      // 0x0000ff → R=0.0, G=0.0, B=1.0
+      expect(vec.value.x).toBeCloseTo(0.0);
+      expect(vec.value.y).toBeCloseTo(0.0);
+      expect(vec.value.z).toBeCloseTo(1.0);
+    });
+  });
+
   describe("setPickingCoord", () => {
     it("should update picking coordinate uniform", () => {
       const state: PolylineBaseState = { ...DEFAULT_BASE_STATE };

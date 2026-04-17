@@ -23,7 +23,7 @@ navara_three (core)
 
 ## Usage
 
-To use layers from `three_default_layers`, you need to register the layer classes with `view.registerMesh()` / `view.registerEffect()` / `view.registerLight()` before calling `view.addLayer()`.
+To use layers from `three_default_layers`, you need to register the layer classes with `view.registerMesh()` / `view.registerEffect()` / `view.registerLight()` before calling `view.addMesh()` / `view.addEffect()` / `view.addLight()`.
 
 ```typescript
 import ThreeView from "@navara/three";
@@ -38,10 +38,10 @@ view.registerLight("sun", SunLightLayer);
 
 await view.init({ canvas: document.getElementById("canvas") });
 
-// Use with addLayer after registration
-view.addLayer({ type: "mesh", box: { width: 100, height: 100, depth: 100 } });
-view.addLayer({ type: "effect", fxaa: {} });
-view.addLayer({ type: "light", sun: { intensity: 1.0 } });
+// Use after registration
+view.addMesh({ box: { width: 100, height: 100, depth: 100 } });
+view.addEffect({ fxaa: {} });
+view.addLight({ sun: { intensity: 1.0 } });
 ```
 
 :::tip
@@ -61,8 +61,8 @@ view.registerMesh("box", BoxMeshLayer);
 view.registerMesh("gltfModel", GLTFModelLayer);
 
 // Use after registration
-view.addLayer({ type: "mesh", box: { width: 100, height: 100, depth: 100 } });
-view.addLayer({ type: "mesh", gltfModel: { url: "model.glb" } });
+view.addMesh({ box: { width: 100, height: 100, depth: 100 } });
+view.addMesh({ gltfModel: { url: "model.glb" } });
 ```
 
 See the [Mesh Layer Reference](../../../three_default_layers/mesh-layer/about/) for details.
@@ -78,8 +78,8 @@ view.registerEffect("fxaa", FXAAEffectLayer);
 view.registerEffect("ssao", SSAOEffectLayer);
 
 // Use after registration
-view.addLayer({ type: "effect", fxaa: {} });
-view.addLayer({ type: "effect", ssao: {} });
+view.addEffect({ fxaa: {} });
+view.addEffect({ ssao: {} });
 ```
 
 See the [Effect Layer Reference](../../../three_default_layers/effect-layer/about/) for details.
@@ -95,8 +95,8 @@ view.registerLight("sun", SunLightLayer);
 view.registerLight("ambient", AmbientLightLayer);
 
 // Use after registration
-view.addLayer({ type: "light", sun: { intensity: 1.0, castShadow: true } });
-view.addLayer({ type: "light", ambient: { intensity: 0.3 } });
+view.addLight({ sun: { intensity: 1.0, castShadow: true } });
+view.addLight({ ambient: { intensity: 0.3 } });
 ```
 
 See the [Light Layer Reference](../../../three_default_layers/light-layer/about/) for details.

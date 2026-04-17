@@ -28,7 +28,7 @@ navara_three は GIS に関連する高度な処理を API として抽象化す
 ```
 navara_three（コア）
   ├── GIS データ処理・座標変換・タイル管理などの高度な処理を抽象化
-  ├── レイヤー API（addLayer, registerMesh, registerEffect, registerLight）
+  ├── レイヤー API（addLayer, addMesh, addEffect, addLight, registerMesh, registerEffect, registerLight）
   └── プラグイン API（addPlugin, Plugin クラス）
 
 three_default_layers（外部モジュール）
@@ -87,9 +87,9 @@ view.addPlugin(plugin);
 await view.init();
 
 // すべてのデフォルトレイヤーが利用可能
-view.addLayer({ type: "mesh", sky: {} });
-view.addLayer({ type: "light", sun: { intensity: 1.0 } });
-view.addLayer({ type: "effect", toneMapping: {} });
+view.addMesh({ sky: {} });
+view.addLight({ sun: { intensity: 1.0 } });
+view.addEffect({ toneMapping: {} });
 ```
 
 詳細は [three_default_plugin のドキュメント](../../../three_default_plugin/about/) を参照してください。

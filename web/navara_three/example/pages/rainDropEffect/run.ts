@@ -2,7 +2,7 @@ import ThreeView from "@navara/three";
 import { RainDropEffectLayer } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
-  type DefaultLayerDescriptions,
+  type DefaultDeclarations,
 } from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 
@@ -10,9 +10,9 @@ import { showAttributions } from "../../helpers/attributions";
 import { TILE_DATASETS } from "../../helpers/constants";
 import { addHidePaneKeyShortcut } from "../../helpers/control";
 
-export type LayerDescriptions = DefaultLayerDescriptions;
+export type CustomDeclarations = DefaultDeclarations;
 
-export const run = async (view: ThreeView<LayerDescriptions>) => {
+export const run = async (view: ThreeView<CustomDeclarations>) => {
   const defaultPlugin = new DefaultPlugin();
   view.addPlugin(defaultPlugin);
 
@@ -40,8 +40,7 @@ export const run = async (view: ThreeView<LayerDescriptions>) => {
     jitterStrengthHigh: 0.08,
   };
 
-  const rainDropLayer = view.addLayer<RainDropEffectLayer>({
-    type: "effect",
+  const rainDropLayer = view.addEffect<RainDropEffectLayer>({
     rainDrop: { ...rainDropDefaults },
     visible: true,
   });

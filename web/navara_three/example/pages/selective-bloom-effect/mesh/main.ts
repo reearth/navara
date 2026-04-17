@@ -13,7 +13,7 @@ import type {
 } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
-  type DefaultLayerDescriptions,
+  type DefaultDeclarations,
 } from "@navara/three_default_plugin";
 import { Vector3 } from "three";
 
@@ -21,7 +21,7 @@ import { showAttributions } from "../../../helpers/attributions";
 import { TERRAIN_DATASETS, TILE_DATASETS } from "../../../helpers/constants";
 
 const run = async () => {
-  const view = new ThreeView<DefaultLayerDescriptions>({
+  const view = new ThreeView<DefaultDeclarations>({
     debug: true,
     shadow: true,
   });
@@ -48,8 +48,7 @@ const run = async () => {
   });
 
   // Selective bloom effect
-  const bloomEffect = view.addLayer({
-    type: "effect",
+  const bloomEffect = view.addEffect({
     selectiveBloom: {
       strength: 1.0,
       radius: 0.5,
@@ -64,8 +63,7 @@ const run = async () => {
     height: 200,
   });
 
-  view.addLayer<BoxMeshLayer>({
-    type: "mesh",
+  view.addMesh<BoxMeshLayer>({
     box: {
       width: 200,
       height: 200,
@@ -90,8 +88,7 @@ const run = async () => {
     .clone()
     .add(new Vector3(-500, 0, -600));
 
-  view.addLayer<SphereMeshLayer>({
-    type: "mesh",
+  view.addMesh<SphereMeshLayer>({
     sphere: {
       radius: 100,
       color: new Color().setHex(0x00aaff),
@@ -117,8 +114,7 @@ const run = async () => {
     height: 400,
   });
 
-  view.addLayer<CylinderMeshLayer>({
-    type: "mesh",
+  view.addMesh<CylinderMeshLayer>({
     cylinder: {
       radiusTop: 50,
       radiusBottom: 80,
@@ -146,8 +142,7 @@ const run = async () => {
     height: 400,
   });
 
-  view.addLayer<PlaneMeshLayer>({
-    type: "mesh",
+  view.addMesh<PlaneMeshLayer>({
     plane: {
       width: 200,
       height: 200,
@@ -174,8 +169,7 @@ const run = async () => {
     height: 400,
   });
 
-  view.addLayer<TubeMeshLayer>({
-    type: "mesh",
+  view.addMesh<TubeMeshLayer>({
     tube: {
       points: [
         { x: 0, y: 0, z: 0 },

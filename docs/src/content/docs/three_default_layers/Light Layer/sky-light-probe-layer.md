@@ -99,8 +99,7 @@ defaultLayers.skyLightProbe.update({
 ### Changing Intensity for Day and Night
 
 ```typescript
-const skyLightProbe = view.addLayer<SkyLightProbeLayer>({
-  type: "light",
+const skyLightProbe = view.addLight<SkyLightProbeLayer>({
   skyLightProbe: {
     intensity: 1.0
   }
@@ -125,8 +124,7 @@ view.atmosphere.on("sunChanged", () => {
 ### Enable Only at Night
 
 ```typescript
-const skyLightProbe = view.addLayer<SkyLightProbeLayer>({
-  type: "light",
+const skyLightProbe = view.addLight<SkyLightProbeLayer>({
   skyLightProbe: {
     intensity: 1.0
   },

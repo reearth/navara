@@ -6,7 +6,7 @@ import type {
 } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
-  type DefaultLayerDescriptions,
+  type DefaultDeclarations,
 } from "@navara/three_default_plugin";
 import { Vector3 } from "three";
 import { Pane } from "tweakpane";
@@ -231,9 +231,9 @@ const gSmoothLinesDef = [
   },
 ];
 
-export type LayerDescriptions = DefaultLayerDescriptions;
+export type CustomDeclarations = DefaultDeclarations;
 
-export const run = async (view: ThreeView<LayerDescriptions>) => {
+export const run = async (view: ThreeView<CustomDeclarations>) => {
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
   await view.init();
@@ -270,8 +270,7 @@ export const run = async (view: ThreeView<LayerDescriptions>) => {
     rasterTile: {},
   });
 
-  view.addLayer({
-    type: "mesh",
+  view.addMesh({
     axesHelper: {
       size: 5,
     },
@@ -288,8 +287,7 @@ export const run = async (view: ThreeView<LayerDescriptions>) => {
 
   plugin.addDefaultPhotorealLayers();
 
-  view.addLayer<CloudsEffectLayer>({
-    type: "effect",
+  view.addEffect<CloudsEffectLayer>({
     clouds: {},
   });
   const pane = new Pane({
@@ -310,9 +308,8 @@ function intToHexColor(num: number) {
   return "#" + num.toString(16).padStart(6, "0");
 }
 
-const addArcLines = (view: ThreeView<LayerDescriptions>, pane: Pane) => {
-  const arcLineLayer = view.addLayer<ArclineMeshLayer>({
-    type: "mesh",
+const addArcLines = (view: ThreeView<CustomDeclarations>, pane: Pane) => {
+  const arcLineLayer = view.addMesh<ArclineMeshLayer>({
     arcLines: gArcLinesDef,
   });
 
@@ -527,9 +524,8 @@ const addArcLines = (view: ThreeView<LayerDescriptions>, pane: Pane) => {
   dashAnimFunc();
 };
 
-const addSmoothLines = (view: ThreeView<LayerDescriptions>, pane: Pane) => {
-  const smoothLineLayer = view.addLayer<SmoothLineMeshLayer>({
-    type: "mesh",
+const addSmoothLines = (view: ThreeView<CustomDeclarations>, pane: Pane) => {
+  const smoothLineLayer = view.addMesh<SmoothLineMeshLayer>({
     smoothLines: gSmoothLinesDef,
   });
 

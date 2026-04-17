@@ -20,7 +20,7 @@ type EffectInstance =
   | Pass<PostProcessingPass, PostProcessingEffect>;
 
 export type EffectLayerConfig = {
-  type: "effect";
+  type?: "effect";
 } & LayerDeclarationConfig;
 
 export type EffectLayerUpdate = LayerDeclarationConfigUpdate;
@@ -135,8 +135,7 @@ export type EffectBaseInstance<Instance extends object = object> =
  * ```typescript
  * view.registerEffect("vignette", VignetteEffectLayer);
  *
- * const handle = view.addLayer<VignetteEffectLayer>({
- *   type: "effect",
+ * const handle = view.addEffect<VignetteEffectLayer>({
  *   vignette: { offset: 0.5, darkness: 0.5 },
  *   visible: true,
  * });

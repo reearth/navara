@@ -1,7 +1,7 @@
 import ThreeView, { JAPAN_GSI_ELEVATION_DECODER, Color } from "@navara/three";
 import {
   DefaultPlugin,
-  type DefaultLayerDescriptions,
+  type DefaultDeclarations,
 } from "@navara/three_default_plugin";
 import { Vector3 } from "three";
 
@@ -12,9 +12,9 @@ import {
   VECTOR_DATASETS,
 } from "../../helpers/constants";
 
-export type LayerDescriptions = DefaultLayerDescriptions;
+export type CustomDeclarations = DefaultDeclarations;
 
-export const run = async (view: ThreeView<LayerDescriptions>) => {
+export const run = async (view: ThreeView<CustomDeclarations>) => {
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
   await view.init();
@@ -23,8 +23,7 @@ export const run = async (view: ThreeView<LayerDescriptions>) => {
 
   view.atmosphere.date.setHours(8);
 
-  view.addLayer({
-    type: "mesh",
+  view.addMesh({
     axesHelper: {
       size: 5,
     },

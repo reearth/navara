@@ -51,6 +51,20 @@ describe("modelBaseEnhancer/mutates", () => {
 
       expect(uniforms.uEffectIdsMask?.value).toBe(5);
     });
+
+    it("should sync uEmissiveIntensity ref from state", () => {
+      const state: ModelBaseState = {
+        ...DEFAULT_BASE_STATE,
+        emissiveIntensity: 0.7,
+      };
+      const mutates = createBaseMutates();
+      mutates.update(state);
+
+      const uniforms: ShaderUniforms = {};
+      mutates.updateUniforms(uniforms, state);
+
+      expect(uniforms.uEmissiveIntensity?.value).toBe(0.7);
+    });
   });
 
   describe("setBatchDataTexture", () => {

@@ -39,7 +39,7 @@ export abstract class MeshLayerDeclarationWithSelectiveEffect<
   CustomEvent,
   Instance
 > {
-  private _effectIds: string[] = [];
+  protected _effectIds: string[] = [];
   private _onSlotsChanged = () => this.updateEffectIdsMask();
 
   constructor(view: ThreeView, ctx: ViewContext, config?: Config) {
@@ -98,7 +98,8 @@ export abstract class MeshLayerDeclarationWithSelectiveEffect<
   }
 
   /**
-   * Compute effectIdsMask from SelectiveEffectRegistry and set on the mesh's material.
+   * Compute effectIdsMask and set on the mesh's material.
+   * Override this for non-standard mesh structures (e.g., Object3D with child meshes).
    */
   protected updateEffectIdsMask(): void {
     const registry = this.ctx.selectiveEffectRegistry;

@@ -2,7 +2,7 @@ import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
 import { ToneMappingMode } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
-  type DefaultLayerDescriptions,
+  type DefaultDeclarations,
 } from "@navara/three_default_plugin";
 import { SphericalHarmonics3 } from "three";
 import { Pane } from "tweakpane";
@@ -12,31 +12,28 @@ import { TERRAIN_DATASETS, VECTOR_DATASETS } from "../../helpers/constants";
 import { addCameraControl } from "../../helpers/control";
 import { SH_COEFFICIENTS } from "../../helpers/sh";
 
-export type LayerDescriptions = DefaultLayerDescriptions;
+export type CustomDeclarations = DefaultDeclarations;
 
-export const run = async (view: ThreeView<LayerDescriptions>) => {
+export const run = async (view: ThreeView<CustomDeclarations>) => {
   view.addPlugin(new DefaultPlugin());
 
   await view.init();
 
-  view.addLayer({ type: "light", ambient: {} });
+  view.addLight({ ambient: {} });
 
   view.toneMappingExposure = 3;
 
-  view.addLayer({
-    type: "effect",
+  view.addEffect({
     toneMapping: {
       mode: ToneMappingMode.REINHARD2,
     },
   });
 
-  view.addLayer({
-    type: "effect",
+  view.addEffect({
     smaa: {},
   });
 
-  view.addLayer({
-    type: "light",
+  view.addLight({
     lightProbe: {
       sh: new SphericalHarmonics3().set(SH_COEFFICIENTS.white),
       intensity: 1,

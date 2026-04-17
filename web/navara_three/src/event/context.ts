@@ -22,6 +22,7 @@ import type { ViewEvents } from "..";
 import type { ThreeViewCamera } from "../camera";
 import type { ViewContext } from "../core";
 import type { LayersManager } from "../layersManager";
+import type { TileMesh } from "../mesh/tile";
 import type { Scenes, TexturizedSceneByTileCoordinates } from "../scene";
 import type { TextureOptions } from "../textures";
 import type {
@@ -32,7 +33,6 @@ import type {
   TileMapByHandle,
 } from "../type";
 import type { CommonUniforms } from "../uniforms";
-import type { TileMesh } from "../mesh/tile";
 import type { TextureSlot } from "../utils";
 
 export type BufferLoader = {

@@ -11,12 +11,12 @@ This page describes all functions (methods) available on a ThreeView instance.
 
 ### addLayer()
 
-Adds a new layer to navara_three. This method supports resource layers (tiles, terrain, geojson, etc.), mesh layers (sky, stars, rain, etc.), light layers (sun, ambient, etc.), and effect layers (tone mapping, SSAO, etc.).
+Adds a new resource layer to navara_three. This method is used for resource layers only (tiles, terrain, geojson, mvt, cesium3dtiles, b3dm, pnts). For mesh, light, and effect layers, use `addMesh()`, `addLight()`, and `addEffect()` respectively.
 
 **Syntax:**
 
 ```tsx
-addLayer<L = unknown>(l: LayerDescription): Layer | LayerHandle<L>
+addLayer(l: LayerDescription): Layer
 ```
 
 **Parameters:**
@@ -26,10 +26,10 @@ For detailed types of LayerDescription, see [Resource Layer Reference](../../../
 **Returns:**
 
 ```tsx
-Layer | LayerHandle<L>;
+Layer;
 ```
 
-Returns a `Layer` instance for resource layers, or a `LayerHandle<L>` for mesh, light, and effect layers.
+Returns a `Layer` instance for the added resource layer.
 
 **Example:**
 
@@ -47,6 +47,81 @@ const layer = view.addLayer({
     wireframe: false,
   },
 });
+```
+
+### addMesh()
+
+Adds a new mesh layer to navara_three. The mesh layer class must be registered with `registerMesh()` before calling this method.
+
+**Syntax:**
+
+```tsx
+addMesh<L = unknown>(l: MeshLayerDescription): LayerHandle<L>
+```
+
+**Returns:**
+
+```tsx
+LayerHandle<L>;
+```
+
+Returns a `LayerHandle<L>` for controlling the mesh layer.
+
+**Example:**
+
+```tsx
+// SkyMeshLayer must be registered
+const skyHandle = view.addMesh<SkyMeshLayer>({ sky: {} });
+```
+
+### addLight()
+
+Adds a new light layer to navara_three. The light layer class must be registered with `registerLight()` before calling this method.
+
+**Syntax:**
+
+```tsx
+addLight<L = unknown>(l: LightLayerDescription): LayerHandle<L>
+```
+
+**Returns:**
+
+```tsx
+LayerHandle<L>;
+```
+
+Returns a `LayerHandle<L>` for controlling the light layer.
+
+**Example:**
+
+```tsx
+// SunLightLayer must be registered
+const sunHandle = view.addLight<SunLightLayer>({ sun: { intensity: 1.0 } });
+```
+
+### addEffect()
+
+Adds a new effect layer to navara_three. The effect layer class must be registered with `registerEffect()` before calling this method.
+
+**Syntax:**
+
+```tsx
+addEffect<L = unknown>(l: EffectLayerDescription): LayerHandle<L>
+```
+
+**Returns:**
+
+```tsx
+LayerHandle<L>;
+```
+
+Returns a `LayerHandle<L>` for controlling the effect layer.
+
+**Example:**
+
+```tsx
+// FXAAEffectLayer must be registered
+const fxaaHandle = view.addEffect<FXAAEffectLayer>({ fxaa: {} });
 ```
 
 ### updateLayerById()

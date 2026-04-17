@@ -11,7 +11,7 @@ import type {
 } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
-  type DefaultLayerDescriptions,
+  type DefaultDeclarations,
 } from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 
@@ -20,7 +20,7 @@ import { TERRAIN_DATASETS, TILE_DATASETS } from "../../helpers/constants";
 import { addDateControl } from "../../helpers/control";
 
 const run = async () => {
-  const view = new ThreeView<DefaultLayerDescriptions>({
+  const view = new ThreeView<DefaultDeclarations>({
     debug: true,
     shadow: true,
   });
@@ -35,8 +35,7 @@ const run = async () => {
     sun: { intensity: 2, castShadow: true, shadowFar: 5000 },
   });
 
-  view.addLayer({
-    type: "light",
+  view.addLight({
     ambient: { intensity: 0.5 },
   });
 
@@ -85,8 +84,7 @@ const run = async () => {
   const boxMatrixWorld = northUpEastToFixedFrame(boxPosition);
 
   // Box mesh layer
-  const boxLayer = view.addLayer<BoxMeshLayer>({
-    type: "mesh",
+  const boxLayer = view.addMesh<BoxMeshLayer>({
     box: {
       width: 1000,
       height: 10000,
@@ -109,8 +107,7 @@ const run = async () => {
   const cylinderMatrixWorld = northUpEastToFixedFrame(cylinderPosition);
 
   // Cylinder mesh layer
-  const cylinderLayer = view.addLayer<CylinderMeshLayer>({
-    type: "mesh",
+  const cylinderLayer = view.addMesh<CylinderMeshLayer>({
     cylinder: {
       radiusTop: 500,
       radiusBottom: 500,

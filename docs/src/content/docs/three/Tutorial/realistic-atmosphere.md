@@ -99,8 +99,7 @@ view.toneMappingExposure = 10; // Adjust according to the scene
 Overlaying volumetric cloud effects enhances the sense of realism. Start with the default settings and adjust shadows and density as needed.
 
 ```typescript
-const clouds = view.addLayer<CloudsEffectLayer>({
-  type: "effect",
+const clouds = view.addEffect<CloudsEffectLayer>({
   clouds: {},
 });
 
@@ -121,8 +120,7 @@ Rain effects use a combination of two layers. `RainMeshLayer` renders 3D raindro
 view.animation = true;
 
 // Add rain layer
-const rain = view.addLayer<RainMeshLayer>({
-  type: "mesh",
+const rain = view.addMesh<RainMeshLayer>({
   rain: {
     particleCount: 5000, // Number of raindrops
     speed: 0.0015,             // Fall speed
@@ -141,8 +139,7 @@ const rain = view.addLayer<RainMeshLayer>({
 A post-processing effect that simulates water droplets adhering to the camera lens during rainy weather.
 
 ```typescript
-const rainDropEffect = view.addLayer<RainDropEffectLayer>({
-  type: "effect",
+const rainDropEffect = view.addEffect<RainDropEffectLayer>({
   rainDrop: {
     opacity: 1.0,           // Overall effect opacity
     dropGridSize: 12,       // Water droplet grid size
@@ -166,8 +163,7 @@ For snow effects, use `SnowMeshLayer`. Remove the rain layer and add it instead.
 
 ```typescript
 // Add snow layer
-const snow = view.addLayer<SnowMeshLayer>({
-  type: "mesh",
+const snow = view.addMesh<SnowMeshLayer>({
   snow: {
     particleCount: 5000,  // Number of snowflakes
     speed: 0.00005,           // Fall speed
@@ -246,8 +242,7 @@ view.addLayer({
 });
 
 // Add SSR effect
-view.addLayer<SSREffectLayer>({
-  type: "effect",
+view.addEffect<SSREffectLayer>({
   ssr: {},
 });
 
@@ -328,8 +323,7 @@ layers.sun.update({ sun: { castShadow: true } }); // Cast shadows
 layers.toneMapping.update({ toneMapping: { mode: ToneMappingMode.AGX } });
 view.toneMappingExposure = 10; // Adjust according to the scene
 
-const clouds = view.addLayer<CloudsEffectLayer>({
-  type: "effect",
+const clouds = view.addEffect<CloudsEffectLayer>({
   clouds: {
     qualityPreset: "high"
   },
@@ -338,8 +332,7 @@ const clouds = view.addLayer<CloudsEffectLayer>({
 // Enable cloud shadows
 clouds.update({ clouds: { shadows: true } });
 
-view.addLayer<RainMeshLayer>({
-  type: "mesh",
+view.addMesh<RainMeshLayer>({
   rain: {
     particleCount: 5000, // Number of raindrops
     speed: 0.0015,             // Fall speed
@@ -352,8 +345,7 @@ view.addLayer<RainMeshLayer>({
   },
 });
 
-view.addLayer<RainDropEffectLayer>({
-  type: "effect",
+view.addEffect<RainDropEffectLayer>({
   rainDrop: {
     opacity: 1.0,           // Overall effect opacity
     dropGridSize: 12,       // Water droplet grid size
@@ -405,8 +397,7 @@ view.addLayer({
 });
 
 // Add SSR effect
-view.addLayer<SSREffectLayer>({
-  type: "effect",
+view.addEffect<SSREffectLayer>({
   ssr: {
   },
 });

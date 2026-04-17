@@ -5,6 +5,7 @@ import type {
 
 export class PolylineMaterialLike {
   clampToGround?: boolean;
+  tiled?: boolean;
   useGroundNormals?: boolean;
   castShadow?: boolean;
   receiveShadow?: boolean;
@@ -17,6 +18,7 @@ export class PolylineMaterialLike {
 
   constructor(material: PolylineMaterial) {
     this.clampToGround = material.clampToGround;
+    this.tiled = material.tiled;
     this.useGroundNormals = material.useGroundNormals;
     this.receiveShadow = material.receiveShadow;
     this.castShadow = material.castShadow;

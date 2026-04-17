@@ -56,6 +56,7 @@ export type ModelBaseState = Readonly<{
 export type ModelBaseRefs = {
   nvr_uPickable: UniformValue<number>;
   uEffectIdsMask: UniformValue<number>;
+  uEmissiveIntensity: UniformValue<number>;
 
   // Optional uniforms
   batchDataTexture?: UniformValue<Texture | null>;
