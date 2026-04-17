@@ -142,7 +142,11 @@ const run = async () => {
       layer?.update({ polyline: { width: value } });
     });
 
-  showAttributions([TILE_DATASETS.openstreetmap, LOCAL_DATASETS.railways]);
+  showAttributions([
+    TILE_DATASETS.openstreetmap,
+    TERRAIN_DATASETS.gsi,
+    LOCAL_DATASETS.railways,
+  ]);
 };
 
 run();
