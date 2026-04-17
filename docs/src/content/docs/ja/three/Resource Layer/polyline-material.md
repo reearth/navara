@@ -217,7 +217,7 @@ import { Color } from "@navara/three";
 
 **Description:** データソースがMVTレイヤーでない場合でも、ポリラインをXYZベクトルタイルに分割してレンダリングします。大きなポリラインのパフォーマンスを向上させることができます。`clampToGround`を有効にすると、`tiled`は暗黙的に`true`に強制されます。
 
-**Default:** `undefined`
+**Default:** `false`
 
 **Example:**
 

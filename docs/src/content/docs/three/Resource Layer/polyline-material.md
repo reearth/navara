@@ -217,7 +217,7 @@ import { Color } from "@navara/three";
 
 **Description:** Splits the polyline into XYZ vector tiles for rendering, even when the data source is not an MVT layer. This can improve performance for large polylines. Enabling `clampToGround` implicitly forces `tiled` to `true`.
 
-**Default:** `undefined`
+**Default:** `false`
 
 **Example:**
 
