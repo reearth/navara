@@ -1,23 +1,31 @@
 /**
- * Custom mesh layer with explicit picking opt-in.
+ * Custom mesh layer with manual picking support.
  *
- * Shows the pattern for building a user-authored mesh layer that supports
- * GPU picking. Picking is NOT automatic — the subclass decides whether to
- * construct a `PickableMeshWrapper` in `createMesh`, registers it with the
- * ViewContext, and exposes the assigned `batchId` for consumers to correlate
- * pick events back to the layer.
+ * Unlike the turnkey `PickableMeshWrapper`, this example shows the
+ * lower-level path: the user writes the picking branch into their own
+ * fragment shader, and implements `PickableMesh` directly to toggle a
+ * uniform. Navara never touches the shader source.
  *
- * If you have a custom ShaderMaterial and do not want Navara to inject
- * picking code into your shader, implement `PickableMesh` directly instead
- * of using `PickableMeshWrapper` — see its jsdoc for the contract.
+ * Contract for manual picking:
+ *   1. Your fragment shader must output `batchId` encoded as a flat RGB
+ *      color when a "picking" uniform is active.
+ *   2. Implement `PickableMesh` on a small wrapper: flip the uniform in
+ *      `onBeforePicking` / `onAfterPicking`, and return the renderable
+ *      from `_getRenderable()`.
+ *   3. Register the wrapper with `ctx.registerPickableMesh(id, wrapper)`.
+ *
+ * That's it — no shader injection, no string mutation, no collisions with
+ * your own `onBeforeCompile`. The 24-bit `batchId` → RGB encoding must
+ * match the decode side in `pickHelper` (high byte = R, mid = G, low = B).
  */
 import ThreeView, {
   Color,
   MeshLayerDeclaration,
-  PickableMeshWrapper,
+  PickableMesh,
   degreeToRadian,
   geodeticToVector3,
   northUpEastToFixedFrame,
+  overrideShaderMaterialForMRT,
   type MeshLayerConfig,
   type MeshLayerUpdate,
   type ViewContext,
@@ -29,7 +37,8 @@ import {
 import {
   Matrix4,
   Mesh,
-  MeshStandardMaterial,
+  Object3D,
+  ShaderMaterial,
   TorusKnotGeometry,
   Vector3,
 } from "three";
@@ -40,7 +49,82 @@ import { TILE_DATASETS } from "../../../helpers/constants";
 import { addDateControl } from "../../../helpers/control";
 
 // ============================================================================
-// TorusKnotMeshLayer — a custom mesh layer with picking support.
+// Shaders — the user owns these. The picking branch lives here, not in
+// Navara. `uPicking` is flipped on/off by the PickableMesh implementation
+// below; while it's on, the fragment emits the encoded `uBatchId`.
+// ============================================================================
+
+const vertexShader = /* glsl */ `
+  varying vec3 vNormal;
+
+  void main() {
+    vNormal = normalize(normalMatrix * normal);
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`;
+
+const fragmentShader = /* glsl */ `
+  varying vec3 vNormal;
+
+  uniform vec3 uColor;
+  uniform float uPicking;
+  uniform float uBatchId;
+
+  // Encode a 24-bit integer into an RGB color. Matches the decode in
+  // navara's pickHelper: R = high byte, G = mid byte, B = low byte.
+  vec3 batchIdToColor(float id) {
+    float r = floor(id / 65536.0);
+    float g = floor(mod(id / 256.0, 256.0));
+    float b = mod(id, 256.0);
+    return vec3(r, g, b) / 255.0;
+  }
+
+  void main() {
+    // Normal-direction lambert for a cheap lit look.
+    vec3 lightDir = normalize(vec3(0.4, 1.0, 0.3));
+    float lambert = max(dot(vNormal, lightDir), 0.0);
+    gl_FragColor = vec4(uColor * (0.3 + 0.7 * lambert), 1.0);
+
+    // Picking override — must come last so it wins over all other writes.
+    if (uPicking > 0.5) {
+      gl_FragColor = vec4(batchIdToColor(uBatchId), 1.0);
+    }
+  }
+`;
+
+// ============================================================================
+// Manual PickableMesh — holds the batchId and flips the shader's uPicking
+// uniform around the pick pass. Navara never sees or mutates the shader.
+// ============================================================================
+
+class PickableTorusKnot extends Object3D implements PickableMesh {
+  public readonly batchId: number;
+
+  constructor(
+    public mesh: Mesh<TorusKnotGeometry, ShaderMaterial>,
+    ctx: ViewContext,
+  ) {
+    super();
+    this.batchId = ctx.genGlobalBatchId() ?? 0;
+    // Bake the batchId into the material once — it's invariant per-mesh.
+    mesh.material.uniforms.uBatchId.value = this.batchId;
+  }
+
+  onBeforePicking(): void {
+    this.mesh.material.uniforms.uPicking.value = 1;
+  }
+
+  onAfterPicking(): void {
+    this.mesh.material.uniforms.uPicking.value = 0;
+  }
+
+  _getRenderable(): Object3D {
+    return this.mesh;
+  }
+}
+
+// ============================================================================
+// TorusKnotMeshLayer — a custom mesh layer that uses the manual path.
 // ============================================================================
 
 type TorusKnotDescription = {
@@ -52,16 +136,9 @@ type TorusKnotDescription = {
     p?: number;
     q?: number;
     color?: Color;
-    castShadow?: boolean;
-    receiveShadow?: boolean;
   };
 };
 
-/**
- * Note that `pickable` lives on the layer's own config — the framework's
- * `MeshLayerConfig` no longer carries it. Each custom layer decides on its
- * own whether to expose a picking opt-in.
- */
 type TorusKnotLayerConfig = MeshLayerConfig &
   TorusKnotDescription & { pickable?: boolean };
 
@@ -70,10 +147,10 @@ type TorusKnotLayerUpdate = MeshLayerUpdate & TorusKnotDescription;
 class TorusKnotMeshLayer extends MeshLayerDeclaration<
   TorusKnotLayerConfig,
   TorusKnotLayerUpdate,
-  Mesh<TorusKnotGeometry, MeshStandardMaterial>
+  Mesh<TorusKnotGeometry, ShaderMaterial>
 > {
   private cfg: TorusKnotLayerConfig;
-  private pickWrapper?: PickableMeshWrapper;
+  private pickable?: PickableTorusKnot;
 
   constructor(view: ThreeView, ctx: ViewContext, config: TorusKnotLayerConfig) {
     super(view, ctx, config);
@@ -82,7 +159,7 @@ class TorusKnotMeshLayer extends MeshLayerDeclaration<
 
   /** Exposed so consumers can match pick events to this layer. */
   get batchId(): number | undefined {
-    return this.pickWrapper?.batchId;
+    return this.pickable?.batchId;
   }
 
   createMesh() {
@@ -95,20 +172,30 @@ class TorusKnotMeshLayer extends MeshLayerDeclaration<
       k.p ?? 2,
       k.q ?? 3,
     );
-    const material = new MeshStandardMaterial({
-      color: k.color?.raw ?? 0xffffff,
-      metalness: 0.2,
-      roughness: 0.5,
-    });
-    const mesh = new Mesh(geometry, material);
-    mesh.castShadow = k.castShadow ?? true;
-    mesh.receiveShadow = k.receiveShadow ?? true;
-    this.ctx.applyShadowMaterial(material);
 
-    // ── Picking opt-in: user constructs the wrapper explicitly. ──
+    const color = (k.color ?? new Color().setStyle("#ffffff")).raw;
+    const material = new ShaderMaterial({
+      vertexShader,
+      fragmentShader,
+      uniforms: {
+        uColor: { value: new Vector3(color.r, color.g, color.b) },
+        uPicking: { value: 0 },
+        uBatchId: { value: 0 },
+      },
+    });
+    // Navara's opaque pass renders into MRT attachments (normal / effectId /
+    // emissive G-buffers). Custom ShaderMaterials must opt in so those
+    // buffers get written — otherwise the pipeline sees undefined outputs
+    // and the geometry fails to render.
+    overrideShaderMaterialForMRT(material, "vNormal");
+
+    const mesh = new Mesh(geometry, material);
+
+    // Manual picking opt-in: construct our own PickableMesh implementation
+    // and register it. No wrapper, no shader injection from Navara.
     if (this.cfg.pickable) {
-      this.pickWrapper = new PickableMeshWrapper(mesh, this.ctx);
-      this.ctx.registerPickableMesh(this.id, this.pickWrapper);
+      this.pickable = new PickableTorusKnot(mesh, this.ctx);
+      this.ctx.registerPickableMesh(this.id, this.pickable);
     }
 
     return mesh;
@@ -116,19 +203,19 @@ class TorusKnotMeshLayer extends MeshLayerDeclaration<
 
   onUpdateConfig(updates: TorusKnotLayerUpdate): void {
     if (updates.torusKnot?.color !== undefined && this._instance) {
-      this._instance.material.color.set(updates.torusKnot.color.raw);
+      const c = updates.torusKnot.color.raw;
+      this._instance.material.uniforms.uColor.value.set(c.r, c.g, c.b);
       this.emit("needsUpdate");
     }
     super.onUpdateConfig(updates);
   }
 
   override onDestroy(): void {
-    if (this.pickWrapper) {
+    if (this.pickable) {
       this.ctx.unregisterPickableMesh(this.id);
-      this.pickWrapper = undefined;
+      this.pickable = undefined;
     }
     if (this._instance) {
-      this.ctx.removeShadowMaterial(this._instance.material);
       this._instance.geometry.dispose();
       this._instance.material.dispose();
     }
@@ -143,7 +230,6 @@ class TorusKnotMeshLayer extends MeshLayerDeclaration<
 const run = async () => {
   const view = new ThreeView<TorusKnotLayerConfig | DefaultLayerDescriptions>({
     debug: true,
-    shadow: true,
   });
 
   const defaultPlugin = new DefaultPlugin();
@@ -153,7 +239,6 @@ const run = async () => {
   defaultPlugin.addDefaultPhotorealLayers();
   view.atmosphere.date.setHours(10);
 
-  // Register the custom layer by type key.
   view.registerMesh("torusKnot", TorusKnotMeshLayer);
 
   view.setCamera({
@@ -171,7 +256,6 @@ const run = async () => {
     rasterTile: { maxZoom: 18 },
   });
 
-  // Place a row of knots above Tokyo Station.
   const origin = geodeticToVector3({
     lat: degreeToRadian(35.681236),
     lng: degreeToRadian(139.767125),
@@ -184,7 +268,6 @@ const run = async () => {
   const Y = 60;
   const SCALE = 30;
 
-  // Track knots so we can highlight/restore on pick events.
   const knots = KNOT_COLORS.map((hex, i) => {
     const x = (i - (KNOT_COLORS.length - 1) / 2) * SPACING;
     const local = new Matrix4()
@@ -206,8 +289,7 @@ const run = async () => {
     return { layer, origHex: hex, name: `Knot #${i + 1}` };
   });
 
-  // ── Pick UI ──
-  const pane = new Pane({ title: "Custom Pickable Layer" });
+  const pane = new Pane({ title: "Manual Picking" });
   const info = { name: "(none)", batchId: 0 };
   const folder = pane.addFolder({ title: "Picked" });
   const nameBinding = folder.addBinding(info, "name", {
@@ -224,7 +306,6 @@ const run = async () => {
   let selected: (typeof knots)[number] | null = null;
 
   view.on("pick", (pickInfo) => {
-    // Restore previous selection.
     if (selected) {
       selected.layer.update({
         torusKnot: { color: new Color().setHex(selected.origHex) },
