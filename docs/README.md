@@ -53,10 +53,10 @@ Static assets, like favicons, can be placed in the `public/` directory.
 
 ## 🛠 Setup
 
-After installing dependencies, install Playwright's browser binaries. This is required for rehype plugins (e.g., `rehype-mermaid`) that render content using a headless browser during the build.
+After installing dependencies, run the following command from the repository root to install Playwright's browser binaries for the `docs` workspace. This is required for rehype plugins (e.g., `rehype-mermaid`) that render content using a headless browser during the build.
 
 ```bash
-npx playwright install --with-deps chromium
+pnpm -C docs exec playwright install --with-deps chromium
 ```
 
 ## 🧞 Commands
