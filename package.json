@@ -55,7 +55,7 @@
     "react": "19.2.5",
     "react-dom": "19.2.5",
     "shadcn": "4.2.0",
-    "typescript": "6.0.2",
+    "typescript": "5.9.3",
     "unplugin-dts": "1.0.0-beta.6",
     "vite": "8.0.8",
     "vite-plugin-top-level-await": "1.6.0",
