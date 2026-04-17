@@ -371,8 +371,7 @@ defaultLayers.sun.update({
 ### 影の品質調整
 
 ```typescript
-const sun = view.addLayer<SunLightLayer>({
-  type: "light",
+const sun = view.addLight<SunLightLayer>({
   sun: {
     intensity: 1.0,
     castShadow: true,
@@ -431,8 +430,7 @@ sun.update({
 import { Color } from "@navara/three";
 
 // 大気計算を無効化してカスタムカラーを使用
-const sun = view.addLayer<SunLightLayer>({
-  type: "light",
+const sun = view.addLight<SunLightLayer>({
   sun: {
     applyColor: true,  // カスタムカラーを使用
     color: new Color().setHex(0xffffee),

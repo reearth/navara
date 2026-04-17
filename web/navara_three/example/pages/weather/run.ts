@@ -15,7 +15,7 @@ import {
 } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
-  type DefaultLayerDescriptions,
+  type DefaultDeclarations,
 } from "@navara/three_default_plugin";
 import { Vector2 } from "three";
 import { Pane } from "tweakpane";
@@ -30,9 +30,9 @@ import {
 import { addDateControl, addHidePaneKeyShortcut } from "../../helpers/control";
 import { addFieldsToFolder, type FolderFields } from "../../helpers/panel";
 
-export type LayerDescriptions = DefaultLayerDescriptions;
+export type CustomDeclarations = DefaultDeclarations;
 
-export const run = async (view: ThreeView<LayerDescriptions>) => {
+export const run = async (view: ThreeView<CustomDeclarations>) => {
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
   await view.init();
@@ -40,8 +40,7 @@ export const run = async (view: ThreeView<LayerDescriptions>) => {
   const defaultEffects = plugin.addDefaultPhotorealLayers();
 
   // Add clouds effect layer explicitly
-  const cloudsLayer = view.addLayer<CloudsEffectLayer>({
-    type: "effect",
+  const cloudsLayer = view.addEffect<CloudsEffectLayer>({
     clouds: {},
   });
 
@@ -51,8 +50,7 @@ export const run = async (view: ThreeView<LayerDescriptions>) => {
     },
   });
 
-  view.addLayer<SSREffectLayer>({
-    type: "effect",
+  view.addEffect<SSREffectLayer>({
     visible: true,
     ssr: {},
   });
@@ -126,8 +124,7 @@ export const run = async (view: ThreeView<LayerDescriptions>) => {
   });
 
   // Add Sample Post Effect with two circles
-  const rainDropEffect = view.addLayer<RainDropEffectLayer>({
-    type: "effect",
+  const rainDropEffect = view.addEffect<RainDropEffectLayer>({
     rainDrop: {
       opacity: 1.0,
       dropGridSize: 12,
@@ -184,7 +181,7 @@ export const run = async (view: ThreeView<LayerDescriptions>) => {
   ]);
 };
 
-const addWaterControl = (view: ThreeView<LayerDescriptions>, pane: Pane) => {
+const addWaterControl = (view: ThreeView<CustomDeclarations>, pane: Pane) => {
   const PARAMS = {
     "visible flood model": true,
     "visible river model": true,
@@ -250,7 +247,7 @@ const addWaterControl = (view: ThreeView<LayerDescriptions>, pane: Pane) => {
   });
 };
 
-const addCameraControl = (view: ThreeView<LayerDescriptions>, pane: Pane) => {
+const addCameraControl = (view: ThreeView<CustomDeclarations>, pane: Pane) => {
   const PARAMS = {
     autoRotation: false,
   };
@@ -274,7 +271,7 @@ const addCameraControl = (view: ThreeView<LayerDescriptions>, pane: Pane) => {
 };
 
 const addWeatherControl = (
-  view: ThreeView<LayerDescriptions>,
+  view: ThreeView<CustomDeclarations>,
   pane: Pane,
   rainDropEffect: LayerHandle<RainDropEffectLayer>,
 ) => {
@@ -284,14 +281,12 @@ const addWeatherControl = (
     height: 10,
   });
 
-  const rain = view.addLayer<RainMeshLayer>({
-    type: "mesh",
+  const rain = view.addMesh<RainMeshLayer>({
     visible: false,
     position: position,
     rain: {},
   });
-  const snow = view.addLayer<SnowMeshLayer>({
-    type: "mesh",
+  const snow = view.addMesh<SnowMeshLayer>({
     visible: false,
     position: position,
     snow: {},

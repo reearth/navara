@@ -64,8 +64,7 @@ const view = new ThreeView();
 await view.init();
 
 // 東方向へ長さ 5、緑色の矢印
-view.addLayer<ArrowHelperLayer>({
-  type: "mesh",
+view.addMesh<ArrowHelperLayer>({
   arrowHelper: {
     direction: { x: 1, y: 0, z: 0 },
     origin: { x: 0, y: 0, z: 0 },

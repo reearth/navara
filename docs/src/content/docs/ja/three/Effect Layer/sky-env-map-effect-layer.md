@@ -52,8 +52,7 @@ await view.init();
 plugin.addDefaultPhotorealLayers();
 
 // 空環境マップエフェクトレイヤーを追加
-view.addLayer<SkyEnvMapEffectLayer>({
-  type: "effect",
+view.addEffect<SkyEnvMapEffectLayer>({
   skyEnvMap: {
     resolution: 256,
   },
@@ -75,8 +74,7 @@ await view.init();
 plugin.addDefaultPhotorealLayers();
 
 // 高解像度の環境マップを作成
-view.addLayer<SkyEnvMapEffectLayer>({
-  type: "effect",
+view.addEffect<SkyEnvMapEffectLayer>({
   skyEnvMap: {
     resolution: 512,
   },
@@ -98,8 +96,7 @@ await view.init();
 plugin.addDefaultPhotorealLayers();
 
 // 空環境マップを追加（反射に使用される）
-view.addLayer<SkyEnvMapEffectLayer>({
-  type: "effect",
+view.addEffect<SkyEnvMapEffectLayer>({
   skyEnvMap: {
     resolution: 256,
   },

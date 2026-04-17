@@ -282,8 +282,7 @@ const view = new ThreeView();
 await view.init();
 
 // SnowMeshLayerを追加
-const snowLayer = view.addLayer<SnowMeshLayer>({
-  type: "mesh",
+const snowLayer = view.addMesh<SnowMeshLayer>({
   snow: {
     particleCount: 3000,
     areaWidth: 500,
@@ -322,8 +321,7 @@ const position = geodeticToVector3(
 );
 
 // 位置を指定してSnowMeshLayerを追加
-const snowLayer = view.addLayer<SnowMeshLayer>({
-  type: "mesh",
+const snowLayer = view.addMesh<SnowMeshLayer>({
   visible: true,
   position: position,
   snow: {

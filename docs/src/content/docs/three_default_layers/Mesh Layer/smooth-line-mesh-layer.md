@@ -256,8 +256,7 @@ const view = new ThreeView();
 await view.init();
 
 // Add a SmoothLineMeshLayer
-const smoothLineLayer = view.addLayer<SmoothLineMeshLayer>({
-  type: "mesh",
+const smoothLineLayer = view.addMesh<SmoothLineMeshLayer>({
   smoothLines: {
     tension: 0.5,
     segments: 10,

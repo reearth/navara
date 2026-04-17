@@ -92,8 +92,8 @@ view.addPlugin(plugin);
 await view.init();
 
 // Layers registered by the plugin are now available
-view.addLayer({ type: "mesh", box: { width: 100, height: 100, depth: 100 } });
-view.addLayer({ type: "light", sun: { intensity: 1.0 } });
+view.addMesh({ box: { width: 100, height: 100, depth: 100 } });
+view.addLight({ sun: { intensity: 1.0 } });
 ```
 
 ### Plugin Providing a High-Level API
@@ -130,14 +130,13 @@ class MyScenePlugin extends Plugin<ThreeView, ViewContext> {
   } {
     if (!this.view) throw new Error("Plugin is not initialized");
 
-    const sky = this.view.addLayer<SkyMeshLayer>({ type: "mesh", sky: {} });
-    const sun = this.view.addLayer<SunLightLayer>({
-      type: "light",
+    const sky = this.view.addMesh<SkyMeshLayer>({ sky: {} });
+    const sun = this.view.addLight<SunLightLayer>({
       sun: { intensity: 1.0, castShadow: true },
     });
-    this.view.addLayer({ type: "light", ambient: { intensity: 0.3 } });
-    this.view.addLayer({ type: "effect", toneMapping: {} });
-    this.view.addLayer({ type: "effect", fxaa: {} });
+    this.view.addLight({ ambient: { intensity: 0.3 } });
+    this.view.addEffect({ toneMapping: {} });
+    this.view.addEffect({ fxaa: {} });
 
     return { sky, sun };
   }

@@ -1,4 +1,9 @@
-import ThreeView, { type Plugin, type Options } from "@navara/three";
+import ThreeView, {
+  type Plugin,
+  type Options,
+  type Declarations,
+  type EmptyDeclarations,
+} from "@navara/three";
 import {
   createContext,
   useContext,
@@ -10,19 +15,15 @@ import {
   type RefObject,
 } from "react";
 
-type ViewContextValues<
-  CustomLayerDescriptions extends Record<string, unknown> | undefined =
-    undefined,
-> = {
-  view?: ThreeView<CustomLayerDescriptions>;
+type ViewContextValues<D extends Declarations = EmptyDeclarations> = {
+  view?: ThreeView<D>;
 };
 
 const ViewContext = createContext<ViewContextValues | undefined>(undefined);
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const useViewContext = <
-  CustomLayerDescriptions extends Record<string, unknown> | undefined =
-    undefined,
+  D extends Declarations = EmptyDeclarations,
 >() => {
   const ctx = useContext(ViewContext);
   if (!ctx) {
@@ -31,7 +32,7 @@ export const useViewContext = <
     );
   }
 
-  return ctx as Required<ViewContextValues<CustomLayerDescriptions>>;
+  return ctx as Required<ViewContextValues<D>>;
 };
 
 export type ViewProviderProps = {

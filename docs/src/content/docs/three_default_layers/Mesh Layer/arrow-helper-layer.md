@@ -64,8 +64,7 @@ const view = new ThreeView();
 await view.init();
 
 // A green arrow of length 5 pointing east
-view.addLayer<ArrowHelperLayer>({
-  type: "mesh",
+view.addMesh<ArrowHelperLayer>({
   arrowHelper: {
     direction: { x: 1, y: 0, z: 0 },
     origin: { x: 0, y: 0, z: 0 },

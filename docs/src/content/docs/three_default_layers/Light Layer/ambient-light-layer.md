@@ -83,8 +83,7 @@ const view = new ThreeView();
 await view.init();
 
 // Add an ambient light layer
-const ambientLight = view.addLayer<AmbientLightLayer>({
-  type: "light",
+const ambientLight = view.addLight<AmbientLightLayer>({
   ambient: {
     color: new Color().setHex(0xffffff),
     intensity: 1.0
@@ -108,8 +107,7 @@ ambientLight.update({
 
 ```typescript
 // Add ambient light with default settings
-view.addLayer<AmbientLightLayer>({
-  type: "light",
+view.addLight<AmbientLightLayer>({
   ambient: {}
 });
 ```
@@ -118,8 +116,7 @@ view.addLayer<AmbientLightLayer>({
 
 ```typescript
 // Add ambient light in a hidden state, then toggle visibility later
-const ambientLightLayer = view.addLayer<AmbientLightLayer>({
-  type: "light",
+const ambientLightLayer = view.addLight<AmbientLightLayer>({
   visible: false,
   ambient: {
     intensity: 1,

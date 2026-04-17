@@ -169,8 +169,7 @@ const view = new ThreeView();
 await view.init();
 
 // Add selective bloom effect layer
-const bloomLayer = view.addLayer<SelectiveBloomEffectLayer>({
-  type: "effect",
+const bloomLayer = view.addEffect<SelectiveBloomEffectLayer>({
   selectiveBloom: {
     strength: 0.8,
     radius: 0.2,
@@ -180,8 +179,7 @@ const bloomLayer = view.addLayer<SelectiveBloomEffectLayer>({
 
 // Apply bloom effect to an object
 // When emissiveColor is not set, the material's color is used as the bloom source
-const cubeLayer = view.addLayer<BoxMeshLayer>({
-  type: "mesh",
+const cubeLayer = view.addMesh<BoxMeshLayer>({
   box: {
     width: 100,
     height: 100,
@@ -209,8 +207,7 @@ await view.init();
 plugin.addDefaultPhotorealLayers();
 
 // Add a strong bloom effect
-const bloomLayer = view.addLayer<SelectiveBloomEffectLayer>({
-  type: "effect",
+const bloomLayer = view.addEffect<SelectiveBloomEffectLayer>({
   selectiveBloom: {
     strength: 1.5,
     radius: 0.5,
@@ -228,8 +225,7 @@ const view = new ThreeView();
 await view.init();
 
 // Performance-oriented settings
-const bloomLayer = view.addLayer<SelectiveBloomEffectLayer>({
-  type: "effect",
+const bloomLayer = view.addEffect<SelectiveBloomEffectLayer>({
   selectiveBloom: {
     strength: 0.6,
     radius: 0.2,
@@ -247,8 +243,7 @@ import ThreeView, { SelectiveBloomEffectLayer } from "@navara/three";
 const view = new ThreeView();
 await view.init();
 
-const bloomLayer = view.addLayer<SelectiveBloomEffectLayer>({
-  type: "effect",
+const bloomLayer = view.addEffect<SelectiveBloomEffectLayer>({
   selectiveBloom: {
     strength: 0.8,
   },
@@ -271,8 +266,7 @@ import ThreeView, { SelectiveBloomEffectLayer, Color } from "@navara/three";
 const view = new ThreeView();
 await view.init();
 
-const bloomLayer = view.addLayer<SelectiveBloomEffectLayer>({
-  type: "effect",
+const bloomLayer = view.addEffect<SelectiveBloomEffectLayer>({
   selectiveBloom: {
     strength: 1.0,
     radius: 0.5,
@@ -304,8 +298,7 @@ import ThreeView, { SelectiveBloomEffectLayer, Color } from "@navara/three";
 const view = new ThreeView();
 await view.init();
 
-const bloomLayer = view.addLayer<SelectiveBloomEffectLayer>({
-  type: "effect",
+const bloomLayer = view.addEffect<SelectiveBloomEffectLayer>({
   selectiveBloom: {
     strength: 1.2,
   },
@@ -331,8 +324,7 @@ const modelLayer = view.addLayer({
 
 ```typescript
 // Initially no effects applied
-const cubeLayer = view.addLayer<BoxMeshLayer>({
-  type: "mesh",
+const cubeLayer = view.addMesh<BoxMeshLayer>({
   box: {
     width: 100,
     height: 100,

@@ -99,8 +99,7 @@ defaultLayers.skyLightProbe.update({
 ### 昼夜で強度を変更
 
 ```typescript
-const skyLightProbe = view.addLayer<SkyLightProbeLayer>({
-  type: "light",
+const skyLightProbe = view.addLight<SkyLightProbeLayer>({
   skyLightProbe: {
     intensity: 1.0
   }
@@ -125,8 +124,7 @@ view.atmosphere.on("sunChanged", () => {
 ### 夜間のみ有効化
 
 ```typescript
-const skyLightProbe = view.addLayer<SkyLightProbeLayer>({
-  type: "light",
+const skyLightProbe = view.addLight<SkyLightProbeLayer>({
   skyLightProbe: {
     intensity: 1.0
   },

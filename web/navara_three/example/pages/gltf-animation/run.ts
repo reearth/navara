@@ -7,7 +7,7 @@ import ThreeView, {
 } from "@navara/three";
 import {
   DefaultPlugin,
-  type DefaultLayerDescriptions,
+  type DefaultDeclarations,
 } from "@navara/three_default_plugin";
 import { Vector3, Quaternion, Euler, Matrix4 } from "three";
 import { Pane } from "tweakpane";
@@ -27,9 +27,9 @@ import {
 /**
  * Main function to run the GLTF Animation example
  */
-export type LayerDescriptions = DefaultLayerDescriptions;
+export type CustomDeclarations = DefaultDeclarations;
 
-export const run = async (view: ThreeView<LayerDescriptions>) => {
+export const run = async (view: ThreeView<CustomDeclarations>) => {
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
   await view.init();
