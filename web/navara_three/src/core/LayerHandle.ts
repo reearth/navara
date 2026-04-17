@@ -1,12 +1,15 @@
 import { EventHandler } from "@navara/core";
 
 import {
-  LayerDeclaration,
-  type LayerDeclarationConfigUpdate,
-} from "./LayerDeclaration";
+  BaseDesc,
+  type BaseDescConfigUpdate,
+} from "./BaseDesc";
+import type { EffectDesc } from "./EffectDesc";
+import type { LightDesc } from "./LightDesc";
+import type { MeshDesc } from "./MeshDesc";
 
 /**
- * Events emitted by LayerHandle.
+ * Events emitted by handles.
  */
 export type LayerHandleEvent = {
   /** Emitted when the layer is deleted. */
@@ -14,33 +17,17 @@ export type LayerHandleEvent = {
 };
 
 /**
- * A handle to control a declaration layer (mesh, light, or effect layer) after it has been added to the scene.
- * Returned by `ThreeView.addMesh()`, `ThreeView.addLight()`, and `ThreeView.addEffect()`.
+ * Abstract base handle to control a declaration layer after it has been added to the scene.
  *
- * Use this handle to update layer properties, control visibility, or delete the layer.
+ * Use the typed subclasses instead:
+ * - {@link MeshHandle} - returned by `ThreeView.addMesh()`
+ * - {@link LightHandle} - returned by `ThreeView.addLight()`
+ * - {@link EffectHandle} - returned by `ThreeView.addEffect()`
  *
- * @typeParam T - The specific layer declaration type (e.g., SkyMeshLayer, SunLightLayer)
- *
- * @example
- * ```typescript
- * // Add a sky mesh layer and get a handle
- * const skyHandle = view.addMesh<SkyMeshLayer>({ sky: {} });
- *
- * // Update the layer configuration
- * skyHandle.update({ sunAngularRadius: 0.05 });
- *
- * // Toggle visibility
- * skyHandle.visible = false;
- *
- * // Access the underlying layer instance
- * const skyLayer = skyHandle.ref;
- *
- * // Delete the layer when no longer needed
- * skyHandle.delete();
- * ```
+ * @typeParam T - The specific layer declaration type
  */
-export class LayerHandle<
-  T extends LayerDeclaration = LayerDeclaration,
+export class BaseHandle<
+  T extends BaseDesc = BaseDesc,
 > extends EventHandler<LayerHandleEvent> {
   constructor(private layer: T) {
     super();
@@ -52,9 +39,9 @@ export class LayerHandle<
    * @param updates - Partial configuration object with properties to update
    */
   update(
-    updates: T extends LayerDeclaration<infer _A, infer B>
+    updates: T extends BaseDesc<infer _A, infer B>
       ? B
-      : LayerDeclarationConfigUpdate,
+      : BaseDescConfigUpdate,
   ): void {
     this.layer.onUpdateConfig(updates);
   }
@@ -97,3 +84,40 @@ export class LayerHandle<
     this.layer.visible = visible;
   }
 }
+
+/**
+ * A handle to control a mesh layer after it has been added to the scene.
+ * Returned by `ThreeView.addMesh()`.
+ *
+ * @typeParam T - The specific mesh declaration type (e.g., BoxMeshDesc)
+ *
+ * @example
+ * ```typescript
+ * const handle = view.addMesh<BoxMeshDesc>({ box: { width: 100 } });
+ * handle.update({ box: { width: 200 } });
+ * handle.delete();
+ * ```
+ */
+export class MeshHandle<
+  T extends MeshDesc = MeshDesc,
+> extends BaseHandle<T> {}
+
+/**
+ * A handle to control a light layer after it has been added to the scene.
+ * Returned by `ThreeView.addLight()`.
+ *
+ * @typeParam T - The specific light declaration type (e.g., SunLightDesc)
+ */
+export class LightHandle<
+  T extends LightDesc = LightDesc,
+> extends BaseHandle<T> {}
+
+/**
+ * A handle to control an effect layer after it has been added to the scene.
+ * Returned by `ThreeView.addEffect()`.
+ *
+ * @typeParam T - The specific effect declaration type (e.g., SSAOEffectDesc)
+ */
+export class EffectHandle<
+  T extends EffectDesc = EffectDesc,
+> extends BaseHandle<T> {}

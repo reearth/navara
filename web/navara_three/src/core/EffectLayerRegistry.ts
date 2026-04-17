@@ -1,26 +1,26 @@
 import type ThreeView from "../index";
 
 import {
-  EffectLayerDeclaration,
-  type EffectLayerConfig,
-} from "./EffectLayerDeclaration";
+  EffectDesc,
+  type EffectConfig,
+} from "./EffectDesc";
 import { LayerRegistry } from "./LayerRegistry";
 import type { ViewContext } from "./ViewContext";
 
 export type EffectLayerConstructor = new (
   view: ThreeView,
   ctx: ViewContext,
-  config: EffectLayerConfig,
-) => EffectLayerDeclaration;
+  config: EffectConfig,
+) => EffectDesc;
 
 export class EffectLayerRegistry extends LayerRegistry<
   EffectLayerConstructor,
-  EffectLayerDeclaration
+  EffectDesc
 > {
   create(
     effectType: string,
-    config: EffectLayerConfig,
-  ): EffectLayerDeclaration {
+    config: EffectConfig,
+  ): EffectDesc {
     const EffectClass = this.getConstructor(effectType);
     if (!EffectClass) {
       throw new Error(`Unknown effect type: ${effectType}`);

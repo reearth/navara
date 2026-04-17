@@ -12,13 +12,13 @@ import {
 import invariant from "tiny-invariant";
 
 import {
-  MeshLayerDeclarationWithSelectiveEffect,
-  type MeshLayerConfigWithSelectiveEffect,
-  type MeshLayerUpdateWithSelectiveEffect,
-} from "./MeshLayerDeclarationWithSelectiveEffect";
+  MeshDescWithSelectiveEffect,
+  type MeshConfigWithSelectiveEffect,
+  type MeshUpdateWithSelectiveEffect,
+} from "./MeshDescWithSelectiveEffect";
 
-export type InstancedMeshLayerConfig = MeshLayerConfigWithSelectiveEffect;
-export type InstancedMeshLayerUpdate = MeshLayerUpdateWithSelectiveEffect;
+export type InstancedMeshConfig = MeshConfigWithSelectiveEffect;
+export type InstancedMeshUpdate = MeshUpdateWithSelectiveEffect;
 
 /**
  * Common transform fields for individual instances within an instanced mesh layer.
@@ -66,14 +66,14 @@ const _swapColor = new ThreeColor();
  * @typeParam ChildConfig - Configuration type for individual instances
  * @typeParam CustomEvent - Additional custom events
  */
-export abstract class InstancedMeshLayerDeclaration<
+export abstract class InstancedMeshDesc<
   TGeometry extends BufferGeometry = BufferGeometry,
   TMaterial extends Material = Material,
-  Config extends InstancedMeshLayerConfig = InstancedMeshLayerConfig,
-  UpdateConfig extends InstancedMeshLayerUpdate = InstancedMeshLayerUpdate,
+  Config extends InstancedMeshConfig = InstancedMeshConfig,
+  UpdateConfig extends InstancedMeshUpdate = InstancedMeshUpdate,
   ChildConfig extends InstancedChildConfig = InstancedChildConfig,
   CustomEvent extends BaseEventMap = BaseEventMap,
-> extends MeshLayerDeclarationWithSelectiveEffect<
+> extends MeshDescWithSelectiveEffect<
   Config,
   UpdateConfig,
   InstancedMesh<TGeometry, TMaterial>,

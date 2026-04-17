@@ -8,22 +8,22 @@ import { Pass } from "../effects";
 import type ThreeView from "../index";
 
 import {
-  LayerDeclaration,
+  BaseDesc,
   type BaseInstance,
-  type LayerDeclarationConfig,
-  type LayerDeclarationConfigUpdate,
-} from "./LayerDeclaration";
+  type BaseDescConfig,
+  type BaseDescConfigUpdate,
+} from "./BaseDesc";
 import type { ViewContext } from "./ViewContext";
 
 type EffectInstance =
   | PostProcessingPass
   | Pass<PostProcessingPass, PostProcessingEffect>;
 
-export type EffectLayerConfig = {
+export type EffectConfig = {
   type?: "effect";
-} & LayerDeclarationConfig;
+} & BaseDescConfig;
 
-export type EffectLayerUpdate = LayerDeclarationConfigUpdate;
+export type EffectUpdate = BaseDescConfigUpdate;
 
 export type EffectBaseInstance<Instance extends object = object> =
   Instance extends EffectInstance
@@ -84,17 +84,17 @@ export type EffectBaseInstance<Instance extends object = object> =
  *   vignette?: { offset?: number; darkness?: number };
  * };
  *
- * type VignetteEffectConfig = EffectLayerConfig & VignetteDescription;
- * type VignetteEffectUpdate = EffectLayerUpdate & VignetteDescription;
+ * type VignetteEffectConfig = EffectConfig & VignetteDescription;
+ * type VignetteEffectUpdate = EffectUpdate & VignetteDescription;
  * ```
  *
- * ### 3. Extend `EffectLayerDeclaration`
+ * ### 3. Extend `EffectDesc`
  *
  * Implement the {@link createPass} factory method and configure the static properties
  * for pipeline ordering:
  *
  * ```typescript
- * class VignetteEffectLayer extends EffectLayerDeclaration<
+ * class VignetteEffectLayer extends EffectDesc<
  *   VignetteEffectConfig,
  *   VignetteEffectUpdate,
  *   Vignette
@@ -174,20 +174,20 @@ export type EffectBaseInstance<Instance extends object = object> =
  * @see The `custom-effect` example page for a complete custom effect layer tutorial
  *      implementing a vignette effect.
  *
- * @typeParam Config - Layer configuration type (extends {@link EffectLayerConfig})
- * @typeParam UpdateConfig - Updatable properties (extends {@link EffectLayerUpdate})
+ * @typeParam Config - Layer configuration type (extends {@link EffectConfig})
+ * @typeParam UpdateConfig - Updatable properties (extends {@link EffectUpdate})
  * @typeParam InstanceObj - The postprocessing Pass type or a wrapper with a `raw` property
  * @typeParam Instance - Resolved instance type (inferred automatically)
  */
-export abstract class EffectLayerDeclaration<
-  Config extends EffectLayerConfig = EffectLayerConfig,
-  UpdateConfig extends EffectLayerUpdate = EffectLayerUpdate,
+export abstract class EffectDesc<
+  Config extends EffectConfig = EffectConfig,
+  UpdateConfig extends EffectUpdate = EffectUpdate,
   InstanceObj extends EffectInstance | { raw: EffectInstance } =
     | EffectInstance
     | { raw: EffectInstance },
   Instance extends EffectBaseInstance<InstanceObj> =
     EffectBaseInstance<InstanceObj>,
-> extends LayerDeclaration<Config, UpdateConfig, Instance> {
+> extends BaseDesc<Config, UpdateConfig, Instance> {
   /** Unique identifier for this effect type in the render pipeline. Must be defined by subclasses. */
   static key: string;
   /** Insert this pass after the first matching key found in the pipeline. */
@@ -242,7 +242,7 @@ export abstract class EffectLayerDeclaration<
   }
 
   getConstructor() {
-    return this.constructor as typeof EffectLayerDeclaration;
+    return this.constructor as typeof EffectDesc;
   }
 
   getKey(): string {
@@ -331,7 +331,7 @@ export abstract class EffectLayerDeclaration<
    * @param key - The static `key` of the effect layer to find.
    * @returns The effect layer instance, or `undefined` if not found.
    */
-  findLayer<Layer extends EffectLayerDeclaration = EffectLayerDeclaration>(
+  findLayer<Layer extends EffectDesc = EffectDesc>(
     key: string,
   ) {
     for (const handle of this.ctx._getEffectLayers()) {

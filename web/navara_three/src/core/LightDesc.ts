@@ -4,20 +4,20 @@ import { Light } from "three";
 import type ThreeView from "../index";
 
 import {
-  LayerDeclaration,
+  BaseDesc,
   type BaseInstance,
-  type LayerDeclarationConfig,
-  type LayerDeclarationConfigUpdate,
-} from "./LayerDeclaration";
+  type BaseDescConfig,
+  type BaseDescConfigUpdate,
+} from "./BaseDesc";
 import type { ViewContext } from "./ViewContext";
 
-export type LightLayerConfig = {
+export type LightConfig = {
   type?: "light";
   position?: XYZ;
-} & LayerDeclarationConfig;
+} & BaseDescConfig;
 
-export type LightLayerUpdate = Pick<LightLayerConfig, "position"> &
-  LayerDeclarationConfigUpdate;
+export type LightUpdate = Pick<LightConfig, "position"> &
+  BaseDescConfigUpdate;
 
 export type LightBaseInstance<Instance extends object = object> =
   Instance extends Light
@@ -50,18 +50,18 @@ export type LightBaseInstance<Instance extends object = object> =
  *   };
  * };
  *
- * type MyLightConfig = LightLayerConfig & MyLightDescription;
- * type MyLightUpdate = LightLayerUpdate & MyLightDescription;
+ * type MyLightConfig = LightConfig & MyLightDescription;
+ * type MyLightUpdate = LightUpdate & MyLightDescription;
  * ```
  *
- * ### 2. Extend `LightLayerDeclaration`
+ * ### 2. Extend `LightDesc`
  *
  * Implement the {@link createLight} factory method. Optionally override
  * {@link onUpdateConfig} for dynamic property updates and {@link update} for
  * per-frame animation.
  *
  * ```typescript
- * class MyLightLayer extends LightLayerDeclaration<
+ * class MyLightLayer extends LightDesc<
  *   MyLightConfig,
  *   MyLightUpdate,
  *   PointLight
@@ -123,18 +123,18 @@ export type LightBaseInstance<Instance extends object = object> =
  * @see {@link AmbientLightLayer} for a minimal built-in example.
  * @see {@link SunLightLayer} for an advanced example with CSM shadows and atmosphere integration.
  *
- * @typeParam Config - Layer configuration type (extends {@link LightLayerConfig})
- * @typeParam UpdateConfig - Updatable properties (extends {@link LightLayerUpdate})
+ * @typeParam Config - Layer configuration type (extends {@link LightConfig})
+ * @typeParam UpdateConfig - Updatable properties (extends {@link LightUpdate})
  * @typeParam InstanceObj - The Three.js Light type or a wrapper with a `raw` property
  * @typeParam Instance - Resolved instance type (inferred automatically)
  */
-export abstract class LightLayerDeclaration<
-  Config extends LightLayerConfig = LightLayerConfig,
-  UpdateConfig extends LightLayerUpdate = LightLayerUpdate,
+export abstract class LightDesc<
+  Config extends LightConfig = LightConfig,
+  UpdateConfig extends LightUpdate = LightUpdate,
   InstanceObj extends Light | { raw: Light } = Light | { raw: Light },
   Instance extends LightBaseInstance<InstanceObj> =
     LightBaseInstance<InstanceObj>,
-> extends LayerDeclaration<Config, UpdateConfig, Instance> {
+> extends BaseDesc<Config, UpdateConfig, Instance> {
   public position?: XYZ;
 
   constructor(

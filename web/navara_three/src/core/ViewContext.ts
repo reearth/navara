@@ -9,8 +9,7 @@ import type { RenderPassOrchestrator } from "../orchestrators";
 import type { CustomRenderPass } from "../passes";
 import type { Scenes } from "../scene";
 
-import type { EffectLayerDeclaration } from "./EffectLayerDeclaration";
-import type { LayerHandle } from "./LayerHandle";
+import type { EffectHandle } from "./LayerHandle";
 import { SelectiveEffectRegistry } from "./SelectiveEffectRegistry";
 
 type ViewContextEvents = {
@@ -180,7 +179,7 @@ export class ViewContext extends EventHandler<ViewContextEvents> {
   // --- Layer query ---
 
   /** @internal Iterate over all registered effect layers. */
-  _getEffectLayers(): Generator<LayerHandle<EffectLayerDeclaration>> {
+  _getEffectLayers(): Generator<EffectHandle> {
     return this.layersManager.getEffectLayers();
   }
 

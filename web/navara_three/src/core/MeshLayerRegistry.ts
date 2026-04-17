@@ -2,25 +2,25 @@ import type ThreeView from "../index";
 
 import { LayerRegistry } from "./LayerRegistry";
 import {
-  MeshLayerDeclaration,
-  type MeshLayerConfig,
-} from "./MeshLayerDeclaration";
+  MeshDesc,
+  type MeshConfig,
+} from "./MeshDesc";
 import type { ViewContext } from "./ViewContext";
 
 export type MeshLayerConstructor<
-  TConfig extends MeshLayerConfig = MeshLayerConfig,
+  TConfig extends MeshConfig = MeshConfig,
 > = new (
   view: ThreeView,
   ctx: ViewContext,
   config: TConfig,
-) => MeshLayerDeclaration;
+) => MeshDesc;
 
 export class MeshLayerRegistry extends LayerRegistry<
   MeshLayerConstructor,
-  MeshLayerDeclaration,
-  MeshLayerConfig
+  MeshDesc,
+  MeshConfig
 > {
-  create(name: string, config: MeshLayerConfig): MeshLayerDeclaration {
+  create(name: string, config: MeshConfig): MeshDesc {
     const MeshClass = this.getConstructor(name);
     if (!MeshClass) {
       throw new Error(`Unknown mesh type: ${name}`);

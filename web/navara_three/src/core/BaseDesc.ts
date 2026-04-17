@@ -8,7 +8,7 @@ import type { ViewContext } from "./ViewContext";
 /**
  * Base configuration options common to all declaration layers.
  */
-export type LayerDeclarationConfig = {
+export type BaseDescConfig = {
   /** Optional custom ID for the layer. Auto-generated if not provided. */
   id?: string;
   /** Whether the layer is visible. Defaults to true. */
@@ -18,8 +18,8 @@ export type LayerDeclarationConfig = {
 /**
  * Configuration properties that can be updated after layer creation.
  */
-export type LayerDeclarationConfigUpdate = Pick<
-  LayerDeclarationConfig,
+export type BaseDescConfigUpdate = Pick<
+  BaseDescConfig,
   "visible"
 >;
 
@@ -29,9 +29,9 @@ export type LayerDeclarationConfigUpdate = Pick<
 export type BaseInstance = { visible: boolean };
 
 /**
- * Internal events emitted by LayerDeclaration.
+ * Internal events emitted by BaseDesc.
  */
-export type LayerDeclarationEvents = {
+export type BaseDescEvents = {
   /** @internal Emitted when the layer needs to trigger a re-render. */
   needsUpdate: () => void;
 };
@@ -43,15 +43,15 @@ export type LayerDeclarationEvents = {
  * Declaration layers differ from resource layers in that they are purely client-side
  * and don't load data from external sources. They create Three.js objects directly.
  *
- * @typeParam Config - Configuration type for the layer (extends LayerDeclarationConfig)
- * @typeParam UpdateConfig - Configuration properties that can be updated (extends LayerDeclarationConfigUpdate)
+ * @typeParam Config - Configuration type for the layer (extends BaseDescConfig)
+ * @typeParam UpdateConfig - Configuration properties that can be updated (extends BaseDescConfigUpdate)
  * @typeParam Instance - The underlying Three.js object type created by the layer
  * @typeParam CustomEvent - Additional custom events the layer can emit
  *
  * @example
  * ```typescript
  * // Creating a custom mesh layer
- * class MyCustomMeshLayer extends LayerDeclaration<MyConfig, MyUpdateConfig, Mesh> {
+ * class MyCustomMeshLayer extends BaseDesc<MyConfig, MyUpdateConfig, Mesh> {
  *   onCreate() {
  *     const geometry = new BoxGeometry(1, 1, 1);
  *     const material = new MeshBasicMaterial();
@@ -61,13 +61,13 @@ export type LayerDeclarationEvents = {
  * }
  * ```
  */
-export abstract class LayerDeclaration<
-  Config extends LayerDeclarationConfig = LayerDeclarationConfig,
-  UpdateConfig extends LayerDeclarationConfigUpdate =
-    LayerDeclarationConfigUpdate,
+export abstract class BaseDesc<
+  Config extends BaseDescConfig = BaseDescConfig,
+  UpdateConfig extends BaseDescConfigUpdate =
+    BaseDescConfigUpdate,
   Instance extends BaseInstance = BaseInstance,
   CustomEvent extends BaseEventMap = BaseEventMap,
-> extends EventHandler<LayerDeclarationEvents & CustomEvent> {
+> extends EventHandler<BaseDescEvents & CustomEvent> {
   /** The unique identifier of this layer. */
   public readonly id: string;
 

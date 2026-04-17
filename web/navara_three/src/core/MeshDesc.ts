@@ -6,27 +6,27 @@ import type ThreeView from "../index";
 import type { Scenes } from "../scene";
 
 import {
-  LayerDeclaration,
+  BaseDesc,
   type BaseInstance,
-  type LayerDeclarationConfig,
-  type LayerDeclarationConfigUpdate,
-} from "./LayerDeclaration";
+  type BaseDescConfig,
+  type BaseDescConfigUpdate,
+} from "./BaseDesc";
 import type { ViewContext } from "./ViewContext";
 
-export type MeshLayerConfig = {
+export type MeshConfig = {
   type?: "mesh";
   position?: XYZ;
   scale?: XYZ;
   rotation?: XYZ;
   matrix?: Matrix4;
   matrixWorld?: Matrix4;
-} & LayerDeclarationConfig;
+} & BaseDescConfig;
 
-export type MeshLayerUpdate = Pick<
-  MeshLayerConfig,
+export type MeshUpdate = Pick<
+  MeshConfig,
   "position" | "scale" | "rotation" | "matrix" | "matrixWorld"
 > &
-  LayerDeclarationConfigUpdate;
+  BaseDescConfigUpdate;
 
 export type PassKey = keyof Pick<
   Scenes,
@@ -65,18 +65,18 @@ export type MeshBaseInstance<Instance extends object = object> =
  *   };
  * };
  *
- * type MyMeshConfig = MeshLayerConfig & MyMeshDescription;
- * type MyMeshUpdate = MeshLayerUpdate & MyMeshDescription;
+ * type MyMeshConfig = MeshConfig & MyMeshDescription;
+ * type MyMeshUpdate = MeshUpdate & MyMeshDescription;
  * ```
  *
- * ### 2. Extend `MeshLayerDeclaration`
+ * ### 2. Extend `MeshDesc`
  *
  * Implement the {@link createMesh} factory method. Optionally override
  * {@link getPassKey} to control which render scene the mesh belongs to,
  * {@link onUpdateConfig} for dynamic updates, and {@link update} for animation.
  *
  * ```typescript
- * class MyMeshLayer extends MeshLayerDeclaration<
+ * class MyMeshLayer extends MeshDesc<
  *   MyMeshConfig,
  *   MyMeshUpdate,
  *   Mesh<SphereGeometry, MeshStandardMaterial>
@@ -170,22 +170,22 @@ export type MeshBaseInstance<Instance extends object = object> =
  * @see The `custom-shader` example page for a complete custom mesh layer tutorial using
  *      MarchingCubes with a custom shader material.
  *
- * @typeParam Config - Layer configuration type (extends {@link MeshLayerConfig})
- * @typeParam UpdateConfig - Updatable properties (extends {@link MeshLayerUpdate})
+ * @typeParam Config - Layer configuration type (extends {@link MeshConfig})
+ * @typeParam UpdateConfig - Updatable properties (extends {@link MeshUpdate})
  * @typeParam InstanceObj - The Three.js Object3D type or a wrapper with a `raw` property
  * @typeParam CustomEvent - Additional custom events the layer can emit
  * @typeParam Instance - Resolved instance type (inferred automatically)
  */
-export abstract class MeshLayerDeclaration<
-  Config extends MeshLayerConfig = MeshLayerConfig,
-  UpdateConfig extends MeshLayerUpdate = MeshLayerUpdate,
+export abstract class MeshDesc<
+  Config extends MeshConfig = MeshConfig,
+  UpdateConfig extends MeshUpdate = MeshUpdate,
   InstanceObj extends Object3D | { raw: Object3D } =
     | Object3D
     | { raw: Object3D },
   CustomEvent extends BaseEventMap = BaseEventMap,
   Instance extends MeshBaseInstance<InstanceObj> =
     MeshBaseInstance<InstanceObj>,
-> extends LayerDeclaration<Config, UpdateConfig, Instance, CustomEvent> {
+> extends BaseDesc<Config, UpdateConfig, Instance, CustomEvent> {
   public position?: XYZ;
   public scale?: XYZ;
   public rotation?: XYZ;

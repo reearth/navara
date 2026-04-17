@@ -40,19 +40,19 @@ import { Color } from "./Color";
 import { createDefaultConcurrencyManager } from "./concurrency";
 import { WATER_NORMAL_URL } from "./constants/assets";
 import {
-  MeshLayerDeclaration,
-  LightLayerDeclaration,
-  EffectLayerDeclaration,
+  MeshDesc,
+  LightDesc,
+  EffectDesc,
   ViewContext,
-  type MeshLayerConfig,
-  type LightLayerConfig,
-  type EffectLayerConfig,
+  type MeshConfig,
+  type LightConfig,
+  type EffectConfig,
   type MeshLayerConstructor,
   type LightLayerConstructor,
   type EffectLayerConstructor,
   UnknownLayerTypeError,
 } from "./core";
-import { LayerHandle } from "./core/LayerHandle";
+import { MeshHandle, LightHandle, EffectHandle } from "./core/LayerHandle";
 import { Registries } from "./core/Registries";
 import { getDevicePixelRatio, isMobileDevice } from "./device";
 import {
@@ -262,14 +262,14 @@ export default class ThreeView<
   private _globe!: Globe;
   private _atmosphere: Atmosphere;
 
-  /** Layer handle for the sky environment map effect layer. Used for sky reflections. */
-  private skyEnvMapLayer!: LayerHandle<SkyEnvMapEffectLayer>;
-  /** Layer handle for the Multi-Render Target pass that outputs color and normal buffers. */
-  private mrtPassLayer!: LayerHandle<MRTPassEffectLayer>;
-  /** Layer handle for the transparent objects rendering pass. */
-  private transparentPassLayer!: LayerHandle<TransparentPassEffectLayer>;
-  /** Layer handle for the final compositing pass that outputs to screen. */
-  private finalPassLayer!: LayerHandle<FinalCopyEffectLayer>;
+  /** Handle for the sky environment map effect layer. Used for sky reflections. */
+  private skyEnvMapLayer!: EffectHandle<SkyEnvMapEffectLayer>;
+  /** Handle for the Multi-Render Target pass that outputs color and normal buffers. */
+  private mrtPassLayer!: EffectHandle<MRTPassEffectLayer>;
+  /** Handle for the transparent objects rendering pass. */
+  private transparentPassLayer!: EffectHandle<TransparentPassEffectLayer>;
+  /** Handle for the final compositing pass that outputs to screen. */
+  private finalPassLayer!: EffectHandle<FinalCopyEffectLayer>;
 
   /** The render pass orchestrator that manages the post-processing effect pipeline. */
   private renderPassOrchestrator: RenderPassOrchestrator;
@@ -1191,38 +1191,38 @@ export default class ThreeView<
    * Adds a 3D mesh to the scene.
    * The mesh kind is determined by the nested key (e.g., `{ box: { width: 200 } }`).
    * @param desc - Mesh configuration object
-   * @returns A LayerHandle for controlling the added mesh
+   * @returns A MeshHandle for controlling the added mesh
    */
-  addMesh<L extends MeshLayerDeclaration = MeshLayerDeclaration>(
-    desc: OmitType<MeshLayerConfig | NonNullable<D["mesh"]>>,
-  ): LayerHandle<L> {
-    return this.addMeshLayer(desc as MeshLayerConfig) as LayerHandle<L>;
+  addMesh<L extends MeshDesc = MeshDesc>(
+    desc: OmitType<MeshConfig | NonNullable<D["mesh"]>>,
+  ): MeshHandle<L> {
+    return this.addMeshLayer(desc as MeshConfig) as MeshHandle<L>;
   }
 
   /**
    * Adds a light to the scene.
    * The light kind is determined by the nested key (e.g., `{ ambient: { intensity: 0.5 } }`).
    * @param desc - Light configuration object
-   * @returns A LayerHandle for controlling the added light
+   * @returns A LightHandle for controlling the added light
    */
-  addLight<L extends LightLayerDeclaration = LightLayerDeclaration>(
-    desc: OmitType<LightLayerConfig | NonNullable<D["light"]>>,
-  ): LayerHandle<L> {
-    return this.addLightLayer(desc as LightLayerConfig) as LayerHandle<L>;
+  addLight<L extends LightDesc = LightDesc>(
+    desc: OmitType<LightConfig | NonNullable<D["light"]>>,
+  ): LightHandle<L> {
+    return this.addLightLayer(desc as LightConfig) as LightHandle<L>;
   }
 
   /**
    * Adds a post-processing effect to the scene.
    * The effect kind is determined by the nested key (e.g., `{ bloom: { strength: 1.0 } }`).
    * @param desc - Effect configuration object
-   * @returns A LayerHandle for controlling the added effect
+   * @returns An EffectHandle for controlling the added effect
    */
-  addEffect<L extends EffectLayerDeclaration = EffectLayerDeclaration>(
+  addEffect<L extends EffectDesc = EffectDesc>(
     desc: OmitType<
-      BuiltInEffectDescription | EffectLayerConfig | NonNullable<D["effect"]>
+      BuiltInEffectDescription | EffectConfig | NonNullable<D["effect"]>
     >,
-  ): LayerHandle<L> {
-    return this.addEffectLayer(desc as EffectLayerConfig) as LayerHandle<L>;
+  ): EffectHandle<L> {
+    return this.addEffectLayer(desc as EffectConfig) as EffectHandle<L>;
   }
 
   /**
@@ -1265,7 +1265,7 @@ export default class ThreeView<
     this.registerEffect("final", FinalCopyEffectLayer);
   }
 
-  private addMeshLayer(config: MeshLayerConfig): LayerHandle {
+  private addMeshLayer(config: MeshConfig): MeshHandle {
     // Find which mesh type from config
     const meshType = this.registries.mesh.findMeshType(config);
     if (!meshType) {
@@ -1298,7 +1298,7 @@ export default class ThreeView<
     // Trigger re-render
     meshLayer.on("needsUpdate", this.forceUpdate);
 
-    const l = new LayerHandle(meshLayer);
+    const l = new MeshHandle(meshLayer);
 
     // Store the mesh layer
     this.layersManager.add(l);
@@ -1307,7 +1307,7 @@ export default class ThreeView<
     return l;
   }
 
-  private addLightLayer(config: LightLayerConfig): LayerHandle {
+  private addLightLayer(config: LightConfig): LightHandle {
     // Find which light type from config
     const lightType = this.registries.light.findLightType(config);
     if (!lightType) {
@@ -1332,7 +1332,7 @@ export default class ThreeView<
     // Trigger re-render
     lightLayer.on("needsUpdate", this.forceUpdate);
 
-    const l = new LayerHandle(lightLayer);
+    const l = new LightHandle(lightLayer);
 
     // Store the light layer
     this.layersManager.add(l);
@@ -1341,7 +1341,7 @@ export default class ThreeView<
     return l;
   }
 
-  private addEffectLayer(config: EffectLayerConfig): LayerHandle {
+  private addEffectLayer(config: EffectConfig): EffectHandle {
     // Find which effect type from config
     const effectType = this.registries.effect.findEffectType(config);
     if (!effectType) {
@@ -1366,7 +1366,7 @@ export default class ThreeView<
     // Trigger re-render
     effectLayer.on("needsUpdate", this.forceUpdate);
 
-    const l = new LayerHandle(effectLayer);
+    const l = new EffectHandle(effectLayer);
 
     // Store the effect layer
     this.layersManager.add(l);

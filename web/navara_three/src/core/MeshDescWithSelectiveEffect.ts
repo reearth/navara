@@ -5,34 +5,34 @@ import type ThreeView from "../index";
 import { arraysEqual } from "../utils";
 
 import {
-  MeshLayerDeclaration,
-  type MeshLayerConfig,
-  type MeshLayerUpdate,
+  MeshDesc,
+  type MeshConfig,
+  type MeshUpdate,
   type MeshBaseInstance,
   type PassKey,
-} from "./MeshLayerDeclaration";
+} from "./MeshDesc";
 import type { ViewContext } from "./ViewContext";
 
-export type MeshLayerConfigWithSelectiveEffect = MeshLayerConfig & {
+export type MeshConfigWithSelectiveEffect = MeshConfig & {
   effectIds?: string[];
 };
 
-export type MeshLayerUpdateWithSelectiveEffect = MeshLayerUpdate & {
+export type MeshUpdateWithSelectiveEffect = MeshUpdate & {
   effectIds?: string[];
 };
 
-export abstract class MeshLayerDeclarationWithSelectiveEffect<
-  Config extends MeshLayerConfigWithSelectiveEffect =
-    MeshLayerConfigWithSelectiveEffect,
-  UpdateConfig extends MeshLayerUpdateWithSelectiveEffect =
-    MeshLayerUpdateWithSelectiveEffect,
+export abstract class MeshDescWithSelectiveEffect<
+  Config extends MeshConfigWithSelectiveEffect =
+    MeshConfigWithSelectiveEffect,
+  UpdateConfig extends MeshUpdateWithSelectiveEffect =
+    MeshUpdateWithSelectiveEffect,
   InstanceObj extends Object3D | { raw: Object3D } =
     | Object3D
     | { raw: Object3D },
   CustomEvent extends BaseEventMap = BaseEventMap,
   Instance extends MeshBaseInstance<InstanceObj> =
     MeshBaseInstance<InstanceObj>,
-> extends MeshLayerDeclaration<
+> extends MeshDesc<
   Config,
   UpdateConfig,
   InstanceObj,
