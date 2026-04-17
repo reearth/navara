@@ -334,8 +334,7 @@ const view = new ThreeView();
 await view.init();
 
 // CylinderMeshLayerを追加
-const cylinderLayer = view.addLayer<CylinderMeshLayer>({
-  type: "mesh",
+const cylinderLayer = view.addMesh<CylinderMeshLayer>({
   cylinder: {
     radiusTop: 50,
     radiusBottom: 50,
@@ -351,8 +350,7 @@ const cylinderLayer = view.addLayer<CylinderMeshLayer>({
 ```typescript
 import ThreeView, { CylinderMeshLayer, Color } from "@navara/three";
 
-const coneLayer = view.addLayer<CylinderMeshLayer>({
-  type: "mesh",
+const coneLayer = view.addMesh<CylinderMeshLayer>({
   cylinder: {
     radiusTop: 0,
     radiusBottom: 100,

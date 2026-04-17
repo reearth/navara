@@ -31,7 +31,7 @@ import type {
 } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
-  type DefaultLayerDescriptions,
+  type DefaultDeclarations,
 } from "@navara/three_default_plugin";
 import { Mesh, Vector2, Vector3, Object3D, Group, ArrowHelper } from "three";
 import { Pane, FolderApi } from "tweakpane";
@@ -95,10 +95,10 @@ let gPickedPos: Nullable<Vector3> = null;
 
 const gPopup = new FloatingDialog();
 
-export type LayerDescriptions = DefaultLayerDescriptions;
+export type CustomDeclarations = DefaultDeclarations;
 
 export const run = async (
-  view: ThreeView<LayerDescriptions>,
+  view: ThreeView<CustomDeclarations>,
   canvas: HTMLCanvasElement,
 ) => {
   const plugin = new DefaultPlugin();
@@ -147,8 +147,7 @@ export const run = async (
     },
   });
 
-  view.addLayer({
-    type: "mesh",
+  view.addMesh({
     axesHelper: {
       size: 5,
     },
@@ -207,7 +206,7 @@ export const run = async (
   ]);
 };
 
-const addRunningObject = (view: ThreeView<LayerDescriptions>) => {
+const addRunningObject = (view: ThreeView<CustomDeclarations>) => {
   const sphere = placeOneBall(view, new Vector3(0, 0, 0), 0xffffff);
   if (!sphere) {
     return;
@@ -242,7 +241,7 @@ const addRunningObject = (view: ThreeView<LayerDescriptions>) => {
 };
 
 const testScreenToWorld = (
-  view: ThreeView<LayerDescriptions>,
+  view: ThreeView<CustomDeclarations>,
   canvas: HTMLCanvasElement,
 ) => {
   const onMouseMove = (event: MouseEvent) => {
@@ -266,13 +265,12 @@ const testScreenToWorld = (
 };
 
 const placeOneBall = (
-  view: ThreeView<LayerDescriptions>,
+  view: ThreeView<CustomDeclarations>,
   pos: Vector3 | undefined,
   color: number,
 ): Mesh | undefined => {
   if (pos) {
-    const sphereLayer = view.addLayer<SphereMeshLayer>({
-      type: "mesh",
+    const sphereLayer = view.addMesh<SphereMeshLayer>({
       sphere: {
         radius: 1,
         color: new Color().setHex(color),
@@ -286,7 +284,7 @@ const placeOneBall = (
   }
 };
 
-const addTestModelForNormal = (view: ThreeView<LayerDescriptions>) => {
+const addTestModelForNormal = (view: ThreeView<CustomDeclarations>) => {
   const pos = geodeticToVector3({
     lat: degreeToRadian(43.0618),
     lng: degreeToRadian(141.3545),
@@ -299,8 +297,7 @@ const addTestModelForNormal = (view: ThreeView<LayerDescriptions>) => {
   });
 
   // Add GLTF model using GLTFModelLayer with URL
-  const modelLayer = view.addLayer<GLTFModelLayer>({
-    type: "mesh",
+  const modelLayer = view.addMesh<GLTFModelLayer>({
     gltfModel: {
       url: LOCAL_DATASETS.steelDrumGLTF.url,
     },
@@ -309,8 +306,7 @@ const addTestModelForNormal = (view: ThreeView<LayerDescriptions>) => {
   });
 
   // Add arrow helper
-  view.addLayer({
-    type: "mesh",
+  view.addMesh({
     arrowHelper: {
       direction: normal,
       origin: pos,
@@ -340,7 +336,7 @@ const addTestModelForNormal = (view: ThreeView<LayerDescriptions>) => {
   }
 };
 
-const addTestModelForTerrainHeight = (view: ThreeView<LayerDescriptions>) => {
+const addTestModelForTerrainHeight = (view: ThreeView<CustomDeclarations>) => {
   const pos = geodeticToVector3({
     lat: degreeToRadian(gFujiPos[0]),
     lng: degreeToRadian(gFujiPos[1]),
@@ -350,8 +346,7 @@ const addTestModelForTerrainHeight = (view: ThreeView<LayerDescriptions>) => {
   const transformMatrix = northUpEastToFixedFrame(pos);
 
   // Add the model using GLTFModelLayer with URL
-  const modelLayer = view.addLayer<GLTFModelLayer>({
-    type: "mesh",
+  const modelLayer = view.addMesh<GLTFModelLayer>({
     gltfModel: {
       url: LOCAL_DATASETS.steelDrumGLTF.url,
     },
@@ -566,7 +561,7 @@ const onTransformChange = () => {
 };
 
 const testRayPlane = (
-  view: ThreeView<LayerDescriptions>,
+  view: ThreeView<CustomDeclarations>,
   canvas: HTMLCanvasElement,
 ) => {
   let center: Vector3 | undefined = undefined;
@@ -662,11 +657,10 @@ const testRayPlane = (
 };
 
 const makeCylinder = (
-  view: ThreeView<LayerDescriptions>,
+  view: ThreeView<CustomDeclarations>,
   center: Vector3,
 ): Mesh | undefined => {
-  const cylinderLayer = view.addLayer<CylinderMeshLayer>({
-    type: "mesh",
+  const cylinderLayer = view.addMesh<CylinderMeshLayer>({
     cylinder: {
       radiusTop: 1,
       radiusBottom: 1,
@@ -748,7 +742,7 @@ const onDistPosChange = () => {
 };
 
 const updatePolylineMesh = (
-  view: ThreeView<LayerDescriptions>,
+  view: ThreeView<CustomDeclarations>,
   curvePoints: XYZ[],
 ) => {
   if (!gPolylineLayer) return;
@@ -794,7 +788,7 @@ const updatePolylineMesh = (
   gMouseBall?.scale.set(mouseBallRadius, mouseBallRadius, mouseBallRadius);
 };
 
-const addCameraListener = (view: ThreeView<LayerDescriptions>) => {
+const addCameraListener = (view: ThreeView<CustomDeclarations>) => {
   // Update tube thickness when camera moves
   view.camera.on("move", () => {
     if (!gPolylineLayer || !view.camera || gPolylinePoints.length === 0) return;
@@ -815,7 +809,7 @@ const addCameraListener = (view: ThreeView<LayerDescriptions>) => {
   });
 };
 
-const createPolylineMesh = (view: ThreeView<LayerDescriptions>) => {
+const createPolylineMesh = (view: ThreeView<CustomDeclarations>) => {
   // Create initial points for the curve
   const points: XYZ[] = Array.from({ length: 2 }, () => ({
     x: 0,
@@ -823,8 +817,7 @@ const createPolylineMesh = (view: ThreeView<LayerDescriptions>) => {
     z: 0,
   }));
 
-  gPolylineLayer = view.addLayer<TubeMeshLayer>({
-    type: "mesh",
+  gPolylineLayer = view.addMesh<TubeMeshLayer>({
     tube: {
       points,
       tubularSegments: 64,
@@ -837,7 +830,7 @@ const createPolylineMesh = (view: ThreeView<LayerDescriptions>) => {
   });
 };
 
-const testSampleTerrainHeight = (view: ThreeView<LayerDescriptions>) => {
+const testSampleTerrainHeight = (view: ThreeView<CustomDeclarations>) => {
   const onMouseMove = (event: MapMouseEvent) => {
     const mapPos = event.map;
 
@@ -904,7 +897,7 @@ const onRegisterChange = () => {
   }
 };
 
-const testShowModelInfo = (view: ThreeView<LayerDescriptions>) => {
+const testShowModelInfo = (view: ThreeView<CustomDeclarations>) => {
   view.on("pick", (info) => {
     if (!info) {
       gPickedPos = null;

@@ -297,8 +297,7 @@ const view = new ThreeView();
 await view.init();
 
 // Add an ArclineMeshLayer
-const arclineLayer = view.addLayer<ArclineMeshLayer>({
-  type: "mesh",
+const arclineLayer = view.addMesh<ArclineMeshLayer>({
   arcLines: {
     thickness: 2,
     srcColor: 0xff0000,
@@ -316,8 +315,7 @@ const arclineLayer = view.addLayer<ArclineMeshLayer>({
 ### Multiple Arc Lines
 
 ```typescript
-const arclineLayer = view.addLayer<ArclineMeshLayer>({
-  type: "mesh",
+const arclineLayer = view.addMesh<ArclineMeshLayer>({
   arcLines: [
     {
       thickness: 2,

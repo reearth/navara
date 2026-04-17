@@ -88,8 +88,7 @@ const view = new ThreeView();
 await view.init();
 
 // Add SMAA effect layer
-view.addLayer<SMAAEffectLayer>({
-  type: "effect",
+view.addEffect<SMAAEffectLayer>({
   smaa: {
     quality: "ultra",
     edgeDetectionMode: "luma",
@@ -126,8 +125,7 @@ defaultLayers.smaa.update({
 
 // Disable SMAA and switch to FXAA
 defaultLayers.smaa.update({ visible: false });
-view.addLayer<FXAAEffectLayer>({
-  type: "effect",
+view.addEffect<FXAAEffectLayer>({
   fxaa: {},
 });
 ```

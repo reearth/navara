@@ -61,7 +61,7 @@ const terrainLayer = view.addLayer({
 
 **特徴:**
 
-- `type` には `"mesh"`, `"effect"`, `"light"` のいずれかを指定
+- `addMesh()`, `addEffect()`, `addLight()` の専用メソッドで追加
 - 1 つのレイヤーにつき 1 つの Material（設定オブジェクト）を持つ
 - Material のキー名でレイヤーの種類が決まる
 - **使用前にレイヤークラスの登録が必要**（`registerMesh`, `registerEffect`, `registerLight`）
@@ -69,14 +69,13 @@ const terrainLayer = view.addLayer({
 ```typescript
 import { BoxMeshLayer, FXAAEffectLayer, SunLightLayer } from "@navara/three_default_layers";
 
-// レイヤークラスを登録（addLayer の前に必要）
+// レイヤークラスを登録（addMesh/addEffect/addLight の前に必要）
 view.registerMesh("box", BoxMeshLayer);
 view.registerEffect("fxaa", FXAAEffectLayer);
 view.registerLight("sun", SunLightLayer);
 
 // メッシュレイヤーの例（BoxMeshLayer）
-const boxLayer = view.addLayer<BoxMeshLayer>({
-  type: "mesh",
+const boxLayer = view.addMesh<BoxMeshLayer>({
   box: {
     // box キーで BoxMeshLayer として認識される
     width: 100,
@@ -85,16 +84,14 @@ const boxLayer = view.addLayer<BoxMeshLayer>({
 });
 
 // エフェクトレイヤーの例（FXAAEffectLayer）
-const fxaaLayer = view.addLayer<FXAAEffectLayer>({
-  type: "effect",
+const fxaaLayer = view.addEffect<FXAAEffectLayer>({
   fxaa: {
     // fxaa キーで FXAAEffectLayer として認識される
   },
 });
 
 // ライトレイヤーの例（SunLightLayer）
-const sunLayer = view.addLayer<SunLightLayer>({
-  type: "light",
+const sunLayer = view.addLight<SunLightLayer>({
   sun: {
     // sun キーで SunLightLayer として認識される
     intensity: 1.0,
@@ -109,7 +106,7 @@ const sunLayer = view.addLayer<SunLightLayer>({
 
 ## 返却されるハンドルクラスの違い
 
-`view.addLayer()` から返されるハンドルクラスは、レイヤーの種類によって異なります：
+`view.addLayer()` / `view.addMesh()` / `view.addEffect()` / `view.addLight()` から返されるハンドルクラスは、レイヤーの種類によって異なります：
 
 | レイヤー種別                         | 返却されるクラス | 主な機能                                                                 |
 | ------------------------------------ | ---------------- | ------------------------------------------------------------------------ |
@@ -144,8 +141,7 @@ geoJsonLayer.delete();
 
 ```typescript
 // BoxMeshLayer が登録済みであること
-const boxLayer = view.addLayer<BoxMeshLayer>({
-  type: "mesh",
+const boxLayer = view.addMesh<BoxMeshLayer>({
   box: { width: 100, height: 100, depth: 100 },
 });
 

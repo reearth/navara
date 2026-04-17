@@ -15,7 +15,7 @@ export type LayerHandleEvent = {
 
 /**
  * A handle to control a declaration layer (mesh, light, or effect layer) after it has been added to the scene.
- * Returned by `ThreeView.addLayer()` when adding mesh, light, or effect layers.
+ * Returned by `ThreeView.addMesh()`, `ThreeView.addLight()`, and `ThreeView.addEffect()`.
  *
  * Use this handle to update layer properties, control visibility, or delete the layer.
  *
@@ -24,7 +24,7 @@ export type LayerHandleEvent = {
  * @example
  * ```typescript
  * // Add a sky mesh layer and get a handle
- * const skyHandle = view.addLayer<SkyMeshLayer>({ type: "mesh", sky: {} });
+ * const skyHandle = view.addMesh<SkyMeshLayer>({ sky: {} });
  *
  * // Update the layer configuration
  * skyHandle.update({ sunAngularRadius: 0.05 });

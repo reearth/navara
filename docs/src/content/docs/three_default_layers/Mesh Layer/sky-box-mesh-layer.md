@@ -86,8 +86,7 @@ const view = new ThreeView();
 await view.init();
 
 // Add a skybox with default settings
-const skyBox = view.addLayer<SkyBoxMeshLayer>({
-  type: "mesh",
+const skyBox = view.addMesh<SkyBoxMeshLayer>({
   skyBox: {},
 });
 ```
@@ -101,8 +100,7 @@ const view = new ThreeView();
 await view.init();
 
 // Add a skybox with custom colors
-const skyBox = view.addLayer<SkyBoxMeshLayer>({
-  type: "mesh",
+const skyBox = view.addMesh<SkyBoxMeshLayer>({
   skyBox: {
     dayColor: new Color().setHex(0x87ceeb),    // Sky blue
     nightColor: new Color().setHex(0x0a0a2e),   // Dark blue

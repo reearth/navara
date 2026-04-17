@@ -12,7 +12,7 @@ import type {
 } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
-  type DefaultLayerDescriptions,
+  type DefaultDeclarations,
 } from "@navara/three_default_plugin";
 import { Vector3 } from "three";
 import { Pane } from "tweakpane";
@@ -26,7 +26,7 @@ import {
 
 import { DebugPlugin } from "./DebugPlugin";
 
-export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
+export const run = async (view: ThreeView<DefaultDeclarations>) => {
   const plugin = new DefaultPlugin();
   const debugPlugin = new DebugPlugin();
   view.addPlugin(plugin);
@@ -54,8 +54,7 @@ export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
 
   // --- Effect Layer definitions ---
 
-  const bloomEffect = view.addLayer<SelectiveBloomEffectLayer>({
-    type: "effect",
+  const bloomEffect = view.addEffect<SelectiveBloomEffectLayer>({
     selectiveBloom: {
       strength: 1.0,
       radius: 0.5,
@@ -64,8 +63,7 @@ export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
     },
   });
 
-  const outlineEffect = view.addLayer<SelectiveOutlineEffectLayer>({
-    type: "effect",
+  const outlineEffect = view.addEffect<SelectiveOutlineEffectLayer>({
     selectiveOutline: {
       color: new Color().setHex(0xff0000),
       thickness: 2.0,
@@ -82,8 +80,7 @@ export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
     lng: degreeToRadian(139.7671),
     height: 200,
   });
-  const boxLayer = view.addLayer<BoxMeshLayer>({
-    type: "mesh",
+  const boxLayer = view.addMesh<BoxMeshLayer>({
     box: {
       width: 200,
       height: 200,
@@ -102,8 +99,7 @@ export const run = async (view: ThreeView<DefaultLayerDescriptions>) => {
     boxPosition.y,
     boxPosition.z,
   ).add(new Vector3(-500, 0, -600));
-  const sphereLayer = view.addLayer<SphereMeshLayer>({
-    type: "mesh",
+  const sphereLayer = view.addMesh<SphereMeshLayer>({
     sphere: {
       radius: 150,
       color: new Color().setHex(0x0000ff),

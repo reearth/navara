@@ -40,9 +40,13 @@ import { Color } from "./Color";
 import { createDefaultConcurrencyManager } from "./concurrency";
 import { WATER_NORMAL_URL } from "./constants/assets";
 import {
-  LayerDeclaration,
+  MeshLayerDeclaration,
+  LightLayerDeclaration,
+  EffectLayerDeclaration,
   ViewContext,
   type MeshLayerConfig,
+  type LightLayerConfig,
+  type EffectLayerConfig,
   type MeshLayerConstructor,
   type LightLayerConstructor,
   type EffectLayerConstructor,
@@ -86,14 +90,16 @@ import { warmUp } from "./tasks/warmUp";
 import type { TextureOptions } from "./textures";
 import {
   type AbortControllers,
-  type LayerDescription as _ActualLayerDescription,
+  type LayerDescription,
+  type BuiltInEffectDescription,
+  type Declarations,
+  type EmptyDeclarations,
+  type OmitType,
   type MeshCache,
   type PickedFeature,
   type WorkerPoolPromises,
   type RenderFlag,
   type TileMapByHandle,
-  type LightLayerDeclarationDescription,
-  type EffectLayerDeclarationDescription,
 } from "./type";
 import type { CommonUniforms } from "./uniforms";
 import { isWorker, convertScreenPos } from "./utils";
@@ -238,9 +244,6 @@ export type ViewEvents = {
   click: (event: MapMouseEvent) => void;
 };
 
-// Need an assignment to tell TypeScript compiler that this is being renamed...
-type ActualLayerDescription = _ActualLayerDescription;
-
 /**
  * The main 3D globe view class that manages rendering, layers, camera, and user interaction.
  * Create an instance and call `init()` to start the engine.
@@ -252,11 +255,7 @@ type ActualLayerDescription = _ActualLayerDescription;
  * ```
  */
 export default class ThreeView<
-  CustomLayerDescriptions extends object | undefined = undefined,
-  LayerDescription extends ActualLayerDescription =
-    CustomLayerDescriptions extends undefined
-      ? ActualLayerDescription
-      : ActualLayerDescription | CustomLayerDescriptions,
+  D extends Declarations = EmptyDeclarations,
 > extends EventHandler<ViewEvents> {
   private _camera: ThreeViewCamera;
   private _renderer: WebGLRenderer;
@@ -730,24 +729,20 @@ export default class ThreeView<
     // Initialize atmosphere
     await this._atmosphere._init();
 
-    this.skyEnvMapLayer = this.addLayer<SkyEnvMapEffectLayer>({
-      type: "effect",
+    this.skyEnvMapLayer = this.addEffect<SkyEnvMapEffectLayer>({
       skyEnvMap: {},
-    } as LayerDescription);
-    this.mrtPassLayer = this.addLayer<MRTPassEffectLayer>({
-      type: "effect",
+    });
+    this.mrtPassLayer = this.addEffect<MRTPassEffectLayer>({
       mrt: {
         // debugNormal: true,
       },
-    } as LayerDescription);
-    this.transparentPassLayer = this.addLayer<TransparentPassEffectLayer>({
-      type: "effect",
+    });
+    this.transparentPassLayer = this.addEffect<TransparentPassEffectLayer>({
       transparent: {},
-    } as LayerDescription);
-    this.finalPassLayer = this.addLayer<FinalCopyEffectLayer>({
-      type: "effect",
+    });
+    this.finalPassLayer = this.addEffect<FinalCopyEffectLayer>({
       final: {},
-    } as LayerDescription);
+    });
   }
 
   private get renderPass() {
@@ -1168,34 +1163,12 @@ export default class ThreeView<
   }
 
   /**
-   * Adds a new layer to the scene.
-   * @param l - Layer configuration object specifying type and options
-   * @returns A Layer or LayerHandle for controlling the added layer
+   * Adds a new resource layer (GIS data layer) to the scene.
+   * For meshes, lights, and effects, use `addMesh()`, `addLight()`, and `addEffect()` instead.
+   * @param l - Resource layer configuration object specifying type and options
+   * @returns A Layer for controlling the added layer
    */
-  addLayer<L = unknown>(
-    l: LayerDescription,
-  ): L extends LayerDeclaration ? LayerHandle<L> : Layer {
-    // Check if this is a mesh layer
-    if (l.type === "mesh") {
-      return this.addMeshLayer(l) as L extends LayerDeclaration
-        ? LayerHandle<L>
-        : never; // TODO: Remove this cast later.
-    }
-
-    // Check if this is a light layer
-    if (l.type === "light") {
-      return this.addLightLayer(
-        l as LightLayerDeclarationDescription,
-      ) as L extends LayerDeclaration ? LayerHandle<L> : never; // TODO: Remove this cast later.
-    }
-
-    // Check if this is an effect layer
-    if (l.type === "effect") {
-      return this.addEffectLayer(
-        l as EffectLayerDeclarationDescription,
-      ) as L extends LayerDeclaration ? LayerHandle<L> : never; // TODO: Remove this cast later.
-    }
-
+  addLayer(l: LayerDescription): Layer {
     // Convert all Color objects to numbers before passing to Rust
     const processedLayer = this._convertColorsToNumbers(l) as LayerDescription;
 
@@ -1211,7 +1184,45 @@ export default class ThreeView<
     );
     this.layersManager.add(layer);
 
-    return layer as L extends LayerDeclaration ? never : Layer; // TODO: Remove this cast later.
+    return layer;
+  }
+
+  /**
+   * Adds a 3D mesh to the scene.
+   * The mesh kind is determined by the nested key (e.g., `{ box: { width: 200 } }`).
+   * @param desc - Mesh configuration object
+   * @returns A LayerHandle for controlling the added mesh
+   */
+  addMesh<L extends MeshLayerDeclaration = MeshLayerDeclaration>(
+    desc: OmitType<MeshLayerConfig | NonNullable<D["mesh"]>>,
+  ): LayerHandle<L> {
+    return this.addMeshLayer(desc as MeshLayerConfig) as LayerHandle<L>;
+  }
+
+  /**
+   * Adds a light to the scene.
+   * The light kind is determined by the nested key (e.g., `{ ambient: { intensity: 0.5 } }`).
+   * @param desc - Light configuration object
+   * @returns A LayerHandle for controlling the added light
+   */
+  addLight<L extends LightLayerDeclaration = LightLayerDeclaration>(
+    desc: OmitType<LightLayerConfig | NonNullable<D["light"]>>,
+  ): LayerHandle<L> {
+    return this.addLightLayer(desc as LightLayerConfig) as LayerHandle<L>;
+  }
+
+  /**
+   * Adds a post-processing effect to the scene.
+   * The effect kind is determined by the nested key (e.g., `{ bloom: { strength: 1.0 } }`).
+   * @param desc - Effect configuration object
+   * @returns A LayerHandle for controlling the added effect
+   */
+  addEffect<L extends EffectLayerDeclaration = EffectLayerDeclaration>(
+    desc: OmitType<
+      BuiltInEffectDescription | EffectLayerConfig | NonNullable<D["effect"]>
+    >,
+  ): LayerHandle<L> {
+    return this.addEffectLayer(desc as EffectLayerConfig) as LayerHandle<L>;
   }
 
   /**
@@ -1296,7 +1307,7 @@ export default class ThreeView<
     return l;
   }
 
-  private addLightLayer(config: LightLayerDeclarationDescription): LayerHandle {
+  private addLightLayer(config: LightLayerConfig): LayerHandle {
     // Find which light type from config
     const lightType = this.registries.light.findLightType(config);
     if (!lightType) {
@@ -1330,9 +1341,7 @@ export default class ThreeView<
     return l;
   }
 
-  private addEffectLayer(
-    config: EffectLayerDeclarationDescription,
-  ): LayerHandle {
+  private addEffectLayer(config: EffectLayerConfig): LayerHandle {
     // Find which effect type from config
     const effectType = this.registries.effect.findEffectType(config);
     if (!effectType) {
@@ -1367,7 +1376,7 @@ export default class ThreeView<
   }
 
   /**
-   * Registers a custom mesh layer type for use with addLayer().
+   * Registers a custom mesh layer type for use with addMesh().
    * @param name - Unique name to identify this mesh type in layer configurations
    * @param meshClass - The mesh layer class constructor
    */
@@ -1376,7 +1385,7 @@ export default class ThreeView<
   }
 
   /**
-   * Registers a custom light layer type for use with addLayer().
+   * Registers a custom light layer type for use with addLight().
    * @param name - Unique name to identify this light type in layer configurations
    * @param lightClass - The light layer class constructor
    */
@@ -1385,7 +1394,7 @@ export default class ThreeView<
   }
 
   /**
-   * Registers a custom post-processing effect layer type for use with addLayer().
+   * Registers a custom post-processing effect layer type for use with addEffect().
    * @param name - Unique name to identify this effect type in layer configurations
    * @param effectClass - The effect layer class constructor
    */

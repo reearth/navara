@@ -99,8 +99,7 @@ view.toneMappingExposure = 10; // シーンに応じて調整
 体積雲エフェクトを重ねると臨場感が向上します。まずはデフォルト設定で追加し、必要に応じて影や密度を調整します。
 
 ```typescript
-const clouds = view.addLayer<CloudsEffectLayer>({
-  type: "effect",
+const clouds = view.addEffect<CloudsEffectLayer>({
   clouds: {},
 });
 
@@ -121,8 +120,7 @@ clouds.update({ clouds: { shadows: true } });
 view.animation = true;
 
 // 雨レイヤーを追加
-const rain = view.addLayer<RainMeshLayer>({
-  type: "mesh",
+const rain = view.addMesh<RainMeshLayer>({
   rain: {
     particleCount: 5000, // 雨粒の数
     speed: 0.0015,             // 落下速度
@@ -141,8 +139,7 @@ const rain = view.addLayer<RainMeshLayer>({
 雨天時にカメラレンズに付着する水滴を表現するポストエフェクトです。
 
 ```typescript
-const rainDropEffect = view.addLayer<RainDropEffectLayer>({
-  type: "effect",
+const rainDropEffect = view.addEffect<RainDropEffectLayer>({
   rainDrop: {
     opacity: 1.0,           // エフェクト全体の不透明度
     dropGridSize: 12,       // 水滴グリッドのサイズ
@@ -166,8 +163,7 @@ const rainDropEffect = view.addLayer<RainDropEffectLayer>({
 
 ```typescript
 // 雪レイヤーを追加
-const snow = view.addLayer<SnowMeshLayer>({
-  type: "mesh",
+const snow = view.addMesh<SnowMeshLayer>({
   snow: {
     particleCount: 5000,  // 雪粒の数
     speed: 0.00005,           // 落下速度
@@ -246,8 +242,7 @@ view.addLayer({
 });
 
 // SSRエフェクトを追加
-view.addLayer<SSREffectLayer>({
-  type: "effect",
+view.addEffect<SSREffectLayer>({
   ssr: {},
 });
 
@@ -328,8 +323,7 @@ layers.sun.update({ sun: { castShadow: true } }); // 影を落とす
 layers.toneMapping.update({ toneMapping: { mode: ToneMappingMode.AGX } });
 view.toneMappingExposure = 10; // シーンに応じて調整
 
-const clouds = view.addLayer<CloudsEffectLayer>({
-  type: "effect",
+const clouds = view.addEffect<CloudsEffectLayer>({
   clouds: {
     qualityPreset: "high"
   },
@@ -338,8 +332,7 @@ const clouds = view.addLayer<CloudsEffectLayer>({
 // 雲の影を有効化
 clouds.update({ clouds: { shadows: true } });
 
-view.addLayer<RainMeshLayer>({
-  type: "mesh",
+view.addMesh<RainMeshLayer>({
   rain: {
     particleCount: 5000, // 雨粒の数
     speed: 0.0015,             // 落下速度
@@ -352,8 +345,7 @@ view.addLayer<RainMeshLayer>({
   },
 });
 
-view.addLayer<RainDropEffectLayer>({
-  type: "effect",
+view.addEffect<RainDropEffectLayer>({
   rainDrop: {
     opacity: 1.0,           // エフェクト全体の不透明度
     dropGridSize: 12,       // 水滴グリッドのサイズ
@@ -405,8 +397,7 @@ view.addLayer({
 });
 
 // SSRエフェクトを追加
-view.addLayer<SSREffectLayer>({
-  type: "effect",
+view.addEffect<SSREffectLayer>({
   ssr: {
   },
 });

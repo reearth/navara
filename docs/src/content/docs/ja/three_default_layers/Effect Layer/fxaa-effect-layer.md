@@ -33,8 +33,7 @@ const view = new ThreeView();
 await view.init();
 
 // FXAAエフェクトレイヤーを追加
-view.addLayer<FXAAEffectLayer>({
-  type: "effect",
+view.addEffect<FXAAEffectLayer>({
   fxaa: {},
 });
 ```

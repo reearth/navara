@@ -56,8 +56,7 @@ await view.init();
 
 ```typescript
 // 基本的な環境光を追加
-view.addLayer({
-  type: "light",
+view.addLight({
   ambient: {},
 });
 
@@ -98,8 +97,7 @@ await view.init();
 **ライトの追加**
 
 ```typescript
-view.addLayer({
-  type: "light",
+view.addLight({
   ambient: {},
 });
 ```
@@ -137,8 +135,7 @@ const view = new ThreeView({});
 view.addPlugin(plugin);
 await view.init();
 
-view.addLayer({
-  type: "light",
+view.addLight({
   ambient: {},
 });
 
@@ -196,8 +193,7 @@ const view = new ThreeView({});
 view.addPlugin(plugin);
 await view.init();
 
-view.addLayer({
-  type: "light",
+view.addLight({
   ambient: {},
 });
 
@@ -311,8 +307,7 @@ const view = new ThreeView({});
 view.addPlugin(plugin);
 await view.init();
 
-view.addLayer({
-  type: "light",
+view.addLight({
   ambient: {},
 });
 
@@ -420,8 +415,7 @@ const view = new ThreeView({});
 view.addPlugin(plugin);
 await view.init();
 
-view.addLayer({
-  type: "light",
+view.addLight({
   ambient: {},
 });
 

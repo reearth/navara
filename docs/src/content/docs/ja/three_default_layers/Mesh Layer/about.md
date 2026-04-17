@@ -33,7 +33,7 @@ navara_threeでは、以下のMeshLayerタイプが利用可能です:
 
 ## 基本的な使い方
 
-MeshLayerは、レイヤークラスを登録した後、`view.addLayer()`メソッドに`type: "mesh"`を指定して追加します:
+MeshLayerは、レイヤークラスを登録した後、`view.addMesh()`メソッドで追加します:
 
 ```typescript
 import ThreeView, { Color } from "@navara/three";
@@ -47,8 +47,7 @@ view.registerMesh("box", BoxMeshLayer);
 await view.init();
 
 // BoxMeshLayerを追加
-const boxLayer = view.addLayer<BoxMeshLayer>({
-  type: "mesh",
+const boxLayer = view.addMesh<BoxMeshLayer>({
   box: {
     width: 100,
     height: 100,
@@ -101,8 +100,7 @@ const position = geodeticToVector3({
 });
 
 // 変換した座標でメッシュレイヤーを追加
-const sphereLayer = view.addLayer<SphereMeshLayer>({
-  type: "mesh",
+const sphereLayer = view.addMesh<SphereMeshLayer>({
   sphere: {
     radius: 100,
     color: new Color().setHex(0x00aaff),
@@ -146,8 +144,7 @@ const quaternion = new Quaternion().setFromUnitVectors(up, normal);
 const euler = new Euler().setFromQuaternion(quaternion);
 
 // モデルを地表面に沿って配置
-const modelLayer = view.addLayer<GLTFModelLayer>({
-  type: "mesh",
+const modelLayer = view.addMesh<GLTFModelLayer>({
   gltfModel: {
     url: "/models/building.gltf",
   },

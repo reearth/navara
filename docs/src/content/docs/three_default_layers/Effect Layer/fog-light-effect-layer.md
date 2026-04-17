@@ -197,8 +197,7 @@ const view = new ThreeView();
 await view.init();
 
 // Add fog light effect layer
-view.addLayer<FogLightEffectLayer>({
-  type: "effect",
+view.addEffect<FogLightEffectLayer>({
   fogLight: {
     lights: [
       {
@@ -229,8 +228,7 @@ const streetLights = [
   { position: { x: 0, y: 50, z: 100 }, color: new Color().setHex(0xffaa00), intensity: 8, radius: 200 },
 ];
 
-const fogLayerDesc: LayerDescription = {
-  type: "effect",
+const fogLayerDesc = {
   fogLight: {
     lights: streetLights,
     fogDensity: 0.7,
@@ -241,7 +239,7 @@ const fogLayerDesc: LayerDescription = {
   visible: true,
 };
 
-view.addLayer<FogLightEffectLayer>(fogLayerDesc);
+view.addEffect<FogLightEffectLayer>(fogLayerDesc);
 ```
 
 ### Dynamically adding lights to a scene
@@ -256,8 +254,7 @@ await view.init();
 const fogLights: FogLightDefinition[] = [];
 
 // Add fog light layer
-const fogLayer = view.addLayer<FogLightEffectLayer>({
-  type: "effect",
+const fogLayer = view.addEffect<FogLightEffectLayer>({
   fogLight: {
     lights: fogLights,
     fogDensity: 0.7,
@@ -295,8 +292,7 @@ await view.init();
 
 const isNight = view.atmosphere.isAtNight(view.camera.positionECEF); // Determined based on time
 
-const fogLayer = view.addLayer<FogLightEffectLayer>({
-  type: "effect",
+const fogLayer = view.addEffect<FogLightEffectLayer>({
   fogLight: {
     lights: [
       { position: { x: 0, y: 100, z: 0 }, color: new Color().setHex(0xffffff), intensity: 10, radius: 500 },

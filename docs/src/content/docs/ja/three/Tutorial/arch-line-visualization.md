@@ -41,14 +41,12 @@ await view.init();
 view.toneMappingExposure = 10;
 
 // アンビエントライトを追加
-view.addLayer({
-  type: "light",
+view.addLight({
   ambient: {},
 });
 
 // 星空を追加
-view.addLayer({
-  type: "mesh",
+view.addMesh({
   stars: {
     intensity: 100,
     pointSize: 1.5,
@@ -56,16 +54,14 @@ view.addLayer({
 });
 
 // トーンマッピングエフェクトを追加
-view.addLayer({
-  type: "effect",
+view.addEffect({
   toneMapping: {
     mode: ToneMappingMode.REINHARD2,
   },
 });
 
 // アンチエイリアシング（SMAA）を追加
-view.addLayer({
-  type: "effect",
+view.addEffect({
   smaa: {
     quality: "ultra",
   },
@@ -129,8 +125,7 @@ NASA の Earth at Night 画像を XYZ タイル形式に変換する必要があ
 import type { GlowGlobeMeshLayer } from "@navara/three";
 
 // 地球のグローエフェクトを追加
-view.addLayer<GlowGlobeMeshLayer>({
-  type: "mesh",
+view.addMesh<GlowGlobeMeshLayer>({
   glowGlobe: {
     radiusScale: 1.2,  // グローの半径（地球半径に対する倍率）
     coefficient: 0.43, // グローの強度係数
@@ -262,8 +257,7 @@ const arcLines = data.features.map((feature) => {
 ```typescript
 import type { ArclineMeshLayer } from "@navara/three";
 
-const arcLineLayer = view.addLayer<ArclineMeshLayer>({
-  type: "mesh",
+const arcLineLayer = view.addMesh<ArclineMeshLayer>({
   arcLines,
 });
 ```
@@ -408,14 +402,12 @@ async function run() {
   view.toneMappingExposure = 10;
 
   // アンビエントライト
-  view.addLayer({
-    type: "light",
+  view.addLight({
     ambient: {},
   });
 
   // 星空
-  view.addLayer({
-    type: "mesh",
+  view.addMesh({
     stars: {
       intensity: 100,
       pointSize: 1.5,
@@ -423,16 +415,14 @@ async function run() {
   });
 
   // トーンマッピング
-  view.addLayer({
-    type: "effect",
+  view.addEffect({
     toneMapping: {
       mode: ToneMappingMode.REINHARD2,
     },
   });
 
   // アンチエイリアシング
-  view.addLayer({
-    type: "effect",
+  view.addEffect({
     smaa: {
       quality: "ultra",
     },
@@ -469,8 +459,7 @@ async function run() {
   });
 
   // グローエフェクト
-  view.addLayer<GlowGlobeMeshLayer>({
-    type: "mesh",
+  view.addMesh<GlowGlobeMeshLayer>({
     glowGlobe: {
       radiusScale: 1.2,
       coefficient: 0.43,
@@ -484,8 +473,7 @@ async function run() {
   const { arcLines } = await constructData();
 
   // アーチラインレイヤーを追加
-  const arcLineLayer = view.addLayer<ArclineMeshLayer>({
-    type: "mesh",
+  const arcLineLayer = view.addMesh<ArclineMeshLayer>({
     arcLines,
   });
 

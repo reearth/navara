@@ -10,7 +10,7 @@ import {
 } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
-  type DefaultLayerDescriptions,
+  type DefaultDeclarations,
 } from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 
@@ -26,17 +26,16 @@ const gPaneParams = {
   sunColor: DEFAULT_SKY_BOX_OPTIONS.sunColor.toHex(),
 };
 
-export type LayerDescriptions = DefaultLayerDescriptions;
+export type CustomDeclarations = DefaultDeclarations;
 
-export const run = async (view: ThreeView<LayerDescriptions>) => {
+export const run = async (view: ThreeView<CustomDeclarations>) => {
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
   await view.init();
 
   view.toneMappingExposure = 3;
 
-  view.addLayer({
-    type: "effect",
+  view.addEffect({
     toneMapping: {
       mode: ToneMappingMode.NEUTRAL,
     },
@@ -59,27 +58,23 @@ export const run = async (view: ThreeView<LayerDescriptions>) => {
     },
   });
 
-  view.addLayer<AmbientLightLayer>({
-    type: "light",
+  view.addLight<AmbientLightLayer>({
     ambient: {
       intensity: 0.1,
     },
   });
 
-  view.addLayer<SunLightLayer>({
-    type: "light",
+  view.addLight<SunLightLayer>({
     sun: {
       intensity: 1.0,
     },
   });
 
-  view.addLayer<StarsLayer>({
-    type: "mesh",
+  view.addMesh<StarsLayer>({
     stars: {},
   });
 
-  gSkyBoxMeshLayer = view.addLayer<SkyBoxMeshLayer>({
-    type: "mesh",
+  gSkyBoxMeshLayer = view.addMesh<SkyBoxMeshLayer>({
     skyBox: {
       dayColor: new Color().setHex(gPaneParams.dayColor),
       nightColor: new Color().setHex(gPaneParams.nightColor),
@@ -88,8 +83,7 @@ export const run = async (view: ThreeView<LayerDescriptions>) => {
   });
 
   // adding color grading for better visuals
-  view.addLayer<ColorGradingLUTEffectLayer>({
-    type: "effect",
+  view.addEffect<ColorGradingLUTEffectLayer>({
     colorGradingLUT: {
       url: LUT_DATASETS.Blackmagic4_6KFilmtoExtendedVideov4Cube.url,
       blendMode: "normal" as BlendMode,

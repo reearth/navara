@@ -83,8 +83,7 @@ const view = new ThreeView();
 await view.init();
 
 // 環境光レイヤーを追加
-const ambientLight = view.addLayer<AmbientLightLayer>({
-  type: "light",
+const ambientLight = view.addLight<AmbientLightLayer>({
   ambient: {
     color: new Color().setHex(0xffffff),
     intensity: 1.0
@@ -108,8 +107,7 @@ ambientLight.update({
 
 ```typescript
 // デフォルト設定で環境光を追加
-view.addLayer<AmbientLightLayer>({
-  type: "light",
+view.addLight<AmbientLightLayer>({
   ambient: {}
 });
 ```
@@ -118,8 +116,7 @@ view.addLayer<AmbientLightLayer>({
 
 ```typescript
 // 非表示状態で環境光を追加し、後から表示切り替え
-const ambientLightLayer = view.addLayer<AmbientLightLayer>({
-  type: "light",
+const ambientLightLayer = view.addLight<AmbientLightLayer>({
   visible: false,
   ambient: {
     intensity: 1,

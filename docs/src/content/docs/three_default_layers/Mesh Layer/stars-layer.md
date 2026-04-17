@@ -108,8 +108,7 @@ const view = new ThreeView();
 await view.init();
 
 // Add a StarsLayer
-const starsLayer = view.addLayer<StarsLayer>({
-  type: "mesh",
+const starsLayer = view.addMesh<StarsLayer>({
   stars: {
     visible: true,
     pointSize: 1.2,

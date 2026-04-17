@@ -1,7 +1,7 @@
 import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
 import {
   DefaultPlugin,
-  type DefaultLayerDescriptions,
+  type DefaultDeclarations,
 } from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 
@@ -14,7 +14,7 @@ import {
 import { addDateControl } from "../../../helpers/control";
 
 const run = async () => {
-  const view = new ThreeView<DefaultLayerDescriptions>({
+  const view = new ThreeView<DefaultDeclarations>({
     debug: true,
     shadow: true,
   });
@@ -29,8 +29,7 @@ const run = async () => {
     sun: { intensity: 2, castShadow: true, shadowFar: 5000 },
   });
 
-  view.addLayer({
-    type: "light",
+  view.addLight({
     ambient: {
       intensity: 0.5,
     },

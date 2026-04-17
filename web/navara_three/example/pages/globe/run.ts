@@ -1,7 +1,7 @@
 import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
 import {
   DefaultPlugin,
-  type DefaultLayerDescriptions,
+  type DefaultDeclarations,
 } from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 
@@ -14,10 +14,10 @@ import {
 import { addCameraControl, addDateControl } from "../../helpers/control";
 import { addFieldsToFolder, type FolderFields } from "../../helpers/panel";
 
-export type LayerDescriptions = DefaultLayerDescriptions;
+export type CustomDeclarations = DefaultDeclarations;
 
 export async function run() {
-  const view = new ThreeView<LayerDescriptions>({});
+  const view = new ThreeView<CustomDeclarations>({});
 
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
@@ -35,8 +35,7 @@ export async function run() {
     },
   });
 
-  view.addLayer({
-    type: "effect",
+  view.addEffect({
     clouds: {},
   });
 
@@ -120,7 +119,7 @@ export async function run() {
   ]);
 }
 
-const addGlobeControl = (view: ThreeView<LayerDescriptions>, pane: Pane) => {
+const addGlobeControl = (view: ThreeView<CustomDeclarations>, pane: Pane) => {
   if (!view.globe) {
     console.warn("Globe API not available");
     return;

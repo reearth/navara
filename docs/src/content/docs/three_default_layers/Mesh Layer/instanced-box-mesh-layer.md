@@ -423,8 +423,7 @@ const view = new ThreeView();
 view.registerMesh("boxes", InstancedBoxMeshLayer);
 await view.init();
 
-const handle = view.addLayer<InstancedBoxMeshLayer>({
-  type: "mesh",
+const handle = view.addMesh<InstancedBoxMeshLayer>({
   boxes: {
     color: new Color().setHex(0xffffff),
     castShadow: true,
