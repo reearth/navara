@@ -139,7 +139,7 @@ export class PickHelper {
       // it would be surprising.
       if (!originalParent || !raw.visible) continue;
 
-      obj._setPickable(true, pickingCoord);
+      obj.onBeforePicking(pickingCoord);
       activated.push(obj);
 
       // Scene.add auto-removes from the previous parent. Both parents
@@ -151,7 +151,7 @@ export class PickHelper {
 
     return () => {
       for (const [raw, parent] of restoreParents) parent.add(raw);
-      for (const w of activated) w._setPickable(false);
+      for (const w of activated) w.onAfterPicking();
     };
   }
 

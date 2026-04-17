@@ -10,7 +10,9 @@ import {
   type WebGLProgramParametersWithUniforms,
 } from "three";
 
-import type { PickableMesh } from "./pickableMesh";
+import type { ViewContext } from "../core/ViewContext";
+
+import { PickableMesh } from "./pickableMesh";
 
 /**
  * Picking uniform declarations injected into fragment shaders.
@@ -146,17 +148,20 @@ function injectPickingIntoShaderMaterial(
 }
 
 /**
- * Wraps a Three.js Object3D (Mesh, Group, etc.) to make it pickable via the
- * GPU picking system.
+ * Turnkey {@link PickableMesh} implementation for stock Three.js materials.
  *
- * Traverses the object's scene graph and injects picking shader code into every
- * child Mesh's material. For ShaderMaterial, modifies the source directly.
- * For standard materials, uses `onBeforeCompile`.
+ * Traverses the wrapped Object3D and injects picking shader code into every
+ * child `Mesh`'s material: `onBeforeCompile` for standard materials, direct
+ * source mutation for `ShaderMaterial`. During the pick pass the fragment
+ * shader outputs a batchId-encoded color, bypassing lighting/tonemapping.
  *
- * During the picking pass, the fragment shader outputs a batchId-encoded color
- * directly, bypassing all lighting/tonemapping calculations.
+ * Apply this explicitly, don't rely on the framework to
+ * wrap your mesh for you. If you have a custom shader and don't want shader
+ * injection, implement {@link PickableMesh} yourself instead of using this
+ * class.
  */
 export class PickableMeshWrapper extends Object3D implements PickableMesh {
+  public readonly batchId: number;
   private refs: {
     nvr_uPickable: { value: number };
     nvr_uBatchId: { value: number };
@@ -164,12 +169,13 @@ export class PickableMeshWrapper extends Object3D implements PickableMesh {
 
   constructor(
     public object: Object3D,
-    public batchId: number,
+    ctx: ViewContext,
   ) {
     super();
+    this.batchId = ctx.genGlobalBatchId() ?? 0;
     this.refs = {
       nvr_uPickable: { value: 0 },
-      nvr_uBatchId: { value: batchId },
+      nvr_uBatchId: { value: this.batchId },
     };
     this.setupShaders();
   }
@@ -207,8 +213,12 @@ export class PickableMeshWrapper extends Object3D implements PickableMesh {
     });
   }
 
-  _setPickable(pickable: boolean, _pickingCoord?: Vector2): void {
-    this.refs.nvr_uPickable.value = pickable ? 1 : 0;
+  onBeforePicking(_pickingCoord?: Vector2): void {
+    this.refs.nvr_uPickable.value = 1;
+  }
+
+  onAfterPicking(): void {
+    this.refs.nvr_uPickable.value = 0;
   }
 
   _getRenderable(): Object3D {
@@ -217,15 +227,20 @@ export class PickableMeshWrapper extends Object3D implements PickableMesh {
 }
 
 /**
- * Wraps a Three.js InstancedMesh to make it pickable with per-instance IDs.
+ * Turnkey {@link PickableMesh} implementation for `InstancedMesh`.
  *
  * Adds a per-instance `batchId` attribute and injects picking shader code.
- * During the picking pass, each instance renders with its unique batchId color.
+ * During the pick pass each instance renders with its unique batchId color.
+ *
+ * The wrapper owns the batchId array; callers drive instance lifecycle via
+ * {@link addInstance}, {@link removeInstanceAt}, {@link clearInstances},
+ * {@link replaceAll}, and {@link syncMesh} (after a buffer grow).
  */
 export class PickableInstancedMeshWrapper
   extends Object3D
   implements PickableMesh
 {
+  public batchIds: number[];
   private refs: { nvr_uPickable: { value: number } };
   private batchIdAttr: InstancedBufferAttribute | null = null;
   /** Set of materials that already have picking shaders installed. */
@@ -233,10 +248,56 @@ export class PickableInstancedMeshWrapper
 
   constructor(
     public mesh: InstancedMesh,
-    private batchIds: number[],
+    initialCount: number,
+    private ctx: ViewContext,
   ) {
     super();
+    this.batchIds = Array.from(
+      { length: initialCount },
+      () => ctx.genGlobalBatchId() ?? 0,
+    );
     this.refs = { nvr_uPickable: { value: 0 } };
+    this.setupBatchIdAttribute();
+    this.setupShader();
+  }
+
+  /** Allocate a batchId for a new instance and extend the attribute. */
+  addInstance(): number {
+    const id = this.ctx.genGlobalBatchId() ?? 0;
+    this.batchIds.push(id);
+    this.setupBatchIdAttribute();
+    return id;
+  }
+
+  /** Remove an instance by index (swap-with-last, O(1)). */
+  removeInstanceAt(index: number): void {
+    const last = this.batchIds.length - 1;
+    if (index < 0 || index > last) return;
+    if (index !== last) this.batchIds[index] = this.batchIds[last];
+    this.batchIds.pop();
+    this.setupBatchIdAttribute();
+  }
+
+  /** Drop all instance batchIds. */
+  clearInstances(): void {
+    this.batchIds = [];
+    this.setupBatchIdAttribute();
+  }
+
+  /** Regenerate `count` fresh batchIds and refresh the attribute. */
+  replaceAll(count: number): number[] {
+    this.batchIds = Array.from(
+      { length: count },
+      () => this.ctx.genGlobalBatchId() ?? 0,
+    );
+    this.setupBatchIdAttribute();
+    return this.batchIds;
+  }
+
+  /** Re-attach bookkeeping after the underlying `InstancedMesh` was replaced. */
+  syncMesh(mesh: InstancedMesh): void {
+    this.mesh = mesh;
+    this.batchIdAttr = null;
     this.setupBatchIdAttribute();
     this.setupShader();
   }
@@ -294,17 +355,12 @@ export class PickableInstancedMeshWrapper
     }
   }
 
-  /** Update the wrapper after instances are added, removed, or the mesh is replaced. */
-  sync(mesh: InstancedMesh, batchIds: number[]): void {
-    this.mesh = mesh;
-    this.batchIds = batchIds;
-    this.setupBatchIdAttribute();
-    // Only installs shader hooks on new/unseen materials; skips already-injected ones.
-    this.setupShader();
+  onBeforePicking(_pickingCoord?: Vector2): void {
+    this.refs.nvr_uPickable.value = 1;
   }
 
-  _setPickable(pickable: boolean, _pickingCoord?: Vector2): void {
-    this.refs.nvr_uPickable.value = pickable ? 1 : 0;
+  onAfterPicking(): void {
+    this.refs.nvr_uPickable.value = 0;
   }
 
   _getRenderable(): Object3D {

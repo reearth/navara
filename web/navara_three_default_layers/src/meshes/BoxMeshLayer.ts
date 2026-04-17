@@ -3,6 +3,7 @@ import {
   Color,
   DrapedMesh,
   MeshLayerDeclarationWithSelectiveEffect,
+  PickableMeshWrapper,
   type MeshLayerConfigWithSelectiveEffect,
   type MeshLayerUpdateWithSelectiveEffect,
   type ViewContext,
@@ -44,7 +45,7 @@ type LayerDescription = {
 };
 
 export type BoxMeshLayerConfig = MeshLayerConfigWithSelectiveEffect &
-  LayerDescription;
+  LayerDescription & { pickable?: boolean };
 
 export type BoxMeshLayerUpdate = MeshLayerUpdateWithSelectiveEffect &
   LayerDescription;
@@ -57,6 +58,7 @@ export class BoxMeshLayer extends MeshLayerDeclarationWithSelectiveEffect<
   DrapedMesh<BoxGeometry, BoxMeshMaterial, BoxMeshEventMap>
 > {
   private config: BoxMeshLayerConfig;
+  private pickWrapper?: PickableMeshWrapper;
 
   constructor(view: ThreeView, ctx: ViewContext, config: BoxMeshLayerConfig) {
     // Propagate initial effectIds to base MeshLayer
@@ -65,6 +67,11 @@ export class BoxMeshLayer extends MeshLayerDeclarationWithSelectiveEffect<
     }
     super(view, ctx, config);
     this.config = config;
+  }
+
+  /** The batch ID assigned to this mesh when picking is enabled. */
+  get batchId(): number | undefined {
+    return this.pickWrapper?.batchId;
   }
 
   createMesh() {
@@ -104,6 +111,11 @@ export class BoxMeshLayer extends MeshLayerDeclarationWithSelectiveEffect<
 
     // Emit CSM event for shadow map integration
     this.ctx.applyShadowMaterial(material);
+
+    if (this.config.pickable) {
+      this.pickWrapper = new PickableMeshWrapper(mesh, this.ctx);
+      this.ctx.registerPickableMesh(this.id, this.pickWrapper);
+    }
 
     return mesh;
   }
@@ -241,5 +253,13 @@ export class BoxMeshLayer extends MeshLayerDeclarationWithSelectiveEffect<
 
       this._instance = undefined;
     }
+  }
+
+  override onDestroy(): void {
+    if (this.pickWrapper) {
+      this.ctx.unregisterPickableMesh(this.id);
+      this.pickWrapper = undefined;
+    }
+    super.onDestroy();
   }
 }

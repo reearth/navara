@@ -11,8 +11,6 @@ import {
 } from "three";
 import invariant from "tiny-invariant";
 
-import { PickableInstancedMeshWrapper } from "../mesh/pickableMeshWrapper";
-
 import {
   MeshLayerDeclarationWithSelectiveEffect,
   type MeshLayerConfigWithSelectiveEffect,
@@ -63,6 +61,10 @@ const _swapColor = new ThreeColor();
  * The parent's transform fields (position, scale, rotation, matrix, matrixWorld)
  * define the parent coordinate space. Each instance's transform is local to the parent.
  *
+ * Subclasses that maintain external per-instance state (e.g. picking batchIds)
+ * can override the `onInstance*` lifecycle hooks to stay in sync with
+ * `add` / `removeAt` / `clear` / `replaceAll` / capacity grows.
+ *
  * @typeParam Config - Layer configuration type
  * @typeParam UpdateConfig - Updatable properties type
  * @typeParam ChildConfig - Configuration type for individual instances
@@ -83,12 +85,6 @@ export abstract class InstancedMeshLayerDeclaration<
 > {
   protected configs: ChildConfig[] = [];
   private capacity = 0;
-  private _instancedPickWrapper?: PickableInstancedMeshWrapper;
-  private _batchIds: number[] = [];
-  /** The batch IDs assigned to each instance for picking. */
-  get batchIds(): readonly number[] {
-    return this._batchIds;
-  }
 
   /** Create the shared geometry for all instances. */
   protected abstract createGeometry(): TGeometry;
@@ -166,28 +162,7 @@ export abstract class InstancedMeshLayerDeclaration<
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
     this.configs = [...configs];
 
-    // Generate batch IDs for initial instances if pickable
-    if (this._pickable) {
-      this._batchIds = configs.map(() => this.ctx.genGlobalBatchId() ?? 0);
-    }
-
     return mesh;
-  }
-
-  protected override initPicking(): void {
-    if (!this._pickable) return;
-
-    if (this._pickRegistered && this._instancedPickWrapper) return;
-
-    const mesh = this.raw;
-    if (!mesh) return;
-
-    this._instancedPickWrapper = new PickableInstancedMeshWrapper(
-      mesh,
-      this._batchIds,
-    );
-    this.ctx.registerPickableMesh(this.id, this._instancedPickWrapper);
-    this._pickRegistered = true;
   }
 
   /** Add a new instance. Returns the index of the added instance. */
@@ -209,10 +184,7 @@ export abstract class InstancedMeshLayerDeclaration<
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
     this.configs.push(config);
 
-    if (this._pickable) {
-      this._batchIds.push(this.ctx.genGlobalBatchId() ?? 0);
-      this.syncPickableWrapper();
-    }
+    this.onInstanceAdded(index);
 
     this.requestUpdate();
     return index;
@@ -242,18 +214,13 @@ export abstract class InstancedMeshLayerDeclaration<
       }
 
       this.configs[index] = this.configs[last];
-
-      if (this._pickable) {
-        this._batchIds[index] = this._batchIds[last];
-      }
     }
 
     mesh.count--;
     this.configs.pop();
-    if (this._pickable) {
-      this._batchIds.pop();
-      this.syncPickableWrapper();
-    }
+
+    this.onInstanceRemoved(index, index === last);
+
     mesh.instanceMatrix.needsUpdate = true;
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
     this.requestUpdate();
@@ -288,10 +255,7 @@ export abstract class InstancedMeshLayerDeclaration<
       this.requestUpdate();
     }
     this.configs = [];
-    if (this._pickable) {
-      this._batchIds = [];
-      this.syncPickableWrapper();
-    }
+    this.onInstancesCleared();
   }
 
   /**
@@ -322,10 +286,7 @@ export abstract class InstancedMeshLayerDeclaration<
     if (currentMesh.instanceColor) currentMesh.instanceColor.needsUpdate = true;
     this.configs = [...configs];
 
-    if (this._pickable) {
-      this._batchIds = configs.map(() => this.ctx.genGlobalBatchId() ?? 0);
-      this.syncPickableWrapper();
-    }
+    this.onInstancesReplaced(configs.length);
 
     this.requestUpdate();
   }
@@ -335,11 +296,35 @@ export abstract class InstancedMeshLayerDeclaration<
     return this.configs.length;
   }
 
-  /** Sync the pickable wrapper with the current mesh and batch IDs. */
-  private syncPickableWrapper(): void {
-    if (!this._instancedPickWrapper || !this.raw) return;
-    this._instancedPickWrapper.sync(this.raw, this._batchIds);
-  }
+  // ---------------------------------------------------------------------------
+  // Subclass lifecycle hooks — override these to sync external per-instance
+  // state (e.g. a PickableInstancedMeshWrapper). Base implementations are
+  // intentionally no-ops.
+  // ---------------------------------------------------------------------------
+
+  /** Called after a new instance has been appended at `index`. */
+  protected onInstanceAdded(_index: number): void {}
+
+  /**
+   * Called after an instance at `index` has been removed via swap-with-last.
+   * `wasLast` is true if the removed instance was already the last one
+   * (no swap happened).
+   */
+  protected onInstanceRemoved(_index: number, _wasLast: boolean): void {}
+
+  /** Called after all instances have been cleared. */
+  protected onInstancesCleared(): void {}
+
+  /** Called after all instances have been replaced; `count` is the new instance count. */
+  protected onInstancesReplaced(_count: number): void {}
+
+  /**
+   * Called after the underlying `InstancedMesh` has been replaced (capacity grow).
+   * `this.raw` already points at the new mesh when this fires.
+   */
+  protected onInstanceMeshReplaced(
+    _newMesh: InstancedMesh<TGeometry, TMaterial>,
+  ): void {}
 
   /**
    * Grow the internal buffers by replacing the InstancedMesh with a larger one.
@@ -405,16 +390,10 @@ export abstract class InstancedMeshLayerDeclaration<
     this._instance = newMesh;
     this.capacity = newCapacity;
 
-    // Re-sync pickable wrapper with new mesh
-    this.syncPickableWrapper();
+    this.onInstanceMeshReplaced(newMesh);
   }
 
   override onDestroy(): void {
-    if (this._instancedPickWrapper) {
-      this._instancedPickWrapper = undefined;
-      this._batchIds = [];
-    }
-
     const mesh = this.raw;
     if (mesh) {
       mesh.geometry.dispose();

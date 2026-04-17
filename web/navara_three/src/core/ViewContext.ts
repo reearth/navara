@@ -6,6 +6,7 @@ import type { Material, Object3D, WebGLRenderer } from "three";
 import invariant from "tiny-invariant";
 
 import type { LayersManager } from "../layersManager";
+import type { PickableMesh } from "../mesh/pickableMesh";
 import type { RenderPassOrchestrator } from "../orchestrators";
 import type { CustomRenderPass } from "../passes";
 import type { Scenes } from "../scene";
@@ -217,9 +218,11 @@ export class ViewContext extends EventHandler<ViewContextEvents> {
   /**
    * Register a pickable mesh so the picking system can discover it.
    * @param key - Unique key (typically the layer ID).
-   * @param mesh - The Object3D that implements PickableMesh.
+   * @param mesh - Any {@link PickableMesh} implementation. Implementers
+   *   must also be an `Object3D` so the pick pass can re-parent the
+   *   renderable into its dedicated scene.
    */
-  registerPickableMesh(key: string, mesh: Object3D): void {
+  registerPickableMesh(key: string, mesh: PickableMesh & Object3D): void {
     this._meshes?.set(key, mesh);
   }
 

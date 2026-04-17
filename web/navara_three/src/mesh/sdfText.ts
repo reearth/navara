@@ -389,8 +389,12 @@ export class SDFTextMesh
 
   // --- PickableMesh interface ---
 
-  _setPickable(pickable: boolean): void {
-    this._enhancer.update({ base: { pickable } });
+  onBeforePicking(): void {
+    this._enhancer.update({ base: { pickable: true } });
+  }
+
+  onAfterPicking(): void {
+    this._enhancer.update({ base: { pickable: false } });
   }
 
   _getRenderable(): Object3D {

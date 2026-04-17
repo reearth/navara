@@ -132,8 +132,13 @@ export class BatchedFeatureMesh<
     throw new Unimplemented();
   }
 
-  _setPickable(pickable: boolean, _pickingCoord?: Vector2) {
-    this.material.userData.uPickable.value = pickable ? 1.0 : 0.0;
+  onBeforePicking(_pickingCoord?: Vector2) {
+    this.material.userData.uPickable.value = 1.0;
+    this.needsUpdate();
+  }
+
+  onAfterPicking() {
+    this.material.userData.uPickable.value = 0.0;
     this.needsUpdate();
   }
 

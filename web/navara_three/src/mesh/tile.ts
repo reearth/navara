@@ -1354,13 +1354,14 @@ if (uPickable > 0.) {
     }
   }
 
-  _setPickable(pickable: boolean): void {
-    if (pickable) {
-      this.material.color.setHex(0);
-    } else {
-      this.material.color.setHex(this.userData.tileOrigColor);
-    }
-    this.material.userData.uPickable.value = pickable ? 1 : 0;
+  onBeforePicking(): void {
+    this.material.color.setHex(0);
+    this.material.userData.uPickable.value = 1;
+  }
+
+  onAfterPicking(): void {
+    this.material.color.setHex(this.userData.tileOrigColor);
+    this.material.userData.uPickable.value = 0;
   }
 
   _getRenderable(): Object3D {
