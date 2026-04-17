@@ -19,10 +19,7 @@ const getIdFromProperties = (properties: Nullable<Record<string, unknown>>) => {
 
 export type MaterialLayerDescription = Exclude<
   LayerDescription,
-  | { type: "terrain" }
-  | { type: "mesh" }
-  | { type: "light" }
-  | { type: "effect" }
+  { type: "terrain" }
 >;
 
 const selectedFeatures = new Set<string>();

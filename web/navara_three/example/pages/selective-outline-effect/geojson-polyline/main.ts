@@ -31,7 +31,6 @@ const run = async () => {
     roll: 0,
   });
 
-  // Base tiles layer
   view.addLayer({
     type: "tiles",
     data: { url: TILE_DATASETS.openstreetmap.url },
@@ -50,8 +49,7 @@ const run = async () => {
     },
   });
 
-  const outlineEffect = view.addLayer({
-    type: "effect",
+  const outlineEffect = view.addEffect({
     selectiveOutline: {
       color: new Color().setHex(0x00ff00),
       thickness: 0.5,

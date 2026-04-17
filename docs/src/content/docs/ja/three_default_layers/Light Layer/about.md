@@ -27,8 +27,7 @@ import { AmbientLightLayer } from "@navara/three_default_layers";
 
 view.registerLight("ambient", AmbientLightLayer);
 
-view.addLayer<AmbientLightLayer>({
-  type: "light",
+view.addLight<AmbientLightLayer>({
   ambient: {
     color: new Color().setHex(0xffffff),
     intensity: 1.0
@@ -52,8 +51,7 @@ import { LightProbeLayer } from "@navara/three_default_layers";
 
 view.registerLight("lightProbe", LightProbeLayer);
 
-view.addLayer<LightProbeLayer>({
-  type: "light",
+view.addLight<LightProbeLayer>({
   lightProbe: {
     sh: new THREE.SphericalHarmonics3().set(coefficients),
     intensity: 0.05
@@ -77,8 +75,7 @@ import { SkyLightProbeLayer } from "@navara/three_default_layers";
 
 view.registerLight("skyLightProbe", SkyLightProbeLayer);
 
-view.addLayer<SkyLightProbeLayer>({
-  type: "light",
+view.addLight<SkyLightProbeLayer>({
   skyLightProbe: {
     intensity: 1.0
   }
@@ -101,8 +98,7 @@ import { SunLightLayer } from "@navara/three_default_layers";
 
 view.registerLight("sun", SunLightLayer);
 
-view.addLayer<SunLightLayer>({
-  type: "light",
+view.addLight<SunLightLayer>({
   sun: {
     intensity: 1.0,
     castShadow: true,
@@ -129,8 +125,7 @@ view.addLayer<SunLightLayer>({
 
 ```typescript
 // AmbientLightLayer が登録済みであること
-view.addLayer<AmbientLightLayer>({
-  type: "light",
+view.addLight<AmbientLightLayer>({
   ambient: { intensity: 1.0 }
 });
 ```
@@ -150,8 +145,7 @@ await view.init();
 const layers = plugin.addDefaultPhotorealLayers();
 
 // 必要に応じて追加の環境光
-view.addLayer<AmbientLightLayer>({
-  type: "light",
+view.addLight<AmbientLightLayer>({
   ambient: { intensity: 0.3 }
 });
 ```
@@ -165,8 +159,7 @@ view.addLayer<AmbientLightLayer>({
 const layers = plugin.addDefaultPhotorealLayers();
 
 // 夜間用ライトプローブ（LightProbeLayer は DefaultPlugin で登録済み）
-const nightLight = view.addLayer<LightProbeLayer>({
-  type: "light",
+const nightLight = view.addLight<LightProbeLayer>({
   lightProbe: {
     sh: new THREE.SphericalHarmonics3().set(NIGHT_COEFFICIENTS),
     intensity: 0.05

@@ -64,24 +64,21 @@ const view = new ThreeView();
 await view.init();
 
 // AGXモード（デフォルト、バランスの取れた結果）
-view.addLayer<ToneMappingEffectLayer>({
-  type: "effect",
+view.addEffect<ToneMappingEffectLayer>({
   toneMapping: {
     mode: ToneMappingMode.AGX,
   },
 });
 
 // または、ACES Filmicモード（映画的な外観）
-view.addLayer<ToneMappingEffectLayer>({
-  type: "effect",
+view.addEffect<ToneMappingEffectLayer>({
   toneMapping: {
     mode: ToneMappingMode.ACES_FILMIC,
   },
 });
 
 // Reinhardモード
-view.addLayer<ToneMappingEffectLayer>({
-  type: "effect",
+view.addEffect<ToneMappingEffectLayer>({
   toneMapping: {
     mode: ToneMappingMode.REINHARD,
   },
@@ -127,16 +124,14 @@ await view.init();
 view.toneMappingExposure = 3;
 
 // トーンマッピングエフェクトレイヤーを追加
-view.addLayer<ToneMappingEffectLayer>({
-  type: "effect",
+view.addEffect<ToneMappingEffectLayer>({
   toneMapping: {
     mode: ToneMappingMode.NEUTRAL,
   },
 });
 
 // SMAAエフェクトレイヤーを追加（トーンマッピングの後に適用）
-view.addLayer<SMAAEffectLayer>({
-  type: "effect",
+view.addEffect<SMAAEffectLayer>({
   smaa: {},
 });
 ```

@@ -184,18 +184,20 @@ See `InstancedBoxMeshLayer` and the `mesh-layers/instanced-mesh` example for a c
 
 ### Bundling layers into a plugin
 
-A plugin registers layer classes so they can be used via `view.addLayer()`:
+A plugin registers layer classes so they can be used via `view.addMesh()`, `view.addLight()`, `view.addEffect()`:
 
 ```typescript
 import { Plugin } from "@navara/core";
 import type ThreeView from "@navara/three";
 
-type CustomLayerDescriptions = 
-  | MyMeshDescription
-  | ...
+type CustomDeclarations = {
+  mesh: MyMeshDescription;
+  light: MyLightDescription;
+  effect: MyEffectDescription;
+};
 
 class MyPlugin extends Plugin {
-  async init(view: ThreeView<CustomLayerDescriptions>) {
+  async init(view: ThreeView<CustomDeclarations>) {
     view.registerMesh("myMesh", MyMeshLayer);
     view.registerLight("myLight", MyCustomLightLayer);
     view.registerEffect("myEffect", MyCustomEffectLayer);
@@ -205,13 +207,13 @@ class MyPlugin extends Plugin {
 
 ## `@navara/three_default_plugin`
 
-`@navara/three_default_plugin` is a plugin that registers the default layers from `@navara/three_default_layers`. It also exports `DefaultLayerDescriptions` — a union type of all default mesh layer configs for type-safe layer declarations.
+`@navara/three_default_plugin` is a plugin that registers the default layers from `@navara/three_default_layers`. It also exports `DefaultDeclarations` — a structured type with `mesh`, `light`, and `effect` fields for type-safe declarations.
 
 ```typescript
 import ThreeView from "@navara/three";
-import { DefaultPlugin, type DefaultLayerDescriptions } from "@navara/three_default_plugin";
+import { DefaultPlugin, type DefaultDeclarations } from "@navara/three_default_plugin";
 
-const view = new ThreeView<DefaultLayerDescriptions>({ /* options */ });
+const view = new ThreeView<DefaultDeclarations>({ /* options */ });
 view.addPlugin(new DefaultPlugin());
 await view.init();
 ```

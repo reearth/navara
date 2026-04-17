@@ -2,7 +2,7 @@ import ThreeView, { TERRARIUM_ELEVATION_DECODER } from "@navara/three";
 import { ToneMappingMode } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
-  type DefaultLayerDescriptions,
+  type DefaultDeclarations,
 } from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 
@@ -10,39 +10,34 @@ import { showAttributions } from "../../helpers/attributions";
 import { TERRAIN_DATASETS, TILE_DATASETS } from "../../helpers/constants";
 import { addDateControl } from "../../helpers/control";
 
-export type LayerDescriptions = DefaultLayerDescriptions;
+export type CustomDeclarations = DefaultDeclarations;
 
-export const run = async (view: ThreeView<LayerDescriptions>) => {
+export const run = async (view: ThreeView<CustomDeclarations>) => {
   view.addPlugin(new DefaultPlugin());
 
   await view.init();
 
   view.toneMappingExposure = 3;
-  view.addLayer({
-    type: "effect",
+  view.addEffect({
     toneMapping: {
       mode: ToneMappingMode.NEUTRAL,
     },
   });
 
-  view.addLayer({
-    type: "effect",
+  view.addEffect({
     smaa: {},
   });
 
-  view.addLayer({
-    type: "light",
+  view.addLight({
     sun: {
       intensity: 1,
     },
   });
-  view.addLayer({
-    type: "mesh",
+  view.addMesh({
     sky: {},
   });
 
-  view.addLayer({
-    type: "light",
+  view.addLight({
     ambient: {
       intensity: 0.1,
     },

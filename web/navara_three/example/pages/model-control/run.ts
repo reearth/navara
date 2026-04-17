@@ -11,7 +11,7 @@ import {
 } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
-  type DefaultLayerDescriptions,
+  type DefaultDeclarations,
 } from "@navara/three_default_plugin";
 import { Vector3, Quaternion, Euler } from "three";
 import { Pane } from "tweakpane";
@@ -37,39 +37,34 @@ const params: ModelControlParams = {
   allowFly: false,
 };
 
-export type LayerDescriptions = DefaultLayerDescriptions;
+export type CustomDeclarations = DefaultDeclarations;
 
-export const run = async (view: ThreeView<LayerDescriptions>) => {
+export const run = async (view: ThreeView<CustomDeclarations>) => {
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
   await view.init();
 
   view.toneMappingExposure = 3;
-  view.addLayer({
-    type: "effect",
+  view.addEffect({
     toneMapping: {
       mode: ToneMappingMode.NEUTRAL,
     },
   });
 
-  view.addLayer({
-    type: "effect",
+  view.addEffect({
     smaa: {},
   });
 
-  view.addLayer({
-    type: "light",
+  view.addLight({
     sun: {
       intensity: 1,
     },
   });
-  view.addLayer({
-    type: "mesh",
+  view.addMesh({
     sky: {},
   });
 
-  view.addLayer({
-    type: "light",
+  view.addLight({
     ambient: {
       intensity: 0.1,
     },
@@ -145,8 +140,7 @@ export const run = async (view: ThreeView<LayerDescriptions>) => {
   const euler = new Euler().setFromQuaternion(quaternion);
 
   // Add GLTF model at Mount Fuji summit
-  const modelLayer = view.addLayer<GLTFModelLayer>({
-    type: "mesh",
+  const modelLayer = view.addMesh<GLTFModelLayer>({
     gltfModel: {
       url: LOCAL_DATASETS.soldierGLTF.url,
       animationEnabled: true,

@@ -25,7 +25,7 @@ All base classes inherit from `LayerDeclaration` and share a common lifecycle.
 | Method                           | Timing                           | Description                                                                                            |
 | -------------------------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------ |
 | `constructor(view, ctx, config)` | When the layer is created        | Receives the ThreeView, ViewContext, and configuration                                                 |
-| `onCreate()`                     | When `addLayer()` is called      | Calls the factory method to create an instance and adds it to the scene. Implemented by the base class |
+| `onCreate()`                     | When `addMesh()`/`addLight()`/`addEffect()` is called | Calls the factory method to create an instance and adds it to the scene. Implemented by the base class |
 | `onUpdateConfig(updates)`        | When `handle.update()` is called | Processes partial configuration updates                                                                |
 | `onDestroy()`                    | When `handle.delete()` is called | Releases resources and removes from the scene                                                          |
 | `update(time)`                   | Every frame (optional)           | Animation processing. Only called if implemented                                                       |
@@ -242,8 +242,7 @@ const view = new ThreeView({});
 view.registerMesh("mySphere", MySphereMeshLayer);
 await view.init();
 
-const handle = view.addLayer<MySphereMeshLayer>({
-  type: "mesh",
+const handle = view.addMesh<MySphereMeshLayer>({
   mySphere: { radius: 100, color: new Color().setHex(0x00aaff) },
   position: { x: 0, y: 0, z: 6378137 },
 });
@@ -396,8 +395,7 @@ const view = new ThreeView({});
 view.registerMesh("myBoxes", MyBoxesLayer);
 await view.init();
 
-const handle = view.addLayer<MyBoxesLayer>({
-  type: "mesh",
+const handle = view.addMesh<MyBoxesLayer>({
   boxes: {
     children: [
       { position: { x: 0, y: 0, z: 100 }, color: new Color().setHex(0xff0000) },
@@ -593,7 +591,7 @@ export class MyPointLightLayer extends LightLayerDeclaration<
 
 ## LayerHandle
 
-The `LayerHandle<T>` returned from `view.addLayer()` is a handle for controlling the layer.
+The `LayerHandle<T>` returned from `view.addMesh()`, `view.addLight()`, or `view.addEffect()` is a handle for controlling the layer.
 
 | Property / Method | Type      | Description                              |
 | ----------------- | --------- | ---------------------------------------- |

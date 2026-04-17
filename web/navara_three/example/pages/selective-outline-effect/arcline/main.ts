@@ -2,7 +2,7 @@ import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
 import type { ArclineMeshLayer } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
-  type DefaultLayerDescriptions,
+  type DefaultDeclarations,
 } from "@navara/three_default_plugin";
 
 import { showAttributions } from "../../../helpers/attributions";
@@ -11,7 +11,7 @@ import { TERRAIN_DATASETS, TILE_DATASETS } from "../../../helpers/constants";
 const TOKYO = { lng: 139.757, lat: 35.676 };
 
 const run = async () => {
-  const view = new ThreeView<DefaultLayerDescriptions>({
+  const view = new ThreeView<DefaultDeclarations>({
     debug: true,
     shadow: true,
   });
@@ -38,8 +38,7 @@ const run = async () => {
   });
 
   // Selective outline effect
-  const outlineEffect = view.addLayer({
-    type: "effect",
+  const outlineEffect = view.addEffect({
     selectiveOutline: {
       color: new Color().setHex(0xff0000),
       thickness: 0.5,
@@ -48,8 +47,7 @@ const run = async () => {
   });
 
   // Arc lines with outline (Tokyo to Asian cities)
-  view.addLayer<ArclineMeshLayer>({
-    type: "mesh",
+  view.addMesh<ArclineMeshLayer>({
     effectIds: [outlineEffect.id],
     arcLines: [
       {

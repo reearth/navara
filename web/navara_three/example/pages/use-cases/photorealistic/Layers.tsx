@@ -1,7 +1,24 @@
-import { JAPAN_GSI_ELEVATION_DECODER, Color } from "@navara/three";
-import type { RainMeshLayerConfig } from "@navara/three_default_layers";
-import type { DefaultPlugin } from "@navara/three_default_plugin";
-import { Layer, useViewContext } from "@navara/three_react";
+import {
+  JAPAN_GSI_ELEVATION_DECODER,
+  Color,
+  type LayerDescription,
+} from "@navara/three";
+import type {
+  RainMeshLayerConfig,
+  CloudsConfig,
+} from "@navara/three_default_layers";
+import type {
+  DefaultPlugin,
+  DefaultEffectDescription,
+  DefaultLightDescription,
+} from "@navara/three_default_plugin";
+import {
+  Layer,
+  MeshLayer,
+  LightLayer,
+  EffectLayer,
+  useViewContext,
+} from "@navara/three_react";
 import { useEffect, useMemo, type FC } from "react";
 import { SphericalHarmonics3, Vector2 } from "three";
 
@@ -15,7 +32,6 @@ import { BUILDING_DATASETS, UC_PHOTOREALISTIC_DATASETS } from "./datasets";
 import { useDefaultLayers } from "./hooks";
 import { useNightContext } from "./NightContext";
 import { QUALITY, type QualityFlags } from "./quality";
-import type { LayerDescriptions } from "./type";
 
 export type SceneLayerToggles = {
   defaultPlugin: DefaultPlugin;
@@ -50,7 +66,7 @@ export const Layers: FC<SceneLayerToggles> = ({
 
   // Descriptions
   const baseTiles = useMemo(
-    (): LayerDescriptions => ({
+    (): LayerDescription => ({
       type: "tiles",
       data: { url: UC_PHOTOREALISTIC_DATASETS.baseRaster.url },
       rasterTile: { minZoom: 2, maxZoom: 18 },
@@ -59,7 +75,7 @@ export const Layers: FC<SceneLayerToggles> = ({
   );
 
   const terrain = useMemo(
-    (): LayerDescriptions => ({
+    (): LayerDescription => ({
       type: "terrain",
       data: { url: UC_PHOTOREALISTIC_DATASETS.terrain.url },
       rasterTerrain: {
@@ -74,8 +90,7 @@ export const Layers: FC<SceneLayerToggles> = ({
   );
 
   const cloudsEffect = useMemo(
-    (): LayerDescriptions => ({
-      type: "effect",
+    (): CloudsConfig => ({
       clouds: {
         coverage: cloudsEffectVisible ? 0.5 : 0,
         localWeatherVelocity: new Vector2(0.005, 0.001),
@@ -92,7 +107,6 @@ export const Layers: FC<SceneLayerToggles> = ({
 
   const rainDesc = useMemo(
     (): RainMeshLayerConfig => ({
-      type: "mesh",
       visible: rainVisible,
       rain: {
         particleCount: 5000,
@@ -103,8 +117,7 @@ export const Layers: FC<SceneLayerToggles> = ({
   );
 
   const rainDropEffect = useMemo(
-    (): LayerDescriptions => ({
-      type: "effect",
+    (): DefaultEffectDescription => ({
       rainDrop: {
         opacity: 0.5,
         dropDensity: 0.2,
@@ -119,8 +132,7 @@ export const Layers: FC<SceneLayerToggles> = ({
   );
 
   const ssrEffect = useMemo(
-    (): LayerDescriptions => ({
-      type: "effect",
+    (): DefaultEffectDescription => ({
       ssr: {
         iterations: QUALITY[quality]?.ssr?.iterations,
         useConeTracing: QUALITY[quality]?.ssr?.useConeTracing,
@@ -131,7 +143,7 @@ export const Layers: FC<SceneLayerToggles> = ({
   );
 
   const mvtLayerDescription = useMemo(
-    (): LayerDescriptions => ({
+    (): LayerDescription => ({
       type: "mvt",
       data: {
         url: UC_PHOTOREALISTIC_DATASETS.waterMvt.url,
@@ -195,8 +207,7 @@ export const Layers: FC<SceneLayerToggles> = ({
   }, [defaultLayers, cloudShadow]);
 
   const nightLightProbe = useMemo(
-    (): LayerDescriptions => ({
-      type: "light",
+    (): DefaultLightDescription => ({
       lightProbe: {
         sh: new SphericalHarmonics3().set(SH_COEFFICIENTS.night),
         intensity: 0.03,
@@ -224,13 +235,13 @@ export const Layers: FC<SceneLayerToggles> = ({
         )}
       {defaultLayers && (
         <>
-          <Layer config={cloudsEffect} />
-          <Layer config={ssrEffect} />
+          <EffectLayer config={cloudsEffect} />
+          <EffectLayer config={ssrEffect} />
         </>
       )}
-      <Layer config={rainDesc} />
-      {rainVisible && defaultLayers && <Layer config={rainDropEffect} />}
-      <Layer config={nightLightProbe} />
+      <MeshLayer config={rainDesc} />
+      {rainVisible && defaultLayers && <EffectLayer config={rainDropEffect} />}
+      <LightLayer config={nightLightProbe} />
       {waterAreaVisible && <Layer config={mvtLayerDescription} />}
     </>
   );

@@ -337,8 +337,7 @@ const view = new ThreeView();
 await view.init();
 
 // 太陽光の色を設定
-view.addLayer<SunLightLayer>({
-  type: "effect",
+view.addEffect<SunLightLayer>({
   sunLight: {
     color: new Color().setHex(0xffffff),
     intensity: 3,

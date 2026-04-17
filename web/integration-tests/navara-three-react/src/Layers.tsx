@@ -3,8 +3,9 @@ import {
   Color,
   JAPAN_GSI_ELEVATION_DECODER,
 } from "@navara/three";
+import type { CloudsConfig } from "@navara/three_default_layers";
 import type { DefaultPlugin } from "@navara/three_default_plugin";
-import { Layer, useViewContext } from "@navara/three_react";
+import { EffectLayer, Layer, useViewContext } from "@navara/three_react";
 import { useMemo, type FC } from "react";
 
 import { useDefaultLayers } from "./hooks";
@@ -83,9 +84,8 @@ export const Layers: FC<{ defaultPlugin: DefaultPlugin }> = ({
     [],
   );
 
-  const cloudsEffect = useMemo<LayerDescription>(
-    () => ({
-      type: "effect",
+  const cloudsEffect = useMemo(
+    (): CloudsConfig => ({
       clouds: {},
     }),
     [],
@@ -97,7 +97,7 @@ export const Layers: FC<{ defaultPlugin: DefaultPlugin }> = ({
       <Layer config={terrain} />
       <Layer config={chiyoda3d} />
       <Layer config={chuo3d} />
-      {defaultLayers && <Layer config={cloudsEffect} />}
+      {defaultLayers && <EffectLayer config={cloudsEffect} />}
     </>
   );
 };

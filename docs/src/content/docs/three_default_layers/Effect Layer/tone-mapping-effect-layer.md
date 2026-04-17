@@ -64,24 +64,21 @@ const view = new ThreeView();
 await view.init();
 
 // AGX mode (default, well-balanced results)
-view.addLayer<ToneMappingEffectLayer>({
-  type: "effect",
+view.addEffect<ToneMappingEffectLayer>({
   toneMapping: {
     mode: ToneMappingMode.AGX,
   },
 });
 
 // Or, ACES Filmic mode (cinematic look)
-view.addLayer<ToneMappingEffectLayer>({
-  type: "effect",
+view.addEffect<ToneMappingEffectLayer>({
   toneMapping: {
     mode: ToneMappingMode.ACES_FILMIC,
   },
 });
 
 // Reinhard mode
-view.addLayer<ToneMappingEffectLayer>({
-  type: "effect",
+view.addEffect<ToneMappingEffectLayer>({
   toneMapping: {
     mode: ToneMappingMode.REINHARD,
   },
@@ -127,16 +124,14 @@ await view.init();
 view.toneMappingExposure = 3;
 
 // Add tone mapping effect layer
-view.addLayer<ToneMappingEffectLayer>({
-  type: "effect",
+view.addEffect<ToneMappingEffectLayer>({
   toneMapping: {
     mode: ToneMappingMode.NEUTRAL,
   },
 });
 
 // Add SMAA effect layer (applied after tone mapping)
-view.addLayer<SMAAEffectLayer>({
-  type: "effect",
+view.addEffect<SMAAEffectLayer>({
   smaa: {},
 });
 ```

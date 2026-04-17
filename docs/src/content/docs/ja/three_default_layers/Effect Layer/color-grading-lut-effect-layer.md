@@ -110,8 +110,7 @@ const view = new ThreeView();
 await view.init();
 
 // カラーグレーディングLUTエフェクトレイヤーを追加
-const colorGradingLayer = view.addLayer<ColorGradingLUTEffectLayer>({
-  type: "effect",
+const colorGradingLayer = view.addEffect<ColorGradingLUTEffectLayer>({
   colorGradingLUT: {},
 });
 ```
@@ -131,8 +130,7 @@ await view.init();
 plugin.addDefaultPhotorealLayers();
 
 // カスタムLUTでカラーグレーディングを追加
-const colorGradingLayer = view.addLayer<ColorGradingLUTEffectLayer>({
-  type: "effect",
+const colorGradingLayer = view.addEffect<ColorGradingLUTEffectLayer>({
   colorGradingLUT: {
     url: "https://example.com/cinematic-lut.3dl",
     blendMode: "colorBurn",
@@ -149,8 +147,7 @@ import ThreeView, { ColorGradingLUTEffectLayer } from "@navara/three";
 const view = new ThreeView();
 await view.init();
 
-const colorGradingLayer = view.addLayer<ColorGradingLUTEffectLayer>({
-  type: "effect",
+const colorGradingLayer = view.addEffect<ColorGradingLUTEffectLayer>({
   colorGradingLUT: {
     opacity: 0.5,
   },

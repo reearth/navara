@@ -10,7 +10,7 @@ import {
 } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
-  type DefaultLayerDescriptions,
+  type DefaultDeclarations,
 } from "@navara/three_default_plugin";
 import type { FeatureCollection, MultiLineString } from "geojson";
 
@@ -95,10 +95,10 @@ const constructData = async () => {
   return { arcLines };
 };
 
-export type LayerDescriptions = DefaultLayerDescriptions;
+export type CustomDeclarations = DefaultDeclarations;
 
 export async function run() {
-  const view = new ThreeView<LayerDescriptions>({
+  const view = new ThreeView<CustomDeclarations>({
     backgroundColor: new Color().setStyle("#0b0a0d"),
   });
 
@@ -110,27 +110,23 @@ export async function run() {
 
   view.toneMappingExposure = 10;
 
-  view.addLayer({
-    type: "light",
+  view.addLight({
     ambient: {},
   });
 
-  view.addLayer({
-    type: "mesh",
+  view.addMesh({
     stars: {
       intensity: 100,
       pointSize: 1.5,
     },
   });
 
-  view.addLayer({
-    type: "effect",
+  view.addEffect({
     toneMapping: {
       mode: ToneMappingMode.REINHARD2,
     },
   });
-  view.addLayer({
-    type: "effect",
+  view.addEffect({
     smaa: {
       quality: "ultra",
     },
@@ -160,8 +156,7 @@ export async function run() {
   });
 
   // Add globe glow mesh layer
-  view.addLayer<GlowGlobeMeshLayer>({
-    type: "mesh",
+  view.addMesh<GlowGlobeMeshLayer>({
     glowGlobe: {
       radiusScale: 1.2,
       coefficient: 0.43,
@@ -173,8 +168,7 @@ export async function run() {
 
   const { arcLines } = await constructData();
 
-  const arcLineLayer = view.addLayer<ArclineMeshLayer>({
-    type: "mesh",
+  const arcLineLayer = view.addMesh<ArclineMeshLayer>({
     arcLines,
   });
 

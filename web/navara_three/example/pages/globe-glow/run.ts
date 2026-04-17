@@ -5,7 +5,7 @@ import {
 } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
-  type DefaultLayerDescriptions,
+  type DefaultDeclarations,
 } from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 
@@ -24,20 +24,18 @@ const gPaneParams = {
   visible: true,
 };
 
-export type LayerDescriptions = DefaultLayerDescriptions;
+export type CustomDeclarations = DefaultDeclarations;
 
-export const run = async (view: ThreeView<LayerDescriptions>) => {
+export const run = async (view: ThreeView<CustomDeclarations>) => {
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
   await view.init();
 
-  view.addLayer<AmbientLightLayer>({
-    type: "light",
+  view.addLight<AmbientLightLayer>({
     ambient: {},
   });
 
-  gGlowGlobeMeshLayer = view.addLayer<GlowGlobeMeshLayer>({
-    type: "mesh",
+  gGlowGlobeMeshLayer = view.addMesh<GlowGlobeMeshLayer>({
     glowGlobe: {
       radiusScale: gPaneParams.glowRadiusScale,
       coefficient: gPaneParams.glowCoefficient,
@@ -63,7 +61,7 @@ export const run = async (view: ThreeView<LayerDescriptions>) => {
   addPanel(view, pane);
 };
 
-function addPanel(view: ThreeView<LayerDescriptions>, pane: Pane) {
+function addPanel(view: ThreeView<CustomDeclarations>, pane: Pane) {
   if (!gGlowGlobeMeshLayer) return;
 
   const folder = pane.addFolder({ title: "Glow Globe Layer" });
@@ -125,8 +123,7 @@ function addPanel(view: ThreeView<LayerDescriptions>, pane: Pane) {
       gGlowGlobeMeshLayer = undefined;
       ev.target.title = "Add Layer";
     } else {
-      gGlowGlobeMeshLayer = view.addLayer<GlowGlobeMeshLayer>({
-        type: "mesh",
+      gGlowGlobeMeshLayer = view.addMesh<GlowGlobeMeshLayer>({
         glowGlobe: {
           radiusScale: gPaneParams.glowRadiusScale,
           coefficient: gPaneParams.glowCoefficient,

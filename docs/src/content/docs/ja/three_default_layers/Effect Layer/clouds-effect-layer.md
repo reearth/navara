@@ -646,8 +646,7 @@ await view.init();
 plugin.addDefaultPhotorealLayers();
 
 // 雲エフェクトレイヤーを追加
-const cloudsLayer = view.addLayer<CloudsEffectLayer>({
-  type: "effect",
+const cloudsLayer = view.addEffect<CloudsEffectLayer>({
   clouds: {
     coverage: 0.5,
     qualityPreset: "high",
@@ -683,8 +682,7 @@ defaultLayers.aerialPerspective.update({
 });
 
 // 雲エフェクトレイヤーを追加（影を有効化）
-const cloudsLayer = view.addLayer<CloudsEffectLayer>({
-  type: "effect",
+const cloudsLayer = view.addEffect<CloudsEffectLayer>({
   clouds: {
     shadows: true,
     shadowCascadeCount: 3,
@@ -707,8 +705,7 @@ await view.init();
 plugin.addDefaultPhotorealLayers();
 
 // 雲レイヤーを霧として使用
-const cloudsLayer = view.addLayer<CloudsEffectLayer>({
-  type: "effect",
+const cloudsLayer = view.addEffect<CloudsEffectLayer>({
   clouds: {},
 });
 
@@ -745,8 +742,7 @@ view.animation = true;
 plugin.addDefaultPhotorealLayers();
 
 // 雲の移動速度を設定してレイヤーを追加
-const cloudsLayer = view.addLayer<CloudsEffectLayer>({
-  type: "effect",
+const cloudsLayer = view.addEffect<CloudsEffectLayer>({
   clouds: {
     coverage: 0.5,
     localWeatherVelocity: new Vector2(0.005, 0.001),
@@ -776,8 +772,7 @@ defaultLayers.aerialPerspective.update({
 });
 
 // 雲レイヤーを追加
-const cloudsLayer = view.addLayer<CloudsEffectLayer>({
-  type: "effect",
+const cloudsLayer = view.addEffect<CloudsEffectLayer>({
   clouds: {
     qualityPreset: "high",
     localWeatherVelocity: new Vector2(0.005, 0.001),
