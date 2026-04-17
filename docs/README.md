@@ -51,6 +51,14 @@ Images can be added to `src/assets/` and embedded in Markdown with a relative li
 
 Static assets, like favicons, can be placed in the `public/` directory.
 
+## 🛠 Setup
+
+After installing dependencies, install Playwright's browser binaries. This is required for rehype plugins (e.g., `rehype-mermaid`) that render content using a headless browser during the build.
+
+```bash
+npx playwright install --with-deps chromium
+```
+
 ## 🧞 Commands
 
 All commands are run from the root of the project, from a terminal:

@@ -6,8 +6,16 @@
   ],
   "packageRules": [
     {
-      "matchDepTypes": ["peerDependencies"],
+      "matchDepTypes": [
+        "peerDependencies"
+      ],
       "rangeStrategy": "widen"
+    },
+    {
+      "matchPackageNames": [
+        "node"
+      ],
+      "enabled": false
     }
   ]
 }
