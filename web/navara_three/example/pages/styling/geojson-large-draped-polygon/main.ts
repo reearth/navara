@@ -71,7 +71,7 @@ const run = async () => {
   // Track updated features to prevent duplicate evaluations
   let updatedFeatures = new Set<bigint>();
 
-  // GeoJSON extruded polygon layer - using interior GeoJSON dataset
+  // GeoJSON polygon layer - using interior GeoJSON dataset
   const addGeoJsonLayer = () => {
     updatedFeatures = new Set<bigint>();
 
@@ -108,7 +108,7 @@ const run = async () => {
   let layer: ReturnType<typeof addGeoJsonLayer> | undefined = addGeoJsonLayer();
 
   // Control panel
-  const pane = new Pane({ title: "GeoJSON Extruded Polygon" });
+  const pane = new Pane({ title: "GeoJSON Polygon" });
   addDateControl(view, pane);
 
   // Toggle button to add/remove layer

@@ -7,7 +7,7 @@ export async function renderPolyline(
   ctx: EventContext,
   mesh: NavaraPolylineMesh,
 ) {
-  return new PolylineMesh(ctx, mesh);
+  return new PolylineMesh(ctx).init(mesh);
 }
 
 export function processPolylineChanged(

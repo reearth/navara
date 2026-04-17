@@ -38,6 +38,15 @@ const run = async () => {
     },
   });
 
+  const bloomEffect = view.addLayer({
+    type: "effect",
+    selectiveBloom: {
+      strength: 1.0,
+      radius: 0.5,
+      threshold: 0.0,
+    },
+  });
+
   view.toneMappingExposure = 5;
 
   view.setCamera({
@@ -71,11 +80,6 @@ const run = async () => {
   // Track updated features to prevent duplicate evaluations
   let updatedFeatures = new Set<bigint>();
 
-  const params = { outlineShow: false };
-
-  const FLOOD_DEPTH_BY_RANK = [0.5, 3.0, 5.0, 10.0, 20.0];
-
-  // GeoJSON polygon layer - using interior GeoJSON dataset
   const addGeoJsonLayer = () => {
     updatedFeatures = new Set<bigint>();
 
@@ -84,14 +88,9 @@ const run = async () => {
       data: { url: LOCAL_DATASETS.tokyoFlood.url },
       polygon: {
         color: new Color().setStyle("#ffffff"),
-        height: 0,
-        extrudedHeight: 0,
-        clampToGround: false,
-        outline: true,
-        outlineShow: params.outlineShow,
-        outlineWidth: 2,
-        outlineColor: new Color().setHex(0xff00ff),
-        tiled: true,
+        emissiveColor: new Color().setStyle("#000000"),
+        emissiveIntensity: 0.1,
+        effectIds: [bloomEffect.id],
       },
     });
 
@@ -103,12 +102,10 @@ const run = async () => {
       evaluator.evaluate(
         ({ properties }) => {
           const rank = Number(properties?.["A31a_205"] ?? 1);
-          const depth = FLOOD_DEPTH_BY_RANK[rank - 1];
 
           const [r, g, b] = FLOOD_RANK_COLOR_MAP[rank];
 
           return {
-            extrudedHeight: depth,
             color: new Color().setRGB(r / 255, g / 255, b / 255),
           };
         },
@@ -136,10 +133,6 @@ const run = async () => {
       layer = addGeoJsonLayer();
       toggleBtn.title = "Remove Layer";
     }
-  });
-
-  pane.addBinding(params, "outlineShow").on("change", ({ value }) => {
-    layer?.update({ polygon: { outlineShow: value } });
   });
 
   showAttributions([
