@@ -32,7 +32,7 @@ import ThreeView, {
 } from "@navara/three";
 import {
   DefaultPlugin,
-  type DefaultLayerDescriptions,
+  type DefaultDeclarations,
 } from "@navara/three_default_plugin";
 import {
   Matrix4,
@@ -144,6 +144,12 @@ type TorusKnotLayerConfig = MeshLayerConfig &
 
 type TorusKnotLayerUpdate = MeshLayerUpdate & TorusKnotDescription;
 
+type CustomDeclarations =
+  | DefaultDeclarations
+  | {
+      mesh: TorusKnotLayerConfig;
+    };
+
 class TorusKnotMeshLayer extends MeshLayerDeclaration<
   TorusKnotLayerConfig,
   TorusKnotLayerUpdate,
@@ -228,7 +234,7 @@ class TorusKnotMeshLayer extends MeshLayerDeclaration<
 // ============================================================================
 
 const run = async () => {
-  const view = new ThreeView<TorusKnotLayerConfig | DefaultLayerDescriptions>({
+  const view = new ThreeView<CustomDeclarations>({
     debug: true,
   });
 
@@ -275,8 +281,7 @@ const run = async () => {
       .scale(new Vector3(SCALE, SCALE, SCALE));
     const matrixWorld = nueFrame.clone().multiply(local);
 
-    const layer = view.addLayer<TorusKnotMeshLayer>({
-      type: "mesh",
+    const layer = view.addMesh<TorusKnotMeshLayer>({
       pickable: true,
       torusKnot: {
         radius: 1,
