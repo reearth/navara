@@ -1199,7 +1199,7 @@ export default class ThreeView<
     // Find which mesh type from config
     const meshType = this.registries.mesh.findMeshType(config);
     if (!meshType) {
-      throw new UnknownTypeError(config);
+      throw new UnknownTypeError("mesh", config);
     }
 
     // Create mesh layer instance
@@ -1246,7 +1246,7 @@ export default class ThreeView<
     // Find which light type from config
     const lightType = this.registries.light.findLightType(config);
     if (!lightType) {
-      throw new UnknownTypeError(config);
+      throw new UnknownTypeError("light", config);
     }
 
     // Create light layer instance
@@ -1286,7 +1286,7 @@ export default class ThreeView<
     // Find which effect type from config
     const effectType = this.registries.effect.findEffectType(config);
     if (!effectType) {
-      throw new UnknownTypeError(config);
+      throw new UnknownTypeError("effect", config);
     }
 
     // Create effect layer instance

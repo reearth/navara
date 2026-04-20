@@ -5,9 +5,12 @@ import type { LightConfig } from "./LightDesc";
 import type { MeshConfig } from "./MeshDesc";
 
 export class UnknownTypeError extends Error {
-  constructor(config: EffectConfig | MeshConfig | LightConfig) {
+  constructor(
+    type: Exclude<(EffectConfig | MeshConfig | LightConfig)["type"], undefined>,
+    config: EffectConfig | MeshConfig | LightConfig,
+  ) {
     super(
-      `Unknown ${config.type} type specified in configuration: ${getExcludedKeys(config, ["type"]).join(", ")}`,
+      `Unknown ${type} type specified in configuration: ${getExcludedKeys(config, ["type"]).join(", ")}`,
     );
   }
 }
