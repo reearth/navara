@@ -117,9 +117,9 @@ view.on("resize", (width, height) => {
 
 ```tsx
 type PickedFeature = {
-  properties: Record<string, unknown>; // 地物のプロパティ
-  batchId: number | null; // バッチ ID
-  layerId: string | null; // レイヤー ID
+  batchId: number; // バッチ ID
+  properties: Record<string, unknown> | undefined; // 地物のプロパティ
+  layerId: string | undefined; // レイヤー ID
 };
 ```
 

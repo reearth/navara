@@ -19,9 +19,9 @@ FeatureEvaluator は、地物データへのアクセスと、プロパティに
 
 ### id
 
-**Type:** `FeatureId`
+**Type:** `FeatureSetId`
 
-**Description:** この地物の一意な識別子を取得します。
+**Description:** このフィーチャーセットの一意な識別子を取得します。
 
 **Example:**
 
@@ -37,9 +37,9 @@ layer.on("featureCreated", ({ evaluator }) => {
 
 ```typescript
 type FeatureInfo = {
-  batchIndex: number;
   batchId: number;
   properties: Record<string, unknown> | undefined;
+  layerId: string | undefined;
 };
 ```
 

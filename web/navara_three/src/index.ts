@@ -1684,19 +1684,20 @@ export default class ThreeView<
     this._renderFlag.forceUpdate = true;
 
     if (pickArr.length > 0) {
-      const prop = this._core?.readPropertyByGlobalBatchId(pickArr[0]);
+      const batchId = pickArr[0];
+      const prop = this._core?.readPropertyByGlobalBatchId(batchId);
       if (prop) {
         const pickedFeature: PickedFeature = {
           properties: prop.properties,
-          batchId: pickArr[0],
+          batchId,
           layerId: prop.layerId,
         };
         this.emit("pick", pickedFeature);
       } else {
         const emptyFeature: PickedFeature = {
           properties: {},
-          batchId: null,
-          layerId: null,
+          batchId,
+          layerId: undefined,
         };
         this.emit("pick", emptyFeature);
       }

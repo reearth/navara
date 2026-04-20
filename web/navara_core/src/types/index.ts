@@ -10,3 +10,4 @@ export * from "./cameraFrustum";
 export * from "./plane";
 export * from "./ray";
 export * from "./vec";
+export * from "./layer";
