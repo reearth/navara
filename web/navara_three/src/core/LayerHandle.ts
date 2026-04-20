@@ -54,8 +54,13 @@ export class BaseHandle<
    * After calling this, the handle should no longer be used.
    */
   delete(): void {
+    if (this._deleted) return;
+    this._deleted = true;
     this.layer.onDestroy();
+    this.emit("deleted");
   }
+
+  private _deleted = false;
 
   /**
    * Gets the unique identifier of this layer.
