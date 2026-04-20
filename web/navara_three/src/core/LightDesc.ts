@@ -120,8 +120,8 @@ export type LightBaseInstance<Instance extends object = object> =
  * 5. **{@link onDestroy}** - Called on `handle.delete()`. The base class removes the light
  *    from its parent scene.
  *
- * @see {@link AmbientLightLayer} for a minimal built-in example.
- * @see {@link SunLightLayer} for an advanced example with CSM shadows and atmosphere integration.
+ * @see {@link AmbientLightDesc} for a minimal built-in example.
+ * @see {@link SunLightDesc} for an advanced example with CSM shadows and atmosphere integration.
  *
  * @typeParam Config - Layer configuration type (extends {@link LightConfig})
  * @typeParam UpdateConfig - Updatable properties (extends {@link LightUpdate})

@@ -4,7 +4,7 @@ import {
   type LayerDescription,
 } from "@navara/three";
 import type {
-  RainMeshLayerConfig,
+  RainMeshConfig,
   CloudsConfig,
 } from "@navara/three_default_layers";
 import type {
@@ -106,7 +106,7 @@ export const Layers: FC<SceneLayerToggles> = ({
   );
 
   const rainDesc = useMemo(
-    (): RainMeshLayerConfig => ({
+    (): RainMeshConfig => ({
       visible: rainVisible,
       rain: {
         particleCount: 5000,
@@ -142,7 +142,7 @@ export const Layers: FC<SceneLayerToggles> = ({
     [quality],
   );
 
-  const mvtLayerDescription = useMemo(
+  const mvtDesc = useMemo(
     (): LayerDescription => ({
       type: "mvt",
       data: {
@@ -242,7 +242,7 @@ export const Layers: FC<SceneLayerToggles> = ({
       <MeshLayer config={rainDesc} />
       {rainVisible && defaultLayers && <EffectLayer config={rainDropEffect} />}
       <LightLayer config={nightLightProbe} />
-      {waterAreaVisible && <Layer config={mvtLayerDescription} />}
+      {waterAreaVisible && <Layer config={mvtDesc} />}
     </>
   );
 };

@@ -1,5 +1,5 @@
 import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
-import type { ArclineMeshLayer } from "@navara/three_default_layers";
+import type { ArclineMeshDesc } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
   type DefaultDeclarations,
@@ -47,7 +47,7 @@ const run = async () => {
   });
 
   // Arc lines with bloom (Tokyo to Asian cities)
-  view.addMesh<ArclineMeshLayer>({
+  view.addMesh<ArclineMeshDesc>({
     effectIds: [bloomEffect.id],
     emissiveColor: new Color().setHex(0xffffff),
     emissiveIntensity: 0.5,

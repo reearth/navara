@@ -35,7 +35,7 @@ import {
 } from "three";
 import invariant from "tiny-invariant";
 
-import { CloudLayer, type CloudLayerOptions } from "./layer";
+import { CloudDesc, type CloudOptions } from "./layer";
 
 export type * from "@takram/three-clouds";
 
@@ -88,7 +88,7 @@ export type CloudsOptions = {
   powderScale?: number;
   powderExponent?: number;
 
-  cloudLayers?: Nullable<CloudLayerOptions[]>;
+  cloudLayers?: Nullable<CloudOptions[]>;
 } & EffectOptions;
 
 // Default value is based on the medium preset.
@@ -145,7 +145,7 @@ export class Clouds extends Pass<
   Required<CloudsOptions>
 > {
   atmosphere: Atmosphere;
-  private _cloudLayers: CloudLayer[] = [];
+  private _cloudLayers: CloudDesc[] = [];
 
   constructor(camera: Camera, atmosphere: Atmosphere, options?: CloudsOptions) {
     const effect = new CloudsEffect(camera);
@@ -274,12 +274,12 @@ export class Clouds extends Pass<
     super.dispose();
   }
 
-  initializeCloudLayers(options?: CloudLayerOptions[]) {
+  initializeCloudLayers(options?: CloudOptions[]) {
     const layers = [
-      new CloudLayer(CloudLayers.DEFAULT[0], options?.[0]),
-      new CloudLayer(CloudLayers.DEFAULT[1], options?.[1]),
-      new CloudLayer(CloudLayers.DEFAULT[2], options?.[2]),
-      new CloudLayer(CloudLayers.DEFAULT[3], options?.[3]),
+      new CloudDesc(CloudLayers.DEFAULT[0], options?.[0]),
+      new CloudDesc(CloudLayers.DEFAULT[1], options?.[1]),
+      new CloudDesc(CloudLayers.DEFAULT[2], options?.[2]),
+      new CloudDesc(CloudLayers.DEFAULT[3], options?.[3]),
     ];
 
     for (let i = 0; i < 4; i++) {

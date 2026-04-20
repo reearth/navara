@@ -8,7 +8,7 @@ import ThreeView, {
 import {
   ToneMappingMode,
   type BoxChildConfig,
-  type InstancedBoxMeshLayer,
+  type InstancedBoxMeshDesc,
 } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
@@ -107,7 +107,7 @@ const run = async () => {
 
   const buildings = generateBuildings(BUILDING_COUNT, RADIUS);
 
-  const boxesLayer = view.addMesh<InstancedBoxMeshLayer>({
+  const boxesLayer = view.addMesh<InstancedBoxMeshDesc>({
     boxes: {
       castShadow: true,
       receiveShadow: true,

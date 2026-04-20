@@ -1,11 +1,11 @@
 import ThreeView, {
   Color,
   type BlendMode,
-  LayerHandle,
+  EffectHandle,
   JAPAN_GSI_ELEVATION_DECODER,
 } from "@navara/three";
 import {
-  ColorGradingLUTEffectLayer,
+  ColorGradingLUTEffectDesc,
   DEFAULT_COLOR_GRADING_LUT_OPTIONS,
 } from "@navara/three_default_layers";
 import {
@@ -27,7 +27,7 @@ import {
   addCameraControl,
 } from "../../helpers/control";
 
-let gColorGradingLUTLayer: LayerHandle<ColorGradingLUTEffectLayer>;
+let gColorGradingLUTLayer: EffectHandle<ColorGradingLUTEffectDesc>;
 
 export type CustomDeclarations = DefaultDeclarations;
 
@@ -47,7 +47,7 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
 
   view.toneMappingExposure = 10;
 
-  gColorGradingLUTLayer = view.addEffect<ColorGradingLUTEffectLayer>({
+  gColorGradingLUTLayer = view.addEffect<ColorGradingLUTEffectDesc>({
     colorGradingLUT: { ...DEFAULT_COLOR_GRADING_LUT_OPTIONS },
     visible: true,
   });

@@ -22,7 +22,7 @@ export type InstancedMeshUpdate = MeshUpdateWithSelectiveEffect;
 
 /**
  * Common transform fields for individual instances within an instanced mesh layer.
- * Mirrors the transform fields of `MeshLayerConfig` at the parent level.
+ * Mirrors the transform fields of `MeshConfig` at the parent level.
  *
  * When `matrix` is provided, it is used directly and `position`, `rotation`, `scale`
  * are ignored.

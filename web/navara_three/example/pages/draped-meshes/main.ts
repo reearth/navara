@@ -6,8 +6,8 @@ import ThreeView, {
   geodeticToVector3,
 } from "@navara/three";
 import type {
-  BoxMeshLayer,
-  CylinderMeshLayer,
+  BoxMeshDesc,
+  CylinderMeshDesc,
 } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
@@ -75,7 +75,7 @@ const run = async () => {
   const boxMatrixWorld = northUpEastToFixedFrame(boxPosition);
 
   // Box mesh layer
-  const boxLayer = view.addMesh<BoxMeshLayer>({
+  const boxLayer = view.addMesh<BoxMeshDesc>({
     box: {
       width: 1000,
       height: 10000,
@@ -98,7 +98,7 @@ const run = async () => {
   const cylinderMatrixWorld = northUpEastToFixedFrame(cylinderPosition);
 
   // Cylinder mesh layer
-  const cylinderLayer = view.addMesh<CylinderMeshLayer>({
+  const cylinderLayer = view.addMesh<CylinderMeshDesc>({
     cylinder: {
       radiusTop: 500,
       radiusBottom: 500,

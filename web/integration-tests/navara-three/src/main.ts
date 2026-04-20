@@ -6,7 +6,7 @@ import ThreeView, {
 } from "@navara/three";
 import {
   ToneMappingMode,
-  type SphereMeshLayer,
+  type SphereMeshDesc,
 } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
@@ -84,11 +84,11 @@ async function main() {
 
 /**
  * Add a sphere that rotates around the globe.
- * Tests: SphereMeshLayer, geodeticToVector3, LLE, degreeToRadian APIs
+ * Tests: SphereMeshDesc, geodeticToVector3, LLE, degreeToRadian APIs
  */
 function addRotatingSphere(view: ThreeView<CustomDeclarations>) {
   // Create a sphere mesh layer
-  const sphereLayer = view.addMesh<SphereMeshLayer>({
+  const sphereLayer = view.addMesh<SphereMeshDesc>({
     sphere: {
       radius: 1,
       color: new Color().setHex(0xff6600), // Orange color

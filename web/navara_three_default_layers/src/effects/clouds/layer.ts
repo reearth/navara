@@ -7,12 +7,12 @@ import {
 
 export type { TextureChannel };
 
-export type CloudLayerEvents = {
+export type CloudEvents = {
   needsUpdate: () => void;
 };
 
-export type CloudLayerOptions = Pick<
-  CloudLayer,
+export type CloudOptions = Pick<
+  CloudDesc,
   | "channel"
   | "altitude"
   | "height"
@@ -32,10 +32,10 @@ export type CloudLayerOptions = Pick<
 /**
  * See [CloudLayer](https://github.com/takram-design-engineering/three-geospatial/tree/main/packages/clouds#cloudlayer).
  */
-export class CloudLayer extends EventHandler<CloudLayerEvents> {
+export class CloudDesc extends EventHandler<CloudEvents> {
   impl: CloudLayerImpl;
 
-  constructor(defaultOptions?: CloudLayerLike, options?: CloudLayerOptions) {
+  constructor(defaultOptions?: CloudLayerLike, options?: CloudOptions) {
     super();
     this.impl = new CloudLayerImpl(defaultOptions);
 

@@ -22,12 +22,12 @@ import {
 import { addDateControl, addCameraControl } from "../../../helpers/control";
 import {
   addCtrlPanel,
-  type MaterialLayerDescription,
+  type MaterialDesc,
 } from "../../../helpers/panel";
 
 export type CustomDeclarations = DefaultDeclarations;
 
-const geoLayersDef: MaterialLayerDescription[] = [
+const geoLayersDef: MaterialDesc[] = [
   {
     type: "tiles",
     data: { url: TILE_DATASETS.openstreetmap.url },

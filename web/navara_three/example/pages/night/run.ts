@@ -1,17 +1,19 @@
 import ThreeView, {
   EventHandler,
   JAPAN_GSI_ELEVATION_DECODER,
-  type LayerHandle,
+  type MeshHandle,
+  type LightHandle,
+  type EffectHandle,
   type LayerDescription,
   degreeToRadian,
   geodeticToVector3,
   Color,
 } from "@navara/three";
 import type {
-  LightProbeLayer,
-  SkyLightProbeLayer,
-  StarsLayer,
-  FogLightEffectLayer,
+  LightProbeDesc,
+  SkyLightProbeDesc,
+  StarsDesc,
+  FogLightEffectDesc,
   FogLightDefinition,
 } from "@navara/three_default_layers";
 import {
@@ -162,7 +164,7 @@ const addNightLightProbeControl = (
   view: ThreeView<CustomDeclarations>,
   pane: Pane,
 ) => {
-  const lightProbeLayer = view.addLight<LightProbeLayer>({
+  const lightProbeLayer = view.addLight<LightProbeDesc>({
     lightProbe: {
       sh: new SphericalHarmonics3().set(SH_COEFFICIENTS.night),
       intensity: 0.05,
@@ -202,7 +204,7 @@ const addNightLightProbeControl = (
 
 const addStarsControl = (
   view: ThreeView<CustomDeclarations>,
-  starsLayer: LayerHandle<StarsLayer>,
+  starsLayer: MeshHandle<StarsDesc>,
   pane: Pane,
 ) => {
   const starsFolder = pane.addFolder({
@@ -254,7 +256,7 @@ const addStarsControl = (
 
 const addSkyLightProbeControl = (
   view: ThreeView<CustomDeclarations>,
-  skyLightProbeLayer: LayerHandle<SkyLightProbeLayer>,
+  skyLightProbeDesc: LightHandle<SkyLightProbeDesc>,
   pane: Pane,
 ) => {
   const skyLightProbeFolder = pane.addFolder({
@@ -273,7 +275,7 @@ const addSkyLightProbeControl = (
     const intensity = isAtNight
       ? skyLightProbeParams.nightIntensity
       : skyLightProbeParams.intensity;
-    skyLightProbeLayer.update({
+    skyLightProbeDesc.update({
       skyLightProbe: { intensity },
     });
   };
@@ -467,7 +469,7 @@ const addTokyoPointsFogLightControl = async (
   );
 
   // Create separate fog light layer for Tokyo Points
-  const tokyoPointsFogLayer = view.addEffect<FogLightEffectLayer>({
+  const tokyoPointsFogLayer = view.addEffect<FogLightEffectDesc>({
     fogLight: {
       lights: tokyoPointsLights,
       fogDensity: 2.0, // Different default density for Tokyo Points
@@ -637,7 +639,7 @@ const addFogLightControl = async (
   sceneChangeHandler?: EventHandler,
 ) => {
   // Fetch street light data and add fog light effect
-  let fogLightLayer: LayerHandle<FogLightEffectLayer> | undefined;
+  let fogLightLayer: EffectHandle<FogLightEffectDesc> | undefined;
   let streetLights: FogLightDefinition[] = [];
 
   // Function to load light data from a file using common function
@@ -654,7 +656,7 @@ const addFogLightControl = async (
     } else {
       // Create fog light layer, initially visible only at night
       const isAtNight = view.atmosphere.isAtNight(view.camera.raw.position);
-      fogLightLayer = view.addEffect<FogLightEffectLayer>({
+      fogLightLayer = view.addEffect<FogLightEffectDesc>({
         fogLight: {
           lights: streetLights,
           fogDensity: 0.5,

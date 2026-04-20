@@ -1,5 +1,5 @@
 import ThreeView, { Color, Layer } from "@navara/three";
-import { AmbientLightLayer } from "@navara/three_default_layers";
+import { AmbientLightDesc } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
   type DefaultDeclarations,
@@ -25,7 +25,7 @@ export const run = async (view: ThreeView<DefaultDeclarations>) => {
 
   await view.init();
 
-  view.addLight<AmbientLightLayer>({
+  view.addLight<AmbientLightDesc>({
     ambient: {},
   });
 

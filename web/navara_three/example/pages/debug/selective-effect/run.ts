@@ -1,14 +1,14 @@
 import ThreeView, {
   Color,
   JAPAN_GSI_ELEVATION_DECODER,
-  SelectiveBloomEffectLayer,
-  SelectiveOutlineEffectLayer,
+  SelectiveBloomEffectDesc,
+  SelectiveOutlineEffectDesc,
   geodeticToVector3,
   degreeToRadian,
 } from "@navara/three";
 import type {
-  BoxMeshLayer,
-  SphereMeshLayer,
+  BoxMeshDesc,
+  SphereMeshDesc,
 } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
@@ -54,7 +54,7 @@ export const run = async (view: ThreeView<DefaultDeclarations>) => {
 
   // --- Effect Layer definitions ---
 
-  const bloomEffect = view.addEffect<SelectiveBloomEffectLayer>({
+  const bloomEffect = view.addEffect<SelectiveBloomEffectDesc>({
     selectiveBloom: {
       strength: 1.0,
       radius: 0.5,
@@ -63,7 +63,7 @@ export const run = async (view: ThreeView<DefaultDeclarations>) => {
     },
   });
 
-  const outlineEffect = view.addEffect<SelectiveOutlineEffectLayer>({
+  const outlineEffect = view.addEffect<SelectiveOutlineEffectDesc>({
     selectiveOutline: {
       color: new Color().setHex(0xff0000),
       thickness: 2.0,
@@ -80,7 +80,7 @@ export const run = async (view: ThreeView<DefaultDeclarations>) => {
     lng: degreeToRadian(139.7671),
     height: 200,
   });
-  const boxLayer = view.addMesh<BoxMeshLayer>({
+  const boxLayer = view.addMesh<BoxMeshDesc>({
     box: {
       width: 200,
       height: 200,
@@ -99,7 +99,7 @@ export const run = async (view: ThreeView<DefaultDeclarations>) => {
     boxPosition.y,
     boxPosition.z,
   ).add(new Vector3(-500, 0, -600));
-  const sphereLayer = view.addMesh<SphereMeshLayer>({
+  const sphereLayer = view.addMesh<SphereMeshDesc>({
     sphere: {
       radius: 150,
       color: new Color().setHex(0x0000ff),

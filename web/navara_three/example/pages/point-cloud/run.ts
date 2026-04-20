@@ -7,10 +7,10 @@ import { TILE_DATASETS, TILES_3D_DATASETS } from "../../helpers/constants";
 import { addDateControl } from "../../helpers/control";
 import {
   addCtrlPanel,
-  type MaterialLayerDescription,
+  type MaterialDesc,
 } from "../../helpers/panel";
 
-const gGeoLayersDef: MaterialLayerDescription[] = [
+const gGeoLayersDef: MaterialDesc[] = [
   {
     type: "cesium3dtiles",
     data: { url: TILES_3D_DATASETS.YamanashiKyonaka.url },

@@ -6,7 +6,7 @@ import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
 } from "@navara/three";
 import {
-  type InstancedBoxMeshLayer,
+  type InstancedBoxMeshDesc,
   type BoxChildConfig,
   ToneMappingMode,
 } from "@navara/three_default_layers";
@@ -124,7 +124,7 @@ const run = async () => {
   // Generate 5000 buildings within 10km radius
   const buildings = generateBuildings(BUILDING_COUNT, RADIUS);
 
-  const boxesLayer = view.addMesh<InstancedBoxMeshLayer>({
+  const boxesLayer = view.addMesh<InstancedBoxMeshDesc>({
     boxes: {
       castShadow: true,
       receiveShadow: true,

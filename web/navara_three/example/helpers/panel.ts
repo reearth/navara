@@ -17,7 +17,7 @@ const getIdFromProperties = (properties: Nullable<Record<string, unknown>>) => {
   return properties?.["id"] ?? properties?.["gml_id"];
 };
 
-export type MaterialLayerDescription = Exclude<
+export type MaterialDesc = Exclude<
   LayerDescription,
   { type: "terrain" }
 >;
@@ -26,7 +26,7 @@ const selectedFeatures = new Set<string>();
 const selectedBatchIds = new Set<number>();
 
 const addFeatureUpdateHandler = (
-  layerDesc: MaterialLayerDescription,
+  layerDesc: MaterialDesc,
   layer: Layer,
 ) => {
   // Function to dynamically get the current default color from layerDesc
@@ -105,7 +105,7 @@ const addFeatureUpdateHandler = (
 };
 
 export const addCtrlPanel = (
-  layers: MaterialLayerDescription[],
+  layers: MaterialDesc[],
   view: ThreeView,
   paneInput?: Pane,
 ) => {
@@ -148,7 +148,7 @@ export const addCtrlPanel = (
     }
   });
 
-  const layerMap = new Map<string, MaterialLayerDescription>();
+  const layerMap = new Map<string, MaterialDesc>();
   layers.forEach((layerDef) => {
     const layer = view.addLayer(layerDef);
 
@@ -486,7 +486,7 @@ export const addCtrlPanel = (
 function createParamCtrl(
   pane: Pane,
   paneParams: Record<string, any>,
-  layer: MaterialLayerDescription | undefined,
+  layer: MaterialDesc | undefined,
   changeFunc: () => void,
 ) {
   if (!layer) {
@@ -726,7 +726,7 @@ function createParamCtrl(
 function createMaterialCtrl(
   pane: Pane,
   paneParams: any,
-  layer: MaterialLayerDescription | undefined,
+  layer: MaterialDesc | undefined,
 ) {
   if (layer) {
     const options = getMaterialOptions(layer);
@@ -744,7 +744,7 @@ function createMaterialCtrl(
   }
 }
 
-function getMaterialOptions(layer: MaterialLayerDescription) {
+function getMaterialOptions(layer: MaterialDesc) {
   const materials = [];
   if ("rasterTile" in layer) {
     materials.push("rasterTile");

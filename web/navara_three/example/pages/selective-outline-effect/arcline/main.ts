@@ -1,5 +1,5 @@
 import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
-import type { ArclineMeshLayer } from "@navara/three_default_layers";
+import type { ArclineMeshDesc } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
   type DefaultDeclarations,
@@ -47,7 +47,7 @@ const run = async () => {
   });
 
   // Arc lines with outline (Tokyo to Asian cities)
-  view.addMesh<ArclineMeshLayer>({
+  view.addMesh<ArclineMeshDesc>({
     effectIds: [outlineEffect.id],
     arcLines: [
       {

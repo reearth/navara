@@ -1,14 +1,14 @@
 import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
   overrideShaderMaterialForMRT,
-  MeshLayerDeclaration,
-  type MeshLayerConfig,
+  MeshDesc,
+  type MeshConfig,
   type ViewContext,
   degreeToRadian,
   eastNorthUpToFixedFrame,
   geodeticToVector3,
 } from "@navara/three";
-import type { CloudsEffectLayer } from "@navara/three_default_layers";
+import type { CloudsEffectDesc } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
   type DefaultDeclarations,
@@ -42,16 +42,16 @@ type MarchingCubesLayerDescription = {
   };
 };
 
-export type MarchingCubesLayerConfig = MeshLayerConfig &
+export type MarchingCubesLayerConfig = MeshConfig &
   MarchingCubesLayerDescription;
 
 export type MarchingCubesLayerUpdate = Pick<
-  MeshLayerConfig,
+  MeshConfig,
   "position" | "visible"
 > &
   MarchingCubesLayerDescription;
 
-export class MarchingCubesLayer extends MeshLayerDeclaration<
+export class MarchingCubesLayer extends MeshDesc<
   MarchingCubesLayerConfig,
   MarchingCubesLayerUpdate,
   MarchingCubes
@@ -147,7 +147,7 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
   });
 
   // Add clouds effect layer explicitly
-  const cloudsLayer = view.addEffect<CloudsEffectLayer>({
+  const cloudsLayer = view.addEffect<CloudsEffectDesc>({
     clouds: {},
   });
 

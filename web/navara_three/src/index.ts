@@ -71,13 +71,13 @@ import { TEXTURE_LOADER } from "./event/loaders";
 import { registerInputEvents } from "./input";
 import { Layer, type LayerEvent } from "./layer";
 import {
-  MRTPassEffectLayer,
-  SelectiveBloomEffectLayer,
-  SelectiveOutlineEffectLayer,
-  SkyEnvMapEffectLayer,
-  TransparentPassEffectLayer,
+  MRTPassEffectDesc,
+  SelectiveBloomEffectDesc,
+  SelectiveOutlineEffectDesc,
+  SkyEnvMapEffectDesc,
+  TransparentPassEffectDesc,
 } from "./layers/effect";
-import { FinalCopyEffectLayer } from "./layers/effect/FinalCopyEffectLayer";
+import { FinalCopyEffectDesc } from "./layers/effect/FinalCopyEffectDesc";
 import { LayersManager } from "./layersManager";
 import { overrideMaterialsForMRT } from "./material";
 import { RenderPassOrchestrator } from "./orchestrators/RenderPassOrchestrator";
@@ -263,13 +263,13 @@ export default class ThreeView<
   private _atmosphere: Atmosphere;
 
   /** Handle for the sky environment map effect layer. Used for sky reflections. */
-  private skyEnvMapLayer!: EffectHandle<SkyEnvMapEffectLayer>;
+  private skyEnvMapLayer!: EffectHandle<SkyEnvMapEffectDesc>;
   /** Handle for the Multi-Render Target pass that outputs color and normal buffers. */
-  private mrtPassLayer!: EffectHandle<MRTPassEffectLayer>;
+  private mrtPassLayer!: EffectHandle<MRTPassEffectDesc>;
   /** Handle for the transparent objects rendering pass. */
-  private transparentPassLayer!: EffectHandle<TransparentPassEffectLayer>;
+  private transparentPassLayer!: EffectHandle<TransparentPassEffectDesc>;
   /** Handle for the final compositing pass that outputs to screen. */
-  private finalPassLayer!: EffectHandle<FinalCopyEffectLayer>;
+  private finalPassLayer!: EffectHandle<FinalCopyEffectDesc>;
 
   /** The render pass orchestrator that manages the post-processing effect pipeline. */
   private renderPassOrchestrator: RenderPassOrchestrator;
@@ -729,18 +729,18 @@ export default class ThreeView<
     // Initialize atmosphere
     await this._atmosphere._init();
 
-    this.skyEnvMapLayer = this.addEffect<SkyEnvMapEffectLayer>({
+    this.skyEnvMapLayer = this.addEffect<SkyEnvMapEffectDesc>({
       skyEnvMap: {},
     });
-    this.mrtPassLayer = this.addEffect<MRTPassEffectLayer>({
+    this.mrtPassLayer = this.addEffect<MRTPassEffectDesc>({
       mrt: {
         // debugNormal: true,
       },
     });
-    this.transparentPassLayer = this.addEffect<TransparentPassEffectLayer>({
+    this.transparentPassLayer = this.addEffect<TransparentPassEffectDesc>({
       transparent: {},
     });
-    this.finalPassLayer = this.addEffect<FinalCopyEffectLayer>({
+    this.finalPassLayer = this.addEffect<FinalCopyEffectDesc>({
       final: {},
     });
   }
@@ -1252,17 +1252,17 @@ export default class ThreeView<
   }
 
   private registerBuiltInEffects(): void {
-    this.registerEffect("skyEnvMap", SkyEnvMapEffectLayer);
-    this.registerEffect("mrt", MRTPassEffectLayer);
+    this.registerEffect("skyEnvMap", SkyEnvMapEffectDesc);
+    this.registerEffect("mrt", MRTPassEffectDesc);
 
     // SelectiveEffect effects
-    this.registerEffect("selectiveBloom", SelectiveBloomEffectLayer);
-    this.registerEffect("selectiveOutline", SelectiveOutlineEffectLayer);
+    this.registerEffect("selectiveBloom", SelectiveBloomEffectDesc);
+    this.registerEffect("selectiveOutline", SelectiveOutlineEffectDesc);
     // TODO: Curve out opaque pass from MRT pass.
     // this.registerEffect("opaque", OpaquePassEffectLayer);
-    this.registerEffect("transparent", TransparentPassEffectLayer);
+    this.registerEffect("transparent", TransparentPassEffectDesc);
 
-    this.registerEffect("final", FinalCopyEffectLayer);
+    this.registerEffect("final", FinalCopyEffectDesc);
   }
 
   private addMeshLayer(config: MeshConfig): MeshHandle {

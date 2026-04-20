@@ -1,8 +1,8 @@
 import ThreeView, {
-  EffectLayerDeclaration,
+  EffectDesc,
   Effect,
-  type EffectLayerConfig,
-  type EffectLayerUpdate,
+  type EffectConfig,
+  type EffectUpdate,
   type ViewContext,
 } from "@navara/three";
 import {
@@ -113,7 +113,7 @@ class Vignette extends Effect<VignetteEffect, VignetteOptions> {
 }
 
 // ============================================================
-// Step 2: Create a custom EffectLayerDeclaration
+// Step 2: Create a custom EffectDesc
 // This integrates the effect into Navara's layer system
 // ============================================================
 
@@ -121,11 +121,11 @@ type VignetteLayerDescription = {
   vignette?: Omit<VignetteOptions, "enabled">;
 };
 
-export type VignetteEffectConfig = VignetteLayerDescription & EffectLayerConfig;
+export type VignetteEffectConfig = VignetteLayerDescription & EffectConfig;
 
-export type VignetteEffectUpdate = VignetteLayerDescription & EffectLayerUpdate;
+export type VignetteEffectUpdate = VignetteLayerDescription & EffectUpdate;
 
-class VignetteEffectLayer extends EffectLayerDeclaration<
+class VignetteEffectDesc extends EffectDesc<
   VignetteEffectConfig,
   VignetteEffectUpdate,
   Vignette
@@ -207,7 +207,7 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
   });
 
   // Register the custom effect layer
-  view.registerEffect("vignette", VignetteEffectLayer);
+  view.registerEffect("vignette", VignetteEffectDesc);
 
   // Set initial camera position
   view.setCamera({
@@ -220,7 +220,7 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
   });
 
   // Add the custom Vignette effect layer
-  const vignetteLayer = view.addEffect<VignetteEffectLayer>({
+  const vignetteLayer = view.addEffect<VignetteEffectDesc>({
     vignette: {
       technique: "default",
       offset: 0.5,

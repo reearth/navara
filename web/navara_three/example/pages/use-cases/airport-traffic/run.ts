@@ -5,8 +5,8 @@ import ThreeView, {
 } from "@navara/three";
 import {
   ToneMappingMode,
-  type ArclineMeshLayer,
-  type GlowGlobeMeshLayer,
+  type ArclineMeshDesc,
+  type GlowGlobeMeshDesc,
 } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
@@ -156,7 +156,7 @@ export async function run() {
   });
 
   // Add globe glow mesh layer
-  view.addMesh<GlowGlobeMeshLayer>({
+  view.addMesh<GlowGlobeMeshDesc>({
     glowGlobe: {
       radiusScale: 1.2,
       coefficient: 0.43,
@@ -168,7 +168,7 @@ export async function run() {
 
   const { arcLines } = await constructData();
 
-  const arcLineLayer = view.addMesh<ArclineMeshLayer>({
+  const arcLineLayer = view.addMesh<ArclineMeshDesc>({
     arcLines,
   });
 

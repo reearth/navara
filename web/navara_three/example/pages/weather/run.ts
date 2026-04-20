@@ -1,17 +1,18 @@
 import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
-  LayerHandle,
+  MeshHandle,
+  EffectHandle,
   type LayerDescription,
   degreeToRadian,
   geodeticToVector3,
   Color,
 } from "@navara/three";
 import {
-  RainMeshLayer,
-  SnowMeshLayer,
-  RainDropEffectLayer,
-  SSREffectLayer,
-  CloudsEffectLayer,
+  RainMeshDesc,
+  SnowMeshDesc,
+  RainDropEffectDesc,
+  SSREffectDesc,
+  CloudsEffectDesc,
 } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
@@ -40,7 +41,7 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
   const defaultEffects = plugin.addDefaultPhotorealLayers();
 
   // Add clouds effect layer explicitly
-  const cloudsLayer = view.addEffect<CloudsEffectLayer>({
+  const cloudsLayer = view.addEffect<CloudsEffectDesc>({
     clouds: {},
   });
 
@@ -50,7 +51,7 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
     },
   });
 
-  view.addEffect<SSREffectLayer>({
+  view.addEffect<SSREffectDesc>({
     visible: true,
     ssr: {},
   });
@@ -124,7 +125,7 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
   });
 
   // Add Sample Post Effect with two circles
-  const rainDropEffect = view.addEffect<RainDropEffectLayer>({
+  const rainDropEffect = view.addEffect<RainDropEffectDesc>({
     rainDrop: {
       opacity: 1.0,
       dropGridSize: 12,
@@ -187,7 +188,7 @@ const addWaterControl = (view: ThreeView<CustomDeclarations>, pane: Pane) => {
     "visible river model": true,
   };
 
-  const floodLayerDescription: LayerDescription = {
+  const floodDesc: LayerDescription = {
     type: "cesium3dtiles",
     data: {
       url: TILES_3D_DATASETS.plateauTokyoFlood.url,
@@ -207,7 +208,7 @@ const addWaterControl = (view: ThreeView<CustomDeclarations>, pane: Pane) => {
     },
   };
 
-  const riverLayerDescription: LayerDescription = {
+  const riverDesc: LayerDescription = {
     type: "mvt",
     data: {
       url: VECTOR_DATASETS.gsiExperimentalVector.url,
@@ -225,25 +226,25 @@ const addWaterControl = (view: ThreeView<CustomDeclarations>, pane: Pane) => {
     },
   };
 
-  const floodModelLayer = view.addLayer(floodLayerDescription);
-  const riverModelLayer = view.addLayer(riverLayerDescription);
+  const floodModelLayer = view.addLayer(floodDesc);
+  const riverModelLayer = view.addLayer(riverDesc);
 
   const folder = pane.addFolder({
     title: "Water",
   });
 
   folder.addBinding(PARAMS, "visible flood model").on("change", (v) => {
-    if (floodLayerDescription.model) {
-      floodLayerDescription.model.show = v.value;
+    if (floodDesc.model) {
+      floodDesc.model.show = v.value;
     }
-    floodModelLayer.update(floodLayerDescription);
+    floodModelLayer.update(floodDesc);
   });
 
   folder.addBinding(PARAMS, "visible river model").on("change", (v) => {
-    if (riverLayerDescription.polygon) {
-      riverLayerDescription.polygon.show = v.value;
+    if (riverDesc.polygon) {
+      riverDesc.polygon.show = v.value;
     }
-    riverModelLayer.update(riverLayerDescription);
+    riverModelLayer.update(riverDesc);
   });
 };
 
@@ -273,7 +274,7 @@ const addCameraControl = (view: ThreeView<CustomDeclarations>, pane: Pane) => {
 const addWeatherControl = (
   view: ThreeView<CustomDeclarations>,
   pane: Pane,
-  rainDropEffect: LayerHandle<RainDropEffectLayer>,
+  rainDropEffect: EffectHandle<RainDropEffectDesc>,
 ) => {
   const position = geodeticToVector3({
     lat: degreeToRadian(35.67564356091717),
@@ -281,12 +282,12 @@ const addWeatherControl = (
     height: 10,
   });
 
-  const rain = view.addMesh<RainMeshLayer>({
+  const rain = view.addMesh<RainMeshDesc>({
     visible: false,
     position: position,
     rain: {},
   });
-  const snow = view.addMesh<SnowMeshLayer>({
+  const snow = view.addMesh<SnowMeshDesc>({
     visible: false,
     position: position,
     snow: {},
@@ -299,8 +300,8 @@ const addWeatherControl = (
   };
 
   let selectedLayer:
-    | LayerHandle<RainMeshLayer>
-    | LayerHandle<SnowMeshLayer>
+    | MeshHandle<RainMeshDesc>
+    | MeshHandle<SnowMeshDesc>
     | null = null;
 
   const folderFields: FolderFields<typeof PARAMS> = [

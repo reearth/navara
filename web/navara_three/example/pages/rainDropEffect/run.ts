@@ -1,5 +1,5 @@
 import ThreeView from "@navara/three";
-import { RainDropEffectLayer } from "@navara/three_default_layers";
+import { RainDropEffectDesc } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
   type DefaultDeclarations,
@@ -40,7 +40,7 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
     jitterStrengthHigh: 0.08,
   };
 
-  const rainDropLayer = view.addEffect<RainDropEffectLayer>({
+  const rainDropLayer = view.addEffect<RainDropEffectDesc>({
     rainDrop: { ...rainDropDefaults },
     visible: true,
   });
