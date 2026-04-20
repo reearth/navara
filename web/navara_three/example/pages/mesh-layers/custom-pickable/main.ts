@@ -249,11 +249,11 @@ const run = async () => {
   view.registerMesh("torusKnot", TorusKnotMeshLayer);
 
   view.setCamera({
-    lng: 139.767125,
-    lat: 35.679,
-    height: 800,
-    heading: 0,
-    pitch: -40,
+    lng: 139.7609269309,
+    lat: 35.681469164,
+    height: 142.01,
+    heading: 97.2068397036,
+    pitch: -11.6037601287,
     roll: 0,
   });
 
