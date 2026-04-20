@@ -76,7 +76,7 @@ export type EvaluatedValue = {
 export type FeatureInfo = {
   batchId: number;
   properties: Record<string, unknown> | undefined;
-  layerId: string | undefined;
+  layerId: LayerId | undefined;
 };
 
 /**
@@ -170,7 +170,7 @@ export class FeatureEvaluator {
   }
 
   /**
-   * Gets the unique identifier of this feature.
+   * Gets the unique identifier of this feature set.
    */
   get id() {
     return this.featureSetId;
