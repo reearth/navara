@@ -11,7 +11,7 @@ import {
   type EffectConfig,
   type BuiltInEffectDescription,
 } from "@navara/three";
-import { useEffect, useRef, type PropsWithChildren } from "react";
+import { useCallback, useEffect, useRef, type PropsWithChildren } from "react";
 
 import { useViewContext } from "./ViewContext";
 
@@ -58,18 +58,21 @@ export function Layer({ config, onReady }: PropsWithChildren<LayerProps>) {
 
 function useDeclarationLayer<L extends BaseDesc>(
   addFn: (config: Record<string, unknown>) => BaseHandle<L>,
+  view: object,
   config: Record<string, unknown>,
   // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
   onReady?: (handle: BaseHandle<L>) => (() => void) | void,
 ) {
   const handleRef = useRef<BaseHandle<L> | null>(null);
+  const addFnRef = useRef(addFn);
   const configRef = useRef(config);
   const onReadyRef = useRef(onReady);
 
+  addFnRef.current = addFn;
   configRef.current = config;
 
   useEffect(() => {
-    const handle = addFn(configRef.current);
+    const handle = addFnRef.current(configRef.current);
     handleRef.current = handle;
     const unmount = onReadyRef.current?.(handle);
     return () => {
@@ -77,7 +80,7 @@ function useDeclarationLayer<L extends BaseDesc>(
       handle.delete();
       handleRef.current = null;
     };
-  }, [addFn]);
+  }, [view]);
 
   useEffect(() => {
     if (handleRef.current) {
@@ -97,8 +100,13 @@ export function MeshDesc<L extends MeshDescClass = MeshDescClass>({
   onReady,
 }: PropsWithChildren<MeshDescProps<L>>) {
   const { view } = useViewContext();
+  const addFn = useCallback(
+    (c: Record<string, unknown>) => view.addMesh<L>(c as MeshConfig),
+    [view],
+  );
   useDeclarationLayer<L>(
-    (c) => view.addMesh<L>(c as MeshConfig),
+    addFn,
+    view,
     config as Record<string, unknown>,
     onReady,
   );
@@ -116,8 +124,13 @@ export function LightDesc<L extends LightDescClass = LightDescClass>({
   onReady,
 }: PropsWithChildren<LightDescProps<L>>) {
   const { view } = useViewContext();
+  const addFn = useCallback(
+    (c: Record<string, unknown>) => view.addLight<L>(c as LightConfig),
+    [view],
+  );
   useDeclarationLayer<L>(
-    (c) => view.addLight<L>(c as LightConfig),
+    addFn,
+    view,
     config as Record<string, unknown>,
     onReady,
   );
@@ -135,8 +148,14 @@ export function EffectDesc<L extends EffectDescClass = EffectDescClass>({
   onReady,
 }: PropsWithChildren<EffectDescProps<L>>) {
   const { view } = useViewContext();
+  const addFn = useCallback(
+    (c: Record<string, unknown>) =>
+      view.addEffect<L>(c as EffectConfig | BuiltInEffectDescription),
+    [view],
+  );
   useDeclarationLayer<L>(
-    (c) => view.addEffect<L>(c as EffectConfig | BuiltInEffectDescription),
+    addFn,
+    view,
     config as Record<string, unknown>,
     onReady,
   );
