@@ -30,7 +30,7 @@ const run = async () => {
 
   await view.init();
 
-  const defaultAtmospheres = defaultPlugin.addDefaultPhotorealLayers();
+  const defaultAtmospheres = defaultPlugin.addDefaultPhotorealScene();
   defaultAtmospheres.sun.update({
     sun: { intensity: 2, castShadow: true, shadowFar: 5000 },
   });
@@ -74,7 +74,7 @@ const run = async () => {
   });
   const boxMatrixWorld = northUpEastToFixedFrame(boxPosition);
 
-  // Box mesh layer
+  // Box mesh descriptor
   const boxLayer = view.addMesh<BoxMeshDesc>({
     box: {
       width: 1000,
@@ -97,7 +97,7 @@ const run = async () => {
   });
   const cylinderMatrixWorld = northUpEastToFixedFrame(cylinderPosition);
 
-  // Cylinder mesh layer
+  // Cylinder mesh descriptor
   const cylinderLayer = view.addMesh<CylinderMeshDesc>({
     cylinder: {
       radiusTop: 500,

@@ -28,13 +28,13 @@ export type LightBaseInstance<Instance extends object = object> =
       : BaseInstance;
 
 /**
- * Abstract base class for creating custom light layers.
+ * Abstract base class for creating custom light descriptors.
  *
  * Extend this class to add custom Three.js lights (directional, point, spot, ambient, etc.)
  * to the Navara scene. The light is automatically added to `view.scenes.light` and
  * position synchronization is handled by the base class.
  *
- * ## Implementing a Custom Light Layer
+ * ## Implementing a Custom Light Descriptor
  *
  * ### 1. Define configuration types
  *
@@ -91,12 +91,12 @@ export type LightBaseInstance<Instance extends object = object> =
  * }
  * ```
  *
- * ### 3. Register and use the layer
+ * ### 3. Register and use the descriptor
  *
  * ```typescript
- * view.registerLight("myLight", MyLightLayer);
+ * view.registerLight("myLight", MyLightDesc);
  *
- * const handle = view.addLight<MyLightLayer>({
+ * const handle = view.addLight<MyLightDesc>({
  *   position: { x: 0, y: 100, z: 0 },
  *   myLight: { intensity: 2, color: new Color("#ff0000") },
  * });
@@ -104,13 +104,13 @@ export type LightBaseInstance<Instance extends object = object> =
  * // Update dynamically
  * handle.update({ myLight: { intensity: 0.5 } });
  *
- * // Remove the layer
+ * // Remove the descriptor
  * handle.delete();
  * ```
  *
  * ## Lifecycle
  *
- * 1. **Construction** - The layer is instantiated with the view context and config.
+ * 1. **Construction** - The descriptor is instantiated with the view context and config.
  * 2. **{@link createLight}** - Called during {@link onCreate} to create the Three.js light.
  *    The base class adds it to `view.scenes.light` and applies the initial position.
  * 3. **{@link onUpdateConfig}** - Called when `handle.update()` is invoked. The base class
@@ -122,7 +122,7 @@ export type LightBaseInstance<Instance extends object = object> =
  * @see {@link AmbientLightDesc} for a minimal built-in example.
  * @see {@link SunLightDesc} for an advanced example with CSM shadows and atmosphere integration.
  *
- * @typeParam Config - Layer configuration type (extends {@link LightConfig})
+ * @typeParam Config - Configuration type (extends {@link LightConfig})
  * @typeParam UpdateConfig - Updatable properties (extends {@link LightUpdate})
  * @typeParam InstanceObj - The Three.js Light type or a wrapper with a `raw` property
  * @typeParam Instance - Resolved instance type (inferred automatically)

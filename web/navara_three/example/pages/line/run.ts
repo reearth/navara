@@ -265,7 +265,7 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
     scale: new Vector3().setScalar(1e9),
   });
 
-  plugin.addDefaultPhotorealLayers();
+  plugin.addDefaultPhotorealScene();
 
   view.addEffect<CloudsEffectDesc>({
     clouds: {},

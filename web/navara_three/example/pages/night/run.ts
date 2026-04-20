@@ -45,10 +45,10 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
   view.toneMappingExposure = 10;
 
   // Set background to dark night sky
-  // Note: Background should be set through renderer or effect layers, not scene directly
+  // Note: Background should be set through renderer or effect descriptors, not scene directly
 
   // Configure atmosphere for night scene
-  const defaultAtmosphere = plugin.addDefaultPhotorealLayers();
+  const defaultAtmosphere = plugin.addDefaultPhotorealScene();
   const starsLayer = defaultAtmosphere.stars;
   defaultAtmosphere.sun.update({
     sun: {
@@ -468,7 +468,7 @@ const addTokyoPointsFogLightControl = async (
     LOCAL_DATASETS.tokyoPoints100GeoJSON.url,
   );
 
-  // Create separate fog light layer for Tokyo Points
+  // Create separate fog light descriptor for Tokyo Points
   const tokyoPointsFogLayer = view.addEffect<FogLightEffectDesc>({
     fogLight: {
       lights: tokyoPointsLights,
@@ -646,7 +646,7 @@ const addFogLightControl = async (
   const loadLightData = async (lightDataFile: string) => {
     streetLights = await loadGeoJSONLights(lightDataFile);
 
-    // Update or create fog light layer
+    // Update or create fog light descriptor
     if (fogLight) {
       fogLight.update({
         fogLight: {
@@ -654,7 +654,7 @@ const addFogLightControl = async (
         },
       });
     } else {
-      // Create fog light layer, initially visible only at night
+      // Create fog light descriptor, initially visible only at night
       const isAtNight = view.atmosphere.isAtNight(view.camera.raw.position);
       fogLight = view.addEffect<FogLightEffectDesc>({
         fogLight: {

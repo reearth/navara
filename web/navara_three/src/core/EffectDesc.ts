@@ -35,12 +35,12 @@ export type EffectBaseInstance<Instance extends object = object> =
       : BaseInstance;
 
 /**
- * Abstract base class for creating custom post-processing effect layers.
+ * Abstract base class for creating custom post-processing effect descriptors.
  *
  * Extend this class to integrate custom effects from the `postprocessing` library into
  * Navara's render pipeline. The base class handles pass insertion, ordering, and lifecycle.
  *
- * ## Implementing a Custom Effect Layer
+ * ## Implementing a Custom Effect Descriptor
  *
  * ### 1. (Optional) Create an Effect wrapper class
  *
@@ -130,12 +130,12 @@ export type EffectBaseInstance<Instance extends object = object> =
  * }
  * ```
  *
- * ### 4. Register and use the layer
+ * ### 4. Register and use the descriptor
  *
  * ```typescript
- * view.registerEffect("vignette", VignetteEffectLayer);
+ * view.registerEffect("vignette", VignetteEffectDesc);
  *
- * const handle = view.addEffect<VignetteEffectLayer>({
+ * const handle = view.addEffect<VignetteEffectDesc>({
  *   vignette: { offset: 0.5, darkness: 0.5 },
  *   visible: true,
  * });
@@ -143,7 +143,7 @@ export type EffectBaseInstance<Instance extends object = object> =
  * // Update dynamically
  * handle.update({ vignette: { offset: 0.7 } });
  *
- * // Remove the layer
+ * // Remove the descriptor
  * handle.delete();
  * ```
  *
@@ -162,7 +162,7 @@ export type EffectBaseInstance<Instance extends object = object> =
  *
  * ## Lifecycle
  *
- * 1. **Construction** - The layer is instantiated with the view context and config.
+ * 1. **Construction** - The descriptor is instantiated with the view context and config.
  * 2. **{@link createPass}** - Called during {@link onCreate} to create the post-processing pass.
  *    The base class inserts it into the render pipeline based on the static ordering properties.
  * 3. **{@link onUpdateConfig}** - Called when `handle.update()` is invoked. The base class
@@ -171,10 +171,10 @@ export type EffectBaseInstance<Instance extends object = object> =
  * 5. **{@link onDestroy}** - Called on `handle.delete()`. The base class removes the pass
  *    from the render pipeline.
  *
- * @see The `custom-effect` example page for a complete custom effect layer tutorial
+ * @see The `custom-effect` example page for a complete custom effect descriptor tutorial
  *      implementing a vignette effect.
  *
- * @typeParam Config - Layer configuration type (extends {@link EffectConfig})
+ * @typeParam Config - Configuration type (extends {@link EffectConfig})
  * @typeParam UpdateConfig - Updatable properties (extends {@link EffectUpdate})
  * @typeParam InstanceObj - The postprocessing Pass type or a wrapper with a `raw` property
  * @typeParam Instance - Resolved instance type (inferred automatically)
@@ -326,13 +326,13 @@ export abstract class EffectDesc<
   update?(time: number): void;
 
   /**
-   * Finds another effect layer in the pipeline by its static `key`.
+   * Finds another effect descriptor in the pipeline by its static `key`.
    * Useful for cross-effect communication (e.g. reading another effect's state).
-   * @param key - The static `key` of the effect layer to find.
-   * @returns The effect layer instance, or `undefined` if not found.
+   * @param key - The static `key` of the effect descriptor to find.
+   * @returns The effect descriptor instance, or `undefined` if not found.
    */
-  findLayer<Layer extends EffectDesc = EffectDesc>(key: string) {
-    for (const handle of this.ctx._getEffectLayers()) {
+  find<Layer extends EffectDesc = EffectDesc>(key: string) {
+    for (const handle of this.ctx._getEffects()) {
       const layer = handle.ref;
       if (layer.getKey() !== key) {
         continue;

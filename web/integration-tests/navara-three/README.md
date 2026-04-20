@@ -35,7 +35,7 @@ The `src/main.ts` contains a minimal example that:
 
 1. Creates a `ThreeView` instance
 2. Initializes the WASM engine
-3. Adds atmosphere and effect layers
+3. Adds atmosphere and effect descriptors
 4. Adds terrain and tile layers
 5. Sets the camera position
 

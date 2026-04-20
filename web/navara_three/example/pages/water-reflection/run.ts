@@ -30,7 +30,7 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
 
   view.toneMappingExposure = 10;
 
-  const defaultAtmospheres = defaultPlugin.addDefaultPhotorealLayers();
+  const defaultAtmospheres = defaultPlugin.addDefaultPhotorealScene();
   defaultAtmospheres.sun.update({
     sun: {
       castShadow: true,
@@ -111,7 +111,7 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
 };
 
 const addSSRControls = (view: ThreeView<CustomDeclarations>, pane: Pane) => {
-  // Add SSR effect layer
+  // Add SSR effect descriptor
   let ssrLayer = view.addEffect<SSREffectDesc>({
     ssr: {},
   });

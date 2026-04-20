@@ -105,7 +105,7 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
 function addPanel(pane: Pane) {
   if (!gSkyBoxMeshDesc) return;
 
-  const folder = pane.addFolder({ title: "Sky Box Layer" });
+  const folder = pane.addFolder({ title: "Sky Box Descriptor" });
 
   folder
     .addBinding(gPaneParams, "visible", { label: "Visible", view: "boolean" })

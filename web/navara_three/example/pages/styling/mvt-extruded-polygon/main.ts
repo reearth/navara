@@ -21,7 +21,7 @@ const run = async () => {
 
   await view.init();
 
-  const defaultAtmospheres = defaultPlugin.addDefaultPhotorealLayers();
+  const defaultAtmospheres = defaultPlugin.addDefaultPhotorealScene();
   defaultAtmospheres.sun.update({
     sun: { intensity: 2, castShadow: true, shadowIntensity: 0.9 },
   });

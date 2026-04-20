@@ -10,7 +10,7 @@ import type ThreeView from "../../index";
 
 import type { MRTPassEffectDesc } from "./MRTPassEffectDesc";
 
-// Base configuration for selective effect layers
+// Base configuration for selective effect descriptors
 export type SelectiveEffectConfig = {
   selectiveEffect?: true;
 } & EffectConfig;
@@ -31,7 +31,7 @@ export function createFullscreenQuad(): {
 }
 
 /**
- * Base class for buffer-based selective effect layers (Bloom, Outline, etc.).
+ * Base class for buffer-based selective effect descriptors (Bloom, Outline, etc.).
  *
  * Manages effect key registration, EffectIds Buffer slot allocation, and
  * provides MRT buffer accessors for subclass passes.
@@ -71,7 +71,7 @@ export abstract class SelectiveEffectDesc<
     const registry = this.ctx.selectiveEffectRegistry;
     if (!registry) {
       throw new Error(
-        "SelectiveEffectRegistry not initialized. Ensure MRTPassEffectDesc is added before selective effect layers.",
+        "SelectiveEffectRegistry not initialized. Ensure MRTPassEffectDesc is added before selective effect descriptors.",
       );
     }
 
@@ -96,13 +96,13 @@ export abstract class SelectiveEffectDesc<
 
   /** Emissive RGB buffer (MRT attachment[3]). */
   public getEmissiveBuffer(): Texture | null {
-    const mrtLayer = this.findLayer<MRTPassEffectDesc>("mrt");
+    const mrtLayer = this.find<MRTPassEffectDesc>("mrt");
     return mrtLayer?.emissiveBuffer ?? null;
   }
 
   /** EffectIds bitmask buffer (MRT attachment[2]). NearestFilter, discrete data. */
   public getEffectIdsBuffer(): Texture | null {
-    const mrtLayer = this.findLayer<MRTPassEffectDesc>("mrt");
+    const mrtLayer = this.find<MRTPassEffectDesc>("mrt");
     return mrtLayer?.effectIdsBuffer ?? null;
   }
 

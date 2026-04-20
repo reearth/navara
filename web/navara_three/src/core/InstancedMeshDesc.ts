@@ -21,7 +21,7 @@ export type InstancedMeshConfig = MeshConfigWithSelectiveEffect;
 export type InstancedMeshUpdate = MeshUpdateWithSelectiveEffect;
 
 /**
- * Common transform fields for individual instances within an instanced mesh layer.
+ * Common transform fields for individual instances within an instanced mesh descriptor.
  * Mirrors the transform fields of `MeshConfig` at the parent level.
  *
  * When `matrix` is provided, it is used directly and `position`, `rotation`, `scale`
@@ -52,7 +52,7 @@ const _swapMatrix = new Matrix4();
 const _swapColor = new ThreeColor();
 
 /**
- * Abstract base class for instanced mesh layers using GPU instancing via Three.js `InstancedMesh`.
+ * Abstract base class for instanced mesh descriptors using GPU instancing via Three.js `InstancedMesh`.
  *
  * All instances share a single geometry and material, rendered in one draw call.
  * Per-instance variation is achieved through `instanceMatrix` (position, rotation, scale)

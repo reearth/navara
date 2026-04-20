@@ -46,7 +46,7 @@ const DEFAULT_THICKNESS = 1.0;
 const DEFAULT_EDGE_STRENGTH = 1.0;
 
 /**
- * Selective Outline Effect Layer
+ * Selective Outline Effect Descriptor
  *
  * Uses EffectIds Buffer to apply outline to selected objects.
  * Extract mask → Sobel edge detection → Composite with base scene.

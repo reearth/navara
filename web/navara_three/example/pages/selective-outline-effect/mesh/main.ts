@@ -31,7 +31,7 @@ const run = async () => {
 
   await view.init();
 
-  const defaultAtmospheres = defaultPlugin.addDefaultPhotorealLayers();
+  const defaultAtmospheres = defaultPlugin.addDefaultPhotorealScene();
   defaultAtmospheres.sun.update({
     sun: { intensity: 1, castShadow: true },
   });
@@ -56,7 +56,7 @@ const run = async () => {
     },
   });
 
-  // Mesh layers with outline
+  // Mesh descriptors with outline
   const tokyoStationPosition = geodeticToVector3({
     lat: degreeToRadian(35.681236),
     lng: degreeToRadian(139.767125),

@@ -20,7 +20,7 @@ const run = async () => {
 
   await view.init();
 
-  defaultPlugin.addDefaultPhotorealLayers();
+  defaultPlugin.addDefaultPhotorealScene();
 
   // Camera position for Gifu
   view.setCamera({

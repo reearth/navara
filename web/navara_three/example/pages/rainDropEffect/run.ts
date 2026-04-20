@@ -20,7 +20,7 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
 
   view.animation = true;
 
-  defaultPlugin.addDefaultPhotorealLayers();
+  defaultPlugin.addDefaultPhotorealScene();
 
   const rainDropDefaults = {
     opacity: 0.85,

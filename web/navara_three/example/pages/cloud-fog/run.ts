@@ -27,9 +27,9 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
 
   await view.init();
 
-  const defaultEffects = defaultPlugin.addDefaultPhotorealLayers();
+  const defaultEffects = defaultPlugin.addDefaultPhotorealScene();
 
-  // Add clouds effect layer explicitly
+  // Add clouds effect descriptor explicitly
   const cloudsLayer = view.addEffect<CloudsEffectDesc>({
     clouds: {},
   });

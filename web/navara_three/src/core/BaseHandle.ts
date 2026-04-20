@@ -8,30 +8,30 @@ import type { MeshDesc } from "./MeshDesc";
 /**
  * Events emitted by handles.
  */
-export type LayerHandleEvent = {
-  /** Emitted when the layer is deleted. */
+export type HandleEvent = {
+  /** Emitted when the descriptor is deleted. */
   deleted: () => void;
 };
 
 /**
- * Abstract base handle to control a declaration layer after it has been added to the scene.
+ * Abstract base handle to control a descriptor after it has been added to the scene.
  *
  * Use the typed subclasses instead:
  * - {@link MeshHandle} - returned by `ThreeView.addMesh()`
  * - {@link LightHandle} - returned by `ThreeView.addLight()`
  * - {@link EffectHandle} - returned by `ThreeView.addEffect()`
  *
- * @typeParam T - The specific layer declaration type
+ * @typeParam T - The specific descriptor type
  */
 export class BaseHandle<
   T extends BaseDesc = BaseDesc,
-> extends EventHandler<LayerHandleEvent> {
+> extends EventHandler<HandleEvent> {
   constructor(private layer: T) {
     super();
   }
 
   /**
-   * Updates the layer configuration with partial updates.
+   * Updates the descriptor configuration with partial updates.
    * Only the specified properties will be changed; others remain unchanged.
    * @param updates - Partial configuration object with properties to update
    */
@@ -42,15 +42,15 @@ export class BaseHandle<
   }
 
   /**
-   * Gets direct access to the underlying layer instance.
-   * Use this to access layer-specific methods and properties not exposed through the handle.
+   * Gets direct access to the underlying descriptor instance.
+   * Use this to access descriptor-specific methods and properties not exposed through the handle.
    */
   get ref(): T {
     return this.layer;
   }
 
   /**
-   * Removes the layer from the scene and disposes its resources.
+   * Removes the descriptor from the scene and disposes its resources.
    * After calling this, the handle should no longer be used.
    */
   delete(): void {
@@ -63,22 +63,22 @@ export class BaseHandle<
   private _deleted = false;
 
   /**
-   * Gets the unique identifier of this layer.
+   * Gets the unique identifier.
    */
   get id(): string {
     return this.layer.id;
   }
 
   /**
-   * Gets whether the layer is currently visible in the scene.
+   * Gets whether the descriptor is currently visible in the scene.
    */
   get visible(): boolean {
     return this.layer.visible;
   }
 
   /**
-   * Sets whether the layer should be visible in the scene.
-   * @param visible - True to show the layer, false to hide it
+   * Sets whether the descriptor should be visible in the scene.
+   * @param visible - True to show, false to hide
    */
   set visible(visible: boolean) {
     this.layer.visible = visible;
@@ -86,10 +86,10 @@ export class BaseHandle<
 }
 
 /**
- * A handle to control a mesh layer after it has been added to the scene.
+ * A handle to control a mesh descriptor after it has been added to the scene.
  * Returned by `ThreeView.addMesh()`.
  *
- * @typeParam T - The specific mesh declaration type (e.g., BoxMeshDesc)
+ * @typeParam T - The specific mesh descriptor type (e.g., BoxMeshDesc)
  *
  * @example
  * ```typescript
@@ -101,20 +101,20 @@ export class BaseHandle<
 export class MeshHandle<T extends MeshDesc = MeshDesc> extends BaseHandle<T> {}
 
 /**
- * A handle to control a light layer after it has been added to the scene.
+ * A handle to control a light descriptor after it has been added to the scene.
  * Returned by `ThreeView.addLight()`.
  *
- * @typeParam T - The specific light declaration type (e.g., SunLightDesc)
+ * @typeParam T - The specific light descriptor type (e.g., SunLightDesc)
  */
 export class LightHandle<
   T extends LightDesc = LightDesc,
 > extends BaseHandle<T> {}
 
 /**
- * A handle to control an effect layer after it has been added to the scene.
+ * A handle to control an effect descriptor after it has been added to the scene.
  * Returned by `ThreeView.addEffect()`.
  *
- * @typeParam T - The specific effect declaration type (e.g., SSAOEffectDesc)
+ * @typeParam T - The specific effect descriptor type (e.g., SSAOEffectDesc)
  */
 export class EffectHandle<
   T extends EffectDesc = EffectDesc,

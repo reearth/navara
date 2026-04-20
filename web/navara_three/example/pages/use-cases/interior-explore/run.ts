@@ -49,7 +49,7 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
   view.atmosphere.date.setHours(8);
   view.toneMappingExposure = 10;
 
-  const defaultLayers = plugin.addDefaultPhotorealLayers();
+  const defaultLayers = plugin.addDefaultPhotorealScene();
 
   const sunLight = defaultLayers.sun;
   sunLight.update({

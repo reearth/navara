@@ -51,14 +51,14 @@ import { SH_COEFFICIENTS } from "../../helpers/sh";
 
 export type CustomDeclarations = DefaultDeclarations;
 
-type DefaultEffects = ReturnType<DefaultPlugin["addDefaultPhotorealLayers"]>;
+type DefaultEffects = ReturnType<DefaultPlugin["addDefaultPhotorealScene"]>;
 
 export const run = async (view: ThreeView<CustomDeclarations>) => {
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
   await view.init();
 
-  const defaultEffects = plugin.addDefaultPhotorealLayers();
+  const defaultEffects = plugin.addDefaultPhotorealScene();
 
   defaultEffects.aerialPerspective.update({
     aerialPerspective: {
@@ -66,12 +66,12 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
     },
   });
 
-  // Add clouds effect layer explicitly
+  // Add clouds effect descriptor explicitly
   const cloudsLayer = view.addEffect<CloudsEffectDesc>({
     clouds: {},
   });
 
-  // Cast to specific layer types for easier access and updates
+  // Cast to specific descriptor types for easier access and updates
   const skyLayer = defaultEffects.sky;
   const starsLayer = defaultEffects.stars;
   const sunLight = defaultEffects.sun;
@@ -83,7 +83,7 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
     },
   });
 
-  // Add an additional ambient light layer
+  // Add an additional ambient light descriptor
   const ambientLight: LightHandle<AmbientLightDesc> = view.addLight({
     visible: false,
     ambient: {

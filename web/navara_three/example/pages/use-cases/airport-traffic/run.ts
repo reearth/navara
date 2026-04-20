@@ -155,7 +155,7 @@ export async function run() {
     },
   });
 
-  // Add globe glow mesh layer
+  // Add globe glow mesh descriptor
   view.addMesh<GlowGlobeMeshDesc>({
     glowGlobe: {
       radiusScale: 1.2,

@@ -36,7 +36,7 @@ The `src/` directory contains a React application that:
 
 1. Creates a `ViewProvider` context with shadow and debug enabled
 2. Uses the `useViewContext` hook to access the view
-3. Adds default atmosphere and effect layers via custom hook
+3. Adds default atmosphere and effect descriptors via custom hook
 4. Renders terrain, tiles, and 3D building layers using the `Layer` component
 5. Demonstrates the declarative React API for managing layers
 

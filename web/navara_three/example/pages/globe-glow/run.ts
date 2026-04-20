@@ -63,7 +63,7 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
 function addPanel(view: ThreeView<CustomDeclarations>, pane: Pane) {
   if (!gGlowGlobeMeshDesc) return;
 
-  const folder = pane.addFolder({ title: "Glow Globe Layer" });
+  const folder = pane.addFolder({ title: "Glow Globe Descriptor" });
 
   folder.addBinding(gPaneParams, "glowRadiusScale").on("change", (ev) => {
     gGlowGlobeMeshDesc?.update({
@@ -115,12 +115,12 @@ function addPanel(view: ThreeView<CustomDeclarations>, pane: Pane) {
     }
   });
 
-  folder.addButton({ title: "Delete Layer" }).on("click", (ev) => {
+  folder.addButton({ title: "Delete Descriptor" }).on("click", (ev) => {
     if (gGlowGlobeMeshDesc) {
       gGlowGlobeMeshDesc.delete();
       view.forceUpdate();
       gGlowGlobeMeshDesc = undefined;
-      ev.target.title = "Add Layer";
+      ev.target.title = "Add Descriptor";
     } else {
       gGlowGlobeMeshDesc = view.addMesh<GlowGlobeMeshDesc>({
         glowGlobe: {

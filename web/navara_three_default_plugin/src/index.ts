@@ -84,7 +84,7 @@ export class DefaultPlugin extends Plugin<
   async init(view: ThreeView<DefaultDeclarations>, _ctx: ViewContext) {
     this.view = view;
 
-    // Register mesh layers
+    // Register meshes
     view.registerMesh("rain", RainMeshDesc);
     view.registerMesh("snow", SnowMeshDesc);
     view.registerMesh("sky", SkyMeshDesc);
@@ -103,13 +103,13 @@ export class DefaultPlugin extends Plugin<
     view.registerMesh("smoothLines", SmoothLineMeshDesc);
     view.registerMesh("boxes", InstancedBoxMeshDesc);
 
-    // Register light layers
+    // Register lights
     view.registerLight("sun", SunLightDesc);
     view.registerLight("ambient", AmbientLightDesc);
     view.registerLight("skyLightProbe", SkyLightProbeDesc);
     view.registerLight("lightProbe", LightProbeDesc);
 
-    // Register effect layers
+    // Register effects
     view.registerEffect("aerialPerspective", AerialPerspectiveEffectDesc);
     view.registerEffect("rainDrop", RainDropEffectDesc);
     view.registerEffect("clouds", CloudsEffectDesc);
@@ -125,10 +125,10 @@ export class DefaultPlugin extends Plugin<
   }
 
   /**
-   * Add default layers automatically to make the photorealistic scene.
+   * Add default descriptors automatically to make the photorealistic scene.
    * This method must be invoked after `view.init()`.
    */
-  addDefaultPhotorealLayers(): {
+  addDefaultPhotorealScene(): {
     sky: MeshHandle<SkyMeshDesc>;
     skyEnv: MeshHandle<SkyMeshDesc>;
     stars: MeshHandle<StarsDesc>;
@@ -148,7 +148,7 @@ export class DefaultPlugin extends Plugin<
     const view = this.view;
     const mobile = view.isMobileOptimized();
 
-    // Mesh layers
+    // Meshes
     const sky = view.addMesh<SkyMeshDesc>({
       sky: {},
     });
@@ -162,7 +162,7 @@ export class DefaultPlugin extends Plugin<
       stars: {},
     });
 
-    // Light layers
+    // Lights
     const skyLightProbe = view.addLight<SkyLightProbeDesc>({
       skyLightProbe: {},
     });
@@ -170,7 +170,7 @@ export class DefaultPlugin extends Plugin<
       sun: {},
     });
 
-    // Effect layers
+    // Effects
     const aerialPerspective = view.addEffect<AerialPerspectiveEffectDesc>({
       aerialPerspective: {},
     });

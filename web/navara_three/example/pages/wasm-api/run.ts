@@ -105,7 +105,7 @@ export const run = async (
   view.addPlugin(plugin);
   await view.init();
 
-  plugin.addDefaultPhotorealLayers();
+  plugin.addDefaultPhotorealScene();
 
   gView = view;
 
@@ -279,7 +279,7 @@ const placeOneBall = (
       position: { x: pos.x, y: pos.y, z: pos.z },
     });
 
-    // sphereLayer is a MeshHandle for mesh layers
+    // sphereLayer is a MeshHandle for mesh descriptors
     return sphereLayer.ref.raw;
   }
 };

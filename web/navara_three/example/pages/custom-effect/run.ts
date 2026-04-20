@@ -183,7 +183,7 @@ class VignetteEffectDesc extends EffectDesc<
 }
 
 // ============================================================
-// Step 3: Use the custom effect layer in the application
+// Step 3: Use the custom effect descriptor in the application
 // ============================================================
 
 export type CustomDeclarations =
@@ -198,7 +198,7 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
 
   await view.init();
 
-  const defaultAtmospheres = defaultPlugin.addDefaultPhotorealLayers();
+  const defaultAtmospheres = defaultPlugin.addDefaultPhotorealScene();
   defaultAtmospheres.sun.update({
     sun: {
       intensity: 1,
@@ -206,7 +206,7 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
     },
   });
 
-  // Register the custom effect layer
+  // Register the custom effect descriptor
   view.registerEffect("vignette", VignetteEffectDesc);
 
   // Set initial camera position
@@ -219,7 +219,7 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
     roll: 0,
   });
 
-  // Add the custom Vignette effect layer
+  // Add the custom Vignette effect descriptor
   const vignetteLayer = view.addEffect<VignetteEffectDesc>({
     vignette: {
       technique: "default",

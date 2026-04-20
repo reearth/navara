@@ -14,7 +14,7 @@ import { BackSide, Mesh, ShaderMaterial, SphereGeometry, Vector4 } from "three";
 
 type Description = {
   /**
-   * Configuration for the glow globe mesh layer.
+   * Configuration for the glow globe mesh descriptor.
    *
    * Implements a Fresnel-based glow effect that creates a halo
    * around a spherical body. The glow intensity varies based on the viewing angle,

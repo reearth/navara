@@ -53,7 +53,7 @@ export type CloudsOptions = {
   maxStepSize?: Nullable<number>;
   resolutionScale?: number;
 
-  // Whether enabling the shadow for all layers or not.
+  // Whether enabling the shadow for all descriptors or not.
   // Need to enable `Atmosphere.irradiance` as well.
   shadows?: boolean;
   shadowCascadeCount?: number;

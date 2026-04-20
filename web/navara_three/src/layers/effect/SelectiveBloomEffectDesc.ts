@@ -48,7 +48,7 @@ const DEFAULT_THRESHOLD = 0.0;
 const DEFAULT_BLOOM_RESOLUTION_SCALE = 0.5;
 
 /**
- * Selective Bloom Effect Layer
+ * Selective Bloom Effect Descriptor
  *
  * Uses EmissiveBuffer + EffectIds Buffer to apply bloom to selected objects.
  * Extract → Blur (UnrealBloomPassRGBA) → Composite with base scene.

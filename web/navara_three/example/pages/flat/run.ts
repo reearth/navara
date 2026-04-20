@@ -18,7 +18,7 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
 
   await view.init();
 
-  const defaultAtmospheres = defaultPlugin.addDefaultPhotorealLayers();
+  const defaultAtmospheres = defaultPlugin.addDefaultPhotorealScene();
   defaultAtmospheres.sun.update({
     sun: {
       castShadow: true,

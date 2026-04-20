@@ -19,7 +19,7 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
   view.addPlugin(plugin);
   await view.init();
 
-  plugin.addDefaultPhotorealLayers();
+  plugin.addDefaultPhotorealScene();
 
   view.atmosphere.date.setHours(8);
 

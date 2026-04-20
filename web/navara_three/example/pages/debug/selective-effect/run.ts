@@ -40,7 +40,7 @@ export const run = async (view: ThreeView<DefaultDeclarations>) => {
     roll: 0,
   });
 
-  const defaultAtmosphere = plugin.addDefaultPhotorealLayers();
+  const defaultAtmosphere = plugin.addDefaultPhotorealScene();
   defaultAtmosphere.sun.update({
     sun: { intensity: 1, castShadow: true },
   });
@@ -49,7 +49,7 @@ export const run = async (view: ThreeView<DefaultDeclarations>) => {
   date.setHours(8);
   view.atmosphere.date = date;
 
-  // --- Effect Layer definitions ---
+  // --- Effect Descriptor definitions ---
 
   const bloomEffect = view.addEffect<SelectiveBloomEffectDesc>({
     selectiveBloom: {
@@ -69,7 +69,7 @@ export const run = async (view: ThreeView<DefaultDeclarations>) => {
     },
   });
 
-  // --- Mesh Layers (effectIds reference effect layer IDs) ---
+  // --- Mesh Descriptors (effectIds reference effect descriptor IDs) ---
 
   // Cube at Tokyo Station (bloom only)
   const boxPosition = geodeticToVector3({
@@ -161,7 +161,7 @@ export const run = async (view: ThreeView<DefaultDeclarations>) => {
       debugPlugin.setEnabled(ev.value);
     });
 
-  // --- Effect Layer Controls ---
+  // --- Effect Descriptor Controls ---
   const effectFolder = pane.addFolder({ title: "Effects", expanded: true });
   const bloomFolder = effectFolder.addFolder({
     title: "Bloom",

@@ -36,7 +36,7 @@ export const run = async (view: ThreeView) => {
 
   await view.init();
 
-  defaultPlugin.addDefaultPhotorealLayers();
+  defaultPlugin.addDefaultPhotorealScene();
 
   view.setCamera({
     lat: 35.4904441833,

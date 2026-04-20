@@ -34,7 +34,7 @@ Decide if your example fits into an existing category or should be uncategorized
 
 | Category      | Purpose                                                              |
 | ------------- | -------------------------------------------------------------------- |
-| `basic/`      | Basic layer type demonstrations (geojson, mvt, tiles, terrain, etc.) |
+| `basic/`      | Basic descriptor type demonstrations (geojson, mvt, tiles, terrain, etc.) |
 | `styling/`    | Feature styling with evaluators                                      |
 | `atmosphere/` | Sky, lighting, and atmospheric effects                               |
 | `camera/`     | Camera controls, constraints, animations                             |

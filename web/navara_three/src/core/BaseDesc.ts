@@ -6,22 +6,22 @@ import type ThreeView from "../index";
 import type { ViewContext } from "./ViewContext";
 
 /**
- * Base configuration options common to all declaration layers.
+ * Base configuration options common to all descriptors.
  */
 export type BaseDescConfig = {
-  /** Optional custom ID for the layer. Auto-generated if not provided. */
+  /** Optional custom ID. Auto-generated if not provided. */
   id?: string;
-  /** Whether the layer is visible. Defaults to true. */
+  /** Whether the descriptor is visible. Defaults to true. */
   visible?: boolean;
 };
 
 /**
- * Configuration properties that can be updated after layer creation.
+ * Configuration properties that can be updated after creation.
  */
 export type BaseDescConfigUpdate = Pick<BaseDescConfig, "visible">;
 
 /**
- * Base interface for the underlying Three.js instance created by a layer.
+ * Base interface for the underlying Three.js instance created by a descriptor.
  */
 export type BaseInstance = { visible: boolean };
 
@@ -29,21 +29,21 @@ export type BaseInstance = { visible: boolean };
  * Internal events emitted by BaseDesc.
  */
 export type BaseDescEvents = {
-  /** @internal Emitted when the layer needs to trigger a re-render. */
+  /** @internal Emitted when the descriptor needs to trigger a re-render. */
   needsUpdate: () => void;
 };
 
 /**
- * Abstract base class for declaration layers (mesh, light, and effect layers).
- * Extend this class to create custom layer types.
+ * Abstract base class for descriptors (mesh, light, and effect descriptors).
+ * Extend this class to create custom descriptor types.
  *
- * Declaration layers differ from resource layers in that they are purely client-side
+ * Descriptors differ from resource layers in that they are purely client-side
  * and don't load data from external sources. They create Three.js objects directly.
  *
- * @typeParam Config - Configuration type for the layer (extends BaseDescConfig)
+ * @typeParam Config - Configuration type for the descriptor (extends BaseDescConfig)
  * @typeParam UpdateConfig - Configuration properties that can be updated (extends BaseDescConfigUpdate)
- * @typeParam Instance - The underlying Three.js object type created by the layer
- * @typeParam CustomEvent - Additional custom events the layer can emit
+ * @typeParam Instance - The underlying Three.js object type created by the descriptor
+ * @typeParam CustomEvent - Additional custom events the descriptor can emit
  *
  * @example
  * ```typescript
@@ -64,14 +64,14 @@ export abstract class BaseDesc<
   Instance extends BaseInstance = BaseInstance,
   CustomEvent extends BaseEventMap = BaseEventMap,
 > extends EventHandler<BaseDescEvents & CustomEvent> {
-  /** The unique identifier of this layer. */
+  /** The unique identifier. */
   public readonly id: string;
 
   /** The ThreeView instance providing access to camera, atmosphere, globe, and other view state. */
   protected view: ThreeView;
   /** The view context providing access to scenes, passes, and rendering internals. */
   protected ctx: ViewContext;
-  /** The underlying Three.js instance created by this layer. */
+  /** The underlying Three.js instance. */
   protected _instance: Instance | undefined;
 
   private _visible?: boolean;
@@ -90,13 +90,13 @@ export abstract class BaseDesc<
   }
 
   /**
-   * Called when the layer is added to the scene. Override this to create the Three.js objects.
+   * Called when the this class is added to the scene. Override this to create the Three.js objects.
    * This is where you should initialize `this._instance` and add it to the appropriate scene.
    */
   abstract onCreate(): void;
 
   /**
-   * Called when the layer configuration is updated via `BaseHandle.update()`.
+   * Called when the configuration is updated via `BaseHandle.update()`.
    * Override this to handle custom configuration updates.
    * @param updates - The configuration properties being updated
    */
@@ -118,7 +118,7 @@ export abstract class BaseDesc<
   }
 
   /**
-   * Called when the layer is deleted via `BaseHandle.delete()`.
+   * Called when deleted via `BaseHandle.delete()`.
    * Override this to clean up resources. Remember to call `super.onDestroy()`.
    */
   onDestroy(): void {
@@ -126,14 +126,14 @@ export abstract class BaseDesc<
   }
 
   /**
-   * Gets whether the layer is currently visible.
+   * Gets whether this is currently visible.
    */
   get visible() {
     return !!this._visible;
   }
 
   /**
-   * Sets whether the layer should be visible.
+   * Sets whether this should be visible.
    */
   set visible(v: boolean) {
     this._visible = v;

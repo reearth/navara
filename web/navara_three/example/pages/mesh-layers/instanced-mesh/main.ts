@@ -69,7 +69,7 @@ const run = async () => {
 
   await view.init();
 
-  const defaultLayers = defaultPlugin.addDefaultPhotorealLayers();
+  const defaultLayers = defaultPlugin.addDefaultPhotorealScene();
 
   defaultLayers.toneMapping.update({
     toneMapping: {

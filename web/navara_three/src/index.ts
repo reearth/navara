@@ -262,14 +262,14 @@ export default class ThreeView<
   private _globe!: Globe;
   private _atmosphere: Atmosphere;
 
-  /** Handle for the sky environment map effect layer. Used for sky reflections. */
-  private skyEnvMapLayer!: EffectHandle<SkyEnvMapEffectDesc>;
+  /** Handle for the sky environment map effect descriptor. Used for sky reflections. */
+  private skyEnvMap!: EffectHandle<SkyEnvMapEffectDesc>;
   /** Handle for the Multi-Render Target pass that outputs color and normal buffers. */
-  private mrtPassLayer!: EffectHandle<MRTPassEffectDesc>;
+  private mrtPass!: EffectHandle<MRTPassEffectDesc>;
   /** Handle for the transparent objects rendering pass. */
-  private transparentPassLayer!: EffectHandle<TransparentPassEffectDesc>;
+  private transparentPass!: EffectHandle<TransparentPassEffectDesc>;
   /** Handle for the final compositing pass that outputs to screen. */
-  private finalPassLayer!: EffectHandle<FinalCopyEffectDesc>;
+  private finalPass!: EffectHandle<FinalCopyEffectDesc>;
 
   /** The render pass orchestrator that manages the post-processing effect pipeline. */
   private renderPassOrchestrator: RenderPassOrchestrator;
@@ -729,24 +729,24 @@ export default class ThreeView<
     // Initialize atmosphere
     await this._atmosphere._init();
 
-    this.skyEnvMapLayer = this.addEffect<SkyEnvMapEffectDesc>({
+    this.skyEnvMap = this.addEffect<SkyEnvMapEffectDesc>({
       skyEnvMap: {},
     });
-    this.mrtPassLayer = this.addEffect<MRTPassEffectDesc>({
+    this.mrtPass = this.addEffect<MRTPassEffectDesc>({
       mrt: {
         // debugNormal: true,
       },
     });
-    this.transparentPassLayer = this.addEffect<TransparentPassEffectDesc>({
+    this.transparentPass = this.addEffect<TransparentPassEffectDesc>({
       transparent: {},
     });
-    this.finalPassLayer = this.addEffect<FinalCopyEffectDesc>({
+    this.finalPass = this.addEffect<FinalCopyEffectDesc>({
       final: {},
     });
   }
 
   private get renderPass() {
-    const instance = this.mrtPassLayer.ref.raw;
+    const instance = this.mrtPass.ref.raw;
     invariant(instance);
     return instance;
   }
@@ -866,7 +866,7 @@ export default class ThreeView<
       fontManager: this._fontManager,
     });
 
-    // Register built-in layers
+    // Register built-in descriptors
     this.registerBuiltIns();
 
     if (!isWorker()) {
@@ -978,10 +978,10 @@ export default class ThreeView<
     this._fontManager.dispose();
     this._atmosphere._dispose();
 
-    this.skyEnvMapLayer?.delete();
-    this.mrtPassLayer?.delete();
-    this.transparentPassLayer?.delete();
-    this.finalPassLayer?.delete();
+    this.skyEnvMap?.delete();
+    this.mrtPass?.delete();
+    this.transparentPass?.delete();
+    this.finalPass?.delete();
 
     // Abort all pending requests
     for (const controller of this._abortControllers.values()) {
@@ -1071,7 +1071,7 @@ export default class ThreeView<
     this._uniforms.tGlobeNormal.value =
       this.renderPass.globeNormalCopyPass.texture;
     this._uniforms.tSkyEnvMap.value =
-      this.skyEnvMapLayer.ref.raw?.getEnvMapTexture() ?? null;
+      this.skyEnvMap.ref.raw?.getEnvMapTexture() ?? null;
     this._uniforms.inverseProjectionMatrix.value =
       this._camera.raw.projectionMatrixInverse;
 
@@ -1106,7 +1106,7 @@ export default class ThreeView<
   }
 
   /**
-   * Process feature updates for all layers
+   * Process feature updates for all descriptors
    * This is called after the main update loop to batch feature updates
    */
   private _forceFeatureUpdates(updatedAt: number) {
@@ -1202,7 +1202,7 @@ export default class ThreeView<
       throw new UnknownTypeError("mesh", config);
     }
 
-    // Create mesh layer instance
+    // Create mesh descriptor instance
     const meshLayer = this.registries.mesh.create(meshType, config);
 
     // Initialize the mesh
@@ -1227,7 +1227,7 @@ export default class ThreeView<
 
     const l = new MeshHandle(meshLayer);
 
-    // Store the mesh layer
+    // Store the mesh descriptor
     this.layersManager.add(l);
 
     // Return handle for imperative access
@@ -1249,7 +1249,7 @@ export default class ThreeView<
       throw new UnknownTypeError("light", config);
     }
 
-    // Create light layer instance
+    // Create light descriptor instance
     const lightLayer = this.registries.light.create(lightType, config);
 
     // Initialize the light
@@ -1265,7 +1265,7 @@ export default class ThreeView<
 
     const l = new LightHandle(lightLayer);
 
-    // Store the light layer
+    // Store the light descriptor
     this.layersManager.add(l);
 
     // Return handle for imperative access
@@ -1289,7 +1289,7 @@ export default class ThreeView<
       throw new UnknownTypeError("effect", config);
     }
 
-    // Create effect layer instance
+    // Create effect descriptor instance
     const effectLayer = this.registries.effect.create(effectType, config);
 
     // Initialize the effect
@@ -1305,7 +1305,7 @@ export default class ThreeView<
 
     const l = new EffectHandle(effectLayer);
 
-    // Store the effect layer
+    // Store the effect descriptor
     this.layersManager.add(l);
 
     // Return handle for imperative access
@@ -1438,27 +1438,27 @@ export default class ThreeView<
   }
 
   /**
-   * Registers a custom mesh layer type for use with addMesh().
+   * Registers a custom mesh descriptor type for use with addMesh().
    * @param name - Unique name to identify this mesh type in layer configurations
-   * @param meshClass - The mesh layer class constructor
+   * @param meshClass - The mesh descriptor class constructor
    */
   registerMesh(name: string, meshClass: MeshLayerConstructor): void {
     this.registries.mesh.register(name, meshClass);
   }
 
   /**
-   * Registers a custom light layer type for use with addLight().
+   * Registers a custom light descriptor type for use with addLight().
    * @param name - Unique name to identify this light type in layer configurations
-   * @param lightClass - The light layer class constructor
+   * @param lightClass - The light descriptor class constructor
    */
   registerLight(name: string, lightClass: LightLayerConstructor): void {
     this.registries.light.register(name, lightClass);
   }
 
   /**
-   * Registers a custom post-processing effect layer type for use with addEffect().
+   * Registers a custom post-processing effect descriptor type for use with addEffect().
    * @param name - Unique name to identify this effect type in layer configurations
-   * @param effectClass - The effect layer class constructor
+   * @param effectClass - The effect descriptor class constructor
    */
   registerEffect(name: string, effectClass: EffectLayerConstructor): void {
     this.registries.effect.register(name, effectClass);

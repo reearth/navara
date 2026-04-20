@@ -11,7 +11,7 @@ export * from "./ssao";
 export * from "./ssr";
 export * from "./toneMapping";
 
-// Effect layer declarations
+// Effect descriptor declarations
 export {
   AerialPerspectiveEffectDesc,
   type AerialPerspectiveConfig,

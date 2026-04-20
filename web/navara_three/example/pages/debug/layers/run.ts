@@ -555,7 +555,7 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
   view.addPlugin(plugin);
   await view.init();
 
-  const defaultAtmospheres = plugin.addDefaultPhotorealLayers();
+  const defaultAtmospheres = plugin.addDefaultPhotorealScene();
   defaultAtmospheres.sun.update({
     sun: {
       intensity: 1,

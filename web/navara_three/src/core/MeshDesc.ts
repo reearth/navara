@@ -43,13 +43,13 @@ export type MeshBaseInstance<Instance extends object = object> =
       : Instance & BaseInstance;
 
 /**
- * Abstract base class for creating custom mesh layers.
+ * Abstract base class for creating custom mesh descriptors.
  *
  * Extend this class to add custom Three.js 3D objects (meshes, groups, particles, etc.)
  * to the Navara scene. The base class handles position/scale/rotation synchronization
  * and automatic scene management via {@link getPassKey}.
  *
- * ## Implementing a Custom Mesh Layer
+ * ## Implementing a Custom Mesh Descriptor
  *
  * ### 1. Define configuration types
  *
@@ -117,12 +117,12 @@ export type MeshBaseInstance<Instance extends object = object> =
  * }
  * ```
  *
- * ### 3. Register and use the layer
+ * ### 3. Register and use the descriptor
  *
  * ```typescript
- * view.registerMesh("myMesh", MyMeshLayer);
+ * view.registerMesh("myMesh", MyMeshDesc);
  *
- * const handle = view.addMesh<MyMeshLayer>({
+ * const handle = view.addMesh<MyMeshDesc>({
  *   position: { x: 0, y: 100, z: 0 },
  *   scale: { x: 10, y: 10, z: 10 },
  *   rotation: { x: 0, y: Math.PI / 4, z: 0 },
@@ -140,7 +140,7 @@ export type MeshBaseInstance<Instance extends object = object> =
  *   mesh.rotation.y += 0.01;
  * });
  *
- * // Remove the layer
+ * // Remove the descriptor
  * handle.delete();
  * ```
  *
@@ -155,7 +155,7 @@ export type MeshBaseInstance<Instance extends object = object> =
  *
  * ## Lifecycle
  *
- * 1. **Construction** - The layer is instantiated with the view context and config.
+ * 1. **Construction** - The descriptor is instantiated with the view context and config.
  * 2. **{@link createMesh}** - Called during {@link onCreate} to create the Three.js object.
  *    The base class applies position/scale/rotation and adds it to the scene
  *    determined by {@link getPassKey}.
@@ -167,10 +167,10 @@ export type MeshBaseInstance<Instance extends object = object> =
  * 6. **{@link onDestroy}** - Called on `handle.delete()`. The base class removes the mesh
  *    from its parent scene. Override to dispose geometry/material resources.
  *
- * @see The `custom-shader` example page for a complete custom mesh layer tutorial using
+ * @see The `custom-shader` example page for a complete custom mesh descriptor tutorial using
  *      MarchingCubes with a custom shader material.
  *
- * @typeParam Config - Layer configuration type (extends {@link MeshConfig})
+ * @typeParam Config - Configuration type (extends {@link MeshConfig})
  * @typeParam UpdateConfig - Updatable properties (extends {@link MeshUpdate})
  * @typeParam InstanceObj - The Three.js Object3D type or a wrapper with a `raw` property
  * @typeParam CustomEvent - Additional custom events the layer can emit
