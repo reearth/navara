@@ -76,7 +76,7 @@ export type MeshBaseInstance<Instance extends object = object> =
  * {@link onUpdateConfig} for dynamic updates, and {@link update} for animation.
  *
  * ```typescript
- * class MyMeshLayer extends MeshDesc<
+ * class MyMeshDesc extends MeshDesc<
  *   MyMeshConfig,
  *   MyMeshUpdate,
  *   Mesh<SphereGeometry, MeshStandardMaterial>

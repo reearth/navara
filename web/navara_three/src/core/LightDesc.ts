@@ -60,7 +60,7 @@ export type LightBaseInstance<Instance extends object = object> =
  * per-frame animation.
  *
  * ```typescript
- * class MyLightLayer extends LightDesc<
+ * class MyLightDesc extends LightDesc<
  *   MyLightConfig,
  *   MyLightUpdate,
  *   PointLight

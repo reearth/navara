@@ -265,14 +265,6 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
     scale: new Vector3().setScalar(1e9),
   });
 
-  // For debug
-  // const defaultEffects = view.addDefaultEffectLayers();
-  // defaultEffects.aerialPerspective.update({
-  //   aerialPerspective: {
-  //     irradiance: true,
-  //   },
-  // });
-
   plugin.addDefaultPhotorealLayers();
 
   view.addEffect<CloudsEffectDesc>({

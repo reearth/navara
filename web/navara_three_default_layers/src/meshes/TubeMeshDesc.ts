@@ -51,7 +51,7 @@ export class TubeMeshDesc extends MeshDescWithSelectiveEffect<
   private config: TubeMeshConfig;
 
   constructor(view: ThreeView, ctx: ViewContext, config: TubeMeshConfig) {
-    // Propagate initial effectIds to base MeshLayer
+    // Propagate initial effectIds to base MeshDesc
     if (config.tube?.effectIds) {
       config.effectIds = config.tube.effectIds;
     }
@@ -184,7 +184,7 @@ export class TubeMeshDesc extends MeshDescWithSelectiveEffect<
         this._instance.receiveShadow = cfg.receiveShadow;
       }
 
-      // Propagate effectIds to base MeshLayer
+      // Propagate effectIds to base MeshDesc
       if (cfg.effectIds !== undefined) {
         updates.effectIds = cfg.effectIds;
       }

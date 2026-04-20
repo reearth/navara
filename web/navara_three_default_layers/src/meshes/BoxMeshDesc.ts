@@ -57,7 +57,7 @@ export class BoxMeshDesc extends MeshDescWithSelectiveEffect<
   private config: BoxMeshConfig;
 
   constructor(view: ThreeView, ctx: ViewContext, config: BoxMeshConfig) {
-    // Propagate initial effectIds to base MeshLayer
+    // Propagate initial effectIds to base MeshDesc
     if (config.box?.effectIds) {
       config.effectIds = config.box.effectIds;
     }
@@ -219,7 +219,7 @@ export class BoxMeshDesc extends MeshDescWithSelectiveEffect<
         this._instance.receiveShadow = cfg.receiveShadow;
       }
 
-      // Propagate effectIds to base MeshLayer
+      // Propagate effectIds to base MeshDesc
       if (cfg.effectIds !== undefined) {
         updates.effectIds = cfg.effectIds;
       }

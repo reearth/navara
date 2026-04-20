@@ -59,7 +59,7 @@ export class CylinderMeshDesc extends MeshDescWithSelectiveEffect<
   private config: CylinderMeshConfig;
 
   constructor(view: ThreeView, ctx: ViewContext, config: CylinderMeshConfig) {
-    // Propagate initial effectIds to base MeshLayer
+    // Propagate initial effectIds to base MeshDesc
     if (config.cylinder?.effectIds) {
       config.effectIds = config.cylinder.effectIds;
     }
@@ -224,7 +224,7 @@ export class CylinderMeshDesc extends MeshDescWithSelectiveEffect<
         this._instance.receiveShadow = cfg.receiveShadow;
       }
 
-      // Propagate effectIds to base MeshLayer
+      // Propagate effectIds to base MeshDesc
       if (cfg.effectIds !== undefined) {
         updates.effectIds = cfg.effectIds;
       }

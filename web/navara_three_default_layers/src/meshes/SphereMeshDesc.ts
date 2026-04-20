@@ -49,7 +49,7 @@ export class SphereMeshDesc extends MeshDescWithSelectiveEffect<
   private config: SphereMeshConfig;
 
   constructor(view: ThreeView, ctx: ViewContext, config: SphereMeshConfig) {
-    // Propagate initial effectIds to base MeshLayer
+    // Propagate initial effectIds to base MeshDesc
     if (config.sphere?.effectIds) {
       config.effectIds = config.sphere.effectIds;
     }
@@ -166,7 +166,7 @@ export class SphereMeshDesc extends MeshDescWithSelectiveEffect<
         this._instance.receiveShadow = cfg.receiveShadow;
       }
 
-      // Propagate effectIds to base MeshLayer
+      // Propagate effectIds to base MeshDesc
       if (cfg.effectIds !== undefined) {
         updates.effectIds = cfg.effectIds;
       }

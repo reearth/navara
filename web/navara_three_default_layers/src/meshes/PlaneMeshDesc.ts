@@ -46,7 +46,7 @@ export class PlaneMeshDesc extends MeshDescWithSelectiveEffect<
   private config: PlaneMeshConfig;
 
   constructor(view: ThreeView, ctx: ViewContext, config: PlaneMeshConfig) {
-    // Propagate initial effectIds to base MeshLayer
+    // Propagate initial effectIds to base MeshDesc
     if (config.plane?.effectIds) {
       config.effectIds = config.plane.effectIds;
     }
@@ -157,7 +157,7 @@ export class PlaneMeshDesc extends MeshDescWithSelectiveEffect<
         this._instance.receiveShadow = cfg.receiveShadow;
       }
 
-      // Propagate effectIds to base MeshLayer
+      // Propagate effectIds to base MeshDesc
       if (cfg.effectIds !== undefined) {
         updates.effectIds = cfg.effectIds;
       }

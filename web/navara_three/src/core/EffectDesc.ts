@@ -94,7 +94,7 @@ export type EffectBaseInstance<Instance extends object = object> =
  * for pipeline ordering:
  *
  * ```typescript
- * class VignetteEffectLayer extends EffectDesc<
+ * class VignetteEffectDesc extends EffectDesc<
  *   VignetteEffectConfig,
  *   VignetteEffectUpdate,
  *   Vignette

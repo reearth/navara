@@ -639,7 +639,7 @@ const addFogLightControl = async (
   sceneChangeHandler?: EventHandler,
 ) => {
   // Fetch street light data and add fog light effect
-  let fogLightLayer: EffectHandle<FogLightEffectDesc> | undefined;
+  let fogLight: EffectHandle<FogLightEffectDesc> | undefined;
   let streetLights: FogLightDefinition[] = [];
 
   // Function to load light data from a file using common function
@@ -647,8 +647,8 @@ const addFogLightControl = async (
     streetLights = await loadGeoJSONLights(lightDataFile);
 
     // Update or create fog light layer
-    if (fogLightLayer) {
-      fogLightLayer.update({
+    if (fogLight) {
+      fogLight.update({
         fogLight: {
           lights: streetLights,
         },
@@ -656,7 +656,7 @@ const addFogLightControl = async (
     } else {
       // Create fog light layer, initially visible only at night
       const isAtNight = view.atmosphere.isAtNight(view.camera.raw.position);
-      fogLightLayer = view.addEffect<FogLightEffectDesc>({
+      fogLight = view.addEffect<FogLightEffectDesc>({
         fogLight: {
           lights: streetLights,
           fogDensity: 0.5,
@@ -704,9 +704,9 @@ const addFogLightControl = async (
 
   // Function to update visibility based on time of day
   const updateVisibility = () => {
-    if (fogLightLayer && fogLightParams.enableAtNight) {
+    if (fogLight && fogLightParams.enableAtNight) {
       const isAtNight = view.atmosphere.isAtNight(view.camera.raw.position);
-      fogLightLayer.update({
+      fogLight.update({
         visible: isAtNight,
       });
     }
@@ -724,8 +724,8 @@ const addFogLightControl = async (
       label: "Fog Density",
     })
     .on("change", (ev) => {
-      if (fogLightLayer) {
-        fogLightLayer.update({
+      if (fogLight) {
+        fogLight.update({
           fogLight: { fogDensity: ev.value },
         });
       }
@@ -737,8 +737,8 @@ const addFogLightControl = async (
       label: "Surface Lighting",
     })
     .on("change", (ev) => {
-      if (fogLightLayer) {
-        fogLightLayer.update({
+      if (fogLight) {
+        fogLight.update({
           fogLight: { useSurfaceLighting: ev.value },
         });
       }
@@ -753,8 +753,8 @@ const addFogLightControl = async (
       label: "Downsample",
     })
     .on("change", (ev) => {
-      if (fogLightLayer) {
-        fogLightLayer.update({ fogLight: { downsample: ev.value } });
+      if (fogLight) {
+        fogLight.update({ fogLight: { downsample: ev.value } });
       }
     });
 
@@ -767,8 +767,8 @@ const addFogLightControl = async (
       label: "Max Lights/Tile",
     })
     .on("change", (ev) => {
-      if (fogLightLayer) {
-        fogLightLayer.update({ fogLight: { maxLightsPerTile: ev.value } });
+      if (fogLight) {
+        fogLight.update({ fogLight: { maxLightsPerTile: ev.value } });
       }
     });
 
@@ -781,8 +781,8 @@ const addFogLightControl = async (
       label: "Extent Scale",
     })
     .on("change", (ev) => {
-      if (fogLightLayer) {
-        fogLightLayer.update({ fogLight: { extentScale: ev.value } });
+      if (fogLight) {
+        fogLight.update({ fogLight: { extentScale: ev.value } });
       }
     });
 
@@ -795,8 +795,8 @@ const addFogLightControl = async (
       label: "Cull Distance (maxFar)",
     })
     .on("change", (ev) => {
-      if (fogLightLayer) {
-        fogLightLayer.update({ fogLight: { maxFar: ev.value } });
+      if (fogLight) {
+        fogLight.update({ fogLight: { maxFar: ev.value } });
       }
     });
 
@@ -804,8 +804,8 @@ const addFogLightControl = async (
   fogLightFolder
     .addBinding(fogLightParams, "debugShowGrid", { label: "Debug Grid" })
     .on("change", (ev) => {
-      if (fogLightLayer) {
-        fogLightLayer.update({ fogLight: { debugShowGrid: ev.value } });
+      if (fogLight) {
+        fogLight.update({ fogLight: { debugShowGrid: ev.value } });
       }
     });
 
@@ -818,12 +818,12 @@ const addFogLightControl = async (
       label: "Lights Intensity",
     })
     .on("change", (ev) => {
-      if (fogLightLayer) {
+      if (fogLight) {
         const updatedLights = streetLights.map((light) => ({
           ...light,
           intensity: ev.value,
         }));
-        fogLightLayer.update({
+        fogLight.update({
           fogLight: { lights: updatedLights },
         });
       }
@@ -838,12 +838,12 @@ const addFogLightControl = async (
       label: "Lights Radius",
     })
     .on("change", (ev) => {
-      if (fogLightLayer) {
+      if (fogLight) {
         const updatedLights = streetLights.map((light) => ({
           ...light,
           radius: ev.value,
         }));
-        fogLightLayer.update({
+        fogLight.update({
           fogLight: { lights: updatedLights },
         });
       }
@@ -855,13 +855,13 @@ const addFogLightControl = async (
       label: "Enable at Night",
     })
     .on("change", (ev) => {
-      if (fogLightLayer) {
+      if (fogLight) {
         if (ev.value) {
           // When enabled, check current time and update visibility
           updateVisibility();
         } else {
           // When disabled, always show the fog lights
-          fogLightLayer.update({
+          fogLight.update({
             visible: true,
           });
         }

@@ -51,8 +51,8 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
 
   const defaultLayers = plugin.addDefaultPhotorealLayers();
 
-  const sunLightLayer = defaultLayers.sun;
-  sunLightLayer.update({
+  const sunLight = defaultLayers.sun;
+  sunLight.update({
     sun: {
       castShadow: true,
     },

@@ -47,8 +47,8 @@ export type BaseDescEvents = {
  *
  * @example
  * ```typescript
- * // Creating a custom mesh layer
- * class MyCustomMeshLayer extends BaseDesc<MyConfig, MyUpdateConfig, Mesh> {
+ * // Creating a custom mesh desc
+ * class MyCustomMeshDesc extends BaseDesc<MyConfig, MyUpdateConfig, Mesh> {
  *   onCreate() {
  *     const geometry = new BoxGeometry(1, 1, 1);
  *     const material = new MeshBasicMaterial();

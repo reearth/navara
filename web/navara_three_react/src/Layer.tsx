@@ -1,9 +1,9 @@
 import {
-  BaseDesc,
-  BaseHandle,
-  MeshDesc,
-  LightDesc,
-  EffectDesc,
+  type BaseDesc,
+  type BaseHandle,
+  type MeshDesc as MeshDescClass,
+  type LightDesc as LightDescClass,
+  type EffectDesc as EffectDescClass,
   Layer as NavaraLayer,
   type LayerDescription,
   type MeshConfig,
@@ -86,16 +86,16 @@ function useDeclarationLayer<L extends BaseDesc>(
   }, [config]);
 }
 
-type MeshLayerProps<L extends MeshDesc = MeshDesc> = {
+type MeshDescProps<L extends MeshDescClass = MeshDescClass> = {
   config: MeshConfig;
   // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
   onReady?: (handle: BaseHandle<L>) => (() => void) | void;
 };
 
-export function MeshLayer<L extends MeshDesc = MeshDesc>({
+export function MeshDesc<L extends MeshDescClass = MeshDescClass>({
   config,
   onReady,
-}: PropsWithChildren<MeshLayerProps<L>>) {
+}: PropsWithChildren<MeshDescProps<L>>) {
   const { view } = useViewContext();
   useDeclarationLayer<L>(
     (c) => view.addMesh<L>(c as MeshConfig),
@@ -105,16 +105,16 @@ export function MeshLayer<L extends MeshDesc = MeshDesc>({
   return null;
 }
 
-type LightLayerProps<L extends LightDesc = LightDesc> = {
+type LightDescProps<L extends LightDescClass = LightDescClass> = {
   config: LightConfig;
   // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
   onReady?: (handle: BaseHandle<L>) => (() => void) | void;
 };
 
-export function LightLayer<L extends LightDesc = LightDesc>({
+export function LightDesc<L extends LightDescClass = LightDescClass>({
   config,
   onReady,
-}: PropsWithChildren<LightLayerProps<L>>) {
+}: PropsWithChildren<LightDescProps<L>>) {
   const { view } = useViewContext();
   useDeclarationLayer<L>(
     (c) => view.addLight<L>(c as LightConfig),
@@ -124,16 +124,16 @@ export function LightLayer<L extends LightDesc = LightDesc>({
   return null;
 }
 
-type EffectLayerProps<L extends EffectDesc = EffectDesc> = {
+type EffectDescProps<L extends EffectDescClass = EffectDescClass> = {
   config: EffectConfig | BuiltInEffectDescription;
   // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
   onReady?: (handle: BaseHandle<L>) => (() => void) | void;
 };
 
-export function EffectLayer<L extends EffectDesc = EffectDesc>({
+export function EffectDesc<L extends EffectDescClass = EffectDescClass>({
   config,
   onReady,
-}: PropsWithChildren<EffectLayerProps<L>>) {
+}: PropsWithChildren<EffectDescProps<L>>) {
   const { view } = useViewContext();
   useDeclarationLayer<L>(
     (c) => view.addEffect<L>(c as EffectConfig | BuiltInEffectDescription),

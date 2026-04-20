@@ -14,9 +14,9 @@ import type {
 } from "@navara/three_default_plugin";
 import {
   Layer,
-  MeshLayer,
-  LightLayer,
-  EffectLayer,
+  MeshDesc,
+  LightDesc,
+  EffectDesc,
   useViewContext,
 } from "@navara/three_react";
 import { useEffect, useMemo, type FC } from "react";
@@ -235,13 +235,13 @@ export const Layers: FC<SceneLayerToggles> = ({
         )}
       {defaultLayers && (
         <>
-          <EffectLayer config={cloudsEffect} />
-          <EffectLayer config={ssrEffect} />
+          <EffectDesc config={cloudsEffect} />
+          <EffectDesc config={ssrEffect} />
         </>
       )}
-      <MeshLayer config={rainDesc} />
-      {rainVisible && defaultLayers && <EffectLayer config={rainDropEffect} />}
-      <LightLayer config={nightLightProbe} />
+      <MeshDesc config={rainDesc} />
+      {rainVisible && defaultLayers && <EffectDesc config={rainDropEffect} />}
+      <LightDesc config={nightLightProbe} />
       {waterAreaVisible && <Layer config={mvtDesc} />}
     </>
   );
