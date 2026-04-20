@@ -84,11 +84,6 @@ export class ArclineMeshLayer extends MeshLayerDeclarationWithSelectiveEffect<
       this.config.emissiveIntensity ?? 0,
     );
 
-    if (this.config.pickable) {
-      this.pickWrapper = new PickableMeshWrapper(arcLine, this.ctx);
-      this.ctx.registerPickableMesh(this.id, this.pickWrapper);
-    }
-
     return arcLine;
   }
 
@@ -161,6 +156,14 @@ export class ArclineMeshLayer extends MeshLayerDeclarationWithSelectiveEffect<
     if (this._instance) {
       this._instance.dispose();
       this._instance = undefined;
+    }
+  }
+
+  override onCreate(): void {
+    super.onCreate();
+    if (this.config.pickable && this._instance) {
+      this.pickWrapper = new PickableMeshWrapper(this._instance, this.ctx);
+      this.ctx.registerPickableMesh(this.id, this.pickWrapper);
     }
   }
 

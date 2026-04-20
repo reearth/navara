@@ -116,11 +116,6 @@ export class CylinderMeshLayer extends MeshLayerDeclarationWithSelectiveEffect<
 
     this.ctx.applyShadowMaterial(material);
 
-    if (this.config.pickable) {
-      this.pickWrapper = new PickableMeshWrapper(mesh, this.ctx);
-      this.ctx.registerPickableMesh(this.id, this.pickWrapper);
-    }
-
     return mesh;
   }
 
@@ -260,6 +255,14 @@ export class CylinderMeshLayer extends MeshLayerDeclarationWithSelectiveEffect<
       this._instance.material.dispose();
 
       this._instance = undefined;
+    }
+  }
+
+  override onCreate(): void {
+    super.onCreate();
+    if (this.config.pickable && this._instance) {
+      this.pickWrapper = new PickableMeshWrapper(this._instance, this.ctx);
+      this.ctx.registerPickableMesh(this.id, this.pickWrapper);
     }
   }
 

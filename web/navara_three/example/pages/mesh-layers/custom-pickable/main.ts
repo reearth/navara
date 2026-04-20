@@ -197,13 +197,6 @@ class TorusKnotMeshLayer extends MeshLayerDeclaration<
 
     const mesh = new Mesh(geometry, material);
 
-    // Manual picking opt-in: construct our own PickableMesh implementation
-    // and register it. No wrapper, no shader injection from Navara.
-    if (this.cfg.pickable) {
-      this.pickable = new PickableTorusKnot(mesh, this.ctx);
-      this.ctx.registerPickableMesh(this.id, this.pickable);
-    }
-
     return mesh;
   }
 
@@ -214,6 +207,14 @@ class TorusKnotMeshLayer extends MeshLayerDeclaration<
       this.emit("needsUpdate");
     }
     super.onUpdateConfig(updates);
+  }
+
+  override onCreate(): void {
+    super.onCreate();
+    if (this.cfg.pickable && this._instance) {
+      this.pickable = new PickableTorusKnot(this._instance, this.ctx);
+      this.ctx.registerPickableMesh(this.id, this.pickable);
+    }
   }
 
   override onDestroy(): void {
