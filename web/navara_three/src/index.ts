@@ -1313,25 +1313,99 @@ export default class ThreeView<
   }
 
   /**
-   * Updates an existing layer's configuration by its ID.
-   * @param layerId - The unique identifier of the layer to update
+   * Updates an existing resource layer's configuration by its ID.
+   * Only works for resource layers added via `addLayer()`.
+   * @param id - The unique identifier of the layer to update
    * @param l - New layer configuration
    */
-  updateLayerById(layerId: string, l: LayerDescription) {
+  updateLayerById(id: string, l: LayerDescription) {
     invariant(this._core);
-    // Convert all Color objects to numbers before updating
+    const target = this.layersManager.get(id);
+    if (!target || !(target instanceof Layer)) return;
     const processedLayer = this._convertColorsToNumbers(l) as LayerDescription;
-    this.layersManager.get(layerId)?.update(processedLayer);
+    target.update(processedLayer);
   }
 
   /**
-   * Deletes a layer from the scene by its ID.
-   * @param layerId - The unique identifier of the layer to delete
+   * Updates an existing mesh descriptor's configuration by its ID.
+   * @param id - The unique identifier of the mesh to update
+   * @param updates - Partial configuration object with properties to update
    */
-  deleteLayerById(layerId: string) {
-    invariant(this._core);
+  updateMeshById(id: string, updates: MeshConfig) {
+    const target = this.layersManager.get(id);
+    if (!target || !(target instanceof MeshHandle)) return;
+    target.update(updates);
+  }
 
-    this.layersManager.get(layerId)?.delete();
+  /**
+   * Updates an existing light descriptor's configuration by its ID.
+   * @param id - The unique identifier of the light to update
+   * @param updates - Partial configuration object with properties to update
+   */
+  updateLightById(id: string, updates: LightConfig) {
+    const target = this.layersManager.get(id);
+    if (!target || !(target instanceof LightHandle)) return;
+    target.update(updates);
+  }
+
+  /**
+   * Updates an existing effect descriptor's configuration by its ID.
+   * @param id - The unique identifier of the effect to update
+   * @param updates - Partial configuration object with properties to update
+   */
+  updateEffectById(id: string, updates: EffectConfig) {
+    const target = this.layersManager.get(id);
+    if (!target || !(target instanceof EffectHandle)) return;
+    target.update(updates);
+  }
+
+  /**
+   * Deletes a resource layer from the scene by its ID.
+   * @param id - The unique identifier of the layer to delete
+   * @returns `true` if the layer was found and deleted, `false` otherwise
+   */
+  deleteLayerById(id: string): boolean {
+    invariant(this._core);
+    const target = this.layersManager.get(id);
+    if (!target || !(target instanceof Layer)) return false;
+    target.delete();
+    return true;
+  }
+
+  /**
+   * Deletes a mesh descriptor from the scene by its ID.
+   * @param id - The unique identifier of the mesh to delete
+   * @returns `true` if the mesh was found and deleted, `false` otherwise
+   */
+  deleteMeshById(id: string): boolean {
+    const target = this.layersManager.get(id);
+    if (!target || !(target instanceof MeshHandle)) return false;
+    target.delete();
+    return true;
+  }
+
+  /**
+   * Deletes a light descriptor from the scene by its ID.
+   * @param id - The unique identifier of the light to delete
+   * @returns `true` if the light was found and deleted, `false` otherwise
+   */
+  deleteLightById(id: string): boolean {
+    const target = this.layersManager.get(id);
+    if (!target || !(target instanceof LightHandle)) return false;
+    target.delete();
+    return true;
+  }
+
+  /**
+   * Deletes an effect descriptor from the scene by its ID.
+   * @param id - The unique identifier of the effect to delete
+   * @returns `true` if the effect was found and deleted, `false` otherwise
+   */
+  deleteEffectById(id: string): boolean {
+    const target = this.layersManager.get(id);
+    if (!target || !(target instanceof EffectHandle)) return false;
+    target.delete();
+    return true;
   }
 
   private registerBuiltIns(): void {
