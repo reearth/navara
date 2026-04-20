@@ -44,7 +44,7 @@ jobs:
       - name: Install Tools (wasm-bindgen-cli, cargo-make)
         uses: taiki-e/install-action@v2
         with:
-          tool: wasm-bindgen-cli@0.2.114, cargo-make
+          tool: wasm-bindgen-cli@0.2.118, cargo-make
 
       - name: Prepare
         run: cargo make prepare-ci
