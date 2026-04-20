@@ -187,7 +187,7 @@ export function processEvent(ctx: EventContext, event: Events | undefined) {
             const layer = layersManager.get(removed.layer_id);
             if (layer && layer instanceof Layer) {
               layer._unregisterFeatureEvaluator(removed.bits);
-              layer.emit("featureRemoved", { featureId: removed.bits });
+              layer.emit("featureRemoved", { featureSetId: removed.bits });
             }
             processObjectRemoved(ctx, scenes.mrt, event);
           }

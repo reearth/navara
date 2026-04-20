@@ -94,26 +94,26 @@ function trackAttributions(layer: Layer, content: HTMLDivElement | undefined) {
     }
   };
 
-  layer.on("featureCreated", ({ featureId, credit }) => {
+  layer.on("featureCreated", ({ featureSetId, credit }) => {
     if (credit) {
-      featureCredits.set(featureId, credit);
+      featureCredits.set(featureSetId, credit);
     }
     // New features start as visible
-    visibleFeatures.add(featureId);
+    visibleFeatures.add(featureSetId);
     updateAttributions();
   });
 
-  layer.on("featureRemoved", ({ featureId }) => {
-    featureCredits.delete(featureId);
-    visibleFeatures.delete(featureId);
+  layer.on("featureRemoved", ({ featureSetId }) => {
+    featureCredits.delete(featureSetId);
+    visibleFeatures.delete(featureSetId);
     updateAttributions();
   });
 
-  layer.on("featureVisibilityChanged", ({ featureId, visible }) => {
+  layer.on("featureVisibilityChanged", ({ featureSetId, visible }) => {
     if (visible) {
-      visibleFeatures.add(featureId);
+      visibleFeatures.add(featureSetId);
     } else {
-      visibleFeatures.delete(featureId);
+      visibleFeatures.delete(featureSetId);
     }
     updateAttributions();
   });

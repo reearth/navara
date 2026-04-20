@@ -19,9 +19,9 @@ For detailed parameter types of events, see [Layer Types](./layer-types#events).
 
 ### id
 
-**Type:** `FeatureId`
+**Type:** `FeatureSetId`
 
-**Description:** Gets the unique identifier of this feature.
+**Description:** Gets the unique identifier of this feature set.
 
 **Example:**
 
@@ -37,9 +37,9 @@ layer.on("featureCreated", ({ evaluator }) => {
 
 ```typescript
 type FeatureInfo = {
-  batchIndex: number;
   batchId: number;
   properties: Record<string, unknown> | undefined;
+  layerId: string | undefined;
 };
 ```
 
