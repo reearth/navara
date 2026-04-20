@@ -70,6 +70,7 @@ function useDeclarationLayer<L extends BaseDesc>(
 
   addFnRef.current = addFn;
   configRef.current = config;
+  onReadyRef.current = onReady;
 
   useEffect(() => {
     const handle = addFnRef.current(configRef.current);
