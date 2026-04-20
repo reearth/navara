@@ -285,9 +285,7 @@ class ScreenshotGenerator {
     };
   }
 
-  async optimizeScreenshots(
-    results: PageScreenshotResult[],
-  ): Promise<void> {
+  async optimizeScreenshots(results: PageScreenshotResult[]): Promise<void> {
     const successfulResults = results.filter((r) => r.success);
     if (successfulResults.length === 0) return;
 
