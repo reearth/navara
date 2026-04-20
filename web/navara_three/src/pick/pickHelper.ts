@@ -37,7 +37,7 @@ export class PickHelper {
   private pixelBuffer: Uint8Array;
   private _renderer: WebGLRenderer;
   private _camera: PerspectiveCamera;
-  private _meshes: MeshCache;
+  private _meshes: Map<string, PickableMesh>;
   private onPickCallback: (pickArr: number[]) => void;
 
   /** Dedicated scene used only during the pick render. */
@@ -57,7 +57,7 @@ export class PickHelper {
     element: HTMLElement,
     renderer: WebGLRenderer,
     camera: PerspectiveCamera,
-    meshes: MeshCache,
+    meshes: Map<string, PickableMesh>,
     onPickCallback: (pickArr: number[]) => void,
     options?: PickHelperOptions,
   ) {
