@@ -1,4 +1,8 @@
-import { type ExtractProperties, type FeatureId } from "@navara/core";
+import {
+  type ExtractProperties,
+  type FeatureSetId,
+  type LayerId,
+} from "@navara/core";
 import type {
   ModelMaterial as NavaraModelMaterial,
   PointMaterial,
@@ -70,9 +74,9 @@ export type EvaluatedValue = {
  * Information about a feature batch, passed to evaluation callbacks.
  */
 export type FeatureInfo = {
-  batchIndex: number;
   batchId: number;
   properties: Record<string, unknown> | undefined;
+  layerId: string | undefined;
 };
 
 /**
@@ -133,7 +137,8 @@ export type FeatureEvaluatorCallback = (
  */
 export class FeatureEvaluator {
   private handler: FeatureHandler;
-  private featureId: FeatureId;
+  private layerId: LayerId;
+  private featureSetId: FeatureSetId;
   private cachedBatchedProperties?: Map<
     number,
     Record<string, unknown> | undefined
@@ -152,9 +157,15 @@ export class FeatureEvaluator {
   // TODO: Need to support TSL if we export it.
   private obj: Object3D;
 
-  constructor(handler: FeatureHandler, featureId: FeatureId, obj: Object3D) {
+  constructor(
+    handler: FeatureHandler,
+    layerId: LayerId,
+    featureSetId: FeatureSetId,
+    obj: Object3D,
+  ) {
     this.handler = handler;
-    this.featureId = featureId;
+    this.layerId = layerId;
+    this.featureSetId = featureSetId;
     this.obj = obj;
   }
 
@@ -162,7 +173,7 @@ export class FeatureEvaluator {
    * Gets the unique identifier of this feature.
    */
   get id() {
-    return this.featureId;
+    return this.featureSetId;
   }
 
   /**
@@ -186,19 +197,22 @@ export class FeatureEvaluator {
    * });
    * ```
    */
-  readFeatureProperties(f: (info: FeatureInfo) => void) {
+  readFeatureProperties(f: (info: FeatureInfo, batchIndex: number) => void) {
     if (this.cachedBatchedProperties) {
       for (const [batchIdx, properties] of this.cachedBatchedProperties) {
-        f({
-          batchIndex: batchIdx,
-          batchId: this.batchIds[batchIdx],
-          properties,
-        });
+        f(
+          {
+            layerId: this.layerId,
+            batchId: this.batchIds[batchIdx],
+            properties,
+          },
+          batchIdx,
+        );
       }
     } else {
       this.cachedBatchedProperties = new Map();
       this.handler.readAllBatchedProperties(
-        this.featureId,
+        this.featureSetId,
         (
           batchIdx: number,
           batchId: number,
@@ -206,7 +220,14 @@ export class FeatureEvaluator {
         ) => {
           this.cachedBatchedProperties?.set(batchIdx, properties);
           this.batchIds[batchIdx] = batchId;
-          f({ batchIndex: batchIdx, batchId, properties });
+          f(
+            {
+              layerId: this.layerId,
+              batchId,
+              properties,
+            },
+            batchIdx,
+          );
         },
       );
     }
@@ -228,23 +249,26 @@ export class FeatureEvaluator {
    */
   readFilteredFeatureProperties(
     keys: string[],
-    f: (info: FeatureInfo) => void,
+    f: (info: FeatureInfo, batchIndex: number) => void,
   ) {
     const cacheKey = keys.join("|");
     if (this.filterCacheKey === cacheKey && this.cachedFilteredProperties) {
       for (const [batchIndex, filtered] of this.cachedFilteredProperties) {
-        f({
+        f(
+          {
+            layerId: this.layerId,
+            batchId: this.batchIds[batchIndex],
+            properties: filtered,
+          },
           batchIndex,
-          batchId: this.batchIds[batchIndex],
-          properties: filtered,
-        });
+        );
       }
     } else {
       this.cachedFilteredProperties = new Map();
       this.filterCacheKey = cacheKey;
 
       this.handler.readFilteredBatchedProperties(
-        this.featureId,
+        this.featureSetId,
         keys,
         (batchIndex: number, batchId: number, filtered?: unknown[]) => {
           const properties: Record<string, unknown> = {};
@@ -253,7 +277,7 @@ export class FeatureEvaluator {
           }
           this.cachedFilteredProperties?.set(batchIndex, properties);
           this.batchIds[batchIndex] = batchId;
-          f({ batchIndex, batchId, properties });
+          f({ layerId: this.layerId, batchId, properties }, batchIndex);
         },
       );
     }
@@ -309,9 +333,9 @@ export class FeatureEvaluator {
       filters?: string[];
     },
   ) {
-    const evaluate = (info: FeatureInfo) => {
+    const evaluate = (info: FeatureInfo, batchIndex: number) => {
       const evaluated = f(info);
-      this.applyEvaluatedValues(info.batchIndex, info.batchId, evaluated);
+      this.applyEvaluatedValues(batchIndex, info.batchId, evaluated);
     };
 
     if (options?.filters) {

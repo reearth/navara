@@ -143,27 +143,27 @@ const updateCreditsDisplay = () => {
 };
 
 // フィーチャー作成時：クレジット情報を保存
-layer.on("featureCreated", ({ featureId, credit }) => {
+layer.on("featureCreated", ({ featureSetId, credit }) => {
   if (credit) {
-    featureCredits.set(featureId, credit);
+    featureCredits.set(featureSetId, credit);
   }
-  visibleFeatures.add(featureId);
+  visibleFeatures.add(featureSetId);
   updateCreditsDisplay();
 });
 
 // フィーチャー削除時：クレジット情報を削除
-layer.on("featureRemoved", ({ featureId }) => {
-  featureCredits.delete(featureId);
-  visibleFeatures.delete(featureId);
+layer.on("featureRemoved", ({ featureSetId }) => {
+  featureCredits.delete(featureSetId);
+  visibleFeatures.delete(featureSetId);
   updateCreditsDisplay();
 });
 
 // 表示/非表示切り替え時：visibleFeatures を更新
-layer.on("featureVisibilityChanged", ({ featureId, visible }) => {
+layer.on("featureVisibilityChanged", ({ featureSetId, visible }) => {
   if (visible) {
-    visibleFeatures.add(featureId);
+    visibleFeatures.add(featureSetId);
   } else {
-    visibleFeatures.delete(featureId);
+    visibleFeatures.delete(featureSetId);
   }
   updateCreditsDisplay();
 });
