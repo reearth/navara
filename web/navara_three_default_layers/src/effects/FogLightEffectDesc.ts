@@ -35,7 +35,7 @@ export class FogLightEffectDesc extends EffectDesc<
   }
 
   createPass(): FogLight {
-    const mrtPass = this.findLayer<MRTPassEffectDesc>("mrt");
+    const mrtPass = this.find<MRTPassEffectDesc>("mrt");
     invariant(mrtPass?.normalBuffer);
 
     const config = this.config.fogLight ?? {};

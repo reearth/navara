@@ -39,7 +39,7 @@ export class CloudsEffectDesc extends EffectDesc<
       enabled: this.config.visible ?? true,
     });
 
-    const mrtPass = this.findLayer<MRTPassEffectDesc>("mrt");
+    const mrtPass = this.find<MRTPassEffectDesc>("mrt");
     invariant(mrtPass?.depthBuffer);
     pass.raw.setCustomDepthTexture(
       mrtPass.depthBuffer,

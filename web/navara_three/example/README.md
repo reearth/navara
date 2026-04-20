@@ -32,14 +32,14 @@ pages/
 
 Decide if your example fits into an existing category or should be uncategorized:
 
-| Category      | Purpose                                                              |
-| ------------- | -------------------------------------------------------------------- |
+| Category      | Purpose                                                                   |
+| ------------- | ------------------------------------------------------------------------- |
 | `basic/`      | Basic descriptor type demonstrations (geojson, mvt, tiles, terrain, etc.) |
-| `styling/`    | Feature styling with evaluators                                      |
-| `atmosphere/` | Sky, lighting, and atmospheric effects                               |
-| `camera/`     | Camera controls, constraints, animations                             |
-| `effects/`    | Post-processing and visual effects                                   |
-| (root)        | Uncategorized / standalone examples                                  |
+| `styling/`    | Feature styling with evaluators                                           |
+| `atmosphere/` | Sky, lighting, and atmospheric effects                                    |
+| `camera/`     | Camera controls, constraints, animations                                  |
+| `effects/`    | Post-processing and visual effects                                        |
+| (root)        | Uncategorized / standalone examples                                       |
 
 ### Step 2: Create the Example Directory
 

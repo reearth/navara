@@ -31,7 +31,7 @@ export class SSREffectDesc extends EffectDesc<SSRConfig, SSRUpdate, SSR> {
   }
 
   createPass() {
-    const mrtPass = this.findLayer<MRTPassEffectDesc>("mrt");
+    const mrtPass = this.find<MRTPassEffectDesc>("mrt");
     invariant(mrtPass?.normalBuffer);
 
     const pass = new SSR(this.view.camera.raw, {

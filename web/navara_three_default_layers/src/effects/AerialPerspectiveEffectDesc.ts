@@ -41,7 +41,7 @@ export class AerialPerspectiveEffectDesc extends EffectDesc<
   }
 
   createPass() {
-    const mrtPass = this.findLayer<MRTPassEffectDesc>("mrt");
+    const mrtPass = this.find<MRTPassEffectDesc>("mrt");
     invariant(mrtPass?.normalBuffer && mrtPass.depthBuffer);
 
     const pass = new AerialPerspective(
