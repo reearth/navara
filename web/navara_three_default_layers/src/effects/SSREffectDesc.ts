@@ -18,11 +18,7 @@ export type SSRConfig = Description & EffectConfig;
 
 export type SSRUpdate = Description & EffectUpdate;
 
-export class SSREffectDesc extends EffectDesc<
-  SSRConfig,
-  SSRUpdate,
-  SSR
-> {
+export class SSREffectDesc extends EffectDesc<SSRConfig, SSRUpdate, SSR> {
   static key = "ssr";
   static insertAfter = ["toneMapping"];
   static insertBefore = ["final"];

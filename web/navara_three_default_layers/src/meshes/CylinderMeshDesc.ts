@@ -45,11 +45,9 @@ type Description = {
   };
 };
 
-export type CylinderMeshConfig = MeshConfigWithSelectiveEffect &
-  Description;
+export type CylinderMeshConfig = MeshConfigWithSelectiveEffect & Description;
 
-export type CylinderMeshUpdate = MeshUpdateWithSelectiveEffect &
-  Description;
+export type CylinderMeshUpdate = MeshUpdateWithSelectiveEffect & Description;
 
 type CylinderMeshMaterial = MeshLambertMaterial | MeshBasicMaterial;
 
@@ -60,11 +58,7 @@ export class CylinderMeshDesc extends MeshDescWithSelectiveEffect<
 > {
   private config: CylinderMeshConfig;
 
-  constructor(
-    view: ThreeView,
-    ctx: ViewContext,
-    config: CylinderMeshConfig,
-  ) {
+  constructor(view: ThreeView, ctx: ViewContext, config: CylinderMeshConfig) {
     // Propagate initial effectIds to base MeshLayer
     if (config.cylinder?.effectIds) {
       config.effectIds = config.cylinder.effectIds;

@@ -15,11 +15,7 @@ export type FXAAConfig = Description & EffectConfig;
 
 export type FXAAUpdate = Description & EffectUpdate;
 
-export class FXAAEffectDesc extends EffectDesc<
-  FXAAConfig,
-  FXAAUpdate,
-  FXAA
-> {
+export class FXAAEffectDesc extends EffectDesc<FXAAConfig, FXAAUpdate, FXAA> {
   static key = "fxaa";
   // FXAA should typically be one of the last effects
   static insertBefore = ["final"];

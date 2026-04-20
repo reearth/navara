@@ -16,11 +16,7 @@ export type SSAOConfig = Description & EffectConfig;
 
 export type SSAOUpdate = Description & EffectUpdate;
 
-export class SSAOEffectDesc extends EffectDesc<
-  SSAOConfig,
-  SSAOUpdate,
-  SSAO
-> {
+export class SSAOEffectDesc extends EffectDesc<SSAOConfig, SSAOUpdate, SSAO> {
   static key = "ssao";
   static insertAfter = ["clouds"];
   static insertBefore = ["transparent"];

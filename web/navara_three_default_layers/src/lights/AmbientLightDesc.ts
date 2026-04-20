@@ -26,11 +26,7 @@ export class AmbientLightDesc extends LightDesc<
 > {
   private config: AmbientLightConfig;
 
-  constructor(
-    view: ThreeView,
-    ctx: ViewContext,
-    config: AmbientLightConfig,
-  ) {
+  constructor(view: ThreeView, ctx: ViewContext, config: AmbientLightConfig) {
     super(view, ctx, config);
     this.config = config;
   }

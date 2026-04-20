@@ -16,11 +16,7 @@ export type SMAAConfig = Description & EffectConfig;
 
 export type SMAAUpdate = Description & EffectUpdate;
 
-export class SMAAEffectDesc extends EffectDesc<
-  SMAAConfig,
-  SMAAUpdate,
-  SMAA
-> {
+export class SMAAEffectDesc extends EffectDesc<SMAAConfig, SMAAUpdate, SMAA> {
   static key = "smaa";
   static insertBefore = ["final"];
 

@@ -22,8 +22,7 @@ export type MeshUpdateWithSelectiveEffect = MeshUpdate & {
 };
 
 export abstract class MeshDescWithSelectiveEffect<
-  Config extends MeshConfigWithSelectiveEffect =
-    MeshConfigWithSelectiveEffect,
+  Config extends MeshConfigWithSelectiveEffect = MeshConfigWithSelectiveEffect,
   UpdateConfig extends MeshUpdateWithSelectiveEffect =
     MeshUpdateWithSelectiveEffect,
   InstanceObj extends Object3D | { raw: Object3D } =
@@ -32,13 +31,7 @@ export abstract class MeshDescWithSelectiveEffect<
   CustomEvent extends BaseEventMap = BaseEventMap,
   Instance extends MeshBaseInstance<InstanceObj> =
     MeshBaseInstance<InstanceObj>,
-> extends MeshDesc<
-  Config,
-  UpdateConfig,
-  InstanceObj,
-  CustomEvent,
-  Instance
-> {
+> extends MeshDesc<Config, UpdateConfig, InstanceObj, CustomEvent, Instance> {
   protected _effectIds: string[] = [];
   private _onSlotsChanged = () => this.updateEffectIdsMask();
 

@@ -1,19 +1,11 @@
 import type ThreeView from "../index";
 
 import { LayerRegistry } from "./LayerRegistry";
-import {
-  MeshDesc,
-  type MeshConfig,
-} from "./MeshDesc";
+import { MeshDesc, type MeshConfig } from "./MeshDesc";
 import type { ViewContext } from "./ViewContext";
 
-export type MeshLayerConstructor<
-  TConfig extends MeshConfig = MeshConfig,
-> = new (
-  view: ThreeView,
-  ctx: ViewContext,
-  config: TConfig,
-) => MeshDesc;
+export type MeshLayerConstructor<TConfig extends MeshConfig = MeshConfig> =
+  new (view: ThreeView, ctx: ViewContext, config: TConfig) => MeshDesc;
 
 export class MeshLayerRegistry extends LayerRegistry<
   MeshLayerConstructor,

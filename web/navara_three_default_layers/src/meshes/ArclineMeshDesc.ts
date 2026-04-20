@@ -15,11 +15,9 @@ type Description = {
   emissiveIntensity?: number;
 };
 
-export type ArclineMeshConfig = MeshConfigWithSelectiveEffect &
-  Description;
+export type ArclineMeshConfig = MeshConfigWithSelectiveEffect & Description;
 
-export type ArclineMeshUpdate = MeshUpdateWithSelectiveEffect &
-  Description;
+export type ArclineMeshUpdate = MeshUpdateWithSelectiveEffect & Description;
 
 export class ArclineMeshDesc extends MeshDescWithSelectiveEffect<
   ArclineMeshConfig,
@@ -28,11 +26,7 @@ export class ArclineMeshDesc extends MeshDescWithSelectiveEffect<
 > {
   private config: ArclineMeshConfig;
 
-  constructor(
-    view: ThreeView,
-    ctx: ViewContext,
-    config: ArclineMeshConfig,
-  ) {
+  constructor(view: ThreeView, ctx: ViewContext, config: ArclineMeshConfig) {
     super(view, ctx, config);
     this.config = config;
   }

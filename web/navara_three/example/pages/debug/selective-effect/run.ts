@@ -6,10 +6,7 @@ import ThreeView, {
   geodeticToVector3,
   degreeToRadian,
 } from "@navara/three";
-import type {
-  BoxMeshDesc,
-  SphereMeshDesc,
-} from "@navara/three_default_layers";
+import type { BoxMeshDesc, SphereMeshDesc } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
   type DefaultDeclarations,

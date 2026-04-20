@@ -13,11 +13,8 @@ import {
 } from "three";
 
 import { Color } from "../../Color";
-import type {
-  EffectConfig,
-  EffectUpdate,
-} from "../../core/EffectDesc";
 import type { BaseInstance } from "../../core/BaseDesc";
+import type { EffectConfig, EffectUpdate } from "../../core/EffectDesc";
 import type { ViewContext } from "../../core/ViewContext";
 import { Pass } from "../../effects";
 import type ThreeView from "../../index";

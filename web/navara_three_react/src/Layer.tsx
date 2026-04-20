@@ -92,9 +92,10 @@ type MeshLayerProps<L extends MeshDesc = MeshDesc> = {
   onReady?: (handle: BaseHandle<L>) => (() => void) | void;
 };
 
-export function MeshLayer<
-  L extends MeshDesc = MeshDesc,
->({ config, onReady }: PropsWithChildren<MeshLayerProps<L>>) {
+export function MeshLayer<L extends MeshDesc = MeshDesc>({
+  config,
+  onReady,
+}: PropsWithChildren<MeshLayerProps<L>>) {
   const { view } = useViewContext();
   useDeclarationLayer<L>(
     (c) => view.addMesh<L>(c as MeshConfig),
@@ -104,16 +105,16 @@ export function MeshLayer<
   return null;
 }
 
-type LightLayerProps<L extends LightDesc = LightDesc> =
-  {
-    config: LightConfig;
-    // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
-    onReady?: (handle: BaseHandle<L>) => (() => void) | void;
-  };
+type LightLayerProps<L extends LightDesc = LightDesc> = {
+  config: LightConfig;
+  // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
+  onReady?: (handle: BaseHandle<L>) => (() => void) | void;
+};
 
-export function LightLayer<
-  L extends LightDesc = LightDesc,
->({ config, onReady }: PropsWithChildren<LightLayerProps<L>>) {
+export function LightLayer<L extends LightDesc = LightDesc>({
+  config,
+  onReady,
+}: PropsWithChildren<LightLayerProps<L>>) {
   const { view } = useViewContext();
   useDeclarationLayer<L>(
     (c) => view.addLight<L>(c as LightConfig),
@@ -123,17 +124,16 @@ export function LightLayer<
   return null;
 }
 
-type EffectLayerProps<
-  L extends EffectDesc = EffectDesc,
-> = {
+type EffectLayerProps<L extends EffectDesc = EffectDesc> = {
   config: EffectConfig | BuiltInEffectDescription;
   // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
   onReady?: (handle: BaseHandle<L>) => (() => void) | void;
 };
 
-export function EffectLayer<
-  L extends EffectDesc = EffectDesc,
->({ config, onReady }: PropsWithChildren<EffectLayerProps<L>>) {
+export function EffectLayer<L extends EffectDesc = EffectDesc>({
+  config,
+  onReady,
+}: PropsWithChildren<EffectLayerProps<L>>) {
   const { view } = useViewContext();
   useDeclarationLayer<L>(
     (c) => view.addEffect<L>(c as EffectConfig | BuiltInEffectDescription),

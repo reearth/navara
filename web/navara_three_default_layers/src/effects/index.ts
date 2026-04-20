@@ -63,11 +63,7 @@ export {
   type SSAOConfig,
   type SSAOUpdate,
 } from "./SSAOEffectDesc";
-export {
-  SSREffectDesc,
-  type SSRConfig,
-  type SSRUpdate,
-} from "./SSREffectDesc";
+export { SSREffectDesc, type SSRConfig, type SSRUpdate } from "./SSREffectDesc";
 export {
   ToneMappingEffectDesc,
   type ToneMappingConfig,

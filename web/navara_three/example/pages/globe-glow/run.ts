@@ -12,8 +12,7 @@ import { Pane } from "tweakpane";
 import { TILE_DATASETS } from "../../helpers/constants";
 import { addCameraControl } from "../../helpers/control";
 
-let gGlowGlobeMeshDesc: MeshHandle<GlowGlobeMeshDesc> | undefined =
-  undefined;
+let gGlowGlobeMeshDesc: MeshHandle<GlowGlobeMeshDesc> | undefined = undefined;
 
 const gPaneParams = {
   glowRadiusScale: 1.2,

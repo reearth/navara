@@ -8,10 +8,7 @@ import { Pane } from "tweakpane";
 
 import { TILE_DATASETS, VECTOR_DATASETS } from "../../helpers/constants";
 import { addCameraControl, addDateControl } from "../../helpers/control";
-import {
-  addCtrlPanel,
-  type MaterialDesc,
-} from "../../helpers/panel";
+import { addCtrlPanel, type MaterialDesc } from "../../helpers/panel";
 
 const layers: MaterialDesc[] = [
   {

@@ -115,11 +115,7 @@ export class GlowGlobeMeshDesc extends MeshDesc<
   Mesh<SphereGeometry, ShaderMaterial>
 > {
   private config: GlowGlobeMeshConfig;
-  constructor(
-    view: ThreeView,
-    ctx: ViewContext,
-    config: GlowGlobeMeshConfig,
-  ) {
+  constructor(view: ThreeView, ctx: ViewContext, config: GlowGlobeMeshConfig) {
     super(view, ctx, config);
     this.config = config;
   }

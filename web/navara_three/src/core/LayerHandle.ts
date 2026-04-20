@@ -1,9 +1,6 @@
 import { EventHandler } from "@navara/core";
 
-import {
-  BaseDesc,
-  type BaseDescConfigUpdate,
-} from "./BaseDesc";
+import { BaseDesc, type BaseDescConfigUpdate } from "./BaseDesc";
 import type { EffectDesc } from "./EffectDesc";
 import type { LightDesc } from "./LightDesc";
 import type { MeshDesc } from "./MeshDesc";
@@ -39,9 +36,7 @@ export class BaseHandle<
    * @param updates - Partial configuration object with properties to update
    */
   update(
-    updates: T extends BaseDesc<infer _A, infer B>
-      ? B
-      : BaseDescConfigUpdate,
+    updates: T extends BaseDesc<infer _A, infer B> ? B : BaseDescConfigUpdate,
   ): void {
     this.layer.onUpdateConfig(updates);
   }
@@ -98,9 +93,7 @@ export class BaseHandle<
  * handle.delete();
  * ```
  */
-export class MeshHandle<
-  T extends MeshDesc = MeshDesc,
-> extends BaseHandle<T> {}
+export class MeshHandle<T extends MeshDesc = MeshDesc> extends BaseHandle<T> {}
 
 /**
  * A handle to control a light layer after it has been added to the scene.

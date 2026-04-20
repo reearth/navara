@@ -43,11 +43,9 @@ type Description = {
   };
 };
 
-export type BoxMeshConfig = MeshConfigWithSelectiveEffect &
-  Description;
+export type BoxMeshConfig = MeshConfigWithSelectiveEffect & Description;
 
-export type BoxMeshUpdate = MeshUpdateWithSelectiveEffect &
-  Description;
+export type BoxMeshUpdate = MeshUpdateWithSelectiveEffect & Description;
 
 type BoxMeshMaterial = MeshLambertMaterial | MeshBasicMaterial;
 

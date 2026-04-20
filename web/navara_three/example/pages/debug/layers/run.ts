@@ -20,10 +20,7 @@ import {
   FONT_DATASETS,
 } from "../../../helpers/constants";
 import { addDateControl, addCameraControl } from "../../../helpers/control";
-import {
-  addCtrlPanel,
-  type MaterialDesc,
-} from "../../../helpers/panel";
+import { addCtrlPanel, type MaterialDesc } from "../../../helpers/panel";
 
 export type CustomDeclarations = DefaultDeclarations;
 

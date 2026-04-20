@@ -17,18 +17,12 @@ const getIdFromProperties = (properties: Nullable<Record<string, unknown>>) => {
   return properties?.["id"] ?? properties?.["gml_id"];
 };
 
-export type MaterialDesc = Exclude<
-  LayerDescription,
-  { type: "terrain" }
->;
+export type MaterialDesc = Exclude<LayerDescription, { type: "terrain" }>;
 
 const selectedFeatures = new Set<string>();
 const selectedBatchIds = new Set<number>();
 
-const addFeatureUpdateHandler = (
-  layerDesc: MaterialDesc,
-  layer: Layer,
-) => {
+const addFeatureUpdateHandler = (layerDesc: MaterialDesc, layer: Layer) => {
   // Function to dynamically get the current default color from layerDesc
   const getDefaultColor = (): number | Color => {
     let defaultColor: number | Color = 0xffffff;

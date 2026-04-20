@@ -18,10 +18,7 @@ export type BaseDescConfig = {
 /**
  * Configuration properties that can be updated after layer creation.
  */
-export type BaseDescConfigUpdate = Pick<
-  BaseDescConfig,
-  "visible"
->;
+export type BaseDescConfigUpdate = Pick<BaseDescConfig, "visible">;
 
 /**
  * Base interface for the underlying Three.js instance created by a layer.
@@ -63,8 +60,7 @@ export type BaseDescEvents = {
  */
 export abstract class BaseDesc<
   Config extends BaseDescConfig = BaseDescConfig,
-  UpdateConfig extends BaseDescConfigUpdate =
-    BaseDescConfigUpdate,
+  UpdateConfig extends BaseDescConfigUpdate = BaseDescConfigUpdate,
   Instance extends BaseInstance = BaseInstance,
   CustomEvent extends BaseEventMap = BaseEventMap,
 > extends EventHandler<BaseDescEvents & CustomEvent> {

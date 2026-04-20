@@ -1,5 +1,11 @@
 import type ThreeView from "@navara/three";
-import { Plugin, type MeshHandle, type LightHandle, type EffectHandle, type ViewContext } from "@navara/three";
+import {
+  Plugin,
+  type MeshHandle,
+  type LightHandle,
+  type EffectHandle,
+  type ViewContext,
+} from "@navara/three";
 import {
   RainMeshDesc,
   SnowMeshDesc,

@@ -34,11 +34,9 @@ type Description = {
   };
 };
 
-export type PlaneMeshConfig = MeshConfigWithSelectiveEffect &
-  Description;
+export type PlaneMeshConfig = MeshConfigWithSelectiveEffect & Description;
 
-export type PlaneMeshUpdate = MeshUpdateWithSelectiveEffect &
-  Description;
+export type PlaneMeshUpdate = MeshUpdateWithSelectiveEffect & Description;
 
 export class PlaneMeshDesc extends MeshDescWithSelectiveEffect<
   PlaneMeshConfig,

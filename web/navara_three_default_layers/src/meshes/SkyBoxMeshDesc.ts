@@ -43,11 +43,7 @@ export class SkyBoxMeshDesc extends MeshDesc<
   Mesh<BufferGeometry, ShaderMaterial>
 > {
   private config: SkyBoxMeshConfig;
-  constructor(
-    view: ThreeView,
-    ctx: ViewContext,
-    config: SkyBoxMeshConfig,
-  ) {
+  constructor(view: ThreeView, ctx: ViewContext, config: SkyBoxMeshConfig) {
     super(view, ctx, config);
     this.config = config;
   }

@@ -13,11 +13,7 @@ export {
   type SkyMeshConfig,
   type SkyMeshUpdate,
 } from "./SkyMeshDesc";
-export {
-  StarsDesc,
-  type StarsConfig,
-  type StarsUpdate,
-} from "./StarsDesc";
+export { StarsDesc, type StarsConfig, type StarsUpdate } from "./StarsDesc";
 export {
   BoxMeshDesc,
   type BoxMeshConfig,

@@ -26,11 +26,7 @@ export class LightProbeDesc extends LightDesc<
 > {
   private config: LightProbeConfig;
 
-  constructor(
-    view: ThreeView,
-    ctx: ViewContext,
-    config: LightProbeConfig,
-  ) {
+  constructor(view: ThreeView, ctx: ViewContext, config: LightProbeConfig) {
     super(view, ctx, config);
     this.config = config;
   }

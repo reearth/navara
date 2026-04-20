@@ -50,11 +50,9 @@ type Description = {
   boxes?: BoxesDescription;
 };
 
-export type InstancedBoxMeshConfig = InstancedMeshConfig &
-  Description;
+export type InstancedBoxMeshConfig = InstancedMeshConfig & Description;
 
-export type InstancedBoxMeshUpdate = InstancedMeshUpdate &
-  Description;
+export type InstancedBoxMeshUpdate = InstancedMeshUpdate & Description;
 
 export class InstancedBoxMeshDesc extends InstancedMeshDesc<
   BoxGeometry,

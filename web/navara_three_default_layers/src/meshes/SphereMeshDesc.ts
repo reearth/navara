@@ -37,11 +37,9 @@ type Description = {
   };
 };
 
-export type SphereMeshConfig = MeshConfigWithSelectiveEffect &
-  Description;
+export type SphereMeshConfig = MeshConfigWithSelectiveEffect & Description;
 
-export type SphereMeshUpdate = MeshUpdateWithSelectiveEffect &
-  Description;
+export type SphereMeshUpdate = MeshUpdateWithSelectiveEffect & Description;
 
 export class SphereMeshDesc extends MeshDescWithSelectiveEffect<
   SphereMeshConfig,
@@ -50,11 +48,7 @@ export class SphereMeshDesc extends MeshDescWithSelectiveEffect<
 > {
   private config: SphereMeshConfig;
 
-  constructor(
-    view: ThreeView,
-    ctx: ViewContext,
-    config: SphereMeshConfig,
-  ) {
+  constructor(view: ThreeView, ctx: ViewContext, config: SphereMeshConfig) {
     // Propagate initial effectIds to base MeshLayer
     if (config.sphere?.effectIds) {
       config.effectIds = config.sphere.effectIds;

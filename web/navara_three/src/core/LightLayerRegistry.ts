@@ -1,10 +1,7 @@
 import type ThreeView from "../index";
 
 import { LayerRegistry } from "./LayerRegistry";
-import type {
-  LightConfig,
-  LightDesc,
-} from "./LightDesc";
+import type { LightConfig, LightDesc } from "./LightDesc";
 import type { ViewContext } from "./ViewContext";
 
 export type LightLayerConstructor = new (

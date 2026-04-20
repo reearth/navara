@@ -18,11 +18,7 @@ export type StarsConfig = MeshConfig & Description;
 
 export type StarsUpdate = MeshUpdate & Description;
 
-export class StarsDesc extends MeshDesc<
-  StarsConfig,
-  StarsUpdate,
-  Stars
-> {
+export class StarsDesc extends MeshDesc<StarsConfig, StarsUpdate, Stars> {
   private config: StarsConfig;
   private _stars: Stars | null = null;
 

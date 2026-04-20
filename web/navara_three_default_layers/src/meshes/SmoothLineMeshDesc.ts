@@ -27,11 +27,7 @@ export class SmoothLineMeshDesc extends MeshDesc<
 > {
   private config: SmoothLineMeshConfig;
 
-  constructor(
-    view: ThreeView,
-    ctx: ViewContext,
-    config: SmoothLineMeshConfig,
-  ) {
+  constructor(view: ThreeView, ctx: ViewContext, config: SmoothLineMeshConfig) {
     super(view, ctx, config);
     this.config = config;
   }

@@ -1,9 +1,5 @@
 import type ThreeView from "@navara/three";
-import {
-  MeshDesc,
-  type MeshConfig,
-  type ViewContext,
-} from "@navara/three";
+import { MeshDesc, type MeshConfig, type ViewContext } from "@navara/three";
 import { AxesHelper } from "three";
 
 type Description = {
@@ -14,10 +10,7 @@ type Description = {
 
 export type AxesHelperConfig = MeshConfig & Description;
 
-export type AxesHelperUpdate = Pick<
-  MeshConfig,
-  "position" | "visible"
-> &
+export type AxesHelperUpdate = Pick<MeshConfig, "position" | "visible"> &
   Description;
 
 export class AxesHelperDesc extends MeshDesc<
@@ -27,11 +20,7 @@ export class AxesHelperDesc extends MeshDesc<
 > {
   private config: AxesHelperConfig;
 
-  constructor(
-    view: ThreeView,
-    ctx: ViewContext,
-    config: AxesHelperConfig,
-  ) {
+  constructor(view: ThreeView, ctx: ViewContext, config: AxesHelperConfig) {
     super(view, ctx, config);
     this.config = config;
   }

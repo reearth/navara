@@ -39,11 +39,9 @@ type Description = {
   };
 };
 
-export type TubeMeshConfig = MeshConfigWithSelectiveEffect &
-  Description;
+export type TubeMeshConfig = MeshConfigWithSelectiveEffect & Description;
 
-export type TubeMeshUpdate = MeshUpdateWithSelectiveEffect &
-  Description;
+export type TubeMeshUpdate = MeshUpdateWithSelectiveEffect & Description;
 
 export class TubeMeshDesc extends MeshDescWithSelectiveEffect<
   TubeMeshConfig,

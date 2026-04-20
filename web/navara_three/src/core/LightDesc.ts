@@ -16,8 +16,7 @@ export type LightConfig = {
   position?: XYZ;
 } & BaseDescConfig;
 
-export type LightUpdate = Pick<LightConfig, "position"> &
-  BaseDescConfigUpdate;
+export type LightUpdate = Pick<LightConfig, "position"> & BaseDescConfigUpdate;
 
 export type LightBaseInstance<Instance extends object = object> =
   Instance extends Light

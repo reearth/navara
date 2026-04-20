@@ -331,9 +331,7 @@ export abstract class EffectDesc<
    * @param key - The static `key` of the effect layer to find.
    * @returns The effect layer instance, or `undefined` if not found.
    */
-  findLayer<Layer extends EffectDesc = EffectDesc>(
-    key: string,
-  ) {
+  findLayer<Layer extends EffectDesc = EffectDesc>(key: string) {
     for (const handle of this.ctx._getEffectLayers()) {
       const layer = handle.ref;
       if (layer.getKey() !== key) {

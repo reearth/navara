@@ -21,10 +21,7 @@ type Description = {
 
 export type ArrowHelperConfig = MeshConfig & Description;
 
-export type ArrowHelperUpdate = Pick<
-  MeshConfig,
-  "position" | "visible"
-> &
+export type ArrowHelperUpdate = Pick<MeshConfig, "position" | "visible"> &
   Description;
 
 export class ArrowHelperDesc extends MeshDesc<
@@ -34,11 +31,7 @@ export class ArrowHelperDesc extends MeshDesc<
 > {
   private config: ArrowHelperConfig;
 
-  constructor(
-    view: ThreeView,
-    ctx: ViewContext,
-    config: ArrowHelperConfig,
-  ) {
+  constructor(view: ThreeView, ctx: ViewContext, config: ArrowHelperConfig) {
     super(view, ctx, config);
     this.config = config;
   }

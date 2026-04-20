@@ -23,11 +23,7 @@ export class SkyLightProbeDesc extends LightDesc<
 > {
   private config: SkyLightProbeConfig;
 
-  constructor(
-    view: ThreeView,
-    ctx: ViewContext,
-    config: SkyLightProbeConfig,
-  ) {
+  constructor(view: ThreeView, ctx: ViewContext, config: SkyLightProbeConfig) {
     super(view, ctx, config);
     this.config = config;
   }
