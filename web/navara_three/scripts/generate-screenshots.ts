@@ -3,6 +3,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 import { Browser, Page, chromium } from "playwright";
+import sharp from "sharp";
 import invariant from "tiny-invariant";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -284,6 +285,52 @@ class ScreenshotGenerator {
     };
   }
 
+  async optimizeScreenshots(results: PageScreenshotResult[]): Promise<void> {
+    const successfulResults = results.filter((r) => r.success);
+    if (successfulResults.length === 0) return;
+
+    console.log(
+      `\n🖼️  Optimizing ${successfulResults.length} screenshots to AVIF (quality: 50)...`,
+    );
+
+    let totalOriginalSize = 0;
+    let totalOptimizedSize = 0;
+
+    for (const result of successfulResults) {
+      const pngPath = result.path;
+      const avifPath = pngPath.replace(/\.png$/, ".avif");
+
+      const originalStat = await fs.stat(pngPath);
+      totalOriginalSize += originalStat.size;
+
+      await sharp(pngPath).avif({ quality: 50 }).toFile(avifPath);
+
+      const optimizedStat = await fs.stat(avifPath);
+      totalOptimizedSize += optimizedStat.size;
+
+      await fs.unlink(pngPath);
+
+      const reduction = (
+        ((originalStat.size - optimizedStat.size) / originalStat.size) *
+        100
+      ).toFixed(1);
+      console.log(
+        `  ✅ ${path.basename(pngPath)} → ${formatBytes(originalStat.size)} → ${formatBytes(optimizedStat.size)} (${reduction}% smaller)`,
+      );
+    }
+
+    const totalReduction =
+      totalOriginalSize > 0
+        ? (
+            ((totalOriginalSize - totalOptimizedSize) / totalOriginalSize) *
+            100
+          ).toFixed(1)
+        : "0";
+    console.log(
+      `  Total: ${formatBytes(totalOriginalSize)} → ${formatBytes(totalOptimizedSize)} (${totalReduction}% smaller)`,
+    );
+  }
+
   async run(): Promise<void> {
     console.log("🚀 Starting screenshot generation...");
 
@@ -308,6 +355,9 @@ class ScreenshotGenerator {
       await this.browser.close();
     }
 
+    // Optimize screenshots to AVIF
+    await this.optimizeScreenshots(results);
+
     // Summary
     const successful = results.filter((r) => r.success).length;
     const failed = results.filter((r) => !r.success).length;
@@ -324,6 +374,14 @@ class ScreenshotGenerator {
       process.exit(1);
     }
   }
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  const kb = bytes / 1024;
+  if (kb < 1024) return `${kb.toFixed(1)} KB`;
+  const mb = kb / 1024;
+  return `${mb.toFixed(1)} MB`;
 }
 
 // Parse command-line arguments
