@@ -11,7 +11,7 @@ export const PageList = ({ pages }: PageListProps) => {
         // Convert nested path to URL-safe format: "styling/geojson-billboard" -> "styling-geojson-billboard"
         const urlName = page.name.replace(/\//g, "-");
         const href = `/${urlName}`;
-        const src = `/screenshots/${urlName}.png`;
+        const src = `/screenshots/${urlName}.avif`;
         const title = page.displayName.replace(/-/g, " ");
         return (
           <a
@@ -26,6 +26,7 @@ export const PageList = ({ pages }: PageListProps) => {
                   src={src}
                   alt={title}
                   className="block h-[150px] w-full object-cover bg-muted"
+                  loading="lazy"
                   onError={(e) => {
                     (e.currentTarget as HTMLImageElement).style.opacity = "0.3";
                   }}
