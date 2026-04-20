@@ -52,7 +52,7 @@ import {
   type EffectLayerConstructor,
   UnknownLayerTypeError,
 } from "./core";
-import { MeshHandle, LightHandle, EffectHandle } from "./core/LayerHandle";
+import { MeshHandle, LightHandle, EffectHandle } from "./core/BaseHandle";
 import { Registries } from "./core/Registries";
 import { getDevicePixelRatio, isMobileDevice } from "./device";
 import {

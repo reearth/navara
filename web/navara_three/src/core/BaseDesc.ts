@@ -96,7 +96,7 @@ export abstract class BaseDesc<
   abstract onCreate(): void;
 
   /**
-   * Called when the layer configuration is updated via `LayerHandle.update()`.
+   * Called when the layer configuration is updated via `BaseHandle.update()`.
    * Override this to handle custom configuration updates.
    * @param updates - The configuration properties being updated
    */
@@ -118,7 +118,7 @@ export abstract class BaseDesc<
   }
 
   /**
-   * Called when the layer is deleted via `LayerHandle.delete()`.
+   * Called when the layer is deleted via `BaseHandle.delete()`.
    * Override this to clean up resources. Remember to call `super.onDestroy()`.
    */
   onDestroy(): void {

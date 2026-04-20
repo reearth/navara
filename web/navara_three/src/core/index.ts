@@ -42,7 +42,7 @@ export {
   MeshHandle,
   LightHandle,
   EffectHandle,
-} from "./LayerHandle";
+} from "./BaseHandle";
 export * from "./ViewContext";
 export { SelectiveEffectRegistry } from "./SelectiveEffectRegistry";
 export { setupSelectiveEffectUniforms } from "../material/selectiveEffectMaterialSetup";

@@ -9,7 +9,7 @@ import type { RenderPassOrchestrator } from "../orchestrators";
 import type { CustomRenderPass } from "../passes";
 import type { Scenes } from "../scene";
 
-import type { EffectHandle } from "./LayerHandle";
+import type { EffectHandle } from "./BaseHandle";
 import { SelectiveEffectRegistry } from "./SelectiveEffectRegistry";
 
 type ViewContextEvents = {
