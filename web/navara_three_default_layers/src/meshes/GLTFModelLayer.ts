@@ -210,9 +210,15 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
       targetGroup.add(gltf.scene);
       this.setupModel(targetGroup);
 
-      if (this.config.pickable && !this.pickWrapper) {
-        this.pickWrapper = new PickableMeshWrapper(targetGroup, this.ctx);
-        this.ctx.registerPickableMesh(this.id, this.pickWrapper);
+      if (this.config.pickable) {
+        if (!this.pickWrapper) {
+          this.pickWrapper = new PickableMeshWrapper(targetGroup, this.ctx);
+          this.ctx.registerPickableMesh(this.id, this.pickWrapper);
+        } else {
+          // Model was reloaded — inject picking into the newly loaded
+          // meshes' materials (preserves existing batchId)
+          this.pickWrapper.syncMaterials();
+        }
       }
 
       this.emit("needsUpdate");

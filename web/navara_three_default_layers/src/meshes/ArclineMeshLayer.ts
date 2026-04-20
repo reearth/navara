@@ -108,6 +108,9 @@ export class ArclineMeshLayer extends MeshLayerDeclarationWithSelectiveEffect<
       this.config.arcLines = currentConfigs;
 
       this._instance.updateConfig(updateConfigs);
+      // ArcLine may have rebuilt sub-meshes — re-inject picking into any
+      // newly created materials (preserves existing batchId)
+      this.pickWrapper?.syncMaterials();
 
       this.emit("needsUpdate");
     }

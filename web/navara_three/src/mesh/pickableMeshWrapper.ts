@@ -166,6 +166,8 @@ export class PickableMeshWrapper extends Object3D implements PickableMesh {
     nvr_uPickable: { value: number };
     nvr_uBatchId: { value: number };
   };
+  /** Materials that already have picking shaders installed. */
+  private injectedMaterials = new WeakSet<Material>();
 
   constructor(
     public object: Object3D,
@@ -180,6 +182,15 @@ export class PickableMeshWrapper extends Object3D implements PickableMesh {
     this.setupShaders();
   }
 
+  /**
+   * Re-scan the wrapped object and inject picking into any materials that
+   * appeared since the last pass (e.g. after a layer swapped its material).
+   * Preserves the existing `batchId` and skips materials already injected.
+   */
+  syncMaterials(): void {
+    this.setupShaders();
+  }
+
   private setupShaders(): void {
     const refs = this.refs;
     this.object.traverse((child) => {
@@ -191,12 +202,14 @@ export class PickableMeshWrapper extends Object3D implements PickableMesh {
 
       materials.forEach((m) => {
         if (!(m instanceof Material)) return;
+        if (this.injectedMaterials.has(m)) return;
         // For ShaderMaterial (includes LineMaterial), inject directly into
         // the shader source. This is more reliable than onBeforeCompile
         // because ShaderMaterial sources may already be modified by MRT
         // overrides and RTE injection.
         if (m instanceof ShaderMaterial) {
           injectPickingIntoShaderMaterial(m, refs);
+          this.injectedMaterials.add(m);
           return;
         }
         // For standard materials, use onBeforeCompile
@@ -209,6 +222,7 @@ export class PickableMeshWrapper extends Object3D implements PickableMesh {
         m.customProgramCacheKey = () =>
           (prevCacheKey?.() ?? "") + "_nvr_pickable";
         m.needsUpdate = true;
+        this.injectedMaterials.add(m);
       });
     });
   }

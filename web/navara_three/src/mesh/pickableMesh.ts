@@ -42,5 +42,14 @@ export class PickableMesh {
   }
 }
 
-export const isPickableMesh = (v: object): v is PickableMesh =>
-  "onBeforePicking" in v;
+export const isPickableMesh = (v: object): v is PickableMesh => {
+  if (typeof v !== "object" || v === null) {
+    return false;
+  }
+  const candidate = v as Record<string, unknown>;
+  return (
+    typeof candidate.onBeforePicking === "function" &&
+    typeof candidate.onAfterPicking === "function" &&
+    typeof candidate._getRenderable === "function"
+  );
+};

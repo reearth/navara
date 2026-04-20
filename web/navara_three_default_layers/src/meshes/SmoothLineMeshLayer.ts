@@ -86,6 +86,9 @@ export class SmoothLineMeshLayer extends MeshLayerDeclaration<
         ? updates.smoothLines
         : [updates.smoothLines];
       this._instance.updateConfig(updateConfigs);
+      // SmoothLine may have rebuilt line meshes — re-inject picking into any
+      // newly created materials (preserves existing batchId)
+      this.pickWrapper?.syncMaterials();
       this.emit("needsUpdate");
     }
 

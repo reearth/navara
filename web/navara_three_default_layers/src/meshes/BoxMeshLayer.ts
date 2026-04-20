@@ -166,6 +166,8 @@ export class BoxMeshLayer extends MeshLayerDeclarationWithSelectiveEffect<
             newMaterial.emissiveIntensity = origin.emissiveIntensity ?? 0;
             setupSelectiveEffectUniforms(newMaterial);
           }
+          // Re-inject picking hooks into the new material (preserves batchId)
+          this.pickWrapper?.syncMaterials();
         }
       }
 

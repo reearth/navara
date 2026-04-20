@@ -171,6 +171,8 @@ export class CylinderMeshLayer extends MeshLayerDeclarationWithSelectiveEffect<
           if (newMaterial instanceof MeshLambertMaterial) {
             setupSelectiveEffectUniforms(newMaterial);
           }
+          // Re-inject picking hooks into the new material (preserves batchId)
+          this.pickWrapper?.syncMaterials();
         }
       }
 
