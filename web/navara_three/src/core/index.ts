@@ -1,6 +1,6 @@
 export { LayerRegistry } from "./LayerRegistry";
 export { Registries } from "./Registries";
-export * from "./layerErrors";
+export * from "./errors";
 export {
   BaseDesc,
   type BaseDescConfig,

@@ -50,7 +50,7 @@ import {
   type MeshLayerConstructor,
   type LightLayerConstructor,
   type EffectLayerConstructor,
-  UnknownLayerTypeError,
+  UnknownTypeError,
 } from "./core";
 import { MeshHandle, LightHandle, EffectHandle } from "./core/BaseHandle";
 import { Registries } from "./core/Registries";
@@ -1194,9 +1194,44 @@ export default class ThreeView<
    * @returns A MeshHandle for controlling the added mesh
    */
   addMesh<L extends MeshDesc = MeshDesc>(
-    desc: OmitType<MeshConfig | NonNullable<D["mesh"]>>,
+    config: OmitType<MeshConfig | NonNullable<D["mesh"]>>,
   ): MeshHandle<L> {
-    return this.addMeshLayer(desc as MeshConfig) as MeshHandle<L>;
+    // Find which mesh type from config
+    const meshType = this.registries.mesh.findMeshType(config);
+    if (!meshType) {
+      throw new UnknownTypeError(config);
+    }
+
+    // Create mesh layer instance
+    const meshLayer = this.registries.mesh.create(meshType, config);
+
+    // Initialize the mesh
+    meshLayer.onCreate();
+
+    // Set up update listener
+    if (meshLayer.update) {
+      this.on("preRender", meshLayer.update.bind(meshLayer));
+    }
+
+    if (meshLayer.onResize) {
+      this.on("resize", meshLayer.onResize.bind(meshLayer));
+
+      const canvasSize = this._getCanvasSize();
+      if (canvasSize) {
+        meshLayer.onResize(canvasSize.width, canvasSize.height);
+      }
+    }
+
+    // Trigger re-render
+    meshLayer.on("needsUpdate", this.forceUpdate);
+
+    const l = new MeshHandle(meshLayer);
+
+    // Store the mesh layer
+    this.layersManager.add(l);
+
+    // Return handle for imperative access
+    return l as MeshHandle<L>;
   }
 
   /**
@@ -1206,9 +1241,35 @@ export default class ThreeView<
    * @returns A LightHandle for controlling the added light
    */
   addLight<L extends LightDesc = LightDesc>(
-    desc: OmitType<LightConfig | NonNullable<D["light"]>>,
+    config: OmitType<LightConfig | NonNullable<D["light"]>>,
   ): LightHandle<L> {
-    return this.addLightLayer(desc as LightConfig) as LightHandle<L>;
+    // Find which light type from config
+    const lightType = this.registries.light.findLightType(config);
+    if (!lightType) {
+      throw new UnknownTypeError(config);
+    }
+
+    // Create light layer instance
+    const lightLayer = this.registries.light.create(lightType, config);
+
+    // Initialize the light
+    lightLayer.onCreate();
+
+    // Set up update listener if the layer has an update method
+    if (lightLayer.update) {
+      this.on("preRender", lightLayer.update.bind(lightLayer));
+    }
+
+    // Trigger re-render
+    lightLayer.on("needsUpdate", this.forceUpdate);
+
+    const l = new LightHandle(lightLayer);
+
+    // Store the light layer
+    this.layersManager.add(l);
+
+    // Return handle for imperative access
+    return l as LightHandle<L>;
   }
 
   /**
@@ -1218,11 +1279,37 @@ export default class ThreeView<
    * @returns An EffectHandle for controlling the added effect
    */
   addEffect<L extends EffectDesc = EffectDesc>(
-    desc: OmitType<
+    config: OmitType<
       BuiltInEffectDescription | EffectConfig | NonNullable<D["effect"]>
     >,
   ): EffectHandle<L> {
-    return this.addEffectLayer(desc as EffectConfig) as EffectHandle<L>;
+    // Find which effect type from config
+    const effectType = this.registries.effect.findEffectType(config);
+    if (!effectType) {
+      throw new UnknownTypeError(config);
+    }
+
+    // Create effect layer instance
+    const effectLayer = this.registries.effect.create(effectType, config);
+
+    // Initialize the effect
+    effectLayer.onCreate();
+
+    // Set up update listener if the layer has an update method
+    if (effectLayer.update) {
+      this.on("preRender", effectLayer.update.bind(effectLayer));
+    }
+
+    // Trigger re-render
+    effectLayer.on("needsUpdate", this.forceUpdate);
+
+    const l = new EffectHandle(effectLayer);
+
+    // Store the effect layer
+    this.layersManager.add(l);
+
+    // Return handle for imperative access
+    return l as EffectHandle<L>;
   }
 
   /**
@@ -1263,116 +1350,6 @@ export default class ThreeView<
     this.registerEffect("transparent", TransparentPassEffectDesc);
 
     this.registerEffect("final", FinalCopyEffectDesc);
-  }
-
-  private addMeshLayer(config: MeshConfig): MeshHandle {
-    // Find which mesh type from config
-    const meshType = this.registries.mesh.findMeshType(config);
-    if (!meshType) {
-      throw new UnknownLayerTypeError(config);
-    }
-
-    // Extract layer config and mesh-specific config
-    const { type, ...meshConfigs } = config;
-    const flatConfig = { ...config, ...meshConfigs };
-    // Create mesh layer instance
-    const meshLayer = this.registries.mesh.create(meshType, flatConfig);
-
-    // Initialize the mesh
-    meshLayer.onCreate();
-
-    // Set up update listener
-    if (meshLayer.update) {
-      this.on("preRender", meshLayer.update.bind(meshLayer));
-    }
-
-    if (meshLayer.onResize) {
-      this.on("resize", meshLayer.onResize.bind(meshLayer));
-
-      const canvasSize = this._getCanvasSize();
-      if (canvasSize) {
-        meshLayer.onResize(canvasSize.width, canvasSize.height);
-      }
-    }
-
-    // Trigger re-render
-    meshLayer.on("needsUpdate", this.forceUpdate);
-
-    const l = new MeshHandle(meshLayer);
-
-    // Store the mesh layer
-    this.layersManager.add(l);
-
-    // Return handle for imperative access
-    return l;
-  }
-
-  private addLightLayer(config: LightConfig): LightHandle {
-    // Find which light type from config
-    const lightType = this.registries.light.findLightType(config);
-    if (!lightType) {
-      throw new UnknownLayerTypeError(config);
-    }
-
-    // Extract layer config and light-specific config
-    const { type, ...lightConfigs } = config;
-    const flatConfig = { ...config, ...lightConfigs };
-
-    // Create light layer instance
-    const lightLayer = this.registries.light.create(lightType, flatConfig);
-
-    // Initialize the light
-    lightLayer.onCreate();
-
-    // Set up update listener if the layer has an update method
-    if (lightLayer.update) {
-      this.on("preRender", lightLayer.update.bind(lightLayer));
-    }
-
-    // Trigger re-render
-    lightLayer.on("needsUpdate", this.forceUpdate);
-
-    const l = new LightHandle(lightLayer);
-
-    // Store the light layer
-    this.layersManager.add(l);
-
-    // Return handle for imperative access
-    return l;
-  }
-
-  private addEffectLayer(config: EffectConfig): EffectHandle {
-    // Find which effect type from config
-    const effectType = this.registries.effect.findEffectType(config);
-    if (!effectType) {
-      throw new UnknownLayerTypeError(config);
-    }
-
-    // Extract layer config and effect-specific config
-    const { type, ...effectConfigs } = config;
-    const flatConfig = { ...config, ...effectConfigs };
-
-    // Create effect layer instance
-    const effectLayer = this.registries.effect.create(effectType, flatConfig);
-
-    // Initialize the effect
-    effectLayer.onCreate();
-
-    // Set up update listener if the layer has an update method
-    if (effectLayer.update) {
-      this.on("preRender", effectLayer.update.bind(effectLayer));
-    }
-
-    // Trigger re-render
-    effectLayer.on("needsUpdate", this.forceUpdate);
-
-    const l = new EffectHandle(effectLayer);
-
-    // Store the effect layer
-    this.layersManager.add(l);
-
-    // Return handle for imperative access
-    return l;
   }
 
   /**
