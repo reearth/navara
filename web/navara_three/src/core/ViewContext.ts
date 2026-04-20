@@ -59,7 +59,7 @@ export class ViewContext extends EventHandler<ViewContextEvents> {
     /** Manager for scheduling work on Web Workers. */
     private _concurrencyManager: ConcurrencyManager,
     private _core: Core,
-    private _meshes: Map<string, PickableMesh>,
+    private _meshes: MeshCache,
   ) {
     super();
 

@@ -106,7 +106,6 @@ import { isWorker, convertScreenPos } from "./utils";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 /** @ts-ignore ignore: https://v3.vitejs.dev/guide/features.html#import-with-query-suffixes  */
 import WorkerURL from "./worker?url&worker";
-import type { PickableMesh } from "./mesh";
 
 export type { CameraOptions, CameraEvent } from "./camera";
 
@@ -290,7 +289,6 @@ export default class ThreeView<
   private _uniforms: CommonUniforms;
 
   private _meshes: MeshCache = new Map();
-  private _pickableMeshes: Map<string, PickableMesh> = new Map();
   private _abortControllers: AbortControllers = new Map();
   private _workerPoolPromises: WorkerPoolPromises = new Map();
   private _loadedTexs = new Map<string, Texture>();
@@ -841,7 +839,7 @@ export default class ThreeView<
       this.renderPassOrchestrator,
       concurrencyManager,
       this._core,
-      this._pickableMeshes,
+      this._meshes,
     );
     this.registries = new Registries(this, this.viewContext);
     this.eventContext = new EventContext({
@@ -882,7 +880,7 @@ export default class ThreeView<
         this._renderer.domElement,
         this._renderer,
         this._camera.raw,
-        this._pickableMeshes,
+        this._meshes,
         this.onPick.bind(this),
         // {
         //   debug: true,
@@ -998,7 +996,6 @@ export default class ThreeView<
 
     // Clear caches and maps
     this._meshes.clear();
-    this._pickableMeshes.clear();
     this._workerPoolPromises.clear();
     this._tileMapByHandle.clear();
 
