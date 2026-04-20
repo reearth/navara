@@ -12,7 +12,7 @@ import {
 import type { ViewContext } from "./ViewContext";
 
 export type LightLayerConfig = {
-  type: "light";
+  type?: "light";
   position?: XYZ;
 } & LayerDeclarationConfig;
 
@@ -97,8 +97,7 @@ export type LightBaseInstance<Instance extends object = object> =
  * ```typescript
  * view.registerLight("myLight", MyLightLayer);
  *
- * const handle = view.addLayer<MyLightLayer>({
- *   type: "light",
+ * const handle = view.addLight<MyLightLayer>({
  *   position: { x: 0, y: 100, z: 0 },
  *   myLight: { intensity: 2, color: new Color("#ff0000") },
  * });

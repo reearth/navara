@@ -523,22 +523,29 @@ async function processConstructPolylineBatchedFeature(
   const positionLow = result.position_low
     ? bufHandler.newF32(result.position_low)
     : undefined;
-  const start = bufHandler.newF32(result.start);
+  const start = result.start ? bufHandler.newF32(result.start) : undefined;
   const startHigh = result.start_high
     ? bufHandler.newF32(result.start_high)
     : undefined;
   const startLow = result.start_low
     ? bufHandler.newF32(result.start_low)
     : undefined;
-  const startNormals = bufHandler.newF32(result.start_normals);
-  const forwardOffset = bufHandler.newF32(result.forward_offset);
+  const startNormals = result.start_normals
+    ? bufHandler.newF32(result.start_normals)
+    : undefined;
+  const forwardOffset = result.forward_offset
+    ? bufHandler.newF32(result.forward_offset)
+    : undefined;
   const endHigh = result.end_high
     ? bufHandler.newF32(result.end_high)
     : undefined;
   const endLow = result.end_low ? bufHandler.newF32(result.end_low) : undefined;
-  const endNormalAndTextureCoordinateNormalizationX = bufHandler.newF32(
-    result.end_normal_and_texture_coordinate_normalization_x,
-  );
+  const endNormalAndTextureCoordinateNormalizationX =
+    result.end_normal_and_texture_coordinate_normalization_x
+      ? bufHandler.newF32(
+          result.end_normal_and_texture_coordinate_normalization_x,
+        )
+      : undefined;
   const rightNormalAndTextureCoordinateNormalizationY = bufHandler.newF32(
     result.right_normal_and_texture_coordinate_normalization_y,
   );
@@ -549,10 +556,6 @@ async function processConstructPolylineBatchedFeature(
     !batchId ||
     !batchIndex ||
     !position ||
-    !start ||
-    !startNormals ||
-    !forwardOffset ||
-    !endNormalAndTextureCoordinateNormalizationX ||
     !rightNormalAndTextureCoordinateNormalizationY ||
     !indices
   ) {
@@ -580,10 +583,9 @@ async function processConstructPolylineBatchedFeature(
   const transferablePositionLow = positionLow
     ? new TransferableFloatAttribute(positionLow, result.position_low_size ?? 0)
     : undefined;
-  const transferableStart = new TransferableFloatAttribute(
-    start,
-    result.start_size,
-  );
+  const transferableStart = start
+    ? new TransferableFloatAttribute(start, result.start_size ?? 0)
+    : undefined;
   const transferableStartHigh = startHigh
     ? new TransferableFloatAttribute(startHigh, result.start_high_size ?? 0)
     : undefined;
@@ -596,19 +598,25 @@ async function processConstructPolylineBatchedFeature(
   const transferableEndLow = endLow
     ? new TransferableFloatAttribute(endLow, result.end_low_size ?? 0)
     : undefined;
-  const transferableStartNormals = new TransferableFloatAttribute(
-    startNormals,
-    result.start_normals_size,
-  );
-  const transferableForwardOffset = new TransferableFloatAttribute(
-    forwardOffset,
-    result.forward_offset_size,
-  );
+  const transferableStartNormals = startNormals
+    ? new TransferableFloatAttribute(
+        startNormals,
+        result.start_normals_size ?? 0,
+      )
+    : undefined;
+  const transferableForwardOffset = forwardOffset
+    ? new TransferableFloatAttribute(
+        forwardOffset,
+        result.forward_offset_size ?? 0,
+      )
+    : undefined;
   const transferableEndNormalAndTextureCoordinateNormalizationX =
-    new TransferableFloatAttribute(
-      endNormalAndTextureCoordinateNormalizationX,
-      result.end_normal_and_texture_coordinate_normalization_x_size,
-    );
+    endNormalAndTextureCoordinateNormalizationX
+      ? new TransferableFloatAttribute(
+          endNormalAndTextureCoordinateNormalizationX,
+          result.end_normal_and_texture_coordinate_normalization_x_size ?? 0,
+        )
+      : undefined;
   const transferableRightNormalAndTextureCoordinateNormalizationY =
     new TransferableFloatAttribute(
       rightNormalAndTextureCoordinateNormalizationY,

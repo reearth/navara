@@ -127,8 +127,7 @@ const NIGHT_SH_COEFFICIENTS = [
 ];
 
 // ライトプローブレイヤーを追加
-const lightProbe = view.addLayer<LightProbeLayer>({
-  type: "light",
+const lightProbe = view.addLight<LightProbeLayer>({
   lightProbe: {
     sh: new THREE.SphericalHarmonics3().set(NIGHT_SH_COEFFICIENTS),
     intensity: 0.05

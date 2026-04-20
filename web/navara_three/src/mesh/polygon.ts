@@ -650,6 +650,15 @@ export class PolygonMesh extends BatchedFeatureMesh<
   get clampToGround(): boolean {
     return this.getEnhancer().states().base.clampToGround;
   }
+  get emissiveColor(): number {
+    return this.getEnhancer().states().base.emissiveColor;
+  }
+  get emissiveIntensity(): number {
+    return this.getEnhancer().states().base.emissiveIntensity;
+  }
+  get effectIdsMask(): number {
+    return this.getEnhancer().states().base.effectIdsMask;
+  }
 
   dispose() {
     if (this._debugBoundingSphereMesh) {

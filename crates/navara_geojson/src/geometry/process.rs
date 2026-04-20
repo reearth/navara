@@ -7,21 +7,21 @@ use navara_feature_component::batch::BatchTable;
 use navara_geometry::{Hierarchy, WindingOrder};
 use navara_material::Appearance;
 use navara_math::Vec3;
-use navara_parser::geojson::{GeoJson, Geometry, Value};
+use navara_parser::geojson::{GeoJson, Geometry, GeometryValue, Position};
 
 use super::builder::{GeometryAppearanceKind, GeometryBuilder};
 
-fn coords(f: &[f64]) -> Vec3 {
-    Vec3::new(f[0], f[1], *f.get(2).unwrap_or(&0.))
+fn coords(f: &Position) -> Vec3 {
+    Vec3::new(f[0], f[1], if f.len() > 2 { f[2] } else { 0. })
 }
 
-fn multi_flat_coords(f: &[Vec<f64>]) -> Vec<f64> {
+fn multi_flat_coords(f: &[Position]) -> Vec<f64> {
     f.iter()
-        .flat_map(|p| [p[0], p[1], *p.get(2).unwrap_or(&0.)])
+        .flat_map(|p| [p[0], p[1], if p.len() > 2 { p[2] } else { 0. }])
         .collect::<Vec<_>>()
 }
 
-fn get_polygon_holes(f: &[Vec<Vec<f64>>]) -> Option<Vec<Hierarchy>> {
+fn get_polygon_holes(f: &[Vec<Position>]) -> Option<Vec<Hierarchy>> {
     let holes: Vec<Hierarchy> = f[1..]
         .iter()
         .map(|hole| Hierarchy {
@@ -90,7 +90,7 @@ fn process_geometry(
 ) {
     // Handle GeometryCollection by recursing into each sub-geometry.
     // No begin_feature here — sub-geometries share the parent feature's state.
-    if let Value::GeometryCollection(geoms) = &geometry.value {
+    if let GeometryValue::GeometryCollection { geometries: geoms } = &geometry.value {
         for g in geoms {
             process_geometry(builder, g, appearances);
         }
@@ -113,11 +113,14 @@ fn process_geometry(
             Appearance::Text(m) => {
                 accumulate_point_rte(builder, geometry, GeometryAppearanceKind::Text, m.height);
             }
-            Appearance::Polyline(_) => {
-                accumulate_polyline(builder, geometry);
+            Appearance::Polyline(p) => {
+                // Skip clamped/tiled polylines - they go through the tiled rendering pipeline
+                if !p.clamp_to_ground && !p.tiled {
+                    accumulate_polyline(builder, geometry);
+                }
             }
             Appearance::Polygon(p) => {
-                // Skip clamped polygons - they go through the tiled rendering pipeline
+                // Skip clamped/tiled polygons - they go through the tiled rendering pipeline
                 if !p.clamp_to_ground && !p.tiled {
                     accumulate_polygon(builder, geometry);
                 }
@@ -135,10 +138,10 @@ fn accumulate_point_rte(
     height: f32,
 ) {
     match &geometry.value {
-        Value::Point(f) => {
+        GeometryValue::Point { coordinates: f } => {
             builder.add_point(kind, coords(f), CRS::Geographic, height);
         }
-        Value::MultiPoint(fs) => {
+        GeometryValue::MultiPoint { coordinates: fs } => {
             for f in fs {
                 builder.add_point(kind, coords(f), CRS::Geographic, height);
             }
@@ -150,10 +153,10 @@ fn accumulate_point_rte(
 /// Accumulate polyline geometry into the builder.
 fn accumulate_polyline(builder: &mut GeometryBuilder, geometry: &Geometry) {
     match &geometry.value {
-        Value::LineString(f) => {
+        GeometryValue::LineString { coordinates: f } => {
             builder.add_polyline(multi_flat_coords(f), CRS::Geographic);
         }
-        Value::MultiLineString(fs) => {
+        GeometryValue::MultiLineString { coordinates: fs } => {
             for f in fs {
                 builder.add_polyline(multi_flat_coords(f), CRS::Geographic);
             }
@@ -164,17 +167,17 @@ fn accumulate_polyline(builder: &mut GeometryBuilder, geometry: &Geometry) {
 
 /// Accumulate polygon geometry into the builder.
 fn accumulate_polygon(builder: &mut GeometryBuilder, geometry: &Geometry) {
-    let accumulate_one = |builder: &mut GeometryBuilder, f: &[Vec<Vec<f64>>]| {
+    let accumulate_one = |builder: &mut GeometryBuilder, f: &[Vec<Position>]| {
         let outer_ring = f.first().map_or_else(Vec::new, |v| multi_flat_coords(v));
         let holes = get_polygon_holes(f).unwrap_or_default();
         builder.add_polygon(outer_ring, &holes, WindingOrder::Unknown, CRS::Geographic);
     };
 
     match &geometry.value {
-        Value::Polygon(f) => {
+        GeometryValue::Polygon { coordinates: f } => {
             accumulate_one(builder, f);
         }
-        Value::MultiPolygon(fs) => {
+        GeometryValue::MultiPolygon { coordinates: fs } => {
             for f in fs {
                 accumulate_one(builder, f);
             }
@@ -233,7 +236,7 @@ mod test {
         app.init_resource::<BufferStore>();
         app.init_resource::<BatchTable>();
 
-        let geojson = GeoJson::from_json_value(json.parse().unwrap()).unwrap();
+        let geojson: GeoJson = json.parse().unwrap();
         app.insert_resource(TestInput {
             geojson,
             appearances,
@@ -247,7 +250,7 @@ mod test {
 
     #[test]
     fn coords_2d_defaults_z_to_zero() {
-        let result = coords(&[139.75, 35.68]);
+        let result = coords(&Position::from([139.75, 35.68]));
         assert_eq!(result.x, 139.75);
         assert_eq!(result.y, 35.68);
         assert_eq!(result.z, 0.0);
@@ -255,7 +258,7 @@ mod test {
 
     #[test]
     fn coords_3d_preserves_elevation() {
-        let result = coords(&[139.75, 35.68, 100.5]);
+        let result = coords(&Position::from([139.75, 35.68, 100.5]));
         assert_eq!(result.x, 139.75);
         assert_eq!(result.y, 35.68);
         assert_eq!(result.z, 100.5);
@@ -263,14 +266,17 @@ mod test {
 
     #[test]
     fn multi_flat_coords_flattens_with_default_z() {
-        let input = vec![vec![1.0, 2.0], vec![3.0, 4.0]];
+        let input = vec![Position::from([1.0, 2.0]), Position::from([3.0, 4.0])];
         let result = multi_flat_coords(&input);
         assert_eq!(result, vec![1.0, 2.0, 0.0, 3.0, 4.0, 0.0]);
     }
 
     #[test]
     fn multi_flat_coords_flattens_with_z() {
-        let input = vec![vec![1.0, 2.0, 10.0], vec![3.0, 4.0, 20.0]];
+        let input = vec![
+            Position::from([1.0, 2.0, 10.0]),
+            Position::from([3.0, 4.0, 20.0]),
+        ];
         let result = multi_flat_coords(&input);
         assert_eq!(result, vec![1.0, 2.0, 10.0, 3.0, 4.0, 20.0]);
     }
@@ -278,10 +284,10 @@ mod test {
     #[test]
     fn get_polygon_holes_returns_none_for_single_ring() {
         let rings = vec![vec![
-            vec![0.0, 0.0],
-            vec![1.0, 0.0],
-            vec![1.0, 1.0],
-            vec![0.0, 0.0],
+            Position::from([0.0, 0.0]),
+            Position::from([1.0, 0.0]),
+            Position::from([1.0, 1.0]),
+            Position::from([0.0, 0.0]),
         ]];
         assert!(get_polygon_holes(&rings).is_none());
     }
@@ -290,16 +296,16 @@ mod test {
     fn get_polygon_holes_returns_holes() {
         let rings = vec![
             vec![
-                vec![0.0, 0.0],
-                vec![10.0, 0.0],
-                vec![10.0, 10.0],
-                vec![0.0, 0.0],
+                Position::from([0.0, 0.0]),
+                Position::from([10.0, 0.0]),
+                Position::from([10.0, 10.0]),
+                Position::from([0.0, 0.0]),
             ],
             vec![
-                vec![2.0, 2.0],
-                vec![4.0, 2.0],
-                vec![4.0, 4.0],
-                vec![2.0, 2.0],
+                Position::from([2.0, 2.0]),
+                Position::from([4.0, 2.0]),
+                Position::from([4.0, 4.0]),
+                Position::from([2.0, 2.0]),
             ],
         ];
         let holes = get_polygon_holes(&rings).unwrap();
@@ -504,7 +510,11 @@ mod test {
         }
     ]
 }"#,
-            vec![Appearance::Polyline(PolylineMaterial::default())],
+            vec![Appearance::Polyline(PolylineMaterial {
+                clamp_to_ground: false,
+                tiled: false,
+                ..Default::default()
+            })],
         );
 
         let mut batched_query = app
@@ -541,7 +551,11 @@ mod test {
         }
     ]
 }"#,
-            vec![Appearance::Polyline(PolylineMaterial::default())],
+            vec![Appearance::Polyline(PolylineMaterial {
+                clamp_to_ground: false,
+                tiled: false,
+                ..Default::default()
+            })],
         );
 
         let mut batched_query = app
@@ -585,6 +599,7 @@ mod test {
 }"#,
             vec![Appearance::Polygon(PolygonMaterial {
                 clamp_to_ground: false,
+                tiled: false,
                 ..Default::default()
             })],
         );
@@ -641,6 +656,7 @@ mod test {
 }"#,
             vec![Appearance::Polygon(PolygonMaterial {
                 clamp_to_ground: false,
+                tiled: false,
                 ..Default::default()
             })],
         );
@@ -738,7 +754,11 @@ mod test {
 }"#,
             vec![
                 Appearance::Point(PointMaterial::default()),
-                Appearance::Polyline(PolylineMaterial::default()),
+                Appearance::Polyline(PolylineMaterial {
+                    clamp_to_ground: false,
+                    tiled: false,
+                    ..Default::default()
+                }),
             ],
         );
 
@@ -786,6 +806,7 @@ mod test {
 }"#,
             vec![Appearance::Polygon(PolygonMaterial {
                 clamp_to_ground: false,
+                tiled: false,
                 ..Default::default()
             })],
         );
@@ -822,7 +843,11 @@ mod test {
         }
     ]
 }"#,
-            vec![Appearance::Polyline(PolylineMaterial::default())],
+            vec![Appearance::Polyline(PolylineMaterial {
+                clamp_to_ground: false,
+                tiled: false,
+                ..Default::default()
+            })],
         );
 
         let mut batched_query = app
@@ -858,8 +883,7 @@ mod test {
         app.init_resource::<BatchTable>();
         app.init_resource::<TestOutput>();
 
-        let geojson = GeoJson::from_json_value(
-            r#"{
+        let geojson: GeoJson = r#"{
     "type": "FeatureCollection",
     "features": [
         {
@@ -879,9 +903,7 @@ mod test {
         }
     ]
 }"#
-            .parse()
-            .unwrap(),
-        )
+        .parse()
         .unwrap();
         app.insert_resource(TestInput {
             geojson,
@@ -934,9 +956,14 @@ mod test {
 }"#,
             vec![
                 Appearance::Point(PointMaterial::default()),
-                Appearance::Polyline(PolylineMaterial::default()),
+                Appearance::Polyline(PolylineMaterial {
+                    clamp_to_ground: false,
+                    tiled: false,
+                    ..Default::default()
+                }),
                 Appearance::Polygon(PolygonMaterial {
                     clamp_to_ground: false,
+                    tiled: false,
                     ..Default::default()
                 }),
             ],
@@ -1139,9 +1166,14 @@ mod test {
                 Appearance::Point(PointMaterial::default()),
                 Appearance::Billboard(BillboardMaterial::default()),
                 Appearance::Text(TextMaterial::default()),
-                Appearance::Polyline(PolylineMaterial::default()),
+                Appearance::Polyline(PolylineMaterial {
+                    clamp_to_ground: false,
+                    tiled: false,
+                    ..Default::default()
+                }),
                 Appearance::Polygon(PolygonMaterial {
                     clamp_to_ground: false,
+                    tiled: false,
                     ..Default::default()
                 }),
             ],

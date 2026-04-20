@@ -303,8 +303,7 @@ const view = new ThreeView();
 await view.init();
 
 // Add a BoxMeshLayer
-const boxLayer = view.addLayer<BoxMeshLayer>({
-  type: "mesh",
+const boxLayer = view.addMesh<BoxMeshLayer>({
   box: {
     width: 100,
     height: 100,
@@ -320,8 +319,7 @@ const boxLayer = view.addLayer<BoxMeshLayer>({
 ```typescript
 import ThreeView, { BoxMeshLayer, Color } from "@navara/three";
 
-const boxLayer = view.addLayer<BoxMeshLayer>({
-  type: "mesh",
+const boxLayer = view.addMesh<BoxMeshLayer>({
   box: {
     width: 200,
     height: 100,
@@ -339,8 +337,7 @@ const boxLayer = view.addLayer<BoxMeshLayer>({
 ```typescript
 import ThreeView, { BoxMeshLayer, Color } from "@navara/three";
 
-const boxLayer = view.addLayer<BoxMeshLayer>({
-  type: "mesh",
+const boxLayer = view.addMesh<BoxMeshLayer>({
   box: {
     width: 150,
     height: 150,

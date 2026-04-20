@@ -10,14 +10,14 @@ import {
 } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
-  type DefaultLayerDescriptions,
+  type DefaultDeclarations,
 } from "@navara/three_default_plugin";
 
-type LayerDescriptions = DefaultLayerDescriptions;
+type CustomDeclarations = DefaultDeclarations;
 
 async function main() {
   // Create the view - this tests that the main export works
-  const view = new ThreeView<LayerDescriptions>({});
+  const view = new ThreeView<CustomDeclarations>({});
 
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
@@ -75,7 +75,6 @@ async function main() {
 
   // Add a rotating sphere mesh - tests mesh layer and geospatial API
   addRotatingSphere(view);
-
   // Log success message
   console.log("Navara integration test loaded successfully!");
   console.log(
@@ -87,10 +86,9 @@ async function main() {
  * Add a sphere that rotates around the globe.
  * Tests: SphereMeshLayer, geodeticToVector3, LLE, degreeToRadian APIs
  */
-function addRotatingSphere(view: ThreeView<LayerDescriptions>) {
+function addRotatingSphere(view: ThreeView<CustomDeclarations>) {
   // Create a sphere mesh layer
-  const sphereLayer = view.addLayer<SphereMeshLayer>({
-    type: "mesh",
+  const sphereLayer = view.addMesh<SphereMeshLayer>({
     sphere: {
       radius: 1,
       color: new Color().setHex(0xff6600), // Orange color

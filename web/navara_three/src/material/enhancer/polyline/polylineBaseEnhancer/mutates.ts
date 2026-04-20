@@ -65,11 +65,11 @@ export const createBaseMutates = (useRTE: boolean): PolylineBaseMutates => {
       refs.useGroundNormals.value = state.useGroundNormals;
       refs.nvr_uPickable.value = state.pickable ? 1 : 0;
       refs.uEffectIdsMask.value = state.effectIdsMask;
-      const ec = state.emissiveColor;
+      const c = state.emissiveColor;
       refs.uEmissiveColor.value.set(
-        ((ec >> 16) & 0xff) / 255,
-        ((ec >> 8) & 0xff) / 255,
-        (ec & 0xff) / 255,
+        ((c >> 16) & 0xff) / 255,
+        ((c >> 8) & 0xff) / 255,
+        (c & 0xff) / 255,
       );
       refs.uEmissiveIntensity.value = state.emissiveIntensity;
 

@@ -70,12 +70,12 @@ import {
 } from "@navara/three_default_layers";
 
 export class DefaultPlugin extends Plugin<
-  ThreeView<DefaultLayerDescriptions>,
+  ThreeView<DefaultDeclarations>,
   ViewContext
 > {
-  private view?: ThreeView<DefaultLayerDescriptions>;
+  private view?: ThreeView<DefaultDeclarations>;
 
-  async init(view: ThreeView<DefaultLayerDescriptions>, _ctx: ViewContext) {
+  async init(view: ThreeView<DefaultDeclarations>, _ctx: ViewContext) {
     this.view = view;
 
     // Register mesh layers
@@ -142,58 +142,50 @@ export class DefaultPlugin extends Plugin<
     const view = this.view;
     const mobile = view.isMobileOptimized();
 
-    // Mesh & light layers
-    const sky = view.addLayer<SkyMeshLayer>({
-      type: "mesh",
+    // Mesh layers
+    const sky = view.addMesh<SkyMeshLayer>({
       sky: {},
     });
-    const skyEnv = view.addLayer<SkyMeshLayer>({
-      type: "mesh",
+    const skyEnv = view.addMesh<SkyMeshLayer>({
       sky: {
         envMap: true,
         sunAngularRadius: 0.1,
       },
     });
-    const stars = view.addLayer<StarsLayer>({
-      type: "mesh",
+    const stars = view.addMesh<StarsLayer>({
       stars: {},
     });
-    const skyLightProbe = view.addLayer<SkyLightProbeLayer>({
-      type: "light",
+
+    // Light layers
+    const skyLightProbe = view.addLight<SkyLightProbeLayer>({
       skyLightProbe: {},
     });
-    const sun = view.addLayer<SunLightLayer>({
-      type: "light",
+    const sun = view.addLight<SunLightLayer>({
       sun: {},
     });
 
     // Effect layers
-    const aerialPerspective = view.addLayer<AerialPerspectiveEffectLayer>({
-      type: "effect",
+    const aerialPerspective = view.addEffect<AerialPerspectiveEffectLayer>({
       aerialPerspective: {},
     });
 
     // Skip lens flare on mobile - expensive effect with limited benefit
     const lensFlare = mobile
       ? undefined
-      : view.addLayer<LensFlareEffectLayer>({
-          type: "effect",
+      : view.addEffect<LensFlareEffectLayer>({
           lensFlare: {},
         });
 
-    const toneMapping = view.addLayer<ToneMappingEffectLayer>({
-      type: "effect",
+    const toneMapping = view.addEffect<ToneMappingEffectLayer>({
       toneMapping: {},
     });
 
     // Use FXAA on mobile (faster), SMAA on desktop (higher quality)
     const antialiasing = mobile
-      ? view.addLayer<FXAAEffectLayer>({
-          type: "effect",
+      ? view.addEffect<FXAAEffectLayer>({
           fxaa: {},
         })
-      : view.addLayer<SMAAEffectLayer>({
-          type: "effect",
+      : view.addEffect<SMAAEffectLayer>({
           smaa: {},
         });
 
@@ -211,18 +203,19 @@ export class DefaultPlugin extends Plugin<
   }
 }
 
-export type DefaultLayerDescriptions =
-  | DefaultMeshLayerDeclarationDescription
-  | DefaultLightLayerDeclarationDescription
-  | DefaultEffectLayerDeclarationDescription;
+export type DefaultDeclarations = {
+  mesh: DefaultMeshDescription;
+  light: DefaultLightDescription;
+  effect: DefaultEffectDescription;
+};
 
-export type DefaultLightLayerDeclarationDescription =
+export type DefaultLightDescription =
   | SunLightLayerConfig
   | SkyLightProbeLayerConfig
   | AmbientLightLayerConfig
   | LightProbeLayerConfig;
 
-export type DefaultEffectLayerDeclarationDescription =
+export type DefaultEffectDescription =
   | AerialPerspectiveConfig
   | CloudsConfig
   | ColorGradingLUTConfig
@@ -236,7 +229,7 @@ export type DefaultEffectLayerDeclarationDescription =
   | SSRConfig
   | ToneMappingConfig;
 
-export type DefaultMeshLayerDeclarationDescription =
+export type DefaultMeshDescription =
   | RainMeshLayerConfig
   | SnowMeshLayerConfig
   | SkyMeshLayerConfig

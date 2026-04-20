@@ -1,6 +1,6 @@
 import ThreeView from "@navara/three";
 
-import { run, type LayerDescriptions } from "./run";
+import { run, type CustomDeclarations } from "./run";
 
 const div = document.createElement("div");
 div.id = "navara-root";
@@ -15,7 +15,7 @@ canvas.style.height = "100%";
 div.appendChild(canvas);
 document.body.appendChild(div);
 
-const view = new ThreeView<LayerDescriptions>({
+const view = new ThreeView<CustomDeclarations>({
   canvas,
   debug: true,
 });

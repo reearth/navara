@@ -1,7 +1,7 @@
 use std::f64::consts::PI;
 use std::sync::Arc;
 
-use geojson_lib::{Feature, FeatureCollection, GeoJson, Geometry, Value};
+use geojson_lib::{Feature, FeatureCollection, GeoJson, Geometry, GeometryValue, Position};
 
 use crate::simplify::simplify;
 use crate::types::{BBox, InternalFeature, InternalGeometry, Ring};
@@ -78,7 +78,9 @@ fn convert_geometry(
     features: &mut Vec<InternalFeature>,
 ) {
     match &geometry.value {
-        Value::Point(coords) => {
+        GeometryValue::Point {
+            coordinates: coords,
+        } => {
             let mut bbox = BBox::new();
             let projected = project_point(coords, &mut bbox);
             features.push(InternalFeature {
@@ -88,7 +90,9 @@ fn convert_geometry(
                 source_index,
             });
         }
-        Value::MultiPoint(coords_list) => {
+        GeometryValue::MultiPoint {
+            coordinates: coords_list,
+        } => {
             let mut bbox = BBox::new();
             let mut flat = Vec::with_capacity(coords_list.len() * 3);
             for coords in coords_list {
@@ -102,7 +106,9 @@ fn convert_geometry(
                 source_index,
             });
         }
-        Value::LineString(coords) => {
+        GeometryValue::LineString {
+            coordinates: coords,
+        } => {
             let mut bbox = BBox::new();
             let ring = convert_line(coords, &mut bbox, sq_tolerance, false);
             features.push(InternalFeature {
@@ -112,7 +118,7 @@ fn convert_geometry(
                 source_index,
             });
         }
-        Value::MultiLineString(lines) => {
+        GeometryValue::MultiLineString { coordinates: lines } => {
             let mut bbox = BBox::new();
             let rings: Vec<Ring> = lines
                 .iter()
@@ -125,7 +131,7 @@ fn convert_geometry(
                 source_index,
             });
         }
-        Value::Polygon(rings) => {
+        GeometryValue::Polygon { coordinates: rings } => {
             let mut bbox = BBox::new();
             let projected_rings = convert_polygon(rings, &mut bbox, sq_tolerance);
             features.push(InternalFeature {
@@ -135,7 +141,9 @@ fn convert_geometry(
                 source_index,
             });
         }
-        Value::MultiPolygon(polygons) => {
+        GeometryValue::MultiPolygon {
+            coordinates: polygons,
+        } => {
             let mut bbox = BBox::new();
             let projected_polygons: Vec<Vec<Ring>> = polygons
                 .iter()
@@ -148,7 +156,7 @@ fn convert_geometry(
                 source_index,
             });
         }
-        Value::GeometryCollection(geometries) => {
+        GeometryValue::GeometryCollection { geometries } => {
             for geom in geometries {
                 convert_geometry(
                     geom,
@@ -162,7 +170,7 @@ fn convert_geometry(
     }
 }
 
-fn project_point(coords: &[f64], bbox: &mut BBox) -> [f64; 3] {
+fn project_point(coords: &Position, bbox: &mut BBox) -> [f64; 3] {
     if coords.len() < 2 {
         return [0.0, 0.0, 0.0];
     }
@@ -174,7 +182,7 @@ fn project_point(coords: &[f64], bbox: &mut BBox) -> [f64; 3] {
 }
 
 /// Projects a ring and runs simplification.
-fn convert_line(coords: &[Vec<f64>], bbox: &mut BBox, sq_tolerance: f64, is_polygon: bool) -> Ring {
+fn convert_line(coords: &[Position], bbox: &mut BBox, sq_tolerance: f64, is_polygon: bool) -> Ring {
     let mut ring = Ring::new();
     ring.coords.reserve(coords.len() * 3);
 
@@ -219,7 +227,7 @@ fn convert_line(coords: &[Vec<f64>], bbox: &mut BBox, sq_tolerance: f64, is_poly
 }
 
 /// Projects polygon rings with simplification.
-fn convert_polygon(rings: &[Vec<Vec<f64>>], bbox: &mut BBox, sq_tolerance: f64) -> Vec<Ring> {
+fn convert_polygon(rings: &[Vec<Position>], bbox: &mut BBox, sq_tolerance: f64) -> Vec<Ring> {
     let mut projected_rings = Vec::with_capacity(rings.len());
     for ring_coords in rings.iter() {
         let ring = convert_line(ring_coords, bbox, sq_tolerance, true);

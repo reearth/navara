@@ -168,8 +168,7 @@ const quaternion = new Quaternion().setFromRotationMatrix(
 const euler = new Euler().setFromQuaternion(quaternion);
 
 // Add character model
-const modelLayer = view.addLayer<GLTFModelLayer>({
-  type: "mesh",
+const modelLayer = view.addMesh<GLTFModelLayer>({
   gltfModel: {
     // Credit:
     // - Soldier.glb - Three.js examples
@@ -516,8 +515,7 @@ const quaternion = new Quaternion().setFromRotationMatrix(
 );
 const euler = new Euler().setFromQuaternion(quaternion);
 
-const modelLayer = view.addLayer<GLTFModelLayer>({
-  type: "mesh",
+const modelLayer = view.addMesh<GLTFModelLayer>({
   gltfModel: {
     // Credit:
     // - Soldier.glb - Three.js examples

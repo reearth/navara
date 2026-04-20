@@ -371,8 +371,7 @@ defaultLayers.sun.update({
 ### Shadow Quality Adjustment
 
 ```typescript
-const sun = view.addLayer<SunLightLayer>({
-  type: "light",
+const sun = view.addLight<SunLightLayer>({
   sun: {
     intensity: 1.0,
     castShadow: true,
@@ -431,8 +430,7 @@ sun.update({
 import { Color } from "@navara/three";
 
 // Disable atmospheric calculation and use custom color
-const sun = view.addLayer<SunLightLayer>({
-  type: "light",
+const sun = view.addLight<SunLightLayer>({
   sun: {
     applyColor: true,  // Use custom color
     color: new Color().setHex(0xffffee),

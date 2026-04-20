@@ -137,6 +137,14 @@ To apply the selective bloom effect to specific objects, specify the bloom effec
 
 An array of selective effect layer IDs to apply to the target object. When a bloom effect layer is added, a unique ID is assigned, and the effect is applied by specifying this ID in the target object's `effectIds`.
 
+### emissiveColor (optional)
+
+Specifies the bloom source color. When not set, the material's surface color (diffuseColor) is automatically used as the bloom source. This means you can enable bloom with just `effectIds` and `emissiveIntensity` without explicitly specifying a color.
+
+### emissiveIntensity
+
+Controls the intensity of the bloom source. Higher values produce brighter bloom.
+
 ### selectiveEffectOcclusion
 
 Specifies the occlusion processing mode when applying the effect.
@@ -161,8 +169,7 @@ const view = new ThreeView();
 await view.init();
 
 // Add selective bloom effect layer
-const bloomLayer = view.addLayer<SelectiveBloomEffectLayer>({
-  type: "effect",
+const bloomLayer = view.addEffect<SelectiveBloomEffectLayer>({
   selectiveBloom: {
     strength: 0.8,
     radius: 0.2,
@@ -171,15 +178,15 @@ const bloomLayer = view.addLayer<SelectiveBloomEffectLayer>({
 });
 
 // Apply bloom effect to an object
-const cubeLayer = view.addLayer<BoxMeshLayer>({
-  type: "mesh",
+// When emissiveColor is not set, the material's color is used as the bloom source
+const cubeLayer = view.addMesh<BoxMeshLayer>({
   box: {
     width: 100,
     height: 100,
     depth: 100,
     color: new Color().setHex(0xff0000),
-    emissiveIntensity: 1.0,
-    effectIds: [bloomLayer.id], // Apply bloom effect
+    emissiveIntensity: 1.0, // Controls bloom brightness
+    effectIds: [bloomLayer.id],
     selectiveEffectOcclusion: "normal",
   },
   position: { x: 0, y: 0, z: 1000 },
@@ -200,8 +207,7 @@ await view.init();
 plugin.addDefaultPhotorealLayers();
 
 // Add a strong bloom effect
-const bloomLayer = view.addLayer<SelectiveBloomEffectLayer>({
-  type: "effect",
+const bloomLayer = view.addEffect<SelectiveBloomEffectLayer>({
   selectiveBloom: {
     strength: 1.5,
     radius: 0.5,
@@ -219,8 +225,7 @@ const view = new ThreeView();
 await view.init();
 
 // Performance-oriented settings
-const bloomLayer = view.addLayer<SelectiveBloomEffectLayer>({
-  type: "effect",
+const bloomLayer = view.addEffect<SelectiveBloomEffectLayer>({
   selectiveBloom: {
     strength: 0.6,
     radius: 0.2,
@@ -238,8 +243,7 @@ import ThreeView, { SelectiveBloomEffectLayer } from "@navara/three";
 const view = new ThreeView();
 await view.init();
 
-const bloomLayer = view.addLayer<SelectiveBloomEffectLayer>({
-  type: "effect",
+const bloomLayer = view.addEffect<SelectiveBloomEffectLayer>({
   selectiveBloom: {
     strength: 0.8,
   },
@@ -262,8 +266,7 @@ import ThreeView, { SelectiveBloomEffectLayer, Color } from "@navara/three";
 const view = new ThreeView();
 await view.init();
 
-const bloomLayer = view.addLayer<SelectiveBloomEffectLayer>({
-  type: "effect",
+const bloomLayer = view.addEffect<SelectiveBloomEffectLayer>({
   selectiveBloom: {
     strength: 1.0,
     radius: 0.5,
@@ -271,6 +274,7 @@ const bloomLayer = view.addLayer<SelectiveBloomEffectLayer>({
 });
 
 // Apply bloom to 3D Tiles buildings
+// emissiveColor is optional — the model's own color is used when omitted
 const buildingsLayer = view.addLayer({
   type: "cesium3dtiles",
   data: {
@@ -280,7 +284,6 @@ const buildingsLayer = view.addLayer({
     show: true,
     color: new Color().setHex(0xffffff),
     effectIds: [bloomLayer.id],
-    emissiveColor: new Color().setHex(0xffffff),
     emissiveIntensity: 0.3,
     selectiveEffectOcclusion: "normal",
   },
@@ -295,14 +298,14 @@ import ThreeView, { SelectiveBloomEffectLayer, Color } from "@navara/three";
 const view = new ThreeView();
 await view.init();
 
-const bloomLayer = view.addLayer<SelectiveBloomEffectLayer>({
-  type: "effect",
+const bloomLayer = view.addEffect<SelectiveBloomEffectLayer>({
   selectiveBloom: {
     strength: 1.2,
   },
 });
 
 // Apply bloom to GeoJSON layer models
+// emissiveColor is optional — the model's own color is used when omitted
 const modelLayer = view.addLayer({
   type: "geojson",
   data: featureCollection,
@@ -311,7 +314,6 @@ const modelLayer = view.addLayer({
     size: 100,
     url: "model.glb",
     effectIds: [bloomLayer.id],
-    emissiveColor: new Color().setHex(0xffffff),
     emissiveIntensity: 0.5,
     selectiveEffectOcclusion: "normal",
   },
@@ -322,8 +324,7 @@ const modelLayer = view.addLayer({
 
 ```typescript
 // Initially no effects applied
-const cubeLayer = view.addLayer<BoxMeshLayer>({
-  type: "mesh",
+const cubeLayer = view.addMesh<BoxMeshLayer>({
   box: {
     width: 100,
     height: 100,
@@ -353,6 +354,7 @@ cubeLayer.update({
 ## Notes
 
 - The selective bloom effect uses mask-based filtering to apply bloom only to specific objects.
+- When `emissiveColor` is not set, the material's surface color (diffuseColor) is automatically used as the bloom source. This includes per-instance colors for InstancedMesh and texture colors for textured materials.
 - To use the bloom effect effectively, it is important to set the object's `emissiveIntensity` appropriately.
 - The default value of `selectiveEffectOcclusion` is `"normal"`. The `"silhouette"` mode is used when you intentionally want to display occluded objects.
 - Rendering is done in two passes: DepthEnabled objects (with depth clipping) and Silhouette objects (without depth clipping), to correctly handle occlusion.

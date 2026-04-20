@@ -28,7 +28,7 @@ navara_threeでは、以下のEffectLayerタイプが利用可能です:
 
 ## 基本的な使い方
 
-EffectLayerは、レイヤークラスを登録した後、`view.addLayer()`メソッドに`type: "effect"`を指定して追加します:
+EffectLayerは、レイヤークラスを登録した後、`view.addEffect()`メソッドで追加します:
 
 ```typescript
 import ThreeView from "@navara/three";
@@ -41,8 +41,7 @@ view.registerEffect("aerialPerspective", AerialPerspectiveEffectLayer);
 
 await view.init();
 
-const aerialPerspectiveLayer = view.addLayer<AerialPerspectiveEffectLayer>({
-  type: "effect",
+const aerialPerspectiveLayer = view.addEffect<AerialPerspectiveEffectLayer>({
   aerialPerspective: {},
 });
 ```

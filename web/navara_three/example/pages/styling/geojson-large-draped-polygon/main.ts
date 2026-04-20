@@ -2,7 +2,7 @@ import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
 import { ToneMappingMode } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
-  type DefaultLayerDescriptions,
+  type DefaultDeclarations,
 } from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 
@@ -15,10 +15,10 @@ import {
 } from "../../../helpers/constants";
 import { addDateControl } from "../../../helpers/control";
 
-type LayerDescriptions = DefaultLayerDescriptions;
+type CustomDeclarations = DefaultDeclarations;
 
 const run = async () => {
-  const view = new ThreeView<LayerDescriptions>({
+  const view = new ThreeView<CustomDeclarations>({
     debug: true,
     hideUnderground: false,
   });
@@ -26,13 +26,11 @@ const run = async () => {
 
   await view.init();
 
-  view.addLayer({
-    type: "light",
+  view.addLight({
     sun: {},
   });
 
-  view.addLayer({
-    type: "effect",
+  view.addEffect({
     toneMapping: {
       mode: ToneMappingMode.NEUTRAL,
     },
@@ -71,7 +69,7 @@ const run = async () => {
   // Track updated features to prevent duplicate evaluations
   let updatedFeatures = new Set<bigint>();
 
-  // GeoJSON extruded polygon layer - using interior GeoJSON dataset
+  // GeoJSON polygon layer - using interior GeoJSON dataset
   const addGeoJsonLayer = () => {
     updatedFeatures = new Set<bigint>();
 
@@ -108,7 +106,7 @@ const run = async () => {
   let layer: ReturnType<typeof addGeoJsonLayer> | undefined = addGeoJsonLayer();
 
   // Control panel
-  const pane = new Pane({ title: "GeoJSON Extruded Polygon" });
+  const pane = new Pane({ title: "GeoJSON Polygon" });
   addDateControl(view, pane);
 
   // Toggle button to add/remove layer

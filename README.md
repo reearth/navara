@@ -25,7 +25,7 @@ You have to install the following environment.
 ```console
 cargo install cargo-make
 cargo install cargo-watch
-cargo install wasm-bindgen-cli --version 0.2.114
+cargo install wasm-bindgen-cli --version 0.2.118
 ```
 Optional: Install binaryen for `wasm-opt` optimization: https://github.com/WebAssembly/binaryen
 

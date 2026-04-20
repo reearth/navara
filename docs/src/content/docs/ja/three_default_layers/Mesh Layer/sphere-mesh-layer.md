@@ -314,8 +314,7 @@ const view = new ThreeView();
 await view.init();
 
 // SphereMeshLayerを追加
-const sphereLayer = view.addLayer<SphereMeshLayer>({
-  type: "mesh",
+const sphereLayer = view.addMesh<SphereMeshLayer>({
   sphere: {
     radius: 100,
     widthSegments: 32,
