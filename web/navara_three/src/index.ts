@@ -1331,7 +1331,10 @@ export default class ThreeView<
    * @param id - The unique identifier of the mesh to update
    * @param updates - Partial configuration object with properties to update
    */
-  updateMeshById(id: string, updates: MeshConfig) {
+  updateMeshById(
+    id: string,
+    updates: OmitType<MeshConfig | NonNullable<D["mesh"]>>,
+  ) {
     const target = this.layersManager.get(id);
     if (!target || !(target instanceof MeshHandle)) return;
     target.update(updates);
@@ -1342,7 +1345,10 @@ export default class ThreeView<
    * @param id - The unique identifier of the light to update
    * @param updates - Partial configuration object with properties to update
    */
-  updateLightById(id: string, updates: LightConfig) {
+  updateLightById(
+    id: string,
+    updates: OmitType<LightConfig | NonNullable<D["light"]>>,
+  ) {
     const target = this.layersManager.get(id);
     if (!target || !(target instanceof LightHandle)) return;
     target.update(updates);
@@ -1353,7 +1359,12 @@ export default class ThreeView<
    * @param id - The unique identifier of the effect to update
    * @param updates - Partial configuration object with properties to update
    */
-  updateEffectById(id: string, updates: EffectConfig) {
+  updateEffectById(
+    id: string,
+    updates: OmitType<
+      BuiltInEffectDescription | EffectConfig | NonNullable<D["effect"]>
+    >,
+  ) {
     const target = this.layersManager.get(id);
     if (!target || !(target instanceof EffectHandle)) return;
     target.update(updates);
