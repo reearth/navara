@@ -122,7 +122,6 @@ const roadLayer = view.addLayer({
     width: 2,
     height: 1,
     clampToGround: true,
-
   },
   vectorTile: {
     maxZoom: 16,
