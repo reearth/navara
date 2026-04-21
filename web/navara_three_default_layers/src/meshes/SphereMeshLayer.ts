@@ -113,7 +113,7 @@ export class SphereMeshLayer extends MeshLayerDeclarationWithSelectiveEffect<
 
     if (this.config.pickable) {
       this.pickWrapper = new PickableMeshWrapper(mesh, this.ctx);
-      return { instance: mesh, pickable: this.pickWrapper };
+      this.ctx.registerPickableMesh(this.id, this.pickWrapper);
     }
 
     return mesh;

@@ -3,7 +3,6 @@ import { Euler, Matrix4, Object3D, Vector3 } from "three";
 import invariant from "tiny-invariant";
 
 import type ThreeView from "../index";
-import type { PickableMesh } from "../mesh/pickableMesh";
 import type { Scenes } from "../scene";
 
 import {
@@ -241,20 +240,17 @@ export abstract class MeshLayerDeclaration<
   /**
    * Factory method to create the Three.js 3D object.
    *
-   * Override this to return your custom mesh. The returned object can be either:
-   * - A Three.js `Object3D` directly (e.g. `Mesh`, `Group`, `Points`)
-   * - A wrapper object with a `raw` property containing the `Object3D`
-   * - An object `{ instance, pickable }` where `pickable` is a
-   *   {@link PickableMesh} to register with the picking system.
+   * Override this to return your custom mesh. The returned object can be
+   * either a Three.js `Object3D` directly (e.g. `Mesh`, `Group`, `Points`) or
+   * a wrapper object with a `raw` property containing the `Object3D`.
    *
-   * The base class calls this during {@link onCreate} and automatically applies
-   * position, scale, rotation, and adds the object to the appropriate scene.
-   * If a `pickable` is returned, the base class registers it via
-   * {@link ViewContext.registerPickableMesh}.
+   * The base class calls this during {@link onCreate} and automatically
+   * applies position, scale, rotation, and adds the object to the appropriate
+   * scene. Picking is opt-in: if your layer supports it, construct a
+   * {@link PickableMesh} here and register it yourself via
+   * `this.ctx.registerPickableMesh(this.id, wrapper)` before returning.
    */
-  abstract createMesh():
-    | Instance
-    | { instance: Instance; pickable: PickableMesh & Object3D };
+  abstract createMesh(): Instance;
 
   get raw() {
     if (!this._instance) return;
@@ -273,29 +269,12 @@ export abstract class MeshLayerDeclaration<
   }
 
   onCreate() {
-    const result = this.createMesh();
-    let pickable: (PickableMesh & Object3D) | undefined;
-    if (
-      result !== null &&
-      typeof result === "object" &&
-      !(result instanceof Object3D) &&
-      "instance" in result &&
-      "pickable" in result
-    ) {
-      this._instance = result.instance;
-      pickable = result.pickable;
-    } else {
-      this._instance = result as Instance;
-    }
+    this._instance = this.createMesh();
     invariant(this.raw);
 
     this.applyTransform();
 
     this._instance.visible = this.visible;
-
-    if (pickable) {
-      this.ctx.registerPickableMesh(this.id, pickable);
-    }
 
     this.onPassKeyChange();
   }

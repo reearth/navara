@@ -78,7 +78,7 @@ export class SmoothLineMeshLayer extends MeshLayerDeclaration<
 
     if (this.config.pickable) {
       this.pickWrapper = new PickableMeshWrapper(smoothLine, this.ctx);
-      return { instance: smoothLine, pickable: this.pickWrapper };
+      this.ctx.registerPickableMesh(this.id, this.pickWrapper);
     }
 
     return smoothLine;

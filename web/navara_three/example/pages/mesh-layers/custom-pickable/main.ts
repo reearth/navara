@@ -199,7 +199,7 @@ class TorusKnotMeshLayer extends MeshLayerDeclaration<
 
     if (this.cfg.pickable) {
       this.pickable = new PickableTorusKnot(mesh, this.ctx);
-      return { instance: mesh, pickable: this.pickable };
+      this.ctx.registerPickableMesh(this.id, this.pickable);
     }
 
     return mesh;

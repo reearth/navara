@@ -86,7 +86,7 @@ export class ArclineMeshLayer extends MeshLayerDeclarationWithSelectiveEffect<
 
     if (this.config.pickable) {
       this.pickWrapper = new PickableMeshWrapper(arcLine, this.ctx);
-      return { instance: arcLine, pickable: this.pickWrapper };
+      this.ctx.registerPickableMesh(this.id, this.pickWrapper);
     }
 
     return arcLine;
