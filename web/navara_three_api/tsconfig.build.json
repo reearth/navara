@@ -2,9 +2,6 @@
   "extends": "../tsconfig.common.json",
   "compilerOptions": {
     "rootDir": "src",
-    "paths": {
-      "@navara/engine-api": ["../../node_modules/navara_wasm_api"]
-    }
   },
   "include": ["src"],
   "exclude": ["./dist", "./node_modules"]

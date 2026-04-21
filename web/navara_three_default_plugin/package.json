@@ -23,11 +23,12 @@
   },
   "license": "MIT OR Apache-2.0",
   "peerDependencies": {
-    "@navara/three": "workspace:*",
+    "@navara/three": "workspace:*"
+  },
+  "dependencies": {
     "@navara/three_default_layers": "workspace:*"
   },
   "devDependencies": {
-    "@navara/three": "workspace:*",
-    "@navara/three_default_layers": "workspace:*"
+    "@navara/three": "workspace:*"
   }
 }

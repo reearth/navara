@@ -26,7 +26,8 @@
     "lint:check": "pnpm --filter './web/**' -r run lint:check",
     "dev:docs": "pnpm -C docs dev",
     "build:docs": "pnpm -C docs build",
-    "preview:docs": "pnpm -C docs preview"
+    "preview:docs": "pnpm -C docs preview",
+    "pack:externals": "pnpm pack -r --pack-destination externals --filter './web/**' --filter '!./web/integration-tests/**'"
   },
   "keywords": [],
   "author": "",

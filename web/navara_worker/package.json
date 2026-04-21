@@ -23,8 +23,9 @@
   },
   "license": "MIT OR Apache-2.0",
   "dependencies": {
-    "@navara/core": "workspace:*",
     "workerpool": "10.0.1"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "@navara/core": "workspace:*"
+  }
 }

@@ -37,6 +37,9 @@ dist-ssr
 # Docs (Astro)
 .astro/
 
+# Packed externals for internal distribution
+externals
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

@@ -25,10 +25,9 @@
   "peerDependencies": {
     "three": ">=0.183.0"
   },
-  "dependencies": {
-    "@navara/core": "workspace:*"
-  },
+  "dependencies": {},
   "devDependencies": {
+    "@navara/core": "workspace:*",
     "@types/three": "0.183.1",
     "three": "0.183.2"
   }
