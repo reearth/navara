@@ -206,13 +206,16 @@ importers:
 
   web/navara_font:
     dependencies:
+      '@navara/engine-font-worker':
+        specifier: workspace:*
+        version: link:../wasm/navara_font_worker
+      '@navara/worker':
+        specifier: workspace:*
+        version: link:../navara_worker
       three:
         specifier: 0.183.2
         version: 0.183.2
     devDependencies:
-      '@navara/worker':
-        specifier: workspace:*
-        version: link:../navara_worker
       '@types/three':
         specifier: 0.183.1
         version: 0.183.1
@@ -222,6 +225,12 @@ importers:
       '@navara/core':
         specifier: workspace:*
         version: link:../navara_core
+      '@navara/engine':
+        specifier: workspace:*
+        version: link:../wasm/navara_engine
+      '@navara/engine-api':
+        specifier: workspace:*
+        version: link:../wasm/navara_engine_api
       '@navara/font':
         specifier: workspace:*
         version: link:../navara_font
@@ -455,6 +464,9 @@ importers:
       '@navara/core':
         specifier: workspace:*
         version: link:../navara_core
+      '@navara/engine-worker':
+        specifier: workspace:*
+        version: link:../wasm/navara_engine_worker
       workerpool:
         specifier: 10.0.1
         version: 10.0.1
