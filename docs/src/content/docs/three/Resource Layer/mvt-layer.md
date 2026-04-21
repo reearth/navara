@@ -147,7 +147,6 @@ const landUseLayer = view.addLayer({
     height: 10,
     extrudedHeight: 0,
     clampToGround: true,
-
     wireframe: false,
   },
   vectorTile: {
