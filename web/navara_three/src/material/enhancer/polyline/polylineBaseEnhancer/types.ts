@@ -21,7 +21,6 @@ export type PolylineBaseProps = {
 
   // Clamp to ground
   clampToGround?: boolean;
-  useGroundNormals?: boolean;
   isTexturized?: boolean;
 
   // Picking
@@ -65,7 +64,6 @@ export type PolylineBaseState = Readonly<
     useRTE: boolean;
     isTexturized: boolean;
     clampToGround: boolean;
-    useGroundNormals: boolean;
     pickable: boolean;
     effectIdsMask: number;
     emissiveColor: number;
@@ -91,7 +89,6 @@ export type PolylineBaseRefs = {
   minMaxHeightAndWidth: UniformValue<[number, number, number]>;
   maxWidth: UniformValue<number>;
   color: UniformValue<Color>;
-  useGroundNormals: UniformValue<boolean>;
   nvr_uPickable: UniformValue<number>;
   uEffectIdsMask: UniformValue<number>;
   uEmissiveColor: UniformValue<Vector3>;

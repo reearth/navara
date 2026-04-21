@@ -169,7 +169,7 @@ const polylineLayer = view.addLayer({
     width: 2,
     height: 1,
     clampToGround: true,
-    useGroundNormals: true,
+
   },
 });
 ```
@@ -202,7 +202,7 @@ const polygonLayer = view.addLayer({
     height: 0,
     extrudedHeight: 5000,
     clampToGround: true,
-    useGroundNormals: true,
+
     wireframe: false,
     outlineColor: new Color().setHex(0x00ff00),
     outlineWidth: 3,

@@ -40,7 +40,6 @@ describe("polylineBaseEnhancer/mutates", () => {
     it("should sync core refs from state", () => {
       const state: PolylineBaseState = {
         ...DEFAULT_BASE_STATE,
-        useGroundNormals: true,
         pickable: true,
         minMaxHeight: [10, 100],
         width: 3,
@@ -52,7 +51,6 @@ describe("polylineBaseEnhancer/mutates", () => {
       mutates.updateUniforms(uniforms, state);
 
       expect(uniforms.minMaxHeightAndWidth?.value).toEqual([10, 100, 3]);
-      expect(uniforms.useGroundNormals?.value).toBe(true);
       expect(uniforms.nvr_uPickable?.value).toBe(1);
     });
   });

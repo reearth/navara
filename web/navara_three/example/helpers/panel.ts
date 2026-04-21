@@ -196,7 +196,6 @@ export const addCtrlPanel = (
     height: 1,
     extrudedHeight: 1,
     clampToGround: false,
-    useGroundNormals: false,
     wireframe: false,
     sizeInMeters: true,
     shouldRotateInDefault: true,
@@ -368,10 +367,6 @@ export const addCtrlPanel = (
 
       if ("clampToGround" in material) {
         material.clampToGround = paneParams.clampToGround;
-      }
-
-      if ("useGroundNormals" in material) {
-        material.useGroundNormals = paneParams.useGroundNormals;
       }
 
       if ("wireframe" in material) {
@@ -549,11 +544,6 @@ function createParamCtrl(
     if ("clampToGround" in material) {
       paneParams.clampToGround = material.clampToGround;
       f.addBinding(paneParams, "clampToGround").on("change", changeFunc);
-    }
-
-    if ("useGroundNormals" in material) {
-      paneParams.useGroundNormals = material.useGroundNormals;
-      f.addBinding(paneParams, "useGroundNormals").on("change", changeFunc);
     }
 
     if ("wireframe" in material) {

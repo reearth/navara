@@ -265,7 +265,6 @@ export class PolylineMesh extends BatchedFeatureMesh<
         width: meshMaterial.width,
         maxWidth: meshMaterial.maxWidth,
         clampToGround: !!meshMaterial.clampToGround,
-        useGroundNormals: !!meshMaterial.useGroundNormals,
         isTexturized,
         pickable: false,
         useRTE,
@@ -403,7 +402,6 @@ export class PolylineMesh extends BatchedFeatureMesh<
         width: material.width,
         maxWidth: material.maxWidth,
         clampToGround: !!material.clampToGround,
-        useGroundNormals: !!material.useGroundNormals,
         effectIdsMask:
           this.ctx.viewContext.selectiveEffectRegistry?.computeMask(
             material.effectIds ?? [],

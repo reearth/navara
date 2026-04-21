@@ -38,18 +38,6 @@ describe("polylineBaseEnhancer/state", () => {
       expect(state.width).toBe(5);
     });
 
-    it("should disable ground normals when isTexturized is true", () => {
-      const props: PolylineBaseProps = {
-        isTexturized: true,
-        useGroundNormals: true,
-      };
-
-      const state = updateState(props, DEFAULT_BASE_STATE);
-
-      expect(state.isTexturized).toBe(true);
-      expect(state.useGroundNormals).toBe(false);
-    });
-
     it("should update clampToGround from props", () => {
       const props: PolylineBaseProps = {
         clampToGround: true,

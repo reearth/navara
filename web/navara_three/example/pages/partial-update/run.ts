@@ -93,7 +93,6 @@ export const run = async (view: ThreeView<DefaultDeclarations>) => {
       width: 2,
       height: 1,
       clampToGround: true,
-      useGroundNormals: true,
     },
     vectorTile: {
       maxZoom: 16,
@@ -454,7 +453,6 @@ function addMvtLayerFolder(pane: Pane) {
     Height: 1,
     Width: 2,
     ClampToGround: true,
-    UseGroundNormals: true,
     CastShadow: true,
     ReceiveShadow: false,
   };
@@ -505,12 +503,6 @@ function addMvtLayerFolder(pane: Pane) {
     label: "clampToGround",
   }).on("change", (v) =>
     gMvtLayer.update({ polyline: { clampToGround: v.value } }),
-  );
-
-  PolylineFolder.addBinding(mvtParams, "UseGroundNormals", {
-    label: "useGroundNormals",
-  }).on("change", (v) =>
-    gMvtLayer.update({ polyline: { useGroundNormals: v.value } }),
   );
 
   PolylineFolder.addBinding(mvtParams, "CastShadow", {
