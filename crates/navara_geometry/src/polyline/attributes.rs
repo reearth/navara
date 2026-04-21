@@ -312,10 +312,6 @@ pub(super) fn generate_geometry_attributes(
             right_normal_and_texture_coordinate_normalization_y[w_index] = tex_coord_normal as f32;
         }
 
-        // Store f64 positions for RTE encoding using unadjusted coordinates
-        // CRITICAL: Must use unadjusted coordinates to maintain consistent coordinate space
-        // The shader's height extrusion logic depends on distance calculation between
-        // positionEC and ecCurPoint, which requires them to be in the same coordinate space
         if let Some(ref mut f64_positions) = positions_f64 {
             // 8 vertices per segment (repeated positions for each corner)
             // Use adjusted coordinates so that the wall is collapsed when clampToGround=false
