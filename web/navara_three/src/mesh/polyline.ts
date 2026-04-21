@@ -8,7 +8,6 @@ import {
   Color,
   Matrix4,
   ShaderMaterial,
-  Texture,
   Vector2,
 } from "three";
 
@@ -264,18 +263,13 @@ export class PolylineMesh extends BatchedFeatureMesh<
         minMaxHeight: [minHeight, maxHeight],
         width: meshMaterial.width,
         maxWidth: meshMaterial.maxWidth,
-        clampToGround: !!meshMaterial.clampToGround,
-        useGroundNormals: !!meshMaterial.useGroundNormals,
         isTexturized,
         pickable: false,
         useRTE,
         // External shared uniforms from CommonUniforms
-        globeNormalTexture: uniforms.tGlobeNormal as { value: Texture | null },
         viewportAndPixelRatio: uniforms.viewportAndPixelRatio,
         frustumNearFar: uniforms.frustumNearFar,
         frustumRatio: uniforms.frustumRatio,
-        tGlobeDepth: uniforms.tGlobeDepth,
-        inverseProjectionMatrix: uniforms.inverseProjectionMatrix,
       },
     });
 
@@ -402,8 +396,6 @@ export class PolylineMesh extends BatchedFeatureMesh<
             : undefined,
         width: material.width,
         maxWidth: material.maxWidth,
-        clampToGround: !!material.clampToGround,
-        useGroundNormals: !!material.useGroundNormals,
         effectIdsMask:
           this.ctx.viewContext.selectiveEffectRegistry?.computeMask(
             material.effectIds ?? [],

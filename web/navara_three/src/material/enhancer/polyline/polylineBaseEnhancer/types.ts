@@ -19,9 +19,6 @@ export type PolylineBaseProps = {
   width?: number;
   maxWidth?: number;
 
-  // Clamp to ground
-  clampToGround?: boolean;
-  useGroundNormals?: boolean;
   isTexturized?: boolean;
 
   // Picking
@@ -34,7 +31,6 @@ export type PolylineBaseProps = {
 
   // External uniforms (passed from CommonUniforms)
   // Note: These use tuple types matching CommonUniforms, not Three.js Vector types
-  globeNormalTexture?: UniformValue<Texture | null>;
   viewportAndPixelRatio?: {
     value: [x: number, y: number, z: number] | undefined | null;
   };
@@ -42,8 +38,6 @@ export type PolylineBaseProps = {
   frustumRatio?: {
     value: [x: number, y: number, z: number, w: number] | undefined | null;
   };
-  tGlobeDepth?: { value: Texture | undefined | null };
-  inverseProjectionMatrix?: { value: Matrix4 | undefined | null };
 
   // Batch texture
   batchDataTexture?: UniformValue<Texture | null>;
@@ -64,8 +58,6 @@ export type PolylineBaseState = Readonly<
   {
     useRTE: boolean;
     isTexturized: boolean;
-    clampToGround: boolean;
-    useGroundNormals: boolean;
     pickable: boolean;
     effectIdsMask: number;
     emissiveColor: number;
@@ -91,7 +83,6 @@ export type PolylineBaseRefs = {
   minMaxHeightAndWidth: UniformValue<[number, number, number]>;
   maxWidth: UniformValue<number>;
   color: UniformValue<Color>;
-  useGroundNormals: UniformValue<boolean>;
   nvr_uPickable: UniformValue<number>;
   uEffectIdsMask: UniformValue<number>;
   uEmissiveColor: UniformValue<Vector3>;
@@ -100,7 +91,6 @@ export type PolylineBaseRefs = {
 
   // Optional uniforms
   batchDataTexture?: UniformValue<Texture | null>;
-  uGlobeNormal?: UniformValue<Texture | null>;
 
   // External shared uniforms (references passed from CommonUniforms)
   // Note: These use tuple types matching CommonUniforms, not Three.js Vector types
@@ -111,8 +101,6 @@ export type PolylineBaseRefs = {
   frustumRatio?: {
     value: [x: number, y: number, z: number, w: number] | undefined | null;
   };
-  tGlobeDepth?: { value: Texture | undefined | null };
-  inverseProjectionMatrix?: { value: Matrix4 | undefined | null };
 
   // RTE uniforms (only present if useRTE is true)
   modelViewMatrixRTE?: UniformValue<Matrix4>;
@@ -162,7 +150,6 @@ export type PolylineBaseMutates = Mutates<
      */
     setExternalRefs: (externalRefs: {
       batchDataTexture?: UniformValue<Texture | null>;
-      globeNormalTexture?: UniformValue<Texture | null>;
       viewportAndPixelRatio?: {
         value: [x: number, y: number, z: number] | undefined | null;
       };
@@ -170,8 +157,6 @@ export type PolylineBaseMutates = Mutates<
       frustumRatio?: {
         value: [x: number, y: number, z: number, w: number] | undefined | null;
       };
-      tGlobeDepth?: { value: Texture | undefined | null };
-      inverseProjectionMatrix?: { value: Matrix4 | undefined | null };
     }) => void;
   }
 >;
