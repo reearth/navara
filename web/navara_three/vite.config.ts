@@ -18,7 +18,15 @@ export default defineConfig((env) => {
       glsl(),
       dts({
         tsconfigPath: "./tsconfig.build.json",
-        bundleTypes: true,
+        bundleTypes: {
+          bundledPackages: [
+            "@navara/engine",
+            "@navara/engine-api",
+            "@navara/core",
+            "@navara/three_api",
+            "@navara/worker",
+          ],
+        },
       }),
       viteStaticCopy({
         targets: [
