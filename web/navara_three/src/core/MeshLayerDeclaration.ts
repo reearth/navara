@@ -3,6 +3,7 @@ import { Matrix4, Object3D } from "three";
 import invariant from "tiny-invariant";
 
 import type ThreeView from "../index";
+import type { PickableMesh } from "../mesh/pickableMesh";
 import type { Scenes } from "../scene";
 
 import {
@@ -219,11 +220,17 @@ export abstract class MeshLayerDeclaration<
    * Override this to return your custom mesh. The returned object can be either:
    * - A Three.js `Object3D` directly (e.g. `Mesh`, `Group`, `Points`)
    * - A wrapper object with a `raw` property containing the `Object3D`
+   * - An object `{ instance, pickable }` where `pickable` is a
+   *   {@link PickableMesh} to register with the picking system.
    *
    * The base class calls this during {@link onCreate} and automatically applies
    * position, scale, rotation, and adds the object to the appropriate scene.
+   * If a `pickable` is returned, the base class registers it via
+   * {@link ViewContext.registerPickableMesh}.
    */
-  abstract createMesh(): Instance;
+  abstract createMesh():
+    | Instance
+    | { instance: Instance; pickable: PickableMesh & Object3D };
 
   get raw() {
     if (!this._instance) return;
@@ -242,7 +249,20 @@ export abstract class MeshLayerDeclaration<
   }
 
   onCreate() {
-    this._instance = this.createMesh();
+    const result = this.createMesh();
+    let pickable: (PickableMesh & Object3D) | undefined;
+    if (
+      result !== null &&
+      typeof result === "object" &&
+      !(result instanceof Object3D) &&
+      "instance" in result &&
+      "pickable" in result
+    ) {
+      this._instance = result.instance;
+      pickable = result.pickable;
+    } else {
+      this._instance = result as Instance;
+    }
     invariant(this.raw);
 
     if (this.matrixWorld) {
@@ -260,6 +280,10 @@ export abstract class MeshLayerDeclaration<
       this.raw.rotation.set(this.rotation.x, this.rotation.y, this.rotation.z);
 
     this._instance.visible = this.visible;
+
+    if (pickable) {
+      this.ctx.registerPickableMesh(this.id, pickable);
+    }
 
     this.onPassKeyChange();
   }

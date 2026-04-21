@@ -76,6 +76,11 @@ export class SmoothLineMeshLayer extends MeshLayerDeclaration<
 
     const smoothLine = new SmoothLine(lineConfig);
 
+    if (this.config.pickable) {
+      this.pickWrapper = new PickableMeshWrapper(smoothLine, this.ctx);
+      return { instance: smoothLine, pickable: this.pickWrapper };
+    }
+
     return smoothLine;
   }
 
@@ -103,14 +108,6 @@ export class SmoothLineMeshLayer extends MeshLayerDeclaration<
     if (this._instance) {
       this._instance.dispose();
       this._instance = undefined;
-    }
-  }
-
-  override onCreate(): void {
-    super.onCreate();
-    if (this.config.pickable && this._instance) {
-      this.pickWrapper = new PickableMeshWrapper(this._instance, this.ctx);
-      this.ctx.registerPickableMesh(this.id, this.pickWrapper);
     }
   }
 

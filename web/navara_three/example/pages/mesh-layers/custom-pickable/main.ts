@@ -197,6 +197,11 @@ class TorusKnotMeshLayer extends MeshLayerDeclaration<
 
     const mesh = new Mesh(geometry, material);
 
+    if (this.cfg.pickable) {
+      this.pickable = new PickableTorusKnot(mesh, this.ctx);
+      return { instance: mesh, pickable: this.pickable };
+    }
+
     return mesh;
   }
 
@@ -207,14 +212,6 @@ class TorusKnotMeshLayer extends MeshLayerDeclaration<
       this.emit("needsUpdate");
     }
     super.onUpdateConfig(updates);
-  }
-
-  override onCreate(): void {
-    super.onCreate();
-    if (this.cfg.pickable && this._instance) {
-      this.pickable = new PickableTorusKnot(this._instance, this.ctx);
-      this.ctx.registerPickableMesh(this.id, this.pickable);
-    }
   }
 
   override onDestroy(): void {
