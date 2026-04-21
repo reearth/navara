@@ -318,32 +318,34 @@ pub(super) fn generate_geometry_attributes(
         // positionEC and ecCurPoint, which requires them to be in the same coordinate space
         if let Some(ref mut f64_positions) = positions_f64 {
             // 8 vertices per segment (repeated positions for each corner)
-            // Use unadjusted coordinates to match ecStart/ecEnd coordinate space
+            // Use adjusted coordinates so that the wall is collapsed when clampToGround=false
+            // (matching the non-RTE positions_array). The shader's height extrusion uniform
+            // will add the correct height on top of these positions.
             f64_positions.extend_from_slice(&[
-                start_bottom.x,
-                start_bottom.y,
-                start_bottom.z,
-                end_bottom.x,
-                end_bottom.y,
-                end_bottom.z,
-                end_top.x,
-                end_top.y,
-                end_top.z,
-                start_top.x,
-                start_top.y,
-                start_top.z,
-                start_bottom.x,
-                start_bottom.y,
-                start_bottom.z,
-                end_bottom.x,
-                end_bottom.y,
-                end_bottom.z,
-                end_top.x,
-                end_top.y,
-                end_top.z,
-                start_top.x,
-                start_top.y,
-                start_top.z,
+                adjust_height_start_bottom.x,
+                adjust_height_start_bottom.y,
+                adjust_height_start_bottom.z,
+                adjust_height_end_bottom.x,
+                adjust_height_end_bottom.y,
+                adjust_height_end_bottom.z,
+                adjust_height_end_top.x,
+                adjust_height_end_top.y,
+                adjust_height_end_top.z,
+                adjust_height_start_top.x,
+                adjust_height_start_top.y,
+                adjust_height_start_top.z,
+                adjust_height_start_bottom.x,
+                adjust_height_start_bottom.y,
+                adjust_height_start_bottom.z,
+                adjust_height_end_bottom.x,
+                adjust_height_end_bottom.y,
+                adjust_height_end_bottom.z,
+                adjust_height_end_top.x,
+                adjust_height_end_top.y,
+                adjust_height_end_top.z,
+                adjust_height_start_top.x,
+                adjust_height_start_top.y,
+                adjust_height_start_top.z,
             ]);
         }
 
