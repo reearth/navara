@@ -73,12 +73,9 @@ export function createPolylineBaseEnhancer(
       // Set all external refs at once
       mutates.setExternalRefs({
         batchDataTexture: props.batchDataTexture,
-        globeNormalTexture: props.globeNormalTexture,
         viewportAndPixelRatio: props.viewportAndPixelRatio,
         frustumNearFar: props.frustumNearFar,
         frustumRatio: props.frustumRatio,
-        tGlobeDepth: props.tGlobeDepth,
-        inverseProjectionMatrix: props.inverseProjectionMatrix,
       });
       updateMaterialProps(material, mergedProps);
     },
@@ -88,7 +85,6 @@ export function createPolylineBaseEnhancer(
 
       // Capture previous state for shader-affecting properties
       const prevIsTexturized = state.isTexturized;
-      const prevClampToGround = state.clampToGround;
       const prevUseBatchTexture = state.useBatchTexture;
       const prevUseBatchColorShow = state.useBatchColorShow;
       const prevUseBatchHeight = state.useBatchHeight;
@@ -100,7 +96,6 @@ export function createPolylineBaseEnhancer(
       // Trigger shader recompilation if shader-affecting state changed
       const shaderStateChanged =
         state.isTexturized !== prevIsTexturized ||
-        state.clampToGround !== prevClampToGround ||
         state.useBatchTexture !== prevUseBatchTexture ||
         state.useBatchColorShow !== prevUseBatchColorShow ||
         state.useBatchHeight !== prevUseBatchHeight ||
@@ -138,7 +133,6 @@ export function createPolylineBaseEnhancer(
         useBatchExtrudedHeight: state.useBatchExtrudedHeight,
         // Additional shader-affecting state used by transformShader
         isTexturized: state.isTexturized,
-        clampToGround: state.clampToGround,
         useRTE: state.useRTE,
         // Custom defines that may influence shader variants
         userDataDefines: material.userData?.defines ?? undefined,

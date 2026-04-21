@@ -38,16 +38,6 @@ describe("polylineBaseEnhancer/state", () => {
       expect(state.width).toBe(5);
     });
 
-    it("should update clampToGround from props", () => {
-      const props: PolylineBaseProps = {
-        clampToGround: true,
-      };
-
-      const state = updateState(props, DEFAULT_BASE_STATE);
-
-      expect(state.clampToGround).toBe(true);
-    });
-
     it("should update batch flags from props", () => {
       const props: PolylineBaseProps = {
         batchColorEnabled: true,

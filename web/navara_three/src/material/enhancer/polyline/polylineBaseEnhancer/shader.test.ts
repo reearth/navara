@@ -44,10 +44,9 @@ describe("polylineBaseEnhancer shader selection", () => {
 
     const enhancer = createPolylineBaseEnhancer(material);
 
-    // Mount with isTexturized = false, clampToGround = false
+    // Mount with isTexturized = false
     enhancer.mount({
       isTexturized: false,
-      clampToGround: false,
     });
 
     // Create a mock shader object
