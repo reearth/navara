@@ -3,21 +3,16 @@ import type { PolylineBaseProps, PolylineBaseState } from "./types";
 export const DEFAULT_BASE_PROPS: Required<
   Omit<
     PolylineBaseProps,
-    | "globeNormalTexture"
     | "batchDataTexture"
     | "minMaxHeight"
     | "viewportAndPixelRatio"
     | "frustumNearFar"
     | "frustumRatio"
-    | "tGlobeDepth"
-    | "inverseProjectionMatrix"
   >
 > = {
   color: 0xffffff,
   width: 1,
   maxWidth: 1000,
-  clampToGround: false,
-  useGroundNormals: false,
   isTexturized: false,
   pickable: false,
   effectIdsMask: 0,
@@ -35,8 +30,6 @@ export const DEFAULT_BASE_PROPS: Required<
 export const DEFAULT_BASE_STATE: PolylineBaseState = {
   useRTE: DEFAULT_BASE_PROPS.useRTE,
   isTexturized: DEFAULT_BASE_PROPS.isTexturized,
-  clampToGround: DEFAULT_BASE_PROPS.clampToGround,
-  useGroundNormals: DEFAULT_BASE_PROPS.useGroundNormals,
   pickable: DEFAULT_BASE_PROPS.pickable,
   effectIdsMask: DEFAULT_BASE_PROPS.effectIdsMask,
   emissiveColor: DEFAULT_BASE_PROPS.emissiveColor,
@@ -70,11 +63,6 @@ export const updateState = (
     // RTE cannot change after mount - always preserve current value
     useRTE: currentState.useRTE,
     isTexturized,
-    clampToGround: props.clampToGround ?? currentState.clampToGround,
-    // Ground normals are only applicable when not texturized
-    useGroundNormals:
-      !isTexturized &&
-      (props.useGroundNormals ?? currentState.useGroundNormals),
     pickable: props.pickable ?? currentState.pickable,
     effectIdsMask: props.effectIdsMask ?? currentState.effectIdsMask,
     emissiveColor: props.emissiveColor ?? currentState.emissiveColor,

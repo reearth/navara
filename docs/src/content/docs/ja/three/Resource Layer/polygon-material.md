@@ -501,24 +501,6 @@ import { Color } from "@navara/three";
 }
 ```
 
-### useGroundNormals
-
-**Type:** `boolean | undefined`
-
-**Description:** 地形の影をポリゴンに反映するかどうかを指定します。`clampToGround`が`true`の場合に有効です。
-
-**Default:** `undefined`
-
-**Example:**
-
-```typescript
-{
-  polygon: {
-    useGroundNormals: true
-  }
-}
-```
-
 ### water
 
 **Type:** `boolean | undefined`

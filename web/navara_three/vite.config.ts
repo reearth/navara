@@ -19,9 +19,9 @@ export default defineConfig((env) => {
       dts({
         tsconfigPath: "./tsconfig.build.json",
         bundleTypes: {
-          // TODO: Remove this once we publish these modules on NPM,
-          // since these modules should be loaded automatically by package manager.
           bundledPackages: [
+            "@navara/engine",
+            "@navara/engine-api",
             "@navara/core",
             "@navara/three_api",
             "@navara/worker",
