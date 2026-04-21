@@ -11,7 +11,7 @@
  *      color when a "picking" uniform is active.
  *   2. Implement `PickableMesh` on a small wrapper: flip the uniform in
  *      `onBeforePicking` / `onAfterPicking`, and return the renderable
- *      from `_getRenderable()`.
+ *      from `getRenderable()`.
  *   3. Register the wrapper with `ctx.registerPickableMesh(id, wrapper)`.
  *
  * That's it — no shader injection, no string mutation, no collisions with
@@ -118,7 +118,7 @@ class PickableTorusKnot extends Object3D implements PickableMesh {
     this.mesh.material.uniforms.uPicking.value = 0;
   }
 
-  _getRenderable(): Object3D {
+  getRenderable(): Object3D {
     return this.mesh;
   }
 }

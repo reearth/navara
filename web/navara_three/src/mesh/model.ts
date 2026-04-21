@@ -434,7 +434,7 @@ export class ModelMesh
     }
   }
 
-  _getRenderable(): Object3D {
+  getRenderable(): Object3D {
     return this;
   }
 

@@ -235,7 +235,7 @@ export class PickableMeshWrapper extends Object3D implements PickableMesh {
     this.refs.nvr_uPickable.value = 0;
   }
 
-  _getRenderable(): Object3D {
+  getRenderable(): Object3D {
     return this.object;
   }
 }
@@ -377,7 +377,7 @@ export class PickableInstancedMeshWrapper
     this.refs.nvr_uPickable.value = 0;
   }
 
-  _getRenderable(): Object3D {
+  getRenderable(): Object3D {
     return this.mesh;
   }
 }

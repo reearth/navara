@@ -550,7 +550,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     this.getEnhancer().update({ base: { pickable: false } });
   }
 
-  _getRenderable(): Object3D {
+  getRenderable(): Object3D {
     return this;
   }
 

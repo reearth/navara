@@ -5,7 +5,7 @@ import { Object3D, type Vector2 } from "three";
  * Contract for an object that participates in GPU picking.
  *
  * Implementers must provide {@link onBeforePicking}, {@link onAfterPicking},
- * and {@link _getRenderable}. Register an instance via
+ * and {@link getRenderable}. Register an instance via
  * `ViewContext.registerPickableMesh` so the pick pass can discover it.
  *
  * Navara does NOT rewrite your shaders. While the two hooks are active, your
@@ -37,7 +37,7 @@ export class PickableMesh {
    * The Object3D to re-parent into the pick scene for the picking render.
    * The wrapper itself is bookkeeping and is never added to a scene.
    */
-  _getRenderable(): Object3D {
+  getRenderable(): Object3D {
     throw new Unimplemented();
   }
 }
@@ -50,6 +50,6 @@ export const isPickableMesh = (v: object): v is PickableMesh => {
   return (
     typeof candidate.onBeforePicking === "function" &&
     typeof candidate.onAfterPicking === "function" &&
-    typeof candidate._getRenderable === "function"
+    typeof candidate.getRenderable === "function"
   );
 };

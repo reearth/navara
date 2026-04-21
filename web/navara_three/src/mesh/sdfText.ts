@@ -397,7 +397,7 @@ export class SDFTextMesh
     this._enhancer.update({ base: { pickable: false } });
   }
 
-  _getRenderable(): Object3D {
+  getRenderable(): Object3D {
     return this;
   }
 

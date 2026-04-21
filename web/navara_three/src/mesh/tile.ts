@@ -1425,7 +1425,7 @@ if (uPickable > 0.) {
     this.material.userData.uPickable.value = 0;
   }
 
-  _getRenderable(): Object3D {
+  getRenderable(): Object3D {
     return this;
   }
 

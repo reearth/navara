@@ -111,7 +111,7 @@ export class InstancedMesh<M extends Object3D>
     }
   }
 
-  _getRenderable(): Object3D {
+  getRenderable(): Object3D {
     return this;
   }
 }

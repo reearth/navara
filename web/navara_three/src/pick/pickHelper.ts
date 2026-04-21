@@ -131,7 +131,7 @@ export class PickHelper {
     for (const [_key, obj] of this._meshes) {
       if (!isPickableMesh(obj)) continue;
 
-      const raw = obj._getRenderable();
+      const raw = obj.getRenderable();
       const originalParent = raw.parent;
 
       // Only pick visible, currently-parented renderables. A mesh that's

@@ -142,7 +142,7 @@ export class BatchedFeatureMesh<
     this.needsUpdate();
   }
 
-  _getRenderable(): Object3D {
+  getRenderable(): Object3D {
     return this;
   }
 
