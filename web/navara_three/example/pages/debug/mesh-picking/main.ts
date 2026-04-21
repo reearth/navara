@@ -20,7 +20,7 @@ import {
   DefaultPlugin,
   type DefaultDeclarations,
 } from "@navara/three_default_plugin";
-import { Euler, Matrix4, Mesh, MeshStandardMaterial, Vector3 } from "three";
+import { Mesh, MeshStandardMaterial } from "three";
 import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../../helpers/attributions";
@@ -30,31 +30,6 @@ import {
   TILE_DATASETS,
 } from "../../../helpers/constants";
 import { addDateControl } from "../../../helpers/control";
-
-/**
- * Create a matrixWorld that places an object at a local NUE offset
- * from the given origin frame, with optional rotation and scale baked in.
- * (When matrixWorld is set, Three.js ignores position/rotation/scale.)
- */
-function offsetMatrix(
-  nueFrame: Matrix4,
-  x: number,
-  y: number,
-  z: number,
-  opts?: { rotation?: { x: number; y: number; z: number }; scale?: number },
-): Matrix4 {
-  const local = new Matrix4().makeTranslation(x, y, z);
-  if (opts?.rotation) {
-    const rot = new Matrix4().makeRotationFromEuler(
-      new Euler(opts.rotation.x, opts.rotation.y, opts.rotation.z),
-    );
-    local.multiply(rot);
-  }
-  if (opts?.scale) {
-    local.scale(new Vector3(opts.scale, opts.scale, opts.scale));
-  }
-  return nueFrame.clone().multiply(local);
-}
 
 const run = async () => {
   const view = new ThreeView<DefaultDeclarations>({
@@ -138,7 +113,8 @@ const run = async () => {
       castShadow: true,
       receiveShadow: true,
     },
-    matrixWorld: offsetMatrix(nueFrame, -2.5 * SPACING, ROW_Y, ROW1_Z),
+    matrixWorld: nueFrame,
+    position: { x: -2.5 * SPACING, y: ROW_Y, z: ROW1_Z },
   });
   registerLayer(boxLayer, "Box", boxColor);
 
@@ -152,7 +128,8 @@ const run = async () => {
       castShadow: true,
       receiveShadow: true,
     },
-    matrixWorld: offsetMatrix(nueFrame, -1.5 * SPACING, ROW_Y, ROW1_Z),
+    matrixWorld: nueFrame,
+    position: { x: -1.5 * SPACING, y: ROW_Y, z: ROW1_Z },
   });
   registerLayer(sphereLayer, "Sphere", sphereColor);
 
@@ -168,7 +145,8 @@ const run = async () => {
       castShadow: true,
       receiveShadow: true,
     },
-    matrixWorld: offsetMatrix(nueFrame, -0.5 * SPACING, ROW_Y, ROW1_Z),
+    matrixWorld: nueFrame,
+    position: { x: -0.5 * SPACING, y: ROW_Y, z: ROW1_Z },
   });
   registerLayer(cylinderLayer, "Cylinder", cylinderColor);
 
@@ -183,9 +161,9 @@ const run = async () => {
       castShadow: true,
       receiveShadow: true,
     },
-    matrixWorld: offsetMatrix(nueFrame, 0.5 * SPACING, ROW_Y, ROW1_Z, {
-      rotation: { x: -Math.PI / 2, y: 0, z: 0 },
-    }),
+    matrixWorld: nueFrame,
+    position: { x: 0.5 * SPACING, y: ROW_Y, z: ROW1_Z },
+    rotation: { x: -Math.PI / 2, y: 0, z: 0 },
   });
   registerLayer(planeLayer, "Plane", planeColor);
 
@@ -208,7 +186,8 @@ const run = async () => {
       castShadow: true,
       receiveShadow: true,
     },
-    matrixWorld: offsetMatrix(nueFrame, 1.5 * SPACING, ROW_Y, ROW1_Z),
+    matrixWorld: nueFrame,
+    position: { x: 1.5 * SPACING, y: ROW_Y, z: ROW1_Z },
   });
   registerLayer(tubeLayer, "Tube", tubeColor);
 
@@ -265,7 +244,8 @@ const run = async () => {
       receiveShadow: true,
       children,
     },
-    matrixWorld: offsetMatrix(nueFrame, 0, 0, ROW2_Z),
+    matrixWorld: nueFrame,
+    position: { x: 0, y: 0, z: ROW2_Z },
   });
 
   // Register instanced mesh children
