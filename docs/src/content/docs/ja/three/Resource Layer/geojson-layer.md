@@ -201,7 +201,6 @@ const polygonLayer = view.addLayer({
     height: 0,
     extrudedHeight: 5000,
     clampToGround: true,
-
     wireframe: false,
     outlineColor: new Color().setHex(0x00ff00),
     outlineWidth: 3,
