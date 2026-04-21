@@ -414,7 +414,29 @@ export abstract class MeshLayerDeclaration<
     if (updates.rotation !== undefined) this.rotation = updates.rotation;
 
     if (spatialChanged) {
-      this.applyTransform();
+      // With a frame present, the effective transform depends on the
+      // combination of all stored fields — recompose the whole thing.
+      // Without a frame, apply only the fields that were actually passed,
+      // so subclasses that strip a field from `updates` (e.g. GLTFModelLayer
+      // keeping `raw.position` at 0 for its RTE shader) can still opt out
+      // of having the base class copy it onto `raw`.
+      if (this.matrixWorld || this.matrix) {
+        this.applyTransform();
+      } else {
+        if (updates.position !== undefined) {
+          this.raw.position.copy(updates.position);
+        }
+        if (updates.scale !== undefined) {
+          this.raw.scale.copy(updates.scale);
+        }
+        if (updates.rotation !== undefined) {
+          this.raw.rotation.set(
+            updates.rotation.x,
+            updates.rotation.y,
+            updates.rotation.z,
+          );
+        }
+      }
     }
 
     this.onPassKeyChange();
