@@ -1,7 +1,7 @@
 {
   "extends": "../tsconfig.common.json",
   "compilerOptions": {
-    "rootDir": "src",
+    "rootDir": "src"
   },
   "include": ["src"],
   "exclude": ["./dist", "./node_modules"]
