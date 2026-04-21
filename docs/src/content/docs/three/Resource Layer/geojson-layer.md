@@ -169,7 +169,6 @@ const polylineLayer = view.addLayer({
     width: 2,
     height: 1,
     clampToGround: true,
-
   },
 });
 ```
