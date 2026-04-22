@@ -890,6 +890,13 @@ await view.init();
 
 Registers a font family composed of multiple faces. Each face covers a set of unicode ranges and points to a separate font file URL (ttf, otf, woff, or woff2). Once a family is registered, a text layer can reference it by its `family` name through [`material.font`](../../resource-layer/text-material/#font); only the faces whose unicode ranges cover the characters in the label's `text` are downloaded.
 
+**Face priority and fallback:**
+
+- Faces are evaluated in the order they appear in `faces`. For each codepoint in `text`, the first face whose `unicodeRanges` contain it is used — so if ranges overlap, the earlier entry wins.
+- Codepoints that are not covered by any face fall back to the first face (`faces[0]`). This means the first face may also be downloaded for uncovered characters, even if its declared `unicodeRanges` do not include them.
+
+To make this behavior predictable, list the most specific faces first and put the face you want used as a fallback at index `0`.
+
 Returns the `ThreeView` instance so calls can be chained.
 
 **Syntax:**

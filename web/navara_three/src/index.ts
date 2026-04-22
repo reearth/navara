@@ -1487,6 +1487,17 @@ export default class ThreeView<
    * When a text label uses this family name as its font, only the face files
    * whose unicode ranges cover the label's characters are loaded.
    *
+   * Face priority and fallback:
+   * - Faces are evaluated in the order given in `faces`. For each codepoint,
+   *   the first face whose `unicodeRanges` contain it is used, so earlier
+   *   entries win when ranges overlap.
+   * - Codepoints not covered by any face fall back to the first face
+   *   (`faces[0]`), which may therefore be downloaded for uncovered characters
+   *   even if its declared `unicodeRanges` do not include them.
+   *
+   * List the most specific faces first and place the intended fallback at
+   * index `0`.
+   *
    * @example
    * ```ts
    * view.addFontFamily({

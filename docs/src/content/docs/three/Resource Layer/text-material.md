@@ -167,6 +167,10 @@ import { Color } from "@navara/three";
 
 When a family name is used, only the face files whose unicode ranges cover the characters in `text` are fetched, so large scripts (CJK, etc.) can be split into multiple faces and loaded on demand.
 
+For each codepoint, the first face (in `faces` order) whose `unicodeRanges` contain it is used, so earlier entries win when ranges overlap. Codepoints not covered by any face fall back to the first face (`faces[0]`), which may therefore be downloaded even for characters outside its declared ranges. See [`addFontFamily()`](../../api/threeview-functions/#addfontfamily) for details.
+
+**Default:** `undefined` (no font is loaded, and the text layer will not render until a font is specified).
+
 **Example (single font file):**
 
 ```typescript

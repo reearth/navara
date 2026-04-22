@@ -257,7 +257,13 @@ pub struct TextMaterial {
     ///
     /// When a family name is used, only the face files whose unicode ranges cover the characters
     /// in `text` are fetched, so large scripts (CJK, etc.) can be split into multiple faces and
-    /// loaded on demand.
+    /// loaded on demand. For each codepoint, the first face (in `faces` order) whose
+    /// `unicodeRanges` contain it is used; codepoints not covered by any face fall back to the
+    /// first face, which may therefore be downloaded even for characters outside its declared
+    /// ranges.
+    ///
+    /// Defaults to `None`: no font is loaded, and the text layer will not render until a font
+    /// is specified.
     #[wasm_bindgen(getter_with_clone)]
     pub font: Option<String>,
     #[wasm_bindgen(js_name = backgroundColor)]
