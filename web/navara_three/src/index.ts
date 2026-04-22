@@ -1495,8 +1495,10 @@ export default class ThreeView<
    *   (`faces[0]`), which may therefore be downloaded for uncovered characters
    *   even if its declared `unicodeRanges` do not include them.
    *
-   * List the most specific faces first and place the intended fallback at
-   * index `0`.
+   * Put the intended fallback face at index `0`: it is both the fallback for
+   * uncovered codepoints and the highest-priority face when ranges overlap.
+   * Order the remaining faces after it by priority, and avoid overlapping
+   * ranges unless that precedence is intentional.
    *
    * @example
    * ```ts

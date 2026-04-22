@@ -895,7 +895,7 @@ Registers a font family composed of multiple faces. Each face covers a set of un
 - Faces are evaluated in the order they appear in `faces`. For each codepoint in `text`, the first face whose `unicodeRanges` contain it is used — so if ranges overlap, the earlier entry wins.
 - Codepoints that are not covered by any face fall back to the first face (`faces[0]`). This means the first face may also be downloaded for uncovered characters, even if its declared `unicodeRanges` do not include them.
 
-To make this behavior predictable, list the most specific faces first and put the face you want used as a fallback at index `0`.
+To make this behavior predictable, put the face you want used as the fallback at index `0`. Then order the remaining faces after it so that, when their ranges overlap, earlier entries have higher priority.
 
 Returns the `ThreeView` instance so calls can be chained.
 
