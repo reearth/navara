@@ -1489,8 +1489,8 @@ export default class ThreeView<
    *
    * Face priority and fallback:
    * - Faces are evaluated in the order given in `faces`. For each codepoint,
-   *   the first face whose `unicodeRanges` contain it is used, so earlier
-   *   entries win when ranges overlap.
+   *   the first face whose `unicodeRanges` includes that codepoint is used,
+   *   so earlier entries win when ranges overlap.
    * - Codepoints not covered by any face fall back to the first face
    *   (`faces[0]`), which may therefore be downloaded for uncovered characters
    *   even if its declared `unicodeRanges` do not include them.
