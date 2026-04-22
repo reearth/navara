@@ -1,11 +1,11 @@
 ---
-title: DepthOfFieldEffectLayer
-description: Depth of field effect layer for navara_three
+title: DepthOfFieldEffectDesc
+description: Depth of field effect descriptor for navara_three
 sidebar:
   order: 53
 ---
 
-The `DepthOfFieldEffectLayer` class is a layer that applies a depth of field (DoF) effect. It generates bokeh based on the camera's focal plane, producing a photographic visual effect.
+The `DepthOfFieldEffectDesc` class is a Descriptor that applies a depth of field (DoF) effect. It generates bokeh based on the camera's focal plane, producing a photographic visual effect.
 
 ## Properties
 
@@ -13,7 +13,7 @@ The `DepthOfFieldEffectLayer` class is a layer that applies a depth of field (Do
 
 **Type:** `boolean | undefined`
 
-**Description:** Controls the visibility of the effect layer.
+**Description:** Controls the visibility of the effect descriptor.
 
 **Default:** `true`
 
@@ -76,13 +76,13 @@ The `DepthOfFieldEffectLayer` class is a layer that applies a depth of field (Do
 ### Adding a basic depth of field effect
 
 ```typescript
-import ThreeView, { DepthOfFieldEffectLayer } from "@navara/three";
+import ThreeView, { DepthOfFieldEffectDesc } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
-// Add depth of field effect layer
-const depthOfFieldLayer = view.addEffect<DepthOfFieldEffectLayer>({
+// Add depth of field effect descriptor
+const depthOfFieldLayer = view.addEffect<DepthOfFieldEffectDesc>({
   depthOfField: { },
   visible: true,
 });
@@ -91,7 +91,7 @@ const depthOfFieldLayer = view.addEffect<DepthOfFieldEffectLayer>({
 ### Depth of field combined with 3D tiles
 
 ```typescript
-import ThreeView, { DepthOfFieldEffectLayer, Color } from "@navara/three";
+import ThreeView, { DepthOfFieldEffectDesc, Color } from "@navara/three";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
@@ -99,8 +99,8 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-// Add default photorealistic layers
-const defaultLayers = plugin.addDefaultPhotorealLayers();
+// Add default photorealistic objects
+const defaultLayers = plugin.addDefaultPhotorealScene();
 defaultLayers.sun.update({
   sun: {
     intensity: 1,
@@ -109,7 +109,7 @@ defaultLayers.sun.update({
 });
 
 // Add depth of field effect
-const depthOfFieldLayer = view.addEffect<DepthOfFieldEffectLayer>({
+const depthOfFieldLayer = view.addEffect<DepthOfFieldEffectDesc>({
   depthOfField: {
     bokehScale: 7,
     focusDistance: 0.000006,
@@ -118,7 +118,7 @@ const depthOfFieldLayer = view.addEffect<DepthOfFieldEffectLayer>({
   visible: true,
 });
 
-// Add 3D tiles layer
+// Add 3D tiles resource layer
 view.addLayer({
   type: "cesium3dtiles",
   data: {

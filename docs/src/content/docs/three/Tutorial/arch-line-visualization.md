@@ -119,13 +119,13 @@ You need to convert NASA Earth at Night imagery to XYZ tile format. Download fro
 
 ## Adding a Glow Effect
 
-Using `GlowGlobeMeshLayer`, you can add a beautiful glow effect around the globe.
+Using `GlowGlobeMeshDesc`, you can add a beautiful glow effect around the globe.
 
 ```typescript
-import type { GlowGlobeMeshLayer } from "@navara/three";
+import type { GlowGlobeMeshDesc } from "@navara/three";
 
 // Add globe glow effect
-view.addMesh<GlowGlobeMeshLayer>({
+view.addMesh<GlowGlobeMeshDesc>({
   glowGlobe: {
     radiusScale: 1.2,  // Glow radius (multiplier relative to Earth's radius)
     coefficient: 0.43, // Glow intensity coefficient
@@ -250,14 +250,14 @@ When data distribution is skewed (a few high values and many low values), using 
 For details on `ColorMap` class methods (`linear()`, `quantize()`, etc.), see the [ColorMap class](../../../three/api-reference/colormap/) reference.
 :::
 
-## Adding the Arch Line Layer
+## Adding the Arch Line Object
 
-Add the arch line definitions as a layer.
+Add the arch line definitions as an object.
 
 ```typescript
-import type { ArclineMeshLayer } from "@navara/three";
+import type { ArclineMeshDesc } from "@navara/three";
 
-const arcLineLayer = view.addMesh<ArclineMeshLayer>({
+const arcLineHandle = view.addMesh<ArclineMeshDesc>({
   arcLines,
 });
 ```
@@ -281,7 +281,7 @@ const dashAnimFunc = () => {
     arcLineDef.dashOffset = (arcLineDef.dashOffset ?? 0) + speed;
   });
 
-  arcLineLayer.update({ arcLines });
+  arcLineHandle.update({ arcLines });
   requestAnimationFrame(dashAnimFunc);
 };
 
@@ -302,8 +302,8 @@ Below is a complete example that visualizes air traffic volume between airports.
 ```typescript
 import ThreeView, {
   ToneMappingMode,
-  type ArclineMeshLayer,
-  type GlowGlobeMeshLayer,
+  type ArclineMeshDesc,
+  type GlowGlobeMeshDesc,
   Color,
   ColorMap,
   geodeticToVector3,
@@ -459,7 +459,7 @@ async function run() {
   });
 
   // Glow effect
-  view.addMesh<GlowGlobeMeshLayer>({
+  view.addMesh<GlowGlobeMeshDesc>({
     glowGlobe: {
       radiusScale: 1.2,
       coefficient: 0.43,
@@ -472,8 +472,8 @@ async function run() {
   // Construct arch line data
   const { arcLines } = await constructData();
 
-  // Add arch line layer
-  const arcLineLayer = view.addMesh<ArclineMeshLayer>({
+  // Add arch line object
+  const arcLineHandle = view.addMesh<ArclineMeshDesc>({
     arcLines,
   });
 
@@ -488,7 +488,7 @@ async function run() {
       arcLineDef.dashOffset = (arcLineDef.dashOffset ?? 0) + speed;
     });
 
-    arcLineLayer.update({ arcLines });
+    arcLineHandle.update({ arcLines });
     requestAnimationFrame(dashAnimFunc);
   };
   dashAnimFunc();

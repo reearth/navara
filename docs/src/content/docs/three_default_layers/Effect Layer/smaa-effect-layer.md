@@ -1,11 +1,11 @@
 ---
-title: SMAAEffectLayer
-description: SMAA effect layer for navara_three
+title: SMAAEffectDesc
+description: SMAA effect descriptor for navara_three
 sidebar:
   order: 58
 ---
 
-The `SMAAEffectLayer` class is a layer that applies the SMAA (Subpixel Morphological Anti-Aliasing) anti-aliasing effect. It provides higher quality anti-aliasing than FXAA.
+The `SMAAEffectDesc` class is a Descriptor that applies the SMAA (Subpixel Morphological Anti-Aliasing) anti-aliasing effect. It provides higher quality anti-aliasing than FXAA.
 
 ## Properties
 
@@ -13,7 +13,7 @@ The `SMAAEffectLayer` class is a layer that applies the SMAA (Subpixel Morpholog
 
 **Type:** `boolean | undefined`
 
-**Description:** Controls the visibility of the effect layer.
+**Description:** Controls the visibility of the effect descriptor.
 
 **Default:** `true`
 
@@ -66,8 +66,8 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-// Add default photorealistic layers (includes SMAA)
-const defaultLayers = plugin.addDefaultPhotorealLayers();
+// Add default photorealistic objects (includes SMAA)
+const defaultLayers = plugin.addDefaultPhotorealScene();
 
 // Enable SMAA and set quality
 defaultLayers.smaa.update({
@@ -82,13 +82,13 @@ defaultLayers.smaa.update({
 ### High-quality SMAA settings
 
 ```typescript
-import ThreeView, { SMAAEffectLayer } from "@navara/three";
+import ThreeView, { SMAAEffectDesc } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
-// Add SMAA effect layer
-view.addEffect<SMAAEffectLayer>({
+// Add SMAA effect descriptor
+view.addEffect<SMAAEffectDesc>({
   smaa: {
     quality: "ultra",
     edgeDetectionMode: "luma",
@@ -99,7 +99,7 @@ view.addEffect<SMAAEffectLayer>({
 ### Dynamically changing SMAA quality and edge detection mode
 
 ```typescript
-import ThreeView, { FXAAEffectLayer } from "@navara/three";
+import ThreeView, { FXAAEffectDesc } from "@navara/three";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
@@ -107,7 +107,7 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-const defaultLayers = plugin.addDefaultPhotorealLayers();
+const defaultLayers = plugin.addDefaultPhotorealScene();
 
 // Change quality to medium
 defaultLayers.smaa.update({
@@ -125,11 +125,11 @@ defaultLayers.smaa.update({
 
 // Disable SMAA and switch to FXAA
 defaultLayers.smaa.update({ visible: false });
-view.addEffect<FXAAEffectLayer>({
+view.addEffect<FXAAEffectDesc>({
   fxaa: {},
 });
 ```
 
 ## Notes
 
-SMAAEffectLayer is applied at the final stage of the rendering pipeline. Use it when higher quality anti-aliasing than FXAA is needed. Quality presets can be selected from `low`, `medium`, `high`, and `ultra`. Edge detection modes can be selected from `color` (highest quality), `luma` (balanced), and `depth` (fastest).
+SMAAEffectDesc is applied at the final stage of the rendering pipeline. Use it when higher quality anti-aliasing than FXAA is needed. Quality presets can be selected from `low`, `medium`, `high`, and `ultra`. Edge detection modes can be selected from `color` (highest quality), `luma` (balanced), and `depth` (fastest).

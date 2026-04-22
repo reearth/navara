@@ -1,17 +1,17 @@
 import {
-  LayerDeclaration,
-  LayerHandle,
-  MeshLayerDeclaration,
-  LightLayerDeclaration,
-  EffectLayerDeclaration,
+  type BaseDesc,
+  type BaseHandle,
+  type MeshDesc as MeshDescClass,
+  type LightDesc as LightDescClass,
+  type EffectDesc as EffectDescClass,
   Layer as NavaraLayer,
   type LayerDescription,
-  type MeshLayerConfig,
-  type LightLayerConfig,
-  type EffectLayerConfig,
+  type MeshConfig,
+  type LightConfig,
+  type EffectConfig,
   type BuiltInEffectDescription,
 } from "@navara/three";
-import { useEffect, useRef, type PropsWithChildren } from "react";
+import { useCallback, useEffect, useRef, type PropsWithChildren } from "react";
 
 import { useViewContext } from "./ViewContext";
 
@@ -56,20 +56,24 @@ export function Layer({ config, onReady }: PropsWithChildren<LayerProps>) {
   return null;
 }
 
-function useDeclarationLayer<L extends LayerDeclaration>(
-  addFn: (config: Record<string, unknown>) => LayerHandle<L>,
+function useDeclarationLayer<L extends BaseDesc>(
+  addFn: (config: Record<string, unknown>) => BaseHandle<L>,
+  view: object,
   config: Record<string, unknown>,
   // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
-  onReady?: (handle: LayerHandle<L>) => (() => void) | void,
+  onReady?: (handle: BaseHandle<L>) => (() => void) | void,
 ) {
-  const handleRef = useRef<LayerHandle<L> | null>(null);
+  const handleRef = useRef<BaseHandle<L> | null>(null);
+  const addFnRef = useRef(addFn);
   const configRef = useRef(config);
   const onReadyRef = useRef(onReady);
 
+  addFnRef.current = addFn;
   configRef.current = config;
+  onReadyRef.current = onReady;
 
   useEffect(() => {
-    const handle = addFn(configRef.current);
+    const handle = addFnRef.current(configRef.current);
     handleRef.current = handle;
     const unmount = onReadyRef.current?.(handle);
     return () => {
@@ -77,7 +81,7 @@ function useDeclarationLayer<L extends LayerDeclaration>(
       handle.delete();
       handleRef.current = null;
     };
-  }, [addFn]);
+  }, [view]);
 
   useEffect(() => {
     if (handleRef.current) {
@@ -86,57 +90,73 @@ function useDeclarationLayer<L extends LayerDeclaration>(
   }, [config]);
 }
 
-type MeshLayerProps<L extends MeshLayerDeclaration = MeshLayerDeclaration> = {
-  config: MeshLayerConfig;
+type MeshDescProps<L extends MeshDescClass = MeshDescClass> = {
+  config: MeshConfig;
   // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
-  onReady?: (handle: LayerHandle<L>) => (() => void) | void;
+  onReady?: (handle: BaseHandle<L>) => (() => void) | void;
 };
 
-export function MeshLayer<
-  L extends MeshLayerDeclaration = MeshLayerDeclaration,
->({ config, onReady }: PropsWithChildren<MeshLayerProps<L>>) {
+export function MeshDesc<L extends MeshDescClass = MeshDescClass>({
+  config,
+  onReady,
+}: PropsWithChildren<MeshDescProps<L>>) {
   const { view } = useViewContext();
+  const addFn = useCallback(
+    (c: Record<string, unknown>) => view.addMesh<L>(c as MeshConfig),
+    [view],
+  );
   useDeclarationLayer<L>(
-    (c) => view.addMesh<L>(c as MeshLayerConfig),
+    addFn,
+    view,
     config as Record<string, unknown>,
     onReady,
   );
   return null;
 }
 
-type LightLayerProps<L extends LightLayerDeclaration = LightLayerDeclaration> =
-  {
-    config: LightLayerConfig;
-    // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
-    onReady?: (handle: LayerHandle<L>) => (() => void) | void;
-  };
+type LightDescProps<L extends LightDescClass = LightDescClass> = {
+  config: LightConfig;
+  // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
+  onReady?: (handle: BaseHandle<L>) => (() => void) | void;
+};
 
-export function LightLayer<
-  L extends LightLayerDeclaration = LightLayerDeclaration,
->({ config, onReady }: PropsWithChildren<LightLayerProps<L>>) {
+export function LightDesc<L extends LightDescClass = LightDescClass>({
+  config,
+  onReady,
+}: PropsWithChildren<LightDescProps<L>>) {
   const { view } = useViewContext();
+  const addFn = useCallback(
+    (c: Record<string, unknown>) => view.addLight<L>(c as LightConfig),
+    [view],
+  );
   useDeclarationLayer<L>(
-    (c) => view.addLight<L>(c as LightLayerConfig),
+    addFn,
+    view,
     config as Record<string, unknown>,
     onReady,
   );
   return null;
 }
 
-type EffectLayerProps<
-  L extends EffectLayerDeclaration = EffectLayerDeclaration,
-> = {
-  config: EffectLayerConfig | BuiltInEffectDescription;
+type EffectDescProps<L extends EffectDescClass = EffectDescClass> = {
+  config: EffectConfig | BuiltInEffectDescription;
   // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
-  onReady?: (handle: LayerHandle<L>) => (() => void) | void;
+  onReady?: (handle: BaseHandle<L>) => (() => void) | void;
 };
 
-export function EffectLayer<
-  L extends EffectLayerDeclaration = EffectLayerDeclaration,
->({ config, onReady }: PropsWithChildren<EffectLayerProps<L>>) {
+export function EffectDesc<L extends EffectDescClass = EffectDescClass>({
+  config,
+  onReady,
+}: PropsWithChildren<EffectDescProps<L>>) {
   const { view } = useViewContext();
+  const addFn = useCallback(
+    (c: Record<string, unknown>) =>
+      view.addEffect<L>(c as EffectConfig | BuiltInEffectDescription),
+    [view],
+  );
   useDeclarationLayer<L>(
-    (c) => view.addEffect<L>(c as EffectLayerConfig | BuiltInEffectDescription),
+    addFn,
+    view,
     config as Record<string, unknown>,
     onReady,
   );

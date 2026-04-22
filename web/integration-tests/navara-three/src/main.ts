@@ -6,7 +6,7 @@ import ThreeView, {
 } from "@navara/three";
 import {
   ToneMappingMode,
-  type SphereMeshLayer,
+  type SphereMeshDesc,
 } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
@@ -30,8 +30,8 @@ async function main() {
 
   view.atmosphere.date.setHours(12);
 
-  // Add default atmosphere layers - tests layer system
-  const effects = plugin.addDefaultPhotorealLayers();
+  // Add default atmosphere descriptors - tests descriptor system
+  const effects = plugin.addDefaultPhotorealScene();
 
   // Simplify by removing sky mesh (use aerial perspective for sky)
   effects.sky.delete();
@@ -73,7 +73,7 @@ async function main() {
     },
   });
 
-  // Add a rotating sphere mesh - tests mesh layer and geospatial API
+  // Add a rotating sphere mesh - tests mesh descriptor and geospatial API
   addRotatingSphere(view);
   // Log success message
   console.log("Navara integration test loaded successfully!");
@@ -84,11 +84,11 @@ async function main() {
 
 /**
  * Add a sphere that rotates around the globe.
- * Tests: SphereMeshLayer, geodeticToVector3, LLE, degreeToRadian APIs
+ * Tests: SphereMeshDesc, geodeticToVector3, LLE, degreeToRadian APIs
  */
 function addRotatingSphere(view: ThreeView<CustomDeclarations>) {
-  // Create a sphere mesh layer
-  const sphereLayer = view.addMesh<SphereMeshLayer>({
+  // Create a sphere mesh descriptor
+  const sphereLayer = view.addMesh<SphereMeshDesc>({
     sphere: {
       radius: 1,
       color: new Color().setHex(0xff6600), // Orange color

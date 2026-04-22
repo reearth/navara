@@ -1,11 +1,11 @@
 ---
-title: SunLightLayer
-description: Sun light layer for navara_three
+title: SunLightDesc
+description: Sun light descriptor for navara_three
 sidebar:
   order: 154
 ---
 
-The `SunLightLayer` class represents a directional light layer that simulates sunlight. It supports high-quality shadow rendering using Cascaded Shadow Maps (CSM) and works in conjunction with atmospheric scattering simulation to reproduce natural sunlight.
+The `SunLightDesc` class represents a directional light descriptor that simulates sunlight. It supports high-quality shadow rendering using Cascaded Shadow Maps (CSM) and works in conjunction with atmospheric scattering simulation to reproduce natural sunlight.
 
 The sun direction is automatically calculated based on `view.atmosphere.date`, and shadow directions change accordingly.
 
@@ -19,7 +19,7 @@ For details on the atmosphere system, see the [Atmosphere class](../../../three/
 
 **Type:** `boolean | undefined`
 
-**Description:** Controls the visibility of the layer.
+**Description:** Controls the visibility of the object.
 
 **Default:** `true`
 
@@ -49,7 +49,7 @@ For details on the atmosphere system, see the [Atmosphere class](../../../three/
 **Default:** `300`
 
 :::note[Configurable only at initialization]
-This property can only be set when creating the layer. It cannot be changed via the `update()` method.
+This property can only be set when creating the Descriptor. It cannot be changed via the `update()` method.
 :::
 
 **Example:**
@@ -345,7 +345,7 @@ import { Color } from "@navara/three";
 ### Basic Usage
 
 ```typescript
-import ThreeView, { SunLightLayer } from "@navara/three";
+import ThreeView, { SunLightDesc } from "@navara/three";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView({
@@ -355,8 +355,8 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-// Add default photorealistic layers (includes SunLightLayer)
-const defaultLayers = plugin.addDefaultPhotorealLayers();
+// Add default photorealistic objects (includes SunLightDesc)
+const defaultLayers = plugin.addDefaultPhotorealScene();
 
 // Update sunlight settings
 defaultLayers.sun.update({
@@ -371,7 +371,7 @@ defaultLayers.sun.update({
 ### Shadow Quality Adjustment
 
 ```typescript
-const sun = view.addLight<SunLightLayer>({
+const sun = view.addLight<SunLightDesc>({
   sun: {
     intensity: 1.0,
     castShadow: true,
@@ -430,7 +430,7 @@ sun.update({
 import { Color } from "@navara/three";
 
 // Disable atmospheric calculation and use custom color
-const sun = view.addLight<SunLightLayer>({
+const sun = view.addLight<SunLightDesc>({
   sun: {
     applyColor: true,  // Use custom color
     color: new Color().setHex(0xffffee),
@@ -456,7 +456,7 @@ Cascaded Shadow Maps is a technique for achieving high-quality shadows across wi
 
 ## Integration with the Atmosphere System
 
-SunLightLayer works in conjunction with atmospheric scattering simulation:
+SunLightDesc works in conjunction with atmospheric scattering simulation:
 
 1. **Sun direction synchronization**: Obtained from `view.atmosphere.sunDirection`
 2. **Transmittance texture usage**: Considers light attenuation through the atmosphere
@@ -466,7 +466,7 @@ This enables natural sunlight that responds to time of day and atmospheric condi
 
 ## Notes
 
-- To use SunLightLayer, you need to specify `shadow: true` when initializing `ThreeView`.
+- To use SunLightDesc, you need to specify `shadow: true` when initializing `ThreeView`.
 - CSM uses multiple shadow maps, which impacts GPU memory and performance.
 - Increasing `shadowMapSize` increases memory usage (e.g., 4096 = 16MB/cascade).
 - To receive shadows on terrain or models, `receiveShadow: true` must be set on the material.

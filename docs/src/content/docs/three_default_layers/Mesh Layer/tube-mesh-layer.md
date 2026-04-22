@@ -1,13 +1,13 @@
 ---
-title: TubeMeshLayer
-description: Tube mesh layer for navara_three
+title: TubeMeshDesc
+description: Tube mesh descriptor for navara_three
 sidebar:
   order: 106
 ---
 
-The `TubeMeshLayer` class is a mesh layer for drawing tube geometry. It can create tube shapes along a Catmull-Rom curve.
+The `TubeMeshDesc` class is a mesh descriptor for drawing tube geometry. It can create tube shapes along a Catmull-Rom curve.
 
-In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `pickable`, `visible`) are available. See [MeshLayerDeclaration](./mesh-layer-base) for details.
+In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `pickable`, `visible`) are available. See [MeshDesc](./mesh-layer-base) for details.
 
 ## Properties
 
@@ -259,7 +259,7 @@ import { Color } from "@navara/three";
 
 **Type:** `string[]` (optional)
 
-**Description:** Specifies an array of selective effect layer IDs to apply to this mesh.
+**Description:** Specifies an array of selective effect descriptor IDs to apply to this mesh.
 
 **Example:**
 
@@ -294,13 +294,13 @@ import { Color } from "@navara/three";
 ## Usage Examples
 
 ```typescript
-import ThreeView, { TubeMeshLayer, Color } from "@navara/three";
+import ThreeView, { TubeMeshDesc, Color } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
-// Add a TubeMeshLayer
-const tubeLayer = view.addMesh<TubeMeshLayer>({
+// Add a TubeMeshDesc
+const tubeLayer = view.addMesh<TubeMeshDesc>({
   tube: {
     points: [
       { x: 0, y: 0, z: 1000 },

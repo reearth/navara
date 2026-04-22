@@ -11,7 +11,7 @@ The documentation covers five main sections of the Navara ecosystem:
 - **engine** - Rust/WASM engine documentation (navara_wasm, navara_wasm_api)
 - **guides** - General information, about us, and community resources
 - **three** - navara_three, the main 3D rendering library based on Three.js
-- **three_default_layers** - Built-in layer documentation (Mesh, Light, Effect layers)
+- **three_default_layers** - Built-in layer documentation (Mesh, Light, Effect descriptors)
 - **three_default_plugin** - Default plugin documentation
 
 ## 🚀 Project Structure

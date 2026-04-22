@@ -40,19 +40,19 @@ import { Color } from "./Color";
 import { createDefaultConcurrencyManager } from "./concurrency";
 import { WATER_NORMAL_URL } from "./constants/assets";
 import {
-  MeshLayerDeclaration,
-  LightLayerDeclaration,
-  EffectLayerDeclaration,
+  MeshDesc,
+  LightDesc,
+  EffectDesc,
   ViewContext,
-  type MeshLayerConfig,
-  type LightLayerConfig,
-  type EffectLayerConfig,
+  type MeshConfig,
+  type LightConfig,
+  type EffectConfig,
   type MeshLayerConstructor,
   type LightLayerConstructor,
   type EffectLayerConstructor,
-  UnknownLayerTypeError,
+  UnknownTypeError,
 } from "./core";
-import { LayerHandle } from "./core/LayerHandle";
+import { MeshHandle, LightHandle, EffectHandle } from "./core/BaseHandle";
 import { Registries } from "./core/Registries";
 import { getDevicePixelRatio, isMobileDevice } from "./device";
 import {
@@ -71,13 +71,13 @@ import { TEXTURE_LOADER } from "./event/loaders";
 import { registerInputEvents } from "./input";
 import { Layer, type LayerEvent } from "./layer";
 import {
-  MRTPassEffectLayer,
-  SelectiveBloomEffectLayer,
-  SelectiveOutlineEffectLayer,
-  SkyEnvMapEffectLayer,
-  TransparentPassEffectLayer,
+  MRTPassEffectDesc,
+  SelectiveBloomEffectDesc,
+  SelectiveOutlineEffectDesc,
+  SkyEnvMapEffectDesc,
+  TransparentPassEffectDesc,
 } from "./layers/effect";
-import { FinalCopyEffectLayer } from "./layers/effect/FinalCopyEffectLayer";
+import { FinalCopyEffectDesc } from "./layers/effect/FinalCopyEffectDesc";
 import { LayersManager } from "./layersManager";
 import { overrideMaterialsForMRT } from "./material";
 import { RenderPassOrchestrator } from "./orchestrators/RenderPassOrchestrator";
@@ -262,14 +262,14 @@ export default class ThreeView<
   private _globe!: Globe;
   private _atmosphere: Atmosphere;
 
-  /** Layer handle for the sky environment map effect layer. Used for sky reflections. */
-  private skyEnvMapLayer!: LayerHandle<SkyEnvMapEffectLayer>;
-  /** Layer handle for the Multi-Render Target pass that outputs color and normal buffers. */
-  private mrtPassLayer!: LayerHandle<MRTPassEffectLayer>;
-  /** Layer handle for the transparent objects rendering pass. */
-  private transparentPassLayer!: LayerHandle<TransparentPassEffectLayer>;
-  /** Layer handle for the final compositing pass that outputs to screen. */
-  private finalPassLayer!: LayerHandle<FinalCopyEffectLayer>;
+  /** Handle for the sky environment map effect descriptor. Used for sky reflections. */
+  private skyEnvMap!: EffectHandle<SkyEnvMapEffectDesc>;
+  /** Handle for the Multi-Render Target pass that outputs color and normal buffers. */
+  private mrtPass!: EffectHandle<MRTPassEffectDesc>;
+  /** Handle for the transparent objects rendering pass. */
+  private transparentPass!: EffectHandle<TransparentPassEffectDesc>;
+  /** Handle for the final compositing pass that outputs to screen. */
+  private finalPass!: EffectHandle<FinalCopyEffectDesc>;
 
   /** The render pass orchestrator that manages the post-processing effect pipeline. */
   private renderPassOrchestrator: RenderPassOrchestrator;
@@ -729,24 +729,24 @@ export default class ThreeView<
     // Initialize atmosphere
     await this._atmosphere._init();
 
-    this.skyEnvMapLayer = this.addEffect<SkyEnvMapEffectLayer>({
+    this.skyEnvMap = this.addEffect<SkyEnvMapEffectDesc>({
       skyEnvMap: {},
     });
-    this.mrtPassLayer = this.addEffect<MRTPassEffectLayer>({
+    this.mrtPass = this.addEffect<MRTPassEffectDesc>({
       mrt: {
         // debugNormal: true,
       },
     });
-    this.transparentPassLayer = this.addEffect<TransparentPassEffectLayer>({
+    this.transparentPass = this.addEffect<TransparentPassEffectDesc>({
       transparent: {},
     });
-    this.finalPassLayer = this.addEffect<FinalCopyEffectLayer>({
+    this.finalPass = this.addEffect<FinalCopyEffectDesc>({
       final: {},
     });
   }
 
   private get renderPass() {
-    const instance = this.mrtPassLayer.ref.raw;
+    const instance = this.mrtPass.ref.raw;
     invariant(instance);
     return instance;
   }
@@ -868,7 +868,7 @@ export default class ThreeView<
       fontManager: this._fontManager,
     });
 
-    // Register built-in layers
+    // Register built-in descriptors
     this.registerBuiltIns();
 
     if (!isWorker()) {
@@ -977,10 +977,10 @@ export default class ThreeView<
     this._fontManager.dispose();
     this._atmosphere._dispose();
 
-    this.skyEnvMapLayer?.delete();
-    this.mrtPassLayer?.delete();
-    this.transparentPassLayer?.delete();
-    this.finalPassLayer?.delete();
+    this.skyEnvMap?.delete();
+    this.mrtPass?.delete();
+    this.transparentPass?.delete();
+    this.finalPass?.delete();
 
     // Abort all pending requests
     for (const controller of this._abortControllers.values()) {
@@ -1075,7 +1075,7 @@ export default class ThreeView<
     this._uniforms.tGlobeNormal.value =
       this.renderPass.globeNormalCopyPass.texture;
     this._uniforms.tSkyEnvMap.value =
-      this.skyEnvMapLayer.ref.raw?.getEnvMapTexture() ?? null;
+      this.skyEnvMap.ref.raw?.getEnvMapTexture() ?? null;
     this._uniforms.inverseProjectionMatrix.value =
       this._camera.raw.projectionMatrixInverse;
 
@@ -1110,7 +1110,7 @@ export default class ThreeView<
   }
 
   /**
-   * Process feature updates for all layers
+   * Process feature updates for all descriptors
    * This is called after the main update loop to batch feature updates
    */
   private _forceFeatureUpdates(updatedAt: number) {
@@ -1195,92 +1195,19 @@ export default class ThreeView<
    * Adds a 3D mesh to the scene.
    * The mesh kind is determined by the nested key (e.g., `{ box: { width: 200 } }`).
    * @param desc - Mesh configuration object
-   * @returns A LayerHandle for controlling the added mesh
+   * @returns A MeshHandle for controlling the added mesh
    */
-  addMesh<L extends MeshLayerDeclaration = MeshLayerDeclaration>(
-    desc: OmitType<MeshLayerConfig | NonNullable<D["mesh"]>>,
-  ): LayerHandle<L> {
-    return this.addMeshLayer(desc as MeshLayerConfig) as LayerHandle<L>;
-  }
-
-  /**
-   * Adds a light to the scene.
-   * The light kind is determined by the nested key (e.g., `{ ambient: { intensity: 0.5 } }`).
-   * @param desc - Light configuration object
-   * @returns A LayerHandle for controlling the added light
-   */
-  addLight<L extends LightLayerDeclaration = LightLayerDeclaration>(
-    desc: OmitType<LightLayerConfig | NonNullable<D["light"]>>,
-  ): LayerHandle<L> {
-    return this.addLightLayer(desc as LightLayerConfig) as LayerHandle<L>;
-  }
-
-  /**
-   * Adds a post-processing effect to the scene.
-   * The effect kind is determined by the nested key (e.g., `{ bloom: { strength: 1.0 } }`).
-   * @param desc - Effect configuration object
-   * @returns A LayerHandle for controlling the added effect
-   */
-  addEffect<L extends EffectLayerDeclaration = EffectLayerDeclaration>(
-    desc: OmitType<
-      BuiltInEffectDescription | EffectLayerConfig | NonNullable<D["effect"]>
-    >,
-  ): LayerHandle<L> {
-    return this.addEffectLayer(desc as EffectLayerConfig) as LayerHandle<L>;
-  }
-
-  /**
-   * Updates an existing layer's configuration by its ID.
-   * @param layerId - The unique identifier of the layer to update
-   * @param l - New layer configuration
-   */
-  updateLayerById(layerId: string, l: LayerDescription) {
-    invariant(this._core);
-    // Convert all Color objects to numbers before updating
-    const processedLayer = this._convertColorsToNumbers(l) as LayerDescription;
-    this.layersManager.get(layerId)?.update(processedLayer);
-  }
-
-  /**
-   * Deletes a layer from the scene by its ID.
-   * @param layerId - The unique identifier of the layer to delete
-   */
-  deleteLayerById(layerId: string) {
-    invariant(this._core);
-
-    this.layersManager.get(layerId)?.delete();
-  }
-
-  private registerBuiltIns(): void {
-    this.registerBuiltInEffects();
-  }
-
-  private registerBuiltInEffects(): void {
-    this.registerEffect("skyEnvMap", SkyEnvMapEffectLayer);
-    this.registerEffect("mrt", MRTPassEffectLayer);
-
-    // SelectiveEffect effects
-    this.registerEffect("selectiveBloom", SelectiveBloomEffectLayer);
-    this.registerEffect("selectiveOutline", SelectiveOutlineEffectLayer);
-    // TODO: Curve out opaque pass from MRT pass.
-    // this.registerEffect("opaque", OpaquePassEffectLayer);
-    this.registerEffect("transparent", TransparentPassEffectLayer);
-
-    this.registerEffect("final", FinalCopyEffectLayer);
-  }
-
-  private addMeshLayer(config: MeshLayerConfig): LayerHandle {
+  addMesh<L extends MeshDesc = MeshDesc>(
+    config: OmitType<MeshConfig | NonNullable<D["mesh"]>>,
+  ): MeshHandle<L> {
     // Find which mesh type from config
     const meshType = this.registries.mesh.findMeshType(config);
     if (!meshType) {
-      throw new UnknownLayerTypeError(config);
+      throw new UnknownTypeError("mesh", config);
     }
 
-    // Extract layer config and mesh-specific config
-    const { type, ...meshConfigs } = config;
-    const flatConfig = { ...config, ...meshConfigs };
-    // Create mesh layer instance
-    const meshLayer = this.registries.mesh.create(meshType, flatConfig);
+    // Create mesh descriptor instance
+    const meshLayer = this.registries.mesh.create(meshType, config);
 
     // Initialize the mesh
     meshLayer.onCreate();
@@ -1302,28 +1229,32 @@ export default class ThreeView<
     // Trigger re-render
     meshLayer.on("needsUpdate", this.forceUpdate);
 
-    const l = new LayerHandle(meshLayer);
+    const l = new MeshHandle(meshLayer);
 
-    // Store the mesh layer
+    // Store the mesh descriptor
     this.layersManager.add(l);
 
     // Return handle for imperative access
-    return l;
+    return l as MeshHandle<L>;
   }
 
-  private addLightLayer(config: LightLayerConfig): LayerHandle {
+  /**
+   * Adds a light to the scene.
+   * The light kind is determined by the nested key (e.g., `{ ambient: { intensity: 0.5 } }`).
+   * @param desc - Light configuration object
+   * @returns A LightHandle for controlling the added light
+   */
+  addLight<L extends LightDesc = LightDesc>(
+    config: OmitType<LightConfig | NonNullable<D["light"]>>,
+  ): LightHandle<L> {
     // Find which light type from config
     const lightType = this.registries.light.findLightType(config);
     if (!lightType) {
-      throw new UnknownLayerTypeError(config);
+      throw new UnknownTypeError("light", config);
     }
 
-    // Extract layer config and light-specific config
-    const { type, ...lightConfigs } = config;
-    const flatConfig = { ...config, ...lightConfigs };
-
-    // Create light layer instance
-    const lightLayer = this.registries.light.create(lightType, flatConfig);
+    // Create light descriptor instance
+    const lightLayer = this.registries.light.create(lightType, config);
 
     // Initialize the light
     lightLayer.onCreate();
@@ -1336,28 +1267,34 @@ export default class ThreeView<
     // Trigger re-render
     lightLayer.on("needsUpdate", this.forceUpdate);
 
-    const l = new LayerHandle(lightLayer);
+    const l = new LightHandle(lightLayer);
 
-    // Store the light layer
+    // Store the light descriptor
     this.layersManager.add(l);
 
     // Return handle for imperative access
-    return l;
+    return l as LightHandle<L>;
   }
 
-  private addEffectLayer(config: EffectLayerConfig): LayerHandle {
+  /**
+   * Adds a post-processing effect to the scene.
+   * The effect kind is determined by the nested key (e.g., `{ bloom: { strength: 1.0 } }`).
+   * @param desc - Effect configuration object
+   * @returns An EffectHandle for controlling the added effect
+   */
+  addEffect<L extends EffectDesc = EffectDesc>(
+    config: OmitType<
+      BuiltInEffectDescription | EffectConfig | NonNullable<D["effect"]>
+    >,
+  ): EffectHandle<L> {
     // Find which effect type from config
     const effectType = this.registries.effect.findEffectType(config);
     if (!effectType) {
-      throw new UnknownLayerTypeError(config);
+      throw new UnknownTypeError("effect", config);
     }
 
-    // Extract layer config and effect-specific config
-    const { type, ...effectConfigs } = config;
-    const flatConfig = { ...config, ...effectConfigs };
-
-    // Create effect layer instance
-    const effectLayer = this.registries.effect.create(effectType, flatConfig);
+    // Create effect descriptor instance
+    const effectLayer = this.registries.effect.create(effectType, config);
 
     // Initialize the effect
     effectLayer.onCreate();
@@ -1370,37 +1307,162 @@ export default class ThreeView<
     // Trigger re-render
     effectLayer.on("needsUpdate", this.forceUpdate);
 
-    const l = new LayerHandle(effectLayer);
+    const l = new EffectHandle(effectLayer);
 
-    // Store the effect layer
+    // Store the effect descriptor
     this.layersManager.add(l);
 
     // Return handle for imperative access
-    return l;
+    return l as EffectHandle<L>;
   }
 
   /**
-   * Registers a custom mesh layer type for use with addMesh().
+   * Updates an existing resource layer's configuration by its ID.
+   * Only works for resource layers added via `addLayer()`.
+   * @param id - The unique identifier of the layer to update
+   * @param l - New layer configuration
+   */
+  updateLayerById(id: string, l: LayerDescription) {
+    invariant(this._core);
+    const target = this.layersManager.get(id);
+    if (!target || !(target instanceof Layer)) return;
+    const processedLayer = this._convertColorsToNumbers(l) as LayerDescription;
+    target.update(processedLayer);
+  }
+
+  /**
+   * Updates an existing mesh descriptor's configuration by its ID.
+   * @param id - The unique identifier of the mesh to update
+   * @param updates - Partial configuration object with properties to update
+   */
+  updateMeshById(
+    id: string,
+    updates: OmitType<MeshConfig | NonNullable<D["mesh"]>>,
+  ) {
+    const target = this.layersManager.get(id);
+    if (!target || !(target instanceof MeshHandle)) return;
+    target.update(updates);
+  }
+
+  /**
+   * Updates an existing light descriptor's configuration by its ID.
+   * @param id - The unique identifier of the light to update
+   * @param updates - Partial configuration object with properties to update
+   */
+  updateLightById(
+    id: string,
+    updates: OmitType<LightConfig | NonNullable<D["light"]>>,
+  ) {
+    const target = this.layersManager.get(id);
+    if (!target || !(target instanceof LightHandle)) return;
+    target.update(updates);
+  }
+
+  /**
+   * Updates an existing effect descriptor's configuration by its ID.
+   * @param id - The unique identifier of the effect to update
+   * @param updates - Partial configuration object with properties to update
+   */
+  updateEffectById(
+    id: string,
+    updates: OmitType<
+      BuiltInEffectDescription | EffectConfig | NonNullable<D["effect"]>
+    >,
+  ) {
+    const target = this.layersManager.get(id);
+    if (!target || !(target instanceof EffectHandle)) return;
+    target.update(updates);
+  }
+
+  /**
+   * Deletes a resource layer from the scene by its ID.
+   * @param id - The unique identifier of the layer to delete
+   * @returns `true` if the layer was found and deleted, `false` otherwise
+   */
+  deleteLayerById(id: string): boolean {
+    invariant(this._core);
+    const target = this.layersManager.get(id);
+    if (!target || !(target instanceof Layer)) return false;
+    target.delete();
+    return true;
+  }
+
+  /**
+   * Deletes a mesh descriptor from the scene by its ID.
+   * @param id - The unique identifier of the mesh to delete
+   * @returns `true` if the mesh was found and deleted, `false` otherwise
+   */
+  deleteMeshById(id: string): boolean {
+    const target = this.layersManager.get(id);
+    if (!target || !(target instanceof MeshHandle)) return false;
+    target.delete();
+    return true;
+  }
+
+  /**
+   * Deletes a light descriptor from the scene by its ID.
+   * @param id - The unique identifier of the light to delete
+   * @returns `true` if the light was found and deleted, `false` otherwise
+   */
+  deleteLightById(id: string): boolean {
+    const target = this.layersManager.get(id);
+    if (!target || !(target instanceof LightHandle)) return false;
+    target.delete();
+    return true;
+  }
+
+  /**
+   * Deletes an effect descriptor from the scene by its ID.
+   * @param id - The unique identifier of the effect to delete
+   * @returns `true` if the effect was found and deleted, `false` otherwise
+   */
+  deleteEffectById(id: string): boolean {
+    const target = this.layersManager.get(id);
+    if (!target || !(target instanceof EffectHandle)) return false;
+    target.delete();
+    return true;
+  }
+
+  private registerBuiltIns(): void {
+    this.registerBuiltInEffects();
+  }
+
+  private registerBuiltInEffects(): void {
+    this.registerEffect("skyEnvMap", SkyEnvMapEffectDesc);
+    this.registerEffect("mrt", MRTPassEffectDesc);
+
+    // SelectiveEffect effects
+    this.registerEffect("selectiveBloom", SelectiveBloomEffectDesc);
+    this.registerEffect("selectiveOutline", SelectiveOutlineEffectDesc);
+    // TODO: Curve out opaque pass from MRT pass.
+    // this.registerEffect("opaque", OpaquePassEffectLayer);
+    this.registerEffect("transparent", TransparentPassEffectDesc);
+
+    this.registerEffect("final", FinalCopyEffectDesc);
+  }
+
+  /**
+   * Registers a custom mesh descriptor type for use with addMesh().
    * @param name - Unique name to identify this mesh type in layer configurations
-   * @param meshClass - The mesh layer class constructor
+   * @param meshClass - The mesh descriptor class constructor
    */
   registerMesh(name: string, meshClass: MeshLayerConstructor): void {
     this.registries.mesh.register(name, meshClass);
   }
 
   /**
-   * Registers a custom light layer type for use with addLight().
+   * Registers a custom light descriptor type for use with addLight().
    * @param name - Unique name to identify this light type in layer configurations
-   * @param lightClass - The light layer class constructor
+   * @param lightClass - The light descriptor class constructor
    */
   registerLight(name: string, lightClass: LightLayerConstructor): void {
     this.registries.light.register(name, lightClass);
   }
 
   /**
-   * Registers a custom post-processing effect layer type for use with addEffect().
+   * Registers a custom post-processing effect descriptor type for use with addEffect().
    * @param name - Unique name to identify this effect type in layer configurations
-   * @param effectClass - The effect layer class constructor
+   * @param effectClass - The effect descriptor class constructor
    */
   registerEffect(name: string, effectClass: EffectLayerConstructor): void {
     this.registries.effect.register(name, effectClass);

@@ -37,7 +37,7 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
   view.animation = true;
 
   // Add default atmosphere layers
-  plugin.addDefaultPhotorealLayers();
+  plugin.addDefaultPhotorealScene();
 
   // Add base tile layer
   view.addLayer({

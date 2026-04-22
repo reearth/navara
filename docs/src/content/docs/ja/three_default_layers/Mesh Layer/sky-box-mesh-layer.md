@@ -1,13 +1,13 @@
 ---
-title: SkyBoxMeshLayer
-description: Sky box mesh layer for navara_three
+title: SkyBoxMeshDesc
+description: Sky box mesh descriptor for navara_three
 sidebar:
   order: 112
 ---
 
-`SkyBoxMeshLayer`は、シンプルなスカイボックスをシーンに追加するレイヤーです。昼夜の空の色と太陽の色を設定でき、大気散乱シミュレーション（`SkyMeshLayer`）を使用せずに軽量な空の表現が可能です。
+`SkyBoxMeshDesc`は、シンプルなスカイボックスをシーンに追加するDescriptorです。昼夜の空の色と太陽の色を設定でき、大気散乱シミュレーション（`SkyMeshDesc`）を使用せずに軽量な空の表現が可能です。
 
-以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`pickable`、`visible`）が利用できます。詳細は [MeshLayerDeclaration](./mesh-layer-base) を参照してください。
+以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`pickable`、`visible`）が利用できます。詳細は [MeshDesc](./mesh-layer-base) を参照してください。
 
 ## Properties
 
@@ -82,13 +82,13 @@ import { Color } from "@navara/three";
 ### 基本的な使用例
 
 ```typescript
-import ThreeView, { SkyBoxMeshLayer, Color } from "@navara/three";
+import ThreeView, { SkyBoxMeshDesc, Color } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
 // デフォルト設定でスカイボックスを追加
-const skyBox = view.addMesh<SkyBoxMeshLayer>({
+const skyBox = view.addMesh<SkyBoxMeshDesc>({
   skyBox: {},
 });
 ```
@@ -96,13 +96,13 @@ const skyBox = view.addMesh<SkyBoxMeshLayer>({
 ### カスタムカラーの設定
 
 ```typescript
-import ThreeView, { SkyBoxMeshLayer, Color } from "@navara/three";
+import ThreeView, { SkyBoxMeshDesc, Color } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
 // カスタムカラーでスカイボックスを追加
-const skyBox = view.addMesh<SkyBoxMeshLayer>({
+const skyBox = view.addMesh<SkyBoxMeshDesc>({
   skyBox: {
     dayColor: new Color().setHex(0x87ceeb),    // スカイブルー
     nightColor: new Color().setHex(0x0a0a2e),   // ダークブルー
@@ -123,9 +123,9 @@ skyBox.update({
 });
 ```
 
-## SkyMeshLayer との違い
+## SkyMeshDesc との違い
 
-| 特徴 | SkyBoxMeshLayer | SkyMeshLayer |
+| 特徴 | SkyBoxMeshDesc | SkyMeshDesc |
 |------|-----------------|--------------|
 | レンダリング方式 | シンプルなグラデーション | 物理ベースの大気散乱 |
 | パフォーマンス | 軽量 | やや重い |
@@ -135,11 +135,11 @@ skyBox.update({
 
 ### 使い分け
 
-- **SkyBoxMeshLayer**: シンプルなビジュアライゼーション、パフォーマンス重視のシーン、スタイライズされた表現
-- **SkyMeshLayer**: リアルな大気表現、時間帯による変化、太陽・月の表示が必要な場合
+- **SkyBoxMeshDesc**: シンプルなビジュアライゼーション、パフォーマンス重視のシーン、スタイライズされた表現
+- **SkyMeshDesc**: リアルな大気表現、時間帯による変化、太陽・月の表示が必要な場合
 
 ## 注意事項
 
 - スカイボックスはカメラの視錐台カリングが無効化されており、常に描画されます。
 - 色は大気の `sunDirection` に基づいて昼夜の色がブレンドされます。
-- `SkyMeshLayer` と同時に使用する場合は、描画順序に注意してください。
+- `SkyMeshDesc` と同時に使用する場合は、描画順序に注意してください。

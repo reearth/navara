@@ -12,8 +12,7 @@ import type { CustomRenderPass } from "../passes";
 import type { Scenes } from "../scene";
 import type { MeshCache } from "../type";
 
-import type { EffectLayerDeclaration } from "./EffectLayerDeclaration";
-import type { LayerHandle } from "./LayerHandle";
+import type { EffectHandle } from "./BaseHandle";
 import { SelectiveEffectRegistry } from "./SelectiveEffectRegistry";
 
 type ViewContextEvents = {
@@ -35,17 +34,17 @@ type ViewContextEvents = {
 };
 
 /**
- * ViewContext is the shared context object passed to every custom layer and plugin.
+ * ViewContext is the shared context object passed to every custom descriptor and plugin.
  *
  * The public properties and methods defined here form the **public API surface**
- * exposed to user-authored layers and plugins. Any addition, removal, or
+ * exposed to user-authored descriptors and plugins. Any addition, removal, or
  * signature change to a public member is a **breaking change** for consumers.
  *
  * When extending this class, keep the public surface minimal and intentional:
  * - Prefer methods over exposing internal objects directly — this allows the
  *   implementation to change without breaking downstream code.
  * - Mark internal dependencies as `private` so they are not accessible from
- *   layer/plugin code.
+ *   descriptor/plugin code.
  */
 export class ViewContext extends EventHandler<ViewContextEvents> {
   private _selectiveEffectRegistry: SelectiveEffectRegistry;
@@ -184,8 +183,8 @@ export class ViewContext extends EventHandler<ViewContextEvents> {
 
   // --- Layer query ---
 
-  /** @internal Iterate over all registered effect layers. */
-  _getEffectLayers(): Generator<LayerHandle<EffectLayerDeclaration>> {
+  /** @internal Iterate over all registered effect descriptors. */
+  _getEffects(): Generator<EffectHandle> {
     return this.layersManager.getEffectLayers();
   }
 

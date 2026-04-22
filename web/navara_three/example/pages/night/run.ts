@@ -1,17 +1,19 @@
 import ThreeView, {
   EventHandler,
   JAPAN_GSI_ELEVATION_DECODER,
-  type LayerHandle,
+  type MeshHandle,
+  type LightHandle,
+  type EffectHandle,
   type LayerDescription,
   degreeToRadian,
   geodeticToVector3,
   Color,
 } from "@navara/three";
 import type {
-  LightProbeLayer,
-  SkyLightProbeLayer,
-  StarsLayer,
-  FogLightEffectLayer,
+  LightProbeDesc,
+  SkyLightProbeDesc,
+  StarsDesc,
+  FogLightEffectDesc,
   FogLightDefinition,
 } from "@navara/three_default_layers";
 import {
@@ -43,10 +45,10 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
   view.toneMappingExposure = 10;
 
   // Set background to dark night sky
-  // Note: Background should be set through renderer or effect layers, not scene directly
+  // Note: Background should be set through renderer or effect descriptors, not scene directly
 
   // Configure atmosphere for night scene
-  const defaultAtmosphere = plugin.addDefaultPhotorealLayers();
+  const defaultAtmosphere = plugin.addDefaultPhotorealScene();
   const starsLayer = defaultAtmosphere.stars;
   defaultAtmosphere.sun.update({
     sun: {
@@ -162,7 +164,7 @@ const addNightLightProbeControl = (
   view: ThreeView<CustomDeclarations>,
   pane: Pane,
 ) => {
-  const lightProbeLayer = view.addLight<LightProbeLayer>({
+  const lightProbeLayer = view.addLight<LightProbeDesc>({
     lightProbe: {
       sh: new SphericalHarmonics3().set(SH_COEFFICIENTS.night),
       intensity: 0.05,
@@ -202,7 +204,7 @@ const addNightLightProbeControl = (
 
 const addStarsControl = (
   view: ThreeView<CustomDeclarations>,
-  starsLayer: LayerHandle<StarsLayer>,
+  starsLayer: MeshHandle<StarsDesc>,
   pane: Pane,
 ) => {
   const starsFolder = pane.addFolder({
@@ -254,7 +256,7 @@ const addStarsControl = (
 
 const addSkyLightProbeControl = (
   view: ThreeView<CustomDeclarations>,
-  skyLightProbeLayer: LayerHandle<SkyLightProbeLayer>,
+  skyLightProbeDesc: LightHandle<SkyLightProbeDesc>,
   pane: Pane,
 ) => {
   const skyLightProbeFolder = pane.addFolder({
@@ -273,7 +275,7 @@ const addSkyLightProbeControl = (
     const intensity = isAtNight
       ? skyLightProbeParams.nightIntensity
       : skyLightProbeParams.intensity;
-    skyLightProbeLayer.update({
+    skyLightProbeDesc.update({
       skyLightProbe: { intensity },
     });
   };
@@ -466,8 +468,8 @@ const addTokyoPointsFogLightControl = async (
     LOCAL_DATASETS.tokyoPoints100GeoJSON.url,
   );
 
-  // Create separate fog light layer for Tokyo Points
-  const tokyoPointsFogLayer = view.addEffect<FogLightEffectLayer>({
+  // Create separate fog light descriptor for Tokyo Points
+  const tokyoPointsFogLayer = view.addEffect<FogLightEffectDesc>({
     fogLight: {
       lights: tokyoPointsLights,
       fogDensity: 2.0, // Different default density for Tokyo Points
@@ -637,24 +639,24 @@ const addFogLightControl = async (
   sceneChangeHandler?: EventHandler,
 ) => {
   // Fetch street light data and add fog light effect
-  let fogLightLayer: LayerHandle<FogLightEffectLayer> | undefined;
+  let fogLight: EffectHandle<FogLightEffectDesc> | undefined;
   let streetLights: FogLightDefinition[] = [];
 
   // Function to load light data from a file using common function
   const loadLightData = async (lightDataFile: string) => {
     streetLights = await loadGeoJSONLights(lightDataFile);
 
-    // Update or create fog light layer
-    if (fogLightLayer) {
-      fogLightLayer.update({
+    // Update or create fog light descriptor
+    if (fogLight) {
+      fogLight.update({
         fogLight: {
           lights: streetLights,
         },
       });
     } else {
-      // Create fog light layer, initially visible only at night
+      // Create fog light descriptor, initially visible only at night
       const isAtNight = view.atmosphere.isAtNight(view.camera.raw.position);
-      fogLightLayer = view.addEffect<FogLightEffectLayer>({
+      fogLight = view.addEffect<FogLightEffectDesc>({
         fogLight: {
           lights: streetLights,
           fogDensity: 0.5,
@@ -702,9 +704,9 @@ const addFogLightControl = async (
 
   // Function to update visibility based on time of day
   const updateVisibility = () => {
-    if (fogLightLayer && fogLightParams.enableAtNight) {
+    if (fogLight && fogLightParams.enableAtNight) {
       const isAtNight = view.atmosphere.isAtNight(view.camera.raw.position);
-      fogLightLayer.update({
+      fogLight.update({
         visible: isAtNight,
       });
     }
@@ -722,8 +724,8 @@ const addFogLightControl = async (
       label: "Fog Density",
     })
     .on("change", (ev) => {
-      if (fogLightLayer) {
-        fogLightLayer.update({
+      if (fogLight) {
+        fogLight.update({
           fogLight: { fogDensity: ev.value },
         });
       }
@@ -735,8 +737,8 @@ const addFogLightControl = async (
       label: "Surface Lighting",
     })
     .on("change", (ev) => {
-      if (fogLightLayer) {
-        fogLightLayer.update({
+      if (fogLight) {
+        fogLight.update({
           fogLight: { useSurfaceLighting: ev.value },
         });
       }
@@ -751,8 +753,8 @@ const addFogLightControl = async (
       label: "Downsample",
     })
     .on("change", (ev) => {
-      if (fogLightLayer) {
-        fogLightLayer.update({ fogLight: { downsample: ev.value } });
+      if (fogLight) {
+        fogLight.update({ fogLight: { downsample: ev.value } });
       }
     });
 
@@ -765,8 +767,8 @@ const addFogLightControl = async (
       label: "Max Lights/Tile",
     })
     .on("change", (ev) => {
-      if (fogLightLayer) {
-        fogLightLayer.update({ fogLight: { maxLightsPerTile: ev.value } });
+      if (fogLight) {
+        fogLight.update({ fogLight: { maxLightsPerTile: ev.value } });
       }
     });
 
@@ -779,8 +781,8 @@ const addFogLightControl = async (
       label: "Extent Scale",
     })
     .on("change", (ev) => {
-      if (fogLightLayer) {
-        fogLightLayer.update({ fogLight: { extentScale: ev.value } });
+      if (fogLight) {
+        fogLight.update({ fogLight: { extentScale: ev.value } });
       }
     });
 
@@ -793,8 +795,8 @@ const addFogLightControl = async (
       label: "Cull Distance (maxFar)",
     })
     .on("change", (ev) => {
-      if (fogLightLayer) {
-        fogLightLayer.update({ fogLight: { maxFar: ev.value } });
+      if (fogLight) {
+        fogLight.update({ fogLight: { maxFar: ev.value } });
       }
     });
 
@@ -802,8 +804,8 @@ const addFogLightControl = async (
   fogLightFolder
     .addBinding(fogLightParams, "debugShowGrid", { label: "Debug Grid" })
     .on("change", (ev) => {
-      if (fogLightLayer) {
-        fogLightLayer.update({ fogLight: { debugShowGrid: ev.value } });
+      if (fogLight) {
+        fogLight.update({ fogLight: { debugShowGrid: ev.value } });
       }
     });
 
@@ -816,12 +818,12 @@ const addFogLightControl = async (
       label: "Lights Intensity",
     })
     .on("change", (ev) => {
-      if (fogLightLayer) {
+      if (fogLight) {
         const updatedLights = streetLights.map((light) => ({
           ...light,
           intensity: ev.value,
         }));
-        fogLightLayer.update({
+        fogLight.update({
           fogLight: { lights: updatedLights },
         });
       }
@@ -836,12 +838,12 @@ const addFogLightControl = async (
       label: "Lights Radius",
     })
     .on("change", (ev) => {
-      if (fogLightLayer) {
+      if (fogLight) {
         const updatedLights = streetLights.map((light) => ({
           ...light,
           radius: ev.value,
         }));
-        fogLightLayer.update({
+        fogLight.update({
           fogLight: { lights: updatedLights },
         });
       }
@@ -853,13 +855,13 @@ const addFogLightControl = async (
       label: "Enable at Night",
     })
     .on("change", (ev) => {
-      if (fogLightLayer) {
+      if (fogLight) {
         if (ev.value) {
           // When enabled, check current time and update visibility
           updateVisibility();
         } else {
           // When disabled, always show the fog lights
-          fogLightLayer.update({
+          fogLight.update({
             visible: true,
           });
         }

@@ -1,11 +1,11 @@
 ---
-title: SSAOEffectLayer
-description: SSAO effect layer for navara_three
+title: SSAOEffectDesc
+description: SSAO effect descriptor for navara_three
 sidebar:
   order: 59
 ---
 
-`SSAOEffectLayer`クラスは、スクリーンスペースアンビエントオクルージョン(SSAO)エフェクトを適用するレイヤーです。ジオメトリの隙間や凹部に暗い影を追加し、より立体的な見た目を実現します。
+`SSAOEffectDesc`クラスは、スクリーンスペースアンビエントオクルージョン(SSAO)エフェクトを適用するDescriptorです。ジオメトリの隙間や凹部に暗い影を追加し、より立体的な見た目を実現します。
 
 ## Properties
 
@@ -13,7 +13,7 @@ sidebar:
 
 **Type:** `boolean | undefined`
 
-**Description:** エフェクトレイヤーの表示/非表示を制御します。
+**Description:** エフェクトの表示/非表示を制御します。
 
 **Default:** `true`
 
@@ -132,13 +132,13 @@ import { Color } from "@navara/three";
 ### 基本的なSSAOエフェクトの追加
 
 ```typescript
-import ThreeView, { SSAOEffectLayer } from "@navara/three";
+import ThreeView, { SSAOEffectDesc } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
-// SSAOエフェクトレイヤーを追加
-const ssaoLayer = view.addEffect<SSAOEffectLayer>({
+// SSAOエフェクトを追加
+const ssaoLayer = view.addEffect<SSAOEffectDesc>({
   visible: true,
   ssao: {},
 });
@@ -147,13 +147,13 @@ const ssaoLayer = view.addEffect<SSAOEffectLayer>({
 ### 高品質SSAOの設定
 
 ```typescript
-import ThreeView, { SSAOEffectLayer, Color } from "@navara/three";
+import ThreeView, { SSAOEffectDesc, Color } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
 // 高品質SSAOを追加
-const ssaoLayer = view.addEffect<SSAOEffectLayer>({
+const ssaoLayer = view.addEffect<SSAOEffectDesc>({
   visible: true,
   ssao: {
     quality: "High",
@@ -168,13 +168,13 @@ const ssaoLayer = view.addEffect<SSAOEffectLayer>({
 ### パフォーマンス重視のSSAO設定
 
 ```typescript
-import ThreeView, { SSAOEffectLayer } from "@navara/three";
+import ThreeView, { SSAOEffectDesc } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
 // 半解像度でパフォーマンスを向上
-const ssaoLayer = view.addEffect<SSAOEffectLayer>({
+const ssaoLayer = view.addEffect<SSAOEffectDesc>({
   visible: true,
   ssao: {
     quality: "Low",
@@ -186,7 +186,7 @@ const ssaoLayer = view.addEffect<SSAOEffectLayer>({
 ### デフォルトエフェクトと組み合わせた使用
 
 ```typescript
-import ThreeView, { SSAOEffectLayer, Color } from "@navara/three";
+import ThreeView, { SSAOEffectDesc, Color } from "@navara/three";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
@@ -194,11 +194,11 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-// デフォルトのフォトリアルレイヤーを追加
-plugin.addDefaultPhotorealLayers();
+// デフォルトのフォトリアルオブジェクトを追加
+plugin.addDefaultPhotorealScene();
 
 // SSAOを追加
-const ssaoLayer = view.addEffect<SSAOEffectLayer>({
+const ssaoLayer = view.addEffect<SSAOEffectDesc>({
   visible: true,
   ssao: {
     quality: "High",

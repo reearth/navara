@@ -1,13 +1,13 @@
 ---
-title: CylinderMeshLayer
-description: Cylinder mesh layer for navara_three
+title: CylinderMeshDesc
+description: Cylinder mesh descriptor for navara_three
 sidebar:
   order: 103
 ---
 
-The `CylinderMeshLayer` class is a mesh layer for drawing cylinder geometry. You can create cylinders and cones by specifying top radius, bottom radius, height, and other parameters.
+The `CylinderMeshDesc` class is a mesh descriptor for drawing cylinder geometry. You can create cylinders and cones by specifying top radius, bottom radius, height, and other parameters.
 
-In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `pickable`, `visible`) are available. See [MeshLayerDeclaration](./mesh-layer-base) for details.
+In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `pickable`, `visible`) are available. See [MeshDesc](./mesh-layer-base) for details.
 
 ## Properties
 
@@ -293,7 +293,7 @@ import { Color } from "@navara/three";
 
 **Type:** `string[]` (optional)
 
-**Description:** Specifies an array of selective effect layer IDs to apply to this mesh.
+**Description:** Specifies an array of selective effect descriptor IDs to apply to this mesh.
 
 **Example:**
 
@@ -330,13 +330,13 @@ import { Color } from "@navara/three";
 ### Basic Cylinder
 
 ```typescript
-import ThreeView, { CylinderMeshLayer, Color } from "@navara/three";
+import ThreeView, { CylinderMeshDesc, Color } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
-// Add a CylinderMeshLayer
-const cylinderLayer = view.addMesh<CylinderMeshLayer>({
+// Add a CylinderMeshDesc
+const cylinderLayer = view.addMesh<CylinderMeshDesc>({
   cylinder: {
     radiusTop: 50,
     radiusBottom: 50,
@@ -350,9 +350,9 @@ const cylinderLayer = view.addMesh<CylinderMeshLayer>({
 ### Creating a Cone
 
 ```typescript
-import ThreeView, { CylinderMeshLayer, Color } from "@navara/three";
+import ThreeView, { CylinderMeshDesc, Color } from "@navara/three";
 
-const coneLayer = view.addMesh<CylinderMeshLayer>({
+const coneLayer = view.addMesh<CylinderMeshDesc>({
   cylinder: {
     radiusTop: 0,
     radiusBottom: 100,

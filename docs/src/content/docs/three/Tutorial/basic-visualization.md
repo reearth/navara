@@ -50,7 +50,7 @@ view.addPlugin(plugin);
 await view.init();
 ```
 
-By adding `DefaultPlugin`, the default layers for meshes, effects, and lights become available.
+By adding `DefaultPlugin`, the default descriptors for meshes, effects, and lights become available.
 
 Add the following code to `main.ts`:
 
@@ -92,7 +92,7 @@ view.addPlugin(plugin);
 await view.init();
 ```
 
-Create a `ThreeView` instance, register default layers with `DefaultPlugin`, and then initialize. This sets up the 3D scene and camera.
+Create a `ThreeView` instance, register default descriptors with `DefaultPlugin`, and then initialize. This sets up the 3D scene and camera.
 
 **Adding Light**
 

@@ -1,11 +1,11 @@
 ---
-title: RainDropEffectLayer
-description: Rain drop effect layer for navara_three
+title: RainDropEffectDesc
+description: Rain drop effect descriptor for navara_three
 sidebar:
   order: 57
 ---
 
-The `RainDropEffectLayer` class is a layer that applies raindrop refraction effects to the screen. It generates an animation effect of raindrops flowing down the screen.
+The `RainDropEffectDesc` class is a Descriptor that applies raindrop refraction effects to the screen. It generates an animation effect of raindrops flowing down the screen.
 
 ## Properties
 
@@ -13,7 +13,7 @@ The `RainDropEffectLayer` class is a layer that applies raindrop refraction effe
 
 **Type:** `boolean | undefined`
 
-**Description:** Controls the visibility of the effect layer.
+**Description:** Controls the visibility of the effect descriptor.
 
 **Default:** `true`
 
@@ -75,7 +75,7 @@ The `RainDropEffectLayer` class is a layer that applies raindrop refraction effe
 
 **Type:** `number | undefined`
 
-**Description:** Specifies the number of active layers to simulate. Higher values add smaller raindrops but increase cost.
+**Description:** Specifies the number of active layers to simulate (shader layers). Higher values add smaller raindrops but increase cost.
 
 **Default:** `4`
 
@@ -292,7 +292,7 @@ The `RainDropEffectLayer` class is a layer that applies raindrop refraction effe
 ### Adding a basic raindrop effect
 
 ```typescript
-import ThreeView, { RainDropEffectLayer } from "@navara/three";
+import ThreeView, { RainDropEffectDesc } from "@navara/three";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
@@ -303,11 +303,11 @@ await view.init();
 // Enable animation (required for raindrops to flow)
 view.animation = true;
 
-// Add default photorealistic layers
-plugin.addDefaultPhotorealLayers();
+// Add default photorealistic objects
+plugin.addDefaultPhotorealScene();
 
-// Add raindrop effect layer
-const rainDropLayer = view.addEffect<RainDropEffectLayer>({
+// Add raindrop effect descriptor
+const rainDropLayer = view.addEffect<RainDropEffectDesc>({
   rainDrop: {
     opacity: 0.85,
     dropGridSize: 14,
@@ -321,4 +321,4 @@ const rainDropLayer = view.addEffect<RainDropEffectLayer>({
 
 ## Notes
 
-This effect has `allowDuplication` set to `true`, so multiple RainDropEffectLayer instances can be created. It provides a raindrop effect that animates over time. You need to set `view.animation = true` to enable the animation.
+This effect has `allowDuplication` set to `true`, so multiple RainDropEffectDesc instances can be created. It provides a raindrop effect that animates over time. You need to set `view.animation = true` to enable the animation.

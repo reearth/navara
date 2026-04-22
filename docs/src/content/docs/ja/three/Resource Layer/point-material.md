@@ -87,7 +87,7 @@ import { Color } from "@navara/three";
 
 **Type:** `string[] | undefined`
 
-**Description:** 適用するセレクティブエフェクトの ID を指定します（例: "bloom", "outline"）。SelectiveBloomEffectLayer や SelectiveOutlineEffectLayer と連携して使用します。
+**Description:** 適用するセレクティブエフェクトの ID を指定します（例: "bloom", "outline"）。SelectiveBloomEffectDesc や SelectiveOutlineEffectDesc と連携して使用します。
 
 **Default:** `undefined`
 
@@ -251,7 +251,7 @@ import { Color } from "@navara/three";
 
 **Type:** `boolean | undefined`
 
-**Description:** ポイントの透過度を考慮するかどうかを指定します。true にするとエフェクトレイヤーを有効にしたときにポイントがうまく表示されないことがあるので注意してください。
+**Description:** ポイントの透過度を考慮するかどうかを指定します。true にするとエフェクトを有効にしたときにポイントがうまく表示されないことがあるので注意してください。
 
 **Default:** `undefined`
 

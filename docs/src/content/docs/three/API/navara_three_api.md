@@ -1062,7 +1062,7 @@ const latitude = 34.6937;
 const altitude = 0;
 
 // Add a GLTF model
-const modelLayer = view.addGltfModelLayer({
+const modelHandle = view.addGltfModelLayer({
   data: { url: "/path/to/model.glb" },
   position: geodeticToVector3({
     lat: degreeToRadian(latitude),
@@ -1111,7 +1111,7 @@ const animate = () => {
   const euler = new Euler().setFromQuaternion(quaternion);
 
   // Update model position and rotation
-  modelLayer.update({
+  modelHandle.update({
     position: { x: pos.x, y: pos.y, z: pos.z },
     rotation: { x: euler.x, y: euler.y, z: euler.z },
   });

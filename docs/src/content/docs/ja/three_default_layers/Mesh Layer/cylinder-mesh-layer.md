@@ -1,13 +1,13 @@
 ---
-title: CylinderMeshLayer
-description: Cylinder mesh layer for navara_three
+title: CylinderMeshDesc
+description: Cylinder mesh descriptor for navara_three
 sidebar:
   order: 103
 ---
 
-`CylinderMeshLayer`クラスは、円柱(Cylinder)ジオメトリを描画するためのメッシュレイヤーです。上部半径・下部半径・高さなどを指定して円柱や円錐を作成できます。
+`CylinderMeshDesc`クラスは、円柱(Cylinder)ジオメトリを描画するためのメッシュです。上部半径・下部半径・高さなどを指定して円柱や円錐を作成できます。
 
-以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`pickable`、`visible`）が利用できます。詳細は [MeshLayerDeclaration](./mesh-layer-base) を参照してください。
+以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`pickable`、`visible`）が利用できます。詳細は [MeshDesc](./mesh-layer-base) を参照してください。
 
 ## Properties
 
@@ -293,7 +293,7 @@ import { Color } from "@navara/three";
 
 **Type:** `string[]` (optional)
 
-**Description:** このメッシュに適用するセレクティブエフェクトレイヤーIDの配列を指定します。
+**Description:** このメッシュに適用するセレクティブエフェクトIDの配列を指定します。
 
 **Example:**
 
@@ -330,13 +330,13 @@ import { Color } from "@navara/three";
 ### 基本的な円柱
 
 ```typescript
-import ThreeView, { CylinderMeshLayer, Color } from "@navara/three";
+import ThreeView, { CylinderMeshDesc, Color } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
-// CylinderMeshLayerを追加
-const cylinderLayer = view.addMesh<CylinderMeshLayer>({
+// CylinderMeshDescを追加
+const cylinderLayer = view.addMesh<CylinderMeshDesc>({
   cylinder: {
     radiusTop: 50,
     radiusBottom: 50,
@@ -350,9 +350,9 @@ const cylinderLayer = view.addMesh<CylinderMeshLayer>({
 ### 円錐の作成
 
 ```typescript
-import ThreeView, { CylinderMeshLayer, Color } from "@navara/three";
+import ThreeView, { CylinderMeshDesc, Color } from "@navara/three";
 
-const coneLayer = view.addMesh<CylinderMeshLayer>({
+const coneLayer = view.addMesh<CylinderMeshDesc>({
   cylinder: {
     radiusTop: 0,
     radiusBottom: 100,

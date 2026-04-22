@@ -87,7 +87,7 @@ import { Color } from "@navara/three";
 
 **Type:** `string[] | undefined`
 
-**Description:** Specifies the IDs of selective effects to apply (e.g., "bloom", "outline"). Used in conjunction with SelectiveBloomEffectLayer or SelectiveOutlineEffectLayer.
+**Description:** Specifies the IDs of selective effects to apply (e.g., "bloom", "outline"). Used in conjunction with SelectiveBloomEffectDesc or SelectiveOutlineEffectDesc.
 
 **Default:** `undefined`
 
@@ -469,7 +469,7 @@ import { Color } from "@navara/three";
 
 **Type:** `boolean | undefined`
 
-**Description:** Specifies whether to enable transparency. Must be set to `true` to use `opacity`. May cause unexpected behavior when using effect layers.
+**Description:** Specifies whether to enable transparency. Must be set to `true` to use `opacity`. May cause unexpected behavior when using effects.
 
 **Default:** `undefined`
 

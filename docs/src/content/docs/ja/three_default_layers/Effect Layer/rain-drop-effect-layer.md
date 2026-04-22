@@ -1,11 +1,11 @@
 ---
-title: RainDropEffectLayer
-description: Rain drop effect layer for navara_three
+title: RainDropEffectDesc
+description: Rain drop effect descriptor for navara_three
 sidebar:
   order: 57
 ---
 
-`RainDropEffectLayer`クラスは、画面に雨粒の屈折効果を適用するレイヤーです。雨粒が画面を流れ落ちるアニメーション効果を生成します。
+`RainDropEffectDesc`クラスは、画面に雨粒の屈折効果を適用するDescriptorです。雨粒が画面を流れ落ちるアニメーション効果を生成します。
 
 ## Properties
 
@@ -13,7 +13,7 @@ sidebar:
 
 **Type:** `boolean | undefined`
 
-**Description:** エフェクトレイヤーの表示/非表示を制御します。
+**Description:** エフェクトの表示/非表示を制御します。
 
 **Default:** `true`
 
@@ -292,7 +292,7 @@ sidebar:
 ### 基本的な雨粒エフェクトの追加
 
 ```typescript
-import ThreeView, { RainDropEffectLayer } from "@navara/three";
+import ThreeView, { RainDropEffectDesc } from "@navara/three";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
@@ -303,11 +303,11 @@ await view.init();
 // アニメーションを有効にする（雨粒が流れるため必須）
 view.animation = true;
 
-// デフォルトのフォトリアルレイヤーを追加
-plugin.addDefaultPhotorealLayers();
+// デフォルトのフォトリアルオブジェクトを追加
+plugin.addDefaultPhotorealScene();
 
-// 雨粒エフェクトレイヤーを追加
-const rainDropLayer = view.addEffect<RainDropEffectLayer>({
+// 雨粒エフェクトを追加
+const rainDropLayer = view.addEffect<RainDropEffectDesc>({
   rainDrop: {
     opacity: 0.85,
     dropGridSize: 14,
@@ -321,4 +321,4 @@ const rainDropLayer = view.addEffect<RainDropEffectLayer>({
 
 ## 備考
 
-このエフェクトは`allowDuplication`が`true`に設定されているため、複数のRainDropEffectLayerインスタンスを作成できます。時間とともにアニメーションする雨粒エフェクトを提供します。アニメーションを有効にするために`view.animation = true`を設定する必要があります。
+このエフェクトは`allowDuplication`が`true`に設定されているため、複数のRainDropEffectDescインスタンスを作成できます。時間とともにアニメーションする雨粒エフェクトを提供します。アニメーションを有効にするために`view.animation = true`を設定する必要があります。

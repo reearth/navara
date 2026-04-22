@@ -25,8 +25,8 @@ export async function run() {
 
   view.toneMappingExposure = 10;
 
-  // Add atmosphere layers
-  const defaultEffects = plugin.addDefaultPhotorealLayers();
+  // Add atmosphere descriptors
+  const defaultEffects = plugin.addDefaultPhotorealScene();
 
   defaultEffects.sky.delete();
   defaultEffects.aerialPerspective.update({

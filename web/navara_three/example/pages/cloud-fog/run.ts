@@ -1,9 +1,9 @@
 import ThreeView, {
   Color,
   JAPAN_GSI_ELEVATION_DECODER,
-  LayerHandle,
+  EffectHandle,
 } from "@navara/three";
-import type { CloudsEffectLayer } from "@navara/three_default_layers";
+import type { CloudsEffectDesc } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
   type DefaultDeclarations,
@@ -27,10 +27,10 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
 
   await view.init();
 
-  const defaultEffects = defaultPlugin.addDefaultPhotorealLayers();
+  const defaultEffects = defaultPlugin.addDefaultPhotorealScene();
 
-  // Add clouds effect layer explicitly
-  const cloudsLayer = view.addEffect<CloudsEffectLayer>({
+  // Add clouds effect descriptor explicitly
+  const cloudsLayer = view.addEffect<CloudsEffectDesc>({
     clouds: {},
   });
 
@@ -110,7 +110,7 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
 
 const addCloudFogControl = (
   pane: Pane,
-  cloudsLayerHandle: LayerHandle<CloudsEffectLayer>,
+  cloudsLayerHandle: EffectHandle<CloudsEffectDesc>,
 ) => {
   const PARAMS = {
     height: 2000,

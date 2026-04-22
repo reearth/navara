@@ -1,24 +1,21 @@
 import type ThreeView from "../index";
 
 import { LayerRegistry } from "./LayerRegistry";
-import type {
-  LightLayerConfig,
-  LightLayerDeclaration,
-} from "./LightLayerDeclaration";
+import type { LightConfig, LightDesc } from "./LightDesc";
 import type { ViewContext } from "./ViewContext";
 
 export type LightLayerConstructor = new (
   view: ThreeView,
   ctx: ViewContext,
-  config: LightLayerConfig,
-) => LightLayerDeclaration;
+  config: LightConfig,
+) => LightDesc;
 
 export class LightLayerRegistry extends LayerRegistry<
   LightLayerConstructor,
-  LightLayerDeclaration,
-  LightLayerConfig
+  LightDesc,
+  LightConfig
 > {
-  create(name: string, config: LightLayerConfig): LightLayerDeclaration {
+  create(name: string, config: LightConfig): LightDesc {
     const LightClass = this.getConstructor(name);
     if (!LightClass) {
       throw new Error(`Unknown light type: ${name}`);

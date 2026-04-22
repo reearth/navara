@@ -1,13 +1,13 @@
 ---
-title: GlowGlobeMeshLayer
-description: Glow globe mesh layer for navara_three
+title: GlowGlobeMeshDesc
+description: Glow globe mesh descriptor for navara_three
 sidebar:
   order: 108
 ---
 
-`GlowGlobeMeshLayer`クラスは、地球の周りにフレネル効果による光彩(グロー)を表示するメッシュレイヤーです。大気圏の光の散乱を模倣し、地球の縁に沿った美しいハロ効果を作成します。
+`GlowGlobeMeshDesc`クラスは、地球の周りにフレネル効果による光彩(グロー)を表示するメッシュです。大気圏の光の散乱を模倣し、地球の縁に沿った美しいハロ効果を作成します。
 
-以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`pickable`、`visible`）が利用できます。詳細は [MeshLayerDeclaration](./mesh-layer-base) を参照してください。
+以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`pickable`、`visible`）が利用できます。詳細は [MeshDesc](./mesh-layer-base) を参照してください。
 
 ## Properties
 
@@ -89,7 +89,7 @@ import { Color } from "@navara/three";
 
 **Type:** `number`
 
-**Description:** グロー効果の不透明度/アルファチャンネルを指定します。グローレイヤー全体の透明度を制御します。この値はシェーダーの色ユニフォームのアルファ成分として使用されます。値が小さいほど微妙で透明なグローになり、値が大きいほど不透明になります。
+**Description:** グロー効果の不透明度/アルファチャンネルを指定します。グローオブジェクト全体の透明度を制御します。この値はシェーダーの色ユニフォームのアルファ成分として使用されます。値が小さいほど微妙で透明なグローになり、値が大きいほど不透明になります。
 
 **Default:** `0.5`
 
@@ -110,13 +110,13 @@ import { Color } from "@navara/three";
 ### 基本的な使い方
 
 ```typescript
-import ThreeView, { GlowGlobeMeshLayer, Color } from "@navara/three";
+import ThreeView, { GlowGlobeMeshDesc, Color } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
-// GlowGlobeMeshLayerを追加
-const glowLayer = view.addMesh<GlowGlobeMeshLayer>({
+// GlowGlobeMeshDescを追加
+const glowLayer = view.addMesh<GlowGlobeMeshDesc>({
   glowGlobe: {
     radiusScale: 1.2,
     coefficient: 0.5,
@@ -132,7 +132,7 @@ const glowLayer = view.addMesh<GlowGlobeMeshLayer>({
 ```typescript
 import { Color } from "@navara/three";
 
-const glowLayer = view.addMesh<GlowGlobeMeshLayer>({
+const glowLayer = view.addMesh<GlowGlobeMeshDesc>({
   glowGlobe: {
     radiusScale: 1.15,
     coefficient: 0.6,
@@ -148,7 +148,7 @@ const glowLayer = view.addMesh<GlowGlobeMeshLayer>({
 ```typescript
 import { Color } from "@navara/three";
 
-const glowLayer = view.addMesh<GlowGlobeMeshLayer>({
+const glowLayer = view.addMesh<GlowGlobeMeshDesc>({
   glowGlobe: {
     radiusScale: 1.05,
     coefficient: 0.4,
@@ -161,7 +161,7 @@ const glowLayer = view.addMesh<GlowGlobeMeshLayer>({
 
 ## 技術的詳細
 
-GlowGlobeMeshLayerは、フレネル効果に基づくシェーダーを使用して実装されています:
+GlowGlobeMeshDescは、フレネル効果に基づくシェーダーを使用して実装されています:
 
 - **ジオメトリ**: WGS84楕円体に基づく球体ジオメトリで、地球の扁平率を考慮しています
 - **マテリアル**: カスタムシェーダーマテリアルで、視線角度に基づいてグロー強度を計算します

@@ -11,67 +11,63 @@ export * from "./ssao";
 export * from "./ssr";
 export * from "./toneMapping";
 
-// Effect layer declarations
+// Effect descriptor declarations
 export {
-  AerialPerspectiveEffectLayer,
+  AerialPerspectiveEffectDesc,
   type AerialPerspectiveConfig,
   type AerialPerspectiveUpdate,
-} from "./AerialPerspectiveEffectLayer";
+} from "./AerialPerspectiveEffectDesc";
 export {
-  CloudsEffectLayer,
+  CloudsEffectDesc,
   type CloudsConfig,
   type CloudsUpdate,
-} from "./CloudsEffectLayer";
+} from "./CloudsEffectDesc";
 export {
-  ColorGradingLUTEffectLayer,
+  ColorGradingLUTEffectDesc,
   DEFAULT_COLOR_GRADING_LUT_OPTIONS,
   type ColorGradingLUTConfig,
   type ColorGradingLUTUpdate,
-} from "./ColorGradingLUTEffectLayer";
+} from "./ColorGradingLUTEffectDesc";
 export {
-  DepthOfFieldEffectLayer,
+  DepthOfFieldEffectDesc,
   type DepthOfFieldConfig,
   type DepthOfFieldUpdate,
-} from "./DepthOfFieldEffectLayer";
+} from "./DepthOfFieldEffectDesc";
 export {
-  FogLightEffectLayer,
+  FogLightEffectDesc,
   type FogLightConfig,
   type FogLightUpdate,
-} from "./FogLightEffectLayer";
+} from "./FogLightEffectDesc";
 export {
-  FXAAEffectLayer,
+  FXAAEffectDesc,
   type FXAAConfig,
   type FXAAUpdate,
-} from "./FXAAEffectLayer";
+} from "./FXAAEffectDesc";
 export {
-  LensFlareEffectLayer,
+  LensFlareEffectDesc,
   type LensFlareConfig,
   type LensFlareUpdate,
-} from "./LensFlareEffectLayer";
+} from "./LensFlareEffectDesc";
 export {
-  RainDropEffectLayer,
+  RainDropEffectDesc,
   type RainDropConfig,
   type RainDropUpdate,
-} from "./RainDropEffectLayer";
+} from "./RainDropEffectDesc";
 export {
-  SMAAEffectLayer,
+  SMAAEffectDesc,
   type SMAAConfig,
   type SMAAUpdate,
-} from "./SMAAEffectLayer";
+} from "./SMAAEffectDesc";
 export {
-  SSAOEffectLayer,
+  SSAOEffectDesc,
   type SSAOConfig,
   type SSAOUpdate,
-} from "./SSAOEffectLayer";
+} from "./SSAOEffectDesc";
+export { SSREffectDesc, type SSRConfig, type SSRUpdate } from "./SSREffectDesc";
 export {
-  SSREffectLayer,
-  type SSRConfig,
-  type SSRUpdate,
-} from "./SSREffectLayer";
-export {
-  ToneMappingEffectLayer,
+  ToneMappingEffectDesc,
   type ToneMappingConfig,
   type ToneMappingUpdate,
-} from "./ToneMappingEffectLayer";
+} from "./ToneMappingEffectDesc";
 
 export { ToneMappingMode } from "postprocessing";

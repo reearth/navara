@@ -1,13 +1,13 @@
 ---
-title: GlowGlobeMeshLayer
-description: Glow globe mesh layer for navara_three
+title: GlowGlobeMeshDesc
+description: Glow globe mesh descriptor for navara_three
 sidebar:
   order: 108
 ---
 
-The `GlowGlobeMeshLayer` class is a mesh layer that displays a Fresnel-effect glow around the globe. It mimics the scattering of light in the atmosphere, creating a beautiful halo effect along the edges of the Earth.
+The `GlowGlobeMeshDesc` class is a mesh descriptor that displays a Fresnel-effect glow around the globe. It mimics the scattering of light in the atmosphere, creating a beautiful halo effect along the edges of the Earth.
 
-In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `pickable`, `visible`) are available. See [MeshLayerDeclaration](./mesh-layer-base) for details.
+In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `pickable`, `visible`) are available. See [MeshDesc](./mesh-layer-base) for details.
 
 ## Properties
 
@@ -110,13 +110,13 @@ import { Color } from "@navara/three";
 ### Basic Usage
 
 ```typescript
-import ThreeView, { GlowGlobeMeshLayer, Color } from "@navara/three";
+import ThreeView, { GlowGlobeMeshDesc, Color } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
-// Add a GlowGlobeMeshLayer
-const glowLayer = view.addMesh<GlowGlobeMeshLayer>({
+// Add a GlowGlobeMeshDesc
+const glowLayer = view.addMesh<GlowGlobeMeshDesc>({
   glowGlobe: {
     radiusScale: 1.2,
     coefficient: 0.5,
@@ -132,7 +132,7 @@ const glowLayer = view.addMesh<GlowGlobeMeshLayer>({
 ```typescript
 import { Color } from "@navara/three";
 
-const glowLayer = view.addMesh<GlowGlobeMeshLayer>({
+const glowLayer = view.addMesh<GlowGlobeMeshDesc>({
   glowGlobe: {
     radiusScale: 1.15,
     coefficient: 0.6,
@@ -148,7 +148,7 @@ const glowLayer = view.addMesh<GlowGlobeMeshLayer>({
 ```typescript
 import { Color } from "@navara/three";
 
-const glowLayer = view.addMesh<GlowGlobeMeshLayer>({
+const glowLayer = view.addMesh<GlowGlobeMeshDesc>({
   glowGlobe: {
     radiusScale: 1.05,
     coefficient: 0.4,
@@ -161,7 +161,7 @@ const glowLayer = view.addMesh<GlowGlobeMeshLayer>({
 
 ## Technical Details
 
-GlowGlobeMeshLayer is implemented using a Fresnel-effect-based shader:
+GlowGlobeMeshDesc is implemented using a Fresnel-effect-based shader:
 
 - **Geometry**: Sphere geometry based on the WGS84 ellipsoid, taking into account the Earth's oblateness
 - **Material**: A custom shader material that computes glow intensity based on the viewing angle

@@ -1,11 +1,11 @@
 ---
-title: FogLightEffectLayer
-description: Fog light effect layer for navara_three
+title: FogLightEffectDesc
+description: Fog light effect descriptor for navara_three
 sidebar:
   order: 55
 ---
 
-`FogLightEffectLayer`クラスは、ボリュメトリックライティングエフェクトを生成するレイヤーです。ポイントライトからのボリュメトリックフォグを計算し、光の散乱効果を表現します。
+`FogLightEffectDesc`クラスは、ボリュメトリックライティングエフェクトを生成するDescriptorです。ポイントライトからのボリュメトリックフォグを計算し、光の散乱効果を表現します。
 
 ## Properties
 
@@ -13,7 +13,7 @@ sidebar:
 
 **Type:** `boolean | undefined`
 
-**Description:** エフェクトレイヤーの表示/非表示を制御します。
+**Description:** エフェクトの表示/非表示を制御します。
 
 **Default:** `true`
 
@@ -191,13 +191,13 @@ sidebar:
 ### 基本的なフォグライトエフェクトの追加
 
 ```typescript
-import ThreeView, { FogLightEffectLayer, Color } from "@navara/three";
+import ThreeView, { FogLightEffectDesc, Color } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
-// フォグライトエフェクトレイヤーを追加
-view.addEffect<FogLightEffectLayer>({
+// フォグライトエフェクトを追加
+view.addEffect<FogLightEffectDesc>({
   fogLight: {
     lights: [
       {
@@ -216,7 +216,7 @@ view.addEffect<FogLightEffectLayer>({
 ### 夜間シーンでの街灯エフェクト
 
 ```typescript
-import ThreeView, { FogLightEffectLayer, Color, type LayerDescription } from "@navara/three";
+import ThreeView, { FogLightEffectDesc, Color, type LayerDescription } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
@@ -239,13 +239,13 @@ const fogLayerDesc = {
   visible: true,
 };
 
-view.addEffect<FogLightEffectLayer>(fogLayerDesc);
+view.addEffect<FogLightEffectDesc>(fogLayerDesc);
 ```
 
 ### 動的にライトを追加するシーン
 
 ```typescript
-import ThreeView, { FogLightEffectLayer, Color, type FogLightDefinition } from "@navara/three";
+import ThreeView, { FogLightEffectDesc, Color, type FogLightDefinition } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
@@ -253,8 +253,8 @@ await view.init();
 // 初期ライト配列
 const fogLights: FogLightDefinition[] = [];
 
-// フォグライトレイヤーを追加
-const fogLayer = view.addEffect<FogLightEffectLayer>({
+// フォグライトを追加
+const fogLayer = view.addEffect<FogLightEffectDesc>({
   fogLight: {
     lights: fogLights,
     fogDensity: 0.7,
@@ -285,14 +285,14 @@ function addLight(x: number, y: number, z: number) {
 ### 夜間のみ表示するフォグライト
 
 ```typescript
-import ThreeView, { FogLightEffectLayer, Color } from "@navara/three";
+import ThreeView, { FogLightEffectDesc, Color } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
 const isNight = view.atmosphere.isAtNight(view.camera.positionECEF); // 時刻に基づいて判定
 
-const fogLayer = view.addEffect<FogLightEffectLayer>({
+const fogLayer = view.addEffect<FogLightEffectDesc>({
   fogLight: {
     lights: [
       { position: { x: 0, y: 100, z: 0 }, color: new Color().setHex(0xffffff), intensity: 10, radius: 500 },
@@ -312,4 +312,4 @@ function updateVisibility(nightMode: boolean) {
 
 ## 備考
 
-このエフェクトは複数のライトをサポートしており、`allowDuplication`が`true`に設定されているため、複数のFogLightEffectLayerインスタンスを作成できます。
+このエフェクトは複数のライトをサポートしており、`allowDuplication`が`true`に設定されているため、複数のFogLightEffectDescインスタンスを作成できます。

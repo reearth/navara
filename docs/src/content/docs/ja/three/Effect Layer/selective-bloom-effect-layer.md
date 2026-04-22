@@ -1,11 +1,11 @@
 ---
-title: SelectiveBloomEffectLayer
-description: Selective bloom effect layer for navara_three
+title: SelectiveBloomEffectDesc
+description: Selective bloom effect descriptor for navara_three
 sidebar:
   order: 61
 ---
 
-`SelectiveBloomEffectLayer`クラスは、選択的なブルームエフェクトを適用するレイヤーです。マスクベースのフィルタリングを使用して、特定のオブジェクトにのみブルームエフェクトを適用できます。
+`SelectiveBloomEffectDesc`クラスは、選択的なブルームエフェクトを適用する Descriptor です。マスクベースのフィルタリングを使用して、特定のオブジェクトにのみブルームエフェクトを適用できます。
 
 ## Properties
 
@@ -13,7 +13,7 @@ sidebar:
 
 **Type:** `boolean | undefined`
 
-**Description:** エフェクトレイヤーの表示/非表示を制御します。
+**Description:** エフェクトの表示/非表示を制御します。
 
 **Default:** `true`
 
@@ -131,20 +131,20 @@ sidebar:
 
 ## オブジェクトへのエフェクト適用
 
-選択的ブルームエフェクトを特定のオブジェクトに適用するには、対象オブジェクトの`effectIds`プロパティにブルームエフェクトレイヤーのIDを指定します。
+選択的ブルームエフェクトを特定のオブジェクトに適用するには、対象オブジェクトの`effectIds`プロパティにブルームエフェクトのIDを指定します。
 
 ### effectIds
 
-対象オブジェクトに適用するセレクティブエフェクトレイヤーのIDの配列です。ブルームエフェクトレイヤーを追加すると一意のIDが割り当てられ、このIDを対象オブジェクトの`effectIds`に指定することでエフェクトが適用されます。
+対象オブジェクトに適用するセレクティブエフェクトのIDの配列です。ブルームエフェクトを追加すると一意のIDが割り当てられ、このIDを対象オブジェクトの`effectIds`に指定することでエフェクトが適用されます。
 
 ### selectiveEffectOcclusion
 
 エフェクト適用時のオクルージョン（遮蔽）処理モードを指定します。
 
-| 値 | 説明 |
-|----|------|
-| `"normal"` | 通常モード。深度テストを有効にし、他のオブジェクトに遮蔽されている部分にはエフェクトが適用されません（デフォルト） |
-| `"silhouette"` | シルエットモード。深度テストを無効にし、オブジェクトが遮蔽されていてもエフェクトが表示されます |
+| 値             | 説明                                                                                                               |
+| -------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `"normal"`     | 通常モード。深度テストを有効にし、他のオブジェクトに遮蔽されている部分にはエフェクトが適用されません（デフォルト） |
+| `"silhouette"` | シルエットモード。深度テストを無効にし、オブジェクトが遮蔽されていてもエフェクトが表示されます                     |
 
 ## Usage Examples
 
@@ -152,16 +152,16 @@ sidebar:
 
 ```typescript
 import ThreeView, {
-  SelectiveBloomEffectLayer,
-  BoxMeshLayer,
+  SelectiveBloomEffectDesc,
+  BoxMeshDesc,
   Color,
 } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
-// 選択的ブルームエフェクトレイヤーを追加
-const bloomLayer = view.addEffect<SelectiveBloomEffectLayer>({
+// 選択的ブルームエフェクトを追加
+const bloomLayer = view.addEffect<SelectiveBloomEffectDesc>({
   selectiveBloom: {
     strength: 0.8,
     radius: 0.2,
@@ -170,7 +170,7 @@ const bloomLayer = view.addEffect<SelectiveBloomEffectLayer>({
 });
 
 // オブジェクトにブルームエフェクトを適用
-const cubeLayer = view.addMesh<BoxMeshLayer>({
+const cubeLayer = view.addMesh<BoxMeshDesc>({
   box: {
     width: 100,
     height: 100,
@@ -187,7 +187,7 @@ const cubeLayer = view.addMesh<BoxMeshLayer>({
 ### 強いブルームエフェクト
 
 ```typescript
-import ThreeView, { SelectiveBloomEffectLayer } from "@navara/three";
+import ThreeView, { SelectiveBloomEffectDesc } from "@navara/three";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
@@ -195,11 +195,11 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-// デフォルトのフォトリアルレイヤーを追加
-plugin.addDefaultPhotorealLayers();
+// デフォルトのフォトリアルオブジェクトを追加
+plugin.addDefaultPhotorealScene();
 
 // 強いブルームエフェクトを追加
-const bloomLayer = view.addEffect<SelectiveBloomEffectLayer>({
+const bloomLayer = view.addEffect<SelectiveBloomEffectDesc>({
   selectiveBloom: {
     strength: 1.5,
     radius: 0.5,
@@ -211,13 +211,13 @@ const bloomLayer = view.addEffect<SelectiveBloomEffectLayer>({
 ### パフォーマンス重視の設定
 
 ```typescript
-import ThreeView, { SelectiveBloomEffectLayer } from "@navara/three";
+import ThreeView, { SelectiveBloomEffectDesc } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
 // パフォーマンス重視の設定
-const bloomLayer = view.addEffect<SelectiveBloomEffectLayer>({
+const bloomLayer = view.addEffect<SelectiveBloomEffectDesc>({
   selectiveBloom: {
     strength: 0.6,
     radius: 0.2,
@@ -230,12 +230,12 @@ const bloomLayer = view.addEffect<SelectiveBloomEffectLayer>({
 ### ブルームエフェクトの動的更新
 
 ```typescript
-import ThreeView, { SelectiveBloomEffectLayer } from "@navara/three";
+import ThreeView, { SelectiveBloomEffectDesc } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
-const bloomLayer = view.addEffect<SelectiveBloomEffectLayer>({
+const bloomLayer = view.addEffect<SelectiveBloomEffectDesc>({
   selectiveBloom: {
     strength: 0.8,
   },
@@ -253,12 +253,12 @@ bloomLayer.update({
 ### 3D Tiles へのブルーム適用
 
 ```typescript
-import ThreeView, { SelectiveBloomEffectLayer, Color } from "@navara/three";
+import ThreeView, { SelectiveBloomEffectDesc, Color } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
-const bloomLayer = view.addEffect<SelectiveBloomEffectLayer>({
+const bloomLayer = view.addEffect<SelectiveBloomEffectDesc>({
   selectiveBloom: {
     strength: 1.0,
     radius: 0.5,
@@ -285,12 +285,12 @@ const buildingsLayer = view.addLayer({
 ### GeoJSON モデルへのブルーム適用
 
 ```typescript
-import ThreeView, { SelectiveBloomEffectLayer, Color } from "@navara/three";
+import ThreeView, { SelectiveBloomEffectDesc, Color } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
-const bloomLayer = view.addEffect<SelectiveBloomEffectLayer>({
+const bloomLayer = view.addEffect<SelectiveBloomEffectDesc>({
   selectiveBloom: {
     strength: 1.2,
   },
@@ -316,7 +316,7 @@ const modelLayer = view.addLayer({
 
 ```typescript
 // 初期状態ではエフェクトなし
-const cubeLayer = view.addMesh<BoxMeshLayer>({
+const cubeLayer = view.addMesh<BoxMeshDesc>({
   box: {
     width: 100,
     height: 100,

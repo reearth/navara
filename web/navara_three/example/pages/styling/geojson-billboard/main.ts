@@ -19,7 +19,7 @@ const run = async () => {
 
   await view.init();
 
-  defaultPlugin.addDefaultPhotorealLayers();
+  defaultPlugin.addDefaultPhotorealScene();
 
   view.setCamera({
     lng: 138.733,

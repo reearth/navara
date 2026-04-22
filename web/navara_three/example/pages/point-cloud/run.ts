@@ -5,12 +5,9 @@ import { Pane } from "tweakpane";
 import { showAttributions } from "../../helpers/attributions";
 import { TILE_DATASETS, TILES_3D_DATASETS } from "../../helpers/constants";
 import { addDateControl } from "../../helpers/control";
-import {
-  addCtrlPanel,
-  type MaterialLayerDescription,
-} from "../../helpers/panel";
+import { addCtrlPanel, type MaterialDesc } from "../../helpers/panel";
 
-const gGeoLayersDef: MaterialLayerDescription[] = [
+const gGeoLayersDef: MaterialDesc[] = [
   {
     type: "cesium3dtiles",
     data: { url: TILES_3D_DATASETS.YamanashiKyonaka.url },
@@ -39,7 +36,7 @@ export const run = async (view: ThreeView) => {
 
   await view.init();
 
-  defaultPlugin.addDefaultPhotorealLayers();
+  defaultPlugin.addDefaultPhotorealScene();
 
   view.setCamera({
     lat: 35.4904441833,

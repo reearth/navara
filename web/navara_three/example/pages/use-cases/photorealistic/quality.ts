@@ -1,5 +1,5 @@
 import type {
-  SunLightLayerConfig,
+  SunLightConfig,
   CloudsConfig,
   RainDropConfig,
   SSRConfig,
@@ -13,7 +13,7 @@ export const QUALITY: Record<
     Pick<CloudsConfig, "clouds"> &
       Pick<RainDropConfig, "rainDrop"> &
       Pick<SSRConfig, "ssr"> &
-      Pick<SunLightLayerConfig, "sun">
+      Pick<SunLightConfig, "sun">
   >
 > = {
   ultra: {

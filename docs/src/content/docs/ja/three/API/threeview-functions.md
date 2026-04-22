@@ -11,7 +11,7 @@ sidebar:
 
 ### addLayer()
 
-navara_three に新しいリソースレイヤーを追加します。このメソッドは、リソースレイヤー（タイル、地形、geojson など）をサポートします。メッシュレイヤーには `addMesh()`、ライトレイヤーには `addLight()`、エフェクトレイヤーには `addEffect()` を使用してください。
+navara_three に新しいリソースレイヤーを追加します。このメソッドは、リソースレイヤー（タイル、地形、geojson など）をサポートします。メッシュには `addMesh()`、ライトには `addLight()`、エフェクトには `addEffect()` を使用してください。
 
 **Syntax:**
 
@@ -51,25 +51,25 @@ const layer = view.addLayer({
 
 ### updateLayerById()
 
-navara_three 上の特定のレイヤーを更新します。
+`addLayer()` で追加したリソースレイヤーの設定を ID で更新します。
 
 **Syntax:**
 
 ```tsx
-updateLayerById(layerId: string, l: LayerDescription): void
+updateLayerById(id: string, l: LayerDescription): void
 ```
 
 **Parameters:**
 
-- `layerId`: 更新するレイヤーの ID
+- `id`: 更新するレイヤーの一意識別子
 - `l`: 更新したいプロパティを指定します
 
 **Example:**
 
 ```tsx
-const layerId = layer.id; // addLayer の戻り値からレイヤー ID を取得
+const id = layer.id; // addLayer の戻り値からレイヤー ID を取得
 
-view.updateLayerById(layerId, {
+view.updateLayerById(id, {
   type: "tiles",
   data: {
     url: "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg",
@@ -84,26 +84,166 @@ view.updateLayerById(layerId, {
 });
 ```
 
-### deleteLayerById()
+### updateMeshById()
 
-navara_three 上の特定のレイヤーを削除します。
+メッシュディスクリプタの設定を ID で更新します。
+`addMesh()` と同じディスクリプタ形式を受け付けます。
 
 **Syntax:**
 
 ```tsx
-deleteLayerById(layerId: string): void
+updateMeshById(id: string, updates: OmitType<MeshConfig | D["mesh"]>): void
 ```
 
 **Parameters:**
 
-- `layerId`: 削除するレイヤーの ID
+- `id`: 更新するメッシュの一意識別子
+- `updates`: 更新するプロパティを含む設定オブジェクト（`addMesh()` と同じ形式）
 
 **Example:**
 
 ```tsx
-const layerId = layer.id;
+const handle = view.addMesh<BoxMeshDesc>({ box: { width: 100 } });
 
-view.deleteLayerById(layerId);
+view.updateMeshById(handle.id, { box: { width: 200 } });
+```
+
+### updateLightById()
+
+ライトディスクリプタの設定を ID で更新します。
+`addLight()` と同じディスクリプタ形式を受け付けます。
+
+**Syntax:**
+
+```tsx
+updateLightById(id: string, updates: OmitType<LightConfig | D["light"]>): void
+```
+
+**Parameters:**
+
+- `id`: 更新するライトの一意識別子
+- `updates`: 更新するプロパティを含む設定オブジェクト（`addLight()` と同じ形式）
+
+**Example:**
+
+```tsx
+const handle = view.addLight<SunLightDesc>({ sun: { intensity: 1.0 } });
+
+view.updateLightById(handle.id, { sun: { intensity: 0.5 } });
+```
+
+### updateEffectById()
+
+エフェクトディスクリプタの設定を ID で更新します。
+`addEffect()` と同じディスクリプタ形式を受け付けます。
+
+**Syntax:**
+
+```tsx
+updateEffectById(id: string, updates: OmitType<BuiltInEffectDescription | EffectConfig | D["effect"]>): void
+```
+
+**Parameters:**
+
+- `id`: 更新するエフェクトの一意識別子
+- `updates`: 更新するプロパティを含む設定オブジェクト（`addEffect()` と同じ形式）
+
+**Example:**
+
+```tsx
+const handle = view.addEffect<SSAOEffectDesc>({ ssao: { radius: 0.5 } });
+
+view.updateEffectById(handle.id, { ssao: { radius: 1.0 } });
+```
+
+### deleteLayerById()
+
+リソースレイヤーを ID で削除します。
+
+**Syntax:**
+
+```tsx
+deleteLayerById(id: string): boolean
+```
+
+**Parameters:**
+
+- `id`: 削除するレイヤーの一意識別子
+
+**Returns:** レイヤーが見つかり削除された場合は `true`、それ以外は `false`。
+
+**Example:**
+
+```tsx
+const id = layer.id;
+
+view.deleteLayerById(id);
+```
+
+### deleteMeshById()
+
+メッシュディスクリプタを ID で削除します。
+
+**Syntax:**
+
+```tsx
+deleteMeshById(id: string): boolean
+```
+
+**Parameters:**
+
+- `id`: 削除するメッシュの一意識別子
+
+**Returns:** メッシュが見つかり削除された場合は `true`、それ以外は `false`。
+
+**Example:**
+
+```tsx
+view.deleteMeshById(handle.id);
+```
+
+### deleteLightById()
+
+ライトディスクリプタを ID で削除します。
+
+**Syntax:**
+
+```tsx
+deleteLightById(id: string): boolean
+```
+
+**Parameters:**
+
+- `id`: 削除するライトの一意識別子
+
+**Returns:** ライトが見つかり削除された場合は `true`、それ以外は `false`。
+
+**Example:**
+
+```tsx
+view.deleteLightById(handle.id);
+```
+
+### deleteEffectById()
+
+エフェクトディスクリプタを ID で削除します。
+
+**Syntax:**
+
+```tsx
+deleteEffectById(id: string): boolean
+```
+
+**Parameters:**
+
+- `id`: 削除するエフェクトの一意識別子
+
+**Returns:** エフェクトが見つかり削除された場合は `true`、それ以外は `false`。
+
+**Example:**
+
+```tsx
+view.deleteEffectById(handle.id);
 ```
 
 ### init()
@@ -569,83 +709,83 @@ view.on("click", (event) => {
 
 ### registerMesh()
 
-カスタムメッシュレイヤークラスを登録します。
+カスタムメッシュクラスを登録します。
 
 **Syntax:**
 
 ```tsx
-registerMesh(name: string, meshClass: MeshLayerConstructor): void
+registerMesh(name: string, meshClass: MeshDescConstructor): void
 ```
 
 **Parameters:**
 
-- `name`: 登録するメッシュレイヤーの名前
-- `meshClass`: メッシュレイヤーのコンストラクタ
+- `name`: 登録するメッシュの名前
+- `meshClass`: メッシュのコンストラクタ
 
 **Example:**
 
 ```tsx
-class CustomMeshLayer extends MeshLayer {
+class CustomMeshDesc extends MeshDesc {
   onCreate() {
     // カスタム実装
   }
 }
 
-view.registerMesh("customMesh", CustomMeshLayer);
+view.registerMesh("customMesh", CustomMeshDesc);
 ```
 
 ### registerLight()
 
-カスタムライトレイヤークラスを登録します。
+カスタムライトクラスを登録します。
 
 **Syntax:**
 
 ```tsx
-registerLight(name: string, lightClass: LightLayerConstructor): void
+registerLight(name: string, lightClass: LightDescConstructor): void
 ```
 
 **Parameters:**
 
-- `name`: 登録するライトレイヤーの名前
-- `lightClass`: ライトレイヤーのコンストラクタ
+- `name`: 登録するライトの名前
+- `lightClass`: ライトのコンストラクタ
 
 **Example:**
 
 ```tsx
-class CustomLightLayer extends LightLayer {
+class CustomLightDesc extends LightDesc {
   onCreate() {
     // カスタム実装
   }
 }
 
-view.registerLight("customLight", CustomLightLayer);
+view.registerLight("customLight", CustomLightDesc);
 ```
 
 ### registerEffect()
 
-カスタムエフェクトレイヤークラスを登録します。
+カスタムエフェクトクラスを登録します。
 
 **Syntax:**
 
 ```tsx
-registerEffect(name: string, effectClass: EffectLayerConstructor): void
+registerEffect(name: string, effectClass: EffectDescConstructor): void
 ```
 
 **Parameters:**
 
-- `name`: 登録するエフェクトレイヤーの名前
-- `effectClass`: エフェクトレイヤーのコンストラクタ
+- `name`: 登録するエフェクトの名前
+- `effectClass`: エフェクトのコンストラクタ
 
 **Example:**
 
 ```tsx
-class CustomEffectLayer extends EffectLayer {
+class CustomEffectDesc extends EffectDesc {
   onCreate() {
     // カスタム実装
   }
 }
 
-view.registerEffect("customEffect", CustomEffectLayer);
+view.registerEffect("customEffect", CustomEffectDesc);
 ```
 
 ### addPlugin()

@@ -1,18 +1,18 @@
-# Custom Layers & Plugin System
+# Custom Descriptors & Plugin System
 
-This document explains the plugin system and custom layer architecture in Navara.
+This document explains the plugin system and custom descriptor architecture in Navara.
 
 ## Motivation
 
-Rendering layers (meshes, lights, effects) are purely Three.js constructs with no dependency on the GIS engine or WASM modules. Keeping them separate from `@navara/three` ensures that:
+Rendering descriptors (meshes, lights, effects) are purely Three.js constructs with no dependency on the GIS engine or WASM modules. Keeping them separate from `@navara/three` ensures that:
 
 - **The core stays focused** on bridging the GIS engine to Three.js, without being inflated by rendering-only implementations.
-- **GIS and rendering concerns stay decoupled** — GIS-driven layers (tiles, vector features) and rendering-only layers (decorative meshes, atmospheric effects, lights) have a clear boundary.
-- **Custom and official layers are on equal footing** — external packages use the same public API as the default layers, so users can extend, replace, or compose layers freely.
+- **GIS and rendering concerns stay decoupled** — GIS-driven descriptors (tiles, vector features) and rendering-only descriptors (decorative meshes, atmospheric effects, lights) have a clear boundary.
+- **Custom and official descriptors are on equal footing** — external packages use the same public API as the default descriptors, so users can extend, replace, or compose descriptors freely.
 
-## Layer Types
+## Descriptor Types
 
-`ThreeView` provides three registration methods, each corresponding to a layer category:
+`ThreeView` provides three registration methods, each corresponding to a descriptor category:
 
 | Method                             | Category | Purpose                                                            |
 | ---------------------------------- | -------- | ------------------------------------------------------------------ |
@@ -20,7 +20,7 @@ Rendering layers (meshes, lights, effects) are purely Three.js constructs with n
 | `view.registerLight(name, class)`  | Light    | Light sources (sun, ambient, light probes)                         |
 | `view.registerEffect(name, class)` | Effect   | Post-processing effects (SSAO, SSR, tone mapping, clouds, etc.)    |
 
-All three are available to plugins, giving external packages the same capabilities as built-in layers.
+All three are available to plugins, giving external packages the same capabilities as built-in descriptors.
 
 ## Plugin System
 
@@ -43,7 +43,7 @@ view.addPlugin(plugin);   // Register before init()
 await view.init();        // Calls plugin.init(view) for each registered plugin
 ```
 
-Light, effect, and mesh layers are registered through the plugin system (e.g., `@navara/three_default_plugin`). Core effect layers (MRT, selective effects, final copy) are registered by `@navara/three` itself.
+Light, effect, and mesh descriptors are registered through the plugin system (e.g., `@navara/three_default_plugin`). Core effect descriptors (MRT, selective effects, final copy) are registered by `@navara/three` itself.
 
 Multiple plugins can be composed together:
 
@@ -53,17 +53,17 @@ view.addPlugin(new MyPlugin());
 await view.init();
 ```
 
-## Implementing a Custom Layer
+## Implementing a Custom Descriptor
 
-### Mesh layer
+### Mesh descriptor
 
-Extend `MeshLayerDeclaration` (or `MeshLayerDeclarationForSelectiveEffect` for bloom/outline support). Define a config type, implement `createMesh()`, and optionally override `onUpdateConfig()` for dynamic updates.
+Extend `MeshDesc` (or `MeshDescWithSelectiveEffect` for bloom/outline support). Define a config type, implement `createMesh()`, and optionally override `onUpdateConfig()` for dynamic updates.
 
 ```typescript
 import {
-  MeshLayerDeclaration,
-  type MeshLayerConfig,
-  type MeshLayerUpdate,
+  MeshDesc,
+  type MeshConfig,
+  type MeshUpdate,
   type ViewContext,
   Color,
 } from "@navara/three";
@@ -76,10 +76,10 @@ type MyMeshDescription = {
   };
 };
 
-type MyMeshConfig = MeshLayerConfig & MyMeshDescription;
-type MyMeshUpdate = MeshLayerUpdate & MyMeshDescription;
+type MyMeshConfig = MeshConfig & MyMeshDescription;
+type MyMeshUpdate = MeshUpdate & MyMeshDescription;
 
-class MyMeshLayer extends MeshLayerDeclaration<
+class MyMeshDesc extends MeshDesc<
   MyMeshConfig,
   MyMeshUpdate,
   Mesh<SphereGeometry, MeshStandardMaterial>
@@ -112,7 +112,7 @@ class MyMeshLayer extends MeshLayerDeclaration<
 }
 ```
 
-See `MeshLayerDeclaration` JSDoc and the `custom-shader` example for a complete tutorial.
+See `MeshDesc` JSDoc and the `custom-shader` example for a complete tutorial.
 
 ### Picking support
 
@@ -123,9 +123,9 @@ Mesh layers can opt into GPU-based click picking by setting `pickable: true` in 
 For layers that use standard Three.js materials (`MeshStandardMaterial`, `MeshLambertMaterial`, etc.) or `ShaderMaterial`/`LineMaterial`, wrap the mesh in a `PickableMeshWrapper`. The wrapper automatically injects picking shader code via `onBeforeCompile` (for standard materials) or direct source mutation (for `ShaderMaterial`).
 
 ```typescript
-import { MeshLayerDeclaration, PickableMeshWrapper, type ViewContext } from "@navara/three";
+import { MeshDesc, PickableMeshWrapper, type ViewContext } from "@navara/three";
 
-class MyPickableLayer extends MeshLayerDeclaration</* ... */> {
+class MyPickableDesc extends MeshDesc</* ... */> {
   private pickWrapper?: PickableMeshWrapper;
 
   get batchId(): number | undefined {
@@ -222,16 +222,16 @@ view.on("pick", (info) => {
 });
 ```
 
-### Instanced mesh layer
+### Instanced mesh descriptor
 
-Extend `InstancedMeshLayerDeclaration` to render many instances of the same geometry in a single draw call via Three.js `InstancedMesh`. Implement four abstract methods: `createGeometry()`, `createMaterial()`, `getChildConfigs()`, and `getInstanceColor()`. Optionally override `getInstanceScale()` to encode geometry-specific dimensions (e.g., width/height/depth) into the scale.
+Extend `InstancedMeshDesc` to render many instances of the same geometry in a single draw call via Three.js `InstancedMesh`. Implement four abstract methods: `createGeometry()`, `createMaterial()`, `getChildConfigs()`, and `getInstanceColor()`. Optionally override `getInstanceScale()` to encode geometry-specific dimensions (e.g., width/height/depth) into the scale.
 
 ```typescript
 import {
-  InstancedMeshLayerDeclaration,
+  InstancedMeshDesc,
   type InstancedChildConfig,
-  type InstancedMeshLayerConfig,
-  type InstancedMeshLayerUpdate,
+  type InstancedMeshConfig,
+  type InstancedMeshUpdate,
   type ViewContext,
   Color,
 } from "@navara/three";
@@ -249,10 +249,10 @@ type BoxesDescription = {
   children?: BoxChildConfig[];
 };
 
-type MyConfig = InstancedMeshLayerConfig & { boxes?: BoxesDescription };
-type MyUpdate = InstancedMeshLayerUpdate & { boxes?: BoxesDescription };
+type MyConfig = InstancedMeshConfig & { boxes?: BoxesDescription };
+type MyUpdate = InstancedMeshUpdate & { boxes?: BoxesDescription };
 
-class InstancedBoxMeshLayer extends InstancedMeshLayerDeclaration<
+class InstancedBoxMeshDesc extends InstancedMeshDesc<
   BoxGeometry, MeshLambertMaterial, MyConfig, MyUpdate, BoxChildConfig
 > {
   private config: MyConfig;
@@ -288,11 +288,11 @@ class InstancedBoxMeshLayer extends InstancedMeshLayerDeclaration<
 
 After creation, instances can be managed dynamically via `add()`, `removeAt()`, `updateAt()`, `clear()`, and `count`. The internal buffer grows automatically when capacity is exceeded.
 
-See `InstancedBoxMeshLayer` and the `mesh-layers/instanced-mesh` example for a complete reference.
+See `InstancedBoxMeshDesc` and the `mesh-layers/instanced-mesh` example for a complete reference.
 
-### Bundling layers into a plugin
+### Bundling descriptors into a plugin
 
-A plugin registers layer classes so they can be used via `view.addMesh()`, `view.addLight()`, `view.addEffect()`:
+A plugin registers descriptor classes so they can be used via `view.addMesh()`, `view.addLight()`, `view.addEffect()`:
 
 ```typescript
 import { Plugin } from "@navara/core";
@@ -306,16 +306,16 @@ type CustomDeclarations = {
 
 class MyPlugin extends Plugin {
   async init(view: ThreeView<CustomDeclarations>) {
-    view.registerMesh("myMesh", MyMeshLayer);
-    view.registerLight("myLight", MyCustomLightLayer);
-    view.registerEffect("myEffect", MyCustomEffectLayer);
+    view.registerMesh("myMesh", MyMeshDesc);
+    view.registerLight("myLight", MyCustomLightDesc);
+    view.registerEffect("myEffect", MyCustomEffectDesc);
   }
 }
 ```
 
 ## `@navara/three_default_plugin`
 
-`@navara/three_default_plugin` is a plugin that registers the default layers from `@navara/three_default_layers`. It also exports `DefaultDeclarations` — a structured type with `mesh`, `light`, and `effect` fields for type-safe declarations.
+`@navara/three_default_plugin` is a plugin that registers the default descriptors from `@navara/three_default_layers`. It also exports `DefaultDeclarations` — a structured type with `mesh`, `light`, and `effect` fields for type-safe declarations.
 
 ```typescript
 import ThreeView from "@navara/three";

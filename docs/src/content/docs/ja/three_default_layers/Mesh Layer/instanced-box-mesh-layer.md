@@ -1,13 +1,13 @@
 ---
-title: InstancedBoxMeshLayer
-description: navara_three 向け GPU インスタンスボックスメッシュレイヤー
+title: InstancedBoxMeshDesc
+description: navara_three 向け GPU インスタンスボックスメッシュ
 sidebar:
   order: 103
 ---
 
-`InstancedBoxMeshLayer` クラスは、GPU インスタンシングを使用して複数のボックスインスタンスをレンダリングするメッシュレイヤーです。すべてのボックスが1つのジオメトリとマテリアルを共有し、1回の描画コールで高パフォーマンスにレンダリングされます。`InstancedMeshLayerDeclaration` を継承しています。
+`InstancedBoxMeshDesc` クラスは、GPU インスタンシングを使用して複数のボックスインスタンスをレンダリングするメッシュです。すべてのボックスが1つのジオメトリとマテリアルを共有し、1回の描画コールで高パフォーマンスにレンダリングされます。`InstancedMeshDesc` を継承しています。
 
-以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`pickable`、`visible`）が利用できます。詳細は [MeshLayerDeclaration](./mesh-layer-base) を参照してください。
+以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`pickable`、`visible`）が利用できます。詳細は [MeshDesc](./mesh-layer-base) を参照してください。
 
 ## 共有マテリアルプロパティ
 
@@ -317,7 +317,7 @@ import { Matrix4 } from "three";
 
 **Type:** `string[]` (optional)
 
-**Description:** このメッシュに適用するセレクティブエフェクトレイヤーIDの配列を指定します。
+**Description:** このメッシュに適用するセレクティブエフェクトIDの配列を指定します。
 
 **Example:**
 
@@ -351,7 +351,7 @@ import { Matrix4 } from "three";
 
 ## インスタンス管理
 
-動的なインスタンス管理のために [InstancedMeshLayerDeclaration](../../../three/core/custom-layer/#custom-instanced-mesh-layer) から継承されるメソッド:
+動的なインスタンス管理のために [InstancedMeshDesc](../../../three/core/custom-layer/#custom-instanced-mesh-layer) から継承されるメソッド:
 
 ### handle.ref.add(config)
 
@@ -419,13 +419,13 @@ console.log("Instance count:", handle.ref.count);
 
 ```typescript
 import ThreeView, { Color } from "@navara/three";
-import { InstancedBoxMeshLayer } from "@navara/three_default_layers";
+import { InstancedBoxMeshDesc } from "@navara/three_default_layers";
 
 const view = new ThreeView();
-view.registerMesh("boxes", InstancedBoxMeshLayer);
+view.registerMesh("boxes", InstancedBoxMeshDesc);
 await view.init();
 
-const handle = view.addMesh<InstancedBoxMeshLayer>({
+const handle = view.addMesh<InstancedBoxMeshDesc>({
   boxes: {
     color: new Color().setHex(0xffffff),
     castShadow: true,

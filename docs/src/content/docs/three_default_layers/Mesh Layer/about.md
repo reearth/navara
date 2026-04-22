@@ -1,55 +1,55 @@
 ---
-title: Mesh Layer
-description: Mesh layer types for navara_three
+title: Mesh Descriptor
+description: Mesh descriptor types for navara_three
 sidebar:
   order: 100
 ---
 
-`MeshLayer` is a layer type for adding 3D mesh objects to the scene. It can display various 3D objects.
+`MeshDesc` is a descriptor type for adding 3D mesh objects to the scene. It can display various 3D objects.
 
-All mesh layers inherit from [`MeshLayerDeclaration`](./mesh-layer-base), which provides common properties such as `position`, `rotation`, `scale`, `matrix`, `matrixWorld`, and `pickable`. See the [MeshLayerDeclaration](./mesh-layer-base) page for details on transform composition, picking, and coordinate transformation.
+All mesh descriptors inherit from [`MeshDesc`](./mesh-layer-base), which provides common properties such as `position`, `rotation`, `scale`, `matrix`, `matrixWorld`, and `pickable`. See the [MeshDesc](./mesh-layer-base) page for details on transform composition, picking, and coordinate transformation.
 
-## Available MeshLayer Types
+## Available Mesh Descriptor Types
 
-The following MeshLayer types are available in navara_three:
+The following MeshDescriptor types are available in navara_three:
 
-| Layer Type | Description |
+| Descriptor Type | Description |
 |------------|------|
-| [ArclineMeshLayer](./arcline-mesh-layer) | A layer that draws arc-shaped lines connecting two points |
-| [BoxMeshLayer](./box-mesh-layer) | A layer that draws box geometry |
-| [InstancedBoxMeshLayer](./instanced-box-mesh-layer) | A GPU-instanced layer that renders multiple boxes in a single draw call |
-| [CylinderMeshLayer](./cylinder-mesh-layer) | A layer that draws cylinder geometry |
-| [GLTFModelLayer](./gltf-model-layer) | A layer that loads and displays GLTF/GLB format 3D models |
-| [GlowGlobeMeshLayer](./glow-globe-mesh-layer) | A layer that displays a Fresnel-effect glow around the globe |
-| [PlaneMeshLayer](./plane-mesh-layer) | A layer that draws plane geometry |
-| [RainMeshLayer](./rain-mesh-layer) | A layer that displays rain particle effects |
-| [SkyBoxMeshLayer](./sky-box-mesh-layer) | A layer that draws a simple skybox |
-| [SkyMeshLayer](./sky-mesh-layer) | A layer that draws the sky, sun, and moon using atmospheric scattering |
-| [SmoothLineMeshLayer](./smooth-line-mesh-layer) | A layer that draws smooth lines using Catmull-Rom curves |
-| [SnowMeshLayer](./snow-mesh-layer) | A layer that displays snow particle effects |
-| [SphereMeshLayer](./sphere-mesh-layer) | A layer that draws sphere geometry |
-| [StarsLayer](./stars-layer) | A layer that draws a starry sky |
-| [TubeMeshLayer](./tube-mesh-layer) | A layer that draws tube geometry |
-| [AxesHelperLayer](./axes-helper-layer) | A debug helper layer that visualizes the 3 axes |
-| [ArrowHelperLayer](./arrow-helper-layer) | A debug helper layer that visualizes vector directions |
+| [ArclineMeshDesc](./arcline-mesh-layer) | A Descriptor that draws arc-shaped lines connecting two points |
+| [BoxMeshDesc](./box-mesh-layer) | A Descriptor that draws box geometry |
+| [InstancedBoxMeshDesc](./instanced-box-mesh-layer) | A GPU-instanced Descriptor that renders multiple boxes in a single draw call |
+| [CylinderMeshDesc](./cylinder-mesh-layer) | A Descriptor that draws cylinder geometry |
+| [GLTFModelDesc](./gltf-model-layer) | A Descriptor that loads and displays GLTF/GLB format 3D models |
+| [GlowGlobeMeshDesc](./glow-globe-mesh-layer) | A Descriptor that displays a Fresnel-effect glow around the globe |
+| [PlaneMeshDesc](./plane-mesh-layer) | A Descriptor that draws plane geometry |
+| [RainMeshDesc](./rain-mesh-layer) | A Descriptor that displays rain particle effects |
+| [SkyBoxMeshDesc](./sky-box-mesh-layer) | A Descriptor that draws a simple skybox |
+| [SkyMeshDesc](./sky-mesh-layer) | A Descriptor that draws the sky, sun, and moon using atmospheric scattering |
+| [SmoothLineMeshDesc](./smooth-line-mesh-layer) | A Descriptor that draws smooth lines using Catmull-Rom curves |
+| [SnowMeshDesc](./snow-mesh-layer) | A Descriptor that displays snow particle effects |
+| [SphereMeshDesc](./sphere-mesh-layer) | A Descriptor that draws sphere geometry |
+| [StarsDesc](./stars-layer) | A Descriptor that draws a starry sky |
+| [TubeMeshDesc](./tube-mesh-layer) | A Descriptor that draws tube geometry |
+| [AxesHelperDesc](./axes-helper-layer) | A debug helper Descriptor that visualizes the 3 axes |
+| [ArrowHelperDesc](./arrow-helper-layer) | A debug helper Descriptor that visualizes vector directions |
 
 ## Basic Usage
 
-MeshLayer is added by registering the layer class and then calling the `view.addMesh()` method:
+A mesh descriptor is added by registering the descriptor class and then calling the `view.addMesh()` method:
 
 ```typescript
 import ThreeView, { Color } from "@navara/three";
-import { BoxMeshLayer } from "@navara/three_default_layers";
+import { BoxMeshDesc } from "@navara/three_default_layers";
 
 const view = new ThreeView();
 
-// Register the layer class
-view.registerMesh("box", BoxMeshLayer);
+// Register the descriptor class
+view.registerMesh("box", BoxMeshDesc);
 
 await view.init();
 
-// Add a BoxMeshLayer
-const boxLayer = view.addMesh<BoxMeshLayer>({
+// Add a BoxMeshDesc
+const boxLayer = view.addMesh<BoxMeshDesc>({
   box: {
     width: 100,
     height: 100,
@@ -60,4 +60,165 @@ const boxLayer = view.addMesh<BoxMeshLayer>({
 });
 ```
 
-For detailed usage, refer to the documentation for each layer type.
+## Common Properties
+
+All Mesh Descriptors have the following basic settings:
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `id` | `string` | Auto-generated | Unique identifier for the object |
+| `visible` | `boolean` | `true` | Toggle visibility of the object |
+| `position` | `{ x: number, y: number, z: number }` | - | Position of the mesh (ECEF coordinate system) |
+| `rotation` | `{ x: number, y: number, z: number }` | - | Rotation of the mesh (Euler angles, radians) |
+| `scale` | `{ x: number, y: number, z: number }` | - | Scale of the mesh |
+
+## Coordinate Transformation
+
+The `position` property of MeshDesc uses the ECEF (Earth-Centered, Earth-Fixed) coordinate system. To convert from latitude/longitude/altitude (geodetic coordinates) to the ECEF coordinate system, use the `geodeticToVector3()` function.
+
+:::note
+Latitude and longitude must be specified in **radians**. Use `degreeToRadian()` to convert from degrees to radians.
+:::
+
+### Basic Coordinate Transformation
+
+```typescript
+import ThreeView, {
+  Color,
+  geodeticToVector3,
+  degreeToRadian,
+} from "@navara/three";
+import { SphereMeshDesc } from "@navara/three_default_layers";
+
+const view = new ThreeView();
+view.registerMesh("sphere", SphereMeshDesc);
+await view.init();
+
+// Convert from latitude/longitude/altitude to ECEF coordinates
+const position = geodeticToVector3({
+  lat: degreeToRadian(35.681236),  // Latitude (radians)
+  lng: degreeToRadian(139.767125), // Longitude (radians)
+  height: 200,                      // Altitude (meters)
+});
+
+// Add a mesh descriptor with the converted coordinates
+const sphereLayer = view.addMesh<SphereMeshDesc>({
+  sphere: {
+    radius: 100,
+    color: new Color().setHex(0x00aaff),
+  },
+  position: {
+    x: position.x,
+    y: position.y,
+    z: position.z,
+  },
+});
+```
+
+### Setting Rotation Along the Earth's Surface
+
+To place a mesh along the Earth's surface, obtain the surface normal vector using `geodeticSurfaceNormal()` and compute the rotation.
+
+```typescript
+import {
+  geodeticToVector3,
+  geodeticSurfaceNormal,
+  degreeToRadian,
+} from "@navara/three";
+import { GLTFModelDesc } from "@navara/three_default_layers";
+import { Vector3, Quaternion, Euler } from "three";
+
+// GLTFModelDesc must be registered
+
+// Compute position
+const lat = degreeToRadian(35.681236);
+const lng = degreeToRadian(139.767125);
+const height = 0;
+
+const position = geodeticToVector3({ lat, lng, height });
+
+// Get the surface normal vector
+const normal = geodeticSurfaceNormal({ lat, lng, height });
+
+// Compute rotation to align the Y-axis (up direction) with the normal
+const up = new Vector3(0, 1, 0);
+const quaternion = new Quaternion().setFromUnitVectors(up, normal);
+const euler = new Euler().setFromQuaternion(quaternion);
+
+// Place the model along the Earth's surface
+const modelLayer = view.addMesh<GLTFModelDesc>({
+  gltfModel: {
+    url: "/models/building.gltf",
+  },
+  position: { x: position.x, y: position.y, z: position.z },
+  rotation: { x: euler.x, y: euler.y, z: euler.z },
+});
+```
+
+### Using ENU (East-North-Up) Coordinate System
+
+To place meshes using a local coordinate system (ENU: East-North-Up), use `eastNorthUpToFixedFrame()`.
+
+```typescript
+import {
+  geodeticToVector3,
+  eastNorthUpToFixedFrame,
+  degreeToRadian,
+} from "@navara/three";
+import { Vector3 } from "three";
+
+const position = geodeticToVector3({
+  lat: degreeToRadian(35.681236),
+  lng: degreeToRadian(139.767125),
+  height: 0,
+});
+
+// Get the ENU transformation matrix
+const enuMatrix = eastNorthUpToFixedFrame(position);
+
+// Extract east and north direction vectors from the ENU matrix
+const east = new Vector3().setFromMatrixColumn(enuMatrix, 0).normalize();
+const north = new Vector3().setFromMatrixColumn(enuMatrix, 1).normalize();
+
+// Compute a position 100m to the east
+const offsetPosition = position.clone().add(east.multiplyScalar(100));
+```
+
+### Reverse Conversion from ECEF to Geodetic Coordinates
+
+To convert back from ECEF coordinates to latitude/longitude/altitude, use `vector3ToGeodetic()` and `radianToDegree()`.
+
+```typescript
+import {
+  vector3ToGeodetic,
+  radianToDegree,
+} from "@navara/three";
+
+// Get the current position of the mesh
+const worldPosition = meshLayer.ref.getWorldPosition();
+
+// Convert from ECEF to geodetic coordinates
+const geodetic = vector3ToGeodetic(worldPosition);
+
+// Convert from radians to degrees
+const latitude = radianToDegree(geodetic.lat);
+const longitude = radianToDegree(geodetic.lng);
+const height = geodetic.height;
+
+console.log(`Latitude: ${latitude}°, Longitude: ${longitude}°, Altitude: ${height}m`);
+```
+
+### Coordinate Transformation Functions
+
+| Function | Description |
+|------|------|
+| `geodeticToVector3()` | Converts geodetic coordinates (latitude/longitude/altitude) to ECEF coordinates (Vector3) |
+| `vector3ToGeodetic()` | Converts ECEF coordinates (Vector3) to geodetic coordinates |
+| `degreeToRadian()` | Converts degrees to radians |
+| `radianToDegree()` | Converts radians to degrees |
+| `geodeticSurfaceNormal()` | Gets the Earth's surface normal vector at the specified position |
+| `eastNorthUpToFixedFrame()` | Gets the transformation matrix to the ENU coordinate system |
+
+For details, see [navara_three_api](../API%20Reference/navara_three_api).
+
+For detailed usage, refer to the documentation for each descriptor type.

@@ -1,2 +1,2 @@
-export { Layer, MeshLayer, LightLayer, EffectLayer } from "./Layer";
+export { Layer, MeshDesc, LightDesc, EffectDesc } from "./Layer";
 export * from "./ViewContext";

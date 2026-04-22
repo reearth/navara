@@ -1,28 +1,28 @@
 ---
-title: MeshLayerDeclaration
-description: すべてのメッシュレイヤーに共通する基底クラスのプロパティと機能
+title: MeshDesc
+description: すべてのメッシュに共通する基底クラスのプロパティと機能
 sidebar:
   order: 99
 ---
 
-`MeshLayerDeclaration` はすべてのメッシュレイヤーの基底クラスです。共通の設定プロパティ、トランスフォーム合成、ピッキングのサポートを提供します。ビルトインおよびカスタムのすべてのメッシュレイヤーはこのクラスを継承しているため、ここで説明する機能はすべてのメッシュレイヤーで利用できます。
+`MeshDesc` はすべてのメッシュの基底クラスです。共通の設定プロパティ、トランスフォーム合成、ピッキングのサポートを提供します。ビルトインおよびカスタムのすべてのメッシュはこのクラスを継承しているため、ここで説明する機能はすべてのメッシュで利用できます。
 
 ## 共通プロパティ
 
-| プロパティ    | 型                                     | デフォルト | 説明                                                                                    |
-|---------------|----------------------------------------|------------|-----------------------------------------------------------------------------------------|
-| `id`          | `string`                               | 自動生成   | レイヤーの一意な識別子                                                                  |
-| `visible`     | `boolean`                              | `true`     | レイヤーの表示/非表示を切り替え                                                         |
-| `position`    | `{ x: number, y: number, z: number }`  | -          | 位置（ECEF座標系）、`matrix`/`matrixWorld` 設定時はローカルオフセット                   |
-| `rotation`    | `{ x: number, y: number, z: number }`  | -          | 回転（Euler角、ラジアン）、`matrix`/`matrixWorld` 設定時はローカルオフセット            |
-| `scale`       | `{ x: number, y: number, z: number }`  | -          | スケール、`matrix`/`matrixWorld` 設定時はローカルオフセット                              |
-| `matrix`      | `Matrix4`                              | -          | ローカル変換行列。設定時は `position`/`rotation`/`scale` がこのフレーム内のオフセットになる |
-| `matrixWorld` | `Matrix4`                              | -          | ワールド変換行列。設定時は `position`/`rotation`/`scale` がこのフレーム内のオフセットになる |
-| `pickable`    | `boolean`                              | `false`    | GPU ベースのクリックピッキングを有効にする                                              |
+| プロパティ    | 型                                    | デフォルト | 説明                                                                                        |
+| ------------- | ------------------------------------- | ---------- | ------------------------------------------------------------------------------------------- |
+| `id`          | `string`                              | 自動生成   | オブジェクトの一意な識別子                                                                      |
+| `visible`     | `boolean`                             | `true`     | オブジェクトの表示/非表示を切り替え                                                             |
+| `position`    | `{ x: number, y: number, z: number }` | -          | 位置（ECEF座標系）、`matrix`/`matrixWorld` 設定時はローカルオフセット                       |
+| `rotation`    | `{ x: number, y: number, z: number }` | -          | 回転（Euler角、ラジアン）、`matrix`/`matrixWorld` 設定時はローカルオフセット                |
+| `scale`       | `{ x: number, y: number, z: number }` | -          | スケール、`matrix`/`matrixWorld` 設定時はローカルオフセット                                 |
+| `matrix`      | `Matrix4`                             | -          | ローカル変換行列。設定時は `position`/`rotation`/`scale` がこのフレーム内のオフセットになる |
+| `matrixWorld` | `Matrix4`                             | -          | ワールド変換行列。設定時は `position`/`rotation`/`scale` がこのフレーム内のオフセットになる |
+| `pickable`    | `boolean`                             | `false`    | GPU ベースのクリックピッキングを有効にする                                                  |
 
 ## トランスフォーム合成
 
-`MeshLayerDeclaration` は3つのトランスフォームモードをサポートしています。
+`MeshDesc` は3つのトランスフォームモードをサポートしています。
 
 ### 標準トランスフォーム
 
@@ -57,10 +57,10 @@ import ThreeView, {
   eastNorthUpToFixedFrame,
   degreeToRadian,
 } from "@navara/three";
-import { BoxMeshLayer } from "@navara/three_default_layers";
+import { BoxMeshDesc } from "@navara/three_default_layers";
 
 const view = new ThreeView();
-view.registerMesh("box", BoxMeshLayer);
+view.registerMesh("box", BoxMeshDesc);
 await view.init();
 
 // 地理的な原点での ENU フレームを計算
@@ -72,14 +72,14 @@ const origin = geodeticToVector3({
 const enuFrame = eastNorthUpToFixedFrame(origin);
 
 // 原点から東に200m、上に50mの位置にボックスを配置
-const box1 = view.addMesh<BoxMeshLayer>({
+const box1 = view.addMesh<BoxMeshDesc>({
   box: { width: 50, height: 100, depth: 50, color: new Color().setHex(0xff0000) },
   matrixWorld: enuFrame,
   position: { x: 200, y: 50, z: 0 },
 });
 
 // 北に100mの位置にもう1つのボックスを配置
-const box2 = view.addMesh<BoxMeshLayer>({
+const box2 = view.addMesh<BoxMeshDesc>({
   box: { width: 50, height: 80, depth: 50, color: new Color().setHex(0x00ff00) },
   matrixWorld: enuFrame,
   position: { x: 0, y: 40, z: 100 },
@@ -88,7 +88,7 @@ const box2 = view.addMesh<BoxMeshLayer>({
 
 ## ピッキング
 
-メッシュレイヤーは、レイヤー設定で `pickable: true` を指定することで GPU ベースのクリックピッキングを有効にできます。ピッキングシステムは、ピッカブルメッシュを専用の 1 ピクセルのレンダーターゲットに各メッシュのバッチ ID を RGB カラーとしてエンコードして描画し、ピクセルを読み取って `"pick"` イベントを発行してクリックされたメッシュを特定します。
+メッシュは、Descriptor設定で `pickable: true` を指定することで GPU ベースのクリックピッキングを有効にできます。ピッキングシステムは、ピッカブルメッシュを専用の 1 ピクセルのレンダーターゲットに各メッシュのバッチ ID を RGB カラーとしてエンコードして描画し、ピクセルを読み取って `"pick"` イベントを発行してクリックされたメッシュを特定します。
 
 :::note
 ピッキングを使用するには、ThreeView のコンストラクタで `picking: true` を設定する必要があります。
@@ -98,13 +98,13 @@ const box2 = view.addMesh<BoxMeshLayer>({
 
 ```typescript
 import ThreeView, { Color } from "@navara/three";
-import { BoxMeshLayer } from "@navara/three_default_layers";
+import { BoxMeshDesc } from "@navara/three_default_layers";
 
 const view = new ThreeView({ picking: true });
-view.registerMesh("box", BoxMeshLayer);
+view.registerMesh("box", BoxMeshDesc);
 await view.init();
 
-const boxLayer = view.addMesh<BoxMeshLayer>({
+const boxLayer = view.addMesh<BoxMeshDesc>({
   box: {
     width: 100,
     height: 100,
@@ -117,7 +117,7 @@ const boxLayer = view.addMesh<BoxMeshLayer>({
 
 view.on("pick", (info) => {
   if (info) {
-    console.log("選択されたレイヤー:", info.layerId);
+    console.log("選択されたオブジェクト:", info.layerId);
     console.log("バッチ ID:", info.batchId);
   }
 });
@@ -125,13 +125,13 @@ view.on("pick", (info) => {
 
 ### バッチ ID
 
-バッチ ID は、各ピッカブルメッシュ（またはインスタンスメッシュレイヤーの各インスタンス）に割り当てられるユニークな 24 ビット整数です。レイヤーリファレンスから読み取り、クリックされたメッシュを特定できます:
+バッチ ID は、各ピッカブルメッシュ（またはインスタンスメッシュの各インスタンス）に割り当てられるユニークな 24 ビット整数です。Descriptorリファレンスから読み取り、クリックされたメッシュを特定できます:
 
 ```typescript
-// 単一メッシュレイヤー
+// 単一メッシュ
 const batchId = boxLayer.ref.batchId;
 
-// インスタンスメッシュレイヤー — インスタンスごとに1つのバッチ ID
+// インスタンスメッシュ — インスタンスごとに1つのバッチ ID
 const batchIds = instancedLayer.ref.batchIds;
 ```
 
@@ -174,10 +174,10 @@ import ThreeView, {
   geodeticToVector3,
   degreeToRadian,
 } from "@navara/three";
-import { SphereMeshLayer } from "@navara/three_default_layers";
+import { SphereMeshDesc } from "@navara/three_default_layers";
 
 const view = new ThreeView();
-view.registerMesh("sphere", SphereMeshLayer);
+view.registerMesh("sphere", SphereMeshDesc);
 await view.init();
 
 // 緯度・経度・高度からECEF座標に変換
@@ -187,8 +187,8 @@ const position = geodeticToVector3({
   height: 200,                      // 高度（メートル）
 });
 
-// 変換した座標でメッシュレイヤーを追加
-const sphereLayer = view.addMesh<SphereMeshLayer>({
+// 変換した座標でメッシュを追加
+const sphereLayer = view.addMesh<SphereMeshDesc>({
   sphere: {
     radius: 100,
     color: new Color().setHex(0x00aaff),
@@ -211,10 +211,10 @@ import {
   geodeticSurfaceNormal,
   degreeToRadian,
 } from "@navara/three";
-import { GLTFModelLayer } from "@navara/three_default_layers";
+import { GLTFModelDesc } from "@navara/three_default_layers";
 import { Vector3, Quaternion, Euler } from "three";
 
-// GLTFModelLayer が登録済みであること
+// GLTFModelDesc が登録済みであること
 
 const origin = geodeticToVector3({
   lat: degreeToRadian(35.681236),
@@ -224,7 +224,7 @@ const origin = geodeticToVector3({
 const enuFrame = eastNorthUpToFixedFrame(origin);
 
 // モデルを地表面に沿って配置
-const modelLayer = view.addMesh<GLTFModelLayer>({
+const modelLayer = view.addMesh<GLTFModelDesc>({
   gltfModel: {
     url: "/models/building.gltf",
   },
@@ -234,13 +234,13 @@ const modelLayer = view.addMesh<GLTFModelLayer>({
 
 ### 座標変換関数一覧
 
-| 関数 | 説明 |
-|------|------|
-| `geodeticToVector3()` | 測地座標（緯度・経度・高度）をECEF座標（Vector3）に変換 |
-| `vector3ToGeodetic()` | ECEF座標（Vector3）を測地座標に変換 |
-| `degreeToRadian()` | 度をラジアンに変換 |
-| `radianToDegree()` | ラジアンを度に変換 |
-| `geodeticSurfaceNormal()` | 指定位置での地球表面の法線ベクトルを取得 |
-| `eastNorthUpToFixedFrame()` | ENU座標系への変換行列を取得 |
+| 関数                        | 説明                                                    |
+| --------------------------- | ------------------------------------------------------- |
+| `geodeticToVector3()`       | 測地座標（緯度・経度・高度）をECEF座標（Vector3）に変換 |
+| `vector3ToGeodetic()`       | ECEF座標（Vector3）を測地座標に変換                     |
+| `degreeToRadian()`          | 度をラジアンに変換                                      |
+| `radianToDegree()`          | ラジアンを度に変換                                      |
+| `geodeticSurfaceNormal()`   | 指定位置での地球表面の法線ベクトルを取得                |
+| `eastNorthUpToFixedFrame()` | ENU座標系への変換行列を取得                             |
 
 詳細は [navara_three_api](../API%20Reference/navara_three_api) を参照してください。

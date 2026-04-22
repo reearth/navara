@@ -1,13 +1,13 @@
 ---
-title: AxesHelperLayer
-description: Axes helper layer for navara_three
+title: AxesHelperDesc
+description: Axes helper Descriptor for navara_three
 sidebar:
   order: 114
 ---
 
-`AxesHelperLayer` は、Three.js の `AxesHelper` をシーンに追加するためのヘルパーレイヤーです。X(赤)/Y(緑)/Z(青) の3軸を可視化し、座標系の確認やデバッグに役立ちます。
+`AxesHelperDesc` は、Three.js の `AxesHelper` をシーンに追加するためのヘルパーDescriptorです。X(赤)/Y(緑)/Z(青) の3軸を可視化し、座標系の確認やデバッグに役立ちます。
 
-以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`pickable`、`visible`）が利用できます。詳細は [MeshLayerDeclaration](./mesh-layer-base) を参照してください。
+以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`pickable`、`visible`）が利用できます。詳細は [MeshDesc](./mesh-layer-base) を参照してください。
 
 ## Properties
 
@@ -25,18 +25,18 @@ sidebar:
 
 **Default:** `5`
 
-**Note:** サイズは作成時のみ反映されます。変更する場合はレイヤーを再作成してください。
+**Note:** サイズは作成時のみ反映されます。変更する場合はDescriptorを再作成してください。
 
 ## 使用例
 
 ```typescript
-import ThreeView, { AxesHelperLayer } from "@navara/three";
+import ThreeView, { AxesHelperDesc } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
 // 3軸ヘルパーを追加
-const axes = view.addMesh<AxesHelperLayer>({
+const axes = view.addMesh<AxesHelperDesc>({
   axesHelper: {
     size: 10,
   },

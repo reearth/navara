@@ -1,11 +1,11 @@
 ---
-title: SelectiveOutlineEffectLayer
-description: Selective outline effect layer for navara_three
+title: SelectiveOutlineEffectDesc
+description: Selective outline effect descriptor for navara_three
 sidebar:
   order: 62
 ---
 
-The `SelectiveOutlineEffectLayer` class is a layer that applies a selective outline effect. It uses mask-based filtering to draw outlines only on specific objects. It highlights object contours using edge detection with a Sobel filter.
+The `SelectiveOutlineEffectDesc` class is a Descriptor that applies a selective outline effect. It uses mask-based filtering to draw outlines only on specific objects. It highlights object contours using edge detection with a Sobel filter.
 
 ## Properties
 
@@ -13,7 +13,7 @@ The `SelectiveOutlineEffectLayer` class is a layer that applies a selective outl
 
 **Type:** `boolean | undefined`
 
-**Description:** Controls the visibility of the effect layer.
+**Description:** Controls the visibility of the effect descriptor.
 
 **Default:** `true`
 
@@ -111,11 +111,11 @@ import { Color } from "@navara/three";
 
 ## Applying the Effect to Objects
 
-To apply the selective outline effect to specific objects, specify the outline effect layer's ID in the target object's `effectIds` property.
+To apply the selective outline effect to specific objects, specify the outline effect descriptor's ID in the target object's `effectIds` property.
 
 ### effectIds
 
-An array of selective effect layer IDs to apply to the target object. When an outline effect layer is added, a unique ID is assigned, and the effect is applied by specifying this ID in the target object's `effectIds`.
+An array of selective effect descriptor IDs to apply to the target object. When an outline effect descriptor is added, a unique ID is assigned, and the effect is applied by specifying this ID in the target object's `effectIds`.
 
 ### selectiveEffectOcclusion
 
@@ -132,16 +132,16 @@ Specifies the occlusion processing mode when applying the effect.
 
 ```typescript
 import ThreeView, {
-  SelectiveOutlineEffectLayer,
-  BoxMeshLayer,
+  SelectiveOutlineEffectDesc,
+  BoxMeshDesc,
   Color,
 } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
-// Add selective outline effect layer
-const outlineLayer = view.addEffect<SelectiveOutlineEffectLayer>({
+// Add selective outline effect descriptor
+const outlineLayer = view.addEffect<SelectiveOutlineEffectDesc>({
   selectiveOutline: {
     color: new Color().setHex(0xffffff),
     thickness: 1.0,
@@ -150,7 +150,7 @@ const outlineLayer = view.addEffect<SelectiveOutlineEffectLayer>({
 });
 
 // Apply outline effect to an object
-const cubeLayer = view.addMesh<BoxMeshLayer>({
+const cubeLayer = view.addMesh<BoxMeshDesc>({
   box: {
     width: 100,
     height: 100,
@@ -166,7 +166,7 @@ const cubeLayer = view.addMesh<BoxMeshLayer>({
 ### Adding a colored outline
 
 ```typescript
-import ThreeView, { SelectiveOutlineEffectLayer, Color } from "@navara/three";
+import ThreeView, { SelectiveOutlineEffectDesc, Color } from "@navara/three";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
@@ -174,10 +174,10 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-plugin.addDefaultPhotorealLayers();
+plugin.addDefaultPhotorealScene();
 
 // Add a thick red outline
-const outlineLayer = view.addEffect<SelectiveOutlineEffectLayer>({
+const outlineLayer = view.addEffect<SelectiveOutlineEffectDesc>({
   selectiveOutline: {
     color: new Color().setHex(0xff0000),
     thickness: 2.5,
@@ -189,13 +189,13 @@ const outlineLayer = view.addEffect<SelectiveOutlineEffectLayer>({
 ### Performance-oriented settings
 
 ```typescript
-import ThreeView, { SelectiveOutlineEffectLayer, Color } from "@navara/three";
+import ThreeView, { SelectiveOutlineEffectDesc, Color } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
 // Performance-oriented settings
-const outlineLayer = view.addEffect<SelectiveOutlineEffectLayer>({
+const outlineLayer = view.addEffect<SelectiveOutlineEffectDesc>({
   selectiveOutline: {
     color: new Color().setHex(0xffffff),
     thickness: 1.0,
@@ -208,12 +208,12 @@ const outlineLayer = view.addEffect<SelectiveOutlineEffectLayer>({
 ### Dynamic outline effect updates
 
 ```typescript
-import ThreeView, { SelectiveOutlineEffectLayer, Color } from "@navara/three";
+import ThreeView, { SelectiveOutlineEffectDesc, Color } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
-const outlineLayer = view.addEffect<SelectiveOutlineEffectLayer>({
+const outlineLayer = view.addEffect<SelectiveOutlineEffectDesc>({
   selectiveOutline: {
     color: new Color().setHex(0xffffff),
     thickness: 1.0,
@@ -232,12 +232,12 @@ outlineLayer.update({
 ### Applying outlines to 3D Tiles
 
 ```typescript
-import ThreeView, { SelectiveOutlineEffectLayer, Color } from "@navara/three";
+import ThreeView, { SelectiveOutlineEffectDesc, Color } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
-const outlineLayer = view.addEffect<SelectiveOutlineEffectLayer>({
+const outlineLayer = view.addEffect<SelectiveOutlineEffectDesc>({
   selectiveOutline: {
     color: new Color().setHex(0xff0000),
     thickness: 2.0,
@@ -265,15 +265,15 @@ An example of highlighting objects behind buildings:
 
 ```typescript
 import ThreeView, {
-  SelectiveOutlineEffectLayer,
-  BoxMeshLayer,
+  SelectiveOutlineEffectDesc,
+  BoxMeshDesc,
   Color,
 } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
-const outlineLayer = view.addEffect<SelectiveOutlineEffectLayer>({
+const outlineLayer = view.addEffect<SelectiveOutlineEffectDesc>({
   selectiveOutline: {
     color: new Color().setHex(0x00ff00),
     thickness: 2.0,
@@ -281,7 +281,7 @@ const outlineLayer = view.addEffect<SelectiveOutlineEffectLayer>({
 });
 
 // Silhouette mode: outline is visible even behind buildings
-const highlightedCube = view.addMesh<BoxMeshLayer>({
+const highlightedCube = view.addMesh<BoxMeshDesc>({
   box: {
     width: 100,
     height: 100,
@@ -297,22 +297,22 @@ const highlightedCube = view.addMesh<BoxMeshLayer>({
 
 ```typescript
 import ThreeView, {
-  SelectiveBloomEffectLayer,
-  SelectiveOutlineEffectLayer,
-  BoxMeshLayer,
+  SelectiveBloomEffectDesc,
+  SelectiveOutlineEffectDesc,
+  BoxMeshDesc,
   Color,
 } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
-const bloomLayer = view.addEffect<SelectiveBloomEffectLayer>({
+const bloomLayer = view.addEffect<SelectiveBloomEffectDesc>({
   selectiveBloom: {
     strength: 1.0,
   },
 });
 
-const outlineLayer = view.addEffect<SelectiveOutlineEffectLayer>({
+const outlineLayer = view.addEffect<SelectiveOutlineEffectDesc>({
   selectiveOutline: {
     color: new Color().setHex(0xff0000),
     thickness: 2.0,
@@ -320,7 +320,7 @@ const outlineLayer = view.addEffect<SelectiveOutlineEffectLayer>({
 });
 
 // Apply both effects
-const cubeLayer = view.addMesh<BoxMeshLayer>({
+const cubeLayer = view.addMesh<BoxMeshDesc>({
   box: {
     width: 100,
     height: 100,

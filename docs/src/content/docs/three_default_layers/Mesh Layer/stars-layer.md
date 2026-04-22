@@ -1,15 +1,15 @@
 ---
-title: StarsLayer
-description: Stars layer for navara_three
+title: StarsDesc
+description: Stars Descriptor for navara_three
 sidebar:
   order: 113
 ---
 
-The `StarsLayer` class is a mesh layer that draws a starry sky. It uses point sprites based on actual astronomical catalogs to render a realistic starry sky.
+The `StarsDesc` class is a mesh descriptor that draws a starry sky. It uses point sprites based on actual astronomical catalogs to render a realistic starry sky.
 
 Star positions account for the Earth's rotation based on `view.atmosphere.date`, and visibility is automatically adjusted based on the sun's position.
 
-In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `pickable`, `visible`) are available. See [MeshLayerDeclaration](./mesh-layer-base) for details.
+In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `pickable`, `visible`) are available. See [MeshDesc](./mesh-layer-base) for details.
 
 :::tip[Related Documentation]
 For details on the atmosphere system, see the [Atmosphere class](../../../three/api-reference/atmosphere/).
@@ -104,13 +104,13 @@ For details on the atmosphere system, see the [Atmosphere class](../../../three/
 ## Usage Examples
 
 ```typescript
-import ThreeView, { StarsLayer } from "@navara/three";
+import ThreeView, { StarsDesc } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
-// Add a StarsLayer
-const starsLayer = view.addMesh<StarsLayer>({
+// Add a StarsDesc
+const starsLayer = view.addMesh<StarsDesc>({
   stars: {
     visible: true,
     pointSize: 1.2,
@@ -122,7 +122,7 @@ const starsLayer = view.addMesh<StarsLayer>({
 
 ## Technical Details
 
-StarsLayer is implemented using the @takram/three-atmosphere library and provides the following features:
+StarsDesc is implemented using the @takram/three-atmosphere library and provides the following features:
 
 - Star placement based on actual astronomical catalog data
 - Automatic adjustment of star visibility based on sun position

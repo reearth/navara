@@ -628,7 +628,7 @@ pub struct PolygonMaterial {
     pub per_position_height: Option<bool>,
     /// Need to enable `transparent`.
     pub opacity: Option<f32>,
-    /// Enable `opacity`. It might cause unexpected behavior when you use an effect layer.
+    /// Enable `opacity`. It might cause unexpected behavior when you use an effect.
     pub transparent: Option<bool>,
 
     /// Currently, this property is supported only in GeoJSON.

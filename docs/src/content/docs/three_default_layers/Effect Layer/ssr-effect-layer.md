@@ -1,11 +1,11 @@
 ---
-title: SSREffectLayer
-description: SSR effect layer for navara_three
+title: SSREffectDesc
+description: SSR effect descriptor for navara_three
 sidebar:
   order: 60
 ---
 
-The `SSREffectLayer` class is a layer that generates screen-space reflection (SSR) effects. It calculates reflections of on-screen objects in real-time, expressing reflections on water surfaces and glossy surfaces.
+The `SSREffectDesc` class is a Descriptor that generates screen-space reflection (SSR) effects. It calculates reflections of on-screen objects in real-time, expressing reflections on water surfaces and glossy surfaces.
 
 ## Properties
 
@@ -13,7 +13,7 @@ The `SSREffectLayer` class is a layer that generates screen-space reflection (SS
 
 **Type:** `boolean | undefined`
 
-**Description:** Controls the visibility of the effect layer.
+**Description:** Controls the visibility of the effect descriptor.
 
 **Default:** `true`
 
@@ -224,10 +224,10 @@ The `SSREffectLayer` class is a layer that generates screen-space reflection (SS
 **Default:** `"normal"`
 
 :::note[Can only be set at initialization]
-This property can only be set when creating the layer. It cannot be changed via the `update()` method.
+This property can only be set when creating the Descriptor. It cannot be changed via the `update()` method.
 :::
 
-**Valid values:** `"normal"`, `"add"`, `"multiply"`, `"screen"`, `"overlay"`, etc. (see ColorGradingLUTEffectLayer blendMode)
+**Valid values:** `"normal"`, `"add"`, `"multiply"`, `"screen"`, `"overlay"`, etc. (see ColorGradingLUTEffectDesc blendMode)
 
 **Example:**
 
@@ -248,7 +248,7 @@ This property can only be set when creating the layer. It cannot be changed via 
 **Default:** `7`
 
 :::note[Can only be set at initialization]
-This property can only be set when creating the layer. It cannot be changed via the `update()` method.
+This property can only be set when creating the Descriptor. It cannot be changed via the `update()` method.
 :::
 
 **Example:**
@@ -374,13 +374,13 @@ This property can only be set when creating the layer. It cannot be changed via 
 ### Adding a basic SSR effect
 
 ```typescript
-import ThreeView, { SSREffectLayer } from "@navara/three";
+import ThreeView, { SSREffectDesc } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
-// Add SSR effect layer
-const ssrLayer = view.addEffect<SSREffectLayer>({
+// Add SSR effect descriptor
+const ssrLayer = view.addEffect<SSREffectDesc>({
   ssr: {},
 });
 ```
@@ -388,7 +388,7 @@ const ssrLayer = view.addEffect<SSREffectLayer>({
 ### SSR for water surface reflections
 
 ```typescript
-import ThreeView, { SSREffectLayer, Color } from "@navara/three";
+import ThreeView, { SSREffectDesc, Color } from "@navara/three";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
@@ -396,11 +396,11 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-// Add default photorealistic layers
-plugin.addDefaultPhotorealLayers();
+// Add default photorealistic objects
+plugin.addDefaultPhotorealScene();
 
 // Add SSR effect
-const ssrLayer = view.addEffect<SSREffectLayer>({
+const ssrLayer = view.addEffect<SSREffectDesc>({
   ssr: {
     resolutionScale: 0.5,
     iterations: 100,
@@ -440,13 +440,13 @@ view.addLayer({
 ### Performance-oriented SSR settings
 
 ```typescript
-import ThreeView, { SSREffectLayer } from "@navara/three";
+import ThreeView, { SSREffectDesc } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
 // Performance-oriented settings
-const ssrLayer = view.addEffect<SSREffectLayer>({
+const ssrLayer = view.addEffect<SSREffectDesc>({
   ssr: {
     resolutionScale: 0.25, // Lower resolution for improved performance
     iterations: 50,        // Reduce iteration count
@@ -458,13 +458,13 @@ const ssrLayer = view.addEffect<SSREffectLayer>({
 ### High-quality SSR with cone tracing
 
 ```typescript
-import ThreeView, { SSREffectLayer } from "@navara/three";
+import ThreeView, { SSREffectDesc } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
 // High-quality settings
-const ssrLayer = view.addEffect<SSREffectLayer>({
+const ssrLayer = view.addEffect<SSREffectDesc>({
   ssr: {
     resolutionScale: 1.0,
     iterations: 150,

@@ -1,11 +1,11 @@
 ---
-title: DepthOfFieldEffectLayer
-description: Depth of field effect layer for navara_three
+title: DepthOfFieldEffectDesc
+description: Depth of field effect descriptor for navara_three
 sidebar:
   order: 53
 ---
 
-`DepthOfFieldEffectLayer`クラスは、被写界深度(Depth of Field)エフェクトを適用するレイヤーです。カメラの焦点面に基づいてボケ効果を生成し、写真のような視覚効果を実現します。
+`DepthOfFieldEffectDesc`クラスは、被写界深度(Depth of Field)エフェクトを適用するDescriptorです。カメラの焦点面に基づいてボケ効果を生成し、写真のような視覚効果を実現します。
 
 ## Properties
 
@@ -13,7 +13,7 @@ sidebar:
 
 **Type:** `boolean | undefined`
 
-**Description:** エフェクトレイヤーの表示/非表示を制御します。
+**Description:** エフェクトの表示/非表示を制御します。
 
 **Default:** `true`
 
@@ -76,13 +76,13 @@ sidebar:
 ### 基本的な被写界深度エフェクトの追加
 
 ```typescript
-import ThreeView, { DepthOfFieldEffectLayer } from "@navara/three";
+import ThreeView, { DepthOfFieldEffectDesc } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
-// 被写界深度エフェクトレイヤーを追加
-const depthOfFieldLayer = view.addEffect<DepthOfFieldEffectLayer>({
+// 被写界深度エフェクトを追加
+const depthOfFieldLayer = view.addEffect<DepthOfFieldEffectDesc>({
   depthOfField: { },
   visible: true,
 });
@@ -91,7 +91,7 @@ const depthOfFieldLayer = view.addEffect<DepthOfFieldEffectLayer>({
 ### 3Dタイルと組み合わせた被写界深度
 
 ```typescript
-import ThreeView, { DepthOfFieldEffectLayer, Color } from "@navara/three";
+import ThreeView, { DepthOfFieldEffectDesc, Color } from "@navara/three";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
@@ -99,8 +99,8 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-// デフォルトのフォトリアルレイヤーを追加
-const defaultLayers = plugin.addDefaultPhotorealLayers();
+// デフォルトのフォトリアルオブジェクトを追加
+const defaultLayers = plugin.addDefaultPhotorealScene();
 defaultLayers.sun.update({
   sun: {
     intensity: 1,
@@ -109,7 +109,7 @@ defaultLayers.sun.update({
 });
 
 // 被写界深度エフェクトを追加
-const depthOfFieldLayer = view.addEffect<DepthOfFieldEffectLayer>({
+const depthOfFieldLayer = view.addEffect<DepthOfFieldEffectDesc>({
   depthOfField: {
     bokehScale: 7,
     focusDistance: 0.000006,
@@ -118,7 +118,7 @@ const depthOfFieldLayer = view.addEffect<DepthOfFieldEffectLayer>({
   visible: true,
 });
 
-// 3Dタイルレイヤーを追加
+// 3Dタイルを追加
 view.addLayer({
   type: "cesium3dtiles",
   data: {

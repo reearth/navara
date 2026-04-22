@@ -1,13 +1,13 @@
 ---
-title: BoxMeshLayer
-description: Box mesh layer for navara_three
+title: BoxMeshDesc
+description: Box mesh descriptor for navara_three
 sidebar:
   order: 102
 ---
 
-The `BoxMeshLayer` class is a mesh layer for drawing box geometry. You can create a box by specifying width, height, and depth.
+The `BoxMeshDesc` class is a mesh descriptor for drawing box geometry. You can create a box by specifying width, height, and depth.
 
-In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `pickable`, `visible`) are available. See [MeshLayerDeclaration](./mesh-layer-base) for details.
+In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `pickable`, `visible`) are available. See [MeshDesc](./mesh-layer-base) for details.
 
 ## Properties
 
@@ -262,7 +262,7 @@ import { Color } from "@navara/three";
 
 **Type:** `string[]` (optional)
 
-**Description:** Specifies an array of selective effect layer IDs to apply to this mesh.
+**Description:** Specifies an array of selective effect descriptor IDs to apply to this mesh.
 
 **Example:**
 
@@ -299,13 +299,13 @@ import { Color } from "@navara/three";
 ### Basic Usage
 
 ```typescript
-import ThreeView, { BoxMeshLayer, Color } from "@navara/three";
+import ThreeView, { BoxMeshDesc, Color } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
-// Add a BoxMeshLayer
-const boxLayer = view.addMesh<BoxMeshLayer>({
+// Add a BoxMeshDesc
+const boxLayer = view.addMesh<BoxMeshDesc>({
   box: {
     width: 100,
     height: 100,
@@ -319,9 +319,9 @@ const boxLayer = view.addMesh<BoxMeshLayer>({
 ### Box with Shadows
 
 ```typescript
-import ThreeView, { BoxMeshLayer, Color } from "@navara/three";
+import ThreeView, { BoxMeshDesc, Color } from "@navara/three";
 
-const boxLayer = view.addMesh<BoxMeshLayer>({
+const boxLayer = view.addMesh<BoxMeshDesc>({
   box: {
     width: 200,
     height: 100,
@@ -337,9 +337,9 @@ const boxLayer = view.addMesh<BoxMeshLayer>({
 ### Semi-transparent Box
 
 ```typescript
-import ThreeView, { BoxMeshLayer, Color } from "@navara/three";
+import ThreeView, { BoxMeshDesc, Color } from "@navara/three";
 
-const boxLayer = view.addMesh<BoxMeshLayer>({
+const boxLayer = view.addMesh<BoxMeshDesc>({
   box: {
     width: 150,
     height: 150,

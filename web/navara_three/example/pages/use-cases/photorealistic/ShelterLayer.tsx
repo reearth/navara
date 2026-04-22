@@ -9,7 +9,7 @@ import type {
   FogLightDefinition,
   FogLightConfig,
 } from "@navara/three_default_layers";
-import { Layer, EffectLayer, useViewContext } from "@navara/three_react";
+import { Layer, EffectDesc, useViewContext } from "@navara/three_react";
 import type { FeatureCollection, Point } from "geojson";
 import { useEffect, useMemo, useRef, useState, type FC } from "react";
 
@@ -125,7 +125,7 @@ export const ShelterLayer: FC<{ visible?: boolean }> = ({
       {textLayerDesc && (
         <Layer config={textLayerDesc} onReady={onTextLayerReady} />
       )}
-      {fogLayerDesc && <EffectLayer config={fogLayerDesc} />}
+      {fogLayerDesc && <EffectDesc config={fogLayerDesc} />}
     </>
   );
 };

@@ -1,11 +1,11 @@
 ---
-title: AmbientLightLayer
-description: Ambient light layer for navara_three
+title: AmbientLightDesc
+description: Ambient light descriptor for navara_three
 sidebar:
   order: 151
 ---
 
-The `AmbientLightLayer` class represents an ambient light layer that illuminates the entire scene uniformly. AmbientLight illuminates all objects evenly and does not cast shadows.
+The `AmbientLightDesc` class represents an ambient light descriptor that illuminates the entire scene uniformly. AmbientLight illuminates all objects evenly and does not cast shadows.
 
 ## Common Properties
 
@@ -13,7 +13,7 @@ The `AmbientLightLayer` class represents an ambient light layer that illuminates
 
 **Type:** `boolean | undefined`
 
-**Description:** Controls the visibility of the layer.
+**Description:** Controls the visibility of the object.
 
 **Default:** `true`
 
@@ -77,13 +77,13 @@ import { Color } from "@navara/three";
 ### Basic Usage
 
 ```typescript
-import ThreeView, { AmbientLightLayer, Color } from "@navara/three";
+import ThreeView, { AmbientLightDesc, Color } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
-// Add an ambient light layer
-const ambientLight = view.addLight<AmbientLightLayer>({
+// Add an ambient light descriptor
+const ambientLight = view.addLight<AmbientLightDesc>({
   ambient: {
     color: new Color().setHex(0xffffff),
     intensity: 1.0
@@ -107,7 +107,7 @@ ambientLight.update({
 
 ```typescript
 // Add ambient light with default settings
-view.addLight<AmbientLightLayer>({
+view.addLight<AmbientLightDesc>({
   ambient: {}
 });
 ```
@@ -116,7 +116,7 @@ view.addLight<AmbientLightLayer>({
 
 ```typescript
 // Add ambient light in a hidden state, then toggle visibility later
-const ambientLightLayer = view.addLight<AmbientLightLayer>({
+const ambientLightLayer = view.addLight<AmbientLightDesc>({
   visible: false,
   ambient: {
     intensity: 1,
@@ -132,5 +132,5 @@ ambientLightLayer.visible = true;
 
 - Ambient light does not cast shadows.
 - Ambient light illuminates objects evenly from all directions.
-- It can be used in combination with other light types (SunLightLayer, SkyLightProbeLayer, etc.).
+- It can be used in combination with other light types (SunLightDesc, SkyLightProbeDesc, etc.).
 - If the ambient light intensity is too high, the scene may appear flat.

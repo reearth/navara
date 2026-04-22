@@ -1,97 +1,93 @@
 export {
-  RainMeshLayer,
-  type RainMeshLayerConfig,
-  type RainMeshLayerUpdate,
-} from "./RainMeshLayer";
+  RainMeshDesc,
+  type RainMeshConfig,
+  type RainMeshUpdate,
+} from "./RainMeshDesc";
 export {
-  SnowMeshLayer,
-  type SnowMeshLayerConfig,
-  type SnowMeshLayerUpdate,
-} from "./SnowMeshLayer";
+  SnowMeshDesc,
+  type SnowMeshConfig,
+  type SnowMeshUpdate,
+} from "./SnowMeshDesc";
 export {
-  SkyMeshLayer,
-  type SkyMeshLayerConfig,
-  type SkyMeshLayerUpdate,
-} from "./SkyMeshLayer";
+  SkyMeshDesc,
+  type SkyMeshConfig,
+  type SkyMeshUpdate,
+} from "./SkyMeshDesc";
+export { StarsDesc, type StarsConfig, type StarsUpdate } from "./StarsDesc";
 export {
-  StarsLayer,
-  type StarsLayerConfig,
-  type StarsLayerUpdate,
-} from "./StarsLayer";
+  BoxMeshDesc,
+  type BoxMeshConfig,
+  type BoxMeshUpdate,
+} from "./BoxMeshDesc";
 export {
-  BoxMeshLayer,
-  type BoxMeshLayerConfig,
-  type BoxMeshLayerUpdate,
-} from "./BoxMeshLayer";
+  SphereMeshDesc,
+  type SphereMeshConfig,
+  type SphereMeshUpdate,
+} from "./SphereMeshDesc";
 export {
-  SphereMeshLayer,
-  type SphereMeshLayerConfig,
-  type SphereMeshLayerUpdate,
-} from "./SphereMeshLayer";
-export {
-  GlowGlobeMeshLayer,
-  type GlowGlobeMeshLayerConfig,
-  type GlowGlobeMeshLayerUpdate,
+  GlowGlobeMeshDesc,
+  type GlowGlobeMeshConfig,
+  type GlowGlobeMeshUpdate,
   DEFAULT_GLOW_GLOBE_OPTIONS,
-} from "./GlowGlobeMeshLayer";
+} from "./GlowGlobeMeshDesc";
 export {
-  CylinderMeshLayer,
-  type CylinderMeshLayerConfig,
-  type CylinderMeshLayerUpdate,
-} from "./CylinderMeshLayer";
+  CylinderMeshDesc,
+  type CylinderMeshConfig,
+  type CylinderMeshUpdate,
+} from "./CylinderMeshDesc";
 export {
-  PlaneMeshLayer,
-  type PlaneMeshLayerConfig,
-  type PlaneMeshLayerUpdate,
-} from "./PlaneMeshLayer";
+  PlaneMeshDesc,
+  type PlaneMeshConfig,
+  type PlaneMeshUpdate,
+} from "./PlaneMeshDesc";
 export {
-  GLTFModelLayer,
-  type GLTFModelLayerConfig,
-  type GLTFModelLayerUpdate,
+  GLTFModelDesc,
+  type GLTFModelConfig,
+  type GLTFModelUpdate,
   type AnimationDetails,
   type AnimationState,
-  type GLTFModelLayerEvent,
+  type GLTFModelEvent,
   DEFAULT_GLTF_MODEL_DESCRIPTION,
-} from "./GLTFModelLayer";
+} from "./GLTFModelDesc";
 export {
-  TubeMeshLayer,
-  type TubeMeshLayerConfig,
-  type TubeMeshLayerUpdate,
-} from "./TubeMeshLayer";
+  TubeMeshDesc,
+  type TubeMeshConfig,
+  type TubeMeshUpdate,
+} from "./TubeMeshDesc";
 export {
-  ArclineMeshLayer,
-  type ArclineMeshLayerConfig,
-  type ArclineMeshLayerUpdate,
-} from "./ArclineMeshLayer";
+  ArclineMeshDesc,
+  type ArclineMeshConfig,
+  type ArclineMeshUpdate,
+} from "./ArclineMeshDesc";
 export {
-  SmoothLineMeshLayer,
-  type SmoothLineMeshLayerConfig,
-  type SmoothLineMeshLayerUpdate,
-} from "./SmoothLineMeshLayer";
+  SmoothLineMeshDesc,
+  type SmoothLineMeshConfig,
+  type SmoothLineMeshUpdate,
+} from "./SmoothLineMeshDesc";
 export {
-  SkyBoxMeshLayer,
-  type SkyBoxMeshLayerConfig,
-  type SkyBoxMeshLayerUpdate,
+  SkyBoxMeshDesc,
+  type SkyBoxMeshConfig,
+  type SkyBoxMeshUpdate,
   DEFAULT_SKY_BOX_OPTIONS,
-} from "./SkyBoxMeshLayer";
+} from "./SkyBoxMeshDesc";
 export {
-  ArrowHelperLayer,
-  type ArrowHelperLayerConfig,
-  type ArrowHelperLayerUpdate,
-} from "./ArrowHelperLayer";
+  ArrowHelperDesc,
+  type ArrowHelperConfig,
+  type ArrowHelperUpdate,
+} from "./ArrowHelperDesc";
 export {
-  AxesHelperLayer,
-  type AxesHelperLayerConfig,
-  type AxesHelperLayerUpdate,
-} from "./AxesHelperLayer";
+  AxesHelperDesc,
+  type AxesHelperConfig,
+  type AxesHelperUpdate,
+} from "./AxesHelperDesc";
 export {
-  InstancedBoxMeshLayer,
-  type InstancedBoxMeshLayerConfig,
-  type InstancedBoxMeshLayerUpdate,
+  InstancedBoxMeshDesc,
+  type InstancedBoxMeshConfig,
+  type InstancedBoxMeshUpdate,
   type BoxChildConfig,
   type SharedBoxMaterialConfig,
   type BoxesDescription,
-} from "./InstancedBoxMeshLayer";
+} from "./InstancedBoxMeshDesc";
 
 // Mesh implementations
 export { SkyMesh, type SkyMeshOptions } from "./skyMesh";

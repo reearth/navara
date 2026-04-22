@@ -1,13 +1,13 @@
 ---
-title: ArclineMeshLayer
-description: Arcline mesh layer for navara_three
+title: ArclineMeshDesc
+description: Arcline mesh descriptor for navara_three
 sidebar:
   order: 101
 ---
 
-`ArclineMeshLayer`クラスは、2点間を結ぶアーク状のラインを描画するためのメッシュレイヤーです。地球上の2地点間を視覚的に繋ぐ際に使用され、グラデーション、破線パターン、高さ調整などの機能を提供します。
+`ArclineMeshDesc`クラスは、2点間を結ぶアーク状のラインを描画するためのメッシュです。地球上の2地点間を視覚的に繋ぐ際に使用され、グラデーション、破線パターン、高さ調整などの機能を提供します。
 
-以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`pickable`、`visible`）が利用できます。詳細は [MeshLayerDeclaration](./mesh-layer-base) を参照してください。
+以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`pickable`、`visible`）が利用できます。詳細は [MeshDesc](./mesh-layer-base) を参照してください。
 
 ## Properties
 
@@ -15,7 +15,7 @@ sidebar:
 
 **Type:** `Partial<ArcLineConfig> | Partial<ArcLineConfig>[] | undefined`
 
-**Description:** アークラインの設定を指定します。配列を渡すことで複数のアークラインを1つのレイヤーで管理できます。
+**Description:** アークラインの設定を指定します。配列を渡すことで複数のアークラインを1つのDescriptorで管理できます。
 
 **Example:**
 
@@ -293,13 +293,13 @@ sidebar:
 ### 基本的な使い方
 
 ```typescript
-import ThreeView, { ArclineMeshLayer } from "@navara/three";
+import ThreeView, { ArclineMeshDesc } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
-// ArclineMeshLayerを追加
-const arclineLayer = view.addMesh<ArclineMeshLayer>({
+// ArclineMeshDescを追加
+const arclineLayer = view.addMesh<ArclineMeshDesc>({
   arcLines: {
     thickness: 2,
     srcColor: 0xff0000,
@@ -317,7 +317,7 @@ const arclineLayer = view.addMesh<ArclineMeshLayer>({
 ### 複数のアークライン
 
 ```typescript
-const arclineLayer = view.addMesh<ArclineMeshLayer>({
+const arclineLayer = view.addMesh<ArclineMeshDesc>({
   arcLines: [
     {
       thickness: 2,
@@ -347,7 +347,7 @@ const arclineLayer = view.addMesh<ArclineMeshLayer>({
 ### 動的な更新
 
 ```typescript
-// レイヤーの設定を更新
+// Descriptorの設定を更新
 arclineLayer.update({
   arcLines: {
     thickness: 5,

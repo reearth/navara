@@ -4,7 +4,7 @@ import {
   type LayerDescription,
 } from "@navara/three";
 import type {
-  RainMeshLayerConfig,
+  RainMeshConfig,
   CloudsConfig,
 } from "@navara/three_default_layers";
 import type {
@@ -14,9 +14,9 @@ import type {
 } from "@navara/three_default_plugin";
 import {
   Layer,
-  MeshLayer,
-  LightLayer,
-  EffectLayer,
+  MeshDesc,
+  LightDesc,
+  EffectDesc,
   useViewContext,
 } from "@navara/three_react";
 import { useEffect, useMemo, type FC } from "react";
@@ -106,7 +106,7 @@ export const Layers: FC<SceneLayerToggles> = ({
   );
 
   const rainDesc = useMemo(
-    (): RainMeshLayerConfig => ({
+    (): RainMeshConfig => ({
       visible: rainVisible,
       rain: {
         particleCount: 5000,
@@ -142,7 +142,7 @@ export const Layers: FC<SceneLayerToggles> = ({
     [quality],
   );
 
-  const mvtLayerDescription = useMemo(
+  const mvtDesc = useMemo(
     (): LayerDescription => ({
       type: "mvt",
       data: {
@@ -235,14 +235,14 @@ export const Layers: FC<SceneLayerToggles> = ({
         )}
       {defaultLayers && (
         <>
-          <EffectLayer config={cloudsEffect} />
-          <EffectLayer config={ssrEffect} />
+          <EffectDesc config={cloudsEffect} />
+          <EffectDesc config={ssrEffect} />
         </>
       )}
-      <MeshLayer config={rainDesc} />
-      {rainVisible && defaultLayers && <EffectLayer config={rainDropEffect} />}
-      <LightLayer config={nightLightProbe} />
-      {waterAreaVisible && <Layer config={mvtLayerDescription} />}
+      <MeshDesc config={rainDesc} />
+      {rainVisible && defaultLayers && <EffectDesc config={rainDropEffect} />}
+      <LightDesc config={nightLightProbe} />
+      {waterAreaVisible && <Layer config={mvtDesc} />}
     </>
   );
 };

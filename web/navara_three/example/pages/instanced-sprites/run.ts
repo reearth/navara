@@ -1,5 +1,5 @@
 import ThreeView, { Color } from "@navara/three";
-import { AmbientLightLayer } from "@navara/three_default_layers";
+import { AmbientLightDesc } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
   type DefaultDeclarations,
@@ -8,12 +8,9 @@ import { Pane } from "tweakpane";
 
 import { TILE_DATASETS, VECTOR_DATASETS } from "../../helpers/constants";
 import { addCameraControl, addDateControl } from "../../helpers/control";
-import {
-  addCtrlPanel,
-  type MaterialLayerDescription,
-} from "../../helpers/panel";
+import { addCtrlPanel, type MaterialDesc } from "../../helpers/panel";
 
-const layers: MaterialLayerDescription[] = [
+const layers: MaterialDesc[] = [
   {
     type: "geojson",
     data: {
@@ -102,7 +99,7 @@ export const run = async (view: ThreeView<DefaultDeclarations>) => {
 
   await view.init();
 
-  view.addLight<AmbientLightLayer>({
+  view.addLight<AmbientLightDesc>({
     ambient: {
       intensity: 0.5,
     },

@@ -331,14 +331,14 @@ view.globe.color = new Color().setStyle("#1a1a2e");
 ### ライトでの使用
 
 ```typescript
-import ThreeView, { SunLightLayer, Color } from "@navara/three";
+import ThreeView, { SunLightDesc, Color } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
 // 太陽光の色を設定
-view.addEffect<SunLightLayer>({
-  sunLight: {
+view.addLight<SunLightDesc>({
+  sun: {
     color: new Color().setHex(0xffffff),
     intensity: 3,
   },
@@ -368,5 +368,5 @@ const ylGnBu = new ColorMap("sequential", "YlGnBu", [
 
 - [ColorMap クラス](../../../three/api-reference/colormap/) - カラーグラデーションの定義
 - [Globe クラス](../../../three/api-reference/globe/) - `color` プロパティ
-- [SunLightLayer](../../../three/effect-layer-reference/sun-light-layer/) - ライトの色設定
-- [AmbientLightLayer](../../../three/effect-layer-reference/ambient-light-layer/) - 環境光の色設定
+- [SunLightDesc](../../../three/effect-desc-reference/sun-light-desc/) - ライトの色設定
+- [AmbientLightDesc](../../../three/effect-desc-reference/ambient-light-desc/) - 環境光の色設定

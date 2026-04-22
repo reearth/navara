@@ -1,11 +1,11 @@
 ---
-title: CloudsEffectLayer
-description: Clouds effect layer for navara_three
+title: CloudsEffectDesc
+description: Clouds effect descriptor for navara_three
 sidebar:
   order: 52
 ---
 
-The `CloudsEffectLayer` class is an effect layer that renders real-time volumetric clouds. It provides advanced cloud visual effects including atmospheric scattering, shadows, and haze.
+The `CloudsEffectDesc` class is an effect descriptor that renders real-time volumetric clouds. It provides advanced cloud visual effects including atmospheric scattering, shadows, and haze.
 
 This effect uses atmospheric textures and sun direction provided by the `Atmosphere` class to calculate physically accurate cloud lighting.
 
@@ -19,7 +19,7 @@ See [Atmosphere class](../../../three/api-reference/atmosphere/) for details on 
 
 **Type:** `boolean | undefined`
 
-**Description:** Controls the visibility of the effect layer.
+**Description:** Controls the visibility of the effect descriptor.
 
 **Default:** `true`
 
@@ -99,7 +99,7 @@ See [Atmosphere class](../../../three/api-reference/atmosphere/) for details on 
 
 **Type:** `boolean | undefined`
 
-**Description:** Specifies whether to enable shadows for all layers. `Atmosphere.irradiance` must also be enabled.
+**Description:** Specifies whether to enable shadows for all descriptors. `Atmosphere.irradiance` must also be enabled.
 
 **Default:** `true`
 
@@ -631,10 +631,10 @@ import { Vector3 } from "three";
 
 ## Usage Examples
 
-### Adding a basic clouds effect layer
+### Adding a basic clouds effect descriptor
 
 ```typescript
-import ThreeView, { CloudsEffectLayer } from "@navara/three";
+import ThreeView, { CloudsEffectDesc } from "@navara/three";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
@@ -642,11 +642,11 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-// Add default photorealistic layers (required for cloud rendering)
-plugin.addDefaultPhotorealLayers();
+// Add default photorealistic objects (required for cloud rendering)
+plugin.addDefaultPhotorealScene();
 
-// Add clouds effect layer
-const cloudsLayer = view.addEffect<CloudsEffectLayer>({
+// Add clouds effect descriptor
+const cloudsLayer = view.addEffect<CloudsEffectDesc>({
   clouds: {
     coverage: 0.5,
     qualityPreset: "high",
@@ -657,7 +657,7 @@ const cloudsLayer = view.addEffect<CloudsEffectLayer>({
 ### Scene with cloud shadows enabled
 
 ```typescript
-import ThreeView, { CloudsEffectLayer } from "@navara/three";
+import ThreeView, { CloudsEffectDesc } from "@navara/three";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView({ shadow: true });
@@ -665,7 +665,7 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-const defaultLayers = plugin.addDefaultPhotorealLayers();
+const defaultLayers = plugin.addDefaultPhotorealScene();
 
 // Enable sunlight shadows
 defaultLayers.sun.update({
@@ -681,8 +681,8 @@ defaultLayers.aerialPerspective.update({
   },
 });
 
-// Add clouds effect layer (with shadows enabled)
-const cloudsLayer = view.addEffect<CloudsEffectLayer>({
+// Add clouds effect descriptor (with shadows enabled)
+const cloudsLayer = view.addEffect<CloudsEffectDesc>({
   clouds: {
     shadows: true,
     shadowCascadeCount: 3,
@@ -693,7 +693,7 @@ const cloudsLayer = view.addEffect<CloudsEffectLayer>({
 ### Using as a fog effect
 
 ```typescript
-import ThreeView, { CloudsEffectLayer, LayerHandle } from "@navara/three";
+import ThreeView, { CloudsEffectDesc, LayerHandle } from "@navara/three";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
@@ -701,10 +701,10 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-plugin.addDefaultPhotorealLayers();
+plugin.addDefaultPhotorealScene();
 
-// Use the clouds layer as fog
-const cloudsLayer = view.addEffect<CloudsEffectLayer>({
+// Use the clouds Descriptor as fog
+const cloudsLayer = view.addEffect<CloudsEffectDesc>({
   clouds: {},
 });
 
@@ -725,7 +725,7 @@ if (clouds) {
 ### Animated clouds
 
 ```typescript
-import ThreeView, { CloudsEffectLayer } from "@navara/three";
+import ThreeView, { CloudsEffectDesc } from "@navara/three";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 import { Vector2 } from "three";
 
@@ -737,10 +737,10 @@ await view.init();
 // Enable animation
 view.animation = true;
 
-plugin.addDefaultPhotorealLayers();
+plugin.addDefaultPhotorealScene();
 
-// Set cloud movement velocity and add the layer
-const cloudsLayer = view.addEffect<CloudsEffectLayer>({
+// Set cloud movement velocity and add the Descriptor
+const cloudsLayer = view.addEffect<CloudsEffectDesc>({
   clouds: {
     coverage: 0.5,
     localWeatherVelocity: new Vector2(0.005, 0.001),
@@ -751,7 +751,7 @@ const cloudsLayer = view.addEffect<CloudsEffectLayer>({
 ### Complete weather scene example
 
 ```typescript
-import ThreeView, { CloudsEffectLayer } from "@navara/three";
+import ThreeView, { CloudsEffectDesc } from "@navara/three";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 import { Vector2 } from "three";
 
@@ -760,7 +760,7 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-const defaultLayers = plugin.addDefaultPhotorealLayers();
+const defaultLayers = plugin.addDefaultPhotorealScene();
 
 // Enable irradiance to render cloud shadows
 defaultLayers.aerialPerspective.update({
@@ -769,8 +769,8 @@ defaultLayers.aerialPerspective.update({
   },
 });
 
-// Add the clouds layer
-const cloudsLayer = view.addEffect<CloudsEffectLayer>({
+// Add the clouds Descriptor
+const cloudsLayer = view.addEffect<CloudsEffectDesc>({
   clouds: {
     qualityPreset: "high",
     localWeatherVelocity: new Vector2(0.005, 0.001),

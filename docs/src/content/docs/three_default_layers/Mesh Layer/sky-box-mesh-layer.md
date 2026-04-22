@@ -1,13 +1,13 @@
 ---
-title: SkyBoxMeshLayer
-description: Sky box mesh layer for navara_three
+title: SkyBoxMeshDesc
+description: Sky box mesh descriptor for navara_three
 sidebar:
   order: 112
 ---
 
-`SkyBoxMeshLayer` is a layer that adds a simple skybox to the scene. It allows setting day and night sky colors as well as the sun color, providing a lightweight sky representation without using atmospheric scattering simulation (`SkyMeshLayer`).
+`SkyBoxMeshDesc` is a Descriptor that adds a simple skybox to the scene. It allows setting day and night sky colors as well as the sun color, providing a lightweight sky representation without using atmospheric scattering simulation (`SkyMeshDesc`).
 
-In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `pickable`, `visible`) are available. See [MeshLayerDeclaration](./mesh-layer-base) for details.
+In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `pickable`, `visible`) are available. See [MeshDesc](./mesh-layer-base) for details.
 
 ## Properties
 
@@ -82,13 +82,13 @@ import { Color } from "@navara/three";
 ### Basic Usage
 
 ```typescript
-import ThreeView, { SkyBoxMeshLayer, Color } from "@navara/three";
+import ThreeView, { SkyBoxMeshDesc, Color } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
 // Add a skybox with default settings
-const skyBox = view.addMesh<SkyBoxMeshLayer>({
+const skyBox = view.addMesh<SkyBoxMeshDesc>({
   skyBox: {},
 });
 ```
@@ -96,13 +96,13 @@ const skyBox = view.addMesh<SkyBoxMeshLayer>({
 ### Custom Color Settings
 
 ```typescript
-import ThreeView, { SkyBoxMeshLayer, Color } from "@navara/three";
+import ThreeView, { SkyBoxMeshDesc, Color } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
 // Add a skybox with custom colors
-const skyBox = view.addMesh<SkyBoxMeshLayer>({
+const skyBox = view.addMesh<SkyBoxMeshDesc>({
   skyBox: {
     dayColor: new Color().setHex(0x87ceeb),    // Sky blue
     nightColor: new Color().setHex(0x0a0a2e),   // Dark blue
@@ -123,9 +123,9 @@ skyBox.update({
 });
 ```
 
-## Differences from SkyMeshLayer
+## Differences from SkyMeshDesc
 
-| Feature | SkyBoxMeshLayer | SkyMeshLayer |
+| Feature | SkyBoxMeshDesc | SkyMeshDesc |
 |------|-----------------|--------------|
 | Rendering method | Simple gradient | Physics-based atmospheric scattering |
 | Performance | Lightweight | Slightly heavy |
@@ -135,11 +135,11 @@ skyBox.update({
 
 ### When to Use Each
 
-- **SkyBoxMeshLayer**: Simple visualizations, performance-critical scenes, stylized representations
-- **SkyMeshLayer**: Realistic atmospheric rendering, time-of-day variations, when sun/moon display is needed
+- **SkyBoxMeshDesc**: Simple visualizations, performance-critical scenes, stylized representations
+- **SkyMeshDesc**: Realistic atmospheric rendering, time-of-day variations, when sun/moon display is needed
 
 ## Notes
 
 - The skybox has frustum culling disabled and is always rendered.
 - Colors are blended between day and night based on the atmosphere's `sunDirection`.
-- When used simultaneously with `SkyMeshLayer`, pay attention to rendering order.
+- When used simultaneously with `SkyMeshDesc`, pay attention to rendering order.

@@ -20,14 +20,11 @@ import {
   FONT_DATASETS,
 } from "../../../helpers/constants";
 import { addDateControl, addCameraControl } from "../../../helpers/control";
-import {
-  addCtrlPanel,
-  type MaterialLayerDescription,
-} from "../../../helpers/panel";
+import { addCtrlPanel, type MaterialDesc } from "../../../helpers/panel";
 
 export type CustomDeclarations = DefaultDeclarations;
 
-const geoLayersDef: MaterialLayerDescription[] = [
+const geoLayersDef: MaterialDesc[] = [
   {
     type: "tiles",
     data: { url: TILE_DATASETS.openstreetmap.url },
@@ -554,7 +551,7 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
   view.addPlugin(plugin);
   await view.init();
 
-  const defaultAtmospheres = plugin.addDefaultPhotorealLayers();
+  const defaultAtmospheres = plugin.addDefaultPhotorealScene();
   defaultAtmospheres.sun.update({
     sun: {
       intensity: 1,

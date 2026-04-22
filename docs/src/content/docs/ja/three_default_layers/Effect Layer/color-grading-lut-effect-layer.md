@@ -1,11 +1,11 @@
 ---
-title: ColorGradingLUTEffectLayer
-description: Color grading LUT effect layer for navara_three
+title: ColorGradingLUTEffectDesc
+description: Color grading LUT effect descriptor for navara_three
 sidebar:
   order: 53
 ---
 
-`ColorGradingLUTEffectLayer`クラスは、LUT(ルックアップテーブル)を使用したカラーグレーディングエフェクトを適用するレイヤーです。3DLファイルなどのLUTテクスチャを使用して、シーン全体の色調を調整できます。
+`ColorGradingLUTEffectDesc`クラスは、LUT(ルックアップテーブル)を使用したカラーグレーディングエフェクトを適用するDescriptorです。3DLファイルなどのLUTテクスチャを使用して、シーン全体の色調を調整できます。
 
 ## Properties
 
@@ -13,7 +13,7 @@ sidebar:
 
 **Type:** `boolean | undefined`
 
-**Description:** エフェクトレイヤーの表示/非表示を制御します。
+**Description:** エフェクトの表示/非表示を制御します。
 
 **Default:** `true`
 
@@ -45,31 +45,31 @@ sidebar:
 
 **有効な値:**
 
-| 値 | 説明 |
-|---|---|
-| `"normal"` | 通常のブレンド |
-| `"add"` | 加算ブレンド |
-| `"multiply"` | 乗算ブレンド |
-| `"screen"` | スクリーンブレンド |
-| `"overlay"` | オーバーレイブレンド |
-| `"colorBurn"` | カラーバーン（デフォルト） |
-| `"colorDodge"` | カラードッジ |
-| `"softLight"` | ソフトライト |
-| `"hardLight"` | ハードライト |
-| `"darken"` | 暗くする |
-| `"lighten"` | 明るくする |
-| `"difference"` | 差の絶対値 |
-| `"exclusion"` | 除外 |
-| `"hue"` | 色相 |
-| `"saturation"` | 彩度 |
-| `"color"` | カラー |
-| `"luminosity"` | 輝度 |
-| `"linearBurn"` | リニアバーン |
-| `"linearDodge"` | リニアドッジ |
-| `"linearLight"` | リニアライト |
-| `"vividLight"` | ビビッドライト |
-| `"pinLight"` | ピンライト |
-| `"hardMix"` | ハードミックス |
+| 値              | 説明                       |
+| --------------- | -------------------------- |
+| `"normal"`      | 通常のブレンド             |
+| `"add"`         | 加算ブレンド               |
+| `"multiply"`    | 乗算ブレンド               |
+| `"screen"`      | スクリーンブレンド         |
+| `"overlay"`     | オーバーレイブレンド       |
+| `"colorBurn"`   | カラーバーン（デフォルト） |
+| `"colorDodge"`  | カラードッジ               |
+| `"softLight"`   | ソフトライト               |
+| `"hardLight"`   | ハードライト               |
+| `"darken"`      | 暗くする                   |
+| `"lighten"`     | 明るくする                 |
+| `"difference"`  | 差の絶対値                 |
+| `"exclusion"`   | 除外                       |
+| `"hue"`         | 色相                       |
+| `"saturation"`  | 彩度                       |
+| `"color"`       | カラー                     |
+| `"luminosity"`  | 輝度                       |
+| `"linearBurn"`  | リニアバーン               |
+| `"linearDodge"` | リニアドッジ               |
+| `"linearLight"` | リニアライト               |
+| `"vividLight"`  | ビビッドライト             |
+| `"pinLight"`    | ピンライト                 |
+| `"hardMix"`     | ハードミックス             |
 
 **Example:**
 
@@ -104,13 +104,13 @@ sidebar:
 ### 基本的なカラーグレーディングの追加
 
 ```typescript
-import ThreeView, { ColorGradingLUTEffectLayer } from "@navara/three";
+import ThreeView, { ColorGradingLUTEffectDesc } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
-// カラーグレーディングLUTエフェクトレイヤーを追加
-const colorGradingLayer = view.addEffect<ColorGradingLUTEffectLayer>({
+// カラーグレーディングLUTエフェクトを追加
+const colorGradingLayer = view.addEffect<ColorGradingLUTEffectDesc>({
   colorGradingLUT: {},
 });
 ```
@@ -118,7 +118,7 @@ const colorGradingLayer = view.addEffect<ColorGradingLUTEffectLayer>({
 ### カスタムLUTを使用したカラーグレーディング
 
 ```typescript
-import ThreeView, { ColorGradingLUTEffectLayer } from "@navara/three";
+import ThreeView, { ColorGradingLUTEffectDesc } from "@navara/three";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
@@ -126,11 +126,11 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-// デフォルトのフォトリアルレイヤーを追加
-plugin.addDefaultPhotorealLayers();
+// デフォルトのフォトリアルオブジェクトを追加
+plugin.addDefaultPhotorealScene();
 
 // カスタムLUTでカラーグレーディングを追加
-const colorGradingLayer = view.addEffect<ColorGradingLUTEffectLayer>({
+const colorGradingLayer = view.addEffect<ColorGradingLUTEffectDesc>({
   colorGradingLUT: {
     url: "https://example.com/cinematic-lut.3dl",
     blendMode: "colorBurn",
@@ -142,12 +142,12 @@ const colorGradingLayer = view.addEffect<ColorGradingLUTEffectLayer>({
 ### カラーグレーディングの動的更新
 
 ```typescript
-import ThreeView, { ColorGradingLUTEffectLayer } from "@navara/three";
+import ThreeView, { ColorGradingLUTEffectDesc } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
-const colorGradingLayer = view.addEffect<ColorGradingLUTEffectLayer>({
+const colorGradingLayer = view.addEffect<ColorGradingLUTEffectDesc>({
   colorGradingLUT: {
     opacity: 0.5,
   },

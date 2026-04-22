@@ -1,13 +1,13 @@
 ---
-title: RainMeshLayer
-description: Rain mesh layer for navara_three
+title: RainMeshDesc
+description: Rain mesh descriptor for navara_three
 sidebar:
   order: 109
 ---
 
-`RainMeshLayer`クラスは、雨のパーティクルエフェクトを表示するメッシュレイヤーです。シェーダーベースのパーティクルシステムを使用して、リアルな降雨効果を作成します。
+`RainMeshDesc`クラスは、雨のパーティクルエフェクトを表示するメッシュです。シェーダーベースのパーティクルシステムを使用して、リアルな降雨効果を作成します。
 
-以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`pickable`、`visible`）が利用できます。詳細は [MeshLayerDeclaration](./mesh-layer-base) を参照してください。
+以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`pickable`、`visible`）が利用できます。詳細は [MeshDesc](./mesh-layer-base) を参照してください。
 
 ## Common Properties
 
@@ -40,7 +40,7 @@ const position = geodeticToVector3(
 
 **Type:** `boolean`
 
-**Description:** レイヤーの表示/非表示を制御します。
+**Description:** オブジェクトの表示/非表示を制御します。
 
 **Default:** `true`
 
@@ -297,13 +297,13 @@ import { Color } from "@navara/three";
 ### 基本的な使い方
 
 ```typescript
-import ThreeView, { RainMeshLayer, Color } from "@navara/three";
+import ThreeView, { RainMeshDesc, Color } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
-// RainMeshLayerを追加
-const rainLayer = view.addMesh<RainMeshLayer>({
+// RainMeshDescを追加
+const rainLayer = view.addMesh<RainMeshDesc>({
   rain: {
     particleCount: 5000,
     speed: 0.002,
@@ -320,7 +320,7 @@ const rainLayer = view.addMesh<RainMeshLayer>({
 
 ```typescript
 import ThreeView, {
-  RainMeshLayer,
+  RainMeshDesc,
   geodeticToVector3,
   degreeToRadian,
   LLE,
@@ -338,8 +338,8 @@ const position = geodeticToVector3(
   ),
 );
 
-// 位置を指定してRainMeshLayerを追加
-const rainLayer = view.addMesh<RainMeshLayer>({
+// 位置を指定してRainMeshDescを追加
+const rainLayer = view.addMesh<RainMeshDesc>({
   visible: true,
   position: position,
   rain: {

@@ -1,11 +1,11 @@
 ---
-title: CloudsEffectLayer
-description: Clouds effect layer for navara_three
+title: CloudsEffectDesc
+description: Clouds effect descriptor for navara_three
 sidebar:
   order: 52
 ---
 
-`CloudsEffectLayer`クラスは、リアルタイムボリュメトリック雲をレンダリングするエフェクトレイヤーです。大気散乱、影、ヘイズなど、高度な雲のビジュアル効果を提供します。
+`CloudsEffectDesc`クラスは、リアルタイムボリュメトリック雲をレンダリングするエフェクトです。大気散乱、影、ヘイズなど、高度な雲のビジュアル効果を提供します。
 
 このエフェクトは `Atmosphere` クラスが提供する大気テクスチャと太陽方向を使用して、物理的に正確な雲の照明を計算します。
 
@@ -19,7 +19,7 @@ sidebar:
 
 **Type:** `boolean | undefined`
 
-**Description:** エフェクトレイヤーの表示/非表示を制御します。
+**Description:** エフェクトの表示/非表示を制御します。
 
 **Default:** `true`
 
@@ -99,7 +99,7 @@ sidebar:
 
 **Type:** `boolean | undefined`
 
-**Description:** すべてのレイヤーの影を有効にするかどうかを指定します。`Atmosphere.irradiance`も有効にする必要があります。
+**Description:** すべてのオブジェクトの影を有効にするかどうかを指定します。`Atmosphere.irradiance`も有効にする必要があります。
 
 **Default:** `true`
 
@@ -631,10 +631,10 @@ import { Vector3 } from "three";
 
 ## Usage Examples
 
-### 基本的な雲エフェクトレイヤーの追加
+### 基本的な雲エフェクトの追加
 
 ```typescript
-import ThreeView, { CloudsEffectLayer } from "@navara/three";
+import ThreeView, { CloudsEffectDesc } from "@navara/three";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
@@ -642,11 +642,11 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-// デフォルトのフォトリアルレイヤーを追加（雲のレンダリングに必要）
-plugin.addDefaultPhotorealLayers();
+// デフォルトのフォトリアルオブジェクトを追加（雲のレンダリングに必要）
+plugin.addDefaultPhotorealScene();
 
-// 雲エフェクトレイヤーを追加
-const cloudsLayer = view.addEffect<CloudsEffectLayer>({
+// 雲エフェクトを追加
+const cloudsLayer = view.addEffect<CloudsEffectDesc>({
   clouds: {
     coverage: 0.5,
     qualityPreset: "high",
@@ -657,7 +657,7 @@ const cloudsLayer = view.addEffect<CloudsEffectLayer>({
 ### 雲の影を有効にしたシーン
 
 ```typescript
-import ThreeView, { CloudsEffectLayer } from "@navara/three";
+import ThreeView, { CloudsEffectDesc } from "@navara/three";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView({ shadow: true });
@@ -665,7 +665,7 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-const defaultLayers = plugin.addDefaultPhotorealLayers();
+const defaultLayers = plugin.addDefaultPhotorealScene();
 
 // 太陽光の影を有効にする
 defaultLayers.sun.update({
@@ -681,8 +681,8 @@ defaultLayers.aerialPerspective.update({
   },
 });
 
-// 雲エフェクトレイヤーを追加（影を有効化）
-const cloudsLayer = view.addEffect<CloudsEffectLayer>({
+// 雲エフェクトを追加（影を有効化）
+const cloudsLayer = view.addEffect<CloudsEffectDesc>({
   clouds: {
     shadows: true,
     shadowCascadeCount: 3,
@@ -693,7 +693,7 @@ const cloudsLayer = view.addEffect<CloudsEffectLayer>({
 ### 霧（フォグ）エフェクトとして使用
 
 ```typescript
-import ThreeView, { CloudsEffectLayer, LayerHandle } from "@navara/three";
+import ThreeView, { CloudsEffectDesc, LayerHandle } from "@navara/three";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
@@ -701,11 +701,11 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-// デフォルトのフォトリアルレイヤーを追加
-plugin.addDefaultPhotorealLayers();
+// デフォルトのフォトリアルオブジェクトを追加
+plugin.addDefaultPhotorealScene();
 
-// 雲レイヤーを霧として使用
-const cloudsLayer = view.addEffect<CloudsEffectLayer>({
+// 雲オブジェクトを霧として使用
+const cloudsLayer = view.addEffect<CloudsEffectDesc>({
   clouds: {},
 });
 
@@ -726,7 +726,7 @@ if (clouds) {
 ### アニメーション付きの雲
 
 ```typescript
-import ThreeView, { CloudsEffectLayer } from "@navara/three";
+import ThreeView, { CloudsEffectDesc } from "@navara/three";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 import { Vector2 } from "three";
 
@@ -738,11 +738,11 @@ await view.init();
 // アニメーションを有効にする
 view.animation = true;
 
-// デフォルトのフォトリアルレイヤーを追加
-plugin.addDefaultPhotorealLayers();
+// デフォルトのフォトリアルオブジェクトを追加
+plugin.addDefaultPhotorealScene();
 
-// 雲の移動速度を設定してレイヤーを追加
-const cloudsLayer = view.addEffect<CloudsEffectLayer>({
+// 雲の移動速度を設定してDescriptorを追加
+const cloudsLayer = view.addEffect<CloudsEffectDesc>({
   clouds: {
     coverage: 0.5,
     localWeatherVelocity: new Vector2(0.005, 0.001),
@@ -753,7 +753,7 @@ const cloudsLayer = view.addEffect<CloudsEffectLayer>({
 ### 天気シーンの完全な例
 
 ```typescript
-import ThreeView, { CloudsEffectLayer } from "@navara/three";
+import ThreeView, { CloudsEffectDesc } from "@navara/three";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 import { Vector2 } from "three";
 
@@ -762,7 +762,7 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-const defaultLayers = plugin.addDefaultPhotorealLayers();
+const defaultLayers = plugin.addDefaultPhotorealScene();
 
 // irradianceを有効にして雲の影を描画
 defaultLayers.aerialPerspective.update({
@@ -771,8 +771,8 @@ defaultLayers.aerialPerspective.update({
   },
 });
 
-// 雲レイヤーを追加
-const cloudsLayer = view.addEffect<CloudsEffectLayer>({
+// 雲Descriptorを追加
+const cloudsLayer = view.addEffect<CloudsEffectDesc>({
   clouds: {
     qualityPreset: "high",
     localWeatherVelocity: new Vector2(0.005, 0.001),

@@ -1,11 +1,11 @@
 ---
-title: SkyEnvMapEffectLayer
-description: Sky environment map effect layer for navara_three
+title: SkyEnvMapEffectDesc
+description: Sky environment map effect descriptor for navara_three
 sidebar:
   order: 61
 ---
 
-The `SkyEnvMapEffectLayer` class is a pass that renders the sky environment map. It generates sky textures used for environment mapping and reflections.
+The `SkyEnvMapEffectDesc` class is a pass that renders the sky environment map. It generates sky textures used for environment mapping and reflections.
 
 ## Properties
 
@@ -13,7 +13,7 @@ The `SkyEnvMapEffectLayer` class is a pass that renders the sky environment map.
 
 **Type:** `boolean | undefined`
 
-**Description:** Controls the visibility of the effect layer.
+**Description:** Controls the visibility of the effect descriptor.
 
 **Default:** `true`
 
@@ -40,7 +40,7 @@ The `SkyEnvMapEffectLayer` class is a pass that renders the sky environment map.
 ### Adding a basic sky environment map
 
 ```typescript
-import ThreeView, { SkyEnvMapEffectLayer } from "@navara/three";
+import ThreeView, { SkyEnvMapEffectDesc } from "@navara/three";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
@@ -48,11 +48,11 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-// Add default photorealistic layers (required for sky rendering)
-plugin.addDefaultPhotorealLayers();
+// Add default photorealistic objects (required for sky rendering)
+plugin.addDefaultPhotorealScene();
 
-// Add sky environment map effect layer
-view.addEffect<SkyEnvMapEffectLayer>({
+// Add sky environment map effect descriptor
+view.addEffect<SkyEnvMapEffectDesc>({
   skyEnvMap: {
     resolution: 256,
   },
@@ -62,7 +62,7 @@ view.addEffect<SkyEnvMapEffectLayer>({
 ### High-resolution environment map
 
 ```typescript
-import ThreeView, { SkyEnvMapEffectLayer } from "@navara/three";
+import ThreeView, { SkyEnvMapEffectDesc } from "@navara/three";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
@@ -70,10 +70,10 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-plugin.addDefaultPhotorealLayers();
+plugin.addDefaultPhotorealScene();
 
 // Create a high-resolution environment map
-view.addEffect<SkyEnvMapEffectLayer>({
+view.addEffect<SkyEnvMapEffectDesc>({
   skyEnvMap: {
     resolution: 512,
   },
@@ -83,7 +83,7 @@ view.addEffect<SkyEnvMapEffectLayer>({
 ### Usage combined with reflective materials
 
 ```typescript
-import ThreeView, { SkyEnvMapEffectLayer, Color } from "@navara/three";
+import ThreeView, { SkyEnvMapEffectDesc, Color } from "@navara/three";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
@@ -91,11 +91,11 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-// Add default photorealistic layers
-plugin.addDefaultPhotorealLayers();
+// Add default photorealistic objects
+plugin.addDefaultPhotorealScene();
 
 // Add sky environment map (used for reflections)
-view.addEffect<SkyEnvMapEffectLayer>({
+view.addEffect<SkyEnvMapEffectDesc>({
   skyEnvMap: {
     resolution: 256,
   },
@@ -118,4 +118,4 @@ view.addLayer({
 
 ## Notes
 
-The generated environment map is used for material reflections and environment lighting. The resolution is fixed at creation time, so the layer must be recreated to change it.
+The generated environment map is used for material reflections and environment lighting. The resolution is fixed at creation time, so the Descriptor must be recreated to change it.

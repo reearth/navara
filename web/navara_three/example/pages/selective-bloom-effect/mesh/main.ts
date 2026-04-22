@@ -5,11 +5,11 @@ import ThreeView, {
   geodeticToVector3,
 } from "@navara/three";
 import type {
-  BoxMeshLayer,
-  SphereMeshLayer,
-  CylinderMeshLayer,
-  PlaneMeshLayer,
-  TubeMeshLayer,
+  BoxMeshDesc,
+  SphereMeshDesc,
+  CylinderMeshDesc,
+  PlaneMeshDesc,
+  TubeMeshDesc,
 } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
@@ -31,7 +31,7 @@ const run = async () => {
 
   await view.init();
 
-  const defaultAtmospheres = defaultPlugin.addDefaultPhotorealLayers();
+  const defaultAtmospheres = defaultPlugin.addDefaultPhotorealScene();
   defaultAtmospheres.sun.update({
     sun: { intensity: 1, castShadow: true },
   });
@@ -56,14 +56,14 @@ const run = async () => {
     },
   });
 
-  // Mesh layers with bloom
+  // Mesh descriptors with bloom
   const tokyoStationPosition = geodeticToVector3({
     lat: degreeToRadian(35.681236),
     lng: degreeToRadian(139.767125),
     height: 200,
   });
 
-  view.addMesh<BoxMeshLayer>({
+  view.addMesh<BoxMeshDesc>({
     box: {
       width: 200,
       height: 200,
@@ -88,7 +88,7 @@ const run = async () => {
     .clone()
     .add(new Vector3(-500, 0, -600));
 
-  view.addMesh<SphereMeshLayer>({
+  view.addMesh<SphereMeshDesc>({
     sphere: {
       radius: 100,
       color: new Color().setHex(0x00aaff),
@@ -114,7 +114,7 @@ const run = async () => {
     height: 400,
   });
 
-  view.addMesh<CylinderMeshLayer>({
+  view.addMesh<CylinderMeshDesc>({
     cylinder: {
       radiusTop: 50,
       radiusBottom: 80,
@@ -142,7 +142,7 @@ const run = async () => {
     height: 400,
   });
 
-  view.addMesh<PlaneMeshLayer>({
+  view.addMesh<PlaneMeshDesc>({
     plane: {
       width: 200,
       height: 200,
@@ -169,7 +169,7 @@ const run = async () => {
     height: 400,
   });
 
-  view.addMesh<TubeMeshLayer>({
+  view.addMesh<TubeMeshDesc>({
     tube: {
       points: [
         { x: 0, y: 0, z: 0 },

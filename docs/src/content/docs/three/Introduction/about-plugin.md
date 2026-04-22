@@ -17,7 +17,7 @@ Therefore, navara_three introduces a plugin system to **efficiently process GIS 
 
 The plugin system is designed to be usable for as many general-purpose scenarios as possible. For example, the following use cases are conceivable:
 
-- **Automating setup** -- A plugin that bulk-registers custom layers implemented by developers
+- **Automating setup** -- A plugin that bulk-registers custom descriptors implemented by developers
 - **Interactive map operations** -- A plugin that draws lines and areas on the map
 - **Supporting new data formats** -- A plugin that loads proprietary GIS formats as GeoJSON layers
 
@@ -32,13 +32,13 @@ navara_three (core)
   └── Plugin API (addPlugin, Plugin class)
 
 three_default_layers (external module)
-  └── Implements Three.js-specific meshes, effects, and lights as layers
+  └── Implements Three.js-specific meshes, effects, and lights as descriptors
 
 three_default_plugin (external module)
-  └── Provides bulk registration of default layers and a high-level API via DefaultPlugin
+  └── Provides bulk registration of default descriptors and a high-level API via DefaultPlugin
 ```
 
-For example, the [three_default_layers](../../../three_default_layers/about/) package implements Three.js-specific meshes, effects, and lights using the navara_three layer API. Furthermore, [three_default_plugin](../../../three_default_plugin/about/) bulk-registers these and provides a high-level API for easily setting up photorealistic scenes.
+For example, the [three_default_layers](../../../three_default_layers/about/) package implements Three.js-specific meshes, effects, and lights using the navara_three Descriptor API. Furthermore, [three_default_plugin](../../../three_default_plugin/about/) bulk-registers these and provides a high-level API for easily setting up photorealistic scenes.
 
 navara_three aims to be a module with the highest possible versatility, but the trade-off is that the API becomes more advanced. The plugin system abstracts this into a high-level API, allowing developers to use it simply.
 
@@ -49,7 +49,7 @@ Plugins operate in the following order:
 1. **Create the plugin** -- Instantiate the plugin
 2. **Register** -- Register the plugin with `view.addPlugin()` (must be done **before** `view.init()`)
 3. **Initialize** -- When `view.init()` is called, the `init()` of all registered plugins is automatically executed
-4. **Use** -- After initialization, the methods and layers provided by the plugin are available
+4. **Use** -- After initialization, the methods and descriptors provided by the plugin are available
 
 ```typescript
 import ThreeView from "@navara/three";
@@ -66,7 +66,7 @@ view.addPlugin(plugin);
 await view.init();
 
 // 4. After initialization, plugin methods are available
-const layers = plugin.addDefaultPhotorealLayers();
+const layers = plugin.addDefaultPhotorealScene();
 ```
 
 :::caution
@@ -75,7 +75,7 @@ const layers = plugin.addDefaultPhotorealLayers();
 
 ## DefaultPlugin
 
-The `DefaultPlugin` provided by the [three_default_plugin](../../../three_default_plugin/about/) package is a plugin that bulk-registers all 32 layers from [three_default_layers](../../../three_default_layers/about/) (16 mesh types, 12 effect types, 4 light types). For most projects, this alone is sufficient.
+The `DefaultPlugin` provided by the [three_default_plugin](../../../three_default_plugin/about/) package is a plugin that bulk-registers all 32 Descriptors from [three_default_layers](../../../three_default_layers/about/) (16 mesh types, 12 effect types, 4 light types). For most projects, this alone is sufficient.
 
 ```typescript
 import ThreeView from "@navara/three";
@@ -86,7 +86,7 @@ const view = new ThreeView({});
 view.addPlugin(plugin);
 await view.init();
 
-// All default layers are now available
+// All default descriptors are now available
 view.addMesh({ sky: {} });
 view.addLight({ sun: { intensity: 1.0 } });
 view.addEffect({ toneMapping: {} });
@@ -98,6 +98,6 @@ For details, see the [three_default_plugin documentation](../../../three_default
 
 - [About Layer](../../../three/introduction/about-layer/) - Layer concepts and types
 - [Plugin API](../../../three/core/plugin/) - How to implement plugins
-- [Custom Layer](../../../three/core/custom-layer/) - How to implement custom layers
-- [three_default_layers](../../../three_default_layers/about/) - Default layer implementations
+- [Custom Descriptor](../../../three/core/custom-layer/) - How to implement custom descriptors
+- [three_default_layers](../../../three_default_layers/about/) - Default Descriptor implementations
 - [three_default_plugin](../../../three_default_plugin/about/) - DefaultPlugin details

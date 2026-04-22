@@ -1,11 +1,11 @@
 ---
-title: SSAOEffectLayer
-description: SSAO effect layer for navara_three
+title: SSAOEffectDesc
+description: SSAO effect descriptor for navara_three
 sidebar:
   order: 59
 ---
 
-The `SSAOEffectLayer` class is a layer that applies the Screen Space Ambient Occlusion (SSAO) effect. It adds dark shadows to crevices and concavities in the geometry, producing a more three-dimensional appearance.
+The `SSAOEffectDesc` class is a Descriptor that applies the Screen Space Ambient Occlusion (SSAO) effect. It adds dark shadows to crevices and concavities in the geometry, producing a more three-dimensional appearance.
 
 ## Properties
 
@@ -13,7 +13,7 @@ The `SSAOEffectLayer` class is a layer that applies the Screen Space Ambient Occ
 
 **Type:** `boolean | undefined`
 
-**Description:** Controls the visibility of the effect layer.
+**Description:** Controls the visibility of the effect descriptor.
 
 **Default:** `true`
 
@@ -132,13 +132,13 @@ import { Color } from "@navara/three";
 ### Adding a basic SSAO effect
 
 ```typescript
-import ThreeView, { SSAOEffectLayer } from "@navara/three";
+import ThreeView, { SSAOEffectDesc } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
-// Add SSAO effect layer
-const ssaoLayer = view.addEffect<SSAOEffectLayer>({
+// Add SSAO effect descriptor
+const ssaoLayer = view.addEffect<SSAOEffectDesc>({
   visible: true,
   ssao: {},
 });
@@ -147,13 +147,13 @@ const ssaoLayer = view.addEffect<SSAOEffectLayer>({
 ### High-quality SSAO settings
 
 ```typescript
-import ThreeView, { SSAOEffectLayer, Color } from "@navara/three";
+import ThreeView, { SSAOEffectDesc, Color } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
 // Add high-quality SSAO
-const ssaoLayer = view.addEffect<SSAOEffectLayer>({
+const ssaoLayer = view.addEffect<SSAOEffectDesc>({
   visible: true,
   ssao: {
     quality: "High",
@@ -168,13 +168,13 @@ const ssaoLayer = view.addEffect<SSAOEffectLayer>({
 ### Performance-oriented SSAO settings
 
 ```typescript
-import ThreeView, { SSAOEffectLayer } from "@navara/three";
+import ThreeView, { SSAOEffectDesc } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
 // Improve performance with half resolution
-const ssaoLayer = view.addEffect<SSAOEffectLayer>({
+const ssaoLayer = view.addEffect<SSAOEffectDesc>({
   visible: true,
   ssao: {
     quality: "Low",
@@ -186,7 +186,7 @@ const ssaoLayer = view.addEffect<SSAOEffectLayer>({
 ### Usage combined with default effects
 
 ```typescript
-import ThreeView, { SSAOEffectLayer, Color } from "@navara/three";
+import ThreeView, { SSAOEffectDesc, Color } from "@navara/three";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
@@ -194,11 +194,11 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-// Add default photorealistic layers
-plugin.addDefaultPhotorealLayers();
+// Add default photorealistic objects
+plugin.addDefaultPhotorealScene();
 
 // Add SSAO
-const ssaoLayer = view.addEffect<SSAOEffectLayer>({
+const ssaoLayer = view.addEffect<SSAOEffectDesc>({
   visible: true,
   ssao: {
     quality: "High",

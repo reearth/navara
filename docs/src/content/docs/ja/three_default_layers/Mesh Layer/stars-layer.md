@@ -1,15 +1,15 @@
 ---
-title: StarsLayer
-description: Stars layer for navara_three
+title: StarsDesc
+description: Stars Descriptor for navara_three
 sidebar:
   order: 113
 ---
 
-`StarsLayer`クラスは、星空を描画するメッシュレイヤーです。実際の天体カタログに基づいたポイントスプライトを使用して、リアルな星空を表現します。
+`StarsDesc`クラスは、星空を描画するメッシュです。実際の天体カタログに基づいたポイントスプライトを使用して、リアルな星空を表現します。
 
 星の位置は `view.atmosphere.date` に基づいて地球の自転が考慮され、太陽の位置によって可視性が自動調整されます。
 
-以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`pickable`、`visible`）が利用できます。詳細は [MeshLayerDeclaration](./mesh-layer-base) を参照してください。
+以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`pickable`、`visible`）が利用できます。詳細は [MeshDesc](./mesh-layer-base) を参照してください。
 
 :::tip[関連ドキュメント]
 大気システムの詳細については [Atmosphere クラス](../../../three/api-reference/atmosphere/) を参照してください。
@@ -104,13 +104,13 @@ sidebar:
 ## Usage Examples
 
 ```typescript
-import ThreeView, { StarsLayer } from "@navara/three";
+import ThreeView, { StarsDesc } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
-// StarsLayerを追加
-const starsLayer = view.addMesh<StarsLayer>({
+// StarsDescを追加
+const starsLayer = view.addMesh<StarsDesc>({
   stars: {
     visible: true,
     pointSize: 1.2,
@@ -122,7 +122,7 @@ const starsLayer = view.addMesh<StarsLayer>({
 
 ## 技術的詳細
 
-StarsLayerは、@takram/three-atmosphereライブラリを使用して実装されており、以下の機能を提供します:
+StarsDescは、@takram/three-atmosphereライブラリを使用して実装されており、以下の機能を提供します:
 
 - 実際の天体カタログデータに基づく星の配置
 - 太陽の位置に基づく星の可視性の自動調整

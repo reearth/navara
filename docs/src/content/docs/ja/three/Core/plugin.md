@@ -21,15 +21,15 @@ abstract class Plugin<TView = unknown, TCtx = unknown> {
 
 `Plugin` クラスは意図的に最小限のインターフェースとして設計されており、`init()` メソッドのみを持ちます。
 
-| メソッド           | 説明                                                             |
-| ------------------ | ---------------------------------------------------------------- |
+| メソッド          | 説明                                                             |
+| ----------------- | ---------------------------------------------------------------- |
 | `init(view, ctx)` | プラグインの初期化処理。`view.init()` の中で自動的に呼び出される |
 
 ### Generics
 
-| パラメータ | 説明 |
-| ---------- | ---- |
-| `TView`    | `init()` に渡される view の型。通常は `ThreeView` または `ThreeView<MyLayerDescriptions>` を指定します。 |
+| パラメータ | 説明                                                                                                                     |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `TView`    | `init()` に渡される view の型。通常は `ThreeView` または `ThreeView<MyLayerDescriptions>` を指定します。                 |
 | `TCtx`     | `init()` に渡されるコンテキストの型。`ViewContext` を指定すると、レンダラー、バッファ、パス管理 API にアクセスできます。 |
 
 ## ライフサイクル
@@ -56,30 +56,30 @@ await view.init()
 
 ### 基本的なプラグイン
 
-レイヤーの登録をカプセル化する基本的なプラグインの例です。
+Descriptor の登録をカプセル化する基本的なプラグインの例です。
 
 ```typescript
 import ThreeView, { Plugin, type ViewContext } from "@navara/three";
 import {
-  BoxMeshLayer,
-  SphereMeshLayer,
-  SunLightLayer,
-  AmbientLightLayer,
-  FXAAEffectLayer,
+  BoxMeshDesc,
+  SphereMeshDesc,
+  SunLightDesc,
+  AmbientLightDesc,
+  FXAAEffectDesc,
 } from "@navara/three_default_layers";
 
 class MyScenePlugin extends Plugin<ThreeView, ViewContext> {
   async init(view: ThreeView, _ctx: ViewContext) {
-    // メッシュレイヤーの登録
-    view.registerMesh("box", BoxMeshLayer);
-    view.registerMesh("sphere", SphereMeshLayer);
+    // メッシュ Descriptor の登録
+    view.registerMesh("box", BoxMeshDesc);
+    view.registerMesh("sphere", SphereMeshDesc);
 
-    // ライトレイヤーの登録
-    view.registerLight("sun", SunLightLayer);
-    view.registerLight("ambient", AmbientLightLayer);
+    // ライト Descriptor の登録
+    view.registerLight("sun", SunLightDesc);
+    view.registerLight("ambient", AmbientLightDesc);
 
-    // エフェクトレイヤーの登録
-    view.registerEffect("fxaa", FXAAEffectLayer);
+    // エフェクト Descriptor の登録
+    view.registerEffect("fxaa", FXAAEffectDesc);
   }
 }
 ```
@@ -91,23 +91,23 @@ const view = new ThreeView({});
 view.addPlugin(plugin);
 await view.init();
 
-// プラグインで登録したレイヤーが利用可能
+// プラグインで登録した Descriptor が利用可能
 view.addMesh({ box: { width: 100, height: 100, depth: 100 } });
 view.addLight({ sun: { intensity: 1.0 } });
 ```
 
 ### 高レベル API を提供するプラグイン
 
-`init()` 内でレイヤーを登録するだけでなく、初期化後に呼び出すメソッドを提供することもできます。
+`init()` 内で Descriptor を登録するだけでなく、初期化後に呼び出すメソッドを提供することもできます。
 
 ```typescript
-import ThreeView, { Plugin, type ViewContext, type LayerHandle } from "@navara/three";
+import ThreeView, { Plugin, type ViewContext, type BaseHandle } from "@navara/three";
 import {
-  SkyMeshLayer,
-  SunLightLayer,
-  AmbientLightLayer,
-  ToneMappingEffectLayer,
-  FXAAEffectLayer,
+  SkyMeshDesc,
+  SunLightDesc,
+  AmbientLightDesc,
+  ToneMappingEffectDesc,
+  FXAAEffectDesc,
 } from "@navara/three_default_layers";
 
 class MyScenePlugin extends Plugin<ThreeView, ViewContext> {
@@ -116,22 +116,22 @@ class MyScenePlugin extends Plugin<ThreeView, ViewContext> {
   async init(view: ThreeView, _ctx: ViewContext) {
     this.view = view;
 
-    view.registerMesh("sky", SkyMeshLayer);
-    view.registerLight("sun", SunLightLayer);
-    view.registerLight("ambient", AmbientLightLayer);
-    view.registerEffect("toneMapping", ToneMappingEffectLayer);
-    view.registerEffect("fxaa", FXAAEffectLayer);
+    view.registerMesh("sky", SkyMeshDesc);
+    view.registerLight("sun", SunLightDesc);
+    view.registerLight("ambient", AmbientLightDesc);
+    view.registerEffect("toneMapping", ToneMappingEffectDesc);
+    view.registerEffect("fxaa", FXAAEffectDesc);
   }
 
   /** シーンに基本的な照明とエフェクトを追加する */
   setupScene(): {
-    sky: LayerHandle<SkyMeshLayer>;
-    sun: LayerHandle<SunLightLayer>;
+    sky: BaseHandle<SkyMeshDesc>;
+    sun: BaseHandle<SunLightDesc>;
   } {
     if (!this.view) throw new Error("Plugin is not initialized");
 
-    const sky = this.view.addMesh<SkyMeshLayer>({ sky: {} });
-    const sun = this.view.addLight<SunLightLayer>({
+    const sky = this.view.addMesh<SkyMeshDesc>({ sky: {} });
+    const sun = this.view.addLight<SunLightDesc>({
       sun: { intensity: 1.0, castShadow: true },
     });
     this.view.addLight({ ambient: { intensity: 0.3 } });
@@ -153,19 +153,19 @@ await view.init();
 const { sky, sun } = plugin.setupScene();
 ```
 
-### カスタムレイヤーを含むプラグイン
+### カスタム Descriptor を含むプラグイン
 
-独自に実装したカスタムレイヤー（[Custom Layer](../../../three/api/custom-layer/) を参照）を登録するプラグインも作成できます。
+独自に実装したカスタム Descriptor（[Custom Layer](../../../three/api/custom-layer/) を参照）を登録するプラグインも作成できます。
 
 ```typescript
 import ThreeView, { Plugin, type ViewContext } from "@navara/three";
-import { MyCustomMeshLayer } from "./layers/MyCustomMeshLayer";
-import { MyCustomEffectLayer } from "./layers/MyCustomEffectLayer";
+import { MyCustomMeshDesc } from "./layers/MyCustomMeshDesc";
+import { MyCustomEffectDesc } from "./layers/MyCustomEffectDesc";
 
 class MyCustomPlugin extends Plugin<ThreeView, ViewContext> {
   async init(view: ThreeView, _ctx: ViewContext) {
-    view.registerMesh("myCustomMesh", MyCustomMeshLayer);
-    view.registerEffect("myCustomEffect", MyCustomEffectLayer);
+    view.registerMesh("myCustomMesh", MyCustomMeshDesc);
+    view.registerEffect("myCustomEffect", MyCustomEffectDesc);
   }
 }
 ```
@@ -173,5 +173,5 @@ class MyCustomPlugin extends Plugin<ThreeView, ViewContext> {
 ## 関連リソース
 
 - [About Plugin](../../../three/introduction/about-plugin/) - プラグインシステムの概念
-- [Custom Layer](../../../three/core/custom-layer/) - カスタムレイヤーの実装方法
+- [Custom Layer](../../../three/core/custom-layer/) - カスタム Descriptor の実装方法
 - [three_default_plugin](../../../three_default_plugin/about/) - DefaultPlugin の詳細

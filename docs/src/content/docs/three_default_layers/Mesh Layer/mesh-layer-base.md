@@ -1,18 +1,18 @@
 ---
-title: MeshLayerDeclaration
-description: Base class properties and features shared by all mesh layers
+title: MeshDesc
+description: Base class properties and features shared by all mesh Descriptors
 sidebar:
   order: 99
 ---
 
-`MeshLayerDeclaration` is the base class for all mesh layers. It provides common configuration properties, transform composition, and picking support. Every mesh layer — both built-in and custom — inherits from this class, so the features described here are available on all mesh layers.
+`MeshDesc` is the base class for all mesh Descriptors. It provides common configuration properties, transform composition, and picking support. Every mesh Descriptor — both built-in and custom — inherits from this class, so the features described here are available on all mesh Descriptors.
 
 ## Common Properties
 
 | Property      | Type                                   | Default        | Description                                                                                    |
 |---------------|----------------------------------------|----------------|------------------------------------------------------------------------------------------------|
-| `id`          | `string`                               | Auto-generated | Unique identifier for the layer                                                                |
-| `visible`     | `boolean`                              | `true`         | Toggle visibility of the layer                                                                 |
+| `id`          | `string`                               | Auto-generated | Unique identifier for the object                                                                |
+| `visible`     | `boolean`                              | `true`         | Toggle visibility of the object                                                                 |
 | `position`    | `{ x: number, y: number, z: number }`  | -              | Position (ECEF), or local offset when `matrix`/`matrixWorld` is set                            |
 | `rotation`    | `{ x: number, y: number, z: number }`  | -              | Rotation (Euler angles, radians), or local offset when `matrix`/`matrixWorld` is set           |
 | `scale`       | `{ x: number, y: number, z: number }`  | -              | Scale, or local offset when `matrix`/`matrixWorld` is set                                      |
@@ -22,7 +22,7 @@ sidebar:
 
 ## Transform Composition
 
-`MeshLayerDeclaration` supports three transform modes.
+`MeshDesc` supports three transform modes.
 
 ### Standard Transforms
 
@@ -57,10 +57,10 @@ import ThreeView, {
   eastNorthUpToFixedFrame,
   degreeToRadian,
 } from "@navara/three";
-import { BoxMeshLayer } from "@navara/three_default_layers";
+import { BoxMeshDesc } from "@navara/three_default_layers";
 
 const view = new ThreeView();
-view.registerMesh("box", BoxMeshLayer);
+view.registerMesh("box", BoxMeshDesc);
 await view.init();
 
 // Compute the ENU frame at a geographic origin
@@ -72,14 +72,14 @@ const origin = geodeticToVector3({
 const enuFrame = eastNorthUpToFixedFrame(origin);
 
 // Place a box 200m east and 50m above the origin
-const box1 = view.addMesh<BoxMeshLayer>({
+const box1 = view.addMesh<BoxMeshDesc>({
   box: { width: 50, height: 100, depth: 50, color: new Color().setHex(0xff0000) },
   matrixWorld: enuFrame,
   position: { x: 200, y: 50, z: 0 },
 });
 
 // Place another box 100m north
-const box2 = view.addMesh<BoxMeshLayer>({
+const box2 = view.addMesh<BoxMeshDesc>({
   box: { width: 50, height: 80, depth: 50, color: new Color().setHex(0x00ff00) },
   matrixWorld: enuFrame,
   position: { x: 0, y: 40, z: 100 },
@@ -88,7 +88,7 @@ const box2 = view.addMesh<BoxMeshLayer>({
 
 ## Picking
 
-Mesh layers can opt into GPU-based click picking by setting `pickable: true` in the layer config. The picking system renders pickable meshes into a dedicated single-pixel render target with each mesh's batch ID encoded as an RGB color, reads back the pixel, and emits a `"pick"` event identifying which mesh was clicked.
+Mesh Descriptors can opt into GPU-based click picking by setting `pickable: true` in the Descriptor config. The picking system renders pickable meshes into a dedicated single-pixel render target with each mesh's batch ID encoded as an RGB color, reads back the pixel, and emits a `"pick"` event identifying which mesh was clicked.
 
 :::note
 To use picking, you must set `picking: true` in the ThreeView constructor.
@@ -98,13 +98,13 @@ To use picking, you must set `picking: true` in the ThreeView constructor.
 
 ```typescript
 import ThreeView, { Color } from "@navara/three";
-import { BoxMeshLayer } from "@navara/three_default_layers";
+import { BoxMeshDesc } from "@navara/three_default_layers";
 
 const view = new ThreeView({ picking: true });
-view.registerMesh("box", BoxMeshLayer);
+view.registerMesh("box", BoxMeshDesc);
 await view.init();
 
-const boxLayer = view.addMesh<BoxMeshLayer>({
+const boxLayer = view.addMesh<BoxMeshDesc>({
   box: {
     width: 100,
     height: 100,
@@ -125,13 +125,13 @@ view.on("pick", (info) => {
 
 ### Batch ID
 
-The batch ID is a unique 24-bit integer assigned to each pickable mesh (or each instance in an instanced mesh layer). You can read it from the layer reference to determine which mesh was clicked:
+The batch ID is a unique 24-bit integer assigned to each pickable mesh (or each instance in an instanced mesh Descriptor). You can read it from the Descriptor reference to determine which mesh was clicked:
 
 ```typescript
-// Single mesh layer
+// Single mesh Descriptor
 const batchId = boxLayer.ref.batchId;
 
-// Instanced mesh layer — one batch ID per instance
+// Instanced mesh Descriptor — one batch ID per instance
 const batchIds = instancedLayer.ref.batchIds;
 ```
 
@@ -156,7 +156,7 @@ type PickedFeature = {
 };
 ```
 
-For implementing picking in custom layers, see [Custom Layer — Mesh Picking](../../three/core/custom-layer/#mesh-picking).
+For implementing picking in custom Descriptors, see [Custom Layer — Mesh Picking](../../three/core/custom-layer/#mesh-picking).
 
 ## Coordinate Transformation
 
@@ -174,10 +174,10 @@ import ThreeView, {
   geodeticToVector3,
   degreeToRadian,
 } from "@navara/three";
-import { SphereMeshLayer } from "@navara/three_default_layers";
+import { SphereMeshDesc } from "@navara/three_default_layers";
 
 const view = new ThreeView();
-view.registerMesh("sphere", SphereMeshLayer);
+view.registerMesh("sphere", SphereMeshDesc);
 await view.init();
 
 // Convert from latitude/longitude/altitude to ECEF coordinates
@@ -187,8 +187,8 @@ const position = geodeticToVector3({
   height: 200,                      // Altitude (meters)
 });
 
-// Add a mesh layer with the converted coordinates
-const sphereLayer = view.addMesh<SphereMeshLayer>({
+// Add a mesh Descriptor with the converted coordinates
+const sphereLayer = view.addMesh<SphereMeshDesc>({
   sphere: {
     radius: 100,
     color: new Color().setHex(0x00aaff),
@@ -211,10 +211,10 @@ import {
   geodeticSurfaceNormal,
   degreeToRadian,
 } from "@navara/three";
-import { GLTFModelLayer } from "@navara/three_default_layers";
+import { GLTFModelDesc } from "@navara/three_default_layers";
 import { Vector3, Quaternion, Euler } from "three";
 
-// GLTFModelLayer must be registered
+// GLTFModelDesc must be registered
 
 // Compute position
 const origin = geodeticToVector3({
@@ -225,7 +225,7 @@ const origin = geodeticToVector3({
 const enuFrame = eastNorthUpToFixedFrame(origin);
 
 // Place the model along the Earth's surface
-const modelLayer = view.addMesh<GLTFModelLayer>({
+const modelLayer = view.addMesh<GLTFModelDesc>({
   gltfModel: {
     url: "/models/building.gltf",
   },

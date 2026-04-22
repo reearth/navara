@@ -22,7 +22,7 @@ const run = async () => {
 
   await view.init();
 
-  defaultPlugin.addDefaultPhotorealLayers();
+  defaultPlugin.addDefaultPhotorealScene();
 
   // Register the multi-script font family
   view.addFontFamily(WORLD_FONT_FAMILY);

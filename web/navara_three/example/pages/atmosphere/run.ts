@@ -3,18 +3,20 @@ import ThreeView, {
   Color,
   JAPAN_GSI_ELEVATION_DECODER,
   type LayerDescription,
-  LayerHandle,
+  MeshHandle,
+  LightHandle,
+  EffectHandle,
 } from "@navara/three";
 import {
-  SunLightLayer,
-  AmbientLightLayer,
-  SkyLightProbeLayer,
-  LightProbeLayer,
-  SkyMeshLayer,
-  StarsLayer,
-  AerialPerspectiveEffectLayer,
-  CloudsEffectLayer,
-  SSAOEffectLayer,
+  SunLightDesc,
+  AmbientLightDesc,
+  SkyLightProbeDesc,
+  LightProbeDesc,
+  SkyMeshDesc,
+  StarsDesc,
+  AerialPerspectiveEffectDesc,
+  CloudsEffectDesc,
+  SSAOEffectDesc,
   DEFAULT_CLOUDS_OPTIONS,
   ToneMappingMode,
   type CloudsOptions,
@@ -49,14 +51,14 @@ import { SH_COEFFICIENTS } from "../../helpers/sh";
 
 export type CustomDeclarations = DefaultDeclarations;
 
-type DefaultEffects = ReturnType<DefaultPlugin["addDefaultPhotorealLayers"]>;
+type DefaultEffects = ReturnType<DefaultPlugin["addDefaultPhotorealScene"]>;
 
 export const run = async (view: ThreeView<CustomDeclarations>) => {
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
   await view.init();
 
-  const defaultEffects = plugin.addDefaultPhotorealLayers();
+  const defaultEffects = plugin.addDefaultPhotorealScene();
 
   defaultEffects.aerialPerspective.update({
     aerialPerspective: {
@@ -64,25 +66,25 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
     },
   });
 
-  // Add clouds effect layer explicitly
-  const cloudsLayer = view.addEffect<CloudsEffectLayer>({
+  // Add clouds effect descriptor explicitly
+  const cloudsLayer = view.addEffect<CloudsEffectDesc>({
     clouds: {},
   });
 
-  // Cast to specific layer types for easier access and updates
+  // Cast to specific descriptor types for easier access and updates
   const skyLayer = defaultEffects.sky;
   const starsLayer = defaultEffects.stars;
-  const sunLightLayer = defaultEffects.sun;
-  const skyLightProbeLayer = defaultEffects.skyLightProbe;
+  const sunLight = defaultEffects.sun;
+  const skyLightProbeDesc = defaultEffects.skyLightProbe;
 
-  sunLightLayer.update({
+  sunLight.update({
     sun: {
       castShadow: true,
     },
   });
 
-  // Add an additional ambient light layer
-  const ambientLightLayer: LayerHandle<AmbientLightLayer> = view.addLight({
+  // Add an additional ambient light descriptor
+  const ambientLight: LightHandle<AmbientLightDesc> = view.addLight({
     visible: false,
     ambient: {
       intensity: 1,
@@ -153,9 +155,9 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
     pane,
     skyLayer,
     starsLayer,
-    sunLightLayer,
-    ambientLightLayer,
-    skyLightProbeLayer,
+    sunLight,
+    ambientLight,
+    skyLightProbeDesc,
     defaultEffects.aerialPerspective,
   );
   addCloudsControl(view, pane, cloudsLayer);
@@ -277,12 +279,12 @@ const addCloudsTilesControl = (
 
 const addAtmosphereControl = (
   pane: Pane,
-  skyLayer: LayerHandle<SkyMeshLayer>,
-  starsLayer: LayerHandle<StarsLayer>,
-  sunLightLayer: LayerHandle<SunLightLayer>,
-  ambientLightLayer: LayerHandle<AmbientLightLayer>,
-  _skyLightProbeLayer: LayerHandle<SkyLightProbeLayer>,
-  aerialPerspectiveLayer: LayerHandle<AerialPerspectiveEffectLayer>,
+  skyLayer: MeshHandle<SkyMeshDesc>,
+  starsLayer: MeshHandle<StarsDesc>,
+  sunLight: LightHandle<SunLightDesc>,
+  ambientLight: LightHandle<AmbientLightDesc>,
+  _skyLightProbeDesc: LightHandle<SkyLightProbeDesc>,
+  aerialPerspectiveLayer: EffectHandle<AerialPerspectiveEffectDesc>,
 ) => {
   const PARAMS = {
     aerialPerspective: true,
@@ -328,17 +330,17 @@ const addAtmosphereControl = (
     starsLayer.visible = v.value;
   });
   folder.addBinding(PARAMS, "sunLight").on("change", (v) => {
-    sunLightLayer.visible = v.value;
+    sunLight.visible = v.value;
   });
   folder
     .addBinding(PARAMS, "sunLightColor", { color: { type: "int" } })
     .on("change", (v) => {
-      sunLightLayer.update({
+      sunLight.update({
         sun: { color: new Color().setHex(v.value) },
       });
     });
   folder.addBinding(PARAMS, "sunApplyLightColor").on("change", (v) => {
-    sunLightLayer.update({ sun: { applyColor: v.value } });
+    sunLight.update({ sun: { applyColor: v.value } });
   });
   folder.addBinding(PARAMS, "moonScale").on("change", (v) => {
     skyLayer.update({ sky: { moonScale: v.value } });
@@ -353,20 +355,20 @@ const addAtmosphereControl = (
     starsLayer.update({ stars: { intensity: v.value } });
   });
   folder.addBinding(PARAMS, "sunLightIntensity").on("change", (v) => {
-    sunLightLayer.update({ sun: { intensity: v.value } });
+    sunLight.update({ sun: { intensity: v.value } });
   });
   folder.addBinding(PARAMS, "ambientLight").on("change", (v) => {
-    ambientLightLayer.visible = v.value;
+    ambientLight.visible = v.value;
   });
   folder
     .addBinding(PARAMS, "ambientLightColor", { color: { type: "int" } })
     .on("change", (v) => {
-      ambientLightLayer.update({
+      ambientLight.update({
         ambient: { color: new Color().setHex(v.value) },
       });
     });
   folder.addBinding(PARAMS, "ambientLightIntensity").on("change", (v) => {
-    ambientLightLayer.update({ ambient: { intensity: v.value } });
+    ambientLight.update({ ambient: { intensity: v.value } });
   });
   folder.addBinding(PARAMS, "inscatter").on("change", (v) => {
     aerialPerspectiveLayer.update({
@@ -394,7 +396,7 @@ const addAtmosphereControl = (
 const addCloudsControl = (
   view: ThreeView<CustomDeclarations>,
   pane: Pane,
-  cloudsLayerHandle: LayerHandle<CloudsEffectLayer>,
+  cloudsLayerHandle: EffectHandle<CloudsEffectDesc>,
 ) => {
   const BASE_PARAMS = {
     enable: true,
@@ -1139,7 +1141,7 @@ const addIBLControl = (view: ThreeView<CustomDeclarations>, pane: Pane) => {
   sh.coefficients = SH_COEFFICIENTS.debug;
 
   // Create the light probe layer but keep it hidden initially
-  const lightProbeLayer = view.addLight<LightProbeLayer>({
+  const lightProbeLayer = view.addLight<LightProbeDesc>({
     lightProbe: {
       sh: sh,
       intensity: PARAMS.intensity,
@@ -1214,7 +1216,7 @@ const addEffectsControl = (
     lensFlare: { intensity: PARAMS.lensFlareIntensity },
   });
 
-  const ssao = view.addEffect<SSAOEffectLayer>({
+  const ssao = view.addEffect<SSAOEffectDesc>({
     visible: PARAMS.ssao,
     ssao: {},
   });

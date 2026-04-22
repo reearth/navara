@@ -1,13 +1,13 @@
 ---
-title: GLTFModelLayer
-description: GLTF model layer for navara_three
+title: GLTFModelDesc
+description: GLTF model Descriptor for navara_three
 sidebar:
   order: 113
 ---
 
-`GLTFModelLayer`クラスは、GLTF/GLB形式の3Dモデルを読み込み・表示するメッシュレイヤーです。アニメーション再生、影の設定、動的な更新などの機能を提供します。
+`GLTFModelDesc`クラスは、GLTF/GLB形式の3Dモデルを読み込み・表示するメッシュです。アニメーション再生、影の設定、動的な更新などの機能を提供します。
 
-以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`pickable`、`visible`）が利用できます。詳細は [MeshLayerDeclaration](./mesh-layer-base) を参照してください。
+以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`pickable`、`visible`）が利用できます。詳細は [MeshDesc](./mesh-layer-base) を参照してください。
 
 ## Properties
 
@@ -404,13 +404,13 @@ modelLayer.on("animationReady", () => {
 ### 基本的な使い方
 
 ```typescript
-import ThreeView, { GLTFModelLayer } from "@navara/three";
+import ThreeView, { GLTFModelDesc } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
-// GLTFModelLayerを追加
-const modelLayer = view.addMesh<GLTFModelLayer>({
+// GLTFModelDescを追加
+const modelLayer = view.addMesh<GLTFModelDesc>({
   gltfModel: {
     url: "https://example.com/models/character.glb",
     castShadow: true,
@@ -423,7 +423,7 @@ const modelLayer = view.addMesh<GLTFModelLayer>({
 ### アニメーション付きモデル
 
 ```typescript
-const animatedModel = view.addMesh<GLTFModelLayer>({
+const animatedModel = view.addMesh<GLTFModelDesc>({
   gltfModel: {
     url: "https://example.com/models/animated.glb",
     castShadow: true,
@@ -447,7 +447,7 @@ animatedModel.ref.on("animationReady", () => {
 ### 複数アニメーションのブレンド
 
 ```typescript
-const blendedModel = view.addMesh<GLTFModelLayer>({
+const blendedModel = view.addMesh<GLTFModelDesc>({
   gltfModel: {
     url: "https://example.com/models/character.glb",
     animationEnabled: true,

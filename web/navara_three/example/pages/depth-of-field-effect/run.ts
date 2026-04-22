@@ -1,6 +1,6 @@
 import ThreeView, { Color } from "@navara/three";
 import {
-  DepthOfFieldEffectLayer,
+  DepthOfFieldEffectDesc,
   DEFAULT_DEPTH_OF_FIELD_OPTIONS,
 } from "@navara/three_default_layers";
 import {
@@ -25,7 +25,7 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
 
   await view.init();
 
-  const defaultAtmospheres = defaultPlugin.addDefaultPhotorealLayers();
+  const defaultAtmospheres = defaultPlugin.addDefaultPhotorealScene();
   defaultAtmospheres.sun.update({
     sun: {
       intensity: 1,
@@ -44,7 +44,7 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
 
   const depthOfFieldDefaults = DEFAULT_DEPTH_OF_FIELD_OPTIONS;
 
-  const depthOfFieldLayer = view.addEffect<DepthOfFieldEffectLayer>({
+  const depthOfFieldLayer = view.addEffect<DepthOfFieldEffectDesc>({
     depthOfField: { ...depthOfFieldDefaults },
     visible: true,
   });

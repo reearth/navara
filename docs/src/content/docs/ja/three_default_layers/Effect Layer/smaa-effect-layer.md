@@ -1,11 +1,11 @@
 ---
-title: SMAAEffectLayer
-description: SMAA effect layer for navara_three
+title: SMAAEffectDesc
+description: SMAA effect descriptor for navara_three
 sidebar:
   order: 58
 ---
 
-`SMAAEffectLayer`クラスは、SMAA(Subpixel Morphological Anti-Aliasing)アンチエイリアシングエフェクトを適用するレイヤーです。FXAAよりも高品質なアンチエイリアシングを提供します。
+`SMAAEffectDesc`クラスは、SMAA(Subpixel Morphological Anti-Aliasing)アンチエイリアシングエフェクトを適用するDescriptorです。FXAAよりも高品質なアンチエイリアシングを提供します。
 
 ## Properties
 
@@ -13,7 +13,7 @@ sidebar:
 
 **Type:** `boolean | undefined`
 
-**Description:** エフェクトレイヤーの表示/非表示を制御します。
+**Description:** エフェクトの表示/非表示を制御します。
 
 **Default:** `true`
 
@@ -66,8 +66,8 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-// デフォルトのフォトリアルレイヤーを追加（SMAAが含まれる）
-const defaultLayers = plugin.addDefaultPhotorealLayers();
+// デフォルトのフォトリアルオブジェクトを追加（SMAAが含まれる）
+const defaultLayers = plugin.addDefaultPhotorealScene();
 
 // SMAAを有効化して品質を設定
 defaultLayers.smaa.update({
@@ -82,13 +82,13 @@ defaultLayers.smaa.update({
 ### 高品質SMAAの設定
 
 ```typescript
-import ThreeView, { SMAAEffectLayer } from "@navara/three";
+import ThreeView, { SMAAEffectDesc } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
-// SMAAエフェクトレイヤーを追加
-view.addEffect<SMAAEffectLayer>({
+// SMAAエフェクトを追加
+view.addEffect<SMAAEffectDesc>({
   smaa: {
     quality: "ultra",
     edgeDetectionMode: "luma",
@@ -99,7 +99,7 @@ view.addEffect<SMAAEffectLayer>({
 ### SMAAの品質とエッジ検出モードの動的変更
 
 ```typescript
-import ThreeView, { FXAAEffectLayer } from "@navara/three";
+import ThreeView, { FXAAEffectDesc } from "@navara/three";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
@@ -107,7 +107,7 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-const defaultLayers = plugin.addDefaultPhotorealLayers();
+const defaultLayers = plugin.addDefaultPhotorealScene();
 
 // 品質をmediumに変更
 defaultLayers.smaa.update({
@@ -125,11 +125,11 @@ defaultLayers.smaa.update({
 
 // SMAAを無効にしてFXAAに切り替える
 defaultLayers.smaa.update({ visible: false });
-view.addEffect<FXAAEffectLayer>({
+view.addEffect<FXAAEffectDesc>({
   fxaa: {},
 });
 ```
 
 ## 備考
 
-SMAAEffectLayerはレンダリングパイプラインの最後の段階で適用されます。FXAAよりも高品質なアンチエイリアシングが必要な場合に使用します。品質プリセットは`low`、`medium`、`high`、`ultra`から選択できます。エッジ検出モードは`color`（最高品質）、`luma`（バランス）、`depth`（最速）から選択できます。
+SMAAEffectDescはレンダリングパイプラインの最後の段階で適用されます。FXAAよりも高品質なアンチエイリアシングが必要な場合に使用します。品質プリセットは`low`、`medium`、`high`、`ultra`から選択できます。エッジ検出モードは`color`（最高品質）、`luma`（バランス）、`depth`（最速）から選択できます。

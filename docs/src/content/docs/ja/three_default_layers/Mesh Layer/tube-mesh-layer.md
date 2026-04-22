@@ -1,13 +1,13 @@
 ---
-title: TubeMeshLayer
-description: Tube mesh layer for navara_three
+title: TubeMeshDesc
+description: Tube mesh descriptor for navara_three
 sidebar:
   order: 106
 ---
 
-`TubeMeshLayer`クラスは、チューブ(Tube)ジオメトリを描画するためのメッシュレイヤーです。カトマル・ロム曲線に沿ったチューブ形状を作成できます。
+`TubeMeshDesc`クラスは、チューブ(Tube)ジオメトリを描画するためのメッシュです。カトマル・ロム曲線に沿ったチューブ形状を作成できます。
 
-以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`pickable`、`visible`）が利用できます。詳細は [MeshLayerDeclaration](./mesh-layer-base) を参照してください。
+以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`pickable`、`visible`）が利用できます。詳細は [MeshDesc](./mesh-layer-base) を参照してください。
 
 ## Properties
 
@@ -259,7 +259,7 @@ import { Color } from "@navara/three";
 
 **Type:** `string[]` (optional)
 
-**Description:** このメッシュに適用するセレクティブエフェクトレイヤーIDの配列を指定します。
+**Description:** このメッシュに適用するセレクティブエフェクトIDの配列を指定します。
 
 **Example:**
 
@@ -294,13 +294,13 @@ import { Color } from "@navara/three";
 ## Usage Examples
 
 ```typescript
-import ThreeView, { TubeMeshLayer, Color } from "@navara/three";
+import ThreeView, { TubeMeshDesc, Color } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
-// TubeMeshLayerを追加
-const tubeLayer = view.addMesh<TubeMeshLayer>({
+// TubeMeshDescを追加
+const tubeLayer = view.addMesh<TubeMeshDesc>({
   tube: {
     points: [
       { x: 0, y: 0, z: 1000 },

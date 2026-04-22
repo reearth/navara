@@ -1,11 +1,11 @@
 ---
-title: LensFlareEffectLayer
-description: Lens flare effect layer for navara_three
+title: LensFlareEffectDesc
+description: Lens flare effect descriptor for navara_three
 sidebar:
   order: 56
 ---
 
-The `LensFlareEffectLayer` class is a layer that generates the lens flare effect. It simulates the effect of light from the sun or moon reflecting off the camera lens.
+The `LensFlareEffectDesc` class is a Descriptor that generates the lens flare effect. It simulates the effect of light from the sun or moon reflecting off the camera lens.
 
 ## Properties
 
@@ -13,7 +13,7 @@ The `LensFlareEffectLayer` class is a layer that generates the lens flare effect
 
 **Type:** `boolean | undefined`
 
-**Description:** Controls the visibility of the effect layer.
+**Description:** Controls the visibility of the effect descriptor.
 
 **Default:** `true`
 
@@ -48,8 +48,8 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-// Add default photorealistic layers (includes LensFlareEffectLayer)
-const defaultLayers = plugin.addDefaultPhotorealLayers();
+// Add default photorealistic objects (includes LensFlareEffectDesc)
+const defaultLayers = plugin.addDefaultPhotorealScene();
 
 // Enable lens flare and set its intensity
 defaultLayers.lensFlare.update({

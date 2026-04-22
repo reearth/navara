@@ -35,7 +35,7 @@ import {
 } from "three";
 import invariant from "tiny-invariant";
 
-import { CloudLayer, type CloudLayerOptions } from "./layer";
+import { CloudLayer, type CloudOptions } from "./layer";
 
 export type * from "@takram/three-clouds";
 
@@ -53,7 +53,7 @@ export type CloudsOptions = {
   maxStepSize?: Nullable<number>;
   resolutionScale?: number;
 
-  // Whether enabling the shadow for all layers or not.
+  // Whether enabling the shadow for all descriptors or not.
   // Need to enable `Atmosphere.irradiance` as well.
   shadows?: boolean;
   shadowCascadeCount?: number;
@@ -88,7 +88,7 @@ export type CloudsOptions = {
   powderScale?: number;
   powderExponent?: number;
 
-  cloudLayers?: Nullable<CloudLayerOptions[]>;
+  cloudLayers?: Nullable<CloudOptions[]>;
 } & EffectOptions;
 
 // Default value is based on the medium preset.
@@ -274,7 +274,7 @@ export class Clouds extends Pass<
     super.dispose();
   }
 
-  initializeCloudLayers(options?: CloudLayerOptions[]) {
+  initializeCloudLayers(options?: CloudOptions[]) {
     const layers = [
       new CloudLayer(CloudLayers.DEFAULT[0], options?.[0]),
       new CloudLayer(CloudLayers.DEFAULT[1], options?.[1]),

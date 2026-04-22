@@ -1,17 +1,17 @@
 ---
-title: Light Layer
-description: Light layer types for navara_three
+title: Light Descriptor
+description: Light descriptor types for navara_three
 sidebar:
   order: 150
 ---
 
-LightLayer is a group of classes that manage lighting in a 3D scene. It provides various lighting techniques including ambient light, sunlight, and Image-Based Lighting.
+LightDesc is a group of classes that manage lighting in a 3D scene. It provides various lighting techniques including ambient light, sunlight, and Image-Based Lighting.
 
-## LightLayer Types
+## LightDescriptor Types
 
-navara_three provides multiple light layer types to address various lighting requirements:
+navara_three provides multiple light descriptor types to address various lighting requirements:
 
-### [AmbientLightLayer](../../../three/light-layer-reference/ambient-light-layer/)
+### [AmbientLightDesc](../../../three/light-layer-reference/ambient-light-layer/)
 
 **Purpose:** Ambient light for the entire scene
 **Description:** Basic ambient light that illuminates all objects evenly. Does not cast shadows.
@@ -23,11 +23,11 @@ navara_three provides multiple light layer types to address various lighting req
 **Usage example:**
 ```typescript
 import ThreeView, { Color } from "@navara/three";
-import { AmbientLightLayer } from "@navara/three_default_layers";
+import { AmbientLightDesc } from "@navara/three_default_layers";
 
-view.registerLight("ambient", AmbientLightLayer);
+view.registerLight("ambient", AmbientLightDesc);
 
-view.addLight<AmbientLightLayer>({
+view.addLight<AmbientLightDesc>({
   ambient: {
     color: new Color().setHex(0xffffff),
     intensity: 1.0
@@ -35,7 +35,7 @@ view.addLight<AmbientLightLayer>({
 });
 ```
 
-### [LightProbeLayer](../../../three/light-layer-reference/light-probe-layer/)
+### [LightProbeDesc](../../../three/light-layer-reference/light-probe-layer/)
 
 **Purpose:** Image-Based Lighting (IBL)
 **Description:** Pre-computed environment lighting using spherical harmonics. Achieves realistic indirect lighting.
@@ -47,11 +47,11 @@ view.addLight<AmbientLightLayer>({
 **Usage example:**
 ```typescript
 import ThreeView from "@navara/three";
-import { LightProbeLayer } from "@navara/three_default_layers";
+import { LightProbeDesc } from "@navara/three_default_layers";
 
-view.registerLight("lightProbe", LightProbeLayer);
+view.registerLight("lightProbe", LightProbeDesc);
 
-view.addLight<LightProbeLayer>({
+view.addLight<LightProbeDesc>({
   lightProbe: {
     sh: new THREE.SphericalHarmonics3().set(coefficients),
     intensity: 0.05
@@ -59,7 +59,7 @@ view.addLight<LightProbeLayer>({
 });
 ```
 
-### [SkyLightProbeLayer](../../../three/light-layer-reference/sky-light-probe-layer/)
+### [SkyLightProbeDesc](../../../three/light-layer-reference/sky-light-probe-layer/)
 
 **Purpose:** Dynamic sky lighting
 **Description:** Dynamic environment lighting that works in conjunction with atmospheric scattering simulation. Automatically updates based on the sun's position.
@@ -71,18 +71,18 @@ view.addLight<LightProbeLayer>({
 **Usage example:**
 ```typescript
 import ThreeView from "@navara/three";
-import { SkyLightProbeLayer } from "@navara/three_default_layers";
+import { SkyLightProbeDesc } from "@navara/three_default_layers";
 
-view.registerLight("skyLightProbe", SkyLightProbeLayer);
+view.registerLight("skyLightProbe", SkyLightProbeDesc);
 
-view.addLight<SkyLightProbeLayer>({
+view.addLight<SkyLightProbeDesc>({
   skyLightProbe: {
     intensity: 1.0
   }
 });
 ```
 
-### [SunLightLayer](../../../three/light-layer-reference/sun-light-layer/)
+### [SunLightDesc](../../../three/light-layer-reference/sun-light-layer/)
 
 **Purpose:** Sunlight and shadows
 **Description:** High-quality sunlight simulation using Cascaded Shadow Maps (CSM). Works in conjunction with atmospheric scattering.
@@ -94,11 +94,11 @@ view.addLight<SkyLightProbeLayer>({
 **Usage example:**
 ```typescript
 import ThreeView from "@navara/three";
-import { SunLightLayer } from "@navara/three_default_layers";
+import { SunLightDesc } from "@navara/three_default_layers";
 
-view.registerLight("sun", SunLightLayer);
+view.registerLight("sun", SunLightDesc);
 
-view.addLight<SunLightLayer>({
+view.addLight<SunLightDesc>({
   sun: {
     intensity: 1.0,
     castShadow: true,
@@ -108,14 +108,14 @@ view.addLight<SunLightLayer>({
 });
 ```
 
-## Light Layer Types Comparison
+## Light Descriptor Types Comparison
 
 | Light Type             | Shadows     | Dynamic Update | Atmosphere Integration | Primary Use          | Performance          |
 | ---------------------- | ----------- | -------------- | ---------------------- | -------------------- | -------------------- |
-| **AmbientLightLayer**  | None        | Manual         | Not required           | Basic ambient light  | Very lightweight     |
-| **LightProbeLayer**    | None        | Manual         | Not required           | Static IBL           | Lightweight          |
-| **SkyLightProbeLayer** | None        | Automatic      | Required               | Dynamic sky lighting | Moderate             |
-| **SunLightLayer**      | Yes (CSM)   | Automatic      | Recommended            | Sunlight and shadows | Heavy (with shadows) |
+| **AmbientLightDesc**  | None        | Manual         | Not required           | Basic ambient light  | Very lightweight     |
+| **LightProbeDesc**    | None        | Manual         | Not required           | Static IBL           | Lightweight          |
+| **SkyLightProbeDesc** | None        | Automatic      | Required               | Dynamic sky lighting | Moderate             |
+| **SunLightDesc**      | Yes (CSM)   | Automatic      | Recommended            | Sunlight and shadows | Heavy (with shadows) |
 
 ## Common Usage Patterns
 
@@ -124,15 +124,15 @@ view.addLight<SunLightLayer>({
 The simplest lighting configuration:
 
 ```typescript
-// AmbientLightLayer must be registered
-view.addLight<AmbientLightLayer>({
+// AmbientLightDesc must be registered
+view.addLight<AmbientLightDesc>({
   ambient: { intensity: 1.0 }
 });
 ```
 
 ### Recommended Lighting Setup
 
-For realistic scenes, combine multiple light layers. Using `DefaultPlugin` from [three_default_plugin](../../../three_default_plugin/about/) registers all layers at once, and `addDefaultPhotorealLayers()` makes it easy to set up a photorealistic scene.
+For realistic scenes, combine multiple light Descriptors. Using `DefaultPlugin` from [three_default_plugin](../../../three_default_plugin/about/) registers all Descriptors at once, and `addDefaultPhotorealScene()` makes it easy to set up a photorealistic scene.
 
 ```typescript
 import { DefaultPlugin } from "@navara/three_default_plugin";
@@ -142,10 +142,10 @@ view.addPlugin(plugin);
 await view.init();
 
 // Set up a photorealistic scene at once (includes SunLight + SkyLightProbe, etc.)
-const layers = plugin.addDefaultPhotorealLayers();
+const layers = plugin.addDefaultPhotorealScene();
 
 // Add additional ambient light as needed
-view.addLight<AmbientLightLayer>({
+view.addLight<AmbientLightDesc>({
   ambient: { intensity: 0.3 }
 });
 ```
@@ -156,10 +156,10 @@ For night scenes, additional light probes are effective:
 
 ```typescript
 // Set up a photorealistic scene with DefaultPlugin
-const layers = plugin.addDefaultPhotorealLayers();
+const layers = plugin.addDefaultPhotorealScene();
 
-// Night light probe (LightProbeLayer is registered by DefaultPlugin)
-const nightLight = view.addLight<LightProbeLayer>({
+// Night light probe (LightProbeDesc is registered by DefaultPlugin)
+const nightLight = view.addLight<LightProbeDesc>({
   lightProbe: {
     sh: new THREE.SphericalHarmonics3().set(NIGHT_COEFFICIENTS),
     intensity: 0.05
@@ -183,15 +183,15 @@ view.atmosphere.on("sunChanged", () => {
 
 ### Integration with the Atmosphere System
 
-The following light layers integrate with the atmosphere system:
+The following light Descriptors integrate with the atmosphere system:
 
-- **SkyLightProbeLayer**: Uses the atmosphere's irradiance texture (required)
-- **SunLightLayer**: Uses the atmosphere's transmittance texture (recommended)
+- **SkyLightProbeDesc**: Uses the atmosphere's irradiance texture (required)
+- **SunLightDesc**: Uses the atmosphere's transmittance texture (recommended)
 
-If you are not using the atmosphere system, use AmbientLightLayer and LightProbeLayer instead.
+If you are not using the atmosphere system, use AmbientLightDesc and LightProbeDesc instead.
 
 ## Related Resources
 
 - [Resource Layer Reference](../../../three/resource-layer-reference/about/) - Resource layer details
-- [Effect Layer Reference](../../../three/effect-layer-reference/about/) - Effect layers
+- [Effect Descriptor Reference](../../../three/effect-layer-reference/about/) - Effect descriptors
 - [API Reference](../../../three/api/) - ThreeView API

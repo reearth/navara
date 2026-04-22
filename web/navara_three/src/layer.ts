@@ -43,7 +43,7 @@ export type LayerEvent = {
 
 /**
  * A handle to control a resource layer (e.g., imagery, terrain, GeoJSON, 3D Tiles) after it has been added to the scene.
- * Returned by `ThreeView.addLayer()` when adding resource layers (not mesh, light, or effect layers).
+ * Returned by `ThreeView.addLayer()` when adding resource layers (not mesh, light, or effect descriptors).
  *
  * Resource layers are data-driven layers that load and display geographic data from external sources.
  * Use this handle to update layer configuration or delete the layer.

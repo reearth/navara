@@ -1,13 +1,13 @@
 ---
-title: RainMeshLayer
-description: Rain mesh layer for navara_three
+title: RainMeshDesc
+description: Rain mesh descriptor for navara_three
 sidebar:
   order: 109
 ---
 
-The `RainMeshLayer` class is a mesh layer that displays rain particle effects. It creates realistic rainfall effects using a shader-based particle system.
+The `RainMeshDesc` class is a mesh descriptor that displays rain particle effects. It creates realistic rainfall effects using a shader-based particle system.
 
-In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `pickable`, `visible`) are available. See [MeshLayerDeclaration](./mesh-layer-base) for details.
+In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `pickable`, `visible`) are available. See [MeshDesc](./mesh-layer-base) for details.
 
 ## Common Properties
 
@@ -40,7 +40,7 @@ const position = geodeticToVector3(
 
 **Type:** `boolean`
 
-**Description:** Controls the visibility of the layer.
+**Description:** Controls the visibility of the object.
 
 **Default:** `true`
 
@@ -297,13 +297,13 @@ import { Color } from "@navara/three";
 ### Basic Usage
 
 ```typescript
-import ThreeView, { RainMeshLayer, Color } from "@navara/three";
+import ThreeView, { RainMeshDesc, Color } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
-// Add a RainMeshLayer
-const rainLayer = view.addMesh<RainMeshLayer>({
+// Add a RainMeshDesc
+const rainLayer = view.addMesh<RainMeshDesc>({
   rain: {
     particleCount: 5000,
     speed: 0.002,
@@ -320,7 +320,7 @@ const rainLayer = view.addMesh<RainMeshLayer>({
 
 ```typescript
 import ThreeView, {
-  RainMeshLayer,
+  RainMeshDesc,
   geodeticToVector3,
   degreeToRadian,
   LLE,
@@ -338,8 +338,8 @@ const position = geodeticToVector3(
   ),
 );
 
-// Add a RainMeshLayer at a specific position
-const rainLayer = view.addMesh<RainMeshLayer>({
+// Add a RainMeshDesc at a specific position
+const rainLayer = view.addMesh<RainMeshDesc>({
   visible: true,
   position: position,
   rain: {

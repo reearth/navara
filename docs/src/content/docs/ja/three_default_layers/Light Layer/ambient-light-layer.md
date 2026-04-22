@@ -1,11 +1,11 @@
 ---
-title: AmbientLightLayer
-description: Ambient light layer for navara_three
+title: AmbientLightDesc
+description: Ambient light descriptor for navara_three
 sidebar:
   order: 151
 ---
 
-`AmbientLightLayer`クラスは、シーン全体に均一に光を当てる環境光レイヤーを表します。AmbientLightはすべてのオブジェクトを均等に照らし、影を作りません。
+`AmbientLightDesc`クラスは、シーン全体に均一に光を当てる環境光Descriptorを表します。AmbientLightはすべてのオブジェクトを均等に照らし、影を作りません。
 
 ## Common Properties
 
@@ -13,7 +13,7 @@ sidebar:
 
 **Type:** `boolean | undefined`
 
-**Description:** レイヤーの表示/非表示を制御します。
+**Description:** オブジェクトの表示/非表示を制御します。
 
 **Default:** `true`
 
@@ -77,13 +77,13 @@ import { Color } from "@navara/three";
 ### 基本的な使用例
 
 ```typescript
-import ThreeView, { AmbientLightLayer, Color } from "@navara/three";
+import ThreeView, { AmbientLightDesc, Color } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
-// 環境光レイヤーを追加
-const ambientLight = view.addLight<AmbientLightLayer>({
+// 環境光オブジェクトを追加
+const ambientLight = view.addLight<AmbientLightDesc>({
   ambient: {
     color: new Color().setHex(0xffffff),
     intensity: 1.0
@@ -107,7 +107,7 @@ ambientLight.update({
 
 ```typescript
 // デフォルト設定で環境光を追加
-view.addLight<AmbientLightLayer>({
+view.addLight<AmbientLightDesc>({
   ambient: {}
 });
 ```
@@ -116,7 +116,7 @@ view.addLight<AmbientLightLayer>({
 
 ```typescript
 // 非表示状態で環境光を追加し、後から表示切り替え
-const ambientLightLayer = view.addLight<AmbientLightLayer>({
+const ambientLightLayer = view.addLight<AmbientLightDesc>({
   visible: false,
   ambient: {
     intensity: 1,
@@ -132,5 +132,5 @@ ambientLightLayer.visible = true;
 
 - 環境光は影を作りません。
 - 環境光は全方向から均等にオブジェクトを照らします。
-- 他のライトタイプ（SunLightLayer、SkyLightProbeLayerなど）と組み合わせて使用することができます。
+- 他のライトタイプ（SunLightDesc、SkyLightProbeDescなど）と組み合わせて使用することができます。
 - 環境光の強度が高すぎると、シーンが平坦に見える可能性があります。

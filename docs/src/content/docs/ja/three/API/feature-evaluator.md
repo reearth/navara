@@ -12,7 +12,7 @@ FeatureEvaluator は、地物データへのアクセスと、プロパティに
 - プロパティに基づいて地物を動的にスタイリングする
 
 :::note
-イベントの詳細なパラメータ型については [Layer Types](./layer-types#events) を参照してください。
+イベントの詳細なパラメータ型については [Descriptor Types](./layer-types#events) を参照してください。
 :::
 
 ## Properties

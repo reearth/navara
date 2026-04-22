@@ -3,7 +3,7 @@ import ThreeView, {
   Color,
   type LayerDescription,
 } from "@navara/three";
-import { SSREffectLayer } from "@navara/three_default_layers";
+import { SSREffectDesc } from "@navara/three_default_layers";
 import {
   DefaultPlugin,
   type DefaultDeclarations,
@@ -30,7 +30,7 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
 
   view.toneMappingExposure = 10;
 
-  const defaultAtmospheres = defaultPlugin.addDefaultPhotorealLayers();
+  const defaultAtmospheres = defaultPlugin.addDefaultPhotorealScene();
   defaultAtmospheres.sun.update({
     sun: {
       castShadow: true,
@@ -111,8 +111,8 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
 };
 
 const addSSRControls = (view: ThreeView<CustomDeclarations>, pane: Pane) => {
-  // Add SSR effect layer
-  let ssrLayer = view.addEffect<SSREffectLayer>({
+  // Add SSR effect descriptor
+  let ssrLayer = view.addEffect<SSREffectDesc>({
     ssr: {},
   });
 
@@ -142,7 +142,7 @@ const addSSRControls = (view: ThreeView<CustomDeclarations>, pane: Pane) => {
       name: "visible",
       onChange: (v) => {
         if (v.value) {
-          ssrLayer = view.addEffect<SSREffectLayer>({
+          ssrLayer = view.addEffect<SSREffectDesc>({
             ssr: ssrParams,
           });
         } else {
@@ -301,7 +301,7 @@ const addSSRControls = (view: ThreeView<CustomDeclarations>, pane: Pane) => {
 
 const addWaterControls = (view: ThreeView<CustomDeclarations>, pane: Pane) => {
   // Store the layer description object
-  const mvtLayerDescription: LayerDescription = {
+  const mvtDesc: LayerDescription = {
     type: "mvt",
     data: {
       url: VECTOR_DATASETS.gsiExperimentalVector.url,
@@ -325,7 +325,7 @@ const addWaterControls = (view: ThreeView<CustomDeclarations>, pane: Pane) => {
       layers: ["waterarea"],
     },
   };
-  const geoJsonLayerDescription: LayerDescription = {
+  const geoJsonDesc: LayerDescription = {
     type: "geojson" as const,
     data: {
       type: "Feature" as const,
@@ -362,22 +362,22 @@ const addWaterControls = (view: ThreeView<CustomDeclarations>, pane: Pane) => {
     },
   };
 
-  let waterLayer = view.addLayer(geoJsonLayerDescription);
+  let waterLayer = view.addLayer(geoJsonDesc);
 
   const waterParams = {
     dataType: "geojson",
-    reflectivity: mvtLayerDescription.polygon?.reflectivity ?? 0,
-    roughness: mvtLayerDescription.polygon?.roughness ?? 0,
-    water: mvtLayerDescription.polygon?.water ?? true,
-    waterScaleNormal: mvtLayerDescription.polygon?.waterScaleNormal ?? 0.1,
-    waterSpeed: mvtLayerDescription.polygon?.waterSpeed ?? 0.0003,
-    shininess: mvtLayerDescription.polygon?.shininess ?? 100,
-    specularStrength: mvtLayerDescription.polygon?.specularStrength ?? 2,
-    applyWaterNormal: mvtLayerDescription.polygon?.applyWaterNormal ?? false,
-    specular: mvtLayerDescription.polygon?.specular ?? false,
-    ior: mvtLayerDescription.polygon?.ior ?? 1.33333,
-    transparent: mvtLayerDescription.polygon?.transparent ?? false,
-    opacity: mvtLayerDescription.polygon?.opacity ?? 1.0,
+    reflectivity: mvtDesc.polygon?.reflectivity ?? 0,
+    roughness: mvtDesc.polygon?.roughness ?? 0,
+    water: mvtDesc.polygon?.water ?? true,
+    waterScaleNormal: mvtDesc.polygon?.waterScaleNormal ?? 0.1,
+    waterSpeed: mvtDesc.polygon?.waterSpeed ?? 0.0003,
+    shininess: mvtDesc.polygon?.shininess ?? 100,
+    specularStrength: mvtDesc.polygon?.specularStrength ?? 2,
+    applyWaterNormal: mvtDesc.polygon?.applyWaterNormal ?? false,
+    specular: mvtDesc.polygon?.specular ?? false,
+    ior: mvtDesc.polygon?.ior ?? 1.33333,
+    transparent: mvtDesc.polygon?.transparent ?? false,
+    opacity: mvtDesc.polygon?.opacity ?? 1.0,
   };
 
   const fields: FolderFields<typeof waterParams> = [
@@ -394,11 +394,11 @@ const addWaterControls = (view: ThreeView<CustomDeclarations>, pane: Pane) => {
         waterLayer.delete();
         switch (v.value) {
           case "mvt": {
-            waterLayer = view.addLayer(mvtLayerDescription);
+            waterLayer = view.addLayer(mvtDesc);
             break;
           }
           case "geojson": {
-            waterLayer = view.addLayer(geoJsonLayerDescription);
+            waterLayer = view.addLayer(geoJsonDesc);
             break;
           }
         }
@@ -408,15 +408,12 @@ const addWaterControls = (view: ThreeView<CustomDeclarations>, pane: Pane) => {
       name: "reflectivity",
       params: { min: 0, max: 1, step: 0.01 },
       onChange: (v) => {
-        if (!mvtLayerDescription.polygon || !geoJsonLayerDescription.polygon)
-          return;
+        if (!mvtDesc.polygon || !geoJsonDesc.polygon) return;
         waterParams.reflectivity = v.value;
-        mvtLayerDescription.polygon.reflectivity = v.value;
-        geoJsonLayerDescription.polygon.reflectivity = v.value;
+        mvtDesc.polygon.reflectivity = v.value;
+        geoJsonDesc.polygon.reflectivity = v.value;
         waterLayer.update(
-          waterParams.dataType === "mvt"
-            ? mvtLayerDescription
-            : geoJsonLayerDescription,
+          waterParams.dataType === "mvt" ? mvtDesc : geoJsonDesc,
         );
       },
     },
@@ -424,30 +421,24 @@ const addWaterControls = (view: ThreeView<CustomDeclarations>, pane: Pane) => {
       name: "roughness",
       params: { min: 0, max: 1, step: 0.01 },
       onChange: (v) => {
-        if (!mvtLayerDescription.polygon || !geoJsonLayerDescription.polygon)
-          return;
+        if (!mvtDesc.polygon || !geoJsonDesc.polygon) return;
         waterParams.roughness = v.value;
-        mvtLayerDescription.polygon.roughness = v.value;
-        geoJsonLayerDescription.polygon.roughness = v.value;
+        mvtDesc.polygon.roughness = v.value;
+        geoJsonDesc.polygon.roughness = v.value;
         waterLayer.update(
-          waterParams.dataType === "mvt"
-            ? mvtLayerDescription
-            : geoJsonLayerDescription,
+          waterParams.dataType === "mvt" ? mvtDesc : geoJsonDesc,
         );
       },
     },
     {
       name: "water",
       onChange: (v) => {
-        if (!mvtLayerDescription.polygon || !geoJsonLayerDescription.polygon)
-          return;
+        if (!mvtDesc.polygon || !geoJsonDesc.polygon) return;
         waterParams.water = v.value;
-        mvtLayerDescription.polygon.water = v.value;
-        geoJsonLayerDescription.polygon.water = v.value;
+        mvtDesc.polygon.water = v.value;
+        geoJsonDesc.polygon.water = v.value;
         waterLayer.update(
-          waterParams.dataType === "mvt"
-            ? mvtLayerDescription
-            : geoJsonLayerDescription,
+          waterParams.dataType === "mvt" ? mvtDesc : geoJsonDesc,
         );
       },
     },
@@ -455,15 +446,12 @@ const addWaterControls = (view: ThreeView<CustomDeclarations>, pane: Pane) => {
       name: "waterScaleNormal",
       params: { min: 0.01, max: 1.0, step: 0.01 },
       onChange: (v) => {
-        if (!mvtLayerDescription.polygon || !geoJsonLayerDescription.polygon)
-          return;
+        if (!mvtDesc.polygon || !geoJsonDesc.polygon) return;
         waterParams.waterScaleNormal = v.value;
-        mvtLayerDescription.polygon.waterScaleNormal = v.value;
-        geoJsonLayerDescription.polygon.waterScaleNormal = v.value;
+        mvtDesc.polygon.waterScaleNormal = v.value;
+        geoJsonDesc.polygon.waterScaleNormal = v.value;
         waterLayer.update(
-          waterParams.dataType === "mvt"
-            ? mvtLayerDescription
-            : geoJsonLayerDescription,
+          waterParams.dataType === "mvt" ? mvtDesc : geoJsonDesc,
         );
       },
     },
@@ -471,15 +459,12 @@ const addWaterControls = (view: ThreeView<CustomDeclarations>, pane: Pane) => {
       name: "waterSpeed",
       params: { min: 0.0, max: 0.01, step: 0.0001 },
       onChange: (v) => {
-        if (!mvtLayerDescription.polygon || !geoJsonLayerDescription.polygon)
-          return;
+        if (!mvtDesc.polygon || !geoJsonDesc.polygon) return;
         waterParams.waterSpeed = v.value;
-        mvtLayerDescription.polygon.waterSpeed = v.value;
-        geoJsonLayerDescription.polygon.waterSpeed = v.value;
+        mvtDesc.polygon.waterSpeed = v.value;
+        geoJsonDesc.polygon.waterSpeed = v.value;
         waterLayer.update(
-          waterParams.dataType === "mvt"
-            ? mvtLayerDescription
-            : geoJsonLayerDescription,
+          waterParams.dataType === "mvt" ? mvtDesc : geoJsonDesc,
         );
       },
     },
@@ -487,15 +472,12 @@ const addWaterControls = (view: ThreeView<CustomDeclarations>, pane: Pane) => {
       name: "shininess",
       params: { min: 0, max: 200, step: 1 },
       onChange: (v) => {
-        if (!mvtLayerDescription.polygon || !geoJsonLayerDescription.polygon)
-          return;
+        if (!mvtDesc.polygon || !geoJsonDesc.polygon) return;
         waterParams.shininess = v.value;
-        mvtLayerDescription.polygon.shininess = v.value;
-        geoJsonLayerDescription.polygon.shininess = v.value;
+        mvtDesc.polygon.shininess = v.value;
+        geoJsonDesc.polygon.shininess = v.value;
         waterLayer.update(
-          waterParams.dataType === "mvt"
-            ? mvtLayerDescription
-            : geoJsonLayerDescription,
+          waterParams.dataType === "mvt" ? mvtDesc : geoJsonDesc,
         );
       },
     },
@@ -503,45 +485,36 @@ const addWaterControls = (view: ThreeView<CustomDeclarations>, pane: Pane) => {
       name: "specularStrength",
       params: { min: 0, max: 10, step: 0.1 },
       onChange: (v) => {
-        if (!mvtLayerDescription.polygon || !geoJsonLayerDescription.polygon)
-          return;
+        if (!mvtDesc.polygon || !geoJsonDesc.polygon) return;
         waterParams.specularStrength = v.value;
-        mvtLayerDescription.polygon.specularStrength = v.value;
-        geoJsonLayerDescription.polygon.specularStrength = v.value;
+        mvtDesc.polygon.specularStrength = v.value;
+        geoJsonDesc.polygon.specularStrength = v.value;
         waterLayer.update(
-          waterParams.dataType === "mvt"
-            ? mvtLayerDescription
-            : geoJsonLayerDescription,
+          waterParams.dataType === "mvt" ? mvtDesc : geoJsonDesc,
         );
       },
     },
     {
       name: "applyWaterNormal",
       onChange: (v) => {
-        if (!mvtLayerDescription.polygon || !geoJsonLayerDescription.polygon)
-          return;
+        if (!mvtDesc.polygon || !geoJsonDesc.polygon) return;
         waterParams.applyWaterNormal = v.value;
-        mvtLayerDescription.polygon.applyWaterNormal = v.value;
-        geoJsonLayerDescription.polygon.applyWaterNormal = v.value;
+        mvtDesc.polygon.applyWaterNormal = v.value;
+        geoJsonDesc.polygon.applyWaterNormal = v.value;
         waterLayer.update(
-          waterParams.dataType === "mvt"
-            ? mvtLayerDescription
-            : geoJsonLayerDescription,
+          waterParams.dataType === "mvt" ? mvtDesc : geoJsonDesc,
         );
       },
     },
     {
       name: "specular",
       onChange: (v) => {
-        if (!mvtLayerDescription.polygon || !geoJsonLayerDescription.polygon)
-          return;
+        if (!mvtDesc.polygon || !geoJsonDesc.polygon) return;
         waterParams.specular = v.value;
-        mvtLayerDescription.polygon.specular = v.value;
-        geoJsonLayerDescription.polygon.specular = v.value;
+        mvtDesc.polygon.specular = v.value;
+        geoJsonDesc.polygon.specular = v.value;
         waterLayer.update(
-          waterParams.dataType === "mvt"
-            ? mvtLayerDescription
-            : geoJsonLayerDescription,
+          waterParams.dataType === "mvt" ? mvtDesc : geoJsonDesc,
         );
       },
     },
@@ -549,30 +522,24 @@ const addWaterControls = (view: ThreeView<CustomDeclarations>, pane: Pane) => {
       name: "ior",
       params: { min: 1.0, max: 2.5, step: 0.01 },
       onChange: (v) => {
-        if (!mvtLayerDescription.polygon || !geoJsonLayerDescription.polygon)
-          return;
+        if (!mvtDesc.polygon || !geoJsonDesc.polygon) return;
         waterParams.ior = v.value;
-        mvtLayerDescription.polygon.ior = v.value;
-        geoJsonLayerDescription.polygon.ior = v.value;
+        mvtDesc.polygon.ior = v.value;
+        geoJsonDesc.polygon.ior = v.value;
         waterLayer.update(
-          waterParams.dataType === "mvt"
-            ? mvtLayerDescription
-            : geoJsonLayerDescription,
+          waterParams.dataType === "mvt" ? mvtDesc : geoJsonDesc,
         );
       },
     },
     {
       name: "transparent",
       onChange: (v) => {
-        if (!mvtLayerDescription.polygon || !geoJsonLayerDescription.polygon)
-          return;
+        if (!mvtDesc.polygon || !geoJsonDesc.polygon) return;
         waterParams.transparent = v.value;
-        mvtLayerDescription.polygon.transparent = v.value;
-        geoJsonLayerDescription.polygon.transparent = v.value;
+        mvtDesc.polygon.transparent = v.value;
+        geoJsonDesc.polygon.transparent = v.value;
         waterLayer.update(
-          waterParams.dataType === "mvt"
-            ? mvtLayerDescription
-            : geoJsonLayerDescription,
+          waterParams.dataType === "mvt" ? mvtDesc : geoJsonDesc,
         );
       },
     },
@@ -580,15 +547,12 @@ const addWaterControls = (view: ThreeView<CustomDeclarations>, pane: Pane) => {
       name: "opacity",
       params: { min: 0, max: 1, step: 0.01 },
       onChange: (v) => {
-        if (!mvtLayerDescription.polygon || !geoJsonLayerDescription.polygon)
-          return;
+        if (!mvtDesc.polygon || !geoJsonDesc.polygon) return;
         waterParams.opacity = v.value;
-        mvtLayerDescription.polygon.opacity = v.value;
-        geoJsonLayerDescription.polygon.opacity = v.value;
+        mvtDesc.polygon.opacity = v.value;
+        geoJsonDesc.polygon.opacity = v.value;
         waterLayer.update(
-          waterParams.dataType === "mvt"
-            ? mvtLayerDescription
-            : geoJsonLayerDescription,
+          waterParams.dataType === "mvt" ? mvtDesc : geoJsonDesc,
         );
       },
     },
