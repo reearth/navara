@@ -376,6 +376,11 @@ impl Core {
         })
     }
 
+    #[wasm_bindgen(js_name = genGlobalBatchId)]
+    pub fn gen_global_batch_id(&mut self) -> Option<u32> {
+        self.app.gen_global_batch_id()
+    }
+
     #[wasm_bindgen(js_name = readPropertyByGlobalBatchId)]
     pub fn read_property_by_global_batch_id(&mut self, batch_id: u32) -> BatchPropResult {
         let (properties, layer_id) = self

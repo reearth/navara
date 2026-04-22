@@ -1,5 +1,5 @@
 import type { BaseEventMap, XYZ } from "@navara/core";
-import { Matrix4, Object3D } from "three";
+import { Euler, Matrix4, Object3D, Vector3 } from "three";
 import invariant from "tiny-invariant";
 
 import type ThreeView from "../index";
@@ -15,10 +15,34 @@ import type { ViewContext } from "./ViewContext";
 
 export type MeshLayerConfig = {
   type?: "mesh";
+  /**
+   * Local translation. When `matrix` or `matrixWorld` is also set, this is
+   * treated as an offset *inside* that frame (left-multiplied by the frame).
+   * Otherwise it's applied directly as `Object3D.position`.
+   */
   position?: XYZ;
+  /**
+   * Local scale. See {@link position} for interaction with `matrix` / `matrixWorld`.
+   */
   scale?: XYZ;
+  /**
+   * Local Euler rotation (XYZ order). See {@link position} for interaction
+   * with `matrix` / `matrixWorld`.
+   */
   rotation?: XYZ;
+  /**
+   * Local frame. When combined with `position` / `rotation` / `scale`, the
+   * effective local matrix is `matrix · T(position) · R(rotation) · S(scale)`.
+   * Disables Three.js's auto matrix update.
+   */
   matrix?: Matrix4;
+  /**
+   * World frame (e.g. an NUE-to-ECEF tangent frame on the globe). When
+   * combined with `position` / `rotation` / `scale`, the effective world
+   * matrix is `matrixWorld · T(position) · R(rotation) · S(scale)`, so the
+   * offset fields are interpreted in the frame's local coordinates.
+   * Disables Three.js's auto matrix-world update.
+   */
   matrixWorld?: Matrix4;
 } & LayerDeclarationConfig;
 
@@ -216,12 +240,15 @@ export abstract class MeshLayerDeclaration<
   /**
    * Factory method to create the Three.js 3D object.
    *
-   * Override this to return your custom mesh. The returned object can be either:
-   * - A Three.js `Object3D` directly (e.g. `Mesh`, `Group`, `Points`)
-   * - A wrapper object with a `raw` property containing the `Object3D`
+   * Override this to return your custom mesh. The returned object can be
+   * either a Three.js `Object3D` directly (e.g. `Mesh`, `Group`, `Points`) or
+   * a wrapper object with a `raw` property containing the `Object3D`.
    *
-   * The base class calls this during {@link onCreate} and automatically applies
-   * position, scale, rotation, and adds the object to the appropriate scene.
+   * The base class calls this during {@link onCreate} and automatically
+   * applies position, scale, rotation, and adds the object to the appropriate
+   * scene. Picking is opt-in: if your layer supports it, construct a
+   * {@link PickableMesh} here and register it yourself via
+   * `this.ctx.registerPickableMesh(this.id, wrapper)` before returning.
    */
   abstract createMesh(): Instance;
 
@@ -245,23 +272,88 @@ export abstract class MeshLayerDeclaration<
     this._instance = this.createMesh();
     invariant(this.raw);
 
-    if (this.matrixWorld) {
-      this.raw.matrixWorldAutoUpdate = false;
-      this.raw.matrixWorld.copy(this.matrixWorld);
-      this.raw.updateMatrixWorld();
-    }
-    if (this.matrix) {
-      this.raw.matrixAutoUpdate = false;
-      this.raw.matrix.copy(this.matrix);
-    }
-    if (this.position) this.raw.position.copy(this.position);
-    if (this.scale) this.raw.scale.copy(this.scale);
-    if (this.rotation)
-      this.raw.rotation.set(this.rotation.x, this.rotation.y, this.rotation.z);
+    this.applyTransform();
 
     this._instance.visible = this.visible;
 
     this.onPassKeyChange();
+  }
+
+  /**
+   * Composes position, rotation, and scale into a local `T · R · S` matrix.
+   * Returns identity when none are set.
+   */
+  private composeLocalTransform(): Matrix4 {
+    const local = new Matrix4();
+    if (this.position) {
+      local.multiply(
+        new Matrix4().makeTranslation(
+          this.position.x,
+          this.position.y,
+          this.position.z,
+        ),
+      );
+    }
+    if (this.rotation) {
+      local.multiply(
+        new Matrix4().makeRotationFromEuler(
+          new Euler(this.rotation.x, this.rotation.y, this.rotation.z),
+        ),
+      );
+    }
+    if (this.scale) {
+      local.scale(new Vector3(this.scale.x, this.scale.y, this.scale.z));
+    }
+    return local;
+  }
+
+  /**
+   * Applies the configured transform to the underlying `Object3D`.
+   *
+   * When `matrixWorld` (or `matrix`) is set together with any of
+   * `position` / `rotation` / `scale`, the base/frame is left-multiplied
+   * by the local `T · R · S`: e.g. `effective = matrixWorld · T · R · S`.
+   * This lets callers pass a frame (such as an NUE-to-ECEF matrix) as
+   * `matrixWorld` and express offsets inside that frame via
+   * `position` / `rotation` / `scale`.
+   */
+  private applyTransform(): void {
+    invariant(this.raw);
+    const hasLocal =
+      this.position != null || this.rotation != null || this.scale != null;
+
+    if (this.matrixWorld) {
+      this.raw.matrixAutoUpdate = false;
+      this.raw.matrixWorldAutoUpdate = false;
+      if (hasLocal) {
+        this.raw.matrixWorld.multiplyMatrices(
+          this.matrixWorld,
+          this.composeLocalTransform(),
+        );
+      } else {
+        this.raw.matrixWorld.copy(this.matrixWorld);
+      }
+      this.raw.updateMatrixWorld();
+      return;
+    }
+
+    if (this.matrix) {
+      this.raw.matrixAutoUpdate = false;
+      if (hasLocal) {
+        this.raw.matrix.multiplyMatrices(
+          this.matrix,
+          this.composeLocalTransform(),
+        );
+      } else {
+        this.raw.matrix.copy(this.matrix);
+      }
+      return;
+    }
+
+    if (this.position) this.raw.position.copy(this.position);
+    if (this.scale) this.raw.scale.copy(this.scale);
+    if (this.rotation)
+      this.raw.rotation.set(this.rotation.x, this.rotation.y, this.rotation.z);
   }
 
   removeFromScene(passKey: PassKey) {
@@ -286,33 +378,44 @@ export abstract class MeshLayerDeclaration<
     super.onUpdateConfig(updates);
     invariant(this.raw);
 
-    if (updates.matrix) {
-      this.raw.matrixAutoUpdate = false;
-      this.raw.matrix.copy(updates.matrix);
-      this.matrix = updates.matrix;
-    }
-    if (updates.matrixWorld) {
-      this.raw.matrixAutoUpdate = false;
-      this.raw.matrixWorldAutoUpdate = false;
-      this.raw.matrixWorld.copy(updates.matrixWorld);
+    const spatialChanged =
+      updates.matrix !== undefined ||
+      updates.matrixWorld !== undefined ||
+      updates.position !== undefined ||
+      updates.scale !== undefined ||
+      updates.rotation !== undefined;
+
+    if (updates.matrix !== undefined) this.matrix = updates.matrix;
+    if (updates.matrixWorld !== undefined)
       this.matrixWorld = updates.matrixWorld;
-      this.raw.updateMatrixWorld();
-    }
-    if (updates.position !== undefined) {
-      this.position = updates.position;
-      this.raw.position.copy(updates.position);
-    }
-    if (updates.scale !== undefined) {
-      this.scale = updates.scale;
-      this.raw.scale.copy(updates.scale);
-    }
-    if (updates.rotation !== undefined) {
-      this.rotation = updates.rotation;
-      this.raw.rotation.set(
-        updates.rotation.x,
-        updates.rotation.y,
-        updates.rotation.z,
-      );
+    if (updates.position !== undefined) this.position = updates.position;
+    if (updates.scale !== undefined) this.scale = updates.scale;
+    if (updates.rotation !== undefined) this.rotation = updates.rotation;
+
+    if (spatialChanged) {
+      // With a frame present, the effective transform depends on the
+      // combination of all stored fields — recompose the whole thing.
+      // Without a frame, apply only the fields that were actually passed,
+      // so subclasses that strip a field from `updates` (e.g. GLTFModelLayer
+      // keeping `raw.position` at 0 for its RTE shader) can still opt out
+      // of having the base class copy it onto `raw`.
+      if (this.matrixWorld || this.matrix) {
+        this.applyTransform();
+      } else {
+        if (updates.position !== undefined) {
+          this.raw.position.copy(updates.position);
+        }
+        if (updates.scale !== undefined) {
+          this.raw.scale.copy(updates.scale);
+        }
+        if (updates.rotation !== undefined) {
+          this.raw.rotation.set(
+            updates.rotation.x,
+            updates.rotation.y,
+            updates.rotation.z,
+          );
+        }
+      }
     }
 
     this.onPassKeyChange();

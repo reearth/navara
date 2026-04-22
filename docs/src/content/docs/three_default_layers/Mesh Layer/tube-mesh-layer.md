@@ -7,6 +7,8 @@ sidebar:
 
 The `TubeMeshLayer` class is a mesh layer for drawing tube geometry. It can create tube shapes along a Catmull-Rom curve.
 
+In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `pickable`, `visible`) are available. See [MeshLayerDeclaration](./mesh-layer-base) for details.
+
 ## Properties
 
 ### points

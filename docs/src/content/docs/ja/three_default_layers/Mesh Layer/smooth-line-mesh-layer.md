@@ -7,6 +7,8 @@ sidebar:
 
 `SmoothLineMeshLayer`クラスは、カトマル・ロム曲線による滑らかなラインを描画するためのメッシュレイヤーです。地点の配列から滑らかな曲線を生成し、破線やポイントマーカーの表示もサポートします。
 
+以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`pickable`、`visible`）が利用できます。詳細は [MeshLayerDeclaration](./mesh-layer-base) を参照してください。
+
 ## Properties
 
 ### tension

@@ -2,6 +2,7 @@ import type ThreeView from "@navara/three";
 import {
   Color,
   InstancedMeshLayerDeclaration,
+  PickableInstancedMeshWrapper,
   setupSelectiveEffectUniforms,
   type InstancedChildConfig,
   type InstancedMeshLayerConfig,
@@ -11,6 +12,7 @@ import {
 import {
   BoxGeometry,
   Color as ThreeColor,
+  InstancedMesh as ThreeInstancedMesh,
   MeshLambertMaterial,
   Vector3,
 } from "three";
@@ -51,7 +53,7 @@ type LayerDescription = {
 };
 
 export type InstancedBoxMeshLayerConfig = InstancedMeshLayerConfig &
-  LayerDescription;
+  LayerDescription & { pickable?: boolean };
 
 export type InstancedBoxMeshLayerUpdate = InstancedMeshLayerUpdate &
   LayerDescription;
@@ -64,6 +66,7 @@ export class InstancedBoxMeshLayer extends InstancedMeshLayerDeclaration<
   BoxChildConfig
 > {
   private config: InstancedBoxMeshLayerConfig;
+  private pickWrapper?: PickableInstancedMeshWrapper;
 
   constructor(
     view: ThreeView,
@@ -76,6 +79,11 @@ export class InstancedBoxMeshLayer extends InstancedMeshLayerDeclaration<
     }
     super(view, ctx, config);
     this.config = config;
+  }
+
+  /** Per-instance batch IDs when picking is enabled. */
+  get batchIds(): readonly number[] {
+    return this.pickWrapper?.batchIds ?? [];
   }
 
   private get boxesConfig(): BoxesDescription | undefined {
@@ -133,7 +141,38 @@ export class InstancedBoxMeshLayer extends InstancedMeshLayerDeclaration<
       mesh.castShadow = cfg?.castShadow ?? false;
       mesh.receiveShadow = cfg?.receiveShadow ?? false;
       this.ctx.applyShadowMaterial(mesh.material);
+
+      if (this.config.pickable) {
+        this.pickWrapper = new PickableInstancedMeshWrapper(
+          mesh,
+          this.count,
+          this.ctx,
+        );
+        this.ctx.registerPickableMesh(this.id, this.pickWrapper);
+      }
     }
+  }
+
+  protected override onInstanceAdded(_index: number): void {
+    this.pickWrapper?.addInstance();
+  }
+
+  protected override onInstanceRemoved(index: number, _wasLast: boolean): void {
+    this.pickWrapper?.removeInstanceAt(index);
+  }
+
+  protected override onInstancesCleared(): void {
+    this.pickWrapper?.clearInstances();
+  }
+
+  protected override onInstancesReplaced(count: number): void {
+    this.pickWrapper?.replaceAll(count);
+  }
+
+  protected override onInstanceMeshReplaced(
+    newMesh: ThreeInstancedMesh<BoxGeometry, MeshLambertMaterial>,
+  ): void {
+    this.pickWrapper?.syncMesh(newMesh);
   }
 
   onUpdateConfig(updates: InstancedBoxMeshLayerUpdate): void {
@@ -186,6 +225,10 @@ export class InstancedBoxMeshLayer extends InstancedMeshLayerDeclaration<
   }
 
   override onDestroy(): void {
+    if (this.pickWrapper) {
+      this.ctx.unregisterPickableMesh(this.id);
+      this.pickWrapper = undefined;
+    }
     if (this.raw) {
       this.ctx.removeShadowMaterial(this.raw.material);
     }

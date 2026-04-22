@@ -529,8 +529,13 @@ export class PolygonMesh extends BatchedFeatureMesh<
     this.enableWater();
   }
 
-  _setPickable(pickable: boolean): void {
-    this.getEnhancer().update({ base: { pickable } });
+  onBeforePicking(): void {
+    this.getEnhancer().update({ base: { pickable: true } });
+    this.needsUpdate();
+  }
+
+  onAfterPicking(): void {
+    this.getEnhancer().update({ base: { pickable: false } });
     this.needsUpdate();
   }
 

@@ -7,6 +7,8 @@ sidebar:
 
 The `SphereMeshLayer` class is a mesh layer for drawing sphere geometry. You can create a sphere by specifying radius, segment counts, and other parameters.
 
+In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `pickable`, `visible`) are available. See [MeshLayerDeclaration](./mesh-layer-base) for details.
+
 ## Properties
 
 ### radius

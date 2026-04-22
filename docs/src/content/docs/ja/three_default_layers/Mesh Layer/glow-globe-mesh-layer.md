@@ -7,6 +7,8 @@ sidebar:
 
 `GlowGlobeMeshLayer`クラスは、地球の周りにフレネル効果による光彩(グロー)を表示するメッシュレイヤーです。大気圏の光の散乱を模倣し、地球の縁に沿った美しいハロ効果を作成します。
 
+以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`pickable`、`visible`）が利用できます。詳細は [MeshLayerDeclaration](./mesh-layer-base) を参照してください。
+
 ## Properties
 
 ### radiusScale

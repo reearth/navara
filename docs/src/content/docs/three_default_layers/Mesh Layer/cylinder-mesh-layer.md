@@ -7,6 +7,8 @@ sidebar:
 
 The `CylinderMeshLayer` class is a mesh layer for drawing cylinder geometry. You can create cylinders and cones by specifying top radius, bottom radius, height, and other parameters.
 
+In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `pickable`, `visible`) are available. See [MeshLayerDeclaration](./mesh-layer-base) for details.
+
 ## Properties
 
 ### radiusTop

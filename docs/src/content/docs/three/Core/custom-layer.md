@@ -128,14 +128,7 @@ type MyMeshUpdate = MeshLayerUpdate & MyMeshDescription;
 
 ### Properties Managed by the Base Class
 
-`MeshLayerDeclaration` automatically handles the application of the following properties:
-
-| Property   | Type          | Description                            |
-| ---------- | ------------- | -------------------------------------- |
-| `position` | `{ x, y, z }` | Position in the ECEF coordinate system |
-| `scale`    | `{ x, y, z }` | Scale                                  |
-| `rotation` | `{ x, y, z }` | Rotation (Euler angles, radians)       |
-| `visible`  | `boolean`     | Show/hide                              |
+`MeshLayerDeclaration` automatically handles `position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `pickable`, and `visible`. For a full description of these properties, transform composition modes, and picking behavior, see [MeshLayerDeclaration](../../../three_default_layers/mesh-layer/mesh-layer-base).
 
 ### Specifying the Render Pass
 
@@ -600,6 +593,171 @@ The `LayerHandle<T>` returned from `view.addMesh()`, `view.addLight()`, or `view
 | `ref`             | `T`       | Direct access to the base layer instance |
 | `update(updates)` | `void`    | Partial configuration update             |
 | `delete()`        | `void`    | Delete the layer. Calls `onDestroy()`    |
+
+## Implementing Picking in Custom Layers
+
+For an overview of picking from the user's perspective, see [MeshLayerDeclaration — Picking](../../../three_default_layers/mesh-layer/mesh-layer-base/#picking). This section covers how to implement picking support when authoring a custom layer.
+
+### Turnkey Picking with PickableMeshWrapper
+
+For layers that use standard Three.js materials (`MeshStandardMaterial`, `MeshLambertMaterial`, etc.) or `ShaderMaterial`, wrap the mesh in a `PickableMeshWrapper`. It automatically injects the picking shader code.
+
+```typescript
+import ThreeView, {
+  MeshLayerDeclaration,
+  PickableMeshWrapper,
+  type MeshLayerConfig,
+  type MeshLayerUpdate,
+  type ViewContext,
+  Color,
+} from "@navara/three";
+import { Mesh, BoxGeometry, MeshStandardMaterial } from "three";
+
+type MyConfig = MeshLayerConfig & { myBox?: { color?: Color } };
+type MyUpdate = MeshLayerUpdate & { myBox?: { color?: Color } };
+
+class MyPickableBoxLayer extends MeshLayerDeclaration<
+  MyConfig, MyUpdate, Mesh
+> {
+  private config: MyConfig;
+  private pickWrapper?: PickableMeshWrapper;
+
+  constructor(view: ThreeView, ctx: ViewContext, config: MyConfig) {
+    super(view, ctx, config);
+    this.config = config;
+  }
+
+  get batchId(): number | undefined {
+    return this.pickWrapper?.batchId;
+  }
+
+  createMesh() {
+    const mesh = new Mesh(
+      new BoxGeometry(1, 1, 1),
+      new MeshStandardMaterial({ color: this.config.myBox?.color?.raw ?? 0xffffff }),
+    );
+
+    if (this.config.pickable) {
+      this.pickWrapper = new PickableMeshWrapper(mesh, this.ctx);
+      this.ctx.registerPickableMesh(this.id, this.pickWrapper);
+    }
+
+    return mesh;
+  }
+
+  onDestroy() {
+    if (this.pickWrapper) {
+      this.ctx.unregisterPickableMesh(this.id);
+    }
+    super.onDestroy();
+  }
+}
+```
+
+### Instanced Mesh Picking
+
+For instanced mesh layers, use `PickableInstancedMeshWrapper`. It assigns a unique batch ID per instance, enabling you to identify which individual instance was clicked.
+
+```typescript
+import {
+  InstancedMeshLayerDeclaration,
+  PickableInstancedMeshWrapper,
+} from "@navara/three";
+
+class MyPickableInstancedLayer extends InstancedMeshLayerDeclaration</* ... */> {
+  private pickWrapper?: PickableInstancedMeshWrapper;
+
+  get batchIds(): readonly number[] {
+    return this.pickWrapper?.batchIds ?? [];
+  }
+
+  override onCreate() {
+    super.onCreate();
+    if (this.config.pickable) {
+      this.pickWrapper = new PickableInstancedMeshWrapper(
+        this.raw, this.count, this.ctx,
+      );
+      this.ctx.registerPickableMesh(this.id, this.pickWrapper);
+    }
+  }
+
+  protected override onInstanceAdded(index: number) {
+    this.pickWrapper?.addInstance();
+  }
+
+  protected override onInstanceRemoved(index: number, wasLast: boolean) {
+    this.pickWrapper?.removeInstanceAt(index);
+  }
+
+  protected override onInstanceMeshReplaced(newMesh: InstancedMesh) {
+    this.pickWrapper?.syncMesh(newMesh);
+  }
+
+  onDestroy() {
+    if (this.pickWrapper) {
+      this.ctx.unregisterPickableMesh(this.id);
+    }
+    super.onDestroy();
+  }
+}
+```
+
+### Custom Picking with PickableMesh
+
+For layers with fully custom shaders, implement the `PickableMesh` interface directly. Your fragment shader must encode the batch ID as an RGB color when the picking uniform is active.
+
+```typescript
+import { type PickableMesh } from "@navara/three";
+
+class CustomPickable extends Object3D implements PickableMesh {
+  batchId: number;
+  private mesh: Mesh;
+
+  constructor(mesh: Mesh, ctx: ViewContext) {
+    super();
+    this.mesh = mesh;
+    this.batchId = ctx.genGlobalBatchId() ?? 0;
+    mesh.material.uniforms.uBatchId.value = this.batchId;
+  }
+
+  onBeforePicking() {
+    this.mesh.material.uniforms.uPicking.value = 1;
+  }
+
+  onAfterPicking() {
+    this.mesh.material.uniforms.uPicking.value = 0;
+  }
+
+  getRenderable() {
+    return this.mesh;
+  }
+}
+```
+
+The batch ID encoding in the fragment shader:
+
+```glsl
+vec3 batchIdToColor(float id) {
+  float r = floor(id / 65536.0);
+  float g = floor(mod(id / 256.0, 256.0));
+  float b = mod(id, 256.0);
+  return vec3(r, g, b) / 255.0;
+}
+
+// In the main function:
+if (uPicking > 0.0) {
+  gl_FragColor = vec4(batchIdToColor(uBatchId), 1.0);
+  return;
+}
+```
+
+### ViewContext Picking API
+
+| Method                                          | Description                                |
+| ----------------------------------------------- | ------------------------------------------ |
+| `ctx.genGlobalBatchId()`                        | Generate a unique batch ID for picking     |
+| `ctx.registerPickableMesh(key, mesh)`           | Register a pickable mesh                   |
+| `ctx.unregisterPickableMesh(key)`               | Unregister a pickable mesh                 |
 
 ## Related Resources
 

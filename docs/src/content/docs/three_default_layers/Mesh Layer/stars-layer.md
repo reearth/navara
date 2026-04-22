@@ -9,6 +9,8 @@ The `StarsLayer` class is a mesh layer that draws a starry sky. It uses point sp
 
 Star positions account for the Earth's rotation based on `view.atmosphere.date`, and visibility is automatically adjusted based on the sun's position.
 
+In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `pickable`, `visible`) are available. See [MeshLayerDeclaration](./mesh-layer-base) for details.
+
 :::tip[Related Documentation]
 For details on the atmosphere system, see the [Atmosphere class](../../../three/api-reference/atmosphere/).
 :::

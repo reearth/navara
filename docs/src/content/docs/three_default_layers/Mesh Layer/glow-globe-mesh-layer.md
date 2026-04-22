@@ -7,6 +7,8 @@ sidebar:
 
 The `GlowGlobeMeshLayer` class is a mesh layer that displays a Fresnel-effect glow around the globe. It mimics the scattering of light in the atmosphere, creating a beautiful halo effect along the edges of the Earth.
 
+In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `pickable`, `visible`) are available. See [MeshLayerDeclaration](./mesh-layer-base) for details.
+
 ## Properties
 
 ### radiusScale

@@ -441,17 +441,22 @@ export class PolylineMesh extends BatchedFeatureMesh<
     return this.getEnhancer().states().effectIdsMask;
   }
 
-  _setPickable(pickable: boolean, pickingCoord?: Vector2) {
-    this.getEnhancer().update({ base: { pickable } });
+  onBeforePicking(pickingCoord?: Vector2) {
+    this.getEnhancer().update({ base: { pickable: true } });
     this.needsUpdate();
 
     const mutates = this.getEnhancer().mutates();
-    if (pickable && pickingCoord) {
+    if (pickingCoord) {
       mutates.setPickingCoord(pickingCoord);
     } else {
-      // Reset to sentinel value when not picking or no coordinate provided
       mutates.setPickingCoord(PICKING_COORD_SENTINEL);
     }
+  }
+
+  onAfterPicking() {
+    this.getEnhancer().update({ base: { pickable: false } });
+    this.needsUpdate();
+    this.getEnhancer().mutates().setPickingCoord(PICKING_COORD_SENTINEL);
   }
 
   _getDefaultBatchAttributeValues(): DefaultBatchAttributeValues {
