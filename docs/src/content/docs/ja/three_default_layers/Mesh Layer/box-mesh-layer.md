@@ -1,11 +1,11 @@
 ---
-title: BoxMeshLayer
+title: BoxMeshDesc
 description: Box mesh descriptor for navara_three
 sidebar:
   order: 102
 ---
 
-`BoxMeshLayer`クラスは、立方体(Box)ジオメトリを描画するためのメッシュレイヤーです。幅・高さ・奥行きを指定して立方体を作成できます。
+`BoxMeshDesc`クラスは、立方体(Box)ジオメトリを描画するためのメッシュレイヤーです。幅・高さ・奥行きを指定して立方体を作成できます。
 
 以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`pickable`、`visible`）が利用できます。詳細は [MeshDesc](./mesh-layer-base) を参照してください。
 
@@ -299,13 +299,13 @@ import { Color } from "@navara/three";
 ### 基本的な使い方
 
 ```typescript
-import ThreeView, { BoxMeshLayer, Color } from "@navara/three";
+import ThreeView, { BoxMeshDesc, Color } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
-// BoxMeshLayerを追加
-const boxLayer = view.addMesh<BoxMeshLayer>({
+// BoxMeshDescを追加
+const boxLayer = view.addMesh<BoxMeshDesc>({
   box: {
     width: 100,
     height: 100,
@@ -319,9 +319,9 @@ const boxLayer = view.addMesh<BoxMeshLayer>({
 ### 影付き立方体
 
 ```typescript
-import ThreeView, { BoxMeshLayer, Color } from "@navara/three";
+import ThreeView, { BoxMeshDesc, Color } from "@navara/three";
 
-const boxLayer = view.addMesh<BoxMeshLayer>({
+const boxLayer = view.addMesh<BoxMeshDesc>({
   box: {
     width: 200,
     height: 100,
@@ -337,9 +337,9 @@ const boxLayer = view.addMesh<BoxMeshLayer>({
 ### 半透明の立方体
 
 ```typescript
-import ThreeView, { BoxMeshLayer, Color } from "@navara/three";
+import ThreeView, { BoxMeshDesc, Color } from "@navara/three";
 
-const boxLayer = view.addMesh<BoxMeshLayer>({
+const boxLayer = view.addMesh<BoxMeshDesc>({
   box: {
     width: 150,
     height: 150,

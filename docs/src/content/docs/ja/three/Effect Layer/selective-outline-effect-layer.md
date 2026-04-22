@@ -1,11 +1,11 @@
 ---
-title: SelectiveOutlineEffectLayer
+title: SelectiveOutlineEffectDesc
 description: Selective outline effect descriptor for navara_three
 sidebar:
   order: 62
 ---
 
-`SelectiveOutlineEffectLayer`クラスは、選択的なアウトラインエフェクトを適用するレイヤーです。マスクベースのフィルタリングを使用して、特定のオブジェクトにのみアウトラインを描画できます。Sobelフィルタを使用したエッジ検出により、オブジェクトの輪郭を強調します。
+`SelectiveOutlineEffectDesc`クラスは、選択的なアウトラインエフェクトを適用するレイヤーです。マスクベースのフィルタリングを使用して、特定のオブジェクトにのみアウトラインを描画できます。Sobelフィルタを使用したエッジ検出により、オブジェクトの輪郭を強調します。
 
 ## Properties
 
@@ -132,8 +132,8 @@ import { Color } from "@navara/three";
 
 ```typescript
 import ThreeView, {
-  SelectiveOutlineEffectLayer,
-  BoxMeshLayer,
+  SelectiveOutlineEffectDesc,
+  BoxMeshDesc,
   Color,
 } from "@navara/three";
 
@@ -141,7 +141,7 @@ const view = new ThreeView();
 await view.init();
 
 // 選択的アウトラインエフェクトレイヤーを追加
-const outlineLayer = view.addEffect<SelectiveOutlineEffectLayer>({
+const outlineLayer = view.addEffect<SelectiveOutlineEffectDesc>({
   selectiveOutline: {
     color: new Color().setHex(0xffffff),
     thickness: 1.0,
@@ -150,7 +150,7 @@ const outlineLayer = view.addEffect<SelectiveOutlineEffectLayer>({
 });
 
 // オブジェクトにアウトラインエフェクトを適用
-const cubeLayer = view.addMesh<BoxMeshLayer>({
+const cubeLayer = view.addMesh<BoxMeshDesc>({
   box: {
     width: 100,
     height: 100,
@@ -166,7 +166,7 @@ const cubeLayer = view.addMesh<BoxMeshLayer>({
 ### カラーアウトラインの追加
 
 ```typescript
-import ThreeView, { SelectiveOutlineEffectLayer, Color } from "@navara/three";
+import ThreeView, { SelectiveOutlineEffectDesc, Color } from "@navara/three";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
@@ -178,7 +178,7 @@ await view.init();
 plugin.addDefaultPhotorealScene();
 
 // 赤色の太いアウトラインを追加
-const outlineLayer = view.addEffect<SelectiveOutlineEffectLayer>({
+const outlineLayer = view.addEffect<SelectiveOutlineEffectDesc>({
   selectiveOutline: {
     color: new Color().setHex(0xff0000),
     thickness: 2.5,
@@ -190,13 +190,13 @@ const outlineLayer = view.addEffect<SelectiveOutlineEffectLayer>({
 ### パフォーマンス重視の設定
 
 ```typescript
-import ThreeView, { SelectiveOutlineEffectLayer, Color } from "@navara/three";
+import ThreeView, { SelectiveOutlineEffectDesc, Color } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
 // パフォーマンス重視の設定
-const outlineLayer = view.addEffect<SelectiveOutlineEffectLayer>({
+const outlineLayer = view.addEffect<SelectiveOutlineEffectDesc>({
   selectiveOutline: {
     color: new Color().setHex(0xffffff),
     thickness: 1.0,
@@ -209,12 +209,12 @@ const outlineLayer = view.addEffect<SelectiveOutlineEffectLayer>({
 ### アウトラインエフェクトの動的更新
 
 ```typescript
-import ThreeView, { SelectiveOutlineEffectLayer, Color } from "@navara/three";
+import ThreeView, { SelectiveOutlineEffectDesc, Color } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
-const outlineLayer = view.addEffect<SelectiveOutlineEffectLayer>({
+const outlineLayer = view.addEffect<SelectiveOutlineEffectDesc>({
   selectiveOutline: {
     color: new Color().setHex(0xffffff),
     thickness: 1.0,
@@ -233,12 +233,12 @@ outlineLayer.update({
 ### 3D Tiles へのアウトライン適用
 
 ```typescript
-import ThreeView, { SelectiveOutlineEffectLayer, Color } from "@navara/three";
+import ThreeView, { SelectiveOutlineEffectDesc, Color } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
-const outlineLayer = view.addEffect<SelectiveOutlineEffectLayer>({
+const outlineLayer = view.addEffect<SelectiveOutlineEffectDesc>({
   selectiveOutline: {
     color: new Color().setHex(0xff0000),
     thickness: 2.0,
@@ -266,15 +266,15 @@ const buildingsLayer = view.addLayer({
 
 ```typescript
 import ThreeView, {
-  SelectiveOutlineEffectLayer,
-  BoxMeshLayer,
+  SelectiveOutlineEffectDesc,
+  BoxMeshDesc,
   Color,
 } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
-const outlineLayer = view.addEffect<SelectiveOutlineEffectLayer>({
+const outlineLayer = view.addEffect<SelectiveOutlineEffectDesc>({
   selectiveOutline: {
     color: new Color().setHex(0x00ff00),
     thickness: 2.0,
@@ -282,7 +282,7 @@ const outlineLayer = view.addEffect<SelectiveOutlineEffectLayer>({
 });
 
 // シルエットモード：建物の背後でもアウトラインが見える
-const highlightedCube = view.addMesh<BoxMeshLayer>({
+const highlightedCube = view.addMesh<BoxMeshDesc>({
   box: {
     width: 100,
     height: 100,
@@ -298,22 +298,22 @@ const highlightedCube = view.addMesh<BoxMeshLayer>({
 
 ```typescript
 import ThreeView, {
-  SelectiveBloomEffectLayer,
-  SelectiveOutlineEffectLayer,
-  BoxMeshLayer,
+  SelectiveBloomEffectDesc,
+  SelectiveOutlineEffectDesc,
+  BoxMeshDesc,
   Color,
 } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
-const bloomLayer = view.addEffect<SelectiveBloomEffectLayer>({
+const bloomLayer = view.addEffect<SelectiveBloomEffectDesc>({
   selectiveBloom: {
     strength: 1.0,
   },
 });
 
-const outlineLayer = view.addEffect<SelectiveOutlineEffectLayer>({
+const outlineLayer = view.addEffect<SelectiveOutlineEffectDesc>({
   selectiveOutline: {
     color: new Color().setHex(0xff0000),
     thickness: 2.0,
@@ -321,7 +321,7 @@ const outlineLayer = view.addEffect<SelectiveOutlineEffectLayer>({
 });
 
 // 両方のエフェクトを適用
-const cubeLayer = view.addMesh<BoxMeshLayer>({
+const cubeLayer = view.addMesh<BoxMeshDesc>({
   box: {
     width: 100,
     height: 100,

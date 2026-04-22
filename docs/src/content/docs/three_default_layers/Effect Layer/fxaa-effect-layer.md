@@ -1,11 +1,11 @@
 ---
-title: FXAAEffectLayer
+title: FXAAEffectDesc
 description: FXAA effect descriptor for navara_three
 sidebar:
   order: 54
 ---
 
-The `FXAAEffectLayer` class is a layer that applies the FXAA (Fast Approximate Anti-Aliasing) anti-aliasing effect. It reduces jagged edges in the image, producing a smoother appearance.
+The `FXAAEffectDesc` class is a layer that applies the FXAA (Fast Approximate Anti-Aliasing) anti-aliasing effect. It reduces jagged edges in the image, producing a smoother appearance.
 
 ## Properties
 
@@ -27,17 +27,17 @@ The `FXAAEffectLayer` class is a layer that applies the FXAA (Fast Approximate A
 ### Enabling FXAA anti-aliasing
 
 ```typescript
-import ThreeView, { FXAAEffectLayer } from "@navara/three";
+import ThreeView, { FXAAEffectDesc } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
 // Add FXAA effect descriptor
-view.addEffect<FXAAEffectLayer>({
+view.addEffect<FXAAEffectDesc>({
   fxaa: {},
 });
 ```
 
 ## Notes
 
-FXAAEffectLayer does not have special configuration parameters. It is applied at the final stage of the rendering pipeline. It is lighter than SMAA but slightly lower in quality. It is suitable when performance is a priority.
+FXAAEffectDesc does not have special configuration parameters. It is applied at the final stage of the rendering pipeline. It is lighter than SMAA but slightly lower in quality. It is suitable when performance is a priority.

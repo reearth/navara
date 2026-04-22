@@ -1,11 +1,11 @@
 ---
-title: SnowMeshLayer
+title: SnowMeshDesc
 description: Snow mesh descriptor for navara_three
 sidebar:
   order: 110
 ---
 
-The `SnowMeshLayer` class is a mesh descriptor that displays snow particle effects. It creates realistic snowfall effects using texture-based point sprites.
+The `SnowMeshDesc` class is a mesh descriptor that displays snow particle effects. It creates realistic snowfall effects using texture-based point sprites.
 
 In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `pickable`, `visible`) are available. See [MeshDesc](./mesh-layer-base) for details.
 
@@ -278,13 +278,13 @@ import { Color } from "@navara/three";
 ### Basic Usage
 
 ```typescript
-import ThreeView, { SnowMeshLayer } from "@navara/three";
+import ThreeView, { SnowMeshDesc } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
-// Add a SnowMeshLayer
-const snowLayer = view.addMesh<SnowMeshLayer>({
+// Add a SnowMeshDesc
+const snowLayer = view.addMesh<SnowMeshDesc>({
   snow: {
     particleCount: 3000,
     areaWidth: 500,
@@ -303,7 +303,7 @@ const snowLayer = view.addMesh<SnowMeshLayer>({
 
 ```typescript
 import ThreeView, {
-  SnowMeshLayer,
+  SnowMeshDesc,
   Color,
   geodeticToVector3,
   degreeToRadian,
@@ -322,8 +322,8 @@ const position = geodeticToVector3(
   ),
 );
 
-// Add a SnowMeshLayer at a specific position
-const snowLayer = view.addMesh<SnowMeshLayer>({
+// Add a SnowMeshDesc at a specific position
+const snowLayer = view.addMesh<SnowMeshDesc>({
   visible: true,
   position: position,
   snow: {

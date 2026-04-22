@@ -1,11 +1,11 @@
 ---
-title: SmoothLineMeshLayer
+title: SmoothLineMeshDesc
 description: Smooth line mesh descriptor for navara_three
 sidebar:
   order: 107
 ---
 
-`SmoothLineMeshLayer`クラスは、カトマル・ロム曲線による滑らかなラインを描画するためのメッシュレイヤーです。地点の配列から滑らかな曲線を生成し、破線やポイントマーカーの表示もサポートします。
+`SmoothLineMeshDesc`クラスは、カトマル・ロム曲線による滑らかなラインを描画するためのメッシュレイヤーです。地点の配列から滑らかな曲線を生成し、破線やポイントマーカーの表示もサポートします。
 
 以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`pickable`、`visible`）が利用できます。詳細は [MeshDesc](./mesh-layer-base) を参照してください。
 
@@ -252,13 +252,13 @@ sidebar:
 ## Usage Examples
 
 ```typescript
-import ThreeView, { SmoothLineMeshLayer } from "@navara/three";
+import ThreeView, { SmoothLineMeshDesc } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
-// SmoothLineMeshLayerを追加
-const smoothLineLayer = view.addMesh<SmoothLineMeshLayer>({
+// SmoothLineMeshDescを追加
+const smoothLineLayer = view.addMesh<SmoothLineMeshDesc>({
   smoothLines: {
     tension: 0.5,
     segments: 10,

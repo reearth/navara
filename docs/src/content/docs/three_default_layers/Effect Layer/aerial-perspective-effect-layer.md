@@ -1,11 +1,11 @@
 ---
-title: AerialPerspectiveEffectLayer
+title: AerialPerspectiveEffectDesc
 description: Aerial perspective effect descriptor for navara_three
 sidebar:
   order: 51
 ---
 
-The `AerialPerspectiveEffectLayer` class is a layer that represents the aerial perspective effect. It calculates atmospheric light scattering (inscatter) and transmittance, producing the effect where distant objects appear more bluish.
+The `AerialPerspectiveEffectDesc` class is a layer that represents the aerial perspective effect. It calculates atmospheric light scattering (inscatter) and transmittance, producing the effect where distant objects appear more bluish.
 
 This effect uses precomputed textures and sun/moon directions provided by the `Atmosphere` class to reproduce physically accurate atmospheric scattering.
 
@@ -149,7 +149,7 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-// Add default photorealistic layers (includes AerialPerspectiveEffectLayer)
+// Add default photorealistic layers (includes AerialPerspectiveEffectDesc)
 const defaultLayers = plugin.addDefaultPhotorealScene();
 
 // Update aerial perspective effect settings
@@ -165,7 +165,7 @@ defaultLayers.aerialPerspective.update({
 ### Aerial perspective combined with cloud shadows
 
 ```typescript
-import ThreeView, { CloudsEffectLayer } from "@navara/three";
+import ThreeView, { CloudsEffectDesc } from "@navara/three";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
@@ -185,7 +185,7 @@ defaultLayers.aerialPerspective.update({
 });
 
 // Add clouds effect descriptor
-view.addEffect<CloudsEffectLayer>({
+view.addEffect<CloudsEffectDesc>({
   clouds: {
     shadows: true,
   },

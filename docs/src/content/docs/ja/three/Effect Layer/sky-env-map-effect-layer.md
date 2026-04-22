@@ -1,11 +1,11 @@
 ---
-title: SkyEnvMapEffectLayer
+title: SkyEnvMapEffectDesc
 description: Sky environment map effect descriptor for navara_three
 sidebar:
   order: 61
 ---
 
-`SkyEnvMapEffectLayer`クラスは、空の環境マップをレンダリングするパスです。環境マッピングや反射に使用される空のテクスチャを生成します。
+`SkyEnvMapEffectDesc`クラスは、空の環境マップをレンダリングするパスです。環境マッピングや反射に使用される空のテクスチャを生成します。
 
 ## Properties
 
@@ -40,7 +40,7 @@ sidebar:
 ### 基本的な空環境マップの追加
 
 ```typescript
-import ThreeView, { SkyEnvMapEffectLayer } from "@navara/three";
+import ThreeView, { SkyEnvMapEffectDesc } from "@navara/three";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
@@ -52,7 +52,7 @@ await view.init();
 plugin.addDefaultPhotorealScene();
 
 // 空環境マップエフェクトレイヤーを追加
-view.addEffect<SkyEnvMapEffectLayer>({
+view.addEffect<SkyEnvMapEffectDesc>({
   skyEnvMap: {
     resolution: 256,
   },
@@ -62,7 +62,7 @@ view.addEffect<SkyEnvMapEffectLayer>({
 ### 高解像度の環境マップ
 
 ```typescript
-import ThreeView, { SkyEnvMapEffectLayer } from "@navara/three";
+import ThreeView, { SkyEnvMapEffectDesc } from "@navara/three";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
@@ -74,7 +74,7 @@ await view.init();
 plugin.addDefaultPhotorealScene();
 
 // 高解像度の環境マップを作成
-view.addEffect<SkyEnvMapEffectLayer>({
+view.addEffect<SkyEnvMapEffectDesc>({
   skyEnvMap: {
     resolution: 512,
   },
@@ -84,7 +84,7 @@ view.addEffect<SkyEnvMapEffectLayer>({
 ### 反射マテリアルと組み合わせた使用
 
 ```typescript
-import ThreeView, { SkyEnvMapEffectLayer, Color } from "@navara/three";
+import ThreeView, { SkyEnvMapEffectDesc, Color } from "@navara/three";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
@@ -96,7 +96,7 @@ await view.init();
 plugin.addDefaultPhotorealScene();
 
 // 空環境マップを追加（反射に使用される）
-view.addEffect<SkyEnvMapEffectLayer>({
+view.addEffect<SkyEnvMapEffectDesc>({
   skyEnvMap: {
     resolution: 256,
   },

@@ -5,7 +5,7 @@ sidebar:
   order: 100
 ---
 
-`MeshLayer` is a descriptor type for adding 3D mesh objects to the scene. It can display various 3D objects.
+`MeshDesc` is a descriptor type for adding 3D mesh objects to the scene. It can display various 3D objects.
 
 All mesh descriptors inherit from [`MeshDesc`](./mesh-layer-base), which provides common properties such as `position`, `rotation`, `scale`, `matrix`, `matrixWorld`, and `pickable`. See the [MeshDesc](./mesh-layer-base) page for details on transform composition, picking, and coordinate transformation.
 
@@ -15,41 +15,41 @@ The following MeshDescriptor types are available in navara_three:
 
 | Descriptor Type | Description |
 |------------|------|
-| [ArclineMeshLayer](./arcline-mesh-layer) | A layer that draws arc-shaped lines connecting two points |
-| [BoxMeshLayer](./box-mesh-layer) | A layer that draws box geometry |
-| [InstancedBoxMeshLayer](./instanced-box-mesh-layer) | A GPU-instanced layer that renders multiple boxes in a single draw call |
-| [CylinderMeshLayer](./cylinder-mesh-layer) | A layer that draws cylinder geometry |
-| [GLTFModelLayer](./gltf-model-layer) | A layer that loads and displays GLTF/GLB format 3D models |
-| [GlowGlobeMeshLayer](./glow-globe-mesh-layer) | A layer that displays a Fresnel-effect glow around the globe |
-| [PlaneMeshLayer](./plane-mesh-layer) | A layer that draws plane geometry |
-| [RainMeshLayer](./rain-mesh-layer) | A layer that displays rain particle effects |
-| [SkyBoxMeshLayer](./sky-box-mesh-layer) | A layer that draws a simple skybox |
-| [SkyMeshLayer](./sky-mesh-layer) | A layer that draws the sky, sun, and moon using atmospheric scattering |
-| [SmoothLineMeshLayer](./smooth-line-mesh-layer) | A layer that draws smooth lines using Catmull-Rom curves |
-| [SnowMeshLayer](./snow-mesh-layer) | A layer that displays snow particle effects |
-| [SphereMeshLayer](./sphere-mesh-layer) | A layer that draws sphere geometry |
-| [StarsLayer](./stars-layer) | A layer that draws a starry sky |
-| [TubeMeshLayer](./tube-mesh-layer) | A layer that draws tube geometry |
-| [AxesHelperLayer](./axes-helper-layer) | A debug helper layer that visualizes the 3 axes |
-| [ArrowHelperLayer](./arrow-helper-layer) | A debug helper layer that visualizes vector directions |
+| [ArclineMeshDesc](./arcline-mesh-layer) | A layer that draws arc-shaped lines connecting two points |
+| [BoxMeshDesc](./box-mesh-layer) | A layer that draws box geometry |
+| [InstancedBoxMeshDesc](./instanced-box-mesh-layer) | A GPU-instanced layer that renders multiple boxes in a single draw call |
+| [CylinderMeshDesc](./cylinder-mesh-layer) | A layer that draws cylinder geometry |
+| [GLTFModelDesc](./gltf-model-layer) | A layer that loads and displays GLTF/GLB format 3D models |
+| [GlowGlobeMeshDesc](./glow-globe-mesh-layer) | A layer that displays a Fresnel-effect glow around the globe |
+| [PlaneMeshDesc](./plane-mesh-layer) | A layer that draws plane geometry |
+| [RainMeshDesc](./rain-mesh-layer) | A layer that displays rain particle effects |
+| [SkyBoxMeshDesc](./sky-box-mesh-layer) | A layer that draws a simple skybox |
+| [SkyMeshDesc](./sky-mesh-layer) | A layer that draws the sky, sun, and moon using atmospheric scattering |
+| [SmoothLineMeshDesc](./smooth-line-mesh-layer) | A layer that draws smooth lines using Catmull-Rom curves |
+| [SnowMeshDesc](./snow-mesh-layer) | A layer that displays snow particle effects |
+| [SphereMeshDesc](./sphere-mesh-layer) | A layer that draws sphere geometry |
+| [StarsDesc](./stars-layer) | A layer that draws a starry sky |
+| [TubeMeshDesc](./tube-mesh-layer) | A layer that draws tube geometry |
+| [AxesHelperDesc](./axes-helper-layer) | A debug helper layer that visualizes the 3 axes |
+| [ArrowHelperDesc](./arrow-helper-layer) | A debug helper layer that visualizes vector directions |
 
 ## Basic Usage
 
-MeshLayer is added by registering the descriptor class and then calling the `view.addMesh()` method:
+A mesh descriptor is added by registering the descriptor class and then calling the `view.addMesh()` method:
 
 ```typescript
 import ThreeView, { Color } from "@navara/three";
-import { BoxMeshLayer } from "@navara/three_default_layers";
+import { BoxMeshDesc } from "@navara/three_default_layers";
 
 const view = new ThreeView();
 
 // Register the descriptor class
-view.registerMesh("box", BoxMeshLayer);
+view.registerMesh("box", BoxMeshDesc);
 
 await view.init();
 
-// Add a BoxMeshLayer
-const boxLayer = view.addMesh<BoxMeshLayer>({
+// Add a BoxMeshDesc
+const boxLayer = view.addMesh<BoxMeshDesc>({
   box: {
     width: 100,
     height: 100,
@@ -62,7 +62,7 @@ const boxLayer = view.addMesh<BoxMeshLayer>({
 
 ## Common Properties
 
-All MeshLayers have the following basic settings:
+All Mesh Descriptors have the following basic settings:
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
@@ -74,7 +74,7 @@ All MeshLayers have the following basic settings:
 
 ## Coordinate Transformation
 
-The `position` property of MeshLayer uses the ECEF (Earth-Centered, Earth-Fixed) coordinate system. To convert from latitude/longitude/altitude (geodetic coordinates) to the ECEF coordinate system, use the `geodeticToVector3()` function.
+The `position` property of MeshDesc uses the ECEF (Earth-Centered, Earth-Fixed) coordinate system. To convert from latitude/longitude/altitude (geodetic coordinates) to the ECEF coordinate system, use the `geodeticToVector3()` function.
 
 :::note
 Latitude and longitude must be specified in **radians**. Use `degreeToRadian()` to convert from degrees to radians.
@@ -88,10 +88,10 @@ import ThreeView, {
   geodeticToVector3,
   degreeToRadian,
 } from "@navara/three";
-import { SphereMeshLayer } from "@navara/three_default_layers";
+import { SphereMeshDesc } from "@navara/three_default_layers";
 
 const view = new ThreeView();
-view.registerMesh("sphere", SphereMeshLayer);
+view.registerMesh("sphere", SphereMeshDesc);
 await view.init();
 
 // Convert from latitude/longitude/altitude to ECEF coordinates
@@ -102,7 +102,7 @@ const position = geodeticToVector3({
 });
 
 // Add a mesh descriptor with the converted coordinates
-const sphereLayer = view.addMesh<SphereMeshLayer>({
+const sphereLayer = view.addMesh<SphereMeshDesc>({
   sphere: {
     radius: 100,
     color: new Color().setHex(0x00aaff),
@@ -125,10 +125,10 @@ import {
   geodeticSurfaceNormal,
   degreeToRadian,
 } from "@navara/three";
-import { GLTFModelLayer } from "@navara/three_default_layers";
+import { GLTFModelDesc } from "@navara/three_default_layers";
 import { Vector3, Quaternion, Euler } from "three";
 
-// GLTFModelLayer must be registered
+// GLTFModelDesc must be registered
 
 // Compute position
 const lat = degreeToRadian(35.681236);
@@ -146,7 +146,7 @@ const quaternion = new Quaternion().setFromUnitVectors(up, normal);
 const euler = new Euler().setFromQuaternion(quaternion);
 
 // Place the model along the Earth's surface
-const modelLayer = view.addMesh<GLTFModelLayer>({
+const modelLayer = view.addMesh<GLTFModelDesc>({
   gltfModel: {
     url: "/models/building.gltf",
   },

@@ -1,11 +1,11 @@
 ---
-title: SphereMeshLayer
+title: SphereMeshDesc
 description: Sphere mesh descriptor for navara_three
 sidebar:
   order: 104
 ---
 
-`SphereMeshLayer`クラスは、球体(Sphere)ジオメトリを描画するためのメッシュレイヤーです。半径や分割数などを指定して球体を作成できます。
+`SphereMeshDesc`クラスは、球体(Sphere)ジオメトリを描画するためのメッシュレイヤーです。半径や分割数などを指定して球体を作成できます。
 
 以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`pickable`、`visible`）が利用できます。詳細は [MeshDesc](./mesh-layer-base) を参照してください。
 
@@ -310,13 +310,13 @@ import { Color } from "@navara/three";
 ## Usage Examples
 
 ```typescript
-import ThreeView, { SphereMeshLayer, Color } from "@navara/three";
+import ThreeView, { SphereMeshDesc, Color } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
-// SphereMeshLayerを追加
-const sphereLayer = view.addMesh<SphereMeshLayer>({
+// SphereMeshDescを追加
+const sphereLayer = view.addMesh<SphereMeshDesc>({
   sphere: {
     radius: 100,
     widthSegments: 32,

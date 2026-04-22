@@ -1,11 +1,11 @@
 ---
-title: LightProbeLayer
+title: LightProbeDesc
 description: Light probe layer for navara_three
 sidebar:
   order: 152
 ---
 
-The `LightProbeLayer` class represents a light probe layer that provides Image-Based Lighting using Spherical Harmonics. It achieves realistic indirect lighting using pre-computed environment lighting data.
+The `LightProbeDesc` class represents a light probe layer that provides Image-Based Lighting using Spherical Harmonics. It achieves realistic indirect lighting using pre-computed environment lighting data.
 
 ## Common Properties
 
@@ -113,7 +113,7 @@ If both `sh` and `coefficients` are specified, `coefficients` takes precedence.
 ### Basic Usage (Night Scene)
 
 ```typescript
-import ThreeView, { LightProbeLayer } from "@navara/three";
+import ThreeView, { LightProbeDesc } from "@navara/three";
 import * as THREE from "three";
 
 const view = new ThreeView();
@@ -127,7 +127,7 @@ const NIGHT_SH_COEFFICIENTS = [
 ];
 
 // Add a light probe layer
-const lightProbe = view.addLight<LightProbeLayer>({
+const lightProbe = view.addLight<LightProbeDesc>({
   lightProbe: {
     sh: new THREE.SphericalHarmonics3().set(NIGHT_SH_COEFFICIENTS),
     intensity: 0.05
@@ -166,4 +166,4 @@ Typically, 3rd-order spherical harmonics (9 coefficients) are used.
 - Light probes are primarily used for representing indirect lighting.
 - They are effective for reproducing specific lighting environments such as night scenes.
 - Spherical harmonics coefficients need to be pre-computed or measured.
-- Combined with SkyLightProbeLayer, more dynamic environment lighting can be achieved.
+- Combined with SkyLightProbeDesc, more dynamic environment lighting can be achieved.

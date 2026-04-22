@@ -1,11 +1,11 @@
 ---
-title: SkyMeshLayer
+title: SkyMeshDesc
 description: Sky mesh descriptor for navara_three
 sidebar:
   order: 111
 ---
 
-The `SkyMeshLayer` class is a mesh descriptor that draws the sky, sun, and moon using atmospheric scattering. It provides realistic sky rendering using physics-based atmospheric scattering simulation.
+The `SkyMeshDesc` class is a mesh descriptor that draws the sky, sun, and moon using atmospheric scattering. It provides realistic sky rendering using physics-based atmospheric scattering simulation.
 
 The sun and moon positions are automatically calculated based on `view.atmosphere.date` and updated every frame.
 
@@ -140,13 +140,13 @@ For details on the atmosphere system, see the [Atmosphere class](../../../three/
 ## Usage Examples
 
 ```typescript
-import ThreeView, { SkyMeshLayer } from "@navara/three";
+import ThreeView, { SkyMeshDesc } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
-// Add a SkyMeshLayer
-const skyLayer = view.addMesh<SkyMeshLayer>({
+// Add a SkyMeshDesc
+const skyLayer = view.addMesh<SkyMeshDesc>({
   sky: {
     visible: true,
     sun: true,
@@ -160,7 +160,7 @@ const skyLayer = view.addMesh<SkyMeshLayer>({
 
 ## Technical Details
 
-SkyMeshLayer is implemented using the @takram/three-atmosphere library and provides the following features:
+SkyMeshDesc is implemented using the @takram/three-atmosphere library and provides the following features:
 
 - Physics-based atmospheric scattering simulation
 - Dynamic lighting based on sun and moon positions

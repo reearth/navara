@@ -1,11 +1,11 @@
 ---
-title: SelectiveBloomEffectLayer
+title: SelectiveBloomEffectDesc
 description: Selective bloom effect descriptor for navara_three
 sidebar:
   order: 61
 ---
 
-The `SelectiveBloomEffectLayer` class is a layer that applies a selective bloom effect. It uses mask-based filtering to apply the bloom effect only to specific objects.
+The `SelectiveBloomEffectDesc` class is a layer that applies a selective bloom effect. It uses mask-based filtering to apply the bloom effect only to specific objects.
 
 ## Properties
 
@@ -160,8 +160,8 @@ Specifies the occlusion processing mode when applying the effect.
 
 ```typescript
 import ThreeView, {
-  SelectiveBloomEffectLayer,
-  BoxMeshLayer,
+  SelectiveBloomEffectDesc,
+  BoxMeshDesc,
   Color,
 } from "@navara/three";
 
@@ -169,7 +169,7 @@ const view = new ThreeView();
 await view.init();
 
 // Add selective bloom effect descriptor
-const bloomLayer = view.addEffect<SelectiveBloomEffectLayer>({
+const bloomLayer = view.addEffect<SelectiveBloomEffectDesc>({
   selectiveBloom: {
     strength: 0.8,
     radius: 0.2,
@@ -179,7 +179,7 @@ const bloomLayer = view.addEffect<SelectiveBloomEffectLayer>({
 
 // Apply bloom effect to an object
 // When emissiveColor is not set, the material's color is used as the bloom source
-const cubeLayer = view.addMesh<BoxMeshLayer>({
+const cubeLayer = view.addMesh<BoxMeshDesc>({
   box: {
     width: 100,
     height: 100,
@@ -196,7 +196,7 @@ const cubeLayer = view.addMesh<BoxMeshLayer>({
 ### Strong bloom effect
 
 ```typescript
-import ThreeView, { SelectiveBloomEffectLayer } from "@navara/three";
+import ThreeView, { SelectiveBloomEffectDesc } from "@navara/three";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
@@ -207,7 +207,7 @@ await view.init();
 plugin.addDefaultPhotorealScene();
 
 // Add a strong bloom effect
-const bloomLayer = view.addEffect<SelectiveBloomEffectLayer>({
+const bloomLayer = view.addEffect<SelectiveBloomEffectDesc>({
   selectiveBloom: {
     strength: 1.5,
     radius: 0.5,
@@ -219,13 +219,13 @@ const bloomLayer = view.addEffect<SelectiveBloomEffectLayer>({
 ### Performance-oriented settings
 
 ```typescript
-import ThreeView, { SelectiveBloomEffectLayer } from "@navara/three";
+import ThreeView, { SelectiveBloomEffectDesc } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
 // Performance-oriented settings
-const bloomLayer = view.addEffect<SelectiveBloomEffectLayer>({
+const bloomLayer = view.addEffect<SelectiveBloomEffectDesc>({
   selectiveBloom: {
     strength: 0.6,
     radius: 0.2,
@@ -238,12 +238,12 @@ const bloomLayer = view.addEffect<SelectiveBloomEffectLayer>({
 ### Dynamic bloom effect updates
 
 ```typescript
-import ThreeView, { SelectiveBloomEffectLayer } from "@navara/three";
+import ThreeView, { SelectiveBloomEffectDesc } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
-const bloomLayer = view.addEffect<SelectiveBloomEffectLayer>({
+const bloomLayer = view.addEffect<SelectiveBloomEffectDesc>({
   selectiveBloom: {
     strength: 0.8,
   },
@@ -261,12 +261,12 @@ bloomLayer.update({
 ### Applying bloom to 3D Tiles
 
 ```typescript
-import ThreeView, { SelectiveBloomEffectLayer, Color } from "@navara/three";
+import ThreeView, { SelectiveBloomEffectDesc, Color } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
-const bloomLayer = view.addEffect<SelectiveBloomEffectLayer>({
+const bloomLayer = view.addEffect<SelectiveBloomEffectDesc>({
   selectiveBloom: {
     strength: 1.0,
     radius: 0.5,
@@ -293,12 +293,12 @@ const buildingsLayer = view.addLayer({
 ### Applying bloom to GeoJSON models
 
 ```typescript
-import ThreeView, { SelectiveBloomEffectLayer, Color } from "@navara/three";
+import ThreeView, { SelectiveBloomEffectDesc, Color } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
-const bloomLayer = view.addEffect<SelectiveBloomEffectLayer>({
+const bloomLayer = view.addEffect<SelectiveBloomEffectDesc>({
   selectiveBloom: {
     strength: 1.2,
   },
@@ -324,7 +324,7 @@ const modelLayer = view.addLayer({
 
 ```typescript
 // Initially no effects applied
-const cubeLayer = view.addMesh<BoxMeshLayer>({
+const cubeLayer = view.addMesh<BoxMeshDesc>({
   box: {
     width: 100,
     height: 100,

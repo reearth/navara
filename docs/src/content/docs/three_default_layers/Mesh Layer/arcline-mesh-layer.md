@@ -1,11 +1,11 @@
 ---
-title: ArclineMeshLayer
+title: ArclineMeshDesc
 description: Arcline mesh descriptor for navara_three
 sidebar:
   order: 101
 ---
 
-The `ArclineMeshLayer` class is a mesh descriptor for drawing arc-shaped lines connecting two points. It is used to visually connect two locations on the globe and provides features such as gradients, dashed patterns, and height adjustment.
+The `ArclineMeshDesc` class is a mesh descriptor for drawing arc-shaped lines connecting two points. It is used to visually connect two locations on the globe and provides features such as gradients, dashed patterns, and height adjustment.
 
 In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `pickable`, `visible`) are available. See [MeshDesc](./mesh-layer-base) for details.
 
@@ -293,13 +293,13 @@ In addition to the properties below, all common properties from the base class (
 ### Basic Usage
 
 ```typescript
-import ThreeView, { ArclineMeshLayer } from "@navara/three";
+import ThreeView, { ArclineMeshDesc } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
-// Add an ArclineMeshLayer
-const arclineLayer = view.addMesh<ArclineMeshLayer>({
+// Add an ArclineMeshDesc
+const arclineLayer = view.addMesh<ArclineMeshDesc>({
   arcLines: {
     thickness: 2,
     srcColor: 0xff0000,
@@ -317,7 +317,7 @@ const arclineLayer = view.addMesh<ArclineMeshLayer>({
 ### Multiple Arc Lines
 
 ```typescript
-const arclineLayer = view.addMesh<ArclineMeshLayer>({
+const arclineLayer = view.addMesh<ArclineMeshDesc>({
   arcLines: [
     {
       thickness: 2,

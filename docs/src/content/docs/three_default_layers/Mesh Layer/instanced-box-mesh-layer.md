@@ -1,11 +1,11 @@
 ---
-title: InstancedBoxMeshLayer
+title: InstancedBoxMeshDesc
 description: GPU-instanced box mesh descriptor for navara_three
 sidebar:
   order: 103
 ---
 
-The `InstancedBoxMeshLayer` class is a mesh descriptor that renders multiple box instances using GPU instancing. All boxes share a single geometry and material, rendered in one draw call for high performance. It extends `InstancedMeshDesc`.
+The `InstancedBoxMeshDesc` class is a mesh descriptor that renders multiple box instances using GPU instancing. All boxes share a single geometry and material, rendered in one draw call for high performance. It extends `InstancedMeshDesc`.
 
 In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `pickable`, `visible`) are available. See [MeshDesc](./mesh-layer-base) for details.
 
@@ -419,13 +419,13 @@ console.log("Instance count:", handle.ref.count);
 
 ```typescript
 import ThreeView, { Color } from "@navara/three";
-import { InstancedBoxMeshLayer } from "@navara/three_default_layers";
+import { InstancedBoxMeshDesc } from "@navara/three_default_layers";
 
 const view = new ThreeView();
-view.registerMesh("boxes", InstancedBoxMeshLayer);
+view.registerMesh("boxes", InstancedBoxMeshDesc);
 await view.init();
 
-const handle = view.addMesh<InstancedBoxMeshLayer>({
+const handle = view.addMesh<InstancedBoxMeshDesc>({
   boxes: {
     color: new Color().setHex(0xffffff),
     castShadow: true,

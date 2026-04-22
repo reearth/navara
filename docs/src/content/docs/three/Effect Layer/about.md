@@ -11,6 +11,6 @@ Core effect descriptors provided by `@navara/three`. These layers are tightly co
 
 | Descriptor Type | Description |
 |------------|------|
-| [SelectiveBloomEffectLayer](./selective-bloom-effect-layer) | An effect that applies selective bloom |
-| [SelectiveOutlineEffectLayer](./selective-outline-effect-layer) | An effect that applies selective outlines |
-| [SkyEnvMapEffectLayer](./sky-env-map-effect-layer) | A pass that renders the sky environment map |
+| [SelectiveBloomEffectDesc](./selective-bloom-effect-layer) | An effect that applies selective bloom |
+| [SelectiveOutlineEffectDesc](./selective-outline-effect-layer) | An effect that applies selective outlines |
+| [SkyEnvMapEffectDesc](./sky-env-map-effect-layer) | A pass that renders the sky environment map |

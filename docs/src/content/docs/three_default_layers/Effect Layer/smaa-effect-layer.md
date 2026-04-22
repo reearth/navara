@@ -1,11 +1,11 @@
 ---
-title: SMAAEffectLayer
+title: SMAAEffectDesc
 description: SMAA effect descriptor for navara_three
 sidebar:
   order: 58
 ---
 
-The `SMAAEffectLayer` class is a layer that applies the SMAA (Subpixel Morphological Anti-Aliasing) anti-aliasing effect. It provides higher quality anti-aliasing than FXAA.
+The `SMAAEffectDesc` class is a layer that applies the SMAA (Subpixel Morphological Anti-Aliasing) anti-aliasing effect. It provides higher quality anti-aliasing than FXAA.
 
 ## Properties
 
@@ -82,13 +82,13 @@ defaultLayers.smaa.update({
 ### High-quality SMAA settings
 
 ```typescript
-import ThreeView, { SMAAEffectLayer } from "@navara/three";
+import ThreeView, { SMAAEffectDesc } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
 // Add SMAA effect descriptor
-view.addEffect<SMAAEffectLayer>({
+view.addEffect<SMAAEffectDesc>({
   smaa: {
     quality: "ultra",
     edgeDetectionMode: "luma",
@@ -99,7 +99,7 @@ view.addEffect<SMAAEffectLayer>({
 ### Dynamically changing SMAA quality and edge detection mode
 
 ```typescript
-import ThreeView, { FXAAEffectLayer } from "@navara/three";
+import ThreeView, { FXAAEffectDesc } from "@navara/three";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
@@ -125,11 +125,11 @@ defaultLayers.smaa.update({
 
 // Disable SMAA and switch to FXAA
 defaultLayers.smaa.update({ visible: false });
-view.addEffect<FXAAEffectLayer>({
+view.addEffect<FXAAEffectDesc>({
   fxaa: {},
 });
 ```
 
 ## Notes
 
-SMAAEffectLayer is applied at the final stage of the rendering pipeline. Use it when higher quality anti-aliasing than FXAA is needed. Quality presets can be selected from `low`, `medium`, `high`, and `ultra`. Edge detection modes can be selected from `color` (highest quality), `luma` (balanced), and `depth` (fastest).
+SMAAEffectDesc is applied at the final stage of the rendering pipeline. Use it when higher quality anti-aliasing than FXAA is needed. Quality presets can be selected from `low`, `medium`, `high`, and `ultra`. Edge detection modes can be selected from `color` (highest quality), `luma` (balanced), and `depth` (fastest).

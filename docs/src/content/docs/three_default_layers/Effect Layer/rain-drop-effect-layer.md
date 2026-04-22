@@ -1,11 +1,11 @@
 ---
-title: RainDropEffectLayer
+title: RainDropEffectDesc
 description: Rain drop effect descriptor for navara_three
 sidebar:
   order: 57
 ---
 
-The `RainDropEffectLayer` class is a layer that applies raindrop refraction effects to the screen. It generates an animation effect of raindrops flowing down the screen.
+The `RainDropEffectDesc` class is a layer that applies raindrop refraction effects to the screen. It generates an animation effect of raindrops flowing down the screen.
 
 ## Properties
 
@@ -292,7 +292,7 @@ The `RainDropEffectLayer` class is a layer that applies raindrop refraction effe
 ### Adding a basic raindrop effect
 
 ```typescript
-import ThreeView, { RainDropEffectLayer } from "@navara/three";
+import ThreeView, { RainDropEffectDesc } from "@navara/three";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
@@ -307,7 +307,7 @@ view.animation = true;
 plugin.addDefaultPhotorealScene();
 
 // Add raindrop effect descriptor
-const rainDropLayer = view.addEffect<RainDropEffectLayer>({
+const rainDropLayer = view.addEffect<RainDropEffectDesc>({
   rainDrop: {
     opacity: 0.85,
     dropGridSize: 14,
@@ -321,4 +321,4 @@ const rainDropLayer = view.addEffect<RainDropEffectLayer>({
 
 ## Notes
 
-This effect has `allowDuplication` set to `true`, so multiple RainDropEffectLayer instances can be created. It provides a raindrop effect that animates over time. You need to set `view.animation = true` to enable the animation.
+This effect has `allowDuplication` set to `true`, so multiple RainDropEffectDesc instances can be created. It provides a raindrop effect that animates over time. You need to set `view.animation = true` to enable the animation.

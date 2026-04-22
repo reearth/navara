@@ -18,7 +18,7 @@ pub struct Globe {
     /// Base color for the globe surface (RGB as u32).
     pub color: u32,
 
-    /// Whether to hide underground geometry. Disabling this value might cause unexpected behavior when using effect layer.
+    /// Whether to hide underground geometry. Disabling this value might cause unexpected behavior when using effect.
     #[wasm_bindgen(js_name = hideUnderground)]
     pub hide_underground: bool,
 

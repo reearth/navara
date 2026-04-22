@@ -1,11 +1,11 @@
 ---
-title: SSREffectLayer
+title: SSREffectDesc
 description: SSR effect descriptor for navara_three
 sidebar:
   order: 60
 ---
 
-`SSREffectLayer`クラスは、スクリーンスペース反射(SSR)エフェクトを生成するレイヤーです。リアルタイムで画面上のオブジェクトの反射を計算し、水面や光沢のある表面の反射を表現します。
+`SSREffectDesc`クラスは、スクリーンスペース反射(SSR)エフェクトを生成するレイヤーです。リアルタイムで画面上のオブジェクトの反射を計算し、水面や光沢のある表面の反射を表現します。
 
 ## Properties
 
@@ -227,7 +227,7 @@ sidebar:
 このプロパティはレイヤー作成時にのみ設定できます。`update()`メソッドでは変更できません。
 :::
 
-**有効な値:** `"normal"`, `"add"`, `"multiply"`, `"screen"`, `"overlay"` など（ColorGradingLUTEffectLayerのblendMode参照）
+**有効な値:** `"normal"`, `"add"`, `"multiply"`, `"screen"`, `"overlay"` など（ColorGradingLUTEffectDescのblendMode参照）
 
 **Example:**
 
@@ -374,13 +374,13 @@ sidebar:
 ### 基本的なSSRエフェクトの追加
 
 ```typescript
-import ThreeView, { SSREffectLayer } from "@navara/three";
+import ThreeView, { SSREffectDesc } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
 // SSRエフェクトレイヤーを追加
-const ssrLayer = view.addEffect<SSREffectLayer>({
+const ssrLayer = view.addEffect<SSREffectDesc>({
   ssr: {},
 });
 ```
@@ -388,7 +388,7 @@ const ssrLayer = view.addEffect<SSREffectLayer>({
 ### 水面反射のためのSSR
 
 ```typescript
-import ThreeView, { SSREffectLayer, Color } from "@navara/three";
+import ThreeView, { SSREffectDesc, Color } from "@navara/three";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
@@ -400,7 +400,7 @@ await view.init();
 plugin.addDefaultPhotorealScene();
 
 // SSRエフェクトを追加
-const ssrLayer = view.addEffect<SSREffectLayer>({
+const ssrLayer = view.addEffect<SSREffectDesc>({
   ssr: {
     resolutionScale: 0.5,
     iterations: 100,
@@ -440,13 +440,13 @@ view.addLayer({
 ### パフォーマンス重視のSSR設定
 
 ```typescript
-import ThreeView, { SSREffectLayer } from "@navara/three";
+import ThreeView, { SSREffectDesc } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
 // パフォーマンス重視の設定
-const ssrLayer = view.addEffect<SSREffectLayer>({
+const ssrLayer = view.addEffect<SSREffectDesc>({
   ssr: {
     resolutionScale: 0.25, // 低解像度でパフォーマンス向上
     iterations: 50,        // 反復回数を減らす
@@ -458,13 +458,13 @@ const ssrLayer = view.addEffect<SSREffectLayer>({
 ### コーントレーシングを使用した高品質SSR
 
 ```typescript
-import ThreeView, { SSREffectLayer } from "@navara/three";
+import ThreeView, { SSREffectDesc } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
 // 高品質設定
-const ssrLayer = view.addEffect<SSREffectLayer>({
+const ssrLayer = view.addEffect<SSREffectDesc>({
   ssr: {
     resolutionScale: 1.0,
     iterations: 150,

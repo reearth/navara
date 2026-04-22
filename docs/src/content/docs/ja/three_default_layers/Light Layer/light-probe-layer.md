@@ -1,11 +1,11 @@
 ---
-title: LightProbeLayer
+title: LightProbeDesc
 description: Light probe layer for navara_three
 sidebar:
   order: 152
 ---
 
-`LightProbeLayer`クラスは、球面調和関数（Spherical Harmonics）を使用したImage-Based Lightingを提供するライトプローブレイヤーを表します。事前計算された環境照明データを使用して、リアルな間接照明を実現します。
+`LightProbeDesc`クラスは、球面調和関数（Spherical Harmonics）を使用したImage-Based Lightingを提供するライトプローブレイヤーを表します。事前計算された環境照明データを使用して、リアルな間接照明を実現します。
 
 ## Common Properties
 
@@ -113,7 +113,7 @@ sh.coefficients = nightCoefficients;
 ### 基本的な使用例（夜間シーン）
 
 ```typescript
-import ThreeView, { LightProbeLayer } from "@navara/three";
+import ThreeView, { LightProbeDesc } from "@navara/three";
 import * as THREE from "three";
 
 const view = new ThreeView();
@@ -127,7 +127,7 @@ const NIGHT_SH_COEFFICIENTS = [
 ];
 
 // ライトプローブレイヤーを追加
-const lightProbe = view.addLight<LightProbeLayer>({
+const lightProbe = view.addLight<LightProbeDesc>({
   lightProbe: {
     sh: new THREE.SphericalHarmonics3().set(NIGHT_SH_COEFFICIENTS),
     intensity: 0.05
@@ -166,4 +166,4 @@ view.atmosphere.on("sunChanged", () => {
 - ライトプローブは主に間接照明の表現に使用されます。
 - 夜間シーンなど、特定の照明環境を再現する際に有効です。
 - 球面調和関数の係数は事前に計算または測定する必要があります。
-- SkyLightProbeLayerと併用することで、より動的な環境照明を実現できます。
+- SkyLightProbeDescと併用することで、より動的な環境照明を実現できます。

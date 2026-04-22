@@ -1,11 +1,11 @@
 ---
-title: SnowMeshLayer
+title: SnowMeshDesc
 description: Snow mesh descriptor for navara_three
 sidebar:
   order: 110
 ---
 
-`SnowMeshLayer`クラスは、雪のパーティクルエフェクトを表示するメッシュレイヤーです。テクスチャベースのポイントスプライトを使用して、リアルな降雪効果を作成します。
+`SnowMeshDesc`クラスは、雪のパーティクルエフェクトを表示するメッシュレイヤーです。テクスチャベースのポイントスプライトを使用して、リアルな降雪効果を作成します。
 
 以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`pickable`、`visible`）が利用できます。詳細は [MeshDesc](./mesh-layer-base) を参照してください。
 
@@ -278,13 +278,13 @@ import { Color } from "@navara/three";
 ### 基本的な使い方
 
 ```typescript
-import ThreeView, { SnowMeshLayer } from "@navara/three";
+import ThreeView, { SnowMeshDesc } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
-// SnowMeshLayerを追加
-const snowLayer = view.addMesh<SnowMeshLayer>({
+// SnowMeshDescを追加
+const snowLayer = view.addMesh<SnowMeshDesc>({
   snow: {
     particleCount: 3000,
     areaWidth: 500,
@@ -303,7 +303,7 @@ const snowLayer = view.addMesh<SnowMeshLayer>({
 
 ```typescript
 import ThreeView, {
-  SnowMeshLayer,
+  SnowMeshDesc,
   Color,
   geodeticToVector3,
   degreeToRadian,
@@ -322,8 +322,8 @@ const position = geodeticToVector3(
   ),
 );
 
-// 位置を指定してSnowMeshLayerを追加
-const snowLayer = view.addMesh<SnowMeshLayer>({
+// 位置を指定してSnowMeshDescを追加
+const snowLayer = view.addMesh<SnowMeshDesc>({
   visible: true,
   position: position,
   snow: {

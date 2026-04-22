@@ -1,11 +1,11 @@
 ---
-title: ArrowHelperLayer
+title: ArrowHelperDesc
 description: Arrow helper layer for navara_three
 sidebar:
   order: 115
 ---
 
-`ArrowHelperLayer` is a helper layer for adding a Three.js `ArrowHelper` to the scene. It is suitable for visualizing direction vectors, representing wind direction or travel direction, and debugging purposes.
+`ArrowHelperDesc` is a helper layer for adding a Three.js `ArrowHelper` to the scene. It is suitable for visualizing direction vectors, representing wind direction or travel direction, and debugging purposes.
 
 In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `pickable`, `visible`) are available. See [MeshDesc](./mesh-layer-base) for details.
 
@@ -60,13 +60,13 @@ In addition to the properties below, all common properties from the base class (
 ## Usage Example
 
 ```typescript
-import ThreeView, { ArrowHelperLayer, Color } from "@navara/three";
+import ThreeView, { ArrowHelperDesc, Color } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
 // A green arrow of length 5 pointing east
-view.addMesh<ArrowHelperLayer>({
+view.addMesh<ArrowHelperDesc>({
   arrowHelper: {
     direction: { x: 1, y: 0, z: 0 },
     origin: { x: 0, y: 0, z: 0 },

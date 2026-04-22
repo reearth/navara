@@ -1,11 +1,11 @@
 ---
-title: SmoothLineMeshLayer
+title: SmoothLineMeshDesc
 description: Smooth line mesh descriptor for navara_three
 sidebar:
   order: 107
 ---
 
-The `SmoothLineMeshLayer` class is a mesh descriptor for drawing smooth lines using Catmull-Rom curves. It generates smooth curves from an array of points and also supports dashed patterns and point marker display.
+The `SmoothLineMeshDesc` class is a mesh descriptor for drawing smooth lines using Catmull-Rom curves. It generates smooth curves from an array of points and also supports dashed patterns and point marker display.
 
 In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `pickable`, `visible`) are available. See [MeshDesc](./mesh-layer-base) for details.
 
@@ -252,13 +252,13 @@ In addition to the properties below, all common properties from the base class (
 ## Usage Examples
 
 ```typescript
-import ThreeView, { SmoothLineMeshLayer } from "@navara/three";
+import ThreeView, { SmoothLineMeshDesc } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
-// Add a SmoothLineMeshLayer
-const smoothLineLayer = view.addMesh<SmoothLineMeshLayer>({
+// Add a SmoothLineMeshDesc
+const smoothLineLayer = view.addMesh<SmoothLineMeshDesc>({
   smoothLines: {
     tension: 0.5,
     segments: 10,

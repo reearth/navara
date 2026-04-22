@@ -1,11 +1,11 @@
 ---
-title: ToneMappingEffectLayer
+title: ToneMappingEffectDesc
 description: Tone mapping effect descriptor for navara_three
 sidebar:
   order: 62
 ---
 
-The `ToneMappingEffectLayer` class is a layer that applies a tone mapping effect. It performs color adjustment from HDR (High Dynamic Range) to LDR (Low Dynamic Range), converting to a range that can be displayed on screen.
+The `ToneMappingEffectDesc` class is a layer that applies a tone mapping effect. It performs color adjustment from HDR (High Dynamic Range) to LDR (Low Dynamic Range), converting to a range that can be displayed on screen.
 
 ## Properties
 
@@ -48,7 +48,7 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-// Add default photorealistic layers (includes ToneMappingEffectLayer)
+// Add default photorealistic layers (includes ToneMappingEffectDesc)
 const defaultLayers = plugin.addDefaultPhotorealScene();
 
 // Set exposure
@@ -58,27 +58,27 @@ view.toneMappingExposure = 10;
 ### Using different tone mapping modes
 
 ```typescript
-import ThreeView, { ToneMappingEffectLayer, ToneMappingMode } from "@navara/three";
+import ThreeView, { ToneMappingEffectDesc, ToneMappingMode } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
 // AGX mode (default, well-balanced results)
-view.addEffect<ToneMappingEffectLayer>({
+view.addEffect<ToneMappingEffectDesc>({
   toneMapping: {
     mode: ToneMappingMode.AGX,
   },
 });
 
 // Or, ACES Filmic mode (cinematic look)
-view.addEffect<ToneMappingEffectLayer>({
+view.addEffect<ToneMappingEffectDesc>({
   toneMapping: {
     mode: ToneMappingMode.ACES_FILMIC,
   },
 });
 
 // Reinhard mode
-view.addEffect<ToneMappingEffectLayer>({
+view.addEffect<ToneMappingEffectDesc>({
   toneMapping: {
     mode: ToneMappingMode.REINHARD,
   },
@@ -116,7 +116,7 @@ view.toneMappingExposure = 5;
 ### Adding a tone mapping layer individually
 
 ```typescript
-import ThreeView, { ToneMappingEffectLayer, SMAAEffectLayer, ToneMappingMode } from "@navara/three";
+import ThreeView, { ToneMappingEffectDesc, SMAAEffectDesc, ToneMappingMode } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
@@ -124,14 +124,14 @@ await view.init();
 view.toneMappingExposure = 3;
 
 // Add tone mapping effect descriptor
-view.addEffect<ToneMappingEffectLayer>({
+view.addEffect<ToneMappingEffectDesc>({
   toneMapping: {
     mode: ToneMappingMode.NEUTRAL,
   },
 });
 
 // Add SMAA effect descriptor (applied after tone mapping)
-view.addEffect<SMAAEffectLayer>({
+view.addEffect<SMAAEffectDesc>({
   smaa: {},
 });
 ```

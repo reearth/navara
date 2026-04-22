@@ -57,10 +57,10 @@ import ThreeView, {
   eastNorthUpToFixedFrame,
   degreeToRadian,
 } from "@navara/three";
-import { BoxMeshLayer } from "@navara/three_default_layers";
+import { BoxMeshDesc } from "@navara/three_default_layers";
 
 const view = new ThreeView();
-view.registerMesh("box", BoxMeshLayer);
+view.registerMesh("box", BoxMeshDesc);
 await view.init();
 
 // 地理的な原点での ENU フレームを計算
@@ -72,14 +72,14 @@ const origin = geodeticToVector3({
 const enuFrame = eastNorthUpToFixedFrame(origin);
 
 // 原点から東に200m、上に50mの位置にボックスを配置
-const box1 = view.addMesh<BoxMeshLayer>({
+const box1 = view.addMesh<BoxMeshDesc>({
   box: { width: 50, height: 100, depth: 50, color: new Color().setHex(0xff0000) },
   matrixWorld: enuFrame,
   position: { x: 200, y: 50, z: 0 },
 });
 
 // 北に100mの位置にもう1つのボックスを配置
-const box2 = view.addMesh<BoxMeshLayer>({
+const box2 = view.addMesh<BoxMeshDesc>({
   box: { width: 50, height: 80, depth: 50, color: new Color().setHex(0x00ff00) },
   matrixWorld: enuFrame,
   position: { x: 0, y: 40, z: 100 },
@@ -98,13 +98,13 @@ const box2 = view.addMesh<BoxMeshLayer>({
 
 ```typescript
 import ThreeView, { Color } from "@navara/three";
-import { BoxMeshLayer } from "@navara/three_default_layers";
+import { BoxMeshDesc } from "@navara/three_default_layers";
 
 const view = new ThreeView({ picking: true });
-view.registerMesh("box", BoxMeshLayer);
+view.registerMesh("box", BoxMeshDesc);
 await view.init();
 
-const boxLayer = view.addMesh<BoxMeshLayer>({
+const boxLayer = view.addMesh<BoxMeshDesc>({
   box: {
     width: 100,
     height: 100,
@@ -174,10 +174,10 @@ import ThreeView, {
   geodeticToVector3,
   degreeToRadian,
 } from "@navara/three";
-import { SphereMeshLayer } from "@navara/three_default_layers";
+import { SphereMeshDesc } from "@navara/three_default_layers";
 
 const view = new ThreeView();
-view.registerMesh("sphere", SphereMeshLayer);
+view.registerMesh("sphere", SphereMeshDesc);
 await view.init();
 
 // 緯度・経度・高度からECEF座標に変換
@@ -188,7 +188,7 @@ const position = geodeticToVector3({
 });
 
 // 変換した座標でメッシュレイヤーを追加
-const sphereLayer = view.addMesh<SphereMeshLayer>({
+const sphereLayer = view.addMesh<SphereMeshDesc>({
   sphere: {
     radius: 100,
     color: new Color().setHex(0x00aaff),
@@ -211,10 +211,10 @@ import {
   geodeticSurfaceNormal,
   degreeToRadian,
 } from "@navara/three";
-import { GLTFModelLayer } from "@navara/three_default_layers";
+import { GLTFModelDesc } from "@navara/three_default_layers";
 import { Vector3, Quaternion, Euler } from "three";
 
-// GLTFModelLayer が登録済みであること
+// GLTFModelDesc が登録済みであること
 
 const origin = geodeticToVector3({
   lat: degreeToRadian(35.681236),
@@ -224,7 +224,7 @@ const origin = geodeticToVector3({
 const enuFrame = eastNorthUpToFixedFrame(origin);
 
 // モデルを地表面に沿って配置
-const modelLayer = view.addMesh<GLTFModelLayer>({
+const modelLayer = view.addMesh<GLTFModelDesc>({
   gltfModel: {
     url: "/models/building.gltf",
   },

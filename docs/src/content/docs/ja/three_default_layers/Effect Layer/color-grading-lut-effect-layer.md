@@ -1,11 +1,11 @@
 ---
-title: ColorGradingLUTEffectLayer
+title: ColorGradingLUTEffectDesc
 description: Color grading LUT effect descriptor for navara_three
 sidebar:
   order: 53
 ---
 
-`ColorGradingLUTEffectLayer`クラスは、LUT(ルックアップテーブル)を使用したカラーグレーディングエフェクトを適用するレイヤーです。3DLファイルなどのLUTテクスチャを使用して、シーン全体の色調を調整できます。
+`ColorGradingLUTEffectDesc`クラスは、LUT(ルックアップテーブル)を使用したカラーグレーディングエフェクトを適用するレイヤーです。3DLファイルなどのLUTテクスチャを使用して、シーン全体の色調を調整できます。
 
 ## Properties
 
@@ -104,13 +104,13 @@ sidebar:
 ### 基本的なカラーグレーディングの追加
 
 ```typescript
-import ThreeView, { ColorGradingLUTEffectLayer } from "@navara/three";
+import ThreeView, { ColorGradingLUTEffectDesc } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
 // カラーグレーディングLUTエフェクトレイヤーを追加
-const colorGradingLayer = view.addEffect<ColorGradingLUTEffectLayer>({
+const colorGradingLayer = view.addEffect<ColorGradingLUTEffectDesc>({
   colorGradingLUT: {},
 });
 ```
@@ -118,7 +118,7 @@ const colorGradingLayer = view.addEffect<ColorGradingLUTEffectLayer>({
 ### カスタムLUTを使用したカラーグレーディング
 
 ```typescript
-import ThreeView, { ColorGradingLUTEffectLayer } from "@navara/three";
+import ThreeView, { ColorGradingLUTEffectDesc } from "@navara/three";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
@@ -130,7 +130,7 @@ await view.init();
 plugin.addDefaultPhotorealScene();
 
 // カスタムLUTでカラーグレーディングを追加
-const colorGradingLayer = view.addEffect<ColorGradingLUTEffectLayer>({
+const colorGradingLayer = view.addEffect<ColorGradingLUTEffectDesc>({
   colorGradingLUT: {
     url: "https://example.com/cinematic-lut.3dl",
     blendMode: "colorBurn",
@@ -142,12 +142,12 @@ const colorGradingLayer = view.addEffect<ColorGradingLUTEffectLayer>({
 ### カラーグレーディングの動的更新
 
 ```typescript
-import ThreeView, { ColorGradingLUTEffectLayer } from "@navara/three";
+import ThreeView, { ColorGradingLUTEffectDesc } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
-const colorGradingLayer = view.addEffect<ColorGradingLUTEffectLayer>({
+const colorGradingLayer = view.addEffect<ColorGradingLUTEffectDesc>({
   colorGradingLUT: {
     opacity: 0.5,
   },

@@ -1,11 +1,11 @@
 ---
-title: SphereMeshLayer
+title: SphereMeshDesc
 description: Sphere mesh descriptor for navara_three
 sidebar:
   order: 104
 ---
 
-The `SphereMeshLayer` class is a mesh descriptor for drawing sphere geometry. You can create a sphere by specifying radius, segment counts, and other parameters.
+The `SphereMeshDesc` class is a mesh descriptor for drawing sphere geometry. You can create a sphere by specifying radius, segment counts, and other parameters.
 
 In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `pickable`, `visible`) are available. See [MeshDesc](./mesh-layer-base) for details.
 
@@ -310,13 +310,13 @@ import { Color } from "@navara/three";
 ## Usage Examples
 
 ```typescript
-import ThreeView, { SphereMeshLayer, Color } from "@navara/three";
+import ThreeView, { SphereMeshDesc, Color } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
-// Add a SphereMeshLayer
-const sphereLayer = view.addMesh<SphereMeshLayer>({
+// Add a SphereMeshDesc
+const sphereLayer = view.addMesh<SphereMeshDesc>({
   sphere: {
     radius: 100,
     widthSegments: 32,

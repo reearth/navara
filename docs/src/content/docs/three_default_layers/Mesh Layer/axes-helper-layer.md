@@ -1,11 +1,11 @@
 ---
-title: AxesHelperLayer
+title: AxesHelperDesc
 description: Axes helper layer for navara_three
 sidebar:
   order: 114
 ---
 
-`AxesHelperLayer` is a helper layer for adding a Three.js `AxesHelper` to the scene. It visualizes the 3 axes as X (red) / Y (green) / Z (blue), which is useful for verifying coordinate systems and debugging.
+`AxesHelperDesc` is a helper layer for adding a Three.js `AxesHelper` to the scene. It visualizes the 3 axes as X (red) / Y (green) / Z (blue), which is useful for verifying coordinate systems and debugging.
 
 In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `pickable`, `visible`) are available. See [MeshDesc](./mesh-layer-base) for details.
 
@@ -30,13 +30,13 @@ In addition to the properties below, all common properties from the base class (
 ## Usage Example
 
 ```typescript
-import ThreeView, { AxesHelperLayer } from "@navara/three";
+import ThreeView, { AxesHelperDesc } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
 // Add a 3-axis helper
-const axes = view.addMesh<AxesHelperLayer>({
+const axes = view.addMesh<AxesHelperDesc>({
   axesHelper: {
     size: 10,
   },

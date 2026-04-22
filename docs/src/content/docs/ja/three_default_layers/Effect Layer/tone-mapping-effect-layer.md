@@ -1,11 +1,11 @@
 ---
-title: ToneMappingEffectLayer
+title: ToneMappingEffectDesc
 description: Tone mapping effect descriptor for navara_three
 sidebar:
   order: 62
 ---
 
-`ToneMappingEffectLayer`クラスは、トーンマッピングエフェクトを適用するレイヤーです。HDR(High Dynamic Range)からLDR(Low Dynamic Range)への色調整を行い、画面に表示可能な範囲に変換します。
+`ToneMappingEffectDesc`クラスは、トーンマッピングエフェクトを適用するレイヤーです。HDR(High Dynamic Range)からLDR(Low Dynamic Range)への色調整を行い、画面に表示可能な範囲に変換します。
 
 ## Properties
 
@@ -48,7 +48,7 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-// デフォルトのフォトリアルレイヤーを追加（ToneMappingEffectLayerを含む）
+// デフォルトのフォトリアルレイヤーを追加（ToneMappingEffectDescを含む）
 const defaultLayers = plugin.addDefaultPhotorealScene();
 
 // 露出を設定
@@ -58,27 +58,27 @@ view.toneMappingExposure = 10;
 ### 異なるトーンマッピングモードの使用
 
 ```typescript
-import ThreeView, { ToneMappingEffectLayer, ToneMappingMode } from "@navara/three";
+import ThreeView, { ToneMappingEffectDesc, ToneMappingMode } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
 // AGXモード（デフォルト、バランスの取れた結果）
-view.addEffect<ToneMappingEffectLayer>({
+view.addEffect<ToneMappingEffectDesc>({
   toneMapping: {
     mode: ToneMappingMode.AGX,
   },
 });
 
 // または、ACES Filmicモード（映画的な外観）
-view.addEffect<ToneMappingEffectLayer>({
+view.addEffect<ToneMappingEffectDesc>({
   toneMapping: {
     mode: ToneMappingMode.ACES_FILMIC,
   },
 });
 
 // Reinhardモード
-view.addEffect<ToneMappingEffectLayer>({
+view.addEffect<ToneMappingEffectDesc>({
   toneMapping: {
     mode: ToneMappingMode.REINHARD,
   },
@@ -116,7 +116,7 @@ view.toneMappingExposure = 5;
 ### 個別にトーンマッピングレイヤーを追加
 
 ```typescript
-import ThreeView, { ToneMappingEffectLayer, SMAAEffectLayer, ToneMappingMode } from "@navara/three";
+import ThreeView, { ToneMappingEffectDesc, SMAAEffectDesc, ToneMappingMode } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
@@ -124,14 +124,14 @@ await view.init();
 view.toneMappingExposure = 3;
 
 // トーンマッピングエフェクトレイヤーを追加
-view.addEffect<ToneMappingEffectLayer>({
+view.addEffect<ToneMappingEffectDesc>({
   toneMapping: {
     mode: ToneMappingMode.NEUTRAL,
   },
 });
 
 // SMAAエフェクトレイヤーを追加（トーンマッピングの後に適用）
-view.addEffect<SMAAEffectLayer>({
+view.addEffect<SMAAEffectDesc>({
   smaa: {},
 });
 ```

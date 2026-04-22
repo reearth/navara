@@ -1,11 +1,11 @@
 ---
-title: InstancedBoxMeshLayer
+title: InstancedBoxMeshDesc
 description: navara_three 向け GPU インスタンスボックスメッシュレイヤー
 sidebar:
   order: 103
 ---
 
-`InstancedBoxMeshLayer` クラスは、GPU インスタンシングを使用して複数のボックスインスタンスをレンダリングするメッシュレイヤーです。すべてのボックスが1つのジオメトリとマテリアルを共有し、1回の描画コールで高パフォーマンスにレンダリングされます。`InstancedMeshDesc` を継承しています。
+`InstancedBoxMeshDesc` クラスは、GPU インスタンシングを使用して複数のボックスインスタンスをレンダリングするメッシュレイヤーです。すべてのボックスが1つのジオメトリとマテリアルを共有し、1回の描画コールで高パフォーマンスにレンダリングされます。`InstancedMeshDesc` を継承しています。
 
 以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`pickable`、`visible`）が利用できます。詳細は [MeshDesc](./mesh-layer-base) を参照してください。
 
@@ -419,13 +419,13 @@ console.log("Instance count:", handle.ref.count);
 
 ```typescript
 import ThreeView, { Color } from "@navara/three";
-import { InstancedBoxMeshLayer } from "@navara/three_default_layers";
+import { InstancedBoxMeshDesc } from "@navara/three_default_layers";
 
 const view = new ThreeView();
-view.registerMesh("boxes", InstancedBoxMeshLayer);
+view.registerMesh("boxes", InstancedBoxMeshDesc);
 await view.init();
 
-const handle = view.addMesh<InstancedBoxMeshLayer>({
+const handle = view.addMesh<InstancedBoxMeshDesc>({
   boxes: {
     color: new Color().setHex(0xffffff),
     castShadow: true,

@@ -1,11 +1,11 @@
 ---
-title: GLTFModelLayer
+title: GLTFModelDesc
 description: GLTF model layer for navara_three
 sidebar:
   order: 113
 ---
 
-The `GLTFModelLayer` class is a mesh descriptor for loading and displaying GLTF/GLB format 3D models. It provides features such as animation playback, shadow settings, and dynamic updates.
+The `GLTFModelDesc` class is a mesh descriptor for loading and displaying GLTF/GLB format 3D models. It provides features such as animation playback, shadow settings, and dynamic updates.
 
 In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `pickable`, `visible`) are available. See [MeshDesc](./mesh-layer-base) for details.
 
@@ -404,13 +404,13 @@ modelLayer.on("animationReady", () => {
 ### Basic Usage
 
 ```typescript
-import ThreeView, { GLTFModelLayer } from "@navara/three";
+import ThreeView, { GLTFModelDesc } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
-// Add a GLTFModelLayer
-const modelLayer = view.addMesh<GLTFModelLayer>({
+// Add a GLTFModelDesc
+const modelLayer = view.addMesh<GLTFModelDesc>({
   gltfModel: {
     url: "https://example.com/models/character.glb",
     castShadow: true,
@@ -423,7 +423,7 @@ const modelLayer = view.addMesh<GLTFModelLayer>({
 ### Animated Model
 
 ```typescript
-const animatedModel = view.addMesh<GLTFModelLayer>({
+const animatedModel = view.addMesh<GLTFModelDesc>({
   gltfModel: {
     url: "https://example.com/models/animated.glb",
     castShadow: true,
@@ -447,7 +447,7 @@ animatedModel.ref.on("animationReady", () => {
 ### Blending Multiple Animations
 
 ```typescript
-const blendedModel = view.addMesh<GLTFModelLayer>({
+const blendedModel = view.addMesh<GLTFModelDesc>({
   gltfModel: {
     url: "https://example.com/models/character.glb",
     animationEnabled: true,

@@ -1,11 +1,11 @@
 ---
-title: SkyMeshLayer
+title: SkyMeshDesc
 description: Sky mesh descriptor for navara_three
 sidebar:
   order: 111
 ---
 
-`SkyMeshLayer`クラスは、大気散乱による空と太陽・月を描画するメッシュレイヤーです。物理ベースの大気散乱シミュレーションを使用して、リアルな空の表現を提供します。
+`SkyMeshDesc`クラスは、大気散乱による空と太陽・月を描画するメッシュレイヤーです。物理ベースの大気散乱シミュレーションを使用して、リアルな空の表現を提供します。
 
 太陽と月の位置は `view.atmosphere.date` に基づいて自動的に計算され、毎フレーム更新されます。
 
@@ -140,13 +140,13 @@ sidebar:
 ## Usage Examples
 
 ```typescript
-import ThreeView, { SkyMeshLayer } from "@navara/three";
+import ThreeView, { SkyMeshDesc } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
-// SkyMeshLayerを追加
-const skyLayer = view.addMesh<SkyMeshLayer>({
+// SkyMeshDescを追加
+const skyLayer = view.addMesh<SkyMeshDesc>({
   sky: {
     visible: true,
     sun: true,
@@ -160,7 +160,7 @@ const skyLayer = view.addMesh<SkyMeshLayer>({
 
 ## 技術的詳細
 
-SkyMeshLayerは、@takram/three-atmosphereライブラリを使用して実装されており、以下の機能を提供します:
+SkyMeshDescは、@takram/three-atmosphereライブラリを使用して実装されており、以下の機能を提供します:
 
 - 物理ベースの大気散乱シミュレーション
 - 太陽と月の位置に基づく動的なライティング

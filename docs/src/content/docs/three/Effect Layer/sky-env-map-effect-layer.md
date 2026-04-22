@@ -1,11 +1,11 @@
 ---
-title: SkyEnvMapEffectLayer
+title: SkyEnvMapEffectDesc
 description: Sky environment map effect descriptor for navara_three
 sidebar:
   order: 61
 ---
 
-The `SkyEnvMapEffectLayer` class is a pass that renders the sky environment map. It generates sky textures used for environment mapping and reflections.
+The `SkyEnvMapEffectDesc` class is a pass that renders the sky environment map. It generates sky textures used for environment mapping and reflections.
 
 ## Properties
 
@@ -40,7 +40,7 @@ The `SkyEnvMapEffectLayer` class is a pass that renders the sky environment map.
 ### Adding a basic sky environment map
 
 ```typescript
-import ThreeView, { SkyEnvMapEffectLayer } from "@navara/three";
+import ThreeView, { SkyEnvMapEffectDesc } from "@navara/three";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
@@ -52,7 +52,7 @@ await view.init();
 plugin.addDefaultPhotorealScene();
 
 // Add sky environment map effect descriptor
-view.addEffect<SkyEnvMapEffectLayer>({
+view.addEffect<SkyEnvMapEffectDesc>({
   skyEnvMap: {
     resolution: 256,
   },
@@ -62,7 +62,7 @@ view.addEffect<SkyEnvMapEffectLayer>({
 ### High-resolution environment map
 
 ```typescript
-import ThreeView, { SkyEnvMapEffectLayer } from "@navara/three";
+import ThreeView, { SkyEnvMapEffectDesc } from "@navara/three";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
@@ -73,7 +73,7 @@ await view.init();
 plugin.addDefaultPhotorealScene();
 
 // Create a high-resolution environment map
-view.addEffect<SkyEnvMapEffectLayer>({
+view.addEffect<SkyEnvMapEffectDesc>({
   skyEnvMap: {
     resolution: 512,
   },
@@ -83,7 +83,7 @@ view.addEffect<SkyEnvMapEffectLayer>({
 ### Usage combined with reflective materials
 
 ```typescript
-import ThreeView, { SkyEnvMapEffectLayer, Color } from "@navara/three";
+import ThreeView, { SkyEnvMapEffectDesc, Color } from "@navara/three";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
@@ -95,7 +95,7 @@ await view.init();
 plugin.addDefaultPhotorealScene();
 
 // Add sky environment map (used for reflections)
-view.addEffect<SkyEnvMapEffectLayer>({
+view.addEffect<SkyEnvMapEffectDesc>({
   skyEnvMap: {
     resolution: 256,
   },

@@ -1,11 +1,11 @@
 ---
-title: PlaneMeshLayer
+title: PlaneMeshDesc
 description: Plane mesh descriptor for navara_three
 sidebar:
   order: 105
 ---
 
-The `PlaneMeshLayer` class is a mesh descriptor for drawing plane geometry. You can create a plane by specifying width and height.
+The `PlaneMeshDesc` class is a mesh descriptor for drawing plane geometry. You can create a plane by specifying width and height.
 
 In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `pickable`, `visible`) are available. See [MeshDesc](./mesh-layer-base) for details.
 
@@ -256,12 +256,12 @@ import { Color } from "@navara/three";
 ## Usage Examples
 
 ```typescript
-import ThreeView, { PlaneMeshLayer, Color } from "@navara/three";
+import ThreeView, { PlaneMeshDesc, Color } from "@navara/three";
 
 const view = new ThreeView();
 await view.init();
 
-const planeLayer = view.addMesh<PlaneMeshLayer>({
+const planeLayer = view.addMesh<PlaneMeshDesc>({
   plane: {
     width: 1000,
     height: 1000,

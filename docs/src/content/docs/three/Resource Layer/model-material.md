@@ -28,7 +28,7 @@ sidebar:
 ```
 
 :::tip[Full Animation Control]
-For advanced animation features such as `animationAutoPlay`, `animationClips`, `animationCrossfadeDuration`, `animationEnabled`, and `animationLoop`, use [GLTFModelLayer](/three_default_layers/mesh-layer/gltf-model-layer/) which provides full animation control as a mesh layer.
+For advanced animation features such as `animationAutoPlay`, `animationClips`, `animationCrossfadeDuration`, `animationEnabled`, and `animationLoop`, use [GLTFModelDesc](/three_default_layers/mesh-layer/gltf-model-layer/) which provides full animation control as a mesh layer.
 :::
 
 ### animationSpeed
@@ -71,7 +71,7 @@ For advanced animation features such as `animationAutoPlay`, `animationClips`, `
 
 **Type:** `boolean | undefined`
 
-**Description:** Specifies whether the model casts shadows. This works when shadows are enabled on the View and castShadow is enabled on the sunlight layer.
+**Description:** Specifies whether the model casts shadows. This works when shadows are enabled on the View and castShadow is enabled on the sunlight.
 
 **Default:** `undefined`
 
@@ -127,7 +127,7 @@ import { Color } from "@navara/three";
 
 **Type:** `string[] | undefined`
 
-**Description:** Specifies the IDs of selective effects to apply (e.g., "bloom", "outline"). Used in conjunction with SelectiveBloomEffectLayer or SelectiveOutlineEffectLayer.
+**Description:** Specifies the IDs of selective effects to apply (e.g., "bloom", "outline"). Used in conjunction with SelectiveBloomEffectDesc or SelectiveOutlineEffectDesc.
 
 **Default:** `undefined`
 

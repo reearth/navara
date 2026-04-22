@@ -1,11 +1,11 @@
 ---
-title: LensFlareEffectLayer
+title: LensFlareEffectDesc
 description: Lens flare effect descriptor for navara_three
 sidebar:
   order: 56
 ---
 
-`LensFlareEffectLayer`クラスは、レンズフレアエフェクトを生成するレイヤーです。太陽や月からの光がカメラレンズで反射する効果を表現します。
+`LensFlareEffectDesc`クラスは、レンズフレアエフェクトを生成するレイヤーです。太陽や月からの光がカメラレンズで反射する効果を表現します。
 
 ## Properties
 
@@ -48,7 +48,7 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-// デフォルトのフォトリアルレイヤーを追加（LensFlareEffectLayerを含む）
+// デフォルトのフォトリアルレイヤーを追加（LensFlareEffectDescを含む）
 const defaultLayers = plugin.addDefaultPhotorealScene();
 
 // レンズフレアを有効にして強度を設定
