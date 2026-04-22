@@ -1,6 +1,6 @@
 ---
 title: ToneMappingEffectLayer
-description: Tone mapping effect layer for navara_three
+description: Tone mapping effect descriptor for navara_three
 sidebar:
   order: 62
 ---
@@ -13,7 +13,7 @@ The `ToneMappingEffectLayer` class is a layer that applies a tone mapping effect
 
 **Type:** `boolean | undefined`
 
-**Description:** Controls the visibility of the effect layer.
+**Description:** Controls the visibility of the effect descriptor.
 
 **Default:** `true`
 
@@ -49,7 +49,7 @@ view.addPlugin(plugin);
 await view.init();
 
 // Add default photorealistic layers (includes ToneMappingEffectLayer)
-const defaultLayers = plugin.addDefaultPhotorealLayers();
+const defaultLayers = plugin.addDefaultPhotorealScene();
 
 // Set exposure
 view.toneMappingExposure = 10;
@@ -96,7 +96,7 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-const defaultLayers = plugin.addDefaultPhotorealLayers();
+const defaultLayers = plugin.addDefaultPhotorealScene();
 
 // Enable tone mapping
 defaultLayers.toneMapping.update({
@@ -123,14 +123,14 @@ await view.init();
 
 view.toneMappingExposure = 3;
 
-// Add tone mapping effect layer
+// Add tone mapping effect descriptor
 view.addEffect<ToneMappingEffectLayer>({
   toneMapping: {
     mode: ToneMappingMode.NEUTRAL,
   },
 });
 
-// Add SMAA effect layer (applied after tone mapping)
+// Add SMAA effect descriptor (applied after tone mapping)
 view.addEffect<SMAAEffectLayer>({
   smaa: {},
 });

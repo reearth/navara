@@ -1,6 +1,6 @@
 ---
 title: AmbientLightLayer
-description: Ambient light layer for navara_three
+description: Ambient light descriptor for navara_three
 sidebar:
   order: 151
 ---

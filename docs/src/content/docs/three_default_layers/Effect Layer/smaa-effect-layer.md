@@ -1,6 +1,6 @@
 ---
 title: SMAAEffectLayer
-description: SMAA effect layer for navara_three
+description: SMAA effect descriptor for navara_three
 sidebar:
   order: 58
 ---
@@ -13,7 +13,7 @@ The `SMAAEffectLayer` class is a layer that applies the SMAA (Subpixel Morpholog
 
 **Type:** `boolean | undefined`
 
-**Description:** Controls the visibility of the effect layer.
+**Description:** Controls the visibility of the effect descriptor.
 
 **Default:** `true`
 
@@ -67,7 +67,7 @@ view.addPlugin(plugin);
 await view.init();
 
 // Add default photorealistic layers (includes SMAA)
-const defaultLayers = plugin.addDefaultPhotorealLayers();
+const defaultLayers = plugin.addDefaultPhotorealScene();
 
 // Enable SMAA and set quality
 defaultLayers.smaa.update({
@@ -87,7 +87,7 @@ import ThreeView, { SMAAEffectLayer } from "@navara/three";
 const view = new ThreeView();
 await view.init();
 
-// Add SMAA effect layer
+// Add SMAA effect descriptor
 view.addEffect<SMAAEffectLayer>({
   smaa: {
     quality: "ultra",
@@ -107,7 +107,7 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-const defaultLayers = plugin.addDefaultPhotorealLayers();
+const defaultLayers = plugin.addDefaultPhotorealScene();
 
 // Change quality to medium
 defaultLayers.smaa.update({

@@ -60,7 +60,7 @@ For details, see [Globe Class](../../../three/api-reference/globe/).
 
 **Read-only** (getter)
 
-The instance that manages the atmosphere system. Handles sun and moon position calculations and atmospheric scattering texture management. When the `date` property is changed, sun and moon directions are automatically recalculated based on the ephemeris and reflected in related layers such as `SunLightLayer` and `SkyMeshLayer`.
+The instance that manages the atmosphere system. Handles sun and moon position calculations and atmospheric scattering texture management. When the `date` property is changed, sun and moon directions are automatically recalculated based on the ephemeris and reflected in related layers such as `SunLightDesc` and `SkyMeshDesc`.
 
 **Example:**
 

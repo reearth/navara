@@ -37,7 +37,7 @@ navara_three には 4 種類のレイヤーがあります：
 
 ```typescript
 // GeoJSON レイヤーの例
-const geoJsonLayer = view.addLayer({
+const geoJsonHandle = view.addLayer({
   type: "geojson",
   data: { url: "https://example.com/data.geojson" },
   // GeoJSON では point, polyline, polygon など複数の Material を指定可能
@@ -47,7 +47,7 @@ const geoJsonLayer = view.addLayer({
 });
 
 // 地形レイヤーの例
-const terrainLayer = view.addLayer({
+const terrainHandle = view.addLayer({
   type: "terrain",
   data: { url: "https://example.com/terrain/{z}/{x}/{y}.png" },
   // 地形レイヤーでは rasterTerrain Material のみ指定可能
@@ -67,33 +67,33 @@ const terrainLayer = view.addLayer({
 - **使用前にレイヤークラスの登録が必要**（`registerMesh`, `registerEffect`, `registerLight`）
 
 ```typescript
-import { BoxMeshLayer, FXAAEffectLayer, SunLightLayer } from "@navara/three_default_layers";
+import { BoxMeshDesc, FXAAEffectDesc, SunLightDesc } from "@navara/three_default_layers";
 
 // レイヤークラスを登録（addMesh/addEffect/addLight の前に必要）
-view.registerMesh("box", BoxMeshLayer);
-view.registerEffect("fxaa", FXAAEffectLayer);
-view.registerLight("sun", SunLightLayer);
+view.registerMesh("box", BoxMeshDesc);
+view.registerEffect("fxaa", FXAAEffectDesc);
+view.registerLight("sun", SunLightDesc);
 
-// メッシュレイヤーの例（BoxMeshLayer）
-const boxLayer = view.addMesh<BoxMeshLayer>({
+// メッシュレイヤーの例（BoxMeshDesc）
+const boxHandle = view.addMesh<BoxMeshDesc>({
   box: {
-    // box キーで BoxMeshLayer として認識される
+    // box キーで BoxMeshDesc として認識される
     width: 100,
     height: 100,
   },
 });
 
-// エフェクトレイヤーの例（FXAAEffectLayer）
-const fxaaLayer = view.addEffect<FXAAEffectLayer>({
+// エフェクトレイヤーの例（FXAAEffectDesc）
+const fxaaHandle = view.addEffect<FXAAEffectDesc>({
   fxaa: {
-    // fxaa キーで FXAAEffectLayer として認識される
+    // fxaa キーで FXAAEffectDesc として認識される
   },
 });
 
-// ライトレイヤーの例（SunLightLayer）
-const sunLayer = view.addLight<SunLightLayer>({
+// ライトレイヤーの例（SunLightDesc）
+const sunHandle = view.addLight<SunLightDesc>({
   sun: {
-    // sun キーで SunLightLayer として認識される
+    // sun キーで SunLightDesc として認識される
     intensity: 1.0,
     castShadow: true,
   },
@@ -111,54 +111,54 @@ const sunLayer = view.addLight<SunLightLayer>({
 | レイヤー種別                         | 返却されるクラス | 主な機能                                                                 |
 | ------------------------------------ | ---------------- | ------------------------------------------------------------------------ |
 | リソースレイヤー                     | `Layer`          | `update()`, `delete()`, `forceUpdate()`, 地物イベント                    |
-| メッシュ・エフェクト・ライトレイヤー | `LayerHandle<T>` | `update()`, `delete()`, `visible`, `ref`（基底インスタンスへのアクセス） |
+| メッシュ・エフェクト・ライトレイヤー | `BaseHandle<T>` | `update()`, `delete()`, `visible`, `ref`（基底インスタンスへのアクセス） |
 
 ### Layer（リソースレイヤー用）
 
 ```typescript
-const geoJsonLayer = view.addLayer({
+const geoJsonHandle = view.addLayer({
   type: "geojson",
   data: { url: "https://example.com/data.geojson" },
 });
 
 // 設定を完全に上書きして更新
-geoJsonLayer.update({
+geoJsonHandle.update({
   type: "geojson",
   data: { url: "https://example.com/data.geojson" },
   point: { color: 0x00ff00 },
 });
 
 // 地物イベントを購読
-geoJsonLayer.on("featureCreated", (evaluator) => {
+geoJsonHandle.on("featureCreated", (evaluator) => {
   console.log("地物が作成されました");
 });
 
 // レイヤーを削除
-geoJsonLayer.delete();
+geoJsonHandle.delete();
 ```
 
-### LayerHandle（メッシュ・エフェクト・ライトレイヤー用）
+### BaseHandle（メッシュ・エフェクト・ライトレイヤー用）
 
 ```typescript
-// BoxMeshLayer が登録済みであること
-const boxLayer = view.addMesh<BoxMeshLayer>({
+// BoxMeshDesc が登録済みであること
+const boxHandle = view.addMesh<BoxMeshDesc>({
   box: { width: 100, height: 100, depth: 100 },
 });
 
 // 部分的な更新（指定したプロパティのみ変更）
-boxLayer.update({ width: 200 });
+boxHandle.update({ width: 200 });
 
 // 表示/非表示の切り替え
-boxLayer.visible = false;
+boxHandle.visible = false;
 
 // 基底の Three.js オブジェクトにアクセス
-const boxMesh = boxLayer.ref;
+const boxMesh = boxHandle.ref;
 
 // レイヤーを削除
-boxLayer.delete();
+boxHandle.delete();
 ```
 
-詳細な API リファレンスは [Layer Types](../../../three/api-reference/layer-types/) を参照してください。
+詳細な API リファレンスは [Descriptor Types](../../../three/api-reference/layer-types/) を参照してください。
 
 ## まとめ
 
@@ -168,7 +168,7 @@ boxLayer.delete();
 | `type` の指定  | データフォーマット名           | `"mesh"`, `"effect"`, `"light"`                             |
 | 事前登録       | 不要                           | 必要（`registerMesh` / `registerEffect` / `registerLight`） |
 | Material 数    | データに応じて複数可           | 1 レイヤー 1 Material                                       |
-| ハンドルクラス | `Layer`                        | `LayerHandle<T>`                                            |
+| ハンドルクラス | `Layer`                        | `BaseHandle<T>`                                            |
 | 更新方法       | 完全な設定オブジェクトで上書き | 部分的な更新が可能                                          |
 
 ## 関連リソース

@@ -86,7 +86,7 @@ view.addPlugin(plugin);
 await view.init();
 
 // デフォルトのフォトリアルレイヤーを追加
-const defaultLayers = plugin.addDefaultPhotorealLayers();
+const defaultLayers = plugin.addDefaultPhotorealScene();
 
 // スカイライトプローブが自動的に太陽の位置に追従
 defaultLayers.skyLightProbe.update({
@@ -164,6 +164,6 @@ SkyLightProbeLayerは、`@takram/three-atmosphere`パッケージの大気散乱
 ## 注意事項
 
 - SkyLightProbeLayerを使用するには、大気レイヤー（Atmosphere）が必要です。
-- `plugin.addDefaultPhotorealLayers()`を使用すると、SkyLightProbeLayerが自動的に含まれます。
+- `plugin.addDefaultPhotorealScene()`を使用すると、SkyLightProbeLayerが自動的に含まれます。
 - 夜間は強度を高めに設定することで、より自然な夜景照明を実現できます。
 - 他のライトレイヤー（AmbientLight、SunLightなど）と組み合わせて使用できます。

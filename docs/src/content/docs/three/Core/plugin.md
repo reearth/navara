@@ -61,25 +61,25 @@ Here is an example of a basic plugin that encapsulates layer registration.
 ```typescript
 import ThreeView, { Plugin, type ViewContext } from "@navara/three";
 import {
-  BoxMeshLayer,
-  SphereMeshLayer,
-  SunLightLayer,
-  AmbientLightLayer,
-  FXAAEffectLayer,
+  BoxMeshDesc,
+  SphereMeshDesc,
+  SunLightDesc,
+  AmbientLightDesc,
+  FXAAEffectDesc,
 } from "@navara/three_default_layers";
 
 class MyScenePlugin extends Plugin<ThreeView, ViewContext> {
   async init(view: ThreeView, _ctx: ViewContext) {
-    // Register mesh layers
-    view.registerMesh("box", BoxMeshLayer);
-    view.registerMesh("sphere", SphereMeshLayer);
+    // Register mesh descriptors
+    view.registerMesh("box", BoxMeshDesc);
+    view.registerMesh("sphere", SphereMeshDesc);
 
-    // Register light layers
-    view.registerLight("sun", SunLightLayer);
-    view.registerLight("ambient", AmbientLightLayer);
+    // Register light descriptors
+    view.registerLight("sun", SunLightDesc);
+    view.registerLight("ambient", AmbientLightDesc);
 
-    // Register effect layers
-    view.registerEffect("fxaa", FXAAEffectLayer);
+    // Register effect descriptors
+    view.registerEffect("fxaa", FXAAEffectDesc);
   }
 }
 ```
@@ -98,16 +98,16 @@ view.addLight({ sun: { intensity: 1.0 } });
 
 ### Plugin Providing a High-Level API
 
-In addition to registering layers within `init()`, you can also provide methods to be called after initialization.
+In addition to registering descriptors within `init()`, you can also provide methods to be called after initialization.
 
 ```typescript
-import ThreeView, { Plugin, type ViewContext, type LayerHandle } from "@navara/three";
+import ThreeView, { Plugin, type ViewContext, type MeshHandle, type LightHandle } from "@navara/three";
 import {
-  SkyMeshLayer,
-  SunLightLayer,
-  AmbientLightLayer,
-  ToneMappingEffectLayer,
-  FXAAEffectLayer,
+  SkyMeshDesc,
+  SunLightDesc,
+  AmbientLightDesc,
+  ToneMappingEffectDesc,
+  FXAAEffectDesc,
 } from "@navara/three_default_layers";
 
 class MyScenePlugin extends Plugin<ThreeView, ViewContext> {
@@ -116,22 +116,22 @@ class MyScenePlugin extends Plugin<ThreeView, ViewContext> {
   async init(view: ThreeView, _ctx: ViewContext) {
     this.view = view;
 
-    view.registerMesh("sky", SkyMeshLayer);
-    view.registerLight("sun", SunLightLayer);
-    view.registerLight("ambient", AmbientLightLayer);
-    view.registerEffect("toneMapping", ToneMappingEffectLayer);
-    view.registerEffect("fxaa", FXAAEffectLayer);
+    view.registerMesh("sky", SkyMeshDesc);
+    view.registerLight("sun", SunLightDesc);
+    view.registerLight("ambient", AmbientLightDesc);
+    view.registerEffect("toneMapping", ToneMappingEffectDesc);
+    view.registerEffect("fxaa", FXAAEffectDesc);
   }
 
   /** Add basic lighting and effects to the scene */
   setupScene(): {
-    sky: LayerHandle<SkyMeshLayer>;
-    sun: LayerHandle<SunLightLayer>;
+    sky: MeshHandle<SkyMeshDesc>;
+    sun: LightHandle<SunLightDesc>;
   } {
     if (!this.view) throw new Error("Plugin is not initialized");
 
-    const sky = this.view.addMesh<SkyMeshLayer>({ sky: {} });
-    const sun = this.view.addLight<SunLightLayer>({
+    const sky = this.view.addMesh<SkyMeshDesc>({ sky: {} });
+    const sun = this.view.addLight<SunLightDesc>({
       sun: { intensity: 1.0, castShadow: true },
     });
     this.view.addLight({ ambient: { intensity: 0.3 } });
@@ -153,19 +153,19 @@ await view.init();
 const { sky, sun } = plugin.setupScene();
 ```
 
-### Plugin with Custom Layers
+### Plugin with Custom Descriptors
 
-You can also create plugins that register custom layers you have implemented (see [Custom Layer](../../../three/api/custom-layer/)).
+You can also create plugins that register custom descriptors you have implemented (see [Custom Layer](../../../three/api/custom-layer/)).
 
 ```typescript
 import ThreeView, { Plugin, type ViewContext } from "@navara/three";
-import { MyCustomMeshLayer } from "./layers/MyCustomMeshLayer";
-import { MyCustomEffectLayer } from "./layers/MyCustomEffectLayer";
+import { MyCustomMeshDesc } from "./layers/MyCustomMeshDesc";
+import { MyCustomEffectDesc } from "./layers/MyCustomEffectDesc";
 
 class MyCustomPlugin extends Plugin<ThreeView, ViewContext> {
   async init(view: ThreeView, _ctx: ViewContext) {
-    view.registerMesh("myCustomMesh", MyCustomMeshLayer);
-    view.registerEffect("myCustomEffect", MyCustomEffectLayer);
+    view.registerMesh("myCustomMesh", MyCustomMeshDesc);
+    view.registerEffect("myCustomEffect", MyCustomEffectDesc);
   }
 }
 ```
@@ -173,5 +173,5 @@ class MyCustomPlugin extends Plugin<ThreeView, ViewContext> {
 ## Related Resources
 
 - [About Plugin](../../../three/introduction/about-plugin/) - Plugin system concepts
-- [Custom Layer](../../../three/core/custom-layer/) - How to implement custom layers
+- [Custom Layer](../../../three/core/custom-layer/) - How to implement custom descriptors
 - [three_default_plugin](../../../three_default_plugin/about/) - DefaultPlugin details

@@ -5,7 +5,7 @@ sidebar:
   order: 113
 ---
 
-The `StarsLayer` class is a mesh layer that draws a starry sky. It uses point sprites based on actual astronomical catalogs to render a realistic starry sky.
+The `StarsLayer` class is a mesh descriptor that draws a starry sky. It uses point sprites based on actual astronomical catalogs to render a realistic starry sky.
 
 Star positions account for the Earth's rotation based on `view.atmosphere.date`, and visibility is automatically adjusted based on the sun's position.
 

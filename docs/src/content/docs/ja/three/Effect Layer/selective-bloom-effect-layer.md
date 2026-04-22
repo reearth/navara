@@ -1,6 +1,6 @@
 ---
 title: SelectiveBloomEffectLayer
-description: Selective bloom effect layer for navara_three
+description: Selective bloom effect descriptor for navara_three
 sidebar:
   order: 61
 ---
@@ -196,7 +196,7 @@ view.addPlugin(plugin);
 await view.init();
 
 // デフォルトのフォトリアルレイヤーを追加
-plugin.addDefaultPhotorealLayers();
+plugin.addDefaultPhotorealScene();
 
 // 強いブルームエフェクトを追加
 const bloomLayer = view.addEffect<SelectiveBloomEffectLayer>({

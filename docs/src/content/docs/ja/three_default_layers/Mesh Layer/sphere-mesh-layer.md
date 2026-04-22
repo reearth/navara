@@ -1,6 +1,6 @@
 ---
 title: SphereMeshLayer
-description: Sphere mesh layer for navara_three
+description: Sphere mesh descriptor for navara_three
 sidebar:
   order: 104
 ---

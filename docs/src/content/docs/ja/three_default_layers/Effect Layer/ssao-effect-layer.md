@@ -1,6 +1,6 @@
 ---
 title: SSAOEffectLayer
-description: SSAO effect layer for navara_three
+description: SSAO effect descriptor for navara_three
 sidebar:
   order: 59
 ---
@@ -195,7 +195,7 @@ view.addPlugin(plugin);
 await view.init();
 
 // デフォルトのフォトリアルレイヤーを追加
-plugin.addDefaultPhotorealLayers();
+plugin.addDefaultPhotorealScene();
 
 // SSAOを追加
 const ssaoLayer = view.addEffect<SSAOEffectLayer>({

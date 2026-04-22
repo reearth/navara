@@ -1,6 +1,6 @@
 ---
 title: ColorGradingLUTEffectLayer
-description: Color grading LUT effect layer for navara_three
+description: Color grading LUT effect descriptor for navara_three
 sidebar:
   order: 53
 ---
@@ -127,7 +127,7 @@ view.addPlugin(plugin);
 await view.init();
 
 // デフォルトのフォトリアルレイヤーを追加
-plugin.addDefaultPhotorealLayers();
+plugin.addDefaultPhotorealScene();
 
 // カスタムLUTでカラーグレーディングを追加
 const colorGradingLayer = view.addEffect<ColorGradingLUTEffectLayer>({

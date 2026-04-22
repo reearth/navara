@@ -1,6 +1,6 @@
 ---
 title: SSAOEffectLayer
-description: SSAO effect layer for navara_three
+description: SSAO effect descriptor for navara_three
 sidebar:
   order: 59
 ---
@@ -13,7 +13,7 @@ The `SSAOEffectLayer` class is a layer that applies the Screen Space Ambient Occ
 
 **Type:** `boolean | undefined`
 
-**Description:** Controls the visibility of the effect layer.
+**Description:** Controls the visibility of the effect descriptor.
 
 **Default:** `true`
 
@@ -137,7 +137,7 @@ import ThreeView, { SSAOEffectLayer } from "@navara/three";
 const view = new ThreeView();
 await view.init();
 
-// Add SSAO effect layer
+// Add SSAO effect descriptor
 const ssaoLayer = view.addEffect<SSAOEffectLayer>({
   visible: true,
   ssao: {},
@@ -195,7 +195,7 @@ view.addPlugin(plugin);
 await view.init();
 
 // Add default photorealistic layers
-plugin.addDefaultPhotorealLayers();
+plugin.addDefaultPhotorealScene();
 
 // Add SSAO
 const ssaoLayer = view.addEffect<SSAOEffectLayer>({

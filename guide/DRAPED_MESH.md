@@ -1,6 +1,6 @@
 # Draped Mesh
 
-This document explains how DrapedMesh works and how to use it in custom layers. For background on the layer system, see [CUSTOM_LAYER.md](CUSTOM_LAYER.md). For the rendering pipeline context, see [ARCHITECTURE.md](ARCHITECTURE.md).
+This document explains how DrapedMesh works and how to use it in custom descriptors. For background on the layer system, see [CUSTOM_LAYER.md](CUSTOM_LAYER.md). For the rendering pipeline context, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Overview
 
@@ -86,7 +86,7 @@ The `drapedEnable` property controls whether the stencil draping is active. When
 > [!NOTE]
 > The mesh must be large enough to penetrate the terrain surface. The stencil test works by detecting where the mesh volume intersects the terrain, so if the mesh does not cover the terrain, nothing will be rendered.
 
-To add draping support to a custom mesh layer:
+To add draping support to a custom mesh descriptor:
 
 1. Use `DrapedMesh` as the instance type
 2. Override `getPassKey()` to return `"draped"` when draping is enabled
@@ -94,10 +94,10 @@ To add draping support to a custom mesh layer:
 
 ```typescript
 import {
-  MeshLayerDeclaration,
+  MeshDescDeclaration,
   DrapedMesh,
-  type MeshLayerConfig,
-  type MeshLayerUpdate,
+  type MeshDescConfig,
+  type MeshDescUpdate,
   type PassKey,
   type ViewContext,
   Color,
@@ -114,10 +114,10 @@ type MyLayerDescription = {
   };
 };
 
-type MyLayerConfig = MeshLayerConfig & MyLayerDescription;
-type MyLayerUpdate = MeshLayerUpdate & MyLayerDescription;
+type MyLayerConfig = MeshDescConfig & MyLayerDescription;
+type MyLayerUpdate = MeshDescUpdate & MyLayerDescription;
 
-class MyDrapedLayer extends MeshLayerDeclaration<
+class MyDrapedLayer extends MeshDescDeclaration<
   MyLayerConfig,
   MyLayerUpdate,
   DrapedMesh<BoxGeometry, MeshBasicMaterial | MeshLambertMaterial>
@@ -187,10 +187,10 @@ layer.update({ myBox: { draped: false } });
 
 ## Built-in Support
 
-The default layers `BoxMeshLayer` and `CylinderMeshLayer` in `@navara/three_default_layers` support the `draped` option out of the box:
+The default descriptors `BoxMeshDesc` and `CylinderMeshDesc` in `@navara/three_default_layers` support the `draped` option out of the box:
 
 ```typescript
-const layer = view.addLayer<BoxMeshLayer>({
+const layer = view.addLayer<BoxMeshDesc>({
   type: "mesh",
   box: {
     width: 1000,

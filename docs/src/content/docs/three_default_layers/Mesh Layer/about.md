@@ -1,17 +1,17 @@
 ---
-title: Mesh Layer
-description: Mesh layer types for navara_three
+title: Mesh Descriptor
+description: Mesh descriptor types for navara_three
 sidebar:
   order: 100
 ---
 
-`MeshLayer` is a layer type for adding 3D mesh objects to the scene. It can display various 3D objects.
+`MeshLayer` is a descriptor type for adding 3D mesh objects to the scene. It can display various 3D objects.
 
-## Available MeshLayer Types
+## Available MeshDescriptor Types
 
-The following MeshLayer types are available in navara_three:
+The following MeshDescriptor types are available in navara_three:
 
-| Layer Type | Description |
+| Descriptor Type | Description |
 |------------|------|
 | [ArclineMeshLayer](./arcline-mesh-layer) | A layer that draws arc-shaped lines connecting two points |
 | [BoxMeshLayer](./box-mesh-layer) | A layer that draws box geometry |
@@ -33,7 +33,7 @@ The following MeshLayer types are available in navara_three:
 
 ## Basic Usage
 
-MeshLayer is added by registering the layer class and then calling the `view.addMesh()` method:
+MeshLayer is added by registering the descriptor class and then calling the `view.addMesh()` method:
 
 ```typescript
 import ThreeView, { Color } from "@navara/three";
@@ -41,7 +41,7 @@ import { BoxMeshLayer } from "@navara/three_default_layers";
 
 const view = new ThreeView();
 
-// Register the layer class
+// Register the descriptor class
 view.registerMesh("box", BoxMeshLayer);
 
 await view.init();
@@ -99,7 +99,7 @@ const position = geodeticToVector3({
   height: 200,                      // Altitude (meters)
 });
 
-// Add a mesh layer with the converted coordinates
+// Add a mesh descriptor with the converted coordinates
 const sphereLayer = view.addMesh<SphereMeshLayer>({
   sphere: {
     radius: 100,
@@ -219,4 +219,4 @@ console.log(`Latitude: ${latitude}°, Longitude: ${longitude}°, Altitude: ${hei
 
 For details, see [navara_three_api](../API%20Reference/navara_three_api).
 
-For detailed usage, refer to the documentation for each layer type.
+For detailed usage, refer to the documentation for each descriptor type.

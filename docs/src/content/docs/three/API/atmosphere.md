@@ -7,7 +7,7 @@ sidebar:
 
 The `Atmosphere` class manages the context for atmospheric rendering. It automatically calculates the positions of the sun and moon from the configured date and time, and manages textures for atmospheric scattering simulation.
 
-A `ThreeView` instance holds an instance of this class through the `atmosphere` property, and atmosphere-related layers such as `SunLightLayer`, `SkyMeshLayer`, and `AerialPerspectiveEffectLayer` reference this instance to operate.
+A `ThreeView` instance holds an instance of this class through the `atmosphere` property, and atmosphere-related layers such as `SunLightDesc`, `SkyMeshDesc`, and `AerialPerspectiveEffectDesc` reference this instance to operate.
 
 ## Basic Usage
 
@@ -167,12 +167,12 @@ The `Atmosphere` class automatically integrates with the following layers:
 
 | Layer | Integration Details |
 |----------|----------|
-| `SunLightLayer` | Updates light direction based on sun direction |
-| `SkyMeshLayer` | Updates rendering positions of the sun and moon |
-| `StarsLayer` | Updates star positions based on sun direction |
-| `SkyLightProbeLayer` | Calculates ambient light based on sun direction |
-| `AerialPerspectiveEffectLayer` | Aerial perspective using atmosphere textures |
-| `CloudsEffectLayer` | Cloud rendering using atmosphere textures |
+| `SunLightDesc` | Updates light direction based on sun direction |
+| `SkyMeshDesc` | Updates rendering positions of the sun and moon |
+| `StarsDesc` | Updates star positions based on sun direction |
+| `SkyLightProbeDesc` | Calculates ambient light based on sun direction |
+| `AerialPerspectiveEffectDesc` | Aerial perspective using atmosphere textures |
+| `CloudsEffectDesc` | Cloud rendering using atmosphere textures |
 
 ## AtmosphereOptions
 

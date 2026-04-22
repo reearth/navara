@@ -1,6 +1,6 @@
 ---
 title: FogLightEffectLayer
-description: Fog light effect layer for navara_three
+description: Fog light effect descriptor for navara_three
 sidebar:
   order: 55
 ---

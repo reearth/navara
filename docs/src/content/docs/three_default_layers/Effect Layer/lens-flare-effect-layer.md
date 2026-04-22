@@ -1,6 +1,6 @@
 ---
 title: LensFlareEffectLayer
-description: Lens flare effect layer for navara_three
+description: Lens flare effect descriptor for navara_three
 sidebar:
   order: 56
 ---
@@ -13,7 +13,7 @@ The `LensFlareEffectLayer` class is a layer that generates the lens flare effect
 
 **Type:** `boolean | undefined`
 
-**Description:** Controls the visibility of the effect layer.
+**Description:** Controls the visibility of the effect descriptor.
 
 **Default:** `true`
 
@@ -49,7 +49,7 @@ view.addPlugin(plugin);
 await view.init();
 
 // Add default photorealistic layers (includes LensFlareEffectLayer)
-const defaultLayers = plugin.addDefaultPhotorealLayers();
+const defaultLayers = plugin.addDefaultPhotorealScene();
 
 // Enable lens flare and set its intensity
 defaultLayers.lensFlare.update({

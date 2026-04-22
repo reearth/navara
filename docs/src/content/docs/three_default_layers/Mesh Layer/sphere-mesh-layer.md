@@ -1,11 +1,11 @@
 ---
 title: SphereMeshLayer
-description: Sphere mesh layer for navara_three
+description: Sphere mesh descriptor for navara_three
 sidebar:
   order: 104
 ---
 
-The `SphereMeshLayer` class is a mesh layer for drawing sphere geometry. You can create a sphere by specifying radius, segment counts, and other parameters.
+The `SphereMeshLayer` class is a mesh descriptor for drawing sphere geometry. You can create a sphere by specifying radius, segment counts, and other parameters.
 
 ## Properties
 
@@ -273,7 +273,7 @@ import { Color } from "@navara/three";
 
 **Type:** `string[]` (optional)
 
-**Description:** Specifies an array of selective effect layer IDs to apply to this mesh.
+**Description:** Specifies an array of selective effect descriptor IDs to apply to this mesh.
 
 **Example:**
 

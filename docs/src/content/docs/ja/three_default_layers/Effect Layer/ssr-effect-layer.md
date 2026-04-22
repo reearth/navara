@@ -1,6 +1,6 @@
 ---
 title: SSREffectLayer
-description: SSR effect layer for navara_three
+description: SSR effect descriptor for navara_three
 sidebar:
   order: 60
 ---
@@ -397,7 +397,7 @@ view.addPlugin(plugin);
 await view.init();
 
 // デフォルトのフォトリアルレイヤーを追加
-plugin.addDefaultPhotorealLayers();
+plugin.addDefaultPhotorealScene();
 
 // SSRエフェクトを追加
 const ssrLayer = view.addEffect<SSREffectLayer>({

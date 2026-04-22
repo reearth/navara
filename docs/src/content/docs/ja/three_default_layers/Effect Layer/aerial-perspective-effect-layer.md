@@ -1,6 +1,6 @@
 ---
 title: AerialPerspectiveEffectLayer
-description: Aerial perspective effect layer for navara_three
+description: Aerial perspective effect descriptor for navara_three
 sidebar:
   order: 51
 ---
@@ -150,7 +150,7 @@ view.addPlugin(plugin);
 await view.init();
 
 // デフォルトのフォトリアルレイヤーを追加（AerialPerspectiveEffectLayerを含む）
-const defaultLayers = plugin.addDefaultPhotorealLayers();
+const defaultLayers = plugin.addDefaultPhotorealScene();
 
 // 大気遠近法エフェクトの設定を更新
 defaultLayers.aerialPerspective.update({
@@ -173,7 +173,7 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-const defaultLayers = plugin.addDefaultPhotorealLayers();
+const defaultLayers = plugin.addDefaultPhotorealScene();
 
 // 雲の影を有効にする場合、irradianceを有効にする
 defaultLayers.aerialPerspective.update({

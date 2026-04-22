@@ -1,6 +1,6 @@
 ---
 title: ToneMappingEffectLayer
-description: Tone mapping effect layer for navara_three
+description: Tone mapping effect descriptor for navara_three
 sidebar:
   order: 62
 ---
@@ -49,7 +49,7 @@ view.addPlugin(plugin);
 await view.init();
 
 // デフォルトのフォトリアルレイヤーを追加（ToneMappingEffectLayerを含む）
-const defaultLayers = plugin.addDefaultPhotorealLayers();
+const defaultLayers = plugin.addDefaultPhotorealScene();
 
 // 露出を設定
 view.toneMappingExposure = 10;
@@ -96,7 +96,7 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-const defaultLayers = plugin.addDefaultPhotorealLayers();
+const defaultLayers = plugin.addDefaultPhotorealScene();
 
 // トーンマッピングを有効化
 defaultLayers.toneMapping.update({

@@ -1,6 +1,6 @@
 ---
 title: RainDropEffectLayer
-description: Rain drop effect layer for navara_three
+description: Rain drop effect descriptor for navara_three
 sidebar:
   order: 57
 ---
@@ -13,7 +13,7 @@ The `RainDropEffectLayer` class is a layer that applies raindrop refraction effe
 
 **Type:** `boolean | undefined`
 
-**Description:** Controls the visibility of the effect layer.
+**Description:** Controls the visibility of the effect descriptor.
 
 **Default:** `true`
 
@@ -304,9 +304,9 @@ await view.init();
 view.animation = true;
 
 // Add default photorealistic layers
-plugin.addDefaultPhotorealLayers();
+plugin.addDefaultPhotorealScene();
 
-// Add raindrop effect layer
+// Add raindrop effect descriptor
 const rainDropLayer = view.addEffect<RainDropEffectLayer>({
   rainDrop: {
     opacity: 0.85,

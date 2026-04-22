@@ -5,7 +5,7 @@ sidebar:
   order: 113
 ---
 
-The `GLTFModelLayer` class is a mesh layer for loading and displaying GLTF/GLB format 3D models. It provides features such as animation playback, shadow settings, and dynamic updates.
+The `GLTFModelLayer` class is a mesh descriptor for loading and displaying GLTF/GLB format 3D models. It provides features such as animation playback, shadow settings, and dynamic updates.
 
 ## Properties
 

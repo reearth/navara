@@ -86,7 +86,7 @@ view.addPlugin(plugin);
 await view.init();
 
 // Add default photorealistic layers
-const defaultLayers = plugin.addDefaultPhotorealLayers();
+const defaultLayers = plugin.addDefaultPhotorealScene();
 
 // The sky light probe automatically follows the sun's position
 defaultLayers.skyLightProbe.update({
@@ -164,6 +164,6 @@ This enables natural environment lighting that responds to time of day and sun p
 ## Notes
 
 - SkyLightProbeLayer requires the atmosphere layer (Atmosphere) to function.
-- Using `plugin.addDefaultPhotorealLayers()` automatically includes SkyLightProbeLayer.
+- Using `plugin.addDefaultPhotorealScene()` automatically includes SkyLightProbeLayer.
 - Setting a higher intensity at night can achieve more natural nightscape lighting.
-- It can be used in combination with other light layers (AmbientLight, SunLight, etc.).
+- It can be used in combination with other light descriptors (AmbientLight, SunLight, etc.).

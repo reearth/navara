@@ -1,11 +1,11 @@
 ---
 title: SmoothLineMeshLayer
-description: Smooth line mesh layer for navara_three
+description: Smooth line mesh descriptor for navara_three
 sidebar:
   order: 107
 ---
 
-The `SmoothLineMeshLayer` class is a mesh layer for drawing smooth lines using Catmull-Rom curves. It generates smooth curves from an array of points and also supports dashed patterns and point marker display.
+The `SmoothLineMeshLayer` class is a mesh descriptor for drawing smooth lines using Catmull-Rom curves. It generates smooth curves from an array of points and also supports dashed patterns and point marker display.
 
 ## Properties
 

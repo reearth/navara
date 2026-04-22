@@ -1,11 +1,11 @@
 ---
 title: CylinderMeshLayer
-description: Cylinder mesh layer for navara_three
+description: Cylinder mesh descriptor for navara_three
 sidebar:
   order: 103
 ---
 
-The `CylinderMeshLayer` class is a mesh layer for drawing cylinder geometry. You can create cylinders and cones by specifying top radius, bottom radius, height, and other parameters.
+The `CylinderMeshLayer` class is a mesh descriptor for drawing cylinder geometry. You can create cylinders and cones by specifying top radius, bottom radius, height, and other parameters.
 
 ## Properties
 
@@ -291,7 +291,7 @@ import { Color } from "@navara/three";
 
 **Type:** `string[]` (optional)
 
-**Description:** Specifies an array of selective effect layer IDs to apply to this mesh.
+**Description:** Specifies an array of selective effect descriptor IDs to apply to this mesh.
 
 **Example:**
 

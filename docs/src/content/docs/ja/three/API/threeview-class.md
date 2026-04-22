@@ -28,7 +28,7 @@ view.addPlugin(plugin);
 await view.init();
 
 // Add default photorealistic layers (sky, stars, sun, light probe)
-const defaultLayers = plugin.addDefaultPhotorealLayers();
+const defaultLayers = plugin.addDefaultPhotorealScene();
 
 // Add terrain layer
 view.addLayer({
@@ -149,7 +149,7 @@ const view = new ThreeView({
 
 **Type:** `AtmosphereOptions | undefined`
 
-**Description:** 大気レンダリングの設定オプション。空、太陽、大気散乱効果の設定を行います。`date` プロパティで指定した日時に基づいて太陽と月の位置が自動計算され、`SunLightLayer` などの関連レイヤーに反映されます。
+**Description:** 大気レンダリングの設定オプション。空、太陽、大気散乱効果の設定を行います。`date` プロパティで指定した日時に基づいて太陽と月の位置が自動計算され、`SunLightDesc` などの関連レイヤーに反映されます。
 
 ```typescript
 export type AtmosphereOptions = {

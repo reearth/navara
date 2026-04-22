@@ -1,6 +1,6 @@
 ---
 title: RainMeshLayer
-description: Rain mesh layer for navara_three
+description: Rain mesh descriptor for navara_three
 sidebar:
   order: 109
 ---

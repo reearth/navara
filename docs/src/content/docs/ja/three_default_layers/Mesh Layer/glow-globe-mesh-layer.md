@@ -1,6 +1,6 @@
 ---
 title: GlowGlobeMeshLayer
-description: Glow globe mesh layer for navara_three
+description: Glow globe mesh descriptor for navara_three
 sidebar:
   order: 108
 ---

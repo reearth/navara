@@ -1,11 +1,11 @@
 ---
 title: SunLightLayer
-description: Sun light layer for navara_three
+description: Sun light descriptor for navara_three
 sidebar:
   order: 154
 ---
 
-The `SunLightLayer` class represents a directional light layer that simulates sunlight. It supports high-quality shadow rendering using Cascaded Shadow Maps (CSM) and works in conjunction with atmospheric scattering simulation to reproduce natural sunlight.
+The `SunLightLayer` class represents a directional light descriptor that simulates sunlight. It supports high-quality shadow rendering using Cascaded Shadow Maps (CSM) and works in conjunction with atmospheric scattering simulation to reproduce natural sunlight.
 
 The sun direction is automatically calculated based on `view.atmosphere.date`, and shadow directions change accordingly.
 
@@ -356,7 +356,7 @@ view.addPlugin(plugin);
 await view.init();
 
 // Add default photorealistic layers (includes SunLightLayer)
-const defaultLayers = plugin.addDefaultPhotorealLayers();
+const defaultLayers = plugin.addDefaultPhotorealScene();
 
 // Update sunlight settings
 defaultLayers.sun.update({

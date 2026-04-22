@@ -1,11 +1,11 @@
 ---
 title: SkyMeshLayer
-description: Sky mesh layer for navara_three
+description: Sky mesh descriptor for navara_three
 sidebar:
   order: 111
 ---
 
-The `SkyMeshLayer` class is a mesh layer that draws the sky, sun, and moon using atmospheric scattering. It provides realistic sky rendering using physics-based atmospheric scattering simulation.
+The `SkyMeshLayer` class is a mesh descriptor that draws the sky, sun, and moon using atmospheric scattering. It provides realistic sky rendering using physics-based atmospheric scattering simulation.
 
 The sun and moon positions are automatically calculated based on `view.atmosphere.date` and updated every frame.
 

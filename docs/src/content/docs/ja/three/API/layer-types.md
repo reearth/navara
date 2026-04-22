@@ -1,6 +1,6 @@
 ---
-title: Layer Types
-description: API Reference for Layer, LayerHandle, and LayerDeclaration types
+title: Descriptor Types
+description: API Reference for Layer, BaseHandle, and BaseDesc types
 sidebar:
   order: 15
 ---
@@ -45,14 +45,14 @@ update(l: LayerDescription): void
 **Example:**
 
 ```typescript
-const geoJsonLayer = view.addLayer({
+const geoJsonHandle = view.addLayer({
   type: "geojson",
   data: { url: "https://example.com/data.geojson" },
   point: { color: 0xff0000 },
 });
 
 // レイヤー設定を更新
-geoJsonLayer.update({
+geoJsonHandle.update({
   type: "geojson",
   data: { url: "https://example.com/data.geojson" },
   point: { color: 0x00ff00 },
@@ -72,7 +72,7 @@ delete(): void
 **Example:**
 
 ```typescript
-geoJsonLayer.delete();
+geoJsonHandle.delete();
 ```
 
 #### forceUpdate()
@@ -203,7 +203,7 @@ layer.on("deleted", () => {
 
 ---
 
-## LayerHandle
+## BaseHandle
 
 メッシュレイヤー、ライトレイヤー、エフェクトレイヤーを制御するためのハンドルクラスです。`ThreeView.addMesh()`、`ThreeView.addLight()`、`ThreeView.addEffect()` でレイヤーを追加した際に返されます。
 
@@ -218,8 +218,8 @@ layer.on("deleted", () => {
 **Example:**
 
 ```typescript
-// SkyMeshLayer が登録済みであること
-const skyHandle = view.addMesh<SkyMeshLayer>({ sky: {} });
+// SkyMeshDesc が登録済みであること
+const skyHandle = view.addMesh<SkyMeshDesc>({ sky: {} });
 console.log("レイヤーID:", skyHandle.id);
 ```
 
@@ -241,18 +241,18 @@ skyHandle.visible = false;
 
 #### ref
 
-**Type:** `T` (LayerDeclaration のサブクラス)
+**Type:** `T` (BaseDesc のサブクラス)
 
 **Description:** 基底レイヤーインスタンスへの直接アクセスを提供します。ハンドルを介して公開されていないレイヤー固有のメソッドやプロパティにアクセスするために使用します。
 
 **Example:**
 
 ```typescript
-// SkyMeshLayer が登録済みであること
-const skyHandle = view.addMesh<SkyMeshLayer>({ sky: {} });
+// SkyMeshDesc が登録済みであること
+const skyHandle = view.addMesh<SkyMeshDesc>({ sky: {} });
 
 // 基底レイヤーインスタンスにアクセス
-const skyLayer = skyHandle.ref;
+const skyHandle = skyHandle.ref;
 ```
 
 ### Methods
@@ -274,8 +274,8 @@ update(updates: UpdateConfig): void
 **Example:**
 
 ```typescript
-// SkyMeshLayer が登録済みであること
-const skyHandle = view.addMesh<SkyMeshLayer>({ sky: {} });
+// SkyMeshDesc が登録済みであること
+const skyHandle = view.addMesh<SkyMeshDesc>({ sky: {} });
 
 // 設定を更新
 skyHandle.update({ sunAngularRadius: 0.05 });
@@ -319,7 +319,7 @@ skyHandle.on("deleted", () => {
 
 ---
 
-## LayerDeclaration
+## BaseDesc
 
 メッシュレイヤー、ライトレイヤー、エフェクトレイヤーの抽象基底クラスです。カスタムレイヤータイプを作成するにはこのクラスを拡張します。
 
@@ -327,8 +327,8 @@ skyHandle.on("deleted", () => {
 
 ### Type Parameters
 
-- `Config` - レイヤーの設定型（LayerDeclarationConfig を拡張）
-- `UpdateConfig` - 更新可能な設定プロパティ（LayerDeclarationConfigUpdate を拡張）
+- `Config` - レイヤーの設定型（BaseDescConfig を拡張）
+- `UpdateConfig` - 更新可能な設定プロパティ（BaseDescConfigUpdate を拡張）
 - `Instance` - レイヤーが作成する基底の Three.js オブジェクト型
 - `CustomEvent` - レイヤーが発火できる追加のカスタムイベント
 
@@ -360,7 +360,7 @@ abstract onCreate(): void
 
 #### onUpdateConfig()
 
-`LayerHandle.update()` を介してレイヤー設定が更新されたときに呼び出されます。カスタム設定の更新を処理するためにオーバーライドします。
+`BaseHandle.update()` を介してレイヤー設定が更新されたときに呼び出されます。カスタム設定の更新を処理するためにオーバーライドします。
 
 **Syntax:**
 
@@ -374,7 +374,7 @@ onUpdateConfig(updates: UpdateConfig): void
 
 #### onDestroy()
 
-`LayerHandle.delete()` を介してレイヤーが削除されたときに呼び出されます。リソースをクリーンアップするためにオーバーライドします。`super.onDestroy()` を呼び出すことを忘れないでください。
+`BaseHandle.delete()` を介してレイヤーが削除されたときに呼び出されます。リソースをクリーンアップするためにオーバーライドします。`super.onDestroy()` を呼び出すことを忘れないでください。
 
 **Syntax:**
 
@@ -385,17 +385,17 @@ onDestroy(): void
 ### Example
 
 ```typescript
-import { LayerDeclaration, type LayerDeclarationConfig } from "@navara/three";
+import { BaseDesc, type BaseDescConfig } from "@navara/three";
 import { BoxGeometry, Mesh, MeshBasicMaterial } from "three";
 
 // カスタム設定型を定義
-type MyBoxConfig = LayerDeclarationConfig & {
+type MyBoxConfig = BaseDescConfig & {
   size?: number;
   color?: number;
 };
 
 // カスタムレイヤーを作成
-class MyBoxLayer extends LayerDeclaration<MyBoxConfig, MyBoxConfig, Mesh> {
+class MyBoxDesc extends BaseDesc<MyBoxConfig, MyBoxConfig, Mesh> {
   private size: number;
   private color: number;
 
@@ -431,7 +431,7 @@ class MyBoxLayer extends LayerDeclaration<MyBoxConfig, MyBoxConfig, Mesh> {
 }
 ```
 
-### LayerDeclarationConfig
+### BaseDescConfig
 
 すべてのメッシュ・エフェクト・ライトレイヤーに共通する基本設定オプション。
 

@@ -1,11 +1,11 @@
 ---
 title: RainMeshLayer
-description: Rain mesh layer for navara_three
+description: Rain mesh descriptor for navara_three
 sidebar:
   order: 109
 ---
 
-The `RainMeshLayer` class is a mesh layer that displays rain particle effects. It creates realistic rainfall effects using a shader-based particle system.
+The `RainMeshLayer` class is a mesh descriptor that displays rain particle effects. It creates realistic rainfall effects using a shader-based particle system.
 
 ## Common Properties
 

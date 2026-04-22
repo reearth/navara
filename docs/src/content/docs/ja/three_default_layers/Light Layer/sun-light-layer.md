@@ -1,6 +1,6 @@
 ---
 title: SunLightLayer
-description: Sun light layer for navara_three
+description: Sun light descriptor for navara_three
 sidebar:
   order: 154
 ---
@@ -356,7 +356,7 @@ view.addPlugin(plugin);
 await view.init();
 
 // デフォルトのフォトリアルレイヤーを追加（SunLightLayerが含まれる）
-const defaultLayers = plugin.addDefaultPhotorealLayers();
+const defaultLayers = plugin.addDefaultPhotorealScene();
 
 // 太陽光の設定を更新
 defaultLayers.sun.update({

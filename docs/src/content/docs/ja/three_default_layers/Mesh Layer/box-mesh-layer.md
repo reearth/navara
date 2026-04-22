@@ -1,6 +1,6 @@
 ---
 title: BoxMeshLayer
-description: Box mesh layer for navara_three
+description: Box mesh descriptor for navara_three
 sidebar:
   order: 102
 ---

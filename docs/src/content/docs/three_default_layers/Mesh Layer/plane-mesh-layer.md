@@ -1,11 +1,11 @@
 ---
 title: PlaneMeshLayer
-description: Plane mesh layer for navara_three
+description: Plane mesh descriptor for navara_three
 sidebar:
   order: 105
 ---
 
-The `PlaneMeshLayer` class is a mesh layer for drawing plane geometry. You can create a plane by specifying width and height.
+The `PlaneMeshLayer` class is a mesh descriptor for drawing plane geometry. You can create a plane by specifying width and height.
 
 ## Properties
 
@@ -219,7 +219,7 @@ import { Color } from "@navara/three";
 
 **Type:** `string[]` (optional)
 
-**Description:** Specifies an array of selective effect layer IDs to apply to this mesh.
+**Description:** Specifies an array of selective effect descriptor IDs to apply to this mesh.
 
 **Example:**
 

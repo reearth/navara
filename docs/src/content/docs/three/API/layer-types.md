@@ -1,6 +1,6 @@
 ---
-title: Layer Types
-description: API Reference for Layer, LayerHandle, and LayerDeclaration types
+title: Descriptor Types
+description: API Reference for Layer, BaseHandle, and BaseDesc types
 sidebar:
   order: 15
 ---
@@ -8,9 +8,9 @@ sidebar:
 In navara_three, layers are classified into the following 4 types:
 
 1. **Resource Layers** - Layers that load and display geographic data from external data sources (raster tiles, terrain, GeoJSON, 3D Tiles, etc.)
-2. **Mesh Layers** - Layers that add 3D mesh objects to the scene
-3. **Effect Layers** - Layers that apply post-processing effects
-4. **Light Layers** - Layers that manage scene lighting
+2. **Mesh Descs** - Layers that add 3D mesh objects to the scene
+3. **Effect Descs** - Layers that apply post-processing effects
+4. **Light Descs** - Layers that manage scene lighting
 
 Resource layers and other layers (mesh, effect, light) return different handle classes.
 
@@ -45,14 +45,14 @@ update(l: LayerDescription): void
 **Example:**
 
 ```typescript
-const geoJsonLayer = view.addLayer({
+const geoJsonHandle = view.addLayer({
   type: "geojson",
   data: { url: "https://example.com/data.geojson" },
   point: { color: 0xff0000 },
 });
 
 // Update layer settings
-geoJsonLayer.update({
+geoJsonHandle.update({
   type: "geojson",
   data: { url: "https://example.com/data.geojson" },
   point: { color: 0x00ff00 },
@@ -72,7 +72,7 @@ delete(): void
 **Example:**
 
 ```typescript
-geoJsonLayer.delete();
+geoJsonHandle.delete();
 ```
 
 #### forceUpdate()
@@ -203,9 +203,9 @@ layer.on("deleted", () => {
 
 ---
 
-## LayerHandle
+## BaseHandle
 
-A handle class for controlling mesh layers, light layers, and effect layers. Returned when adding a layer with `ThreeView.addMesh()`, `ThreeView.addLight()`, or `ThreeView.addEffect()`.
+A handle class for controlling mesh descriptors, light descriptors, and effect descriptors. Returned when adding a layer with `ThreeView.addMesh()`, `ThreeView.addLight()`, or `ThreeView.addEffect()`.
 
 ### Properties
 
@@ -218,8 +218,8 @@ A handle class for controlling mesh layers, light layers, and effect layers. Ret
 **Example:**
 
 ```typescript
-// SkyMeshLayer must be registered
-const skyHandle = view.addMesh<SkyMeshLayer>({ sky: {} });
+// SkyMeshDesc must be registered
+const skyHandle = view.addMesh<SkyMeshDesc>({ sky: {} });
 console.log("Layer ID:", skyHandle.id);
 ```
 
@@ -241,18 +241,18 @@ skyHandle.visible = false;
 
 #### ref
 
-**Type:** `T` (subclass of LayerDeclaration)
+**Type:** `T` (subclass of BaseDesc)
 
 **Description:** Provides direct access to the underlying layer instance. Use this to access layer-specific methods and properties not exposed through the handle.
 
 **Example:**
 
 ```typescript
-// SkyMeshLayer must be registered
-const skyHandle = view.addMesh<SkyMeshLayer>({ sky: {} });
+// SkyMeshDesc must be registered
+const skyHandle = view.addMesh<SkyMeshDesc>({ sky: {} });
 
 // Access the underlying layer instance
-const skyLayer = skyHandle.ref;
+const skyHandle = skyHandle.ref;
 ```
 
 ### Methods
@@ -274,8 +274,8 @@ update(updates: UpdateConfig): void
 **Example:**
 
 ```typescript
-// SkyMeshLayer must be registered
-const skyHandle = view.addMesh<SkyMeshLayer>({ sky: {} });
+// SkyMeshDesc must be registered
+const skyHandle = view.addMesh<SkyMeshDesc>({ sky: {} });
 
 // Update settings
 skyHandle.update({ sunAngularRadius: 0.05 });
@@ -319,16 +319,16 @@ skyHandle.on("deleted", () => {
 
 ---
 
-## LayerDeclaration
+## BaseDesc
 
-An abstract base class for mesh layers, light layers, and effect layers. Extend this class to create custom layer types.
+An abstract base class for mesh descriptors, light descriptors, and effect descriptors. Extend this class to create custom descriptor types.
 
 These layers differ from resource layers in that they are purely client-side and do not load data from external sources. They directly create Three.js objects.
 
 ### Type Parameters
 
-- `Config` - The layer configuration type (extends LayerDeclarationConfig)
-- `UpdateConfig` - Updatable configuration properties (extends LayerDeclarationConfigUpdate)
+- `Config` - The layer configuration type (extends BaseDescConfig)
+- `UpdateConfig` - Updatable configuration properties (extends BaseDescConfigUpdate)
 - `Instance` - The underlying Three.js object type that the layer creates
 - `CustomEvent` - Additional custom events that the layer can fire
 
@@ -360,7 +360,7 @@ abstract onCreate(): void
 
 #### onUpdateConfig()
 
-Called when the layer configuration is updated via `LayerHandle.update()`. Override to handle custom configuration updates.
+Called when the layer configuration is updated via `BaseHandle.update()`. Override to handle custom configuration updates.
 
 **Syntax:**
 
@@ -374,7 +374,7 @@ onUpdateConfig(updates: UpdateConfig): void
 
 #### onDestroy()
 
-Called when the layer is removed via `LayerHandle.delete()`. Override to clean up resources. Remember to call `super.onDestroy()`.
+Called when the layer is removed via `BaseHandle.delete()`. Override to clean up resources. Remember to call `super.onDestroy()`.
 
 **Syntax:**
 
@@ -385,17 +385,17 @@ onDestroy(): void
 ### Example
 
 ```typescript
-import { LayerDeclaration, type LayerDeclarationConfig } from "@navara/three";
+import { BaseDesc, type BaseDescConfig } from "@navara/three";
 import { BoxGeometry, Mesh, MeshBasicMaterial } from "three";
 
 // Define custom configuration type
-type MyBoxConfig = LayerDeclarationConfig & {
+type MyBoxConfig = BaseDescConfig & {
   size?: number;
   color?: number;
 };
 
 // Create custom layer
-class MyBoxLayer extends LayerDeclaration<MyBoxConfig, MyBoxConfig, Mesh> {
+class MyBoxDesc extends BaseDesc<MyBoxConfig, MyBoxConfig, Mesh> {
   private size: number;
   private color: number;
 
@@ -431,9 +431,9 @@ class MyBoxLayer extends LayerDeclaration<MyBoxConfig, MyBoxConfig, Mesh> {
 }
 ```
 
-### LayerDeclarationConfig
+### BaseDescConfig
 
-Base configuration options common to all mesh, effect, and light layers.
+Base configuration options common to all mesh, effect, and light descriptors.
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|

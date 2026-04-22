@@ -1,6 +1,6 @@
 ---
 title: AerialPerspectiveEffectLayer
-description: Aerial perspective effect layer for navara_three
+description: Aerial perspective effect descriptor for navara_three
 sidebar:
   order: 51
 ---
@@ -19,7 +19,7 @@ See [Atmosphere class](../../../three/api-reference/atmosphere/) for details on 
 
 **Type:** `boolean | undefined`
 
-**Description:** Controls the visibility of the effect layer.
+**Description:** Controls the visibility of the effect descriptor.
 
 **Default:** `true`
 
@@ -138,7 +138,7 @@ See [Atmosphere class](../../../three/api-reference/atmosphere/) for details on 
 
 ## Usage Examples
 
-### Enable aerial perspective with default effect layers
+### Enable aerial perspective with default effect descriptors
 
 ```typescript
 import ThreeView from "@navara/three";
@@ -150,7 +150,7 @@ view.addPlugin(plugin);
 await view.init();
 
 // Add default photorealistic layers (includes AerialPerspectiveEffectLayer)
-const defaultLayers = plugin.addDefaultPhotorealLayers();
+const defaultLayers = plugin.addDefaultPhotorealScene();
 
 // Update aerial perspective effect settings
 defaultLayers.aerialPerspective.update({
@@ -173,7 +173,7 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-const defaultLayers = plugin.addDefaultPhotorealLayers();
+const defaultLayers = plugin.addDefaultPhotorealScene();
 
 // Enable irradiance when using cloud shadows
 defaultLayers.aerialPerspective.update({
@@ -184,7 +184,7 @@ defaultLayers.aerialPerspective.update({
   },
 });
 
-// Add clouds effect layer
+// Add clouds effect descriptor
 view.addEffect<CloudsEffectLayer>({
   clouds: {
     shadows: true,

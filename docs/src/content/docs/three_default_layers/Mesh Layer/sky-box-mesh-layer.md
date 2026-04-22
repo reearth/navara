@@ -1,6 +1,6 @@
 ---
 title: SkyBoxMeshLayer
-description: Sky box mesh layer for navara_three
+description: Sky box mesh descriptor for navara_three
 sidebar:
   order: 112
 ---

@@ -1,6 +1,6 @@
 ---
 title: SnowMeshLayer
-description: Snow mesh layer for navara_three
+description: Snow mesh descriptor for navara_three
 sidebar:
   order: 110
 ---

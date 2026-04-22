@@ -16,9 +16,9 @@ sidebar:
 ```
 navara_three（コア）
   └── three_default_layers（デフォルトレイヤー実装）
-        ├── Mesh Layer（3D メッシュ）
-        ├── Effect Layer（ポストプロセッシング）
-        └── Light Layer（照明）
+        ├── Mesh Desc（3D メッシュ）
+        ├── Effect Desc（ポストプロセッシング）
+        └── Light Desc（照明）
 ```
 
 ## 使い方
@@ -27,14 +27,14 @@ navara_three（コア）
 
 ```typescript
 import ThreeView from "@navara/three";
-import { BoxMeshLayer, FXAAEffectLayer, SunLightLayer } from "@navara/three_default_layers";
+import { BoxMeshDesc, FXAAEffectDesc, SunLightDesc } from "@navara/three_default_layers";
 
 const view = new ThreeView();
 
 // レイヤークラスを登録
-view.registerMesh("box", BoxMeshLayer);
-view.registerEffect("fxaa", FXAAEffectLayer);
-view.registerLight("sun", SunLightLayer);
+view.registerMesh("box", BoxMeshDesc);
+view.registerEffect("fxaa", FXAAEffectDesc);
+view.registerLight("sun", SunLightDesc);
 
 await view.init({ canvas: document.getElementById("canvas") });
 
@@ -55,48 +55,48 @@ view.addLight({ sun: { intensity: 1.0 } });
 3D メッシュオブジェクトをシーンに追加するレイヤーです。ボックス、球体、円柱などの基本形状や、glTF モデルの読み込みに対応しています。
 
 ```typescript
-import { BoxMeshLayer, GLTFModelLayer } from "@navara/three_default_layers";
+import { BoxMeshDesc, GLTFModelDesc } from "@navara/three_default_layers";
 
-view.registerMesh("box", BoxMeshLayer);
-view.registerMesh("gltfModel", GLTFModelLayer);
+view.registerMesh("box", BoxMeshDesc);
+view.registerMesh("gltfModel", GLTFModelDesc);
 
 // 登録後に使用
 view.addMesh({ box: { width: 100, height: 100, depth: 100 } });
 view.addMesh({ gltfModel: { url: "model.glb" } });
 ```
 
-詳細は [Mesh Layer Reference](../../../three_default_layers/mesh-layer/about/) を参照してください。
+詳細は [Mesh Desc Reference](../../../three_default_layers/mesh-desc/about/) を参照してください。
 
 ### エフェクトレイヤー
 
 ポストプロセッシングエフェクトを適用するレイヤーです。アンチエイリアス、SSAO、SSR など、豊富なエフェクトを提供します。
 
 ```typescript
-import { FXAAEffectLayer, SSAOEffectLayer } from "@navara/three_default_layers";
+import { FXAAEffectDesc, SSAOEffectDesc } from "@navara/three_default_layers";
 
-view.registerEffect("fxaa", FXAAEffectLayer);
-view.registerEffect("ssao", SSAOEffectLayer);
+view.registerEffect("fxaa", FXAAEffectDesc);
+view.registerEffect("ssao", SSAOEffectDesc);
 
 // 登録後に使用
 view.addEffect({ fxaa: {} });
 view.addEffect({ ssao: {} });
 ```
 
-詳細は [Effect Layer Reference](../../../three_default_layers/effect-layer/about/) を参照してください。
+詳細は [Effect Desc Reference](../../../three_default_layers/effect-desc/about/) を参照してください。
 
 ### ライトレイヤー
 
 シーンの照明を管理するレイヤーです。太陽光、環境光、ライトプローブなどを提供します。
 
 ```typescript
-import { SunLightLayer, AmbientLightLayer } from "@navara/three_default_layers";
+import { SunLightDesc, AmbientLightDesc } from "@navara/three_default_layers";
 
-view.registerLight("sun", SunLightLayer);
-view.registerLight("ambient", AmbientLightLayer);
+view.registerLight("sun", SunLightDesc);
+view.registerLight("ambient", AmbientLightDesc);
 
 // 登録後に使用
 view.addLight({ sun: { intensity: 1.0, castShadow: true } });
 view.addLight({ ambient: { intensity: 0.3 } });
 ```
 
-詳細は [Light Layer Reference](../../../three_default_layers/light-layer/about/) を参照してください。
+詳細は [Light Desc Reference](../../../three_default_layers/light-desc/about/) を参照してください。

@@ -1,6 +1,6 @@
 ---
 title: CylinderMeshLayer
-description: Cylinder mesh layer for navara_three
+description: Cylinder mesh descriptor for navara_three
 sidebar:
   order: 103
 ---

@@ -1,6 +1,6 @@
 ---
 title: RainDropEffectLayer
-description: Rain drop effect layer for navara_three
+description: Rain drop effect descriptor for navara_three
 sidebar:
   order: 57
 ---
@@ -304,7 +304,7 @@ await view.init();
 view.animation = true;
 
 // デフォルトのフォトリアルレイヤーを追加
-plugin.addDefaultPhotorealLayers();
+plugin.addDefaultPhotorealScene();
 
 // 雨粒エフェクトレイヤーを追加
 const rainDropLayer = view.addEffect<RainDropEffectLayer>({

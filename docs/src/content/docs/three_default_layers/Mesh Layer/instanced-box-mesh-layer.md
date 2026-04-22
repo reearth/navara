@@ -1,11 +1,11 @@
 ---
 title: InstancedBoxMeshLayer
-description: GPU-instanced box mesh layer for navara_three
+description: GPU-instanced box mesh descriptor for navara_three
 sidebar:
   order: 103
 ---
 
-The `InstancedBoxMeshLayer` class is a mesh layer that renders multiple box instances using GPU instancing. All boxes share a single geometry and material, rendered in one draw call for high performance. It extends `InstancedMeshLayerDeclaration`.
+The `InstancedBoxMeshLayer` class is a mesh descriptor that renders multiple box instances using GPU instancing. All boxes share a single geometry and material, rendered in one draw call for high performance. It extends `InstancedMeshLayerDeclaration`.
 
 ## Shared Material Properties
 
@@ -315,7 +315,7 @@ import { Matrix4 } from "three";
 
 **Type:** `string[]` (optional)
 
-**Description:** Specifies an array of selective effect layer IDs to apply to this mesh.
+**Description:** Specifies an array of selective effect descriptor IDs to apply to this mesh.
 
 **Example:**
 

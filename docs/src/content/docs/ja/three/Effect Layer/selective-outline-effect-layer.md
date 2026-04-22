@@ -1,6 +1,6 @@
 ---
 title: SelectiveOutlineEffectLayer
-description: Selective outline effect layer for navara_three
+description: Selective outline effect descriptor for navara_three
 sidebar:
   order: 62
 ---
@@ -175,7 +175,7 @@ view.addPlugin(plugin);
 await view.init();
 
 // デフォルトのフォトリアルレイヤーを追加
-plugin.addDefaultPhotorealLayers();
+plugin.addDefaultPhotorealScene();
 
 // 赤色の太いアウトラインを追加
 const outlineLayer = view.addEffect<SelectiveOutlineEffectLayer>({

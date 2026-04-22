@@ -1,6 +1,6 @@
 ---
 title: ColorGradingLUTEffectLayer
-description: Color grading LUT effect layer for navara_three
+description: Color grading LUT effect descriptor for navara_three
 sidebar:
   order: 53
 ---
@@ -13,7 +13,7 @@ The `ColorGradingLUTEffectLayer` class is a layer that applies color grading eff
 
 **Type:** `boolean | undefined`
 
-**Description:** Controls the visibility of the effect layer.
+**Description:** Controls the visibility of the effect descriptor.
 
 **Default:** `true`
 
@@ -109,7 +109,7 @@ import ThreeView, { ColorGradingLUTEffectLayer } from "@navara/three";
 const view = new ThreeView();
 await view.init();
 
-// Add color grading LUT effect layer
+// Add color grading LUT effect descriptor
 const colorGradingLayer = view.addEffect<ColorGradingLUTEffectLayer>({
   colorGradingLUT: {},
 });
@@ -126,7 +126,7 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-plugin.addDefaultPhotorealLayers();
+plugin.addDefaultPhotorealScene();
 
 // Add color grading with a custom LUT
 const colorGradingLayer = view.addEffect<ColorGradingLUTEffectLayer>({

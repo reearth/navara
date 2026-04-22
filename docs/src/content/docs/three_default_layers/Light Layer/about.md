@@ -1,15 +1,15 @@
 ---
-title: Light Layer
-description: Light layer types for navara_three
+title: Light Descriptor
+description: Light descriptor types for navara_three
 sidebar:
   order: 150
 ---
 
 LightLayer is a group of classes that manage lighting in a 3D scene. It provides various lighting techniques including ambient light, sunlight, and Image-Based Lighting.
 
-## LightLayer Types
+## LightDescriptor Types
 
-navara_three provides multiple light layer types to address various lighting requirements:
+navara_three provides multiple light descriptor types to address various lighting requirements:
 
 ### [AmbientLightLayer](../../../three/light-layer-reference/ambient-light-layer/)
 
@@ -108,7 +108,7 @@ view.addLight<SunLightLayer>({
 });
 ```
 
-## Light Layer Types Comparison
+## Light Descriptor Types Comparison
 
 | Light Type             | Shadows     | Dynamic Update | Atmosphere Integration | Primary Use          | Performance          |
 | ---------------------- | ----------- | -------------- | ---------------------- | -------------------- | -------------------- |
@@ -132,7 +132,7 @@ view.addLight<AmbientLightLayer>({
 
 ### Recommended Lighting Setup
 
-For realistic scenes, combine multiple light layers. Using `DefaultPlugin` from [three_default_plugin](../../../three_default_plugin/about/) registers all layers at once, and `addDefaultPhotorealLayers()` makes it easy to set up a photorealistic scene.
+For realistic scenes, combine multiple light descriptors. Using `DefaultPlugin` from [three_default_plugin](../../../three_default_plugin/about/) registers all descriptors at once, and `addDefaultPhotorealScene()` makes it easy to set up a photorealistic scene.
 
 ```typescript
 import { DefaultPlugin } from "@navara/three_default_plugin";
@@ -142,7 +142,7 @@ view.addPlugin(plugin);
 await view.init();
 
 // Set up a photorealistic scene at once (includes SunLight + SkyLightProbe, etc.)
-const layers = plugin.addDefaultPhotorealLayers();
+const layers = plugin.addDefaultPhotorealScene();
 
 // Add additional ambient light as needed
 view.addLight<AmbientLightLayer>({
@@ -156,7 +156,7 @@ For night scenes, additional light probes are effective:
 
 ```typescript
 // Set up a photorealistic scene with DefaultPlugin
-const layers = plugin.addDefaultPhotorealLayers();
+const layers = plugin.addDefaultPhotorealScene();
 
 // Night light probe (LightProbeLayer is registered by DefaultPlugin)
 const nightLight = view.addLight<LightProbeLayer>({
@@ -183,7 +183,7 @@ view.atmosphere.on("sunChanged", () => {
 
 ### Integration with the Atmosphere System
 
-The following light layers integrate with the atmosphere system:
+The following light descriptors integrate with the atmosphere system:
 
 - **SkyLightProbeLayer**: Uses the atmosphere's irradiance texture (required)
 - **SunLightLayer**: Uses the atmosphere's transmittance texture (recommended)
@@ -193,5 +193,5 @@ If you are not using the atmosphere system, use AmbientLightLayer and LightProbe
 ## Related Resources
 
 - [Resource Layer Reference](../../../three/resource-layer-reference/about/) - Resource layer details
-- [Effect Layer Reference](../../../three/effect-layer-reference/about/) - Effect layers
+- [Effect Descriptor Reference](../../../three/effect-layer-reference/about/) - Effect descriptors
 - [API Reference](../../../three/api/) - ThreeView API

@@ -1,11 +1,11 @@
 ---
 title: AmbientLightLayer
-description: Ambient light layer for navara_three
+description: Ambient light descriptor for navara_three
 sidebar:
   order: 151
 ---
 
-The `AmbientLightLayer` class represents an ambient light layer that illuminates the entire scene uniformly. AmbientLight illuminates all objects evenly and does not cast shadows.
+The `AmbientLightLayer` class represents an ambient light descriptor that illuminates the entire scene uniformly. AmbientLight illuminates all objects evenly and does not cast shadows.
 
 ## Common Properties
 
@@ -82,7 +82,7 @@ import ThreeView, { AmbientLightLayer, Color } from "@navara/three";
 const view = new ThreeView();
 await view.init();
 
-// Add an ambient light layer
+// Add an ambient light descriptor
 const ambientLight = view.addLight<AmbientLightLayer>({
   ambient: {
     color: new Color().setHex(0xffffff),

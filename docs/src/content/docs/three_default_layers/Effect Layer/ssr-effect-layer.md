@@ -1,6 +1,6 @@
 ---
 title: SSREffectLayer
-description: SSR effect layer for navara_three
+description: SSR effect descriptor for navara_three
 sidebar:
   order: 60
 ---
@@ -13,7 +13,7 @@ The `SSREffectLayer` class is a layer that generates screen-space reflection (SS
 
 **Type:** `boolean | undefined`
 
-**Description:** Controls the visibility of the effect layer.
+**Description:** Controls the visibility of the effect descriptor.
 
 **Default:** `true`
 
@@ -379,7 +379,7 @@ import ThreeView, { SSREffectLayer } from "@navara/three";
 const view = new ThreeView();
 await view.init();
 
-// Add SSR effect layer
+// Add SSR effect descriptor
 const ssrLayer = view.addEffect<SSREffectLayer>({
   ssr: {},
 });
@@ -397,7 +397,7 @@ view.addPlugin(plugin);
 await view.init();
 
 // Add default photorealistic layers
-plugin.addDefaultPhotorealLayers();
+plugin.addDefaultPhotorealScene();
 
 // Add SSR effect
 const ssrLayer = view.addEffect<SSREffectLayer>({

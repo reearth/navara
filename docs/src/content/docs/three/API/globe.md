@@ -113,7 +113,7 @@ view.globe.color = new Color().setStyle("#2d3436");
 **Default:** `true`
 
 :::warning
-Disabling this value may cause unexpected behavior when using effect layers.
+Disabling this value may cause unexpected behavior when using effect descriptors.
 :::
 
 **Example:**

@@ -1,6 +1,6 @@
 ---
 title: CloudsEffectLayer
-description: Clouds effect layer for navara_three
+description: Clouds effect descriptor for navara_three
 sidebar:
   order: 52
 ---
@@ -643,7 +643,7 @@ view.addPlugin(plugin);
 await view.init();
 
 // デフォルトのフォトリアルレイヤーを追加（雲のレンダリングに必要）
-plugin.addDefaultPhotorealLayers();
+plugin.addDefaultPhotorealScene();
 
 // 雲エフェクトレイヤーを追加
 const cloudsLayer = view.addEffect<CloudsEffectLayer>({
@@ -665,7 +665,7 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-const defaultLayers = plugin.addDefaultPhotorealLayers();
+const defaultLayers = plugin.addDefaultPhotorealScene();
 
 // 太陽光の影を有効にする
 defaultLayers.sun.update({
@@ -702,7 +702,7 @@ view.addPlugin(plugin);
 await view.init();
 
 // デフォルトのフォトリアルレイヤーを追加
-plugin.addDefaultPhotorealLayers();
+plugin.addDefaultPhotorealScene();
 
 // 雲レイヤーを霧として使用
 const cloudsLayer = view.addEffect<CloudsEffectLayer>({
@@ -739,7 +739,7 @@ await view.init();
 view.animation = true;
 
 // デフォルトのフォトリアルレイヤーを追加
-plugin.addDefaultPhotorealLayers();
+plugin.addDefaultPhotorealScene();
 
 // 雲の移動速度を設定してレイヤーを追加
 const cloudsLayer = view.addEffect<CloudsEffectLayer>({
@@ -762,7 +762,7 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-const defaultLayers = plugin.addDefaultPhotorealLayers();
+const defaultLayers = plugin.addDefaultPhotorealScene();
 
 // irradianceを有効にして雲の影を描画
 defaultLayers.aerialPerspective.update({

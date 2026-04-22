@@ -1,6 +1,6 @@
 ---
 title: FXAAEffectLayer
-description: FXAA effect layer for navara_three
+description: FXAA effect descriptor for navara_three
 sidebar:
   order: 54
 ---
@@ -13,7 +13,7 @@ The `FXAAEffectLayer` class is a layer that applies the FXAA (Fast Approximate A
 
 **Type:** `boolean | undefined`
 
-**Description:** Controls the visibility of the effect layer.
+**Description:** Controls the visibility of the effect descriptor.
 
 **Default:** `true`
 
@@ -32,7 +32,7 @@ import ThreeView, { FXAAEffectLayer } from "@navara/three";
 const view = new ThreeView();
 await view.init();
 
-// Add FXAA effect layer
+// Add FXAA effect descriptor
 view.addEffect<FXAAEffectLayer>({
   fxaa: {},
 });

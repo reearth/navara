@@ -1,6 +1,6 @@
 ---
 title: ArclineMeshLayer
-description: Arcline mesh layer for navara_three
+description: Arcline mesh descriptor for navara_three
 sidebar:
   order: 101
 ---

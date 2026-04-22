@@ -1,6 +1,6 @@
 ---
 title: DepthOfFieldEffectLayer
-description: Depth of field effect layer for navara_three
+description: Depth of field effect descriptor for navara_three
 sidebar:
   order: 53
 ---
@@ -100,7 +100,7 @@ view.addPlugin(plugin);
 await view.init();
 
 // デフォルトのフォトリアルレイヤーを追加
-const defaultLayers = plugin.addDefaultPhotorealLayers();
+const defaultLayers = plugin.addDefaultPhotorealScene();
 defaultLayers.sun.update({
   sun: {
     intensity: 1,

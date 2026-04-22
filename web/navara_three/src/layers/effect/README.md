@@ -6,4 +6,4 @@ effects).
 
 Independent, self-contained effect descriptors should be implemented as external
 packages (e.g., `@navara/three_default_layers`) using the public
-`EffectLayerDeclaration` API and registered via plugins.
+`EffectDesc` API and registered via plugins.

@@ -1,11 +1,11 @@
 ---
 title: BoxMeshLayer
-description: Box mesh layer for navara_three
+description: Box mesh descriptor for navara_three
 sidebar:
   order: 102
 ---
 
-The `BoxMeshLayer` class is a mesh layer for drawing box geometry. You can create a box by specifying width, height, and depth.
+The `BoxMeshLayer` class is a mesh descriptor for drawing box geometry. You can create a box by specifying width, height, and depth.
 
 ## Properties
 
@@ -260,7 +260,7 @@ import { Color } from "@navara/three";
 
 **Type:** `string[]` (optional)
 
-**Description:** Specifies an array of selective effect layer IDs to apply to this mesh.
+**Description:** Specifies an array of selective effect descriptor IDs to apply to this mesh.
 
 **Example:**
 

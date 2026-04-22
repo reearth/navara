@@ -11,7 +11,7 @@ This page describes all functions (methods) available on a ThreeView instance.
 
 ### addLayer()
 
-Adds a new resource layer to navara_three. This method is used for resource layers only (tiles, terrain, geojson, mvt, cesium3dtiles, b3dm, pnts). For mesh, light, and effect layers, use `addMesh()`, `addLight()`, and `addEffect()` respectively.
+Adds a new resource layer to navara_three. This method is used for resource layers only (tiles, terrain, geojson, mvt, cesium3dtiles, b3dm, pnts). For mesh, light, and effect descriptors, use `addMesh()`, `addLight()`, and `addEffect()` respectively.
 
 **Syntax:**
 
@@ -51,100 +51,101 @@ const layer = view.addLayer({
 
 ### addMesh()
 
-Adds a new mesh layer to navara_three. The mesh layer class must be registered with `registerMesh()` before calling this method.
+Adds a new mesh descriptor to navara_three. The mesh descriptor class must be registered with `registerMesh()` before calling this method.
 
 **Syntax:**
 
 ```tsx
-addMesh<L = unknown>(l: MeshLayerDescription): LayerHandle<L>
+addMesh<L = unknown>(l: MeshDescription): MeshHandle<L>
 ```
 
 **Returns:**
 
 ```tsx
-LayerHandle<L>;
+MeshHandle<L>;
 ```
 
-Returns a `LayerHandle<L>` for controlling the mesh layer.
+Returns a `MeshHandle<L>` for controlling the mesh descriptor.
 
 **Example:**
 
 ```tsx
-// SkyMeshLayer must be registered
-const skyHandle = view.addMesh<SkyMeshLayer>({ sky: {} });
+// SkyMeshDesc must be registered
+const skyHandle = view.addMesh<SkyMeshDesc>({ sky: {} });
 ```
 
 ### addLight()
 
-Adds a new light layer to navara_three. The light layer class must be registered with `registerLight()` before calling this method.
+Adds a new light descriptor to navara_three. The light descriptor class must be registered with `registerLight()` before calling this method.
 
 **Syntax:**
 
 ```tsx
-addLight<L = unknown>(l: LightLayerDescription): LayerHandle<L>
+addLight<L = unknown>(l: LightDescription): LightHandle<L>
 ```
 
 **Returns:**
 
 ```tsx
-LayerHandle<L>;
+LightHandle<L>;
 ```
 
-Returns a `LayerHandle<L>` for controlling the light layer.
+Returns a `LightHandle<L>` for controlling the light descriptor.
 
 **Example:**
 
 ```tsx
-// SunLightLayer must be registered
-const sunHandle = view.addLight<SunLightLayer>({ sun: { intensity: 1.0 } });
+// SunLightDesc must be registered
+const sunHandle = view.addLight<SunLightDesc>({ sun: { intensity: 1.0 } });
 ```
 
 ### addEffect()
 
-Adds a new effect layer to navara_three. The effect layer class must be registered with `registerEffect()` before calling this method.
+Adds a new effect descriptor to navara_three. The effect descriptor class must be registered with `registerEffect()` before calling this method.
 
 **Syntax:**
 
 ```tsx
-addEffect<L = unknown>(l: EffectLayerDescription): LayerHandle<L>
+addEffect<L = unknown>(l: EffectDescription): EffectHandle<L>
 ```
 
 **Returns:**
 
 ```tsx
-LayerHandle<L>;
+EffectHandle<L>;
 ```
 
-Returns a `LayerHandle<L>` for controlling the effect layer.
+Returns a `EffectHandle<L>` for controlling the effect descriptor.
 
 **Example:**
 
 ```tsx
-// FXAAEffectLayer must be registered
-const fxaaHandle = view.addEffect<FXAAEffectLayer>({ fxaa: {} });
+// FXAAEffectDesc must be registered
+const fxaaHandle = view.addEffect<FXAAEffectDesc>({ fxaa: {} });
 ```
 
 ### updateLayerById()
 
-Updates a specific layer on navara_three.
+Updates an existing resource layer's configuration by its ID.
+Only works for resource layers added via `addLayer()`.
 
 **Syntax:**
 
 ```tsx
-updateLayerById(layerId: string, l: LayerDescription): void
+updateLayerById(id: string, l: LayerDescription): void
 ```
 
 **Parameters:**
 
-- `layerId`: The ID of the layer to update
+- `id`: The unique identifier of the layer to update
 - `l`: Specifies the properties to update
 
 **Example:**
 
 ```tsx
-const layerId = layer.id; // Get the layer ID from the addLayer return value
+const id = layer.id; // Get the layer ID from the addLayer return value
 
-view.updateLayerById(layerId, {
+view.updateLayerById(id, {
   type: "tiles",
   data: {
     url: "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg",
@@ -159,26 +160,166 @@ view.updateLayerById(layerId, {
 });
 ```
 
-### deleteLayerById()
+### updateMeshById()
 
-Deletes a specific layer from navara_three.
+Updates an existing mesh descriptor's configuration by its ID.
+Accepts the same descriptor shape as `addMesh()`.
 
 **Syntax:**
 
 ```tsx
-deleteLayerById(layerId: string): void
+updateMeshById(id: string, updates: OmitType<MeshConfig | D["mesh"]>): void
 ```
 
 **Parameters:**
 
-- `layerId`: The ID of the layer to delete
+- `id`: The unique identifier of the mesh to update
+- `updates`: Configuration object with properties to update (same shape as `addMesh()`)
 
 **Example:**
 
 ```tsx
-const layerId = layer.id;
+const handle = view.addMesh<BoxMeshDesc>({ box: { width: 100 } });
 
-view.deleteLayerById(layerId);
+view.updateMeshById(handle.id, { box: { width: 200 } });
+```
+
+### updateLightById()
+
+Updates an existing light descriptor's configuration by its ID.
+Accepts the same descriptor shape as `addLight()`.
+
+**Syntax:**
+
+```tsx
+updateLightById(id: string, updates: OmitType<LightConfig | D["light"]>): void
+```
+
+**Parameters:**
+
+- `id`: The unique identifier of the light to update
+- `updates`: Configuration object with properties to update (same shape as `addLight()`)
+
+**Example:**
+
+```tsx
+const handle = view.addLight<SunLightDesc>({ sun: { intensity: 1.0 } });
+
+view.updateLightById(handle.id, { sun: { intensity: 0.5 } });
+```
+
+### updateEffectById()
+
+Updates an existing effect descriptor's configuration by its ID.
+Accepts the same descriptor shape as `addEffect()`.
+
+**Syntax:**
+
+```tsx
+updateEffectById(id: string, updates: OmitType<BuiltInEffectDescription | EffectConfig | D["effect"]>): void
+```
+
+**Parameters:**
+
+- `id`: The unique identifier of the effect to update
+- `updates`: Configuration object with properties to update (same shape as `addEffect()`)
+
+**Example:**
+
+```tsx
+const handle = view.addEffect<SSAOEffectDesc>({ ssao: { radius: 0.5 } });
+
+view.updateEffectById(handle.id, { ssao: { radius: 1.0 } });
+```
+
+### deleteLayerById()
+
+Deletes a resource layer from the scene by its ID.
+
+**Syntax:**
+
+```tsx
+deleteLayerById(id: string): boolean
+```
+
+**Parameters:**
+
+- `id`: The unique identifier of the layer to delete
+
+**Returns:** `true` if the layer was found and deleted, `false` otherwise.
+
+**Example:**
+
+```tsx
+const id = layer.id;
+
+view.deleteLayerById(id);
+```
+
+### deleteMeshById()
+
+Deletes a mesh descriptor from the scene by its ID.
+
+**Syntax:**
+
+```tsx
+deleteMeshById(id: string): boolean
+```
+
+**Parameters:**
+
+- `id`: The unique identifier of the mesh to delete
+
+**Returns:** `true` if the mesh was found and deleted, `false` otherwise.
+
+**Example:**
+
+```tsx
+view.deleteMeshById(handle.id);
+```
+
+### deleteLightById()
+
+Deletes a light descriptor from the scene by its ID.
+
+**Syntax:**
+
+```tsx
+deleteLightById(id: string): boolean
+```
+
+**Parameters:**
+
+- `id`: The unique identifier of the light to delete
+
+**Returns:** `true` if the light was found and deleted, `false` otherwise.
+
+**Example:**
+
+```tsx
+view.deleteLightById(handle.id);
+```
+
+### deleteEffectById()
+
+Deletes an effect descriptor from the scene by its ID.
+
+**Syntax:**
+
+```tsx
+deleteEffectById(id: string): boolean
+```
+
+**Parameters:**
+
+- `id`: The unique identifier of the effect to delete
+
+**Returns:** `true` if the effect was found and deleted, `false` otherwise.
+
+**Example:**
+
+```tsx
+view.deleteEffectById(handle.id);
 ```
 
 ### init()
@@ -644,83 +785,83 @@ view.on("click", (event) => {
 
 ### registerMesh()
 
-Registers a custom mesh layer class.
+Registers a custom mesh descriptor class.
 
 **Syntax:**
 
 ```tsx
-registerMesh(name: string, meshClass: MeshLayerConstructor): void
+registerMesh(name: string, meshClass: MeshDescConstructor): void
 ```
 
 **Parameters:**
 
-- `name`: Name of the mesh layer to register
-- `meshClass`: Constructor of the mesh layer
+- `name`: Name of the mesh descriptor to register
+- `meshClass`: Constructor of the mesh descriptor
 
 **Example:**
 
 ```tsx
-class CustomMeshLayer extends MeshLayer {
+class CustomMeshDesc extends MeshDesc {
   onCreate() {
     // Custom implementation
   }
 }
 
-view.registerMesh("customMesh", CustomMeshLayer);
+view.registerMesh("customMesh", CustomMeshDesc);
 ```
 
 ### registerLight()
 
-Registers a custom light layer class.
+Registers a custom light descriptor class.
 
 **Syntax:**
 
 ```tsx
-registerLight(name: string, lightClass: LightLayerConstructor): void
+registerLight(name: string, lightClass: LightDescConstructor): void
 ```
 
 **Parameters:**
 
-- `name`: Name of the light layer to register
-- `lightClass`: Constructor of the light layer
+- `name`: Name of the light descriptor to register
+- `lightClass`: Constructor of the light descriptor
 
 **Example:**
 
 ```tsx
-class CustomLightLayer extends LightLayer {
+class CustomLightDesc extends LightDesc {
   onCreate() {
     // Custom implementation
   }
 }
 
-view.registerLight("customLight", CustomLightLayer);
+view.registerLight("customLight", CustomLightDesc);
 ```
 
 ### registerEffect()
 
-Registers a custom effect layer class.
+Registers a custom effect descriptor class.
 
 **Syntax:**
 
 ```tsx
-registerEffect(name: string, effectClass: EffectLayerConstructor): void
+registerEffect(name: string, effectClass: EffectDescConstructor): void
 ```
 
 **Parameters:**
 
-- `name`: Name of the effect layer to register
-- `effectClass`: Constructor of the effect layer
+- `name`: Name of the effect descriptor to register
+- `effectClass`: Constructor of the effect descriptor
 
 **Example:**
 
 ```tsx
-class CustomEffectLayer extends EffectLayer {
+class CustomEffectDesc extends EffectDesc {
   onCreate() {
     // Custom implementation
   }
 }
 
-view.registerEffect("customEffect", CustomEffectLayer);
+view.registerEffect("customEffect", CustomEffectDesc);
 ```
 
 ### addPlugin()

@@ -1,5 +1,5 @@
 ---
-title: Effect Layer
+title: Effect Descriptor
 description: navara_three のコアエフェクトレイヤータイプ
 sidebar:
   order: 60

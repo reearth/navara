@@ -1,6 +1,6 @@
 ---
 title: LensFlareEffectLayer
-description: Lens flare effect layer for navara_three
+description: Lens flare effect descriptor for navara_three
 sidebar:
   order: 56
 ---
@@ -49,7 +49,7 @@ view.addPlugin(plugin);
 await view.init();
 
 // デフォルトのフォトリアルレイヤーを追加（LensFlareEffectLayerを含む）
-const defaultLayers = plugin.addDefaultPhotorealLayers();
+const defaultLayers = plugin.addDefaultPhotorealScene();
 
 // レンズフレアを有効にして強度を設定
 defaultLayers.lensFlare.update({

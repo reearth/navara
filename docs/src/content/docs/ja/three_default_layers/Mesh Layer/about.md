@@ -1,6 +1,6 @@
 ---
-title: Mesh Layer
-description: Mesh layer types for navara_three
+title: Mesh Descriptor
+description: Mesh descriptor types for navara_three
 sidebar:
   order: 100
 ---

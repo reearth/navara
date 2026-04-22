@@ -1,11 +1,11 @@
 ---
 title: GlowGlobeMeshLayer
-description: Glow globe mesh layer for navara_three
+description: Glow globe mesh descriptor for navara_three
 sidebar:
   order: 108
 ---
 
-The `GlowGlobeMeshLayer` class is a mesh layer that displays a Fresnel-effect glow around the globe. It mimics the scattering of light in the atmosphere, creating a beautiful halo effect along the edges of the Earth.
+The `GlowGlobeMeshLayer` class is a mesh descriptor that displays a Fresnel-effect glow around the globe. It mimics the scattering of light in the atmosphere, creating a beautiful halo effect along the edges of the Earth.
 
 ## Properties
 

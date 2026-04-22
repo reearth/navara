@@ -1,6 +1,6 @@
 ---
 title: SkyEnvMapEffectLayer
-description: Sky environment map effect layer for navara_three
+description: Sky environment map effect descriptor for navara_three
 sidebar:
   order: 61
 ---
@@ -49,7 +49,7 @@ view.addPlugin(plugin);
 await view.init();
 
 // デフォルトのフォトリアルレイヤーを追加（空のレンダリングに必要）
-plugin.addDefaultPhotorealLayers();
+plugin.addDefaultPhotorealScene();
 
 // 空環境マップエフェクトレイヤーを追加
 view.addEffect<SkyEnvMapEffectLayer>({
@@ -71,7 +71,7 @@ view.addPlugin(plugin);
 await view.init();
 
 // デフォルトのフォトリアルレイヤーを追加
-plugin.addDefaultPhotorealLayers();
+plugin.addDefaultPhotorealScene();
 
 // 高解像度の環境マップを作成
 view.addEffect<SkyEnvMapEffectLayer>({
@@ -93,7 +93,7 @@ view.addPlugin(plugin);
 await view.init();
 
 // デフォルトのフォトリアルレイヤーを追加
-plugin.addDefaultPhotorealLayers();
+plugin.addDefaultPhotorealScene();
 
 // 空環境マップを追加（反射に使用される）
 view.addEffect<SkyEnvMapEffectLayer>({

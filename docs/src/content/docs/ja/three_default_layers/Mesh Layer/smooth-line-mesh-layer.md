@@ -1,6 +1,6 @@
 ---
 title: SmoothLineMeshLayer
-description: Smooth line mesh layer for navara_three
+description: Smooth line mesh descriptor for navara_three
 sidebar:
   order: 107
 ---

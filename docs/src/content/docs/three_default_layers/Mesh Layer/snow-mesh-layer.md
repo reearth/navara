@@ -1,11 +1,11 @@
 ---
 title: SnowMeshLayer
-description: Snow mesh layer for navara_three
+description: Snow mesh descriptor for navara_three
 sidebar:
   order: 110
 ---
 
-The `SnowMeshLayer` class is a mesh layer that displays snow particle effects. It creates realistic snowfall effects using texture-based point sprites.
+The `SnowMeshLayer` class is a mesh descriptor that displays snow particle effects. It creates realistic snowfall effects using texture-based point sprites.
 
 ## Common Properties
 

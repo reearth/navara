@@ -1,11 +1,11 @@
 ---
 title: CloudsEffectLayer
-description: Clouds effect layer for navara_three
+description: Clouds effect descriptor for navara_three
 sidebar:
   order: 52
 ---
 
-The `CloudsEffectLayer` class is an effect layer that renders real-time volumetric clouds. It provides advanced cloud visual effects including atmospheric scattering, shadows, and haze.
+The `CloudsEffectLayer` class is an effect descriptor that renders real-time volumetric clouds. It provides advanced cloud visual effects including atmospheric scattering, shadows, and haze.
 
 This effect uses atmospheric textures and sun direction provided by the `Atmosphere` class to calculate physically accurate cloud lighting.
 
@@ -19,7 +19,7 @@ See [Atmosphere class](../../../three/api-reference/atmosphere/) for details on 
 
 **Type:** `boolean | undefined`
 
-**Description:** Controls the visibility of the effect layer.
+**Description:** Controls the visibility of the effect descriptor.
 
 **Default:** `true`
 
@@ -99,7 +99,7 @@ See [Atmosphere class](../../../three/api-reference/atmosphere/) for details on 
 
 **Type:** `boolean | undefined`
 
-**Description:** Specifies whether to enable shadows for all layers. `Atmosphere.irradiance` must also be enabled.
+**Description:** Specifies whether to enable shadows for all descriptors. `Atmosphere.irradiance` must also be enabled.
 
 **Default:** `true`
 
@@ -631,7 +631,7 @@ import { Vector3 } from "three";
 
 ## Usage Examples
 
-### Adding a basic clouds effect layer
+### Adding a basic clouds effect descriptor
 
 ```typescript
 import ThreeView, { CloudsEffectLayer } from "@navara/three";
@@ -643,9 +643,9 @@ view.addPlugin(plugin);
 await view.init();
 
 // Add default photorealistic layers (required for cloud rendering)
-plugin.addDefaultPhotorealLayers();
+plugin.addDefaultPhotorealScene();
 
-// Add clouds effect layer
+// Add clouds effect descriptor
 const cloudsLayer = view.addEffect<CloudsEffectLayer>({
   clouds: {
     coverage: 0.5,
@@ -665,7 +665,7 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-const defaultLayers = plugin.addDefaultPhotorealLayers();
+const defaultLayers = plugin.addDefaultPhotorealScene();
 
 // Enable sunlight shadows
 defaultLayers.sun.update({
@@ -681,7 +681,7 @@ defaultLayers.aerialPerspective.update({
   },
 });
 
-// Add clouds effect layer (with shadows enabled)
+// Add clouds effect descriptor (with shadows enabled)
 const cloudsLayer = view.addEffect<CloudsEffectLayer>({
   clouds: {
     shadows: true,
@@ -701,7 +701,7 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-plugin.addDefaultPhotorealLayers();
+plugin.addDefaultPhotorealScene();
 
 // Use the clouds layer as fog
 const cloudsLayer = view.addEffect<CloudsEffectLayer>({
@@ -737,7 +737,7 @@ await view.init();
 // Enable animation
 view.animation = true;
 
-plugin.addDefaultPhotorealLayers();
+plugin.addDefaultPhotorealScene();
 
 // Set cloud movement velocity and add the layer
 const cloudsLayer = view.addEffect<CloudsEffectLayer>({
@@ -760,7 +760,7 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-const defaultLayers = plugin.addDefaultPhotorealLayers();
+const defaultLayers = plugin.addDefaultPhotorealScene();
 
 // Enable irradiance to render cloud shadows
 defaultLayers.aerialPerspective.update({

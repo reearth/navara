@@ -1,6 +1,6 @@
 ---
 title: SelectiveOutlineEffectLayer
-description: Selective outline effect layer for navara_three
+description: Selective outline effect descriptor for navara_three
 sidebar:
   order: 62
 ---
@@ -13,7 +13,7 @@ The `SelectiveOutlineEffectLayer` class is a layer that applies a selective outl
 
 **Type:** `boolean | undefined`
 
-**Description:** Controls the visibility of the effect layer.
+**Description:** Controls the visibility of the effect descriptor.
 
 **Default:** `true`
 
@@ -111,11 +111,11 @@ import { Color } from "@navara/three";
 
 ## Applying the Effect to Objects
 
-To apply the selective outline effect to specific objects, specify the outline effect layer's ID in the target object's `effectIds` property.
+To apply the selective outline effect to specific objects, specify the outline effect descriptor's ID in the target object's `effectIds` property.
 
 ### effectIds
 
-An array of selective effect layer IDs to apply to the target object. When an outline effect layer is added, a unique ID is assigned, and the effect is applied by specifying this ID in the target object's `effectIds`.
+An array of selective effect descriptor IDs to apply to the target object. When an outline effect descriptor is added, a unique ID is assigned, and the effect is applied by specifying this ID in the target object's `effectIds`.
 
 ### selectiveEffectOcclusion
 
@@ -140,7 +140,7 @@ import ThreeView, {
 const view = new ThreeView();
 await view.init();
 
-// Add selective outline effect layer
+// Add selective outline effect descriptor
 const outlineLayer = view.addEffect<SelectiveOutlineEffectLayer>({
   selectiveOutline: {
     color: new Color().setHex(0xffffff),
@@ -174,7 +174,7 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-plugin.addDefaultPhotorealLayers();
+plugin.addDefaultPhotorealScene();
 
 // Add a thick red outline
 const outlineLayer = view.addEffect<SelectiveOutlineEffectLayer>({

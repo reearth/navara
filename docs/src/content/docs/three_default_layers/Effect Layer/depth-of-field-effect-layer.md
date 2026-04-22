@@ -1,6 +1,6 @@
 ---
 title: DepthOfFieldEffectLayer
-description: Depth of field effect layer for navara_three
+description: Depth of field effect descriptor for navara_three
 sidebar:
   order: 53
 ---
@@ -13,7 +13,7 @@ The `DepthOfFieldEffectLayer` class is a layer that applies a depth of field (Do
 
 **Type:** `boolean | undefined`
 
-**Description:** Controls the visibility of the effect layer.
+**Description:** Controls the visibility of the effect descriptor.
 
 **Default:** `true`
 
@@ -81,7 +81,7 @@ import ThreeView, { DepthOfFieldEffectLayer } from "@navara/three";
 const view = new ThreeView();
 await view.init();
 
-// Add depth of field effect layer
+// Add depth of field effect descriptor
 const depthOfFieldLayer = view.addEffect<DepthOfFieldEffectLayer>({
   depthOfField: { },
   visible: true,
@@ -100,7 +100,7 @@ view.addPlugin(plugin);
 await view.init();
 
 // Add default photorealistic layers
-const defaultLayers = plugin.addDefaultPhotorealLayers();
+const defaultLayers = plugin.addDefaultPhotorealScene();
 defaultLayers.sun.update({
   sun: {
     intensity: 1,

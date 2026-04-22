@@ -1,17 +1,17 @@
 ---
-title: Effect Layer
-description: Effect layer types for navara_three
+title: Effect Descriptor
+description: Effect descriptor types for navara_three
 sidebar:
   order: 50
 ---
 
-`EffectLayer` is a layer type for applying post-processing effects to the rendering pipeline. You can add various visual effects such as anti-aliasing, depth of field, tone mapping, and more.
+`EffectLayer` is a descriptor type for applying post-processing effects to the rendering pipeline. You can add various visual effects such as anti-aliasing, depth of field, tone mapping, and more.
 
-## Available EffectLayer Types
+## Available EffectDescriptor Types
 
-The following EffectLayer types are available in navara_three:
+The following EffectDescriptor types are available in navara_three:
 
-| Layer Type | Description |
+| Descriptor Type | Description |
 |------------|------|
 | [AerialPerspectiveEffectLayer](./aerial-perspective-effect-layer) | An effect that simulates light scattering and transmittance through the atmosphere |
 | [CloudsEffectLayer](./clouds-effect-layer) | An effect that renders real-time volumetric clouds |
@@ -28,7 +28,7 @@ The following EffectLayer types are available in navara_three:
 
 ## Basic Usage
 
-EffectLayers are added by registering the layer class and then calling the `view.addEffect()` method:
+EffectLayers are added by registering the descriptor class and then calling the `view.addEffect()` method:
 
 ```typescript
 import ThreeView from "@navara/three";
@@ -36,7 +36,7 @@ import { AerialPerspectiveEffectLayer } from "@navara/three_default_layers";
 
 const view = new ThreeView();
 
-// Register the layer class
+// Register the descriptor class
 view.registerEffect("aerialPerspective", AerialPerspectiveEffectLayer);
 
 await view.init();
@@ -53,4 +53,4 @@ All EffectLayers have the following basic settings:
 - `id`: A unique identifier for the layer
 - `visible`: Toggles the layer's visibility
 
-Refer to each layer type's documentation for detailed usage.
+Refer to each descriptor type's documentation for detailed usage.

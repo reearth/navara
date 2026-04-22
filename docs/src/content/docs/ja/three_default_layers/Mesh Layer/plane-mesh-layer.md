@@ -1,6 +1,6 @@
 ---
 title: PlaneMeshLayer
-description: Plane mesh layer for navara_three
+description: Plane mesh descriptor for navara_three
 sidebar:
   order: 105
 ---

@@ -1,6 +1,6 @@
 ---
 title: TubeMeshLayer
-description: Tube mesh layer for navara_three
+description: Tube mesh descriptor for navara_three
 sidebar:
   order: 106
 ---

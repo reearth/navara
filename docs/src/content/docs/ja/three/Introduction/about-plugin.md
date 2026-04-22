@@ -66,7 +66,7 @@ view.addPlugin(plugin);
 await view.init();
 
 // 4. 初期化後、プラグインのメソッドを利用可能
-const layers = plugin.addDefaultPhotorealLayers();
+const layers = plugin.addDefaultPhotorealScene();
 ```
 
 :::caution

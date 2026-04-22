@@ -1,6 +1,6 @@
 ---
 title: FogLightEffectLayer
-description: Fog light effect layer for navara_three
+description: Fog light effect descriptor for navara_three
 sidebar:
   order: 55
 ---
@@ -13,7 +13,7 @@ The `FogLightEffectLayer` class is a layer that generates volumetric lighting ef
 
 **Type:** `boolean | undefined`
 
-**Description:** Controls the visibility of the effect layer.
+**Description:** Controls the visibility of the effect descriptor.
 
 **Default:** `true`
 
@@ -196,7 +196,7 @@ import ThreeView, { FogLightEffectLayer, Color } from "@navara/three";
 const view = new ThreeView();
 await view.init();
 
-// Add fog light effect layer
+// Add fog light effect descriptor
 view.addEffect<FogLightEffectLayer>({
   fogLight: {
     lights: [
@@ -253,7 +253,7 @@ await view.init();
 // Initial light array
 const fogLights: FogLightDefinition[] = [];
 
-// Add fog light layer
+// Add fog light descriptor
 const fogLayer = view.addEffect<FogLightEffectLayer>({
   fogLight: {
     lights: fogLights,

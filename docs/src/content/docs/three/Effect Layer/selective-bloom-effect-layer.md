@@ -1,6 +1,6 @@
 ---
 title: SelectiveBloomEffectLayer
-description: Selective bloom effect layer for navara_three
+description: Selective bloom effect descriptor for navara_three
 sidebar:
   order: 61
 ---
@@ -13,7 +13,7 @@ The `SelectiveBloomEffectLayer` class is a layer that applies a selective bloom 
 
 **Type:** `boolean | undefined`
 
-**Description:** Controls the visibility of the effect layer.
+**Description:** Controls the visibility of the effect descriptor.
 
 **Default:** `true`
 
@@ -131,11 +131,11 @@ The `SelectiveBloomEffectLayer` class is a layer that applies a selective bloom 
 
 ## Applying the Effect to Objects
 
-To apply the selective bloom effect to specific objects, specify the bloom effect layer's ID in the target object's `effectIds` property.
+To apply the selective bloom effect to specific objects, specify the bloom effect descriptor's ID in the target object's `effectIds` property.
 
 ### effectIds
 
-An array of selective effect layer IDs to apply to the target object. When a bloom effect layer is added, a unique ID is assigned, and the effect is applied by specifying this ID in the target object's `effectIds`.
+An array of selective effect descriptor IDs to apply to the target object. When a bloom effect descriptor is added, a unique ID is assigned, and the effect is applied by specifying this ID in the target object's `effectIds`.
 
 ### emissiveColor (optional)
 
@@ -168,7 +168,7 @@ import ThreeView, {
 const view = new ThreeView();
 await view.init();
 
-// Add selective bloom effect layer
+// Add selective bloom effect descriptor
 const bloomLayer = view.addEffect<SelectiveBloomEffectLayer>({
   selectiveBloom: {
     strength: 0.8,
@@ -204,7 +204,7 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-plugin.addDefaultPhotorealLayers();
+plugin.addDefaultPhotorealScene();
 
 // Add a strong bloom effect
 const bloomLayer = view.addEffect<SelectiveBloomEffectLayer>({

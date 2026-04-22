@@ -43,9 +43,9 @@ await view.init({ canvas: document.getElementById("canvas") });
 
 **ライトレイヤー（4 種）:** `sun`, `ambient`, `skyLightProbe`, `lightProbe`
 
-### addDefaultPhotorealLayers()
+### addDefaultPhotorealScene()
 
-`DefaultPlugin` は、フォトリアルな 3D 地図シーンを簡単に構築するための `addDefaultPhotorealLayers()` メソッドを提供します。`view.init()` の後に呼び出すことで、空、星、太陽光、大気エフェクトなどが自動的に追加されます。
+`DefaultPlugin` は、フォトリアルな 3D 地図シーンを簡単に構築するための `addDefaultPhotorealScene()` メソッドを提供します。`view.init()` の後に呼び出すことで、空、星、太陽光、大気エフェクトなどが自動的に追加されます。
 
 ```typescript
 const plugin = new DefaultPlugin();
@@ -54,7 +54,7 @@ view.addPlugin(plugin);
 await view.init({ canvas: document.getElementById("canvas") });
 
 // フォトリアルなシーンを一括セットアップ
-const layers = plugin.addDefaultPhotorealLayers();
+const layers = plugin.addDefaultPhotorealScene();
 // layers.sky, layers.sun, layers.aerialPerspective, ... が返される
 ```
 

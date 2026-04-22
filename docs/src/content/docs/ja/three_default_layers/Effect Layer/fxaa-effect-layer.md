@@ -1,6 +1,6 @@
 ---
 title: FXAAEffectLayer
-description: FXAA effect layer for navara_three
+description: FXAA effect descriptor for navara_three
 sidebar:
   order: 54
 ---

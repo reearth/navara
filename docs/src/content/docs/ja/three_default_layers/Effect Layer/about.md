@@ -1,6 +1,6 @@
 ---
-title: Effect Layer
-description: Effect layer types for navara_three
+title: Effect Descriptor
+description: Effect descriptor types for navara_three
 sidebar:
   order: 50
 ---

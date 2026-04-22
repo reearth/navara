@@ -1,11 +1,11 @@
 ---
 title: TubeMeshLayer
-description: Tube mesh layer for navara_three
+description: Tube mesh descriptor for navara_three
 sidebar:
   order: 106
 ---
 
-The `TubeMeshLayer` class is a mesh layer for drawing tube geometry. It can create tube shapes along a Catmull-Rom curve.
+The `TubeMeshLayer` class is a mesh descriptor for drawing tube geometry. It can create tube shapes along a Catmull-Rom curve.
 
 ## Properties
 
@@ -257,7 +257,7 @@ import { Color } from "@navara/three";
 
 **Type:** `string[]` (optional)
 
-**Description:** Specifies an array of selective effect layer IDs to apply to this mesh.
+**Description:** Specifies an array of selective effect descriptor IDs to apply to this mesh.
 
 **Example:**
 

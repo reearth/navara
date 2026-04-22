@@ -1,13 +1,13 @@
 ---
-title: Light Layer
-description: Light layer types for navara_three
+title: Light Descriptor
+description: Light descriptor types for navara_three
 sidebar:
   order: 150
 ---
 
 LightLayer は、3Dシーンの照明を管理するクラス群です。環境光、太陽光、Image-Based Lightingなど、様々な照明手法を提供します。
 
-## LightLayer Types
+## LightDescriptor Types
 
 navara_three は、様々な照明要件に対応する複数のライトレイヤータイプを提供しています：
 
@@ -108,7 +108,7 @@ view.addLight<SunLightLayer>({
 });
 ```
 
-## Light Layer Types 比較表
+## Light Descriptor Types 比較表
 
 | ライトタイプ           | 影          | 動的更新 | 大気連携 | 主な用途         | パフォーマンス   |
 | ---------------------- | ----------- | -------- | -------- | ---------------- | ---------------- |
@@ -132,7 +132,7 @@ view.addLight<AmbientLightLayer>({
 
 ### 推奨される照明セットアップ
 
-リアルなシーンには、複数のライトレイヤーを組み合わせます。[three_default_plugin](../../../three_default_plugin/about/) の `DefaultPlugin` を使用すると、すべてのレイヤーが一括登録され、`addDefaultPhotorealLayers()` でフォトリアルなシーンを簡単にセットアップできます。
+リアルなシーンには、複数のライトレイヤーを組み合わせます。[three_default_plugin](../../../three_default_plugin/about/) の `DefaultPlugin` を使用すると、すべてのレイヤーが一括登録され、`addDefaultPhotorealScene()` でフォトリアルなシーンを簡単にセットアップできます。
 
 ```typescript
 import { DefaultPlugin } from "@navara/three_default_plugin";
@@ -142,7 +142,7 @@ view.addPlugin(plugin);
 await view.init();
 
 // フォトリアルなシーンを一括セットアップ（SunLight + SkyLightProbe 等を含む）
-const layers = plugin.addDefaultPhotorealLayers();
+const layers = plugin.addDefaultPhotorealScene();
 
 // 必要に応じて追加の環境光
 view.addLight<AmbientLightLayer>({
@@ -156,7 +156,7 @@ view.addLight<AmbientLightLayer>({
 
 ```typescript
 // DefaultPlugin でフォトリアルなシーンをセットアップ
-const layers = plugin.addDefaultPhotorealLayers();
+const layers = plugin.addDefaultPhotorealScene();
 
 // 夜間用ライトプローブ（LightProbeLayer は DefaultPlugin で登録済み）
 const nightLight = view.addLight<LightProbeLayer>({
@@ -193,5 +193,5 @@ view.atmosphere.on("sunChanged", () => {
 ## 関連リソース
 
 - [Resource Layer Reference](../../../three/resource-layer-reference/about/) - リソースレイヤーの詳細
-- [Effect Layer Reference](../../../three/effect-layer-reference/about/) - エフェクトレイヤー
+- [Effect Descriptor Reference](../../../three/effect-layer-reference/about/) - エフェクトレイヤー
 - [API Reference](../../../three/api/) - ThreeView API

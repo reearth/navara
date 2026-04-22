@@ -1,6 +1,6 @@
 ---
 title: SMAAEffectLayer
-description: SMAA effect layer for navara_three
+description: SMAA effect descriptor for navara_three
 sidebar:
   order: 58
 ---
@@ -67,7 +67,7 @@ view.addPlugin(plugin);
 await view.init();
 
 // デフォルトのフォトリアルレイヤーを追加（SMAAが含まれる）
-const defaultLayers = plugin.addDefaultPhotorealLayers();
+const defaultLayers = plugin.addDefaultPhotorealScene();
 
 // SMAAを有効化して品質を設定
 defaultLayers.smaa.update({
@@ -107,7 +107,7 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-const defaultLayers = plugin.addDefaultPhotorealLayers();
+const defaultLayers = plugin.addDefaultPhotorealScene();
 
 // 品質をmediumに変更
 defaultLayers.smaa.update({

@@ -1,11 +1,11 @@
 ---
 title: ArclineMeshLayer
-description: Arcline mesh layer for navara_three
+description: Arcline mesh descriptor for navara_three
 sidebar:
   order: 101
 ---
 
-The `ArclineMeshLayer` class is a mesh layer for drawing arc-shaped lines connecting two points. It is used to visually connect two locations on the globe and provides features such as gradients, dashed patterns, and height adjustment.
+The `ArclineMeshLayer` class is a mesh descriptor for drawing arc-shaped lines connecting two points. It is used to visually connect two locations on the globe and provides features such as gradients, dashed patterns, and height adjustment.
 
 ## Properties
 

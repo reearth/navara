@@ -1,6 +1,6 @@
 ---
 title: SkyEnvMapEffectLayer
-description: Sky environment map effect layer for navara_three
+description: Sky environment map effect descriptor for navara_three
 sidebar:
   order: 61
 ---
@@ -13,7 +13,7 @@ The `SkyEnvMapEffectLayer` class is a pass that renders the sky environment map.
 
 **Type:** `boolean | undefined`
 
-**Description:** Controls the visibility of the effect layer.
+**Description:** Controls the visibility of the effect descriptor.
 
 **Default:** `true`
 
@@ -49,9 +49,9 @@ view.addPlugin(plugin);
 await view.init();
 
 // Add default photorealistic layers (required for sky rendering)
-plugin.addDefaultPhotorealLayers();
+plugin.addDefaultPhotorealScene();
 
-// Add sky environment map effect layer
+// Add sky environment map effect descriptor
 view.addEffect<SkyEnvMapEffectLayer>({
   skyEnvMap: {
     resolution: 256,
@@ -70,7 +70,7 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-plugin.addDefaultPhotorealLayers();
+plugin.addDefaultPhotorealScene();
 
 // Create a high-resolution environment map
 view.addEffect<SkyEnvMapEffectLayer>({
@@ -92,7 +92,7 @@ view.addPlugin(plugin);
 await view.init();
 
 // Add default photorealistic layers
-plugin.addDefaultPhotorealLayers();
+plugin.addDefaultPhotorealScene();
 
 // Add sky environment map (used for reflections)
 view.addEffect<SkyEnvMapEffectLayer>({

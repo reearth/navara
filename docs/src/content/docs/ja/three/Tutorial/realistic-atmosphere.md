@@ -19,7 +19,7 @@ sidebar:
 
 ## 大気遠近法エフェクトを追加する
 
-大気遠近法（Aerial Perspective）は、距離に応じた空気感・霞の効果を付与します。`DefaultPlugin` を使うと、すべてのデフォルトレイヤーが登録され、`addDefaultPhotorealLayers()` でフォトリアルなシーンを一括セットアップできます。
+大気遠近法（Aerial Perspective）は、距離に応じた空気感・霞の効果を付与します。`DefaultPlugin` を使うと、すべてのデフォルトレイヤーが登録され、`addDefaultPhotorealScene()` でフォトリアルなシーンを一括セットアップできます。
 
 ```typescript
 import ThreeView, { JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
@@ -31,7 +31,7 @@ view.addPlugin(plugin);
 await view.init();
 
 // フォトリアルなシーンを一括セットアップ（空・太陽光・星・大気エフェクト・トーンマッピング・アンチエイリアシングなど）
-const layers = plugin.addDefaultPhotorealLayers();
+const layers = plugin.addDefaultPhotorealScene();
 
 // 必要に応じて Aerial Perspective を調整
 layers.aerialPerspective.update({
@@ -71,7 +71,7 @@ view.addLayer({
 view.setCamera({ lng: 139.7511, lat: 35.6736, height: 400, heading: -100, pitch: -20, roll: 0 });
 ```
 
-`addDefaultPhotorealLayers()` により、空・太陽光・星・スカイライトプローブなどの大気レイヤーも自動で追加されています。影を落とすには太陽光の設定を更新します。
+`addDefaultPhotorealScene()` により、空・太陽光・星・スカイライトプローブなどの大気レイヤーも自動で追加されています。影を落とすには太陽光の設定を更新します。
 
 ```typescript
 layers.sun.update({ sun: { castShadow: true } }); // 影を落とす
@@ -91,7 +91,7 @@ layers.toneMapping.update({ toneMapping: { mode: ToneMappingMode.AGX } });
 view.toneMappingExposure = 10; // シーンに応じて調整
 
 // アンチエイリアシング
-// addDefaultPhotorealLayers() はデスクトップで SMAA, モバイル最適化時は FXAA を自動選択します
+// addDefaultPhotorealScene() はデスクトップで SMAA, モバイル最適化時は FXAA を自動選択します
 ```
 
 ## 雲エフェクトを追加する
@@ -99,7 +99,7 @@ view.toneMappingExposure = 10; // シーンに応じて調整
 体積雲エフェクトを重ねると臨場感が向上します。まずはデフォルト設定で追加し、必要に応じて影や密度を調整します。
 
 ```typescript
-const clouds = view.addEffect<CloudsEffectLayer>({
+const clouds = view.addEffect<CloudsEffectDesc>({
   clouds: {},
 });
 
@@ -111,7 +111,7 @@ clouds.update({ clouds: { shadows: true } });
 
 ## 雨エフェクトを追加する
 
-雨の表現には2つのレイヤーを組み合わせて使用します。`RainMeshLayer` はシーン内に3D雨粒パーティクルを描画し、`RainDropEffectLayer` は画面に水滴が付着するポストエフェクトを提供します。
+雨の表現には2つのレイヤーを組み合わせて使用します。`RainMeshDesc` はシーン内に3D雨粒パーティクルを描画し、`RainDropEffectDesc` は画面に水滴が付着するポストエフェクトを提供します。
 
 ### 3D雨粒パーティクル
 
@@ -120,7 +120,7 @@ clouds.update({ clouds: { shadows: true } });
 view.animation = true;
 
 // 雨レイヤーを追加
-const rain = view.addMesh<RainMeshLayer>({
+const rain = view.addMesh<RainMeshDesc>({
   rain: {
     particleCount: 5000, // 雨粒の数
     speed: 0.0015,             // 落下速度
@@ -139,7 +139,7 @@ const rain = view.addMesh<RainMeshLayer>({
 雨天時にカメラレンズに付着する水滴を表現するポストエフェクトです。
 
 ```typescript
-const rainDropEffect = view.addEffect<RainDropEffectLayer>({
+const rainDropEffect = view.addEffect<RainDropEffectDesc>({
   rainDrop: {
     opacity: 1.0,           // エフェクト全体の不透明度
     dropGridSize: 12,       // 水滴グリッドのサイズ
@@ -152,18 +152,18 @@ const rainDropEffect = view.addEffect<RainDropEffectLayer>({
 ```
 
 :::tip[雨エフェクトの組み合わせ]
-`RainMeshLayer` と `RainDropEffectLayer` を同時に有効にすることで、より臨場感のある雨の表現が可能です。
+`RainMeshDesc` と `RainDropEffectDesc` を同時に有効にすることで、より臨場感のある雨の表現が可能です。
 :::
 
 ![実行結果](@assets/tutorial/realistic-atmosphere-rain.png)
 
 ## 雪エフェクトを追加する
 
-雪の表現は `SnowMeshLayer` を使用します。 雨レイヤーを消して追加してみましょう。
+雪の表現は `SnowMeshDesc` を使用します。 雨レイヤーを消して追加してみましょう。
 
 ```typescript
 // 雪レイヤーを追加
-const snow = view.addMesh<SnowMeshLayer>({
+const snow = view.addMesh<SnowMeshDesc>({
   snow: {
     particleCount: 5000,  // 雪粒の数
     speed: 0.00005,           // 落下速度
@@ -218,7 +218,7 @@ view.setCamera({ lng: 140.0372145462, lat: 35.6059411903, height: 3880, heading:
 
 ### SSR（スクリーンスペース反射）との組み合わせ
 
-`SSREffectLayer` を追加すると、建物などの反射がリアルタイムで水面に映り込みます。
+`SSREffectDesc` を追加すると、建物などの反射がリアルタイムで水面に映り込みます。
 
 ```typescript
 // PLATEAUの建築物モデルを追加
@@ -242,7 +242,7 @@ view.addLayer({
 });
 
 // SSRエフェクトを追加
-view.addEffect<SSREffectLayer>({
+view.addEffect<SSREffectDesc>({
   ssr: {},
 });
 
@@ -265,7 +265,7 @@ view.setCamera({
 以下は大気エフェクト、雨、水面マテリアルをすべて組み合わせた完全な例です。
 
 ```typescript
-import ThreeView, { type CloudsEffectLayer, Color, JAPAN_GSI_ELEVATION_DECODER, type RainDropEffectLayer, type RainMeshLayer, type SnowMeshLayer, type SSREffectLayer, ToneMappingMode } from "@navara/three";
+import ThreeView, { type CloudsEffectDesc, Color, JAPAN_GSI_ELEVATION_DECODER, type RainDropEffectDesc, type RainMeshDesc, type SnowMeshDesc, type SSREffectDesc, ToneMappingMode } from "@navara/three";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const plugin = new DefaultPlugin();
@@ -280,7 +280,7 @@ view.addPlugin(plugin);
 await view.init();
 
 // フォトリアルなシーンを一括セットアップ
-const layers = plugin.addDefaultPhotorealLayers();
+const layers = plugin.addDefaultPhotorealScene();
 
 // 必要に応じて Aerial Perspective を調整
 layers.aerialPerspective.update({
@@ -323,7 +323,7 @@ layers.sun.update({ sun: { castShadow: true } }); // 影を落とす
 layers.toneMapping.update({ toneMapping: { mode: ToneMappingMode.AGX } });
 view.toneMappingExposure = 10; // シーンに応じて調整
 
-const clouds = view.addEffect<CloudsEffectLayer>({
+const clouds = view.addEffect<CloudsEffectDesc>({
   clouds: {
     qualityPreset: "high"
   },
@@ -332,7 +332,7 @@ const clouds = view.addEffect<CloudsEffectLayer>({
 // 雲の影を有効化
 clouds.update({ clouds: { shadows: true } });
 
-view.addMesh<RainMeshLayer>({
+view.addMesh<RainMeshDesc>({
   rain: {
     particleCount: 5000, // 雨粒の数
     speed: 0.0015,             // 落下速度
@@ -345,7 +345,7 @@ view.addMesh<RainMeshLayer>({
   },
 });
 
-view.addEffect<RainDropEffectLayer>({
+view.addEffect<RainDropEffectDesc>({
   rainDrop: {
     opacity: 1.0,           // エフェクト全体の不透明度
     dropGridSize: 12,       // 水滴グリッドのサイズ
@@ -397,7 +397,7 @@ view.addLayer({
 });
 
 // SSRエフェクトを追加
-view.addEffect<SSREffectLayer>({
+view.addEffect<SSREffectDesc>({
   ssr: {
   },
 });
