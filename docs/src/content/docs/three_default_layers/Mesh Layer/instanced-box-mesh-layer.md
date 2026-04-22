@@ -7,6 +7,8 @@ sidebar:
 
 The `InstancedBoxMeshLayer` class is a mesh layer that renders multiple box instances using GPU instancing. All boxes share a single geometry and material, rendered in one draw call for high performance. It extends `InstancedMeshLayerDeclaration`.
 
+In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `pickable`, `visible`) are available. See [MeshLayerDeclaration](./mesh-layer-base) for details.
+
 ## Shared Material Properties
 
 Shared material properties applied to all instances. These are specified in the `boxes` config object.

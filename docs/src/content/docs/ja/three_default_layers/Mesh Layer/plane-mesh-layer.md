@@ -7,6 +7,8 @@ sidebar:
 
 `PlaneMeshLayer`クラスは、平面(Plane)ジオメトリを描画するためのメッシュレイヤーです。幅・高さを指定して平面を作成できます。
 
+以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`pickable`、`visible`）が利用できます。詳細は [MeshLayerDeclaration](./mesh-layer-base) を参照してください。
+
 ## Properties
 
 ### width

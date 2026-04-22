@@ -7,6 +7,8 @@ sidebar:
 
 The `RainMeshLayer` class is a mesh layer that displays rain particle effects. It creates realistic rainfall effects using a shader-based particle system.
 
+In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `pickable`, `visible`) are available. See [MeshLayerDeclaration](./mesh-layer-base) for details.
+
 ## Common Properties
 
 ### position

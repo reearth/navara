@@ -9,6 +9,8 @@ sidebar:
 
 太陽と月の位置は `view.atmosphere.date` に基づいて自動的に計算され、毎フレーム更新されます。
 
+以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`pickable`、`visible`）が利用できます。詳細は [MeshLayerDeclaration](./mesh-layer-base) を参照してください。
+
 :::tip[関連ドキュメント]
 大気システムの詳細については [Atmosphere クラス](../../../three/api-reference/atmosphere/) を参照してください。
 :::

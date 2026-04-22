@@ -7,6 +7,8 @@ sidebar:
 
 `SkyBoxMeshLayer`は、シンプルなスカイボックスをシーンに追加するレイヤーです。昼夜の空の色と太陽の色を設定でき、大気散乱シミュレーション（`SkyMeshLayer`）を使用せずに軽量な空の表現が可能です。
 
+以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`pickable`、`visible`）が利用できます。詳細は [MeshLayerDeclaration](./mesh-layer-base) を参照してください。
+
 ## Properties
 
 ### skyBox

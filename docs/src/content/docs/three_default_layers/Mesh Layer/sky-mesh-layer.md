@@ -9,6 +9,8 @@ The `SkyMeshLayer` class is a mesh layer that draws the sky, sun, and moon using
 
 The sun and moon positions are automatically calculated based on `view.atmosphere.date` and updated every frame.
 
+In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `pickable`, `visible`) are available. See [MeshLayerDeclaration](./mesh-layer-base) for details.
+
 :::tip[Related Documentation]
 For details on the atmosphere system, see the [Atmosphere class](../../../three/api-reference/atmosphere/).
 :::
