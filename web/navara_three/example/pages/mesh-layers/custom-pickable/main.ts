@@ -240,7 +240,7 @@ const run = async () => {
   view.addPlugin(defaultPlugin);
   await view.init();
 
-  defaultPlugin.addDefaultPhotorealLayers();
+  defaultPlugin.addDefaultPhotorealScene();
   view.atmosphere.date.setHours(10);
 
   view.registerMesh("torusKnot", TorusKnotMeshDesc);
