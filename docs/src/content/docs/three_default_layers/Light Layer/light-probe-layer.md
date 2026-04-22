@@ -1,11 +1,11 @@
 ---
 title: LightProbeDesc
-description: Light probe layer for navara_three
+description: Light probe descriptor for navara_three
 sidebar:
   order: 152
 ---
 
-The `LightProbeDesc` class represents a light probe layer that provides Image-Based Lighting using Spherical Harmonics. It achieves realistic indirect lighting using pre-computed environment lighting data.
+The `LightProbeDesc` class represents a light probe Descriptor that provides Image-Based Lighting using Spherical Harmonics. It achieves realistic indirect lighting using pre-computed environment lighting data.
 
 ## Common Properties
 
@@ -13,7 +13,7 @@ The `LightProbeDesc` class represents a light probe layer that provides Image-Ba
 
 **Type:** `boolean | undefined`
 
-**Description:** Controls the visibility of the layer.
+**Description:** Controls the visibility of the object.
 
 **Default:** `true`
 
@@ -126,7 +126,7 @@ const NIGHT_SH_COEFFICIENTS = [
   // ... other coefficients
 ];
 
-// Add a light probe layer
+// Add a light probe Descriptor
 const lightProbe = view.addLight<LightProbeDesc>({
   lightProbe: {
     sh: new THREE.SphericalHarmonics3().set(NIGHT_SH_COEFFICIENTS),

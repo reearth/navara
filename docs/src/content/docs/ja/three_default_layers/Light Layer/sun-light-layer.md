@@ -5,7 +5,7 @@ sidebar:
   order: 154
 ---
 
-`SunLightDesc`クラスは、太陽光をシミュレートする指向性ライトレイヤーを表します。Cascaded Shadow Maps（CSM）を使用した高品質な影の描画に対応し、大気散乱シミュレーションと連携して自然な太陽光を再現します。
+`SunLightDesc`クラスは、太陽光をシミュレートする指向性ライトを表します。Cascaded Shadow Maps（CSM）を使用した高品質な影の描画に対応し、大気散乱シミュレーションと連携して自然な太陽光を再現します。
 
 太陽の方向は `view.atmosphere.date` に基づいて自動計算され、影の向きも連動して変化します。
 
@@ -19,7 +19,7 @@ sidebar:
 
 **Type:** `boolean | undefined`
 
-**Description:** レイヤーの表示/非表示を制御します。
+**Description:** オブジェクトの表示/非表示を制御します。
 
 **Default:** `true`
 
@@ -49,7 +49,7 @@ sidebar:
 **Default:** `300`
 
 :::note[初期化時のみ設定可能]
-このプロパティはレイヤー作成時にのみ設定できます。`update()`メソッドでは変更できません。
+このプロパティはDescriptor作成時にのみ設定できます。`update()`メソッドでは変更できません。
 :::
 
 **Example:**
@@ -355,10 +355,10 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-// デフォルトのフォトリアルレイヤーを追加（SunLightDescが含まれる）
+// デフォルトのフォトリアルオブジェクトを追加（SunLightDescが含まれる）
 const defaultLayers = plugin.addDefaultPhotorealScene();
 
-// 太陽光の設定を更新
+// 太陽光のDescriptorの設定を更新
 defaultLayers.sun.update({
   sun: {
     castShadow: true,

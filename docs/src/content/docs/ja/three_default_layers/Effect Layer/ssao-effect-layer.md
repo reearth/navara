@@ -5,7 +5,7 @@ sidebar:
   order: 59
 ---
 
-`SSAOEffectDesc`クラスは、スクリーンスペースアンビエントオクルージョン(SSAO)エフェクトを適用するレイヤーです。ジオメトリの隙間や凹部に暗い影を追加し、より立体的な見た目を実現します。
+`SSAOEffectDesc`クラスは、スクリーンスペースアンビエントオクルージョン(SSAO)エフェクトを適用するDescriptorです。ジオメトリの隙間や凹部に暗い影を追加し、より立体的な見た目を実現します。
 
 ## Properties
 
@@ -13,7 +13,7 @@ sidebar:
 
 **Type:** `boolean | undefined`
 
-**Description:** エフェクトレイヤーの表示/非表示を制御します。
+**Description:** エフェクトの表示/非表示を制御します。
 
 **Default:** `true`
 
@@ -137,7 +137,7 @@ import ThreeView, { SSAOEffectDesc } from "@navara/three";
 const view = new ThreeView();
 await view.init();
 
-// SSAOエフェクトレイヤーを追加
+// SSAOエフェクトを追加
 const ssaoLayer = view.addEffect<SSAOEffectDesc>({
   visible: true,
   ssao: {},
@@ -194,7 +194,7 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-// デフォルトのフォトリアルレイヤーを追加
+// デフォルトのフォトリアルオブジェクトを追加
 plugin.addDefaultPhotorealScene();
 
 // SSAOを追加

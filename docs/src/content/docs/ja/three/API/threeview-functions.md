@@ -11,7 +11,7 @@ sidebar:
 
 ### addLayer()
 
-navara_three に新しいリソースレイヤーを追加します。このメソッドは、リソースレイヤー（タイル、地形、geojson など）をサポートします。メッシュレイヤーには `addMesh()`、ライトレイヤーには `addLight()`、エフェクトレイヤーには `addEffect()` を使用してください。
+navara_three に新しいリソースレイヤーを追加します。このメソッドは、リソースレイヤー（タイル、地形、geojson など）をサポートします。メッシュには `addMesh()`、ライトには `addLight()`、エフェクトには `addEffect()` を使用してください。
 
 **Syntax:**
 
@@ -709,7 +709,7 @@ view.on("click", (event) => {
 
 ### registerMesh()
 
-カスタムメッシュレイヤークラスを登録します。
+カスタムメッシュクラスを登録します。
 
 **Syntax:**
 
@@ -719,8 +719,8 @@ registerMesh(name: string, meshClass: MeshDescConstructor): void
 
 **Parameters:**
 
-- `name`: 登録するメッシュレイヤーの名前
-- `meshClass`: メッシュレイヤーのコンストラクタ
+- `name`: 登録するメッシュの名前
+- `meshClass`: メッシュのコンストラクタ
 
 **Example:**
 
@@ -736,7 +736,7 @@ view.registerMesh("customMesh", CustomMeshDesc);
 
 ### registerLight()
 
-カスタムライトレイヤークラスを登録します。
+カスタムライトクラスを登録します。
 
 **Syntax:**
 
@@ -746,8 +746,8 @@ registerLight(name: string, lightClass: LightDescConstructor): void
 
 **Parameters:**
 
-- `name`: 登録するライトレイヤーの名前
-- `lightClass`: ライトレイヤーのコンストラクタ
+- `name`: 登録するライトの名前
+- `lightClass`: ライトのコンストラクタ
 
 **Example:**
 
@@ -763,7 +763,7 @@ view.registerLight("customLight", CustomLightDesc);
 
 ### registerEffect()
 
-カスタムエフェクトレイヤークラスを登録します。
+カスタムエフェクトクラスを登録します。
 
 **Syntax:**
 
@@ -773,8 +773,8 @@ registerEffect(name: string, effectClass: EffectDescConstructor): void
 
 **Parameters:**
 
-- `name`: 登録するエフェクトレイヤーの名前
-- `effectClass`: エフェクトレイヤーのコンストラクタ
+- `name`: 登録するエフェクトの名前
+- `effectClass`: エフェクトのコンストラクタ
 
 **Example:**
 

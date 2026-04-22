@@ -5,7 +5,7 @@ sidebar:
   order: 61
 ---
 
-The `SelectiveBloomEffectDesc` class is a layer that applies a selective bloom effect. It uses mask-based filtering to apply the bloom effect only to specific objects.
+The `SelectiveBloomEffectDesc` class is a Descriptor that applies a selective bloom effect. It uses mask-based filtering to apply the bloom effect only to specific objects.
 
 ## Properties
 

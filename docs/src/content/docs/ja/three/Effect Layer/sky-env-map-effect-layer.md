@@ -13,7 +13,7 @@ sidebar:
 
 **Type:** `boolean | undefined`
 
-**Description:** エフェクトレイヤーの表示/非表示を制御します。
+**Description:** エフェクトの表示/非表示を制御します。
 
 **Default:** `true`
 
@@ -48,10 +48,10 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-// デフォルトのフォトリアルレイヤーを追加（空のレンダリングに必要）
+// デフォルトのフォトリアルオブジェクトを追加（空のレンダリングに必要）
 plugin.addDefaultPhotorealScene();
 
-// 空環境マップエフェクトレイヤーを追加
+// 空環境マップエフェクトを追加
 view.addEffect<SkyEnvMapEffectDesc>({
   skyEnvMap: {
     resolution: 256,
@@ -70,7 +70,7 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-// デフォルトのフォトリアルレイヤーを追加
+// デフォルトのフォトリアルオブジェクトを追加
 plugin.addDefaultPhotorealScene();
 
 // 高解像度の環境マップを作成
@@ -92,7 +92,7 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-// デフォルトのフォトリアルレイヤーを追加
+// デフォルトのフォトリアルオブジェクトを追加
 plugin.addDefaultPhotorealScene();
 
 // 空環境マップを追加（反射に使用される）
@@ -119,4 +119,4 @@ view.addLayer({
 
 ## 備考
 
-生成された環境マップは、マテリアルの反射や環境ライティングに使用されます。解像度は作成時に固定されるため、変更する場合はレイヤーを再作成する必要があります。
+生成された環境マップは、マテリアルの反射や環境ライティングに使用されます。解像度は作成時に固定されるため、変更する場合は Descriptor を再作成する必要があります。

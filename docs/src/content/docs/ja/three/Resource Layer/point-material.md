@@ -251,7 +251,7 @@ import { Color } from "@navara/three";
 
 **Type:** `boolean | undefined`
 
-**Description:** ポイントの透過度を考慮するかどうかを指定します。true にするとエフェクトレイヤーを有効にしたときにポイントがうまく表示されないことがあるので注意してください。
+**Description:** ポイントの透過度を考慮するかどうかを指定します。true にするとエフェクトを有効にしたときにポイントがうまく表示されないことがあるので注意してください。
 
 **Default:** `undefined`
 

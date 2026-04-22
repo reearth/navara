@@ -40,7 +40,7 @@ const position = geodeticToVector3(
 
 **Type:** `boolean`
 
-**Description:** Controls the visibility of the layer.
+**Description:** Controls the visibility of the object.
 
 **Default:** `true`
 

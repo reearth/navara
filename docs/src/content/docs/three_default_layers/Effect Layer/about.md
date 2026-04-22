@@ -50,7 +50,7 @@ const aerialPerspectiveLayer = view.addEffect<AerialPerspectiveEffectDesc>({
 
 All Effect Descriptors have the following basic settings:
 
-- `id`: A unique identifier for the layer
-- `visible`: Toggles the layer's visibility
+- `id`: A unique identifier for the object
+- `visible`: Toggles the object's visibility
 
 Refer to each descriptor type's documentation for detailed usage.

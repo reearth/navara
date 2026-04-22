@@ -5,7 +5,7 @@ sidebar:
   order: 58
 ---
 
-The `SMAAEffectDesc` class is a layer that applies the SMAA (Subpixel Morphological Anti-Aliasing) anti-aliasing effect. It provides higher quality anti-aliasing than FXAA.
+The `SMAAEffectDesc` class is a Descriptor that applies the SMAA (Subpixel Morphological Anti-Aliasing) anti-aliasing effect. It provides higher quality anti-aliasing than FXAA.
 
 ## Properties
 
@@ -66,7 +66,7 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-// Add default photorealistic layers (includes SMAA)
+// Add default photorealistic objects (includes SMAA)
 const defaultLayers = plugin.addDefaultPhotorealScene();
 
 // Enable SMAA and set quality

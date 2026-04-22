@@ -250,9 +250,9 @@ When data distribution is skewed (a few high values and many low values), using 
 For details on `ColorMap` class methods (`linear()`, `quantize()`, etc.), see the [ColorMap class](../../../three/api-reference/colormap/) reference.
 :::
 
-## Adding the Arch Line Layer
+## Adding the Arch Line Object
 
-Add the arch line definitions as a layer.
+Add the arch line definitions as an object.
 
 ```typescript
 import type { ArclineMeshDesc } from "@navara/three";
@@ -472,7 +472,7 @@ async function run() {
   // Construct arch line data
   const { arcLines } = await constructData();
 
-  // Add arch line layer
+  // Add arch line object
   const arcLineHandle = view.addMesh<ArclineMeshDesc>({
     arcLines,
   });

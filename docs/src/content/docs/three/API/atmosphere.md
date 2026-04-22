@@ -7,7 +7,7 @@ sidebar:
 
 The `Atmosphere` class manages the context for atmospheric rendering. It automatically calculates the positions of the sun and moon from the configured date and time, and manages textures for atmospheric scattering simulation.
 
-A `ThreeView` instance holds an instance of this class through the `atmosphere` property, and atmosphere-related layers such as `SunLightDesc`, `SkyMeshDesc`, and `AerialPerspectiveEffectDesc` reference this instance to operate.
+A `ThreeView` instance holds an instance of this class through the `atmosphere` property, and atmosphere-related Descriptors such as `SunLightDesc`, `SkyMeshDesc`, and `AerialPerspectiveEffectDesc` reference this instance to operate.
 
 ## Basic Usage
 
@@ -161,11 +161,11 @@ view.atmosphere.on("sunChanged", (sunDirection) => {
 });
 ```
 
-## Atmosphere System Integration with Other Layers
+## Atmosphere System Integration with Other Descriptors
 
-The `Atmosphere` class automatically integrates with the following layers:
+The `Atmosphere` class automatically integrates with the following Descriptors:
 
-| Layer | Integration Details |
+| Descriptor | Integration Details |
 |----------|----------|
 | `SunLightDesc` | Updates light direction based on sun direction |
 | `SkyMeshDesc` | Updates rendering positions of the sun and moon |

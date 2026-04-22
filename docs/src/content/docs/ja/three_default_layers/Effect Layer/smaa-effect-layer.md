@@ -5,7 +5,7 @@ sidebar:
   order: 58
 ---
 
-`SMAAEffectDesc`クラスは、SMAA(Subpixel Morphological Anti-Aliasing)アンチエイリアシングエフェクトを適用するレイヤーです。FXAAよりも高品質なアンチエイリアシングを提供します。
+`SMAAEffectDesc`クラスは、SMAA(Subpixel Morphological Anti-Aliasing)アンチエイリアシングエフェクトを適用するDescriptorです。FXAAよりも高品質なアンチエイリアシングを提供します。
 
 ## Properties
 
@@ -13,7 +13,7 @@ sidebar:
 
 **Type:** `boolean | undefined`
 
-**Description:** エフェクトレイヤーの表示/非表示を制御します。
+**Description:** エフェクトの表示/非表示を制御します。
 
 **Default:** `true`
 
@@ -66,7 +66,7 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-// デフォルトのフォトリアルレイヤーを追加（SMAAが含まれる）
+// デフォルトのフォトリアルオブジェクトを追加（SMAAが含まれる）
 const defaultLayers = plugin.addDefaultPhotorealScene();
 
 // SMAAを有効化して品質を設定
@@ -87,7 +87,7 @@ import ThreeView, { SMAAEffectDesc } from "@navara/three";
 const view = new ThreeView();
 await view.init();
 
-// SMAAエフェクトレイヤーを追加
+// SMAAエフェクトを追加
 view.addEffect<SMAAEffectDesc>({
   smaa: {
     quality: "ultra",

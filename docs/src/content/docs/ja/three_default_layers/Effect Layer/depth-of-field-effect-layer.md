@@ -5,7 +5,7 @@ sidebar:
   order: 53
 ---
 
-`DepthOfFieldEffectDesc`クラスは、被写界深度(Depth of Field)エフェクトを適用するレイヤーです。カメラの焦点面に基づいてボケ効果を生成し、写真のような視覚効果を実現します。
+`DepthOfFieldEffectDesc`クラスは、被写界深度(Depth of Field)エフェクトを適用するDescriptorです。カメラの焦点面に基づいてボケ効果を生成し、写真のような視覚効果を実現します。
 
 ## Properties
 
@@ -13,7 +13,7 @@ sidebar:
 
 **Type:** `boolean | undefined`
 
-**Description:** エフェクトレイヤーの表示/非表示を制御します。
+**Description:** エフェクトの表示/非表示を制御します。
 
 **Default:** `true`
 
@@ -81,7 +81,7 @@ import ThreeView, { DepthOfFieldEffectDesc } from "@navara/three";
 const view = new ThreeView();
 await view.init();
 
-// 被写界深度エフェクトレイヤーを追加
+// 被写界深度エフェクトを追加
 const depthOfFieldLayer = view.addEffect<DepthOfFieldEffectDesc>({
   depthOfField: { },
   visible: true,
@@ -99,7 +99,7 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-// デフォルトのフォトリアルレイヤーを追加
+// デフォルトのフォトリアルオブジェクトを追加
 const defaultLayers = plugin.addDefaultPhotorealScene();
 defaultLayers.sun.update({
   sun: {
@@ -118,7 +118,7 @@ const depthOfFieldLayer = view.addEffect<DepthOfFieldEffectDesc>({
   visible: true,
 });
 
-// 3Dタイルレイヤーを追加
+// 3Dタイルを追加
 view.addLayer({
   type: "cesium3dtiles",
   data: {

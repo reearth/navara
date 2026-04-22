@@ -132,7 +132,7 @@ view.addLight<AmbientLightDesc>({
 
 ### Recommended Lighting Setup
 
-For realistic scenes, combine multiple light descriptors. Using `DefaultPlugin` from [three_default_plugin](../../../three_default_plugin/about/) registers all descriptors at once, and `addDefaultPhotorealScene()` makes it easy to set up a photorealistic scene.
+For realistic scenes, combine multiple light Descriptors. Using `DefaultPlugin` from [three_default_plugin](../../../three_default_plugin/about/) registers all Descriptors at once, and `addDefaultPhotorealScene()` makes it easy to set up a photorealistic scene.
 
 ```typescript
 import { DefaultPlugin } from "@navara/three_default_plugin";
@@ -183,7 +183,7 @@ view.atmosphere.on("sunChanged", () => {
 
 ### Integration with the Atmosphere System
 
-The following light descriptors integrate with the atmosphere system:
+The following light Descriptors integrate with the atmosphere system:
 
 - **SkyLightProbeDesc**: Uses the atmosphere's irradiance texture (required)
 - **SunLightDesc**: Uses the atmosphere's transmittance texture (recommended)

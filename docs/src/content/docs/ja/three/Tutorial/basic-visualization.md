@@ -50,7 +50,7 @@ view.addPlugin(plugin);
 await view.init();
 ```
 
-`DefaultPlugin` を追加することで、メッシュ・エフェクト・ライトのデフォルトのレイヤーが利用可能になります。
+`DefaultPlugin` を追加することで、メッシュ・エフェクト・ライトのデフォルトDescriptorが利用可能になります。
 
 `main.ts` に以下のコードを追加します。
 
@@ -92,7 +92,7 @@ view.addPlugin(plugin);
 await view.init();
 ```
 
-`ThreeView` インスタンスを作成し、`DefaultPlugin` でデフォルトレイヤーを登録してから初期化します。これにより、3D シーンとカメラが設定されます。
+`ThreeView` インスタンスを作成し、`DefaultPlugin` でデフォルトDescriptorを登録してから初期化します。これにより、3D シーンとカメラが設定されます。
 
 **ライトの追加**
 

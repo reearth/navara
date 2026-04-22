@@ -5,7 +5,7 @@ sidebar:
   order: 55
 ---
 
-`FogLightEffectDesc`クラスは、ボリュメトリックライティングエフェクトを生成するレイヤーです。ポイントライトからのボリュメトリックフォグを計算し、光の散乱効果を表現します。
+`FogLightEffectDesc`クラスは、ボリュメトリックライティングエフェクトを生成するDescriptorです。ポイントライトからのボリュメトリックフォグを計算し、光の散乱効果を表現します。
 
 ## Properties
 
@@ -13,7 +13,7 @@ sidebar:
 
 **Type:** `boolean | undefined`
 
-**Description:** エフェクトレイヤーの表示/非表示を制御します。
+**Description:** エフェクトの表示/非表示を制御します。
 
 **Default:** `true`
 
@@ -196,7 +196,7 @@ import ThreeView, { FogLightEffectDesc, Color } from "@navara/three";
 const view = new ThreeView();
 await view.init();
 
-// フォグライトエフェクトレイヤーを追加
+// フォグライトエフェクトを追加
 view.addEffect<FogLightEffectDesc>({
   fogLight: {
     lights: [
@@ -253,7 +253,7 @@ await view.init();
 // 初期ライト配列
 const fogLights: FogLightDefinition[] = [];
 
-// フォグライトレイヤーを追加
+// フォグライトを追加
 const fogLayer = view.addEffect<FogLightEffectDesc>({
   fogLight: {
     lights: fogLights,

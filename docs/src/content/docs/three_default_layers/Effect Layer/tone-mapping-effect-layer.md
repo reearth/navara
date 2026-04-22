@@ -5,7 +5,7 @@ sidebar:
   order: 62
 ---
 
-The `ToneMappingEffectDesc` class is a layer that applies a tone mapping effect. It performs color adjustment from HDR (High Dynamic Range) to LDR (Low Dynamic Range), converting to a range that can be displayed on screen.
+The `ToneMappingEffectDesc` class is a Descriptor that applies a tone mapping effect. It performs color adjustment from HDR (High Dynamic Range) to LDR (Low Dynamic Range), converting to a range that can be displayed on screen.
 
 ## Properties
 
@@ -48,7 +48,7 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-// Add default photorealistic layers (includes ToneMappingEffectDesc)
+// Add default photorealistic objects (includes ToneMappingEffectDesc)
 const defaultLayers = plugin.addDefaultPhotorealScene();
 
 // Set exposure
@@ -113,7 +113,7 @@ view.toneMappingExposure = 15;
 view.toneMappingExposure = 5;
 ```
 
-### Adding a tone mapping layer individually
+### Adding a tone mapping Descriptor individually
 
 ```typescript
 import ThreeView, { ToneMappingEffectDesc, SMAAEffectDesc, ToneMappingMode } from "@navara/three";

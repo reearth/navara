@@ -5,7 +5,7 @@ sidebar:
   order: 106
 ---
 
-`TubeMeshDesc`クラスは、チューブ(Tube)ジオメトリを描画するためのメッシュレイヤーです。カトマル・ロム曲線に沿ったチューブ形状を作成できます。
+`TubeMeshDesc`クラスは、チューブ(Tube)ジオメトリを描画するためのメッシュです。カトマル・ロム曲線に沿ったチューブ形状を作成できます。
 
 以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`pickable`、`visible`）が利用できます。詳細は [MeshDesc](./mesh-layer-base) を参照してください。
 
@@ -259,7 +259,7 @@ import { Color } from "@navara/three";
 
 **Type:** `string[]` (optional)
 
-**Description:** このメッシュに適用するセレクティブエフェクトレイヤーIDの配列を指定します。
+**Description:** このメッシュに適用するセレクティブエフェクトIDの配列を指定します。
 
 **Example:**
 

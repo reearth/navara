@@ -1,11 +1,11 @@
 ---
 title: SkyLightProbeDesc
-description: Sky light probe layer for navara_three
+description: Sky light probe descriptor for navara_three
 sidebar:
   order: 153
 ---
 
-The `SkyLightProbeDesc` class represents a dynamic sky light probe layer that works in conjunction with atmospheric scattering simulation. It provides environment lighting that automatically updates based on the sun's position, reproducing realistic sky lighting.
+The `SkyLightProbeDesc` class represents a dynamic sky light probe Descriptor that works in conjunction with atmospheric scattering simulation. It provides environment lighting that automatically updates based on the sun's position, reproducing realistic sky lighting.
 
 The sun direction is automatically calculated based on `view.atmosphere.date`, and lighting is updated every frame.
 
@@ -19,7 +19,7 @@ For details on the atmosphere system, see the [Atmosphere class](../../../three/
 
 **Type:** `boolean | undefined`
 
-**Description:** Controls the visibility of the layer.
+**Description:** Controls the visibility of the object.
 
 **Default:** `true`
 
@@ -69,7 +69,7 @@ SkyLightProbeDesc automatically updates based on the following factors:
 These updates are performed automatically every frame, so manual updating is unnecessary.
 
 :::note[Updatable Properties]
-The only property that can be changed via the `update()` method after layer creation is **`intensity`**. Properties such as sun direction and position are updated automatically and cannot be set manually.
+The only property that can be changed via the `update()` method after Descriptor creation is **`intensity`**. Properties such as sun direction and position are updated automatically and cannot be set manually.
 :::
 
 ## Usage Examples
@@ -85,7 +85,7 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-// Add default photorealistic layers
+// Add default photorealistic objects
 const defaultLayers = plugin.addDefaultPhotorealScene();
 
 // The sky light probe automatically follows the sun's position
@@ -146,7 +146,7 @@ view.atmosphere.on("sunChanged", () => {
 
 SkyLightProbeDesc works closely with the atmospheric scattering simulation from the `@takram/three-atmosphere` package:
 
-1. **Irradiance texture retrieval**: Obtains pre-computed irradiance textures from the atmosphere layer
+1. **Irradiance texture retrieval**: Obtains pre-computed irradiance textures from the atmosphere object
 2. **Sun direction synchronization**: Synchronizes the sun direction every frame
 3. **Position update**: Calculates appropriate lighting based on camera position
 
@@ -163,7 +163,7 @@ This enables natural environment lighting that responds to time of day and sun p
 
 ## Notes
 
-- SkyLightProbeDesc requires the atmosphere layer (Atmosphere) to function.
+- SkyLightProbeDesc requires the atmosphere object (Atmosphere) to function.
 - Using `plugin.addDefaultPhotorealScene()` automatically includes SkyLightProbeDesc.
 - Setting a higher intensity at night can achieve more natural nightscape lighting.
-- It can be used in combination with other light descriptors (AmbientLight, SunLight, etc.).
+- It can be used in combination with other light Descriptors (AmbientLight, SunLight, etc.).

@@ -48,7 +48,7 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-// Add default photorealistic layers (required for sky rendering)
+// Add default photorealistic objects (required for sky rendering)
 plugin.addDefaultPhotorealScene();
 
 // Add sky environment map effect descriptor
@@ -91,7 +91,7 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-// Add default photorealistic layers
+// Add default photorealistic objects
 plugin.addDefaultPhotorealScene();
 
 // Add sky environment map (used for reflections)
@@ -118,4 +118,4 @@ view.addLayer({
 
 ## Notes
 
-The generated environment map is used for material reflections and environment lighting. The resolution is fixed at creation time, so the layer must be recreated to change it.
+The generated environment map is used for material reflections and environment lighting. The resolution is fixed at creation time, so the Descriptor must be recreated to change it.

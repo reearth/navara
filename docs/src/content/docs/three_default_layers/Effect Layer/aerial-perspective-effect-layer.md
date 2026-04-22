@@ -5,7 +5,7 @@ sidebar:
   order: 51
 ---
 
-The `AerialPerspectiveEffectDesc` class is a layer that represents the aerial perspective effect. It calculates atmospheric light scattering (inscatter) and transmittance, producing the effect where distant objects appear more bluish.
+The `AerialPerspectiveEffectDesc` class is a Descriptor that represents the aerial perspective effect. It calculates atmospheric light scattering (inscatter) and transmittance, producing the effect where distant objects appear more bluish.
 
 This effect uses precomputed textures and sun/moon directions provided by the `Atmosphere` class to reproduce physically accurate atmospheric scattering.
 
@@ -149,7 +149,7 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-// Add default photorealistic layers (includes AerialPerspectiveEffectDesc)
+// Add default photorealistic objects (includes AerialPerspectiveEffectDesc)
 const defaultLayers = plugin.addDefaultPhotorealScene();
 
 // Update aerial perspective effect settings

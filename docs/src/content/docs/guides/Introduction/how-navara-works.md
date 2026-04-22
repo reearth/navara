@@ -62,7 +62,7 @@ graph TB
 
 **Tier 0: ThreeView** is the primary entry point for all users. It provides high-level methods for camera positioning, layer management, plugin registration, and lifecycle control. This surface is intentionally kept small and stable — breaking changes require a major version bump. See the [ThreeView API reference](../../../three/API/threeview-class/) for details.
 
-**Tier 1: Plugin + ViewContext** is available to plugin and layer developers. When a plugin is initialized, it receives a `ViewContext` that provides controlled access to rendering internals such as scenes, pass management, and the renderer reference. This level offers more power at the cost of occasional breaking changes between minor versions. See the [Plugin](../../../three/Core/plugin/) and [Custom Layer](../../../three/Core/custom-layer/) documentation for details.
+**Tier 1: Plugin + ViewContext** is available to plugin and Descriptor developers. When a plugin is initialized, it receives a `ViewContext` that provides controlled access to rendering internals such as scenes, pass management, and the renderer reference. This level offers more power at the cost of occasional breaking changes between minor versions. See the [Plugin](../../../three/Core/plugin/) and [Custom Layer](../../../three/Core/custom-layer/) documentation for details.
 
 **Tier 2: Advanced** is planned for future use cases that require deeper integration, such as injecting an external renderer or replacing the render loop. These APIs will be explicitly marked as unstable.
 

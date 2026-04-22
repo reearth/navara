@@ -27,7 +27,7 @@ view.addPlugin(plugin);
 // Initialize the view
 await view.init();
 
-// Add default photorealistic layers (sky, stars, sun, light probe)
+// Add default photorealistic objects (sky, stars, sun, light probe)
 const defaultLayers = plugin.addDefaultPhotorealScene();
 
 // Add terrain layer
@@ -149,7 +149,7 @@ const view = new ThreeView({
 
 **Type:** `AtmosphereOptions | undefined`
 
-**Description:** Configuration options for atmospheric rendering. Configures the sky, sun, and atmospheric scattering effects. Sun and moon positions are automatically calculated based on the date specified in the `date` property and reflected in related layers such as `SunLightDesc`.
+**Description:** Configuration options for atmospheric rendering. Configures the sky, sun, and atmospheric scattering effects. Sun and moon positions are automatically calculated based on the date specified in the `date` property and reflected in related Descriptors such as `SunLightDesc`.
 
 ```typescript
 export type AtmosphereOptions = {
@@ -387,7 +387,7 @@ type GlobeOptions = {
 ```
 
 :::warning
-Disabling `hideUnderground` may cause unexpected behavior with some effect descriptors.
+Disabling `hideUnderground` may cause unexpected behavior with some effect Descriptors.
 :::
 
 :::tip[Related Documentation]

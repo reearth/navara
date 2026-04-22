@@ -469,7 +469,7 @@ import { Color } from "@navara/three";
 
 **Type:** `boolean | undefined`
 
-**Description:** 透過を有効にするかどうかを指定します。`opacity` を使用するには `true` に設定する必要があります。エフェクトレイヤーを使用する場合に予期しない動作を引き起こす可能性があります。
+**Description:** 透過を有効にするかどうかを指定します。`opacity` を使用するには `true` に設定する必要があります。エフェクトを使用する場合に予期しない動作を引き起こす可能性があります。
 
 **Default:** `undefined`
 

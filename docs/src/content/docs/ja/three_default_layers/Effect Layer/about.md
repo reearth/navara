@@ -5,13 +5,13 @@ sidebar:
   order: 50
 ---
 
-`EffectDesc`は、レンダリングパイプラインにポストプロセッシングエフェクトを適用するためのレイヤータイプです。アンチエイリアシング、被写界深度、トーンマッピングなど、様々なビジュアルエフェクトを追加できます。
+`EffectDesc`は、レンダリングパイプラインにポストプロセッシングエフェクトを適用するためのDescriptorタイプです。アンチエイリアシング、被写界深度、トーンマッピングなど、様々なビジュアルエフェクトを追加できます。
 
 ## 利用可能なEffectDescタイプ
 
 navara_threeでは、以下のEffectDescタイプが利用可能です:
 
-| レイヤータイプ | 説明 |
+| Descriptorタイプ | 説明 |
 |------------|------|
 | [AerialPerspectiveEffectDesc](./aerial-perspective-effect-layer) | 大気による光の散乱と透過を表現するエフェクト |
 | [CloudsEffectDesc](./clouds-effect-layer) | リアルタイムボリュメトリック雲をレンダリングするエフェクト |
@@ -28,7 +28,7 @@ navara_threeでは、以下のEffectDescタイプが利用可能です:
 
 ## 基本的な使い方
 
-EffectDescは、レイヤークラスを登録した後、`view.addEffect()`メソッドで追加します:
+EffectDescは、Descriptorクラスを登録した後、`view.addEffect()`メソッドで追加します:
 
 ```typescript
 import ThreeView from "@navara/three";
@@ -36,7 +36,7 @@ import { AerialPerspectiveEffectDesc } from "@navara/three_default_layers";
 
 const view = new ThreeView();
 
-// レイヤークラスを登録
+// Descriptorクラスを登録
 view.registerEffect("aerialPerspective", AerialPerspectiveEffectDesc);
 
 await view.init();
@@ -50,7 +50,7 @@ const aerialPerspectiveLayer = view.addEffect<AerialPerspectiveEffectDesc>({
 
 すべてのEffectDescは、以下の基本設定を持ちます:
 
-- `id`: レイヤーの一意な識別子
-- `visible`: レイヤーの表示/非表示を切り替え
+- `id`: オブジェクトの一意な識別子
+- `visible`: オブジェクトの表示/非表示を切り替え
 
-詳細な使用方法は、各レイヤータイプのドキュメントを参照してください。
+詳細な使用方法は、各Descriptorタイプのドキュメントを参照してください。

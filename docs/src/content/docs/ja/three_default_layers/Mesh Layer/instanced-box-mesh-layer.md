@@ -1,11 +1,11 @@
 ---
 title: InstancedBoxMeshDesc
-description: navara_three 向け GPU インスタンスボックスメッシュレイヤー
+description: navara_three 向け GPU インスタンスボックスメッシュ
 sidebar:
   order: 103
 ---
 
-`InstancedBoxMeshDesc` クラスは、GPU インスタンシングを使用して複数のボックスインスタンスをレンダリングするメッシュレイヤーです。すべてのボックスが1つのジオメトリとマテリアルを共有し、1回の描画コールで高パフォーマンスにレンダリングされます。`InstancedMeshDesc` を継承しています。
+`InstancedBoxMeshDesc` クラスは、GPU インスタンシングを使用して複数のボックスインスタンスをレンダリングするメッシュです。すべてのボックスが1つのジオメトリとマテリアルを共有し、1回の描画コールで高パフォーマンスにレンダリングされます。`InstancedMeshDesc` を継承しています。
 
 以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`pickable`、`visible`）が利用できます。詳細は [MeshDesc](./mesh-layer-base) を参照してください。
 
@@ -317,7 +317,7 @@ import { Matrix4 } from "three";
 
 **Type:** `string[]` (optional)
 
-**Description:** このメッシュに適用するセレクティブエフェクトレイヤーIDの配列を指定します。
+**Description:** このメッシュに適用するセレクティブエフェクトIDの配列を指定します。
 
 **Example:**
 

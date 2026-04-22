@@ -5,7 +5,7 @@ sidebar:
   order: 53
 ---
 
-The `ColorGradingLUTEffectDesc` class is a layer that applies color grading effects using a LUT (Lookup Table). You can adjust the overall color tone of the scene using LUT textures such as 3DL files.
+The `ColorGradingLUTEffectDesc` class is a Descriptor that applies color grading effects using a LUT (Lookup Table). You can adjust the overall color tone of the scene using LUT textures such as 3DL files.
 
 ## Properties
 

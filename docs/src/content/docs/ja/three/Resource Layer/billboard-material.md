@@ -269,7 +269,7 @@ import { Color } from "@navara/three";
 
 **Type:** `boolean | undefined`
 
-**Description:** ビルボードの透過度を考慮するかどうかを指定します。true にするとエフェクトレイヤーを有効にしたときにビルボードがうまく表示されないことがあるので注意してください。
+**Description:** ビルボードの透過度を考慮するかどうかを指定します。true にするとエフェクトを有効にしたときにビルボードがうまく表示されないことがあるので注意してください。
 
 **Default:** `undefined`
 

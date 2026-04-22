@@ -8,11 +8,11 @@ sidebar:
 navara_three では、レイヤーは以下の 4 種類に分類されます：
 
 1. **リソースレイヤー** - 外部データソースから地理データを読み込んで表示するレイヤー（ラスタータイル、地形、GeoJSON、3D Tiles など）
-2. **メッシュレイヤー** - 3D メッシュオブジェクトをシーンに追加するレイヤー
-3. **エフェクトレイヤー** - ポストプロセッシングエフェクトを適用するレイヤー
-4. **ライトレイヤー** - シーンの照明を管理するレイヤー
+2. **メッシュ Descriptor** - 3D メッシュオブジェクトをシーンに追加する Descriptor
+3. **エフェクト Descriptor** - ポストプロセッシングエフェクトを適用する Descriptor
+4. **ライト Descriptor** - シーンの照明を管理する Descriptor
 
-リソースレイヤーとその他のレイヤー（メッシュ・エフェクト・ライト）では、返却されるハンドルクラスが異なります。
+リソースレイヤーと Descriptor（メッシュ・エフェクト・ライト）では、返却されるハンドルクラスが異なります。
 
 ## Layer
 
@@ -110,11 +110,11 @@ layer.forceUpdate();
 
 **FeatureCreatedParams:**
 
-| Property    | Type                  | Description                                |
-| ----------- | --------------------- | ------------------------------------------ |
-| `featureSetId` | `FeatureSetId`           | 作成されたフィーチャーセットの一意な識別子               |
-| `evaluator` | `FeatureEvaluator`    | 地物のスタイリングに使用する評価クラス     |
-| `credit`    | `string \| undefined` | データソースのクレジット情報（オプション） |
+| Property       | Type                  | Description                                |
+| -------------- | --------------------- | ------------------------------------------ |
+| `featureSetId` | `FeatureSetId`        | 作成されたフィーチャーセットの一意な識別子 |
+| `evaluator`    | `FeatureEvaluator`    | 地物のスタイリングに使用する評価クラス     |
+| `credit`       | `string \| undefined` | データソースのクレジット情報（オプション） |
 
 **Example:**
 
@@ -136,11 +136,11 @@ layer.on("featureCreated", ({ evaluator }) => {
 
 **FeatureUpdatedParams:**
 
-| Property    | Type               | Description                            |
-| ----------- | ------------------ | -------------------------------------- |
-| `featureSetId` | `FeatureSetId`        | 更新されたフィーチャーセットの一意な識別子           |
-| `evaluator` | `FeatureEvaluator` | 地物のスタイリングに使用する評価クラス |
-| `updatedAt` | `number`           | 更新時刻（タイムスタンプ）             |
+| Property       | Type               | Description                                |
+| -------------- | ------------------ | ------------------------------------------ |
+| `featureSetId` | `FeatureSetId`     | 更新されたフィーチャーセットの一意な識別子 |
+| `evaluator`    | `FeatureEvaluator` | 地物のスタイリングに使用する評価クラス     |
+| `updatedAt`    | `number`           | 更新時刻（タイムスタンプ）                 |
 
 **Example:**
 
@@ -167,8 +167,8 @@ layer.on("featureUpdated", ({ evaluator }) => {
 
 **FeatureVisibilityChangedParams:**
 
-| Property    | Type        | Description                    |
-| ----------- | ----------- | ------------------------------ |
+| Property       | Type           | Description                                  |
+| -------------- | -------------- | -------------------------------------------- |
 | `featureSetId` | `FeatureSetId` | 可視性が変更されたフィーチャーセットの識別子 |
 
 #### featureRemoved
@@ -183,8 +183,8 @@ layer.on("featureUpdated", ({ evaluator }) => {
 
 **FeatureRemovedParams:**
 
-| Property    | Type        | Description            |
-| ----------- | ----------- | ---------------------- |
+| Property       | Type           | Description                          |
+| -------------- | -------------- | ------------------------------------ |
 | `featureSetId` | `FeatureSetId` | 削除されたフィーチャーセットの識別子 |
 
 #### deleted
@@ -209,7 +209,7 @@ layer.on("deleted", () => {
 
 ## BaseHandle
 
-メッシュレイヤー、ライトレイヤー、エフェクトレイヤーを制御するためのハンドルクラスです。`ThreeView.addMesh()`、`ThreeView.addLight()`、`ThreeView.addEffect()` でレイヤーを追加した際に返されます。
+メッシュ、ライト、エフェクトを制御するためのハンドルクラスです。`ThreeView.addMesh()`、`ThreeView.addLight()`、`ThreeView.addEffect()` で Descriptor を追加した際に返されます。
 
 ### Properties
 
@@ -217,21 +217,21 @@ layer.on("deleted", () => {
 
 **Type:** `string`
 
-**Description:** レイヤーの一意な識別子。
+**Description:** Descriptor の一意な識別子。
 
 **Example:**
 
 ```typescript
 // SkyMeshDesc が登録済みであること
 const skyHandle = view.addMesh<SkyMeshDesc>({ sky: {} });
-console.log("レイヤーID:", skyHandle.id);
+console.log("Descriptor ID:", skyHandle.id);
 ```
 
 #### visible
 
 **Type:** `boolean`
 
-**Description:** レイヤーがシーンで表示されているかどうか。
+**Description:** Descriptor がシーンで表示されているかどうか。
 
 **Example:**
 
@@ -247,7 +247,7 @@ skyHandle.visible = false;
 
 **Type:** `T` (BaseDesc のサブクラス)
 
-**Description:** 基底レイヤーインスタンスへの直接アクセスを提供します。ハンドルを介して公開されていないレイヤー固有のメソッドやプロパティにアクセスするために使用します。
+**Description:** 基底 Descriptor インスタンスへの直接アクセスを提供します。ハンドルを介して公開されていない Descriptor 固有のメソッドやプロパティにアクセスするために使用します。
 
 **Example:**
 
@@ -255,7 +255,7 @@ skyHandle.visible = false;
 // SkyMeshDesc が登録済みであること
 const skyHandle = view.addMesh<SkyMeshDesc>({ sky: {} });
 
-// 基底レイヤーインスタンスにアクセス
+// 基底 Descriptor インスタンスにアクセス
 const skyHandle = skyHandle.ref;
 ```
 
@@ -263,7 +263,7 @@ const skyHandle = skyHandle.ref;
 
 #### update()
 
-部分的な更新でレイヤー設定を更新します。指定されたプロパティのみが変更され、その他は変更されません。
+部分的な更新で Descriptor 設定を更新します。指定されたプロパティのみが変更され、その他は変更されません。
 
 **Syntax:**
 
@@ -287,7 +287,7 @@ skyHandle.update({ sunAngularRadius: 0.05 });
 
 #### delete()
 
-シーンからレイヤーを削除し、リソースを解放します。削除後はハンドルを使用しないでください。
+シーンから Descriptor を削除し、リソースを解放します。削除後はハンドルを使用しないでください。
 
 **Syntax:**
 
@@ -305,7 +305,7 @@ skyHandle.delete();
 
 #### deleted
 
-**Description:** レイヤーが削除されたときに発火します。
+**Description:** Descriptor が削除されたときに発火します。
 
 **Handler Type:**
 
@@ -317,7 +317,7 @@ skyHandle.delete();
 
 ```typescript
 skyHandle.on("deleted", () => {
-  console.log("スカイレイヤーが削除されました");
+  console.log("SkyMeshが削除されました");
 });
 ```
 
@@ -325,16 +325,16 @@ skyHandle.on("deleted", () => {
 
 ## BaseDesc
 
-メッシュレイヤー、ライトレイヤー、エフェクトレイヤーの抽象基底クラスです。カスタムレイヤータイプを作成するにはこのクラスを拡張します。
+メッシュ、ライト、エフェクトの抽象基底クラスです。カスタム Descriptor を作成するにはこのクラスを拡張します。
 
-これらのレイヤーはリソースレイヤーと異なり、純粋にクライアントサイドであり、外部ソースからデータを読み込みません。Three.js オブジェクトを直接作成します。
+これらはリソースレイヤーと異なり、純粋にクライアントサイドであり、外部ソースからデータを読み込みません。Three.js オブジェクトを直接作成します。
 
 ### Type Parameters
 
-- `Config` - レイヤーの設定型（BaseDescConfig を拡張）
+- `Config` - Descriptor の設定型（BaseDescConfig を拡張）
 - `UpdateConfig` - 更新可能な設定プロパティ（BaseDescConfigUpdate を拡張）
-- `Instance` - レイヤーが作成する基底の Three.js オブジェクト型
-- `CustomEvent` - レイヤーが発火できる追加のカスタムイベント
+- `Instance` - Descriptor が作成する基底の Three.js オブジェクト型
+- `CustomEvent` - Descriptor が発火できる追加のカスタムイベント
 
 ### Properties
 
@@ -342,19 +342,19 @@ skyHandle.on("deleted", () => {
 
 **Type:** `string`
 
-**Description:** レイヤーの一意な識別子。`config.id` で指定するか、自動生成されます。
+**Description:** Descriptor の一意な識別子。`config.id` で指定するか、自動生成されます。
 
 #### visible
 
 **Type:** `boolean`
 
-**Description:** レイヤーが現在表示されているかどうかを取得または設定します。
+**Description:** Descriptor が現在表示されているかどうかを取得または設定します。
 
 ### Methods
 
 #### onCreate() (abstract)
 
-レイヤーがシーンに追加されたときに呼び出されます。Three.js オブジェクトを作成するためにオーバーライドします。ここで `this._instance` を初期化し、適切なシーンに追加する必要があります。
+Descriptor がシーンに追加されたときに呼び出されます。Three.js オブジェクトを作成するためにオーバーライドします。ここで `this._instance` を初期化し、適切なシーンに追加する必要があります。
 
 **Syntax:**
 
@@ -364,7 +364,7 @@ abstract onCreate(): void
 
 #### onUpdateConfig()
 
-`BaseHandle.update()` を介してレイヤー設定が更新されたときに呼び出されます。カスタム設定の更新を処理するためにオーバーライドします。
+`BaseHandle.update()` を介して Descriptor 設定が更新されたときに呼び出されます。カスタム設定の更新を処理するためにオーバーライドします。
 
 **Syntax:**
 
@@ -378,7 +378,7 @@ onUpdateConfig(updates: UpdateConfig): void
 
 #### onDestroy()
 
-`BaseHandle.delete()` を介してレイヤーが削除されたときに呼び出されます。リソースをクリーンアップするためにオーバーライドします。`super.onDestroy()` を呼び出すことを忘れないでください。
+`BaseHandle.delete()` を介して Descriptor が削除されたときに呼び出されます。リソースをクリーンアップするためにオーバーライドします。`super.onDestroy()` を呼び出すことを忘れないでください。
 
 **Syntax:**
 
@@ -398,7 +398,7 @@ type MyBoxConfig = BaseDescConfig & {
   color?: number;
 };
 
-// カスタムレイヤーを作成
+// カスタム Descriptor を作成
 class MyBoxDesc extends BaseDesc<MyBoxConfig, MyBoxConfig, Mesh> {
   private size: number;
   private color: number;
@@ -437,9 +437,9 @@ class MyBoxDesc extends BaseDesc<MyBoxConfig, MyBoxConfig, Mesh> {
 
 ### BaseDescConfig
 
-すべてのメッシュ・エフェクト・ライトレイヤーに共通する基本設定オプション。
+すべてのメッシュ・エフェクト・ライトに共通する基本設定オプション。
 
 | Property  | Type                   | Default  | Description                |
 | --------- | ---------------------- | -------- | -------------------------- |
-| `id`      | `string \| undefined`  | 自動生成 | レイヤーのカスタム ID      |
-| `visible` | `boolean \| undefined` | `true`   | レイヤーを表示するかどうか |
+| `id`      | `string \| undefined`  | 自動生成 | Descriptor のカスタム ID      |
+| `visible` | `boolean \| undefined` | `true`   | Descriptor を表示するかどうか |

@@ -111,7 +111,7 @@ clouds.update({ clouds: { shadows: true } });
 
 ## Adding Rain Effects
 
-Rain effects use a combination of two layers. `RainMeshDesc` renders 3D raindrop particles in the scene, and `RainDropEffectDesc` provides a post-processing effect of water droplets on the screen.
+Rain effects use a combination of two objects. `RainMeshDesc` renders 3D raindrop particles in the scene, and `RainDropEffectDesc` provides a post-processing effect of water droplets on the screen.
 
 ### 3D Raindrop Particles
 
@@ -119,7 +119,7 @@ Rain effects use a combination of two layers. `RainMeshDesc` renders 3D raindrop
 // Enable the animation loop to keep rain animation running
 view.animation = true;
 
-// Add rain layer
+// Add rain object
 const rain = view.addMesh<RainMeshDesc>({
   rain: {
     particleCount: 5000, // Number of raindrops
@@ -159,10 +159,10 @@ Enabling both `RainMeshDesc` and `RainDropEffectDesc` simultaneously allows for 
 
 ## Adding Snow Effects
 
-For snow effects, use `SnowMeshDesc`. Remove the rain layer and add it instead.
+For snow effects, use `SnowMeshDesc`. Remove the rain object and add it instead.
 
 ```typescript
-// Add snow layer
+// Add snow object
 const snow = view.addMesh<SnowMeshDesc>({
   snow: {
     particleCount: 5000,  // Number of snowflakes

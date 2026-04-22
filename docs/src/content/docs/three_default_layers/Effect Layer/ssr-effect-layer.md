@@ -5,7 +5,7 @@ sidebar:
   order: 60
 ---
 
-The `SSREffectDesc` class is a layer that generates screen-space reflection (SSR) effects. It calculates reflections of on-screen objects in real-time, expressing reflections on water surfaces and glossy surfaces.
+The `SSREffectDesc` class is a Descriptor that generates screen-space reflection (SSR) effects. It calculates reflections of on-screen objects in real-time, expressing reflections on water surfaces and glossy surfaces.
 
 ## Properties
 
@@ -224,7 +224,7 @@ The `SSREffectDesc` class is a layer that generates screen-space reflection (SSR
 **Default:** `"normal"`
 
 :::note[Can only be set at initialization]
-This property can only be set when creating the layer. It cannot be changed via the `update()` method.
+This property can only be set when creating the Descriptor. It cannot be changed via the `update()` method.
 :::
 
 **Valid values:** `"normal"`, `"add"`, `"multiply"`, `"screen"`, `"overlay"`, etc. (see ColorGradingLUTEffectDesc blendMode)
@@ -248,7 +248,7 @@ This property can only be set when creating the layer. It cannot be changed via 
 **Default:** `7`
 
 :::note[Can only be set at initialization]
-This property can only be set when creating the layer. It cannot be changed via the `update()` method.
+This property can only be set when creating the Descriptor. It cannot be changed via the `update()` method.
 :::
 
 **Example:**
@@ -396,7 +396,7 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-// Add default photorealistic layers
+// Add default photorealistic objects
 plugin.addDefaultPhotorealScene();
 
 // Add SSR effect

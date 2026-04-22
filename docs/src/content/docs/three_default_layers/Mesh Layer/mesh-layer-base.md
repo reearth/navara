@@ -1,18 +1,18 @@
 ---
 title: MeshDesc
-description: Base class properties and features shared by all mesh layers
+description: Base class properties and features shared by all mesh Descriptors
 sidebar:
   order: 99
 ---
 
-`MeshDesc` is the base class for all mesh layers. It provides common configuration properties, transform composition, and picking support. Every mesh layer — both built-in and custom — inherits from this class, so the features described here are available on all mesh layers.
+`MeshDesc` is the base class for all mesh Descriptors. It provides common configuration properties, transform composition, and picking support. Every mesh Descriptor — both built-in and custom — inherits from this class, so the features described here are available on all mesh Descriptors.
 
 ## Common Properties
 
 | Property      | Type                                   | Default        | Description                                                                                    |
 |---------------|----------------------------------------|----------------|------------------------------------------------------------------------------------------------|
-| `id`          | `string`                               | Auto-generated | Unique identifier for the layer                                                                |
-| `visible`     | `boolean`                              | `true`         | Toggle visibility of the layer                                                                 |
+| `id`          | `string`                               | Auto-generated | Unique identifier for the object                                                                |
+| `visible`     | `boolean`                              | `true`         | Toggle visibility of the object                                                                 |
 | `position`    | `{ x: number, y: number, z: number }`  | -              | Position (ECEF), or local offset when `matrix`/`matrixWorld` is set                            |
 | `rotation`    | `{ x: number, y: number, z: number }`  | -              | Rotation (Euler angles, radians), or local offset when `matrix`/`matrixWorld` is set           |
 | `scale`       | `{ x: number, y: number, z: number }`  | -              | Scale, or local offset when `matrix`/`matrixWorld` is set                                      |
@@ -88,7 +88,7 @@ const box2 = view.addMesh<BoxMeshDesc>({
 
 ## Picking
 
-Mesh layers can opt into GPU-based click picking by setting `pickable: true` in the layer config. The picking system renders pickable meshes into a dedicated single-pixel render target with each mesh's batch ID encoded as an RGB color, reads back the pixel, and emits a `"pick"` event identifying which mesh was clicked.
+Mesh Descriptors can opt into GPU-based click picking by setting `pickable: true` in the Descriptor config. The picking system renders pickable meshes into a dedicated single-pixel render target with each mesh's batch ID encoded as an RGB color, reads back the pixel, and emits a `"pick"` event identifying which mesh was clicked.
 
 :::note
 To use picking, you must set `picking: true` in the ThreeView constructor.
@@ -125,13 +125,13 @@ view.on("pick", (info) => {
 
 ### Batch ID
 
-The batch ID is a unique 24-bit integer assigned to each pickable mesh (or each instance in an instanced mesh layer). You can read it from the layer reference to determine which mesh was clicked:
+The batch ID is a unique 24-bit integer assigned to each pickable mesh (or each instance in an instanced mesh Descriptor). You can read it from the Descriptor reference to determine which mesh was clicked:
 
 ```typescript
-// Single mesh layer
+// Single mesh Descriptor
 const batchId = boxLayer.ref.batchId;
 
-// Instanced mesh layer — one batch ID per instance
+// Instanced mesh Descriptor — one batch ID per instance
 const batchIds = instancedLayer.ref.batchIds;
 ```
 
@@ -156,7 +156,7 @@ type PickedFeature = {
 };
 ```
 
-For implementing picking in custom layers, see [Custom Layer — Mesh Picking](../../three/core/custom-layer/#mesh-picking).
+For implementing picking in custom Descriptors, see [Custom Layer — Mesh Picking](../../three/core/custom-layer/#mesh-picking).
 
 ## Coordinate Transformation
 
@@ -187,7 +187,7 @@ const position = geodeticToVector3({
   height: 200,                      // Altitude (meters)
 });
 
-// Add a mesh layer with the converted coordinates
+// Add a mesh Descriptor with the converted coordinates
 const sphereLayer = view.addMesh<SphereMeshDesc>({
   sphere: {
     radius: 100,

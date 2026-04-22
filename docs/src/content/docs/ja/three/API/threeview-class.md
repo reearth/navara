@@ -149,7 +149,7 @@ const view = new ThreeView({
 
 **Type:** `AtmosphereOptions | undefined`
 
-**Description:** 大気レンダリングの設定オプション。空、太陽、大気散乱効果の設定を行います。`date` プロパティで指定した日時に基づいて太陽と月の位置が自動計算され、`SunLightDesc` などの関連レイヤーに反映されます。
+**Description:** 大気レンダリングの設定オプション。空、太陽、大気散乱効果の設定を行います。`date` プロパティで指定した日時に基づいて太陽と月の位置が自動計算され、`SunLightDesc` などの関連 Descriptor に反映されます。
 
 ```typescript
 export type AtmosphereOptions = {
@@ -387,7 +387,7 @@ type GlobeOptions = {
 ```
 
 :::warning
-`hideUnderground` を無効にすると、エフェクトレイヤーによっては予期しない動作が発生する可能性があります。
+`hideUnderground` を無効にすると、エフェクトによっては予期しない動作が発生する可能性があります。
 :::
 
 :::tip[関連ドキュメント]

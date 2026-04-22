@@ -5,7 +5,7 @@ sidebar:
   order: 54
 ---
 
-`FXAAEffectDesc`クラスは、FXAA(Fast Approximate Anti-Aliasing)アンチエイリアシングエフェクトを適用するレイヤーです。画像のジャギーを軽減し、滑らかな外観を実現します。
+`FXAAEffectDesc`クラスは、FXAA(Fast Approximate Anti-Aliasing)アンチエイリアシングエフェクトを適用するDescriptorです。画像のジャギーを軽減し、滑らかな外観を実現します。
 
 ## Properties
 
@@ -13,7 +13,7 @@ sidebar:
 
 **Type:** `boolean | undefined`
 
-**Description:** エフェクトレイヤーの表示/非表示を制御します。
+**Description:** エフェクトの表示/非表示を制御します。
 
 **Default:** `true`
 
@@ -32,7 +32,7 @@ import ThreeView, { FXAAEffectDesc } from "@navara/three";
 const view = new ThreeView();
 await view.init();
 
-// FXAAエフェクトレイヤーを追加
+// FXAAエフェクトを追加
 view.addEffect<FXAAEffectDesc>({
   fxaa: {},
 });

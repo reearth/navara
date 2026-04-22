@@ -5,7 +5,7 @@ sidebar:
   order: 57
 ---
 
-The `RainDropEffectDesc` class is a layer that applies raindrop refraction effects to the screen. It generates an animation effect of raindrops flowing down the screen.
+The `RainDropEffectDesc` class is a Descriptor that applies raindrop refraction effects to the screen. It generates an animation effect of raindrops flowing down the screen.
 
 ## Properties
 
@@ -75,7 +75,7 @@ The `RainDropEffectDesc` class is a layer that applies raindrop refraction effec
 
 **Type:** `number | undefined`
 
-**Description:** Specifies the number of active layers to simulate. Higher values add smaller raindrops but increase cost.
+**Description:** Specifies the number of active layers to simulate (shader layers). Higher values add smaller raindrops but increase cost.
 
 **Default:** `4`
 
@@ -303,7 +303,7 @@ await view.init();
 // Enable animation (required for raindrops to flow)
 view.animation = true;
 
-// Add default photorealistic layers
+// Add default photorealistic objects
 plugin.addDefaultPhotorealScene();
 
 // Add raindrop effect descriptor

@@ -1,24 +1,24 @@
 ---
 title: MeshDesc
-description: すべてのメッシュレイヤーに共通する基底クラスのプロパティと機能
+description: すべてのメッシュに共通する基底クラスのプロパティと機能
 sidebar:
   order: 99
 ---
 
-`MeshDesc` はすべてのメッシュレイヤーの基底クラスです。共通の設定プロパティ、トランスフォーム合成、ピッキングのサポートを提供します。ビルトインおよびカスタムのすべてのメッシュレイヤーはこのクラスを継承しているため、ここで説明する機能はすべてのメッシュレイヤーで利用できます。
+`MeshDesc` はすべてのメッシュの基底クラスです。共通の設定プロパティ、トランスフォーム合成、ピッキングのサポートを提供します。ビルトインおよびカスタムのすべてのメッシュはこのクラスを継承しているため、ここで説明する機能はすべてのメッシュで利用できます。
 
 ## 共通プロパティ
 
-| プロパティ    | 型                                     | デフォルト | 説明                                                                                    |
-|---------------|----------------------------------------|------------|-----------------------------------------------------------------------------------------|
-| `id`          | `string`                               | 自動生成   | レイヤーの一意な識別子                                                                  |
-| `visible`     | `boolean`                              | `true`     | レイヤーの表示/非表示を切り替え                                                         |
-| `position`    | `{ x: number, y: number, z: number }`  | -          | 位置（ECEF座標系）、`matrix`/`matrixWorld` 設定時はローカルオフセット                   |
-| `rotation`    | `{ x: number, y: number, z: number }`  | -          | 回転（Euler角、ラジアン）、`matrix`/`matrixWorld` 設定時はローカルオフセット            |
-| `scale`       | `{ x: number, y: number, z: number }`  | -          | スケール、`matrix`/`matrixWorld` 設定時はローカルオフセット                              |
-| `matrix`      | `Matrix4`                              | -          | ローカル変換行列。設定時は `position`/`rotation`/`scale` がこのフレーム内のオフセットになる |
-| `matrixWorld` | `Matrix4`                              | -          | ワールド変換行列。設定時は `position`/`rotation`/`scale` がこのフレーム内のオフセットになる |
-| `pickable`    | `boolean`                              | `false`    | GPU ベースのクリックピッキングを有効にする                                              |
+| プロパティ    | 型                                    | デフォルト | 説明                                                                                        |
+| ------------- | ------------------------------------- | ---------- | ------------------------------------------------------------------------------------------- |
+| `id`          | `string`                              | 自動生成   | オブジェクトの一意な識別子                                                                      |
+| `visible`     | `boolean`                             | `true`     | オブジェクトの表示/非表示を切り替え                                                             |
+| `position`    | `{ x: number, y: number, z: number }` | -          | 位置（ECEF座標系）、`matrix`/`matrixWorld` 設定時はローカルオフセット                       |
+| `rotation`    | `{ x: number, y: number, z: number }` | -          | 回転（Euler角、ラジアン）、`matrix`/`matrixWorld` 設定時はローカルオフセット                |
+| `scale`       | `{ x: number, y: number, z: number }` | -          | スケール、`matrix`/`matrixWorld` 設定時はローカルオフセット                                 |
+| `matrix`      | `Matrix4`                             | -          | ローカル変換行列。設定時は `position`/`rotation`/`scale` がこのフレーム内のオフセットになる |
+| `matrixWorld` | `Matrix4`                             | -          | ワールド変換行列。設定時は `position`/`rotation`/`scale` がこのフレーム内のオフセットになる |
+| `pickable`    | `boolean`                             | `false`    | GPU ベースのクリックピッキングを有効にする                                                  |
 
 ## トランスフォーム合成
 
@@ -88,7 +88,7 @@ const box2 = view.addMesh<BoxMeshDesc>({
 
 ## ピッキング
 
-メッシュレイヤーは、レイヤー設定で `pickable: true` を指定することで GPU ベースのクリックピッキングを有効にできます。ピッキングシステムは、ピッカブルメッシュを専用の 1 ピクセルのレンダーターゲットに各メッシュのバッチ ID を RGB カラーとしてエンコードして描画し、ピクセルを読み取って `"pick"` イベントを発行してクリックされたメッシュを特定します。
+メッシュは、Descriptor設定で `pickable: true` を指定することで GPU ベースのクリックピッキングを有効にできます。ピッキングシステムは、ピッカブルメッシュを専用の 1 ピクセルのレンダーターゲットに各メッシュのバッチ ID を RGB カラーとしてエンコードして描画し、ピクセルを読み取って `"pick"` イベントを発行してクリックされたメッシュを特定します。
 
 :::note
 ピッキングを使用するには、ThreeView のコンストラクタで `picking: true` を設定する必要があります。
@@ -117,7 +117,7 @@ const boxLayer = view.addMesh<BoxMeshDesc>({
 
 view.on("pick", (info) => {
   if (info) {
-    console.log("選択されたレイヤー:", info.layerId);
+    console.log("選択されたオブジェクト:", info.layerId);
     console.log("バッチ ID:", info.batchId);
   }
 });
@@ -125,13 +125,13 @@ view.on("pick", (info) => {
 
 ### バッチ ID
 
-バッチ ID は、各ピッカブルメッシュ（またはインスタンスメッシュレイヤーの各インスタンス）に割り当てられるユニークな 24 ビット整数です。レイヤーリファレンスから読み取り、クリックされたメッシュを特定できます:
+バッチ ID は、各ピッカブルメッシュ（またはインスタンスメッシュの各インスタンス）に割り当てられるユニークな 24 ビット整数です。Descriptorリファレンスから読み取り、クリックされたメッシュを特定できます:
 
 ```typescript
-// 単一メッシュレイヤー
+// 単一メッシュ
 const batchId = boxLayer.ref.batchId;
 
-// インスタンスメッシュレイヤー — インスタンスごとに1つのバッチ ID
+// インスタンスメッシュ — インスタンスごとに1つのバッチ ID
 const batchIds = instancedLayer.ref.batchIds;
 ```
 
@@ -187,7 +187,7 @@ const position = geodeticToVector3({
   height: 200,                      // 高度（メートル）
 });
 
-// 変換した座標でメッシュレイヤーを追加
+// 変換した座標でメッシュを追加
 const sphereLayer = view.addMesh<SphereMeshDesc>({
   sphere: {
     radius: 100,
@@ -234,13 +234,13 @@ const modelLayer = view.addMesh<GLTFModelDesc>({
 
 ### 座標変換関数一覧
 
-| 関数 | 説明 |
-|------|------|
-| `geodeticToVector3()` | 測地座標（緯度・経度・高度）をECEF座標（Vector3）に変換 |
-| `vector3ToGeodetic()` | ECEF座標（Vector3）を測地座標に変換 |
-| `degreeToRadian()` | 度をラジアンに変換 |
-| `radianToDegree()` | ラジアンを度に変換 |
-| `geodeticSurfaceNormal()` | 指定位置での地球表面の法線ベクトルを取得 |
-| `eastNorthUpToFixedFrame()` | ENU座標系への変換行列を取得 |
+| 関数                        | 説明                                                    |
+| --------------------------- | ------------------------------------------------------- |
+| `geodeticToVector3()`       | 測地座標（緯度・経度・高度）をECEF座標（Vector3）に変換 |
+| `vector3ToGeodetic()`       | ECEF座標（Vector3）を測地座標に変換                     |
+| `degreeToRadian()`          | 度をラジアンに変換                                      |
+| `radianToDegree()`          | ラジアンを度に変換                                      |
+| `geodeticSurfaceNormal()`   | 指定位置での地球表面の法線ベクトルを取得                |
+| `eastNorthUpToFixedFrame()` | ENU座標系への変換行列を取得                             |
 
 詳細は [navara_three_api](../API%20Reference/navara_three_api) を参照してください。

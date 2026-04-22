@@ -7,7 +7,7 @@ sidebar:
 
 `Atmosphere` クラスは、大気レンダリングのコンテキストを管理します。太陽と月の位置を設定された日時から自動計算し、大気散乱シミュレーション用のテクスチャを管理します。
 
-`ThreeView` インスタンスは `atmosphere` プロパティを通じてこのクラスのインスタンスを保持しており、`SunLightDesc`、`SkyMeshDesc`、`AerialPerspectiveEffectDesc` など大気に関連するレイヤーはこのインスタンスを参照して動作します。
+`ThreeView` インスタンスは `atmosphere` プロパティを通じてこのクラスのインスタンスを保持しており、`SunLightDesc`、`SkyMeshDesc`、`AerialPerspectiveEffectDesc` など大気に関連する Descriptor はこのインスタンスを参照して動作します。
 
 ## 基本的な使用例
 
@@ -161,11 +161,11 @@ view.atmosphere.on("sunChanged", (sunDirection) => {
 });
 ```
 
-## 大気システムと他のレイヤーの連携
+## 大気システムと他の Descriptor の連携
 
-`Atmosphere` クラスは以下のレイヤーと自動的に連携します：
+`Atmosphere` クラスは以下の Descriptor と自動的に連携します：
 
-| レイヤー | 連携内容 |
+| Descriptor | 連携内容 |
 |----------|----------|
 | `SunLightDesc` | 太陽方向に基づいてライトの向きを更新 |
 | `SkyMeshDesc` | 太陽・月の描画位置を更新 |

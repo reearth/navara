@@ -5,7 +5,7 @@ sidebar:
   order: 53
 ---
 
-The `DepthOfFieldEffectDesc` class is a layer that applies a depth of field (DoF) effect. It generates bokeh based on the camera's focal plane, producing a photographic visual effect.
+The `DepthOfFieldEffectDesc` class is a Descriptor that applies a depth of field (DoF) effect. It generates bokeh based on the camera's focal plane, producing a photographic visual effect.
 
 ## Properties
 
@@ -99,7 +99,7 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-// Add default photorealistic layers
+// Add default photorealistic objects
 const defaultLayers = plugin.addDefaultPhotorealScene();
 defaultLayers.sun.update({
   sun: {
@@ -118,7 +118,7 @@ const depthOfFieldLayer = view.addEffect<DepthOfFieldEffectDesc>({
   visible: true,
 });
 
-// Add 3D tiles layer
+// Add 3D tiles resource layer
 view.addLayer({
   type: "cesium3dtiles",
   data: {

@@ -11,7 +11,7 @@ sidebar:
 
 **このチュートリアルで学べること:**
 - 大気遠近法（Aerial Perspective）エフェクトの追加
-- 空・太陽・星のレイヤー設定
+- 空・太陽・星のオブジェクト設定
 - 雲エフェクトの追加
 - トーンマッピングとアンチエイリアシングの設定
 - 雨・雪エフェクトの追加
@@ -19,7 +19,7 @@ sidebar:
 
 ## 大気遠近法エフェクトを追加する
 
-大気遠近法（Aerial Perspective）は、距離に応じた空気感・霞の効果を付与します。`DefaultPlugin` を使うと、すべてのデフォルトレイヤーが登録され、`addDefaultPhotorealScene()` でフォトリアルなシーンを一括セットアップできます。
+大気遠近法（Aerial Perspective）は、距離に応じた空気感・霞の効果を付与します。`DefaultPlugin` を使うと、すべてのデフォルトDescriptorが登録され、`addDefaultPhotorealScene()` でフォトリアルなシーンを一括セットアップできます。
 
 ```typescript
 import ThreeView, { JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
@@ -71,7 +71,7 @@ view.addLayer({
 view.setCamera({ lng: 139.7511, lat: 35.6736, height: 400, heading: -100, pitch: -20, roll: 0 });
 ```
 
-`addDefaultPhotorealScene()` により、空・太陽光・星・スカイライトプローブなどの大気レイヤーも自動で追加されています。影を落とすには太陽光の設定を更新します。
+`addDefaultPhotorealScene()` により、空・太陽光・星・スカイライトプローブなどの大気オブジェクトも自動で追加されています。影を落とすには太陽光の設定を更新します。
 
 ```typescript
 layers.sun.update({ sun: { castShadow: true } }); // 影を落とす
@@ -111,7 +111,7 @@ clouds.update({ clouds: { shadows: true } });
 
 ## 雨エフェクトを追加する
 
-雨の表現には2つのレイヤーを組み合わせて使用します。`RainMeshDesc` はシーン内に3D雨粒パーティクルを描画し、`RainDropEffectDesc` は画面に水滴が付着するポストエフェクトを提供します。
+雨の表現には2つのオブジェクトを組み合わせて使用します。`RainMeshDesc` はシーン内に3D雨粒パーティクルを描画し、`RainDropEffectDesc` は画面に水滴が付着するポストエフェクトを提供します。
 
 ### 3D雨粒パーティクル
 
@@ -119,7 +119,7 @@ clouds.update({ clouds: { shadows: true } });
 // 雨のアニメーションを常に動かすために、アニメーションループを常に回す
 view.animation = true;
 
-// 雨レイヤーを追加
+// 雨オブジェクトを追加
 const rain = view.addMesh<RainMeshDesc>({
   rain: {
     particleCount: 5000, // 雨粒の数
@@ -159,10 +159,10 @@ const rainDropEffect = view.addEffect<RainDropEffectDesc>({
 
 ## 雪エフェクトを追加する
 
-雪の表現は `SnowMeshDesc` を使用します。 雨レイヤーを消して追加してみましょう。
+雪の表現は `SnowMeshDesc` を使用します。 雨オブジェクトを消して追加してみましょう。
 
 ```typescript
-// 雪レイヤーを追加
+// 雪オブジェクトを追加
 const snow = view.addMesh<SnowMeshDesc>({
   snow: {
     particleCount: 5000,  // 雪粒の数

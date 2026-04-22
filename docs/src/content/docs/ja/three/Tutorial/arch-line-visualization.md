@@ -250,9 +250,9 @@ const arcLines = data.features.map((feature) => {
 `ColorMap` クラスのメソッド（`linear()`、`quantize()` など）については、[ColorMap クラス](../../../three/api-reference/colormap/) を参照してください。
 :::
 
-## アーチラインレイヤーを追加する
+## アーチラインオブジェクトを追加する
 
-作成したアーチライン定義をレイヤーとして追加します。
+作成したアーチライン定義をメッシュとして追加します。
 
 ```typescript
 import type { ArclineMeshDesc } from "@navara/three";
@@ -472,7 +472,7 @@ async function run() {
   // アーチラインデータを構築
   const { arcLines } = await constructData();
 
-  // アーチラインレイヤーを追加
+  // アーチラインオブジェクトを追加
   const arcLineHandle = view.addMesh<ArclineMeshDesc>({
     arcLines,
   });

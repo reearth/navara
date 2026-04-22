@@ -5,7 +5,7 @@ sidebar:
   order: 112
 ---
 
-`SkyBoxMeshDesc` is a layer that adds a simple skybox to the scene. It allows setting day and night sky colors as well as the sun color, providing a lightweight sky representation without using atmospheric scattering simulation (`SkyMeshDesc`).
+`SkyBoxMeshDesc` is a Descriptor that adds a simple skybox to the scene. It allows setting day and night sky colors as well as the sun color, providing a lightweight sky representation without using atmospheric scattering simulation (`SkyMeshDesc`).
 
 In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `pickable`, `visible`) are available. See [MeshDesc](./mesh-layer-base) for details.
 

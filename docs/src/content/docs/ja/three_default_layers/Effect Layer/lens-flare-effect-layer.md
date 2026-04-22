@@ -5,7 +5,7 @@ sidebar:
   order: 56
 ---
 
-`LensFlareEffectDesc`クラスは、レンズフレアエフェクトを生成するレイヤーです。太陽や月からの光がカメラレンズで反射する効果を表現します。
+`LensFlareEffectDesc`クラスは、レンズフレアエフェクトを生成するDescriptorです。太陽や月からの光がカメラレンズで反射する効果を表現します。
 
 ## Properties
 
@@ -13,7 +13,7 @@ sidebar:
 
 **Type:** `boolean | undefined`
 
-**Description:** エフェクトレイヤーの表示/非表示を制御します。
+**Description:** エフェクトの表示/非表示を制御します。
 
 **Default:** `true`
 
@@ -48,7 +48,7 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-// デフォルトのフォトリアルレイヤーを追加（LensFlareEffectDescを含む）
+// デフォルトのフォトリアルオブジェクトを追加（LensFlareEffectDescを含む）
 const defaultLayers = plugin.addDefaultPhotorealScene();
 
 // レンズフレアを有効にして強度を設定

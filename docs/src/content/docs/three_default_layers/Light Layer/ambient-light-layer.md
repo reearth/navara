@@ -13,7 +13,7 @@ The `AmbientLightDesc` class represents an ambient light descriptor that illumin
 
 **Type:** `boolean | undefined`
 
-**Description:** Controls the visibility of the layer.
+**Description:** Controls the visibility of the object.
 
 **Default:** `true`
 

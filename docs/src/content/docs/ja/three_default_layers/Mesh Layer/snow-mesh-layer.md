@@ -5,7 +5,7 @@ sidebar:
   order: 110
 ---
 
-`SnowMeshDesc`クラスは、雪のパーティクルエフェクトを表示するメッシュレイヤーです。テクスチャベースのポイントスプライトを使用して、リアルな降雪効果を作成します。
+`SnowMeshDesc`クラスは、雪のパーティクルエフェクトを表示するメッシュです。テクスチャベースのポイントスプライトを使用して、リアルな降雪効果を作成します。
 
 以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`pickable`、`visible`）が利用できます。詳細は [MeshDesc](./mesh-layer-base) を参照してください。
 
@@ -40,7 +40,7 @@ const position = geodeticToVector3(
 
 **Type:** `boolean`
 
-**Description:** レイヤーの表示/非表示を制御します。
+**Description:** オブジェクトの表示/非表示を制御します。
 
 **Default:** `true`
 

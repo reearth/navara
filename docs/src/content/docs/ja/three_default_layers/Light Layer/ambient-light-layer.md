@@ -5,7 +5,7 @@ sidebar:
   order: 151
 ---
 
-`AmbientLightDesc`クラスは、シーン全体に均一に光を当てる環境光レイヤーを表します。AmbientLightはすべてのオブジェクトを均等に照らし、影を作りません。
+`AmbientLightDesc`クラスは、シーン全体に均一に光を当てる環境光Descriptorを表します。AmbientLightはすべてのオブジェクトを均等に照らし、影を作りません。
 
 ## Common Properties
 
@@ -13,7 +13,7 @@ sidebar:
 
 **Type:** `boolean | undefined`
 
-**Description:** レイヤーの表示/非表示を制御します。
+**Description:** オブジェクトの表示/非表示を制御します。
 
 **Default:** `true`
 
@@ -82,7 +82,7 @@ import ThreeView, { AmbientLightDesc, Color } from "@navara/three";
 const view = new ThreeView();
 await view.init();
 
-// 環境光レイヤーを追加
+// 環境光オブジェクトを追加
 const ambientLight = view.addLight<AmbientLightDesc>({
   ambient: {
     color: new Color().setHex(0xffffff),

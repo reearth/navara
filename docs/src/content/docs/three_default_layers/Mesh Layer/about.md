@@ -15,23 +15,23 @@ The following MeshDescriptor types are available in navara_three:
 
 | Descriptor Type | Description |
 |------------|------|
-| [ArclineMeshDesc](./arcline-mesh-layer) | A layer that draws arc-shaped lines connecting two points |
-| [BoxMeshDesc](./box-mesh-layer) | A layer that draws box geometry |
-| [InstancedBoxMeshDesc](./instanced-box-mesh-layer) | A GPU-instanced layer that renders multiple boxes in a single draw call |
-| [CylinderMeshDesc](./cylinder-mesh-layer) | A layer that draws cylinder geometry |
-| [GLTFModelDesc](./gltf-model-layer) | A layer that loads and displays GLTF/GLB format 3D models |
-| [GlowGlobeMeshDesc](./glow-globe-mesh-layer) | A layer that displays a Fresnel-effect glow around the globe |
-| [PlaneMeshDesc](./plane-mesh-layer) | A layer that draws plane geometry |
-| [RainMeshDesc](./rain-mesh-layer) | A layer that displays rain particle effects |
-| [SkyBoxMeshDesc](./sky-box-mesh-layer) | A layer that draws a simple skybox |
-| [SkyMeshDesc](./sky-mesh-layer) | A layer that draws the sky, sun, and moon using atmospheric scattering |
-| [SmoothLineMeshDesc](./smooth-line-mesh-layer) | A layer that draws smooth lines using Catmull-Rom curves |
-| [SnowMeshDesc](./snow-mesh-layer) | A layer that displays snow particle effects |
-| [SphereMeshDesc](./sphere-mesh-layer) | A layer that draws sphere geometry |
-| [StarsDesc](./stars-layer) | A layer that draws a starry sky |
-| [TubeMeshDesc](./tube-mesh-layer) | A layer that draws tube geometry |
-| [AxesHelperDesc](./axes-helper-layer) | A debug helper layer that visualizes the 3 axes |
-| [ArrowHelperDesc](./arrow-helper-layer) | A debug helper layer that visualizes vector directions |
+| [ArclineMeshDesc](./arcline-mesh-layer) | A Descriptor that draws arc-shaped lines connecting two points |
+| [BoxMeshDesc](./box-mesh-layer) | A Descriptor that draws box geometry |
+| [InstancedBoxMeshDesc](./instanced-box-mesh-layer) | A GPU-instanced Descriptor that renders multiple boxes in a single draw call |
+| [CylinderMeshDesc](./cylinder-mesh-layer) | A Descriptor that draws cylinder geometry |
+| [GLTFModelDesc](./gltf-model-layer) | A Descriptor that loads and displays GLTF/GLB format 3D models |
+| [GlowGlobeMeshDesc](./glow-globe-mesh-layer) | A Descriptor that displays a Fresnel-effect glow around the globe |
+| [PlaneMeshDesc](./plane-mesh-layer) | A Descriptor that draws plane geometry |
+| [RainMeshDesc](./rain-mesh-layer) | A Descriptor that displays rain particle effects |
+| [SkyBoxMeshDesc](./sky-box-mesh-layer) | A Descriptor that draws a simple skybox |
+| [SkyMeshDesc](./sky-mesh-layer) | A Descriptor that draws the sky, sun, and moon using atmospheric scattering |
+| [SmoothLineMeshDesc](./smooth-line-mesh-layer) | A Descriptor that draws smooth lines using Catmull-Rom curves |
+| [SnowMeshDesc](./snow-mesh-layer) | A Descriptor that displays snow particle effects |
+| [SphereMeshDesc](./sphere-mesh-layer) | A Descriptor that draws sphere geometry |
+| [StarsDesc](./stars-layer) | A Descriptor that draws a starry sky |
+| [TubeMeshDesc](./tube-mesh-layer) | A Descriptor that draws tube geometry |
+| [AxesHelperDesc](./axes-helper-layer) | A debug helper Descriptor that visualizes the 3 axes |
+| [ArrowHelperDesc](./arrow-helper-layer) | A debug helper Descriptor that visualizes vector directions |
 
 ## Basic Usage
 
@@ -66,8 +66,8 @@ All Mesh Descriptors have the following basic settings:
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
-| `id` | `string` | Auto-generated | Unique identifier for the layer |
-| `visible` | `boolean` | `true` | Toggle visibility of the layer |
+| `id` | `string` | Auto-generated | Unique identifier for the object |
+| `visible` | `boolean` | `true` | Toggle visibility of the object |
 | `position` | `{ x: number, y: number, z: number }` | - | Position of the mesh (ECEF coordinate system) |
 | `rotation` | `{ x: number, y: number, z: number }` | - | Rotation of the mesh (Euler angles, radians) |
 | `scale` | `{ x: number, y: number, z: number }` | - | Scale of the mesh |

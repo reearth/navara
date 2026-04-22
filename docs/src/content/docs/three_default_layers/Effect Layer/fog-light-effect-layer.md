@@ -5,7 +5,7 @@ sidebar:
   order: 55
 ---
 
-The `FogLightEffectDesc` class is a layer that generates volumetric lighting effects. It calculates volumetric fog from point lights and expresses light scattering effects.
+The `FogLightEffectDesc` class is a Descriptor that generates volumetric lighting effects. It calculates volumetric fog from point lights and expresses light scattering effects.
 
 ## Properties
 

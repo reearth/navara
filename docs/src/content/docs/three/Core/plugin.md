@@ -56,7 +56,7 @@ await view.init()
 
 ### Basic Plugin
 
-Here is an example of a basic plugin that encapsulates layer registration.
+Here is an example of a basic plugin that encapsulates Descriptor registration.
 
 ```typescript
 import ThreeView, { Plugin, type ViewContext } from "@navara/three";
@@ -91,7 +91,7 @@ const view = new ThreeView({});
 view.addPlugin(plugin);
 await view.init();
 
-// Layers registered by the plugin are now available
+// Descriptors registered by the plugin are now available
 view.addMesh({ box: { width: 100, height: 100, depth: 100 } });
 view.addLight({ sun: { intensity: 1.0 } });
 ```
@@ -155,7 +155,7 @@ const { sky, sun } = plugin.setupScene();
 
 ### Plugin with Custom Descriptors
 
-You can also create plugins that register custom descriptors you have implemented (see [Custom Layer](../../../three/api/custom-layer/)).
+You can also create plugins that register custom descriptors you have implemented (see [Custom Descriptor](../../../three/api/custom-layer/)).
 
 ```typescript
 import ThreeView, { Plugin, type ViewContext } from "@navara/three";
@@ -173,5 +173,5 @@ class MyCustomPlugin extends Plugin<ThreeView, ViewContext> {
 ## Related Resources
 
 - [About Plugin](../../../three/introduction/about-plugin/) - Plugin system concepts
-- [Custom Layer](../../../three/core/custom-layer/) - How to implement custom descriptors
+- [Custom Descriptor](../../../three/core/custom-layer/) - How to implement custom descriptors
 - [three_default_plugin](../../../three_default_plugin/about/) - DefaultPlugin details

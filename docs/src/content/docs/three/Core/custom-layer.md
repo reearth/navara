@@ -1,5 +1,5 @@
 ---
-title: Custom Layer
+title: Custom Descriptor
 description: How to implement custom descriptors
 sidebar:
   order: 21
@@ -7,9 +7,9 @@ sidebar:
 
 In navara_three, you can implement your own mesh, effect, and light descriptors. For an overview of the layer concept, see [About Layer](../../../three/introduction/about-layer/).
 
-## Layer Base Classes
+## Descriptor Base Classes
 
-Depending on the descriptor type, you inherit from the corresponding base class to implement your layer.
+Depending on the descriptor type, you inherit from the corresponding base class to implement your Descriptor.
 
 | Descriptor Type     | Base Class                      | Factory Method                          | Registration Method     |
 | -------------- | ------------------------------- | --------------------------------------- | ----------------------- |
@@ -24,12 +24,12 @@ All base classes inherit from `BaseDesc` and share a common lifecycle.
 
 | Method                           | Timing                           | Description                                                                                            |
 | -------------------------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| `constructor(view, ctx, config)` | When the layer is created        | Receives the ThreeView, ViewContext, and configuration                                                 |
+| `constructor(view, ctx, config)` | When the Descriptor is created   | Receives the ThreeView, ViewContext, and configuration                                                 |
 | `onCreate()`                     | When `addMesh()`/`addLight()`/`addEffect()` is called | Calls the factory method to create an instance and adds it to the scene. Implemented by the base class |
 | `onUpdateConfig(updates)`        | When `handle.update()` is called | Processes partial configuration updates                                                                |
 | `onDestroy()`                    | When `handle.delete()` is called | Releases resources and removes from the scene                                                          |
 | `update(time)`                   | Every frame (optional)           | Animation processing. Only called if implemented                                                       |
-| `onResize(width, height)`        | On viewport resize (optional)    | Mesh descriptors only. Only called if implemented                                                           |
+| `onResize(width, height)`        | On viewport resize (optional)    | Mesh Descriptors only. Only called if implemented                                                           |
 
 ## Common Properties
 
@@ -38,7 +38,7 @@ All base classes inherit from `BaseDesc` and share a common lifecycle.
 | `view`      | `ThreeView`             | The ThreeView instance providing access to camera, atmosphere, globe, and other view state |
 | `ctx`       | `ViewContext`           | The view context providing access to scenes, passes, and rendering internals               |
 | `_instance` | `Instance \| undefined` | The created Three.js object                                                                |
-| `id`        | `string`                | Unique identifier of the layer                                                             |
+| `id`        | `string`                | Unique identifier of the object                                                            |
 | `visible`   | `boolean`               | Show/hide                                                                                  |
 
 ### view and ctx
@@ -104,7 +104,7 @@ See [ThreeView Properties](../../../three/api/threeview-properties/).
 
 ```typescript
 class MyMeshDesc extends MeshDesc<
-  Config,      // Layer configuration type (extends MeshConfig)
+  Config,      // Descriptor configuration type (extends MeshConfig)
   UpdateConfig, // Update configuration type (extends MeshUpdate)
   InstanceObj,  // Three.js object type (extends Object3D)
 > {}
@@ -273,7 +273,7 @@ For rendering many copies of the same geometry in a single draw call, use `Insta
 class MyInstancedDesc extends InstancedMeshDesc<
   TGeometry,    // Three.js BufferGeometry type
   TMaterial,    // Three.js Material type
-  Config,       // Layer configuration type (extends InstancedMeshConfig)
+  Config,       // Descriptor configuration type (extends InstancedMeshConfig)
   UpdateConfig, // Update configuration type (extends InstancedMeshUpdate)
   ChildConfig,  // Per-instance configuration type (extends InstancedChildConfig)
 > {}
@@ -296,7 +296,7 @@ Common transform fields for individual instances:
 | -------------------------- | ------------------------- | ------------------------------------------------------------------- |
 | `createGeometry()`         | `TGeometry`               | Create the shared geometry for all instances                        |
 | `createMaterial()`         | `TMaterial`               | Create the shared material for all instances                        |
-| `getChildConfigs()`        | `ChildConfig[]`           | Extract the initial array of instance configs from the layer config |
+| `getChildConfigs()`        | `ChildConfig[]`           | Extract the initial array of instance configs from the Descriptor config |
 | `getInstanceColor(config)` | `ThreeColor \| undefined` | Extract the per-instance color, or undefined for default white      |
 
 ### Optional Override Methods
@@ -339,7 +339,7 @@ type MyBoxChild = InstancedChildConfig & {
   color?: Color;
 };
 
-// Layer configuration
+// Descriptor configuration
 type MyBoxesConfig = InstancedMeshConfig & {
   boxes?: { children?: MyBoxChild[] };
 };
@@ -414,7 +414,7 @@ handle.ref.removeAt(1);
 
 ```typescript
 class MyEffectDesc extends EffectDesc<
-  Config,      // Layer configuration type (extends EffectConfig)
+  Config,      // Descriptor configuration type (extends EffectConfig)
   UpdateConfig, // Update configuration type (extends EffectUpdate)
   InstanceObj,  // Post-processing pass type
 > {}
@@ -505,7 +505,7 @@ createPass() {
 
 ```typescript
 class MyLightDesc extends LightDesc<
-  Config,      // Layer configuration type (extends LightConfig)
+  Config,      // Descriptor configuration type (extends LightConfig)
   UpdateConfig, // Update configuration type (extends LightUpdate)
   InstanceObj,  // Three.js Light type
 > {}
@@ -584,23 +584,23 @@ export class MyPointLightDesc extends LightDesc<
 
 ## BaseHandle
 
-The `BaseHandle<T>` returned from `view.addMesh()`, `view.addLight()`, or `view.addEffect()` is a handle for controlling the layer.
+The `BaseHandle<T>` returned from `view.addMesh()`, `view.addLight()`, or `view.addEffect()` is a handle for controlling the object.
 
-| Property / Method | Type      | Description                              |
-| ----------------- | --------- | ---------------------------------------- |
-| `id`              | `string`  | Unique identifier of the layer           |
-| `visible`         | `boolean` | Get/set show/hide                        |
-| `ref`             | `T`       | Direct access to the base layer instance |
-| `update(updates)` | `void`    | Partial configuration update             |
-| `delete()`        | `void`    | Delete the layer. Calls `onDestroy()`    |
+| Property / Method | Type      | Description                                    |
+| ----------------- | --------- | ---------------------------------------------- |
+| `id`              | `string`  | Unique identifier of the object                |
+| `visible`         | `boolean` | Get/set show/hide                              |
+| `ref`             | `T`       | Direct access to the base Descriptor instance  |
+| `update(updates)` | `void`    | Partial configuration update                   |
+| `delete()`        | `void`    | Delete the object. Calls `onDestroy()`         |
 
-## Implementing Picking in Custom Layers
+## Implementing Picking in Custom Descriptors
 
-For an overview of picking from the user's perspective, see [MeshDesc — Picking](../../../three_default_layers/mesh-layer/mesh-layer-base/#picking). This section covers how to implement picking support when authoring a custom layer.
+For an overview of picking from the user's perspective, see [MeshDesc — Picking](../../../three_default_layers/mesh-layer/mesh-layer-base/#picking). This section covers how to implement picking support when authoring a custom Descriptor.
 
 ### Turnkey Picking with PickableMeshWrapper
 
-For layers that use standard Three.js materials (`MeshStandardMaterial`, `MeshLambertMaterial`, etc.) or `ShaderMaterial`, wrap the mesh in a `PickableMeshWrapper`. It automatically injects the picking shader code.
+For Descriptors that use standard Three.js materials (`MeshStandardMaterial`, `MeshLambertMaterial`, etc.) or `ShaderMaterial`, wrap the mesh in a `PickableMeshWrapper`. It automatically injects the picking shader code.
 
 ```typescript
 import ThreeView, {
@@ -656,7 +656,7 @@ class MyPickableBoxDesc extends MeshDesc<
 
 ### Instanced Mesh Picking
 
-For instanced mesh layers, use `PickableInstancedMeshWrapper`. It assigns a unique batch ID per instance, enabling you to identify which individual instance was clicked.
+For instanced mesh Descriptors, use `PickableInstancedMeshWrapper`. It assigns a unique batch ID per instance, enabling you to identify which individual instance was clicked.
 
 ```typescript
 import {
@@ -704,7 +704,7 @@ class MyPickableInstancedDesc extends InstancedMeshDesc</* ... */> {
 
 ### Custom Picking with PickableMesh
 
-For layers with fully custom shaders, implement the `PickableMesh` interface directly. Your fragment shader must encode the batch ID as an RGB color when the picking uniform is active.
+For Descriptors with fully custom shaders, implement the `PickableMesh` interface directly. Your fragment shader must encode the batch ID as an RGB color when the picking uniform is active.
 
 ```typescript
 import { type PickableMesh } from "@navara/three";
@@ -764,4 +764,4 @@ if (uPicking > 0.0) {
 - [About Layer](../../../three/introduction/about-layer/) - Layer concepts and types
 - [About Plugin](../../../three/introduction/about-plugin/) - Plugin system concepts
 - [Plugin API](../../../three/core/plugin/) - How to implement plugins
-- [three_default_layers](../../../three_default_layers/about/) - Default layer implementation examples
+- [three_default_layers](../../../three_default_layers/about/) - Default Descriptor implementation examples

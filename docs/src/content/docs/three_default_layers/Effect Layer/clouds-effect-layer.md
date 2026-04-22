@@ -642,7 +642,7 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-// Add default photorealistic layers (required for cloud rendering)
+// Add default photorealistic objects (required for cloud rendering)
 plugin.addDefaultPhotorealScene();
 
 // Add clouds effect descriptor
@@ -703,7 +703,7 @@ await view.init();
 
 plugin.addDefaultPhotorealScene();
 
-// Use the clouds layer as fog
+// Use the clouds Descriptor as fog
 const cloudsLayer = view.addEffect<CloudsEffectDesc>({
   clouds: {},
 });
@@ -739,7 +739,7 @@ view.animation = true;
 
 plugin.addDefaultPhotorealScene();
 
-// Set cloud movement velocity and add the layer
+// Set cloud movement velocity and add the Descriptor
 const cloudsLayer = view.addEffect<CloudsEffectDesc>({
   clouds: {
     coverage: 0.5,
@@ -769,7 +769,7 @@ defaultLayers.aerialPerspective.update({
   },
 });
 
-// Add the clouds layer
+// Add the clouds Descriptor
 const cloudsLayer = view.addEffect<CloudsEffectDesc>({
   clouds: {
     qualityPreset: "high",

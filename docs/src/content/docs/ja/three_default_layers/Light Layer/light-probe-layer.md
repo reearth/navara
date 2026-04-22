@@ -5,7 +5,7 @@ sidebar:
   order: 152
 ---
 
-`LightProbeDesc`クラスは、球面調和関数（Spherical Harmonics）を使用したImage-Based Lightingを提供するライトプローブレイヤーを表します。事前計算された環境照明データを使用して、リアルな間接照明を実現します。
+`LightProbeDesc`クラスは、球面調和関数（Spherical Harmonics）を使用したImage-Based Lightingを提供するライトプローブDescriptorを表します。事前計算された環境照明データを使用して、リアルな間接照明を実現します。
 
 ## Common Properties
 
@@ -13,7 +13,7 @@ sidebar:
 
 **Type:** `boolean | undefined`
 
-**Description:** レイヤーの表示/非表示を制御します。
+**Description:** オブジェクトの表示/非表示を制御します。
 
 **Default:** `true`
 
@@ -126,7 +126,7 @@ const NIGHT_SH_COEFFICIENTS = [
   // ... 他の係数
 ];
 
-// ライトプローブレイヤーを追加
+// ライトプローブオブジェクトを追加
 const lightProbe = view.addLight<LightProbeDesc>({
   lightProbe: {
     sh: new THREE.SphericalHarmonics3().set(NIGHT_SH_COEFFICIENTS),

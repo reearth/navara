@@ -5,7 +5,7 @@ sidebar:
   order: 59
 ---
 
-The `SSAOEffectDesc` class is a layer that applies the Screen Space Ambient Occlusion (SSAO) effect. It adds dark shadows to crevices and concavities in the geometry, producing a more three-dimensional appearance.
+The `SSAOEffectDesc` class is a Descriptor that applies the Screen Space Ambient Occlusion (SSAO) effect. It adds dark shadows to crevices and concavities in the geometry, producing a more three-dimensional appearance.
 
 ## Properties
 
@@ -194,7 +194,7 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-// Add default photorealistic layers
+// Add default photorealistic objects
 plugin.addDefaultPhotorealScene();
 
 // Add SSAO

@@ -15,7 +15,7 @@ In addition to the properties below, all common properties from the base class (
 
 **Type:** `Partial<ArcLineConfig> | Partial<ArcLineConfig>[] | undefined`
 
-**Description:** Specifies the arc line configuration. Multiple arc lines can be managed in a single layer by passing an array.
+**Description:** Specifies the arc line configuration. Multiple arc lines can be managed in a single Descriptor by passing an array.
 
 **Example:**
 
@@ -347,7 +347,7 @@ const arclineLayer = view.addMesh<ArclineMeshDesc>({
 ### Dynamic Update
 
 ```typescript
-// Update the layer settings
+// Update the Descriptor settings
 arclineLayer.update({
   arcLines: {
     thickness: 5,

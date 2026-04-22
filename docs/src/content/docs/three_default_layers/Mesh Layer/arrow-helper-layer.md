@@ -1,11 +1,11 @@
 ---
 title: ArrowHelperDesc
-description: Arrow helper layer for navara_three
+description: Arrow helper descriptor for navara_three
 sidebar:
   order: 115
 ---
 
-`ArrowHelperDesc` is a helper layer for adding a Three.js `ArrowHelper` to the scene. It is suitable for visualizing direction vectors, representing wind direction or travel direction, and debugging purposes.
+`ArrowHelperDesc` is a helper Descriptor for adding a Three.js `ArrowHelper` to the scene. It is suitable for visualizing direction vectors, representing wind direction or travel direction, and debugging purposes.
 
 In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `pickable`, `visible`) are available. See [MeshDesc](./mesh-layer-base) for details.
 

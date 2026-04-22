@@ -5,7 +5,7 @@ sidebar:
   order: 62
 ---
 
-The `SelectiveOutlineEffectDesc` class is a layer that applies a selective outline effect. It uses mask-based filtering to draw outlines only on specific objects. It highlights object contours using edge detection with a Sobel filter.
+The `SelectiveOutlineEffectDesc` class is a Descriptor that applies a selective outline effect. It uses mask-based filtering to draw outlines only on specific objects. It highlights object contours using edge detection with a Sobel filter.
 
 ## Properties
 

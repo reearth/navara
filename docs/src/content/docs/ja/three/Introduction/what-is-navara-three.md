@@ -11,12 +11,12 @@ sidebar:
 
 ## navara_three の特徴
 
-### 宣言的なレイヤー API
+### 宣言的な API
 
-navara_three では、地図上に表示するすべての要素を「レイヤー」として宣言的に追加できます。
+navara_three では、地図上に表示するすべての要素を宣言的に追加できます。
 
 ```typescript
-// GeoJSON データをレイヤーとして追加
+// GeoJSON データをリソースレイヤーとして追加
 const layer = view.addLayer({
   type: "geojson",
   data: { url: "https://example.com/data.geojson" },
@@ -24,11 +24,11 @@ const layer = view.addLayer({
 });
 ```
 
-従来の GIS 開発では複雑だった多くのデータ形式（GeoJSON、MVT、3D Tiles、地形データ、ラスタタイルなど）を、すべて統一されたレイヤー API で扱えます。
+従来の GIS 開発では複雑だった多くのデータ形式（GeoJSON、MVT、3D Tiles、地形データ、ラスタタイルなど）を、すべて統一された API で扱えます。
 
 ### Material によるスタイル設定
 
-各レイヤーには Material を指定してスタイルを設定します。ポイント、ライン、ポリゴンなど地物の種類ごとに色、サイズ、透明度などを柔軟に指定できます。
+各リソースレイヤーには Material を指定してスタイルを設定します。ポイント、ライン、ポリゴンなど地物の種類ごとに色、サイズ、透明度などを柔軟に指定できます。
 
 ```typescript
 view.addLayer({
@@ -40,16 +40,16 @@ view.addLayer({
 });
 ```
 
-### 3D オブジェクト・エフェクト・ライトもレイヤーとして管理
+### 3D オブジェクト・エフェクト・ライトの管理
 
-GIS データだけでなく、3D メッシュ、ポストプロセッシングエフェクト、照明もレイヤーとして追加できます。これにより、地図とビジュアルエフェクトを統一的な API で管理できます。
+GIS データだけでなく、3D メッシュ、ポストプロセッシングエフェクト、照明もオブジェクトとして追加できます。これにより、地図とビジュアルエフェクトを統一的な API で管理できます。
 
-メッシュ・エフェクト・ライトレイヤーは、使用前にレイヤークラスの登録が必要です。
+メッシュ・エフェクト・ライトは、使用前に Descriptor クラスの登録が必要です。
 
 ```typescript
 import { BoxMeshDesc, FXAAEffectDesc, SunLightDesc } from "@navara/three_default_layers";
 
-// レイヤークラスを登録
+// Descriptor クラスを登録
 view.registerMesh("box", BoxMeshDesc);
 view.registerEffect("fxaa", FXAAEffectDesc);
 view.registerLight("sun", SunLightDesc);
@@ -66,7 +66,7 @@ view.addLight({ sun: { intensity: 1.0 } });
 
 ### 地物への動的アクセス
 
-レイヤーは宣言的な追加だけでなく、地物への動的なアクセスも可能です。イベントを通じて個々の地物にアクセスし、データに基づいたスタイル設定やインタラクションを実装できます。
+リソースレイヤーは宣言的な追加だけでなく、地物への動的なアクセスも可能です。イベントを通じて個々の地物にアクセスし、データに基づいたスタイル設定やインタラクションを実装できます。
 
 ```typescript
 import { Color } from "@navara/three";

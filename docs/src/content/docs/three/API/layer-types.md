@@ -5,14 +5,14 @@ sidebar:
   order: 15
 ---
 
-In navara_three, layers are classified into the following 4 types:
+In navara_three, Descriptors are classified into the following 4 types:
 
 1. **Resource Layers** - Layers that load and display geographic data from external data sources (raster tiles, terrain, GeoJSON, 3D Tiles, etc.)
-2. **Mesh Descs** - Layers that add 3D mesh objects to the scene
-3. **Effect Descs** - Layers that apply post-processing effects
-4. **Light Descs** - Layers that manage scene lighting
+2. **Mesh Descs** - Descriptors that add 3D mesh objects to the scene
+3. **Effect Descs** - Descriptors that apply post-processing effects
+4. **Light Descs** - Descriptors that manage scene lighting
 
-Resource layers and other layers (mesh, effect, light) return different handle classes.
+Resource layers and other Descriptors (mesh, effect, light) return different handle classes.
 
 ## Layer
 
@@ -209,7 +209,7 @@ layer.on("deleted", () => {
 
 ## BaseHandle
 
-A handle class for controlling mesh descriptors, light descriptors, and effect descriptors. Returned when adding a layer with `ThreeView.addMesh()`, `ThreeView.addLight()`, or `ThreeView.addEffect()`.
+A handle class for controlling mesh descriptors, light descriptors, and effect descriptors. Returned when adding a Descriptor with `ThreeView.addMesh()`, `ThreeView.addLight()`, or `ThreeView.addEffect()`.
 
 ### Properties
 
@@ -217,21 +217,21 @@ A handle class for controlling mesh descriptors, light descriptors, and effect d
 
 **Type:** `string`
 
-**Description:** The unique identifier of the layer.
+**Description:** The unique identifier of the object.
 
 **Example:**
 
 ```typescript
 // SkyMeshDesc must be registered
 const skyHandle = view.addMesh<SkyMeshDesc>({ sky: {} });
-console.log("Layer ID:", skyHandle.id);
+console.log("Object ID:", skyHandle.id);
 ```
 
 #### visible
 
 **Type:** `boolean`
 
-**Description:** Whether the layer is visible in the scene.
+**Description:** Whether the object is visible in the scene.
 
 **Example:**
 
@@ -247,7 +247,7 @@ skyHandle.visible = false;
 
 **Type:** `T` (subclass of BaseDesc)
 
-**Description:** Provides direct access to the underlying layer instance. Use this to access layer-specific methods and properties not exposed through the handle.
+**Description:** Provides direct access to the underlying Descriptor instance. Use this to access Descriptor-specific methods and properties not exposed through the handle.
 
 **Example:**
 
@@ -255,7 +255,7 @@ skyHandle.visible = false;
 // SkyMeshDesc must be registered
 const skyHandle = view.addMesh<SkyMeshDesc>({ sky: {} });
 
-// Access the underlying layer instance
+// Access the underlying Descriptor instance
 const skyHandle = skyHandle.ref;
 ```
 
@@ -263,7 +263,7 @@ const skyHandle = skyHandle.ref;
 
 #### update()
 
-Updates layer settings with a partial update. Only the specified properties are changed; others remain unchanged.
+Updates Descriptor settings with a partial update. Only the specified properties are changed; others remain unchanged.
 
 **Syntax:**
 
@@ -287,7 +287,7 @@ skyHandle.update({ sunAngularRadius: 0.05 });
 
 #### delete()
 
-Removes the layer from the scene and releases resources. Do not use the handle after deletion.
+Removes the object from the scene and releases resources. Do not use the handle after deletion.
 
 **Syntax:**
 
@@ -305,7 +305,7 @@ skyHandle.delete();
 
 #### deleted
 
-**Description:** Fires when the layer is deleted.
+**Description:** Fires when the object is deleted.
 
 **Handler Type:**
 
@@ -317,7 +317,7 @@ skyHandle.delete();
 
 ```typescript
 skyHandle.on("deleted", () => {
-  console.log("Sky layer has been deleted");
+  console.log("Sky object has been deleted");
 });
 ```
 
@@ -327,14 +327,14 @@ skyHandle.on("deleted", () => {
 
 An abstract base class for mesh descriptors, light descriptors, and effect descriptors. Extend this class to create custom descriptor types.
 
-These layers differ from resource layers in that they are purely client-side and do not load data from external sources. They directly create Three.js objects.
+These descriptors differ from resource layers in that they are purely client-side and do not load data from external sources. They directly create Three.js objects.
 
 ### Type Parameters
 
-- `Config` - The layer configuration type (extends BaseDescConfig)
+- `Config` - The Descriptor configuration type (extends BaseDescConfig)
 - `UpdateConfig` - Updatable configuration properties (extends BaseDescConfigUpdate)
-- `Instance` - The underlying Three.js object type that the layer creates
-- `CustomEvent` - Additional custom events that the layer can fire
+- `Instance` - The underlying Three.js object type that the Descriptor creates
+- `CustomEvent` - Additional custom events that the Descriptor can fire
 
 ### Properties
 
@@ -342,19 +342,19 @@ These layers differ from resource layers in that they are purely client-side and
 
 **Type:** `string`
 
-**Description:** The unique identifier of the layer. Specified via `config.id` or auto-generated.
+**Description:** The unique identifier of the object. Specified via `config.id` or auto-generated.
 
 #### visible
 
 **Type:** `boolean`
 
-**Description:** Gets or sets whether the layer is currently visible.
+**Description:** Gets or sets whether the object is currently visible.
 
 ### Methods
 
 #### onCreate() (abstract)
 
-Called when the layer is added to the scene. Override to create Three.js objects. You must initialize `this._instance` and add it to the appropriate scene here.
+Called when the Descriptor is added to the scene. Override to create Three.js objects. You must initialize `this._instance` and add it to the appropriate scene here.
 
 **Syntax:**
 
@@ -364,7 +364,7 @@ abstract onCreate(): void
 
 #### onUpdateConfig()
 
-Called when the layer configuration is updated via `BaseHandle.update()`. Override to handle custom configuration updates.
+Called when the Descriptor configuration is updated via `BaseHandle.update()`. Override to handle custom configuration updates.
 
 **Syntax:**
 
@@ -378,7 +378,7 @@ onUpdateConfig(updates: UpdateConfig): void
 
 #### onDestroy()
 
-Called when the layer is removed via `BaseHandle.delete()`. Override to clean up resources. Remember to call `super.onDestroy()`.
+Called when the object is removed via `BaseHandle.delete()`. Override to clean up resources. Remember to call `super.onDestroy()`.
 
 **Syntax:**
 
@@ -398,7 +398,7 @@ type MyBoxConfig = BaseDescConfig & {
   color?: number;
 };
 
-// Create custom layer
+// Create custom Descriptor
 class MyBoxDesc extends BaseDesc<MyBoxConfig, MyBoxConfig, Mesh> {
   private size: number;
   private color: number;
@@ -441,5 +441,5 @@ Base configuration options common to all mesh, effect, and light descriptors.
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
-| `id` | `string \| undefined` | Auto-generated | Custom ID for the layer |
-| `visible` | `boolean \| undefined` | `true` | Whether to display the layer |
+| `id` | `string \| undefined` | Auto-generated | Custom ID for the object |
+| `visible` | `boolean \| undefined` | `true` | Whether to display the object |

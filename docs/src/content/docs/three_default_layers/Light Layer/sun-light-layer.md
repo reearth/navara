@@ -19,7 +19,7 @@ For details on the atmosphere system, see the [Atmosphere class](../../../three/
 
 **Type:** `boolean | undefined`
 
-**Description:** Controls the visibility of the layer.
+**Description:** Controls the visibility of the object.
 
 **Default:** `true`
 
@@ -49,7 +49,7 @@ For details on the atmosphere system, see the [Atmosphere class](../../../three/
 **Default:** `300`
 
 :::note[Configurable only at initialization]
-This property can only be set when creating the layer. It cannot be changed via the `update()` method.
+This property can only be set when creating the Descriptor. It cannot be changed via the `update()` method.
 :::
 
 **Example:**
@@ -355,7 +355,7 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-// Add default photorealistic layers (includes SunLightDesc)
+// Add default photorealistic objects (includes SunLightDesc)
 const defaultLayers = plugin.addDefaultPhotorealScene();
 
 // Update sunlight settings

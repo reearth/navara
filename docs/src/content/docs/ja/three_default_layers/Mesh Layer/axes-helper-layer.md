@@ -5,7 +5,7 @@ sidebar:
   order: 114
 ---
 
-`AxesHelperDesc` は、Three.js の `AxesHelper` をシーンに追加するためのヘルパーレイヤーです。X(赤)/Y(緑)/Z(青) の3軸を可視化し、座標系の確認やデバッグに役立ちます。
+`AxesHelperDesc` は、Three.js の `AxesHelper` をシーンに追加するためのヘルパーDescriptorです。X(赤)/Y(緑)/Z(青) の3軸を可視化し、座標系の確認やデバッグに役立ちます。
 
 以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`pickable`、`visible`）が利用できます。詳細は [MeshDesc](./mesh-layer-base) を参照してください。
 
@@ -25,7 +25,7 @@ sidebar:
 
 **Default:** `5`
 
-**Note:** サイズは作成時のみ反映されます。変更する場合はレイヤーを再作成してください。
+**Note:** サイズは作成時のみ反映されます。変更する場合はDescriptorを再作成してください。
 
 ## 使用例
 

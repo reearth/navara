@@ -5,7 +5,7 @@ sidebar:
   order: 54
 ---
 
-The `FXAAEffectDesc` class is a layer that applies the FXAA (Fast Approximate Anti-Aliasing) anti-aliasing effect. It reduces jagged edges in the image, producing a smoother appearance.
+The `FXAAEffectDesc` class is a Descriptor that applies the FXAA (Fast Approximate Anti-Aliasing) anti-aliasing effect. It reduces jagged edges in the image, producing a smoother appearance.
 
 ## Properties
 

@@ -7,11 +7,11 @@ sidebar:
 
 ## What is a Layer?
 
-In navara_three, elements displayed in the 3D scene are managed as "layers." Map data rendering, 3D object placement, post-processing effects, lighting, and more can all be added and controlled as layers.
+In navara_three, elements displayed in the 3D scene are managed as "layers" and "Descriptors." Map data rendering uses resource layers, while 3D object placement, post-processing effects, and lighting are added and controlled as Descriptors.
 
 ## Descriptor Types
 
-navara_three has 4 types of layers:
+navara_three has 4 types of Descriptors:
 
 | Descriptor Type           | Description                                            | Method                                                   |
 | -------------------- | ------------------------------------------------------ | -------------------------------------------------------- |
@@ -42,7 +42,7 @@ When working with [`FeatureEvaluator`](../../api/feature-evaluator/), the callba
 
 For details on feature events (`featureCreated`, `featureUpdated`, etc.), see [Layer Types](../../api/layer-types/#events).
 
-## Differences Between Resource Layers and Other Layers
+## Differences Between Resource Layers and Other Descriptors
 
 Resource layers handle external geographic data, so they differ from mesh, effect, and light descriptors in how they are used.
 
@@ -176,7 +176,7 @@ boxHandle.visible = false;
 // Access the underlying Three.js object
 const boxMesh = boxHandle.ref;
 
-// Delete the layer
+// Delete the object
 boxHandle.delete();
 ```
 
@@ -189,11 +189,11 @@ For detailed API reference, see [Descriptor Types](../../../three/api-reference/
 | Purpose             | Loading and displaying external data | 3D objects, effects, lighting                              |
 | Method               | `addLayer()` with data format name | `addMesh()`, `addEffect()`, `addLight()`                   |
 | Pre-registration    | Not required                       | Required (`registerMesh` / `registerEffect` / `registerLight`) |
-| Number of Materials | Multiple depending on the data     | 1 Material per layer                                        |
+| Number of Materials | Multiple depending on the data     | 1 Material per Descriptor                                   |
 | Handle Class        | `Layer`                            | `BaseHandle<T>`                                            |
 | Update Method       | Overwrite with a complete configuration object | Partial updates are possible                       |
 
 ## Related Resources
 
 - [Resource Layer](../../../three/resource-layer/about/) - Resource layer details
-- [three_default_layers](../../../three_default_layers/about/) - Default layer details
+- [three_default_layers](../../../three_default_layers/about/) - Default Descriptor details

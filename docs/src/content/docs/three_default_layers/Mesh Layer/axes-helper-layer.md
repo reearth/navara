@@ -1,11 +1,11 @@
 ---
 title: AxesHelperDesc
-description: Axes helper layer for navara_three
+description: Axes helper descriptor for navara_three
 sidebar:
   order: 114
 ---
 
-`AxesHelperDesc` is a helper layer for adding a Three.js `AxesHelper` to the scene. It visualizes the 3 axes as X (red) / Y (green) / Z (blue), which is useful for verifying coordinate systems and debugging.
+`AxesHelperDesc` is a helper Descriptor for adding a Three.js `AxesHelper` to the scene. It visualizes the 3 axes as X (red) / Y (green) / Z (blue), which is useful for verifying coordinate systems and debugging.
 
 In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `pickable`, `visible`) are available. See [MeshDesc](./mesh-layer-base) for details.
 
@@ -25,7 +25,7 @@ In addition to the properties below, all common properties from the base class (
 
 **Default:** `5`
 
-**Note:** Size is only applied at creation time. To change it, recreate the layer.
+**Note:** Size is only applied at creation time. To change it, recreate the Descriptor.
 
 ## Usage Example
 

@@ -5,7 +5,7 @@ sidebar:
   order: 60
 ---
 
-`SSREffectDesc`クラスは、スクリーンスペース反射(SSR)エフェクトを生成するレイヤーです。リアルタイムで画面上のオブジェクトの反射を計算し、水面や光沢のある表面の反射を表現します。
+`SSREffectDesc`クラスは、スクリーンスペース反射(SSR)エフェクトを生成するDescriptorです。リアルタイムで画面上のオブジェクトの反射を計算し、水面や光沢のある表面の反射を表現します。
 
 ## Properties
 
@@ -13,7 +13,7 @@ sidebar:
 
 **Type:** `boolean | undefined`
 
-**Description:** エフェクトレイヤーの表示/非表示を制御します。
+**Description:** エフェクトの表示/非表示を制御します。
 
 **Default:** `true`
 
@@ -224,7 +224,7 @@ sidebar:
 **Default:** `"normal"`
 
 :::note[初期化時のみ設定可能]
-このプロパティはレイヤー作成時にのみ設定できます。`update()`メソッドでは変更できません。
+このプロパティはDescriptor作成時にのみ設定できます。`update()`メソッドでは変更できません。
 :::
 
 **有効な値:** `"normal"`, `"add"`, `"multiply"`, `"screen"`, `"overlay"` など（ColorGradingLUTEffectDescのblendMode参照）
@@ -248,7 +248,7 @@ sidebar:
 **Default:** `7`
 
 :::note[初期化時のみ設定可能]
-このプロパティはレイヤー作成時にのみ設定できます。`update()`メソッドでは変更できません。
+このプロパティはDescriptor作成時にのみ設定できます。`update()`メソッドでは変更できません。
 :::
 
 **Example:**
@@ -379,7 +379,7 @@ import ThreeView, { SSREffectDesc } from "@navara/three";
 const view = new ThreeView();
 await view.init();
 
-// SSRエフェクトレイヤーを追加
+// SSRエフェクトを追加
 const ssrLayer = view.addEffect<SSREffectDesc>({
   ssr: {},
 });
@@ -396,7 +396,7 @@ const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 await view.init();
 
-// デフォルトのフォトリアルレイヤーを追加
+// デフォルトのフォトリアルオブジェクトを追加
 plugin.addDefaultPhotorealScene();
 
 // SSRエフェクトを追加

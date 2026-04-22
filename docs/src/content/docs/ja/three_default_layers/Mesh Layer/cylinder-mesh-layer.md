@@ -5,7 +5,7 @@ sidebar:
   order: 103
 ---
 
-`CylinderMeshDesc`クラスは、円柱(Cylinder)ジオメトリを描画するためのメッシュレイヤーです。上部半径・下部半径・高さなどを指定して円柱や円錐を作成できます。
+`CylinderMeshDesc`クラスは、円柱(Cylinder)ジオメトリを描画するためのメッシュです。上部半径・下部半径・高さなどを指定して円柱や円錐を作成できます。
 
 以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`pickable`、`visible`）が利用できます。詳細は [MeshDesc](./mesh-layer-base) を参照してください。
 
@@ -293,7 +293,7 @@ import { Color } from "@navara/three";
 
 **Type:** `string[]` (optional)
 
-**Description:** このメッシュに適用するセレクティブエフェクトレイヤーIDの配列を指定します。
+**Description:** このメッシュに適用するセレクティブエフェクトIDの配列を指定します。
 
 **Example:**
 
