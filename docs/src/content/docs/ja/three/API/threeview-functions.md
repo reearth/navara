@@ -809,3 +809,72 @@ const view = new ThreeView({});
 view.addPlugin(pluginA).addPlugin(pluginB);
 await view.init();
 ```
+
+### addFontFamily()
+
+複数のフェイスから構成されるフォントファミリを登録します。各フェイスは Unicode 範囲の集合をカバーし、個別のフォントファイル URL（ttf、otf、woff、woff2）を指します。ファミリを登録すると、テキストレイヤは [`material.font`](../../resource-layer/text-material/#font) で `family` 名を指定してこのファミリを参照できます。ラベルの `text` に含まれる文字の Unicode 範囲をカバーするフェイスのみがダウンロードされます。
+
+`ThreeView` インスタンスを返すため、メソッドチェーンが可能です。
+
+**Syntax:**
+
+```tsx
+addFontFamily(family: FontFamily): this
+```
+
+**Parameters:**
+
+- `family`: `FontFamily` オブジェクト。
+  - `family`: `material.font` からこのファミリを参照するために使う一意の名前。
+  - `faces`: `FontFace` エントリの配列。各エントリは以下を持ちます:
+    - `url`: フォントファイルの URL。
+    - `unicodeRanges`: このフェイスがカバーするコードポイント範囲 `{ from, to }`（両端を含む）の配列。
+
+**Example:**
+
+```typescript
+view.addFontFamily({
+  family: "MapFont",
+  faces: [
+    {
+      url: "/fonts/latin.woff2",
+      unicodeRanges: [{ from: 0x0000, to: 0x024f }],
+    },
+    {
+      url: "/fonts/cjk.woff2",
+      unicodeRanges: [{ from: 0x4e00, to: 0x9fff }],
+    },
+  ],
+});
+
+view.addLayer({
+  type: "geojson",
+  url: "/cities.geojson",
+  text: {
+    text: ["get", "name"],
+    font: "MapFont",
+  },
+});
+```
+
+### removeFontFamily()
+
+登録済みのフォントファミリを名前で削除します。削除後もこのファミリを参照しているテキストレイヤは、該当ファミリを解決できなくなります。
+
+`ThreeView` インスタンスを返すため、メソッドチェーンが可能です。
+
+**Syntax:**
+
+```tsx
+removeFontFamily(family: string): this
+```
+
+**Parameters:**
+
+- `family`: `addFontFamily()` に渡した `family` 名。
+
+**Example:**
+
+```typescript
+view.removeFontFamily("MapFont");
+```

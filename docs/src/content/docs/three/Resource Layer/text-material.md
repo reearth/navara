@@ -163,16 +163,35 @@ import { Color } from "@navara/three";
 
 **Type:** `string | undefined`
 
-**Description:** **Experimental**: Specifies the URL of a font file. Supported file formats are ttf, otf, and woff. This API loads a large font file all at once, so it may be replaced by a different API in the future.
+**Description:** Specifies either the URL of a single font file or the `family` name of a font family previously registered with [`view.addFontFamily()`](../../api/threeview-functions/#addfontfamily). Supported file formats are ttf, otf, woff, and woff2.
 
-**Default:** `Roboto`
+When a family name is used, only the face files whose unicode ranges cover the characters in `text` are fetched, so large scripts (CJK, etc.) can be split into multiple faces and loaded on demand.
 
-**Example:**
+**Example (single font file):**
 
 ```typescript
 {
   text: {
     font: "https://example.com/fonts/NotoSansJP-Regular.ttf"
+  }
+}
+```
+
+**Example (registered font family):**
+
+```typescript
+view.addFontFamily({
+  family: "MapFont",
+  faces: [
+    { url: "/fonts/latin.woff2", unicodeRanges: [{ from: 0x0000, to: 0x024f }] },
+    { url: "/fonts/cjk.woff2", unicodeRanges: [{ from: 0x4e00, to: 0x9fff }] },
+  ],
+});
+
+// Later, in a text layer material:
+{
+  text: {
+    font: "MapFont"
   }
 }
 ```

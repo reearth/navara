@@ -163,16 +163,35 @@ import { Color } from "@navara/three";
 
 **Type:** `string | undefined`
 
-**Description:** **実験的**: フォントファイルの URL を指定します。サポートされているファイル形式は ttf、otf、woff です。このAPIは大きなフォントファイルを一度に読み込むため、将来的に別のAPIに置き換えられる可能性があります。
+**Description:** 単一のフォントファイルの URL、または [`view.addFontFamily()`](../../api/threeview-functions/#addfontfamily) で事前に登録したフォントファミリの `family` 名を指定します。サポートされているファイル形式は ttf、otf、woff、woff2 です。
 
-**Default:** `Roboto`
+ファミリ名を指定した場合、`text` に含まれる文字の Unicode 範囲をカバーするフェイスファイルのみが読み込まれるため、CJK などの大きなスクリプトを複数のフェイスに分割してオンデマンドに読み込めます。
 
-**Example:**
+**Example (単一フォントファイル):**
 
 ```typescript
 {
   text: {
     font: "https://example.com/fonts/NotoSansJP-Regular.ttf"
+  }
+}
+```
+
+**Example (登録済みフォントファミリ):**
+
+```typescript
+view.addFontFamily({
+  family: "MapFont",
+  faces: [
+    { url: "/fonts/latin.woff2", unicodeRanges: [{ from: 0x0000, to: 0x024f }] },
+    { url: "/fonts/cjk.woff2", unicodeRanges: [{ from: 0x4e00, to: 0x9fff }] },
+  ],
+});
+
+// テキストレイヤのマテリアルで使用:
+{
+  text: {
+    font: "MapFont"
   }
 }
 ```
