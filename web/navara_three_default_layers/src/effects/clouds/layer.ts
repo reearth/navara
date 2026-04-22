@@ -12,7 +12,7 @@ export type CloudEvents = {
 };
 
 export type CloudOptions = Pick<
-  CloudDesc,
+  CloudLayer,
   | "channel"
   | "altitude"
   | "height"
@@ -32,7 +32,7 @@ export type CloudOptions = Pick<
 /**
  * See [CloudLayer](https://github.com/takram-design-engineering/three-geospatial/tree/main/packages/clouds#cloudlayer).
  */
-export class CloudDesc extends EventHandler<CloudEvents> {
+export class CloudLayer extends EventHandler<CloudEvents> {
   impl: CloudLayerImpl;
 
   constructor(defaultOptions?: CloudLayerLike, options?: CloudOptions) {

@@ -1,6 +1,6 @@
 ---
 title: LightProbeDesc
-description: Light probe layer for navara_three
+description: Light probe Descriptor for navara_three
 sidebar:
   order: 152
 ---

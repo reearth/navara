@@ -35,7 +35,7 @@ import {
 } from "three";
 import invariant from "tiny-invariant";
 
-import { CloudDesc, type CloudOptions } from "./layer";
+import { CloudLayer, type CloudOptions } from "./layer";
 
 export type * from "@takram/three-clouds";
 
@@ -145,7 +145,7 @@ export class Clouds extends Pass<
   Required<CloudsOptions>
 > {
   atmosphere: Atmosphere;
-  private _cloudLayers: CloudDesc[] = [];
+  private _cloudLayers: CloudLayer[] = [];
 
   constructor(camera: Camera, atmosphere: Atmosphere, options?: CloudsOptions) {
     const effect = new CloudsEffect(camera);
@@ -276,10 +276,10 @@ export class Clouds extends Pass<
 
   initializeCloudLayers(options?: CloudOptions[]) {
     const layers = [
-      new CloudDesc(CloudLayers.DEFAULT[0], options?.[0]),
-      new CloudDesc(CloudLayers.DEFAULT[1], options?.[1]),
-      new CloudDesc(CloudLayers.DEFAULT[2], options?.[2]),
-      new CloudDesc(CloudLayers.DEFAULT[3], options?.[3]),
+      new CloudLayer(CloudLayers.DEFAULT[0], options?.[0]),
+      new CloudLayer(CloudLayers.DEFAULT[1], options?.[1]),
+      new CloudLayer(CloudLayers.DEFAULT[2], options?.[2]),
+      new CloudLayer(CloudLayers.DEFAULT[3], options?.[3]),
     ];
 
     for (let i = 0; i < 4; i++) {

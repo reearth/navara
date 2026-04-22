@@ -1,6 +1,6 @@
 ---
 title: StarsDesc
-description: Stars layer for navara_three
+description: Stars Descriptor for navara_three
 sidebar:
   order: 113
 ---

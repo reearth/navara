@@ -28,7 +28,7 @@ sidebar:
 ```
 
 :::tip[Full Animation Control]
-For advanced animation features such as `animationAutoPlay`, `animationClips`, `animationCrossfadeDuration`, `animationEnabled`, and `animationLoop`, use [GLTFModelDesc](/three_default_layers/mesh-layer/gltf-model-layer/) which provides full animation control as a mesh layer.
+For advanced animation features such as `animationAutoPlay`, `animationClips`, `animationCrossfadeDuration`, `animationEnabled`, and `animationLoop`, use [GLTFModelDesc](/three_default_layers/mesh-layer/gltf-model-layer/) which provides full animation control as a mesh Descriptor.
 :::
 
 ### animationSpeed

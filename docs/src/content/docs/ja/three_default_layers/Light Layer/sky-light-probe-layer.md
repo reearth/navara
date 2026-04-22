@@ -1,6 +1,6 @@
 ---
 title: SkyLightProbeDesc
-description: Sky light probe layer for navara_three
+description: Sky light probe Descriptor for navara_three
 sidebar:
   order: 153
 ---

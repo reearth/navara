@@ -1,6 +1,6 @@
 ---
 title: AxesHelperDesc
-description: Axes helper layer for navara_three
+description: Axes helper Descriptor for navara_three
 sidebar:
   order: 114
 ---

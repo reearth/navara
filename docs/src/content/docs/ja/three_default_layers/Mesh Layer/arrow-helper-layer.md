@@ -1,6 +1,6 @@
 ---
 title: ArrowHelperDesc
-description: Arrow helper layer for navara_three
+description: Arrow helper Descriptor for navara_three
 sidebar:
   order: 115
 ---

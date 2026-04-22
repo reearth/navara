@@ -1,6 +1,6 @@
 ---
 title: GLTFModelDesc
-description: GLTF model layer for navara_three
+description: GLTF model Descriptor for navara_three
 sidebar:
   order: 113
 ---
