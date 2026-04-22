@@ -3,6 +3,7 @@ import {
   type XYZ,
   Color,
   MeshDescWithSelectiveEffect,
+  PickableMeshWrapper,
   type MeshConfigWithSelectiveEffect,
   type MeshUpdateWithSelectiveEffect,
   type ViewContext,
@@ -39,7 +40,8 @@ type Description = {
   };
 };
 
-export type TubeMeshConfig = MeshConfigWithSelectiveEffect & Description;
+export type TubeMeshConfig = MeshConfigWithSelectiveEffect &
+  Description & { pickable?: boolean };
 
 export type TubeMeshUpdate = MeshUpdateWithSelectiveEffect & Description;
 
@@ -49,6 +51,7 @@ export class TubeMeshDesc extends MeshDescWithSelectiveEffect<
   Mesh<TubeGeometry, MeshLambertMaterial, TubeMeshEventMap>
 > {
   private config: TubeMeshConfig;
+  private pickWrapper?: PickableMeshWrapper;
 
   constructor(view: ThreeView, ctx: ViewContext, config: TubeMeshConfig) {
     // Propagate initial effectIds to base MeshDesc
@@ -57,6 +60,11 @@ export class TubeMeshDesc extends MeshDescWithSelectiveEffect<
     }
     super(view, ctx, config);
     this.config = config;
+  }
+
+  /** The batch ID assigned to this mesh when picking is enabled. */
+  get batchId(): number | undefined {
+    return this.pickWrapper?.batchId;
   }
 
   createMesh() {
@@ -105,6 +113,11 @@ export class TubeMeshDesc extends MeshDescWithSelectiveEffect<
     mesh.receiveShadow = cfg.receiveShadow ?? false;
 
     this.ctx.applyShadowMaterial(material);
+
+    if (this.config.pickable) {
+      this.pickWrapper = new PickableMeshWrapper(mesh, this.ctx);
+      this.ctx.registerPickableMesh(this.id, this.pickWrapper);
+    }
 
     return mesh;
   }
@@ -203,5 +216,13 @@ export class TubeMeshDesc extends MeshDescWithSelectiveEffect<
 
       this._instance = undefined;
     }
+  }
+
+  override onDestroy(): void {
+    if (this.pickWrapper) {
+      this.ctx.unregisterPickableMesh(this.id);
+      this.pickWrapper = undefined;
+    }
+    super.onDestroy();
   }
 }

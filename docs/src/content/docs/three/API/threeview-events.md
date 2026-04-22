@@ -117,9 +117,9 @@ To use this event, you must set `picking: true` in the ThreeView constructor.
 
 ```tsx
 type PickedFeature = {
-  properties: Record<string, unknown>; // Feature properties
-  batchId: number | null; // Batch ID
-  layerId: string | null; // Layer ID
+  batchId: number; // Batch ID
+  properties: Record<string, unknown> | undefined; // Feature properties
+  layerId: string | undefined; // Layer ID
 };
 ```
 

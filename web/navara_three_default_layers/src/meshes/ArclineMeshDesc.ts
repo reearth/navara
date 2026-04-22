@@ -2,6 +2,7 @@ import type ThreeView from "@navara/three";
 import {
   Color,
   MeshDescWithSelectiveEffect,
+  PickableMeshWrapper,
   type MeshConfigWithSelectiveEffect,
   type MeshUpdateWithSelectiveEffect,
   type ViewContext,
@@ -15,7 +16,8 @@ type Description = {
   emissiveIntensity?: number;
 };
 
-export type ArclineMeshConfig = MeshConfigWithSelectiveEffect & Description;
+export type ArclineMeshConfig = MeshConfigWithSelectiveEffect &
+  Description & { pickable?: boolean };
 
 export type ArclineMeshUpdate = MeshUpdateWithSelectiveEffect & Description;
 
@@ -25,10 +27,16 @@ export class ArclineMeshDesc extends MeshDescWithSelectiveEffect<
   ArcLine
 > {
   private config: ArclineMeshConfig;
+  private pickWrapper?: PickableMeshWrapper;
 
   constructor(view: ThreeView, ctx: ViewContext, config: ArclineMeshConfig) {
     super(view, ctx, config);
     this.config = config;
+  }
+
+  /** The batch ID assigned to this mesh when picking is enabled. */
+  get batchId(): number | undefined {
+    return this.pickWrapper?.batchId;
   }
 
   protected getPassKey() {
@@ -71,6 +79,11 @@ export class ArclineMeshDesc extends MeshDescWithSelectiveEffect<
       this.config.emissiveIntensity ?? 0,
     );
 
+    if (this.config.pickable) {
+      this.pickWrapper = new PickableMeshWrapper(arcLine, this.ctx);
+      this.ctx.registerPickableMesh(this.id, this.pickWrapper);
+    }
+
     return arcLine;
   }
 
@@ -95,6 +108,9 @@ export class ArclineMeshDesc extends MeshDescWithSelectiveEffect<
       this.config.arcLines = currentConfigs;
 
       this._instance.updateConfig(updateConfigs);
+      // ArcLine may have rebuilt sub-meshes — re-inject picking into any
+      // newly created materials (preserves existing batchId)
+      this.pickWrapper?.syncMaterials();
 
       this.emit("needsUpdate");
     }
@@ -144,5 +160,13 @@ export class ArclineMeshDesc extends MeshDescWithSelectiveEffect<
       this._instance.dispose();
       this._instance = undefined;
     }
+  }
+
+  override onDestroy(): void {
+    if (this.pickWrapper) {
+      this.ctx.unregisterPickableMesh(this.id);
+      this.pickWrapper = undefined;
+    }
+    super.onDestroy();
   }
 }

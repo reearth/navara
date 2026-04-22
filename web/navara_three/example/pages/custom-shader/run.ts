@@ -130,13 +130,13 @@ export type CustomDeclarations =
     };
 
 export const run = async (view: ThreeView<CustomDeclarations>) => {
-  // Register custom MarchingCubesLayer
-  view.registerMesh("marchingCubes", MarchingCubesLayer);
-
   const defaultPlugin = new DefaultPlugin();
   view.addPlugin(defaultPlugin);
 
   await view.init();
+
+  // Register custom MarchingCubesLayer
+  view.registerMesh("marchingCubes", MarchingCubesLayer);
 
   const defaultEffects = defaultPlugin.addDefaultPhotorealScene();
   defaultEffects.sun.update({

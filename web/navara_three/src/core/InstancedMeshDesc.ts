@@ -61,6 +61,10 @@ const _swapColor = new ThreeColor();
  * The parent's transform fields (position, scale, rotation, matrix, matrixWorld)
  * define the parent coordinate space. Each instance's transform is local to the parent.
  *
+ * Subclasses that maintain external per-instance state (e.g. picking batchIds)
+ * can override the `onInstance*` lifecycle hooks to stay in sync with
+ * `add` / `removeAt` / `clear` / `replaceAll` / capacity grows.
+ *
  * @typeParam Config - Layer configuration type
  * @typeParam UpdateConfig - Updatable properties type
  * @typeParam ChildConfig - Configuration type for individual instances
@@ -179,6 +183,9 @@ export abstract class InstancedMeshDesc<
     mesh.instanceMatrix.needsUpdate = true;
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
     this.configs.push(config);
+
+    this.onInstanceAdded(index);
+
     this.requestUpdate();
     return index;
   }
@@ -211,6 +218,9 @@ export abstract class InstancedMeshDesc<
 
     mesh.count--;
     this.configs.pop();
+
+    this.onInstanceRemoved(index, index === last);
+
     mesh.instanceMatrix.needsUpdate = true;
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
     this.requestUpdate();
@@ -245,6 +255,7 @@ export abstract class InstancedMeshDesc<
       this.requestUpdate();
     }
     this.configs = [];
+    this.onInstancesCleared();
   }
 
   /**
@@ -274,6 +285,9 @@ export abstract class InstancedMeshDesc<
     currentMesh.instanceMatrix.needsUpdate = true;
     if (currentMesh.instanceColor) currentMesh.instanceColor.needsUpdate = true;
     this.configs = [...configs];
+
+    this.onInstancesReplaced(configs.length);
+
     this.requestUpdate();
   }
 
@@ -281,6 +295,36 @@ export abstract class InstancedMeshDesc<
   get count(): number {
     return this.configs.length;
   }
+
+  // ---------------------------------------------------------------------------
+  // Subclass lifecycle hooks — override these to sync external per-instance
+  // state (e.g. a PickableInstancedMeshWrapper). Base implementations are
+  // intentionally no-ops.
+  // ---------------------------------------------------------------------------
+
+  /** Called after a new instance has been appended at `index`. */
+  protected onInstanceAdded(_index: number): void {}
+
+  /**
+   * Called after an instance at `index` has been removed via swap-with-last.
+   * `wasLast` is true if the removed instance was already the last one
+   * (no swap happened).
+   */
+  protected onInstanceRemoved(_index: number, _wasLast: boolean): void {}
+
+  /** Called after all instances have been cleared. */
+  protected onInstancesCleared(): void {}
+
+  /** Called after all instances have been replaced; `count` is the new instance count. */
+  protected onInstancesReplaced(_count: number): void {}
+
+  /**
+   * Called after the underlying `InstancedMesh` has been replaced (capacity grow).
+   * `this.raw` already points at the new mesh when this fires.
+   */
+  protected onInstanceMeshReplaced(
+    _newMesh: InstancedMesh<TGeometry, TMaterial>,
+  ): void {}
 
   /**
    * Grow the internal buffers by replacing the InstancedMesh with a larger one.
@@ -345,6 +389,8 @@ export abstract class InstancedMeshDesc<
 
     this._instance = newMesh;
     this.capacity = newCapacity;
+
+    this.onInstanceMeshReplaced(newMesh);
   }
 
   override onDestroy(): void {

@@ -94,6 +94,10 @@ layer.forceUpdate();
 
 ### Events
 
+:::note
+For the data structure behind these events (Layer, FeatureSet, Feature, Batch), see [About Layer](../../introduction/about-layer/#resource-layer-data-structure). For the `FeatureEvaluator` class used in event callbacks, see [FeatureEvaluator](./feature-evaluator/).
+:::
+
 #### featureCreated
 
 **Description:** Fires when a new feature is created within the layer.
@@ -108,7 +112,7 @@ layer.forceUpdate();
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `featureId` | `FeatureId` | Unique identifier of the created feature |
+| `featureSetId` | `FeatureSetId` | Unique identifier of the created feature set |
 | `evaluator` | `FeatureEvaluator` | Evaluator class used for feature styling |
 | `credit` | `string \| undefined` | Data source credit information (optional) |
 
@@ -134,7 +138,7 @@ layer.on("featureCreated", ({ evaluator }) => {
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `featureId` | `FeatureId` | Unique identifier of the updated feature |
+| `featureSetId` | `FeatureSetId` | Unique identifier of the updated feature set |
 | `evaluator` | `FeatureEvaluator` | Evaluator class used for feature styling |
 | `updatedAt` | `number` | Update timestamp |
 
@@ -165,7 +169,7 @@ layer.on("featureUpdated", ({ evaluator }) => {
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `featureId` | `FeatureId` | Identifier of the feature whose visibility changed |
+| `featureSetId` | `FeatureSetId` | Identifier of the feature set whose visibility changed |
 
 #### featureRemoved
 
@@ -181,7 +185,7 @@ layer.on("featureUpdated", ({ evaluator }) => {
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `featureId` | `FeatureId` | Identifier of the removed feature |
+| `featureSetId` | `FeatureSetId` | Identifier of the removed feature set |
 
 #### deleted
 

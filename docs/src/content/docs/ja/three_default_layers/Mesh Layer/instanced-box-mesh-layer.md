@@ -5,7 +5,9 @@ sidebar:
   order: 103
 ---
 
-`InstancedBoxMeshLayer` クラスは、GPU インスタンシングを使用して複数のボックスインスタンスをレンダリングするメッシュレイヤーです。すべてのボックスが1つのジオメトリとマテリアルを共有し、1回の描画コールで高パフォーマンスにレンダリングされます。`InstancedMeshLayerDeclaration` を継承しています。
+`InstancedBoxMeshLayer` クラスは、GPU インスタンシングを使用して複数のボックスインスタンスをレンダリングするメッシュレイヤーです。すべてのボックスが1つのジオメトリとマテリアルを共有し、1回の描画コールで高パフォーマンスにレンダリングされます。`InstancedMeshDesc` を継承しています。
+
+以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`pickable`、`visible`）が利用できます。詳細は [MeshDesc](./mesh-layer-base) を参照してください。
 
 ## 共有マテリアルプロパティ
 
@@ -349,7 +351,7 @@ import { Matrix4 } from "three";
 
 ## インスタンス管理
 
-動的なインスタンス管理のために [InstancedMeshLayerDeclaration](../../../three/core/custom-layer/#custom-instanced-mesh-layer) から継承されるメソッド:
+動的なインスタンス管理のために [InstancedMeshDesc](../../../three/core/custom-layer/#custom-instanced-mesh-layer) から継承されるメソッド:
 
 ### handle.ref.add(config)
 

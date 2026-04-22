@@ -116,7 +116,6 @@ describe("polylineBaseEnhancer", () => {
         useBatchHeight: true,
         useBatchExtrudedHeight: false,
         isTexturized: true,
-        clampToGround: false,
         useRTE: true,
       });
 
@@ -129,7 +128,6 @@ describe("polylineBaseEnhancer", () => {
         useBatchHeight: true,
         useBatchExtrudedHeight: false,
         isTexturized: true,
-        clampToGround: false,
         useRTE: true,
       });
     });

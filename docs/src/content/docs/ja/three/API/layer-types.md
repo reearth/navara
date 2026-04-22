@@ -94,6 +94,10 @@ layer.forceUpdate();
 
 ### Events
 
+:::note
+これらのイベントの背景にあるデータ構造（Layer、FeatureSet、Feature、Batch）については [About Layer](../../introduction/about-layer/#リソースレイヤーのデータ構造) を参照してください。イベントコールバックで使用する `FeatureEvaluator` クラスについては [FeatureEvaluator](./feature-evaluator/) を参照してください。
+:::
+
 #### featureCreated
 
 **Description:** レイヤー内で新しい地物が作成されたときに発火します。
@@ -108,7 +112,7 @@ layer.forceUpdate();
 
 | Property    | Type                  | Description                                |
 | ----------- | --------------------- | ------------------------------------------ |
-| `featureId` | `FeatureId`           | 作成された地物の一意な識別子               |
+| `featureSetId` | `FeatureSetId`           | 作成されたフィーチャーセットの一意な識別子               |
 | `evaluator` | `FeatureEvaluator`    | 地物のスタイリングに使用する評価クラス     |
 | `credit`    | `string \| undefined` | データソースのクレジット情報（オプション） |
 
@@ -134,7 +138,7 @@ layer.on("featureCreated", ({ evaluator }) => {
 
 | Property    | Type               | Description                            |
 | ----------- | ------------------ | -------------------------------------- |
-| `featureId` | `FeatureId`        | 更新された地物の一意な識別子           |
+| `featureSetId` | `FeatureSetId`        | 更新されたフィーチャーセットの一意な識別子           |
 | `evaluator` | `FeatureEvaluator` | 地物のスタイリングに使用する評価クラス |
 | `updatedAt` | `number`           | 更新時刻（タイムスタンプ）             |
 
@@ -165,7 +169,7 @@ layer.on("featureUpdated", ({ evaluator }) => {
 
 | Property    | Type        | Description                    |
 | ----------- | ----------- | ------------------------------ |
-| `featureId` | `FeatureId` | 可視性が変更された地物の識別子 |
+| `featureSetId` | `FeatureSetId` | 可視性が変更されたフィーチャーセットの識別子 |
 
 #### featureRemoved
 
@@ -181,7 +185,7 @@ layer.on("featureUpdated", ({ evaluator }) => {
 
 | Property    | Type        | Description            |
 | ----------- | ----------- | ---------------------- |
-| `featureId` | `FeatureId` | 削除された地物の識別子 |
+| `featureSetId` | `FeatureSetId` | 削除されたフィーチャーセットの識別子 |
 
 #### deleted
 

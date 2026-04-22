@@ -1,13 +1,16 @@
 import { EventHandler } from "@navara/core";
+import type { Core } from "@navara/engine";
 import type { ConcurrencyManager } from "@navara/worker";
 import type { Pass as PostProcessingPass } from "postprocessing";
-import type { Material, WebGLRenderer } from "three";
+import type { Material, Object3D, WebGLRenderer } from "three";
 import invariant from "tiny-invariant";
 
 import type { LayersManager } from "../layersManager";
+import type { PickableMesh } from "../mesh/pickableMesh";
 import type { RenderPassOrchestrator } from "../orchestrators";
 import type { CustomRenderPass } from "../passes";
 import type { Scenes } from "../scene";
+import type { MeshCache } from "../type";
 
 import type { EffectHandle } from "./BaseHandle";
 import { SelectiveEffectRegistry } from "./SelectiveEffectRegistry";
@@ -54,6 +57,8 @@ export class ViewContext extends EventHandler<ViewContextEvents> {
     private renderPassOrchestrator: RenderPassOrchestrator,
     /** Manager for scheduling work on Web Workers. */
     private _concurrencyManager: ConcurrencyManager,
+    private _core: Core,
+    private _meshes: MeshCache,
   ) {
     super();
 
@@ -197,5 +202,34 @@ export class ViewContext extends EventHandler<ViewContextEvents> {
    */
   removeShadowMaterial(material: Material): void {
     this.emit("shadowRemoved", material);
+  }
+
+  // --- Picking registration ---
+
+  /**
+   * Generate a new unique global batch ID for picking.
+   * The returned ID is in the 24-bit RGB color range (1..0xffffff).
+   */
+  genGlobalBatchId(): number | undefined {
+    return this._core?.genGlobalBatchId();
+  }
+
+  /**
+   * Register a pickable mesh so the picking system can discover it.
+   * @param key - Unique key (typically the layer ID).
+   * @param mesh - Any {@link PickableMesh} implementation. Implementers
+   *   must also be an `Object3D` so the pick pass can re-parent the
+   *   renderable into its dedicated scene.
+   */
+  registerPickableMesh(key: string, mesh: PickableMesh & Object3D): void {
+    this._meshes?.set(key, mesh);
+  }
+
+  /**
+   * Unregister a pickable mesh from the picking system.
+   * @param key - The key used during registration.
+   */
+  unregisterPickableMesh(key: string): void {
+    this._meshes?.delete(key);
   }
 }

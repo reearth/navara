@@ -7,7 +7,9 @@ sidebar:
 
 `MeshLayer` is a descriptor type for adding 3D mesh objects to the scene. It can display various 3D objects.
 
-## Available MeshDescriptor Types
+All mesh descriptors inherit from [`MeshDesc`](./mesh-layer-base), which provides common properties such as `position`, `rotation`, `scale`, `matrix`, `matrixWorld`, and `pickable`. See the [MeshDesc](./mesh-layer-base) page for details on transform composition, picking, and coordinate transformation.
+
+## Available Mesh Descriptor Types
 
 The following MeshDescriptor types are available in navara_three:
 

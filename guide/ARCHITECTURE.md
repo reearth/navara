@@ -200,6 +200,28 @@ The engine supports comprehensive geospatial data formats:
 - **Memory Management** - Efficient buffer pooling and zero-copy transfers
 - **Spatial Indexing** - Quadtree-based spatial data structures
 
+## Mesh Picking
+
+The rendering engine includes a GPU-based mesh picking system that identifies which mesh the user clicked. Rather than using CPU-side raycasting, picking renders all pickable meshes into a dedicated 1×1 render target with each mesh's batch ID encoded as an RGB color, then reads back the single pixel to determine the hit.
+
+### Pick Flow
+
+1. The user clicks on the canvas.
+2. `PickHelper` converts the click coordinates to WebGL pixel space (Y-flipped) and sets a scissor rect to limit the GPU work to a single pixel.
+3. All registered pickable meshes are temporarily re-parented into a dedicated pick scene. Each mesh's `onBeforePicking()` callback activates the picking shader branch.
+4. The pick scene is rendered with a black clear color (batch ID 0 = miss).
+5. The single pixel is read back and decoded: `batchId = (R << 16) + (G << 8) + B`.
+6. `onAfterPicking()` restores each mesh's normal rendering state, and all meshes are re-parented to their original scenes.
+7. A `"pick"` event is emitted with the decoded `PickedFeature` (batch ID, layer ID, properties).
+
+### Shader Injection
+
+For standard Three.js materials, `PickableMeshWrapper` injects picking uniforms (`nvr_uPickable`, `nvr_uBatchId`) and a color-encoding branch via `onBeforeCompile`. For `ShaderMaterial` variants, the injection modifies the shader source directly. Layers with fully custom shaders implement the `PickableMesh` interface and handle the encoding themselves.
+
+### Instanced Mesh Picking
+
+`PickableInstancedMeshWrapper` assigns a unique batch ID per instance using an `InstancedBufferAttribute`. The vertex shader passes the per-instance ID as a varying, and the fragment shader encodes it during the pick pass. This allows picking individual instances within a single draw call.
+
 ## Three.js Integration
 
 ### **Rendering Pipeline**
@@ -207,6 +229,7 @@ The engine supports comprehensive geospatial data formats:
 - **Post-Processing** - SSAO, tone mapping, anti-aliasing, lens flare
 - **Atmospheric Effects** - Realistic atmosphere with scattering
 - **Weather Effects** - Volumetric clouds and fog systems
+- **Mesh Picking** - GPU-based single-pixel picking with scissor optimization
 
 ### **Key Dependencies**
 - **Three.js** - Core 3D rendering

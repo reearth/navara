@@ -1,6 +1,7 @@
 import type ThreeView from "@navara/three";
 import {
   MeshDesc,
+  PickableMeshWrapper,
   type MeshConfig,
   type ViewContext,
   type MeshUpdate,
@@ -16,7 +17,8 @@ type Description = {
   smoothLines?: Partial<SmoothLineConfig> | Partial<SmoothLineConfig>[];
 };
 
-export type SmoothLineMeshConfig = MeshConfig & Description;
+export type SmoothLineMeshConfig = MeshConfig &
+  Description & { pickable?: boolean };
 
 export type SmoothLineMeshUpdate = MeshUpdate & Description;
 
@@ -26,10 +28,16 @@ export class SmoothLineMeshDesc extends MeshDesc<
   SmoothLine
 > {
   private config: SmoothLineMeshConfig;
+  private pickWrapper?: PickableMeshWrapper;
 
   constructor(view: ThreeView, ctx: ViewContext, config: SmoothLineMeshConfig) {
     super(view, ctx, config);
     this.config = config;
+  }
+
+  /** The batch ID assigned to this mesh when picking is enabled. */
+  get batchId(): number | undefined {
+    return this.pickWrapper?.batchId;
   }
 
   protected getPassKey() {
@@ -62,7 +70,14 @@ export class SmoothLineMeshDesc extends MeshDesc<
       }
     }
 
-    return new SmoothLine(lineConfig);
+    const smoothLine = new SmoothLine(lineConfig);
+
+    if (this.config.pickable) {
+      this.pickWrapper = new PickableMeshWrapper(smoothLine, this.ctx);
+      this.ctx.registerPickableMesh(this.id, this.pickWrapper);
+    }
+
+    return smoothLine;
   }
 
   onUpdateConfig(updates: SmoothLineMeshUpdate): void {
@@ -72,6 +87,9 @@ export class SmoothLineMeshDesc extends MeshDesc<
         ? updates.smoothLines
         : [updates.smoothLines];
       this._instance.updateConfig(updateConfigs);
+      // SmoothLine may have rebuilt line meshes — re-inject picking into any
+      // newly created materials (preserves existing batchId)
+      this.pickWrapper?.syncMaterials();
       this.emit("needsUpdate");
     }
 
@@ -87,5 +105,13 @@ export class SmoothLineMeshDesc extends MeshDesc<
       this._instance.dispose();
       this._instance = undefined;
     }
+  }
+
+  override onDestroy(): void {
+    if (this.pickWrapper) {
+      this.ctx.unregisterPickableMesh(this.id);
+      this.pickWrapper = undefined;
+    }
+    super.onDestroy();
   }
 }

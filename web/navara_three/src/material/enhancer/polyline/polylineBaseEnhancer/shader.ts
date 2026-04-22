@@ -1,6 +1,5 @@
 import FlatPolylineFragShader from "@shaders/glsl/flatPolyline.frag.glsl";
 import FlatPolylineVertShader from "@shaders/glsl/flatPolyline.vert.glsl";
-import GroundPolylineFragShader from "@shaders/glsl/groundPolyline.frag.glsl";
 import PolylineFragShader from "@shaders/glsl/polyline.frag.glsl";
 import PolylineVertShader from "@shaders/glsl/polyline.vert.glsl";
 import { packing } from "@takram/three-geospatial/shaders";
@@ -13,12 +12,10 @@ import type { PolylineBaseMutates, PolylineBaseState } from "./types";
  * Select appropriate shaders based on polyline state.
  *
  * @param isTexturized - Whether the polyline is rendered as flat texturized tile
- * @param clampToGround - Whether the polyline is clamped to ground (only used for non-texturized)
  * @returns Object with vertexShader and fragmentShader code
  */
 const selectShaders = (
   isTexturized: boolean,
-  clampToGround: boolean,
 ): { vertexShader: string; fragmentShader: string } => {
   if (isTexturized) {
     // Flat polyline for texturized tile rendering
@@ -29,9 +26,7 @@ const selectShaders = (
   }
 
   // 3D polyline for globe rendering
-  const fragmentShader =
-    `${packing}\n` +
-    (clampToGround ? GroundPolylineFragShader : PolylineFragShader);
+  const fragmentShader = `${packing}\n` + PolylineFragShader;
 
   return {
     vertexShader: PolylineVertShader,
@@ -57,7 +52,7 @@ export const transformShader = (
   material: SupportedMaterial,
 ): void => {
   // Select and set shaders based on state
-  const shaders = selectShaders(state.isTexturized, state.clampToGround);
+  const shaders = selectShaders(state.isTexturized);
   shader.vertexShader = shaders.vertexShader;
   shader.fragmentShader = shaders.fragmentShader;
 

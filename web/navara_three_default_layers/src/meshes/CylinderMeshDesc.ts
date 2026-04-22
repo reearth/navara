@@ -3,6 +3,7 @@ import {
   Color,
   DrapedMesh,
   MeshDescWithSelectiveEffect,
+  PickableMeshWrapper,
   type MeshConfigWithSelectiveEffect,
   type MeshUpdateWithSelectiveEffect,
   type ViewContext,
@@ -45,7 +46,8 @@ type Description = {
   };
 };
 
-export type CylinderMeshConfig = MeshConfigWithSelectiveEffect & Description;
+export type CylinderMeshConfig = MeshConfigWithSelectiveEffect &
+  Description & { pickable?: boolean };
 
 export type CylinderMeshUpdate = MeshUpdateWithSelectiveEffect & Description;
 
@@ -57,6 +59,7 @@ export class CylinderMeshDesc extends MeshDescWithSelectiveEffect<
   DrapedMesh<CylinderGeometry, CylinderMeshMaterial, CylinderMeshEventMap>
 > {
   private config: CylinderMeshConfig;
+  private pickWrapper?: PickableMeshWrapper;
 
   constructor(view: ThreeView, ctx: ViewContext, config: CylinderMeshConfig) {
     // Propagate initial effectIds to base MeshDesc
@@ -65,6 +68,11 @@ export class CylinderMeshDesc extends MeshDescWithSelectiveEffect<
     }
     super(view, ctx, config);
     this.config = config;
+  }
+
+  /** The batch ID assigned to this mesh when picking is enabled. */
+  get batchId(): number | undefined {
+    return this.pickWrapper?.batchId;
   }
 
   createMesh() {
@@ -102,6 +110,11 @@ export class CylinderMeshDesc extends MeshDescWithSelectiveEffect<
     mesh.receiveShadow = cfg.receiveShadow ?? false;
 
     this.ctx.applyShadowMaterial(material);
+
+    if (this.config.pickable) {
+      this.pickWrapper = new PickableMeshWrapper(mesh, this.ctx);
+      this.ctx.registerPickableMesh(this.id, this.pickWrapper);
+    }
 
     return mesh;
   }
@@ -158,6 +171,8 @@ export class CylinderMeshDesc extends MeshDescWithSelectiveEffect<
           if (newMaterial instanceof MeshLambertMaterial) {
             setupSelectiveEffectUniforms(newMaterial);
           }
+          // Re-inject picking hooks into the new material (preserves batchId)
+          this.pickWrapper?.syncMaterials();
         }
       }
 
@@ -243,5 +258,13 @@ export class CylinderMeshDesc extends MeshDescWithSelectiveEffect<
 
       this._instance = undefined;
     }
+  }
+
+  override onDestroy(): void {
+    if (this.pickWrapper) {
+      this.ctx.unregisterPickableMesh(this.id);
+      this.pickWrapper = undefined;
+    }
+    super.onDestroy();
   }
 }

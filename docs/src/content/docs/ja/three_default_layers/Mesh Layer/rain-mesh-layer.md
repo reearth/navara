@@ -7,6 +7,8 @@ sidebar:
 
 `RainMeshLayer`クラスは、雨のパーティクルエフェクトを表示するメッシュレイヤーです。シェーダーベースのパーティクルシステムを使用して、リアルな降雨効果を作成します。
 
+以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`pickable`、`visible`）が利用できます。詳細は [MeshDesc](./mesh-layer-base) を参照してください。
+
 ## Common Properties
 
 ### position

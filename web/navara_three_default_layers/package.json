@@ -28,8 +28,6 @@
     "@navara/three": "workspace:*"
   },
   "dependencies": {
-    "@navara/core": "workspace:*",
-    "@navara/three_csm": "workspace:*",
     "@takram/three-atmosphere": "0.18.0",
     "@takram/three-clouds": "0.7.4",
     "@takram/three-geospatial": "0.8.0",
@@ -38,7 +36,9 @@
     "tiny-invariant": "1.3.3"
   },
   "devDependencies": {
+    "@navara/core": "workspace:*",
     "@navara/three": "workspace:*",
+    "@navara/three_csm": "workspace:*",
     "@types/three": "0.183.1",
     "postprocessing": "6.38.3",
     "three": "0.183.2",

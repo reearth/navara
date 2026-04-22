@@ -1,4 +1,4 @@
-import type { EventHandler, FeatureId } from "@navara/core";
+import type { EventHandler, FeatureSetId } from "@navara/core";
 import type { Object3D } from "three";
 
 import { ModelMesh, type ViewEvents } from "..";
@@ -14,16 +14,16 @@ export const handleFeatureCreatedEventByLayerId = (
   viewEvents: EventHandler<ViewEvents>,
   layersManager: LayersManager,
   layerId: string,
-  featureId: FeatureId,
+  featureSetId: FeatureSetId,
 ) => {
   const layer = layersManager.get(layerId);
 
   // Create the evaluator
-  const evaluator = new FeatureEvaluator(handler, featureId, obj);
+  const evaluator = new FeatureEvaluator(handler, layerId, featureSetId, obj);
 
   // Register the feature evaluator with the layer if it exists
   if (layer && layer instanceof Layer) {
-    layer._registerFeatureEvaluator(featureId, evaluator);
+    layer._registerFeatureEvaluator(featureSetId, evaluator);
   }
 
   let credit = undefined;
@@ -33,7 +33,7 @@ export const handleFeatureCreatedEventByLayerId = (
 
   // Emit the evaluator
   viewEvents.emit("layer", "featureCreated", layerId, {
-    featureId,
+    featureSetId,
     evaluator,
     credit,
   });
@@ -45,7 +45,7 @@ export const handleFeatureUpdatedEventByLayerId = (
   viewEvents: EventHandler<ViewEvents>,
   layersManager: LayersManager,
   layerId: string,
-  featureId: FeatureId,
+  featureSetId: FeatureSetId,
   updatedAt: number,
 ) => {
   const layer = layersManager.get(layerId);
@@ -54,12 +54,12 @@ export const handleFeatureUpdatedEventByLayerId = (
 
   // Get the existing evaluator or create a new one
   if (!(layer instanceof Layer)) return;
-  const evaluator = layer._getFeatureEvaluator(featureId);
+  const evaluator = layer._getFeatureEvaluator(featureSetId);
   if (!evaluator) return;
 
   // Emit the event with the evaluator
   viewEvents.emit("layer", "featureUpdated", layerId, {
-    featureId,
+    featureSetId,
     evaluator,
     updatedAt,
   });
@@ -68,7 +68,7 @@ export const handleFeatureUpdatedEventByLayerId = (
 export const handleFeatureVisibilityChangedEventByLayerId = (
   layersManager: LayersManager,
   layerId: string,
-  featureId: FeatureId,
+  featureSetId: FeatureSetId,
   visible: boolean,
 ) => {
   const layer = layersManager.get(layerId);
@@ -77,5 +77,5 @@ export const handleFeatureVisibilityChangedEventByLayerId = (
   if (!(layer instanceof Layer)) return;
 
   // Emit the visibility changed event
-  layer.emit("featureVisibilityChanged", { featureId, visible });
+  layer.emit("featureVisibilityChanged", { featureSetId, visible });
 };

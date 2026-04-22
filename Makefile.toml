@@ -122,6 +122,13 @@ cargo test --workspace --verbose
 grcov . -s . --binary-path ./target/debug/ -t lcov --branch --ignore-not-existing -o lcov.info
 ''']
 
+[tasks.pack-externals]
+description = "Pack all web packages into externals/ for internal distribution"
+script = ['''
+pnpm pack:externals
+''']
+dependencies = ["build-all", "build-web"]
+
 [tasks.check-easy-panic]
 script = ['''
 #!/usr/bin/env bash -eux

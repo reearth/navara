@@ -838,6 +838,8 @@ export default class ThreeView<
       this.layersManager,
       this.renderPassOrchestrator,
       concurrencyManager,
+      this._core,
+      this._meshes,
     );
     this.registries = new Registries(this, this.viewContext);
     this.eventContext = new EventContext({
@@ -878,11 +880,8 @@ export default class ThreeView<
         this._renderer.domElement,
         this._renderer,
         this._camera.raw,
-        this._scenes,
         this._meshes,
         this.onPick.bind(this),
-        this.renderPassOrchestrator.effectComposer.inputBuffer,
-        this._globe,
         // {
         //   debug: true,
         // },
@@ -1039,6 +1038,11 @@ export default class ThreeView<
     if (this._options.pixelRatio == null && pixelRatio) {
       this._renderer.setPixelRatio(pixelRatio);
     }
+
+    const drawingBufferSize = this._renderer.getDrawingBufferSize(
+      new Vector2(),
+    );
+    this._pickHelper?.setSize(drawingBufferSize.x, drawingBufferSize.y);
 
     this._core?.resize(w, h, pixelRatio ?? 1);
 
@@ -1746,19 +1750,20 @@ export default class ThreeView<
     this._renderFlag.forceUpdate = true;
 
     if (pickArr.length > 0) {
-      const prop = this._core?.readPropertyByGlobalBatchId(pickArr[0]);
+      const batchId = pickArr[0];
+      const prop = this._core?.readPropertyByGlobalBatchId(batchId);
       if (prop) {
         const pickedFeature: PickedFeature = {
           properties: prop.properties,
-          batchId: pickArr[0],
+          batchId,
           layerId: prop.layerId,
         };
         this.emit("pick", pickedFeature);
       } else {
         const emptyFeature: PickedFeature = {
           properties: {},
-          batchId: null,
-          layerId: null,
+          batchId,
+          layerId: undefined,
         };
         this.emit("pick", emptyFeature);
       }

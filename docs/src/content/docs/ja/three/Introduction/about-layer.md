@@ -20,6 +20,28 @@ navara_three には 4 種類のレイヤーがあります：
 | **エフェクトレイヤー** | ポストプロセッシングエフェクトを適用           | `"effect"`                                            |
 | **ライトレイヤー**     | シーンの照明を管理                             | `"light"`                                             |
 
+## リソースレイヤーのデータ構造
+
+リソースレイヤーは、地理データを以下の階層構造で管理します：
+
+```mermaid
+graph LR
+  Layer --> FeatureSet
+  FeatureSet --> Feature
+  Feature --> Batch
+```
+
+- **Layer** — `addLayer()` で追加されるトップレベルのコンテナ。各レイヤーは一意の `LayerId` を持ちます。
+- **FeatureSet** — レイヤー内の描画単位。フィーチャーイベント（`featureCreated`、`featureUpdated` など）はフィーチャーセットごとに発行され、それぞれ `FeatureSetId` を持ちます。1 つのフィーチャーセットは複数の LOD レベルにまたがる場合があります。
+- **Feature** — プロパティを持つ概念的な単位。データソースが GIS データの場合、フィーチャーは個々の地理的エンティティ（建物、道路セグメントなど）に対応します。LOD レベルをまたいで特定のフィーチャーを識別するには、プロパティ内の値（`id` フィールドなど）を使用してください。
+- **Batch** — 最下位の単位で、実際のジオメトリで構成されます。各バッチは `batchId` を持ちます。
+
+:::tip
+[`FeatureEvaluator`](../../api/feature-evaluator/) を使用する際、コールバックは `batchId`、`properties`、`layerId` を含む `FeatureInfo` オブジェクトを受け取ります。フィーチャーセット内の個々のフィーチャーを識別するには `properties` を使用してください。
+:::
+
+フィーチャーイベント（`featureCreated`、`featureUpdated` など）の詳細は [Layer Types](../../api/layer-types/#events) を参照してください。
+
 ## リソースレイヤーとその他のレイヤーの違い
 
 リソースレイヤーは外部の地理データを扱うため、メッシュ・エフェクト・ライトレイヤーとは扱いが異なります。

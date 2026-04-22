@@ -1,28 +1,28 @@
-import { EventHandler, type FeatureId } from "@navara/core";
+import { EventHandler, type FeatureSetId } from "@navara/core";
 import type { Core } from "@navara/engine";
 
 import { FeatureEvaluator } from "./evaluations";
 import type { LayerDescription } from "./type";
 
 export type FeatureCreatedParams = {
-  featureId: FeatureId;
+  featureSetId: FeatureSetId;
   evaluator: FeatureEvaluator;
   credit?: string;
 };
 
 export type FeatureUpdatedParams = {
-  featureId: FeatureId;
+  featureSetId: FeatureSetId;
   evaluator: FeatureEvaluator;
   updatedAt: number;
 };
 
 export type FeatureVisibilityChangedParams = {
-  featureId: FeatureId;
+  featureSetId: FeatureSetId;
   visible: boolean;
 };
 
 export type FeatureRemovedParams = {
-  featureId: FeatureId;
+  featureSetId: FeatureSetId;
 };
 
 /**
@@ -75,8 +75,8 @@ export class Layer extends EventHandler<LayerEvent> {
   /** The unique identifier of this layer. */
   id: string;
   private core: Core;
-  private featureEvaluators: Map<FeatureId, FeatureEvaluator> = new Map<
-    FeatureId,
+  private featureEvaluators: Map<FeatureSetId, FeatureEvaluator> = new Map<
+    FeatureSetId,
     FeatureEvaluator
   >();
   private needUpdate = false;
@@ -98,24 +98,29 @@ export class Layer extends EventHandler<LayerEvent> {
    * Register a feature evaluator with this layer
    * @internal Used by the event system
    */
-  _registerFeatureEvaluator(featureId: FeatureId, evaluator: FeatureEvaluator) {
-    this.featureEvaluators.set(featureId, evaluator);
+  _registerFeatureEvaluator(
+    featureSetId: FeatureSetId,
+    evaluator: FeatureEvaluator,
+  ) {
+    this.featureEvaluators.set(featureSetId, evaluator);
   }
 
   /**
    * Get a feature evaluator by ID
    * @internal Used by the event system
    */
-  _getFeatureEvaluator(featureId: FeatureId): FeatureEvaluator | undefined {
-    return this.featureEvaluators.get(featureId);
+  _getFeatureEvaluator(
+    featureSetId: FeatureSetId,
+  ): FeatureEvaluator | undefined {
+    return this.featureEvaluators.get(featureSetId);
   }
 
   /**
    * Unregister a feature evaluator from this layer
    * @internal Used by the event system
    */
-  _unregisterFeatureEvaluator(featureId: FeatureId) {
-    this.featureEvaluators.delete(featureId);
+  _unregisterFeatureEvaluator(featureSetId: FeatureSetId) {
+    this.featureEvaluators.delete(featureSetId);
   }
 
   /**
@@ -131,7 +136,7 @@ export class Layer extends EventHandler<LayerEvent> {
     // Process all evaluators with the registered callbacks
     for (const evaluator of this.featureEvaluators.values()) {
       this.emit("featureUpdated", {
-        featureId: evaluator.id,
+        featureSetId: evaluator.id,
         evaluator,
         updatedAt,
       });

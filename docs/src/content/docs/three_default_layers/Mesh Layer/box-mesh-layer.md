@@ -7,6 +7,8 @@ sidebar:
 
 The `BoxMeshLayer` class is a mesh descriptor for drawing box geometry. You can create a box by specifying width, height, and depth.
 
+In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `pickable`, `visible`) are available. See [MeshDesc](./mesh-layer-base) for details.
+
 ## Properties
 
 ### width

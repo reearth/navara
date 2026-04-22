@@ -7,6 +7,8 @@ sidebar:
 
 The `GLTFModelLayer` class is a mesh descriptor for loading and displaying GLTF/GLB format 3D models. It provides features such as animation playback, shadow settings, and dynamic updates.
 
+In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `pickable`, `visible`) are available. See [MeshDesc](./mesh-layer-base) for details.
+
 ## Properties
 
 ### url

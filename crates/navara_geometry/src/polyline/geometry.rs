@@ -597,7 +597,7 @@ pub fn create_flat_polyline_geometry(
 
 #[cfg(test)]
 mod test {
-    use navara_core::{LLE, WGS84_64};
+    use navara_core::{EncodedVec3, LLE, WGS84_64};
     use radians::Degrees;
 
     use super::{
@@ -774,5 +774,98 @@ mod test {
 
         // 2 segment quads (12) + 1 bevel triangle (3) = 15 indices
         assert_eq!(geometry.indices.len(), 15);
+    }
+
+    #[test]
+    fn rte_position_high_low_matches_adjusted_positions_when_not_clamped() {
+        // When use_rte=true and clamp_to_ground=false, position_high/low must encode
+        // the same adjusted (collapsed) positions as the f32 position attribute.
+        // This guards against a regression where unadjusted coordinates were used instead.
+        let geometry = create_polyline_geometry(
+            WGS84_64,
+            PolylineGeometryOptions {
+                positions: vec![
+                    LLE::<f64, Degrees>::from_float(0.01, 0., 0.).rad(),
+                    LLE::<f64, Degrees>::from_float(0.02, 0., 0.).rad(),
+                ],
+                granularity: 0.0,
+                clamp_to_ground: false,
+                use_rte: true,
+                ..Default::default()
+            },
+        )
+        .unwrap();
+
+        let position_high = geometry
+            .attributes
+            .position_high
+            .as_ref()
+            .expect("position_high should be present when use_rte=true");
+        let position_low = geometry
+            .attributes
+            .position_low
+            .as_ref()
+            .expect("position_low should be present when use_rte=true");
+
+        // Reconstruct the expected high/low from the f32 position attribute.
+        // The f32 positions are stored from adjusted (collapsed) coordinates cast to f32.
+        // The f64 positions (used for RTE) should also come from adjusted coordinates,
+        // so high + low should reconstruct closely to the f32 position values.
+        let positions = &geometry.attributes.position.data;
+        let vertex_count = positions.len() / 3;
+
+        assert_eq!(position_high.data.len(), positions.len());
+        assert_eq!(position_low.data.len(), positions.len());
+
+        for v in 0..vertex_count {
+            let i = v * 3;
+            let high_x = position_high.data[i];
+            let high_y = position_high.data[i + 1];
+            let high_z = position_high.data[i + 2];
+            let low_x = position_low.data[i];
+            let low_y = position_low.data[i + 1];
+            let low_z = position_low.data[i + 2];
+
+            // high + low should reconstruct to approximately the same value as positions
+            let reconstructed_x = high_x + low_x;
+            let reconstructed_y = high_y + low_y;
+            let reconstructed_z = high_z + low_z;
+
+            let pos_x = positions[i];
+            let pos_y = positions[i + 1];
+            let pos_z = positions[i + 2];
+
+            // Use relative tolerance since ECEF coords are large (~6.3M meters)
+            let tol = 1.0; // 1 meter tolerance for f32 rounding
+            assert!(
+                (reconstructed_x - pos_x).abs() < tol,
+                "vertex {v} x mismatch: reconstructed={reconstructed_x}, position={pos_x}"
+            );
+            assert!(
+                (reconstructed_y - pos_y).abs() < tol,
+                "vertex {v} y mismatch: reconstructed={reconstructed_y}, position={pos_y}"
+            );
+            assert!(
+                (reconstructed_z - pos_z).abs() < tol,
+                "vertex {v} z mismatch: reconstructed={reconstructed_z}, position={pos_z}"
+            );
+        }
+
+        // Additionally verify that position_high/low values match EncodedVec3 encoding
+        // of the adjusted positions (not the raw top/bottom positions).
+        // When clamp_to_ground=false, max_height=0 so top collapses toward bottom.
+        // All 8 vertices per segment should have collapsed positions.
+        // Verify the first vertex by checking encoding directly.
+        let pos_f64_x = positions[0] as f64;
+        let pos_f64_y = positions[1] as f64;
+        let pos_f64_z = positions[2] as f64;
+        let encoded = EncodedVec3::encode_xyz(pos_f64_x, pos_f64_y, pos_f64_z);
+
+        // The actual RTE encoding uses the f64 adjusted position (more precise than
+        // round-tripping through f32), so we just verify high is in the right ballpark.
+        assert!(
+            (position_high.data[0] - encoded.high.x as f32).abs() < 1.0,
+            "first vertex high.x doesn't match expected encoding"
+        );
     }
 }

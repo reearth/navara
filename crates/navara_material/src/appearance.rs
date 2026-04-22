@@ -233,7 +233,6 @@ pub struct PolylineMaterial {
     pub max_width: f32,
     pub clamp_to_ground: bool,
     pub tiled: bool,
-    pub use_ground_normals: bool,
     pub height: f32,
     pub internal: Option<PolylineInternalMaterial>,
     // post effect
@@ -253,7 +252,6 @@ impl Default for PolylineMaterial {
             max_width: 10000.,
             clamp_to_ground: true,
             tiled: false,
-            use_ground_normals: false,
             height: 1.,
             internal: None,
             // post effect

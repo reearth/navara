@@ -1,6 +1,5 @@
 import FlatPolylineFragShader from "@shaders/glsl/flatPolyline.frag.glsl";
 import FlatPolylineVertShader from "@shaders/glsl/flatPolyline.vert.glsl";
-import GroundPolylineFragShader from "@shaders/glsl/groundPolyline.frag.glsl";
 import PolylineFragShader from "@shaders/glsl/polyline.frag.glsl";
 import PolylineVertShader from "@shaders/glsl/polyline.vert.glsl";
 import { describe, it, expect } from "vitest";
@@ -37,7 +36,7 @@ describe("polylineBaseEnhancer shader selection", () => {
     expect(shader.fragmentShader).toBe(FlatPolylineFragShader);
   });
 
-  it("should use GroundPolylineFragShader when isTexturized is false and clampToGround is true", () => {
+  it("should use PolylineFragShader when isTexturized is false", () => {
     const material = {
       type: "ShaderMaterial",
       userData: {},
@@ -45,40 +44,9 @@ describe("polylineBaseEnhancer shader selection", () => {
 
     const enhancer = createPolylineBaseEnhancer(material);
 
-    // Mount with isTexturized = false, clampToGround = true
+    // Mount with isTexturized = false
     enhancer.mount({
       isTexturized: false,
-      clampToGround: true,
-    });
-
-    // Create a mock shader object
-    const shader = {
-      vertexShader: "",
-      fragmentShader: "",
-      uniforms: {},
-      defines: {},
-    };
-
-    // Transform the shader
-    enhancer.transformShader(shader as any);
-
-    // Verify that PolylineVertShader and GroundPolylineFragShader are used
-    expect(shader.vertexShader).toBe(PolylineVertShader);
-    expect(shader.fragmentShader).toContain(GroundPolylineFragShader);
-  });
-
-  it("should use PolylineFragShader when isTexturized is false and clampToGround is false", () => {
-    const material = {
-      type: "ShaderMaterial",
-      userData: {},
-    } as unknown as SupportedMaterial;
-
-    const enhancer = createPolylineBaseEnhancer(material);
-
-    // Mount with isTexturized = false, clampToGround = false
-    enhancer.mount({
-      isTexturized: false,
-      clampToGround: false,
     });
 
     // Create a mock shader object

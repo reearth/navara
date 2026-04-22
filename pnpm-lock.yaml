@@ -206,6 +206,9 @@ importers:
 
   web/navara_font:
     dependencies:
+      '@navara/engine-font-worker':
+        specifier: workspace:*
+        version: link:../wasm/navara_font_worker
       '@navara/worker':
         specifier: workspace:*
         version: link:../navara_worker
@@ -222,6 +225,12 @@ importers:
       '@navara/core':
         specifier: workspace:*
         version: link:../navara_core
+      '@navara/engine':
+        specifier: workspace:*
+        version: link:../wasm/navara_engine
+      '@navara/engine-api':
+        specifier: workspace:*
+        version: link:../wasm/navara_engine_api
       '@navara/font':
         specifier: workspace:*
         version: link:../navara_font
@@ -234,18 +243,6 @@ importers:
       '@navara/worker':
         specifier: workspace:*
         version: link:../navara_worker
-      '@radix-ui/react-collapsible':
-        specifier: 1.1.12
-        version: 1.1.12(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
-      '@radix-ui/react-select':
-        specifier: 2.2.6
-        version: 2.2.6(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
-      '@radix-ui/react-slider':
-        specifier: 1.3.6
-        version: 1.3.6(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
-      '@radix-ui/react-switch':
-        specifier: 1.2.6
-        version: 1.2.6(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       '@takram/three-atmosphere':
         specifier: 0.18.0
         version: 0.18.0(@react-three/fiber@9.1.2(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(three@0.183.2))(postprocessing@6.38.3(three@0.183.2))(react@19.2.5)(three@0.183.2)
@@ -280,15 +277,27 @@ importers:
       '@playwright/test':
         specifier: 1.59.1
         version: 1.59.1
+      '@radix-ui/react-collapsible':
+        specifier: 1.1.12
+        version: 1.1.12(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       '@radix-ui/react-label':
         specifier: 2.1.8
         version: 2.1.8(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
+      '@radix-ui/react-select':
+        specifier: 2.2.6
+        version: 2.2.6(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       '@radix-ui/react-separator':
         specifier: 1.1.8
         version: 1.1.8(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
+      '@radix-ui/react-slider':
+        specifier: 1.3.6
+        version: 1.3.6(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       '@radix-ui/react-slot':
         specifier: 1.2.4
         version: 1.2.4(@types/react@19.2.14)(react@19.2.5)
+      '@radix-ui/react-switch':
+        specifier: 1.2.6
+        version: 1.2.6(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       '@tailwindcss/postcss':
         specifier: 4.2.2
         version: 4.2.2
@@ -355,6 +364,9 @@ importers:
       '@navara/core':
         specifier: workspace:*
         version: link:../navara_core
+      '@navara/engine-api':
+        specifier: workspace:*
+        version: link:../wasm/navara_engine_api
     devDependencies:
       '@types/three':
         specifier: 0.183.1
@@ -374,12 +386,6 @@ importers:
 
   web/navara_three_default_layers:
     dependencies:
-      '@navara/core':
-        specifier: workspace:*
-        version: link:../navara_core
-      '@navara/three_csm':
-        specifier: workspace:*
-        version: link:../navara_three_csm
       '@takram/three-atmosphere':
         specifier: 0.18.0
         version: 0.18.0(@react-three/fiber@9.1.2(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(three@0.183.2))(postprocessing@6.38.3(three@0.183.2))(react@19.2.5)(three@0.183.2)
@@ -399,9 +405,15 @@ importers:
         specifier: 1.3.3
         version: 1.3.3
     devDependencies:
+      '@navara/core':
+        specifier: workspace:*
+        version: link:../navara_core
       '@navara/three':
         specifier: workspace:*
         version: link:../navara_three
+      '@navara/three_csm':
+        specifier: workspace:*
+        version: link:../navara_three_csm
       '@types/three':
         specifier: 0.183.1
         version: 0.183.1
@@ -416,13 +428,14 @@ importers:
         version: 1.6.0(@rollup/pluginutils@5.3.0(rollup@4.59.0))(esbuild@0.27.4)(vite@8.0.8(@types/node@24.12.2)(esbuild@0.27.4)(jiti@2.6.1)(terser@5.43.1)(tsx@4.21.0))
 
   web/navara_three_default_plugin:
+    dependencies:
+      '@navara/three_default_layers':
+        specifier: workspace:*
+        version: link:../navara_three_default_layers
     devDependencies:
       '@navara/three':
         specifier: workspace:*
         version: link:../navara_three
-      '@navara/three_default_layers':
-        specifier: workspace:*
-        version: link:../navara_three_default_layers
 
   web/navara_three_react:
     dependencies:
@@ -451,6 +464,9 @@ importers:
       '@navara/core':
         specifier: workspace:*
         version: link:../navara_core
+      '@navara/engine-worker':
+        specifier: workspace:*
+        version: link:../wasm/navara_engine_worker
       workerpool:
         specifier: 10.0.1
         version: 10.0.1

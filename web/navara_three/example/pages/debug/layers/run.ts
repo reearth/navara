@@ -290,7 +290,6 @@ const geoLayersDef: MaterialDesc[] = [
       maxWidth: 10000,
       height: 1,
       clampToGround: true,
-      useGroundNormals: true,
     },
   },
 
@@ -314,7 +313,6 @@ const geoLayersDef: MaterialDesc[] = [
       maxWidth: 10000,
       height: 1,
       clampToGround: true,
-      useGroundNormals: true,
     },
   },
   {
@@ -492,7 +490,6 @@ const geoLayersDef: MaterialDesc[] = [
       maxWidth: 10000,
       height: 1,
       clampToGround: true,
-      useGroundNormals: true,
     },
     vectorTile: {
       maxZoom: 16,
@@ -545,7 +542,6 @@ const geoLayersDef: MaterialDesc[] = [
       maxWidth: 10000,
       height: 1,
       clampToGround: true,
-      useGroundNormals: true,
     },
   },
 ];

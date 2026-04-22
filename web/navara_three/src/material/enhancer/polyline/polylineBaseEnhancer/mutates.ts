@@ -23,7 +23,6 @@ const DEFAULT_BASE_REFS: PolylineBaseRefs = {
   minMaxHeightAndWidth: { value: [0, 0, 1] },
   maxWidth: { value: 10000 },
   color: { value: new ThreeColor(0xffffff) },
-  useGroundNormals: { value: false },
   nvr_uPickable: { value: 0 },
   uEffectIdsMask: { value: 0 },
   uEmissiveColor: { value: new ThreeVector3(0, 0, 0) },
@@ -62,7 +61,6 @@ export const createBaseMutates = (useRTE: boolean): PolylineBaseMutates => {
         state.width,
       ];
       refs.maxWidth.value = state.maxWidth;
-      refs.useGroundNormals.value = state.useGroundNormals;
       refs.nvr_uPickable.value = state.pickable ? 1 : 0;
       refs.uEffectIdsMask.value = state.effectIdsMask;
       const c = state.emissiveColor;
@@ -84,17 +82,11 @@ export const createBaseMutates = (useRTE: boolean): PolylineBaseMutates => {
       uniforms.minMaxHeightAndWidth = refs.minMaxHeightAndWidth;
       uniforms.maxWidth = refs.maxWidth;
       uniforms.color = refs.color;
-      uniforms.useGroundNormals = refs.useGroundNormals;
       uniforms.nvr_uPickable = refs.nvr_uPickable;
       uniforms.uEffectIdsMask = refs.uEffectIdsMask;
       uniforms.uEmissiveColor = refs.uEmissiveColor;
       uniforms.uEmissiveIntensity = refs.uEmissiveIntensity;
       uniforms.nvr_uPickingCoord = refs.nvr_uPickingCoord;
-
-      // Optional uniforms
-      if (refs.uGlobeNormal) {
-        uniforms.uGlobeNormal = refs.uGlobeNormal;
-      }
 
       // RTE uniforms
       if (
@@ -123,12 +115,6 @@ export const createBaseMutates = (useRTE: boolean): PolylineBaseMutates => {
       if (refs.frustumRatio) {
         uniforms.frustumRatio = refs.frustumRatio;
       }
-      if (refs.tGlobeDepth) {
-        uniforms.tGlobeDepth = refs.tGlobeDepth;
-      }
-      if (refs.inverseProjectionMatrix) {
-        uniforms.inverseProjectionMatrix = refs.inverseProjectionMatrix;
-      }
     },
     setBatchDataTexture: (texture: UniformValue<Texture | null>): void => {
       refs.batchDataTexture = texture;
@@ -138,7 +124,6 @@ export const createBaseMutates = (useRTE: boolean): PolylineBaseMutates => {
     },
     setExternalRefs: (externalRefs: {
       batchDataTexture?: UniformValue<Texture | null>;
-      globeNormalTexture?: UniformValue<Texture | null>;
       viewportAndPixelRatio?: {
         value: [x: number, y: number, z: number] | undefined | null;
       };
@@ -146,14 +131,9 @@ export const createBaseMutates = (useRTE: boolean): PolylineBaseMutates => {
       frustumRatio?: {
         value: [x: number, y: number, z: number, w: number] | undefined | null;
       };
-      tGlobeDepth?: { value: Texture | undefined | null };
-      inverseProjectionMatrix?: { value: ThreeMatrix4 | undefined | null };
     }): void => {
       if (externalRefs.batchDataTexture) {
         refs.batchDataTexture = externalRefs.batchDataTexture;
-      }
-      if (externalRefs.globeNormalTexture) {
-        refs.uGlobeNormal = externalRefs.globeNormalTexture;
       }
       if (externalRefs.viewportAndPixelRatio) {
         refs.viewportAndPixelRatio = externalRefs.viewportAndPixelRatio;
@@ -163,12 +143,6 @@ export const createBaseMutates = (useRTE: boolean): PolylineBaseMutates => {
       }
       if (externalRefs.frustumRatio) {
         refs.frustumRatio = externalRefs.frustumRatio;
-      }
-      if (externalRefs.tGlobeDepth) {
-        refs.tGlobeDepth = externalRefs.tGlobeDepth;
-      }
-      if (externalRefs.inverseProjectionMatrix) {
-        refs.inverseProjectionMatrix = externalRefs.inverseProjectionMatrix;
       }
     },
     updateRteUniforms: (

@@ -3,6 +3,7 @@ import {
   Color,
   DrapedMesh,
   MeshDescWithSelectiveEffect,
+  PickableMeshWrapper,
   type MeshConfigWithSelectiveEffect,
   type MeshUpdateWithSelectiveEffect,
   type ViewContext,
@@ -43,7 +44,8 @@ type Description = {
   };
 };
 
-export type BoxMeshConfig = MeshConfigWithSelectiveEffect & Description;
+export type BoxMeshConfig = MeshConfigWithSelectiveEffect &
+  Description & { pickable?: boolean };
 
 export type BoxMeshUpdate = MeshUpdateWithSelectiveEffect & Description;
 
@@ -55,6 +57,7 @@ export class BoxMeshDesc extends MeshDescWithSelectiveEffect<
   DrapedMesh<BoxGeometry, BoxMeshMaterial, BoxMeshEventMap>
 > {
   private config: BoxMeshConfig;
+  private pickWrapper?: PickableMeshWrapper;
 
   constructor(view: ThreeView, ctx: ViewContext, config: BoxMeshConfig) {
     // Propagate initial effectIds to base MeshDesc
@@ -63,6 +66,11 @@ export class BoxMeshDesc extends MeshDescWithSelectiveEffect<
     }
     super(view, ctx, config);
     this.config = config;
+  }
+
+  /** The batch ID assigned to this mesh when picking is enabled. */
+  get batchId(): number | undefined {
+    return this.pickWrapper?.batchId;
   }
 
   createMesh() {
@@ -102,6 +110,11 @@ export class BoxMeshDesc extends MeshDescWithSelectiveEffect<
 
     // Emit CSM event for shadow map integration
     this.ctx.applyShadowMaterial(material);
+
+    if (this.config.pickable) {
+      this.pickWrapper = new PickableMeshWrapper(mesh, this.ctx);
+      this.ctx.registerPickableMesh(this.id, this.pickWrapper);
+    }
 
     return mesh;
   }
@@ -157,6 +170,8 @@ export class BoxMeshDesc extends MeshDescWithSelectiveEffect<
             newMaterial.emissiveIntensity = origin.emissiveIntensity ?? 0;
             setupSelectiveEffectUniforms(newMaterial);
           }
+          // Re-inject picking hooks into the new material (preserves batchId)
+          this.pickWrapper?.syncMaterials();
         }
       }
 
@@ -239,5 +254,13 @@ export class BoxMeshDesc extends MeshDescWithSelectiveEffect<
 
       this._instance = undefined;
     }
+  }
+
+  override onDestroy(): void {
+    if (this.pickWrapper) {
+      this.ctx.unregisterPickableMesh(this.id);
+      this.pickWrapper = undefined;
+    }
+    super.onDestroy();
   }
 }

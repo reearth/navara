@@ -501,24 +501,6 @@ import { Color } from "@navara/three";
 }
 ```
 
-### useGroundNormals
-
-**Type:** `boolean | undefined`
-
-**Description:** Specifies whether to apply terrain shadows to the polygon. This is effective when `clampToGround` is `true`.
-
-**Default:** `undefined`
-
-**Example:**
-
-```typescript
-{
-  polygon: {
-    useGroundNormals: true
-  }
-}
-```
-
 ### water
 
 **Type:** `boolean | undefined`

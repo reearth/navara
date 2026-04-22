@@ -57,13 +57,13 @@ await view.init();
 
 ### Mesh descriptor
 
-Extend `MeshDescDeclaration` (or `MeshDescDeclarationForSelectiveEffect` for bloom/outline support). Define a config type, implement `createMesh()`, and optionally override `onUpdateConfig()` for dynamic updates.
+Extend `MeshDesc` (or `MeshDescWithSelectiveEffect` for bloom/outline support). Define a config type, implement `createMesh()`, and optionally override `onUpdateConfig()` for dynamic updates.
 
 ```typescript
 import {
-  MeshDescDeclaration,
-  type MeshDescConfig,
-  type MeshDescUpdate,
+  MeshDesc,
+  type MeshConfig,
+  type MeshUpdate,
   type ViewContext,
   Color,
 } from "@navara/three";
@@ -76,10 +76,10 @@ type MyMeshDescription = {
   };
 };
 
-type MyMeshConfig = MeshDescConfig & MyMeshDescription;
-type MyMeshUpdate = MeshDescUpdate & MyMeshDescription;
+type MyMeshConfig = MeshConfig & MyMeshDescription;
+type MyMeshUpdate = MeshUpdate & MyMeshDescription;
 
-class MyMeshDesc extends MeshDescDeclaration<
+class MyMeshDesc extends MeshDesc<
   MyMeshConfig,
   MyMeshUpdate,
   Mesh<SphereGeometry, MeshStandardMaterial>
@@ -112,18 +112,126 @@ class MyMeshDesc extends MeshDescDeclaration<
 }
 ```
 
-See `MeshDescDeclaration` JSDoc and the `custom-shader` example for a complete tutorial.
+See `MeshDesc` JSDoc and the `custom-shader` example for a complete tutorial.
+
+### Picking support
+
+Mesh layers can opt into GPU-based click picking by setting `pickable: true` in the layer config. The picking system renders pickable meshes into a dedicated single-pixel render target using a color-encoded batch ID, then decodes the pixel to identify which mesh was clicked.
+
+#### Turnkey picking with PickableMeshWrapper
+
+For layers that use standard Three.js materials (`MeshStandardMaterial`, `MeshLambertMaterial`, etc.) or `ShaderMaterial`/`LineMaterial`, wrap the mesh in a `PickableMeshWrapper`. The wrapper automatically injects picking shader code via `onBeforeCompile` (for standard materials) or direct source mutation (for `ShaderMaterial`).
+
+```typescript
+import { MeshDesc, PickableMeshWrapper, type ViewContext } from "@navara/three";
+
+class MyPickableDesc extends MeshDesc</* ... */> {
+  private pickWrapper?: PickableMeshWrapper;
+
+  get batchId(): number | undefined {
+    return this.pickWrapper?.batchId;
+  }
+
+  createMesh() {
+    const mesh = new Mesh(geometry, material);
+
+    if (this.config.pickable) {
+      this.pickWrapper = new PickableMeshWrapper(mesh, this.ctx);
+      this.ctx.registerPickableMesh(this.id, this.pickWrapper);
+    }
+
+    return mesh;
+  }
+
+  onUpdateConfig(updates) {
+    // If material was recreated, re-sync picking shaders
+    if (materialChanged) {
+      this.pickWrapper?.syncMaterials();
+    }
+    super.onUpdateConfig(updates);
+  }
+
+  onDestroy() {
+    if (this.pickWrapper) {
+      this.ctx.unregisterPickableMesh(this.id);
+    }
+    super.onDestroy();
+  }
+}
+```
+
+For instanced meshes, use `PickableInstancedMeshWrapper` instead. It assigns a unique batch ID per instance and uses an instanced buffer attribute to pass per-instance IDs to the fragment shader.
+
+#### Custom picking with PickableMesh
+
+When you need full control over the picking shader (e.g., for a custom `ShaderMaterial` with a non-standard rendering pipeline), implement the `PickableMesh` interface directly. Your implementation must output the batch ID as an RGB-encoded color during the pick pass.
+
+```typescript
+import { type PickableMesh } from "@navara/three";
+
+class CustomPickable extends Object3D implements PickableMesh {
+  batchId: number;
+
+  constructor(mesh: Mesh, ctx: ViewContext) {
+    super();
+    this.batchId = ctx.genGlobalBatchId() ?? 0;
+    mesh.material.uniforms.uBatchId.value = this.batchId;
+  }
+
+  onBeforePicking() {
+    this.mesh.material.uniforms.uPicking.value = 1;
+  }
+
+  onAfterPicking() {
+    this.mesh.material.uniforms.uPicking.value = 0;
+  }
+
+  getRenderable() {
+    return this.mesh;
+  }
+}
+```
+
+The batch ID encoding in the fragment shader must follow this convention:
+
+```glsl
+vec3 batchIdToColor(float id) {
+  float r = floor(id / 65536.0);
+  float g = floor(mod(id / 256.0, 256.0));
+  float b = mod(id, 256.0);
+  return vec3(r, g, b) / 255.0;
+}
+```
+
+See the `mesh-layers/custom-pickable` example for a complete reference.
+
+#### Listening for pick events
+
+Enable picking on the view and listen for the `"pick"` event:
+
+```typescript
+const view = new ThreeView({ picking: true });
+// ...
+
+view.on("pick", (info) => {
+  if (info) {
+    console.log("Picked batch ID:", info.batchId);
+    console.log("Layer ID:", info.layerId);
+    console.log("Properties:", info.properties);
+  }
+});
+```
 
 ### Instanced mesh descriptor
 
-Extend `InstancedMeshDescDeclaration` to render many instances of the same geometry in a single draw call via Three.js `InstancedMesh`. Implement four abstract methods: `createGeometry()`, `createMaterial()`, `getChildConfigs()`, and `getInstanceColor()`. Optionally override `getInstanceScale()` to encode geometry-specific dimensions (e.g., width/height/depth) into the scale.
+Extend `InstancedMeshDesc` to render many instances of the same geometry in a single draw call via Three.js `InstancedMesh`. Implement four abstract methods: `createGeometry()`, `createMaterial()`, `getChildConfigs()`, and `getInstanceColor()`. Optionally override `getInstanceScale()` to encode geometry-specific dimensions (e.g., width/height/depth) into the scale.
 
 ```typescript
 import {
-  InstancedMeshDescDeclaration,
+  InstancedMeshDesc,
   type InstancedChildConfig,
-  type InstancedMeshDescConfig,
-  type InstancedMeshDescUpdate,
+  type InstancedMeshConfig,
+  type InstancedMeshUpdate,
   type ViewContext,
   Color,
 } from "@navara/three";
@@ -141,10 +249,10 @@ type BoxesDescription = {
   children?: BoxChildConfig[];
 };
 
-type MyConfig = InstancedMeshDescConfig & { boxes?: BoxesDescription };
-type MyUpdate = InstancedMeshDescUpdate & { boxes?: BoxesDescription };
+type MyConfig = InstancedMeshConfig & { boxes?: BoxesDescription };
+type MyUpdate = InstancedMeshUpdate & { boxes?: BoxesDescription };
 
-class InstancedBoxMeshDesc extends InstancedMeshDescDeclaration<
+class InstancedBoxMeshDesc extends InstancedMeshDesc<
   BoxGeometry, MeshLambertMaterial, MyConfig, MyUpdate, BoxChildConfig
 > {
   private config: MyConfig;

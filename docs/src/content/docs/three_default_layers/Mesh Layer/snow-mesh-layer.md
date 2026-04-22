@@ -7,6 +7,8 @@ sidebar:
 
 The `SnowMeshLayer` class is a mesh descriptor that displays snow particle effects. It creates realistic snowfall effects using texture-based point sprites.
 
+In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `pickable`, `visible`) are available. See [MeshDesc](./mesh-layer-base) for details.
+
 ## Common Properties
 
 ### position

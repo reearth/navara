@@ -94,17 +94,17 @@ To add draping support to a custom mesh descriptor:
 
 ```typescript
 import {
-  MeshDescDeclaration,
+  MeshDesc,
   DrapedMesh,
-  type MeshDescConfig,
-  type MeshDescUpdate,
+  type MeshConfig,
+  type MeshUpdate,
   type PassKey,
   type ViewContext,
   Color,
 } from "@navara/three";
 import { BoxGeometry, MeshBasicMaterial, MeshLambertMaterial } from "three";
 
-type MyLayerDescription = {
+type MyDescription = {
   myBox?: {
     width?: number;
     height?: number;
@@ -114,17 +114,17 @@ type MyLayerDescription = {
   };
 };
 
-type MyLayerConfig = MeshDescConfig & MyLayerDescription;
-type MyLayerUpdate = MeshDescUpdate & MyLayerDescription;
+type MyConfig = MeshConfig & MyDescription;
+type MyUpdate = MeshUpdate & MyDescription;
 
-class MyDrapedLayer extends MeshDescDeclaration<
-  MyLayerConfig,
-  MyLayerUpdate,
+class MyDrapedDesc extends MeshDesc<
+  MyConfig,
+  MyUpdate,
   DrapedMesh<BoxGeometry, MeshBasicMaterial | MeshLambertMaterial>
 > {
-  private config: MyLayerConfig;
+  private config: MyConfig;
 
-  constructor(view: ViewContext, config: MyLayerConfig) {
+  constructor(view: ViewContext, config: MyConfig) {
     super(view, config);
     this.config = config;
   }
@@ -154,7 +154,7 @@ class MyDrapedLayer extends MeshDescDeclaration<
     return super.getPassKey();
   }
 
-  onUpdateConfig(updates: MyLayerUpdate): void {
+  onUpdateConfig(updates: MyUpdate): void {
     if (updates.myBox?.draped !== undefined && this._instance) {
       this._instance.drapedEnable = updates.myBox.draped;
       // Swap material for appropriate lighting mode

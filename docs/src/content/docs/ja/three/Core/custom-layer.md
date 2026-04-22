@@ -128,14 +128,7 @@ type MyMeshUpdate = MeshUpdate & MyMeshDescription;
 
 ### 基底クラスが管理するプロパティ
 
-`MeshDesc` は以下のプロパティの適用を自動的に処理します：
-
-| プロパティ | 型            | 説明                       |
-| ---------- | ------------- | -------------------------- |
-| `position` | `{ x, y, z }` | ECEF 座標系での位置        |
-| `scale`    | `{ x, y, z }` | スケール                   |
-| `rotation` | `{ x, y, z }` | 回転（Euler 角、ラジアン） |
-| `visible`  | `boolean`     | 表示/非表示                |
+`MeshDesc` は `position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`pickable`、`visible` を自動的に処理します。これらのプロパティ、トランスフォーム合成モード、ピッキング動作の詳細については [MeshDesc](../../../three_default_layers/mesh-layer/mesh-layer-base) を参照してください。
 
 ### レンダーパスの指定
 
@@ -600,6 +593,171 @@ export class MyPointLightDesc extends LightDesc<
 | `ref`                 | `T`       | 基底レイヤーインスタンスへの直接アクセス |
 | `update(updates)`     | `void`    | 設定の部分更新                           |
 | `delete()`            | `void`    | レイヤーの削除。`onDestroy()` が呼ばれる |
+
+## カスタムレイヤーでのピッキング実装
+
+ユーザー向けのピッキング概要については [MeshDesc — ピッキング](../../../three_default_layers/mesh-layer/mesh-layer-base/#ピッキング) を参照してください。このセクションでは、カスタムレイヤーを作成する際にピッキングサポートを実装する方法を説明します。
+
+### PickableMeshWrapper によるターンキーピッキング
+
+標準的な Three.js マテリアル（`MeshStandardMaterial`、`MeshLambertMaterial` など）や `ShaderMaterial` を使用するレイヤーでは、メッシュを `PickableMeshWrapper` でラップします。ピッキングシェーダーコードが自動的に注入されます。
+
+```typescript
+import ThreeView, {
+  MeshDesc,
+  PickableMeshWrapper,
+  type MeshLayerConfig,
+  type MeshLayerUpdate,
+  type ViewContext,
+  Color,
+} from "@navara/three";
+import { Mesh, BoxGeometry, MeshStandardMaterial } from "three";
+
+type MyConfig = MeshLayerConfig & { myBox?: { color?: Color } };
+type MyUpdate = MeshLayerUpdate & { myBox?: { color?: Color } };
+
+class MyPickableBoxDesc extends MeshDesc<
+  MyConfig, MyUpdate, Mesh
+> {
+  private config: MyConfig;
+  private pickWrapper?: PickableMeshWrapper;
+
+  constructor(view: ThreeView, ctx: ViewContext, config: MyConfig) {
+    super(view, ctx, config);
+    this.config = config;
+  }
+
+  get batchId(): number | undefined {
+    return this.pickWrapper?.batchId;
+  }
+
+  createMesh() {
+    const mesh = new Mesh(
+      new BoxGeometry(1, 1, 1),
+      new MeshStandardMaterial({ color: this.config.myBox?.color?.raw ?? 0xffffff }),
+    );
+
+    if (this.config.pickable) {
+      this.pickWrapper = new PickableMeshWrapper(mesh, this.ctx);
+      this.ctx.registerPickableMesh(this.id, this.pickWrapper);
+    }
+
+    return mesh;
+  }
+
+  onDestroy() {
+    if (this.pickWrapper) {
+      this.ctx.unregisterPickableMesh(this.id);
+    }
+    super.onDestroy();
+  }
+}
+```
+
+### インスタンスメッシュのピッキング
+
+インスタンスメッシュレイヤーには `PickableInstancedMeshWrapper` を使用します。インスタンスごとに一意のバッチ ID が割り当てられ、クリックされた個々のインスタンスを特定できます。
+
+```typescript
+import {
+  InstancedMeshDesc,
+  PickableInstancedMeshWrapper,
+} from "@navara/three";
+
+class MyPickableInstancedDesc extends InstancedMeshDesc</* ... */> {
+  private pickWrapper?: PickableInstancedMeshWrapper;
+
+  get batchIds(): readonly number[] {
+    return this.pickWrapper?.batchIds ?? [];
+  }
+
+  override onCreate() {
+    super.onCreate();
+    if (this.config.pickable) {
+      this.pickWrapper = new PickableInstancedMeshWrapper(
+        this.raw, this.count, this.ctx,
+      );
+      this.ctx.registerPickableMesh(this.id, this.pickWrapper);
+    }
+  }
+
+  protected override onInstanceAdded(index: number) {
+    this.pickWrapper?.addInstance();
+  }
+
+  protected override onInstanceRemoved(index: number, wasLast: boolean) {
+    this.pickWrapper?.removeInstanceAt(index);
+  }
+
+  protected override onInstanceMeshReplaced(newMesh: InstancedMesh) {
+    this.pickWrapper?.syncMesh(newMesh);
+  }
+
+  onDestroy() {
+    if (this.pickWrapper) {
+      this.ctx.unregisterPickableMesh(this.id);
+    }
+    super.onDestroy();
+  }
+}
+```
+
+### PickableMesh によるカスタムピッキング
+
+完全にカスタムなシェーダーを持つレイヤーでは、`PickableMesh` インターフェースを直接実装します。フラグメントシェーダーで、ピッキングユニフォームがアクティブな場合にバッチ ID を RGB カラーとしてエンコードする必要があります。
+
+```typescript
+import { type PickableMesh } from "@navara/three";
+
+class CustomPickable extends Object3D implements PickableMesh {
+  batchId: number;
+  private mesh: Mesh;
+
+  constructor(mesh: Mesh, ctx: ViewContext) {
+    super();
+    this.mesh = mesh;
+    this.batchId = ctx.genGlobalBatchId() ?? 0;
+    mesh.material.uniforms.uBatchId.value = this.batchId;
+  }
+
+  onBeforePicking() {
+    this.mesh.material.uniforms.uPicking.value = 1;
+  }
+
+  onAfterPicking() {
+    this.mesh.material.uniforms.uPicking.value = 0;
+  }
+
+  getRenderable() {
+    return this.mesh;
+  }
+}
+```
+
+フラグメントシェーダーでのバッチ ID エンコーディング:
+
+```glsl
+vec3 batchIdToColor(float id) {
+  float r = floor(id / 65536.0);
+  float g = floor(mod(id / 256.0, 256.0));
+  float b = mod(id, 256.0);
+  return vec3(r, g, b) / 255.0;
+}
+
+// メイン関数内:
+if (uPicking > 0.0) {
+  gl_FragColor = vec4(batchIdToColor(uBatchId), 1.0);
+  return;
+}
+```
+
+### ViewContext ピッキング API
+
+| メソッド                                        | 説明                                   |
+| ----------------------------------------------- | -------------------------------------- |
+| `ctx.genGlobalBatchId()`                        | ピッキング用のユニークなバッチ ID を生成 |
+| `ctx.registerPickableMesh(key, mesh)`           | ピッカブルメッシュを登録               |
+| `ctx.unregisterPickableMesh(key)`               | ピッカブルメッシュの登録を解除         |
 
 ## 関連リソース
 

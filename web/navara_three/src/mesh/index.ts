@@ -8,6 +8,7 @@ export * from "./instanced";
 export * from "./batchTexture";
 export * from "./tile";
 export * from "./pickableMesh";
+export * from "./pickableMeshWrapper";
 export * from "./rtcRteHelper";
 export * from "./instancedSprite";
 export * from "./sdfText";

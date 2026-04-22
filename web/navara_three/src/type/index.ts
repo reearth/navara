@@ -1,4 +1,4 @@
-import type { NormalizeWASMClass, Nullable, TileHandle } from "@navara/core";
+import type { NormalizeWASMClass, TileHandle } from "@navara/core";
 import type {
   B3dmLayerDescription,
   PntsLayerDescription,
@@ -12,6 +12,7 @@ import type { Promise as WorkerPoolPromise } from "@navara/worker";
 import type { Mesh, Sprite, Object3D } from "three";
 
 import type { Color } from "../Color";
+import type { FeatureInfo } from "../evaluations";
 import type {
   FinalCopyPassConfig,
   MRTPassConfig,
@@ -120,11 +121,7 @@ export type AbortControllers = Map<string, AbortController>;
 
 export type WorkerPoolPromises = Map<string, WorkerPoolPromise<unknown>>;
 
-export type PickedFeature = {
-  properties: Nullable<Record<string, unknown>>;
-  batchId: Nullable<number>;
-  layerId: Nullable<string>;
-};
+export type PickedFeature = FeatureInfo;
 
 export type RenderFlag = {
   forceUpdate: boolean;
