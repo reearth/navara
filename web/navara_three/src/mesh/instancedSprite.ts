@@ -7,6 +7,7 @@ import {
   InstancedBufferAttribute,
   InstancedBufferGeometry,
   Mesh,
+  Object3D,
   ShaderMaterial,
   BufferAttribute,
   DataArrayTexture,
@@ -541,8 +542,16 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     return undefined;
   }
 
-  _setPickable(pickable: boolean): void {
-    this.getEnhancer().update({ base: { pickable } });
+  onBeforePicking(): void {
+    this.getEnhancer().update({ base: { pickable: true } });
+  }
+
+  onAfterPicking(): void {
+    this.getEnhancer().update({ base: { pickable: false } });
+  }
+
+  getRenderable(): Object3D {
+    return this;
   }
 
   /**

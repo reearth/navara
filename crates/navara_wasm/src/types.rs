@@ -1,4 +1,3 @@
-use gloo_utils::format::JsValueSerdeExt;
 use navara_core::CRS;
 
 use navara_layer::{
@@ -726,7 +725,7 @@ impl LayerDescription {
                     } else {
                         // Try to parse the data as GeoJson if the URL is not provided.
                         let data_json: Option<GeoJson> =
-                            GeoJson::from_json_object(js_data.data.into_serde().ok()?).ok();
+                            serde_wasm_bindgen::from_value(js_data.data).ok();
                         geo_data = Some(GeoJsonLayerData::GeoJson(data_json.unwrap()));
                     }
                 }

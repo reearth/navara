@@ -8,7 +8,6 @@ import {
   Color,
   Matrix4,
   ShaderMaterial,
-  Texture,
   Vector2,
 } from "three";
 
@@ -264,18 +263,13 @@ export class PolylineMesh extends BatchedFeatureMesh<
         minMaxHeight: [minHeight, maxHeight],
         width: meshMaterial.width,
         maxWidth: meshMaterial.maxWidth,
-        clampToGround: !!meshMaterial.clampToGround,
-        useGroundNormals: !!meshMaterial.useGroundNormals,
         isTexturized,
         pickable: false,
         useRTE,
         // External shared uniforms from CommonUniforms
-        globeNormalTexture: uniforms.tGlobeNormal as { value: Texture | null },
         viewportAndPixelRatio: uniforms.viewportAndPixelRatio,
         frustumNearFar: uniforms.frustumNearFar,
         frustumRatio: uniforms.frustumRatio,
-        tGlobeDepth: uniforms.tGlobeDepth,
-        inverseProjectionMatrix: uniforms.inverseProjectionMatrix,
       },
     });
 
@@ -402,8 +396,6 @@ export class PolylineMesh extends BatchedFeatureMesh<
             : undefined,
         width: material.width,
         maxWidth: material.maxWidth,
-        clampToGround: !!material.clampToGround,
-        useGroundNormals: !!material.useGroundNormals,
         effectIdsMask:
           this.ctx.viewContext.selectiveEffectRegistry?.computeMask(
             material.effectIds ?? [],
@@ -449,17 +441,22 @@ export class PolylineMesh extends BatchedFeatureMesh<
     return this.getEnhancer().states().effectIdsMask;
   }
 
-  _setPickable(pickable: boolean, pickingCoord?: Vector2) {
-    this.getEnhancer().update({ base: { pickable } });
+  onBeforePicking(pickingCoord?: Vector2) {
+    this.getEnhancer().update({ base: { pickable: true } });
     this.needsUpdate();
 
     const mutates = this.getEnhancer().mutates();
-    if (pickable && pickingCoord) {
+    if (pickingCoord) {
       mutates.setPickingCoord(pickingCoord);
     } else {
-      // Reset to sentinel value when not picking or no coordinate provided
       mutates.setPickingCoord(PICKING_COORD_SENTINEL);
     }
+  }
+
+  onAfterPicking() {
+    this.getEnhancer().update({ base: { pickable: false } });
+    this.needsUpdate();
+    this.getEnhancer().mutates().setPickingCoord(PICKING_COORD_SENTINEL);
   }
 
   _getDefaultBatchAttributeValues(): DefaultBatchAttributeValues {

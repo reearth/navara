@@ -82,7 +82,6 @@ const run = async () => {
         maxWidth: params.maxWidth,
         height: 1,
         clampToGround: true,
-        useGroundNormals: true,
       },
     });
 

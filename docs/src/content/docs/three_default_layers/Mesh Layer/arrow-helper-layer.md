@@ -7,6 +7,8 @@ sidebar:
 
 `ArrowHelperLayer` is a helper layer for adding a Three.js `ArrowHelper` to the scene. It is suitable for visualizing direction vectors, representing wind direction or travel direction, and debugging purposes.
 
+In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `pickable`, `visible`) are available. See [MeshLayerDeclaration](./mesh-layer-base) for details.
+
 ## Properties
 
 ### arrowHelper

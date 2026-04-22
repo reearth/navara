@@ -90,8 +90,15 @@ export class InstancedMesh<M extends Object3D>
     mesh._setFeatureHeight(height);
   }
 
-  _setPickable(pickable: boolean) {
-    const v = pickable ? 1.0 : 0.0;
+  onBeforePicking() {
+    this.setPickable(1.0);
+  }
+
+  onAfterPicking() {
+    this.setPickable(0.0);
+  }
+
+  private setPickable(v: number) {
     for (const mesh of this.meshes()) {
       mesh.userData.uPickable.value = v;
 
@@ -102,5 +109,9 @@ export class InstancedMesh<M extends Object3D>
         mesh._setFrustumCulled(v < 0.5);
       }
     }
+  }
+
+  getRenderable(): Object3D {
+    return this;
   }
 }

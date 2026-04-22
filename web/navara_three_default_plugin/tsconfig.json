@@ -11,12 +11,6 @@
       "@navara/worker": ["../navara_worker/src"],
       "@navara/font": ["../navara_font/src"],
       "@navara/three_csm": ["../navara_three_csm/src"],
-      "@navara/engine": ["../../node_modules/navara_wasm"],
-      "@navara/engine-worker": ["../../node_modules/navara_wasm_worker"],
-      "@navara/engine-api": ["../../node_modules/navara_wasm_api"],
-      "@navara/engine-font-worker": [
-        "../../node_modules/navara_wasm_font_worker"
-      ],
       "@shaders/*": ["../../shaders"]
     }
   },

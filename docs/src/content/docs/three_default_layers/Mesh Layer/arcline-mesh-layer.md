@@ -7,6 +7,8 @@ sidebar:
 
 The `ArclineMeshLayer` class is a mesh layer for drawing arc-shaped lines connecting two points. It is used to visually connect two locations on the globe and provides features such as gradients, dashed patterns, and height adjustment.
 
+In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `pickable`, `visible`) are available. See [MeshLayerDeclaration](./mesh-layer-base) for details.
+
 ## Properties
 
 ### arcLines

@@ -2,6 +2,7 @@ import type ThreeView from "@navara/three";
 import {
   Color,
   MeshLayerDeclarationWithSelectiveEffect,
+  PickableMeshWrapper,
   type MeshLayerConfigWithSelectiveEffect,
   type MeshLayerUpdateWithSelectiveEffect,
   type ViewContext,
@@ -38,7 +39,7 @@ type LayerDescription = {
 };
 
 export type SphereMeshLayerConfig = MeshLayerConfigWithSelectiveEffect &
-  LayerDescription;
+  LayerDescription & { pickable?: boolean };
 
 export type SphereMeshLayerUpdate = MeshLayerUpdateWithSelectiveEffect &
   LayerDescription;
@@ -49,6 +50,7 @@ export class SphereMeshLayer extends MeshLayerDeclarationWithSelectiveEffect<
   Mesh<SphereGeometry, MeshLambertMaterial, SphereMeshEventMap>
 > {
   private config: SphereMeshLayerConfig;
+  private pickWrapper?: PickableMeshWrapper;
 
   constructor(
     view: ThreeView,
@@ -61,6 +63,11 @@ export class SphereMeshLayer extends MeshLayerDeclarationWithSelectiveEffect<
     }
     super(view, ctx, config);
     this.config = config;
+  }
+
+  /** The batch ID assigned to this mesh when picking is enabled. */
+  get batchId(): number | undefined {
+    return this.pickWrapper?.batchId;
   }
 
   createMesh() {
@@ -103,6 +110,11 @@ export class SphereMeshLayer extends MeshLayerDeclarationWithSelectiveEffect<
     mesh.receiveShadow = cfg.receiveShadow ?? false;
 
     this.ctx.applyShadowMaterial(material);
+
+    if (this.config.pickable) {
+      this.pickWrapper = new PickableMeshWrapper(mesh, this.ctx);
+      this.ctx.registerPickableMesh(this.id, this.pickWrapper);
+    }
 
     return mesh;
   }
@@ -190,5 +202,13 @@ export class SphereMeshLayer extends MeshLayerDeclarationWithSelectiveEffect<
 
       this._instance = undefined;
     }
+  }
+
+  override onDestroy(): void {
+    if (this.pickWrapper) {
+      this.ctx.unregisterPickableMesh(this.id);
+      this.pickWrapper = undefined;
+    }
+    super.onDestroy();
   }
 }

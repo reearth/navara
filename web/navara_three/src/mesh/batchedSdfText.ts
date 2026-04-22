@@ -205,9 +205,15 @@ export class BatchedSdfTextMesh
     if (needRender) needRender();
   }
 
-  override _setPickable(pickable: boolean) {
+  override onBeforePicking() {
     for (const mesh of this.meshes()) {
-      mesh._setPickable(pickable);
+      mesh.onBeforePicking();
+    }
+  }
+
+  override onAfterPicking() {
+    for (const mesh of this.meshes()) {
+      mesh.onAfterPicking();
     }
   }
 

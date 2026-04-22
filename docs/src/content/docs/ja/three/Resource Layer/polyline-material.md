@@ -229,24 +229,6 @@ import { Color } from "@navara/three";
 }
 ```
 
-### useGroundNormals
-
-**Type:** `boolean | undefined`
-
-**Description:** 地形の影をポリラインに反映するかどうかを指定します。`clampToGround` が `true` の場合に有効です。
-
-**Default:** `undefined`
-
-**Example:**
-
-```typescript
-{
-  polyline: {
-    useGroundNormals: true
-  }
-}
-```
-
 ### width
 
 **Type:** `number`

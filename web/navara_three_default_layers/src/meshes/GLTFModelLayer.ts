@@ -1,6 +1,7 @@
 import type ThreeView from "@navara/three";
 import {
   MeshLayerDeclaration,
+  PickableMeshWrapper,
   type MeshLayerConfig,
   type MeshLayerUpdate,
   type ViewContext,
@@ -58,7 +59,8 @@ export const DEFAULT_GLTF_MODEL_DESCRIPTION: NonNullable<
   animationCrossfadeDuration: 0.3,
 };
 
-export type GLTFModelLayerConfig = MeshLayerConfig & LayerDescription;
+export type GLTFModelLayerConfig = MeshLayerConfig &
+  LayerDescription & { pickable?: boolean };
 
 export type GLTFModelLayerUpdate = MeshLayerUpdate & LayerDescription;
 
@@ -132,6 +134,13 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
     cameraPositionLow: { value: new Vector3() },
   };
 
+  private pickWrapper?: PickableMeshWrapper;
+
+  /** The batch ID assigned to this model when picking is enabled (after load). */
+  get batchId(): number | undefined {
+    return this.pickWrapper?.batchId;
+  }
+
   constructor(view: ThreeView, ctx: ViewContext, config: GLTFModelLayerConfig) {
     super(view, ctx, config);
     this.config = {
@@ -200,6 +209,17 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
       // Add the loaded model
       targetGroup.add(gltf.scene);
       this.setupModel(targetGroup);
+
+      if (this.config.pickable) {
+        if (!this.pickWrapper) {
+          this.pickWrapper = new PickableMeshWrapper(targetGroup, this.ctx);
+          this.ctx.registerPickableMesh(this.id, this.pickWrapper);
+        } else {
+          // Model was reloaded — inject picking into the newly loaded
+          // meshes' materials (preserves existing batchId)
+          this.pickWrapper.syncMaterials();
+        }
+      }
 
       this.emit("needsUpdate");
       this.emit("load");
@@ -453,6 +473,14 @@ export class GLTFModelLayer extends MeshLayerDeclaration<
     } else {
       super.onUpdateConfig(updates);
     }
+  }
+
+  override onDestroy(): void {
+    if (this.pickWrapper) {
+      this.ctx.unregisterPickableMesh(this.id);
+      this.pickWrapper = undefined;
+    }
+    super.onDestroy();
   }
 
   protected disposeMesh(): void {

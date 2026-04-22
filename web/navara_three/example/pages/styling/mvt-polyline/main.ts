@@ -79,7 +79,6 @@ const run = async () => {
         width: params.width,
         height: 1,
         clampToGround: true,
-        useGroundNormals: true,
       },
       vectorTile: { maxZoom: 16 },
     });

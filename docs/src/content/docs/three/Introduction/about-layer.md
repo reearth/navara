@@ -20,6 +20,28 @@ navara_three has 4 types of layers:
 | **Effect Layer**     | Applies post-processing effects                        | `addEffect()`                                            |
 | **Light Layer**      | Manages scene lighting                                 | `addLight()`                                             |
 
+## Resource Layer Data Structure
+
+Resource layers organize geographic data in a hierarchical structure:
+
+```mermaid
+graph LR
+  Layer --> FeatureSet
+  FeatureSet --> Feature
+  Feature --> Batch
+```
+
+- **Layer** — The top-level container added via `addLayer()`. Each layer has a unique `LayerId`.
+- **FeatureSet** — A rendering unit within a layer. Feature events (`featureCreated`, `featureUpdated`, etc.) are emitted per feature set, and each carries a `FeatureSetId`. A single feature set may span multiple LOD levels.
+- **Feature** — A conceptual unit that has properties. If the data source is GIS data, a feature corresponds to an individual geographic entity (e.g. a building, a road segment). To identify a specific feature across LOD levels, use a property value (such as an `id` field) from the feature's properties.
+- **Batch** — The lowest-level unit, consisting of actual geometries. Each batch has a `batchId`.
+
+:::tip
+When working with [`FeatureEvaluator`](../../api/feature-evaluator/), the callback receives a `FeatureInfo` object containing `batchId`, `properties`, and `layerId`. Use `properties` to identify individual features within a feature set.
+:::
+
+For details on feature events (`featureCreated`, `featureUpdated`, etc.), see [Layer Types](../../api/layer-types/#events).
+
 ## Differences Between Resource Layers and Other Layers
 
 Resource layers handle external geographic data, so they differ from mesh, effect, and light layers in how they are used.

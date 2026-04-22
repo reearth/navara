@@ -1,1 +1,1 @@
-export type FeatureId = bigint;
+export type FeatureSetId = bigint;

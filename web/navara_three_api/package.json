@@ -26,7 +26,8 @@
     "three": ">=0.183.0"
   },
   "dependencies": {
-    "@navara/core": "workspace:*"
+    "@navara/core": "workspace:*",
+    "@navara/engine-api": "workspace:*"
   },
   "devDependencies": {
     "@types/three": "0.183.1",

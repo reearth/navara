@@ -417,9 +417,6 @@ pub struct PolylineMaterial {
     #[wasm_bindgen(js_name = tiled)]
     #[serde(rename = "tiled")]
     pub tiled: Option<bool>,
-    #[wasm_bindgen(js_name = useGroundNormals)]
-    #[serde(rename = "useGroundNormals")]
-    pub use_ground_normals: Option<bool>,
     pub height: Option<f32>,
     #[wasm_bindgen(getter_with_clone)]
     pub __internal__: Option<PolylineInternalMaterial>,
@@ -449,7 +446,6 @@ impl PolylineMaterial {
         color: Option<u32>,
         clamp_to_ground: Option<bool>,
         tiled: Option<bool>,
-        use_ground_normals: Option<bool>,
         height: Option<f32>,
         width: Option<f32>,
         max_width: Option<f32>,
@@ -462,7 +458,6 @@ impl PolylineMaterial {
             color,
             clamp_to_ground,
             tiled,
-            use_ground_normals,
             height,
             width,
             max_width,
@@ -488,7 +483,6 @@ impl PolylineMaterial {
             max_width: self.max_width.unwrap_or(other.max_width),
             clamp_to_ground: self.clamp_to_ground.unwrap_or(other.clamp_to_ground),
             tiled: self.tiled.unwrap_or(other.tiled),
-            use_ground_normals: self.use_ground_normals.unwrap_or(other.use_ground_normals),
             height: self.height.unwrap_or(other.height),
             internal: self
                 .__internal__
@@ -514,7 +508,6 @@ impl From<PolylineMaterial> for navara_material::PolylineMaterial {
             max_width: val.max_width.unwrap_or(default.max_width),
             clamp_to_ground: val.clamp_to_ground.unwrap_or(default.clamp_to_ground),
             tiled: val.tiled.unwrap_or(default.tiled),
-            use_ground_normals: val.use_ground_normals.unwrap_or(default.use_ground_normals),
             height: val.height.unwrap_or(default.height),
             internal: val.__internal__.map(|v| v.into()),
             effect_ids: val.effect_ids.or(default.effect_ids),
@@ -534,7 +527,6 @@ impl<'a> From<&'a navara_material::PolylineMaterial> for PolylineMaterial {
             max_width: Some(value.max_width),
             clamp_to_ground: Some(value.clamp_to_ground),
             tiled: Some(value.tiled),
-            use_ground_normals: Some(value.use_ground_normals),
             height: Some(value.height),
             __internal__: value.internal.as_ref().map(|v| v.into()),
             effect_ids: value.effect_ids.clone(),
@@ -555,7 +547,6 @@ impl From<navara_material::PolylineMaterial> for PolylineMaterial {
             max_width: Some(value.max_width),
             clamp_to_ground: Some(value.clamp_to_ground),
             tiled: Some(value.tiled),
-            use_ground_normals: Some(value.use_ground_normals),
             height: Some(value.height),
             __internal__: value.internal.map(|v| v.into()),
             effect_ids: value.effect_ids.clone(),

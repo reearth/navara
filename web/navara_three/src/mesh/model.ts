@@ -420,10 +420,22 @@ export class ModelMesh
     this.frustumCulled = culled;
   }
 
-  _setPickable(pickable: boolean): void {
+  onBeforePicking(): void {
+    this.setPickable(true);
+  }
+
+  onAfterPicking(): void {
+    this.setPickable(false);
+  }
+
+  private setPickable(pickable: boolean): void {
     for (const enhancer of this._enhancers.values()) {
       enhancer.update({ base: { pickable } });
     }
+  }
+
+  getRenderable(): Object3D {
+    return this;
   }
 
   _setFeatureHeight(_height: number) {

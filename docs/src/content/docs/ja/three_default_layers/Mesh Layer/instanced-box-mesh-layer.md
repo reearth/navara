@@ -7,6 +7,8 @@ sidebar:
 
 `InstancedBoxMeshLayer` クラスは、GPU インスタンシングを使用して複数のボックスインスタンスをレンダリングするメッシュレイヤーです。すべてのボックスが1つのジオメトリとマテリアルを共有し、1回の描画コールで高パフォーマンスにレンダリングされます。`InstancedMeshLayerDeclaration` を継承しています。
 
+以下のプロパティに加えて、基底クラスの共通プロパティ（`position`、`rotation`、`scale`、`matrix`、`matrixWorld`、`pickable`、`visible`）が利用できます。詳細は [MeshLayerDeclaration](./mesh-layer-base) を参照してください。
+
 ## 共有マテリアルプロパティ
 
 すべてのインスタンスに適用される共有マテリアルプロパティです。`boxes` 設定オブジェクト内で指定します。

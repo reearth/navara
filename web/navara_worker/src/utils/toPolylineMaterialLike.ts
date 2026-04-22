@@ -9,7 +9,6 @@ export function toPolylineMaterialLike(like: PolylineMaterialLike) {
     like.color,
     like.clampToGround,
     like.tiled,
-    like.useGroundNormals,
     like.height,
     like.width,
     like.maxWidth,

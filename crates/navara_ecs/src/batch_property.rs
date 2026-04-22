@@ -14,6 +14,13 @@ pub enum BatchProperties<V> {
 }
 
 impl App {
+    /// Generate a new unique global batch id for picking.
+    /// The returned id is in the range 1..0xffffff (24-bit RGB color range).
+    pub fn gen_global_batch_id(&mut self) -> Option<u32> {
+        let mut batch_table = self.app.world_mut().get_resource_mut::<BatchTable>()?;
+        batch_table.gen_global_batch_id()
+    }
+
     /// Get properties by a specified global batch id
     pub fn read_property_by_global_batch_id<V: PropertyValue>(
         &mut self,
