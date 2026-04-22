@@ -59,8 +59,7 @@ export const DEFAULT_GLTF_MODEL_DESCRIPTION: NonNullable<
   animationCrossfadeDuration: 0.3,
 };
 
-export type GLTFModelConfig = MeshConfig &
-  Description & { pickable?: boolean };
+export type GLTFModelConfig = MeshConfig & Description & { pickable?: boolean };
 
 export type GLTFModelUpdate = MeshUpdate & Description;
 
