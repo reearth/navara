@@ -130,10 +130,9 @@ export type CustomDeclarations =
     };
 
 export const run = async (view: ThreeView<CustomDeclarations>) => {
-  
   const defaultPlugin = new DefaultPlugin();
   view.addPlugin(defaultPlugin);
-  
+
   await view.init();
 
   // Register custom MarchingCubesLayer
