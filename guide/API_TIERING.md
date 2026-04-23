@@ -43,7 +43,7 @@ Navara organizes its public API into three tiers with different stability guaran
 
 ### Tier 1: Plugin + ViewContext
 
-Plugins receive a `ThreeView` reference and a `ViewContext` via `init(view, ctx)`, where `ctx` is the `ViewContext` provided to plugins. custom descriptor also receive a `ViewContext` instance, which provides controlled access to rendering internals:
+Plugins receive a `ThreeView` reference and a `ViewContext` via `init(view, ctx)`, where `ctx` is the `ViewContext` provided to plugins. Custom descriptors also receive a `ViewContext` instance, which provides controlled access to rendering internals:
 
 - **Scenes** - Access to render groups (mrt, globe, draped, opaque, transparent, etc.)
 - **Camera** - The Three.js `PerspectiveCamera`
