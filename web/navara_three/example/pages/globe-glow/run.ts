@@ -2,7 +2,7 @@ import ThreeView, { Color, MeshHandle } from "@navara/three";
 import {
   AmbientLightDesc,
   GlowGlobeMeshDesc,
-} from "@navara/three_default_layers";
+} from "@navara/three_default_descs";
 import {
   DefaultPlugin,
   type DefaultDeclarations,

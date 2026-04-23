@@ -1,5 +1,5 @@
 import ThreeView, { Color } from "@navara/three";
-import { ToneMappingMode } from "@navara/three_default_layers";
+import { ToneMappingMode } from "@navara/three_default_descs";
 import {
   DefaultPlugin,
   type DefaultDeclarations,

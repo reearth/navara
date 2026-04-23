@@ -11,9 +11,9 @@ Navara uses a plugin system to register descriptor types. Before calling `init()
 
 [`DefaultPlugin`](../../../three_default_plugin/about/) (from `@navara/three_default_plugin`) registers built-in mesh, light, and effect descriptors. For most applications, adding `DefaultPlugin` is all you need to get started.
 
-You can also create your own mesh descriptors, effect descriptors, and light descriptors with full access to the Three.js scene graph. This is the same mechanism that powers Navara's built-in descriptors. For details, see the [Custom Layer](../../../three/Core/custom-layer/) documentation.
+You can also create your own mesh descriptors, effect descriptors, and light descriptors with full access to the Three.js scene graph. This is the same mechanism that powers Navara's built-in descriptors. For details, see the [Custom Descriptor](../../../three/core/custom-desc/) documentation.
 
-In addition to these, Navara provides [resource layers](../../../three/Resource%20Layer/about/) for loading and displaying geographic data such as GeoJSON, MVT, and 3D Tiles. Resource layers handle the complexity of features and their attributes — parsing, spatial indexing, and attribute-based styling through [`FeatureEvaluator`](../../../three/API/feature-evaluator/). Mesh descriptors, on the other hand, deal only with geometry and rendering, which allows them to be optimized purely for draw performance and is suited for rendering large numbers of objects efficiently. This separation lets you choose the right tool for each use case. For more on descriptor types, see [About Layer](../../../three/Introduction/about-layer/).
+In addition to these, Navara provides [resource layers](../../../three/resource-layer/about/) for loading and displaying geographic data such as GeoJSON, MVT, and 3D Tiles. Resource layers handle the complexity of features and their attributes — parsing, spatial indexing, and attribute-based styling through [`FeatureEvaluator`](../../../three/api/feature-evaluator/). Mesh descriptors, on the other hand, deal only with geometry and rendering, which allows them to be optimized purely for draw performance and is suited for rendering large numbers of objects efficiently. This separation lets you choose the right tool for each use case. For more on descriptor types, see [About Layer](../../../three/introduction/about-layer/).
 
 ```mermaid
 sequenceDiagram
@@ -60,9 +60,9 @@ graph TB
   style Tier2 fill:#f8d7da,stroke:#dc3545
 ```
 
-**Tier 0: ThreeView** is the primary entry point for all users. It provides high-level methods for camera positioning, layer management, plugin registration, and lifecycle control. This surface is intentionally kept small and stable — breaking changes require a major version bump. See the [ThreeView API reference](../../../three/API/threeview-class/) for details.
+**Tier 0: ThreeView** is the primary entry point for all users. It provides high-level methods for camera positioning, layer management, plugin registration, and lifecycle control. This surface is intentionally kept small and stable — breaking changes require a major version bump. See the [ThreeView API reference](../../../three/api/threeview-class/) for details.
 
-**Tier 1: Plugin + ViewContext** is available to plugin and Descriptor developers. When a plugin is initialized, it receives a `ViewContext` that provides controlled access to rendering internals such as scenes, pass management, and the renderer reference. This level offers more power at the cost of occasional breaking changes between minor versions. See the [Plugin](../../../three/Core/plugin/) and [Custom Layer](../../../three/Core/custom-layer/) documentation for details.
+**Tier 1: Plugin + ViewContext** is available to plugin and Descriptor developers. When a plugin is initialized, it receives a `ViewContext` that provides controlled access to rendering internals such as scenes, pass management, and the renderer reference. This level offers more power at the cost of occasional breaking changes between minor versions. See the [Plugin](../../../three/core/plugin/) and [Custom Descriptor](../../../three/core/custom-desc/) documentation for details.
 
 **Tier 2: Advanced** is planned for future use cases that require deeper integration, such as injecting an external renderer or replacing the render loop. These APIs will be explicitly marked as unstable.
 
@@ -78,16 +78,16 @@ In practice, most applications only need two packages: `@navara/three` for the c
 |---------|------|-----------------|
 | `@navara/three` | Main package — `ThreeView` class, layer API, camera control | Always |
 | `@navara/three_default_plugin` | `DefaultPlugin` — built-in mesh, light, and effect descriptors | Almost always |
-| `@navara/three_default_layers` | Individual descriptor class implementations | When registering descriptors manually without `DefaultPlugin` |
+| `@navara/three_default_descs` | Individual descriptor class implementations | When registering descriptors manually without `DefaultPlugin` |
 | `@navara/three_api` | Standalone GIS utilities (coordinate transforms, geodesic calculations) | When you need GIS math without the full map engine |
 
 ## Navigating the Documentation
 
 This documentation is organized into several sections that correspond to different parts of the system.
 
-The [**three** section](../../../three/Introduction/what-is-navara-three/) covers everything related to `@navara/three` — the `ThreeView` API, camera controls, layer concepts, and step-by-step tutorials. If you are building an application with Navara, this is where you will spend most of your time.
+The [**three** section](../../../three/introduction/what-is-navara-three/) covers everything related to `@navara/three` — the `ThreeView` API, camera controls, layer concepts, and step-by-step tutorials. If you are building an application with Navara, this is where you will spend most of your time.
 
-The [**three_default_layers** section](../../../three_default_layers/about/) is a reference for all the mesh, effect, and light descriptor types provided by `@navara/three_default_layers`. Each descriptor type has its own page documenting its configuration options and usage examples.
+The [**three_default_descs** section](../../../three_default_descs/about/) is a reference for all the mesh, effect, and light descriptor types provided by `@navara/three_default_descs`. Each descriptor type has its own page documenting its configuration options and usage examples.
 
 The [**three_default_plugin** section](../../../three_default_plugin/about/) documents the `DefaultPlugin` API, including the convenience methods it provides for common setups.
 

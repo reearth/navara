@@ -146,9 +146,9 @@ importers:
       '@navara/three':
         specifier: workspace:*
         version: link:../../navara_three
-      '@navara/three_default_layers':
+      '@navara/three_default_descs':
         specifier: workspace:*
-        version: link:../../navara_three_default_layers
+        version: link:../../navara_three_default_descs
       '@navara/three_default_plugin':
         specifier: workspace:*
         version: link:../../navara_three_default_plugin
@@ -177,9 +177,9 @@ importers:
       '@navara/three':
         specifier: workspace:*
         version: link:../../navara_three
-      '@navara/three_default_layers':
+      '@navara/three_default_descs':
         specifier: workspace:*
-        version: link:../../navara_three_default_layers
+        version: link:../../navara_three_default_descs
       '@navara/three_default_plugin':
         specifier: workspace:*
         version: link:../../navara_three_default_plugin
@@ -265,9 +265,9 @@ importers:
         specifier: 0.52.4
         version: 0.52.4(three@0.183.2)
     devDependencies:
-      '@navara/three_default_layers':
+      '@navara/three_default_descs':
         specifier: workspace:*
-        version: link:../navara_three_default_layers
+        version: link:../navara_three_default_descs
       '@navara/three_default_plugin':
         specifier: workspace:*
         version: link:../navara_three_default_plugin
@@ -384,7 +384,7 @@ importers:
         specifier: 0.183.2
         version: 0.183.2
 
-  web/navara_three_default_layers:
+  web/navara_three_default_descs:
     dependencies:
       '@takram/three-atmosphere':
         specifier: 0.18.0
@@ -429,9 +429,9 @@ importers:
 
   web/navara_three_default_plugin:
     dependencies:
-      '@navara/three_default_layers':
+      '@navara/three_default_descs':
         specifier: workspace:*
-        version: link:../navara_three_default_layers
+        version: link:../navara_three_default_descs
     devDependencies:
       '@navara/three':
         specifier: workspace:*

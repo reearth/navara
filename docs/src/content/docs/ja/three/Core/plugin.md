@@ -29,7 +29,7 @@ abstract class Plugin<TView = unknown, TCtx = unknown> {
 
 | パラメータ | 説明                                                                                                                     |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `TView`    | `init()` に渡される view の型。通常は `ThreeView` または `ThreeView<MyLayerDescriptions>` を指定します。                 |
+| `TView`    | `init()` に渡される view の型。通常は `ThreeView` または `ThreeView<MyDeclarations>` を指定します。                 |
 | `TCtx`     | `init()` に渡されるコンテキストの型。`ViewContext` を指定すると、レンダラー、バッファ、パス管理 API にアクセスできます。 |
 
 ## ライフサイクル
@@ -66,7 +66,7 @@ import {
   SunLightDesc,
   AmbientLightDesc,
   FXAAEffectDesc,
-} from "@navara/three_default_layers";
+} from "@navara/three_default_descs";
 
 class MyScenePlugin extends Plugin<ThreeView, ViewContext> {
   async init(view: ThreeView, _ctx: ViewContext) {
@@ -108,7 +108,7 @@ import {
   AmbientLightDesc,
   ToneMappingEffectDesc,
   FXAAEffectDesc,
-} from "@navara/three_default_layers";
+} from "@navara/three_default_descs";
 
 class MyScenePlugin extends Plugin<ThreeView, ViewContext> {
   private view?: ThreeView;
@@ -155,7 +155,7 @@ const { sky, sun } = plugin.setupScene();
 
 ### カスタム Descriptor を含むプラグイン
 
-独自に実装したカスタム Descriptor（[Custom Layer](../../../three/api/custom-layer/) を参照）を登録するプラグインも作成できます。
+独自に実装したカスタム Descriptor（[Custom Descriptor](../../../three/api/custom-desc/) を参照）を登録するプラグインも作成できます。
 
 ```typescript
 import ThreeView, { Plugin, type ViewContext } from "@navara/three";
@@ -173,5 +173,5 @@ class MyCustomPlugin extends Plugin<ThreeView, ViewContext> {
 ## 関連リソース
 
 - [About Plugin](../../../three/introduction/about-plugin/) - プラグインシステムの概念
-- [Custom Layer](../../../three/core/custom-layer/) - カスタム Descriptor の実装方法
+- [Custom Descriptor](../../../three/core/custom-desc/) - カスタム Descriptor の実装方法
 - [three_default_plugin](../../../three_default_plugin/about/) - DefaultPlugin の詳細

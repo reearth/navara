@@ -73,7 +73,7 @@ import {
   type AmbientLightConfig,
   type SkyLightProbeConfig,
   type LightProbeConfig,
-} from "@navara/three_default_layers";
+} from "@navara/three_default_descs";
 
 export class DefaultPlugin extends Plugin<
   ThreeView<DefaultDeclarations>,

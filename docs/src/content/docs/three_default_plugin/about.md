@@ -7,17 +7,17 @@ sidebar:
 
 ## What is three_default_plugin?
 
-`three_default_plugin` is a plugin that uses the `Plugin` system of `navara_three` to register all descriptors provided by `three_default_layers` into `ThreeView` at once. Simply adding the `DefaultPlugin` class via `view.addPlugin()` makes all mesh, effect, and light descriptors available.
+`three_default_plugin` is a plugin that uses the `Plugin` system of `navara_three` to register all descriptors provided by `three_default_descs` into `ThreeView` at once. Simply adding the `DefaultPlugin` class via `view.addPlugin()` makes all mesh, effect, and light descriptors available.
 
-## Relationship with navara_three / three_default_layers
+## Relationship with navara_three / three_default_descs
 
 ```
 navara_three (core: ThreeView, Plugin, addPlugin, registerMesh/Effect/Light)
-  ├── three_default_layers (descriptor implementations: 17 meshes, 12 effects, 4 lights)
+  ├── three_default_descs (descriptor implementations: 17 meshes, 12 effects, 4 lights)
   └── three_default_plugin (DefaultPlugin: bulk descriptor registration + utilities)
 ```
 
-`navara_three` provides the mechanism for registering and managing descriptors (`registerMesh`, `registerEffect`, `registerLight`). `three_default_layers` provides the implementation of individual descriptor classes. `three_default_plugin` bridges these together and registers all default descriptors into `ThreeView`.
+`navara_three` provides the mechanism for registering and managing descriptors (`registerMesh`, `registerEffect`, `registerLight`). `three_default_descs` provides the implementation of individual descriptor classes. `three_default_plugin` bridges these together and registers all default descriptors into `ThreeView`.
 
 ## Usage
 

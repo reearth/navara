@@ -7,17 +7,17 @@ sidebar:
 
 ## What is three_default_plugin?
 
-`three_default_plugin` は、`navara_three` の `Plugin` システムを利用して、`three_default_layers` が提供するすべてのDescriptorを `ThreeView` に一括登録するプラグインです。`DefaultPlugin` クラスを `view.addPlugin()` で追加するだけで、メッシュ・エフェクト・ライトの全Descriptorが利用可能になります。
+`three_default_plugin` は、`navara_three` の `Plugin` システムを利用して、`three_default_descs` が提供するすべてのDescriptorを `ThreeView` に一括登録するプラグインです。`DefaultPlugin` クラスを `view.addPlugin()` で追加するだけで、メッシュ・エフェクト・ライトの全Descriptorが利用可能になります。
 
-## navara_three / three_default_layers との関係
+## navara_three / three_default_descs との関係
 
 ```
 navara_three（コア: ThreeView, Plugin, addPlugin, registerMesh/Effect/Light）
-  ├── three_default_layers（Descriptorの実装: 17 メッシュ, 12 エフェクト, 4 ライト）
+  ├── three_default_descs（Descriptorの実装: 17 メッシュ, 12 エフェクト, 4 ライト）
   └── three_default_plugin（DefaultPlugin: Descriptorの一括登録 + ユーティリティ）
 ```
 
-`navara_three` はDescriptorの登録・管理の仕組み（`registerMesh`, `registerEffect`, `registerLight`）を提供します。`three_default_layers` は個々のDescriptorクラスの実装を提供します。`three_default_plugin` はこれらを橋渡しし、すべてのデフォルトDescriptorを `ThreeView` に登録します。
+`navara_three` はDescriptorの登録・管理の仕組み（`registerMesh`, `registerEffect`, `registerLight`）を提供します。`three_default_descs` は個々のDescriptorクラスの実装を提供します。`three_default_plugin` はこれらを橋渡しし、すべてのデフォルトDescriptorを `ThreeView` に登録します。
 
 ## 使い方
 

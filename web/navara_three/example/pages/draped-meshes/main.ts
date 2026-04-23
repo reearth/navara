@@ -8,7 +8,7 @@ import ThreeView, {
 import type {
   BoxMeshDesc,
   CylinderMeshDesc,
-} from "@navara/three_default_layers";
+} from "@navara/three_default_descs";
 import {
   DefaultPlugin,
   type DefaultDeclarations,

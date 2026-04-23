@@ -7,7 +7,7 @@ import {
   DEFAULT_SKY_BOX_OPTIONS,
   ColorGradingLUTEffectDesc,
   ToneMappingMode,
-} from "@navara/three_default_layers";
+} from "@navara/three_default_descs";
 import {
   DefaultPlugin,
   type DefaultDeclarations,

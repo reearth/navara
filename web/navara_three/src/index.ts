@@ -47,9 +47,9 @@ import {
   type MeshConfig,
   type LightConfig,
   type EffectConfig,
-  type MeshLayerConstructor,
-  type LightLayerConstructor,
-  type EffectLayerConstructor,
+  type MeshDescConstructor,
+  type LightDescConstructor,
+  type EffectDescConstructor,
   UnknownTypeError,
 } from "./core";
 import { MeshHandle, LightHandle, EffectHandle } from "./core/BaseHandle";
@@ -1443,28 +1443,28 @@ export default class ThreeView<
 
   /**
    * Registers a custom mesh descriptor type for use with addMesh().
-   * @param name - Unique name to identify this mesh type in layer configurations
+   * @param name - Unique name to identify this mesh type in descriptor configurations
    * @param meshClass - The mesh descriptor class constructor
    */
-  registerMesh(name: string, meshClass: MeshLayerConstructor): void {
+  registerMesh(name: string, meshClass: MeshDescConstructor): void {
     this.registries.mesh.register(name, meshClass);
   }
 
   /**
    * Registers a custom light descriptor type for use with addLight().
-   * @param name - Unique name to identify this light type in layer configurations
+   * @param name - Unique name to identify this light type in descriptor configurations
    * @param lightClass - The light descriptor class constructor
    */
-  registerLight(name: string, lightClass: LightLayerConstructor): void {
+  registerLight(name: string, lightClass: LightDescConstructor): void {
     this.registries.light.register(name, lightClass);
   }
 
   /**
    * Registers a custom post-processing effect descriptor type for use with addEffect().
-   * @param name - Unique name to identify this effect type in layer configurations
+   * @param name - Unique name to identify this effect type in descriptor configurations
    * @param effectClass - The effect descriptor class constructor
    */
-  registerEffect(name: string, effectClass: EffectLayerConstructor): void {
+  registerEffect(name: string, effectClass: EffectDescConstructor): void {
     this.registries.effect.register(name, effectClass);
   }
 

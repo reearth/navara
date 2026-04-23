@@ -7,7 +7,7 @@ import ThreeView, {
   geodeticSurfaceNormal,
   MeshHandle,
 } from "@navara/three";
-import type { GLTFModelDesc } from "@navara/three_default_layers";
+import type { GLTFModelDesc } from "@navara/three_default_descs";
 import {
   DefaultPlugin,
   type DefaultDeclarations,

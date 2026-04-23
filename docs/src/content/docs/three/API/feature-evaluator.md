@@ -12,7 +12,7 @@ This class allows you to:
 - Dynamically style features based on their properties
 
 :::note
-For detailed parameter types of events, see [Descriptor Types](./layer-types#events).
+For detailed parameter types of events, see [Descriptor Types](./desc-types#events).
 :::
 
 ## Properties

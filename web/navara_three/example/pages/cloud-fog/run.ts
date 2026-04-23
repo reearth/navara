@@ -3,7 +3,7 @@ import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
   EffectHandle,
 } from "@navara/three";
-import type { CloudsEffectDesc } from "@navara/three_default_layers";
+import type { CloudsEffectDesc } from "@navara/three_default_descs";
 import {
   DefaultPlugin,
   type DefaultDeclarations,

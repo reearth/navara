@@ -40,7 +40,7 @@ graph LR
 [`FeatureEvaluator`](../../api/feature-evaluator/) を使用する際、コールバックは `batchId`、`properties`、`layerId` を含む `FeatureInfo` オブジェクトを受け取ります。フィーチャーセット内の個々のフィーチャーを識別するには `properties` を使用してください。
 :::
 
-フィーチャーイベント（`featureCreated`、`featureUpdated` など）の詳細は [Layer Types](../../api/layer-types/#events) を参照してください。
+フィーチャーイベント（`featureCreated`、`featureUpdated` など）の詳細は [Layer Types](../../api/desc-types/#events) を参照してください。
 
 ## リソースレイヤーとメッシュ・エフェクト・ライトの違い
 
@@ -89,7 +89,7 @@ const terrainHandle = view.addLayer({
 - **使用前に Descriptor クラスの登録が必要**（`registerMesh`, `registerEffect`, `registerLight`）
 
 ```typescript
-import { BoxMeshDesc, FXAAEffectDesc, SunLightDesc } from "@navara/three_default_layers";
+import { BoxMeshDesc, FXAAEffectDesc, SunLightDesc } from "@navara/three_default_descs";
 
 // Descriptor クラスを登録（addMesh/addEffect/addLight の前に必要）
 view.registerMesh("box", BoxMeshDesc);
@@ -180,7 +180,7 @@ const boxMesh = boxHandle.ref;
 boxHandle.delete();
 ```
 
-詳細な API リファレンスは [Descriptor Types](../../../three/api-reference/layer-types/) を参照してください。
+詳細な API リファレンスは [Descriptor Types](../../../three/api-reference/desc-types/) を参照してください。
 
 ## まとめ
 
@@ -196,4 +196,4 @@ boxHandle.delete();
 ## 関連リソース
 
 - [Resource Layer](../../../three/resource-layer/about/) - リソースレイヤーの詳細
-- [three_default_layers](../../../three_default_layers/about/) - デフォルト Descriptor の詳細
+- [three_default_descs](../../../three_default_descs/about/) - デフォルト Descriptor の詳細

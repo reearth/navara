@@ -31,14 +31,14 @@ navara_three（コア）
   ├── API（addLayer, addMesh, addEffect, addLight, registerMesh, registerEffect, registerLight）
   └── プラグイン API（addPlugin, Plugin クラス）
 
-three_default_layers（外部モジュール）
+three_default_descs（外部モジュール）
   └── Three.js 固有のメッシュ・エフェクト・ライトを Descriptor として実装
 
 three_default_plugin（外部モジュール）
   └── DefaultPlugin でデフォルト Descriptor の一括登録と高レベル API を提供
 ```
 
-たとえば、[three_default_layers](../../../three_default_layers/about/) パッケージは Three.js 固有のメッシュやエフェクト、ライトを navara_three の API を使用して Descriptor として実装しています。さらに [three_default_plugin](../../../three_default_plugin/about/) がこれらを一括で登録し、フォトリアルなシーンを簡単にセットアップできる高レベル API を提供します。
+たとえば、[three_default_descs](../../../three_default_descs/about/) パッケージは Three.js 固有のメッシュやエフェクト、ライトを navara_three の API を使用して Descriptor として実装しています。さらに [three_default_plugin](../../../three_default_plugin/about/) がこれらを一括で登録し、フォトリアルなシーンを簡単にセットアップできる高レベル API を提供します。
 
 navara_three はできるだけ汎用性の高いモジュールであることを目指しますが、その代償として API が高度になります。プラグインシステムがこれを高レベル API へと抽象化し、開発者がシンプルに利用できるようにします。
 
@@ -75,7 +75,7 @@ const layers = plugin.addDefaultPhotorealScene();
 
 ## DefaultPlugin
 
-[three_default_plugin](../../../three_default_plugin/about/) パッケージが提供する `DefaultPlugin` は、[three_default_layers](../../../three_default_layers/about/) の全 32 Descriptor（メッシュ 16 種、エフェクト 12 種、ライト 4 種）を一括登録するプラグインです。ほとんどのプロジェクトではこれだけで十分です。
+[three_default_plugin](../../../three_default_plugin/about/) パッケージが提供する `DefaultPlugin` は、[three_default_descs](../../../three_default_descs/about/) の全 32 Descriptor（メッシュ 16 種、エフェクト 12 種、ライト 4 種）を一括登録するプラグインです。ほとんどのプロジェクトではこれだけで十分です。
 
 ```typescript
 import ThreeView from "@navara/three";
@@ -98,6 +98,6 @@ view.addEffect({ toneMapping: {} });
 
 - [About Layer](../../../three/introduction/about-layer/) - レイヤーとオブジェクトの概念と種類
 - [Plugin API](../../../three/core/plugin/) - プラグインの実装方法
-- [Custom Layer](../../../three/core/custom-layer/) - カスタム Descriptor の実装方法
-- [three_default_layers](../../../three_default_layers/about/) - デフォルト Descriptor の実装
+- [Custom Descriptor](../../../three/core/custom-desc/) - カスタム Descriptor の実装方法
+- [three_default_descs](../../../three_default_descs/about/) - デフォルト Descriptor の実装
 - [three_default_plugin](../../../three_default_plugin/about/) - DefaultPlugin の詳細

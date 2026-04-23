@@ -7,7 +7,7 @@ import ThreeView, {
 import {
   ColorGradingLUTEffectDesc,
   DEFAULT_COLOR_GRADING_LUT_OPTIONS,
-} from "@navara/three_default_layers";
+} from "@navara/three_default_descs";
 import {
   DefaultPlugin,
   type DefaultDeclarations,

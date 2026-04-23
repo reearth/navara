@@ -2,7 +2,7 @@ import ThreeView, { Color } from "@navara/three";
 import {
   DepthOfFieldEffectDesc,
   DEFAULT_DEPTH_OF_FIELD_OPTIONS,
-} from "@navara/three_default_layers";
+} from "@navara/three_default_descs";
 import {
   DefaultPlugin,
   type DefaultDeclarations,
