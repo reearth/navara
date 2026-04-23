@@ -315,7 +315,7 @@ class MyPlugin extends Plugin {
 
 ## `@navara/three_default_plugin`
 
-`@navara/three_default_plugin` is a plugin that registers the default descriptors from `@navara/three_default_descs`. It also exports `DefaultDescriptions` — a structured type with `mesh`, `light`, and `effect` fields for type-safe declarations.
+`@navara/three_default_plugin` is a plugin that registers the default descriptors from `@navara/three_default_descs`. It also exports `DefaultDescriptions` — a structured type with `mesh`, `light`, and `effect` fields for type-safe descriptions.
 
 ```typescript
 import ThreeView from "@navara/three";
