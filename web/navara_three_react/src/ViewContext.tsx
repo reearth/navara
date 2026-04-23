@@ -1,8 +1,8 @@
 import ThreeView, {
   type Plugin,
   type Options,
-  type Declarations,
-  type EmptyDeclarations,
+  type Descriptions,
+  type EmptyDescriptions,
 } from "@navara/three";
 import {
   createContext,
@@ -15,7 +15,7 @@ import {
   type RefObject,
 } from "react";
 
-type ViewContextValues<D extends Declarations = EmptyDeclarations> = {
+type ViewContextValues<D extends Descriptions = EmptyDescriptions> = {
   view?: ThreeView<D>;
 };
 
@@ -23,7 +23,7 @@ const ViewContext = createContext<ViewContextValues | undefined>(undefined);
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const useViewContext = <
-  D extends Declarations = EmptyDeclarations,
+  D extends Descriptions = EmptyDescriptions,
 >() => {
   const ctx = useContext(ViewContext);
   if (!ctx) {

@@ -8,11 +8,11 @@ import ThreeView, {
 import {
   ToneMappingMode,
   type BoxChildConfig,
-  type InstancedBoxMeshLayer,
-} from "@navara/three_default_layers";
+  type InstancedBoxMeshDesc,
+} from "@navara/three_default_descs";
 import {
   DefaultPlugin,
-  type DefaultDeclarations,
+  type DefaultDescriptions,
 } from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 
@@ -54,7 +54,7 @@ function generateBuildings(count: number, radius: number): BoxChildConfig[] {
 }
 
 const run = async () => {
-  const view = new ThreeView<DefaultDeclarations>({
+  const view = new ThreeView<DefaultDescriptions>({
     debug: true,
   });
 
@@ -104,7 +104,7 @@ const run = async () => {
 
   const buildings = generateBuildings(BUILDING_COUNT, RADIUS);
 
-  const boxesLayer = view.addMesh<InstancedBoxMeshLayer>({
+  const boxesLayer = view.addMesh<InstancedBoxMeshDesc>({
     boxes: {
       castShadow: true,
       receiveShadow: true,

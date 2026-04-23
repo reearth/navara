@@ -1,8 +1,8 @@
 import ThreeView, { Color } from "@navara/three";
 
-import { run, type CustomDeclarations } from "./run";
+import { run, type CustomDescriptions } from "./run";
 
-const view = new ThreeView<CustomDeclarations>({
+const view = new ThreeView<CustomDescriptions>({
   shadow: true,
   backgroundColor: new Color().setStyle("#475668"),
 });

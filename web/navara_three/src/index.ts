@@ -40,19 +40,19 @@ import { Color } from "./Color";
 import { createDefaultConcurrencyManager } from "./concurrency";
 import { WATER_NORMAL_URL } from "./constants/assets";
 import {
-  MeshLayerDeclaration,
-  LightLayerDeclaration,
-  EffectLayerDeclaration,
+  MeshDesc,
+  LightDesc,
+  EffectDesc,
   ViewContext,
-  type MeshLayerConfig,
-  type LightLayerConfig,
-  type EffectLayerConfig,
-  type MeshLayerConstructor,
-  type LightLayerConstructor,
-  type EffectLayerConstructor,
-  UnknownLayerTypeError,
+  type MeshConfig,
+  type LightConfig,
+  type EffectConfig,
+  type MeshDescConstructor,
+  type LightDescConstructor,
+  type EffectDescConstructor,
+  UnknownTypeError,
 } from "./core";
-import { LayerHandle } from "./core/LayerHandle";
+import { MeshHandle, LightHandle, EffectHandle } from "./core/BaseHandle";
 import { Registries } from "./core/Registries";
 import { getDevicePixelRatio, isMobileDevice } from "./device";
 import {
@@ -71,13 +71,13 @@ import { TEXTURE_LOADER } from "./event/loaders";
 import { registerInputEvents } from "./input";
 import { Layer, type LayerEvent } from "./layer";
 import {
-  MRTPassEffectLayer,
-  SelectiveBloomEffectLayer,
-  SelectiveOutlineEffectLayer,
-  SkyEnvMapEffectLayer,
-  TransparentPassEffectLayer,
+  MRTPassEffectDesc,
+  SelectiveBloomEffectDesc,
+  SelectiveOutlineEffectDesc,
+  SkyEnvMapEffectDesc,
+  TransparentPassEffectDesc,
 } from "./layers/effect";
-import { FinalCopyEffectLayer } from "./layers/effect/FinalCopyEffectLayer";
+import { FinalCopyEffectDesc } from "./layers/effect/FinalCopyEffectDesc";
 import { LayersManager } from "./layersManager";
 import { overrideMaterialsForMRT } from "./material";
 import type { TileMesh } from "./mesh/tile";
@@ -93,8 +93,8 @@ import {
   type AbortControllers,
   type LayerDescription,
   type BuiltInEffectDescription,
-  type Declarations,
-  type EmptyDeclarations,
+  type Descriptions,
+  type EmptyDescriptions,
   type OmitType,
   type MeshCache,
   type PickedFeature,
@@ -256,21 +256,21 @@ export type ViewEvents = {
  * ```
  */
 export default class ThreeView<
-  D extends Declarations = EmptyDeclarations,
+  D extends Descriptions = EmptyDescriptions,
 > extends EventHandler<ViewEvents> {
   private _camera: ThreeViewCamera;
   private _renderer: WebGLRenderer;
   private _globe!: Globe;
   private _atmosphere: Atmosphere;
 
-  /** Layer handle for the sky environment map effect layer. Used for sky reflections. */
-  private skyEnvMapLayer!: LayerHandle<SkyEnvMapEffectLayer>;
-  /** Layer handle for the Multi-Render Target pass that outputs color and normal buffers. */
-  private mrtPassLayer!: LayerHandle<MRTPassEffectLayer>;
-  /** Layer handle for the transparent objects rendering pass. */
-  private transparentPassLayer!: LayerHandle<TransparentPassEffectLayer>;
-  /** Layer handle for the final compositing pass that outputs to screen. */
-  private finalPassLayer!: LayerHandle<FinalCopyEffectLayer>;
+  /** Handle for the sky environment map effect descriptor. Used for sky reflections. */
+  private skyEnvMap!: EffectHandle<SkyEnvMapEffectDesc>;
+  /** Handle for the Multi-Render Target pass that outputs color and normal buffers. */
+  private mrtPass!: EffectHandle<MRTPassEffectDesc>;
+  /** Handle for the transparent objects rendering pass. */
+  private transparentPass!: EffectHandle<TransparentPassEffectDesc>;
+  /** Handle for the final compositing pass that outputs to screen. */
+  private finalPass!: EffectHandle<FinalCopyEffectDesc>;
 
   /** The render pass orchestrator that manages the post-processing effect pipeline. */
   private renderPassOrchestrator: RenderPassOrchestrator;
@@ -750,24 +750,24 @@ export default class ThreeView<
     // Initialize atmosphere
     await this._atmosphere._init();
 
-    this.skyEnvMapLayer = this.addEffect<SkyEnvMapEffectLayer>({
+    this.skyEnvMap = this.addEffect<SkyEnvMapEffectDesc>({
       skyEnvMap: {},
     });
-    this.mrtPassLayer = this.addEffect<MRTPassEffectLayer>({
+    this.mrtPass = this.addEffect<MRTPassEffectDesc>({
       mrt: {
         // debugNormal: true,
       },
     });
-    this.transparentPassLayer = this.addEffect<TransparentPassEffectLayer>({
+    this.transparentPass = this.addEffect<TransparentPassEffectDesc>({
       transparent: {},
     });
-    this.finalPassLayer = this.addEffect<FinalCopyEffectLayer>({
+    this.finalPass = this.addEffect<FinalCopyEffectDesc>({
       final: {},
     });
   }
 
   private get renderPass() {
-    const instance = this.mrtPassLayer.ref.raw;
+    const instance = this.mrtPass.ref.raw;
     invariant(instance);
     return instance;
   }
@@ -892,7 +892,7 @@ export default class ThreeView<
       pendingHillshadeEdges: this._pendingHillshadeEdges,
     });
 
-    // Register built-in layers
+    // Register built-in descriptors
     this.registerBuiltIns();
 
     if (!isWorker()) {
@@ -1001,10 +1001,10 @@ export default class ThreeView<
     this._fontManager.dispose();
     this._atmosphere._dispose();
 
-    this.skyEnvMapLayer?.delete();
-    this.mrtPassLayer?.delete();
-    this.transparentPassLayer?.delete();
-    this.finalPassLayer?.delete();
+    this.skyEnvMap?.delete();
+    this.mrtPass?.delete();
+    this.transparentPass?.delete();
+    this.finalPass?.delete();
 
     // Abort all pending requests
     for (const controller of this._abortControllers.values()) {
@@ -1099,7 +1099,7 @@ export default class ThreeView<
     this._uniforms.tGlobeNormal.value =
       this.renderPass.globeNormalCopyPass.texture;
     this._uniforms.tSkyEnvMap.value =
-      this.skyEnvMapLayer.ref.raw?.getEnvMapTexture() ?? null;
+      this.skyEnvMap.ref.raw?.getEnvMapTexture() ?? null;
     this._uniforms.inverseProjectionMatrix.value =
       this._camera.raw.projectionMatrixInverse;
 
@@ -1135,7 +1135,7 @@ export default class ThreeView<
   }
 
   /**
-   * Process feature updates for all layers
+   * Process feature updates for all descriptors
    * This is called after the main update loop to batch feature updates
    */
   private _forceFeatureUpdates(updatedAt: number) {
@@ -1220,60 +1220,232 @@ export default class ThreeView<
    * Adds a 3D mesh to the scene.
    * The mesh kind is determined by the nested key (e.g., `{ box: { width: 200 } }`).
    * @param desc - Mesh configuration object
-   * @returns A LayerHandle for controlling the added mesh
+   * @returns A MeshHandle for controlling the added mesh
    */
-  addMesh<L extends MeshLayerDeclaration = MeshLayerDeclaration>(
-    desc: OmitType<MeshLayerConfig | NonNullable<D["mesh"]>>,
-  ): LayerHandle<L> {
-    return this.addMeshLayer(desc as MeshLayerConfig) as LayerHandle<L>;
+  addMesh<L extends MeshDesc = MeshDesc>(
+    config: OmitType<MeshConfig | NonNullable<D["mesh"]>>,
+  ): MeshHandle<L> {
+    // Find which mesh type from config
+    const meshType = this.registries.mesh.findMeshType(config);
+    if (!meshType) {
+      throw new UnknownTypeError("mesh", config);
+    }
+
+    // Create mesh descriptor instance
+    const meshDesc = this.registries.mesh.create(meshType, config);
+
+    // Initialize the mesh
+    meshDesc.onCreate();
+
+    // Set up update listener
+    if (meshDesc.update) {
+      this.on("preRender", meshDesc.update.bind(meshDesc));
+    }
+
+    if (meshDesc.onResize) {
+      this.on("resize", meshDesc.onResize.bind(meshDesc));
+
+      const canvasSize = this._getCanvasSize();
+      if (canvasSize) {
+        meshDesc.onResize(canvasSize.width, canvasSize.height);
+      }
+    }
+
+    // Trigger re-render
+    meshDesc.on("needsUpdate", this.forceUpdate);
+
+    const l = new MeshHandle(meshDesc);
+
+    // Store the mesh descriptor
+    this.layersManager.add(l);
+
+    // Return handle for imperative access
+    return l as MeshHandle<L>;
   }
 
   /**
    * Adds a light to the scene.
    * The light kind is determined by the nested key (e.g., `{ ambient: { intensity: 0.5 } }`).
    * @param desc - Light configuration object
-   * @returns A LayerHandle for controlling the added light
+   * @returns A LightHandle for controlling the added light
    */
-  addLight<L extends LightLayerDeclaration = LightLayerDeclaration>(
-    desc: OmitType<LightLayerConfig | NonNullable<D["light"]>>,
-  ): LayerHandle<L> {
-    return this.addLightLayer(desc as LightLayerConfig) as LayerHandle<L>;
+  addLight<L extends LightDesc = LightDesc>(
+    config: OmitType<LightConfig | NonNullable<D["light"]>>,
+  ): LightHandle<L> {
+    // Find which light type from config
+    const lightType = this.registries.light.findLightType(config);
+    if (!lightType) {
+      throw new UnknownTypeError("light", config);
+    }
+
+    // Create light descriptor instance
+    const lightDesc = this.registries.light.create(lightType, config);
+
+    // Initialize the light
+    lightDesc.onCreate();
+
+    // Set up update listener if the descriptor has an update method
+    if (lightDesc.update) {
+      this.on("preRender", lightDesc.update.bind(lightDesc));
+    }
+
+    // Trigger re-render
+    lightDesc.on("needsUpdate", this.forceUpdate);
+
+    const l = new LightHandle(lightDesc);
+
+    // Store the light descriptor
+    this.layersManager.add(l);
+
+    // Return handle for imperative access
+    return l as LightHandle<L>;
   }
 
   /**
    * Adds a post-processing effect to the scene.
    * The effect kind is determined by the nested key (e.g., `{ bloom: { strength: 1.0 } }`).
    * @param desc - Effect configuration object
-   * @returns A LayerHandle for controlling the added effect
+   * @returns An EffectHandle for controlling the added effect
    */
-  addEffect<L extends EffectLayerDeclaration = EffectLayerDeclaration>(
-    desc: OmitType<
-      BuiltInEffectDescription | EffectLayerConfig | NonNullable<D["effect"]>
+  addEffect<L extends EffectDesc = EffectDesc>(
+    config: OmitType<
+      BuiltInEffectDescription | EffectConfig | NonNullable<D["effect"]>
     >,
-  ): LayerHandle<L> {
-    return this.addEffectLayer(desc as EffectLayerConfig) as LayerHandle<L>;
+  ): EffectHandle<L> {
+    // Find which effect type from config
+    const effectType = this.registries.effect.findEffectType(config);
+    if (!effectType) {
+      throw new UnknownTypeError("effect", config);
+    }
+
+    // Create effect descriptor instance
+    const effectDesc = this.registries.effect.create(effectType, config);
+
+    // Initialize the effect
+    effectDesc.onCreate();
+
+    // Set up update listener if the descriptor has an update method
+    if (effectDesc.update) {
+      this.on("preRender", effectDesc.update.bind(effectDesc));
+    }
+
+    // Trigger re-render
+    effectDesc.on("needsUpdate", this.forceUpdate);
+
+    const l = new EffectHandle(effectDesc);
+
+    // Store the effect descriptor
+    this.layersManager.add(l);
+
+    // Return handle for imperative access
+    return l as EffectHandle<L>;
   }
 
   /**
-   * Updates an existing layer's configuration by its ID.
-   * @param layerId - The unique identifier of the layer to update
+   * Updates an existing resource layer's configuration by its ID.
+   * Only works for resource layers added via `addLayer()`.
+   * @param id - The unique identifier of the layer to update
    * @param l - New layer configuration
    */
-  updateLayerById(layerId: string, l: LayerDescription) {
+  updateLayerById(id: string, l: LayerDescription) {
     invariant(this._core);
-    // Convert all Color objects to numbers before updating
+    const target = this.layersManager.get(id);
+    if (!target || !(target instanceof Layer)) return;
     const processedLayer = this._convertColorsToNumbers(l) as LayerDescription;
-    this.layersManager.get(layerId)?.update(processedLayer);
+    target.update(processedLayer);
   }
 
   /**
-   * Deletes a layer from the scene by its ID.
-   * @param layerId - The unique identifier of the layer to delete
+   * Updates an existing mesh descriptor's configuration by its ID.
+   * @param id - The unique identifier of the mesh to update
+   * @param updates - Partial configuration object with properties to update
    */
-  deleteLayerById(layerId: string) {
-    invariant(this._core);
+  updateMeshById(
+    id: string,
+    updates: OmitType<MeshConfig | NonNullable<D["mesh"]>>,
+  ) {
+    const target = this.layersManager.get(id);
+    if (!target || !(target instanceof MeshHandle)) return;
+    target.update(updates);
+  }
 
-    this.layersManager.get(layerId)?.delete();
+  /**
+   * Updates an existing light descriptor's configuration by its ID.
+   * @param id - The unique identifier of the light to update
+   * @param updates - Partial configuration object with properties to update
+   */
+  updateLightById(
+    id: string,
+    updates: OmitType<LightConfig | NonNullable<D["light"]>>,
+  ) {
+    const target = this.layersManager.get(id);
+    if (!target || !(target instanceof LightHandle)) return;
+    target.update(updates);
+  }
+
+  /**
+   * Updates an existing effect descriptor's configuration by its ID.
+   * @param id - The unique identifier of the effect to update
+   * @param updates - Partial configuration object with properties to update
+   */
+  updateEffectById(
+    id: string,
+    updates: OmitType<
+      BuiltInEffectDescription | EffectConfig | NonNullable<D["effect"]>
+    >,
+  ) {
+    const target = this.layersManager.get(id);
+    if (!target || !(target instanceof EffectHandle)) return;
+    target.update(updates);
+  }
+
+  /**
+   * Deletes a resource layer from the scene by its ID.
+   * @param id - The unique identifier of the layer to delete
+   * @returns `true` if the layer was found and deleted, `false` otherwise
+   */
+  deleteLayerById(id: string): boolean {
+    invariant(this._core);
+    const target = this.layersManager.get(id);
+    if (!target || !(target instanceof Layer)) return false;
+    target.delete();
+    return true;
+  }
+
+  /**
+   * Deletes a mesh descriptor from the scene by its ID.
+   * @param id - The unique identifier of the mesh to delete
+   * @returns `true` if the mesh was found and deleted, `false` otherwise
+   */
+  deleteMeshById(id: string): boolean {
+    const target = this.layersManager.get(id);
+    if (!target || !(target instanceof MeshHandle)) return false;
+    target.delete();
+    return true;
+  }
+
+  /**
+   * Deletes a light descriptor from the scene by its ID.
+   * @param id - The unique identifier of the light to delete
+   * @returns `true` if the light was found and deleted, `false` otherwise
+   */
+  deleteLightById(id: string): boolean {
+    const target = this.layersManager.get(id);
+    if (!target || !(target instanceof LightHandle)) return false;
+    target.delete();
+    return true;
+  }
+
+  /**
+   * Deletes an effect descriptor from the scene by its ID.
+   * @param id - The unique identifier of the effect to delete
+   * @returns `true` if the effect was found and deleted, `false` otherwise
+   */
+  deleteEffectById(id: string): boolean {
+    const target = this.layersManager.get(id);
+    if (!target || !(target instanceof EffectHandle)) return false;
+    target.delete();
+    return true;
   }
 
   private registerBuiltIns(): void {
@@ -1281,153 +1453,43 @@ export default class ThreeView<
   }
 
   private registerBuiltInEffects(): void {
-    this.registerEffect("skyEnvMap", SkyEnvMapEffectLayer);
-    this.registerEffect("mrt", MRTPassEffectLayer);
+    this.registerEffect("skyEnvMap", SkyEnvMapEffectDesc);
+    this.registerEffect("mrt", MRTPassEffectDesc);
 
     // SelectiveEffect effects
-    this.registerEffect("selectiveBloom", SelectiveBloomEffectLayer);
-    this.registerEffect("selectiveOutline", SelectiveOutlineEffectLayer);
+    this.registerEffect("selectiveBloom", SelectiveBloomEffectDesc);
+    this.registerEffect("selectiveOutline", SelectiveOutlineEffectDesc);
     // TODO: Curve out opaque pass from MRT pass.
-    // this.registerEffect("opaque", OpaquePassEffectLayer);
-    this.registerEffect("transparent", TransparentPassEffectLayer);
+    // this.registerEffect("opaque", OpaquePassEffectDesc);
+    this.registerEffect("transparent", TransparentPassEffectDesc);
 
-    this.registerEffect("final", FinalCopyEffectLayer);
-  }
-
-  private addMeshLayer(config: MeshLayerConfig): LayerHandle {
-    // Find which mesh type from config
-    const meshType = this.registries.mesh.findMeshType(config);
-    if (!meshType) {
-      throw new UnknownLayerTypeError(config);
-    }
-
-    // Extract layer config and mesh-specific config
-    const { type, ...meshConfigs } = config;
-    const flatConfig = { ...config, ...meshConfigs };
-    // Create mesh layer instance
-    const meshLayer = this.registries.mesh.create(meshType, flatConfig);
-
-    // Initialize the mesh
-    meshLayer.onCreate();
-
-    // Set up update listener
-    if (meshLayer.update) {
-      this.on("preRender", meshLayer.update.bind(meshLayer));
-    }
-
-    if (meshLayer.onResize) {
-      this.on("resize", meshLayer.onResize.bind(meshLayer));
-
-      const canvasSize = this._getCanvasSize();
-      if (canvasSize) {
-        meshLayer.onResize(canvasSize.width, canvasSize.height);
-      }
-    }
-
-    // Trigger re-render
-    meshLayer.on("needsUpdate", this.forceUpdate);
-
-    const l = new LayerHandle(meshLayer);
-
-    // Store the mesh layer
-    this.layersManager.add(l);
-
-    // Return handle for imperative access
-    return l;
-  }
-
-  private addLightLayer(config: LightLayerConfig): LayerHandle {
-    // Find which light type from config
-    const lightType = this.registries.light.findLightType(config);
-    if (!lightType) {
-      throw new UnknownLayerTypeError(config);
-    }
-
-    // Extract layer config and light-specific config
-    const { type, ...lightConfigs } = config;
-    const flatConfig = { ...config, ...lightConfigs };
-
-    // Create light layer instance
-    const lightLayer = this.registries.light.create(lightType, flatConfig);
-
-    // Initialize the light
-    lightLayer.onCreate();
-
-    // Set up update listener if the layer has an update method
-    if (lightLayer.update) {
-      this.on("preRender", lightLayer.update.bind(lightLayer));
-    }
-
-    // Trigger re-render
-    lightLayer.on("needsUpdate", this.forceUpdate);
-
-    const l = new LayerHandle(lightLayer);
-
-    // Store the light layer
-    this.layersManager.add(l);
-
-    // Return handle for imperative access
-    return l;
-  }
-
-  private addEffectLayer(config: EffectLayerConfig): LayerHandle {
-    // Find which effect type from config
-    const effectType = this.registries.effect.findEffectType(config);
-    if (!effectType) {
-      throw new UnknownLayerTypeError(config);
-    }
-
-    // Extract layer config and effect-specific config
-    const { type, ...effectConfigs } = config;
-    const flatConfig = { ...config, ...effectConfigs };
-
-    // Create effect layer instance
-    const effectLayer = this.registries.effect.create(effectType, flatConfig);
-
-    // Initialize the effect
-    effectLayer.onCreate();
-
-    // Set up update listener if the layer has an update method
-    if (effectLayer.update) {
-      this.on("preRender", effectLayer.update.bind(effectLayer));
-    }
-
-    // Trigger re-render
-    effectLayer.on("needsUpdate", this.forceUpdate);
-
-    const l = new LayerHandle(effectLayer);
-
-    // Store the effect layer
-    this.layersManager.add(l);
-
-    // Return handle for imperative access
-    return l;
+    this.registerEffect("final", FinalCopyEffectDesc);
   }
 
   /**
-   * Registers a custom mesh layer type for use with addMesh().
-   * @param name - Unique name to identify this mesh type in layer configurations
-   * @param meshClass - The mesh layer class constructor
+   * Registers a custom mesh descriptor type for use with addMesh().
+   * @param name - Unique name to identify this mesh type in descriptor configurations
+   * @param meshClass - The mesh descriptor class constructor
    */
-  registerMesh(name: string, meshClass: MeshLayerConstructor): void {
+  registerMesh(name: string, meshClass: MeshDescConstructor): void {
     this.registries.mesh.register(name, meshClass);
   }
 
   /**
-   * Registers a custom light layer type for use with addLight().
-   * @param name - Unique name to identify this light type in layer configurations
-   * @param lightClass - The light layer class constructor
+   * Registers a custom light descriptor type for use with addLight().
+   * @param name - Unique name to identify this light type in descriptor configurations
+   * @param lightClass - The light descriptor class constructor
    */
-  registerLight(name: string, lightClass: LightLayerConstructor): void {
+  registerLight(name: string, lightClass: LightDescConstructor): void {
     this.registries.light.register(name, lightClass);
   }
 
   /**
-   * Registers a custom post-processing effect layer type for use with addEffect().
-   * @param name - Unique name to identify this effect type in layer configurations
-   * @param effectClass - The effect layer class constructor
+   * Registers a custom post-processing effect descriptor type for use with addEffect().
+   * @param name - Unique name to identify this effect type in descriptor configurations
+   * @param effectClass - The effect descriptor class constructor
    */
-  registerEffect(name: string, effectClass: EffectLayerConstructor): void {
+  registerEffect(name: string, effectClass: EffectDescConstructor): void {
     this.registries.effect.register(name, effectClass);
   }
 
@@ -1449,6 +1511,19 @@ export default class ThreeView<
    * Each face covers a set of unicode ranges and points to a separate font file URL.
    * When a text label uses this family name as its font, only the face files
    * whose unicode ranges cover the label's characters are loaded.
+   *
+   * Face priority and fallback:
+   * - Faces are evaluated in the order given in `faces`. For each codepoint,
+   *   the first face whose `unicodeRanges` includes that codepoint is used,
+   *   so earlier entries win when ranges overlap.
+   * - Codepoints not covered by any face fall back to the first face
+   *   (`faces[0]`), which may therefore be downloaded for uncovered characters
+   *   even if its declared `unicodeRanges` do not include them.
+   *
+   * Put the intended fallback face at index `0`: it is both the fallback for
+   * uncovered codepoints and the highest-priority face when ranges overlap.
+   * Order the remaining faces after it by priority, and avoid overlapping
+   * ranges unless that precedence is intentional.
    *
    * @example
    * ```ts

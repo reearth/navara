@@ -1,8 +1,8 @@
 import ThreeView from "@navara/three";
-import { RainDropEffectLayer } from "@navara/three_default_layers";
+import { RainDropEffectDesc } from "@navara/three_default_descs";
 import {
   DefaultPlugin,
-  type DefaultDeclarations,
+  type DefaultDescriptions,
 } from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 
@@ -10,9 +10,9 @@ import { showAttributions } from "../../helpers/attributions";
 import { TILE_DATASETS } from "../../helpers/constants";
 import { addHidePaneKeyShortcut } from "../../helpers/control";
 
-export type CustomDeclarations = DefaultDeclarations;
+export type CustomDescriptions = DefaultDescriptions;
 
-export const run = async (view: ThreeView<CustomDeclarations>) => {
+export const run = async (view: ThreeView<CustomDescriptions>) => {
   const defaultPlugin = new DefaultPlugin();
   view.addPlugin(defaultPlugin);
 
@@ -20,7 +20,7 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
 
   view.animation = true;
 
-  defaultPlugin.addDefaultPhotorealLayers();
+  defaultPlugin.addDefaultPhotorealScene();
 
   const rainDropDefaults = {
     opacity: 0.85,
@@ -40,7 +40,7 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
     jitterStrengthHigh: 0.08,
   };
 
-  const rainDropLayer = view.addEffect<RainDropEffectLayer>({
+  const rainDropLayer = view.addEffect<RainDropEffectDesc>({
     rainDrop: { ...rainDropDefaults },
     visible: true,
   });

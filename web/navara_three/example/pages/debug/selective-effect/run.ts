@@ -1,18 +1,15 @@
 import ThreeView, {
   Color,
   JAPAN_GSI_ELEVATION_DECODER,
-  SelectiveBloomEffectLayer,
-  SelectiveOutlineEffectLayer,
+  SelectiveBloomEffectDesc,
+  SelectiveOutlineEffectDesc,
   geodeticToVector3,
   degreeToRadian,
 } from "@navara/three";
-import type {
-  BoxMeshLayer,
-  SphereMeshLayer,
-} from "@navara/three_default_layers";
+import type { BoxMeshDesc, SphereMeshDesc } from "@navara/three_default_descs";
 import {
   DefaultPlugin,
-  type DefaultDeclarations,
+  type DefaultDescriptions,
 } from "@navara/three_default_plugin";
 import { Vector3 } from "three";
 import { Pane } from "tweakpane";
@@ -26,7 +23,7 @@ import {
 
 import { DebugPlugin } from "./DebugPlugin";
 
-export const run = async (view: ThreeView<DefaultDeclarations>) => {
+export const run = async (view: ThreeView<DefaultDescriptions>) => {
   const plugin = new DefaultPlugin();
   const debugPlugin = new DebugPlugin();
   view.addPlugin(plugin);
@@ -43,7 +40,7 @@ export const run = async (view: ThreeView<DefaultDeclarations>) => {
     roll: 0,
   });
 
-  const defaultAtmosphere = plugin.addDefaultPhotorealLayers();
+  const defaultAtmosphere = plugin.addDefaultPhotorealScene();
   defaultAtmosphere.sun.update({
     sun: { intensity: 1, castShadow: true },
   });
@@ -52,9 +49,9 @@ export const run = async (view: ThreeView<DefaultDeclarations>) => {
   date.setHours(8);
   view.atmosphere.date = date;
 
-  // --- Effect Layer definitions ---
+  // --- Effect Descriptor definitions ---
 
-  const bloomEffect = view.addEffect<SelectiveBloomEffectLayer>({
+  const bloomEffect = view.addEffect<SelectiveBloomEffectDesc>({
     selectiveBloom: {
       strength: 1.0,
       radius: 0.5,
@@ -63,7 +60,7 @@ export const run = async (view: ThreeView<DefaultDeclarations>) => {
     },
   });
 
-  const outlineEffect = view.addEffect<SelectiveOutlineEffectLayer>({
+  const outlineEffect = view.addEffect<SelectiveOutlineEffectDesc>({
     selectiveOutline: {
       color: new Color().setHex(0xff0000),
       thickness: 2.0,
@@ -72,7 +69,7 @@ export const run = async (view: ThreeView<DefaultDeclarations>) => {
     },
   });
 
-  // --- Mesh Layers (effectIds reference effect layer IDs) ---
+  // --- Mesh Descriptors (effectIds reference effect descriptor IDs) ---
 
   // Cube at Tokyo Station (bloom only)
   const boxPosition = geodeticToVector3({
@@ -80,7 +77,7 @@ export const run = async (view: ThreeView<DefaultDeclarations>) => {
     lng: degreeToRadian(139.7671),
     height: 200,
   });
-  const boxLayer = view.addMesh<BoxMeshLayer>({
+  const boxLayer = view.addMesh<BoxMeshDesc>({
     box: {
       width: 200,
       height: 200,
@@ -99,7 +96,7 @@ export const run = async (view: ThreeView<DefaultDeclarations>) => {
     boxPosition.y,
     boxPosition.z,
   ).add(new Vector3(-500, 0, -600));
-  const sphereLayer = view.addMesh<SphereMeshLayer>({
+  const sphereLayer = view.addMesh<SphereMeshDesc>({
     sphere: {
       radius: 150,
       color: new Color().setHex(0x0000ff),
@@ -176,7 +173,7 @@ export const run = async (view: ThreeView<DefaultDeclarations>) => {
       debugPlugin.setEnabled(ev.value);
     });
 
-  // --- Effect Layer Controls ---
+  // --- Effect Descriptor Controls ---
   const effectFolder = pane.addFolder({ title: "Effects", expanded: true });
   const bloomFolder = effectFolder.addFolder({
     title: "Bloom",

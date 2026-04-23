@@ -7,17 +7,17 @@ sidebar:
 
 ## What is three_default_plugin?
 
-`three_default_plugin` is a plugin that uses the `Plugin` system of `navara_three` to register all layers provided by `three_default_layers` into `ThreeView` at once. Simply adding the `DefaultPlugin` class via `view.addPlugin()` makes all mesh, effect, and light layers available.
+`three_default_plugin` is a plugin that uses the `Plugin` system of `navara_three` to register all descriptors provided by `three_default_descs` into `ThreeView` at once. Simply adding the `DefaultPlugin` class via `view.addPlugin()` makes all mesh, effect, and light descriptors available.
 
-## Relationship with navara_three / three_default_layers
+## Relationship with navara_three / three_default_descs
 
 ```
 navara_three (core: ThreeView, Plugin, addPlugin, registerMesh/Effect/Light)
-  ├── three_default_layers (layer implementations: 17 meshes, 12 effects, 4 lights)
-  └── three_default_plugin (DefaultPlugin: bulk layer registration + utilities)
+  ├── three_default_descs (descriptor implementations: 17 meshes, 12 effects, 4 lights)
+  └── three_default_plugin (DefaultPlugin: bulk descriptor registration + utilities)
 ```
 
-`navara_three` provides the mechanism for registering and managing layers (`registerMesh`, `registerEffect`, `registerLight`). `three_default_layers` provides the implementation of individual layer classes. `three_default_plugin` bridges these together and registers all default layers into `ThreeView`.
+`navara_three` provides the mechanism for registering and managing descriptors (`registerMesh`, `registerEffect`, `registerLight`). `three_default_descs` provides the implementation of individual descriptor classes. `three_default_plugin` bridges these together and registers all default descriptors into `ThreeView`.
 
 ## Usage
 
@@ -35,17 +35,17 @@ view.addPlugin(plugin);
 await view.init({ canvas: document.getElementById("canvas") });
 ```
 
-The following layers are automatically registered during the plugin's `init()`:
+The following descriptors are automatically registered during the plugin's `init()`:
 
-**Mesh layers (17 types):** `rain`, `snow`, `sky`, `skyBox`, `stars`, `box`, `boxes`, `sphere`, `glowGlobe`, `cylinder`, `tube`, `plane`, `gltfModel`, `axesHelper`, `arrowHelper`, `arcLines`, `smoothLines`
+**Mesh descriptors (17 types):** `rain`, `snow`, `sky`, `skyBox`, `stars`, `box`, `boxes`, `sphere`, `glowGlobe`, `cylinder`, `tube`, `plane`, `gltfModel`, `axesHelper`, `arrowHelper`, `arcLines`, `smoothLines`
 
-**Effect layers (12 types):** `aerialPerspective`, `rainDrop`, `clouds`, `fogLight`, `lensFlare`, `ssao`, `ssr`, `depthOfField`, `colorGradingLUT`, `toneMapping`, `smaa`, `fxaa`
+**Effect descriptors (12 types):** `aerialPerspective`, `rainDrop`, `clouds`, `fogLight`, `lensFlare`, `ssao`, `ssr`, `depthOfField`, `colorGradingLUT`, `toneMapping`, `smaa`, `fxaa`
 
-**Light layers (4 types):** `sun`, `ambient`, `skyLightProbe`, `lightProbe`
+**Light descriptors (4 types):** `sun`, `ambient`, `skyLightProbe`, `lightProbe`
 
-### addDefaultPhotorealLayers()
+### addDefaultPhotorealScene()
 
-`DefaultPlugin` provides the `addDefaultPhotorealLayers()` method for easily building photorealistic 3D map scenes. By calling it after `view.init()`, sky, stars, sunlight, atmospheric effects, and more are automatically added.
+`DefaultPlugin` provides the `addDefaultPhotorealScene()` method for easily building photorealistic 3D map scenes. By calling it after `view.init()`, sky, stars, sunlight, atmospheric effects, and more are automatically added.
 
 ```typescript
 const plugin = new DefaultPlugin();
@@ -54,13 +54,13 @@ view.addPlugin(plugin);
 await view.init({ canvas: document.getElementById("canvas") });
 
 // Set up a photorealistic scene in one call
-const layers = plugin.addDefaultPhotorealLayers();
+const layers = plugin.addDefaultPhotorealScene();
 // Returns layers.sky, layers.sun, layers.aerialPerspective, ...
 ```
 
-Layers added:
+Descriptors added:
 
-| Layer | Type | Description |
+| Descriptor | Type | Description |
 |---------|------|------|
 | `sky` | mesh | Sky rendering |
 | `skyEnv` | mesh | Sky for environment maps |

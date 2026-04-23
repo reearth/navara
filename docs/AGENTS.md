@@ -19,7 +19,7 @@ docs/
 ├── guide/                            # Guides for writing and updating docs
 └── src/content/docs/                 # Documentation pages
     ├── three/                        # @navara/three
-    ├── three_default_layers/         # @navara/three_default_layers
+    ├── three_default_descs/         # @navara/three_default_descs
     ├── three_default_plugin/         # @navara/three_default_plugin
     ├── engine/                       # WASM engine
     ├── guides/                       # General project guides

@@ -16,6 +16,10 @@
         "node"
       ],
       "enabled": false
+    },
+    {
+      "matchUpdateTypes": ["patch"],
+      "groupName": "patch updates"
     }
   ]
 }

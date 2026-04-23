@@ -1,9 +1,9 @@
 import ThreeView from "@navara/three";
 
-import { type CustomDeclarations } from "./run";
+import { type CustomDescriptions } from "./run";
 import { run } from "./run";
 
-const view = new ThreeView<CustomDeclarations>({
+const view = new ThreeView<CustomDescriptions>({
   debug: true,
   shadow: true,
   animation: true,

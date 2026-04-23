@@ -251,9 +251,19 @@ pub struct TextMaterial {
     pub offset_depth: Option<bool>,
     #[wasm_bindgen(getter_with_clone)]
     pub text: Option<String>,
-    /// **Experimental*:
-    /// Specify URL for font file. Supported files are ttf, otf and woff. Default is `Roboto`.
-    /// Please note that this API might be replaced with another API in the future, since it loads a large font file at once.
+    /// Specifies either the URL of a single font file or the `family` name of a font family
+    /// previously registered with `view.addFontFamily()`. Supported file formats are ttf, otf,
+    /// woff, and woff2.
+    ///
+    /// When a family name is used, only the face files whose unicode ranges cover the characters
+    /// in `text` are fetched, so large scripts (CJK, etc.) can be split into multiple faces and
+    /// loaded on demand. For each codepoint, the first face (in `faces` order) whose
+    /// `unicodeRanges` contain the codepoint is used; codepoints not covered by any face fall
+    /// back to the first face, which may therefore be downloaded even for characters outside its
+    /// declared ranges.
+    ///
+    /// Defaults to `None`: no font is loaded, and the text layer will not render until a font
+    /// is specified.
     #[wasm_bindgen(getter_with_clone)]
     pub font: Option<String>,
     #[wasm_bindgen(js_name = backgroundColor)]
@@ -628,7 +638,7 @@ pub struct PolygonMaterial {
     pub per_position_height: Option<bool>,
     /// Need to enable `transparent`.
     pub opacity: Option<f32>,
-    /// Enable `opacity`. It might cause unexpected behavior when you use an effect layer.
+    /// Enable `opacity`. It might cause unexpected behavior when you use an effect.
     pub transparent: Option<bool>,
 
     /// Currently, this property is supported only in GeoJSON.

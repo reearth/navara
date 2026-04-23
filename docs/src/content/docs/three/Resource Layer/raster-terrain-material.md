@@ -29,7 +29,7 @@ sidebar:
 
 ### elevationDecoder
 
-**Type:** [`ElevationDecoder`](#ElevationDecoder-type)
+**Type:** [`ElevationDecoder`](#elevationdecoder-type)
 
 **Description:** Specifies the settings and methods for converting encoded elevation data to actual terrain heights.
 

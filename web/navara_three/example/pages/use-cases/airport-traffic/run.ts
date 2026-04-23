@@ -5,12 +5,12 @@ import ThreeView, {
 } from "@navara/three";
 import {
   ToneMappingMode,
-  type ArclineMeshLayer,
-  type GlowGlobeMeshLayer,
-} from "@navara/three_default_layers";
+  type ArclineMeshDesc,
+  type GlowGlobeMeshDesc,
+} from "@navara/three_default_descs";
 import {
   DefaultPlugin,
-  type DefaultDeclarations,
+  type DefaultDescriptions,
 } from "@navara/three_default_plugin";
 import type { FeatureCollection, MultiLineString } from "geojson";
 
@@ -95,10 +95,10 @@ const constructData = async () => {
   return { arcLines };
 };
 
-export type CustomDeclarations = DefaultDeclarations;
+export type CustomDescriptions = DefaultDescriptions;
 
 export async function run() {
-  const view = new ThreeView<CustomDeclarations>({
+  const view = new ThreeView<CustomDescriptions>({
     backgroundColor: new Color().setStyle("#0b0a0d"),
   });
 
@@ -155,8 +155,8 @@ export async function run() {
     },
   });
 
-  // Add globe glow mesh layer
-  view.addMesh<GlowGlobeMeshLayer>({
+  // Add globe glow mesh descriptor
+  view.addMesh<GlowGlobeMeshDesc>({
     glowGlobe: {
       radiusScale: 1.2,
       coefficient: 0.43,
@@ -168,7 +168,7 @@ export async function run() {
 
   const { arcLines } = await constructData();
 
-  const arcLineLayer = view.addMesh<ArclineMeshLayer>({
+  const arcLineLayer = view.addMesh<ArclineMeshDesc>({
     arcLines,
   });
 

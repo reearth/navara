@@ -1,19 +1,18 @@
-import ThreeView, { Color, LayerHandle } from "@navara/three";
+import ThreeView, { Color, MeshHandle } from "@navara/three";
 import {
-  AmbientLightLayer,
-  GlowGlobeMeshLayer,
-} from "@navara/three_default_layers";
+  AmbientLightDesc,
+  GlowGlobeMeshDesc,
+} from "@navara/three_default_descs";
 import {
   DefaultPlugin,
-  type DefaultDeclarations,
+  type DefaultDescriptions,
 } from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 
 import { TILE_DATASETS } from "../../helpers/constants";
 import { addCameraControl } from "../../helpers/control";
 
-let gGlowGlobeMeshLayer: LayerHandle<GlowGlobeMeshLayer> | undefined =
-  undefined;
+let gGlowGlobeMeshDesc: MeshHandle<GlowGlobeMeshDesc> | undefined = undefined;
 
 const gPaneParams = {
   glowRadiusScale: 1.2,
@@ -24,18 +23,18 @@ const gPaneParams = {
   visible: true,
 };
 
-export type CustomDeclarations = DefaultDeclarations;
+export type CustomDescriptions = DefaultDescriptions;
 
-export const run = async (view: ThreeView<CustomDeclarations>) => {
+export const run = async (view: ThreeView<CustomDescriptions>) => {
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
   await view.init();
 
-  view.addLight<AmbientLightLayer>({
+  view.addLight<AmbientLightDesc>({
     ambient: {},
   });
 
-  gGlowGlobeMeshLayer = view.addMesh<GlowGlobeMeshLayer>({
+  gGlowGlobeMeshDesc = view.addMesh<GlowGlobeMeshDesc>({
     glowGlobe: {
       radiusScale: gPaneParams.glowRadiusScale,
       coefficient: gPaneParams.glowCoefficient,
@@ -61,13 +60,13 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
   addPanel(view, pane);
 };
 
-function addPanel(view: ThreeView<CustomDeclarations>, pane: Pane) {
-  if (!gGlowGlobeMeshLayer) return;
+function addPanel(view: ThreeView<CustomDescriptions>, pane: Pane) {
+  if (!gGlowGlobeMeshDesc) return;
 
-  const folder = pane.addFolder({ title: "Glow Globe Layer" });
+  const folder = pane.addFolder({ title: "Glow Globe Descriptor" });
 
   folder.addBinding(gPaneParams, "glowRadiusScale").on("change", (ev) => {
-    gGlowGlobeMeshLayer?.update({
+    gGlowGlobeMeshDesc?.update({
       glowGlobe: {
         radiusScale: ev.value,
       },
@@ -75,7 +74,7 @@ function addPanel(view: ThreeView<CustomDeclarations>, pane: Pane) {
   });
 
   folder.addBinding(gPaneParams, "glowCoefficient").on("change", (ev) => {
-    gGlowGlobeMeshLayer?.update({
+    gGlowGlobeMeshDesc?.update({
       glowGlobe: {
         coefficient: ev.value,
       },
@@ -83,7 +82,7 @@ function addPanel(view: ThreeView<CustomDeclarations>, pane: Pane) {
   });
 
   folder.addBinding(gPaneParams, "glowExponent").on("change", (ev) => {
-    gGlowGlobeMeshLayer?.update({
+    gGlowGlobeMeshDesc?.update({
       glowGlobe: {
         exponent: ev.value,
       },
@@ -93,7 +92,7 @@ function addPanel(view: ThreeView<CustomDeclarations>, pane: Pane) {
   folder
     .addBinding(gPaneParams, "glowColor", { view: "color" })
     .on("change", (ev) => {
-      gGlowGlobeMeshLayer?.update({
+      gGlowGlobeMeshDesc?.update({
         glowGlobe: {
           glowColor: new Color().setHex(ev.value),
         },
@@ -103,7 +102,7 @@ function addPanel(view: ThreeView<CustomDeclarations>, pane: Pane) {
   folder
     .addBinding(gPaneParams, "glowOpacity", { min: 0, max: 1 })
     .on("change", (ev) => {
-      gGlowGlobeMeshLayer?.update({
+      gGlowGlobeMeshDesc?.update({
         glowGlobe: {
           opacity: ev.value,
         },
@@ -111,19 +110,19 @@ function addPanel(view: ThreeView<CustomDeclarations>, pane: Pane) {
     });
 
   folder.addBinding(gPaneParams, "visible").on("change", (ev) => {
-    if (gGlowGlobeMeshLayer && gGlowGlobeMeshLayer.visible !== undefined) {
-      gGlowGlobeMeshLayer.visible = ev.value;
+    if (gGlowGlobeMeshDesc && gGlowGlobeMeshDesc.visible !== undefined) {
+      gGlowGlobeMeshDesc.visible = ev.value;
     }
   });
 
-  folder.addButton({ title: "Delete Layer" }).on("click", (ev) => {
-    if (gGlowGlobeMeshLayer) {
-      gGlowGlobeMeshLayer.delete();
+  folder.addButton({ title: "Delete Descriptor" }).on("click", (ev) => {
+    if (gGlowGlobeMeshDesc) {
+      gGlowGlobeMeshDesc.delete();
       view.forceUpdate();
-      gGlowGlobeMeshLayer = undefined;
-      ev.target.title = "Add Layer";
+      gGlowGlobeMeshDesc = undefined;
+      ev.target.title = "Add Descriptor";
     } else {
-      gGlowGlobeMeshLayer = view.addMesh<GlowGlobeMeshLayer>({
+      gGlowGlobeMeshDesc = view.addMesh<GlowGlobeMeshDesc>({
         glowGlobe: {
           radiusScale: gPaneParams.glowRadiusScale,
           coefficient: gPaneParams.glowCoefficient,

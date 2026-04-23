@@ -40,7 +40,7 @@ const view = new ThreeView({
   shadow: true,
 });
 
-// Register the default plugin with built-in layers
+// Register the default plugin with built-in descriptors
 const plugin = new DefaultPlugin();
 view.addPlugin(plugin);
 
@@ -73,7 +73,7 @@ view.setCamera({
 
 The `ThreeView` class is the main entry point for Navara. Creating an instance sets up the Three.js renderer, scene graph, and rendering pipeline. The `animation: true` option enables continuous rendering, and `shadow: true` enables shadow mapping.
 
-Before calling `init()`, you register plugins. The `DefaultPlugin` registers over 30 layer types — sky, atmosphere, lighting, terrain, and post-processing effects — so they are available for use after initialization. You can also create and register your own plugins for custom layer types.
+Before calling `init()`, you register plugins. The `DefaultPlugin` registers over 30 descriptor types — sky, atmosphere, lighting, terrain, and post-processing effects — so they are available for use after initialization. You can also create and register your own plugins for custom descriptor types.
 
 The `init()` call initializes the WASM GIS engine, sets up Web Workers for background processing, and prepares the rendering pipeline. This is an asynchronous operation that must complete before you add layers.
 
@@ -83,4 +83,4 @@ Finally, `setCamera()` positions the camera at a geographic coordinate with a gi
 
 ## Next Steps
 
-This example only scratches the surface. To learn how to add terrain elevation, display GeoJSON data, and compose multiple layers, continue with the [Basic Visualization Tutorial](../../../three/Tutorial/basic-visualization/).
+This example only scratches the surface. To learn how to add terrain elevation, display GeoJSON data, and compose multiple layers, continue with the [Basic Visualization Tutorial](../../../three/tutorial/basic-visualization/).

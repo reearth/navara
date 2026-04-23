@@ -28,7 +28,7 @@ sidebar:
 ```
 
 :::tip[フルアニメーション制御]
-`animationAutoPlay`、`animationClips`、`animationCrossfadeDuration`、`animationEnabled`、`animationLoop` などの高度なアニメーション機能については、メッシュレイヤーとしてフルアニメーション制御を提供する [GLTFModelLayer](../../../three_default_layers/mesh-layer/gltf-model-layer/) を使用してください。
+`animationAutoPlay`、`animationClips`、`animationCrossfadeDuration`、`animationEnabled`、`animationLoop` などの高度なアニメーション機能については、メッシュとしてフルアニメーション制御を提供する [GLTFModelDesc](../../../three_default_descs/mesh-desc/gltf-model-desc/) を使用してください。
 :::
 
 ### animationSpeed
@@ -127,7 +127,7 @@ import { Color } from "@navara/three";
 
 **Type:** `string[] | undefined`
 
-**Description:** 適用するセレクティブエフェクトの ID を指定します（例: "bloom", "outline"）。SelectiveBloomEffectLayer や SelectiveOutlineEffectLayer と連携して使用します。
+**Description:** 適用するセレクティブエフェクトの ID を指定します（例: "bloom", "outline"）。SelectiveBloomEffectDesc や SelectiveOutlineEffectDesc と連携して使用します。
 
 **Default:** `undefined`
 

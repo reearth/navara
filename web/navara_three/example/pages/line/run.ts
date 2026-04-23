@@ -1,12 +1,12 @@
 import ThreeView, { JAPAN_GSI_ELEVATION_DECODER, Color } from "@navara/three";
-import { CloudsEffectLayer } from "@navara/three_default_layers";
+import { CloudsEffectDesc } from "@navara/three_default_descs";
 import type {
-  ArclineMeshLayer,
-  SmoothLineMeshLayer,
-} from "@navara/three_default_layers";
+  ArclineMeshDesc,
+  SmoothLineMeshDesc,
+} from "@navara/three_default_descs";
 import {
   DefaultPlugin,
-  type DefaultDeclarations,
+  type DefaultDescriptions,
 } from "@navara/three_default_plugin";
 import { Vector3 } from "three";
 import { Pane } from "tweakpane";
@@ -231,9 +231,9 @@ const gSmoothLinesDef = [
   },
 ];
 
-export type CustomDeclarations = DefaultDeclarations;
+export type CustomDescriptions = DefaultDescriptions;
 
-export const run = async (view: ThreeView<CustomDeclarations>) => {
+export const run = async (view: ThreeView<CustomDescriptions>) => {
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
   await view.init();
@@ -277,17 +277,9 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
     scale: new Vector3().setScalar(1e9),
   });
 
-  // For debug
-  // const defaultEffects = view.addDefaultEffectLayers();
-  // defaultEffects.aerialPerspective.update({
-  //   aerialPerspective: {
-  //     irradiance: true,
-  //   },
-  // });
+  plugin.addDefaultPhotorealScene();
 
-  plugin.addDefaultPhotorealLayers();
-
-  view.addEffect<CloudsEffectLayer>({
+  view.addEffect<CloudsEffectDesc>({
     clouds: {},
   });
   const pane = new Pane({
@@ -308,8 +300,8 @@ function intToHexColor(num: number) {
   return "#" + num.toString(16).padStart(6, "0");
 }
 
-const addArcLines = (view: ThreeView<CustomDeclarations>, pane: Pane) => {
-  const arcLineLayer = view.addMesh<ArclineMeshLayer>({
+const addArcLines = (view: ThreeView<CustomDescriptions>, pane: Pane) => {
+  const arcLineLayer = view.addMesh<ArclineMeshDesc>({
     arcLines: gArcLinesDef,
   });
 
@@ -524,8 +516,8 @@ const addArcLines = (view: ThreeView<CustomDeclarations>, pane: Pane) => {
   dashAnimFunc();
 };
 
-const addSmoothLines = (view: ThreeView<CustomDeclarations>, pane: Pane) => {
-  const smoothLineLayer = view.addMesh<SmoothLineMeshLayer>({
+const addSmoothLines = (view: ThreeView<CustomDescriptions>, pane: Pane) => {
+  const smoothLineLayer = view.addMesh<SmoothLineMeshDesc>({
     smoothLines: gSmoothLinesDef,
   });
 

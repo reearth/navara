@@ -5,12 +5,12 @@ import ThreeView, {
   geodeticToVector3,
   degreeToRadian,
   geodeticSurfaceNormal,
-  LayerHandle,
+  MeshHandle,
 } from "@navara/three";
-import type { GLTFModelLayer } from "@navara/three_default_layers";
+import type { GLTFModelDesc } from "@navara/three_default_descs";
 import {
   DefaultPlugin,
-  type DefaultDeclarations,
+  type DefaultDescriptions,
 } from "@navara/three_default_plugin";
 import { Vector3, Quaternion, Euler } from "three";
 import { Pane } from "tweakpane";
@@ -39,9 +39,9 @@ const SCENES = {
 
 let gCurSceneName: keyof typeof SCENES = "ToranomonHillsBIM";
 
-export type CustomDeclarations = DefaultDeclarations;
+export type CustomDescriptions = DefaultDescriptions;
 
-export const run = async (view: ThreeView<CustomDeclarations>) => {
+export const run = async (view: ThreeView<CustomDescriptions>) => {
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
   await view.init();
@@ -49,10 +49,10 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
   view.atmosphere.date.setHours(8);
   view.toneMappingExposure = 10;
 
-  const defaultLayers = plugin.addDefaultPhotorealLayers();
+  const defaultLayers = plugin.addDefaultPhotorealScene();
 
-  const sunLightLayer = defaultLayers.sun;
-  sunLightLayer.update({
+  const sunLight = defaultLayers.sun;
+  sunLight.update({
     sun: {
       castShadow: true,
     },
@@ -95,7 +95,7 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
   });
 
   // Add GLTF model at Mount Fuji summit
-  const modelLayer = view.addMesh<GLTFModelLayer>({
+  const modelLayer = view.addMesh<GLTFModelDesc>({
     gltfModel: {
       url: LOCAL_DATASETS.soldierGLTF.url,
       animationEnabled: true,
@@ -140,8 +140,8 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
 };
 
 const updateModelLayerPos = (
-  view: ThreeView<CustomDeclarations>,
-  modelLayer: LayerHandle<GLTFModelLayer>,
+  view: ThreeView<CustomDescriptions>,
+  modelLayer: MeshHandle<GLTFModelDesc>,
   lle: number[],
 ) => {
   const startPos = geodeticToVector3({
@@ -173,9 +173,9 @@ const updateModelLayerPos = (
 };
 
 const add3DTilesSceneControl = (
-  view: ThreeView<CustomDeclarations>,
+  view: ThreeView<CustomDescriptions>,
   pane: Pane,
-  modelLayer: LayerHandle<GLTFModelLayer>,
+  modelLayer: MeshHandle<GLTFModelDesc>,
 ) => {
   const PARAMS = {
     scene: gCurSceneName,

@@ -43,7 +43,7 @@ Navara organizes its public API into three tiers with different stability guaran
 
 ### Tier 1: Plugin + ViewContext
 
-Plugins receive a `ThreeView` reference and a `ViewContext` via `init(view, ctx)`, where `ctx` is the `ViewContext` provided to plugins. Layer declarations also receive a `ViewContext` instance, which provides controlled access to rendering internals:
+Plugins receive a `ThreeView` reference and a `ViewContext` via `init(view, ctx)`, where `ctx` is the `ViewContext` provided to plugins. Custom descriptors also receive a `ViewContext` instance, which provides controlled access to rendering internals:
 
 - **Scenes** - Access to render groups (mrt, globe, draped, opaque, transparent, etc.)
 - **Camera** - The Three.js `PerspectiveCamera`
@@ -79,7 +79,7 @@ When deciding where a new API belongs, ask:
 | Question | If yes | If no |
 |----------|--------|-------|
 | Does a general map application need this? | Tier 0 | Continue |
-| Does a plugin/custom layer need this? | Tier 1 (ViewContext) | Continue |
+| Does a plugin/custom descriptor need this? | Tier 1 (ViewContext) | Continue |
 | Is there a proven, concrete use case? | Tier 2 (unstable) | Do not add yet |
 
 ### Rules

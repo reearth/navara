@@ -1,11 +1,11 @@
 import ThreeView, { Color } from "@navara/three";
 import {
-  DepthOfFieldEffectLayer,
+  DepthOfFieldEffectDesc,
   DEFAULT_DEPTH_OF_FIELD_OPTIONS,
-} from "@navara/three_default_layers";
+} from "@navara/three_default_descs";
 import {
   DefaultPlugin,
-  type DefaultDeclarations,
+  type DefaultDescriptions,
 } from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 
@@ -17,15 +17,15 @@ import {
   addCameraControl,
 } from "../../helpers/control";
 
-export type CustomDeclarations = DefaultDeclarations;
+export type CustomDescriptions = DefaultDescriptions;
 
-export const run = async (view: ThreeView<CustomDeclarations>) => {
+export const run = async (view: ThreeView<CustomDescriptions>) => {
   const defaultPlugin = new DefaultPlugin();
   view.addPlugin(defaultPlugin);
 
   await view.init();
 
-  const defaultAtmospheres = defaultPlugin.addDefaultPhotorealLayers();
+  const defaultAtmospheres = defaultPlugin.addDefaultPhotorealScene();
   defaultAtmospheres.sun.update({
     sun: {
       intensity: 1,
@@ -44,7 +44,7 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
 
   const depthOfFieldDefaults = DEFAULT_DEPTH_OF_FIELD_OPTIONS;
 
-  const depthOfFieldLayer = view.addEffect<DepthOfFieldEffectLayer>({
+  const depthOfFieldLayer = view.addEffect<DepthOfFieldEffectDesc>({
     depthOfField: { ...depthOfFieldDefaults },
     visible: true,
   });

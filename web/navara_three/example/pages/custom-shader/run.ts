@@ -1,17 +1,17 @@
 import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
   overrideShaderMaterialForMRT,
-  MeshLayerDeclaration,
-  type MeshLayerConfig,
+  MeshDesc,
+  type MeshConfig,
   type ViewContext,
   degreeToRadian,
   eastNorthUpToFixedFrame,
   geodeticToVector3,
 } from "@navara/three";
-import type { CloudsEffectLayer } from "@navara/three_default_layers";
+import type { CloudsEffectDesc } from "@navara/three_default_descs";
 import {
   DefaultPlugin,
-  type DefaultDeclarations,
+  type DefaultDescriptions,
 } from "@navara/three_default_plugin";
 import {
   Color,
@@ -42,16 +42,16 @@ type MarchingCubesLayerDescription = {
   };
 };
 
-export type MarchingCubesLayerConfig = MeshLayerConfig &
+export type MarchingCubesLayerConfig = MeshConfig &
   MarchingCubesLayerDescription;
 
 export type MarchingCubesLayerUpdate = Pick<
-  MeshLayerConfig,
+  MeshConfig,
   "position" | "visible"
 > &
   MarchingCubesLayerDescription;
 
-export class MarchingCubesLayer extends MeshLayerDeclaration<
+export class MarchingCubesLayer extends MeshDesc<
   MarchingCubesLayerConfig,
   MarchingCubesLayerUpdate,
   MarchingCubes
@@ -123,13 +123,13 @@ export class MarchingCubesLayer extends MeshLayerDeclaration<
   }
 }
 
-export type CustomDeclarations =
-  | DefaultDeclarations
+export type CustomDescriptions =
+  | DefaultDescriptions
   | {
       mesh: MarchingCubesLayerConfig;
     };
 
-export const run = async (view: ThreeView<CustomDeclarations>) => {
+export const run = async (view: ThreeView<CustomDescriptions>) => {
   const defaultPlugin = new DefaultPlugin();
   view.addPlugin(defaultPlugin);
 
@@ -138,7 +138,7 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
   // Register custom MarchingCubesLayer
   view.registerMesh("marchingCubes", MarchingCubesLayer);
 
-  const defaultEffects = defaultPlugin.addDefaultPhotorealLayers();
+  const defaultEffects = defaultPlugin.addDefaultPhotorealScene();
   defaultEffects.sun.update({
     sun: {
       intensity: 1,
@@ -146,8 +146,8 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
     },
   });
 
-  // Add clouds effect layer explicitly
-  const cloudsLayer = view.addEffect<CloudsEffectLayer>({
+  // Add clouds effect descriptor explicitly
+  const cloudsLayer = view.addEffect<CloudsEffectDesc>({
     clouds: {},
   });
 

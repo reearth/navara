@@ -11,7 +11,7 @@ Achieve more realistic visual rendering using atmospheric effects.
 
 **What you will learn in this tutorial:**
 - Adding Aerial Perspective effects
-- Configuring sky, sun, and star layers
+- Configuring sky, sun, and star descriptors
 - Adding cloud effects
 - Setting up tone mapping and anti-aliasing
 - Adding rain and snow effects
@@ -19,7 +19,7 @@ Achieve more realistic visual rendering using atmospheric effects.
 
 ## Adding the Aerial Perspective Effect
 
-Aerial Perspective applies a haze and atmospheric depth effect based on distance. Using `DefaultPlugin`, all default layers are registered, and `addDefaultPhotorealLayers()` sets up a photorealistic scene in one call.
+Aerial Perspective applies a haze and atmospheric depth effect based on distance. Using `DefaultPlugin`, all default descriptors are registered, and `addDefaultPhotorealScene()` sets up a photorealistic scene in one call.
 
 ```typescript
 import ThreeView, { JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
@@ -31,7 +31,7 @@ view.addPlugin(plugin);
 await view.init();
 
 // Set up a photorealistic scene in one call (sky, sunlight, stars, atmospheric effects, tone mapping, anti-aliasing, etc.)
-const layers = plugin.addDefaultPhotorealLayers();
+const layers = plugin.addDefaultPhotorealScene();
 
 // Adjust Aerial Perspective as needed
 layers.aerialPerspective.update({
@@ -71,7 +71,7 @@ view.addLayer({
 view.setCamera({ lng: 139.7511, lat: 35.6736, height: 400, heading: -100, pitch: -20, roll: 0 });
 ```
 
-With `addDefaultPhotorealLayers()`, atmospheric layers such as sky, sunlight, stars, and skylight probe are also automatically added. To cast shadows, update the sunlight settings.
+With `addDefaultPhotorealScene()`, atmospheric descriptors such as sky, sunlight, stars, and skylight probe are also automatically added. To cast shadows, update the sunlight settings.
 
 ```typescript
 layers.sun.update({ sun: { castShadow: true } }); // Cast shadows
@@ -91,7 +91,7 @@ layers.toneMapping.update({ toneMapping: { mode: ToneMappingMode.AGX } });
 view.toneMappingExposure = 10; // Adjust according to the scene
 
 // Anti-aliasing
-// addDefaultPhotorealLayers() automatically selects SMAA for desktop and FXAA for mobile optimization
+// addDefaultPhotorealScene() automatically selects SMAA for desktop and FXAA for mobile optimization
 ```
 
 ## Adding Cloud Effects
@@ -99,7 +99,7 @@ view.toneMappingExposure = 10; // Adjust according to the scene
 Overlaying volumetric cloud effects enhances the sense of realism. Start with the default settings and adjust shadows and density as needed.
 
 ```typescript
-const clouds = view.addEffect<CloudsEffectLayer>({
+const clouds = view.addEffect<CloudsEffectDesc>({
   clouds: {},
 });
 
@@ -111,7 +111,7 @@ clouds.update({ clouds: { shadows: true } });
 
 ## Adding Rain Effects
 
-Rain effects use a combination of two layers. `RainMeshLayer` renders 3D raindrop particles in the scene, and `RainDropEffectLayer` provides a post-processing effect of water droplets on the screen.
+Rain effects use a combination of two objects. `RainMeshDesc` renders 3D raindrop particles in the scene, and `RainDropEffectDesc` provides a post-processing effect of water droplets on the screen.
 
 ### 3D Raindrop Particles
 
@@ -119,8 +119,8 @@ Rain effects use a combination of two layers. `RainMeshLayer` renders 3D raindro
 // Enable the animation loop to keep rain animation running
 view.animation = true;
 
-// Add rain layer
-const rain = view.addMesh<RainMeshLayer>({
+// Add rain object
+const rain = view.addMesh<RainMeshDesc>({
   rain: {
     particleCount: 5000, // Number of raindrops
     speed: 0.0015,             // Fall speed
@@ -139,7 +139,7 @@ const rain = view.addMesh<RainMeshLayer>({
 A post-processing effect that simulates water droplets adhering to the camera lens during rainy weather.
 
 ```typescript
-const rainDropEffect = view.addEffect<RainDropEffectLayer>({
+const rainDropEffect = view.addEffect<RainDropEffectDesc>({
   rainDrop: {
     opacity: 1.0,           // Overall effect opacity
     dropGridSize: 12,       // Water droplet grid size
@@ -152,18 +152,18 @@ const rainDropEffect = view.addEffect<RainDropEffectLayer>({
 ```
 
 :::tip[Combining Rain Effects]
-Enabling both `RainMeshLayer` and `RainDropEffectLayer` simultaneously allows for a more immersive rain effect.
+Enabling both `RainMeshDesc` and `RainDropEffectDesc` simultaneously allows for a more immersive rain effect.
 :::
 
 ![Result](@assets/tutorial/realistic-atmosphere-rain.png)
 
 ## Adding Snow Effects
 
-For snow effects, use `SnowMeshLayer`. Remove the rain layer and add it instead.
+For snow effects, use `SnowMeshDesc`. Remove the rain object and add it instead.
 
 ```typescript
-// Add snow layer
-const snow = view.addMesh<SnowMeshLayer>({
+// Add snow object
+const snow = view.addMesh<SnowMeshDesc>({
   snow: {
     particleCount: 5000,  // Number of snowflakes
     speed: 0.00005,           // Fall speed
@@ -218,7 +218,7 @@ view.setCamera({ lng: 140.0372145462, lat: 35.6059411903, height: 3880, heading:
 
 ### Combining with SSR (Screen Space Reflections)
 
-Adding `SSREffectLayer` enables real-time reflections of buildings and other objects on the water surface.
+Adding `SSREffectDesc` enables real-time reflections of buildings and other objects on the water surface.
 
 ```typescript
 // Add PLATEAU building models
@@ -242,7 +242,7 @@ view.addLayer({
 });
 
 // Add SSR effect
-view.addEffect<SSREffectLayer>({
+view.addEffect<SSREffectDesc>({
   ssr: {},
 });
 
@@ -265,7 +265,7 @@ view.setCamera({
 Below is a complete example combining atmospheric effects, rain, and water surface materials.
 
 ```typescript
-import ThreeView, { type CloudsEffectLayer, Color, JAPAN_GSI_ELEVATION_DECODER, type RainDropEffectLayer, type RainMeshLayer, type SnowMeshLayer, type SSREffectLayer, ToneMappingMode } from "@navara/three";
+import ThreeView, { type CloudsEffectDesc, Color, JAPAN_GSI_ELEVATION_DECODER, type RainDropEffectDesc, type RainMeshDesc, type SnowMeshDesc, type SSREffectDesc, ToneMappingMode } from "@navara/three";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const plugin = new DefaultPlugin();
@@ -280,7 +280,7 @@ view.addPlugin(plugin);
 await view.init();
 
 // Set up a photorealistic scene in one call
-const layers = plugin.addDefaultPhotorealLayers();
+const layers = plugin.addDefaultPhotorealScene();
 
 // Adjust Aerial Perspective as needed
 layers.aerialPerspective.update({
@@ -323,7 +323,7 @@ layers.sun.update({ sun: { castShadow: true } }); // Cast shadows
 layers.toneMapping.update({ toneMapping: { mode: ToneMappingMode.AGX } });
 view.toneMappingExposure = 10; // Adjust according to the scene
 
-const clouds = view.addEffect<CloudsEffectLayer>({
+const clouds = view.addEffect<CloudsEffectDesc>({
   clouds: {
     qualityPreset: "high"
   },
@@ -332,7 +332,7 @@ const clouds = view.addEffect<CloudsEffectLayer>({
 // Enable cloud shadows
 clouds.update({ clouds: { shadows: true } });
 
-view.addMesh<RainMeshLayer>({
+view.addMesh<RainMeshDesc>({
   rain: {
     particleCount: 5000, // Number of raindrops
     speed: 0.0015,             // Fall speed
@@ -345,7 +345,7 @@ view.addMesh<RainMeshLayer>({
   },
 });
 
-view.addEffect<RainDropEffectLayer>({
+view.addEffect<RainDropEffectDesc>({
   rainDrop: {
     opacity: 1.0,           // Overall effect opacity
     dropGridSize: 12,       // Water droplet grid size
@@ -397,7 +397,7 @@ view.addLayer({
 });
 
 // Add SSR effect
-view.addEffect<SSREffectLayer>({
+view.addEffect<SSREffectDesc>({
   ssr: {
   },
 });

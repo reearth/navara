@@ -69,7 +69,7 @@ import { Color } from "@navara/three";
 
 **Type:** `string[] | undefined`
 
-**Description:** 適用するセレクティブエフェクトの ID を指定します（例: "bloom", "outline"）。SelectiveBloomEffectLayer や SelectiveOutlineEffectLayer と連携して使用します。
+**Description:** 適用するセレクティブエフェクトの ID を指定します（例: "bloom", "outline"）。SelectiveBloomEffectDesc や SelectiveOutlineEffectDesc と連携して使用します。
 
 **Default:** `undefined`
 

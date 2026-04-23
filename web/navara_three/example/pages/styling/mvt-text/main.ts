@@ -45,7 +45,7 @@ const run = async () => {
 
   await view.init();
 
-  defaultPlugin.addDefaultPhotorealLayers();
+  defaultPlugin.addDefaultPhotorealScene();
 
   // Camera position for Japan overview
   view.setCamera({

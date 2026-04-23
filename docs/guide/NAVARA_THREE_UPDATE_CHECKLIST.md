@@ -270,7 +270,7 @@ view.on("eventName", (param) => {
 \`\`\`
 ```
 
-### Layer Type (Index Entry)
+### Descriptor Type (Index Entry)
 
 ```markdown
 | [LayerName](./layer-name) | `ConfigType` | Description of usage |

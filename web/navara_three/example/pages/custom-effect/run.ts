@@ -1,13 +1,13 @@
 import ThreeView, {
-  EffectLayerDeclaration,
+  EffectDesc,
   Effect,
-  type EffectLayerConfig,
-  type EffectLayerUpdate,
+  type EffectConfig,
+  type EffectUpdate,
   type ViewContext,
 } from "@navara/three";
 import {
   DefaultPlugin,
-  type DefaultDeclarations,
+  type DefaultDescriptions,
 } from "@navara/three_default_plugin";
 import { VignetteEffect, VignetteTechnique } from "postprocessing";
 import type { Camera } from "three";
@@ -113,7 +113,7 @@ class Vignette extends Effect<VignetteEffect, VignetteOptions> {
 }
 
 // ============================================================
-// Step 2: Create a custom EffectLayerDeclaration
+// Step 2: Create a custom EffectDesc
 // This integrates the effect into Navara's layer system
 // ============================================================
 
@@ -121,11 +121,11 @@ type VignetteLayerDescription = {
   vignette?: Omit<VignetteOptions, "enabled">;
 };
 
-export type VignetteEffectConfig = VignetteLayerDescription & EffectLayerConfig;
+export type VignetteEffectConfig = VignetteLayerDescription & EffectConfig;
 
-export type VignetteEffectUpdate = VignetteLayerDescription & EffectLayerUpdate;
+export type VignetteEffectUpdate = VignetteLayerDescription & EffectUpdate;
 
-class VignetteEffectLayer extends EffectLayerDeclaration<
+class VignetteEffectDesc extends EffectDesc<
   VignetteEffectConfig,
   VignetteEffectUpdate,
   Vignette
@@ -183,22 +183,22 @@ class VignetteEffectLayer extends EffectLayerDeclaration<
 }
 
 // ============================================================
-// Step 3: Use the custom effect layer in the application
+// Step 3: Use the custom effect descriptor in the application
 // ============================================================
 
-export type CustomDeclarations =
-  | DefaultDeclarations
+export type CustomDescriptions =
+  | DefaultDescriptions
   | {
       effect: VignetteEffectConfig;
     };
 
-export const run = async (view: ThreeView<CustomDeclarations>) => {
+export const run = async (view: ThreeView<CustomDescriptions>) => {
   const defaultPlugin = new DefaultPlugin();
   view.addPlugin(defaultPlugin);
 
   await view.init();
 
-  const defaultAtmospheres = defaultPlugin.addDefaultPhotorealLayers();
+  const defaultAtmospheres = defaultPlugin.addDefaultPhotorealScene();
   defaultAtmospheres.sun.update({
     sun: {
       intensity: 1,
@@ -206,8 +206,8 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
     },
   });
 
-  // Register the custom effect layer
-  view.registerEffect("vignette", VignetteEffectLayer);
+  // Register the custom effect descriptor
+  view.registerEffect("vignette", VignetteEffectDesc);
 
   // Set initial camera position
   view.setCamera({
@@ -219,8 +219,8 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
     roll: 0,
   });
 
-  // Add the custom Vignette effect layer
-  const vignetteLayer = view.addEffect<VignetteEffectLayer>({
+  // Add the custom Vignette effect descriptor
+  const vignetteLayer = view.addEffect<VignetteEffectDesc>({
     vignette: {
       technique: "default",
       offset: 0.5,

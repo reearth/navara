@@ -1,14 +1,14 @@
 // GLTF Model related functions
 
 import ThreeView, {
-  type LayerHandle,
+  type MeshHandle,
   geodeticToVector3,
   degreeToRadian,
   geodeticSurfaceNormal,
   Color,
 } from "@navara/three";
-import type { GLTFModelLayer } from "@navara/three_default_layers";
-import type { DefaultDeclarations } from "@navara/three_default_plugin";
+import type { GLTFModelDesc } from "@navara/three_default_descs";
+import type { DefaultDescriptions } from "@navara/three_default_plugin";
 import { Vector3, Quaternion, Euler } from "three";
 import { Pane, type FolderApi } from "tweakpane";
 
@@ -43,8 +43,8 @@ const SAPPORO_COORDINATES = getCoordinatesFromGeoJSON(SAPPORO_GEOJSON);
  * Add GLTF model for normal surface alignment
  */
 export const addTestModelForNormal = (
-  view: ThreeView<DefaultDeclarations>,
-): LayerHandle<GLTFModelLayer> => {
+  view: ThreeView<DefaultDescriptions>,
+): MeshHandle<GLTFModelDesc> => {
   const pos = geodeticToVector3({
     lat: degreeToRadian(SAPPORO_COORDINATES.latitude),
     lng: degreeToRadian(SAPPORO_COORDINATES.longitude),
@@ -61,8 +61,8 @@ export const addTestModelForNormal = (
   const quaternion = new Quaternion().setFromUnitVectors(up, normal);
   const euler = new Euler().setFromQuaternion(quaternion);
 
-  // Add GLTF model using GLTFModelLayer with URL
-  const modelLayer = view.addMesh<GLTFModelLayer>({
+  // Add GLTF model using GLTFModelDesc with URL
+  const modelLayer = view.addMesh<GLTFModelDesc>({
     gltfModel: {
       url: MODEL_CONFIG.url,
       // Animation configuration - fully aligned with Rust naming
@@ -97,9 +97,9 @@ export const addTestModelForNormal = (
  * Add text model control panel
  */
 export const addTextModelControl = (
-  _view: ThreeView<DefaultDeclarations>,
+  _view: ThreeView<DefaultDescriptions>,
   pane: Pane | FolderApi,
-  modelLayer: LayerHandle<GLTFModelLayer>,
+  modelLayer: MeshHandle<GLTFModelDesc>,
 ): AnimationControlReturn => {
   // Control parameters
   const PARAMS: AnimationControlParams = {
@@ -467,8 +467,8 @@ export const addTextModelControl = (
  * Fixed latitude, changing longitude over time
  */
 export const addRunningModelAroundEarth = (
-  view: ThreeView<DefaultDeclarations>,
-): LayerHandle<GLTFModelLayer> => {
+  view: ThreeView<DefaultDescriptions>,
+): MeshHandle<GLTFModelDesc> => {
   const OSAKA_COORDINATES = getCoordinatesFromGeoJSON(OSAKA_GEOJSON);
 
   const pos = geodeticToVector3({
@@ -488,7 +488,7 @@ export const addRunningModelAroundEarth = (
   const euler = new Euler().setFromQuaternion(quaternion);
 
   // Add GLTF model with Run animation fixed
-  const modelLayer = view.addMesh<GLTFModelLayer>({
+  const modelLayer = view.addMesh<GLTFModelDesc>({
     gltfModel: {
       url: MODEL_CONFIG.url,
       animationEnabled: true,

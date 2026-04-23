@@ -163,4 +163,4 @@ const tilesLayer = view.addLayer({
 ## Related Resources
 
 - [About Layer](../../../three/introduction/about-layer/) - Layer concepts
-- [Layer Types](../../../three/api-reference/layer-types/) - Layer class API reference
+- [Layer Types](../../../three/api-reference/desc-types/) - Layer class API reference

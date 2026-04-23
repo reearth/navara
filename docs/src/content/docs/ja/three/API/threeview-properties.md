@@ -60,7 +60,7 @@ view.globe.elevationColormap = customColorMap;
 
 **Read-only** (getter)
 
-大気システムを管理するインスタンス。太陽と月の位置計算、大気散乱テクスチャの管理を行います。`date` プロパティを変更すると、天体暦に基づいて太陽・月の方向が自動的に再計算され、`SunLightLayer` や `SkyMeshLayer` などの関連レイヤーに反映されます。
+大気システムを管理するインスタンス。太陽と月の位置計算、大気散乱テクスチャの管理を行います。`date` プロパティを変更すると、天体暦に基づいて太陽・月の方向が自動的に再計算され、`SunLightDesc` や `SkyMeshDesc` などの関連 Descriptor に反映されます。
 
 **Example:**
 
