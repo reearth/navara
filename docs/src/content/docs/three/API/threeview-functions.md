@@ -930,13 +930,22 @@ view.addFontFamily({
   ],
 });
 
-view.addLayer({
+const layer = view.addLayer({
   type: "geojson",
-  url: "/cities.geojson",
+  data: { url: "/cities.geojson" },
   text: {
-    text: ["get", "name"],
     font: "MapFont",
   },
+});
+
+layer.on("featureUpdated", ({ evaluator }) => {
+  evaluator.evaluate(
+    ({ properties }) => {
+      const name = properties?.["name"] as string | undefined;
+      return { text: name ?? "", show: !!name };
+    },
+    { filters: ["name"] },
+  );
 });
 ```
 
