@@ -25,7 +25,7 @@ import {
 } from "@navara/three_default_descs";
 import {
   DefaultPlugin,
-  type DefaultDeclarations,
+  type DefaultDescriptions,
 } from "@navara/three_default_plugin";
 import { SphericalHarmonics3 } from "three";
 import { Pane } from "tweakpane";
@@ -49,11 +49,11 @@ import {
 } from "../../helpers/panel";
 import { SH_COEFFICIENTS } from "../../helpers/sh";
 
-export type CustomDeclarations = DefaultDeclarations;
+export type CustomDescriptions = DefaultDescriptions;
 
 type DefaultEffects = ReturnType<DefaultPlugin["addDefaultPhotorealScene"]>;
 
-export const run = async (view: ThreeView<CustomDeclarations>) => {
+export const run = async (view: ThreeView<CustomDescriptions>) => {
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
   await view.init();
@@ -174,7 +174,7 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
   ]);
 };
 
-const addTileControl = (view: ThreeView<CustomDeclarations>, pane: Pane) => {
+const addTileControl = (view: ThreeView<CustomDescriptions>, pane: Pane) => {
   const PARAMS = {
     type: TILE_DATASETS.gsiSeamlessphoto.url,
   };
@@ -219,7 +219,7 @@ const addTileControl = (view: ThreeView<CustomDeclarations>, pane: Pane) => {
 };
 
 const addCloudsTilesControl = (
-  view: ThreeView<CustomDeclarations>,
+  view: ThreeView<CustomDescriptions>,
   pane: Pane,
   tileChangeBinding: EventHandler,
 ) => {
@@ -394,7 +394,7 @@ const addAtmosphereControl = (
 };
 
 const addCloudsControl = (
-  view: ThreeView<CustomDeclarations>,
+  view: ThreeView<CustomDescriptions>,
   pane: Pane,
   cloudsLayerHandle: EffectHandle<CloudsEffectDesc>,
 ) => {
@@ -1038,7 +1038,7 @@ const addCloudsControl = (
 };
 
 const addAAControl = (
-  view: ThreeView<CustomDeclarations>,
+  view: ThreeView<CustomDescriptions>,
   pane: Pane,
   defaultEffects: DefaultEffects,
 ) => {
@@ -1130,7 +1130,7 @@ const addAAControl = (
 };
 
 // Advanced
-const addIBLControl = (view: ThreeView<CustomDeclarations>, pane: Pane) => {
+const addIBLControl = (view: ThreeView<CustomDescriptions>, pane: Pane) => {
   const PARAMS = {
     enable: false,
     sh: "debug",
@@ -1186,7 +1186,7 @@ const addIBLControl = (view: ThreeView<CustomDeclarations>, pane: Pane) => {
 };
 
 const addEffectsControl = (
-  view: ThreeView<CustomDeclarations>,
+  view: ThreeView<CustomDescriptions>,
   pane: Pane,
   defaultEffects: DefaultEffects,
 ) => {

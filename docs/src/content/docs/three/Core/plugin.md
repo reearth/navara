@@ -29,7 +29,7 @@ The `Plugin` class is intentionally designed as a minimal interface, providing o
 
 | Parameter | Description |
 | --------- | ----------- |
-| `TView`   | The type of the view passed to `init()`. Typically `ThreeView` or `ThreeView<MyDeclarations>`. |
+| `TView`   | The type of the view passed to `init()`. Typically `ThreeView` or `ThreeView<MyDescriptions>`. |
 | `TCtx`    | The type of the context passed to `init()`. Use `ViewContext` to access the renderer, buffers, and pass management APIs. |
 
 ## Lifecycle

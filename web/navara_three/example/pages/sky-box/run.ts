@@ -10,7 +10,7 @@ import {
 } from "@navara/three_default_descs";
 import {
   DefaultPlugin,
-  type DefaultDeclarations,
+  type DefaultDescriptions,
 } from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 
@@ -26,9 +26,9 @@ const gPaneParams = {
   sunColor: DEFAULT_SKY_BOX_OPTIONS.sunColor.toHex(),
 };
 
-export type CustomDeclarations = DefaultDeclarations;
+export type CustomDescriptions = DefaultDescriptions;
 
-export const run = async (view: ThreeView<CustomDeclarations>) => {
+export const run = async (view: ThreeView<CustomDescriptions>) => {
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
   await view.init();

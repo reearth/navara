@@ -5,7 +5,7 @@ import {
 } from "@navara/three_default_descs";
 import {
   DefaultPlugin,
-  type DefaultDeclarations,
+  type DefaultDescriptions,
 } from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 
@@ -23,9 +23,9 @@ const gPaneParams = {
   visible: true,
 };
 
-export type CustomDeclarations = DefaultDeclarations;
+export type CustomDescriptions = DefaultDescriptions;
 
-export const run = async (view: ThreeView<CustomDeclarations>) => {
+export const run = async (view: ThreeView<CustomDescriptions>) => {
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
   await view.init();
@@ -60,7 +60,7 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
   addPanel(view, pane);
 };
 
-function addPanel(view: ThreeView<CustomDeclarations>, pane: Pane) {
+function addPanel(view: ThreeView<CustomDescriptions>, pane: Pane) {
   if (!gGlowGlobeMeshDesc) return;
 
   const folder = pane.addFolder({ title: "Glow Globe Descriptor" });

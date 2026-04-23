@@ -2,7 +2,7 @@ import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
 import type { ArclineMeshDesc } from "@navara/three_default_descs";
 import {
   DefaultPlugin,
-  type DefaultDeclarations,
+  type DefaultDescriptions,
 } from "@navara/three_default_plugin";
 
 import { showAttributions } from "../../../helpers/attributions";
@@ -11,7 +11,7 @@ import { TERRAIN_DATASETS, TILE_DATASETS } from "../../../helpers/constants";
 const TOKYO = { lng: 139.757, lat: 35.676 };
 
 const run = async () => {
-  const view = new ThreeView<DefaultDeclarations>({
+  const view = new ThreeView<DefaultDescriptions>({
     debug: true,
     shadow: true,
   });

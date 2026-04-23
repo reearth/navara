@@ -2,7 +2,7 @@ import ThreeView, { Color } from "@navara/three";
 import { AmbientLightDesc } from "@navara/three_default_descs";
 import {
   DefaultPlugin,
-  type DefaultDeclarations,
+  type DefaultDescriptions,
 } from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 
@@ -94,7 +94,7 @@ const layers: MaterialDesc[] = [
   },
 ];
 
-export const run = async (view: ThreeView<DefaultDeclarations>) => {
+export const run = async (view: ThreeView<DefaultDescriptions>) => {
   view.addPlugin(new DefaultPlugin());
 
   await view.init();

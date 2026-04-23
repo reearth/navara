@@ -298,14 +298,14 @@ A plugin registers descriptor classes so they can be used via `view.addMesh()`, 
 import { Plugin } from "@navara/core";
 import type ThreeView from "@navara/three";
 
-type CustomDeclarations = {
+type CustomDescriptions = {
   mesh: MyMeshDescription;
   light: MyLightDescription;
   effect: MyEffectDescription;
 };
 
 class MyPlugin extends Plugin {
-  async init(view: ThreeView<CustomDeclarations>) {
+  async init(view: ThreeView<CustomDescriptions>) {
     view.registerMesh("myMesh", MyMeshDesc);
     view.registerLight("myLight", MyCustomLightDesc);
     view.registerEffect("myEffect", MyCustomEffectDesc);
@@ -315,13 +315,13 @@ class MyPlugin extends Plugin {
 
 ## `@navara/three_default_plugin`
 
-`@navara/three_default_plugin` is a plugin that registers the default descriptors from `@navara/three_default_descs`. It also exports `DefaultDeclarations` — a structured type with `mesh`, `light`, and `effect` fields for type-safe declarations.
+`@navara/three_default_plugin` is a plugin that registers the default descriptors from `@navara/three_default_descs`. It also exports `DefaultDescriptions` — a structured type with `mesh`, `light`, and `effect` fields for type-safe descriptions.
 
 ```typescript
 import ThreeView from "@navara/three";
-import { DefaultPlugin, type DefaultDeclarations } from "@navara/three_default_plugin";
+import { DefaultPlugin, type DefaultDescriptions } from "@navara/three_default_plugin";
 
-const view = new ThreeView<DefaultDeclarations>({ /* options */ });
+const view = new ThreeView<DefaultDescriptions>({ /* options */ });
 view.addPlugin(new DefaultPlugin());
 await view.init();
 ```

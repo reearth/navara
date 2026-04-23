@@ -10,7 +10,7 @@ import ThreeView, {
 import type { GLTFModelDesc } from "@navara/three_default_descs";
 import {
   DefaultPlugin,
-  type DefaultDeclarations,
+  type DefaultDescriptions,
 } from "@navara/three_default_plugin";
 import { Vector3, Quaternion, Euler } from "three";
 import { Pane } from "tweakpane";
@@ -39,9 +39,9 @@ const SCENES = {
 
 let gCurSceneName: keyof typeof SCENES = "ToranomonHillsBIM";
 
-export type CustomDeclarations = DefaultDeclarations;
+export type CustomDescriptions = DefaultDescriptions;
 
-export const run = async (view: ThreeView<CustomDeclarations>) => {
+export const run = async (view: ThreeView<CustomDescriptions>) => {
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
   await view.init();
@@ -128,7 +128,7 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
 };
 
 const updateModelLayerPos = (
-  view: ThreeView<CustomDeclarations>,
+  view: ThreeView<CustomDescriptions>,
   modelLayer: MeshHandle<GLTFModelDesc>,
   lle: number[],
 ) => {
@@ -161,7 +161,7 @@ const updateModelLayerPos = (
 };
 
 const add3DTilesSceneControl = (
-  view: ThreeView<CustomDeclarations>,
+  view: ThreeView<CustomDescriptions>,
   pane: Pane,
   modelLayer: MeshHandle<GLTFModelDesc>,
 ) => {

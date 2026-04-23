@@ -7,7 +7,7 @@ import ThreeView, {
 } from "@navara/three";
 import {
   DefaultPlugin,
-  type DefaultDeclarations,
+  type DefaultDescriptions,
 } from "@navara/three_default_plugin";
 import { VignetteEffect, VignetteTechnique } from "postprocessing";
 import type { Camera } from "three";
@@ -186,13 +186,13 @@ class VignetteEffectDesc extends EffectDesc<
 // Step 3: Use the custom effect descriptor in the application
 // ============================================================
 
-export type CustomDeclarations =
-  | DefaultDeclarations
+export type CustomDescriptions =
+  | DefaultDescriptions
   | {
       effect: VignetteEffectConfig;
     };
 
-export const run = async (view: ThreeView<CustomDeclarations>) => {
+export const run = async (view: ThreeView<CustomDescriptions>) => {
   const defaultPlugin = new DefaultPlugin();
   view.addPlugin(defaultPlugin);
 

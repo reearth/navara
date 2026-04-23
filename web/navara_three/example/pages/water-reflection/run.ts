@@ -6,7 +6,7 @@ import ThreeView, {
 import { SSREffectDesc } from "@navara/three_default_descs";
 import {
   DefaultPlugin,
-  type DefaultDeclarations,
+  type DefaultDescriptions,
 } from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 
@@ -20,9 +20,9 @@ import {
 import { addCameraControl, addDateControl } from "../../helpers/control";
 import { addFieldsToFolder, type FolderFields } from "../../helpers/panel";
 
-export type CustomDeclarations = DefaultDeclarations;
+export type CustomDescriptions = DefaultDescriptions;
 
-export const run = async (view: ThreeView<CustomDeclarations>) => {
+export const run = async (view: ThreeView<CustomDescriptions>) => {
   const defaultPlugin = new DefaultPlugin();
   view.addPlugin(defaultPlugin);
 
@@ -110,7 +110,7 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
   ]);
 };
 
-const addSSRControls = (view: ThreeView<CustomDeclarations>, pane: Pane) => {
+const addSSRControls = (view: ThreeView<CustomDescriptions>, pane: Pane) => {
   // Add SSR effect descriptor
   let ssrLayer = view.addEffect<SSREffectDesc>({
     ssr: {},
@@ -299,7 +299,7 @@ const addSSRControls = (view: ThreeView<CustomDeclarations>, pane: Pane) => {
   );
 };
 
-const addWaterControls = (view: ThreeView<CustomDeclarations>, pane: Pane) => {
+const addWaterControls = (view: ThreeView<CustomDescriptions>, pane: Pane) => {
   // Store the layer description object
   const mvtDesc: LayerDescription = {
     type: "mvt",

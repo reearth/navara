@@ -92,8 +92,8 @@ import {
   type AbortControllers,
   type LayerDescription,
   type BuiltInEffectDescription,
-  type Declarations,
-  type EmptyDeclarations,
+  type Descriptions,
+  type EmptyDescriptions,
   type OmitType,
   type MeshCache,
   type PickedFeature,
@@ -255,7 +255,7 @@ export type ViewEvents = {
  * ```
  */
 export default class ThreeView<
-  D extends Declarations = EmptyDeclarations,
+  D extends Descriptions = EmptyDescriptions,
 > extends EventHandler<ViewEvents> {
   private _camera: ThreeViewCamera;
   private _renderer: WebGLRenderer;
