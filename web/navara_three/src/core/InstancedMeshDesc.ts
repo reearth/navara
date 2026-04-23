@@ -65,7 +65,7 @@ const _swapColor = new ThreeColor();
  * can override the `onInstance*` lifecycle hooks to stay in sync with
  * `add` / `removeAt` / `clear` / `replaceAll` / capacity grows.
  *
- * @typeParam Config - Layer configuration type
+ * @typeParam Config - Descriptor configuration type
  * @typeParam UpdateConfig - Updatable properties type
  * @typeParam ChildConfig - Configuration type for individual instances
  * @typeParam CustomEvent - Additional custom events
@@ -92,7 +92,7 @@ export abstract class InstancedMeshDesc<
   /** Create the shared material for all instances. */
   protected abstract createMaterial(): TMaterial;
 
-  /** Extract the initial array of instance configs from the layer config. */
+  /** Extract the initial array of instance configs from the descriptor config. */
   protected abstract getChildConfigs(): ChildConfig[];
 
   /** Extract the per-instance color, or undefined if no color. */
@@ -173,7 +173,7 @@ export abstract class InstancedMeshDesc<
     }
 
     const mesh = this.raw;
-    invariant(mesh, "Layer must be created before adding instances");
+    invariant(mesh, "Descriptor must be created before adding instances");
 
     const index = mesh.count;
     mesh.setMatrixAt(index, this.composeInstanceMatrix(config));
@@ -196,7 +196,7 @@ export abstract class InstancedMeshDesc<
    */
   removeAt(index: number): void {
     const mesh = this.raw;
-    invariant(mesh, "Layer must be created before removing instances");
+    invariant(mesh, "Descriptor must be created before removing instances");
 
     if (index < 0 || index >= mesh.count) {
       throw new Error(`Index ${index} out of bounds [0, ${mesh.count})`);
@@ -229,7 +229,7 @@ export abstract class InstancedMeshDesc<
   /** Update an instance at the given index with partial config. */
   updateAt(index: number, config: Partial<ChildConfig>): void {
     const mesh = this.raw;
-    invariant(mesh, "Layer must be created before updating instances");
+    invariant(mesh, "Descriptor must be created before updating instances");
 
     if (index < 0 || index >= mesh.count) {
       throw new Error(`Index ${index} out of bounds [0, ${mesh.count})`);
@@ -273,7 +273,10 @@ export abstract class InstancedMeshDesc<
 
     // Re-read after potential grow() which replaces the mesh
     const currentMesh = this.raw;
-    invariant(currentMesh, "Layer must be created before replacing instances");
+    invariant(
+      currentMesh,
+      "Descriptor must be created before replacing instances",
+    );
     currentMesh.count = configs.length;
 
     for (let i = 0; i < configs.length; i++) {
@@ -332,7 +335,7 @@ export abstract class InstancedMeshDesc<
    */
   private grow(): void {
     const oldMesh = this.raw;
-    invariant(oldMesh, "Layer must be created before growing");
+    invariant(oldMesh, "Descriptor must be created before growing");
 
     const newCapacity = Math.max(
       this.capacity * GROWTH_FACTOR,

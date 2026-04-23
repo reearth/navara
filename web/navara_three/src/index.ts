@@ -1207,29 +1207,29 @@ export default class ThreeView<
     }
 
     // Create mesh descriptor instance
-    const meshLayer = this.registries.mesh.create(meshType, config);
+    const meshDesc = this.registries.mesh.create(meshType, config);
 
     // Initialize the mesh
-    meshLayer.onCreate();
+    meshDesc.onCreate();
 
     // Set up update listener
-    if (meshLayer.update) {
-      this.on("preRender", meshLayer.update.bind(meshLayer));
+    if (meshDesc.update) {
+      this.on("preRender", meshDesc.update.bind(meshDesc));
     }
 
-    if (meshLayer.onResize) {
-      this.on("resize", meshLayer.onResize.bind(meshLayer));
+    if (meshDesc.onResize) {
+      this.on("resize", meshDesc.onResize.bind(meshDesc));
 
       const canvasSize = this._getCanvasSize();
       if (canvasSize) {
-        meshLayer.onResize(canvasSize.width, canvasSize.height);
+        meshDesc.onResize(canvasSize.width, canvasSize.height);
       }
     }
 
     // Trigger re-render
-    meshLayer.on("needsUpdate", this.forceUpdate);
+    meshDesc.on("needsUpdate", this.forceUpdate);
 
-    const l = new MeshHandle(meshLayer);
+    const l = new MeshHandle(meshDesc);
 
     // Store the mesh descriptor
     this.layersManager.add(l);
@@ -1254,20 +1254,20 @@ export default class ThreeView<
     }
 
     // Create light descriptor instance
-    const lightLayer = this.registries.light.create(lightType, config);
+    const lightDesc = this.registries.light.create(lightType, config);
 
     // Initialize the light
-    lightLayer.onCreate();
+    lightDesc.onCreate();
 
-    // Set up update listener if the layer has an update method
-    if (lightLayer.update) {
-      this.on("preRender", lightLayer.update.bind(lightLayer));
+    // Set up update listener if the descriptor has an update method
+    if (lightDesc.update) {
+      this.on("preRender", lightDesc.update.bind(lightDesc));
     }
 
     // Trigger re-render
-    lightLayer.on("needsUpdate", this.forceUpdate);
+    lightDesc.on("needsUpdate", this.forceUpdate);
 
-    const l = new LightHandle(lightLayer);
+    const l = new LightHandle(lightDesc);
 
     // Store the light descriptor
     this.layersManager.add(l);
@@ -1294,20 +1294,20 @@ export default class ThreeView<
     }
 
     // Create effect descriptor instance
-    const effectLayer = this.registries.effect.create(effectType, config);
+    const effectDesc = this.registries.effect.create(effectType, config);
 
     // Initialize the effect
-    effectLayer.onCreate();
+    effectDesc.onCreate();
 
-    // Set up update listener if the layer has an update method
-    if (effectLayer.update) {
-      this.on("preRender", effectLayer.update.bind(effectLayer));
+    // Set up update listener if the descriptor has an update method
+    if (effectDesc.update) {
+      this.on("preRender", effectDesc.update.bind(effectDesc));
     }
 
     // Trigger re-render
-    effectLayer.on("needsUpdate", this.forceUpdate);
+    effectDesc.on("needsUpdate", this.forceUpdate);
 
-    const l = new EffectHandle(effectLayer);
+    const l = new EffectHandle(effectDesc);
 
     // Store the effect descriptor
     this.layersManager.add(l);
@@ -1435,7 +1435,7 @@ export default class ThreeView<
     this.registerEffect("selectiveBloom", SelectiveBloomEffectDesc);
     this.registerEffect("selectiveOutline", SelectiveOutlineEffectDesc);
     // TODO: Curve out opaque pass from MRT pass.
-    // this.registerEffect("opaque", OpaquePassEffectLayer);
+    // this.registerEffect("opaque", OpaquePassEffectDesc);
     this.registerEffect("transparent", TransparentPassEffectDesc);
 
     this.registerEffect("final", FinalCopyEffectDesc);

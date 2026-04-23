@@ -26,7 +26,7 @@ export type HandleEvent = {
 export class BaseHandle<
   T extends BaseDesc = BaseDesc,
 > extends EventHandler<HandleEvent> {
-  constructor(private layer: T) {
+  constructor(private desc: T) {
     super();
   }
 
@@ -38,7 +38,7 @@ export class BaseHandle<
   update(
     updates: T extends BaseDesc<infer _A, infer B> ? B : BaseDescConfigUpdate,
   ): void {
-    this.layer.onUpdateConfig(updates);
+    this.desc.onUpdateConfig(updates);
   }
 
   /**
@@ -46,7 +46,7 @@ export class BaseHandle<
    * Use this to access descriptor-specific methods and properties not exposed through the handle.
    */
   get ref(): T {
-    return this.layer;
+    return this.desc;
   }
 
   /**
@@ -56,7 +56,7 @@ export class BaseHandle<
   delete(): void {
     if (this._deleted) return;
     this._deleted = true;
-    this.layer.onDestroy();
+    this.desc.onDestroy();
     this.emit("deleted");
   }
 
@@ -66,14 +66,14 @@ export class BaseHandle<
    * Gets the unique identifier.
    */
   get id(): string {
-    return this.layer.id;
+    return this.desc.id;
   }
 
   /**
    * Gets whether the descriptor is currently visible in the scene.
    */
   get visible(): boolean {
-    return this.layer.visible;
+    return this.desc.visible;
   }
 
   /**
@@ -81,7 +81,7 @@ export class BaseHandle<
    * @param visible - True to show, false to hide
    */
   set visible(visible: boolean) {
-    this.layer.visible = visible;
+    this.desc.visible = visible;
   }
 }
 

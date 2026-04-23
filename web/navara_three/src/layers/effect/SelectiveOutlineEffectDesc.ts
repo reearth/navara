@@ -146,7 +146,7 @@ export class SelectiveOutlineEffectDesc extends SelectiveEffectDesc<
  * Reads from EffectIds Buffer in the GBuffer MRT.
  */
 class SelectiveOutlinePass extends PostProcessingPass {
-  private layer: SelectiveOutlineEffectDesc;
+  private desc: SelectiveOutlineEffectDesc;
 
   private maskRT: WebGLRenderTarget;
   private edgeRT: WebGLRenderTarget;
@@ -165,14 +165,14 @@ class SelectiveOutlinePass extends PostProcessingPass {
 
   private size = new Vector2();
 
-  constructor(layer: SelectiveOutlineEffectDesc) {
+  constructor(desc: SelectiveOutlineEffectDesc) {
     super("SelectiveOutlinePass");
-    this.layer = layer;
+    this.desc = desc;
 
-    const renderer = layer.viewContext.getRenderer();
+    const renderer = desc.viewContext.getRenderer();
     const renderSize = renderer.getSize(new Vector2());
     const resolutionScale =
-      layer.layerConfig.selectiveOutline.resolutionScale ?? 1.0;
+      desc.layerConfig.selectiveOutline.resolutionScale ?? 1.0;
     const initialWidth = Math.floor(renderSize.x * resolutionScale);
     const initialHeight = Math.floor(renderSize.y * resolutionScale);
 
@@ -332,9 +332,9 @@ class SelectiveOutlinePass extends PostProcessingPass {
     });
 
     this.setParameters(
-      layer.outlineColor,
-      layer.outlineThickness,
-      layer.outlineEdgeStrength,
+      desc.outlineColor,
+      desc.outlineThickness,
+      desc.outlineEdgeStrength,
     );
 
     this.compositeScene = new Scene();
@@ -348,14 +348,14 @@ class SelectiveOutlinePass extends PostProcessingPass {
       depthBuffer: false,
       stencilBuffer: false,
     });
-    this.maskRT.texture.name = `SelectiveOutline_Mask_${layer.id}`;
+    this.maskRT.texture.name = `SelectiveOutline_Mask_${desc.id}`;
 
     this.edgeRT = new WebGLRenderTarget(initialWidth, initialHeight, {
       format: RGBAFormat,
       depthBuffer: false,
       stencilBuffer: false,
     });
-    this.edgeRT.texture.name = `SelectiveOutline_Edge_${layer.id}`;
+    this.edgeRT.texture.name = `SelectiveOutline_Edge_${desc.id}`;
 
     this.size.set(initialWidth, initialHeight);
     this.needsSwap = true;
@@ -386,15 +386,15 @@ class SelectiveOutlinePass extends PostProcessingPass {
     _deltaTime?: number,
   ): void {
     const resScale =
-      this.layer.layerConfig.selectiveOutline.resolutionScale ?? 1.0;
+      this.desc.layerConfig.selectiveOutline.resolutionScale ?? 1.0;
     this.updateSizes(
       Math.floor(inputBuffer.width * resScale),
       Math.floor(inputBuffer.height * resScale),
     );
 
     // Get buffer textures
-    const effectIdsBuffer = this.layer.getEffectIdsBuffer();
-    const slot = this.layer.getEffectSlot();
+    const effectIdsBuffer = this.desc.getEffectIdsBuffer();
+    const slot = this.desc.getEffectSlot();
 
     // Passthrough if buffers not available — bypass composite to avoid null tEdge sampling
     if (!effectIdsBuffer || slot < 0) {

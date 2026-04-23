@@ -331,13 +331,13 @@ export abstract class EffectDesc<
    * @param key - The static `key` of the effect descriptor to find.
    * @returns The effect descriptor instance, or `undefined` if not found.
    */
-  find<Layer extends EffectDesc = EffectDesc>(key: string) {
+  find<T extends EffectDesc = EffectDesc>(key: string) {
     for (const handle of this.ctx._getEffects()) {
-      const layer = handle.ref;
-      if (layer.getKey() !== key) {
+      const desc = handle.ref;
+      if (desc.getKey() !== key) {
         continue;
       }
-      return layer as Layer;
+      return desc as T;
     }
   }
 }

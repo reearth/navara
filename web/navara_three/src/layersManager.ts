@@ -50,21 +50,14 @@ export class LayersManager {
     }
   }
 
-  *getEffectLayers(): Generator<EffectHandle> {
+  *getEffectDescs(): Generator<EffectHandle> {
     for (const handle of this.layers.values()) {
       if (!(handle instanceof BaseHandle)) continue;
 
-      const layer = handle.ref;
-      if (!(layer instanceof EffectDesc)) continue;
+      const desc = handle.ref;
+      if (!(desc instanceof EffectDesc)) continue;
 
       yield handle as EffectHandle;
-    }
-  }
-
-  *getDeclarationLayers(): Generator<BaseHandle> {
-    for (const handle of this.layers.values()) {
-      if (!(handle instanceof BaseHandle)) continue;
-      yield handle;
     }
   }
 }
