@@ -809,3 +809,88 @@ const view = new ThreeView({});
 view.addPlugin(pluginA).addPlugin(pluginB);
 await view.init();
 ```
+
+### addFontFamily()
+
+複数のフェイスから構成されるフォントファミリを登録します。各フェイスは Unicode 範囲の集合をカバーし、個別のフォントファイル URL（ttf、otf、woff、woff2）を指します。ファミリを登録すると、テキストレイヤは [`material.font`](../../resource-layer/text-material/#font) で `family` 名を指定してこのファミリを参照できます。ラベルの `text` に含まれる文字の Unicode 範囲をカバーするフェイスのみがダウンロードされます。
+
+**フェイスの優先順位とフォールバック:**
+
+- フェイスは `faces` 配列に並んだ順に評価されます。`text` 内の各コードポイントには、`unicodeRanges` にそのコードポイントを含む最初のフェイスが使用されます。したがって範囲が重複する場合は、先に定義されたエントリが優先されます。
+- どのフェイスにもカバーされないコードポイントは、先頭のフェイス（`faces[0]`）にフォールバックします。このため、先頭のフェイスは、宣言された `unicodeRanges` に含まれない文字のためにもダウンロードされる可能性があります。
+
+この挙動を予測しやすくするため、フォールバックとして使いたいフェイスをインデックス `0` に配置してください。残りのフェイスはその後に、範囲が重複した場合に優先度が高い順に並べてください。
+
+`ThreeView` インスタンスを返すため、メソッドチェーンが可能です。
+
+**Syntax:**
+
+```tsx
+addFontFamily(family: FontFamily): this
+```
+
+**Parameters:**
+
+- `family`: `FontFamily` オブジェクト。
+  - `family`: `material.font` からこのファミリを参照するために使う一意の名前。
+  - `faces`: `FontFace` エントリの配列。各エントリは以下を持ちます:
+    - `url`: フォントファイルの URL。
+    - `unicodeRanges`: このフェイスがカバーするコードポイント範囲 `{ from, to }`（両端を含む）の配列。
+
+**Example:**
+
+```typescript
+view.addFontFamily({
+  family: "MapFont",
+  faces: [
+    {
+      url: "/fonts/latin.woff2",
+      unicodeRanges: [{ from: 0x0000, to: 0x024f }],
+    },
+    {
+      url: "/fonts/cjk.woff2",
+      unicodeRanges: [{ from: 0x4e00, to: 0x9fff }],
+    },
+  ],
+});
+
+const layer = view.addLayer({
+  type: "geojson",
+  data: { url: "/cities.geojson" },
+  text: {
+    font: "MapFont",
+  },
+});
+
+layer.on("featureUpdated", ({ evaluator }) => {
+  evaluator.evaluate(
+    ({ properties }) => {
+      const name = properties?.["name"] as string | undefined;
+      return { text: name ?? "", show: !!name };
+    },
+    { filters: ["name"] },
+  );
+});
+```
+
+### removeFontFamily()
+
+登録済みのフォントファミリを名前で削除します。削除後もこのファミリを参照しているテキストレイヤは、該当ファミリを解決できなくなります。
+
+`ThreeView` インスタンスを返すため、メソッドチェーンが可能です。
+
+**Syntax:**
+
+```tsx
+removeFontFamily(family: string): this
+```
+
+**Parameters:**
+
+- `family`: `addFontFamily()` に渡した `family` 名。
+
+**Example:**
+
+```typescript
+view.removeFontFamily("MapFont");
+```

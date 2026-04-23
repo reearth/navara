@@ -885,3 +885,88 @@ const view = new ThreeView({});
 view.addPlugin(pluginA).addPlugin(pluginB);
 await view.init();
 ```
+
+### addFontFamily()
+
+Registers a font family composed of multiple faces. Each face covers a set of unicode ranges and points to a separate font file URL (ttf, otf, woff, or woff2). Once a family is registered, a text layer can reference it by its `family` name through [`material.font`](../../resource-layer/text-material/#font); only the faces whose unicode ranges cover the characters in the label's `text` are downloaded.
+
+**Face priority and fallback:**
+
+- Faces are evaluated in the order they appear in `faces`. For each codepoint in `text`, the first face whose `unicodeRanges` contain the codepoint is used — so if ranges overlap, the earlier entry wins.
+- Codepoints that are not covered by any face fall back to the first face (`faces[0]`). This means the first face may also be downloaded for uncovered characters, even if its declared `unicodeRanges` do not include them.
+
+To make this behavior predictable, put the face you want used as the fallback at index `0`. Then order the remaining faces after it so that, when their ranges overlap, earlier entries have higher priority.
+
+Returns the `ThreeView` instance so calls can be chained.
+
+**Syntax:**
+
+```tsx
+addFontFamily(family: FontFamily): this
+```
+
+**Parameters:**
+
+- `family`: A `FontFamily` object.
+  - `family`: Unique name used to reference the family from `material.font`.
+  - `faces`: Array of `FontFace` entries, each with:
+    - `url`: URL of the font file.
+    - `unicodeRanges`: Array of `{ from, to }` code point ranges (inclusive) covered by this face.
+
+**Example:**
+
+```typescript
+view.addFontFamily({
+  family: "MapFont",
+  faces: [
+    {
+      url: "/fonts/latin.woff2",
+      unicodeRanges: [{ from: 0x0000, to: 0x024f }],
+    },
+    {
+      url: "/fonts/cjk.woff2",
+      unicodeRanges: [{ from: 0x4e00, to: 0x9fff }],
+    },
+  ],
+});
+
+const layer = view.addLayer({
+  type: "geojson",
+  data: { url: "/cities.geojson" },
+  text: {
+    font: "MapFont",
+  },
+});
+
+layer.on("featureUpdated", ({ evaluator }) => {
+  evaluator.evaluate(
+    ({ properties }) => {
+      const name = properties?.["name"] as string | undefined;
+      return { text: name ?? "", show: !!name };
+    },
+    { filters: ["name"] },
+  );
+});
+```
+
+### removeFontFamily()
+
+Unregisters a previously added font family by name. Text layers that still reference the family will no longer be able to resolve it.
+
+Returns the `ThreeView` instance so calls can be chained.
+
+**Syntax:**
+
+```tsx
+removeFontFamily(family: string): this
+```
+
+**Parameters:**
+
+- `family`: The `family` name passed to `addFontFamily()`.
+
+**Example:**
+
+```typescript
+view.removeFontFamily("MapFont");
+```
