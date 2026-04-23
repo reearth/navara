@@ -60,11 +60,4 @@ export class LayersManager {
       yield handle as EffectHandle;
     }
   }
-
-  *getDescriptionHandles(): Generator<BaseHandle> {
-    for (const handle of this.layers.values()) {
-      if (!(handle instanceof BaseHandle)) continue;
-      yield handle;
-    }
-  }
 }

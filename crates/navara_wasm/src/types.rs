@@ -97,7 +97,7 @@ impl TerrainLayerDescription {
 /// **Note**: Model appearance is intentionally not supported for GeoJSON layers.
 /// The batched feature pipeline requires per-batch coordinate transforms (model matrices)
 /// and animation support, which are incompatible with the current GeoJSON batching approach.
-/// For 3D model rendering at geographic coordinates, use a mesh description (e.g. `GLTFModelMeshDesc`)
+/// For 3D model rendering at geographic coordinates, use a mesh description (e.g. `GLTFModelDesc`)
 /// instead.
 #[wasm_bindgen]
 #[derive(Debug, Default, Clone, Deserialize)]
