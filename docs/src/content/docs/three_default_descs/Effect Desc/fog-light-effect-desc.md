@@ -228,7 +228,7 @@ const streetLights = [
   { position: { x: 0, y: 50, z: 100 }, color: new Color().setHex(0xffaa00), intensity: 8, radius: 200 },
 ];
 
-const fogLayerDesc = {
+const fogEffectDesc = {
   fogLight: {
     lights: streetLights,
     fogDensity: 0.7,
@@ -239,7 +239,7 @@ const fogLayerDesc = {
   visible: true,
 };
 
-view.addEffect<FogLightEffectDesc>(fogLayerDesc);
+view.addEffect<FogLightEffectDesc>(fogEffectDesc);
 ```
 
 ### Dynamically adding lights to a scene
@@ -254,7 +254,7 @@ await view.init();
 const fogLights: FogLightDefinition[] = [];
 
 // Add fog light descriptor
-const fogLayer = view.addEffect<FogLightEffectDesc>({
+const fogDesc = view.addEffect<FogLightEffectDesc>({
   fogLight: {
     lights: fogLights,
     fogDensity: 0.7,
@@ -274,7 +274,7 @@ function addLight(x: number, y: number, z: number) {
     radius: 300,
   });
 
-  fogLayer.update({
+  fogDesc.update({
     fogLight: {
       lights: fogLights,
     },
@@ -292,7 +292,7 @@ await view.init();
 
 const isNight = view.atmosphere.isAtNight(view.camera.positionECEF); // Determined based on time
 
-const fogLayer = view.addEffect<FogLightEffectDesc>({
+const fogDesc = view.addEffect<FogLightEffectDesc>({
   fogLight: {
     lights: [
       { position: { x: 0, y: 100, z: 0 }, color: new Color().setHex(0xffffff), intensity: 10, radius: 500 },
@@ -304,7 +304,7 @@ const fogLayer = view.addEffect<FogLightEffectDesc>({
 
 // Toggle visibility based on time
 function updateVisibility(nightMode: boolean) {
-  fogLayer.update({
+  fogDesc.update({
     visible: nightMode,
   });
 }

@@ -196,7 +196,7 @@ sidebar:
 **Example:**
 
 ```typescript
-const clips = modelLayer.getAnimationAvailable();
+const clips = modelDesc.getAnimationAvailable();
 console.log(clips); // ["Walk", "Run", "Jump"]
 ```
 
@@ -215,7 +215,7 @@ console.log(clips); // ["Walk", "Run", "Jump"]
 **Example:**
 
 ```typescript
-const details = modelLayer.getAnimationDetails("Walk");
+const details = modelDesc.getAnimationDetails("Walk");
 console.log(details);
 // { name: "Walk", duration: 2.5, tracks: 45, isLooping: true, timeScale: 1.0 }
 ```
@@ -231,7 +231,7 @@ console.log(details);
 **Example:**
 
 ```typescript
-const state = modelLayer.getAnimationCurrentState();
+const state = modelDesc.getAnimationCurrentState();
 console.log(state);
 // {
 //   isPlaying: true,
@@ -258,7 +258,7 @@ console.log(state);
 **Example:**
 
 ```typescript
-modelLayer.playAnimation("Run");
+modelDesc.playAnimation("Run");
 ```
 
 ### crossFadeAnimation(from: string, to: string, duration: number)
@@ -278,7 +278,7 @@ modelLayer.playAnimation("Run");
 **Example:**
 
 ```typescript
-modelLayer.crossFadeAnimation("Walk", "Run", 0.5);
+modelDesc.crossFadeAnimation("Walk", "Run", 0.5);
 ```
 
 ### blendAnimations(animations: { name: string, weight: number }[])
@@ -292,7 +292,7 @@ modelLayer.crossFadeAnimation("Walk", "Run", 0.5);
 **Example:**
 
 ```typescript
-modelLayer.blendAnimations([
+modelDesc.blendAnimations([
   { name: "Walk", weight: 0.7 },
   { name: "Run", weight: 0.3 }
 ]);
@@ -305,7 +305,7 @@ modelLayer.blendAnimations([
 **Example:**
 
 ```typescript
-modelLayer.stopAnimation();
+modelDesc.stopAnimation();
 ```
 
 ### pauseAnimation()
@@ -315,7 +315,7 @@ modelLayer.stopAnimation();
 **Example:**
 
 ```typescript
-modelLayer.pauseAnimation();
+modelDesc.pauseAnimation();
 ```
 
 ### resumeAnimation()
@@ -325,7 +325,7 @@ modelLayer.pauseAnimation();
 **Example:**
 
 ```typescript
-modelLayer.resumeAnimation();
+modelDesc.resumeAnimation();
 ```
 
 ### setAnimationSpeed(speed: number)
@@ -339,7 +339,7 @@ modelLayer.resumeAnimation();
 **Example:**
 
 ```typescript
-modelLayer.setAnimationSpeed(2.0); // 2倍速
+modelDesc.setAnimationSpeed(2.0); // 2倍速
 ```
 
 ### setAnimationLoop(loop: boolean)
@@ -353,7 +353,7 @@ modelLayer.setAnimationSpeed(2.0); // 2倍速
 **Example:**
 
 ```typescript
-modelLayer.setAnimationLoop(false);
+modelDesc.setAnimationLoop(false);
 ```
 
 ### setAnimationWeight(name: string, weight: number)
@@ -368,7 +368,7 @@ modelLayer.setAnimationLoop(false);
 **Example:**
 
 ```typescript
-modelLayer.setAnimationWeight("Walk", 0.5);
+modelDesc.setAnimationWeight("Walk", 0.5);
 ```
 
 ## イベント
@@ -380,7 +380,7 @@ modelLayer.setAnimationWeight("Walk", 0.5);
 **Example:**
 
 ```typescript
-modelLayer.on("load", () => {
+modelDesc.on("load", () => {
   console.log("Model loaded!");
 });
 ```
@@ -392,9 +392,9 @@ modelLayer.on("load", () => {
 **Example:**
 
 ```typescript
-modelLayer.on("animationReady", () => {
+modelDesc.on("animationReady", () => {
   console.log("Animations ready!");
-  const clips = modelLayer.getAnimationAvailable();
+  const clips = modelDesc.getAnimationAvailable();
   console.log("Available clips:", clips);
 });
 ```
@@ -410,7 +410,7 @@ const view = new ThreeView();
 await view.init();
 
 // GLTFModelDescを追加
-const modelLayer = view.addMesh<GLTFModelDesc>({
+const modelDesc = view.addMesh<GLTFModelDesc>({
   gltfModel: {
     url: "https://example.com/models/character.glb",
     castShadow: true,
@@ -467,14 +467,14 @@ blendedModel.ref.on("animationReady", () => {
 
 ```typescript
 // URLを変更してモデルを再読み込み
-modelLayer.update({
+modelDesc.update({
   gltfModel: {
     url: "https://example.com/models/new-model.glb",
   },
 });
 
 // アニメーション速度を変更
-modelLayer.update({
+modelDesc.update({
   gltfModel: {
     animationSpeed: 2.0,
   },

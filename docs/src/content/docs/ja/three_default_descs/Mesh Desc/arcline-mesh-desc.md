@@ -299,7 +299,7 @@ const view = new ThreeView();
 await view.init();
 
 // ArclineMeshDescを追加
-const arclineLayer = view.addMesh<ArclineMeshDesc>({
+const arclineDesc = view.addMesh<ArclineMeshDesc>({
   arcLines: {
     thickness: 2,
     srcColor: 0xff0000,
@@ -317,7 +317,7 @@ const arclineLayer = view.addMesh<ArclineMeshDesc>({
 ### 複数のアークライン
 
 ```typescript
-const arclineLayer = view.addMesh<ArclineMeshDesc>({
+const arclineDesc = view.addMesh<ArclineMeshDesc>({
   arcLines: [
     {
       thickness: 2,
@@ -348,7 +348,7 @@ const arclineLayer = view.addMesh<ArclineMeshDesc>({
 
 ```typescript
 // Descriptorの設定を更新
-arclineLayer.update({
+arclineDesc.update({
   arcLines: {
     thickness: 5,
     opacity: 0.5,

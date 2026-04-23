@@ -141,7 +141,7 @@ const view = new ThreeView();
 await view.init();
 
 // Add selective outline effect descriptor
-const outlineLayer = view.addEffect<SelectiveOutlineEffectDesc>({
+const outlineDesc = view.addEffect<SelectiveOutlineEffectDesc>({
   selectiveOutline: {
     color: new Color().setHex(0xffffff),
     thickness: 1.0,
@@ -150,13 +150,13 @@ const outlineLayer = view.addEffect<SelectiveOutlineEffectDesc>({
 });
 
 // Apply outline effect to an object
-const cubeLayer = view.addMesh<BoxMeshDesc>({
+const cubeDesc = view.addMesh<BoxMeshDesc>({
   box: {
     width: 100,
     height: 100,
     depth: 100,
     color: new Color().setHex(0x0088ff),
-    effectIds: [outlineLayer.id], // Apply outline effect
+    effectIds: [outlineDesc.id], // Apply outline effect
     selectiveEffectOcclusion: "normal",
   },
   position: { x: 0, y: 0, z: 1000 },
@@ -177,7 +177,7 @@ await view.init();
 plugin.addDefaultPhotorealScene();
 
 // Add a thick red outline
-const outlineLayer = view.addEffect<SelectiveOutlineEffectDesc>({
+const outlineDesc = view.addEffect<SelectiveOutlineEffectDesc>({
   selectiveOutline: {
     color: new Color().setHex(0xff0000),
     thickness: 2.5,
@@ -195,7 +195,7 @@ const view = new ThreeView();
 await view.init();
 
 // Performance-oriented settings
-const outlineLayer = view.addEffect<SelectiveOutlineEffectDesc>({
+const outlineDesc = view.addEffect<SelectiveOutlineEffectDesc>({
   selectiveOutline: {
     color: new Color().setHex(0xffffff),
     thickness: 1.0,
@@ -213,7 +213,7 @@ import ThreeView, { SelectiveOutlineEffectDesc, Color } from "@navara/three";
 const view = new ThreeView();
 await view.init();
 
-const outlineLayer = view.addEffect<SelectiveOutlineEffectDesc>({
+const outlineDesc = view.addEffect<SelectiveOutlineEffectDesc>({
   selectiveOutline: {
     color: new Color().setHex(0xffffff),
     thickness: 1.0,
@@ -221,7 +221,7 @@ const outlineLayer = view.addEffect<SelectiveOutlineEffectDesc>({
 });
 
 // Update parameters later
-outlineLayer.update({
+outlineDesc.update({
   selectiveOutline: {
     color: new Color().setHex(0x00ff00), // Green
     thickness: 2.0,
@@ -237,7 +237,7 @@ import ThreeView, { SelectiveOutlineEffectDesc, Color } from "@navara/three";
 const view = new ThreeView();
 await view.init();
 
-const outlineLayer = view.addEffect<SelectiveOutlineEffectDesc>({
+const outlineDesc = view.addEffect<SelectiveOutlineEffectDesc>({
   selectiveOutline: {
     color: new Color().setHex(0xff0000),
     thickness: 2.0,
@@ -253,7 +253,7 @@ const buildingsLayer = view.addLayer({
   model: {
     show: true,
     color: new Color().setHex(0xffffff),
-    effectIds: [outlineLayer.id],
+    effectIds: [outlineDesc.id],
     selectiveEffectOcclusion: "normal",
   },
 });
@@ -273,7 +273,7 @@ import ThreeView, {
 const view = new ThreeView();
 await view.init();
 
-const outlineLayer = view.addEffect<SelectiveOutlineEffectDesc>({
+const outlineDesc = view.addEffect<SelectiveOutlineEffectDesc>({
   selectiveOutline: {
     color: new Color().setHex(0x00ff00),
     thickness: 2.0,
@@ -286,7 +286,7 @@ const highlightedCube = view.addMesh<BoxMeshDesc>({
     width: 100,
     height: 100,
     depth: 100,
-    effectIds: [outlineLayer.id],
+    effectIds: [outlineDesc.id],
     selectiveEffectOcclusion: "silhouette", // Visible even when occluded
   },
   position: { x: 0, y: 0, z: 500 },
@@ -306,13 +306,13 @@ import ThreeView, {
 const view = new ThreeView();
 await view.init();
 
-const bloomLayer = view.addEffect<SelectiveBloomEffectDesc>({
+const bloomDesc = view.addEffect<SelectiveBloomEffectDesc>({
   selectiveBloom: {
     strength: 1.0,
   },
 });
 
-const outlineLayer = view.addEffect<SelectiveOutlineEffectDesc>({
+const outlineDesc = view.addEffect<SelectiveOutlineEffectDesc>({
   selectiveOutline: {
     color: new Color().setHex(0xff0000),
     thickness: 2.0,
@@ -320,14 +320,14 @@ const outlineLayer = view.addEffect<SelectiveOutlineEffectDesc>({
 });
 
 // Apply both effects
-const cubeLayer = view.addMesh<BoxMeshDesc>({
+const cubeDesc = view.addMesh<BoxMeshDesc>({
   box: {
     width: 100,
     height: 100,
     depth: 100,
     color: new Color().setHex(0xff0000),
     emissiveIntensity: 1.0,
-    effectIds: [bloomLayer.id, outlineLayer.id], // Apply both
+    effectIds: [bloomDesc.id, outlineDesc.id], // Apply both
     selectiveEffectOcclusion: "normal",
   },
   position: { x: 0, y: 0, z: 1000 },

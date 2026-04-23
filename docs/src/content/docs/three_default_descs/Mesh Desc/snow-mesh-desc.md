@@ -284,7 +284,7 @@ const view = new ThreeView();
 await view.init();
 
 // Add a SnowMeshDesc
-const snowLayer = view.addMesh<SnowMeshDesc>({
+const snowDesc = view.addMesh<SnowMeshDesc>({
   snow: {
     particleCount: 3000,
     areaWidth: 500,
@@ -323,7 +323,7 @@ const position = geodeticToVector3(
 );
 
 // Add a SnowMeshDesc at a specific position
-const snowLayer = view.addMesh<SnowMeshDesc>({
+const snowDesc = view.addMesh<SnowMeshDesc>({
   visible: true,
   position: position,
   snow: {
@@ -335,5 +335,5 @@ const snowLayer = view.addMesh<SnowMeshDesc>({
 });
 
 // Toggle visibility
-snowLayer.visible = false;
+snowDesc.visible = false;
 ```

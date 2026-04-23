@@ -23,10 +23,7 @@ export {
   type InstancedMeshUpdate,
   type InstancedChildConfig,
 } from "./InstancedMeshDesc";
-export {
-  MeshDescRegistry,
-  type MeshDescConstructor,
-} from "./MeshDescRegistry";
+export { MeshDescRegistry, type MeshDescConstructor } from "./MeshDescRegistry";
 export { LightDesc, type LightUpdate, type LightConfig } from "./LightDesc";
 export {
   LightDescRegistry,

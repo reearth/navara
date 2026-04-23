@@ -316,7 +316,7 @@ const view = new ThreeView();
 await view.init();
 
 // SphereMeshDescを追加
-const sphereLayer = view.addMesh<SphereMeshDesc>({
+const sphereDesc = view.addMesh<SphereMeshDesc>({
   sphere: {
     radius: 100,
     widthSegments: 32,

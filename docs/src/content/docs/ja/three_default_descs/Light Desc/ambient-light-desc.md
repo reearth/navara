@@ -116,7 +116,7 @@ view.addLight<AmbientLightDesc>({
 
 ```typescript
 // 非表示状態で環境光を追加し、後から表示切り替え
-const ambientLightLayer = view.addLight<AmbientLightDesc>({
+const ambientLightDesc = view.addLight<AmbientLightDesc>({
   visible: false,
   ambient: {
     intensity: 1,
@@ -125,7 +125,7 @@ const ambientLightLayer = view.addLight<AmbientLightDesc>({
 });
 
 // 表示/非表示を切り替え
-ambientLightLayer.visible = true;
+ambientLightDesc.visible = true;
 ```
 
 ## 注意事項

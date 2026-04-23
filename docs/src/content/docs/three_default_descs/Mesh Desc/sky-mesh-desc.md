@@ -146,7 +146,7 @@ const view = new ThreeView();
 await view.init();
 
 // Add a SkyMeshDesc
-const skyLayer = view.addMesh<SkyMeshDesc>({
+const skyDesc = view.addMesh<SkyMeshDesc>({
   sky: {
     visible: true,
     sun: true,

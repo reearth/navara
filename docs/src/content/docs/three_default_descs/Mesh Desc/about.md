@@ -49,7 +49,7 @@ view.registerMesh("box", BoxMeshDesc);
 await view.init();
 
 // Add a BoxMeshDesc
-const boxLayer = view.addMesh<BoxMeshDesc>({
+const boxDesc = view.addMesh<BoxMeshDesc>({
   box: {
     width: 100,
     height: 100,
@@ -102,7 +102,7 @@ const position = geodeticToVector3({
 });
 
 // Add a mesh descriptor with the converted coordinates
-const sphereLayer = view.addMesh<SphereMeshDesc>({
+const sphereDesc = view.addMesh<SphereMeshDesc>({
   sphere: {
     radius: 100,
     color: new Color().setHex(0x00aaff),
@@ -146,7 +146,7 @@ const quaternion = new Quaternion().setFromUnitVectors(up, normal);
 const euler = new Euler().setFromQuaternion(quaternion);
 
 // Place the model along the Earth's surface
-const modelLayer = view.addMesh<GLTFModelDesc>({
+const modelDesc = view.addMesh<GLTFModelDesc>({
   gltfModel: {
     url: "/models/building.gltf",
   },
@@ -195,7 +195,7 @@ import {
 } from "@navara/three";
 
 // Get the current position of the mesh
-const worldPosition = meshLayer.ref.getWorldPosition();
+const worldPosition = meshDesc.ref.getWorldPosition();
 
 // Convert from ECEF to geodetic coordinates
 const geodetic = vector3ToGeodetic(worldPosition);

@@ -4,8 +4,11 @@ import { DescRegistry } from "./DescRegistry";
 import { MeshDesc, type MeshConfig } from "./MeshDesc";
 import type { ViewContext } from "./ViewContext";
 
-export type MeshDescConstructor<TConfig extends MeshConfig = MeshConfig> =
-  new (view: ThreeView, ctx: ViewContext, config: TConfig) => MeshDesc;
+export type MeshDescConstructor<TConfig extends MeshConfig = MeshConfig> = new (
+  view: ThreeView,
+  ctx: ViewContext,
+  config: TConfig,
+) => MeshDesc;
 
 export class MeshDescRegistry extends DescRegistry<
   MeshDescConstructor,

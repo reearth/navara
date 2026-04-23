@@ -41,7 +41,7 @@ view.registerEffect("aerialPerspective", AerialPerspectiveEffectDesc);
 
 await view.init();
 
-const aerialPerspectiveLayer = view.addEffect<AerialPerspectiveEffectDesc>({
+const aerialPerspectiveDesc = view.addEffect<AerialPerspectiveEffectDesc>({
   aerialPerspective: {},
 });
 ```

@@ -116,7 +116,7 @@ const view = new ThreeView();
 await view.init();
 
 // Add a GlowGlobeMeshDesc
-const glowLayer = view.addMesh<GlowGlobeMeshDesc>({
+const glowDesc = view.addMesh<GlowGlobeMeshDesc>({
   glowGlobe: {
     radiusScale: 1.2,
     coefficient: 0.5,
@@ -132,7 +132,7 @@ const glowLayer = view.addMesh<GlowGlobeMeshDesc>({
 ```typescript
 import { Color } from "@navara/three";
 
-const glowLayer = view.addMesh<GlowGlobeMeshDesc>({
+const glowDesc = view.addMesh<GlowGlobeMeshDesc>({
   glowGlobe: {
     radiusScale: 1.15,
     coefficient: 0.6,
@@ -148,7 +148,7 @@ const glowLayer = view.addMesh<GlowGlobeMeshDesc>({
 ```typescript
 import { Color } from "@navara/three";
 
-const glowLayer = view.addMesh<GlowGlobeMeshDesc>({
+const glowDesc = view.addMesh<GlowGlobeMeshDesc>({
   glowGlobe: {
     radiusScale: 1.05,
     coefficient: 0.4,

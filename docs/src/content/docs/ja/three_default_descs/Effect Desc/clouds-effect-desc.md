@@ -646,7 +646,7 @@ await view.init();
 plugin.addDefaultPhotorealScene();
 
 // 雲エフェクトを追加
-const cloudsLayer = view.addEffect<CloudsEffectDesc>({
+const cloudsDesc = view.addEffect<CloudsEffectDesc>({
   clouds: {
     coverage: 0.5,
     qualityPreset: "high",
@@ -682,7 +682,7 @@ defaultLayers.aerialPerspective.update({
 });
 
 // 雲エフェクトを追加（影を有効化）
-const cloudsLayer = view.addEffect<CloudsEffectDesc>({
+const cloudsDesc = view.addEffect<CloudsEffectDesc>({
   clouds: {
     shadows: true,
     shadowCascadeCount: 3,
@@ -705,12 +705,12 @@ await view.init();
 plugin.addDefaultPhotorealScene();
 
 // 雲オブジェクトを霧として使用
-const cloudsLayer = view.addEffect<CloudsEffectDesc>({
+const cloudsDesc = view.addEffect<CloudsEffectDesc>({
   clouds: {},
 });
 
 // 霧の設定を適用
-const clouds = cloudsLayer.ref.raw;
+const clouds = cloudsDesc.ref.raw;
 if (clouds) {
   clouds.coverage = 0.3;
   // 4番目のクラウドレイヤーを霧として設定
@@ -742,7 +742,7 @@ view.animation = true;
 plugin.addDefaultPhotorealScene();
 
 // 雲の移動速度を設定してDescriptorを追加
-const cloudsLayer = view.addEffect<CloudsEffectDesc>({
+const cloudsDesc = view.addEffect<CloudsEffectDesc>({
   clouds: {
     coverage: 0.5,
     localWeatherVelocity: new Vector2(0.005, 0.001),
@@ -772,7 +772,7 @@ defaultLayers.aerialPerspective.update({
 });
 
 // 雲Descriptorを追加
-const cloudsLayer = view.addEffect<CloudsEffectDesc>({
+const cloudsDesc = view.addEffect<CloudsEffectDesc>({
   clouds: {
     qualityPreset: "high",
     localWeatherVelocity: new Vector2(0.005, 0.001),

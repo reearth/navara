@@ -305,7 +305,7 @@ const view = new ThreeView();
 await view.init();
 
 // Add a BoxMeshDesc
-const boxLayer = view.addMesh<BoxMeshDesc>({
+const boxDesc = view.addMesh<BoxMeshDesc>({
   box: {
     width: 100,
     height: 100,
@@ -321,7 +321,7 @@ const boxLayer = view.addMesh<BoxMeshDesc>({
 ```typescript
 import ThreeView, { BoxMeshDesc, Color } from "@navara/three";
 
-const boxLayer = view.addMesh<BoxMeshDesc>({
+const boxDesc = view.addMesh<BoxMeshDesc>({
   box: {
     width: 200,
     height: 100,
@@ -339,7 +339,7 @@ const boxLayer = view.addMesh<BoxMeshDesc>({
 ```typescript
 import ThreeView, { BoxMeshDesc, Color } from "@navara/three";
 
-const boxLayer = view.addMesh<BoxMeshDesc>({
+const boxDesc = view.addMesh<BoxMeshDesc>({
   box: {
     width: 150,
     height: 150,

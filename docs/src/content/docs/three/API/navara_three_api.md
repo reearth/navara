@@ -1044,6 +1044,7 @@ import ThreeView, {
   degreeToRadian,
   geodeticSurfaceNormal,
 } from "@navara/three";
+import { GLTFModelDesc } from "@navara/three_default_descs";
 import { Vector3, Quaternion, Euler, Matrix4 } from "three";
 
 const view = new ThreeView(container, {
@@ -1054,6 +1055,7 @@ const view = new ThreeView(container, {
   },
 });
 
+view.registerMesh("gltfModel", GLTFModelDesc);
 await view.init();
 
 // Initial position in Osaka
@@ -1062,8 +1064,8 @@ const latitude = 34.6937;
 const altitude = 0;
 
 // Add a GLTF model
-const modelHandle = view.addGltfModelLayer({
-  data: { url: "/path/to/model.glb" },
+const modelDesc = view.addMesh<GLTFModelDesc>({
+  gltfModel: { url: "/path/to/model.glb" },
   position: geodeticToVector3({
     lat: degreeToRadian(latitude),
     lng: degreeToRadian(longitude),
@@ -1111,7 +1113,7 @@ const animate = () => {
   const euler = new Euler().setFromQuaternion(quaternion);
 
   // Update model position and rotation
-  modelHandle.update({
+  modelDesc.update({
     position: { x: pos.x, y: pos.y, z: pos.z },
     rotation: { x: euler.x, y: euler.y, z: euler.z },
   });

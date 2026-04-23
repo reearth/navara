@@ -110,7 +110,7 @@ const view = new ThreeView();
 await view.init();
 
 // StarsDescを追加
-const starsLayer = view.addMesh<StarsDesc>({
+const starsDesc = view.addMesh<StarsDesc>({
   stars: {
     visible: true,
     pointSize: 1.2,

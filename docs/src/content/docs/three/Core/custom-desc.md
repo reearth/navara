@@ -606,15 +606,15 @@ For Descriptors that use standard Three.js materials (`MeshStandardMaterial`, `M
 import ThreeView, {
   MeshDesc,
   PickableMeshWrapper,
-  type MeshLayerConfig,
-  type MeshLayerUpdate,
+  type MeshConfig,
+  type MeshUpdate,
   type ViewContext,
   Color,
 } from "@navara/three";
 import { Mesh, BoxGeometry, MeshStandardMaterial } from "three";
 
-type MyConfig = MeshLayerConfig & { myBox?: { color?: Color } };
-type MyUpdate = MeshLayerUpdate & { myBox?: { color?: Color } };
+type MyConfig = MeshConfig & { myBox?: { color?: Color } };
+type MyUpdate = MeshUpdate & { myBox?: { color?: Color } };
 
 class MyPickableBoxDesc extends MeshDesc<
   MyConfig, MyUpdate, Mesh

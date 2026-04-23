@@ -303,7 +303,7 @@ const view = new ThreeView();
 await view.init();
 
 // RainMeshDescを追加
-const rainLayer = view.addMesh<RainMeshDesc>({
+const rainDesc = view.addMesh<RainMeshDesc>({
   rain: {
     particleCount: 5000,
     speed: 0.002,
@@ -339,7 +339,7 @@ const position = geodeticToVector3(
 );
 
 // 位置を指定してRainMeshDescを追加
-const rainLayer = view.addMesh<RainMeshDesc>({
+const rainDesc = view.addMesh<RainMeshDesc>({
   visible: true,
   position: position,
   rain: {
@@ -350,5 +350,5 @@ const rainLayer = view.addMesh<RainMeshDesc>({
 });
 
 // 表示/非表示を切り替え
-rainLayer.visible = false;
+rainDesc.visible = false;
 ```

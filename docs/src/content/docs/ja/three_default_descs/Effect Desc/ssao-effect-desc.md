@@ -138,7 +138,7 @@ const view = new ThreeView();
 await view.init();
 
 // SSAOエフェクトを追加
-const ssaoLayer = view.addEffect<SSAOEffectDesc>({
+const ssaoDesc = view.addEffect<SSAOEffectDesc>({
   visible: true,
   ssao: {},
 });
@@ -153,7 +153,7 @@ const view = new ThreeView();
 await view.init();
 
 // 高品質SSAOを追加
-const ssaoLayer = view.addEffect<SSAOEffectDesc>({
+const ssaoDesc = view.addEffect<SSAOEffectDesc>({
   visible: true,
   ssao: {
     quality: "High",
@@ -174,7 +174,7 @@ const view = new ThreeView();
 await view.init();
 
 // 半解像度でパフォーマンスを向上
-const ssaoLayer = view.addEffect<SSAOEffectDesc>({
+const ssaoDesc = view.addEffect<SSAOEffectDesc>({
   visible: true,
   ssao: {
     quality: "Low",
@@ -198,7 +198,7 @@ await view.init();
 plugin.addDefaultPhotorealScene();
 
 // SSAOを追加
-const ssaoLayer = view.addEffect<SSAOEffectDesc>({
+const ssaoDesc = view.addEffect<SSAOEffectDesc>({
   visible: true,
   ssao: {
     quality: "High",

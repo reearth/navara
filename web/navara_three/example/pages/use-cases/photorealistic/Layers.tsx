@@ -3,10 +3,7 @@ import {
   Color,
   type LayerDescription,
 } from "@navara/three";
-import type {
-  RainMeshConfig,
-  CloudsConfig,
-} from "@navara/three_default_descs";
+import type { RainMeshConfig, CloudsConfig } from "@navara/three_default_descs";
 import type {
   DefaultPlugin,
   DefaultEffectDescription,

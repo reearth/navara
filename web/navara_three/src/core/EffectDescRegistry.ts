@@ -1,7 +1,7 @@
 import type ThreeView from "../index";
 
-import { EffectDesc, type EffectConfig } from "./EffectDesc";
 import { DescRegistry } from "./DescRegistry";
+import { EffectDesc, type EffectConfig } from "./EffectDesc";
 import type { ViewContext } from "./ViewContext";
 
 export type EffectDescConstructor = new (

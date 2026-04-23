@@ -116,7 +116,7 @@ view.addLight<AmbientLightDesc>({
 
 ```typescript
 // Add ambient light in a hidden state, then toggle visibility later
-const ambientLightLayer = view.addLight<AmbientLightDesc>({
+const ambientLightDesc = view.addLight<AmbientLightDesc>({
   visible: false,
   ambient: {
     intensity: 1,
@@ -125,7 +125,7 @@ const ambientLightLayer = view.addLight<AmbientLightDesc>({
 });
 
 // Toggle visibility
-ambientLightLayer.visible = true;
+ambientLightDesc.visible = true;
 ```
 
 ## Notes

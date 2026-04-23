@@ -307,7 +307,7 @@ view.animation = true;
 plugin.addDefaultPhotorealScene();
 
 // Add raindrop effect descriptor
-const rainDropLayer = view.addEffect<RainDropEffectDesc>({
+const rainDropDesc = view.addEffect<RainDropEffectDesc>({
   rainDrop: {
     opacity: 0.85,
     dropGridSize: 14,

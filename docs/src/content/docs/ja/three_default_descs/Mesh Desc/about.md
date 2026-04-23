@@ -49,7 +49,7 @@ view.registerMesh("box", BoxMeshDesc);
 await view.init();
 
 // BoxMeshDescを追加
-const boxLayer = view.addMesh<BoxMeshDesc>({
+const boxDesc = view.addMesh<BoxMeshDesc>({
   box: {
     width: 100,
     height: 100,

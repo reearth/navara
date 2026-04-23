@@ -336,7 +336,7 @@ const view = new ThreeView();
 await view.init();
 
 // Add a CylinderMeshDesc
-const cylinderLayer = view.addMesh<CylinderMeshDesc>({
+const cylinderDesc = view.addMesh<CylinderMeshDesc>({
   cylinder: {
     radiusTop: 50,
     radiusBottom: 50,
@@ -352,7 +352,7 @@ const cylinderLayer = view.addMesh<CylinderMeshDesc>({
 ```typescript
 import ThreeView, { CylinderMeshDesc, Color } from "@navara/three";
 
-const coneLayer = view.addMesh<CylinderMeshDesc>({
+const coneDesc = view.addMesh<CylinderMeshDesc>({
   cylinder: {
     radiusTop: 0,
     radiusBottom: 100,

@@ -104,7 +104,7 @@ const view = new ThreeView({ picking: true });
 view.registerMesh("box", BoxMeshDesc);
 await view.init();
 
-const boxLayer = view.addMesh<BoxMeshDesc>({
+const boxDesc = view.addMesh<BoxMeshDesc>({
   box: {
     width: 100,
     height: 100,
@@ -129,19 +129,19 @@ view.on("pick", (info) => {
 
 ```typescript
 // 単一メッシュ
-const batchId = boxLayer.ref.batchId;
+const batchId = boxDesc.ref.batchId;
 
 // インスタンスメッシュ — インスタンスごとに1つのバッチ ID
-const batchIds = instancedLayer.ref.batchIds;
+const batchIds = instancedDesc.ref.batchIds;
 ```
 
 ### ピックへの応答
 
 ```typescript
 view.on("pick", (info) => {
-  if (info && info.batchId === boxLayer.ref.batchId) {
+  if (info && info.batchId === boxDesc.ref.batchId) {
     // 選択されたボックスをハイライト
-    boxLayer.update({ box: { color: new Color().setHex(0xffff00) } });
+    boxDesc.update({ box: { color: new Color().setHex(0xffff00) } });
   }
 });
 ```
@@ -188,7 +188,7 @@ const position = geodeticToVector3({
 });
 
 // 変換した座標でメッシュを追加
-const sphereLayer = view.addMesh<SphereMeshDesc>({
+const sphereDesc = view.addMesh<SphereMeshDesc>({
   sphere: {
     radius: 100,
     color: new Color().setHex(0x00aaff),
@@ -224,7 +224,7 @@ const origin = geodeticToVector3({
 const enuFrame = eastNorthUpToFixedFrame(origin);
 
 // モデルを地表面に沿って配置
-const modelLayer = view.addMesh<GLTFModelDesc>({
+const modelDesc = view.addMesh<GLTFModelDesc>({
   gltfModel: {
     url: "/models/building.gltf",
   },

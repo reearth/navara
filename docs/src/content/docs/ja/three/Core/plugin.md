@@ -29,7 +29,7 @@ abstract class Plugin<TView = unknown, TCtx = unknown> {
 
 | パラメータ | 説明                                                                                                                     |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `TView`    | `init()` に渡される view の型。通常は `ThreeView` または `ThreeView<MyLayerDescriptions>` を指定します。                 |
+| `TView`    | `init()` に渡される view の型。通常は `ThreeView` または `ThreeView<MyDeclarations>` を指定します。                 |
 | `TCtx`     | `init()` に渡されるコンテキストの型。`ViewContext` を指定すると、レンダラー、バッファ、パス管理 API にアクセスできます。 |
 
 ## ライフサイクル

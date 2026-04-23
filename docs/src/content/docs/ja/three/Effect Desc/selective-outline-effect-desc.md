@@ -141,7 +141,7 @@ const view = new ThreeView();
 await view.init();
 
 // 選択的アウトラインエフェクトを追加
-const outlineLayer = view.addEffect<SelectiveOutlineEffectDesc>({
+const outlineDesc = view.addEffect<SelectiveOutlineEffectDesc>({
   selectiveOutline: {
     color: new Color().setHex(0xffffff),
     thickness: 1.0,
@@ -150,13 +150,13 @@ const outlineLayer = view.addEffect<SelectiveOutlineEffectDesc>({
 });
 
 // オブジェクトにアウトラインエフェクトを適用
-const cubeLayer = view.addMesh<BoxMeshDesc>({
+const cubeDesc = view.addMesh<BoxMeshDesc>({
   box: {
     width: 100,
     height: 100,
     depth: 100,
     color: new Color().setHex(0x0088ff),
-    effectIds: [outlineLayer.id], // アウトラインエフェクトを適用
+    effectIds: [outlineDesc.id], // アウトラインエフェクトを適用
     selectiveEffectOcclusion: "normal",
   },
   position: { x: 0, y: 0, z: 1000 },
@@ -178,7 +178,7 @@ await view.init();
 plugin.addDefaultPhotorealScene();
 
 // 赤色の太いアウトラインを追加
-const outlineLayer = view.addEffect<SelectiveOutlineEffectDesc>({
+const outlineDesc = view.addEffect<SelectiveOutlineEffectDesc>({
   selectiveOutline: {
     color: new Color().setHex(0xff0000),
     thickness: 2.5,
@@ -196,7 +196,7 @@ const view = new ThreeView();
 await view.init();
 
 // パフォーマンス重視の設定
-const outlineLayer = view.addEffect<SelectiveOutlineEffectDesc>({
+const outlineDesc = view.addEffect<SelectiveOutlineEffectDesc>({
   selectiveOutline: {
     color: new Color().setHex(0xffffff),
     thickness: 1.0,
@@ -214,7 +214,7 @@ import ThreeView, { SelectiveOutlineEffectDesc, Color } from "@navara/three";
 const view = new ThreeView();
 await view.init();
 
-const outlineLayer = view.addEffect<SelectiveOutlineEffectDesc>({
+const outlineDesc = view.addEffect<SelectiveOutlineEffectDesc>({
   selectiveOutline: {
     color: new Color().setHex(0xffffff),
     thickness: 1.0,
@@ -222,7 +222,7 @@ const outlineLayer = view.addEffect<SelectiveOutlineEffectDesc>({
 });
 
 // 後からパラメータを更新
-outlineLayer.update({
+outlineDesc.update({
   selectiveOutline: {
     color: new Color().setHex(0x00ff00), // 緑
     thickness: 2.0,
@@ -238,7 +238,7 @@ import ThreeView, { SelectiveOutlineEffectDesc, Color } from "@navara/three";
 const view = new ThreeView();
 await view.init();
 
-const outlineLayer = view.addEffect<SelectiveOutlineEffectDesc>({
+const outlineDesc = view.addEffect<SelectiveOutlineEffectDesc>({
   selectiveOutline: {
     color: new Color().setHex(0xff0000),
     thickness: 2.0,
@@ -254,7 +254,7 @@ const buildingsLayer = view.addLayer({
   model: {
     show: true,
     color: new Color().setHex(0xffffff),
-    effectIds: [outlineLayer.id],
+    effectIds: [outlineDesc.id],
     selectiveEffectOcclusion: "normal",
   },
 });
@@ -274,7 +274,7 @@ import ThreeView, {
 const view = new ThreeView();
 await view.init();
 
-const outlineLayer = view.addEffect<SelectiveOutlineEffectDesc>({
+const outlineDesc = view.addEffect<SelectiveOutlineEffectDesc>({
   selectiveOutline: {
     color: new Color().setHex(0x00ff00),
     thickness: 2.0,
@@ -287,7 +287,7 @@ const highlightedCube = view.addMesh<BoxMeshDesc>({
     width: 100,
     height: 100,
     depth: 100,
-    effectIds: [outlineLayer.id],
+    effectIds: [outlineDesc.id],
     selectiveEffectOcclusion: "silhouette", // 遮蔽されていても表示
   },
   position: { x: 0, y: 0, z: 500 },
@@ -307,13 +307,13 @@ import ThreeView, {
 const view = new ThreeView();
 await view.init();
 
-const bloomLayer = view.addEffect<SelectiveBloomEffectDesc>({
+const bloomDesc = view.addEffect<SelectiveBloomEffectDesc>({
   selectiveBloom: {
     strength: 1.0,
   },
 });
 
-const outlineLayer = view.addEffect<SelectiveOutlineEffectDesc>({
+const outlineDesc = view.addEffect<SelectiveOutlineEffectDesc>({
   selectiveOutline: {
     color: new Color().setHex(0xff0000),
     thickness: 2.0,
@@ -321,14 +321,14 @@ const outlineLayer = view.addEffect<SelectiveOutlineEffectDesc>({
 });
 
 // 両方のエフェクトを適用
-const cubeLayer = view.addMesh<BoxMeshDesc>({
+const cubeDesc = view.addMesh<BoxMeshDesc>({
   box: {
     width: 100,
     height: 100,
     depth: 100,
     color: new Color().setHex(0xff0000),
     emissiveIntensity: 1.0,
-    effectIds: [bloomLayer.id, outlineLayer.id], // 両方を適用
+    effectIds: [bloomDesc.id, outlineDesc.id], // 両方を適用
     selectiveEffectOcclusion: "normal",
   },
   position: { x: 0, y: 0, z: 1000 },

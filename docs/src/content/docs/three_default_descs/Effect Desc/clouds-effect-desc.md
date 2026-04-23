@@ -646,7 +646,7 @@ await view.init();
 plugin.addDefaultPhotorealScene();
 
 // Add clouds effect descriptor
-const cloudsLayer = view.addEffect<CloudsEffectDesc>({
+const cloudsDesc = view.addEffect<CloudsEffectDesc>({
   clouds: {
     coverage: 0.5,
     qualityPreset: "high",
@@ -682,7 +682,7 @@ defaultLayers.aerialPerspective.update({
 });
 
 // Add clouds effect descriptor (with shadows enabled)
-const cloudsLayer = view.addEffect<CloudsEffectDesc>({
+const cloudsDesc = view.addEffect<CloudsEffectDesc>({
   clouds: {
     shadows: true,
     shadowCascadeCount: 3,
@@ -704,12 +704,12 @@ await view.init();
 plugin.addDefaultPhotorealScene();
 
 // Use the clouds Descriptor as fog
-const cloudsLayer = view.addEffect<CloudsEffectDesc>({
+const cloudsDesc = view.addEffect<CloudsEffectDesc>({
   clouds: {},
 });
 
 // Apply fog settings
-const clouds = cloudsLayer.ref.raw;
+const clouds = cloudsDesc.ref.raw;
 if (clouds) {
   clouds.coverage = 0.3;
   // Configure the 4th cloud layer as fog
@@ -740,7 +740,7 @@ view.animation = true;
 plugin.addDefaultPhotorealScene();
 
 // Set cloud movement velocity and add the Descriptor
-const cloudsLayer = view.addEffect<CloudsEffectDesc>({
+const cloudsDesc = view.addEffect<CloudsEffectDesc>({
   clouds: {
     coverage: 0.5,
     localWeatherVelocity: new Vector2(0.005, 0.001),
@@ -770,7 +770,7 @@ defaultLayers.aerialPerspective.update({
 });
 
 // Add the clouds Descriptor
-const cloudsLayer = view.addEffect<CloudsEffectDesc>({
+const cloudsDesc = view.addEffect<CloudsEffectDesc>({
   clouds: {
     qualityPreset: "high",
     localWeatherVelocity: new Vector2(0.005, 0.001),

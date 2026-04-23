@@ -299,7 +299,7 @@ const view = new ThreeView();
 await view.init();
 
 // Add an ArclineMeshDesc
-const arclineLayer = view.addMesh<ArclineMeshDesc>({
+const arclineDesc = view.addMesh<ArclineMeshDesc>({
   arcLines: {
     thickness: 2,
     srcColor: 0xff0000,
@@ -317,7 +317,7 @@ const arclineLayer = view.addMesh<ArclineMeshDesc>({
 ### Multiple Arc Lines
 
 ```typescript
-const arclineLayer = view.addMesh<ArclineMeshDesc>({
+const arclineDesc = view.addMesh<ArclineMeshDesc>({
   arcLines: [
     {
       thickness: 2,
@@ -348,7 +348,7 @@ const arclineLayer = view.addMesh<ArclineMeshDesc>({
 
 ```typescript
 // Update the Descriptor settings
-arclineLayer.update({
+arclineDesc.update({
   arcLines: {
     thickness: 5,
     opacity: 0.5,

@@ -104,7 +104,7 @@ const view = new ThreeView({ picking: true });
 view.registerMesh("box", BoxMeshDesc);
 await view.init();
 
-const boxLayer = view.addMesh<BoxMeshDesc>({
+const boxDesc = view.addMesh<BoxMeshDesc>({
   box: {
     width: 100,
     height: 100,
@@ -129,19 +129,19 @@ The batch ID is a unique 24-bit integer assigned to each pickable mesh (or each 
 
 ```typescript
 // Single mesh Descriptor
-const batchId = boxLayer.ref.batchId;
+const batchId = boxDesc.ref.batchId;
 
 // Instanced mesh Descriptor — one batch ID per instance
-const batchIds = instancedLayer.ref.batchIds;
+const batchIds = instancedDesc.ref.batchIds;
 ```
 
 ### Responding to Picks
 
 ```typescript
 view.on("pick", (info) => {
-  if (info && info.batchId === boxLayer.ref.batchId) {
+  if (info && info.batchId === boxDesc.ref.batchId) {
     // Highlight the selected box
-    boxLayer.update({ box: { color: new Color().setHex(0xffff00) } });
+    boxDesc.update({ box: { color: new Color().setHex(0xffff00) } });
   }
 });
 ```
@@ -188,7 +188,7 @@ const position = geodeticToVector3({
 });
 
 // Add a mesh Descriptor with the converted coordinates
-const sphereLayer = view.addMesh<SphereMeshDesc>({
+const sphereDesc = view.addMesh<SphereMeshDesc>({
   sphere: {
     radius: 100,
     color: new Color().setHex(0x00aaff),
@@ -225,7 +225,7 @@ const origin = geodeticToVector3({
 const enuFrame = eastNorthUpToFixedFrame(origin);
 
 // Place the model along the Earth's surface
-const modelLayer = view.addMesh<GLTFModelDesc>({
+const modelDesc = view.addMesh<GLTFModelDesc>({
   gltfModel: {
     url: "/models/building.gltf",
   },

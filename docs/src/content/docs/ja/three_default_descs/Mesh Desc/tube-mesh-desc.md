@@ -300,7 +300,7 @@ const view = new ThreeView();
 await view.init();
 
 // TubeMeshDescを追加
-const tubeLayer = view.addMesh<TubeMeshDesc>({
+const tubeDesc = view.addMesh<TubeMeshDesc>({
   tube: {
     points: [
       { x: 0, y: 0, z: 1000 },

@@ -273,7 +273,7 @@ export class RotatingBoxDesc extends MeshDesc</* ... */> {
 class MyInstancedDesc extends InstancedMeshDesc<
   TGeometry,    // Three.js BufferGeometry type
   TMaterial,    // Three.js Material type
-  Config,       // Layer configuration type (extends InstancedMeshConfig)
+  Config,       // Descriptor configuration type (extends InstancedMeshConfig)
   UpdateConfig, // Update configuration type (extends InstancedMeshUpdate)
   ChildConfig,  // Per-instance configuration type (extends InstancedChildConfig)
 > {}
@@ -339,7 +339,7 @@ type MyBoxChild = InstancedChildConfig & {
   color?: Color;
 };
 
-// Layer configuration
+// Descriptor configuration
 type MyBoxesConfig = InstancedMeshConfig & {
   boxes?: { children?: MyBoxChild[] };
 };
@@ -606,15 +606,15 @@ export class MyPointLightDesc extends LightDesc<
 import ThreeView, {
   MeshDesc,
   PickableMeshWrapper,
-  type MeshLayerConfig,
-  type MeshLayerUpdate,
+  type MeshConfig,
+  type MeshUpdate,
   type ViewContext,
   Color,
 } from "@navara/three";
 import { Mesh, BoxGeometry, MeshStandardMaterial } from "three";
 
-type MyConfig = MeshLayerConfig & { myBox?: { color?: Color } };
-type MyUpdate = MeshLayerUpdate & { myBox?: { color?: Color } };
+type MyConfig = MeshConfig & { myBox?: { color?: Color } };
+type MyUpdate = MeshUpdate & { myBox?: { color?: Color } };
 
 class MyPickableBoxDesc extends MeshDesc<
   MyConfig, MyUpdate, Mesh

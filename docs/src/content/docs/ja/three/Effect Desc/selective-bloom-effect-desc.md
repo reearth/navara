@@ -161,7 +161,7 @@ const view = new ThreeView();
 await view.init();
 
 // 選択的ブルームエフェクトを追加
-const bloomLayer = view.addEffect<SelectiveBloomEffectDesc>({
+const bloomDesc = view.addEffect<SelectiveBloomEffectDesc>({
   selectiveBloom: {
     strength: 0.8,
     radius: 0.2,
@@ -170,14 +170,14 @@ const bloomLayer = view.addEffect<SelectiveBloomEffectDesc>({
 });
 
 // オブジェクトにブルームエフェクトを適用
-const cubeLayer = view.addMesh<BoxMeshDesc>({
+const cubeDesc = view.addMesh<BoxMeshDesc>({
   box: {
     width: 100,
     height: 100,
     depth: 100,
     color: new Color().setHex(0xff0000),
     emissiveIntensity: 1.0,
-    effectIds: [bloomLayer.id], // ブルームエフェクトを適用
+    effectIds: [bloomDesc.id], // ブルームエフェクトを適用
     selectiveEffectOcclusion: "normal",
   },
   position: { x: 0, y: 0, z: 1000 },
@@ -199,7 +199,7 @@ await view.init();
 plugin.addDefaultPhotorealScene();
 
 // 強いブルームエフェクトを追加
-const bloomLayer = view.addEffect<SelectiveBloomEffectDesc>({
+const bloomDesc = view.addEffect<SelectiveBloomEffectDesc>({
   selectiveBloom: {
     strength: 1.5,
     radius: 0.5,
@@ -217,7 +217,7 @@ const view = new ThreeView();
 await view.init();
 
 // パフォーマンス重視の設定
-const bloomLayer = view.addEffect<SelectiveBloomEffectDesc>({
+const bloomDesc = view.addEffect<SelectiveBloomEffectDesc>({
   selectiveBloom: {
     strength: 0.6,
     radius: 0.2,
@@ -235,14 +235,14 @@ import ThreeView, { SelectiveBloomEffectDesc } from "@navara/three";
 const view = new ThreeView();
 await view.init();
 
-const bloomLayer = view.addEffect<SelectiveBloomEffectDesc>({
+const bloomDesc = view.addEffect<SelectiveBloomEffectDesc>({
   selectiveBloom: {
     strength: 0.8,
   },
 });
 
 // 後からパラメータを更新
-bloomLayer.update({
+bloomDesc.update({
   selectiveBloom: {
     strength: 1.2,
     radius: 0.3,
@@ -258,7 +258,7 @@ import ThreeView, { SelectiveBloomEffectDesc, Color } from "@navara/three";
 const view = new ThreeView();
 await view.init();
 
-const bloomLayer = view.addEffect<SelectiveBloomEffectDesc>({
+const bloomDesc = view.addEffect<SelectiveBloomEffectDesc>({
   selectiveBloom: {
     strength: 1.0,
     radius: 0.5,
@@ -274,7 +274,7 @@ const buildingsLayer = view.addLayer({
   model: {
     show: true,
     color: new Color().setHex(0xffffff),
-    effectIds: [bloomLayer.id],
+    effectIds: [bloomDesc.id],
     emissiveColor: new Color().setHex(0xffffff),
     emissiveIntensity: 0.3,
     selectiveEffectOcclusion: "normal",
@@ -290,7 +290,7 @@ import ThreeView, { SelectiveBloomEffectDesc, Color } from "@navara/three";
 const view = new ThreeView();
 await view.init();
 
-const bloomLayer = view.addEffect<SelectiveBloomEffectDesc>({
+const bloomDesc = view.addEffect<SelectiveBloomEffectDesc>({
   selectiveBloom: {
     strength: 1.2,
   },
@@ -304,7 +304,7 @@ const modelLayer = view.addLayer({
     show: true,
     size: 100,
     url: "model.glb",
-    effectIds: [bloomLayer.id],
+    effectIds: [bloomDesc.id],
     emissiveColor: new Color().setHex(0xffffff),
     emissiveIntensity: 0.5,
     selectiveEffectOcclusion: "normal",
@@ -316,7 +316,7 @@ const modelLayer = view.addLayer({
 
 ```typescript
 // 初期状態ではエフェクトなし
-const cubeLayer = view.addMesh<BoxMeshDesc>({
+const cubeDesc = view.addMesh<BoxMeshDesc>({
   box: {
     width: 100,
     height: 100,
@@ -328,15 +328,15 @@ const cubeLayer = view.addMesh<BoxMeshDesc>({
 });
 
 // 後からブルームエフェクトを追加
-cubeLayer.update({
+cubeDesc.update({
   box: {
-    effectIds: [bloomLayer.id],
+    effectIds: [bloomDesc.id],
     emissiveIntensity: 1.0,
   },
 });
 
 // エフェクトを無効化
-cubeLayer.update({
+cubeDesc.update({
   box: {
     effectIds: [],
   },

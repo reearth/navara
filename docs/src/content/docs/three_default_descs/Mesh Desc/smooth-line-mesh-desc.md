@@ -258,7 +258,7 @@ const view = new ThreeView();
 await view.init();
 
 // Add a SmoothLineMeshDesc
-const smoothLineLayer = view.addMesh<SmoothLineMeshDesc>({
+const smoothLineDesc = view.addMesh<SmoothLineMeshDesc>({
   smoothLines: {
     tension: 0.5,
     segments: 10,

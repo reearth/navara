@@ -261,7 +261,7 @@ import ThreeView, { PlaneMeshDesc, Color } from "@navara/three";
 const view = new ThreeView();
 await view.init();
 
-const planeLayer = view.addMesh<PlaneMeshDesc>({
+const planeDesc = view.addMesh<PlaneMeshDesc>({
   plane: {
     width: 1000,
     height: 1000,

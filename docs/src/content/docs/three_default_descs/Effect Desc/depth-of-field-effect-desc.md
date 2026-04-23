@@ -82,7 +82,7 @@ const view = new ThreeView();
 await view.init();
 
 // Add depth of field effect descriptor
-const depthOfFieldLayer = view.addEffect<DepthOfFieldEffectDesc>({
+const depthOfFieldDesc = view.addEffect<DepthOfFieldEffectDesc>({
   depthOfField: { },
   visible: true,
 });
@@ -109,7 +109,7 @@ defaultLayers.sun.update({
 });
 
 // Add depth of field effect
-const depthOfFieldLayer = view.addEffect<DepthOfFieldEffectDesc>({
+const depthOfFieldDesc = view.addEffect<DepthOfFieldEffectDesc>({
   depthOfField: {
     bokehScale: 7,
     focusDistance: 0.000006,
