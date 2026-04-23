@@ -96,14 +96,14 @@ export abstract class SelectiveEffectDesc<
 
   /** Emissive RGB buffer (MRT attachment[3]). */
   public getEmissiveBuffer(): Texture | null {
-    const mrtLayer = this.find<MRTPassEffectDesc>("mrt");
-    return mrtLayer?.emissiveBuffer ?? null;
+    const mrtDesc = this.find<MRTPassEffectDesc>("mrt");
+    return mrtDesc?.emissiveBuffer ?? null;
   }
 
   /** EffectIds bitmask buffer (MRT attachment[2]). NearestFilter, discrete data. */
   public getEffectIdsBuffer(): Texture | null {
-    const mrtLayer = this.find<MRTPassEffectDesc>("mrt");
-    return mrtLayer?.effectIdsBuffer ?? null;
+    const mrtDesc = this.find<MRTPassEffectDesc>("mrt");
+    return mrtDesc?.effectIdsBuffer ?? null;
   }
 
   /** Slot bit index for this effect instance in the EffectIds Buffer. -1 if unregistered. */

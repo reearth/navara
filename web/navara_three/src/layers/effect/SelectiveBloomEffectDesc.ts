@@ -146,7 +146,7 @@ export class SelectiveBloomEffectDesc extends SelectiveEffectDesc<
  * Reads from EmissiveBuffer + EffectIds Buffer in the GBuffer MRT.
  */
 class SelectiveBloomPass extends PostProcessingPass {
-  private layer: SelectiveBloomEffectDesc;
+  private desc: SelectiveBloomEffectDesc;
   private bloom: UnrealBloomPassRGBA;
 
   private bloomSourceRT: WebGLRenderTarget;
@@ -162,14 +162,14 @@ class SelectiveBloomPass extends PostProcessingPass {
 
   private size = new Vector2();
 
-  constructor(layer: SelectiveBloomEffectDesc) {
+  constructor(desc: SelectiveBloomEffectDesc) {
     super("SelectiveBloomPass");
-    this.layer = layer;
+    this.desc = desc;
 
-    const renderer = layer.viewContext.getRenderer();
+    const renderer = desc.viewContext.getRenderer();
     const renderSize = renderer.getSize(new Vector2());
     const resolutionScale =
-      layer.layerConfig.selectiveBloom.resolutionScale ??
+      desc.layerConfig.selectiveBloom.resolutionScale ??
       DEFAULT_BLOOM_RESOLUTION_SCALE;
     const initialWidth = Math.floor(renderSize.x * resolutionScale);
     const initialHeight = Math.floor(renderSize.y * resolutionScale);
@@ -264,13 +264,13 @@ class SelectiveBloomPass extends PostProcessingPass {
       depthBuffer: false,
       stencilBuffer: false,
     });
-    this.bloomSourceRT.texture.name = `SelectiveBloom_Source_${layer.id}`;
+    this.bloomSourceRT.texture.name = `SelectiveBloom_Source_${desc.id}`;
 
     this.bloom = new UnrealBloomPassRGBA(
       new Vector2(initialWidth, initialHeight),
-      layer.bloomStrength,
-      layer.bloomRadius,
-      layer.bloomThreshold,
+      desc.bloomStrength,
+      desc.bloomRadius,
+      desc.bloomThreshold,
     );
     this.bloom.renderToScreen = false;
 
@@ -300,7 +300,7 @@ class SelectiveBloomPass extends PostProcessingPass {
     deltaTime?: number,
   ): void {
     const resScale =
-      this.layer.layerConfig.selectiveBloom.resolutionScale ??
+      this.desc.layerConfig.selectiveBloom.resolutionScale ??
       DEFAULT_BLOOM_RESOLUTION_SCALE;
     this.updateSizes(
       Math.floor(inputBuffer.width * resScale),
@@ -308,15 +308,15 @@ class SelectiveBloomPass extends PostProcessingPass {
     );
 
     this.setParameters(
-      this.layer.bloomStrength,
-      this.layer.bloomRadius,
-      this.layer.bloomThreshold,
+      this.desc.bloomStrength,
+      this.desc.bloomRadius,
+      this.desc.bloomThreshold,
     );
 
     // Get buffer textures
-    const emissiveBuffer = this.layer.getEmissiveBuffer();
-    const effectIdsBuffer = this.layer.getEffectIdsBuffer();
-    const slot = this.layer.getEffectSlot();
+    const emissiveBuffer = this.desc.getEmissiveBuffer();
+    const effectIdsBuffer = this.desc.getEffectIdsBuffer();
+    const slot = this.desc.getEffectSlot();
 
     // Passthrough if buffers not available — render base without bloom
     if (!emissiveBuffer || !effectIdsBuffer || slot < 0) {

@@ -197,7 +197,7 @@ export type MeshBaseInstance<Instance extends object = object> =
  * @typeParam Config - Configuration type (extends {@link MeshConfig})
  * @typeParam UpdateConfig - Updatable properties (extends {@link MeshUpdate})
  * @typeParam InstanceObj - The Three.js Object3D type or a wrapper with a `raw` property
- * @typeParam CustomEvent - Additional custom events the layer can emit
+ * @typeParam CustomEvent - Additional custom events the descriptor can emit
  * @typeParam Instance - Resolved instance type (inferred automatically)
  */
 export abstract class MeshDesc<

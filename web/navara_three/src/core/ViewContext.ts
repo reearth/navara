@@ -181,11 +181,11 @@ export class ViewContext extends EventHandler<ViewContextEvents> {
     return this._renderPass.gbufferRenderTarget.textures[3];
   }
 
-  // --- Layer query ---
+  // --- Descriptor query ---
 
   /** @internal Iterate over all registered effect descriptors. */
   _getEffects(): Generator<EffectHandle> {
-    return this.layersManager.getEffectLayers();
+    return this.layersManager.getEffectDescs();
   }
 
   /**
@@ -216,7 +216,7 @@ export class ViewContext extends EventHandler<ViewContextEvents> {
 
   /**
    * Register a pickable mesh so the picking system can discover it.
-   * @param key - Unique key (typically the layer ID).
+   * @param key - Unique key (typically the descriptor ID).
    * @param mesh - Any {@link PickableMesh} implementation. Implementers
    *   must also be an `Object3D` so the pick pass can re-parent the
    *   renderable into its dedicated scene.
