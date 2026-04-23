@@ -83,4 +83,4 @@ view.setCamera({
 
 ## 次のステップ
 
-この例はほんの入り口です。地形の標高を追加したり、GeoJSON データを表示したり、複数のレイヤーを組み合わせる方法を学ぶには、[Basic Visualization Tutorial](../../../three/Tutorial/basic-visualization/) に進んでください。
+この例はほんの入り口です。地形の標高を追加したり、GeoJSON データを表示したり、複数のレイヤーを組み合わせる方法を学ぶには、[Basic Visualization Tutorial](../../../three/tutorial/basic-visualization/) に進んでください。

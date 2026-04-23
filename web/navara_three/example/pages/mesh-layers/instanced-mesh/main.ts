@@ -9,7 +9,7 @@ import {
   type InstancedBoxMeshDesc,
   type BoxChildConfig,
   ToneMappingMode,
-} from "@navara/three_default_layers";
+} from "@navara/three_default_descs";
 import {
   DefaultPlugin,
   type DefaultDeclarations,

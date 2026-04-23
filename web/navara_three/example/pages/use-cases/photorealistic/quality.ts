@@ -3,7 +3,7 @@ import type {
   CloudsConfig,
   RainDropConfig,
   SSRConfig,
-} from "@navara/three_default_layers";
+} from "@navara/three_default_descs";
 
 export type QualityFlags = "ultra" | "high" | "medium" | "low";
 

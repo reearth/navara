@@ -1,5 +1,5 @@
 import ThreeView, { Color } from "@navara/three";
-import { AmbientLightDesc } from "@navara/three_default_layers";
+import { AmbientLightDesc } from "@navara/three_default_descs";
 import {
   DefaultPlugin,
   type DefaultDeclarations,

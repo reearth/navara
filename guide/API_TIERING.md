@@ -79,7 +79,7 @@ When deciding where a new API belongs, ask:
 | Question | If yes | If no |
 |----------|--------|-------|
 | Does a general map application need this? | Tier 0 | Continue |
-| Does a plugin/custom layer need this? | Tier 1 (ViewContext) | Continue |
+| Does a plugin/custom descriptor need this? | Tier 1 (ViewContext) | Continue |
 | Is there a proven, concrete use case? | Tier 2 (unstable) | Do not add yet |
 
 ### Rules

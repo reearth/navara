@@ -1,9 +1,9 @@
 import ThreeView, { JAPAN_GSI_ELEVATION_DECODER, Color } from "@navara/three";
-import { CloudsEffectDesc } from "@navara/three_default_layers";
+import { CloudsEffectDesc } from "@navara/three_default_descs";
 import type {
   ArclineMeshDesc,
   SmoothLineMeshDesc,
-} from "@navara/three_default_layers";
+} from "@navara/three_default_descs";
 import {
   DefaultPlugin,
   type DefaultDeclarations,

@@ -16,7 +16,7 @@ Each web package maps to a documentation section under `docs/src/content/docs/`:
 |---------|-------------|
 | `web/navara_three/` | `three/` |
 | `web/navara_three_api/` | `three/API/` |
-| `web/navara_three_default_layers/` | `three_default_layers/` |
+| `web/navara_three_default_descs/` | `three_default_descs/` |
 | `web/navara_three_default_plugin/` | `three_default_plugin/` |
 | `web/wasm/` | `engine/` |
 

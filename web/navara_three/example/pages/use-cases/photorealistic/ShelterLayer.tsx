@@ -8,7 +8,7 @@ import {
 import type {
   FogLightDefinition,
   FogLightConfig,
-} from "@navara/three_default_layers";
+} from "@navara/three_default_descs";
 import { Layer, EffectDesc, useViewContext } from "@navara/three_react";
 import type { FeatureCollection, Point } from "geojson";
 import { useEffect, useMemo, useRef, useState, type FC } from "react";

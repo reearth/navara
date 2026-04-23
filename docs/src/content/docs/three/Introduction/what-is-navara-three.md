@@ -47,7 +47,7 @@ Not only GIS data, but also 3D meshes, post-processing effects, and lighting can
 Mesh, effect, and light descriptors require descriptor class registration before use.
 
 ```typescript
-import { BoxMeshDesc, FXAAEffectDesc, SunLightDesc } from "@navara/three_default_layers";
+import { BoxMeshDesc, FXAAEffectDesc, SunLightDesc } from "@navara/three_default_descs";
 
 // Register descriptor classes
 view.registerMesh("box", BoxMeshDesc);

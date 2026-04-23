@@ -83,4 +83,4 @@ Finally, `setCamera()` positions the camera at a geographic coordinate with a gi
 
 ## Next Steps
 
-This example only scratches the surface. To learn how to add terrain elevation, display GeoJSON data, and compose multiple layers, continue with the [Basic Visualization Tutorial](../../../three/Tutorial/basic-visualization/).
+This example only scratches the surface. To learn how to add terrain elevation, display GeoJSON data, and compose multiple layers, continue with the [Basic Visualization Tutorial](../../../three/tutorial/basic-visualization/).

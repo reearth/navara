@@ -5,7 +5,7 @@ import ThreeView, {
   LightHandle,
   type Cesium3dTilesLayer,
 } from "@navara/three";
-import { SunLightDesc, type ShadowMode } from "@navara/three_default_layers";
+import { SunLightDesc, type ShadowMode } from "@navara/three_default_descs";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 

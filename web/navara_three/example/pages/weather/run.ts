@@ -13,7 +13,7 @@ import {
   RainDropEffectDesc,
   SSREffectDesc,
   CloudsEffectDesc,
-} from "@navara/three_default_layers";
+} from "@navara/three_default_descs";
 import {
   DefaultPlugin,
   type DefaultDeclarations,

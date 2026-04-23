@@ -29,7 +29,7 @@ sidebar:
 
 ### elevationDecoder
 
-**Type:** [`ElevationDecoder`](#ElevationDecoder-type)
+**Type:** [`ElevationDecoder`](#elevationdecoder-type)
 
 **Description:** エンコードされた標高データを実際の地形の高さに変換するための設定やメソッドを指定します。
 

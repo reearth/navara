@@ -1,4 +1,4 @@
-export { LayerRegistry } from "./LayerRegistry";
+export { DescRegistry } from "./DescRegistry";
 export { Registries } from "./Registries";
 export * from "./errors";
 export {
@@ -24,19 +24,19 @@ export {
   type InstancedChildConfig,
 } from "./InstancedMeshDesc";
 export {
-  MeshLayerRegistry,
-  type MeshLayerConstructor,
-} from "./MeshLayerRegistry";
+  MeshDescRegistry,
+  type MeshDescConstructor,
+} from "./MeshDescRegistry";
 export { LightDesc, type LightUpdate, type LightConfig } from "./LightDesc";
 export {
-  LightLayerRegistry,
-  type LightLayerConstructor,
-} from "./LightLayerRegistry";
+  LightDescRegistry,
+  type LightDescConstructor,
+} from "./LightDescRegistry";
 export { EffectDesc, type EffectUpdate, type EffectConfig } from "./EffectDesc";
 export {
-  EffectLayerRegistry,
-  type EffectLayerConstructor,
-} from "./EffectLayerRegistry";
+  EffectDescRegistry,
+  type EffectDescConstructor,
+} from "./EffectDescRegistry";
 export {
   BaseHandle,
   MeshHandle,

@@ -8,7 +8,7 @@ import ThreeView, {
   eastNorthUpToFixedFrame,
   geodeticToVector3,
 } from "@navara/three";
-import type { CloudsEffectDesc } from "@navara/three_default_layers";
+import type { CloudsEffectDesc } from "@navara/three_default_descs";
 import {
   DefaultPlugin,
   type DefaultDeclarations,

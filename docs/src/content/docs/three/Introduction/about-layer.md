@@ -40,7 +40,7 @@ graph LR
 When working with [`FeatureEvaluator`](../../api/feature-evaluator/), the callback receives a `FeatureInfo` object containing `batchId`, `properties`, and `layerId`. Use `properties` to identify individual features within a feature set.
 :::
 
-For details on feature events (`featureCreated`, `featureUpdated`, etc.), see [Layer Types](../../api/layer-types/#events).
+For details on feature events (`featureCreated`, `featureUpdated`, etc.), see [Layer Types](../../api/desc-types/#events).
 
 ## Differences Between Resource Layers and Other Descriptors
 
@@ -89,7 +89,7 @@ Mesh descriptors, effect descriptors, and light descriptors create Three.js obje
 - **Descriptor class registration is required before use** (`registerMesh`, `registerEffect`, `registerLight`)
 
 ```typescript
-import { BoxMeshDesc, FXAAEffectDesc, SunLightDesc } from "@navara/three_default_layers";
+import { BoxMeshDesc, FXAAEffectDesc, SunLightDesc } from "@navara/three_default_descs";
 
 // Register descriptor classes (required before addMesh/addEffect/addLight)
 view.registerMesh("box", BoxMeshDesc);
@@ -180,7 +180,7 @@ const boxMesh = boxHandle.ref;
 boxHandle.delete();
 ```
 
-For detailed API reference, see [Descriptor Types](../../../three/api-reference/layer-types/).
+For detailed API reference, see [Descriptor Types](../../../three/api-reference/desc-types/).
 
 ## Summary
 
@@ -196,4 +196,4 @@ For detailed API reference, see [Descriptor Types](../../../three/api-reference/
 ## Related Resources
 
 - [Resource Layer](../../../three/resource-layer/about/) - Resource layer details
-- [three_default_layers](../../../three_default_layers/about/) - Default Descriptor details
+- [three_default_descs](../../../three_default_descs/about/) - Default Descriptor details

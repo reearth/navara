@@ -1,5 +1,5 @@
 import ThreeView from "@navara/three";
-import { RainDropEffectDesc } from "@navara/three_default_layers";
+import { RainDropEffectDesc } from "@navara/three_default_descs";
 import {
   DefaultPlugin,
   type DefaultDeclarations,

@@ -3,7 +3,7 @@ import ThreeView, {
   Color,
   type LayerDescription,
 } from "@navara/three";
-import { SSREffectDesc } from "@navara/three_default_layers";
+import { SSREffectDesc } from "@navara/three_default_descs";
 import {
   DefaultPlugin,
   type DefaultDeclarations,

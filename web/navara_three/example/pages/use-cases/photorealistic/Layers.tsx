@@ -6,7 +6,7 @@ import {
 import type {
   RainMeshConfig,
   CloudsConfig,
-} from "@navara/three_default_layers";
+} from "@navara/three_default_descs";
 import type {
   DefaultPlugin,
   DefaultEffectDescription,
