@@ -10,7 +10,7 @@ import {
 } from "@navara/three_default_descs";
 import {
   DefaultPlugin,
-  type DefaultDeclarations,
+  type DefaultDescriptions,
 } from "@navara/three_default_plugin";
 import type { FeatureCollection, MultiLineString } from "geojson";
 
@@ -95,10 +95,10 @@ const constructData = async () => {
   return { arcLines };
 };
 
-export type CustomDeclarations = DefaultDeclarations;
+export type CustomDescriptions = DefaultDescriptions;
 
 export async function run() {
-  const view = new ThreeView<CustomDeclarations>({
+  const view = new ThreeView<CustomDescriptions>({
     backgroundColor: new Color().setStyle("#0b0a0d"),
   });
 

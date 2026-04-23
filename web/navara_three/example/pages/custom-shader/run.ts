@@ -11,7 +11,7 @@ import ThreeView, {
 import type { CloudsEffectDesc } from "@navara/three_default_descs";
 import {
   DefaultPlugin,
-  type DefaultDeclarations,
+  type DefaultDescriptions,
 } from "@navara/three_default_plugin";
 import {
   Color,
@@ -123,13 +123,13 @@ export class MarchingCubesLayer extends MeshDesc<
   }
 }
 
-export type CustomDeclarations =
-  | DefaultDeclarations
+export type CustomDescriptions =
+  | DefaultDescriptions
   | {
       mesh: MarchingCubesLayerConfig;
     };
 
-export const run = async (view: ThreeView<CustomDeclarations>) => {
+export const run = async (view: ThreeView<CustomDescriptions>) => {
   const defaultPlugin = new DefaultPlugin();
   view.addPlugin(defaultPlugin);
 

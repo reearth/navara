@@ -25,13 +25,13 @@ import type { TileMesh } from "../mesh";
 
 export type { Promise as WorkerPoolPromise } from "@navara/worker";
 
-export type Declarations = {
+export type Descriptions = {
   mesh?: object;
   light?: object;
   effect?: object;
 };
 
-export type EmptyDeclarations = {
+export type EmptyDescriptions = {
   mesh: undefined;
   light: undefined;
   effect: undefined;

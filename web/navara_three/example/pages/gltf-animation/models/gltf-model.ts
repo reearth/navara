@@ -8,7 +8,7 @@ import ThreeView, {
   Color,
 } from "@navara/three";
 import type { GLTFModelDesc } from "@navara/three_default_descs";
-import type { DefaultDeclarations } from "@navara/three_default_plugin";
+import type { DefaultDescriptions } from "@navara/three_default_plugin";
 import { Vector3, Quaternion, Euler } from "three";
 import { Pane, type FolderApi } from "tweakpane";
 
@@ -43,7 +43,7 @@ const SAPPORO_COORDINATES = getCoordinatesFromGeoJSON(SAPPORO_GEOJSON);
  * Add GLTF model for normal surface alignment
  */
 export const addTestModelForNormal = (
-  view: ThreeView<DefaultDeclarations>,
+  view: ThreeView<DefaultDescriptions>,
 ): MeshHandle<GLTFModelDesc> => {
   const pos = geodeticToVector3({
     lat: degreeToRadian(SAPPORO_COORDINATES.latitude),
@@ -97,7 +97,7 @@ export const addTestModelForNormal = (
  * Add text model control panel
  */
 export const addTextModelControl = (
-  _view: ThreeView<DefaultDeclarations>,
+  _view: ThreeView<DefaultDescriptions>,
   pane: Pane | FolderApi,
   modelLayer: MeshHandle<GLTFModelDesc>,
 ): AnimationControlReturn => {
@@ -467,7 +467,7 @@ export const addTextModelControl = (
  * Fixed latitude, changing longitude over time
  */
 export const addRunningModelAroundEarth = (
-  view: ThreeView<DefaultDeclarations>,
+  view: ThreeView<DefaultDescriptions>,
 ): MeshHandle<GLTFModelDesc> => {
   const OSAKA_COORDINATES = getCoordinatesFromGeoJSON(OSAKA_GEOJSON);
 

@@ -16,7 +16,7 @@ import {
 } from "@navara/three_default_descs";
 import {
   DefaultPlugin,
-  type DefaultDeclarations,
+  type DefaultDescriptions,
 } from "@navara/three_default_plugin";
 import { Vector2 } from "three";
 import { Pane } from "tweakpane";
@@ -31,9 +31,9 @@ import {
 import { addDateControl, addHidePaneKeyShortcut } from "../../helpers/control";
 import { addFieldsToFolder, type FolderFields } from "../../helpers/panel";
 
-export type CustomDeclarations = DefaultDeclarations;
+export type CustomDescriptions = DefaultDescriptions;
 
-export const run = async (view: ThreeView<CustomDeclarations>) => {
+export const run = async (view: ThreeView<CustomDescriptions>) => {
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
   await view.init();
@@ -182,7 +182,7 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
   ]);
 };
 
-const addWaterControl = (view: ThreeView<CustomDeclarations>, pane: Pane) => {
+const addWaterControl = (view: ThreeView<CustomDescriptions>, pane: Pane) => {
   const PARAMS = {
     "visible flood model": true,
     "visible river model": true,
@@ -248,7 +248,7 @@ const addWaterControl = (view: ThreeView<CustomDeclarations>, pane: Pane) => {
   });
 };
 
-const addCameraControl = (view: ThreeView<CustomDeclarations>, pane: Pane) => {
+const addCameraControl = (view: ThreeView<CustomDescriptions>, pane: Pane) => {
   const PARAMS = {
     autoRotation: false,
   };
@@ -272,7 +272,7 @@ const addCameraControl = (view: ThreeView<CustomDeclarations>, pane: Pane) => {
 };
 
 const addWeatherControl = (
-  view: ThreeView<CustomDeclarations>,
+  view: ThreeView<CustomDescriptions>,
   pane: Pane,
   rainDropEffect: EffectHandle<RainDropEffectDesc>,
 ) => {

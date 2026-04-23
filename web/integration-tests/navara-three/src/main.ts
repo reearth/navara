@@ -10,14 +10,14 @@ import {
 } from "@navara/three_default_descs";
 import {
   DefaultPlugin,
-  type DefaultDeclarations,
+  type DefaultDescriptions,
 } from "@navara/three_default_plugin";
 
-type CustomDeclarations = DefaultDeclarations;
+type CustomDescriptions = DefaultDescriptions;
 
 async function main() {
   // Create the view - this tests that the main export works
-  const view = new ThreeView<CustomDeclarations>({});
+  const view = new ThreeView<CustomDescriptions>({});
 
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
@@ -86,7 +86,7 @@ async function main() {
  * Add a sphere that rotates around the globe.
  * Tests: SphereMeshDesc, geodeticToVector3, LLE, degreeToRadian APIs
  */
-function addRotatingSphere(view: ThreeView<CustomDeclarations>) {
+function addRotatingSphere(view: ThreeView<CustomDescriptions>) {
   // Create a sphere mesh descriptor
   const sphereLayer = view.addMesh<SphereMeshDesc>({
     sphere: {

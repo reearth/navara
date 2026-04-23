@@ -6,7 +6,7 @@ import ThreeView, {
 import { ToneMappingMode } from "@navara/three_default_descs";
 import {
   DefaultPlugin,
-  type DefaultDeclarations,
+  type DefaultDescriptions,
 } from "@navara/three_default_plugin";
 import { SphericalHarmonics3 } from "three";
 import { Pane } from "tweakpane";
@@ -22,9 +22,9 @@ import { TERRAIN_DATASETS } from "../../helpers/constants";
 import { addCameraControl, addDateControl } from "../../helpers/control";
 import { SH_COEFFICIENTS } from "../../helpers/sh";
 
-export type CustomDeclarations = DefaultDeclarations;
+export type CustomDescriptions = DefaultDescriptions;
 
-export const run = async (view: ThreeView<CustomDeclarations>) => {
+export const run = async (view: ThreeView<CustomDescriptions>) => {
   view.addPlugin(new DefaultPlugin());
 
   await view.init();

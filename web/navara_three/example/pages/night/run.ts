@@ -18,7 +18,7 @@ import type {
 } from "@navara/three_default_descs";
 import {
   DefaultPlugin,
-  type DefaultDeclarations,
+  type DefaultDescriptions,
 } from "@navara/three_default_plugin";
 import type { FeatureCollection, Point } from "geojson";
 import { SphericalHarmonics3 } from "three";
@@ -34,9 +34,9 @@ import {
 import { addCameraControl, addDateControl } from "../../helpers/control";
 import { SH_COEFFICIENTS } from "../../helpers/sh";
 
-export type CustomDeclarations = DefaultDeclarations;
+export type CustomDescriptions = DefaultDescriptions;
 
-export const run = async (view: ThreeView<CustomDeclarations>) => {
+export const run = async (view: ThreeView<CustomDescriptions>) => {
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
   await view.init();
@@ -161,7 +161,7 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
 };
 
 const addNightLightProbeControl = (
-  view: ThreeView<CustomDeclarations>,
+  view: ThreeView<CustomDescriptions>,
   pane: Pane,
 ) => {
   const lightProbeLayer = view.addLight<LightProbeDesc>({
@@ -203,7 +203,7 @@ const addNightLightProbeControl = (
 };
 
 const addStarsControl = (
-  view: ThreeView<CustomDeclarations>,
+  view: ThreeView<CustomDescriptions>,
   starsLayer: MeshHandle<StarsDesc>,
   pane: Pane,
 ) => {
@@ -255,7 +255,7 @@ const addStarsControl = (
 };
 
 const addSkyLightProbeControl = (
-  view: ThreeView<CustomDeclarations>,
+  view: ThreeView<CustomDescriptions>,
   skyLightProbeDesc: LightHandle<SkyLightProbeDesc>,
   pane: Pane,
 ) => {
@@ -314,7 +314,7 @@ const addSkyLightProbeControl = (
 };
 
 const add3DTilesSceneControl = (
-  view: ThreeView<CustomDeclarations>,
+  view: ThreeView<CustomDescriptions>,
   pane: Pane,
 ) => {
   const SCENES = {
@@ -460,7 +460,7 @@ const loadGeoJSONLights = async (
 };
 
 const addTokyoPointsFogLightControl = async (
-  view: ThreeView<CustomDeclarations>,
+  view: ThreeView<CustomDescriptions>,
   pane: Pane,
 ) => {
   // Load Tokyo Points light data using common function
@@ -634,7 +634,7 @@ const addTokyoPointsFogLightControl = async (
 };
 
 const addFogLightControl = async (
-  view: ThreeView<CustomDeclarations>,
+  view: ThreeView<CustomDescriptions>,
   pane: Pane,
   sceneChangeHandler?: EventHandler,
 ) => {

@@ -9,7 +9,7 @@ import ThreeView, {
 import type { BoxMeshDesc, SphereMeshDesc } from "@navara/three_default_descs";
 import {
   DefaultPlugin,
-  type DefaultDeclarations,
+  type DefaultDescriptions,
 } from "@navara/three_default_plugin";
 import { Vector3 } from "three";
 import { Pane } from "tweakpane";
@@ -23,7 +23,7 @@ import {
 
 import { DebugPlugin } from "./DebugPlugin";
 
-export const run = async (view: ThreeView<DefaultDeclarations>) => {
+export const run = async (view: ThreeView<DefaultDescriptions>) => {
   const plugin = new DefaultPlugin();
   const debugPlugin = new DebugPlugin();
   view.addPlugin(plugin);

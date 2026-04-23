@@ -76,12 +76,12 @@ import {
 } from "@navara/three_default_descs";
 
 export class DefaultPlugin extends Plugin<
-  ThreeView<DefaultDeclarations>,
+  ThreeView<DefaultDescriptions>,
   ViewContext
 > {
-  private view?: ThreeView<DefaultDeclarations>;
+  private view?: ThreeView<DefaultDescriptions>;
 
-  async init(view: ThreeView<DefaultDeclarations>, _ctx: ViewContext) {
+  async init(view: ThreeView<DefaultDescriptions>, _ctx: ViewContext) {
     this.view = view;
 
     // Register meshes
@@ -209,7 +209,7 @@ export class DefaultPlugin extends Plugin<
   }
 }
 
-export type DefaultDeclarations = {
+export type DefaultDescriptions = {
   mesh: DefaultMeshDescription;
   light: DefaultLightDescription;
   effect: DefaultEffectDescription;

@@ -32,7 +32,7 @@ import ThreeView, {
 } from "@navara/three";
 import {
   DefaultPlugin,
-  type DefaultDeclarations,
+  type DefaultDescriptions,
 } from "@navara/three_default_plugin";
 import {
   Matrix4,
@@ -144,8 +144,8 @@ type TorusKnotLayerConfig = MeshConfig &
 
 type TorusKnotLayerUpdate = MeshUpdate & TorusKnotDescription;
 
-type CustomDeclarations =
-  | DefaultDeclarations
+type CustomDescriptions =
+  | DefaultDescriptions
   | {
       mesh: TorusKnotLayerConfig;
     };
@@ -232,7 +232,7 @@ class TorusKnotMeshDesc extends MeshDesc<
 // ============================================================================
 
 const run = async () => {
-  const view = new ThreeView<CustomDeclarations>({
+  const view = new ThreeView<CustomDescriptions>({
     debug: true,
   });
 

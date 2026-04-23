@@ -12,7 +12,7 @@ import {
 } from "@navara/three_default_descs";
 import {
   DefaultPlugin,
-  type DefaultDeclarations,
+  type DefaultDescriptions,
 } from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 
@@ -54,7 +54,7 @@ function generateBuildings(count: number, radius: number): BoxChildConfig[] {
 }
 
 const run = async () => {
-  const view = new ThreeView<DefaultDeclarations>({
+  const view = new ThreeView<DefaultDescriptions>({
     debug: true,
   });
 

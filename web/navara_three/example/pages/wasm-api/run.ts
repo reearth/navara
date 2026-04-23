@@ -31,7 +31,7 @@ import type {
 } from "@navara/three_default_descs";
 import {
   DefaultPlugin,
-  type DefaultDeclarations,
+  type DefaultDescriptions,
 } from "@navara/three_default_plugin";
 import { Mesh, Vector2, Vector3, Object3D, Group, ArrowHelper } from "three";
 import { Pane, FolderApi } from "tweakpane";
@@ -95,10 +95,10 @@ let gPickedPos: Nullable<Vector3> = null;
 
 const gPopup = new FloatingDialog();
 
-export type CustomDeclarations = DefaultDeclarations;
+export type CustomDescriptions = DefaultDescriptions;
 
 export const run = async (
-  view: ThreeView<CustomDeclarations>,
+  view: ThreeView<CustomDescriptions>,
   canvas: HTMLCanvasElement,
 ) => {
   const plugin = new DefaultPlugin();
@@ -206,7 +206,7 @@ export const run = async (
   ]);
 };
 
-const addRunningObject = (view: ThreeView<CustomDeclarations>) => {
+const addRunningObject = (view: ThreeView<CustomDescriptions>) => {
   const sphere = placeOneBall(view, new Vector3(0, 0, 0), 0xffffff);
   if (!sphere) {
     return;
@@ -241,7 +241,7 @@ const addRunningObject = (view: ThreeView<CustomDeclarations>) => {
 };
 
 const testScreenToWorld = (
-  view: ThreeView<CustomDeclarations>,
+  view: ThreeView<CustomDescriptions>,
   canvas: HTMLCanvasElement,
 ) => {
   const onMouseMove = (event: MouseEvent) => {
@@ -265,7 +265,7 @@ const testScreenToWorld = (
 };
 
 const placeOneBall = (
-  view: ThreeView<CustomDeclarations>,
+  view: ThreeView<CustomDescriptions>,
   pos: Vector3 | undefined,
   color: number,
 ): Mesh | undefined => {
@@ -284,7 +284,7 @@ const placeOneBall = (
   }
 };
 
-const addTestModelForNormal = (view: ThreeView<CustomDeclarations>) => {
+const addTestModelForNormal = (view: ThreeView<CustomDescriptions>) => {
   const pos = geodeticToVector3({
     lat: degreeToRadian(43.0618),
     lng: degreeToRadian(141.3545),
@@ -336,7 +336,7 @@ const addTestModelForNormal = (view: ThreeView<CustomDeclarations>) => {
   }
 };
 
-const addTestModelForTerrainHeight = (view: ThreeView<CustomDeclarations>) => {
+const addTestModelForTerrainHeight = (view: ThreeView<CustomDescriptions>) => {
   const pos = geodeticToVector3({
     lat: degreeToRadian(gFujiPos[0]),
     lng: degreeToRadian(gFujiPos[1]),
@@ -561,7 +561,7 @@ const onTransformChange = () => {
 };
 
 const testRayPlane = (
-  view: ThreeView<CustomDeclarations>,
+  view: ThreeView<CustomDescriptions>,
   canvas: HTMLCanvasElement,
 ) => {
   let center: Vector3 | undefined = undefined;
@@ -657,7 +657,7 @@ const testRayPlane = (
 };
 
 const makeCylinder = (
-  view: ThreeView<CustomDeclarations>,
+  view: ThreeView<CustomDescriptions>,
   center: Vector3,
 ): Mesh | undefined => {
   const cylinderLayer = view.addMesh<CylinderMeshDesc>({
@@ -742,7 +742,7 @@ const onDistPosChange = () => {
 };
 
 const updatePolylineMesh = (
-  view: ThreeView<CustomDeclarations>,
+  view: ThreeView<CustomDescriptions>,
   curvePoints: XYZ[],
 ) => {
   if (!gPolylineLayer) return;
@@ -788,7 +788,7 @@ const updatePolylineMesh = (
   gMouseBall?.scale.set(mouseBallRadius, mouseBallRadius, mouseBallRadius);
 };
 
-const addCameraListener = (view: ThreeView<CustomDeclarations>) => {
+const addCameraListener = (view: ThreeView<CustomDescriptions>) => {
   // Update tube thickness when camera moves
   view.camera.on("move", () => {
     if (!gPolylineLayer || !view.camera || gPolylinePoints.length === 0) return;
@@ -809,7 +809,7 @@ const addCameraListener = (view: ThreeView<CustomDeclarations>) => {
   });
 };
 
-const createPolylineMesh = (view: ThreeView<CustomDeclarations>) => {
+const createPolylineMesh = (view: ThreeView<CustomDescriptions>) => {
   // Create initial points for the curve
   const points: XYZ[] = Array.from({ length: 2 }, () => ({
     x: 0,
@@ -830,7 +830,7 @@ const createPolylineMesh = (view: ThreeView<CustomDeclarations>) => {
   });
 };
 
-const testSampleTerrainHeight = (view: ThreeView<CustomDeclarations>) => {
+const testSampleTerrainHeight = (view: ThreeView<CustomDescriptions>) => {
   const onMouseMove = (event: MapMouseEvent) => {
     const mapPos = event.map;
 
@@ -897,7 +897,7 @@ const onRegisterChange = () => {
   }
 };
 
-const testShowModelInfo = (view: ThreeView<CustomDeclarations>) => {
+const testShowModelInfo = (view: ThreeView<CustomDescriptions>) => {
   view.on("pick", (info) => {
     if (!info) {
       gPickedPos = null;

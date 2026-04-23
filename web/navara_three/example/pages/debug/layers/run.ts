@@ -5,7 +5,7 @@ import ThreeView, {
 } from "@navara/three";
 import {
   DefaultPlugin,
-  type DefaultDeclarations,
+  type DefaultDescriptions,
 } from "@navara/three_default_plugin";
 import { Vector3 } from "three";
 import { Pane } from "tweakpane";
@@ -22,7 +22,7 @@ import {
 import { addDateControl, addCameraControl } from "../../../helpers/control";
 import { addCtrlPanel, type MaterialDesc } from "../../../helpers/panel";
 
-export type CustomDeclarations = DefaultDeclarations;
+export type CustomDescriptions = DefaultDescriptions;
 
 const geoLayersDef: MaterialDesc[] = [
   {
@@ -546,7 +546,7 @@ const geoLayersDef: MaterialDesc[] = [
   },
 ];
 
-export const run = async (view: ThreeView<CustomDeclarations>) => {
+export const run = async (view: ThreeView<CustomDescriptions>) => {
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
   await view.init();
