@@ -65,7 +65,7 @@ rustybuzz = "=0.20.1"
 fontdue = "=0.9.3"
 sdf_glyph_renderer = "=1.1.0"
 guillotiere = "=0.7.0"
-wuff = "=0.2.3"
+wuff = "=0.2.4"
 
 # --- Testing ---
 wasm-bindgen-test = "=0.3.68"
