@@ -167,7 +167,11 @@ export class GLTFModelDesc extends MeshDesc<
       }
 
       if (this.rotation) {
-        this.raw?.rotation.set(this.rotation.x, this.rotation.y, this.rotation.z);
+        this.raw?.rotation.set(
+          this.rotation.x,
+          this.rotation.y,
+          this.rotation.z,
+        );
       }
     }
 
@@ -496,7 +500,8 @@ export class GLTFModelDesc extends MeshDesc<
 
     if (hasSpatialChange && (this.matrixWorld || updates.matrixWorld)) {
       // matrixWorld path: recompute the full RTE decomposition
-      if (updates.matrixWorld !== undefined) this.matrixWorld = updates.matrixWorld;
+      if (updates.matrixWorld !== undefined)
+        this.matrixWorld = updates.matrixWorld;
       if (updates.position !== undefined) this.position = updates.position;
       if (updates.scale !== undefined) this.scale = updates.scale;
       if (updates.rotation !== undefined) this.rotation = updates.rotation;
@@ -504,7 +509,8 @@ export class GLTFModelDesc extends MeshDesc<
       this.applyRTETransform();
 
       // Strip spatial properties so super doesn't also apply them
-      const { position, matrixWorld, scale, rotation, ...restUpdates } = updates;
+      const { position, matrixWorld, scale, rotation, ...restUpdates } =
+        updates;
       super.onUpdateConfig(restUpdates as GLTFModelUpdate);
     } else if (updates.position !== undefined) {
       // RTE-only path (no frame matrix)
