@@ -1,22 +1,25 @@
 use std::collections::HashMap;
+use std::ops::Range;
 use std::sync::Arc;
 
 use navara_property::PropertyValue;
 use rustc_hash::FxHashMap;
 
-/// Stores property table data from EXT_structural_metadata for lazy decoding.
+/// Stores property table metadata from EXT_structural_metadata for lazy decoding.
+/// Binary data is not owned; callers must provide the BIN chunk slice at read time.
 pub struct PropertyTableData {
     /// Number of features (rows) in the table.
     pub count: u32,
-    /// Property names and their binary data.
-    /// Key: property name, Value: raw binary data for that column.
+    /// Property names and their column metadata.
+    /// Key: property name, Value: column metadata with byte ranges into the BIN chunk.
     pub properties: Arc<HashMap<String, PropertyColumnData>>,
 }
 
-/// Binary data for a single property column in a PropertyTable.
+/// Metadata for a single property column in a PropertyTable.
+/// Stores byte ranges instead of owned data; the actual binary is resolved at read time.
 pub struct PropertyColumnData {
-    /// Raw binary data containing the values.
-    pub values: Vec<u8>,
+    /// Byte range within the GLB BIN chunk for column values.
+    pub values_range: Range<usize>,
     /// The component type (e.g. UINT8, FLOAT32, STRING).
     pub component_type: String,
     /// The top-level type (e.g. SCALAR, VEC2, VEC3, STRING).
@@ -28,9 +31,9 @@ pub struct PropertyColumnData {
     /// Sentinel string value from schema `noData` property for STRING types.
     /// When a decoded string matches this, the value is treated as null.
     pub string_no_data: Option<String>,
-    /// Byte offsets for STRING type properties (from `stringOffsets` buffer view).
+    /// Byte range within the GLB BIN chunk for string offsets (if STRING type).
     /// Per spec, this is an array of `count + 1` offsets marking string boundaries.
-    pub string_offsets: Option<Vec<u8>>,
+    pub string_offsets_range: Option<Range<usize>>,
     /// Component type for string offsets (UINT8, UINT16, or UINT32). Defaults to UINT32.
     pub string_offset_type: String,
     /// Whether integer values should be normalized to [0,1] or [-1,1] range.
@@ -45,13 +48,20 @@ pub struct PropertyColumnData {
 
 impl PropertyTableData {
     /// Get all properties for a feature at the given index.
-    pub fn get_properties<V: PropertyValue>(&self, index: usize) -> Option<V> {
+    /// `binary` is the GLB BIN chunk slice from which column data is read.
+    pub fn get_properties<V: PropertyValue>(&self, index: usize, binary: &[u8]) -> Option<V> {
         if index >= self.count as usize {
             return None;
         }
         let mut props = V::empty_map();
         for (name, col) in self.properties.as_ref() {
-            let value = read_column_value::<V>(col, index).unwrap_or_else(V::null);
+            let values = binary.get(col.values_range.clone()).unwrap_or(&[]);
+            let string_offsets = col
+                .string_offsets_range
+                .as_ref()
+                .and_then(|r| binary.get(r.clone()));
+            let value =
+                read_column_value::<V>(col, values, string_offsets, index).unwrap_or_else(V::null);
             V::insert(&mut props, name.clone(), value);
         }
         Some(V::finalize_map(props))
@@ -59,10 +69,12 @@ impl PropertyTableData {
 
     /// Get filtered properties for a feature at the given index.
     /// Returns `Vec<Option<V>>` in the same order as `keys`.
+    /// `binary` is the GLB BIN chunk slice from which column data is read.
     pub fn get_filtered_properties<V: PropertyValue>(
         &self,
         index: usize,
         keys: &[String],
+        binary: &[u8],
     ) -> Option<Vec<Option<V>>> {
         if index >= self.count as usize {
             return None;
@@ -74,7 +86,12 @@ impl PropertyTableData {
         let mut result: Vec<Option<V>> = keys.iter().map(|_| None).collect();
         for (name, col) in self.properties.as_ref() {
             if let Some(&pos) = indexed_keys.get(name.as_str()) {
-                result[pos] = read_column_value::<V>(col, index);
+                let values = binary.get(col.values_range.clone()).unwrap_or(&[]);
+                let string_offsets = col
+                    .string_offsets_range
+                    .as_ref()
+                    .and_then(|r| binary.get(r.clone()));
+                result[pos] = read_column_value::<V>(col, values, string_offsets, index);
             }
         }
         Some(result)
@@ -83,17 +100,18 @@ impl PropertyTableData {
 
 /// Read a value from a column, returning null if it matches the noData sentinel.
 /// Applies normalization, scale, and offset transforms per 3D Tiles 1.1 spec.
-fn read_column_value<V: PropertyValue>(col: &PropertyColumnData, index: usize) -> Option<V> {
-    if is_no_data(col, index) {
+/// `values` and `string_offsets` are pre-sliced from the GLB BIN chunk.
+fn read_column_value<V: PropertyValue>(
+    col: &PropertyColumnData,
+    values: &[u8],
+    string_offsets: Option<&[u8]>,
+    index: usize,
+) -> Option<V> {
+    if is_no_data(col, values, index) {
         return Some(V::null());
     }
     if col.element_type == "STRING" {
-        return match read_string_value(
-            &col.values,
-            index,
-            col.string_offsets.as_deref(),
-            &col.string_offset_type,
-        ) {
+        return match read_string_value(values, index, string_offsets, &col.string_offset_type) {
             Some(s) if col.string_no_data.as_deref() == Some(s.as_str()) => Some(V::null()),
             Some(s) => Some(V::from_string(s)),
             None => None,
@@ -108,7 +126,7 @@ fn read_column_value<V: PropertyValue>(col: &PropertyColumnData, index: usize) -
 
         if elem_count == 1 {
             // SCALAR path
-            let raw = read_raw_f64(&col.values, index, &col.component_type)?;
+            let raw = read_raw_f64(values, index, &col.component_type)?;
             let norm = if col.normalized {
                 normalize_value(raw, &col.component_type)
             } else {
@@ -131,7 +149,7 @@ fn read_column_value<V: PropertyValue>(col: &PropertyColumnData, index: usize) -
         let mut arr = Vec::with_capacity(elem_count);
         for i in 0..elem_count {
             let byte_off = base_offset + i * comp_size;
-            let raw = read_raw_f64_at(&col.values, byte_off, &col.component_type)?;
+            let raw = read_raw_f64_at(values, byte_off, &col.component_type)?;
             let norm = if col.normalized {
                 normalize_value(raw, &col.component_type)
             } else {
@@ -152,11 +170,11 @@ fn read_column_value<V: PropertyValue>(col: &PropertyColumnData, index: usize) -
         return Some(V::from_array(arr));
     }
 
-    read_value::<V>(&col.values, index, &col.component_type, &col.element_type)
+    read_value::<V>(values, index, &col.component_type, &col.element_type)
 }
 
 /// Check if the raw bytes at the given index match the noData sentinel value.
-fn is_no_data(col: &PropertyColumnData, index: usize) -> bool {
+fn is_no_data(col: &PropertyColumnData, values: &[u8], index: usize) -> bool {
     let Some(no_data) = &col.no_data else {
         return false;
     };
@@ -165,7 +183,7 @@ fn is_no_data(col: &PropertyColumnData, index: usize) -> bool {
         return false;
     }
     let offset = index * size;
-    col.values
+    values
         .get(offset..offset + size)
         .is_some_and(|bytes| bytes == no_data.as_slice())
 }
@@ -452,23 +470,27 @@ mod tests {
     use super::*;
     use serde_json::Value;
 
-    fn make_property_table() -> PropertyTableData {
+    /// Build a contiguous binary buffer and a PropertyTableData with ranges into it.
+    /// Returns (binary, table) where binary is the BIN chunk.
+    fn make_property_table() -> (Vec<u8>, PropertyTableData) {
+        let mut binary = Vec::new();
         let mut properties = HashMap::new();
 
         // height: 3 features, FLOAT32 SCALAR
-        let mut height_bytes = Vec::new();
-        height_bytes.extend_from_slice(&10.5f32.to_le_bytes());
-        height_bytes.extend_from_slice(&20.0f32.to_le_bytes());
-        height_bytes.extend_from_slice(&30.75f32.to_le_bytes());
+        let height_start = binary.len();
+        binary.extend_from_slice(&10.5f32.to_le_bytes());
+        binary.extend_from_slice(&20.0f32.to_le_bytes());
+        binary.extend_from_slice(&30.75f32.to_le_bytes());
+        let height_end = binary.len();
         properties.insert(
             "height".to_string(),
             PropertyColumnData {
-                values: height_bytes,
+                values_range: height_start..height_end,
                 component_type: "FLOAT32".to_string(),
                 element_type: "SCALAR".to_string(),
                 no_data: None,
                 string_no_data: None,
-                string_offsets: None,
+                string_offsets_range: None,
                 string_offset_type: String::new(),
                 normalized: false,
                 offset: None,
@@ -477,19 +499,20 @@ mod tests {
         );
 
         // id: 3 features, UINT32 SCALAR
-        let mut id_bytes = Vec::new();
-        id_bytes.extend_from_slice(&100u32.to_le_bytes());
-        id_bytes.extend_from_slice(&200u32.to_le_bytes());
-        id_bytes.extend_from_slice(&300u32.to_le_bytes());
+        let id_start = binary.len();
+        binary.extend_from_slice(&100u32.to_le_bytes());
+        binary.extend_from_slice(&200u32.to_le_bytes());
+        binary.extend_from_slice(&300u32.to_le_bytes());
+        let id_end = binary.len();
         properties.insert(
             "id".to_string(),
             PropertyColumnData {
-                values: id_bytes,
+                values_range: id_start..id_end,
                 component_type: "UINT32".to_string(),
                 element_type: "SCALAR".to_string(),
                 no_data: None,
                 string_no_data: None,
-                string_offsets: None,
+                string_offsets_range: None,
                 string_offset_type: String::new(),
                 normalized: false,
                 offset: None,
@@ -498,21 +521,24 @@ mod tests {
         );
 
         // name: 3 features, STRING with stringOffsets
-        let name_bytes = b"building_abuilding_bbuilding_c".to_vec();
-        let mut name_offsets = Vec::new();
-        name_offsets.extend_from_slice(&0u32.to_le_bytes());
-        name_offsets.extend_from_slice(&10u32.to_le_bytes());
-        name_offsets.extend_from_slice(&20u32.to_le_bytes());
-        name_offsets.extend_from_slice(&30u32.to_le_bytes());
+        let name_start = binary.len();
+        binary.extend_from_slice(b"building_abuilding_bbuilding_c");
+        let name_end = binary.len();
+        let offsets_start = binary.len();
+        binary.extend_from_slice(&0u32.to_le_bytes());
+        binary.extend_from_slice(&10u32.to_le_bytes());
+        binary.extend_from_slice(&20u32.to_le_bytes());
+        binary.extend_from_slice(&30u32.to_le_bytes());
+        let offsets_end = binary.len();
         properties.insert(
             "name".to_string(),
             PropertyColumnData {
-                values: name_bytes,
+                values_range: name_start..name_end,
                 component_type: String::new(),
                 element_type: "STRING".to_string(),
                 no_data: None,
                 string_no_data: None,
-                string_offsets: Some(name_offsets),
+                string_offsets_range: Some(offsets_start..offsets_end),
                 string_offset_type: "UINT32".to_string(),
                 normalized: false,
                 offset: None,
@@ -520,16 +546,17 @@ mod tests {
             },
         );
 
-        PropertyTableData {
+        let table = PropertyTableData {
             count: 3,
             properties: Arc::new(properties),
-        }
+        };
+        (binary, table)
     }
 
     #[test]
     fn test_get_properties_all() {
-        let table = make_property_table();
-        let props: Value = table.get_properties(0).unwrap();
+        let (binary, table) = make_property_table();
+        let props: Value = table.get_properties(0, &binary).unwrap();
         let map = props.as_object().unwrap();
 
         assert_eq!(map["id"].as_u64(), Some(100));
@@ -539,8 +566,8 @@ mod tests {
 
     #[test]
     fn test_get_properties_second_feature() {
-        let table = make_property_table();
-        let props: Value = table.get_properties(1).unwrap();
+        let (binary, table) = make_property_table();
+        let props: Value = table.get_properties(1, &binary).unwrap();
         let map = props.as_object().unwrap();
 
         assert_eq!(map["id"].as_u64(), Some(200));
@@ -550,8 +577,8 @@ mod tests {
 
     #[test]
     fn test_get_properties_last_feature() {
-        let table = make_property_table();
-        let props: Value = table.get_properties(2).unwrap();
+        let (binary, table) = make_property_table();
+        let props: Value = table.get_properties(2, &binary).unwrap();
         let map = props.as_object().unwrap();
 
         assert_eq!(map["id"].as_u64(), Some(300));
@@ -561,21 +588,23 @@ mod tests {
 
     #[test]
     fn test_get_properties_no_data_returns_null() {
+        let mut binary = Vec::new();
         let mut properties = HashMap::new();
 
-        let mut height_bytes = Vec::new();
-        height_bytes.extend_from_slice(&10.5f32.to_le_bytes());
-        height_bytes.extend_from_slice(&(-9999.0f32).to_le_bytes());
-        height_bytes.extend_from_slice(&30.0f32.to_le_bytes());
+        let start = binary.len();
+        binary.extend_from_slice(&10.5f32.to_le_bytes());
+        binary.extend_from_slice(&(-9999.0f32).to_le_bytes());
+        binary.extend_from_slice(&30.0f32.to_le_bytes());
+        let end = binary.len();
         properties.insert(
             "height".to_string(),
             PropertyColumnData {
-                values: height_bytes,
+                values_range: start..end,
                 component_type: "FLOAT32".to_string(),
                 element_type: "SCALAR".to_string(),
                 no_data: Some((-9999.0f32).to_le_bytes().to_vec()),
                 string_no_data: None,
-                string_offsets: None,
+                string_offsets_range: None,
                 string_offset_type: String::new(),
                 normalized: false,
                 offset: None,
@@ -588,32 +617,34 @@ mod tests {
             properties: Arc::new(properties),
         };
 
-        let props: Value = table.get_properties(0).unwrap();
+        let props: Value = table.get_properties(0, &binary).unwrap();
         assert!((props["height"].as_f64().unwrap() - 10.5).abs() < 1e-6);
 
-        let props: Value = table.get_properties(1).unwrap();
+        let props: Value = table.get_properties(1, &binary).unwrap();
         assert!(props["height"].is_null());
 
-        let props: Value = table.get_properties(2).unwrap();
+        let props: Value = table.get_properties(2, &binary).unwrap();
         assert!((props["height"].as_f64().unwrap() - 30.0).abs() < 1e-6);
     }
 
     #[test]
     fn test_get_properties_no_data_uint32() {
+        let mut binary = Vec::new();
         let mut properties = HashMap::new();
 
-        let mut id_bytes = Vec::new();
-        id_bytes.extend_from_slice(&100u32.to_le_bytes());
-        id_bytes.extend_from_slice(&0u32.to_le_bytes());
+        let start = binary.len();
+        binary.extend_from_slice(&100u32.to_le_bytes());
+        binary.extend_from_slice(&0u32.to_le_bytes());
+        let end = binary.len();
         properties.insert(
             "id".to_string(),
             PropertyColumnData {
-                values: id_bytes,
+                values_range: start..end,
                 component_type: "UINT32".to_string(),
                 element_type: "SCALAR".to_string(),
                 no_data: Some(0u32.to_le_bytes().to_vec()),
                 string_no_data: None,
-                string_offsets: None,
+                string_offsets_range: None,
                 string_offset_type: String::new(),
                 normalized: false,
                 offset: None,
@@ -626,29 +657,30 @@ mod tests {
             properties: Arc::new(properties),
         };
 
-        let props: Value = table.get_properties(0).unwrap();
+        let props: Value = table.get_properties(0, &binary).unwrap();
         assert_eq!(props["id"].as_u64(), Some(100));
 
-        let props: Value = table.get_properties(1).unwrap();
+        let props: Value = table.get_properties(1, &binary).unwrap();
         assert!(props["id"].is_null());
     }
 
     #[test]
     fn test_get_properties_out_of_bounds() {
-        let table = make_property_table();
-        let result: Option<Value> = table.get_properties(3);
+        let (binary, table) = make_property_table();
+        let result: Option<Value> = table.get_properties(3, &binary);
         assert!(result.is_none());
     }
 
     #[test]
     fn test_get_filtered_properties_ordering_and_missing() {
-        let table = make_property_table();
+        let (binary, table) = make_property_table();
         let keys = vec![
             "name".to_string(),
             "nonexistent".to_string(),
             "id".to_string(),
         ];
-        let result: Vec<Option<Value>> = table.get_filtered_properties(0, &keys).unwrap();
+        let result: Vec<Option<Value>> =
+            table.get_filtered_properties(0, &keys, &binary).unwrap();
 
         assert_eq!(result.len(), 3);
         assert_eq!(result[0], Some(Value::String("building_a".to_string())));
@@ -658,9 +690,10 @@ mod tests {
 
     #[test]
     fn test_get_filtered_properties_out_of_bounds() {
-        let table = make_property_table();
+        let (binary, table) = make_property_table();
         let keys = vec!["id".to_string()];
-        let result: Option<Vec<Option<Value>>> = table.get_filtered_properties(99, &keys);
+        let result: Option<Vec<Option<Value>>> =
+            table.get_filtered_properties(99, &keys, &binary);
         assert!(result.is_none());
     }
 
@@ -773,126 +806,144 @@ mod tests {
 
     #[test]
     fn test_string_with_offsets() {
-        let values = b"helloworld!".to_vec();
-        let mut offsets = Vec::new();
-        offsets.extend_from_slice(&0u32.to_le_bytes());
-        offsets.extend_from_slice(&5u32.to_le_bytes());
-        offsets.extend_from_slice(&10u32.to_le_bytes());
-        offsets.extend_from_slice(&11u32.to_le_bytes());
+        let mut binary = Vec::new();
+        let values_start = binary.len();
+        binary.extend_from_slice(b"helloworld!");
+        let values_end = binary.len();
+        let offsets_start = binary.len();
+        binary.extend_from_slice(&0u32.to_le_bytes());
+        binary.extend_from_slice(&5u32.to_le_bytes());
+        binary.extend_from_slice(&10u32.to_le_bytes());
+        binary.extend_from_slice(&11u32.to_le_bytes());
+        let offsets_end = binary.len();
 
         let col = PropertyColumnData {
-            values,
+            values_range: values_start..values_end,
             component_type: String::new(),
             element_type: "STRING".to_string(),
             no_data: None,
             string_no_data: None,
-            string_offsets: Some(offsets),
+            string_offsets_range: Some(offsets_start..offsets_end),
             string_offset_type: "UINT32".to_string(),
             normalized: false,
             offset: None,
             scale: None,
         };
 
-        let v: Value = read_column_value(&col, 0).unwrap();
+        let values = &binary[col.values_range.clone()];
+        let string_offsets = col.string_offsets_range.as_ref().map(|r| &binary[r.clone()]);
+        let v: Value = read_column_value(&col, values, string_offsets, 0).unwrap();
         assert_eq!(v.as_str(), Some("hello"));
-        let v: Value = read_column_value(&col, 1).unwrap();
+        let v: Value = read_column_value(&col, values, string_offsets, 1).unwrap();
         assert_eq!(v.as_str(), Some("world"));
-        let v: Value = read_column_value(&col, 2).unwrap();
+        let v: Value = read_column_value(&col, values, string_offsets, 2).unwrap();
         assert_eq!(v.as_str(), Some("!"));
     }
 
     #[test]
     fn test_string_with_uint16_offsets() {
-        let values = b"ab".to_vec();
-        let mut offsets = Vec::new();
-        offsets.extend_from_slice(&0u16.to_le_bytes());
-        offsets.extend_from_slice(&1u16.to_le_bytes());
-        offsets.extend_from_slice(&2u16.to_le_bytes());
+        let mut binary = Vec::new();
+        let values_start = binary.len();
+        binary.extend_from_slice(b"ab");
+        let values_end = binary.len();
+        let offsets_start = binary.len();
+        binary.extend_from_slice(&0u16.to_le_bytes());
+        binary.extend_from_slice(&1u16.to_le_bytes());
+        binary.extend_from_slice(&2u16.to_le_bytes());
+        let offsets_end = binary.len();
 
         let col = PropertyColumnData {
-            values,
+            values_range: values_start..values_end,
             component_type: String::new(),
             element_type: "STRING".to_string(),
             no_data: None,
             string_no_data: None,
-            string_offsets: Some(offsets),
+            string_offsets_range: Some(offsets_start..offsets_end),
             string_offset_type: "UINT16".to_string(),
             normalized: false,
             offset: None,
             scale: None,
         };
 
-        let v: Value = read_column_value(&col, 0).unwrap();
+        let values = &binary[col.values_range.clone()];
+        let string_offsets = col.string_offsets_range.as_ref().map(|r| &binary[r.clone()]);
+        let v: Value = read_column_value(&col, values, string_offsets, 0).unwrap();
         assert_eq!(v.as_str(), Some("a"));
-        let v: Value = read_column_value(&col, 1).unwrap();
+        let v: Value = read_column_value(&col, values, string_offsets, 1).unwrap();
         assert_eq!(v.as_str(), Some("b"));
     }
 
     #[test]
     fn test_string_without_offsets_null_separated() {
         // When stringOffsets is absent, strings are decoded via null separators
+        let binary = b"hello\0world\0".to_vec();
         let col = PropertyColumnData {
-            values: b"hello\0world\0".to_vec(),
+            values_range: 0..binary.len(),
             component_type: String::new(),
             element_type: "STRING".to_string(),
             no_data: None,
             string_no_data: None,
-            string_offsets: None,
+            string_offsets_range: None,
             string_offset_type: String::new(),
             normalized: false,
             offset: None,
             scale: None,
         };
 
-        let v: Value = read_column_value(&col, 0).unwrap();
+        let values = &binary[col.values_range.clone()];
+        let v: Value = read_column_value(&col, values, None, 0).unwrap();
         assert_eq!(v.as_str(), Some("hello"));
-        let v: Value = read_column_value(&col, 1).unwrap();
+        let v: Value = read_column_value(&col, values, None, 1).unwrap();
         assert_eq!(v.as_str(), Some("world"));
     }
 
     #[test]
     fn test_string_without_offsets_no_trailing_null() {
         // Last string may not have a trailing null
+        let binary = b"hello\0world".to_vec();
         let col = PropertyColumnData {
-            values: b"hello\0world".to_vec(),
+            values_range: 0..binary.len(),
             component_type: String::new(),
             element_type: "STRING".to_string(),
             no_data: None,
             string_no_data: None,
-            string_offsets: None,
+            string_offsets_range: None,
             string_offset_type: String::new(),
             normalized: false,
             offset: None,
             scale: None,
         };
 
-        let v: Value = read_column_value(&col, 0).unwrap();
+        let values = &binary[col.values_range.clone()];
+        let v: Value = read_column_value(&col, values, None, 0).unwrap();
         assert_eq!(v.as_str(), Some("hello"));
-        let v: Value = read_column_value(&col, 1).unwrap();
+        let v: Value = read_column_value(&col, values, None, 1).unwrap();
         assert_eq!(v.as_str(), Some("world"));
     }
 
     #[test]
     fn test_string_without_offsets_no_data() {
         // noData sentinel should work with null-separated strings too
+        let binary = "hello\0\u{FFFF}\0bye".as_bytes().to_vec();
         let col = PropertyColumnData {
-            values: "hello\0\u{FFFF}\0bye".as_bytes().to_vec(),
+            values_range: 0..binary.len(),
             component_type: String::new(),
             element_type: "STRING".to_string(),
             no_data: None,
             string_no_data: Some("\u{FFFF}".to_string()),
-            string_offsets: None,
+            string_offsets_range: None,
             string_offset_type: String::new(),
             normalized: false,
             offset: None,
             scale: None,
         };
 
-        let v: Value = read_column_value(&col, 0).unwrap();
+        let values = &binary[col.values_range.clone()];
+        let v: Value = read_column_value(&col, values, None, 0).unwrap();
         assert_eq!(v.as_str(), Some("hello"));
-        let v: Value = read_column_value(&col, 1).unwrap();
+        let v: Value = read_column_value(&col, values, None, 1).unwrap();
         assert!(v.is_null());
-        let v: Value = read_column_value(&col, 2).unwrap();
+        let v: Value = read_column_value(&col, values, None, 2).unwrap();
         assert_eq!(v.as_str(), Some("bye"));
     }
 
@@ -922,96 +973,101 @@ mod tests {
 
     #[test]
     fn test_normalized_uint8() {
+        let binary = vec![255u8, 128];
         let col = PropertyColumnData {
-            values: vec![255, 128],
+            values_range: 0..binary.len(),
             component_type: "UINT8".to_string(),
             element_type: "SCALAR".to_string(),
             no_data: None,
             string_no_data: None,
-            string_offsets: None,
+            string_offsets_range: None,
             string_offset_type: String::new(),
             normalized: true,
             offset: None,
             scale: None,
         };
 
-        let v: Value = read_column_value(&col, 0).unwrap();
+        let values = &binary[col.values_range.clone()];
+        let v: Value = read_column_value(&col, values, None, 0).unwrap();
         assert!((v.as_f64().unwrap() - 1.0).abs() < 1e-6);
 
-        let v: Value = read_column_value(&col, 1).unwrap();
+        let v: Value = read_column_value(&col, values, None, 1).unwrap();
         assert!((v.as_f64().unwrap() - 128.0 / 255.0).abs() < 1e-6);
     }
 
     #[test]
     fn test_offset_and_scale() {
-        let mut values = Vec::new();
-        values.extend_from_slice(&10.0f32.to_le_bytes());
-        values.extend_from_slice(&20.0f32.to_le_bytes());
+        let mut binary = Vec::new();
+        binary.extend_from_slice(&10.0f32.to_le_bytes());
+        binary.extend_from_slice(&20.0f32.to_le_bytes());
 
         let col = PropertyColumnData {
-            values,
+            values_range: 0..binary.len(),
             component_type: "FLOAT32".to_string(),
             element_type: "SCALAR".to_string(),
             no_data: None,
             string_no_data: None,
-            string_offsets: None,
+            string_offsets_range: None,
             string_offset_type: String::new(),
             normalized: false,
             offset: Some(vec![100.0]),
             scale: Some(vec![2.0]),
         };
 
-        let v: Value = read_column_value(&col, 0).unwrap();
+        let values = &binary[col.values_range.clone()];
+        let v: Value = read_column_value(&col, values, None, 0).unwrap();
         assert!((v.as_f64().unwrap() - 120.0).abs() < 1e-6);
 
-        let v: Value = read_column_value(&col, 1).unwrap();
+        let v: Value = read_column_value(&col, values, None, 1).unwrap();
         assert!((v.as_f64().unwrap() - 140.0).abs() < 1e-6);
     }
 
     #[test]
     fn test_normalized_with_offset_and_scale() {
-        let mut values = Vec::new();
-        values.extend_from_slice(&32768u16.to_le_bytes());
+        let mut binary = Vec::new();
+        binary.extend_from_slice(&32768u16.to_le_bytes());
 
         let col = PropertyColumnData {
-            values,
+            values_range: 0..binary.len(),
             component_type: "UINT16".to_string(),
             element_type: "SCALAR".to_string(),
             no_data: None,
             string_no_data: None,
-            string_offsets: None,
+            string_offsets_range: None,
             string_offset_type: String::new(),
             normalized: true,
             offset: Some(vec![10.0]),
             scale: Some(vec![100.0]),
         };
 
-        let v: Value = read_column_value(&col, 0).unwrap();
+        let values = &binary[col.values_range.clone()];
+        let v: Value = read_column_value(&col, values, None, 0).unwrap();
         let expected = 10.0 + 100.0 * (32768.0 / 65535.0);
         assert!((v.as_f64().unwrap() - expected).abs() < 0.01);
     }
 
     #[test]
     fn test_vec3_with_offset_and_scale() {
-        let mut values = Vec::new();
-        values.extend_from_slice(&1.0f32.to_le_bytes());
-        values.extend_from_slice(&2.0f32.to_le_bytes());
-        values.extend_from_slice(&3.0f32.to_le_bytes());
+        let mut binary = Vec::new();
+        binary.extend_from_slice(&1.0f32.to_le_bytes());
+        binary.extend_from_slice(&2.0f32.to_le_bytes());
+        binary.extend_from_slice(&3.0f32.to_le_bytes());
 
         let col = PropertyColumnData {
-            values,
+            values_range: 0..binary.len(),
             component_type: "FLOAT32".to_string(),
             element_type: "VEC3".to_string(),
             no_data: None,
             string_no_data: None,
-            string_offsets: None,
+            string_offsets_range: None,
             string_offset_type: String::new(),
             normalized: false,
             offset: Some(vec![10.0, 20.0, 30.0]),
             scale: Some(vec![2.0, 3.0, 4.0]),
         };
 
-        let v: Value = read_column_value(&col, 0).unwrap();
+        let values = &binary[col.values_range.clone()];
+        let v: Value = read_column_value(&col, values, None, 0).unwrap();
         let arr = v.as_array().unwrap();
         assert!((arr[0].as_f64().unwrap() - 12.0).abs() < 1e-6);
         assert!((arr[1].as_f64().unwrap() - 26.0).abs() < 1e-6);
@@ -1020,22 +1076,23 @@ mod tests {
 
     #[test]
     fn test_vec3_normalized() {
-        let values = vec![255u8, 128, 0];
+        let binary = vec![255u8, 128, 0];
 
         let col = PropertyColumnData {
-            values,
+            values_range: 0..binary.len(),
             component_type: "UINT8".to_string(),
             element_type: "VEC3".to_string(),
             no_data: None,
             string_no_data: None,
-            string_offsets: None,
+            string_offsets_range: None,
             string_offset_type: String::new(),
             normalized: true,
             offset: None,
             scale: None,
         };
 
-        let v: Value = read_column_value(&col, 0).unwrap();
+        let values = &binary[col.values_range.clone()];
+        let v: Value = read_column_value(&col, values, None, 0).unwrap();
         let arr = v.as_array().unwrap();
         assert!((arr[0].as_f64().unwrap() - 1.0).abs() < 1e-6);
         assert!((arr[1].as_f64().unwrap() - 128.0 / 255.0).abs() < 1e-4);

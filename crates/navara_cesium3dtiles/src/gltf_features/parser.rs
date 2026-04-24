@@ -3,7 +3,7 @@
 use bevy_log::warn;
 use navara_core::CRS;
 use navara_feature_component::batch::{
-    BatchProperty, BatchTableValue, FeatureBatchId, GlobalBatchIds,
+    BatchProperty, BatchTableValue, FeatureBatchId, GlobalBatchIds, GltfPropertyTable,
 };
 use navara_math::{PI_OVER_TWO, Quat, Transform, Vec3};
 use navara_parser::cesium3dtiles::property_table::GlbSchemaParser;
@@ -51,7 +51,13 @@ impl TileContentParser for GltfFeaturesParser {
             let property_table_data = property_table_index
                 .and_then(|idx| glb_parser.property_table(idx, ctx.tileset_schema));
 
-            let batch_property = property_table_data.map(BatchProperty::Cesium3dTilesetV11);
+            let batch_property = property_table_data.map(|table| {
+                BatchProperty::Cesium3dTilesetV11(GltfPropertyTable {
+                    table,
+                    handle: ctx.requester_handle,
+                    bin_chunk_start: glb_parser.bin_chunk_start,
+                })
+            });
 
             ctx.batch_table
                 .add(Some(BatchTableValue {
