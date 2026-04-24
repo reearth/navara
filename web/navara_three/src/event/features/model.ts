@@ -26,7 +26,7 @@ export async function renderModel(ctx: EventContext, m: NavaraModelMesh) {
 
   const { rawScene, credit } = await (async () => {
     if (m.bin) {
-      const bin = ctx.buf.removeU8(m.bin);
+      const bin = ctx.buf.u8(m.bin);
       if (!bin) {
         return {};
       }
