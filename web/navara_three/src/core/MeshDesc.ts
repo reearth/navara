@@ -283,7 +283,7 @@ export abstract class MeshDesc<
    * Composes position, rotation, and scale into a local `T · R · S` matrix.
    * Returns identity when none are set.
    */
-  private composeLocalTransform(): Matrix4 {
+  protected composeLocalTransform(): Matrix4 {
     const local = new Matrix4();
     if (this.position) {
       local.multiply(
