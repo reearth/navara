@@ -736,6 +736,66 @@ material.uniforms.cameraPositionHigh.value = encodedCameraPos.high;
 material.uniforms.cameraPositionLow.value = encodedCameraPos.low;
 ```
 
+### composeWorldMatrixForRTE(frameMatrix, localMatrix)
+
+フレーム行列とローカル変換を合成し、結果を RTE レンダリング用の平行移動 Vector3 と回転・スケールのみの Matrix4 に分割します。平行移動は GPU 精度のために high/low の RTE uniform としてエンコードされ、回転・スケール行列はメッシュの matrixWorld に設定されてシェーダーの modelMatrix uniform となります。
+
+**Syntax:**
+
+```typescript
+function composeWorldMatrixForRTE(
+  frameMatrix: Matrix4,
+  localMatrix: Matrix4,
+  resultPosition?: Vector3,
+  resultRotationScale?: Matrix4
+): {
+  position: Vector3;
+  rotationScale: Matrix4;
+};
+```
+
+**Parameters:**
+
+- `frameMatrix`: フレーム変換行列（例: NUE-to-ECEF）（Three.js Matrix4）
+- `localMatrix`: フレーム内で合成するローカル T\*R\*S 変換（Three.js Matrix4）
+- `resultPosition`（省略可）: 抽出された平行移動を格納する Vector3（GC 回避のため再利用可能）
+- `resultRotationScale`（省略可）: 平行移動をゼロにした行列を格納する Matrix4（GC 回避のため再利用可能）
+
+**Returns:**
+
+RTE レンダリング用に分解された結果:
+- `position`: 合成行列から抽出されたワールド位置
+- `rotationScale`: 平行移動がゼロにされた合成行列
+
+```typescript
+type ComposeWorldMatrixForRTEResult = {
+  position: Vector3;
+  rotationScale: Matrix4;
+};
+```
+
+**Example:**
+
+```typescript
+import { composeWorldMatrixForRTE, encodePositionRTE } from "@navara/three_api";
+
+// NUE-to-ECEF フレームとローカルオフセットを合成し、RTE 用に分割
+const { position, rotationScale } = composeWorldMatrixForRTE(
+  nueToEcefMatrix,
+  localTransformMatrix,
+);
+
+// ワールド位置を high/low uniform としてエンコード
+const posHigh = new Vector3();
+const posLow = new Vector3();
+encodePositionRTE(position, posHigh, posLow);
+
+// 回転・スケールをメッシュに適用（平行移動は RTE uniform で処理）
+mesh.matrixAutoUpdate = false;
+mesh.matrixWorldAutoUpdate = false;
+mesh.matrixWorld.copy(rotationScale);
+```
+
 ## EllipsoidGeodesic
 
 楕円体表面上の測地線計算を行うクラスです。2 点間の測地線距離、方位角、補間点の計算などを提供します。インスタンス生成時に共通変数を事前計算することで、最適化されたパフォーマンスを実現します。

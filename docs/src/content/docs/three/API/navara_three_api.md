@@ -736,6 +736,66 @@ material.uniforms.cameraPositionHigh.value = encodedCameraPos.high;
 material.uniforms.cameraPositionLow.value = encodedCameraPos.low;
 ```
 
+### composeWorldMatrixForRTE(frameMatrix, localMatrix)
+
+Composes a frame matrix with a local transform, then splits the result into a translation Vector3 and a rotation/scale-only Matrix4 for RTE rendering. The translation is intended to be encoded as high/low RTE uniforms for GPU precision, while the rotation/scale matrix is assigned to the mesh's matrixWorld so it becomes the shader's modelMatrix uniform.
+
+**Syntax:**
+
+```typescript
+function composeWorldMatrixForRTE(
+  frameMatrix: Matrix4,
+  localMatrix: Matrix4,
+  resultPosition?: Vector3,
+  resultRotationScale?: Matrix4
+): {
+  position: Vector3;
+  rotationScale: Matrix4;
+};
+```
+
+**Parameters:**
+
+- `frameMatrix`: The frame transformation matrix (e.g. NUE-to-ECEF) (Three.js Matrix4)
+- `localMatrix`: The local T\*R\*S transform to compose within the frame (Three.js Matrix4)
+- `resultPosition` (optional): Vector3 to store the extracted translation (reused to avoid GC)
+- `resultRotationScale` (optional): Matrix4 to store the translation-zeroed matrix (reused to avoid GC)
+
+**Returns:**
+
+The decomposed result for RTE rendering:
+- `position`: World position extracted from the composed matrix
+- `rotationScale`: The composed matrix with translation zeroed out
+
+```typescript
+type ComposeWorldMatrixForRTEResult = {
+  position: Vector3;
+  rotationScale: Matrix4;
+};
+```
+
+**Example:**
+
+```typescript
+import { composeWorldMatrixForRTE, encodePositionRTE } from "@navara/three_api";
+
+// Compose an NUE-to-ECEF frame with a local offset, then split for RTE
+const { position, rotationScale } = composeWorldMatrixForRTE(
+  nueToEcefMatrix,
+  localTransformMatrix,
+);
+
+// Encode the world position as high/low uniforms
+const posHigh = new Vector3();
+const posLow = new Vector3();
+encodePositionRTE(position, posHigh, posLow);
+
+// Apply rotation/scale to the mesh (translation is handled by RTE uniforms)
+mesh.matrixAutoUpdate = false;
+mesh.matrixWorldAutoUpdate = false;
+mesh.matrixWorld.copy(rotationScale);
+```
+
 ## EllipsoidGeodesic
 
 A class for geodesic calculations on the ellipsoid surface. Provides geodesic distance, azimuth, and interpolation point calculations between two points. Achieves optimized performance by pre-computing common variables when the instance is created.

@@ -11,6 +11,7 @@ import {
   type RTEUserData,
   createReplacer,
   encodePositionRTE,
+  composeWorldMatrixForRTE,
 } from "@navara/three";
 import ProjectVertexRteModel from "@shaders/glsl/chunks/project_vertex_rte_model.glsl";
 import RteUniformParsVertex from "@shaders/glsl/chunks/rte_uniform_pars_vertex.glsl";
@@ -155,15 +156,19 @@ export class GLTFModelDesc extends MeshDesc<
   override onCreate() {
     this._instance = this.createMesh();
 
-    // RTE mode: keep raw.position at (0,0,0)
-    // The world position is stored in this.position and encoded in RTE uniforms
+    if (this.matrixWorld) {
+      // Decompose effective transform into RTE position + rotation/scale matrix
+      this.applyRTETransform();
+    } else {
+      // RTE-only mode: keep raw.position at (0,0,0)
+      // The world position is stored in this.position and encoded in RTE uniforms
+      if (this.scale) {
+        this.raw?.scale.copy(this.scale);
+      }
 
-    if (this.scale) {
-      this.raw?.scale.copy(this.scale);
-    }
-
-    if (this.rotation) {
-      this.raw?.rotation.set(this.rotation.x, this.rotation.y, this.rotation.z);
+      if (this.rotation) {
+        this.raw?.rotation.set(this.rotation.x, this.rotation.y, this.rotation.z);
+      }
     }
 
     this._instance.visible = this.visible;
@@ -232,8 +237,9 @@ export class GLTFModelDesc extends MeshDesc<
 
     if (!modelConfig) return;
 
-    // RTE: Encode world position from this.position (not targetGroup.position which is 0,0,0)
-    if (this.position) {
+    // When matrixWorld is set, applyRTETransform() already encoded the world position.
+    // Only encode from this.position when there is no frame matrix.
+    if (!this.matrixWorld && this.position) {
       this.setPositionRTE(
         new Vector3(this.position.x, this.position.y, this.position.z),
       );
@@ -332,6 +338,31 @@ export class GLTFModelDesc extends MeshDesc<
       this.modelPositionHigh,
       this.modelPositionLow,
     );
+  }
+
+  /**
+   * Decomposes the effective world transform (matrixWorld * T*R*S) into:
+   * - Translation → encoded as RTE position uniforms
+   * - Rotation/Scale → set on raw.matrixWorld for the shader's modelMatrix uniform
+   *
+   * This allows matrixWorld (e.g. NUE-to-ECEF frame) to work correctly with RTE
+   * by keeping the high-precision position in uniforms while the shader's modelMatrix
+   * only contains rotation and scale.
+   */
+  private applyRTETransform(): void {
+    if (!this.raw || !this.matrixWorld) return;
+
+    // Compose frame * local, then split into RTE position and rotation/scale
+    const { position, rotationScale } = composeWorldMatrixForRTE(
+      this.matrixWorld,
+      this.composeLocalTransform(),
+    );
+    this.setPositionRTE(position);
+
+    this.raw.matrixAutoUpdate = false;
+    this.raw.matrixWorldAutoUpdate = false;
+    this.raw.matrixWorld.copy(rotationScale);
+    this.raw.updateMatrixWorld();
   }
 
   private setupRTEShadersForMesh(mesh: Mesh): void {
@@ -456,17 +487,31 @@ export class GLTFModelDesc extends MeshDesc<
       this.emit("needsUpdate");
     }
 
-    // Handle position updates for RTE mode
-    if (updates.position !== undefined) {
-      // Update our stored world position
-      this.position = updates.position;
+    // Handle spatial updates for RTE mode
+    const hasSpatialChange =
+      updates.matrixWorld !== undefined ||
+      updates.position !== undefined ||
+      updates.scale !== undefined ||
+      updates.rotation !== undefined;
 
-      // Re-encode the new position (convert XYZ to Vector3)
+    if (hasSpatialChange && (this.matrixWorld || updates.matrixWorld)) {
+      // matrixWorld path: recompute the full RTE decomposition
+      if (updates.matrixWorld !== undefined) this.matrixWorld = updates.matrixWorld;
+      if (updates.position !== undefined) this.position = updates.position;
+      if (updates.scale !== undefined) this.scale = updates.scale;
+      if (updates.rotation !== undefined) this.rotation = updates.rotation;
+
+      this.applyRTETransform();
+
+      // Strip spatial properties so super doesn't also apply them
+      const { position, matrixWorld, scale, rotation, ...restUpdates } = updates;
+      super.onUpdateConfig(restUpdates as GLTFModelUpdate);
+    } else if (updates.position !== undefined) {
+      // RTE-only path (no frame matrix)
+      this.position = updates.position;
       this.setPositionRTE(
         new Vector3(updates.position.x, updates.position.y, updates.position.z),
       );
-
-      // Prevent super from setting raw.position by removing it from updates
       const { position, ...restUpdates } = updates;
       super.onUpdateConfig(restUpdates);
     } else {
