@@ -115,7 +115,7 @@ pub struct GltfPropertyTable {
 
 impl GltfPropertyTable {
     /// Resolve the BIN chunk slice from BufferStore.
-    fn resolve_binary<'a>(&self, buf_store: &'a BufferStore) -> Option<&'a [u8]> {
+    pub fn resolve_binary<'a>(&self, buf_store: &'a BufferStore) -> Option<&'a [u8]> {
         let glb = buf_store.get_u8(&self.handle)?;
         glb.get(self.bin_data_start..)
     }

@@ -251,13 +251,15 @@ impl App {
                     return Ok(Some(()));
                 };
 
-                let buf_store = world.get_resource::<BufferStore>();
+                let binary = world
+                    .get_resource::<BufferStore>()
+                    .and_then(|bs| gltf_table.resolve_binary(bs));
 
                 match keys {
                     None => {
                         for batch_idx in 0..batch_length {
-                            let props: Option<V> = buf_store
-                                .and_then(|bs| gltf_table.get_properties(batch_idx, bs));
+                            let props: Option<V> =
+                                binary.and_then(|b| gltf_table.table.get_properties(batch_idx, b));
                             let global_batch_id = global_batch_id_array
                                 .as_ref()
                                 .and_then(|arr| arr.get(batch_idx).copied())
@@ -267,8 +269,11 @@ impl App {
                     }
                     Some(keys) => {
                         for batch_idx in 0..batch_length {
-                            let props = buf_store
-                                .and_then(|bs| gltf_table.get_filtered_properties::<V>(batch_idx, keys, bs));
+                            let props = binary.and_then(|b| {
+                                gltf_table
+                                    .table
+                                    .get_filtered_properties::<V>(batch_idx, keys, b)
+                            });
                             let global_batch_id = global_batch_id_array
                                 .as_ref()
                                 .and_then(|arr| arr.get(batch_idx).copied())

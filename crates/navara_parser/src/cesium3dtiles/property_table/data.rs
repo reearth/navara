@@ -679,8 +679,7 @@ mod tests {
             "nonexistent".to_string(),
             "id".to_string(),
         ];
-        let result: Vec<Option<Value>> =
-            table.get_filtered_properties(0, &keys, &binary).unwrap();
+        let result: Vec<Option<Value>> = table.get_filtered_properties(0, &keys, &binary).unwrap();
 
         assert_eq!(result.len(), 3);
         assert_eq!(result[0], Some(Value::String("building_a".to_string())));
@@ -692,8 +691,7 @@ mod tests {
     fn test_get_filtered_properties_out_of_bounds() {
         let (binary, table) = make_property_table();
         let keys = vec!["id".to_string()];
-        let result: Option<Vec<Option<Value>>> =
-            table.get_filtered_properties(99, &keys, &binary);
+        let result: Option<Vec<Option<Value>>> = table.get_filtered_properties(99, &keys, &binary);
         assert!(result.is_none());
     }
 
@@ -831,7 +829,10 @@ mod tests {
         };
 
         let values = &binary[col.values_range.clone()];
-        let string_offsets = col.string_offsets_range.as_ref().map(|r| &binary[r.clone()]);
+        let string_offsets = col
+            .string_offsets_range
+            .as_ref()
+            .map(|r| &binary[r.clone()]);
         let v: Value = read_column_value(&col, values, string_offsets, 0).unwrap();
         assert_eq!(v.as_str(), Some("hello"));
         let v: Value = read_column_value(&col, values, string_offsets, 1).unwrap();
@@ -866,7 +867,10 @@ mod tests {
         };
 
         let values = &binary[col.values_range.clone()];
-        let string_offsets = col.string_offsets_range.as_ref().map(|r| &binary[r.clone()]);
+        let string_offsets = col
+            .string_offsets_range
+            .as_ref()
+            .map(|r| &binary[r.clone()]);
         let v: Value = read_column_value(&col, values, string_offsets, 0).unwrap();
         assert_eq!(v.as_str(), Some("a"));
         let v: Value = read_column_value(&col, values, string_offsets, 1).unwrap();

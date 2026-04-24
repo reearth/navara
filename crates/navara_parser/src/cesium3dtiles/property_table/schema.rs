@@ -38,34 +38,33 @@ impl<'a> GlbSchemaParser<'a> {
         // GLB BIN chunk type magic: 0x004E4942 ("BIN\0" in little-endian)
         const GLB_CHUNK_TYPE_BIN: u32 = 0x004E4942;
 
-        let (binary, bin_data_start) =
-            if glb_bin.len() >= bin_data_start + chunk_header_size {
-                let bin_chunk_length = u32::from_le_bytes([
-                    glb_bin[bin_data_start],
-                    glb_bin[bin_data_start + 1],
-                    glb_bin[bin_data_start + 2],
-                    glb_bin[bin_data_start + 3],
-                ]) as usize;
-                let bin_chunk_type = u32::from_le_bytes([
-                    glb_bin[bin_data_start + 4],
-                    glb_bin[bin_data_start + 5],
-                    glb_bin[bin_data_start + 6],
-                    glb_bin[bin_data_start + 7],
-                ]);
-                if bin_chunk_type != GLB_CHUNK_TYPE_BIN {
-                    (None, bin_data_start + chunk_header_size)
-                } else {
-                    let data_start = bin_data_start + chunk_header_size;
-                    let bin_data_end = data_start + bin_chunk_length;
-                    if glb_bin.len() >= bin_data_end {
-                        (Some(&glb_bin[data_start..bin_data_end]), data_start)
-                    } else {
-                        (None, data_start)
-                    }
-                }
-            } else {
+        let (binary, bin_data_start) = if glb_bin.len() >= bin_data_start + chunk_header_size {
+            let bin_chunk_length = u32::from_le_bytes([
+                glb_bin[bin_data_start],
+                glb_bin[bin_data_start + 1],
+                glb_bin[bin_data_start + 2],
+                glb_bin[bin_data_start + 3],
+            ]) as usize;
+            let bin_chunk_type = u32::from_le_bytes([
+                glb_bin[bin_data_start + 4],
+                glb_bin[bin_data_start + 5],
+                glb_bin[bin_data_start + 6],
+                glb_bin[bin_data_start + 7],
+            ]);
+            if bin_chunk_type != GLB_CHUNK_TYPE_BIN {
                 (None, bin_data_start + chunk_header_size)
-            };
+            } else {
+                let data_start = bin_data_start + chunk_header_size;
+                let bin_data_end = data_start + bin_chunk_length;
+                if glb_bin.len() >= bin_data_end {
+                    (Some(&glb_bin[data_start..bin_data_end]), data_start)
+                } else {
+                    (None, data_start)
+                }
+            }
+        } else {
+            (None, bin_data_start + chunk_header_size)
+        };
 
         Some(Self {
             json,
