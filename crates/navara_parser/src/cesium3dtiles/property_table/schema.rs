@@ -70,7 +70,7 @@ impl<'a> GlbSchemaParser<'a> {
         Some(Self {
             json,
             binary,
-            bin_data_start: bin_data_start,
+            bin_data_start,
         })
     }
 

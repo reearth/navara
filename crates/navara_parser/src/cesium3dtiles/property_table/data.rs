@@ -973,7 +973,7 @@ mod tests {
 
     #[test]
     fn test_normalized_uint8() {
-        let binary = vec![255u8, 128];
+        let binary = [255u8, 128];
         let col = PropertyColumnData {
             values_range: 0..binary.len(),
             component_type: "UINT8".to_string(),
@@ -1076,7 +1076,7 @@ mod tests {
 
     #[test]
     fn test_vec3_normalized() {
-        let binary = vec![255u8, 128, 0];
+        let binary = [255u8, 128, 0];
 
         let col = PropertyColumnData {
             values_range: 0..binary.len(),
