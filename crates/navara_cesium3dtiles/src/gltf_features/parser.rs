@@ -55,7 +55,7 @@ impl TileContentParser for GltfFeaturesParser {
                 BatchProperty::Cesium3dTilesetV11(GltfPropertyTable {
                     table,
                     handle: ctx.requester_handle,
-                    bin_chunk_start: glb_parser.bin_chunk_start,
+                    bin_data_start: glb_parser.bin_data_start,
                 })
             });
 

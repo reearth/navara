@@ -108,15 +108,16 @@ pub struct GltfPropertyTable {
     pub table: PropertyTableData,
     /// Handle to the GLB binary in BufferStore.
     pub handle: Handle,
-    /// Byte offset where the BIN chunk data starts within the full GLB binary.
-    pub bin_chunk_start: usize,
+    /// Byte offset where the BIN chunk **data** starts within the full GLB binary
+    /// (i.e. after the 8-byte chunk header: chunk_length + chunk_type).
+    pub bin_data_start: usize,
 }
 
 impl GltfPropertyTable {
     /// Resolve the BIN chunk slice from BufferStore.
     fn resolve_binary<'a>(&self, buf_store: &'a BufferStore) -> Option<&'a [u8]> {
         let glb = buf_store.get_u8(&self.handle)?;
-        glb.get(self.bin_chunk_start..)
+        glb.get(self.bin_data_start..)
     }
 
     /// Get all properties for a feature at the given index.
