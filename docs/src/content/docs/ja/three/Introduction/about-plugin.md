@@ -94,6 +94,19 @@ view.addEffect({ toneMapping: {} });
 
 詳細は [three_default_plugin のドキュメント](../../../three_default_plugin/about/) を参照してください。
 
+## three_plugins
+
+[three_plugins](../../../three_plugins/about/) パッケージは、プラグインシステムの上に構築されたユースケース特化型プラグインのコレクションを提供します。すぐに使える形で一般的なユースケースを解決します：
+
+- **FlyingModelPlugin** — キーボード操作による GLTF モデル飛行と追従カメラ
+- **OverlayPlugin** — ワールド座標からスクリーン座標への HTML オーバーレイ投影
+
+```typescript
+import { FlyingModelPlugin, OverlayPlugin } from "@navara/three_plugins";
+```
+
+詳細は [three_plugins のドキュメント](../../../three_plugins/about/) を参照してください。
+
 ## 関連リソース
 
 - [About Layer](../../../three/introduction/about-layer/) - レイヤーとオブジェクトの概念と種類
@@ -101,3 +114,4 @@ view.addEffect({ toneMapping: {} });
 - [Custom Descriptor](../../../three/core/custom-desc/) - カスタム Descriptor の実装方法
 - [three_default_descs](../../../three_default_descs/about/) - デフォルト Descriptor の実装
 - [three_default_plugin](../../../three_default_plugin/about/) - DefaultPlugin の詳細
+- [three_plugins](../../../three_plugins/about/) - ユースケース特化型プラグイン

@@ -50,6 +50,7 @@
   "devDependencies": {
     "@navara/three_default_descs": "workspace:*",
     "@navara/three_default_plugin": "workspace:*",
+    "@navara/three_plugins": "workspace:*",
     "@navara/three_react": "workspace:*",
     "@playwright/test": "1.59.1",
     "@radix-ui/react-collapsible": "1.1.12",

@@ -18,6 +18,7 @@ Each web package maps to a documentation section under `docs/src/content/docs/`:
 | `web/navara_three_api/` | `three/API/` |
 | `web/navara_three_default_descs/` | `three_default_descs/` |
 | `web/navara_three_default_plugin/` | `three_default_plugin/` |
+| `web/navara_three_plugins/` | `three_plugins/` |
 | `web/wasm/` | `engine/` |
 
 Navigate the docs directory to find the matching page, or create a new one following the existing structure.
