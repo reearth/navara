@@ -381,3 +381,138 @@ export class PickableInstancedMeshWrapper
     return this.mesh;
   }
 }
+
+/**
+ * Turnkey {@link PickableMesh} implementation for a group of sibling
+ * `InstancedMesh`es that share one logical per-instance identity.
+ *
+ * Used for instanced GLTF models: a single source model has multiple sub-meshes
+ * (one `InstancedMesh` per node), each with its own geometry and material.
+ * Every instance `i` represents one full model, so all sub-meshes at slot `i`
+ * share the same `batchId`. Picking any sub-mesh of a given instance resolves
+ * to the same id.
+ *
+ * The wrapper owns a single `batchIds` array, installs a synchronized
+ * `batchId` `InstancedBufferAttribute` on every sub-mesh geometry, and injects
+ * the instanced picking shader into every sub-mesh material.
+ */
+export class PickableMultiInstancedMeshWrapper
+  extends Object3D
+  implements PickableMesh
+{
+  public batchIds: number[];
+  private refs: { nvr_uPickable: { value: number } };
+  private attrs = new Map<InstancedMesh, InstancedBufferAttribute>();
+  private injectedMaterials = new WeakSet<Material>();
+
+  constructor(
+    public root: Object3D,
+    public meshes: InstancedMesh[],
+    initialCount: number,
+    private ctx: ViewContext,
+  ) {
+    super();
+    this.batchIds = Array.from(
+      { length: initialCount },
+      () => ctx.genGlobalBatchId() ?? 0,
+    );
+    this.refs = { nvr_uPickable: { value: 0 } };
+    this.setupBatchIdAttributes();
+    this.setupShaders();
+  }
+
+  addInstance(): number {
+    const id = this.ctx.genGlobalBatchId() ?? 0;
+    this.batchIds.push(id);
+    this.setupBatchIdAttributes();
+    return id;
+  }
+
+  removeInstanceAt(index: number): void {
+    const last = this.batchIds.length - 1;
+    if (index < 0 || index > last) return;
+    if (index !== last) this.batchIds[index] = this.batchIds[last];
+    this.batchIds.pop();
+    this.setupBatchIdAttributes();
+  }
+
+  clearInstances(): void {
+    this.batchIds = [];
+    this.setupBatchIdAttributes();
+  }
+
+  replaceAll(count: number): number[] {
+    this.batchIds = Array.from(
+      { length: count },
+      () => this.ctx.genGlobalBatchId() ?? 0,
+    );
+    this.setupBatchIdAttributes();
+    return this.batchIds;
+  }
+
+  /** Re-attach bookkeeping after the underlying sub-meshes were replaced. */
+  syncMeshes(meshes: InstancedMesh[]): void {
+    this.meshes = meshes;
+    this.attrs.clear();
+    this.setupBatchIdAttributes();
+    this.setupShaders();
+  }
+
+  private setupBatchIdAttributes(): void {
+    for (const mesh of this.meshes) {
+      const count = mesh.instanceMatrix.count;
+      const len = Math.min(this.batchIds.length, count);
+      let attr = this.attrs.get(mesh);
+      if (attr && attr.array.length >= count) {
+        const arr = attr.array as Float32Array;
+        arr.fill(0);
+        for (let i = 0; i < len; i++) arr[i] = this.batchIds[i] ?? 0;
+        attr.needsUpdate = true;
+      } else {
+        const data = new Float32Array(count);
+        for (let i = 0; i < len; i++) data[i] = this.batchIds[i] ?? 0;
+        attr = new InstancedBufferAttribute(data, 1);
+        mesh.geometry.setAttribute("batchId", attr);
+        this.attrs.set(mesh, attr);
+      }
+    }
+  }
+
+  private setupShaders(): void {
+    const refs = this.refs;
+    for (const mesh of this.meshes) {
+      const materials = Array.isArray(mesh.material)
+        ? mesh.material
+        : [mesh.material];
+      for (const mat of materials) {
+        if (!(mat instanceof Material)) continue;
+        if (this.injectedMaterials.has(mat)) continue;
+
+        const prevOnBeforeCompile = mat.onBeforeCompile;
+        const prevCacheKey = mat.customProgramCacheKey?.bind(mat);
+
+        mat.onBeforeCompile = (shader, renderer) => {
+          prevOnBeforeCompile?.call(mat, shader, renderer);
+          injectInstancedPickingShader(shader, refs);
+        };
+        mat.customProgramCacheKey = () =>
+          (prevCacheKey?.() ?? "") + "_nvr_instanced_pickable";
+        mat.needsUpdate = true;
+
+        this.injectedMaterials.add(mat);
+      }
+    }
+  }
+
+  onBeforePicking(_pickingCoord?: Vector2): void {
+    this.refs.nvr_uPickable.value = 1;
+  }
+
+  onAfterPicking(): void {
+    this.refs.nvr_uPickable.value = 0;
+  }
+
+  getRenderable(): Object3D {
+    return this.root;
+  }
+}
