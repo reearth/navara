@@ -1,3 +1,14 @@
+import type ThreeView from "@navara/three";
+import {
+  Color,
+  Pass,
+  SelectiveEffectDesc,
+  createFullscreenQuad,
+  type EffectConfig,
+  type EffectUpdate,
+  type SelectiveEffectConfig,
+  type ViewContext,
+} from "@navara/three";
 import SelectiveEffectMaskChunk from "@shaders/glsl/chunks/selective_effect_mask.glsl?raw";
 import { Pass as PostProcessingPass } from "postprocessing";
 import {
@@ -11,19 +22,6 @@ import {
   type WebGLRenderer,
   RGBAFormat,
 } from "three";
-
-import { Color } from "../../Color";
-import type { BaseInstance } from "../../core/BaseDesc";
-import type { EffectConfig, EffectUpdate } from "../../core/EffectDesc";
-import type { ViewContext } from "../../core/ViewContext";
-import { Pass } from "../../effects";
-import type ThreeView from "../../index";
-
-import {
-  SelectiveEffectDesc,
-  type SelectiveEffectConfig,
-  createFullscreenQuad,
-} from "./SelectiveEffectDesc";
 
 // Selective Outline configuration
 export type SelectiveOutlineConfig = {
@@ -96,12 +94,10 @@ export class SelectiveOutlineEffectDesc extends SelectiveEffectDesc<
     super(view, ctx, postEffectConfig);
   }
 
-  createPass() {
+  createPass(): Pass<SelectiveOutlinePass, null> {
     const rawPass = new SelectiveOutlinePass(this);
     this.outlinePass = rawPass;
-    const pass = new Pass(rawPass, null, { enabled: true });
-
-    return pass as Pass<SelectiveOutlinePass, null> & BaseInstance;
+    return new Pass(rawPass, null, { enabled: true });
   }
 
   onUpdateConfig(updates: SelectiveOutlineEffectUpdate): void {
