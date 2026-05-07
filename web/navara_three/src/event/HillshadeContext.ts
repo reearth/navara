@@ -15,7 +15,7 @@ export type HillshadeConfig = {
   maxOffset: number;
   epsilon: number;
   offset: number;
-}
+};
 
 /**
  * Temporary DEM texture storage entry
@@ -26,7 +26,7 @@ type TempDemEntry = {
   receivedEdges: Set<number>;
   metersPerTexel: number;
   hillshadeConfig: HillshadeConfig;
-}
+};
 
 /**
  * Context for managing hillshade-related state and resources

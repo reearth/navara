@@ -16,9 +16,7 @@ import {
   WebGLRenderTarget,
 } from "three";
 
-
 import type { HillshadeConfig } from "../event/HillshadeContext";
-
 
 /**
  * Generator for hillshade normal maps using offscreen rendering.
@@ -127,6 +125,30 @@ export class HillshadeNormalMapGenerator {
     const contentHeight = this.isPowerOfTwo(paddedHeight)
       ? paddedHeight
       : paddedHeight - 2;
+
+    // Guard against invalid/placeholder textures (e.g., 1x1 textures)
+    // Need at least 2x2 to compute meaningful normals
+    const minSize = 2;
+    if (contentWidth < minSize || contentHeight < minSize) {
+      console.warn(
+        `HillshadeNormalMapGenerator: DEM texture too small (${contentWidth}x${contentHeight}), ` +
+          `returning default flat normal map`,
+      );
+
+      // Return a minimal 1x1 texture with default upward normal (0, 0, 1)
+      // Encoded as octahedral and mapped to [0,1]: (0.5, 0.5, 0, 1)
+      const defaultPixels = new Uint8Array([127, 127, 0, 255]);
+      const defaultTexture = new DataTexture(
+        defaultPixels,
+        1,
+        1,
+        RGBAFormat,
+        UnsignedByteType,
+      );
+      defaultTexture.colorSpace = NoColorSpace;
+      defaultTexture.needsUpdate = true;
+      return defaultTexture;
+    }
 
     // Calculate texel size for DEM sampling
     // Standard UV mapping: UV [0,1] maps to pixel centers [first, last]
