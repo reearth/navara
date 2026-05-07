@@ -175,3 +175,4 @@ class MyCustomPlugin extends Plugin<ThreeView, ViewContext> {
 - [About Plugin](../../../three/introduction/about-plugin/) - Plugin system concepts
 - [Custom Descriptor](../../../three/core/custom-desc/) - How to implement custom descriptors
 - [three_default_plugin](../../../three_default_plugin/about/) - DefaultPlugin details
+- [three_plugins](../../../three_plugins/about/) - Use-case specific plugins
