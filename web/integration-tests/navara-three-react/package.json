@@ -23,9 +23,9 @@
     "@navara/engine-worker": "workspace:*",
     "@navara/three_default_plugin": "workspace:*",
     "@navara/three_default_descs": "workspace:*",
-    "three": "0.183.2"
+    "three": "0.184.0"
   },
   "devDependencies": {
-    "@types/three": "0.183.1"
+    "@types/three": "0.184.0"
   }
 }

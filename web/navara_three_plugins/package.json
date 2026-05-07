@@ -31,7 +31,7 @@
   "devDependencies": {
     "@navara/three": "workspace:*",
     "@navara/three_default_plugin": "workspace:*",
-    "@types/three": "0.183.1",
-    "three": "0.183.2"
+    "@types/three": "0.184.0",
+    "three": "0.184.0"
   }
 }
