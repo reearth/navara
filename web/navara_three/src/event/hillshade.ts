@@ -25,14 +25,14 @@ export function processHillshadeBackfilled(
     textureFragmentIndex,
     textureOptions,
     tileHandler,
-    pendingHillshadeEdges,
+    hillshadeContext,
   } = ctx;
 
   if (
     !loadedTexs ||
     !buf ||
     !tileHandler ||
-    !pendingHillshadeEdges ||
+    !hillshadeContext ||
     !textureOptions ||
     !textureFragmentIndex
   ) {
@@ -98,29 +98,21 @@ export function processHillshadeBackfilled(
     dataTexture.minFilter = NearestFilter;
     dataTexture.magFilter = NearestFilter;
     dataTexture.generateMipmaps = false;
-    dataTexture.flipY = true;
     dataTexture.needsUpdate = true;
 
-    // Store zoom level in userData for later retrieval in setupTextures
+    // Get tile handle for calculations
     const tileHandleBigInt =
       typeof event.tile_handle === "bigint"
         ? event.tile_handle
         : BigInt(event.tile_handle);
-    const ownerTile = tileHandler.getTile(tileHandleBigInt);
-    if (ownerTile) {
-      dataTexture.userData.hillshadeZoom = ownerTile.coords.z;
-    }
 
     // Dispose old texture if exists
     if (texture) {
       texture.dispose();
     }
 
-    texture = dataTexture;
-    loadedTexs.set(entityId, texture);
-
     // Apply any pending edge updates that arrived before texture creation
-    const pending = pendingHillshadeEdges.get(entityId);
+    const pending = hillshadeContext.pendingEdges.get(entityId);
     if (pending && pending.size > 0) {
       const textureData = dataTexture.image.data as Uint8Array;
       const texSize = dataTexture.image.width;
@@ -137,19 +129,62 @@ export function processHillshadeBackfilled(
       }
 
       // Clear pending updates for this entity
-      pendingHillshadeEdges.delete(entityId);
+      hillshadeContext.pendingEdges.delete(entityId);
     }
+
+    // Generate normal map from DEM texture for performance optimization
+    // This pre-computes normals to avoid expensive per-fragment computation
+    const generator = hillshadeContext.getOrCreateGenerator(ctx.viewContext);
+
+    // Get tile info for zoom level
+    const tile = tileHandler.getTile(tileHandleBigInt);
+    if (!tile) {
+      return;
+    }
+
+    const metersPerTexel = tileHandler.calcMetersPerTexel(
+      tileHandleBigInt,
+      tile.coords.z,
+      paddedSize,
+    );
+
+    // Get hillshade decoder config from tile (cached after first query)
+    const hillshadeConfig = hillshadeContext.getHillshadeConfig(
+      tileHandler,
+      tileHandleBigInt,
+    );
+
+    // Generate normal map and use it as the texture (replacing DEM)
+    // DEM is only used for offline rendering, we store the normal map result
+    const normalMap = generator.generate(
+      dataTexture,
+      metersPerTexel,
+      hillshadeConfig,
+    );
+
+    // Use normal map as the texture
+    texture = normalMap;
+    loadedTexs.set(entityId, texture);
+
+    // Store temporary DEM texture for edge updates
+    // It will be auto-cleaned when all 4 edges arrive
+    hillshadeContext.storeTempDem(
+      entityId,
+      dataTexture,
+      metersPerTexel,
+      hillshadeConfig,
+    );
 
     // Deduplicate tileMeshes: same mesh may appear in multiple slots
     // Avoid redundant rebinding when mesh uses same fragment in multiple texture slots
     const slots = getTextureFragmentSlots(textureFragmentIndex, entityId);
     if (slots) {
       const uniqueMeshes = new Set<TileMesh>();
-      for (const { tileMesh } of slots) {
-        uniqueMeshes.add(tileMesh);
+      for (const { tileMesh: mesh } of slots) {
+        uniqueMeshes.add(mesh);
       }
-      for (const tileMesh of uniqueMeshes) {
-        tileMesh.rebindTextures(loadedTexs, textureOptions);
+      for (const mesh of uniqueMeshes) {
+        mesh.rebindTextures(loadedTexs, textureOptions);
       }
     }
   }
@@ -171,19 +206,27 @@ export function processHillshadeBackfilled(
     if (!texture || !(texture instanceof DataTexture)) {
       // Texture doesn't exist yet - queue this edge update for later application
       // Store at most one update per direction (newer replaces older)
-      let pending = pendingHillshadeEdges.get(entityId);
+      let pending = hillshadeContext.pendingEdges.get(entityId);
       if (!pending) {
         pending = new Map<number, Uint8Array>();
-        pendingHillshadeEdges.set(entityId, pending);
+        hillshadeContext.pendingEdges.set(entityId, pending);
       }
       // Copy and store edge data, replacing any previous update for this direction
       pending.set(event.edge_direction, new Uint8Array(edgeBytes));
       return;
     }
 
+    // Texture exists (it's a normal map), check if we have the temporary DEM
+    const tempDemEntry = hillshadeContext.getTempDem(entityId);
+    if (!tempDemEntry) {
+      // No temp DEM - edge updates complete or timed out, ignore this late arrival
+      return;
+    }
+
     const edgeSize = edgeBytes.length / 4; // Number of pixels in this edge
-    const textureData = texture.image.data as Uint8Array;
-    const texSize = texture.image.width;
+    const demTexture = tempDemEntry.demTexture;
+    const textureData = demTexture.image.data as Uint8Array;
+    const texSize = demTexture.image.width;
 
     // Texture should be padded (edgeSize + 2)
     const expectedTexSize = edgeSize + 2;
@@ -192,10 +235,45 @@ export function processHillshadeBackfilled(
       return;
     }
 
-    // Update the specific padding edge based on direction
+    // Update the DEM texture padding edge based on direction
     // 0=Left, 1=Right, 2=Top, 3=Bottom
     updatePaddingEdge(textureData, edgeBytes, texSize, event.edge_direction);
-    texture.needsUpdate = true;
+    demTexture.needsUpdate = true;
+
+    // Mark this edge as received
+    const allEdgesReceived = hillshadeContext.markEdgeReceived(
+      entityId,
+      event.edge_direction,
+    );
+
+    // Regenerate normal map from updated DEM
+    const generator = hillshadeContext.getOrCreateGenerator(ctx.viewContext);
+    const normalMap = generator.generate(
+      demTexture,
+      tempDemEntry.metersPerTexel,
+      tempDemEntry.hillshadeConfig,
+    );
+
+    // Replace the old normal map with the new one
+    texture.dispose();
+    loadedTexs.set(entityId, normalMap);
+
+    // If all 4 edges received, cleanup the temporary DEM
+    if (allEdgesReceived) {
+      hillshadeContext.clearTempDem(entityId);
+    }
+
+    // Rebind textures to update the meshes
+    const slots = getTextureFragmentSlots(textureFragmentIndex, entityId);
+    if (slots) {
+      const uniqueMeshes = new Set<TileMesh>();
+      for (const { tileMesh } of slots) {
+        uniqueMeshes.add(tileMesh);
+      }
+      for (const tileMesh of uniqueMeshes) {
+        tileMesh.rebindTextures(loadedTexs, textureOptions);
+      }
+    }
   }
 }
 

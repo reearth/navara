@@ -58,6 +58,7 @@ import { getDevicePixelRatio, isMobileDevice } from "./device";
 import {
   processEvent,
   EventContext,
+  HillshadeContext,
   type BufferLoader,
   type FeatureHandler,
   type GlobeHandler,
@@ -305,10 +306,9 @@ export default class ThreeView<
     TileMesh,
     Set<string>
   >();
-  // Pending hillshade edge updates: entityId → (edgeDirection → edge bytes)
+  // Hillshade processing context
   // Scoped to this view instance to prevent cross-view contamination
-  private _pendingHillshadeEdges: Map<string, Map<number, Uint8Array>> =
-    new Map<string, Map<number, Uint8Array>>();
+  private _hillshadeContext = new HillshadeContext();
   private _initialized = false;
 
   private _buf: BufferLoader = {
@@ -889,7 +889,7 @@ export default class ThreeView<
       fontManager: this._fontManager,
       textureFragmentIndex: this._textureFragmentIndex,
       tileMeshToFragmentIds: this._tileMeshToFragmentIds,
-      pendingHillshadeEdges: this._pendingHillshadeEdges,
+      hillshadeContext: this._hillshadeContext,
     });
 
     // Register built-in layers
@@ -1017,6 +1017,9 @@ export default class ThreeView<
       tex.dispose();
     }
     this._loadedTexs.clear();
+
+    // Cleanup hillshade context (temp DEMs, generator, etc.)
+    this._hillshadeContext.dispose();
 
     // Clear caches and maps
     this._meshes.clear();

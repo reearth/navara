@@ -47,6 +47,7 @@ export type {
   LayerHandler,
 } from "./context";
 export { EventContext } from "./context";
+export { HillshadeContext } from "./HillshadeContext";
 
 export function processEvent(ctx: EventContext, event: Events | undefined) {
   const {
@@ -496,7 +497,7 @@ function processDataRequesterRemoved(
     abortControllers,
     workerPoolPromises,
     loadedTexs,
-    pendingHillshadeEdges,
+    hillshadeContext,
   } = ctx;
   const id = generate_id_from_entity(req);
   const abortController = abortControllers.get(id);
@@ -507,10 +508,11 @@ function processDataRequesterRemoved(
     loadedTexs.delete(id);
   }
 
-  // Clean up any pending hillshade edge updates for this entity
+  // Clean up any pending hillshade edge updates and temp DEM for this entity
   // Prevents memory leak when tiles are removed before texture creation
-  if (pendingHillshadeEdges) {
-    pendingHillshadeEdges.delete(id);
+  if (hillshadeContext) {
+    hillshadeContext.pendingEdges.delete(id);
+    hillshadeContext.clearTempDem(id);
   }
 
   buf.remove(req.handle);

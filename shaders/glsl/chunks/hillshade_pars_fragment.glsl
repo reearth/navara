@@ -9,7 +9,6 @@
   uniform float uHillshadeMaxOffset; // Offset for values above boundary
   uniform float uHillshadeEpsilon; // Scale factor for height conversion
   uniform float uHillshadeOffset; // Additive offset (applied after epsilon)
-  uniform float uHillshadeExaggeration; // Terrain exaggeration factor (recommended: 0.3-2.0)
 
   // Decode height from RGB DEM texture
   float decodeHeightForHillshade(vec4 color) {
@@ -86,10 +85,6 @@
     // Then divide by metersPerTexel to get slope (rise over run)
     float slopeX = (dX / 4.0) / metersPerTexel;
     float slopeY = (dY / 4.0) / metersPerTexel;
-
-    // Apply user exaggeration
-    slopeX *= uHillshadeExaggeration;
-    slopeY *= uHillshadeExaggeration;
 
     // Construct normal vector
     vec3 normal = vec3(-slopeX, slopeY, 1.0);

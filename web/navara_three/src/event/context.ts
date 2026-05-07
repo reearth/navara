@@ -35,6 +35,8 @@ import type {
 import type { CommonUniforms } from "../uniforms";
 import type { TextureSlot } from "../utils";
 
+import { HillshadeContext } from "./HillshadeContext";
+
 export type BufferLoader = {
   u8: (handle: number) => Uint8Array | null;
   f32: (handle: number) => Float32Array | null;
@@ -166,7 +168,7 @@ type EventContextArgs = {
   fontManager?: FontManager;
   textureFragmentIndex?: Map<string, Set<TextureSlot>>;
   tileMeshToFragmentIds?: Map<TileMesh, Set<string>>;
-  pendingHillshadeEdges?: Map<string, Map<number, Uint8Array>>;
+  hillshadeContext?: HillshadeContext;
 };
 
 /**
@@ -199,7 +201,7 @@ export class EventContext {
   readonly fontManager?: FontManager;
   readonly textureFragmentIndex?: Map<string, Set<TextureSlot>>;
   readonly tileMeshToFragmentIds?: Map<TileMesh, Set<string>>;
-  readonly pendingHillshadeEdges?: Map<string, Map<number, Uint8Array>>;
+  readonly hillshadeContext?: HillshadeContext;
 
   updatedAt = 0;
 
@@ -230,6 +232,6 @@ export class EventContext {
     this.fontManager = args.fontManager;
     this.textureFragmentIndex = args.textureFragmentIndex;
     this.tileMeshToFragmentIds = args.tileMeshToFragmentIds;
-    this.pendingHillshadeEdges = args.pendingHillshadeEdges;
+    this.hillshadeContext = args.hillshadeContext;
   }
 }
