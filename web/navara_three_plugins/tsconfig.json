@@ -1,0 +1,20 @@
+{
+  "extends": "../tsconfig.common.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "paths": {
+      "@navara/three_plugins": ["./src"],
+      "@navara/three_default_plugin": ["../navara_three_default_plugin/src"],
+      "@navara/three_default_descs": ["../navara_three_default_descs/src"],
+      "@navara/three": ["../navara_three/src"],
+      "@navara/three_api": ["../navara_three_api/src"],
+      "@navara/core": ["../navara_core/src"],
+      "@navara/worker": ["../navara_worker/src"],
+      "@navara/font": ["../navara_font/src"],
+      "@navara/three_csm": ["../navara_three_csm/src"],
+      "@shaders/*": ["../../shaders"]
+    }
+  },
+  "include": ["src"],
+  "exclude": ["./dist", "./node_modules"]
+}
