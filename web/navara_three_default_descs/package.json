@@ -4,7 +4,14 @@
   "version": "0.0.0",
   "private": true,
   "module": "dist/index.js",
+  "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
   "files": [
     "src",
     "dist"
