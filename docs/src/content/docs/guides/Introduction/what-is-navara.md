@@ -23,9 +23,9 @@ graph TD
 
 ## Key Features
 
-Navara supports a wide range of geospatial data formats including GeoJSON, Mapbox Vector Tiles (MVT), Cesium 3D Tiles, raster tiles, and terrain data. You can display and style these data sources as layers on a 3D globe, with per-feature styling through [`FeatureEvaluator`](../../../three/API/feature-evaluator/).
+Navara supports a wide range of geospatial data formats including GeoJSON, Mapbox Vector Tiles (MVT), Cesium 3D Tiles, raster tiles, and terrain data. You can display and style these data sources as layers on a 3D globe, with per-feature styling through [`FeatureEvaluator`](../../../three/api/feature-evaluator/).
 
-The Three.js rendering backend includes photorealistic capabilities such as atmospheric scattering, shadow mapping, volumetric clouds, and post-processing effects. These are all available as composable effect layers through the plugin system.
+The Three.js rendering backend includes photorealistic capabilities such as atmospheric scattering, shadow mapping, volumetric clouds, and post-processing effects. These are all available as composable effect descriptors through the plugin system.
 
 The Rust/WASM GIS engine handles all geospatial computation independently of the renderer, and CPU-intensive tasks are distributed across Web Workers for responsive performance even with large datasets.
 
@@ -39,7 +39,7 @@ Each web map engine has its own design philosophy and strengths. Understanding t
 
 **deck.gl** extends MapLibre GL JS (or MapboxGL) with a rich set of visualization layers and a clear composable layer model. The combination is powerful, but it requires learning both libraries and their integration patterns.
 
-**Navara** aims to combine the strengths of these approaches under a single, tiered API. For general users, Navara provides a high-level, declarative API for adding layers and styling features through [`FeatureEvaluator`](../../../three/API/feature-evaluator/). Plugins can further simplify workflows — for example, loading layer definitions from JSON, or using the MapLibre Style Plugin (in development) to define feature styles in a familiar JSON format. For advanced users who need to build custom functionality, Navara exposes a lower-level API through the plugin system, custom mesh layers, and custom effect layers — the same foundation that powers Navara's own built-in layers. Additionally, Navara offers standalone GIS APIs for coordinate transforms and geodesic calculations that can be used independently of the map engine itself.
+**Navara** aims to combine the strengths of these approaches under a single, tiered API. For general users, Navara provides a high-level, declarative API for adding layers and styling features through [`FeatureEvaluator`](../../../three/api/feature-evaluator/). Plugins can further simplify workflows — for example, loading layer definitions from JSON, or using the MapLibre Style Plugin (in development) to define feature styles in a familiar JSON format. For advanced users who need to build custom functionality, Navara exposes a lower-level API through the plugin system, custom mesh descriptors, and custom effect descriptors — the same foundation that powers Navara's own built-in descriptors. Additionally, Navara offers standalone GIS APIs for coordinate transforms and geodesic calculations that can be used independently of the map engine itself.
 
 ## Next Steps
 

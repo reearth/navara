@@ -11,9 +11,9 @@ sidebar:
 
 ## Features of navara_three
 
-### Declarative Layer API
+### Declarative API
 
-In navara_three, all elements displayed on the map can be added declaratively as "layers."
+In navara_three, all elements displayed on the map can be added declaratively.
 
 ```typescript
 // Add GeoJSON data as a layer
@@ -40,19 +40,19 @@ view.addLayer({
 });
 ```
 
-### 3D Objects, Effects, and Lights Managed as Layers
+### 3D Objects, Effects, and Lights Managed as Descriptors
 
-Not only GIS data, but also 3D meshes, post-processing effects, and lighting can be added as layers. This allows you to manage maps and visual effects through a unified API.
+Not only GIS data, but also 3D meshes, post-processing effects, and lighting can be added as Descriptors. This allows you to manage maps and visual effects through a unified API.
 
-Mesh, effect, and light layers require layer class registration before use.
+Mesh, effect, and light descriptors require descriptor class registration before use.
 
 ```typescript
-import { BoxMeshLayer, FXAAEffectLayer, SunLightLayer } from "@navara/three_default_layers";
+import { BoxMeshDesc, FXAAEffectDesc, SunLightDesc } from "@navara/three_default_descs";
 
-// Register layer classes
-view.registerMesh("box", BoxMeshLayer);
-view.registerEffect("fxaa", FXAAEffectLayer);
-view.registerLight("sun", SunLightLayer);
+// Register descriptor classes
+view.registerMesh("box", BoxMeshDesc);
+view.registerEffect("fxaa", FXAAEffectDesc);
+view.registerLight("sun", SunLightDesc);
 
 // Add a 3D box
 view.addMesh({ box: { width: 100, height: 100, depth: 100 } });

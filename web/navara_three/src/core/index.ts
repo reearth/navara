@@ -1,51 +1,45 @@
-export { LayerRegistry } from "./LayerRegistry";
+export { DescRegistry } from "./DescRegistry";
 export { Registries } from "./Registries";
-export * from "./layerErrors";
+export * from "./errors";
 export {
-  LayerDeclaration,
-  type LayerDeclarationConfig,
-  type LayerDeclarationConfigUpdate,
-} from "./LayerDeclaration";
+  BaseDesc,
+  type BaseDescConfig,
+  type BaseDescConfigUpdate,
+} from "./BaseDesc";
 export {
-  MeshLayerDeclaration,
-  type MeshLayerUpdate,
-  type MeshLayerConfig,
+  MeshDesc,
+  type MeshUpdate,
+  type MeshConfig,
   type PassKey,
-} from "./MeshLayerDeclaration";
+} from "./MeshDesc";
 export {
-  MeshLayerDeclarationWithSelectiveEffect,
-  type MeshLayerUpdateWithSelectiveEffect,
-  type MeshLayerConfigWithSelectiveEffect,
-} from "./MeshLayerDeclarationWithSelectiveEffect";
+  MeshDescWithSelectiveEffect,
+  type MeshUpdateWithSelectiveEffect,
+  type MeshConfigWithSelectiveEffect,
+} from "./MeshDescWithSelectiveEffect";
 export {
-  InstancedMeshLayerDeclaration,
-  type InstancedMeshLayerConfig,
-  type InstancedMeshLayerUpdate,
+  InstancedMeshDesc,
+  type InstancedMeshConfig,
+  type InstancedMeshUpdate,
   type InstancedChildConfig,
-} from "./InstancedMeshLayerDeclaration";
+} from "./InstancedMeshDesc";
+export { MeshDescRegistry, type MeshDescConstructor } from "./MeshDescRegistry";
+export { LightDesc, type LightUpdate, type LightConfig } from "./LightDesc";
 export {
-  MeshLayerRegistry,
-  type MeshLayerConstructor,
-} from "./MeshLayerRegistry";
+  LightDescRegistry,
+  type LightDescConstructor,
+} from "./LightDescRegistry";
+export { EffectDesc, type EffectUpdate, type EffectConfig } from "./EffectDesc";
 export {
-  LightLayerDeclaration,
-  type LightLayerUpdate,
-  type LightLayerConfig,
-} from "./LightLayerDeclaration";
+  EffectDescRegistry,
+  type EffectDescConstructor,
+} from "./EffectDescRegistry";
 export {
-  LightLayerRegistry,
-  type LightLayerConstructor,
-} from "./LightLayerRegistry";
-export {
-  EffectLayerDeclaration,
-  type EffectLayerUpdate,
-  type EffectLayerConfig,
-} from "./EffectLayerDeclaration";
-export {
-  EffectLayerRegistry,
-  type EffectLayerConstructor,
-} from "./EffectLayerRegistry";
-export { LayerHandle } from "./LayerHandle";
+  BaseHandle,
+  MeshHandle,
+  LightHandle,
+  EffectHandle,
+} from "./BaseHandle";
 export * from "./ViewContext";
 export { SelectiveEffectRegistry } from "./SelectiveEffectRegistry";
 export { setupSelectiveEffectUniforms } from "../material/selectiveEffectMaterialSetup";

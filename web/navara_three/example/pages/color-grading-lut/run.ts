@@ -1,16 +1,16 @@
 import ThreeView, {
   Color,
   type BlendMode,
-  LayerHandle,
+  EffectHandle,
   JAPAN_GSI_ELEVATION_DECODER,
 } from "@navara/three";
 import {
-  ColorGradingLUTEffectLayer,
+  ColorGradingLUTEffectDesc,
   DEFAULT_COLOR_GRADING_LUT_OPTIONS,
-} from "@navara/three_default_layers";
+} from "@navara/three_default_descs";
 import {
   DefaultPlugin,
-  type DefaultDeclarations,
+  type DefaultDescriptions,
 } from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 
@@ -27,17 +27,17 @@ import {
   addCameraControl,
 } from "../../helpers/control";
 
-let gColorGradingLUTLayer: LayerHandle<ColorGradingLUTEffectLayer>;
+let gColorGradingLUTLayer: EffectHandle<ColorGradingLUTEffectDesc>;
 
-export type CustomDeclarations = DefaultDeclarations;
+export type CustomDescriptions = DefaultDescriptions;
 
-export const run = async (view: ThreeView<CustomDeclarations>) => {
+export const run = async (view: ThreeView<CustomDescriptions>) => {
   const defaultPlugin = new DefaultPlugin();
   view.addPlugin(defaultPlugin);
 
   await view.init();
 
-  const defaultAtmospheres = defaultPlugin.addDefaultPhotorealLayers();
+  const defaultAtmospheres = defaultPlugin.addDefaultPhotorealScene();
   defaultAtmospheres.sun.update({
     sun: {
       intensity: 1,
@@ -47,7 +47,7 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
 
   view.toneMappingExposure = 10;
 
-  gColorGradingLUTLayer = view.addEffect<ColorGradingLUTEffectLayer>({
+  gColorGradingLUTLayer = view.addEffect<ColorGradingLUTEffectDesc>({
     colorGradingLUT: { ...DEFAULT_COLOR_GRADING_LUT_OPTIONS },
     visible: true,
   });

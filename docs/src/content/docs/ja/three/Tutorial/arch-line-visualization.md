@@ -119,13 +119,13 @@ NASA の Earth at Night 画像を XYZ タイル形式に変換する必要があ
 
 ## グローエフェクトを追加する
 
-`GlowGlobeMeshLayer` を使うと、地球の周りに美しいグローエフェクトを追加できます。
+`GlowGlobeMeshDesc` を使うと、地球の周りに美しいグローエフェクトを追加できます。
 
 ```typescript
-import type { GlowGlobeMeshLayer } from "@navara/three";
+import type { GlowGlobeMeshDesc } from "@navara/three";
 
 // 地球のグローエフェクトを追加
-view.addMesh<GlowGlobeMeshLayer>({
+view.addMesh<GlowGlobeMeshDesc>({
   glowGlobe: {
     radiusScale: 1.2,  // グローの半径（地球半径に対する倍率）
     coefficient: 0.43, // グローの強度係数
@@ -250,14 +250,14 @@ const arcLines = data.features.map((feature) => {
 `ColorMap` クラスのメソッド（`linear()`、`quantize()` など）については、[ColorMap クラス](../../../three/api-reference/colormap/) を参照してください。
 :::
 
-## アーチラインレイヤーを追加する
+## アーチラインオブジェクトを追加する
 
-作成したアーチライン定義をレイヤーとして追加します。
+作成したアーチライン定義をメッシュとして追加します。
 
 ```typescript
-import type { ArclineMeshLayer } from "@navara/three";
+import type { ArclineMeshDesc } from "@navara/three";
 
-const arcLineLayer = view.addMesh<ArclineMeshLayer>({
+const arcLineHandle = view.addMesh<ArclineMeshDesc>({
   arcLines,
 });
 ```
@@ -281,7 +281,7 @@ const dashAnimFunc = () => {
     arcLineDef.dashOffset = (arcLineDef.dashOffset ?? 0) + speed;
   });
 
-  arcLineLayer.update({ arcLines });
+  arcLineHandle.update({ arcLines });
   requestAnimationFrame(dashAnimFunc);
 };
 
@@ -302,8 +302,8 @@ dashAnimFunc();
 ```typescript
 import ThreeView, {
   ToneMappingMode,
-  type ArclineMeshLayer,
-  type GlowGlobeMeshLayer,
+  type ArclineMeshDesc,
+  type GlowGlobeMeshDesc,
   Color,
   ColorMap,
   geodeticToVector3,
@@ -459,7 +459,7 @@ async function run() {
   });
 
   // グローエフェクト
-  view.addMesh<GlowGlobeMeshLayer>({
+  view.addMesh<GlowGlobeMeshDesc>({
     glowGlobe: {
       radiusScale: 1.2,
       coefficient: 0.43,
@@ -472,8 +472,8 @@ async function run() {
   // アーチラインデータを構築
   const { arcLines } = await constructData();
 
-  // アーチラインレイヤーを追加
-  const arcLineLayer = view.addMesh<ArclineMeshLayer>({
+  // アーチラインオブジェクトを追加
+  const arcLineHandle = view.addMesh<ArclineMeshDesc>({
     arcLines,
   });
 
@@ -488,7 +488,7 @@ async function run() {
       arcLineDef.dashOffset = (arcLineDef.dashOffset ?? 0) + speed;
     });
 
-    arcLineLayer.update({ arcLines });
+    arcLineHandle.update({ arcLines });
     requestAnimationFrame(dashAnimFunc);
   };
   dashAnimFunc();

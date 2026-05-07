@@ -1,6 +1,6 @@
 import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
-  type LayerHandle,
+  type MeshHandle,
   type PickedFeature,
   type Nullable,
   type XYZ,
@@ -24,14 +24,14 @@ import ThreeView, {
   Color,
 } from "@navara/three";
 import type {
-  SphereMeshLayer,
-  TubeMeshLayer,
-  CylinderMeshLayer,
-  GLTFModelLayer,
-} from "@navara/three_default_layers";
+  SphereMeshDesc,
+  TubeMeshDesc,
+  CylinderMeshDesc,
+  GLTFModelDesc,
+} from "@navara/three_default_descs";
 import {
   DefaultPlugin,
-  type DefaultDeclarations,
+  type DefaultDescriptions,
 } from "@navara/three_default_plugin";
 import { Mesh, Vector2, Vector3, Object3D, Group, ArrowHelper } from "three";
 import { Pane, FolderApi } from "tweakpane";
@@ -77,9 +77,9 @@ const gPaneParams = {
 const gFujiPos = [35.3624725342, 138.7306671143];
 const gKitaPos = [35.6744, 138.2392];
 
-let gModelNormalHandle: Nullable<LayerHandle<GLTFModelLayer>> = undefined;
-let gModelFujiHandle: Nullable<LayerHandle<GLTFModelLayer>> = undefined;
-let gPolylineLayer: Nullable<LayerHandle<TubeMeshLayer>> = undefined;
+let gModelNormalHandle: Nullable<MeshHandle<GLTFModelDesc>> = undefined;
+let gModelFujiHandle: Nullable<MeshHandle<GLTFModelDesc>> = undefined;
+let gPolylineLayer: Nullable<MeshHandle<TubeMeshDesc>> = undefined;
 let gMouseBall: Nullable<Mesh> = undefined;
 let gInterBall: Nullable<Mesh> = undefined;
 let gLastCameraDistance = 0;
@@ -95,17 +95,17 @@ let gPickedPos: Nullable<Vector3> = null;
 
 const gPopup = new FloatingDialog();
 
-export type CustomDeclarations = DefaultDeclarations;
+export type CustomDescriptions = DefaultDescriptions;
 
 export const run = async (
-  view: ThreeView<CustomDeclarations>,
+  view: ThreeView<CustomDescriptions>,
   canvas: HTMLCanvasElement,
 ) => {
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
   await view.init();
 
-  plugin.addDefaultPhotorealLayers();
+  plugin.addDefaultPhotorealScene();
 
   gView = view;
 
@@ -218,7 +218,7 @@ export const run = async (
   ]);
 };
 
-const addRunningObject = (view: ThreeView<CustomDeclarations>) => {
+const addRunningObject = (view: ThreeView<CustomDescriptions>) => {
   const sphere = placeOneBall(view, new Vector3(0, 0, 0), 0xffffff);
   if (!sphere) {
     return;
@@ -253,7 +253,7 @@ const addRunningObject = (view: ThreeView<CustomDeclarations>) => {
 };
 
 const testScreenToWorld = (
-  view: ThreeView<CustomDeclarations>,
+  view: ThreeView<CustomDescriptions>,
   canvas: HTMLCanvasElement,
 ) => {
   const onMouseMove = (event: MouseEvent) => {
@@ -277,12 +277,12 @@ const testScreenToWorld = (
 };
 
 const placeOneBall = (
-  view: ThreeView<CustomDeclarations>,
+  view: ThreeView<CustomDescriptions>,
   pos: Vector3 | undefined,
   color: number,
 ): Mesh | undefined => {
   if (pos) {
-    const sphereLayer = view.addMesh<SphereMeshLayer>({
+    const sphereLayer = view.addMesh<SphereMeshDesc>({
       sphere: {
         radius: 1,
         color: new Color().setHex(color),
@@ -291,12 +291,12 @@ const placeOneBall = (
       position: { x: pos.x, y: pos.y, z: pos.z },
     });
 
-    // sphereLayer is a LayerHandle for mesh layers
+    // sphereLayer is a MeshHandle for mesh descriptors
     return sphereLayer.ref.raw;
   }
 };
 
-const addTestModelForNormal = (view: ThreeView<CustomDeclarations>) => {
+const addTestModelForNormal = (view: ThreeView<CustomDescriptions>) => {
   const pos = geodeticToVector3({
     lat: degreeToRadian(43.0618),
     lng: degreeToRadian(141.3545),
@@ -308,8 +308,8 @@ const addTestModelForNormal = (view: ThreeView<CustomDeclarations>) => {
     height: 0,
   });
 
-  // Add GLTF model using GLTFModelLayer with URL
-  const modelLayer = view.addMesh<GLTFModelLayer>({
+  // Add GLTF model using GLTFModelDesc with URL
+  const modelLayer = view.addMesh<GLTFModelDesc>({
     gltfModel: {
       url: LOCAL_DATASETS.steelDrumGLTF.url,
     },
@@ -348,7 +348,7 @@ const addTestModelForNormal = (view: ThreeView<CustomDeclarations>) => {
   }
 };
 
-const addTestModelForTerrainHeight = (view: ThreeView<CustomDeclarations>) => {
+const addTestModelForTerrainHeight = (view: ThreeView<CustomDescriptions>) => {
   const pos = geodeticToVector3({
     lat: degreeToRadian(gFujiPos[0]),
     lng: degreeToRadian(gFujiPos[1]),
@@ -357,8 +357,8 @@ const addTestModelForTerrainHeight = (view: ThreeView<CustomDeclarations>) => {
 
   const transformMatrix = northUpEastToFixedFrame(pos);
 
-  // Add the model using GLTFModelLayer with URL
-  const modelLayer = view.addMesh<GLTFModelLayer>({
+  // Add the model using GLTFModelDesc with URL
+  const modelLayer = view.addMesh<GLTFModelDesc>({
     gltfModel: {
       url: LOCAL_DATASETS.steelDrumGLTF.url,
     },
@@ -573,7 +573,7 @@ const onTransformChange = () => {
 };
 
 const testRayPlane = (
-  view: ThreeView<CustomDeclarations>,
+  view: ThreeView<CustomDescriptions>,
   canvas: HTMLCanvasElement,
 ) => {
   let center: Vector3 | undefined = undefined;
@@ -669,10 +669,10 @@ const testRayPlane = (
 };
 
 const makeCylinder = (
-  view: ThreeView<CustomDeclarations>,
+  view: ThreeView<CustomDescriptions>,
   center: Vector3,
 ): Mesh | undefined => {
-  const cylinderLayer = view.addMesh<CylinderMeshLayer>({
+  const cylinderLayer = view.addMesh<CylinderMeshDesc>({
     cylinder: {
       radiusTop: 1,
       radiusBottom: 1,
@@ -754,7 +754,7 @@ const onDistPosChange = () => {
 };
 
 const updatePolylineMesh = (
-  view: ThreeView<CustomDeclarations>,
+  view: ThreeView<CustomDescriptions>,
   curvePoints: XYZ[],
 ) => {
   if (!gPolylineLayer) return;
@@ -800,7 +800,7 @@ const updatePolylineMesh = (
   gMouseBall?.scale.set(mouseBallRadius, mouseBallRadius, mouseBallRadius);
 };
 
-const addCameraListener = (view: ThreeView<CustomDeclarations>) => {
+const addCameraListener = (view: ThreeView<CustomDescriptions>) => {
   // Update tube thickness when camera moves
   view.camera.on("move", () => {
     if (!gPolylineLayer || !view.camera || gPolylinePoints.length === 0) return;
@@ -821,7 +821,7 @@ const addCameraListener = (view: ThreeView<CustomDeclarations>) => {
   });
 };
 
-const createPolylineMesh = (view: ThreeView<CustomDeclarations>) => {
+const createPolylineMesh = (view: ThreeView<CustomDescriptions>) => {
   // Create initial points for the curve
   const points: XYZ[] = Array.from({ length: 2 }, () => ({
     x: 0,
@@ -829,7 +829,7 @@ const createPolylineMesh = (view: ThreeView<CustomDeclarations>) => {
     z: 0,
   }));
 
-  gPolylineLayer = view.addMesh<TubeMeshLayer>({
+  gPolylineLayer = view.addMesh<TubeMeshDesc>({
     tube: {
       points,
       tubularSegments: 64,
@@ -842,7 +842,7 @@ const createPolylineMesh = (view: ThreeView<CustomDeclarations>) => {
   });
 };
 
-const testSampleTerrainHeight = (view: ThreeView<CustomDeclarations>) => {
+const testSampleTerrainHeight = (view: ThreeView<CustomDescriptions>) => {
   const onMouseMove = (event: MapMouseEvent) => {
     const mapPos = event.map;
 
@@ -909,7 +909,7 @@ const onRegisterChange = () => {
   }
 };
 
-const testShowModelInfo = (view: ThreeView<CustomDeclarations>) => {
+const testShowModelInfo = (view: ThreeView<CustomDescriptions>) => {
   view.on("pick", (info) => {
     if (!info) {
       gPickedPos = null;

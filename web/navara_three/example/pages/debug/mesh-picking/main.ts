@@ -5,20 +5,20 @@ import ThreeView, {
   northUpEastToFixedFrame,
 } from "@navara/three";
 import type {
-  ArclineMeshLayer,
-  BoxMeshLayer,
-  CylinderMeshLayer,
-  GLTFModelLayer,
-  InstancedBoxMeshLayer,
+  ArclineMeshDesc,
+  BoxMeshDesc,
+  CylinderMeshDesc,
+  GLTFModelDesc,
+  InstancedBoxMeshDesc,
   BoxChildConfig,
-  PlaneMeshLayer,
-  SmoothLineMeshLayer,
-  SphereMeshLayer,
-  TubeMeshLayer,
-} from "@navara/three_default_layers";
+  PlaneMeshDesc,
+  SmoothLineMeshDesc,
+  SphereMeshDesc,
+  TubeMeshDesc,
+} from "@navara/three_default_descs";
 import {
   DefaultPlugin,
-  type DefaultDeclarations,
+  type DefaultDescriptions,
 } from "@navara/three_default_plugin";
 import { Mesh, MeshStandardMaterial } from "three";
 import { Pane } from "tweakpane";
@@ -32,7 +32,7 @@ import {
 import { addDateControl } from "../../../helpers/control";
 
 const run = async () => {
-  const view = new ThreeView<DefaultDeclarations>({
+  const view = new ThreeView<DefaultDescriptions>({
     debug: true,
     shadow: true,
   });
@@ -42,7 +42,7 @@ const run = async () => {
 
   await view.init();
 
-  const defaultLayers = defaultPlugin.addDefaultPhotorealLayers();
+  const defaultLayers = defaultPlugin.addDefaultPhotorealScene();
   defaultLayers.sun.update({
     sun: { intensity: 1, castShadow: true },
   });
@@ -103,7 +103,7 @@ const run = async () => {
 
   // 1. Box
   const boxColor = 0xff4444;
-  const boxLayer = view.addMesh<BoxMeshLayer>({
+  const boxLayer = view.addMesh<BoxMeshDesc>({
     pickable: true,
     box: {
       width: 100,
@@ -120,7 +120,7 @@ const run = async () => {
 
   // 2. Sphere
   const sphereColor = 0x44ff44;
-  const sphereLayer = view.addMesh<SphereMeshLayer>({
+  const sphereLayer = view.addMesh<SphereMeshDesc>({
     pickable: true,
     sphere: {
       radius: 80,
@@ -135,7 +135,7 @@ const run = async () => {
 
   // 3. Cylinder
   const cylinderColor = 0x4444ff;
-  const cylinderLayer = view.addMesh<CylinderMeshLayer>({
+  const cylinderLayer = view.addMesh<CylinderMeshDesc>({
     pickable: true,
     cylinder: {
       radiusTop: 50,
@@ -152,7 +152,7 @@ const run = async () => {
 
   // 4. Plane (rotated to face upward so it's visible from above)
   const planeColor = 0xff8800;
-  const planeLayer = view.addMesh<PlaneMeshLayer>({
+  const planeLayer = view.addMesh<PlaneMeshDesc>({
     pickable: true,
     plane: {
       width: 150,
@@ -175,7 +175,7 @@ const run = async () => {
     { x: 30, y: -30, z: -30 },
     { x: 60, y: 60, z: 0 },
   ];
-  const tubeLayer = view.addMesh<TubeMeshLayer>({
+  const tubeLayer = view.addMesh<TubeMeshDesc>({
     pickable: true,
     tube: {
       points: tubePoints,
@@ -199,7 +199,7 @@ const run = async () => {
     lng: degreeToRadian(139.76945),
     height: 100,
   });
-  const gltfLayer = view.addMesh<GLTFModelLayer>({
+  const gltfLayer = view.addMesh<GLTFModelDesc>({
     pickable: true,
     gltfModel: {
       url: LOCAL_DATASETS.steelDrumGLTF.url,
@@ -237,7 +237,7 @@ const run = async () => {
     });
   }
 
-  const instancedLayer = view.addMesh<InstancedBoxMeshLayer>({
+  const instancedLayer = view.addMesh<InstancedBoxMeshDesc>({
     pickable: true,
     boxes: {
       castShadow: true,
@@ -263,7 +263,7 @@ const run = async () => {
 
   // 7. ArcLine
   const arcLineColor = 0x00ffaa;
-  const arcLineLayer = view.addMesh<ArclineMeshLayer>({
+  const arcLineLayer = view.addMesh<ArclineMeshDesc>({
     pickable: true,
     arcLines: [
       {
@@ -283,7 +283,7 @@ const run = async () => {
 
   // 8. SmoothLine
   const smoothLineColor = 0xffaa00;
-  const smoothLineLayer = view.addMesh<SmoothLineMeshLayer>({
+  const smoothLineLayer = view.addMesh<SmoothLineMeshDesc>({
     pickable: true,
     smoothLines: [
       {

@@ -19,7 +19,7 @@ export default defineConfig((env) => {
       ...common.build,
       rollupOptions: {
         ...common.build.rollupOptions,
-        external: ["@navara/three", "@navara/three_default_layers"],
+        external: ["@navara/three", "@navara/three_default_descs"],
       },
     },
   };

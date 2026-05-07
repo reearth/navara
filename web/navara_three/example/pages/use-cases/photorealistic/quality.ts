@@ -1,9 +1,9 @@
 import type {
-  SunLightLayerConfig,
+  SunLightConfig,
   CloudsConfig,
   RainDropConfig,
   SSRConfig,
-} from "@navara/three_default_layers";
+} from "@navara/three_default_descs";
 
 export type QualityFlags = "ultra" | "high" | "medium" | "low";
 
@@ -13,7 +13,7 @@ export const QUALITY: Record<
     Pick<CloudsConfig, "clouds"> &
       Pick<RainDropConfig, "rainDrop"> &
       Pick<SSRConfig, "ssr"> &
-      Pick<SunLightLayerConfig, "sun">
+      Pick<SunLightConfig, "sun">
   >
 > = {
   ultra: {

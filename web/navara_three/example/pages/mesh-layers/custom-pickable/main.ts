@@ -20,19 +20,19 @@
  */
 import ThreeView, {
   Color,
-  MeshLayerDeclaration,
+  MeshDesc,
   PickableMesh,
   degreeToRadian,
   geodeticToVector3,
   northUpEastToFixedFrame,
   overrideShaderMaterialForMRT,
-  type MeshLayerConfig,
-  type MeshLayerUpdate,
+  type MeshConfig,
+  type MeshUpdate,
   type ViewContext,
 } from "@navara/three";
 import {
   DefaultPlugin,
-  type DefaultDeclarations,
+  type DefaultDescriptions,
 } from "@navara/three_default_plugin";
 import {
   Matrix4,
@@ -124,7 +124,7 @@ class PickableTorusKnot extends Object3D implements PickableMesh {
 }
 
 // ============================================================================
-// TorusKnotMeshLayer — a custom mesh layer that uses the manual path.
+// TorusKnotMeshDesc — a custom mesh layer that uses the manual path.
 // ============================================================================
 
 type TorusKnotDescription = {
@@ -139,18 +139,18 @@ type TorusKnotDescription = {
   };
 };
 
-type TorusKnotLayerConfig = MeshLayerConfig &
+type TorusKnotLayerConfig = MeshConfig &
   TorusKnotDescription & { pickable?: boolean };
 
-type TorusKnotLayerUpdate = MeshLayerUpdate & TorusKnotDescription;
+type TorusKnotLayerUpdate = MeshUpdate & TorusKnotDescription;
 
-type CustomDeclarations =
-  | DefaultDeclarations
+type CustomDescriptions =
+  | DefaultDescriptions
   | {
       mesh: TorusKnotLayerConfig;
     };
 
-class TorusKnotMeshLayer extends MeshLayerDeclaration<
+class TorusKnotMeshDesc extends MeshDesc<
   TorusKnotLayerConfig,
   TorusKnotLayerUpdate,
   Mesh<TorusKnotGeometry, ShaderMaterial>
@@ -232,7 +232,7 @@ class TorusKnotMeshLayer extends MeshLayerDeclaration<
 // ============================================================================
 
 const run = async () => {
-  const view = new ThreeView<CustomDeclarations>({
+  const view = new ThreeView<CustomDescriptions>({
     debug: true,
   });
 
@@ -240,10 +240,10 @@ const run = async () => {
   view.addPlugin(defaultPlugin);
   await view.init();
 
-  defaultPlugin.addDefaultPhotorealLayers();
+  defaultPlugin.addDefaultPhotorealScene();
   view.atmosphere.date.setHours(10);
 
-  view.registerMesh("torusKnot", TorusKnotMeshLayer);
+  view.registerMesh("torusKnot", TorusKnotMeshDesc);
 
   view.setCamera({
     lng: 139.7609269309,
@@ -279,7 +279,7 @@ const run = async () => {
       .scale(new Vector3(SCALE, SCALE, SCALE));
     const matrixWorld = nueFrame.clone().multiply(local);
 
-    const layer = view.addMesh<TorusKnotMeshLayer>({
+    const layer = view.addMesh<TorusKnotMeshDesc>({
       pickable: true,
       torusKnot: {
         radius: 1,

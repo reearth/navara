@@ -28,7 +28,7 @@ import ThreeView, {
   degreeToRadian,
   eastNorthUpToFixedFrame,
   JAPAN_GSI_ELEVATION_DECODER,
-  type GLTFModelLayer,
+  type GLTFModelDesc,
 } from "@navara/three";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 import { Vector3, Quaternion, Euler, Matrix4 } from "three";
@@ -45,7 +45,7 @@ view.atmosphere.date.setHours(8);
 view.toneMappingExposure = 10;
 
 // フォトリアルなシーンを一括セットアップ
-const layers = plugin.addDefaultPhotorealLayers();
+const layers = plugin.addDefaultPhotorealScene();
 
 // 太陽の影を有効化
 layers.sun.update({
@@ -168,7 +168,7 @@ const quaternion = new Quaternion().setFromRotationMatrix(
 const euler = new Euler().setFromQuaternion(quaternion);
 
 // キャラクターモデルを追加
-const modelLayer = view.addMesh<GLTFModelLayer>({
+const modelHandle = view.addMesh<GLTFModelDesc>({
   gltfModel: {
     // Credit:
     // - Soldier.glb - Three.js examples
@@ -257,7 +257,7 @@ function updateAnimation() {
   }
 
   if (targetState !== currentState) {
-    modelLayer.ref.crossFadeAnimation(currentState, targetState, 0.3);
+    modelHandle.ref.crossFadeAnimation(currentState, targetState, 0.3);
     currentState = targetState;
   }
 }
@@ -286,8 +286,8 @@ function tick(currentTime: number) {
   const deltaTime = (currentTime - lastTime) / 1000;
   lastTime = currentTime;
 
-  const modelObject = modelLayer.ref.raw;
-  const curPos = modelLayer.ref.getWorldPosition();
+  const modelObject = modelHandle.ref.raw;
+  const curPos = modelHandle.ref.getWorldPosition();
   if (!modelObject || !curPos) {
     requestAnimationFrame(tick);
     return;
@@ -363,7 +363,7 @@ function tick(currentTime: number) {
   // 最終位置を計算して更新
   const finalPos = geodeticToVector3({ lat: curLLE.lat, lng: curLLE.lng, height });
 
-  modelLayer.update({
+  modelHandle.update({
     position: { x: finalPos.x, y: finalPos.y, z: finalPos.z },
     rotation: { x: finalEuler.x, y: finalEuler.y, z: finalEuler.z },
   });
@@ -378,7 +378,7 @@ function tick(currentTime: number) {
 }
 
 // モデル読み込み完了後に開始
-modelLayer.ref.on("load", () => {
+modelHandle.ref.on("load", () => {
   requestAnimationFrame(tick);
 });
 ```
@@ -413,7 +413,7 @@ import ThreeView, {
   radianToDegree,
   eastNorthUpToFixedFrame,
   JAPAN_GSI_ELEVATION_DECODER,
-  type GLTFModelLayer,
+  type GLTFModelDesc,
 } from "@navara/three";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 import { Vector3, Quaternion, Euler, Matrix4 } from "three";
@@ -430,7 +430,7 @@ view.atmosphere.date.setHours(8);
 view.toneMappingExposure = 10;
 
 // フォトリアルなシーンを一括セットアップ
-const layers = plugin.addDefaultPhotorealLayers();
+const layers = plugin.addDefaultPhotorealScene();
 layers.sun.update({ sun: { castShadow: true } });
 
 // 地形レイヤー
@@ -515,7 +515,7 @@ const quaternion = new Quaternion().setFromRotationMatrix(
 );
 const euler = new Euler().setFromQuaternion(quaternion);
 
-const modelLayer = view.addMesh<GLTFModelLayer>({
+const modelHandle = view.addMesh<GLTFModelDesc>({
   gltfModel: {
     // Credit:
     // - Soldier.glb - Three.js examples
@@ -593,7 +593,7 @@ function updateAnimation() {
   }
 
   if (targetState !== currentState) {
-    modelLayer.ref.crossFadeAnimation(currentState, targetState, 0.3);
+    modelHandle.ref.crossFadeAnimation(currentState, targetState, 0.3);
     currentState = targetState;
   }
 }
@@ -604,8 +604,8 @@ function tick(currentTime: number) {
   const deltaTime = (currentTime - lastTime) / 1000;
   lastTime = currentTime;
 
-  const modelObject = modelLayer.ref.raw;
-  const curPos = modelLayer.ref.getWorldPosition();
+  const modelObject = modelHandle.ref.raw;
+  const curPos = modelHandle.ref.getWorldPosition();
   if (!modelObject || !curPos) {
     requestAnimationFrame(tick);
     return;
@@ -670,7 +670,7 @@ function tick(currentTime: number) {
 
   const finalPos = geodeticToVector3({ lat: curLLE.lat, lng: curLLE.lng, height });
 
-  modelLayer.update({
+  modelHandle.update({
     position: { x: finalPos.x, y: finalPos.y, z: finalPos.z },
     rotation: { x: finalEuler.x, y: finalEuler.y, z: finalEuler.z },
   });
@@ -683,7 +683,7 @@ function tick(currentTime: number) {
   requestAnimationFrame(tick);
 }
 
-modelLayer.ref.on("load", () => {
+modelHandle.ref.on("load", () => {
   requestAnimationFrame(tick);
 });
 ```

@@ -2,7 +2,7 @@
  * Base `Plugin` abstract class.
  * This class doesn't have a logic, but has interfaces.
  * ```
- * class MyPlugin extends Plugin<ThreeView<MyCustomDeclarations>, ViewContext> {
+ * class MyPlugin extends Plugin<ThreeView<MyCustomDescriptions>, ViewContext> {
  *   async init(view, ctx) {
  *     // ...
  *   }

@@ -5,15 +5,15 @@ import ThreeView, {
   geodeticToVector3,
 } from "@navara/three";
 import type {
-  BoxMeshLayer,
-  SphereMeshLayer,
-  CylinderMeshLayer,
-  PlaneMeshLayer,
-  TubeMeshLayer,
-} from "@navara/three_default_layers";
+  BoxMeshDesc,
+  SphereMeshDesc,
+  CylinderMeshDesc,
+  PlaneMeshDesc,
+  TubeMeshDesc,
+} from "@navara/three_default_descs";
 import {
   DefaultPlugin,
-  type DefaultDeclarations,
+  type DefaultDescriptions,
 } from "@navara/three_default_plugin";
 import { Vector3 } from "three";
 
@@ -21,7 +21,7 @@ import { showAttributions } from "../../../helpers/attributions";
 import { TERRAIN_DATASETS, TILE_DATASETS } from "../../../helpers/constants";
 
 const run = async () => {
-  const view = new ThreeView<DefaultDeclarations>({
+  const view = new ThreeView<DefaultDescriptions>({
     debug: true,
     shadow: true,
   });
@@ -31,7 +31,7 @@ const run = async () => {
 
   await view.init();
 
-  const defaultAtmospheres = defaultPlugin.addDefaultPhotorealLayers();
+  const defaultAtmospheres = defaultPlugin.addDefaultPhotorealScene();
   defaultAtmospheres.sun.update({
     sun: { intensity: 1, castShadow: true },
   });
@@ -56,14 +56,14 @@ const run = async () => {
     },
   });
 
-  // Mesh layers with outline
+  // Mesh descriptors with outline
   const tokyoStationPosition = geodeticToVector3({
     lat: degreeToRadian(35.681236),
     lng: degreeToRadian(139.767125),
     height: 200,
   });
 
-  view.addMesh<BoxMeshLayer>({
+  view.addMesh<BoxMeshDesc>({
     box: {
       width: 200,
       height: 200,
@@ -86,7 +86,7 @@ const run = async () => {
     .clone()
     .add(new Vector3(-500, 0, -600));
 
-  view.addMesh<SphereMeshLayer>({
+  view.addMesh<SphereMeshDesc>({
     sphere: {
       radius: 100,
       color: new Color().setHex(0x00aaff),
@@ -110,7 +110,7 @@ const run = async () => {
     height: 400,
   });
 
-  view.addMesh<CylinderMeshLayer>({
+  view.addMesh<CylinderMeshDesc>({
     cylinder: {
       radiusTop: 50,
       radiusBottom: 80,
@@ -136,7 +136,7 @@ const run = async () => {
     height: 400,
   });
 
-  view.addMesh<PlaneMeshLayer>({
+  view.addMesh<PlaneMeshDesc>({
     plane: {
       width: 200,
       height: 200,
@@ -161,7 +161,7 @@ const run = async () => {
     height: 400,
   });
 
-  view.addMesh<TubeMeshLayer>({
+  view.addMesh<TubeMeshDesc>({
     tube: {
       points: [
         { x: 0, y: 0, z: 0 },

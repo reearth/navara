@@ -5,7 +5,7 @@ import ThreeView, {
 } from "@navara/three";
 import {
   DefaultPlugin,
-  type DefaultDeclarations,
+  type DefaultDescriptions,
 } from "@navara/three_default_plugin";
 import { Vector3 } from "three";
 import { Pane } from "tweakpane";
@@ -20,14 +20,11 @@ import {
   FONT_DATASETS,
 } from "../../../helpers/constants";
 import { addDateControl, addCameraControl } from "../../../helpers/control";
-import {
-  addCtrlPanel,
-  type MaterialLayerDescription,
-} from "../../../helpers/panel";
+import { addCtrlPanel, type MaterialDesc } from "../../../helpers/panel";
 
-export type CustomDeclarations = DefaultDeclarations;
+export type CustomDescriptions = DefaultDescriptions;
 
-const geoLayersDef: MaterialLayerDescription[] = [
+const geoLayersDef: MaterialDesc[] = [
   {
     type: "tiles",
     data: { url: TILE_DATASETS.openstreetmap.url },
@@ -549,12 +546,12 @@ const geoLayersDef: MaterialLayerDescription[] = [
   },
 ];
 
-export const run = async (view: ThreeView<CustomDeclarations>) => {
+export const run = async (view: ThreeView<CustomDescriptions>) => {
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
   await view.init();
 
-  const defaultAtmospheres = plugin.addDefaultPhotorealLayers();
+  const defaultAtmospheres = plugin.addDefaultPhotorealScene();
   defaultAtmospheres.sun.update({
     sun: {
       intensity: 1,

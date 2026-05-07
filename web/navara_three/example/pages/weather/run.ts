@@ -1,21 +1,22 @@
 import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
-  LayerHandle,
+  MeshHandle,
+  EffectHandle,
   type LayerDescription,
   degreeToRadian,
   geodeticToVector3,
   Color,
 } from "@navara/three";
 import {
-  RainMeshLayer,
-  SnowMeshLayer,
-  RainDropEffectLayer,
-  SSREffectLayer,
-  CloudsEffectLayer,
-} from "@navara/three_default_layers";
+  RainMeshDesc,
+  SnowMeshDesc,
+  RainDropEffectDesc,
+  SSREffectDesc,
+  CloudsEffectDesc,
+} from "@navara/three_default_descs";
 import {
   DefaultPlugin,
-  type DefaultDeclarations,
+  type DefaultDescriptions,
 } from "@navara/three_default_plugin";
 import { Vector2 } from "three";
 import { Pane } from "tweakpane";
@@ -30,17 +31,17 @@ import {
 import { addDateControl, addHidePaneKeyShortcut } from "../../helpers/control";
 import { addFieldsToFolder, type FolderFields } from "../../helpers/panel";
 
-export type CustomDeclarations = DefaultDeclarations;
+export type CustomDescriptions = DefaultDescriptions;
 
-export const run = async (view: ThreeView<CustomDeclarations>) => {
+export const run = async (view: ThreeView<CustomDescriptions>) => {
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
   await view.init();
 
-  const defaultEffects = plugin.addDefaultPhotorealLayers();
+  const defaultEffects = plugin.addDefaultPhotorealScene();
 
-  // Add clouds effect layer explicitly
-  const cloudsLayer = view.addEffect<CloudsEffectLayer>({
+  // Add clouds effect descriptor explicitly
+  const cloudsLayer = view.addEffect<CloudsEffectDesc>({
     clouds: {},
   });
 
@@ -50,7 +51,7 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
     },
   });
 
-  view.addEffect<SSREffectLayer>({
+  view.addEffect<SSREffectDesc>({
     visible: true,
     ssr: {},
   });
@@ -136,7 +137,7 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
   });
 
   // Add Sample Post Effect with two circles
-  const rainDropEffect = view.addEffect<RainDropEffectLayer>({
+  const rainDropEffect = view.addEffect<RainDropEffectDesc>({
     rainDrop: {
       opacity: 1.0,
       dropGridSize: 12,
@@ -193,13 +194,13 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
   ]);
 };
 
-const addWaterControl = (view: ThreeView<CustomDeclarations>, pane: Pane) => {
+const addWaterControl = (view: ThreeView<CustomDescriptions>, pane: Pane) => {
   const PARAMS = {
     "visible flood model": true,
     "visible river model": true,
   };
 
-  const floodLayerDescription: LayerDescription = {
+  const floodDesc: LayerDescription = {
     type: "cesium3dtiles",
     data: {
       url: TILES_3D_DATASETS.plateauTokyoFlood.url,
@@ -219,7 +220,7 @@ const addWaterControl = (view: ThreeView<CustomDeclarations>, pane: Pane) => {
     },
   };
 
-  const riverLayerDescription: LayerDescription = {
+  const riverDesc: LayerDescription = {
     type: "mvt",
     data: {
       url: VECTOR_DATASETS.gsiExperimentalVector.url,
@@ -237,29 +238,29 @@ const addWaterControl = (view: ThreeView<CustomDeclarations>, pane: Pane) => {
     },
   };
 
-  const floodModelLayer = view.addLayer(floodLayerDescription);
-  const riverModelLayer = view.addLayer(riverLayerDescription);
+  const floodModelLayer = view.addLayer(floodDesc);
+  const riverModelLayer = view.addLayer(riverDesc);
 
   const folder = pane.addFolder({
     title: "Water",
   });
 
   folder.addBinding(PARAMS, "visible flood model").on("change", (v) => {
-    if (floodLayerDescription.model) {
-      floodLayerDescription.model.show = v.value;
+    if (floodDesc.model) {
+      floodDesc.model.show = v.value;
     }
-    floodModelLayer.update(floodLayerDescription);
+    floodModelLayer.update(floodDesc);
   });
 
   folder.addBinding(PARAMS, "visible river model").on("change", (v) => {
-    if (riverLayerDescription.polygon) {
-      riverLayerDescription.polygon.show = v.value;
+    if (riverDesc.polygon) {
+      riverDesc.polygon.show = v.value;
     }
-    riverModelLayer.update(riverLayerDescription);
+    riverModelLayer.update(riverDesc);
   });
 };
 
-const addCameraControl = (view: ThreeView<CustomDeclarations>, pane: Pane) => {
+const addCameraControl = (view: ThreeView<CustomDescriptions>, pane: Pane) => {
   const PARAMS = {
     autoRotation: false,
   };
@@ -283,9 +284,9 @@ const addCameraControl = (view: ThreeView<CustomDeclarations>, pane: Pane) => {
 };
 
 const addWeatherControl = (
-  view: ThreeView<CustomDeclarations>,
+  view: ThreeView<CustomDescriptions>,
   pane: Pane,
-  rainDropEffect: LayerHandle<RainDropEffectLayer>,
+  rainDropEffect: EffectHandle<RainDropEffectDesc>,
 ) => {
   const position = geodeticToVector3({
     lat: degreeToRadian(35.67564356091717),
@@ -293,12 +294,12 @@ const addWeatherControl = (
     height: 10,
   });
 
-  const rain = view.addMesh<RainMeshLayer>({
+  const rain = view.addMesh<RainMeshDesc>({
     visible: false,
     position: position,
     rain: {},
   });
-  const snow = view.addMesh<SnowMeshLayer>({
+  const snow = view.addMesh<SnowMeshDesc>({
     visible: false,
     position: position,
     snow: {},
@@ -311,8 +312,8 @@ const addWeatherControl = (
   };
 
   let selectedLayer:
-    | LayerHandle<RainMeshLayer>
-    | LayerHandle<SnowMeshLayer>
+    | MeshHandle<RainMeshDesc>
+    | MeshHandle<SnowMeshDesc>
     | null = null;
 
   const folderFields: FolderFields<typeof PARAMS> = [

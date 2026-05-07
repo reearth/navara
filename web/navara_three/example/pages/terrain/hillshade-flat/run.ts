@@ -2,10 +2,10 @@ import ThreeView, {
   TERRARIUM_ELEVATION_DECODER,
   type LayerDescription,
 } from "@navara/three";
-import { ToneMappingMode } from "@navara/three_default_layers";
+import { ToneMappingMode } from "@navara/three_default_descs";
 import {
   DefaultPlugin,
-  type DefaultDeclarations,
+  type DefaultDescriptions,
 } from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 
@@ -13,7 +13,7 @@ import { showAttributions } from "../../../helpers/attributions";
 import { TERRAIN_DATASETS, TILE_DATASETS } from "../../../helpers/constants";
 import { addCameraControl, addDateControl } from "../../../helpers/control";
 
-export type CustomDeclarations = DefaultDeclarations;
+export type CustomDeclarations = DefaultDescriptions;
 
 export const run = async (view: ThreeView<CustomDeclarations>) => {
   view.addPlugin(new DefaultPlugin());

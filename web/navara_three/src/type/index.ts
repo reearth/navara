@@ -25,15 +25,13 @@ import type { TileMesh } from "../mesh";
 
 export type { Promise as WorkerPoolPromise } from "@navara/worker";
 
-export type LayerDescription = ResourceLayerDescription;
-
-export type Declarations = {
+export type Descriptions = {
   mesh?: object;
   light?: object;
   effect?: object;
 };
 
-export type EmptyDeclarations = {
+export type EmptyDescriptions = {
   mesh: undefined;
   light: undefined;
   effect: undefined;
@@ -105,7 +103,7 @@ export type MvtLayer = WithColorSupport<
   Layer<MvtLayerDescription & { type: "mvt" }>
 >;
 
-export type ResourceLayerDescription =
+export type LayerDescription =
   | TilesLayer
   | TerrainLayer
   | GeoJsonLayer
