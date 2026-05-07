@@ -22,7 +22,7 @@
  *   { id: "marker-1", lng: 139.77, lat: 35.68, alt: 0 },
  * ]);
  *
- * const unsub = overlayPlugin.onUpdate(({ projected, camera }) => {
+ * const unsub = overlayPlugin.onUpdate(({ projected }) => {
  *   for (const [id, pos] of projected) {
  *     const el = document.getElementById(id);
  *     if (el) moveOverlayElement(el, pos.x, pos.y);
