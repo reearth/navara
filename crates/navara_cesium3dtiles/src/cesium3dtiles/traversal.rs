@@ -249,6 +249,7 @@ fn mark_leaves(
         && (!tile.is_renderable_content || parent_geometric_error < tile_meta.geometric_error);
 
     if !within_frustum && !can_unconditionally_refine {
+        // To avoid showing an unexpected parent tile, select the direct culled tile.
         return TraversalResult::Selected;
     }
 
@@ -480,7 +481,6 @@ fn mark_rendered_tiles(
         remove_resources_if_no_rendered_tile(commands, tile, rendered_tiles, nested_map);
     }
 
-    tile.reset_state();
     tile.state.is_rendered_last_frame = is_rendered;
 
     // Pivot for child base_url / is_v1_1 when descending into a loaded nested tileset.
