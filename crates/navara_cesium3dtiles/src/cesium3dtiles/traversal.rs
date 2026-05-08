@@ -119,8 +119,6 @@ pub fn select_tiles(
 ) {
     let mut rendered_tiles_count = 0;
 
-    let is_rendered = tile.is_rendered(rendered_tiles, features, renderable_features);
-
     let traversal_result = mark_leaves(
         nested_map.as_ref(),
         max_sse,
@@ -136,7 +134,7 @@ pub fn select_tiles(
         renderable_features,
         f64::MAX, // Root tile has no parent
         is_v1_1,
-        is_rendered,
+        false,
         false,
     );
 
@@ -369,12 +367,11 @@ fn mark_leaves(
             return TraversalResult::Selected;
         }
 
-        // Mark this parent tile as leaf if children are rendered instead of this tile.
-        if meets_sse && were_children_loaded {
-            tile.state.leaf = true;
-        }
-
         if matches!(tile.refine, Refine::Replace) && all_children_rendered {
+            // Mark this parent tile as leaf if children are rendered instead of this tile.
+            if meets_sse && were_children_loaded {
+                tile.state.leaf = true;
+            }
             return TraversalResult::ChildrenSelected;
         }
     }
