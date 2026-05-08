@@ -303,6 +303,24 @@ impl Cesium3dTileContent {
 
         matches!(renderable_feature, RenderableFeature::Model { render_info, .. } if render_info.is_rendered)
     }
+
+    pub fn is_active(
+        &self,
+        rendered_tiles: &mut Query<&mut RenderedCesium3dTileContent>,
+        features: &Query<&FeatureId>,
+        renderable_features: &Query<&RenderableFeature>,
+    ) -> bool {
+        let Some(renderable_feature) = self
+            .rendered_tile_id
+            .and_then(|e| rendered_tiles.get(e).ok().and_then(|t| t.feature_id))
+            .and_then(|feature_id| features.get(feature_id).ok().and_then(|f| f.0))
+            .and_then(|renderable_feature_id| renderable_features.get(renderable_feature_id).ok())
+        else {
+            return false;
+        };
+
+        matches!(renderable_feature, RenderableFeature::Model { active, .. } if *active)
+    }
 }
 
 /// Per-frame traversal state for a tile.
@@ -342,7 +360,6 @@ impl Cesium3dTileContentState {
         self.is_visible = false;
         self.touched = false;
         self.is_data_loaded = false;
-        self.are_all_children_loaded = false;
         self.distance_from_camera = 0.;
         self.sse = 0.;
     }
