@@ -16,8 +16,6 @@ import type { FeatureInfo } from "../evaluations";
 import type {
   FinalCopyPassConfig,
   MRTPassConfig,
-  SelectiveBloomEffectConfig,
-  SelectiveOutlineEffectConfig,
   SkyEnvMapPassConfig,
   TransparentPassConfig,
 } from "../layers/effect";
@@ -43,8 +41,6 @@ export type BuiltInEffectDescription =
   | FinalCopyPassConfig
   | MRTPassConfig
   | SkyEnvMapPassConfig
-  | SelectiveBloomEffectConfig
-  | SelectiveOutlineEffectConfig
   | TransparentPassConfig;
 
 // export type MVTLayer = {

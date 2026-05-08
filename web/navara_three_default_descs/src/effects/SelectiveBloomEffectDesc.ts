@@ -1,3 +1,13 @@
+import type ThreeView from "@navara/three";
+import {
+  Pass,
+  SelectiveEffectDesc,
+  createFullscreenQuad,
+  type EffectConfig,
+  type EffectUpdate,
+  type SelectiveEffectConfig,
+  type ViewContext,
+} from "@navara/three";
 import SelectiveEffectMaskChunk from "@shaders/glsl/chunks/selective_effect_mask.glsl?raw";
 import { Pass as PostProcessingPass } from "postprocessing";
 import {
@@ -13,18 +23,7 @@ import {
   RGBAFormat,
 } from "three";
 
-import type { BaseInstance } from "../../core/BaseDesc";
-import type { EffectConfig, EffectUpdate } from "../../core/EffectDesc";
-import type { ViewContext } from "../../core/ViewContext";
-import { Pass } from "../../effects";
-import type ThreeView from "../../index";
-import { UnrealBloomPassRGBA } from "../../postprocessing";
-
-import {
-  SelectiveEffectDesc,
-  type SelectiveEffectConfig,
-  createFullscreenQuad,
-} from "./SelectiveEffectDesc";
+import { UnrealBloomPassRGBA } from "./UnrealBloomPassRGBA";
 
 // Selective Bloom configuration
 export type SelectiveBloomConfig = {
@@ -97,12 +96,10 @@ export class SelectiveBloomEffectDesc extends SelectiveEffectDesc<
     super(view, ctx, postEffectConfig);
   }
 
-  createPass() {
+  createPass(): Pass<SelectiveBloomPass, null> {
     const rawPass = new SelectiveBloomPass(this);
     this.bloomPass = rawPass;
-    const pass = new Pass(rawPass, null, { enabled: true });
-
-    return pass as Pass<SelectiveBloomPass, null> & BaseInstance;
+    return new Pass(rawPass, null, { enabled: true });
   }
 
   onUpdateConfig(updates: SelectiveBloomEffectUpdate): void {

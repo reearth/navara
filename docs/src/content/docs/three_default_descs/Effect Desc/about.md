@@ -21,6 +21,8 @@ The following EffectDescriptor types are available in navara_three:
 | [FXAAEffectDesc](./fxaa-effect-desc) | An effect that applies FXAA (Fast Approximate Anti-Aliasing) |
 | [LensFlareEffectDesc](./lens-flare-effect-desc) | An effect that generates lens flares from the sun and moon |
 | [RainDropEffectDesc](./rain-drop-effect-desc) | An effect that applies raindrop refraction to the screen |
+| [SelectiveBloomEffectDesc](./selective-bloom-effect-desc) | An effect that applies selective bloom |
+| [SelectiveOutlineEffectDesc](./selective-outline-effect-desc) | An effect that applies selective outlines |
 | [SMAAEffectDesc](./smaa-effect-desc) | An effect that applies SMAA (Subpixel Morphological Anti-Aliasing) |
 | [SSAOEffectDesc](./ssao-effect-desc) | An effect that applies screen-space ambient occlusion |
 | [SSREffectDesc](./ssr-effect-desc) | An effect that generates real-time screen-space reflections |
