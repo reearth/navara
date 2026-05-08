@@ -35,9 +35,10 @@
 //!    - Feature batch ID mappings
 
 use crate::{
-    Cesium3dTilesJsonTileSetStateMap, Cesium3dTilesTreeOrder, RenderedCesium3dTileContent,
-    b3dm::RenderedCesium3dTileContentB3dmMarker, cesium3dtiles::traversal::select_tiles,
-    glb::RenderedCesium3dTileContentGlbMarker,
+    Cesium3dTilesNestedSubtreeMetadata, Cesium3dTilesNestedTreeMap, Cesium3dTilesTreeOrder,
+    RenderedCesium3dTileContent, b3dm::RenderedCesium3dTileContentB3dmMarker,
+    cesium3dtiles::Cesium3dTilesNestedMetadataDataRequesterMarker,
+    cesium3dtiles::traversal::select_tiles, glb::RenderedCesium3dTileContentGlbMarker,
     gltf_features::RenderedCesium3dTileContentGltfFeaturesMarker,
     pnts::RenderedCesium3dTileContentPntsMarker,
 };
@@ -67,6 +68,8 @@ use navara_material::{Appearance, ModelMaterial};
 use navara_math::{Transform, Vec3};
 use navara_parser::cesium3dtiles;
 use navara_window::Window;
+use std::sync::Arc;
+use url::Url;
 
 use super::{
     Cesium3dTilesMetadata, Cesium3dTilesMetadataDataRequesterMarker, Cesium3dTilesTree,
@@ -100,9 +103,7 @@ pub fn request_metadata(
                 &mut buf,
                 DataRequesterExtension::Json,
             ),
-            // The root tileset is always prioritized.
             Cesium3dTilesTreeOrder {
-                index: 0,
                 distance: Default::default(),
             },
         ));
@@ -112,39 +113,32 @@ pub fn request_metadata(
 /// Parses loaded tileset.json and constructs the tile tree structure.
 ///
 /// When a [`DataRequester`] successfully fetches a tileset.json file, this system:
-/// 1. Parses the JSON into a [`Cesium3dTilesMetadata`] structure
-/// 2. Constructs a [`Cesium3dTilesTree`] with the root tile
-/// 3. Spawns an entity with the tree and metadata components
 ///
-/// # Handling Nested Tilesets
-///
-/// 3D Tiles supports nested tileset.json files (external tilesets). When a tile's
-/// content URL points to another tileset.json:
-/// - A new tree is created with `Cesium3dTilesTreeOrder.index > 0`
-/// - The parent's `data_requester_id` is stored in `parent_data_requester_id`
-/// - The nested tree communicates its state via [`Cesium3dTilesJsonTileSetStateMap`]
-///
-/// # Entity Lifecycle
-///
-/// - Root tileset requesters are marked with [`Deleted`] after parsing
-/// - Nested tileset requesters are preserved until the tree is no longer needed
-/// - This prevents re-fetching when tiles go in/out of view
+/// - **Root tilesets** (no [`Cesium3dTilesNestedMetadataDataRequesterMarker`])
+///   are parsed into a [`Cesium3dTilesMetadata`] + [`Cesium3dTilesTree`] entity,
+///   then the requester is marked [`Deleted`].
+/// - **Nested tilesets** (with the marker) are parsed into a
+///   [`Cesium3dTilesNestedSubtreeMetadata`] and inserted into
+///   [`Cesium3dTilesNestedTreeMap`] keyed by the requester entity id.
+///   The requester entity is **kept alive** so the parent JSON tile's
+///   `data_requester_id` continues to resolve to a valid key for cleanup.
 #[allow(clippy::type_complexity)]
 pub fn construct_cesium_3d_tiles_tree(
     mut commands: Commands,
     mut buf: ResMut<BufferStore>,
+    mut nested_map: ResMut<Cesium3dTilesNestedTreeMap>,
     requesters: Query<
         (
             Entity,
             &Cesium3dTilesMetadataDataRequesterMarker,
             &DataRequester,
-            Option<&Cesium3dTilesTreeOrder>,
+            Option<&Cesium3dTilesNestedMetadataDataRequesterMarker>,
         ),
         (Changed<DataRequester>, Without<Deleted>),
     >,
     layers: Query<&Cesium3dTilesLayer>,
 ) {
-    for (e, marker, req, order) in &requesters {
+    for (e, marker, req, is_nested) in &requesters {
         // TODO: Handle fail
         if !matches!(req.status, DataRequesterStatus::Success) {
             continue;
@@ -161,31 +155,54 @@ pub fn construct_cesium_3d_tiles_tree(
         };
         buf.remove(&req.handle);
 
-        // Root tree's requester should be removed at this time, but other nested tree should preserve the component.
-        // It is removed by each `remove_invisible_rendered_tiles` system.
-        if order.map(|o| o.index).unwrap_or(0) == 0 {
-            commands.entity(e).insert(Deleted);
-        }
-
         let layer = match layers.get(marker.0) {
             Ok(l) => l,
             Err(_) => continue,
         };
-        let metadata = Cesium3dTilesMetadata(tileset_json);
-        let mut tree = match Cesium3dTilesTree::new(&req.url, marker.0, layer, &metadata.0) {
-            Ok(t) => t,
-            Err(e) => {
-                error!("tileset.json might be incorrect: {}", e);
-                continue;
-            }
-        };
 
-        tree.root.parent_data_requester_id = Some(e);
+        if is_nested.is_some() {
+            let base_url = match Url::parse(&req.url) {
+                Ok(u) => Arc::new(u),
+                Err(err) => {
+                    error!("nested tileset url is invalid: {}", err);
+                    continue;
+                }
+            };
+            let is_v1_1 = tileset_json.asset.version == "1.1";
+            let schema = tileset_json
+                .schema
+                .as_ref()
+                .and_then(|s| serde_json::to_value(s).ok());
+            nested_map.insert(
+                e,
+                Cesium3dTilesNestedSubtreeMetadata {
+                    base_url,
+                    metadata: tileset_json,
+                    is_v1_1,
+                    schema,
+                },
+            );
+        } else {
+            // Root tileset: requester is no longer needed after parse.
+            commands.entity(e).insert(Deleted);
 
-        let mut entity = commands.spawn((LayerId(layer.layer_id.clone()), metadata, tree));
+            let metadata = Cesium3dTilesMetadata(tileset_json);
+            let tree = match Cesium3dTilesTree::new(&req.url, marker.0, layer, &metadata.0) {
+                Ok(t) => t,
+                Err(e) => {
+                    error!("tileset.json might be incorrect: {}", e);
+                    continue;
+                }
+            };
 
-        if let Some(order) = order {
-            entity.insert(order.clone());
+            commands.spawn((
+                LayerId(layer.layer_id.clone()),
+                metadata,
+                tree,
+                Cesium3dTilesTreeOrder {
+                    distance: Default::default(),
+                },
+            ));
         }
     }
 }
@@ -230,13 +247,9 @@ pub fn construct_cesium_3d_tiles_tree(
 pub fn traverse_cesium_3d_tiles_tree(
     mut commands: Commands,
     mut buf: ResMut<BufferStore>,
-    mut sync_json_tilesets: ResMut<Cesium3dTilesJsonTileSetStateMap>,
+    mut nested_map: ResMut<Cesium3dTilesNestedTreeMap>,
     window: Res<Window>,
-    mut tiles: Query<(
-        &Cesium3dTilesMetadata,
-        &mut Cesium3dTilesTree,
-        &Cesium3dTilesTreeOrder,
-    )>,
+    mut tiles: Query<(&Cesium3dTilesMetadata, &mut Cesium3dTilesTree)>,
     camera: Query<(&CameraMarker, Ref<Transform>, &CameraFrustum)>,
     requesters: Cesium3dTileContentRequesterQuery,
     changed_requesters: ChangedCesium3dTileContentRequesterQuery,
@@ -263,28 +276,27 @@ pub fn traverse_cesium_3d_tiles_tree(
     let mut rendered_tiles = rendered_tiles.p0();
     let renderable_features = renderable_features.p0();
 
-    // Sort tree by `Cesium3dTilesTreeOrder` that has a order of each tile.
-    for (metadata, mut tree, order) in &mut tiles.iter_mut().sort::<&Cesium3dTilesTreeOrder>() {
+    for (metadata, mut tree) in &mut tiles {
         for (_, camera, frustum) in &camera {
             let needs_update = is_data_requesters_changed
                 || changed_rendered_tiles
                 || changed_renderable_features
                 || camera.is_added()
                 || camera.is_changed()
-                || tree.is_added()
-                || sync_json_tilesets.needs_update();
+                || tree.is_added();
             if !needs_update {
                 continue;
             }
             let camera_pos = camera.transform_point(Vec3::ZERO);
             let is_v1_1 = tree.is_v1_1;
+            let base_url = Arc::clone(&tree.base_url);
             select_tiles(
                 &mut commands,
                 &mut buf,
-                &mut sync_json_tilesets,
+                &mut nested_map,
                 tree.layer_id,
                 tree.max_sse,
-                &tree.base_url.clone(),
+                &base_url,
                 &metadata.0.root,
                 &mut tree.root,
                 camera_pos,
@@ -294,13 +306,10 @@ pub fn traverse_cesium_3d_tiles_tree(
                 &features,
                 &renderable_features,
                 &window,
-                order,
                 is_v1_1,
             );
         }
     }
-
-    sync_json_tilesets.set_needs_update(false);
 }
 
 /// Updates material properties for all rendered tiles in a Cesium 3D Tiles layer.
@@ -407,7 +416,7 @@ pub fn update_cesium3dtiles_layer(
 pub fn delete_cesium3dtiles_layer(
     mut commands: Commands,
     mut layer_store: ResMut<LayerStore>,
-    mut sync_json_tilesets: ResMut<Cesium3dTilesJsonTileSetStateMap>,
+    mut nested_map: ResMut<Cesium3dTilesNestedTreeMap>,
     deleted: Query<(Entity, &DeleteCesium3dTilesLayerMarker)>,
     layers: Query<(Entity, &Cesium3dTilesLayer)>,
     mut tiles: Query<(Entity, &LayerId, &mut Cesium3dTilesTree)>,
@@ -418,13 +427,11 @@ pub fn delete_cesium3dtiles_layer(
             if layer_id.0 != d.0 {
                 continue;
             }
-            let layer_id_entity = tree.layer_id;
             mark_rendered_tiles_invisible(
                 &mut commands,
                 &mut tree.root,
                 &mut rendered_tiles,
-                &mut sync_json_tilesets,
-                layer_id_entity,
+                &mut nested_map,
             );
             commands.entity(e).despawn();
             layer_store.remove(&layer_id.0);
@@ -436,53 +443,5 @@ pub fn delete_cesium3dtiles_layer(
             commands.entity(e).despawn();
         }
         commands.entity(e).despawn();
-    }
-}
-
-/// Removes nested tileset trees that are no longer needed.
-///
-/// This system handles cleanup of external/nested tilesets (tileset.json files
-/// referenced by parent tiles). When a nested tileset's root tile is marked
-/// as `removed`, this system:
-/// 1. Marks all its rendered tiles as invisible
-/// 2. Despawns the tree entity
-///
-/// # Note
-///
-/// Root trees (index == 0) are never removed by this system. They are only
-/// removed when the entire layer is deleted via [`delete_cesium3dtiles_layer`].
-///
-/// # Nested Tileset Lifecycle
-///
-/// 1. Parent tile's content URL points to nested tileset.json
-/// 2. Nested tree is created with `Cesium3dTilesTreeOrder.index > 0`
-/// 3. When parent tile goes out of view, nested tree is marked for removal
-/// 4. This system cleans up the nested tree and all its resources
-#[allow(clippy::type_complexity, clippy::too_many_arguments)]
-pub fn remove_invisible_tileset(
-    mut commands: Commands,
-    mut tiles: Query<(Entity, &mut Cesium3dTilesTree, &Cesium3dTilesTreeOrder)>,
-    mut rendered_tiles: Query<&mut RenderedCesium3dTileContent>,
-    mut sync_json_tilesets: ResMut<Cesium3dTilesJsonTileSetStateMap>,
-) {
-    for (entity, mut tree, order) in &mut tiles {
-        let tile = &tree.root;
-
-        let is_root_tree = order.index == 0;
-
-        if !tile.state.removed || is_root_tree {
-            continue;
-        }
-
-        let layer_id = tree.layer_id;
-        mark_rendered_tiles_invisible(
-            &mut commands,
-            &mut tree.root,
-            &mut rendered_tiles,
-            &mut sync_json_tilesets,
-            layer_id,
-        );
-
-        commands.entity(entity).despawn();
     }
 }

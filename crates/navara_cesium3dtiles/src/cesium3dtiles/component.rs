@@ -35,7 +35,7 @@ use navara_layer::Cesium3dTilesLayer;
 use navara_material::Appearance;
 use navara_math::{FloatType, Mat4, Transform, Vec3};
 use navara_parser::cesium3dtiles::{self, tileset::Refine};
-use std::{cmp::Ordering, collections::HashMap};
+use std::{cmp::Ordering, collections::HashMap, sync::Arc};
 use url::{ParseError, Url};
 
 use crate::TileOrderByDistance;
@@ -60,8 +60,10 @@ pub struct Cesium3dTilesMetadata(pub navara_parser::cesium3dtiles::tileset::Tile
 pub struct Cesium3dTilesTree {
     /// Entity ID of the parent [`Cesium3dTilesLayer`]
     pub layer_id: Entity,
-    /// Base URL for resolving relative content URLs
-    pub base_url: Url,
+    /// Base URL for resolving relative content URLs.
+    /// Wrapped in `Arc` so the recursive traversal can hand it down without
+    /// cloning the underlying `Url` (which would heap-allocate per tile).
+    pub base_url: Arc<Url>,
     /// The root tile content (contains the full tree recursively)
     pub root: Cesium3dTileContent,
     /// Maximum screen-space error threshold for LOD selection
@@ -85,7 +87,7 @@ impl Cesium3dTilesTree {
         layer: &Cesium3dTilesLayer,
         metadata: &navara_parser::cesium3dtiles::tileset::Tileset,
     ) -> Result<Self, ParseError> {
-        let base_url = Url::parse(url)?;
+        let base_url = Arc::new(Url::parse(url)?);
         let root = Cesium3dTileContent::new(&metadata.root, None);
 
         let appearance = layer
@@ -136,9 +138,12 @@ pub struct Cesium3dTileContent {
     /// Relative URL to tile content (may be a path, not full URL).
     pub uri: Option<String>,
     /// Entity with [`DataRequester`] for this tile's content.
+    ///
+    /// For renderable tiles this points to the content data requester
+    /// (b3dm/glb/pnts). For non-renderable JSON tiles this points to the
+    /// metadata data requester that fetched the nested `tileset.json` —
+    /// it is also the key into [`Cesium3dTilesNestedTreeMap`](super::Cesium3dTilesNestedTreeMap).
     pub data_requester_id: Option<Entity>,
-    /// For nested tilesets: parent tile's data requester ID.
-    pub parent_data_requester_id: Option<Entity>,
     /// Entity with [`RenderedCesium3dTileContent`] when tile is rendered.
     pub rendered_tile_id: Option<Entity>,
     /// Child tiles (lazily allocated, cleared when out of view).
@@ -242,7 +247,6 @@ impl Cesium3dTileContent {
         Self {
             uri,
             data_requester_id: None,
-            parent_data_requester_id: None,
             rendered_tile_id: None,
             children: None,
             is_renderable_content,
@@ -315,8 +319,6 @@ pub struct Cesium3dTileContentState {
     pub touched_last_frame: bool,
     /// Whether the tile is within camera frustum.
     pub is_visible: bool,
-    /// Whether to preload this culled tile for smooth transitions.
-    pub should_preload: bool,
     /// Marked for removal (nested tileset cleanup).
     pub removed: bool,
     /// Whether this content was touched while traversing.
@@ -338,7 +340,6 @@ impl Cesium3dTileContentState {
         self.leaf = false;
         self.removed = false;
         self.is_visible = false;
-        self.should_preload = false;
         self.touched = false;
         self.is_data_loaded = false;
         self.are_all_children_loaded = false;
@@ -385,16 +386,11 @@ pub struct TileTransform {
     pub transform: Transform,
 }
 
-/// Priority ordering for tile trees and requests.
-///
-/// Used to:
-/// 1. Identify nested tilesets (index > 0)
-/// 2. Sort trees during traversal (closer/higher SSE = higher priority)
-/// 3. Prioritize data requests
+/// Priority ordering for spawned [`DataRequester`](navara_data_requester::DataRequester)
+/// entities, sorted by distance/SSE so nearer / higher-error tiles are
+/// fetched first.
 #[derive(Component, PartialEq, Debug, Clone)]
 pub struct Cesium3dTilesTreeOrder {
-    /// Tree nesting level. 0 = root tileset, >0 = nested tileset.
-    pub index: usize,
     /// Distance-based ordering for request prioritization.
     pub distance: TileOrderByDistance,
 }
@@ -407,19 +403,7 @@ impl PartialOrd for Cesium3dTilesTreeOrder {
 
 impl Ord for Cesium3dTilesTreeOrder {
     fn cmp(&self, other: &Self) -> Ordering {
-        if self.index < other.index {
-            return Ordering::Less;
-        }
-        if self.index > other.index {
-            return Ordering::Greater;
-        }
-        if self.distance < other.distance {
-            return Ordering::Less;
-        }
-        if self.distance > other.distance {
-            return Ordering::Greater;
-        }
-        Ordering::Equal
+        self.distance.cmp(&other.distance)
     }
 }
 
@@ -431,58 +415,21 @@ mod tests_cesium3dtiles_tree_order {
     use crate::TileOrderByDistance;
 
     #[test]
-    fn sorts_by_index_first_then_distance() {
-        // index has highest priority: lower index should come first regardless of distance
+    fn sorts_by_sse_desc_then_distance_asc() {
         let mut items = [
             Cesium3dTilesTreeOrder {
-                index: 2,
-                distance: TileOrderByDistance {
-                    sse: 10.0,
-                    distance_from_camera: 0.0,
-                },
-            },
-            Cesium3dTilesTreeOrder {
-                index: 0,
-                distance: TileOrderByDistance {
-                    sse: 0.0,
-                    distance_from_camera: 999.0,
-                },
-            },
-            Cesium3dTilesTreeOrder {
-                index: 1,
-                distance: TileOrderByDistance {
-                    sse: 100.0,
-                    distance_from_camera: 0.0,
-                },
-            },
-        ];
-
-        items.sort();
-
-        assert_eq!(items[0].index, 0);
-        assert_eq!(items[1].index, 1);
-        assert_eq!(items[2].index, 2);
-    }
-
-    #[test]
-    fn sorts_by_sse_desc_then_distance_asc_when_index_equal() {
-        let mut items = [
-            Cesium3dTilesTreeOrder {
-                index: 0,
                 distance: TileOrderByDistance {
                     sse: 3.0,
                     distance_from_camera: 5.0,
                 },
             },
             Cesium3dTilesTreeOrder {
-                index: 0,
                 distance: TileOrderByDistance {
                     sse: 2.0,
                     distance_from_camera: 1.0,
                 },
             },
             Cesium3dTilesTreeOrder {
-                index: 0,
                 distance: TileOrderByDistance {
                     sse: 3.0,
                     distance_from_camera: 2.0,
@@ -495,21 +442,18 @@ mod tests_cesium3dtiles_tree_order {
         // Expect highest SSE first; for equal SSE, nearer (smaller distance) first
         let expects = [
             Cesium3dTilesTreeOrder {
-                index: 0,
                 distance: TileOrderByDistance {
                     sse: 3.0,
                     distance_from_camera: 2.0,
                 },
             },
             Cesium3dTilesTreeOrder {
-                index: 0,
                 distance: TileOrderByDistance {
                     sse: 3.0,
                     distance_from_camera: 5.0,
                 },
             },
             Cesium3dTilesTreeOrder {
-                index: 0,
                 distance: TileOrderByDistance {
                     sse: 2.0,
                     distance_from_camera: 1.0,
@@ -523,9 +467,8 @@ mod tests_cesium3dtiles_tree_order {
     }
 
     #[test]
-    fn equality_when_index_and_distance_equal() {
+    fn equality_when_distance_equal() {
         let a = Cesium3dTilesTreeOrder {
-            index: 1,
             distance: TileOrderByDistance {
                 sse: 1.5,
                 distance_from_camera: 42.0,
