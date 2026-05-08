@@ -4,12 +4,12 @@
 // Manual bilinear interpolation for octahedral-encoded normals
 // Hardware bilinear filtering doesn't work correctly on encoded normals
 // because the encoding is non-linear
-vec3 sampleBilinearNormal(sampler2D normalMap, vec2 baseUv, vec2 texelSize, vec2 frac) {
-  // Sample 4 packed normals at corners
-  vec2 packed00 = texture2D(normalMap, baseUv).rg;
-  vec2 packed10 = texture2D(normalMap, baseUv + vec2(texelSize.x, 0.0)).rg;
-  vec2 packed01 = texture2D(normalMap, baseUv + vec2(0.0, texelSize.y)).rg;
-  vec2 packed11 = texture2D(normalMap, baseUv + texelSize).rg;
+vec3 sampleBilinearNormal(sampler2D normalMap, ivec2 basePixel, vec2 frac) {
+  // Sample 4 packed normals at corners using texelFetch (more precise than texture2D)
+  vec2 packed00 = texelFetch(normalMap, basePixel, 0).rg;
+  vec2 packed10 = texelFetch(normalMap, basePixel + ivec2(1, 0), 0).rg;
+  vec2 packed01 = texelFetch(normalMap, basePixel + ivec2(0, 1), 0).rg;
+  vec2 packed11 = texelFetch(normalMap, basePixel + ivec2(1, 1), 0).rg;
 
   // Unpack octahedral-encoded normals
   // Input is expected to be in [0,1] range, convert to [-1,1] before unpacking

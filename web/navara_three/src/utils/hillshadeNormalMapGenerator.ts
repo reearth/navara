@@ -3,8 +3,8 @@ import { packing } from "@takram/three-geospatial/shaders";
 import {
   ClampToEdgeWrapping,
   DataTexture,
-  LinearFilter,
   Mesh,
+  NearestFilter,
   NoColorSpace,
   OrthographicCamera,
   PlaneGeometry,
@@ -43,6 +43,7 @@ export class HillshadeNormalMapGenerator {
         uDemTexture: { value: null },
         uTexelSize: { value: [0, 0] },
         uMetersPerTexel: { value: 1.0 },
+        uOutputSize: { value: [0, 0] }, // Output render target size (content size without padding)
         // Hillshade decoder uniforms (will be set per-generation)
         uHillshadeRGBScaler: { value: [256, 1, 1 / 256] },
         uHillshadeBoundary: { value: 0 },
@@ -52,9 +53,7 @@ export class HillshadeNormalMapGenerator {
         uHillshadeOffset: { value: -32768 },
       },
       vertexShader: `
-        varying vec2 vUv;
         void main() {
-          vUv = uv;
           gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
         }
       `,
@@ -64,8 +63,7 @@ export class HillshadeNormalMapGenerator {
         uniform sampler2D uDemTexture;
         uniform vec2 uTexelSize;
         uniform float uMetersPerTexel;
-
-        varying vec2 vUv;
+        uniform vec2 uOutputSize;
 
         // Import packing functions (signNotZero, packNormalToVec2, etc.)
         ${packing}
@@ -76,8 +74,14 @@ export class HillshadeNormalMapGenerator {
         void main() {
           ivec2 texSize = textureSize(uDemTexture, 0);
 
+          // Compute UV from gl_FragCoord using correct OUTPUT size (not DEM padded size)
+          // gl_FragCoord ranges from (0.5, 0.5) to (width-0.5, height-0.5)
+          // Map to UV [0,1] spanning pixel centers: (fragCoord - 0.5) / (size - 1)
+          vec2 pixelCoord = gl_FragCoord.xy - 0.5;
+          vec2 uv = pixelCoord / (uOutputSize - 1.0);
+
           // Check if this is valid terrain data
-          float testHeight = sampleHeightBilinear(uDemTexture, vUv, texSize);
+          float testHeight = sampleHeightBilinear(uDemTexture, uv, texSize);
 
           if (!isValidHeight(testHeight)) {
             // Invalid data (ocean/no-data), output default upward normal
@@ -87,7 +91,7 @@ export class HillshadeNormalMapGenerator {
           }
 
           // Compute normal from DEM
-          vec3 normal = computeNormalFromDEM(uDemTexture, vUv, uTexelSize, uMetersPerTexel);
+          vec3 normal = computeNormalFromDEM(uDemTexture, uv, uTexelSize, uMetersPerTexel);
 
           // Pack normal to RG channels and map to [0,1] for storage
           vec2 packed = packNormalToVec2(normal);
@@ -159,6 +163,7 @@ export class HillshadeNormalMapGenerator {
     this.material.uniforms.uDemTexture.value = demTexture;
     this.material.uniforms.uTexelSize.value = [texelSize, texelSize];
     this.material.uniforms.uMetersPerTexel.value = metersPerTexel;
+    this.material.uniforms.uOutputSize.value = [contentWidth, contentHeight];
 
     // Update hillshade decoder uniforms from Rust config
     this.material.uniforms.uHillshadeRGBScaler.value =
@@ -172,11 +177,12 @@ export class HillshadeNormalMapGenerator {
     this.material.uniforms.uHillshadeOffset.value = hillshadeConfig.offset;
 
     // Create render target for CONTENT SIZE (without padding)
+    // Use NearestFilter to avoid any hardware interpolation during generation
     const renderTarget = new WebGLRenderTarget(contentWidth, contentHeight, {
       format: RGBAFormat,
       type: UnsignedByteType,
-      minFilter: LinearFilter,
-      magFilter: LinearFilter,
+      minFilter: NearestFilter,
+      magFilter: NearestFilter,
       wrapS: ClampToEdgeWrapping,
       wrapT: ClampToEdgeWrapping,
       colorSpace: NoColorSpace,
@@ -214,8 +220,10 @@ export class HillshadeNormalMapGenerator {
     // readRenderTargetPixels returns data in WebGL coordinate system (bottom-up)
     // Set flipY=true to match Three.js texture coordinate system (top-down)
     normalMap.flipY = true;
-    normalMap.minFilter = LinearFilter;
-    normalMap.magFilter = LinearFilter;
+    // Use NearestFilter to avoid hardware interpolation of encoded normals
+    // Manual bilinear interpolation is performed in sampleBilinearNormal()
+    normalMap.minFilter = NearestFilter;
+    normalMap.magFilter = NearestFilter;
     normalMap.wrapS = ClampToEdgeWrapping;
     normalMap.wrapT = ClampToEdgeWrapping;
     normalMap.colorSpace = NoColorSpace;

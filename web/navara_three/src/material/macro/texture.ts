@@ -51,14 +51,15 @@ export function generateHillshadeNormalShader(maxTextures: number): string {
         // Apply per-layer UV transform for hillshade parent texture reuse
         vec2 hillshadeUv = vOrigUv * uHillshadeUvScale[${i}] + uHillshadeUvOffset[${i}];
 
-        // Compute bilinear interpolation parameters
-        vec2 texelSize = 1.0 / vec2(normalMapSize);
-        vec2 pixelCoord = hillshadeUv * vec2(normalMapSize) - 0.5;
+        // Pixel-center UV mapping: UV [0,1] spans pixel centers [0, N-1]
+        // This matches the convention used in normal map generation
+        vec2 contentSize = vec2(normalMapSize);
+        vec2 pixelCoord = hillshadeUv * (contentSize - 1.0);
         vec2 frac = fract(pixelCoord);
-        vec2 baseUv = (floor(pixelCoord) + 0.5) * texelSize;
+        ivec2 basePixel = ivec2(floor(pixelCoord));
 
-        // Sample and interpolate normal
-        vec3 demNormal = sampleBilinearNormal(uTextures[${i}], baseUv, texelSize, frac);
+        // Sample and interpolate normal using texelFetch (more precise than texture2D)
+        vec3 demNormal = sampleBilinearNormal(uTextures[${i}], basePixel, frac);
 
         // Apply exaggeration to slope components (xy) before normalization
         demNormal.xy *= uHillshadeExaggeration;
