@@ -88,6 +88,11 @@ export {
   type SharedBoxMaterialConfig,
   type BoxesDescription,
 } from "./InstancedBoxMeshDesc";
+export {
+  SplatMeshDesc,
+  type SplatMeshConfig,
+  type SplatMeshUpdate,
+} from "./SplatMeshDesc";
 
 // Mesh implementations
 export { SkyMesh, type SkyMeshOptions } from "./skyMesh";
