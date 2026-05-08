@@ -119,6 +119,8 @@ pub fn select_tiles(
 ) {
     let mut rendered_tiles_count = 0;
 
+    let is_rendered = tile.is_rendered(rendered_tiles, features, renderable_features);
+
     let traversal_result = mark_leaves(
         nested_map.as_ref(),
         max_sse,
@@ -134,6 +136,8 @@ pub fn select_tiles(
         renderable_features,
         f64::MAX, // Root tile has no parent
         is_v1_1,
+        is_rendered,
+        false,
     );
 
     if matches!(traversal_result, TraversalResult::Selected) {
@@ -194,7 +198,11 @@ fn mark_leaves(
     renderable_features: &Query<&RenderableFeature>,
     parent_geometric_error: f64,
     is_v1_1: bool,
+    is_ancestor_activated: bool,
+    meets_sse_ancestors: bool,
 ) -> TraversalResult {
+    let were_children_loaded = tile.state.are_all_children_loaded;
+
     tile.reset_state();
 
     let within_frustum =
@@ -255,9 +263,11 @@ fn mark_leaves(
 
     let meets_sse = sse <= max_sse;
 
-    if meets_sse && !can_unconditionally_refine {
+    if meets_sse && !can_unconditionally_refine && !were_children_loaded {
         return TraversalResult::Selected;
     }
+
+    let is_activated = tile.is_active(rendered_tiles, features, renderable_features);
 
     // Choose the children metadata source. For loaded JSON tiles, treat the
     // nested tileset's root as a single synthetic child of this tile.
@@ -273,6 +283,10 @@ fn mark_leaves(
             is_v1_1,
         ),
     };
+
+    // If the children are rendered to fill the parent, the parent tile replaces them when it is ready.
+    let hide_children =
+        (meets_sse && is_activated) || (meets_sse_ancestors && is_ancestor_activated);
 
     if !child_meta_slice.is_empty() {
         if tile.children.is_none() {
@@ -309,10 +323,23 @@ fn mark_leaves(
                 renderable_features,
                 tile_meta.geometric_error,
                 child_is_v1_1,
+                if meets_sse_ancestors {
+                    is_ancestor_activated
+                } else {
+                    is_activated
+                },
+                meets_sse,
             ) {
                 TraversalResult::Selected => {
-                    any_child_in_frustum = true;
-                    child_tile.state.leaf = true;
+                    if hide_children {
+                        child_tile.state.leaf = false;
+                        child_tile.state.is_visible = false;
+                        all_children_rendered = false;
+                    } else {
+                        any_child_in_frustum = true;
+                        child_tile.state.leaf = true;
+                    }
+
                     if !child_tile.is_renderable_content
                         || !child_tile.is_rendered(rendered_tiles, features, renderable_features)
                     {
@@ -329,6 +356,7 @@ fn mark_leaves(
         if matches!(tile.refine, Refine::Replace)
             && any_child_in_frustum
             && let Some(children) = &mut tile.children
+            && !were_children_loaded
         {
             for child in children.iter_mut() {
                 mark_for_preload(child);
@@ -339,6 +367,11 @@ fn mark_leaves(
 
         if matches!(tile.refine, Refine::Add) {
             return TraversalResult::Selected;
+        }
+
+        // Mark this parent tile as leaf if children are rendered instead of this tile.
+        if meets_sse && were_children_loaded {
+            tile.state.leaf = true;
         }
 
         if matches!(tile.refine, Refine::Replace) && all_children_rendered {
@@ -481,6 +514,7 @@ fn mark_rendered_tiles(
         remove_resources_if_no_rendered_tile(commands, tile, rendered_tiles, nested_map);
     }
 
+    tile.reset_state();
     tile.state.is_rendered_last_frame = is_rendered;
 
     // Pivot for child base_url / is_v1_1 when descending into a loaded nested tileset.
