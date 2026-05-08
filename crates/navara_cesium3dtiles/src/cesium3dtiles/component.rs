@@ -35,7 +35,7 @@ use navara_layer::Cesium3dTilesLayer;
 use navara_material::Appearance;
 use navara_math::{FloatType, Mat4, Transform, Vec3};
 use navara_parser::cesium3dtiles::{self, tileset::Refine};
-use std::{cmp::Ordering, collections::HashMap};
+use std::{cmp::Ordering, collections::HashMap, sync::Arc};
 use url::{ParseError, Url};
 
 use crate::TileOrderByDistance;
@@ -60,8 +60,10 @@ pub struct Cesium3dTilesMetadata(pub navara_parser::cesium3dtiles::tileset::Tile
 pub struct Cesium3dTilesTree {
     /// Entity ID of the parent [`Cesium3dTilesLayer`]
     pub layer_id: Entity,
-    /// Base URL for resolving relative content URLs
-    pub base_url: Url,
+    /// Base URL for resolving relative content URLs.
+    /// Wrapped in `Arc` so the recursive traversal can hand it down without
+    /// cloning the underlying `Url` (which would heap-allocate per tile).
+    pub base_url: Arc<Url>,
     /// The root tile content (contains the full tree recursively)
     pub root: Cesium3dTileContent,
     /// Maximum screen-space error threshold for LOD selection
@@ -85,7 +87,7 @@ impl Cesium3dTilesTree {
         layer: &Cesium3dTilesLayer,
         metadata: &navara_parser::cesium3dtiles::tileset::Tileset,
     ) -> Result<Self, ParseError> {
-        let base_url = Url::parse(url)?;
+        let base_url = Arc::new(Url::parse(url)?);
         let root = Cesium3dTileContent::new(&metadata.root, None);
 
         let appearance = layer
@@ -317,8 +319,6 @@ pub struct Cesium3dTileContentState {
     pub touched_last_frame: bool,
     /// Whether the tile is within camera frustum.
     pub is_visible: bool,
-    /// Whether to preload this culled tile for smooth transitions.
-    pub should_preload: bool,
     /// Marked for removal (nested tileset cleanup).
     pub removed: bool,
     /// Whether this content was touched while traversing.
@@ -340,7 +340,6 @@ impl Cesium3dTileContentState {
         self.leaf = false;
         self.removed = false;
         self.is_visible = false;
-        self.should_preload = false;
         self.touched = false;
         self.is_data_loaded = false;
         self.are_all_children_loaded = false;

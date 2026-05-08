@@ -4,6 +4,8 @@
 //! metadata across the tile system. Runtime tile state lives inline in the
 //! recursive [`Cesium3dTileContent`] tree, not here.
 
+use std::sync::Arc;
+
 use bevy_ecs::{entity::Entity, resource::Resource};
 use rustc_hash::FxHashMap;
 use url::Url;
@@ -17,7 +19,7 @@ use url::Url;
 /// via the traversal pivot.
 #[derive(Debug)]
 pub struct Cesium3dTilesNestedSubtreeMetadata {
-    pub base_url: Url,
+    pub base_url: Arc<Url>,
     pub metadata: navara_parser::cesium3dtiles::tileset::Tileset,
     pub is_v1_1: bool,
     pub schema: Option<serde_json::Value>,

@@ -68,6 +68,7 @@ use navara_material::{Appearance, ModelMaterial};
 use navara_math::{Transform, Vec3};
 use navara_parser::cesium3dtiles;
 use navara_window::Window;
+use std::sync::Arc;
 use url::Url;
 
 use super::{
@@ -161,7 +162,7 @@ pub fn construct_cesium_3d_tiles_tree(
 
         if is_nested.is_some() {
             let base_url = match Url::parse(&req.url) {
-                Ok(u) => u,
+                Ok(u) => Arc::new(u),
                 Err(err) => {
                     error!("nested tileset url is invalid: {}", err);
                     continue;
@@ -288,13 +289,14 @@ pub fn traverse_cesium_3d_tiles_tree(
             }
             let camera_pos = camera.transform_point(Vec3::ZERO);
             let is_v1_1 = tree.is_v1_1;
+            let base_url = Arc::clone(&tree.base_url);
             select_tiles(
                 &mut commands,
                 &mut buf,
                 &mut nested_map,
                 tree.layer_id,
                 tree.max_sse,
-                &tree.base_url.clone(),
+                &base_url,
                 &metadata.0.root,
                 &mut tree.root,
                 camera_pos,
