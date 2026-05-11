@@ -16,14 +16,15 @@
 //! The main 3D Tiles processing pipeline:
 //!
 //! 1. **request_metadata** - Spawn data requesters for new tilesets
-//! 2. **construct_cesium_3d_tiles_tree** - Parse tileset.json into tree structure
-//! 3. **traverse_cesium_3d_tiles_tree** - Select visible tiles based on SSE
+//! 2. **construct_cesium_3d_tiles_tree** - Parse tileset.json into tree (root) or
+//!    [`Cesium3dTilesNestedTreeMap`] (nested)
+//! 3. **traverse_cesium_3d_tiles_tree** - Select visible tiles based on SSE,
+//!    descending into nested tilesets in-line
 //! 4. **filter_requestable_data_requester** - Prioritize pending data requests
 //! 5. **construct_model_by_cesium3dtiles_layer** (generic) - Create models for all formats
 //! 6. **remove_invisible_rendered_tiles** (generic/GLB) - Clean up invisible tiles
-//! 7. **remove_invisible_tileset** - Clean up nested tilesets
-//! 8. **delete_cesium3dtiles_layer** - Handle layer deletion
-//! 9. **update_cesium3dtiles_layer** - Handle material updates
+//! 7. **delete_cesium3dtiles_layer** - Handle layer deletion
+//! 8. **update_cesium3dtiles_layer** - Handle material updates
 //!
 //! ## Integration with navara_feature
 //!
@@ -58,7 +59,7 @@ pub struct Cesium3dTilesPlugin;
 
 impl Plugin for Cesium3dTilesPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<Cesium3dTilesJsonTileSetStateMap>();
+        app.init_resource::<Cesium3dTilesNestedTreeMap>();
         // Standalone B3DM layer systems (not part of 3D Tiles)
         app.add_systems(
             Update,
@@ -102,7 +103,6 @@ impl Plugin for Cesium3dTilesPlugin {
                 cleanup_system::remove_invisible_rendered_tiles::<pnts::parser::PntsParser>,
                 cleanup_system::remove_invisible_rendered_tiles::<glb::parser::GlbParser>,
                 cleanup_system::remove_invisible_rendered_tiles::<gltf_features::parser::GltfFeaturesParser>,
-                cesium3dtiles::system::remove_invisible_tileset,
                 // Phase 5: Layer management
                 cesium3dtiles::system::delete_cesium3dtiles_layer,
                 cesium3dtiles::system::update_cesium3dtiles_layer,

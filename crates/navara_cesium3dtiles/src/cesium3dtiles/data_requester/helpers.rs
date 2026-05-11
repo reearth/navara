@@ -18,6 +18,15 @@ pub struct Cesium3dTilesMetadataDataRequesterMarker(pub Entity);
 #[derive(Component)]
 pub struct Cesium3dTileContentDataRequesterMarker;
 
+/// Marker for the [`DataRequester`] that fetches a *nested* `tileset.json`.
+///
+/// Distinguishes nested-tileset metadata requesters from the layer's root
+/// metadata requester so `construct_cesium_3d_tiles_tree` can route them
+/// differently (root → spawn tree entity; nested → insert into the
+/// [`Cesium3dTilesNestedTreeMap`](crate::Cesium3dTilesNestedTreeMap)).
+#[derive(Component)]
+pub struct Cesium3dTilesNestedMetadataDataRequesterMarker;
+
 // TODO: Request again if the request failed.
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn request_tile_content(
@@ -27,7 +36,6 @@ pub(crate) fn request_tile_content(
     tile: &mut Cesium3dTileContent,
     requesters: &Cesium3dTileContentRequesterQuery,
     priority: Priority,
-    tree_order: Cesium3dTilesTreeOrder,
     is_v1_1: bool,
 ) -> bool {
     let data_requester_entity_id = tile.data_requester_id;
@@ -42,6 +50,12 @@ pub(crate) fn request_tile_content(
             error!("{}", e);
             return false;
         }
+    };
+    let tree_order = Cesium3dTilesTreeOrder {
+        distance: TileOrderByDistance {
+            distance_from_camera: tile.state.distance_from_camera,
+            sse: tile.state.sse,
+        },
     };
     match extension {
         DataRequesterExtension::Pnts => {

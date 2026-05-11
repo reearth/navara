@@ -1,6 +1,6 @@
 ---
 title: SelectiveOutlineEffectDesc
-description: Selective outline effect descriptor for navara_three
+description: Selective outline effect descriptor for navara_three_default_descs
 sidebar:
   order: 62
 ---
@@ -131,11 +131,11 @@ Specifies the occlusion processing mode when applying the effect.
 ### Adding a basic selective outline
 
 ```typescript
-import ThreeView, {
-  SelectiveOutlineEffectDesc,
+import ThreeView, { Color } from "@navara/three";
+import {
   BoxMeshDesc,
-  Color,
-} from "@navara/three";
+  SelectiveOutlineEffectDesc,
+} from "@navara/three_default_descs";
 
 const view = new ThreeView();
 await view.init();
@@ -166,7 +166,8 @@ const cubeDesc = view.addMesh<BoxMeshDesc>({
 ### Adding a colored outline
 
 ```typescript
-import ThreeView, { SelectiveOutlineEffectDesc, Color } from "@navara/three";
+import ThreeView, { Color } from "@navara/three";
+import { SelectiveOutlineEffectDesc } from "@navara/three_default_descs";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
@@ -189,7 +190,8 @@ const outlineDesc = view.addEffect<SelectiveOutlineEffectDesc>({
 ### Performance-oriented settings
 
 ```typescript
-import ThreeView, { SelectiveOutlineEffectDesc, Color } from "@navara/three";
+import ThreeView, { Color } from "@navara/three";
+import { SelectiveOutlineEffectDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
 await view.init();
@@ -208,7 +210,8 @@ const outlineDesc = view.addEffect<SelectiveOutlineEffectDesc>({
 ### Dynamic outline effect updates
 
 ```typescript
-import ThreeView, { SelectiveOutlineEffectDesc, Color } from "@navara/three";
+import ThreeView, { Color } from "@navara/three";
+import { SelectiveOutlineEffectDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
 await view.init();
@@ -232,7 +235,8 @@ outlineDesc.update({
 ### Applying outlines to 3D Tiles
 
 ```typescript
-import ThreeView, { SelectiveOutlineEffectDesc, Color } from "@navara/three";
+import ThreeView, { Color } from "@navara/three";
+import { SelectiveOutlineEffectDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
 await view.init();
@@ -264,11 +268,11 @@ const buildingsLayer = view.addLayer({
 An example of highlighting objects behind buildings:
 
 ```typescript
-import ThreeView, {
-  SelectiveOutlineEffectDesc,
+import ThreeView, { Color } from "@navara/three";
+import {
   BoxMeshDesc,
-  Color,
-} from "@navara/three";
+  SelectiveOutlineEffectDesc,
+} from "@navara/three_default_descs";
 
 const view = new ThreeView();
 await view.init();
@@ -296,12 +300,12 @@ const highlightedCube = view.addMesh<BoxMeshDesc>({
 ### Combining bloom and outline
 
 ```typescript
-import ThreeView, {
+import ThreeView, { Color } from "@navara/three";
+import {
+  BoxMeshDesc,
   SelectiveBloomEffectDesc,
   SelectiveOutlineEffectDesc,
-  BoxMeshDesc,
-  Color,
-} from "@navara/three";
+} from "@navara/three_default_descs";
 
 const view = new ThreeView();
 await view.init();

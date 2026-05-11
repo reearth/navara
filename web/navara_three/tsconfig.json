@@ -6,6 +6,7 @@
       "@navara/three": ["./src"],
       "@navara/three_default_descs": ["../navara_three_default_descs/src"],
       "@navara/three_default_plugin": ["../navara_three_default_plugin/src"],
+      "@navara/three_plugins": ["../navara_three_plugins/src"],
       "@navara/three_api": ["../navara_three_api/src"],
       "@navara/core": ["../navara_core/src"],
       "@navara/font": ["../navara_font/src"],

@@ -1,12 +1,15 @@
 import ThreeView, {
   Color,
   JAPAN_GSI_ELEVATION_DECODER,
-  SelectiveBloomEffectDesc,
-  SelectiveOutlineEffectDesc,
   geodeticToVector3,
   degreeToRadian,
 } from "@navara/three";
-import type { BoxMeshDesc, SphereMeshDesc } from "@navara/three_default_descs";
+import type {
+  BoxMeshDesc,
+  SelectiveBloomEffectDesc,
+  SelectiveOutlineEffectDesc,
+  SphereMeshDesc,
+} from "@navara/three_default_descs";
 import {
   DefaultPlugin,
   type DefaultDescriptions,

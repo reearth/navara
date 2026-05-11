@@ -91,6 +91,7 @@ impl App {
             RenderableFeature::Unknown => return None,
         };
 
+        let buf_store = world.get_resource::<BufferStore>()?;
         let batch_value = batch_table.get(&feature_batch_id)?;
         let batch_prop = batch_value.properties.as_ref()?;
 
@@ -101,7 +102,9 @@ impl App {
             }
             BatchProperty::Values(values) => json_value_to_property(values.get(*in_batch_id)?),
             BatchProperty::Mvt(mvt_layer_data) => mvt_layer_data.get_properties(*in_batch_id),
-            BatchProperty::Cesium3dTilesetV11(table) => table.get_properties(*in_batch_id),
+            BatchProperty::Cesium3dTilesetV11(gltf_table) => {
+                gltf_table.get_properties(*in_batch_id, buf_store)
+            }
         }?;
 
         Some((properties, batch_value.layer_id.clone()?))
@@ -243,15 +246,20 @@ impl App {
                     }
                 }
             }
-            BatchProperty::Cesium3dTilesetV11(property_table_data) => {
+            BatchProperty::Cesium3dTilesetV11(gltf_table) => {
                 let Some(batch_length) = model_batch_length else {
                     return Ok(Some(()));
                 };
 
+                let binary = world
+                    .get_resource::<BufferStore>()
+                    .and_then(|bs| gltf_table.resolve_binary(bs));
+
                 match keys {
                     None => {
                         for batch_idx in 0..batch_length {
-                            let props: Option<V> = property_table_data.get_properties(batch_idx);
+                            let props: Option<V> =
+                                binary.and_then(|b| gltf_table.table.get_properties(batch_idx, b));
                             let global_batch_id = global_batch_id_array
                                 .as_ref()
                                 .and_then(|arr| arr.get(batch_idx).copied())
@@ -261,8 +269,11 @@ impl App {
                     }
                     Some(keys) => {
                         for batch_idx in 0..batch_length {
-                            let props =
-                                property_table_data.get_filtered_properties::<V>(batch_idx, keys);
+                            let props = binary.and_then(|b| {
+                                gltf_table
+                                    .table
+                                    .get_filtered_properties::<V>(batch_idx, keys, b)
+                            });
                             let global_batch_id = global_batch_id_array
                                 .as_ref()
                                 .and_then(|arr| arr.get(batch_idx).copied())

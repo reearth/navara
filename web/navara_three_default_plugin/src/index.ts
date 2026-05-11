@@ -57,6 +57,8 @@ import {
   FXAAEffectDesc,
   LensFlareEffectDesc,
   RainDropEffectDesc,
+  SelectiveBloomEffectDesc,
+  SelectiveOutlineEffectDesc,
   SMAAEffectDesc,
   SSAOEffectDesc,
   SSREffectDesc,
@@ -69,6 +71,8 @@ import {
   type FXAAConfig,
   type LensFlareConfig,
   type RainDropConfig,
+  type SelectiveBloomEffectConfig,
+  type SelectiveOutlineEffectConfig,
   type SMAAConfig,
   type SSAOConfig,
   type SSRConfig,
@@ -124,6 +128,8 @@ export class DefaultPlugin extends Plugin<
     // Register effects
     view.registerEffect("aerialPerspective", AerialPerspectiveEffectDesc);
     view.registerEffect("rainDrop", RainDropEffectDesc);
+    view.registerEffect("selectiveBloom", SelectiveBloomEffectDesc);
+    view.registerEffect("selectiveOutline", SelectiveOutlineEffectDesc);
     view.registerEffect("clouds", CloudsEffectDesc);
     view.registerEffect("fogLight", FogLightEffectDesc);
     view.registerEffect("lensFlare", LensFlareEffectDesc);
@@ -242,6 +248,8 @@ export type DefaultEffectDescription =
   | FXAAConfig
   | LensFlareConfig
   | RainDropConfig
+  | SelectiveBloomEffectConfig
+  | SelectiveOutlineEffectConfig
   | SMAAConfig
   | SSAOConfig
   | SSRConfig

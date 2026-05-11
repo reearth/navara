@@ -27,6 +27,10 @@ export default defineConfig((env) => {
     },
     build: {
       ...common.build,
+      lib: {
+        ...common.build.lib,
+        formats: ["es"],
+      },
       rollupOptions: {
         ...common.build.rollupOptions,
         external: ["three", "postprocessing", "@navara/three"],
