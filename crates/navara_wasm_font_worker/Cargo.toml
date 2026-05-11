@@ -13,6 +13,7 @@ rustybuzz.workspace = true
 fontdue.workspace = true
 sdf_glyph_renderer.workspace = true
 guillotiere.workspace = true
+skrifa.workspace = true
 wasm-bindgen.workspace = true
 js-sys.workspace = true
 rustc-hash.workspace = true
