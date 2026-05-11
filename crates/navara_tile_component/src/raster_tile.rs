@@ -201,6 +201,12 @@ impl RasterTile {
             .as_ref()
             .map(|e| {
                 e.len() == tile_layers_len
+                    // At least one texture needs to be succeeded.
+                    && e.iter().any(|e| {
+                        e.and_then(|e| texture_fragment.get(e).map(|t| t.1.is_succeeded()).ok())
+                            .unwrap_or(false)
+                    })
+                    // Other textures need to be requested.
                     && e.iter().all(|e| {
                         e.and_then(|e| {
                             texture_fragment
