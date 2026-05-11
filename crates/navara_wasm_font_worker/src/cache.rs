@@ -1,4 +1,5 @@
 use crate::atlas::SDFAtlas;
+use crate::color_atlas::ColorAtlas;
 use skrifa::{FontRef, raw::TableProvider};
 use std::collections::HashMap as StdHashMap;
 use wasm_bindgen::prelude::*;
@@ -71,6 +72,10 @@ pub struct FontCache {
     pub fonts: StdHashMap<String, FontEntry>,
     #[wasm_bindgen(skip)]
     pub atlases: StdHashMap<String, SDFAtlas>,
+    /// Parallel atlases for COLRv1 color glyphs. Keyed identically to `atlases`
+    /// so a font family that mixes text and emoji faces gets one of each.
+    #[wasm_bindgen(skip)]
+    pub color_atlases: StdHashMap<String, ColorAtlas>,
     #[wasm_bindgen(skip)]
     pub current_frame: u64,
     /// Counter for assigning unique font indices (used in composite atlas keys).
@@ -106,6 +111,16 @@ impl FontCache {
         self.atlases.get_mut(atlas_key)
     }
 
+    /// Get an immutable reference to a color atlas by its key.
+    pub fn get_color_atlas(&self, atlas_key: &str) -> Option<&ColorAtlas> {
+        self.color_atlases.get(atlas_key)
+    }
+
+    /// Get a mutable reference to a color atlas by its key.
+    pub fn get_color_atlas_mut(&mut self, atlas_key: &str) -> Option<&mut ColorAtlas> {
+        self.color_atlases.get_mut(atlas_key)
+    }
+
     /// Store a newly loaded font. Parses the font data and creates or reuses an atlas.
     ///
     /// `atlas_key`: if `Some`, the font shares an atlas with other fonts under the same key
@@ -127,6 +142,9 @@ impl FontCache {
 
         // Create the atlas if it doesn't exist yet (first face in the family, or standalone font)
         self.atlases.entry(atlas_key.clone()).or_default();
+        if is_color {
+            self.color_atlases.entry(atlas_key.clone()).or_default();
+        }
 
         let font_index = self.next_font_index;
         self.next_font_index += 1;
@@ -157,6 +175,7 @@ impl FontCache {
 
         if !still_referenced {
             self.atlases.remove(&entry.atlas_key);
+            self.color_atlases.remove(&entry.atlas_key);
         }
 
         Ok(())

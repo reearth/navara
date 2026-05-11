@@ -2,6 +2,7 @@
 
 pub mod atlas;
 pub mod cache;
+pub mod color_atlas;
 pub mod color_raster;
 pub mod shaping;
 
