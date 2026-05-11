@@ -26,6 +26,13 @@ type SharedEntry = {
   renderer: SparkRenderer;
   refCount: number;
   enableLod: boolean;
+  /**
+   * Whatever `SparkRenderer.sparkOverride` was pointing at when we first
+   * acquired (typically `undefined`, but could be a renderer owned by another
+   * ThreeView). Restored when the last ref is released so we don't trash a
+   * neighbouring view's override.
+   */
+  previousOverride: SparkRenderer | undefined;
 };
 
 const shared = new WeakMap<Scene, SharedEntry>();
@@ -72,12 +79,16 @@ function acquireSparkRenderer(
     encodeLinear,
   });
   target.add(renderer);
+  // Capture whatever override was set before us so release can restore it,
+  // instead of unconditionally clearing it (which would break a peer view).
+  const previousOverride = SparkRenderer.sparkOverride;
   SparkRenderer.sparkOverride = renderer;
 
   shared.set(target, {
     renderer,
     refCount: 1,
     enableLod: opts.enableLod,
+    previousOverride,
   });
   return renderer;
 }
@@ -93,7 +104,7 @@ function releaseSparkRenderer(ctx: ViewContext): void {
   target.remove(entry.renderer);
   entry.renderer.dispose();
   if (SparkRenderer.sparkOverride === entry.renderer) {
-    SparkRenderer.sparkOverride = undefined;
+    SparkRenderer.sparkOverride = entry.previousOverride;
   }
   shared.delete(target);
 }
@@ -135,6 +146,13 @@ export class SplatMeshDesc extends MeshDesc<
       .then(() => this.requestUpdate())
       .catch((err) => {
         console.warn("SplatMesh load failed:", err);
+        // The splat will never produce frames, so release the worker slot
+        // reserved at creation. SparkRenderer ref stays alive until onDestroy
+        // so any sibling splats keep working.
+        if (this.incremented) {
+          this.ctx.concurrencyManager.decrement();
+          this.incremented = false;
+        }
       });
     return mesh;
   }
@@ -155,20 +173,20 @@ export class SplatMeshDesc extends MeshDesc<
     super.onUpdateConfig(updates);
   }
 
-  protected disposeMesh(): void {
-    if (this._instance) {
-      this._instance.dispose();
-      this._instance = undefined;
-    }
-  }
-
   override onDestroy(): void {
-    this.disposeMesh();
+    // Capture the SplatMesh before `super.onDestroy()` runs: the base
+    // implementation reads `this.raw` (= `_instance`) to remove the mesh from
+    // its parent scene, then `BaseDesc.onDestroy()` clears `_instance`.
+    // Disposing the mesh's GPU resources must happen AFTER the scene removal
+    // but the reference would be gone — so we grab it here.
+    const mesh = this._instance;
+    super.onDestroy();
+    mesh?.dispose();
+
     releaseSparkRenderer(this.ctx);
     if (this.incremented) {
       this.ctx.concurrencyManager.decrement();
       this.incremented = false;
     }
-    super.onDestroy();
   }
 }
