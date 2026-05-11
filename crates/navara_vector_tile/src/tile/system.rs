@@ -151,7 +151,7 @@ pub fn update_tiles(
                 &features,
                 &mut renderable_features,
                 &fog,
-                is_rendered,
+                false,
                 false,
                 &terrain_layer,
                 &terrain_qt,

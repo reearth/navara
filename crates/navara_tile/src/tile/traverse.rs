@@ -107,7 +107,8 @@ pub fn traverse_tile(
     );
     let is_tile_ready = tile_ready_state.is_tile_ready;
 
-    let is_rendered_last_frame = tc.is_rendered_tile_activated(&handle, meshes);
+    let is_activated = tc.is_rendered_tile_activated(&handle, meshes);
+    let is_rendered_last_frame = is_activated;
 
     let distance_from_camera = tile.calc_distance_from_camera(camera, ellipsoid).abs();
     let sse = tile.calc_sse(
@@ -373,8 +374,6 @@ pub fn traverse_tile(
         }
         return TraversalResult::NotFound;
     }
-
-    let is_activated = tc.is_rendered_tile_activated(&handle, meshes);
 
     // Avoid to return an inactivated tile when meets SSE from ancestors.
     if meets_sse_ancestors && !is_activated {
