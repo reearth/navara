@@ -67,6 +67,7 @@ sdf_glyph_renderer = "=1.1.0"
 guillotiere = "=0.7.0"
 wuff = "=0.2.3"
 skrifa = "=0.42.1"
+tiny-skia = { version = "=0.12.0", default-features = false, features = ["std", "simd"] }
 
 # --- Testing ---
 wasm-bindgen-test = "=0.3.68"
