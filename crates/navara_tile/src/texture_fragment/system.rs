@@ -21,7 +21,12 @@ pub(crate) fn filter_requestable_texture_fragment(
             &OrderByDistance,
             &Priority,
         ),
-        (Added<TileTextureFragmentMarker>, Without<Deleted>),
+        (
+            Added<TileTextureFragmentMarker>,
+            Without<Deleted>,
+            // Since layers and `texture_fragment_entity_ids` are referenced by index, we can't use this filter to prevent the order.
+            // Without<Ignored>,
+        ),
     >,
     requested_fragments: Query<
         Entity,

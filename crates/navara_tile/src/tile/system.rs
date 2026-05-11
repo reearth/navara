@@ -802,6 +802,7 @@ pub fn update_mesh_material(
         };
 
         let mut parent_z = None;
+        // TODO: Support parent fallbacks for multiple tiles
         let texture_fragment_entity_ids =
             if tile.is_texture_ready(&texture_fragment, tile_layers.iter().len()) {
                 texture_fragment_entity_ids
