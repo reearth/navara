@@ -1,5 +1,6 @@
 import BATCHID_TO_COLOR from "@shaders/glsl/chunks/pick.glsl";
 import {
+  BufferGeometry,
   InstancedBufferAttribute,
   InstancedMesh,
   Material,
@@ -402,7 +403,12 @@ export class PickableMultiInstancedMeshWrapper
 {
   public batchIds: number[];
   private refs: { nvr_uPickable: { value: number } };
-  private attrs = new Map<InstancedMesh, InstancedBufferAttribute>();
+  // Keyed by BufferGeometry, not InstancedMesh: sub-meshes loaded from a GLTF
+  // commonly share a geometry, and `batchId` lives on the geometry. Keying by
+  // mesh would let a later `geometry.setAttribute("batchId", ...)` silently
+  // overwrite the earlier mesh's cached attribute, so updates would mutate
+  // a stale object and picking would read outdated ids.
+  private attrs = new Map<BufferGeometry, InstancedBufferAttribute>();
   private injectedMaterials = new WeakSet<Material>();
 
   constructor(
@@ -459,10 +465,15 @@ export class PickableMultiInstancedMeshWrapper
   }
 
   private setupBatchIdAttributes(): void {
+    const seen = new Set<BufferGeometry>();
     for (const mesh of this.meshes) {
+      const geometry = mesh.geometry;
+      if (seen.has(geometry)) continue;
+      seen.add(geometry);
+
       const count = mesh.instanceMatrix.count;
       const len = Math.min(this.batchIds.length, count);
-      let attr = this.attrs.get(mesh);
+      let attr = this.attrs.get(geometry);
       if (attr && attr.array.length >= count) {
         const arr = attr.array as Float32Array;
         arr.fill(0);
@@ -472,8 +483,8 @@ export class PickableMultiInstancedMeshWrapper
         const data = new Float32Array(count);
         for (let i = 0; i < len; i++) data[i] = this.batchIds[i] ?? 0;
         attr = new InstancedBufferAttribute(data, 1);
-        mesh.geometry.setAttribute("batchId", attr);
-        this.attrs.set(mesh, attr);
+        geometry.setAttribute("batchId", attr);
+        this.attrs.set(geometry, attr);
       }
     }
   }

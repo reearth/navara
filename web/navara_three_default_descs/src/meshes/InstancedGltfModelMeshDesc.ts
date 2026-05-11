@@ -224,6 +224,28 @@ export class InstancedGltfModelMeshDesc extends MeshDesc<
   private captureAnchorFromMatrixWorld(): void {
     if (!this.raw) return;
 
+    // `MeshDesc.applyTransform` only writes `raw.matrixWorld` directly when
+    // the descriptor's `matrixWorld` is set. For the `matrix`-only and
+    // local-TRS paths it leaves matrixWorld stale, so decomposing it would
+    // pull an identity anchor on the first capture. Also, after our first
+    // capture we disable `matrixAutoUpdate`/`matrixWorldAutoUpdate` below,
+    // so we can't rely on three.js to recompute matrixWorld on subsequent
+    // captures either — refresh it explicitly from the authoritative source.
+    if (this.matrixWorld) {
+      // applyTransform already populated raw.matrixWorld.
+    } else if (this.matrix) {
+      // applyTransform already populated raw.matrix (including any local TRS).
+      this.raw.matrixWorld.copy(this.raw.matrix);
+    } else {
+      // Local-TRS only: applyTransform set raw.position/quaternion/scale.
+      this.raw.matrix.compose(
+        this.raw.position,
+        this.raw.quaternion,
+        this.raw.scale,
+      );
+      this.raw.matrixWorld.copy(this.raw.matrix);
+    }
+
     const q = new Quaternion();
     const s = new Vector3();
     const p = new Vector3();
