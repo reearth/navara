@@ -2,6 +2,7 @@ import ThreeView, {
   geodeticToVector3,
   degreeToRadian,
   geodeticSurfaceNormal,
+  radianToDegree,
 } from "@navara/three";
 import type { SplatMeshDesc } from "@navara/three_default_descs";
 import {
@@ -9,6 +10,7 @@ import {
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
 import { Vector3, Quaternion, Euler } from "three";
+import { Pane } from "tweakpane";
 
 import { TILE_DATASETS } from "../../helpers/constants";
 
@@ -28,6 +30,8 @@ const SCALE = 30;
 
 type SplatSample = {
   url: string;
+  /** Short label used in the debug Pane. */
+  name: string;
   /** Comparison metadata — purely for reading the screenshots. */
   note: string;
   /** Offset from CENTER in degrees (lng east, lat north). */
@@ -45,6 +49,7 @@ type SplatSample = {
 const SAMPLES: SplatSample[] = [
   {
     url: "https://sparkjs.dev/assets/splats/butterfly.spz",
+    name: "butterfly",
     note: "SH3 / AA off",
     dLng: -1.5 * STEP,
     dLat: 0,
@@ -54,6 +59,7 @@ const SAMPLES: SplatSample[] = [
   },
   {
     url: "https://sparkjs.dev/assets/splats/cat.spz",
+    name: "cat",
     note: "SH3 / AA off",
     dLng: -0.5 * STEP,
     dLat: 0,
@@ -61,6 +67,7 @@ const SAMPLES: SplatSample[] = [
   },
   {
     url: "https://sparkjs.dev/assets/splats/robot-head.spz",
+    name: "robot-head",
     note: "SH3 / AA on",
     dLng: 0.5 * STEP,
     dLat: 0,
@@ -72,6 +79,7 @@ const SAMPLES: SplatSample[] = [
   },
   {
     url: "https://sparkjs.dev/assets/splats/penguin.spz",
+    name: "penguin",
     note: "SH3 / AA on",
     dLng: 1.5 * STEP,
     dLat: 0,
@@ -157,4 +165,84 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     },
     new Vector3(0, 300, 100),
   );
+
+  addDebugPane(view);
+};
+
+/**
+ * Live readout of the camera's geographic pose and each splat's intended
+ * (lat, lng, height). Helps visually verify whether the rendered splats line
+ * up with the lat/lng coordinates assigned by SAMPLES — useful when judging
+ * RTE precision artifacts at globe scale.
+ */
+const addDebugPane = (view: ThreeView<CustomDescriptions>): void => {
+  const pane = new Pane({ title: "splat debug", expanded: true });
+
+  const cameraState = {
+    lat: 0,
+    lng: 0,
+    height: 0,
+    heading: 0,
+    pitch: 0,
+  };
+
+  const cameraFolder = pane.addFolder({ title: "camera", expanded: true });
+  const cameraBindings = [
+    cameraFolder.addBinding(cameraState, "lat", {
+      readonly: true,
+      format: (v: number) => v.toFixed(6),
+    }),
+    cameraFolder.addBinding(cameraState, "lng", {
+      readonly: true,
+      format: (v: number) => v.toFixed(6),
+    }),
+    cameraFolder.addBinding(cameraState, "height", {
+      readonly: true,
+      format: (v: number) => v.toFixed(2),
+    }),
+    cameraFolder.addBinding(cameraState, "heading", {
+      readonly: true,
+      format: (v: number) => v.toFixed(1),
+    }),
+    cameraFolder.addBinding(cameraState, "pitch", {
+      readonly: true,
+      format: (v: number) => v.toFixed(1),
+    }),
+  ];
+
+  const splatsFolder = pane.addFolder({
+    title: "splats (intended)",
+    expanded: true,
+  });
+  for (const sample of SAMPLES) {
+    const sub = splatsFolder.addFolder({ title: sample.name, expanded: false });
+    const target = {
+      lat: CENTER.lat + sample.dLat,
+      lng: CENTER.lng + sample.dLng,
+      height: CENTER.height + (sample.dHeight ?? 0),
+    };
+    sub.addBinding(target, "lat", {
+      readonly: true,
+      format: (v: number) => v.toFixed(6),
+    });
+    sub.addBinding(target, "lng", {
+      readonly: true,
+      format: (v: number) => v.toFixed(6),
+    });
+    sub.addBinding(target, "height", {
+      readonly: true,
+      format: (v: number) => v.toFixed(2),
+    });
+  }
+
+  view.on("postUpdate", () => {
+    const geo = view.camera.positionGeographic;
+    const ori = view.camera.orientation;
+    cameraState.lat = radianToDegree(geo.lat);
+    cameraState.lng = radianToDegree(geo.lng);
+    cameraState.height = geo.height;
+    cameraState.heading = radianToDegree(ori.heading ?? 0);
+    cameraState.pitch = radianToDegree(ori.pitch ?? 0);
+    for (const binding of cameraBindings) binding.refresh();
+  });
 };
