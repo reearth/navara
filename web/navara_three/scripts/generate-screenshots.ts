@@ -62,11 +62,6 @@ const PAGE_CONFIGS: Record<string, PageConfig> = {
   "use-cases-photorealistic": {
     waitTime: 50000,
   },
-  splat: {
-    // SparkJS WASM init + 4 .spz asset fetches (~12MB total) + sort/LoD
-    // workers settling. The 4 SplatMeshes load progressively; allow margin.
-    waitTime: 90000,
-  },
 };
 
 class ScreenshotGenerator {
