@@ -17,10 +17,12 @@ export type CustomDescriptions = DefaultDescriptions;
 const CENTER = {
   lat: 35.71006,
   lng: 139.8107,
-  height: 600,
+  // Place near the ground: with SCALE=30 each splat is ~30m tall, so dropping
+  // by half-body keeps the feet on the surface.
+  height: 10.0,
 };
 
-// 約 0.001° ≒ 111m。0.0008° で ~88m 間隔。
+// 0.001° ≈ 111m, so 0.0008° gives ~88m spacing.
 const STEP = 0.0008;
 const SCALE = 30;
 
@@ -34,9 +36,12 @@ type SplatSample = {
   scale: number;
   /** Optional yaw rotation around the up axis (radians). */
   yaw?: number;
+  /** Optional per-sample height delta [m]. Each splat has a different model
+   * origin, so tune individually to land feet/center on the ground. */
+  dHeight?: number;
 };
 
-// 4 体を東西一直線に等間隔で並べる (STEP は東西方向の lng 差)。
+// Four splats in an east-west line at equal spacing (STEP is the lng delta).
 const SAMPLES: SplatSample[] = [
   {
     url: "https://sparkjs.dev/assets/splats/butterfly.spz",
@@ -44,6 +49,8 @@ const SAMPLES: SplatSample[] = [
     dLng: -1.5 * STEP,
     dLat: 0,
     scale: SCALE,
+    // butterfly: slightly above CENTER (20m) so the wings hover in the air.
+    dHeight: 20,
   },
   {
     url: "https://sparkjs.dev/assets/splats/cat.spz",
@@ -59,6 +66,9 @@ const SAMPLES: SplatSample[] = [
     dLat: 0,
     scale: SCALE,
     yaw: Math.PI / 2,
+    // robot-head: lifted above CENTER (20m) so it sits at roughly human face
+    // height.
+    dHeight: 20,
   },
   {
     url: "https://sparkjs.dev/assets/splats/penguin.spz",
@@ -69,8 +79,9 @@ const SAMPLES: SplatSample[] = [
   },
 ];
 
-// Spark の sample splat は Y-down (image-space) で訓練されているため、
-// Y-up の世界では逆さまになる。X 軸 180° で flip してから surface normal に align する。
+// Spark's sample splats are trained in Y-down (image-space) convention, so they
+// appear upside-down in a Y-up world. Flip 180° around X first, then align with
+// the surface normal.
 const FLIP_Y_DOWN = new Quaternion().setFromAxisAngle(
   new Vector3(1, 0, 0),
   Math.PI,
@@ -82,22 +93,24 @@ const placeSplat = (
 ) => {
   const lat = CENTER.lat + sample.dLat;
   const lng = CENTER.lng + sample.dLng;
+  const height = CENTER.height + (sample.dHeight ?? 0);
   const pos = geodeticToVector3({
     lat: degreeToRadian(lat),
     lng: degreeToRadian(lng),
-    height: CENTER.height,
+    height,
   });
   const normal = geodeticSurfaceNormal({
     lat: degreeToRadian(lat),
     lng: degreeToRadian(lng),
-    height: CENTER.height,
+    height,
   });
 
   const align = new Quaternion().setFromUnitVectors(
     new Vector3(0, 1, 0),
     normal,
   );
-  // 順序: flip (Y-down→Y-up) → yaw (object's up 軸まわり) → align (surface normal)
+  // Order: flip (Y-down→Y-up) → yaw (around the object's up axis) → align
+  // (surface normal).
   const yaw = new Quaternion().setFromAxisAngle(
     new Vector3(0, 1, 0),
     sample.yaw ?? 0,
@@ -134,7 +147,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     placeSplat(view, sample);
   }
 
-  // cat (SAMPLES[1]) を顔側 (北側) から見る。north 300m / up 100m。
+  // View the cat (SAMPLES[1]) from its front (north) side: 300m north, 100m up.
   const focus = SAMPLES[1];
   view.lookAt(
     {
