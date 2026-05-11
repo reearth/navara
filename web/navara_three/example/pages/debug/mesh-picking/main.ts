@@ -28,7 +28,13 @@ import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
-import { Color as ThreeColor, InstancedBufferAttribute, InstancedMesh , Mesh, MeshStandardMaterial } from "three";
+import {
+  Color as ThreeColor,
+  InstancedBufferAttribute,
+  InstancedMesh,
+  Mesh,
+  MeshStandardMaterial,
+} from "three";
 import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../../helpers/attributions";
@@ -277,7 +283,9 @@ const run = async () => {
   // Row 3: Instanced Sphere mesh layer
   // ============================================================
 
-  const sphereInstanceColors = [0xff66aa, 0x66ffaa, 0xaa66ff, 0xffaa66, 0x66aaff];
+  const sphereInstanceColors = [
+    0xff66aa, 0x66ffaa, 0xaa66ff, 0xffaa66, 0x66aaff,
+  ];
   const sphereChildren: SphereChildConfig[] = [];
   for (let i = 0; i < 5; i++) {
     sphereChildren.push({

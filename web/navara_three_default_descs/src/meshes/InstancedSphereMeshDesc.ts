@@ -186,7 +186,8 @@ export class InstancedSphereMeshDesc extends InstancedMeshDesc<
 
       const material = this.raw.material;
       if (u.color !== undefined) material.color.set(u.color.raw);
-      if (u.emissiveColor !== undefined) material.emissive.set(u.emissiveColor.raw);
+      if (u.emissiveColor !== undefined)
+        material.emissive.set(u.emissiveColor.raw);
       if (u.emissiveIntensity !== undefined)
         material.emissiveIntensity = u.emissiveIntensity;
       if (u.opacity !== undefined) material.opacity = u.opacity;
@@ -195,7 +196,8 @@ export class InstancedSphereMeshDesc extends InstancedMeshDesc<
         material.needsUpdate = true;
       }
       if (u.castShadow !== undefined) this.raw.castShadow = u.castShadow;
-      if (u.receiveShadow !== undefined) this.raw.receiveShadow = u.receiveShadow;
+      if (u.receiveShadow !== undefined)
+        this.raw.receiveShadow = u.receiveShadow;
 
       if (u.children !== undefined) {
         this.replaceAll(u.children);

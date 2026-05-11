@@ -16,7 +16,6 @@ import {
   type PlaneChildConfig,
   type CylinderChildConfig,
   type ModelChildConfig,
-  ToneMappingMode,
 } from "@navara/three_default_descs";
 import {
   DefaultPlugin,
@@ -31,7 +30,6 @@ import {
   TILE_DATASETS,
 } from "../../../helpers/constants";
 import { addDateControl } from "../../../helpers/control";
-import { toneMapping } from "three/src/nodes/TSL.js";
 
 // Each mesh type gets its own cluster — centers arranged on a ring around
 // the group origin so the types don't mix visually.
@@ -119,8 +117,8 @@ function generatePlanes(count: number, cluster: Cluster): PlaneChildConfig[] {
       position: { x, y: 5, z },
       rotation: { x: -Math.PI / 2, y: 0, z: 0 },
       color: new Color().setStyle(
-                `hsl(${Math.random() * 360}, ${50 + Math.random() * 50}%, ${30 + Math.random() * 50}%)`),
-
+        `hsl(${Math.random() * 360}, ${50 + Math.random() * 50}%, ${30 + Math.random() * 50}%)`,
+      ),
     });
   }
   return out;
@@ -138,7 +136,9 @@ function generateCylinders(
       radius: 3 + Math.random() * 10,
       height: h,
       position: { x, y: h / 2, z },
-      color: new Color().setStyle(        `hsl(${Math.random() * 360}, ${50 + Math.random() * 50}%, ${30 + Math.random() * 50}%)`),
+      color: new Color().setStyle(
+        `hsl(${Math.random() * 360}, ${50 + Math.random() * 50}%, ${30 + Math.random() * 50}%)`,
+      ),
     });
   }
   return out;
@@ -273,7 +273,8 @@ const run = async () => {
 
   const buildingsFolder = pane.addFolder({ title: "Buildings" });
   buildingsFolder.addButton({ title: "Add 100" }).on("click", () => {
-    for (const b of generateBuildings(100, CLUSTERS.boxes)) boxesLayer.ref.add(b);
+    for (const b of generateBuildings(100, CLUSTERS.boxes))
+      boxesLayer.ref.add(b);
   });
   buildingsFolder.addButton({ title: "Remove First 100" }).on("click", () => {
     const count = Math.min(100, boxesLayer.ref.count);
@@ -290,7 +291,8 @@ const run = async () => {
 
   const spheresFolder = pane.addFolder({ title: "Spheres" });
   spheresFolder.addButton({ title: "Add 50" }).on("click", () => {
-    for (const s of generateSpheres(50, CLUSTERS.spheres)) spheresLayer.ref.add(s);
+    for (const s of generateSpheres(50, CLUSTERS.spheres))
+      spheresLayer.ref.add(s);
   });
   spheresFolder.addButton({ title: "Remove First 50" }).on("click", () => {
     const count = Math.min(50, spheresLayer.ref.count);
@@ -308,7 +310,8 @@ const run = async () => {
 
   const cylindersFolder = pane.addFolder({ title: "Cylinders" });
   cylindersFolder.addButton({ title: "Add 50" }).on("click", () => {
-    for (const c of generateCylinders(50, CLUSTERS.cylinders)) cylindersLayer.ref.add(c);
+    for (const c of generateCylinders(50, CLUSTERS.cylinders))
+      cylindersLayer.ref.add(c);
   });
   cylindersFolder.addButton({ title: "Remove First 50" }).on("click", () => {
     const count = Math.min(50, cylindersLayer.ref.count);

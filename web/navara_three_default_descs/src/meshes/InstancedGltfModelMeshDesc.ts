@@ -411,7 +411,10 @@ export class InstancedGltfModelMeshDesc extends MeshDesc<
 
   // ---------- Non-skinned (instanced) path ----------
 
-  private initInstancedPath(root: Group, initialConfigs: ModelChildConfig[]): void {
+  private initInstancedPath(
+    root: Group,
+    initialConfigs: ModelChildConfig[],
+  ): void {
     invariant(this.gltf, "GLTF must be loaded before initInstancedPath");
     const gltf = this.gltf;
     this.capacity = Math.max(initialConfigs.length, DEFAULT_CAPACITY);
@@ -467,7 +470,10 @@ export class InstancedGltfModelMeshDesc extends MeshDesc<
     }
   }
 
-  private composeInstanceTransform(config: ModelChildConfig, out: Matrix4): void {
+  private composeInstanceTransform(
+    config: ModelChildConfig,
+    out: Matrix4,
+  ): void {
     if (config.matrix) {
       out.copy(config.matrix);
       return;
@@ -490,7 +496,10 @@ export class InstancedGltfModelMeshDesc extends MeshDesc<
   }
 
   /** Apply a ModelChildConfig to an Object3D via compose/decompose. */
-  private applyTransformToObject(obj: Object3D, config: ModelChildConfig): void {
+  private applyTransformToObject(
+    obj: Object3D,
+    config: ModelChildConfig,
+  ): void {
     this.composeInstanceTransform(config, _T);
     _T.decompose(obj.position, obj.quaternion, obj.scale);
   }
@@ -528,7 +537,10 @@ export class InstancedGltfModelMeshDesc extends MeshDesc<
 
   // ---------- Skinned fallback path ----------
 
-  private initSkinnedPath(root: Group, initialConfigs: ModelChildConfig[]): void {
+  private initSkinnedPath(
+    root: Group,
+    initialConfigs: ModelChildConfig[],
+  ): void {
     invariant(this.gltf, "GLTF must be loaded before initSkinnedPath");
     // SkeletonUtils.clone shares materials — patch the source scene once.
     this.patchMaterials(this.gltf.scene, false);
@@ -690,21 +702,29 @@ export class InstancedGltfModelMeshDesc extends MeshDesc<
     while (configs.length > this.capacity) this.grow();
     this.configs = [...configs];
     for (const { inst } of this.subMeshes) inst.count = configs.length;
-    for (let i = 0; i < configs.length; i++) this.writeInstanceAt(i, configs[i]);
+    for (let i = 0; i < configs.length; i++)
+      this.writeInstanceAt(i, configs[i]);
     this.markAllInstancesDirty();
     this.pickWrapper?.replaceAll(configs.length);
     this.emit("needsUpdate");
   }
 
   private grow(): void {
-    const newCapacity = Math.max(this.capacity * GROWTH_FACTOR, DEFAULT_CAPACITY);
+    const newCapacity = Math.max(
+      this.capacity * GROWTH_FACTOR,
+      DEFAULT_CAPACITY,
+    );
     const oldCount = this.configs.length;
     const root = this.raw;
     invariant(root, "Must be created before growing");
 
     const newSubs: typeof this.subMeshes = [];
     for (const { inst, sourceMesh, sourceLocal } of this.subMeshes) {
-      const newInst = new InstancedMesh(inst.geometry, inst.material, newCapacity);
+      const newInst = new InstancedMesh(
+        inst.geometry,
+        inst.material,
+        newCapacity,
+      );
       newInst.count = oldCount;
       newInst.frustumCulled = false;
       newInst.castShadow = inst.castShadow;
@@ -778,21 +798,24 @@ export class InstancedGltfModelMeshDesc extends MeshDesc<
             scene.traverse((o) => {
               if (o instanceof Mesh || o instanceof SkinnedMesh) {
                 if (u.castShadow !== undefined) o.castShadow = u.castShadow;
-                if (u.receiveShadow !== undefined) o.receiveShadow = u.receiveShadow;
+                if (u.receiveShadow !== undefined)
+                  o.receiveShadow = u.receiveShadow;
               }
             });
           }
         } else {
           for (const { inst } of this.subMeshes) {
             if (u.castShadow !== undefined) inst.castShadow = u.castShadow;
-            if (u.receiveShadow !== undefined) inst.receiveShadow = u.receiveShadow;
+            if (u.receiveShadow !== undefined)
+              inst.receiveShadow = u.receiveShadow;
           }
         }
       }
 
       if (u.animationSpeed !== undefined) {
         for (const anim of this.anims) {
-          for (const a of anim.actions.values()) a.setEffectiveTimeScale(u.animationSpeed);
+          for (const a of anim.actions.values())
+            a.setEffectiveTimeScale(u.animationSpeed);
         }
       }
       if (u.animationLoop !== undefined) {
@@ -809,7 +832,10 @@ export class InstancedGltfModelMeshDesc extends MeshDesc<
         this.replaceAll(u.children);
       }
 
-      this.config.models = { ...this.config.models, ...u } as InstancedModelsDescription;
+      this.config.models = {
+        ...this.config.models,
+        ...u,
+      } as InstancedModelsDescription;
     }
 
     const spatialChanged =
@@ -841,7 +867,9 @@ export class InstancedGltfModelMeshDesc extends MeshDesc<
     this.skinnedScenes = [];
 
     for (const { inst } of this.subMeshes) {
-      const mats = Array.isArray(inst.material) ? inst.material : [inst.material];
+      const mats = Array.isArray(inst.material)
+        ? inst.material
+        : [inst.material];
       for (const m of mats) this.ctx.removeShadowMaterial(m as Material);
     }
 
