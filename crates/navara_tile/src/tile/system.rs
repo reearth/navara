@@ -142,6 +142,8 @@ pub fn update_tiles(
         .unwrap()
         .is_texture_ready(&texture_fragment, has_tile_layer);
 
+    let is_ancestor_ready = tc.is_rendered_tile_activated(&zero_tile_handle, &mut meshes);
+
     let traversal_result = traverse_tile(
         &mut commands,
         tiles,
@@ -161,6 +163,7 @@ pub fn update_tiles(
         &mut meshes,
         &fog,
         globe.max_sse as f64,
+        is_ancestor_ready,
         false,
         is_texture_ready.then_some(zero_tile_handle),
     );
