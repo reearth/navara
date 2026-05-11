@@ -13,8 +13,28 @@ type Description = {
   splat?: {
     /** URL of the splat file (.spz, .ply, .splat, .ksplat, .pcsogs, etc.). */
     url: string;
-    /** Enable SparkJS Level-of-Detail. Set at creation time only. */
-    lod?: boolean;
+    /**
+     * Level-of-Detail mode.
+     * - `false` (default): render every splat.
+     * - `true`: build an in-memory Tiny LoD tree and pick splats per frame.
+     * - `"quality"`: rebuild the LoD tree at higher precision (slower init,
+     *   crisper distant splats).
+     *
+     * Set at creation time only.
+     */
+    lod?: boolean | "quality";
+    /**
+     * Per-mesh LoD detail scale. `1.0` = default; higher values keep more
+     * splats per frame for this mesh. Effective only when `lod` is enabled.
+     * Set at creation time only.
+     */
+    lodScale?: number;
+    /**
+     * Conical foveation factor in `[0, 1]`. `0` disables. Higher values trim
+     * splats outside the focal cone more aggressively for performance.
+     * Set at creation time only.
+     */
+    coneFoveate?: number;
   };
 };
 
@@ -133,7 +153,9 @@ export class SplatMeshDesc extends MeshDesc<
     }
 
     const lod = cfg.lod ?? false;
-    acquireSparkRenderer(this.ctx, { enableLod: lod });
+    // Spark's `lod` accepts boolean | "quality"; the shared SparkRenderer only
+    // needs to know whether any mesh uses LoD, so coerce to boolean here.
+    acquireSparkRenderer(this.ctx, { enableLod: Boolean(lod) });
 
     // SparkJS uses a small worker pool internally for sorting and LoD. Reserve
     // a slot in Navara's ConcurrencyManager so other consumers (tile/GLTF
@@ -141,7 +163,12 @@ export class SplatMeshDesc extends MeshDesc<
     this.ctx.concurrencyManager.increment();
     this.incremented = true;
 
-    const mesh = new SplatMesh({ url: cfg.url, lod });
+    const mesh = new SplatMesh({
+      url: cfg.url,
+      lod,
+      lodScale: cfg.lodScale,
+      coneFoveate: cfg.coneFoveate,
+    });
     mesh.initialized
       .then(() => this.requestUpdate())
       .catch((err) => {
@@ -160,15 +187,25 @@ export class SplatMeshDesc extends MeshDesc<
   onUpdateConfig(updates: SplatMeshUpdate): void {
     const next = updates.splat;
     const current = this.config.splat;
-    if (next?.url !== undefined && next.url !== current?.url) {
-      console.warn(
-        "SplatMeshDesc: splat.url cannot be changed after creation; recreate the descriptor.",
-      );
+    const immutable: (keyof NonNullable<Description["splat"]>)[] = [
+      "url",
+      "lod",
+      "lodScale",
+      "coneFoveate",
+    ];
+    for (const key of immutable) {
+      if (next?.[key] !== undefined && next[key] !== current?.[key]) {
+        console.warn(
+          `SplatMeshDesc: splat.${key} cannot be changed after creation; recreate the descriptor.`,
+        );
+      }
     }
-    if (next?.lod !== undefined && next.lod !== current?.lod) {
-      console.warn(
-        "SplatMeshDesc: splat.lod cannot be changed after creation; recreate the descriptor.",
-      );
+    // Keep the stored config in sync with the latest requested values so a
+    // repeated update with the same value doesn't re-warn. Note: immutable
+    // fields are still effectively frozen at the rendered splat — this only
+    // affects what we compare against next time.
+    if (next && current) {
+      Object.assign(current, next);
     }
     super.onUpdateConfig(updates);
   }
