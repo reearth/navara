@@ -355,7 +355,7 @@ const run = async () => {
   showAttributions([
     TILE_DATASETS.openstreetmap,
     TERRAIN_DATASETS.gsi,
-    LOCAL_DATASETS.steelDrumGLTF,
+    LOCAL_DATASETS.soldierGLTF,
   ]);
 };
 

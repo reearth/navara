@@ -907,12 +907,21 @@ export class InstancedGltfModelMeshDesc extends MeshDesc<
     }
 
     if (this.hasSkinned && this.gltf) {
-      // Shared materials were registered from the source scene once.
+      // SkeletonUtils.clone shares geometries and materials with the source
+      // gltf.scene, so dispose them from the source once — disposing on each
+      // clone would double-dispose. removeShadowMaterial mirrors the one-time
+      // registration done by patchMaterials on the source scene.
       this.gltf.scene.traverse((o) => {
-        const m = (o as Mesh).material as Material | Material[] | undefined;
-        if (!m) return;
-        const mats = Array.isArray(m) ? m : [m];
-        for (const mat of mats) this.ctx.removeShadowMaterial(mat);
+        const mesh = o as Mesh;
+        const m = mesh.material as Material | Material[] | undefined;
+        if (m) {
+          const mats = Array.isArray(m) ? m : [m];
+          for (const mat of mats) {
+            this.ctx.removeShadowMaterial(mat);
+            mat.dispose();
+          }
+        }
+        mesh.geometry?.dispose();
       });
     }
 
