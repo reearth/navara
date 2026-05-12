@@ -93,23 +93,14 @@ pub fn filter_requestable_hillshade_data_requester(
         if let Some(tile) = tile {
             commands.entity(e).insert((Deleted, Ignored));
 
-            // Find and remove from both arrays to maintain alignment
+            // Clear the rejected slot to None so the next request_texture_fragment
+            // pass can re-spawn an entity for the same layer index
             if let Some(hillshade_ids) = tile.hillshade_entity_ids.as_mut()
-                && let Some(idx) = hillshade_ids
-                    .iter()
-                    .enumerate()
-                    .find_map(|(i, id)| id.and_then(|id| (id == e).then_some(i)))
+                && let Some(slot) = hillshade_ids
+                    .iter_mut()
+                    .find(|id| matches!(id, Some(id) if *id == e))
             {
-                // Remove from both arrays at same index
-                hillshade_ids.remove(idx);
-
-                // texture_fragment_entity_ids MUST exist and have same length
-                // because request_texture_fragment always pushes to both arrays
-                if let Some(tex_ids) = tile.texture_fragment_entity_ids.as_mut()
-                    && idx < tex_ids.len()
-                {
-                    tex_ids.remove(idx);
-                }
+                *slot = None;
             }
         }
     }

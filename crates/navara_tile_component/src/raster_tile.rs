@@ -220,19 +220,54 @@ impl RasterTile {
             return true;
         }
 
-        self.is_hillshade_ready(tiles, texture_fragment, data_requesters)
-            && self
-                .texture_fragment_entity_ids
-                .as_ref()
-                .map(|e| {
-                    e.iter().any(|e| {
-                        e.map(|entity| {
-                            Self::is_texture_entity_ready(entity, texture_fragment, data_requesters)
-                        })
-                        .unwrap_or(false)
-                    })
-                })
-                .unwrap_or(false)
+        if !self.is_hillshade_ready(tiles, texture_fragment, data_requesters) {
+            return false;
+        }
+
+        let Some(tex_ids) = self.texture_fragment_entity_ids.as_ref() else {
+            return false;
+        };
+        let sorted_tiles: Vec<_> = tiles.iter().sort::<&Order>().collect();
+        if tex_ids.len() != sorted_tiles.len() {
+            return false;
+        }
+        let hill_ids = self.hillshade_entity_ids.as_ref();
+
+        // At least one entity (regular texture or hillshade) must be ready so we
+        // actually have something to render.
+        let any_ready = tex_ids.iter().enumerate().any(|(i, tex_opt)| {
+            let entity = tex_opt.or_else(|| hill_ids.and_then(|ids| ids.get(i).and_then(|&e| e)));
+            entity.is_some_and(|e| {
+                Self::is_texture_entity_ready(e, texture_fragment, data_requesters)
+            })
+        });
+        if !any_ready {
+            return false;
+        }
+
+        // Every required layer must have finished (succeeded or failed) or be
+        // intentionally skipped. A None slot for a regular layer means the
+        // filter rejected it and we still need to retry, so it is NOT ready.
+        tex_ids
+            .iter()
+            .zip(sorted_tiles.iter())
+            .all(|(tex_opt, (layer, _))| {
+                // Layer outside its configured zoom range: never requested.
+                if !layer.is_over_min_zoom(self.coords.z) || layer.is_over_max_zoom(self.coords.z) {
+                    return true;
+                }
+                // Hillshade layers are validated above via is_hillshade_ready.
+                if layer.hillshade_config.is_some() {
+                    return true;
+                }
+                match tex_opt {
+                    Some(e) => texture_fragment
+                        .get(*e)
+                        .map(|t| t.1.is_succeeded() || t.1.is_failed())
+                        .unwrap_or(false),
+                    None => false,
+                }
+            })
     }
 
     pub fn is_terrain_ready(
