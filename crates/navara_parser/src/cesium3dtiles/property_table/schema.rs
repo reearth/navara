@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::ops::Range;
 use std::sync::Arc;
 
 use navara_glb::{BinaryReader, GLB_HEADER_SIZE, Glb};
@@ -13,6 +14,9 @@ pub struct GlbSchemaParser<'a> {
     pub json: Value,
     /// The binary chunk data, if present.
     pub binary: Option<&'a [u8]>,
+    /// Byte offset where the BIN chunk **data** starts within the full GLB binary
+    /// (i.e. after the 8-byte chunk header: chunk_length + chunk_type).
+    pub bin_data_start: usize,
 }
 
 impl<'a> GlbSchemaParser<'a> {
@@ -29,40 +33,44 @@ impl<'a> GlbSchemaParser<'a> {
         let json_chunk_length = glb_bin
             .get(GLB_HEADER_SIZE..GLB_HEADER_SIZE + 4)
             .map(|b| u32::from_le_bytes([b[0], b[1], b[2], b[3]]) as usize)?;
-        let bin_chunk_start = GLB_HEADER_SIZE + chunk_header_size + json_chunk_length;
+        let bin_data_start = GLB_HEADER_SIZE + chunk_header_size + json_chunk_length;
 
         // GLB BIN chunk type magic: 0x004E4942 ("BIN\0" in little-endian)
         const GLB_CHUNK_TYPE_BIN: u32 = 0x004E4942;
 
-        let binary = if glb_bin.len() >= bin_chunk_start + chunk_header_size {
+        let (binary, bin_data_start) = if glb_bin.len() >= bin_data_start + chunk_header_size {
             let bin_chunk_length = u32::from_le_bytes([
-                glb_bin[bin_chunk_start],
-                glb_bin[bin_chunk_start + 1],
-                glb_bin[bin_chunk_start + 2],
-                glb_bin[bin_chunk_start + 3],
+                glb_bin[bin_data_start],
+                glb_bin[bin_data_start + 1],
+                glb_bin[bin_data_start + 2],
+                glb_bin[bin_data_start + 3],
             ]) as usize;
             let bin_chunk_type = u32::from_le_bytes([
-                glb_bin[bin_chunk_start + 4],
-                glb_bin[bin_chunk_start + 5],
-                glb_bin[bin_chunk_start + 6],
-                glb_bin[bin_chunk_start + 7],
+                glb_bin[bin_data_start + 4],
+                glb_bin[bin_data_start + 5],
+                glb_bin[bin_data_start + 6],
+                glb_bin[bin_data_start + 7],
             ]);
             if bin_chunk_type != GLB_CHUNK_TYPE_BIN {
-                None
+                (None, bin_data_start + chunk_header_size)
             } else {
-                let bin_data_start = bin_chunk_start + chunk_header_size;
-                let bin_data_end = bin_data_start + bin_chunk_length;
+                let data_start = bin_data_start + chunk_header_size;
+                let bin_data_end = data_start + bin_chunk_length;
                 if glb_bin.len() >= bin_data_end {
-                    Some(&glb_bin[bin_data_start..bin_data_end])
+                    (Some(&glb_bin[data_start..bin_data_end]), data_start)
                 } else {
-                    None
+                    (None, data_start)
                 }
             }
         } else {
-            None
+            (None, bin_data_start + chunk_header_size)
         };
 
-        Some(Self { json, binary })
+        Some(Self {
+            json,
+            binary,
+            bin_data_start,
+        })
     }
 
     /// Extracts the feature count from the first FeatureIdSet in EXT_mesh_features.
@@ -160,6 +168,8 @@ impl<'a> GlbSchemaParser<'a> {
         let props_obj = table.get("properties").and_then(|p| p.as_object())?;
         let buffer_views = self.json.get("bufferViews").and_then(|bv| bv.as_array());
 
+        let binary_len = self.binary.map_or(0, |b| b.len());
+
         let mut properties = HashMap::new();
         for (name, prop) in props_obj {
             let values_bv_index = match prop.get("values").and_then(|v| v.as_u64()) {
@@ -167,23 +177,23 @@ impl<'a> GlbSchemaParser<'a> {
                 None => continue,
             };
 
-            // Helper to read a buffer view's data from the GLB binary chunk
-            let read_buffer_view = |bv_index: usize| -> Vec<u8> {
-                if let (Some(bvs), Some(binary)) = (&buffer_views, self.binary)
+            // Helper to resolve a buffer view as a byte range within the BIN chunk.
+            let resolve_buffer_view = |bv_index: usize| -> Range<usize> {
+                if let Some(bvs) = &buffer_views
                     && let Some(bv) = bvs.get(bv_index)
                 {
                     let byte_offset =
                         bv.get("byteOffset").and_then(|o| o.as_u64()).unwrap_or(0) as usize;
                     let byte_length =
                         bv.get("byteLength").and_then(|l| l.as_u64()).unwrap_or(0) as usize;
-                    if byte_offset + byte_length <= binary.len() {
-                        return binary[byte_offset..byte_offset + byte_length].to_vec();
+                    if byte_offset + byte_length <= binary_len {
+                        return byte_offset..byte_offset + byte_length;
                     }
                 }
-                vec![]
+                0..0
             };
 
-            let values_data = read_buffer_view(values_bv_index);
+            let values_range = resolve_buffer_view(values_bv_index);
 
             // Look up type info from the schema class property definition
             let schema_prop = schema_class_props.and_then(|p| p.get(name));
@@ -202,14 +212,14 @@ impl<'a> GlbSchemaParser<'a> {
                 (ct, et)
             } else {
                 // No schema available: infer type from buffer size and feature count
-                infer_component_type(values_data.len(), count)
+                infer_component_type(values_range.len(), count)
             };
 
-            // Read stringOffsets buffer view for STRING properties (per 3D Tiles 1.1 spec)
-            let string_offsets = prop
+            // Resolve stringOffsets buffer view for STRING properties (per 3D Tiles 1.1 spec)
+            let string_offsets_range = prop
                 .get("stringOffsets")
                 .and_then(|v| v.as_u64())
-                .map(|idx| read_buffer_view(idx as usize));
+                .map(|idx| resolve_buffer_view(idx as usize));
 
             let string_offset_type = prop
                 .get("stringOffsetType")
@@ -244,12 +254,12 @@ impl<'a> GlbSchemaParser<'a> {
             properties.insert(
                 name.clone(),
                 PropertyColumnData {
-                    values: values_data,
+                    values_range,
                     component_type,
                     element_type,
                     no_data,
                     string_no_data,
-                    string_offsets,
+                    string_offsets_range,
                     string_offset_type,
                     normalized,
                     offset: prop_offset,
@@ -294,6 +304,7 @@ mod tests {
         GlbSchemaParser {
             json: gltf_json,
             binary: None,
+            bin_data_start: 0,
         }
     }
 
@@ -301,6 +312,7 @@ mod tests {
         GlbSchemaParser {
             json: gltf_json,
             binary: Some(binary),
+            bin_data_start: 0,
         }
     }
 
@@ -566,10 +578,10 @@ mod tests {
         let table = parser.property_table(0, None).unwrap();
 
         let height = table.properties.get("height").unwrap();
-        assert_eq!(height.values.len(), 12);
+        assert_eq!(height.values_range.len(), 12);
 
         let age = table.properties.get("age").unwrap();
-        assert_eq!(age.values.len(), 12);
+        assert_eq!(age.values_range.len(), 12);
     }
 
     #[test]
@@ -578,12 +590,12 @@ mod tests {
         let parser = make_parser_with_binary(make_tree_survey_gltf_json(), &binary);
         let table = parser.property_table(0, None).unwrap();
 
-        let props: Value = table.get_properties(0).unwrap();
+        let props: Value = table.get_properties(0, &binary).unwrap();
         let map = props.as_object().unwrap();
         assert!((map["height"].as_f64().unwrap() - 10.5).abs() < 1e-6);
         assert_eq!(map["age"].as_u64(), Some(5));
 
-        let props: Value = table.get_properties(2).unwrap();
+        let props: Value = table.get_properties(2, &binary).unwrap();
         let map = props.as_object().unwrap();
         assert!((map["height"].as_f64().unwrap() - 30.75).abs() < 1e-6);
         assert_eq!(map["age"].as_u64(), Some(25));
@@ -630,7 +642,7 @@ mod tests {
 
         let parser = make_parser_with_binary(gltf_json, &bin);
         let table = parser.property_table(0, None).unwrap();
-        let props: Value = table.get_properties(1).unwrap();
+        let props: Value = table.get_properties(1, &bin).unwrap();
         let color = props.as_object().unwrap()["color"].as_array().unwrap();
         assert_eq!(color.len(), 3);
         assert!((color[0].as_f64().unwrap()).abs() < 1e-6);
@@ -688,11 +700,11 @@ mod tests {
         let parser = make_parser_with_binary(gltf_json, &bin);
 
         let tree_table = parser.property_table(0, None).unwrap();
-        let tree_props: Value = tree_table.get_properties(0).unwrap();
+        let tree_props: Value = tree_table.get_properties(0, &bin).unwrap();
         assert!((tree_props["height"].as_f64().unwrap() - 25.0).abs() < 1e-6);
 
         let building_table = parser.property_table(1, None).unwrap();
-        let bld_props: Value = building_table.get_properties(0).unwrap();
+        let bld_props: Value = building_table.get_properties(0, &bin).unwrap();
         assert_eq!(bld_props["floors"].as_u64(), Some(3));
     }
 
@@ -703,7 +715,7 @@ mod tests {
 
         assert_eq!(table.count, 3);
         let height = table.properties.get("height").unwrap();
-        assert!(height.values.is_empty());
+        assert!(height.values_range.is_empty());
     }
 
     #[test]
@@ -790,7 +802,7 @@ mod tests {
         assert_eq!(col.component_type, "FLOAT32");
         assert_eq!(col.element_type, "SCALAR");
 
-        let props: Value = table.get_properties(0).unwrap();
+        let props: Value = table.get_properties(0, &bin).unwrap();
         assert!((props["height"].as_f64().unwrap() - 10.5).abs() < 1e-6);
     }
 
@@ -959,7 +971,8 @@ mod tests {
         let table = parser.property_table(0, None).unwrap();
         assert_eq!(table.count, 3);
 
-        let props: Value = table.get_properties(1).unwrap();
+        let binary = parser.binary.unwrap();
+        let props: Value = table.get_properties(1, binary).unwrap();
         let map = props.as_object().unwrap();
         assert!((map["height"].as_f64().unwrap() - 20.0).abs() < 1e-6);
         assert_eq!(map["age"].as_u64(), Some(12));

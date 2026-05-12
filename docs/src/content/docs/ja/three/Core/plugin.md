@@ -175,3 +175,4 @@ class MyCustomPlugin extends Plugin<ThreeView, ViewContext> {
 - [About Plugin](../../../three/introduction/about-plugin/) - プラグインシステムの概念
 - [Custom Descriptor](../../../three/core/custom-desc/) - カスタム Descriptor の実装方法
 - [three_default_plugin](../../../three_default_plugin/about/) - DefaultPlugin の詳細
+- [three_plugins](../../../three_plugins/about/) - ユースケース特化型プラグイン

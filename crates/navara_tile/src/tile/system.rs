@@ -168,6 +168,7 @@ pub fn update_tiles(
         &fog,
         globe.max_sse as f64,
         false,
+        false,
         is_texture_ready.then_some(zero_tile_handle),
         None,
     );

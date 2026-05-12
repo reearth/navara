@@ -40,6 +40,34 @@ export const calcModelMatrixRTE = (
   return result;
 };
 
+/**
+ * Composes a frame matrix with a local transform, then splits the result into
+ * a translation Vector3 and a rotation/scale-only Matrix4 for RTE rendering.
+ *
+ * The translation is intended to be encoded as high/low RTE uniforms for GPU
+ * precision, while the rotation/scale matrix is assigned to the mesh's
+ * matrixWorld so it becomes the shader's modelMatrix uniform.
+ *
+ * @param frameMatrix - The frame transformation matrix (e.g. NUE-to-ECEF)
+ * @param localMatrix - The local T*R*S transform to compose within the frame
+ * @param resultPosition - Vector3 to store the extracted translation (reused to avoid GC)
+ * @param resultRotationScale - Matrix4 to store the translation-zeroed matrix (reused to avoid GC)
+ */
+export function composeWorldMatrixForRTE(
+  frameMatrix: Matrix4,
+  localMatrix: Matrix4,
+  resultPosition = new Vector3(),
+  resultRotationScale = new Matrix4(),
+): { position: Vector3; rotationScale: Matrix4 } {
+  resultRotationScale.multiplyMatrices(frameMatrix, localMatrix);
+  resultPosition.setFromMatrixPosition(resultRotationScale);
+  const e = resultRotationScale.elements;
+  e[12] = 0;
+  e[13] = 0;
+  e[14] = 0;
+  return { position: resultPosition, rotationScale: resultRotationScale };
+}
+
 const INVERSE_MODEL_MATRIX = new Matrix4();
 const CAMERA_MODEL_POSITION = new Vector3();
 /**
