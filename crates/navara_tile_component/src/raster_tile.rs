@@ -116,11 +116,9 @@ impl RasterTile {
         data_requesters: &Query<&navara_data_requester::DataRequester>,
         terrain_data_requester: &TileTerrainDataRequesterQuery,
         terrain_layer: &Option<&TerrainLayer>,
-        has_tile_layer: bool,
         tiles: &Query<(&TilesLayer, &Order)>,
     ) -> ReadyState {
-        let is_texture_loaded =
-            self.is_texture_ready(texture_fragment, data_requesters, has_tile_layer);
+        let is_texture_loaded = self.is_texture_ready(texture_fragment, data_requesters, tiles);
 
         let data_requester_entity_id = self
             .terrain_data
@@ -170,10 +168,8 @@ impl RasterTile {
                 Some(DataRequesterStatus::Fail)
             );
 
-        let is_hillshade_ready = self.is_hillshade_ready(tiles, texture_fragment, data_requesters);
-
         ReadyState {
-            is_tile_ready: (is_terrain_ready && is_hillshade_ready
+            is_tile_ready: (is_terrain_ready
                 || (is_upsamplable || should_be_rendered_without_terrain)),
             is_texture_ready: is_texture_loaded,
             is_terrain_ready,
@@ -217,24 +213,26 @@ impl RasterTile {
         &self,
         texture_fragment: &TileTextureFragmentQuery,
         data_requesters: &Query<&navara_data_requester::DataRequester>,
-        has_tile_layer: bool,
+        tiles: &Query<'_, '_, (&TilesLayer, &Order)>,
     ) -> bool {
         // If TileLayer is None, texture is considered ready
-        if !has_tile_layer {
+        if tiles.is_empty() {
             return true;
         }
 
-        self.texture_fragment_entity_ids
-            .as_ref()
-            .map(|e| {
-                e.iter().any(|e| {
-                    e.map(|entity| {
-                        Self::is_texture_entity_ready(entity, texture_fragment, data_requesters)
+        self.is_hillshade_ready(tiles, texture_fragment, data_requesters)
+            && self
+                .texture_fragment_entity_ids
+                .as_ref()
+                .map(|e| {
+                    e.iter().any(|e| {
+                        e.map(|entity| {
+                            Self::is_texture_entity_ready(entity, texture_fragment, data_requesters)
+                        })
+                        .unwrap_or(false)
                     })
-                    .unwrap_or(false)
                 })
-            })
-            .unwrap_or(false)
+                .unwrap_or(false)
     }
 
     pub fn is_terrain_ready(

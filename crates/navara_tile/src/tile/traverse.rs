@@ -107,7 +107,6 @@ pub fn traverse_tile(
         data_requesters,
         terrain_data_requester,
         terrain_layer,
-        has_tile_layer,
         tiles,
     );
     let is_tile_ready = tile_ready_state.is_tile_ready;
