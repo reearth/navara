@@ -10,7 +10,7 @@ use navara_geometry::{ReturnedConstructedTerrainMesh, UpsamplableTerrainGeometry
 use navara_math::Vec3;
 
 use navara_mesh::CachedMeshHandle;
-use navara_quadtree::{Coords, children_coords};
+use navara_quadtree::{Coords, children_coords, num::Zero};
 
 use crate::{
     RasterTileQuadtree, Tile, TileHandle, raster_tile_texture_fragment::TileTextureFragmentQuery,
@@ -111,9 +111,9 @@ impl RasterTile {
         texture_fragment: &TileTextureFragmentQuery,
         terrain_data_requester: &TileTerrainDataRequesterQuery,
         terrain_layer: &Option<&TerrainLayer>,
-        has_tile_layer: bool,
+        tile_layers_len: usize,
     ) -> ReadyState {
-        let is_texture_loaded = self.is_texture_ready(texture_fragment, has_tile_layer);
+        let is_texture_loaded = self.is_texture_ready(texture_fragment, tile_layers_len);
 
         let data_requester_entity_id = self
             .terrain_data
@@ -190,20 +190,32 @@ impl RasterTile {
     pub fn is_texture_ready(
         &self,
         texture_fragment: &TileTextureFragmentQuery,
-        has_tile_layer: bool,
+        tile_layers_len: usize,
     ) -> bool {
         // If TileLayer is None, texture is considered ready
-        if !has_tile_layer {
+        if tile_layers_len.is_zero() {
             return true;
         }
 
         self.texture_fragment_entity_ids
             .as_ref()
             .map(|e| {
-                e.iter().any(|e| {
-                    e.and_then(|e| texture_fragment.get(e).map(|t| t.1.is_succeeded()).ok())
+                e.len() == tile_layers_len
+                    // At least one texture needs to be succeeded.
+                    && e.iter().any(|e| {
+                        e.and_then(|e| texture_fragment.get(e).map(|t| t.1.is_succeeded()).ok())
+                            .unwrap_or(false)
+                    })
+                    // Other textures need to be requested.
+                    && e.iter().all(|e| {
+                        e.and_then(|e| {
+                            texture_fragment
+                                .get(e)
+                                .map(|t| t.1.is_succeeded() || t.1.is_failed())
+                                .ok()
+                        })
                         .unwrap_or(false)
-                })
+                    })
             })
             .unwrap_or(false)
     }
