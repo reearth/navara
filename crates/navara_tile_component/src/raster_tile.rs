@@ -880,3 +880,215 @@ mod test {
         assert_eq!(leaves.len(), 2);
     }
 }
+
+#[cfg(test)]
+mod raster_tile_tests {
+    use super::*;
+    use bevy_app::{App, Update};
+    use bevy_ecs::prelude::{Entity, Resource};
+    use bevy_ecs::system::{Query, ResMut};
+    use navara_buffer_store::Handle;
+    use navara_component::Order;
+    use navara_core::TileXYZ;
+    use navara_data_requester::{DataRequester, DataRequesterExtension, DataRequesterStatus};
+    use navara_layer::LayerData;
+    use navara_material::{Appearance, HillshadeConfig, RasterTileMaterial};
+    use navara_texture_fragment::{TextureFragment, TextureFragmentStatus};
+
+    use crate::raster_tile_texture_fragment::{
+        TileTextureFragmentMarker, TileTextureFragmentQuery,
+    };
+
+    fn regular_layer(id: &str, min_zoom: usize, max_zoom: usize) -> TilesLayer {
+        TilesLayer {
+            layer_id: id.into(),
+            data: Some(LayerData {
+                url: "https://example.com/.png".into(),
+            }),
+            appearance: Some(Appearance::RasterTile(RasterTileMaterial {
+                min_zoom,
+                max_zoom,
+                ..Default::default()
+            })),
+            elevation_heatmap_config: None,
+            hillshade_config: None,
+        }
+    }
+
+    fn hillshade_layer(id: &str, min_zoom: usize, max_zoom: usize) -> TilesLayer {
+        TilesLayer {
+            layer_id: id.into(),
+            data: Some(LayerData {
+                url: "https://example.com/.png".into(),
+            }),
+            appearance: Some(Appearance::RasterTile(RasterTileMaterial {
+                min_zoom,
+                max_zoom,
+                ..Default::default()
+            })),
+            elevation_heatmap_config: None,
+            hillshade_config: Some(HillshadeConfig {
+                elevation_decoder: Default::default(),
+                exaggeration: 1.0,
+            }),
+        }
+    }
+
+    fn texture_fragment(status: TextureFragmentStatus) -> TextureFragment {
+        TextureFragment {
+            url: "https://example.com/.png".into(),
+            status,
+        }
+    }
+
+    fn data_requester(status: DataRequesterStatus) -> DataRequester {
+        DataRequester {
+            handle: 0 as Handle,
+            url: "https://example.com/.png".into(),
+            extension: DataRequesterExtension::Png,
+            status,
+        }
+    }
+
+    /// Returns `is_texture_ready` for a tile at z=5, given the layer fixture and
+    /// closures that produce the entity-id arrays. The setup callback receives
+    /// the world so it can spawn entities and reference their IDs.
+    fn run_is_ready<F>(layers: Vec<(TilesLayer, Order)>, setup: F) -> bool
+    where
+        F: FnOnce(&mut bevy_ecs::world::World) -> (Vec<Option<Entity>>, Vec<Option<Entity>>),
+    {
+        let mut app = App::new();
+        for (layer, order) in layers {
+            app.world_mut().spawn((layer, order));
+        }
+        let (tex_ids, hill_ids) = setup(app.world_mut());
+
+        #[derive(Resource, Default)]
+        struct Out(Option<bool>);
+        app.init_resource::<Out>();
+
+        let tex_ids = std::sync::Mutex::new(Some(tex_ids));
+        let hill_ids = std::sync::Mutex::new(Some(hill_ids));
+        app.add_systems(
+            Update,
+            move |texture_fragment: TileTextureFragmentQuery,
+                  data_requesters: Query<&DataRequester>,
+                  tiles: Query<(&TilesLayer, &Order)>,
+                  mut out: ResMut<Out>| {
+                let mut tile = RasterTile::new(TileXYZ { x: 0, y: 0, z: 5 }, 0., 0.);
+                tile.texture_fragment_entity_ids = Some(tex_ids.lock().unwrap().take().unwrap());
+                tile.hillshade_entity_ids = Some(hill_ids.lock().unwrap().take().unwrap());
+                out.0 = Some(tile.is_texture_ready(&texture_fragment, &data_requesters, &tiles));
+            },
+        );
+        app.update();
+        app.world().resource::<Out>().0.unwrap()
+    }
+
+    /// A None slot for an in-zoom regular layer must NOT be treated as ready.
+    /// Before the fix, the `unwrap_or(true)` in the all-check would have
+    /// returned true and let the tile render with a missing texture.
+    #[test]
+    fn none_slot_on_in_zoom_regular_layer_is_not_ready() {
+        let ready = run_is_ready(
+            vec![
+                (regular_layer("a", 0, 20), Order(0)),
+                (regular_layer("b", 0, 20), Order(1)),
+            ],
+            |world| {
+                // Layer 0 has a succeeded texture; layer 1's slot is None
+                // (simulating a filter-rejected request that hasn't retried yet).
+                let e0 = world
+                    .spawn((
+                        TileTextureFragmentMarker(0),
+                        texture_fragment(TextureFragmentStatus::Success),
+                    ))
+                    .id();
+                (vec![Some(e0), None], vec![None, None])
+            },
+        );
+
+        assert!(
+            !ready,
+            "in-zoom regular layer with None slot must not be ready"
+        );
+    }
+
+    /// A None slot for a layer that's outside its configured zoom range must be
+    /// treated as ready — no entity will ever be requested for that layer.
+    #[test]
+    fn none_slot_on_out_of_zoom_layer_is_ready() {
+        let ready = run_is_ready(
+            // Layer 1's min_zoom=10 → out of range for the test tile at z=5.
+            vec![
+                (regular_layer("a", 0, 20), Order(0)),
+                (regular_layer("b", 10, 20), Order(1)),
+            ],
+            |world| {
+                let e0 = world
+                    .spawn((
+                        TileTextureFragmentMarker(0),
+                        texture_fragment(TextureFragmentStatus::Success),
+                    ))
+                    .id();
+                (vec![Some(e0), None], vec![None, None])
+            },
+        );
+
+        assert!(
+            ready,
+            "None slot for out-of-zoom layer must be treated as ready"
+        );
+    }
+
+    /// A tile with only hillshade layers must become ready as soon as the
+    /// hillshade DataRequester succeeds — even though `texture_fragment_entity_ids`
+    /// holds only Nones at those indices.
+    #[test]
+    fn hillshade_only_tile_is_ready_when_hill_array_has_succeeded_entity() {
+        let ready = run_is_ready(vec![(hillshade_layer("h", 0, 20), Order(0))], |world| {
+            let h0 = world
+                .spawn((
+                    TileTextureFragmentMarker(0),
+                    data_requester(DataRequesterStatus::Success),
+                ))
+                .id();
+            (vec![None], vec![Some(h0)])
+        });
+
+        assert!(
+            ready,
+            "hillshade-only tile must read entity from hillshade_entity_ids"
+        );
+    }
+
+    /// When a regular layer's texture is still pending, the tile is not ready,
+    /// even if a hillshade layer is already succeeded. This exercises the
+    /// per-layer all-check: regular Some(pending) → false.
+    #[test]
+    fn pending_regular_blocks_readiness_even_with_succeeded_hillshade() {
+        let ready = run_is_ready(
+            vec![
+                (regular_layer("a", 0, 20), Order(0)),
+                (hillshade_layer("h", 0, 20), Order(1)),
+            ],
+            |world| {
+                let e0 = world
+                    .spawn((
+                        TileTextureFragmentMarker(0),
+                        texture_fragment(TextureFragmentStatus::Pending),
+                    ))
+                    .id();
+                let h1 = world
+                    .spawn((
+                        TileTextureFragmentMarker(0),
+                        data_requester(DataRequesterStatus::Success),
+                    ))
+                    .id();
+                (vec![Some(e0), None], vec![None, Some(h1)])
+            },
+        );
+
+        assert!(!ready, "pending regular layer must block readiness");
+    }
+}

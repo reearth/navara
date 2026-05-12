@@ -128,3 +128,200 @@ pub(crate) fn request_texture_fragment(
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use bevy_app::{App, Update};
+    use bevy_ecs::{entity::Entity, prelude::Resource, system::ResMut};
+    use navara_core::TileXYZ;
+    use navara_layer::LayerData;
+    use navara_material::{HillshadeConfig, RasterTileMaterial};
+
+    fn regular_layer(layer_id: &str, min_zoom: usize, max_zoom: usize) -> TilesLayer {
+        TilesLayer {
+            layer_id: layer_id.to_string(),
+            data: Some(LayerData {
+                url: "https://example.com/{z}/{x}/{y}.png".to_string(),
+            }),
+            appearance: Some(Appearance::RasterTile(RasterTileMaterial {
+                min_zoom,
+                max_zoom,
+                ..Default::default()
+            })),
+            elevation_heatmap_config: None,
+            hillshade_config: None,
+        }
+    }
+
+    fn hillshade_layer(layer_id: &str, min_zoom: usize, max_zoom: usize) -> TilesLayer {
+        TilesLayer {
+            layer_id: layer_id.to_string(),
+            data: Some(LayerData {
+                url: "https://example.com/{z}/{x}/{y}.png".to_string(),
+            }),
+            appearance: Some(Appearance::RasterTile(RasterTileMaterial {
+                min_zoom,
+                max_zoom,
+                ..Default::default()
+            })),
+            elevation_heatmap_config: None,
+            hillshade_config: Some(HillshadeConfig {
+                elevation_decoder: Default::default(),
+                exaggeration: 1.0,
+            }),
+        }
+    }
+
+    #[derive(Resource, Default, Clone)]
+    struct CapturedSlots {
+        tex_ids: Vec<Option<Entity>>,
+        hill_ids: Vec<Option<Entity>>,
+    }
+
+    /// Run a single update where the caller can mutate a freshly-built `RasterTile`
+    /// before and after the call to `request_texture_fragment`. The post-call state
+    /// of both entity-id arrays is captured into `CapturedSlots`.
+    fn run_request<F>(layers: Vec<(TilesLayer, Order)>, tile_z: usize, prepare: F) -> CapturedSlots
+    where
+        F: FnOnce(&mut RasterTile) + Send + Sync + 'static,
+    {
+        let mut app = App::new();
+        app.init_resource::<BufferStore>();
+        app.init_resource::<CapturedSlots>();
+
+        for (layer, order) in layers {
+            app.world_mut().spawn((layer, order));
+        }
+
+        let prepare = std::sync::Mutex::new(Some(prepare));
+        app.add_systems(
+            Update,
+            move |mut commands: Commands,
+                  mut buf: ResMut<BufferStore>,
+                  tiles: Query<(&TilesLayer, &Order)>,
+                  texture_fragment: TileTextureFragmentQuery,
+                  data_requesters: Query<&DataRequester>,
+                  mut out: ResMut<CapturedSlots>| {
+                let mut tile = RasterTile::new(
+                    TileXYZ {
+                        x: 0,
+                        y: 0,
+                        z: tile_z,
+                    },
+                    0.,
+                    0.,
+                );
+                let prepare = prepare.lock().unwrap().take().unwrap();
+                prepare(&mut tile);
+
+                request_texture_fragment(
+                    &mut commands,
+                    &mut tile,
+                    &tiles,
+                    0,
+                    &texture_fragment,
+                    &data_requesters,
+                    Priority::High,
+                    &mut buf,
+                );
+
+                out.tex_ids = tile.texture_fragment_entity_ids.clone().unwrap_or_default();
+                out.hill_ids = tile.hillshade_entity_ids.clone().unwrap_or_default();
+            },
+        );
+        app.update();
+        app.world().resource::<CapturedSlots>().clone()
+    }
+
+    /// Regular layers must land in `texture_fragment_entity_ids` and hillshade
+    /// layers must land in `hillshade_entity_ids` — never crossed. This is the
+    /// invariant the misalignment bug used to break.
+    #[test]
+    fn mixed_layers_go_to_correct_arrays() {
+        let captured = run_request(
+            vec![
+                (regular_layer("a", 0, 20), Order(0)),
+                (regular_layer("c", 0, 20), Order(2)),
+                (hillshade_layer("b", 0, 20), Order(1)),
+            ],
+            5,
+            |_| {},
+        );
+
+        assert_eq!(captured.tex_ids.len(), 3);
+        assert_eq!(captured.hill_ids.len(), 3);
+
+        // Layer 0 (regular) — tex has Some, hill stays None.
+        assert!(captured.tex_ids[0].is_some());
+        assert!(captured.hill_ids[0].is_none());
+
+        // Layer 1 (hillshade) — hill has Some, tex stays None.
+        assert!(captured.tex_ids[1].is_none());
+        assert!(captured.hill_ids[1].is_some());
+
+        // Layer 2 (regular) — tex has Some, hill stays None.
+        assert!(captured.tex_ids[2].is_some());
+        assert!(captured.hill_ids[2].is_none());
+    }
+
+    /// When the filter has cleared a layer's slot to None, the next call must
+    /// refill it into the array that matches the layer's type — the regression
+    /// would refill a hillshade layer's slot into `texture_fragment_entity_ids`.
+    #[test]
+    fn filter_rejected_slots_refill_into_correct_array() {
+        // Both arrays start at length 2 with all None — this is the state the
+        // tile is in after the filter rejected the very first attempt on both
+        // layers.
+        let captured = run_request(
+            vec![
+                (regular_layer("a", 0, 20), Order(0)),
+                (hillshade_layer("b", 0, 20), Order(1)),
+            ],
+            5,
+            |tile| {
+                tile.texture_fragment_entity_ids = Some(vec![None, None]);
+                tile.hillshade_entity_ids = Some(vec![None, None]);
+            },
+        );
+
+        // Layer 0 (regular) is refilled into tex.
+        assert!(captured.tex_ids[0].is_some());
+        assert!(captured.hill_ids[0].is_none());
+
+        // Layer 1 (hillshade) is refilled into hill, NOT tex.
+        assert!(
+            captured.tex_ids[1].is_none(),
+            "hillshade entity must not land in texture_fragment_entity_ids"
+        );
+        assert!(captured.hill_ids[1].is_some());
+    }
+
+    /// Out-of-zoom layers must keep both array slots as `None` — no entity is
+    /// spawned for them. This is what tells `is_texture_ready` apart from
+    /// filter rejection.
+    #[test]
+    fn out_of_zoom_layer_leaves_both_slots_none() {
+        // tile is at z=2, layer 1 has min_zoom=10 → out of range.
+        let captured = run_request(
+            vec![
+                (regular_layer("a", 0, 20), Order(0)),
+                (regular_layer("c", 0, 20), Order(2)),
+                (regular_layer("b", 10, 20), Order(1)),
+            ],
+            2,
+            |_| {},
+        );
+
+        assert_eq!(captured.tex_ids.len(), 3);
+        assert_eq!(captured.hill_ids.len(), 3);
+
+        assert!(captured.tex_ids[0].is_some());
+        assert!(
+            captured.tex_ids[1].is_none(),
+            "out-of-zoom layer must not spawn"
+        );
+        assert!(captured.hill_ids[1].is_none());
+        assert!(captured.tex_ids[2].is_some());
+    }
+}
