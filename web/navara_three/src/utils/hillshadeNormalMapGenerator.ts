@@ -3,6 +3,7 @@ import { packing } from "@takram/three-geospatial/shaders";
 import {
   ClampToEdgeWrapping,
   DataTexture,
+  LinearFilter,
   Mesh,
   NearestFilter,
   NoColorSpace,
@@ -93,9 +94,9 @@ export class HillshadeNormalMapGenerator {
           // Compute normal from DEM
           vec3 normal = computeNormalFromDEM(uDemTexture, uv, uTexelSize, uMetersPerTexel);
 
-          // Pack normal to RG channels and map to [0,1] for storage
-          vec2 packed = packNormalToVec2(normal);
-          gl_FragColor = vec4(packed * 0.5 + 0.5, 0.0, 1.0);
+          // Store normal directly in RGB channels (linear, can use hardware bilinear filtering)
+          // Map from [-1,1] to [0,1] for 8-bit storage
+          gl_FragColor = vec4(normal * 0.5 + 0.5, 1.0);
         }
       `,
     });
@@ -141,7 +142,7 @@ export class HillshadeNormalMapGenerator {
 
       // Return a minimal 1x1 texture with default upward normal (0, 0, 1)
       // Encoded as octahedral and mapped to [0,1]: (0.5, 0.5, 0, 1)
-      const defaultPixels = new Uint8Array([127, 127, 0, 255]);
+      const defaultPixels = new Uint8Array([128, 128, 0, 255]);
       const defaultTexture = new DataTexture(
         defaultPixels,
         1,
@@ -220,10 +221,9 @@ export class HillshadeNormalMapGenerator {
     // readRenderTargetPixels returns data in WebGL coordinate system (bottom-up)
     // Set flipY=true to match Three.js texture coordinate system (top-down)
     normalMap.flipY = true;
-    // Use NearestFilter to avoid hardware interpolation of encoded normals
-    // Manual bilinear interpolation is performed in sampleBilinearNormal()
-    normalMap.minFilter = NearestFilter;
-    normalMap.magFilter = NearestFilter;
+    // Use LinearFilter for hardware bilinear interpolation
+    normalMap.minFilter = LinearFilter;
+    normalMap.magFilter = LinearFilter;
     normalMap.wrapS = ClampToEdgeWrapping;
     normalMap.wrapT = ClampToEdgeWrapping;
     normalMap.colorSpace = NoColorSpace;

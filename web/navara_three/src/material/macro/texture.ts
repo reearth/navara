@@ -32,9 +32,10 @@ export const generateMixOverlaidTexturesMacro = (
 
 /**
  * Generate hillshade normal override shader code for each texture slot
- * This replaces vertex normals with pre-computed normals from hillshade normal maps
- * The hillshade textures in uTextures[] are actually normal maps (RG format) generated
- * offline from DEM data. This avoids expensive per-fragment height sampling and normal computation.
+ * This replaces vertex normals with pre-computed normals from hillshade normal data textures.
+ * The hillshade textures in uTextures[] are generated offline from DEM data and store
+ * precomputed normal information for shader sampling. This avoids expensive per-fragment
+ * height sampling and normal computation.
  */
 export function generateHillshadeNormalShader(maxTextures: number): string {
   return `
@@ -51,15 +52,12 @@ export function generateHillshadeNormalShader(maxTextures: number): string {
         // Apply per-layer UV transform for hillshade parent texture reuse
         vec2 hillshadeUv = vOrigUv * uHillshadeUvScale[${i}] + uHillshadeUvOffset[${i}];
 
-        // Pixel-center UV mapping: UV [0,1] spans pixel centers [0, N-1]
-        // This matches the convention used in normal map generation
-        vec2 contentSize = vec2(normalMapSize);
-        vec2 pixelCoord = hillshadeUv * (contentSize - 1.0);
-        vec2 frac = fract(pixelCoord);
-        ivec2 basePixel = ivec2(floor(pixelCoord));
+        // Clamp UV to [0,1] to prevent out-of-bounds sampling at tile borders
+        hillshadeUv = clamp(hillshadeUv, vec2(0.0), vec2(1.0));
 
-        // Sample and interpolate normal using texelFetch (more precise than texture2D)
-        vec3 demNormal = sampleBilinearNormal(uTextures[${i}], basePixel, frac);
+        // [0,1] -> [-1,1] to get normal vector from texture
+        vec3 demNormal = texture2D(uTextures[${i}], hillshadeUv).rgb * 2.0 - 1.0;
+        demNormal = normalize(demNormal);
 
         // Apply exaggeration to slope components (xy) before normalization
         demNormal.xy *= uHillshadeExaggeration;

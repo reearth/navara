@@ -10,7 +10,6 @@ import type {
   Globe,
 } from "@navara/engine";
 import ElevationParsFragment from "@shaders/glsl/chunks/elevation_pars_fragment.glsl";
-import OctahedralNormalSampling from "@shaders/glsl/chunks/octahedral_normal_sampling.glsl";
 import SpecularParsFragment from "@shaders/glsl/chunks/spucular_pars_fragment.glsl";
 import WaterParsFragment from "@shaders/glsl/chunks/water_pars_fragment.glsl?raw";
 import {
@@ -38,6 +37,7 @@ import {
   Sphere,
   NoColorSpace,
   MeshBasicMaterial,
+  LinearFilter,
 } from "three";
 
 import { PolygonMesh, PolylineMesh } from "..";
@@ -744,8 +744,6 @@ vUv = vUv * uScale + uOffset;
   // uColorMapTexture is used for elevation heatmap color mapping
   ${ElevationParsFragment}
 
-  // Octahedral normal sampling for hillshade
-  ${OctahedralNormalSampling}
   `,
         )
         .replaceWithCondition(
@@ -1523,14 +1521,29 @@ if (uPickable > 0.) {
       // produces intermediate values like RGB(64,0,2) which decode to ~42000m!
       // Always apply these settings for DEM textures, independent of colorSpace change
       if (isDEMTexture) {
-        if (t.minFilter !== NearestFilter) {
-          t.minFilter = NearestFilter;
-          t.needsUpdate = true;
+        if (isHillshade) {
+          // sample normals from normal map with bilinear interpolation for smoother shading
+          if (t.minFilter !== LinearFilter) {
+            t.minFilter = LinearFilter;
+            t.needsUpdate = true;
+          }
+          if (t.magFilter !== LinearFilter) {
+            t.magFilter = LinearFilter;
+            t.needsUpdate = true;
+          }
         }
-        if (t.magFilter !== NearestFilter) {
-          t.magFilter = NearestFilter;
-          t.needsUpdate = true;
+
+        if (isElevationHeatmap) {
+          if (t.minFilter !== NearestFilter) {
+            t.minFilter = NearestFilter;
+            t.needsUpdate = true;
+          }
+          if (t.magFilter !== NearestFilter) {
+            t.magFilter = NearestFilter;
+            t.needsUpdate = true;
+          }
         }
+
         if (t.generateMipmaps !== false) {
           t.generateMipmaps = false;
           t.needsUpdate = true;

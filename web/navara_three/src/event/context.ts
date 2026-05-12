@@ -35,7 +35,7 @@ import type {
 import type { CommonUniforms } from "../uniforms";
 import type { TextureSlot } from "../utils";
 
-import { HillshadeContext } from "./HillshadeContext";
+import type { HillshadeContext } from "./HillshadeContext";
 
 export type BufferLoader = {
   u8: (handle: number) => Uint8Array | null;
