@@ -1516,13 +1516,16 @@ if (uPickable > 0.) {
         t.needsUpdate = true;
       }
 
-      // CRITICAL: DEM textures must use NearestFilter to prevent interpolation
+      // CRITICAL: Elevation DEM textures must use NearestFilter to prevent interpolation artifacts.
       // Linear interpolation between ocean RGB(128,0,0) and land RGB(0,0,5)
       // produces intermediate values like RGB(64,0,2) which decode to ~42000m!
+      // However, hillshade normal maps (which store normals directly in RGB, not encoded heights)
+      // should use LinearFilter for smooth bilinear interpolation at tile boundaries.
       // Always apply these settings for DEM textures, independent of colorSpace change
       if (isDEMTexture) {
         if (isHillshade) {
-          // sample normals from normal map with bilinear interpolation for smoother shading
+          // Hillshade normal maps: use LinearFilter for hardware bilinear interpolation
+          // Normals are stored directly in RGB [-1,1] -> [0,1], so linear filtering is safe
           if (t.minFilter !== LinearFilter) {
             t.minFilter = LinearFilter;
             t.needsUpdate = true;
@@ -1534,6 +1537,8 @@ if (uPickable > 0.) {
         }
 
         if (isElevationHeatmap) {
+          // Elevation DEM textures: use NearestFilter to prevent decoding artifacts
+          // RGB-encoded heights must not be interpolated before decoding
           if (t.minFilter !== NearestFilter) {
             t.minFilter = NearestFilter;
             t.needsUpdate = true;

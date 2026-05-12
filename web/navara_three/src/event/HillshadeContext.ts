@@ -41,7 +41,7 @@ export class HillshadeContext {
 
   /**
    * Temporary storage for DEM textures while waiting for edge updates
-   * entityId → { demTexture, receivedEdges, metersPerTexel, timeout }
+   * entityId → { demTexture, receivedEdges, metersPerTexel, hillshadeConfig }
    */
   readonly tempDemTextures = new Map<string, TempDemEntry>();
 

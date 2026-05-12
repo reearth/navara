@@ -1,5 +1,4 @@
 import HillshadeParsFragment from "@shaders/glsl/chunks/hillshade_pars_fragment.glsl";
-import { packing } from "@takram/three-geospatial/shaders";
 import {
   ClampToEdgeWrapping,
   DataTexture,
@@ -66,9 +65,6 @@ export class HillshadeNormalMapGenerator {
         uniform float uMetersPerTexel;
         uniform vec2 uOutputSize;
 
-        // Import packing functions (signNotZero, packNormalToVec2, etc.)
-        ${packing}
-
         // Import DEM decoding and normal computation from hillshade shader
         ${HillshadeParsFragment}
 
@@ -85,9 +81,9 @@ export class HillshadeNormalMapGenerator {
           float testHeight = sampleHeightBilinear(uDemTexture, uv, texSize);
 
           if (!isValidHeight(testHeight)) {
-            // Invalid data (ocean/no-data), output default upward normal
-            vec2 packed = packNormalToVec2(vec3(0.0, 0.0, 1.0));
-            gl_FragColor = vec4(packed * 0.5 + 0.5, 0.0, 1.0);
+            // Invalid data (ocean/no-data), output default upward normal (0, 0, 1)
+            // Store directly in RGB channels, mapped from [-1,1] to [0,1]
+            gl_FragColor = vec4(0.5, 0.5, 1.0, 1.0);
             return;
           }
 
@@ -141,8 +137,8 @@ export class HillshadeNormalMapGenerator {
       );
 
       // Return a minimal 1x1 texture with default upward normal (0, 0, 1)
-      // Encoded as octahedral and mapped to [0,1]: (0.5, 0.5, 0, 1)
-      const defaultPixels = new Uint8Array([128, 128, 0, 255]);
+      // Encoded as an RGB normal map mapped from [-1, 1] to [0, 255].
+      const defaultPixels = new Uint8Array([128, 128, 255, 255]);
       const defaultTexture = new DataTexture(
         defaultPixels,
         1,
