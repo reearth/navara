@@ -17,6 +17,7 @@ import {
   AnimationAction,
   AnimationMixer,
   BufferGeometry,
+  Cache,
   Color as ThreeColor,
   Euler,
   Group,
@@ -30,6 +31,7 @@ import {
   Quaternion,
   ShaderChunk,
   SkinnedMesh,
+  Texture,
   Vector3,
   type NormalBufferAttributes,
 } from "three";
@@ -88,6 +90,39 @@ export type InstancedGltfModelEvent = {
 
 const DEFAULT_CAPACITY = 64;
 const GROWTH_FACTOR = 2;
+
+const TEXTURE_SLOTS = [
+  "map",
+  "normalMap",
+  "metalnessMap",
+  "roughnessMap",
+  "emissiveMap",
+  "aoMap",
+] as const;
+
+function hasMissingTextureData(gltf: GLTF): boolean {
+  let missing = false;
+  gltf.scene.traverse((o) => {
+    if (missing) return;
+    const mats = (o as Mesh).material;
+    if (!mats) return;
+    const list = Array.isArray(mats) ? mats : [mats];
+    for (const mat of list) {
+      const slots = mat as unknown as Record<
+        string,
+        Texture | null | undefined
+      >;
+      for (const slot of TEXTURE_SLOTS) {
+        const tex = slots[slot];
+        if (tex && tex.source && tex.source.data == null) {
+          missing = true;
+          return;
+        }
+      }
+    }
+  });
+  return missing;
+}
 
 const _position = new Vector3();
 const _quaternion = new Quaternion();
@@ -347,7 +382,24 @@ export class InstancedGltfModelMeshDesc extends MeshDesc<
   }
 
   private async loadModel(url: string, root: Group): Promise<void> {
-    const gltf = await this.loader.loadAsync(url);
+    let gltf = await this.loader.loadAsync(url);
+    // three.js's `ImageBitmapLoader` caches the in-flight fetch promise but its
+    // terminal `.then` does not return the resolved bitmap (three r184,
+    // src/loaders/ImageBitmapLoader.js line 181). When a second
+    // `GLTFLoader.loadAsync` for the same URL subscribes to that cached
+    // promise, its callback receives `undefined`, so the resulting textures
+    // have `source.data === null` and render solid black. Detect that and
+    // reload with `three.Cache` briefly off — by then the first load has
+    // populated its real bitmaps, so the retry isn't racing anyone.
+    if (hasMissingTextureData(gltf)) {
+      const wasEnabled = Cache.enabled;
+      Cache.enabled = false;
+      try {
+        gltf = await this.loader.loadAsync(url);
+      } finally {
+        Cache.enabled = wasEnabled;
+      }
+    }
     this.gltf = gltf;
 
     // Detect skinned meshes — if any, we fall back to per-instance clones
