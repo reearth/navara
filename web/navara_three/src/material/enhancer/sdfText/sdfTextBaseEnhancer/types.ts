@@ -96,6 +96,8 @@ export type SdfTextBaseRefs = {
   nvr_uBatchId: UniformValue<number>;
   nvr_uPickable: UniformValue<number>;
   uAtlas: UniformValue<DataTexture | null>;
+  /** COLRv1 RGBA atlas. `null` when the font has no color glyphs. */
+  uColorAtlas: UniformValue<DataTexture | null>;
 
   // Conditional RTE/RTC position uniforms
   uRTEPositionLOW?: UniformValue<Vector3>;
@@ -137,6 +139,10 @@ export type SdfTextBaseMutates = Mutates<
      * Set the SDF atlas texture external ref.
      */
     setAtlasTexture: (texture: UniformValue<DataTexture | null>) => void;
+    /**
+     * Set the COLRv1 color atlas texture external ref.
+     */
+    setColorAtlasTexture: (texture: UniformValue<DataTexture | null>) => void;
     /**
      * Update position uniforms (RTE or RTC).
      */
