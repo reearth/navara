@@ -106,12 +106,17 @@ impl ColorAtlas {
             let atlas_x = rect.min.x;
             let atlas_y = rect.min.y;
 
-            // Copy RGBA pixels into the atlas buffer, top-down (matches bitmap layout).
+            // Copy RGBA pixels into the atlas buffer, Y-flipped so the atlas
+            // shares the bottom-up layout used by the SDF atlas (UV origin at
+            // bottom-left, matching the OpenGL convention the shader assumes).
             let aw = self.width as usize;
-            for y in 0..bitmap.height as usize {
-                let src_row = y * bitmap.width as usize * 4;
-                let dst_row = ((atlas_y as usize + y) * aw + atlas_x as usize) * 4;
-                let row_bytes = bitmap.width as usize * 4;
+            let bw = bitmap.width as usize;
+            let bh = bitmap.height as usize;
+            let row_bytes = bw * 4;
+            for y in 0..bh {
+                let src_row = y * row_bytes;
+                let dst_y = atlas_y as usize + (bh - 1 - y);
+                let dst_row = (dst_y * aw + atlas_x as usize) * 4;
                 let src_end = src_row + row_bytes;
                 let dst_end = dst_row + row_bytes;
                 if src_end <= bitmap.rgba.len() && dst_end <= self.pixel_data.len() {
