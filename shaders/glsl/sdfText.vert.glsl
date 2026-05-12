@@ -6,6 +6,7 @@
 attribute vec2 glyphOffset;  // Glyph position in normalized text space
 attribute vec2 glyphSize;    // Glyph quad dimensions in normalized text space
 attribute vec4 glyphUvRect;  // Atlas UV sub-rect: (u0, v0, u1, v1)
+attribute float glyphIsColor; // 1.0 = sample COLRv1 color atlas, 0.0 = sample SDF atlas
 
 // Uniforms
 #ifdef USE_RTE
@@ -35,6 +36,7 @@ varying vec2 vAtlasUv;
 varying float vFragDepth;
 flat varying int vBackGroundSprite; // Whether this vertex belongs to the background sprite (1) or a glyph (0)
 flat varying float vBackGroundRatio;
+flat varying int vIsColor; // Per-instance flag: glyph is sampled from the color atlas
 
 void main() {
 #ifdef USE_RTE
@@ -73,6 +75,8 @@ void main() {
     }
 
     vec2 center = clamp(uCenter, vec2(-0.5), vec2(0.5)); // Ensure center is within the bounds of the sprite
+
+    vIsColor = glyphIsColor > 0.5 ? 1 : 0;
 
     if (uShowBackground && gl_InstanceID == 0) {
         vBackGroundSprite = 1;

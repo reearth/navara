@@ -25,9 +25,11 @@ varying float vFragDepth;
 flat varying int vHorizonCulled;
 flat varying int vBackGroundSprite;
 flat varying float vBackGroundRatio;
+flat varying int vIsColor;
 
 // Uniforms
 uniform sampler2D uAtlas;
+uniform sampler2D uColorAtlas;
 uniform float uSdfThreshold;
 uniform vec3 uColor;
 uniform vec3 uOutlineColor;
@@ -65,6 +67,23 @@ void main() {
             gl_FragColor = vec4(uBackgroundColor, 1.0);
         }
 
+        return;
+    }
+
+    // Color glyph path: sample the COLRv1 RGBA atlas directly. The pre-rasterized
+    // bitmap already encodes shape, anti-aliasing, gradients and palette colors —
+    // SDF math, outline, and uColor are all bypassed.
+    if (vIsColor == 1) {
+        vec4 c = texture2D(uColorAtlas, vAtlasUv);
+        if (c.a <= 0.0) discard;
+        gl_FragColor = c;
+
+        #ifndef USE_SHADOWMAP_DEPTH
+            vec3 normal = screenSpaceNormal();
+            normalBuffer = vec4(packNormalToVec2(normal), 0.0, 0.0);
+            effectIdBuffer = vec4(0.0);
+            emissiveBuffer = vec4(0.0);
+        #endif
         return;
     }
 
