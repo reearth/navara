@@ -35,13 +35,23 @@ pub(crate) fn request_texture_fragment(
     let sse = leaf.sse;
     let distance_from_camera = leaf.distance_from_camera;
 
-    // Both arrays stay at `tiles_len` for the lifetime of the tile. Filter systems
-    // clear rejected slots to None (rather than removing) so the layer-index
-    // alignment is preserved across frames.
-    leaf.texture_fragment_entity_ids
+    // Both arrays must match `tiles_len`. Filter systems clear rejected slots
+    // to None (rather than removing) so layer-index alignment is preserved
+    // across frames. When a layer is added between calls, `add_order_to_tiles_layer`
+    // assigns it the highest Order, so extending the arrays with trailing Nones
+    // keeps existing layer indices intact; `delete_layer` handles shrinking.
+    let tex_ids = leaf
+        .texture_fragment_entity_ids
         .get_or_insert_with(|| vec![None; tiles_len]);
-    leaf.hillshade_entity_ids
+    if tex_ids.len() < tiles_len {
+        tex_ids.resize(tiles_len, None);
+    }
+    let hill_ids = leaf
+        .hillshade_entity_ids
         .get_or_insert_with(|| vec![None; tiles_len]);
+    if hill_ids.len() < tiles_len {
+        hill_ids.resize(tiles_len, None);
+    }
 
     // Check whether every layer is already handled.
     // Out-of-zoom layers stay None; regular layers must have a queryable
@@ -295,6 +305,35 @@ mod tests {
             "hillshade entity must not land in texture_fragment_entity_ids"
         );
         assert!(captured.hill_ids[1].is_some());
+    }
+
+    /// When a layer is added after the tile already has shorter arrays, the
+    /// function must extend them (not panic). The new layer is always appended
+    /// by `add_order_to_tiles_layer`, so trailing Nones preserve existing
+    /// layer-to-index alignment.
+    #[test]
+    fn new_layer_with_shorter_existing_arrays_extends_without_panic() {
+        let captured = run_request(
+            vec![
+                (regular_layer("a", 0, 20), Order(0)),
+                (regular_layer("b", 0, 20), Order(1)),
+                (regular_layer("c", 0, 20), Order(2)),
+            ],
+            5,
+            |tile| {
+                // Tile was previously built with only 2 layers; layer c was
+                // added later. Without resize, accessing tex_ids[2] would panic.
+                tile.texture_fragment_entity_ids = Some(vec![None, None]);
+                tile.hillshade_entity_ids = Some(vec![None, None]);
+            },
+        );
+
+        assert_eq!(captured.tex_ids.len(), 3);
+        assert_eq!(captured.hill_ids.len(), 3);
+        assert!(
+            captured.tex_ids[2].is_some(),
+            "newly appended layer must be spawned"
+        );
     }
 
     /// Out-of-zoom layers must keep both array slots as `None` — no entity is
