@@ -1,5 +1,6 @@
 import type ThreeView from "@navara/three";
 import {
+  Color,
   MeshDesc,
   PickableMultiInstancedMeshWrapper,
   createReplacer,
@@ -11,12 +12,12 @@ import {
   type ViewContext,
 } from "@navara/three";
 import ProjectVertexRteModel from "@shaders/glsl/chunks/project_vertex_rte_model.glsl";
-import ProjectVertexRteModelInstanced from "@shaders/glsl/chunks/project_vertex_rte_model_instanced.glsl";
 import RteUniformParsVertex from "@shaders/glsl/chunks/rte_uniform_pars_vertex.glsl";
 import {
   AnimationAction,
   AnimationMixer,
   BufferGeometry,
+  Color as ThreeColor,
   Euler,
   Group,
   InstancedMesh,
@@ -46,6 +47,8 @@ export type ModelChildConfig = {
   rotation?: { x: number; y: number; z: number };
   scale?: { x: number; y: number; z: number };
   matrix?: Matrix4;
+  /** Per-instance tint multiplied into the material color. */
+  color?: Color;
 };
 
 export type InstancedModelsDescription = {
@@ -92,6 +95,7 @@ const _scale = new Vector3();
 const _euler = new Euler();
 const _T = new Matrix4();
 const _composed = new Matrix4();
+const _tempColor = new ThreeColor();
 
 /**
  * An animation "slot" — one mixer, its cached actions, and the currently
@@ -266,12 +270,12 @@ export class InstancedGltfModelMeshDesc extends MeshDesc<
   }
 
   /**
-   * Inject RTE shader chunks into a material. `instanced` selects the variant
-   * that additionally multiplies `instanceMatrix` (for `InstancedMesh` sub-
-   * meshes); `false` is for per-instance `SkeletonUtils.clone` fallback
-   * meshes that use the standard non-instanced path.
+   * Inject RTE shader chunks into a material. The chunk branches on
+   * `USE_INSTANCING` internally, so the same patch works for both
+   * `InstancedMesh` sub-meshes (non-skinned path) and `SkeletonUtils.clone`
+   * fallback meshes (skinned path).
    */
-  private modifyMaterialForRTE(material: Material, instanced: boolean): void {
+  private modifyMaterialForRTE(material: Material): void {
     if (this.rtePatchedMaterials.has(material)) return;
 
     const prevOnBeforeCompile = material.onBeforeCompile;
@@ -289,10 +293,6 @@ export class InstancedGltfModelMeshDesc extends MeshDesc<
       shader.uniforms.modelViewMatrixRTE = this.rteUserData
         .modelViewMatrixRTE ?? { value: new Matrix4() };
 
-      const projectChunk = instanced
-        ? ProjectVertexRteModelInstanced
-        : ProjectVertexRteModel;
-
       shader.vertexShader = createReplacer(shader.vertexShader)
         .replace(
           "#include <common>",
@@ -301,7 +301,7 @@ export class InstancedGltfModelMeshDesc extends MeshDesc<
           ${RteUniformParsVertex}
           `,
         )
-        .replace("#include <project_vertex>", projectChunk)
+        .replace("#include <project_vertex>", ProjectVertexRteModel)
         .replace(
           "#include <worldpos_vertex>",
           createReplacer(ShaderChunk.worldpos_vertex)
@@ -313,22 +313,21 @@ export class InstancedGltfModelMeshDesc extends MeshDesc<
         ).source;
     };
     material.customProgramCacheKey = () =>
-      (prevCacheKey?.() ?? "") +
-      (instanced ? "_nvr_rte_instanced_gltf" : "_nvr_rte_gltf");
+      (prevCacheKey?.() ?? "") + "_nvr_rte_gltf";
     material.needsUpdate = true;
 
     this.rtePatchedMaterials.add(material);
   }
 
   /** Patch every material reachable from a scene graph for RTE + shadows. */
-  private patchMaterials(root: Object3D, instanced: boolean): void {
+  private patchMaterials(root: Object3D): void {
     root.traverse((o) => {
       const m = (o as Mesh).material as Material | Material[] | undefined;
       if (!m) return;
       const mats = Array.isArray(m) ? m : [m];
       for (const mat of mats) {
         this.ctx.applyShadowMaterial(mat);
-        this.modifyMaterialForRTE(mat, instanced);
+        this.modifyMaterialForRTE(mat);
       }
     });
   }
@@ -463,7 +462,7 @@ export class InstancedGltfModelMeshDesc extends MeshDesc<
       const mats = Array.isArray(material) ? material : [material];
       for (const m of mats) {
         this.ctx.applyShadowMaterial(m);
-        this.modifyMaterialForRTE(m, true);
+        this.modifyMaterialForRTE(m);
       }
 
       root.add(inst);
@@ -533,6 +532,21 @@ export class InstancedGltfModelMeshDesc extends MeshDesc<
       _composed.multiplyMatrices(_T, sourceLocal);
       inst.setMatrixAt(i, _composed);
     }
+    this.writeColorAt(i, config);
+  }
+
+  /**
+   * Set per-instance tint on every sub-mesh. Three.js's `setColorAt` lazily
+   * allocates `instanceColor` (filled white) on first call, so omitting color
+   * stays free until at least one instance opts in.
+   */
+  private writeColorAt(i: number, config: ModelChildConfig): void {
+    if (!config.color) return;
+    _tempColor.set(config.color.raw);
+    for (const { inst } of this.subMeshes) {
+      inst.setColorAt(i, _tempColor);
+      if (inst.instanceColor) inst.instanceColor.needsUpdate = true;
+    }
   }
 
   /**
@@ -565,7 +579,7 @@ export class InstancedGltfModelMeshDesc extends MeshDesc<
   ): void {
     invariant(this.gltf, "GLTF must be loaded before initSkinnedPath");
     // SkeletonUtils.clone shares materials — patch the source scene once.
-    this.patchMaterials(this.gltf.scene, false);
+    this.patchMaterials(this.gltf.scene);
 
     for (const cfg of initialConfigs) {
       this.addSkinnedInstance(root, cfg);
@@ -758,6 +772,14 @@ export class InstancedGltfModelMeshDesc extends MeshDesc<
         newInst.setMatrixAt(i, m);
       }
       newInst.instanceMatrix.needsUpdate = true;
+
+      if (inst.instanceColor) {
+        for (let i = 0; i < oldCount; i++) {
+          inst.getColorAt(i, _tempColor);
+          newInst.setColorAt(i, _tempColor);
+        }
+        if (newInst.instanceColor) newInst.instanceColor.needsUpdate = true;
+      }
 
       root.remove(inst);
       root.add(newInst);

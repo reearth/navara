@@ -107,14 +107,54 @@ function generateSpheres(count: number, cluster: Cluster): SphereChildConfig[] {
   return out;
 }
 
-function generatePlanes(count: number, cluster: Cluster): PlaneChildConfig[] {
+// Planes lie flat in xz, so two close planes overlap. Lay them out on a
+// shuffled grid in the plane cluster and constrain plane size + per-cell
+// offset so footprints stay inside their cell.
+const PLANE_CELL_SIZE = 200;
+const PLANE_MAX_SIZE = 180;
+const PLANE_MIN_SIZE = 60;
+
+function buildPlaneCells(cluster: Cluster): { x: number; z: number }[] {
+  const cells: { x: number; z: number }[] = [];
+  const half = Math.ceil(CLUSTER_RADIUS / PLANE_CELL_SIZE);
+  const r2 = CLUSTER_RADIUS * CLUSTER_RADIUS;
+  for (let i = -half; i < half; i++) {
+    for (let j = -half; j < half; j++) {
+      const dx = (i + 0.5) * PLANE_CELL_SIZE;
+      const dz = (j + 0.5) * PLANE_CELL_SIZE;
+      if (dx * dx + dz * dz > r2) continue;
+      cells.push({ x: cluster.cx + dx, z: cluster.cz + dz });
+    }
+  }
+  for (let i = cells.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [cells[i], cells[j]] = [cells[j], cells[i]];
+  }
+  return cells;
+}
+
+const planeCells = buildPlaneCells(CLUSTERS.planes);
+let planeCursor = 0;
+
+function generatePlanes(count: number): PlaneChildConfig[] {
   const out: PlaneChildConfig[] = [];
-  for (let i = 0; i < count; i++) {
-    const { x, z } = randomPointInCluster(cluster, CLUSTER_RADIUS);
+  const take = Math.min(count, planeCells.length - planeCursor);
+  for (let i = 0; i < take; i++) {
+    const { x, z } = planeCells[planeCursor++];
+    const w =
+      PLANE_MIN_SIZE + Math.random() * (PLANE_MAX_SIZE - PLANE_MIN_SIZE);
+    const h =
+      PLANE_MIN_SIZE + Math.random() * (PLANE_MAX_SIZE - PLANE_MIN_SIZE);
+    const jitterX = (PLANE_CELL_SIZE - w) / 2;
+    const jitterZ = (PLANE_CELL_SIZE - h) / 2;
     out.push({
-      width: 80 + Math.random() * 120,
-      height: 80 + Math.random() * 120,
-      position: { x, y: 5, z },
+      width: w,
+      height: h,
+      position: {
+        x: x + (Math.random() * 2 - 1) * jitterX,
+        y: 5,
+        z: z + (Math.random() * 2 - 1) * jitterZ,
+      },
       rotation: { x: -Math.PI / 2, y: 0, z: 0 },
       color: new Color().setStyle(
         `hsl(${Math.random() * 360}, ${50 + Math.random() * 50}%, ${30 + Math.random() * 50}%)`,
@@ -237,7 +277,7 @@ const run = async () => {
   const planesLayer = view.addMesh<InstancedPlaneMeshDesc>({
     planes: {
       receiveShadow: true,
-      children: generatePlanes(PLANE_COUNT, CLUSTERS.planes),
+      children: generatePlanes(PLANE_COUNT),
     },
     matrixWorld,
   });
@@ -301,7 +341,7 @@ const run = async () => {
 
   const planesFolder = pane.addFolder({ title: "Planes" });
   planesFolder.addButton({ title: "Add 50" }).on("click", () => {
-    for (const p of generatePlanes(50, CLUSTERS.planes)) planesLayer.ref.add(p);
+    for (const p of generatePlanes(50)) planesLayer.ref.add(p);
   });
   planesFolder.addButton({ title: "Remove First 50" }).on("click", () => {
     const count = Math.min(50, planesLayer.ref.count);

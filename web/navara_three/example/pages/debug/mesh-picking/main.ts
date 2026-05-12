@@ -28,13 +28,7 @@ import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
-import {
-  Color as ThreeColor,
-  InstancedBufferAttribute,
-  InstancedMesh,
-  Mesh,
-  MeshStandardMaterial,
-} from "three";
+import { Mesh, MeshStandardMaterial } from "three";
 import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../../helpers/attributions";
@@ -573,20 +567,8 @@ const run = async () => {
       }
       idx = instancedGltfLayer.ref.batchIds.indexOf(batchId);
       if (idx >= 0) {
-        // Per-instance tint via InstancedMesh.setColorAt — three.js multiplies
-        // this into the material color when `instanceColor` is present, so it
-        // works without editing the shared GLTF material.
-        const i = idx;
-        const threeColor = new ThreeColor(color);
-        instancedGltfLayer.ref.raw?.traverse((child) => {
-          if (!(child instanceof InstancedMesh)) return;
-          if (!child.instanceColor) {
-            const data = new Float32Array(child.count * 3).fill(1);
-            child.instanceColor = new InstancedBufferAttribute(data, 3);
-          }
-          child.setColorAt(i, threeColor);
-          child.instanceColor.needsUpdate = true;
-        });
+        instancedGltfLayer.ref.updateAt(idx, { color: c });
+        return;
       }
     }
   }
