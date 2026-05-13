@@ -123,10 +123,11 @@ export class ModelMesh
       this.overrideCesium3DTilesMaterial(meshMaterial, batchIds, dataSize);
     }
 
-    if (meshMaterial.__internal__?.pointCloud) {
-      // Point cloud specific initialization can go here
-      this.overridePntsMaterial(meshMaterial);
-    }
+    // `overridePntsMaterial` traverses `THREE.Points` nodes via `traversePoints`
+    // and is a no-op when none are present. Always invoking it gives per-node
+    // accuracy for mixed-mode glTFs (POINTS + TRIANGLES) at near-zero cost for
+    // pure-mesh tiles.
+    this.overridePntsMaterial(meshMaterial);
 
     this.visible = meshMaterial.show ?? true;
   }
@@ -299,6 +300,7 @@ export class ModelMesh
       pointSize: meshMaterial.pointSize ?? 1,
       height: meshMaterial.height ?? 0,
       geodeticNormal,
+      divideColor: meshMaterial.__internal__?.pointCloud,
     };
 
     this.traversePoints((points) => {
@@ -335,25 +337,23 @@ export class ModelMesh
   _update(material: NavaraModelMaterial, active: boolean) {
     this.visible = (material.show ?? true) && active;
 
-    if (!material.__internal__?.pointCloud) {
-      // Update all enhancers with new props
-      const updateProps = this.buildUpdateProps(material);
-      for (const [mesh, enhancer] of this._enhancers) {
-        enhancer.update(updateProps);
+    // Each enhancer map is populated only for its node type, so empty maps
+    // iterate trivially. Running both lets mixed-mode glTFs (POINTS + TRIANGLES)
+    // update each node with the right props without a tile-level flag.
+    const updateProps = this.buildUpdateProps(material);
+    for (const [mesh, enhancer] of this._enhancers) {
+      enhancer.update(updateProps);
+      mesh.castShadow = !!material.castShadow;
+      mesh.receiveShadow = !!material.receiveShadow;
+    }
 
-        // Update mesh properties not managed by enhancer
-        mesh.castShadow = !!material.castShadow;
-        mesh.receiveShadow = !!material.receiveShadow;
-      }
-    } else {
-      const pntsProps: PntsProps = {
-        color: material.color,
-        pointSize: material.pointSize,
-        height: material.height,
-      };
-      for (const enhancer of this._pntsEnhancers.values()) {
-        enhancer.update(pntsProps);
-      }
+    const pntsProps: PntsProps = {
+      color: material.color,
+      pointSize: material.pointSize,
+      height: material.height,
+    };
+    for (const enhancer of this._pntsEnhancers.values()) {
+      enhancer.update(pntsProps);
     }
   }
 

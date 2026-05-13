@@ -21,6 +21,12 @@ testShaderCompatibility(
         geodeticNormal: { x: 0.1, y: 0.2, z: 0.97 },
       },
     },
+    {
+      name: "With divideColor",
+      props: {
+        divideColor: true,
+      },
+    },
   ],
   PNTS_SHADER_MARKERS,
 );
