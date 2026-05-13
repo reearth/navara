@@ -14,3 +14,11 @@ export {
   type WorldPosition,
   type ProjectedPosition,
 } from "./OverlayPlugin";
+
+export {
+  SplatMeshDesc,
+  type SplatMeshConfig,
+  type SplatMeshUpdate,
+} from "./SplatMeshDesc";
+
+export { SplatPlugin, type SplatDescriptions } from "./SplatPlugin";

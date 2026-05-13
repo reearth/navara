@@ -41,8 +41,6 @@ import {
   type SmoothLineMeshConfig,
   InstancedBoxMeshDesc,
   type InstancedBoxMeshConfig,
-  SplatMeshDesc,
-  type SplatMeshConfig,
   AerialPerspectiveEffectDesc,
   CloudsEffectDesc,
   ColorGradingLUTEffectDesc,
@@ -108,7 +106,6 @@ export class DefaultPlugin extends Plugin<
     view.registerMesh("arcLines", ArclineMeshDesc);
     view.registerMesh("smoothLines", SmoothLineMeshDesc);
     view.registerMesh("boxes", InstancedBoxMeshDesc);
-    view.registerMesh("splat", SplatMeshDesc);
 
     // Register lights
     view.registerLight("sun", SunLightDesc);
@@ -263,5 +260,4 @@ export type DefaultMeshDescription =
   | ArrowHelperConfig
   | ArclineMeshConfig
   | SmoothLineMeshConfig
-  | InstancedBoxMeshConfig
-  | SplatMeshConfig;
+  | InstancedBoxMeshConfig;
