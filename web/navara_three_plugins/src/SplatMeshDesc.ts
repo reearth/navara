@@ -29,8 +29,8 @@ type SharedEntry = {
   renderer: SparkRenderer;
   refCount: number;
   enableLod: boolean;
-  /** sparkOverride snapshot from first acquire; restored on final release. */
-  previousOverride: SparkRenderer | undefined;
+  /** Whether we hold a `ConcurrencyManager` slot for this renderer. */
+  reservedSlot: boolean;
 };
 
 const shared = new WeakMap<Scene, SharedEntry>();
@@ -53,7 +53,7 @@ function acquireSparkRenderer(
   if (existing) {
     if (existing.enableLod !== opts.enableLod) {
       console.warn(
-        `SplatMeshDesc: SparkRenderer is already shared with enableLod=${existing.enableLod}; ignoring requested ${opts.enableLod}.`,
+        `SplatMeshDesc: SparkRenderer is already shared with splat.lod=${existing.enableLod}; ignoring requested splat.lod=${opts.enableLod}.`,
       );
     }
     existing.refCount += 1;
@@ -74,14 +74,22 @@ function acquireSparkRenderer(
     encodeLinear,
   });
   target.add(renderer);
-  const previousOverride = SparkRenderer.sparkOverride;
   SparkRenderer.sparkOverride = renderer;
+
+  // Reserve one ConcurrencyManager slot for SparkJS's sort/LoD workers.
+  // Per-renderer (not per-mesh) — adding more SplatMesh instances to the
+  // same SparkRenderer doesn't spawn extra workers. canIncrement() guards
+  // against an unmatched decrement when the manager is at capacity.
+  const reservedSlot = ctx.concurrencyManager.canIncrement();
+  if (reservedSlot) {
+    ctx.concurrencyManager.increment();
+  }
 
   shared.set(target, {
     renderer,
     refCount: 1,
     enableLod: opts.enableLod,
-    previousOverride,
+    reservedSlot,
   });
   return renderer;
 }
@@ -96,8 +104,15 @@ function releaseSparkRenderer(ctx: ViewContext): void {
 
   target.remove(entry.renderer);
   entry.renderer.dispose();
+  // Clear to undefined rather than restoring a saved override: a saved
+  // pointer could outlive its renderer's disposal and become dangling. The
+  // next active view re-asserts sparkOverride via the existing-entry path
+  // in acquireSparkRenderer(), so we don't need to track previous values.
   if (SparkRenderer.sparkOverride === entry.renderer) {
-    SparkRenderer.sparkOverride = entry.previousOverride;
+    SparkRenderer.sparkOverride = undefined;
+  }
+  if (entry.reservedSlot) {
+    ctx.concurrencyManager.decrement();
   }
   shared.delete(target);
 }
@@ -116,7 +131,6 @@ export class SplatMeshDesc extends MeshDesc<
   SplatMesh
 > {
   private config: SplatMeshConfig;
-  private incremented = false;
 
   constructor(view: ThreeView, ctx: ViewContext, config: SplatMeshConfig) {
     super(view, ctx, config);
@@ -136,23 +150,11 @@ export class SplatMeshDesc extends MeshDesc<
     const lod = cfg.lod ?? false;
     acquireSparkRenderer(this.ctx, { enableLod: lod });
 
-    // Reserve a Worker slot so SparkJS's sort/LoD threads aren't starved by
-    // tile/GLTF loaders. Guard with canIncrement() because increment() is a
-    // no-op at capacity, which would unbalance the matching decrement.
-    if (this.ctx.concurrencyManager.canIncrement()) {
-      this.ctx.concurrencyManager.increment();
-      this.incremented = true;
-    }
-
     const mesh = new SplatMesh({ url: cfg.url, lod });
     mesh.initialized
       .then(() => this.requestUpdate())
       .catch((err: unknown) => {
         console.warn("SplatMesh load failed:", err);
-        // Free the Worker slot now — a failed splat won't run sort/LoD. The
-        // SparkRenderer ref stays alive until onDestroy so siblings keep
-        // working.
-        this.releaseWorkerSlot();
       });
     return mesh;
   }
@@ -178,13 +180,5 @@ export class SplatMeshDesc extends MeshDesc<
     mesh?.dispose();
 
     releaseSparkRenderer(this.ctx);
-    this.releaseWorkerSlot();
-  }
-
-  private releaseWorkerSlot(): void {
-    if (this.incremented) {
-      this.ctx.concurrencyManager.decrement();
-      this.incremented = false;
-    }
   }
 }
