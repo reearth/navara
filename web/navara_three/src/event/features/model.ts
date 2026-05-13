@@ -31,7 +31,11 @@ export async function renderModel(ctx: EventContext, m: NavaraModelMesh) {
         return {};
       }
 
-      if (m.material.__internal__?.pointCloud) {
+      const internal = m.material.__internal__;
+      // PNTS legacy bin path: only the PNTS parser sets `pointCloud=true`, and the
+      // bin here is the extracted position buffer (Draco blob or raw f32), not glTF.
+      // 3D Tiles 1.1 glTF tiles (point cloud or not) take the GLTFLoader path below.
+      if (internal?.pointCloud) {
         let geometry: BufferGeometry | undefined;
         const material = new PointsMaterial({
           size: m.material.pointSize,
@@ -39,7 +43,7 @@ export async function renderModel(ctx: EventContext, m: NavaraModelMesh) {
           sizeAttenuation: false,
         });
 
-        if (m.material.__internal__?.dracoCompressed) {
+        if (internal.dracoCompressed) {
           geometry = await decompressDraco(
             bin.buffer as ArrayBuffer,
             dracoLoader,

@@ -24,8 +24,12 @@ Navara supports the following 3D Tiles specifications:
 | Feature | Description |
 | ------- | ----------- |
 | GLB content | Tiles using GLB (binary glTF) as the content format |
+| GLB POINTS primitive | Point cloud rendering for glTF meshes with `mode: POINTS` (3D Tiles 1.1 point cloud) |
 | `EXT_mesh_features` | Feature identification via FeatureId sets in glTF meshes |
 | `EXT_structural_metadata` | Access to per-feature metadata via property tables embedded in glTF assets |
+| `KHR_draco_mesh_compression` | Decoding of Draco-compressed mesh data |
+| `KHR_mesh_quantization` | Quantized vertex attributes for compact glTF assets |
+| `EXT_meshopt_compression` | Decoding of meshopt-compressed buffers |
 
 :::note
 - Only GLB (binary glTF container) is supported. Plain `.gltf` files referencing external `.bin` buffers are not yet supported.
