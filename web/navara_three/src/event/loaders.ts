@@ -1,7 +1,7 @@
 import type { ConcurrencyManager } from "@navara/worker";
 import { BufferGeometry, Cache, ImageLoader, TextureLoader } from "three";
+import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import { DRACOLoader as DRACODecoder } from "three/addons/loaders/DRACOLoader.js";
-import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import { DRACOLoader, GLTFLoader } from "three-stdlib";
 
 import { AbortableImageLoader } from "../loaders";

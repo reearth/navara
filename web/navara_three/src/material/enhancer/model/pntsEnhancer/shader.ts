@@ -12,7 +12,7 @@ const COLOR_DIVISOR = 65535.0;
  *
  * Vertex shader changes:
  * - Adds uAddHeight and uGeodeticNormal uniforms
- * - Scales vertex colors by 1/65535 (PNTS color range normalization)
+ * - When `divideColor` is `true`, scales vertex colors by 1/65535 (PNTS color range normalization)
  * - Offsets vertex position along geodetic normal by uAddHeight
  */
 export const transformShader = (

@@ -18,7 +18,7 @@ export type PntsProps = {
 export type PntsState = Readonly<{
   height: number;
   geodeticNormal: { x: number; y: number; z: number };
-  divideColor: boolean,
+  divideColor: boolean;
 }>;
 
 /**
