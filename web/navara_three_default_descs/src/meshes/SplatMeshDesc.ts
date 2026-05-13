@@ -14,27 +14,10 @@ type Description = {
     /** URL of the splat file (.spz, .ply, .splat, .ksplat, .pcsogs, etc.). */
     url: string;
     /**
-     * Level-of-Detail mode.
-     * - `false` (default): render every splat.
-     * - `true`: build an in-memory Tiny LoD tree and pick splats per frame.
-     * - `"quality"`: rebuild the LoD tree at higher precision (slower init,
-     *   crisper distant splats).
-     *
-     * Set at creation time only.
+     * Enable Level-of-Detail. `false` (default) renders every splat each
+     * frame; `true` builds an in-memory LoD tree and picks splats per frame.
      */
-    lod?: boolean | "quality";
-    /**
-     * Per-mesh LoD detail scale. `1.0` = default; higher values keep more
-     * splats per frame for this mesh. Effective only when `lod` is enabled.
-     * Set at creation time only.
-     */
-    lodScale?: number;
-    /**
-     * Conical foveation factor in `[0, 1]`. `0` disables. Higher values trim
-     * splats outside the focal cone more aggressively for performance.
-     * Set at creation time only.
-     */
-    coneFoveate?: number;
+    lod?: boolean;
   };
 };
 
@@ -153,9 +136,7 @@ export class SplatMeshDesc extends MeshDesc<
     }
 
     const lod = cfg.lod ?? false;
-    // Spark's `lod` accepts boolean | "quality"; the shared SparkRenderer only
-    // needs to know whether any mesh uses LoD, so coerce to boolean here.
-    acquireSparkRenderer(this.ctx, { enableLod: Boolean(lod) });
+    acquireSparkRenderer(this.ctx, { enableLod: lod });
 
     // SparkJS uses a small worker pool internally for sorting and LoD. Reserve
     // a slot in Navara's ConcurrencyManager so other consumers (tile/GLTF
@@ -163,12 +144,7 @@ export class SplatMeshDesc extends MeshDesc<
     this.ctx.concurrencyManager.increment();
     this.incremented = true;
 
-    const mesh = new SplatMesh({
-      url: cfg.url,
-      lod,
-      lodScale: cfg.lodScale,
-      coneFoveate: cfg.coneFoveate,
-    });
+    const mesh = new SplatMesh({ url: cfg.url, lod });
     mesh.initialized
       .then(() => this.requestUpdate())
       .catch((err) => {
@@ -190,8 +166,6 @@ export class SplatMeshDesc extends MeshDesc<
     const immutable: (keyof NonNullable<Description["splat"]>)[] = [
       "url",
       "lod",
-      "lodScale",
-      "coneFoveate",
     ];
     for (const key of immutable) {
       if (next?.[key] !== undefined && next[key] !== current?.[key]) {
