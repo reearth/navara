@@ -389,6 +389,9 @@ importers:
 
   web/navara_three_default_descs:
     dependencies:
+      '@sparkjsdev/spark':
+        specifier: ^2.0.0
+        version: 2.0.0(three@0.184.0)
       '@takram/three-atmosphere':
         specifier: 0.19.1
         version: 0.19.1(@react-three/fiber@9.1.2(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(three@0.184.0))(postprocessing@6.38.3(three@0.184.0))(react@19.2.5)(three@0.184.0)
@@ -441,10 +444,6 @@ importers:
         version: link:../navara_three
 
   web/navara_three_plugins:
-    dependencies:
-      '@sparkjsdev/spark':
-        specifier: ^2.0.0
-        version: 2.0.0(three@0.184.0)
     devDependencies:
       '@navara/three':
         specifier: workspace:*

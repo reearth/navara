@@ -4,25 +4,17 @@ import ThreeView, {
   geodeticSurfaceNormal,
   radianToDegree,
 } from "@navara/three";
+import type { SplatMeshDesc } from "@navara/three_default_descs";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
-import {
-  SplatPlugin,
-  type SplatMeshConfig,
-  type SplatMeshDesc,
-} from "@navara/three_plugins";
 import { Vector3, Quaternion, Euler } from "three";
 import { Pane } from "tweakpane";
 
 import { TILE_DATASETS } from "../../helpers/constants";
 
-export type CustomDescriptions = {
-  mesh: DefaultDescriptions["mesh"] | SplatMeshConfig;
-  light: DefaultDescriptions["light"];
-  effect: DefaultDescriptions["effect"];
-};
+export type CustomDescriptions = DefaultDescriptions;
 
 const CENTER = {
   lat: 35.71006,
@@ -149,7 +141,6 @@ const placeSplat = (
 export const run = async (view: ThreeView<CustomDescriptions>) => {
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
-  view.addPlugin(new SplatPlugin());
   await view.init();
 
   plugin.addDefaultPhotorealScene();

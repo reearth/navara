@@ -34,6 +34,7 @@
     "three": ">=0.183.0"
   },
   "dependencies": {
+    "@sparkjsdev/spark": "^2.0.0",
     "@takram/three-atmosphere": "0.19.1",
     "@takram/three-clouds": "0.7.6",
     "@takram/three-geospatial": "0.9.1",
