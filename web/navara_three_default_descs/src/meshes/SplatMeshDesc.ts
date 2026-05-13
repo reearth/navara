@@ -29,32 +29,25 @@ type SharedEntry = {
   renderer: SparkRenderer;
   refCount: number;
   enableLod: boolean;
-  /**
-   * Whatever `SparkRenderer.sparkOverride` was pointing at when we first
-   * acquired (typically `undefined`, but could be a renderer owned by another
-   * ThreeView). Restored when the last ref is released so we don't trash a
-   * neighbouring view's override.
-   */
+  /** sparkOverride snapshot from first acquire; restored on final release. */
   previousOverride: SparkRenderer | undefined;
 };
 
 const shared = new WeakMap<Scene, SharedEntry>();
 
 /**
- * SparkRenderer is a `THREE.Mesh` that aggregates every `SplatMesh` in the
- * scene each frame. It must live in the same scene as the splats and there
- * should be exactly one per ThreeView. We share it across all `SplatMeshDesc`
- * instances via a refCount and lazy init: the first descriptor creates it,
- * the last destroys it. `SparkRenderer.sparkOverride` is a Spark-side static
- * that lets new `SplatMesh` instances find this renderer automatically.
+ * Lazily creates a single shared `SparkRenderer` per scene, ref-counted so
+ * the last `SplatMeshDesc` to release also disposes it. `SparkRenderer` is a
+ * `THREE.Mesh` that aggregates every `SplatMesh` in the scene each frame and
+ * must live in the scene to function. `SparkRenderer.sparkOverride` is a
+ * Spark-side static that lets new `SplatMesh` instances find this renderer.
  */
 function acquireSparkRenderer(
   ctx: ViewContext,
   opts: { enableLod: boolean },
 ): SparkRenderer {
-  // Use the transparent scene so splats render *after* the atmosphere /
-  // aerial-perspective post-effects. This preserves the splat's original
-  // color and crispness; atmosphere is only applied to the opaque MRT pass.
+  // transparent scene renders after atmosphere/aerial-perspective post-effects,
+  // preserving the splat's baked color.
   const target = ctx.scenes.transparent;
   const existing = shared.get(target);
   if (existing) {
@@ -70,12 +63,8 @@ function acquireSparkRenderer(
     return existing.renderer;
   }
 
-  // Match Spark's output color space to whatever the post-processing pipeline
-  // is using internally. Navara's EffectComposer uses HalfFloatType
-  // intermediate buffers (RenderPassOrchestrator.ts) which hold linear values
-  // and have an empty `colorSpace` tag (NoColorSpace). The pipeline performs
-  // a single sRGB encoding at the very end. So Spark must emit linear unless
-  // the intermediate buffer is explicitly sRGB-tagged.
+  // Spark must emit linear when the post-pp pipeline targets are linear,
+  // otherwise the final sRGB pass double-encodes.
   const encodeLinear =
     ctx.getInputBuffer().texture.colorSpace !== SRGBColorSpace;
 
@@ -85,8 +74,6 @@ function acquireSparkRenderer(
     encodeLinear,
   });
   target.add(renderer);
-  // Capture whatever override was set before us so release can restore it,
-  // instead of unconditionally clearing it (which would break a peer view).
   const previousOverride = SparkRenderer.sparkOverride;
   SparkRenderer.sparkOverride = renderer;
 
@@ -113,6 +100,14 @@ function releaseSparkRenderer(ctx: ViewContext): void {
     SparkRenderer.sparkOverride = entry.previousOverride;
   }
   shared.delete(target);
+}
+
+function warnIfChanged<T>(field: string, next: T, current: T): void {
+  if (next !== undefined && next !== current) {
+    console.warn(
+      `SplatMeshDesc: splat.${field} cannot be changed after creation; recreate the descriptor.`,
+    );
+  }
 }
 
 export class SplatMeshDesc extends MeshDesc<
@@ -154,13 +149,10 @@ export class SplatMeshDesc extends MeshDesc<
       .then(() => this.requestUpdate())
       .catch((err) => {
         console.warn("SplatMesh load failed:", err);
-        // The splat will never produce frames, so release the worker slot
-        // reserved at creation. SparkRenderer ref stays alive until onDestroy
-        // so any sibling splats keep working.
-        if (this.incremented) {
-          this.ctx.concurrencyManager.decrement();
-          this.incremented = false;
-        }
+        // Free the Worker slot now — a failed splat won't run sort/LoD. The
+        // SparkRenderer ref stays alive until onDestroy so siblings keep
+        // working.
+        this.releaseWorkerSlot();
       });
     return mesh;
   }
@@ -168,21 +160,10 @@ export class SplatMeshDesc extends MeshDesc<
   onUpdateConfig(updates: SplatMeshUpdate): void {
     const next = updates.splat;
     const current = this.config.splat;
-    const immutable: (keyof NonNullable<Description["splat"]>)[] = [
-      "url",
-      "lod",
-    ];
-    for (const key of immutable) {
-      if (next?.[key] !== undefined && next[key] !== current?.[key]) {
-        console.warn(
-          `SplatMeshDesc: splat.${key} cannot be changed after creation; recreate the descriptor.`,
-        );
-      }
-    }
-    // Keep the stored config in sync with the latest requested values so a
-    // repeated update with the same value doesn't re-warn. Note: immutable
-    // fields are still effectively frozen at the rendered splat — this only
-    // affects what we compare against next time.
+    warnIfChanged("url", next?.url, current?.url);
+    warnIfChanged("lod", next?.lod, current?.lod);
+    // Sync so a repeated update with the same value doesn't re-warn. The
+    // rendered splat stays frozen at construction values regardless.
     if (next && current) {
       Object.assign(current, next);
     }
@@ -190,16 +171,17 @@ export class SplatMeshDesc extends MeshDesc<
   }
 
   override onDestroy(): void {
-    // Capture the SplatMesh before `super.onDestroy()` runs: the base
-    // implementation reads `this.raw` (= `_instance`) to remove the mesh from
-    // its parent scene, then `BaseDesc.onDestroy()` clears `_instance`.
-    // Disposing the mesh's GPU resources must happen AFTER the scene removal
-    // but the reference would be gone — so we grab it here.
+    // super removes from scene then nulls _instance; capture the ref so we
+    // can dispose the splat after the scene removal.
     const mesh = this._instance;
     super.onDestroy();
     mesh?.dispose();
 
     releaseSparkRenderer(this.ctx);
+    this.releaseWorkerSlot();
+  }
+
+  private releaseWorkerSlot(): void {
     if (this.incremented) {
       this.ctx.concurrencyManager.decrement();
       this.incremented = false;
