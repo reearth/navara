@@ -73,8 +73,6 @@ import { registerInputEvents } from "./input";
 import { Layer, type LayerEvent } from "./layer";
 import {
   MRTPassEffectDesc,
-  SelectiveBloomEffectDesc,
-  SelectiveOutlineEffectDesc,
   SkyEnvMapEffectDesc,
   TransparentPassEffectDesc,
 } from "./layers/effect";
@@ -1458,12 +1456,6 @@ export default class ThreeView<
   private registerBuiltInEffects(): void {
     this.registerEffect("skyEnvMap", SkyEnvMapEffectDesc);
     this.registerEffect("mrt", MRTPassEffectDesc);
-
-    // SelectiveEffect effects
-    this.registerEffect("selectiveBloom", SelectiveBloomEffectDesc);
-    this.registerEffect("selectiveOutline", SelectiveOutlineEffectDesc);
-    // TODO: Curve out opaque pass from MRT pass.
-    // this.registerEffect("opaque", OpaquePassEffectDesc);
     this.registerEffect("transparent", TransparentPassEffectDesc);
 
     this.registerEffect("final", FinalCopyEffectDesc);

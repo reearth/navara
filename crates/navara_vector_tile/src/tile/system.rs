@@ -152,6 +152,7 @@ pub fn update_tiles(
                 &mut renderable_features,
                 &fog,
                 false,
+                false,
                 &terrain_layer,
                 &terrain_qt,
                 is_rendered.then_some(zero_tile_handle),

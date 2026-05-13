@@ -139,12 +139,10 @@ pub fn update_tiles(
     };
     let zero_tile_handle = zero_tile.handle();
 
-    let has_tile_layer = !tiles.is_empty();
-
     let is_texture_ready = qt.qt.get_mut(zero_tile_handle).unwrap().is_texture_ready(
         &texture_fragment,
         &data_requesters,
-        has_tile_layer,
+        tiles,
     );
 
     let traversal_result = traverse_tile(
@@ -167,6 +165,7 @@ pub fn update_tiles(
         &mut meshes,
         &fog,
         globe.max_sse as f64,
+        false,
         false,
         is_texture_ready.then_some(zero_tile_handle),
         None,
@@ -947,7 +946,7 @@ pub fn update_mesh_material(
         let tile_layers_len = tile_layers.iter().len();
 
         // Use parent if tile isn't ready (all-or-nothing to respect single UV transform)
-        let is_ready = tile.is_texture_ready(&texture_fragment, &data_requesters, true);
+        let is_ready = tile.is_texture_ready(&texture_fragment, &data_requesters, &tile_layers);
 
         if !is_ready && let Some(parent) = parent_tile {
             parent_z = Some(parent.coords.z);

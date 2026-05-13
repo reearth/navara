@@ -25,175 +25,342 @@ pub(crate) fn request_texture_fragment(
     priority: Priority,
     buf: &mut BufferStore,
 ) {
-    let tiles_len = tiles.iter().len();
+    let sorted_tiles: Vec<_> = tiles.iter().sort::<&Order>().collect();
+    let tiles_len = sorted_tiles.len();
+    if tiles_len == 0 {
+        return;
+    }
 
-    // Check if all layers have entities (either in texture_fragment_entity_ids or hillshade_entity_ids)
-    let all_layers_requested = leaf
+    let coords = leaf.coords;
+    let sse = leaf.sse;
+    let distance_from_camera = leaf.distance_from_camera;
+
+    // Both arrays must match `tiles_len`. Filter systems clear rejected slots
+    // to None (rather than removing) so layer-index alignment is preserved
+    // across frames. When a layer is added between calls, `add_order_to_tiles_layer`
+    // assigns it the highest Order, so extending the arrays with trailing Nones
+    // keeps existing layer indices intact; `delete_layer` handles shrinking.
+    let tex_ids = leaf
         .texture_fragment_entity_ids
-        .as_ref()
-        .zip(leaf.hillshade_entity_ids.as_ref())
-        .is_some_and(|(tex_ids, hill_ids)| {
-            tex_ids.len() == tiles_len
-                && hill_ids.len() == tiles_len
-                && tex_ids
-                    .iter()
-                    .zip(hill_ids.iter())
-                    .all(|(tex_opt, hill_opt)| {
-                        // Check texture entity (TextureFragment only)
-                        if let Some(tex_e) = tex_opt {
-                            texture_fragment.contains(*tex_e)
-                        }
-                        // Check hillshade entity (DataRequester only)
-                        else if let Some(hill_e) = hill_opt {
-                            data_requesters.get(*hill_e).is_ok()
-                        } else {
-                            // Both None means this layer was skipped (for example due to
-                            // min/max zoom), so there is nothing to request for this layer.
-                            // This is treated as "already handled" for all_layers_requested,
-                            // but it does not imply the tile is texture-ready in other checks.
-                            true
-                        }
-                    })
-        });
+        .get_or_insert_with(|| vec![None; tiles_len]);
+    if tex_ids.len() < tiles_len {
+        tex_ids.resize(tiles_len, None);
+    }
+    let hill_ids = leaf
+        .hillshade_entity_ids
+        .get_or_insert_with(|| vec![None; tiles_len]);
+    if hill_ids.len() < tiles_len {
+        hill_ids.resize(tiles_len, None);
+    }
 
+    // Check whether every layer is already handled.
+    // Out-of-zoom layers stay None; regular layers must have a queryable
+    // TextureFragment entity; hillshade layers must have a queryable DataRequester.
+    let all_layers_requested = {
+        let tex_ids = leaf.texture_fragment_entity_ids.as_ref().unwrap();
+        let hill_ids = leaf.hillshade_entity_ids.as_ref().unwrap();
+        sorted_tiles.iter().enumerate().all(|(i, (layer, _))| {
+            if !layer.is_over_min_zoom(coords.z) || layer.is_over_max_zoom(coords.z) {
+                return true;
+            }
+            if layer.hillshade_config.is_some() {
+                hill_ids[i].is_some_and(|e| data_requesters.get(e).is_ok())
+            } else {
+                tex_ids[i].is_some_and(|e| texture_fragment.contains(e))
+            }
+        })
+    };
     if all_layers_requested {
         return;
     }
 
-    // Wait until previous request is ready.
-    // Check last texture fragment entity
-    if let Some(Some(e)) = leaf
-        .texture_fragment_entity_ids
-        .as_ref()
-        .and_then(|ids| ids.last())
-        && (texture_fragment.get(*e).is_ok_and(|t| t.1.is_pending())
-            || data_requesters.get(*e).is_ok_and(|r| r.is_pending()))
-    {
-        return;
-    }
-    // Check last hillshade entity
-    if let Some(Some(e)) = leaf
-        .hillshade_entity_ids
-        .as_ref()
-        .and_then(|ids| ids.last())
-        && data_requesters.get(*e).is_ok_and(|r| r.is_pending())
-    {
-        return;
-    }
+    for (i, (layer, _)) in sorted_tiles.iter().enumerate() {
+        // Skip layers whose zoom range excludes this tile. The slot stays None.
+        if !layer.is_over_min_zoom(coords.z) || layer.is_over_max_zoom(coords.z) {
+            continue;
+        }
+        let is_hillshade = layer.hillshade_config.is_some();
 
-    // Calculate idx as max length to handle case where hillshade is enabled after regular textures
-    // This prevents misalignment when texture_fragment_entity_ids and hillshade_entity_ids have different lengths
-    let tex_len = leaf
-        .texture_fragment_entity_ids
-        .as_ref()
-        .map_or(0, |ids| ids.len());
-    let hill_len = leaf
-        .hillshade_entity_ids
-        .as_ref()
-        .map_or(0, |ids| ids.len());
-    let idx = tex_len.max(hill_len);
+        // Skip layers that already have a valid in-flight or completed entity.
+        let already_requested = {
+            let tex_ids = leaf.texture_fragment_entity_ids.as_ref().unwrap();
+            let hill_ids = leaf.hillshade_entity_ids.as_ref().unwrap();
+            if is_hillshade {
+                hill_ids[i].is_some_and(|e| data_requesters.get(e).is_ok())
+            } else {
+                tex_ids[i].is_some_and(|e| texture_fragment.contains(e))
+            }
+        };
+        if already_requested {
+            continue;
+        }
 
-    // Ensure both arrays have same length before processing by padding shorter one with None
-    if tex_len < idx {
-        let tex_ids = leaf
-            .texture_fragment_entity_ids
-            .get_or_insert_with(|| Vec::with_capacity(tiles_len));
-        tex_ids.resize(idx, None);
-    }
-    if hill_len < idx {
-        let hill_ids = leaf
-            .hillshade_entity_ids
-            .get_or_insert_with(|| Vec::with_capacity(tiles_len));
-        hill_ids.resize(idx, None);
-    }
+        let tms = matches!(layer.appearance.as_ref(), Some(Appearance::RasterTile(m)) if m.tms);
+        let url = tile_url(layer.data.as_ref().unwrap().url.as_str(), &coords, tms);
 
-    let mut next_tile = None;
+        let entity_id = if is_hillshade {
+            // Hillshade texture: use DataRequester so Rust can backfill edges.
+            let extension = Url::parse(&url)
+                .ok()
+                .map(|parsed_url| DataRequesterExtension::from_url(&parsed_url))
+                .unwrap_or(DataRequesterExtension::Png); // Fallback to PNG if URL parsing fails
 
-    // Skip requesting a tile that doesn't match `min_zoom` and `max_zoom` conditions,
-    // since selected tile has multiple layers.
-    for (next, _) in tiles.iter().sort::<&Order>().skip(idx) {
-        if !next.is_over_min_zoom(leaf.coords.z) || next.is_over_max_zoom(leaf.coords.z) {
-            // Push None to both arrays to maintain alignment
-            leaf.texture_fragment_entity_ids
-                .get_or_insert_with(|| Vec::with_capacity(tiles_len))
-                .push(None);
-            leaf.hillshade_entity_ids
-                .get_or_insert_with(|| Vec::with_capacity(tiles_len))
-                .push(None);
-            next_tile = None;
+            commands
+                .spawn((
+                    TileTextureFragmentMarker(handle),
+                    HillshadeTextureMarker,
+                    DataRequester::from_store(url, buf, extension),
+                    OrderByDistance {
+                        sse,
+                        distance: distance_from_camera,
+                    },
+                    priority,
+                ))
+                .id()
         } else {
-            next_tile = Some(next);
-            break;
+            commands
+                .spawn((
+                    TileTextureFragmentMarker(handle),
+                    TextureFragment::new(url),
+                    OrderByDistance {
+                        sse,
+                        distance: distance_from_camera,
+                    },
+                    priority,
+                ))
+                .id()
+        };
+
+        if is_hillshade {
+            leaf.hillshade_entity_ids.as_mut().unwrap()[i] = Some(entity_id);
+        } else {
+            leaf.texture_fragment_entity_ids.as_mut().unwrap()[i] = Some(entity_id);
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use bevy_app::{App, Update};
+    use bevy_ecs::{entity::Entity, prelude::Resource, system::ResMut};
+    use navara_core::TileXYZ;
+    use navara_layer::LayerData;
+    use navara_material::{HillshadeConfig, RasterTileMaterial};
+
+    fn regular_layer(layer_id: &str, min_zoom: usize, max_zoom: usize) -> TilesLayer {
+        TilesLayer {
+            layer_id: layer_id.to_string(),
+            data: Some(LayerData {
+                url: "https://example.com/{z}/{x}/{y}.png".to_string(),
+            }),
+            appearance: Some(Appearance::RasterTile(RasterTileMaterial {
+                min_zoom,
+                max_zoom,
+                ..Default::default()
+            })),
+            elevation_heatmap_config: None,
+            hillshade_config: None,
         }
     }
 
-    let Some(next_tile) = next_tile else {
-        return;
-    };
+    fn hillshade_layer(layer_id: &str, min_zoom: usize, max_zoom: usize) -> TilesLayer {
+        TilesLayer {
+            layer_id: layer_id.to_string(),
+            data: Some(LayerData {
+                url: "https://example.com/{z}/{x}/{y}.png".to_string(),
+            }),
+            appearance: Some(Appearance::RasterTile(RasterTileMaterial {
+                min_zoom,
+                max_zoom,
+                ..Default::default()
+            })),
+            elevation_heatmap_config: None,
+            hillshade_config: Some(HillshadeConfig {
+                elevation_decoder: Default::default(),
+                exaggeration: 1.0,
+            }),
+        }
+    }
 
-    let tms = matches!(next_tile.appearance.as_ref(), Some(Appearance::RasterTile(m)) if m.tms);
-    let url = tile_url(
-        next_tile.data.as_ref().unwrap().url.as_str(),
-        &leaf.coords,
-        tms,
-    );
+    #[derive(Resource, Default, Clone)]
+    struct CapturedSlots {
+        tex_ids: Vec<Option<Entity>>,
+        hill_ids: Vec<Option<Entity>>,
+    }
 
-    // Check if current layer is a hillshade texture (needs backfill)
-    let is_hillshade = next_tile.hillshade_config.is_some();
+    /// Run a single update where the caller can mutate a freshly-built `RasterTile`
+    /// before and after the call to `request_texture_fragment`. The post-call state
+    /// of both entity-id arrays is captured into `CapturedSlots`.
+    fn run_request<F>(layers: Vec<(TilesLayer, Order)>, tile_z: usize, prepare: F) -> CapturedSlots
+    where
+        F: FnOnce(&mut RasterTile) + Send + Sync + 'static,
+    {
+        let mut app = App::new();
+        app.init_resource::<BufferStore>();
+        app.init_resource::<CapturedSlots>();
 
-    // Choose different path based on whether it's hillshade
-    let entity = if is_hillshade {
-        // Hillshade texture: use DataRequester (can backfill in Rust)
-        // Use robust extension detection that handles query strings correctly
-        let extension = Url::parse(&url)
-            .ok()
-            .map(|parsed_url| DataRequesterExtension::from_url(&parsed_url))
-            .unwrap_or(DataRequesterExtension::Png); // Fallback to PNG if URL parsing fails
+        for (layer, order) in layers {
+            app.world_mut().spawn((layer, order));
+        }
 
-        commands.spawn((
-            TileTextureFragmentMarker(handle),
-            HillshadeTextureMarker, // Mark this as a hillshade texture for backfill system
-            DataRequester::from_store(url, buf, extension),
-            OrderByDistance {
-                sse: leaf.sse,
-                distance: leaf.distance_from_camera,
+        let prepare = std::sync::Mutex::new(Some(prepare));
+        app.add_systems(
+            Update,
+            move |mut commands: Commands,
+                  mut buf: ResMut<BufferStore>,
+                  tiles: Query<(&TilesLayer, &Order)>,
+                  texture_fragment: TileTextureFragmentQuery,
+                  data_requesters: Query<&DataRequester>,
+                  mut out: ResMut<CapturedSlots>| {
+                let mut tile = RasterTile::new(
+                    TileXYZ {
+                        x: 0,
+                        y: 0,
+                        z: tile_z,
+                    },
+                    0.,
+                    0.,
+                );
+                let prepare = prepare.lock().unwrap().take().unwrap();
+                prepare(&mut tile);
+
+                request_texture_fragment(
+                    &mut commands,
+                    &mut tile,
+                    &tiles,
+                    0,
+                    &texture_fragment,
+                    &data_requesters,
+                    Priority::High,
+                    &mut buf,
+                );
+
+                out.tex_ids = tile.texture_fragment_entity_ids.clone().unwrap_or_default();
+                out.hill_ids = tile.hillshade_entity_ids.clone().unwrap_or_default();
             },
-            priority,
-        ))
-    } else {
-        // Regular texture: continue using TextureFragment (no change to existing functionality)
-        commands.spawn((
-            TileTextureFragmentMarker(handle),
-            TextureFragment::new(url),
-            OrderByDistance {
-                sse: leaf.sse,
-                distance: leaf.distance_from_camera,
+        );
+        app.update();
+        app.world().resource::<CapturedSlots>().clone()
+    }
+
+    /// Regular layers must land in `texture_fragment_entity_ids` and hillshade
+    /// layers must land in `hillshade_entity_ids` — never crossed. This is the
+    /// invariant the misalignment bug used to break.
+    #[test]
+    fn mixed_layers_go_to_correct_arrays() {
+        let captured = run_request(
+            vec![
+                (regular_layer("a", 0, 20), Order(0)),
+                (regular_layer("c", 0, 20), Order(2)),
+                (hillshade_layer("b", 0, 20), Order(1)),
+            ],
+            5,
+            |_| {},
+        );
+
+        assert_eq!(captured.tex_ids.len(), 3);
+        assert_eq!(captured.hill_ids.len(), 3);
+
+        // Layer 0 (regular) — tex has Some, hill stays None.
+        assert!(captured.tex_ids[0].is_some());
+        assert!(captured.hill_ids[0].is_none());
+
+        // Layer 1 (hillshade) — hill has Some, tex stays None.
+        assert!(captured.tex_ids[1].is_none());
+        assert!(captured.hill_ids[1].is_some());
+
+        // Layer 2 (regular) — tex has Some, hill stays None.
+        assert!(captured.tex_ids[2].is_some());
+        assert!(captured.hill_ids[2].is_none());
+    }
+
+    /// When the filter has cleared a layer's slot to None, the next call must
+    /// refill it into the array that matches the layer's type — the regression
+    /// would refill a hillshade layer's slot into `texture_fragment_entity_ids`.
+    #[test]
+    fn filter_rejected_slots_refill_into_correct_array() {
+        // Both arrays start at length 2 with all None — this is the state the
+        // tile is in after the filter rejected the very first attempt on both
+        // layers.
+        let captured = run_request(
+            vec![
+                (regular_layer("a", 0, 20), Order(0)),
+                (hillshade_layer("b", 0, 20), Order(1)),
+            ],
+            5,
+            |tile| {
+                tile.texture_fragment_entity_ids = Some(vec![None, None]);
+                tile.hillshade_entity_ids = Some(vec![None, None]);
             },
-            priority,
-        ))
-    };
+        );
 
-    let id = entity.id();
+        // Layer 0 (regular) is refilled into tex.
+        assert!(captured.tex_ids[0].is_some());
+        assert!(captured.hill_ids[0].is_none());
 
-    if is_hillshade {
-        // Store hillshade entity in dedicated array for efficient neighbor lookup
-        leaf.hillshade_entity_ids
-            .get_or_insert_with(|| Vec::with_capacity(tiles_len))
-            .push(Some(id));
+        // Layer 1 (hillshade) is refilled into hill, NOT tex.
+        assert!(
+            captured.tex_ids[1].is_none(),
+            "hillshade entity must not land in texture_fragment_entity_ids"
+        );
+        assert!(captured.hill_ids[1].is_some());
+    }
 
-        // Push None to texture_fragment_entity_ids to maintain index alignment
-        leaf.texture_fragment_entity_ids
-            .get_or_insert_with(|| Vec::with_capacity(tiles_len))
-            .push(None);
-    } else {
-        // Regular texture: store in texture_fragment_entity_ids only
-        leaf.texture_fragment_entity_ids
-            .get_or_insert_with(|| Vec::with_capacity(tiles_len))
-            .push(Some(id));
+    /// When a layer is added after the tile already has shorter arrays, the
+    /// function must extend them (not panic). The new layer is always appended
+    /// by `add_order_to_tiles_layer`, so trailing Nones preserve existing
+    /// layer-to-index alignment.
+    #[test]
+    fn new_layer_with_shorter_existing_arrays_extends_without_panic() {
+        let captured = run_request(
+            vec![
+                (regular_layer("a", 0, 20), Order(0)),
+                (regular_layer("b", 0, 20), Order(1)),
+                (regular_layer("c", 0, 20), Order(2)),
+            ],
+            5,
+            |tile| {
+                // Tile was previously built with only 2 layers; layer c was
+                // added later. Without resize, accessing tex_ids[2] would panic.
+                tile.texture_fragment_entity_ids = Some(vec![None, None]);
+                tile.hillshade_entity_ids = Some(vec![None, None]);
+            },
+        );
 
-        // Push None to hillshade_entity_ids to maintain index alignment
-        leaf.hillshade_entity_ids
-            .get_or_insert_with(|| Vec::with_capacity(tiles_len))
-            .push(None);
+        assert_eq!(captured.tex_ids.len(), 3);
+        assert_eq!(captured.hill_ids.len(), 3);
+        assert!(
+            captured.tex_ids[2].is_some(),
+            "newly appended layer must be spawned"
+        );
+    }
+
+    /// Out-of-zoom layers must keep both array slots as `None` — no entity is
+    /// spawned for them. This is what tells `is_texture_ready` apart from
+    /// filter rejection.
+    #[test]
+    fn out_of_zoom_layer_leaves_both_slots_none() {
+        // tile is at z=2, layer 1 has min_zoom=10 → out of range.
+        let captured = run_request(
+            vec![
+                (regular_layer("a", 0, 20), Order(0)),
+                (regular_layer("c", 0, 20), Order(2)),
+                (regular_layer("b", 10, 20), Order(1)),
+            ],
+            2,
+            |_| {},
+        );
+
+        assert_eq!(captured.tex_ids.len(), 3);
+        assert_eq!(captured.hill_ids.len(), 3);
+
+        assert!(captured.tex_ids[0].is_some());
+        assert!(
+            captured.tex_ids[1].is_none(),
+            "out-of-zoom layer must not spawn"
+        );
+        assert!(captured.hill_ids[1].is_none());
+        assert!(captured.tex_ids[2].is_some());
     }
 }

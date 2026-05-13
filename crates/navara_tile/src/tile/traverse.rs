@@ -56,6 +56,7 @@ pub fn traverse_tile(
     meshes: &mut Query<&mut Mesh, (With<TileMeshMarker>, Without<Deleted>)>,
     fog: &Fog,
     max_sse: f64,
+    is_ancestor_rendered: bool,
     // This is used to keep rendering current children when parent tile isn't ready after you zoomed out.
     meets_sse_ancestors: bool,
     // This is used to show parent's texture if child's texture isn't ready.
@@ -90,11 +91,6 @@ pub fn traverse_tile(
         None => unreachable!(),
     };
 
-    let is_culled_by_frustum = !tile.intersect_with_camera_frustum(frustum);
-    if is_culled_by_frustum {
-        return TraversalResult::Culled;
-    }
-
     let is_culled_by_occlusion = !tile
         .occludee_point_in_scaled_space
         .map(|p| occluder.is_scaled_space_point_visible(p))
@@ -103,18 +99,20 @@ pub fn traverse_tile(
         return TraversalResult::Culled;
     }
 
+    let is_culled_by_frustum = !tile.intersect_with_camera_frustum(frustum);
+
     let tile_ready_state = tile.is_ready(
         qt,
         texture_fragment,
         data_requesters,
         terrain_data_requester,
         terrain_layer,
-        has_tile_layer,
         tiles,
     );
     let is_tile_ready = tile_ready_state.is_tile_ready;
 
-    let is_rendered_last_frame = tc.rendered_tile_caches.contains_key(&handle);
+    let is_activated = tc.is_rendered_tile_activated(&handle, meshes);
+    let is_rendered_last_frame = is_activated;
 
     let distance_from_camera = tile.calc_distance_from_camera(camera, ellipsoid).abs();
     let sse = tile.calc_sse(
@@ -131,6 +129,7 @@ pub fn traverse_tile(
     tile.distance_from_camera = distance_from_camera;
 
     let were_children_rendered = tile.were_children_rendered;
+    tile.were_children_rendered = false;
 
     // Check only if terrain is exist.
     let is_over_min_z = if has_tile_layer {
@@ -190,11 +189,6 @@ pub fn traverse_tile(
             // Keep rendering children while preparing the tile if it's available, because rendering tile takes some time.
             && !were_children_rendered
         {
-            // Avoid to return an inactivated tile when meets SSE from ancestors.
-            if meets_sse_ancestors && !tc.is_rendered_tile_activated(&handle, meshes) {
-                return TraversalResult::NotFound;
-            }
-
             return TraversalResult::TileRendered;
         }
 
@@ -203,7 +197,8 @@ pub fn traverse_tile(
         }
     }
 
-    if let Some(children) = RasterTile::traversable_children(qt, handle) {
+    // Culled tiles do not traverse children, but they are rendered to prevent parent tiles from flickering.
+    if !is_culled_by_frustum && let Some(children) = RasterTile::traversable_children(qt, handle) {
         let mut any_children_rendered = false;
 
         let ready_parent_tile_handle = if tile_ready_state.is_texture_ready {
@@ -255,6 +250,11 @@ pub fn traverse_tile(
                 meshes,
                 fog,
                 max_sse,
+                if meets_sse_ancestors {
+                    is_ancestor_rendered
+                } else {
+                    is_rendered_last_frame
+                },
                 meets_sse,
                 ready_parent_tile_handle,
                 ready_hillshade_parents.clone(),
@@ -316,10 +316,12 @@ pub fn traverse_tile(
         let allow_updating_state_of_children = !meets_sse && !meets_sse_ancestors;
 
         if any_children_rendered {
-            if are_all_children_activated && allow_updating_state_of_children {
-                let tile = qt.qt.get_mut(handle).unwrap();
-                tile.were_children_rendered = true;
-            }
+            // If the children are rendered to fill the parent, the parent tile replaces them when it is ready.
+            let hide_children = (meets_sse_ancestors && is_ancestor_rendered)
+                || (meets_sse && is_rendered_last_frame);
+
+            let tile = qt.qt.get_mut(handle).unwrap();
+            tile.were_children_rendered = are_all_children_activated && !hide_children;
 
             if allow_updating_state_of_children {
                 for (i, child) in children.iter().enumerate() {
@@ -356,14 +358,15 @@ pub fn traverse_tile(
                     tc.activate_rendered_tile(child, meshes, false);
                     continue;
                 }
+
                 // Activate child tile when children are activated.
-                tc.activate_rendered_tile(child, meshes, are_all_children_prepared);
+                tc.activate_rendered_tile(
+                    child,
+                    meshes,
+                    are_all_children_prepared && !hide_children,
+                );
             }
 
-            // Avoid to render new children while waiting for parent tile is activated.
-            if meets_sse_ancestors && are_all_children_activated {
-                return TraversalResult::ChildrenMeshesPrepared;
-            }
             if allow_updating_state_of_children {
                 if are_all_children_prepared {
                     return TraversalResult::ChildrenMeshesPrepared;
@@ -398,13 +401,6 @@ pub fn traverse_tile(
             );
         }
         return TraversalResult::NotFound;
-    }
-
-    let is_activated = tc.is_rendered_tile_activated(&handle, meshes);
-
-    if meets_sse && !meets_sse_ancestors && is_activated {
-        let tile = qt.qt.get_mut(handle).unwrap();
-        tile.were_children_rendered = false;
     }
 
     // Avoid to return an inactivated tile when meets SSE from ancestors.

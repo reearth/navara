@@ -4,6 +4,7 @@
     "github>reearth/renovate-config",
     ":pinVersions"
   ],
+  "separateMinorPatch": true,
   "packageRules": [
     {
       "matchDepTypes": [
@@ -18,8 +19,11 @@
       "enabled": false
     },
     {
+      "matchManagers": ["npm"],
       "matchUpdateTypes": ["patch"],
-      "groupName": "patch updates"
+      "groupName": "npm patch updates",
+      "groupSlug": "npm-patch",
+      "schedule": ["before 3:00 am on monday"]
     }
   ]
 }

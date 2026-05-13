@@ -63,6 +63,18 @@ export {
   type SSAOConfig,
   type SSAOUpdate,
 } from "./SSAOEffectDesc";
+export {
+  SelectiveBloomEffectDesc,
+  type SelectiveBloomConfig,
+  type SelectiveBloomEffectConfig,
+  type SelectiveBloomEffectUpdate,
+} from "./SelectiveBloomEffectDesc";
+export {
+  SelectiveOutlineEffectDesc,
+  type SelectiveOutlineConfig,
+  type SelectiveOutlineEffectConfig,
+  type SelectiveOutlineEffectUpdate,
+} from "./SelectiveOutlineEffectDesc";
 export { SSREffectDesc, type SSRConfig, type SSRUpdate } from "./SSREffectDesc";
 export {
   ToneMappingEffectDesc,

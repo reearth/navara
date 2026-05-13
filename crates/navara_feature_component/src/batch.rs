@@ -5,6 +5,7 @@ use navara_component::Deleted;
 
 pub use navara_parser::cesium3dtiles::property_table::{PropertyColumnData, PropertyTableData};
 use navara_parser::{b3dm::BatchTable as B3dmBatchTable, mvt::MvtLayerData};
+use navara_property::PropertyValue;
 use rustc_hash::FxHashMap;
 
 use crate::unique_id::{UniqueFeatureId, UniqueGlobalBatchId, UniqueId};
@@ -97,7 +98,48 @@ pub enum BatchProperty {
     Mvt(MvtLayerData),
     /// 3D Tiles 1.1 property table from EXT_structural_metadata.
     /// Properties are decoded lazily from binary buffers on demand.
-    Cesium3dTilesetV11(PropertyTableData),
+    /// Binary data is resolved from BufferStore at read time via the handle.
+    Cesium3dTilesetV11(GltfPropertyTable),
+}
+
+/// Wraps a PropertyTableData with the information needed to resolve
+/// binary data lazily from BufferStore at read time.
+pub struct GltfPropertyTable {
+    pub table: PropertyTableData,
+    /// Handle to the GLB binary in BufferStore.
+    pub handle: Handle,
+    /// Byte offset where the BIN chunk **data** starts within the full GLB binary
+    /// (i.e. after the 8-byte chunk header: chunk_length + chunk_type).
+    pub bin_data_start: usize,
+}
+
+impl GltfPropertyTable {
+    /// Resolve the BIN chunk slice from BufferStore.
+    pub fn resolve_binary<'a>(&self, buf_store: &'a BufferStore) -> Option<&'a [u8]> {
+        let glb = buf_store.get_u8(&self.handle)?;
+        glb.get(self.bin_data_start..)
+    }
+
+    /// Get all properties for a feature at the given index.
+    pub fn get_properties<V: PropertyValue>(
+        &self,
+        index: usize,
+        buf_store: &BufferStore,
+    ) -> Option<V> {
+        let binary = self.resolve_binary(buf_store)?;
+        self.table.get_properties(index, binary)
+    }
+
+    /// Get filtered properties for a feature at the given index.
+    pub fn get_filtered_properties<V: PropertyValue>(
+        &self,
+        index: usize,
+        keys: &[String],
+        buf_store: &BufferStore,
+    ) -> Option<Vec<Option<V>>> {
+        let binary = self.resolve_binary(buf_store)?;
+        self.table.get_filtered_properties(index, keys, binary)
+    }
 }
 
 pub struct BatchTableValue {

@@ -27,3 +27,4 @@ martini.workspace = true
 
 [dev-dependencies]
 approx.workspace = true
+navara_material.workspace = true

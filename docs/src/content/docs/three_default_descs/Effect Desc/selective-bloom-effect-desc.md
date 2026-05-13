@@ -1,6 +1,6 @@
 ---
 title: SelectiveBloomEffectDesc
-description: Selective bloom effect descriptor for navara_three
+description: Selective bloom effect descriptor for navara_three_default_descs
 sidebar:
   order: 61
 ---
@@ -159,11 +159,11 @@ Specifies the occlusion processing mode when applying the effect.
 ### Adding a basic selective bloom
 
 ```typescript
-import ThreeView, {
-  SelectiveBloomEffectDesc,
+import ThreeView, { Color } from "@navara/three";
+import {
   BoxMeshDesc,
-  Color,
-} from "@navara/three";
+  SelectiveBloomEffectDesc,
+} from "@navara/three_default_descs";
 
 const view = new ThreeView();
 await view.init();
@@ -196,7 +196,8 @@ const cubeDesc = view.addMesh<BoxMeshDesc>({
 ### Strong bloom effect
 
 ```typescript
-import ThreeView, { SelectiveBloomEffectDesc } from "@navara/three";
+import ThreeView from "@navara/three";
+import { SelectiveBloomEffectDesc } from "@navara/three_default_descs";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
@@ -219,7 +220,8 @@ const bloomDesc = view.addEffect<SelectiveBloomEffectDesc>({
 ### Performance-oriented settings
 
 ```typescript
-import ThreeView, { SelectiveBloomEffectDesc } from "@navara/three";
+import ThreeView from "@navara/three";
+import { SelectiveBloomEffectDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
 await view.init();
@@ -238,7 +240,8 @@ const bloomDesc = view.addEffect<SelectiveBloomEffectDesc>({
 ### Dynamic bloom effect updates
 
 ```typescript
-import ThreeView, { SelectiveBloomEffectDesc } from "@navara/three";
+import ThreeView from "@navara/three";
+import { SelectiveBloomEffectDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
 await view.init();
@@ -261,7 +264,8 @@ bloomDesc.update({
 ### Applying bloom to 3D Tiles
 
 ```typescript
-import ThreeView, { SelectiveBloomEffectDesc, Color } from "@navara/three";
+import ThreeView, { Color } from "@navara/three";
+import { SelectiveBloomEffectDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
 await view.init();
@@ -293,7 +297,8 @@ const buildingsLayer = view.addLayer({
 ### Applying bloom to GeoJSON models
 
 ```typescript
-import ThreeView, { SelectiveBloomEffectDesc, Color } from "@navara/three";
+import ThreeView from "@navara/three";
+import { SelectiveBloomEffectDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
 await view.init();
