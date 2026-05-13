@@ -93,7 +93,7 @@ export class HillshadeContext {
     }
 
     // Fallback to Terrarium defaults if no decoder found
-    this.cachedConfig = {
+    return {
       rgbScaler: [256, 1, 1 / 256],
       boundary: 0,
       minOffset: 0,
@@ -101,7 +101,6 @@ export class HillshadeContext {
       epsilon: 1.0,
       offset: -32768,
     };
-    return this.cachedConfig;
   }
 
   /**
