@@ -29,8 +29,6 @@ type SharedEntry = {
   renderer: SparkRenderer;
   refCount: number;
   enableLod: boolean;
-  /** Whether we hold a `ConcurrencyManager` slot for this renderer. */
-  reservedSlot: boolean;
 };
 
 const shared = new WeakMap<Scene, SharedEntry>();
@@ -76,20 +74,10 @@ function acquireSparkRenderer(
   target.add(renderer);
   SparkRenderer.sparkOverride = renderer;
 
-  // Reserve one ConcurrencyManager slot for SparkJS's sort/LoD workers.
-  // Per-renderer (not per-mesh) — adding more SplatMesh instances to the
-  // same SparkRenderer doesn't spawn extra workers. canIncrement() guards
-  // against an unmatched decrement when the manager is at capacity.
-  const reservedSlot = ctx.concurrencyManager.canIncrement();
-  if (reservedSlot) {
-    ctx.concurrencyManager.increment();
-  }
-
   shared.set(target, {
     renderer,
     refCount: 1,
     enableLod: opts.enableLod,
-    reservedSlot,
   });
   return renderer;
 }
@@ -111,9 +99,6 @@ function releaseSparkRenderer(ctx: ViewContext): void {
   if (SparkRenderer.sparkOverride === entry.renderer) {
     SparkRenderer.sparkOverride = undefined;
   }
-  if (entry.reservedSlot) {
-    ctx.concurrencyManager.decrement();
-  }
   shared.delete(target);
 }
 
@@ -131,6 +116,8 @@ export class SplatMeshDesc extends MeshDesc<
   SplatMesh
 > {
   private config: SplatMeshConfig;
+  /** Tracks whether this instance holds a slot on `concurrencyManager`. */
+  private holdsSlot = false;
 
   constructor(view: ThreeView, ctx: ViewContext, config: SplatMeshConfig) {
     super(view, ctx, config);
@@ -149,6 +136,14 @@ export class SplatMeshDesc extends MeshDesc<
 
     const lod = cfg.lod ?? false;
     acquireSparkRenderer(this.ctx, { enableLod: lod });
+
+    // Reserve a `ConcurrencyManager` slot for this splat so concurrent splat
+    // loads don't oversubscribe SparkJS's worker pool. `canIncrement` guard
+    // keeps `decrement` symmetric when the manager is at capacity.
+    if (this.ctx.concurrencyManager.canIncrement()) {
+      this.ctx.concurrencyManager.increment();
+      this.holdsSlot = true;
+    }
 
     const mesh = new SplatMesh({ url: cfg.url, lod });
     mesh.initialized
@@ -179,6 +174,10 @@ export class SplatMeshDesc extends MeshDesc<
     super.onDestroy();
     mesh?.dispose();
 
+    if (this.holdsSlot) {
+      this.ctx.concurrencyManager.decrement();
+      this.holdsSlot = false;
+    }
     releaseSparkRenderer(this.ctx);
   }
 }
