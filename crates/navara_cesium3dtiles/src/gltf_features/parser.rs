@@ -5,6 +5,7 @@ use navara_core::CRS;
 use navara_feature_component::batch::{
     BatchProperty, BatchTableValue, FeatureBatchId, GlobalBatchIds, GltfPropertyTable,
 };
+use navara_material::ModelInternalMaterial;
 use navara_math::{PI_OVER_TWO, Quat, Transform, Vec3};
 use navara_parser::cesium3dtiles::property_table::GlbSchemaParser;
 
@@ -72,17 +73,32 @@ impl TileContentParser for GltfFeaturesParser {
         let batch_length = global_batch_ids.len();
         let ids_handle = ctx.buf.new_u32(global_batch_ids);
 
+        // Compose the accumulated tile world-transform (from tileset.json hierarchy)
+        // with the glTF-to-Navara Y-up→Z-up rotation. Inner rotation runs first in
+        // glTF local space, then `tile_transform` places the tile in world ECEF.
+        let y_up_to_z_up = Transform::from_rotation(Quat::from_rotation_x(PI_OVER_TWO));
+        let transform = match ctx.tile_transform {
+            Some(t) => t.mul_transform(y_up_to_z_up),
+            None => y_up_to_z_up,
+        };
+
         Some(ParsedTileContent {
             coords: Vec3::ZERO,
             crs: CRS::Geocentric,
             model_bin_handle: ctx.requester_handle,
-            transform: Transform::from_rotation(Quat::from_rotation_x(PI_OVER_TWO)),
+            transform,
             feature_batch_id: FeatureBatchId(feature_batch_id),
             global_batch_ids: GlobalBatchIds {
                 handle: ids_handle,
                 batch_length: batch_length as u32,
             },
-            appearance_modifier: None,
+            appearance_modifier: Some(Box::new(|material: &mut navara_material::ModelMaterial| {
+                material.internal = Some(ModelInternalMaterial {
+                    draco_compressed: false,
+                    point_cloud: false,
+                    point_cloud_geodetic_normal: Vec3::ZERO,
+                });
+            })),
             extra_components: None,
         })
     }

@@ -176,14 +176,16 @@ impl Cesium3dTileContent {
             None => (None, false),
         };
 
-        let mut tile_transform = Transform::from_matrix(Mat4::from_cols_array(
+        // Per 3D Tiles 1.1 spec, `tile.transform` is defined relative to the parent
+        // tile's coordinate system. Accumulate down the chain so that this struct's
+        // `transform` field always holds the world-space transform.
+        let own = Transform::from_matrix(Mat4::from_cols_array(
             &tile.transform.map(|v| v as FloatType),
         ));
-        if tile_transform == Transform::IDENTITY {
-            tile_transform = parent
-                .and_then(|p| p.transform)
-                .unwrap_or(Transform::IDENTITY);
-        }
+        let parent_world = parent
+            .and_then(|p| p.transform)
+            .unwrap_or(Transform::IDENTITY);
+        let tile_transform = parent_world.mul_transform(own);
         let bv = &tile.bounding_volume;
         let bounding_volume = match (bv.region, bv.sphere, bv.box_) {
             (Some([west, south, east, north, min_height, max_height]), _, _) => {
