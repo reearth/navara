@@ -38,6 +38,10 @@ impl TextureFragment {
         }
     }
 
+    pub fn with_status(url: String, status: TextureFragmentStatus) -> Self {
+        Self { url, status }
+    }
+
     pub fn is_succeeded(&self) -> bool {
         matches!(self.status, TextureFragmentStatus::Success)
     }
@@ -63,7 +67,7 @@ impl bevy_app::Plugin for TextureFragmentPlugin {
 fn commit(
     mut commands: Commands,
     mut events: ResMut<EventStore>,
-    added: Query<Entity, (Added<TextureFragment>, Without<Deleted>)>,
+    added: Query<Entity, (Added<TextureFragment>, Without<Deleted>, Without<Ignored>)>,
     removed: Query<Entity, (With<TextureFragment>, With<Deleted>, Without<Ignored>)>,
 ) {
     for e in &added {
