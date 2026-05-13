@@ -93,6 +93,38 @@ export {
   type SharedBoxMaterialConfig,
   type BoxesDescription,
 } from "./InstancedBoxMeshDesc";
+export {
+  InstancedSphereMeshDesc,
+  type InstancedSphereMeshConfig,
+  type InstancedSphereMeshUpdate,
+  type SphereChildConfig,
+  type SharedSphereConfig,
+  type SpheresDescription,
+} from "./InstancedSphereMeshDesc";
+export {
+  InstancedPlaneMeshDesc,
+  type InstancedPlaneMeshConfig,
+  type InstancedPlaneMeshUpdate,
+  type PlaneChildConfig,
+  type SharedPlaneConfig,
+  type PlanesDescription,
+} from "./InstancedPlaneMeshDesc";
+export {
+  InstancedCylinderMeshDesc,
+  type InstancedCylinderMeshConfig,
+  type InstancedCylinderMeshUpdate,
+  type CylinderChildConfig,
+  type SharedCylinderConfig,
+  type CylindersDescription,
+} from "./InstancedCylinderMeshDesc";
+export {
+  InstancedGltfModelMeshDesc,
+  type InstancedGltfModelMeshConfig,
+  type InstancedGltfModelMeshUpdate,
+  type ModelChildConfig,
+  type InstancedModelsDescription,
+  type InstancedGltfModelEvent,
+} from "./InstancedGltfModelMeshDesc";
 
 // Mesh implementations
 export { SkyMesh, type SkyMeshOptions } from "./skyMesh";
