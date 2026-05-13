@@ -45,10 +45,10 @@ export function generateHillshadeNormalShader(maxTextures: number): string {
       { length: maxTextures },
       (_, i) => `
     if (uIsHillshades[${i}]) {
-      // Check if there's a valid texture bound (size > 2 to avoid 1×1 placeholders)
+      // Check if there's a valid texture bound (size > 1 to avoid 1×1 placeholders)
       ivec2 normalMapSize = textureSize(uTextures[${i}], 0);
 
-      if (normalMapSize.x > 2) {
+      if (normalMapSize.x > 1) {
         // Apply per-layer UV transform for hillshade parent texture reuse
         vec2 hillshadeUv = vOrigUv * uHillshadeUvScale[${i}] + uHillshadeUvOffset[${i}];
 
