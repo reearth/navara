@@ -7,8 +7,15 @@ import ThreeView, {
 } from "@navara/three";
 import {
   type InstancedBoxMeshDesc,
+  type InstancedSphereMeshDesc,
+  type InstancedPlaneMeshDesc,
+  type InstancedCylinderMeshDesc,
+  type InstancedGltfModelMeshDesc,
   type BoxChildConfig,
-  ToneMappingMode,
+  type SphereChildConfig,
+  type PlaneChildConfig,
+  type CylinderChildConfig,
+  type ModelChildConfig,
 } from "@navara/three_default_descs";
 import {
   DefaultPlugin,
@@ -17,38 +24,67 @@ import {
 import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../../helpers/attributions";
-import { TERRAIN_DATASETS, TILE_DATASETS } from "../../../helpers/constants";
+import {
+  LOCAL_DATASETS,
+  TERRAIN_DATASETS,
+  TILE_DATASETS,
+} from "../../../helpers/constants";
 import { addDateControl } from "../../../helpers/control";
 
-const RADIUS = 30000; // 30km
-const BUILDING_COUNT = 50000;
+// Each mesh type gets its own cluster — centers arranged on a ring around
+// the group origin so the types don't mix visually.
+const CLUSTER_RING = 12000; // distance from origin to each cluster center
+const CLUSTER_RADIUS = 4000; // per-cluster spread
+const BUILDING_COUNT = 1000;
+const SPHERE_COUNT = 1000;
+const PLANE_COUNT = 1000;
+const CYLINDER_COUNT = 1000;
+const MODEL_COUNT = 200;
 
-/** Generate a random point within a circle of the given radius. */
-function randomPointInCircle(radius: number): { x: number; z: number } {
-  const angle = Math.random() * Math.PI * 2;
-  const r = radius * Math.sqrt(Math.random());
-  return { x: Math.cos(angle) * r, z: Math.sin(angle) * r };
+type Cluster = { cx: number; cz: number };
+
+function clusterAt(angleDeg: number): Cluster {
+  const a = (angleDeg * Math.PI) / 180;
+  return { cx: Math.cos(a) * CLUSTER_RING, cz: Math.sin(a) * CLUSTER_RING };
 }
 
-/** Generate random building configs within a circle. */
-function generateBuildings(count: number, radius: number): BoxChildConfig[] {
+const CLUSTERS = {
+  boxes: clusterAt(-90),
+  spheres: clusterAt(-18),
+  planes: clusterAt(54),
+  cylinders: clusterAt(126),
+  models: clusterAt(198),
+};
+
+function randomPointInCluster(
+  cluster: Cluster,
+  radius: number,
+): { x: number; z: number } {
+  const angle = Math.random() * Math.PI * 2;
+  const r = radius * Math.sqrt(Math.random());
+  return {
+    x: cluster.cx + Math.cos(angle) * r,
+    z: cluster.cz + Math.sin(angle) * r,
+  };
+}
+
+function generateBuildings(count: number, cluster: Cluster): BoxChildConfig[] {
   const buildings: BoxChildConfig[] = [];
   for (let i = 0; i < count; i++) {
-    const { x, z } = randomPointInCircle(radius);
+    const { x, z } = randomPointInCluster(cluster, CLUSTER_RADIUS);
     const base = 30 + Math.random() * 60;
-    const width = base;
-    const depth = base;
     const height = 10 + Math.random() * 200;
 
-    // Taller buildings toward center
-    const dist = Math.sqrt(x * x + z * z);
-    const centerFactor = 1 - dist / radius;
+    const dx = x - cluster.cx;
+    const dz = z - cluster.cz;
+    const dist = Math.sqrt(dx * dx + dz * dz);
+    const centerFactor = 1 - dist / CLUSTER_RADIUS;
     const adjustedHeight = height * (1 + centerFactor * 3);
 
     buildings.push({
-      width,
+      width: base,
       height: adjustedHeight,
-      depth,
+      depth: base,
       color: new Color().setStyle(
         `hsl(${Math.random() * 360}, ${50 + Math.random() * 50}%, ${30 + Math.random() * 50}%)`,
       ),
@@ -58,10 +94,114 @@ function generateBuildings(count: number, radius: number): BoxChildConfig[] {
   return buildings;
 }
 
+function generateSpheres(count: number, cluster: Cluster): SphereChildConfig[] {
+  const out: SphereChildConfig[] = [];
+  for (let i = 0; i < count; i++) {
+    const { x, z } = randomPointInCluster(cluster, CLUSTER_RADIUS);
+    out.push({
+      radius: 20 + Math.random() * 60,
+      position: { x, y: 400 + Math.random() * 600, z },
+      color: new Color().setStyle(`hsl(${Math.random() * 360}, 80%, 60%)`),
+    });
+  }
+  return out;
+}
+
+// Planes lie flat in xz, so two close planes overlap. Lay them out on a
+// shuffled grid in the plane cluster and constrain plane size + per-cell
+// offset so footprints stay inside their cell.
+const PLANE_CELL_SIZE = 200;
+const PLANE_MAX_SIZE = 180;
+const PLANE_MIN_SIZE = 60;
+
+function buildPlaneCells(cluster: Cluster): { x: number; z: number }[] {
+  const cells: { x: number; z: number }[] = [];
+  const half = Math.ceil(CLUSTER_RADIUS / PLANE_CELL_SIZE);
+  const r2 = CLUSTER_RADIUS * CLUSTER_RADIUS;
+  for (let i = -half; i < half; i++) {
+    for (let j = -half; j < half; j++) {
+      const dx = (i + 0.5) * PLANE_CELL_SIZE;
+      const dz = (j + 0.5) * PLANE_CELL_SIZE;
+      if (dx * dx + dz * dz > r2) continue;
+      cells.push({ x: cluster.cx + dx, z: cluster.cz + dz });
+    }
+  }
+  for (let i = cells.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [cells[i], cells[j]] = [cells[j], cells[i]];
+  }
+  return cells;
+}
+
+const planeCells = buildPlaneCells(CLUSTERS.planes);
+let planeCursor = 0;
+
+function generatePlanes(count: number): PlaneChildConfig[] {
+  const out: PlaneChildConfig[] = [];
+  const take = Math.min(count, planeCells.length - planeCursor);
+  for (let i = 0; i < take; i++) {
+    const { x, z } = planeCells[planeCursor++];
+    const w =
+      PLANE_MIN_SIZE + Math.random() * (PLANE_MAX_SIZE - PLANE_MIN_SIZE);
+    const h =
+      PLANE_MIN_SIZE + Math.random() * (PLANE_MAX_SIZE - PLANE_MIN_SIZE);
+    const jitterX = (PLANE_CELL_SIZE - w) / 2;
+    const jitterZ = (PLANE_CELL_SIZE - h) / 2;
+    out.push({
+      width: w,
+      height: h,
+      position: {
+        x: x + (Math.random() * 2 - 1) * jitterX,
+        y: 5,
+        z: z + (Math.random() * 2 - 1) * jitterZ,
+      },
+      rotation: { x: -Math.PI / 2, y: 0, z: 0 },
+      color: new Color().setStyle(
+        `hsl(${Math.random() * 360}, ${50 + Math.random() * 50}%, ${30 + Math.random() * 50}%)`,
+      ),
+    });
+  }
+  return out;
+}
+
+function generateCylinders(
+  count: number,
+  cluster: Cluster,
+): CylinderChildConfig[] {
+  const out: CylinderChildConfig[] = [];
+  for (let i = 0; i < count; i++) {
+    const { x, z } = randomPointInCluster(cluster, CLUSTER_RADIUS);
+    const h = 50 + Math.random() * 300;
+    out.push({
+      radius: 3 + Math.random() * 10,
+      height: h,
+      position: { x, y: h / 2, z },
+      color: new Color().setStyle(
+        `hsl(${Math.random() * 360}, ${50 + Math.random() * 50}%, ${30 + Math.random() * 50}%)`,
+      ),
+    });
+  }
+  return out;
+}
+
+function generateModels(count: number, cluster: Cluster): ModelChildConfig[] {
+  const out: ModelChildConfig[] = [];
+  for (let i = 0; i < count; i++) {
+    const { x, z } = randomPointInCluster(cluster, CLUSTER_RADIUS);
+    const s = 20 + Math.random() * 40;
+    out.push({
+      position: { x, y: 0, z },
+      rotation: { x: 0, y: Math.random() * Math.PI * 2, z: 0 },
+      scale: { x: s, y: s, z: s },
+    });
+  }
+  return out;
+}
+
 const run = async () => {
   const view = new ThreeView<DefaultDescriptions>({
     debug: true,
-    shadow: true,
+    shadow: false,
   });
 
   const defaultPlugin = new DefaultPlugin();
@@ -69,15 +209,11 @@ const run = async () => {
 
   await view.init();
 
+  // Render continuously so the GLTF animation keeps advancing while idle.
+  view.animation = true;
+
   const defaultLayers = defaultPlugin.addDefaultPhotorealScene();
-
-  defaultLayers.toneMapping.update({
-    toneMapping: {
-      mode: ToneMappingMode.NEUTRAL,
-    },
-  });
-
-  view.toneMappingExposure = 2;
+  defaultLayers.toneMapping.delete();
 
   view.addLight({
     ambient: { intensity: 0.5 },
@@ -92,7 +228,6 @@ const run = async () => {
     roll: 0.2,
   });
 
-  // Base tile layer
   view.addLayer({
     type: "tiles",
     data: { url: TILE_DATASETS.openstreetmap.url },
@@ -113,7 +248,6 @@ const run = async () => {
     },
   });
 
-  // Position the group at Tokyo Station
   const groupPosition = geodeticToVector3({
     lat: degreeToRadian(35.6812),
     lng: degreeToRadian(139.7671),
@@ -121,14 +255,54 @@ const run = async () => {
   });
   const matrixWorld = northUpEastToFixedFrame(groupPosition);
 
-  // Generate 5000 buildings within 10km radius
-  const buildings = generateBuildings(BUILDING_COUNT, RADIUS);
-
   const boxesLayer = view.addMesh<InstancedBoxMeshDesc>({
     boxes: {
       castShadow: true,
       receiveShadow: true,
-      children: buildings,
+      children: generateBuildings(BUILDING_COUNT, CLUSTERS.boxes),
+    },
+    matrixWorld,
+  });
+
+  const spheresLayer = view.addMesh<InstancedSphereMeshDesc>({
+    spheres: {
+      widthSegments: 24,
+      heightSegments: 16,
+      castShadow: true,
+      children: generateSpheres(SPHERE_COUNT, CLUSTERS.spheres),
+    },
+    matrixWorld,
+  });
+
+  const planesLayer = view.addMesh<InstancedPlaneMeshDesc>({
+    planes: {
+      receiveShadow: true,
+      children: generatePlanes(PLANE_COUNT),
+    },
+    matrixWorld,
+  });
+
+  const cylindersLayer = view.addMesh<InstancedCylinderMeshDesc>({
+    cylinders: {
+      radiusTop: 1,
+      radiusBottom: 1,
+      radialSegments: 12,
+      castShadow: true,
+      children: generateCylinders(CYLINDER_COUNT, CLUSTERS.cylinders),
+    },
+    matrixWorld,
+  });
+
+  const modelsLayer = view.addMesh<InstancedGltfModelMeshDesc>({
+    models: {
+      url: LOCAL_DATASETS.soldierGLTF.url,
+      castShadow: false,
+      receiveShadow: false,
+      animationActiveClip: "Run",
+      animationSpeed: 1,
+      animationLoop: true,
+      animationAutoPlay: true,
+      children: generateModels(MODEL_COUNT, CLUSTERS.models),
     },
     matrixWorld,
   });
@@ -137,23 +311,16 @@ const run = async () => {
   const pane = new Pane({ title: "Instanced Mesh" });
   addDateControl(view, pane);
 
-  const folder = pane.addFolder({ title: "Buildings" });
-
-  folder.addButton({ title: "Add 100 Buildings" }).on("click", () => {
-    const newBuildings = generateBuildings(100, RADIUS);
-    for (const b of newBuildings) {
+  const buildingsFolder = pane.addFolder({ title: "Buildings" });
+  buildingsFolder.addButton({ title: "Add 100" }).on("click", () => {
+    for (const b of generateBuildings(100, CLUSTERS.boxes))
       boxesLayer.ref.add(b);
-    }
   });
-
-  folder.addButton({ title: "Remove First 100" }).on("click", () => {
+  buildingsFolder.addButton({ title: "Remove First 100" }).on("click", () => {
     const count = Math.min(100, boxesLayer.ref.count);
-    for (let i = 0; i < count; i++) {
-      boxesLayer.ref.removeAt(0);
-    }
+    for (let i = 0; i < count; i++) boxesLayer.ref.removeAt(0);
   });
-
-  folder.addButton({ title: "Randomize Colors" }).on("click", () => {
+  buildingsFolder.addButton({ title: "Randomize Colors" }).on("click", () => {
     const count = boxesLayer.ref.count;
     for (let i = 0; i < count; i++) {
       boxesLayer.ref.updateAt(i, {
@@ -162,7 +329,74 @@ const run = async () => {
     }
   });
 
-  showAttributions([TILE_DATASETS.openstreetmap, TERRAIN_DATASETS.gsi]);
+  const spheresFolder = pane.addFolder({ title: "Spheres" });
+  spheresFolder.addButton({ title: "Add 50" }).on("click", () => {
+    for (const s of generateSpheres(50, CLUSTERS.spheres))
+      spheresLayer.ref.add(s);
+  });
+  spheresFolder.addButton({ title: "Remove First 50" }).on("click", () => {
+    const count = Math.min(50, spheresLayer.ref.count);
+    for (let i = 0; i < count; i++) spheresLayer.ref.removeAt(0);
+  });
+
+  const planesFolder = pane.addFolder({ title: "Planes" });
+  planesFolder.addButton({ title: "Add 50" }).on("click", () => {
+    for (const p of generatePlanes(50)) planesLayer.ref.add(p);
+  });
+  planesFolder.addButton({ title: "Remove First 50" }).on("click", () => {
+    const count = Math.min(50, planesLayer.ref.count);
+    for (let i = 0; i < count; i++) planesLayer.ref.removeAt(0);
+  });
+
+  const cylindersFolder = pane.addFolder({ title: "Cylinders" });
+  cylindersFolder.addButton({ title: "Add 50" }).on("click", () => {
+    for (const c of generateCylinders(50, CLUSTERS.cylinders))
+      cylindersLayer.ref.add(c);
+  });
+  cylindersFolder.addButton({ title: "Remove First 50" }).on("click", () => {
+    const count = Math.min(50, cylindersLayer.ref.count);
+    for (let i = 0; i < count; i++) cylindersLayer.ref.removeAt(0);
+  });
+
+  const modelsFolder = pane.addFolder({ title: "Models (GLTF)" });
+  modelsFolder.addButton({ title: "Add 20" }).on("click", () => {
+    for (const m of generateModels(20, CLUSTERS.models)) modelsLayer.ref.add(m);
+  });
+  modelsFolder.addButton({ title: "Remove First 20" }).on("click", () => {
+    const count = Math.min(20, modelsLayer.ref.count);
+    for (let i = 0; i < count; i++) modelsLayer.ref.removeAt(0);
+  });
+
+  // Animation — Soldier.glb ships with "Idle", "Walk", "Run", "TPose"
+  const animState = {
+    clip: "Run" as "Idle" | "Walk" | "Run" | "TPose",
+    speed: 1,
+    loop: true,
+  };
+  modelsFolder
+    .addBinding(animState, "clip", {
+      options: { Idle: "Idle", Walk: "Walk", Run: "Run", TPose: "TPose" },
+    })
+    .on("change", (e) => {
+      modelsLayer.update({ models: { animationActiveClip: e.value } });
+    });
+  modelsFolder
+    .addBinding(animState, "speed", { min: 0, max: 3, step: 0.1 })
+    .on("change", (e) => {
+      modelsLayer.update({ models: { animationSpeed: e.value } });
+    });
+  modelsFolder.addBinding(animState, "loop").on("change", (e) => {
+    modelsLayer.update({ models: { animationLoop: e.value } });
+  });
+  modelsFolder.addButton({ title: "Stop Animation" }).on("click", () => {
+    modelsLayer.ref.stopAnimation();
+  });
+
+  showAttributions([
+    TILE_DATASETS.openstreetmap,
+    TERRAIN_DATASETS.gsi,
+    LOCAL_DATASETS.soldierGLTF,
+  ]);
 };
 
 run();
