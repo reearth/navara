@@ -590,12 +590,18 @@ export class InstancedGltfModelMeshDesc extends MeshDesc<
   /**
    * Set per-instance tint on every sub-mesh. Three.js's `setColorAt` lazily
    * allocates `instanceColor` (filled white) on first call, so omitting color
-   * stays free until at least one instance opts in.
+   * stays free until at least one instance opts in. Once `instanceColor`
+   * exists, an unset color resets the slot to white so stale colors from a
+   * prior occupant (after swap-with-last removal or replaceAll) don't leak.
    */
   private writeColorAt(i: number, config: ModelChildConfig): void {
-    if (!config.color) return;
-    _tempColor.set(config.color.raw);
+    if (config.color) {
+      _tempColor.set(config.color.raw);
+    } else {
+      _tempColor.setRGB(1, 1, 1);
+    }
     for (const { inst } of this.subMeshes) {
+      if (!config.color && !inst.instanceColor) continue;
       inst.setColorAt(i, _tempColor);
       if (inst.instanceColor) inst.instanceColor.needsUpdate = true;
     }
@@ -868,16 +874,18 @@ export class InstancedGltfModelMeshDesc extends MeshDesc<
     this.lastUpdateTime = time;
 
     if (this.anims.length === 0) return;
+
+    // Only step mixers and force renders when an action is actually playing.
+    // A loaded-but-idle GLTF (clips present, currentAction null) would
+    // otherwise keep the render loop running every frame.
+    const active = this.anims.some((a) => a.currentAction);
+    if (!active) return;
+
     for (const a of this.anims) a.mixer.update(delta);
 
     if (!this.hasSkinned) {
-      // Re-sample node-TRS from the animated source scene. Only needed when
-      // the mixer is actively driving an action, but the cost is O(N*M) per
-      // frame and for typical counts this is cheap enough to always do.
-      if (this.anims[0].currentAction) {
-        this.gltf?.scene.updateMatrixWorld(true);
-        this.resampleAndRewriteAll();
-      }
+      this.gltf?.scene.updateMatrixWorld(true);
+      this.resampleAndRewriteAll();
       this.syncMorphTargets();
     }
 
