@@ -28,6 +28,7 @@ The following MeshDescriptor types are available in navara_three:
 | [SmoothLineMeshDesc](./smooth-line-mesh-desc) | A Descriptor that draws smooth lines using Catmull-Rom curves |
 | [SnowMeshDesc](./snow-mesh-desc) | A Descriptor that displays snow particle effects |
 | [SphereMeshDesc](./sphere-mesh-desc) | A Descriptor that draws sphere geometry |
+| [SplatMeshDesc](./splat-mesh-desc) | A Descriptor that renders 3D Gaussian Splat assets via SparkJS |
 | [StarsDesc](./stars-desc) | A Descriptor that draws a starry sky |
 | [TubeMeshDesc](./tube-mesh-desc) | A Descriptor that draws tube geometry |
 | [AxesHelperDesc](./axes-helper-desc) | A debug helper Descriptor that visualizes the 3 axes |
