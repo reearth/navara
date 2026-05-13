@@ -1,10 +1,10 @@
 use bevy_ecs::system::{Commands, Query};
 
-use navara_component::{Order, OrderByDistance, Priority};
+use navara_component::{Ignored, Order, OrderByDistance, Priority};
 use navara_core::tile_url;
 use navara_layer::TilesLayer;
 use navara_material::Appearance;
-use navara_texture_fragment::TextureFragment;
+use navara_texture_fragment::{TextureFragment, TextureFragmentStatus};
 use navara_tile_component::{
     RasterTile, TileHandle, TileTextureFragmentMarker, TileTextureFragmentQuery,
 };
@@ -38,44 +38,42 @@ pub(crate) fn request_texture_fragment(
         .as_ref()
         .map_or(0, |ids| ids.len());
 
-    let mut next_tile = None;
-
     // Skip requesting a tile that doesn't match `min_zoom` and `max_zoom` conditions,
     // since selected tile has multiple layers.
     for (next, _) in tiles.iter().skip(idx) {
-        if !next.is_over_min_zoom(leaf.coords.z) || next.is_over_max_zoom(leaf.coords.z) {
-            leaf.texture_fragment_entity_ids
-                .get_or_insert_with(|| Vec::with_capacity(tiles_len))
-                .push(None);
-            next_tile = None;
-        } else {
-            next_tile = Some(next);
-            break;
+        let tms = matches!(next.appearance.as_ref(), Some(Appearance::RasterTile(m)) if m.tms);
+        let url = tile_url(next.data.as_ref().unwrap().url.as_str(), &leaf.coords, tms);
+
+        // The number of `texture_fragment_entity_ids` and layers need to match to render correctly,
+        // but we can avoid requesting the resource beyond the max zoom level.
+        let skip_request =
+            next.is_over_max_zoom(leaf.coords.z) || !next.is_over_min_zoom(leaf.coords.z);
+
+        let mut entity = commands.spawn((
+            TileTextureFragmentMarker(handle),
+            TextureFragment::with_status(
+                url,
+                if skip_request {
+                    TextureFragmentStatus::Fail
+                } else {
+                    TextureFragmentStatus::Pending
+                },
+            ),
+            OrderByDistance {
+                sse: leaf.sse,
+                distance: leaf.distance_from_camera,
+            },
+            priority,
+        ));
+
+        if skip_request {
+            entity.insert(Ignored);
         }
+
+        let id = entity.id();
+
+        leaf.texture_fragment_entity_ids
+            .get_or_insert_with(|| Vec::with_capacity(tiles_len))
+            .push(Some(id));
     }
-
-    let Some(next_tile) = next_tile else {
-        return;
-    };
-
-    let tms = matches!(next_tile.appearance.as_ref(), Some(Appearance::RasterTile(m)) if m.tms);
-    let url = tile_url(
-        next_tile.data.as_ref().unwrap().url.as_str(),
-        &leaf.coords,
-        tms,
-    );
-    let entity = commands.spawn((
-        TileTextureFragmentMarker(handle),
-        TextureFragment::new(url),
-        OrderByDistance {
-            sse: leaf.sse,
-            distance: leaf.distance_from_camera,
-        },
-        priority,
-    ));
-    let id = entity.id();
-
-    leaf.texture_fragment_entity_ids
-        .get_or_insert_with(|| Vec::with_capacity(tiles_len))
-        .push(Some(id));
 }
