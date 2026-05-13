@@ -64,6 +64,9 @@ function acquireSparkRenderer(
       );
     }
     existing.refCount += 1;
+    // Another view may have overwritten sparkOverride; new SplatMesh
+    // instances look it up to find their renderer.
+    SparkRenderer.sparkOverride = existing.renderer;
     return existing.renderer;
   }
 
@@ -138,11 +141,13 @@ export class SplatMeshDesc extends MeshDesc<
     const lod = cfg.lod ?? false;
     acquireSparkRenderer(this.ctx, { enableLod: lod });
 
-    // SparkJS uses a small worker pool internally for sorting and LoD. Reserve
-    // a slot in Navara's ConcurrencyManager so other consumers (tile/GLTF
-    // loaders, etc.) avoid contending for those threads while a splat is alive.
-    this.ctx.concurrencyManager.increment();
-    this.incremented = true;
+    // Reserve a Worker slot so SparkJS's sort/LoD threads aren't starved by
+    // tile/GLTF loaders. Guard with canIncrement() because increment() is a
+    // no-op at capacity, which would unbalance the matching decrement.
+    if (this.ctx.concurrencyManager.canIncrement()) {
+      this.ctx.concurrencyManager.increment();
+      this.incremented = true;
+    }
 
     const mesh = new SplatMesh({ url: cfg.url, lod });
     mesh.initialized
