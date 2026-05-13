@@ -2,7 +2,6 @@
   #include "dem_util.glsl"
 
   // Hillshade-specific uniforms for DEM decoding
-  // Note: All uniforms are declared in tile.ts
   uniform vec3 uHillshadeRGBScaler;
   uniform float uHillshadeBoundary; // Boundary value marking no-data
   uniform float uHillshadeMinOffset; // Offset for values below boundary

@@ -9,7 +9,7 @@ import type { TileHandler } from "./context";
  * Hillshade decoder configuration from Rust
  */
 export type HillshadeConfig = {
-  rgbScaler: number[];
+  rgbScaler: [number, number, number]; // vec3: [R, G, B] scalers
   boundary: number;
   minOffset: number;
   maxOffset: number;
