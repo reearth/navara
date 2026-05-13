@@ -24,8 +24,12 @@ Navara は以下の 3D Tiles 仕様に対応しています。
 | 機能 | 説明 |
 | ---- | ---- |
 | GLB コンテンツ | GLB（バイナリ glTF）をコンテンツフォーマットとして使用するタイル |
+| GLB POINTS プリミティブ | `mode: POINTS` の glTF メッシュを点群として描画 (3D Tiles 1.1 の点群対応) |
 | `EXT_mesh_features` | glTF メッシュ内の FeatureId セットによるフィーチャー識別 |
 | `EXT_structural_metadata` | glTF アセットに埋め込まれたプロパティテーブルによるフィーチャーごとのメタデータへのアクセス |
+| `KHR_draco_mesh_compression` | Draco 圧縮されたメッシュデータのデコード |
+| `KHR_mesh_quantization` | 量子化された頂点属性によるコンパクトな glTF アセットへの対応 |
+| `EXT_meshopt_compression` | meshopt 圧縮バッファのデコード |
 
 :::note
 - GLB（バイナリ glTF コンテナ）のみ対応しています。外部 `.bin` バッファを参照するプレーンな `.gltf` ファイルには未対応です。

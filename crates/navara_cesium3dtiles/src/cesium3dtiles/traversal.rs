@@ -674,29 +674,30 @@ fn update_or_spawn_rendered_tile(
 
     if visible {
         if tile.uri.as_ref().unwrap().ends_with("pnts") {
-            let aabb = tile.bounding_volume.as_ref().unwrap();
-            tile.rendered_tile_id = Some(
-                commands
-                    .spawn((
-                        RenderedCesium3dTileContentPntsMarker,
-                        TileOrderByDistance {
-                            distance_from_camera: tile.state.distance_from_camera,
-                            sse: tile.state.sse,
-                        },
-                        RenderedCesium3dTileContent {
-                            layer_id,
-                            feature_id: None,
-                            data_requester_id: tile.data_requester_id.unwrap(),
-                            is_visible: true,
-                            touched: true,
-                        },
-                        super::TileTransform {
-                            transform: tile.transform.unwrap_or_default(),
-                        },
-                        aabb.clone(),
-                    ))
-                    .id(),
-            );
+            let mut entity = commands.spawn((
+                RenderedCesium3dTileContentPntsMarker,
+                TileOrderByDistance {
+                    distance_from_camera: tile.state.distance_from_camera,
+                    sse: tile.state.sse,
+                },
+                RenderedCesium3dTileContent {
+                    layer_id,
+                    feature_id: None,
+                    data_requester_id: tile.data_requester_id.unwrap(),
+                    is_visible: true,
+                    touched: true,
+                },
+                super::TileTransform {
+                    transform: tile.transform.unwrap_or_default(),
+                },
+            ));
+
+            let aabb = tile.bounding_volume.as_ref();
+            if let Some(aabb) = aabb {
+                entity.insert(aabb.clone());
+            }
+
+            tile.rendered_tile_id = Some(entity.id());
         } else if tile.uri.as_ref().unwrap().ends_with("b3dm") {
             tile.rendered_tile_id = Some(
                 commands
@@ -717,24 +718,30 @@ fn update_or_spawn_rendered_tile(
                     .id(),
             );
         } else if tile.uri.as_ref().unwrap().contains("glb") && is_v1_1 {
-            tile.rendered_tile_id = Some(
-                commands
-                    .spawn((
-                        RenderedCesium3dTileContentGltfFeaturesMarker,
-                        TileOrderByDistance {
-                            distance_from_camera: tile.state.distance_from_camera,
-                            sse: tile.state.sse,
-                        },
-                        RenderedCesium3dTileContent {
-                            layer_id,
-                            feature_id: None,
-                            data_requester_id: tile.data_requester_id.unwrap(),
-                            is_visible: true,
-                            touched: true,
-                        },
-                    ))
-                    .id(),
-            );
+            let mut entity = commands.spawn((
+                RenderedCesium3dTileContentGltfFeaturesMarker,
+                TileOrderByDistance {
+                    distance_from_camera: tile.state.distance_from_camera,
+                    sse: tile.state.sse,
+                },
+                RenderedCesium3dTileContent {
+                    layer_id,
+                    feature_id: None,
+                    data_requester_id: tile.data_requester_id.unwrap(),
+                    is_visible: true,
+                    touched: true,
+                },
+                super::TileTransform {
+                    transform: tile.transform.unwrap_or_default(),
+                },
+            ));
+
+            let aabb = tile.bounding_volume.as_ref();
+            if let Some(aabb) = aabb {
+                entity.insert(aabb.clone());
+            }
+
+            tile.rendered_tile_id = Some(entity.id());
         } else if tile.uri.as_ref().unwrap().contains("glb") {
             tile.rendered_tile_id = Some(
                 commands

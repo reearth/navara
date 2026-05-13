@@ -12,25 +12,26 @@ const COLOR_DIVISOR = 65535.0;
  *
  * Vertex shader changes:
  * - Adds uAddHeight and uGeodeticNormal uniforms
- * - Scales vertex colors by 1/65535 (PNTS color range normalization)
+ * - When `divideColor` is `true`, scales vertex colors by 1/65535 (PNTS color range normalization)
  * - Offsets vertex position along geodetic normal by uAddHeight
  */
 export const transformShader = (
   shader: WebGLProgramParametersWithUniforms,
-  _state: PntsState,
+  state: PntsState,
   mutates: PntsMutates,
 ): void => {
   shader.defines ??= {};
 
-  mutates.updateUniforms(shader.uniforms, _state);
+  mutates.updateUniforms(shader.uniforms, state);
 
   shader.vertexShader = createReplacer(shader.vertexShader)
-    .replace(
+    .replaceWithCondition(
       "#include <color_vertex>",
       createReplacer(ShaderChunk.color_vertex).replace(
         "vColor = vec4( 1.0 );",
         `vColor = vec4( 1.0 / ${COLOR_DIVISOR}.0 );`,
       ).source,
+      state.divideColor,
     )
     .replace(
       "#include <common>",
