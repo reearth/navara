@@ -147,7 +147,7 @@ export class SplatMeshDesc extends MeshDesc<
     const mesh = new SplatMesh({ url: cfg.url, lod });
     mesh.initialized
       .then(() => this.requestUpdate())
-      .catch((err) => {
+      .catch((err: unknown) => {
         console.warn("SplatMesh load failed:", err);
         // Free the Worker slot now — a failed splat won't run sort/LoD. The
         // SparkRenderer ref stays alive until onDestroy so siblings keep
