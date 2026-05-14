@@ -42,11 +42,9 @@ export abstract class MeshDescWithSelectiveEffect<
   }
 
   protected override getPassKey(): PassKey {
-    // Meshes with SelectiveEffect (effectIds) need to be in MRT scene for SelectiveEffect buffer rendering
-    if (this._effectIds.length > 0) {
-      return "mrt";
-    }
-    return super.getPassKey();
+    // Always route to MRT scene so non-SE meshes also write effectIdBuffer/emissiveBuffer (as 0),
+    // ensuring the depth test in the MRT pass correctly occludes SE effects behind them.
+    return "mrt";
   }
 
   override onCreate() {
