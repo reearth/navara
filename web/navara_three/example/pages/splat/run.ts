@@ -170,10 +170,9 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
 };
 
 /**
- * Live readout of the camera's geographic pose and each splat's intended
- * (lat, lng, height). Helps visually verify whether the rendered splats line
- * up with the lat/lng coordinates assigned by SAMPLES — useful when judging
- * RTE precision artifacts at globe scale.
+ * Tweakpane readout of the camera's geographic pose and each splat's
+ * intended `(lat, lng, height)`. Useful for visually checking whether the
+ * rendered splats line up with the coordinates assigned by `SAMPLES`.
  */
 const addDebugPane = (view: ThreeView<CustomDescriptions>): void => {
   const pane = new Pane({ title: "splat debug", expanded: true });

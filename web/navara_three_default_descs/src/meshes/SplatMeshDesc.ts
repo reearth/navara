@@ -9,21 +9,16 @@ import {
 import { SparkRenderer, SplatMesh } from "@sparkjsdev/spark";
 import { SRGBColorSpace, Scene } from "three";
 
-type Description = {
+type SplatDescription = {
   splat?: {
-    /** URL of the splat file (.spz, .ply, .splat, .ksplat, .pcsogs, etc.). */
     url: string;
-    /**
-     * Enable Level-of-Detail. `false` (default) renders every splat each
-     * frame; `true` builds an in-memory LoD tree and picks splats per frame.
-     */
     lod?: boolean;
   };
 };
 
-export type SplatMeshConfig = MeshConfig & Description;
+export type SplatMeshConfig = MeshConfig & SplatDescription;
 
-export type SplatMeshUpdate = MeshUpdate & Description;
+export type SplatMeshUpdate = MeshUpdate & SplatDescription;
 
 type SharedEntry = {
   renderer: SparkRenderer;
@@ -33,36 +28,27 @@ type SharedEntry = {
 
 const shared = new WeakMap<Scene, SharedEntry>();
 
-/**
- * Lazily creates a single shared `SparkRenderer` per scene, ref-counted so
- * the last `SplatMeshDesc` to release also disposes it. `SparkRenderer` is a
- * `THREE.Mesh` that aggregates every `SplatMesh` in the scene each frame and
- * must live in the scene to function. `SparkRenderer.sparkOverride` is a
- * Spark-side static that lets new `SplatMesh` instances find this renderer.
- */
 function acquireSparkRenderer(
   ctx: ViewContext,
   opts: { enableLod: boolean },
-): SparkRenderer {
-  // transparent scene renders after atmosphere/aerial-perspective post-effects,
-  // preserving the splat's baked color.
+): { renderer: SparkRenderer; enableLod: boolean } {
+  // Transparent scene: render after atmosphere/aerial-perspective so baked color survives.
   const target = ctx.scenes.transparent;
   const existing = shared.get(target);
   if (existing) {
-    if (existing.enableLod !== opts.enableLod) {
+    // Only the lod:true → lod:false downgrade wastes memory; the reverse is fine.
+    if (opts.enableLod && !existing.enableLod) {
       console.warn(
-        `SplatMeshDesc: SparkRenderer is already shared with splat.lod=${existing.enableLod}; ignoring requested splat.lod=${opts.enableLod}.`,
+        `SplatMeshDesc: splat.lod=true requested but the shared SparkRenderer was created with splat.lod=false; rendering this mesh without LoD.`,
       );
     }
     existing.refCount += 1;
-    // Another view may have overwritten sparkOverride; new SplatMesh
-    // instances look it up to find their renderer.
+    // Re-assert in case another view clobbered the global.
     SparkRenderer.sparkOverride = existing.renderer;
-    return existing.renderer;
+    return { renderer: existing.renderer, enableLod: existing.enableLod };
   }
 
-  // Spark must emit linear when the post-pp pipeline targets are linear,
-  // otherwise the final sRGB pass double-encodes.
+  // Linear when the post-pp pipeline is linear, else the final sRGB pass double-encodes.
   const encodeLinear =
     ctx.getInputBuffer().texture.colorSpace !== SRGBColorSpace;
 
@@ -79,7 +65,7 @@ function acquireSparkRenderer(
     refCount: 1,
     enableLod: opts.enableLod,
   });
-  return renderer;
+  return { renderer, enableLod: opts.enableLod };
 }
 
 function releaseSparkRenderer(ctx: ViewContext): void {
@@ -92,10 +78,7 @@ function releaseSparkRenderer(ctx: ViewContext): void {
 
   target.remove(entry.renderer);
   entry.renderer.dispose();
-  // Clear to undefined rather than restoring a saved override: a saved
-  // pointer could outlive its renderer's disposal and become dangling. The
-  // next active view re-asserts sparkOverride via the existing-entry path
-  // in acquireSparkRenderer(), so we don't need to track previous values.
+  // Clear (not restore): a saved override could outlive its renderer.
   if (SparkRenderer.sparkOverride === entry.renderer) {
     SparkRenderer.sparkOverride = undefined;
   }
@@ -116,7 +99,6 @@ export class SplatMeshDesc extends MeshDesc<
   SplatMesh
 > {
   private config: SplatMeshConfig;
-  /** Tracks whether this instance holds a slot on `concurrencyManager`. */
   private holdsSlot = false;
 
   constructor(view: ThreeView, ctx: ViewContext, config: SplatMeshConfig) {
@@ -134,50 +116,57 @@ export class SplatMeshDesc extends MeshDesc<
       throw new Error("SplatMeshDesc requires splat.url");
     }
 
-    const lod = cfg.lod ?? false;
-    acquireSparkRenderer(this.ctx, { enableLod: lod });
+    const requestedLod = cfg.lod ?? false;
+    const { enableLod: rendererLod } = acquireSparkRenderer(this.ctx, {
+      enableLod: requestedLod,
+    });
+    const effectiveLod = requestedLod && rendererLod;
 
-    // Reserve a `ConcurrencyManager` slot for this splat so concurrent splat
-    // loads don't oversubscribe SparkJS's worker pool. `canIncrement` guard
-    // keeps `decrement` symmetric when the manager is at capacity.
+    // Slot held only during load; released on `mesh.initialized` settle.
     if (this.ctx.concurrencyManager.canIncrement()) {
       this.ctx.concurrencyManager.increment();
       this.holdsSlot = true;
     }
 
-    const mesh = new SplatMesh({ url: cfg.url, lod });
+    const mesh = new SplatMesh({ url: cfg.url, lod: effectiveLod });
     mesh.initialized
       .then(() => this.requestUpdate())
       .catch((err: unknown) => {
         console.warn("SplatMesh load failed:", err);
-      });
+      })
+      .finally(() => this.releaseSlot());
     return mesh;
+  }
+
+  private releaseSlot(): void {
+    if (this.holdsSlot) {
+      this.ctx.concurrencyManager.decrement();
+      this.holdsSlot = false;
+    }
   }
 
   onUpdateConfig(updates: SplatMeshUpdate): void {
     const next = updates.splat;
     const current = this.config.splat;
     warnIfChanged("url", next?.url, current?.url);
-    warnIfChanged("lod", next?.lod, current?.lod);
-    // Sync so a repeated update with the same value doesn't re-warn. The
-    // rendered splat stays frozen at construction values regardless.
+    // Normalize both sides to avoid an undefined vs false false-warn.
+    warnIfChanged("lod", next?.lod ?? false, current?.lod ?? false);
+    // Field-by-field so an undefined doesn't overwrite the resolved value.
     if (next && current) {
-      Object.assign(current, next);
+      if (next.url !== undefined) current.url = next.url;
+      if (next.lod !== undefined) current.lod = next.lod;
     }
     super.onUpdateConfig(updates);
   }
 
   override onDestroy(): void {
-    // super removes from scene then nulls _instance; capture the ref so we
-    // can dispose the splat after the scene removal.
+    // Capture before super: super removes from scene and nulls `_instance`.
     const mesh = this._instance;
     super.onDestroy();
     mesh?.dispose();
 
-    if (this.holdsSlot) {
-      this.ctx.concurrencyManager.decrement();
-      this.holdsSlot = false;
-    }
+    // Fallback: destroyed before `mesh.initialized` settled.
+    this.releaseSlot();
     releaseSparkRenderer(this.ctx);
   }
 }
