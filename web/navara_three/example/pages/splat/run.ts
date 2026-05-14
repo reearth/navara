@@ -12,6 +12,7 @@ import {
 import { Vector3, Quaternion, Euler } from "three";
 import { Pane } from "tweakpane";
 
+import { showAttributions } from "../../helpers/attributions";
 import { TILE_DATASETS } from "../../helpers/constants";
 
 export type CustomDescriptions = DefaultDescriptions;
@@ -47,6 +48,8 @@ type SplatSample = {
 };
 
 // Four splats in an east-west line at equal spacing (STEP is the lng delta).
+// URLs point to SparkJS's public demo assets (sparkjs.dev) — for production,
+// host your own assets and respect the original splat dataset licenses.
 const SAMPLES: SplatSample[] = [
   {
     url: "https://sparkjs.dev/assets/splats/butterfly.spz",
@@ -152,6 +155,8 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     rasterTile: { maxZoom: 23 },
   });
 
+  showAttributions([TILE_DATASETS.openstreetmap]);
+
   for (const sample of SAMPLES) {
     placeSplat(view, sample);
   }
@@ -217,10 +222,12 @@ const addDebugPane = (view: ThreeView<CustomDescriptions>): void => {
   for (const sample of SAMPLES) {
     const sub = splatsFolder.addFolder({ title: sample.name, expanded: false });
     const target = {
+      note: sample.note,
       lat: CENTER.lat + sample.dLat,
       lng: CENTER.lng + sample.dLng,
       height: CENTER.height + (sample.dHeight ?? 0),
     };
+    sub.addBinding(target, "note", { readonly: true });
     sub.addBinding(target, "lat", {
       readonly: true,
       format: (v: number) => v.toFixed(6),
