@@ -23,7 +23,7 @@ use tiny_skia::{
 };
 
 /// Pixel size at which color glyphs are rasterized into the atlas.
-pub const COLOR_GLYPH_PX_SIZE: f32 = 128.0;
+pub const COLOR_GLYPH_PX_SIZE: f32 = 64.0;
 
 /// Padding (in pixels) added around the glyph bbox for antialiased edges.
 const COLOR_GLYPH_PADDING: f32 = 1.0;

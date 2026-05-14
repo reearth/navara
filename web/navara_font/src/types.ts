@@ -2,7 +2,7 @@
  * Pixel size at which COLRv1 color glyphs are rasterized into the color atlas.
  * Must match `COLOR_GLYPH_PX_SIZE` in `crates/navara_wasm_font_worker/src/color_raster.rs`.
  */
-export const COLOR_GLYPH_PX_SIZE = 128.0;
+export const COLOR_GLYPH_PX_SIZE = 64.0;
 
 /** Glyph metrics from either the SDF or the color atlas. */
 export type GlyphMetrics = {
