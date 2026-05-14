@@ -27,6 +27,7 @@
     "@navara/three_default_plugin": "workspace:*",
     "three": ">=0.183.0"
   },
+  "dependencies": {},
   "devDependencies": {
     "@navara/three": "workspace:*",
     "@navara/three_default_plugin": "workspace:*",

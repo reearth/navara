@@ -29,9 +29,9 @@
   },
   "license": "MIT OR Apache-2.0",
   "peerDependencies": {
-    "@navara/three": "workspace:*",
+    "three": ">=0.183.0",
     "postprocessing": ">=6.38.0",
-    "three": ">=0.183.0"
+    "@navara/three": "workspace:*"
   },
   "dependencies": {
     "@sparkjsdev/spark": "^2.0.0",
