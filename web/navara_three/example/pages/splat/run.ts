@@ -24,7 +24,8 @@ const CENTER = {
   height: 10.0,
 };
 
-// 0.001° ≈ 111m, so 0.0008° gives ~88m spacing.
+// 0.0008° of longitude ≈ 72m at Tokyo's latitude (35.71°N), since longitude
+// degrees shrink by cos(lat). Latitude degrees stay ~111m/° regardless.
 const STEP = 0.0008;
 const SCALE = 30;
 

@@ -16,9 +16,18 @@ type SplatDescription = {
   };
 };
 
+// Update accepts partials since both fields are frozen post-creation —
+// callers should be able to send only the field they (futilely) try to change.
+type SplatDescriptionUpdate = {
+  splat?: {
+    url?: string;
+    lod?: boolean;
+  };
+};
+
 export type SplatMeshConfig = MeshConfig & SplatDescription;
 
-export type SplatMeshUpdate = MeshUpdate & SplatDescription;
+export type SplatMeshUpdate = MeshUpdate & SplatDescriptionUpdate;
 
 type SharedEntry = {
   renderer: SparkRenderer;
@@ -132,7 +141,7 @@ export class SplatMeshDesc extends MeshDesc<
     mesh.initialized
       .then(() => this.requestUpdate())
       .catch((err: unknown) => {
-        console.warn("SplatMesh load failed:", err);
+        console.warn(`SplatMesh load failed (${cfg.url}):`, err);
       })
       .finally(() => this.releaseSlot());
     return mesh;
@@ -148,11 +157,14 @@ export class SplatMeshDesc extends MeshDesc<
   onUpdateConfig(updates: SplatMeshUpdate): void {
     const next = updates.splat;
     const current = this.config.splat;
-    warnIfChanged("url", next?.url, current?.url);
-    // Normalize both sides to avoid an undefined vs false false-warn.
-    warnIfChanged("lod", next?.lod ?? false, current?.lod ?? false);
-    // Field-by-field so an undefined doesn't overwrite the resolved value.
+    // Only inspect splat fields when the caller actually passed `splat`,
+    // otherwise a transform-only update (e.g. position) would false-warn on
+    // `lod` after the `?? false` normalization.
     if (next && current) {
+      warnIfChanged("url", next.url, current.url);
+      warnIfChanged("lod", next.lod ?? false, current.lod ?? false);
+      // Sync intent so repeated same-value updates don't re-warn; the
+      // rendered splat stays frozen at construction values regardless.
       if (next.url !== undefined) current.url = next.url;
       if (next.lod !== undefined) current.lod = next.lod;
     }

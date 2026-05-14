@@ -57,8 +57,13 @@ In addition to the properties below, all common properties from the base class (
 ```typescript
 import ThreeView, { geodeticToVector3, degreeToRadian } from "@navara/three";
 import type { SplatMeshDesc } from "@navara/three_default_descs";
+import {
+  DefaultPlugin,
+  type DefaultDescriptions,
+} from "@navara/three_default_plugin";
 
-const view = new ThreeView();
+const view = new ThreeView<DefaultDescriptions>();
+view.addPlugin(new DefaultPlugin()); // registers "splat" → SplatMeshDesc
 await view.init();
 
 const pos = geodeticToVector3({
@@ -101,8 +106,8 @@ See the [splat example](https://github.com/eukarya-inc/navara/tree/main/web/nava
 
 - **Shared `SparkRenderer`**: Lazily created once per transparent scene and reference-counted; the last descriptor to release disposes the renderer. The renderer lives in the transparent scene so splats render after atmosphere / aerial-perspective post-effects, preserving their baked color.
 - **`sparkOverride`**: SparkJS's process-wide static (used by new `SplatMesh` instances to discover their renderer) is cleared on final release and re-asserted on the next acquire to keep sequential / LIFO use of multiple views safe.
-- **`enableLod`**: Fixed at first acquire. If the first descriptor was created with `lod: false`, subsequent descriptors that request `lod: true` are silently downgraded to `lod: false` because building a per-mesh LoD tree without a LoD-driving renderer would waste memory. The reverse (`lod: false` on a LoD-capable renderer) incurs no downgrade.
-- **`ConcurrencyManager` slot**: One slot reserved per descriptor while its async splat load is in flight, released as soon as `mesh.initialized` settles (success or failure). `onDestroy()` only performs fallback cleanup for a still-held reservation.
+- **`enableLod`**: Fixed at first acquire. If the first descriptor was created with `lod: false`, subsequent descriptors that request `lod: true` are downgraded to `lod: false` (a `console.warn` is logged) because building a per-mesh LoD tree without a LoD-driving renderer would waste memory. The reverse (`lod: false` on a LoD-capable renderer) incurs no downgrade.
+- **`ConcurrencyManager` slot**: One slot reserved per descriptor while its async splat load is in flight, released as soon as `mesh.initialized` settles (success or failure). `onDestroy()` only performs fallback cleanup for a still-held reservation. Reservation is **best-effort**: if the pool is already saturated, `canIncrement()` returns false and the splat load proceeds without a reserved slot (to preserve `decrement` symmetry); the load is not blocked or queued.
 
 ## Limitations
 
@@ -111,3 +116,4 @@ See the [splat example](https://github.com/eukarya-inc/navara/tree/main/web/nava
 - **No shadow / selective effect**: Splats render in the transparent pass and do not write to the MRT effect-ids / normal buffer used by `SelectiveBloomEffect` and `SelectiveOutlineEffect`.
 - **No picking**: `SplatMesh.raycastable` exists on the underlying SparkJS instance but is not integrated into Navara's picking pipeline.
 - **Single view at a time**: SparkJS exposes `sparkOverride` as a process-wide static; truly concurrent rendering of multiple `ThreeView` instances on the same page is not supported.
+- **SparkJS peer dependency**: `@sparkjsdev/spark@2.0.0` declares `three: ^0.180.0` while this workspace pins `three@0.184.0`. pnpm emits an unmet-peer warning at install but installation succeeds and no runtime incompatibility was observed. A widened peer range from upstream is expected.
