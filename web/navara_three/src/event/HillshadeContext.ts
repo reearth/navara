@@ -1,4 +1,12 @@
-import type { DataTexture } from "three";
+import type { DataTexture, Texture } from "three";
+import {
+  ClampToEdgeWrapping,
+  LinearFilter,
+  NoColorSpace,
+  RGBAFormat,
+  UnsignedByteType,
+  WebGLRenderTarget,
+} from "three";
 
 import type { ViewContext } from "../core";
 import { HillshadeNormalMapGenerator } from "../utils/hillshadeNormalMapGenerator";
@@ -52,6 +60,13 @@ export class HillshadeContext {
   private cachedConfig: HillshadeConfig | null = null;
 
   /**
+   * RenderTarget pool for normal map generation
+   * One RenderTarget per entity to avoid GPU→CPU→GPU round-trip
+   * Similar to texturizedSceneRenderTargets in tile.ts
+   */
+  private renderTargets = new Map<string, WebGLRenderTarget>();
+
+  /**
    * Get or create the normal map generator
    * @param viewContext - ViewContext to get the renderer from
    */
@@ -101,6 +116,102 @@ export class HillshadeContext {
       epsilon: 1.0,
       offset: -32768,
     };
+  }
+
+  /**
+   * Get or create a RenderTarget for the given entity
+   * Reuses existing RenderTarget if size matches, creates new one otherwise
+   * @private
+   */
+  private getOrCreateRenderTarget(
+    entityId: string,
+    width: number,
+    height: number,
+  ): WebGLRenderTarget {
+    let rt = this.renderTargets.get(entityId);
+
+    // Check if size matches (different zoom levels may have different sizes)
+    if (rt && (rt.width !== width || rt.height !== height)) {
+      rt.dispose();
+      rt = undefined;
+    }
+
+    if (!rt) {
+      rt = new WebGLRenderTarget(width, height, {
+        format: RGBAFormat,
+        type: UnsignedByteType,
+        minFilter: LinearFilter,
+        magFilter: LinearFilter,
+        wrapS: ClampToEdgeWrapping,
+        wrapT: ClampToEdgeWrapping,
+        colorSpace: NoColorSpace,
+        generateMipmaps: false, // Disable mipmaps for normal maps
+      });
+      this.renderTargets.set(entityId, rt);
+    }
+
+    return rt;
+  }
+
+  /**
+   * Generate normal map texture from DEM texture
+   * Uses RenderTarget pool to avoid GPU→CPU→GPU round-trip
+   * @param entityId - Entity ID for RenderTarget lookup/creation
+   * @param viewContext - ViewContext to get the renderer from
+   * @param demTexture - Source DEM texture (padded)
+   * @param metersPerTexel - Meters per texel for normal calculation
+   * @param hillshadeConfig - Hillshade decoder configuration
+   * @param tileCoords - Optional tile coordinates for debugging (z/x/y format)
+   * @returns Normal map texture (references RenderTarget.texture directly)
+   */
+  generateNormalMap(
+    entityId: string,
+    viewContext: ViewContext,
+    demTexture: DataTexture,
+    metersPerTexel: number,
+    hillshadeConfig: HillshadeConfig,
+  ): Texture {
+    const paddedWidth = demTexture.image.width;
+    const paddedHeight = demTexture.image.height;
+
+    // Calculate content size (remove padding)
+    const isPowerOfTwo = (n: number) => (n & (n - 1)) === 0 && n !== 0;
+    const contentWidth = isPowerOfTwo(paddedWidth)
+      ? paddedWidth
+      : paddedWidth - 2;
+    const contentHeight = isPowerOfTwo(paddedHeight)
+      ? paddedHeight
+      : paddedHeight - 2;
+
+    // Get or create RenderTarget for this entity
+    const renderTarget = this.getOrCreateRenderTarget(
+      entityId,
+      contentWidth,
+      contentHeight,
+    );
+
+    // Get generator and render to target
+    const generator = this.getOrCreateGenerator(viewContext);
+    generator.renderToTarget(
+      renderTarget,
+      demTexture,
+      metersPerTexel,
+      hillshadeConfig,
+    );
+
+    // Return the texture directly
+    return renderTarget.texture;
+  }
+
+  /**
+   * Clear RenderTarget for the given entity
+   */
+  clearRenderTarget(entityId: string): void {
+    const rt = this.renderTargets.get(entityId);
+    if (rt) {
+      rt.dispose();
+      this.renderTargets.delete(entityId);
+    }
   }
 
   /**
@@ -166,6 +277,12 @@ export class HillshadeContext {
 
     // Clear pending edges
     this.pendingEdges.clear();
+
+    // Dispose all RenderTargets
+    for (const rt of this.renderTargets.values()) {
+      rt.dispose();
+    }
+    this.renderTargets.clear();
 
     // Dispose generator
     if (this.normalMapGenerator) {

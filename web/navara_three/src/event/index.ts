@@ -513,6 +513,7 @@ function processDataRequesterRemoved(
   if (hillshadeContext) {
     hillshadeContext.pendingEdges.delete(id);
     hillshadeContext.clearTempDem(id);
+    hillshadeContext.clearRenderTarget(id); // Clean up RenderTarget when texture is removed
   }
 
   buf.remove(req.handle);

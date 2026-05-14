@@ -195,9 +195,10 @@ function processInitialHillshadeTexture(
     tileHandleBigInt,
   );
 
-  // Generate normal map from DEM texture for performance optimization
-  const generator = hillshadeContext.getOrCreateGenerator(ctx.viewContext);
-  const normalMap = generator.generate(
+  // Generate normal map from DEM texture using RenderTarget pool
+  const normalMap = hillshadeContext.generateNormalMap(
+    entityId,
+    ctx.viewContext,
     dataTexture,
     metersPerTexel,
     hillshadeConfig,
@@ -258,7 +259,7 @@ function processHillshadeEdgeUpdate(
 
   const texture = loadedTexs.get(entityId);
 
-  if (!texture || !(texture instanceof DataTexture)) {
+  if (!texture) {
     // Texture doesn't exist yet - queue this edge update for later application
     let pending = hillshadeContext.pendingEdges.get(entityId);
     if (!pending) {
@@ -300,16 +301,13 @@ function processHillshadeEdgeUpdate(
   );
 
   // Regenerate normal map from updated DEM
-  const generator = hillshadeContext.getOrCreateGenerator(ctx.viewContext);
-  const normalMap = generator.generate(
+  hillshadeContext.generateNormalMap(
+    entityId,
+    ctx.viewContext,
     demTexture,
     tempDemEntry.metersPerTexel,
     tempDemEntry.hillshadeConfig,
   );
-
-  // Replace the old normal map with the new one
-  texture.dispose();
-  loadedTexs.set(entityId, normalMap);
 
   // If all 4 edges received, cleanup the temporary DEM
   if (allEdgesReceived) {

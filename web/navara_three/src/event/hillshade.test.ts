@@ -1,5 +1,5 @@
 import type { HillshadeBackfilledEvent } from "@navara/engine";
-import { DataTexture } from "three";
+import { DataTexture, Texture } from "three";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import type { EventContext } from "./context";
@@ -488,7 +488,7 @@ describe("hillshade normal map generation", () => {
     // Verify normal map was generated and stored
     expect(loadedTexs.has(entityId)).toBe(true);
     const normalMap = loadedTexs.get(entityId);
-    expect(normalMap).toBeInstanceOf(DataTexture);
+    expect(normalMap).toBeInstanceOf(Texture);
     if (normalMap) {
       expect(normalMap.image.width).toBe(4); // Content size (no padding in normal map)
     }
@@ -496,7 +496,7 @@ describe("hillshade normal map generation", () => {
     // Verify temp DEM was stored for edge updates
     const tempDem = hillshadeContext.getTempDem(entityId);
     expect(tempDem).toBeDefined();
-    expect(tempDem?.demTexture).toBeInstanceOf(DataTexture);
+    expect(tempDem?.demTexture).toBeInstanceOf(Texture);
     expect(tempDem?.demTexture.image.width).toBe(6); // Padded size (4 + 2)
     expect(tempDem?.receivedEdges.size).toBe(0);
   });
@@ -519,7 +519,7 @@ describe("hillshade normal map generation", () => {
     } as HillshadeBackfilledEvent);
 
     const firstNormalMap = loadedTexs.get(entityId);
-    expect(firstNormalMap).toBeInstanceOf(DataTexture);
+    expect(firstNormalMap).toBeInstanceOf(Texture);
 
     // Step 2: Left edge arrives (direction 0)
     const edgeData = createEdgeData(100);
@@ -535,10 +535,11 @@ describe("hillshade normal map generation", () => {
       target_entity_gen: 123,
     } as HillshadeBackfilledEvent);
 
-    // Verify normal map was regenerated (different instance)
+    // Verify normal map is still the same texture instance (RenderTarget reuse)
+    // Content is updated in-place on GPU, texture reference stays the same
     const secondNormalMap = loadedTexs.get(entityId);
-    expect(secondNormalMap).toBeInstanceOf(DataTexture);
-    expect(secondNormalMap).not.toBe(firstNormalMap); // New texture instance created
+    expect(secondNormalMap).toBeInstanceOf(Texture);
+    expect(secondNormalMap).toBe(firstNormalMap); // Same texture instance (updated in-place)
 
     // Verify edge was marked as received
     const tempDem = hillshadeContext.getTempDem(entityId);
@@ -643,7 +644,7 @@ describe("hillshade normal map generation", () => {
 
     // Verify normal map was generated with pending edges applied
     expect(loadedTexs.has(entityId)).toBe(true);
-    expect(loadedTexs.get(entityId)).toBeInstanceOf(DataTexture);
+    expect(loadedTexs.get(entityId)).toBeInstanceOf(Texture);
 
     // Verify pending edges were cleared
     expect(hillshadeContext.pendingEdges.has(entityId)).toBe(false);

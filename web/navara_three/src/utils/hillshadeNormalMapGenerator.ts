@@ -1,17 +1,11 @@
 import HillshadeParsFragment from "@shaders/glsl/chunks/hillshade_pars_fragment.glsl";
 import {
-  ClampToEdgeWrapping,
   DataTexture,
-  LinearFilter,
   Mesh,
-  NearestFilter,
-  NoColorSpace,
   OrthographicCamera,
   PlaneGeometry,
-  RGBAFormat,
   Scene,
   ShaderMaterial,
-  UnsignedByteType,
   WebGLRenderer,
   WebGLRenderTarget,
 } from "three";
@@ -77,6 +71,10 @@ export class HillshadeNormalMapGenerator {
           vec2 pixelCoord = gl_FragCoord.xy - 0.5;
           vec2 uv = pixelCoord / (uOutputSize - 1.0);
 
+          // Flip Y to match DEM texture coordinate system (top-down)
+          // gl_FragCoord is OpenGL coords (y=0 at bottom), but DEM texture is top-down (y=0 at top)
+          uv.y = 1.0 - uv.y;
+
           // Check if this is valid terrain data
           float testHeight = sampleHeightBilinear(uDemTexture, uv, texSize);
 
@@ -104,56 +102,23 @@ export class HillshadeNormalMapGenerator {
   }
 
   /**
-   * Generate normal map from DEM texture
-   * @param demTexture - Source DEM texture (padded, e.g. 514x514 for 512 content)
+   * Render normal map to an existing RenderTarget (GPU-only, no readback)
+   * Used by HillshadeContext's RenderTarget pool to avoid GPU→CPU→GPU round-trip
+   * @param renderTarget - Target to render to (owned by HillshadeContext)
+   * @param demTexture - Source DEM texture (padded)
    * @param metersPerTexel - Meters per texel for normal calculation
-   * @param hillshadeConfig - Hillshade decoder configuration from Rust
-   * @returns Normal map texture without padding (e.g. 512x512)
+   * @param hillshadeConfig - Hillshade decoder configuration
    */
-  generate(
+  renderToTarget(
+    renderTarget: WebGLRenderTarget,
     demTexture: DataTexture,
     metersPerTexel: number,
     hillshadeConfig: HillshadeConfig,
-  ): DataTexture {
-    const paddedWidth = demTexture.image.width;
-    const paddedHeight = demTexture.image.height;
-
-    // Calculate content size (remove padding)
-    // Power of 2 = no padding, otherwise has 2px padding (1px each side)
-    const contentWidth = this.isPowerOfTwo(paddedWidth)
-      ? paddedWidth
-      : paddedWidth - 2;
-    const contentHeight = this.isPowerOfTwo(paddedHeight)
-      ? paddedHeight
-      : paddedHeight - 2;
-
-    // Guard against invalid/placeholder textures (e.g., 1x1 textures)
-    // Need at least 2x2 to compute meaningful normals
-    const minSize = 2;
-    if (contentWidth < minSize || contentHeight < minSize) {
-      console.warn(
-        `HillshadeNormalMapGenerator: DEM texture too small (${contentWidth}x${contentHeight}), ` +
-          `returning default flat normal map`,
-      );
-
-      // Return a minimal 1x1 texture with default upward normal (0, 0, 1)
-      // Encoded as an RGB normal map mapped from [-1, 1] to [0, 255].
-      const defaultPixels = new Uint8Array([128, 128, 255, 255]);
-      const defaultTexture = new DataTexture(
-        defaultPixels,
-        1,
-        1,
-        RGBAFormat,
-        UnsignedByteType,
-      );
-      defaultTexture.colorSpace = NoColorSpace;
-      defaultTexture.needsUpdate = true;
-      return defaultTexture;
-    }
+  ): void {
+    const contentWidth = renderTarget.width;
+    const contentHeight = renderTarget.height;
 
     // Calculate texel size for DEM sampling
-    // Standard UV mapping: UV [0,1] maps to pixel centers [first, last]
-    // So texelSize (UV distance between adjacent pixels) = 1 / (N - 1)
     const texelSize = 1.0 / (contentWidth - 1);
 
     // Update shader uniforms
@@ -173,62 +138,57 @@ export class HillshadeNormalMapGenerator {
     this.material.uniforms.uHillshadeEpsilon.value = hillshadeConfig.epsilon;
     this.material.uniforms.uHillshadeOffset.value = hillshadeConfig.offset;
 
-    // Create render target for CONTENT SIZE (without padding)
-    // Use NearestFilter to avoid any hardware interpolation during generation
-    const renderTarget = new WebGLRenderTarget(contentWidth, contentHeight, {
-      format: RGBAFormat,
-      type: UnsignedByteType,
-      minFilter: NearestFilter,
-      magFilter: NearestFilter,
-      wrapS: ClampToEdgeWrapping,
-      wrapT: ClampToEdgeWrapping,
-      colorSpace: NoColorSpace,
-    });
-
-    // Render to target
     const currentRenderTarget = this.renderer.getRenderTarget();
     this.renderer.setRenderTarget(renderTarget);
     this.renderer.render(this.scene, this.camera);
     this.renderer.setRenderTarget(currentRenderTarget);
 
-    // Read pixels from render target
-    const pixels = new Uint8Array(contentWidth * contentHeight * 4);
+    // RenderTarget.texture uses default flipY=false (OpenGL bottom-up)
+    // Do not set flipY - shader UV transform should handle coordinate mapping
+    renderTarget.texture.version++;
+    renderTarget.texture.needsUpdate = true;
+  }
+
+  /**
+   * Debug: Save normal map to file
+   * @param renderTarget - RenderTarget to read from
+   * @param filename - Output filename
+   */
+  dbgSaveNormalMap(renderTarget: WebGLRenderTarget, filename: string): void {
+    const width = renderTarget.width;
+    const height = renderTarget.height;
+    const pixels = new Uint8Array(width * height * 4);
+
     this.renderer.readRenderTargetPixels(
       renderTarget,
       0,
       0,
-      contentWidth,
-      contentHeight,
+      width,
+      height,
       pixels,
     );
 
-    // Clean up render target
-    renderTarget.dispose();
+    // Create canvas and write pixels
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
 
-    // Create normal map texture (content size, no padding)
-    const normalMap = new DataTexture(
-      pixels,
-      contentWidth,
-      contentHeight,
-      RGBAFormat,
-      UnsignedByteType,
-    );
-    normalMap.needsUpdate = true;
-    // readRenderTargetPixels returns data in WebGL coordinate system (bottom-up)
-    // Set flipY=true to match Three.js texture coordinate system (top-down)
-    normalMap.flipY = true;
-    // Use LinearFilter for hardware bilinear interpolation
-    normalMap.minFilter = LinearFilter;
-    normalMap.magFilter = LinearFilter;
-    normalMap.wrapS = ClampToEdgeWrapping;
-    normalMap.wrapT = ClampToEdgeWrapping;
-    normalMap.colorSpace = NoColorSpace;
+    const imageData = ctx.createImageData(width, height);
+    imageData.data.set(pixels);
+    ctx.putImageData(imageData, 0, 0);
 
-    return normalMap;
-  }
-
-  private isPowerOfTwo(n: number): boolean {
-    return (n & (n - 1)) === 0 && n !== 0;
+    // Download
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
   }
 
   dispose(): void {
