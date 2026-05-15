@@ -179,11 +179,15 @@ class SelectiveOutlinePass extends PostProcessingPass {
 
     // Extract material: reads EffectIds Buffer → binary mask.
     // MRT-time vs final depth comparison masks out pixels that opaque later occluded.
+    // depthResolution: full-res depth texture size. Used by the occlusion helper to snap
+    // UVs to texel centers — when resolutionScale < 1 this mask RT is downsampled and the
+    // shared LinearFilter depth textures would otherwise produce invalid unpack values.
     this.extractMaterial = new ShaderMaterial({
       uniforms: {
         tEffectIds: { value: null },
         tMrtDepth: { value: null },
         tAllDepth: { value: null },
+        depthResolution: { value: new Vector2() },
         slotBit: { value: 0 },
       },
       vertexShader: `
@@ -197,6 +201,7 @@ class SelectiveOutlinePass extends PostProcessingPass {
         uniform sampler2D tEffectIds;
         uniform sampler2D tMrtDepth;
         uniform sampler2D tAllDepth;
+        uniform vec2 depthResolution;
         uniform int slotBit;
 
         varying vec2 vUv;
@@ -210,7 +215,7 @@ class SelectiveOutlinePass extends PostProcessingPass {
           float bitValue = extractEffectBit(maskValue, slotBit);
 
           float mask =
-            (bitValue > 0.5 && !isOccludedByOpaque(tMrtDepth, tAllDepth, vUv))
+            (bitValue > 0.5 && !isOccludedByOpaque(tMrtDepth, tAllDepth, vUv, depthResolution))
               ? 1.0
               : 0.0;
           gl_FragColor = vec4(vec3(mask), 1.0);
@@ -284,7 +289,11 @@ class SelectiveOutlinePass extends PostProcessingPass {
       new Mesh(this.fullscreenGeometry, this.edgeDetectMaterial),
     );
 
-    // Composite material: blend outline with base scene
+    // Composite material: blend outline with base scene.
+    // Note: edges that the Sobel + thickness widened over an occluder are kept
+    // on purpose — the resulting "outline hovering on top of the occluder" is
+    // the intended X-ray-style readout. Per-pixel occlusion is applied earlier
+    // in the extract pass (on the mask itself, before Sobel widens it).
     this.compositeMaterial = new ShaderMaterial({
       uniforms: {
         tBase: { value: null },
@@ -420,6 +429,10 @@ class SelectiveOutlinePass extends PostProcessingPass {
     this.extractMaterial.uniforms.tEffectIds.value = effectIdsBuffer;
     this.extractMaterial.uniforms.tMrtDepth.value = mrtDepthBuffer;
     this.extractMaterial.uniforms.tAllDepth.value = allDepthBuffer;
+    this.extractMaterial.uniforms.depthResolution.value.set(
+      inputBuffer.width,
+      inputBuffer.height,
+    );
     this.extractMaterial.uniforms.slotBit.value = slot;
 
     renderer.setRenderTarget(this.maskRT);

@@ -42,6 +42,11 @@ export type CustomRenderPassOptions = {
  * Comparing the two (per-effect, in extract shaders) tells whether a MRT pixel
  * is still the front-most. `effectIdsBuffer` alone can't answer this because
  * it's frozen at MRT-time, even when opaque later covers the same screen pixel.
+ *
+ * Both copies use LinearFilter (default). Selective-effect extract shaders
+ * unpack RGBA-packed depth, which is invalid under linear interpolation, so
+ * they snap UVs to texel centers (see `selective_effect_occlusion.glsl`)
+ * before sampling.
  */
 export class CustomRenderPass extends RenderPass {
   protected _camera: PerspectiveCamera;
@@ -238,15 +243,11 @@ export class CustomRenderPass extends RenderPass {
     }
 
     // Capture MRT-time depth (globe + draped + mrt, before opaque) so the bloom/outline
-    // extract passes can detect pixels that opaque later occluded.
-    // Skip when mrt scene is empty: effectIdsBuffer is cleared to 0, so the extract shader's
-    // bitValue guard short-circuits before sampling the (now stale) mrtDepth texture.
-    const hasMrtMeshes = this._scenes.mrt.children.length > 0;
-    if (hasMrtMeshes) {
-      this.mrtDepthCopyPass.setDepthTexture(renderTarget.depthTexture);
-      this.mrtDepthCopyPass.copyDepth(false);
-      this.mrtDepthCopyPass.render(renderer, null, null);
-    }
+    // extract passes can detect pixels that opaque later occluded. Always copy so the
+    // public `mrtDepthBuffer` getter never returns a previous-frame snapshot.
+    this.mrtDepthCopyPass.setDepthTexture(renderTarget.depthTexture);
+    this.mrtDepthCopyPass.copyDepth(false);
+    this.mrtDepthCopyPass.render(renderer, null, null);
 
     this.debugNormalCopyPass?.render(renderer, null, null);
 

@@ -178,12 +178,16 @@ class SelectiveBloomPass extends PostProcessingPass {
 
     // Extract material: reads EmissiveBuffer + EffectIds Buffer → bloom source.
     // Also reads MRT-time depth and final depth to discard pixels that opaque later occluded.
+    // depthResolution: full-res depth texture size. Used by the occlusion helper to snap
+    // UVs to texel centers — Bloom extracts at a downsampled RT, so the shared LinearFilter
+    // depth textures would otherwise be sampled mid-texel and produce invalid unpack values.
     this.extractMaterial = new ShaderMaterial({
       uniforms: {
         tEmissive: { value: null },
         tEffectIds: { value: null },
         tMrtDepth: { value: null },
         tAllDepth: { value: null },
+        depthResolution: { value: new Vector2() },
         slotBit: { value: 0 },
       },
       vertexShader: `
@@ -198,6 +202,7 @@ class SelectiveBloomPass extends PostProcessingPass {
         uniform sampler2D tEffectIds;
         uniform sampler2D tMrtDepth;
         uniform sampler2D tAllDepth;
+        uniform vec2 depthResolution;
         uniform int slotBit;
 
         varying vec2 vUv;
@@ -210,7 +215,7 @@ class SelectiveBloomPass extends PostProcessingPass {
           float maskValue = texture2D(tEffectIds, vUv).r;
           float bitValue = extractEffectBit(maskValue, slotBit);
 
-          if (bitValue <= 0.5 || isOccludedByOpaque(tMrtDepth, tAllDepth, vUv)) {
+          if (bitValue <= 0.5 || isOccludedByOpaque(tMrtDepth, tAllDepth, vUv, depthResolution)) {
             gl_FragColor = vec4(0.0, 0.0, 0.0, 0.0);
             return;
           }
@@ -346,6 +351,10 @@ class SelectiveBloomPass extends PostProcessingPass {
     this.extractMaterial.uniforms.tEffectIds.value = effectIdsBuffer;
     this.extractMaterial.uniforms.tMrtDepth.value = mrtDepthBuffer;
     this.extractMaterial.uniforms.tAllDepth.value = allDepthBuffer;
+    this.extractMaterial.uniforms.depthResolution.value.set(
+      inputBuffer.width,
+      inputBuffer.height,
+    );
     this.extractMaterial.uniforms.slotBit.value = slot;
 
     renderer.setRenderTarget(this.bloomSourceRT);
