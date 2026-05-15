@@ -102,7 +102,7 @@ fn color_atlas_packs_glyphs_and_tracks_lru() {
     let added = atlas.ensure_glyphs_in_atlas(COLRV1_FONT, 0, &[gid], 0);
     assert!(added, "first call should report new glyphs added");
 
-    let key = (gid as u64) | ((0u64) << 32); // composite_key(font_index=0, gid)
+    let key = gid as u64; // composite_key(font_index=0, gid)
     let metrics = atlas
         .get_metrics(key)
         .expect("metrics for newly packed glyph");

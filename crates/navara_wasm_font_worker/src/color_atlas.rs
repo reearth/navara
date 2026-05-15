@@ -120,7 +120,8 @@ impl ColorAtlas {
                 let src_end = src_row + row_bytes;
                 let dst_end = dst_row + row_bytes;
                 if src_end <= bitmap.rgba.len() && dst_end <= self.pixel_data.len() {
-                    self.pixel_data[dst_row..dst_end].copy_from_slice(&bitmap.rgba[src_row..src_end]);
+                    self.pixel_data[dst_row..dst_end]
+                        .copy_from_slice(&bitmap.rgba[src_row..src_end]);
                 }
             }
 

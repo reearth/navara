@@ -13,8 +13,8 @@ use skrifa::{
     color::{Brush, ColorGlyphFormat, ColorPainter, ColorStop, CompositeMode, Extend, Transform},
     instance::{LocationRef, Size},
     outline::{DrawSettings, OutlinePen},
-    raw::{TableProvider, tables::cpal::ColorRecord, types::BoundingBox},
     prelude::FontRef,
+    raw::{TableProvider, tables::cpal::ColorRecord, types::BoundingBox},
 };
 use tiny_skia::{
     BlendMode, Color as TsColor, FillRule, GradientStop, LinearGradient, Mask, Paint, Path,
@@ -97,7 +97,8 @@ pub fn rasterize_color_glyph(
         .map(|s| s.to_vec())
         .unwrap_or_default();
 
-    let mut painter = ColorPainterImpl::new(canvas, &font, palette, base_transform, pixel_w, pixel_h);
+    let mut painter =
+        ColorPainterImpl::new(canvas, &font, palette, base_transform, pixel_w, pixel_h);
     glyph.paint(LocationRef::default(), &mut painter).ok()?;
     let canvas = painter.into_pixmap();
 
@@ -339,9 +340,9 @@ impl<'a> ColorPainterImpl<'a> {
             Brush::SweepGradient { color_stops, .. } => {
                 // tiny-skia 0.12 has no sweep/conical gradient.
                 // Approximate with the first color stop until we add a custom shader.
-                color_stops.first().map(|s| {
-                    Shader::SolidColor(self.resolve_color(s.palette_index, s.alpha))
-                })
+                color_stops
+                    .first()
+                    .map(|s| Shader::SolidColor(self.resolve_color(s.palette_index, s.alpha)))
             }
         }
     }

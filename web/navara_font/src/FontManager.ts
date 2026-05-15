@@ -45,7 +45,13 @@ export function createColorAtlasTexture(
   width: number,
   height: number,
 ): DataTexture {
-  const tex = new DataTexture(data, width, height, RGBAFormat, UnsignedByteType);
+  const tex = new DataTexture(
+    data,
+    width,
+    height,
+    RGBAFormat,
+    UnsignedByteType,
+  );
   tex.minFilter = LinearFilter;
   tex.magFilter = LinearFilter;
   tex.generateMipmaps = false;

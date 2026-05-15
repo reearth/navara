@@ -94,7 +94,11 @@ export class FontWorkerClient {
       raw: { data: ArrayBuffer; width: number; height: number } | null,
     ): FontAtlasData | null =>
       raw
-        ? { data: new Uint8Array(raw.data), width: raw.width, height: raw.height }
+        ? {
+            data: new Uint8Array(raw.data),
+            width: raw.width,
+            height: raw.height,
+          }
         : null;
 
     return {

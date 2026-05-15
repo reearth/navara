@@ -4,15 +4,11 @@ import { DefaultPlugin } from "@navara/three_default_plugin";
 import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../../helpers/attributions";
-import {
-  GEOJSON_DATASETS,
-  TERRAIN_DATASETS,
-  TILE_DATASETS,
-} from "../../../helpers/constants";
+import { GEOJSON_DATASETS, TILE_DATASETS } from "../../../helpers/constants";
 import { addDateControl } from "../../../helpers/control";
+import WORLD_FONT_FAMILY from "../geojson-font-faces/worldCitiesFontFamily.json";
 
 import EMOJI_FONT_FAMILY from "./notoColorEmojiFamily.json";
-import WORLD_FONT_FAMILY from "../geojson-font-faces/worldCitiesFontFamily.json";
 
 const FAMILY_NAME = "CityWithEmoji";
 
@@ -20,21 +16,11 @@ const FAMILY_NAME = "CityWithEmoji";
 // regions of the COLRv1 atlas.
 type DemoMode = "flag" | "face" | "food" | "animal" | "mixed";
 
+// prettier-ignore
+const MIXED_PALETTE = ["🌟", "❤️", "🔥", "⚡", "💎", "🌈", "🚀", "✈️", "🎨", "🎵"];
 const FACE_PALETTE = ["😀", "🥰", "😎", "🤩", "😴", "🥳", "🤔", "😇"];
 const FOOD_PALETTE = ["🍕", "🍔", "🍣", "🍱", "🥑", "🍎", "🍇", "🌮"];
 const ANIMAL_PALETTE = ["🐶", "🐱", "🦊", "🐻", "🐼", "🐨", "🦁", "🐯"];
-const MIXED_PALETTE = [
-  "🌟",
-  "❤️",
-  "🔥",
-  "⚡",
-  "💎",
-  "🌈",
-  "🚀",
-  "✈️",
-  "🎨",
-  "🎵",
-];
 
 const flagFor = (country: unknown): string => {
   if (typeof country !== "string" || country.length !== 2) return "🌍";
@@ -55,11 +41,7 @@ const hashStr = (s: string): number => {
   return Math.abs(h);
 };
 
-const pickEmoji = (
-  mode: DemoMode,
-  name: string,
-  country: unknown,
-): string => {
+const pickEmoji = (mode: DemoMode, name: string, country: unknown): string => {
   if (mode === "flag") return flagFor(country);
   const palette =
     mode === "face"
@@ -109,7 +91,10 @@ const run = async () => {
     rasterTile: { maxZoom: 19 },
   });
 
-  const params: { size: number; mode: DemoMode } = {
+  const params: {
+    size: number;
+    mode: DemoMode;
+  } = {
     size: 18,
     mode: "flag",
   };
@@ -145,7 +130,7 @@ const run = async () => {
           const name = properties?.["name"] as string | undefined;
           if (!name) return { show: false };
           const emoji = pickEmoji(params.mode, name, properties?.["country"]);
-          return { text: `${emoji} ${name}`, show: true };
+          return { text: `${emoji}${name}`, show: true };
         },
         { filters: ["name", "country"] },
       );
@@ -193,7 +178,7 @@ const run = async () => {
       layer?.update({ text: { size: value } });
     });
 
-  showAttributions([TILE_DATASETS.openstreetmap, TERRAIN_DATASETS.mapterhorn]);
+  showAttributions([TILE_DATASETS.openstreetmap]);
 };
 
 run();
