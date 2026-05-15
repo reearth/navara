@@ -74,7 +74,6 @@ export class HillshadeContext {
 
   /**
    * Get hillshade decoder config from tile
-   * Caches the result after first query to avoid repeated WASM calls
    * @param tileHandler - TileHandler to query WASM
    * @param tileHandle - Tile handle to get elevation decoder from
    */
