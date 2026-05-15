@@ -106,6 +106,18 @@ export abstract class SelectiveEffectDesc<
     return mrtDesc?.effectIdsBuffer ?? null;
   }
 
+  /** Depth snapshot taken right after MRT scene render (before opaque). RGBADepthPacking. */
+  public getMrtDepthBuffer(): Texture | null {
+    const mrtDesc = this.find<MRTPassEffectDesc>("mrt");
+    return mrtDesc?.mrtDepthBuffer ?? null;
+  }
+
+  /** Final depth buffer after all rendering (globe + mrt + opaque). RGBADepthPacking. */
+  public getDepthBuffer(): Texture | null {
+    const mrtDesc = this.find<MRTPassEffectDesc>("mrt");
+    return mrtDesc?.depthBuffer ?? null;
+  }
+
   /** Slot bit index for this effect instance in the EffectIds Buffer. -1 if unregistered. */
   public getEffectSlot(): number {
     return this.ctx.selectiveEffectRegistry?.getSlot(this.id) ?? -1;

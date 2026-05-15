@@ -26,6 +26,23 @@ export type CustomRenderPassOptions = {
   allowTransparent?: boolean;
 };
 
+/**
+ * G-buffer + multi-scene render pass.
+ *
+ * Renders `globe` / `mrt` / `opaque` scenes in order, writing four MRT
+ * attachments (color, normal, effectIds bitmask, emissive) plus a depth
+ * texture into `gbufferRenderTarget`. The depth texture is captured at two
+ * points so downstream Selective Effect extracts can detect opaque occlusion:
+ *
+ *   1. `mrtDepthCopyPass.texture` — depth right after MRT scene render
+ *      (globe + draped + mrt; before opaque). This is the depth at which the
+ *      effect-emitting fragment was written.
+ *   2. `allDepthCopyPass.texture` — depth after opaque rendering (final).
+ *
+ * Comparing the two (per-effect, in extract shaders) tells whether a MRT pixel
+ * is still the front-most. `effectIdsBuffer` alone can't answer this because
+ * it's frozen at MRT-time, even when opaque later covers the same screen pixel.
+ */
 export class CustomRenderPass extends RenderPass {
   protected _camera: PerspectiveCamera;
   protected _scenes: Scenes;
@@ -34,6 +51,11 @@ export class CustomRenderPass extends RenderPass {
   globeDepthCopyPass: DepthCopyPass;
   globeNormalCopyPass: NormalCopyPass;
   allDepthCopyPass: AllDepthCopyPass;
+  /**
+   * Captures depth right after MRT scene render (before opaque), so selective-effect
+   * extract passes can detect opaque-occluded MRT pixels.
+   */
+  mrtDepthCopyPass: AllDepthCopyPass;
   disableShadow: boolean;
   private globe: Globe;
   private combinedScene = new Scene();
@@ -93,6 +115,7 @@ export class CustomRenderPass extends RenderPass {
     });
 
     this.allDepthCopyPass = new AllDepthCopyPass();
+    this.mrtDepthCopyPass = new AllDepthCopyPass();
 
     this.disableShadow = !!options?.disableShadow;
     this.allowTransparent = options?.allowTransparent ?? true;
@@ -214,6 +237,17 @@ export class CustomRenderPass extends RenderPass {
       this._renderWithLight(renderer, this._scenes.mrt);
     }
 
+    // Capture MRT-time depth (globe + draped + mrt, before opaque) so the bloom/outline
+    // extract passes can detect pixels that opaque later occluded.
+    // Skip when mrt scene is empty: effectIdsBuffer is cleared to 0, so the extract shader's
+    // bitValue guard short-circuits before sampling the (now stale) mrtDepth texture.
+    const hasMrtMeshes = this._scenes.mrt.children.length > 0;
+    if (hasMrtMeshes) {
+      this.mrtDepthCopyPass.setDepthTexture(renderTarget.depthTexture);
+      this.mrtDepthCopyPass.copyDepth(false);
+      this.mrtDepthCopyPass.render(renderer, null, null);
+    }
+
     this.debugNormalCopyPass?.render(renderer, null, null);
 
     const finalTarget = this.renderToScreen ? null : inputBuffer;
@@ -242,6 +276,7 @@ export class CustomRenderPass extends RenderPass {
     this.gbufferRenderTarget.setSize(width, height);
     this.globeDepthCopyPass.setSize(width, height);
     this.allDepthCopyPass.setSize(width, height);
+    this.mrtDepthCopyPass.setSize(width, height);
     this.globeNormalCopyPass.setSize(width, height);
     this.debugNormalCopyPass?.setSize(width, height);
   }

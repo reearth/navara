@@ -10,6 +10,7 @@ import {
   type ViewContext,
 } from "@navara/three";
 import SelectiveEffectMaskChunk from "@shaders/glsl/chunks/selective_effect_mask.glsl?raw";
+import SelectiveEffectOcclusionChunk from "@shaders/glsl/chunks/selective_effect_occlusion.glsl?raw";
 import { Pass as PostProcessingPass } from "postprocessing";
 import {
   Mesh,
@@ -176,10 +177,13 @@ class SelectiveOutlinePass extends PostProcessingPass {
     this.fullscreenCamera = fullscreenQuad.camera;
     this.fullscreenGeometry = fullscreenQuad.geometry;
 
-    // Extract material: reads EffectIds Buffer → binary mask
+    // Extract material: reads EffectIds Buffer → binary mask.
+    // MRT-time vs final depth comparison masks out pixels that opaque later occluded.
     this.extractMaterial = new ShaderMaterial({
       uniforms: {
         tEffectIds: { value: null },
+        tMrtDepth: { value: null },
+        tAllDepth: { value: null },
         slotBit: { value: 0 },
       },
       vertexShader: `
@@ -191,17 +195,24 @@ class SelectiveOutlinePass extends PostProcessingPass {
       `,
       fragmentShader: `
         uniform sampler2D tEffectIds;
+        uniform sampler2D tMrtDepth;
+        uniform sampler2D tAllDepth;
         uniform int slotBit;
 
         varying vec2 vUv;
 
+        #include <packing>
         ${SelectiveEffectMaskChunk}
+        ${SelectiveEffectOcclusionChunk}
 
         void main() {
           float maskValue = texture2D(tEffectIds, vUv).r;
           float bitValue = extractEffectBit(maskValue, slotBit);
 
-          float mask = bitValue > 0.5 ? 1.0 : 0.0;
+          float mask =
+            (bitValue > 0.5 && !isOccludedByOpaque(tMrtDepth, tAllDepth, vUv))
+              ? 1.0
+              : 0.0;
           gl_FragColor = vec4(vec3(mask), 1.0);
         }
       `,
@@ -390,10 +401,12 @@ class SelectiveOutlinePass extends PostProcessingPass {
 
     // Get buffer textures
     const effectIdsBuffer = this.desc.getEffectIdsBuffer();
+    const mrtDepthBuffer = this.desc.getMrtDepthBuffer();
+    const allDepthBuffer = this.desc.getDepthBuffer();
     const slot = this.desc.getEffectSlot();
 
     // Passthrough if buffers not available — bypass composite to avoid null tEdge sampling
-    if (!effectIdsBuffer || slot < 0) {
+    if (!effectIdsBuffer || !mrtDepthBuffer || !allDepthBuffer || slot < 0) {
       this.compositeMaterial.uniforms.tBase.value = inputBuffer.texture;
       // Bind inputBuffer to avoid null sampler (bypass=1 skips edge sampling)
       this.compositeMaterial.uniforms.tEdge.value = inputBuffer.texture;
@@ -403,8 +416,10 @@ class SelectiveOutlinePass extends PostProcessingPass {
       return;
     }
 
-    // Step 1: Extract binary mask from EffectIds Buffer
+    // Step 1: Extract binary mask from EffectIds Buffer (with opaque-occlusion gate)
     this.extractMaterial.uniforms.tEffectIds.value = effectIdsBuffer;
+    this.extractMaterial.uniforms.tMrtDepth.value = mrtDepthBuffer;
+    this.extractMaterial.uniforms.tAllDepth.value = allDepthBuffer;
     this.extractMaterial.uniforms.slotBit.value = slot;
 
     renderer.setRenderTarget(this.maskRT);

@@ -75,6 +75,11 @@ export class MRTPassEffectDesc extends EffectDesc<
     return this.raw?.allDepthCopyPass.depthPacking;
   }
 
+  /** Depth snapshot taken right after MRT scene render (before opaque). RGBADepthPacking. */
+  get mrtDepthBuffer(): Texture | undefined {
+    return this.raw?.mrtDepthCopyPass.texture;
+  }
+
   get globeNormalBuffer(): Texture | undefined {
     return this.raw?.globeNormalCopyPass.texture;
   }

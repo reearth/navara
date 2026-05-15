@@ -9,6 +9,7 @@ import {
   type ViewContext,
 } from "@navara/three";
 import SelectiveEffectMaskChunk from "@shaders/glsl/chunks/selective_effect_mask.glsl?raw";
+import SelectiveEffectOcclusionChunk from "@shaders/glsl/chunks/selective_effect_occlusion.glsl?raw";
 import { Pass as PostProcessingPass } from "postprocessing";
 import {
   HalfFloatType,
@@ -175,11 +176,14 @@ class SelectiveBloomPass extends PostProcessingPass {
     this.fullscreenCamera = fullscreenQuad.camera;
     this.fullscreenGeometry = fullscreenQuad.geometry;
 
-    // Extract material: reads EmissiveBuffer + EffectIds Buffer → bloom source
+    // Extract material: reads EmissiveBuffer + EffectIds Buffer → bloom source.
+    // Also reads MRT-time depth and final depth to discard pixels that opaque later occluded.
     this.extractMaterial = new ShaderMaterial({
       uniforms: {
         tEmissive: { value: null },
         tEffectIds: { value: null },
+        tMrtDepth: { value: null },
+        tAllDepth: { value: null },
         slotBit: { value: 0 },
       },
       vertexShader: `
@@ -192,22 +196,27 @@ class SelectiveBloomPass extends PostProcessingPass {
       fragmentShader: `
         uniform sampler2D tEmissive;
         uniform sampler2D tEffectIds;
+        uniform sampler2D tMrtDepth;
+        uniform sampler2D tAllDepth;
         uniform int slotBit;
 
         varying vec2 vUv;
 
+        #include <packing>
         ${SelectiveEffectMaskChunk}
+        ${SelectiveEffectOcclusionChunk}
 
         void main() {
           float maskValue = texture2D(tEffectIds, vUv).r;
           float bitValue = extractEffectBit(maskValue, slotBit);
 
-          if (bitValue > 0.5) {
-            vec3 emissive = texture2D(tEmissive, vUv).rgb;
-            gl_FragColor = vec4(emissive, 1.0);
-          } else {
+          if (bitValue <= 0.5 || isOccludedByOpaque(tMrtDepth, tAllDepth, vUv)) {
             gl_FragColor = vec4(0.0, 0.0, 0.0, 0.0);
+            return;
           }
+
+          vec3 emissive = texture2D(tEmissive, vUv).rgb;
+          gl_FragColor = vec4(emissive, 1.0);
         }
       `,
       depthTest: false,
@@ -313,10 +322,18 @@ class SelectiveBloomPass extends PostProcessingPass {
     // Get buffer textures
     const emissiveBuffer = this.desc.getEmissiveBuffer();
     const effectIdsBuffer = this.desc.getEffectIdsBuffer();
+    const mrtDepthBuffer = this.desc.getMrtDepthBuffer();
+    const allDepthBuffer = this.desc.getDepthBuffer();
     const slot = this.desc.getEffectSlot();
 
     // Passthrough if buffers not available — render base without bloom
-    if (!emissiveBuffer || !effectIdsBuffer || slot < 0) {
+    if (
+      !emissiveBuffer ||
+      !effectIdsBuffer ||
+      !mrtDepthBuffer ||
+      !allDepthBuffer ||
+      slot < 0
+    ) {
       renderer.setRenderTarget(this.renderToScreen ? null : outputBuffer);
       this.compositeMaterial.uniforms.tBase.value = inputBuffer.texture;
       this.compositeMaterial.uniforms.tBloom.value = this.bloomSourceRT.texture;
@@ -327,6 +344,8 @@ class SelectiveBloomPass extends PostProcessingPass {
     // Step 1: Extract bloom source from buffers
     this.extractMaterial.uniforms.tEmissive.value = emissiveBuffer;
     this.extractMaterial.uniforms.tEffectIds.value = effectIdsBuffer;
+    this.extractMaterial.uniforms.tMrtDepth.value = mrtDepthBuffer;
+    this.extractMaterial.uniforms.tAllDepth.value = allDepthBuffer;
     this.extractMaterial.uniforms.slotBit.value = slot;
 
     renderer.setRenderTarget(this.bloomSourceRT);
