@@ -563,11 +563,20 @@ async function processTextureFragmentRequested(
 }
 
 function processTextureFragmentRemoved(ctx: EventContext, req: EntityEvent) {
-  const { loadedTexs, abortControllers } = ctx;
+  const { loadedTexs, abortControllers, hillshadeContext } = ctx;
   const id = generate_id_from_entity(req);
   const abortController = abortControllers.get(id);
+
   loadedTexs.get(id)?.dispose();
   loadedTexs.delete(id);
+
+  // Clean up hillshade resources if this was a hillshade texture
+  if (hillshadeContext) {
+    hillshadeContext.pendingEdges.delete(id);
+    hillshadeContext.clearTempDem(id);
+    hillshadeContext.clearRenderTarget(id);
+  }
+
   abortController?.abort();
 }
 
