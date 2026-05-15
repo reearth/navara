@@ -170,12 +170,6 @@ function processInitialHillshadeTexture(
     return;
   }
 
-  // Dispose old texture if exists
-  const oldTexture = loadedTexs.get(entityId);
-  if (oldTexture) {
-    oldTexture.dispose();
-  }
-
   // Apply any pending edge updates that arrived before texture creation
   const appliedEdges = applyPendingEdges(
     dataTexture,

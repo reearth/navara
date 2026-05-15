@@ -54,12 +54,6 @@ export class HillshadeContext {
   readonly tempDemTextures = new Map<string, TempDemEntry>();
 
   /**
-   * Cached hillshade decoder config from first hillshade layer
-   * Assumes all hillshade layers in the same view use the same decoder
-   */
-  private cachedConfig: HillshadeConfig | null = null;
-
-  /**
    * RenderTarget pool for normal map generation
    * One RenderTarget per entity to avoid GPU→CPU→GPU round-trip
    * Similar to texturizedSceneRenderTargets in tile.ts
@@ -88,15 +82,10 @@ export class HillshadeContext {
     tileHandler: TileHandler,
     tileHandle: bigint,
   ): HillshadeConfig {
-    if (this.cachedConfig) {
-      return this.cachedConfig;
-    }
-
-    // Query elevation decoder from WASM for this tile
     const decoder = tileHandler.getTileElevationDecoder(tileHandle);
 
     if (decoder) {
-      this.cachedConfig = {
+      return {
         rgbScaler: [decoder.r_scaler, decoder.g_scaler, decoder.b_scaler],
         boundary: decoder.boundary,
         minOffset: decoder.min_offset,
@@ -104,18 +93,17 @@ export class HillshadeContext {
         epsilon: decoder.epsilon,
         offset: decoder.offset,
       };
-      return this.cachedConfig;
+    } else {
+      // Fallback to Terrarium defaults if no decoder found
+      return {
+        rgbScaler: [256, 1, 1 / 256],
+        boundary: 0,
+        minOffset: 0,
+        maxOffset: 0,
+        epsilon: 1.0,
+        offset: -32768,
+      };
     }
-
-    // Fallback to Terrarium defaults if no decoder found
-    return {
-      rgbScaler: [256, 1, 1 / 256],
-      boundary: 0,
-      minOffset: 0,
-      maxOffset: 0,
-      epsilon: 1.0,
-      offset: -32768,
-    };
   }
 
   /**
