@@ -114,7 +114,7 @@ export class Globe implements Omit<
   }
 
   get useNormal(): boolean {
-    return this.handler.getUseNormal() ?? true;
+    return this.handler.getUseNormal() ?? false;
   }
 
   set useNormal(value: boolean) {

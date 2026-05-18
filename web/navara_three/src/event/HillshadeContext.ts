@@ -148,7 +148,8 @@ export class HillshadeContext {
    * @param demTexture - Source DEM texture (padded)
    * @param metersPerTexel - Meters per texel for normal calculation
    * @param hillshadeConfig - Hillshade decoder configuration
-   * @param tileCoords - Optional tile coordinates for debugging (z/x/y format)
+   * @param contentWidth - Content width (without padding)
+   * @param contentHeight - Content height (without padding)
    * @returns Normal map texture (references RenderTarget.texture directly)
    */
   generateNormalMap(
@@ -157,19 +158,9 @@ export class HillshadeContext {
     demTexture: DataTexture,
     metersPerTexel: number,
     hillshadeConfig: HillshadeConfig,
+    contentWidth: number,
+    contentHeight: number,
   ): Texture {
-    const paddedWidth = demTexture.image.width;
-    const paddedHeight = demTexture.image.height;
-
-    // Calculate content size (remove padding)
-    const isPowerOfTwo = (n: number) => (n & (n - 1)) === 0 && n !== 0;
-    const contentWidth = isPowerOfTwo(paddedWidth)
-      ? paddedWidth
-      : paddedWidth - 2;
-    const contentHeight = isPowerOfTwo(paddedHeight)
-      ? paddedHeight
-      : paddedHeight - 2;
-
     // Get or create RenderTarget for this entity
     const renderTarget = this.getOrCreateRenderTarget(
       entityId,

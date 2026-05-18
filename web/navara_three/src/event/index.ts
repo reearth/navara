@@ -503,17 +503,23 @@ function processDataRequesterRemoved(
   const abortController = abortControllers.get(id);
   const workerPool = workerPoolPromises.get(id);
 
-  if (loadedTexs) {
-    loadedTexs.get(id)?.dispose();
-    loadedTexs.delete(id);
-  }
-
-  // Clean up any pending hillshade edge updates and temp DEM for this entity
-  // Prevents memory leak when tiles are removed before texture creation
+  // Clean up hillshade resources first (if applicable)
+  // For hillshade entities, clearRenderTarget will dispose the RenderTarget and its texture
   if (hillshadeContext) {
     hillshadeContext.pendingEdges.delete(id);
     hillshadeContext.clearTempDem(id);
-    hillshadeContext.clearRenderTarget(id); // Clean up RenderTarget when texture is removed
+    hillshadeContext.clearRenderTarget(id);
+  }
+
+  // Dispose and remove texture from loadedTexs
+  // For hillshade entities, texture is already disposed by clearRenderTarget above
+  // Check isRenderTargetTexture to avoid double-dispose
+  if (loadedTexs) {
+    const texture = loadedTexs.get(id);
+    if (texture && !texture.isRenderTargetTexture) {
+      texture.dispose();
+    }
+    loadedTexs.delete(id);
   }
 
   buf.remove(req.handle);
@@ -567,15 +573,22 @@ function processTextureFragmentRemoved(ctx: EventContext, req: EntityEvent) {
   const id = generate_id_from_entity(req);
   const abortController = abortControllers.get(id);
 
-  loadedTexs.get(id)?.dispose();
-  loadedTexs.delete(id);
-
-  // Clean up hillshade resources if this was a hillshade texture
+  // Clean up hillshade resources first (if applicable)
+  // For hillshade entities, clearRenderTarget will dispose the RenderTarget and its texture
   if (hillshadeContext) {
     hillshadeContext.pendingEdges.delete(id);
     hillshadeContext.clearTempDem(id);
     hillshadeContext.clearRenderTarget(id);
   }
+
+  // Dispose and remove texture from loadedTexs
+  // For hillshade entities, texture is already disposed by clearRenderTarget above
+  // Check isRenderTargetTexture to avoid double-dispose
+  const texture = loadedTexs.get(id);
+  if (texture && !texture.isRenderTargetTexture) {
+    texture.dispose();
+  }
+  loadedTexs.delete(id);
 
   abortController?.abort();
 }
