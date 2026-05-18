@@ -1,7 +1,7 @@
 import ThreeView, {
   geodeticToVector3,
   degreeToRadian,
-  geodeticSurfaceNormal,
+  northUpEastToFixedFrame,
   radianToDegree,
 } from "@navara/three";
 import type { SplatMeshDesc } from "@navara/three_default_descs";
@@ -9,11 +9,11 @@ import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
-import { Vector3, Quaternion, Euler } from "three";
+import { Vector3 } from "three";
 import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../helpers/attributions";
-import { TILE_DATASETS } from "../../helpers/constants";
+import { SPLAT_DATASETS, TILE_DATASETS } from "../../helpers/constants";
 
 export type CustomDescriptions = DefaultDescriptions;
 
@@ -48,11 +48,11 @@ type SplatSample = {
 };
 
 // Four splats in an east-west line at equal spacing (STEP is the lng delta).
-// URLs point to SparkJS's public demo assets (sparkjs.dev) — for production,
-// host your own assets and respect the original splat dataset licenses.
+// URLs point to SparkJS's public demo assets — for production, host your own
+// assets and respect the original splat dataset licenses.
 const SAMPLES: SplatSample[] = [
   {
-    url: "https://sparkjs.dev/assets/splats/butterfly.spz",
+    url: SPLAT_DATASETS.sparkButterfly.url,
     name: "butterfly",
     note: "SH3 / AA off",
     dLng: -1.5 * STEP,
@@ -62,7 +62,7 @@ const SAMPLES: SplatSample[] = [
     dHeight: 20,
   },
   {
-    url: "https://sparkjs.dev/assets/splats/cat.spz",
+    url: SPLAT_DATASETS.sparkCat.url,
     name: "cat",
     note: "SH3 / AA off",
     dLng: -0.5 * STEP,
@@ -70,7 +70,7 @@ const SAMPLES: SplatSample[] = [
     scale: SCALE,
   },
   {
-    url: "https://sparkjs.dev/assets/splats/robot-head.spz",
+    url: SPLAT_DATASETS.sparkRobotHead.url,
     name: "robot-head",
     note: "SH3 / AA on",
     dLng: 0.5 * STEP,
@@ -82,7 +82,7 @@ const SAMPLES: SplatSample[] = [
     dHeight: 20,
   },
   {
-    url: "https://sparkjs.dev/assets/splats/penguin.spz",
+    url: SPLAT_DATASETS.sparkPenguin.url,
     name: "penguin",
     note: "SH3 / AA on",
     dLng: 1.5 * STEP,
@@ -90,14 +90,6 @@ const SAMPLES: SplatSample[] = [
     scale: SCALE,
   },
 ];
-
-// Spark's sample splats are trained in Y-down (image-space) convention, so they
-// appear upside-down in a Y-up world. Flip 180° around X first, then align with
-// the surface normal.
-const FLIP_Y_DOWN = new Quaternion().setFromAxisAngle(
-  new Vector3(1, 0, 0),
-  Math.PI,
-);
 
 const placeSplat = (
   view: ThreeView<CustomDescriptions>,
@@ -111,33 +103,18 @@ const placeSplat = (
     lng: degreeToRadian(lng),
     height,
   });
-  const normal = geodeticSurfaceNormal({
-    lat: degreeToRadian(lat),
-    lng: degreeToRadian(lng),
-    height,
-  });
-
-  const align = new Quaternion().setFromUnitVectors(
-    new Vector3(0, 1, 0),
-    normal,
-  );
-  // Order: flip (Y-down→Y-up) → yaw (around the object's up axis) → align
-  // (surface normal).
-  const yaw = new Quaternion().setFromAxisAngle(
-    new Vector3(0, 1, 0),
-    sample.yaw ?? 0,
-  );
-  const euler = new Euler().setFromQuaternion(
-    align.clone().multiply(yaw).multiply(FLIP_Y_DOWN),
-  );
+  // `northUpEastToFixedFrame` gives a local ENU frame at `pos` whose Y axis is
+  // the surface normal. Spark's sample splats are trained Y-down so we flip
+  // 180° around X within that frame; `sample.yaw` rotates around the local up.
+  const matrix = northUpEastToFixedFrame(pos);
 
   view.addMesh<SplatMeshDesc>({
+    matrixWorld: matrix,
     splat: {
       url: sample.url,
       lod: true,
     },
-    position: { x: pos.x, y: pos.y, z: pos.z },
-    rotation: { x: euler.x, y: euler.y, z: euler.z },
+    rotation: { x: Math.PI, y: sample.yaw ?? -Math.PI / 2, z: 0 },
     scale: { x: sample.scale, y: sample.scale, z: sample.scale },
   });
 };
@@ -155,7 +132,13 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     rasterTile: { maxZoom: 23 },
   });
 
-  showAttributions([TILE_DATASETS.openstreetmap]);
+  showAttributions([
+    TILE_DATASETS.openstreetmap,
+    SPLAT_DATASETS.sparkButterfly,
+    SPLAT_DATASETS.sparkCat,
+    SPLAT_DATASETS.sparkRobotHead,
+    SPLAT_DATASETS.sparkPenguin,
+  ]);
 
   for (const sample of SAMPLES) {
     placeSplat(view, sample);
