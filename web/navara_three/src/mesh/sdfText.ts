@@ -58,12 +58,8 @@ export class SDFTextMesh
   private _atlasTexture: DataTexture | null = null;
   /** When true, the atlas texture is shared and should not be disposed by this mesh. */
   private _sharedAtlas = false;
-  /**
-   * Color (COLRv1 RGBA) atlas texture. Always FontManager-owned and shared —
-   * unlike `_atlasTexture`, this mesh never creates a local color texture, so
-   * it must never be disposed here.
-   */
-  private _colorAtlasTexture: DataTexture | null = null;
+  // Color (COLRv1 RGBA) atlas texture is always FontManager-owned; this mesh
+  // never holds a local color texture, so there's no field to track here.
 
   private _enhancer: MaterialEnhancer<
     ShaderMaterial,
@@ -174,7 +170,6 @@ export class SDFTextMesh
    * Pass `null` to clear when the font has no color glyphs.
    */
   setColorAtlasTexture(tex: DataTexture | null): void {
-    this._colorAtlasTexture = tex;
     this._enhancer.mutates().setColorAtlasTexture({ value: tex });
   }
 
