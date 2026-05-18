@@ -27,22 +27,10 @@ export type CustomRenderPassOptions = {
 };
 
 /**
- * G-buffer + multi-scene render pass.
- *
- * Renders `globe` / `draped` / `mrt` / `opaque` scenes in order into
- * `gbufferRenderTarget` — a single MRT render target with four attachments
- * (color, normal, effectIds bitmask, emissive) plus a shared depth texture.
- *
- * Because all four scenes share the same MRT target, an opaque mesh covering
- * a Selective Effect target naturally overwrites the `effectIds.r` bitmask to
- * 0 at the covered pixels (via `overrideMaterialsForMRT`). Downstream
- * Selective Effect extracts therefore only need to test `effectIds.r` — no
- * separate opaque-occlusion depth comparison is required.
- *
- * After all scenes have rendered, the color attachment is copied to
- * `finalTarget` for the post-processing chain, and the depth attachment is
- * RGBA-packed into `allDepthCopyPass.texture` for downstream effects
- * (AerialPerspective, Clouds, etc.) via `MRTPassEffectDesc.depthBuffer`.
+ * G-buffer + multi-scene render pass. Renders `globe` / `draped` / `mrt` /
+ * `opaque` scenes into a shared MRT target (color, normal, effectIds, emissive
+ * + depth), then copies color to `finalTarget` and RGBA-packs depth into
+ * `allDepthCopyPass.texture` for downstream effects (AerialPerspective, Clouds).
  */
 export class CustomRenderPass extends RenderPass {
   protected _camera: PerspectiveCamera;
