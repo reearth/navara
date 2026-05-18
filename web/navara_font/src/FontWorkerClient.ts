@@ -1,9 +1,14 @@
 import type { ConcurrencyManager } from "@navara/worker";
 
 import type {
-  ShapeTextResult,
-  FontAtlasData,
+  BatchPrepareTextCurvesResult,
   BatchPrepareTextResult,
+  ColorCurveBufferSnapshot,
+  CurveBufferSnapshot,
+  CurveDirtyRange,
+  FontAtlasData,
+  ShapeTextCurvesResult,
+  ShapeTextResult,
 } from "./types";
 
 /**
@@ -106,6 +111,75 @@ export class FontWorkerClient {
       atlas: wrap(raw.atlas),
       colorAtlas: wrap(raw.colorAtlas),
       atlasKey: raw.atlasKey,
+    };
+  }
+
+  /**
+   * Slug-style curve pipeline: shape texts and pull the four outline buffers
+   * (plus three color buffers if the font has COLRv1 faces).
+   *
+   * The buffers are returned as full snapshots — the JS side uploads either
+   * a full reallocation (when the underlying WASM Vec grew) or just the
+   * dirty sub-range. Both decisions live in the [CurveTextureSet] consumer.
+   */
+  async prepareTextCurvesBatch(
+    fontUrl: string,
+    texts: string[],
+  ): Promise<BatchPrepareTextCurvesResult> {
+    const raw = (await this._send("prepareTextCurvesBatch", {
+      fontUrl,
+      texts,
+    })) as {
+      results: { text: string; shapeResult: ShapeTextCurvesResult | null }[];
+      atlasKey: string;
+      outline: {
+        glyphHeaders: ArrayBuffer;
+        bandData: ArrayBuffer;
+        bandCurves: ArrayBuffer;
+        curveData: ArrayBuffer;
+        dirty: {
+          headers: CurveDirtyRange;
+          bandData: CurveDirtyRange;
+          bandCurves: CurveDirtyRange;
+          curveData: CurveDirtyRange;
+        };
+      } | null;
+      color: {
+        layerHeaders: ArrayBuffer;
+        paintParams: ArrayBuffer;
+        clipRecords: ArrayBuffer;
+        dirty: {
+          layerHeaders: CurveDirtyRange;
+          paintParams: CurveDirtyRange;
+          clipRecords: CurveDirtyRange;
+        };
+      } | null;
+    };
+
+    const outline: CurveBufferSnapshot | null = raw.outline
+      ? {
+          glyphHeaders: new Float32Array(raw.outline.glyphHeaders),
+          bandData: new Uint32Array(raw.outline.bandData),
+          bandCurves: new Uint32Array(raw.outline.bandCurves),
+          curveData: new Float32Array(raw.outline.curveData),
+          dirty: raw.outline.dirty,
+        }
+      : null;
+
+    const color: ColorCurveBufferSnapshot | null = raw.color
+      ? {
+          layerHeaders: new Uint32Array(raw.color.layerHeaders),
+          paintParams: new Float32Array(raw.color.paintParams),
+          clipRecords: new Uint32Array(raw.color.clipRecords),
+          dirty: raw.color.dirty,
+        }
+      : null;
+
+    return {
+      results: raw.results,
+      atlasKey: raw.atlasKey,
+      outline,
+      color,
     };
   }
 

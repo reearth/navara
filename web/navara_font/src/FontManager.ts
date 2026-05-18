@@ -9,6 +9,7 @@ import {
 } from "three";
 import invariant from "tiny-invariant";
 
+import { CurveTextureSet } from "./curveTextures";
 import { FontWorkerClient } from "./FontWorkerClient";
 import { LRUMap } from "./LRUMap";
 import type {
@@ -17,6 +18,7 @@ import type {
   FontFamily,
   GlyphMetrics,
   ShapedGlyph,
+  ShapeTextCurvesResult,
   ShapeTextResult,
 } from "./types";
 
@@ -95,6 +97,27 @@ export class FontManager {
   private _colorTextureCache = new Map<string, DataTexture>();
   /** Tracks in-flight prepareText promises to deduplicate. */
   private _preparePending = new Map<string, Promise<void>>();
+
+  // --- Slug-style curve pipeline (parallel state, opt-in). ---
+  /** Per-font cache of curve-pipeline shape results, mirroring _shapeCache. */
+  private _curveShapeCache = new Map<
+    string,
+    LRUMap<string, ShapeTextCurvesResult>
+  >();
+  /** One texture set per atlas key. Holds all 4 outline + 3 color textures. */
+  private _curveTextures = new Map<string, CurveTextureSet>();
+  /** Microtask batch queue for the curve pipeline (independent from SDF). */
+  private _curveBatchQueue = new Map<
+    string,
+    {
+      text: string;
+      cacheKey: string;
+      resolve: () => void;
+      reject: (reason: unknown) => void;
+    }[]
+  >();
+  private _curveBatchScheduled = false;
+  private _curvePreparePending = new Map<string, Promise<void>>();
   /** Microtask batch queue: per-font list of texts awaiting worker dispatch. */
   private _batchQueue = new Map<
     string,
@@ -292,6 +315,12 @@ export class FontManager {
           colorTex.dispose();
           this._colorTextureCache.delete(atlasKey);
         }
+        const curveTex = this._curveTextures.get(atlasKey);
+        if (curveTex) {
+          curveTex.dispose();
+          this._curveTextures.delete(atlasKey);
+        }
+        this._curveShapeCache.delete(atlasKey);
       }
 
       if (this._client) {
@@ -591,6 +620,239 @@ export class FontManager {
     return tex;
   }
 
+  // -------------------------------------------------------------------------
+  // Slug-style curve pipeline (parallel to prepareText / shapeText / atlas).
+  //
+  // These methods are an opt-in path; nothing in the SDF surface routes
+  // through them. A mesh that wants curve rendering calls
+  // `prepareTextCurves(font, text)` (async) and then `shapeTextCurves(font,
+  // text)` plus `getCurveTextures(font)` (both sync) to obtain the shaped
+  // glyphs and the shared GPU textures.
+  // -------------------------------------------------------------------------
+
+  /** Async: shape `text` and ensure all glyphs are in the curve GPU buffers.
+   *  Loads dependent font files lazily when given a family identifier. */
+  async prepareTextCurves(
+    fontIdentifier: string,
+    text: string,
+    loadedFaces?: Set<string>,
+  ): Promise<void> {
+    if (!text) return;
+
+    const family = this._families.get(fontIdentifier);
+    if (family) {
+      const tracker = loadedFaces ?? new Set<string>();
+      const segments = this._segmentTextByFace(family.faces, text);
+      const uniqueUrls = [...new Set(segments.map((s) => s.url))];
+      await Promise.all(
+        uniqueUrls
+          .filter((url) => !tracker.has(url))
+          .map(async (url) => {
+            await this.loadFont(url, fontIdentifier);
+            tracker.add(url);
+          }),
+      );
+      return this._prepareFamilyTextCurves(fontIdentifier, family, text);
+    }
+
+    return this._prepareSingleFontTextCurves(fontIdentifier, text);
+  }
+
+  /** Sync: get a cached curve shape result. Call [prepareTextCurves] first. */
+  shapeTextCurves(
+    fontIdentifier: string,
+    text: string,
+  ): ShapeTextCurvesResult | undefined {
+    return this._curveShapeCache.get(fontIdentifier)?.get(text);
+  }
+
+  /** Sync: get the shared [CurveTextureSet] for a font's atlas key.
+   *  Returns `undefined` until at least one batch has been processed. */
+  getCurveTextures(fontIdentifier: string): CurveTextureSet | undefined {
+    const key = this._resolveAtlasKey(fontIdentifier);
+    return this._curveTextures.get(key);
+  }
+
+  /** Whether `text` has already been shaped via the curve pipeline. */
+  isTextCurvesPrepared(fontIdentifier: string, text: string): boolean {
+    return this._curveShapeCache.get(fontIdentifier)?.has(text) ?? false;
+  }
+
+  private async _prepareSingleFontTextCurves(
+    fontUrl: string,
+    text: string,
+  ): Promise<void> {
+    const cacheKey = this._cacheKey(fontUrl, text);
+    if (this._curveShapeCache.get(fontUrl)?.has(text) ?? false) return;
+    if (this._curvePreparePending.has(cacheKey))
+      return this._curvePreparePending.get(cacheKey);
+
+    const promise = new Promise<void>((resolve, reject) => {
+      let queue = this._curveBatchQueue.get(fontUrl);
+      if (!queue) {
+        queue = [];
+        this._curveBatchQueue.set(fontUrl, queue);
+      }
+      queue.push({ text, cacheKey, resolve, reject });
+    });
+
+    this._curvePreparePending.set(cacheKey, promise);
+
+    if (!this._curveBatchScheduled) {
+      this._curveBatchScheduled = true;
+      queueMicrotask(() => this._flushCurveBatch());
+    }
+
+    try {
+      await promise;
+    } finally {
+      this._curvePreparePending.delete(cacheKey);
+    }
+  }
+
+  private async _prepareFamilyTextCurves(
+    familyName: string,
+    family: FontFamily,
+    text: string,
+  ): Promise<void> {
+    if (this._curveShapeCache.get(familyName)?.has(text)) return;
+    const pendingKey = this._cacheKey(familyName, text);
+    if (this._curvePreparePending.has(pendingKey))
+      return this._curvePreparePending.get(pendingKey);
+
+    const promise = (async () => {
+      const segments = this._segmentTextByFace(family.faces, text);
+      await Promise.all(
+        segments.map((seg) =>
+          this._prepareSingleFontTextCurves(seg.url, seg.text),
+        ),
+      );
+
+      // Stitch per-segment curve results into one combined result.
+      const stitched = this._stitchCurveSegments(segments);
+
+      let familyCache = this._curveShapeCache.get(familyName);
+      if (!familyCache) {
+        familyCache = new LRUMap<string, ShapeTextCurvesResult>(
+          SHAPE_CACHE_MAX_SIZE,
+        );
+        this._curveShapeCache.set(familyName, familyCache);
+      }
+      familyCache.set(text, stitched);
+    })();
+
+    this._curvePreparePending.set(pendingKey, promise);
+    try {
+      await promise;
+    } finally {
+      this._curvePreparePending.delete(pendingKey);
+    }
+  }
+
+  private _stitchCurveSegments(
+    segments: { url: string; text: string }[],
+  ): ShapeTextCurvesResult {
+    const allGlyphs: ShapeTextCurvesResult["glyphs"] = [];
+    let targetUnitsPerEm = 0;
+    let isColor = false;
+
+    for (const seg of segments) {
+      const result = this._curveShapeCache.get(seg.url)?.get(seg.text);
+      invariant(
+        result,
+        `FontManager: missing curve shape cache for ${seg.url} "${seg.text}"`,
+      );
+      if (targetUnitsPerEm === 0) targetUnitsPerEm = result.unitsPerEm;
+      const scale = targetUnitsPerEm / result.unitsPerEm;
+
+      for (const g of result.glyphs) {
+        allGlyphs.push(
+          scale === 1
+            ? g
+            : {
+                ...g,
+                xAdvance: g.xAdvance * scale,
+                yAdvance: g.yAdvance * scale,
+                xOffset: g.xOffset * scale,
+                yOffset: g.yOffset * scale,
+              },
+        );
+      }
+      isColor = isColor || result.isColor;
+    }
+
+    if (targetUnitsPerEm === 0) {
+      throw new Error(
+        "FontManager: _stitchCurveSegments produced unitsPerEm of 0",
+      );
+    }
+    return { glyphs: allGlyphs, unitsPerEm: targetUnitsPerEm, isColor };
+  }
+
+  private async _flushCurveBatch(): Promise<void> {
+    this._curveBatchScheduled = false;
+
+    const queue = this._curveBatchQueue;
+    this._curveBatchQueue = new Map();
+
+    let client: FontWorkerClient;
+    try {
+      client = await this._ensureClient();
+    } catch (err) {
+      for (const [, entries] of queue) {
+        for (const entry of entries) entry.reject(err);
+      }
+      return;
+    }
+
+    const processFontBatch = async (
+      fontUrl: string,
+      entries: {
+        text: string;
+        cacheKey: string;
+        resolve: () => void;
+        reject: (reason: unknown) => void;
+      }[],
+    ) => {
+      const texts = entries.map((e) => e.text);
+      try {
+        const batchResult = await client.prepareTextCurvesBatch(fontUrl, texts);
+
+        for (const item of batchResult.results) {
+          if (item.shapeResult) {
+            let cache = this._curveShapeCache.get(fontUrl);
+            if (!cache) {
+              cache = new LRUMap<string, ShapeTextCurvesResult>(
+                SHAPE_CACHE_MAX_SIZE,
+              );
+              this._curveShapeCache.set(fontUrl, cache);
+            }
+            cache.set(item.text, item.shapeResult);
+          }
+        }
+
+        const atlasKey = batchResult.atlasKey;
+        let textures = this._curveTextures.get(atlasKey);
+        if (!textures) {
+          textures = new CurveTextureSet();
+          this._curveTextures.set(atlasKey, textures);
+        }
+        if (batchResult.outline) textures.applyOutline(batchResult.outline);
+        if (batchResult.color) textures.applyColor(batchResult.color);
+
+        for (const entry of entries) entry.resolve();
+      } catch (err) {
+        for (const entry of entries) entry.reject(err);
+      }
+    };
+
+    await Promise.all(
+      [...queue].map(([fontUrl, entries]) =>
+        processFontBatch(fontUrl, entries),
+      ),
+    );
+  }
+
   dispose() {
     this._pending.clear();
     this._preparePending.clear();
@@ -611,6 +873,11 @@ export class FontManager {
     this._colorTextureCache.clear();
     this._families.clear();
     this._atlasKeys.clear();
+    for (const tex of this._curveTextures.values()) tex.dispose();
+    this._curveTextures.clear();
+    this._curveShapeCache.clear();
+    this._curveBatchQueue.clear();
+    this._curvePreparePending.clear();
     this._client?.dispose();
     this._client = undefined;
   }

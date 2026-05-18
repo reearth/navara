@@ -73,3 +73,83 @@ export type FontFamily = {
   family: string;
   faces: FontFace[];
 };
+
+// ---------------------------------------------------------------------------
+// Slug-style curve pipeline types (parallel to the SDF types above).
+//
+// These mirror the Phase 1–3 Rust output. The shape result no longer carries
+// atlas rects; instead each glyph carries a `headerSlot` that the vertex
+// shader uses to fetch the glyph's bbox, band table, and curve table from
+// shared GPU buffers (see CurveTextureSet).
+// ---------------------------------------------------------------------------
+
+/** A single shaped glyph in the curve pipeline. */
+export type CurveShapedGlyph = {
+  glyphId: number;
+  fontIndex: number;
+  /** Slot index in the outline atlas's `glyphHeaders` buffer. The vertex
+   *  shader uses this as the instance attribute. */
+  headerSlot: number;
+  xAdvance: number;
+  yAdvance: number;
+  xOffset: number;
+  yOffset: number;
+};
+
+/** Result of shaping text through the curve pipeline. */
+export type ShapeTextCurvesResult = {
+  glyphs: CurveShapedGlyph[];
+  unitsPerEm: number;
+  /** True iff this run shaped through a COLRv1 face. */
+  isColor: boolean;
+};
+
+/** Dirty range [start, end) (in *element* units, not bytes) on a single
+ *  GPU-resident buffer. `null` means the buffer didn't change this batch. */
+export type CurveDirtyRange = { start: number; end: number } | null;
+
+/** Snapshot of the four outline-pipeline buffers for one atlas key. */
+export type CurveBufferSnapshot = {
+  /** 12 f32 per glyph header slot. RGBA32F-friendly. */
+  glyphHeaders: Float32Array;
+  /** 1 u32 per band entry: `(curveStart << 16) | curveCount`. */
+  bandData: Uint32Array;
+  /** 1 u32 per band-curves entry (glyph-local curve index). */
+  bandCurves: Uint32Array;
+  /** 6 f32 per quadratic Bezier: p0.xy, p1.xy, p2.xy. */
+  curveData: Float32Array;
+  dirty: {
+    headers: CurveDirtyRange;
+    bandData: CurveDirtyRange;
+    bandCurves: CurveDirtyRange;
+    curveData: CurveDirtyRange;
+  };
+};
+
+/** Snapshot of the three COLRv1-pipeline buffers for one atlas key. */
+export type ColorCurveBufferSnapshot = {
+  /** 12 u32 per layer header (transform-as-bits + tags + offsets). */
+  layerHeaders: Uint32Array;
+  /** Variable f32 blob; per-layer layout depends on the layer's paint tag. */
+  paintParams: Float32Array;
+  /** 8 u32 per clip record. */
+  clipRecords: Uint32Array;
+  dirty: {
+    layerHeaders: CurveDirtyRange;
+    paintParams: CurveDirtyRange;
+    clipRecords: CurveDirtyRange;
+  };
+};
+
+/** Per-batch return value for the curve pipeline. The buffer snapshots are
+ *  only present when at least one of their sub-buffers changed during the
+ *  batch — `null` means JS keeps using the previously cached snapshot. */
+export type BatchPrepareTextCurvesResult = {
+  results: {
+    text: string;
+    shapeResult: ShapeTextCurvesResult | null;
+  }[];
+  atlasKey: string;
+  outline: CurveBufferSnapshot | null;
+  color: ColorCurveBufferSnapshot | null;
+};
