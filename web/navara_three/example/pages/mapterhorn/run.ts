@@ -54,6 +54,19 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   });
 
   view.addLayer({
+    type: "tiles",
+    data: { url: TERRAIN_DATASETS.mapterhorn.url },
+    rasterTile: {
+      maxZoom: 17,
+      minZoom: 5,
+    },
+    hillshade: {
+      elevationDecoder: TERRARIUM_ELEVATION_DECODER(),
+      exaggeration: 1.0,
+    },
+  });
+
+  view.addLayer({
     type: "terrain",
     data: {
       url: TERRAIN_DATASETS.mapterhorn.url,
@@ -80,7 +93,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   const pane = new Pane();
 
   const date = new Date();
-  date.setUTCHours(18);
+  date.setUTCHours(20);
 
   addDateControl(view, pane, date);
 

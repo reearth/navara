@@ -58,6 +58,7 @@ import { getDevicePixelRatio, isMobileDevice } from "./device";
 import {
   processEvent,
   EventContext,
+  HillshadeContext,
   type BufferLoader,
   type FeatureHandler,
   type GlobeHandler,
@@ -78,6 +79,7 @@ import {
 import { FinalCopyEffectDesc } from "./layers/effect/FinalCopyEffectDesc";
 import { LayersManager } from "./layersManager";
 import { overrideMaterialsForMRT } from "./material";
+import type { TileMesh } from "./mesh/tile";
 import { RenderPassOrchestrator } from "./orchestrators/RenderPassOrchestrator";
 import { PickHelper } from "./pick/pickHelper";
 import { TerrainPicker } from "./pick/pickTerrain";
@@ -100,7 +102,7 @@ import {
   type TileMapByHandle,
 } from "./type";
 import type { CommonUniforms } from "./uniforms";
-import { isWorker, convertScreenPos } from "./utils";
+import { isWorker, convertScreenPos, type TextureSlot } from "./utils";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 /** @ts-ignore ignore: https://v3.vitejs.dev/guide/features.html#import-with-query-suffixes  */
 import WorkerURL from "./worker?url&worker";
@@ -292,6 +294,19 @@ export default class ThreeView<
   private _loadedTexs = new Map<string, Texture>();
   private _texturizedSceneByTileCoordinates: TexturizedSceneByTileCoordinates;
   private _tileMapByHandle: TileMapByHandle = new Map();
+  // fragment id → Set of {tileMesh, slotIndex}
+  private _textureFragmentIndex: Map<string, Set<TextureSlot>> = new Map<
+    string,
+    Set<TextureSlot>
+  >();
+  // tileMesh → Set of fragment IDs it uses
+  private _tileMeshToFragmentIds: Map<TileMesh, Set<string>> = new Map<
+    TileMesh,
+    Set<string>
+  >();
+  // Hillshade processing context
+  // Scoped to this view instance to prevent cross-view contamination
+  private _hillshadeContext = new HillshadeContext();
   private _initialized = false;
 
   private _buf: BufferLoader = {
@@ -390,6 +405,12 @@ export default class ThreeView<
     getVectorTileStates: (handle) => {
       return this._core?.getVectorTileStates(handle);
     },
+    calcMetersPerTexel: (tileHandle, textureZoom, textureWidth) => {
+      return (
+        this._core?.calcMetersPerTexel(tileHandle, textureZoom, textureWidth) ??
+        1.0
+      );
+    },
   };
   private _globeHandler: GlobeHandler = {
     getTransparent: () => {
@@ -408,8 +429,8 @@ export default class ThreeView<
     getHideUnderground: () => {
       return this._core?.getGlobeHideUnderground();
     },
-    getShouldComputeNormalFromVertex: () => {
-      return this._core?.getGlobeShouldComputeNormalFromVertex();
+    getUseNormal: () => {
+      return this._core?.getGlobeUseNormal();
     },
     getOpacity: () => {
       return this._core?.getGlobeOpacity();
@@ -435,8 +456,8 @@ export default class ThreeView<
     setHideUnderground: (value: boolean) => {
       this._core?.setGlobeHideUnderground(value);
     },
-    setShouldComputeNormalFromVertex: (value: boolean) => {
-      this._core?.setGlobeShouldComputeNormalFromVertex(value);
+    setUseNormal: (value: boolean) => {
+      this._core?.setGlobeUseNormal(value);
     },
     setOpacity: (value: number) => {
       this._core?.setGlobeOpacity(value);
@@ -864,6 +885,9 @@ export default class ThreeView<
       viewContext: this.viewContext,
       layerHandler: this._layerHandler,
       fontManager: this._fontManager,
+      textureFragmentIndex: this._textureFragmentIndex,
+      tileMeshToFragmentIds: this._tileMeshToFragmentIds,
+      hillshadeContext: this._hillshadeContext,
     });
 
     // Register built-in descriptors
@@ -992,6 +1016,9 @@ export default class ThreeView<
     }
     this._loadedTexs.clear();
 
+    // Cleanup hillshade context (temp DEMs, generator, etc.)
+    this._hillshadeContext.dispose();
+
     // Clear caches and maps
     this._meshes.clear();
     this._workerPoolPromises.clear();
@@ -1096,6 +1123,7 @@ export default class ThreeView<
     this.eventContext.updatedAt = updatedAt;
 
     processEvent(this.eventContext, events);
+
     events?.free();
 
     this._camera.raw.updateMatrixWorld();

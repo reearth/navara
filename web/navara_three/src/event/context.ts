@@ -22,6 +22,7 @@ import type { ViewEvents } from "..";
 import type { ThreeViewCamera } from "../camera";
 import type { ViewContext } from "../core";
 import type { LayersManager } from "../layersManager";
+import type { TileMesh } from "../mesh/tile";
 import type { Scenes, TexturizedSceneByTileCoordinates } from "../scene";
 import type { TextureOptions } from "../textures";
 import type {
@@ -32,6 +33,9 @@ import type {
   TileMapByHandle,
 } from "../type";
 import type { CommonUniforms } from "../uniforms";
+import type { TextureSlot } from "../utils";
+
+import type { HillshadeContext } from "./HillshadeContext";
 
 export type BufferLoader = {
   u8: (handle: number) => Uint8Array | null;
@@ -72,6 +76,11 @@ export type TileHandler = {
   getParentTile: (handle: bigint) => TransferableTile | undefined;
   getTileElevationDecoder: (handle: bigint) => ElevationDecoder | undefined;
   getVectorTileStates: (handle: bigint) => VectorTileState[] | undefined;
+  calcMetersPerTexel: (
+    tileHandle: bigint,
+    textureZoom: number,
+    textureWidth: number,
+  ) => number;
 };
 
 /**
@@ -84,7 +93,7 @@ export type GlobeHandler = {
   getSegments: () => number | undefined;
   getColor: () => CoreColor | undefined;
   getHideUnderground: () => boolean | undefined;
-  getShouldComputeNormalFromVertex: () => boolean | undefined;
+  getUseNormal: () => boolean | undefined;
   getOpacity: () => number | undefined;
   getWireframe: () => boolean | undefined;
   getElevationColormap: () => Float32Array | undefined;
@@ -93,7 +102,7 @@ export type GlobeHandler = {
   setSegments: (value: number) => void;
   setColor: (value: CoreColor) => void;
   setHideUnderground: (value: boolean) => void;
-  setShouldComputeNormalFromVertex: (value: boolean) => void;
+  setUseNormal: (value: boolean) => void;
   setOpacity: (value: number) => void;
   setWireframe: (value: boolean) => void;
   setElevationColormap: (value: ColorMap) => void;
@@ -157,6 +166,9 @@ type EventContextArgs = {
   viewContext: ViewContext;
   layerHandler?: LayerHandler;
   fontManager?: FontManager;
+  textureFragmentIndex?: Map<string, Set<TextureSlot>>;
+  tileMeshToFragmentIds?: Map<TileMesh, Set<string>>;
+  hillshadeContext?: HillshadeContext;
 };
 
 /**
@@ -187,6 +199,9 @@ export class EventContext {
   readonly viewContext: ViewContext;
   readonly layerHandler?: LayerHandler;
   readonly fontManager?: FontManager;
+  readonly textureFragmentIndex?: Map<string, Set<TextureSlot>>;
+  readonly tileMeshToFragmentIds?: Map<TileMesh, Set<string>>;
+  readonly hillshadeContext?: HillshadeContext;
 
   updatedAt = 0;
 
@@ -215,5 +230,8 @@ export class EventContext {
     this.viewContext = args.viewContext;
     this.layerHandler = args.layerHandler;
     this.fontManager = args.fontManager;
+    this.textureFragmentIndex = args.textureFragmentIndex;
+    this.tileMeshToFragmentIds = args.tileMeshToFragmentIds;
+    this.hillshadeContext = args.hillshadeContext;
   }
 }
