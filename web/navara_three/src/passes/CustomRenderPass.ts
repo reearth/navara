@@ -29,24 +29,20 @@ export type CustomRenderPassOptions = {
 /**
  * G-buffer + multi-scene render pass.
  *
- * Renders `globe` / `mrt` / `opaque` scenes in order, writing four MRT
- * attachments (color, normal, effectIds bitmask, emissive) plus a depth
- * texture into `gbufferRenderTarget`. The depth texture is captured at two
- * points so downstream Selective Effect extracts can detect opaque occlusion:
+ * Renders `globe` / `draped` / `mrt` / `opaque` scenes in order into
+ * `gbufferRenderTarget` — a single MRT render target with four attachments
+ * (color, normal, effectIds bitmask, emissive) plus a shared depth texture.
  *
- *   1. `mrtDepthCopyPass.texture` — depth right after MRT scene render
- *      (globe + draped + mrt; before opaque). This is the depth at which the
- *      effect-emitting fragment was written.
- *   2. `allDepthCopyPass.texture` — depth after opaque rendering (final).
+ * Because all four scenes share the same MRT target, an opaque mesh covering
+ * a Selective Effect target naturally overwrites the `effectIds.r` bitmask to
+ * 0 at the covered pixels (via `overrideMaterialsForMRT`). Downstream
+ * Selective Effect extracts therefore only need to test `effectIds.r` — no
+ * separate opaque-occlusion depth comparison is required.
  *
- * Comparing the two (per-effect, in extract shaders) tells whether a MRT pixel
- * is still the front-most. `effectIdsBuffer` alone can't answer this because
- * it's frozen at MRT-time, even when opaque later covers the same screen pixel.
- *
- * Both copies use LinearFilter (default). Selective-effect extract shaders
- * unpack RGBA-packed depth, which is invalid under linear interpolation, so
- * they snap UVs to texel centers (see `selective_effect_occlusion.glsl`)
- * before sampling.
+ * After all scenes have rendered, the color attachment is copied to
+ * `finalTarget` for the post-processing chain, and the depth attachment is
+ * RGBA-packed into `allDepthCopyPass.texture` for downstream effects
+ * (AerialPerspective, Clouds, etc.) via `MRTPassEffectDesc.depthBuffer`.
  */
 export class CustomRenderPass extends RenderPass {
   protected _camera: PerspectiveCamera;
@@ -56,11 +52,6 @@ export class CustomRenderPass extends RenderPass {
   globeDepthCopyPass: DepthCopyPass;
   globeNormalCopyPass: NormalCopyPass;
   allDepthCopyPass: AllDepthCopyPass;
-  /**
-   * Captures depth right after MRT scene render (before opaque), so selective-effect
-   * extract passes can detect opaque-occluded MRT pixels.
-   */
-  mrtDepthCopyPass: AllDepthCopyPass;
   disableShadow: boolean;
   private globe: Globe;
   private combinedScene = new Scene();
@@ -120,7 +111,6 @@ export class CustomRenderPass extends RenderPass {
     });
 
     this.allDepthCopyPass = new AllDepthCopyPass();
-    this.mrtDepthCopyPass = new AllDepthCopyPass();
 
     this.disableShadow = !!options?.disableShadow;
     this.allowTransparent = options?.allowTransparent ?? true;
@@ -193,7 +183,7 @@ export class CustomRenderPass extends RenderPass {
     this.globeDepthCopyPass.render(renderer, null, null);
 
     if (clearDepth) {
-      // Copy globe depth to the all depth buffer
+      // Copy globe depth to the all depth buffer (later merged with min(globe, mrt+opaque))
       this.allDepthCopyPass.setDepthTexture(
         this.globeDepthCopyPass.texture,
         RGBADepthPacking,
@@ -242,12 +232,11 @@ export class CustomRenderPass extends RenderPass {
       this._renderWithLight(renderer, this._scenes.mrt);
     }
 
-    // Capture MRT-time depth (globe + draped + mrt, before opaque) so the bloom/outline
-    // extract passes can detect pixels that opaque later occluded. Always copy so the
-    // public `mrtDepthBuffer` getter never returns a previous-frame snapshot.
-    this.mrtDepthCopyPass.setDepthTexture(renderTarget.depthTexture);
-    this.mrtDepthCopyPass.copyDepth(false);
-    this.mrtDepthCopyPass.render(renderer, null, null);
+    // Render opaque scene into the same MRT target. Opaque meshes without
+    // `effectIds` write `effectIdBuffer = vec4(0.0)` via overrideMaterialsForMRT,
+    // so they naturally overwrite the bitmask where they cover Selective Effect
+    // targets — no separate depth-occlusion pass is needed downstream.
+    this._renderWithLight(renderer, this._scenes.opaque);
 
     this.debugNormalCopyPass?.render(renderer, null, null);
 
@@ -258,11 +247,9 @@ export class CustomRenderPass extends RenderPass {
     }
     this.copyPass.render(renderer, finalTarget, null);
 
-    this._renderWithLight(renderer, this._scenes.opaque);
-
-    // Copy all depth (globe + MRT + opaque) to the all depth buffer.
-    // The renderTarget's depth texture now contains all rendered depth.
-    this.allDepthCopyPass.setDepthTexture(finalTarget?.depthTexture ?? null);
+    // Copy the gbuffer depth (globe + draped + mrt + opaque) for downstream
+    // effects (AerialPerspective, Clouds, etc.).
+    this.allDepthCopyPass.setDepthTexture(renderTarget.depthTexture);
     this.allDepthCopyPass.copyDepth(clearDepth);
     this.allDepthCopyPass.render(renderer, null, null);
   }
@@ -277,7 +264,6 @@ export class CustomRenderPass extends RenderPass {
     this.gbufferRenderTarget.setSize(width, height);
     this.globeDepthCopyPass.setSize(width, height);
     this.allDepthCopyPass.setSize(width, height);
-    this.mrtDepthCopyPass.setSize(width, height);
     this.globeNormalCopyPass.setSize(width, height);
     this.debugNormalCopyPass?.setSize(width, height);
   }
