@@ -14,8 +14,8 @@ use crate::color_raster::{COLOR_GLYPH_PX_SIZE, rasterize_color_glyph};
 
 /// Default color atlas dimensions (pixels per side).
 ///
-/// 1024² × 4 bytes = 4 MB — fits ~50 color glyphs at 128px, enough for typical
-/// emoji ranges in view. LRU evicts cold glyphs when the atlas fills.
+/// 1024² × 4 bytes = 4 MB — enough for typical emoji ranges in view at
+/// [`COLOR_GLYPH_PX_SIZE`]. LRU evicts cold glyphs when the atlas fills.
 pub const DEFAULT_COLOR_ATLAS_SIZE: i32 = 1024;
 
 /// RGBA8 color glyph atlas.

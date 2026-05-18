@@ -58,9 +58,12 @@ export class SDFTextMesh
   private _atlasTexture: DataTexture | null = null;
   /** When true, the atlas texture is shared and should not be disposed by this mesh. */
   private _sharedAtlas = false;
+  /**
+   * Color (COLRv1 RGBA) atlas texture. Always FontManager-owned and shared —
+   * unlike `_atlasTexture`, this mesh never creates a local color texture, so
+   * it must never be disposed here.
+   */
   private _colorAtlasTexture: DataTexture | null = null;
-  /** When true, the color atlas texture is shared and should not be disposed by this mesh. */
-  private _sharedColorAtlas = false;
 
   private _enhancer: MaterialEnhancer<
     ShaderMaterial,
@@ -172,7 +175,6 @@ export class SDFTextMesh
    */
   setColorAtlasTexture(tex: DataTexture | null): void {
     this._colorAtlasTexture = tex;
-    this._sharedColorAtlas = tex !== null;
     this._enhancer.mutates().setColorAtlasTexture({ value: tex });
   }
 
@@ -432,9 +434,7 @@ export class SDFTextMesh
     if (!this._sharedAtlas) {
       this._atlasTexture?.dispose();
     }
-    if (!this._sharedColorAtlas) {
-      this._colorAtlasTexture?.dispose();
-    }
+    // Color atlas is always FontManager-owned; never disposed here.
     this.material?.dispose();
   }
 
@@ -506,8 +506,9 @@ export class SDFTextMesh
 
     // Collect renderable glyphs (those with atlas regions). Each glyph carries
     // its own normalization scale so SDF and color glyphs share one em-space
-    // coordinate system downstream — color glyphs are rasterized at 128px,
-    // SDF glyphs at 64px, but both end up in [em]-units after dividing by px.
+    // coordinate system downstream — the two paths may use different raster
+    // sizes (SDF_PX_SIZE vs COLOR_GLYPH_PX_SIZE), but both end up in [em]-units
+    // after dividing by their respective px.
     let cursorX = 0;
     let cursorY = 0;
 
