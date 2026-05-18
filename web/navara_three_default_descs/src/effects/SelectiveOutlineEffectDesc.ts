@@ -168,8 +168,6 @@ class SelectiveOutlinePass extends PostProcessingPass {
     this.fullscreenCamera = fullscreenQuad.camera;
     this.fullscreenGeometry = fullscreenQuad.geometry;
 
-    // Opaque meshes already cleared effectIds.r to 0 in the shared MRT
-    // (CustomRenderPass), so the bit check alone gates opaque-occlusion.
     // Extract binary mask: drop pixels with no slot bit or marked occluded.
     this.extractMaterial = new ShaderMaterial({
       uniforms: {
