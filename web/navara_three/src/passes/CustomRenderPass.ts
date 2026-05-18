@@ -11,6 +11,7 @@ import {
   type WebGLRenderer,
 } from "three";
 
+import type { SelectiveEffectRegistry } from "../core/SelectiveEffectRegistry";
 import { RenderPass } from "../effects";
 import { DrapedMesh } from "../mesh/DrapedMesh";
 import type { Scenes } from "../scene";
@@ -29,6 +30,12 @@ export type CustomRenderPassOptions = {
   debugNormal?: boolean;
   disableShadow?: boolean;
   allowTransparent?: boolean;
+  /**
+   * When provided, the MRT-depth snapshot and occlusion mask pass run only
+   * while at least one Selective Effect slot is registered. Skipped entirely
+   * otherwise to avoid GPU work for views without selective effects.
+   */
+  selectiveEffectRegistry?: SelectiveEffectRegistry;
 };
 
 /**
@@ -66,6 +73,7 @@ export class CustomRenderPass extends RenderPass {
 
   private debugNormalCopyPass?: NormalCopyPass;
   private allowTransparent: boolean;
+  private selectiveEffectRegistry?: SelectiveEffectRegistry;
 
   constructor(
     scenes: Scenes,
@@ -116,6 +124,7 @@ export class CustomRenderPass extends RenderPass {
 
     this.disableShadow = !!options?.disableShadow;
     this.allowTransparent = options?.allowTransparent ?? true;
+    this.selectiveEffectRegistry = options?.selectiveEffectRegistry;
 
     this.globeNormalCopyPass = new NormalCopyPass();
     this.globeNormalCopyPass.setNormalTexture(
@@ -234,10 +243,14 @@ export class CustomRenderPass extends RenderPass {
       this._renderWithLight(renderer, this._scenes.mrt);
     }
 
-    const hasMrtMeshes = this._scenes.mrt.children.length > 0;
+    // Skip the depth snapshot and mask pass when no Selective Effect is registered.
+    const hasSelectiveEffect =
+      (this.selectiveEffectRegistry?.slotCount ?? 0) > 0;
 
-    // Snapshot post-MRT depth for the occlusion mask pass.
-    if (hasMrtMeshes) {
+    // Snapshot post-MRT depth for the occlusion mask pass. Under clearDepth
+    // this snapshot omits globe (allDepth re-merges it); harmless because
+    // the extract bit check drops globe pixels before the mask is read.
+    if (hasSelectiveEffect) {
       this.mrtDepthCopyPass.setDepthTexture(renderTarget.depthTexture);
       this.mrtDepthCopyPass.copyDepth(false);
       this.mrtDepthCopyPass.render(renderer, null, null);
@@ -259,7 +272,7 @@ export class CustomRenderPass extends RenderPass {
     this.allDepthCopyPass.copyDepth(clearDepth);
     this.allDepthCopyPass.render(renderer, null, null);
 
-    if (hasMrtMeshes) {
+    if (hasSelectiveEffect) {
       this.occlusionMaskPass.setDepthTextures(
         this.mrtDepthCopyPass.texture,
         this.allDepthCopyPass.texture,
@@ -283,6 +296,9 @@ export class CustomRenderPass extends RenderPass {
     this.globeNormalCopyPass.setSize(width, height);
     this.debugNormalCopyPass?.setSize(width, height);
   }
+
+  // `dispose()` is inherited: `postprocessing.Pass.dispose()` walks instance
+  // properties and releases all owned RTs / materials / sub-passes.
 
   /**
    * Drape features onto the terrain via stencil test.

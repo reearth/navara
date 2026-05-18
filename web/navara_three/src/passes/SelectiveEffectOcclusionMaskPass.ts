@@ -19,6 +19,9 @@ uniform sampler2D tAllDepth;
 
 varying vec2 vUv;
 
+// Margin against RGBA depth packing precision (~6e-8 per channel) and
+// float arithmetic. Smaller risks z-fighting between MRT and final depth;
+// larger swallows real near-coplanar occluders.
 #define SELECTIVE_EFFECT_OCCLUSION_EPSILON 0.00001
 
 void main() {
@@ -34,6 +37,12 @@ void main() {
  *
  * Compares MRT-time depth vs. final depth and writes `R = 1.0` where opaque
  * rendered closer than the MRT pixel. Runs at full resolution.
+ *
+ * The render target is left uninitialized until {@link render} is first
+ * called. Consumers must therefore gate on Selective Effect activation
+ * (e.g. `SelectiveEffectRegistry.slotCount > 0`) before sampling — when no
+ * effect is active, extracts short-circuit on the bit check and the mask
+ * is never read.
  */
 export class SelectiveEffectOcclusionMaskPass extends Pass {
   private _renderTarget: WebGLRenderTarget;

@@ -49,6 +49,7 @@ export class MRTPassEffectDesc extends EffectDesc<
       this.view.globe,
       {
         debugNormal: !!this.config.mrt?.debugNormal,
+        selectiveEffectRegistry: this.ctx.selectiveEffectRegistry,
       },
     );
 
