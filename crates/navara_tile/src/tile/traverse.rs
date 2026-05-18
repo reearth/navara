@@ -103,7 +103,7 @@ pub fn traverse_tile(
         texture_fragment,
         terrain_data_requester,
         terrain_layer,
-        has_tile_layer,
+        tiles.iter().len(),
     );
     let is_tile_ready = tile_ready_state.is_tile_ready;
 
