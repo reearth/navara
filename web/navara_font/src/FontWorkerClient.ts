@@ -86,19 +86,27 @@ export class FontWorkerClient {
     })) as {
       results: { text: string; shapeResult: ShapeTextResult | null }[];
       atlas: { data: ArrayBuffer; width: number; height: number } | null;
+      colorAtlas: { data: ArrayBuffer; width: number; height: number } | null;
       atlasKey: string;
     };
 
-    let atlas: FontAtlasData | null = null;
-    if (raw.atlas) {
-      atlas = {
-        data: new Uint8Array(raw.atlas.data),
-        width: raw.atlas.width,
-        height: raw.atlas.height,
-      };
-    }
+    const wrap = (
+      raw: { data: ArrayBuffer; width: number; height: number } | null,
+    ): FontAtlasData | null =>
+      raw
+        ? {
+            data: new Uint8Array(raw.data),
+            width: raw.width,
+            height: raw.height,
+          }
+        : null;
 
-    return { results: raw.results, atlas, atlasKey: raw.atlasKey };
+    return {
+      results: raw.results,
+      atlas: wrap(raw.atlas),
+      colorAtlas: wrap(raw.colorAtlas),
+      atlasKey: raw.atlasKey,
+    };
   }
 
   dispose(): void {

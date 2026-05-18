@@ -2,6 +2,8 @@
 
 pub mod atlas;
 pub mod cache;
+pub mod color_atlas;
+pub mod color_raster;
 pub mod shaping;
 
 pub use atlas::{GlyphMetrics, SDFAtlas};
@@ -52,6 +54,9 @@ pub struct WasmGlyphMetrics {
     pub atlas_h: u32,
     pub bearing_x: f32,
     pub bearing_y: f32,
+    /// True when the glyph lives in the COLRv1 color atlas (RGBA) rather than
+    /// the monochrome SDF atlas. TS samples the correct texture accordingly.
+    pub is_color: bool,
 }
 
 /// A single shaped glyph with positioning info.
@@ -74,6 +79,9 @@ pub struct ShapeTextResult {
     pub units_per_em: u16,
     pub font_index: u32,
     pub atlas_changed: bool,
+    /// True when the shaped font is a COLRv1 color font. Glyphs were packed
+    /// into the color atlas (RGBA) instead of the SDF atlas (R8).
+    pub is_color: bool,
 }
 
 // ---------------------------------------------------------------------------
@@ -122,7 +130,8 @@ impl FontCache {
         self.is_font_loaded(url)
     }
 
-    /// Shape text and ensure all glyphs are rasterized into the shared atlas.
+    /// Shape text and ensure all glyphs are rasterized into the appropriate
+    /// atlas (SDF for monochrome fonts, color for COLRv1 fonts).
     #[wasm_bindgen(js_name = shapeText)]
     pub fn wasm_shape_text(&mut self, url: &str, text: &str) -> Option<ShapeTextResult> {
         let current_frame = self.current_frame;
@@ -132,13 +141,19 @@ impl FontCache {
         let units_per_em = entry.units_per_em;
         let atlas_key = entry.atlas_key.clone();
         let font_index = entry.font_index;
+        let is_color = entry.is_color;
 
         let glyph_ids: Vec<u32> = shaped.iter().map(|g| g.glyph_id).collect();
 
-        let atlas = self.atlases.get_mut(&atlas_key)?;
-        let raster_font = &self.fonts.get(url)?.raster_font;
-        let atlas_changed =
-            atlas.ensure_glyphs_in_atlas(raster_font, font_index, &glyph_ids, current_frame);
+        let atlas_changed = if is_color {
+            let font_data = &self.fonts.get(url)?.data;
+            let color_atlas = self.color_atlases.get_mut(&atlas_key)?;
+            color_atlas.ensure_glyphs_in_atlas(font_data, font_index, &glyph_ids, current_frame)
+        } else {
+            let raster_font = &self.fonts.get(url)?.raster_font;
+            let atlas = self.atlases.get_mut(&atlas_key)?;
+            atlas.ensure_glyphs_in_atlas(raster_font, font_index, &glyph_ids, current_frame)
+        };
 
         let glyphs: Vec<WasmShapedGlyph> = shaped
             .iter()
@@ -156,12 +171,16 @@ impl FontCache {
         unique_ids.sort_unstable();
         unique_ids.dedup();
 
-        let atlas = self.atlases.get(&atlas_key)?;
         let metrics: Vec<WasmGlyphMetrics> = unique_ids
             .iter()
             .filter_map(|&gid| {
                 let key = atlas::composite_key(font_index, gid);
-                atlas.get_metrics(key).map(|m| WasmGlyphMetrics {
+                let m = if is_color {
+                    self.color_atlases.get(&atlas_key)?.get_metrics(key)?
+                } else {
+                    self.atlases.get(&atlas_key)?.get_metrics(key)?
+                };
+                Some(WasmGlyphMetrics {
                     glyph_id: gid,
                     font_index,
                     atlas_x: m.atlas_x,
@@ -170,6 +189,7 @@ impl FontCache {
                     atlas_h: m.atlas_h,
                     bearing_x: m.bearing_x,
                     bearing_y: m.bearing_y,
+                    is_color,
                 })
             })
             .collect();
@@ -180,6 +200,7 @@ impl FontCache {
             units_per_em,
             font_index,
             atlas_changed,
+            is_color,
         })
     }
 
@@ -191,6 +212,21 @@ impl FontCache {
         let atlas = self.atlases.get(key).or_else(|| {
             let entry = self.fonts.get(key)?;
             self.atlases.get(&entry.atlas_key)
+        })?;
+        Some(FontAtlas {
+            data: copy_u8_array(&atlas.pixel_data),
+            width: atlas.width,
+            height: atlas.height,
+        })
+    }
+
+    /// Get the RGBA color atlas pixel data by atlas key (family name or font URL).
+    /// Returns `None` if the key has no color atlas (i.e. no COLRv1 face was loaded for it).
+    #[wasm_bindgen(js_name = getColorAtlas)]
+    pub fn wasm_get_color_atlas(&self, key: &str) -> Option<FontAtlas> {
+        let atlas = self.color_atlases.get(key).or_else(|| {
+            let entry = self.fonts.get(key)?;
+            self.color_atlases.get(&entry.atlas_key)
         })?;
         Some(FontAtlas {
             data: copy_u8_array(&atlas.pixel_data),

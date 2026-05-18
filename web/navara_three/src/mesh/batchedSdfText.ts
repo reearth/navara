@@ -82,8 +82,13 @@ export class BatchedSdfTextMesh
     const material = m.material;
     const transform = m.transform;
 
-    // Get the font-level shared atlas texture (one DataTexture per font, shared across all groups)
+    // Get the font-level shared atlas textures (one DataTexture per font,
+    // shared across all per-feature meshes). The color atlas is `null` for
+    // monochrome fonts.
     const sharedTex = this._fontManager.getAtlasTexture(this._fontIdentifier);
+    const sharedColorTex = this._fontManager.getColorAtlasTexture(
+      this._fontIdentifier,
+    );
 
     for (let i = 0; i < nPositions; i++) {
       const batchIdIdx = i * batchIDSize;
@@ -110,6 +115,7 @@ export class BatchedSdfTextMesh
       if (sharedTex) {
         mesh.setAtlasTexture(sharedTex);
       }
+      mesh.setColorAtlasTexture(sharedColorTex);
 
       mesh.update(material);
 
@@ -193,11 +199,15 @@ export class BatchedSdfTextMesh
     needRender?: () => void,
     forceUpdate = false,
   ) {
-    // Update shared texture (in-place update if atlas grew)
+    // Update shared textures (in-place update if either atlas grew)
     const sharedTex = this._fontManager.getAtlasTexture(this._fontIdentifier);
+    const sharedColorTex = this._fontManager.getColorAtlasTexture(
+      this._fontIdentifier,
+    );
 
     for (const mesh of this.meshes()) {
       if (sharedTex) mesh.setAtlasTexture(sharedTex);
+      mesh.setColorAtlasTexture(sharedColorTex);
       mesh.update(material, forceUpdate);
       this.markVisibility(mesh);
     }
@@ -294,13 +304,16 @@ export class BatchedSdfTextMesh
         this._fontManager
           .prepareText(this._fontIdentifier, text, this._loadedFaceUrls)
           .then(() => {
-            // Refresh the shared atlas texture if the worker rasterized new glyphs
+            // Refresh shared atlas textures if the worker rasterized new glyphs
             const sharedTex = this._fontManager.getAtlasTexture(
               this._fontIdentifier,
             );
             if (sharedTex) {
               mesh.setAtlasTexture(sharedTex);
             }
+            mesh.setColorAtlasTexture(
+              this._fontManager.getColorAtlasTexture(this._fontIdentifier),
+            );
             mesh.setText(text);
             // Restore intended visibility now that text content is available
             mesh.visible = intendedVisible;

@@ -45,6 +45,7 @@ function convertMetrics(metrics: WasmGlyphMetrics[]) {
       atlasH: m.atlas_h,
       bearingX: m.bearing_x,
       bearingY: m.bearing_y,
+      isColor: m.is_color,
     };
     m.free();
     return out;
@@ -64,6 +65,18 @@ function convertShapeResult(sr: WasmShapeTextResult | undefined) {
 
 function snapshotAtlas(fontUrl: string) {
   const atlas = fontCache.getFontAtlas(fontUrl);
+  if (!atlas) return null;
+  const snapshot = {
+    data: atlas.data.buffer,
+    width: atlas.width,
+    height: atlas.height,
+  };
+  atlas.free();
+  return snapshot;
+}
+
+function snapshotColorAtlas(fontUrl: string) {
+  const atlas = fontCache.getColorAtlas(fontUrl);
   if (!atlas) return null;
   const snapshot = {
     data: atlas.data.buffer,
@@ -123,26 +136,35 @@ ctx.onmessage = async (e: MessageEvent) => {
           texts: string[];
         };
 
-        let anyAtlasChanged = false;
+        let sdfAtlasChanged = false;
+        let colorAtlasChanged = false;
         const results = texts.map((text) => {
           const sr = fontCache.shapeText(fontUrl, text);
-          if (sr?.atlas_changed) anyAtlasChanged = true;
+          if (sr?.atlas_changed) {
+            if (sr.is_color) colorAtlasChanged = true;
+            else sdfAtlasChanged = true;
+          }
           return { text, shapeResult: convertShapeResult(sr) };
         });
 
         fontCache.tickFrame();
 
-        // Snapshot atlas by atlas key (family name or URL) so shared atlases
+        // Snapshot atlases by atlas key (family name or URL) so shared atlases
         // are returned correctly for font-family faces.
         const atlasKey = fontCache.getAtlasKey(fontUrl) ?? fontUrl;
-        const atlas = anyAtlasChanged ? snapshotAtlas(atlasKey) : null;
+        const atlas = sdfAtlasChanged ? snapshotAtlas(atlasKey) : null;
+        const colorAtlas = colorAtlasChanged
+          ? snapshotColorAtlas(atlasKey)
+          : null;
 
-        const transfers: Transferable[] = atlas ? [atlas.data] : [];
+        const transfers: Transferable[] = [];
+        if (atlas) transfers.push(atlas.data);
+        if (colorAtlas) transfers.push(colorAtlas.data);
         ctx.postMessage(
           {
             id,
             type: "result",
-            payload: { results, atlas, atlasKey },
+            payload: { results, atlas, colorAtlas, atlasKey },
           },
           transfers,
         );

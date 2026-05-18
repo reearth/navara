@@ -55,6 +55,7 @@ export const createBaseMutates = (
     nvr_uBatchId: { value: batchId ?? 0 },
     nvr_uPickable: { value: 0.0 },
     uAtlas: { value: null },
+    uColorAtlas: { value: null },
   };
 
   // Conditional position uniforms based on RTE mode
@@ -110,6 +111,7 @@ export const createBaseMutates = (
       uniforms.nvr_uBatchId = refs.nvr_uBatchId;
       uniforms.nvr_uPickable = refs.nvr_uPickable;
       uniforms.uAtlas = refs.uAtlas;
+      uniforms.uColorAtlas = refs.uColorAtlas;
 
       if (refs.uRTEPositionLOW) {
         uniforms.uRTEPositionLOW = refs.uRTEPositionLOW;
@@ -159,6 +161,10 @@ export const createBaseMutates = (
 
     setAtlasTexture: (texture: UniformValue<DataTexture | null>) => {
       refs.uAtlas.value = texture.value;
+    },
+
+    setColorAtlasTexture: (texture: UniformValue<DataTexture | null>) => {
+      refs.uColorAtlas.value = texture.value;
     },
 
     setPosition: (
