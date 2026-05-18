@@ -32,12 +32,6 @@ export type CustomRenderPassOptions = {
 };
 
 /**
- * G-buffer + multi-scene render pass. Renders `globe` / `draped` / `mrt` /
- * `opaque` scenes into a shared MRT target (color, normal, effectIds, emissive
- * + depth), then copies color to `finalTarget` and RGBA-packs depth into
- * `allDepthCopyPass.texture` for downstream effects (AerialPerspective, Clouds).
- */
-/**
  * G-buffer + multi-scene render pass.
  *
  * Draws `globe` / `draped` / `mrt` into `gbufferRenderTarget` (MRT: color,
@@ -136,7 +130,7 @@ export class CustomRenderPass extends RenderPass {
     }
   }
 
-  // Render the scene with world scene that includes user setting object like a light.
+  /** Render `scene` with the configured light temporarily attached. */
   protected _renderWithLight(renderer: WebGLRenderer, scene: Scene) {
     if (this.disableShadow) {
       renderer.render(scene, this._camera);
@@ -290,10 +284,12 @@ export class CustomRenderPass extends RenderPass {
     this.debugNormalCopyPass?.setSize(width, height);
   }
 
-  // Drape a feature on the terrain by stencil test.
-  // Refs
-  // - https://www.isprs.org/proceedings/XXXVII/congress/2_pdf/5_WG-II-5/06.pdf
-  // - http://wscg.zcu.cz/WSCG2007/Papers_2007/journal/B17-full.pdf
+  /**
+   * Drape features onto the terrain via stencil test.
+   *
+   * @see https://www.isprs.org/proceedings/XXXVII/congress/2_pdf/5_WG-II-5/06.pdf
+   * @see http://wscg.zcu.cz/WSCG2007/Papers_2007/journal/B17-full.pdf
+   */
   protected _renderDrapedMesh(renderer: WebGLRenderer) {
     const drapedScene = this._scenes.draped;
     const children = [...drapedScene.children];
