@@ -10,7 +10,15 @@ import type {
   CylinderMeshDesc,
   GLTFModelDesc,
   InstancedBoxMeshDesc,
+  InstancedCylinderMeshDesc,
+  InstancedGltfModelMeshDesc,
+  InstancedPlaneMeshDesc,
+  InstancedSphereMeshDesc,
   BoxChildConfig,
+  CylinderChildConfig,
+  ModelChildConfig,
+  PlaneChildConfig,
+  SphereChildConfig,
   PlaneMeshDesc,
   SmoothLineMeshDesc,
   SphereMeshDesc,
@@ -75,11 +83,19 @@ const run = async () => {
 
   // --- Layout constants ---
   // Row 1 (z = -300): Simple mesh layers (Box, Sphere, Cylinder, Plane, Tube, GLTF)
-  // Row 2 (z =  300): Instanced mesh layer
-  // Row 3: Line mesh layers (ArcLine, SmoothLine) — uses geodetic coords directly
+  // Row 2 (z =  300): Instanced Boxes
+  // Row 3 (z =  900): Instanced Spheres
+  // Row 4 (z = 1500): Instanced Cylinders
+  // Row 5 (z = 2100): Instanced Planes
+  // Row 6 (z = 2700): Instanced GLTF Models
+  // Row 7: Line mesh layers (ArcLine, SmoothLine) — uses geodetic coords directly
   const ROW_Y = 100; // height above ground
   const ROW1_Z = -300;
   const ROW2_Z = 300;
+  const ROW3_Z = 900;
+  const ROW4_Z = 1500;
+  const ROW5_Z = 2100;
+  const ROW6_Z = 2700;
   const SPACING = 300; // horizontal spacing between meshes
 
   // Track all layers for pick handling
@@ -258,7 +274,143 @@ const run = async () => {
   }
 
   // ============================================================
-  // Row 3: Line mesh layers (geodetic coordinates, RTE rendering)
+  // Row 3: Instanced Sphere mesh layer
+  // ============================================================
+
+  const sphereInstanceColors = [
+    0xff66aa, 0x66ffaa, 0xaa66ff, 0xffaa66, 0x66aaff,
+  ];
+  const sphereChildren: SphereChildConfig[] = [];
+  for (let i = 0; i < 5; i++) {
+    sphereChildren.push({
+      radius: 40 + i * 10,
+      color: new Color().setHex(sphereInstanceColors[i]),
+      position: { x: (i - 2) * SPACING, y: 60, z: 0 },
+    });
+  }
+  const instancedSphereLayer = view.addMesh<InstancedSphereMeshDesc>({
+    pickable: true,
+    spheres: {
+      castShadow: true,
+      receiveShadow: true,
+      children: sphereChildren,
+    },
+    matrixWorld: nueFrame,
+    position: { x: 0, y: 0, z: ROW3_Z },
+  });
+  for (let i = 0; i < instancedSphereLayer.ref.batchIds.length; i++) {
+    layers.set(instancedSphereLayer.ref.batchIds[i], {
+      name: `Instanced Sphere #${i}`,
+      origColor: sphereInstanceColors[i],
+    });
+  }
+
+  // ============================================================
+  // Row 4: Instanced Cylinder mesh layer
+  // ============================================================
+
+  const cylinderInstanceColors = [
+    0xe74c3c, 0xf1c40f, 0x2ecc71, 0x3498db, 0x9b59b6,
+  ];
+  const cylinderChildren: CylinderChildConfig[] = [];
+  for (let i = 0; i < 5; i++) {
+    const h = 120 + i * 40;
+    cylinderChildren.push({
+      radius: 40,
+      height: h,
+      color: new Color().setHex(cylinderInstanceColors[i]),
+      position: { x: (i - 2) * SPACING, y: h / 2, z: 0 },
+    });
+  }
+  const instancedCylinderLayer = view.addMesh<InstancedCylinderMeshDesc>({
+    pickable: true,
+    cylinders: {
+      radiusTop: 1,
+      radiusBottom: 1,
+      radialSegments: 24,
+      castShadow: true,
+      receiveShadow: true,
+      children: cylinderChildren,
+    },
+    matrixWorld: nueFrame,
+    position: { x: 0, y: 0, z: ROW4_Z },
+  });
+  for (let i = 0; i < instancedCylinderLayer.ref.batchIds.length; i++) {
+    layers.set(instancedCylinderLayer.ref.batchIds[i], {
+      name: `Instanced Cylinder #${i}`,
+      origColor: cylinderInstanceColors[i],
+    });
+  }
+
+  // ============================================================
+  // Row 5: Instanced Plane mesh layer
+  // ============================================================
+
+  const planeInstanceColors = [
+    0xff5577, 0x77ff55, 0x5577ff, 0xffee55, 0x55eeff,
+  ];
+  const planeChildren: PlaneChildConfig[] = [];
+  for (let i = 0; i < 5; i++) {
+    planeChildren.push({
+      width: 150,
+      height: 150,
+      color: new Color().setHex(planeInstanceColors[i]),
+      position: { x: (i - 2) * SPACING, y: 5, z: 0 },
+      rotation: { x: -Math.PI / 2, y: 0, z: 0 },
+    });
+  }
+  const instancedPlaneLayer = view.addMesh<InstancedPlaneMeshDesc>({
+    pickable: true,
+    planes: {
+      castShadow: false,
+      receiveShadow: true,
+      children: planeChildren,
+    },
+    matrixWorld: nueFrame,
+    position: { x: 0, y: 0, z: ROW5_Z },
+  });
+  for (let i = 0; i < instancedPlaneLayer.ref.batchIds.length; i++) {
+    layers.set(instancedPlaneLayer.ref.batchIds[i], {
+      name: `Instanced Plane #${i}`,
+      origColor: planeInstanceColors[i],
+    });
+  }
+
+  // ============================================================
+  // Row 6: Instanced GLTF Model layer
+  // ============================================================
+
+  const gltfInstanceColor = 0xcccccc;
+  const modelChildren: ModelChildConfig[] = [];
+  for (let i = 0; i < 5; i++) {
+    modelChildren.push({
+      position: { x: (i - 2) * SPACING, y: 0, z: 0 },
+      rotation: { x: 0, y: (i * Math.PI) / 5, z: 0 },
+      scale: { x: 50, y: 50, z: 50 },
+    });
+  }
+  const instancedGltfLayer = view.addMesh<InstancedGltfModelMeshDesc>({
+    pickable: true,
+    models: {
+      url: LOCAL_DATASETS.steelDrumGLTF.url,
+      castShadow: true,
+      receiveShadow: false,
+      children: modelChildren,
+    },
+    matrixWorld: nueFrame,
+    position: { x: 0, y: 0, z: ROW6_Z },
+  });
+  instancedGltfLayer.ref.on("load", () => {
+    for (let i = 0; i < instancedGltfLayer.ref.batchIds.length; i++) {
+      layers.set(instancedGltfLayer.ref.batchIds[i], {
+        name: `Instanced GLTF #${i}`,
+        origColor: gltfInstanceColor,
+      });
+    }
+  });
+
+  // ============================================================
+  // Row 7: Line mesh layers (geodetic coordinates, RTE rendering)
   // ============================================================
 
   // 7. ArcLine
@@ -392,10 +544,31 @@ const run = async () => {
         }
       });
     } else {
-      // Check instanced layer
-      const idx = instancedLayer.ref.batchIds.indexOf(batchId);
+      // Check instanced layers
+      let idx = instancedLayer.ref.batchIds.indexOf(batchId);
       if (idx >= 0) {
         instancedLayer.ref.updateAt(idx, { color: c });
+        return;
+      }
+      idx = instancedSphereLayer.ref.batchIds.indexOf(batchId);
+      if (idx >= 0) {
+        instancedSphereLayer.ref.updateAt(idx, { color: c });
+        return;
+      }
+      idx = instancedCylinderLayer.ref.batchIds.indexOf(batchId);
+      if (idx >= 0) {
+        instancedCylinderLayer.ref.updateAt(idx, { color: c });
+        return;
+      }
+      idx = instancedPlaneLayer.ref.batchIds.indexOf(batchId);
+      if (idx >= 0) {
+        instancedPlaneLayer.ref.updateAt(idx, { color: c });
+        return;
+      }
+      idx = instancedGltfLayer.ref.batchIds.indexOf(batchId);
+      if (idx >= 0) {
+        instancedGltfLayer.ref.updateAt(idx, { color: c });
+        return;
       }
     }
   }

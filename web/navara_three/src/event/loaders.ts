@@ -1,5 +1,6 @@
 import type { ConcurrencyManager } from "@navara/worker";
 import { BufferGeometry, Cache, ImageLoader, TextureLoader } from "three";
+import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import { DRACOLoader as DRACODecoder } from "three/addons/loaders/DRACOLoader.js";
 import { DRACOLoader, GLTFLoader } from "three-stdlib";
 
@@ -21,9 +22,10 @@ export const initializeGltfLoader = (() => {
     const draco = new DRACOLoader();
     draco.setWorkerLimit(concurrencyManager.total);
     draco.setDecoderPath(
-      "https://unpkg.com/three@0.170.0/examples/jsm/libs/draco/gltf/",
+      "https://unpkg.com/three@0.184.0/examples/jsm/libs/draco/gltf/",
     );
     GLTF.setDRACOLoader(draco);
+    GLTF.setMeshoptDecoder(MeshoptDecoder);
     return GLTF;
   };
 })();
@@ -35,7 +37,7 @@ export const initializeDracoLoader = (() => {
     draco = new DRACODecoder();
     draco.setWorkerLimit(concurrencyManager.total);
     draco.setDecoderPath(
-      "https://unpkg.com/three@0.180.0/examples/jsm/libs/draco/",
+      "https://unpkg.com/three@0.184.0/examples/jsm/libs/draco/",
     );
     return draco;
   };

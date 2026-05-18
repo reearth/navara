@@ -19,15 +19,19 @@ navara_threeでは、以下のMeshDescタイプが利用可能です:
 | [BoxMeshDesc](./box-mesh-desc)                    | 立方体(Box)ジオメトリを描画するDescriptor                                                 |
 | [InstancedBoxMeshDesc](./instanced-box-mesh-desc) | GPU インスタンシングを使用して複数のボックスを1回の描画コールでレンダリングするDescriptor |
 | [CylinderMeshDesc](./cylinder-mesh-desc)          | 円柱(Cylinder)ジオメトリを描画するDescriptor                                              |
+| [InstancedCylinderMeshDesc](./instanced-cylinder-mesh-desc) | GPU インスタンシングを使用して複数の円柱を1回の描画コールでレンダリングするDescriptor       |
 | [GLTFModelDesc](./gltf-model-desc)                | GLTF/GLB形式の3Dモデルを読み込み・表示するDescriptor                                      |
+| [InstancedGltfModelMeshDesc](./instanced-gltf-model-mesh-desc) | GPU インスタンシングを使用して GLTF/GLB モデルの複数コピーをレンダリングするDescriptor    |
 | [GlowGlobeMeshDesc](./glow-globe-mesh-desc)       | 地球の周りにフレネル効果による光彩(グロー)を表示するDescriptor                            |
 | [PlaneMeshDesc](./plane-mesh-desc)                | 平面(Plane)ジオメトリを描画するDescriptor                                                 |
+| [InstancedPlaneMeshDesc](./instanced-plane-mesh-desc) | GPU インスタンシングを使用して複数の平面を1回の描画コールでレンダリングするDescriptor       |
 | [RainMeshDesc](./rain-mesh-desc)                  | 雨のパーティクルエフェクトを表示するDescriptor                                            |
 | [SkyBoxMeshDesc](./sky-box-mesh-desc)             | シンプルなスカイボックスを描画するDescriptor                                              |
 | [SkyMeshDesc](./sky-mesh-desc)                    | 大気散乱による空と太陽・月を描画するDescriptor                                            |
 | [SmoothLineMeshDesc](./smooth-line-mesh-desc)     | カトマル・ロム曲線による滑らかなラインを描画するDescriptor                                |
 | [SnowMeshDesc](./snow-mesh-desc)                  | 雪のパーティクルエフェクトを表示するDescriptor                                            |
 | [SphereMeshDesc](./sphere-mesh-desc)              | 球体(Sphere)ジオメトリを描画するDescriptor                                                |
+| [InstancedSphereMeshDesc](./instanced-sphere-mesh-desc) | GPU インスタンシングを使用して複数の球を1回の描画コールでレンダリングするDescriptor          |
 | [StarsDesc](./stars-desc)                         | 星空を描画するDescriptor                                                                  |
 | [TubeMeshDesc](./tube-mesh-desc)                  | チューブ(Tube)ジオメトリを描画するDescriptor                                              |
 | [AxesHelperDesc](./axes-helper-desc)              | 3軸を可視化するデバッグ用ヘルパーDescriptor                                               |
