@@ -17,9 +17,19 @@
 //! - [`pack`]    — flatten a banded glyph into f32/u32 buffers ready for upload
 
 pub mod bands;
+pub mod color_extract;
+pub mod color_pack;
 pub mod extract;
 pub mod pack;
 
 pub use bands::{BAND_COUNT_DEFAULT, Band, BandedGlyph, build_bands};
+pub use color_extract::{
+    BlendKind, ClipShape, ColorGlyph, ColorLayer, ColorStop, ExtendMode, PaintKind,
+    extract_color_glyph,
+};
+pub use color_pack::{
+    BlendTag, CLIP_RECORD_U32S, ClipTag, ExtendTag, LAYER_HEADER_U32S, PackedColorGlyph, PaintTag,
+    pack_color_glyph,
+};
 pub use extract::{CUBIC_TO_QUAD_TOL, GlyphOutline, QuadCurve, extract_glyph_outline};
 pub use pack::{PackedGlyph, pack_glyph};
