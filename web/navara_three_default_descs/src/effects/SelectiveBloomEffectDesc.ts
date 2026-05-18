@@ -169,10 +169,12 @@ class SelectiveBloomPass extends PostProcessingPass {
 
     // Opaque meshes already cleared effectIds.r to 0 in the shared MRT
     // (CustomRenderPass), so the bit check alone gates opaque-occlusion.
+    // Extract bloom source: drop pixels with no slot bit or marked occluded.
     this.extractMaterial = new ShaderMaterial({
       uniforms: {
         tEmissive: { value: null },
         tEffectIds: { value: null },
+        tOcclusionMask: { value: null },
         slotBit: { value: 0 },
       },
       vertexShader: `
@@ -185,6 +187,7 @@ class SelectiveBloomPass extends PostProcessingPass {
       fragmentShader: `
         uniform sampler2D tEmissive;
         uniform sampler2D tEffectIds;
+        uniform sampler2D tOcclusionMask;
         uniform int slotBit;
 
         varying vec2 vUv;
@@ -194,8 +197,9 @@ class SelectiveBloomPass extends PostProcessingPass {
         void main() {
           float maskValue = texture2D(tEffectIds, vUv).r;
           float bitValue = extractEffectBit(maskValue, slotBit);
+          float occluded = texture2D(tOcclusionMask, vUv).r;
 
-          if (bitValue <= 0.5) {
+          if (bitValue <= 0.5 || occluded > 0.5) {
             gl_FragColor = vec4(0.0, 0.0, 0.0, 0.0);
             return;
           }
@@ -304,9 +308,15 @@ class SelectiveBloomPass extends PostProcessingPass {
 
     const emissiveBuffer = this.desc.getEmissiveBuffer();
     const effectIdsBuffer = this.desc.getEffectIdsBuffer();
+    const occlusionMaskBuffer = this.desc.getOcclusionMaskBuffer();
     const slot = this.desc.getEffectSlot();
 
-    if (!emissiveBuffer || !effectIdsBuffer || slot < 0) {
+    if (
+      !emissiveBuffer ||
+      !effectIdsBuffer ||
+      !occlusionMaskBuffer ||
+      slot < 0
+    ) {
       renderer.setRenderTarget(this.renderToScreen ? null : outputBuffer);
       this.compositeMaterial.uniforms.tBase.value = inputBuffer.texture;
       this.compositeMaterial.uniforms.tBloom.value = this.bloomSourceRT.texture;
@@ -316,6 +326,7 @@ class SelectiveBloomPass extends PostProcessingPass {
 
     this.extractMaterial.uniforms.tEmissive.value = emissiveBuffer;
     this.extractMaterial.uniforms.tEffectIds.value = effectIdsBuffer;
+    this.extractMaterial.uniforms.tOcclusionMask.value = occlusionMaskBuffer;
     this.extractMaterial.uniforms.slotBit.value = slot;
 
     renderer.setRenderTarget(this.bloomSourceRT);

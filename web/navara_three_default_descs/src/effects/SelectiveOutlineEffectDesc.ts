@@ -170,9 +170,11 @@ class SelectiveOutlinePass extends PostProcessingPass {
 
     // Opaque meshes already cleared effectIds.r to 0 in the shared MRT
     // (CustomRenderPass), so the bit check alone gates opaque-occlusion.
+    // Extract binary mask: drop pixels with no slot bit or marked occluded.
     this.extractMaterial = new ShaderMaterial({
       uniforms: {
         tEffectIds: { value: null },
+        tOcclusionMask: { value: null },
         slotBit: { value: 0 },
       },
       vertexShader: `
@@ -184,6 +186,7 @@ class SelectiveOutlinePass extends PostProcessingPass {
       `,
       fragmentShader: `
         uniform sampler2D tEffectIds;
+        uniform sampler2D tOcclusionMask;
         uniform int slotBit;
 
         varying vec2 vUv;
@@ -193,8 +196,9 @@ class SelectiveOutlinePass extends PostProcessingPass {
         void main() {
           float maskValue = texture2D(tEffectIds, vUv).r;
           float bitValue = extractEffectBit(maskValue, slotBit);
+          float occluded = texture2D(tOcclusionMask, vUv).r;
 
-          float mask = bitValue > 0.5 ? 1.0 : 0.0;
+          float mask = (bitValue > 0.5 && occluded <= 0.5) ? 1.0 : 0.0;
           gl_FragColor = vec4(vec3(mask), 1.0);
         }
       `,
@@ -381,11 +385,12 @@ class SelectiveOutlinePass extends PostProcessingPass {
     );
 
     const effectIdsBuffer = this.desc.getEffectIdsBuffer();
+    const occlusionMaskBuffer = this.desc.getOcclusionMaskBuffer();
     const slot = this.desc.getEffectSlot();
 
     // Bypass composite when buffers are unavailable. tEdge is bound to
     // inputBuffer so the sampler isn't null (bypass=1 skips edge sampling).
-    if (!effectIdsBuffer || slot < 0) {
+    if (!effectIdsBuffer || !occlusionMaskBuffer || slot < 0) {
       this.compositeMaterial.uniforms.tBase.value = inputBuffer.texture;
       this.compositeMaterial.uniforms.tEdge.value = inputBuffer.texture;
       this.compositeMaterial.uniforms.bypass.value = 1;
@@ -395,6 +400,7 @@ class SelectiveOutlinePass extends PostProcessingPass {
     }
 
     this.extractMaterial.uniforms.tEffectIds.value = effectIdsBuffer;
+    this.extractMaterial.uniforms.tOcclusionMask.value = occlusionMaskBuffer;
     this.extractMaterial.uniforms.slotBit.value = slot;
 
     renderer.setRenderTarget(this.maskRT);

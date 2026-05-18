@@ -106,6 +106,12 @@ export abstract class SelectiveEffectDesc<
     return mrtDesc?.effectIdsBuffer ?? null;
   }
 
+  /** 1ch opaque-occlusion mask (R=1 occluded). */
+  public getOcclusionMaskBuffer(): Texture | null {
+    const mrtDesc = this.find<MRTPassEffectDesc>("mrt");
+    return mrtDesc?.occlusionMaskBuffer ?? null;
+  }
+
   /** Slot bit index for this effect instance in the EffectIds Buffer. -1 if unregistered. */
   public getEffectSlot(): number {
     return this.ctx.selectiveEffectRegistry?.getSlot(this.id) ?? -1;

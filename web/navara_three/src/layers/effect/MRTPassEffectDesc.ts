@@ -75,6 +75,11 @@ export class MRTPassEffectDesc extends EffectDesc<
     return this.raw?.allDepthCopyPass.depthPacking;
   }
 
+  /** 1ch opaque-occlusion mask for Selective Effects (R=1 where occluded). */
+  get occlusionMaskBuffer(): Texture | undefined {
+    return this.raw?.occlusionMaskPass.texture;
+  }
+
   get globeNormalBuffer(): Texture | undefined {
     return this.raw?.globeNormalCopyPass.texture;
   }

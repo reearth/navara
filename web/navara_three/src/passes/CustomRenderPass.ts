@@ -15,7 +15,12 @@ import { RenderPass } from "../effects";
 import { DrapedMesh } from "../mesh/DrapedMesh";
 import type { Scenes } from "../scene";
 
-import { AllDepthCopyPass, NormalCopyPass, RenderTargetCopyPass } from ".";
+import {
+  AllDepthCopyPass,
+  NormalCopyPass,
+  RenderTargetCopyPass,
+  SelectiveEffectOcclusionMaskPass,
+} from ".";
 
 /**
  * Options for CustomRenderPass
@@ -32,6 +37,15 @@ export type CustomRenderPassOptions = {
  * + depth), then copies color to `finalTarget` and RGBA-packs depth into
  * `allDepthCopyPass.texture` for downstream effects (AerialPerspective, Clouds).
  */
+/**
+ * G-buffer + multi-scene render pass.
+ *
+ * Draws `globe` / `draped` / `mrt` into `gbufferRenderTarget` (MRT: color,
+ * normal, effectIds bitmask, emissive) and `opaque` into `finalTarget`
+ * (MRT-less). Two depth snapshots (`mrtDepthCopyPass`, `allDepthCopyPass`)
+ * feed `occlusionMaskPass`, which produces a 1ch opaque-occlusion mask
+ * consumed by Selective Effect extracts.
+ */
 export class CustomRenderPass extends RenderPass {
   protected _camera: PerspectiveCamera;
   protected _scenes: Scenes;
@@ -40,6 +54,10 @@ export class CustomRenderPass extends RenderPass {
   globeDepthCopyPass: DepthCopyPass;
   globeNormalCopyPass: NormalCopyPass;
   allDepthCopyPass: AllDepthCopyPass;
+  /** Depth snapshot right after MRT (before opaque). */
+  mrtDepthCopyPass: AllDepthCopyPass;
+  /** 1ch opaque-occlusion mask for Selective Effects. */
+  occlusionMaskPass: SelectiveEffectOcclusionMaskPass;
   disableShadow: boolean;
   private globe: Globe;
   private combinedScene = new Scene();
@@ -99,6 +117,8 @@ export class CustomRenderPass extends RenderPass {
     });
 
     this.allDepthCopyPass = new AllDepthCopyPass();
+    this.mrtDepthCopyPass = new AllDepthCopyPass();
+    this.occlusionMaskPass = new SelectiveEffectOcclusionMaskPass();
 
     this.disableShadow = !!options?.disableShadow;
     this.allowTransparent = options?.allowTransparent ?? true;
@@ -220,11 +240,14 @@ export class CustomRenderPass extends RenderPass {
       this._renderWithLight(renderer, this._scenes.mrt);
     }
 
-    // Render opaque scene into the same MRT target. Opaque meshes without
-    // `effectIds` write `effectIdBuffer = vec4(0.0)` via overrideMaterialsForMRT,
-    // so they naturally overwrite the bitmask where they cover Selective Effect
-    // targets — no separate depth-occlusion pass is needed downstream.
-    this._renderWithLight(renderer, this._scenes.opaque);
+    const hasMrtMeshes = this._scenes.mrt.children.length > 0;
+
+    // Snapshot post-MRT depth for the occlusion mask pass.
+    if (hasMrtMeshes) {
+      this.mrtDepthCopyPass.setDepthTexture(renderTarget.depthTexture);
+      this.mrtDepthCopyPass.copyDepth(false);
+      this.mrtDepthCopyPass.render(renderer, null, null);
+    }
 
     this.debugNormalCopyPass?.render(renderer, null, null);
 
@@ -235,11 +258,20 @@ export class CustomRenderPass extends RenderPass {
     }
     this.copyPass.render(renderer, finalTarget, null);
 
-    // Copy the gbuffer depth (globe + draped + mrt + opaque) for downstream
-    // effects (AerialPerspective, Clouds, etc.).
-    this.allDepthCopyPass.setDepthTexture(renderTarget.depthTexture);
+    // MRT-less path: opaque renders into finalTarget, not the gbuffer.
+    this._renderWithLight(renderer, this._scenes.opaque);
+
+    this.allDepthCopyPass.setDepthTexture(finalTarget?.depthTexture ?? null);
     this.allDepthCopyPass.copyDepth(clearDepth);
     this.allDepthCopyPass.render(renderer, null, null);
+
+    if (hasMrtMeshes) {
+      this.occlusionMaskPass.setDepthTextures(
+        this.mrtDepthCopyPass.texture,
+        this.allDepthCopyPass.texture,
+      );
+      this.occlusionMaskPass.render(renderer, null, null);
+    }
   }
 
   setDepthTexture(depthTexture: DepthTexture): void {
@@ -252,6 +284,8 @@ export class CustomRenderPass extends RenderPass {
     this.gbufferRenderTarget.setSize(width, height);
     this.globeDepthCopyPass.setSize(width, height);
     this.allDepthCopyPass.setSize(width, height);
+    this.mrtDepthCopyPass.setSize(width, height);
+    this.occlusionMaskPass.setSize(width, height);
     this.globeNormalCopyPass.setSize(width, height);
     this.debugNormalCopyPass?.setSize(width, height);
   }
