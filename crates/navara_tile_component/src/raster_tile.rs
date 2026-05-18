@@ -220,14 +220,17 @@ impl RasterTile {
             return true;
         }
 
-        if !self.is_hillshade_ready(tiles, texture_fragment, data_requesters) {
-            return false;
-        }
-
         let Some(tex_ids) = self.texture_fragment_entity_ids.as_ref() else {
             return false;
         };
+
+        // Sort tiles once and reuse for both hillshade and texture checks
         let sorted_tiles: Vec<_> = tiles.iter().sort::<&Order>().collect();
+
+        if !self.is_hillshade_ready(&sorted_tiles, texture_fragment, data_requesters) {
+            return false;
+        }
+
         if tex_ids.len() != sorted_tiles.len() {
             return false;
         }
@@ -303,12 +306,12 @@ impl RasterTile {
 
     pub fn is_hillshade_ready(
         &self,
-        tiles: &Query<(&TilesLayer, &Order)>,
+        sorted_tiles: &[(&TilesLayer, &Order)],
         texture_fragment: &TileTextureFragmentQuery,
         data_requesters: &Query<&navara_data_requester::DataRequester>,
     ) -> bool {
-        // Check if there are any hillshade layers in the query
-        let has_hillshade_layers = tiles
+        // Check if there are any hillshade layers in the sorted tiles
+        let has_hillshade_layers = sorted_tiles
             .iter()
             .any(|(layer, _)| layer.hillshade_config.is_some());
 
@@ -316,9 +319,6 @@ impl RasterTile {
         if !has_hillshade_layers {
             return true;
         }
-
-        // Collect sorted tiles once for efficient iteration
-        let sorted_tiles: Vec<_> = tiles.iter().sort::<&Order>().collect();
 
         // Has hillshade layers, check if entities are ready
         self.hillshade_entity_ids.as_ref().is_none_or(|hill_ids| {

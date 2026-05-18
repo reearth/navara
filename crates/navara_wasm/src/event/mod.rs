@@ -162,8 +162,14 @@ pub struct HillshadeBackfilledEvent {
     pub ind: u32,
     pub r#gen: u32,
     pub tile_handle: TileHandle, // Handle of the tile that owns this texture
-    pub edge_data_handle: i32,   // Edge data handle (one edge), -1 when no edge update
-    pub original_handle: i32,    // Original DEM data (256×256 RGBA), -1 when None
+
+    #[wasm_bindgen(readonly)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub edge_data_handle: Option<u32>, // Edge data handle (one edge), None when no edge update
+
+    #[wasm_bindgen(readonly)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub original_handle: Option<u32>, // Original DEM data (256×256 RGBA), None when not provided
 
     #[wasm_bindgen(readonly)]
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -486,8 +492,12 @@ impl<'a>
             ind: ev.ind,
             r#gen: ev.r#gen,
             tile_handle: ev.comp.tile_handle,
-            edge_data_handle: ev.comp.edge_data_handle,
-            original_handle: ev.comp.original_handle.unwrap_or(-1),
+            edge_data_handle: if ev.comp.edge_data_handle >= 0 {
+                Some(ev.comp.edge_data_handle as u32)
+            } else {
+                None
+            },
+            original_handle: ev.comp.original_handle.map(|h| h as u32),
             target_entity_ind: target_ind,
             target_entity_gen: target_gen,
             edge_direction: ev.comp.edge_direction,

@@ -144,9 +144,15 @@ function processInitialHillshadeTexture(
     return;
   }
 
+  // Validate original_handle exists
+  const originalHandle = event.original_handle;
+  if (originalHandle === undefined || originalHandle === null) {
+    return;
+  }
+
   // Use removeU8 to delete original DEM data after reading
   // Rust side keeps only 4 edges (4KB), original data (256KB) is deleted here
-  const originalBytes = buf.removeU8(event.original_handle);
+  const originalBytes = buf.removeU8(originalHandle);
   if (!originalBytes) {
     return;
   }
@@ -257,8 +263,14 @@ function processHillshadeEdgeUpdate(
     return;
   }
 
+  // Validate edge_data_handle exists
+  const edgeDataHandle = event.edge_data_handle;
+  if (edgeDataHandle === undefined || edgeDataHandle === null) {
+    return;
+  }
+
   // Read edge data and remove from BufferStore immediately to prevent leaks
-  const edgeBytes = buf.removeU8(event.edge_data_handle);
+  const edgeBytes = buf.removeU8(edgeDataHandle);
   if (!edgeBytes) {
     return;
   }
@@ -369,12 +381,12 @@ export function processHillshadeBackfilled(
       : generate_id_from_entity(event);
 
   // 1. Create texture if original data is provided
-  if (event.original_handle >= 0) {
+  if (event.original_handle !== undefined && event.original_handle !== null) {
     processInitialHillshadeTexture(ctx, event, entityId);
   }
 
   // 2. Update edges if edge data is provided
-  if (event.edge_data_handle >= 0) {
+  if (event.edge_data_handle !== undefined && event.edge_data_handle !== null) {
     processHillshadeEdgeUpdate(ctx, event, entityId);
   }
 }

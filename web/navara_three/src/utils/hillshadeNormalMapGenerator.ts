@@ -142,11 +142,6 @@ export class HillshadeNormalMapGenerator {
     this.renderer.setRenderTarget(renderTarget);
     this.renderer.render(this.scene, this.camera);
     this.renderer.setRenderTarget(currentRenderTarget);
-
-    // RenderTarget.texture uses default flipY=false (OpenGL bottom-up)
-    // Do not set flipY - shader UV transform should handle coordinate mapping
-    renderTarget.texture.version++;
-    renderTarget.texture.needsUpdate = true;
   }
 
   /**
