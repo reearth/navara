@@ -89,6 +89,7 @@ export class EventManager {
     update_sample_terrain_height: [],
     worker_task_delegated: [],
     worker_task_removed: [],
+    hillshade_backfilled: [],
   };
   addedEventIds = new Set();
   private transactionManager = new TransactionManager();

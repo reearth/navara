@@ -126,6 +126,18 @@ impl DataRequester {
     ) -> Self {
         Self::new(buf.new_handle(), url, extension)
     }
+
+    pub fn is_succeeded(&self) -> bool {
+        matches!(self.status, DataRequesterStatus::Success)
+    }
+
+    pub fn is_failed(&self) -> bool {
+        matches!(self.status, DataRequesterStatus::Fail)
+    }
+
+    pub fn is_pending(&self) -> bool {
+        matches!(self.status, DataRequesterStatus::Pending)
+    }
 }
 
 pub fn set_data_requester_loaded(

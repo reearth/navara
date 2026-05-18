@@ -11,7 +11,9 @@ use serde::Serialize;
 use wasm_bindgen::prelude::*;
 use worker::WorkerTaskDelegatedEvent;
 
-use navara_wasm_types::{CameraFrustum, Globe, LLE, RasterTileInternalMaterial, Transform, Vec2};
+use navara_wasm_types::{
+    CameraFrustum, Globe, LLE, RasterTileInternalMaterial, TileUvTransform, Transform,
+};
 
 #[wasm_bindgen(getter_with_clone)]
 #[derive(Debug, Clone, Serialize)]
@@ -32,6 +34,7 @@ pub struct Events {
     pub renderable_feature_changed: Vec<RenderableFeatureChangedEvent>,
     pub renderable_feature_removed: Vec<RenderableFeatureRemovedEvent>,
     pub update_sample_terrain_height: Vec<TerrainHeightUpdatedEvent>,
+    pub hillshade_backfilled: Vec<HillshadeBackfilledEvent>,
 }
 
 #[wasm_bindgen]
@@ -88,13 +91,6 @@ pub struct Mesh {
     pub skirt_indices: Option<i32>,
     /// Mapping from skirt vertex index to edge vertex index in main geometry.
     pub skirt_indices_to_edge: Option<i32>,
-}
-
-#[wasm_bindgen]
-#[derive(Debug, Clone, Copy, Serialize)]
-pub struct TileUvTransform {
-    pub offset: Vec2,
-    pub scale: Vec2,
 }
 
 #[wasm_bindgen]
@@ -160,6 +156,32 @@ pub struct EntityEvent {
     pub r#gen: u32,
 }
 
+#[wasm_bindgen]
+#[derive(Debug, Clone, Serialize)]
+pub struct HillshadeBackfilledEvent {
+    pub ind: u32,
+    pub r#gen: u32,
+    pub tile_handle: TileHandle, // Handle of the tile that owns this texture
+
+    #[wasm_bindgen(readonly)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub edge_data_handle: Option<u32>, // Edge data handle (one edge), None when no edge update
+
+    #[wasm_bindgen(readonly)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub original_handle: Option<u32>, // Original DEM data (256×256 RGBA), None when not provided
+
+    #[wasm_bindgen(readonly)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub target_entity_ind: Option<u32>, // Target entity ind (DataRequester), None when not applicable
+
+    #[wasm_bindgen(readonly)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub target_entity_gen: Option<u32>, // Target entity gen, None when not applicable
+
+    pub edge_direction: u8, // 0=Left, 1=Right, 2=Top, 3=Bottom, 255=N/A
+}
+
 impl From<navara_event::Events<'_>> for Events {
     fn from(ev: navara_event::Events) -> Self {
         Self {
@@ -216,6 +238,11 @@ impl From<navara_event::Events<'_>> for Events {
                 .collect(),
             update_sample_terrain_height: ev
                 .update_sample_terrain_height
+                .into_iter()
+                .map(|ev| ev.into())
+                .collect(),
+            hillshade_backfilled: ev
+                .hillshade_backfilled
                 .into_iter()
                 .map(|ev| ev.into())
                 .collect(),
@@ -354,15 +381,6 @@ impl<'a> From<&'a navara_mesh::Mesh> for Mesh {
     }
 }
 
-impl<'a> From<&'a navara_geometry::TileUvTransform> for TileUvTransform {
-    fn from(m: &'a navara_geometry::TileUvTransform) -> Self {
-        Self {
-            offset: m.offset.into(),
-            scale: m.scale.into(),
-        }
-    }
-}
-
 impl<'a>
     From<
         navara_event_store::ReconstructableComponentEvent<&'a navara_data_requester::DataRequester>,
@@ -449,6 +467,40 @@ impl From<navara_texture_fragment::TextureFragmentStatus> for TextureFragmentSta
             navara_texture_fragment::TextureFragmentStatus::Pending => {
                 TextureFragmentStatus::Pending
             }
+        }
+    }
+}
+
+impl<'a>
+    From<
+        navara_event_store::ReconstructableComponentEvent<
+            &'a navara_tile_component::HillshadeBackfillEventData,
+        >,
+    > for HillshadeBackfilledEvent
+{
+    fn from(
+        ev: navara_event_store::ReconstructableComponentEvent<
+            &'a navara_tile_component::HillshadeBackfillEventData,
+        >,
+    ) -> Self {
+        let (target_ind, target_gen) = ev
+            .comp
+            .target_entity
+            .map(|e| (Some(e.index().index()), Some(e.generation().to_bits())))
+            .unwrap_or((None, None));
+        Self {
+            ind: ev.ind,
+            r#gen: ev.r#gen,
+            tile_handle: ev.comp.tile_handle,
+            edge_data_handle: if ev.comp.edge_data_handle >= 0 {
+                Some(ev.comp.edge_data_handle as u32)
+            } else {
+                None
+            },
+            original_handle: ev.comp.original_handle.map(|h| h as u32),
+            target_entity_ind: target_ind,
+            target_entity_gen: target_gen,
+            edge_direction: ev.comp.edge_direction,
         }
     }
 }

@@ -9,3 +9,4 @@ bevy_app.workspace = true
 bevy_ecs.workspace = true
 navara_math.workspace = true
 navara_core.workspace = true
+navara_geometry.workspace = true

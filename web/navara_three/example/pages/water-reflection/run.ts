@@ -59,6 +59,18 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     },
   });
 
+  view.addLayer({
+    type: "tiles",
+    data: { url: TERRAIN_DATASETS.gsi.url },
+    rasterTile: {
+      maxZoom: 15,
+      minZoom: 6,
+    },
+    hillshade: {
+      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+    },
+  });
+
   // Add some 3D tiles buildings
   view.addLayer({
     type: "cesium3dtiles",

@@ -7,6 +7,8 @@ import { addCtrlPanel } from "../../helpers/panel";
 export const run = async (view: ThreeView) => {
   await view.init();
 
+  view.globe.useNormal = false;
+
   addCtrlPanel(
     [
       {

@@ -7,6 +7,8 @@ use navara_component::{Deleted, Ignored, OrderByDistance, Priority, Requested};
 use navara_texture_fragment::TextureFragment;
 use navara_tile_component::{RasterTileQuadtree, TileTextureFragmentMarker};
 
+use crate::hillshade::HillshadeTextureMarker;
+
 const MAX_PENDINGS: u32 = 50;
 
 #[allow(clippy::type_complexity)]
@@ -34,6 +36,9 @@ pub(crate) fn filter_requestable_texture_fragment(
             With<TileTextureFragmentMarker>,
             With<Requested>,
             Without<Deleted>,
+            // Hillshade requests are rate-limited by filter_requestable_hillshade_data_requester,
+            // so they must not be counted here.
+            Without<HillshadeTextureMarker>,
         ),
     >,
 ) {
@@ -51,13 +56,14 @@ pub(crate) fn filter_requestable_texture_fragment(
         if let Some(tile) = tile {
             commands.entity(e).insert((Deleted, Ignored));
 
-            if let Some(ids) = tile.texture_fragment_entity_ids.as_mut() {
-                let idx = ids
-                    .iter()
-                    .enumerate()
-                    .find_map(|(i, id)| id.and_then(|id| (id == e).then_some(i)))
-                    .unwrap();
-                ids.remove(idx);
+            // Clear the rejected slot to None so the next request_texture_fragment
+            // pass can re-spawn an entity for the same layer index.
+            if let Some(tex_ids) = tile.texture_fragment_entity_ids.as_mut()
+                && let Some(slot) = tex_ids
+                    .iter_mut()
+                    .find(|id| matches!(id, Some(id) if *id == e))
+            {
+                *slot = None;
             }
         }
     }
