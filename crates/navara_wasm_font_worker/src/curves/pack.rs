@@ -7,44 +7,62 @@
 //! Layout (all coordinates in em-space, normalized by units_per_em):
 //!
 //! ```text
-//!  header (8 f32, two RGBA32F texels)
-//!      [0..2]  bbox_min.xy
-//!      [2..4]  bbox_max.xy
-//!      [4]     band_count          (whole f32, cast to int in the shader)
-//!      [5]     bands_offset        (texel index into the band table)
-//!      [6]     curves_offset       (texel index into the curve table)
-//!      [7]     flags                (reserved; bit 0 = has_color_layers, Phase 2)
+//!  header (12 f32, three RGBA32F texels)
+//!      [0..2]   bbox_min.xy
+//!      [2..4]   bbox_max.xy
+//!      [4]      band_count         (whole f32, cast to int in the shader)
+//!      [5]      bands_offset       (index into the global band-data buffer)
+//!      [6]      band_curves_offset (index into the global band-curves buffer)
+//!      [7]      curves_offset      (index into the global curve-data buffer)
+//!      [8]      flags              (bit 0 = has_color_layers, set by Phase 3)
+//!      [9]      color_layer_start  (index into color_layer_headers, when
+//!                                   FLAG_HAS_COLOR_LAYERS is set)
+//!      [10]     color_layer_count  (number of color layers belonging to this
+//!                                   glyph; consumed by the COLR fragment path)
+//!      [11]     reserved (zero)    — keeps the header texel-aligned
 //!
-//!  bands (band_count u32s, one per band)
+//!  bands (one u32 per band)
 //!      packed: (curve_start_in_band_curves << 16) | curve_count
-//!      "band_curves" is a flat list of curve indices for all bands of this
-//!      glyph, concatenated in band order. The header `bands_offset` plus the
-//!      band index gives the band entry; that entry's curve_start indexes into
-//!      `band_curves`.
+//!      `curve_start` indexes into the band-curves buffer, *relative to this
+//!      glyph's* `band_curves_offset`.
 //!
-//!  band_curves (variable u16 count, one per band-entry)
-//!      curve index relative to this glyph's curve table.
+//!  band_curves (one u16 per band-entry)
+//!      Curve index relative to this glyph's curve table (i.e. relative to
+//!      `curves_offset`).
 //!
 //!  curves (6 f32 per curve)
 //!      p0.x p0.y p1.x p1.y p2.x p2.y
 //! ```
 //!
-//! On the GPU all four sections will live in a single `RGBA32F` data texture
-//! and be read with `texelFetch`. We keep them as separate `Vec`s here so the
-//! caller can decide on a global allocation strategy (free-list, ring buffer,
-//! etc.) before flattening.
+//! The three variable sections live in three separate GPU buffers (each
+//! uploaded as a data texture in WebGL2 / storage buffer on WebGPU). Phase 3's
+//! allocator decides where each glyph lands and writes the `*_offset` fields
+//! into the header. The band entries' `curve_start` does not need biasing —
+//! it's already glyph-relative against the band-curves table.
 
 use crate::curves::bands::BandedGlyph;
 
-/// Number of f32s in a [`PackedGlyph::header`]. Two RGBA32F texels.
-pub const HEADER_F32_COUNT: usize = 8;
+/// Number of f32s in a [`PackedGlyph::header`]. Three RGBA32F texels.
+pub const HEADER_F32_COUNT: usize = 12;
 
 /// Number of f32s per curve entry (p0.xy, p1.xy, p2.xy).
 pub const CURVE_F32_COUNT: usize = 6;
 
-/// Bit set in `header[7]` when the glyph has COLRv1 layer data attached.
-/// Phase 1 always clears it; reserved here so the GPU contract is forward-
-/// compatible with Phase 2.
+// Field offsets within [`PackedGlyph::header`]. Both the allocator and the
+// GPU shader must agree on these slot numbers.
+pub const HEADER_BBOX_MIN: usize = 0; // .xy → slots 0,1
+pub const HEADER_BBOX_MAX: usize = 2; // .xy → slots 2,3
+pub const HEADER_BAND_COUNT: usize = 4;
+pub const HEADER_BANDS_OFFSET: usize = 5;
+pub const HEADER_BAND_CURVES_OFFSET: usize = 6;
+pub const HEADER_CURVES_OFFSET: usize = 7;
+pub const HEADER_FLAGS: usize = 8;
+pub const HEADER_COLOR_LAYER_START: usize = 9;
+pub const HEADER_COLOR_LAYER_COUNT: usize = 10;
+
+/// Bit set in `header[HEADER_FLAGS]` when the glyph has COLRv1 layer data
+/// attached. Cleared by Phase 1 packing; set by Phase 3 when the cache binds
+/// a color-layer record to the glyph slot.
 pub const FLAG_HAS_COLOR_LAYERS: u32 = 1 << 0;
 
 /// Packed representation of a single glyph, ready to be appended into the
@@ -100,16 +118,15 @@ pub fn pack_glyph(glyph: &BandedGlyph) -> PackedGlyph {
         curves.extend_from_slice(&[c.p0[0], c.p0[1], c.p1[0], c.p1[1], c.p2[0], c.p2[1]]);
     }
 
-    let header = [
-        glyph.bbox_min[0],
-        glyph.bbox_min[1],
-        glyph.bbox_max[0],
-        glyph.bbox_max[1],
-        glyph.band_count as f32,
-        0.0, // bands_offset — filled by the shared-buffer allocator (Phase 3)
-        0.0, // curves_offset — same
-        0.0, // flags
-    ];
+    let mut header = [0.0f32; HEADER_F32_COUNT];
+    header[0] = glyph.bbox_min[0];
+    header[1] = glyph.bbox_min[1];
+    header[2] = glyph.bbox_max[0];
+    header[3] = glyph.bbox_max[1];
+    header[4] = glyph.band_count as f32;
+    // header[5..8] (bands_offset, band_curves_offset, curves_offset) and
+    // header[8] (flags) are filled in by the allocator at upload time.
+    // header[9..12] reserved.
 
     PackedGlyph {
         header,
@@ -148,11 +165,16 @@ mod tests {
         let banded = build_bands(outline(vec![c], [0.0, 0.0], [10.0, 10.0]), 4);
         let packed = pack_glyph(&banded);
 
-        assert_eq!(packed.header[0], 0.0);
-        assert_eq!(packed.header[1], 0.0);
-        assert_eq!(packed.header[2], 10.0);
-        assert_eq!(packed.header[3], 10.0);
-        assert_eq!(packed.header[4], 4.0);
+        assert_eq!(packed.header[HEADER_BBOX_MIN], 0.0);
+        assert_eq!(packed.header[HEADER_BBOX_MIN + 1], 0.0);
+        assert_eq!(packed.header[HEADER_BBOX_MAX], 10.0);
+        assert_eq!(packed.header[HEADER_BBOX_MAX + 1], 10.0);
+        assert_eq!(packed.header[HEADER_BAND_COUNT], 4.0);
+        // Offsets stay zero until the shared-buffer allocator fills them in.
+        assert_eq!(packed.header[HEADER_BANDS_OFFSET], 0.0);
+        assert_eq!(packed.header[HEADER_BAND_CURVES_OFFSET], 0.0);
+        assert_eq!(packed.header[HEADER_CURVES_OFFSET], 0.0);
+        assert_eq!(packed.header[HEADER_FLAGS], 0.0);
         assert_eq!(packed.bands.len(), 4);
     }
 

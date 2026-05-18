@@ -1,5 +1,7 @@
 use crate::atlas::SDFAtlas;
 use crate::color_atlas::ColorAtlas;
+use crate::color_curve_atlas::ColorCurveAtlas;
+use crate::curve_atlas::CurveAtlas;
 use skrifa::{FontRef, raw::TableProvider};
 use std::collections::HashMap as StdHashMap;
 use wasm_bindgen::prelude::*;
@@ -76,6 +78,14 @@ pub struct FontCache {
     /// so a font family that mixes text and emoji faces gets one of each.
     #[wasm_bindgen(skip)]
     pub color_atlases: StdHashMap<String, ColorAtlas>,
+    /// New Slug-style outline-buffer pool, keyed identically to `atlases`.
+    /// Populated lazily alongside the SDF atlas while both pipelines coexist.
+    #[wasm_bindgen(skip)]
+    pub curve_atlases: StdHashMap<String, CurveAtlas>,
+    /// New Slug-style color-layer buffer pool, keyed identically. Only present
+    /// for atlas keys whose family includes at least one COLRv1 face.
+    #[wasm_bindgen(skip)]
+    pub color_curve_atlases: StdHashMap<String, ColorCurveAtlas>,
     #[wasm_bindgen(skip)]
     pub current_frame: u64,
     /// Counter for assigning unique font indices (used in composite atlas keys).
@@ -146,6 +156,15 @@ impl FontCache {
             self.color_atlases.entry(atlas_key.clone()).or_default();
         }
 
+        // Parallel Slug-style buffer pools. Lazily allocated alongside the
+        // legacy SDF atlas so JS can opt into either pipeline per-glyph.
+        self.curve_atlases.entry(atlas_key.clone()).or_default();
+        if is_color {
+            self.color_curve_atlases
+                .entry(atlas_key.clone())
+                .or_default();
+        }
+
         let font_index = self.next_font_index;
         self.next_font_index += 1;
 
@@ -176,8 +195,42 @@ impl FontCache {
         if !still_referenced {
             self.atlases.remove(&entry.atlas_key);
             self.color_atlases.remove(&entry.atlas_key);
+            self.curve_atlases.remove(&entry.atlas_key);
+            self.color_curve_atlases.remove(&entry.atlas_key);
         }
 
         Ok(())
+    }
+
+    /// Look up the outline-curve atlas by atlas key (family name) or fall
+    /// back to resolving via a font URL.
+    pub fn get_curve_atlas(&self, key: &str) -> Option<&CurveAtlas> {
+        self.curve_atlases.get(key).or_else(|| {
+            let entry = self.fonts.get(key)?;
+            self.curve_atlases.get(&entry.atlas_key)
+        })
+    }
+
+    pub fn get_curve_atlas_mut(&mut self, key: &str) -> Option<&mut CurveAtlas> {
+        if self.curve_atlases.contains_key(key) {
+            return self.curve_atlases.get_mut(key);
+        }
+        let atlas_key = self.fonts.get(key)?.atlas_key.clone();
+        self.curve_atlases.get_mut(&atlas_key)
+    }
+
+    pub fn get_color_curve_atlas(&self, key: &str) -> Option<&ColorCurveAtlas> {
+        self.color_curve_atlases.get(key).or_else(|| {
+            let entry = self.fonts.get(key)?;
+            self.color_curve_atlases.get(&entry.atlas_key)
+        })
+    }
+
+    pub fn get_color_curve_atlas_mut(&mut self, key: &str) -> Option<&mut ColorCurveAtlas> {
+        if self.color_curve_atlases.contains_key(key) {
+            return self.color_curve_atlases.get_mut(key);
+        }
+        let atlas_key = self.fonts.get(key)?.atlas_key.clone();
+        self.color_curve_atlases.get_mut(&atlas_key)
     }
 }

@@ -32,4 +32,9 @@ pub use color_pack::{
     pack_color_glyph,
 };
 pub use extract::{CUBIC_TO_QUAD_TOL, GlyphOutline, QuadCurve, extract_glyph_outline};
-pub use pack::{PackedGlyph, pack_glyph};
+pub use pack::{
+    CURVE_F32_COUNT, FLAG_HAS_COLOR_LAYERS, HEADER_BAND_COUNT, HEADER_BAND_CURVES_OFFSET,
+    HEADER_BANDS_OFFSET, HEADER_BBOX_MAX, HEADER_BBOX_MIN, HEADER_COLOR_LAYER_COUNT,
+    HEADER_COLOR_LAYER_START, HEADER_CURVES_OFFSET, HEADER_F32_COUNT, HEADER_FLAGS, PackedGlyph,
+    pack_glyph,
+};
