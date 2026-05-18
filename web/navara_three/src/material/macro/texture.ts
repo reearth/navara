@@ -32,56 +32,53 @@ export const generateMixOverlaidTexturesMacro = (
 
 /**
  * Generate hillshade normal override shader code for each texture slot
- * This replaces vertex normals with DEM-derived normals for hillshade layers
+ * This replaces vertex normals with pre-computed normals from hillshade normal data textures.
+ * The hillshade textures in uTextures[] are generated offline from DEM data and store
+ * precomputed normal information for shader sampling. This avoids expensive per-fragment
+ * height sampling and normal computation.
  */
 export function generateHillshadeNormalShader(maxTextures: number): string {
   return `
   #if USE_HILLSHADE
-    // Override normal with DEM-derived normal for hillshade layers
+    // Override normal with pre-computed normals for hillshade layers
     ${Array.from(
       { length: maxTextures },
       (_, i) => `
     if (uIsHillshades[${i}]) {
-      // Check if there's a valid texture bound (size > 2 to avoid 1×1 placeholders)
-      ivec2 actualTexSize = textureSize(uTextures[${i}], 0);
+      // Check if there's a valid texture bound (size > 1 to avoid 1×1 placeholders)
+      ivec2 normalMapSize = textureSize(uTextures[${i}], 0);
 
-      if (actualTexSize.x > 2) {
-        // Apply per-layer UV transform for hillshade parent texture reuse
+      if (normalMapSize.x > 1 && normalMapSize.y > 1) {
         vec2 hillshadeUv = vOrigUv * uHillshadeUvScale[${i}] + uHillshadeUvOffset[${i}];
+        hillshadeUv = clamp(hillshadeUv, vec2(0.0), vec2(1.0));
 
-        // Calculate texelSize based on content size
-        // Standard UV mapping: UV [0,1] maps to pixel centers [first, last]
-        // So texelSize (UV distance between adjacent pixels) = 1 / (N - 1)
-        // For 258x258 padded texture with 256 content pixels: texelSize = 1/255
-        ivec2 contentSize = isPowerOfTwo(actualTexSize.x) ? actualTexSize : actualTexSize - ivec2(2);
-        vec2 texelSize = vec2(1.0) / (vec2(contentSize) - vec2(1.0));
+        // [0,1] -> [-1,1] to get normal vector from texture
+        vec3 demNormal = texture2D(uTextures[${i}], hillshadeUv).rgb * 2.0 - 1.0;
+        demNormal = normalize(demNormal);
 
-        // Second check: Is this valid land data (not ocean/no-data)?
-        float testHeight = sampleHeightBilinear(uTextures[${i}], hillshadeUv, actualTexSize);
+        // Apply exaggeration to slope components (xy) before normalization
+        demNormal.xy *= uHillshadeExaggeration;
+        demNormal = normalize(demNormal);
 
-        // This preserves original vertex normals for ocean/no-data areas
-        if (isValidHeight(testHeight)) {
-          vec3 demNormal = computeNormalFromDEM(uTextures[${i}], hillshadeUv, texelSize, uMetersPerTexel[${i}]);
+        // Transform from tangent space to world space
+        vec3 up = vec3(0.0, 0.0, 1.0);  // World up
+        vec3 T = normalize(cross(up, N));
 
-          vec3 up = vec3(0.0, 0.0, 1.0);  // World up
-          vec3 T = normalize(cross(up, N));
-
-          // Handle poles where N is parallel to up
-          if (length(T) < 0.001) {
-            T = vec3(1.0, 0.0, 0.0);  // Fallback for poles
-          }
-
-          vec3 B = normalize(cross(N, T));
-
-          // Construct TBN matrix (tangent space to world space)
-          mat3 TBN = mat3(T, B, N);
-
-          // Transform DEM normal from tangent space to world space
-          vec3 worldDemNormal = normalize(TBN * demNormal);
-
-          // Transform to view space
-          normal = normalize(mat3(viewMatrix) * worldDemNormal);
+        // Handle poles where N is parallel to up
+        if (length(T) < 0.001) {
+          T = vec3(1.0, 0.0, 0.0);  // Fallback for poles
         }
+
+        vec3 B = normalize(cross(N, T));
+
+        // Construct TBN matrix (tangent space to world space)
+        mat3 TBN = mat3(T, B, N);
+
+        // Transform DEM normal from tangent space to world space
+        vec3 worldDemNormal = normalize(TBN * demNormal);
+
+        // Transform to view space
+        normal = normalize(mat3(viewMatrix) * worldDemNormal);
       }
     }`,
     ).join("\n")}

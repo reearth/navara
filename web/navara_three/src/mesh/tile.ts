@@ -10,14 +10,12 @@ import type {
   Globe,
 } from "@navara/engine";
 import ElevationParsFragment from "@shaders/glsl/chunks/elevation_pars_fragment.glsl";
-import HillshadeParsFragment from "@shaders/glsl/chunks/hillshade_pars_fragment.glsl";
 import SpecularParsFragment from "@shaders/glsl/chunks/spucular_pars_fragment.glsl";
 import WaterParsFragment from "@shaders/glsl/chunks/water_pars_fragment.glsl?raw";
 import {
   BufferAttribute,
   BufferGeometry,
   Color,
-  DataTexture,
   NearestFilter,
   Mesh,
   MeshLambertMaterial,
@@ -39,6 +37,7 @@ import {
   Sphere,
   NoColorSpace,
   MeshBasicMaterial,
+  LinearFilter,
 } from "three";
 
 import { PolygonMesh, PolylineMesh } from "..";
@@ -671,14 +670,7 @@ export class TileMesh
 
       // Hillshade uniforms
       shader.uniforms.uIsHillshades = m.userData.isHillshades;
-      shader.uniforms.uHillshadeRGBScaler = m.userData.hillshadeRGBScaler;
-      shader.uniforms.uHillshadeBoundary = m.userData.hillshadeBoundary;
-      shader.uniforms.uHillshadeMinOffset = m.userData.hillshadeMinOffset;
-      shader.uniforms.uHillshadeMaxOffset = m.userData.hillshadeMaxOffset;
-      shader.uniforms.uHillshadeEpsilon = m.userData.hillshadeEpsilon;
-      shader.uniforms.uHillshadeOffset = m.userData.hillshadeOffset;
       shader.uniforms.uHillshadeExaggeration = m.userData.hillshadeExaggeration;
-      shader.uniforms.uMetersPerTexel = m.userData.metersPerTexel;
       shader.uniforms.uHillshadeUvOffset = m.userData.hillshadeUvOffset;
       shader.uniforms.uHillshadeUvScale = m.userData.hillshadeUvScale;
 
@@ -733,12 +725,12 @@ vUv = vUv * uScale + uOffset;
   uniform sampler2D uTextures[${maxTextures}];
   uniform bool uIsElevationHeatmaps[${maxTextures}];
   uniform bool uIsHillshades[${maxTextures}];
-  uniform float uMetersPerTexel[${maxTextures}];
   uniform vec2 uHillshadeUvOffset[${maxTextures}];
   uniform vec2 uHillshadeUvScale[${maxTextures}];
   uniform float uEmissiveIntensities[${maxTextures}];
   uniform vec3 uEmissiveColors[${maxTextures}];
   uniform float uEffectIdsMasks[${maxTextures}];
+  uniform float uHillshadeExaggeration; // Terrain exaggeration factor (recommended: 0.3-2.0)
   uniform sampler2D uWaterNormalMap;
   uniform float uPickable;
   uniform float uIor;
@@ -752,8 +744,6 @@ vUv = vUv * uScale + uOffset;
   // uColorMapTexture is used for elevation heatmap color mapping
   ${ElevationParsFragment}
 
-  // Hillshade: compute normals from DEM
-  ${useNormal ? HillshadeParsFragment : ""}
   `,
         )
         .replaceWithCondition(
@@ -1249,31 +1239,6 @@ if (uPickable > 0.) {
         value: [...new Array(maxTextures)].fill(false),
       };
     }
-    if (!m.userData.hillshadeRGBScaler) {
-      m.userData.hillshadeRGBScaler = {
-        value: new Vector3(0, 0, 0),
-      };
-    }
-    if (!m.userData.hillshadeBoundary) {
-      m.userData.hillshadeBoundary = {
-        value: 0.0,
-      };
-    }
-    if (!m.userData.hillshadeMinOffset) {
-      m.userData.hillshadeMinOffset = {
-        value: 0.0,
-      };
-    }
-    if (!m.userData.hillshadeMaxOffset) {
-      m.userData.hillshadeMaxOffset = {
-        value: 0.0,
-      };
-    }
-    if (!m.userData.hillshadeEpsilon) {
-      m.userData.hillshadeEpsilon = {
-        value: 0.01,
-      };
-    }
     if (!m.userData.hillshadeOffset) {
       m.userData.hillshadeOffset = {
         value: 0.0,
@@ -1328,17 +1293,7 @@ if (uPickable > 0.) {
       }
     }
 
-    // Hillshade decoder (from hillshade_config)
-    m.userData.hillshadeRGBScaler.value.set(
-      mat.hillshadeRScaler,
-      mat.hillshadeGScaler,
-      mat.hillshadeBScaler,
-    );
-    m.userData.hillshadeBoundary.value = mat.hillshadeBoundary;
-    m.userData.hillshadeMinOffset.value = mat.hillshadeMinOffset;
-    m.userData.hillshadeMaxOffset.value = mat.hillshadeMaxOffset;
-    m.userData.hillshadeEpsilon.value = mat.hillshadeEpsilon;
-    m.userData.hillshadeOffset.value = mat.hillshadeOffset;
+    // Hillshade exaggeration (applied during normal map sampling in shader)
     m.userData.hillshadeExaggeration.value = mat.hillshadeExaggeration;
 
     m.userData.elevationRGBScaler.value.set(
@@ -1466,12 +1421,6 @@ if (uPickable > 0.) {
       };
     }
 
-    if (!m.userData.metersPerTexel) {
-      m.userData.metersPerTexel = {
-        value: [...new Array(maxTextures)].fill(1.0),
-      };
-    }
-
     if (!m.userData.hillshadeUvOffset) {
       m.userData.hillshadeUvOffset = {
         value: [...new Array(maxTextures)].map(() => new Vector2(0, 0)),
@@ -1528,53 +1477,32 @@ if (uPickable > 0.) {
         mat.isElevationHeatmaps && mat.isElevationHeatmaps[i];
       const isHillshade = mat.isHillshades && mat.isHillshades[i];
 
-      // Set hillshade parameters (zoom level and metersPerTexel)
-      // Read zoom level from texture.userData (set by hillshade.ts when texture was created)
-      if (isHillshade) {
-        const layerZoom = t.userData.hillshadeZoom;
-        if (
-          layerZoom !== undefined &&
-          t instanceof DataTexture &&
-          t.image &&
-          "width" in t.image
-        ) {
-          // Pass padded texture width to Rust (calcMetersPerTexel handles padding internally)
-          // Hillshade textures are padded: paddedSize = contentSize + 2
-          const metersPerTexel = this.tileHandler.calcMetersPerTexel(
-            this.handle,
-            layerZoom,
-            t.image.width,
+      // Set hillshade UV transform
+      if (isHillshade && !preserveHillshadeUv) {
+        // Use UV transform from Rust (for hillshade-specific parent reuse)
+        // Rust calculates this based on max_zoom and ancestor lookup
+        const uvTransform = hillshadeUvTransforms[i];
+        if (uvTransform) {
+          // Rust provided a specific hillshade parent reuse transform
+          m.userData.hillshadeUvOffset.value[i].set(
+            uvTransform.offset.x,
+            uvTransform.offset.y,
           );
-          m.userData.metersPerTexel.value[i] = metersPerTexel;
-
-          // Skip UV transform updates if preserving (e.g., during rebind)
-          if (!preserveHillshadeUv) {
-            // Use UV transform from Rust (for hillshade-specific parent reuse)
-            // Rust calculates this based on max_zoom and ancestor lookup
-            const uvTransform = hillshadeUvTransforms[i];
-            if (uvTransform) {
-              // Rust provided a specific hillshade parent reuse transform
-              m.userData.hillshadeUvOffset.value[i].set(
-                uvTransform.offset.x,
-                uvTransform.offset.y,
-              );
-              m.userData.hillshadeUvScale.value[i].set(
-                uvTransform.scale.x,
-                uvTransform.scale.y,
-              );
-            } else {
-              // No hillshade-specific transform: use global tile UV transform (for parent fallback)
-              const globalUvTransform = this.material.userData.uvTransform;
-              m.userData.hillshadeUvOffset.value[i].set(
-                globalUvTransform.offset.x,
-                globalUvTransform.offset.y,
-              );
-              m.userData.hillshadeUvScale.value[i].set(
-                globalUvTransform.scale.x,
-                globalUvTransform.scale.y,
-              );
-            }
-          }
+          m.userData.hillshadeUvScale.value[i].set(
+            uvTransform.scale.x,
+            uvTransform.scale.y,
+          );
+        } else {
+          // No hillshade-specific transform: use global tile UV transform (for parent fallback)
+          const globalUvTransform = this.material.userData.uvTransform;
+          m.userData.hillshadeUvOffset.value[i].set(
+            globalUvTransform.offset.x,
+            globalUvTransform.offset.y,
+          );
+          m.userData.hillshadeUvScale.value[i].set(
+            globalUvTransform.scale.x,
+            globalUvTransform.scale.y,
+          );
         }
       }
 
@@ -1588,19 +1516,39 @@ if (uPickable > 0.) {
         t.needsUpdate = true;
       }
 
-      // CRITICAL: DEM textures must use NearestFilter to prevent interpolation
+      // CRITICAL: Elevation DEM textures must use NearestFilter to prevent interpolation artifacts.
       // Linear interpolation between ocean RGB(128,0,0) and land RGB(0,0,5)
       // produces intermediate values like RGB(64,0,2) which decode to ~42000m!
+      // However, hillshade normal maps (which store normals directly in RGB, not encoded heights)
+      // should use LinearFilter for smooth bilinear interpolation at tile boundaries.
       // Always apply these settings for DEM textures, independent of colorSpace change
       if (isDEMTexture) {
-        if (t.minFilter !== NearestFilter) {
-          t.minFilter = NearestFilter;
-          t.needsUpdate = true;
+        if (isHillshade) {
+          // Hillshade normal maps: use LinearFilter for hardware bilinear interpolation
+          // Normals are stored directly in RGB [-1,1] -> [0,1], so linear filtering is safe
+          if (t.minFilter !== LinearFilter) {
+            t.minFilter = LinearFilter;
+            t.needsUpdate = true;
+          }
+          if (t.magFilter !== LinearFilter) {
+            t.magFilter = LinearFilter;
+            t.needsUpdate = true;
+          }
         }
-        if (t.magFilter !== NearestFilter) {
-          t.magFilter = NearestFilter;
-          t.needsUpdate = true;
+
+        if (isElevationHeatmap) {
+          // Elevation DEM textures: use NearestFilter to prevent decoding artifacts
+          // RGB-encoded heights must not be interpolated before decoding
+          if (t.minFilter !== NearestFilter) {
+            t.minFilter = NearestFilter;
+            t.needsUpdate = true;
+          }
+          if (t.magFilter !== NearestFilter) {
+            t.magFilter = NearestFilter;
+            t.needsUpdate = true;
+          }
         }
+
         if (t.generateMipmaps !== false) {
           t.generateMipmaps = false;
           t.needsUpdate = true;

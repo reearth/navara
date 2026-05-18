@@ -1,6 +1,19 @@
-import { describe, it, expect } from "vitest";
+import type { HillshadeBackfilledEvent } from "@navara/engine";
+import { DataTexture, Texture } from "three";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import { updatePaddingEdge, replicateEdgesToPadding } from "./hillshade";
+import type { EventContext } from "./context";
+import {
+  updatePaddingEdge,
+  replicateEdgesToPadding,
+  processHillshadeBackfilled,
+} from "./hillshade";
+import { HillshadeContext } from "./HillshadeContext";
+
+// Mock generate_id_from_entity
+vi.mock("@navara/core", () => ({
+  generate_id_from_entity: (event: any) => `${event.ind}_${event.gen}`,
+}));
 
 /**
  * Helper to create a test texture with unique RGBA values per pixel
@@ -331,5 +344,367 @@ describe("updatePaddingEdge", () => {
       expect(pixel[2]).toBe(45);
       expect(pixel[3]).toBe(255);
     }
+  });
+});
+
+/**
+ * Tests for hillshade normal map generation lifecycle
+ * Covers: original-before-edges, edges-before-original, size mismatch, temp DEM cleanup
+ */
+describe("hillshade normal map generation", () => {
+  let mockContext: EventContext;
+  let hillshadeContext: HillshadeContext;
+  let loadedTexs: Map<string, DataTexture>;
+  let mockBufferStore: Map<number, Uint8Array>;
+  let nextHandle: number;
+
+  beforeEach(() => {
+    // Reset state for each test
+    hillshadeContext = new HillshadeContext();
+    loadedTexs = new Map();
+    mockBufferStore = new Map();
+    nextHandle = 1;
+
+    // Create mock ViewContext with renderer
+    const mockRenderer = {
+      getRenderTarget: vi.fn(() => null),
+      setRenderTarget: vi.fn(),
+      render: vi.fn(),
+      readRenderTargetPixels: vi.fn((_target, _x, _y, _w, _h, buffer) => {
+        // Fill with test pattern
+        for (let i = 0; i < buffer.length; i += 4) {
+          buffer[i] = 128; // R
+          buffer[i + 1] = 128; // G
+          buffer[i + 2] = 255; // B
+          buffer[i + 3] = 255; // A
+        }
+      }),
+    };
+
+    const mockViewContext = {
+      getRenderer: () => mockRenderer,
+    };
+
+    // Create mock TileHandler
+    const mockTileHandler = {
+      getTile: vi.fn((_handle: bigint) => ({
+        coords: { z: 14, x: 14507, y: 6473 },
+      })),
+      calcMetersPerTexel: vi.fn(() => 7.798810005187988),
+      getTileElevationDecoder: vi.fn(() => ({
+        r_scaler: 256,
+        g_scaler: 1,
+        b_scaler: 1 / 256,
+        boundary: 0,
+        min_offset: 0,
+        max_offset: 0,
+        epsilon: 1.0,
+        offset: -32768,
+      })),
+    };
+
+    // Create mock BufferStore
+    const mockBuf = {
+      removeU8: vi.fn((handle: number) => mockBufferStore.get(handle)),
+    };
+
+    // Create mock texture fragment index
+    const mockTextureFragmentIndex = new Map();
+
+    // Create mock texture options
+    const mockTextureOptions = new Map();
+
+    mockContext = {
+      viewContext: mockViewContext as any,
+      loadedTexs,
+      buf: mockBuf as any,
+      textureFragmentIndex: mockTextureFragmentIndex as any,
+      textureOptions: mockTextureOptions as any,
+      tileHandler: mockTileHandler as any,
+      hillshadeContext,
+    } as unknown as EventContext;
+  });
+
+  /**
+   * Helper to create test DEM data (4×4 content = 16 pixels)
+   */
+  function createTestDemData(): Uint8Array {
+    const size = 4;
+    const buffer = new Uint8Array(size * size * 4);
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        const idx = (y * size + x) * 4;
+        buffer[idx] = x * 10; // R
+        buffer[idx + 1] = y * 10; // G
+        buffer[idx + 2] = (x + y) * 5; // B
+        buffer[idx + 3] = 255; // A
+      }
+    }
+    return buffer;
+  }
+
+  /**
+   * Helper to create edge data (4 pixels for a 4×4 content texture)
+   */
+  function createEdgeData(value: number): Uint8Array {
+    const edgeSize = 4;
+    const buffer = new Uint8Array(edgeSize * 4);
+    for (let i = 0; i < edgeSize; i++) {
+      buffer[i * 4] = value; // R
+      buffer[i * 4 + 1] = value + 10; // G
+      buffer[i * 4 + 2] = value + 20; // B
+      buffer[i * 4 + 3] = 255; // A
+    }
+    return buffer;
+  }
+
+  /**
+   * Helper to store buffer and get handle
+   */
+  function storeBuffer(data: Uint8Array): number {
+    const handle = nextHandle++;
+    mockBufferStore.set(handle, data);
+    return handle;
+  }
+
+  it("generates normal map when original DEM arrives (original-before-edges)", () => {
+    const entityId = "1_123"; // Format: {entity_ind}_{entity_gen}
+    const demData = createTestDemData();
+    const demHandle = storeBuffer(demData);
+
+    const event = {
+      ind: 1,
+      gen: 123,
+      tile_handle: 999n,
+      original_handle: demHandle,
+      edge_data_handle: -1,
+      edge_direction: 0,
+      target_entity_ind: undefined,
+      target_entity_gen: undefined,
+    } as HillshadeBackfilledEvent;
+
+    processHillshadeBackfilled(mockContext, event);
+
+    // Verify normal map was generated and stored
+    expect(loadedTexs.has(entityId)).toBe(true);
+    const normalMap = loadedTexs.get(entityId);
+    expect(normalMap).toBeInstanceOf(Texture);
+    if (normalMap) {
+      expect(normalMap.image.width).toBe(4); // Content size (no padding in normal map)
+    }
+
+    // Verify temp DEM was stored for edge updates
+    const tempDem = hillshadeContext.getTempDem(entityId);
+    expect(tempDem).toBeDefined();
+    expect(tempDem?.demTexture).toBeInstanceOf(Texture);
+    expect(tempDem?.demTexture.image.width).toBe(6); // Padded size (4 + 2)
+    expect(tempDem?.receivedEdges.size).toBe(0);
+  });
+
+  it("regenerates normal map when edge arrives after original", () => {
+    const entityId = "1_123"; // Format: {entity_ind}_{entity_gen}
+
+    // Step 1: Original DEM arrives
+    const demData = createTestDemData();
+    const demHandle = storeBuffer(demData);
+    processHillshadeBackfilled(mockContext, {
+      ind: 1,
+      gen: 123,
+      tile_handle: 999n,
+      original_handle: demHandle,
+      edge_data_handle: -1,
+      edge_direction: 0,
+      target_entity_ind: undefined,
+      target_entity_gen: undefined,
+    } as HillshadeBackfilledEvent);
+
+    const firstNormalMap = loadedTexs.get(entityId);
+    expect(firstNormalMap).toBeInstanceOf(Texture);
+
+    // Step 2: Left edge arrives (direction 0)
+    const edgeData = createEdgeData(100);
+    const edgeHandle = storeBuffer(edgeData);
+    processHillshadeBackfilled(mockContext, {
+      ind: 999,
+      gen: 999,
+      tile_handle: 999n,
+      original_handle: -1,
+      edge_data_handle: edgeHandle,
+      edge_direction: 0,
+      target_entity_ind: 1,
+      target_entity_gen: 123,
+    } as HillshadeBackfilledEvent);
+
+    // Verify normal map is still the same texture instance (RenderTarget reuse)
+    // Content is updated in-place on GPU, texture reference stays the same
+    const secondNormalMap = loadedTexs.get(entityId);
+    expect(secondNormalMap).toBeInstanceOf(Texture);
+    expect(secondNormalMap).toBe(firstNormalMap); // Same texture instance (updated in-place)
+
+    // Verify edge was marked as received
+    const tempDem = hillshadeContext.getTempDem(entityId);
+    expect(tempDem?.receivedEdges.has(0)).toBe(true);
+    expect(tempDem?.receivedEdges.size).toBe(1);
+  });
+
+  it("cleans up temp DEM after all 4 edges received", () => {
+    const entityId = "1_123"; // Format: {entity_ind}_{entity_gen}
+
+    // Step 1: Original arrives
+    const demData = createTestDemData();
+    processHillshadeBackfilled(mockContext, {
+      ind: 1,
+      gen: 123,
+      tile_handle: 999n,
+      original_handle: storeBuffer(demData),
+      edge_data_handle: -1,
+      edge_direction: 0,
+      target_entity_ind: undefined,
+      target_entity_gen: undefined,
+    } as HillshadeBackfilledEvent);
+
+    expect(hillshadeContext.getTempDem(entityId)).toBeDefined();
+    expect(loadedTexs.has(entityId)).toBe(true);
+
+    // Step 2-5: All 4 edges arrive (directions 0, 1, 2, 3)
+    for (let direction = 0; direction < 4; direction++) {
+      processHillshadeBackfilled(mockContext, {
+        ind: 999,
+        gen: 999,
+        tile_handle: 999n,
+        original_handle: -1,
+        edge_data_handle: storeBuffer(createEdgeData(100 + direction)),
+        edge_direction: direction,
+        target_entity_ind: 1,
+        target_entity_gen: 123,
+      } as HillshadeBackfilledEvent);
+
+      if (direction < 3) {
+        // Not all edges received yet
+        expect(hillshadeContext.getTempDem(entityId)).toBeDefined();
+        expect(hillshadeContext.getTempDem(entityId)?.receivedEdges.size).toBe(
+          direction + 1,
+        );
+      } else {
+        // All 4 edges received, temp DEM should be cleaned up
+        expect(hillshadeContext.getTempDem(entityId)).toBeUndefined();
+      }
+    }
+
+    // Verify texture still exists after cleanup
+    expect(loadedTexs.has(entityId)).toBe(true);
+  });
+
+  it("queues edges that arrive before original (edges-before-original)", () => {
+    const entityId = "1_123"; // Format: {entity_ind}_{entity_gen}
+
+    // Step 1: Edges arrive first (directions 0, 1)
+    processHillshadeBackfilled(mockContext, {
+      ind: 999,
+      gen: 999,
+      tile_handle: 999n,
+      original_handle: -1,
+      edge_data_handle: storeBuffer(createEdgeData(100)),
+      edge_direction: 0,
+      target_entity_ind: 1,
+      target_entity_gen: 123,
+    } as HillshadeBackfilledEvent);
+
+    processHillshadeBackfilled(mockContext, {
+      ind: 999,
+      gen: 999,
+      tile_handle: 999n,
+      original_handle: -1,
+      edge_data_handle: storeBuffer(createEdgeData(110)),
+      edge_direction: 1,
+      target_entity_ind: 1,
+      target_entity_gen: 123,
+    } as HillshadeBackfilledEvent);
+
+    // Verify edges are queued, no texture created yet
+    expect(loadedTexs.has(entityId)).toBe(false);
+    const pendingMap = hillshadeContext.pendingEdges.get(entityId);
+    expect(pendingMap).toBeDefined();
+    expect(pendingMap?.size).toBe(2);
+    expect(pendingMap?.has(0)).toBe(true);
+    expect(pendingMap?.has(1)).toBe(true);
+
+    // Step 2: Original arrives
+    const demData = createTestDemData();
+    processHillshadeBackfilled(mockContext, {
+      ind: 1,
+      gen: 123,
+      tile_handle: 999n,
+      original_handle: storeBuffer(demData),
+      edge_data_handle: -1,
+      edge_direction: 0,
+      target_entity_ind: undefined,
+      target_entity_gen: undefined,
+    } as HillshadeBackfilledEvent);
+
+    // Verify normal map was generated with pending edges applied
+    expect(loadedTexs.has(entityId)).toBe(true);
+    expect(loadedTexs.get(entityId)).toBeInstanceOf(Texture);
+
+    // Verify pending edges were cleared
+    expect(hillshadeContext.pendingEdges.has(entityId)).toBe(false);
+
+    // Verify edges were marked as received in temp DEM
+    const tempDem = hillshadeContext.getTempDem(entityId);
+    expect(tempDem?.receivedEdges.has(0)).toBe(true);
+    expect(tempDem?.receivedEdges.has(1)).toBe(true);
+    expect(tempDem?.receivedEdges.size).toBe(2);
+  });
+
+  it("handles multiple entities independently", () => {
+    const entity1 = "1_123";
+    const entity2 = "2_456";
+
+    // Create textures for both entities
+    processHillshadeBackfilled(mockContext, {
+      ind: 1,
+      gen: 123,
+      tile_handle: 999n,
+      original_handle: storeBuffer(createTestDemData()),
+      edge_data_handle: -1,
+      edge_direction: 0,
+      target_entity_ind: undefined,
+      target_entity_gen: undefined,
+    } as HillshadeBackfilledEvent);
+
+    processHillshadeBackfilled(mockContext, {
+      ind: 2,
+      gen: 456,
+      tile_handle: 888n,
+      original_handle: storeBuffer(createTestDemData()),
+      edge_data_handle: -1,
+      edge_direction: 0,
+      target_entity_ind: undefined,
+      target_entity_gen: undefined,
+    } as HillshadeBackfilledEvent);
+
+    // Verify both have textures and temp DEMs
+    expect(loadedTexs.has(entity1)).toBe(true);
+    expect(loadedTexs.has(entity2)).toBe(true);
+    expect(hillshadeContext.getTempDem(entity1)).toBeDefined();
+    expect(hillshadeContext.getTempDem(entity2)).toBeDefined();
+
+    // Send edge to entity1
+    processHillshadeBackfilled(mockContext, {
+      ind: 999,
+      gen: 999,
+      tile_handle: 999n,
+      original_handle: -1,
+      edge_data_handle: storeBuffer(createEdgeData(100)),
+      edge_direction: 0,
+      target_entity_ind: 1,
+      target_entity_gen: 123,
+    } as HillshadeBackfilledEvent);
+
+    // Verify only entity1 was updated
+    const tempDem1 = hillshadeContext.getTempDem(entity1);
+    const tempDem2 = hillshadeContext.getTempDem(entity2);
+    expect(tempDem1?.receivedEdges.size).toBe(1);
+    expect(tempDem2?.receivedEdges.size).toBe(0);
   });
 });

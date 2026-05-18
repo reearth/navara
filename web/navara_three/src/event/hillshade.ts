@@ -12,6 +12,305 @@ import type { TileMesh } from "../mesh/tile";
 import { getTextureFragmentSlots } from "../utils/textureFragmentIndex";
 
 import type { EventContext } from "./context";
+import type { HillshadeContext } from "./HillshadeContext";
+
+/**
+ * Create padded DEM texture from original data
+ * @returns DataTexture with padding, or undefined if invalid data
+ */
+function createPaddedDemTexture(
+  originalBytes: Uint8Array,
+): DataTexture | undefined {
+  // Validate buffer format (must be RGBA)
+  if (originalBytes.length % 4 !== 0) {
+    return undefined;
+  }
+
+  const originalSize = Math.sqrt(originalBytes.length / 4);
+  if (!Number.isInteger(originalSize) || originalSize < 1) {
+    return undefined;
+  }
+
+  // Expand to padded size (originalSize + 2 for 1px padding on each side)
+  const paddedSize = originalSize + 2;
+  const paddedBytes = new Uint8Array(paddedSize * paddedSize * 4);
+
+  // Copy center content from original data
+  for (let y = 0; y < originalSize; y++) {
+    for (let x = 0; x < originalSize; x++) {
+      const srcIdx = (y * originalSize + x) * 4;
+      const dstIdx = ((y + 1) * paddedSize + (x + 1)) * 4;
+      paddedBytes[dstIdx] = originalBytes[srcIdx];
+      paddedBytes[dstIdx + 1] = originalBytes[srcIdx + 1];
+      paddedBytes[dstIdx + 2] = originalBytes[srcIdx + 2];
+      paddedBytes[dstIdx + 3] = originalBytes[srcIdx + 3];
+    }
+  }
+
+  // Initialize padding with edge replication (will be updated by neighbor edges later)
+  replicateEdgesToPadding(paddedBytes, paddedSize);
+
+  // Create DataTexture with padded size
+  const dataTexture = new DataTexture(
+    paddedBytes,
+    paddedSize,
+    paddedSize,
+    RGBAFormat,
+    UnsignedByteType,
+  );
+  dataTexture.colorSpace = NoColorSpace;
+  dataTexture.minFilter = NearestFilter;
+  dataTexture.magFilter = NearestFilter;
+  dataTexture.generateMipmaps = false;
+  dataTexture.needsUpdate = true;
+
+  return dataTexture;
+}
+
+/**
+ * Apply pending edges that arrived before texture creation
+ * @returns Array of successfully applied edge directions
+ */
+function applyPendingEdges(
+  dataTexture: DataTexture,
+  hillshadeContext: HillshadeContext,
+  entityId: string,
+): number[] {
+  const appliedEdges: number[] = [];
+  const pending = hillshadeContext.pendingEdges.get(entityId);
+
+  if (!pending || pending.size === 0) {
+    return appliedEdges;
+  }
+
+  const textureData = dataTexture.image.data as Uint8Array;
+  const texSize = dataTexture.image.width;
+
+  for (const [edgeDirection, edgeBytes] of pending) {
+    const edgeSize = edgeBytes.length / 4;
+    const expectedTexSize = edgeSize + 2;
+
+    // Only apply if size matches (same zoom level)
+    if (texSize === expectedTexSize) {
+      updatePaddingEdge(textureData, edgeBytes, texSize, edgeDirection);
+      dataTexture.needsUpdate = true;
+      appliedEdges.push(edgeDirection);
+    }
+  }
+
+  // Clear pending updates for this entity
+  hillshadeContext.pendingEdges.delete(entityId);
+
+  return appliedEdges;
+}
+
+/**
+ * Rebind textures to all meshes using this entity
+ */
+function rebindTexturesForEntity(entityId: string, ctx: EventContext): void {
+  const { textureFragmentIndex, loadedTexs, textureOptions } = ctx;
+
+  // These are guaranteed to exist by validation in processHillshadeBackfilled
+  if (!textureFragmentIndex || !loadedTexs || !textureOptions) {
+    return;
+  }
+
+  const slots = getTextureFragmentSlots(textureFragmentIndex, entityId);
+  if (!slots) return;
+
+  // Deduplicate tileMeshes: same mesh may appear in multiple slots
+  const uniqueMeshes = new Set<TileMesh>();
+  for (const { tileMesh } of slots) {
+    uniqueMeshes.add(tileMesh);
+  }
+
+  for (const tileMesh of uniqueMeshes) {
+    tileMesh.rebindTextures(loadedTexs, textureOptions);
+  }
+}
+
+/**
+ * Process initial hillshade texture creation
+ */
+function processInitialHillshadeTexture(
+  ctx: EventContext,
+  event: HillshadeBackfilledEvent,
+  entityId: string,
+): void {
+  const { loadedTexs, buf, tileHandler, hillshadeContext } = ctx;
+
+  // These are guaranteed to exist by validation in processHillshadeBackfilled
+  if (!loadedTexs || !buf || !tileHandler || !hillshadeContext) {
+    return;
+  }
+
+  // Use removeU8 to delete original DEM data after reading
+  // Rust side keeps only 4 edges (4KB), original data (256KB) is deleted here
+  const originalBytes = buf.removeU8(event.original_handle);
+  if (!originalBytes) {
+    return;
+  }
+
+  // Create padded DEM texture
+  const dataTexture = createPaddedDemTexture(originalBytes);
+  if (!dataTexture) {
+    return;
+  }
+
+  // Get tile handle for calculations
+  const tileHandleBigInt =
+    typeof event.tile_handle === "bigint"
+      ? event.tile_handle
+      : BigInt(event.tile_handle);
+
+  // Get tile info for zoom level (validate before doing expensive work)
+  const tile = tileHandler.getTile(tileHandleBigInt);
+  if (!tile) {
+    dataTexture.dispose();
+    return;
+  }
+
+  // Apply any pending edge updates that arrived before texture creation
+  const appliedEdges = applyPendingEdges(
+    dataTexture,
+    hillshadeContext,
+    entityId,
+  );
+
+  const metersPerTexel = tileHandler.calcMetersPerTexel(
+    tileHandleBigInt,
+    tile.coords.z,
+    dataTexture.image.width,
+  );
+
+  // Get hillshade decoder config from tile (cached after first query)
+  const hillshadeConfig = hillshadeContext.getHillshadeConfig(
+    tileHandler,
+    tileHandleBigInt,
+  );
+
+  // Generate normal map from DEM texture using RenderTarget pool
+  const normalMap = hillshadeContext.generateNormalMap(
+    entityId,
+    ctx.viewContext,
+    dataTexture,
+    metersPerTexel,
+    hillshadeConfig,
+  );
+
+  // Use normal map as the texture
+  loadedTexs.set(entityId, normalMap);
+
+  // Store temporary DEM texture for edge updates
+  hillshadeContext.storeTempDem(
+    entityId,
+    dataTexture,
+    metersPerTexel,
+    hillshadeConfig,
+  );
+
+  // Mark the edges that were already applied from pending as received
+  for (const edgeDirection of appliedEdges) {
+    const allEdgesReceived = hillshadeContext.markEdgeReceived(
+      entityId,
+      edgeDirection,
+    );
+    if (allEdgesReceived) {
+      hillshadeContext.clearTempDem(entityId);
+      break;
+    }
+  }
+
+  // Rebind textures to update the meshes
+  rebindTexturesForEntity(entityId, ctx);
+}
+
+/**
+ * Process hillshade edge update
+ */
+function processHillshadeEdgeUpdate(
+  ctx: EventContext,
+  event: HillshadeBackfilledEvent,
+  entityId: string,
+): void {
+  const { loadedTexs, buf, hillshadeContext } = ctx;
+
+  // These are guaranteed to exist by validation in processHillshadeBackfilled
+  if (!loadedTexs || !buf || !hillshadeContext) {
+    return;
+  }
+
+  // Read edge data and remove from BufferStore immediately to prevent leaks
+  const edgeBytes = buf.removeU8(event.edge_data_handle);
+  if (!edgeBytes) {
+    return;
+  }
+
+  // Validate edge data: one edge (size pixels × 4 bytes RGBA)
+  if (edgeBytes.length % 4 !== 0) {
+    return;
+  }
+
+  const texture = loadedTexs.get(entityId);
+
+  if (!texture) {
+    // Texture doesn't exist yet - queue this edge update for later application
+    let pending = hillshadeContext.pendingEdges.get(entityId);
+    if (!pending) {
+      pending = new Map<number, Uint8Array>();
+      hillshadeContext.pendingEdges.set(entityId, pending);
+    }
+    // Copy and store edge data, replacing any previous update for this direction
+    pending.set(event.edge_direction, new Uint8Array(edgeBytes));
+    return;
+  }
+
+  // Texture exists (it's a normal map), check if we have the temporary DEM
+  const tempDemEntry = hillshadeContext.getTempDem(entityId);
+  if (!tempDemEntry) {
+    // No temp DEM - edge updates complete or timed out, ignore this late arrival
+    return;
+  }
+
+  const edgeSize = edgeBytes.length / 4;
+  const demTexture = tempDemEntry.demTexture;
+  const textureData = demTexture.image.data as Uint8Array;
+  const texSize = demTexture.image.width;
+
+  // Texture should be padded (edgeSize + 2)
+  const expectedTexSize = edgeSize + 2;
+  if (texSize !== expectedTexSize) {
+    // Size mismatch - different zoom levels, discard this edge data
+    return;
+  }
+
+  // Update the DEM texture padding edge
+  updatePaddingEdge(textureData, edgeBytes, texSize, event.edge_direction);
+  demTexture.needsUpdate = true;
+
+  // Mark this edge as received
+  const allEdgesReceived = hillshadeContext.markEdgeReceived(
+    entityId,
+    event.edge_direction,
+  );
+
+  // Regenerate normal map from updated DEM
+  hillshadeContext.generateNormalMap(
+    entityId,
+    ctx.viewContext,
+    demTexture,
+    tempDemEntry.metersPerTexel,
+    tempDemEntry.hillshadeConfig,
+  );
+
+  // If all 4 edges received, cleanup the temporary DEM
+  if (allEdgesReceived) {
+    hillshadeContext.clearTempDem(entityId);
+  }
+
+  // Rebind textures to update the meshes
+  rebindTexturesForEntity(entityId, ctx);
+}
 
 export function processHillshadeBackfilled(
   ctx: EventContext,
@@ -25,14 +324,14 @@ export function processHillshadeBackfilled(
     textureFragmentIndex,
     textureOptions,
     tileHandler,
-    pendingHillshadeEdges,
+    hillshadeContext,
   } = ctx;
 
   if (
     !loadedTexs ||
     !buf ||
     !tileHandler ||
-    !pendingHillshadeEdges ||
+    !hillshadeContext ||
     !textureOptions ||
     !textureFragmentIndex
   ) {
@@ -46,156 +345,14 @@ export function processHillshadeBackfilled(
       ? `${event.target_entity_ind}_${event.target_entity_gen}`
       : generate_id_from_entity(event);
 
-  let texture = loadedTexs.get(entityId);
-
   // 1. Create texture if original data is provided
   if (event.original_handle >= 0) {
-    // Use removeU8 to delete original DEM data after reading
-    // Rust side keeps only 4 edges (4KB), original data (256KB) is deleted here
-    const originalBytes = buf.removeU8(event.original_handle);
-    if (!originalBytes) {
-      return;
-    }
-
-    // Validate buffer format (must be RGBA)
-    if (originalBytes.length % 4 !== 0) {
-      return;
-    }
-
-    const originalSize = Math.sqrt(originalBytes.length / 4);
-    if (!Number.isInteger(originalSize) || originalSize < 1) {
-      return;
-    }
-
-    // Expand to padded size (originalSize + 2 for 1px padding on each side)
-    const paddedSize = originalSize + 2;
-    const paddedBytes = new Uint8Array(paddedSize * paddedSize * 4);
-
-    // Copy center content from original data
-    for (let y = 0; y < originalSize; y++) {
-      for (let x = 0; x < originalSize; x++) {
-        const srcIdx = (y * originalSize + x) * 4;
-        const dstIdx = ((y + 1) * paddedSize + (x + 1)) * 4;
-        paddedBytes[dstIdx] = originalBytes[srcIdx];
-        paddedBytes[dstIdx + 1] = originalBytes[srcIdx + 1];
-        paddedBytes[dstIdx + 2] = originalBytes[srcIdx + 2];
-        paddedBytes[dstIdx + 3] = originalBytes[srcIdx + 3];
-      }
-    }
-
-    // Initialize padding with edge replication (will be updated by neighbor edges later)
-    replicateEdgesToPadding(paddedBytes, paddedSize);
-
-    // Create DataTexture with padded size
-    const dataTexture = new DataTexture(
-      paddedBytes,
-      paddedSize,
-      paddedSize,
-      RGBAFormat,
-      UnsignedByteType,
-    );
-    dataTexture.colorSpace = NoColorSpace;
-    dataTexture.minFilter = NearestFilter;
-    dataTexture.magFilter = NearestFilter;
-    dataTexture.generateMipmaps = false;
-    dataTexture.flipY = true;
-    dataTexture.needsUpdate = true;
-
-    // Store zoom level in userData for later retrieval in setupTextures
-    const tileHandleBigInt =
-      typeof event.tile_handle === "bigint"
-        ? event.tile_handle
-        : BigInt(event.tile_handle);
-    const ownerTile = tileHandler.getTile(tileHandleBigInt);
-    if (ownerTile) {
-      dataTexture.userData.hillshadeZoom = ownerTile.coords.z;
-    }
-
-    // Dispose old texture if exists
-    if (texture) {
-      texture.dispose();
-    }
-
-    texture = dataTexture;
-    loadedTexs.set(entityId, texture);
-
-    // Apply any pending edge updates that arrived before texture creation
-    const pending = pendingHillshadeEdges.get(entityId);
-    if (pending && pending.size > 0) {
-      const textureData = dataTexture.image.data as Uint8Array;
-      const texSize = dataTexture.image.width;
-
-      for (const [edgeDirection, edgeBytes] of pending) {
-        const edgeSize = edgeBytes.length / 4;
-        const expectedTexSize = edgeSize + 2;
-
-        // Only apply if size matches (same zoom level)
-        if (texSize === expectedTexSize) {
-          updatePaddingEdge(textureData, edgeBytes, texSize, edgeDirection);
-          dataTexture.needsUpdate = true;
-        }
-      }
-
-      // Clear pending updates for this entity
-      pendingHillshadeEdges.delete(entityId);
-    }
-
-    // Deduplicate tileMeshes: same mesh may appear in multiple slots
-    // Avoid redundant rebinding when mesh uses same fragment in multiple texture slots
-    const slots = getTextureFragmentSlots(textureFragmentIndex, entityId);
-    if (slots) {
-      const uniqueMeshes = new Set<TileMesh>();
-      for (const { tileMesh } of slots) {
-        uniqueMeshes.add(tileMesh);
-      }
-      for (const tileMesh of uniqueMeshes) {
-        tileMesh.rebindTextures(loadedTexs, textureOptions);
-      }
-    }
+    processInitialHillshadeTexture(ctx, event, entityId);
   }
 
   // 2. Update edges if edge data is provided
   if (event.edge_data_handle >= 0) {
-    // Read edge data and remove from BufferStore immediately to prevent leaks
-    const edgeBytes = buf.removeU8(event.edge_data_handle);
-    if (!edgeBytes) {
-      return;
-    }
-
-    // Validate edge data: one edge (size pixels × 4 bytes RGBA)
-    if (edgeBytes.length % 4 !== 0) {
-      // Invalid data, already removed from buffer
-      return;
-    }
-
-    if (!texture || !(texture instanceof DataTexture)) {
-      // Texture doesn't exist yet - queue this edge update for later application
-      // Store at most one update per direction (newer replaces older)
-      let pending = pendingHillshadeEdges.get(entityId);
-      if (!pending) {
-        pending = new Map<number, Uint8Array>();
-        pendingHillshadeEdges.set(entityId, pending);
-      }
-      // Copy and store edge data, replacing any previous update for this direction
-      pending.set(event.edge_direction, new Uint8Array(edgeBytes));
-      return;
-    }
-
-    const edgeSize = edgeBytes.length / 4; // Number of pixels in this edge
-    const textureData = texture.image.data as Uint8Array;
-    const texSize = texture.image.width;
-
-    // Texture should be padded (edgeSize + 2)
-    const expectedTexSize = edgeSize + 2;
-    if (texSize !== expectedTexSize) {
-      // Size mismatch - different zoom levels, discard this edge data
-      return;
-    }
-
-    // Update the specific padding edge based on direction
-    // 0=Left, 1=Right, 2=Top, 3=Bottom
-    updatePaddingEdge(textureData, edgeBytes, texSize, event.edge_direction);
-    texture.needsUpdate = true;
+    processHillshadeEdgeUpdate(ctx, event, entityId);
   }
 }
 
