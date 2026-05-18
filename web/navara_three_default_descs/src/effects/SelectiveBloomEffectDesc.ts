@@ -25,7 +25,6 @@ import {
 
 import { UnrealBloomPassRGBA } from "./UnrealBloomPassRGBA";
 
-// Selective Bloom configuration
 export type SelectiveBloomConfig = {
   strength?: number;
   radius?: number;
@@ -47,10 +46,8 @@ const DEFAULT_THRESHOLD = 0.0;
 const DEFAULT_BLOOM_RESOLUTION_SCALE = 0.5;
 
 /**
- * Selective Bloom Effect Descriptor
- *
- * Uses EmissiveBuffer + EffectIds Buffer to apply bloom to selected objects.
- * Extract → Blur (UnrealBloomPassRGBA) → Composite with base scene.
+ * Applies bloom to objects selected via the EffectIds bitmask.
+ * Pipeline: extract from EmissiveBuffer → UnrealBloomPassRGBA blur → composite.
  */
 export class SelectiveBloomEffectDesc extends SelectiveEffectDesc<
   SelectiveBloomEffectConfig,
@@ -136,12 +133,7 @@ export class SelectiveBloomEffectDesc extends SelectiveEffectDesc<
   }
 }
 
-/**
- * Buffer-based Selective Bloom Pass.
- *
- * Pipeline: Extract bloom source → UnrealBloomPassRGBA blur → Composite with base.
- * Reads from EmissiveBuffer + EffectIds Buffer in the GBuffer MRT.
- */
+/** Renders the bloom pipeline. See {@link SelectiveBloomEffectDesc}. */
 class SelectiveBloomPass extends PostProcessingPass {
   private desc: SelectiveBloomEffectDesc;
   private bloom: UnrealBloomPassRGBA;
@@ -175,9 +167,8 @@ class SelectiveBloomPass extends PostProcessingPass {
     this.fullscreenCamera = fullscreenQuad.camera;
     this.fullscreenGeometry = fullscreenQuad.geometry;
 
-    // Extract bloom source from EmissiveBuffer + EffectIds. Opaque meshes
-    // overwrite effectIds.r to 0 in CustomRenderPass (they share the MRT
-    // render target), so the bit check alone suffices for opaque-occlusion.
+    // Opaque meshes already cleared effectIds.r to 0 in the shared MRT
+    // (CustomRenderPass), so the bit check alone gates opaque-occlusion.
     this.extractMaterial = new ShaderMaterial({
       uniforms: {
         tEmissive: { value: null },
@@ -222,7 +213,6 @@ class SelectiveBloomPass extends PostProcessingPass {
       new Mesh(this.fullscreenGeometry, this.extractMaterial),
     );
 
-    // Composite material: base + bloom additive blend
     this.compositeMaterial = new ShaderMaterial({
       uniforms: {
         tBase: { value: null },
@@ -256,8 +246,7 @@ class SelectiveBloomPass extends PostProcessingPass {
       new Mesh(this.fullscreenGeometry, this.compositeMaterial),
     );
 
-    // Bloom source RT (extracted emissive for bloom-targeted pixels)
-    // HalfFloatType preserves HDR values (emissive intensity > 1.0)
+    // HalfFloatType preserves HDR emissive intensity (> 1.0).
     this.bloomSourceRT = new WebGLRenderTarget(initialWidth, initialHeight, {
       format: RGBAFormat,
       type: HalfFloatType,
@@ -313,12 +302,10 @@ class SelectiveBloomPass extends PostProcessingPass {
       this.desc.bloomThreshold,
     );
 
-    // Get buffer textures
     const emissiveBuffer = this.desc.getEmissiveBuffer();
     const effectIdsBuffer = this.desc.getEffectIdsBuffer();
     const slot = this.desc.getEffectSlot();
 
-    // Passthrough if buffers not available — render base without bloom
     if (!emissiveBuffer || !effectIdsBuffer || slot < 0) {
       renderer.setRenderTarget(this.renderToScreen ? null : outputBuffer);
       this.compositeMaterial.uniforms.tBase.value = inputBuffer.texture;
@@ -327,7 +314,6 @@ class SelectiveBloomPass extends PostProcessingPass {
       return;
     }
 
-    // Step 1: Extract bloom source from buffers
     this.extractMaterial.uniforms.tEmissive.value = emissiveBuffer;
     this.extractMaterial.uniforms.tEffectIds.value = effectIdsBuffer;
     this.extractMaterial.uniforms.slotBit.value = slot;
@@ -335,8 +321,7 @@ class SelectiveBloomPass extends PostProcessingPass {
     renderer.setRenderTarget(this.bloomSourceRT);
     renderer.render(this.extractScene, this.fullscreenCamera);
 
-    // Step 2: Apply bloom blur
-    // UnrealBloomPassRGBA reads from readBuffer (2nd arg)
+    // UnrealBloomPassRGBA reads from readBuffer (2nd arg).
     this.bloom.render(
       renderer,
       this.bloomSourceRT, // writeBuffer (ignored)
@@ -344,10 +329,8 @@ class SelectiveBloomPass extends PostProcessingPass {
       deltaTime ?? 0,
     );
 
-    // Get bloom output from internal RT
     const bloomOutput = this.bloom.renderTargetsHorizontal[0];
 
-    // Step 3: Composite bloom with base scene
     this.compositeMaterial.uniforms.tBase.value = inputBuffer.texture;
     this.compositeMaterial.uniforms.tBloom.value =
       bloomOutput?.texture ?? this.bloomSourceRT.texture;

@@ -23,7 +23,6 @@ import {
   RGBAFormat,
 } from "three";
 
-// Selective Outline configuration
 export type SelectiveOutlineConfig = {
   color?: Color;
   thickness?: number;
@@ -44,10 +43,8 @@ const DEFAULT_THICKNESS = 1.0;
 const DEFAULT_EDGE_STRENGTH = 1.0;
 
 /**
- * Selective Outline Effect Descriptor
- *
- * Uses EffectIds Buffer to apply outline to selected objects.
- * Extract mask → Sobel edge detection → Composite with base scene.
+ * Draws outlines around objects selected via the EffectIds bitmask.
+ * Pipeline: extract mask → Sobel edge detection → composite.
  */
 export class SelectiveOutlineEffectDesc extends SelectiveEffectDesc<
   SelectiveOutlineEffectConfig,
@@ -135,12 +132,7 @@ export class SelectiveOutlineEffectDesc extends SelectiveEffectDesc<
   }
 }
 
-/**
- * Buffer-based Selective Outline Pass.
- *
- * Pipeline: Extract mask from EffectIds Buffer → Sobel edge detection → Composite with base.
- * Reads from EffectIds Buffer in the GBuffer MRT.
- */
+/** Renders the outline pipeline. See {@link SelectiveOutlineEffectDesc}. */
 class SelectiveOutlinePass extends PostProcessingPass {
   private desc: SelectiveOutlineEffectDesc;
 
@@ -176,9 +168,8 @@ class SelectiveOutlinePass extends PostProcessingPass {
     this.fullscreenCamera = fullscreenQuad.camera;
     this.fullscreenGeometry = fullscreenQuad.geometry;
 
-    // Extract binary mask from EffectIds Buffer. Opaque meshes overwrite
-    // effectIds.r to 0 in CustomRenderPass (they share the MRT render target),
-    // so the bit check alone suffices for opaque-occlusion.
+    // Opaque meshes already cleared effectIds.r to 0 in the shared MRT
+    // (CustomRenderPass), so the bit check alone gates opaque-occlusion.
     this.extractMaterial = new ShaderMaterial({
       uniforms: {
         tEffectIds: { value: null },
@@ -216,7 +207,6 @@ class SelectiveOutlinePass extends PostProcessingPass {
       new Mesh(this.fullscreenGeometry, this.extractMaterial),
     );
 
-    // Edge detection material (Sobel filter)
     this.edgeDetectMaterial = new ShaderMaterial({
       uniforms: {
         tMask: { value: null },
@@ -275,11 +265,8 @@ class SelectiveOutlinePass extends PostProcessingPass {
       new Mesh(this.fullscreenGeometry, this.edgeDetectMaterial),
     );
 
-    // Composite material: blend outline with base scene.
-    // Note: edges that the Sobel + thickness widened over an occluder are kept
-    // on purpose — the resulting "outline hovering on top of the occluder" is
-    // the intended X-ray-style readout. Per-pixel occlusion is applied earlier
-    // in the extract pass (on the mask itself, before Sobel widens it).
+    // X-ray readout: edges that Sobel/thickness widened over an occluder are
+    // intentionally kept. Per-pixel occlusion is gated earlier in extract.
     this.compositeMaterial = new ShaderMaterial({
       uniforms: {
         tBase: { value: null },
@@ -344,7 +331,6 @@ class SelectiveOutlinePass extends PostProcessingPass {
       new Mesh(this.fullscreenGeometry, this.compositeMaterial),
     );
 
-    // Render targets for extract + edge detection
     this.maskRT = new WebGLRenderTarget(initialWidth, initialHeight, {
       format: RGBAFormat,
       depthBuffer: false,
@@ -394,14 +380,13 @@ class SelectiveOutlinePass extends PostProcessingPass {
       Math.floor(inputBuffer.height * resScale),
     );
 
-    // Get buffer textures
     const effectIdsBuffer = this.desc.getEffectIdsBuffer();
     const slot = this.desc.getEffectSlot();
 
-    // Passthrough if buffers not available — bypass composite to avoid null tEdge sampling
+    // Bypass composite when buffers are unavailable. tEdge is bound to
+    // inputBuffer so the sampler isn't null (bypass=1 skips edge sampling).
     if (!effectIdsBuffer || slot < 0) {
       this.compositeMaterial.uniforms.tBase.value = inputBuffer.texture;
-      // Bind inputBuffer to avoid null sampler (bypass=1 skips edge sampling)
       this.compositeMaterial.uniforms.tEdge.value = inputBuffer.texture;
       this.compositeMaterial.uniforms.bypass.value = 1;
       renderer.setRenderTarget(this.renderToScreen ? null : outputBuffer);
@@ -409,20 +394,16 @@ class SelectiveOutlinePass extends PostProcessingPass {
       return;
     }
 
-    // Step 1: Extract binary mask from EffectIds Buffer (R channel; opaque
-    // meshes have overwritten effectIds.r to 0 already in CustomRenderPass)
     this.extractMaterial.uniforms.tEffectIds.value = effectIdsBuffer;
     this.extractMaterial.uniforms.slotBit.value = slot;
 
     renderer.setRenderTarget(this.maskRT);
     renderer.render(this.extractScene, this.fullscreenCamera);
 
-    // Step 2: Sobel edge detection on mask
     this.edgeDetectMaterial.uniforms.tMask.value = this.maskRT.texture;
     renderer.setRenderTarget(this.edgeRT);
     renderer.render(this.edgeDetectScene, this.fullscreenCamera);
 
-    // Step 3: Composite outline with base scene
     this.compositeMaterial.uniforms.tBase.value = inputBuffer.texture;
     this.compositeMaterial.uniforms.tEdge.value = this.edgeRT.texture;
     this.compositeMaterial.uniforms.bypass.value = 0;
