@@ -3,12 +3,14 @@ import type {
   Transform,
 } from "@navara/engine";
 import { type CurveTextureSet, type FontManager } from "@navara/font";
+import { CURVE_TEX_WIDTH } from "@navara/font";
 import { degreeToRadian } from "@navara/three_api";
 import curveTextFragmentShader from "@shaders/glsl/curveText.frag.glsl";
 import curveTextVertexShader from "@shaders/glsl/curveText.vert.glsl";
 import {
   BufferAttribute,
   Color,
+  GLSL3,
   InstancedBufferAttribute,
   InstancedBufferGeometry,
   Mesh,
@@ -71,6 +73,8 @@ export class CurveTextMesh
       uniforms: this._initialUniforms(material, transform, position),
       transparent: true,
       depthTest: material.depthTest ?? true,
+      // Integer texture sampling (`usampler2D`) needs GLSL ES 3.0.
+      glslVersion: GLSL3,
     });
 
     mat.onBeforeRender = (renderer, _scene, camera) => {
@@ -199,13 +203,13 @@ export class CurveTextMesh
 
       // Texture uniforms — bound to null until the first setText.
       uGlyphHeaders: { value: null },
-      uGlyphHeadersWidth: { value: 1 },
       uBandData: { value: null },
       uBandCurves: { value: null },
       uCurveData: { value: null },
       uColorLayerHeaders: { value: null },
       uColorPaintParams: { value: null },
       uColorClipRecords: { value: null },
+      uCurveTexWidth: { value: CURVE_TEX_WIDTH },
 
       // Position / eye uniforms. The vertex shader picks between RTE/RTC by
       // the USE_RTE define; only one set is read per draw.
@@ -267,8 +271,6 @@ export class CurveTextMesh
   private _bindTextures(textures: CurveTextureSet): void {
     const u = this.material.uniforms;
     u.uGlyphHeaders.value = textures.glyphHeaders;
-    u.uGlyphHeadersWidth.value =
-      textures.glyphHeaders?.image?.width ?? 1;
     u.uBandData.value = textures.bandData;
     u.uBandCurves.value = textures.bandCurves;
     u.uCurveData.value = textures.curveData;

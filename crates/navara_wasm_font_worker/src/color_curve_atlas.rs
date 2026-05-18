@@ -193,13 +193,63 @@ impl ColorCurveAtlas {
             return false;
         };
 
-        // 3. Bind the color layer range onto the outline glyph's header.
+        // 3. Translate clip-glyph GIDs to outline-atlas header slots so the
+        //    fragment shader can dereference them directly. Phase 2's pack
+        //    format stores GIDs (it doesn't know about the outline atlas);
+        //    we rewrite each glyph-clip record's gid field to the
+        //    corresponding header_slot now that we've ensured the outlines.
+        self.translate_clip_gids_to_slots(&record, outline_atlas, font_index);
+
+        // 4. Bind the color layer range onto the outline glyph's header.
         let key = composite_key(font_index, gid);
         outline_atlas.bind_color_layers(key, record.layer_start, record.layer_count);
 
         self.glyph_map.insert(key, record);
         self.last_used.insert(key, current_frame);
         true
+    }
+
+    /// Sentinel written into a clip record's slot field when the referenced
+    /// glyph has no outline in the atlas (e.g. notdef / blank glyphs). The
+    /// fragment shader treats this as "no clip" (clip passes everywhere).
+    pub const MISSING_CLIP_SLOT: u32 = u32::MAX;
+
+    fn translate_clip_gids_to_slots(
+        &mut self,
+        record: &ColorGlyphRecord,
+        outline_atlas: &CurveAtlas,
+        font_index: u32,
+    ) {
+        if record.clip_count == 0 {
+            return;
+        }
+        let start = record.clip_offset as usize * CLIP_RECORD_U32S;
+        let end = start + record.clip_count as usize * CLIP_RECORD_U32S;
+        let mut dirtied = false;
+        for slot in (start..end).step_by(CLIP_RECORD_U32S) {
+            // Layout per [crate::curves::color_pack]:
+            //   [0] = clip kind tag (0 = Glyph, 1 = Rect)
+            //   [1] = gid (for Glyph) or min.x bits (for Rect)
+            let tag = self.clip_records[slot];
+            if tag != 0 {
+                continue; // Not a glyph clip — nothing to translate.
+            }
+            let gid = self.clip_records[slot + 1];
+            let new_slot = outline_atlas
+                .get_record(composite_key(font_index, gid))
+                .map(|r| r.header_slot)
+                .unwrap_or(Self::MISSING_CLIP_SLOT);
+            if self.clip_records[slot + 1] != new_slot {
+                self.clip_records[slot + 1] = new_slot;
+                dirtied = true;
+            }
+        }
+        if dirtied {
+            Self::touch_range(
+                &mut self.dirty_clip_records,
+                start as u32..end as u32,
+            );
+        }
     }
 
     fn insert_packed(

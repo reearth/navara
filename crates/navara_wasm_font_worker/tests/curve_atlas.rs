@@ -10,9 +10,9 @@ use navara_wasm_font_worker::{
     color_curve_atlas::evict_cold_pair,
     curve_atlas::{CurveAtlas, composite_key},
     curves::{
-        CLIP_RECORD_U32S, FLAG_HAS_COLOR_LAYERS, HEADER_BAND_CURVES_OFFSET, HEADER_BANDS_OFFSET,
-        HEADER_COLOR_LAYER_COUNT, HEADER_COLOR_LAYER_START, HEADER_CURVES_OFFSET, HEADER_F32_COUNT,
-        HEADER_FLAGS, LAYER_HEADER_U32S,
+        CLIP_RECORD_U32S, ClipTag, FLAG_HAS_COLOR_LAYERS, HEADER_BAND_CURVES_OFFSET,
+        HEADER_BANDS_OFFSET, HEADER_COLOR_LAYER_COUNT, HEADER_COLOR_LAYER_START,
+        HEADER_CURVES_OFFSET, HEADER_F32_COUNT, HEADER_FLAGS, LAYER_HEADER_U32S,
     },
 };
 use skrifa::{GlyphId, prelude::FontRef, raw::TableProvider};
@@ -177,6 +177,75 @@ fn color_glyph_binds_layer_range_on_outline_header() {
         color.clip_records.len() % CLIP_RECORD_U32S,
         0,
         "clip records buffer not a multiple of CLIP_RECORD_U32S",
+    );
+}
+
+/// After `ensure_color_glyphs`, every glyph-clip record's `gid` field must
+/// have been rewritten to the matching outline atlas's `header_slot`. This
+/// is the GPU contract — the fragment shader dereferences clip records as
+/// slot indices.
+#[test]
+fn glyph_clip_records_carry_header_slots_not_gids() {
+    let mut cache = FontCache::default();
+    load(&mut cache, COLR_URL, COLRV1_FONT);
+    let font = FontRef::new(COLRV1_FONT).unwrap();
+
+    // Find a color glyph whose paint graph references at least one clip glyph
+    // OTHER than itself; that's the case where gid != header_slot is most
+    // likely to surface a wrong field.
+    let glyph_count = font.maxp().ok().map(|m| m.num_glyphs()).unwrap_or(0);
+    let mut chosen: Option<u32> = None;
+    for gid in 1..glyph_count {
+        let id = GlyphId::new(gid as u32);
+        if let Some(g) = navara_wasm_font_worker::curves::extract_color_glyph(&font, id)
+            && g.layers.iter().flat_map(|l| l.clips.iter()).any(|c| {
+                matches!(
+                    c,
+                    navara_wasm_font_worker::curves::ClipShape::Glyph { .. }
+                )
+            })
+        {
+            chosen = Some(gid as u32);
+            break;
+        }
+    }
+    let gid = chosen.expect("fixture has a paint graph with glyph clips");
+
+    let outline_ptr = cache.get_curve_atlas_mut(COLR_URL).unwrap() as *mut _;
+    let color = cache.get_color_curve_atlas_mut(COLR_URL).unwrap();
+    // SAFETY: disjoint fields on FontCache, single-statement aliasing.
+    let outline = unsafe { &mut *outline_ptr };
+    color.ensure_color_glyphs(outline, &font, 0, &[gid], 0);
+
+    // Iterate the clip_records buffer and check every glyph-clip record's
+    // slot field is either a valid header_slot or the MISSING sentinel.
+    let color_record = color
+        .get_record(composite_key(0, gid))
+        .expect("color record");
+    let start = color_record.clip_offset as usize * CLIP_RECORD_U32S;
+    let end = start + color_record.clip_count as usize * CLIP_RECORD_U32S;
+    let max_outline_slot = outline.glyph_headers.len() / HEADER_F32_COUNT;
+
+    let mut saw_real_slot = false;
+    for base in (start..end).step_by(CLIP_RECORD_U32S) {
+        let tag = color.clip_records[base];
+        if tag != ClipTag::Glyph as u32 {
+            continue;
+        }
+        let slot = color.clip_records[base + 1];
+        if slot == navara_wasm_font_worker::color_curve_atlas::ColorCurveAtlas::MISSING_CLIP_SLOT {
+            continue;
+        }
+        assert!(
+            (slot as usize) < max_outline_slot,
+            "clip record carries slot {slot}, larger than outline atlas slot count {max_outline_slot}; \
+             likely still a raw glyph ID",
+        );
+        saw_real_slot = true;
+    }
+    assert!(
+        saw_real_slot,
+        "every glyph clip mapped to MISSING — translation never fired",
     );
 }
 

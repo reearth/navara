@@ -1,10 +1,17 @@
-// Slug-style curve text — vertex shader.
+// Slug-style curve text — vertex shader (Phase 5).
 //
-// Phase 4: stub. Reuses the SDF vertex shader's RTE/RTC + billboard math,
-// but fetches each glyph's bbox from the shared `uGlyphHeaders` texture
-// instead of receiving it as per-instance attributes. The fragment shader
-// receives `vGlyphHeaderSlot` so it can fetch band tables and curve data
-// from the other three textures during Phase 5.
+// Fetches each glyph's bbox from the shared `uGlyphHeaders` texture and
+// emits a quad in em-space. The fragment shader receives the header slot
+// and the interpolated em-space position; everything else (band table,
+// curves, COLR layers) is fetched at fragment time.
+//
+// Coordinate flow:
+//   position.xy  ∈ [-0.5, 0.5]  (unit quad attribute)
+//   emPos        = remap to glyph bbox in em-space (per-glyph)
+//   localPos     = emPos - anchor                  (after `uCenter`)
+//   worldPos     = mvPosition + scaleFactor * localPos  (billboard quad)
+//
+// Same RTE/RTC + billboard math as the legacy SDF vertex shader.
 
 #include "chunks/horizon_culling_pars_vertex.glsl"
 #include "chunks/sprite_height_pars_vertex.glsl"
@@ -14,8 +21,9 @@
 attribute float aGlyphHeaderSlot;
 
 // -- Shared GPU buffers (data textures populated by CurveTextureSet). --
-uniform sampler2D uGlyphHeaders;       // RGBA32F, 3 texels per header
-uniform float uGlyphHeadersWidth;      // texture width in texels
+uniform sampler2D uGlyphHeaders;
+/** All curve-pipeline data textures share this width (CURVE_TEX_WIDTH). */
+uniform float uCurveTexWidth;
 
 #ifdef USE_RTE
     uniform vec3 uRTEPositionLOW;
@@ -36,28 +44,14 @@ uniform float uAddHeight;
 
 // Pass-through to fragment.
 flat varying float vGlyphHeaderSlot;
-varying vec2 vEmCoord;          // em-space position inside the glyph bbox
-varying vec4 vBboxMinMax;       // (bbox_min.xy, bbox_max.xy), forwarded for Phase 5
+varying vec2 vEmCoord;
+varying vec4 vBboxMinMax;
 varying float vFragDepth;
 
-// Look up `slot`'s header texels. Header is 12 f32 = 3 RGBA32F texels.
-// Layout (must match HEADER_F32_COUNT slots in Rust):
-//   texel 0: bbox_min.xy, bbox_max.xy
-//   texel 1: band_count, bands_offset, band_curves_offset, curves_offset
-//   texel 2: flags, color_layer_start, color_layer_count, reserved
-void fetchHeader(in float slot, out vec4 t0, out vec4 t1, out vec4 t2) {
-    float baseTexel = slot * 3.0;
-    float texW = uGlyphHeadersWidth;
-    // Row-major addressing: y = floor(idx / width), x = idx - y*width
-    float y0 = floor(baseTexel / texW);
-    float x0 = baseTexel - y0 * texW;
-    float y1 = floor((baseTexel + 1.0) / texW);
-    float x1 = (baseTexel + 1.0) - y1 * texW;
-    float y2 = floor((baseTexel + 2.0) / texW);
-    float x2 = (baseTexel + 2.0) - y2 * texW;
-    t0 = texelFetch(uGlyphHeaders, ivec2(int(x0), int(y0)), 0);
-    t1 = texelFetch(uGlyphHeaders, ivec2(int(x1), int(y1)), 0);
-    t2 = texelFetch(uGlyphHeaders, ivec2(int(x2), int(y2)), 0);
+ivec2 _idxTo2D(float idx) {
+    float y = floor(idx / uCurveTexWidth);
+    float x = idx - y * uCurveTexWidth;
+    return ivec2(int(x), int(y));
 }
 
 void main() {
@@ -89,24 +83,27 @@ void main() {
 
     float scaleFactor = uFontSize;
     if (!uSizeInMeters) {
-        scaleFactor = nvr_pxToWorld(uFontSize, uFovRad, uScreenHeightPx, vec3(0.0, 0.0, mvPosition.z), vec3(0.0, 0.0, 0.0));
+        scaleFactor = nvr_pxToWorld(
+            uFontSize, uFovRad, uScreenHeightPx,
+            vec3(0.0, 0.0, mvPosition.z),
+            vec3(0.0, 0.0, 0.0)
+        );
     }
 
-    vec2 center = clamp(uCenter, vec2(-0.5), vec2(0.5));
+    vec2 anchor = clamp(uCenter, vec2(-0.5), vec2(0.5));
 
-    // Fetch glyph header.
-    vec4 hdr0, hdr1, hdr2;
-    fetchHeader(aGlyphHeaderSlot, hdr0, hdr1, hdr2);
+    // Fetch only the first header texel; bbox lives in (.xy = bboxMin, .zw = bboxMax).
+    float baseTexel = aGlyphHeaderSlot * 3.0;
+    vec4 hdr0 = texelFetch(uGlyphHeaders, _idxTo2D(baseTexel), 0);
     vec2 bboxMin = hdr0.xy;
     vec2 bboxMax = hdr0.zw;
     vec2 bboxSize = bboxMax - bboxMin;
 
-    // Map the unit quad [-0.5, 0.5] to the glyph's em-space bbox.
+    // Map unit quad [-0.5, 0.5] → glyph's em-space bbox.
     vec2 emPos = (position.xy + vec2(0.5)) * bboxSize + bboxMin;
-    // Shift by anchor point (Phase 4 stub: no per-text-width centering yet).
     vec2 localPos = emPos;
-    localPos.x -= center.x;
-    localPos.y -= center.y;
+    localPos.x -= anchor.x;
+    localPos.y -= anchor.y;
 
     vec4 delta = vec4(localPos * scaleFactor, 0.0, 0.0);
     vec4 newMvPosition = mvPosition + delta;
