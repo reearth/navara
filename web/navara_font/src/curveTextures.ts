@@ -131,8 +131,12 @@ export class CurveTextureSet {
         snapshot.dirty.bandCurves,
       ) || changed;
     changed =
-      this._upload("curves", snapshot.curveData, CURVE_F32_COUNT, snapshot.dirty.curveData) ||
-      changed;
+      this._upload(
+        "curves",
+        snapshot.curveData,
+        CURVE_F32_COUNT,
+        snapshot.dirty.curveData,
+      ) || changed;
     return changed;
   }
 
@@ -147,8 +151,12 @@ export class CurveTextureSet {
         snapshot.dirty.layerHeaders,
       ) || changed;
     changed =
-      this._upload("paintParams", snapshot.paintParams, 1, snapshot.dirty.paintParams) ||
-      changed;
+      this._upload(
+        "paintParams",
+        snapshot.paintParams,
+        1,
+        snapshot.dirty.paintParams,
+      ) || changed;
     changed =
       this._upload(
         "clipRecords",
@@ -210,9 +218,16 @@ export class CurveTextureSet {
       return true;
     }
 
-    // Same length → patch in place. (DataTexture replaces the data ref;
-    // three.js re-uploads on next render when `needsUpdate` is true.)
-    existing.texture.image.data = data;
+    // Same length → patch in place. The DataTexture was created with a
+    // buffer padded up to `width * height * floatsPerTexel`; the new
+    // snapshot is the raw unpadded buffer, so we must re-pad before
+    // swapping `image.data` or WebGL will read past the ArrayBufferView.
+    const { format } = describeSlot(slot);
+    const floatsPerTexel =
+      format === RGBAFormat ? 4 : format === RGFormat ? 2 : 1;
+    const image = existing.texture.image as { width: number; height: number };
+    const padded = padTo(data, image.width * image.height * floatsPerTexel);
+    existing.texture.image.data = padded;
     existing.texture.needsUpdate = true;
     existing.texture.userData.lastDirty = dirty;
     this._setSlot(slot, existing);
@@ -303,7 +318,8 @@ export class CurveTextureSet {
     // texels; total texels = length / floatsPerTexel. To keep math simple
     // we use a fixed width of CURVE_TEX_WIDTH and compute height = ceil
     // (totalTexels / width), padding the buffer up to width*height texels.
-    const floatsPerTexel = format === RGBAFormat ? 4 : format === RGFormat ? 2 : 1;
+    const floatsPerTexel =
+      format === RGBAFormat ? 4 : format === RGFormat ? 2 : 1;
     const totalTexels = Math.ceil(length / floatsPerTexel);
     const width = CURVE_TEX_WIDTH;
     const height = Math.max(1, Math.ceil(totalTexels / width));
@@ -333,7 +349,11 @@ function describeSlot(
     | "paintParams"
     | "clipRecords",
 ): {
-  format: typeof RGBAFormat | typeof RGFormat | typeof RedFormat | typeof RedIntegerFormat;
+  format:
+    | typeof RGBAFormat
+    | typeof RGFormat
+    | typeof RedFormat
+    | typeof RedIntegerFormat;
   type: typeof FloatType | typeof UnsignedIntType;
   /** Number of *texels* one logical element occupies. */
   texelsPerRow: number;
@@ -343,20 +363,36 @@ function describeSlot(
       // 12 f32 per glyph header → 3 RGBA32F texels.
       return { format: RGBAFormat, type: FloatType, texelsPerRow: 3 };
     case "bands":
-      return { format: RedIntegerFormat, type: UnsignedIntType, texelsPerRow: 1 };
+      return {
+        format: RedIntegerFormat,
+        type: UnsignedIntType,
+        texelsPerRow: 1,
+      };
     case "bandCurves":
-      return { format: RedIntegerFormat, type: UnsignedIntType, texelsPerRow: 1 };
+      return {
+        format: RedIntegerFormat,
+        type: UnsignedIntType,
+        texelsPerRow: 1,
+      };
     case "curves":
       // 6 f32 per curve → 3 RG32F texels.
       return { format: RGFormat, type: FloatType, texelsPerRow: 3 };
     case "layerHeaders":
       // 12 u32 per layer → 12 R32UI texels.
-      return { format: RedIntegerFormat, type: UnsignedIntType, texelsPerRow: 12 };
+      return {
+        format: RedIntegerFormat,
+        type: UnsignedIntType,
+        texelsPerRow: 12,
+      };
     case "paintParams":
       return { format: RedFormat, type: FloatType, texelsPerRow: 1 };
     case "clipRecords":
       // 8 u32 per clip → 8 R32UI texels.
-      return { format: RedIntegerFormat, type: UnsignedIntType, texelsPerRow: 8 };
+      return {
+        format: RedIntegerFormat,
+        type: UnsignedIntType,
+        texelsPerRow: 8,
+      };
   }
 }
 
@@ -373,10 +409,13 @@ function pickInternalFormat(
   return "R32F";
 }
 
-function padTo<T extends Float32Array | Uint32Array>(data: T, totalLength: number): T {
+function padTo<T extends Float32Array | Uint32Array>(
+  data: T,
+  totalLength: number,
+): T {
   if (data.length >= totalLength) return data;
   // Construct a new typed array of the same kind with the padded length.
-  const Ctor = (data.constructor as new (length: number) => T);
+  const Ctor = data.constructor as new (length: number) => T;
   const out = new Ctor(totalLength);
   out.set(data, 0);
   return out;

@@ -110,6 +110,7 @@ const run = async () => {
         center: { x: 0.5, y: 0.0 },
         outlineColor: new Color().setStyle("#000000"),
         outlineWidth: 2,
+        useCurveRenderer: true,
       },
       vectorTile: {
         maxZoom: 16,

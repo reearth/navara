@@ -19,7 +19,7 @@ import { radianToDegree } from "@navara/three_api";
 import { canWorkerProcessImmediately } from "@navara/worker";
 import { Mesh, Object3D, Sprite } from "three";
 
-import { BatchedSdfTextMesh, Layer } from "..";
+import { BatchedCurveTextMesh, BatchedSdfTextMesh, Layer } from "..";
 import { getImageDataFromImageBitmap } from "../tasks/getImageDataFromImageBitmap";
 
 import { EventContext } from "./context";
@@ -334,7 +334,7 @@ function processObjectRemoved(
     disposeObject3D(m);
   }
 
-  if (m instanceof BatchedSdfTextMesh) {
+  if (m instanceof BatchedSdfTextMesh || m instanceof BatchedCurveTextMesh) {
     m.dispose();
   }
 

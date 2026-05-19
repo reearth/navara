@@ -8,6 +8,7 @@ import {
 import { Mesh, Sprite, Object3D } from "three";
 
 import {
+  BatchedCurveTextMesh,
   BatchedSdfTextMesh,
   InstancedSpriteMesh,
   ModelMesh,
@@ -217,7 +218,11 @@ export async function processRenderableFeatureChanged(
   if (obj instanceof InstancedSpriteMesh && billboard) {
     await processBillboardChanged(obj, billboard, active);
   }
-  if (obj instanceof BatchedSdfTextMesh && text) {
+  if (
+    (obj instanceof BatchedSdfTextMesh ||
+      obj instanceof BatchedCurveTextMesh) &&
+    text
+  ) {
     await processTextChanged(obj, text, active);
   }
   if (obj instanceof ModelMesh && model) {

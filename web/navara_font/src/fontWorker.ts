@@ -168,14 +168,26 @@ function snapshotOutlineBuffers(atlasKey: string) {
     bandCurves: bandCurves.buffer,
     curveData: curveData.buffer,
     dirty: {
-      headers: curveRange(dirty.headers_start, dirty.headers_end, dirty.headers_changed),
-      bandData: curveRange(dirty.bands_start, dirty.bands_end, dirty.bands_changed),
+      headers: curveRange(
+        dirty.headers_start,
+        dirty.headers_end,
+        dirty.headers_changed,
+      ),
+      bandData: curveRange(
+        dirty.bands_start,
+        dirty.bands_end,
+        dirty.bands_changed,
+      ),
       bandCurves: curveRange(
         dirty.band_curves_start,
         dirty.band_curves_end,
         dirty.band_curves_changed,
       ),
-      curveData: curveRange(dirty.curves_start, dirty.curves_end, dirty.curves_changed),
+      curveData: curveRange(
+        dirty.curves_start,
+        dirty.curves_end,
+        dirty.curves_changed,
+      ),
     },
   };
   dirty.free();

@@ -318,6 +318,17 @@ impl CurveAtlas {
             Some(o) => o,
             None => return false,
         };
+        // Empty-outline glyphs (e.g. the monochrome stub for a COLRv1 emoji
+        // base glyph, whose `glyf` entry has zero contours because the visible
+        // content lives entirely in the COLR paint graph) carry no curves and
+        // would land here with a degenerate (0,0)-(0,0) bbox — collapsing the
+        // quad in the vertex shader and skipping the fragment shader's COLR
+        // path entirely. Skipping the insert lets the color pipeline's
+        // stub-glyph path (color_curve_atlas::try_insert) own the header for
+        // these slots, using the COLR `clip_box` as a non-degenerate bbox.
+        if outline.curves.is_empty() {
+            return false;
+        }
         let banded = build_bands(outline, BAND_COUNT_DEFAULT);
         let packed = pack_glyph(&banded);
         self.insert_packed(font_index, glyph_id, &packed, current_frame)
@@ -469,10 +480,17 @@ impl CurveAtlas {
         };
         let base = record.header_slot as usize * HEADER_F32_COUNT;
         let flag_idx = base + HEADER_FLAGS;
-        let bits = self.glyph_headers[flag_idx].to_bits() | crate::curves::FLAG_HAS_COLOR_LAYERS;
-        self.glyph_headers[flag_idx] = f32::from_bits(bits);
-        self.glyph_headers[base + HEADER_COLOR_LAYER_START] = f32::from_bits(start);
-        self.glyph_headers[base + HEADER_COLOR_LAYER_COUNT] = f32::from_bits(count);
+        // Store flag mask + offsets as plain `as f32` numeric values rather
+        // than `f32::from_bits`. Small u32 bit patterns (1, 2, 3, ...) decode
+        // as denormal floats (~1.4e-45) and ANGLE / Metal on macOS flushes
+        // those to zero on register loads, which caused `floatBitsToUint`
+        // to read 0 in the shader and silently bypass the COLR path. The
+        // numeric path stays exact for any u32 < 2^24, which is well above
+        // realistic layer-count / flag-mask values.
+        let existing = self.glyph_headers[flag_idx] as u32;
+        self.glyph_headers[flag_idx] = (existing | crate::curves::FLAG_HAS_COLOR_LAYERS) as f32;
+        self.glyph_headers[base + HEADER_COLOR_LAYER_START] = start as f32;
+        self.glyph_headers[base + HEADER_COLOR_LAYER_COUNT] = count as f32;
         Self::touch_range(
             &mut self.dirty_headers,
             base as u32 + HEADER_FLAGS as u32..base as u32 + HEADER_COLOR_LAYER_COUNT as u32 + 1,
@@ -487,8 +505,10 @@ impl CurveAtlas {
         };
         let base = record.header_slot as usize * HEADER_F32_COUNT;
         let flag_idx = base + HEADER_FLAGS;
-        let bits = self.glyph_headers[flag_idx].to_bits() & !crate::curves::FLAG_HAS_COLOR_LAYERS;
-        self.glyph_headers[flag_idx] = f32::from_bits(bits);
+        // Mirror `bind_color_layers`: numeric mask, not bit pattern (avoids
+        // denormal-flush). Clears only the COLR bit so other flags survive.
+        let existing = self.glyph_headers[flag_idx] as u32;
+        self.glyph_headers[flag_idx] = (existing & !crate::curves::FLAG_HAS_COLOR_LAYERS) as f32;
         self.glyph_headers[base + HEADER_COLOR_LAYER_START] = 0.0;
         self.glyph_headers[base + HEADER_COLOR_LAYER_COUNT] = 0.0;
         Self::touch_range(
@@ -795,23 +815,23 @@ mod tests {
         let key = composite_key(0, 1);
         let h_start = atlas.get_record(key).unwrap().header_slot as usize * HEADER_F32_COUNT;
 
-        assert_eq!(atlas.glyph_headers[h_start + HEADER_FLAGS].to_bits(), 0);
+        assert_eq!(atlas.glyph_headers[h_start + HEADER_FLAGS] as u32, 0);
         atlas.bind_color_layers(key, 42, 5);
         assert_eq!(
-            atlas.glyph_headers[h_start + HEADER_FLAGS].to_bits(),
+            atlas.glyph_headers[h_start + HEADER_FLAGS] as u32,
             crate::curves::FLAG_HAS_COLOR_LAYERS,
         );
         assert_eq!(
-            atlas.glyph_headers[h_start + crate::curves::HEADER_COLOR_LAYER_START].to_bits(),
+            atlas.glyph_headers[h_start + crate::curves::HEADER_COLOR_LAYER_START] as u32,
             42,
         );
         assert_eq!(
-            atlas.glyph_headers[h_start + crate::curves::HEADER_COLOR_LAYER_COUNT].to_bits(),
+            atlas.glyph_headers[h_start + crate::curves::HEADER_COLOR_LAYER_COUNT] as u32,
             5,
         );
 
         atlas.clear_color_layers(key);
-        assert_eq!(atlas.glyph_headers[h_start + HEADER_FLAGS].to_bits(), 0);
+        assert_eq!(atlas.glyph_headers[h_start + HEADER_FLAGS] as u32, 0);
         assert_eq!(
             atlas.glyph_headers[h_start + crate::curves::HEADER_COLOR_LAYER_START],
             0.0,

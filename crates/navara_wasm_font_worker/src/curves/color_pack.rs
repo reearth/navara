@@ -309,11 +309,19 @@ fn encode_paint(paint: &PaintKind, out: &mut Vec<f32>) {
 }
 
 fn push_extend(extend: ExtendMode, out: &mut Vec<f32>) {
-    out.push(f32::from_bits(ExtendTag::from(extend) as u32));
+    // Numeric `as f32`, not `f32::from_bits`. Small u32 patterns map to
+    // denormals (~1.4e-45) which ANGLE/Metal flushes to zero on register
+    // loads, so `floatBitsToUint` in the shader would silently read 0 for
+    // `Repeat` (=1) or `Reflect` (=2). Numeric storage is exact for any
+    // u32 < 2^24.
+    out.push(ExtendTag::from(extend) as u32 as f32);
 }
 
 fn push_count(n: usize, out: &mut Vec<f32>) {
-    out.push(f32::from_bits(n as u32));
+    // Same rationale as `push_extend` — stop counts (usually 2–10) are
+    // squarely in the denormal range under `f32::from_bits`, and a
+    // flushed-to-zero `numStops` makes the gradient fully transparent.
+    out.push(n as u32 as f32);
 }
 
 fn push_stops(stops: &[ColorStop], out: &mut Vec<f32>) {
@@ -426,10 +434,11 @@ mod tests {
         let count = p.layer_headers[8];
         assert_eq!(count, 16);
 
-        // First f32 is the extend tag, stored as float bits.
-        assert_eq!(p.paint_params[0].to_bits(), ExtendTag::Pad as u32);
-        // Second is the stop count.
-        assert_eq!(p.paint_params[1].to_bits(), 2);
+        // First f32 is the extend tag, stored as `value as f32` (numeric,
+        // not bit-pattern — avoids denormal-flush).
+        assert_eq!(p.paint_params[0] as u32, ExtendTag::Pad as u32);
+        // Second is the stop count, same encoding.
+        assert_eq!(p.paint_params[1] as u32, 2);
         // p0 and p1.
         assert_eq!(&p.paint_params[2..6], &[0.0, 0.0, 1.0, 0.0]);
         // Stop 0: offset, rgba.

@@ -211,6 +211,7 @@ const geoLayersDef: MaterialDesc[] = [
       text: "hello world!!!",
       font: FONT_DATASETS.Borel.url,
       backgroundColor: new Color().setStyle("#0a70c2"),
+      useCurveRenderer: true,
       borderColor: new Color().setStyle("#f8e43c"),
       borderWidth: 0.08, // 0 ~ 0.5, the ratio of the border to the height
       // cornerRadius: 0.1, // 0 ~ 0.5, the ratio of the corner radius to the height

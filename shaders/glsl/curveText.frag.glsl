@@ -39,6 +39,28 @@ precision highp usampler2D;
 layout(location = 0) out highp vec4 pc_fragColor;
 #define gl_FragColor pc_fragColor
 
+// The text mesh renders into the MRT scene, which has four color
+// attachments (color, normal, effectId, emissive). All four outputs must
+// be written or the draw call fails with "Active draw buffers with
+// missing fragment shader outputs."
+#ifndef USE_SHADOWMAP_DEPTH
+    layout(location = 1) out vec4 normalBuffer;
+    layout(location = 2) out vec4 effectIdBuffer;
+    layout(location = 3) out vec4 emissiveBuffer;
+
+    vec2 packNormalToVec2(vec3 normal) {
+        return normal.xy * 0.5 + 0.5;
+    }
+
+    vec3 screenSpaceNormal() {
+        vec3 fdx = dFdx(gl_FragCoord.xyz);
+        vec3 fdy = dFdy(gl_FragCoord.xyz);
+        vec3 normal = normalize(cross(fdx, fdy));
+        if (normal.z < 0.0) normal = -normal;
+        return normal;
+    }
+#endif
+
 // -- Shared buffer textures (same width for every buffer; see CurveTextureSet). --
 uniform sampler2D uGlyphHeaders;     // 12 f32 / glyph, RGBA32F (3 texels)
 uniform usampler2D uBandData;        // 1 u32 / band
@@ -53,6 +75,10 @@ uniform float uCurveTexWidth;        // matches CURVE_TEX_WIDTH
 uniform vec3 uColor;
 uniform float uOpacity;
 uniform float uFarPlane;
+// When true, scale vFragDepth by 0.8 before the logarithmic depth conversion.
+// Matches the SDF text shader so labels sit slightly above the surface they
+// anchor to (e.g. terrain / building roofs) instead of z-fighting against it.
+uniform bool uOffsetDepth;
 
 flat varying float vGlyphHeaderSlot;
 varying vec2 vEmCoord;
@@ -181,10 +207,15 @@ float coverageInGlyph(uint slot, vec2 emCoord, vec2 pxEm) {
             idxTo2Du(bandCurvesOffset + curveStart + i),
             0
         ).r;
-        float curveBase = float(curvesOffset + glyphCurveIdx * 3u);
-        vec2 p0 = texelFetch(uCurveData, idxTo2D(curveBase + 0.0), 0).rg;
-        vec2 p1 = texelFetch(uCurveData, idxTo2D(curveBase + 1.0), 0).rg;
-        vec2 p2 = texelFetch(uCurveData, idxTo2D(curveBase + 2.0), 0).rg;
+        // `curvesOffset` comes from the header in f32-element units (the
+        // Rust side stores `Vec<f32>` indices), but `uCurveData` is RG32F —
+        // two floats per texel — so we have to divide by 2 to convert to a
+        // texel index. `glyphCurveIdx * 3u` is already in texel units
+        // (6 floats / 2 floats-per-texel = 3 texels per curve).
+        uint curveBaseTexel = (curvesOffset >> 1u) + glyphCurveIdx * 3u;
+        vec2 p0 = texelFetch(uCurveData, idxTo2Du(curveBaseTexel + 0u), 0).rg;
+        vec2 p1 = texelFetch(uCurveData, idxTo2Du(curveBaseTexel + 1u), 0).rg;
+        vec2 p2 = texelFetch(uCurveData, idxTo2Du(curveBaseTexel + 2u), 0).rg;
 
         vec2 ts;
         int n = solveQuadY(p0, p1, p2, emCoord.y, ts);
@@ -269,8 +300,11 @@ vec4 evaluatePaint(uint kind, uint paintOffset, vec2 pLocal) {
         );
     } else if (kind == 1u) {
         // Linear gradient. Layout: extend(1) numStops(1) p0.xy(2) p1.xy(2) stops*
-        uint extend = floatBitsToUint(readPaintF(paintOffset, 0u));
-        uint numStops = floatBitsToUint(readPaintF(paintOffset, 1u));
+        // extend/numStops are stored as `value as f32` on the Rust side
+        // (push_extend / push_count); recover numerically. Bit-pattern
+        // storage produced denormals that ANGLE/Metal flushed to zero.
+        uint extend = uint(readPaintF(paintOffset, 0u));
+        uint numStops = uint(readPaintF(paintOffset, 1u));
         vec2 p0 = vec2(readPaintF(paintOffset, 2u), readPaintF(paintOffset, 3u));
         vec2 p1 = vec2(readPaintF(paintOffset, 4u), readPaintF(paintOffset, 5u));
         vec2 d = p1 - p0;
@@ -285,8 +319,11 @@ vec4 evaluatePaint(uint kind, uint paintOffset, vec2 pLocal) {
         // radial. For two-circle radials we fall back to the c1/r1 endpoint
         // (good enough for typical emoji glow / highlight passes; the full
         // quadratic conic solver lands in a follow-up).
-        uint extend = floatBitsToUint(readPaintF(paintOffset, 0u));
-        uint numStops = floatBitsToUint(readPaintF(paintOffset, 1u));
+        // extend/numStops are stored as `value as f32` on the Rust side
+        // (push_extend / push_count); recover numerically. Bit-pattern
+        // storage produced denormals that ANGLE/Metal flushed to zero.
+        uint extend = uint(readPaintF(paintOffset, 0u));
+        uint numStops = uint(readPaintF(paintOffset, 1u));
         vec2 c0 = vec2(readPaintF(paintOffset, 2u), readPaintF(paintOffset, 3u));
         float r0 = readPaintF(paintOffset, 4u);
         vec2 c1 = vec2(readPaintF(paintOffset, 5u), readPaintF(paintOffset, 6u));
@@ -306,7 +343,7 @@ vec4 evaluatePaint(uint kind, uint paintOffset, vec2 pLocal) {
     } else {
         // Sweep gradient (kind 3) -- TODO: real angular evaluator. Match the
         // existing tiny-skia behavior: fall back to the first color stop.
-        uint numStops = floatBitsToUint(readPaintF(paintOffset, 1u));
+        uint numStops = uint(readPaintF(paintOffset, 1u));
         if (numStops == 0u) return vec4(0.0);
         return readStop(paintOffset + 6u, 0u);
     }
@@ -342,7 +379,12 @@ float clipCoverage(
             // Glyph clip: slot (already translated from gid on the CPU),
             // then 6 transform floats.
             uint clipSlot = texelFetch(uColorClipRecords, idxTo2D(clipBase + 1.0), 0).r;
-            if (clipSlot == MISSING_CLIP_SLOT) continue;
+            // A missing clip glyph means we couldn't dereference its outline.
+            // Fail closed (`cov = 0`) rather than skip: skipping leaves `cov`
+            // at its previous value (1.0 if this was the first clip), which
+            // would let the layer's paint flood the entire bbox quad — what
+            // shows up as a visible translucent rectangle around flag emojis.
+            if (clipSlot == MISSING_CLIP_SLOT) return 0.0;
             mat2 lin = mat2(
                 uintBitsToFloat(texelFetch(uColorClipRecords, idxTo2D(clipBase + 2.0), 0).r),
                 uintBitsToFloat(texelFetch(uColorClipRecords, idxTo2D(clipBase + 3.0), 0).r),
@@ -377,7 +419,11 @@ float clipCoverage(
             float inRect = lo.x * lo.y * hi.x * hi.y;
             cov = min(cov, inRect);
         }
-        if (cov < 0.001) return 0.0;
+        // Tighter than 1/255 so the COLR fragment-loop's `cov < 1/255 continue`
+        // matches the final discard threshold: clips that contribute less than
+        // one 8-bit step can't survive blending anyway, and bailing here saves
+        // the rest of the clip walk.
+        if (cov < 1.0 / 255.0) return 0.0;
     }
     return cov;
 }
@@ -386,30 +432,33 @@ float clipCoverage(
 // Blend modes
 // ---------------------------------------------------------------------------
 
-// All inputs unpremultiplied (RGB, A separate). Returns unpremultiplied.
-// We only implement the few common ones; everything else falls back to
-// SrcOver -- matches the project's current rendering of complex emojis.
-vec4 composite(vec4 dst, vec4 src, uint blend) {
+// Premultiplied compositing. Both inputs and output carry premultiplied RGB
+// (`rgb_pm = rgb_unpm * a`). Matches tiny_skia's internal pipeline used by
+// the legacy color rasterizer; demultiplying after every layer (the old
+// formulation) divides by an accumulating alpha that can be ≪ 1 in the
+// middle of a paint graph and amplifies float precision error into visibly
+// washed-out colors.
+vec4 compositePm(vec4 dstPm, vec4 srcPm, uint blend) {
     // Tags: 3 = SrcOver, 23 = Multiply, 13 = Screen.
     // Other tags fall through to SrcOver.
     if (blend == 23u) {
-        // Multiply: result = dst * src; alpha = dst + src - dst*src
-        vec3 rgb = dst.rgb * src.rgb;
-        float a = src.a + dst.a * (1.0 - src.a);
-        return vec4(mix(dst.rgb, rgb, src.a), a);
+        // Multiply (premultiplied): src*dst + src*(1-dst.a) + dst*(1-src.a)
+        // — keeps the parts of src and dst outside the overlap intact.
+        vec3 rgb = srcPm.rgb * dstPm.rgb
+                 + srcPm.rgb * (1.0 - dstPm.a)
+                 + dstPm.rgb * (1.0 - srcPm.a);
+        float a = srcPm.a + dstPm.a * (1.0 - srcPm.a);
+        return vec4(rgb, a);
     }
     if (blend == 13u) {
-        // Screen: 1 - (1-dst)*(1-src)
-        vec3 rgb = 1.0 - (1.0 - dst.rgb) * (1.0 - src.rgb);
-        float a = src.a + dst.a * (1.0 - src.a);
-        return vec4(mix(dst.rgb, rgb, src.a), a);
+        // Screen (premultiplied): src + dst - src*dst
+        vec3 rgb = srcPm.rgb + dstPm.rgb - srcPm.rgb * dstPm.rgb;
+        float a = srcPm.a + dstPm.a * (1.0 - srcPm.a);
+        return vec4(rgb, a);
     }
-    // SrcOver (default).
-    float outA = src.a + dst.a * (1.0 - src.a);
-    vec3 outRGB = (outA > 1e-6)
-        ? (src.rgb * src.a + dst.rgb * dst.a * (1.0 - src.a)) / outA
-        : vec3(0.0);
-    return vec4(outRGB, outA);
+    // SrcOver (default), premultiplied:
+    //   out_pm = src_pm + dst_pm * (1 - src.a)
+    return srcPm + dstPm * (1.0 - srcPm.a);
 }
 
 // ---------------------------------------------------------------------------
@@ -417,7 +466,10 @@ vec4 composite(vec4 dst, vec4 src, uint blend) {
 // ---------------------------------------------------------------------------
 
 vec4 colrRender(uint colorLayerStart, uint colorLayerCount, vec2 emCoord, vec2 pxEm) {
-    vec4 dst = vec4(0.0);
+    // Accumulator carries premultiplied RGBA; we only demultiply once at the
+    // very end so the shader's output matches the unpremultiplied convention
+    // the ShaderMaterial's GL blend (`premultipliedAlpha = false`) expects.
+    vec4 dstPm = vec4(0.0);
     for (uint i = 0u; i < colorLayerCount; i++) {
         float layerBase = float((colorLayerStart + i) * 12u);
         // Read transform (6 floats as bits) + kindBlend + paint range + clip range.
@@ -440,7 +492,9 @@ vec4 colrRender(uint colorLayerStart, uint colorLayerCount, vec2 emCoord, vec2 p
         uint clipCount  = texelFetch(uColorLayerHeaders, idxTo2D(layerBase + 10.0), 0).r;
 
         float cov = clipCoverage(clipOffset, clipCount, emCoord, pxEm);
-        if (cov < 0.001) continue;
+        // Match the discard threshold so vanishingly-small contributions
+        // don't accumulate into a visible bbox-wide haze across many layers.
+        if (cov < 1.0 / 255.0) continue;
 
         bool ok;
         mat2 inv = inv2(lin, ok);
@@ -449,24 +503,47 @@ vec4 colrRender(uint colorLayerStart, uint colorLayerCount, vec2 emCoord, vec2 p
 
         vec4 src = evaluatePaint(kind, paintOffset, pLocal);
         src.a *= cov;
-        dst = composite(dst, src, blend);
+        // Promote to premultiplied for compositing.
+        vec4 srcPm = vec4(src.rgb * src.a, src.a);
+        dstPm = compositePm(dstPm, srcPm, blend);
     }
-    return dst;
+    // Demultiply to unpremultiplied RGBA for the framebuffer's
+    // `premultipliedAlpha = false` blend mode.
+    if (dstPm.a > 1e-6) {
+        return vec4(dstPm.rgb / dstPm.a, dstPm.a);
+    }
+    return vec4(0.0);
 }
 
 void main() {
     if (vHorizonCulled == 1) discard;
 
+    // Logarithmic depth, with the same `* 0.8` nudge the SDF shader applies
+    // when `uOffsetDepth` is set. Computed once and reused on every early-out
+    // (picking, color path, monochrome path) so labels share depth handling.
+    float depthInput = uOffsetDepth ? vFragDepth * 0.8 : vFragDepth;
+    float logDepth = log(depthInput) / log(uFarPlane + 1.0);
+
     // Picking mode: write the batch ID as a color and skip the curve eval.
     if (nvr_uPickable > 0.0) {
         gl_FragColor = vec4(nvr_batchIdToColor(nvr_uBatchId), 1.0);
-        gl_FragDepth = log(vFragDepth) / log(uFarPlane + 1.0);
+        gl_FragDepth = logDepth;
+        #ifndef USE_SHADOWMAP_DEPTH
+            normalBuffer = vec4(0.0);
+            effectIdBuffer = vec4(0.0);
+            emissiveBuffer = vec4(0.0);
+        #endif
         return;
     }
 
     uint slot = uint(vGlyphHeaderSlot);
     vec4 hdr0, hdr1, hdr2;
     fetchHeader(slot, hdr0, hdr1, hdr2);
+    // flags / color_layer_start / color_layer_count are written as
+    // `value as f32` on the Rust side (bind_color_layers). They used to be
+    // written via `f32::from_bits`, but small u32 patterns decode as
+    // denormals (~1.4e-45) which ANGLE/Metal on macOS flushes to zero,
+    // breaking the COLR path. Numeric storage is exact for any u32 < 2^24.
     uint flags = uint(hdr2.x);
     uint colorLayerStart = uint(hdr2.y);
     uint colorLayerCount = uint(hdr2.z);
@@ -482,6 +559,21 @@ void main() {
         float cov = coverageInGlyph(slot, vEmCoord, pxEm);
         outColor = vec4(uColor, uOpacity * cov);
     }
+    // Discard fragments below ~1/255 alpha. Two reasons: (1) the quad covers
+    // the whole bbox so transparent pixels would still write depth (material
+    // default `depthWrite = true`) and occlude content behind the label;
+    // (2) COLR clip anti-aliasing + multi-layer composition can leak a few
+    // ‰ of alpha across the entire bbox, painting a faintly translucent
+    // rectangle around each emoji. A 1/255 cut-off is below 8-bit visibility
+    // but well above the leak floor.
+    if (outColor.a < 1.0 / 255.0) discard;
     gl_FragColor = outColor;
-    gl_FragDepth = log(vFragDepth) / log(uFarPlane + 1.0);
+    gl_FragDepth = logDepth;
+
+    #ifndef USE_SHADOWMAP_DEPTH
+        vec3 normal = screenSpaceNormal();
+        normalBuffer = vec4(packNormalToVec2(normal), 0.0, 0.0);
+        effectIdBuffer = vec4(0.0);
+        emissiveBuffer = vec4(0.0);
+    #endif
 }

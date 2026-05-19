@@ -10,13 +10,21 @@ import curveTextVertexShader from "@shaders/glsl/curveText.vert.glsl";
 import {
   BufferAttribute,
   Color,
+  DataTexture,
+  FloatType,
   GLSL3,
   InstancedBufferAttribute,
   InstancedBufferGeometry,
   Mesh,
+  NearestFilter,
   Object3D,
   type PerspectiveCamera,
+  RedFormat,
+  RedIntegerFormat,
+  RGBAFormat,
+  RGFormat,
   ShaderMaterial,
+  UnsignedIntType,
   Vector2,
   Vector3,
 } from "three";
@@ -24,6 +32,69 @@ import {
 import type { PickableMesh } from "./pickableMesh";
 
 const _tmpSize = new Vector2();
+
+/** Lazily-created 1×1 placeholder textures for the curve shader's sampler
+ *  uniforms. three.js binds its default RGBA8 empty texture to any null
+ *  sampler — that mismatches our `usampler2D` (integer) samplers and trips
+ *  WebGL with "Mismatch between texture format and sampler type" the first
+ *  time the program runs. Pre-binding format-correct 1×1 textures keeps the
+ *  pipeline valid even if a draw call sneaks in before `_bindTextures`. */
+let _placeholderFloatRGBA: DataTexture | null = null;
+let _placeholderFloatRG: DataTexture | null = null;
+let _placeholderFloatR: DataTexture | null = null;
+let _placeholderUintR: DataTexture | null = null;
+
+function _makePlaceholder(
+  format:
+    | typeof RGBAFormat
+    | typeof RGFormat
+    | typeof RedFormat
+    | typeof RedIntegerFormat,
+  type: typeof FloatType | typeof UnsignedIntType,
+  internalFormat: "RGBA32F" | "RG32F" | "R32F" | "R32UI",
+): DataTexture {
+  const channels = format === RGBAFormat ? 4 : format === RGFormat ? 2 : 1;
+  const data =
+    type === UnsignedIntType
+      ? new Uint32Array(channels)
+      : new Float32Array(channels);
+  const tex = new DataTexture(data, 1, 1, format, type);
+  tex.internalFormat = internalFormat;
+  tex.minFilter = NearestFilter;
+  tex.magFilter = NearestFilter;
+  tex.generateMipmaps = false;
+  tex.needsUpdate = true;
+  return tex;
+}
+
+function placeholderFloatRGBA(): DataTexture {
+  return (_placeholderFloatRGBA ??= _makePlaceholder(
+    RGBAFormat,
+    FloatType,
+    "RGBA32F",
+  ));
+}
+function placeholderFloatRG(): DataTexture {
+  return (_placeholderFloatRG ??= _makePlaceholder(
+    RGFormat,
+    FloatType,
+    "RG32F",
+  ));
+}
+function placeholderFloatR(): DataTexture {
+  return (_placeholderFloatR ??= _makePlaceholder(
+    RedFormat,
+    FloatType,
+    "R32F",
+  ));
+}
+function placeholderUintR(): DataTexture {
+  return (_placeholderUintR ??= _makePlaceholder(
+    RedIntegerFormat,
+    UnsignedIntType,
+    "R32UI",
+  ));
+}
 
 /**
  * Slug-style GPU-direct curve text mesh.
@@ -47,6 +118,14 @@ export class CurveTextMesh
   private _text = "";
   private _useRTE: boolean;
   private _color: Color;
+  // Curve textures (the `usampler2D` uniforms in particular) start as null;
+  // if the mesh is rendered before `_bindTextures` runs, three.js binds its
+  // default RGBA8 empty texture to the integer samplers, which trips
+  // "Mismatch between texture format and sampler type" on draw. We track
+  // intended visibility separately and only flip `this.visible` true once
+  // textures land.
+  private _intendedVisible = true;
+  private _texturesBound = false;
 
   constructor(
     position: Float32Array | { high: Float32Array; low: Float32Array },
@@ -90,10 +169,15 @@ export class CurveTextMesh
 
     this.material = mat;
     this.frustumCulled = false;
+    this.visible = false;
 
     if (batchId !== undefined) {
       this.setBatchId(batchId);
     }
+  }
+
+  private _syncVisibility(): void {
+    this.visible = this._intendedVisible && this._texturesBound;
   }
 
   /**
@@ -107,6 +191,8 @@ export class CurveTextMesh
 
     if (!text) {
       this.geometry.instanceCount = 0;
+      this._texturesBound = false;
+      this._syncVisibility();
       return;
     }
 
@@ -114,11 +200,15 @@ export class CurveTextMesh
     const textures = this._fontManager.getCurveTextures(this._fontIdentifier);
     if (!shape || !textures) {
       this.geometry.instanceCount = 0;
+      this._texturesBound = false;
+      this._syncVisibility();
       return;
     }
 
     this._buildGlyphInstances(shape);
     this._bindTextures(textures);
+    this._texturesBound = true;
+    this._syncVisibility();
   }
 
   setColor(color: Color | number): void {
@@ -166,6 +256,8 @@ export class CurveTextMesh
     if (material.sizeInMeters !== undefined)
       u.uSizeInMeters.value = material.sizeInMeters;
     if (material.height !== undefined) u.uAddHeight.value = material.height;
+    if (material.offsetDepth !== undefined)
+      u.uOffsetDepth.value = material.offsetDepth;
     if (material.depthTest !== undefined)
       this.material.depthTest = material.depthTest;
     if (material.center !== undefined) {
@@ -176,7 +268,10 @@ export class CurveTextMesh
     if (nextText !== undefined && nextText !== "") {
       this.setText(nextText, forceUpdate);
     }
-    this.visible = material.show ?? this.visible;
+    if (material.show !== undefined) {
+      this._intendedVisible = material.show;
+      this._syncVisibility();
+    }
   }
 
   // --- FeatureMesh interface (subset) ---
@@ -190,7 +285,8 @@ export class CurveTextMesh
   }
 
   _setFeatureShow(visible: boolean): void {
-    this.visible = visible;
+    this._intendedVisible = visible;
+    this._syncVisibility();
   }
 
   _setFeatureHeight(height: number): void {
@@ -238,6 +334,13 @@ export class CurveTextMesh
       "aGlyphHeaderSlot",
       new InstancedBufferAttribute(new Float32Array(), 1),
     );
+    // Em-space cursor position for this glyph (accumulated xAdvance + xOffset
+    // from shaping, divided by units_per_em). The vertex shader adds this on
+    // top of the glyph bbox so successive glyphs lay out left-to-right.
+    geo.setAttribute(
+      "aGlyphCursor",
+      new InstancedBufferAttribute(new Float32Array(), 2),
+    );
 
     geo.instanceCount = 0;
     return geo;
@@ -256,25 +359,35 @@ export class CurveTextMesh
       uOpacity: { value: 1.0 },
       uFontSize: { value: material.size ?? 16.0 },
       uSizeInMeters: { value: material.sizeInMeters ?? true },
+      // Mirror the SDF mesh's default: pulls labels slightly toward camera so
+      // they don't z-fight with the surface they anchor to (terrain, roof).
+      uOffsetDepth: { value: material.offsetDepth ?? true },
       uFovRad: { value: 0 },
       uScreenHeightPx: { value: 1 },
       uFarPlane: { value: 1 },
       uCenter: { value: center },
       uAddHeight: { value: material.height ?? 0.0 },
+      // Text-run dimensions in em-space, used by the vertex shader to
+      // resolve the `uCenter` anchor against the whole label rather than
+      // each glyph.
+      uTextWidthEm: { value: 0.0 },
+      uTextHeightEm: { value: 1.0 },
 
       // Picking — written via setBatchId() / onBeforePicking(); set to 0/0
       // by default so non-picking passes render normally.
       nvr_uBatchId: { value: 0.0 },
       nvr_uPickable: { value: 0.0 },
 
-      // Texture uniforms — bound to null until the first setText.
-      uGlyphHeaders: { value: null },
-      uBandData: { value: null },
-      uBandCurves: { value: null },
-      uCurveData: { value: null },
-      uColorLayerHeaders: { value: null },
-      uColorPaintParams: { value: null },
-      uColorClipRecords: { value: null },
+      // Texture uniforms — pre-bound to 1×1 placeholders that match each
+      // sampler's GLSL type. `_bindTextures` swaps in the real shared
+      // textures once the worker has populated them.
+      uGlyphHeaders: { value: placeholderFloatRGBA() },
+      uBandData: { value: placeholderUintR() },
+      uBandCurves: { value: placeholderUintR() },
+      uCurveData: { value: placeholderFloatRG() },
+      uColorLayerHeaders: { value: placeholderUintR() },
+      uColorPaintParams: { value: placeholderFloatR() },
+      uColorClipRecords: { value: placeholderUintR() },
       uCurveTexWidth: { value: CURVE_TEX_WIDTH },
 
       // Position / eye uniforms. The vertex shader picks between RTE/RTC by
@@ -318,11 +431,29 @@ export class CurveTextMesh
       this.geometry.instanceCount = 0;
       return;
     }
+    const upem = shape.unitsPerEm;
+    if (upem <= 0) {
+      this.geometry.instanceCount = 0;
+      return;
+    }
+    const invUpem = 1.0 / upem;
 
     const slots = new Float32Array(count);
+    const cursors = new Float32Array(count * 2);
+
+    // Walk the shaped run, accumulating xAdvance/yAdvance in font-units and
+    // emitting each glyph's origin in em-space (= cursor + xOffset/upem).
+    let cursorFuX = 0;
+    let cursorFuY = 0;
     for (let i = 0; i < count; i++) {
-      slots[i] = shape.glyphs[i].headerSlot;
+      const g = shape.glyphs[i];
+      slots[i] = g.headerSlot;
+      cursors[i * 2] = (cursorFuX + g.xOffset) * invUpem;
+      cursors[i * 2 + 1] = (cursorFuY + g.yOffset) * invUpem;
+      cursorFuX += g.xAdvance;
+      cursorFuY += g.yAdvance;
     }
+    const textWidthEm = cursorFuX * invUpem;
 
     if (this.geometry.hasAttribute("aGlyphHeaderSlot")) {
       this.geometry.deleteAttribute("aGlyphHeaderSlot");
@@ -331,17 +462,34 @@ export class CurveTextMesh
       "aGlyphHeaderSlot",
       new InstancedBufferAttribute(slots, 1),
     );
+    if (this.geometry.hasAttribute("aGlyphCursor")) {
+      this.geometry.deleteAttribute("aGlyphCursor");
+    }
+    this.geometry.setAttribute(
+      "aGlyphCursor",
+      new InstancedBufferAttribute(cursors, 2),
+    );
     this.geometry.instanceCount = count;
+
+    // Text-run dimensions for the anchor calculation (em-space).
+    this.material.uniforms.uTextWidthEm.value = textWidthEm;
+    this.material.uniforms.uTextHeightEm.value = 1.0;
   }
 
   private _bindTextures(textures: CurveTextureSet): void {
+    // Monochrome fonts never populate the COLR buffers — keep the
+    // format-matched placeholder textures in those slots instead of
+    // overwriting with `null`, otherwise three.js falls back to its RGBA8
+    // empty texture and the `usampler2D` bindings mismatch on draw.
     const u = this.material.uniforms;
-    u.uGlyphHeaders.value = textures.glyphHeaders;
-    u.uBandData.value = textures.bandData;
-    u.uBandCurves.value = textures.bandCurves;
-    u.uCurveData.value = textures.curveData;
-    u.uColorLayerHeaders.value = textures.colorLayerHeaders;
-    u.uColorPaintParams.value = textures.colorPaintParams;
-    u.uColorClipRecords.value = textures.colorClipRecords;
+    u.uGlyphHeaders.value = textures.glyphHeaders ?? placeholderFloatRGBA();
+    u.uBandData.value = textures.bandData ?? placeholderUintR();
+    u.uBandCurves.value = textures.bandCurves ?? placeholderUintR();
+    u.uCurveData.value = textures.curveData ?? placeholderFloatRG();
+    u.uColorLayerHeaders.value =
+      textures.colorLayerHeaders ?? placeholderUintR();
+    u.uColorPaintParams.value =
+      textures.colorPaintParams ?? placeholderFloatR();
+    u.uColorClipRecords.value = textures.colorClipRecords ?? placeholderUintR();
   }
 }

@@ -151,18 +151,20 @@ fn color_glyph_binds_layer_range_on_outline_header() {
     let key = composite_key(0, gid);
     let outline_record = outline_ref.get_record(key).expect("outline glyph cached");
     let h = outline_record.header_slot as usize * HEADER_F32_COUNT;
-    let flags = outline_ref.glyph_headers[h + HEADER_FLAGS].to_bits();
+    // Flag/start/count are stored as `value as f32` (not `f32::from_bits`)
+    // to avoid denormal-flush on macOS Metal — recover via `as u32`.
+    let flags = outline_ref.glyph_headers[h + HEADER_FLAGS] as u32;
     assert!(
         flags & FLAG_HAS_COLOR_LAYERS != 0,
         "outline header should be flagged as color",
     );
     let color_record = color.get_record(key).expect("color record present");
     assert_eq!(
-        outline_ref.glyph_headers[h + HEADER_COLOR_LAYER_START].to_bits(),
+        outline_ref.glyph_headers[h + HEADER_COLOR_LAYER_START] as u32,
         color_record.layer_start,
     );
     assert_eq!(
-        outline_ref.glyph_headers[h + HEADER_COLOR_LAYER_COUNT].to_bits(),
+        outline_ref.glyph_headers[h + HEADER_COLOR_LAYER_COUNT] as u32,
         color_record.layer_count,
     );
 
@@ -279,7 +281,7 @@ fn evict_cold_pair_clears_color_binding() {
     assert!(!color.contains(key), "color record should be evicted");
     if let Some(record) = outline.get_record(key) {
         let h = record.header_slot as usize * HEADER_F32_COUNT;
-        let flags = outline.glyph_headers[h + HEADER_FLAGS].to_bits();
+        let flags = outline.glyph_headers[h + HEADER_FLAGS] as u32;
         assert_eq!(
             flags & FLAG_HAS_COLOR_LAYERS,
             0,

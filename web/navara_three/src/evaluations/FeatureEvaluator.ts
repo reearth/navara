@@ -25,6 +25,7 @@ import {
   type BatchedAttributeName,
   InstancedSpriteMesh,
   BatchedSdfTextMesh,
+  BatchedCurveTextMesh,
 } from "../mesh";
 
 type AvailableMaterialProperty = ExtractProperties<
@@ -375,7 +376,11 @@ export class FeatureEvaluator {
       if (evaluated.height != null) {
         obj.setFeatureHeightByBatchIndex(batchIndex, evaluated.height);
       }
-      if (evaluated.text != null && obj instanceof BatchedSdfTextMesh) {
+      if (
+        evaluated.text != null &&
+        (obj instanceof BatchedSdfTextMesh ||
+          obj instanceof BatchedCurveTextMesh)
+      ) {
         obj.setTextByBatchIndex(batchIndex, evaluated.text);
       }
       return;

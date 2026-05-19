@@ -205,12 +205,14 @@ export class BatchedCurveTextMesh
       text &&
       !this._fontManager.isTextCurvesPrepared(this._fontIdentifier, text)
     ) {
-      const intendedVisible = mesh.visible;
+      // `CurveTextMesh` tracks intended visibility separately from
+      // `_texturesBound`, so we no longer need to capture and restore
+      // `mesh.visible` around the async prepare — `setText` will flip
+      // visibility once textures land.
       this._fontManager
         .prepareTextCurves(this._fontIdentifier, text, this._loadedFaceUrls)
         .then(() => {
           mesh.setText(text);
-          mesh.visible = intendedVisible;
           this.markVisibility(mesh);
           this._needRender?.();
         })

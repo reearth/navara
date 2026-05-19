@@ -180,9 +180,6 @@ impl ColorCurveAtlas {
             .iter()
             .flat_map(|l| l.clips.iter().filter_map(clip_gid))
             .collect();
-        // The color glyph's own outline (used for early-reject / fallback
-        // when the COLR tree is empty).
-        clip_gids.push(gid);
         clip_gids.sort_unstable();
         clip_gids.dedup();
         outline_atlas.ensure_glyphs(font, font_index, &clip_gids, current_frame);
@@ -193,15 +190,41 @@ impl ColorCurveAtlas {
             return false;
         };
 
-        // 3. Translate clip-glyph GIDs to outline-atlas header slots so the
+        // 3. The color glyph itself also needs an outline-atlas entry so the
+        //    vertex shader can read a non-degenerate bbox for its quad and
+        //    `bind_color_layers` has somewhere to write the flag. Most COLR
+        //    emoji base glyphs have no monochrome outline of their own —
+        //    `ensure_glyphs` skips those — so we insert a stub PackedGlyph
+        //    using the COLR `clip_box` (or a unit-em fallback) as the bbox
+        //    and no curves. The fragment shader's COLR path doesn't read
+        //    the bands/curves for this slot, only the bbox and flag/range.
+        let key = composite_key(font_index, gid);
+        if !outline_atlas.contains(key) {
+            let (bb_min, bb_max) = packed.clip_box.unwrap_or(([0.0, 0.0], [1.0, 1.0]));
+            let mut header = [0.0f32; crate::curves::HEADER_F32_COUNT];
+            header[crate::curves::HEADER_BBOX_MIN] = bb_min[0];
+            header[crate::curves::HEADER_BBOX_MIN + 1] = bb_min[1];
+            header[crate::curves::HEADER_BBOX_MAX] = bb_max[0];
+            header[crate::curves::HEADER_BBOX_MAX + 1] = bb_max[1];
+            // band_count = 0 → fragment shader's monochrome coverage path
+            // returns 0 instantly; only the COLR path uses this slot.
+            let stub = crate::curves::PackedGlyph {
+                header,
+                ..Default::default()
+            };
+            if !outline_atlas.insert_packed(font_index, gid, &stub, current_frame) {
+                return false;
+            }
+        }
+
+        // 4. Translate clip-glyph GIDs to outline-atlas header slots so the
         //    fragment shader can dereference them directly. Phase 2's pack
         //    format stores GIDs (it doesn't know about the outline atlas);
         //    we rewrite each glyph-clip record's gid field to the
         //    corresponding header_slot now that we've ensured the outlines.
         self.translate_clip_gids_to_slots(&record, outline_atlas, font_index);
 
-        // 4. Bind the color layer range onto the outline glyph's header.
-        let key = composite_key(font_index, gid);
+        // 5. Bind the color layer range onto the outline glyph's header.
         outline_atlas.bind_color_layers(key, record.layer_start, record.layer_count);
 
         self.glyph_map.insert(key, record);
@@ -570,10 +593,10 @@ mod tests {
 
         let outline_record = outline.get_record(key).unwrap();
         let h = outline_record.header_slot as usize * crate::curves::HEADER_F32_COUNT;
-        let flags = outline.glyph_headers[h + crate::curves::HEADER_FLAGS].to_bits();
+        let flags = outline.glyph_headers[h + crate::curves::HEADER_FLAGS] as u32;
         assert!(flags & crate::curves::FLAG_HAS_COLOR_LAYERS != 0);
         assert_eq!(
-            outline.glyph_headers[h + crate::curves::HEADER_COLOR_LAYER_START].to_bits(),
+            outline.glyph_headers[h + crate::curves::HEADER_COLOR_LAYER_START] as u32,
             record.layer_start,
         );
     }
@@ -610,7 +633,7 @@ mod tests {
         // flag must be cleared.
         if let Some(rec) = outline.get_record(key) {
             let h = rec.header_slot as usize * crate::curves::HEADER_F32_COUNT;
-            let flags = outline.glyph_headers[h + crate::curves::HEADER_FLAGS].to_bits();
+            let flags = outline.glyph_headers[h + crate::curves::HEADER_FLAGS] as u32;
             assert_eq!(
                 flags & crate::curves::FLAG_HAS_COLOR_LAYERS,
                 0,

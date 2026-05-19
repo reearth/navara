@@ -17,8 +17,13 @@
 #include "chunks/sprite_height_pars_vertex.glsl"
 #include "chunks/pixelToWorld.glsl"
 
-// Per-instance attribute: slot index into uGlyphHeaders.
+// Per-instance attributes:
+//   aGlyphHeaderSlot -- slot index into uGlyphHeaders
+//   aGlyphCursor     -- em-space origin for this glyph (accumulated xAdvance
+//                       + xOffset from shaping), so successive glyphs lay out
+//                       left-to-right
 attribute float aGlyphHeaderSlot;
+attribute vec2 aGlyphCursor;
 
 // -- Shared GPU buffers (data textures populated by CurveTextureSet). --
 uniform sampler2D uGlyphHeaders;
@@ -41,6 +46,11 @@ uniform float uFovRad;
 uniform float uScreenHeightPx;
 uniform vec2 uCenter;
 uniform float uAddHeight;
+// Em-space dimensions of the whole text run (set by CurveTextMesh after
+// shaping). Used to resolve `uCenter` against the label as a whole rather
+// than each glyph in isolation.
+uniform float uTextWidthEm;
+uniform float uTextHeightEm;
 
 // Pass-through to fragment.
 flat varying float vGlyphHeaderSlot;
@@ -100,11 +110,14 @@ void main() {
     vec2 bboxMax = hdr0.zw;
     vec2 bboxSize = bboxMax - bboxMin;
 
-    // Map unit quad [-0.5, 0.5] -> glyph's em-space bbox.
+    // Map unit quad [-0.5, 0.5] -> this glyph's em-space bbox + its cursor
+    // position in the run. emPos is the glyph-LOCAL coord (relative to its
+    // own bbox) — the fragment shader needs it that way for band lookup —
+    // while localPos is the run-space coord used to position the quad.
     vec2 emPos = (position.xy + vec2(0.5)) * bboxSize + bboxMin;
-    vec2 localPos = emPos;
-    localPos.x -= anchor.x;
-    localPos.y -= anchor.y;
+    vec2 localPos = emPos + aGlyphCursor;
+    localPos.x -= anchor.x * uTextWidthEm;
+    localPos.y -= anchor.y * uTextHeightEm;
 
     vec4 delta = vec4(localPos * scaleFactor, 0.0, 0.0);
     vec4 newMvPosition = mvPosition + delta;
