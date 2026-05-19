@@ -25,7 +25,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     },
   });
 
-  view.toneMappingExposure = 5;
+  view.toneMappingExposure = 1;
   defaultAtmospheres.toneMapping.update({
     toneMapping: {
       mode: ToneMappingMode.NEUTRAL,

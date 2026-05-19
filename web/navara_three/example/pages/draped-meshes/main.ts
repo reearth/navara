@@ -66,6 +66,15 @@ const run = async () => {
     },
   });
 
+  view.addLayer({
+    type: "tiles",
+    data: { url: TERRAIN_DATASETS.gsi.url },
+    rasterTile: { maxZoom: 18 },
+    hillshade: {
+      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+    },
+  });
+
   // Positions & ENU matrices around Mt. Fuji
   const boxPosition = geodeticToVector3({
     lat: degreeToRadian(35.365),

@@ -2,7 +2,7 @@ use navara_wasm_utils::ToU8;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
-use crate::{ElevationDecoder, TextureFragment, Vec2, Vec3 as WasmVec3};
+use crate::{ElevationDecoder, TextureFragment, TileUvTransform, Vec2, Vec3 as WasmVec3};
 #[wasm_bindgen]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PointMaterial {
@@ -1312,10 +1312,56 @@ pub struct RasterTileInternalMaterial {
     #[wasm_bindgen(js_name = logBoundary)]
     #[serde(rename = "logBoundary")]
     pub log_boundary: f64,
+
+    // Hillshade fields
+    #[wasm_bindgen(getter_with_clone, js_name = isHillshades)]
+    #[serde(rename = "isHillshades")]
+    pub is_hillshades: Vec<u8>,
+    #[wasm_bindgen(js_name = hillshadeRScaler)]
+    #[serde(rename = "hillshadeRScaler")]
+    pub hillshade_r_scaler: f64,
+    #[wasm_bindgen(js_name = hillshadeGScaler)]
+    #[serde(rename = "hillshadeGScaler")]
+    pub hillshade_g_scaler: f64,
+    #[wasm_bindgen(js_name = hillshadeBScaler)]
+    #[serde(rename = "hillshadeBScaler")]
+    pub hillshade_b_scaler: f64,
+    #[wasm_bindgen(js_name = hillshadeBoundary)]
+    #[serde(rename = "hillshadeBoundary")]
+    pub hillshade_boundary: f64,
+    #[wasm_bindgen(js_name = hillshadeEpsilon)]
+    #[serde(rename = "hillshadeEpsilon")]
+    pub hillshade_epsilon: f64,
+    #[wasm_bindgen(js_name = hillshadeMaxOffset)]
+    #[serde(rename = "hillshadeMaxOffset")]
+    pub hillshade_max_offset: f64,
+    #[wasm_bindgen(js_name = hillshadeMinOffset)]
+    #[serde(rename = "hillshadeMinOffset")]
+    pub hillshade_min_offset: f64,
+    #[wasm_bindgen(js_name = hillshadeOffset)]
+    #[serde(rename = "hillshadeOffset")]
+    pub hillshade_offset: f64,
+    #[wasm_bindgen(js_name = hillshadeExaggeration)]
+    #[serde(rename = "hillshadeExaggeration")]
+    pub hillshade_exaggeration: f32,
+    // Hillshade UV transforms for parent texture reuse (per-layer)
+    // Stored as raw Vec for internal use, exposed via getter
+    hillshade_uv_transforms: Vec<Option<TileUvTransform>>,
 }
 
 #[wasm_bindgen]
 impl RasterTileInternalMaterial {
+    #[wasm_bindgen(js_name = hillshadeUvTransforms)]
+    pub fn hillshade_uv_transforms(&self) -> Vec<JsValue> {
+        self.hillshade_uv_transforms
+            .iter()
+            .map(|opt| match opt {
+                Some(transform) => JsValue::from(*transform),
+                None => JsValue::NULL,
+            })
+            .collect()
+    }
+
     pub fn texture_fragments(&self) -> Option<Vec<JsValue>> {
         self.texture_fragments.as_ref().map(|ts| {
             ts.iter()
@@ -1408,6 +1454,60 @@ impl<'a> From<&'a navara_material::RasterTileInternalMaterial> for RasterTileInt
                 .as_ref()
                 .map(|c| c.log_boundary)
                 .unwrap_or(10.0),
+
+            // Hillshade fields
+            is_hillshades: m.is_hillshades.iter().map(|b| b.to_u8()).collect(),
+            hillshade_r_scaler: m
+                .hillshade_config
+                .as_ref()
+                .map(|c| c.elevation_decoder.r_scaler)
+                .unwrap_or(0.0),
+            hillshade_g_scaler: m
+                .hillshade_config
+                .as_ref()
+                .map(|c| c.elevation_decoder.g_scaler)
+                .unwrap_or(0.0),
+            hillshade_b_scaler: m
+                .hillshade_config
+                .as_ref()
+                .map(|c| c.elevation_decoder.b_scaler)
+                .unwrap_or(0.0),
+            hillshade_boundary: m
+                .hillshade_config
+                .as_ref()
+                .map(|c| c.elevation_decoder.boundary)
+                .unwrap_or(0.0),
+            hillshade_epsilon: m
+                .hillshade_config
+                .as_ref()
+                .map(|c| c.elevation_decoder.epsilon)
+                .unwrap_or(0.01),
+            hillshade_max_offset: m
+                .hillshade_config
+                .as_ref()
+                .map(|c| c.elevation_decoder.max_offset)
+                .unwrap_or(0.0),
+            hillshade_min_offset: m
+                .hillshade_config
+                .as_ref()
+                .map(|c| c.elevation_decoder.min_offset)
+                .unwrap_or(0.0),
+            hillshade_offset: m
+                .hillshade_config
+                .as_ref()
+                .map(|c| c.elevation_decoder.offset)
+                .unwrap_or(0.0),
+            hillshade_exaggeration: m
+                .hillshade_config
+                .as_ref()
+                .map(|c| c.exaggeration)
+                .unwrap_or(1.0),
+            // Hillshade UV transforms
+            hillshade_uv_transforms: m
+                .hillshade_uv_transforms
+                .iter()
+                .map(|opt| opt.as_ref().map(|t| t.into()))
+                .collect(),
         }
     }
 }
@@ -1591,6 +1691,16 @@ pub struct ElevationHeatmapMaterial {
     #[wasm_bindgen(js_name = logBoundary)]
     #[serde(rename = "logBoundary")]
     pub log_boundary: f64,
+}
+
+#[wasm_bindgen]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HillshadeMaterial {
+    #[wasm_bindgen(js_name = elevationDecoder)]
+    #[serde(rename = "elevationDecoder")]
+    pub elevation_decoder: Option<ElevationDecoder>,
+    /// Exaggeration factor for hillshade effect (default: 1.0)
+    pub exaggeration: Option<f32>,
 }
 
 #[wasm_bindgen]

@@ -12,7 +12,7 @@ export type GlobeHandler = {
   getSegments: () => number | undefined;
   getColor: () => Color | undefined;
   getHideUnderground: () => boolean | undefined;
-  getShouldComputeNormalFromVertex: () => boolean | undefined;
+  getUseNormal: () => boolean | undefined;
   getOpacity: () => number | undefined;
   getWireframe: () => boolean | undefined;
   getElevationColormap: () => Float32Array | undefined;
@@ -21,7 +21,7 @@ export type GlobeHandler = {
   setSegments: (value: number) => void;
   setColor: (value: Color) => void;
   setHideUnderground: (value: boolean) => void;
-  setShouldComputeNormalFromVertex: (value: boolean) => void;
+  setUseNormal: (value: boolean) => void;
   setOpacity: (value: number) => void;
   setWireframe: (value: boolean) => void;
   setElevationColormap: (value: ColorMap) => void;
@@ -65,9 +65,8 @@ export class Globe implements Omit<
     if (options?.hideUnderground != null) {
       this.hideUnderground = options.hideUnderground;
     }
-    if (options?.shouldComputeNormalFromVertex != null) {
-      this.shouldComputeNormalFromVertex =
-        options.shouldComputeNormalFromVertex;
+    if (options?.useNormal != null) {
+      this.useNormal = options.useNormal;
     }
     if (options?.transparent != null) {
       this.transparent = options.transparent;
@@ -114,12 +113,12 @@ export class Globe implements Omit<
     this.handler.setHideUnderground(value);
   }
 
-  get shouldComputeNormalFromVertex(): boolean {
-    return this.handler.getShouldComputeNormalFromVertex() ?? true;
+  get useNormal(): boolean {
+    return this.handler.getUseNormal() ?? false;
   }
 
-  set shouldComputeNormalFromVertex(value: boolean) {
-    this.handler.setShouldComputeNormalFromVertex(value);
+  set useNormal(value: boolean) {
+    this.handler.setUseNormal(value);
   }
 
   get transparent(): boolean {

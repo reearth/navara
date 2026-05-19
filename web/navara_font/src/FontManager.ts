@@ -1,5 +1,12 @@
 import type { ConcurrencyManager } from "@navara/worker";
-import { DataTexture, LinearFilter, RedFormat, UnsignedByteType } from "three";
+import {
+  DataTexture,
+  LinearFilter,
+  RedFormat,
+  RGBAFormat,
+  SRGBColorSpace,
+  UnsignedByteType,
+} from "three";
 import invariant from "tiny-invariant";
 
 import { FontWorkerClient } from "./FontWorkerClient";
@@ -27,6 +34,32 @@ export function createSdfAtlasTexture(
   return tex;
 }
 
+/**
+ * Create an RGBA color atlas DataTexture for COLRv1 glyphs.
+ *
+ * The pixel data is unpremultiplied sRGB; the texture is flagged with
+ * `SRGBColorSpace` so three.js linearizes on sample.
+ */
+export function createColorAtlasTexture(
+  data: Uint8Array,
+  width: number,
+  height: number,
+): DataTexture {
+  const tex = new DataTexture(
+    data,
+    width,
+    height,
+    RGBAFormat,
+    UnsignedByteType,
+  );
+  tex.minFilter = LinearFilter;
+  tex.magFilter = LinearFilter;
+  tex.generateMipmaps = false;
+  tex.colorSpace = SRGBColorSpace;
+  tex.needsUpdate = true;
+  return tex;
+}
+
 /** Maximum number of shaped text results to cache before LRU eviction. */
 const SHAPE_CACHE_MAX_SIZE = 10_000;
 
@@ -50,10 +83,16 @@ export class FontManager {
   private _shapeCache = new Map<string, LRUMap<string, ShapeTextResult>>();
   /** Cache atlas data per font to avoid redundant copies. */
   private _atlasCache = new Map<string, FontAtlasData>();
+  /** Cache color atlas data per font (COLRv1 RGBA). */
+  private _colorAtlasCache = new Map<string, FontAtlasData>();
   /** Tracks whether the atlas cache is stale (new glyphs may have been rasterized). */
   private _atlasDirty = new Set<string>();
+  /** Tracks whether the color atlas cache is stale. */
+  private _colorAtlasDirty = new Set<string>();
   /** Shared GPU texture per font — all meshes using the same font share one DataTexture. */
   private _textureCache = new Map<string, DataTexture>();
+  /** Shared color atlas texture per atlas key (RGBA). */
+  private _colorTextureCache = new Map<string, DataTexture>();
   /** Tracks in-flight prepareText promises to deduplicate. */
   private _preparePending = new Map<string, Promise<void>>();
   /** Microtask batch queue: per-font list of texts awaiting worker dispatch. */
@@ -241,10 +280,17 @@ export class FontManager {
         this._shapeCache.delete(atlasKey);
         this._atlasCache.delete(atlasKey);
         this._atlasDirty.delete(atlasKey);
+        this._colorAtlasCache.delete(atlasKey);
+        this._colorAtlasDirty.delete(atlasKey);
         const tex = this._textureCache.get(atlasKey);
         if (tex) {
           tex.dispose();
           this._textureCache.delete(atlasKey);
+        }
+        const colorTex = this._colorTextureCache.get(atlasKey);
+        if (colorTex) {
+          colorTex.dispose();
+          this._colorTextureCache.delete(atlasKey);
         }
       }
 
@@ -498,6 +544,53 @@ export class FontManager {
     return tex;
   }
 
+  /**
+   * Get the color atlas data for a loaded color font from cache.
+   * Returns `undefined` when the font/family has no COLRv1 face loaded.
+   */
+  getColorAtlas(fontIdentifier: string): FontAtlasData | undefined {
+    const key = this._resolveAtlasKey(fontIdentifier);
+    return this._colorAtlasCache.get(key);
+  }
+
+  /**
+   * Get a shared GPU DataTexture for a font's color atlas (RGBA).
+   * Returns `null` if no color glyphs have been rasterized for this atlas key
+   * yet (or the font is monochrome).
+   */
+  getColorAtlasTexture(fontIdentifier: string): DataTexture | null {
+    const key = this._resolveAtlasKey(fontIdentifier);
+
+    if (!this._colorAtlasDirty.has(key)) {
+      const cached = this._colorTextureCache.get(key);
+      if (cached) return cached;
+    }
+
+    const atlasData = this._colorAtlasCache.get(key);
+    if (!atlasData) return null;
+
+    const existing = this._colorTextureCache.get(key);
+    if (existing) {
+      existing.image = {
+        data: atlasData.data,
+        width: atlasData.width,
+        height: atlasData.height,
+      };
+      existing.needsUpdate = true;
+      this._colorAtlasDirty.delete(key);
+      return existing;
+    }
+
+    const tex = createColorAtlasTexture(
+      atlasData.data,
+      atlasData.width,
+      atlasData.height,
+    );
+    this._colorTextureCache.set(key, tex);
+    this._colorAtlasDirty.delete(key);
+    return tex;
+  }
+
   dispose() {
     this._pending.clear();
     this._preparePending.clear();
@@ -506,10 +599,16 @@ export class FontManager {
     this._shapeCache.clear();
     this._atlasCache.clear();
     this._atlasDirty.clear();
+    this._colorAtlasCache.clear();
+    this._colorAtlasDirty.clear();
     for (const tex of this._textureCache.values()) {
       tex.dispose();
     }
     this._textureCache.clear();
+    for (const tex of this._colorTextureCache.values()) {
+      tex.dispose();
+    }
+    this._colorTextureCache.clear();
     this._families.clear();
     this._atlasKeys.clear();
     this._client?.dispose();
@@ -589,12 +688,16 @@ export class FontManager {
           }
         }
 
-        // Update atlas once for the entire batch, keyed by atlas key
+        // Update atlases once for the entire batch, keyed by atlas key
         // (family name for font-family faces, or font URL for standalone fonts)
+        const atlasKey = batchResult.atlasKey;
         if (batchResult.atlas) {
-          const atlasKey = batchResult.atlasKey;
           this._atlasCache.set(atlasKey, batchResult.atlas);
           this._atlasDirty.add(atlasKey);
+        }
+        if (batchResult.colorAtlas) {
+          this._colorAtlasCache.set(atlasKey, batchResult.colorAtlas);
+          this._colorAtlasDirty.add(atlasKey);
         }
 
         for (const entry of entries) {

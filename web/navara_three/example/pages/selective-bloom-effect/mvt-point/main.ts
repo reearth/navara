@@ -102,6 +102,18 @@ const run = async () => {
     rasterTile: { maxZoom: 23 },
   });
 
+  view.addLayer({
+    type: "tiles",
+    data: { url: TERRAIN_DATASETS.gsi.url },
+    rasterTile: {
+      maxZoom: 15,
+      show: false, // Don't render DEM as color
+    },
+    hillshade: {
+      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+    },
+  });
+
   showAttributions([
     TILE_DATASETS.openstreetmap,
     TERRAIN_DATASETS.gsi,

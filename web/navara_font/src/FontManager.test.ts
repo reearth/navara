@@ -128,6 +128,7 @@ function createShapeResult(text: string, unitsPerEm = 1000): ShapeTextResult {
       atlasH: 32,
       bearingX: 0,
       bearingY: 32,
+      isColor: false,
     })),
     unitsPerEm,
   };
@@ -149,6 +150,7 @@ function setupBatchMock(atlasKeyOverride?: string) {
         width: 256,
         height: 256,
       },
+      colorAtlas: null,
       atlasKey: atlasKeyOverride ?? fontUrl,
     }),
   );
@@ -648,6 +650,7 @@ describe("FontManager", () => {
             shapeResult: fontUrl.includes("cjk") ? cjkResult : latinResult,
           })),
           atlas: { data: new Uint8Array([1]), width: 64, height: 64 },
+          colorAtlas: null,
           atlasKey: "TestFamily",
         }),
       );
@@ -675,6 +678,7 @@ describe("FontManager", () => {
             shapeResult: createShapeResult(text, 1000),
           })),
           atlas: { data: new Uint8Array([1]), width: 64, height: 64 },
+          colorAtlas: null,
           atlasKey: "TestFamily",
         }),
       );
@@ -701,6 +705,7 @@ describe("FontManager", () => {
         atlasH: 32,
         bearingX: 0,
         bearingY: 32,
+        isColor: false,
       };
       mocks.mockPrepareTextBatch.mockImplementation(
         async (
@@ -726,6 +731,7 @@ describe("FontManager", () => {
             },
           })),
           atlas: { data: new Uint8Array([1]), width: 64, height: 64 },
+          colorAtlas: null,
           atlasKey: "TestFamily",
         }),
       );
@@ -799,11 +805,13 @@ describe("FontManager", () => {
                   atlasH: 32,
                   bearingX: 5,
                   bearingY: 30,
+                  isColor: false,
                 })),
                 unitsPerEm: cfg.unitsPerEm,
               },
             })),
             atlas: { data: new Uint8Array([1]), width: 64, height: 64 },
+            colorAtlas: null,
             atlasKey,
           };
         },
@@ -1165,12 +1173,14 @@ describe("FontManager", () => {
                       atlasH: 32,
                       bearingX: 5,
                       bearingY: 30,
+                      isColor: false,
                     },
                   ],
                   unitsPerEm: 1000,
                 },
               })),
               atlas: { data: new Uint8Array([1]), width: 64, height: 64 },
+              colorAtlas: null,
               atlasKey: "Seg",
             };
           },
@@ -1549,6 +1559,7 @@ describe("FontManager", () => {
       mocks.mockPrepareTextBatch.mockResolvedValueOnce({
         results: [{ text: "cached", shapeResult: createShapeResult("cached") }],
         atlas: null,
+        colorAtlas: null,
         atlasKey: FONT_URL,
       } satisfies BatchPrepareTextResult);
 
@@ -1564,6 +1575,7 @@ describe("FontManager", () => {
       mocks.mockPrepareTextBatch.mockResolvedValueOnce({
         results: [{ text: "empty", shapeResult: null }],
         atlas: null,
+        colorAtlas: null,
         atlasKey: FONT_URL,
       } satisfies BatchPrepareTextResult);
 

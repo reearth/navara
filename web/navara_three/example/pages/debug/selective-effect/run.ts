@@ -138,6 +138,18 @@ export const run = async (view: ThreeView<DefaultDescriptions>) => {
     rasterTile: { maxZoom: 23 },
   });
 
+  view.addLayer({
+    type: "tiles",
+    data: { url: TERRAIN_DATASETS.gsi.url },
+    rasterTile: {
+      maxZoom: 15,
+      minZoom: 5,
+    },
+    hillshade: {
+      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+    },
+  });
+
   // Terrain
   view.addLayer({
     type: "terrain",

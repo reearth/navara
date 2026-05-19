@@ -86,6 +86,21 @@ export const Layers: FC<SceneLayerToggles> = ({
     [],
   );
 
+  const hillshade = useMemo(
+    (): LayerDescription => ({
+      type: "tiles",
+      data: { url: UC_PHOTOREALISTIC_DATASETS.terrain.url },
+      rasterTile: {
+        minZoom: 6,
+        maxZoom: 15,
+      },
+      hillshade: {
+        elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+      },
+    }),
+    [],
+  );
+
   const cloudsEffect = useMemo(
     (): CloudsConfig => ({
       clouds: {
@@ -218,6 +233,7 @@ export const Layers: FC<SceneLayerToggles> = ({
     <>
       <Layer config={baseTiles} />
       <Layer config={terrain} />
+      <Layer config={hillshade} />
       {buildingsVisible &&
         BUILDING_DATASETS.map((dataset, index) =>
           individualBuildingVisibility[index] ? (

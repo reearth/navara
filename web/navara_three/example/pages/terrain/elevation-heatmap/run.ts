@@ -11,16 +11,16 @@ import {
 import { SphericalHarmonics3 } from "three";
 import { Pane } from "tweakpane";
 
-import { showAttributions } from "../../helpers/attributions";
+import { showAttributions } from "../../../helpers/attributions";
 import {
   PLATEAU_COLOR_MAP,
   TURBO_COLOR_MAP,
   PLASMA_COLORMAP,
   YlGnBu_COLOR_MAP,
-} from "../../helpers/colors";
-import { TERRAIN_DATASETS } from "../../helpers/constants";
-import { addCameraControl, addDateControl } from "../../helpers/control";
-import { SH_COEFFICIENTS } from "../../helpers/sh";
+} from "../../../helpers/colors";
+import { TERRAIN_DATASETS } from "../../../helpers/constants";
+import { addCameraControl, addDateControl } from "../../../helpers/control";
+import { SH_COEFFICIENTS } from "../../../helpers/sh";
 
 export type CustomDescriptions = DefaultDescriptions;
 
@@ -53,12 +53,26 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
       url: TERRAIN_DATASETS.mapterhorn.url,
     },
     rasterTerrain: {
-      maxZoom: 12,
+      maxZoom: 15,
       minZoom: 5,
       elevationDecoder: TERRARIUM_ELEVATION_DECODER(),
       tileSize: 512,
       castShadow: false,
       receiveShadow: false,
+    },
+  });
+
+  view.addLayer({
+    type: "tiles",
+    data: {
+      url: TERRAIN_DATASETS.mapterhorn.url,
+    },
+    rasterTile: {
+      maxZoom: 17,
+      minZoom: 5,
+    },
+    hillshade: {
+      elevationDecoder: TERRARIUM_ELEVATION_DECODER(),
     },
   });
 
@@ -71,7 +85,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
       url: TERRAIN_DATASETS.mapterhorn.url,
     },
     rasterTile: {
-      maxZoom: 15,
+      maxZoom: 17,
     },
     elevationHeatmap: {
       maxHeight: 3000,
