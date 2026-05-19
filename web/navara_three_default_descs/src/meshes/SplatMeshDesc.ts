@@ -160,16 +160,17 @@ export class SplatMeshDesc extends MeshDesc<
   onUpdateConfig(updates: SplatMeshUpdate): void {
     const next = updates.splat;
     const current = this.config.splat;
-    // Only inspect splat fields when the caller actually passed `splat`,
-    // otherwise a transform-only update (e.g. position) would false-warn on
-    // `lod` after the `?? false` normalization.
+    // Skip omitted fields so partial updates don't false-warn. The rendered
+    // splat stays frozen at construction either way.
     if (next && current) {
-      warnIfChanged("url", next.url, current.url);
-      warnIfChanged("lod", next.lod ?? false, current.lod ?? false);
-      // Sync intent so repeated same-value updates don't re-warn; the
-      // rendered splat stays frozen at construction values regardless.
-      if (next.url !== undefined) current.url = next.url;
-      if (next.lod !== undefined) current.lod = next.lod;
+      if (next.url !== undefined) {
+        warnIfChanged("url", next.url, current.url);
+        current.url = next.url;
+      }
+      if (next.lod !== undefined) {
+        warnIfChanged("lod", next.lod, current.lod ?? false);
+        current.lod = next.lod;
+      }
     }
     super.onUpdateConfig(updates);
   }
