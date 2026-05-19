@@ -94,20 +94,13 @@ view.addMesh<SplatMeshDesc>({
 
 For placing a splat on the globe, combine this with `northUpEastToFixedFrame(pos)` passed as `matrixWorld` so the local up axis follows the surface normal. See the [splat example](https://github.com/eukarya-inc/navara/tree/main/web/navara_three/example/pages/splat) for a working setup.
 
-## Technical Details
-
-`SplatMeshDesc` is an adapter around [SparkJS](https://sparkjs.dev/) and provides the following:
-
-- **Shared `SparkRenderer`**: Lazily created once per transparent scene and reference-counted; the last descriptor to release disposes the renderer. The renderer lives in the transparent scene so splats render after atmosphere / aerial-perspective post-effects, preserving their baked color.
-- **`sparkOverride`**: SparkJS's process-wide static (used by new `SplatMesh` instances to discover their renderer) is cleared on final release and re-asserted on the next acquire to keep sequential / LIFO use of multiple views safe.
-- **`enableLod`**: Fixed at first acquire. If the first descriptor was created with `lod: false`, subsequent descriptors that request `lod: true` are downgraded to `lod: false` (a `console.warn` is logged) because building a per-mesh LoD tree without a LoD-driving renderer would waste memory. The reverse (`lod: false` on a LoD-capable renderer) incurs no downgrade.
-- **`ConcurrencyManager` slot**: One slot reserved per descriptor while its async splat load is in flight, released as soon as `mesh.initialized` settles (success or failure). `onDestroy()` only performs fallback cleanup for a still-held reservation. Reservation is **best-effort**: if the pool is already saturated, `canIncrement()` returns false and the splat load proceeds without a reserved slot (to preserve `decrement` symmetry); the load is not blocked or queued.
-
 ## Limitations
 
-- **Periodic visual snaps with `lod: true`**: SparkJS's async sort/LoD workers can produce visible snaps at globe-scale even at fixed camera — inherent to SparkJS 2.0's LoD architecture. Pre-building LoD trees at asset preparation time mitigates it; `SparkRenderer` flag tuning (`minSortIntervalMs`, `enableLodFetching`, `lodSplatScale`) did not meaningfully help in our measurements.
-- **No scene lighting**: Gaussian Splats encode lighting in the splat data; they do not respond to `SunLight`, `AmbientLight`, etc.
-- **No shadow / selective effect**: Splats render in the transparent pass and do not write to the MRT effect-ids / normal buffer used by `SelectiveBloomEffect` and `SelectiveOutlineEffect`.
-- **No picking**: `SplatMesh.raycastable` exists on the underlying SparkJS instance but is not integrated into Navara's picking pipeline.
-- **Single view at a time**: SparkJS exposes `sparkOverride` as a process-wide static; truly concurrent rendering of multiple `ThreeView` instances on the same page is not supported.
-- **SparkJS peer dependency**: `@sparkjsdev/spark@2.0.0` declares `three: ^0.180.0` while this workspace pins `three@0.184.0`. pnpm emits an unmet-peer warning at install but installation succeeds and no runtime incompatibility was observed. A widened peer range from upstream is expected.
+- **Load failures are silent**: A failed fetch for the splat URL only logs a `console.warn`; no error is thrown, and the descriptor stays alive. Implement retry / fallback in the application if needed.
+- **Visual flicker with `lod: true`**: Splats placed at globe-scale may show small flickers even at a fixed camera. Use `lod: false` (default) for stable rendering, or pre-build LoD trees at asset preparation time.
+- **No scene lighting**: Lighting is baked into the splat data; `SunLight` / `AmbientLight` do not affect rendering.
+- **No shadow / selective effect**: Splats are excluded from `SelectiveBloomEffect` and `SelectiveOutlineEffect`.
+- **No picking**: Splats are not integrated into Navara's picking pipeline.
+- **Single view at a time**: Multiple concurrent `ThreeView` instances rendering splats on the same page are not supported.
+- **spz v4 (NGSP) is not yet supported**: Use spz v3 or earlier. Files from Niantic's v4 web converter fail to load. Build [`nianticlabs/spz`](https://github.com/nianticlabs/spz) locally and pass `PackOptions.version = 3` to produce a compatible file.
+- **`three` peer-range mismatch**: Install emits an `unmet peer` warning because the SparkJS package targets an older `three` range than this workspace; runtime is unaffected.

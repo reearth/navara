@@ -94,20 +94,13 @@ view.addMesh<SplatMeshDesc>({
 
 地球上に配置する場合は、`northUpEastToFixedFrame(pos)` を `matrixWorld` として渡し、ローカル up 軸を地表法線に揃えると組み合わせやすくなります。動作する一式の例は [splat サンプル](https://github.com/eukarya-inc/navara/tree/main/web/navara_three/example/pages/splat) を参照してください。
 
-## 技術的詳細
-
-`SplatMeshDesc` は [SparkJS](https://sparkjs.dev/) のアダプタとして、以下の機能を提供します:
-
-- **共有 `SparkRenderer`**: transparent シーンごとに 1 つだけ遅延生成され、参照カウントで管理されます。最後に解放した Descriptor が renderer を dispose します。Renderer は transparent シーンに置かれているため、splat は atmosphere / aerial-perspective ポストエフェクトの後に描画され、ベイクされた色とエッジのシャープさが維持されます。
-- **`sparkOverride`**: SparkJS のプロセス全域の static（新規 `SplatMesh` が renderer を見つけるために参照）は、最後の解放時に `undefined` にクリアされ、次に active になった view の Descriptor 構築時に再アサートされます。これにより複数 view を LIFO 順に使う場合でも干渉しません。
-- **`enableLod`**: 最初に acquire した Descriptor の値で固定されます。最初の Descriptor が `lod: false` で作られた場合、その後 `lod: true` を要求する Descriptor は `lod: false` へ降格され（`console.warn` を出力します）、LoD を駆動しない renderer の下で per-mesh LoD ツリーを構築してメモリを無駄にすることを避けます。逆方向（LoD 対応 renderer 上での `lod: false`）は降格されず動作します。
-- **`ConcurrencyManager` スロット**: 各 Descriptor は splat の async ロード処理中だけ 1 スロットを予約します。`mesh.initialized` が settle した時点（成功/失敗いずれでも）で解放され、`onDestroy()` は settle 前に破棄された場合のフォールバックとしてのみ動作します。予約は **best-effort** で、pool が飽和している場合は `canIncrement()` が false を返すため slot を取らずに load を進めます（`decrement` の対称性を維持するため）。load は block / queue されません。
-
 ## 制約
 
-- **`lod: true` 時の周期的な visual snap**: SparkJS の非同期 sort/LoD worker が globe-scale で固定 camera でも snap を発生させます。SparkJS 2.0 の LoD アーキテクチャに本質的な挙動です。アセット作成時に LoD ツリーをプリビルドすると緩和されます。`SparkRenderer` のフラグ調整（`minSortIntervalMs`、`enableLodFetching`、`lodSplatScale`）では有意な改善は観測されませんでした。
-- **シーンライティング非対応**: Gaussian Splat は照明をデータ内にエンコードしており、`SunLight`、`AmbientLight` などの影響を受けません。
-- **shadow / selective effect 非対応**: splat は transparent パスで描画され、`SelectiveBloomEffect` や `SelectiveOutlineEffect` が使用する MRT effect-ids / 法線バッファに書き込みません。
-- **picking 非対応**: SparkJS 側に `SplatMesh.raycastable` はありますが、Navara の picking パイプラインには統合されていません。
-- **同時に 1 view のみ**: SparkJS は `sparkOverride` をプロセス全域の static として公開しているため、同一ページ上で複数の `ThreeView` を同時にレンダリングすることはサポートされません。
-- **SparkJS の peer dependency**: `@sparkjsdev/spark@2.0.0` は `three: ^0.180.0` を peer dependency として宣言していますが、本ワークスペースは `three@0.184.0` を使用しています。pnpm は初回 install で unmet-peer 警告を出しますが、install 自体は成功し、ランタイム上の不整合は確認されていません。upstream で peer range が拡張されることが期待されます。
+- **ロード失敗は通知されない**: splat URL の取得に失敗しても `console.warn` が出るだけで、例外は throw されず descriptor は生き続けます。リトライや fallback はアプリ側で実装してください。
+- **`lod: true` 時のちらつき**: 地球規模に splat を配置すると、カメラ固定でも小さな描画ずれが見えることがあります。安定描画には `lod: false`（既定）を推奨。アセット側で LoD ツリーをプリビルドすると緩和されます。
+- **シーンライティング非対応**: splat は照明をデータ内に焼き込んでおり、`SunLight` / `AmbientLight` などの影響を受けません。
+- **shadow / selective effect 非対応**: splat は `SelectiveBloomEffect` / `SelectiveOutlineEffect` の対象になりません。
+- **picking 非対応**: splat は Navara の picking パイプラインに統合されていません。
+- **同時に 1 view のみ**: 同一ページ上で複数の `ThreeView` で splat を同時描画することはサポートされません。
+- **spz v4 (NGSP) は現状未対応**: spz v3 以下を使用してください。Niantic 公式 web converter が出力する v4 は読み込めません。[`nianticlabs/spz`](https://github.com/nianticlabs/spz) をローカルビルドし `PackOptions.version = 3` で出力すると互換になります。
+- **`three` の peer-range ずれ**: SparkJS パッケージが要求する `three` のバージョン範囲が本ワークスペースより古いため、install 時に `unmet peer` 警告が出ます。実行時には影響しません。
