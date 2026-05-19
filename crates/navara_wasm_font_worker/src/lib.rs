@@ -244,6 +244,31 @@ impl FontCache {
         self.current_frame += 1;
     }
 
+    /// Walk every curve atlas and color curve atlas, evicting glyphs that
+    /// haven't been used for at least [`crate::cache::LRU_MIN_AGE`] frames.
+    /// Run from the worker's per-frame tick so the GPU buffers don't grow
+    /// indefinitely under sustained label streaming. Paired atlases (a font
+    /// family with both outline + COLR faces) are evicted via
+    /// [`color_curve_atlas::evict_cold_pair`] so the "color binding ⇔ color
+    /// record" invariant is preserved.
+    #[wasm_bindgen(js_name = evictColdCurveGlyphs)]
+    pub fn wasm_evict_cold_curve_glyphs(&mut self) {
+        let current_frame = self.current_frame;
+        let min_age = cache::LRU_MIN_AGE;
+        let keys: Vec<String> = self.curve_atlases.keys().cloned().collect();
+        for key in keys {
+            if self.color_curve_atlases.contains_key(&key) {
+                if let Some(outline) = self.curve_atlases.get_mut(&key)
+                    && let Some(color) = self.color_curve_atlases.get_mut(&key)
+                {
+                    color_curve_atlas::evict_cold_pair(color, outline, current_frame, min_age);
+                }
+            } else if let Some(outline) = self.curve_atlases.get_mut(&key) {
+                outline.evict_cold(current_frame, min_age);
+            }
+        }
+    }
+
     // -----------------------------------------------------------------------
     // Slug-style curve pipeline (parallel to the SDF API above).
     // -----------------------------------------------------------------------

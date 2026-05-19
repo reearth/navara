@@ -1,14 +1,14 @@
-// Slug-style curve text — vertex shader (Phase 5).
+// Slug-style curve text -- vertex shader (Phase 5).
 //
-// Fetches each glyph's bbox from the shared `uGlyphHeaders` texture and
+// Fetches each glyph's bbox from the shared uGlyphHeaders texture and
 // emits a quad in em-space. The fragment shader receives the header slot
 // and the interpolated em-space position; everything else (band table,
 // curves, COLR layers) is fetched at fragment time.
 //
 // Coordinate flow:
-//   position.xy  ∈ [-0.5, 0.5]  (unit quad attribute)
+//   position.xy  in [-0.5, 0.5]  (unit quad attribute)
 //   emPos        = remap to glyph bbox in em-space (per-glyph)
-//   localPos     = emPos - anchor                  (after `uCenter`)
+//   localPos     = emPos - anchor                  (after uCenter)
 //   worldPos     = mvPosition + scaleFactor * localPos  (billboard quad)
 //
 // Same RTE/RTC + billboard math as the legacy SDF vertex shader.
@@ -47,6 +47,7 @@ flat varying float vGlyphHeaderSlot;
 varying vec2 vEmCoord;
 varying vec4 vBboxMinMax;
 varying float vFragDepth;
+// vHorizonCulled is declared by chunks/horizon_culling_pars_vertex.glsl.
 
 ivec2 _idxTo2D(float idx) {
     float y = floor(idx / uCurveTexWidth);
@@ -99,7 +100,7 @@ void main() {
     vec2 bboxMax = hdr0.zw;
     vec2 bboxSize = bboxMax - bboxMin;
 
-    // Map unit quad [-0.5, 0.5] → glyph's em-space bbox.
+    // Map unit quad [-0.5, 0.5] -> glyph's em-space bbox.
     vec2 emPos = (position.xy + vec2(0.5)) * bboxSize + bboxMin;
     vec2 localPos = emPos;
     localPos.x -= anchor.x;

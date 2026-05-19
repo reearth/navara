@@ -350,6 +350,11 @@ ctx.onmessage = async (e: MessageEvent) => {
 
       case "tickFrame": {
         fontCache.tickFrame();
+        // Sweep the curve-pipeline buffers for cold glyphs. The legacy SDF
+        // atlas evicts opportunistically on allocation failure; the curve
+        // atlases need an explicit per-frame tick so their LRU stays bounded
+        // even when no new glyphs are arriving.
+        fontCache.evictColdCurveGlyphs();
         ctx.postMessage({ id, type: "result", payload: null });
         break;
       }

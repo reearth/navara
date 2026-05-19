@@ -199,6 +199,11 @@ pub struct TextMaterial {
     pub outline_opacity: f32, // outlineOpacity Default:1
     pub outline_width: f32,   // outlineWidth Default:0
     pub lang: String,
+    /// Render text via the Slug-style GPU curve evaluator instead of the
+    /// legacy SDF atlas pipeline. Defaults to `false` while the curve
+    /// pipeline is opt-in; flipping the default is a Phase 6 follow-up once
+    /// the curve renderer reaches feature parity.
+    pub use_curve_renderer: bool,
 }
 
 impl Default for TextMaterial {
@@ -226,6 +231,7 @@ impl Default for TextMaterial {
             outline_opacity: 1.0,
             outline_width: 0.0,
             lang: "".to_string(),
+            use_curve_renderer: false,
         }
     }
 }

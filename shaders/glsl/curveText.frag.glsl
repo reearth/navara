@@ -1,4 +1,4 @@
-// Slug-style curve text — fragment shader (Phase 5).
+// Slug-style curve text -- fragment shader (Phase 5).
 //
 // Per-pixel banded ray-cast against quadratic Bezier outlines.
 //
@@ -9,25 +9,35 @@
 // The header tells us where this glyph's band table and curve table live in
 // the shared buffer textures. We pick the band by vEmCoord.y, walk that
 // band's curves, and for each:
-//   1. Solve the curve's y(t) = vEmCoord.y for t ∈ [0, 1].
-//   2. For each root, evaluate x(t) and compare to vEmCoord.x — a crossing
+//   1. Solve the curve's y(t) = vEmCoord.y for t in [0, 1].
+//   2. For each root, evaluate x(t) and compare to vEmCoord.x -- a crossing
 //      to the right contributes +1 / -1 to the signed winding number
 //      depending on whether the curve is going up or down at that t.
 // AA uses screen-space derivatives: instead of an integer crossing count we
 // accumulate a smooth contribution per crossing based on the horizontal
-// distance to the ray, in pixel units (`fwidth(vEmCoord).x`).
+// distance to the ray, in pixel units (fwidth(vEmCoord).x).
 //
 // COLR path: if the header has FLAG_HAS_COLOR_LAYERS set, the same
-// `coverageInGlyph` helper drives clip tests; per-layer paint evaluation
+// coverageInGlyph helper drives clip tests; per-layer paint evaluation
 // (solid / linear / radial / sweep) writes to a SrcOver accumulator.
 //
-// Integer textures (`usampler2D`) require GLSL ES 3.0; the host material
-// sets `glslVersion: THREE.GLSL3` to opt in.
+// Integer textures (usampler2D) require GLSL ES 3.0; the host material
+// sets glslVersion: THREE.GLSL3 to opt in.
+
+#include "chunks/batch_definition.glsl"
+#include "chunks/pick.glsl"
 
 precision highp float;
 precision highp int;
 precision highp sampler2D;
 precision highp usampler2D;
+
+// three.js's GLSL3 prefix shims `attribute`/`varying` but NOT `gl_FragColor`
+// on WebGL2 (it only auto-shims that on WebGL1). We keep writing
+// `gl_FragColor` for readability and parity with the SDF fragment shader;
+// this layout declaration + macro redirects it to a user-declared output.
+layout(location = 0) out highp vec4 pc_fragColor;
+#define gl_FragColor pc_fragColor
 
 // -- Shared buffer textures (same width for every buffer; see CurveTextureSet). --
 uniform sampler2D uGlyphHeaders;     // 12 f32 / glyph, RGBA32F (3 texels)
@@ -48,6 +58,9 @@ flat varying float vGlyphHeaderSlot;
 varying vec2 vEmCoord;
 varying vec4 vBboxMinMax;
 varying float vFragDepth;
+// vHorizonCulled comes from chunks/horizon_culling_pars_vertex.glsl; it's
+// declared flat varying int and set to 1 when the vertex was culled.
+flat varying int vHorizonCulled;
 
 // Header layout (12 f32, see crates/navara_wasm_font_worker/src/curves/pack.rs):
 //   texel 0: bbox_min.xy, bbox_max.xy
@@ -92,8 +105,8 @@ float bezierDy(vec2 p0, vec2 p1, vec2 p2, float t) {
     return 2.0 * ((1.0 - t) * (p1.y - p0.y) + t * (p2.y - p1.y));
 }
 
-/// Solve B(t).y = py for t ∈ [0, 1]. Returns up to two roots in `ts`. The
-/// `count` is the number of valid (in-range) roots. Tangent / linear / no-
+/// Solve B(t).y = py for t in [0, 1]. Returns up to two roots in ts. The
+/// count is the number of valid (in-range) roots. Tangent / linear / no-
 /// solution cases are all clamped to "no contribution".
 int solveQuadY(vec2 p0, vec2 p1, vec2 p2, float py, out vec2 ts) {
     float A = p0.y - 2.0 * p1.y + p2.y;
@@ -129,8 +142,8 @@ int solveQuadY(vec2 p0, vec2 p1, vec2 p2, float py, out vec2 ts) {
 }
 
 // ---------------------------------------------------------------------------
-// Banded ray-cast: returns AA coverage in [0, 1] for `emCoord` against the
-// glyph at `slot`. Uses non-zero winding fill.
+// Banded ray-cast: returns AA coverage in [0, 1] for emCoord against the
+// glyph at slot. Uses non-zero winding fill.
 // ---------------------------------------------------------------------------
 
 float coverageInGlyph(uint slot, vec2 emCoord, vec2 pxEm) {
@@ -148,7 +161,7 @@ float coverageInGlyph(uint slot, vec2 emCoord, vec2 pxEm) {
     vec2 size = bboxMax - bboxMin;
     if (size.x <= 0.0 || size.y <= 0.0) return 0.0;
 
-    // Slop ε in y so curves exactly grazing the bbox edges still register.
+    // Slop eps in y so curves exactly grazing the bbox edges still register.
     float eps = max(pxEm.y, 1e-6);
     if (emCoord.y < bboxMin.y - eps || emCoord.y > bboxMax.y + eps) return 0.0;
 
@@ -285,13 +298,13 @@ vec4 evaluatePaint(uint kind, uint paintOffset, vec2 pLocal) {
             float dr = r1 - r0;
             t = (abs(dr) > 1e-9) ? (d - r0) / dr : 0.0;
         } else {
-            // Conical fallback — distance to c1, normalized by r1.
+            // Conical fallback -- distance to c1, normalized by r1.
             t = (r1 > 1e-9) ? distance(pLocal, c1) / r1 : 0.0;
         }
         t = applyExtend(t, extend);
         return interpStops(paintOffset + 8u, numStops, t);
     } else {
-        // Sweep gradient (kind 3) — TODO: real angular evaluator. Match the
+        // Sweep gradient (kind 3) -- TODO: real angular evaluator. Match the
         // existing tiny-skia behavior: fall back to the first color stop.
         uint numStops = floatBitsToUint(readPaintF(paintOffset, 1u));
         if (numStops == 0u) return vec4(0.0);
@@ -311,9 +324,9 @@ mat2 inv2(mat2 m, out bool ok) {
     return mat2(m[1][1] * inv, -m[0][1] * inv, -m[1][0] * inv, m[0][0] * inv);
 }
 
-/// Logical-AND every clip in the layer's range. `vEmCoord` is the root
+/// Logical-AND every clip in the layer's range. vEmCoord is the root
 /// glyph's em-space coord; each clip carries its own transform that maps
-/// clip-local em-space → root em-space.
+/// clip-local em-space -> root em-space.
 float clipCoverage(
     uint clipOffset,
     uint clipCount,
@@ -375,7 +388,7 @@ float clipCoverage(
 
 // All inputs unpremultiplied (RGB, A separate). Returns unpremultiplied.
 // We only implement the few common ones; everything else falls back to
-// SrcOver — matches the project's current rendering of complex emojis.
+// SrcOver -- matches the project's current rendering of complex emojis.
 vec4 composite(vec4 dst, vec4 src, uint blend) {
     // Tags: 3 = SrcOver, 23 = Multiply, 13 = Screen.
     // Other tags fall through to SrcOver.
@@ -442,6 +455,15 @@ vec4 colrRender(uint colorLayerStart, uint colorLayerCount, vec2 emCoord, vec2 p
 }
 
 void main() {
+    if (vHorizonCulled == 1) discard;
+
+    // Picking mode: write the batch ID as a color and skip the curve eval.
+    if (nvr_uPickable > 0.0) {
+        gl_FragColor = vec4(nvr_batchIdToColor(nvr_uBatchId), 1.0);
+        gl_FragDepth = log(vFragDepth) / log(uFarPlane + 1.0);
+        return;
+    }
+
     uint slot = uint(vGlyphHeaderSlot);
     vec4 hdr0, hdr1, hdr2;
     fetchHeader(slot, hdr0, hdr1, hdr2);

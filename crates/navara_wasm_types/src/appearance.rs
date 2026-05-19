@@ -304,6 +304,12 @@ pub struct TextMaterial {
     /// Language code for text shaping (e.g., "en", "ja", "ar"). Used for proper text rendering.
     #[wasm_bindgen(getter_with_clone)]
     pub lang: Option<String>,
+    /// Render text through the Slug-style GPU curve evaluator instead of the
+    /// legacy SDF atlas pipeline. Defaults to `false` while the curve renderer
+    /// is opt-in.
+    #[wasm_bindgen(js_name = useCurveRenderer)]
+    #[serde(rename = "useCurveRenderer")]
+    pub use_curve_renderer: Option<bool>,
 }
 
 impl From<TextMaterial> for navara_material::TextMaterial {
@@ -335,6 +341,7 @@ impl From<TextMaterial> for navara_material::TextMaterial {
             outline_opacity: val.outline_opacity.unwrap_or(default.outline_opacity),
             outline_width: val.outline_width.unwrap_or(default.outline_width),
             lang: val.lang.unwrap_or(default.lang),
+            use_curve_renderer: val.use_curve_renderer.unwrap_or(default.use_curve_renderer),
         }
     }
 }
@@ -363,6 +370,7 @@ impl<'a> From<&'a navara_material::TextMaterial> for TextMaterial {
             outline_opacity: Some(value.outline_opacity),
             outline_width: Some(value.outline_width),
             lang: Some(value.lang.clone()),
+            use_curve_renderer: Some(value.use_curve_renderer),
         }
     }
 }
@@ -395,6 +403,7 @@ impl TextMaterial {
             outline_opacity: self.outline_opacity.unwrap_or(other.outline_opacity),
             outline_width: self.outline_width.unwrap_or(other.outline_width),
             lang: self.lang.clone().unwrap_or(other.lang.clone()),
+            use_curve_renderer: self.use_curve_renderer.unwrap_or(other.use_curve_renderer),
         }
     }
 }

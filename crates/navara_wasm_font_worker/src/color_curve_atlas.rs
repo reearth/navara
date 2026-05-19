@@ -245,10 +245,7 @@ impl ColorCurveAtlas {
             }
         }
         if dirtied {
-            Self::touch_range(
-                &mut self.dirty_clip_records,
-                start as u32..end as u32,
-            );
+            Self::touch_range(&mut self.dirty_clip_records, start as u32..end as u32);
         }
     }
 

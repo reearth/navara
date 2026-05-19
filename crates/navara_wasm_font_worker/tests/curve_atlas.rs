@@ -198,12 +198,10 @@ fn glyph_clip_records_carry_header_slots_not_gids() {
     for gid in 1..glyph_count {
         let id = GlyphId::new(gid as u32);
         if let Some(g) = navara_wasm_font_worker::curves::extract_color_glyph(&font, id)
-            && g.layers.iter().flat_map(|l| l.clips.iter()).any(|c| {
-                matches!(
-                    c,
-                    navara_wasm_font_worker::curves::ClipShape::Glyph { .. }
-                )
-            })
+            && g.layers
+                .iter()
+                .flat_map(|l| l.clips.iter())
+                .any(|c| matches!(c, navara_wasm_font_worker::curves::ClipShape::Glyph { .. }))
         {
             chosen = Some(gid as u32);
             break;

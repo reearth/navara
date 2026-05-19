@@ -54,7 +54,7 @@ export class CurveTextMesh
     transform: Transform,
     fontManager: FontManager,
     fontIdentifier: string,
-    _batchId: number | undefined,
+    batchId: number | undefined,
     RTE: boolean,
   ) {
     super();
@@ -90,6 +90,10 @@ export class CurveTextMesh
 
     this.material = mat;
     this.frustumCulled = false;
+
+    if (batchId !== undefined) {
+      this.setBatchId(batchId);
+    }
   }
 
   /**
@@ -122,6 +126,59 @@ export class CurveTextMesh
     this.material.uniforms.uColor.value.copy(this._color);
   }
 
+  setHeight(height: number): void {
+    this.material.uniforms.uAddHeight.value = height;
+  }
+
+  setBatchId(batchId: number): void {
+    this.material.uniforms.nvr_uBatchId.value = batchId;
+  }
+
+  setPosition(
+    position: Float32Array | { high: Float32Array; low: Float32Array },
+    RTE: boolean,
+    transform: Transform,
+  ): void {
+    this._useRTE = RTE;
+    const u = this.material.uniforms;
+    if (RTE) {
+      const p = position as { high: Float32Array; low: Float32Array };
+      u.uRTEPositionHIGH.value.fromArray(p.high);
+      u.uRTEPositionLOW.value.fromArray(p.low);
+    } else {
+      const p = position as Float32Array;
+      u.uRTCPosition.value.fromArray(p);
+    }
+    u.uRTCCenter.value.set(transform.tx, transform.ty, transform.tz);
+  }
+
+  /** Apply a TextMaterial: color, size, height, and text. Mirrors the SDF
+   *  mesh's `update` but only the subset of properties the Phase 5 fragment
+   *  shader actually consumes. Stroke / background / outline land in a
+   *  follow-up. */
+  update(material: NavaraTextMaterial, forceUpdate = false): void {
+    const u = this.material.uniforms;
+    if (material.color !== undefined) {
+      this._color.set(material.color);
+      u.uColor.value.copy(this._color);
+    }
+    if (material.size !== undefined) u.uFontSize.value = material.size;
+    if (material.sizeInMeters !== undefined)
+      u.uSizeInMeters.value = material.sizeInMeters;
+    if (material.height !== undefined) u.uAddHeight.value = material.height;
+    if (material.depthTest !== undefined)
+      this.material.depthTest = material.depthTest;
+    if (material.center !== undefined) {
+      u.uCenter.value.set(material.center.x, material.center.y);
+    }
+
+    const nextText = material.text;
+    if (nextText !== undefined && nextText !== "") {
+      this.setText(nextText, forceUpdate);
+    }
+    this.visible = material.show ?? this.visible;
+  }
+
   // --- FeatureMesh interface (subset) ---
 
   _setFeatureColor(color: Color): void {
@@ -136,6 +193,10 @@ export class CurveTextMesh
     this.visible = visible;
   }
 
+  _setFeatureHeight(height: number): void {
+    this.setHeight(height);
+  }
+
   _setFrustumCulled(culled: boolean): void {
     this.frustumCulled = culled;
   }
@@ -143,11 +204,11 @@ export class CurveTextMesh
   // --- PickableMesh interface ---
 
   onBeforePicking(): void {
-    // Phase 4 stub: real picking joins Phase 5 with the curve fragment shader.
+    this.material.uniforms.nvr_uPickable.value = 1.0;
   }
 
   onAfterPicking(): void {
-    // Phase 4 stub.
+    this.material.uniforms.nvr_uPickable.value = 0.0;
   }
 
   getRenderable(): Object3D {
@@ -200,6 +261,11 @@ export class CurveTextMesh
       uFarPlane: { value: 1 },
       uCenter: { value: center },
       uAddHeight: { value: material.height ?? 0.0 },
+
+      // Picking — written via setBatchId() / onBeforePicking(); set to 0/0
+      // by default so non-picking passes render normally.
+      nvr_uBatchId: { value: 0.0 },
+      nvr_uPickable: { value: 0.0 },
 
       // Texture uniforms — bound to null until the first setText.
       uGlyphHeaders: { value: null },
