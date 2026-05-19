@@ -268,28 +268,7 @@ export const LOCAL_DATASETS = {
 /**
  * 3D Gaussian Splatting datasets
  */
-export const SPLAT_DATASETS = {
-  sparkButterfly: {
-    url: "https://sparkjs.dev/assets/splats/butterfly.spz",
-    attribution: "SparkJS demo splats",
-    attributionUrl: "https://sparkjs.dev/",
-  },
-  sparkCat: {
-    url: "https://sparkjs.dev/assets/splats/cat.spz",
-    attribution: "SparkJS demo splats",
-    attributionUrl: "https://sparkjs.dev/",
-  },
-  sparkRobotHead: {
-    url: "https://sparkjs.dev/assets/splats/robot-head.spz",
-    attribution: "SparkJS demo splats",
-    attributionUrl: "https://sparkjs.dev/",
-  },
-  sparkPenguin: {
-    url: "https://sparkjs.dev/assets/splats/penguin.spz",
-    attribution: "SparkJS demo splats",
-    attributionUrl: "https://sparkjs.dev/",
-  },
-} satisfies Record<string, Dataset>;
+export const SPLAT_DATASETS = {} satisfies Record<string, Dataset>;
 
 /**
  * LUT datasets

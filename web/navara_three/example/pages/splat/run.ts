@@ -12,7 +12,7 @@ import { Vector3 } from "three";
 import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../helpers/attributions";
-import { SPLAT_DATASETS, TILE_DATASETS } from "../../helpers/constants";
+import { TILE_DATASETS } from "../../helpers/constants";
 
 export type CustomDescriptions = DefaultDescriptions;
 
@@ -23,11 +23,6 @@ const CENTER = {
   // by half-body keeps the feet on the surface.
   height: 10.0,
 };
-
-// 0.0008° of longitude ≈ 72m at Tokyo's latitude (35.71°N), since longitude
-// degrees shrink by cos(lat). Latitude degrees stay ~111m/° regardless.
-const STEP = 0.0008;
-const SCALE = 30;
 
 type SplatSample = {
   url: string;
@@ -46,49 +41,7 @@ type SplatSample = {
   dHeight?: number;
 };
 
-// Four splats in an east-west line at equal spacing (STEP is the lng delta).
-// URLs point to SparkJS's public demo assets — for production, host your own
-// assets and respect the original splat dataset licenses.
-const SAMPLES: SplatSample[] = [
-  {
-    url: SPLAT_DATASETS.sparkButterfly.url,
-    name: "butterfly",
-    note: "SH3 / AA off",
-    dLng: -1.5 * STEP,
-    dLat: 0,
-    scale: SCALE,
-    // butterfly: slightly above CENTER (20m) so the wings hover in the air.
-    dHeight: 20,
-  },
-  {
-    url: SPLAT_DATASETS.sparkCat.url,
-    name: "cat",
-    note: "SH3 / AA off",
-    dLng: -0.5 * STEP,
-    dLat: 0,
-    scale: SCALE,
-  },
-  {
-    url: SPLAT_DATASETS.sparkRobotHead.url,
-    name: "robot-head",
-    note: "SH3 / AA on",
-    dLng: 0.5 * STEP,
-    dLat: 0,
-    scale: SCALE,
-    yaw: Math.PI / 2,
-    // robot-head: lifted above CENTER (20m) so it sits at roughly human face
-    // height.
-    dHeight: 20,
-  },
-  {
-    url: SPLAT_DATASETS.sparkPenguin.url,
-    name: "penguin",
-    note: "SH3 / AA on",
-    dLng: 1.5 * STEP,
-    dLat: 0,
-    scale: SCALE,
-  },
-];
+const SAMPLES: SplatSample[] = [];
 
 const placeSplat = (
   view: ThreeView<CustomDescriptions>,
@@ -131,28 +84,13 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     rasterTile: { maxZoom: 23 },
   });
 
-  showAttributions([
-    TILE_DATASETS.openstreetmap,
-    SPLAT_DATASETS.sparkButterfly,
-    SPLAT_DATASETS.sparkCat,
-    SPLAT_DATASETS.sparkRobotHead,
-    SPLAT_DATASETS.sparkPenguin,
-  ]);
+  showAttributions([TILE_DATASETS.openstreetmap]);
 
   for (const sample of SAMPLES) {
     placeSplat(view, sample);
   }
 
-  // View the cat (SAMPLES[1]) from its front (north) side: 300m north, 100m up.
-  const focus = SAMPLES[1];
-  view.lookAt(
-    {
-      lat: CENTER.lat + focus.dLat,
-      lng: CENTER.lng + focus.dLng,
-      height: CENTER.height,
-    },
-    new Vector3(0, 300, 100),
-  );
+  view.lookAt(CENTER, new Vector3(0, 300, 100));
 
   addDebugPane(view);
 };
