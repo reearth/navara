@@ -6,7 +6,7 @@ use bevy_ecs::{
     entity::Entity,
     message::MessageReader,
     query::{Added, With, Without},
-    schedule::IntoScheduleConfigs,
+    schedule::{IntoScheduleConfigs, SystemSet},
     system::{Commands, Query, ResMut},
 };
 use navara_buffer_store::{BufferStore, BufferStoreFailedEvent, BufferStoreLoadedEvent, Handle};
@@ -16,19 +16,49 @@ use url::Url;
 
 pub struct DataRequesterPlugin;
 
+/// System sets that order data-request dispatch within [`PostUpdate`].
+///
+/// A consumer crate that supplies its own priority/sort sender (such as
+/// `navara_cesium3dtiles`'s distance-ordered sender) should register it in
+/// [`DataRequesterSet::PrioritizeRequests`] rather than ordering against the
+/// built-in sender directly. That set is chained before
+/// [`DataRequesterSet::SendRequests`], so the deferred `Requested` insert
+/// from the consumer's sender is flushed at the sync point Bevy inserts
+/// between the two sets (auto-inserted because the consumer sender holds
+/// `Commands`; enabled by default) before the built-in priority-only sender
+/// runs. Without that boundary the same entity could be enqueued twice in
+/// one frame.
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub enum DataRequesterSet {
+    /// Consumer-provided priority/sort senders run here, ahead of the
+    /// built-in senders in [`DataRequesterSet::SendRequests`].
+    PrioritizeRequests,
+    /// Built-in senders that enqueue data requests and apply load results.
+    SendRequests,
+}
+
 impl bevy_app::Plugin for DataRequesterPlugin {
     fn build(&self, app: &mut bevy_app::App) {
-        app.add_systems(PreUpdate, remove_removed_data_requesters)
-            .add_systems(
-                PostUpdate,
-                (
-                    send_data_request_events,
-                    send_data_request_events_with_priority,
-                    set_data_requester_loaded,
-                    set_data_requester_failed,
-                )
-                    .chain(),
-            );
+        app.configure_sets(
+            PostUpdate,
+            (
+                DataRequesterSet::PrioritizeRequests,
+                DataRequesterSet::SendRequests,
+            )
+                .chain(),
+        )
+        .add_systems(PreUpdate, remove_removed_data_requesters)
+        .add_systems(
+            PostUpdate,
+            (
+                send_data_request_events,
+                send_data_request_events_with_priority,
+                set_data_requester_loaded,
+                set_data_requester_failed,
+            )
+                .chain()
+                .in_set(DataRequesterSet::SendRequests),
+        );
     }
 }
 
@@ -333,18 +363,31 @@ mod tests {
 
     #[test]
     fn default_sender_skips_already_requested_entities() {
-        // Simulates the production wiring: the priority+sort sender runs first
-        // and marks Requested; the default priority-only sender must not push
-        // the same entity again.
+        // Mirrors the production wiring: the priority+sort sender runs in
+        // DataRequesterSet::PrioritizeRequests and the built-in priority-only
+        // sender in DataRequesterSet::SendRequests, with the two sets chained
+        // exactly as DataRequesterPlugin configures them. This exercises the
+        // cross-set sync point (not an over-constrained single .chain()), so a
+        // missing flush of the Requested insert would surface here as a
+        // duplicate enqueue.
         let mut app = App::new();
         app.init_resource::<EventStore>();
-        app.add_systems(
-            bevy_app::Update,
+        app.configure_sets(
+            PostUpdate,
             (
-                send_data_request_events_with_priority_and_sort::<TestKey>,
-                send_data_request_events_with_priority,
+                DataRequesterSet::PrioritizeRequests,
+                DataRequesterSet::SendRequests,
             )
                 .chain(),
+        );
+        app.add_systems(
+            PostUpdate,
+            send_data_request_events_with_priority_and_sort::<TestKey>
+                .in_set(DataRequesterSet::PrioritizeRequests),
+        );
+        app.add_systems(
+            PostUpdate,
+            send_data_request_events_with_priority.in_set(DataRequesterSet::SendRequests),
         );
 
         let with_key = spawn_requester(&mut app, Priority::High, 5);

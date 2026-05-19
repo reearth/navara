@@ -48,9 +48,7 @@ mod tile_content_parser;
 
 use bevy_ecs::schedule::IntoScheduleConfigs;
 pub use cesium3dtiles::*;
-use navara_data_requester::{
-    send_data_request_events_with_priority, send_data_request_events_with_priority_and_sort,
-};
+use navara_data_requester::{DataRequesterSet, send_data_request_events_with_priority_and_sort};
 
 /// Plugin that adds Cesium 3D Tiles support to the Navara engine.
 ///
@@ -112,12 +110,10 @@ impl Plugin for Cesium3dTilesPlugin {
             )
                 .chain(),
         )
-        // Send DataRequester events sorted by distance/SSE, before the generic
-        // priority-only sender, so the request queue starts with the nearest tiles.
         .add_systems(
             PostUpdate,
             send_data_request_events_with_priority_and_sort::<TileOrderByDistance>
-                .before(send_data_request_events_with_priority),
+                .in_set(DataRequesterSet::PrioritizeRequests),
         );
     }
 }

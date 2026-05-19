@@ -33,8 +33,6 @@ export async function renderModel(ctx: EventContext, m: NavaraModelMesh) {
       // bin here is the extracted position buffer (Draco blob or raw f32), not glTF.
       // 3D Tiles 1.1 glTF tiles (point cloud or not) take the GLTFLoader path below.
       if (internal?.pointCloud) {
-        const { decoder, dispose } = initializeDracoLoader();
-
         let geometry: BufferGeometry | undefined;
         const material = new PointsMaterial({
           size: m.material.pointSize,
@@ -43,6 +41,7 @@ export async function renderModel(ctx: EventContext, m: NavaraModelMesh) {
         });
 
         if (internal.dracoCompressed) {
+          const { decoder, dispose } = initializeDracoLoader();
           geometry = await (async () => {
             try {
               return await decompressDraco(bin.buffer as ArrayBuffer, decoder);
