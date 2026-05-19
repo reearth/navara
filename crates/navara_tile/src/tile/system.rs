@@ -64,7 +64,16 @@ pub fn update_tiles(
     )>,
     texture_fragment: TileTextureFragmentQuery,
     changed_texture_fragment: ChangedTileTextureFragmentQuery,
-    data_requesters: Query<&DataRequester>,
+    mut data_requesters_set: ParamSet<(
+        Query<&DataRequester>,
+        Query<
+            &DataRequester,
+            (
+                With<TileTextureFragmentMarker>,
+                Or<(Added<DataRequester>, Changed<DataRequester>)>,
+            ),
+        >,
+    )>,
     mut terrain_data_requester_set: ParamSet<(
         TileTerrainDataRequesterQuery,
         ChangedTileTerrainDataRequesterQuery,
@@ -86,12 +95,14 @@ pub fn update_tiles(
 ) {
     let is_texture_fragment_changed = !changed_texture_fragment.is_empty();
     let is_data_requester_changed = !terrain_data_requester_set.p1().is_empty();
+    let is_texture_data_requester_changed = !data_requesters_set.p1().is_empty();
     let is_mesh_changed = !meshes_set.p1().is_empty();
     let is_tile_layer_added = !tiles_set.p1().is_empty();
     let is_terrain_layer_added = !terrain_layer_set.p1().is_empty();
 
     let mut meshes = meshes_set.p0();
     let terrain_data_requester = terrain_data_requester_set.p0();
+    let data_requesters = data_requesters_set.p0();
 
     // TODO: Think how to support multiple terrain layer.(Is it possible?)
     let terrain_layer = terrain_layer_set.p0();
@@ -110,6 +121,7 @@ pub fn update_tiles(
 
     let needs_update = is_texture_fragment_changed
         || is_data_requester_changed
+        || is_texture_data_requester_changed
         || is_mesh_changed
         || tc.is_updated_in_this_frame
         || camera.is_added()
