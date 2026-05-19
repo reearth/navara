@@ -170,7 +170,15 @@ pub fn set_data_requester_failed(
 pub fn send_data_request_events(
     mut commands: Commands,
     mut events: ResMut<EventStore>,
-    requests: Query<Entity, (Added<DataRequester>, Without<Priority>, Without<Deleted>)>,
+    requests: Query<
+        Entity,
+        (
+            Added<DataRequester>,
+            Without<Priority>,
+            Without<Deleted>,
+            Without<Requested>,
+        ),
+    >,
     removed: Query<Entity, (With<DataRequester>, With<Deleted>, Without<Ignored>)>,
 ) {
     for e in requests.iter() {
@@ -188,9 +196,44 @@ pub fn send_data_request_events(
 pub fn send_data_request_events_with_priority(
     mut commands: Commands,
     mut events: ResMut<EventStore>,
-    requests: Query<(Entity, &Priority), (Added<DataRequester>, Without<Deleted>)>,
+    requests: Query<
+        (Entity, &Priority),
+        (Added<DataRequester>, Without<Deleted>, Without<Requested>),
+    >,
 ) {
     for (e, _) in requests.iter().sort::<&Priority>() {
+        commands.entity(e).insert(Requested);
+        events.data_requested.push(e);
+    }
+}
+
+/// Marker trait for a secondary sort key used by
+/// [`send_data_request_events_with_priority_and_sort`]. Implementors are
+/// wrapped in [`RequestOrder<K>`] and compared after `Priority`; smaller
+/// values (per [`Ord`]) are enqueued earlier within the same priority.
+pub trait RequestOrderKey: Component + Ord + Send + Sync + 'static {}
+
+/// Wrapper component attached to a [`DataRequester`] to control its
+/// position in the request queue. Smaller `K` values (per [`Ord`]) are
+/// enqueued earlier within the same [`Priority`].
+#[derive(Component, PartialEq, Eq, PartialOrd, Ord, Debug, Clone)]
+pub struct RequestOrder<K: RequestOrderKey>(pub K);
+
+/// Priority + secondary-sort version of [`send_data_request_events_with_priority`].
+///
+/// Requests with the highest [`Priority`] are sent first; ties are broken by
+/// the wrapped [`RequestOrderKey`] (smaller first). Already-`Requested`
+/// entities are skipped so this can run alongside the default senders.
+#[allow(clippy::type_complexity)]
+pub fn send_data_request_events_with_priority_and_sort<K: RequestOrderKey>(
+    mut commands: Commands,
+    mut events: ResMut<EventStore>,
+    requests: Query<
+        (Entity, &Priority, &RequestOrder<K>),
+        (Added<DataRequester>, Without<Deleted>, Without<Requested>),
+    >,
+) {
+    for (e, _, _) in requests.iter().sort::<(&Priority, &RequestOrder<K>)>() {
         commands.entity(e).insert(Requested);
         events.data_requested.push(e);
     }
@@ -205,5 +248,121 @@ pub fn remove_removed_data_requesters(
         buf.remove(&d.handle);
         commands.entity(e).remove::<Requested>();
         commands.entity(e).despawn();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::cmp::Ordering;
+
+    use bevy_app::App;
+    use bevy_ecs::component::Component;
+
+    use super::*;
+
+    #[derive(Component, PartialEq, Eq, Clone, Copy, Debug)]
+    struct TestKey(i32);
+
+    impl PartialOrd for TestKey {
+        fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+            Some(self.cmp(other))
+        }
+    }
+
+    impl Ord for TestKey {
+        fn cmp(&self, other: &Self) -> Ordering {
+            self.0.cmp(&other.0)
+        }
+    }
+
+    impl RequestOrderKey for TestKey {}
+
+    fn spawn_requester(app: &mut App, priority: Priority, key: i32) -> bevy_ecs::entity::Entity {
+        app.world_mut()
+            .spawn((
+                DataRequester::default(),
+                priority,
+                RequestOrder(TestKey(key)),
+            ))
+            .id()
+    }
+
+    #[test]
+    fn priority_and_sort_enqueues_in_ascending_order() {
+        let mut app = App::new();
+        app.init_resource::<EventStore>();
+        app.add_systems(
+            bevy_app::Update,
+            send_data_request_events_with_priority_and_sort::<TestKey>,
+        );
+
+        // Spawn in deliberately scrambled key order; the sender must reorder them.
+        let e1 = spawn_requester(&mut app, Priority::High, 30);
+        let e2 = spawn_requester(&mut app, Priority::High, 10);
+        let e3 = spawn_requester(&mut app, Priority::High, 20);
+
+        app.update();
+
+        let order = app.world().resource::<EventStore>().data_requested.clone();
+        assert_eq!(order, vec![e2, e3, e1]);
+
+        // All three should now carry Requested so a second tick is a no-op.
+        for e in [e1, e2, e3] {
+            assert!(app.world().get::<Requested>(e).is_some());
+        }
+    }
+
+    #[test]
+    fn priority_and_sort_sorts_priority_before_key() {
+        let mut app = App::new();
+        app.init_resource::<EventStore>();
+        app.add_systems(
+            bevy_app::Update,
+            send_data_request_events_with_priority_and_sort::<TestKey>,
+        );
+
+        // Lower-priority entity has a smaller key; priority must still win.
+        let high = spawn_requester(&mut app, Priority::High, 100);
+        let low = spawn_requester(&mut app, Priority::Low, 1);
+
+        app.update();
+
+        let order = app.world().resource::<EventStore>().data_requested.clone();
+        assert_eq!(order, vec![high, low]);
+    }
+
+    #[test]
+    fn default_sender_skips_already_requested_entities() {
+        // Simulates the production wiring: the priority+sort sender runs first
+        // and marks Requested; the default priority-only sender must not push
+        // the same entity again.
+        let mut app = App::new();
+        app.init_resource::<EventStore>();
+        app.add_systems(
+            bevy_app::Update,
+            (
+                send_data_request_events_with_priority_and_sort::<TestKey>,
+                send_data_request_events_with_priority,
+            )
+                .chain(),
+        );
+
+        let with_key = spawn_requester(&mut app, Priority::High, 5);
+        // An entity that has Priority but no RequestOrder<TestKey> — should
+        // be picked up by the default sender.
+        let without_key = app
+            .world_mut()
+            .spawn((DataRequester::default(), Priority::High))
+            .id();
+
+        app.update();
+
+        let order = app.world().resource::<EventStore>().data_requested.clone();
+        // The keyed entity went first via the specialized sender; the keyless
+        // one followed via the default sender — and the keyed one was not
+        // re-pushed (no duplicates).
+        assert_eq!(order.len(), 2);
+        assert_eq!(order[0], with_key);
+        assert_eq!(order[1], without_key);
     }
 }

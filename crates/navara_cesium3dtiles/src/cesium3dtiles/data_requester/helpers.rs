@@ -2,14 +2,13 @@ use bevy_ecs::{component::Component, entity::Entity, system::Commands};
 use bevy_log::{error, warn};
 use navara_buffer_store::BufferStore;
 use navara_component::Priority;
-use navara_data_requester::{DataRequester, DataRequesterExtension};
+use navara_data_requester::{DataRequester, DataRequesterExtension, RequestOrder};
 use url::Url;
 
 use crate::{
-    Cesium3dTileContent, Cesium3dTilesTreeOrder, TileOrderByDistance,
-    b3dm::B3dmDataRequesterMarker, cesium3dtiles::types::Cesium3dTileContentRequesterQuery,
-    glb::GlbDataRequesterMarker, gltf_features::GltfFeaturesDataRequesterMarker,
-    pnts::PntsDataRequesterMarker,
+    Cesium3dTileContent, TileOrderByDistance, b3dm::B3dmDataRequesterMarker,
+    cesium3dtiles::types::Cesium3dTileContentRequesterQuery, glb::GlbDataRequesterMarker,
+    gltf_features::GltfFeaturesDataRequesterMarker, pnts::PntsDataRequesterMarker,
 };
 
 #[derive(Component)]
@@ -51,12 +50,10 @@ pub(crate) fn request_tile_content(
             return false;
         }
     };
-    let tree_order = Cesium3dTilesTreeOrder {
-        distance: TileOrderByDistance {
-            distance_from_camera: tile.state.distance_from_camera,
-            sse: tile.state.sse,
-        },
-    };
+    let request_order = RequestOrder(TileOrderByDistance {
+        distance_from_camera: tile.state.distance_from_camera,
+        sse: tile.state.sse,
+    });
     match extension {
         DataRequesterExtension::Pnts => {
             let id = commands
@@ -64,11 +61,7 @@ pub(crate) fn request_tile_content(
                     Cesium3dTileContentDataRequesterMarker,
                     PntsDataRequesterMarker,
                     priority,
-                    tree_order,
-                    TileOrderByDistance {
-                        distance_from_camera: tile.state.distance_from_camera,
-                        sse: tile.state.sse,
-                    },
+                    request_order,
                     DataRequester::from_store(content_url, buf, extension),
                 ))
                 .id();
@@ -81,11 +74,7 @@ pub(crate) fn request_tile_content(
                     Cesium3dTileContentDataRequesterMarker,
                     B3dmDataRequesterMarker,
                     priority,
-                    tree_order,
-                    TileOrderByDistance {
-                        distance_from_camera: tile.state.distance_from_camera,
-                        sse: tile.state.sse,
-                    },
+                    request_order,
                     DataRequester::from_store(content_url, buf, extension),
                 ))
                 .id();
@@ -98,11 +87,7 @@ pub(crate) fn request_tile_content(
                     Cesium3dTileContentDataRequesterMarker,
                     GltfFeaturesDataRequesterMarker,
                     priority,
-                    tree_order,
-                    TileOrderByDistance {
-                        distance_from_camera: tile.state.distance_from_camera,
-                        sse: tile.state.sse,
-                    },
+                    request_order,
                     DataRequester::from_store(content_url, buf, extension),
                 ))
                 .id();
@@ -115,11 +100,7 @@ pub(crate) fn request_tile_content(
                     Cesium3dTileContentDataRequesterMarker,
                     GlbDataRequesterMarker,
                     priority,
-                    tree_order,
-                    TileOrderByDistance {
-                        distance_from_camera: tile.state.distance_from_camera,
-                        sse: tile.state.sse,
-                    },
+                    request_order,
                     DataRequester::from_store(content_url, buf, extension),
                 ))
                 .id();

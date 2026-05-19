@@ -24,3 +24,6 @@ navara_camera.workspace = true
 navara_window.workspace = true
 navara_component.workspace = true
 rustc-hash.workspace = true
+
+[dev-dependencies]
+approx.workspace = true

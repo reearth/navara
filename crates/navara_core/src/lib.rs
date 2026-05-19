@@ -1,6 +1,7 @@
 #![doc = include_str!("../README.md")]
 
 mod aabb;
+mod bounding_volume;
 mod coord;
 mod ellipsoid;
 mod ellipsoid_geodesic;
@@ -8,6 +9,7 @@ mod ellipsoid_tangent_plane;
 mod encoding;
 mod extent;
 mod intersection_tests;
+mod obb;
 mod plane;
 mod ray;
 mod scale_to_geodetic_surface;
@@ -18,6 +20,7 @@ mod unit;
 mod utils;
 
 pub use aabb::*;
+pub use bounding_volume::*;
 pub use coord::*;
 pub use ellipsoid::*;
 pub use ellipsoid_geodesic::*;
@@ -25,6 +28,7 @@ pub use ellipsoid_tangent_plane::*;
 pub use encoding::*;
 pub use extent::*;
 pub use intersection_tests::*;
+pub use obb::*;
 pub use plane::*;
 pub use ray::*;
 pub use scale_to_geodetic_surface::*;
