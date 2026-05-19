@@ -17,14 +17,14 @@ In addition to the properties below, all common properties from the base class (
 
 **Type:** `string`
 
-**Description:** URL of the splat file to load. Required.
+**Description:** URL of the splat file to load. Required. Provide either the URL of an externally hosted splat with a verified license, or a path to a self-hosted asset placed under your project's `public/splat/` directory (referenced as `/splat/your-asset.ply`).
 
 **Example:**
 
 ```typescript
 {
   splat: {
-    url: "https://sparkjs.dev/assets/splats/butterfly.spz",
+    url: "/splat/your-asset.ply",
   }
 }
 ```
@@ -35,14 +35,14 @@ In addition to the properties below, all common properties from the base class (
 
 **Default:** `false`
 
-**Description:** Enable [SparkJS Level-of-Detail](https://sparkjs.dev/docs/lod-getting-started/). When `true`, an in-memory LoD tree is built and splats are picked per frame.
+**Description:** Enable [SparkJS Level-of-Detail](https://sparkjs.dev/docs/lod-getting-started/). Requires assets with a pre-built LoD tree (e.g. via `spark-cli ... --quality`); raw PLY exports may render with artifacts. See Limitations.
 
 **Example:**
 
 ```typescript
 {
   splat: {
-    url: "https://sparkjs.dev/assets/splats/butterfly.spz",
+    url: "/splat/your-asset.ply",
     lod: true,
   }
 }
@@ -74,8 +74,7 @@ const pos = geodeticToVector3({
 
 const splat = view.addMesh<SplatMeshDesc>({
   splat: {
-    url: "https://sparkjs.dev/assets/splats/butterfly.spz",
-    lod: true,
+    url: "/splat/your-asset.ply",
   },
   position: { x: pos.x, y: pos.y, z: pos.z },
   scale: { x: 30, y: 30, z: 30 },
@@ -87,18 +86,13 @@ const splat = view.addMesh<SplatMeshDesc>({
 Many publicly distributed splat assets are trained in **Y-down (image-space)** convention and appear upside-down in a Y-up world. Apply a 180° rotation around the X axis to correct:
 
 ```typescript
-import { Vector3, Quaternion, Euler } from "three";
-
-const flip = new Quaternion().setFromAxisAngle(new Vector3(1, 0, 0), Math.PI);
-const euler = new Euler().setFromQuaternion(flip);
-
 view.addMesh<SplatMeshDesc>({
   splat: { url: "..." },
-  rotation: { x: euler.x, y: euler.y, z: euler.z },
+  rotation: { x: Math.PI, y: 0, z: 0 },
 });
 ```
 
-See the [splat example](https://github.com/eukarya-inc/navara/tree/main/web/navara_three/example/pages/splat) for a complete flip + surface-normal alignment helper.
+For placing a splat on the globe, combine this with `northUpEastToFixedFrame(pos)` passed as `matrixWorld` so the local up axis follows the surface normal. See the [splat example](https://github.com/eukarya-inc/navara/tree/main/web/navara_three/example/pages/splat) for a working setup.
 
 ## Technical Details
 
@@ -111,7 +105,7 @@ See the [splat example](https://github.com/eukarya-inc/navara/tree/main/web/nava
 
 ## Limitations
 
-- **Periodic visual snaps at globe-scale**: SparkJS's two async workers (sort + LoD) continuously push state updates while `autoUpdate: true` (the default required for interactive rendering), producing 10–60% pixel snaps every 0.5–2s even at fixed camera. SparkJS's [System Design](https://sparkjs.dev/docs/system-design/) acknowledges that "the sort order lags the render by at least one frame, but possibly more on older devices" while claiming it is "not usually perceptible" — globe-scale viewing makes it perceptible. The following `SparkRenderer` flags were each tested and did **not** meaningfully reduce snap frequency in our measurements: `minSortIntervalMs: 500/1000`, `enableLodFetching: false`, `lodSplatScale: 0.25/0.5` (the [official LoD docs](https://sparkjs.dev/docs/lod-getting-started/) recommend lowering the latter at the cost of detail). Pre-building LoD trees with the `spark-cli ... --quality` flag at asset preparation time may help. Snaps appear inherent to SparkJS 2.0's new LoD architecture.
+- **Periodic visual snaps with `lod: true`**: SparkJS's async sort/LoD workers can produce visible snaps at globe-scale even at fixed camera — inherent to SparkJS 2.0's LoD architecture. Pre-building LoD trees at asset preparation time mitigates it; `SparkRenderer` flag tuning (`minSortIntervalMs`, `enableLodFetching`, `lodSplatScale`) did not meaningfully help in our measurements.
 - **No scene lighting**: Gaussian Splats encode lighting in the splat data; they do not respond to `SunLight`, `AmbientLight`, etc.
 - **No shadow / selective effect**: Splats render in the transparent pass and do not write to the MRT effect-ids / normal buffer used by `SelectiveBloomEffect` and `SelectiveOutlineEffect`.
 - **No picking**: `SplatMesh.raycastable` exists on the underlying SparkJS instance but is not integrated into Navara's picking pipeline.
