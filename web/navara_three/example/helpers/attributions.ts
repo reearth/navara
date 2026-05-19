@@ -39,6 +39,7 @@ function createContainer(): HTMLDivElement {
   container.style.zIndex = "1000";
   container.style.fontFamily = "system-ui, -apple-system, sans-serif";
   container.style.transition = "all 0.2s ease";
+  container.style.overflow = "hidden";
 
   return container;
 }
@@ -81,10 +82,12 @@ function createToggleButton(container: HTMLDivElement): HTMLButtonElement {
       icon.style.transform = "rotate(90deg)";
       container.style.maxHeight = "34px";
       container.style.maxWidth = "200px";
+      container.style.overflow = "hidden";
     } else {
       icon.style.transform = "rotate(0deg)";
       container.style.maxHeight = "400px";
       container.style.maxWidth = "400px";
+      container.style.overflow = "auto";
     }
   });
 

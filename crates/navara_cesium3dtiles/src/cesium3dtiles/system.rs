@@ -35,8 +35,8 @@
 //!    - Feature batch ID mappings
 
 use crate::{
-    Cesium3dTilesNestedSubtreeMetadata, Cesium3dTilesNestedTreeMap, Cesium3dTilesTreeOrder,
-    RenderedCesium3dTileContent, b3dm::RenderedCesium3dTileContentB3dmMarker,
+    Cesium3dTilesNestedSubtreeMetadata, Cesium3dTilesNestedTreeMap, RenderedCesium3dTileContent,
+    TileOrderByDistance, b3dm::RenderedCesium3dTileContentB3dmMarker,
     cesium3dtiles::Cesium3dTilesNestedMetadataDataRequesterMarker,
     cesium3dtiles::traversal::select_tiles, glb::RenderedCesium3dTileContentGlbMarker,
     gltf_features::RenderedCesium3dTileContentGltfFeaturesMarker,
@@ -54,7 +54,9 @@ use navara_buffer_store::BufferStore;
 use navara_camera::{CameraFrustum, CameraMarker};
 use navara_component::{Deleted, Priority};
 
-use navara_data_requester::{DataRequester, DataRequesterExtension, DataRequesterStatus};
+use navara_data_requester::{
+    DataRequester, DataRequesterExtension, DataRequesterStatus, RequestOrder,
+};
 use navara_feature_component::{
     id::FeatureId,
     model::{ModelBin, ModelGeometry, ModelMarker},
@@ -88,7 +90,7 @@ use super::{
 /// - [`Cesium3dTilesMetadataDataRequesterMarker`] - Links the requester to the layer
 /// - [`Priority::Medium`] - Request priority for the data fetcher
 /// - [`DataRequester`] - Handles the actual HTTP request
-/// - [`Cesium3dTilesTreeOrder`] - Root tileset has index 0 (highest priority)
+/// - [`RequestOrder<TileOrderByDistance>`] - Secondary sort key for the request queue
 pub fn request_metadata(
     mut commands: Commands,
     mut buf: ResMut<BufferStore>,
@@ -103,9 +105,7 @@ pub fn request_metadata(
                 &mut buf,
                 DataRequesterExtension::Json,
             ),
-            Cesium3dTilesTreeOrder {
-                distance: Default::default(),
-            },
+            RequestOrder(TileOrderByDistance::default()),
         ));
     }
 }
@@ -195,14 +195,7 @@ pub fn construct_cesium_3d_tiles_tree(
                 }
             };
 
-            commands.spawn((
-                LayerId(layer.layer_id.clone()),
-                metadata,
-                tree,
-                Cesium3dTilesTreeOrder {
-                    distance: Default::default(),
-                },
-            ));
+            commands.spawn((LayerId(layer.layer_id.clone()), metadata, tree));
         }
     }
 }
