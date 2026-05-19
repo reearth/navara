@@ -12,23 +12,22 @@ import { Vector3 } from "three";
 import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../helpers/attributions";
-import { TILE_DATASETS } from "../../helpers/constants";
+import { SPLAT_DATASETS, TILE_DATASETS } from "../../helpers/constants";
 
 export type CustomDescriptions = DefaultDescriptions;
 
+// Tokyo Station — a visible landmark on the OSM base tiles.
 const CENTER = {
-  lat: 35.71006,
-  lng: 139.8107,
-  // Place near the ground: with SCALE=30 each splat is ~30m tall, so dropping
-  // by half-body keeps the feet on the surface.
-  height: 10.0,
+  lat: 35.6812,
+  lng: 139.7671,
+  height: 30.0,
 };
 
 type SplatSample = {
   url: string;
-  /** Short label used in the debug Pane. */
+  /** Folder title in the debug pane. */
   name: string;
-  /** Comparison metadata — purely for reading the screenshots. */
+  /** Free-form note shown in the debug pane. */
   note: string;
   /** Offset from CENTER in degrees (lng east, lat north). */
   dLng: number;
@@ -36,12 +35,28 @@ type SplatSample = {
   scale: number;
   /** Optional yaw rotation around the up axis (radians). */
   yaw?: number;
-  /** Optional per-sample height delta [m]. Each splat has a different model
-   * origin, so tune individually to land feet/center on the ground. */
+  /** Optional per-sample height delta [m]. */
   dHeight?: number;
 };
 
-const SAMPLES: SplatSample[] = [];
+const SAMPLES: SplatSample[] = [
+  {
+    url: SPLAT_DATASETS.quechua.url,
+    name: "quechua",
+    note: "QUECHUA - Webviewer by Christoph SCHINDELAR",
+    dLng: -0.0012,
+    dLat: 0,
+    scale: 10,
+  },
+  {
+    url: SPLAT_DATASETS.pencilSharpener.url,
+    name: "pencil-sharpener",
+    note: "Pencil sharpener shaped like a duck by Alfred Duemlein",
+    dLng: 0.0028,
+    dLat: 0,
+    scale: 200,
+  },
+];
 
 const placeSplat = (
   view: ThreeView<CustomDescriptions>,
@@ -55,16 +70,15 @@ const placeSplat = (
     lng: degreeToRadian(lng),
     height,
   });
-  // `northUpEastToFixedFrame` gives a local ENU frame at `pos` whose Y axis is
-  // the surface normal. Spark's sample splats are trained Y-down so we flip
-  // 180° around X within that frame; `sample.yaw` rotates around the local up.
+  // ENU frame at `pos` (Y = surface normal). Flip 180° around X for Y-down
+  // assets; `sample.yaw` rotates around the local up.
   const matrix = northUpEastToFixedFrame(pos);
 
   view.addMesh<SplatMeshDesc>({
     matrixWorld: matrix,
     splat: {
       url: sample.url,
-      lod: true,
+      lod: false,
     },
     rotation: { x: Math.PI, y: sample.yaw ?? -Math.PI / 2, z: 0 },
     scale: { x: sample.scale, y: sample.scale, z: sample.scale },
@@ -84,22 +98,22 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     rasterTile: { maxZoom: 23 },
   });
 
-  showAttributions([TILE_DATASETS.openstreetmap]);
+  showAttributions([
+    TILE_DATASETS.openstreetmap,
+    SPLAT_DATASETS.quechua,
+    SPLAT_DATASETS.pencilSharpener,
+  ]);
 
   for (const sample of SAMPLES) {
     placeSplat(view, sample);
   }
 
-  view.lookAt(CENTER, new Vector3(0, 300, 100));
+  view.lookAt(CENTER, new Vector3(0, 700, 400));
 
   addDebugPane(view);
 };
 
-/**
- * Tweakpane readout of the camera's geographic pose and each splat's
- * intended `(lat, lng, height)`. Useful for visually checking whether the
- * rendered splats line up with the coordinates assigned by `SAMPLES`.
- */
+/** Tweakpane debug pane: camera pose + each splat's intended position. */
 const addDebugPane = (view: ThreeView<CustomDescriptions>): void => {
   const pane = new Pane({ title: "splat debug", expanded: true });
 
