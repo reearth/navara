@@ -137,11 +137,14 @@ export class SplatMeshDesc extends MeshDesc<
       this.holdsSlot = true;
     }
 
-    const mesh = new SplatMesh({ url: cfg.url, lod: effectiveLod });
+    // Pin url locally so a concurrent `onUpdateConfig()` doesn't make
+    // the catch log the new url for an old failure.
+    const url = cfg.url;
+    const mesh = new SplatMesh({ url, lod: effectiveLod });
     mesh.initialized
       .then(() => this.requestUpdate())
       .catch((err: unknown) => {
-        console.warn(`SplatMesh load failed (${cfg.url}):`, err);
+        console.warn(`SplatMesh load failed (${url}):`, err);
       })
       .finally(() => this.releaseSlot());
     return mesh;
