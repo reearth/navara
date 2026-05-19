@@ -7,7 +7,7 @@ import {
   type ViewContext,
 } from "@navara/three";
 import { SparkRenderer, SplatMesh } from "@sparkjsdev/spark";
-import { SRGBColorSpace, Scene } from "three";
+import { SRGBColorSpace, type Scene } from "three";
 
 type SplatDescription = {
   splat?: {

@@ -401,7 +401,7 @@ importers:
   web/navara_three_default_descs:
     dependencies:
       '@sparkjsdev/spark':
-        specifier: ^2.0.0
+        specifier: 2.0.0
         version: 2.0.0(three@0.184.0)
       '@takram/three-atmosphere':
         specifier: 0.19.1
