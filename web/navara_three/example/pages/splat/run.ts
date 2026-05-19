@@ -2,7 +2,6 @@ import ThreeView, {
   geodeticToVector3,
   degreeToRadian,
   northUpEastToFixedFrame,
-  radianToDegree,
 } from "@navara/three";
 import type { SplatMeshDesc } from "@navara/three_default_descs";
 import {
@@ -228,11 +227,11 @@ const addDebugPane = (view: ThreeView<CustomDescriptions>): void => {
   view.on("postUpdate", () => {
     const geo = view.camera.positionGeographic;
     const ori = view.camera.orientation;
-    cameraState.lat = radianToDegree(geo.lat);
-    cameraState.lng = radianToDegree(geo.lng);
+    cameraState.lat = geo.lat;
+    cameraState.lng = geo.lng;
     cameraState.height = geo.height;
-    cameraState.heading = radianToDegree(ori.heading ?? 0);
-    cameraState.pitch = radianToDegree(ori.pitch ?? 0);
+    cameraState.heading = ori.heading ?? 0;
+    cameraState.pitch = ori.pitch ?? 0;
     for (const binding of cameraBindings) binding.refresh();
   });
 };
