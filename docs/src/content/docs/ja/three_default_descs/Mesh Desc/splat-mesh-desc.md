@@ -19,6 +19,8 @@ sidebar:
 
 **Description:** 読み込む splat ファイルの URL。必須パラメータです。ライセンスが確認された外部ホストの URL を指定するか、プロジェクトの `public/splat/` 配下にアセットを置いて `/splat/your-asset.ply` のように参照してください。
 
+取得失敗時は `console.warn` が出力されます。例外やイベントは発生しないため、必要に応じてアプリ側でリトライや fallback を実装してください。
+
 **Example:**
 
 ```typescript
@@ -92,15 +94,16 @@ view.addMesh<SplatMeshDesc>({
 });
 ```
 
-地球上に配置する場合は、`northUpEastToFixedFrame(pos)` を `matrixWorld` として渡し、ローカル up 軸を地表法線に揃えると組み合わせやすくなります。動作する一式の例は [splat サンプル](https://github.com/eukarya-inc/navara/tree/main/web/navara_three/example/pages/splat) を参照してください。
+## 既知の制約
 
-## 制約
+### 3DGS の仕様
 
-- **ロード失敗は通知されない**: splat URL の取得に失敗しても `console.warn` が出るだけで、例外は throw されず descriptor は生き続けます。リトライや fallback はアプリ側で実装してください。
-- **`lod: true` 時のちらつき**: 地球規模に splat を配置すると、カメラ固定でも小さな描画ずれが見えることがあります。安定描画には `lod: false`（既定）を推奨。アセット側で LoD ツリーをプリビルドすると緩和されます。
 - **シーンライティング非対応**: splat は照明をデータ内に焼き込んでおり、`SunLight` / `AmbientLight` などの影響を受けません。
-- **shadow / selective effect 非対応**: splat は `SelectiveBloomEffect` / `SelectiveOutlineEffect` の対象になりません。
-- **picking 非対応**: splat は Navara の picking パイプラインに統合されていません。
-- **同時に 1 view のみ**: 同一ページ上で複数の `ThreeView` で splat を同時描画することはサポートされません。
+- **shadow / selective effect / picking 非対応**: splat は transparent パスで描画され、shadow、`SelectiveBloomEffect` / `SelectiveOutlineEffect`、Navara の picking パイプラインのいずれの対象にもなりません。
+
+### SparkJS 既知の仕様
+
+- **`lod: true` 時のちらつき**: 地球規模に splat を配置すると、カメラ固定でも小さな描画ずれが見えることがあります。安定描画には `lod: false`（既定）を推奨。アセット側で LoD ツリーをプリビルドすると緩和されます。
+- **同時に 1 view のみ**: SparkJS がプロセス全域の static を使うため、同一ページで複数の `ThreeView` で splat を同時描画することはサポートされません。
 - **spz v4 (NGSP) は現状未対応**: spz v3 以下を使用してください。Niantic 公式 web converter が出力する v4 は読み込めません。[`nianticlabs/spz`](https://github.com/nianticlabs/spz) をローカルビルドし `PackOptions.version = 3` で出力すると互換になります。
 - **`three` の peer-range ずれ**: SparkJS パッケージが要求する `three` のバージョン範囲が本ワークスペースより古いため、install 時に `unmet peer` 警告が出ます。実行時には影響しません。

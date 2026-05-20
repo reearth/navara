@@ -19,6 +19,8 @@ In addition to the properties below, all common properties from the base class (
 
 **Description:** URL of the splat file to load. Required. Provide either the URL of an externally hosted splat with a verified license, or a path to a self-hosted asset placed under your project's `public/splat/` directory (referenced as `/splat/your-asset.ply`).
 
+On fetch failure, a `console.warn` is logged; no exception is thrown and no event is emitted. Implement retry / fallback in the application if needed.
+
 **Example:**
 
 ```typescript
@@ -92,15 +94,16 @@ view.addMesh<SplatMeshDesc>({
 });
 ```
 
-For placing a splat on the globe, combine this with `northUpEastToFixedFrame(pos)` passed as `matrixWorld` so the local up axis follows the surface normal. See the [splat example](https://github.com/eukarya-inc/navara/tree/main/web/navara_three/example/pages/splat) for a working setup.
-
 ## Limitations
 
-- **Load failures are silent**: A failed fetch for the splat URL only logs a `console.warn`; no error is thrown, and the descriptor stays alive. Implement retry / fallback in the application if needed.
-- **Visual flicker with `lod: true`**: Splats placed at globe-scale may show small flickers even at a fixed camera. Use `lod: false` (default) for stable rendering, or pre-build LoD trees at asset preparation time.
+### 3DGS spec
+
 - **No scene lighting**: Lighting is baked into the splat data; `SunLight` / `AmbientLight` do not affect rendering.
-- **No shadow / selective effect**: Splats are excluded from `SelectiveBloomEffect` and `SelectiveOutlineEffect`.
-- **No picking**: Splats are not integrated into Navara's picking pipeline.
-- **Single view at a time**: Multiple concurrent `ThreeView` instances rendering splats on the same page are not supported.
+- **No shadow / selective effect / picking**: Splats render in the transparent pass and are not integrated with shadows, `SelectiveBloomEffect` / `SelectiveOutlineEffect`, or Navara's picking pipeline.
+
+### Known SparkJS behaviors
+
+- **Visual flicker with `lod: true`**: Splats placed at globe-scale may show small flickers even at a fixed camera. Use `lod: false` (default) for stable rendering, or pre-build LoD trees at asset preparation time.
+- **Single view at a time**: SparkJS uses a process-wide static, so multiple concurrent `ThreeView` instances rendering splats are not supported.
 - **spz v4 (NGSP) is not yet supported**: Use spz v3 or earlier. Files from Niantic's v4 web converter fail to load. Build [`nianticlabs/spz`](https://github.com/nianticlabs/spz) locally and pass `PackOptions.version = 3` to produce a compatible file.
 - **`three` peer-range mismatch**: Install emits an `unmet peer` warning because the SparkJS package targets an older `three` range than this workspace; runtime is unaffected.
