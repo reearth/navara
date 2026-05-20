@@ -94,6 +94,24 @@ view.addMesh<SplatMeshDesc>({
 });
 ```
 
+## 対応仕様
+
+Navara は以下の Gaussian Splatting フォーマットに対応しています。
+
+### ファイルフォーマット
+
+| ファイルフォーマット | 説明 |
+| ------------------ | ---- |
+| `.spz` | Niantic SPZ 形式 |
+| `.ply` | Gaussian Splatting データ |
+| `.splat` | antimatter15 splat 形式 |
+| `.ksplat` | mkkellogg GaussianSplats3D 形式 |
+| `.pcsogs` | PlayCanvas Scene Optimized Gaussians |
+
+:::note
+- spz v4 (NGSP) は現状未対応です。Niantic 公式 web converter が出力する v4 は読み込めません。[`nianticlabs/spz`](https://github.com/nianticlabs/spz) をローカルビルドし `PackOptions.version = 3` で出力すると互換になります。
+:::
+
 ## 既知の制約
 
 ### 3DGS の仕様
@@ -103,7 +121,5 @@ view.addMesh<SplatMeshDesc>({
 
 ### SparkJS 既知の仕様
 
-- **`lod: true` 時のちらつき**: 地球規模に splat を配置すると、カメラ固定でも小さな描画ずれが見えることがあります。安定描画には `lod: false`（既定）を推奨。アセット側で LoD ツリーをプリビルドすると緩和されます。
-- **同時に 1 view のみ**: SparkJS がプロセス全域の static を使うため、同一ページで複数の `ThreeView` で splat を同時描画することはサポートされません。
-- **spz v4 (NGSP) は現状未対応**: spz v3 以下を使用してください。Niantic 公式 web converter が出力する v4 は読み込めません。[`nianticlabs/spz`](https://github.com/nianticlabs/spz) をローカルビルドし `PackOptions.version = 3` で出力すると互換になります。
-- **`three` の peer-range ずれ**: SparkJS パッケージが要求する `three` のバージョン範囲が本ワークスペースより古いため、install 時に `unmet peer` 警告が出ます。実行時には影響しません。
+- **`lod: true` 時のちらつき**: 地球規模に splat を配置すると、カメラ固定でも小さな描画ずれが見えることがあります。安定描画には `lod: false`（既定）を推奨。
+- **同時に 1 view のみ**: 同一ページで複数の `ThreeView` で splat を同時描画することはサポートされません (SparkJS 自体が単一のグローバルな描画コンテキストを使うため)。

@@ -94,6 +94,24 @@ view.addMesh<SplatMeshDesc>({
 });
 ```
 
+## Supported Specifications
+
+Navara supports the following Gaussian Splatting formats.
+
+### File formats
+
+| File format | Description |
+| ----------- | ----------- |
+| `.spz` | Niantic SPZ format |
+| `.ply` | Plain Gaussian Splatting data |
+| `.splat` | antimatter15 splat format |
+| `.ksplat` | mkkellogg GaussianSplats3D format |
+| `.pcsogs` | PlayCanvas Scene Optimized Gaussians |
+
+:::note
+- spz v4 (NGSP) is not yet supported. Files from Niantic's v4 web converter fail to load. Build [`nianticlabs/spz`](https://github.com/nianticlabs/spz) locally with `PackOptions.version = 3` to produce a compatible file.
+:::
+
 ## Limitations
 
 ### 3DGS spec
@@ -103,7 +121,5 @@ view.addMesh<SplatMeshDesc>({
 
 ### Known SparkJS behaviors
 
-- **Visual flicker with `lod: true`**: Splats placed at globe-scale may show small flickers even at a fixed camera. Use `lod: false` (default) for stable rendering, or pre-build LoD trees at asset preparation time.
-- **Single view at a time**: SparkJS uses a process-wide static, so multiple concurrent `ThreeView` instances rendering splats are not supported.
-- **spz v4 (NGSP) is not yet supported**: Use spz v3 or earlier. Files from Niantic's v4 web converter fail to load. Build [`nianticlabs/spz`](https://github.com/nianticlabs/spz) locally and pass `PackOptions.version = 3` to produce a compatible file.
-- **`three` peer-range mismatch**: Install emits an `unmet peer` warning because the SparkJS package targets an older `three` range than this workspace; runtime is unaffected.
+- **Visual flicker with `lod: true`**: Splats placed at globe-scale may show small flickers even at a fixed camera. Use `lod: false` (default) for stable rendering.
+- **Single view at a time**: Multiple `ThreeView` instances rendering splats on the same page are not supported (SparkJS itself uses a single global rendering context).
