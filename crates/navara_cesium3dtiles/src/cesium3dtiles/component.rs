@@ -28,17 +28,15 @@
 //!   that changes every frame (visibility, SSE, loading status).
 
 use bevy_ecs::{component::Component, entity::Entity, system::Query};
-use navara_core::{Aabb, Extent, LngLat};
+use navara_core::{BoundingSphere, BoundingVolume, Extent, LngLat, Obb};
 use navara_data_requester::DataRequesterExtension;
 use navara_feature_component::{id::FeatureId, render::RenderableFeature};
 use navara_layer::Cesium3dTilesLayer;
 use navara_material::Appearance;
 use navara_math::{FloatType, Mat4, Transform, Vec3};
 use navara_parser::cesium3dtiles::{self, tileset::Refine};
-use std::{cmp::Ordering, collections::HashMap, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
 use url::{ParseError, Url};
-
-use crate::TileOrderByDistance;
 
 /// Type alias for tile metadata from the tileset.json.
 ///
@@ -152,8 +150,11 @@ pub struct Cesium3dTileContent {
     pub refine: Refine,
     /// True for B3DM/PNTS/GLB, false for nested tileset.json.
     pub is_renderable_content: bool,
-    /// Axis-aligned bounding box for frustum culling.
-    pub bounding_volume: Option<Aabb>,
+    /// Bounding volume for frustum culling and SSE distance. Built as an OBB
+    /// for both region (ENU-aligned at patch center) and box (preserves the
+    /// source orientation) sources, so the envelope stays tight against
+    /// curved ellipsoid patches.
+    pub bounding_volume: Option<BoundingVolume>,
     /// Tile transform (inherited from parent if identity).
     pub transform: Option<Transform>,
     /// Per-frame traversal state.
@@ -189,17 +190,30 @@ impl Cesium3dTileContent {
         let bv = &tile.bounding_volume;
         let bounding_volume = match (bv.region, bv.sphere, bv.box_) {
             (Some([west, south, east, north, min_height, max_height]), _, _) => {
-                Some(Aabb::from_extent_f64(
+                Some(BoundingVolume::Obb(Obb::from_oriented_extent(
                     Extent::from_points(&[
                         LngLat::new(south as FloatType, west as FloatType),
                         LngLat::new(north as FloatType, east as FloatType),
                     ]),
                     min_height as FloatType,
                     max_height as FloatType,
-                ))
+                )))
             }
-            // TODO: Support making bounding volume from the sphere
-            (_, Some(_), _) => None,
+            (_, Some([cx, cy, cz, radius]), _) => {
+                // 3D Tiles spec: tile.transform applies to box/sphere volumes (but not to region).
+                // Use the largest unit-axis length under the transform as the radius scale
+                // so non-uniform scales stay conservative.
+                let center = Vec3::new(cx as FloatType, cy as FloatType, cz as FloatType);
+                let center_transformed = tile_transform.transform_point(center);
+                let sx = tile_transform.transform_vector(Vec3::X).length();
+                let sy = tile_transform.transform_vector(Vec3::Y).length();
+                let sz = tile_transform.transform_vector(Vec3::Z).length();
+                let scale = sx.max(sy).max(sz);
+                Some(BoundingVolume::Sphere(BoundingSphere::new(
+                    center_transformed,
+                    (radius as FloatType) * scale,
+                )))
+            }
             (
                 _,
                 _,
@@ -220,28 +234,25 @@ impl Cesium3dTileContent {
                     ],
                 ),
             ) => {
-                // Transform the bounding volume
+                // Preserve the source axes through the tile transform instead of
+                // taking an axis-aligned hull — the box bounding volume *is*
+                // oriented in 3D Tiles, and collapsing it to an AABB would
+                // reintroduce the envelope slack that this OBB pipeline exists
+                // to eliminate.
                 let center = Vec3::new(cx as FloatType, cy as FloatType, cz as FloatType);
                 let x_axis = Vec3::new(xdir0 as FloatType, xdir1 as FloatType, xdir2 as FloatType);
                 let y_axis = Vec3::new(ydir0 as FloatType, ydir1 as FloatType, ydir2 as FloatType);
                 let z_axis = Vec3::new(zdir0 as FloatType, zdir1 as FloatType, zdir2 as FloatType);
 
                 let center_transformed = tile_transform.transform_point(center);
-
                 let x_transformed = tile_transform.transform_vector(x_axis);
                 let y_transformed = tile_transform.transform_vector(y_axis);
                 let z_transformed = tile_transform.transform_vector(z_axis);
 
-                let extents = Vec3::new(
-                    x_transformed.x.abs() + y_transformed.x.abs() + z_transformed.x.abs(),
-                    x_transformed.y.abs() + y_transformed.y.abs() + z_transformed.y.abs(),
-                    x_transformed.z.abs() + y_transformed.z.abs() + z_transformed.z.abs(),
-                );
-
-                Some(Aabb {
-                    center: center_transformed,
-                    extents,
-                })
+                Some(BoundingVolume::Obb(Obb::new(
+                    center_transformed,
+                    [x_transformed, y_transformed, z_transformed],
+                )))
             }
             _ => None,
         };
@@ -403,100 +414,4 @@ pub struct RenderedCesium3dTileContent {
 #[derive(Component)]
 pub struct TileTransform {
     pub transform: Transform,
-}
-
-/// Priority ordering for spawned [`DataRequester`](navara_data_requester::DataRequester)
-/// entities, sorted by distance/SSE so nearer / higher-error tiles are
-/// fetched first.
-#[derive(Component, PartialEq, Debug, Clone)]
-pub struct Cesium3dTilesTreeOrder {
-    /// Distance-based ordering for request prioritization.
-    pub distance: TileOrderByDistance,
-}
-
-impl PartialOrd for Cesium3dTilesTreeOrder {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Ord for Cesium3dTilesTreeOrder {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.distance.cmp(&other.distance)
-    }
-}
-
-impl Eq for Cesium3dTilesTreeOrder {}
-
-#[cfg(test)]
-mod tests_cesium3dtiles_tree_order {
-    use super::Cesium3dTilesTreeOrder;
-    use crate::TileOrderByDistance;
-
-    #[test]
-    fn sorts_by_sse_desc_then_distance_asc() {
-        let mut items = [
-            Cesium3dTilesTreeOrder {
-                distance: TileOrderByDistance {
-                    sse: 3.0,
-                    distance_from_camera: 5.0,
-                },
-            },
-            Cesium3dTilesTreeOrder {
-                distance: TileOrderByDistance {
-                    sse: 2.0,
-                    distance_from_camera: 1.0,
-                },
-            },
-            Cesium3dTilesTreeOrder {
-                distance: TileOrderByDistance {
-                    sse: 3.0,
-                    distance_from_camera: 2.0,
-                },
-            },
-        ];
-
-        items.sort();
-
-        // Expect highest SSE first; for equal SSE, nearer (smaller distance) first
-        let expects = [
-            Cesium3dTilesTreeOrder {
-                distance: TileOrderByDistance {
-                    sse: 3.0,
-                    distance_from_camera: 2.0,
-                },
-            },
-            Cesium3dTilesTreeOrder {
-                distance: TileOrderByDistance {
-                    sse: 3.0,
-                    distance_from_camera: 5.0,
-                },
-            },
-            Cesium3dTilesTreeOrder {
-                distance: TileOrderByDistance {
-                    sse: 2.0,
-                    distance_from_camera: 1.0,
-                },
-            },
-        ];
-
-        for (i, result) in items.iter().enumerate() {
-            assert_eq!(result, &expects[i]);
-        }
-    }
-
-    #[test]
-    fn equality_when_distance_equal() {
-        let a = Cesium3dTilesTreeOrder {
-            distance: TileOrderByDistance {
-                sse: 1.5,
-                distance_from_camera: 42.0,
-            },
-        };
-        let b = a.clone();
-
-        assert_eq!(a, b);
-        assert_eq!(a.partial_cmp(&b), Some(std::cmp::Ordering::Equal));
-        assert_eq!(a.cmp(&b), std::cmp::Ordering::Equal);
-    }
 }

@@ -35,7 +35,7 @@
 //! When tiles are marked `Deleted`, `navara_feature::model::system::remove_batched_feature`
 //! handles final cleanup of buffers and batch tables.
 
-use bevy_app::{App, Plugin, Update};
+use bevy_app::{App, Plugin, PostUpdate, Update};
 
 mod b3dm;
 mod cesium3dtiles;
@@ -48,6 +48,7 @@ mod tile_content_parser;
 
 use bevy_ecs::schedule::IntoScheduleConfigs;
 pub use cesium3dtiles::*;
+use navara_data_requester::{DataRequesterSet, send_data_request_events_with_priority_and_sort};
 
 /// Plugin that adds Cesium 3D Tiles support to the Navara engine.
 ///
@@ -108,6 +109,11 @@ impl Plugin for Cesium3dTilesPlugin {
                 cesium3dtiles::system::update_cesium3dtiles_layer,
             )
                 .chain(),
+        )
+        .add_systems(
+            PostUpdate,
+            send_data_request_events_with_priority_and_sort::<TileOrderByDistance>
+                .in_set(DataRequesterSet::PrioritizeRequests),
         );
     }
 }

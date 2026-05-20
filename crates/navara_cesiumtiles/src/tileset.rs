@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 
 use cesiumtiles::tileset::{
-    Asset, BoundingVolume, GroupMetadata, ImplicitTiling, MetadataEntity, Statistics,
+    BoundingVolume, GroupMetadata, ImplicitTiling, MetadataEntity, Statistics,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -127,11 +127,50 @@ impl Default for Tile {
     }
 }
 
+/// Metadata about the entire tileset.
+/// Almost same with https://github.com/reearth/cesiumtiles-rs/blob/97485fe1c80577f052ae710eaa35b472bf594295/src/models/tileset.rs#L9-L32.
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct Asset {
+    /// The 3D Tiles version. The version defines the JSON schema for the tileset JSON and the base set of tile formats.
+    pub version: String,
+
+    pub copyright: Option<String>,
+
+    /// Application-specific version of this tileset, e.g., for when an existing tileset is updated.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tileset_version: Option<String>,
+
+    /// Dictionary object with extension-specific objects.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub extensions: Option<HashMap<String, Value>>,
+
+    /// Application-specific data.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub extra: Option<Value>,
+
+    /// Application-specific data.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub extras: Option<Value>,
+}
+
+impl Default for Asset {
+    fn default() -> Self {
+        Self {
+            version: "1.1".to_string(),
+            copyright: None,
+            tileset_version: None,
+            extensions: None,
+            extra: None,
+            extras: None,
+        }
+    }
+}
+
 /// A 3D Tiles tileset.
 /// Same with https://github.com/reearth/cesiumtiles-rs/blob/97485fe1c80577f052ae710eaa35b472bf594295/src/models/tileset.rs#L313
 #[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(rename_all = "camelCase")]
-#[serde(deny_unknown_fields)]
 pub struct Tileset {
     /// Metadata about the entire tileset.
     pub asset: Asset,
