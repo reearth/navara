@@ -16,8 +16,8 @@ type SplatDescription = {
   };
 };
 
-// Update accepts partials since both fields are frozen post-creation —
-// callers should be able to send only the field they (futilely) try to change.
+// Update accepts partials; `url` and `lod` are frozen post-creation
+// (only warn if an explicitly provided value differs).
 type SplatDescriptionUpdate = {
   splat?: {
     url?: string;
@@ -45,14 +45,14 @@ function acquireSparkRenderer(
   const target = ctx.scenes.transparent;
   const existing = shared.get(target);
   if (existing) {
-    // Only the lod:true → lod:false downgrade wastes memory; the reverse is fine.
+    // Only the lod:true → lod:false downgrade is order-dependent; the reverse runs fine on a LoD renderer.
     if (opts.enableLod && !existing.enableLod) {
       console.warn(
         `SplatMeshDesc: splat.lod=true requested but the shared SparkRenderer was created with splat.lod=false; rendering this mesh without LoD.`,
       );
     }
     existing.refCount += 1;
-    // Re-assert in case another view clobbered the global.
+    // Re-assert in case another view changed the global override.
     SparkRenderer.sparkOverride = existing.renderer;
     return { renderer: existing.renderer, enableLod: existing.enableLod };
   }
