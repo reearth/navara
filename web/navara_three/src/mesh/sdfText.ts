@@ -149,6 +149,9 @@ export class SDFTextMesh
         camera.position.z,
         state,
       );
+      // Keep atlas-size uniforms in sync with the (possibly resized) shared
+      // DataTexture so glyph pixel rects always normalize to the right UV.
+      mutates.updateAtlasSizes();
     };
 
     this.material = mat;
@@ -194,17 +197,9 @@ export class SDFTextMesh
     const atlasData = this._fontManager.getAtlas(this._fontUrl);
     if (!atlasData) return;
 
-    // Color atlas dimensions are only needed when the shape has color glyphs.
-    // For monochrome fonts this stays `null` and the geometry has no color quads.
-    const colorAtlasData = this._fontManager.getColorAtlas(this._fontUrl);
-
-    this._buildGlyphInstances(
-      shapeResult,
-      atlasData.width,
-      atlasData.height,
-      colorAtlasData?.width ?? 0,
-      colorAtlasData?.height ?? 0,
-    );
+    // Glyph rects are stored in pixel space and normalized in the shader using
+    // uSdfAtlasSize / uColorAtlasSize, so atlas dimensions aren't needed here.
+    this._buildGlyphInstances(shapeResult);
 
     // Skip texture creation if using a shared atlas from the parent container
     if (!this._sharedAtlas) {
@@ -479,13 +474,7 @@ export class SDFTextMesh
     return geo;
   }
 
-  private _buildGlyphInstances(
-    shapeResult: ShapeTextResult,
-    sdfAtlasWidth: number,
-    sdfAtlasHeight: number,
-    colorAtlasWidth: number,
-    colorAtlasHeight: number,
-  ): void {
+  private _buildGlyphInstances(shapeResult: ShapeTextResult): void {
     const { glyphs, metrics, unitsPerEm } = shapeResult;
 
     // Build composite key -> metrics lookup.
@@ -524,26 +513,21 @@ export class SDFTextMesh
       if (m && m.atlasW > 0 && m.atlasH > 0) {
         const px = m.isColor ? COLOR_GLYPH_PX_SIZE : SDF_PX_SIZE;
         const fuToPx = m.isColor ? fontUnitToColorPx : fontUnitToSdfPx;
-        const atlasW = m.isColor ? colorAtlasWidth : sdfAtlasWidth;
-        const atlasH = m.isColor ? colorAtlasHeight : sdfAtlasHeight;
-        if (atlasW === 0 || atlasH === 0) {
-          // Atlas not available yet — skip rather than divide by zero.
-          cursorX += glyph.xAdvance;
-          cursorY += glyph.yAdvance;
-          continue;
-        }
         const offsetPxX = (cursorX + glyph.xOffset) * fuToPx + m.bearingX;
         const offsetPxY = (cursorY + glyph.yOffset) * fuToPx + m.bearingY;
 
+        // Atlas rects are stored in PIXEL space; the shader divides by the
+        // current uSdfAtlasSize / uColorAtlasSize uniform to derive UVs, so
+        // these instance attrs survive an atlas resize without rebuilding.
         renderable.push({
           offsetEmX: offsetPxX / px,
           offsetEmY: offsetPxY / px,
           sizeEmX: m.atlasW / px,
           sizeEmY: m.atlasH / px,
-          uvL: m.atlasX / atlasW,
-          uvT: m.atlasY / atlasH,
-          uvR: (m.atlasX + m.atlasW) / atlasW,
-          uvB: (m.atlasY + m.atlasH) / atlasH,
+          uvL: m.atlasX,
+          uvT: m.atlasY,
+          uvR: m.atlasX + m.atlasW,
+          uvB: m.atlasY + m.atlasH,
           isColor: m.isColor,
         });
       }

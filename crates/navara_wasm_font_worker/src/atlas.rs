@@ -3,9 +3,21 @@ use rustc_hash::FxHashMap;
 use sdf_glyph_renderer::{BitmapGlyph, clamp_to_u8};
 
 use crate::cache::LRU_MIN_AGE;
+use wasm_bindgen::prelude::*;
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_namespace = console)]
+    fn log(s: &str);
+}
+
+
 
 /// Default SDF atlas dimensions (width x height in pixels).
 pub const DEFAULT_ATLAS_SIZE: i32 = 1024 * 2;
+
+/// Hard cap on atlas growth. Each step doubles the side length, so 8192 means
+/// we'll grow at most: 2048 → 4096 → 8192 (256 MB for the R8 pixel buffer).
+pub const MAX_ATLAS_SIZE: i32 = 1024 * 8;
 
 /// SDF buffer: padding pixels around the glyph bitmap for SDF generation.
 const SDF_BUFFER: usize = 12;
@@ -152,16 +164,28 @@ impl SDFAtlas {
 
             let alloc_size = Size::new(sdf_w as i32, sdf_h as i32);
 
-            // Try to allocate; if full, evict cold glyphs and retry
-            let alloc = self.allocator.allocate(alloc_size).or_else(|| {
-                self.evict_cold_glyphs(current_frame, LRU_MIN_AGE);
-                self.allocator.allocate(alloc_size)
-            });
+            // Try to allocate; if full, evict cold glyphs and retry; if still
+            // full, grow the atlas (up to MAX_ATLAS_SIZE) and retry once more.
+            let alloc = self
+                .allocator
+                .allocate(alloc_size)
+                .or_else(|| {
+                    self.evict_cold_glyphs(current_frame, LRU_MIN_AGE);
+                    self.allocator.allocate(alloc_size)
+                })
+                .or_else(|| {
+                    if self.grow() {
+                        new_glyphs = true;
+                        self.allocator.allocate(alloc_size)
+                    } else {
+                        None
+                    }
+                });
 
             let Some(alloc) = alloc else {
                 #[cfg(debug_assertions)]
                 eprintln!(
-                    "SDF atlas: failed to allocate space for glyph {glyph_id} (font {font_index}) after eviction"
+                    "SDF atlas: failed to allocate space for glyph {glyph_id} (font {font_index}) after eviction and grow"
                 );
                 continue;
             };
@@ -200,6 +224,42 @@ impl SDFAtlas {
             new_glyphs = true;
         }
         new_glyphs
+    }
+
+    /// Double the atlas dimensions (square) up to `MAX_ATLAS_SIZE`. Existing
+    /// glyph allocations keep their `(atlas_x, atlas_y, atlas_w, atlas_h)`
+    /// metrics — guillotiere's `grow` preserves them, and the existing pixel
+    /// data is copied row-by-row into the new wider buffer at the same coords.
+    ///
+    /// Returns `true` if the atlas was grown, `false` if the cap has already
+    /// been reached.
+    pub fn grow(&mut self) -> bool {
+        log(&format!("SDF atlas: growing from {}x{} to {}x{}", self.width, self.height, self.width * 2, self.height * 2));
+        let new_w = (self.width as i32).saturating_mul(2).min(MAX_ATLAS_SIZE);
+        let new_h = (self.height as i32).saturating_mul(2).min(MAX_ATLAS_SIZE);
+        if new_w == self.width as i32 && new_h == self.height as i32 {
+            return false;
+        }
+
+        let old_w = self.width as usize;
+        let old_h = self.height as usize;
+        let new_w_usize = new_w as usize;
+        let new_h_usize = new_h as usize;
+
+        // Repack pixel data into a wider/taller row-major buffer at the same
+        // (x, y) coordinates so existing glyph_map entries remain valid.
+        let mut new_pixels = vec![0u8; new_w_usize * new_h_usize];
+        for y in 0..old_h {
+            let src = y * old_w;
+            let dst = y * new_w_usize;
+            new_pixels[dst..dst + old_w].copy_from_slice(&self.pixel_data[src..src + old_w]);
+        }
+
+        self.allocator.grow(Size::new(new_w, new_h));
+        self.pixel_data = new_pixels;
+        self.width = new_w as u32;
+        self.height = new_h as u32;
+        true
     }
 
     /// Evict glyphs that haven't been used for at least `min_age` frames.

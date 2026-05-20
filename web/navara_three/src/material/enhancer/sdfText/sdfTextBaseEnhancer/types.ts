@@ -98,6 +98,10 @@ export type SdfTextBaseRefs = {
   uAtlas: UniformValue<DataTexture | null>;
   /** COLRv1 RGBA atlas. `null` when the font has no color glyphs. */
   uColorAtlas: UniformValue<DataTexture | null>;
+  /** Current SDF atlas pixel dimensions; updated when the Rust atlas grows. */
+  uSdfAtlasSize: UniformValue<Vector2>;
+  /** Current color atlas pixel dimensions; updated when the color atlas grows. */
+  uColorAtlasSize: UniformValue<Vector2>;
 
   // Conditional RTE/RTC position uniforms
   uRTEPositionLOW?: UniformValue<Vector3>;
@@ -143,6 +147,12 @@ export type SdfTextBaseMutates = Mutates<
      * Set the COLRv1 color atlas texture external ref.
      */
     setColorAtlasTexture: (texture: UniformValue<DataTexture | null>) => void;
+    /**
+     * Sync the atlas-size uniforms with the currently-bound atlas textures.
+     * Cheap to call every frame; the shader divides glyph pixel rects by these
+     * to derive UVs, so this is how atlas resizes propagate to existing meshes.
+     */
+    updateAtlasSizes: () => void;
     /**
      * Update position uniforms (RTE or RTC).
      */
