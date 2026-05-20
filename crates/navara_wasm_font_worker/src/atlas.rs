@@ -3,14 +3,6 @@ use rustc_hash::FxHashMap;
 use sdf_glyph_renderer::{BitmapGlyph, clamp_to_u8};
 
 use crate::cache::LRU_MIN_AGE;
-use wasm_bindgen::prelude::*;
-#[wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen(js_namespace = console)]
-    fn log(s: &str);
-}
-
-
 
 /// Default SDF atlas dimensions (width x height in pixels).
 pub const DEFAULT_ATLAS_SIZE: i32 = 1024 * 2;
@@ -234,7 +226,6 @@ impl SDFAtlas {
     /// Returns `true` if the atlas was grown, `false` if the cap has already
     /// been reached.
     pub fn grow(&mut self) -> bool {
-        log(&format!("SDF atlas: growing from {}x{} to {}x{}", self.width, self.height, self.width * 2, self.height * 2));
         let new_w = (self.width as i32).saturating_mul(2).min(MAX_ATLAS_SIZE);
         let new_h = (self.height as i32).saturating_mul(2).min(MAX_ATLAS_SIZE);
         if new_w == self.width as i32 && new_h == self.height as i32 {
