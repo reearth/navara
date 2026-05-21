@@ -1,11 +1,11 @@
 ---
 title: SplatMeshDesc
-description: 3D Gaussian Splat mesh descriptor for navara_three (powered by SparkJS).
+description: 3D Gaussian Splat mesh descriptor for navara_three.
 sidebar:
   order: 116
 ---
 
-The `SplatMeshDesc` class is a mesh descriptor that renders 3D Gaussian Splat assets (`.spz`, `.ply`, `.splat`, `.ksplat`, `.pcsogs`) via [SparkJS](https://sparkjs.dev/).
+The `SplatMeshDesc` class is a mesh descriptor that renders 3D Gaussian Splat assets (`.spz`, `.ply`, `.sog`, `.rad`, `.splat`, `.ksplat`).
 
 It is registered as the `"splat"` mesh key by `DefaultPlugin`, so any `view.addMesh({ splat: { ... } })` call routes to this descriptor.
 
@@ -37,7 +37,7 @@ On fetch failure, a `console.warn` is logged; no exception is thrown and no even
 
 **Default:** `false`
 
-**Description:** Enable [SparkJS Level-of-Detail](https://sparkjs.dev/docs/lod-getting-started/). Requires assets with a pre-built LoD tree (e.g. via `spark-cli ... --quality`); raw PLY exports may render with artifacts. See Limitations.
+**Description:** Enable Level-of-Detail rendering to draw only the splats needed at the current camera distance. Works with any 3DGS asset at runtime; pre-building the LoD tree at asset preparation time speeds up the initial load and avoids runtime tree construction.
 
 **Example:**
 
@@ -85,7 +85,7 @@ const splat = view.addMesh<SplatMeshDesc>({
 
 ### Y-down Asset Correction
 
-Many publicly distributed splat assets are trained in **Y-down (image-space)** convention and appear upside-down in a Y-up world. Apply a 180° rotation around the X axis to correct:
+If a splat is trained in **Y-down (image-space)** convention, it will appear upside-down in a Y-up world. In that case, apply a 180° rotation around the X axis to correct:
 
 ```typescript
 view.addMesh<SplatMeshDesc>({
@@ -104,9 +104,10 @@ Navara supports the following Gaussian Splatting formats.
 | ----------- | ----------- |
 | `.spz` | Niantic SPZ format |
 | `.ply` | Plain Gaussian Splatting data |
+| `.sog` | PlayCanvas Scene Optimized Gaussians |
+| `.rad` | Pre-built LoD asset (output of `build-lod`) |
 | `.splat` | antimatter15 splat format |
 | `.ksplat` | mkkellogg GaussianSplats3D format |
-| `.pcsogs` | PlayCanvas Scene Optimized Gaussians |
 
 :::note
 - spz v4 (NGSP) is not yet supported. Files from Niantic's v4 web converter fail to load. Build [`nianticlabs/spz`](https://github.com/nianticlabs/spz) locally with `PackOptions.version = 3` to produce a compatible file.
@@ -114,12 +115,5 @@ Navara supports the following Gaussian Splatting formats.
 
 ## Limitations
 
-### 3DGS spec
-
 - **No scene lighting**: Lighting is baked into the splat data; `SunLight` / `AmbientLight` do not affect rendering.
 - **No shadow / selective effect / picking**: Splats render in the transparent pass and are not integrated with shadows, `SelectiveBloomEffect` / `SelectiveOutlineEffect`, or Navara's picking pipeline.
-
-### Known SparkJS behaviors
-
-- **Visual flicker with `lod: true`**: Splats placed at globe-scale may show small flickers even at a fixed camera. Use `lod: false` (default) for stable rendering.
-- **Single view at a time**: Multiple `ThreeView` instances rendering splats on the same page are not supported (SparkJS itself uses a single global rendering context).

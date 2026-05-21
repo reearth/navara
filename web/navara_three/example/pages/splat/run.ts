@@ -70,7 +70,7 @@ const placeSplat = (
     lng: degreeToRadian(lng),
     height,
   });
-  // ENU frame at `pos` (Y = surface normal). Flip 180° around X for Y-down
+  // NUE frame at `pos` (Y = surface normal). Flip 180° around X for Y-down
   // assets; `sample.yaw` rotates around the local up.
   const matrix = northUpEastToFixedFrame(pos);
 
