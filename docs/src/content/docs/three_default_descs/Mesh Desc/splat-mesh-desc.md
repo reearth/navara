@@ -83,9 +83,9 @@ const splat = view.addMesh<SplatMeshDesc>({
 });
 ```
 
-### Y-down Asset Correction
+### Upside-down correction
 
-If a splat is trained in **Y-down (image-space)** convention, it will appear upside-down in a Y-up world. In that case, apply a 180° rotation around the X axis to correct:
+If a splat appears upside-down in the scene, apply a 180° rotation around the X axis to correct:
 
 ```typescript
 view.addMesh<SplatMeshDesc>({

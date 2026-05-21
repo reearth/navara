@@ -83,9 +83,9 @@ const splat = view.addMesh<SplatMeshDesc>({
 });
 ```
 
-### Y-down アセットの補正
+### 逆さま表示の補正
 
-splat アセットが **Y-down（画像空間）** で訓練されている場合、Y-up のワールドに配置すると逆さまになります。その場合は X 軸まわりに 180° 回転すると補正できます:
+splat がシーン上で逆さまに表示される場合は、X 軸まわりに 180° 回転で補正できます:
 
 ```typescript
 view.addMesh<SplatMeshDesc>({
