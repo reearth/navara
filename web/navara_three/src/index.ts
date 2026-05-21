@@ -40,7 +40,6 @@ import { Color } from "./Color";
 import { createDefaultConcurrencyManager } from "./concurrency";
 import { WATER_NORMAL_URL } from "./constants/assets";
 import {
-  MeshDesc,
   LightDesc,
   EffectDesc,
   ViewContext,
@@ -52,7 +51,12 @@ import {
   type EffectDescConstructor,
   UnknownTypeError,
 } from "./core";
-import { MeshHandle, LightHandle, EffectHandle } from "./core/BaseHandle";
+import {
+  MeshHandle,
+  LightHandle,
+  EffectHandle,
+  type AnyMeshDesc,
+} from "./core/BaseHandle";
 import { Registries } from "./core/Registries";
 import { getDevicePixelRatio, isMobileDevice } from "./device";
 import {
@@ -80,6 +84,7 @@ import { FinalCopyEffectDesc } from "./layers/effect/FinalCopyEffectDesc";
 import { LayersManager } from "./layersManager";
 import { overrideMaterialsForMRT } from "./material";
 import type { TileMesh } from "./mesh/tile";
+import { setupWebGLNodesHandler } from "./nodes";
 import { RenderPassOrchestrator } from "./orchestrators/RenderPassOrchestrator";
 import { PickHelper } from "./pick/pickHelper";
 import { TerrainPicker } from "./pick/pickTerrain";
@@ -135,6 +140,7 @@ export * from "./layer";
 export * from "./effects";
 export * from "./shaders";
 export * from "./material";
+export * from "./nodes";
 export * from "./core";
 export { BufferView } from "./bufferView";
 export * from "./layers";
@@ -575,6 +581,9 @@ export default class ThreeView<
     renderer.autoClearStencil = false;
     renderer.autoClearColor = false;
     renderer.autoClearDepth = false;
+
+    setupWebGLNodesHandler(renderer);
+
     this._renderer = renderer;
 
     renderer.shadowMap.enabled = !!options.shadow;
@@ -1223,7 +1232,7 @@ export default class ThreeView<
    * @param desc - Mesh configuration object
    * @returns A MeshHandle for controlling the added mesh
    */
-  addMesh<L extends MeshDesc = MeshDesc>(
+  addMesh<L extends AnyMeshDesc = AnyMeshDesc>(
     config: OmitType<MeshConfig | NonNullable<D["mesh"]>>,
   ): MeshHandle<L> {
     // Find which mesh type from config

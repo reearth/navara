@@ -174,6 +174,9 @@ export class SunLight extends EventHandler<SunLightEvents> {
 
     // Update CSM if enabled
     this.updateCSM();
+
+    this.raw.updateMatrixWorld(true);
+    this.raw.target.updateMatrixWorld(true);
   }
 
   setTransmittanceTexture(texture: Texture) {

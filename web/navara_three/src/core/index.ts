@@ -23,7 +23,32 @@ export {
   type InstancedMeshUpdate,
   type InstancedChildConfig,
 } from "./InstancedMeshDesc";
-export { MeshDescRegistry, type MeshDescConstructor } from "./MeshDescRegistry";
+export {
+  MeshDescBase,
+  type MeshDescBaseConfig,
+  type MeshDescBaseUpdate,
+  type MeshDescBaseInstance,
+} from "./MeshDescBase";
+export {
+  NewMeshDesc,
+  type MeshDescConfig,
+  type MeshDescUpdate,
+} from "./NewMeshDesc";
+export {
+  NewInstancedMeshDesc,
+  type NewInstancedMeshConfig,
+  type NewInstancedMeshUpdate,
+  type NewInstancedChildConfig,
+  type InstancedMeshDescConfig,
+  type InstancedMeshDescUpdate,
+  type InstancedMeshDescChildConfig,
+} from "./NewInstancedMeshDesc";
+export {
+  MeshDescRegistry,
+  type MeshDescConstructor,
+  type AnyMeshConfig,
+} from "./MeshDescRegistry";
+export { type AnyMeshDesc } from "./BaseHandle";
 export { LightDesc, type LightUpdate, type LightConfig } from "./LightDesc";
 export {
   LightDescRegistry,
