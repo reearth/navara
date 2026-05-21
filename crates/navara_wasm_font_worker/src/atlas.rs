@@ -7,7 +7,7 @@ use crate::cache::LRU_MIN_AGE;
 pub const DEFAULT_ATLAS_SIZE: i32 = 1024 * 2;
 
 /// Hard cap on atlas growth. Each step doubles the side length, so 8192 means
-/// we'll grow at most: 2048 → 4096 → 8192 (256 MB for the R8 pixel buffer).
+/// we'll grow at most: 2048 → 4096 → 8192 (~64 MiB for the R8 pixel buffer).
 pub const MAX_ATLAS_SIZE: i32 = 1024 * 8;
 
 /// SDF buffer: padding pixels around the glyph bitmap for SDF generation.
