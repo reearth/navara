@@ -50,6 +50,11 @@ export {
   DEFAULT_GLTF_MODEL_DESCRIPTION,
 } from "./GLTFModelDesc";
 export {
+  SplatMeshDesc,
+  type SplatMeshConfig,
+  type SplatMeshUpdate,
+} from "./SplatMeshDesc";
+export {
   TubeMeshDesc,
   type TubeMeshConfig,
   type TubeMeshUpdate,

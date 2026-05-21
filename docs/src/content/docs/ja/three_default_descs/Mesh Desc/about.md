@@ -31,6 +31,7 @@ navara_threeでは、以下のMeshDescタイプが利用可能です:
 | [SmoothLineMeshDesc](./smooth-line-mesh-desc)     | カトマル・ロム曲線による滑らかなラインを描画するDescriptor                                |
 | [SnowMeshDesc](./snow-mesh-desc)                  | 雪のパーティクルエフェクトを表示するDescriptor                                            |
 | [SphereMeshDesc](./sphere-mesh-desc)              | 球体(Sphere)ジオメトリを描画するDescriptor                                                |
+| [SplatMeshDesc](./splat-mesh-desc)                | SparkJS による 3D Gaussian Splat アセットを描画するDescriptor                            |
 | [InstancedSphereMeshDesc](./instanced-sphere-mesh-desc) | GPU インスタンシングを使用して複数の球を1回の描画コールでレンダリングするDescriptor          |
 | [StarsDesc](./stars-desc)                         | 星空を描画するDescriptor                                                                  |
 | [TubeMeshDesc](./tube-mesh-desc)                  | チューブ(Tube)ジオメトリを描画するDescriptor                                              |
