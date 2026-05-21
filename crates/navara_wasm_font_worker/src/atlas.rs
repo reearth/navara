@@ -3,7 +3,6 @@ use rustc_hash::FxHashMap;
 use sdf_glyph_renderer::{BitmapGlyph, clamp_to_u8};
 
 use crate::cache::LRU_MIN_AGE;
-
 /// Default SDF atlas dimensions (width x height in pixels).
 pub const DEFAULT_ATLAS_SIZE: i32 = 1024 * 2;
 
@@ -57,7 +56,7 @@ pub struct SDFAtlas {
     pub height: u32,
     /// Map from composite key `(font_index << 32 | glyph_id)` to metrics
     pub glyph_map: FxHashMap<u64, GlyphMetrics>,
-    /// LRU tracking: composite key → last frame the glyph was used
+    /// LRU tracking: composite key → tick at which the glyph was last used.
     pub last_used: FxHashMap<u64, u64>,
 }
 
@@ -79,9 +78,9 @@ impl SDFAtlas {
         }
     }
 
-    /// Mark a glyph as used this frame (for LRU tracking).
-    pub fn touch(&mut self, key: u64, current_frame: u64) {
-        self.last_used.insert(key, current_frame);
+    /// Mark a glyph as used at the given tick (for LRU tracking).
+    pub fn touch(&mut self, key: u64, tick: u64) {
+        self.last_used.insert(key, tick);
     }
 
     /// Check if a glyph is already in the atlas.
@@ -114,14 +113,14 @@ impl SDFAtlas {
         raster_font: &fontdue::Font,
         font_index: u32,
         glyph_ids: &[u32],
-        current_frame: u64,
+        tick: u64,
     ) -> bool {
         let mut new_glyphs = false;
         for &glyph_id in glyph_ids {
             let key = composite_key(font_index, glyph_id);
 
             // Always touch the glyph for LRU, even if already present
-            self.touch(key, current_frame);
+            self.touch(key, tick);
 
             if self.contains(key) {
                 continue;
@@ -162,7 +161,7 @@ impl SDFAtlas {
                 .allocator
                 .allocate(alloc_size)
                 .or_else(|| {
-                    self.evict_cold_glyphs(current_frame, LRU_MIN_AGE);
+                    self.evict_cold_glyphs(tick, LRU_MIN_AGE);
                     self.allocator.allocate(alloc_size)
                 })
                 .or_else(|| {
@@ -253,16 +252,18 @@ impl SDFAtlas {
         true
     }
 
-    /// Evict glyphs that haven't been used for at least `min_age` frames.
+    /// Evict glyphs that haven't been used for at least `min_age` ticks.
     ///
+    /// A tick is one `prepareTextBatch` call (see [`LRU_MIN_AGE`]), so a glyph
+    /// is evictable once 5 batches have completed without touching it.
     /// Frees atlas space by deallocating the coldest glyphs first.
-    fn evict_cold_glyphs(&mut self, current_frame: u64, min_age: u64) {
+    fn evict_cold_glyphs(&mut self, tick: u64, min_age: u64) {
         let evictable: Vec<(u64, u64)> = self
             .last_used
             .iter()
-            .filter_map(|(&key, &last_frame)| {
-                if current_frame.saturating_sub(last_frame) >= min_age {
-                    Some((key, last_frame))
+            .filter_map(|(&key, &last_tick)| {
+                if tick.saturating_sub(last_tick) >= min_age {
+                    Some((key, last_tick))
                 } else {
                     None
                 }

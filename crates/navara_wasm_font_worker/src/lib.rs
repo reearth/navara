@@ -134,7 +134,7 @@ impl FontCache {
     /// atlas (SDF for monochrome fonts, color for COLRv1 fonts).
     #[wasm_bindgen(js_name = shapeText)]
     pub fn wasm_shape_text(&mut self, url: &str, text: &str) -> Option<ShapeTextResult> {
-        let current_frame = self.current_frame;
+        let tick = self.tick;
         let entry = self.fonts.get(url)?;
 
         let shaped = shaping::shape_text(&entry.data, text)?;
@@ -148,11 +148,11 @@ impl FontCache {
         let atlas_changed = if is_color {
             let font_data = &self.fonts.get(url)?.data;
             let color_atlas = self.color_atlases.get_mut(&atlas_key)?;
-            color_atlas.ensure_glyphs_in_atlas(font_data, font_index, &glyph_ids, current_frame)
+            color_atlas.ensure_glyphs_in_atlas(font_data, font_index, &glyph_ids, tick)
         } else {
             let raster_font = &self.fonts.get(url)?.raster_font;
             let atlas = self.atlases.get_mut(&atlas_key)?;
-            atlas.ensure_glyphs_in_atlas(raster_font, font_index, &glyph_ids, current_frame)
+            atlas.ensure_glyphs_in_atlas(raster_font, font_index, &glyph_ids, tick)
         };
 
         let glyphs: Vec<WasmShapedGlyph> = shaped
@@ -235,9 +235,10 @@ impl FontCache {
         })
     }
 
-    /// Increment the frame counter for LRU tracking.
-    #[wasm_bindgen(js_name = tickFrame)]
-    pub fn wasm_tick_frame(&mut self) {
-        self.current_frame += 1;
+    /// Advance the LRU tick counter. Called once per `prepareTextBatch`, so a
+    /// tick is one batch — not a rendered frame (see [`LRU_MIN_AGE`]).
+    #[wasm_bindgen(js_name = tick)]
+    pub fn wasm_tick(&mut self) {
+        self.tick += 1;
     }
 }
