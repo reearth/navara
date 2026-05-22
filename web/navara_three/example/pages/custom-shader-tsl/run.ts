@@ -2,6 +2,7 @@ import ThreeView, {
   Color,
   degreeToRadian,
   geodeticToVector3,
+  JAPAN_GSI_ELEVATION_DECODER,
   northUpEastToFixedFrame,
 } from "@navara/three";
 import type { BoxMeshDesc } from "@navara/three_default_descs";
@@ -13,7 +14,7 @@ import { color, mix, sin, time, uv, vec3 } from "three/tsl";
 import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../helpers/attributions";
-import { TILE_DATASETS } from "../../helpers/constants";
+import { TERRAIN_DATASETS, TILE_DATASETS } from "../../helpers/constants";
 import { addCameraControl, addDateControl } from "../../helpers/control";
 
 export type CustomDescriptions = DefaultDescriptions;
@@ -25,14 +26,41 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   await view.init();
 
   const defaultAtmospheres = defaultPlugin.addDefaultPhotorealScene();
-  // TODO: Support CSM
-  defaultAtmospheres.sun.update({ sun: { intensity: 1, castShadow: false } });
+  defaultAtmospheres.sun.update({
+    sun: { intensity: 1, castShadow: true },
+  });
   view.atmosphere.date.setHours(10);
 
   view.addLayer({
     type: "tiles",
     data: { url: TILE_DATASETS.openstreetmap.url },
     rasterTile: { maxZoom: 23 },
+  });
+  view.addLayer({
+    type: "terrain",
+    data: {
+      url: TERRAIN_DATASETS.gsi.url,
+    },
+    rasterTerrain: {
+      maxZoom: 15,
+      minZoom: 6,
+      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+      castShadow: true,
+      receiveShadow: true,
+    },
+  });
+  view.addLayer({
+    type: "tiles",
+    data: {
+      url: TERRAIN_DATASETS.gsi.url,
+    },
+    rasterTile: {
+      maxZoom: 15,
+      minZoom: 6,
+    },
+    hillshade: {
+      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+    },
   });
 
   // ------------------------------------------------------------------

@@ -3,6 +3,7 @@ import type { Core } from "@navara/engine";
 import type { ConcurrencyManager } from "@navara/worker";
 import type { Pass as PostProcessingPass } from "postprocessing";
 import type { Material, Object3D, WebGLRenderer } from "three";
+import type { BasicNodeLibrary } from "three/webgpu";
 import invariant from "tiny-invariant";
 
 import type { LayersManager } from "../layersManager";
@@ -59,6 +60,7 @@ export class ViewContext extends EventHandler<ViewContextEvents> {
     private _concurrencyManager: ConcurrencyManager,
     private _core: Core,
     private _meshes: MeshCache,
+    private _nodeLibrary: BasicNodeLibrary,
   ) {
     super();
 
@@ -121,6 +123,13 @@ export class ViewContext extends EventHandler<ViewContextEvents> {
   /** Get the underlying WebGLRenderer instance. */
   getRenderer(): WebGLRenderer {
     return this.renderPassOrchestrator.effectComposer.getRenderer();
+  }
+
+  /**
+   * Get the TSL node library for this view.
+   */
+  getNodeLibrary(): BasicNodeLibrary {
+    return this._nodeLibrary;
   }
 
   /** Get the input buffer from the effect composer. */

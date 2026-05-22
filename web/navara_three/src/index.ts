@@ -32,6 +32,7 @@ import {
   Group,
   PCFShadowMap,
 } from "three";
+import type { BasicNodeLibrary } from "three/webgpu";
 import invariant from "tiny-invariant";
 
 import { Atmosphere, type AtmosphereOptions } from "./atmosphere";
@@ -265,6 +266,7 @@ export default class ThreeView<
 > extends EventHandler<ViewEvents> {
   private _camera: ThreeViewCamera;
   private _renderer: WebGLRenderer;
+  private _nodeLibrary: BasicNodeLibrary;
   private _globe!: Globe;
   private _atmosphere: Atmosphere;
 
@@ -582,7 +584,7 @@ export default class ThreeView<
     renderer.autoClearColor = false;
     renderer.autoClearDepth = false;
 
-    setupWebGLNodesHandler(renderer);
+    this._nodeLibrary = setupWebGLNodesHandler(renderer);
 
     this._renderer = renderer;
 
@@ -868,6 +870,7 @@ export default class ThreeView<
       concurrencyManager,
       this._core,
       this._meshes,
+      this._nodeLibrary,
     );
     this.registries = new Registries(this, this.viewContext);
     this.eventContext = new EventContext({
