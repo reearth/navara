@@ -44,8 +44,8 @@ export class FontWorkerClient {
       this.dispose();
     };
 
-    // Trigger WASM init by sending a tickFrame
-    this._ready = this._send("tickFrame", undefined).then(() => undefined);
+    // Trigger WASM init by sending a tick
+    this._ready = this._send("tick", undefined).then(() => undefined);
     this._concurrencyManager.increment();
   }
 
@@ -71,8 +71,8 @@ export class FontWorkerClient {
     return this._send("unloadFont", { url }) as Promise<{ ok: boolean }>;
   }
 
-  async tickFrame(): Promise<void> {
-    return this._send("tickFrame", undefined) as Promise<void>;
+  async tick(): Promise<void> {
+    return this._send("tick", undefined) as Promise<void>;
   }
 
   /** Shape multiple texts in one worker round-trip. */

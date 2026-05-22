@@ -27,7 +27,7 @@ pub struct ColorAtlas {
     pub height: u32,
     /// Map from composite key `(font_index << 32 | glyph_id)` to metrics.
     pub glyph_map: FxHashMap<u64, GlyphMetrics>,
-    /// LRU tracking: composite key → last frame the glyph was used.
+    /// LRU tracking: composite key → tick at which the glyph was last used.
     pub last_used: FxHashMap<u64, u64>,
 }
 
@@ -44,8 +44,8 @@ impl ColorAtlas {
         }
     }
 
-    pub fn touch(&mut self, key: u64, current_frame: u64) {
-        self.last_used.insert(key, current_frame);
+    pub fn touch(&mut self, key: u64, tick: u64) {
+        self.last_used.insert(key, tick);
     }
 
     pub fn contains(&self, key: u64) -> bool {
@@ -73,12 +73,12 @@ impl ColorAtlas {
         font_data: &[u8],
         font_index: u32,
         glyph_ids: &[u32],
-        current_frame: u64,
+        tick: u64,
     ) -> bool {
         let mut new_glyphs = false;
         for &glyph_id in glyph_ids {
             let key = composite_key(font_index, glyph_id);
-            self.touch(key, current_frame);
+            self.touch(key, tick);
             if self.contains(key) {
                 continue;
             }
@@ -90,7 +90,7 @@ impl ColorAtlas {
 
             let alloc_size = Size::new(bitmap.width as i32, bitmap.height as i32);
             let alloc = self.allocator.allocate(alloc_size).or_else(|| {
-                self.evict_cold_glyphs(current_frame, LRU_MIN_AGE);
+                self.evict_cold_glyphs(tick, LRU_MIN_AGE);
                 self.allocator.allocate(alloc_size)
             });
 
@@ -142,12 +142,12 @@ impl ColorAtlas {
         new_glyphs
     }
 
-    fn evict_cold_glyphs(&mut self, current_frame: u64, min_age: u64) {
+    fn evict_cold_glyphs(&mut self, tick: u64, min_age: u64) {
         let evictable: Vec<u64> = self
             .last_used
             .iter()
-            .filter_map(|(&key, &last_frame)| {
-                (current_frame.saturating_sub(last_frame) >= min_age).then_some(key)
+            .filter_map(|(&key, &last_tick)| {
+                (tick.saturating_sub(last_tick) >= min_age).then_some(key)
             })
             .collect();
         for key in evictable {

@@ -523,7 +523,18 @@ export class FontManager {
 
     const existing = this._textureCache.get(key);
     if (existing) {
-      // Update in-place if atlas data changed
+      // If the atlas grew, the GPU storage is still sized for the old image.
+      // Calling dispose() releases the GL handle so three.js runs a fresh
+      // texImage2D at the new dimensions on the next render — avoids the
+      // `glTexSubImage2D: Offset overflows texture dimensions` error from
+      // trying to sub-upload a larger buffer into the existing allocation.
+      // The DataTexture instance is preserved so existing meshes keep their refs.
+      const dimsChanged =
+        existing.image?.width !== atlasData.width ||
+        existing.image?.height !== atlasData.height;
+      if (dimsChanged) {
+        existing.dispose();
+      }
       existing.image = {
         data: atlasData.data,
         width: atlasData.width,
@@ -571,6 +582,15 @@ export class FontManager {
 
     const existing = this._colorTextureCache.get(key);
     if (existing) {
+      // Mirror the SDF path: if the color atlas grew, dispose the existing GL
+      // handle so three.js reallocates at the new size on the next render
+      // instead of overflowing texSubImage2D.
+      const dimsChanged =
+        existing.image?.width !== atlasData.width ||
+        existing.image?.height !== atlasData.height;
+      if (dimsChanged) {
+        existing.dispose();
+      }
       existing.image = {
         data: atlasData.data,
         width: atlasData.width,

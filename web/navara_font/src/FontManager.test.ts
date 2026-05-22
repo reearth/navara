@@ -64,6 +64,8 @@ vi.mock("three", () => {
     DataTexture: MockDataTexture,
     LinearFilter: 1006,
     RedFormat: 1028,
+    RGBAFormat: 1023,
+    SRGBColorSpace: "srgb",
     UnsignedByteType: 1009,
   };
 });
@@ -1437,6 +1439,125 @@ describe("FontManager", () => {
 
       const tex = manager.getAtlasTexture("TestFamily");
       expect(tex).not.toBeNull();
+    });
+
+    it("should dispose the existing texture when atlas dimensions grow but preserve the instance", async () => {
+      await manager.loadFont(FONT_URL);
+      await manager.prepareText(FONT_URL, "hello");
+      const tex1 = manager.getAtlasTexture(FONT_URL);
+      expect(tex1).not.toBeNull();
+      expect(tex1!.image.width).toBe(256);
+      expect((tex1 as unknown as Record<string, unknown>).disposed).toBe(false);
+
+      // Second batch returns an atlas at the grown size — mirrors the worker
+      // doubling the SDF atlas when it ran out of space.
+      mocks.mockPrepareTextBatch.mockImplementationOnce(
+        async (
+          fontUrl: string,
+          texts: string[],
+        ): Promise<BatchPrepareTextResult> => ({
+          results: texts.map((text) => ({
+            text,
+            shapeResult: createShapeResult(text),
+          })),
+          atlas: {
+            data: new Uint8Array([5, 6, 7, 8]),
+            width: 512,
+            height: 512,
+          },
+          colorAtlas: null,
+          atlasKey: fontUrl,
+        }),
+      );
+      await manager.prepareText(FONT_URL, "world");
+
+      const tex2 = manager.getAtlasTexture(FONT_URL);
+      expect(tex2).toBe(tex1); // same DataTexture instance preserved
+      expect((tex2 as unknown as Record<string, unknown>).disposed).toBe(true);
+      expect(tex2!.image.width).toBe(512);
+      expect(tex2!.image.height).toBe(512);
+      expect(tex2!.needsUpdate).toBe(true);
+    });
+
+    it("should NOT dispose the existing texture when dimensions are unchanged", async () => {
+      await manager.loadFont(FONT_URL);
+      await manager.prepareText(FONT_URL, "hello");
+      const tex1 = manager.getAtlasTexture(FONT_URL);
+      expect((tex1 as unknown as Record<string, unknown>).disposed).toBe(false);
+
+      // Atlas data changes but dimensions stay the same — no GL reallocation
+      // is needed and we should keep the existing handle alive.
+      await manager.prepareText(FONT_URL, "world");
+      const tex2 = manager.getAtlasTexture(FONT_URL);
+
+      expect(tex2).toBe(tex1);
+      expect((tex2 as unknown as Record<string, unknown>).disposed).toBe(false);
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // getColorAtlasTexture
+  // -----------------------------------------------------------------------
+
+  describe("getColorAtlasTexture", () => {
+    function setupColorBatchMock(width: number, height: number) {
+      mocks.mockPrepareTextBatch.mockImplementationOnce(
+        async (
+          fontUrl: string,
+          texts: string[],
+        ): Promise<BatchPrepareTextResult> => ({
+          results: texts.map((text) => ({
+            text,
+            shapeResult: createShapeResult(text),
+          })),
+          atlas: {
+            data: new Uint8Array(4),
+            width: 256,
+            height: 256,
+          },
+          colorAtlas: {
+            data: new Uint8Array(width * height * 4),
+            width,
+            height,
+          },
+          atlasKey: fontUrl,
+        }),
+      );
+    }
+
+    it("should dispose the existing color texture when its dimensions grow", async () => {
+      await manager.loadFont(FONT_URL);
+      setupColorBatchMock(128, 128);
+      await manager.prepareText(FONT_URL, "hello");
+      const tex1 = manager.getColorAtlasTexture(FONT_URL);
+      expect(tex1).not.toBeNull();
+      expect(tex1!.image.width).toBe(128);
+      expect((tex1 as unknown as Record<string, unknown>).disposed).toBe(false);
+
+      setupColorBatchMock(256, 256);
+      await manager.prepareText(FONT_URL, "world");
+      const tex2 = manager.getColorAtlasTexture(FONT_URL);
+
+      expect(tex2).toBe(tex1);
+      expect((tex2 as unknown as Record<string, unknown>).disposed).toBe(true);
+      expect(tex2!.image.width).toBe(256);
+      expect(tex2!.image.height).toBe(256);
+      expect(tex2!.needsUpdate).toBe(true);
+    });
+
+    it("should NOT dispose the existing color texture when dimensions are unchanged", async () => {
+      await manager.loadFont(FONT_URL);
+      setupColorBatchMock(128, 128);
+      await manager.prepareText(FONT_URL, "hello");
+      const tex1 = manager.getColorAtlasTexture(FONT_URL);
+      expect((tex1 as unknown as Record<string, unknown>).disposed).toBe(false);
+
+      setupColorBatchMock(128, 128);
+      await manager.prepareText(FONT_URL, "world");
+      const tex2 = manager.getColorAtlasTexture(FONT_URL);
+
+      expect(tex2).toBe(tex1);
+      expect((tex2 as unknown as Record<string, unknown>).disposed).toBe(false);
     });
   });
 
