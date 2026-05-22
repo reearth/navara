@@ -400,6 +400,9 @@ importers:
 
   web/navara_three_default_descs:
     dependencies:
+      '@sparkjsdev/spark':
+        specifier: 2.0.0
+        version: 2.0.0(three@0.184.0)
       '@takram/three-atmosphere':
         specifier: 0.19.1
         version: 0.19.1(@react-three/fiber@9.1.2(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(three@0.184.0))(postprocessing@6.38.3(three@0.184.0))(react@19.2.5)(three@0.184.0)
@@ -2125,6 +2128,11 @@ packages:
   '@sindresorhus/merge-streams@4.0.0':
     resolution: {integrity: sha512-tlqY9xq5ukxTUZBmoOp+m61cqwQD5pHJtFY3Mn8CA8ps6yghLH/Hw8UPdqg4OLmFW3IFlcXnQNmo/dh8HzXYIQ==}
     engines: {node: '>=18'}
+
+  '@sparkjsdev/spark@2.0.0':
+    resolution: {integrity: sha512-W1p7NM4xXcUAVVcVus2mIFwcAC3VckyE0l4wXJuSmhcOgb6hHpqhQ/Ks9MK9ts7j23K+UwbCBwe+aTc/zgGygw==}
+    peerDependencies:
+      three: ^0.180.0
 
   '@standard-schema/spec@1.1.0':
     resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
@@ -8200,6 +8208,11 @@ snapshots:
   '@shikijs/vscode-textmate@10.0.2': {}
 
   '@sindresorhus/merge-streams@4.0.0': {}
+
+  '@sparkjsdev/spark@2.0.0(three@0.184.0)':
+    dependencies:
+      fflate: 0.8.2
+      three: 0.184.0
 
   '@standard-schema/spec@1.1.0': {}
 
