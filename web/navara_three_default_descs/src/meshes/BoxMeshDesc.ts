@@ -180,8 +180,6 @@ export class BoxMeshDesc extends NewMeshDesc<
 
       if (
         cfg.color !== undefined ||
-        cfg.emissiveColor !== undefined ||
-        cfg.emissiveIntensity !== undefined ||
         cfg.opacity !== undefined ||
         cfg.transparent !== undefined
       ) {
@@ -192,11 +190,6 @@ export class BoxMeshDesc extends NewMeshDesc<
         if (cfg.opacity !== undefined) material.opacity = cfg.opacity;
         if (cfg.transparent !== undefined)
           material.transparent = cfg.transparent;
-        if (material instanceof MeshLambertNodeMaterial) {
-          if (cfg.emissiveColor !== undefined) {
-            material.emissive.set(cfg.emissiveColor.raw);
-          }
-        }
         material.needsUpdate = true;
       }
 

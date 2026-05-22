@@ -8,7 +8,7 @@ import {
   type LightUpdate,
 } from "@navara/three";
 import { SunDirectionalLight } from "@takram/three-atmosphere";
-import type { DirectionalLight, Material } from "three/webgpu";
+import { DirectionalLight, type Material } from "three/webgpu";
 
 import { SunLight, type SunLightOptions } from "./sunLight";
 

@@ -163,15 +163,19 @@ export abstract class MeshDescBase<
 
   /** Wire one NodeMaterial into the MRT outputStruct using this base's inputs. */
   protected setupNodeMaterial(material: NodeMaterial): void {
-    setupNodeMaterialForMRT(material, {
-      colorNode: this._colorOutputNode,
-      normalNode: this._normalNode,
-      roughnessNode: this._roughness,
-      metalnessNode: this._metalness,
-      emissiveNode: this._emissive.rgb,
-      emissiveIntensityNode: this._emissiveIntensity,
-      effectIdsMaskNode: this._effectIdsMask,
-    });
+    setupNodeMaterialForMRT(
+      material,
+      {
+        colorNode: this._colorOutputNode,
+        normalNode: this._normalNode,
+        roughnessNode: this._roughness,
+        metalnessNode: this._metalness,
+        emissiveNode: this._emissive.rgb,
+        emissiveIntensityNode: this._emissiveIntensity,
+        effectIdsMaskNode: this._effectIdsMask,
+      },
+      this.ctx.getRenderer().capabilities.logarithmicDepthBuffer,
+    );
   }
 
   /** Re-run {@link setupNodeMaterial} on every attached NodeMaterial. */

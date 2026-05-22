@@ -57,10 +57,17 @@ export type MRTOptions = {
  * `layout(location = N) out vec4 mN;`, slotting into the framebuffer that
  * `overrideMaterialsForMRT()` already binds — so this works on
  * `WebGLNodesHandler` despite it not supporting `renderer.getMRT()`.
+ *
+ * `logarithmicDepthBuffer` must mirror the renderer's log-depth mode
+ * (`renderer.capabilities.logarithmicDepthBuffer`). When it is off, leaving
+ * `depthNode` unset keeps these meshes on hardware depth, matching the legacy
+ * non-TSL meshes that share the depth buffer; forcing the log-depth formula
+ * regardless would desync z-order against them.
  */
 export function setupNodeMaterialForMRT(
   material: NodeMaterial,
   options: MRTOptions = {},
+  logarithmicDepthBuffer = true,
 ): void {
   const colorSlot = options.colorNode ?? output;
   const normalSlot = vec4(
@@ -89,6 +96,9 @@ export function setupNodeMaterialForMRT(
   // NodeMaterial's automatic log-depth path checks `renderer.logarithmicDepthBuffer`,
   // which on WebGLRenderer lives on `renderer.capabilities` instead, so the
   // material would silently skip `gl_FragDepth` and desync from the standard
-  // meshes that do write it.
-  material.depthNode = logarithmicDepthNode;
+  // meshes that do write it. Only patch it in when the renderer has log-depth
+  // enabled — otherwise both TSL and non-TSL meshes stay on hardware depth.
+  if (logarithmicDepthBuffer) {
+    material.depthNode = logarithmicDepthNode;
+  }
 }
