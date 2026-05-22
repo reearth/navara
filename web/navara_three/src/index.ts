@@ -880,7 +880,6 @@ export default class ThreeView<
     );
     this.registries = new Registries(this, this.viewContext);
     this.eventContext = new EventContext({
-      core: this._core,
       eventManager: this._eventManager,
       scenes: this._scenes,
       camera: this._camera,

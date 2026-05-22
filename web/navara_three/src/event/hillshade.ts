@@ -150,7 +150,7 @@ function processInitialHillshadeTexture(
     return;
   }
 
-  // Read data without removing - ResourceManager handles cleanup via reference counting
+  // Read data without removing - DataManager handles cleanup via reference counting
   // When multiple consumers (terrain, hillshade) share the same URL, the data is shared.
   // Reference count is decremented when each consumer entity is deleted.
   // Only when ref count reaches 0 (last consumer removed) is the data actually deleted.

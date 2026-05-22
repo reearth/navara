@@ -1,7 +1,6 @@
 import type {
   Color as CoreColor,
   ColorMap,
-  Core,
   EventHandler,
   EventManager,
 } from "@navara/core";
@@ -146,7 +145,6 @@ export type LayerHandler = {
 };
 
 type EventContextArgs = {
-  core: Core;
   eventManager: EventManager;
   scenes: Scenes;
   camera: ThreeViewCamera;
@@ -181,7 +179,6 @@ type EventContextArgs = {
  * and propagate them into each processor.
  */
 export class EventContext {
-  readonly core: Core;
   readonly eventManager: EventManager;
   readonly scenes: Scenes;
   readonly camera: ThreeViewCamera;
@@ -213,7 +210,6 @@ export class EventContext {
   updatedAt = 0;
 
   constructor(args: EventContextArgs) {
-    this.core = args.core;
     this.eventManager = args.eventManager;
     this.scenes = args.scenes;
     this.camera = args.camera;

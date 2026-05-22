@@ -44,26 +44,26 @@ pub enum DataRequesterSet {
 impl bevy_app::Plugin for DataRequesterPlugin {
     fn build(&self, app: &mut bevy_app::App) {
         app.init_resource::<DataManager>()
-        .configure_sets(
-            PostUpdate,
-            (
-                DataRequesterSet::PrioritizeRequests,
-                DataRequesterSet::SendRequests,
+            .configure_sets(
+                PostUpdate,
+                (
+                    DataRequesterSet::PrioritizeRequests,
+                    DataRequesterSet::SendRequests,
+                )
+                    .chain(),
             )
-                .chain(),
-        )
-        .add_systems(PreUpdate, remove_removed_data_requesters)
-        .add_systems(
-            PostUpdate,
-            (
-                send_data_request_events,
-                send_data_request_events_with_priority,
-                set_data_requester_loaded,
-                set_data_requester_failed,
-            )
-                .chain()
-                .in_set(DataRequesterSet::SendRequests),
-        );
+            .add_systems(PreUpdate, remove_removed_data_requesters)
+            .add_systems(
+                PostUpdate,
+                (
+                    send_data_request_events,
+                    send_data_request_events_with_priority,
+                    set_data_requester_loaded,
+                    set_data_requester_failed,
+                )
+                    .chain()
+                    .in_set(DataRequesterSet::SendRequests),
+            );
     }
 }
 
@@ -282,10 +282,10 @@ pub fn remove_removed_data_requesters(
 ) {
     for (e, d) in removed.iter() {
         // Unregister from resource manager
-        if let Some((_url, _handle, should_delete)) = resource_manager.unregister_consumer(e) {
+        if let Some((_url, handle, should_delete)) = resource_manager.unregister_consumer(e) {
             // Only remove from BufferStore if this was the last consumer
             if should_delete {
-                buf.remove(&d.handle);
+                buf.remove(&handle);
             }
         } else {
             // Not managed by resource manager, remove directly
