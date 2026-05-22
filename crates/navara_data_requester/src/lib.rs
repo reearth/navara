@@ -1,5 +1,7 @@
 #![doc = include_str!("../README.md")]
 
+mod data_manager;
+
 use bevy_app::{PostUpdate, PreUpdate};
 use bevy_ecs::{
     component::Component,
@@ -14,11 +16,14 @@ use navara_component::{Deleted, Ignored, Priority, Requested};
 use navara_event_store::EventStore;
 use url::Url;
 
+pub use data_manager::DataManager;
+
 pub struct DataRequesterPlugin;
 
 impl bevy_app::Plugin for DataRequesterPlugin {
     fn build(&self, app: &mut bevy_app::App) {
-        app.add_systems(PreUpdate, remove_removed_data_requesters)
+        app.init_resource::<DataManager>()
+            .add_systems(PreUpdate, remove_removed_data_requesters)
             .add_systems(
                 PostUpdate,
                 (
@@ -199,10 +204,21 @@ pub fn send_data_request_events_with_priority(
 pub fn remove_removed_data_requesters(
     mut commands: Commands,
     mut buf: ResMut<BufferStore>,
+    mut resource_manager: ResMut<DataManager>,
     removed: Query<(Entity, &DataRequester), With<Deleted>>,
 ) {
     for (e, d) in removed.iter() {
-        buf.remove(&d.handle);
+        // Unregister from resource manager
+        if let Some((_url, _handle, should_delete)) = resource_manager.unregister_consumer(e) {
+            // Only remove from BufferStore if this was the last consumer
+            if should_delete {
+                buf.remove(&d.handle);
+            }
+        } else {
+            // Not managed by resource manager, remove directly
+            buf.remove(&d.handle);
+        }
+
         commands.entity(e).remove::<Requested>();
         commands.entity(e).despawn();
     }

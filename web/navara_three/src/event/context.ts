@@ -1,6 +1,7 @@
 import type {
   Color as CoreColor,
   ColorMap,
+  Core,
   EventHandler,
   EventManager,
 } from "@navara/core";
@@ -36,6 +37,7 @@ import type { CommonUniforms } from "../uniforms";
 import type { TextureSlot } from "../utils";
 
 import type { HillshadeContext } from "./HillshadeContext";
+import type { FetchCache } from "./FetchCache";
 
 export type BufferLoader = {
   u8: (handle: number) => Uint8Array | null;
@@ -52,6 +54,7 @@ export type BufferLoader = {
   newF32: (bytes: Float32Array) => number | undefined;
   newF64: (bytes: Float64Array) => number | undefined;
   remove: (handle: number) => void;
+  triggerDataRequesterLoaded: (bits: bigint, handle: number) => void;
   triggerDataRequesterFailed: (bits: bigint) => void;
 };
 
@@ -143,6 +146,7 @@ export type LayerHandler = {
 };
 
 type EventContextArgs = {
+  core: Core;
   eventManager: EventManager;
   scenes: Scenes;
   camera: ThreeViewCamera;
@@ -169,6 +173,7 @@ type EventContextArgs = {
   textureFragmentIndex?: Map<string, Set<TextureSlot>>;
   tileMeshToFragmentIds?: Map<TileMesh, Set<string>>;
   hillshadeContext?: HillshadeContext;
+  fetchCache?: FetchCache;
 };
 
 /**
@@ -176,6 +181,7 @@ type EventContextArgs = {
  * and propagate them into each processor.
  */
 export class EventContext {
+  readonly core: Core;
   readonly eventManager: EventManager;
   readonly scenes: Scenes;
   readonly camera: ThreeViewCamera;
@@ -202,10 +208,12 @@ export class EventContext {
   readonly textureFragmentIndex?: Map<string, Set<TextureSlot>>;
   readonly tileMeshToFragmentIds?: Map<TileMesh, Set<string>>;
   readonly hillshadeContext?: HillshadeContext;
+  readonly fetchCache?: FetchCache;
 
   updatedAt = 0;
 
   constructor(args: EventContextArgs) {
+    this.core = args.core;
     this.eventManager = args.eventManager;
     this.scenes = args.scenes;
     this.camera = args.camera;
@@ -233,5 +241,6 @@ export class EventContext {
     this.textureFragmentIndex = args.textureFragmentIndex;
     this.tileMeshToFragmentIds = args.tileMeshToFragmentIds;
     this.hillshadeContext = args.hillshadeContext;
+    this.fetchCache = args.fetchCache;
   }
 }

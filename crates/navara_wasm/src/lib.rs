@@ -185,6 +185,11 @@ impl Core {
         Some(copy_f64_array(&self.app.remove_buffer_f64(handle)?))
     }
 
+    #[wasm_bindgen(js_name = triggerDataRequesterLoaded)]
+    pub fn trigger_data_requester_loaded(&mut self, bits: u64, handle: i32) {
+        self.app.trigger_data_requester_loaded(bits, handle);
+    }
+
     #[wasm_bindgen(js_name = triggerDataRequesterFailed)]
     pub fn trigger_data_requester_failed(&mut self, bits: u64) {
         self.app.trigger_data_requester_failed(bits);

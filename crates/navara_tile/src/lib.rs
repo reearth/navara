@@ -6,6 +6,7 @@ pub mod texture_fragment;
 
 use bevy_app::{App, Plugin, PreUpdate, Update};
 use bevy_ecs::schedule::{IntoScheduleConfigs, SystemSet};
+use navara_data_requester::DataManager;
 use navara_tile_component::{CachedMartini, RasterTileQuadtree, TerrainInformationQuadtree};
 use tile::{event::MeshPreparedEvent, tile_cache_manager::TileCacheManager};
 
@@ -23,6 +24,7 @@ impl Plugin for TilePlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<TileCacheManager>()
             .init_resource::<CachedMartini>()
+            .init_resource::<DataManager>()
             .insert_resource(RasterTileQuadtree::new_with_linear_qt())
             .insert_resource(TerrainInformationQuadtree::new_with_linear_qt())
             .add_message::<MeshPreparedEvent>()

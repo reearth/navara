@@ -58,6 +58,7 @@ import { getDevicePixelRatio, isMobileDevice } from "./device";
 import {
   processEvent,
   EventContext,
+  FetchCache,
   HillshadeContext,
   type BufferLoader,
   type FeatureHandler,
@@ -307,6 +308,8 @@ export default class ThreeView<
   // Hillshade processing context
   // Scoped to this view instance to prevent cross-view contamination
   private _hillshadeContext = new HillshadeContext();
+  // Fetch cache for deduplicating concurrent network requests
+  private _fetchCache = new FetchCache();
   private _initialized = false;
 
   private _buf: BufferLoader = {
@@ -376,6 +379,9 @@ export default class ThreeView<
     },
     remove: (handle: number) => {
       this._core?.removeBuffer(handle);
+    },
+    triggerDataRequesterLoaded: (bits: bigint, handle: number) => {
+      this._core?.triggerDataRequesterLoaded(bits, handle);
     },
     triggerDataRequesterFailed: (bits: bigint) => {
       this._core?.triggerDataRequesterFailed(bits);
@@ -862,6 +868,7 @@ export default class ThreeView<
     );
     this.registries = new Registries(this, this.viewContext);
     this.eventContext = new EventContext({
+      core: this._core,
       eventManager: this._eventManager,
       scenes: this._scenes,
       camera: this._camera,
@@ -888,6 +895,7 @@ export default class ThreeView<
       textureFragmentIndex: this._textureFragmentIndex,
       tileMeshToFragmentIds: this._tileMeshToFragmentIds,
       hillshadeContext: this._hillshadeContext,
+      fetchCache: this._fetchCache,
     });
 
     // Register built-in descriptors

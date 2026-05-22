@@ -4,17 +4,19 @@ use bevy_ecs::system::Commands;
 use navara_buffer_store::BufferStore;
 use navara_component::{OrderByDistance, Priority};
 use navara_core::tile_url;
-use navara_data_requester::{DataRequester, DataRequesterExtension};
+use navara_data_requester::{DataManager, DataRequester, DataRequesterExtension};
 use navara_layer::{TerrainDataType, TerrainLayer};
 use navara_tile_component::{
     RasterDEMData, RasterTile, TerrainData, TerrainDataRequesterMarker, TileHandle,
     TileTerrainDataRequesterQuery,
 };
 
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn request_terrain_data(
     commands: &mut Commands,
     tile: &mut RasterTile,
     buf: &mut BufferStore,
+    data_manager: &mut DataManager,
     terrain_layer: &Option<&TerrainLayer>,
     handle: TileHandle,
     terrain_data_requester: &TileTerrainDataRequesterQuery,
@@ -45,17 +47,25 @@ pub(crate) fn request_terrain_data(
             TerrainDataType::Ellipsoid | TerrainDataType::Unknown => unreachable!(),
         };
         let extension = DataRequesterExtension::from_url(&url::Url::from_str(&url).unwrap());
-        let entity = commands.spawn((
+
+        // Spawn entity first to get entity ID
+        let entity_id = commands.spawn_empty().id();
+
+        // Register with DataManager to get shared handle
+        let (shared_handle, _is_new) = data_manager.register_consumer(url.clone(), entity_id, buf);
+
+        // Insert components with shared handle
+        commands.entity(entity_id).insert((
             TerrainDataRequesterMarker(handle),
-            DataRequester::from_store(url, buf, extension),
+            DataRequester::new(shared_handle, url, extension),
             OrderByDistance {
                 sse: tile.sse,
                 distance: tile.distance_from_camera,
             },
             priority,
         ));
-        let id = entity.id();
-        terrain_data.set_data_requester_entity_id(Some(id));
+
+        terrain_data.set_data_requester_entity_id(Some(entity_id));
         tile.terrain_data = Some(Box::new(terrain_data));
     }
 }

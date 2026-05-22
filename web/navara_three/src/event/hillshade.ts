@@ -150,9 +150,11 @@ function processInitialHillshadeTexture(
     return;
   }
 
-  // Use removeU8 to delete original DEM data after reading
-  // Rust side keeps only 4 edges (4KB), original data (256KB) is deleted here
-  const originalBytes = buf.removeU8(originalHandle);
+  // Read data without removing - ResourceManager handles cleanup via reference counting
+  // When multiple consumers (terrain, hillshade) share the same URL, the data is shared.
+  // Reference count is decremented when each consumer entity is deleted.
+  // Only when ref count reaches 0 (last consumer removed) is the data actually deleted.
+  const originalBytes = buf.u8(originalHandle);
   if (!originalBytes) {
     return;
   }
