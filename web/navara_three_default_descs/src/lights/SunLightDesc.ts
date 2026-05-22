@@ -1,12 +1,14 @@
 import type ThreeView from "@navara/three";
-import { Color } from "@navara/three";
 import {
+  Color,
+  StableDirectionalLightNode,
   LightDesc,
   type LightConfig,
   type ViewContext,
   type LightUpdate,
 } from "@navara/three";
-import { Material } from "three";
+import { SunDirectionalLight } from "@takram/three-atmosphere";
+import { DirectionalLight, type Material } from "three/webgpu";
 
 import { SunLight, type SunLightOptions } from "./sunLight";
 
@@ -120,7 +122,27 @@ export class SunLightDesc extends LightDesc<
     // Add initial lights to scene
     this.updateSceneLights();
 
-    // Listen for shadow material events.
+    // Eagerly init the TSL CSM so its `_shadowNodes` are populated before
+    // TSL graph compilation. Cascade lights are already added to
+    // `scenes.light` via `updateSceneLights` above.
+    this._instance?.attachToScene(this.ctx.getRenderer());
+
+    const library = this.ctx.getNodeLibrary();
+    library.addLight(StableDirectionalLightNode, SunDirectionalLight);
+
+    const cascadeLights =
+      this._instance?.getCSM().directionalLights.cascadedLights;
+    if (cascadeLights && cascadeLights.length > 0) {
+      const cascadeLightCtor = cascadeLights[0]
+        .constructor as typeof DirectionalLight;
+      library.lightNodes.delete(cascadeLightCtor);
+      library.addLight(StableDirectionalLightNode, cascadeLightCtor);
+    }
+
+    // Listen for shadow material events. `setupMaterialForCSM` /
+    // `removeMaterialFromCSM` internally route NodeMaterial to the TSL
+    // path (no-op here; the shadow node is already attached to the sun
+    // light's shadow) and legacy Material to the GLSL injection path.
     this.ctx.on("shadowApplied", (m: Material) => {
       this._instance?.setupMaterialForCSM(m);
     });

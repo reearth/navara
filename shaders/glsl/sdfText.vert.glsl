@@ -5,7 +5,7 @@
 // Per-instance attributes
 attribute vec2 glyphOffset;  // Glyph position in normalized text space
 attribute vec2 glyphSize;    // Glyph quad dimensions in normalized text space
-attribute vec4 glyphUvRect;  // Atlas UV sub-rect: (u0, v0, u1, v1)
+attribute vec4 glyphUvRect;  // Atlas sub-rect in PIXEL space: (x0, y0, x1, y1)
 attribute float glyphIsColor; // 1.0 = sample COLRv1 color atlas, 0.0 = sample SDF atlas
 
 // Uniforms
@@ -20,6 +20,11 @@ attribute float glyphIsColor; // 1.0 = sample COLRv1 color atlas, 0.0 = sample S
 #endif
 
 uniform float uFontSize;
+// Current atlas dimensions in pixels. Both update at runtime when the atlas
+// grows on overflow, so per-instance pixel rects normalize to the right UV
+// regardless of when the geometry was built.
+uniform vec2 uSdfAtlasSize;
+uniform vec2 uColorAtlasSize;
 uniform bool uSizeInMeters;
 uniform float uFovRad;
 uniform float uScreenHeightPx;
@@ -110,8 +115,11 @@ void main() {
 
         gl_Position = projectionMatrix * newMvPosition;
 
-        // Atlas UV interpolation: map unit quad UV [0,1] to atlas sub-rect
-        vAtlasUv = mix(glyphUvRect.xy, glyphUvRect.zw, uv);
+        // Atlas UV interpolation: glyphUvRect carries pixel-space corners so
+        // resizing the atlas only requires updating the size uniform — geometry
+        // attributes stay valid.
+        vec2 atlasSize = glyphIsColor > 0.5 ? uColorAtlasSize : uSdfAtlasSize;
+        vAtlasUv = mix(glyphUvRect.xy, glyphUvRect.zw, uv) / atlasSize;
     }
 
     vFragDepth = gl_Position.w + 1.0;

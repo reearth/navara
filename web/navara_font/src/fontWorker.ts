@@ -91,7 +91,7 @@ type FontWorkerMessageType =
   | "loadFont"
   | "unloadFont"
   | "prepareTextBatch"
-  | "tickFrame";
+  | "tick";
 
 const ctx = self as unknown as DedicatedWorkerGlobalScope;
 
@@ -147,7 +147,7 @@ ctx.onmessage = async (e: MessageEvent) => {
           return { text, shapeResult: convertShapeResult(sr) };
         });
 
-        fontCache.tickFrame();
+        fontCache.tick();
 
         // Snapshot atlases by atlas key (family name or URL) so shared atlases
         // are returned correctly for font-family faces.
@@ -171,8 +171,8 @@ ctx.onmessage = async (e: MessageEvent) => {
         break;
       }
 
-      case "tickFrame": {
-        fontCache.tickFrame();
+      case "tick": {
+        fontCache.tick();
         ctx.postMessage({ id, type: "result", payload: null });
         break;
       }

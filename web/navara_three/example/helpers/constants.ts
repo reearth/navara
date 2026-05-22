@@ -266,6 +266,23 @@ export const LOCAL_DATASETS = {
 } satisfies Record<string, Dataset>;
 
 /**
+ * 3D Gaussian Splatting datasets
+ */
+export const SPLAT_DATASETS = {
+  quechua: {
+    url: "/splat/QUECHUA%20-%20Webviewer/webviewer.spz",
+    attribution: "QUECHUA - Webviewer by Christoph SCHINDELAR - CC BY 4.0",
+    attributionUrl: "https://superspl.at/scene/f83d530f",
+  },
+  pencilSharpener: {
+    url: "/splat/Pencil%20sharpener%20shaped%20like%20a%20duck/duck.spz",
+    attribution:
+      "Pencil sharpener shaped like a duck by Alfred Duemlein - CC BY 4.0",
+    attributionUrl: "https://superspl.at/scene/d34e7de1",
+  },
+} satisfies Record<string, Dataset>;
+
+/**
  * LUT datasets
  */
 export const LUT_DATASETS = {

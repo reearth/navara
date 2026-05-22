@@ -491,9 +491,6 @@ async function performDataFetch(
   const { buf, abortControllers } = ctx;
 
   try {
-    if (req.url === "https://tiles.mapterhorn.com/11/2013/1266.webp") {
-      console.log("req 11/2013/1266");
-    }
     if (IMAGE_EXTENSIONS.includes(req.extension)) {
       await fetchImageAsUint8Array(ctx, req, id, abortController);
     } else {

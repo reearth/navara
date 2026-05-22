@@ -4,22 +4,26 @@ use bevy_ecs::{
     system::{Commands, Query},
 };
 use navara_component::{Deleted, Ignored, Priority, Requested};
-use navara_data_requester::DataRequester;
+use navara_data_requester::{DataRequester, RequestOrder};
 
 use crate::{
     Cesium3dTileContentDataRequesterMarker, Cesium3dTilesMetadataDataRequesterMarker,
-    Cesium3dTilesTreeOrder, b3dm::B3dmDataRequesterMarker, glb::GlbDataRequesterMarker,
+    TileOrderByDistance, b3dm::B3dmDataRequesterMarker, glb::GlbDataRequesterMarker,
     pnts::PntsDataRequesterMarker,
 };
 
-const MAX_CONTENT_PENDINGS: u32 = 50;
-const MAX_METADATA_PENDINGS: u32 = 100;
+const MAX_PENDINGS: u32 = 50;
 
 #[allow(clippy::type_complexity)]
 pub fn filter_requestable_data_requester(
     mut commands: Commands,
     data_requesters: Query<
-        (Entity, &DataRequester, &Priority, &Cesium3dTilesTreeOrder),
+        (
+            Entity,
+            &DataRequester,
+            &Priority,
+            &RequestOrder<TileOrderByDistance>,
+        ),
         (
             With<DataRequester>,
             With<Cesium3dTileContentDataRequesterMarker>,
@@ -50,12 +54,12 @@ pub fn filter_requestable_data_requester(
     >,
 ) {
     let pendings = requested_data_requesters.iter().count();
-    let num_skip = (MAX_CONTENT_PENDINGS as i32 - pendings as i32).max(0);
+    let num_skip = (MAX_PENDINGS as i32 - pendings as i32).max(0);
 
     // Limit the number of content requests in this frame
     for (e, _, _, _) in data_requesters
         .iter()
-        .sort::<(&Priority, &Cesium3dTilesTreeOrder)>()
+        .sort::<(&Priority, &RequestOrder<TileOrderByDistance>)>()
         .skip(num_skip as usize)
     {
         commands.entity(e).insert((Deleted, Ignored));
@@ -66,7 +70,12 @@ pub fn filter_requestable_data_requester(
 pub fn filter_requestable_metadata_requester(
     mut commands: Commands,
     data_requesters: Query<
-        (Entity, &DataRequester, &Priority, &Cesium3dTilesTreeOrder),
+        (
+            Entity,
+            &DataRequester,
+            &Priority,
+            &RequestOrder<TileOrderByDistance>,
+        ),
         (
             With<DataRequester>,
             With<Cesium3dTileContentDataRequesterMarker>,
@@ -87,12 +96,12 @@ pub fn filter_requestable_metadata_requester(
     >,
 ) {
     let pendings = requested_data_requesters.iter().count();
-    let num_skip = (MAX_METADATA_PENDINGS as i32 - pendings as i32).max(0);
+    let num_skip = (MAX_PENDINGS as i32 - pendings as i32).max(0);
 
     // Limit the number of metadata requests in this frame
     for (e, _, _, _) in data_requesters
         .iter()
-        .sort::<(&Priority, &Cesium3dTilesTreeOrder)>()
+        .sort::<(&Priority, &RequestOrder<TileOrderByDistance>)>()
         .skip(num_skip as usize)
     {
         commands.entity(e).insert((Deleted, Ignored));

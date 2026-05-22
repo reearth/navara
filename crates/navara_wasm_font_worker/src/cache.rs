@@ -37,8 +37,12 @@ fn maybe_decompress_font(data: Vec<u8>) -> Result<Vec<u8>, String> {
     Ok(data)
 }
 
-/// Number of frames a glyph must be unused before it becomes evictable.
-pub const LRU_MIN_AGE: u64 = 120;
+/// Number of ticks a glyph must be unused before it becomes evictable.
+/// One tick corresponds to one `prepareTextBatch` call (see [`FontCache::tick`]
+/// in `lib.rs`), not one rendered frame — batches only fire when new text is
+/// requested, so a small value here is needed for eviction to actually kick in
+/// before the atlas grows. A glyph not touched by the last 5 batches is cold.
+pub const LRU_MIN_AGE: u64 = 5;
 
 /// A loaded font entry. The SDF atlas is stored separately in `FontCache::atlases`
 /// so that multiple fonts belonging to the same family can share one atlas.
@@ -76,8 +80,10 @@ pub struct FontCache {
     /// so a font family that mixes text and emoji faces gets one of each.
     #[wasm_bindgen(skip)]
     pub color_atlases: StdHashMap<String, ColorAtlas>,
+    /// Logical LRU clock. Incremented once per `prepareTextBatch` call via
+    /// [`FontCache::tick`]; **not** a rendered-frame counter.
     #[wasm_bindgen(skip)]
-    pub current_frame: u64,
+    pub tick: u64,
     /// Counter for assigning unique font indices (used in composite atlas keys).
     #[wasm_bindgen(skip)]
     pub next_font_index: u32,

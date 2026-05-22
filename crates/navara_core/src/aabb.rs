@@ -24,10 +24,28 @@ impl Aabb {
     }
 }
 
-#[derive(Debug, Default, Clone, Copy, PartialEq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Component)]
 pub struct BoundingSphere {
     pub center: Vec3,
     pub radius: FloatType,
+}
+
+impl BoundingSphere {
+    pub fn new(center: Vec3, radius: FloatType) -> Self {
+        Self { center, radius }
+    }
+
+    /// Distance from `p` to the sphere surface, or 0 if `p` is inside.
+    pub fn distance_to_point(&self, p: Vec3) -> FloatType {
+        let d = p.distance(self.center) - self.radius;
+        if d < 0.0 { 0.0 } else { d }
+    }
+
+    /// Conservative plane-side test. The sphere is "on or forward" iff the
+    /// signed plane distance to the center is at least `-radius`.
+    pub fn is_on_or_forward_plane(&self, plane: &Plane) -> bool {
+        plane.get_distance_to_point(self.center) >= -self.radius
+    }
 }
 
 impl Aabb {
@@ -80,119 +98,82 @@ impl Aabb {
         min_height: FloatType,
         max_height: FloatType,
     ) -> Self {
+        // The geographic extent describes a curved patch on the ellipsoid, so
+        // four corners + a center cannot enclose the surface bulge between them
+        // once the patch grows beyond a few degrees. Sample on a grid whose
+        // step in lng/lat is bounded by `MAX_ANGULAR_STEP_RAD`, so the chord
+        // between adjacent samples stays close to the underlying arc (≈ 2 km
+        // at the equator for a ~2.9° step). The resulting AABB then conservatively
+        // contains the whole region across all camera orientations.
+        const MAX_ANGULAR_STEP_RAD: FloatType = 0.05;
+
         let ellipsoid = WGS84_64;
 
-        let mut nw = LLE {
-            lng: extent.west,
-            lat: extent.north,
-            height: Meters::new(max_height),
-        };
-        let mut ne = LLE {
-            lng: extent.east,
-            lat: extent.north,
-            height: Meters::new(max_height),
-        };
-        let mut se = LLE {
-            lng: extent.east,
-            lat: extent.south,
-            height: Meters::new(max_height),
-        };
-        let mut sw = LLE {
-            lng: extent.west,
-            lat: extent.south,
-            height: Meters::new(max_height),
-        };
+        let west = extent.west.val();
+        let east = extent.east.val();
+        let south = extent.south.val();
+        let north = extent.north.val();
 
-        let center = LLE {
-            lng: Angle::new((sw.lng.val() + ne.lng.val()) / 2.),
-            lat: Angle::new((sw.lat.val() + ne.lat.val()) / 2.),
-            height: Meters::new((max_height + min_height) / 2.),
-        };
+        let lng_span = (east - west).abs();
+        let lat_span = (north - south).abs();
 
-        // Max
-        let p_nw_max = ellipsoid.lle_to_xyz(nw);
-        let p_ne_max = ellipsoid.lle_to_xyz(ne);
-        let p_se_max = ellipsoid.lle_to_xyz(se);
-        let p_sw_max = ellipsoid.lle_to_xyz(sw);
-        // Min
-        let min_height = Meters::new(min_height);
-        nw.height = min_height;
-        ne.height = min_height;
-        se.height = min_height;
-        sw.height = min_height;
-        let p_nw_min = ellipsoid.lle_to_xyz(nw);
-        let p_ne_min = ellipsoid.lle_to_xyz(ne);
-        let p_se_min = ellipsoid.lle_to_xyz(se);
-        let p_sw_min = ellipsoid.lle_to_xyz(sw);
+        // At least one segment (two samples) per dimension so the four corners
+        // are always included, even when the extent is degenerate.
+        let lng_segments = (lng_span / MAX_ANGULAR_STEP_RAD).ceil().max(1.0) as usize;
+        let lat_segments = (lat_span / MAX_ANGULAR_STEP_RAD).ceil().max(1.0) as usize;
 
-        let p_center = ellipsoid.lle_to_xyz(center);
+        let max_height_m = Meters::new(max_height);
+        let min_height_m = Meters::new(min_height);
 
-        let max_x = p_nw_max
-            .x
-            .val()
-            .max(p_ne_max.x.val())
-            .max(p_se_max.x.val())
-            .max(p_sw_max.x.val())
-            .max(p_nw_min.x.val())
-            .max(p_ne_min.x.val())
-            .max(p_se_min.x.val())
-            .max(p_sw_min.x.val())
-            .max(p_center.x.val());
-        let max_y = p_nw_max
-            .y
-            .val()
-            .max(p_ne_max.y.val())
-            .max(p_se_max.y.val())
-            .max(p_sw_max.y.val())
-            .max(p_nw_min.y.val())
-            .max(p_ne_min.y.val())
-            .max(p_se_min.y.val())
-            .max(p_sw_min.y.val())
-            .max(p_center.y.val());
-        let max_z = p_nw_max
-            .z
-            .val()
-            .max(p_ne_max.z.val())
-            .max(p_se_max.z.val())
-            .max(p_sw_max.z.val())
-            .max(p_nw_min.z.val())
-            .max(p_ne_min.z.val())
-            .max(p_se_min.z.val())
-            .max(p_sw_min.z.val())
-            .max(p_center.z.val());
-        let min_x = p_nw_max
-            .x
-            .val()
-            .min(p_ne_max.x.val())
-            .min(p_se_max.x.val())
-            .min(p_sw_max.x.val())
-            .min(p_nw_min.x.val())
-            .min(p_ne_min.x.val())
-            .min(p_se_min.x.val())
-            .min(p_sw_min.x.val())
-            .min(p_center.x.val());
-        let min_y = p_nw_max
-            .y
-            .val()
-            .min(p_ne_max.y.val())
-            .min(p_se_max.y.val())
-            .min(p_sw_max.y.val())
-            .min(p_nw_min.y.val())
-            .min(p_ne_min.y.val())
-            .min(p_se_min.y.val())
-            .min(p_sw_min.y.val())
-            .min(p_center.y.val());
-        let min_z = p_nw_max
-            .z
-            .val()
-            .min(p_ne_max.z.val())
-            .min(p_se_max.z.val())
-            .min(p_sw_max.z.val())
-            .min(p_nw_min.z.val())
-            .min(p_ne_min.z.val())
-            .min(p_se_min.z.val())
-            .min(p_sw_min.z.val())
-            .min(p_center.z.val());
+        let mut max_x = FloatType::NEG_INFINITY;
+        let mut max_y = FloatType::NEG_INFINITY;
+        let mut max_z = FloatType::NEG_INFINITY;
+        let mut min_x = FloatType::INFINITY;
+        let mut min_y = FloatType::INFINITY;
+        let mut min_z = FloatType::INFINITY;
+
+        for i in 0..=lng_segments {
+            let t_lng = i as FloatType / lng_segments as FloatType;
+            let lng = Angle::new(west + (east - west) * t_lng);
+            for j in 0..=lat_segments {
+                let t_lat = j as FloatType / lat_segments as FloatType;
+                let lat = Angle::new(south + (north - south) * t_lat);
+                for height in [max_height_m, min_height_m] {
+                    let p = ellipsoid.lle_to_xyz(LLE { lng, lat, height });
+                    let (x, y, z) = (p.x.val(), p.y.val(), p.z.val());
+                    if x > max_x {
+                        max_x = x;
+                    }
+                    if y > max_y {
+                        max_y = y;
+                    }
+                    if z > max_z {
+                        max_z = z;
+                    }
+                    if x < min_x {
+                        min_x = x;
+                    }
+                    if y < min_y {
+                        min_y = y;
+                    }
+                    if z < min_z {
+                        min_z = z;
+                    }
+                }
+            }
+        }
+
+        // Inflate the extents by a conservative chord-arc gap. Sampled points
+        // sit on the ellipsoid, but the surface between adjacent samples bulges
+        // outward by up to `r * (1 - cos(diag/2))`, where `diag` is the angular
+        // distance from a grid sample to the worst-case interior point of its
+        // cell. Padding the AABB by this amount keeps the box conservative
+        // without re-sampling at a finer step.
+        let lng_step = lng_span / lng_segments as FloatType;
+        let lat_step = lat_span / lat_segments as FloatType;
+        let half_diag = (lng_step * lng_step + lat_step * lat_step).sqrt() * 0.5;
+        let outer_radius = ellipsoid.semi_major_axis() + max_height.max(0.0);
+        let padding = outer_radius * (1.0 - half_diag.cos());
 
         // Use the midpoint of min/max as the AABB center for symmetric extents.
         // This allows min() and max() to be computed accurately as center ± extents.
@@ -201,7 +182,11 @@ impl Aabb {
             (max_y + min_y) / 2.,
             (max_z + min_z) / 2.,
         );
-        let extents = Vec3::new(max_x - center.x, max_y - center.y, max_z - center.z);
+        let extents = Vec3::new(
+            max_x - center.x + padding,
+            max_y - center.y + padding,
+            max_z - center.z + padding,
+        );
 
         Self { center, extents }
     }
@@ -415,5 +400,140 @@ mod test {
                 max.z
             );
         }
+    }
+
+    #[test]
+    fn from_extent_f64_should_cover_curved_surface_for_large_region() {
+        // Reproduces the buildings.reearth.land issue: the root tileset's
+        // direct children are quarter-Earth extents whose ellipsoid surface
+        // bulges far outside the 9-point sample envelope used previously.
+        // The chosen NE quadrant is the same extent that Cesium 3D Tiles emits
+        // for the (1, 1, 1) child of a global region root.
+        let extent = Extent {
+            west: Angle::new(0.0),
+            south: Angle::new(0.0),
+            east: Angle::new(std::f64::consts::PI),
+            north: Angle::new(1.4844222297453327),
+        };
+        let min_height = 0.0;
+        let max_height = 1000.0;
+
+        let aabb = Aabb::from_extent_f64(extent, min_height, max_height);
+        let ellipsoid = WGS84_64;
+        let min = aabb.min();
+        let max = aabb.max();
+
+        // Interior points that the old 9-point sampler missed: the equator
+        // bulges away from the corner chord at off-meridian longitudes.
+        let probes = [
+            LLE {
+                lng: Angle::new(std::f64::consts::PI / 2.0),
+                lat: Angle::new(0.0),
+                height: Meters::new(0.0),
+            },
+            LLE {
+                lng: Angle::new(std::f64::consts::PI / 4.0),
+                lat: Angle::new(0.0),
+                height: Meters::new(0.0),
+            },
+            LLE {
+                lng: Angle::new(3.0 * std::f64::consts::PI / 4.0),
+                lat: Angle::new(0.0),
+                height: Meters::new(0.0),
+            },
+            LLE {
+                lng: Angle::new(std::f64::consts::PI / 2.0),
+                lat: Angle::new(0.5),
+                height: Meters::new(500.0),
+            },
+        ];
+
+        for probe in probes {
+            let p = ellipsoid.lle_to_xyz(probe);
+            let (x, y, z) = (p.x.val(), p.y.val(), p.z.val());
+            assert!(
+                x >= min.x - EPSILON7 && x <= max.x + EPSILON7,
+                "Probe x={} is outside AABB bounds [{}, {}]",
+                x,
+                min.x,
+                max.x
+            );
+            assert!(
+                y >= min.y - EPSILON7 && y <= max.y + EPSILON7,
+                "Probe y={} is outside AABB bounds [{}, {}]",
+                y,
+                min.y,
+                max.y
+            );
+            assert!(
+                z >= min.z - EPSILON7 && z <= max.z + EPSILON7,
+                "Probe z={} is outside AABB bounds [{}, {}]",
+                z,
+                min.z,
+                max.z
+            );
+        }
+    }
+
+    use super::BoundingSphere;
+
+    #[test]
+    fn bounding_sphere_distance_outside_inside_on_surface() {
+        let sphere = BoundingSphere::new(Vec3::ZERO, 5.0);
+
+        // Outside: Euclidean - radius.
+        assert_abs_diff_eq!(
+            sphere.distance_to_point(Vec3::new(13., 0., 0.)),
+            8.0,
+            epsilon = EPSILON7
+        );
+        // On the surface: distance is 0 (and the function must not return a
+        // small negative value from floating-point error).
+        assert_abs_diff_eq!(
+            sphere.distance_to_point(Vec3::new(5., 0., 0.)),
+            0.0,
+            epsilon = EPSILON7
+        );
+        // Strictly inside: clamped to 0.
+        assert_eq!(sphere.distance_to_point(Vec3::new(1., 0., 0.)), 0.0);
+        // Dead center: also 0.
+        assert_eq!(sphere.distance_to_point(Vec3::ZERO), 0.0);
+    }
+
+    /// A degenerate sphere with radius 0 acts like a point — distance equals
+    /// the Euclidean distance to the center.
+    #[test]
+    fn bounding_sphere_zero_radius_acts_as_point() {
+        let sphere = BoundingSphere::new(Vec3::new(1., 2., 3.), 0.0);
+        assert_abs_diff_eq!(
+            sphere.distance_to_point(Vec3::new(4., 6., 3.)),
+            5.0,
+            epsilon = EPSILON7
+        );
+        assert_eq!(sphere.distance_to_point(Vec3::new(1., 2., 3.)), 0.0);
+    }
+
+    #[test]
+    fn bounding_sphere_is_on_or_forward_plane_three_cases() {
+        let sphere = BoundingSphere::new(Vec3::new(0., 5., 0.), 1.0);
+
+        // Plane at y=0 facing +Y. Sphere fully in front (y∈[4, 6]).
+        let plane = Plane::from_point_normal(Vec3::new(0., 0., 0.), Vec3::new(0., 1., 0.));
+        assert!(sphere.is_on_or_forward_plane(&plane));
+
+        // Plane at y=10 facing +Y. Sphere fully behind.
+        let plane = Plane::from_point_normal(Vec3::new(0., 10., 0.), Vec3::new(0., 1., 0.));
+        assert!(!sphere.is_on_or_forward_plane(&plane));
+
+        // Plane tangent to the sphere from behind (y=4 facing +Y). Center
+        // distance = 1 = radius, so still considered "on or forward".
+        let plane = Plane::from_point_normal(Vec3::new(0., 4., 0.), Vec3::new(0., 1., 0.));
+        assert!(sphere.is_on_or_forward_plane(&plane));
+
+        // Plane just past the back face (y=4.5 facing +Y, but with sphere
+        // center at y=5 radius 1, center is 0.5 in front, half the radius
+        // crosses — still forward).
+        let plane = Plane::from_point_normal(Vec3::new(0., 4.5, 0.), Vec3::new(0., 1., 0.));
+        assert!(sphere.is_on_or_forward_plane(&plane));
     }
 }

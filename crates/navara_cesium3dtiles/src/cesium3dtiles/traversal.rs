@@ -64,7 +64,7 @@ use navara_window::Window;
 use url::Url;
 
 use crate::{
-    Cesium3dTileContentDataRequesterMarker, Cesium3dTilesNestedTreeMap, Cesium3dTilesTreeOrder,
+    Cesium3dTileContentDataRequesterMarker, Cesium3dTilesNestedTreeMap,
     RenderedCesium3dTileContent, TileOrderByDistance, b3dm::RenderedCesium3dTileContentB3dmMarker,
     cesium3dtiles::Cesium3dTilesNestedMetadataDataRequesterMarker,
     glb::RenderedCesium3dTileContentGlbMarker,
@@ -77,7 +77,7 @@ use super::{
     request_tile_content, types::Cesium3dTileContentRequesterQuery,
 };
 
-use navara_data_requester::{DataRequester, DataRequesterExtension};
+use navara_data_requester::{DataRequester, DataRequesterExtension, RequestOrder};
 
 /// Result of traversing a single tile in the tree.
 ///
@@ -203,16 +203,21 @@ fn mark_leaves(
 
     tile.reset_state();
 
-    let within_frustum =
-        matches!(&tile.bounding_volume, Some(aabb) if frustum.intersection_with_aabb(aabb));
+    let within_frustum = matches!(
+        &tile.bounding_volume,
+        Some(bv) if frustum.intersection_with_bounding_volume(bv)
+    );
 
     tile.state.is_visible = within_frustum;
 
     let (distance_from_camera, sse) = match &tile.bounding_volume {
-        Some(aabb) => {
-            // Use a minimum distance to avoid division by zero when camera is inside the AABB.
-            // When camera is inside the bounding box, distance_to_point returns 0.
-            let distance_from_camera = aabb.distance_to_point(camera_position).max(1.0);
+        Some(bv) => {
+            // Tight bounding volumes (OBB for region/box) let us go back to
+            // the standard point-to-volume Euclidean metric without the
+            // off-axis ordering bias that an axis-aligned hull would have
+            // produced. `.max(1.0)` only guards against the camera-inside-
+            // volume case where distance collapses to 0.
+            let distance_from_camera = bv.distance_to_point(camera_position).max(1.0);
             let sse = (tile_meta.geometric_error)
                 / (distance_from_camera * (frustum.sse_denominator / window.height));
             (distance_from_camera as f32, sse as f32)
@@ -494,12 +499,10 @@ fn mark_rendered_tiles(
                     Cesium3dTilesNestedMetadataDataRequesterMarker,
                     Cesium3dTileContentDataRequesterMarker,
                     priority,
-                    Cesium3dTilesTreeOrder {
-                        distance: TileOrderByDistance {
-                            distance_from_camera: tile.state.distance_from_camera,
-                            sse: tile.state.sse,
-                        },
-                    },
+                    RequestOrder(TileOrderByDistance {
+                        distance_from_camera: tile.state.distance_from_camera,
+                        sse: tile.state.sse,
+                    }),
                     DataRequester::from_store(url, buf, DataRequesterExtension::Json),
                 ))
                 .id();
@@ -546,6 +549,7 @@ fn mark_rendered_tiles(
 
     // Reset children once it is out of touch.
     if !touched {
+        tile.state.are_all_children_loaded = false;
         tile.children = None;
     }
 }

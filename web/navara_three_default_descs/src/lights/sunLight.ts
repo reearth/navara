@@ -1,7 +1,21 @@
 import { EventHandler } from "@navara/core";
-import { CascadedShadowMaps, CSMHelper } from "@navara/three_csm";
+import {
+  CascadedShadowMaps,
+  CSMHelper,
+  CSMShadowNodeForWebGL,
+  attachShadowNodeToLight,
+} from "@navara/three_csm";
 import { SunDirectionalLight } from "@takram/three-atmosphere";
-import { Color, Texture, Vector3, Material, PerspectiveCamera } from "three";
+import {
+  Color,
+  Texture,
+  Vector3,
+  Material,
+  PerspectiveCamera,
+  WebGLRenderer,
+} from "three";
+import { vec4 } from "three/tsl";
+import { NodeMaterial } from "three/webgpu";
 
 export type SunLightEvents = {
   needsUpdate: () => void;
@@ -130,6 +144,13 @@ export class SunLight extends EventHandler<SunLightEvents> {
   private csmHelper: CSMHelper | null = null;
   private camera: PerspectiveCamera;
 
+  // TSL CSM — drives shadows for NodeMaterial meshes. Runs alongside the
+  // legacy `csm` above which still serves the GLSL `onBeforeCompile` path
+  // for materials that have not yet been migrated to NodeMaterial.
+  // Both render their own cascade depth maps each frame (2× cost) during
+  // the migration period; one will be retired once every mesh is on TSL.
+  private csmNode: CSMShadowNodeForWebGL | null = null;
+
   constructor(camera: PerspectiveCamera, options: SunLightOptions = {}) {
     super();
 
@@ -174,6 +195,9 @@ export class SunLight extends EventHandler<SunLightEvents> {
 
     // Update CSM if enabled
     this.updateCSM();
+
+    this.raw.updateMatrixWorld(true);
+    this.raw.target.updateMatrixWorld(true);
   }
 
   setTransmittanceTexture(texture: Texture) {
@@ -219,6 +243,56 @@ export class SunLight extends EventHandler<SunLightEvents> {
     if (this.options.debugCSMHelper) {
       this.csmHelper = new CSMHelper(this.csm);
     }
+
+    // Eagerly populate cascade ranges. `CascadedShadowMaps` allocates the
+    // `Vector2` entries in `cascades[]` lazily on its first `update()`,
+    // but the TSL graph (which shares this array by reference, below)
+    // builds during the first render pass and `UniformArrayNode.update`
+    // reads `cascades[i].x` / `.y` at setup time. If the array were still
+    // empty at that point we'd dereference `undefined.x` and crash.
+    this.csm.updateFrusta();
+
+    // Construct the TSL CSM and share legacy CSM's cascade lights with
+    // it. Sharing keeps the total shadow-map count at the cascade count
+    // (instead of doubling under WebGL's tight MAX_TEXTURE_IMAGE_UNITS=16
+    // budget), and the TSL graph reads cascade boundaries through the
+    // same `Vector2[]` that `CascadedShadowMaps.update()` mutates each
+    // frame. Anchor `csmNode` on `cascadedLights[0]` (which IS in the
+    // scene with an up-to-date `matrixWorld`) rather than on `this.raw`,
+    // which `getSceneLights` excludes from the scene when castShadow is
+    // enabled.
+    const cascadeLights = this.csm.directionalLights.cascadedLights;
+    this.csmNode = new CSMShadowNodeForWebGL(cascadeLights[0], {
+      cascades: this.options.shadowCascadeCount,
+      maxFar: this.options.shadowFar,
+      mode: this.options.shadowMode,
+      lightMargin: this.options.shadowMargin,
+    });
+    this.csmNode.fade = this.options.shadowFade ?? true;
+    this.csmNode.useSharedCascade(cascadeLights, this.csm.cascades);
+    attachShadowNodeToLight(cascadeLights[0], this.csmNode);
+
+    // Cascade clones `[1..N-1]` are shadow-only casters. Zero their
+    // intensity (so TSL's `AnalyticLightNode` doesn't accumulate N×
+    // direct light), and attach a `vec4(1)` no-op shadowNode (so it
+    // doesn't construct a default `ShadowNode` whose extra samplers
+    // bloat the TSL fragment shader's texture-unit count).
+    for (let i = 1; i < cascadeLights.length; ++i) {
+      cascadeLights[i].intensity = 0;
+      attachShadowNodeToLight(cascadeLights[i], vec4(1));
+    }
+  }
+
+  /**
+   * Eagerly init the TSL CSM so its `_shadowNodes` are populated before TSL
+   * graph compilation reads them. Cascade lights are owned by
+   * `CascadedDirectionalLights` (added to the scene via
+   * `SunLightDesc.updateSceneLights`), so this call does not parent any
+   * objects itself. Idempotent — `CSMShadowNodeForWebGL.attachToScene`
+   * self-guards.
+   */
+  attachToScene(renderer: WebGLRenderer): void {
+    this.csmNode?.attachToScene(this.camera, renderer);
   }
 
   /**
@@ -244,16 +318,28 @@ export class SunLight extends EventHandler<SunLightEvents> {
   }
 
   /**
-   * Setup a material for CSM
+   * Setup a material for CSM.
+   *
+   * For legacy `Material` (e.g. `MeshLambertMaterial` with custom
+   * `onBeforeCompile`), the GLSL injection path is applied. For
+   * `NodeMaterial` (TSL), the shadow is driven by
+   * `light.shadow.shadowNode = csmNode` set up during construction —
+   * `AnalyticLightNode.setupShadow` picks it up automatically at material
+   * build time, so this method is a no-op for that path.
    */
   setupMaterialForCSM(material: Material): void {
+    if (material instanceof NodeMaterial) return;
     this.csm.setupMaterial(material);
   }
 
   /**
-   * Remove a material from CSM
+   * Remove a material from CSM.
+   *
+   * NodeMaterials had nothing registered in `setupMaterialForCSM`, so
+   * removal is also a no-op for them.
    */
   removeMaterialFromCSM(material: Material): void {
+    if (material instanceof NodeMaterial) return;
     this.csm.rollbackMaterial(material);
   }
 
@@ -346,6 +432,10 @@ export class SunLight extends EventHandler<SunLightEvents> {
   }
   set castShadow(v: boolean) {
     this.options.castShadow = v;
+    // No need to set `this.raw.castShadow = v` here — `this.raw` is not in
+    // the scene tree when castShadow is enabled (see `getSceneLights`),
+    // and the TSL CSM `shadowNode` is attached to `cascadedLights[0]`
+    // (the cascade light that actually drives illumination in scene).
     this.emit("_csmChanged");
     this.emit("needsUpdate");
   }
@@ -368,6 +458,10 @@ export class SunLight extends EventHandler<SunLightEvents> {
   set shadowFar(v: number) {
     this.options.shadowFar = v;
     this.csm.far = v;
+    if (this.csmNode) {
+      this.csmNode.maxFar = v;
+      this.csmNode.updateFrustums();
+    }
 
     this.emit("needsUpdate");
   }
@@ -381,6 +475,9 @@ export class SunLight extends EventHandler<SunLightEvents> {
   set shadowCascadeCount(v: number) {
     this.options.shadowCascadeCount = v;
     this.csm.cascadeCount = v;
+    // TSL CSM cascade count is fixed at construction (the internal
+    // `_shadowNodes` / `_cascades` arrays are built once in `_init`).
+    // TODO: support dynamic cascade count by disposing + recreating csmNode.
 
     this.emit("needsUpdate");
   }
@@ -390,6 +487,10 @@ export class SunLight extends EventHandler<SunLightEvents> {
   set shadowMode(v: ShadowMode) {
     this.options.shadowMode = v;
     this.csm.mode = v;
+    if (this.csmNode) {
+      this.csmNode.mode = v;
+      this.csmNode.updateFrustums();
+    }
 
     this.emit("needsUpdate");
   }
@@ -399,6 +500,10 @@ export class SunLight extends EventHandler<SunLightEvents> {
   set shadowLambda(v: number) {
     this.options.shadowLambda = v;
     this.csm.lambda = v;
+    // Upstream `CSMShadowNode` hardcodes the practical-split lambda to 0.5
+    // (no public setter). Custom split via `customSplitsCallback` is the
+    // available override path. For now this setter only updates the legacy
+    // CSM; the TSL CSM stays at lambda=0.5 for practical mode.
 
     this.emit("needsUpdate");
   }
@@ -408,6 +513,10 @@ export class SunLight extends EventHandler<SunLightEvents> {
   set shadowMargin(v: number) {
     this.options.shadowMargin = v;
     this.csm.margin = v;
+    if (this.csmNode) {
+      this.csmNode.lightMargin = v;
+      this.csmNode.updateFrustums();
+    }
 
     this.emit("needsUpdate");
   }
@@ -417,6 +526,9 @@ export class SunLight extends EventHandler<SunLightEvents> {
   set shadowFade(v: boolean) {
     this.options.shadowFade = v;
     this.csm.fade = v;
+    if (this.csmNode) {
+      this.csmNode.fade = v;
+    }
 
     this.emit("needsUpdate");
   }

@@ -1,12 +1,15 @@
 use std::cmp::Ordering;
 
 use bevy_ecs::component::Component;
+use navara_data_requester::RequestOrderKey;
 
 #[derive(Component, PartialEq, Debug, Clone, Default)]
 pub struct TileOrderByDistance {
     pub distance_from_camera: f32,
     pub sse: f32,
 }
+
+impl RequestOrderKey for TileOrderByDistance {}
 
 impl PartialOrd for TileOrderByDistance {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
