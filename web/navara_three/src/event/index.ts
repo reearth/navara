@@ -28,6 +28,7 @@ import {
   processRenderableFeatureAdded,
   processRenderableFeatureChanged,
 } from "./feature";
+import { processHillshadeBackfilled } from "./hillshade";
 import { ABORTABLE_IMAGE_LOADER, ABORTABLE_TEXTURE_LOADER } from "./loaders";
 import { processMeshAdded, processMeshChanged } from "./tile";
 import {
@@ -46,6 +47,7 @@ export type {
   LayerHandler,
 } from "./context";
 export { EventContext } from "./context";
+export { HillshadeContext } from "./HillshadeContext";
 
 export function processEvent(ctx: EventContext, event: Events | undefined) {
   const {
@@ -74,6 +76,10 @@ export function processEvent(ctx: EventContext, event: Events | undefined) {
 
   eventManager.forEachStack("update_sample_terrain_height", (ev) =>
     viewEvents.emit("_sample_terrain_height_received", ev),
+  );
+
+  eventManager.forEachStack("hillshade_backfilled", (ev) =>
+    processHillshadeBackfilled(ctx, ev),
   );
 
   eventManager.processTransactionEvents(
@@ -486,10 +492,35 @@ function processDataRequesterRemoved(
   ctx: EventContext,
   req: DataRequesterRemovedEvent,
 ) {
-  const { buf, abortControllers, workerPoolPromises } = ctx;
+  const {
+    buf,
+    abortControllers,
+    workerPoolPromises,
+    loadedTexs,
+    hillshadeContext,
+  } = ctx;
   const id = generate_id_from_entity(req);
   const abortController = abortControllers.get(id);
   const workerPool = workerPoolPromises.get(id);
+
+  // Clean up hillshade resources first (if applicable)
+  // For hillshade entities, clearRenderTarget will dispose the RenderTarget and its texture
+  if (hillshadeContext) {
+    hillshadeContext.pendingEdges.delete(id);
+    hillshadeContext.clearTempDem(id);
+    hillshadeContext.clearRenderTarget(id);
+  }
+
+  // Dispose and remove texture from loadedTexs
+  // For hillshade entities, texture is already disposed by clearRenderTarget above
+  // Check isRenderTargetTexture to avoid double-dispose
+  if (loadedTexs) {
+    const texture = loadedTexs.get(id);
+    if (texture && !texture.isRenderTargetTexture) {
+      texture.dispose();
+    }
+    loadedTexs.delete(id);
+  }
 
   buf.remove(req.handle);
   abortController?.abort();
@@ -538,11 +569,27 @@ async function processTextureFragmentRequested(
 }
 
 function processTextureFragmentRemoved(ctx: EventContext, req: EntityEvent) {
-  const { loadedTexs, abortControllers } = ctx;
+  const { loadedTexs, abortControllers, hillshadeContext } = ctx;
   const id = generate_id_from_entity(req);
   const abortController = abortControllers.get(id);
-  loadedTexs.get(id)?.dispose();
+
+  // Clean up hillshade resources first (if applicable)
+  // For hillshade entities, clearRenderTarget will dispose the RenderTarget and its texture
+  if (hillshadeContext) {
+    hillshadeContext.pendingEdges.delete(id);
+    hillshadeContext.clearTempDem(id);
+    hillshadeContext.clearRenderTarget(id);
+  }
+
+  // Dispose and remove texture from loadedTexs
+  // For hillshade entities, texture is already disposed by clearRenderTarget above
+  // Check isRenderTargetTexture to avoid double-dispose
+  const texture = loadedTexs.get(id);
+  if (texture && !texture.isRenderTargetTexture) {
+    texture.dispose();
+  }
   loadedTexs.delete(id);
+
   abortController?.abort();
 }
 

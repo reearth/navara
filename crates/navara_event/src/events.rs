@@ -12,7 +12,10 @@ use navara_material::RasterTileInternalMaterial;
 use navara_math::Transform;
 use navara_mesh::Mesh;
 use navara_texture_fragment::TextureFragment;
-use navara_tile_component::{OverscaledTileHandle, TerrainHeightObserver, TileMeshMarker};
+use navara_tile_component::{
+    HillshadeBackfillEventData, HillshadeBackfillEvents, OverscaledTileHandle,
+    TerrainHeightObserver, TileMeshMarker,
+};
 use navara_worker::DelegatedWorkerTasksParameters;
 
 #[derive(Debug, Default)]
@@ -62,6 +65,7 @@ pub struct Events<'a> {
     >,
     pub renderable_feature_removed: Vec<ReconstructableComponentEvent<&'a LayerId>>,
     pub update_sample_terrain_height: Vec<ReconstructableComponentEvent<&'a TerrainHeightObserver>>,
+    pub hillshade_backfilled: Vec<ReconstructableComponentEvent<&'a HillshadeBackfillEventData>>,
 }
 
 impl<'a> Events<'a> {
@@ -169,6 +173,19 @@ impl<'a> Events<'a> {
             if let Some(e) = ReconstructableComponentEvent::from_world(*e, world) {
                 events.update_sample_terrain_height.push(e);
                 is_changed = true;
+            }
+        }
+
+        for entity in store.hillshade_backfilled.iter() {
+            // Read HillshadeBackfillEvents component from entity
+            if let Some(backfill_events) = world.get::<HillshadeBackfillEvents>(*entity) {
+                // Push each event data as a separate ReconstructableComponentEvent
+                for event_data in &backfill_events.events {
+                    events
+                        .hillshade_backfilled
+                        .push(ReconstructableComponentEvent::new(*entity, event_data));
+                    is_changed = true;
+                }
             }
         }
 

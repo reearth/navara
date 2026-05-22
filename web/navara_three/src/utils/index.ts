@@ -5,3 +5,4 @@ export * from "./replacer";
 export * from "./screen";
 export * from "./blendModes";
 export * from "./object";
+export * from "./textureFragmentIndex";

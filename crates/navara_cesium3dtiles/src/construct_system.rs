@@ -23,7 +23,7 @@ use navara_material::Appearance;
 
 use crate::{
     Cesium3dTileContentDataRequesterMarker, Cesium3dTilesTree, RenderedCesium3dTileContent,
-    TileTransform,
+    TileOrderByDistance, TileTransform,
     tile_content_parser::{ParseContext, TileContentParser},
 };
 
@@ -50,13 +50,16 @@ pub fn construct_model_by_cesium3dtiles_layer<T: TileContentParser>(
             &mut RenderedCesium3dTileContent,
             Option<&TileTransform>,
             Option<&Aabb>,
+            &TileOrderByDistance,
         ),
         (With<T::RenderedMarker>, Added<RenderedCesium3dTileContent>),
     >,
     layers: Query<(Entity, &Cesium3dTilesLayer)>,
     trees: Query<&Cesium3dTilesTree>,
 ) {
-    for (mut tile, tile_transform, tile_aabb) in &mut rendered_tiles {
+    for (mut tile, tile_transform, tile_aabb, _) in
+        rendered_tiles.iter_mut().sort::<&TileOrderByDistance>()
+    {
         let (_, _, req) = match requesters.get(tile.data_requester_id) {
             Ok(v) => v,
             Err(_) => continue,

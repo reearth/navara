@@ -52,6 +52,17 @@ const run = async () => {
       receiveShadow: true,
     },
   });
+  view.addLayer({
+    type: "tiles",
+    data: { url: TERRAIN_DATASETS.gsi.url },
+    rasterTile: {
+      maxZoom: 15,
+      minZoom: 5,
+    },
+    hillshade: {
+      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+    },
+  });
 
   // Selective bloom effect
   const bloomEffect = view.addEffect({

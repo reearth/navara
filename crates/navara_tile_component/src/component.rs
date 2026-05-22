@@ -1,4 +1,4 @@
-use bevy_ecs::component::Component;
+use bevy_ecs::{component::Component, entity::Entity};
 use navara_core::{Extent, LLE, Radians};
 use navara_math::FloatType;
 
@@ -36,4 +36,47 @@ impl TileExtent {
 pub struct TerrainHeightObserver {
     pub lle: LLE<FloatType, Radians>,
     pub height: Option<FloatType>,
+}
+
+/// Data for a single hillshade backfill event
+/// Contains all information needed to update hillshade textures in JS
+#[derive(Debug, Clone, Copy)]
+pub struct HillshadeBackfillEventData {
+    pub tile_handle: u64,
+    /// Edge data handle for updating edges
+    /// -1 when only creating initial texture (no edge update)
+    pub edge_data_handle: i32,
+    /// Original DEM data handle (256×256 RGBA)
+    /// Some() when texture needs to be created for the first time
+    /// None when only updating edges
+    pub original_handle: Option<i32>,
+    /// Target entity (DataRequester entity) that owns the texture
+    /// For edge updates, this points to the actual DataRequester
+    pub target_entity: Option<Entity>,
+    /// Edge direction: 0=Left, 1=Right, 2=Top, 3=Bottom
+    /// 255 when not applicable (initialization)
+    pub edge_direction: u8,
+}
+
+/// Component storing multiple hillshade backfill events for a single entity
+/// Attached to the main DataRequester entity when backfill events are generated
+#[derive(Component, Debug, Clone)]
+pub struct HillshadeBackfillEvents {
+    pub events: Vec<HillshadeBackfillEventData>,
+}
+
+/// Marker component indicating that hillshade edges have been extracted
+/// Once this is added, the original DEM data has been deleted and only edge data remains
+#[derive(Component, Debug, Clone, Copy)]
+pub struct HillshadeEdgesExtracted;
+
+/// Component storing handles to the 4 edge buffers of a hillshade tile
+/// Each edge is 256×4 bytes (RGBA) for a 256×256 DEM texture
+/// Edges are extracted after first load to save memory (4KB instead of 256KB per tile)
+#[derive(Component, Debug, Clone, Copy)]
+pub struct HillshadeEdges {
+    pub left: i32,   // Edge direction 0
+    pub right: i32,  // Edge direction 1
+    pub top: i32,    // Edge direction 2
+    pub bottom: i32, // Edge direction 3
 }

@@ -337,6 +337,27 @@ impl Core {
             .map(|v| v.into())
     }
 
+    /// Calculate meters per texel for hillshade normal computation
+    ///
+    /// # Arguments
+    /// * `tile_handle` - Handle of the tile (for calculating latitude)
+    /// * `texture_zoom` - Zoom level of the texture
+    /// * `texture_width` - Width of the texture in pixels (including 2-pixel padding)
+    ///
+    /// # Returns
+    /// Meters per texel value for hillshade shader
+    #[wasm_bindgen(js_name = calcMetersPerTexel)]
+    pub fn calc_meters_per_texel(
+        &mut self,
+        tile_handle: TileHandle,
+        texture_zoom: usize,
+        texture_width: u32,
+    ) -> f32 {
+        self.app
+            .calc_meters_per_texel(tile_handle, texture_zoom, texture_width)
+            .unwrap_or(1.0)
+    }
+
     #[wasm_bindgen(js_name = getTransferablePolygonBatchedFeature)]
     pub fn get_transferable_polygon_batched_feature(
         &mut self,
@@ -615,11 +636,9 @@ impl Core {
         self.app.get_globe().map(|g| g.hide_underground)
     }
 
-    #[wasm_bindgen(js_name = getGlobeShouldComputeNormalFromVertex)]
-    pub fn get_globe_should_compute_normal_from_vertex(&self) -> Option<bool> {
-        self.app
-            .get_globe()
-            .map(|g| g.should_compute_normal_from_vertex)
+    #[wasm_bindgen(js_name = getGlobeUseNormal)]
+    pub fn get_globe_use_normal(&self) -> Option<bool> {
+        self.app.get_globe().map(|g| g.use_normal)
     }
 
     #[wasm_bindgen(js_name = getGlobeOpacity)]
@@ -662,9 +681,9 @@ impl Core {
         self.app.set_globe_hide_underground(value);
     }
 
-    #[wasm_bindgen(js_name = setGlobeShouldComputeNormalFromVertex)]
-    pub fn set_globe_should_compute_normal_from_vertex(&mut self, value: bool) {
-        self.app.set_globe_should_compute_normal_from_vertex(value);
+    #[wasm_bindgen(js_name = setGlobeUseNormal)]
+    pub fn set_globe_use_normal(&mut self, value: bool) {
+        self.app.set_globe_use_normal(value);
     }
 
     #[wasm_bindgen(js_name = setGlobeOpacity)]

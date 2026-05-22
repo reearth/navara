@@ -602,6 +602,28 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     },
   });
 
+  view.addLayer({
+    type: "tiles",
+    data: {
+      url:
+        // @ts-expect-error : Make switch button later
+        terrainType === "mapbox"
+          ? TERRAIN_DATASETS.mapbox.url
+          : TERRAIN_DATASETS.gsi.url,
+    },
+    rasterTile: {
+      maxZoom: 15,
+      minZoom: 5,
+    },
+    hillshade: {
+      elevationDecoder:
+        // @ts-expect-error : Make switch button later
+        terrainType === "mapbox"
+          ? MAPBOX_ELEVATION_DECODER()
+          : JAPAN_GSI_ELEVATION_DECODER(),
+    },
+  });
+
   const pane = new Pane({
     title: "Parameters",
     expanded: true,

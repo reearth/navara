@@ -55,6 +55,11 @@ export const createBaseMutates = (
     nvr_uBatchId: { value: batchId ?? 0 },
     nvr_uPickable: { value: 0.0 },
     uAtlas: { value: null },
+    uColorAtlas: { value: null },
+    // Default to 1.0 to avoid divide-by-zero in the shader before a texture
+    // is bound; UVs are unused until glyph quads exist anyway.
+    uSdfAtlasSize: { value: new Vector2(1, 1) },
+    uColorAtlasSize: { value: new Vector2(1, 1) },
   };
 
   // Conditional position uniforms based on RTE mode
@@ -110,6 +115,9 @@ export const createBaseMutates = (
       uniforms.nvr_uBatchId = refs.nvr_uBatchId;
       uniforms.nvr_uPickable = refs.nvr_uPickable;
       uniforms.uAtlas = refs.uAtlas;
+      uniforms.uColorAtlas = refs.uColorAtlas;
+      uniforms.uSdfAtlasSize = refs.uSdfAtlasSize;
+      uniforms.uColorAtlasSize = refs.uColorAtlasSize;
 
       if (refs.uRTEPositionLOW) {
         uniforms.uRTEPositionLOW = refs.uRTEPositionLOW;
@@ -159,6 +167,21 @@ export const createBaseMutates = (
 
     setAtlasTexture: (texture: UniformValue<DataTexture | null>) => {
       refs.uAtlas.value = texture.value;
+    },
+
+    setColorAtlasTexture: (texture: UniformValue<DataTexture | null>) => {
+      refs.uColorAtlas.value = texture.value;
+    },
+
+    updateAtlasSizes: () => {
+      const sdfImg = refs.uAtlas.value?.image;
+      if (sdfImg && sdfImg.width > 0 && sdfImg.height > 0) {
+        refs.uSdfAtlasSize.value.set(sdfImg.width, sdfImg.height);
+      }
+      const colorImg = refs.uColorAtlas.value?.image;
+      if (colorImg && colorImg.width > 0 && colorImg.height > 0) {
+        refs.uColorAtlasSize.value.set(colorImg.width, colorImg.height);
+      }
     },
 
     setPosition: (

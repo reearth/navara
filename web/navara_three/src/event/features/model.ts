@@ -21,9 +21,6 @@ import {
 } from "../loaders";
 
 export async function renderModel(ctx: EventContext, m: NavaraModelMesh) {
-  const loader = initializeGltfLoader(ctx.viewContext.concurrencyManager);
-  const dracoLoader = initializeDracoLoader(ctx.viewContext.concurrencyManager);
-
   const { rawScene, credit } = await (async () => {
     if (m.bin) {
       const bin = ctx.buf.u8(m.bin);
@@ -44,10 +41,14 @@ export async function renderModel(ctx: EventContext, m: NavaraModelMesh) {
         });
 
         if (internal.dracoCompressed) {
-          geometry = await decompressDraco(
-            bin.buffer as ArrayBuffer,
-            dracoLoader,
-          );
+          const { decoder, dispose } = initializeDracoLoader();
+          geometry = await (async () => {
+            try {
+              return await decompressDraco(bin.buffer as ArrayBuffer, decoder);
+            } finally {
+              dispose();
+            }
+          })();
         } else {
           geometry = new BufferGeometry();
           geometry.setAttribute(
@@ -91,7 +92,9 @@ export async function renderModel(ctx: EventContext, m: NavaraModelMesh) {
         return { rawScene: group };
       }
 
+      const { loader, dispose } = initializeGltfLoader();
       const model = await loader.parseAsync(bin.buffer as ArrayBuffer, "");
+      dispose();
       if (m.material.showBoundingBox) {
         model.scene.traverse((child) => {
           if (child instanceof Mesh) {
@@ -113,12 +116,15 @@ export async function renderModel(ctx: EventContext, m: NavaraModelMesh) {
       if (!m.material.url) {
         return {};
       }
+      const { loader, dispose } = initializeGltfLoader();
       let model;
       try {
         model = await loader.loadAsync(m.material.url);
       } catch (e) {
         console.warn(`Failed to load model: ${m.material.url}`, e);
         return {};
+      } finally {
+        dispose();
       }
       if (m.material.showBoundingBox) {
         model.scene.traverse((child) => {

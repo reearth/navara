@@ -333,6 +333,7 @@ impl App {
                             layer_id: LayerId(layer_id.to_owned()),
                             appearance: appearance.clone(),
                             elevation_heatmap_config: None,
+                            hillshade_config: None,
                         });
                 }
             }
@@ -344,6 +345,7 @@ impl App {
                             layer_id: LayerId(layer_id.to_owned()),
                             appearance: appearance.clone(),
                             elevation_heatmap_config: None,
+                            hillshade_config: None,
                         });
                 }
             }
@@ -355,6 +357,7 @@ impl App {
                             layer_id: LayerId(layer_id.to_owned()),
                             appearance: appearance.clone(),
                             elevation_heatmap_config: None,
+                            hillshade_config: None,
                         });
                 }
             }
@@ -366,6 +369,7 @@ impl App {
                             layer_id: LayerId(layer_id.to_owned()),
                             appearance: appearance.clone(),
                             elevation_heatmap_config: None,
+                            hillshade_config: None,
                         });
                 }
             }
@@ -377,6 +381,7 @@ impl App {
                             layer_id: LayerId(layer_id.to_owned()),
                             appearance: appearance.clone(),
                             elevation_heatmap_config: None,
+                            hillshade_config: None,
                         });
                 }
             }
@@ -388,6 +393,7 @@ impl App {
                             layer_id: LayerId(layer_id.to_owned()),
                             appearance,
                             elevation_heatmap_config: layer.elevation_heatmap_config.clone(),
+                            hillshade_config: layer.hillshade_config.clone(),
                         });
                 }
             }
@@ -442,6 +448,36 @@ impl App {
         let qt = world.get_resource::<RasterTileQuadtree>()?;
 
         qt.qt.get(handle)
+    }
+
+    pub fn calc_meters_per_texel(
+        &mut self,
+        tile_handle: TileHandle,
+        texture_zoom: usize,
+        texture_width: u32,
+    ) -> Option<f32> {
+        let world = self.app.world_mut();
+        let qt = world.get_resource::<RasterTileQuadtree>()?;
+
+        let tile = qt.qt.get(tile_handle)?;
+
+        // Calculate tile center latitude's cosine for metersPerTexel calculation
+        let tile_size = 1u64 << tile.coords.z;
+        let center_y = (tile.coords.y as f64 + 0.5) / tile_size as f64;
+        let lat_rad = ((std::f64::consts::PI * (1.0 - 2.0 * center_y)).sinh()).atan();
+        let cos_lat = lat_rad.cos();
+
+        // Earth circumference at equator (2π × WGS84 semi-major axis)
+        let earth_circumference = 2.0 * std::f64::consts::PI * WGS84_64.a;
+
+        // Content width excludes 2-pixel padding
+        let content_pixel_width = (texture_width - 2) as f64;
+
+        // Calculate meters per texel using texture zoom
+        let meters_per_texel =
+            (earth_circumference * cos_lat) / (content_pixel_width * (1u64 << texture_zoom) as f64);
+
+        Some(meters_per_texel as f32)
     }
 
     pub fn get_parent_tile(&mut self, handle: TileHandle) -> Option<&RasterTile> {
@@ -793,9 +829,9 @@ impl App {
         }
     }
 
-    pub fn set_globe_should_compute_normal_from_vertex(&mut self, value: bool) {
+    pub fn set_globe_use_normal(&mut self, value: bool) {
         if let Some(mut globe) = self.get_globe_mut() {
-            globe.should_compute_normal_from_vertex = value;
+            globe.use_normal = value;
         }
     }
 

@@ -127,6 +127,98 @@ describe("sdfTextBaseEnhancer/mutates", () => {
     });
   });
 
+  describe("updateAtlasSizes", () => {
+    it("should sync uSdfAtlasSize and uColorAtlasSize from bound texture images", () => {
+      const state: SdfTextBaseState = { ...DEFAULT_BASE_STATE };
+      const mutates = createBaseMutates(false);
+      mutates.update(state);
+
+      const sdfTex = {
+        image: { width: 1024, height: 2048, data: new Uint8Array(1) },
+      } as unknown as DataTexture;
+      const colorTex = {
+        image: { width: 4096, height: 4096, data: new Uint8Array(1) },
+      } as unknown as DataTexture;
+
+      mutates.setAtlasTexture({ value: sdfTex });
+      mutates.setColorAtlasTexture({ value: colorTex });
+      mutates.updateAtlasSizes();
+
+      const uniforms: ShaderUniforms = {};
+      mutates.updateUniforms(uniforms, state);
+
+      expect(uniforms.uSdfAtlasSize?.value.x).toBe(1024);
+      expect(uniforms.uSdfAtlasSize?.value.y).toBe(2048);
+      expect(uniforms.uColorAtlasSize?.value.x).toBe(4096);
+      expect(uniforms.uColorAtlasSize?.value.y).toBe(4096);
+    });
+
+    it("should pick up new dimensions after the atlas grows", () => {
+      const state: SdfTextBaseState = { ...DEFAULT_BASE_STATE };
+      const mutates = createBaseMutates(false);
+      mutates.update(state);
+
+      const sdfTex = {
+        image: { width: 2048, height: 2048, data: new Uint8Array(1) },
+      } as unknown as DataTexture;
+      mutates.setAtlasTexture({ value: sdfTex });
+      mutates.updateAtlasSizes();
+
+      const uniforms: ShaderUniforms = {};
+      mutates.updateUniforms(uniforms, state);
+      expect(uniforms.uSdfAtlasSize?.value.x).toBe(2048);
+      expect(uniforms.uSdfAtlasSize?.value.y).toBe(2048);
+
+      // Simulate the SDFAtlas growing — the image dims on the same texture
+      // change, and updateAtlasSizes() must propagate them to the uniform.
+      sdfTex.image = {
+        width: 4096,
+        height: 4096,
+        data: new Uint8Array(1),
+      } as DataTexture["image"];
+      mutates.updateAtlasSizes();
+
+      expect(uniforms.uSdfAtlasSize?.value.x).toBe(4096);
+      expect(uniforms.uSdfAtlasSize?.value.y).toBe(4096);
+    });
+
+    it("should leave atlas size uniforms unchanged when textures are null", () => {
+      const state: SdfTextBaseState = { ...DEFAULT_BASE_STATE };
+      const mutates = createBaseMutates(false);
+      mutates.update(state);
+
+      // Both uAtlas and uColorAtlas default to null.
+      mutates.updateAtlasSizes();
+
+      const uniforms: ShaderUniforms = {};
+      mutates.updateUniforms(uniforms, state);
+
+      // Defaults set in createBaseMutates: (1, 1) to avoid divide-by-zero.
+      expect(uniforms.uSdfAtlasSize?.value.x).toBe(1);
+      expect(uniforms.uSdfAtlasSize?.value.y).toBe(1);
+      expect(uniforms.uColorAtlasSize?.value.x).toBe(1);
+      expect(uniforms.uColorAtlasSize?.value.y).toBe(1);
+    });
+
+    it("should leave atlas size uniforms unchanged when image has zero dimensions", () => {
+      const state: SdfTextBaseState = { ...DEFAULT_BASE_STATE };
+      const mutates = createBaseMutates(false);
+      mutates.update(state);
+
+      const sdfTex = {
+        image: { width: 0, height: 0, data: new Uint8Array(0) },
+      } as unknown as DataTexture;
+      mutates.setAtlasTexture({ value: sdfTex });
+      mutates.updateAtlasSizes();
+
+      const uniforms: ShaderUniforms = {};
+      mutates.updateUniforms(uniforms, state);
+
+      expect(uniforms.uSdfAtlasSize?.value.x).toBe(1);
+      expect(uniforms.uSdfAtlasSize?.value.y).toBe(1);
+    });
+  });
+
   describe("updatePerFrame", () => {
     it("should update camera uniforms", () => {
       const state: SdfTextBaseState = { ...DEFAULT_BASE_STATE };

@@ -22,7 +22,7 @@ use crate::texture_fragment::request_texture_fragment;
 
 use super::{
     render::RenderedTile,
-    tile_cache_manager::{RenderedTileCache, TileCacheManager},
+    tile_cache_manager::{HillshadeParent, RenderedTileCache, TileCacheManager},
 };
 
 use navara_layer::{TerrainDataType, TerrainLayer, TilesLayer};
@@ -48,6 +48,7 @@ pub fn traverse_tile(
     camera: &Transform,
     frustum: &CameraFrustum,
     texture_fragment: &TileTextureFragmentQuery,
+    data_requesters: &Query<&navara_data_requester::DataRequester>,
     terrain_data_requester: &TileTerrainDataRequesterQuery,
     window: &Window,
     ellipsoid: &Ellipsoid<FloatType>,
@@ -60,18 +61,20 @@ pub fn traverse_tile(
     meets_sse_ancestors: bool,
     // This is used to show parent's texture if child's texture isn't ready.
     ready_parent_tile_handle: Option<TileHandle>,
+    // This tracks the nearest ready hillshade parent for each layer.
+    ready_hillshade_parents: Option<Vec<Option<HillshadeParent>>>,
 ) -> TraversalResult {
     let has_tile_layer = !tiles.is_empty();
     match qt.qt.get(handle) {
         Some(tile) => {
             let has_no_tile =
                 has_tile_layer && tiles.iter().all(|t| t.0.is_over_max_zoom(tile.coords.z));
-            // If tile layer isn't added, check overscaled_max_zoom for terrain layer.
-            // The reason why we check `overscaled_max_zoom` is that the terrain is upsampled even if actual tile isn't exist.
-            // The terrain is upsampled until it reaches `overscaled_max_zoom`.
-            let has_no_terrain = !has_tile_layer
-                && terrain_layer.is_none_or(|l| l.is_over_overscaled_max_zoom(tile.coords.z));
-            if has_no_tile || has_no_terrain {
+            // Terrain may still be upsampled even when no actual tile data exists,
+            // up to `overscaled_max_zoom`. Treat terrain as unrenderable only past that point.
+            let has_no_terrain =
+                terrain_layer.is_none_or(|l| l.is_over_overscaled_max_zoom(tile.coords.z));
+            // Bail only when neither tile data nor upsamplable terrain can render this tile.
+            if (has_no_tile || !has_tile_layer) && has_no_terrain {
                 return TraversalResult::NotFound;
             }
         }
@@ -101,9 +104,10 @@ pub fn traverse_tile(
     let tile_ready_state = tile.is_ready(
         qt,
         texture_fragment,
+        data_requesters,
         terrain_data_requester,
         terrain_layer,
-        tiles.iter().len(),
+        tiles,
     );
     let is_tile_ready = tile_ready_state.is_tile_ready;
 
@@ -148,7 +152,9 @@ pub fn traverse_tile(
             tiles,
             handle,
             texture_fragment,
+            data_requesters,
             Priority::High,
+            buf,
         );
     }
 
@@ -169,6 +175,7 @@ pub fn traverse_tile(
                 tc,
                 tiles,
                 texture_fragment,
+                data_requesters,
                 terrain_data_requester,
                 if is_renderable {
                     Priority::Medium
@@ -200,6 +207,16 @@ pub fn traverse_tile(
             ready_parent_tile_handle
         };
 
+        // Update hillshade parents - track nearest ready parent for each layer
+        let ready_hillshade_parents = update_ready_hillshade_parents(
+            qt,
+            handle,
+            tiles,
+            texture_fragment,
+            data_requesters,
+            ready_hillshade_parents,
+        );
+
         // Tile has several states to switch LOD smoothly.
         // 1. RenderedTile component is spawned if a tile is selected.
         // 2. Rendering engine needs to do some preparations, so the selected tile is marked as it's prepared after these preparations.
@@ -225,6 +242,7 @@ pub fn traverse_tile(
                 camera,
                 frustum,
                 texture_fragment,
+                data_requesters,
                 terrain_data_requester,
                 window,
                 ellipsoid,
@@ -239,6 +257,7 @@ pub fn traverse_tile(
                 },
                 meets_sse,
                 ready_parent_tile_handle,
+                ready_hillshade_parents.clone(),
             );
 
             if matches!(traversal_result, TraversalResult::NotFound) {
@@ -321,7 +340,15 @@ pub fn traverse_tile(
                         Some(t) => t,
                         None => unreachable!(),
                     };
-                    spawn_tile_entity(command, tc, frame, tile, handle, ready_parent_tile_handle);
+                    spawn_tile_entity(
+                        command,
+                        tc,
+                        frame,
+                        tile,
+                        handle,
+                        ready_parent_tile_handle,
+                        ready_hillshade_parents.clone(),
+                    );
                 }
             }
 
@@ -368,6 +395,7 @@ pub fn traverse_tile(
                 tc,
                 tiles,
                 texture_fragment,
+                data_requesters,
                 terrain_data_requester,
                 Priority::Extreme,
             );
@@ -391,12 +419,14 @@ pub fn spawn_tile_entity(
     tile: &mut RasterTile,
     tile_handle: TileHandle,
     ready_parent_tile_handle: Option<TileHandle>,
+    hillshade_parents: Option<Vec<Option<HillshadeParent>>>,
 ) {
     tile.rendered_at = frame.rendered_frame();
     tc.is_updated_in_this_frame = true;
 
     if let Some(tile) = tc.rendered_tile_caches.get_mut(&tile_handle) {
         tile.ready_parent_tile_handle = ready_parent_tile_handle;
+        tile.hillshade_parents = hillshade_parents;
         return;
     }
 
@@ -415,10 +445,57 @@ pub fn spawn_tile_entity(
         RenderedTileCache {
             rendered_tile_entity: e.id(),
             ready_parent_tile_handle,
+            hillshade_parents,
             mesh_entity: None,
             mesh_prepared: false,
         },
     );
+}
+
+/// Update hillshade parents by tracking the nearest ready parent for each layer
+/// Similar to how ready_parent_tile_handle tracks the nearest ready parent tile
+fn update_ready_hillshade_parents(
+    qt: &RasterTileQuadtree,
+    handle: TileHandle,
+    tiles: &Query<(&TilesLayer, &Order)>,
+    texture_fragment: &TileTextureFragmentQuery,
+    data_requesters: &Query<&navara_data_requester::DataRequester>,
+    ready_hillshade_parents: Option<Vec<Option<HillshadeParent>>>,
+) -> Option<Vec<Option<HillshadeParent>>> {
+    let has_hillshade = tiles.iter().any(|(l, _)| l.hillshade_config.is_some());
+    if !has_hillshade {
+        return None;
+    }
+
+    let tile = qt.qt.get(handle)?;
+    let mut updated_parents = Vec::new();
+
+    for (i, (layer, _)) in tiles.iter().sort::<&Order>().enumerate() {
+        let parent = if layer.hillshade_config.is_some() {
+            // Check if current tile has a ready hillshade entity for this layer
+            if let Some(hill_ids) = &tile.hillshade_entity_ids
+                && let Some(&Some(entity)) = hill_ids.get(i)
+                && RasterTile::is_texture_entity_ready(entity, texture_fragment, data_requesters)
+            {
+                // Current tile has ready hillshade, use it as parent
+                Some(HillshadeParent {
+                    entity,
+                    zoom: tile.coords.z,
+                })
+            } else {
+                // Current tile doesn't have ready hillshade, preserve parent's value
+                ready_hillshade_parents
+                    .as_ref()
+                    .and_then(|parents| parents.get(i).cloned())
+                    .flatten()
+            }
+        } else {
+            None
+        };
+        updated_parents.push(parent);
+    }
+
+    Some(updated_parents)
 }
 
 /// Prepare some resource that is necessary to render the tile.
@@ -433,6 +510,7 @@ pub fn prepare_tile_resource(
     tc: &mut TileCacheManager,
     tiles: &Query<(&TilesLayer, &Order)>,
     texture_fragment: &TileTextureFragmentQuery,
+    data_requesters: &Query<&navara_data_requester::DataRequester>,
     terrain_data_requester: &TileTerrainDataRequesterQuery,
     priority: Priority,
 ) {
@@ -461,7 +539,9 @@ pub fn prepare_tile_resource(
             tiles,
             handle,
             texture_fragment,
+            data_requesters,
             Priority::High,
+            buf,
         );
     }
 

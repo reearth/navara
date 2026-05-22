@@ -1,5 +1,7 @@
 use bevy_ecs::component::Component;
-use navara_core::{Aabb, CRS, Plane, WGS84_64, WGS84_B_64, adjust_angle_for_lerp, lerp};
+use navara_core::{
+    Aabb, BoundingVolume, CRS, Plane, WGS84_64, WGS84_B_64, adjust_angle_for_lerp, lerp,
+};
 use navara_math::{
     EPSILON10, EqualEpsilon, FloatType, Mat3, Quat, Transform, Vec3, negative_pi_to_pi,
 };
@@ -112,6 +114,14 @@ impl CameraFrustum {
             }
         }
         true
+    }
+
+    /// Conservative frustum vs bounding volume test. Returns true if the
+    /// volume is on the forward side of every frustum plane (i.e. not
+    /// definitively outside any plane). Dispatches to the underlying Aabb /
+    /// Obb plane test.
+    pub fn intersection_with_bounding_volume(&self, bv: &BoundingVolume) -> bool {
+        self.planes.iter().all(|p| bv.is_on_or_forward_plane(p))
     }
 
     /// Returns true if the point is inside or on the boundary of all frustum planes.
@@ -665,7 +675,7 @@ impl CameraFlight {
 #[cfg(test)]
 mod test {
     use approx::assert_abs_diff_eq;
-    use navara_core::{Aabb, Angle, Plane};
+    use navara_core::{Aabb, Angle, BoundingVolume, Obb, Plane};
     use navara_math::{EPSILON5, Transform, Vec3};
 
     use super::CameraFrustum;
@@ -762,6 +772,63 @@ mod test {
         assert!(!frustum.contains_point(Vec3::new(0., 0., -20.)));
         // Point far to the side
         assert!(!frustum.contains_point(Vec3::new(100., 100., 10.)));
+    }
+
+    /// The new `intersection_with_bounding_volume` must match the
+    /// AABB-specific path for Aabb-wrapped volumes, and must additionally
+    /// reject OBBs that lie outside the frustum even when their axis-aligned
+    /// hull would have looked like a false positive.
+    #[test]
+    fn intersection_with_bounding_volume_handles_both_variants() {
+        let camera = Transform::from_xyz(0., 0., -10.).looking_at(Vec3::ZERO, Vec3::Y);
+        let frustum = CameraFrustum::new(&camera, 0.1, 1000., Angle::new(50.).rad().val(), 1., 1.);
+
+        // Aabb path mirrors `intersection_with_aabb`.
+        let aabb = Aabb::from_vec3(&[Vec3::new(-10., -1., 10.), Vec3::new(10., 1., 30.)]);
+        let bv: BoundingVolume = aabb.clone().into();
+        assert_eq!(
+            frustum.intersection_with_bounding_volume(&bv),
+            frustum.intersection_with_aabb(&aabb),
+        );
+
+        // OBB inside the frustum at (0, 0, 10).
+        let obb_inside = Obb::new(
+            Vec3::new(0., 0., 10.),
+            [
+                Vec3::new(1., 0., 0.),
+                Vec3::new(0., 1., 0.),
+                Vec3::new(0., 0., 1.),
+            ],
+        );
+        let bv: BoundingVolume = obb_inside.into();
+        assert!(frustum.intersection_with_bounding_volume(&bv));
+
+        // OBB far above the frustum (no axis-aligned slack involved).
+        let obb_outside = Obb::new(
+            Vec3::new(0., 200., 10.),
+            [
+                Vec3::new(1., 0., 0.),
+                Vec3::new(0., 1., 0.),
+                Vec3::new(0., 0., 1.),
+            ],
+        );
+        let bv: BoundingVolume = obb_outside.into();
+        assert!(!frustum.intersection_with_bounding_volume(&bv));
+
+        // OBB rotated 45° around Z, near the boundary — must still be
+        // considered visible (the projection radius onto each plane normal
+        // accounts for the rotation).
+        let s = 1.0_f64 / 2.0_f64.sqrt();
+        let obb_rotated = Obb::new(
+            Vec3::new(0., 0., 10.),
+            [
+                Vec3::new(s, s, 0.),
+                Vec3::new(-s, s, 0.),
+                Vec3::new(0., 0., 1.),
+            ],
+        );
+        let bv: BoundingVolume = obb_rotated.into();
+        assert!(frustum.intersection_with_bounding_volume(&bv));
     }
 
     #[test]

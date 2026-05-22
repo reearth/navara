@@ -73,6 +73,16 @@ const run = async () => {
       receiveShadow: true,
     },
   });
+  view.addLayer({
+    type: "tiles",
+    data: { url: TERRAIN_DATASETS.gsi.url },
+    rasterTile: {
+      maxZoom: 15,
+    },
+    hillshade: {
+      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+    },
+  });
 
   // Track updated features to prevent duplicate evaluations
   let updatedFeatures = new Set<bigint>();

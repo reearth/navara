@@ -1,5 +1,6 @@
 use bevy_ecs::{component::Component, entity::Entity};
 use navara_core::{CRS, ElevationDecoder, calc_transform};
+use navara_geometry::TileUvTransform;
 use navara_math::{Transform, Vec2, Vec3};
 
 /// Configuration for elevation heatmap rendering.
@@ -13,6 +14,18 @@ pub struct ElevationHeatmapConfig {
 
     pub logarithmic: bool,
     pub log_boundary: f64,
+}
+
+/// Configuration for hillshade rendering.
+/// Computes normals from DEM gradients to fix tile boundary seams.
+/// The computed normals are used with existing scene lighting.
+#[derive(Debug, Clone, PartialEq)]
+pub struct HillshadeConfig {
+    pub elevation_decoder: ElevationDecoder,
+
+    /// Exaggeration factor for hillshade effect (default: 1.0)
+    /// Higher values make terrain appear more dramatic, lower values flatten it. Recommended range is 0.5 to 2.0.
+    pub exaggeration: f32,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -537,6 +550,11 @@ pub struct RasterTileInternalMaterial {
     // Elevation Heatmap fields
     pub is_elevation_heatmaps: Vec<bool>, // Per-layer flags: which texture slots are elevation heatmaps
     pub elevation_heatmap_config: Option<ElevationHeatmapConfig>, // Shared config for all heatmap layers
+
+    // Hillshade fields
+    pub is_hillshades: Vec<bool>, // Per-layer flags: which texture slots are hillshades
+    pub hillshade_config: Option<HillshadeConfig>, // Shared config for all hillshade layers
+    pub hillshade_uv_transforms: Vec<Option<TileUvTransform>>, // Per-layer UV transforms for parent texture reuse
 }
 
 #[derive(Debug, Clone, PartialEq, Component)]

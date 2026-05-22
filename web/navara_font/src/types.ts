@@ -1,4 +1,10 @@
-/** Glyph metrics from the SDF atlas. */
+/**
+ * Pixel size at which COLRv1 color glyphs are rasterized into the color atlas.
+ * Must match `COLOR_GLYPH_PX_SIZE` in `crates/navara_wasm_font_worker/src/color_raster.rs`.
+ */
+export const COLOR_GLYPH_PX_SIZE = 64.0;
+
+/** Glyph metrics from either the SDF or the color atlas. */
 export type GlyphMetrics = {
   glyphId: number;
   /** Unique font index within the atlas (distinguishes glyphs from different fonts). */
@@ -11,6 +17,8 @@ export type GlyphMetrics = {
   atlasH: number;
   bearingX: number;
   bearingY: number;
+  /** True when this glyph lives in the COLRv1 color atlas (RGBA) rather than the SDF atlas (R8). */
+  isColor: boolean;
 };
 
 /** A single shaped glyph with positioning info. */
@@ -43,7 +51,10 @@ export type FontAtlasData = {
 
 export type BatchPrepareTextResult = {
   results: { text: string; shapeResult: ShapeTextResult | null }[];
+  /** Snapshot of the SDF atlas, if any glyphs were added during the batch. */
   atlas: FontAtlasData | null;
+  /** Snapshot of the COLRv1 color atlas (RGBA), if any color glyphs were added during the batch. */
+  colorAtlas: FontAtlasData | null;
   /** The atlas key used for this batch (family name or font URL). */
   atlasKey: string;
 };

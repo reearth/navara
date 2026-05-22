@@ -67,7 +67,7 @@ export class CustomRenderPass extends RenderPass {
   // Used to render only the shadow map
   private shadowScene = new Scene();
   private dummyShadowRenderTarget = new WebGLRenderTarget(1, 1, {
-    depthBuffer: false,
+    depthBuffer: true,
     stencilBuffer: false,
   });
 

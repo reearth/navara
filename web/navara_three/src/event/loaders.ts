@@ -1,4 +1,3 @@
-import type { ConcurrencyManager } from "@navara/worker";
 import { BufferGeometry, Cache, ImageLoader, TextureLoader } from "three";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import { DRACOLoader as DRACODecoder } from "three/addons/loaders/DRACOLoader.js";
@@ -14,34 +13,37 @@ export const ABORTABLE_TEXTURE_LOADER = new AbortableTextureLoader();
 export const IMAGE_LOADER = new ImageLoader();
 export const ABORTABLE_IMAGE_LOADER = new AbortableImageLoader();
 
-export const initializeGltfLoader = (() => {
-  let GLTF: GLTFLoader;
-  return (concurrencyManager: ConcurrencyManager) => {
-    if (GLTF) return GLTF;
-    GLTF = new GLTFLoader();
-    const draco = new DRACOLoader();
-    draco.setWorkerLimit(concurrencyManager.total);
-    draco.setDecoderPath(
-      "https://unpkg.com/three@0.184.0/examples/jsm/libs/draco/gltf/",
-    );
-    GLTF.setDRACOLoader(draco);
-    GLTF.setMeshoptDecoder(MeshoptDecoder);
-    return GLTF;
-  };
-})();
+const THREEJS_DRACO_MODULE_URL =
+  "https://unpkg.com/three@0.184.0/examples/jsm/libs/draco/";
 
-export const initializeDracoLoader = (() => {
-  let draco: DRACODecoder;
-  return (concurrencyManager: ConcurrencyManager) => {
-    if (draco) return draco;
-    draco = new DRACODecoder();
-    draco.setWorkerLimit(concurrencyManager.total);
-    draco.setDecoderPath(
-      "https://unpkg.com/three@0.184.0/examples/jsm/libs/draco/",
-    );
-    return draco;
+export const initializeGltfLoader = () => {
+  // Instantiate these loaders every time to prevent worker occupation.
+  const gltf = new GLTFLoader();
+  const draco = new DRACOLoader();
+  draco.setWorkerLimit(1);
+  draco.setDecoderPath(THREEJS_DRACO_MODULE_URL);
+  gltf.setDRACOLoader(draco);
+  gltf.setMeshoptDecoder(MeshoptDecoder);
+  return {
+    loader: gltf,
+    dispose: () => {
+      gltf.dracoLoader?.dispose();
+    },
   };
-})();
+};
+
+export const initializeDracoLoader = () => {
+  // Instantiate these loaders every time to prevent worker occupation.
+  const draco = new DRACODecoder();
+  draco.setWorkerLimit(1);
+  draco.setDecoderPath(THREEJS_DRACO_MODULE_URL);
+  return {
+    decoder: draco,
+    dispose: () => {
+      draco?.dispose();
+    },
+  };
+};
 
 export async function decompressDraco(
   buffer: ArrayBuffer,
