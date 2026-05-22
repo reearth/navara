@@ -4,6 +4,10 @@ import { BaseDesc, type BaseDescConfigUpdate } from "./BaseDesc";
 import type { EffectDesc } from "./EffectDesc";
 import type { LightDesc } from "./LightDesc";
 import type { MeshDesc } from "./MeshDesc";
+import type { MeshDescBase } from "./MeshDescBase";
+
+/** Union of the legacy {@link MeshDesc} and the TSL-only {@link MeshDescBase} hierarchies. */
+export type AnyMeshDesc = MeshDesc | MeshDescBase;
 
 /**
  * Events emitted by handles.
@@ -98,7 +102,9 @@ export class BaseHandle<
  * handle.delete();
  * ```
  */
-export class MeshHandle<T extends MeshDesc = MeshDesc> extends BaseHandle<T> {}
+export class MeshHandle<
+  T extends AnyMeshDesc = AnyMeshDesc,
+> extends BaseHandle<T> {}
 
 /**
  * A handle to control a light descriptor after it has been added to the scene.

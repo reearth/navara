@@ -201,7 +201,7 @@ function generateModels(count: number, cluster: Cluster): ModelChildConfig[] {
 const run = async () => {
   const view = new ThreeView<DefaultDescriptions>({
     debug: true,
-    shadow: false,
+    shadow: true,
   });
 
   const defaultPlugin = new DefaultPlugin();
@@ -245,6 +245,20 @@ const run = async () => {
       elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
       castShadow: true,
       receiveShadow: true,
+    },
+  });
+
+  view.addLayer({
+    type: "tiles",
+    data: {
+      url: TERRAIN_DATASETS.gsi.url,
+    },
+    rasterTile: {
+      maxZoom: 15,
+      minZoom: 5,
+    },
+    hillshade: {
+      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
     },
   });
 
