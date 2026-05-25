@@ -11,17 +11,11 @@ import {
   type WebGLRenderer,
 } from "three";
 
-import type { SelectiveEffectRegistry } from "../core/SelectiveEffectRegistry";
 import { RenderPass } from "../effects";
 import { DrapedMesh } from "../mesh/DrapedMesh";
 import type { Scenes } from "../scene";
 
-import {
-  AllDepthCopyPass,
-  NormalCopyPass,
-  RenderTargetCopyPass,
-  SelectiveEffectOcclusionMaskPass,
-} from ".";
+import { AllDepthCopyPass, NormalCopyPass, RenderTargetCopyPass } from ".";
 
 /**
  * Options for CustomRenderPass
@@ -30,23 +24,8 @@ export type CustomRenderPassOptions = {
   debugNormal?: boolean;
   disableShadow?: boolean;
   allowTransparent?: boolean;
-  /**
-   * When provided, the MRT-depth snapshot and occlusion mask pass run only
-   * while at least one Selective Effect slot is registered. Skipped entirely
-   * otherwise to avoid GPU work for views without selective effects.
-   */
-  selectiveEffectRegistry?: SelectiveEffectRegistry;
 };
 
-/**
- * G-buffer + multi-scene render pass.
- *
- * Draws `globe` / `draped` / `mrt` into `gbufferRenderTarget` (MRT: color,
- * normal, effectIds bitmask, emissive) and `opaque` into `finalTarget`
- * (MRT-less). Two depth snapshots (`mrtDepthCopyPass`, `allDepthCopyPass`)
- * feed `occlusionMaskPass`, which produces a 1ch opaque-occlusion mask
- * consumed by Selective Effect extracts.
- */
 export class CustomRenderPass extends RenderPass {
   protected _camera: PerspectiveCamera;
   protected _scenes: Scenes;
@@ -55,10 +34,6 @@ export class CustomRenderPass extends RenderPass {
   globeDepthCopyPass: DepthCopyPass;
   globeNormalCopyPass: NormalCopyPass;
   allDepthCopyPass: AllDepthCopyPass;
-  /** Depth snapshot right after MRT (before opaque). */
-  mrtDepthCopyPass: AllDepthCopyPass;
-  /** 1ch opaque-occlusion mask for Selective Effects. */
-  occlusionMaskPass: SelectiveEffectOcclusionMaskPass;
   disableShadow: boolean;
   private globe: Globe;
   private combinedScene = new Scene();
@@ -73,7 +48,6 @@ export class CustomRenderPass extends RenderPass {
 
   private debugNormalCopyPass?: NormalCopyPass;
   private allowTransparent: boolean;
-  private selectiveEffectRegistry?: SelectiveEffectRegistry;
 
   constructor(
     scenes: Scenes,
@@ -119,12 +93,9 @@ export class CustomRenderPass extends RenderPass {
     });
 
     this.allDepthCopyPass = new AllDepthCopyPass();
-    this.mrtDepthCopyPass = new AllDepthCopyPass();
-    this.occlusionMaskPass = new SelectiveEffectOcclusionMaskPass();
 
     this.disableShadow = !!options?.disableShadow;
     this.allowTransparent = options?.allowTransparent ?? true;
-    this.selectiveEffectRegistry = options?.selectiveEffectRegistry;
 
     this.globeNormalCopyPass = new NormalCopyPass();
     this.globeNormalCopyPass.setNormalTexture(
@@ -139,7 +110,7 @@ export class CustomRenderPass extends RenderPass {
     }
   }
 
-  /** Render `scene` with the configured light temporarily attached. */
+  // Render the scene with world scene that includes user setting object like a light.
   protected _renderWithLight(renderer: WebGLRenderer, scene: Scene) {
     if (this.disableShadow) {
       renderer.render(scene, this._camera);
@@ -194,7 +165,7 @@ export class CustomRenderPass extends RenderPass {
     this.globeDepthCopyPass.render(renderer, null, null);
 
     if (clearDepth) {
-      // Copy globe depth to the all depth buffer (later merged with min(globe, mrt+opaque))
+      // Copy globe depth to the all depth buffer
       this.allDepthCopyPass.setDepthTexture(
         this.globeDepthCopyPass.texture,
         RGBADepthPacking,
@@ -243,19 +214,6 @@ export class CustomRenderPass extends RenderPass {
       this._renderWithLight(renderer, this._scenes.mrt);
     }
 
-    // Skip the depth snapshot and mask pass when no Selective Effect is registered.
-    const hasSelectiveEffect =
-      (this.selectiveEffectRegistry?.slotCount ?? 0) > 0;
-
-    // Snapshot post-MRT depth for the occlusion mask pass. Under clearDepth
-    // this snapshot omits globe (allDepth re-merges it); harmless because
-    // the extract bit check drops globe pixels before the mask is read.
-    if (hasSelectiveEffect) {
-      this.mrtDepthCopyPass.setDepthTexture(renderTarget.depthTexture);
-      this.mrtDepthCopyPass.copyDepth(false);
-      this.mrtDepthCopyPass.render(renderer, null, null);
-    }
-
     this.debugNormalCopyPass?.render(renderer, null, null);
 
     const finalTarget = this.renderToScreen ? null : inputBuffer;
@@ -265,20 +223,13 @@ export class CustomRenderPass extends RenderPass {
     }
     this.copyPass.render(renderer, finalTarget, null);
 
-    // MRT-less path: opaque renders into finalTarget, not the gbuffer.
     this._renderWithLight(renderer, this._scenes.opaque);
 
+    // Copy all depth (globe + MRT + opaque) to the all depth buffer.
+    // The renderTarget's depth texture now contains all rendered depth.
     this.allDepthCopyPass.setDepthTexture(finalTarget?.depthTexture ?? null);
     this.allDepthCopyPass.copyDepth(clearDepth);
     this.allDepthCopyPass.render(renderer, null, null);
-
-    if (hasSelectiveEffect) {
-      this.occlusionMaskPass.setDepthTextures(
-        this.mrtDepthCopyPass.texture,
-        this.allDepthCopyPass.texture,
-      );
-      this.occlusionMaskPass.render(renderer, null, null);
-    }
   }
 
   setDepthTexture(depthTexture: DepthTexture): void {
@@ -291,21 +242,14 @@ export class CustomRenderPass extends RenderPass {
     this.gbufferRenderTarget.setSize(width, height);
     this.globeDepthCopyPass.setSize(width, height);
     this.allDepthCopyPass.setSize(width, height);
-    this.mrtDepthCopyPass.setSize(width, height);
-    this.occlusionMaskPass.setSize(width, height);
     this.globeNormalCopyPass.setSize(width, height);
     this.debugNormalCopyPass?.setSize(width, height);
   }
 
-  // `dispose()` is inherited: `postprocessing.Pass.dispose()` walks instance
-  // properties and releases all owned RTs / materials / sub-passes.
-
-  /**
-   * Drape features onto the terrain via stencil test.
-   *
-   * @see https://www.isprs.org/proceedings/XXXVII/congress/2_pdf/5_WG-II-5/06.pdf
-   * @see http://wscg.zcu.cz/WSCG2007/Papers_2007/journal/B17-full.pdf
-   */
+  // Drape a feature on the terrain by stencil test.
+  // Refs
+  // - https://www.isprs.org/proceedings/XXXVII/congress/2_pdf/5_WG-II-5/06.pdf
+  // - http://wscg.zcu.cz/WSCG2007/Papers_2007/journal/B17-full.pdf
   protected _renderDrapedMesh(renderer: WebGLRenderer) {
     const drapedScene = this._scenes.draped;
     const children = [...drapedScene.children];

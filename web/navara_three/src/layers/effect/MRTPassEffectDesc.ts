@@ -49,7 +49,6 @@ export class MRTPassEffectDesc extends EffectDesc<
       this.view.globe,
       {
         debugNormal: !!this.config.mrt?.debugNormal,
-        selectiveEffectRegistry: this.ctx.selectiveEffectRegistry,
       },
     );
 
@@ -74,11 +73,6 @@ export class MRTPassEffectDesc extends EffectDesc<
 
   get depthBufferPacking(): DepthPackingStrategies | undefined {
     return this.raw?.allDepthCopyPass.depthPacking;
-  }
-
-  /** 1ch opaque-occlusion mask for Selective Effects (R=1 where occluded). */
-  get occlusionMaskBuffer(): Texture | undefined {
-    return this.raw?.occlusionMaskPass.texture;
   }
 
   get globeNormalBuffer(): Texture | undefined {
