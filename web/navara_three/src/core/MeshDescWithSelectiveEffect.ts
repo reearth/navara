@@ -33,7 +33,12 @@ export abstract class MeshDescWithSelectiveEffect<
     MeshBaseInstance<InstanceObj>,
 > extends MeshDesc<Config, UpdateConfig, InstanceObj, CustomEvent, Instance> {
   protected _effectIds: string[] = [];
-  private _onSlotsChanged = () => this.updateEffectIdsMask();
+  private _onSlotsChanged = () => {
+    this.updateEffectIdsMask();
+    // Slot count changes can flip the pass returned by getPassKey()
+    // (mrt <-> opaque), so re-evaluate scene placement.
+    this.onPassKeyChange();
+  };
 
   constructor(view: ThreeView, ctx: ViewContext, config?: Config) {
     const resolvedConfig = config ?? ({} as Config);
@@ -42,9 +47,17 @@ export abstract class MeshDescWithSelectiveEffect<
   }
 
   protected override getPassKey(): PassKey {
-    // SelectiveEffect meshes are always part of the MRT scene; an empty
-    // effectIds list is expressed as effectIdsMask=0, not by falling back to opaque.
-    return "mrt";
+    // When at least one selective effect is registered on this view, all
+    // SE-capable meshes must share the MRT depth/color path so the depth
+    // ordering between SE participants stays consistent — an empty
+    // effectIds list still has to coexist with non-empty siblings, and is
+    // expressed by effectIdsMask=0 rather than by falling back to opaque.
+    // When no effect is registered, MRT participation is pure overhead, so
+    // defer to the parent's default (opaque) pass.
+    if (this.ctx.selectiveEffectRegistry.slotCount > 0) {
+      return "mrt";
+    }
+    return super.getPassKey();
   }
 
   override onCreate() {
