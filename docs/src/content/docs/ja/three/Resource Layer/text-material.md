@@ -80,7 +80,7 @@ import { Color } from "@navara/three";
 ```typescript
 {
   text: {
-    center: { x: 10, y: -5 }
+    center: { x: 0.5, y: 0.0 }
   }
 }
 ```
@@ -119,24 +119,6 @@ import { Color } from "@navara/three";
 {
   text: {
     color: new Color().setHex(0x000000)
-  }
-}
-```
-
-### cornerRadius
-
-**Type:** `number | undefined`
-
-**Description:** テキスト背景の角の丸みを指定します。0 〜 0.5 の間で隅の半径と高さの比率を指定します。
-
-**Default:** `undefined`
-
-**Example:**
-
-```typescript
-{
-  text: {
-    cornerRadius: 5
   }
 }
 ```
@@ -200,8 +182,6 @@ view.addFontFamily({
 }
 ```
 
-[troika-three-textのスクリプト](https://github.com/protectwise/troika/blob/main/packages/troika-three-text/find-google-font-url.js)を使用して、Google fontsを取得して得られたフォントファイルを指定することもできます。
-
 ### height
 
 **Type:** `number | undefined`
@@ -256,24 +236,6 @@ view.addFontFamily({
 }
 ```
 
-### outlineBlur
-
-**Type:** `number | undefined`
-
-**Description:** アウトラインのぼかし半径を CSS ピクセル単位で指定します。
-
-**Default:** `0.0`
-
-**Example:**
-
-```typescript
-{
-  text: {
-    outlineBlur: 2
-  }
-}
-```
-
 ### outlineColor
 
 **Type:** `Color | undefined`
@@ -290,24 +252,6 @@ import { Color } from "@navara/three";
 {
   text: {
     outlineColor: new Color().setHex(0x000000) // 黒アウトライン
-  }
-}
-```
-
-### outlineOffset
-
-**Type:** [`Vec2`](#vec2) | undefined
-
-**Description:** CSS ピクセル単位のピクセルオフセット `[x, y]` を指定します。
-
-**Default:** `(0.0, 0.0)`
-
-**Example:**
-
-```typescript
-{
-  text: {
-    outlineOffset: { x: 1, y: 1 }
   }
 }
 ```
@@ -344,24 +288,6 @@ import { Color } from "@navara/three";
 {
   text: {
     outlineWidth: 2
-  }
-}
-```
-
-### padding
-
-**Type:** [`Vec2`](#vec2) | undefined
-
-**Description:** テキストのパディングを指定します。単位はピクセルです。
-
-**Default:** `undefined`
-
-**Example:**
-
-```typescript
-{
-  text: {
-    padding: { x: 5, y: 3 }
   }
 }
 ```
