@@ -1,5 +1,4 @@
-use crate::atlas::{AtlasMode, DEFAULT_ATLAS_SIZE, SDFAtlas};
-use crate::color_atlas::ColorAtlas;
+use crate::atlas::{Atlas, AtlasMode, DEFAULT_ATLAS_SIZE, DEFAULT_COLOR_ATLAS_SIZE};
 use skrifa::{FontRef, raw::TableProvider};
 use std::collections::HashMap as StdHashMap;
 use wasm_bindgen::prelude::*;
@@ -75,11 +74,11 @@ pub struct FontCache {
     #[wasm_bindgen(skip)]
     pub fonts: StdHashMap<String, FontEntry>,
     #[wasm_bindgen(skip)]
-    pub atlases: StdHashMap<String, SDFAtlas>,
+    pub atlases: StdHashMap<String, Atlas>,
     /// Parallel atlases for COLRv1 color glyphs. Keyed identically to `atlases`
     /// so a font family that mixes text and emoji faces gets one of each.
     #[wasm_bindgen(skip)]
-    pub color_atlases: StdHashMap<String, ColorAtlas>,
+    pub color_atlases: StdHashMap<String, Atlas>,
     /// Logical LRU clock. Incremented once per `prepareTextBatch` call via
     /// [`FontCache::tick`]; **not** a rendered-frame counter.
     #[wasm_bindgen(skip)]
@@ -108,22 +107,22 @@ impl FontCache {
     }
 
     /// Get an immutable reference to an atlas by its key.
-    pub fn get_atlas(&self, atlas_key: &str) -> Option<&SDFAtlas> {
+    pub fn get_atlas(&self, atlas_key: &str) -> Option<&Atlas> {
         self.atlases.get(atlas_key)
     }
 
     /// Get a mutable reference to an atlas by its key.
-    pub fn get_atlas_mut(&mut self, atlas_key: &str) -> Option<&mut SDFAtlas> {
+    pub fn get_atlas_mut(&mut self, atlas_key: &str) -> Option<&mut Atlas> {
         self.atlases.get_mut(atlas_key)
     }
 
     /// Get an immutable reference to a color atlas by its key.
-    pub fn get_color_atlas(&self, atlas_key: &str) -> Option<&ColorAtlas> {
+    pub fn get_color_atlas(&self, atlas_key: &str) -> Option<&Atlas> {
         self.color_atlases.get(atlas_key)
     }
 
     /// Get a mutable reference to a color atlas by its key.
-    pub fn get_color_atlas_mut(&mut self, atlas_key: &str) -> Option<&mut ColorAtlas> {
+    pub fn get_color_atlas_mut(&mut self, atlas_key: &str) -> Option<&mut Atlas> {
         self.color_atlases.get_mut(atlas_key)
     }
 
@@ -158,9 +157,11 @@ impl FontCache {
         // Create the atlas if it doesn't exist yet (first face in the family, or standalone font)
         self.atlases
             .entry(atlas_key.clone())
-            .or_insert_with(|| SDFAtlas::new(DEFAULT_ATLAS_SIZE, mode));
+            .or_insert_with(|| Atlas::new(DEFAULT_ATLAS_SIZE, mode));
         if is_color {
-            self.color_atlases.entry(atlas_key.clone()).or_default();
+            self.color_atlases
+                .entry(atlas_key.clone())
+                .or_insert_with(|| Atlas::new(DEFAULT_COLOR_ATLAS_SIZE, AtlasMode::Color));
         }
 
         let font_index = self.next_font_index;

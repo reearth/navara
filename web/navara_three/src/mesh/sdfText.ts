@@ -45,9 +45,7 @@ const SDF_PX_SIZE = 64.0;
  *  `@navara/font` union. The user-facing field is a plain string, so anything
  *  other than the two known values (or `undefined`) falls back to the default
  *  — matches the Rust `parse_text_quality` policy. */
-export const wasmQualityToString = (
-  q: string | undefined,
-): TextQuality => {
+export const wasmQualityToString = (q: string | undefined): TextQuality => {
   if (q === "high") return "high";
   if (q === "low") return "low";
   return DEFAULT_TEXT_QUALITY;

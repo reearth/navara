@@ -11,7 +11,7 @@
 //! well make the fourth channel useful.
 //!
 //! The output is in OpenGL Y-up convention (row 0 = bottom of glyph), which
-//! lets [`crate::atlas::SDFAtlas`] copy MTSDF bitmaps without the Y-flip
+//! lets [`crate::atlas::Atlas`] copy MTSDF bitmaps without the Y-flip
 //! step it applies to single-channel SDFs.
 
 use fdsm::{

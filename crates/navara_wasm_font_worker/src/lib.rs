@@ -2,12 +2,11 @@
 
 pub mod atlas;
 pub mod cache;
-pub mod color_atlas;
 pub mod color_raster;
 pub mod msdf;
 pub mod shaping;
 
-pub use atlas::{GlyphMetrics, SDFAtlas};
+pub use atlas::{Atlas, GlyphMetrics};
 pub use cache::{FontCache, FontEntry};
 use navara_wasm_types::{copy_u8_array, transfer_u8_array};
 use navara_wasm_utils::set_panic_hook;
@@ -160,21 +159,21 @@ impl FontCache {
 
         let glyph_ids: Vec<u32> = shaped.iter().map(|g| g.glyph_id).collect();
 
-        let atlas_changed = if is_color {
-            let font_data = &self.fonts.get(url)?.data;
-            let color_atlas = self.color_atlases.get_mut(&atlas_key)?;
-            color_atlas.ensure_glyphs_in_atlas(font_data, font_index, &glyph_ids, tick)
+        // Split-borrow: `fonts` and the atlas maps are separate fields so each
+        // can be borrowed independently, letting us hand the immutable font
+        // bytes + raster font to a mutable atlas method without cloning the
+        // (potentially multi-MB) font buffer each call.
+        let entry = self.fonts.get(url)?;
+        let raster_font = &entry.raster_font;
+        let font_data = entry.data.as_slice();
+        let atlases = if is_color {
+            &mut self.color_atlases
         } else {
-            // Split-borrow: `fonts` and `atlases` are separate fields so each
-            // can be borrowed independently, letting us hand the immutable
-            // font bytes + raster font to a mutable atlas method without
-            // cloning the (potentially multi-MB) font buffer each call.
-            let entry = self.fonts.get(url)?;
-            let raster_font = &entry.raster_font;
-            let font_data = entry.data.as_slice();
-            let atlas = self.atlases.get_mut(&atlas_key)?;
-            atlas.ensure_glyphs_in_atlas(raster_font, font_data, font_index, &glyph_ids, tick)
+            &mut self.atlases
         };
+        let atlas = atlases.get_mut(&atlas_key)?;
+        let atlas_changed =
+            atlas.ensure_glyphs_in_atlas(raster_font, font_data, font_index, &glyph_ids, tick);
 
         let glyphs: Vec<WasmShapedGlyph> = shaped
             .iter()
