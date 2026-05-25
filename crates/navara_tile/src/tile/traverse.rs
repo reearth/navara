@@ -140,7 +140,9 @@ pub fn traverse_tile(
 
     // Check only if terrain is exist.
     let is_over_min_z = if has_tile_layer {
-        tiles_without_hillshade.iter().any(|t| t.is_over_min_zoom(tile.coords.z))
+        tiles_without_hillshade
+            .iter()
+            .any(|t| t.is_over_min_zoom(tile.coords.z))
     } else {
         true
     };
