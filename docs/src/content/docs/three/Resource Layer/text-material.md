@@ -80,7 +80,7 @@ import { Color } from "@navara/three";
 ```typescript
 {
   text: {
-    center: { x: 10, y: -5 }
+    center: { x: 0.5, y: 0.0 }
   }
 }
 ```
@@ -119,24 +119,6 @@ import { Color } from "@navara/three";
 {
   text: {
     color: new Color().setHex(0x000000)
-  }
-}
-```
-
-### cornerRadius
-
-**Type:** `number | undefined`
-
-**Description:** Specifies the corner radius of the text background. Specified as a ratio of the corner radius to the height, between 0 and 0.5.
-
-**Default:** `undefined`
-
-**Example:**
-
-```typescript
-{
-  text: {
-    cornerRadius: 5
   }
 }
 ```
@@ -200,8 +182,6 @@ view.addFontFamily({
 }
 ```
 
-You can also specify a font file obtained by using the [troika-three-text script](https://github.com/protectwise/troika/blob/main/packages/troika-three-text/find-google-font-url.js) to retrieve Google Fonts.
-
 ### height
 
 **Type:** `number | undefined`
@@ -256,24 +236,6 @@ You can also specify a font file obtained by using the [troika-three-text script
 }
 ```
 
-### outlineBlur
-
-**Type:** `number | undefined`
-
-**Description:** Specifies the outline blur radius in CSS pixels.
-
-**Default:** `0.0`
-
-**Example:**
-
-```typescript
-{
-  text: {
-    outlineBlur: 2
-  }
-}
-```
-
 ### outlineColor
 
 **Type:** `Color | undefined`
@@ -290,24 +252,6 @@ import { Color } from "@navara/three";
 {
   text: {
     outlineColor: new Color().setHex(0x000000) // Black outline
-  }
-}
-```
-
-### outlineOffset
-
-**Type:** [`Vec2`](#vec2) | undefined
-
-**Description:** Specifies the pixel offset `[x, y]` in CSS pixels.
-
-**Default:** `(0.0, 0.0)`
-
-**Example:**
-
-```typescript
-{
-  text: {
-    outlineOffset: { x: 1, y: 1 }
   }
 }
 ```
@@ -344,24 +288,6 @@ import { Color } from "@navara/three";
 {
   text: {
     outlineWidth: 2
-  }
-}
-```
-
-### padding
-
-**Type:** [`Vec2`](#vec2) | undefined
-
-**Description:** Specifies the text padding. The unit is pixels.
-
-**Default:** `undefined`
-
-**Example:**
-
-```typescript
-{
-  text: {
-    padding: { x: 5, y: 3 }
   }
 }
 ```
