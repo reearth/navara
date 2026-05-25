@@ -48,7 +48,6 @@ export type {
 } from "./context";
 export { EventContext } from "./context";
 export { HillshadeContext } from "./HillshadeContext";
-export { FetchCache } from "./FetchCache";
 
 export function processEvent(ctx: EventContext, event: Events | undefined) {
   const {
@@ -402,142 +401,91 @@ function disposeObject3D(model: Object3D): void {
   });
 }
 
-function getOrCreateAbortController(
-  abortControllers: Map<string, AbortController>,
-  id: string,
-): AbortController {
-  const existing = abortControllers.get(id);
-  if (existing) {
-    return existing;
-  }
-
-  const controller = new AbortController();
-  abortControllers.set(id, controller);
-  return controller;
-}
-
-async function fetchImageAsUint8Array(
-  ctx: EventContext,
-  req: DataRequestEvent,
-  id: string,
-  abortController: AbortController,
-): Promise<void> {
-  const { buf, workerPoolPromises } = ctx;
-
-  const img = await ABORTABLE_IMAGE_LOADER.loadAsyncWithAbort(
-    req.url,
-    abortController,
-  );
-
-  // TODO: Get OffScreenCanvas from main thread in worker.
-  const canvas = document.createElement("canvas");
-  canvas.height = img.height;
-  canvas.width = img.width;
-
-  const promise = getImageDataFromImageBitmap(
-    await createImageBitmap(img),
-    canvas.transferControlToOffscreen(),
-  );
-
-  workerPoolPromises.set(id, promise);
-
-  try {
-    const data = await promise;
-
-    if (abortController.signal.aborted) {
-      return;
-    }
-
-    let u8a: Uint8Array | null = new Uint8Array(data);
-    buf.setU8(req.handle, req.bits, u8a);
-
-    // Prevent memory leak
-    u8a.set([]);
-    u8a = null;
-    data.set([]);
-  } finally {
-    workerPoolPromises.delete(id);
-    img.remove();
-    canvas.remove();
-  }
-}
-
-async function fetchDataAsArrayBuffer(
-  buf: EventContext["buf"],
-  req: DataRequestEvent,
-  abortController: AbortController,
-): Promise<void> {
-  const res = await fetch(req.url, { signal: abortController.signal });
-  if (!res.ok) throw new Error();
-
-  const val = await res.arrayBuffer();
-  if (abortController.signal.aborted) {
-    return;
-  }
-
-  const bytes = new Uint8Array(val);
-  buf.setU8(req.handle, req.bits, bytes);
-
-  // Prevent memory leak
-  bytes.set([]);
-}
-
-async function performDataFetch(
-  ctx: EventContext,
-  req: DataRequestEvent,
-  id: string,
-  abortController: AbortController,
-): Promise<void> {
-  const { buf, abortControllers } = ctx;
-
-  try {
-    if (IMAGE_EXTENSIONS.includes(req.extension)) {
-      await fetchImageAsUint8Array(ctx, req, id, abortController);
-    } else {
-      await fetchDataAsArrayBuffer(buf, req, abortController);
-    }
-  } catch {
-    // Fetch failed - data will not be written to buffer
-    // Caller will detect empty buffer and trigger failure event
-  } finally {
-    abortControllers.delete(id);
-  }
-}
-
 // TODO: Need to check if the cached texture is removed completely
 async function processRequestedData(ctx: EventContext, req: DataRequestEvent) {
-  const { buf, abortControllers, fetchCache } = ctx;
+  const { buf, abortControllers } = ctx;
   const id = generate_id_from_entity(req);
 
-  // Check if data already exists in shared handle (Rust-side deduplication)
-  const dataExistedBefore = !!buf.u8(req.handle);
-  if (dataExistedBefore) {
-    // Data already loaded by another consumer, notify this consumer
-    buf.triggerDataRequesterLoaded(req.bits, req.handle);
+  const abortController = (() => {
+    const a = abortControllers.get(id);
+    if (a) {
+      return a;
+    } else {
+      const a = new AbortController();
+      abortControllers.set(id, a);
+      return a;
+    }
+  })();
+
+  if (IMAGE_EXTENSIONS.includes(req.extension)) {
+    await ABORTABLE_IMAGE_LOADER.loadAsyncWithAbort(req.url, abortController)
+      .then(async (img) => {
+        // TODO: Get OffScreeCanvas from main thread in worker.
+        const canvas = document.createElement("canvas");
+        canvas.height = img.height;
+        canvas.width = img.width;
+
+        const promise = getImageDataFromImageBitmap(
+          await createImageBitmap(img),
+          canvas.transferControlToOffscreen(),
+        );
+
+        ctx.workerPoolPromises.set(id, promise);
+        const data = await (async () => {
+          try {
+            return await promise;
+          } finally {
+            ctx.workerPoolPromises.delete(id);
+          }
+        })();
+
+        if (abortController.signal.aborted) {
+          return;
+        }
+
+        let u8a: Uint8Array | null = new Uint8Array(data);
+        buf.setU8(req.handle, req.bits, u8a);
+
+        // Prevent memory leak
+        u8a.set([]);
+        u8a = null;
+
+        data.set([]);
+
+        img.remove();
+        canvas.remove();
+      })
+      .catch(() => {
+        buf.triggerDataRequesterFailed(req.bits);
+      })
+      .finally(() => {
+        abortControllers.delete(id);
+      });
     return;
   }
 
-  // Define fetch operation (only executed by first requester via FetchCache)
-  const performFetch = async () => {
-    const abortController = getOrCreateAbortController(abortControllers, id);
-    await performDataFetch(ctx, req, id, abortController);
-  };
+  await fetch(req.url, { signal: abortController.signal })
+    .then((res) => {
+      if (!res.ok) throw new Error();
+      return res.arrayBuffer();
+    })
+    .then((val) => {
+      if (abortController.signal.aborted) {
+        return;
+      }
 
-  // All requesters queue through FetchCache to avoid microtask race conditions
-  // Previously: isPending() check could race with Promise completion/deletion
-  // Now: getOrCreateFetchPromise() atomically handles both new and pending requests
-  if (fetchCache) {
-    await fetchCache.getOrCreateFetchPromise(req.url, performFetch);
-  } else {
-    await performFetch();
-  }
+      const bytes = new Uint8Array(val);
+      buf.setU8(req.handle, req.bits, bytes);
 
-  // Only notify on failure
-  // Success case: buf.setU8() already notified the requester during fetch
-  // No need to notify again to avoid duplicate notifications
-  if (!buf.u8(req.handle)) {
-    buf.triggerDataRequesterFailed(req.bits);
-  }
+      // Prevent memory leak
+      bytes.set([]);
+    })
+    .catch(() => {
+      buf.triggerDataRequesterFailed(req.bits);
+    })
+    .finally(() => {
+      abortControllers.delete(id);
+    });
 }
 
 function processDataRequesterRemoved(

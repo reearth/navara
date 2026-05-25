@@ -6,7 +6,7 @@ use bevy_ecs::{
 };
 use navara_buffer_store::BufferStore;
 use navara_component::{Deleted, Ignored, OrderByDistance, Priority, Requested};
-use navara_data_requester::DataRequester;
+use navara_data_requester::{DataManager, DataRequester};
 use navara_event_store::EventStore;
 use navara_quadtree::{decode_quadleaf_handle, encode_quadleaf_handle};
 use navara_tile_component::{
@@ -55,10 +55,13 @@ enum EdgeDirection {
 pub fn filter_requestable_hillshade_data_requester(
     mut commands: Commands,
     mut qt: ResMut<RasterTileQuadtree>,
+    mut buf: ResMut<BufferStore>,
+    mut data_manager: ResMut<DataManager>,
     hillshade_requesters: Query<
         (
             Entity,
             &TileTextureFragmentMarker,
+            &DataRequester,
             &OrderByDistance,
             &Priority,
         ),
@@ -81,16 +84,27 @@ pub fn filter_requestable_hillshade_data_requester(
     let pendings = requested_hillshades.iter().count();
     let num_skip = (MAX_HILLSHADE_PENDINGS as i32 - pendings as i32).max(0);
 
-    // Limit the number of hillshade requests in this frame
-    // Sort by priority and distance, then mark excess entities for deletion
-    for (e, marker, _, _) in hillshade_requesters
+    // Limit the number of hillshade requests in this frame.
+    // Skip DataRequesters with Success status - they already have
+    // their data (loaded by previous consumers) and should not be subject to the
+    // MAX_HILLSHADE_PENDINGS limit. Rejecting them would cause create-delete loops.
+    for (e, marker, _, _, _) in hillshade_requesters
         .iter()
         .sort::<(&Priority, &OrderByDistance)>()
+        .filter(|(_, _, data_req, _, _)| {
+            data_req.status != navara_data_requester::DataRequesterStatus::Success
+        })
         .skip(num_skip as usize)
     {
         let handle = marker.0;
         let tile = qt.qt.get_mut(handle);
         if let Some(tile) = tile {
+            // Unregister from DataManager immediately when filtered out.
+            // This keeps refcounts accurate and allows URL cleanup if this was the last consumer.
+            if let Some((_url, handle, true)) = data_manager.unregister_consumer(e) {
+                buf.remove(&handle);
+            }
+
             commands.entity(e).insert((Deleted, Ignored));
 
             // Clear the rejected slot to None so the next request_texture_fragment

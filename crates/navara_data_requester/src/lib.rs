@@ -154,6 +154,20 @@ impl DataRequester {
         }
     }
 
+    pub fn new_with_status(
+        handle: Handle,
+        url: String,
+        extension: DataRequesterExtension,
+        status: DataRequesterStatus,
+    ) -> Self {
+        Self {
+            handle,
+            url,
+            extension,
+            status,
+        }
+    }
+
     pub fn from_store(
         url: String,
         buf: &mut BufferStore,
@@ -178,12 +192,20 @@ impl DataRequester {
 pub fn set_data_requester_loaded(
     mut commands: Commands,
     mut events: MessageReader<BufferStoreLoadedEvent>,
-    mut requests: Query<&mut DataRequester>,
+    mut requests: Query<(Entity, &mut DataRequester)>,
 ) {
     for e in events.read() {
-        if let Ok(mut d) = requests.get_mut(e.id) {
-            commands.entity(e.id).remove::<Requested>();
-            d.status = DataRequesterStatus::Success;
+        let loaded_handle = e.handle;
+
+        // Broadcast success to ALL DataRequesters using this handle
+        // This handles the case where multiple consumers share the same URL:
+        // - First consumer fetches data and triggers this event
+        // - Other consumers (pending, waiting) are also marked as success
+        for (entity, mut data_req) in requests.iter_mut() {
+            if data_req.handle == loaded_handle && data_req.status == DataRequesterStatus::Pending {
+                commands.entity(entity).remove::<Requested>();
+                data_req.status = DataRequesterStatus::Success;
+            }
         }
     }
 }

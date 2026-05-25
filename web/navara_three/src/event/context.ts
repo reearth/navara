@@ -36,7 +36,6 @@ import type { CommonUniforms } from "../uniforms";
 import type { TextureSlot } from "../utils";
 
 import type { HillshadeContext } from "./HillshadeContext";
-import type { FetchCache } from "./FetchCache";
 
 export type BufferLoader = {
   u8: (handle: number) => Uint8Array | null;
@@ -171,7 +170,6 @@ type EventContextArgs = {
   textureFragmentIndex?: Map<string, Set<TextureSlot>>;
   tileMeshToFragmentIds?: Map<TileMesh, Set<string>>;
   hillshadeContext?: HillshadeContext;
-  fetchCache?: FetchCache;
 };
 
 /**
@@ -205,7 +203,6 @@ export class EventContext {
   readonly textureFragmentIndex?: Map<string, Set<TextureSlot>>;
   readonly tileMeshToFragmentIds?: Map<TileMesh, Set<string>>;
   readonly hillshadeContext?: HillshadeContext;
-  readonly fetchCache?: FetchCache;
 
   updatedAt = 0;
 
@@ -237,6 +234,5 @@ export class EventContext {
     this.textureFragmentIndex = args.textureFragmentIndex;
     this.tileMeshToFragmentIds = args.tileMeshToFragmentIds;
     this.hillshadeContext = args.hillshadeContext;
-    this.fetchCache = args.fetchCache;
   }
 }
