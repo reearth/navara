@@ -1,4 +1,4 @@
-use crate::atlas::SDFAtlas;
+use crate::atlas::{AtlasMode, DEFAULT_ATLAS_SIZE, SDFAtlas};
 use crate::color_atlas::ColorAtlas;
 use skrifa::{FontRef, raw::TableProvider};
 use std::collections::HashMap as StdHashMap;
@@ -131,11 +131,20 @@ impl FontCache {
     ///
     /// `atlas_key`: if `Some`, the font shares an atlas with other fonts under the same key
     /// (e.g. a font family name). If `None`, the font gets its own atlas keyed by URL.
+    ///
+    /// `mode` picks the raster path for the atlas: [`AtlasMode::Sdf`] for the
+    /// fast bitmap pipeline, [`AtlasMode::Msdf`] for the sharp-corner MSDF
+    /// pipeline. The TS side surfaces this as `quality: "low" | "high"` per
+    /// text material, and ensures that each (font, quality) combination uses a
+    /// distinct `atlas_key` so the two atlases coexist without conflict.
+    /// If an atlas under `atlas_key` already exists, its mode wins — the TS
+    /// layer is expected to keep modes consistent per key.
     pub fn load_font(
         &mut self,
         url: String,
         data: Vec<u8>,
         atlas_key: Option<String>,
+        mode: AtlasMode,
     ) -> Result<(), String> {
         let data = maybe_decompress_font(data)?;
         let raster_font =
@@ -147,7 +156,9 @@ impl FontCache {
         let atlas_key = atlas_key.unwrap_or_else(|| url.clone());
 
         // Create the atlas if it doesn't exist yet (first face in the family, or standalone font)
-        self.atlases.entry(atlas_key.clone()).or_default();
+        self.atlases
+            .entry(atlas_key.clone())
+            .or_insert_with(|| SDFAtlas::new(DEFAULT_ATLAS_SIZE, mode));
         if is_color {
             self.color_atlases.entry(atlas_key.clone()).or_default();
         }

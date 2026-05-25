@@ -8,6 +8,7 @@
 //!   font does not)
 
 use navara_wasm_font_worker::{
+    atlas::AtlasMode,
     cache::FontCache,
     color_atlas::ColorAtlas,
     color_raster::{COLOR_GLYPH_PX_SIZE, rasterize_color_glyph},
@@ -23,7 +24,7 @@ const MONO_URL: &str = "fixture://demo_monochrome.ttf";
 fn cache_with(font_url: &str, bytes: &[u8]) -> FontCache {
     let mut cache = FontCache::default();
     cache
-        .load_font(font_url.to_owned(), bytes.to_vec(), None)
+        .load_font(font_url.to_owned(), bytes.to_vec(), None, AtlasMode::Sdf)
         .expect("load_font");
     cache
 }

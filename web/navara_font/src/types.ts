@@ -5,26 +5,35 @@
 export const COLOR_GLYPH_PX_SIZE = 64.0;
 
 /**
- * Whether the monochrome glyph atlas is rasterized as 4-channel MTSDF
- * (median-of-RGB + true SDF in alpha) instead of single-channel SDF.
+ * Per-material text quality. Picks the atlas raster path:
+ *  - `"low"` — single-channel SDF via fontdue + Felzenszwalb. Cheap, ~100×
+ *    faster per glyph; slightly soft corners at extreme zoom.
+ *  - `"high"` — 4-channel MTSDF via `fdsm`. Sharper corners; expensive
+ *    rasterization because exact distance-to-curve math runs per pixel.
  *
- * **Must stay in sync with `ATLAS_MODE` in
- * `crates/navara_wasm_font_worker/src/atlas.rs`.** The shader define
- * `USE_MSDF` is driven from this flag, and the Rust side decides the actual
- * texture layout — if they disagree the atlas will be sampled wrong.
+ * Mirrors `TextQuality` in `crates/navara_material/src/appearance.rs`.
  */
-export const USE_MSDF = true;
+export type TextQuality = "low" | "high";
+
+/** Default quality when a TextMaterial omits `quality`. Matches the Rust
+ *  default in [`navara_material::TextQuality::default`]. */
+export const DEFAULT_TEXT_QUALITY: TextQuality = "low";
+
+/** Whether the given quality maps to the MSDF (MTSDF) atlas path.
+ *  The shader define `USE_MSDF` is driven from this. */
+export const isMsdfQuality = (q: TextQuality): boolean => q === "high";
 
 /**
- * Pixel range over which the atlas distance field ramps from "outside" to
- * "inside" (i.e. the value covered by `d - 0.5` in the shader). This is
- * what converts an outline-thickness expressed in pixels into a delta on
- * the sampled distance value.
+ * Pixel range over which a quality's atlas distance field ramps from
+ * "outside" to "inside" (i.e. the value covered by `d - 0.5` in the shader).
+ * Converts an outline-thickness expressed in pixels into a delta on the
+ * sampled distance value.
  *
  * SDF: `SDF_RADIUS` (35) in `crates/navara_wasm_font_worker/src/atlas.rs`.
  * MSDF: `MSDF_RANGE_PX` (8) in `crates/navara_wasm_font_worker/src/msdf.rs`.
  */
-export const ATLAS_RANGE_PX = USE_MSDF ? 8.0 : 35.0;
+export const atlasRangePx = (q: TextQuality): number =>
+  isMsdfQuality(q) ? 8.0 : 35.0;
 
 /** Glyph metrics from either the SDF or the color atlas. */
 export type GlyphMetrics = {

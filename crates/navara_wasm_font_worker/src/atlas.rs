@@ -25,16 +25,18 @@ pub const SDF_PX_SIZE: f32 = 64.0;
 ///
 /// Single-channel SDF goes through `sdf_glyph_renderer` (Felzenszwalb on a
 /// fontdue bitmap), MSDF goes through `fdsm` directly on the vector outline.
-/// MSDF preserves sharp corners but triples the atlas memory footprint
-/// (R8 → RGB8). Flip this constant to A/B compare the two pipelines.
+/// MSDF preserves sharp corners but the per-glyph cost is ~100× higher because
+/// `fdsm` does exact distance-to-curve math with no spatial acceleration.
+///
+/// Selected at atlas creation time so a single FontCache can hold both flavors
+/// side-by-side (one atlas per font + quality combination, see
+/// [`SDFAtlas::mode`]). The TS layer surfaces this as a per-text-material
+/// `quality: "low" | "high"` knob.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AtlasMode {
     Sdf,
     Msdf,
 }
-
-/// Active mode for monochrome glyph rasterization. Toggle to compare the two.
-pub const ATLAS_MODE: AtlasMode = AtlasMode::Msdf;
 
 /// Extra atlas pixels reserved on every side of each glyph rect to keep the
 /// bilinear sampler from reading neighboring glyphs' distance values.
@@ -78,9 +80,13 @@ pub struct GlyphMetrics {
 /// For standalone fonts (one atlas per URL) the font_index is the unique index
 /// assigned by `FontCache` at load time.
 ///
-/// The atlas stores either single-channel SDF (R8) or 3-channel MSDF (RGB8)
-/// pixel data based on [`ATLAS_MODE`]. `pixel_data.len() == width * height * channels`.
+/// The atlas stores either single-channel SDF (R8) or 4-channel MTSDF (RGBA8)
+/// pixel data based on [`Self::mode`]. `pixel_data.len() == width * height * channels`.
 pub struct SDFAtlas {
+    /// Rasterization flavor for glyphs blitted into this atlas. Fixed at
+    /// construction time — every glyph in the atlas must come from the same
+    /// raster path so the shader can sample consistently.
+    pub mode: AtlasMode,
     /// Rectangle packer for allocating glyph regions
     pub allocator: AtlasAllocator,
     /// Raw pixel data of the atlas texture, interleaved by [`Self::channels`].
@@ -89,7 +95,7 @@ pub struct SDFAtlas {
     pub width: u32,
     /// Atlas height in pixels
     pub height: u32,
-    /// Bytes per pixel (1 for SDF, 3 for MSDF). Fixed at construction time.
+    /// Bytes per pixel (1 for SDF, 4 for MSDF/MTSDF). Derived from [`Self::mode`].
     pub channels: u8,
     /// Map from composite key `(font_index << 32 | glyph_id)` to metrics
     pub glyph_map: FxHashMap<u64, GlyphMetrics>,
@@ -165,9 +171,10 @@ fn msdf_rasterize(face: &Face<'_>, glyph_id: u32) -> Option<GlyphRaster> {
 }
 
 impl SDFAtlas {
-    pub fn new(size: i32) -> Self {
-        let channels = atlas_channels(ATLAS_MODE);
+    pub fn new(size: i32, mode: AtlasMode) -> Self {
+        let channels = atlas_channels(mode);
         Self {
+            mode,
             allocator: AtlasAllocator::new(Size::new(size, size)),
             pixel_data: vec![0u8; (size * size) as usize * channels],
             width: size as u32,
@@ -221,7 +228,7 @@ impl SDFAtlas {
         // Parse the ttf-parser Face once for the whole batch. Re-parsing per
         // glyph (cmap, kern, hmtx, ...) was previously the bulk of MSDF cost
         // when many unique glyphs were rasterized at once.
-        let msdf_face = match ATLAS_MODE {
+        let msdf_face = match self.mode {
             AtlasMode::Msdf => Face::parse(font_data, 0).ok(),
             AtlasMode::Sdf => None,
         };
@@ -303,7 +310,7 @@ impl SDFAtlas {
         new_glyphs
     }
 
-    /// Produce a single glyph's pixel data for the active [`ATLAS_MODE`].
+    /// Produce a single glyph's pixel data for this atlas's [`Self::mode`].
     /// Returns `None` for empty glyphs or outline-loading failures.
     ///
     /// `face` must be `Some` in [`AtlasMode::Msdf`] and is unused in
@@ -314,7 +321,7 @@ impl SDFAtlas {
         face: Option<&Face<'_>>,
         glyph_id: u32,
     ) -> Option<GlyphRaster> {
-        match ATLAS_MODE {
+        match self.mode {
             AtlasMode::Sdf => sdf_rasterize(raster_font, glyph_id),
             AtlasMode::Msdf => msdf_rasterize(face?, glyph_id),
         }
@@ -407,11 +414,5 @@ impl SDFAtlas {
         for (key, _) in evictable {
             self.remove(key);
         }
-    }
-}
-
-impl Default for SDFAtlas {
-    fn default() -> Self {
-        Self::new(DEFAULT_ATLAS_SIZE)
     }
 }

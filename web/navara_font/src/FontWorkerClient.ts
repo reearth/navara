@@ -4,6 +4,7 @@ import type {
   ShapeTextResult,
   FontAtlasData,
   BatchPrepareTextResult,
+  TextQuality,
 } from "./types";
 
 /**
@@ -56,13 +57,20 @@ export class FontWorkerClient {
 
   /** Load a font file into the worker's FontCache. Transfers the ArrayBuffer.
    *  `atlasKey`: optional shared atlas identifier (e.g. font family name).
-   *  When provided, all fonts loaded with the same key share a single SDF atlas. */
+   *  When provided, all fonts loaded with the same key share a single atlas.
+   *  `quality`: which atlas raster path to use. The Rust side creates the
+   *  atlas with this mode on the first load; subsequent loads under the same
+   *  `atlasKey` are expected to reuse the same quality (the TS layer
+   *  guarantees this by including the quality in both `url` and `atlasKey`). */
   async loadFont(
     url: string,
     data: ArrayBuffer,
-    atlasKey?: string,
+    atlasKey: string | undefined,
+    quality: TextQuality,
   ): Promise<{ ok: boolean }> {
-    return this._send("loadFont", { url, data, atlasKey }, [data]) as Promise<{
+    return this._send("loadFont", { url, data, atlasKey, quality }, [
+      data,
+    ]) as Promise<{
       ok: boolean;
     }>;
   }

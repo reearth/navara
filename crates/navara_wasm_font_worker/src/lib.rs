@@ -105,6 +105,11 @@ impl FontCache {
     /// `atlas_key`: optional shared atlas identifier (e.g. font family name).
     /// When provided, all fonts loaded with the same key share a single SDF atlas.
     /// When omitted, the font gets its own atlas keyed by URL.
+    ///
+    /// `mode`: `"sdf"` selects the fast single-channel SDF path,
+    /// `"msdf"` selects the sharp-corner MTSDF path. Mirrors the
+    /// per-text-material `quality` knob on the TS side. Any unrecognized value
+    /// (including the empty string) falls back to `"sdf"`.
     #[wasm_bindgen(js_name = loadFont)]
     pub fn wasm_load_font(
         &mut self,
@@ -112,9 +117,14 @@ impl FontCache {
         byte_length: usize,
         f: &js_sys::Function,
         atlas_key: Option<String>,
+        mode: Option<String>,
     ) -> bool {
         let data = transfer_u8_array(byte_length, f);
-        self.load_font(url, data, atlas_key).is_ok()
+        let mode = match mode.as_deref() {
+            Some("msdf") => crate::atlas::AtlasMode::Msdf,
+            _ => crate::atlas::AtlasMode::Sdf,
+        };
+        self.load_font(url, data, atlas_key, mode).is_ok()
     }
 
     /// Get the atlas key for a loaded font (family name or URL).

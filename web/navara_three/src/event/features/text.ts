@@ -1,6 +1,7 @@
 import { type TextMesh as NavaraTextMesh } from "@navara/engine";
 
 import { BatchedSdfTextMesh } from "../../mesh";
+import { wasmQualityToString } from "../../mesh/sdfText";
 import { FEATURE_RENDER_ORDER } from "../../renderOrder";
 import type { EventContext } from "../context";
 
@@ -25,12 +26,14 @@ export async function renderText(
       // For font families, only the face URLs needed for `text` are loaded (lazy).
       // For raw URLs, the single font file is loaded directly.
       const text = m.material.text ?? "";
+      const quality = wasmQualityToString(m.material.quality);
       const loadedFaceUrls = new Set<string>();
       if (fontManager.isFamily(fontUrl)) {
-        if (text) await fontManager.prepareText(fontUrl, text, loadedFaceUrls);
+        if (text)
+          await fontManager.prepareText(fontUrl, text, quality, loadedFaceUrls);
       } else {
-        await fontManager.loadFont(fontUrl);
-        if (text) await fontManager.prepareText(fontUrl, text);
+        await fontManager.loadFont(fontUrl, quality);
+        if (text) await fontManager.prepareText(fontUrl, text, quality);
       }
 
       const textGroup = new BatchedSdfTextMesh(

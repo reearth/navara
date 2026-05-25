@@ -174,6 +174,20 @@ impl BillboardMaterial {
     }
 }
 
+/// Rendering quality for text glyphs. Picks the atlas raster path.
+///
+/// `Low` uses single-channel SDF (Felzenszwalb on a fontdue bitmap) — cheap to
+/// rasterize, ~100× faster per glyph than MSDF, slightly soft corners at
+/// extreme zoom. `High` uses MTSDF via `fdsm` — preserves sharp corners but
+/// per-glyph cost is dominated by exact distance-to-curve math. Defaults to
+/// [`TextQuality::Low`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum TextQuality {
+    #[default]
+    Low,
+    High,
+}
+
 #[derive(Debug, Clone, PartialEq, Component)]
 pub struct TextMaterial {
     pub show: bool,
@@ -199,6 +213,8 @@ pub struct TextMaterial {
     pub outline_opacity: f32, // outlineOpacity Default:1
     pub outline_width: f32,   // outlineWidth Default:0
     pub lang: String,
+    /// SDF vs MSDF atlas selection. See [`TextQuality`].
+    pub quality: TextQuality,
 }
 
 impl Default for TextMaterial {
@@ -226,6 +242,7 @@ impl Default for TextMaterial {
             outline_opacity: 1.0,
             outline_width: 0.0,
             lang: "".to_string(),
+            quality: TextQuality::default(),
         }
     }
 }

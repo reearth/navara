@@ -6,10 +6,12 @@ import type {
 import {
   COLOR_GLYPH_PX_SIZE,
   createSdfAtlasTexture,
+  DEFAULT_TEXT_QUALITY,
+  isMsdfQuality,
   type FontManager,
   type GlyphMetrics,
   type ShapeTextResult,
-  USE_MSDF,
+  type TextQuality,
 } from "@navara/font";
 import { degreeToRadian } from "@navara/three_api";
 import {
@@ -32,12 +34,24 @@ import {
   type SdfTextBaseProps,
   type SdfTextBaseState,
 } from "../material/enhancer/sdfText";
-import { SDF_RADIUS } from "../material/enhancer/sdfText/sdfTextBaseEnhancer/types";
+import { sdfRadiusFor } from "../material/enhancer/sdfText/sdfTextBaseEnhancer/types";
 
 import type { PickableMesh } from "./pickableMesh";
 
 /** Must match Rust SDF_PX_SIZE in navara_font/src/resource.rs */
 const SDF_PX_SIZE = 64.0;
+
+/** Normalize the `quality` string coming off the WASM TextMaterial into the
+ *  `@navara/font` union. The user-facing field is a plain string, so anything
+ *  other than the two known values (or `undefined`) falls back to the default
+ *  — matches the Rust `parse_text_quality` policy. */
+export const wasmQualityToString = (
+  q: string | undefined,
+): TextQuality => {
+  if (q === "high") return "high";
+  if (q === "low") return "low";
+  return DEFAULT_TEXT_QUALITY;
+};
 
 /** Reusable Vector2 to avoid per-frame allocations in onBeforeRender. */
 const _tmpSize = new Vector2();
@@ -55,6 +69,10 @@ export class SDFTextMesh
 {
   private _fontManager: FontManager;
   private _fontUrl: string;
+  /** Per-material text quality. Immutable after construction — switching
+   *  quality requires a separate (font, atlas) pair, so callers create a new
+   *  mesh rather than mutating this one. */
+  private _quality: TextQuality;
   private _text = "";
   private _atlasTexture: DataTexture | null = null;
   /** When true, the atlas texture is shared and should not be disposed by this mesh. */
@@ -83,6 +101,7 @@ export class SDFTextMesh
 
     this._fontManager = fontManager;
     this._fontUrl = fontUrl;
+    this._quality = wasmQualityToString(material.quality);
 
     this.geometry = this._createBaseGeometry();
 
@@ -97,7 +116,7 @@ export class SDFTextMesh
     this._enhancer.mount({
       base: {
         useRTE: RTE,
-        useMsdf: USE_MSDF,
+        useMsdf: isMsdfQuality(this._quality),
         color: material.color ?? 0xffffff,
         fontSize: material.size ?? 16.0,
         center: material.center
@@ -190,13 +209,17 @@ export class SDFTextMesh
       return;
     }
 
-    const shapeResult = this._fontManager.shapeText(this._fontUrl, text);
+    const shapeResult = this._fontManager.shapeText(
+      this._fontUrl,
+      text,
+      this._quality,
+    );
     if (!shapeResult) {
       this.geometry.instanceCount = 0;
       return;
     }
 
-    const atlasData = this._fontManager.getAtlas(this._fontUrl);
+    const atlasData = this._fontManager.getAtlas(this._fontUrl, this._quality);
     if (!atlasData) return;
 
     // Glyph rects are stored in pixel space and normalized in the shader using
@@ -330,7 +353,7 @@ export class SDFTextMesh
     }
 
     const nextOutlineWidth = material.outlineWidth ?? 0;
-    if (nextOutlineWidth / SDF_RADIUS !== state.outlineWidth) {
+    if (nextOutlineWidth / sdfRadiusFor(state.useMsdf) !== state.outlineWidth) {
       baseProps.outlineWidth = nextOutlineWidth;
       hasUpdate = true;
     }

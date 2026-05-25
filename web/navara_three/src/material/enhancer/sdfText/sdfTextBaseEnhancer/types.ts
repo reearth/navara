@@ -1,14 +1,15 @@
-import { ATLAS_RANGE_PX } from "@navara/font";
+import { atlasRangePx } from "@navara/font";
 import type { Color, DataTexture, Vector2, Vector3 } from "three";
 
 import type { UniformValue } from "../../../types";
 import type { Mutates } from "../../MaterialEnhancer";
 
-/** Pixel range covered by the atlas distance field; defines how outline-width
- *  pixels translate to a distance-value delta. Picks `MSDF_RANGE_PX` or the
- *  classic SDF radius depending on the active atlas mode — see
- *  [`ATLAS_RANGE_PX`] in `@navara/font/types`. */
-export const SDF_RADIUS = ATLAS_RANGE_PX;
+/** Pixel range covered by a quality's atlas distance field; defines how
+ *  outline-width pixels translate to a distance-value delta. SDF (`useMsdf=false`)
+ *  uses the classic 35 px radius from `sdf_glyph_renderer`; MSDF uses
+ *  `MSDF_RANGE_PX` (8 px). See [`atlasRangePx`] in `@navara/font`. */
+export const sdfRadiusFor = (useMsdf: boolean): number =>
+  atlasRangePx(useMsdf ? "high" : "low");
 
 /**
  * Props for the sdfText base enhancer.
@@ -27,7 +28,7 @@ export type SdfTextBaseProps = {
   sizeInMeters?: boolean;
   addHeight?: number;
   offsetDepth?: boolean;
-  outlineWidth?: number; // raw width, converted in state via SDF_RADIUS
+  outlineWidth?: number; // raw width, converted in state via sdfRadiusFor(useMsdf)
   outlineColor?: number; // hex
   outlineOpacity?: number;
   showBackground?: boolean;
@@ -59,7 +60,7 @@ export type SdfTextBaseState = Readonly<{
   sizeInMeters: boolean;
   addHeight: number;
   offsetDepth: boolean;
-  outlineWidth: number; // pre-converted: raw / SDF_RADIUS
+  outlineWidth: number; // pre-converted: raw / sdfRadiusFor(useMsdf)
   outlineColor: Color;
   outlineOpacity: number;
   showBackground: boolean;

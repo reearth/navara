@@ -2,6 +2,25 @@ use navara_wasm_utils::ToU8;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
+/// Parse a TS-side `"low" | "high"` string into the internal [`TextQuality`].
+/// Anything else (including `None` and unknown values) maps to
+/// [`TextQuality::Low`] — the default — so callers can omit the field or pass
+/// `null` without breaking the layer.
+fn parse_text_quality(value: Option<&str>) -> navara_material::TextQuality {
+    match value {
+        Some("high") => navara_material::TextQuality::High,
+        _ => navara_material::TextQuality::Low,
+    }
+}
+
+/// Render an internal [`TextQuality`] back to the TS-side string form.
+fn text_quality_to_string(value: navara_material::TextQuality) -> String {
+    match value {
+        navara_material::TextQuality::Low => "low".to_owned(),
+        navara_material::TextQuality::High => "high".to_owned(),
+    }
+}
+
 use crate::{ElevationDecoder, TextureFragment, TileUvTransform, Vec2, Vec3 as WasmVec3};
 #[wasm_bindgen]
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -304,6 +323,12 @@ pub struct TextMaterial {
     /// Language code for text shaping (e.g., "en", "ja", "ar"). Used for proper text rendering.
     #[wasm_bindgen(getter_with_clone)]
     pub lang: Option<String>,
+    /// Glyph atlas quality: `"low"` (single-channel SDF, fast) or `"high"`
+    /// (MTSDF — sharper corners at large sizes, dramatically slower
+    /// rasterization). Defaults to `"low"` when omitted or unrecognized.
+    /// Mirrors [`navara_material::TextQuality`] on the Rust side.
+    #[wasm_bindgen(getter_with_clone)]
+    pub quality: Option<String>,
 }
 
 impl From<TextMaterial> for navara_material::TextMaterial {
@@ -335,6 +360,11 @@ impl From<TextMaterial> for navara_material::TextMaterial {
             outline_opacity: val.outline_opacity.unwrap_or(default.outline_opacity),
             outline_width: val.outline_width.unwrap_or(default.outline_width),
             lang: val.lang.unwrap_or(default.lang),
+            quality: val
+                .quality
+                .as_deref()
+                .map(|s| parse_text_quality(Some(s)))
+                .unwrap_or(default.quality),
         }
     }
 }
@@ -363,6 +393,7 @@ impl<'a> From<&'a navara_material::TextMaterial> for TextMaterial {
             outline_opacity: Some(value.outline_opacity),
             outline_width: Some(value.outline_width),
             lang: Some(value.lang.clone()),
+            quality: Some(text_quality_to_string(value.quality)),
         }
     }
 }
@@ -395,6 +426,11 @@ impl TextMaterial {
             outline_opacity: self.outline_opacity.unwrap_or(other.outline_opacity),
             outline_width: self.outline_width.unwrap_or(other.outline_width),
             lang: self.lang.clone().unwrap_or(other.lang.clone()),
+            quality: self
+                .quality
+                .as_deref()
+                .map(|s| parse_text_quality(Some(s)))
+                .unwrap_or(other.quality),
         }
     }
 }

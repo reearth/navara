@@ -107,12 +107,16 @@ ctx.onmessage = async (e: MessageEvent) => {
 
     switch (msgType) {
       case "loadFont": {
-        const { url, data, atlasKey } = msg.payload as {
+        const { url, data, atlasKey, quality } = msg.payload as {
           url: string;
           data: ArrayBuffer;
           atlasKey?: string;
+          quality: "low" | "high";
         };
         const bytes = new Uint8Array(data);
+        // Map TS quality → WASM mode string. Anything other than "high" is
+        // treated as the SDF path by the Rust side (see `wasm_load_font`).
+        const mode = quality === "high" ? "msdf" : "sdf";
         const ok = fontCache.loadFont(
           url,
           bytes.length,
@@ -120,6 +124,7 @@ ctx.onmessage = async (e: MessageEvent) => {
             buf.set(bytes);
           },
           atlasKey,
+          mode,
         );
         ctx.postMessage({ id, type: "result", payload: { ok } });
         break;
