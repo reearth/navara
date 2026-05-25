@@ -4,6 +4,7 @@ pub mod atlas;
 pub mod cache;
 pub mod color_atlas;
 pub mod color_raster;
+pub mod msdf;
 pub mod shaping;
 
 pub use atlas::{GlyphMetrics, SDFAtlas};
@@ -34,12 +35,16 @@ extern "C" {
 // WASM types
 // ---------------------------------------------------------------------------
 
-/// SDF atlas data returned to TypeScript.
+/// SDF/MSDF atlas data returned to TypeScript.
+///
+/// `channels` selects the GPU texture format on the JS side: 1 → R8 (SDF),
+/// 3 → RGB8 (MSDF), 4 → RGBA8 (color glyphs).
 #[wasm_bindgen(getter_with_clone)]
 pub struct FontAtlas {
     pub data: js_sys::Uint8Array,
     pub width: u32,
     pub height: u32,
+    pub channels: u32,
 }
 
 /// A single glyph's metrics in the atlas.
@@ -150,9 +155,15 @@ impl FontCache {
             let color_atlas = self.color_atlases.get_mut(&atlas_key)?;
             color_atlas.ensure_glyphs_in_atlas(font_data, font_index, &glyph_ids, tick)
         } else {
-            let raster_font = &self.fonts.get(url)?.raster_font;
+            // Split-borrow: `fonts` and `atlases` are separate fields so each
+            // can be borrowed independently, letting us hand the immutable
+            // font bytes + raster font to a mutable atlas method without
+            // cloning the (potentially multi-MB) font buffer each call.
+            let entry = self.fonts.get(url)?;
+            let raster_font = &entry.raster_font;
+            let font_data = entry.data.as_slice();
             let atlas = self.atlases.get_mut(&atlas_key)?;
-            atlas.ensure_glyphs_in_atlas(raster_font, font_index, &glyph_ids, tick)
+            atlas.ensure_glyphs_in_atlas(raster_font, font_data, font_index, &glyph_ids, tick)
         };
 
         let glyphs: Vec<WasmShapedGlyph> = shaped
@@ -217,6 +228,7 @@ impl FontCache {
             data: copy_u8_array(&atlas.pixel_data),
             width: atlas.width,
             height: atlas.height,
+            channels: atlas.channels as u32,
         })
     }
 
@@ -232,6 +244,7 @@ impl FontCache {
             data: copy_u8_array(&atlas.pixel_data),
             width: atlas.width,
             height: atlas.height,
+            channels: 4,
         })
     }
 

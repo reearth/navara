@@ -9,6 +9,7 @@ import {
   type FontManager,
   type GlyphMetrics,
   type ShapeTextResult,
+  USE_MSDF,
 } from "@navara/font";
 import { degreeToRadian } from "@navara/three_api";
 import {
@@ -96,6 +97,7 @@ export class SDFTextMesh
     this._enhancer.mount({
       base: {
         useRTE: RTE,
+        useMsdf: USE_MSDF,
         color: material.color ?? 0xffffff,
         fontSize: material.size ?? 16.0,
         center: material.center
@@ -207,6 +209,7 @@ export class SDFTextMesh
         atlasData.data,
         atlasData.width,
         atlasData.height,
+        atlasData.channels,
       );
     }
   }
@@ -632,6 +635,7 @@ export class SDFTextMesh
     data: Uint8Array,
     width: number,
     height: number,
+    channels: number,
   ): void {
     if (this._atlasTexture) {
       // Update existing texture in-place (atlas dimensions are constant)
@@ -640,7 +644,7 @@ export class SDFTextMesh
       return;
     }
 
-    const tex = createSdfAtlasTexture(data, width, height);
+    const tex = createSdfAtlasTexture(data, width, height, channels);
     this._atlasTexture = tex;
     this._enhancer.mutates().setAtlasTexture({ value: tex });
   }

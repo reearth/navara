@@ -1,10 +1,14 @@
+import { ATLAS_RANGE_PX } from "@navara/font";
 import type { Color, DataTexture, Vector2, Vector3 } from "three";
 
 import type { UniformValue } from "../../../types";
 import type { Mutates } from "../../MaterialEnhancer";
 
-/** Must match Rust SDF_RADIUS in navara_font/src/atlas.rs */
-export const SDF_RADIUS = 35.0;
+/** Pixel range covered by the atlas distance field; defines how outline-width
+ *  pixels translate to a distance-value delta. Picks `MSDF_RANGE_PX` or the
+ *  classic SDF radius depending on the active atlas mode — see
+ *  [`ATLAS_RANGE_PX`] in `@navara/font/types`. */
+export const SDF_RADIUS = ATLAS_RANGE_PX;
 
 /**
  * Props for the sdfText base enhancer.
@@ -12,6 +16,9 @@ export const SDF_RADIUS = 35.0;
 export type SdfTextBaseProps = {
   // Immutable after mount
   useRTE?: boolean;
+  /** When `true` the fragment shader samples the atlas as 4-channel MTSDF
+   *  (median of RGB + true SDF in alpha) instead of single-channel R8. */
+  useMsdf?: boolean;
 
   // Mutable state
   color?: number; // hex color
@@ -43,6 +50,7 @@ export type SdfTextBaseProps = {
 export type SdfTextBaseState = Readonly<{
   // Immutable after mount
   useRTE: boolean;
+  useMsdf: boolean;
 
   // Mutable
   color: Color;

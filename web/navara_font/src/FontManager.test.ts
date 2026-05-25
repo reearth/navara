@@ -63,6 +63,7 @@ vi.mock("three", () => {
   return {
     DataTexture: MockDataTexture,
     LinearFilter: 1006,
+    NoColorSpace: "",
     RedFormat: 1028,
     RGBAFormat: 1023,
     SRGBColorSpace: "srgb",
@@ -151,6 +152,7 @@ function setupBatchMock(atlasKeyOverride?: string) {
         data: new Uint8Array([1, 2, 3, 4]),
         width: 256,
         height: 256,
+        channels: 1,
       },
       colorAtlas: null,
       atlasKey: atlasKeyOverride ?? fontUrl,
@@ -168,7 +170,7 @@ const WORKER_URL = "https://worker.test/font-worker.js";
 describe("createSdfAtlasTexture", () => {
   it("should create a DataTexture with correct dimensions and data", () => {
     const data = new Uint8Array([10, 20, 30, 40]);
-    const tex = createSdfAtlasTexture(data, 2, 2);
+    const tex = createSdfAtlasTexture(data, 2, 2, 1);
 
     expect(tex.image.data).toBe(data);
     expect(tex.image.width).toBe(2);
@@ -176,7 +178,7 @@ describe("createSdfAtlasTexture", () => {
   });
 
   it("should disable mipmaps and mark as needing update", () => {
-    const tex = createSdfAtlasTexture(new Uint8Array(4), 2, 2);
+    const tex = createSdfAtlasTexture(new Uint8Array(4), 2, 2, 1);
 
     expect(tex.generateMipmaps).toBe(false);
     expect(tex.needsUpdate).toBe(true);
@@ -651,7 +653,12 @@ describe("FontManager", () => {
             text,
             shapeResult: fontUrl.includes("cjk") ? cjkResult : latinResult,
           })),
-          atlas: { data: new Uint8Array([1]), width: 64, height: 64 },
+          atlas: {
+            data: new Uint8Array([1]),
+            width: 64,
+            height: 64,
+            channels: 1,
+          },
           colorAtlas: null,
           atlasKey: "TestFamily",
         }),
@@ -679,7 +686,12 @@ describe("FontManager", () => {
             text,
             shapeResult: createShapeResult(text, 1000),
           })),
-          atlas: { data: new Uint8Array([1]), width: 64, height: 64 },
+          atlas: {
+            data: new Uint8Array([1]),
+            width: 64,
+            height: 64,
+            channels: 1,
+          },
           colorAtlas: null,
           atlasKey: "TestFamily",
         }),
@@ -732,7 +744,12 @@ describe("FontManager", () => {
               unitsPerEm: 1000,
             },
           })),
-          atlas: { data: new Uint8Array([1]), width: 64, height: 64 },
+          atlas: {
+            data: new Uint8Array([1]),
+            width: 64,
+            height: 64,
+            channels: 1,
+          },
           colorAtlas: null,
           atlasKey: "TestFamily",
         }),
@@ -812,7 +829,12 @@ describe("FontManager", () => {
                 unitsPerEm: cfg.unitsPerEm,
               },
             })),
-            atlas: { data: new Uint8Array([1]), width: 64, height: 64 },
+            atlas: {
+              data: new Uint8Array([1]),
+              width: 64,
+              height: 64,
+              channels: 1,
+            },
             colorAtlas: null,
             atlasKey,
           };
@@ -1181,7 +1203,12 @@ describe("FontManager", () => {
                   unitsPerEm: 1000,
                 },
               })),
-              atlas: { data: new Uint8Array([1]), width: 64, height: 64 },
+              atlas: {
+                data: new Uint8Array([1]),
+                width: 64,
+                height: 64,
+                channels: 1,
+              },
               colorAtlas: null,
               atlasKey: "Seg",
             };
@@ -1464,6 +1491,7 @@ describe("FontManager", () => {
             data: new Uint8Array([5, 6, 7, 8]),
             width: 512,
             height: 512,
+            channels: 1,
           },
           colorAtlas: null,
           atlasKey: fontUrl,
@@ -1514,11 +1542,13 @@ describe("FontManager", () => {
             data: new Uint8Array(4),
             width: 256,
             height: 256,
+            channels: 1,
           },
           colorAtlas: {
             data: new Uint8Array(width * height * 4),
             width,
             height,
+            channels: 4,
           },
           atlasKey: fontUrl,
         }),

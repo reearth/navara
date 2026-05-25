@@ -14,6 +14,7 @@ export const DEFAULT_BASE_PROPS: Required<
   Omit<SdfTextBaseProps, "atlasTexture" | "rtcCenter">
 > = {
   useRTE: false,
+  useMsdf: false,
   color: 0xffffff,
   fontSize: 16.0,
   center: [0.5, 0.0],
@@ -34,6 +35,7 @@ export const DEFAULT_BASE_PROPS: Required<
 /** Default state derived from DEFAULT_BASE_PROPS */
 export const DEFAULT_BASE_STATE: SdfTextBaseState = {
   useRTE: DEFAULT_BASE_PROPS.useRTE,
+  useMsdf: DEFAULT_BASE_PROPS.useMsdf,
   color: hexToColor(DEFAULT_BASE_PROPS.color),
   fontSize: DEFAULT_BASE_PROPS.fontSize,
   center: DEFAULT_BASE_PROPS.center,
@@ -63,6 +65,7 @@ export const updateState = (
   return {
     // Immutable after mount
     useRTE: currentState.useRTE,
+    useMsdf: currentState.useMsdf,
     // Mutable
     color:
       props.color !== undefined ? hexToColor(props.color) : currentState.color,

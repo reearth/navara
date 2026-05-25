@@ -5,7 +5,7 @@ export {
 } from "./FontManager";
 export { FontWorkerClient } from "./FontWorkerClient";
 export { LRUMap } from "./LRUMap";
-export { COLOR_GLYPH_PX_SIZE } from "./types";
+export { ATLAS_RANGE_PX, COLOR_GLYPH_PX_SIZE, USE_MSDF } from "./types";
 export type {
   FontAtlasData,
   FontFace,

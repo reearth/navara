@@ -4,6 +4,28 @@
  */
 export const COLOR_GLYPH_PX_SIZE = 64.0;
 
+/**
+ * Whether the monochrome glyph atlas is rasterized as 4-channel MTSDF
+ * (median-of-RGB + true SDF in alpha) instead of single-channel SDF.
+ *
+ * **Must stay in sync with `ATLAS_MODE` in
+ * `crates/navara_wasm_font_worker/src/atlas.rs`.** The shader define
+ * `USE_MSDF` is driven from this flag, and the Rust side decides the actual
+ * texture layout — if they disagree the atlas will be sampled wrong.
+ */
+export const USE_MSDF = true;
+
+/**
+ * Pixel range over which the atlas distance field ramps from "outside" to
+ * "inside" (i.e. the value covered by `d - 0.5` in the shader). This is
+ * what converts an outline-thickness expressed in pixels into a delta on
+ * the sampled distance value.
+ *
+ * SDF: `SDF_RADIUS` (35) in `crates/navara_wasm_font_worker/src/atlas.rs`.
+ * MSDF: `MSDF_RANGE_PX` (8) in `crates/navara_wasm_font_worker/src/msdf.rs`.
+ */
+export const ATLAS_RANGE_PX = USE_MSDF ? 8.0 : 35.0;
+
 /** Glyph metrics from either the SDF or the color atlas. */
 export type GlyphMetrics = {
   glyphId: number;
@@ -42,11 +64,17 @@ export type ShapeTextResult = {
   unitsPerEm: number;
 };
 
-/** SDF atlas texture data. */
+/** SDF/MSDF atlas texture data.
+ *
+ * `channels` selects the GPU texture format: 1 → R8 (single-channel SDF),
+ * 3 → RGB8 (MSDF — sampled with `median(rgb)` in the fragment shader),
+ * 4 → RGBA8 (COLRv1 color atlas).
+ */
 export type FontAtlasData = {
   data: Uint8Array;
   width: number;
   height: number;
+  channels: number;
 };
 
 export type BatchPrepareTextResult = {

@@ -2,6 +2,7 @@ import type { ConcurrencyManager } from "@navara/worker";
 import {
   DataTexture,
   LinearFilter,
+  NoColorSpace,
   RedFormat,
   RGBAFormat,
   SRGBColorSpace,
@@ -20,16 +21,31 @@ import type {
   ShapeTextResult,
 } from "./types";
 
-/** Create a single-channel SDF atlas DataTexture with standard filtering. */
+/** Create a glyph distance-field atlas DataTexture.
+ *
+ * `channels` picks the GPU format:
+ *  - 1 → single-channel SDF (R8). Sampled as `dist = .r` in the shader.
+ *  - 4 → MTSDF (RGBA8) — three MSDF channels + true SDF in alpha. Sampled
+ *    as `dist = median(.r, .g, .b)`; alpha is available for smooth effects.
+ *
+ * RGB-only (3-channel) is intentionally not supported: three.js dropped
+ * `RGBFormat` in r137, so the Rust side pads MSDF to MTSDF instead of
+ * forcing a CPU-side repack on every atlas update.
+ */
 export function createSdfAtlasTexture(
   data: Uint8Array,
   width: number,
   height: number,
+  channels: number,
 ): DataTexture {
-  const tex = new DataTexture(data, width, height, RedFormat, UnsignedByteType);
+  const format = channels === 4 ? RGBAFormat : RedFormat;
+  const tex = new DataTexture(data, width, height, format, UnsignedByteType);
   tex.minFilter = LinearFilter;
   tex.magFilter = LinearFilter;
   tex.generateMipmaps = false;
+  // Distance values are linear, not sRGB — keep the texture in linear space
+  // even though it shares a format with the color atlas.
+  tex.colorSpace = NoColorSpace;
   tex.needsUpdate = true;
   return tex;
 }
@@ -549,6 +565,7 @@ export class FontManager {
       atlasData.data,
       atlasData.width,
       atlasData.height,
+      atlasData.channels,
     );
     this._textureCache.set(key, tex);
     this._atlasDirty.delete(key);

@@ -3,6 +3,7 @@ use rustc_hash::FxHashMap;
 use sdf_glyph_renderer::{BitmapGlyph, clamp_to_u8};
 
 use crate::cache::LRU_MIN_AGE;
+use crate::msdf::{Face, MSDF_CHANNELS, rasterize_msdf};
 /// Default SDF atlas dimensions (width x height in pixels).
 pub const DEFAULT_ATLAS_SIZE: i32 = 1024 * 2;
 
@@ -19,6 +20,37 @@ const SDF_RADIUS: usize = 35;
 /// Font size in pixels used for SDF rasterization.
 /// A single SDF glyph at this size can render both small and large text.
 pub const SDF_PX_SIZE: f32 = 64.0;
+
+/// Atlas rasterization mode: pick the field flavor used for monochrome glyphs.
+///
+/// Single-channel SDF goes through `sdf_glyph_renderer` (Felzenszwalb on a
+/// fontdue bitmap), MSDF goes through `fdsm` directly on the vector outline.
+/// MSDF preserves sharp corners but triples the atlas memory footprint
+/// (R8 → RGB8). Flip this constant to A/B compare the two pipelines.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AtlasMode {
+    Sdf,
+    Msdf,
+}
+
+/// Active mode for monochrome glyph rasterization. Toggle to compare the two.
+pub const ATLAS_MODE: AtlasMode = AtlasMode::Msdf;
+
+/// Extra atlas pixels reserved on every side of each glyph rect to keep the
+/// bilinear sampler from reading neighboring glyphs' distance values.
+/// Without this, glyph edges show flickering pixels at the rect boundary.
+/// The padded ring is left zeroed (i.e. fully "outside" for either field
+/// type), so sampling into it produces a clean fade to the surrounding
+/// color, not a discontinuity.
+const ATLAS_GLYPH_PADDING: i32 = 1;
+
+/// Bytes per atlas pixel for the active mode.
+pub const fn atlas_channels(mode: AtlasMode) -> usize {
+    match mode {
+        AtlasMode::Sdf => 1,
+        AtlasMode::Msdf => MSDF_CHANNELS,
+    }
+}
 
 /// Metrics for a single glyph in the SDF atlas.
 #[derive(Debug, Clone)]
@@ -39,21 +71,26 @@ pub struct GlyphMetrics {
     pub bearing_y: f32,
 }
 
-/// SDF texture atlas that can be shared by multiple fonts.
+/// SDF / MSDF texture atlas that can be shared by multiple fonts.
 ///
 /// Glyphs are keyed by a composite `u64` of `(font_index, glyph_id)` so that
 /// different fonts sharing the same atlas never collide on glyph IDs.
 /// For standalone fonts (one atlas per URL) the font_index is the unique index
 /// assigned by `FontCache` at load time.
+///
+/// The atlas stores either single-channel SDF (R8) or 3-channel MSDF (RGB8)
+/// pixel data based on [`ATLAS_MODE`]. `pixel_data.len() == width * height * channels`.
 pub struct SDFAtlas {
     /// Rectangle packer for allocating glyph regions
     pub allocator: AtlasAllocator,
-    /// Raw single-channel SDF pixel data of the atlas texture
+    /// Raw pixel data of the atlas texture, interleaved by [`Self::channels`].
     pub pixel_data: Vec<u8>,
     /// Atlas width in pixels
     pub width: u32,
     /// Atlas height in pixels
     pub height: u32,
+    /// Bytes per pixel (1 for SDF, 3 for MSDF). Fixed at construction time.
+    pub channels: u8,
     /// Map from composite key `(font_index << 32 | glyph_id)` to metrics
     pub glyph_map: FxHashMap<u64, GlyphMetrics>,
     /// LRU tracking: composite key → tick at which the glyph was last used.
@@ -66,13 +103,76 @@ pub fn composite_key(font_index: u32, glyph_id: u32) -> u64 {
     (font_index as u64) << 32 | glyph_id as u64
 }
 
+/// Orientation of a glyph raster's row order relative to OpenGL Y-up.
+enum GlyphOrientation {
+    /// Row 0 is the top of the glyph (fontdue / sdf_glyph_renderer convention).
+    YDown,
+    /// Row 0 is the bottom of the glyph (fdsm / TTF convention).
+    YUp,
+}
+
+/// One glyph rasterized into the active atlas pixel format.
+/// Independent of which raster path produced it.
+struct GlyphRaster {
+    /// Interleaved pixel bytes, `width * height * channels` long.
+    pixels: Vec<u8>,
+    width: usize,
+    height: usize,
+    bearing_x: f32,
+    bearing_y: f32,
+    orientation: GlyphOrientation,
+}
+
+/// fontdue + `sdf_glyph_renderer` single-channel SDF path.
+fn sdf_rasterize(raster_font: &fontdue::Font, glyph_id: u32) -> Option<GlyphRaster> {
+    let (metrics, bitmap) = raster_font.rasterize_indexed(glyph_id as u16, SDF_PX_SIZE);
+    if metrics.width == 0 || metrics.height == 0 {
+        return None;
+    }
+    let glyph_bitmap =
+        BitmapGlyph::from_unbuffered(&bitmap, metrics.width, metrics.height, SDF_BUFFER).ok()?;
+    let sdf_f64 = glyph_bitmap.render_sdf(SDF_RADIUS);
+    // sdf_glyph_renderer convention: positive = outside, negative = inside.
+    // clamp_to_u8 with cutoff=0.5 maps: inside → high values (>128), outside → low values (<128).
+    let sdf_data = clamp_to_u8(&sdf_f64, 0.5).ok()?;
+    let w = metrics.width + SDF_BUFFER * 2;
+    let h = metrics.height + SDF_BUFFER * 2;
+    Some(GlyphRaster {
+        pixels: sdf_data,
+        width: w,
+        height: h,
+        // Bearings include the SDF buffer added by sdf_glyph_renderer.
+        bearing_x: metrics.xmin as f32 - SDF_BUFFER as f32,
+        bearing_y: metrics.ymin as f32 - SDF_BUFFER as f32,
+        orientation: GlyphOrientation::YDown,
+    })
+}
+
+/// ttf-parser + fdsm MSDF path.
+///
+/// `face` is parsed once by the caller and reused for every glyph in the
+/// batch; parsing it per glyph is the dominant cost otherwise.
+fn msdf_rasterize(face: &Face<'_>, glyph_id: u32) -> Option<GlyphRaster> {
+    let g = rasterize_msdf(face, glyph_id as u16, SDF_PX_SIZE)?;
+    Some(GlyphRaster {
+        pixels: g.pixels,
+        width: g.width as usize,
+        height: g.height as usize,
+        bearing_x: g.bearing_x,
+        bearing_y: g.bearing_y,
+        orientation: GlyphOrientation::YUp,
+    })
+}
+
 impl SDFAtlas {
     pub fn new(size: i32) -> Self {
+        let channels = atlas_channels(ATLAS_MODE);
         Self {
             allocator: AtlasAllocator::new(Size::new(size, size)),
-            pixel_data: vec![0u8; (size * size) as usize],
+            pixel_data: vec![0u8; (size * size) as usize * channels],
             width: size as u32,
             height: size as u32,
+            channels: channels as u8,
             glyph_map: FxHashMap::default(),
             last_used: FxHashMap::default(),
         }
@@ -104,17 +204,28 @@ impl SDFAtlas {
     /// Ensure all required glyphs are in the atlas.
     ///
     /// `font_index` distinguishes glyphs from different fonts sharing the same atlas.
-    /// For each glyph ID not yet in the atlas, rasterizes a bitmap with fontdue,
-    /// then generates an SDF using sdf_glyph_renderer (TinySDF/Felzenszwalb algorithm).
-    /// Updates LRU timestamps for all requested glyphs.
-    /// If the atlas is full, evicts the coldest unused glyphs before retrying.
+    /// Updates LRU timestamps for all requested glyphs. If the atlas is full,
+    /// evicts the coldest unused glyphs before retrying.
+    ///
+    /// The actual raster path depends on [`ATLAS_MODE`]:
+    /// - [`AtlasMode::Sdf`]: fontdue bitmap → `sdf_glyph_renderer` (Felzenszwalb).
+    /// - [`AtlasMode::Msdf`]: ttf-parser outline → `fdsm` MSDF.
     pub fn ensure_glyphs_in_atlas(
         &mut self,
         raster_font: &fontdue::Font,
+        font_data: &[u8],
         font_index: u32,
         glyph_ids: &[u32],
         tick: u64,
     ) -> bool {
+        // Parse the ttf-parser Face once for the whole batch. Re-parsing per
+        // glyph (cmap, kern, hmtx, ...) was previously the bulk of MSDF cost
+        // when many unique glyphs were rasterized at once.
+        let msdf_face = match ATLAS_MODE {
+            AtlasMode::Msdf => Face::parse(font_data, 0).ok(),
+            AtlasMode::Sdf => None,
+        };
+
         let mut new_glyphs = false;
         for &glyph_id in glyph_ids {
             let key = composite_key(font_index, glyph_id);
@@ -126,34 +237,20 @@ impl SDFAtlas {
                 continue;
             }
 
-            // Rasterize glyph to bitmap using fontdue
-            let (metrics, bitmap) = raster_font.rasterize_indexed(glyph_id as u16, SDF_PX_SIZE);
-
-            if metrics.width == 0 || metrics.height == 0 {
-                continue;
-            }
-
-            // Generate SDF from bitmap using sdf_glyph_renderer (Felzenszwalb algorithm)
-            let Ok(glyph_bitmap) =
-                BitmapGlyph::from_unbuffered(&bitmap, metrics.width, metrics.height, SDF_BUFFER)
+            let Some(raster) = self.rasterize_glyph(raster_font, msdf_face.as_ref(), glyph_id)
             else {
                 continue;
             };
 
-            let sdf_f64 = glyph_bitmap.render_sdf(SDF_RADIUS);
-
-            // Convert f64 SDF to u8 [0, 255].
-            // sdf_glyph_renderer convention: positive = outside, negative = inside.
-            // clamp_to_u8 with cutoff=0.5 maps: inside → high values (>128), outside → low values (<128).
-            let Ok(sdf_data) = clamp_to_u8(&sdf_f64, 0.5) else {
-                continue;
-            };
-
-            // The SDF output includes the buffer on all sides
-            let sdf_w = metrics.width + SDF_BUFFER * 2;
-            let sdf_h = metrics.height + SDF_BUFFER * 2;
-
-            let alloc_size = Size::new(sdf_w as i32, sdf_h as i32);
+            // Request padding on all sides so bilinear sampling at the
+            // glyph's edge doesn't read neighboring glyphs' distance values.
+            // The ring stays zeroed and reads as "deep outside" for both SDF
+            // and MSDF/MTSDF, which is what the shader expects past the edge.
+            let pad = ATLAS_GLYPH_PADDING;
+            let alloc_size = Size::new(
+                raster.width as i32 + 2 * pad,
+                raster.height as i32 + 2 * pad,
+            );
 
             // Try to allocate; if full, evict cold glyphs and retry; if still
             // full, grow the atlas (up to MAX_ATLAS_SIZE) and retry once more.
@@ -182,22 +279,12 @@ impl SDFAtlas {
             };
 
             let rect = alloc.rectangle;
-            let atlas_x = rect.min.x;
-            let atlas_y = rect.min.y;
+            // Inset by the padding ring; the metrics record the inner glyph
+            // region, not the padded allocation.
+            let atlas_x = rect.min.x + pad;
+            let atlas_y = rect.min.y + pad;
 
-            // Copy SDF data into the atlas pixel buffer (R8 format), Y-flipped for OpenGL
-            for y in 0..sdf_h {
-                for x in 0..sdf_w {
-                    let src_idx = y * sdf_w + x;
-                    let dst_x = atlas_x as usize + x;
-                    let dst_y = atlas_y as usize + (sdf_h - 1 - y);
-                    let dst_idx = dst_y * self.width as usize + dst_x;
-
-                    if src_idx < sdf_data.len() && dst_idx < self.pixel_data.len() {
-                        self.pixel_data[dst_idx] = sdf_data[src_idx];
-                    }
-                }
-            }
+            self.blit_glyph(&raster, atlas_x, atlas_y);
 
             self.glyph_map.insert(
                 key,
@@ -205,16 +292,60 @@ impl SDFAtlas {
                     alloc_id: alloc.id,
                     atlas_x,
                     atlas_y,
-                    atlas_w: sdf_w as u32,
-                    atlas_h: sdf_h as u32,
-                    // Adjust bearings to account for the SDF buffer
-                    bearing_x: metrics.xmin as f32 - SDF_BUFFER as f32,
-                    bearing_y: metrics.ymin as f32 - SDF_BUFFER as f32,
+                    atlas_w: raster.width as u32,
+                    atlas_h: raster.height as u32,
+                    bearing_x: raster.bearing_x,
+                    bearing_y: raster.bearing_y,
                 },
             );
             new_glyphs = true;
         }
         new_glyphs
+    }
+
+    /// Produce a single glyph's pixel data for the active [`ATLAS_MODE`].
+    /// Returns `None` for empty glyphs or outline-loading failures.
+    ///
+    /// `face` must be `Some` in [`AtlasMode::Msdf`] and is unused in
+    /// [`AtlasMode::Sdf`]; the caller parses it once per batch.
+    fn rasterize_glyph(
+        &self,
+        raster_font: &fontdue::Font,
+        face: Option<&Face<'_>>,
+        glyph_id: u32,
+    ) -> Option<GlyphRaster> {
+        match ATLAS_MODE {
+            AtlasMode::Sdf => sdf_rasterize(raster_font, glyph_id),
+            AtlasMode::Msdf => msdf_rasterize(face?, glyph_id),
+        }
+    }
+
+    /// Copy a rasterized glyph into the atlas at `(atlas_x, atlas_y)`.
+    ///
+    /// For SDF (Y-down source), rows are Y-flipped on copy so the atlas ends
+    /// up in OpenGL convention. MSDF output is already Y-up — no flip needed.
+    fn blit_glyph(&mut self, raster: &GlyphRaster, atlas_x: i32, atlas_y: i32) {
+        let ch = self.channels as usize;
+        let atlas_w = self.width as usize;
+        let gw = raster.width;
+        let gh = raster.height;
+        for y in 0..gh {
+            for x in 0..gw {
+                let src_idx = (y * gw + x) * ch;
+                let dst_y = match raster.orientation {
+                    GlyphOrientation::YDown => atlas_y as usize + (gh - 1 - y),
+                    GlyphOrientation::YUp => atlas_y as usize + y,
+                };
+                let dst_x = atlas_x as usize + x;
+                let dst_idx = (dst_y * atlas_w + dst_x) * ch;
+
+                if src_idx + ch > raster.pixels.len() || dst_idx + ch > self.pixel_data.len() {
+                    continue;
+                }
+                self.pixel_data[dst_idx..dst_idx + ch]
+                    .copy_from_slice(&raster.pixels[src_idx..src_idx + ch]);
+            }
+        }
     }
 
     /// Double the atlas dimensions (square) up to `MAX_ATLAS_SIZE`. Existing
@@ -235,14 +366,17 @@ impl SDFAtlas {
         let old_h = self.height as usize;
         let new_w_usize = new_w as usize;
         let new_h_usize = new_h as usize;
+        let ch = self.channels as usize;
 
         // Repack pixel data into a wider/taller row-major buffer at the same
         // (x, y) coordinates so existing glyph_map entries remain valid.
-        let mut new_pixels = vec![0u8; new_w_usize * new_h_usize];
+        let mut new_pixels = vec![0u8; new_w_usize * new_h_usize * ch];
         for y in 0..old_h {
-            let src = y * old_w;
-            let dst = y * new_w_usize;
-            new_pixels[dst..dst + old_w].copy_from_slice(&self.pixel_data[src..src + old_w]);
+            let src = y * old_w * ch;
+            let dst = y * new_w_usize * ch;
+            let row_bytes = old_w * ch;
+            new_pixels[dst..dst + row_bytes]
+                .copy_from_slice(&self.pixel_data[src..src + row_bytes]);
         }
 
         self.allocator.grow(Size::new(new_w, new_h));

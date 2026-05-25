@@ -80,24 +80,29 @@ export class FontWorkerClient {
     fontUrl: string,
     texts: string[],
   ): Promise<BatchPrepareTextResult> {
+    type RawAtlas = {
+      data: ArrayBuffer;
+      width: number;
+      height: number;
+      channels: number;
+    };
     const raw = (await this._send("prepareTextBatch", {
       fontUrl,
       texts,
     })) as {
       results: { text: string; shapeResult: ShapeTextResult | null }[];
-      atlas: { data: ArrayBuffer; width: number; height: number } | null;
-      colorAtlas: { data: ArrayBuffer; width: number; height: number } | null;
+      atlas: RawAtlas | null;
+      colorAtlas: RawAtlas | null;
       atlasKey: string;
     };
 
-    const wrap = (
-      raw: { data: ArrayBuffer; width: number; height: number } | null,
-    ): FontAtlasData | null =>
+    const wrap = (raw: RawAtlas | null): FontAtlasData | null =>
       raw
         ? {
             data: new Uint8Array(raw.data),
             width: raw.width,
             height: raw.height,
+            channels: raw.channels,
           }
         : null;
 

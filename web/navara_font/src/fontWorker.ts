@@ -70,6 +70,7 @@ function snapshotAtlas(fontUrl: string) {
     data: atlas.data.buffer,
     width: atlas.width,
     height: atlas.height,
+    channels: atlas.channels,
   };
   atlas.free();
   return snapshot;
@@ -82,6 +83,7 @@ function snapshotColorAtlas(fontUrl: string) {
     data: atlas.data.buffer,
     width: atlas.width,
     height: atlas.height,
+    channels: atlas.channels,
   };
   atlas.free();
   return snapshot;
