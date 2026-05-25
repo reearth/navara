@@ -366,6 +366,24 @@ import { Color } from "@navara/three";
 }
 ```
 
+### quality
+
+**Type:** `"low" | "high" | undefined`
+
+**Description:** グリフアトラスのラスタライズ経路を選択します。`"low"` はシングルチャネル SDF を使用し、ラスタライズが非常に高速ですが、極端なズーム時に角がわずかに丸くなります。`"high"` は MTSDF を使用し、大きなサイズでも角の鋭さを保ちますが、1 グリフあたりの処理コストは大幅に増加します。認識されない値は `"low"` にフォールバックします。
+
+**Default:** `"low"`
+
+**Example:**
+
+```typescript
+{
+  text: {
+    quality: "high"
+  }
+}
+```
+
 ### sizeInMeters
 
 **Type:** `boolean | undefined`
