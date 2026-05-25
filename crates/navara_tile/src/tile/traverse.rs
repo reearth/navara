@@ -77,7 +77,8 @@ pub fn traverse_tile(
                     .iter()
                     .all(|t| t.is_over_max_zoom(tile.coords.z));
             // If tile layer isn't added, check overscaled_max_zoom for terrain layer.
-            // The reason why we check `overscaled_max_zoom` is that the terrain is upsampled even if actual tile isn't exist.
+            // The reason why we check `overscaled_max_zoom` is that the terrain is
+            // upsampled even if the actual tile doesn't exist.
             // The terrain is upsampled until it reaches `overscaled_max_zoom`.
             let has_no_terrain = !has_tile_layer
                 && terrain_layer.is_none_or(|l| l.is_over_overscaled_max_zoom(tile.coords.z));
