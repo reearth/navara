@@ -75,9 +75,15 @@ export type ShapeTextResult = {
 
 /** SDF/MSDF atlas texture data.
  *
- * `channels` selects the GPU texture format: 1 → R8 (single-channel SDF),
- * 3 → RGB8 (MSDF — sampled with `median(rgb)` in the fragment shader),
- * 4 → RGBA8 (COLRv1 color atlas).
+ * `channels` selects the GPU texture format:
+ *  - 1 → R8 (single-channel SDF, sampled as `.r`).
+ *  - 4 → RGBA8. Either MTSDF (three MSDF channels + true SDF in alpha,
+ *    sampled as `median(.rgb)` in the fragment shader) or the COLRv1 color
+ *    atlas — distinguished by which atlas slot the data was placed in, not
+ *    by `channels`.
+ *
+ * 3-channel MSDF (RGB8) isn't used: three.js dropped `RGBFormat` in r137,
+ * and the worker emits MTSDF (4 channels) for the high-quality path.
  */
 export type FontAtlasData = {
   data: Uint8Array;

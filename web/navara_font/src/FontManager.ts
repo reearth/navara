@@ -337,18 +337,19 @@ export class FontManager {
     const family = this._families.get(fontIdentifier);
     if (family) {
       // Lazy path: load only the face URLs needed for this text that this
-      // caller has not loaded yet. `loadedFaces` tracks raw URLs (so the
-      // caller can use the same set across quality switches if they want to;
-      // each (url, quality) load is still deduped via the worker refcount).
+      // caller has not loaded yet. `loadedFaces` tracks raw face URLs (no
+      // quality suffix), matching the URLs the caller later passes to
+      // `unloadFont(url, quality)`. A single set is therefore tied to one
+      // quality — callers switching quality should use a fresh set.
       const tracker = loadedFaces ?? new Set<string>();
       const segments = this._segmentTextByFace(family.faces, text);
       const uniqueUrls = [...new Set(segments.map((s) => s.url))];
       await Promise.all(
         uniqueUrls
-          .filter((url) => !tracker.has(_q(url, quality)))
+          .filter((url) => !tracker.has(url))
           .map(async (url) => {
             await this.loadFont(url, quality, fontIdentifier);
-            tracker.add(_q(url, quality));
+            tracker.add(url);
           }),
       );
       return this._prepareFamilyText(fontIdentifier, family, text, quality);

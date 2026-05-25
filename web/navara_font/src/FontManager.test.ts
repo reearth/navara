@@ -537,8 +537,8 @@ describe("FontManager", () => {
       // "Hello" is Basic Latin only → should load latin.ttf but NOT cjk.ttf
       await manager.prepareText("TestFamily", "Hello", "low", loadedFaces);
 
-      expect(loadedFaces.has("https://fonts.test/latin.ttf#q=low")).toBe(true);
-      expect(loadedFaces.has("https://fonts.test/cjk.ttf#q=low")).toBe(false);
+      expect(loadedFaces.has("https://fonts.test/latin.ttf")).toBe(true);
+      expect(loadedFaces.has("https://fonts.test/cjk.ttf")).toBe(false);
     });
 
     it("should load multiple faces when text spans unicode ranges", async () => {
@@ -551,8 +551,8 @@ describe("FontManager", () => {
         loadedFaces,
       );
 
-      expect(loadedFaces.has("https://fonts.test/latin.ttf#q=low")).toBe(true);
-      expect(loadedFaces.has("https://fonts.test/cjk.ttf#q=low")).toBe(true);
+      expect(loadedFaces.has("https://fonts.test/latin.ttf")).toBe(true);
+      expect(loadedFaces.has("https://fonts.test/cjk.ttf")).toBe(true);
     });
 
     it("should not reload a face that is already tracked in loadedFaces", async () => {
@@ -597,8 +597,8 @@ describe("FontManager", () => {
       // Emoji (U+1F600) is not in any defined range → should fall back to latin.ttf
       await manager.prepareText("TestFamily", "\u{1F600}", "low", loadedFaces);
 
-      expect(loadedFaces.has("https://fonts.test/latin.ttf#q=low")).toBe(true);
-      expect(loadedFaces.has("https://fonts.test/cjk.ttf#q=low")).toBe(false);
+      expect(loadedFaces.has("https://fonts.test/latin.ttf")).toBe(true);
+      expect(loadedFaces.has("https://fonts.test/cjk.ttf")).toBe(false);
     });
 
     it("should keep spaces with the current face to avoid extra segments", async () => {
@@ -623,10 +623,8 @@ describe("FontManager", () => {
       // "Hello World" — space between Latin words should stay with narrow.ttf
       await manager.prepareText("SpaceTest", "Hello World", "low", loadedFaces);
 
-      expect(loadedFaces.has("https://fonts.test/narrow.ttf#q=low")).toBe(true);
-      expect(loadedFaces.has("https://fonts.test/fallback.ttf#q=low")).toBe(
-        false,
-      );
+      expect(loadedFaces.has("https://fonts.test/narrow.ttf")).toBe(true);
+      expect(loadedFaces.has("https://fonts.test/fallback.ttf")).toBe(false);
     });
 
     it("should handle a single-face family without segmentation overhead", async () => {
