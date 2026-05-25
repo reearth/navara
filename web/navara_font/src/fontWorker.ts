@@ -1,6 +1,7 @@
 /// <reference lib="webworker" />
 
 import init, {
+  type FontAtlas,
   FontCache,
   composite_key,
   type ShapeTextResult as WasmShapeTextResult,
@@ -63,30 +64,17 @@ function convertShapeResult(sr: WasmShapeTextResult | undefined) {
   return result;
 }
 
-function snapshotAtlas(fontUrl: string) {
-  const atlas = fontCache.getFontAtlas(fontUrl);
+/** Take a transferable snapshot of `atlas` and free the WASM-owned object. */
+function snapshot(atlas: FontAtlas | undefined) {
   if (!atlas) return null;
-  const snapshot = {
+  const out = {
     data: atlas.data.buffer,
     width: atlas.width,
     height: atlas.height,
     channels: atlas.channels,
   };
   atlas.free();
-  return snapshot;
-}
-
-function snapshotColorAtlas(fontUrl: string) {
-  const atlas = fontCache.getColorAtlas(fontUrl);
-  if (!atlas) return null;
-  const snapshot = {
-    data: atlas.data.buffer,
-    width: atlas.width,
-    height: atlas.height,
-    channels: atlas.channels,
-  };
-  atlas.free();
-  return snapshot;
+  return out;
 }
 
 type FontWorkerMessageType =
@@ -159,9 +147,11 @@ ctx.onmessage = async (e: MessageEvent) => {
         // Snapshot atlases by atlas key (family name or URL) so shared atlases
         // are returned correctly for font-family faces.
         const atlasKey = fontCache.getAtlasKey(fontUrl) ?? fontUrl;
-        const atlas = sdfAtlasChanged ? snapshotAtlas(atlasKey) : null;
+        const atlas = sdfAtlasChanged
+          ? snapshot(fontCache.getFontAtlas(atlasKey))
+          : null;
         const colorAtlas = colorAtlasChanged
-          ? snapshotColorAtlas(atlasKey)
+          ? snapshot(fontCache.getColorAtlas(atlasKey))
           : null;
 
         const transfers: Transferable[] = [];

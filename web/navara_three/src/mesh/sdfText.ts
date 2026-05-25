@@ -38,18 +38,14 @@ import { sdfRadiusFor } from "../material/enhancer/sdfText/sdfTextBaseEnhancer/t
 
 import type { PickableMesh } from "./pickableMesh";
 
-/** Must match Rust SDF_PX_SIZE in navara_font/src/resource.rs */
+/** Must match Rust `SDF_PX_SIZE` in `crates/navara_wasm_font_worker/src/atlas.rs`. */
 const SDF_PX_SIZE = 64.0;
 
-/** Normalize the `quality` string coming off the WASM TextMaterial into the
- *  `@navara/font` union. The user-facing field is a plain string, so anything
- *  other than the two known values (or `undefined`) falls back to the default
- *  — matches the Rust `parse_text_quality` policy. */
-export const wasmQualityToString = (q: string | undefined): TextQuality => {
-  if (q === "high") return "high";
-  if (q === "low") return "low";
-  return DEFAULT_TEXT_QUALITY;
-};
+/** Normalize a WASM TextMaterial `quality` string into the union, falling back
+ *  to [`DEFAULT_TEXT_QUALITY`] for `undefined` or unknown values (mirrors the
+ *  Rust `parse_text_quality` policy). */
+export const wasmQualityToString = (q: string | undefined): TextQuality =>
+  q === "high" || q === "low" ? q : DEFAULT_TEXT_QUALITY;
 
 /** Reusable Vector2 to avoid per-frame allocations in onBeforeRender. */
 const _tmpSize = new Vector2();
@@ -73,10 +69,9 @@ export class SDFTextMesh
   private _quality: TextQuality;
   private _text = "";
   private _atlasTexture: DataTexture | null = null;
-  /** When true, the atlas texture is shared and should not be disposed by this mesh. */
+  /** Atlas texture is owned externally; do not dispose on cleanup when true. */
   private _sharedAtlas = false;
-  // Color (COLRv1 RGBA) atlas texture is always FontManager-owned; this mesh
-  // never holds a local color texture, so there's no field to track here.
+  // The COLRv1 color atlas is always FontManager-owned; no local field needed.
 
   private _enhancer: MaterialEnhancer<
     ShaderMaterial,
@@ -601,43 +596,16 @@ export class SDFTextMesh
       glyphIsColorData[j] = g.isColor ? 1.0 : 0.0;
     }
 
-    // Recreate geometry if instance count increased beyond current capacity
+    // Recreate geometry if instance count grew beyond the current capacity.
     if (this.geometry.instanceCount < count + 1) {
       this.geometry.dispose();
       this.geometry = this._createBaseGeometry();
     }
 
-    if (this.geometry.hasAttribute("glyphOffset")) {
-      this.geometry.deleteAttribute("glyphOffset");
-    }
-    this.geometry.setAttribute(
-      "glyphOffset",
-      new InstancedBufferAttribute(glyphOffsetData, 2),
-    );
-
-    if (this.geometry.hasAttribute("glyphSize")) {
-      this.geometry.deleteAttribute("glyphSize");
-    }
-    this.geometry.setAttribute(
-      "glyphSize",
-      new InstancedBufferAttribute(glyphSizeData, 2),
-    );
-
-    if (this.geometry.hasAttribute("glyphUvRect")) {
-      this.geometry.deleteAttribute("glyphUvRect");
-    }
-    this.geometry.setAttribute(
-      "glyphUvRect",
-      new InstancedBufferAttribute(glyphUvRectData, 4),
-    );
-
-    if (this.geometry.hasAttribute("glyphIsColor")) {
-      this.geometry.deleteAttribute("glyphIsColor");
-    }
-    this.geometry.setAttribute(
-      "glyphIsColor",
-      new InstancedBufferAttribute(glyphIsColorData, 1),
-    );
+    this._setInstanceAttribute("glyphOffset", glyphOffsetData, 2);
+    this._setInstanceAttribute("glyphSize", glyphSizeData, 2);
+    this._setInstanceAttribute("glyphUvRect", glyphUvRectData, 4);
+    this._setInstanceAttribute("glyphIsColor", glyphIsColorData, 1);
 
     this.geometry.instanceCount = count + 1;
 
@@ -650,6 +618,18 @@ export class SDFTextMesh
         bgMinY === Infinity ? 0.0 : bgMinY,
         bgMaxY === -Infinity ? 1.0 : bgMaxY,
       );
+  }
+
+  private _setInstanceAttribute(
+    name: string,
+    data: Float32Array,
+    itemSize: number,
+  ): void {
+    if (this.geometry.hasAttribute(name)) this.geometry.deleteAttribute(name);
+    this.geometry.setAttribute(
+      name,
+      new InstancedBufferAttribute(data, itemSize),
+    );
   }
 
   private _updateAtlasTexture(
