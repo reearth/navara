@@ -42,11 +42,9 @@ export abstract class MeshDescWithSelectiveEffect<
   }
 
   protected override getPassKey(): PassKey {
-    // Meshes with SelectiveEffect (effectIds) need to be in MRT scene for SelectiveEffect buffer rendering
-    if (this._effectIds.length > 0) {
-      return "mrt";
-    }
-    return super.getPassKey();
+    // SelectiveEffect meshes are always part of the MRT scene; an empty
+    // effectIds list is expressed as effectIdsMask=0, not by falling back to opaque.
+    return "mrt";
   }
 
   override onCreate() {
@@ -62,7 +60,8 @@ export abstract class MeshDescWithSelectiveEffect<
   override onUpdateConfig(updates: UpdateConfig): void {
     // ----------------------------------------------------------------------------
     // SelectiveEffect: effectIds update
-    // Update _effectIds BEFORE super.onUpdateConfig() so getPassKey() returns correct value
+    // Sync _effectIds before delegating to super so any downstream handler
+    // observing the descriptor sees the new value.
     // ----------------------------------------------------------------------------
     let effectIdsChanged = false;
 
@@ -70,24 +69,17 @@ export abstract class MeshDescWithSelectiveEffect<
       const nextEffectIds = updates.effectIds ?? [];
 
       if (!arraysEqual(this._effectIds, nextEffectIds)) {
-        // Update local cache first (used by getPassKey())
         this._effectIds = [...nextEffectIds];
         effectIdsChanged = true;
       }
     }
 
-    // super.onUpdateConfig() calls onPassKeyChange() internally
     super.onUpdateConfig(updates);
 
-    // ----------------------------------------------------------------------------
-    // SelectiveEffect: registry update (requires this.raw)
-    // ----------------------------------------------------------------------------
     if (effectIdsChanged) {
-      // Recompute effectIdsMask for material uniforms
+      // Recompute effectIdsMask for material uniforms.
       this.updateEffectIdsMask();
     }
-
-    // Note: onPassKeyChange() is already called by super.onUpdateConfig()
   }
 
   /**
