@@ -115,16 +115,28 @@ impl DataManager {
         self.url_registry.is_empty()
     }
 
-    /// Mark that a fetch has been enqueued for an entity's URL.
-    /// This prevents other consumers of the same URL from triggering duplicate fetches.
-    pub fn mark_fetch_enqueued(&mut self, entity: Entity) {
+    /// Try to mark that a fetch has been enqueued for an entity's URL.
+    /// Returns true if this is the first fetch for this URL (caller should push event).
+    /// Returns false if a fetch was already enqueued (caller should skip pushing event).
+    /// This prevents duplicate fetches when multiple consumers for the same URL
+    /// are spawned in the same frame.
+    ///
+    /// For entities not registered in DataManager (unmanaged DataRequesters),
+    /// returns true to allow the event (fallback for tests and legacy code).
+    pub fn try_mark_fetch_enqueued(&mut self, entity: Entity) -> bool {
         if let Some(entry) = self
             .entity_to_url
             .get(&entity)
             .and_then(|url| self.url_registry.get_mut(url))
         {
+            if entry.fetch_enqueued {
+                return false; // Already enqueued by another consumer
+            }
             entry.fetch_enqueued = true;
+            return true; // Successfully marked as first fetch
         }
+        // Entity not in registry - allow event (for unmanaged DataRequesters)
+        true
     }
 }
 

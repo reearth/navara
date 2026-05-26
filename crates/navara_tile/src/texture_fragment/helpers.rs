@@ -125,6 +125,10 @@ pub(crate) fn request_texture_fragment(
                 navara_data_requester::DataRequesterStatus::Pending
             };
 
+            // Check if we should wait for an in-flight fetch before moving initial_status
+            let should_wait_for_fetch = fetch_already_enqueued
+                && initial_status == navara_data_requester::DataRequesterStatus::Pending;
+
             // Insert components with shared handle.
             let mut entity_commands = commands.entity(entity_id);
             entity_commands.insert((
@@ -138,9 +142,9 @@ pub(crate) fn request_texture_fragment(
                 priority,
             ));
 
-            // If another consumer already enqueued a fetch for this URL,
+            // If another consumer already enqueued a fetch AND we're still pending,
             // insert Requested marker so this consumer waits for the shared fetch.
-            if fetch_already_enqueued {
+            if should_wait_for_fetch {
                 entity_commands.insert(Requested);
             }
 

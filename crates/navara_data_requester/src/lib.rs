@@ -267,10 +267,13 @@ pub fn send_data_request_events(
     for (e, data_req) in requests.iter() {
         if data_req.status == DataRequesterStatus::Pending {
             commands.entity(e).insert(Requested);
-            events.data_requested.push(e);
-            // Mark that we've enqueued a fetch for this entity's URL.
-            // This prevents other consumers of the same URL from triggering duplicate fetches.
-            data_manager.mark_fetch_enqueued(e);
+
+            // Only push event if this is the first fetch for this URL.
+            // try_mark_fetch_enqueued returns true if we're the first, false if another
+            // consumer already enqueued a fetch for the same URL in this frame.
+            if data_manager.try_mark_fetch_enqueued(e) {
+                events.data_requested.push(e);
+            }
         }
     }
 
@@ -295,10 +298,13 @@ pub fn send_data_request_events_with_priority(
     for (e, _, data_req) in requests.iter().sort::<&Priority>() {
         if data_req.status == DataRequesterStatus::Pending {
             commands.entity(e).insert(Requested);
-            events.data_requested.push(e);
-            // Mark that we've enqueued a fetch for this entity's URL.
-            // This prevents other consumers of the same URL from triggering duplicate fetches.
-            data_manager.mark_fetch_enqueued(e);
+
+            // Only push event if this is the first fetch for this URL.
+            // try_mark_fetch_enqueued returns true if we're the first, false if another
+            // consumer already enqueued a fetch for the same URL in this frame.
+            if data_manager.try_mark_fetch_enqueued(e) {
+                events.data_requested.push(e);
+            }
         }
     }
 }
@@ -336,10 +342,13 @@ pub fn send_data_request_events_with_priority_and_sort<K: RequestOrderKey>(
     for (e, _, _, data_req) in requests.iter().sort::<(&Priority, &RequestOrder<K>)>() {
         if data_req.status == DataRequesterStatus::Pending {
             commands.entity(e).insert(Requested);
-            events.data_requested.push(e);
-            // Mark that we've enqueued a fetch for this entity's URL.
-            // This prevents other consumers of the same URL from triggering duplicate fetches.
-            data_manager.mark_fetch_enqueued(e);
+
+            // Only push event if this is the first fetch for this URL.
+            // try_mark_fetch_enqueued returns true if we're the first, false if another
+            // consumer already enqueued a fetch for the same URL in this frame.
+            if data_manager.try_mark_fetch_enqueued(e) {
+                events.data_requested.push(e);
+            }
         }
     }
 }
