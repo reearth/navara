@@ -81,6 +81,10 @@ pub struct DataRequester {
     pub url: String,
     pub extension: DataRequesterExtension,
     pub status: DataRequesterStatus,
+    /// Whether this DataRequester's handle is managed by DataManager.
+    /// If true, cleanup is handled via DataManager's refcounting.
+    /// If false, handle cleanup is the responsibility of the owner.
+    pub managed_by_data_manager: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -145,15 +149,21 @@ impl DataRequesterExtension {
 }
 
 impl DataRequester {
+    /// Create a DataRequester with an unmanaged handle.
+    /// The caller is responsible for handle cleanup.
     pub fn new(handle: Handle, url: String, extension: DataRequesterExtension) -> Self {
         Self {
             handle,
             url,
             extension,
             status: DataRequesterStatus::default(),
+            managed_by_data_manager: false,
         }
     }
 
+    /// Create a DataRequester with a DataManager-managed handle.
+    /// Cleanup is handled via DataManager's refcounting.
+    /// This should be used after calling `DataManager::register_consumer()`.
     pub fn new_with_status(
         handle: Handle,
         url: String,
@@ -165,6 +175,7 @@ impl DataRequester {
             url,
             extension,
             status,
+            managed_by_data_manager: true,
         }
     }
 
@@ -192,15 +203,15 @@ impl DataRequester {
 pub fn set_data_requester_loaded(
     mut commands: Commands,
     mut events: MessageReader<BufferStoreLoadedEvent>,
-    mut requests: Query<(Entity, &mut DataRequester)>,
+    mut requests: Query<(Entity, &mut DataRequester), With<Requested>>,
 ) {
     for e in events.read() {
         let loaded_handle = e.handle;
 
-        // Broadcast success to ALL DataRequesters using this handle
-        // This handles the case where multiple consumers share the same URL:
-        // - First consumer fetches data and triggers this event
-        // - Other consumers (pending, waiting) are also marked as success
+        // Broadcast success to DataRequesters with matching handle.
+        // Query filtered to With<Requested> for performance - all in-flight requests
+        // have Requested marker (inserted by send_data_request_events), so this
+        // skips already-successful DataRequesters while finding all pending ones.
         for (entity, mut data_req) in requests.iter_mut() {
             if data_req.handle == loaded_handle && data_req.status == DataRequesterStatus::Pending {
                 commands.entity(entity).remove::<Requested>();
@@ -303,14 +314,16 @@ pub fn remove_removed_data_requesters(
     removed: Query<(Entity, &DataRequester), With<Deleted>>,
 ) {
     for (e, d) in removed.iter() {
-        // Unregister from resource manager
-        if let Some((_url, handle, should_delete)) = resource_manager.unregister_consumer(e) {
-            // Only remove from BufferStore if this was the last consumer
-            if should_delete {
+        if d.managed_by_data_manager {
+            // Handle is managed by DataManager - use refcounting cleanup.
+            // Note: unregister_consumer may return None if this entity was already
+            // unregistered (e.g., by filter systems), which is fine - the handle
+            // cleanup was already handled or is still shared by other consumers.
+            if let Some((_url, handle, true)) = resource_manager.unregister_consumer(e) {
                 buf.remove(&handle);
             }
         } else {
-            // Not managed by resource manager, remove directly
+            // Handle is unmanaged - caller is responsible for cleanup
             buf.remove(&d.handle);
         }
 

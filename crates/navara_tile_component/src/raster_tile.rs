@@ -947,6 +947,7 @@ mod raster_tile_tests {
             url: "https://example.com/.png".into(),
             extension: DataRequesterExtension::Png,
             status,
+            managed_by_data_manager: false,
         }
     }
 

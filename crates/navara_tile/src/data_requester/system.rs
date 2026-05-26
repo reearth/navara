@@ -5,7 +5,7 @@ use bevy_ecs::{
 };
 use navara_buffer_store::BufferStore;
 use navara_component::{Deleted, Ignored, OrderByDistance, Priority, Requested};
-use navara_data_requester::{DataManager, DataRequester, DataRequesterStatus};
+use navara_data_requester::{DataRequester, DataRequesterStatus};
 use navara_tile_component::{RasterTileQuadtree, TerrainDataRequesterMarker};
 
 const MAX_PENDINGS: u32 = 50;
@@ -15,7 +15,6 @@ pub(crate) fn filter_requestable_data_requester(
     mut commands: Commands,
     mut qt: ResMut<RasterTileQuadtree>,
     mut buf: ResMut<BufferStore>,
-    mut data_manager: ResMut<DataManager>,
     data_requesters: Query<
         (
             Entity,
@@ -57,12 +56,6 @@ pub(crate) fn filter_requestable_data_requester(
                 terrain_data.destroy(&mut buf);
                 tile.terrain_data = None;
             };
-
-            // Unregister from DataManager immediately when filtered out.
-            // This keeps refcounts accurate and allows URL cleanup if this was the last consumer.
-            if let Some((_url, handle, true)) = data_manager.unregister_consumer(e) {
-                buf.remove(&handle);
-            }
 
             commands.entity(e).insert((Deleted, Ignored));
         }
