@@ -2,7 +2,7 @@ use bevy_ecs::system::{Commands, Query};
 use url::Url;
 
 use navara_buffer_store::BufferStore;
-use navara_component::{Order, OrderByDistance, Priority, Requested};
+use navara_component::{Order, OrderByDistance, Priority};
 use navara_core::tile_url;
 use navara_data_requester::{DataManager, DataRequester, DataRequesterExtension};
 use navara_layer::TilesLayer;
@@ -124,9 +124,8 @@ pub(crate) fn request_texture_fragment(
                 navara_data_requester::DataRequesterStatus::Pending
             };
 
-            // Insert components with shared handle
-            let mut entity_commands = commands.entity(entity_id);
-            entity_commands.insert((
+            // Insert components with shared handle.
+            commands.entity(entity_id).insert((
                 TileTextureFragmentMarker(handle),
                 HillshadeTextureMarker,
                 DataRequester::new_with_status(shared_handle, url, extension, initial_status),
@@ -136,12 +135,6 @@ pub(crate) fn request_texture_fragment(
                 },
                 priority,
             ));
-
-            // Insert Requested marker immediately if this entity should not trigger a fetch.
-            // This prevents send_data_request_events from picking it up (filters Without<Requested>).
-            if !is_new {
-                entity_commands.insert(Requested);
-            }
 
             entity_id
         } else {

@@ -26,16 +26,21 @@ pub(crate) fn filter_requestable_data_requester(
         (Added<TerrainDataRequesterMarker>, Without<Deleted>),
     >,
     requested_data_requesters: Query<
-        Entity,
+        &DataRequester,
         (
             With<TerrainDataRequesterMarker>,
-            With<DataRequester>,
             With<Requested>,
             Without<Deleted>,
         ),
     >,
 ) {
-    let pendings = requested_data_requesters.iter().count();
+    // Count only Pending DataRequesters with Requested marker.
+    // Success+Requested entities exist (shared-handle consumers with already-loaded data)
+    // and should not count toward the limit.
+    let pendings = requested_data_requesters
+        .iter()
+        .filter(|dr| dr.status == DataRequesterStatus::Pending)
+        .count();
     let num_skip = (MAX_PENDINGS as i32 - pendings as i32).max(0);
 
     // Limit the number of requests in this frame.

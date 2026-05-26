@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use bevy_ecs::system::Commands;
 use navara_buffer_store::BufferStore;
-use navara_component::{OrderByDistance, Priority, Requested};
+use navara_component::{OrderByDistance, Priority};
 use navara_core::tile_url;
 use navara_data_requester::{DataManager, DataRequester, DataRequesterExtension};
 use navara_layer::{TerrainDataType, TerrainLayer};
@@ -65,9 +65,8 @@ pub(crate) fn request_terrain_data(
             navara_data_requester::DataRequesterStatus::Pending
         };
 
-        // Insert components with shared handle
-        let mut entity_commands = commands.entity(entity_id);
-        entity_commands.insert((
+        // Insert components with shared handle.
+        commands.entity(entity_id).insert((
             TerrainDataRequesterMarker(handle),
             DataRequester::new_with_status(shared_handle, url, extension, initial_status),
             OrderByDistance {
@@ -76,12 +75,6 @@ pub(crate) fn request_terrain_data(
             },
             priority,
         ));
-
-        // Insert Requested marker immediately if this entity should not trigger a fetch.
-        // This prevents send_data_request_events from picking it up (filters Without<Requested>).
-        if !is_new {
-            entity_commands.insert(Requested);
-        }
 
         terrain_data.set_data_requester_entity_id(Some(entity_id));
         tile.terrain_data = Some(Box::new(terrain_data));

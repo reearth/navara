@@ -70,7 +70,7 @@ pub fn filter_requestable_hillshade_data_requester(
         ),
     >,
     requested_hillshades: Query<
-        Entity,
+        &DataRequester,
         (
             With<TileTextureFragmentMarker>,
             With<HillshadeTextureMarker>,
@@ -79,7 +79,13 @@ pub fn filter_requestable_hillshade_data_requester(
         ),
     >,
 ) {
-    let pendings = requested_hillshades.iter().count();
+    // Count only Pending DataRequesters with Requested marker.
+    // Success+Requested entities exist (shared-handle consumers with already-loaded data)
+    // and should not count toward the limit.
+    let pendings = requested_hillshades
+        .iter()
+        .filter(|dr| dr.status == navara_data_requester::DataRequesterStatus::Pending)
+        .count();
     let num_skip = (MAX_HILLSHADE_PENDINGS as i32 - pendings as i32).max(0);
 
     // Limit the number of hillshade requests in this frame.
