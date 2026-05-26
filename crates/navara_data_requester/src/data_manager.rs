@@ -28,6 +28,10 @@ pub struct ResourceEntry {
     pub handle: Handle,
     /// Number of active consumers
     pub reference_count: usize,
+    /// Whether a fetch has been enqueued for this URL.
+    /// This prevents duplicate fetches when multiple consumers share a handle.
+    /// Reset to false if all consumers are removed before fetch completes.
+    pub fetch_enqueued: bool,
 }
 
 impl DataManager {
@@ -41,6 +45,7 @@ impl DataManager {
     /// Returns:
     /// - `handle`: BufferStore handle for the resource (new or existing)
     /// - `is_new_request`: true if this is the first request for this URL
+    /// - `fetch_already_enqueued`: true if a fetch has already been triggered for this URL
     ///
     /// If the URL is already registered, the existing handle is returned and
     /// the reference count is incremented. Otherwise, a new handle is created.
@@ -49,7 +54,7 @@ impl DataManager {
         url: String,
         entity: Entity,
         buf: &mut BufferStore,
-    ) -> (Handle, bool) {
+    ) -> (Handle, bool, bool) {
         let is_new = !self.url_registry.contains_key(&url);
 
         let entry = self
@@ -58,12 +63,14 @@ impl DataManager {
             .or_insert_with(|| ResourceEntry {
                 handle: buf.new_handle(),
                 reference_count: 0,
+                fetch_enqueued: false,
             });
 
+        let fetch_already_enqueued = entry.fetch_enqueued;
         entry.reference_count += 1;
         self.entity_to_url.insert(entity, url);
 
-        (entry.handle, is_new)
+        (entry.handle, is_new, fetch_already_enqueued)
     }
 
     /// Unregister a consumer.
@@ -107,6 +114,18 @@ impl DataManager {
     pub fn is_empty(&self) -> bool {
         self.url_registry.is_empty()
     }
+
+    /// Mark that a fetch has been enqueued for an entity's URL.
+    /// This prevents other consumers of the same URL from triggering duplicate fetches.
+    pub fn mark_fetch_enqueued(&mut self, entity: Entity) {
+        if let Some(entry) = self
+            .entity_to_url
+            .get(&entity)
+            .and_then(|url| self.url_registry.get_mut(url))
+        {
+            entry.fetch_enqueued = true;
+        }
+    }
 }
 
 #[cfg(test)]
@@ -122,9 +141,11 @@ mod tests {
         let mut manager = DataManager::new();
 
         let url = "https://example.com/tile.png".to_string();
-        let (_handle, is_new) = manager.register_consumer(url.clone(), entity, &mut buf);
+        let (_handle, is_new, fetch_already_enqueued) =
+            manager.register_consumer(url.clone(), entity, &mut buf);
 
         assert!(is_new);
+        assert!(!fetch_already_enqueued);
         assert_eq!(manager.len(), 1);
         assert_eq!(manager.get_ref_count(&url), 1);
     }
@@ -140,12 +161,16 @@ mod tests {
         let url = "https://example.com/tile.png".to_string();
 
         // First registration
-        let (handle1, is_new1) = manager.register_consumer(url.clone(), entity1, &mut buf);
+        let (handle1, is_new1, fetch_already_enqueued1) =
+            manager.register_consumer(url.clone(), entity1, &mut buf);
         assert!(is_new1);
+        assert!(!fetch_already_enqueued1);
 
         // Second registration (same URL)
-        let (handle2, is_new2) = manager.register_consumer(url.clone(), entity2, &mut buf);
+        let (handle2, is_new2, fetch_already_enqueued2) =
+            manager.register_consumer(url.clone(), entity2, &mut buf);
         assert!(!is_new2);
+        assert!(!fetch_already_enqueued2); // First consumer hasn't marked it yet
         assert_eq!(handle1, handle2); // Same handle
         assert_eq!(manager.get_ref_count(&url), 2);
         assert_eq!(manager.len(), 1); // Still only 1 URL
@@ -161,8 +186,8 @@ mod tests {
 
         let url = "https://example.com/tile.png".to_string();
 
-        manager.register_consumer(url.clone(), entity1, &mut buf);
-        manager.register_consumer(url.clone(), entity2, &mut buf);
+        let _ = manager.register_consumer(url.clone(), entity1, &mut buf);
+        let _ = manager.register_consumer(url.clone(), entity2, &mut buf);
 
         // Unregister first consumer
         let result = manager.unregister_consumer(entity1);
@@ -181,7 +206,7 @@ mod tests {
         let mut manager = DataManager::new();
 
         let url = "https://example.com/tile.png".to_string();
-        let (handle, _) = manager.register_consumer(url.clone(), entity, &mut buf);
+        let (handle, _, _) = manager.register_consumer(url.clone(), entity, &mut buf);
 
         // Unregister only consumer
         let result = manager.unregister_consumer(entity);
@@ -204,8 +229,8 @@ mod tests {
         let url1 = "https://example.com/tile1.png".to_string();
         let url2 = "https://example.com/tile2.png".to_string();
 
-        let (handle1, _) = manager.register_consumer(url1.clone(), entity1, &mut buf);
-        let (handle2, _) = manager.register_consumer(url2.clone(), entity2, &mut buf);
+        let (handle1, _, _) = manager.register_consumer(url1.clone(), entity1, &mut buf);
+        let (handle2, _, _) = manager.register_consumer(url2.clone(), entity2, &mut buf);
 
         assert_ne!(handle1, handle2); // Different handles
         assert_eq!(manager.len(), 2);

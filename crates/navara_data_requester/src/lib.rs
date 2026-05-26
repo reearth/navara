@@ -224,12 +224,24 @@ pub fn set_data_requester_loaded(
 pub fn set_data_requester_failed(
     mut commands: Commands,
     mut events: MessageReader<BufferStoreFailedEvent>,
-    mut requests: Query<&mut DataRequester>,
+    mut requests: Query<(Entity, &mut DataRequester), With<Requested>>,
 ) {
     for e in events.read() {
-        if let Ok(mut d) = requests.get_mut(e.id) {
-            commands.entity(e.id).remove::<Requested>();
-            d.status = DataRequesterStatus::Fail;
+        // Get the handle from the failed entity
+        if let Ok((_, failed_req)) = requests.get(e.id) {
+            let failed_handle = failed_req.handle;
+
+            // Broadcast failure to all consumers with the same handle.
+            // This ensures all consumers sharing a handle are notified when any one fails,
+            // preventing them from being stuck in Pending state forever.
+            for (entity, mut data_req) in requests.iter_mut() {
+                if data_req.handle == failed_handle
+                    && data_req.status == DataRequesterStatus::Pending
+                {
+                    commands.entity(entity).remove::<Requested>();
+                    data_req.status = DataRequesterStatus::Fail;
+                }
+            }
         }
     }
 }
@@ -238,6 +250,7 @@ pub fn set_data_requester_failed(
 pub fn send_data_request_events(
     mut commands: Commands,
     mut events: ResMut<EventStore>,
+    mut data_manager: ResMut<DataManager>,
     requests: Query<
         (Entity, &DataRequester),
         (
@@ -255,6 +268,9 @@ pub fn send_data_request_events(
         if data_req.status == DataRequesterStatus::Pending {
             commands.entity(e).insert(Requested);
             events.data_requested.push(e);
+            // Mark that we've enqueued a fetch for this entity's URL.
+            // This prevents other consumers of the same URL from triggering duplicate fetches.
+            data_manager.mark_fetch_enqueued(e);
         }
     }
 
@@ -268,6 +284,7 @@ pub fn send_data_request_events(
 pub fn send_data_request_events_with_priority(
     mut commands: Commands,
     mut events: ResMut<EventStore>,
+    mut data_manager: ResMut<DataManager>,
     requests: Query<
         (Entity, &Priority, &DataRequester),
         (Added<DataRequester>, Without<Deleted>, Without<Requested>),
@@ -279,6 +296,9 @@ pub fn send_data_request_events_with_priority(
         if data_req.status == DataRequesterStatus::Pending {
             commands.entity(e).insert(Requested);
             events.data_requested.push(e);
+            // Mark that we've enqueued a fetch for this entity's URL.
+            // This prevents other consumers of the same URL from triggering duplicate fetches.
+            data_manager.mark_fetch_enqueued(e);
         }
     }
 }
@@ -305,6 +325,7 @@ pub struct RequestOrder<K: RequestOrderKey>(pub K);
 pub fn send_data_request_events_with_priority_and_sort<K: RequestOrderKey>(
     mut commands: Commands,
     mut events: ResMut<EventStore>,
+    mut data_manager: ResMut<DataManager>,
     requests: Query<
         (Entity, &Priority, &RequestOrder<K>, &DataRequester),
         (Added<DataRequester>, Without<Deleted>, Without<Requested>),
@@ -316,6 +337,9 @@ pub fn send_data_request_events_with_priority_and_sort<K: RequestOrderKey>(
         if data_req.status == DataRequesterStatus::Pending {
             commands.entity(e).insert(Requested);
             events.data_requested.push(e);
+            // Mark that we've enqueued a fetch for this entity's URL.
+            // This prevents other consumers of the same URL from triggering duplicate fetches.
+            data_manager.mark_fetch_enqueued(e);
         }
     }
 }

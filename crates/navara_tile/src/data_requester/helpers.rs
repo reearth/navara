@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use bevy_ecs::system::Commands;
 use navara_buffer_store::BufferStore;
-use navara_component::{OrderByDistance, Priority};
+use navara_component::{OrderByDistance, Priority, Requested};
 use navara_core::tile_url;
 use navara_data_requester::{DataManager, DataRequester, DataRequesterExtension};
 use navara_layer::{TerrainDataType, TerrainLayer};
@@ -53,7 +53,9 @@ pub(crate) fn request_terrain_data(
 
         // Register with DataManager to get shared handle.
         // is_new=true means this is the first consumer for this URL.
-        let (shared_handle, is_new) = data_manager.register_consumer(url.clone(), entity_id, buf);
+        // fetch_already_enqueued=true means another consumer already triggered a fetch.
+        let (shared_handle, is_new, fetch_already_enqueued) =
+            data_manager.register_consumer(url.clone(), entity_id, buf);
 
         // Check if data already exists in BufferStore (loaded by previous consumer)
         let data_exists = buf.get_u8(&shared_handle).is_some();
@@ -66,7 +68,8 @@ pub(crate) fn request_terrain_data(
         };
 
         // Insert components with shared handle.
-        commands.entity(entity_id).insert((
+        let mut entity_commands = commands.entity(entity_id);
+        entity_commands.insert((
             TerrainDataRequesterMarker(handle),
             DataRequester::new_with_status(shared_handle, url, extension, initial_status),
             OrderByDistance {
@@ -75,6 +78,12 @@ pub(crate) fn request_terrain_data(
             },
             priority,
         ));
+
+        // If another consumer already enqueued a fetch for this URL,
+        // insert Requested marker so this consumer waits for the shared fetch.
+        if fetch_already_enqueued {
+            entity_commands.insert(Requested);
+        }
 
         terrain_data.set_data_requester_entity_id(Some(entity_id));
         tile.terrain_data = Some(Box::new(terrain_data));

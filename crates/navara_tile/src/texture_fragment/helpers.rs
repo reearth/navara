@@ -2,7 +2,7 @@ use bevy_ecs::system::{Commands, Query};
 use url::Url;
 
 use navara_buffer_store::BufferStore;
-use navara_component::{Order, OrderByDistance, Priority};
+use navara_component::{Order, OrderByDistance, Priority, Requested};
 use navara_core::tile_url;
 use navara_data_requester::{DataManager, DataRequester, DataRequesterExtension};
 use navara_layer::TilesLayer;
@@ -111,7 +111,8 @@ pub(crate) fn request_texture_fragment(
 
             // Register with DataManager to get shared handle.
             // is_new=true means this is the first consumer for this URL.
-            let (shared_handle, is_new) =
+            // fetch_already_enqueued=true means another consumer already triggered a fetch.
+            let (shared_handle, is_new, fetch_already_enqueued) =
                 data_manager.register_consumer(url.clone(), entity_id, buf);
 
             // Check if data already exists in BufferStore (loaded by previous consumer)
@@ -125,7 +126,8 @@ pub(crate) fn request_texture_fragment(
             };
 
             // Insert components with shared handle.
-            commands.entity(entity_id).insert((
+            let mut entity_commands = commands.entity(entity_id);
+            entity_commands.insert((
                 TileTextureFragmentMarker(handle),
                 HillshadeTextureMarker,
                 DataRequester::new_with_status(shared_handle, url, extension, initial_status),
@@ -135,6 +137,12 @@ pub(crate) fn request_texture_fragment(
                 },
                 priority,
             ));
+
+            // If another consumer already enqueued a fetch for this URL,
+            // insert Requested marker so this consumer waits for the shared fetch.
+            if fetch_already_enqueued {
+                entity_commands.insert(Requested);
+            }
 
             entity_id
         } else {
