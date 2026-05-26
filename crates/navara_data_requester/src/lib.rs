@@ -409,6 +409,7 @@ mod tests {
     fn priority_and_sort_enqueues_in_ascending_order() {
         let mut app = App::new();
         app.init_resource::<EventStore>();
+        app.init_resource::<DataManager>();
         app.add_systems(
             bevy_app::Update,
             send_data_request_events_with_priority_and_sort::<TestKey>,
@@ -434,6 +435,7 @@ mod tests {
     fn priority_and_sort_sorts_priority_before_key() {
         let mut app = App::new();
         app.init_resource::<EventStore>();
+        app.init_resource::<DataManager>();
         app.add_systems(
             bevy_app::Update,
             send_data_request_events_with_priority_and_sort::<TestKey>,
@@ -460,6 +462,7 @@ mod tests {
         // duplicate enqueue.
         let mut app = App::new();
         app.init_resource::<EventStore>();
+        app.init_resource::<DataManager>();
         app.configure_sets(
             PostUpdate,
             (
