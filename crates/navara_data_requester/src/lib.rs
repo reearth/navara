@@ -239,7 +239,7 @@ pub fn send_data_request_events(
     mut commands: Commands,
     mut events: ResMut<EventStore>,
     requests: Query<
-        Entity,
+        (Entity, &DataRequester),
         (
             Added<DataRequester>,
             Without<Priority>,
@@ -249,9 +249,13 @@ pub fn send_data_request_events(
     >,
     removed: Query<Entity, (With<DataRequester>, With<Deleted>, Without<Ignored>)>,
 ) {
-    for e in requests.iter() {
-        commands.entity(e).insert(Requested);
-        events.data_requested.push(e);
+    // Only send events for Pending DataRequesters.
+    // Success DataRequesters already have their data and don't need fetching.
+    for (e, data_req) in requests.iter() {
+        if data_req.status == DataRequesterStatus::Pending {
+            commands.entity(e).insert(Requested);
+            events.data_requested.push(e);
+        }
     }
 
     for e in removed.iter() {
@@ -265,13 +269,17 @@ pub fn send_data_request_events_with_priority(
     mut commands: Commands,
     mut events: ResMut<EventStore>,
     requests: Query<
-        (Entity, &Priority),
+        (Entity, &Priority, &DataRequester),
         (Added<DataRequester>, Without<Deleted>, Without<Requested>),
     >,
 ) {
-    for (e, _) in requests.iter().sort::<&Priority>() {
-        commands.entity(e).insert(Requested);
-        events.data_requested.push(e);
+    // Only send events for Pending DataRequesters.
+    // Success DataRequesters already have their data and don't need fetching.
+    for (e, _, data_req) in requests.iter().sort::<&Priority>() {
+        if data_req.status == DataRequesterStatus::Pending {
+            commands.entity(e).insert(Requested);
+            events.data_requested.push(e);
+        }
     }
 }
 
@@ -292,18 +300,23 @@ pub struct RequestOrder<K: RequestOrderKey>(pub K);
 /// Requests with the highest [`Priority`] are sent first; ties are broken by
 /// the wrapped [`RequestOrderKey`] (smaller first). Already-`Requested`
 /// entities are skipped so this can run alongside the default senders.
+/// Only Pending DataRequesters trigger fetch events.
 #[allow(clippy::type_complexity)]
 pub fn send_data_request_events_with_priority_and_sort<K: RequestOrderKey>(
     mut commands: Commands,
     mut events: ResMut<EventStore>,
     requests: Query<
-        (Entity, &Priority, &RequestOrder<K>),
+        (Entity, &Priority, &RequestOrder<K>, &DataRequester),
         (Added<DataRequester>, Without<Deleted>, Without<Requested>),
     >,
 ) {
-    for (e, _, _) in requests.iter().sort::<(&Priority, &RequestOrder<K>)>() {
-        commands.entity(e).insert(Requested);
-        events.data_requested.push(e);
+    // Only send events for Pending DataRequesters.
+    // Success DataRequesters already have their data and don't need fetching.
+    for (e, _, _, data_req) in requests.iter().sort::<(&Priority, &RequestOrder<K>)>() {
+        if data_req.status == DataRequesterStatus::Pending {
+            commands.entity(e).insert(Requested);
+            events.data_requested.push(e);
+        }
     }
 }
 
