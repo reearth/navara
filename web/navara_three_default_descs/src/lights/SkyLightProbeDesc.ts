@@ -5,6 +5,7 @@ import {
   type ViewContext,
   type LightUpdate,
 } from "@navara/three";
+import { LightProbe, LightProbeNode } from "three/webgpu";
 
 import { SkyLightProbe, type SkyLightProbeOptions } from "./skyLightProbe";
 
@@ -51,6 +52,16 @@ export class SkyLightProbeDesc extends LightDesc<
       if (updates.skyLightProbe.intensity !== undefined) {
         this._instance.intensity = updates.skyLightProbe.intensity;
       }
+    }
+  }
+
+  onCreate() {
+    super.onCreate();
+
+    if (this.raw) {
+      this.ctx
+        .getNodeLibrary()
+        .addLight(LightProbeNode, this.raw.constructor as typeof LightProbe);
     }
   }
 

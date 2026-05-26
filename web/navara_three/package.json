@@ -44,8 +44,7 @@
     "@takram/three-geospatial": "0.9.1",
     "@takram/three-geospatial-effects": "0.6.4",
     "stats.js": "0.17.0",
-    "three-stdlib": "2.36.1",
-    "troika-three-text": "0.52.4"
+    "three-stdlib": "2.36.1"
   },
   "devDependencies": {
     "@navara/three_default_descs": "workspace:*",

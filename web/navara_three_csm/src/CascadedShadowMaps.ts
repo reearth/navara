@@ -385,11 +385,13 @@ export class CascadedShadowMaps {
 
   set intensity(value: number) {
     if (value !== this.intensity) {
-      const lights = this.directionalLights.cascadedLights;
-      // eslint-disable-next-line @typescript-eslint/prefer-for-of
-      for (let i = 0; i < lights.length; ++i) {
-        lights[i].intensity = value;
-      }
+      // Only the main (index 0) cascade light contributes direct
+      // illumination. Clones at [1..] are shadow-only casters and must
+      // keep intensity=0 so TSL graphs (which accumulate every
+      // DirectionalLight via AnalyticLightNode, unlike the legacy GLSL
+      // CSM shader which only uses `directionalLights[0]`) don't
+      // over-illuminate by a factor of cascadeCount.
+      this.directionalLights.cascadedLights[0].intensity = value;
     }
   }
 
