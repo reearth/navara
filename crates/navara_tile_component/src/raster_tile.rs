@@ -407,12 +407,7 @@ impl RasterTile {
     }
 
     // This function will be invoked before this tile is destroyed.
-    pub fn destroy(
-        &mut self,
-        commands: &mut Commands,
-        buf: &mut BufferStore,
-        terrain_data_requester: &TileTerrainDataRequesterQuery,
-    ) {
+    pub fn destroy(&mut self, commands: &mut Commands, buf: &mut BufferStore) {
         if let Some(cached_mesh) = &self.cached_mesh_handle {
             buf.remove(&cached_mesh.vertices);
             buf.remove(&cached_mesh.indices);
@@ -437,8 +432,9 @@ impl RasterTile {
 
         if let Some(t) = &mut self.terrain_data {
             if let Some(e) = t.data_requester_entity_id() {
-                let data_requester = terrain_data_requester.get(e).unwrap();
-                buf.remove(&data_requester.1.handle);
+                // Don't remove the handle directly - it may be shared with other consumers
+                // (e.g., hillshade). Let remove_removed_data_requesters handle cleanup
+                // via DataManager's refcounting.
                 commands.entity(e).insert(Deleted);
                 t.set_data_requester_entity_id(None);
             }

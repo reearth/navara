@@ -224,25 +224,35 @@ pub fn set_data_requester_loaded(
 pub fn set_data_requester_failed(
     mut commands: Commands,
     mut events: MessageReader<BufferStoreFailedEvent>,
+    mut data_manager: ResMut<DataManager>,
     mut requests: Query<(Entity, &mut DataRequester), With<Requested>>,
 ) {
     for e in events.read() {
-        // Get the handle from the failed entity
-        if let Ok((_, failed_req)) = requests.get(e.id) {
-            let failed_handle = failed_req.handle;
+        // Try to get handle from DataManager first (works even if entity was deleted).
+        // Fall back to querying the entity if it's an unmanaged DataRequester.
+        let failed_handle = if let Some(handle) = data_manager.get_handle_for_entity(e.id) {
+            handle
+        } else if let Ok((_, failed_req)) = requests.get(e.id) {
+            failed_req.handle
+        } else {
+            // Entity is gone and not in DataManager - can't broadcast
+            continue;
+        };
 
-            // Broadcast failure to all consumers with the same handle.
-            // This ensures all consumers sharing a handle are notified when any one fails,
-            // preventing them from being stuck in Pending state forever.
-            for (entity, mut data_req) in requests.iter_mut() {
-                if data_req.handle == failed_handle
-                    && data_req.status == DataRequesterStatus::Pending
-                {
-                    commands.entity(entity).remove::<Requested>();
-                    data_req.status = DataRequesterStatus::Fail;
-                }
+        // Broadcast failure to all consumers with the same handle.
+        // This ensures all consumers sharing a handle are notified when any one fails,
+        // preventing them from being stuck in Pending state forever.
+        for (entity, mut data_req) in requests.iter_mut() {
+            if data_req.handle == failed_handle && data_req.status == DataRequesterStatus::Pending {
+                commands.entity(entity).remove::<Requested>();
+                data_req.status = DataRequesterStatus::Fail;
             }
         }
+
+        // Reset fetch_enqueued flag so future consumers can retry.
+        // Without this, new consumers would see fetch_already_enqueued=true,
+        // get Requested marker, but no fetch would actually happen.
+        data_manager.reset_fetch_enqueued(e.id);
     }
 }
 

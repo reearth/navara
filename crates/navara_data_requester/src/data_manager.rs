@@ -138,6 +138,29 @@ impl DataManager {
         // Entity not in registry - allow event (for unmanaged DataRequesters)
         true
     }
+
+    /// Reset the fetch_enqueued flag for an entity's URL.
+    /// This is called when a fetch fails, allowing future consumers to retry.
+    pub fn reset_fetch_enqueued(&mut self, entity: Entity) {
+        if let Some(entry) = self
+            .entity_to_url
+            .get(&entity)
+            .and_then(|url| self.url_registry.get_mut(url))
+        {
+            entry.fetch_enqueued = false;
+        }
+    }
+
+    /// Get the handle associated with an entity.
+    /// This works even if the entity component was deleted, as long as
+    /// the entity is still registered in DataManager. Useful for failure
+    /// broadcasting when the fetch leader might be gone.
+    pub fn get_handle_for_entity(&self, entity: Entity) -> Option<Handle> {
+        self.entity_to_url
+            .get(&entity)
+            .and_then(|url| self.url_registry.get(url))
+            .map(|entry| entry.handle)
+    }
 }
 
 #[cfg(test)]

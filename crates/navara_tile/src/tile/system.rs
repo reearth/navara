@@ -1200,7 +1200,6 @@ pub fn clear_caches(
     mut terrain_qt: ResMut<TerrainInformationQuadtree>,
     mut buf: ResMut<BufferStore>,
     mut rendered_tiles: Query<(Entity, &mut RenderedTile, &OrderByDistance)>,
-    terrain_data_requester: TileTerrainDataRequesterQuery,
 ) {
     if !tc.is_updated_in_this_frame {
         tc.is_updated_in_this_frame = false;
@@ -1233,11 +1232,10 @@ pub fn clear_caches(
         tc.requested_tile_caches.remove(&rendered_tile.tile_handle);
 
         rendered_tile.destroy(&mut commands);
-        qt.qt.remove(rendered_tile.tile_handle).unwrap().destroy(
-            &mut commands,
-            &mut buf,
-            &terrain_data_requester,
-        );
+        qt.qt
+            .remove(rendered_tile.tile_handle)
+            .unwrap()
+            .destroy(&mut commands, &mut buf);
 
         terrain_qt.qt.remove(rendered_tile.tile_handle);
     }
@@ -1255,11 +1253,10 @@ pub fn clear_caches(
             continue;
         }
 
-        qt.qt.remove(tile_handle).unwrap().destroy(
-            &mut commands,
-            &mut buf,
-            &terrain_data_requester,
-        );
+        qt.qt
+            .remove(tile_handle)
+            .unwrap()
+            .destroy(&mut commands, &mut buf);
 
         removed_handles.push(tile_handle);
     }
