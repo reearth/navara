@@ -2,9 +2,9 @@ use bevy_ecs::system::{Commands, Query};
 use url::Url;
 
 use navara_buffer_store::BufferStore;
-use navara_component::{Order, OrderByDistance, Priority};
+use navara_component::{Order, OrderByDistance, Priority, Requested};
 use navara_core::tile_url;
-use navara_data_requester::{DataRequester, DataRequesterExtension};
+use navara_data_requester::{DataManager, DataRequester, DataRequesterExtension};
 use navara_layer::TilesLayer;
 use navara_material::Appearance;
 use navara_texture_fragment::TextureFragment;
@@ -24,6 +24,7 @@ pub(crate) fn request_texture_fragment(
     data_requesters: &Query<&DataRequester>,
     priority: Priority,
     buf: &mut BufferStore,
+    data_manager: &mut DataManager,
 ) {
     let sorted_tiles: Vec<_> = tiles.iter().sort::<&Order>().collect();
     let tiles_len = sorted_tiles.len();
@@ -105,18 +106,49 @@ pub(crate) fn request_texture_fragment(
                 .map(|parsed_url| DataRequesterExtension::from_url(&parsed_url))
                 .unwrap_or(DataRequesterExtension::Png); // Fallback to PNG if URL parsing fails
 
-            commands
-                .spawn((
-                    TileTextureFragmentMarker(handle),
-                    HillshadeTextureMarker,
-                    DataRequester::from_store(url, buf, extension),
-                    OrderByDistance {
-                        sse,
-                        distance: distance_from_camera,
-                    },
-                    priority,
-                ))
-                .id()
+            // Spawn entity first to get entity ID
+            let entity_id = commands.spawn_empty().id();
+
+            // Register with DataManager to get shared handle.
+            // is_new=true means this is the first consumer for this URL.
+            // fetch_already_enqueued=true means another consumer already triggered a fetch.
+            let (shared_handle, is_new, fetch_already_enqueued) =
+                data_manager.register_consumer(url.clone(), entity_id, buf);
+
+            // Check if data already exists in BufferStore (loaded by previous consumer)
+            let data_exists = buf.get_u8(&shared_handle).is_some();
+
+            // Determine initial status: Success if data already loaded, otherwise Pending
+            let initial_status = if !is_new && data_exists {
+                navara_data_requester::DataRequesterStatus::Success
+            } else {
+                navara_data_requester::DataRequesterStatus::Pending
+            };
+
+            // Check if we should wait for an in-flight fetch before moving initial_status
+            let should_wait_for_fetch = fetch_already_enqueued
+                && initial_status == navara_data_requester::DataRequesterStatus::Pending;
+
+            // Insert components with shared handle.
+            let mut entity_commands = commands.entity(entity_id);
+            entity_commands.insert((
+                TileTextureFragmentMarker(handle),
+                HillshadeTextureMarker,
+                DataRequester::new_with_status(shared_handle, url, extension, initial_status),
+                OrderByDistance {
+                    sse,
+                    distance: distance_from_camera,
+                },
+                priority,
+            ));
+
+            // If another consumer already enqueued a fetch AND we're still pending,
+            // insert Requested marker so this consumer waits for the shared fetch.
+            if should_wait_for_fetch {
+                entity_commands.insert(Requested);
+            }
+
+            entity_id
         } else {
             commands
                 .spawn((
@@ -199,6 +231,7 @@ mod tests {
         let mut app = App::new();
         app.init_resource::<BufferStore>();
         app.init_resource::<CapturedSlots>();
+        app.init_resource::<DataManager>();
 
         for (layer, order) in layers {
             app.world_mut().spawn((layer, order));
@@ -209,6 +242,7 @@ mod tests {
             Update,
             move |mut commands: Commands,
                   mut buf: ResMut<BufferStore>,
+                  mut data_manager: ResMut<DataManager>,
                   tiles: Query<(&TilesLayer, &Order)>,
                   texture_fragment: TileTextureFragmentQuery,
                   data_requesters: Query<&DataRequester>,
@@ -234,6 +268,7 @@ mod tests {
                     &data_requesters,
                     Priority::High,
                     &mut buf,
+                    &mut data_manager,
                 );
 
                 out.tex_ids = tile.texture_fragment_entity_ids.clone().unwrap_or_default();

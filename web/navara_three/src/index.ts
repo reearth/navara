@@ -385,6 +385,9 @@ export default class ThreeView<
     remove: (handle: number) => {
       this._core?.removeBuffer(handle);
     },
+    triggerDataRequesterLoaded: (bits: bigint, handle: number) => {
+      this._core?.triggerDataRequesterLoaded(bits, handle);
+    },
     triggerDataRequesterFailed: (bits: bigint) => {
       this._core?.triggerDataRequesterFailed(bits);
     },

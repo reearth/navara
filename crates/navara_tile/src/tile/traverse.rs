@@ -2,6 +2,7 @@ use bevy_ecs::prelude::*;
 use navara_buffer_store::BufferStore;
 use navara_component::{Deleted, Order, OrderByDistance, Priority};
 use navara_core::Ellipsoid;
+use navara_data_requester::DataManager;
 
 use navara_fog::Fog;
 use navara_frame::FrameManager;
@@ -44,6 +45,7 @@ pub fn traverse_tile(
     tc: &mut TileCacheManager,
     qt: &mut RasterTileQuadtree,
     buf: &mut BufferStore,
+    data_manager: &mut DataManager,
     frame: &FrameManager,
     camera: &Transform,
     frustum: &CameraFrustum,
@@ -165,6 +167,7 @@ pub fn traverse_tile(
             data_requesters,
             Priority::High,
             buf,
+            data_manager,
         );
     }
 
@@ -180,6 +183,7 @@ pub fn traverse_tile(
                 command,
                 qt,
                 buf,
+                data_manager,
                 terrain_layer,
                 handle,
                 tc,
@@ -248,6 +252,7 @@ pub fn traverse_tile(
                 tc,
                 qt,
                 buf,
+                data_manager,
                 frame,
                 camera,
                 frustum,
@@ -400,6 +405,7 @@ pub fn traverse_tile(
                 command,
                 qt,
                 buf,
+                data_manager,
                 terrain_layer,
                 handle,
                 tc,
@@ -515,6 +521,7 @@ pub fn prepare_tile_resource(
     commands: &mut Commands,
     qt: &mut RasterTileQuadtree,
     buf: &mut BufferStore,
+    data_manager: &mut DataManager,
     terrain_layer: &Option<&TerrainLayer>,
     handle: TileHandle,
     tc: &mut TileCacheManager,
@@ -536,6 +543,7 @@ pub fn prepare_tile_resource(
             commands,
             tile,
             buf,
+            data_manager,
             terrain_layer,
             handle,
             terrain_data_requester,
@@ -552,6 +560,7 @@ pub fn prepare_tile_resource(
             data_requesters,
             Priority::High,
             buf,
+            data_manager,
         );
     }
 

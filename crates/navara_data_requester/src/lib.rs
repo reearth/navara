@@ -1,5 +1,7 @@
 #![doc = include_str!("../README.md")]
 
+mod data_manager;
+
 use bevy_app::{PostUpdate, PreUpdate};
 use bevy_ecs::{
     component::Component,
@@ -13,6 +15,8 @@ use navara_buffer_store::{BufferStore, BufferStoreFailedEvent, BufferStoreLoaded
 use navara_component::{Deleted, Ignored, Priority, Requested};
 use navara_event_store::EventStore;
 use url::Url;
+
+pub use data_manager::DataManager;
 
 pub struct DataRequesterPlugin;
 
@@ -39,26 +43,27 @@ pub enum DataRequesterSet {
 
 impl bevy_app::Plugin for DataRequesterPlugin {
     fn build(&self, app: &mut bevy_app::App) {
-        app.configure_sets(
-            PostUpdate,
-            (
-                DataRequesterSet::PrioritizeRequests,
-                DataRequesterSet::SendRequests,
+        app.init_resource::<DataManager>()
+            .configure_sets(
+                PostUpdate,
+                (
+                    DataRequesterSet::PrioritizeRequests,
+                    DataRequesterSet::SendRequests,
+                )
+                    .chain(),
             )
-                .chain(),
-        )
-        .add_systems(PreUpdate, remove_removed_data_requesters)
-        .add_systems(
-            PostUpdate,
-            (
-                send_data_request_events,
-                send_data_request_events_with_priority,
-                set_data_requester_loaded,
-                set_data_requester_failed,
-            )
-                .chain()
-                .in_set(DataRequesterSet::SendRequests),
-        );
+            .add_systems(PreUpdate, remove_removed_data_requesters)
+            .add_systems(
+                PostUpdate,
+                (
+                    send_data_request_events,
+                    send_data_request_events_with_priority,
+                    set_data_requester_loaded,
+                    set_data_requester_failed,
+                )
+                    .chain()
+                    .in_set(DataRequesterSet::SendRequests),
+            );
     }
 }
 
@@ -76,6 +81,10 @@ pub struct DataRequester {
     pub url: String,
     pub extension: DataRequesterExtension,
     pub status: DataRequesterStatus,
+    /// Whether this DataRequester's handle is managed by DataManager.
+    /// If true, cleanup is handled via DataManager's refcounting.
+    /// If false, handle cleanup is the responsibility of the owner.
+    pub managed_by_data_manager: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -140,12 +149,33 @@ impl DataRequesterExtension {
 }
 
 impl DataRequester {
+    /// Create a DataRequester with an unmanaged handle.
+    /// The caller is responsible for handle cleanup.
     pub fn new(handle: Handle, url: String, extension: DataRequesterExtension) -> Self {
         Self {
             handle,
             url,
             extension,
             status: DataRequesterStatus::default(),
+            managed_by_data_manager: false,
+        }
+    }
+
+    /// Create a DataRequester with a DataManager-managed handle.
+    /// Cleanup is handled via DataManager's refcounting.
+    /// This should be used after calling `DataManager::register_consumer()`.
+    pub fn new_with_status(
+        handle: Handle,
+        url: String,
+        extension: DataRequesterExtension,
+        status: DataRequesterStatus,
+    ) -> Self {
+        Self {
+            handle,
+            url,
+            extension,
+            status,
+            managed_by_data_manager: true,
         }
     }
 
@@ -173,12 +203,20 @@ impl DataRequester {
 pub fn set_data_requester_loaded(
     mut commands: Commands,
     mut events: MessageReader<BufferStoreLoadedEvent>,
-    mut requests: Query<&mut DataRequester>,
+    mut requests: Query<(Entity, &mut DataRequester), With<Requested>>,
 ) {
     for e in events.read() {
-        if let Ok(mut d) = requests.get_mut(e.id) {
-            commands.entity(e.id).remove::<Requested>();
-            d.status = DataRequesterStatus::Success;
+        let loaded_handle = e.handle;
+
+        // Broadcast success to DataRequesters with matching handle.
+        // Query filtered to With<Requested> for performance - all in-flight requests
+        // have Requested marker (inserted by send_data_request_events), so this
+        // skips already-successful DataRequesters while finding all pending ones.
+        for (entity, mut data_req) in requests.iter_mut() {
+            if data_req.handle == loaded_handle && data_req.status == DataRequesterStatus::Pending {
+                commands.entity(entity).remove::<Requested>();
+                data_req.status = DataRequesterStatus::Success;
+            }
         }
     }
 }
@@ -186,13 +224,35 @@ pub fn set_data_requester_loaded(
 pub fn set_data_requester_failed(
     mut commands: Commands,
     mut events: MessageReader<BufferStoreFailedEvent>,
-    mut requests: Query<&mut DataRequester>,
+    mut data_manager: ResMut<DataManager>,
+    mut requests: Query<(Entity, &mut DataRequester), With<Requested>>,
 ) {
     for e in events.read() {
-        if let Ok(mut d) = requests.get_mut(e.id) {
-            commands.entity(e.id).remove::<Requested>();
-            d.status = DataRequesterStatus::Fail;
+        // Try to get handle from DataManager first (works even if entity was deleted).
+        // Fall back to querying the entity if it's an unmanaged DataRequester.
+        let failed_handle = if let Some(handle) = data_manager.get_handle_for_entity(e.id) {
+            handle
+        } else if let Ok((_, failed_req)) = requests.get(e.id) {
+            failed_req.handle
+        } else {
+            // Entity is gone and not in DataManager - can't broadcast
+            continue;
+        };
+
+        // Broadcast failure to all consumers with the same handle.
+        // This ensures all consumers sharing a handle are notified when any one fails,
+        // preventing them from being stuck in Pending state forever.
+        for (entity, mut data_req) in requests.iter_mut() {
+            if data_req.handle == failed_handle && data_req.status == DataRequesterStatus::Pending {
+                commands.entity(entity).remove::<Requested>();
+                data_req.status = DataRequesterStatus::Fail;
+            }
         }
+
+        // Reset fetch_enqueued flag so future consumers can retry.
+        // Without this, new consumers would see fetch_already_enqueued=true,
+        // get Requested marker, but no fetch would actually happen.
+        data_manager.reset_fetch_enqueued(e.id);
     }
 }
 
@@ -200,8 +260,9 @@ pub fn set_data_requester_failed(
 pub fn send_data_request_events(
     mut commands: Commands,
     mut events: ResMut<EventStore>,
+    mut data_manager: ResMut<DataManager>,
     requests: Query<
-        Entity,
+        (Entity, &DataRequester),
         (
             Added<DataRequester>,
             Without<Priority>,
@@ -211,9 +272,19 @@ pub fn send_data_request_events(
     >,
     removed: Query<Entity, (With<DataRequester>, With<Deleted>, Without<Ignored>)>,
 ) {
-    for e in requests.iter() {
-        commands.entity(e).insert(Requested);
-        events.data_requested.push(e);
+    // Only send events for Pending DataRequesters.
+    // Success DataRequesters already have their data and don't need fetching.
+    for (e, data_req) in requests.iter() {
+        if data_req.status == DataRequesterStatus::Pending {
+            commands.entity(e).insert(Requested);
+
+            // Only push event if this is the first fetch for this URL.
+            // try_mark_fetch_enqueued returns true if we're the first, false if another
+            // consumer already enqueued a fetch for the same URL in this frame.
+            if data_manager.try_mark_fetch_enqueued(e) {
+                events.data_requested.push(e);
+            }
+        }
     }
 
     for e in removed.iter() {
@@ -226,14 +297,25 @@ pub fn send_data_request_events(
 pub fn send_data_request_events_with_priority(
     mut commands: Commands,
     mut events: ResMut<EventStore>,
+    mut data_manager: ResMut<DataManager>,
     requests: Query<
-        (Entity, &Priority),
+        (Entity, &Priority, &DataRequester),
         (Added<DataRequester>, Without<Deleted>, Without<Requested>),
     >,
 ) {
-    for (e, _) in requests.iter().sort::<&Priority>() {
-        commands.entity(e).insert(Requested);
-        events.data_requested.push(e);
+    // Only send events for Pending DataRequesters.
+    // Success DataRequesters already have their data and don't need fetching.
+    for (e, _, data_req) in requests.iter().sort::<&Priority>() {
+        if data_req.status == DataRequesterStatus::Pending {
+            commands.entity(e).insert(Requested);
+
+            // Only push event if this is the first fetch for this URL.
+            // try_mark_fetch_enqueued returns true if we're the first, false if another
+            // consumer already enqueued a fetch for the same URL in this frame.
+            if data_manager.try_mark_fetch_enqueued(e) {
+                events.data_requested.push(e);
+            }
+        }
     }
 }
 
@@ -254,28 +336,53 @@ pub struct RequestOrder<K: RequestOrderKey>(pub K);
 /// Requests with the highest [`Priority`] are sent first; ties are broken by
 /// the wrapped [`RequestOrderKey`] (smaller first). Already-`Requested`
 /// entities are skipped so this can run alongside the default senders.
+/// Only Pending DataRequesters trigger fetch events.
 #[allow(clippy::type_complexity)]
 pub fn send_data_request_events_with_priority_and_sort<K: RequestOrderKey>(
     mut commands: Commands,
     mut events: ResMut<EventStore>,
+    mut data_manager: ResMut<DataManager>,
     requests: Query<
-        (Entity, &Priority, &RequestOrder<K>),
+        (Entity, &Priority, &RequestOrder<K>, &DataRequester),
         (Added<DataRequester>, Without<Deleted>, Without<Requested>),
     >,
 ) {
-    for (e, _, _) in requests.iter().sort::<(&Priority, &RequestOrder<K>)>() {
-        commands.entity(e).insert(Requested);
-        events.data_requested.push(e);
+    // Only send events for Pending DataRequesters.
+    // Success DataRequesters already have their data and don't need fetching.
+    for (e, _, _, data_req) in requests.iter().sort::<(&Priority, &RequestOrder<K>)>() {
+        if data_req.status == DataRequesterStatus::Pending {
+            commands.entity(e).insert(Requested);
+
+            // Only push event if this is the first fetch for this URL.
+            // try_mark_fetch_enqueued returns true if we're the first, false if another
+            // consumer already enqueued a fetch for the same URL in this frame.
+            if data_manager.try_mark_fetch_enqueued(e) {
+                events.data_requested.push(e);
+            }
+        }
     }
 }
 
 pub fn remove_removed_data_requesters(
     mut commands: Commands,
     mut buf: ResMut<BufferStore>,
+    mut resource_manager: ResMut<DataManager>,
     removed: Query<(Entity, &DataRequester), With<Deleted>>,
 ) {
     for (e, d) in removed.iter() {
-        buf.remove(&d.handle);
+        if d.managed_by_data_manager {
+            // Handle is managed by DataManager - use refcounting cleanup.
+            // Note: unregister_consumer may return None if this entity was already
+            // unregistered (e.g., by filter systems), which is fine - the handle
+            // cleanup was already handled or is still shared by other consumers.
+            if let Some((_url, handle, true)) = resource_manager.unregister_consumer(e) {
+                buf.remove(&handle);
+            }
+        } else {
+            // Handle is unmanaged - caller is responsible for cleanup
+            buf.remove(&d.handle);
+        }
+
         commands.entity(e).remove::<Requested>();
         commands.entity(e).despawn();
     }
@@ -321,6 +428,7 @@ mod tests {
     fn priority_and_sort_enqueues_in_ascending_order() {
         let mut app = App::new();
         app.init_resource::<EventStore>();
+        app.init_resource::<DataManager>();
         app.add_systems(
             bevy_app::Update,
             send_data_request_events_with_priority_and_sort::<TestKey>,
@@ -346,6 +454,7 @@ mod tests {
     fn priority_and_sort_sorts_priority_before_key() {
         let mut app = App::new();
         app.init_resource::<EventStore>();
+        app.init_resource::<DataManager>();
         app.add_systems(
             bevy_app::Update,
             send_data_request_events_with_priority_and_sort::<TestKey>,
@@ -372,6 +481,7 @@ mod tests {
         // duplicate enqueue.
         let mut app = App::new();
         app.init_resource::<EventStore>();
+        app.init_resource::<DataManager>();
         app.configure_sets(
             PostUpdate,
             (

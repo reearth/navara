@@ -1,8 +1,9 @@
 use bevy_ecs::prelude::*;
+use bevy_ecs::system::SystemParam;
 use navara_buffer_store::BufferStore;
 use navara_component::{Deleted, Order, OrderByDistance, Priority, Rendered};
 use navara_core::{Aabb, TileXYZ, WGS84_64};
-use navara_data_requester::{DataRequester, DataRequesterStatus};
+use navara_data_requester::{DataManager, DataRequester, DataRequesterStatus};
 use navara_fog::Fog;
 use navara_frame::FrameManager;
 use navara_geometry::{
@@ -47,12 +48,19 @@ use navara_layer::{
     DeleteRasterTileLayerMarker, TerrainLayer, TilesLayer, UpdateRasterTileLayerMarker,
 };
 
+/// System parameter that groups BufferStore and DataManager to reduce parameter count
+#[derive(SystemParam)]
+pub struct DataResources<'w> {
+    pub buf: ResMut<'w, BufferStore>,
+    pub data_manager: ResMut<'w, DataManager>,
+}
+
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn update_tiles(
     mut commands: Commands,
     mut qt: ResMut<RasterTileQuadtree>,
     mut tc: ResMut<TileCacheManager>,
-    mut buf: ResMut<BufferStore>,
+    mut data_resources: DataResources,
     frame: Res<FrameManager>,
     window: Res<Window>,
     globe: Res<navara_globe::Globe>,
@@ -164,7 +172,8 @@ pub fn update_tiles(
         zero_tile_handle,
         &mut tc,
         &mut qt,
-        &mut buf,
+        &mut data_resources.buf,
+        &mut data_resources.data_manager,
         &frame,
         &camera,
         &frustum,
@@ -215,7 +224,8 @@ pub fn update_tiles(
             prepare_tile_resource(
                 &mut commands,
                 &mut qt,
-                &mut buf,
+                &mut data_resources.buf,
+                &mut data_resources.data_manager,
                 &terrain_layer,
                 zero_tile_handle,
                 &mut tc,
@@ -234,7 +244,8 @@ pub fn update_tiles(
                 &texture_fragment,
                 &data_requesters,
                 Priority::High,
-                &mut buf,
+                &mut data_resources.buf,
+                &mut data_resources.data_manager,
             );
         }
         TraversalResult::ChildrenMeshesPrepared => {
@@ -1189,7 +1200,6 @@ pub fn clear_caches(
     mut terrain_qt: ResMut<TerrainInformationQuadtree>,
     mut buf: ResMut<BufferStore>,
     mut rendered_tiles: Query<(Entity, &mut RenderedTile, &OrderByDistance)>,
-    terrain_data_requester: TileTerrainDataRequesterQuery,
 ) {
     if !tc.is_updated_in_this_frame {
         tc.is_updated_in_this_frame = false;
@@ -1222,11 +1232,10 @@ pub fn clear_caches(
         tc.requested_tile_caches.remove(&rendered_tile.tile_handle);
 
         rendered_tile.destroy(&mut commands);
-        qt.qt.remove(rendered_tile.tile_handle).unwrap().destroy(
-            &mut commands,
-            &mut buf,
-            &terrain_data_requester,
-        );
+        qt.qt
+            .remove(rendered_tile.tile_handle)
+            .unwrap()
+            .destroy(&mut commands, &mut buf);
 
         terrain_qt.qt.remove(rendered_tile.tile_handle);
     }
@@ -1244,11 +1253,10 @@ pub fn clear_caches(
             continue;
         }
 
-        qt.qt.remove(tile_handle).unwrap().destroy(
-            &mut commands,
-            &mut buf,
-            &terrain_data_requester,
-        );
+        qt.qt
+            .remove(tile_handle)
+            .unwrap()
+            .destroy(&mut commands, &mut buf);
 
         removed_handles.push(tile_handle);
     }

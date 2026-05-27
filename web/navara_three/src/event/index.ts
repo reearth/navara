@@ -492,13 +492,8 @@ function processDataRequesterRemoved(
   ctx: EventContext,
   req: DataRequesterRemovedEvent,
 ) {
-  const {
-    buf,
-    abortControllers,
-    workerPoolPromises,
-    loadedTexs,
-    hillshadeContext,
-  } = ctx;
+  const { abortControllers, workerPoolPromises, loadedTexs, hillshadeContext } =
+    ctx;
   const id = generate_id_from_entity(req);
   const abortController = abortControllers.get(id);
   const workerPool = workerPoolPromises.get(id);
@@ -522,7 +517,10 @@ function processDataRequesterRemoved(
     loadedTexs.delete(id);
   }
 
-  buf.remove(req.handle);
+  // Note: Do NOT call buf.remove(req.handle) here!
+  // The handle is shared among multiple consumers (via Rust DataManager)
+  // Rust side manages the lifecycle and will remove data when ref count reaches 0
+
   abortController?.abort();
   workerPool?.cancel();
 

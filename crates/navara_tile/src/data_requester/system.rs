@@ -5,7 +5,7 @@ use bevy_ecs::{
 };
 use navara_buffer_store::BufferStore;
 use navara_component::{Deleted, Ignored, OrderByDistance, Priority, Requested};
-use navara_data_requester::DataRequester;
+use navara_data_requester::{DataRequester, DataRequesterStatus};
 use navara_tile_component::{RasterTileQuadtree, TerrainDataRequesterMarker};
 
 const MAX_PENDINGS: u32 = 50;
@@ -26,22 +26,31 @@ pub(crate) fn filter_requestable_data_requester(
         (Added<TerrainDataRequesterMarker>, Without<Deleted>),
     >,
     requested_data_requesters: Query<
-        Entity,
+        &DataRequester,
         (
             With<TerrainDataRequesterMarker>,
-            With<DataRequester>,
             With<Requested>,
             Without<Deleted>,
         ),
     >,
 ) {
-    let pendings = requested_data_requesters.iter().count();
+    // Count only Pending DataRequesters with Requested marker.
+    // Success+Requested entities exist (shared-handle consumers with already-loaded data)
+    // and should not count toward the limit.
+    let pendings = requested_data_requesters
+        .iter()
+        .filter(|dr| dr.status == DataRequesterStatus::Pending)
+        .count();
     let num_skip = (MAX_PENDINGS as i32 - pendings as i32).max(0);
 
-    // Limit the number of requests in this frame
-    for (e, marker, _, _, _) in data_requesters
+    // Limit the number of requests in this frame.
+    // Skip DataRequesters with Success status - they already have
+    // their data (loaded by previous consumers) and should not be subject to the
+    // MAX_PENDINGS limit. Rejecting them would cause create-delete loops.
+    for (e, marker, _data_req, _, _) in data_requesters
         .iter()
         .sort::<(&Priority, &OrderByDistance)>()
+        .filter(|(_, _, data_req, _, _)| data_req.status != DataRequesterStatus::Success)
         .skip(num_skip as usize)
     {
         let handle = marker.0;
@@ -52,6 +61,7 @@ pub(crate) fn filter_requestable_data_requester(
                 terrain_data.destroy(&mut buf);
                 tile.terrain_data = None;
             };
+
             commands.entity(e).insert((Deleted, Ignored));
         }
     }
