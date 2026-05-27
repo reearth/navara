@@ -405,6 +405,7 @@ describe("hillshade normal map generation", () => {
 
     // Create mock BufferStore
     const mockBuf = {
+      u8: vi.fn((handle: number) => mockBufferStore.get(handle)),
       removeU8: vi.fn((handle: number) => mockBufferStore.get(handle)),
     };
 

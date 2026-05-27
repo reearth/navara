@@ -52,6 +52,7 @@ export type BufferLoader = {
   newF32: (bytes: Float32Array) => number | undefined;
   newF64: (bytes: Float64Array) => number | undefined;
   remove: (handle: number) => void;
+  triggerDataRequesterLoaded: (bits: bigint, handle: number) => void;
   triggerDataRequesterFailed: (bits: bigint) => void;
 };
 

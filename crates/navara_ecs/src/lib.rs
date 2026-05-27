@@ -235,6 +235,16 @@ impl App {
         world.commands().entity(entity).insert(Rendered);
     }
 
+    pub fn trigger_data_requester_loaded(&mut self, bits: u64, handle: i32) {
+        self.app
+            .world_mut()
+            .write_message(navara_buffer_store::BufferStoreLoadedEvent {
+                id: Entity::from_bits(bits),
+                ty: navara_buffer_store::BufferType::U8,
+                handle,
+            });
+    }
+
     pub fn trigger_data_requester_failed(&mut self, bits: u64) {
         self.app
             .world_mut()
