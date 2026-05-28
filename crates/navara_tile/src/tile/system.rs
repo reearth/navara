@@ -469,8 +469,7 @@ pub fn transfer_mesh(
 
         if !should_render_terrain
             || is_ellipsoid_terrain
-            || (terrain_layer
-                .is_some_and(|t| !t.is_over_min_zoom(tile.coords.z))
+            || (terrain_layer.is_some_and(|t| !t.is_over_min_zoom(tile.coords.z))
                 || (!should_upsample_terrain && is_terrain_failed))
         {
             // TODO: Move these tile construction process to worker.
