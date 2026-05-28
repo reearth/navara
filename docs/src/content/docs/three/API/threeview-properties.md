@@ -15,18 +15,23 @@ This page describes all properties and events available on a ThreeView instance.
 
 **Read-only** (getter)
 
-The camera controller that manages the view's position, orientation, and projection. Access the Three.js `PerspectiveCamera` via the `raw` property.
+The camera controller that manages the view's position, orientation, projection, and interactive control behavior.
 
 **Example:**
 
 ```tsx
-// Get the Three.js camera position
-const position = view.camera.raw.position;
+// Read the camera's geographic position
+const pos = view.camera.positionGeographic;
 
-// Change the camera field of view
-view.camera.raw.fov = 60;
-view.camera.raw.updateProjectionMatrix();
+// Subscribe to camera movement events
+view.camera.on("moveend", () => {
+  console.log("Camera stopped");
+});
 ```
+
+:::tip[Related Documentation]
+For full details on all properties, events, and control options, see [ThreeViewCamera Class](../../../three/api-reference/camera/).
+:::
 
 ### globe
 
