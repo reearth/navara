@@ -17,6 +17,7 @@
     "preview": "pnpm navara_three preview",
     "build": "pnpm --filter-prod './web/**' --filter-prod '!./web/integration-tests/**' run build",
     "build:common:dev": "NODE_ENV=development pnpm -r --parallel run build:dev:watch",
+    "build:iife": "pnpm -C web/navara_three run build:iife",
     "build:example": "pnpm build && pnpm -r run build:example",
     "build:integration": "pnpm integration-tests -r run build",
     "test": "pnpm --filter './web/**' -r run test",

@@ -17,6 +17,7 @@
     "build": "pnpm type-check && vite build -c vite.config.ts",
     "build:dev": "vite build --mode development",
     "build:dev:watch": "pnpm build:dev --watch",
+    "build:iife": "vite build -c vite.config.iife.ts",
     "build:example": "tsc && vite build -c vite.config.example.ts",
     "preview": "vite preview",
     "test": "vitest --passWithNoTests --watch=false",
