@@ -99,4 +99,7 @@ pub struct CameraControlUpdateEvent {
     pub spin_duration: Option<f32>,
     pub zoom_duration: Option<f32>,
     pub translate_duration: Option<f32>,
+    pub enable_spin: Option<bool>,
+    pub enable_zoom: Option<bool>,
+    pub enable_tilt: Option<bool>,
 }
