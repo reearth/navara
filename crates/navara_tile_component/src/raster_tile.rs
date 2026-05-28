@@ -80,6 +80,7 @@ pub struct ReadyState {
     pub is_texture_ready: bool,
     pub is_terrain_ready: bool,
     pub is_upsamplable: bool,
+    pub use_terrain: bool,
 }
 
 impl RasterTile {
@@ -140,6 +141,7 @@ impl RasterTile {
             return ReadyState {
                 is_tile_ready: true,
                 is_texture_ready: is_texture_loaded,
+                use_terrain,
                 ..Default::default()
             };
         }
@@ -156,24 +158,28 @@ impl RasterTile {
         };
 
         let should_upsample = terrain_layer.is_some_and(|l| l.should_upsample(self.coords.z));
+        let is_upsamplable = self.is_upsamplable(qt, terrain_data_requester, terrain_layer);
+        let is_in_upsample_band = should_upsample && is_upsamplable;
 
-        let is_upsamplable =
-            should_upsample && self.is_upsamplable(qt, terrain_data_requester, terrain_layer);
-
-        // This tile isn't upsamplable and it doesn't have the terrain, it should be rendered without terrain.
-        let should_be_rendered_without_terrain = !should_upsample
-            && matches!(
-                self.get_terrain_data_requester(terrain_data_requester)
-                    .map(|t| t.status),
-                Some(DataRequesterStatus::Fail)
-            );
+        let is_terrain_failed = matches!(
+            self.get_terrain_data_requester(terrain_data_requester)
+                .map(|t| t.status),
+            Some(DataRequesterStatus::Fail)
+        );
+        // Fail + parent ready: upsample from parent instead of rendering flat.
+        let can_upsample_failed = is_terrain_failed && is_upsamplable;
+        // Last-resort flat fallback: failed and no parent terrain to upsample from.
+        let should_be_rendered_without_terrain = is_terrain_failed && !is_upsamplable;
 
         ReadyState {
-            is_tile_ready: (is_terrain_ready
-                || (is_upsamplable || should_be_rendered_without_terrain)),
+            is_tile_ready: is_terrain_ready
+                || is_in_upsample_band
+                || can_upsample_failed
+                || should_be_rendered_without_terrain,
             is_texture_ready: is_texture_loaded,
             is_terrain_ready,
-            is_upsamplable,
+            is_upsamplable: is_in_upsample_band || can_upsample_failed,
+            use_terrain,
         }
     }
 
@@ -278,10 +284,9 @@ impl RasterTile {
         terrain_data_requesters: &TileTerrainDataRequesterQuery,
     ) -> bool {
         let terrain_data_requester = self.get_terrain_data_requester(terrain_data_requesters);
-        terrain_data_requester.is_some_and(|s| {
-            // If the status is failed and parent is succeeded, we need to upsample the terrain mesh.
-            matches!(s.status, DataRequesterStatus::Success)
-        })
+        // Narrow contract: this tile owns ready DEM data. Fail+parent-ready upsampling
+        // is handled by the caller (see `is_ready`).
+        terrain_data_requester.is_some_and(|s| matches!(s.status, DataRequesterStatus::Success))
     }
 
     pub fn is_parent_ready(
@@ -895,6 +900,8 @@ mod raster_tile_tests {
         TileTextureFragmentMarker, TileTextureFragmentQuery,
     };
 
+    // ---- shared fixtures ----
+
     fn regular_layer(id: &str, min_zoom: usize, max_zoom: usize) -> TilesLayer {
         TilesLayer {
             layer_id: id.into(),
@@ -947,145 +954,369 @@ mod raster_tile_tests {
         }
     }
 
-    /// Returns `is_texture_ready` for a tile at z=5, given the layer fixture and
-    /// closures that produce the entity-id arrays. The setup callback receives
-    /// the world so it can spawn entities and reference their IDs.
-    fn run_is_ready<F>(layers: Vec<(TilesLayer, Order)>, setup: F) -> bool
-    where
-        F: FnOnce(&mut bevy_ecs::world::World) -> (Vec<Option<Entity>>, Vec<Option<Entity>>),
-    {
-        let mut app = App::new();
-        for (layer, order) in layers {
-            app.world_mut().spawn((layer, order));
+    // ---- is_texture_ready ----
+
+    mod is_texture_ready {
+        use super::*;
+
+        /// Returns `is_texture_ready` for a tile at z=5, given the layer fixture and
+        /// closures that produce the entity-id arrays. The setup callback receives
+        /// the world so it can spawn entities and reference their IDs.
+        fn run<F>(layers: Vec<(TilesLayer, Order)>, setup: F) -> bool
+        where
+            F: FnOnce(&mut bevy_ecs::world::World) -> (Vec<Option<Entity>>, Vec<Option<Entity>>),
+        {
+            let mut app = App::new();
+            for (layer, order) in layers {
+                app.world_mut().spawn((layer, order));
+            }
+            let (tex_ids, hill_ids) = setup(app.world_mut());
+
+            #[derive(Resource, Default)]
+            struct Out(Option<bool>);
+            app.init_resource::<Out>();
+
+            let tex_ids = std::sync::Mutex::new(Some(tex_ids));
+            let hill_ids = std::sync::Mutex::new(Some(hill_ids));
+            app.add_systems(
+                Update,
+                move |texture_fragment: TileTextureFragmentQuery,
+                      data_requesters: Query<&DataRequester>,
+                      tiles: Query<(&TilesLayer, &Order)>,
+                      mut out: ResMut<Out>| {
+                    let mut tile = RasterTile::new(TileXYZ { x: 0, y: 0, z: 5 }, 0., 0.);
+                    tile.texture_fragment_entity_ids =
+                        Some(tex_ids.lock().unwrap().take().unwrap());
+                    tile.hillshade_entity_ids = Some(hill_ids.lock().unwrap().take().unwrap());
+                    out.0 =
+                        Some(tile.is_texture_ready(&texture_fragment, &data_requesters, &tiles));
+                },
+            );
+            app.update();
+            app.world().resource::<Out>().0.unwrap()
         }
-        let (tex_ids, hill_ids) = setup(app.world_mut());
 
-        #[derive(Resource, Default)]
-        struct Out(Option<bool>);
-        app.init_resource::<Out>();
+        /// A None slot for an in-zoom regular layer must NOT be treated as ready.
+        /// Before the fix, the `unwrap_or(true)` in the all-check would have
+        /// returned true and let the tile render with a missing texture.
+        #[test]
+        fn none_slot_on_in_zoom_regular_layer_is_not_ready() {
+            let ready = run(
+                vec![
+                    (regular_layer("a", 0, 20), Order(0)),
+                    (regular_layer("b", 0, 20), Order(1)),
+                ],
+                |world| {
+                    // Layer 0 has a succeeded texture; layer 1's slot is None
+                    // (simulating a filter-rejected request that hasn't retried yet).
+                    let e0 = world
+                        .spawn((
+                            TileTextureFragmentMarker(0),
+                            texture_fragment(TextureFragmentStatus::Success),
+                        ))
+                        .id();
+                    (vec![Some(e0), None], vec![None, None])
+                },
+            );
 
-        let tex_ids = std::sync::Mutex::new(Some(tex_ids));
-        let hill_ids = std::sync::Mutex::new(Some(hill_ids));
-        app.add_systems(
-            Update,
-            move |texture_fragment: TileTextureFragmentQuery,
-                  data_requesters: Query<&DataRequester>,
-                  tiles: Query<(&TilesLayer, &Order)>,
-                  mut out: ResMut<Out>| {
-                let mut tile = RasterTile::new(TileXYZ { x: 0, y: 0, z: 5 }, 0., 0.);
-                tile.texture_fragment_entity_ids = Some(tex_ids.lock().unwrap().take().unwrap());
-                tile.hillshade_entity_ids = Some(hill_ids.lock().unwrap().take().unwrap());
-                out.0 = Some(tile.is_texture_ready(&texture_fragment, &data_requesters, &tiles));
-            },
-        );
-        app.update();
-        app.world().resource::<Out>().0.unwrap()
-    }
+            assert!(
+                !ready,
+                "in-zoom regular layer with None slot must not be ready"
+            );
+        }
 
-    /// A None slot for an in-zoom regular layer must NOT be treated as ready.
-    /// Before the fix, the `unwrap_or(true)` in the all-check would have
-    /// returned true and let the tile render with a missing texture.
-    #[test]
-    fn none_slot_on_in_zoom_regular_layer_is_not_ready() {
-        let ready = run_is_ready(
-            vec![
-                (regular_layer("a", 0, 20), Order(0)),
-                (regular_layer("b", 0, 20), Order(1)),
-            ],
-            |world| {
-                // Layer 0 has a succeeded texture; layer 1's slot is None
-                // (simulating a filter-rejected request that hasn't retried yet).
-                let e0 = world
-                    .spawn((
-                        TileTextureFragmentMarker(0),
-                        texture_fragment(TextureFragmentStatus::Success),
-                    ))
-                    .id();
-                (vec![Some(e0), None], vec![None, None])
-            },
-        );
+        /// A None slot for a layer that's outside its configured zoom range must be
+        /// treated as ready — no entity will ever be requested for that layer.
+        #[test]
+        fn none_slot_on_out_of_zoom_layer_is_ready() {
+            let ready = run(
+                // Layer 1's min_zoom=10 → out of range for the test tile at z=5.
+                vec![
+                    (regular_layer("a", 0, 20), Order(0)),
+                    (regular_layer("b", 10, 20), Order(1)),
+                ],
+                |world| {
+                    let e0 = world
+                        .spawn((
+                            TileTextureFragmentMarker(0),
+                            texture_fragment(TextureFragmentStatus::Success),
+                        ))
+                        .id();
+                    (vec![Some(e0), None], vec![None, None])
+                },
+            );
 
-        assert!(
-            !ready,
-            "in-zoom regular layer with None slot must not be ready"
-        );
-    }
+            assert!(
+                ready,
+                "None slot for out-of-zoom layer must be treated as ready"
+            );
+        }
 
-    /// A None slot for a layer that's outside its configured zoom range must be
-    /// treated as ready — no entity will ever be requested for that layer.
-    #[test]
-    fn none_slot_on_out_of_zoom_layer_is_ready() {
-        let ready = run_is_ready(
-            // Layer 1's min_zoom=10 → out of range for the test tile at z=5.
-            vec![
-                (regular_layer("a", 0, 20), Order(0)),
-                (regular_layer("b", 10, 20), Order(1)),
-            ],
-            |world| {
-                let e0 = world
-                    .spawn((
-                        TileTextureFragmentMarker(0),
-                        texture_fragment(TextureFragmentStatus::Success),
-                    ))
-                    .id();
-                (vec![Some(e0), None], vec![None, None])
-            },
-        );
-
-        assert!(
-            ready,
-            "None slot for out-of-zoom layer must be treated as ready"
-        );
-    }
-
-    /// A tile with only hillshade layers must become ready as soon as the
-    /// hillshade DataRequester succeeds — even though `texture_fragment_entity_ids`
-    /// holds only Nones at those indices.
-    #[test]
-    fn hillshade_only_tile_is_ready_when_hill_array_has_succeeded_entity() {
-        let ready = run_is_ready(vec![(hillshade_layer("h", 0, 20), Order(0))], |world| {
-            let h0 = world
-                .spawn((
-                    TileTextureFragmentMarker(0),
-                    data_requester(DataRequesterStatus::Success),
-                ))
-                .id();
-            (vec![None], vec![Some(h0)])
-        });
-
-        assert!(
-            ready,
-            "hillshade-only tile must read entity from hillshade_entity_ids"
-        );
-    }
-
-    /// When a regular layer's texture is still pending, the tile is not ready,
-    /// even if a hillshade layer is already succeeded. This exercises the
-    /// per-layer all-check: regular Some(pending) → false.
-    #[test]
-    fn pending_regular_blocks_readiness_even_with_succeeded_hillshade() {
-        let ready = run_is_ready(
-            vec![
-                (regular_layer("a", 0, 20), Order(0)),
-                (hillshade_layer("h", 0, 20), Order(1)),
-            ],
-            |world| {
-                let e0 = world
-                    .spawn((
-                        TileTextureFragmentMarker(0),
-                        texture_fragment(TextureFragmentStatus::Pending),
-                    ))
-                    .id();
-                let h1 = world
+        /// A tile with only hillshade layers must become ready as soon as the
+        /// hillshade DataRequester succeeds — even though `texture_fragment_entity_ids`
+        /// holds only Nones at those indices.
+        #[test]
+        fn hillshade_only_tile_is_ready_when_hill_array_has_succeeded_entity() {
+            let ready = run(vec![(hillshade_layer("h", 0, 20), Order(0))], |world| {
+                let h0 = world
                     .spawn((
                         TileTextureFragmentMarker(0),
                         data_requester(DataRequesterStatus::Success),
                     ))
                     .id();
-                (vec![Some(e0), None], vec![None, Some(h1)])
-            },
-        );
+                (vec![None], vec![Some(h0)])
+            });
 
-        assert!(!ready, "pending regular layer must block readiness");
+            assert!(
+                ready,
+                "hillshade-only tile must read entity from hillshade_entity_ids"
+            );
+        }
+
+        /// When a regular layer's texture is still pending, the tile is not ready,
+        /// even if a hillshade layer is already succeeded. This exercises the
+        /// per-layer all-check: regular Some(pending) → false.
+        #[test]
+        fn pending_regular_blocks_readiness_even_with_succeeded_hillshade() {
+            let ready = run(
+                vec![
+                    (regular_layer("a", 0, 20), Order(0)),
+                    (hillshade_layer("h", 0, 20), Order(1)),
+                ],
+                |world| {
+                    let e0 = world
+                        .spawn((
+                            TileTextureFragmentMarker(0),
+                            texture_fragment(TextureFragmentStatus::Pending),
+                        ))
+                        .id();
+                    let h1 = world
+                        .spawn((
+                            TileTextureFragmentMarker(0),
+                            data_requester(DataRequesterStatus::Success),
+                        ))
+                        .id();
+                    (vec![Some(e0), None], vec![None, Some(h1)])
+                },
+            );
+
+            assert!(!ready, "pending regular layer must block readiness");
+        }
+    }
+
+    // ---- is_ready (full terrain readiness) ----
+
+    mod is_ready {
+        use super::*;
+        use crate::terrain::RasterDEMData;
+        use crate::terrain_data_requester::TerrainDataRequesterMarker;
+        use navara_layer::{TerrainAppearance, TerrainDataType};
+        use navara_material::RasterTerrainMaterial;
+        use navara_mesh::CachedMeshHandle;
+
+        #[derive(Default)]
+        struct ReadyStateSnapshot {
+            is_tile_ready: bool,
+            is_terrain_ready: bool,
+            is_upsamplable: bool,
+        }
+
+        /// Test scenario for `is_ready`. The child tile is at z=1 so its parent is
+        /// the root tile (z=0), which we configure via `parent_terrain_ready`.
+        struct Scenario {
+            /// Status of self's DEM request. `None` means no requester is attached.
+            self_dem_status: Option<DataRequesterStatus>,
+            /// If true, root tile gets terrain_data (Success requester) + cached mesh.
+            parent_terrain_ready: bool,
+            /// Terrain layer config.
+            terrain_max_zoom: usize,
+            terrain_overscaled_max_zoom: usize,
+        }
+
+        fn terrain_layer_with(max_zoom: usize, overscaled_max_zoom: usize) -> TerrainLayer {
+            TerrainLayer {
+                layer_id: "terrain".into(),
+                data: Some(LayerData {
+                    url: "https://example.com/{z}/{x}/{y}.png".into(),
+                }),
+                terrain_type: TerrainDataType::RasterDEM,
+                appearance: Some(TerrainAppearance::Raster(RasterTerrainMaterial {
+                    min_zoom: 0,
+                    max_zoom,
+                    overscaled_max_zoom,
+                    ..Default::default()
+                })),
+            }
+        }
+
+        fn run(scenario: Scenario) -> ReadyStateSnapshot {
+            let mut app = App::new();
+            app.world_mut().spawn(terrain_layer_with(
+                scenario.terrain_max_zoom,
+                scenario.terrain_overscaled_max_zoom,
+            ));
+
+            // Build qt with the root (parent of z=1). Optionally make it terrain-ready.
+            let mut qt = RasterTileQuadtree::new_with_linear_qt();
+            qt.qt.initialize_zero(&|v| {
+                RasterTile::new(
+                    TileXYZ {
+                        x: v.0,
+                        y: v.1,
+                        z: v.2,
+                    },
+                    0.,
+                    0.,
+                )
+            });
+
+            if scenario.parent_terrain_ready {
+                let root_handle = qt.qt.zero().unwrap().handle();
+                let parent_req = app
+                    .world_mut()
+                    .spawn((
+                        TerrainDataRequesterMarker(root_handle),
+                        data_requester(DataRequesterStatus::Success),
+                    ))
+                    .id();
+                let root = qt.qt.get_mut(root_handle).unwrap();
+                root.terrain_data = Some(Box::new(RasterDEMData {
+                    data_requester_entity_id: Some(parent_req),
+                    ..Default::default()
+                }));
+                root.cached_mesh_handle = Some(CachedMeshHandle {
+                    vertices: 0,
+                    indices: 0,
+                    uvs: 0,
+                    heights: Some(0),
+                });
+            }
+
+            // Build the child tile (standalone — is_ready doesn't require it in qt).
+            let mut child = RasterTile::new(TileXYZ { x: 0, y: 0, z: 1 }, 0., 0.);
+            if let Some(status) = scenario.self_dem_status {
+                // child_handle is irrelevant; we just need an entity carrying the
+                // marker + DataRequester components.
+                let child_req = app
+                    .world_mut()
+                    .spawn((
+                        TerrainDataRequesterMarker(qt.qt.zero().unwrap().handle()),
+                        data_requester(status),
+                    ))
+                    .id();
+                child.terrain_data = Some(Box::new(RasterDEMData {
+                    data_requester_entity_id: Some(child_req),
+                    ..Default::default()
+                }));
+            }
+
+            app.world_mut().insert_resource(qt);
+
+            #[derive(Resource, Default)]
+            struct Out(Option<ReadyStateSnapshot>);
+            app.init_resource::<Out>();
+
+            let child = std::sync::Mutex::new(Some(child));
+            app.add_systems(
+                Update,
+                move |qt: bevy_ecs::system::Res<RasterTileQuadtree>,
+                      texture_fragment: TileTextureFragmentQuery,
+                      data_requesters: Query<&DataRequester>,
+                      terrain_data_requester: crate::TileTerrainDataRequesterQuery,
+                      terrain_layers: Query<&TerrainLayer>,
+                      tiles: Query<(&TilesLayer, &Order)>,
+                      mut out: ResMut<Out>| {
+                    let terrain_layer = terrain_layers.iter().next();
+                    let child = child.lock().unwrap().take().unwrap();
+                    let rs = child.is_ready(
+                        &qt,
+                        &texture_fragment,
+                        &data_requesters,
+                        &terrain_data_requester,
+                        &terrain_layer,
+                        &tiles,
+                    );
+                    out.0 = Some(ReadyStateSnapshot {
+                        is_tile_ready: rs.is_tile_ready,
+                        is_terrain_ready: rs.is_terrain_ready,
+                        is_upsamplable: rs.is_upsamplable,
+                    });
+                },
+            );
+            app.update();
+            app.world_mut().resource_mut::<Out>().0.take().unwrap()
+        }
+
+        /// Fail at z < max_zoom with a ready parent: tile must become ready and route
+        /// through the upsample path (the bug this commit fixes).
+        #[test]
+        fn marks_tile_ready_on_fail_when_parent_terrain_ready() {
+            let rs = run(Scenario {
+                self_dem_status: Some(DataRequesterStatus::Fail),
+                parent_terrain_ready: true,
+                terrain_max_zoom: 20,
+                terrain_overscaled_max_zoom: 24,
+            });
+            assert!(rs.is_tile_ready, "Fail with ready parent must be ready");
+            assert!(
+                rs.is_upsamplable,
+                "Fail with ready parent must take the upsample path"
+            );
+            assert!(
+                !rs.is_terrain_ready,
+                "is_terrain_ready stays narrow: own DEM not Success"
+            );
+        }
+
+        /// Fail with no parent terrain: last-resort flat fallback (own ready but not
+        /// upsamplable).
+        #[test]
+        fn falls_back_to_flat_when_fail_and_no_parent() {
+            let rs = run(Scenario {
+                self_dem_status: Some(DataRequesterStatus::Fail),
+                parent_terrain_ready: false,
+                terrain_max_zoom: 20,
+                terrain_overscaled_max_zoom: 24,
+            });
+            assert!(
+                rs.is_tile_ready,
+                "Fail must still mark ready for flat fallback"
+            );
+            assert!(
+                !rs.is_upsamplable,
+                "No parent terrain → not upsamplable; downstream will render flat"
+            );
+        }
+
+        /// Regression guard for the upsample band (max_zoom < z < overscaled_max_zoom)
+        /// with a ready parent: should still upsample without needing a Fail status.
+        #[test]
+        fn in_upsample_band_unchanged() {
+            let rs = run(Scenario {
+                // No requester at all — upsample band doesn't fetch DEM.
+                self_dem_status: None,
+                parent_terrain_ready: true,
+                terrain_max_zoom: 0,
+                terrain_overscaled_max_zoom: 5,
+            });
+            assert!(
+                rs.is_tile_ready,
+                "Upsample band with ready parent must be ready"
+            );
+            assert!(rs.is_upsamplable, "Upsample band must take upsample path");
+        }
+
+        /// Pending request (no Success, no Fail yet) must not be ready: waiting on the
+        /// fetch — the traversal parent-fallback handles visibility.
+        #[test]
+        fn pending_is_not_ready() {
+            let rs = run(Scenario {
+                self_dem_status: Some(DataRequesterStatus::Pending),
+                parent_terrain_ready: true,
+                terrain_max_zoom: 20,
+                terrain_overscaled_max_zoom: 24,
+            });
+            assert!(!rs.is_tile_ready, "Pending must not be marked ready");
+        }
     }
 }
