@@ -128,6 +128,14 @@ export class RenderPassOrchestrator {
   }
 
   /**
+   * Dispose all GPU resources held by the effect composer.
+   */
+  dispose(): void {
+    this.clearPasses();
+    this.effectComposer.dispose();
+  }
+
+  /**
    * Rebuild the index map after manual list modification.
    */
   private rebuildIndexMap(): void {
