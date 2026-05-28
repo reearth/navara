@@ -1,0 +1,21 @@
+{
+  "name": "@navara/integration-test-iife",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Integration test for @navara/three IIFE bundle - loads via script tag",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "eslint . --fix",
+    "lint:check": "eslint .",
+    "format": "prettier --write --ignore-path ../../../.gitignore .",
+    "format:check": "prettier --check --ignore-path ../../../.gitignore .",
+    "test": "echo 'No tests yet'"
+  },
+  "license": "MIT OR Apache-2.0",
+  "devDependencies": {
+    "vite": "8.0.8"
+  }
+}

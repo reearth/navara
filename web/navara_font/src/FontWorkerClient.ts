@@ -23,7 +23,9 @@ export class FontWorkerClient {
   constructor(workerUrl: string | URL, concurrencyManager: ConcurrencyManager) {
     this._concurrencyManager = concurrencyManager;
 
-    this._worker = new Worker(workerUrl, { type: "module" });
+    this._worker = new Worker(workerUrl, {
+      type: import.meta.env.PROD ? undefined : "module",
+    });
 
     this._worker.onmessage = (e: MessageEvent) => {
       const { id, type, payload } = e.data;

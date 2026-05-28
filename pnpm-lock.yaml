@@ -143,6 +143,12 @@ importers:
         specifier: 1.59.1
         version: 1.59.1
 
+  web/integration-tests/navara-iife:
+    devDependencies:
+      vite:
+        specifier: 8.0.8
+        version: 8.0.8(@types/node@24.12.2)(esbuild@0.27.4)(jiti@2.6.1)(terser@5.43.1)(tsx@4.21.0)
+
   web/integration-tests/navara-three:
     dependencies:
       '@navara/engine':
