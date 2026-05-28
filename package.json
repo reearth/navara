@@ -5,9 +5,9 @@
   "description": "",
   "engines": {
     "node": ">=24",
-    "pnpm": "10.33.0"
+    "pnpm": "11.2.1"
   },
-  "packageManager": "pnpm@10.33.0",
+  "packageManager": "pnpm@11.2.1",
   "scripts": {
     "navara_three": "pnpm -C web/navara_three",
     "integration-tests": "pnpm -filter './web/integration-tests/**'",
@@ -49,14 +49,14 @@
     "@types/react-dom": "19.2.3",
     "@typescript-eslint/utils": "8.59.1",
     "@vitejs/plugin-react": "6.0.1",
-    "eslint": "9.39.4",
+    "eslint": "10.4.0",
     "eslint-config-reearth": "0.3.8",
     "jsdom": "29.1.0",
     "prettier": "3.8.2",
     "react": "19.2.5",
     "react-dom": "19.2.5",
-    "shadcn": "4.6.0",
-    "typescript": "5.9.3",
+    "shadcn": "4.7.0",
+    "typescript": "6.0.3",
     "unplugin-dts": "1.0.0-beta.6",
     "vite": "8.0.8",
     "vite-plugin-top-level-await": "1.6.0",
