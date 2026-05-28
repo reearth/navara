@@ -151,6 +151,14 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
    * @private
    */
   _dispose() {
+    if (this.textures) {
+      this.textures.irradianceTexture.dispose();
+      this.textures.scatteringTexture.dispose();
+      this.textures.transmittanceTexture.dispose();
+      this.textures.singleMieScatteringTexture?.dispose();
+      this.textures.higherOrderScatteringTexture?.dispose();
+      this.textures = undefined;
+    }
     this.emit("disposed");
   }
 
