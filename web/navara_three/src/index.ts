@@ -19,7 +19,7 @@ import initCore, {
 import { FontManager, type FontFamily } from "@navara/font";
 import FontWorkerURL from "@navara/font/fontWorker?worker&url";
 import { initNavaraApi } from "@navara/three_api";
-import { initializeWorkerPool } from "@navara/worker";
+import { initializeWorkerPool, terminateWorkerPool } from "@navara/worker";
 import {
   Scene,
   WebGLRenderer,
@@ -531,6 +531,7 @@ export default class ThreeView<
       return this._core?.getLayerIndex(layerId);
     },
   };
+  private _ownedRootElement: HTMLElement | undefined;
   private _eventManager = new EventManager();
   private _pickHelper?: PickHelper;
   private _terrainPicker: TerrainPicker;
@@ -563,6 +564,7 @@ export default class ThreeView<
       div.appendChild(options.canvas);
 
       document.body.appendChild(div);
+      this._ownedRootElement = div;
     }
 
     this._options = options;
@@ -989,6 +991,7 @@ export default class ThreeView<
    */
   dispose() {
     this._disposed = true;
+    this._initialized = false;
     if (!isWorker()) {
       window.removeEventListener("resize", this._handleResize);
       this.pixelRatioMatchedMedia?.removeEventListener(
@@ -1038,6 +1041,11 @@ export default class ThreeView<
     this._meshes.clear();
     this._workerPoolPromises.clear();
     this._tileMapByHandle.clear();
+    this._textureFragmentIndex.clear();
+    this._tileMeshToFragmentIds.clear();
+
+    // Dispose render pipeline GPU resources
+    this.renderPassOrchestrator.dispose();
 
     // Clean up WASM core
     this._core?.free();
@@ -1055,6 +1063,13 @@ export default class ThreeView<
     ) {
       this._renderer.dispose();
     }
+
+    // Remove auto-created DOM container so a new ThreeView can append its own
+    this._ownedRootElement?.remove();
+    this._ownedRootElement = undefined;
+
+    // Reset worker pool so a new ThreeView can reinitialize it
+    terminateWorkerPool();
   }
 
   /**
