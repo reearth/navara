@@ -460,14 +460,17 @@ pub fn transfer_mesh(
             Some(&DataRequesterStatus::Fail)
         );
 
-        let should_upsample_terrain = terrain_layer
-            .is_some_and(|l| l.should_upsample(tile.coords.z))
-            && tile.is_upsamplable(&qt, &terrain_data_requester, &terrain_layer);
+        // Take the upsample branch either when we're in the configured upsample band
+        // OR when our own DEM request failed but the parent terrain is ready.
+        let should_upsample_terrain = terrain_layer.is_some()
+            && tile.is_upsamplable(&qt, &terrain_data_requester, &terrain_layer)
+            && (terrain_layer.is_some_and(|l| l.should_upsample(tile.coords.z))
+                || is_terrain_failed);
 
         if !should_render_terrain
             || is_ellipsoid_terrain
             || (terrain_layer
-                .is_some_and(|t| t.appearance.as_ref().unwrap().min_zoom() >= tile.coords.z)
+                .is_some_and(|t| !t.is_over_min_zoom(tile.coords.z))
                 || (!should_upsample_terrain && is_terrain_failed))
         {
             // TODO: Move these tile construction process to worker.
