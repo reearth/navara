@@ -222,7 +222,7 @@ pub struct CameraControlUpdateEvent {
     /// Default: `500.0`
     #[wasm_bindgen(js_name = translateDuration)]
     pub translate_duration: Option<f32>,
-    /// Whether mouse drag rotation (spin) is enabled.
+    /// Whether mouse drag and touch swipe rotation (spin) are enabled.
     ///
     /// Default: `true`
     #[wasm_bindgen(js_name = enableSpin)]
