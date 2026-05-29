@@ -415,12 +415,24 @@ type CameraPosition = {
   pitch?: number;
   heading?: number;
   roll?: number;
+  distance?: number;
 };
 ```
+
+| Field | Type | Description |
+|---|---|---|
+| `lng` | `number` | Longitude (degrees) |
+| `lat` | `number` | Latitude (degrees) |
+| `height` | `number` | Height above the ellipsoid (meters). When `distance` is also set, this is used as the **target point elevation** — the camera is placed `distance` meters from that elevated target. |
+| `pitch` | `number` | Pitch angle (degrees) |
+| `heading` | `number` | Heading angle (degrees) |
+| `roll` | `number` | Roll angle (degrees) |
+| `distance` | `number` | Distance from the target point along the camera forward direction (meters). When specified, the camera is placed so that its forward ray reaches the `lng`/`lat`/`height` target from this distance. If omitted, `height` is used as the camera's own altitude above the surface normal. |
 
 **Example:**
 
 ```tsx
+// Altitude-based: place the camera 1000 m above Tokyo along the surface normal
 view.setCamera({
   lng: 139.7671,
   lat: 35.6812,
@@ -428,6 +440,16 @@ view.setCamera({
   pitch: -45,
   heading: 0,
   roll: 0,
+});
+
+// Distance-based: frame a mountain summit (height = 3776 m) from 5000 m away
+view.setCamera({
+  lng: 138.7274,
+  lat: 35.3606,
+  height: 3776,
+  distance: 5000,
+  pitch: -20,
+  heading: 0,
 });
 ```
 
@@ -505,20 +527,21 @@ flyTo(
 
 **Parameters:**
 
-- `camPos`: Target position. `lng`, `lat`, and `height` are required
-  - `lng`: Longitude (degrees)
-  - `lat`: Latitude (degrees)
-  - `height`: Height (meters)
+- `camPos`: Target position. `lng`, `lat`, and `height` are required.
+  - `lng`: Longitude (degrees) — **required**
+  - `lat`: Latitude (degrees) — **required**
+  - `height`: Height above the ellipsoid (meters) — **required**. When `distance` is also set, this is used as the **target point elevation** rather than the camera's own altitude.
   - `pitch`: Pitch angle (degrees)
   - `heading`: Heading angle (degrees)
   - `roll`: Roll angle (degrees)
+  - `distance`: Distance from the target point along the camera forward direction (meters). When specified, the camera is placed so that its forward ray reaches the `lng`/`lat`/`height` target from this distance. If omitted, `height` is used as the camera's own altitude above the surface normal.
 - `duration`: Animation duration (milliseconds)
 - `maxHeight`: Maximum height during the flight arc (meters)
 
 **Example:**
 
 ```tsx
-// Fly to Tokyo over 3 seconds (maximum height 5000m)
+// Altitude-based: fly to Tokyo over 3 seconds (maximum height 5000 m)
 view.flyTo(
   {
     lng: 139.7671,
@@ -529,6 +552,19 @@ view.flyTo(
   },
   3000,
   5000
+);
+
+// Distance-based: approach Tokyo Tower (at ground level) from 2000 m away
+view.flyTo(
+  {
+    lng: 139.7454,
+    lat: 35.6586,
+    height: 0,
+    distance: 2000,
+    pitch: -30,
+    heading: 45,
+  },
+  4000
 );
 ```
 

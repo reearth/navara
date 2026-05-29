@@ -490,8 +490,9 @@ impl Core {
         pitch: Option<FloatType>,
         heading: Option<FloatType>,
         roll: Option<FloatType>,
+        distance: Option<FloatType>,
     ) {
-        self.app.change_camera(position, pitch, heading, roll);
+        self.app.change_camera(position, pitch, heading, roll, distance);
     }
 
     #[wasm_bindgen(js_name = moveCamera)]
@@ -513,9 +514,10 @@ impl Core {
         roll: Option<FloatType>,
         duration: Option<FloatType>,
         max_height: Option<FloatType>,
+        distance: Option<FloatType>,
     ) {
         self.app
-            .fly_to(position, pitch, heading, roll, duration, max_height);
+            .fly_to(position, pitch, heading, roll, duration, max_height, distance);
     }
 
     #[wasm_bindgen(js_name = lookAt)]
