@@ -720,7 +720,7 @@ export default class ThreeView<
       };
     }
 
-    this._atmosphere = new Atmosphere(this._renderer, options.atmosphere);
+    this._atmosphere = new Atmosphere(this._renderer, options.atmosphere, this._camera);
     this._atmosphere.on("needsUpdate", this.forceUpdate);
 
     this.on("layer", (e, id, ...args) => {

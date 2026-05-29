@@ -12,7 +12,9 @@ import {
 import { Vector3, Matrix4, type WebGLRenderer } from "three";
 import invariant from "tiny-invariant";
 
+import { type ThreeViewCamera } from "./camera";
 import { ATMOSPHERE_ASSETS_URL, STBN_URL } from "./constants";
+import { shiftDateToElevation, shiftDateToHourAngle } from "./solar";
 
 /**
  * Events emitted by the {@link Atmosphere} class.
@@ -99,15 +101,27 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
   private options: AtmosphereOptions;
 
   /**
+   * @private
+   */
+  private _camera: ThreeViewCamera | undefined;
+
+
+  /**
    * Creates a new Atmosphere instance.
    * @param renderer - The WebGL renderer used for texture type detection.
    * @param options - Configuration options for the atmosphere.
+   * @param camera - Camera reference used by {@link setDateAt}.
    */
-  constructor(renderer: WebGLRenderer, options: AtmosphereOptions = {}) {
+  constructor(
+    renderer: WebGLRenderer,
+    options: AtmosphereOptions = {},
+    camera?: ThreeViewCamera,
+  ) {
     super();
 
     this.renderer = renderer;
     this.options = { ...DEFAULT_ATMOSPHERE_OPTIONS, ...options };
+    this._camera = camera;
 
     this.onUpdate();
   }
@@ -244,5 +258,91 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
   set date(v: Date) {
     this.options.date = v;
     this.onUpdate();
+  }
+
+  /**
+   * Adjusts `atmosphere.date` so that the local solar time at `to` matches the
+   * local solar time at `from`.
+   *
+   * The calculation is based on the sun's hour angle, which increases
+   * monotonically over a solar day, giving exactly one solution per day with no
+   * morning/afternoon ambiguity. The equation of time is accounted for
+   * automatically.
+   *
+   * @example
+   * // atmosphere.date shows 08:00 local solar time at Tokyo.
+   * view.atmosphere.setDateAt({ lng: 139.69 }, { lng: 0 });
+   * // → atmosphere.date is now 08:00 local solar time at London
+   *
+   * @param from - Source location. Only `lng` (degrees) affects the result.
+   * @param to   - Target location. Only `lng` (degrees) affects the result.
+   */
+  setDateAt(
+    from: { lng: number; lat?: number },
+    to: { lng: number; lat?: number },
+  ): void {
+    this.date = shiftDateToHourAngle(this.date, from.lng, to.lng, to.lat);
+  }
+
+  /**
+   * Adjusts `atmosphere.date` so that the sun elevation at `to` matches the
+   * sun elevation at `from`.
+   *
+   * Morning/afternoon context is preserved. If the target elevation cannot be
+   * reached at `to` (e.g. polar night), the date is clamped to solar noon
+   * there.
+   *
+   * @example
+   * // atmosphere.date shows sun at 30° elevation over Tokyo.
+   * view.atmosphere.setElevationAt({ lat: 35.68, lng: 139.69 }, { lat: 51.5, lng: -0.12 });
+   * // → atmosphere.date adjusted so sun is also at 30° elevation over London
+   *
+   * @param from - Source location (both `lat` and `lng` required).
+   * @param to   - Target location (both `lat` and `lng` required).
+   */
+  setElevationAt(
+    from: { lat: number; lng: number },
+    to: { lat: number; lng: number },
+  ): void {
+    this.date = shiftDateToElevation(
+      this.date,
+      from.lat,
+      from.lng,
+      to.lat,
+      to.lng,
+    );
+  }
+
+  /**
+   * Convenience wrapper for {@link setDateAt} that uses the camera position as
+   * `from`.
+   *
+   * @example
+   * // Camera is over Tokyo showing 08:00 local solar time.
+   * view.atmosphere.setDateFromCameraAt({ lng: 0 }); // adjust to London
+   * // → atmosphere.date is now 08:00 local solar time at London
+   *
+   * @param to - Target location. Only `lng` (degrees) affects the result.
+   */
+  setDateFromCameraAt(to: { lng: number; lat?: number }): void {
+    const { lng: fromLng } = this._camera?.positionGeographic ?? { lng: 0 };
+    this.setDateAt({ lng: fromLng }, to);
+  }
+
+  /**
+   * Convenience wrapper for {@link setElevationAt} that uses the camera
+   * position as `from`.
+   *
+   * @example
+   * // Camera is over Tokyo with sun at 30° elevation.
+   * view.atmosphere.setElevationFromCameraAt({ lat: 51.5, lng: -0.12 }); // adjust to London
+   * // → atmosphere.date adjusted so sun is also at 30° elevation over London
+   *
+   * @param to - Target location (both `lat` and `lng` required).
+   */
+  setElevationFromCameraAt(to: { lat: number; lng: number }): void {
+    const { lng: fromLng, lat: fromLat } =
+      this._camera?.positionGeographic ?? { lng: 0, lat: 0 };
+    this.setElevationAt({ lat: fromLat, lng: fromLng }, to);
   }
 }
