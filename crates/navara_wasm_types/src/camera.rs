@@ -227,7 +227,7 @@ pub struct CameraControlUpdateEvent {
     /// Default: `true`
     #[wasm_bindgen(js_name = enableSpin)]
     pub enable_spin: Option<bool>,
-    /// Whether scroll wheel zoom is enabled.
+    /// Whether scroll wheel and pinch/spread touch zoom are enabled.
     ///
     /// Default: `true`
     #[wasm_bindgen(js_name = enableZoom)]
