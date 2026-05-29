@@ -140,6 +140,6 @@ fn handle_camera_control_update(
             if let Some(enable_tilt) = event.enable_tilt {
                 controller.enable_tilt = enable_tilt;
             }
-}
+        }
     }
 }
