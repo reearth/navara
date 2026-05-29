@@ -206,9 +206,9 @@ type CameraOptions = {
 | `spinDuration` | `number` | `500` | Spin inertia duration after releasing mouse drag (ms) |
 | `zoomDuration` | `number` | `100` | Zoom inertia duration after scroll wheel input (ms) |
 | `translateDuration` | `number` | `500` | Translation inertia duration (ms) |
-| `enableSpin` | `boolean` | `true` | Whether mouse drag rotation is enabled |
-| `enableZoom` | `boolean` | `true` | Whether scroll wheel zoom is enabled |
-| `enableTilt` | `boolean` | `true` | Whether right-click drag tilt is enabled |
+| `enableSpin` | `boolean` | `true` | Whether drag/swipe rotation is enabled |
+| `enableZoom` | `boolean` | `true` | Whether scroll wheel and pinch/spread zoom are enabled |
+| `enableTilt` | `boolean` | `true` | Whether tilt interactions (Ctrl+left drag, right-click drag, double-swipe, or rotate gestures) are enabled |
 
 **Example:**
 
