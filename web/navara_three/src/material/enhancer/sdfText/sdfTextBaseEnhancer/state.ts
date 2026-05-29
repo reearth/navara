@@ -1,7 +1,7 @@
 import { Color } from "three";
 
 import {
-  SDF_RADIUS,
+  sdfRadiusFor,
   type SdfTextBaseProps,
   type SdfTextBaseState,
 } from "./types";
@@ -14,6 +14,7 @@ export const DEFAULT_BASE_PROPS: Required<
   Omit<SdfTextBaseProps, "atlasTexture" | "rtcCenter">
 > = {
   useRTE: false,
+  useMsdf: false,
   color: 0xffffff,
   fontSize: 16.0,
   center: [0.5, 0.0],
@@ -34,13 +35,15 @@ export const DEFAULT_BASE_PROPS: Required<
 /** Default state derived from DEFAULT_BASE_PROPS */
 export const DEFAULT_BASE_STATE: SdfTextBaseState = {
   useRTE: DEFAULT_BASE_PROPS.useRTE,
+  useMsdf: DEFAULT_BASE_PROPS.useMsdf,
   color: hexToColor(DEFAULT_BASE_PROPS.color),
   fontSize: DEFAULT_BASE_PROPS.fontSize,
   center: DEFAULT_BASE_PROPS.center,
   sizeInMeters: DEFAULT_BASE_PROPS.sizeInMeters,
   addHeight: DEFAULT_BASE_PROPS.addHeight,
   offsetDepth: DEFAULT_BASE_PROPS.offsetDepth,
-  outlineWidth: DEFAULT_BASE_PROPS.outlineWidth / SDF_RADIUS,
+  outlineWidth:
+    DEFAULT_BASE_PROPS.outlineWidth / sdfRadiusFor(DEFAULT_BASE_PROPS.useMsdf),
   outlineColor: hexToColor(DEFAULT_BASE_PROPS.outlineColor),
   outlineOpacity: DEFAULT_BASE_PROPS.outlineOpacity,
   showBackground: DEFAULT_BASE_PROPS.showBackground,
@@ -63,6 +66,7 @@ export const updateState = (
   return {
     // Immutable after mount
     useRTE: currentState.useRTE,
+    useMsdf: currentState.useMsdf,
     // Mutable
     color:
       props.color !== undefined ? hexToColor(props.color) : currentState.color,
@@ -73,7 +77,7 @@ export const updateState = (
     offsetDepth: props.offsetDepth ?? currentState.offsetDepth,
     outlineWidth:
       props.outlineWidth !== undefined
-        ? props.outlineWidth / SDF_RADIUS
+        ? props.outlineWidth / sdfRadiusFor(currentState.useMsdf)
         : currentState.outlineWidth,
     outlineColor:
       props.outlineColor !== undefined

@@ -4,6 +4,7 @@ import type {
   ShapeTextResult,
   FontAtlasData,
   BatchPrepareTextResult,
+  TextQuality,
 } from "./types";
 
 /**
@@ -58,13 +59,20 @@ export class FontWorkerClient {
 
   /** Load a font file into the worker's FontCache. Transfers the ArrayBuffer.
    *  `atlasKey`: optional shared atlas identifier (e.g. font family name).
-   *  When provided, all fonts loaded with the same key share a single SDF atlas. */
+   *  When provided, all fonts loaded with the same key share a single atlas.
+   *  `quality`: which atlas raster path to use. The Rust side creates the
+   *  atlas with this mode on the first load; subsequent loads under the same
+   *  `atlasKey` are expected to reuse the same quality (the TS layer
+   *  guarantees this by including the quality in both `url` and `atlasKey`). */
   async loadFont(
     url: string,
     data: ArrayBuffer,
-    atlasKey?: string,
+    atlasKey: string | undefined,
+    quality: TextQuality,
   ): Promise<{ ok: boolean }> {
-    return this._send("loadFont", { url, data, atlasKey }, [data]) as Promise<{
+    return this._send("loadFont", { url, data, atlasKey, quality }, [
+      data,
+    ]) as Promise<{
       ok: boolean;
     }>;
   }
@@ -82,24 +90,29 @@ export class FontWorkerClient {
     fontUrl: string,
     texts: string[],
   ): Promise<BatchPrepareTextResult> {
+    type RawAtlas = {
+      data: ArrayBuffer;
+      width: number;
+      height: number;
+      channels: number;
+    };
     const raw = (await this._send("prepareTextBatch", {
       fontUrl,
       texts,
     })) as {
       results: { text: string; shapeResult: ShapeTextResult | null }[];
-      atlas: { data: ArrayBuffer; width: number; height: number } | null;
-      colorAtlas: { data: ArrayBuffer; width: number; height: number } | null;
+      atlas: RawAtlas | null;
+      colorAtlas: RawAtlas | null;
       atlasKey: string;
     };
 
-    const wrap = (
-      raw: { data: ArrayBuffer; width: number; height: number } | null,
-    ): FontAtlasData | null =>
+    const wrap = (raw: RawAtlas | null): FontAtlasData | null =>
       raw
         ? {
             data: new Uint8Array(raw.data),
             width: raw.width,
             height: raw.height,
+            channels: raw.channels,
           }
         : null;
 

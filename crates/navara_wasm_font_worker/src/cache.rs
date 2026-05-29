@@ -1,15 +1,10 @@
-use crate::atlas::SDFAtlas;
-use crate::color_atlas::ColorAtlas;
+use crate::atlas::{Atlas, AtlasMode, DEFAULT_ATLAS_SIZE, DEFAULT_COLOR_ATLAS_SIZE};
 use skrifa::{FontRef, raw::TableProvider};
 use std::collections::HashMap as StdHashMap;
 use wasm_bindgen::prelude::*;
 
-/// Detect whether the font contains a COLRv1 paint graph we can render.
-///
-/// A font is considered a color font for our pipeline only if it has a COLR
-/// table with a v1 BaseGlyphList. Pure COLRv0 fonts and bitmap color formats
-/// (CBDT/sbix) are treated as monochrome — they will still render via fontdue
-/// using whatever outline fallbacks exist.
+/// True if the font has a COLRv1 BaseGlyphList. Pure COLRv0 / CBDT / sbix
+/// fonts are treated as monochrome and fall back to fontdue outlines.
 fn detect_colr_v1(data: &[u8]) -> bool {
     let Ok(font) = FontRef::new(data) else {
         return false;
@@ -20,8 +15,7 @@ fn detect_colr_v1(data: &[u8]) -> bool {
     colr.base_glyph_list().is_some()
 }
 
-/// Detect WOFF2/WOFF1 by magic bytes and decompress to raw TTF/OTF.
-/// Returns the data unchanged if it is already a raw font.
+/// Decompress WOFF2/WOFF1 to raw TTF/OTF; pass-through for raw fonts.
 fn maybe_decompress_font(data: Vec<u8>) -> Result<Vec<u8>, String> {
     if data.len() >= 4 {
         let tag = &data[..4];
@@ -37,54 +31,44 @@ fn maybe_decompress_font(data: Vec<u8>) -> Result<Vec<u8>, String> {
     Ok(data)
 }
 
-/// Number of ticks a glyph must be unused before it becomes evictable.
-/// One tick corresponds to one `prepareTextBatch` call (see [`FontCache::tick`]
-/// in `lib.rs`), not one rendered frame — batches only fire when new text is
-/// requested, so a small value here is needed for eviction to actually kick in
-/// before the atlas grows. A glyph not touched by the last 5 batches is cold.
+/// Ticks a glyph must be unused before becoming evictable. A tick is one
+/// `prepareTextBatch` call (see [`FontCache::tick`] in lib.rs), not a frame —
+/// so a small value is needed for eviction to fire before the atlas grows.
 pub const LRU_MIN_AGE: u64 = 5;
 
-/// A loaded font entry. The SDF atlas is stored separately in `FontCache::atlases`
-/// so that multiple fonts belonging to the same family can share one atlas.
+/// A loaded font. The atlas lives separately in `FontCache::atlases` so faces
+/// from the same family can share one.
 pub struct FontEntry {
-    /// Raw font file bytes (kept alive for rustybuzz references)
+    /// Raw font bytes (kept alive for rustybuzz references).
     pub data: Vec<u8>,
-    /// Parsed fontdue font (for bitmap rasterization by glyph ID)
     pub raster_font: fontdue::Font,
-    /// Used for converting font units to pixels
     pub units_per_em: u16,
-    /// Key into `FontCache::atlases`. For standalone fonts this equals the URL;
-    /// for font-family faces this equals the family name so all faces share one atlas.
+    /// Key into `FontCache::atlases`: family name for shared atlases, URL for
+    /// standalone fonts.
     pub atlas_key: String,
-    /// Unique index for this font within a shared atlas. Used to build composite
-    /// glyph keys so that different fonts' glyph IDs don't collide.
+    /// Unique index used in composite glyph keys, so two fonts sharing an
+    /// atlas can't collide on the same glyph_id.
     pub font_index: u32,
-    /// True if the font has a COLRv1 paint graph and should be rendered through
-    /// the color glyph pipeline instead of the SDF pipeline.
+    /// True for COLRv1 fonts — glyphs go to a parallel RGBA color atlas.
     pub is_color: bool,
 }
 
-/// Cache of loaded fonts, keyed by URL.
+/// Loaded fonts plus their atlases.
 ///
-/// Atlases are stored in a separate map keyed by "atlas key" so that:
-/// - Standalone font URLs each get their own atlas (atlas_key == url).
-/// - Font-family faces share a single atlas (atlas_key == family name).
+/// `atlases` and `color_atlases` use the same keys (family name or URL), so a
+/// family mixing text and emoji gets one of each.
 #[wasm_bindgen]
 #[derive(Default)]
 pub struct FontCache {
     #[wasm_bindgen(skip)]
     pub fonts: StdHashMap<String, FontEntry>,
     #[wasm_bindgen(skip)]
-    pub atlases: StdHashMap<String, SDFAtlas>,
-    /// Parallel atlases for COLRv1 color glyphs. Keyed identically to `atlases`
-    /// so a font family that mixes text and emoji faces gets one of each.
+    pub atlases: StdHashMap<String, Atlas>,
     #[wasm_bindgen(skip)]
-    pub color_atlases: StdHashMap<String, ColorAtlas>,
-    /// Logical LRU clock. Incremented once per `prepareTextBatch` call via
-    /// [`FontCache::tick`]; **not** a rendered-frame counter.
+    pub color_atlases: StdHashMap<String, Atlas>,
+    /// Logical LRU clock, bumped once per `prepareTextBatch` (not per frame).
     #[wasm_bindgen(skip)]
     pub tick: u64,
-    /// Counter for assigning unique font indices (used in composite atlas keys).
     #[wasm_bindgen(skip)]
     pub next_font_index: u32,
 }
@@ -98,44 +82,30 @@ impl FontCache {
         self.fonts.get(url)
     }
 
-    pub fn get_mut(&mut self, url: &str) -> Option<&mut FontEntry> {
-        self.fonts.get_mut(url)
-    }
-
-    /// Get the atlas key for a loaded font (family name or URL).
+    /// Atlas key for a loaded font (family name or URL).
     pub fn get_atlas_key(&self, url: &str) -> Option<&str> {
         self.fonts.get(url).map(|e| e.atlas_key.as_str())
     }
 
-    /// Get an immutable reference to an atlas by its key.
-    pub fn get_atlas(&self, atlas_key: &str) -> Option<&SDFAtlas> {
-        self.atlases.get(atlas_key)
-    }
-
-    /// Get a mutable reference to an atlas by its key.
-    pub fn get_atlas_mut(&mut self, atlas_key: &str) -> Option<&mut SDFAtlas> {
-        self.atlases.get_mut(atlas_key)
-    }
-
-    /// Get an immutable reference to a color atlas by its key.
-    pub fn get_color_atlas(&self, atlas_key: &str) -> Option<&ColorAtlas> {
+    pub fn get_color_atlas(&self, atlas_key: &str) -> Option<&Atlas> {
         self.color_atlases.get(atlas_key)
     }
 
-    /// Get a mutable reference to a color atlas by its key.
-    pub fn get_color_atlas_mut(&mut self, atlas_key: &str) -> Option<&mut ColorAtlas> {
-        self.color_atlases.get_mut(atlas_key)
-    }
-
-    /// Store a newly loaded font. Parses the font data and creates or reuses an atlas.
+    /// Parse and store a font, creating its atlases if missing.
     ///
-    /// `atlas_key`: if `Some`, the font shares an atlas with other fonts under the same key
-    /// (e.g. a font family name). If `None`, the font gets its own atlas keyed by URL.
+    /// `atlas_key`: if set, all fonts with the same key share one atlas
+    /// (typically a family name). If `None`, the URL is used.
+    ///
+    /// `mode` picks the SDF vs MSDF path for the monochrome atlas. The TS
+    /// layer exposes this as `quality: "low" | "high"` and qualifies
+    /// `atlas_key` per quality so the two modes coexist. The first load under
+    /// a given key fixes that atlas's mode.
     pub fn load_font(
         &mut self,
         url: String,
         data: Vec<u8>,
         atlas_key: Option<String>,
+        mode: AtlasMode,
     ) -> Result<(), String> {
         let data = maybe_decompress_font(data)?;
         let raster_font =
@@ -146,10 +116,13 @@ impl FontCache {
 
         let atlas_key = atlas_key.unwrap_or_else(|| url.clone());
 
-        // Create the atlas if it doesn't exist yet (first face in the family, or standalone font)
-        self.atlases.entry(atlas_key.clone()).or_default();
+        self.atlases
+            .entry(atlas_key.clone())
+            .or_insert_with(|| Atlas::new(DEFAULT_ATLAS_SIZE, mode));
         if is_color {
-            self.color_atlases.entry(atlas_key.clone()).or_default();
+            self.color_atlases
+                .entry(atlas_key.clone())
+                .or_insert_with(|| Atlas::new(DEFAULT_COLOR_ATLAS_SIZE, AtlasMode::Color));
         }
 
         let font_index = self.next_font_index;
@@ -169,16 +142,14 @@ impl FontCache {
         Ok(())
     }
 
-    /// Remove a font from the cache. Frees the atlas only when no other fonts reference it.
+    /// Remove a font. Frees its atlases only if no other font still uses them.
     pub fn unload_font(&mut self, url: &str) -> Result<(), String> {
         let entry = self
             .fonts
             .remove(url)
             .ok_or_else(|| format!("Font not found: {}", url))?;
 
-        // Check if any other font still references this atlas key
         let still_referenced = self.fonts.values().any(|e| e.atlas_key == entry.atlas_key);
-
         if !still_referenced {
             self.atlases.remove(&entry.atlas_key);
             self.color_atlases.remove(&entry.atlas_key);

@@ -1,10 +1,15 @@
+import { atlasRangePx } from "@navara/font";
 import type { Color, DataTexture, Vector2, Vector3 } from "three";
 
 import type { UniformValue } from "../../../types";
 import type { Mutates } from "../../MaterialEnhancer";
 
-/** Must match Rust SDF_RADIUS in navara_font/src/atlas.rs */
-export const SDF_RADIUS = 35.0;
+/** Pixel range covered by a quality's atlas distance field; defines how
+ *  outline-width pixels translate to a distance-value delta. SDF (`useMsdf=false`)
+ *  uses the classic 35 px radius from `sdf_glyph_renderer`; MSDF uses
+ *  `MSDF_RANGE_PX` (8 px). See [`atlasRangePx`] in `@navara/font`. */
+export const sdfRadiusFor = (useMsdf: boolean): number =>
+  atlasRangePx(useMsdf ? "high" : "low");
 
 /**
  * Props for the sdfText base enhancer.
@@ -12,6 +17,9 @@ export const SDF_RADIUS = 35.0;
 export type SdfTextBaseProps = {
   // Immutable after mount
   useRTE?: boolean;
+  /** When `true` the fragment shader samples the atlas as 4-channel MTSDF
+   *  (median of RGB + true SDF in alpha) instead of single-channel R8. */
+  useMsdf?: boolean;
 
   // Mutable state
   color?: number; // hex color
@@ -20,7 +28,7 @@ export type SdfTextBaseProps = {
   sizeInMeters?: boolean;
   addHeight?: number;
   offsetDepth?: boolean;
-  outlineWidth?: number; // raw width, converted in state via SDF_RADIUS
+  outlineWidth?: number; // raw width, converted in state via sdfRadiusFor(useMsdf)
   outlineColor?: number; // hex
   outlineOpacity?: number;
   showBackground?: boolean;
@@ -43,6 +51,7 @@ export type SdfTextBaseProps = {
 export type SdfTextBaseState = Readonly<{
   // Immutable after mount
   useRTE: boolean;
+  useMsdf: boolean;
 
   // Mutable
   color: Color;
@@ -51,7 +60,7 @@ export type SdfTextBaseState = Readonly<{
   sizeInMeters: boolean;
   addHeight: number;
   offsetDepth: boolean;
-  outlineWidth: number; // pre-converted: raw / SDF_RADIUS
+  outlineWidth: number; // pre-converted: raw / sdfRadiusFor(useMsdf)
   outlineColor: Color;
   outlineOpacity: number;
   showBackground: boolean;

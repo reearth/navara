@@ -213,6 +213,7 @@ const geoLayersDef: MaterialDesc[] = [
       backgroundColor: new Color().setStyle("#0a70c2"),
       borderColor: new Color().setStyle("#f8e43c"),
       borderWidth: 0.08, // 0 ~ 0.5, the ratio of the border to the height
+      quality: "high",
       // cornerRadius: 0.1, // 0 ~ 0.5, the ratio of the corner radius to the height
       size: 50,
       center: {

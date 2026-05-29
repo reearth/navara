@@ -3,13 +3,13 @@
 //! Covers Phases 1-4 of the color emoji pipeline:
 //! - color font detection (`detect_colr_v1` via `FontCache::load_font`)
 //! - color glyph rasterization (`color_raster::rasterize_color_glyph`)
-//! - color atlas packing (`ColorAtlas::ensure_glyphs_in_atlas`)
-//! - cache wiring (a color font gets a `ColorAtlas` allocated; a monochrome
+//! - color atlas packing (`Atlas::ensure_glyphs_in_atlas` in Color mode)
+//! - cache wiring (a color font gets a color `Atlas` allocated; a monochrome
 //!   font does not)
 
 use navara_wasm_font_worker::{
+    atlas::{Atlas, AtlasMode, DEFAULT_COLOR_ATLAS_SIZE},
     cache::FontCache,
-    color_atlas::ColorAtlas,
     color_raster::{COLOR_GLYPH_PX_SIZE, rasterize_color_glyph},
 };
 
@@ -23,7 +23,7 @@ const MONO_URL: &str = "fixture://demo_monochrome.ttf";
 fn cache_with(font_url: &str, bytes: &[u8]) -> FontCache {
     let mut cache = FontCache::default();
     cache
-        .load_font(font_url.to_owned(), bytes.to_vec(), None)
+        .load_font(font_url.to_owned(), bytes.to_vec(), None, AtlasMode::Sdf)
         .expect("load_font");
     cache
 }
@@ -98,8 +98,12 @@ fn color_atlas_packs_glyphs_and_tracks_lru() {
     let gid = first_renderable_color_glyph(COLRV1_FONT)
         .expect("fixture should have at least one paintable COLRv1 glyph");
 
-    let mut atlas = ColorAtlas::default();
-    let added = atlas.ensure_glyphs_in_atlas(COLRV1_FONT, 0, &[gid], 0);
+    let mut atlas = Atlas::new(DEFAULT_COLOR_ATLAS_SIZE, AtlasMode::Color);
+    // raster_font is unused in Color mode; parse one anyway to satisfy the
+    // unified signature.
+    let raster_font =
+        fontdue::Font::from_bytes(COLRV1_FONT, fontdue::FontSettings::default()).unwrap();
+    let added = atlas.ensure_glyphs_in_atlas(&raster_font, COLRV1_FONT, 0, &[gid], 0);
     assert!(added, "first call should report new glyphs added");
 
     let key = gid as u64; // composite_key(font_index=0, gid)
@@ -109,7 +113,7 @@ fn color_atlas_packs_glyphs_and_tracks_lru() {
     assert!(metrics.atlas_w > 0 && metrics.atlas_h > 0);
 
     // Calling again with the same id is idempotent (atlas unchanged).
-    let added_again = atlas.ensure_glyphs_in_atlas(COLRV1_FONT, 0, &[gid], 1);
+    let added_again = atlas.ensure_glyphs_in_atlas(&raster_font, COLRV1_FONT, 0, &[gid], 1);
     assert!(!added_again, "no new glyphs on repeat call");
 
     // LRU should record the latest frame for the repeat call.

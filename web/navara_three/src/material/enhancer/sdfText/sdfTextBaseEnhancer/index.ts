@@ -67,6 +67,7 @@ export function createSdfTextBaseEnhancer(
       const initialState = {
         ...DEFAULT_BASE_STATE,
         useRTE: mergedProps.useRTE,
+        useMsdf: mergedProps.useMsdf,
       };
       state = updateState(mergedProps, initialState);
       // Create mutates (refs are created inside with default values)
@@ -106,7 +107,7 @@ export function createSdfTextBaseEnhancer(
 
     programCacheKey: (): string => {
       invariant(state, "mount() must be called before programCacheKey");
-      return JSON.stringify({ useRTE: state.useRTE });
+      return JSON.stringify({ useRTE: state.useRTE, useMsdf: state.useMsdf });
     },
   };
 }

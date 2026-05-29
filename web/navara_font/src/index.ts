@@ -5,7 +5,12 @@ export {
 } from "./FontManager";
 export { FontWorkerClient } from "./FontWorkerClient";
 export { LRUMap } from "./LRUMap";
-export { COLOR_GLYPH_PX_SIZE } from "./types";
+export {
+  COLOR_GLYPH_PX_SIZE,
+  DEFAULT_TEXT_QUALITY,
+  atlasRangePx,
+  isMsdfQuality,
+} from "./types";
 export type {
   FontAtlasData,
   FontFace,
@@ -13,4 +18,5 @@ export type {
   GlyphMetrics,
   ShapedGlyph,
   ShapeTextResult,
+  TextQuality,
 } from "./types";

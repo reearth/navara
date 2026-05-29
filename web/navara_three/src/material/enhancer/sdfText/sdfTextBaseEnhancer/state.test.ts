@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { DEFAULT_BASE_STATE, updateState } from "./state";
-import { SDF_RADIUS } from "./types";
+import { sdfRadiusFor } from "./types";
 
 describe("sdfTextBaseEnhancer / state", () => {
   describe("updateState", () => {
@@ -48,9 +48,11 @@ describe("sdfTextBaseEnhancer / state", () => {
       expect(state.offsetDepth).toBe(false);
     });
 
-    it("converts outlineWidth using SDF_RADIUS", () => {
+    it("converts outlineWidth using the current quality's range (SDF default)", () => {
       const state = updateState({ outlineWidth: 2.0 }, DEFAULT_BASE_STATE);
-      expect(state.outlineWidth).toBeCloseTo(2.0 / SDF_RADIUS);
+      expect(state.outlineWidth).toBeCloseTo(
+        2.0 / sdfRadiusFor(DEFAULT_BASE_STATE.useMsdf),
+      );
     });
 
     it("updates outlineColor from hex", () => {

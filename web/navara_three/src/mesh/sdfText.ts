@@ -6,9 +6,12 @@ import type {
 import {
   COLOR_GLYPH_PX_SIZE,
   createSdfAtlasTexture,
+  DEFAULT_TEXT_QUALITY,
+  isMsdfQuality,
   type FontManager,
   type GlyphMetrics,
   type ShapeTextResult,
+  type TextQuality,
 } from "@navara/font";
 import { degreeToRadian } from "@navara/three_api";
 import {
@@ -31,12 +34,18 @@ import {
   type SdfTextBaseProps,
   type SdfTextBaseState,
 } from "../material/enhancer/sdfText";
-import { SDF_RADIUS } from "../material/enhancer/sdfText/sdfTextBaseEnhancer/types";
+import { sdfRadiusFor } from "../material/enhancer/sdfText/sdfTextBaseEnhancer/types";
 
 import type { PickableMesh } from "./pickableMesh";
 
-/** Must match Rust SDF_PX_SIZE in navara_font/src/resource.rs */
+/** Must match Rust `SDF_PX_SIZE` in `crates/navara_wasm_font_worker/src/atlas.rs`. */
 const SDF_PX_SIZE = 64.0;
+
+/** Normalize a WASM TextMaterial `quality` string into the union, falling back
+ *  to [`DEFAULT_TEXT_QUALITY`] for `undefined` or unknown values (mirrors the
+ *  Rust `parse_text_quality` policy). */
+export const wasmQualityToString = (q: string | undefined): TextQuality =>
+  q === "high" || q === "low" ? q : DEFAULT_TEXT_QUALITY;
 
 /** Reusable Vector2 to avoid per-frame allocations in onBeforeRender. */
 const _tmpSize = new Vector2();
@@ -54,12 +63,15 @@ export class SDFTextMesh
 {
   private _fontManager: FontManager;
   private _fontUrl: string;
+  /** Per-material text quality. Immutable after construction — switching
+   *  quality requires a separate (font, atlas) pair, so callers create a new
+   *  mesh rather than mutating this one. */
+  private _quality: TextQuality;
   private _text = "";
   private _atlasTexture: DataTexture | null = null;
-  /** When true, the atlas texture is shared and should not be disposed by this mesh. */
+  /** Atlas texture is owned externally; do not dispose on cleanup when true. */
   private _sharedAtlas = false;
-  // Color (COLRv1 RGBA) atlas texture is always FontManager-owned; this mesh
-  // never holds a local color texture, so there's no field to track here.
+  // The COLRv1 color atlas is always FontManager-owned; no local field needed.
 
   private _enhancer: MaterialEnhancer<
     ShaderMaterial,
@@ -82,6 +94,7 @@ export class SDFTextMesh
 
     this._fontManager = fontManager;
     this._fontUrl = fontUrl;
+    this._quality = wasmQualityToString(material.quality);
 
     this.geometry = this._createBaseGeometry();
 
@@ -96,6 +109,7 @@ export class SDFTextMesh
     this._enhancer.mount({
       base: {
         useRTE: RTE,
+        useMsdf: isMsdfQuality(this._quality),
         color: material.color ?? 0xffffff,
         fontSize: material.size ?? 16.0,
         center: material.center
@@ -188,13 +202,17 @@ export class SDFTextMesh
       return;
     }
 
-    const shapeResult = this._fontManager.shapeText(this._fontUrl, text);
+    const shapeResult = this._fontManager.shapeText(
+      this._fontUrl,
+      text,
+      this._quality,
+    );
     if (!shapeResult) {
       this.geometry.instanceCount = 0;
       return;
     }
 
-    const atlasData = this._fontManager.getAtlas(this._fontUrl);
+    const atlasData = this._fontManager.getAtlas(this._fontUrl, this._quality);
     if (!atlasData) return;
 
     // Glyph rects are stored in pixel space and normalized in the shader using
@@ -207,6 +225,7 @@ export class SDFTextMesh
         atlasData.data,
         atlasData.width,
         atlasData.height,
+        atlasData.channels,
       );
     }
   }
@@ -327,7 +346,7 @@ export class SDFTextMesh
     }
 
     const nextOutlineWidth = material.outlineWidth ?? 0;
-    if (nextOutlineWidth / SDF_RADIUS !== state.outlineWidth) {
+    if (nextOutlineWidth / sdfRadiusFor(state.useMsdf) !== state.outlineWidth) {
       baseProps.outlineWidth = nextOutlineWidth;
       hasUpdate = true;
     }
@@ -577,43 +596,16 @@ export class SDFTextMesh
       glyphIsColorData[j] = g.isColor ? 1.0 : 0.0;
     }
 
-    // Recreate geometry if instance count increased beyond current capacity
+    // Recreate geometry if instance count grew beyond the current capacity.
     if (this.geometry.instanceCount < count + 1) {
       this.geometry.dispose();
       this.geometry = this._createBaseGeometry();
     }
 
-    if (this.geometry.hasAttribute("glyphOffset")) {
-      this.geometry.deleteAttribute("glyphOffset");
-    }
-    this.geometry.setAttribute(
-      "glyphOffset",
-      new InstancedBufferAttribute(glyphOffsetData, 2),
-    );
-
-    if (this.geometry.hasAttribute("glyphSize")) {
-      this.geometry.deleteAttribute("glyphSize");
-    }
-    this.geometry.setAttribute(
-      "glyphSize",
-      new InstancedBufferAttribute(glyphSizeData, 2),
-    );
-
-    if (this.geometry.hasAttribute("glyphUvRect")) {
-      this.geometry.deleteAttribute("glyphUvRect");
-    }
-    this.geometry.setAttribute(
-      "glyphUvRect",
-      new InstancedBufferAttribute(glyphUvRectData, 4),
-    );
-
-    if (this.geometry.hasAttribute("glyphIsColor")) {
-      this.geometry.deleteAttribute("glyphIsColor");
-    }
-    this.geometry.setAttribute(
-      "glyphIsColor",
-      new InstancedBufferAttribute(glyphIsColorData, 1),
-    );
+    this._setInstanceAttribute("glyphOffset", glyphOffsetData, 2);
+    this._setInstanceAttribute("glyphSize", glyphSizeData, 2);
+    this._setInstanceAttribute("glyphUvRect", glyphUvRectData, 4);
+    this._setInstanceAttribute("glyphIsColor", glyphIsColorData, 1);
 
     this.geometry.instanceCount = count + 1;
 
@@ -628,10 +620,23 @@ export class SDFTextMesh
       );
   }
 
+  private _setInstanceAttribute(
+    name: string,
+    data: Float32Array,
+    itemSize: number,
+  ): void {
+    if (this.geometry.hasAttribute(name)) this.geometry.deleteAttribute(name);
+    this.geometry.setAttribute(
+      name,
+      new InstancedBufferAttribute(data, itemSize),
+    );
+  }
+
   private _updateAtlasTexture(
     data: Uint8Array,
     width: number,
     height: number,
+    channels: number,
   ): void {
     if (this._atlasTexture) {
       // Update existing texture in-place (atlas dimensions are constant)
@@ -640,7 +645,7 @@ export class SDFTextMesh
       return;
     }
 
-    const tex = createSdfAtlasTexture(data, width, height);
+    const tex = createSdfAtlasTexture(data, width, height, channels);
     this._atlasTexture = tex;
     this._enhancer.mutates().setAtlasTexture({ value: tex });
   }

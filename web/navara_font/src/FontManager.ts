@@ -2,6 +2,7 @@ import type { ConcurrencyManager } from "@navara/worker";
 import {
   DataTexture,
   LinearFilter,
+  NoColorSpace,
   RedFormat,
   RGBAFormat,
   SRGBColorSpace,
@@ -18,44 +19,52 @@ import type {
   GlyphMetrics,
   ShapedGlyph,
   ShapeTextResult,
+  TextQuality,
 } from "./types";
 
-/** Create a single-channel SDF atlas DataTexture with standard filtering. */
+/** Internal cache key combining an identifier with a quality, so SDF and
+ *  MSDF variants of the same font live as separate entries. */
+const _q = (identifier: string, quality: TextQuality): string =>
+  `${identifier}#q=${quality}`;
+
+/** Create an SDF/MSDF distance-field atlas DataTexture.
+ *
+ * `channels`: 1 → R8 SDF (sampled as `.r`); 4 → RGBA8 MTSDF (three MSDF
+ * channels + true SDF in alpha, sampled as `median(.rgb)`). RGB8 isn't
+ * supported because three.js dropped `RGBFormat` in r137. */
 export function createSdfAtlasTexture(
   data: Uint8Array,
   width: number,
   height: number,
+  channels: number,
 ): DataTexture {
-  const tex = new DataTexture(data, width, height, RedFormat, UnsignedByteType);
-  tex.minFilter = LinearFilter;
-  tex.magFilter = LinearFilter;
-  tex.generateMipmaps = false;
-  tex.needsUpdate = true;
-  return tex;
+  const format = channels === 4 ? RGBAFormat : RedFormat;
+  // Distance values are linear, not sRGB.
+  return createAtlasTexture(data, width, height, format, NoColorSpace);
 }
 
-/**
- * Create an RGBA color atlas DataTexture for COLRv1 glyphs.
- *
- * The pixel data is unpremultiplied sRGB; the texture is flagged with
- * `SRGBColorSpace` so three.js linearizes on sample.
- */
+/** Create an RGBA color atlas DataTexture for COLRv1 glyphs.
+ *  Pixel data is unpremultiplied sRGB; three.js linearizes on sample. */
 export function createColorAtlasTexture(
   data: Uint8Array,
   width: number,
   height: number,
 ): DataTexture {
-  const tex = new DataTexture(
-    data,
-    width,
-    height,
-    RGBAFormat,
-    UnsignedByteType,
-  );
+  return createAtlasTexture(data, width, height, RGBAFormat, SRGBColorSpace);
+}
+
+function createAtlasTexture(
+  data: Uint8Array,
+  width: number,
+  height: number,
+  format: typeof RedFormat | typeof RGBAFormat,
+  colorSpace: typeof NoColorSpace | typeof SRGBColorSpace,
+): DataTexture {
+  const tex = new DataTexture(data, width, height, format, UnsignedByteType);
   tex.minFilter = LinearFilter;
   tex.magFilter = LinearFilter;
   tex.generateMipmaps = false;
-  tex.colorSpace = SRGBColorSpace;
+  tex.colorSpace = colorSpace;
   tex.needsUpdate = true;
   return tex;
 }
@@ -145,11 +154,10 @@ export class FontManager {
   }
 
   /**
-   * Segment text into runs where each run maps to a specific font face.
-   * For each character, the first face whose unicodeRanges contain the
-   * codepoint wins. Consecutive characters mapping to the same face are
-   * grouped into a single segment. Falls back to the first face for
-   * codepoints not covered by any face.
+   * Split `text` into runs of consecutive characters that map to the same face.
+   * Each character picks the first face whose unicode ranges contain it,
+   * falling back to face 0. Spaces stick to the current run to avoid breaking
+   * up whitespace.
    */
   private _segmentTextByFace(
     faces: FontFace[],
@@ -161,36 +169,28 @@ export class FontManager {
     if (faces.length === 1) return [{ url: faces[0].url, text }];
 
     const segments: { url: string; text: string }[] = [];
-    let currentUrl: string | null = null;
-    let currentChars: string[] = [];
+    let currentUrl = "";
+    let currentText = "";
 
     for (const ch of text) {
-      const cp = ch.codePointAt(0) ?? 0;
-      // make space character use current face to avoid unnecessary segmentation of whitespace
-      const url: string =
+      const url =
         ch === " " && currentUrl
           ? currentUrl
-          : this._findFaceForCodepoint(faces, cp);
+          : this._findFaceForCodepoint(faces, ch.codePointAt(0) ?? 0);
 
-      if (url !== currentUrl) {
-        if (currentUrl !== null && currentChars.length > 0) {
-          segments.push({ url: currentUrl, text: currentChars.join("") });
-        }
-        currentUrl = url;
-        currentChars = [ch];
+      if (url === currentUrl) {
+        currentText += ch;
       } else {
-        currentChars.push(ch);
+        if (currentText) segments.push({ url: currentUrl, text: currentText });
+        currentUrl = url;
+        currentText = ch;
       }
     }
-
-    if (currentUrl !== null && currentChars.length > 0) {
-      segments.push({ url: currentUrl, text: currentChars.join("") });
-    }
-
+    if (currentText) segments.push({ url: currentUrl, text: currentText });
     return segments;
   }
 
-  /** Find the first face whose unicode ranges contain the given codepoint. */
+  /** First face whose unicode ranges contain `codepoint`, or face 0. */
   private _findFaceForCodepoint(faces: FontFace[], codepoint: number): string {
     for (const face of faces) {
       for (const range of face.unicodeRanges) {
@@ -226,82 +226,90 @@ export class FontManager {
   /**
    * Load a font from a URL. Fetches the font file and sends it to the worker.
    * Returns immediately if the font is already loaded. Deduplicates concurrent requests.
+   *
    * `atlasKey`: optional shared atlas identifier (e.g. font family name).
+   * `quality`: which atlas raster path to use. Two materials referencing the
+   * same `url` but different `quality` values produce two independent
+   * (font, atlas) entries — both live side-by-side. The browser HTTP cache
+   * makes the second fetch effectively free.
    */
-  async loadFont(url: string, atlasKey?: string): Promise<void> {
-    if (this._loaded.has(url)) {
-      this._refCount.set(url, (this._refCount.get(url) ?? 0) + 1);
+  async loadFont(
+    url: string,
+    quality: TextQuality,
+    atlasKey?: string,
+  ): Promise<void> {
+    const qUrl = _q(url, quality);
+    if (this._loaded.has(qUrl)) {
+      this._refCount.set(qUrl, (this._refCount.get(qUrl) ?? 0) + 1);
       return;
     }
 
-    if (this._pending.has(url)) {
-      this._refCount.set(url, (this._refCount.get(url) ?? 0) + 1);
-      return this._pending.get(url);
+    if (this._pending.has(qUrl)) {
+      this._refCount.set(qUrl, (this._refCount.get(qUrl) ?? 0) + 1);
+      return this._pending.get(qUrl);
     }
 
-    const promise = this._fetchAndLoad(url, atlasKey);
-    this._refCount.set(url, 1);
-    this._pending.set(url, promise);
+    // qAtlasKey is `undefined` (worker falls back to the URL, which is itself
+    // already qualified) when the caller didn't supply an atlasKey. When they
+    // did, we qualify it so families with the same name but different quality
+    // get distinct atlases.
+    const qAtlasKey = atlasKey ? _q(atlasKey, quality) : undefined;
+    const promise = this._fetchAndLoad(url, qUrl, qAtlasKey, quality);
+    this._refCount.set(qUrl, 1);
+    this._pending.set(qUrl, promise);
 
     this._shapeCache.set(
-      url,
+      qUrl,
       new LRUMap<string, ShapeTextResult>(SHAPE_CACHE_MAX_SIZE),
     );
 
     try {
       await promise;
-      this._loaded.add(url);
-      this._atlasKeys.set(url, atlasKey ?? url);
+      this._loaded.add(qUrl);
+      this._atlasKeys.set(qUrl, qAtlasKey ?? qUrl);
     } catch (err) {
-      this._refCount.delete(url);
-      this._shapeCache.delete(url);
+      this._refCount.delete(qUrl);
+      this._shapeCache.delete(qUrl);
       throw err;
     } finally {
-      this._pending.delete(url);
+      this._pending.delete(qUrl);
     }
   }
 
-  async unloadFont(url: string) {
-    const count = this._refCount.get(url);
-    if (!count) return; // Not loaded or already fully unloaded
-    if (count === 1) {
-      const atlasKey = this._atlasKeys.get(url) ?? url;
+  async unloadFont(url: string, quality: TextQuality) {
+    const qUrl = _q(url, quality);
+    const count = this._refCount.get(qUrl);
+    if (!count) return;
+    if (count > 1) {
+      this._refCount.set(qUrl, count - 1);
+      return;
+    }
 
-      this._loaded.delete(url);
-      this._refCount.delete(url);
-      this._shapeCache.delete(url);
-      this._atlasKeys.delete(url);
+    const atlasKey = this._atlasKeys.get(qUrl) ?? qUrl;
+    this._loaded.delete(qUrl);
+    this._refCount.delete(qUrl);
+    this._shapeCache.delete(qUrl);
+    this._atlasKeys.delete(qUrl);
 
-      // Only clean up atlas/texture when no other loaded font shares the same atlas key
-      const stillReferenced = [...this._atlasKeys.values()].some(
-        (k) => k === atlasKey,
-      );
-      if (!stillReferenced) {
-        this._shapeCache.delete(atlasKey);
-        this._atlasCache.delete(atlasKey);
-        this._atlasDirty.delete(atlasKey);
-        this._colorAtlasCache.delete(atlasKey);
-        this._colorAtlasDirty.delete(atlasKey);
-        const tex = this._textureCache.get(atlasKey);
-        if (tex) {
-          tex.dispose();
-          this._textureCache.delete(atlasKey);
-        }
-        const colorTex = this._colorTextureCache.get(atlasKey);
-        if (colorTex) {
-          colorTex.dispose();
-          this._colorTextureCache.delete(atlasKey);
-        }
+    // Drop the atlas only when no other loaded font still references it.
+    const stillReferenced = [...this._atlasKeys.values()].includes(atlasKey);
+    if (!stillReferenced) {
+      this._shapeCache.delete(atlasKey);
+      this._atlasCache.delete(atlasKey);
+      this._atlasDirty.delete(atlasKey);
+      this._colorAtlasCache.delete(atlasKey);
+      this._colorAtlasDirty.delete(atlasKey);
+      this._textureCache.get(atlasKey)?.dispose();
+      this._textureCache.delete(atlasKey);
+      this._colorTextureCache.get(atlasKey)?.dispose();
+      this._colorTextureCache.delete(atlasKey);
+    }
+
+    if (this._client) {
+      const result = await this._client.unloadFont(qUrl);
+      if (!result.ok) {
+        console.warn(`Failed to unload font "${url}" (${quality}) in worker`);
       }
-
-      if (this._client) {
-        const result = await this._client.unloadFont(url);
-        if (!result.ok) {
-          console.warn(`Failed to unload font "${url}" in worker`);
-        }
-      }
-    } else {
-      this._refCount.set(url, count - 1);
     }
   }
 
@@ -321,6 +329,7 @@ export class FontManager {
   async prepareText(
     fontIdentifier: string,
     text: string,
+    quality: TextQuality,
     loadedFaces?: Set<string>,
   ): Promise<void> {
     if (!text) return;
@@ -328,7 +337,10 @@ export class FontManager {
     const family = this._families.get(fontIdentifier);
     if (family) {
       // Lazy path: load only the face URLs needed for this text that this
-      // caller has not loaded yet.
+      // caller has not loaded yet. `loadedFaces` tracks raw face URLs (no
+      // quality suffix), matching the URLs the caller later passes to
+      // `unloadFont(url, quality)`. A single set is therefore tied to one
+      // quality — callers switching quality should use a fresh set.
       const tracker = loadedFaces ?? new Set<string>();
       const segments = this._segmentTextByFace(family.faces, text);
       const uniqueUrls = [...new Set(segments.map((s) => s.url))];
@@ -336,22 +348,28 @@ export class FontManager {
         uniqueUrls
           .filter((url) => !tracker.has(url))
           .map(async (url) => {
-            await this.loadFont(url, fontIdentifier);
+            await this.loadFont(url, quality, fontIdentifier);
             tracker.add(url);
           }),
       );
-      return this._prepareFamilyText(fontIdentifier, family, text);
+      return this._prepareFamilyText(fontIdentifier, family, text, quality);
     }
 
-    return this._prepareSingleFontText(fontIdentifier, text);
+    return this._prepareSingleFontText(fontIdentifier, text, quality);
   }
 
   /**
    * Check if text has been prepared (sync).
    * Accepts either a font URL or a registered font family name.
    */
-  isTextPrepared(fontIdentifier: string, text: string): boolean {
-    return this._shapeCache.get(fontIdentifier)?.has(text) ?? false;
+  isTextPrepared(
+    fontIdentifier: string,
+    text: string,
+    quality: TextQuality,
+  ): boolean {
+    return (
+      this._shapeCache.get(_q(fontIdentifier, quality))?.has(text) ?? false
+    );
   }
 
   /**
@@ -359,25 +377,31 @@ export class FontManager {
    * Call prepareText() first.
    * Accepts either a font URL or a registered font family name.
    */
-  shapeText(fontIdentifier: string, text: string): ShapeTextResult | undefined {
-    return this._shapeCache.get(fontIdentifier)?.get(text);
+  shapeText(
+    fontIdentifier: string,
+    text: string,
+    quality: TextQuality,
+  ): ShapeTextResult | undefined {
+    return this._shapeCache.get(_q(fontIdentifier, quality))?.get(text);
   }
 
   /** Prepare text for a single standalone font (non-family path). */
   private async _prepareSingleFontText(
     fontUrl: string,
     text: string,
+    quality: TextQuality,
   ): Promise<void> {
-    const cacheKey = this._cacheKey(fontUrl, text);
-    if (this._shapeCache.get(fontUrl)?.has(text) ?? false) return;
+    const qUrl = _q(fontUrl, quality);
+    const cacheKey = this._cacheKey(qUrl, text);
+    if (this._shapeCache.get(qUrl)?.has(text) ?? false) return;
     if (this._preparePending.has(cacheKey))
       return this._preparePending.get(cacheKey);
 
     const promise = new Promise<void>((resolve, reject) => {
-      let queue = this._batchQueue.get(fontUrl);
+      let queue = this._batchQueue.get(qUrl);
       if (!queue) {
         queue = [];
-        this._batchQueue.set(fontUrl, queue);
+        this._batchQueue.set(qUrl, queue);
       }
       queue.push({ text, cacheKey, resolve, reject });
     });
@@ -401,11 +425,13 @@ export class FontManager {
     familyName: string,
     family: FontFamily,
     text: string,
+    quality: TextQuality,
   ): Promise<void> {
+    const qFamily = _q(familyName, quality);
     // Already stitched and cached?
-    if (this._shapeCache.get(familyName)?.has(text)) return;
+    if (this._shapeCache.get(qFamily)?.has(text)) return;
 
-    const pendingKey = this._cacheKey(familyName, text);
+    const pendingKey = this._cacheKey(qFamily, text);
     if (this._preparePending.has(pendingKey))
       return this._preparePending.get(pendingKey);
 
@@ -414,18 +440,20 @@ export class FontManager {
 
       // Shape each segment. Face URLs were loaded lazily by prepareText above.
       await Promise.all(
-        segments.map((seg) => this._prepareSingleFontText(seg.url, seg.text)),
+        segments.map((seg) =>
+          this._prepareSingleFontText(seg.url, seg.text, quality),
+        ),
       );
 
       // Stitch per-segment results into one combined result
-      const stitched = this._stitchSegments(segments);
+      const stitched = this._stitchSegments(segments, quality);
 
-      let familyShapeCache = this._shapeCache.get(familyName);
+      let familyShapeCache = this._shapeCache.get(qFamily);
       if (!familyShapeCache) {
         familyShapeCache = new LRUMap<string, ShapeTextResult>(
           SHAPE_CACHE_MAX_SIZE,
         );
-        this._shapeCache.set(familyName, familyShapeCache);
+        this._shapeCache.set(qFamily, familyShapeCache);
       }
       familyShapeCache.set(text, stitched);
     })();
@@ -445,16 +473,17 @@ export class FontManager {
    */
   private _stitchSegments(
     segments: { url: string; text: string }[],
+    quality: TextQuality,
   ): ShapeTextResult {
     const allGlyphs: ShapedGlyph[] = [];
     const metricsMap = new Map<string, GlyphMetrics>();
     let targetUnitsPerEm = 0;
 
     for (const seg of segments) {
-      const result = this._shapeCache.get(seg.url)?.get(seg.text);
+      const result = this._shapeCache.get(_q(seg.url, quality))?.get(seg.text);
       invariant(
         result,
-        `FontManager: missing shape cache for ${seg.url} "${seg.text}"`,
+        `FontManager: missing shape cache for ${seg.url} "${seg.text}" (${quality})`,
       );
 
       if (targetUnitsPerEm === 0) targetUnitsPerEm = result.unitsPerEm;
@@ -498,120 +527,103 @@ export class FontManager {
    * Accepts either a font URL or a registered font family name.
    * For families, the atlas is shared across all faces.
    */
-  getAtlas(fontIdentifier: string): FontAtlasData | undefined {
-    const key = this._resolveAtlasKey(fontIdentifier);
+  getAtlas(
+    fontIdentifier: string,
+    quality: TextQuality,
+  ): FontAtlasData | undefined {
+    const key = this._resolveAtlasKey(fontIdentifier, quality);
     return this._atlasCache.get(key);
   }
 
   /**
-   * Get a shared GPU DataTexture for a font's atlas.
-   * Returns the same texture instance for all callers using the same font.
-   * Creates the texture on first call; updates it in-place when the atlas grows.
-   * Accepts either a font URL or a registered font family name.
-   * For families, all faces share the same texture.
+   * Shared GPU DataTexture for a font's atlas. Returns the same instance
+   * across callers and updates it in-place when the atlas grows. Accepts a
+   * font URL or a family name.
    */
-  getAtlasTexture(fontIdentifier: string): DataTexture | null {
-    const key = this._resolveAtlasKey(fontIdentifier);
-
-    if (!this._atlasDirty.has(key)) {
-      const cached = this._textureCache.get(key);
-      if (cached) return cached;
-    }
-
-    const atlasData = this._atlasCache.get(key);
-    if (!atlasData) return null;
-
-    const existing = this._textureCache.get(key);
-    if (existing) {
-      // If the atlas grew, the GPU storage is still sized for the old image.
-      // Calling dispose() releases the GL handle so three.js runs a fresh
-      // texImage2D at the new dimensions on the next render — avoids the
-      // `glTexSubImage2D: Offset overflows texture dimensions` error from
-      // trying to sub-upload a larger buffer into the existing allocation.
-      // The DataTexture instance is preserved so existing meshes keep their refs.
-      const dimsChanged =
-        existing.image?.width !== atlasData.width ||
-        existing.image?.height !== atlasData.height;
-      if (dimsChanged) {
-        existing.dispose();
-      }
-      existing.image = {
-        data: atlasData.data,
-        width: atlasData.width,
-        height: atlasData.height,
-      };
-      existing.needsUpdate = true;
-      this._atlasDirty.delete(key);
-      return existing;
-    }
-
-    const tex = createSdfAtlasTexture(
-      atlasData.data,
-      atlasData.width,
-      atlasData.height,
+  getAtlasTexture(
+    fontIdentifier: string,
+    quality: TextQuality,
+  ): DataTexture | null {
+    return this._getOrUpdateTexture(
+      this._resolveAtlasKey(fontIdentifier, quality),
+      this._atlasCache,
+      this._atlasDirty,
+      this._textureCache,
+      (a) => createSdfAtlasTexture(a.data, a.width, a.height, a.channels),
     );
-    this._textureCache.set(key, tex);
-    this._atlasDirty.delete(key);
-    return tex;
   }
 
-  /**
-   * Get the color atlas data for a loaded color font from cache.
-   * Returns `undefined` when the font/family has no COLRv1 face loaded.
-   */
-  getColorAtlas(fontIdentifier: string): FontAtlasData | undefined {
-    const key = this._resolveAtlasKey(fontIdentifier);
+  /** Color atlas data for a loaded COLRv1 font. `undefined` for monochrome. */
+  getColorAtlas(
+    fontIdentifier: string,
+    quality: TextQuality,
+  ): FontAtlasData | undefined {
+    const key = this._resolveAtlasKey(fontIdentifier, quality);
     return this._colorAtlasCache.get(key);
   }
 
   /**
-   * Get a shared GPU DataTexture for a font's color atlas (RGBA).
-   * Returns `null` if no color glyphs have been rasterized for this atlas key
-   * yet (or the font is monochrome).
+   * Shared GPU DataTexture for a font's COLRv1 color atlas. `null` when no
+   * color glyphs have been rasterized under this key.
    */
-  getColorAtlasTexture(fontIdentifier: string): DataTexture | null {
-    const key = this._resolveAtlasKey(fontIdentifier);
+  getColorAtlasTexture(
+    fontIdentifier: string,
+    quality: TextQuality,
+  ): DataTexture | null {
+    return this._getOrUpdateTexture(
+      this._resolveAtlasKey(fontIdentifier, quality),
+      this._colorAtlasCache,
+      this._colorAtlasDirty,
+      this._colorTextureCache,
+      (a) => createColorAtlasTexture(a.data, a.width, a.height),
+    );
+  }
 
-    if (!this._colorAtlasDirty.has(key)) {
-      const cached = this._colorTextureCache.get(key);
+  /** Shared "get cached texture, create or refresh from atlas data" path.
+   *  When the atlas grew, dispose() releases the GL handle so three.js
+   *  reallocates at the new size on the next render instead of overflowing
+   *  texSubImage2D. The DataTexture instance is preserved so existing meshes
+   *  keep their refs. */
+  private _getOrUpdateTexture(
+    key: string,
+    atlasCache: Map<string, FontAtlasData>,
+    dirtySet: Set<string>,
+    textureCache: Map<string, DataTexture>,
+    create: (atlas: FontAtlasData) => DataTexture,
+  ): DataTexture | null {
+    if (!dirtySet.has(key)) {
+      const cached = textureCache.get(key);
       if (cached) return cached;
     }
 
-    const atlasData = this._colorAtlasCache.get(key);
+    const atlasData = atlasCache.get(key);
     if (!atlasData) return null;
 
-    const existing = this._colorTextureCache.get(key);
+    dirtySet.delete(key);
+
+    const existing = textureCache.get(key);
     if (existing) {
-      // Mirror the SDF path: if the color atlas grew, dispose the existing GL
-      // handle so three.js reallocates at the new size on the next render
-      // instead of overflowing texSubImage2D.
       const dimsChanged =
         existing.image?.width !== atlasData.width ||
         existing.image?.height !== atlasData.height;
-      if (dimsChanged) {
-        existing.dispose();
-      }
+      if (dimsChanged) existing.dispose();
       existing.image = {
         data: atlasData.data,
         width: atlasData.width,
         height: atlasData.height,
       };
       existing.needsUpdate = true;
-      this._colorAtlasDirty.delete(key);
       return existing;
     }
 
-    const tex = createColorAtlasTexture(
-      atlasData.data,
-      atlasData.width,
-      atlasData.height,
-    );
-    this._colorTextureCache.set(key, tex);
-    this._colorAtlasDirty.delete(key);
+    const tex = create(atlasData);
+    textureCache.set(key, tex);
     return tex;
   }
 
   dispose() {
+    for (const tex of this._textureCache.values()) tex.dispose();
+    for (const tex of this._colorTextureCache.values()) tex.dispose();
     this._pending.clear();
     this._preparePending.clear();
     this._loaded.clear();
@@ -621,13 +633,7 @@ export class FontManager {
     this._atlasDirty.clear();
     this._colorAtlasCache.clear();
     this._colorAtlasDirty.clear();
-    for (const tex of this._textureCache.values()) {
-      tex.dispose();
-    }
     this._textureCache.clear();
-    for (const tex of this._colorTextureCache.values()) {
-      tex.dispose();
-    }
     this._colorTextureCache.clear();
     this._families.clear();
     this._atlasKeys.clear();
@@ -639,30 +645,47 @@ export class FontManager {
     return fontUrl + "\0" + text;
   }
 
-  /** Resolve a font identifier to its atlas key.
-   *  Family names are their own atlas key; font URLs are looked up via _atlasKeys. */
-  private _resolveAtlasKey(fontIdentifier: string): string {
-    // If it's a registered family name, that IS the atlas key
-    if (this._families.has(fontIdentifier)) return fontIdentifier;
-    // For font URLs, resolve via the atlas key map (falls back to URL itself)
-    return this._atlasKeys.get(fontIdentifier) ?? fontIdentifier;
+  /** Resolve a (font identifier, quality) pair to its qualified atlas key.
+   *  Family names get a quality suffix and become their own atlas key; font
+   *  URLs are looked up via `_atlasKeys` (already-qualified keys). */
+  private _resolveAtlasKey(
+    fontIdentifier: string,
+    quality: TextQuality,
+  ): string {
+    if (this._families.has(fontIdentifier)) return _q(fontIdentifier, quality);
+    return (
+      this._atlasKeys.get(_q(fontIdentifier, quality)) ??
+      _q(fontIdentifier, quality)
+    );
   }
 
-  private async _fetchAndLoad(url: string, atlasKey?: string): Promise<void> {
+  /** Fetch + worker-load a font for a single (url, quality) combination.
+   *
+   *  `rawUrl` is the network URL (no `#q=...` fragment). `qUrl` and
+   *  `qAtlasKey` are the qualified identifiers the worker will use as
+   *  FontEntry / atlas keys. The worker side treats `qUrl` as opaque, so the
+   *  same `rawUrl` can be loaded twice (once per quality) without collision.
+   */
+  private async _fetchAndLoad(
+    rawUrl: string,
+    qUrl: string,
+    qAtlasKey: string | undefined,
+    quality: TextQuality,
+  ): Promise<void> {
     const client = await this._ensureClient();
 
-    const response = await fetch(url);
+    const response = await fetch(rawUrl);
     if (!response.ok) {
       throw new Error(
-        `FontManager: failed to fetch font from ${url}: ${response.status}`,
+        `FontManager: failed to fetch font from ${rawUrl}: ${response.status}`,
       );
     }
 
     const arrayBuffer = await response.arrayBuffer();
-    const result = await client.loadFont(url, arrayBuffer, atlasKey);
+    const result = await client.loadFont(qUrl, arrayBuffer, qAtlasKey, quality);
 
     if (!result.ok) {
-      throw new Error(`FontManager: WASM failed to load font from ${url}`);
+      throw new Error(`FontManager: WASM failed to load font from ${rawUrl}`);
     }
   }
 
