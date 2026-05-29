@@ -257,7 +257,15 @@ fn process_camera_event(
             orientation,
             distance,
         } => {
-            apply_camera_change(window, frustum, transform, orbit, position, orientation, *distance);
+            apply_camera_change(
+                window,
+                frustum,
+                transform,
+                orbit,
+                position,
+                orientation,
+                *distance,
+            );
 
             // stop camera movement when changing position or orientation
             inertia.stop_all(controller);
@@ -297,13 +305,8 @@ fn process_camera_event(
                     let ellipsoid_surface = CRS::Geographic.to_vec3(WGS84_64, ground_point, 0.0);
                     let target_dir = ellipsoid_surface.normalize_or_zero();
                     let world_quat = calculate_world_quat(target_dir, heading);
-                    let (world_forward, _) = apply_orientation_changes(
-                        world_quat,
-                        Vec3::Y,
-                        Vec3::Z,
-                        pitch,
-                        roll,
-                    );
+                    let (world_forward, _) =
+                        apply_orientation_changes(world_quat, Vec3::Y, Vec3::Z, pitch, roll);
                     // Use full position (including altitude) as the target point
                     let target = CRS::Geographic.to_vec3(WGS84_64, *pos, 0.0);
                     let camera_world = target - world_forward * dist.max(1.0);
@@ -314,7 +317,14 @@ fn process_camera_event(
                     *pos
                 };
 
-                if flight.fly_to(transform, frustum, &effective_pos, &orient, duration, max_height) {
+                if flight.fly_to(
+                    transform,
+                    frustum,
+                    &effective_pos,
+                    &orient,
+                    duration,
+                    max_height,
+                ) {
                     // Start the flight animation and stop current inertia
                     inertia.stop_all(controller);
                     if is_cam_moving {
