@@ -206,9 +206,9 @@ type CameraOptions = {
 | `spinDuration` | `number` | `500` | マウスドラッグを離した後のスピン慣性の持続時間（ミリ秒） |
 | `zoomDuration` | `number` | `100` | スクロールホイール入力後のズーム慣性の持続時間（ミリ秒） |
 | `translateDuration` | `number` | `500` | 移動慣性の持続時間（ミリ秒） |
-| `enableSpin` | `boolean` | `true` | マウスドラッグによる回転（スピン）を有効にするかどうか |
-| `enableZoom` | `boolean` | `true` | スクロールホイールによるズームを有効にするかどうか |
-| `enableTilt` | `boolean` | `true` | 右クリックドラッグによるチルトを有効にするかどうか |
+| `enableSpin` | `boolean` | `true` | ドラッグ／スワイプによる回転（スピン）を有効にするかどうか |
+| `enableZoom` | `boolean` | `true` | スクロールホイールおよびピンチ／スプレッドによるズームを有効にするかどうか |
+| `enableTilt` | `boolean` | `true` | Ctrl+左ドラッグ、右クリックドラッグ、ダブルスワイプ、回転ジェスチャーによるチルトを有効にするかどうか |
 
 **Example:**
 
