@@ -1648,8 +1648,8 @@ export default class ThreeView<
 
   /**
    * Animates the camera to fly to a target position.
-   * @param camPos - Target position with required lng/lat (degrees). Provide either `height` (meters above target)
-   *   or `distance` (meters from ellipsoid along the camera forward direction). Optional pitch, heading, roll (degrees).
+   * @param camPos - Target position with required lng/lat (degrees). Provide either `height` (meters above the ellipsoid)
+   *   or `distance` (meters from the target point along the camera forward direction). Optional pitch, heading, roll (degrees).
    * @param duration - Animation duration in milliseconds
    * @param maxHeight - Maximum height during the flight arc in meters
    */
