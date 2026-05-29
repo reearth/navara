@@ -56,7 +56,7 @@ pub enum CameraEvent {
     Change {
         position: Option<Vec3>,                 // [longitude, latitude, altitude]
         orientation: Option<CameraOrientation>, // [pitch, heading, roll]
-        distance: Option<FloatType>, // distance from ellipsoid along camera forward (meters)
+        distance: Option<FloatType>, // distance from target point along camera forward (meters)
     },
     Translate {
         amount: FloatType,     // amount to move in meters
@@ -67,7 +67,7 @@ pub enum CameraEvent {
         orientation: Option<CameraOrientation>, // [pitch, heading, roll]
         duration: Option<FloatType>,            // duration in milliseconds(ms)
         max_height: Option<FloatType>,          // The maximum height at the peak of the flight.
-        distance: Option<FloatType>, // distance from ellipsoid along camera forward (meters)
+        distance: Option<FloatType>, // distance from target point along camera forward (meters)
     },
     LookAt {
         target: Vec3, // [longitude, latitude, altitude]
