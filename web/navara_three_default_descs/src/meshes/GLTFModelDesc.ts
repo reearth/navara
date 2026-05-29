@@ -313,19 +313,25 @@ export class GLTFModelDesc extends NewMeshDesc<
    * crashes reading `.isOutputStructNode`).
    */
   private convertMaterialsToTSL(group: Group): void {
+    const cache = new WeakMap<Material, NodeMaterial>();
+    const toDispose = new Set<Material>();
     group.traverse((child) => {
       if (!(child instanceof Mesh)) return;
-      const list = Array.isArray(child.material)
+      const originalList = Array.isArray(child.material)
         ? child.material
         : [child.material];
-      const converted: Material[] = list.map((original) => {
+      const converted = originalList.map((original) => {
         if (original instanceof NodeMaterial) return original;
+        const cached = cache.get(original);
+        if (cached) return cached;
         const next = convertToNodeMaterial(original);
-        original.dispose();
+        cache.set(original, next);
+        toDispose.add(original);
         return next;
       });
       child.material = Array.isArray(child.material) ? converted : converted[0];
     });
+    for (const m of toDispose) m.dispose();
   }
 
   private setPositionRTE(worldPosition: Vector3): void {

@@ -926,6 +926,7 @@ export default class ThreeView<
         // },
       );
       this._pickHelper.enablePick(this._options.picking ?? true);
+      this._pickHelper.setLightsGroup(this._scenes.light);
     }
 
     await this.initializeRenderPass();

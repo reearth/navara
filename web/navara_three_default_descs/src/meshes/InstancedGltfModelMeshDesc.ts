@@ -392,6 +392,8 @@ export class InstancedGltfModelMeshDesc extends MeshDescBase<
    * enough. MRT + RTE wiring happens later via {@link refreshNodeMaterial}.
    */
   private patchMaterials(root: Object3D): void {
+    const cache = new WeakMap<Material, NodeMaterial>();
+    const toDispose = new Set<Material>();
     root.traverse((o) => {
       const mesh = o as Mesh;
       if (!mesh.isMesh) return;
@@ -399,8 +401,11 @@ export class InstancedGltfModelMeshDesc extends MeshDescBase<
       const list = Array.isArray(original) ? original : [original];
       const converted = list.map((m) => {
         if (m instanceof NodeMaterial) return m;
+        const cached = cache.get(m);
+        if (cached) return cached;
         const n = convertToNodeMaterial(m);
-        m.dispose();
+        cache.set(m, n);
+        toDispose.add(m);
         return n;
       });
       mesh.material = Array.isArray(original) ? converted : converted[0];
@@ -414,6 +419,7 @@ export class InstancedGltfModelMeshDesc extends MeshDescBase<
         }
       }
     });
+    for (const m of toDispose) m.dispose();
   }
 
   private async loadModel(url: string, root: Group): Promise<void> {
@@ -528,6 +534,9 @@ export class InstancedGltfModelMeshDesc extends MeshDescBase<
     this.capacity = Math.max(initialConfigs.length, DEFAULT_CAPACITY);
     const modelCfg = this.config.gltfModels;
 
+    const matCache = new WeakMap<Material, NodeMaterial>();
+    const matToDispose = new Set<Material>();
+
     // Walk scene, spin up one InstancedMesh per source Mesh node
     gltf.scene.traverse((node) => {
       if (!(node instanceof Mesh)) return;
@@ -544,8 +553,11 @@ export class InstancedGltfModelMeshDesc extends MeshDescBase<
         : [originalMaterial];
       const convertedList = list.map((m) => {
         if (m instanceof NodeMaterial) return m;
+        const cached = matCache.get(m);
+        if (cached) return cached;
         const n = convertToNodeMaterial(m);
-        m.dispose();
+        matCache.set(m, n);
+        matToDispose.add(m);
         return n;
       });
       const material = Array.isArray(originalMaterial)
@@ -585,6 +597,7 @@ export class InstancedGltfModelMeshDesc extends MeshDescBase<
       root.add(inst);
       this.subMeshes.push({ inst, sourceMesh, sourceLocal });
     });
+    for (const m of matToDispose) m.dispose();
 
     for (let i = 0; i < initialConfigs.length; i++) {
       this.writeInstanceAt(i, initialConfigs[i]);
