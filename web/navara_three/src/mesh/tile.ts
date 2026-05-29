@@ -461,7 +461,7 @@ export class TileMesh
     this.material.userData.uvTransform.scale.set(scale.x, scale.y);
 
     const maxTextures = this.maxTextures;
-    this.setUniforms(mat, maxTextures);
+    this.setUniforms(mat, maxTextures, globe, mesh.uv_transform);
     this.setupTextureFragments(
       mat.texture_fragments(),
       tileMapByHandle,
@@ -956,11 +956,6 @@ if (uPickable > 0.) {
     this.visible = active;
 
     if (active) {
-      // Update UV transform if available in the mesh
-      const { offset, scale } = tileMesh.uv_transform;
-      this.material.userData.uvTransform.offset.set(offset.x, offset.y);
-      this.material.userData.uvTransform.scale.set(scale.x, scale.y);
-
       this.setupTextureFragments(
         changedMaterial?.texture_fragments(),
         tileMapByHandle,
@@ -968,7 +963,29 @@ if (uPickable > 0.) {
         textureFragmentIndex,
         tileMeshToFragmentIds,
       );
-      this.setUniforms(changedMaterial, maxTextures);
+
+      // Set uniforms (this may switch material type for hillshade)
+      // Pass uvTransform from mesh data so new material gets correct values immediately
+      this.setUniforms(
+        changedMaterial,
+        maxTextures,
+        globe,
+        tileMesh.uv_transform,
+      );
+
+      // Update UV transform AFTER material switch to ensure it's set on the current material
+      // This handles the case where material didn't switch
+      if (!this.material.userData.uvTransform) {
+        this.material.userData.uvTransform = {
+          offset: new Vector2(),
+          scale: new Vector2(1, 1),
+        };
+      }
+
+      const { offset, scale } = tileMesh.uv_transform;
+      this.material.userData.uvTransform.offset.set(offset.x, offset.y);
+      this.material.userData.uvTransform.scale.set(scale.x, scale.y);
+
       this.setupTextures(
         loadedTexs,
         textureOptions,
@@ -1117,7 +1134,59 @@ if (uPickable > 0.) {
     }
   }
 
-  private setUniforms(mat: RasterTileInternalMaterial, maxTextures: number) {
+  /**
+   * Ensures the material type matches the hillshade requirements.
+   * Switches between MeshBasicMaterial and MeshLambertMaterial as needed.
+   * - MeshLambertMaterial: Required for hillshade (supports normal-based lighting)
+   * - MeshBasicMaterial: Used when no hillshade (more performant)
+   */
+  private ensureCorrectMaterialType(
+    mat: RasterTileInternalMaterial,
+    globe: Globe,
+    uvTransform: {
+      offset: { x: number; y: number };
+      scale: { x: number; y: number };
+    },
+  ): void {
+    // Determine if hillshade is present in the material configuration
+    const needsLambert = mat.isHillshades?.some((v) => v !== 0) ?? false;
+    const isLambert = this.material instanceof MeshLambertMaterial;
+
+    if (needsLambert !== isLambert) {
+      // Material type needs to change - recreate the material
+      console.log(
+        `[TileMesh] Switching material: ${isLambert ? "Lambert→Basic" : "Basic→Lambert"} for tile ${this.handle}`,
+      );
+      const oldMaterial = this.material;
+
+      // Create new material with correct type
+      this.material = this.initMaterial(mat, this.ctx.uniforms, globe);
+
+      // Set up uvTransform immediately with correct values from mesh data
+      // This prevents shader from compiling with default/stale values
+      this.material.userData.uvTransform = {
+        offset: new Vector2(uvTransform.offset.x, uvTransform.offset.y),
+        scale: new Vector2(uvTransform.scale.x, uvTransform.scale.y),
+      };
+
+      // Dispose old material
+      oldMaterial.dispose();
+    }
+  }
+
+  private setUniforms(
+    mat: RasterTileInternalMaterial,
+    maxTextures: number,
+    globe: Globe,
+    uvTransform: {
+      offset: { x: number; y: number };
+      scale: { x: number; y: number };
+    },
+  ) {
+    // Ensure material type is correct before setting up userData
+    // Pass uvTransform so new material gets correct values immediately
+    this.ensureCorrectMaterialType(mat, globe, uvTransform);
+
     const m = this.material;
 
     if (!m.userData.shows) {

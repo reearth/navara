@@ -87,7 +87,8 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
   };
 
   // Add hillshade layer
-  const hillshadeLayer = view.addLayer(layerDef);
+  let hillshadeLayer: ReturnType<typeof view.addLayer> | null =
+    view.addLayer(layerDef);
 
   view.setCamera({
     lng: 173.8798307478,
@@ -108,19 +109,36 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
   showAttributions([TERRAIN_DATASETS.mapterhorn, TILE_DATASETS.openstreetmap]);
 
   const params = {
+    enable: true,
     exaggeration: 0.5,
   };
 
   const changeFunc = () => {
-    if (!layerDef.hillshade || !hillshadeLayer) {
+    if (!layerDef.hillshade) {
       return;
     }
     layerDef.hillshade.exaggeration = params.exaggeration;
-    view.updateLayerById(hillshadeLayer.id, layerDef);
+
+    if (hillshadeLayer) {
+      view.updateLayerById(hillshadeLayer.id, layerDef);
+    }
   };
 
   const folder = pane.addFolder({
-    title: "Hillshade Exaggeration",
+    title: "Hillshade",
+  });
+
+  folder.addBinding(params, "enable").on("change", () => {
+    if (params.enable) {
+      // Add hillshade layer
+      hillshadeLayer = view.addLayer(layerDef);
+    } else {
+      // Remove hillshade layer
+      if (hillshadeLayer) {
+        view.deleteLayerById(hillshadeLayer.id);
+        hillshadeLayer = null;
+      }
+    }
   });
 
   folder
