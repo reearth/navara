@@ -490,8 +490,10 @@ impl Core {
         pitch: Option<FloatType>,
         heading: Option<FloatType>,
         roll: Option<FloatType>,
+        distance: Option<FloatType>,
     ) {
-        self.app.change_camera(position, pitch, heading, roll);
+        self.app
+            .change_camera(position, pitch, heading, roll, distance);
     }
 
     #[wasm_bindgen(js_name = moveCamera)]
@@ -504,6 +506,7 @@ impl Core {
         self.app.move_camera_with_direction(direction, amount);
     }
 
+    #[allow(clippy::too_many_arguments)]
     #[wasm_bindgen(js_name = flyTo)]
     pub fn fly_to(
         &mut self,
@@ -513,9 +516,11 @@ impl Core {
         roll: Option<FloatType>,
         duration: Option<FloatType>,
         max_height: Option<FloatType>,
+        distance: Option<FloatType>,
     ) {
-        self.app
-            .fly_to(position, pitch, heading, roll, duration, max_height);
+        self.app.fly_to(
+            position, pitch, heading, roll, duration, max_height, distance,
+        );
     }
 
     #[wasm_bindgen(js_name = lookAt)]

@@ -115,6 +115,7 @@ pub fn update(
                 &mut orbit,
                 &Some(position),
                 &Some(orientation),
+                None,
             );
 
             if flight.is_flying() {
@@ -254,8 +255,17 @@ fn process_camera_event(
         CameraEvent::Change {
             position,
             orientation,
+            distance,
         } => {
-            apply_camera_change(window, frustum, transform, orbit, position, orientation);
+            apply_camera_change(
+                window,
+                frustum,
+                transform,
+                orbit,
+                position,
+                orientation,
+                *distance,
+            );
 
             // stop camera movement when changing position or orientation
             inertia.stop_all(controller);
@@ -279,10 +289,42 @@ fn process_camera_event(
             orientation,
             duration,
             max_height,
+            distance,
         } => {
             if let Some(pos) = position {
                 let orient = orientation.unwrap_or(CameraOrientation::default());
-                if flight.fly_to(transform, frustum, pos, &orient, duration, max_height) {
+
+                // When distance is specified, convert the target geographic point + orientation + distance
+                // into the camera's own geographic position, then use that for flight interpolation.
+                let effective_pos = if let Some(dist) = distance {
+                    let heading = -orient.get_heading();
+                    let pitch = orient.get_pitch() + 90.0;
+                    let roll = orient.get_roll();
+
+                    let ground_point = Vec3::new(pos.x, pos.y, 0.0);
+                    let ellipsoid_surface = CRS::Geographic.to_vec3(WGS84_64, ground_point, 0.0);
+                    let target_dir = ellipsoid_surface.normalize_or_zero();
+                    let world_quat = calculate_world_quat(target_dir, heading);
+                    let (world_forward, _) =
+                        apply_orientation_changes(world_quat, Vec3::Y, Vec3::Z, pitch, roll);
+                    // Use full position (including altitude) as the target point
+                    let target = CRS::Geographic.to_vec3(WGS84_64, *pos, 0.0);
+                    let camera_world = target - world_forward * dist.max(1.0);
+                    let lle = CRS::Geocentric.to_lle(WGS84_64, camera_world, 0.0);
+                    let lle_deg = lle.deg();
+                    Vec3::new(lle_deg.lng.val(), lle_deg.lat.val(), lle_deg.height.val())
+                } else {
+                    *pos
+                };
+
+                if flight.fly_to(
+                    transform,
+                    frustum,
+                    &effective_pos,
+                    &orient,
+                    duration,
+                    max_height,
+                ) {
                     // Start the flight animation and stop current inertia
                     inertia.stop_all(controller);
                     if is_cam_moving {
@@ -836,6 +878,7 @@ fn apply_camera_change(
     orbit: &mut Orbit,
     position: &Option<Vec3>,
     orientation: &Option<CameraOrientation>,
+    distance: Option<FloatType>,
 ) {
     let orient = orientation.unwrap_or_default();
 
@@ -865,20 +908,35 @@ fn apply_camera_change(
     // Calculate new world position and target direction
     // This differs based on whether we have a new position or are using existing one
     let (world_position, target_dir) = if let Some(pos) = position {
-        let altitude = pos.z.max(1.0); // Ensure minimum altitude of 1.0 for stability
-
         // Create ground point (ignoring altitude for now)
         let ground_point = Vec3::new(pos.x, pos.y, 0.0);
         // Convert geographic coordinates to world-space position
         let pivot = CRS::Geographic.to_vec3(WGS84_64, ground_point, 0.0);
         let target_dir = pivot.normalize_or_zero();
 
-        // Calculate camera offset from ground point
-        let cam_offset = -Vec3::Y * altitude;
         let world_quat = calculate_world_quat(target_dir, heading);
 
-        // Final world position is ground point plus camera offset
-        (pivot + (world_quat * cam_offset), target_dir)
+        let world_position = if let Some(dist) = distance {
+            // Distance-based: place camera `dist` meters from the target along the reverse forward direction.
+            // Use the full position (including altitude) as the target point so that elevated
+            // targets (e.g. a mountain summit at pos.z > 0) are correctly framed.
+            let target = CRS::Geographic.to_vec3(WGS84_64, *pos, 0.0);
+            let (world_forward, _) = apply_orientation_changes(
+                world_quat,
+                orbit.local_forward,
+                orbit.local_up,
+                pitch,
+                roll,
+            );
+            target - world_forward * dist.max(1.0)
+        } else {
+            // Altitude-based: place camera `altitude` meters above the target point along the surface normal.
+            let altitude = pos.z.max(1.0);
+            let cam_offset = -Vec3::Y * altitude;
+            pivot + (world_quat * cam_offset)
+        };
+
+        (world_position, target_dir)
     } else {
         // When no position provided, use existing transform position
         let mut position = transform.translation;

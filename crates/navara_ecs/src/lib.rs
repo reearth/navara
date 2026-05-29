@@ -598,6 +598,7 @@ impl App {
         pitch: Option<FloatType>,
         heading: Option<FloatType>,
         roll: Option<FloatType>,
+        distance: Option<FloatType>,
     ) {
         let pos = position.and_then(|v| (v.len() == 3).then(|| Vec3::new(v[0], v[1], v[2])));
         self.app.world_mut().write_message(CameraEvent::Change {
@@ -607,6 +608,7 @@ impl App {
                 heading,
                 roll,
             }),
+            distance,
         });
     }
 
@@ -627,6 +629,7 @@ impl App {
         });
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn fly_to(
         &mut self,
         position: Option<Vec<FloatType>>,
@@ -635,6 +638,7 @@ impl App {
         roll: Option<FloatType>,
         duration: Option<FloatType>,
         max_height: Option<FloatType>,
+        distance: Option<FloatType>,
     ) {
         let pos = position.and_then(|v| (v.len() == 3).then(|| Vec3::new(v[0], v[1], v[2])));
         self.app.world_mut().write_message(CameraEvent::FlyTo {
@@ -646,6 +650,7 @@ impl App {
             }),
             duration,
             max_height,
+            distance,
         });
     }
 

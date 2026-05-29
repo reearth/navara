@@ -1588,11 +1588,11 @@ export default class ThreeView<
       return Number.isFinite(value) && value != null;
     }
 
+    const lng = camPos.lng;
+    const lat = camPos.lat;
     const position =
-      checkFinite(camPos.lng) &&
-      checkFinite(camPos.lat) &&
-      checkFinite(camPos.height)
-        ? new Float64Array([camPos.lng, camPos.lat, camPos.height])
+      checkFinite(lng) && checkFinite(lat)
+        ? new Float64Array([lng, lat, camPos.height ?? 0])
         : null;
 
     this._core?.changeCamera(
@@ -1600,6 +1600,7 @@ export default class ThreeView<
       camPos.pitch,
       camPos.heading,
       camPos.roll,
+      camPos.distance,
     );
   }
 
@@ -1648,25 +1649,29 @@ export default class ThreeView<
 
   /**
    * Animates the camera to fly to a target position.
-   * @param camPos - Target position with required lng (degrees), lat (degrees), height (meters), and optional pitch, heading, roll (degrees)
+   * @param camPos - Target position with required lng/lat (degrees). Provide either `height` (meters above the ellipsoid)
+   *   or `distance` (meters from the target point along the camera forward direction). Optional pitch, heading, roll (degrees).
    * @param duration - Animation duration in milliseconds
    * @param maxHeight - Maximum height during the flight arc in meters
    */
   flyTo(
     camPos: CameraPosition &
-      Required<Pick<CameraPosition, "lng" | "lat" | "height">>,
+      Required<Pick<CameraPosition, "lng" | "lat">> &
+      ({ height: number } | { distance: number }),
     duration?: number,
     maxHeight?: number,
   ) {
-    const position = new Float64Array([camPos.lng, camPos.lat, camPos.height]);
+    const pos = camPos as CameraPosition & { lng: number; lat: number };
+    const position = new Float64Array([pos.lng, pos.lat, pos.height ?? 0]);
 
     this._core?.flyTo(
       position,
-      camPos.pitch,
-      camPos.heading,
-      camPos.roll,
+      pos.pitch,
+      pos.heading,
+      pos.roll,
       duration,
       maxHeight,
+      pos.distance,
     );
   }
 
