@@ -112,8 +112,8 @@ const run = async () => {
       transparent: true,
       opacity: 1.0,
       children: buildings,
-      effectIds: [bloomEffect.id],
     },
+    effectIds: [bloomEffect.id],
     matrixWorld,
   });
 

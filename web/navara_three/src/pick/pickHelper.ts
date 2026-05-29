@@ -7,6 +7,7 @@ import {
   Color,
   Scene,
   Vector2,
+  Group,
 } from "three";
 
 import { BufferView } from "../bufferView";
@@ -42,6 +43,18 @@ export class PickHelper {
 
   /** Dedicated scene used only during the pick render. */
   private readonly pickScene = new Scene();
+
+  /**
+   * The lights group from the main render (typically `_scenes.light`).
+   *
+   * Adding the same lights to the pick scene before rendering ensures the
+   * `WebGLNodesHandler` `SceneContext` computes an identical `sceneHash` for
+   * both the main render and the pick render. When the hash matches, Three.js
+   * reuses the already-compiled WebGL programs rather than creating new ones,
+   * which prevents `WebGLUniformsGroups.allocateBindingPointIndex` from
+   * exhausting the 24 available UBO binding slots.
+   */
+  private _lightsGroup?: Group;
 
   private debugBufferView?: BufferView;
   private debugRenderTarget?: WebGLRenderTarget;
@@ -106,6 +119,10 @@ export class PickHelper {
     }
   }
 
+  setLightsGroup(group: Group): void {
+    this._lightsGroup = group;
+  }
+
   enablePick(bPick: boolean) {
     if (bPick) {
       this.element.addEventListener("mousedown", this.mouseDownHandler);
@@ -167,6 +184,11 @@ export class PickHelper {
     const origRenderTarget = this._renderer.getRenderTarget();
     const origAutoClear = this._renderer.autoClear;
 
+    // Mirror _renderWithLight: add the scene's lights group so
+    // WebGLNodesHandler computes the same sceneHash as the main MRT pass and
+    // can reuse already-compiled programs instead of allocating new UBO
+    // binding points (which would exhaust WebGL's MAX_UNIFORM_BUFFER_BINDINGS).
+    if (this._lightsGroup) this.pickScene.add(this._lightsGroup);
     const teardown = this.stagePickables(pickingCoord);
 
     this._renderer.setClearColor(0x000000, 1);
@@ -176,6 +198,7 @@ export class PickHelper {
     this._renderer.render(this.pickScene, this._camera);
 
     teardown();
+    if (this._lightsGroup) this.pickScene.remove(this._lightsGroup);
 
     this._renderer.setRenderTarget(origRenderTarget);
     this._renderer.setClearColor(origClearColor, origClearAlpha);
