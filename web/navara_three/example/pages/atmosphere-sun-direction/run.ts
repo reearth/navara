@@ -1,10 +1,10 @@
-import { AstroTime, Body, Equator, Horizon, Observer } from "astronomy-engine";
 import ThreeView, { TERRARIUM_ELEVATION_DECODER } from "@navara/three";
 import { ToneMappingMode } from "@navara/three_default_descs";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
+import { AstroTime, Body, Equator, Horizon, Observer } from "astronomy-engine";
 import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../helpers/attributions";
@@ -13,11 +13,51 @@ import { TERRAIN_DATASETS, TILE_DATASETS } from "../../helpers/constants";
 export type CustomDescriptions = DefaultDescriptions;
 
 const LOCATIONS = [
-  { name: "Tokyo",    lng: 139.69, lat: 35.68,  height: 500, distance: 15000, heading: 20,  pitch: -25 },
-  { name: "London",  lng: -0.12,  lat: 51.5,   height: 500, distance: 12000, heading: 0,   pitch: -25 },
-  { name: "New York",lng: -74.01, lat: 40.71,  height: 500, distance: 12000, heading: 330, pitch: -25 },
-  { name: "Sydney",  lng: 151.21, lat: -33.87, height: 500, distance: 12000, heading: 0,   pitch: -25 },
-  { name: "Dubai",   lng: 55.27,  lat: 25.2,   height: 500, distance: 15000, heading: 10,  pitch: -25 },
+  {
+    name: "Tokyo",
+    lng: 139.69,
+    lat: 35.68,
+    height: 500,
+    distance: 15000,
+    heading: 20,
+    pitch: -25,
+  },
+  {
+    name: "London",
+    lng: -0.12,
+    lat: 51.5,
+    height: 500,
+    distance: 12000,
+    heading: 0,
+    pitch: -25,
+  },
+  {
+    name: "New York",
+    lng: -74.01,
+    lat: 40.71,
+    height: 500,
+    distance: 12000,
+    heading: 330,
+    pitch: -25,
+  },
+  {
+    name: "Sydney",
+    lng: 151.21,
+    lat: -33.87,
+    height: 500,
+    distance: 12000,
+    heading: 0,
+    pitch: -25,
+  },
+  {
+    name: "Dubai",
+    lng: 55.27,
+    lat: 25.2,
+    height: 500,
+    distance: 15000,
+    heading: 10,
+    pitch: -25,
+  },
 ] as const;
 
 function formatHHMM(decimalHours: number): string {
@@ -68,7 +108,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
 
   // Start over Tokyo with 8 AM local solar time (UTC = 8 - 139.69/15)
   const solarTarget = 8.0;
-  const initialUtcH = ((solarTarget - LOCATIONS[0].lng / 15) % 24 + 24) % 24;
+  const initialUtcH = (((solarTarget - LOCATIONS[0].lng / 15) % 24) + 24) % 24;
   const initialDate = new Date("2024-06-21T00:00:00Z");
   initialDate.setUTCHours(
     Math.floor(initialUtcH),
@@ -115,7 +155,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     const { lng, lat } = view.camera.positionGeographic;
     const utcH = d.getUTCHours() + d.getUTCMinutes() / 60;
 
-    info.solarTime = formatHHMM(((utcH + lng / 15) % 24 + 24) % 24);
+    info.solarTime = formatHHMM((((utcH + lng / 15) % 24) + 24) % 24);
     info.utc = d.toISOString().slice(11, 16);
 
     const time = new AstroTime(d);
@@ -142,7 +182,9 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   };
 
   // setDateFromCameraAt: maintains local solar time (hour angle) across locations
-  const solarTimeFolder = pane.addFolder({ title: "Match solar time (setDateFromCameraAt)" });
+  const solarTimeFolder = pane.addFolder({
+    title: "Match solar time (setDateFromCameraAt)",
+  });
   for (const loc of LOCATIONS) {
     solarTimeFolder.addButton({ title: loc.name }).on("click", () => {
       view.atmosphere.setDateFromCameraAt({ lng: loc.lng });
@@ -151,7 +193,9 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   }
 
   // setElevationFromCameraAt: maintains sun elevation angle across locations
-  const elevFolder = pane.addFolder({ title: "Match elevation (setElevationFromCameraAt)" });
+  const elevFolder = pane.addFolder({
+    title: "Match elevation (setElevationFromCameraAt)",
+  });
   for (const loc of LOCATIONS) {
     elevFolder.addButton({ title: loc.name }).on("click", () => {
       view.atmosphere.setElevationFromCameraAt({ lng: loc.lng, lat: loc.lat });

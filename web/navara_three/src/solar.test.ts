@@ -1,9 +1,4 @@
-import {
-  AstroTime,
-  Body,
-  HourAngle,
-  Observer,
-} from "astronomy-engine";
+import { AstroTime, Body, HourAngle, Observer } from "astronomy-engine";
 import { describe, expect, it } from "vitest";
 
 import {

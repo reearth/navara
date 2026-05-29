@@ -37,7 +37,9 @@ export function shiftDateToHourAngle(
   const time = new AstroTime(date);
   const ha = HourAngle(Body.Sun, time, new Observer(0, fromLng, 0));
   const dayStart = new AstroTime(
-    new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())),
+    new Date(
+      Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
+    ),
   );
   return SearchHourAngle(
     Body.Sun,
@@ -71,7 +73,9 @@ export function shiftDateToElevation(
 
   const observer = new Observer(targetLat, targetLng, 0);
   const dayStart = new AstroTime(
-    new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())),
+    new Date(
+      Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
+    ),
   );
 
   const noonTime = SearchHourAngle(Body.Sun, observer, 0, dayStart, 1).time;

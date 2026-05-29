@@ -105,7 +105,6 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
    */
   private _camera: ThreeViewCamera | undefined;
 
-
   /**
    * Creates a new Atmosphere instance.
    * @param renderer - The WebGL renderer used for texture type detection.
@@ -341,8 +340,10 @@ export class Atmosphere extends EventHandler<AtmosphereEvents> {
    * @param to - Target location (both `lat` and `lng` required).
    */
   setElevationFromCameraAt(to: { lat: number; lng: number }): void {
-    const { lng: fromLng, lat: fromLat } =
-      this._camera?.positionGeographic ?? { lng: 0, lat: 0 };
+    const { lng: fromLng, lat: fromLat } = this._camera?.positionGeographic ?? {
+      lng: 0,
+      lat: 0,
+    };
     this.setElevationAt({ lat: fromLat, lng: fromLng }, to);
   }
 }
