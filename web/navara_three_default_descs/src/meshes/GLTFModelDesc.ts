@@ -1,22 +1,16 @@
 import type ThreeView from "@navara/three";
 import {
-  MeshDesc,
-  PickableMeshWrapper,
-  type MeshConfig,
-  type MeshUpdate,
-  type ViewContext,
-  createShadowMapDepthEnhancer,
-  type ShadowMapDepthSupportedMaterial,
-  setupRTEBeforeRender,
-  type RTEUserData,
-  createReplacer,
+  Color,
+  NewMeshDesc,
   encodePositionRTE,
   composeWorldMatrixForRTE,
+  type MeshDescConfig,
+  type MeshDescUpdate,
+  type ViewContext,
 } from "@navara/three";
-import ProjectVertexRteModel from "@shaders/glsl/chunks/project_vertex_rte_model.glsl";
-import RteUniformParsVertex from "@shaders/glsl/chunks/rte_uniform_pars_vertex.glsl";
 import {
   Group,
+  Matrix4,
   Mesh,
   AnimationMixer,
   AnimationAction,
@@ -24,19 +18,18 @@ import {
   LoopRepeat,
   LoopOnce,
   Material,
-  Matrix4,
   Vector3,
-  BufferGeometry,
-  type NormalBufferAttributes,
-  RGBADepthPacking,
-  ShaderChunk,
 } from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import type { GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { uniform } from "three/tsl";
+import { NodeMaterial } from "three/webgpu";
+
+import { applyRTEToNodeMaterial, convertToNodeMaterial } from "../nodes";
 
 type Description = {
   gltfModel?: {
-    url: string;
+    url?: string;
     castShadow?: boolean;
     receiveShadow?: boolean;
 
@@ -48,6 +41,11 @@ type Description = {
     animationLoop?: boolean; // default: true
     animationCrossfadeDuration?: number; // default: 0.3
     animationAutoPlay?: boolean; // default: false
+
+    // MRT emissive uniforms — drive additive glow on top of the model's
+    // own material emissive (e.g. for picking highlight).
+    emissiveColor?: Color;
+    emissiveIntensity?: number;
   };
 };
 
@@ -60,9 +58,9 @@ export const DEFAULT_GLTF_MODEL_DESCRIPTION: NonNullable<
   animationCrossfadeDuration: 0.3,
 };
 
-export type GLTFModelConfig = MeshConfig & Description & { pickable?: boolean };
+export type GLTFModelConfig = MeshDescConfig & Description;
 
-export type GLTFModelUpdate = MeshUpdate & Description;
+export type GLTFModelUpdate = MeshDescUpdate & Description;
 
 // Type definition for animation details
 export type AnimationDetails = {
@@ -93,7 +91,7 @@ export type GLTFModelEvent = {
   needsUpdate: () => void;
 };
 
-export class GLTFModelDesc extends MeshDesc<
+export class GLTFModelDesc extends NewMeshDesc<
   GLTFModelConfig,
   GLTFModelUpdate,
   Group,
@@ -122,24 +120,14 @@ export class GLTFModelDesc extends MeshDesc<
   >();
   private isBlendMode = false;
 
-  // RTE (Relative-To-Eye) fields
+  // RTE (Relative-To-Eye) state
   private originalWorldPosition: Vector3 = new Vector3();
-  private modelPositionHigh: Vector3 = new Vector3();
-  private modelPositionLow: Vector3 = new Vector3();
-
-  // Shared RTE uniforms for all materials in this model
-  private rteUserData: RTEUserData = {
-    modelViewMatrixRTE: { value: new Matrix4() },
-    cameraPositionHigh: { value: new Vector3() },
-    cameraPositionLow: { value: new Vector3() },
-  };
-
-  private pickWrapper?: PickableMeshWrapper;
-
-  /** The batch ID assigned to this model when picking is enabled (after load). */
-  get batchId(): number | undefined {
-    return this.pickWrapper?.batchId;
-  }
+  private readonly _rtePosHigh = uniform(new Vector3());
+  private readonly _rtePosLow = uniform(new Vector3());
+  // f32 uniform holding R⁻¹×ecefPos (origin in local space) for castShadowPositionNode.
+  // Updated in applyRTETransform. See the TODO in setupNodeMaterial for precision caveats.
+  private readonly _localOriginOffset = uniform(new Vector3());
+  private castShadow = false;
 
   constructor(view: ThreeView, ctx: ViewContext, config: GLTFModelConfig) {
     super(view, ctx, config);
@@ -151,31 +139,22 @@ export class GLTFModelDesc extends MeshDesc<
       },
     };
     this.loader = new GLTFLoader();
+
+    if (config.gltfModel?.emissiveColor !== undefined) {
+      this.emissive = config.gltfModel.emissiveColor;
+    }
+    if (config.gltfModel?.emissiveIntensity !== undefined) {
+      this.emissiveIntensity = config.gltfModel.emissiveIntensity;
+    }
   }
 
   override onCreate() {
-    this._instance = this.createMesh();
+    super.onCreate();
+    this.applyRTETransform();
 
-    if (this.matrixWorld) {
-      // Decompose effective transform into RTE position + rotation/scale matrix
-      this.applyRTETransform();
-    } else {
-      // RTE-only mode: keep raw.position at (0,0,0)
-      // The world position is stored in this.position and encoded in RTE uniforms
-      if (this.scale) {
-        this.raw?.scale.copy(this.scale);
-      }
-
-      if (this.rotation) {
-        this.raw?.rotation.set(
-          this.rotation.x,
-          this.rotation.y,
-          this.rotation.z,
-        );
-      }
+    if (this._instance) {
+      this._instance.visible = this.visible;
     }
-
-    this._instance.visible = this.visible;
 
     this.onPassKeyChange();
   }
@@ -202,11 +181,47 @@ export class GLTFModelDesc extends MeshDesc<
     return group;
   }
 
+  /**
+   * Override the base extractor — our `raw` is a {@link Group} that contains
+   * child {@link Mesh}es with their own materials. Walk the tree and collect
+   * every {@link NodeMaterial} so `MeshDescBase` can wire MRT/picking slots
+   * to all of them.
+   */
+  protected override extractNodeMaterial(): NodeMaterial[] {
+    const result: NodeMaterial[] = [];
+    const raw = this.raw;
+    if (!raw) return result;
+    raw.traverse((child) => {
+      if (!(child instanceof Mesh)) return;
+      const mats = Array.isArray(child.material)
+        ? child.material
+        : [child.material];
+      for (const m of mats) {
+        if (m instanceof NodeMaterial) result.push(m);
+      }
+    });
+    return result;
+  }
+
+  /**
+   * Compose MRT slots (via super) + the RTE vertex transform. Every loaded
+   * GLTF material receives the same per-instance `rtePosHigh/Low` uniforms,
+   * and the global camera uniforms in `highPrecisionNode` provide the
+   * eye-relative offset.
+   */
+  protected override setupNodeMaterial(material: NodeMaterial): void {
+    super.setupNodeMaterial(material);
+    applyRTEToNodeMaterial(material, {
+      rtePosHigh: this._rtePosHigh,
+      rtePosLow: this._rtePosLow,
+      localOriginOffset: this._localOriginOffset,
+    });
+  }
+
   private async loadModel(url: string, targetGroup: Group): Promise<void> {
     try {
       const gltf = await this.loader.loadAsync(url);
 
-      // Store GLTF data for animation access
       this.gltf = gltf;
 
       // Clear any existing children
@@ -214,20 +229,13 @@ export class GLTFModelDesc extends MeshDesc<
         targetGroup.remove(targetGroup.children[0]);
       }
 
-      // Add the loaded model
       targetGroup.add(gltf.scene);
       this.setupModel(targetGroup);
 
-      if (this.config.pickable) {
-        if (!this.pickWrapper) {
-          this.pickWrapper = new PickableMeshWrapper(targetGroup, this.ctx);
-          this.ctx.registerPickableMesh(this.id, this.pickWrapper);
-        } else {
-          // Model was reloaded — inject picking into the newly loaded
-          // meshes' materials (preserves existing batchId)
-          this.pickWrapper.syncMaterials();
-        }
-      }
+      // Materials only exist after the GLTF loads, so MRT/picking/RTE
+      // wiring done in `super.onCreate()` was a no-op. Re-run it now that
+      // `extractNodeMaterial()` will actually return materials.
+      this.refreshNodeMaterial();
 
       this.emit("needsUpdate");
       this.emit("load");
@@ -241,188 +249,129 @@ export class GLTFModelDesc extends MeshDesc<
 
     if (!modelConfig) return;
 
-    // When matrixWorld is set, applyRTETransform() already encoded the world position.
-    // Only encode from this.position when there is no frame matrix.
-    if (!this.matrixWorld && this.position) {
-      this.setPositionRTE(
-        new Vector3(this.position.x, this.position.y, this.position.z),
-      );
-    }
+    this.convertMaterialsToTSL(model);
 
-    let setRteCbk = false;
-    const IDENTITY_MATRIX = new Matrix4();
+    this.castShadow = !!modelConfig.castShadow;
 
-    // Setup shadows and CSM
     model.traverse((child) => {
       if (child instanceof Mesh) {
         if (modelConfig.castShadow) child.castShadow = true;
         if (modelConfig.receiveShadow) child.receiveShadow = true;
-
+        // RTE-encoded positions sit far away from the camera in world space,
+        // so frustum culling against the original mesh AABB is unreliable.
         child.frustumCulled = false;
-        this.setupRTEShadersForMesh(child);
 
-        this.initDepthMaterial(child);
+        this._setupShadowDepth(child);
 
-        // Set RTE callback only once for the first mesh (shared RTE uniforms)
-        if (!setRteCbk) {
-          const rteCallback = setupRTEBeforeRender(
-            child,
-            this.rteUserData,
-            IDENTITY_MATRIX,
-          );
-          if (rteCallback) {
-            child.onBeforeRender = rteCallback;
-            child.onBeforeShadow = rteCallback;
-          }
-          setRteCbk = true;
-        }
-
-        // Setup CSM for materials if shadows are enabled
-        if (Array.isArray(child.material)) {
-          child.material.forEach((mat) => {
-            this.ctx.applyShadowMaterial(mat);
-          });
-        } else {
-          this.ctx.applyShadowMaterial(child.material);
+        const mats = Array.isArray(child.material)
+          ? child.material
+          : [child.material];
+        for (const mat of mats) {
+          this.ctx.applyShadowMaterial(mat);
         }
       }
     });
   }
 
-  /**
-   * Override a material that is used to generate a shadow map.
-   * Uses the shadowMapDepthEnhancer to inject shadow map depth shaders.
-   */
-  private initDepthMaterial(
-    mesh: Mesh<BufferGeometry<NormalBufferAttributes>>,
-  ) {
-    const origMaterial = Array.isArray(mesh.material)
-      ? mesh.material[0]
-      : mesh.material;
-    mesh.customDepthMaterial = origMaterial.clone();
-    mesh.customDepthMaterial.needsUpdate = true;
-
-    // Create enhancer for depth material
-    const enhancer = createShadowMapDepthEnhancer(
-      mesh.customDepthMaterial as ShadowMapDepthSupportedMaterial,
-    );
-
-    // Mount the enhancer with RTE uniforms
-    enhancer.mount({});
-
-    // Set up custom program cache key
-    mesh.customDepthMaterial.customProgramCacheKey = () =>
-      enhancer.programCacheKey();
-
-    // Set up onBeforeCompile using the enhancer's transformShader
-    mesh.customDepthMaterial.onBeforeCompile = (shader, renderer) => {
-      // The original material's state is shared through `origMaterial`.
-      origMaterial.onBeforeCompile(shader, renderer);
-
-      enhancer.transformShader(shader);
-
-      shader.defines ??= {};
-      Object.assign(shader.defines, origMaterial.userData?.defines || {});
-      shader.defines["USE_SHADOWMAP_DEPTH"] = 1;
-      shader.defines["DEPTH_PACKING"] = RGBADepthPacking;
+  // TODO(webgpu-migration): remove once on WebGPU.
+  // WebGL ignores castShadowPositionNode, so this hook patches modelViewMatrix
+  // directly with the full ECEF position (CPU f64) to prevent the shadow from
+  // rendering at the globe origin (where the RTE-stripped matrixWorld points).
+  private _setupShadowDepth(mesh: Mesh): void {
+    const stripped = new Vector3();
+    const fullMatrix = new Matrix4();
+    mesh.onBeforeShadow = (
+      _renderer: unknown,
+      _object: unknown,
+      _camera: unknown,
+      shadowCamera: { matrixWorldInverse: Matrix4 },
+    ) => {
+      if (!this.castShadow) return;
+      stripped.setFromMatrixPosition(mesh.matrixWorld);
+      fullMatrix.copy(mesh.matrixWorld);
+      fullMatrix.setPosition(
+        this.originalWorldPosition.x + stripped.x,
+        this.originalWorldPosition.y + stripped.y,
+        this.originalWorldPosition.z + stripped.z,
+      );
+      mesh.modelViewMatrix.multiplyMatrices(
+        shadowCamera.matrixWorldInverse,
+        fullMatrix,
+      );
     };
   }
 
-  private setPositionRTE(worldPosition: Vector3): void {
-    // Store the original world position
-    this.originalWorldPosition.set(
-      worldPosition.x,
-      worldPosition.y,
-      worldPosition.z,
-    );
+  /**
+   * Replace each loaded Three.js Material with its NodeMaterial counterpart
+   * so the rest of the TSL pipeline (`MeshDescBase` MRT slots,
+   * `highPrecisionUniformLocalVertexNode` RTE transform, picking wrap) can
+   * attach. We invoke the base material's `copy()` (not `NodeMaterial.copy()`)
+   * because the latter clobbers `vertexNode` / `fragmentNode` / `outputNode`
+   * with `undefined` when the source isn't a NodeMaterial — which then trips
+   * `NodeMaterial.setup()`'s `if (this.fragmentNode === null)` check (it's a
+   * strict null compare; undefined falls through to the else branch and
+   * crashes reading `.isOutputStructNode`).
+   */
+  private convertMaterialsToTSL(group: Group): void {
+    const cache = new WeakMap<Material, NodeMaterial>();
+    const toDispose = new Set<Material>();
+    group.traverse((child) => {
+      if (!(child instanceof Mesh)) return;
+      const originalList = Array.isArray(child.material)
+        ? child.material
+        : [child.material];
+      const converted = originalList.map((original) => {
+        if (original instanceof NodeMaterial) return original;
+        const cached = cache.get(original);
+        if (cached) return cached;
+        const next = convertToNodeMaterial(original);
+        cache.set(original, next);
+        toDispose.add(original);
+        return next;
+      });
+      child.material = Array.isArray(child.material) ? converted : converted[0];
+    });
+    for (const m of toDispose) m.dispose();
+  }
 
-    // Encode the world position as high/low components
+  private setPositionRTE(worldPosition: Vector3): void {
+    this.originalWorldPosition.copy(worldPosition);
     encodePositionRTE(
       worldPosition,
-      this.modelPositionHigh,
-      this.modelPositionLow,
+      this._rtePosHigh.value,
+      this._rtePosLow.value,
     );
   }
 
   /**
-   * Decomposes the effective world transform (matrixWorld * T*R*S) into:
-   * - Translation → encoded as RTE position uniforms
-   * - Rotation/Scale → set on raw.matrixWorld for the shader's modelMatrix uniform
+   * Decompose the effective world transform (matrixWorld * T*R*S) into:
+   * - Translation → encoded into the per-instance RTE uniforms
+   * - Rotation/scale → kept on `raw.matrixWorld` so the RTE vertex node's
+   *   `modelViewMatrixRTEUniform * modelWorldMatrix` (mat4×mat4) can rotate
+   *   and scale `positionLocal` correctly — the earlier mat3()-based approach
+   *   caused camera-move jitter and was replaced with this single mat4 multiply
    *
-   * This allows matrixWorld (e.g. NUE-to-ECEF frame) to work correctly with RTE
-   * by keeping the high-precision position in uniforms while the shader's modelMatrix
-   * only contains rotation and scale.
+   * MeshDescBase.onCreate / onUpdateConfig already wrote a full transform
+   * (including translation) into matrixWorld; this overwrites it.
    */
   private applyRTETransform(): void {
-    if (!this.raw || !this.matrixWorld) return;
+    if (!this.raw) return;
 
-    // Compose frame * local, then split into RTE position and rotation/scale
     const { position, rotationScale } = composeWorldMatrixForRTE(
-      this.matrixWorld,
+      this.matrixWorld ?? this.matrix ?? new Matrix4(),
       this.composeLocalTransform(),
     );
     this.setPositionRTE(position);
 
+    // WebGPU castShadowPositionNode: R⁻¹ × ecefPos computed in JS f64 → f32 uniform
+    const invRotScale = rotationScale.clone().invert();
+    this._localOriginOffset.value.copy(position).applyMatrix4(invRotScale);
+
     this.raw.matrixAutoUpdate = false;
     this.raw.matrixWorldAutoUpdate = false;
     this.raw.matrixWorld.copy(rotationScale);
+    rotationScale.decompose(new Vector3(), this.raw.quaternion, this.raw.scale);
     this.raw.updateMatrixWorld();
-  }
-
-  private setupRTEShadersForMesh(mesh: Mesh): void {
-    const materials = Array.isArray(mesh.material)
-      ? mesh.material
-      : [mesh.material];
-
-    // Setup shader modifications BEFORE triggering recompilation
-    this.modifyMaterialForRTE(materials);
-  }
-
-  private modifyMaterialForRTE(materials: Material[]): void {
-    materials.forEach((material) => {
-      // Store original onBeforeCompile if it exists
-      const originalOnBeforeCompile = material.onBeforeCompile;
-
-      material.onBeforeCompile = (shader, renderer) => {
-        // Call original onBeforeCompile if it existed
-        if (originalOnBeforeCompile) {
-          originalOnBeforeCompile.call(material, shader, renderer);
-        }
-
-        // Add RTE uniforms to shader
-        shader.uniforms.u_cameraPositionHigh = this.rteUserData
-          .cameraPositionHigh || { value: new Vector3() };
-        shader.uniforms.u_cameraPositionLow = this.rteUserData
-          .cameraPositionLow || { value: new Vector3() };
-        shader.uniforms.rtePosHigh = { value: this.modelPositionHigh };
-        shader.uniforms.rtePosLow = { value: this.modelPositionLow };
-        shader.uniforms.modelViewMatrixRTE = this.rteUserData
-          .modelViewMatrixRTE || { value: new Matrix4() };
-
-        // Modify vertex shader with RTE chunks
-        shader.vertexShader = createReplacer(shader.vertexShader)
-          .replace(
-            "#include <common>",
-            `
-            #include <common>
-            ${RteUniformParsVertex}
-            `,
-          )
-          .replace("#include <project_vertex>", ProjectVertexRteModel)
-          .replace(
-            "#include <worldpos_vertex>",
-            createReplacer(ShaderChunk.worldpos_vertex)
-              // Use RTE absolute position.
-              .replace(
-                "vec4 worldPosition = vec4( transformed, 1.0 );",
-                "vec4 worldPosition = vec4( absTransformed, 1.0 );",
-              )
-              // RTE absolute position don't need modelMatrix multiplication.
-              .replace("worldPosition = modelMatrix * worldPosition;", "")
-              .source,
-          ).source;
-      };
-    });
   }
 
   onUpdateConfig(updates: GLTFModelUpdate): void {
@@ -434,10 +383,13 @@ export class GLTFModelDesc extends MeshDesc<
         modelConfig.castShadow !== undefined ||
         modelConfig.receiveShadow !== undefined
       ) {
+        this.castShadow = !!modelConfig.castShadow;
+
         this._instance.traverse((child) => {
           if (child instanceof Mesh) {
-            if (modelConfig.castShadow !== undefined)
+            if (modelConfig.castShadow !== undefined) {
               child.castShadow = modelConfig.castShadow;
+            }
             if (modelConfig.receiveShadow !== undefined)
               child.receiveShadow = modelConfig.receiveShadow;
           }
@@ -446,17 +398,14 @@ export class GLTFModelDesc extends MeshDesc<
 
       // Dynamic animation settings update
       if (this.mixer && this.actions.size > 0) {
-        // Speed change
         if (modelConfig.animationSpeed !== undefined) {
           this.setAnimationSpeed(modelConfig.animationSpeed);
         }
 
-        // Loop setting change
         if (modelConfig.animationLoop !== undefined) {
           this.setAnimationLoop(modelConfig.animationLoop);
         }
 
-        // Animation switching
         if (modelConfig.animationActiveClip !== undefined) {
           const duration = modelConfig.animationCrossfadeDuration ?? 0.3;
           if (this.currentAction) {
@@ -470,7 +419,6 @@ export class GLTFModelDesc extends MeshDesc<
           }
         }
 
-        // Animation enabled state change
         if (modelConfig.animationEnabled !== undefined) {
           if (modelConfig.animationEnabled) {
             this.resumeAnimation();
@@ -488,18 +436,23 @@ export class GLTFModelDesc extends MeshDesc<
         }
       }
 
+      if (modelConfig.emissiveColor !== undefined) {
+        this.emissive = modelConfig.emissiveColor;
+      }
+      if (modelConfig.emissiveIntensity !== undefined) {
+        this.emissiveIntensity = modelConfig.emissiveIntensity;
+      }
+
       this.emit("needsUpdate");
     }
 
-    // Handle spatial updates for RTE mode
     const hasSpatialChange =
       updates.matrixWorld !== undefined ||
       updates.position !== undefined ||
       updates.scale !== undefined ||
       updates.rotation !== undefined;
 
-    if (hasSpatialChange && (this.matrixWorld || updates.matrixWorld)) {
-      // matrixWorld path: recompute the full RTE decomposition
+    if (hasSpatialChange) {
       if (updates.matrixWorld !== undefined)
         this.matrixWorld = updates.matrixWorld;
       if (updates.position !== undefined) this.position = updates.position;
@@ -508,33 +461,16 @@ export class GLTFModelDesc extends MeshDesc<
 
       this.applyRTETransform();
 
-      // Strip spatial properties so super doesn't also apply them
+      // Strip spatial keys so super.onUpdateConfig() skips its own applyTransform()
       const { position, matrixWorld, scale, rotation, ...restUpdates } =
         updates;
       super.onUpdateConfig(restUpdates as GLTFModelUpdate);
-    } else if (updates.position !== undefined) {
-      // RTE-only path (no frame matrix)
-      this.position = updates.position;
-      this.setPositionRTE(
-        new Vector3(updates.position.x, updates.position.y, updates.position.z),
-      );
-      const { position, ...restUpdates } = updates;
-      super.onUpdateConfig(restUpdates);
     } else {
       super.onUpdateConfig(updates);
     }
   }
 
   override onDestroy(): void {
-    if (this.pickWrapper) {
-      this.ctx.unregisterPickableMesh(this.id);
-      this.pickWrapper = undefined;
-    }
-    super.onDestroy();
-  }
-
-  protected disposeMesh(): void {
-    // Clean up animation-related resources
     this.disposeAnimation();
 
     if (this._instance) {
@@ -550,44 +486,31 @@ export class GLTFModelDesc extends MeshDesc<
               child.material.dispose();
             }
           }
-          // Dispose custom depth material
-          if (child.customDepthMaterial) {
-            child.customDepthMaterial.dispose();
-          }
         }
       });
-      this._instance = undefined;
     }
+
+    super.onDestroy();
   }
 
   /**
    * Dispose animation-related resources
    */
   private disposeAnimationResources(): void {
-    // Stop current animation
     if (this.currentAction) {
       this.currentAction.stop();
       this.currentAction = null;
     }
-
-    // Clear animation actions
     this.actions.clear();
-
-    // Clear animation clips
     this.clips.clear();
-
-    // Dispose mixer
     if (this.mixer) {
       this.mixer.stopAllAction();
       this.mixer = null;
     }
-
-    // Clear GLTF data
     this.gltf = null;
   }
 
   private shouldInitializeAnimation(): boolean {
-    // Initialize only when GLTF data exists and has animation clips
     return (
       this.gltf !== null &&
       this.gltf.animations &&
@@ -607,21 +530,17 @@ export class GLTFModelDesc extends MeshDesc<
 
     const animConfig = this.config.gltfModel;
 
-    // Create AnimationMixer
     this.mixer = new AnimationMixer(this.gltf.scene);
 
-    // Apply configuration values
     const speed = animConfig?.animationSpeed ?? this.animationSpeed;
     const loop = animConfig?.animationLoop ?? this.isLooping;
 
-    // Register animation clips
     this.gltf.animations.forEach((clip) => {
       this.clips.set(clip.name, clip);
       if (this.mixer) {
         const action = this.mixer.clipAction(clip);
         this.actions.set(clip.name, action);
 
-        // Apply configuration values (align with three.js example semantics)
         action.setLoop(loop ? LoopRepeat : LoopOnce, Infinity);
         action.setEffectiveTimeScale(speed);
         action.setEffectiveWeight(0);
@@ -629,17 +548,14 @@ export class GLTFModelDesc extends MeshDesc<
       }
     });
 
-    // Reflect configuration values to internal state
     this.animationSpeed = speed;
     this.isLooping = loop;
 
-    // Handle auto-play settings
     if (animConfig?.animationAutoPlay && animConfig?.animationActiveClip) {
       const clipName = animConfig.animationActiveClip;
       if (this.clips.has(clipName)) {
         this.playAnimation(clipName);
 
-        // Set enabled state
         if (animConfig.animationEnabled === false) {
           this.pauseAnimation();
         }
@@ -648,7 +564,6 @@ export class GLTFModelDesc extends MeshDesc<
       }
     }
 
-    // Notify animation initialization completion
     this.emit("animationReady");
   }
 
@@ -656,19 +571,12 @@ export class GLTFModelDesc extends MeshDesc<
   // Getter APIs (get prefix)
   // ========================================
 
-  /**
-   * Get available animation clip names
-   */
   getAnimationAvailable(): string[] {
     return Array.from(this.clips.keys());
   }
 
-  /**
-   * Get animation details information
-   */
   getAnimationDetails(name?: string): AnimationDetails | AnimationDetails[] {
     if (name) {
-      // Get details for specific animation
       const clip = this.clips.get(name);
       const action = this.actions.get(name);
       if (!clip || !action) {
@@ -683,7 +591,6 @@ export class GLTFModelDesc extends MeshDesc<
         timeScale: action.timeScale,
       };
     } else {
-      // Get details for all animations
       return Array.from(this.clips.entries()).map(([name, clip]) => {
         const action = this.actions.get(name);
         if (!action) {
@@ -700,16 +607,12 @@ export class GLTFModelDesc extends MeshDesc<
     }
   }
 
-  /**
-   * Get current playback state
-   */
   getAnimationCurrentState(): AnimationState {
     const isPlaying = this.currentAction
       ? !this.currentAction.paused && this.currentAction.isRunning()
       : false;
     const currentAnimation = this.getCurrentAnimationName();
 
-    // Get blend animation states
     const blendAnimations = Array.from(
       this.activeBlendAnimations.entries(),
     ).map(([name, blendAnim]) => ({
@@ -718,7 +621,6 @@ export class GLTFModelDesc extends MeshDesc<
       isPlaying: !blendAnim.action.paused && blendAnim.action.isRunning(),
     }));
 
-    // Calculate playback time and progress
     let playbackTime = 0;
     let progress = 0;
     if (this.currentAction) {
@@ -739,16 +641,10 @@ export class GLTFModelDesc extends MeshDesc<
     };
   }
 
-  /**
-   * Get animation clip directly
-   */
   getAnimationClip(name: string): AnimationClip | null {
     return this.clips.get(name) || null;
   }
 
-  /**
-   * Get animation action directly
-   */
   getAnimationAction(name: string): AnimationAction | null {
     return this.actions.get(name) || null;
   }
@@ -757,25 +653,19 @@ export class GLTFModelDesc extends MeshDesc<
   // Control APIs (verb-based)
   // ========================================
 
-  /**
-   * Play specified animation
-   */
   playAnimation(name: string): boolean {
     if (!this.mixer || !this.actions.has(name)) {
       console.warn(`Animation clip "${name}" not found`);
       return false;
     }
 
-    // If currently in blend mode, stop all and exit blend mode
     if (this.isBlendMode) {
       this.stopAllAnimations();
       this.isBlendMode = false;
     } else if (this.currentAction) {
-      // Stop current single animation
       this.currentAction.stop();
     }
 
-    // Start new animation
     const action = this.actions.get(name);
     if (!action) {
       console.warn(`Animation action "${name}" not found`);
@@ -786,9 +676,6 @@ export class GLTFModelDesc extends MeshDesc<
     return true;
   }
 
-  /**
-   * Cross-fade between animations
-   */
   crossFadeAnimation(from: string, to: string, duration: number): boolean {
     if (!this.mixer) {
       console.warn("Animation mixer not initialized");
@@ -813,30 +700,23 @@ export class GLTFModelDesc extends MeshDesc<
       return false;
     }
 
-    // Handle case where same animation is specified
     if (fromAction === toAction) {
       this.ensureAnimationPlaying(toAction);
       return true;
     }
 
-    // If currently in blend mode, stop all and exit blend mode before crossfading
     if (this.isBlendMode) {
       this.stopAllAnimations();
       this.isBlendMode = false;
     }
 
-    // Ensure 'from' animation is the current animation
     this.ensureFromAnimationActive(fromAction);
 
-    // Execute crossfade
     this.executeCrossFade(fromAction, toAction, duration);
 
     return true;
   }
 
-  /**
-   * Ensure the specified animation is playing
-   */
   private ensureAnimationPlaying(action: AnimationAction): void {
     action.enabled = true;
     action.setEffectiveWeight(1);
@@ -846,9 +726,6 @@ export class GLTFModelDesc extends MeshDesc<
     this.emit("needsUpdate");
   }
 
-  /**
-   * Ensure the 'from' animation is currently active
-   */
   private ensureFromAnimationActive(fromAction: AnimationAction): void {
     if (this.currentAction !== fromAction) {
       // Ensure the source action is actively contributing before crossfade
@@ -860,9 +737,6 @@ export class GLTFModelDesc extends MeshDesc<
     }
   }
 
-  /**
-   * Execute the actual crossfade between animations
-   */
   private executeCrossFade(
     fromAction: AnimationAction,
     toAction: AnimationAction,
@@ -879,23 +753,17 @@ export class GLTFModelDesc extends MeshDesc<
     this.emit("needsUpdate");
   }
 
-  /**
-   * Play multiple animations simultaneously with weights
-   */
   blendAnimations(animations: { name: string; weight: number }[]): void {
     if (!this.mixer) {
       console.warn("Animation mixer not initialized");
       return;
     }
 
-    // Stop existing animations
     this.stopAllAnimations();
 
-    // Switch to blend mode
     this.isBlendMode = true;
     this.currentAction = null;
 
-    // Configure each animation
     animations.forEach(({ name, weight }) => {
       const action = this.actions.get(name);
       if (!action) {
@@ -903,13 +771,11 @@ export class GLTFModelDesc extends MeshDesc<
         return;
       }
 
-      // Start animation with effective settings
       action.enabled = true;
       action.setEffectiveTimeScale(this.animationSpeed);
       action.setEffectiveWeight(weight);
       action.play();
 
-      // Register as blend animation
       this.activeBlendAnimations.set(name, {
         action,
         weight,
@@ -917,16 +783,11 @@ export class GLTFModelDesc extends MeshDesc<
       });
     });
 
-    // Notify rendering update
     this.emit("needsUpdate");
   }
 
-  /**
-   * Stop current animation
-   */
   stopAnimation(): void {
     if (this.isBlendMode) {
-      // Stop all in blend mode
       this.stopAllAnimations();
     } else if (this.currentAction) {
       this.currentAction.stop();
@@ -934,37 +795,27 @@ export class GLTFModelDesc extends MeshDesc<
     }
   }
 
-  /**
-   * Stop all animations
-   */
   stopAllAnimations(): void {
-    // Stop blend animations
     this.activeBlendAnimations.forEach((blendAnim) => {
       blendAnim.action.stop();
     });
     this.activeBlendAnimations.clear();
 
-    // Stop single animation
     if (this.currentAction) {
       this.currentAction.stop();
       this.currentAction = null;
     }
 
-    // Also reset weights and disable actions
     this.actions.forEach((action) => {
       action.setEffectiveWeight(0);
       action.enabled = false;
     });
 
-    // Exit blend mode
     this.isBlendMode = false;
 
     this.emit("needsUpdate");
   }
 
-  /**
-   * Pause current animation
-   */
   pauseAnimation(): void {
     if (this.isBlendMode) {
       this.activeBlendAnimations.forEach((blendAnim) => {
@@ -975,9 +826,6 @@ export class GLTFModelDesc extends MeshDesc<
     }
   }
 
-  /**
-   * Resume paused animation
-   */
   resumeAnimation(): void {
     if (this.isBlendMode) {
       this.activeBlendAnimations.forEach((blendAnim) => {
@@ -988,18 +836,12 @@ export class GLTFModelDesc extends MeshDesc<
     }
   }
 
-  // stepAnimation removed with UI pausing/stepping controls
-
-  /**
-   * Normalize all animation weights (adjust total to 1.0)
-   */
   normalizeAnimationWeights(): void {
     if (!this.isBlendMode || this.activeBlendAnimations.size === 0) {
       console.warn("No blend animations to normalize");
       return;
     }
 
-    // Calculate total weight
     const totalWeight = Array.from(this.activeBlendAnimations.values()).reduce(
       (sum, blendAnim) => sum + blendAnim.targetWeight,
       0,
@@ -1010,14 +852,12 @@ export class GLTFModelDesc extends MeshDesc<
       return;
     }
 
-    // Normalize each animation weight
     this.activeBlendAnimations.forEach((blendAnim) => {
       const normalizedWeight = blendAnim.targetWeight / totalWeight;
       blendAnim.action.weight = normalizedWeight;
       blendAnim.weight = normalizedWeight;
     });
 
-    // Notify rendering update
     this.emit("needsUpdate");
   }
 
@@ -1025,9 +865,6 @@ export class GLTFModelDesc extends MeshDesc<
   // Setter APIs (set prefix)
   // ========================================
 
-  /**
-   * Set animation speed
-   */
   setAnimationSpeed(speed: number): void {
     this.animationSpeed = speed;
     // Apply to all actions so both single and blend modes are covered
@@ -1036,9 +873,6 @@ export class GLTFModelDesc extends MeshDesc<
     });
   }
 
-  /**
-   * Change animation loop setting
-   */
   setAnimationLoop(loop: boolean): void {
     this.isLooping = loop;
     this.actions.forEach((action) => {
@@ -1046,16 +880,12 @@ export class GLTFModelDesc extends MeshDesc<
     });
   }
 
-  /**
-   * Set weight for specific animation
-   */
   setAnimationWeight(name: string, weight: number): void {
     if (!this.mixer) {
       console.warn("Animation mixer not initialized");
       return;
     }
 
-    // Weight adjustment in blend mode
     if (this.isBlendMode && this.activeBlendAnimations.has(name)) {
       const blendAnim = this.activeBlendAnimations.get(name);
       if (!blendAnim) {
@@ -1067,21 +897,18 @@ export class GLTFModelDesc extends MeshDesc<
       blendAnim.weight = weight;
       blendAnim.targetWeight = weight;
     } else {
-      // For single animation, switch to blend mode and set weight
       const action = this.actions.get(name);
       if (!action) {
         console.warn(`Animation "${name}" not found`);
         return;
       }
 
-      // Stop existing animations and switch to blend mode
       if (!this.isBlendMode) {
         this.stopAllAnimations();
         this.isBlendMode = true;
         this.currentAction = null;
       }
 
-      // Start animation and set weight
       action.enabled = true;
       action.setEffectiveTimeScale(this.animationSpeed);
       action.setEffectiveWeight(weight);
@@ -1101,23 +928,14 @@ export class GLTFModelDesc extends MeshDesc<
   // Internal Processing APIs
   // ========================================
 
-  /**
-   * Update animation mixer (needs to be called every frame)
-   */
   updateAnimation(deltaTime: number): void {
     this.updateAnimationMixer(deltaTime);
   }
 
-  /**
-   * Dispose animation-related resources
-   */
   disposeAnimation(): void {
     this.disposeAnimationResources();
   }
 
-  /**
-   * Internal method to update animation mixer
-   */
   private updateAnimationMixer(deltaTime: number): void {
     if (this.mixer) {
       this.mixer.update(deltaTime);
@@ -1128,27 +946,18 @@ export class GLTFModelDesc extends MeshDesc<
   // Framework Integration APIs
   // ========================================
 
-  /**
-   * Update method called every frame
-   * Automatically called by Three.js framework
-   */
   update(time: number): void {
-    // Record previous update time and calculate deltaTime
     if (!this.lastUpdateTime) {
       this.lastUpdateTime = time;
       return;
     }
 
-    const deltaTime = (time - this.lastUpdateTime) / 1000; // Convert milliseconds to seconds
+    const deltaTime = (time - this.lastUpdateTime) / 1000;
     this.lastUpdateTime = time;
 
-    // Update animation mixer
     this.updateAnimationMixer(deltaTime);
   }
 
-  /**
-   * Get currently playing animation name
-   */
   private getCurrentAnimationName(): string | null {
     if (!this.currentAction) return null;
 
@@ -1161,7 +970,6 @@ export class GLTFModelDesc extends MeshDesc<
   }
 
   getWorldPosition(): Vector3 {
-    // Return stored world position (RTE mode)
     return this.originalWorldPosition;
   }
 

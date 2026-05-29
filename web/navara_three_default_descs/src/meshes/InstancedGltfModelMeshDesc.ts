@@ -1,18 +1,13 @@
 import type ThreeView from "@navara/three";
 import {
   Color,
-  MeshDesc,
-  PickableMultiInstancedMeshWrapper,
-  createReplacer,
+  MeshDescBase,
+  PickableMultiInstancedNodeMaterialWrapper,
   encodePositionRTE,
-  setupRTEBeforeRender,
-  type MeshConfig,
-  type MeshUpdate,
-  type RTEUserData,
+  type MeshDescBaseConfig,
+  type MeshDescBaseUpdate,
   type ViewContext,
 } from "@navara/three";
-import ProjectVertexRteModel from "@shaders/glsl/chunks/project_vertex_rte_model.glsl";
-import RteUniformParsVertex from "@shaders/glsl/chunks/rte_uniform_pars_vertex.glsl";
 import {
   AnimationAction,
   AnimationMixer,
@@ -29,7 +24,6 @@ import {
   Mesh,
   Object3D,
   Quaternion,
-  ShaderChunk,
   SkinnedMesh,
   Texture,
   Vector3,
@@ -38,7 +32,11 @@ import {
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import type { GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
+import { uniform } from "three/tsl";
+import { NodeMaterial } from "three/webgpu";
 import invariant from "tiny-invariant";
+
+import { applyRTEToNodeMaterial, convertToNodeMaterial } from "../nodes";
 
 /**
  * Per-instance configuration for a single model instance.
@@ -58,6 +56,15 @@ export type InstancedModelsDescription = {
   castShadow?: boolean;
   receiveShadow?: boolean;
 
+  /** Emissive color written to the MRT emissive slot (shared across all instances). */
+  emissiveColor?: Color;
+  /** Multiplier on the emissive color (default 0 = no emission). */
+  emissiveIntensity?: number;
+  /** Opacity of the material (0–1). */
+  opacity?: number;
+  /** Enable alpha blending when true. */
+  transparent?: boolean;
+
   /** Animation clip name to play (shared across all instances). */
   animationActiveClip?: string;
   /** Playback speed (default 1). Shared across all instances. */
@@ -71,17 +78,17 @@ export type InstancedModelsDescription = {
 };
 
 type Description = {
-  models?: InstancedModelsDescription;
+  gltfModels?: InstancedModelsDescription;
 };
 
 type DescriptionUpdate = {
-  models?: Partial<InstancedModelsDescription>;
+  gltfModels?: Partial<InstancedModelsDescription>;
 };
 
-export type InstancedGltfModelMeshConfig = MeshConfig &
-  Description & { pickable?: boolean };
+export type InstancedGltfModelMeshConfig = MeshDescBaseConfig & Description;
 
-export type InstancedGltfModelMeshUpdate = MeshUpdate & DescriptionUpdate;
+export type InstancedGltfModelMeshUpdate = MeshDescBaseUpdate &
+  DescriptionUpdate;
 
 export type InstancedGltfModelEvent = {
   load: () => void;
@@ -165,7 +172,7 @@ type Anim = {
  * Limitations:
  * - Skinned-path picking is currently unsupported (`batchIds` is empty).
  */
-export class InstancedGltfModelMeshDesc extends MeshDesc<
+export class InstancedGltfModelMeshDesc extends MeshDescBase<
   InstancedGltfModelMeshConfig,
   InstancedGltfModelMeshUpdate,
   Group,
@@ -195,23 +202,22 @@ export class InstancedGltfModelMeshDesc extends MeshDesc<
   private configs: ModelChildConfig[] = [];
   private lastUpdateTime?: number;
 
-  private pickWrapper?: PickableMultiInstancedMeshWrapper;
+  private pickWrapper?: PickableMultiInstancedNodeMaterialWrapper;
 
-  // RTE (Relative-To-Eye) state
-  // `raw.matrixWorld` is decomposed into an anchor translation (encoded into
-  // rtePosHigh/rtePosLow uniforms) and a residual rotation+scale kept on
-  // `raw.matrixWorld` with translation zeroed. All materials used by sub-
-  // meshes or skinned clones get patched with RTE shader chunks; one shared
-  // onBeforeRender updates `modelViewMatrixRTE` and camera high/low per frame.
-  private rteAnchor = new Vector3();
-  private rtePosHigh = new Vector3();
-  private rtePosLow = new Vector3();
-  private rteUserData: RTEUserData = {
-    modelViewMatrixRTE: { value: new Matrix4() },
-    cameraPositionHigh: { value: new Vector3() },
-    cameraPositionLow: { value: new Vector3() },
-  };
-  private rtePatchedMaterials = new WeakSet<Material>();
+  // RTE (Relative-To-Eye) state encoded as TSL uniforms.
+  // `raw.matrixWorld` carries rotation+scale only; the anchor translation is
+  // encoded into `_rtePosHigh`/`_rtePosLow` uniforms consumed by
+  // `applyRTEToNodeMaterial` on each material. TSL `renderGroup` uniforms in
+  // `highPrecisionNode.ts` update camera state once per render call automatically,
+  // so no per-frame `onBeforeRender` callback is needed.
+  private readonly _rtePosHigh = uniform(new Vector3());
+  private readonly _rtePosLow = uniform(new Vector3());
+  // R⁻¹×ecefPos for castShadowPositionNode (f32 approx. — see TODO in applyRTEToNodeMaterial).
+  private readonly _localOriginOffset = uniform(new Vector3());
+  // Full-precision ECEF anchor, kept as f64 JS value for onBeforeShadow patching.
+  // WebGL ignores castShadowPositionNode, so the shadow pass must receive the
+  // real world position via modelViewMatrix (same trick as GLTFModelDesc).
+  private readonly _originalWorldPosition = new Vector3();
 
   constructor(
     view: ThreeView,
@@ -220,6 +226,11 @@ export class InstancedGltfModelMeshDesc extends MeshDesc<
   ) {
     super(view, ctx, config);
     this.config = config;
+
+    const cfg = config.gltfModels;
+    if (cfg?.emissiveColor !== undefined) this.emissive = cfg.emissiveColor;
+    if (cfg?.emissiveIntensity !== undefined)
+      this.emissiveIntensity = cfg.emissiveIntensity;
   }
 
   get batchIds(): readonly number[] {
@@ -237,7 +248,7 @@ export class InstancedGltfModelMeshDesc extends MeshDesc<
 
   createMesh(): Group {
     const root = new Group();
-    const cfg = this.config.models;
+    const cfg = this.config.gltfModels;
 
     if (cfg?.url) {
       this.loadModel(cfg.url, root).catch((err) => {
@@ -249,7 +260,7 @@ export class InstancedGltfModelMeshDesc extends MeshDesc<
 
   override onCreate(): void {
     super.onCreate();
-    // MeshDesc.applyTransform has just populated `raw.matrixWorld` from the
+    // MeshDescBase.applyTransform has just populated `raw.matrixWorld` from the
     // user-supplied `matrixWorld` (and any local TRS). Decompose it so the
     // anchor translation lives in RTE uniforms instead of the world matrix.
     this.captureAnchorFromMatrixWorld();
@@ -263,7 +274,7 @@ export class InstancedGltfModelMeshDesc extends MeshDesc<
   private captureAnchorFromMatrixWorld(): void {
     if (!this.raw) return;
 
-    // `MeshDesc.applyTransform` only writes `raw.matrixWorld` directly when
+    // `MeshDescBase.applyTransform` only writes `raw.matrixWorld` directly when
     // the descriptor's `matrixWorld` is set. For the `matrix`-only and
     // local-TRS paths it leaves matrixWorld stale, so decomposing it would
     // pull an identity anchor on the first capture. Also, after our first
@@ -290,8 +301,12 @@ export class InstancedGltfModelMeshDesc extends MeshDesc<
     const p = new Vector3();
     this.raw.matrixWorld.decompose(p, q, s);
 
-    this.rteAnchor.copy(p);
-    encodePositionRTE(this.rteAnchor, this.rtePosHigh, this.rtePosLow);
+    this._originalWorldPosition.copy(p);
+    encodePositionRTE(p, this._rtePosHigh.value, this._rtePosLow.value);
+
+    // Compute R⁻¹×ecefPos in JS f64 → f32 uniform for castShadowPositionNode.
+    const rotScale = new Matrix4().compose(new Vector3(), q, s);
+    this._localOriginOffset.value.copy(p).applyMatrix4(rotScale.invert());
 
     // Rebuild matrixWorld with translation zeroed so the shader sees a
     // modelMatrix that only carries rotation+scale. The residual rotation+
@@ -305,80 +320,106 @@ export class InstancedGltfModelMeshDesc extends MeshDesc<
   }
 
   /**
-   * Inject RTE shader chunks into a material. The chunk branches on
-   * `USE_INSTANCING` internally, so the same patch works for both
-   * `InstancedMesh` sub-meshes (non-skinned path) and `SkeletonUtils.clone`
-   * fallback meshes (skinned path).
+   * Patch `inst.onBeforeShadow` so WebGL shadow passes use the full ECEF
+   * translation rather than the RTE-stripped matrixWorld.
+   *
+   * `castShadowPositionNode` (set by applyRTEToNodeMaterial) is ignored under
+   * WebGL — the depth material shader uses `modelViewMatrix` directly.  We
+   * mirror the GLTFModelDesc fix: compute `shadowCamera.matrixWorldInverse *
+   * fullMatrix` in f64 JS and write it into `inst.modelViewMatrix` before each
+   * shadow draw call.  The per-instance instanceMatrix is then applied by the
+   * GPU shader on top of this base, placing every instance correctly.
    */
-  private modifyMaterialForRTE(material: Material): void {
-    if (this.rtePatchedMaterials.has(material)) return;
-
-    const prevOnBeforeCompile = material.onBeforeCompile;
-    const prevCacheKey = material.customProgramCacheKey?.bind(material);
-
-    material.onBeforeCompile = (shader, renderer) => {
-      prevOnBeforeCompile?.call(material, shader, renderer);
-
-      shader.uniforms.u_cameraPositionHigh = this.rteUserData
-        .cameraPositionHigh ?? { value: new Vector3() };
-      shader.uniforms.u_cameraPositionLow = this.rteUserData
-        .cameraPositionLow ?? { value: new Vector3() };
-      shader.uniforms.rtePosHigh = { value: this.rtePosHigh };
-      shader.uniforms.rtePosLow = { value: this.rtePosLow };
-      shader.uniforms.modelViewMatrixRTE = this.rteUserData
-        .modelViewMatrixRTE ?? { value: new Matrix4() };
-
-      shader.vertexShader = createReplacer(shader.vertexShader)
-        .replace(
-          "#include <common>",
-          `
-          #include <common>
-          ${RteUniformParsVertex}
-          `,
-        )
-        .replace("#include <project_vertex>", ProjectVertexRteModel)
-        .replace(
-          "#include <worldpos_vertex>",
-          createReplacer(ShaderChunk.worldpos_vertex)
-            .replace(
-              "vec4 worldPosition = vec4( transformed, 1.0 );",
-              "vec4 worldPosition = vec4( absTransformed, 1.0 );",
-            )
-            .replace("worldPosition = modelMatrix * worldPosition;", "").source,
-        ).source;
+  private setupShadowDepth(inst: Mesh): void {
+    const stripped = new Vector3();
+    const fullMatrix = new Matrix4();
+    inst.onBeforeShadow = (
+      _renderer: unknown,
+      _object: unknown,
+      _camera: unknown,
+      shadowCamera: { matrixWorldInverse: Matrix4 },
+    ) => {
+      if (!inst.castShadow) return;
+      stripped.setFromMatrixPosition(inst.matrixWorld);
+      fullMatrix.copy(inst.matrixWorld);
+      fullMatrix.setPosition(
+        this._originalWorldPosition.x + stripped.x,
+        this._originalWorldPosition.y + stripped.y,
+        this._originalWorldPosition.z + stripped.z,
+      );
+      inst.modelViewMatrix.multiplyMatrices(
+        shadowCamera.matrixWorldInverse,
+        fullMatrix,
+      );
     };
-    material.customProgramCacheKey = () =>
-      (prevCacheKey?.() ?? "") + "_nvr_rte_gltf";
-    material.needsUpdate = true;
-
-    this.rtePatchedMaterials.add(material);
   }
 
-  /** Patch every material reachable from a scene graph for RTE + shadows. */
-  private patchMaterials(root: Object3D): void {
-    root.traverse((o) => {
-      const m = (o as Mesh).material as Material | Material[] | undefined;
-      if (!m) return;
-      const mats = Array.isArray(m) ? m : [m];
-      for (const mat of mats) {
-        this.ctx.applyShadowMaterial(mat);
-        this.modifyMaterialForRTE(mat);
+  /** Walk the root Group and collect all unique NodeMaterials from sub-meshes. */
+  protected override extractNodeMaterial(): NodeMaterial[] {
+    if (!this.raw) return [];
+    const seen = new Set<NodeMaterial>();
+    this.raw.traverse((o) => {
+      const mesh = o as Mesh;
+      if (!mesh.isMesh) return;
+      const mats = Array.isArray(mesh.material)
+        ? mesh.material
+        : [mesh.material];
+      for (const m of mats) {
+        if (m instanceof NodeMaterial && !seen.has(m)) seen.add(m);
       }
+    });
+    return [...seen];
+  }
+
+  /**
+   * Wire MRT output struct (via super) + TSL RTE vertex nodes on a single
+   * NodeMaterial. Called by {@link MeshDescBase.onCreate} and
+   * {@link MeshDescBase.refreshNodeMaterial} whenever materials need rewiring.
+   */
+  protected override setupNodeMaterial(material: NodeMaterial): void {
+    super.setupNodeMaterial(material);
+    applyRTEToNodeMaterial(material, {
+      rtePosHigh: this._rtePosHigh,
+      rtePosLow: this._rtePosLow,
+      localOriginOffset: this._localOriginOffset,
     });
   }
 
   /**
-   * Install the per-frame RTE callback on a mesh. The callback writes shared
-   * uniforms (same values regardless of which mesh drives it), so we install
-   * on every mesh that might be rendered — that way the uniforms stay live
-   * even when individual meshes/clones are removed via removeAt/clear/grow.
+   * Convert every material in the scene graph to NodeMaterial and apply shadow
+   * material setup. Used for the skinned fallback path where
+   * `SkeletonUtils.clone` shares materials — patching the source scene once is
+   * enough. MRT + RTE wiring happens later via {@link refreshNodeMaterial}.
    */
-  private installRTECallback(mesh: Mesh | InstancedMesh): void {
-    const cb = setupRTEBeforeRender(mesh, this.rteUserData, new Matrix4());
-    if (cb) {
-      mesh.onBeforeRender = cb;
-      mesh.onBeforeShadow = cb;
-    }
+  private patchMaterials(root: Object3D): void {
+    const cache = new WeakMap<Material, NodeMaterial>();
+    const toDispose = new Set<Material>();
+    root.traverse((o) => {
+      const mesh = o as Mesh;
+      if (!mesh.isMesh) return;
+      const original = mesh.material as Material | Material[];
+      const list = Array.isArray(original) ? original : [original];
+      const converted = list.map((m) => {
+        if (m instanceof NodeMaterial) return m;
+        const cached = cache.get(m);
+        if (cached) return cached;
+        const n = convertToNodeMaterial(m);
+        cache.set(m, n);
+        toDispose.add(m);
+        return n;
+      });
+      mesh.material = Array.isArray(original) ? converted : converted[0];
+      const modelCfg = this.config.gltfModels;
+      for (const m of converted) {
+        this.ctx.applyShadowMaterial(m);
+        if (modelCfg?.opacity !== undefined) m.opacity = modelCfg.opacity;
+        if (modelCfg?.transparent !== undefined) {
+          m.transparent = modelCfg.transparent;
+          m.needsUpdate = true;
+        }
+      }
+    });
+    for (const m of toDispose) m.dispose();
   }
 
   private async loadModel(url: string, root: Group): Promise<void> {
@@ -409,7 +450,7 @@ export class InstancedGltfModelMeshDesc extends MeshDesc<
 
     gltf.scene.updateMatrixWorld(true);
 
-    const initialConfigs = this.config.models?.children ?? [];
+    const initialConfigs = this.config.gltfModels?.children ?? [];
 
     if (this.hasSkinned) {
       this.initSkinnedPath(root, initialConfigs);
@@ -419,7 +460,7 @@ export class InstancedGltfModelMeshDesc extends MeshDesc<
 
     this.configs = [...initialConfigs];
 
-    const cfg = this.config.models;
+    const cfg = this.config.gltfModels;
     if (cfg?.animationAutoPlay && cfg.animationActiveClip) {
       this.playAnimation(cfg.animationActiveClip);
     }
@@ -433,7 +474,7 @@ export class InstancedGltfModelMeshDesc extends MeshDesc<
   /** Build an Anim slot whose mixer drives `target`. */
   private createAnim(target: Object3D): Anim {
     invariant(this.gltf, "GLTF must be loaded before createAnim");
-    const cfg = this.config.models;
+    const cfg = this.config.gltfModels;
     const speed = cfg?.animationSpeed ?? 1;
     const loop = cfg?.animationLoop ?? true;
 
@@ -491,7 +532,10 @@ export class InstancedGltfModelMeshDesc extends MeshDesc<
     invariant(this.gltf, "GLTF must be loaded before initInstancedPath");
     const gltf = this.gltf;
     this.capacity = Math.max(initialConfigs.length, DEFAULT_CAPACITY);
-    const modelCfg = this.config.models;
+    const modelCfg = this.config.gltfModels;
+
+    const matCache = new WeakMap<Material, NodeMaterial>();
+    const matToDispose = new Set<Material>();
 
     // Walk scene, spin up one InstancedMesh per source Mesh node
     gltf.scene.traverse((node) => {
@@ -500,7 +544,27 @@ export class InstancedGltfModelMeshDesc extends MeshDesc<
 
       const sourceLocal = sourceMesh.matrixWorld.clone();
 
-      const material = sourceMesh.material as Material | Material[];
+      // Convert source materials to NodeMaterials for the TSL RTE pipeline.
+      // Updating sourceMesh.material here is important so `grow()` reuses the
+      // already-converted material via `inst.material`.
+      const originalMaterial = sourceMesh.material as Material | Material[];
+      const list = Array.isArray(originalMaterial)
+        ? originalMaterial
+        : [originalMaterial];
+      const convertedList = list.map((m) => {
+        if (m instanceof NodeMaterial) return m;
+        const cached = matCache.get(m);
+        if (cached) return cached;
+        const n = convertToNodeMaterial(m);
+        matCache.set(m, n);
+        matToDispose.add(m);
+        return n;
+      });
+      const material = Array.isArray(originalMaterial)
+        ? convertedList
+        : convertedList[0];
+      sourceMesh.material = material;
+
       const inst = new InstancedMesh(
         sourceMesh.geometry,
         material,
@@ -511,16 +575,29 @@ export class InstancedGltfModelMeshDesc extends MeshDesc<
       inst.castShadow = modelCfg?.castShadow ?? false;
       inst.receiveShadow = modelCfg?.receiveShadow ?? false;
 
-      const mats = Array.isArray(material) ? material : [material];
-      for (const m of mats) {
+      for (const m of convertedList) {
         this.ctx.applyShadowMaterial(m);
-        this.modifyMaterialForRTE(m);
+        if (modelCfg?.opacity !== undefined) m.opacity = modelCfg.opacity;
+        if (modelCfg?.transparent !== undefined) {
+          m.transparent = modelCfg.transparent;
+          m.needsUpdate = true;
+        }
       }
+
+      this.setupShadowDepth(inst);
+
+      // Pre-allocate instanceColor so the program is compiled once with
+      // instancingColor=true from the start. Without this, the first updateAt()
+      // call that sets a per-instance color lazily creates instanceColor, which
+      // changes the program cache key and forces a recompilation of every
+      // sub-mesh material — consuming 4 new WebGL UBO binding points per mesh
+      // and exhausting the 24-slot global limit.
+      inst.setColorAt(0, _tempColor.setRGB(1, 1, 1));
 
       root.add(inst);
       this.subMeshes.push({ inst, sourceMesh, sourceLocal });
-      this.installRTECallback(inst);
     });
+    for (const m of matToDispose) m.dispose();
 
     for (let i = 0; i < initialConfigs.length; i++) {
       this.writeInstanceAt(i, initialConfigs[i]);
@@ -533,13 +610,18 @@ export class InstancedGltfModelMeshDesc extends MeshDesc<
 
     if (this.config.pickable) {
       const meshes = this.subMeshes.map((s) => s.inst);
-      this.pickWrapper = new PickableMultiInstancedMeshWrapper(
+      this.pickWrapper = new PickableMultiInstancedNodeMaterialWrapper(
         root,
         meshes,
         initialConfigs.length,
         this.ctx,
       );
       this.ctx.registerPickableMesh(this.id, this.pickWrapper);
+      // Wire picking color — the setter also calls refreshNodeMaterial() to
+      // apply MRT + RTE + wrappedColor across all sub-mesh materials.
+      this.colorOutputNode = this.pickWrapper.wrapColor(this.colorOutputNode);
+    } else {
+      this.refreshNodeMaterial();
     }
   }
 
@@ -648,6 +730,9 @@ export class InstancedGltfModelMeshDesc extends MeshDesc<
         "InstancedGltfModelMeshDesc: picking is not supported for skinned GLTFs (fallback clone path).",
       );
     }
+
+    // Wire MRT + RTE on all patched materials now that clones are in the group.
+    this.refreshNodeMaterial();
   }
 
   private addSkinnedInstance(root: Group, config: ModelChildConfig): void {
@@ -655,8 +740,7 @@ export class InstancedGltfModelMeshDesc extends MeshDesc<
     const scene = cloneSkinned(this.gltf.scene);
     this.applyTransformToObject(scene, config);
 
-    const modelCfg = this.config.models;
-    let callbackHost: Mesh | SkinnedMesh | null = null;
+    const modelCfg = this.config.gltfModels;
     scene.traverse((o) => {
       if (o instanceof Mesh || o instanceof SkinnedMesh) {
         o.castShadow = modelCfg?.castShadow ?? false;
@@ -665,12 +749,9 @@ export class InstancedGltfModelMeshDesc extends MeshDesc<
         // sphere transformed by matrixWorld doesn't match rendered position.
         // Disable frustum culling to avoid false-positive culls.
         o.frustumCulled = false;
-        if (!callbackHost) callbackHost = o;
+        this.setupShadowDepth(o);
       }
     });
-    // Install the RTE callback once per clone. If this clone gets removed,
-    // remaining clones' callbacks still keep the shared uniforms live.
-    if (callbackHost) this.installRTECallback(callbackHost);
 
     root.add(scene);
     this.skinnedScenes.push(scene);
@@ -687,7 +768,7 @@ export class InstancedGltfModelMeshDesc extends MeshDesc<
       this.addSkinnedInstance(root, config);
       this.configs.push(config);
 
-      const activeClip = this.config.models?.animationActiveClip;
+      const activeClip = this.config.gltfModels?.animationActiveClip;
       if (activeClip) {
         this.playOn(this.anims[this.anims.length - 1], activeClip);
       }
@@ -787,7 +868,7 @@ export class InstancedGltfModelMeshDesc extends MeshDesc<
       for (const c of configs) this.addSkinnedInstance(root, c);
       this.configs = [...configs];
 
-      const activeClip = this.config.models?.animationActiveClip;
+      const activeClip = this.config.gltfModels?.animationActiveClip;
       if (activeClip) this.playAnimation(activeClip);
       this.emit("needsUpdate");
       return;
@@ -823,6 +904,7 @@ export class InstancedGltfModelMeshDesc extends MeshDesc<
       newInst.frustumCulled = false;
       newInst.castShadow = inst.castShadow;
       newInst.receiveShadow = inst.receiveShadow;
+      this.setupShadowDepth(newInst);
 
       const m = new Matrix4();
       for (let i = 0; i < oldCount; i++) {
@@ -842,10 +924,6 @@ export class InstancedGltfModelMeshDesc extends MeshDesc<
       root.remove(inst);
       root.add(newInst);
       inst.dispose();
-
-      // The old inst held the onBeforeRender/onBeforeShadow closure; transfer
-      // it to its replacement so RTE uniforms keep updating per frame.
-      this.installRTECallback(newInst);
 
       newSubs.push({ inst: newInst, sourceMesh, sourceLocal });
     }
@@ -893,17 +971,33 @@ export class InstancedGltfModelMeshDesc extends MeshDesc<
   }
 
   onUpdateConfig(updates: InstancedGltfModelMeshUpdate): void {
-    if (updates.models !== undefined) {
-      const u = updates.models;
+    if (updates.gltfModels !== undefined) {
+      const u = updates.gltfModels;
 
-      if (u.castShadow !== undefined || u.receiveShadow !== undefined) {
+      const meshPropChanged =
+        u.castShadow !== undefined ||
+        u.receiveShadow !== undefined ||
+        u.opacity !== undefined ||
+        u.transparent !== undefined;
+      if (meshPropChanged) {
         if (this.hasSkinned) {
           for (const scene of this.skinnedScenes) {
             scene.traverse((o) => {
-              if (o instanceof Mesh || o instanceof SkinnedMesh) {
-                if (u.castShadow !== undefined) o.castShadow = u.castShadow;
-                if (u.receiveShadow !== undefined)
-                  o.receiveShadow = u.receiveShadow;
+              const mesh = o as Mesh;
+              if (!mesh.isMesh) return;
+              if (u.castShadow !== undefined) mesh.castShadow = u.castShadow;
+              if (u.receiveShadow !== undefined)
+                mesh.receiveShadow = u.receiveShadow;
+              if (u.opacity !== undefined || u.transparent !== undefined) {
+                const mats = Array.isArray(mesh.material)
+                  ? mesh.material
+                  : [mesh.material];
+                for (const m of mats as Material[]) {
+                  if (u.opacity !== undefined) m.opacity = u.opacity;
+                  if (u.transparent !== undefined)
+                    m.transparent = u.transparent;
+                  m.needsUpdate = true;
+                }
               }
             });
           }
@@ -912,8 +1006,25 @@ export class InstancedGltfModelMeshDesc extends MeshDesc<
             if (u.castShadow !== undefined) inst.castShadow = u.castShadow;
             if (u.receiveShadow !== undefined)
               inst.receiveShadow = u.receiveShadow;
+            if (u.opacity !== undefined || u.transparent !== undefined) {
+              const mats = Array.isArray(inst.material)
+                ? inst.material
+                : [inst.material];
+              for (const m of mats as Material[]) {
+                if (u.opacity !== undefined) m.opacity = u.opacity;
+                if (u.transparent !== undefined) m.transparent = u.transparent;
+                m.needsUpdate = true;
+              }
+            }
           }
         }
+      }
+
+      if (u.emissiveColor !== undefined) {
+        this.emissive = u.emissiveColor;
+      }
+      if (u.emissiveIntensity !== undefined) {
+        this.emissiveIntensity = u.emissiveIntensity;
       }
 
       if (u.animationSpeed !== undefined) {
@@ -936,8 +1047,8 @@ export class InstancedGltfModelMeshDesc extends MeshDesc<
         this.replaceAll(u.children);
       }
 
-      this.config.models = {
-        ...this.config.models,
+      this.config.gltfModels = {
+        ...this.config.gltfModels,
         ...u,
       } as InstancedModelsDescription;
     }

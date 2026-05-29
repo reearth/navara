@@ -1,3 +1,4 @@
+export * from "./highPrecisionNode";
 export * from "./normalPacking";
 export * from "./setupNodeMaterialForMRT";
 export * from "./setupNodeMaterialForPicking";

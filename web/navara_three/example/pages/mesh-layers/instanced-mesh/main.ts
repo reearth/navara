@@ -308,10 +308,10 @@ const run = async () => {
   });
 
   const modelsLayer = view.addMesh<InstancedGltfModelMeshDesc>({
-    models: {
+    gltfModels: {
       url: LOCAL_DATASETS.soldierGLTF.url,
-      castShadow: false,
-      receiveShadow: false,
+      castShadow: true,
+      receiveShadow: true,
       animationActiveClip: "Run",
       animationSpeed: 1,
       animationLoop: true,
@@ -392,15 +392,15 @@ const run = async () => {
       options: { Idle: "Idle", Walk: "Walk", Run: "Run", TPose: "TPose" },
     })
     .on("change", (e) => {
-      modelsLayer.update({ models: { animationActiveClip: e.value } });
+      modelsLayer.update({ gltfModels: { animationActiveClip: e.value } });
     });
   modelsFolder
     .addBinding(animState, "speed", { min: 0, max: 3, step: 0.1 })
     .on("change", (e) => {
-      modelsLayer.update({ models: { animationSpeed: e.value } });
+      modelsLayer.update({ gltfModels: { animationSpeed: e.value } });
     });
   modelsFolder.addBinding(animState, "loop").on("change", (e) => {
-    modelsLayer.update({ models: { animationLoop: e.value } });
+    modelsLayer.update({ gltfModels: { animationLoop: e.value } });
   });
   modelsFolder.addButton({ title: "Stop Animation" }).on("click", () => {
     modelsLayer.ref.stopAnimation();
