@@ -159,6 +159,15 @@ export class ThreeViewCamera extends EventHandler<CameraEvent> {
     if (options.translateDuration !== undefined) {
       event.translateDuration = options.translateDuration;
     }
+    if (options.enableSpin !== undefined) {
+      event.enableSpin = options.enableSpin;
+    }
+    if (options.enableZoom !== undefined) {
+      event.enableZoom = options.enableZoom;
+    }
+    if (options.enableTilt !== undefined) {
+      event.enableTilt = options.enableTilt;
+    }
     this._core?.setCameraControl(event);
   }
 }

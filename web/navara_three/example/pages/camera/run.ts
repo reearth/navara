@@ -333,6 +333,9 @@ const addCameraControlOptions = (
     spinDuration: 500.0,
     zoomDuration: 100.0,
     translateDuration: 500.0,
+    enableSpin: true,
+    enableZoom: true,
+    enableTilt: true,
   };
 
   const frustumParams = {
@@ -424,6 +427,9 @@ const addCameraControlOptions = (
   folder
     .addBinding(controlParams, "translateDuration", { min: 0, max: 2000 })
     .on("change", applyOptions);
+  folder.addBinding(controlParams, "enableSpin").on("change", applyOptions);
+  folder.addBinding(controlParams, "enableZoom").on("change", applyOptions);
+  folder.addBinding(controlParams, "enableTilt").on("change", applyOptions);
 };
 
 const addRotateOption = (pane: Pane, view: ThreeView<CustomDescriptions>) => {

@@ -126,13 +126,16 @@ pub fn update(
                 orbit.fixed_rotation_pivot = None;
             };
 
+            // Drain queued events so they don't accumulate while flying.
+            for _ in ce.read() {}
+
             // Avoid other camera operations during flight.
             continue;
         }
 
-        // Handle camera events (Change, Translate, FlyTo, LookAt)
-        let ce = ce.read().last();
-        if let Some(ce) = ce {
+        // Handle camera events in order — process all events this frame, not just the last.
+        // If setCamera and moveCamera fire in the same frame, both must be applied sequentially.
+        for ce in ce.read() {
             process_camera_event(
                 &window,
                 ce,

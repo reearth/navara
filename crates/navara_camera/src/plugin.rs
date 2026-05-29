@@ -131,6 +131,15 @@ fn handle_camera_control_update(
             if let Some(translate_duration) = event.translate_duration {
                 controller.translate_duration = translate_duration;
             }
+            if let Some(enable_spin) = event.enable_spin {
+                controller.enable_spin = enable_spin;
+            }
+            if let Some(enable_zoom) = event.enable_zoom {
+                controller.enable_zoom = enable_zoom;
+            }
+            if let Some(enable_tilt) = event.enable_tilt {
+                controller.enable_tilt = enable_tilt;
+            }
         }
     }
 }
