@@ -232,7 +232,7 @@ pub struct CameraControlUpdateEvent {
     /// Default: `true`
     #[wasm_bindgen(js_name = enableZoom)]
     pub enable_zoom: Option<bool>,
-    /// Whether tilt (Ctrl+left drag, right-click drag, or supported touch gestures) is enabled.
+    /// Whether tilt interactions (Ctrl+left drag, right-click drag, double-swipe, or rotate gestures) are enabled.
     ///
     /// Default: `true`
     #[wasm_bindgen(js_name = enableTilt)]
