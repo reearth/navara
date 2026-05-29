@@ -26,7 +26,9 @@ const camera = view.camera;
 
 **Read-only**
 
-The underlying Three.js `PerspectiveCamera`. Use this to integrate with Three.js APIs directly, such as reading the camera matrix or manually updating projection parameters.
+The underlying Three.js `PerspectiveCamera`. Use this for **read-only** integration with Three.js APIs, such as reading the camera matrix or world position.
+
+Do not write to `raw.fov` (or other frustum fields) directly — the engine synchronizes `raw.fov` from its internal frustum state, so direct writes will be overwritten and can leave the Rust-side culling state out of sync. Use the `fov` setter instead.
 
 **Example:**
 
@@ -34,9 +36,8 @@ The underlying Three.js `PerspectiveCamera`. Use this to integrate with Three.js
 // Read the camera's world position
 const position = view.camera.raw.position;
 
-// Manually update FOV via Three.js API
-view.camera.raw.fov = 60;
-view.camera.raw.updateProjectionMatrix();
+// Set FOV through the ThreeViewCamera setter (keeps engine frustum in sync)
+view.camera.fov = 60;
 ```
 
 ---
