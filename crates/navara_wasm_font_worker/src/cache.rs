@@ -97,7 +97,7 @@ impl FontCache {
     /// (typically a family name). If `None`, the URL is used.
     ///
     /// `mode` picks the SDF vs MSDF path for the monochrome atlas. The TS
-    /// layer exposes this as `quality: "low" | "high"` and qualifies
+    /// layer exposes this as the `highQuality` boolean and qualifies
     /// `atlas_key` per quality so the two modes coexist. The first load under
     /// a given key fixes that atlas's mode.
     pub fn load_font(

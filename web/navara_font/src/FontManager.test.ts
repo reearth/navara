@@ -138,7 +138,7 @@ function createShapeResult(text: string, unitsPerEm = 1000): ShapeTextResult {
 }
 
 /** Set the prepareTextBatch mock to return shape results with a given atlasKey.
- *  The override is automatically qualified with `#q=low` so it matches what the
+ *  The override is automatically qualified with `#q=false` so it matches what the
  *  real worker would store under the FontManager's qualified atlas keys. */
 function setupBatchMock(atlasKeyOverride?: string) {
   mocks.mockPrepareTextBatch.mockImplementation(
@@ -157,7 +157,7 @@ function setupBatchMock(atlasKeyOverride?: string) {
         channels: 1,
       },
       colorAtlas: null,
-      atlasKey: atlasKeyOverride ? `${atlasKeyOverride}#q=low` : fontUrl,
+      atlasKey: atlasKeyOverride ? `${atlasKeyOverride}#q=false` : fontUrl,
     }),
   );
 }
@@ -262,48 +262,48 @@ describe("FontManager", () => {
 
   describe("loadFont", () => {
     it("should fetch the font file and pass it to the worker", async () => {
-      await manager.loadFont(FONT_URL, "low");
+      await manager.loadFont(FONT_URL, false);
 
       expect(mockFetch).toHaveBeenCalledWith(FONT_URL);
       expect(mocks.mockLoadFont).toHaveBeenCalledWith(
-        FONT_URL + "#q=low",
+        FONT_URL + "#q=false",
         expect.any(ArrayBuffer),
         undefined,
-        "low",
+        false,
       );
     });
 
     it("should forward atlasKey to the worker", async () => {
-      await manager.loadFont(FONT_URL, "low", "SharedAtlas");
+      await manager.loadFont(FONT_URL, false, "SharedAtlas");
 
       expect(mocks.mockLoadFont).toHaveBeenCalledWith(
-        FONT_URL + "#q=low",
+        FONT_URL + "#q=false",
         expect.any(ArrayBuffer),
-        "SharedAtlas#q=low",
-        "low",
+        "SharedAtlas#q=false",
+        false,
       );
     });
 
     it("should skip fetching if the font is already loaded", async () => {
-      await manager.loadFont(FONT_URL, "low");
+      await manager.loadFont(FONT_URL, false);
       mockFetch.mockClear();
 
-      await manager.loadFont(FONT_URL, "low");
+      await manager.loadFont(FONT_URL, false);
 
       expect(mockFetch).not.toHaveBeenCalled();
     });
 
     it("should deduplicate concurrent requests for the same URL", async () => {
-      const p1 = manager.loadFont(FONT_URL, "low");
-      const p2 = manager.loadFont(FONT_URL, "low");
+      const p1 = manager.loadFont(FONT_URL, false);
+      const p2 = manager.loadFont(FONT_URL, false);
       await Promise.all([p1, p2]);
 
       expect(mockFetch).toHaveBeenCalledTimes(1);
     });
 
     it("should allow loading different URLs concurrently", async () => {
-      const p1 = manager.loadFont("https://fonts.test/a.ttf", "low");
-      const p2 = manager.loadFont("https://fonts.test/b.ttf", "low");
+      const p1 = manager.loadFont("https://fonts.test/a.ttf", false);
+      const p2 = manager.loadFont("https://fonts.test/b.ttf", false);
       await Promise.all([p1, p2]);
 
       expect(mockFetch).toHaveBeenCalledTimes(2);
@@ -312,7 +312,7 @@ describe("FontManager", () => {
     it("should throw when fetch returns a non-OK response", async () => {
       mockFetch.mockResolvedValue({ ok: false, status: 404 });
 
-      await expect(manager.loadFont(FONT_URL, "low")).rejects.toThrow(
+      await expect(manager.loadFont(FONT_URL, false)).rejects.toThrow(
         "failed to fetch font",
       );
     });
@@ -320,18 +320,18 @@ describe("FontManager", () => {
     it("should throw when the worker rejects the font", async () => {
       mocks.mockLoadFont.mockResolvedValueOnce({ ok: false });
 
-      await expect(manager.loadFont(FONT_URL, "low")).rejects.toThrow(
+      await expect(manager.loadFont(FONT_URL, false)).rejects.toThrow(
         "WASM failed to load font",
       );
     });
 
     it("should clean up state on error so a retry can succeed", async () => {
       mockFetch.mockResolvedValueOnce({ ok: false, status: 500 });
-      await expect(manager.loadFont(FONT_URL, "low")).rejects.toThrow();
+      await expect(manager.loadFont(FONT_URL, false)).rejects.toThrow();
 
       // Retry should fetch again
       mockFetchSuccess();
-      await manager.loadFont(FONT_URL, "low");
+      await manager.loadFont(FONT_URL, false);
 
       expect(mockFetch).toHaveBeenCalledTimes(2);
     });
@@ -343,71 +343,71 @@ describe("FontManager", () => {
 
   describe("unloadFont", () => {
     it("should tell the worker to unload when ref count reaches 0", async () => {
-      await manager.loadFont(FONT_URL, "low");
-      await manager.unloadFont(FONT_URL, "low");
+      await manager.loadFont(FONT_URL, false);
+      await manager.unloadFont(FONT_URL, false);
 
-      expect(mocks.mockUnloadFont).toHaveBeenCalledWith(FONT_URL + "#q=low");
+      expect(mocks.mockUnloadFont).toHaveBeenCalledWith(FONT_URL + "#q=false");
     });
 
     it("should only decrement ref count when refs > 1", async () => {
-      await manager.loadFont(FONT_URL, "low");
-      await manager.loadFont(FONT_URL, "low"); // refCount = 2
+      await manager.loadFont(FONT_URL, false);
+      await manager.loadFont(FONT_URL, false); // refCount = 2
 
-      await manager.unloadFont(FONT_URL, "low"); // refCount → 1
+      await manager.unloadFont(FONT_URL, false); // refCount → 1
 
       expect(mocks.mockUnloadFont).not.toHaveBeenCalled();
     });
 
     it("should fully unload after all refs are released", async () => {
-      await manager.loadFont(FONT_URL, "low");
-      await manager.loadFont(FONT_URL, "low");
+      await manager.loadFont(FONT_URL, false);
+      await manager.loadFont(FONT_URL, false);
 
-      await manager.unloadFont(FONT_URL, "low");
-      await manager.unloadFont(FONT_URL, "low");
+      await manager.unloadFont(FONT_URL, false);
+      await manager.unloadFont(FONT_URL, false);
 
       expect(mocks.mockUnloadFont).toHaveBeenCalledTimes(1);
     });
 
     it("should be a no-op for unknown font URLs", async () => {
-      await manager.unloadFont("https://fonts.test/unknown.ttf", "low");
+      await manager.unloadFont("https://fonts.test/unknown.ttf", false);
       expect(mocks.mockUnloadFont).not.toHaveBeenCalled();
     });
 
     it("should dispose the texture when the last font sharing an atlas is unloaded", async () => {
       setupBatchMock("shared");
-      await manager.loadFont("https://fonts.test/a.ttf", "low", "shared");
+      await manager.loadFont("https://fonts.test/a.ttf", false, "shared");
 
-      await manager.prepareText("https://fonts.test/a.ttf", "hi", "low");
-      const tex = manager.getAtlasTexture("https://fonts.test/a.ttf", "low");
+      await manager.prepareText("https://fonts.test/a.ttf", "hi", false);
+      const tex = manager.getAtlasTexture("https://fonts.test/a.ttf", false);
       expect(tex).not.toBeNull();
 
-      await manager.unloadFont("https://fonts.test/a.ttf", "low");
+      await manager.unloadFont("https://fonts.test/a.ttf", false);
 
       expect((tex as unknown as Record<string, unknown>).disposed).toBe(true);
     });
 
     it("should NOT dispose the texture when another font still shares the atlas", async () => {
       setupBatchMock("shared");
-      await manager.loadFont("https://fonts.test/a.ttf", "low", "shared");
-      await manager.loadFont("https://fonts.test/b.ttf", "low", "shared");
+      await manager.loadFont("https://fonts.test/a.ttf", false, "shared");
+      await manager.loadFont("https://fonts.test/b.ttf", false, "shared");
 
-      await manager.prepareText("https://fonts.test/a.ttf", "hi", "low");
-      const tex = manager.getAtlasTexture("https://fonts.test/a.ttf", "low");
+      await manager.prepareText("https://fonts.test/a.ttf", "hi", false);
+      const tex = manager.getAtlasTexture("https://fonts.test/a.ttf", false);
 
-      await manager.unloadFont("https://fonts.test/a.ttf", "low");
+      await manager.unloadFont("https://fonts.test/a.ttf", false);
 
       // b.ttf still references "shared", so texture stays alive
       expect((tex as unknown as Record<string, unknown>).disposed).toBe(false);
     });
 
     it("should clear shape cache for the unloaded font", async () => {
-      await manager.loadFont(FONT_URL, "low");
-      await manager.prepareText(FONT_URL, "hello", "low");
-      expect(manager.isTextPrepared(FONT_URL, "hello", "low")).toBe(true);
+      await manager.loadFont(FONT_URL, false);
+      await manager.prepareText(FONT_URL, "hello", false);
+      expect(manager.isTextPrepared(FONT_URL, "hello", false)).toBe(true);
 
-      await manager.unloadFont(FONT_URL, "low");
+      await manager.unloadFont(FONT_URL, false);
 
-      expect(manager.isTextPrepared(FONT_URL, "hello", "low")).toBe(false);
+      expect(manager.isTextPrepared(FONT_URL, "hello", false)).toBe(false);
     });
   });
 
@@ -417,51 +417,51 @@ describe("FontManager", () => {
 
   describe("prepareText (standalone font)", () => {
     it("should return immediately for empty text without calling worker", async () => {
-      await manager.loadFont(FONT_URL, "low");
-      await manager.prepareText(FONT_URL, "", "low");
+      await manager.loadFont(FONT_URL, false);
+      await manager.prepareText(FONT_URL, "", false);
 
       expect(mocks.mockPrepareTextBatch).not.toHaveBeenCalled();
     });
 
     it("should shape text via the worker", async () => {
-      await manager.loadFont(FONT_URL, "low");
-      await manager.prepareText(FONT_URL, "hello", "low");
+      await manager.loadFont(FONT_URL, false);
+      await manager.prepareText(FONT_URL, "hello", false);
 
       expect(mocks.mockPrepareTextBatch).toHaveBeenCalledWith(
-        FONT_URL + "#q=low",
+        FONT_URL + "#q=false",
         ["hello"],
       );
     });
 
     it("should cache results so repeated calls skip the worker", async () => {
-      await manager.loadFont(FONT_URL, "low");
-      await manager.prepareText(FONT_URL, "hello", "low");
+      await manager.loadFont(FONT_URL, false);
+      await manager.prepareText(FONT_URL, "hello", false);
       mocks.mockPrepareTextBatch.mockClear();
 
-      await manager.prepareText(FONT_URL, "hello", "low");
+      await manager.prepareText(FONT_URL, "hello", false);
 
       expect(mocks.mockPrepareTextBatch).not.toHaveBeenCalled();
     });
 
     it("should batch multiple synchronous prepareText calls into one worker call", async () => {
-      await manager.loadFont(FONT_URL, "low");
+      await manager.loadFont(FONT_URL, false);
 
-      const p1 = manager.prepareText(FONT_URL, "hello", "low");
-      const p2 = manager.prepareText(FONT_URL, "world", "low");
+      const p1 = manager.prepareText(FONT_URL, "hello", false);
+      const p2 = manager.prepareText(FONT_URL, "world", false);
       await Promise.all([p1, p2]);
 
       expect(mocks.mockPrepareTextBatch).toHaveBeenCalledTimes(1);
       expect(mocks.mockPrepareTextBatch).toHaveBeenCalledWith(
-        FONT_URL + "#q=low",
+        FONT_URL + "#q=false",
         ["hello", "world"],
       );
     });
 
     it("should deduplicate concurrent calls for the same text", async () => {
-      await manager.loadFont(FONT_URL, "low");
+      await manager.loadFont(FONT_URL, false);
 
-      const p1 = manager.prepareText(FONT_URL, "same", "low");
-      const p2 = manager.prepareText(FONT_URL, "same", "low");
+      const p1 = manager.prepareText(FONT_URL, "same", false);
+      const p2 = manager.prepareText(FONT_URL, "same", false);
       await Promise.all([p1, p2]);
 
       // Both promises should resolve; only one queue entry expected
@@ -471,51 +471,53 @@ describe("FontManager", () => {
     it("should batch per-font so different fonts get separate worker calls", async () => {
       const urlA = "https://fonts.test/a.ttf";
       const urlB = "https://fonts.test/b.ttf";
-      await manager.loadFont(urlA, "low");
-      await manager.loadFont(urlB, "low");
+      await manager.loadFont(urlA, false);
+      await manager.loadFont(urlB, false);
 
-      const p1 = manager.prepareText(urlA, "alpha", "low");
-      const p2 = manager.prepareText(urlB, "beta", "low");
+      const p1 = manager.prepareText(urlA, "alpha", false);
+      const p2 = manager.prepareText(urlB, "beta", false);
       await Promise.all([p1, p2]);
 
       expect(mocks.mockPrepareTextBatch).toHaveBeenCalledTimes(2);
-      expect(mocks.mockPrepareTextBatch).toHaveBeenCalledWith(urlA + "#q=low", [
-        "alpha",
-      ]);
-      expect(mocks.mockPrepareTextBatch).toHaveBeenCalledWith(urlB + "#q=low", [
-        "beta",
-      ]);
+      expect(mocks.mockPrepareTextBatch).toHaveBeenCalledWith(
+        urlA + "#q=false",
+        ["alpha"],
+      );
+      expect(mocks.mockPrepareTextBatch).toHaveBeenCalledWith(
+        urlB + "#q=false",
+        ["beta"],
+      );
     });
 
     it("should store atlas data returned by the worker", async () => {
-      await manager.loadFont(FONT_URL, "low");
-      await manager.prepareText(FONT_URL, "hello", "low");
+      await manager.loadFont(FONT_URL, false);
+      await manager.prepareText(FONT_URL, "hello", false);
 
-      const atlas = manager.getAtlas(FONT_URL, "low");
+      const atlas = manager.getAtlas(FONT_URL, false);
       expect(atlas).toBeDefined();
       expect(atlas!.width).toBe(256);
       expect(atlas!.height).toBe(256);
     });
 
     it("should reject when the worker throws during batch processing", async () => {
-      await manager.loadFont(FONT_URL, "low");
+      await manager.loadFont(FONT_URL, false);
       mocks.mockPrepareTextBatch.mockRejectedValueOnce(
         new Error("worker crash"),
       );
 
       await expect(
-        manager.prepareText(FONT_URL, "fail", "low"),
+        manager.prepareText(FONT_URL, "fail", false),
       ).rejects.toThrow("worker crash");
     });
 
     it("should reject all batched entries on worker failure", async () => {
-      await manager.loadFont(FONT_URL, "low");
+      await manager.loadFont(FONT_URL, false);
       mocks.mockPrepareTextBatch.mockRejectedValueOnce(
         new Error("batch failed"),
       );
 
-      const p1 = manager.prepareText(FONT_URL, "a", "low");
-      const p2 = manager.prepareText(FONT_URL, "b", "low");
+      const p1 = manager.prepareText(FONT_URL, "a", false);
+      const p2 = manager.prepareText(FONT_URL, "b", false);
 
       await expect(p1).rejects.toThrow("batch failed");
       await expect(p2).rejects.toThrow("batch failed");
@@ -535,7 +537,7 @@ describe("FontManager", () => {
     it("should lazily load only the face URLs needed for the text", async () => {
       const loadedFaces = new Set<string>();
       // "Hello" is Basic Latin only → should load latin.ttf but NOT cjk.ttf
-      await manager.prepareText("TestFamily", "Hello", "low", loadedFaces);
+      await manager.prepareText("TestFamily", "Hello", false, loadedFaces);
 
       expect(loadedFaces.has("https://fonts.test/latin.ttf")).toBe(true);
       expect(loadedFaces.has("https://fonts.test/cjk.ttf")).toBe(false);
@@ -547,7 +549,7 @@ describe("FontManager", () => {
       await manager.prepareText(
         "TestFamily",
         "Hi\u4e16\u754c",
-        "low",
+        false,
         loadedFaces,
       );
 
@@ -557,37 +559,37 @@ describe("FontManager", () => {
 
     it("should not reload a face that is already tracked in loadedFaces", async () => {
       const loadedFaces = new Set<string>();
-      await manager.prepareText("TestFamily", "Hello", "low", loadedFaces);
+      await manager.prepareText("TestFamily", "Hello", false, loadedFaces);
       mockFetch.mockClear();
 
-      await manager.prepareText("TestFamily", "World", "low", loadedFaces);
+      await manager.prepareText("TestFamily", "World", false, loadedFaces);
 
       // latin.ttf was already in loadedFaces — no new fetch
       expect(mockFetch).not.toHaveBeenCalled();
     });
 
     it("should produce a stitched ShapeTextResult for the full text", async () => {
-      await manager.prepareText("TestFamily", "Hi\u4e16", "low");
+      await manager.prepareText("TestFamily", "Hi\u4e16", false);
 
-      const result = manager.shapeText("TestFamily", "Hi\u4e16", "low");
+      const result = manager.shapeText("TestFamily", "Hi\u4e16", false);
       expect(result).toBeDefined();
       expect(result!.glyphs.length).toBeGreaterThan(0);
       expect(result!.unitsPerEm).toBeGreaterThan(0);
     });
 
     it("should cache the stitched result under the family name", async () => {
-      await manager.prepareText("TestFamily", "Hi\u4e16", "low");
+      await manager.prepareText("TestFamily", "Hi\u4e16", false);
 
-      expect(manager.isTextPrepared("TestFamily", "Hi\u4e16", "low")).toBe(
+      expect(manager.isTextPrepared("TestFamily", "Hi\u4e16", false)).toBe(
         true,
       );
     });
 
     it("should not re-stitch if the same text was already prepared", async () => {
-      await manager.prepareText("TestFamily", "Hi\u4e16", "low");
+      await manager.prepareText("TestFamily", "Hi\u4e16", false);
       mocks.mockPrepareTextBatch.mockClear();
 
-      await manager.prepareText("TestFamily", "Hi\u4e16", "low");
+      await manager.prepareText("TestFamily", "Hi\u4e16", false);
 
       expect(mocks.mockPrepareTextBatch).not.toHaveBeenCalled();
     });
@@ -595,7 +597,7 @@ describe("FontManager", () => {
     it("should fall back to the first face for codepoints not in any range", async () => {
       const loadedFaces = new Set<string>();
       // Emoji (U+1F600) is not in any defined range → should fall back to latin.ttf
-      await manager.prepareText("TestFamily", "\u{1F600}", "low", loadedFaces);
+      await manager.prepareText("TestFamily", "\u{1F600}", false, loadedFaces);
 
       expect(loadedFaces.has("https://fonts.test/latin.ttf")).toBe(true);
       expect(loadedFaces.has("https://fonts.test/cjk.ttf")).toBe(false);
@@ -621,7 +623,7 @@ describe("FontManager", () => {
 
       const loadedFaces = new Set<string>();
       // "Hello World" — space between Latin words should stay with narrow.ttf
-      await manager.prepareText("SpaceTest", "Hello World", "low", loadedFaces);
+      await manager.prepareText("SpaceTest", "Hello World", false, loadedFaces);
 
       expect(loadedFaces.has("https://fonts.test/narrow.ttf")).toBe(true);
       expect(loadedFaces.has("https://fonts.test/fallback.ttf")).toBe(false);
@@ -644,7 +646,7 @@ describe("FontManager", () => {
       await manager.prepareText(
         "SingleFace",
         "Hello \u4e16\u754c",
-        "low",
+        false,
         loadedFaces,
       );
 
@@ -682,9 +684,9 @@ describe("FontManager", () => {
       );
 
       manager.registerFontFamily(createTestFamily());
-      await manager.prepareText("TestFamily", "Hi\u4e16", "low");
+      await manager.prepareText("TestFamily", "Hi\u4e16", false);
 
-      const result = manager.shapeText("TestFamily", "Hi\u4e16", "low");
+      const result = manager.shapeText("TestFamily", "Hi\u4e16", false);
       expect(result).toBeDefined();
       expect(result!.unitsPerEm).toBe(1000);
 
@@ -715,9 +717,9 @@ describe("FontManager", () => {
       );
 
       manager.registerFontFamily(createTestFamily());
-      await manager.prepareText("TestFamily", "Hi\u4e16", "low");
+      await manager.prepareText("TestFamily", "Hi\u4e16", false);
 
-      const result = manager.shapeText("TestFamily", "Hi\u4e16", "low");
+      const result = manager.shapeText("TestFamily", "Hi\u4e16", false);
       // All glyphs should have unscaled xAdvance = 500
       for (const g of result!.glyphs) {
         expect(g.xAdvance).toBe(500);
@@ -773,9 +775,9 @@ describe("FontManager", () => {
       );
 
       manager.registerFontFamily(createTestFamily());
-      await manager.prepareText("TestFamily", "A\u4e16", "low");
+      await manager.prepareText("TestFamily", "A\u4e16", false);
 
-      const result = manager.shapeText("TestFamily", "A\u4e16", "low");
+      const result = manager.shapeText("TestFamily", "A\u4e16", false);
       // "0:1" appears in both segments but should only appear once
       expect(result!.metrics.length).toBe(1);
     });
@@ -863,7 +865,7 @@ describe("FontManager", () => {
             colorAtlas: null,
             // Qualify the atlas key so FontManager's _resolveAtlasKey
             // (which appends `#q=<quality>`) can find the stored atlas.
-            atlasKey: `${atlasKey}#q=low`,
+            atlasKey: `${atlasKey}#q=false`,
           };
         },
       );
@@ -898,14 +900,14 @@ describe("FontManager", () => {
 
     describe("segmentation", () => {
       it("should produce a single segment for all-Latin text", async () => {
-        await manager.prepareText("Seg", "Hello", "low");
+        await manager.prepareText("Seg", "Hello", false);
 
         expect(textsFor(LATIN)).toEqual(["Hello"]);
         expect(textsFor(CJK)).toEqual([]);
       });
 
       it("should produce a single segment for all-CJK text", async () => {
-        await manager.prepareText("Seg", "\u4e16\u754c", "low");
+        await manager.prepareText("Seg", "\u4e16\u754c", false);
 
         expect(textsFor(CJK)).toEqual(["\u4e16\u754c"]);
         expect(textsFor(LATIN)).toEqual([]);
@@ -913,14 +915,14 @@ describe("FontManager", () => {
 
       it("should split at the boundary between different ranges", async () => {
         // "Hi世界" → "Hi" latin, "世界" cjk
-        await manager.prepareText("Seg", "Hi\u4e16\u754c", "low");
+        await manager.prepareText("Seg", "Hi\u4e16\u754c", false);
 
         expect(textsFor(LATIN)).toEqual(["Hi"]);
         expect(textsFor(CJK)).toEqual(["\u4e16\u754c"]);
       });
 
       it("should split in reverse order (CJK then Latin)", async () => {
-        await manager.prepareText("Seg", "\u4e16\u754cHi", "low");
+        await manager.prepareText("Seg", "\u4e16\u754cHi", false);
 
         expect(textsFor(CJK)).toEqual(["\u4e16\u754c"]);
         expect(textsFor(LATIN)).toEqual(["Hi"]);
@@ -928,7 +930,7 @@ describe("FontManager", () => {
 
       it("should create separate segments for each alternating run", async () => {
         // "A世B界" → 4 segments: "A", "世", "B", "界"
-        await manager.prepareText("Seg", "A\u4e16B\u754c", "low");
+        await manager.prepareText("Seg", "A\u4e16B\u754c", false);
 
         expect(textsFor(LATIN)).toEqual(["A", "B"]);
         expect(textsFor(CJK)).toEqual(["\u4e16", "\u754c"]);
@@ -936,7 +938,7 @@ describe("FontManager", () => {
 
       it("should group consecutive same-face characters into one segment", async () => {
         // "ABCD世界好人" → "ABCD" latin, "世界好人" cjk
-        await manager.prepareText("Seg", "ABCD\u4e16\u754c\u597d\u4eba", "low");
+        await manager.prepareText("Seg", "ABCD\u4e16\u754c\u597d\u4eba", false);
 
         expect(textsFor(LATIN)).toEqual(["ABCD"]);
         expect(textsFor(CJK)).toEqual(["\u4e16\u754c\u597d\u4eba"]);
@@ -944,7 +946,7 @@ describe("FontManager", () => {
 
       it("should keep space with the current face instead of re-evaluating", async () => {
         // "Hi 世界" → space stays with latin → "Hi " latin, "世界" cjk
-        await manager.prepareText("Seg", "Hi \u4e16\u754c", "low");
+        await manager.prepareText("Seg", "Hi \u4e16\u754c", false);
 
         expect(textsFor(LATIN)).toEqual(["Hi "]);
         expect(textsFor(CJK)).toEqual(["\u4e16\u754c"]);
@@ -952,7 +954,7 @@ describe("FontManager", () => {
 
       it("should keep space with CJK face between CJK characters", async () => {
         // "世 界" → space stays with cjk face → "世 界" all cjk
-        await manager.prepareText("Seg", "\u4e16 \u754c", "low");
+        await manager.prepareText("Seg", "\u4e16 \u754c", false);
 
         expect(textsFor(CJK)).toEqual(["\u4e16 \u754c"]);
         expect(textsFor(LATIN)).toEqual([]);
@@ -961,7 +963,7 @@ describe("FontManager", () => {
       it("should evaluate space normally when it is the first character", async () => {
         // Space (U+0020) at start: no currentUrl yet → evaluated by range
         // U+0020 is in Latin range (0x0000-0x00FF) → latin face
-        await manager.prepareText("Seg", " Hello", "low");
+        await manager.prepareText("Seg", " Hello", false);
 
         expect(textsFor(LATIN)).toEqual([" Hello"]);
         expect(textsFor(CJK)).toEqual([]);
@@ -970,7 +972,7 @@ describe("FontManager", () => {
       it("should evaluate leading space by range even when followed by CJK", async () => {
         // " 世界" → space (U+0020) at start maps to latin by range,
         // then "世界" maps to cjk → two segments
-        await manager.prepareText("Seg", " \u4e16\u754c", "low");
+        await manager.prepareText("Seg", " \u4e16\u754c", false);
 
         expect(textsFor(LATIN)).toEqual([" "]);
         expect(textsFor(CJK)).toEqual(["\u4e16\u754c"]);
@@ -978,7 +980,7 @@ describe("FontManager", () => {
 
       it("should fall back unmapped codepoints to the first face", async () => {
         // Emoji U+1F600 is not in Latin (0-0xFF) or CJK range → first face (latin)
-        await manager.prepareText("Seg", "\u{1F600}", "low");
+        await manager.prepareText("Seg", "\u{1F600}", false);
 
         expect(textsFor(LATIN)).toEqual(["\u{1F600}"]);
         expect(textsFor(CJK)).toEqual([]);
@@ -986,21 +988,21 @@ describe("FontManager", () => {
 
       it("should group unmapped codepoints with adjacent same-face text", async () => {
         // "A😀B" → A is latin, 😀 fallback to latin, B is latin → single segment
-        await manager.prepareText("Seg", "A\u{1F600}B", "low");
+        await manager.prepareText("Seg", "A\u{1F600}B", false);
 
         expect(textsFor(LATIN)).toEqual(["A\u{1F600}B"]);
       });
 
       it("should split when unmapped codepoint sits between different faces", async () => {
         // "世😀B" → "世" cjk, "😀" fallback to latin, "B" latin → two segments
-        await manager.prepareText("Seg", "\u4e16\u{1F600}B", "low");
+        await manager.prepareText("Seg", "\u4e16\u{1F600}B", false);
 
         expect(textsFor(CJK)).toEqual(["\u4e16"]);
         expect(textsFor(LATIN)).toEqual(["\u{1F600}B"]);
       });
 
       it("should handle a single character", async () => {
-        await manager.prepareText("Seg", "A", "low");
+        await manager.prepareText("Seg", "A", false);
 
         expect(textsFor(LATIN)).toEqual(["A"]);
         expect(batchCalls.length).toBe(1);
@@ -1016,7 +1018,7 @@ describe("FontManager", () => {
           "Single",
         );
 
-        await manager.prepareText("Single", "Hello\u4e16\u{1F600}", "low");
+        await manager.prepareText("Single", "Hello\u4e16\u{1F600}", false);
 
         expect(textsFor(LATIN)).toEqual(["Hello\u4e16\u{1F600}"]);
         expect(batchCalls.length).toBe(1);
@@ -1044,7 +1046,7 @@ describe("FontManager", () => {
         );
 
         // "A" latin + "ب" (U+0628) arabic + "世" cjk
-        await manager.prepareText("Tri", "A\u0628\u4e16", "low");
+        await manager.prepareText("Tri", "A\u0628\u4e16", false);
 
         expect(textsFor(LATIN)).toEqual(["A"]);
         expect(textsFor(ARABIC)).toEqual(["\u0628"]);
@@ -1071,7 +1073,7 @@ describe("FontManager", () => {
         );
 
         // "世" matches both ranges → first face (latin) wins
-        await manager.prepareText("Overlap", "\u4e16", "low");
+        await manager.prepareText("Overlap", "\u4e16", false);
 
         expect(textsFor(LATIN)).toEqual(["\u4e16"]);
         expect(textsFor(CJK)).toEqual([]);
@@ -1079,7 +1081,7 @@ describe("FontManager", () => {
 
       it("should handle multiple spaces between faces without splitting", async () => {
         // "Hi   世" → spaces stay with latin → "Hi   " latin, "世" cjk
-        await manager.prepareText("Seg", "Hi   \u4e16", "low");
+        await manager.prepareText("Seg", "Hi   \u4e16", false);
 
         expect(textsFor(LATIN)).toEqual(["Hi   "]);
         expect(textsFor(CJK)).toEqual(["\u4e16"]);
@@ -1108,7 +1110,7 @@ describe("FontManager", () => {
         );
 
         // "AaBb" → all covered by the two disjoint Latin ranges → single segment
-        await manager.prepareText("Multi", "AaBb", "low");
+        await manager.prepareText("Multi", "AaBb", false);
 
         expect(textsFor(LATIN)).toEqual(["AaBb"]);
       });
@@ -1119,8 +1121,8 @@ describe("FontManager", () => {
     describe("stitching", () => {
       it("should produce total glyph count equal to the text length", async () => {
         // "Hi世界" → 2 latin + 2 cjk = 4 glyphs
-        await manager.prepareText("Seg", "Hi\u4e16\u754c", "low");
-        const result = manager.shapeText("Seg", "Hi\u4e16\u754c", "low")!;
+        await manager.prepareText("Seg", "Hi\u4e16\u754c", false);
+        const result = manager.shapeText("Seg", "Hi\u4e16\u754c", false)!;
 
         expect(result.glyphs.length).toBe(4);
       });
@@ -1128,8 +1130,8 @@ describe("FontManager", () => {
       it("should preserve glyph fontIndex in text reading order", async () => {
         // fontIndex=0 for latin, fontIndex=1 for cjk
         // "Hi世" → [0, 0, 1]
-        await manager.prepareText("Seg", "Hi\u4e16", "low");
-        const result = manager.shapeText("Seg", "Hi\u4e16", "low")!;
+        await manager.prepareText("Seg", "Hi\u4e16", false);
+        const result = manager.shapeText("Seg", "Hi\u4e16", false)!;
 
         expect(result.glyphs.map((g) => g.fontIndex)).toEqual([0, 0, 1]);
       });
@@ -1143,8 +1145,8 @@ describe("FontManager", () => {
           "Seg",
         );
 
-        await manager.prepareText("Seg", "A\u4e16", "low");
-        const result = manager.shapeText("Seg", "A\u4e16", "low")!;
+        await manager.prepareText("Seg", "A\u4e16", false);
+        const result = manager.shapeText("Seg", "A\u4e16", false)!;
 
         expect(result.unitsPerEm).toBe(2048);
       });
@@ -1158,8 +1160,8 @@ describe("FontManager", () => {
           "Seg",
         );
 
-        await manager.prepareText("Seg", "A\u4e16", "low");
-        const result = manager.shapeText("Seg", "A\u4e16", "low")!;
+        await manager.prepareText("Seg", "A\u4e16", false);
+        const result = manager.shapeText("Seg", "A\u4e16", false)!;
 
         // Latin glyph: no scaling (unitsPerEm matches target)
         expect(result.glyphs[0].xAdvance).toBe(500);
@@ -1175,16 +1177,16 @@ describe("FontManager", () => {
       });
 
       it("should not scale when all segments share the same unitsPerEm", async () => {
-        await manager.prepareText("Seg", "A\u4e16", "low");
-        const result = manager.shapeText("Seg", "A\u4e16", "low")!;
+        await manager.prepareText("Seg", "A\u4e16", false);
+        const result = manager.shapeText("Seg", "A\u4e16", false)!;
 
         expect(result.glyphs[0].xAdvance).toBe(500); // latin, unscaled
         expect(result.glyphs[1].xAdvance).toBe(700); // cjk, unscaled
       });
 
       it("should include metrics from all font indexes", async () => {
-        await manager.prepareText("Seg", "A\u4e16", "low");
-        const result = manager.shapeText("Seg", "A\u4e16", "low")!;
+        await manager.prepareText("Seg", "A\u4e16", false);
+        const result = manager.shapeText("Seg", "A\u4e16", false)!;
 
         const fontIndexes = new Set(result.metrics.map((m) => m.fontIndex));
         expect(fontIndexes).toEqual(new Set([0, 1]));
@@ -1242,8 +1244,8 @@ describe("FontManager", () => {
           },
         );
 
-        await manager.prepareText("Seg", "A\u4e16", "low");
-        const result = manager.shapeText("Seg", "A\u4e16", "low")!;
+        await manager.prepareText("Seg", "A\u4e16", false);
+        const result = manager.shapeText("Seg", "A\u4e16", false)!;
 
         // fontIndex:0, glyphId:1 appears in both segments → first kept
         expect(result.metrics.length).toBe(1);
@@ -1252,8 +1254,8 @@ describe("FontManager", () => {
 
       it("should correctly stitch when text returns to the same face", async () => {
         // "A世B" → latin "A", cjk "世", latin "B" — 3 segments
-        await manager.prepareText("Seg", "A\u4e16B", "low");
-        const result = manager.shapeText("Seg", "A\u4e16B", "low")!;
+        await manager.prepareText("Seg", "A\u4e16B", false);
+        const result = manager.shapeText("Seg", "A\u4e16B", false)!;
 
         expect(result.glyphs.length).toBe(3);
         expect(result.glyphs.map((g) => g.fontIndex)).toEqual([0, 1, 0]);
@@ -1262,8 +1264,8 @@ describe("FontManager", () => {
 
       it("should handle many alternating segments", async () => {
         // "A世B界C" → 5 segments
-        await manager.prepareText("Seg", "A\u4e16B\u754cC", "low");
-        const result = manager.shapeText("Seg", "A\u4e16B\u754cC", "low")!;
+        await manager.prepareText("Seg", "A\u4e16B\u754cC", false);
+        const result = manager.shapeText("Seg", "A\u4e16B\u754cC", false)!;
 
         expect(result.glyphs.length).toBe(5);
         expect(result.glyphs.map((g) => g.fontIndex)).toEqual([0, 1, 0, 1, 0]);
@@ -1290,8 +1292,8 @@ describe("FontManager", () => {
           "Tri",
         );
 
-        await manager.prepareText("Tri", "A\u0628\u4e16", "low");
-        const result = manager.shapeText("Tri", "A\u0628\u4e16", "low")!;
+        await manager.prepareText("Tri", "A\u0628\u4e16", false);
+        const result = manager.shapeText("Tri", "A\u0628\u4e16", false)!;
 
         expect(result.glyphs.length).toBe(3);
         expect(result.glyphs.map((g) => g.fontIndex)).toEqual([0, 1, 2]);
@@ -1320,8 +1322,8 @@ describe("FontManager", () => {
           "Mixed",
         );
 
-        await manager.prepareText("Mixed", "A\u0628\u4e16", "low");
-        const result = manager.shapeText("Mixed", "A\u0628\u4e16", "low")!;
+        await manager.prepareText("Mixed", "A\u0628\u4e16", false);
+        const result = manager.shapeText("Mixed", "A\u0628\u4e16", false)!;
 
         expect(result.unitsPerEm).toBe(1000);
         // Latin: no scale
@@ -1334,8 +1336,8 @@ describe("FontManager", () => {
 
       it("should produce a single-segment stitch with no transformation", async () => {
         // All Latin → one segment, stitch is identity
-        await manager.prepareText("Seg", "Hello", "low");
-        const result = manager.shapeText("Seg", "Hello", "low")!;
+        await manager.prepareText("Seg", "Hello", false);
+        const result = manager.shapeText("Seg", "Hello", false)!;
 
         expect(result.glyphs.length).toBe(5);
         expect(result.unitsPerEm).toBe(1000);
@@ -1353,25 +1355,25 @@ describe("FontManager", () => {
 
   describe("isTextPrepared", () => {
     it("should return false for unprepared text", () => {
-      expect(manager.isTextPrepared(FONT_URL, "hello", "low")).toBe(false);
+      expect(manager.isTextPrepared(FONT_URL, "hello", false)).toBe(false);
     });
 
     it("should return false for unknown font identifiers", () => {
-      expect(manager.isTextPrepared("unknown", "hello", "low")).toBe(false);
+      expect(manager.isTextPrepared("unknown", "hello", false)).toBe(false);
     });
 
     it("should return true after text is prepared", async () => {
-      await manager.loadFont(FONT_URL, "low");
-      await manager.prepareText(FONT_URL, "hello", "low");
+      await manager.loadFont(FONT_URL, false);
+      await manager.prepareText(FONT_URL, "hello", false);
 
-      expect(manager.isTextPrepared(FONT_URL, "hello", "low")).toBe(true);
+      expect(manager.isTextPrepared(FONT_URL, "hello", false)).toBe(true);
     });
 
     it("should return false for different text with the same font", async () => {
-      await manager.loadFont(FONT_URL, "low");
-      await manager.prepareText(FONT_URL, "hello", "low");
+      await manager.loadFont(FONT_URL, false);
+      await manager.prepareText(FONT_URL, "hello", false);
 
-      expect(manager.isTextPrepared(FONT_URL, "world", "low")).toBe(false);
+      expect(manager.isTextPrepared(FONT_URL, "world", false)).toBe(false);
     });
   });
 
@@ -1381,18 +1383,18 @@ describe("FontManager", () => {
 
   describe("shapeText", () => {
     it("should return undefined for unprepared text", () => {
-      expect(manager.shapeText(FONT_URL, "hello", "low")).toBeUndefined();
+      expect(manager.shapeText(FONT_URL, "hello", false)).toBeUndefined();
     });
 
     it("should return undefined for unknown font identifiers", () => {
-      expect(manager.shapeText("unknown", "hello", "low")).toBeUndefined();
+      expect(manager.shapeText("unknown", "hello", false)).toBeUndefined();
     });
 
     it("should return the shaped result after preparation", async () => {
-      await manager.loadFont(FONT_URL, "low");
-      await manager.prepareText(FONT_URL, "hello", "low");
+      await manager.loadFont(FONT_URL, false);
+      await manager.prepareText(FONT_URL, "hello", false);
 
-      const result = manager.shapeText(FONT_URL, "hello", "low");
+      const result = manager.shapeText(FONT_URL, "hello", false);
       expect(result).toBeDefined();
       expect(result!.glyphs).toBeInstanceOf(Array);
       expect(result!.metrics).toBeInstanceOf(Array);
@@ -1400,10 +1402,10 @@ describe("FontManager", () => {
     });
 
     it("should return the correct number of glyphs for the input text", async () => {
-      await manager.loadFont(FONT_URL, "low");
-      await manager.prepareText(FONT_URL, "abc", "low");
+      await manager.loadFont(FONT_URL, false);
+      await manager.prepareText(FONT_URL, "abc", false);
 
-      const result = manager.shapeText(FONT_URL, "abc", "low");
+      const result = manager.shapeText(FONT_URL, "abc", false);
       expect(result!.glyphs.length).toBe(3);
     });
   });
@@ -1414,14 +1416,14 @@ describe("FontManager", () => {
 
   describe("getAtlas", () => {
     it("should return undefined when no atlas exists", () => {
-      expect(manager.getAtlas(FONT_URL, "low")).toBeUndefined();
+      expect(manager.getAtlas(FONT_URL, false)).toBeUndefined();
     });
 
     it("should return atlas data after text preparation", async () => {
-      await manager.loadFont(FONT_URL, "low");
-      await manager.prepareText(FONT_URL, "hello", "low");
+      await manager.loadFont(FONT_URL, false);
+      await manager.prepareText(FONT_URL, "hello", false);
 
-      const atlas = manager.getAtlas(FONT_URL, "low");
+      const atlas = manager.getAtlas(FONT_URL, false);
       expect(atlas).toBeDefined();
       expect(atlas!.data).toBeInstanceOf(Uint8Array);
       expect(atlas!.width).toBe(256);
@@ -1431,18 +1433,18 @@ describe("FontManager", () => {
     it("should resolve a family name to the shared atlas", async () => {
       manager.registerFontFamily(createTestFamily());
       setupBatchMock("TestFamily");
-      await manager.prepareText("TestFamily", "Hello", "low");
+      await manager.prepareText("TestFamily", "Hello", false);
 
-      expect(manager.getAtlas("TestFamily", "low")).toBeDefined();
+      expect(manager.getAtlas("TestFamily", false)).toBeDefined();
     });
 
     it("should resolve a font URL to its atlas key", async () => {
       setupBatchMock("shared");
-      await manager.loadFont(FONT_URL, "low", "shared");
-      await manager.prepareText(FONT_URL, "hello", "low");
+      await manager.loadFont(FONT_URL, false, "shared");
+      await manager.prepareText(FONT_URL, "hello", false);
 
       // Accessing via the URL should resolve to the "shared" atlas key
-      expect(manager.getAtlas(FONT_URL, "low")).toBeDefined();
+      expect(manager.getAtlas(FONT_URL, false)).toBeDefined();
     });
   });
 
@@ -1452,35 +1454,35 @@ describe("FontManager", () => {
 
   describe("getAtlasTexture", () => {
     it("should return null when no atlas data exists", () => {
-      expect(manager.getAtlasTexture(FONT_URL, "low")).toBeNull();
+      expect(manager.getAtlasTexture(FONT_URL, false)).toBeNull();
     });
 
     it("should create a texture from atlas data", async () => {
-      await manager.loadFont(FONT_URL, "low");
-      await manager.prepareText(FONT_URL, "hello", "low");
+      await manager.loadFont(FONT_URL, false);
+      await manager.prepareText(FONT_URL, "hello", false);
 
-      const tex = manager.getAtlasTexture(FONT_URL, "low");
+      const tex = manager.getAtlasTexture(FONT_URL, false);
       expect(tex).not.toBeNull();
       expect(tex!.needsUpdate).toBe(true);
     });
 
     it("should return the same texture instance on subsequent calls", async () => {
-      await manager.loadFont(FONT_URL, "low");
-      await manager.prepareText(FONT_URL, "hello", "low");
+      await manager.loadFont(FONT_URL, false);
+      await manager.prepareText(FONT_URL, "hello", false);
 
-      const tex1 = manager.getAtlasTexture(FONT_URL, "low");
-      const tex2 = manager.getAtlasTexture(FONT_URL, "low");
+      const tex1 = manager.getAtlasTexture(FONT_URL, false);
+      const tex2 = manager.getAtlasTexture(FONT_URL, false);
       expect(tex1).toBe(tex2);
     });
 
     it("should update texture in-place when atlas is dirty", async () => {
-      await manager.loadFont(FONT_URL, "low");
-      await manager.prepareText(FONT_URL, "hello", "low");
-      const tex1 = manager.getAtlasTexture(FONT_URL, "low");
+      await manager.loadFont(FONT_URL, false);
+      await manager.prepareText(FONT_URL, "hello", false);
+      const tex1 = manager.getAtlasTexture(FONT_URL, false);
 
       // Preparing more text makes the atlas dirty again
-      await manager.prepareText(FONT_URL, "world", "low");
-      const tex2 = manager.getAtlasTexture(FONT_URL, "low");
+      await manager.prepareText(FONT_URL, "world", false);
+      const tex2 = manager.getAtlasTexture(FONT_URL, false);
 
       expect(tex2).toBe(tex1); // same instance, updated in place
       expect(tex2!.needsUpdate).toBe(true);
@@ -1489,16 +1491,16 @@ describe("FontManager", () => {
     it("should resolve family names to the shared texture", async () => {
       manager.registerFontFamily(createTestFamily());
       setupBatchMock("TestFamily");
-      await manager.prepareText("TestFamily", "Hello", "low");
+      await manager.prepareText("TestFamily", "Hello", false);
 
-      const tex = manager.getAtlasTexture("TestFamily", "low");
+      const tex = manager.getAtlasTexture("TestFamily", false);
       expect(tex).not.toBeNull();
     });
 
     it("should dispose the existing texture when atlas dimensions grow but preserve the instance", async () => {
-      await manager.loadFont(FONT_URL, "low");
-      await manager.prepareText(FONT_URL, "hello", "low");
-      const tex1 = manager.getAtlasTexture(FONT_URL, "low");
+      await manager.loadFont(FONT_URL, false);
+      await manager.prepareText(FONT_URL, "hello", false);
+      const tex1 = manager.getAtlasTexture(FONT_URL, false);
       expect(tex1).not.toBeNull();
       expect(tex1!.image.width).toBe(256);
       expect((tex1 as unknown as Record<string, unknown>).disposed).toBe(false);
@@ -1524,9 +1526,9 @@ describe("FontManager", () => {
           atlasKey: fontUrl,
         }),
       );
-      await manager.prepareText(FONT_URL, "world", "low");
+      await manager.prepareText(FONT_URL, "world", false);
 
-      const tex2 = manager.getAtlasTexture(FONT_URL, "low");
+      const tex2 = manager.getAtlasTexture(FONT_URL, false);
       expect(tex2).toBe(tex1); // same DataTexture instance preserved
       expect((tex2 as unknown as Record<string, unknown>).disposed).toBe(true);
       expect(tex2!.image.width).toBe(512);
@@ -1535,15 +1537,15 @@ describe("FontManager", () => {
     });
 
     it("should NOT dispose the existing texture when dimensions are unchanged", async () => {
-      await manager.loadFont(FONT_URL, "low");
-      await manager.prepareText(FONT_URL, "hello", "low");
-      const tex1 = manager.getAtlasTexture(FONT_URL, "low");
+      await manager.loadFont(FONT_URL, false);
+      await manager.prepareText(FONT_URL, "hello", false);
+      const tex1 = manager.getAtlasTexture(FONT_URL, false);
       expect((tex1 as unknown as Record<string, unknown>).disposed).toBe(false);
 
       // Atlas data changes but dimensions stay the same — no GL reallocation
       // is needed and we should keep the existing handle alive.
-      await manager.prepareText(FONT_URL, "world", "low");
-      const tex2 = manager.getAtlasTexture(FONT_URL, "low");
+      await manager.prepareText(FONT_URL, "world", false);
+      const tex2 = manager.getAtlasTexture(FONT_URL, false);
 
       expect(tex2).toBe(tex1);
       expect((tex2 as unknown as Record<string, unknown>).disposed).toBe(false);
@@ -1583,17 +1585,17 @@ describe("FontManager", () => {
     }
 
     it("should dispose the existing color texture when its dimensions grow", async () => {
-      await manager.loadFont(FONT_URL, "low");
+      await manager.loadFont(FONT_URL, false);
       setupColorBatchMock(128, 128);
-      await manager.prepareText(FONT_URL, "hello", "low");
-      const tex1 = manager.getColorAtlasTexture(FONT_URL, "low");
+      await manager.prepareText(FONT_URL, "hello", false);
+      const tex1 = manager.getColorAtlasTexture(FONT_URL, false);
       expect(tex1).not.toBeNull();
       expect(tex1!.image.width).toBe(128);
       expect((tex1 as unknown as Record<string, unknown>).disposed).toBe(false);
 
       setupColorBatchMock(256, 256);
-      await manager.prepareText(FONT_URL, "world", "low");
-      const tex2 = manager.getColorAtlasTexture(FONT_URL, "low");
+      await manager.prepareText(FONT_URL, "world", false);
+      const tex2 = manager.getColorAtlasTexture(FONT_URL, false);
 
       expect(tex2).toBe(tex1);
       expect((tex2 as unknown as Record<string, unknown>).disposed).toBe(true);
@@ -1603,15 +1605,15 @@ describe("FontManager", () => {
     });
 
     it("should NOT dispose the existing color texture when dimensions are unchanged", async () => {
-      await manager.loadFont(FONT_URL, "low");
+      await manager.loadFont(FONT_URL, false);
       setupColorBatchMock(128, 128);
-      await manager.prepareText(FONT_URL, "hello", "low");
-      const tex1 = manager.getColorAtlasTexture(FONT_URL, "low");
+      await manager.prepareText(FONT_URL, "hello", false);
+      const tex1 = manager.getColorAtlasTexture(FONT_URL, false);
       expect((tex1 as unknown as Record<string, unknown>).disposed).toBe(false);
 
       setupColorBatchMock(128, 128);
-      await manager.prepareText(FONT_URL, "world", "low");
-      const tex2 = manager.getColorAtlasTexture(FONT_URL, "low");
+      await manager.prepareText(FONT_URL, "world", false);
+      const tex2 = manager.getColorAtlasTexture(FONT_URL, false);
 
       expect(tex2).toBe(tex1);
       expect((tex2 as unknown as Record<string, unknown>).disposed).toBe(false);
@@ -1626,7 +1628,7 @@ describe("FontManager", () => {
     it("should reject when concurrencyManager is not set", async () => {
       const bare = new FontManager(WORKER_URL);
 
-      await expect(bare.loadFont(FONT_URL, "low")).rejects.toThrow(
+      await expect(bare.loadFont(FONT_URL, false)).rejects.toThrow(
         "concurrencyManager not set",
       );
 
@@ -1634,8 +1636,8 @@ describe("FontManager", () => {
     });
 
     it("should create the FontWorkerClient only once across multiple loads", async () => {
-      await manager.loadFont("https://fonts.test/a.ttf", "low");
-      await manager.loadFont("https://fonts.test/b.ttf", "low");
+      await manager.loadFont("https://fonts.test/a.ttf", false);
+      await manager.loadFont("https://fonts.test/b.ttf", false);
 
       expect(mocks.FontWorkerClient).toHaveBeenCalledTimes(1);
     });
@@ -1643,11 +1645,11 @@ describe("FontManager", () => {
     it("should retry client creation after a failure", async () => {
       mocks.mockReady.mockRejectedValueOnce(new Error("init failed"));
 
-      await expect(manager.loadFont(FONT_URL, "low")).rejects.toThrow();
+      await expect(manager.loadFont(FONT_URL, false)).rejects.toThrow();
 
       // Second attempt should work (mockReady falls back to default resolved)
       mocks.mockReady.mockResolvedValueOnce(undefined);
-      await manager.loadFont("https://fonts.test/retry.ttf", "low");
+      await manager.loadFont("https://fonts.test/retry.ttf", false);
 
       expect(mocks.FontWorkerClient).toHaveBeenCalledTimes(2);
     });
@@ -1659,22 +1661,22 @@ describe("FontManager", () => {
 
   describe("dispose", () => {
     it("should clear all caches", async () => {
-      await manager.loadFont(FONT_URL, "low");
-      await manager.prepareText(FONT_URL, "hello", "low");
+      await manager.loadFont(FONT_URL, false);
+      await manager.prepareText(FONT_URL, "hello", false);
       manager.registerFontFamily(createTestFamily());
 
       manager.dispose();
 
-      expect(manager.isTextPrepared(FONT_URL, "hello", "low")).toBe(false);
-      expect(manager.getAtlas(FONT_URL, "low")).toBeUndefined();
-      expect(manager.getAtlasTexture(FONT_URL, "low")).toBeNull();
+      expect(manager.isTextPrepared(FONT_URL, "hello", false)).toBe(false);
+      expect(manager.getAtlas(FONT_URL, false)).toBeUndefined();
+      expect(manager.getAtlasTexture(FONT_URL, false)).toBeNull();
       expect(manager.isFamily("TestFamily")).toBe(false);
     });
 
     it("should dispose all cached textures", async () => {
-      await manager.loadFont(FONT_URL, "low");
-      await manager.prepareText(FONT_URL, "hello", "low");
-      const tex = manager.getAtlasTexture(FONT_URL, "low");
+      await manager.loadFont(FONT_URL, false);
+      await manager.prepareText(FONT_URL, "hello", false);
+      const tex = manager.getAtlasTexture(FONT_URL, false);
 
       manager.dispose();
 
@@ -1682,7 +1684,7 @@ describe("FontManager", () => {
     });
 
     it("should dispose the worker client", async () => {
-      await manager.loadFont(FONT_URL, "low"); // ensures client is created
+      await manager.loadFont(FONT_URL, false); // ensures client is created
       manager.dispose();
 
       expect(mocks.mockClientDispose).toHaveBeenCalled();
@@ -1693,7 +1695,7 @@ describe("FontManager", () => {
     });
 
     it("should be safe to call multiple times", async () => {
-      await manager.loadFont(FONT_URL, "low");
+      await manager.loadFont(FONT_URL, false);
       manager.dispose();
       expect(() => manager.dispose()).not.toThrow();
     });
@@ -1706,7 +1708,7 @@ describe("FontManager", () => {
   describe("edge cases", () => {
     it("should reject all queued entries when _ensureClient fails during flush", async () => {
       // Load succeeds initially (client created)
-      await manager.loadFont(FONT_URL, "low");
+      await manager.loadFont(FONT_URL, false);
 
       // Now make prepareTextBatch fail in a way that simulates client issues
       mocks.mockPrepareTextBatch.mockRejectedValueOnce(
@@ -1714,23 +1716,23 @@ describe("FontManager", () => {
       );
 
       await expect(
-        manager.prepareText(FONT_URL, "oops", "low"),
+        manager.prepareText(FONT_URL, "oops", false),
       ).rejects.toThrow("connection lost");
     });
 
     it("should handle preparing text for multiple fonts simultaneously", async () => {
       const urlA = "https://fonts.test/a.ttf";
       const urlB = "https://fonts.test/b.ttf";
-      await manager.loadFont(urlA, "low");
-      await manager.loadFont(urlB, "low");
+      await manager.loadFont(urlA, false);
+      await manager.loadFont(urlB, false);
 
       await Promise.all([
-        manager.prepareText(urlA, "alpha", "low"),
-        manager.prepareText(urlB, "beta", "low"),
+        manager.prepareText(urlA, "alpha", false),
+        manager.prepareText(urlB, "beta", false),
       ]);
 
-      expect(manager.isTextPrepared(urlA, "alpha", "low")).toBe(true);
-      expect(manager.isTextPrepared(urlB, "beta", "low")).toBe(true);
+      expect(manager.isTextPrepared(urlA, "alpha", false)).toBe(true);
+      expect(manager.isTextPrepared(urlB, "beta", false)).toBe(true);
     });
 
     it("should handle batch returning null atlas", async () => {
@@ -1738,15 +1740,15 @@ describe("FontManager", () => {
         results: [{ text: "cached", shapeResult: createShapeResult("cached") }],
         atlas: null,
         colorAtlas: null,
-        atlasKey: FONT_URL + "#q=low",
+        atlasKey: FONT_URL + "#q=false",
       } satisfies BatchPrepareTextResult);
 
-      await manager.loadFont(FONT_URL, "low");
-      await manager.prepareText(FONT_URL, "cached", "low");
+      await manager.loadFont(FONT_URL, false);
+      await manager.prepareText(FONT_URL, "cached", false);
 
       // No atlas was returned (all glyphs were already in atlas)
       // But shape result should still be cached
-      expect(manager.isTextPrepared(FONT_URL, "cached", "low")).toBe(true);
+      expect(manager.isTextPrepared(FONT_URL, "cached", false)).toBe(true);
     });
 
     it("should handle batch returning null shapeResult for a text entry", async () => {
@@ -1754,14 +1756,14 @@ describe("FontManager", () => {
         results: [{ text: "empty", shapeResult: null }],
         atlas: null,
         colorAtlas: null,
-        atlasKey: FONT_URL + "#q=low",
+        atlasKey: FONT_URL + "#q=false",
       } satisfies BatchPrepareTextResult);
 
-      await manager.loadFont(FONT_URL, "low");
-      await manager.prepareText(FONT_URL, "empty", "low");
+      await manager.loadFont(FONT_URL, false);
+      await manager.prepareText(FONT_URL, "empty", false);
 
       // null shapeResult should not be cached
-      expect(manager.isTextPrepared(FONT_URL, "empty", "low")).toBe(false);
+      expect(manager.isTextPrepared(FONT_URL, "empty", false)).toBe(false);
     });
 
     it("should handle font family with empty text segments gracefully", async () => {
@@ -1769,7 +1771,7 @@ describe("FontManager", () => {
       setupBatchMock("TestFamily");
 
       // Empty string returns early
-      await manager.prepareText("TestFamily", "", "low");
+      await manager.prepareText("TestFamily", "", false);
       expect(mocks.mockPrepareTextBatch).not.toHaveBeenCalled();
     });
   });

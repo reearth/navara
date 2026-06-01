@@ -19,13 +19,12 @@ import type {
   GlyphMetrics,
   ShapedGlyph,
   ShapeTextResult,
-  TextQuality,
 } from "./types";
 
 /** Internal cache key combining an identifier with a quality, so SDF and
  *  MSDF variants of the same font live as separate entries. */
-const _q = (identifier: string, quality: TextQuality): string =>
-  `${identifier}#q=${quality}`;
+const _q = (identifier: string, highQuality: boolean): string =>
+  `${identifier}#q=${highQuality}`;
 
 /** Create an SDF/MSDF distance-field atlas DataTexture.
  *
@@ -228,17 +227,17 @@ export class FontManager {
    * Returns immediately if the font is already loaded. Deduplicates concurrent requests.
    *
    * `atlasKey`: optional shared atlas identifier (e.g. font family name).
-   * `quality`: which atlas raster path to use. Two materials referencing the
-   * same `url` but different `quality` values produce two independent
+   * `highQuality`: which atlas raster path to use. Two materials referencing the
+   * same `url` but different `highQuality` values produce two independent
    * (font, atlas) entries — both live side-by-side. The browser HTTP cache
    * makes the second fetch effectively free.
    */
   async loadFont(
     url: string,
-    quality: TextQuality,
+    highQuality: boolean,
     atlasKey?: string,
   ): Promise<void> {
-    const qUrl = _q(url, quality);
+    const qUrl = _q(url, highQuality);
     if (this._loaded.has(qUrl)) {
       this._refCount.set(qUrl, (this._refCount.get(qUrl) ?? 0) + 1);
       return;
@@ -251,10 +250,10 @@ export class FontManager {
 
     // qAtlasKey is `undefined` (worker falls back to the URL, which is itself
     // already qualified) when the caller didn't supply an atlasKey. When they
-    // did, we qualify it so families with the same name but different quality
+    // did, we qualify it so families with the same name but different highQuality
     // get distinct atlases.
-    const qAtlasKey = atlasKey ? _q(atlasKey, quality) : undefined;
-    const promise = this._fetchAndLoad(url, qUrl, qAtlasKey, quality);
+    const qAtlasKey = atlasKey ? _q(atlasKey, highQuality) : undefined;
+    const promise = this._fetchAndLoad(url, qUrl, qAtlasKey, highQuality);
     this._refCount.set(qUrl, 1);
     this._pending.set(qUrl, promise);
 
@@ -276,8 +275,8 @@ export class FontManager {
     }
   }
 
-  async unloadFont(url: string, quality: TextQuality) {
-    const qUrl = _q(url, quality);
+  async unloadFont(url: string, highQuality: boolean) {
+    const qUrl = _q(url, highQuality);
     const count = this._refCount.get(qUrl);
     if (!count) return;
     if (count > 1) {
@@ -308,7 +307,9 @@ export class FontManager {
     if (this._client) {
       const result = await this._client.unloadFont(qUrl);
       if (!result.ok) {
-        console.warn(`Failed to unload font "${url}" (${quality}) in worker`);
+        console.warn(
+          `Failed to unload font "${url}" (${highQuality}) in worker`,
+        );
       }
     }
   }
@@ -329,7 +330,7 @@ export class FontManager {
   async prepareText(
     fontIdentifier: string,
     text: string,
-    quality: TextQuality,
+    highQuality: boolean,
     loadedFaces?: Set<string>,
   ): Promise<void> {
     if (!text) return;
@@ -338,9 +339,9 @@ export class FontManager {
     if (family) {
       // Lazy path: load only the face URLs needed for this text that this
       // caller has not loaded yet. `loadedFaces` tracks raw face URLs (no
-      // quality suffix), matching the URLs the caller later passes to
-      // `unloadFont(url, quality)`. A single set is therefore tied to one
-      // quality — callers switching quality should use a fresh set.
+      // highQuality suffix), matching the URLs the caller later passes to
+      // `unloadFont(url, highQuality)`. A single set is therefore tied to one
+      // highQuality — callers switching highQuality should use a fresh set.
       const tracker = loadedFaces ?? new Set<string>();
       const segments = this._segmentTextByFace(family.faces, text);
       const uniqueUrls = [...new Set(segments.map((s) => s.url))];
@@ -348,14 +349,14 @@ export class FontManager {
         uniqueUrls
           .filter((url) => !tracker.has(url))
           .map(async (url) => {
-            await this.loadFont(url, quality, fontIdentifier);
+            await this.loadFont(url, highQuality, fontIdentifier);
             tracker.add(url);
           }),
       );
-      return this._prepareFamilyText(fontIdentifier, family, text, quality);
+      return this._prepareFamilyText(fontIdentifier, family, text, highQuality);
     }
 
-    return this._prepareSingleFontText(fontIdentifier, text, quality);
+    return this._prepareSingleFontText(fontIdentifier, text, highQuality);
   }
 
   /**
@@ -365,10 +366,10 @@ export class FontManager {
   isTextPrepared(
     fontIdentifier: string,
     text: string,
-    quality: TextQuality,
+    highQuality: boolean,
   ): boolean {
     return (
-      this._shapeCache.get(_q(fontIdentifier, quality))?.has(text) ?? false
+      this._shapeCache.get(_q(fontIdentifier, highQuality))?.has(text) ?? false
     );
   }
 
@@ -380,18 +381,18 @@ export class FontManager {
   shapeText(
     fontIdentifier: string,
     text: string,
-    quality: TextQuality,
+    highQuality: boolean,
   ): ShapeTextResult | undefined {
-    return this._shapeCache.get(_q(fontIdentifier, quality))?.get(text);
+    return this._shapeCache.get(_q(fontIdentifier, highQuality))?.get(text);
   }
 
   /** Prepare text for a single standalone font (non-family path). */
   private async _prepareSingleFontText(
     fontUrl: string,
     text: string,
-    quality: TextQuality,
+    highQuality: boolean,
   ): Promise<void> {
-    const qUrl = _q(fontUrl, quality);
+    const qUrl = _q(fontUrl, highQuality);
     const cacheKey = this._cacheKey(qUrl, text);
     if (this._shapeCache.get(qUrl)?.has(text) ?? false) return;
     if (this._preparePending.has(cacheKey))
@@ -425,9 +426,9 @@ export class FontManager {
     familyName: string,
     family: FontFamily,
     text: string,
-    quality: TextQuality,
+    highQuality: boolean,
   ): Promise<void> {
-    const qFamily = _q(familyName, quality);
+    const qFamily = _q(familyName, highQuality);
     // Already stitched and cached?
     if (this._shapeCache.get(qFamily)?.has(text)) return;
 
@@ -441,12 +442,12 @@ export class FontManager {
       // Shape each segment. Face URLs were loaded lazily by prepareText above.
       await Promise.all(
         segments.map((seg) =>
-          this._prepareSingleFontText(seg.url, seg.text, quality),
+          this._prepareSingleFontText(seg.url, seg.text, highQuality),
         ),
       );
 
       // Stitch per-segment results into one combined result
-      const stitched = this._stitchSegments(segments, quality);
+      const stitched = this._stitchSegments(segments, highQuality);
 
       let familyShapeCache = this._shapeCache.get(qFamily);
       if (!familyShapeCache) {
@@ -473,17 +474,19 @@ export class FontManager {
    */
   private _stitchSegments(
     segments: { url: string; text: string }[],
-    quality: TextQuality,
+    highQuality: boolean,
   ): ShapeTextResult {
     const allGlyphs: ShapedGlyph[] = [];
     const metricsMap = new Map<string, GlyphMetrics>();
     let targetUnitsPerEm = 0;
 
     for (const seg of segments) {
-      const result = this._shapeCache.get(_q(seg.url, quality))?.get(seg.text);
+      const result = this._shapeCache
+        .get(_q(seg.url, highQuality))
+        ?.get(seg.text);
       invariant(
         result,
-        `FontManager: missing shape cache for ${seg.url} "${seg.text}" (${quality})`,
+        `FontManager: missing shape cache for ${seg.url} "${seg.text}" (${highQuality})`,
       );
 
       if (targetUnitsPerEm === 0) targetUnitsPerEm = result.unitsPerEm;
@@ -529,9 +532,9 @@ export class FontManager {
    */
   getAtlas(
     fontIdentifier: string,
-    quality: TextQuality,
+    highQuality: boolean,
   ): FontAtlasData | undefined {
-    const key = this._resolveAtlasKey(fontIdentifier, quality);
+    const key = this._resolveAtlasKey(fontIdentifier, highQuality);
     return this._atlasCache.get(key);
   }
 
@@ -542,10 +545,10 @@ export class FontManager {
    */
   getAtlasTexture(
     fontIdentifier: string,
-    quality: TextQuality,
+    highQuality: boolean,
   ): DataTexture | null {
     return this._getOrUpdateTexture(
-      this._resolveAtlasKey(fontIdentifier, quality),
+      this._resolveAtlasKey(fontIdentifier, highQuality),
       this._atlasCache,
       this._atlasDirty,
       this._textureCache,
@@ -556,9 +559,9 @@ export class FontManager {
   /** Color atlas data for a loaded COLRv1 font. `undefined` for monochrome. */
   getColorAtlas(
     fontIdentifier: string,
-    quality: TextQuality,
+    highQuality: boolean,
   ): FontAtlasData | undefined {
-    const key = this._resolveAtlasKey(fontIdentifier, quality);
+    const key = this._resolveAtlasKey(fontIdentifier, highQuality);
     return this._colorAtlasCache.get(key);
   }
 
@@ -568,10 +571,10 @@ export class FontManager {
    */
   getColorAtlasTexture(
     fontIdentifier: string,
-    quality: TextQuality,
+    highQuality: boolean,
   ): DataTexture | null {
     return this._getOrUpdateTexture(
-      this._resolveAtlasKey(fontIdentifier, quality),
+      this._resolveAtlasKey(fontIdentifier, highQuality),
       this._colorAtlasCache,
       this._colorAtlasDirty,
       this._colorTextureCache,
@@ -650,12 +653,13 @@ export class FontManager {
    *  URLs are looked up via `_atlasKeys` (already-qualified keys). */
   private _resolveAtlasKey(
     fontIdentifier: string,
-    quality: TextQuality,
+    highQuality: boolean,
   ): string {
-    if (this._families.has(fontIdentifier)) return _q(fontIdentifier, quality);
+    if (this._families.has(fontIdentifier))
+      return _q(fontIdentifier, highQuality);
     return (
-      this._atlasKeys.get(_q(fontIdentifier, quality)) ??
-      _q(fontIdentifier, quality)
+      this._atlasKeys.get(_q(fontIdentifier, highQuality)) ??
+      _q(fontIdentifier, highQuality)
     );
   }
 
@@ -670,7 +674,7 @@ export class FontManager {
     rawUrl: string,
     qUrl: string,
     qAtlasKey: string | undefined,
-    quality: TextQuality,
+    highQuality: boolean,
   ): Promise<void> {
     const client = await this._ensureClient();
 
@@ -682,7 +686,12 @@ export class FontManager {
     }
 
     const arrayBuffer = await response.arrayBuffer();
-    const result = await client.loadFont(qUrl, arrayBuffer, qAtlasKey, quality);
+    const result = await client.loadFont(
+      qUrl,
+      arrayBuffer,
+      qAtlasKey,
+      highQuality,
+    );
 
     if (!result.ok) {
       throw new Error(`FontManager: WASM failed to load font from ${rawUrl}`);

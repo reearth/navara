@@ -2,7 +2,7 @@ import type {
   TextMesh as NavaraTextMesh,
   TextMaterial as NavaraTextMaterial,
 } from "@navara/engine";
-import type { FontManager, TextQuality } from "@navara/font";
+import type { FontManager } from "@navara/font";
 import { type Color } from "three";
 import invariant from "tiny-invariant";
 
@@ -10,7 +10,7 @@ import type { EventContext } from "../event/context";
 
 import { InstancedMesh, type InstancedMeshOptions } from "./instanced";
 import type { PickableMesh } from "./pickableMesh";
-import { SDFTextMesh, wasmQualityToString } from "./sdfText";
+import { SDFTextMesh } from "./sdfText";
 
 type PositionsInfoBase = {
   batchIDs: Float32Array<ArrayBufferLike> | null;
@@ -44,7 +44,7 @@ export class BatchedSdfTextMesh
   /** Per-batch text quality. All instanced meshes in this batch share it
    *  because they all sample the same atlas texture; flipping quality requires
    *  a new BatchedSdfTextMesh. */
-  private _quality: TextQuality;
+  private _highQuality: boolean;
   private _fontManager: FontManager;
   private _needRender?: () => void;
   /**
@@ -64,7 +64,7 @@ export class BatchedSdfTextMesh
     super(options);
     this.ctx = ctx;
     this._fontIdentifier = fontIdentifier;
-    this._quality = wasmQualityToString(m.material.highQuality);
+    this._highQuality = m.material.highQuality ?? false;
     invariant(ctx.fontManager);
     this._fontManager = ctx.fontManager;
     this._loadedFaceUrls = loadedFaceUrls ?? new Set();
@@ -75,8 +75,8 @@ export class BatchedSdfTextMesh
     return this._fontIdentifier;
   }
 
-  get quality(): TextQuality {
-    return this._quality;
+  get highQuality(): boolean {
+    return this._highQuality;
   }
 
   private initMeshes(m: NavaraTextMesh) {
@@ -96,11 +96,11 @@ export class BatchedSdfTextMesh
     // monochrome fonts.
     const sharedTex = this._fontManager.getAtlasTexture(
       this._fontIdentifier,
-      this._quality,
+      this._highQuality,
     );
     const sharedColorTex = this._fontManager.getColorAtlasTexture(
       this._fontIdentifier,
-      this._quality,
+      this._highQuality,
     );
 
     for (let i = 0; i < nPositions; i++) {
@@ -167,9 +167,9 @@ export class BatchedSdfTextMesh
     const fontIdentifier = m.material.font ?? this._fontIdentifier;
     const needFontUpdate = fontIdentifier !== this._fontIdentifier;
 
-    // Quality is immutable per batch (see _quality docs); use the batch's
+    // Quality is immutable per batch (see _highQuality docs); use the batch's
     // quality everywhere, ignoring `m.material.highQuality` on updates.
-    const q = this._quality;
+    const q = this._highQuality;
 
     if (needFontUpdate) {
       // Unload old font resources.
@@ -219,11 +219,11 @@ export class BatchedSdfTextMesh
     // Update shared textures (in-place update if either atlas grew)
     const sharedTex = this._fontManager.getAtlasTexture(
       this._fontIdentifier,
-      this._quality,
+      this._highQuality,
     );
     const sharedColorTex = this._fontManager.getColorAtlasTexture(
       this._fontIdentifier,
-      this._quality,
+      this._highQuality,
     );
 
     for (const mesh of this.meshes()) {
@@ -317,7 +317,7 @@ export class BatchedSdfTextMesh
         !this._fontManager.isTextPrepared(
           this._fontIdentifier,
           text,
-          this._quality,
+          this._highQuality,
         )
       ) {
         // Capture the intended visibility before the async font prep begins.
@@ -330,14 +330,14 @@ export class BatchedSdfTextMesh
           .prepareText(
             this._fontIdentifier,
             text,
-            this._quality,
+            this._highQuality,
             this._loadedFaceUrls,
           )
           .then(() => {
             // Refresh shared atlas textures if the worker rasterized new glyphs
             const sharedTex = this._fontManager.getAtlasTexture(
               this._fontIdentifier,
-              this._quality,
+              this._highQuality,
             );
             if (sharedTex) {
               mesh.setAtlasTexture(sharedTex);
@@ -345,7 +345,7 @@ export class BatchedSdfTextMesh
             mesh.setColorAtlasTexture(
               this._fontManager.getColorAtlasTexture(
                 this._fontIdentifier,
-                this._quality,
+                this._highQuality,
               ),
             );
             mesh.setText(text);
@@ -389,7 +389,7 @@ export class BatchedSdfTextMesh
   }
 
   dispose() {
-    const q = this._quality;
+    const q = this._highQuality;
     const unload =
       this._loadedFaceUrls.size > 0
         ? Promise.all(

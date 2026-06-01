@@ -5,25 +5,6 @@
 export const COLOR_GLYPH_PX_SIZE = 64.0;
 
 /**
- * Per-material text quality. Picks the atlas raster path:
- *  - `"low"` — single-channel SDF via fontdue + Felzenszwalb. Cheap, ~100×
- *    faster per glyph; slightly soft corners at extreme zoom.
- *  - `"high"` — 4-channel MTSDF via `fdsm`. Sharper corners; expensive
- *    rasterization because exact distance-to-curve math runs per pixel.
- *
- * Mirrors `TextQuality` in `crates/navara_material/src/appearance.rs`.
- */
-export type TextQuality = "low" | "high";
-
-/** Default quality when a TextMaterial omits `quality`. Matches the Rust
- *  default in [`navara_material::TextQuality::default`]. */
-export const DEFAULT_TEXT_QUALITY: TextQuality = "low";
-
-/** Whether the given quality maps to the MSDF (MTSDF) atlas path.
- *  The shader define `USE_MSDF` is driven from this. */
-export const isMsdfQuality = (q: TextQuality): boolean => q === "high";
-
-/**
  * Pixel range over which a quality's atlas distance field ramps from
  * "outside" to "inside" (i.e. the value covered by `d - 0.5` in the shader).
  * Converts an outline-thickness expressed in pixels into a delta on the
@@ -32,8 +13,8 @@ export const isMsdfQuality = (q: TextQuality): boolean => q === "high";
  * SDF: `SDF_RADIUS` (35) in `crates/navara_wasm_font_worker/src/atlas.rs`.
  * MSDF: `MSDF_RANGE_PX` (8) in `crates/navara_wasm_font_worker/src/msdf.rs`.
  */
-export const atlasRangePx = (q: TextQuality): number =>
-  isMsdfQuality(q) ? 8.0 : 35.0;
+export const atlasRangePx = (highQuality: boolean): number =>
+  highQuality ? 8.0 : 35.0;
 
 /** Glyph metrics from either the SDF or the color atlas. */
 export type GlyphMetrics = {

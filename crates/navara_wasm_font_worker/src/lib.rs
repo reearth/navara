@@ -111,7 +111,7 @@ impl FontCache {
     /// `atlas_key`: shared atlas identifier (e.g. family name). Omit to get a
     /// per-URL atlas.
     /// `mode`: `"msdf"` → MTSDF; anything else (including `None`) → SDF.
-    /// Mirrors the TS `quality: "low" | "high"` knob.
+    /// Selected by the TS `highQuality` boolean knob (`true` → `"msdf"`).
     #[wasm_bindgen(js_name = loadFont)]
     pub fn wasm_load_font(
         &mut self,

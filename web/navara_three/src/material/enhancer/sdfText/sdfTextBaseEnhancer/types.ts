@@ -8,8 +8,7 @@ import type { Mutates } from "../../MaterialEnhancer";
  *  outline-width pixels translate to a distance-value delta. SDF (`useMsdf=false`)
  *  uses the classic 35 px radius from `sdf_glyph_renderer`; MSDF uses
  *  `MSDF_RANGE_PX` (8 px). See [`atlasRangePx`] in `@navara/font`. */
-export const sdfRadiusFor = (useMsdf: boolean): number =>
-  atlasRangePx(useMsdf ? "high" : "low");
+export const sdfRadiusFor = (useMsdf: boolean): number => atlasRangePx(useMsdf);
 
 /**
  * Props for the sdfText base enhancer.

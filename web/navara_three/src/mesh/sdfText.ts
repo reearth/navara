@@ -6,12 +6,9 @@ import type {
 import {
   COLOR_GLYPH_PX_SIZE,
   createSdfAtlasTexture,
-  DEFAULT_TEXT_QUALITY,
-  isMsdfQuality,
   type FontManager,
   type GlyphMetrics,
   type ShapeTextResult,
-  type TextQuality,
 } from "@navara/font";
 import { degreeToRadian } from "@navara/three_api";
 import {
@@ -41,13 +38,6 @@ import type { PickableMesh } from "./pickableMesh";
 /** Must match Rust `SDF_PX_SIZE` in `crates/navara_wasm_font_worker/src/atlas.rs`. */
 const SDF_PX_SIZE = 64.0;
 
-/** Normalize a WASM TextMaterial `highQuality` boolean into the internal union:
- *  `true` selects the high-quality MTSDF path, while `false` or `undefined`
- *  fall back to [`DEFAULT_TEXT_QUALITY`] (single-channel SDF). Mirrors the Rust
- *  `bool_to_text_quality` policy. */
-export const wasmQualityToString = (q: boolean | undefined): TextQuality =>
-  q === true ? "high" : DEFAULT_TEXT_QUALITY;
-
 /** Reusable Vector2 to avoid per-frame allocations in onBeforeRender. */
 const _tmpSize = new Vector2();
 
@@ -67,7 +57,7 @@ export class SDFTextMesh
   /** Per-material text quality. Immutable after construction — switching
    *  quality requires a separate (font, atlas) pair, so callers create a new
    *  mesh rather than mutating this one. */
-  private _quality: TextQuality;
+  private _highQuality: boolean;
   private _text = "";
   private _atlasTexture: DataTexture | null = null;
   /** Atlas texture is owned externally; do not dispose on cleanup when true. */
@@ -95,7 +85,7 @@ export class SDFTextMesh
 
     this._fontManager = fontManager;
     this._fontUrl = fontUrl;
-    this._quality = wasmQualityToString(material.highQuality);
+    this._highQuality = material.highQuality ?? false;
 
     this.geometry = this._createBaseGeometry();
 
@@ -110,7 +100,7 @@ export class SDFTextMesh
     this._enhancer.mount({
       base: {
         useRTE: RTE,
-        useMsdf: isMsdfQuality(this._quality),
+        useMsdf: this._highQuality,
         color: material.color ?? 0xffffff,
         fontSize: material.size ?? 16.0,
         center: material.center
@@ -206,14 +196,17 @@ export class SDFTextMesh
     const shapeResult = this._fontManager.shapeText(
       this._fontUrl,
       text,
-      this._quality,
+      this._highQuality,
     );
     if (!shapeResult) {
       this.geometry.instanceCount = 0;
       return;
     }
 
-    const atlasData = this._fontManager.getAtlas(this._fontUrl, this._quality);
+    const atlasData = this._fontManager.getAtlas(
+      this._fontUrl,
+      this._highQuality,
+    );
     if (!atlasData) return;
 
     // Glyph rects are stored in pixel space and normalized in the shader using
