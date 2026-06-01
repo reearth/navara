@@ -1937,7 +1937,7 @@ export default class ThreeView<
    * Picks the position at screen coordinates from the depth.
    * @param x - Screen X coordinate in CSS pixels (same as MouseEvent.clientX)
    * @param y - Screen Y coordinate in CSS pixels (same as MouseEvent.clientY)
-   * @returns World position Vector3 in ECEF coordinates, or null if no terrain is hit
+   * @returns World position Vector3 in ECEF coordinates, or null if nothing is hit
    */
   pickDepthPosition(x: number, y: number): Nullable<Vector3> {
     return this._terrainPicker.pick(
