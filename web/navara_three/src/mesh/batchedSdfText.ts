@@ -64,7 +64,7 @@ export class BatchedSdfTextMesh
     super(options);
     this.ctx = ctx;
     this._fontIdentifier = fontIdentifier;
-    this._quality = wasmQualityToString(m.material.quality);
+    this._quality = wasmQualityToString(m.material.highQuality);
     invariant(ctx.fontManager);
     this._fontManager = ctx.fontManager;
     this._loadedFaceUrls = loadedFaceUrls ?? new Set();
@@ -168,7 +168,7 @@ export class BatchedSdfTextMesh
     const needFontUpdate = fontIdentifier !== this._fontIdentifier;
 
     // Quality is immutable per batch (see _quality docs); use the batch's
-    // quality everywhere, ignoring `m.material.quality` on updates.
+    // quality everywhere, ignoring `m.material.highQuality` on updates.
     const q = this._quality;
 
     if (needFontUpdate) {

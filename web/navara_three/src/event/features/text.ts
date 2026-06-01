@@ -26,7 +26,7 @@ export async function renderText(
       // For font families, only the face URLs needed for `text` are loaded (lazy).
       // For raw URLs, the single font file is loaded directly.
       const text = m.material.text ?? "";
-      const quality = wasmQualityToString(m.material.quality);
+      const quality = wasmQualityToString(m.material.highQuality);
       const loadedFaceUrls = new Set<string>();
       if (fontManager.isFamily(fontUrl)) {
         if (text)

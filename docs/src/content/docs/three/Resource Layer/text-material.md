@@ -292,20 +292,20 @@ import { Color } from "@navara/three";
 }
 ```
 
-### quality
+### highQuality
 
-**Type:** `"low" | "high" | undefined`
+**Type:** `boolean | undefined`
 
-**Description:** Selects the glyph atlas rasterization path. `"low"` uses a single-channel SDF and is dramatically faster to rasterize, with slightly soft corners at extreme zoom. `"high"` uses MSDF, which preserves sharp corners at large sizes but is significantly slower per glyph. Unrecognized values fall back to `"low"`.
+**Description:** Enables high-quality glyph rendering. When `true`, text uses an MSDF atlas, which preserves sharp corners at large sizes but is significantly slower to rasterize per glyph. When `false` or omitted, the default single-channel SDF atlas is used, which is dramatically faster with slightly soft corners at extreme zoom.
 
-**Default:** `"low"`
+**Default:** `false`
 
 **Example:**
 
 ```typescript
 {
   text: {
-    quality: "high"
+    highQuality: true
   }
 }
 ```

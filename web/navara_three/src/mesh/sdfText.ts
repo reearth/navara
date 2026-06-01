@@ -41,11 +41,12 @@ import type { PickableMesh } from "./pickableMesh";
 /** Must match Rust `SDF_PX_SIZE` in `crates/navara_wasm_font_worker/src/atlas.rs`. */
 const SDF_PX_SIZE = 64.0;
 
-/** Normalize a WASM TextMaterial `quality` string into the union, falling back
- *  to [`DEFAULT_TEXT_QUALITY`] for `undefined` or unknown values (mirrors the
- *  Rust `parse_text_quality` policy). */
-export const wasmQualityToString = (q: string | undefined): TextQuality =>
-  q === "high" || q === "low" ? q : DEFAULT_TEXT_QUALITY;
+/** Normalize a WASM TextMaterial `highQuality` boolean into the internal union:
+ *  `true` selects the high-quality MTSDF path, while `false` or `undefined`
+ *  fall back to [`DEFAULT_TEXT_QUALITY`] (single-channel SDF). Mirrors the Rust
+ *  `bool_to_text_quality` policy. */
+export const wasmQualityToString = (q: boolean | undefined): TextQuality =>
+  q === true ? "high" : DEFAULT_TEXT_QUALITY;
 
 /** Reusable Vector2 to avoid per-frame allocations in onBeforeRender. */
 const _tmpSize = new Vector2();
@@ -94,7 +95,7 @@ export class SDFTextMesh
 
     this._fontManager = fontManager;
     this._fontUrl = fontUrl;
-    this._quality = wasmQualityToString(material.quality);
+    this._quality = wasmQualityToString(material.highQuality);
 
     this.geometry = this._createBaseGeometry();
 
