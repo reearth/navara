@@ -319,6 +319,30 @@ const view = new ThreeView({
 });
 ```
 
+### idleThreshold
+
+**Type:** `number | undefined`
+
+**Description:** Milliseconds without data or tile processing activity that must elapse before the `idle` event fires. Continuous animations and effects do not count as activity. Lowering this value makes the engine report idle sooner; raising it delays the notification until a longer quiet period has passed.
+
+**Default:** `100`
+
+**Example:**
+
+```typescript
+const view = new ThreeView({
+  idleThreshold: 200,
+});
+
+view.on("idle", () => {
+  console.log("Engine has been idle for 200 ms");
+});
+```
+
+:::tip[Related Documentation]
+See the [`idle` event](./threeview-events#idle) for details on when this event fires.
+:::
+
 ### mobileOptimization
 
 **Type:** `boolean | undefined`
