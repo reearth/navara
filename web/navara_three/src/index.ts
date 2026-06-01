@@ -932,9 +932,10 @@ export default class ThreeView<
         this._renderer.domElement,
         () => {
           const el = this._renderer.domElement;
+          const rect = el.getBoundingClientRect();
           const pos = this.pickDepthPosition(
-            el.clientWidth / 2,
-            el.clientHeight / 2,
+            rect.left + rect.width / 2,
+            rect.top + rect.height / 2,
           );
           if (!pos) return null;
           return this._camera.raw.position.distanceTo(pos);
