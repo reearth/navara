@@ -461,7 +461,7 @@ export class TileMesh
     this.material.userData.uvTransform.scale.set(scale.x, scale.y);
 
     const maxTextures = this.maxTextures;
-    this.setUniforms(mat, maxTextures, globe, mesh.uv_transform);
+    this.setUniforms(mat, maxTextures);
     this.setupTextureFragments(
       mat.texture_fragments(),
       tileMapByHandle,
@@ -956,6 +956,12 @@ if (uPickable > 0.) {
     this.visible = active;
 
     if (active) {
+      this.ensureCorrectMaterialType(
+        changedMaterial,
+        globe,
+        tileMesh.uv_transform,
+      );
+
       this.setupTextureFragments(
         changedMaterial?.texture_fragments(),
         tileMapByHandle,
@@ -966,12 +972,7 @@ if (uPickable > 0.) {
 
       // Set uniforms (this may switch material type for hillshade)
       // Pass uvTransform from mesh data so new material gets correct values immediately
-      this.setUniforms(
-        changedMaterial,
-        maxTextures,
-        globe,
-        tileMesh.uv_transform,
-      );
+      this.setUniforms(changedMaterial, maxTextures);
 
       // Update UV transform AFTER material switch to ensure it's set on the current material
       // This handles the case where material didn't switch
@@ -1149,18 +1150,21 @@ if (uPickable > 0.) {
     },
   ): void {
     // Determine if hillshade is present in the material configuration
-    const needsLambert = mat.isHillshades?.some((v) => v !== 0) ?? false;
+    const needsLambert =
+      mat.isHillshades && mat.isHillshades.length > 0
+        ? mat.isHillshades.some((v) => v !== 0)
+        : !!globe.useNormal;
     const isLambert = this.material instanceof MeshLambertMaterial;
 
     if (needsLambert !== isLambert) {
-      // Material type needs to change - recreate the material
-      console.log(
-        `[TileMesh] Switching material: ${isLambert ? "Lambert→Basic" : "Basic→Lambert"} for tile ${this.handle}`,
-      );
       const oldMaterial = this.material;
 
       // Create new material with correct type
       this.material = this.initMaterial(mat, this.ctx.uniforms, globe);
+
+      if (this.shadowMesh) {
+        this.shadowMesh.material = this.material;
+      }
 
       // Set up uvTransform immediately with correct values from mesh data
       // This prevents shader from compiling with default/stale values
@@ -1170,23 +1174,12 @@ if (uPickable > 0.) {
       };
 
       // Dispose old material
+      this.ctx.viewContext?.removeShadowMaterial(oldMaterial);
       oldMaterial.dispose();
     }
   }
 
-  private setUniforms(
-    mat: RasterTileInternalMaterial,
-    maxTextures: number,
-    globe: Globe,
-    uvTransform: {
-      offset: { x: number; y: number };
-      scale: { x: number; y: number };
-    },
-  ) {
-    // Ensure material type is correct before setting up userData
-    // Pass uvTransform so new material gets correct values immediately
-    this.ensureCorrectMaterialType(mat, globe, uvTransform);
-
+  private setUniforms(mat: RasterTileInternalMaterial, maxTextures: number) {
     const m = this.material;
 
     if (!m.userData.shows) {
