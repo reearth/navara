@@ -81,6 +81,13 @@ impl Core {
             return;
         };
 
+        if matches!(
+            input.r#type,
+            InputType::MouseDown | InputType::Wheel | InputType::TouchStart
+        ) {
+            self.app.set_terrain_pick_distance(input.terrain_distance);
+        }
+
         let Some(input) = input.into_ecs_input() else {
             return;
         };

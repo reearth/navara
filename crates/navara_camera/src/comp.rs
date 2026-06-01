@@ -209,6 +209,7 @@ pub struct CameraController {
     pub follow_target_cur: Option<Vec3>,
     pub follow_target_pre: Option<Vec3>,
     pub follow_offset: Option<Vec3>,
+    pub terrain_hit_distance: Option<f64>,
 }
 
 impl Default for CameraController {
@@ -232,6 +233,7 @@ impl Default for CameraController {
             follow_target_cur: None,
             follow_target_pre: None,
             follow_offset: None,
+            terrain_hit_distance: None,
         }
     }
 }

@@ -819,6 +819,38 @@ view.on("click", (event) => {
 });
 ```
 
+### pickDepthPosition()
+
+Picks the world position at the given screen coordinates using the full scene depth buffer. Unlike `pickTerrainPosition()`, this method reads from the combined depth texture that includes all rendered geometry (terrain, meshes, etc.), so it returns a hit even when non-terrain objects are in front of the terrain.
+
+**Syntax:**
+
+```tsx
+pickDepthPosition(x: number, y: number): Vector3 | null
+```
+
+**Parameters:**
+
+- `x`: Screen X coordinate (CSS pixels, same as `MouseEvent.clientX`)
+- `y`: Screen Y coordinate (CSS pixels, same as `MouseEvent.clientY`)
+
+**Returns:**
+
+World position (ECEF coordinates), or `null` if nothing is hit
+
+**Example:**
+
+```tsx
+view.on("click", (event) => {
+  const position = view.pickDepthPosition(event.clientX, event.clientY);
+  if (position) {
+    console.log(`ECEF coordinates: ${position.x}, ${position.y}, ${position.z}`);
+  } else {
+    console.log("Nothing hit");
+  }
+});
+```
+
 ### registerMesh()
 
 Registers a custom mesh descriptor class.

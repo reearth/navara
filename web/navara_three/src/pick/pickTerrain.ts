@@ -96,7 +96,7 @@ export class TerrainPicker {
     camera: PerspectiveCamera,
   ): Nullable<Vector3> {
     const logDepthOrDepth = this._sampleDepthAt(x, y, renderer, depthTexture);
-    if (logDepthOrDepth === null) {
+    if (logDepthOrDepth === null || logDepthOrDepth > 0.99) {
       return null;
     }
 
