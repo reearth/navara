@@ -7,3 +7,4 @@ export type {
   DefaultLightDescription,
   DefaultEffectDescription,
 } from "@navara/three_default_plugin";
+export * from "@navara/three_default_descs";
