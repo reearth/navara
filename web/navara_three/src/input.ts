@@ -1,9 +1,11 @@
 import type { Core } from "@navara/engine";
+import { throttle } from "lodash-es";
 
 // TODO: Need to think about how to propagate these event to worker.
 export function registerInputEvents(
   core: Core,
   element: HTMLElement,
+  getTerrainDistance?: () => number | null,
 ): () => void {
   let mouseEvent:
     | {
@@ -11,12 +13,17 @@ export function registerInputEvents(
         button: number;
       }
     | undefined;
+
+  let lastTerrainDistance: number | undefined;
+
   const mousedown = (event: MouseEvent) => {
     mouseEvent = {
       type: "mousedown",
       button: event.button,
     };
-    core.input(mouseEvent);
+    const terrainDistance = getTerrainDistance?.() ?? undefined;
+    lastTerrainDistance = terrainDistance;
+    core.input({ ...mouseEvent, terrain_distance: terrainDistance });
   };
   const mouseup = () => {
     core.input({
@@ -40,12 +47,15 @@ export function registerInputEvents(
   const touchstart = (event: TouchEvent) => {
     event.preventDefault();
 
+    const terrainDistance = getTerrainDistance?.() ?? undefined;
+    lastTerrainDistance = terrainDistance;
     for (const touch of event.changedTouches) {
       core.input({
         type: "touchstart",
         x: touch.clientX,
         y: touch.clientY,
         id: touch.identifier,
+        terrain_distance: terrainDistance,
       });
     }
   };
@@ -76,11 +86,17 @@ export function registerInputEvents(
     }
   };
 
+  const updateWheelTerrainDistance = throttle(() => {
+    lastTerrainDistance = getTerrainDistance?.() ?? undefined;
+  }, 100);
+
   const wheel = (event: WheelEvent) => {
+    updateWheelTerrainDistance();
     core.input({
       type: "wheel",
       x: event.deltaX,
       y: event.deltaY,
+      terrain_distance: lastTerrainDistance,
     });
   };
 

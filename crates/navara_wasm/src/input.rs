@@ -12,6 +12,7 @@ pub struct Input {
     pub key_code: Option<String>,
     pub key: Option<String>,
     pub id: Option<i32>,
+    pub terrain_distance: Option<f64>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]

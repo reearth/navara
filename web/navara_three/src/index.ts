@@ -831,6 +831,10 @@ export default class ThreeView<
     return this.renderPass.globeDepthCopyPass.texture;
   }
 
+  private get depthTexture() {
+    return this.renderPass.allDepthCopyPass.texture;
+  }
+
   /**
    * Returns whether mobile optimizations should be applied.
    * If `mobileOptimization` option is explicitly set, returns that value;
@@ -926,6 +930,15 @@ export default class ThreeView<
       this._eventDisposer = registerInputEvents(
         this._core,
         this._renderer.domElement,
+        () => {
+          const el = this._renderer.domElement;
+          const pos = this.pickDepthPosition(
+            el.clientWidth / 2,
+            el.clientHeight / 2,
+          );
+          if (!pos) return null;
+          return this._camera.raw.position.distanceTo(pos);
+        },
       );
       this._pickHelper = new PickHelper(
         this._renderer.domElement,
@@ -1916,6 +1929,22 @@ export default class ThreeView<
       y,
       this._renderer,
       this.globeDepthTexture,
+      this._camera.raw,
+    );
+  }
+
+  /**
+   * Picks the position at screen coordinates from the depth.
+   * @param x - Screen X coordinate in CSS pixels (same as MouseEvent.clientX)
+   * @param y - Screen Y coordinate in CSS pixels (same as MouseEvent.clientY)
+   * @returns World position Vector3 in ECEF coordinates, or null if no terrain is hit
+   */
+  pickDepthPosition(x: number, y: number): Nullable<Vector3> {
+    return this._terrainPicker.pick(
+      x,
+      y,
+      this._renderer,
+      this.depthTexture,
       this._camera.raw,
     );
   }

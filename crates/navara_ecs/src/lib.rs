@@ -8,8 +8,9 @@ use bevy_ecs::{
 };
 use navara_buffer_store::{BufferStore, Handle};
 use navara_camera::{
-    CamDirType, CameraControlUpdateEvent, CameraDirection, CameraEvent, CameraFrustum,
-    CameraMarker, CameraOrientation, CameraStatus, FrustumEvent, get_heading, get_pitch, get_roll,
+    CamDirType, CameraControlUpdateEvent, CameraController, CameraDirection, CameraEvent,
+    CameraFrustum, CameraMarker, CameraOrientation, CameraStatus, FrustumEvent, get_heading,
+    get_pitch, get_roll,
 };
 use navara_component::{Deleted, Rendered};
 use navara_core::{CRS, ElevationDecoder, LLE, LngLat, Radians, WGS84_64};
@@ -802,6 +803,14 @@ impl App {
 
     pub fn set_camera_control(&mut self, event: CameraControlUpdateEvent) {
         self.app.world_mut().write_message(event);
+    }
+
+    pub fn set_terrain_pick_distance(&mut self, distance: f64) {
+        let world = self.app.world_mut();
+        let mut query = world.query::<(&CameraMarker, &mut CameraController)>();
+        for (_, mut controller) in query.iter_mut(world) {
+            controller.terrain_hit_distance = Some(distance);
+        }
     }
 
     pub fn get_globe(&self) -> Option<&Globe> {

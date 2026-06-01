@@ -743,6 +743,38 @@ view.on("click", (event) => {
 });
 ```
 
+### pickDepthPosition()
+
+スクリーン座標でシーン全体の深度バッファを使用してワールド位置をピックします。`pickTerrainPosition()` と異なり、このメソッドは地形だけでなく全てのレンダリングジオメトリ（メッシュなど）を含む深度テクスチャを読み取るため、地形の手前に他のオブジェクトがある場合でもヒットを返します。
+
+**Syntax:**
+
+```tsx
+pickDepthPosition(x: number, y: number): Vector3 | null
+```
+
+**Parameters:**
+
+- `x`: スクリーン X 座標（CSS ピクセル、`MouseEvent.clientX` と同じ）
+- `y`: スクリーン Y 座標（CSS ピクセル、`MouseEvent.clientY` と同じ）
+
+**Returns:**
+
+ワールド位置（ECEF 座標）、または何もヒットしない場合は `null`
+
+**Example:**
+
+```tsx
+view.on("click", (event) => {
+  const position = view.pickDepthPosition(event.clientX, event.clientY);
+  if (position) {
+    console.log(`ECEF 座標: ${position.x}, ${position.y}, ${position.z}`);
+  } else {
+    console.log("何もヒットしませんでした");
+  }
+});
+```
+
 ### registerMesh()
 
 カスタムメッシュクラスを登録します。
