@@ -37,7 +37,7 @@ pub const MSDF_CHANNELS: usize = 4;
 
 /// Result of rasterizing one glyph to MSDF.
 pub struct MsdfGlyph {
-    /// Interleaved RGB pixels, row-major, Y-up (row 0 = bottom of glyph).
+    /// Interleaved RGBA pixels, row-major, Y-up (row 0 = bottom of glyph).
     pub pixels: Vec<u8>,
     pub width: u32,
     pub height: u32,
