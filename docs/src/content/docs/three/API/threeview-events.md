@@ -389,6 +389,30 @@ view.on("mouseup", (event) => {
 });
 ```
 
+### idle
+
+**Description:**
+
+Fires when data and tile processing becomes idle — that is, when no updates such as tile loading or data processing have occurred for at least `idleThreshold` milliseconds. Continuous animations and effects do not count as activity, so this event fires even while they are running. It fires at most once per idle period and resets when processing activity resumes.
+
+**Handler Type:**
+
+```tsx
+() => void
+```
+
+**Example:**
+
+```tsx
+view.on("idle", () => {
+  console.log("Data and tile processing is idle");
+});
+```
+
+:::tip
+Use the `idleThreshold` constructor option to control how long the engine must be inactive before the event fires. The default is 100 ms.
+:::
+
 ### click
 
 **Description:**

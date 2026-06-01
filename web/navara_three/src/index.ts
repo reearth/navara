@@ -194,6 +194,11 @@ export type Options = {
   /** Enables mobile device optimizations such as lower pixel ratio. */
   mobileOptimization?: boolean;
   /**
+   * Milliseconds of inactivity (no Rust-side events) before the `idle` event fires.
+   * @defaultValue 100
+   */
+  idleThreshold?: number;
+  /**
    * Enables shared water texture. When enabled, a single water normal texture
    * is loaded once and shared across all meshes that have water effects enabled.
    */
@@ -249,6 +254,8 @@ export type ViewEvents = {
   mouseup: (event: MapMouseEvent) => void;
   /** Emitted on click with map coordinates. */
   click: (event: MapMouseEvent) => void;
+  /** Emitted when the engine becomes idle (no Rust-side events for `idleThreshold` ms). */
+  idle: () => void;
 };
 
 /**
@@ -294,6 +301,7 @@ export default class ThreeView<
     forceUpdate: false,
     animation: false,
   };
+  private _isIdle = false;
   private _uniforms: CommonUniforms;
 
   private _meshes: MeshCache = new Map();
@@ -720,7 +728,11 @@ export default class ThreeView<
       };
     }
 
-    this._atmosphere = new Atmosphere(this._renderer, options.atmosphere);
+    this._atmosphere = new Atmosphere(
+      this._renderer,
+      options.atmosphere,
+      this._camera,
+    );
     this._atmosphere.on("needsUpdate", this.forceUpdate);
 
     this.on("layer", (e, id, ...args) => {
@@ -1766,19 +1778,28 @@ export default class ThreeView<
   }
 
   private _startMainLoop() {
+    const idleThreshold = this._options.idleThreshold ?? 100;
     const loop: XRFrameRequestCallback = (time) => {
       if (this._disposed) return;
       this._stats?.begin();
 
       this._forceFeatureUpdates(time);
 
-      if (
-        this._update(time) ||
-        this._renderFlag.forceUpdate ||
-        this._renderFlag.animation
-      )
+      const updated = this._update(time);
+      if (updated || this._renderFlag.forceUpdate || this._renderFlag.animation)
         this._render(time);
       this._renderFlag.forceUpdate = false;
+
+      if (updated) {
+        this._isIdle = false;
+      } else if (
+        !this._isIdle &&
+        this.eventContext.updatedAt > 0 &&
+        time - this.eventContext.updatedAt >= idleThreshold
+      ) {
+        this._isIdle = true;
+        this.emit("idle");
+      }
 
       this._stats?.end();
     };

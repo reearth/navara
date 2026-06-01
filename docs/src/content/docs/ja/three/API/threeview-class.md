@@ -319,6 +319,30 @@ const view = new ThreeView({
 });
 ```
 
+### idleThreshold
+
+**Type:** `number | undefined`
+
+**Description:** `idle` イベントが発火するまでに必要な、データやタイル処理が途絶えた時間（ミリ秒）。常時実行されるアニメーションやエフェクトはアクティビティとして扱われません。値を小さくするとアイドル状態の検出が早くなり、大きくすると長い静止期間が続くまで通知を遅延させます。
+
+**Default:** `100`
+
+**Example:**
+
+```typescript
+const view = new ThreeView({
+  idleThreshold: 200,
+});
+
+view.on("idle", () => {
+  console.log("エンジンが 200 ms アイドル状態になりました");
+});
+```
+
+:::tip[関連ドキュメント]
+このイベントが発火するタイミングの詳細は [`idle` イベント](./threeview-events#idle) を参照してください。
+:::
+
 ### mobileOptimization
 
 **Type:** `boolean | undefined`

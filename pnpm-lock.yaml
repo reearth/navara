@@ -272,6 +272,9 @@ importers:
       '@takram/three-geospatial-effects':
         specifier: 0.6.4
         version: 0.6.4(@react-three/fiber@9.1.2(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(three@0.184.0))(postprocessing@6.38.3(three@0.184.0))(react@19.2.5)(three@0.184.0)
+      astronomy-engine:
+        specifier: 2.1.19
+        version: 2.1.19
       stats.js:
         specifier: 0.17.0
         version: 0.17.0
