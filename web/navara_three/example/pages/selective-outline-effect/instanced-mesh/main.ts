@@ -112,8 +112,8 @@ const run = async () => {
       castShadow: true,
       receiveShadow: true,
       children: buildings,
-      effectIds: [outlineEffect.id],
     },
+    effectIds: [outlineEffect.id],
     matrixWorld,
   });
 

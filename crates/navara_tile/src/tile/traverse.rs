@@ -2,6 +2,7 @@ use bevy_ecs::prelude::*;
 use navara_buffer_store::BufferStore;
 use navara_component::{Deleted, Order, OrderByDistance, Priority};
 use navara_core::Ellipsoid;
+use navara_data_requester::DataManager;
 
 use navara_fog::Fog;
 use navara_frame::FrameManager;
@@ -44,6 +45,7 @@ pub fn traverse_tile(
     tc: &mut TileCacheManager,
     qt: &mut RasterTileQuadtree,
     buf: &mut BufferStore,
+    data_manager: &mut DataManager,
     frame: &FrameManager,
     camera: &Transform,
     frustum: &CameraFrustum,
@@ -118,6 +120,7 @@ pub fn traverse_tile(
         tiles,
     );
     let is_tile_ready = tile_ready_state.is_tile_ready;
+    let use_terrain = tile_ready_state.use_terrain;
 
     let is_activated = tc.is_rendered_tile_activated(&handle, meshes);
     let is_rendered_last_frame = is_activated;
@@ -165,6 +168,7 @@ pub fn traverse_tile(
             data_requesters,
             Priority::High,
             buf,
+            data_manager,
         );
     }
 
@@ -180,6 +184,7 @@ pub fn traverse_tile(
                 command,
                 qt,
                 buf,
+                data_manager,
                 terrain_layer,
                 handle,
                 tc,
@@ -248,6 +253,7 @@ pub fn traverse_tile(
                 tc,
                 qt,
                 buf,
+                data_manager,
                 frame,
                 camera,
                 frustum,
@@ -332,8 +338,13 @@ pub fn traverse_tile(
 
             let tile = qt.qt.get_mut(handle).unwrap();
             tile.were_children_rendered = are_all_children_activated && !hide_children;
+            // Defer spawning children until this tile's mesh is ready so each
+            // level can upsample from a parent that already has a built mesh.
+            // Children's data requests are already issued via
+            // prepare_tile_resource and act as preload while waiting.
+            let parent_mesh_ready = tile.cached_mesh_handle.is_some();
 
-            if allow_updating_state_of_children {
+            if allow_updating_state_of_children && (!use_terrain || parent_mesh_ready) {
                 for (i, child) in children.iter().enumerate() {
                     // If this child is not renderable, skip rendering this child.
                     if hidden_children_indices.contains(&i) {
@@ -400,6 +411,7 @@ pub fn traverse_tile(
                 command,
                 qt,
                 buf,
+                data_manager,
                 terrain_layer,
                 handle,
                 tc,
@@ -515,6 +527,7 @@ pub fn prepare_tile_resource(
     commands: &mut Commands,
     qt: &mut RasterTileQuadtree,
     buf: &mut BufferStore,
+    data_manager: &mut DataManager,
     terrain_layer: &Option<&TerrainLayer>,
     handle: TileHandle,
     tc: &mut TileCacheManager,
@@ -536,6 +549,7 @@ pub fn prepare_tile_resource(
             commands,
             tile,
             buf,
+            data_manager,
             terrain_layer,
             handle,
             terrain_data_requester,
@@ -552,6 +566,7 @@ pub fn prepare_tile_resource(
             data_requesters,
             Priority::High,
             buf,
+            data_manager,
         );
     }
 
@@ -565,6 +580,10 @@ fn prepare_upsamplable_terrain_data(
     terrain_layer: &Option<&TerrainLayer>,
     handle: TileHandle,
 ) {
+    if qt.qt.get(handle).is_some_and(|t| t.terrain_data.is_some()) {
+        return;
+    }
+
     let Some((terrain_type, terrain_appearance)) =
         terrain_layer.map(|l| (&l.terrain_type, &l.appearance))
     else {

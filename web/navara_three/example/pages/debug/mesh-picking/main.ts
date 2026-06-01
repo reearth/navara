@@ -28,7 +28,6 @@ import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
-import { Mesh, MeshStandardMaterial } from "three";
 import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../../helpers/attributions";
@@ -391,7 +390,7 @@ const run = async () => {
   }
   const instancedGltfLayer = view.addMesh<InstancedGltfModelMeshDesc>({
     pickable: true,
-    models: {
+    gltfModels: {
       url: LOCAL_DATASETS.steelDrumGLTF.url,
       castShadow: true,
       receiveShadow: false,
@@ -534,14 +533,11 @@ const run = async () => {
       smoothLineLayer.update({ smoothLines: [{ color }] });
     } else if (batchId === gltfLayer.ref.batchId) {
       // GLTF: tint via emissive on child MeshStandardMaterials
-      gltfLayer.ref.raw?.traverse((child) => {
-        if (
-          child instanceof Mesh &&
-          child.material instanceof MeshStandardMaterial
-        ) {
-          child.material.emissive.setHex(color);
-          child.material.emissiveIntensity = color === gltfColor ? 0 : 0.5;
-        }
+      gltfLayer.update({
+        gltfModel: {
+          emissiveColor: c,
+          emissiveIntensity: color === gltfColor ? 0 : 0.5,
+        },
       });
     } else {
       // Check instanced layers

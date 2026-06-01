@@ -33,7 +33,6 @@ export type SharedBoxMaterialConfig = {
   transparent?: boolean;
   castShadow?: boolean;
   receiveShadow?: boolean;
-  effectIds?: string[];
 };
 
 /** The `boxes` config object containing shared material props and children. */
@@ -63,10 +62,6 @@ export class InstancedBoxMeshDesc extends NewInstancedMeshDesc<
     ctx: ViewContext,
     config: InstancedBoxMeshConfig,
   ) {
-    // Propagate effectIds to MeshDescBase
-    if (config.boxes?.effectIds) {
-      config.effectIds = config.boxes.effectIds;
-    }
     super(view, ctx, config);
     this.config = config;
 
@@ -170,10 +165,6 @@ export class InstancedBoxMeshDesc extends NewInstancedMeshDesc<
         this.replaceAll(boxesUpdate.children);
       }
 
-      // Propagate effectIds to MeshDescBase
-      if (boxesUpdate.effectIds !== undefined) {
-        updates.effectIds = boxesUpdate.effectIds;
-      }
       if (boxesUpdate.emissiveColor !== undefined) {
         this.emissive = boxesUpdate.emissiveColor;
       }

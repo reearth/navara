@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Navara IIFE Integration Test</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+      }
+
+      #error {
+        display: none;
+        position: fixed;
+        top: 16px;
+        left: 16px;
+        padding: 12px 16px;
+        background: #fee2e2;
+        border: 1px solid #ef4444;
+        border-radius: 6px;
+        color: #b91c1c;
+        font-family: monospace;
+        font-size: 13px;
+        max-width: 600px;
+        white-space: pre-wrap;
+        z-index: 9999;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="error"></div>
+
+    <!--
+      navara.iife.js is served from web/navara_three/dist/iife/ via publicDir.
+      Run `pnpm build:iife` in web/navara_three before starting this dev server.
+    -->
+    <script src="/navara.iife.js"></script>
+    <script>
+      async function main() {
+        if (typeof Navara === "undefined") {
+          showError("Navara global not found. Did you run `pnpm build:iife`?");
+          return;
+        }
+
+        const {
+          default: ThreeView,
+          DefaultPlugin,
+          Color,
+          geodeticToVector3,
+          degreeToRadian,
+          JAPAN_GSI_ELEVATION_DECODER,
+        } = Navara;
+
+        const view = new ThreeView({});
+        const plugin = new DefaultPlugin();
+        view.addPlugin(plugin);
+        await view.init();
+
+        view.toneMappingExposure = 10;
+        view.atmosphere.date.setHours(12);
+
+        const effects = plugin.addDefaultPhotorealScene();
+        effects.sky.delete();
+        effects.aerialPerspective.update({ aerialPerspective: { sky: true } });
+
+        view.addLayer({
+          type: "terrain",
+          data: {
+            url: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
+          },
+          rasterTerrain: {
+            maxZoom: 15,
+            minZoom: 6,
+            elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+          },
+        });
+
+        view.addLayer({
+          type: "tiles",
+          data: {
+            url: "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg",
+          },
+          rasterTile: {
+            color: new Color().setStyle("#ffffff"),
+            maxZoom: 18,
+            opacity: 1,
+          },
+        });
+
+        addRotatingSphere(view, { Color, geodeticToVector3, degreeToRadian });
+
+        console.log("Navara IIFE integration test loaded successfully!");
+      }
+
+      function addRotatingSphere(
+        view,
+        { Color, geodeticToVector3, degreeToRadian },
+      ) {
+        const sphereLayer = view.addMesh({
+          sphere: {
+            radius: 1,
+            color: new Color().setHex(0xff6600),
+            emissiveColor: new Color().setHex(0x331100),
+          },
+          position: { x: 0, y: 0, z: 0 },
+        });
+
+        const sphere = sphereLayer.ref.raw;
+        if (!sphere) return;
+
+        const sphereRadius = 200000;
+        sphere.scale.set(sphereRadius, sphereRadius, sphereRadius);
+
+        let lng = 0;
+        let lat = 0;
+        let latDirection = 1;
+
+        const animate = () => {
+          lng = (lng + 0.5) % 360;
+          lat += 0.1 * latDirection;
+          if (lat > 60 || lat < -60) latDirection *= -1;
+
+          const position = geodeticToVector3({
+            lat: degreeToRadian(lat),
+            lng: degreeToRadian(lng),
+            height: 500000,
+          });
+          sphere.position.set(position.x, position.y, position.z);
+          view.forceUpdate();
+          requestAnimationFrame(animate);
+        };
+        animate();
+      }
+
+      function showError(msg) {
+        const el = document.getElementById("error");
+        el.style.display = "block";
+        el.textContent = msg;
+        console.error(msg);
+      }
+
+      main().catch((err) => showError(String(err)));
+    </script>
+  </body>
+</html>

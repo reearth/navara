@@ -235,6 +235,16 @@ impl App {
         world.commands().entity(entity).insert(Rendered);
     }
 
+    pub fn trigger_data_requester_loaded(&mut self, bits: u64, handle: i32) {
+        self.app
+            .world_mut()
+            .write_message(navara_buffer_store::BufferStoreLoadedEvent {
+                id: Entity::from_bits(bits),
+                ty: navara_buffer_store::BufferType::U8,
+                handle,
+            });
+    }
+
     pub fn trigger_data_requester_failed(&mut self, bits: u64) {
         self.app
             .world_mut()
@@ -588,6 +598,7 @@ impl App {
         pitch: Option<FloatType>,
         heading: Option<FloatType>,
         roll: Option<FloatType>,
+        distance: Option<FloatType>,
     ) {
         let pos = position.and_then(|v| (v.len() == 3).then(|| Vec3::new(v[0], v[1], v[2])));
         self.app.world_mut().write_message(CameraEvent::Change {
@@ -597,6 +608,7 @@ impl App {
                 heading,
                 roll,
             }),
+            distance,
         });
     }
 
@@ -617,6 +629,7 @@ impl App {
         });
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn fly_to(
         &mut self,
         position: Option<Vec<FloatType>>,
@@ -625,6 +638,7 @@ impl App {
         roll: Option<FloatType>,
         duration: Option<FloatType>,
         max_height: Option<FloatType>,
+        distance: Option<FloatType>,
     ) {
         let pos = position.and_then(|v| (v.len() == 3).then(|| Vec3::new(v[0], v[1], v[2])));
         self.app.world_mut().write_message(CameraEvent::FlyTo {
@@ -636,6 +650,7 @@ impl App {
             }),
             duration,
             max_height,
+            distance,
         });
     }
 

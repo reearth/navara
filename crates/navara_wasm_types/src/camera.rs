@@ -222,6 +222,21 @@ pub struct CameraControlUpdateEvent {
     /// Default: `500.0`
     #[wasm_bindgen(js_name = translateDuration)]
     pub translate_duration: Option<f32>,
+    /// Whether mouse drag and touch swipe rotation (spin) are enabled.
+    ///
+    /// Default: `true`
+    #[wasm_bindgen(js_name = enableSpin)]
+    pub enable_spin: Option<bool>,
+    /// Whether scroll wheel and pinch/spread touch zoom are enabled.
+    ///
+    /// Default: `true`
+    #[wasm_bindgen(js_name = enableZoom)]
+    pub enable_zoom: Option<bool>,
+    /// Whether tilt interactions (Ctrl+left drag, right-click drag, double-swipe, or rotate gestures) are enabled.
+    ///
+    /// Default: `true`
+    #[wasm_bindgen(js_name = enableTilt)]
+    pub enable_tilt: Option<bool>,
 }
 
 #[wasm_bindgen]
@@ -243,6 +258,9 @@ impl From<CameraControlUpdateEvent> for navara_camera::CameraControlUpdateEvent 
             spin_duration: e.spin_duration,
             zoom_duration: e.zoom_duration,
             translate_duration: e.translate_duration,
+            enable_spin: e.enable_spin,
+            enable_zoom: e.enable_zoom,
+            enable_tilt: e.enable_tilt,
         }
     }
 }

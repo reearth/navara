@@ -34,7 +34,7 @@ Specified in the `models` config object.
 
 ```typescript
 {
-  models: {
+  gltfModels: {
     url: "/models/tree.glb",
   }
 }
@@ -230,11 +230,11 @@ import ThreeView from "@navara/three";
 import { InstancedGltfModelMeshDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
-view.registerMesh("models", InstancedGltfModelMeshDesc);
+view.registerMesh("gltfModels", InstancedGltfModelMeshDesc);
 await view.init();
 
 const handle = view.addMesh<InstancedGltfModelMeshDesc>({
-  models: {
+  gltfModels: {
     url: "/models/tree.glb",
     castShadow: true,
     children: [
@@ -251,7 +251,7 @@ const handle = view.addMesh<InstancedGltfModelMeshDesc>({
 
 ```typescript
 const handle = view.addMesh<InstancedGltfModelMeshDesc>({
-  models: {
+  gltfModels: {
     url: "/glTF/animated_bird_pigeon/scene.gltf",
     animationActiveClip: "Fly",
     animationSpeed: 1.5,
