@@ -1,5 +1,4 @@
 import type { Core } from "@navara/engine";
-import { throttle } from "lodash-es";
 
 // TODO: Need to think about how to propagate these event to worker.
 export function registerInputEvents(
@@ -47,15 +46,14 @@ export function registerInputEvents(
   const touchstart = (event: TouchEvent) => {
     event.preventDefault();
 
-    const terrainDistance = getTerrainDistance?.() ?? undefined;
-    lastTerrainDistance = terrainDistance;
+    lastTerrainDistance = getTerrainDistance?.() ?? undefined;
     for (const touch of event.changedTouches) {
       core.input({
         type: "touchstart",
         x: touch.clientX,
         y: touch.clientY,
         id: touch.identifier,
-        terrain_distance: terrainDistance,
+        terrain_distance: lastTerrainDistance,
       });
     }
   };
@@ -86,12 +84,8 @@ export function registerInputEvents(
     }
   };
 
-  const updateWheelTerrainDistance = throttle(() => {
-    lastTerrainDistance = getTerrainDistance?.() ?? undefined;
-  }, 100);
-
   const wheel = (event: WheelEvent) => {
-    updateWheelTerrainDistance();
+    lastTerrainDistance = getTerrainDistance?.() ?? undefined;
     core.input({
       type: "wheel",
       x: event.deltaX,

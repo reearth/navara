@@ -84,9 +84,8 @@ impl Core {
         if matches!(
             input.r#type,
             InputType::MouseDown | InputType::Wheel | InputType::TouchStart
-        ) && let Some(distance) = input.terrain_distance
-        {
-            self.app.set_terrain_pick_distance(distance);
+        ) {
+            self.app.set_terrain_pick_distance(input.terrain_distance);
         }
 
         let Some(input) = input.into_ecs_input() else {

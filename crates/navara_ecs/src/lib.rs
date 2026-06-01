@@ -805,11 +805,11 @@ impl App {
         self.app.world_mut().write_message(event);
     }
 
-    pub fn set_terrain_pick_distance(&mut self, distance: f64) {
+    pub fn set_terrain_pick_distance(&mut self, distance: Option<f64>) {
         let world = self.app.world_mut();
         let mut query = world.query::<(&CameraMarker, &mut CameraController)>();
         for (_, mut controller) in query.iter_mut(world) {
-            controller.terrain_hit_distance = Some(distance);
+            controller.terrain_hit_distance = distance;
         }
     }
 
