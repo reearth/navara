@@ -4,6 +4,7 @@ import type { Core } from "@navara/engine";
 export function registerInputEvents(
   core: Core,
   element: HTMLElement,
+  getTerrainDistance?: () => number | null,
 ): () => void {
   let mouseEvent:
     | {
@@ -11,12 +12,17 @@ export function registerInputEvents(
         button: number;
       }
     | undefined;
+
+  let lastTerrainDistance: number | undefined;
+
   const mousedown = (event: MouseEvent) => {
     mouseEvent = {
       type: "mousedown",
       button: event.button,
     };
-    core.input(mouseEvent);
+    const terrainDistance = getTerrainDistance?.() ?? undefined;
+    lastTerrainDistance = terrainDistance;
+    core.input({ ...mouseEvent, terrain_distance: terrainDistance });
   };
   const mouseup = () => {
     core.input({
@@ -40,12 +46,14 @@ export function registerInputEvents(
   const touchstart = (event: TouchEvent) => {
     event.preventDefault();
 
+    lastTerrainDistance = getTerrainDistance?.() ?? undefined;
     for (const touch of event.changedTouches) {
       core.input({
         type: "touchstart",
         x: touch.clientX,
         y: touch.clientY,
         id: touch.identifier,
+        terrain_distance: lastTerrainDistance,
       });
     }
   };
@@ -77,10 +85,12 @@ export function registerInputEvents(
   };
 
   const wheel = (event: WheelEvent) => {
+    lastTerrainDistance = getTerrainDistance?.() ?? undefined;
     core.input({
       type: "wheel",
       x: event.deltaX,
       y: event.deltaY,
+      terrain_distance: lastTerrainDistance,
     });
   };
 

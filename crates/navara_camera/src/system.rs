@@ -59,6 +59,8 @@ pub fn startup(mut commands: Commands) {
     ));
 }
 
+const FRAME_JUMP_LIMIT: f32 = (1000.0 / 60.0) * 2.0;
+
 #[allow(clippy::type_complexity, clippy::too_many_arguments)]
 pub fn update(
     window: Res<Window>,
@@ -85,7 +87,7 @@ pub fn update(
 ) {
     let updated_at = frame.updated_at();
     let last_updated_at = frame.last_updated_at();
-    let duration = (updated_at - last_updated_at) as f32;
+    let duration = ((updated_at - last_updated_at) as f32).min(FRAME_JUMP_LIMIT);
     for (
         marker,
         mut transform,
@@ -426,9 +428,11 @@ fn handle_orbit_spin(
     let world = orbit.get_default_world_quat();
     orbit.set_quat(transform, world, Vec3::ZERO, false);
 
-    let distance_from_ellipsoid_surface = calc_distance_from_ellipsoid_surface(transform, WGS84_64);
+    let effective_distance = controller
+        .terrain_hit_distance
+        .unwrap_or_else(|| calc_distance_from_ellipsoid_surface(transform, WGS84_64));
 
-    let ratio = distance_from_ellipsoid_surface.abs() / controller.minimum_zoom_distance;
+    let ratio = effective_distance.abs() / controller.minimum_zoom_distance;
 
     let Some(spin) = rotate(mm, touch_control, controller, ratio, ratio) else {
         return;
@@ -574,10 +578,12 @@ fn get_tilt_quat_by_ray(
     transform: &Transform,
     frustum: &CameraFrustum,
     ellipsoid: Ellipsoid<f64>,
+    terrain_hit_distance: Option<f64>,
 ) -> (Vec3, Quat) {
     let center_2d = Vec2::new(window.raw_width() / 2., window.raw_height() / 2.);
     let ray = get_pick_ray_from_camera(window, transform, frustum, center_2d);
-    let center = if let Some(t) = ray_ellipsoid_intersect(&ray, ellipsoid) {
+    let t = terrain_hit_distance.or_else(|| ray_ellipsoid_intersect(&ray, ellipsoid));
+    let center = if let Some(t) = t {
         ray.get_point(t)
     } else {
         // If no intersection found, find the intersection point from the camera forward and the distance from the surface.
@@ -618,10 +624,6 @@ fn handle_tilt(
 ) {
     let ellipsoid = WGS84_64;
 
-    // TODO: Check whether picking point from terrain or center. If the camera is nearby ground, it should be picked by terrain.
-
-    // TODO: Pick terrain height like here from depth buffer: https://github.com/CesiumGS/cesium/blob/0e9a425b475cd3cfdd90f35e9cdbdda453e448d8/packages/engine/Source/Scene/ScreenSpaceCameraController.js#L2557
-
     let touch_tilt = touch_control.as_ref().is_some_and(|tc| {
         matches!(
             tc.gesture,
@@ -644,7 +646,13 @@ fn handle_tilt(
         orbit.default_world_quat = Some(orbit.world_quat);
     }
 
-    let (center, enu_quat) = get_tilt_quat_by_ray(window, transform, frustum, ellipsoid);
+    let (center, enu_quat) = get_tilt_quat_by_ray(
+        window,
+        transform,
+        frustum,
+        ellipsoid,
+        controller.terrain_hit_distance,
+    );
 
     orbit.set_quat(transform, enu_quat, center, true);
 
@@ -715,9 +723,10 @@ fn handle_zoom(
     let world = orbit.get_default_world_quat();
     orbit.set_quat(transform, world, Vec3::ZERO, false);
 
-    let distance_from_ellipsoid_surface = calc_distance_from_ellipsoid_surface(transform, WGS84_64);
-
-    let dist = distance_from_ellipsoid_surface.max(0.);
+    let dist = controller
+        .terrain_hit_distance
+        .unwrap_or_else(|| calc_distance_from_ellipsoid_surface(transform, WGS84_64))
+        .max(0.);
     let d = (zoom as f64) * controller.zoom_speed * dist * 0.0025;
 
     if !is_cam_moving {
@@ -957,7 +966,7 @@ fn apply_camera_change(
     transform.translation = world_position;
     transform.look_to(world_forward, world_up);
 
-    let (center, enu_quat) = get_tilt_quat_by_ray(window, transform, frustum, WGS84_64);
+    let (center, enu_quat) = get_tilt_quat_by_ray(window, transform, frustum, WGS84_64, None);
 
     // Update orbit state with new quaternion
     orbit.set_quat(transform, enu_quat, center, true);
