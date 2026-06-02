@@ -71,20 +71,37 @@ pub fn traverse_tile(
         .filter(|t| t.0.hillshade_config.is_none())
         .map(|(t, _)| t)
         .collect();
+    let tiles_with_hillshade: Vec<&TilesLayer> = tiles
+        .iter()
+        .filter(|t| t.0.hillshade_config.is_some())
+        .map(|(t, _)| t)
+        .collect();
     let has_tile_layer = !tiles_without_hillshade.is_empty();
+    let has_hillshade_layer = !tiles_with_hillshade.is_empty();
+
     match qt.qt.get(handle) {
         Some(tile) => {
+            // For regular tile layers (without hillshade), stop at max_zoom
             let has_no_tile = has_tile_layer
                 && tiles_without_hillshade
                     .iter()
                     .all(|t| t.is_over_max_zoom(tile.coords.z));
+
+            // For hillshade layers, allow overscaling like terrain - stop at overscaled_max_zoom
+            let has_no_hillshade = has_hillshade_layer
+                && tiles_with_hillshade
+                    .iter()
+                    .all(|t| t.is_over_overscaled_max_zoom(tile.coords.z));
+
             // If tile layer isn't added, check overscaled_max_zoom for terrain layer.
             // The reason why we check `overscaled_max_zoom` is that the terrain is
             // upsampled even if the actual tile doesn't exist.
             // The terrain is upsampled until it reaches `overscaled_max_zoom`.
             let has_no_terrain = !has_tile_layer
+                && !has_hillshade_layer
                 && terrain_layer.is_none_or(|l| l.is_over_overscaled_max_zoom(tile.coords.z));
-            if has_no_tile || has_no_terrain {
+
+            if has_no_tile && has_no_hillshade && has_no_terrain {
                 return TraversalResult::NotFound;
             }
         }

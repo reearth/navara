@@ -61,10 +61,16 @@ pub(crate) fn request_texture_fragment(
         let tex_ids = leaf.texture_fragment_entity_ids.as_ref().unwrap();
         let hill_ids = leaf.hillshade_entity_ids.as_ref().unwrap();
         sorted_tiles.iter().enumerate().all(|(i, (layer, _))| {
-            if !layer.is_over_min_zoom(coords.z) || layer.is_over_max_zoom(coords.z) {
+            let is_hillshade = layer.hillshade_config.is_some();
+            let is_out_of_zoom = if is_hillshade {
+                !layer.is_over_min_zoom(coords.z) || layer.is_over_overscaled_max_zoom(coords.z)
+            } else {
+                !layer.is_over_min_zoom(coords.z) || layer.is_over_max_zoom(coords.z)
+            };
+            if is_out_of_zoom {
                 return true;
             }
-            if layer.hillshade_config.is_some() {
+            if is_hillshade {
                 hill_ids[i].is_some_and(|e| data_requesters.get(e).is_ok())
             } else {
                 tex_ids[i].is_some_and(|e| texture_fragment.contains(e))
@@ -76,11 +82,16 @@ pub(crate) fn request_texture_fragment(
     }
 
     for (i, (layer, _)) in sorted_tiles.iter().enumerate() {
+        let is_hillshade = layer.hillshade_config.is_some();
+        let is_out_of_zoom = if is_hillshade {
+            !layer.is_over_min_zoom(coords.z) || layer.is_over_overscaled_max_zoom(coords.z)
+        } else {
+            !layer.is_over_min_zoom(coords.z) || layer.is_over_max_zoom(coords.z)
+        };
         // Skip layers whose zoom range excludes this tile. The slot stays None.
-        if !layer.is_over_min_zoom(coords.z) || layer.is_over_max_zoom(coords.z) {
+        if is_out_of_zoom {
             continue;
         }
-        let is_hillshade = layer.hillshade_config.is_some();
 
         // Skip layers that already have a valid in-flight or completed entity.
         let already_requested = {

@@ -1205,6 +1205,9 @@ pub struct RasterTileMaterial {
     #[wasm_bindgen(js_name = showBoundingBox)]
     #[serde(rename = "showBoundingBox")]
     pub show_bounding_box: Option<bool>,
+    #[wasm_bindgen(js_name = overscaledMaxZoom)]
+    #[serde(rename = "overscaledMaxZoom")]
+    pub overscaled_max_zoom: Option<usize>,
 }
 
 impl From<RasterTileMaterial> for navara_material::RasterTileMaterial {
@@ -1218,6 +1221,9 @@ impl From<RasterTileMaterial> for navara_material::RasterTileMaterial {
             min_zoom: val.min_zoom.unwrap_or(default.min_zoom),
             tms: val.tms.unwrap_or(default.tms),
             show_bounding_box: val.show_bounding_box.unwrap_or(default.show_bounding_box),
+            overscaled_max_zoom: val
+                .overscaled_max_zoom
+                .unwrap_or(default.overscaled_max_zoom),
         }
     }
 }
@@ -1231,6 +1237,7 @@ impl<'a> From<&'a navara_material::RasterTileMaterial> for RasterTileMaterial {
             min_zoom: Some(value.min_zoom),
             tms: Some(value.tms),
             show_bounding_box: Some(value.show_bounding_box),
+            overscaled_max_zoom: Some(value.overscaled_max_zoom),
         }
     }
 }
@@ -1248,6 +1255,9 @@ impl RasterTileMaterial {
             min_zoom: self.min_zoom.unwrap_or(other.min_zoom),
             tms: self.tms.unwrap_or(other.tms),
             show_bounding_box: self.show_bounding_box.unwrap_or(other.show_bounding_box),
+            overscaled_max_zoom: self
+                .overscaled_max_zoom
+                .unwrap_or(other.overscaled_max_zoom),
         }
     }
 }
