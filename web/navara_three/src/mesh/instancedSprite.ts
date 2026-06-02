@@ -6,6 +6,7 @@ import { degreeToRadian } from "@navara/three_api";
 import {
   InstancedBufferAttribute,
   InstancedBufferGeometry,
+  Material,
   Mesh,
   Object3D,
   ShaderMaterial,
@@ -25,7 +26,29 @@ import { TEXTURE_LOADER } from "../event/loaders";
 import { createInstancedSpriteMaterialEnhancer } from "../material/enhancer";
 import { getImageDataFromImageBitmap } from "../tasks/getImageDataFromImageBitmap";
 
+import {
+  getInstancedPointNodeMaterial,
+  type InstancedPointNodeMaterial,
+} from "./instancedSpritePointMaterial";
 import { PickableMesh } from "./pickableMesh";
+
+/**
+ * Per-mesh shader values for the point path, written into the shared point
+ * material's uniforms just-in-time in {@link InstancedSpriteMesh.onBeforeRender}.
+ */
+type PointMeshState = {
+  scale: number;
+  centerX: number;
+  centerY: number;
+  sizeInMeters: boolean;
+  offsetDepth: boolean;
+  effectIdsMask: number;
+  emissiveColorHex: number;
+  emissiveIntensity: number;
+  rtcX: number;
+  rtcY: number;
+  rtcZ: number;
+};
 
 export type InstancedSpriteOptions = {
   renderOrder?: number;
@@ -57,10 +80,25 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
   private _loadedUrls = new Set<string>();
   private _active = true;
   readonly ctx: EventContext;
-  /** Material enhancer for encapsulated state management */
+  /** Material enhancer for encapsulated state management (billboard GLSL path) */
   private _enhancedMaterial?: ReturnType<
     typeof createInstancedSpriteMaterialEnhancer
   >;
+  /** Shared TSL point material + uniforms (non-billboard path). */
+  private _pointMat?: InstancedPointNodeMaterial;
+  /** Per-mesh shader values flushed into the shared point uniforms. */
+  private _pointState?: PointMeshState;
+  /** Fixed part of the point material cache key (RTE / log-depth). */
+  private _pointOpts?: { useRTE: boolean; logarithmicDepthBuffer: boolean };
+  /** Last-applied pipeline state, part of the point material cache key. */
+  private _pointTransparent = true;
+  private _pointDepthTest = true;
+  /** Per-mesh show flag (point path; the material is shared so can't carry it). */
+  private _pointVisible = true;
+  /** True between onBeforePicking/onAfterPicking; flushed to the shared uPickable. */
+  private _pickRequested = false;
+  /** Whether this mesh renders billboards (legacy GLSL) vs points (TSL). */
+  private _isBillboard = false;
   constructor(options: InstancedSpriteOptions) {
     super();
     this.renderOrder = options.renderOrder ?? this.renderOrder;
@@ -89,14 +127,57 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
   }
 
   async _update(m: NavaraPointMesh | NavaraBillboardMesh) {
-    const enhancer = this.getEnhancer();
-    const material = this.material as ShaderMaterial;
+    const show = m.material.show ?? true;
 
-    if (material.visible !== m.material.show) {
-      material.visible = m.material.show ?? true;
-      this.updateVisibility();
+    // Point path: state lives on the mesh (the material is shared) and is
+    // flushed in onBeforeRender. Color/height/position (per-instance attributes)
+    // are handled below, shared with the billboard path.
+    if (!this._isBillboard) {
+      if (this._pointVisible !== show) {
+        this._pointVisible = show;
+        this.updateVisibility();
+      }
+      this._syncPointState(m);
+    } else {
+      const material = this.material as Material;
+      if (material.visible !== show) {
+        material.visible = show;
+        this.updateVisibility();
+      }
+      this.updateBillboardMaterial(m);
     }
 
+    this._updateInstanceAttributes(m);
+
+    // Billboard-specific updates
+    if (m instanceof NavaraBillboardMesh) {
+      const enhancer = this.getEnhancer();
+      enhancer.update({
+        base: { alphaTest: m.material.alphaTest ?? 0.0 },
+      });
+
+      if (m.material.url) {
+        const layerIndex = await this.uploadTexture(
+          m.material.url,
+          this.material as ShaderMaterial,
+        );
+        if (layerIndex !== undefined) {
+          const layerAttr = this.geometry.getAttribute(
+            "instanceLayer",
+          ) as InstancedBufferAttribute;
+          const instanceCount = layerAttr.count;
+          for (let i = 0; i < instanceCount; i++) {
+            layerAttr.setX(i, layerIndex);
+          }
+          layerAttr.needsUpdate = true;
+        }
+      }
+    }
+  }
+
+  /** Update billboard (legacy GLSL) material state via the enhancer. */
+  private updateBillboardMaterial(m: NavaraPointMesh | NavaraBillboardMesh) {
+    const enhancer = this.getEnhancer();
     // Update enhancer state for uniform-backed properties
     enhancer.update({
       base: {
@@ -114,7 +195,10 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
         emissiveIntensity: m.material.emissiveIntensity ?? 0,
       },
     });
+  }
 
+  /** Sync per-instance color/height/position attributes from the engine mesh. */
+  private _updateInstanceAttributes(m: NavaraPointMesh | NavaraBillboardMesh) {
     // Color (per-instance attribute)
     if (this._initialColor.getHex() !== (m.material.color ?? 0xffffff)) {
       this._initialColor.setHex(m.material.color ?? 0xffffff);
@@ -173,27 +257,6 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
           ) as InstancedBufferAttribute;
           p.copyArray(pos);
           p.needsUpdate = true;
-        }
-      }
-    }
-
-    // Billboard-specific updates
-    if (m instanceof NavaraBillboardMesh) {
-      enhancer.update({
-        base: { alphaTest: m.material.alphaTest ?? 0.0 },
-      });
-
-      if (m.material.url) {
-        const layerIndex = await this.uploadTexture(m.material.url, material);
-        if (layerIndex !== undefined) {
-          const layerAttr = this.geometry.getAttribute(
-            "instanceLayer",
-          ) as InstancedBufferAttribute;
-          const instanceCount = layerAttr.count;
-          for (let i = 0; i < instanceCount; i++) {
-            layerAttr.setX(i, layerIndex);
-          }
-          layerAttr.needsUpdate = true;
         }
       }
     }
@@ -319,6 +382,14 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     m: NavaraPointMesh | NavaraBillboardMesh,
   ) {
     const isBillboard = m instanceof NavaraBillboardMesh;
+    this._isBillboard = isBillboard;
+
+    // Point path: TSL NodeMaterial. Billboards still use the legacy GLSL
+    // ShaderMaterial below until they are migrated (Phase 2).
+    if (!isBillboard) {
+      return this._initPointMaterial(positionsInfo, m);
+    }
+
     const material = new ShaderMaterial();
 
     // Create enhancer
@@ -386,10 +457,104 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     return material;
   }
 
+  /** Attach the shared TSL point material for the (non-billboard) path. */
+  private _initPointMaterial(
+    positionsInfo: PositionsInfo,
+    m: NavaraPointMesh | NavaraBillboardMesh,
+  ) {
+    const useRTE = positionsInfo.RTE;
+    this._pointOpts = {
+      useRTE,
+      logarithmicDepthBuffer:
+        this.ctx.viewContext.getRenderer().capabilities.logarithmicDepthBuffer,
+    };
+    this._pointTransparent = m.material.transparent ?? true;
+    this._pointDepthTest = m.material.depthTest ?? true;
+    this._attachPointMaterial();
+
+    this._syncPointState(m);
+    this._pointVisible = m.material.show ?? true;
+
+    // The point material is shared across many meshes, so per-mesh uniform
+    // values are written just-in-time, immediately before this mesh's draw.
+    this.onBeforeRender = () => this._flushPointUniforms();
+
+    this.updateVisibility();
+    invariant(this._pointMat);
+    return this._pointMat.material;
+  }
+
+  /** (Re)bind the shared material for the current RTE / pipeline-state key. */
+  private _attachPointMaterial() {
+    invariant(this._pointOpts);
+    this._pointMat = getInstancedPointNodeMaterial({
+      ...this._pointOpts,
+      transparent: this._pointTransparent,
+      depthTest: this._pointDepthTest,
+    });
+    this.material = this._pointMat.material;
+  }
+
+  /**
+   * Recompute this mesh's point state from the engine mesh. Swaps to a
+   * different shared material if the pipeline state (transparent/depthTest)
+   * changed, since those cannot be expressed as a per-mesh uniform.
+   */
+  private _syncPointState(m: NavaraPointMesh | NavaraBillboardMesh) {
+    const transparent = m.material.transparent ?? true;
+    const depthTest = m.material.depthTest ?? true;
+    if (
+      this._pointMat &&
+      (transparent !== this._pointTransparent ||
+        depthTest !== this._pointDepthTest)
+    ) {
+      this._pointTransparent = transparent;
+      this._pointDepthTest = depthTest;
+      this._attachPointMaterial();
+    }
+
+    this._pointState = {
+      scale: m.material.size ?? 100.0,
+      centerX: m.material.center?.x ?? 0.0,
+      centerY: m.material.center?.y ?? 0.0,
+      sizeInMeters: m.material.sizeInMeters ?? true,
+      offsetDepth: m.material.offsetDepth ?? true,
+      effectIdsMask:
+        this.ctx.viewContext.selectiveEffectRegistry?.computeMask(
+          m.material.effectIds ?? [],
+        ) ?? 0,
+      emissiveColorHex: m.material.emissiveColor ?? 0,
+      emissiveIntensity: m.material.emissiveIntensity ?? 0,
+      // RTE ignores this (uses the global camera uniforms); RTC reads it.
+      rtcX: m.transform.tx,
+      rtcY: m.transform.ty,
+      rtcZ: m.transform.tz,
+    };
+  }
+
+  /** Write this mesh's point state into the shared material's uniforms. */
+  private _flushPointUniforms() {
+    const mat = this._pointMat;
+    const s = this._pointState;
+    if (!mat || !s) return;
+    const u = mat.uniforms;
+    u.scale.value = s.scale;
+    u.center.value.set(s.centerX, s.centerY);
+    u.sizeInMeters.value = s.sizeInMeters;
+    u.offsetDepth.value = s.offsetDepth;
+    u.effectIdsMask.value = s.effectIdsMask;
+    u.emissiveColor.value.setHex(s.emissiveColorHex);
+    u.emissiveIntensity.value = s.emissiveIntensity;
+    u.rtcCenter.value.set(s.rtcX, s.rtcY, s.rtcZ);
+    u.pickable.value = this._pickRequested;
+  }
+
   private updateVisibility() {
-    const material = this.material;
-    const materialVisible =
-      material instanceof ShaderMaterial ? material.visible : true;
+    const materialVisible = this._isBillboard
+      ? this.material instanceof Material
+        ? this.material.visible
+        : true
+      : this._pointVisible;
     this.visible = this._active && materialVisible;
   }
 
@@ -543,10 +708,19 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
   }
 
   onBeforePicking(): void {
+    if (!this._isBillboard) {
+      // Flushed into the shared uPickable in onBeforeRender, per mesh.
+      this._pickRequested = true;
+      return;
+    }
     this.getEnhancer().update({ base: { pickable: true } });
   }
 
   onAfterPicking(): void {
+    if (!this._isBillboard) {
+      this._pickRequested = false;
+      return;
+    }
     this.getEnhancer().update({ base: { pickable: false } });
   }
 
@@ -602,19 +776,26 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
   dispose(): void {
     this.geometry?.dispose();
 
-    const shaderMaterial = this.material as ShaderMaterial;
+    if (this._isBillboard) {
+      // Billboard (legacy GLSL) owns its ShaderMaterial and a DataArrayTexture.
+      const shaderMaterial = this.material as ShaderMaterial;
+      const uniforms = shaderMaterial.uniforms as {
+        uTexture?: { value: DataArrayTexture | null };
+        [key: string]: unknown;
+      };
 
-    const uniforms = shaderMaterial.uniforms as {
-      uTexture?: { value: DataArrayTexture | null };
-      [key: string]: unknown;
-    };
-
-    const textureArray = uniforms?.uTexture?.value;
-    if (textureArray instanceof DataArrayTexture) {
-      textureArray.dispose();
+      const textureArray = uniforms?.uTexture?.value;
+      if (textureArray instanceof DataArrayTexture) {
+        textureArray.dispose();
+      }
+      shaderMaterial.dispose();
+    } else {
+      // The point material is shared across meshes — do NOT dispose it here, or
+      // other live point meshes lose their material. Just drop references.
+      this.onBeforeRender = () => {};
+      this._pointMat = undefined;
+      this._pointState = undefined;
     }
-
-    shaderMaterial.dispose();
 
     // Clear internal collections to release references
     this._batchIdToInstance.clear();
