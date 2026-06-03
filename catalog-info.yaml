@@ -1,0 +1,17 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: navara
+  namespace: reearth
+  annotations:
+    github.com/project-slug: reearth/navara
+  links:
+  - url: https://github.com/reearth/navara
+    title: GitHub
+    icon: github
+  tags:
+  - typescript
+spec:
+  type: service
+  lifecycle: production
+  owner: reearth/navara

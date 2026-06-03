@@ -68,6 +68,11 @@ guillotiere = "=0.7.0"
 wuff = "=0.2.3"
 skrifa = "=0.42.1"
 tiny-skia = { version = "=0.12.0", default-features = false, features = ["std", "simd"] }
+# MSDF generation (multi-channel SDF, used as a higher-quality alternative to sdf_glyph_renderer)
+fdsm = "=0.8.0"
+fdsm-ttf-parser = "=0.2.0"
+ttf-parser = "=0.25.1"
+nalgebra = "=0.34.1"
 
 # --- Testing ---
 wasm-bindgen-test = "=0.3.68"

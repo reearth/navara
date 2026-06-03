@@ -304,6 +304,14 @@ pub struct TextMaterial {
     /// Language code for text shaping (e.g., "en", "ja", "ar"). Used for proper text rendering.
     #[wasm_bindgen(getter_with_clone)]
     pub lang: Option<String>,
+    /// Enable high-quality glyph rendering. When `true`, text uses an MTSDF
+    /// atlas (sharper corners at large sizes, dramatically slower
+    /// rasterization). When `false` or omitted, the default single-channel SDF
+    /// atlas is used (fast). Mirrors `navara_material::TextMaterial::high_quality`
+    /// on the Rust side.
+    #[wasm_bindgen(js_name = highQuality)]
+    #[serde(rename = "highQuality")]
+    pub high_quality: Option<bool>,
 }
 
 impl From<TextMaterial> for navara_material::TextMaterial {
@@ -335,6 +343,7 @@ impl From<TextMaterial> for navara_material::TextMaterial {
             outline_opacity: val.outline_opacity.unwrap_or(default.outline_opacity),
             outline_width: val.outline_width.unwrap_or(default.outline_width),
             lang: val.lang.unwrap_or(default.lang),
+            high_quality: val.high_quality.unwrap_or(default.high_quality),
         }
     }
 }
@@ -363,6 +372,7 @@ impl<'a> From<&'a navara_material::TextMaterial> for TextMaterial {
             outline_opacity: Some(value.outline_opacity),
             outline_width: Some(value.outline_width),
             lang: Some(value.lang.clone()),
+            high_quality: Some(value.high_quality),
         }
     }
 }
@@ -395,6 +405,7 @@ impl TextMaterial {
             outline_opacity: self.outline_opacity.unwrap_or(other.outline_opacity),
             outline_width: self.outline_width.unwrap_or(other.outline_width),
             lang: self.lang.clone().unwrap_or(other.lang.clone()),
+            high_quality: self.high_quality.unwrap_or(other.high_quality),
         }
     }
 }

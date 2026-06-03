@@ -199,6 +199,12 @@ pub struct TextMaterial {
     pub outline_opacity: f32, // outlineOpacity Default:1
     pub outline_width: f32,   // outlineWidth Default:0
     pub lang: String,
+    /// Enable high-quality glyph rendering. When `true`, text uses an MTSDF
+    /// atlas via `fdsm` — preserves sharp corners at large sizes but per-glyph
+    /// cost is dominated by exact distance-to-curve math. When `false` (the
+    /// default), single-channel SDF (Felzenszwalb on a fontdue bitmap) is used
+    /// — ~100× faster per glyph, slightly soft corners at extreme zoom.
+    pub high_quality: bool,
 }
 
 impl Default for TextMaterial {
@@ -226,6 +232,7 @@ impl Default for TextMaterial {
             outline_opacity: 1.0,
             outline_width: 0.0,
             lang: "".to_string(),
+            high_quality: false,
         }
     }
 }
