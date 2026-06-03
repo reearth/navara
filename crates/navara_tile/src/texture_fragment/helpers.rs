@@ -3,7 +3,7 @@ use url::Url;
 
 use navara_buffer_store::BufferStore;
 use navara_component::{Order, OrderByDistance, Priority, Requested};
-use navara_core::tile_url;
+use navara_core::{TileXYZ, tile_url};
 use navara_data_requester::{DataManager, DataRequester, DataRequesterExtension};
 use navara_layer::TilesLayer;
 use navara_material::Appearance;
@@ -54,6 +54,14 @@ pub(crate) fn request_texture_fragment(
         hill_ids.resize(tiles_len, None);
     }
 
+    // Check if there are any regular (non-hillshade) layers in zoom range.
+    // This determines whether hillshade follows regular tiles' max_zoom or uses overscaled_max_zoom.
+    let has_regular_tiles = sorted_tiles.iter().any(|(layer, _)| {
+        layer.hillshade_config.is_none()
+            && layer.is_over_min_zoom(coords.z)
+            && !layer.is_over_max_zoom(coords.z)
+    });
+
     // Check whether every layer is already handled.
     // Out-of-zoom layers stay None; regular layers must have a queryable
     // TextureFragment entity; hillshade layers must have a queryable DataRequester.
@@ -62,7 +70,7 @@ pub(crate) fn request_texture_fragment(
         let hill_ids = leaf.hillshade_entity_ids.as_ref().unwrap();
         sorted_tiles.iter().enumerate().all(|(i, (layer, _))| {
             let is_hillshade = layer.hillshade_config.is_some();
-            let is_out_of_zoom = if is_hillshade {
+            let is_out_of_zoom = if is_hillshade && !has_regular_tiles {
                 !layer.is_over_min_zoom(coords.z) || layer.is_over_overscaled_max_zoom(coords.z)
             } else {
                 !layer.is_over_min_zoom(coords.z) || layer.is_over_max_zoom(coords.z)
@@ -83,7 +91,7 @@ pub(crate) fn request_texture_fragment(
 
     for (i, (layer, _)) in sorted_tiles.iter().enumerate() {
         let is_hillshade = layer.hillshade_config.is_some();
-        let is_out_of_zoom = if is_hillshade {
+        let is_out_of_zoom = if is_hillshade && !has_regular_tiles {
             !layer.is_over_min_zoom(coords.z) || layer.is_over_overscaled_max_zoom(coords.z)
         } else {
             !layer.is_over_min_zoom(coords.z) || layer.is_over_max_zoom(coords.z)
@@ -108,7 +116,27 @@ pub(crate) fn request_texture_fragment(
         }
 
         let tms = matches!(layer.appearance.as_ref(), Some(Appearance::RasterTile(m)) if m.tms);
-        let url = tile_url(layer.data.as_ref().unwrap().url.as_str(), &coords, tms);
+
+        // For layers beyond max_zoom, clamp coordinates to max_zoom to reuse parent data.
+        // This enables overscaling: child tiles share parent's texture data via DataManager.
+        let request_coords = if layer.should_overscale(coords.z) {
+            // Beyond max_zoom but before overscaled_max_zoom: use parent coordinates
+            let max_zoom = layer.appearance().unwrap().max_zoom;
+            let scale = coords.z - max_zoom;
+            TileXYZ {
+                x: coords.x >> scale,
+                y: coords.y >> scale,
+                z: max_zoom,
+            }
+        } else {
+            coords
+        };
+
+        let url = tile_url(
+            layer.data.as_ref().unwrap().url.as_str(),
+            &request_coords,
+            tms,
+        );
 
         let entity_id = if is_hillshade {
             // Hillshade texture: use DataRequester so Rust can backfill edges.
