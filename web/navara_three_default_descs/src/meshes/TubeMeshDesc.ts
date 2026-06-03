@@ -2,22 +2,20 @@ import type ThreeView from "@navara/three";
 import {
   type XYZ,
   Color,
-  MeshDescWithSelectiveEffect,
-  PickableMeshWrapper,
-  type MeshConfigWithSelectiveEffect,
-  type MeshUpdateWithSelectiveEffect,
+  NewMeshDesc,
+  type MeshDescConfig,
+  type MeshDescUpdate,
   type ViewContext,
   type CustomObject3DEventMap,
-  setupSelectiveEffectUniforms,
 } from "@navara/three";
 import {
   CatmullRomCurve3,
   Mesh,
-  MeshLambertMaterial,
   TubeGeometry,
   Vector3,
   type Object3DEventMap,
 } from "three";
+import { MeshLambertNodeMaterial } from "three/webgpu";
 
 type TubeMeshEventMap = Object3DEventMap & CustomObject3DEventMap;
 
@@ -40,31 +38,32 @@ type Description = {
   };
 };
 
-export type TubeMeshConfig = MeshConfigWithSelectiveEffect &
-  Description & { pickable?: boolean };
+export type TubeMeshConfig = MeshDescConfig & Description;
 
-export type TubeMeshUpdate = MeshUpdateWithSelectiveEffect & Description;
+export type TubeMeshUpdate = MeshDescUpdate & Description;
 
-export class TubeMeshDesc extends MeshDescWithSelectiveEffect<
+export class TubeMeshDesc extends NewMeshDesc<
   TubeMeshConfig,
   TubeMeshUpdate,
-  Mesh<TubeGeometry, MeshLambertMaterial, TubeMeshEventMap>
+  Mesh<TubeGeometry, MeshLambertNodeMaterial, TubeMeshEventMap>
 > {
   private config: TubeMeshConfig;
-  private pickWrapper?: PickableMeshWrapper;
 
   constructor(view: ThreeView, ctx: ViewContext, config: TubeMeshConfig) {
-    // Propagate initial effectIds to base MeshDesc
+    // Propagate initial effectIds to MeshDescBase
     if (config.tube?.effectIds) {
       config.effectIds = config.tube.effectIds;
     }
     super(view, ctx, config);
     this.config = config;
-  }
 
-  /** The batch ID assigned to this mesh when picking is enabled. */
-  get batchId(): number | undefined {
-    return this.pickWrapper?.batchId;
+    // Drive the MRT emissive uniforms from this tube's config.
+    if (config.tube?.emissiveColor !== undefined) {
+      this.emissive = config.tube.emissiveColor;
+    }
+    if (config.tube?.emissiveIntensity !== undefined) {
+      this.emissiveIntensity = config.tube.emissiveIntensity;
+    }
   }
 
   createMesh() {
@@ -90,34 +89,25 @@ export class TubeMeshDesc extends MeshDescWithSelectiveEffect<
       cfg.closed ?? false,
     );
 
-    // Create material from properties
     const colorValue = cfg.color ?? new Color().setStyle("#ffffff");
-    const emissiveColorValue = cfg.emissiveColor ? cfg.emissiveColor.raw : 0;
-    const material = new MeshLambertMaterial({
+    const material = new MeshLambertNodeMaterial({
       color: colorValue.raw,
-      emissive: emissiveColorValue,
-      emissiveIntensity: cfg.emissiveIntensity ?? 0,
       opacity: cfg.opacity ?? 1,
       transparent: cfg.transparent ?? false,
     });
+    material.emissive.set(cfg.emissiveColor?.raw ?? 0x000000);
+    material.emissiveIntensity = cfg.emissiveIntensity ?? 0;
 
-    // Set up selective effect uniforms
-    setupSelectiveEffectUniforms(material);
-
-    const mesh = new Mesh<TubeGeometry, MeshLambertMaterial, TubeMeshEventMap>(
-      geometry,
-      material,
-    );
+    const mesh = new Mesh<
+      TubeGeometry,
+      MeshLambertNodeMaterial,
+      TubeMeshEventMap
+    >(geometry, material);
 
     mesh.castShadow = cfg.castShadow ?? false;
     mesh.receiveShadow = cfg.receiveShadow ?? false;
 
     this.ctx.applyShadowMaterial(material);
-
-    if (this.config.pickable) {
-      this.pickWrapper = new PickableMeshWrapper(mesh, this.ctx);
-      this.ctx.registerPickableMesh(this.id, this.pickWrapper);
-    }
 
     return mesh;
   }
@@ -167,21 +157,12 @@ export class TubeMeshDesc extends MeshDescWithSelectiveEffect<
       // Update material if material properties changed
       if (
         cfg.color !== undefined ||
-        cfg.emissiveColor !== undefined ||
-        cfg.emissiveIntensity !== undefined ||
         cfg.opacity !== undefined ||
         cfg.transparent !== undefined
       ) {
         const material = this._instance.material;
         if (cfg.color !== undefined) {
-          const colorValue = cfg.color.raw;
-          material.color.set(colorValue);
-        }
-        if (cfg.emissiveColor !== undefined) {
-          material.emissive.set(cfg.emissiveColor.raw);
-        }
-        if (cfg.emissiveIntensity !== undefined) {
-          material.emissiveIntensity = cfg.emissiveIntensity;
+          material.color.set(cfg.color.raw);
         }
         if (cfg.opacity !== undefined) material.opacity = cfg.opacity;
         if (cfg.transparent !== undefined)
@@ -201,7 +182,12 @@ export class TubeMeshDesc extends MeshDescWithSelectiveEffect<
       if (cfg.effectIds !== undefined) {
         updates.effectIds = cfg.effectIds;
       }
-
+      if (cfg.emissiveColor !== undefined) {
+        this.emissive = cfg.emissiveColor;
+      }
+      if (cfg.emissiveIntensity !== undefined) {
+        this.emissiveIntensity = cfg.emissiveIntensity;
+      }
       this.emit("needsUpdate");
     }
 
@@ -213,16 +199,7 @@ export class TubeMeshDesc extends MeshDescWithSelectiveEffect<
       this.ctx.removeShadowMaterial(this._instance.material);
       this._instance.geometry.dispose();
       this._instance.material.dispose();
-
       this._instance = undefined;
     }
-  }
-
-  override onDestroy(): void {
-    if (this.pickWrapper) {
-      this.ctx.unregisterPickableMesh(this.id);
-      this.pickWrapper = undefined;
-    }
-    super.onDestroy();
   }
 }

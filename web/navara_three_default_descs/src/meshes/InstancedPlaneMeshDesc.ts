@@ -1,26 +1,19 @@
 import type ThreeView from "@navara/three";
 import {
   Color,
-  InstancedMeshDesc,
-  PickableInstancedMeshWrapper,
-  setupSelectiveEffectUniforms,
-  type InstancedChildConfig,
-  type InstancedMeshConfig,
-  type InstancedMeshUpdate,
+  NewInstancedMeshDesc,
+  type InstancedMeshDescChildConfig,
+  type InstancedMeshDescConfig,
+  type InstancedMeshDescUpdate,
   type ViewContext,
 } from "@navara/three";
-import {
-  Color as ThreeColor,
-  InstancedMesh as ThreeInstancedMesh,
-  MeshLambertMaterial,
-  PlaneGeometry,
-  Vector3,
-} from "three";
+import { Color as ThreeColor, PlaneGeometry, Vector3 } from "three";
+import { MeshLambertNodeMaterial } from "three/webgpu";
 
 const _tempColor = new ThreeColor();
 
 /** Per-instance configuration for a single plane. */
-export type PlaneChildConfig = InstancedChildConfig & {
+export type PlaneChildConfig = InstancedMeshDescChildConfig & {
   /** Plane width (X-axis). Encoded as scale in the instance matrix. */
   width?: number;
   /** Plane height (Y-axis). Encoded as scale in the instance matrix. */
@@ -51,20 +44,18 @@ type Description = {
   planes?: PlanesDescription;
 };
 
-export type InstancedPlaneMeshConfig = InstancedMeshConfig &
-  Description & { pickable?: boolean };
+export type InstancedPlaneMeshConfig = InstancedMeshDescConfig & Description;
 
-export type InstancedPlaneMeshUpdate = InstancedMeshUpdate & Description;
+export type InstancedPlaneMeshUpdate = InstancedMeshDescUpdate & Description;
 
-export class InstancedPlaneMeshDesc extends InstancedMeshDesc<
+export class InstancedPlaneMeshDesc extends NewInstancedMeshDesc<
   PlaneGeometry,
-  MeshLambertMaterial,
+  MeshLambertNodeMaterial,
   InstancedPlaneMeshConfig,
   InstancedPlaneMeshUpdate,
   PlaneChildConfig
 > {
   private config: InstancedPlaneMeshConfig;
-  private pickWrapper?: PickableInstancedMeshWrapper;
 
   constructor(
     view: ThreeView,
@@ -76,10 +67,14 @@ export class InstancedPlaneMeshDesc extends InstancedMeshDesc<
     }
     super(view, ctx, config);
     this.config = config;
-  }
 
-  get batchIds(): readonly number[] {
-    return this.pickWrapper?.batchIds ?? [];
+    // Drive the MRT emissive uniforms from the planes config.
+    if (config.planes?.emissiveColor !== undefined) {
+      this.emissive = config.planes.emissiveColor;
+    }
+    if (config.planes?.emissiveIntensity !== undefined) {
+      this.emissiveIntensity = config.planes.emissiveIntensity;
+    }
   }
 
   private get planesConfig(): PlanesDescription | undefined {
@@ -100,19 +95,18 @@ export class InstancedPlaneMeshDesc extends InstancedMeshDesc<
     );
   }
 
-  protected createMaterial(): MeshLambertMaterial {
+  protected createMaterial(): MeshLambertNodeMaterial {
     const cfg = this.planesConfig;
     const colorValue = cfg?.color ?? new Color().setStyle("#ffffff");
     const emissiveColorValue = cfg?.emissiveColor ? cfg.emissiveColor.raw : 0;
 
-    const material = new MeshLambertMaterial({
+    const material = new MeshLambertNodeMaterial({
       color: colorValue.raw,
-      emissive: emissiveColorValue,
-      emissiveIntensity: cfg?.emissiveIntensity ?? 0,
       opacity: cfg?.opacity ?? 1,
       transparent: cfg?.transparent ?? false,
     });
-    setupSelectiveEffectUniforms(material);
+    material.emissive.set(emissiveColorValue);
+    material.emissiveIntensity = cfg?.emissiveIntensity ?? 0;
     return material;
   }
 
@@ -142,38 +136,7 @@ export class InstancedPlaneMeshDesc extends InstancedMeshDesc<
       mesh.castShadow = cfg?.castShadow ?? false;
       mesh.receiveShadow = cfg?.receiveShadow ?? false;
       this.ctx.applyShadowMaterial(mesh.material);
-
-      if (this.config.pickable) {
-        this.pickWrapper = new PickableInstancedMeshWrapper(
-          mesh,
-          this.count,
-          this.ctx,
-        );
-        this.ctx.registerPickableMesh(this.id, this.pickWrapper);
-      }
     }
-  }
-
-  protected override onInstanceAdded(_index: number): void {
-    this.pickWrapper?.addInstance();
-  }
-
-  protected override onInstanceRemoved(index: number, _wasLast: boolean): void {
-    this.pickWrapper?.removeInstanceAt(index);
-  }
-
-  protected override onInstancesCleared(): void {
-    this.pickWrapper?.clearInstances();
-  }
-
-  protected override onInstancesReplaced(count: number): void {
-    this.pickWrapper?.replaceAll(count);
-  }
-
-  protected override onInstanceMeshReplaced(
-    newMesh: ThreeInstancedMesh<PlaneGeometry, MeshLambertMaterial>,
-  ): void {
-    this.pickWrapper?.syncMesh(newMesh);
   }
 
   onUpdateConfig(updates: InstancedPlaneMeshUpdate): void {
@@ -202,6 +165,12 @@ export class InstancedPlaneMeshDesc extends InstancedMeshDesc<
       if (u.effectIds !== undefined) {
         updates.effectIds = u.effectIds;
       }
+      if (u.emissiveColor !== undefined) {
+        this.emissive = u.emissiveColor;
+      }
+      if (u.emissiveIntensity !== undefined) {
+        this.emissiveIntensity = u.emissiveIntensity;
+      }
 
       this.config.planes = {
         ...this.config.planes,
@@ -213,10 +182,6 @@ export class InstancedPlaneMeshDesc extends InstancedMeshDesc<
   }
 
   override onDestroy(): void {
-    if (this.pickWrapper) {
-      this.ctx.unregisterPickableMesh(this.id);
-      this.pickWrapper = undefined;
-    }
     if (this.raw) {
       this.ctx.removeShadowMaterial(this.raw.material);
     }

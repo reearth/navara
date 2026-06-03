@@ -2,21 +2,15 @@ import type ThreeView from "@navara/three";
 import {
   Color,
   DrapedMesh,
-  MeshDescWithSelectiveEffect,
-  PickableMeshWrapper,
-  type MeshConfigWithSelectiveEffect,
-  type MeshUpdateWithSelectiveEffect,
+  NewMeshDesc,
+  type MeshDescConfig,
+  type MeshDescUpdate,
   type ViewContext,
   type CustomObject3DEventMap,
   type PassKey,
-  setupSelectiveEffectUniforms,
 } from "@navara/three";
-import {
-  CylinderGeometry,
-  MeshBasicMaterial,
-  MeshLambertMaterial,
-  type Object3DEventMap,
-} from "three";
+import { CylinderGeometry, type Object3DEventMap } from "three";
+import { MeshBasicNodeMaterial, MeshLambertNodeMaterial } from "three/webgpu";
 
 type CylinderMeshEventMap = Object3DEventMap & CustomObject3DEventMap;
 
@@ -46,33 +40,34 @@ type Description = {
   };
 };
 
-export type CylinderMeshConfig = MeshConfigWithSelectiveEffect &
-  Description & { pickable?: boolean };
+export type CylinderMeshConfig = MeshDescConfig & Description;
 
-export type CylinderMeshUpdate = MeshUpdateWithSelectiveEffect & Description;
+export type CylinderMeshUpdate = MeshDescUpdate & Description;
 
-type CylinderMeshMaterial = MeshLambertMaterial | MeshBasicMaterial;
+type CylinderMeshMaterial = MeshLambertNodeMaterial | MeshBasicNodeMaterial;
 
-export class CylinderMeshDesc extends MeshDescWithSelectiveEffect<
+export class CylinderMeshDesc extends NewMeshDesc<
   CylinderMeshConfig,
   CylinderMeshUpdate,
   DrapedMesh<CylinderGeometry, CylinderMeshMaterial, CylinderMeshEventMap>
 > {
   private config: CylinderMeshConfig;
-  private pickWrapper?: PickableMeshWrapper;
 
   constructor(view: ThreeView, ctx: ViewContext, config: CylinderMeshConfig) {
-    // Propagate initial effectIds to base MeshDesc
+    // Propagate initial effectIds to MeshDescBase
     if (config.cylinder?.effectIds) {
       config.effectIds = config.cylinder.effectIds;
     }
     super(view, ctx, config);
     this.config = config;
-  }
 
-  /** The batch ID assigned to this mesh when picking is enabled. */
-  get batchId(): number | undefined {
-    return this.pickWrapper?.batchId;
+    // Drive the MRT emissive uniforms from this cylinder's config.
+    if (config.cylinder?.emissiveColor !== undefined) {
+      this.emissive = config.cylinder.emissiveColor;
+    }
+    if (config.cylinder?.emissiveIntensity !== undefined) {
+      this.emissiveIntensity = config.cylinder.emissiveIntensity;
+    }
   }
 
   createMesh() {
@@ -92,13 +87,7 @@ export class CylinderMeshDesc extends MeshDescWithSelectiveEffect<
       cfg.thetaLength ?? Math.PI * 2,
     );
 
-    // Create material from properties
     const material = this.createMaterial(cfg);
-
-    // Set up selective effect uniforms
-    if (material instanceof MeshLambertMaterial) {
-      setupSelectiveEffectUniforms(material);
-    }
 
     const mesh = new DrapedMesh<
       CylinderGeometry,
@@ -111,11 +100,6 @@ export class CylinderMeshDesc extends MeshDescWithSelectiveEffect<
 
     this.ctx.applyShadowMaterial(material);
 
-    if (this.config.pickable) {
-      this.pickWrapper = new PickableMeshWrapper(mesh, this.ctx);
-      this.ctx.registerPickableMesh(this.id, this.pickWrapper);
-    }
-
     return mesh;
   }
 
@@ -123,21 +107,20 @@ export class CylinderMeshDesc extends MeshDescWithSelectiveEffect<
     cfg: NonNullable<CylinderMeshConfig["cylinder"]>,
   ): CylinderMeshMaterial {
     const colorValue = cfg.color ?? new Color().setStyle("#ffffff");
-    if (cfg.draped) {
-      return new MeshBasicMaterial({
-        color: colorValue.raw,
-        opacity: cfg.opacity ?? 1,
-        transparent: cfg.transparent ?? false,
-      });
-    }
-    const emissiveColorValue = cfg.emissiveColor ? cfg.emissiveColor.raw : 0;
-    return new MeshLambertMaterial({
+    const baseParams = {
       color: colorValue.raw,
-      emissive: emissiveColorValue,
-      emissiveIntensity: cfg.emissiveIntensity ?? 0,
       opacity: cfg.opacity ?? 1,
       transparent: cfg.transparent ?? false,
-    });
+    };
+
+    if (cfg.draped) {
+      return new MeshBasicNodeMaterial(baseParams);
+    }
+
+    const material = new MeshLambertNodeMaterial(baseParams);
+    material.emissive.set(cfg.emissiveColor?.raw ?? 0x000000);
+    material.emissiveIntensity = cfg.emissiveIntensity ?? 0;
+    return material;
   }
 
   protected override getPassKey(): PassKey {
@@ -164,15 +147,12 @@ export class CylinderMeshDesc extends MeshDescWithSelectiveEffect<
           this._instance.material.dispose();
           const newMaterial = this.createMaterial(origin);
           this._instance.material = newMaterial;
+          // Pickable handle is preserved across draped swaps; re-run the
+          // NodeMaterial setup against the freshly-created material.
+          this.refreshNodeMaterial();
           if (!cfg.draped) {
             this.ctx.applyShadowMaterial(newMaterial);
           }
-          // Re-setup SelectiveEffect uniforms for the new material
-          if (newMaterial instanceof MeshLambertMaterial) {
-            setupSelectiveEffectUniforms(newMaterial);
-          }
-          // Re-inject picking hooks into the new material (preserves batchId)
-          this.pickWrapper?.syncMaterials();
         }
       }
 
@@ -208,8 +188,6 @@ export class CylinderMeshDesc extends MeshDescWithSelectiveEffect<
       // Update material if material properties changed
       if (
         cfg.color !== undefined ||
-        cfg.emissiveColor !== undefined ||
-        cfg.emissiveIntensity !== undefined ||
         cfg.opacity !== undefined ||
         cfg.transparent !== undefined
       ) {
@@ -220,14 +198,6 @@ export class CylinderMeshDesc extends MeshDescWithSelectiveEffect<
         if (cfg.opacity !== undefined) material.opacity = cfg.opacity;
         if (cfg.transparent !== undefined)
           material.transparent = cfg.transparent;
-        if (material instanceof MeshLambertMaterial) {
-          if (cfg.emissiveColor !== undefined) {
-            material.emissive.set(cfg.emissiveColor.raw);
-          }
-          if (cfg.emissiveIntensity !== undefined) {
-            material.emissiveIntensity = cfg.emissiveIntensity;
-          }
-        }
         material.needsUpdate = true;
       }
 
@@ -243,7 +213,12 @@ export class CylinderMeshDesc extends MeshDescWithSelectiveEffect<
       if (cfg.effectIds !== undefined) {
         updates.effectIds = cfg.effectIds;
       }
-
+      if (cfg.emissiveColor !== undefined) {
+        this.emissive = cfg.emissiveColor;
+      }
+      if (cfg.emissiveIntensity !== undefined) {
+        this.emissiveIntensity = cfg.emissiveIntensity;
+      }
       this.emit("needsUpdate");
     }
 
@@ -255,16 +230,7 @@ export class CylinderMeshDesc extends MeshDescWithSelectiveEffect<
       this.ctx.removeShadowMaterial(this._instance.material);
       this._instance.geometry.dispose();
       this._instance.material.dispose();
-
       this._instance = undefined;
     }
-  }
-
-  override onDestroy(): void {
-    if (this.pickWrapper) {
-      this.ctx.unregisterPickableMesh(this.id);
-      this.pickWrapper = undefined;
-    }
-    super.onDestroy();
   }
 }
