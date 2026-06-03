@@ -98,7 +98,12 @@ export class CylinderMeshDesc extends NewMeshDesc<
     mesh.castShadow = cfg.castShadow ?? false;
     mesh.receiveShadow = cfg.receiveShadow ?? false;
 
-    this.ctx.applyShadowMaterial(material);
+    // Only lit (non-draped) materials participate in CSM shadows; draped
+    // meshes are terrain-projected via the stencil pass. Keep this consistent
+    // with the draped-swap handling in onUpdateConfig.
+    if (!(cfg.draped ?? false)) {
+      this.ctx.applyShadowMaterial(material);
+    }
 
     return mesh;
   }
