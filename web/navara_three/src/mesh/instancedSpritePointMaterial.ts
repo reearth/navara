@@ -208,11 +208,11 @@ function createInstancedPointNodeMaterial(opts: {
     logarithmicDepthBuffer,
   );
 
-  // Re-apply the ellipsoid depth offset (legacy `if (uOffsetDepth) depth -= 0.2`)
+  // Re-apply the ellipsoid depth offset (legacy `if (uOffsetDepth) depth -= 0.01`)
   // on top of the shared logarithmic-depth node.
   if (logarithmicDepthBuffer) {
     material.depthNode = logarithmicDepthNode.sub(
-      select(uOffsetDepth, float(0.2), float(0.0)),
+      select(uOffsetDepth, float(0.01), float(0.0)),
     );
   }
 
