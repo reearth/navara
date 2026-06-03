@@ -182,8 +182,6 @@ function createInstancedPointNodeMaterial(opts: {
   // logarithmic-depth node and screen-space normal resolve against the actual
   // rendered geometry, not the default model-view position.
   material.setupPositionView = () => mvFinal.xyz;
-  // Feeds the MRT emissive slot's `diffuseColor.rgb`.
-  material.colorNode = instanceColor;
 
   // MRT slot-0 color: circle mask (discard outside), picking override. Matches
   // the legacy fragment, where the circle alpha only gates discard and the
@@ -195,6 +193,8 @@ function createInstancedPointNodeMaterial(opts: {
     const picked = vec4(nvr_batchIdToColor(instanceBatchID), 1.0);
     return select(uPickable, picked, base);
   })();
+
+  material.colorNode = spriteColor;
 
   setupNodeMaterialForMRT(
     material,
