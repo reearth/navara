@@ -88,6 +88,7 @@ pub fn traverse_tile(
 
             // For hillshade layers, allow overscaling like terrain - stop at overscaled_max_zoom
             let hillshade_overmax = !has_tile_layer
+                && !tiles_with_hillshade.is_empty()
                 && tiles_with_hillshade
                     .iter()
                     .all(|t| t.is_over_overscaled_max_zoom(tile.coords.z));

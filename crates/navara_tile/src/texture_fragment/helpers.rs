@@ -54,14 +54,6 @@ pub(crate) fn request_texture_fragment(
         hill_ids.resize(tiles_len, None);
     }
 
-    // Check if there are any regular (non-hillshade) layers in zoom range.
-    // This determines whether hillshade follows regular tiles' max_zoom or uses overscaled_max_zoom.
-    let has_regular_tiles = sorted_tiles.iter().any(|(layer, _)| {
-        layer.hillshade_config.is_none()
-            && layer.is_over_min_zoom(coords.z)
-            && !layer.is_over_max_zoom(coords.z)
-    });
-
     // Check whether every layer is already handled.
     // Out-of-zoom layers stay None; regular layers must have a queryable
     // TextureFragment entity; hillshade layers must have a queryable DataRequester.
@@ -69,16 +61,10 @@ pub(crate) fn request_texture_fragment(
         let tex_ids = leaf.texture_fragment_entity_ids.as_ref().unwrap();
         let hill_ids = leaf.hillshade_entity_ids.as_ref().unwrap();
         sorted_tiles.iter().enumerate().all(|(i, (layer, _))| {
-            let is_hillshade = layer.hillshade_config.is_some();
-            let is_out_of_zoom = if is_hillshade && !has_regular_tiles {
-                !layer.is_over_min_zoom(coords.z) || layer.is_over_overscaled_max_zoom(coords.z)
-            } else {
-                !layer.is_over_min_zoom(coords.z) || layer.is_over_max_zoom(coords.z)
-            };
-            if is_out_of_zoom {
+            if !layer.is_over_min_zoom(coords.z) || layer.is_over_max_zoom(coords.z) {
                 return true;
             }
-            if is_hillshade {
+            if layer.hillshade_config.is_some() {
                 hill_ids[i].is_some_and(|e| data_requesters.get(e).is_ok())
             } else {
                 tex_ids[i].is_some_and(|e| texture_fragment.contains(e))
@@ -90,16 +76,10 @@ pub(crate) fn request_texture_fragment(
     }
 
     for (i, (layer, _)) in sorted_tiles.iter().enumerate() {
-        let is_hillshade = layer.hillshade_config.is_some();
-        let is_out_of_zoom = if is_hillshade && !has_regular_tiles {
-            !layer.is_over_min_zoom(coords.z) || layer.is_over_overscaled_max_zoom(coords.z)
-        } else {
-            !layer.is_over_min_zoom(coords.z) || layer.is_over_max_zoom(coords.z)
-        };
-        // Skip layers whose zoom range excludes this tile. The slot stays None.
-        if is_out_of_zoom {
+        if !layer.is_over_min_zoom(coords.z) || layer.is_over_max_zoom(coords.z) {
             continue;
         }
+        let is_hillshade = layer.hillshade_config.is_some();
 
         // For hillshade in the overscale zone (beyond max_zoom but before overscaled_max_zoom),
         // skip entity creation. Like terrain's should_upsample, we don't request new data.
@@ -423,5 +403,31 @@ mod tests {
         );
         assert!(captured.hill_ids[1].is_none());
         assert!(captured.tex_ids[2].is_some());
+    }
+
+    /// Hillshade layers in the overscale zone (max_zoom < z <= overscaled_max_zoom)
+    /// must not spawn a hillshade entity — the slot stays None, allowing the tile
+    /// to use its parent's hillshade via ready_hillshade_parents.
+    #[test]
+    fn hillshade_overscale_zone_leaves_hillshade_slot_none() {
+        // Create a hillshade layer with max_zoom=10, overscaled_max_zoom=20
+        let mut layer = hillshade_layer("hillshade", 0, 10);
+        if let Some(Appearance::RasterTile(ref mut material)) = layer.appearance {
+            material.overscaled_max_zoom = 20;
+        }
+
+        // Tile at z=15 is in overscale zone: 10 < 15 <= 20
+        let captured = run_request(vec![(layer, Order(0))], 15, |_| {});
+
+        assert_eq!(captured.tex_ids.len(), 1);
+        assert_eq!(captured.hill_ids.len(), 1);
+
+        // No hillshade entity should be spawned in the overscale zone
+        assert!(
+            captured.hill_ids[0].is_none(),
+            "hillshade in overscale zone must not spawn DataRequester"
+        );
+        // Regular texture slot should also be None (no regular texture for hillshade layer)
+        assert!(captured.tex_ids[0].is_none());
     }
 }
