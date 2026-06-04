@@ -325,13 +325,6 @@ impl RasterTile {
             return true;
         }
 
-        // Check if there are regular (non-hillshade) layers in zoom range
-        let has_regular_tiles = sorted_tiles.iter().any(|(layer, _)| {
-            layer.hillshade_config.is_none()
-                && layer.is_over_min_zoom(self.coords.z)
-                && !layer.is_over_max_zoom(self.coords.z)
-        });
-
         // Has hillshade layers, check if entities are ready
         self.hillshade_entity_ids.as_ref().is_none_or(|hill_ids| {
             hill_ids
@@ -346,18 +339,8 @@ impl RasterTile {
                             data_requesters,
                         )
                     } else {
-                        // Entity is None, check if this layer is beyond its zoom limit
-                        // When no regular tiles, hillshade uses overscaled_max_zoom
-                        // When regular tiles exist, hillshade uses max_zoom
-                        if layer.hillshade_config.is_some() {
-                            if has_regular_tiles {
-                                layer.is_over_max_zoom(self.coords.z)
-                            } else {
-                                layer.is_over_overscaled_max_zoom(self.coords.z)
-                            }
-                        } else {
-                            false
-                        }
+                        // Entity is None, check if this layer is beyond max_zoom
+                        layer.hillshade_config.is_some() && layer.is_over_max_zoom(self.coords.z)
                     }
                 })
         })

@@ -3,7 +3,7 @@ use url::Url;
 
 use navara_buffer_store::BufferStore;
 use navara_component::{Order, OrderByDistance, Priority, Requested};
-use navara_core::{TileXYZ, tile_url};
+use navara_core::tile_url;
 use navara_data_requester::{DataManager, DataRequester, DataRequesterExtension};
 use navara_layer::TilesLayer;
 use navara_material::Appearance;
@@ -101,6 +101,13 @@ pub(crate) fn request_texture_fragment(
             continue;
         }
 
+        // For hillshade in the overscale zone (beyond max_zoom but before overscaled_max_zoom),
+        // skip entity creation. Like terrain's should_upsample, we don't request new data.
+        // Rendering will use parent hillshade via ready_hillshade_parents with UV transforms.
+        if is_hillshade && layer.should_overscale(coords.z) {
+            continue;
+        }
+
         // Skip layers that already have a valid in-flight or completed entity.
         let already_requested = {
             let tex_ids = leaf.texture_fragment_entity_ids.as_ref().unwrap();
@@ -116,27 +123,7 @@ pub(crate) fn request_texture_fragment(
         }
 
         let tms = matches!(layer.appearance.as_ref(), Some(Appearance::RasterTile(m)) if m.tms);
-
-        // For layers beyond max_zoom, clamp coordinates to max_zoom to reuse parent data.
-        // This enables overscaling: child tiles share parent's texture data via DataManager.
-        let request_coords = if layer.should_overscale(coords.z) {
-            // Beyond max_zoom but before overscaled_max_zoom: use parent coordinates
-            let max_zoom = layer.appearance().unwrap().max_zoom;
-            let scale = coords.z - max_zoom;
-            TileXYZ {
-                x: coords.x >> scale,
-                y: coords.y >> scale,
-                z: max_zoom,
-            }
-        } else {
-            coords
-        };
-
-        let url = tile_url(
-            layer.data.as_ref().unwrap().url.as_str(),
-            &request_coords,
-            tms,
-        );
+        let url = tile_url(layer.data.as_ref().unwrap().url.as_str(), &coords, tms);
 
         let entity_id = if is_hillshade {
             // Hillshade texture: use DataRequester so Rust can backfill edges.

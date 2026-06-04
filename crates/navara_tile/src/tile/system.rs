@@ -916,10 +916,20 @@ pub fn update_mesh_material(
     let are_tile_layers_removed = !tile_layers.p2().is_empty();
     let are_texture_fragments_updated = !texture_fragment.p1().is_empty();
     let are_data_requesters_updated = !data_requesters.p1().is_empty();
+
+    let hillshade_parent_tiles_updated = tc.is_changed()
+        && rendered_tiles.iter().any(|(rt, _)| {
+            tc.rendered_tile_caches
+                .get(&rt.tile_handle)
+                .and_then(|cache| cache.hillshade_parents.as_ref())
+                .is_some()
+        });
+
     if !are_tile_layers_updated
         && !are_texture_fragments_updated
         && !are_tile_layers_removed
         && !are_data_requesters_updated
+        && !hillshade_parent_tiles_updated
     {
         return;
     }

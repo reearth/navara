@@ -126,7 +126,7 @@ pub fn calc_meters_per_texel(
     // Calculate latitude at tile center and get its cosine for Web Mercator correction
     let cos_lat = tile_y_to_latitude(tile_y as f64 + 0.5, tile_z).cos();
     let earth_circumference = 2.0 * std::f64::consts::PI * ellipsoid_semi_major_axis;
-    let content_pixel_width = (texture_width - 2) as f64;
+    let content_pixel_width = texture_width.saturating_sub(2).max(1) as f64;
     let meters_per_texel =
         (earth_circumference * cos_lat) / (content_pixel_width * (1u64 << texture_zoom) as f64);
     meters_per_texel as f32
