@@ -2,31 +2,25 @@ import type { DataArrayTexture, Vector2, Vector3 } from "three";
 
 import type { UniformValue } from "../../../types";
 import type { Mutates } from "../../MaterialEnhancer";
+import type {
+  SpriteCommonProps,
+  SpriteCommonState,
+} from "../spriteCommonState";
 
 /**
  * Props for the instancedSprite base enhancer.
+ *
+ * Extends {@link SpriteCommonProps} (the appearance/pipeline state shared with
+ * the point path) with the billboard-only fields: RTE/billboard mode flags,
+ * alpha test, and the external uniform refs/values resolved per-frame.
  */
-export type InstancedSpriteBaseProps = {
+export type InstancedSpriteBaseProps = SpriteCommonProps & {
   // Immutable after mount
   useRTE?: boolean;
   billboard?: boolean;
 
   // Mutable state
-  scale?: number;
-  center?: [number, number];
-  sizeInMeters?: boolean;
-  offsetDepth?: boolean;
   alphaTest?: number;
-  pickable?: boolean;
-
-  // SelectiveEffect
-  effectIdsMask?: number;
-  emissiveColor?: number;
-  emissiveIntensity?: number;
-
-  // Material properties (set directly on material, not via uniforms)
-  transparent?: boolean;
-  depthTest?: boolean;
 
   // External uniform refs / values (may change over time)
   rtcCenter?: [number, number, number];
@@ -39,32 +33,23 @@ export type InstancedSpriteBaseProps = {
 /**
  * Immutable state snapshot for the instancedSprite base enhancer.
  * This state is always replaced as a whole (never mutated).
+ *
+ * Extends {@link SpriteCommonState} with the billboard-only fields.
  */
-export type InstancedSpriteBaseState = Readonly<{
-  // Immutable after mount
-  useRTE: boolean;
-  billboard: boolean;
+export type InstancedSpriteBaseState = SpriteCommonState &
+  Readonly<{
+    // Immutable after mount
+    useRTE: boolean;
+    billboard: boolean;
 
-  // Mutable
-  scale: number;
-  center: [number, number];
-  sizeInMeters: boolean;
-  offsetDepth: boolean;
-  alphaTest: number;
-  pickable: boolean;
-  effectIdsMask: number;
-  emissiveColor: number;
-  emissiveIntensity: number;
+    // Mutable
+    alphaTest: number;
 
-  // Material properties
-  transparent: boolean;
-  depthTest: boolean;
-
-  // External ref state
-  aspect: number;
-  fovRad: number;
-  screenHeightPx: number;
-}>;
+    // External ref state
+    aspect: number;
+    fovRad: number;
+    screenHeightPx: number;
+  }>;
 
 /**
  * Mutable references (uniforms) for the instancedSprite base enhancer.

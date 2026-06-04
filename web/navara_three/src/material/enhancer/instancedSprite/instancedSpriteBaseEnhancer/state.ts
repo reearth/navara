@@ -1,3 +1,8 @@
+import {
+  DEFAULT_SPRITE_COMMON_STATE,
+  updateSpriteCommonState,
+} from "../spriteCommonState";
+
 import type {
   InstancedSpriteBaseProps,
   InstancedSpriteBaseState,
@@ -6,19 +11,10 @@ import type {
 export const DEFAULT_BASE_PROPS: Required<
   Omit<InstancedSpriteBaseProps, "texture" | "rtcCenter">
 > = {
+  ...DEFAULT_SPRITE_COMMON_STATE,
   useRTE: false,
   billboard: false,
-  scale: 100.0,
-  center: [0.0, 0.0],
-  sizeInMeters: true,
-  offsetDepth: true,
   alphaTest: 0.0,
-  pickable: false,
-  effectIdsMask: 0,
-  emissiveColor: 0,
-  emissiveIntensity: 0,
-  transparent: true,
-  depthTest: true,
   aspect: 1.0,
   fovRad: 1.0,
   screenHeightPx: 1080,
@@ -26,19 +22,10 @@ export const DEFAULT_BASE_PROPS: Required<
 
 /** Default state derived from DEFAULT_BASE_PROPS */
 export const DEFAULT_BASE_STATE: InstancedSpriteBaseState = {
+  ...DEFAULT_SPRITE_COMMON_STATE,
   useRTE: DEFAULT_BASE_PROPS.useRTE,
   billboard: DEFAULT_BASE_PROPS.billboard,
-  scale: DEFAULT_BASE_PROPS.scale,
-  center: DEFAULT_BASE_PROPS.center,
-  sizeInMeters: DEFAULT_BASE_PROPS.sizeInMeters,
-  offsetDepth: DEFAULT_BASE_PROPS.offsetDepth,
   alphaTest: DEFAULT_BASE_PROPS.alphaTest,
-  pickable: DEFAULT_BASE_PROPS.pickable,
-  effectIdsMask: DEFAULT_BASE_PROPS.effectIdsMask,
-  emissiveColor: DEFAULT_BASE_PROPS.emissiveColor,
-  emissiveIntensity: DEFAULT_BASE_PROPS.emissiveIntensity,
-  transparent: DEFAULT_BASE_PROPS.transparent,
-  depthTest: DEFAULT_BASE_PROPS.depthTest,
   aspect: DEFAULT_BASE_PROPS.aspect,
   fovRad: DEFAULT_BASE_PROPS.fovRad,
   screenHeightPx: DEFAULT_BASE_PROPS.screenHeightPx,
@@ -57,22 +44,12 @@ export const updateState = (
   currentState: InstancedSpriteBaseState,
 ): InstancedSpriteBaseState => {
   return {
+    ...updateSpriteCommonState(props, currentState),
     // Immutable after mount - always preserve current value
     useRTE: currentState.useRTE,
     billboard: currentState.billboard,
-    // Mutable
-    scale: props.scale ?? currentState.scale,
-    center: props.center ?? currentState.center,
-    sizeInMeters: props.sizeInMeters ?? currentState.sizeInMeters,
-    offsetDepth: props.offsetDepth ?? currentState.offsetDepth,
+    // Mutable billboard-only
     alphaTest: props.alphaTest ?? currentState.alphaTest,
-    pickable: props.pickable ?? currentState.pickable,
-    effectIdsMask: props.effectIdsMask ?? currentState.effectIdsMask,
-    emissiveColor: props.emissiveColor ?? currentState.emissiveColor,
-    emissiveIntensity:
-      props.emissiveIntensity ?? currentState.emissiveIntensity,
-    transparent: props.transparent ?? currentState.transparent,
-    depthTest: props.depthTest ?? currentState.depthTest,
     aspect: props.aspect ?? currentState.aspect,
     fovRad: props.fovRad ?? currentState.fovRad,
     screenHeightPx: props.screenHeightPx ?? currentState.screenHeightPx,
