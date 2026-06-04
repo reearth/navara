@@ -13,7 +13,11 @@ import { Pane, FolderApi } from "tweakpane";
 
 import { showAttributions } from "../../helpers/attributions";
 import { TERRAIN_DATASETS, TILE_DATASETS } from "../../helpers/constants";
-import { addDateControl, addCameraControl } from "../../helpers/control";
+import {
+  addDateControl,
+  addCameraControl,
+  atZoneTime,
+} from "../../helpers/control";
 
 const gCameraParams = {
   longitude: 139.75711454748298,
@@ -34,7 +38,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   view.addPlugin(plugin);
   await view.init();
 
-  view.atmosphere.date.setHours(8);
+  view.atmosphere.date = atZoneTime(view.atmosphere.date, 8);
 
   plugin.addDefaultPhotorealScene();
 

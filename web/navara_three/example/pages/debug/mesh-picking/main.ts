@@ -36,7 +36,7 @@ import {
   TERRAIN_DATASETS,
   TILE_DATASETS,
 } from "../../../helpers/constants";
-import { addDateControl } from "../../../helpers/control";
+import { addDateControl, atZoneTime } from "../../../helpers/control";
 
 const run = async () => {
   const view = new ThreeView<DefaultDescriptions>({
@@ -53,7 +53,7 @@ const run = async () => {
   defaultLayers.sun.update({
     sun: { intensity: 1, castShadow: true },
   });
-  view.atmosphere.date.setHours(10);
+  view.atmosphere.date = atZoneTime(view.atmosphere.date, 10);
 
   // Shared origin frame — all meshes are offset from here in NUE coordinates
   const origin = geodeticToVector3({

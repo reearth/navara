@@ -23,6 +23,7 @@ import {
   TILES_3D_DATASETS,
   TERRAIN_DATASETS,
 } from "../../../helpers/constants";
+import { atZoneTime } from "../../../helpers/control";
 
 import { DebugPlugin } from "./DebugPlugin";
 
@@ -48,8 +49,7 @@ export const run = async (view: ThreeView<DefaultDescriptions>) => {
     sun: { intensity: 1, castShadow: true },
   });
 
-  const date = new Date();
-  date.setHours(8);
+  const date = atZoneTime(new Date(), 8);
   view.atmosphere.date = date;
 
   // --- Effect Descriptor definitions ---

@@ -10,6 +10,7 @@ import {
   TERRAIN_DATASETS,
   TILE_DATASETS,
 } from "../../../helpers/constants";
+import { atZoneTime } from "../../../helpers/control";
 
 const run = async () => {
   const view = new ThreeView<DefaultDescriptions>({
@@ -27,7 +28,7 @@ const run = async () => {
     sun: { intensity: 1, castShadow: true },
   });
 
-  view.atmosphere.date.setHours(8);
+  view.atmosphere.date = atZoneTime(view.atmosphere.date, 8);
 
   view.setCamera({
     lng: 139.6,

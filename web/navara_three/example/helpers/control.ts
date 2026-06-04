@@ -1,29 +1,53 @@
 import type ThreeView from "@navara/three";
+import dayjs from "dayjs";
+import timezone from "dayjs/plugin/timezone";
+import utc from "dayjs/plugin/utc";
 import type { InputBindingApi, Pane } from "tweakpane";
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+export const DEFAULT_TIME_ZONE = "Asia/Tokyo";
+
+// Returns a new Date whose instant corresponds to `hours:minutes` wall-clock
+// time in the given IANA zone, on the same calendar day the input date falls
+// on in that zone. DST transitions are handled by the dayjs timezone plugin.
+export const atZoneTime = (
+  date: Date,
+  hours: number,
+  minutes = 0,
+  zone: string = DEFAULT_TIME_ZONE,
+): Date =>
+  dayjs(date)
+    .tz(zone)
+    .hour(hours)
+    .minute(minutes)
+    .second(0)
+    .millisecond(0)
+    .toDate();
 
 export const addDateControl = (
   view: ThreeView,
   pane: Pane,
   initialDate?: Date,
+  zone: string = DEFAULT_TIME_ZONE,
 ) => {
-  const date = initialDate ?? new Date();
-  if (!initialDate) {
-    date.setHours(8);
-  }
-
+  let date = initialDate ?? atZoneTime(new Date(), 8, 0, zone);
   view.atmosphere.date = date;
 
-  const hour = date.getHours();
+  const inZone = () => dayjs(date).tz(zone);
+  const initial = inZone();
 
   const PARAMS = {
-    year: date.getFullYear(),
-    month: date.getMonth() + 1,
-    hour: date.getHours(),
-    minutesOfDay: hour * 60,
+    year: initial.year(),
+    month: initial.month() + 1,
+    hour: initial.hour(),
+    minutesOfDay: initial.hour() * 60 + initial.minute(),
     animation: false,
   };
 
-  const onChangeDate = () => {
+  const apply = (next: dayjs.Dayjs) => {
+    date = next.toDate();
     view.atmosphere.date = date;
   };
 
@@ -34,30 +58,29 @@ export const addDateControl = (
   folder
     .addBinding(PARAMS, "year", {
       min: 1900,
-      max: date.getFullYear(),
+      max: PARAMS.year,
       step: 1,
     })
     .on("change", (v) => {
-      date.setFullYear(v.value);
-      onChangeDate();
+      apply(inZone().year(v.value));
     });
   folder
     .addBinding(PARAMS, "month", { min: 1, max: 12, step: 1 })
     .on("change", (v) => {
-      date.setMonth(v.value - 1);
-      onChangeDate();
+      apply(inZone().month(v.value - 1));
     });
   folder
     .addBinding(PARAMS, "hour", { min: 0, max: 23, step: 1 })
     .on("change", (v) => {
-      date.setHours(v.value);
-      onChangeDate();
+      apply(inZone().hour(v.value));
     });
 
   const updateMinutesOfDay = (value: number) => {
-    date.setHours(Math.floor(value / 60));
-    date.setMinutes(value % 60);
-    onChangeDate();
+    apply(
+      inZone()
+        .hour(Math.floor(value / 60))
+        .minute(value % 60),
+    );
   };
   const maxMinutesOfDay = 24 * 60;
   const minutesOfDay = folder

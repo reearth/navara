@@ -7,6 +7,7 @@ import {
 
 import { showAttributions } from "../../../helpers/attributions";
 import { TERRAIN_DATASETS, TILE_DATASETS } from "../../../helpers/constants";
+import { atZoneTime } from "../../../helpers/control";
 
 const TOKYO = { lng: 139.757, lat: 35.676 };
 
@@ -26,7 +27,7 @@ const run = async () => {
     sun: { intensity: 1, castShadow: true },
   });
 
-  view.atmosphere.date.setHours(8);
+  view.atmosphere.date = atZoneTime(view.atmosphere.date, 8);
 
   view.setCamera({
     lng: 130,

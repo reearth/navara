@@ -46,7 +46,7 @@ import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../../helpers/attributions";
 import { TILE_DATASETS } from "../../../helpers/constants";
-import { addDateControl } from "../../../helpers/control";
+import { addDateControl, atZoneTime } from "../../../helpers/control";
 
 // ============================================================================
 // Shaders — the user owns these. The picking branch lives here, not in
@@ -241,7 +241,7 @@ const run = async () => {
   await view.init();
 
   defaultPlugin.addDefaultPhotorealScene();
-  view.atmosphere.date.setHours(10);
+  view.atmosphere.date = atZoneTime(view.atmosphere.date, 10);
 
   view.registerMesh("torusKnot", TorusKnotMeshDesc);
 
