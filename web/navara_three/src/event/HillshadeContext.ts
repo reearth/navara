@@ -1,9 +1,12 @@
-import type { DataTexture, Texture } from "three";
+import type { Texture } from "three";
 import {
   ClampToEdgeWrapping,
+  DataTexture,
   LinearFilter,
+  NearestFilter,
   NoColorSpace,
   RGBAFormat,
+  RGFormat,
   UnsignedByteType,
   WebGLRenderTarget,
 } from "three";
@@ -26,12 +29,15 @@ export type HillshadeConfig = {
 };
 
 /**
- * Temporary DEM texture storage entry
- * Kept until all 4 edges arrive (directions: 0=Left, 1=Right, 2=Top, 3=Bottom)
+ * Temporary DEM state while waiting for edge updates.
+ * Stores only the WASM buffer handle and received edge strips — NOT the full padded DEM.
+ * The padded DEM is reconstructed transiently on each edge arrival, then discarded.
  */
 type TempDemEntry = {
-  demTexture: DataTexture;
+  originalHandle: number;
+  paddedSize: number;
   receivedEdges: Set<number>;
+  receivedEdgeData: Map<number, Uint8Array>;
   metersPerTexel: number;
   hillshadeConfig: HillshadeConfig;
 };
@@ -44,12 +50,15 @@ export class HillshadeContext {
   /** Shared normal map generator for offline rendering */
   private normalMapGenerator: HillshadeNormalMapGenerator | null = null;
 
+  /** Scale factor for normal map RenderTarget dimensions (1.0 = full res, 0.5 = half res for mobile) */
+  normalMapScale = 1.0;
+
   /** Pending edge updates that arrived before the main texture was created */
   readonly pendingEdges = new Map<string, Map<number, Uint8Array>>();
 
   /**
-   * Temporary storage for DEM textures while waiting for edge updates
-   * entityId → { demTexture, receivedEdges, metersPerTexel, hillshadeConfig }
+   * Temporary storage for DEM reconstruction state while waiting for edge updates.
+   * entityId → { originalHandle, paddedSize, receivedEdges, receivedEdgeData, ... }
    */
   readonly tempDemTextures = new Map<string, TempDemEntry>();
 
@@ -125,14 +134,14 @@ export class HillshadeContext {
 
     if (!rt) {
       rt = new WebGLRenderTarget(width, height, {
-        format: RGBAFormat,
+        format: RGFormat,
         type: UnsignedByteType,
         minFilter: LinearFilter,
         magFilter: LinearFilter,
         wrapS: ClampToEdgeWrapping,
         wrapT: ClampToEdgeWrapping,
         colorSpace: NoColorSpace,
-        generateMipmaps: false, // Disable mipmaps for normal maps
+        generateMipmaps: false,
       });
       this.renderTargets.set(entityId, rt);
     }
@@ -141,11 +150,12 @@ export class HillshadeContext {
   }
 
   /**
-   * Generate normal map texture from DEM texture
-   * Uses RenderTarget pool to avoid GPU→CPU→GPU round-trip
+   * Generate normal map texture from DEM data
+   * Creates a transient DataTexture for GPU upload, renders to RenderTarget, then frees the DEM texture.
    * @param entityId - Entity ID for RenderTarget lookup/creation
    * @param viewContext - ViewContext to get the renderer from
-   * @param demTexture - Source DEM texture (padded)
+   * @param demData - Padded DEM pixel data (CPU only, not GPU-resident)
+   * @param paddedSize - Width/height of the padded DEM (square)
    * @param metersPerTexel - Meters per texel for normal calculation
    * @param hillshadeConfig - Hillshade decoder configuration
    * @param contentWidth - Content width (without padding)
@@ -155,29 +165,37 @@ export class HillshadeContext {
   generateNormalMap(
     entityId: string,
     viewContext: ViewContext,
-    demTexture: DataTexture,
+    demData: Uint8Array,
+    paddedSize: number,
     metersPerTexel: number,
     hillshadeConfig: HillshadeConfig,
     contentWidth: number,
     contentHeight: number,
   ): Texture {
-    // Get or create RenderTarget for this entity
     const renderTarget = this.getOrCreateRenderTarget(
       entityId,
-      contentWidth,
-      contentHeight,
+      Math.max(1, Math.round(contentWidth * this.normalMapScale)),
+      Math.max(1, Math.round(contentHeight * this.normalMapScale)),
     );
 
-    // Get generator and render to target
+    // Create a transient DataTexture for GPU upload, render, then dispose immediately
+    const demTexture = new DataTexture(
+      demData,
+      paddedSize,
+      paddedSize,
+      RGBAFormat,
+      UnsignedByteType,
+    );
+    demTexture.colorSpace = NoColorSpace;
+    demTexture.minFilter = NearestFilter;
+    demTexture.magFilter = NearestFilter;
+    demTexture.needsUpdate = true;
+
     const generator = this.getOrCreateGenerator(viewContext);
-    generator.renderToTarget(
-      renderTarget,
-      demTexture,
-      metersPerTexel,
-      hillshadeConfig,
-    );
+    generator.renderToTarget(renderTarget, demTexture, metersPerTexel, hillshadeConfig);
 
-    // Return the texture directly
+    demTexture.dispose();
+
     return renderTarget.texture;
   }
 
@@ -193,24 +211,38 @@ export class HillshadeContext {
   }
 
   /**
-   * Store a temporary DEM texture
-   * Will be cleaned up when all 4 edges are received
+   * Store temporary DEM entry (WASM handle + metadata) for edge updates.
+   * Does NOT store the full padded DEM — only the handle needed to re-read on demand.
    */
   storeTempDem(
     entityId: string,
-    demTexture: DataTexture,
+    originalHandle: number,
+    paddedSize: number,
     metersPerTexel: number,
     hillshadeConfig: HillshadeConfig,
   ): void {
-    // Clear any existing entry
-    this.clearTempDem(entityId);
-
     this.tempDemTextures.set(entityId, {
-      demTexture,
+      originalHandle,
+      paddedSize,
       receivedEdges: new Set(),
+      receivedEdgeData: new Map(),
       metersPerTexel,
       hillshadeConfig,
     });
+  }
+
+  /**
+   * Store an edge pixel strip for later padded DEM reconstruction.
+   */
+  storeEdgeData(
+    entityId: string,
+    edgeDirection: number,
+    edgeBytes: Uint8Array,
+  ): void {
+    const entry = this.tempDemTextures.get(entityId);
+    if (entry) {
+      entry.receivedEdgeData.set(edgeDirection, edgeBytes);
+    }
   }
 
   /**
@@ -233,14 +265,10 @@ export class HillshadeContext {
   }
 
   /**
-   * Clear temporary DEM texture
+   * Clear temporary DEM data
    */
   clearTempDem(entityId: string): void {
-    const entry = this.tempDemTextures.get(entityId);
-    if (entry) {
-      entry.demTexture.dispose();
-      this.tempDemTextures.delete(entityId);
-    }
+    this.tempDemTextures.delete(entityId);
   }
 
   /**
@@ -248,12 +276,7 @@ export class HillshadeContext {
    * Should be called on view disposal
    */
   dispose(): void {
-    // Clear all temporary DEM textures
-    for (const [entityId] of this.tempDemTextures) {
-      this.clearTempDem(entityId);
-    }
-
-    // Clear pending edges
+    this.tempDemTextures.clear();
     this.pendingEdges.clear();
 
     // Dispose all RenderTargets

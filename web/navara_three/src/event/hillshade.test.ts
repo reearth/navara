@@ -1,5 +1,5 @@
 import type { HillshadeBackfilledEvent } from "@navara/engine";
-import { DataTexture, Texture } from "three";
+import { Texture } from "three";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import type { EventContext } from "./context";
@@ -354,7 +354,7 @@ describe("updatePaddingEdge", () => {
 describe("hillshade normal map generation", () => {
   let mockContext: EventContext;
   let hillshadeContext: HillshadeContext;
-  let loadedTexs: Map<string, DataTexture>;
+  let loadedTexs: Map<string, Texture>;
   let mockBufferStore: Map<number, Uint8Array>;
   let nextHandle: number;
 
@@ -491,14 +491,14 @@ describe("hillshade normal map generation", () => {
     const normalMap = loadedTexs.get(entityId);
     expect(normalMap).toBeInstanceOf(Texture);
     if (normalMap) {
-      expect(normalMap.image.width).toBe(4); // Content size (no padding in normal map)
+      expect((normalMap.image as { width: number }).width).toBe(4); // Content size (no padding in normal map)
     }
 
-    // Verify temp DEM was stored for edge updates
+    // Verify temp DEM entry was stored for edge updates
     const tempDem = hillshadeContext.getTempDem(entityId);
     expect(tempDem).toBeDefined();
-    expect(tempDem?.demTexture).toBeInstanceOf(Texture);
-    expect(tempDem?.demTexture.image.width).toBe(6); // Padded size (4 + 2)
+    expect(tempDem?.originalHandle).toBe(demHandle);
+    expect(tempDem?.paddedSize).toBe(6); // Padded size (4 + 2)
     expect(tempDem?.receivedEdges.size).toBe(0);
   });
 
