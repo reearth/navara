@@ -861,9 +861,11 @@ export default class ThreeView<
 
     this._initialized = true;
 
-    const concurrencyManager = createDefaultConcurrencyManager(
-      this.isMobileOptimized(),
-    );
+    const mobileOptimized = this.isMobileOptimized();
+    const concurrencyManager = createDefaultConcurrencyManager(mobileOptimized);
+    if (mobileOptimized) {
+      this._hillshadeContext.normalMapScale = 0.5;
+    }
 
     initializeWorkerPool(WorkerURL, concurrencyManager);
 

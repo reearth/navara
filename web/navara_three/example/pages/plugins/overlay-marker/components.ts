@@ -96,7 +96,7 @@ export function createMarkerElement(
 export function createHud(): HTMLDivElement {
   const hud = document.createElement("div");
   hud.style.cssText = `
-    position: fixed; bottom: 16px; left: 16px; z-index: 20;
+    position: fixed; bottom: 8px; right: 12px; z-index: 20;
     font: 12px/1.6 system-ui, sans-serif;
     color: #fff; background: rgba(0,0,0,0.6);
     padding: 12px 16px; border-radius: 8px;
@@ -112,21 +112,6 @@ export function createHud(): HTMLDivElement {
   `.trim();
   document.body.appendChild(hud);
   return hud;
-}
-
-export function createAttribution(): HTMLDivElement {
-  const el = document.createElement("div");
-  el.style.cssText = `
-    position: fixed; bottom: 16px; right: 16px; z-index: 20;
-    font: 10px system-ui, sans-serif;
-    color: #ccc; background: rgba(0,0,0,0.5);
-    padding: 4px 8px; border-radius: 4px;
-  `;
-  el.innerHTML = `Bird model:
-    <a href="https://sketchfab.com/3d-models/animated-bird-pigeon-797d27b68af3453e865149435df6aa30"
-       target="_blank" style="color:#8af;">dudecon</a> (CC-BY-4.0)`;
-  document.body.appendChild(el);
-  return el;
 }
 
 export function formatDistance(meters: number): string {

@@ -53,6 +53,8 @@ export default defineConfig((env) => {
         external: [
           ...(common.build.rollupOptions.external as string[]),
           "three",
+          "three/webgpu",
+          "three/tsl",
         ],
       },
       watch: undefined,
