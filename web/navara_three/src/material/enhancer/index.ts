@@ -28,12 +28,25 @@ export type {
 } from "./polyline";
 
 // InstancedSprite enhancers
-export { createInstancedSpriteMaterialEnhancer } from "./instancedSprite";
+export {
+  createInstancedSpriteMaterialEnhancer,
+  createInstancedSpritePointMaterialEnhancer,
+  getInstancedPointNodeMaterial,
+  instancedPointMaterialKey,
+} from "./instancedSprite";
 export type { InstancedSpriteMaterialProps } from "./instancedSprite";
 export type {
+  InstancedPointMaterialOptions,
+  InstancedPointMaterialUniforms,
+  InstancedPointNodeMaterial,
   InstancedSpriteBaseMutates,
   InstancedSpriteBaseProps,
   InstancedSpriteBaseState,
+  InstancedSpritePointBaseProps,
+  InstancedSpritePointBaseState,
+  InstancedSpritePointEnhancer,
+  InstancedSpritePointEnhancerOptions,
+  InstancedSpritePointMaterialProps,
 } from "./instancedSprite";
 
 // SdfText enhancers

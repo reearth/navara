@@ -23,19 +23,19 @@ import { MeshBasicNodeMaterial, type NodeMaterial } from "three/webgpu";
 import {
   highPrecisionOffsetFromAttributes,
   modelViewMatrixRTEUniform,
-} from "../nodes/highPrecisionNode";
+} from "../../../../nodes/highPrecisionNode";
 import {
   logarithmicDepthNode,
   setupNodeMaterialForMRT,
-} from "../nodes/setupNodeMaterialForMRT";
-import { nvr_batchIdToColor } from "../nodes/setupNodeMaterialForPicking";
+} from "../../../../nodes/setupNodeMaterialForMRT";
+import { nvr_batchIdToColor } from "../../../../nodes/setupNodeMaterialForPicking";
 import {
   circleAlpha,
   heightOffsetView,
   horizonCulled,
   pxToWorld,
   screenSpaceNormalView,
-} from "../nodes/spriteNodes";
+} from "../../../../nodes/spriteNodes";
 
 /** Reusable Vector2 to avoid per-frame allocations in onRenderUpdate. */
 const _tmpSize = new Vector2();
@@ -60,10 +60,11 @@ const _tmpSize = new Vector2();
  * features come from per-tile layers (MVT/GeoJSON), so a material-per-mesh
  * would exhaust the pool ("Maximum number of simultaneously usable uniforms
  * groups reached"). Instead {@link getInstancedPointNodeMaterial} caches one
- * material per `useRTE|logDepth|transparent|depthTest` combination, and each
- * {@link InstancedSpriteMesh} writes its per-mesh uniform values just-in-time
- * in `onBeforeRender` (which runs immediately before that mesh's UBO upload).
- * Per-instance data stays on each geometry's attributes.
+ * material per `useRTE|logDepth|transparent|depthTest` combination, and the
+ * per-mesh {@link createInstancedSpritePointMaterialEnhancer} writes its
+ * per-mesh uniform values just-in-time in the mesh's `onBeforeRender` (which
+ * runs immediately before that mesh's UBO upload). Per-instance data stays on
+ * each geometry's attributes.
  */
 function createInstancedPointNodeMaterial(opts: {
   useRTE: boolean;
@@ -73,7 +74,7 @@ function createInstancedPointNodeMaterial(opts: {
 }) {
   const { useRTE, logarithmicDepthBuffer } = opts;
 
-  // --- uniforms mutated by the mesh ---
+  // --- uniforms mutated by the enhancer ---
   const uScale = uniform(100.0);
   const uCenter = uniform(new Vector2(0, 0));
   const uSizeInMeters = uniform(true);
@@ -262,7 +263,8 @@ export function instancedPointMaterialKey(
 /**
  * Return the shared point material for the given options, building it on first
  * use. Many {@link InstancedSpriteMesh} instances share each material; per-mesh
- * uniform values are written just-in-time in the mesh's `onBeforeRender`.
+ * uniform values are written just-in-time by the per-mesh point enhancer in the
+ * mesh's `onBeforeRender`.
  */
 export function getInstancedPointNodeMaterial(
   opts: InstancedPointMaterialOptions,

@@ -23,32 +23,14 @@ import invariant from "tiny-invariant";
 
 import type { EventContext } from "../event/context";
 import { TEXTURE_LOADER } from "../event/loaders";
-import { createInstancedSpriteMaterialEnhancer } from "../material/enhancer";
+import {
+  createInstancedSpriteMaterialEnhancer,
+  createInstancedSpritePointMaterialEnhancer,
+  type InstancedSpritePointBaseProps,
+} from "../material/enhancer";
 import { getImageDataFromImageBitmap } from "../tasks/getImageDataFromImageBitmap";
 
-import {
-  getInstancedPointNodeMaterial,
-  type InstancedPointNodeMaterial,
-} from "./instancedSpritePointMaterial";
 import { PickableMesh } from "./pickableMesh";
-
-/**
- * Per-mesh shader values for the point path, written into the shared point
- * material's uniforms just-in-time in {@link InstancedSpriteMesh.onBeforeRender}.
- */
-type PointMeshState = {
-  scale: number;
-  centerX: number;
-  centerY: number;
-  sizeInMeters: boolean;
-  offsetDepth: boolean;
-  effectIdsMask: number;
-  emissiveColorHex: number;
-  emissiveIntensity: number;
-  rtcX: number;
-  rtcY: number;
-  rtcZ: number;
-};
 
 export type InstancedSpriteOptions = {
   renderOrder?: number;
@@ -84,19 +66,15 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
   private _enhancedMaterial?: ReturnType<
     typeof createInstancedSpriteMaterialEnhancer
   >;
-  /** Shared TSL point material + uniforms (non-billboard path). */
-  private _pointMat?: InstancedPointNodeMaterial;
-  /** Per-mesh shader values flushed into the shared point uniforms. */
-  private _pointState?: PointMeshState;
-  /** Fixed part of the point material cache key (RTE / log-depth). */
-  private _pointOpts?: { useRTE: boolean; logarithmicDepthBuffer: boolean };
-  /** Last-applied pipeline state, part of the point material cache key. */
-  private _pointTransparent = true;
-  private _pointDepthTest = true;
+  /**
+   * Material enhancer for the point (TSL NodeMaterial) path. Owns the per-mesh
+   * state and flushes it into the shared point material's uniforms.
+   */
+  private _pointEnhancer?: ReturnType<
+    typeof createInstancedSpritePointMaterialEnhancer
+  >;
   /** Per-mesh show flag (point path; the material is shared so can't carry it). */
   private _pointVisible = true;
-  /** True between onBeforePicking/onAfterPicking; flushed to the shared uPickable. */
-  private _pickRequested = false;
   /** Whether this mesh renders billboards (legacy GLSL) vs points (TSL). */
   private _isBillboard = false;
   constructor(options: InstancedSpriteOptions) {
@@ -129,15 +107,21 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
   async _update(m: NavaraPointMesh | NavaraBillboardMesh) {
     const show = m.material.show ?? true;
 
-    // Point path: state lives on the mesh (the material is shared) and is
-    // flushed in onBeforeRender. Color/height/position (per-instance attributes)
-    // are handled below, shared with the billboard path.
+    // Point path: state is owned by the point enhancer (the material is shared)
+    // and flushed in onBeforeRender. Color/height/position (per-instance
+    // attributes) are handled below, shared with the billboard path.
     if (!this._isBillboard) {
       if (this._pointVisible !== show) {
         this._pointVisible = show;
         this.updateVisibility();
       }
-      this._syncPointState(m);
+      const enhancer = this.getPointEnhancer();
+      enhancer.update({ base: this._pointBaseProps(m) });
+      // A pipeline-state change (transparent/depthTest) re-binds a different
+      // shared material; adopt it.
+      if (this.material !== enhancer.material) {
+        this.material = enhancer.material;
+      }
     } else {
       const material = this.material as Material;
       if (material.visible !== show) {
@@ -195,6 +179,28 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
         emissiveIntensity: m.material.emissiveIntensity ?? 0,
       },
     });
+  }
+
+  /** Build the point enhancer's per-mesh props from the engine mesh. */
+  private _pointBaseProps(
+    m: NavaraPointMesh | NavaraBillboardMesh,
+  ): InstancedSpritePointBaseProps {
+    return {
+      scale: m.material.size ?? 100.0,
+      center: [m.material.center?.x ?? 0.0, m.material.center?.y ?? 0.0],
+      sizeInMeters: m.material.sizeInMeters ?? true,
+      offsetDepth: m.material.offsetDepth ?? true,
+      transparent: m.material.transparent ?? true,
+      depthTest: m.material.depthTest ?? true,
+      effectIdsMask:
+        this.ctx.viewContext.selectiveEffectRegistry?.computeMask(
+          m.material.effectIds ?? [],
+        ) ?? 0,
+      emissiveColor: m.material.emissiveColor ?? 0,
+      emissiveIntensity: m.material.emissiveIntensity ?? 0,
+      // RTE ignores this (uses the global camera uniforms); RTC reads it.
+      rtcCenter: [m.transform.tx, m.transform.ty, m.transform.tz],
+    };
   }
 
   /** Sync per-instance color/height/position attributes from the engine mesh. */
@@ -457,96 +463,27 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     return material;
   }
 
-  /** Attach the shared TSL point material for the (non-billboard) path. */
+  /** Attach the shared TSL point material (via its enhancer) for the (non-billboard) path. */
   private _initPointMaterial(
     positionsInfo: PositionsInfo,
     m: NavaraPointMesh | NavaraBillboardMesh,
   ) {
-    const useRTE = positionsInfo.RTE;
-    this._pointOpts = {
-      useRTE,
+    const enhancer = createInstancedSpritePointMaterialEnhancer({
+      useRTE: positionsInfo.RTE,
       logarithmicDepthBuffer:
         this.ctx.viewContext.getRenderer().capabilities.logarithmicDepthBuffer,
-    };
-    this._pointTransparent = m.material.transparent ?? true;
-    this._pointDepthTest = m.material.depthTest ?? true;
-    this._attachPointMaterial();
+    });
+    this._pointEnhancer = enhancer;
 
-    this._syncPointState(m);
+    enhancer.mount({ base: this._pointBaseProps(m) });
     this._pointVisible = m.material.show ?? true;
 
     // The point material is shared across many meshes, so per-mesh uniform
     // values are written just-in-time, immediately before this mesh's draw.
-    this.onBeforeRender = () => this._flushPointUniforms();
+    this.onBeforeRender = () => enhancer.flush();
 
     this.updateVisibility();
-    invariant(this._pointMat);
-    return this._pointMat.material;
-  }
-
-  /** (Re)bind the shared material for the current RTE / pipeline-state key. */
-  private _attachPointMaterial() {
-    invariant(this._pointOpts);
-    this._pointMat = getInstancedPointNodeMaterial({
-      ...this._pointOpts,
-      transparent: this._pointTransparent,
-      depthTest: this._pointDepthTest,
-    });
-    this.material = this._pointMat.material;
-  }
-
-  /**
-   * Recompute this mesh's point state from the engine mesh. Swaps to a
-   * different shared material if the pipeline state (transparent/depthTest)
-   * changed, since those cannot be expressed as a per-mesh uniform.
-   */
-  private _syncPointState(m: NavaraPointMesh | NavaraBillboardMesh) {
-    const transparent = m.material.transparent ?? true;
-    const depthTest = m.material.depthTest ?? true;
-    if (
-      this._pointMat &&
-      (transparent !== this._pointTransparent ||
-        depthTest !== this._pointDepthTest)
-    ) {
-      this._pointTransparent = transparent;
-      this._pointDepthTest = depthTest;
-      this._attachPointMaterial();
-    }
-
-    this._pointState = {
-      scale: m.material.size ?? 100.0,
-      centerX: m.material.center?.x ?? 0.0,
-      centerY: m.material.center?.y ?? 0.0,
-      sizeInMeters: m.material.sizeInMeters ?? true,
-      offsetDepth: m.material.offsetDepth ?? true,
-      effectIdsMask:
-        this.ctx.viewContext.selectiveEffectRegistry?.computeMask(
-          m.material.effectIds ?? [],
-        ) ?? 0,
-      emissiveColorHex: m.material.emissiveColor ?? 0,
-      emissiveIntensity: m.material.emissiveIntensity ?? 0,
-      // RTE ignores this (uses the global camera uniforms); RTC reads it.
-      rtcX: m.transform.tx,
-      rtcY: m.transform.ty,
-      rtcZ: m.transform.tz,
-    };
-  }
-
-  /** Write this mesh's point state into the shared material's uniforms. */
-  private _flushPointUniforms() {
-    const mat = this._pointMat;
-    const s = this._pointState;
-    if (!mat || !s) return;
-    const u = mat.uniforms;
-    u.scale.value = s.scale;
-    u.center.value.set(s.centerX, s.centerY);
-    u.sizeInMeters.value = s.sizeInMeters;
-    u.offsetDepth.value = s.offsetDepth;
-    u.effectIdsMask.value = s.effectIdsMask;
-    u.emissiveColor.value.setHex(s.emissiveColorHex);
-    u.emissiveIntensity.value = s.emissiveIntensity;
-    u.rtcCenter.value.set(s.rtcX, s.rtcY, s.rtcZ);
-    u.pickable.value = this._pickRequested;
+    return enhancer.material;
   }
 
   private updateVisibility() {
@@ -710,7 +647,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
   onBeforePicking(): void {
     if (!this._isBillboard) {
       // Flushed into the shared uPickable in onBeforeRender, per mesh.
-      this._pickRequested = true;
+      this.getPointEnhancer().update({ base: { pickable: true } });
       return;
     }
     this.getEnhancer().update({ base: { pickable: true } });
@@ -718,7 +655,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
 
   onAfterPicking(): void {
     if (!this._isBillboard) {
-      this._pickRequested = false;
+      this.getPointEnhancer().update({ base: { pickable: false } });
       return;
     }
     this.getEnhancer().update({ base: { pickable: false } });
@@ -738,6 +675,18 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
       );
     }
     return this._enhancedMaterial;
+  }
+
+  /**
+   * Get the point enhancer, throwing if not initialized.
+   */
+  private getPointEnhancer(): NonNullable<typeof this._pointEnhancer> {
+    if (!this._pointEnhancer) {
+      throw new Error(
+        "InstancedSpriteMesh point material enhancer is not initialized. This usually indicates a failure during construction or geometry/material setup.",
+      );
+    }
+    return this._pointEnhancer;
   }
 
   setFeatureColorByBatchId(batchId: number, color: Color) {
@@ -793,8 +742,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
       // The point material is shared across meshes — do NOT dispose it here, or
       // other live point meshes lose their material. Just drop references.
       this.onBeforeRender = () => {};
-      this._pointMat = undefined;
-      this._pointState = undefined;
+      this._pointEnhancer = undefined;
     }
 
     // Clear internal collections to release references
