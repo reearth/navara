@@ -1,5 +1,5 @@
 import type ThreeView from "@navara/three";
-import dayjs from "dayjs";
+import dayjs, { type Dayjs } from "dayjs";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
 import type { InputBindingApi, Pane } from "tweakpane";
@@ -9,22 +9,16 @@ dayjs.extend(timezone);
 
 export const DEFAULT_TIME_ZONE = "Asia/Tokyo";
 
-// Returns a new Date whose instant corresponds to `hours:minutes` wall-clock
-// time in the given IANA zone, on the same calendar day the input date falls
-// on in that zone. DST transitions are handled by the dayjs timezone plugin.
+// Returns a new Date set to `hours:minutes` wall-clock time in the given IANA
+// zone, on the same calendar day the input falls on in that zone. DST
+// transitions are handled by the dayjs timezone plugin.
 export const atZoneTime = (
   date: Date,
   hours: number,
   minutes = 0,
   zone: string = DEFAULT_TIME_ZONE,
 ): Date =>
-  dayjs(date)
-    .tz(zone)
-    .hour(hours)
-    .minute(minutes)
-    .second(0)
-    .millisecond(0)
-    .toDate();
+  dayjs(date).tz(zone).hour(hours).minute(minutes).startOf("minute").toDate();
 
 export const addDateControl = (
   view: ThreeView,
@@ -32,56 +26,35 @@ export const addDateControl = (
   initialDate?: Date,
   zone: string = DEFAULT_TIME_ZONE,
 ) => {
-  let date = initialDate ?? atZoneTime(new Date(), 8, 0, zone);
-  view.atmosphere.date = date;
+  let dt: Dayjs = dayjs(initialDate ?? new Date()).tz(zone);
+  if (!initialDate) dt = dt.hour(8).startOf("hour");
 
-  const inZone = () => dayjs(date).tz(zone);
-  const initial = inZone();
+  const apply = (next: Dayjs) => {
+    dt = next;
+    view.atmosphere.date = dt.toDate();
+  };
+  apply(dt);
 
   const PARAMS = {
-    year: initial.year(),
-    month: initial.month() + 1,
-    hour: initial.hour(),
-    minutesOfDay: initial.hour() * 60 + initial.minute(),
+    year: dt.year(),
+    month: dt.month() + 1,
+    hour: dt.hour(),
+    minutesOfDay: dt.hour() * 60 + dt.minute(),
     animation: false,
   };
 
-  const apply = (next: dayjs.Dayjs) => {
-    date = next.toDate();
-    view.atmosphere.date = date;
-  };
-
-  const folder = pane.addFolder({
-    title: "Date",
-  });
+  const folder = pane.addFolder({ title: "Date" });
 
   folder
-    .addBinding(PARAMS, "year", {
-      min: 1900,
-      max: PARAMS.year,
-      step: 1,
-    })
-    .on("change", (v) => {
-      apply(inZone().year(v.value));
-    });
+    .addBinding(PARAMS, "year", { min: 1900, max: PARAMS.year, step: 1 })
+    .on("change", (v) => apply(dt.year(v.value)));
   folder
     .addBinding(PARAMS, "month", { min: 1, max: 12, step: 1 })
-    .on("change", (v) => {
-      apply(inZone().month(v.value - 1));
-    });
+    .on("change", (v) => apply(dt.month(v.value - 1)));
   folder
     .addBinding(PARAMS, "hour", { min: 0, max: 23, step: 1 })
-    .on("change", (v) => {
-      apply(inZone().hour(v.value));
-    });
+    .on("change", (v) => apply(dt.hour(v.value)));
 
-  const updateMinutesOfDay = (value: number) => {
-    apply(
-      inZone()
-        .hour(Math.floor(value / 60))
-        .minute(value % 60),
-    );
-  };
   const maxMinutesOfDay = 24 * 60;
   const minutesOfDay = folder
     .addBinding(PARAMS, "minutesOfDay", {
@@ -89,9 +62,9 @@ export const addDateControl = (
       max: maxMinutesOfDay,
       step: 1,
     })
-    .on("change", (v) => {
-      updateMinutesOfDay(v.value);
-    });
+    .on("change", (v) =>
+      apply(dt.hour(Math.floor(v.value / 60)).minute(v.value % 60)),
+    );
   let animationId: number | undefined;
   folder.addBinding(PARAMS, "animation").on("change", (v) => {
     if (!v.value) {
