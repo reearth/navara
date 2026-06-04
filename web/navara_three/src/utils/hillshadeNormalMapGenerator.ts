@@ -1,5 +1,4 @@
 import HillshadeParsFragment from "@shaders/glsl/chunks/hillshade_pars_fragment.glsl";
-import { packing } from "@takram/three-geospatial/shaders";
 import {
   DataTexture,
   Mesh,
@@ -60,9 +59,6 @@ export class HillshadeNormalMapGenerator {
         uniform float uMetersPerTexel;
         uniform vec2 uOutputSize;
 
-        // Octahedral normal encoding (vec3 -> vec2)
-        ${packing}
-
         // Import DEM decoding and normal computation from hillshade shader
         ${HillshadeParsFragment}
 
@@ -83,18 +79,18 @@ export class HillshadeNormalMapGenerator {
           float testHeight = sampleHeightBilinear(uDemTexture, uv, texSize);
 
           if (!isValidHeight(testHeight)) {
-            // Invalid data (ocean/no-data), output flat upward normal via octahedral encoding
-            // packNormalToVec2(vec3(0,0,1)) = vec2(0,0), mapped to [0,1] = vec2(0.5,0.5)
-            gl_FragColor = vec4(0.5, 0.5, 0.0, 1.0);
+            // Invalid data (ocean/no-data), output default upward normal (0, 0, 1)
+            // Store directly in RGB channels, mapped from [-1,1] to [0,1]
+            gl_FragColor = vec4(0.5, 0.5, 1.0, 1.0);
             return;
           }
 
           // Compute normal from DEM
           vec3 normal = computeNormalFromDEM(uDemTexture, uv, uTexelSize, uMetersPerTexel);
 
-          // Octahedral-encode normal into RG channels, mapped from [-1,1] to [0,1]
-          vec2 packed = packNormalToVec2(normal);
-          gl_FragColor = vec4(packed * 0.5 + 0.5, 0.0, 1.0);
+          // Store normal directly in RGB channels (linear, can use hardware bilinear filtering)
+          // Map from [-1,1] to [0,1] for 8-bit storage
+          gl_FragColor = vec4(normal * 0.5 + 0.5, 1.0);
         }
       `,
     });

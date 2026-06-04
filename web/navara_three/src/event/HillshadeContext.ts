@@ -6,7 +6,7 @@ import {
   NearestFilter,
   NoColorSpace,
   RGBAFormat,
-  RGFormat,
+  RGBFormat,
   UnsignedByteType,
   WebGLRenderTarget,
 } from "three";
@@ -134,7 +134,7 @@ export class HillshadeContext {
 
     if (!rt) {
       rt = new WebGLRenderTarget(width, height, {
-        format: RGFormat,
+        format: RGBFormat,
         type: UnsignedByteType,
         minFilter: LinearFilter,
         magFilter: LinearFilter,
