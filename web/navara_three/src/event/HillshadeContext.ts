@@ -192,7 +192,12 @@ export class HillshadeContext {
     demTexture.needsUpdate = true;
 
     const generator = this.getOrCreateGenerator(viewContext);
-    generator.renderToTarget(renderTarget, demTexture, metersPerTexel, hillshadeConfig);
+    generator.renderToTarget(
+      renderTarget,
+      demTexture,
+      metersPerTexel,
+      hillshadeConfig,
+    );
 
     demTexture.dispose();
 

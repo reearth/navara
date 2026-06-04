@@ -148,7 +148,12 @@ function processInitialHillshadeTexture(
   }
 
   // Apply any pending edge updates that arrived before texture creation
-  const appliedEdges = applyPendingEdges(demData, paddedSize, hillshadeContext, entityId);
+  const appliedEdges = applyPendingEdges(
+    demData,
+    paddedSize,
+    hillshadeContext,
+    entityId,
+  );
 
   const metersPerTexel = tileHandler.calcMetersPerTexel(
     tileHandleBigInt,
@@ -203,7 +208,10 @@ function processInitialHillshadeTexture(
 
   // Mark the edges that were already applied from pending as received
   for (const { direction } of appliedEdges) {
-    const allEdgesReceived = hillshadeContext.markEdgeReceived(entityId, direction);
+    const allEdgesReceived = hillshadeContext.markEdgeReceived(
+      entityId,
+      direction,
+    );
     if (allEdgesReceived) {
       hillshadeContext.clearTempDem(entityId);
       break;
@@ -278,7 +286,11 @@ function processHillshadeEdgeUpdate(
   }
 
   // Store edge bytes for reconstruction on future edge arrivals
-  hillshadeContext.storeEdgeData(entityId, event.edge_direction, new Uint8Array(edgeBytes));
+  hillshadeContext.storeEdgeData(
+    entityId,
+    event.edge_direction,
+    new Uint8Array(edgeBytes),
+  );
 
   // Mark this edge as received
   const allEdgesReceived = hillshadeContext.markEdgeReceived(
