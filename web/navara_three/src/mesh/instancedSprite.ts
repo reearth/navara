@@ -63,7 +63,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
   private _active = true;
   readonly ctx: EventContext;
   /** Material enhancer for encapsulated state management (billboard GLSL path) */
-  private _enhancedMaterial?: ReturnType<
+  private _billboardEnhancer?: ReturnType<
     typeof createInstancedSpriteMaterialEnhancer
   >;
   /**
@@ -135,7 +135,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
 
     // Billboard-specific updates
     if (m instanceof NavaraBillboardMesh) {
-      const enhancer = this.getEnhancer();
+      const enhancer = this.getBillboardEnhancer();
       enhancer.update({
         base: { alphaTest: m.material.alphaTest ?? 0.0 },
       });
@@ -161,7 +161,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
 
   /** Update billboard (legacy GLSL) material state via the enhancer. */
   private updateBillboardMaterial(m: NavaraPointMesh | NavaraBillboardMesh) {
-    const enhancer = this.getEnhancer();
+    const enhancer = this.getBillboardEnhancer();
     // Update enhancer state for uniform-backed properties
     enhancer.update({
       base: {
@@ -400,7 +400,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
 
     // Create enhancer
     const enhancer = createInstancedSpriteMaterialEnhancer(material);
-    this._enhancedMaterial = enhancer;
+    this._billboardEnhancer = enhancer;
 
     // Mount with initial props
     enhancer.mount({
@@ -628,7 +628,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
       newTextureArray.magFilter = LinearFilter;
 
       // Sync texture and aspect ratio via enhancer
-      this.getEnhancer().update({
+      this.getBillboardEnhancer().update({
         base: {
           texture: { value: newTextureArray },
           aspect: width / height,
@@ -650,7 +650,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
       this.getPointEnhancer().update({ base: { pickable: true } });
       return;
     }
-    this.getEnhancer().update({ base: { pickable: true } });
+    this.getBillboardEnhancer().update({ base: { pickable: true } });
   }
 
   onAfterPicking(): void {
@@ -658,7 +658,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
       this.getPointEnhancer().update({ base: { pickable: false } });
       return;
     }
-    this.getEnhancer().update({ base: { pickable: false } });
+    this.getBillboardEnhancer().update({ base: { pickable: false } });
   }
 
   getRenderable(): Object3D {
@@ -666,15 +666,15 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
   }
 
   /**
-   * Get the enhancer, throwing if not initialized.
+   * Get the billboard enhancer, throwing if not initialized.
    */
-  private getEnhancer(): NonNullable<typeof this._enhancedMaterial> {
-    if (!this._enhancedMaterial) {
+  private getBillboardEnhancer(): NonNullable<typeof this._billboardEnhancer> {
+    if (!this._billboardEnhancer) {
       throw new Error(
-        "InstancedSpriteMesh material enhancer is not initialized. This usually indicates a failure during construction or geometry/material setup.",
+        "InstancedSpriteMesh billboard material enhancer is not initialized. This usually indicates a failure during construction or geometry/material setup.",
       );
     }
-    return this._enhancedMaterial;
+    return this._billboardEnhancer;
   }
 
   /**
