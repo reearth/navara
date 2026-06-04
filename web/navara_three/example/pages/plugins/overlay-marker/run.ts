@@ -15,6 +15,7 @@ import {
   LOCAL_DATASETS,
   TILES_3D_DATASETS,
 } from "../../../helpers/constants";
+import { atZoneTime } from "../../../helpers/control";
 import { GOOGLE_MAPS_API_KEY } from "../../../helpers/keys";
 
 import {
@@ -53,7 +54,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   view.animation = true;
 
   // Scene setup
-  view.atmosphere.date.setHours(8);
+  view.atmosphere.date = atZoneTime(view.atmosphere.date, 8);
   view.toneMappingExposure = 10;
 
   const defaultScene = defaultPlugin.addDefaultPhotorealScene();

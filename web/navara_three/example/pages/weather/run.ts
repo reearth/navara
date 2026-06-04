@@ -28,7 +28,11 @@ import {
   TILES_3D_DATASETS,
   VECTOR_DATASETS,
 } from "../../helpers/constants";
-import { addDateControl, addHidePaneKeyShortcut } from "../../helpers/control";
+import {
+  addDateControl,
+  addHidePaneKeyShortcut,
+  atZoneTime,
+} from "../../helpers/control";
 import { addFieldsToFolder, type FolderFields } from "../../helpers/panel";
 
 export type CustomDescriptions = DefaultDescriptions;
@@ -65,8 +69,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     roll: 0, // -180 to 180
   });
 
-  const date = new Date();
-  date.setHours(8);
+  const date = atZoneTime(new Date(), 8);
 
   view.atmosphere.date = date;
 

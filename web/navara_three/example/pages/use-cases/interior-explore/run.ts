@@ -22,6 +22,7 @@ import {
   TILES_3D_DATASETS,
   LOCAL_DATASETS,
 } from "../../../helpers/constants";
+import { atZoneTime } from "../../../helpers/control";
 import { controlGLTFModel } from "../../../helpers/modelControl";
 
 const SCENES = {
@@ -46,7 +47,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   view.addPlugin(plugin);
   await view.init();
 
-  view.atmosphere.date.setHours(8);
+  view.atmosphere.date = atZoneTime(view.atmosphere.date, 8);
   view.toneMappingExposure = 10;
 
   const defaultLayers = plugin.addDefaultPhotorealScene();

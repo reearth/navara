@@ -15,7 +15,11 @@ import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../helpers/attributions";
 import { TERRAIN_DATASETS, TILE_DATASETS } from "../../helpers/constants";
-import { addCameraControl, addDateControl } from "../../helpers/control";
+import {
+  addCameraControl,
+  addDateControl,
+  atZoneTime,
+} from "../../helpers/control";
 
 export type CustomDescriptions = DefaultDescriptions;
 
@@ -29,7 +33,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   defaultAtmospheres.sun.update({
     sun: { intensity: 1, castShadow: true },
   });
-  view.atmosphere.date.setHours(10);
+  view.atmosphere.date = atZoneTime(view.atmosphere.date, 10);
 
   view.addLayer({
     type: "tiles",

@@ -11,6 +11,7 @@ import {
   TILE_DATASETS,
   VECTOR_DATASETS,
 } from "../../helpers/constants";
+import { atZoneTime } from "../../helpers/control";
 
 export type CustomDescriptions = DefaultDescriptions;
 
@@ -21,7 +22,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
 
   plugin.addDefaultPhotorealScene();
 
-  view.atmosphere.date.setHours(8);
+  view.atmosphere.date = atZoneTime(view.atmosphere.date, 8);
 
   view.addMesh({
     axesHelper: {
