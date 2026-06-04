@@ -30,8 +30,9 @@ impl TilesLayer {
         z >= self.appearance().unwrap().overscaled_max_zoom
     }
 
-    /// Check if this layer should use overscaled parent tiles
-    /// Returns true when zoom is beyond max_zoom but before overscaled_max_zoom
+    /// Check if this layer should use overscaled parent tiles.
+    /// Returns true when z >= max_zoom and z < overscaled_max_zoom
+    /// (max_zoom is an exclusive upper bound for new data requests).
     pub fn should_overscale(&self, z: usize) -> bool {
         self.is_over_max_zoom(z) && !self.is_over_overscaled_max_zoom(z)
     }

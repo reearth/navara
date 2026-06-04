@@ -76,17 +76,11 @@ pub(crate) fn request_texture_fragment(
     }
 
     for (i, (layer, _)) in sorted_tiles.iter().enumerate() {
+        // Skip layers whose zoom range excludes this tile. The slot stays None.
         if !layer.is_over_min_zoom(coords.z) || layer.is_over_max_zoom(coords.z) {
             continue;
         }
         let is_hillshade = layer.hillshade_config.is_some();
-
-        // For hillshade in the overscale zone (beyond max_zoom but before overscaled_max_zoom),
-        // skip entity creation. Like terrain's should_upsample, we don't request new data.
-        // Rendering will use parent hillshade via ready_hillshade_parents with UV transforms.
-        if is_hillshade && layer.should_overscale(coords.z) {
-            continue;
-        }
 
         // Skip layers that already have a valid in-flight or completed entity.
         let already_requested = {
@@ -405,7 +399,7 @@ mod tests {
         assert!(captured.tex_ids[2].is_some());
     }
 
-    /// Hillshade layers in the overscale zone (max_zoom < z <= overscaled_max_zoom)
+    /// Hillshade layers in the overscale zone (max_zoom <= z < overscaled_max_zoom)
     /// must not spawn a hillshade entity — the slot stays None, allowing the tile
     /// to use its parent's hillshade via ready_hillshade_parents.
     #[test]
@@ -416,7 +410,7 @@ mod tests {
             material.overscaled_max_zoom = 20;
         }
 
-        // Tile at z=15 is in overscale zone: 10 < 15 <= 20
+        // Tile at z=15 is in overscale zone: 10 <= 15 < 20
         let captured = run_request(vec![(layer, Order(0))], 15, |_| {});
 
         assert_eq!(captured.tex_ids.len(), 1);
