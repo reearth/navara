@@ -418,40 +418,28 @@ impl<'a> ColorPainter for ColorPainterImpl<'a> {
     }
 
     fn push_clip_glyph(&mut self, glyph_id: GlyphId) {
-        let path = match glyph_path(self.font, glyph_id) {
-            Some(p) => p,
-            None => {
-                // Push an empty mask layer so pop_clip stays balanced.
-                let empty = Mask::new(self.width.max(1), self.height.max(1));
-                self.clip_stack.push(empty);
-                return;
-            }
-        };
-        self.push_clip_path(&path);
+        match glyph_path(self.font, glyph_id) {
+            Some(path) => self.push_clip_path(&path),
+            None => self.push_empty_clip(),
+        }
     }
 
     fn push_clip_box(&mut self, clip_box: BoundingBox<f32>) {
-        let rect = match tiny_skia::Rect::from_ltrb(
+        let path = tiny_skia::Rect::from_ltrb(
             clip_box.x_min,
             clip_box.y_min,
             clip_box.x_max,
             clip_box.y_max,
-        ) {
-            Some(r) => r,
-            None => {
-                let empty = Mask::new(self.width.max(1), self.height.max(1));
-                self.clip_stack.push(empty);
-                return;
-            }
-        };
-        let mut builder = PathBuilder::new();
-        builder.push_rect(rect);
-        let Some(path) = builder.finish() else {
-            let empty = Mask::new(self.width.max(1), self.height.max(1));
-            self.clip_stack.push(empty);
-            return;
-        };
-        self.push_clip_path(&path);
+        )
+        .and_then(|rect| {
+            let mut builder = PathBuilder::new();
+            builder.push_rect(rect);
+            builder.finish()
+        });
+        match path {
+            Some(path) => self.push_clip_path(&path),
+            None => self.push_empty_clip(),
+        }
     }
 
     fn pop_clip(&mut self) {
@@ -493,6 +481,12 @@ impl<'a> ColorPainter for ColorPainterImpl<'a> {
 }
 
 impl<'a> ColorPainterImpl<'a> {
+    /// Push an empty mask so the next `pop_clip` stays balanced.
+    fn push_empty_clip(&mut self) {
+        self.clip_stack
+            .push(Mask::new(self.width.max(1), self.height.max(1)));
+    }
+
     fn push_clip_path(&mut self, path: &Path) {
         let w = self.width.max(1);
         let h = self.height.max(1);
@@ -505,8 +499,7 @@ impl<'a> ColorPainterImpl<'a> {
             m
         } else {
             let Some(mut m) = Mask::new(w, h) else {
-                let empty = Mask::new(w, h);
-                self.clip_stack.push(empty);
+                self.push_empty_clip();
                 return;
             };
             m.fill_path(path, FillRule::Winding, true, transform);

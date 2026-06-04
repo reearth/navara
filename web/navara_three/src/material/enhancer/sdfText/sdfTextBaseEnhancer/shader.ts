@@ -27,6 +27,9 @@ export const transformShader = (
   if (state.useRTE) {
     shader.defines.USE_RTE = 1;
   }
+  if (state.useMsdf) {
+    shader.defines.USE_MSDF = 1;
+  }
 
   // Assign uniform refs to shader.uniforms via mutates
   mutates.updateUniforms(shader.uniforms, state);

@@ -1,4 +1,4 @@
-import ThreeView from "@navara/three";
+import ThreeView, { type Layer } from "@navara/three";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
@@ -9,12 +9,19 @@ import {
   moveOverlayElement,
 } from "@navara/three_plugins";
 
+import { showAttributions } from "../../../helpers/attributions";
+import {
+  type Dataset,
+  LOCAL_DATASETS,
+  TILES_3D_DATASETS,
+} from "../../../helpers/constants";
+import { GOOGLE_MAPS_API_KEY } from "../../../helpers/keys";
+
 import {
   injectGlobalStyles,
   createOverlayContainer,
   createMarkerElement,
   createHud,
-  createAttribution,
   formatDistance,
 } from "./components";
 import { JAPAN_LANDMARKS } from "./data/landmarks";
@@ -64,18 +71,23 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   });
 
   // Google 3D Tiles
-  const googleApiKey = import.meta.env.NAVARA_GOOGLE_MAPS_API_KEY;
+  const googleApiKey = GOOGLE_MAPS_API_KEY;
+  const datasets: Dataset[] = [LOCAL_DATASETS.animatedBirdPigeonGLTF];
+  const layers: Layer[] = [];
   if (googleApiKey) {
-    view.addLayer({
+    const tilesLayer = view.addLayer({
       type: "cesium3dtiles",
       data: {
-        url: `https://tile.googleapis.com/v1/3dtiles/root.json?key=${googleApiKey}`,
+        url: `${TILES_3D_DATASETS.googlePhotorealTiles.url}?key=${encodeURIComponent(googleApiKey)}`,
       },
       model: {
         maxSse: 60,
       },
     });
+    datasets.unshift(TILES_3D_DATASETS.googlePhotorealTiles);
+    layers.push(tilesLayer);
   }
+  showAttributions(datasets, layers);
 
   // Set overlay positions from landmark data
   overlayPlugin.setPositions(
@@ -134,5 +146,4 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   flyingModelPlugin.start();
 
   createHud();
-  createAttribution();
 };

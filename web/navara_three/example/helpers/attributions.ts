@@ -1,9 +1,11 @@
-import type { Dataset } from "./constants";
+import type { Layer } from "@navara/three";
+
+import { type Dataset, TILES_3D_DATASETS } from "./constants";
 
 /**
  * Attribution UI state
  */
-let attributionContainer: HTMLDivElement | null = null;
+let attributionWrapper: HTMLDivElement | null = null;
 let isCollapsed = true;
 
 /**
@@ -15,15 +17,45 @@ type UniqueAttribution = {
 };
 
 /**
+ * Create the fixed-position wrapper that holds the logo (left) and the
+ * attributions container (right).
+ */
+function createWrapper(): HTMLDivElement {
+  const wrapper = document.createElement("div");
+  wrapper.id = "navara-attributions-wrapper";
+  wrapper.style.position = "fixed";
+  wrapper.style.bottom = "8px";
+  wrapper.style.left = "8px";
+  wrapper.style.display = "flex";
+  wrapper.style.alignItems = "flex-end";
+  wrapper.style.gap = "8px";
+  wrapper.style.zIndex = "1000";
+  return wrapper;
+}
+
+/**
+ * Create the Google Maps logo image element. Per Google Photorealistic 3D
+ * Tiles attribution guidelines, the logo must always be visible.
+ */
+function createGoogleLogo(): HTMLImageElement {
+  const img = document.createElement("img");
+  img.src = "/credits/GoogleMaps.png";
+  img.alt = "Google Maps";
+  img.style.height = "22px";
+  img.style.width = "auto";
+  img.style.display = "block";
+  img.style.userSelect = "none";
+  img.draggable = false;
+  return img;
+}
+
+/**
  * Create and style the attribution container
  */
 function createContainer(): HTMLDivElement {
   const container = document.createElement("div");
   container.id = "navara-attributions";
 
-  container.style.position = "fixed";
-  container.style.bottom = "8px";
-  container.style.left = "8px";
   container.style.backgroundColor = "rgba(0, 0, 0, 0.8)";
   container.style.color = "#ffffff";
   container.style.padding = "4px";
@@ -32,14 +64,12 @@ function createContainer(): HTMLDivElement {
   container.style.boxSizing = "border-box";
   container.style.fontSize = "12px";
   container.style.lineHeight = "1.6";
-  container.style.maxWidth = "200px";
-  container.style.minWidth = "200px";
-  container.style.maxHeight = "34px";
-  container.style.overflow = "auto";
-  container.style.zIndex = "1000";
+  container.style.maxWidth = "140px";
+  container.style.minWidth = "140px";
+  container.style.maxHeight = "28px";
+  container.style.overflow = "hidden";
   container.style.fontFamily = "system-ui, -apple-system, sans-serif";
   container.style.transition = "all 0.2s ease";
-  container.style.overflow = "hidden";
 
   return container;
 }
@@ -71,8 +101,8 @@ function createToggleButton(container: HTMLDivElement): HTMLButtonElement {
   button.style.border = "none";
   button.style.color = "#ffffff";
   button.style.cursor = "pointer";
-  button.style.fontSize = "14px";
-  button.style.padding = "4px";
+  button.style.fontSize = "12px";
+  button.style.padding = "2px";
   button.style.lineHeight = "1";
 
   button.addEventListener("click", () => {
@@ -80,8 +110,8 @@ function createToggleButton(container: HTMLDivElement): HTMLButtonElement {
 
     if (isCollapsed) {
       icon.style.transform = "rotate(90deg)";
-      container.style.maxHeight = "34px";
-      container.style.maxWidth = "200px";
+      container.style.maxHeight = "28px";
+      container.style.maxWidth = "140px";
       container.style.overflow = "hidden";
     } else {
       icon.style.transform = "rotate(0deg)";
@@ -95,9 +125,51 @@ function createToggleButton(container: HTMLDivElement): HTMLButtonElement {
 }
 
 /**
- * Create attribution content
+ * Build an attribution list item with the standard bordered style. Renders an
+ * anchor when a URL is provided, otherwise plain text.
  */
-function createContent(attributions: UniqueAttribution[]): HTMLDivElement {
+function createAttributionItem(attr: UniqueAttribution): HTMLDivElement {
+  const item = document.createElement("div");
+  item.style.paddingLeft = "8px";
+  item.style.borderLeft = "2px solid rgba(255, 255, 255, 0.3)";
+
+  if (attr.attributionUrl) {
+    const link = document.createElement("a");
+    link.href = attr.attributionUrl;
+    link.textContent = attr.attribution;
+    link.target = "_blank";
+    link.style.color = "#60a5fa";
+    link.style.textDecoration = "none";
+    link.style.transition = "color 0.2s";
+
+    link.addEventListener("mouseenter", () => {
+      link.style.color = "#93c5fd";
+      link.style.textDecoration = "underline";
+    });
+
+    link.addEventListener("mouseleave", () => {
+      link.style.color = "#60a5fa";
+      link.style.textDecoration = "none";
+    });
+
+    item.appendChild(link);
+  } else {
+    item.textContent = attr.attribution;
+    item.style.color = "rgba(255, 255, 255, 0.9)";
+  }
+
+  return item;
+}
+
+/**
+ * Create attribution content. Returns the outer content div together with the
+ * inner list element so callers can append additional (dynamic) items later
+ * using the same layout and item styling.
+ */
+function createContent(attributions: UniqueAttribution[]): {
+  content: HTMLDivElement;
+  list: HTMLDivElement;
+} {
   const content = document.createElement("div");
   content.id = "navara-attributions-content";
   content.style.padding = "8px 10px";
@@ -108,62 +180,42 @@ function createContent(attributions: UniqueAttribution[]): HTMLDivElement {
   list.style.gap = "6px";
 
   attributions.forEach((attr) => {
-    const item = document.createElement("div");
-    item.style.paddingLeft = "8px";
-    item.style.borderLeft = "2px solid rgba(255, 255, 255, 0.3)";
-
-    if (attr.attributionUrl) {
-      const link = document.createElement("a");
-      link.href = attr.attributionUrl;
-      link.textContent = attr.attribution;
-      link.target = "_blank";
-      link.style.color = "#60a5fa";
-      link.style.textDecoration = "none";
-      link.style.transition = "color 0.2s";
-
-      link.addEventListener("mouseenter", () => {
-        link.style.color = "#93c5fd";
-        link.style.textDecoration = "underline";
-      });
-
-      link.addEventListener("mouseleave", () => {
-        link.style.color = "#60a5fa";
-        link.style.textDecoration = "none";
-      });
-
-      item.appendChild(link);
-    } else {
-      item.textContent = attr.attribution;
-      item.style.color = "rgba(255, 255, 255, 0.9)";
-    }
-
-    list.appendChild(item);
+    list.appendChild(createAttributionItem(attr));
   });
 
   content.appendChild(list);
-  return content;
+  return { content, list };
 }
 
 /**
- * Display dataset attributions in a collapsible UI at bottom right
+ * Display dataset attributions in a collapsible UI at bottom left.
  *
- * @param datasets - Array of datasets to display attributions for
+ * When `layers` are provided, per-tile credits emitted by those layers are
+ * automatically tracked and merged into the attribution list as features
+ * become visible or are removed. This is what Google Photorealistic 3D Tiles
+ * requires for compliance.
+ *
+ * When the Google Photorealistic 3D Tiles dataset is included, the Google Maps
+ * logo is shown to the left of the container and remains visible regardless of
+ * the collapsed state, as required by Google's attribution guidelines.
+ *
+ * @param datasets - Datasets to display attributions for
+ * @param layers - Optional layers whose per-feature credits should be tracked
  *
  * @example
  * ```ts
- * import { showAttributions } from "./helpers/attributions";
- * import { TILES_3D_DATASETS } from "./helpers/constants";
- *
- * showAttributions([TILES_3D_DATASETS.plateauChiyoda, TILES_3D_DATASETS.plateauChuo]);
+ * const layer = view.addLayer({ ... });
+ * showAttributions([TILES_3D_DATASETS.googlePhotorealTiles], [layer]);
  * ```
  */
 export function showAttributions(
   datasets: Dataset[],
-): HTMLDivElement | undefined {
-  // Remove existing container if present
-  if (attributionContainer) {
-    attributionContainer.remove();
-    attributionContainer = null;
+  layers: Layer[] = [],
+): void {
+  // Remove existing wrapper if present
+  if (attributionWrapper) {
+    attributionWrapper.remove();
+    attributionWrapper = null;
   }
 
   // Return early if no datasets
@@ -191,25 +243,94 @@ export function showAttributions(
   // Create and populate container
   const container = createContainer();
   const toggleButton = createToggleButton(container);
-  const content = createContent(uniqueAttributions);
+  const { content: staticContent, list } = createContent(uniqueAttributions);
 
   container.appendChild(toggleButton);
-  container.appendChild(content);
+  container.appendChild(staticContent);
+
+  // Track per-feature credits for each provided layer and merge them into the
+  // same list, after the static dataset entries. Kept distinct from the static
+  // entries so removed or hidden features don't drop dataset-level attribution.
+  const dynamicCredits = new Map<bigint, string>();
+  const visibleFeatures = new Set<bigint>();
+  const dynamicItems: HTMLDivElement[] = [];
+
+  const refreshDynamic = () => {
+    for (const item of dynamicItems) {
+      item.remove();
+    }
+    dynamicItems.length = 0;
+
+    const counts = new Map<string, number>();
+    for (const id of visibleFeatures) {
+      const credit = dynamicCredits.get(id);
+      if (!credit) continue;
+      credit.split(";").forEach((raw) => {
+        const c = raw.trim();
+        if (!c) return;
+        counts.set(c, (counts.get(c) ?? 0) + 1);
+      });
+    }
+    const sorted = Array.from(counts.entries()).sort((a, b) => b[1] - a[1]);
+    for (const [credit] of sorted) {
+      const item = createAttributionItem({ attribution: credit });
+      list.appendChild(item);
+      dynamicItems.push(item);
+    }
+  };
+
+  const trackAttributions = (layer: Layer) => {
+    layer.on("featureCreated", ({ featureSetId, credit }) => {
+      if (credit) {
+        dynamicCredits.set(featureSetId, credit);
+      }
+      visibleFeatures.add(featureSetId);
+      refreshDynamic();
+    });
+
+    layer.on("featureRemoved", ({ featureSetId }) => {
+      dynamicCredits.delete(featureSetId);
+      visibleFeatures.delete(featureSetId);
+      refreshDynamic();
+    });
+
+    layer.on("featureVisibilityChanged", ({ featureSetId, visible }) => {
+      if (visible) {
+        visibleFeatures.add(featureSetId);
+      } else {
+        visibleFeatures.delete(featureSetId);
+      }
+      refreshDynamic();
+    });
+  };
+
+  // Build wrapper. The Google logo sits outside the collapsible container, to
+  // its left, so it stays visible even when attributions are collapsed.
+  const wrapper = createWrapper();
+  const includesGooglePhotoreal = datasets.some(
+    (d) => d.url === TILES_3D_DATASETS.googlePhotorealTiles.url,
+  );
+  if (includesGooglePhotoreal) {
+    wrapper.appendChild(createGoogleLogo());
+  }
+  wrapper.appendChild(container);
 
   // Add to document
-  document.body.appendChild(container);
-  attributionContainer = container;
+  document.body.appendChild(wrapper);
+  attributionWrapper = wrapper;
 
-  return content;
+  for (const layer of layers) {
+    trackAttributions(layer);
+  }
 }
 
 /**
  * Remove the attributions UI from the page
  */
 export function hideAttributions(): void {
-  if (attributionContainer) {
-    attributionContainer.remove();
-    attributionContainer = null;
+  if (attributionWrapper) {
+    attributionWrapper.remove();
+    attributionWrapper = null;
   }
   isCollapsed = false;
 }

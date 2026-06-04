@@ -292,6 +292,24 @@ import { Color } from "@navara/three";
 }
 ```
 
+### highQuality
+
+**Type:** `boolean | undefined`
+
+**Description:** 高品質なグリフ描画を有効にします。`true` の場合、テキストは MSDF アトラスを使用し、大きなサイズでも角の鋭さを保ちますが、1 グリフあたりのラスタライズ処理コストは大幅に増加します。`false` または省略した場合は、デフォルトのシングルチャネル SDF アトラスを使用し、ラスタライズが非常に高速ですが、極端なズーム時に角がわずかに丸くなります。
+
+**Default:** `false`
+
+**Example:**
+
+```typescript
+{
+  text: {
+    highQuality: true
+  }
+}
+```
+
 ### sizeInMeters
 
 **Type:** `boolean | undefined`

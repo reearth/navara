@@ -246,6 +246,12 @@ export const LOCAL_DATASETS = {
     attribution:
       "https://github.com/mrdoob/three.js/blob/dev/examples/models/gltf/Soldier.glb",
   },
+  animatedBirdPigeonGLTF: {
+    url: "/glTF/animated_bird_pigeon/scene.gltf",
+    attribution: "Animated Bird Pigeon by dudecon - CC BY 4.0",
+    attributionUrl:
+      "https://sketchfab.com/3d-models/animated-bird-pigeon-797d27b68af3453e865149435df6aa30",
+  },
   globeGeoJSON: {
     url: "/globe.geojson",
     attribution: "GeoJSON Maps of the globe",

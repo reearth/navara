@@ -4,6 +4,18 @@
  */
 export const COLOR_GLYPH_PX_SIZE = 64.0;
 
+/**
+ * Pixel range over which a quality's atlas distance field ramps from
+ * "outside" to "inside" (i.e. the value covered by `d - 0.5` in the shader).
+ * Converts an outline-thickness expressed in pixels into a delta on the
+ * sampled distance value.
+ *
+ * SDF: `SDF_RADIUS` (35) in `crates/navara_wasm_font_worker/src/atlas.rs`.
+ * MSDF: `MSDF_RANGE_PX` (8) in `crates/navara_wasm_font_worker/src/msdf.rs`.
+ */
+export const atlasRangePx = (highQuality: boolean): number =>
+  highQuality ? 8.0 : 35.0;
+
 /** Glyph metrics from either the SDF or the color atlas. */
 export type GlyphMetrics = {
   glyphId: number;
@@ -42,11 +54,23 @@ export type ShapeTextResult = {
   unitsPerEm: number;
 };
 
-/** SDF atlas texture data. */
+/** SDF/MSDF atlas texture data.
+ *
+ * `channels` selects the GPU texture format:
+ *  - 1 → R8 (single-channel SDF, sampled as `.r`).
+ *  - 4 → RGBA8. Either MTSDF (three MSDF channels + true SDF in alpha,
+ *    sampled as `median(.rgb)` in the fragment shader) or the COLRv1 color
+ *    atlas — distinguished by which atlas slot the data was placed in, not
+ *    by `channels`.
+ *
+ * 3-channel MSDF (RGB8) isn't used: three.js dropped `RGBFormat` in r137,
+ * and the worker emits MTSDF (4 channels) for the high-quality path.
+ */
 export type FontAtlasData = {
   data: Uint8Array;
   width: number;
   height: number;
+  channels: number;
 };
 
 export type BatchPrepareTextResult = {

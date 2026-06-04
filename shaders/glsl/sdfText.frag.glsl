@@ -87,8 +87,33 @@ void main() {
         return;
     }
 
-    // Sample SDF value from atlas (R channel)
-    float dist = texture2D(uAtlas, vAtlasUv).r;
+    // Sample distance value from atlas.
+    // - SDF path: single R8 channel.
+    // - MTSDF path: median of the 3 MSDF channels preserves sharp corners
+    //   at normal scale; alpha holds a true single-channel SDF used to
+    //   stabilize the field at small render sizes.
+    //
+    // Why mix at small sizes: under heavy minification each fragment
+    // averages many atlas texels. The three MSDF channels each encode a
+    // different subset of edges, so the median of bilinearly-averaged
+    // channels can pick a value well below 0.5 even when the actual field
+    // is solid — producing the "tiny text isn't filled" artifact. The true
+    // SDF in alpha averages cleanly, so we lean on it as fwidth grows.
+    #ifdef USE_MSDF
+        vec4 s = texture2D(uAtlas, vAtlasUv);
+        float msdf = max(min(s.r, s.g), min(max(s.r, s.g), s.b));
+        float trueSdf = s.a;
+        // fwidth(msdf) in distance-value units. Threshold tuned so the
+        // transition starts a bit below "one full distance range per pixel"
+        // (= 0.5 in distance-value units) and completes by 0.5. Above 0.5
+        // we're sampling more than the entire ramp per pixel — useless for
+        // edge detection, fall fully back to the smooth SDF.
+        float w = fwidth(msdf);
+        float dist = mix(msdf, trueSdf, smoothstep(0.25, 0.5, w));
+    #else
+        float trueSdf = texture2D(uAtlas, vAtlasUv).r;
+        float dist = trueSdf;
+    #endif
     float edgeWidth = fwidth(dist);
 
     float outlineWidth = clamp(uOutlineWidth, 0.0, 0.4);
@@ -99,11 +124,18 @@ void main() {
                                      uSdfThreshold + edgeWidth,
                                      dist);
 
-        // Outline alpha (smooth transition at outer outline edge)
+        // Outline alpha (smooth transition at outer outline edge).
+        // Use the true single-channel SDF here: median(rgb) can spike well
+        // above 0 in regions outside the glyph where the three channels
+        // disagree (classic MSDF artifact). Those spikes are harmless near
+        // the contour but become visible "outline freckles" once
+        // outlineWidth pushes the threshold close to 0. trueSdf is smooth
+        // everywhere and free of that artifact.
         float outerEdge = uSdfThreshold - outlineWidth;
-        float outlineAlpha = smoothstep(outerEdge - edgeWidth,
-                                        outerEdge + edgeWidth,
-                                        dist);
+        float outlineEdgeWidth = fwidth(trueSdf);
+        float outlineAlpha = smoothstep(outerEdge - outlineEdgeWidth,
+                                        outerEdge + outlineEdgeWidth,
+                                        trueSdf);
 
         if (outlineAlpha <= 0.0) discard;
 
