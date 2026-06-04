@@ -46,7 +46,7 @@ void main() {
     gl_FragDepth = log(vFragDepth) / log(uFarPlane + 1.0);
 
     // Offset depth to make sure to be drawn over ellipsoid surface
-    if (uOffsetDepth) { gl_FragDepth -= 0.2; }
+    if (uOffsetDepth) { gl_FragDepth -= 0.01; }
 
     float alpha = 1.0;
     #ifdef BILLBOARD
