@@ -39,7 +39,7 @@ use crate::texture_fragment::request_texture_fragment;
 
 use super::{
     event::MeshPreparedEvent,
-    render::RenderedTile,
+    render::{HillshadeParentsUpdated, RenderedTile},
     tile_cache_manager::TileCacheManager,
     traverse::{TraversalResult, prepare_tile_resource, spawn_tile_entity, traverse_tile},
 };
@@ -884,9 +884,11 @@ pub fn delete_layer(
 
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn update_mesh_material(
+    mut commands: Commands,
     tc: ResMut<TileCacheManager>,
     qt: ResMut<RasterTileQuadtree>,
     rendered_tiles: Query<(&RenderedTile, &OrderByDistance), With<Rendered>>,
+    hillshade_updated_tiles: Query<Entity, (With<Rendered>, With<HillshadeParentsUpdated>)>,
     mut texture_fragment: ParamSet<(TileTextureFragmentQuery, ChangedTileTextureFragmentQuery)>,
     mut data_requesters: ParamSet<(
         Query<&DataRequester>,
@@ -916,22 +918,20 @@ pub fn update_mesh_material(
     let are_tile_layers_removed = !tile_layers.p2().is_empty();
     let are_texture_fragments_updated = !texture_fragment.p1().is_empty();
     let are_data_requesters_updated = !data_requesters.p1().is_empty();
-
-    let hillshade_parent_tiles_updated = tc.is_changed()
-        && rendered_tiles.iter().any(|(rt, _)| {
-            tc.rendered_tile_caches
-                .get(&rt.tile_handle)
-                .and_then(|cache| cache.hillshade_parents.as_ref())
-                .is_some()
-        });
+    let are_hillshade_parents_updated = !hillshade_updated_tiles.is_empty();
 
     if !are_tile_layers_updated
         && !are_texture_fragments_updated
         && !are_tile_layers_removed
         && !are_data_requesters_updated
-        && !hillshade_parent_tiles_updated
+        && !are_hillshade_parents_updated
     {
         return;
+    }
+
+    // Remove HillshadeParentsUpdated markers after checking - they're consumed this frame
+    for entity in hillshade_updated_tiles.iter() {
+        commands.entity(entity).remove::<HillshadeParentsUpdated>();
     }
 
     let tile_layers = tile_layers.p0();

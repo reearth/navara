@@ -399,18 +399,14 @@ mod tests {
         assert!(captured.tex_ids[2].is_some());
     }
 
-    /// Hillshade layers in the overscale zone (max_zoom <= z < overscaled_max_zoom)
-    /// must not spawn a hillshade entity — the slot stays None, allowing the tile
-    /// to use its parent's hillshade via ready_hillshade_parents.
+    /// Hillshade layers at z >= max_zoom must not spawn a hillshade entity — the slot stays None,
+    /// allowing the tile to use its parent's hillshade via ready_hillshade_parents.
     #[test]
-    fn hillshade_overscale_zone_leaves_hillshade_slot_none() {
-        // Create a hillshade layer with max_zoom=10, overscaled_max_zoom=20
-        let mut layer = hillshade_layer("hillshade", 0, 10);
-        if let Some(Appearance::RasterTile(ref mut material)) = layer.appearance {
-            material.overscaled_max_zoom = 20;
-        }
+    fn hillshade_beyond_max_zoom_leaves_hillshade_slot_none() {
+        // Create a hillshade layer with max_zoom=10
+        let layer = hillshade_layer("hillshade", 0, 10);
 
-        // Tile at z=15 is in overscale zone: 10 <= 15 < 20
+        // Tile at z=15 is beyond max_zoom (15 >= 10): no hillshade requester should spawn.
         let captured = run_request(vec![(layer, Order(0))], 15, |_| {});
 
         assert_eq!(captured.tex_ids.len(), 1);

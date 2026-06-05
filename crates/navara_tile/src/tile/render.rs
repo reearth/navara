@@ -20,3 +20,8 @@ impl RenderedTile {
         }
     }
 }
+
+/// Marker component indicating that a tile's hillshade_parents was updated
+/// and its material needs to be refreshed. Removed after processing.
+#[derive(Component)]
+pub struct HillshadeParentsUpdated;
