@@ -197,7 +197,7 @@ impl Atlas {
     /// when the atlas next needs space — see [`Self::evict_unreferenced`]).
     pub fn release(&mut self, key: u64) {
         if let Some(count) = self.ref_count.get_mut(&key) {
-            *count -= 1;
+            *count = count.saturating_sub(1);
             if *count == 0 {
                 self.ref_count.remove(&key);
             }
