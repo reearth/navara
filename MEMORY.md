@@ -1,1 +1,0 @@
-- [Font atlas sync model](font-atlas-refcount.md) — glyph residency is visibility-driven refcounting, not tick LRU
