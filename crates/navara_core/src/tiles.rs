@@ -280,4 +280,18 @@ mod tests {
         assert_eq!(iter.next(), Some(TileXYZ { x: 3, y: 3, z: 2 }));
         assert_eq!(iter.next(), None);
     }
+
+    #[test]
+    fn test_calc_meters_per_texel_sanity() {
+        let a = 6378137.0;
+        // Width includes 2px padding => content width = 256
+        let m = calc_meters_per_texel(0, 0, 0, 258, a);
+        assert!(m.is_finite() && m > 0.0);
+        let expected = (2.0 * std::f64::consts::PI * a) / 256.0;
+        let rel_err = ((m as f64) - expected).abs() / expected;
+        assert!(rel_err < 1e-4, "unexpected relative error: {rel_err}");
+        // Guard: texture_width < 2 must not underflow or divide by zero
+        let m_tiny = calc_meters_per_texel(0, 0, 0, 1, a);
+        assert!(m_tiny.is_finite() && m_tiny > 0.0);
+    }
 }

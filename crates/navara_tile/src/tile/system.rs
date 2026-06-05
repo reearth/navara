@@ -39,7 +39,7 @@ use crate::texture_fragment::request_texture_fragment;
 
 use super::{
     event::MeshPreparedEvent,
-    render::{HillshadeParentsUpdated, RenderedTile},
+    render::{RenderedTile, TileParentsUpdated},
     tile_cache_manager::TileCacheManager,
     traverse::{TraversalResult, prepare_tile_resource, spawn_tile_entity, traverse_tile},
 };
@@ -888,7 +888,7 @@ pub fn update_mesh_material(
     tc: ResMut<TileCacheManager>,
     qt: ResMut<RasterTileQuadtree>,
     rendered_tiles: Query<(&RenderedTile, &OrderByDistance), With<Rendered>>,
-    hillshade_updated_tiles: Query<Entity, (With<Rendered>, With<HillshadeParentsUpdated>)>,
+    hillshade_updated_tiles: Query<Entity, (With<Rendered>, With<TileParentsUpdated>)>,
     mut texture_fragment: ParamSet<(TileTextureFragmentQuery, ChangedTileTextureFragmentQuery)>,
     mut data_requesters: ParamSet<(
         Query<&DataRequester>,
@@ -929,9 +929,9 @@ pub fn update_mesh_material(
         return;
     }
 
-    // Remove HillshadeParentsUpdated markers after checking - they're consumed this frame
+    // Remove TileParentsUpdated markers after checking - they're consumed this frame
     for entity in hillshade_updated_tiles.iter() {
-        commands.entity(entity).remove::<HillshadeParentsUpdated>();
+        commands.entity(entity).remove::<TileParentsUpdated>();
     }
 
     let tile_layers = tile_layers.p0();
