@@ -31,11 +31,6 @@ fn maybe_decompress_font(data: Vec<u8>) -> Result<Vec<u8>, String> {
     Ok(data)
 }
 
-/// Ticks a glyph must be unused before becoming evictable. A tick is one
-/// `prepareTextBatch` call (see [`FontCache::tick`] in lib.rs), not a frame —
-/// so a small value is needed for eviction to fire before the atlas grows.
-pub const LRU_MIN_AGE: u64 = 5;
-
 /// A loaded font. The atlas lives separately in `FontCache::atlases` so faces
 /// from the same family can share one.
 pub struct FontEntry {
@@ -66,9 +61,6 @@ pub struct FontCache {
     pub atlases: StdHashMap<String, Atlas>,
     #[wasm_bindgen(skip)]
     pub color_atlases: StdHashMap<String, Atlas>,
-    /// Logical LRU clock, bumped once per `prepareTextBatch` (not per frame).
-    #[wasm_bindgen(skip)]
-    pub tick: u64,
     #[wasm_bindgen(skip)]
     pub next_font_index: u32,
 }
@@ -140,6 +132,35 @@ impl FontCache {
             },
         );
         Ok(())
+    }
+
+    /// The atlas (SDF or color) under `atlas_key` that holds `key`. A composite
+    /// key lives in at most one of the two (a font is either color or
+    /// monochrome), so the SDF atlas wins only when it actually contains the
+    /// key; otherwise the color atlas is returned as the fallback owner.
+    fn atlas_with_key_mut(&mut self, atlas_key: &str, key: u64) -> Option<&mut Atlas> {
+        if self.atlases.get(atlas_key).is_some_and(|a| a.contains(key)) {
+            return self.atlases.get_mut(atlas_key);
+        }
+        self.color_atlases.get_mut(atlas_key)
+    }
+
+    /// Add one visible-label reference to each glyph under `atlas_key`.
+    pub fn retain_glyphs(&mut self, atlas_key: &str, keys: &[u64]) {
+        for &key in keys {
+            if let Some(atlas) = self.atlas_with_key_mut(atlas_key, key) {
+                atlas.retain(key);
+            }
+        }
+    }
+
+    /// Drop one visible-label reference from each glyph under `atlas_key`.
+    pub fn release_glyphs(&mut self, atlas_key: &str, keys: &[u64]) {
+        for &key in keys {
+            if let Some(atlas) = self.atlas_with_key_mut(atlas_key, key) {
+                atlas.release(key);
+            }
+        }
     }
 
     /// Remove a font. Frees its atlases only if no other font still uses them.

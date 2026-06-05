@@ -124,6 +124,18 @@ export class BatchedSdfTextMesh
         RTE,
       );
       mesh.renderOrder = this.renderOrder;
+      // Re-prepare evicted glyphs through the batch so font-family faces and
+      // refcounts stay consistent; request a render once they're rebuilt.
+      mesh.setGlyphLifecycleHandlers(
+        (text) =>
+          this._fontManager.prepareText(
+            this._fontIdentifier,
+            text,
+            this._highQuality,
+            this._loadedFaceUrls,
+          ),
+        () => this._needRender?.(),
+      );
 
       if (sharedTex) {
         mesh.setAtlasTexture(sharedTex);

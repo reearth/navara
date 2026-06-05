@@ -52,6 +52,11 @@ export type ShapeTextResult = {
   metrics: GlyphMetrics[];
   /** Font units per em (needed for converting font-unit to pixel space) */
   unitsPerEm: number;
+  /** FontManager-internal: the atlas generation these metrics were built
+   *  under. When the atlas evicts glyphs its generation bumps, marking older
+   *  cached results stale so they are re-shaped on next use. Unset on results
+   *  fresh from the worker; the FontManager stamps it when caching. */
+  _generation?: number;
 };
 
 /** SDF/MSDF atlas texture data.
@@ -81,6 +86,11 @@ export type BatchPrepareTextResult = {
   colorAtlas: FontAtlasData | null;
   /** The atlas key used for this batch (family name or font URL). */
   atlasKey: string;
+  /** True if any glyph was evicted during this batch. The reused rects mean
+   *  cached shape results for this atlas may be stale, so the FontManager bumps
+   *  the atlas generation to force a re-shape on next use. Optional only so
+   *  callers needn't construct it (the worker always sends it). */
+  evicted?: boolean;
 };
 
 type UnicodeRange = {

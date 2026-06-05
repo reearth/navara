@@ -1,8 +1,7 @@
 use guillotiere::{AllocId, AtlasAllocator, Size};
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 use sdf_glyph_renderer::{BitmapGlyph, clamp_to_u8};
 
-use crate::cache::LRU_MIN_AGE;
 use crate::color_raster::{COLOR_GLYPH_PX_SIZE, rasterize_color_glyph};
 use crate::msdf::{Face, MSDF_CHANNELS, rasterize_msdf};
 
@@ -89,8 +88,13 @@ pub struct Atlas {
     pub height: u32,
     pub channels: u8,
     pub glyph_map: FxHashMap<u64, GlyphMetrics>,
-    /// LRU tracking: composite key → tick at which the glyph was last used.
-    pub last_used: FxHashMap<u64, u64>,
+    /// Reference counts keyed by composite key: how many *visible* labels
+    /// currently use the glyph. Driven by TypeScript — incremented when a label
+    /// showing the glyph becomes visible, decremented when it hides or is
+    /// disposed. A glyph with no entry here (count 0) is unreferenced and may be
+    /// evicted to reclaim space; a glyph with `>= 1` is on screen and must never
+    /// be evicted, since its atlas rect is baked into a live mesh.
+    pub ref_count: FxHashMap<u64, u32>,
 }
 
 /// Pack a font index and glyph ID into a single u64 key.
@@ -175,12 +179,29 @@ impl Atlas {
             height: size as u32,
             channels: channels as u8,
             glyph_map: FxHashMap::default(),
-            last_used: FxHashMap::default(),
+            ref_count: FxHashMap::default(),
         }
     }
 
-    pub fn touch(&mut self, key: u64, tick: u64) {
-        self.last_used.insert(key, tick);
+    /// Add one visible-label reference to a glyph, pinning it against eviction.
+    /// No-op for glyphs not in the atlas (e.g. one that failed to allocate), so
+    /// counts can never outlive a glyph.
+    pub fn retain(&mut self, key: u64) {
+        if self.glyph_map.contains_key(&key) {
+            *self.ref_count.entry(key).or_insert(0) += 1;
+        }
+    }
+
+    /// Drop one visible-label reference. Once the count reaches zero the glyph
+    /// becomes unreferenced and eligible for eviction (which happens lazily,
+    /// when the atlas next needs space — see [`Self::evict_unreferenced`]).
+    pub fn release(&mut self, key: u64) {
+        if let Some(count) = self.ref_count.get_mut(&key) {
+            *count -= 1;
+            if *count == 0 {
+                self.ref_count.remove(&key);
+            }
+        }
     }
 
     pub fn contains(&self, key: u64) -> bool {
@@ -195,7 +216,7 @@ impl Atlas {
     pub fn remove(&mut self, key: u64) {
         if let Some(metrics) = self.glyph_map.remove(&key) {
             self.allocator.deallocate(metrics.alloc_id);
-            self.last_used.remove(&key);
+            self.ref_count.remove(&key);
         }
     }
 
@@ -203,9 +224,14 @@ impl Atlas {
     /// atlas. Returns `true` if the atlas pixels or dimensions changed.
     ///
     /// `font_index` distinguishes glyphs from different fonts sharing this
-    /// atlas. LRU is touched for every requested glyph (present or not).
-    /// On allocator failure: evict cold glyphs and retry, then grow and retry
-    /// (capped at [`MAX_ATLAS_SIZE`]).
+    /// atlas. On allocator failure: evict unreferenced (off-screen) glyphs and
+    /// retry, then grow and retry (capped at [`MAX_ATLAS_SIZE`]).
+    ///
+    /// Sets `*evicted` to `true` if any glyph was freed to make room, so the
+    /// caller can invalidate the now-stale TS metrics for that atlas. Glyphs
+    /// packed earlier in this same call are protected from eviction even though
+    /// they have no references yet — the requesting label will retain them once
+    /// the shaped result is applied.
     ///
     /// `raster_font` is only consulted for [`AtlasMode::Sdf`]; MSDF and Color
     /// work from `font_data`.
@@ -215,7 +241,7 @@ impl Atlas {
         font_data: &[u8],
         font_index: u32,
         glyph_ids: &[u32],
-        tick: u64,
+        evicted: &mut bool,
     ) -> bool {
         // Parse Face once per batch — per-glyph parsing dominated MSDF cost.
         let msdf_face = match self.mode {
@@ -225,9 +251,12 @@ impl Atlas {
 
         let pad = self.mode.padding();
         let mut new_glyphs = false;
+        // Glyphs packed during this call have no references yet; protect them
+        // so a later glyph in the same batch can't evict them before the
+        // caller's label retains them.
+        let mut just_added: FxHashSet<u64> = FxHashSet::default();
         for &glyph_id in glyph_ids {
             let key = composite_key(font_index, glyph_id);
-            self.touch(key, tick);
 
             if self.contains(key) {
                 continue;
@@ -251,7 +280,7 @@ impl Atlas {
                 .allocator
                 .allocate(alloc_size)
                 .or_else(|| {
-                    self.evict_cold_glyphs(tick, LRU_MIN_AGE);
+                    *evicted |= self.evict_unreferenced(&just_added);
                     self.allocator.allocate(alloc_size)
                 })
                 .or_else(|| {
@@ -291,6 +320,7 @@ impl Atlas {
                     bearing_y: raster.bearing_y,
                 },
             );
+            just_added.insert(key);
             new_glyphs = true;
         }
         new_glyphs
@@ -370,19 +400,22 @@ impl Atlas {
         true
     }
 
-    /// Evict glyphs untouched for at least `min_age` ticks (one tick per
-    /// `prepareTextBatch`; see [`LRU_MIN_AGE`]).
-    fn evict_cold_glyphs(&mut self, tick: u64, min_age: u64) {
+    /// Free every glyph with no visible-label references, so the freed rects
+    /// can be reused. Glyphs in `protect` (packed earlier in the current
+    /// shaping call, not yet retained) are kept. Returns `true` if anything was
+    /// evicted, so the caller can invalidate the now-stale TS metrics.
+    fn evict_unreferenced(&mut self, protect: &FxHashSet<u64>) -> bool {
         let evictable: Vec<u64> = self
-            .last_used
-            .iter()
-            .filter_map(|(&key, &last_tick)| {
-                (tick.saturating_sub(last_tick) >= min_age).then_some(key)
-            })
+            .glyph_map
+            .keys()
+            .copied()
+            .filter(|key| !self.ref_count.contains_key(key) && !protect.contains(key))
             .collect();
 
+        let evicted = !evictable.is_empty();
         for key in evictable {
             self.remove(key);
         }
+        evicted
     }
 }

@@ -78,10 +78,12 @@ function snapshot(atlas: FontAtlas | undefined) {
 }
 
 type FontWorkerMessageType =
+  | "init"
   | "loadFont"
   | "unloadFont"
   | "prepareTextBatch"
-  | "tick";
+  | "retainGlyphs"
+  | "releaseGlyphs";
 
 const ctx = self as unknown as DedicatedWorkerGlobalScope;
 
@@ -94,6 +96,12 @@ ctx.onmessage = async (e: MessageEvent) => {
     await ensureWasm();
 
     switch (msgType) {
+      case "init": {
+        // No-op beyond ensureWasm() above; used to await worker readiness.
+        ctx.postMessage({ id, type: "result", payload: null });
+        break;
+      }
+
       case "loadFont": {
         const { url, data, atlasKey, highQuality } = msg.payload as {
           url: string;
@@ -133,16 +141,17 @@ ctx.onmessage = async (e: MessageEvent) => {
 
         let sdfAtlasChanged = false;
         let colorAtlasChanged = false;
+        let evicted = false;
         const results = texts.map((text) => {
           const sr = fontCache.shapeText(fontUrl, text);
           if (sr?.atlas_changed) {
             if (sr.is_color) colorAtlasChanged = true;
             else sdfAtlasChanged = true;
           }
+          // Read `evicted` before convertShapeResult frees the WASM result.
+          if (sr?.evicted) evicted = true;
           return { text, shapeResult: convertShapeResult(sr) };
         });
-
-        fontCache.tick();
 
         // Snapshot atlases by atlas key (family name or URL) so shared atlases
         // are returned correctly for font-family faces.
@@ -161,15 +170,24 @@ ctx.onmessage = async (e: MessageEvent) => {
           {
             id,
             type: "result",
-            payload: { results, atlas, colorAtlas, atlasKey },
+            payload: { results, atlas, colorAtlas, atlasKey, evicted },
           },
           transfers,
         );
         break;
       }
 
-      case "tick": {
-        fontCache.tick();
+      case "retainGlyphs":
+      case "releaseGlyphs": {
+        const { atlasKey, keys } = msg.payload as {
+          atlasKey: string;
+          keys: BigUint64Array;
+        };
+        if (msgType === "retainGlyphs") {
+          fontCache.retainGlyphs(atlasKey, keys);
+        } else {
+          fontCache.releaseGlyphs(atlasKey, keys);
+        }
         ctx.postMessage({ id, type: "result", payload: null });
         break;
       }

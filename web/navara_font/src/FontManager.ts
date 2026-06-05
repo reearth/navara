@@ -122,6 +122,20 @@ export class FontManager {
   /** Maps font URL → atlas key (family name or URL for standalone fonts). */
   private _atlasKeys = new Map<string, string>();
 
+  /** Per-atlas generation counter. Bumped when the worker reports it evicted
+   *  glyphs from an atlas; cached shape results carry the generation they were
+   *  built under, so any from before the eviction are re-shaped on next use.
+   *  Visible labels are unaffected — their glyphs are pinned and never evicted,
+   *  so their (possibly older-generation) metrics stay valid. */
+  private _atlasGeneration = new Map<string, number>();
+  /** Pending visible-label refcount increments per atlas key (one entry per
+   *  occurrence), flushed to the worker on a microtask. */
+  private _retainQueue = new Map<string, bigint[]>();
+  /** Pending visible-label refcount decrements per atlas key. */
+  private _releaseQueue = new Map<string, bigint[]>();
+  /** Whether a retain/release flush is already scheduled. */
+  private _refFlushScheduled = false;
+
   constructor(workerUrl: string | URL) {
     this._workerUrl = workerUrl;
   }
@@ -298,6 +312,7 @@ export class FontManager {
       this._atlasDirty.delete(atlasKey);
       this._colorAtlasCache.delete(atlasKey);
       this._colorAtlasDirty.delete(atlasKey);
+      this._atlasGeneration.delete(atlasKey);
       this._textureCache.get(atlasKey)?.dispose();
       this._textureCache.delete(atlasKey);
       this._colorTextureCache.get(atlasKey)?.dispose();
@@ -368,8 +383,10 @@ export class FontManager {
     text: string,
     highQuality: boolean,
   ): boolean {
-    return (
-      this._shapeCache.get(_q(fontIdentifier, highQuality))?.has(text) ?? false
+    return this._isPreparedFresh(
+      _q(fontIdentifier, highQuality),
+      text,
+      this._resolveAtlasKey(fontIdentifier, highQuality),
     );
   }
 
@@ -394,7 +411,14 @@ export class FontManager {
   ): Promise<void> {
     const qUrl = _q(fontUrl, highQuality);
     const cacheKey = this._cacheKey(qUrl, text);
-    if (this._shapeCache.get(qUrl)?.has(text) ?? false) return;
+    if (
+      this._isPreparedFresh(
+        qUrl,
+        text,
+        this._resolveAtlasKey(fontUrl, highQuality),
+      )
+    )
+      return;
     if (this._preparePending.has(cacheKey))
       return this._preparePending.get(cacheKey);
 
@@ -429,8 +453,8 @@ export class FontManager {
     highQuality: boolean,
   ): Promise<void> {
     const qFamily = _q(familyName, highQuality);
-    // Already stitched and cached?
-    if (this._shapeCache.get(qFamily)?.has(text)) return;
+    // Already stitched and still current for the atlas?
+    if (this._isPreparedFresh(qFamily, text, qFamily)) return;
 
     const pendingKey = this._cacheKey(qFamily, text);
     if (this._preparePending.has(pendingKey))
@@ -456,6 +480,9 @@ export class FontManager {
         );
         this._shapeCache.set(qFamily, familyShapeCache);
       }
+      // Stamp with the family atlas's current generation so an eviction
+      // afterward marks this stitched result stale.
+      stitched._generation = this._currentGen(qFamily);
       familyShapeCache.set(text, stitched);
     })();
 
@@ -632,6 +659,10 @@ export class FontManager {
     this._loaded.clear();
     this._refCount.clear();
     this._shapeCache.clear();
+    this._atlasGeneration.clear();
+    this._retainQueue.clear();
+    this._releaseQueue.clear();
+    this._refFlushScheduled = false;
     this._atlasCache.clear();
     this._atlasDirty.clear();
     this._colorAtlasCache.clear();
@@ -646,6 +677,93 @@ export class FontManager {
 
   private _cacheKey(fontUrl: string, text: string): string {
     return fontUrl + "\0" + text;
+  }
+
+  /** Current generation of an atlas. Bumped whenever the atlas evicts glyphs;
+   *  cached shape results stamped with an older generation are treated as
+   *  stale (their metrics may point at reused rects) and re-shaped on next use. */
+  private _currentGen(atlasKey: string): number {
+    return this._atlasGeneration.get(atlasKey) ?? 0;
+  }
+
+  /** Whether `text` has a cached shape result that is still current for its
+   *  atlas. A result from before the atlas last evicted is treated as not
+   *  prepared, forcing a re-shape that re-rasterizes any evicted glyphs. */
+  private _isPreparedFresh(
+    shapeCacheKey: string,
+    text: string,
+    atlasKey: string,
+  ): boolean {
+    const entry = this._shapeCache.get(shapeCacheKey)?.get(text);
+    return !!entry && (entry._generation ?? 0) === this._currentGen(atlasKey);
+  }
+
+  /**
+   * Add one visible-label reference to each glyph (composite keys) so the
+   * worker keeps them in the atlas while on screen. Call when a label using
+   * these glyphs becomes visible; balance with {@link releaseGlyphs}.
+   */
+  retainGlyphs(
+    fontIdentifier: string,
+    highQuality: boolean,
+    keys: bigint[],
+  ): void {
+    if (keys.length === 0) return;
+    const atlasKey = this._resolveAtlasKey(fontIdentifier, highQuality);
+    this._enqueueRef(this._retainQueue, atlasKey, keys);
+  }
+
+  /** Drop one visible-label reference from each glyph. Call when a label hides
+   *  or is disposed. */
+  releaseGlyphs(
+    fontIdentifier: string,
+    highQuality: boolean,
+    keys: bigint[],
+  ): void {
+    if (keys.length === 0) return;
+    const atlasKey = this._resolveAtlasKey(fontIdentifier, highQuality);
+    this._enqueueRef(this._releaseQueue, atlasKey, keys);
+  }
+
+  private _enqueueRef(
+    queue: Map<string, bigint[]>,
+    atlasKey: string,
+    keys: bigint[],
+  ): void {
+    let arr = queue.get(atlasKey);
+    if (!arr) {
+      arr = [];
+      queue.set(atlasKey, arr);
+    }
+    for (const k of keys) arr.push(k);
+
+    if (!this._refFlushScheduled) {
+      this._refFlushScheduled = true;
+      queueMicrotask(() => this._flushRefs());
+    }
+  }
+
+  /** Send queued refcount changes to the worker. Retains are sent before
+   *  releases so a glyph hidden and re-shown in the same tick never momentarily
+   *  drops to zero. */
+  private _flushRefs(): void {
+    this._refFlushScheduled = false;
+    const retain = this._retainQueue;
+    const release = this._releaseQueue;
+    this._retainQueue = new Map();
+    this._releaseQueue = new Map();
+
+    const client = this._client;
+    if (!client) return;
+
+    for (const [atlasKey, keys] of retain) {
+      if (keys.length > 0)
+        client.retainGlyphs(atlasKey, BigUint64Array.from(keys));
+    }
+    for (const [atlasKey, keys] of release) {
+      if (keys.length > 0)
+        client.releaseGlyphs(atlasKey, BigUint64Array.from(keys));
+    }
   }
 
   /** Resolve a (font identifier, quality) pair to its qualified atlas key.
@@ -732,17 +850,27 @@ export class FontManager {
 
       try {
         const batchResult = await client.prepareTextBatch(fontUrl, texts);
+        const atlasKey = batchResult.atlasKey;
 
-        // Cache each per-text result
+        // If the worker evicted glyphs from this atlas, bump its generation so
+        // any cached result from before the eviction is treated as stale and
+        // re-shaped on next use. Bump before stamping the fresh results below
+        // so they carry the new generation.
+        if (batchResult.evicted) {
+          this._atlasGeneration.set(atlasKey, this._currentGen(atlasKey) + 1);
+        }
+        const generation = this._currentGen(atlasKey);
+
+        // Cache each per-text result, stamped with the current generation.
         for (const item of batchResult.results) {
           if (item.shapeResult) {
+            item.shapeResult._generation = generation;
             this._shapeCache.get(fontUrl)?.set(item.text, item.shapeResult);
           }
         }
 
         // Update atlases once for the entire batch, keyed by atlas key
         // (family name for font-family faces, or font URL for standalone fonts)
-        const atlasKey = batchResult.atlasKey;
         if (batchResult.atlas) {
           this._atlasCache.set(atlasKey, batchResult.atlas);
           this._atlasDirty.add(atlasKey);
