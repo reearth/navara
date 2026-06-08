@@ -40,10 +40,7 @@ async function applyCreasedNormals(
 
   await Promise.all(
     meshes.map(async (mesh) => {
-      const oldGeometry = mesh.geometry as BufferGeometry;
-      const newGeometry = await toCreasedNormalsAsync(oldGeometry, creaseAngle);
-      mesh.geometry = newGeometry;
-      oldGeometry.dispose();
+      await toCreasedNormalsAsync(mesh.geometry as BufferGeometry, creaseAngle);
     }),
   );
 }
