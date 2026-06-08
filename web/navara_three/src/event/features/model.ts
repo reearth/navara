@@ -31,17 +31,17 @@ async function applyCreasedNormals(
   scene: Group,
   creaseAngle: number,
 ): Promise<void> {
-  const meshes: Mesh[] = [];
+  const geometries = new Set<BufferGeometry>();
   scene.traverse((object) => {
     if (object instanceof Mesh && object.geometry instanceof BufferGeometry) {
-      meshes.push(object);
+      geometries.add(object.geometry);
     }
   });
 
   await Promise.all(
-    meshes.map(async (mesh) => {
-      await toCreasedNormalsAsync(mesh.geometry as BufferGeometry, creaseAngle);
-    }),
+    [...geometries].map((geometry) =>
+      toCreasedNormalsAsync(geometry, creaseAngle),
+    ),
   );
 }
 
