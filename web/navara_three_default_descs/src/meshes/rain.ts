@@ -1,4 +1,8 @@
-import { eastNorthUpToFixedFrame, vector3ToGeodetic } from "@navara/three";
+import {
+  degreeToRadian,
+  eastNorthUpToFixedFrame,
+  vector3ToGeodetic,
+} from "@navara/three";
 import fragmentShader from "@shaders/glsl/rain.frag.glsl";
 import vertexShader from "@shaders/glsl/rain.vert.glsl";
 import {
@@ -7,6 +11,7 @@ import {
   DoubleSide,
   Float32BufferAttribute,
   Mesh,
+  PerspectiveCamera,
   ShaderMaterial,
   Uint16BufferAttribute,
   Uniform,
@@ -16,6 +21,8 @@ import {
   Color,
   UniformsLib,
 } from "three";
+
+const DEFAULT_BASE_FOV_DEG = 45;
 
 export type RainConfig = {
   particleCount: number;
@@ -35,6 +42,8 @@ export type RainConfig = {
   followCamera: boolean;
   /** Opacity is reduced in proportion to the maximum height and the camera height. */
   maxHeight: number;
+  /** Reference fov (degrees) at which `width` / `height` look as authored. The on-screen size is held constant relative to this fov. */
+  baseFov: number;
 };
 
 export const DefaultRainConfig: RainConfig = {
@@ -43,7 +52,7 @@ export const DefaultRainConfig: RainConfig = {
   color: 0xffffff,
   areaWidth: 500,
   areaHeight: 1000,
-  width: 3.0,
+  width: 2.0,
   height: 60,
   radius: 10,
   opacity: 0.5,
@@ -51,6 +60,7 @@ export const DefaultRainConfig: RainConfig = {
   alphaMin: 0.05,
   followCamera: true,
   maxHeight: 3000,
+  baseFov: DEFAULT_BASE_FOV_DEG,
 };
 
 class RainMaterial extends ShaderMaterial {
@@ -70,6 +80,8 @@ class RainMaterial extends ShaderMaterial {
     cameraUp: Uniform<Vector3>;
     followCamera: Uniform<boolean>;
     radius: Uniform<number>;
+    fov: Uniform<number>;
+    baseFov: Uniform<number>;
   };
 
   constructor() {
@@ -102,6 +114,8 @@ class RainMaterial extends ShaderMaterial {
       bounds: new Uniform(new Vector3(0, 0, 0)),
       followCamera: new Uniform(false),
       radius: new Uniform(0),
+      fov: new Uniform(degreeToRadian(DEFAULT_BASE_FOV_DEG)),
+      baseFov: new Uniform(degreeToRadian(DEFAULT_BASE_FOV_DEG)),
     };
   }
 }
@@ -188,6 +202,9 @@ export class RainMesh extends Mesh<BufferGeometry, RainMaterial> {
     this._material.uniforms.alphaMin.value = this._config.alphaMin;
     this._material.uniforms.followCamera.value = this._config.followCamera;
     this._material.uniforms.radius.value = this._config.radius;
+    this._material.uniforms.baseFov.value = degreeToRadian(
+      this._config.baseFov,
+    );
 
     this.updateBounds();
   }
@@ -339,6 +356,15 @@ export class RainMesh extends Mesh<BufferGeometry, RainMaterial> {
     return this._config.maxHeight;
   }
 
+  set baseFov(value: number) {
+    this._config.baseFov = value;
+    this._material.uniforms.baseFov.value = degreeToRadian(value);
+  }
+
+  get baseFov(): number {
+    return this._config.baseFov;
+  }
+
   updateConfig(newConfig: Partial<RainConfig>) {
     if (newConfig.particleCount !== undefined)
       this.particleCount = newConfig.particleCount;
@@ -356,6 +382,7 @@ export class RainMesh extends Mesh<BufferGeometry, RainMaterial> {
     if (newConfig.followCamera !== undefined)
       this.followCamera = newConfig.followCamera;
     if (newConfig.maxHeight !== undefined) this.maxHeight = newConfig.maxHeight;
+    if (newConfig.baseFov !== undefined) this.baseFov = newConfig.baseFov;
   }
 
   getConfig(): RainConfig {
@@ -369,6 +396,10 @@ export class RainMesh extends Mesh<BufferGeometry, RainMaterial> {
    */
   update(time: number, camera: Camera) {
     this.updateTime(time);
+
+    if (camera instanceof PerspectiveCamera) {
+      this._material.uniforms.fov.value = degreeToRadian(camera.fov);
+    }
 
     if (this.maxHeight !== Infinity) {
       const geodesic = vector3ToGeodetic(camera.position);
