@@ -16,6 +16,8 @@ uniform vec3 meshOffset;
 uniform vec3 bounds;
 uniform bool followCamera;
 uniform float radius;
+uniform float fov;
+uniform float baseFov;
 
 varying vec2 vUv;
 varying vec3 vColor;
@@ -64,7 +66,10 @@ vec3 normalizedPosition = vec3(transformed.x, 0.0, transformed.z);
   } else {
     scaledSize.x *= dist;
   }
-  
+
+  float fovScale = tan(fov * 0.5) / tan(baseFov * 0.5);
+  scaledSize *= fovScale;
+
   // Create billboard quad using pre-calculated camera vectors
   vec3 worldPos = transformed + cameraRight * offset.x * scaledSize.x + cameraUp * offset.y * scaledSize.y;
   

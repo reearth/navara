@@ -136,6 +136,42 @@ sidebar:
 }
 ```
 
+### useNormalBuffer
+
+**Type:** `boolean | undefined`
+
+**Description:** エフェクトに法線バッファをバインドするかどうかを指定します。これは、このパスでマテリアルに対する deferred lighting（irradiance の適用）を行うかどうかの切り替えとして機能します。`false` の場合、法線バッファはエフェクトに渡されず、マテリアルにポストプロセスのライティングは適用されません（大気の in-scatter と transmittance の計算自体は引き続き行われますが、このパスによってマテリアルがライティングし直されることはありません）。シーンのジオメトリが信頼できる法線バッファを出力しない場合（例: 法線情報を持たないタイル glTF アセットなど）に無効化し、マテリアルのライティングをそのまま保ちたいときに使用します。
+
+**Default:** `true`
+
+**Example:**
+
+```typescript
+{
+  aerialPerspective: {
+    useNormalBuffer: false,
+  }
+}
+```
+
+### albedoScale
+
+**Type:** `number | undefined`
+
+**Description:** 内部の `AerialPerspectiveEffect` に渡される `albedoScale` uniform の値を指定します。irradiance パスで diffuse 項を計算する際に、シーンカラーへ乗算されるスケール係数として使用されます。
+
+**Default:** `2 / Math.PI`
+
+**Example:**
+
+```typescript
+{
+  aerialPerspective: {
+    albedoScale: 2 / Math.PI,
+  }
+}
+```
+
 ## Usage Examples
 
 ### デフォルトエフェクトで大気遠近法を有効にする

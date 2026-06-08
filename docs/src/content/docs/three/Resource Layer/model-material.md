@@ -123,6 +123,25 @@ import { Color } from "@navara/three";
 }
 ```
 
+### creaseNormalAngle
+
+**Type:** `number | undefined`
+
+**Description:** Specifies the crease angle (in radians) used when [`normals`](#normals) is enabled. Edges whose shared face angle exceeds this threshold are kept as creased (hard) edges; smaller angles are smoothed.
+
+**Default:** `Math.PI / 6` (30°, applied when `normals` is enabled and this property is omitted)
+
+**Example:**
+
+```typescript
+{
+  model: {
+    normals: true,
+    creaseNormalAngle: Math.PI / 3, // 60°
+  }
+}
+```
+
 ### effectIds
 
 **Type:** `string[] | undefined`
@@ -247,6 +266,24 @@ import { Color } from "@navara/three";
 {
   model: {
     metalness: 0.1
+  }
+}
+```
+
+### normals
+
+**Type:** `boolean | undefined`
+
+**Description:** When enabled, vertex normals are recomputed using a creased-normals algorithm after the model loads. This is useful for tiled glTF assets that ship without normals or with low-quality normals (for example, photogrammetry tilesets), so that lighting and the aerial perspective effect can shade them correctly. The crease angle is configured by [`creaseNormalAngle`](#creasenormalangle).
+
+**Default:** `undefined`
+
+**Example:**
+
+```typescript
+{
+  model: {
+    normals: true,
   }
 }
 ```

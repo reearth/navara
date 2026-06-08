@@ -243,7 +243,7 @@ pub fn traverse_cesium_3d_tiles_tree(
     mut nested_map: ResMut<Cesium3dTilesNestedTreeMap>,
     window: Res<Window>,
     mut tiles: Query<(&Cesium3dTilesMetadata, &mut Cesium3dTilesTree)>,
-    camera: Query<(&CameraMarker, Ref<Transform>, &CameraFrustum)>,
+    camera: Query<(&CameraMarker, Ref<Transform>, Ref<CameraFrustum>)>,
     requesters: Cesium3dTileContentRequesterQuery,
     changed_requesters: ChangedCesium3dTileContentRequesterQuery,
     mut rendered_tiles: ParamSet<(
@@ -276,6 +276,8 @@ pub fn traverse_cesium_3d_tiles_tree(
                 || changed_renderable_features
                 || camera.is_added()
                 || camera.is_changed()
+                || frustum.is_added()
+                || frustum.is_changed()
                 || tree.is_added();
             if !needs_update {
                 continue;
@@ -293,7 +295,7 @@ pub fn traverse_cesium_3d_tiles_tree(
                 &metadata.0.root,
                 &mut tree.root,
                 camera_pos,
-                frustum,
+                &frustum,
                 &requesters,
                 &mut rendered_tiles,
                 &features,

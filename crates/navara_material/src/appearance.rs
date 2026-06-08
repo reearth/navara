@@ -416,6 +416,13 @@ pub struct ModelMaterial {
     pub animation_speed: Option<f32>,
     pub point_size: f32,
     pub show_bounding_box: bool,
+    /// When true, recompute vertex normals using a creased-normals algorithm
+    /// after the model loads. Useful for tiled glTF assets that ship without
+    /// normals or with low-quality normals.
+    pub normals: bool,
+    /// Crease angle (in radians) used when `normals` is true. `None` lets the
+    /// renderer pick its default (currently 30° / PI/6).
+    pub crease_normal_angle: Option<f32>,
     pub internal: Option<ModelInternalMaterial>,
     // post effect
     pub effect_ids: Option<Vec<String>>,
@@ -452,6 +459,8 @@ impl Default for ModelMaterial {
             animation_speed: None,
             point_size: 0.3,
             show_bounding_box: false,
+            normals: false,
+            crease_normal_angle: None,
             internal: None,
             // post effect
             effect_ids: None,

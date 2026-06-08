@@ -1,4 +1,5 @@
 import { ModelMesh as NavaraModelMesh } from "@navara/engine";
+import { degreeToRadian } from "@navara/three_api";
 import {
   BufferGeometry,
   Points,
@@ -13,12 +14,36 @@ import {
 } from "three";
 
 import { ModelMesh } from "../../mesh/model";
+import { toCreasedNormalsAsync } from "../../tasks/toCreasedNormalsAsync";
 import type { EventContext } from "../context";
 import {
   initializeGltfLoader,
   initializeDracoLoader,
   decompressDraco,
 } from "../loaders";
+
+/**
+ * Recompute vertex normals via `toCreasedNormalsAsync` for every Mesh in the
+ * loaded scene. Awaited before the `ModelMesh` is constructed so downstream
+ * material/shadow setup observes the final geometry.
+ */
+async function applyCreasedNormals(
+  scene: Group,
+  creaseAngle: number,
+): Promise<void> {
+  const geometries = new Set<BufferGeometry>();
+  scene.traverse((object) => {
+    if (object instanceof Mesh && object.geometry instanceof BufferGeometry) {
+      geometries.add(object.geometry);
+    }
+  });
+
+  await Promise.all(
+    [...geometries].map((geometry) =>
+      toCreasedNormalsAsync(geometry, creaseAngle),
+    ),
+  );
+}
 
 export async function renderModel(ctx: EventContext, m: NavaraModelMesh) {
   const { rawScene, credit } = await (async () => {
@@ -143,6 +168,13 @@ export async function renderModel(ctx: EventContext, m: NavaraModelMesh) {
 
   if (!rawScene) {
     return;
+  }
+
+  if (m.material.normals) {
+    await applyCreasedNormals(
+      rawScene,
+      m.material.creaseNormalAngle ?? degreeToRadian(30),
+    );
   }
 
   const scene = new ModelMesh(ctx, { scene: rawScene, credit }, m);
