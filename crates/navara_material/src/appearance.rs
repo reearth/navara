@@ -421,7 +421,7 @@ pub struct ModelMaterial {
     /// normals or with low-quality normals.
     pub normals: bool,
     /// Crease angle (in radians) used when `normals` is true. `None` lets the
-    /// implementation pick its default (Three.js' default is PI/3).
+    /// renderer pick its default (currently 30° / PI/6).
     pub crease_normal_angle: Option<f32>,
     pub internal: Option<ModelInternalMaterial>,
     // post effect
