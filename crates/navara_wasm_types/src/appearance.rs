@@ -1030,6 +1030,15 @@ pub struct ModelMaterial {
     #[wasm_bindgen(js_name = showBoundingBox)]
     #[serde(rename = "showBoundingBox")]
     pub show_bounding_box: Option<bool>,
+    /// When true, recompute vertex normals using a creased-normals algorithm
+    /// after the model loads. Useful for tiled glTF assets that ship without
+    /// normals or with low-quality normals.
+    pub normals: Option<bool>,
+    /// Crease angle (in radians) used when `normals` is true. Defaults to the
+    /// implementation default (Three.js uses PI/3) when omitted.
+    #[wasm_bindgen(js_name = creaseNormalAngle)]
+    #[serde(rename = "creaseNormalAngle")]
+    pub crease_normal_angle: Option<f32>,
     #[wasm_bindgen(getter_with_clone)]
     pub __internal__: Option<ModelInternalMaterial>,
     // SelectiveEffect
@@ -1079,6 +1088,8 @@ impl From<ModelMaterial> for navara_material::ModelMaterial {
             animation_speed: val.animation_speed,
             point_size: val.point_size.unwrap_or(default.point_size),
             show_bounding_box: val.show_bounding_box.unwrap_or(default.show_bounding_box),
+            normals: val.normals.unwrap_or(default.normals),
+            crease_normal_angle: val.crease_normal_angle.or(default.crease_normal_angle),
             internal: val.__internal__.clone().map(|v| v.into()),
             effect_ids: val.effect_ids.or(default.effect_ids),
             emissive_intensity: val.emissive_intensity.or(default.emissive_intensity),
@@ -1116,6 +1127,8 @@ impl<'a> From<&'a navara_material::ModelMaterial> for ModelMaterial {
             animation_speed: value.animation_speed,
             point_size: Some(value.point_size),
             show_bounding_box: Some(value.show_bounding_box),
+            normals: Some(value.normals),
+            crease_normal_angle: value.crease_normal_angle,
             __internal__: value.internal.clone().as_ref().map(|v| v.into()),
             effect_ids: value.effect_ids.clone(),
             emissive_intensity: value.emissive_intensity,
@@ -1158,6 +1171,8 @@ impl ModelMaterial {
             animation_speed: self.animation_speed.or(other.animation_speed),
             point_size: self.point_size.unwrap_or(other.point_size),
             show_bounding_box: self.show_bounding_box.unwrap_or(other.show_bounding_box),
+            normals: self.normals.unwrap_or(other.normals),
+            crease_normal_angle: self.crease_normal_angle.or(other.crease_normal_angle),
             internal: other.internal.clone(),
             effect_ids: self.effect_ids.clone().or_else(|| other.effect_ids.clone()),
             emissive_intensity: self.emissive_intensity.or(other.emissive_intensity),

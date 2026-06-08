@@ -89,6 +89,12 @@ export class AerialPerspectiveEffectDesc extends EffectDesc<
     if (config.moon !== undefined) {
       this._instance.moon = config.moon;
     }
+    if (config.albedoScale !== undefined) {
+      this._instance.albedoScale = config.albedoScale;
+    }
+    if (config.useNormalBuffer !== undefined) {
+      this._instance.useNormalBuffer = config.useNormalBuffer;
+    }
   }
 
   update(_time: number): void {
