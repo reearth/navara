@@ -1034,8 +1034,8 @@ pub struct ModelMaterial {
     /// after the model loads. Useful for tiled glTF assets that ship without
     /// normals or with low-quality normals.
     pub normals: Option<bool>,
-    /// Crease angle (in radians) used when `normals` is true. Defaults to the
-    /// implementation default (Three.js uses PI/3) when omitted.
+    /// Crease angle (in radians) used when `normals` is true. Defaults to 30°
+    /// (PI/6) when omitted.
     #[wasm_bindgen(js_name = creaseNormalAngle)]
     #[serde(rename = "creaseNormalAngle")]
     pub crease_normal_angle: Option<f32>,
