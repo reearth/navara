@@ -49,6 +49,7 @@ export class RainMeshDesc extends MeshDesc<
       followCamera:
         this.config.rain?.followCamera ?? DefaultRainConfig.followCamera,
       maxHeight: this.config.rain?.maxHeight ?? DefaultRainConfig.maxHeight,
+      baseFov: this.config.rain?.baseFov ?? DefaultRainConfig.baseFov,
     };
 
     return new RainMesh(rainConfig);

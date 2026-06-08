@@ -24,6 +24,8 @@ export type AerialPerspectiveOptions = {
   sky?: boolean;
   sun?: boolean;
   moon?: boolean;
+  albedoScale?: number;
+  useNormalBuffer?: boolean;
 } & EffectOptions;
 
 export const DEFAULT_AERIAL_PERSPECTIVE_OPTIONS: Required<AerialPerspectiveOptions> =
@@ -35,6 +37,8 @@ export const DEFAULT_AERIAL_PERSPECTIVE_OPTIONS: Required<AerialPerspectiveOptio
     sky: false,
     sun: true,
     moon: true,
+    useNormalBuffer: true,
+    albedoScale: 2 / Math.PI,
   };
 
 export class AerialPerspective extends Pass<
@@ -45,6 +49,7 @@ export class AerialPerspective extends Pass<
   atmosphere: Atmosphere;
 
   private cloudsShadows = true;
+  private normalBuffer: Texture;
 
   constructor(
     atmosphere: Atmosphere,
@@ -53,8 +58,6 @@ export class AerialPerspective extends Pass<
     _options: AerialPerspectiveOptions = {},
   ) {
     const effect = new AerialPerspectiveEffect(camera, {
-      albedoScale: 2 / Math.PI,
-      normalBuffer: normalBuffer,
       octEncodedNormal: true,
     });
     const pass = new CustomEffectPass(camera, effect);
@@ -62,7 +65,7 @@ export class AerialPerspective extends Pass<
     super(pass, effect, options);
 
     this.atmosphere = atmosphere;
-
+    this.normalBuffer = normalBuffer;
     this.options = options;
 
     this.init();
@@ -81,6 +84,12 @@ export class AerialPerspective extends Pass<
     this.sky = !!this.options.sky;
     this.sun = !!this.options.sun;
     this.moon = !!this.options.moon;
+    this.albedoScale =
+      this.options.albedoScale ??
+      DEFAULT_AERIAL_PERSPECTIVE_OPTIONS.albedoScale;
+    this.useNormalBuffer =
+      this.options.useNormalBuffer ??
+      DEFAULT_AERIAL_PERSPECTIVE_OPTIONS.useNormalBuffer;
 
     this.atmosphere.onTexturesReady(() => this.onTextureLoaded());
 
@@ -192,6 +201,31 @@ export class AerialPerspective extends Pass<
     if (!this.rawEffect) return;
     this.options.moon = v;
     this.rawEffect.moon = v;
+    this.onUpdate();
+  }
+
+  get albedoScale() {
+    return (
+      this.options.albedoScale ?? DEFAULT_AERIAL_PERSPECTIVE_OPTIONS.albedoScale
+    );
+  }
+  set albedoScale(v: number) {
+    if (!this.rawEffect) return;
+    this.options.albedoScale = v;
+    this.rawEffect.albedoScale = v;
+    this.onUpdate();
+  }
+
+  get useNormalBuffer() {
+    return (
+      this.options.useNormalBuffer ??
+      DEFAULT_AERIAL_PERSPECTIVE_OPTIONS.useNormalBuffer
+    );
+  }
+  set useNormalBuffer(v: boolean) {
+    if (!this.rawEffect) return;
+    this.options.useNormalBuffer = v;
+    this.rawEffect.normalBuffer = v ? this.normalBuffer : null;
     this.onUpdate();
   }
 }

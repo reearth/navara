@@ -152,9 +152,9 @@ import { Color } from "@navara/three";
 
 **Type:** `number`
 
-**Description:** 個々の雨滴の幅を指定します。
+**Description:** 個々の雨滴の幅を `baseFov` を基準として指定します。画面上のサイズはこの基準 fov に対して一定に保たれるため、実際の描画幅はカメラの現在の fov に応じてスケーリングされます。
 
-**Default:** `3.0`
+**Default:** `2.0`
 
 **Example:**
 
@@ -288,6 +288,24 @@ import { Color } from "@navara/three";
 {
   rain: {
     maxHeight: 5000,
+  }
+}
+```
+
+### baseFov
+
+**Type:** `number`
+
+**Description:** `width` と `height` を意図通りに見せるための基準視野角（度）です。雨滴の画面上のサイズはこの fov を基準に一定に保たれ、有効な PerspectiveCamera の fov が異なる場合、パーティクルサイズは `tan(fov/2) / tan(baseFov/2)` で再スケーリングされるため、ズームに関わらず想定した見え方を維持できます。
+
+**Default:** `45`
+
+**Example:**
+
+```typescript
+{
+  rain: {
+    baseFov: 60,
   }
 }
 ```
