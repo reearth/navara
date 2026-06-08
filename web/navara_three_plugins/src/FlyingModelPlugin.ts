@@ -499,12 +499,6 @@ export class FlyingModelPlugin extends Plugin<View, ViewContext> {
     const modelLatDeg = radianToDegree(curLLE.lat);
     const modelLngDeg = radianToDegree(curLLE.lng);
 
-    this.view.cameraFollow(true, {
-      lat: modelLatDeg,
-      lng: modelLngDeg,
-      height: height + 1,
-    });
-
     if (!this.orbitMode) {
       let yawDiff = this.modelYaw - this.cameraYaw;
       yawDiff = yawDiff - Math.round(yawDiff / (Math.PI * 2)) * (Math.PI * 2);
@@ -513,10 +507,17 @@ export class FlyingModelPlugin extends Plugin<View, ViewContext> {
       const offsetEast = -Math.sin(this.cameraYaw) * cameraDistance;
       const offsetNorth = -Math.cos(this.cameraYaw) * cameraDistance;
 
-      this.view.lookAt(
+      this.view.cameraFollow(
+        true,
         { lat: modelLatDeg, lng: modelLngDeg, height: height + 1 },
         new Vector3(offsetEast, offsetNorth, cameraHeight),
       );
+    } else {
+      this.view.cameraFollow(true, {
+        lat: modelLatDeg,
+        lng: modelLngDeg,
+        height: height + 1,
+      });
     }
 
     const isMoving = dirY !== 0 || dirX !== 0 || dirZ !== 0;
