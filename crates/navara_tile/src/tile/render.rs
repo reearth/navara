@@ -20,8 +20,3 @@ impl RenderedTile {
         }
     }
 }
-
-/// Marker component indicating that a tile's parents were updated
-/// and its material needs to be refreshed. Removed after processing.
-#[derive(Component)]
-pub struct TileParentsUpdated;

@@ -22,7 +22,7 @@ use crate::data_requester::request_terrain_data;
 use crate::texture_fragment::request_texture_fragment;
 
 use super::{
-    render::{RenderedTile, TileParentsUpdated},
+    render::RenderedTile,
     tile_cache_manager::{HillshadeParent, RenderedTileCache, TileCacheManager},
 };
 
@@ -460,11 +460,6 @@ pub fn spawn_tile_entity(
     if let Some(tile) = tc.rendered_tile_caches.get_mut(&tile_handle) {
         tile.ready_parent_tile_handle = ready_parent_tile_handle;
         tile.hillshade_parents = hillshade_parents;
-
-        // Insert marker to trigger material update
-        commands
-            .entity(tile.rendered_tile_entity)
-            .insert(TileParentsUpdated);
         return;
     }
 

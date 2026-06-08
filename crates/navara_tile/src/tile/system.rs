@@ -39,7 +39,7 @@ use crate::texture_fragment::request_texture_fragment;
 
 use super::{
     event::MeshPreparedEvent,
-    render::{RenderedTile, TileParentsUpdated},
+    render::RenderedTile,
     tile_cache_manager::TileCacheManager,
     traverse::{TraversalResult, prepare_tile_resource, spawn_tile_entity, traverse_tile},
 };
@@ -413,6 +413,30 @@ pub fn transfer_mesh(
                 )
             });
 
+        // Get hillshade_parents from cache for overscale tiles
+        let hillshade_parents = tc
+            .rendered_tile_caches
+            .get(&rendered_tile.tile_handle)
+            .and_then(|cache| cache.hillshade_parents.as_ref());
+
+        // Calculate UV transforms for hillshade parent reuse
+        let mut mesh_uv_transform = None;
+        for i in 0..tile_layers_len {
+            let uv_trans = hillshade_parents
+                .and_then(|parents| parents.get(i))
+                .and_then(|p| p.as_ref())
+                .map(|p| {
+                    let transform = uv_transform(tile.coords, p.zoom);
+                    // Use the first hillshade parent's zoom for global mesh UV transform
+                    if mesh_uv_transform.is_none() {
+                        mesh_uv_transform = Some(transform);
+                    }
+                    transform
+                });
+            hillshade_uv_transforms.push(uv_trans);
+        }
+        let mesh_uv_transform = mesh_uv_transform.unwrap_or_default();
+
         // Merge texture and hillshade entities (fix for hillshade not displaying)
         let merged_texture_fragments = if let Some(tex_ids) = texture_fragment_entity_ids.as_ref() {
             let mut merged = Vec::with_capacity(tex_ids.len());
@@ -421,7 +445,14 @@ pub fn transfer_mesh(
             for i in 0..tex_ids.len() {
                 let tex = tex_ids.get(i).and_then(|&e| e);
                 let hill = hill_ids.and_then(|ids| ids.get(i).and_then(|&e| e));
-                merged.push(tex.or(hill));
+
+                // For overscale tiles: use parent's hillshade entity if available
+                let from_parent = hillshade_parents
+                    .and_then(|parents| parents.get(i))
+                    .and_then(|p| p.as_ref())
+                    .map(|p| p.entity);
+
+                merged.push(tex.or(hill).or(from_parent));
             }
 
             Some(merged)
@@ -526,7 +557,7 @@ pub fn transfer_mesh(
                         uvs: uvshandle,
                         active: false,
                         render_order,
-                        uv_transform: Default::default(),
+                        uv_transform: mesh_uv_transform,
                         aabb: Aabb {
                             center: Transform::from_translation(-rtc_translation)
                                 .transform_point(tile_aabb.center),
@@ -643,7 +674,7 @@ pub fn transfer_mesh(
                         uvs: uvshandle,
                         active: false,
                         render_order,
-                        uv_transform: Default::default(),
+                        uv_transform: mesh_uv_transform,
                         aabb: Aabb {
                             center: Transform::from_translation(-rtc_translation)
                                 .transform_point(tile_aabb.center),
@@ -884,11 +915,9 @@ pub fn delete_layer(
 
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn update_mesh_material(
-    mut commands: Commands,
     tc: ResMut<TileCacheManager>,
     qt: ResMut<RasterTileQuadtree>,
     rendered_tiles: Query<(&RenderedTile, &OrderByDistance), With<Rendered>>,
-    hillshade_updated_tiles: Query<Entity, (With<Rendered>, With<TileParentsUpdated>)>,
     mut texture_fragment: ParamSet<(TileTextureFragmentQuery, ChangedTileTextureFragmentQuery)>,
     mut data_requesters: ParamSet<(
         Query<&DataRequester>,
@@ -918,20 +947,13 @@ pub fn update_mesh_material(
     let are_tile_layers_removed = !tile_layers.p2().is_empty();
     let are_texture_fragments_updated = !texture_fragment.p1().is_empty();
     let are_data_requesters_updated = !data_requesters.p1().is_empty();
-    let are_hillshade_parents_updated = !hillshade_updated_tiles.is_empty();
 
     if !are_tile_layers_updated
         && !are_texture_fragments_updated
         && !are_tile_layers_removed
         && !are_data_requesters_updated
-        && !are_hillshade_parents_updated
     {
         return;
-    }
-
-    // Remove TileParentsUpdated markers after checking - they're consumed this frame
-    for entity in hillshade_updated_tiles.iter() {
-        commands.entity(entity).remove::<TileParentsUpdated>();
     }
 
     let tile_layers = tile_layers.p0();

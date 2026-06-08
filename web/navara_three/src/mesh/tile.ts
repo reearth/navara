@@ -955,6 +955,11 @@ if (uPickable > 0.) {
     // TODO: Support hide entire globe.
     this.visible = active;
 
+    // const tile = this.tileHandler.getTile(this.handle);
+    // if (tile) {
+    //   console.log(`Tile coords: x=${tile.coords.x}, y=${tile.coords.y}, z=${tile.coords.z} - active: ${active}`);
+    // }
+
     if (active) {
       this.ensureCorrectMaterialType(
         changedMaterial,
@@ -1419,6 +1424,9 @@ if (uPickable > 0.) {
     tileMeshToFragmentIds: Map<TileMesh, Set<string>> | undefined,
   ) {
     const m = this.material;
+
+    // console.log("textureFragments ", textureFragments);
+    // console.log("readyParentTileHandle ", readyParentTileHandle);
 
     if (!textureFragments || !textureFragments.length) {
       if (!readyParentTileHandle) {
