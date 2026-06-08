@@ -19,6 +19,10 @@ pub struct ConstructTerrainMeshParameters {
     /// Multiplier for the automatically calculated skirt height.
     #[wasm_bindgen(js_name = skirtExaggeration)]
     pub skirt_exaggeration: f32,
+    #[wasm_bindgen(js_name = isQuantizedMesh)]
+    pub is_quantized_mesh: bool,
+    pub geographic: bool,
+    pub tms: bool,
 }
 
 impl<'a> From<&'a navara_worker::construct_terrain_mesh::ConstructTerrainMeshParameters>
@@ -33,6 +37,9 @@ impl<'a> From<&'a navara_worker::construct_terrain_mesh::ConstructTerrainMeshPar
             tile_handle: val.tile_handle,
             skirt: val.skirt,
             skirt_exaggeration: val.skirt_exaggeration,
+            is_quantized_mesh: val.is_quantized_mesh,
+            geographic: val.geographic,
+            tms: val.tms,
         }
     }
 }

@@ -19,6 +19,11 @@ pub struct ConstructTerrainMeshParameters {
     pub skirt: bool,
     /// Multiplier for the automatically calculated skirt height.
     pub skirt_exaggeration: f32,
+    pub is_quantized_mesh: bool,
+    /// EPSG:4326 geographic tiling (quantized mesh only)
+    pub geographic: bool,
+    /// TMS scheme (y=0 at south) (quantized mesh only)
+    pub tms: bool,
 }
 
 #[derive(Component, Clone, Debug, Serialize)]

@@ -10,9 +10,9 @@ use navara_geometry::{
 };
 use navara_math::FloatType;
 
-use crate::{Tile, raster_tile::RasterTile, terrain_data_requester::TileTerrainDataRequesterQuery};
+use crate::terrain_data_requester::TileTerrainDataRequesterQuery;
 
-use super::TerrainData;
+use super::{TerrainConstructContext, TerrainData};
 
 #[derive(Debug, Default, Clone)]
 pub struct RasterDEMData {
@@ -98,12 +98,13 @@ impl TerrainData for RasterDEMData {
     fn construct_terrain_mesh(
         &self,
         ellipsoid: Ellipsoid<FloatType>,
-        tile: &RasterTile,
+        ctx: &TerrainConstructContext,
         bytes: &[u8],
         geoid_height: FloatType,
-        martini: &mut Martini,
+        martini: Option<&mut Martini>,
     ) -> ReturnedConstructedTerrainMesh {
-        let extent = &tile.extent;
+        let martini = martini.expect("RasterDEM requires a Martini instance");
+        let extent = &ctx.extent;
         let martini_size = martini.size as usize;
 
         let mut heights = vec![];
@@ -125,14 +126,14 @@ impl TerrainData for RasterDEMData {
         let aabb = Aabb::from_extent_f64(
             *extent,
             0.,
-            tile.max_height, // Use parent max_height
+            ctx.max_height, // Use parent max_height
         );
         let tile_center = aabb.center;
 
         // This is a trial and error value. We can update it if necessary, but...
         // 1. The raw geometric error is too large, so you need to adjust the value.
         // 2. If the error is still large when you are close to the tile, upsampling might not work well.
-        let max_error = (tile.get_level_maximum_geometric_error(&ellipsoid, 65.) / 2.).min(1024.);
+        let max_error = (ctx.get_level_maximum_geometric_error(&ellipsoid, 65.) / 2.).min(1024.);
 
         let mut martini_tile = martini.create_terrain(&read_height);
         let (vertices, indices, uvs) =
@@ -175,7 +176,7 @@ impl TerrainData for RasterDEMData {
                 martini_size - 1,
                 martini_size - 1,
                 &self.decoder,
-                tile.max_height,
+                ctx.max_height,
             );
         }
 
@@ -251,7 +252,9 @@ fn compute_terrain_height_from_tile(
 mod test {
     use navara_core::{Angle, LngLat, TileXYZ};
 
-    use super::{RasterTile, compute_terrain_height_from_tile};
+    use crate::RasterTile;
+
+    use super::compute_terrain_height_from_tile;
 
     #[test]
     fn it_should_compute_terrain_height_from_tile() {

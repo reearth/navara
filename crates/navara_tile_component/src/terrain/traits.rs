@@ -1,14 +1,36 @@
 use std::fmt::Debug;
 
-use crate::{raster_tile::RasterTile, terrain_data_requester::TileTerrainDataRequesterQuery};
+use crate::terrain_data_requester::TileTerrainDataRequesterQuery;
 use bevy_ecs::entity::Entity;
 use martini::Martini;
 use navara_buffer_store::BufferStore;
-use navara_core::{ElevationDecoder, Ellipsoid, Extent, LngLat, Radians, TileRegion};
+use navara_core::{
+    ElevationDecoder, Ellipsoid, Extent, LngLat, Radians, TerrainCrs, TileRegion, TileXYZ,
+    get_ellipsoid_terrain_level_zero_maximum_geometric_error, get_level_maximum_geometric_error,
+};
 use navara_geometry::{
     ReturnedConstructedTerrainMesh, UpsamplableTerrainGeometry, UpsampledTerrainGeometry,
 };
 use navara_math::FloatType;
+
+pub struct TerrainConstructContext {
+    pub coords: TileXYZ,
+    pub extent: Extent<FloatType, Radians>,
+    pub max_height: FloatType,
+}
+
+impl TerrainConstructContext {
+    pub fn get_level_maximum_geometric_error(
+        &self,
+        ellipsoid: &Ellipsoid<FloatType>,
+        height_map_width: FloatType,
+    ) -> FloatType {
+        get_level_maximum_geometric_error(
+            self.coords.z,
+            get_ellipsoid_terrain_level_zero_maximum_geometric_error(ellipsoid, height_map_width),
+        )
+    }
+}
 
 pub trait TerrainData: Debug + Sync + Send {
     fn upsample(
@@ -19,10 +41,10 @@ pub trait TerrainData: Debug + Sync + Send {
     fn construct_terrain_mesh(
         &self,
         ellipsoid: Ellipsoid<FloatType>,
-        tile: &RasterTile,
+        ctx: &TerrainConstructContext,
         bytes: &[u8],
         geoid_height: FloatType,
-        martini: &mut Martini,
+        martini: Option<&mut Martini>,
     ) -> ReturnedConstructedTerrainMesh;
     fn data_requester_entity_id(&self) -> Option<Entity>;
     fn set_data_requester_entity_id(&mut self, e: Option<Entity>);
@@ -43,5 +65,9 @@ pub trait TerrainData: Debug + Sync + Send {
     fn box_clone(&self) -> Box<dyn TerrainData>;
     fn decoder(&self) -> Option<&ElevationDecoder> {
         None
+    }
+
+    fn crs(&self) -> TerrainCrs {
+        TerrainCrs::default()
     }
 }

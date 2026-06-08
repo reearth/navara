@@ -1,12 +1,15 @@
 use crate::LayerData;
 use bevy_ecs::component::Component;
-use navara_core::ElevationDecoder;
-use navara_material::{EllipsoidTerrainMaterial, RasterTerrainMaterial};
+use navara_core::{ElevationDecoder, TerrainCrs, TilingScheme};
+use navara_material::{
+    EllipsoidTerrainMaterial, QuantizedMeshTerrainMaterial, RasterTerrainMaterial,
+};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TerrainAppearance {
     Raster(RasterTerrainMaterial),
     Ellipsoid(EllipsoidTerrainMaterial),
+    QuantizedMesh(QuantizedMeshTerrainMaterial),
 }
 
 impl TerrainAppearance {
@@ -14,6 +17,7 @@ impl TerrainAppearance {
         match self {
             TerrainAppearance::Raster(mat) => mat.max_zoom,
             TerrainAppearance::Ellipsoid(mat) => mat.max_zoom,
+            TerrainAppearance::QuantizedMesh(mat) => mat.max_zoom,
         }
     }
 
@@ -21,6 +25,7 @@ impl TerrainAppearance {
         match self {
             TerrainAppearance::Raster(mat) => mat.min_zoom,
             TerrainAppearance::Ellipsoid(mat) => mat.min_zoom,
+            TerrainAppearance::QuantizedMesh(mat) => mat.min_zoom,
         }
     }
 
@@ -28,6 +33,7 @@ impl TerrainAppearance {
         match self {
             TerrainAppearance::Raster(mat) => mat.overscaled_max_zoom,
             TerrainAppearance::Ellipsoid(_) => 30, // Ellipsoid has no max zoom limit
+            TerrainAppearance::QuantizedMesh(mat) => mat.overscaled_max_zoom,
         }
     }
 
@@ -35,6 +41,7 @@ impl TerrainAppearance {
         match self {
             TerrainAppearance::Raster(mat) => Some(&mat.elevation_decoder),
             TerrainAppearance::Ellipsoid(_) => None,
+            TerrainAppearance::QuantizedMesh(_) => None,
         }
     }
 
@@ -42,6 +49,7 @@ impl TerrainAppearance {
         match self {
             TerrainAppearance::Raster(mat) => mat.tile_size,
             TerrainAppearance::Ellipsoid(_) => 256,
+            TerrainAppearance::QuantizedMesh(_) => 256,
         }
     }
 
@@ -49,6 +57,7 @@ impl TerrainAppearance {
         match self {
             TerrainAppearance::Raster(mat) => mat.cast_shadow,
             TerrainAppearance::Ellipsoid(mat) => mat.cast_shadow,
+            TerrainAppearance::QuantizedMesh(mat) => mat.cast_shadow,
         }
     }
 
@@ -56,6 +65,7 @@ impl TerrainAppearance {
         match self {
             TerrainAppearance::Raster(mat) => mat.receive_shadow,
             TerrainAppearance::Ellipsoid(mat) => mat.receive_shadow,
+            TerrainAppearance::QuantizedMesh(mat) => mat.receive_shadow,
         }
     }
 
@@ -63,6 +73,7 @@ impl TerrainAppearance {
         match self {
             TerrainAppearance::Raster(mat) => mat.show,
             TerrainAppearance::Ellipsoid(_) => true,
+            TerrainAppearance::QuantizedMesh(mat) => mat.show,
         }
     }
 
@@ -70,6 +81,7 @@ impl TerrainAppearance {
         match self {
             TerrainAppearance::Raster(mat) => mat.show_bounding_box,
             TerrainAppearance::Ellipsoid(mat) => mat.show_bounding_box,
+            TerrainAppearance::QuantizedMesh(mat) => mat.show_bounding_box,
         }
     }
 
@@ -78,6 +90,7 @@ impl TerrainAppearance {
         match self {
             TerrainAppearance::Raster(mat) => mat.skirt,
             TerrainAppearance::Ellipsoid(_) => false, // Ellipsoid terrain doesn't need skirts
+            TerrainAppearance::QuantizedMesh(mat) => mat.skirt,
         }
     }
 
@@ -86,7 +99,36 @@ impl TerrainAppearance {
         match self {
             TerrainAppearance::Raster(mat) => mat.skirt_exaggeration,
             TerrainAppearance::Ellipsoid(_) => 1.0,
+            TerrainAppearance::QuantizedMesh(mat) => mat.skirt_exaggeration,
         }
+    }
+
+    pub fn crs(&self) -> TerrainCrs {
+        match self {
+            TerrainAppearance::Raster(_) => TerrainCrs::WebMercator { tms: false },
+            TerrainAppearance::Ellipsoid(_) => TerrainCrs::WebMercator { tms: false },
+            TerrainAppearance::QuantizedMesh(mat) => mat.crs.clone(),
+        }
+    }
+
+    pub fn tiling_scheme(&self) -> TilingScheme {
+        match self {
+            TerrainAppearance::Raster(_) | TerrainAppearance::Ellipsoid(_) => {
+                TilingScheme::WebMercator
+            }
+            TerrainAppearance::QuantizedMesh(mat) => match &mat.crs {
+                TerrainCrs::Geographic { tms } => TilingScheme::Geographic { tms: *tms },
+                TerrainCrs::WebMercator { .. } => TilingScheme::WebMercator,
+            },
+        }
+    }
+
+    pub fn tms(&self) -> bool {
+        self.crs().tms()
+    }
+
+    pub fn geographic(&self) -> bool {
+        self.crs().is_geographic()
     }
 }
 

@@ -12,8 +12,8 @@ use wasm_bindgen::prelude::*;
 
 use navara_wasm_types::{
     BillboardMaterial, ElevationHeatmapMaterial, EllipsoidTerrainMaterial, HillshadeMaterial,
-    ModelMaterial, PointMaterial, PolygonMaterial, PolylineMaterial, RasterTerrainMaterial,
-    RasterTileMaterial, TextMaterial, VectorTileMaterial,
+    ModelMaterial, PointMaterial, PolygonMaterial, PolylineMaterial, QuantizedMeshTerrainMaterial,
+    RasterTerrainMaterial, RasterTileMaterial, TextMaterial, VectorTileMaterial,
 };
 
 #[wasm_bindgen]
@@ -75,11 +75,15 @@ pub struct TerrainLayerDescription {
     pub raster_terrain: Option<RasterTerrainMaterial>,
     #[wasm_bindgen(getter_with_clone)]
     pub ellipsoid: Option<EllipsoidTerrainMaterial>,
+    #[wasm_bindgen(getter_with_clone, js_name = quantizedMesh)]
+    #[serde(rename = "quantizedMesh")]
+    pub quantized_mesh: Option<QuantizedMeshTerrainMaterial>,
 }
 
 pub enum TerrainMaterial {
     Raster(navara_material::RasterTerrainMaterial),
     Ellipsoid(navara_material::EllipsoidTerrainMaterial),
+    QuantizedMesh(navara_material::QuantizedMeshTerrainMaterial),
 }
 
 impl TerrainLayerDescription {
@@ -89,6 +93,9 @@ impl TerrainLayerDescription {
         }
         if let Some(v) = self.ellipsoid.take() {
             return Some(TerrainMaterial::Ellipsoid(v.into()));
+        }
+        if let Some(v) = self.quantized_mesh.take() {
+            return Some(TerrainMaterial::QuantizedMesh(v.into()));
         }
         None
     }
@@ -688,6 +695,15 @@ impl LayerDescription {
                                 }),
                             )
                         }
+                        Some(TerrainMaterial::QuantizedMesh(_)) => {
+                            let url = data.as_ref()?.url.as_str();
+                            (
+                                TerrainDataType::QuantizedMesh,
+                                Some(LayerData {
+                                    url: String::from(url),
+                                }),
+                            )
+                        }
                         None => (TerrainDataType::Unknown, None),
                     }
                 } else {
@@ -697,6 +713,9 @@ impl LayerDescription {
                 let terrain_appearance = appearance.map(|mat| match mat {
                     TerrainMaterial::Raster(r) => navara_layer::TerrainAppearance::Raster(r),
                     TerrainMaterial::Ellipsoid(e) => navara_layer::TerrainAppearance::Ellipsoid(e),
+                    TerrainMaterial::QuantizedMesh(q) => {
+                        navara_layer::TerrainAppearance::QuantizedMesh(q)
+                    }
                 });
 
                 Some(navara_layer::LayerDescription::Terrain(Box::new(

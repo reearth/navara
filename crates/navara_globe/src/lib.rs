@@ -2,6 +2,7 @@
 
 use bevy_app::{App, Plugin};
 use bevy_ecs::prelude::Resource;
+use navara_core::TilingScheme;
 use serde::{Deserialize, Serialize};
 
 /// Globe resource that manages shared properties across different material types.
@@ -49,6 +50,11 @@ pub struct Globe {
     /// Flattened RGB array: [r0,g0,b0, r1,g1,b1, ...].
     /// Used by elevation heatmap layers.
     pub elevation_colormap: Vec<f32>,
+
+    /// Tiling scheme for the quadtree.
+    /// `WebMercator` (default): single root (0,0,0), WM extents.
+    /// `Geographic`: two roots (0,0,0) and (0,1,0), equal-degree extents.
+    pub tiling_scheme: TilingScheme,
 }
 
 impl Default for Globe {
@@ -63,6 +69,7 @@ impl Default for Globe {
             opacity: 1.0,
             wireframe: false,
             elevation_colormap: Vec::new(),
+            tiling_scheme: TilingScheme::WebMercator,
         }
     }
 }

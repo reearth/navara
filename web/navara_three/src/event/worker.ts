@@ -34,7 +34,9 @@ import {
 
 import { constructPolygonBatchedFeature } from "../tasks/constructPolygonBatchedFeature";
 import { constructPolylineBatchedFeature } from "../tasks/constructPolylineBatchedFeature";
+import { constructQuantizedMeshTerrainMesh } from "../tasks/constructQuantizedMeshTerrainMesh";
 import { constructTerrainMesh } from "../tasks/constructTerrainMesh";
+import { upsampleQuantizedMeshTerrainMesh } from "../tasks/upsampleQuantizedMeshTerrainMesh";
 import { upsampleTerrainMesh } from "../tasks/upsampleTerrainMesh";
 
 import type { EventContext } from ".";
@@ -116,20 +118,33 @@ async function processConstructTerrainMesh(
   if (!tile) {
     return;
   }
-  const elevationDecoder = tileHandler.getTileElevationDecoder(
-    params.tile_handle,
-  );
-  if (!elevationDecoder) {
-    return;
+
+  let promise;
+  if (params.isQuantizedMesh) {
+    promise = constructQuantizedMeshTerrainMesh(
+      bytes,
+      new TransferableTileLike(tile),
+      params.skirt,
+      params.skirtExaggeration,
+      params.geographic,
+      params.tms,
+    );
+  } else {
+    const elevationDecoder = tileHandler.getTileElevationDecoder(
+      params.tile_handle,
+    );
+    if (!elevationDecoder) {
+      return;
+    }
+    promise = constructTerrainMesh(
+      bytes,
+      new TransferableTileLike(tile),
+      new TransferableRasterDEMDataLike(elevationDecoder),
+      params.tile_size,
+      params.skirt,
+      params.skirtExaggeration,
+    );
   }
-  const promise = constructTerrainMesh(
-    bytes,
-    new TransferableTileLike(tile),
-    new TransferableRasterDEMDataLike(elevationDecoder),
-    params.tile_size,
-    params.skirt,
-    params.skirtExaggeration,
-  );
   workerPoolPromises.set(id, promise);
   const { result } = await promise;
   workerPoolPromises.delete(id);
@@ -172,6 +187,7 @@ async function processConstructTerrainMesh(
   }
 
   const rtcTranslation = result.rtc_translation;
+
   const constructTerrainMeshResult = new ConstructTerrainMeshResult(
     geometry,
     heights,
@@ -225,27 +241,39 @@ async function processUpsampleTerrainMesh(
     return;
   }
 
-  const elevationDecoder = tileHandler.getTileElevationDecoder(
-    params.tile_handle,
-  );
-  if (!elevationDecoder) {
-    return;
-  }
-
   const upsamplableTerrainGeometry = new UpsamplableTerrainGeometryLike(
     parentUvs,
     parentIndices,
     parentHeights,
   );
 
-  const promise = upsampleTerrainMesh(
-    new TransferableTileLike(tile),
-    new TransferableTileLike(parentTile),
-    new TransferableRasterDEMDataLike(elevationDecoder),
-    upsamplableTerrainGeometry,
-    params.skirt,
-    params.skirtExaggeration,
-  );
+  let promise;
+  if (params.isQuantizedMesh) {
+    promise = upsampleQuantizedMeshTerrainMesh(
+      new TransferableTileLike(tile),
+      new TransferableTileLike(parentTile),
+      upsamplableTerrainGeometry,
+      params.skirt,
+      params.skirtExaggeration,
+      params.geographic,
+      params.tms,
+    );
+  } else {
+    const elevationDecoder = tileHandler.getTileElevationDecoder(
+      params.tile_handle,
+    );
+    if (!elevationDecoder) {
+      return;
+    }
+    promise = upsampleTerrainMesh(
+      new TransferableTileLike(tile),
+      new TransferableTileLike(parentTile),
+      new TransferableRasterDEMDataLike(elevationDecoder),
+      upsamplableTerrainGeometry,
+      params.skirt,
+      params.skirtExaggeration,
+    );
+  }
   workerPoolPromises.set(id, promise);
   const result = await promise;
   workerPoolPromises.delete(id);

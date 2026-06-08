@@ -45,6 +45,11 @@ export const TERRAIN_DATASETS = {
     attribution: "© Mapterhorn",
     attributionUrl: "https://mapterhorn.com/attribution",
   },
+  reearthQuantizedMesh: {
+    url: "https://terrain.reearth.land/cesium-mesh/ellipsoid/{z}/{x}/{y}.terrain",
+    attribution: "© Re:Earth Terrain",
+    attributionUrl: "https://reearth.io",
+  },
   mapbox: {
     url: `https://api.mapbox.com/v4/mapbox.terrain-rgb/{z}/{x}/{y}.webp?access_token=${
       import.meta.env.NAVARA_MAPBOX_ACCESS_TOKEN

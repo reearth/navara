@@ -8,7 +8,7 @@ use navara_buffer_store::BufferStore;
 use navara_component::Deleted;
 use navara_core::WGS84_32;
 use navara_geometry::TransferableGeometry;
-use navara_tile_component::{MartiniComponent, TileQuadtree};
+use navara_tile_component::{MartiniComponent, TerrainConstructContext, TileQuadtree};
 
 use super::{ConstructTerrainMeshParameters, ConstructTerrainMeshResult};
 use crate::WorkerTaskMarker;
@@ -61,24 +61,37 @@ pub(crate) fn construct_terrain_mesh(
             None => continue,
         };
 
-        let martini_id = cached_martini
-            .get(constructor.tile_size)
-            .expect("It must be initialized when terrain layer is added");
-        let mut martini = martini_components.get_mut(martini_id).unwrap();
+        let ctx = TerrainConstructContext {
+            coords: tile.coords,
+            extent: tile.extent,
+            max_height: tile.max_height,
+        };
 
-        let returned = tile.terrain_data.as_ref().unwrap().construct_terrain_mesh(
-            WGS84_32,
-            tile,
-            bytes,
-            0.,
-            martini.get_mut(),
-        );
+        let martini_opt = cached_martini
+            .get(constructor.tile_size)
+            .and_then(|id| martini_components.get_mut(*id).ok());
+
+        let returned = if let Some(mut martini) = martini_opt {
+            tile.terrain_data.as_ref().unwrap().construct_terrain_mesh(
+                WGS84_32,
+                &ctx,
+                bytes,
+                0.,
+                Some(martini.get_mut()),
+            )
+        } else {
+            tile.terrain_data
+                .as_ref()
+                .unwrap()
+                .construct_terrain_mesh(WGS84_32, &ctx, bytes, 0., None)
+        };
 
         commands.entity(e).insert(ConstructTerrainMeshResult {
             geometry: TransferableGeometry::with_buf(&mut buf, returned.geometry),
             heights: buf.new_f32(returned.heights),
             max_height: returned.max_height,
             min_height: returned.min_height,
+            rtc_translation: returned.rtc_translation,
         });
     }
 }

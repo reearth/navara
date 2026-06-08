@@ -1773,3 +1773,82 @@ impl<'a> From<&'a navara_material::EllipsoidTerrainMaterial> for EllipsoidTerrai
         }
     }
 }
+
+#[wasm_bindgen]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QuantizedMeshTerrainMaterial {
+    pub show: Option<bool>,
+    #[wasm_bindgen(js_name = castShadow)]
+    #[serde(rename = "castShadow")]
+    pub cast_shadow: Option<bool>,
+    #[wasm_bindgen(js_name = receiveShadow)]
+    #[serde(rename = "receiveShadow")]
+    pub receive_shadow: Option<bool>,
+    #[wasm_bindgen(js_name = showBoundingBox)]
+    #[serde(rename = "showBoundingBox")]
+    pub show_bounding_box: Option<bool>,
+    #[wasm_bindgen(js_name = maxZoom)]
+    #[serde(rename = "maxZoom")]
+    pub max_zoom: Option<usize>,
+    #[wasm_bindgen(js_name = overscaledMaxZoom)]
+    #[serde(rename = "overscaledMaxZoom")]
+    pub overscaled_max_zoom: Option<usize>,
+    #[wasm_bindgen(js_name = minZoom)]
+    #[serde(rename = "minZoom")]
+    pub min_zoom: Option<usize>,
+    pub skirt: Option<bool>,
+    #[wasm_bindgen(js_name = skirtExaggeration)]
+    #[serde(rename = "skirtExaggeration")]
+    pub skirt_exaggeration: Option<f32>,
+    pub tms: Option<bool>,
+    pub geographic: Option<bool>,
+}
+
+impl From<QuantizedMeshTerrainMaterial> for navara_material::QuantizedMeshTerrainMaterial {
+    fn from(val: QuantizedMeshTerrainMaterial) -> Self {
+        use navara_core::TerrainCrs;
+        let default = navara_material::QuantizedMeshTerrainMaterial::default();
+        let tms = val.tms.unwrap_or_else(|| default.crs.tms());
+        let geographic = val
+            .geographic
+            .unwrap_or_else(|| default.crs.is_geographic());
+        navara_material::QuantizedMeshTerrainMaterial {
+            show: val.show.unwrap_or(default.show),
+            cast_shadow: val.cast_shadow.unwrap_or(default.cast_shadow),
+            receive_shadow: val.receive_shadow.unwrap_or(default.receive_shadow),
+            show_bounding_box: val.show_bounding_box.unwrap_or(default.show_bounding_box),
+            max_zoom: val.max_zoom.unwrap_or(default.max_zoom),
+            overscaled_max_zoom: val
+                .overscaled_max_zoom
+                .unwrap_or(default.overscaled_max_zoom),
+            min_zoom: val.min_zoom.unwrap_or(default.min_zoom),
+            skirt: val.skirt.unwrap_or(default.skirt),
+            skirt_exaggeration: val.skirt_exaggeration.unwrap_or(default.skirt_exaggeration),
+            crs: if geographic {
+                TerrainCrs::Geographic { tms }
+            } else {
+                TerrainCrs::WebMercator { tms }
+            },
+        }
+    }
+}
+
+impl<'a> From<&'a navara_material::QuantizedMeshTerrainMaterial> for QuantizedMeshTerrainMaterial {
+    fn from(
+        value: &'a navara_material::QuantizedMeshTerrainMaterial,
+    ) -> QuantizedMeshTerrainMaterial {
+        QuantizedMeshTerrainMaterial {
+            show: Some(value.show),
+            cast_shadow: Some(value.cast_shadow),
+            receive_shadow: Some(value.receive_shadow),
+            show_bounding_box: Some(value.show_bounding_box),
+            max_zoom: Some(value.max_zoom),
+            overscaled_max_zoom: Some(value.overscaled_max_zoom),
+            min_zoom: Some(value.min_zoom),
+            skirt: Some(value.skirt),
+            skirt_exaggeration: Some(value.skirt_exaggeration),
+            tms: Some(value.crs.tms()),
+            geographic: Some(value.crs.is_geographic()),
+        }
+    }
+}

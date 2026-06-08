@@ -2,15 +2,15 @@ use bevy_ecs::prelude::*;
 use navara_buffer_store::BufferStore;
 use navara_component::{Deleted, Order};
 use navara_core::{
-    Aabb, Ellipsoid, Extent, LngLat, Radians, TileRegion, TileXYZ, WGS84_64,
+    Aabb, Ellipsoid, Extent, LngLat, Radians, TileRegion, TileXYZ, TilingScheme, WGS84_64,
     get_ellipsoid_terrain_level_zero_maximum_geometric_error, get_level_maximum_geometric_error,
 };
 use navara_data_requester::{DataRequester, DataRequesterStatus};
 use navara_geometry::{ReturnedConstructedTerrainMesh, UpsamplableTerrainGeometry};
-use navara_math::Vec3;
+use navara_math::{EPSILON10, Vec3};
 
 use navara_mesh::CachedMeshHandle;
-use navara_quadtree::{Coords, children_coords};
+use navara_quadtree::Coords;
 
 use crate::{
     RasterTileQuadtree, Tile, TileHandle, raster_tile_texture_fragment::TileTextureFragmentQuery,
@@ -46,6 +46,7 @@ pub struct RasterTile {
     pub min_height: f64,
     pub distance_from_camera: FloatType,
     pub sse: FloatType,
+    pub tiling_scheme: TilingScheme,
 }
 
 impl Clone for RasterTile {
@@ -70,6 +71,7 @@ impl Clone for RasterTile {
             min_height: self.min_height,
             distance_from_camera: 0.,
             sse: 0.,
+            tiling_scheme: self.tiling_scheme.clone(),
         }
     }
 }
@@ -85,11 +87,20 @@ pub struct ReadyState {
 
 impl RasterTile {
     pub fn new(coords: TileXYZ, max_height: FloatType, min_height: FloatType) -> Self {
-        let extent = coords.extent();
+        Self::new_with_scheme(coords, max_height, min_height, TilingScheme::WebMercator)
+    }
+
+    pub fn new_with_scheme(
+        coords: TileXYZ,
+        max_height: FloatType,
+        min_height: FloatType,
+        tiling_scheme: TilingScheme,
+    ) -> Self {
+        let extent = tiling_scheme.tile_extent(coords);
 
         Self {
             coords,
-            extent: coords.extent(),
+            extent,
             aabb: Aabb::from_extent_f64(extent, min_height, max_height),
             bounding_region: Some(TileBoundingRegion::from_extent_f64(extent, WGS84_64)),
             rendered_at: 0,
@@ -106,6 +117,7 @@ impl RasterTile {
             min_height,
             distance_from_camera: 0.,
             sse: 0.,
+            tiling_scheme,
         }
     }
 
@@ -353,23 +365,24 @@ impl RasterTile {
     }
 
     fn get_region(&self, parent: &RasterTile) -> Option<TileRegion> {
-        let parent_children_coords =
-            children_coords((parent.coords.x, parent.coords.y, parent.coords.z));
-
-        Some(match (self.coords.x, self.coords.y) {
-            (x, y) if x == parent_children_coords[0].0 && y == parent_children_coords[0].1 => {
-                TileRegion::NorthWest
-            }
-            (x, y) if x == parent_children_coords[1].0 && y == parent_children_coords[1].1 => {
-                TileRegion::NorthEast
-            }
-            (x, y) if x == parent_children_coords[2].0 && y == parent_children_coords[2].1 => {
-                TileRegion::SouthWest
-            }
-            (x, y) if x == parent_children_coords[3].0 && y == parent_children_coords[3].1 => {
-                TileRegion::SouthEast
-            }
-            (_, _) => unreachable!(),
+        let mid_lng = (parent.extent.west.val() + parent.extent.east.val()) / 2.0;
+        let mid_lat = (parent.extent.south.val() + parent.extent.north.val()) / 2.0;
+        // Use a tolerance proportional to the tile size, not `f64::EPSILON`.
+        // `mid_lng` can be off by a few ULPs from `self.extent.west` even when
+        // they are mathematically equal (different rounding paths in
+        // `(west_rad + east_rad) / 2` vs `(deg).to_radians()`), and at the
+        // magnitudes involved (~2.4 rad) `f64::EPSILON` is rounded away by the
+        // subtraction, leaving an effectively-strict `>=` that miscategorises
+        // tiles whose west edge sits exactly on the parent's mid line.
+        let lng_eps = (parent.extent.east.val() - parent.extent.west.val()).abs() * EPSILON10;
+        let lat_eps = (parent.extent.north.val() - parent.extent.south.val()).abs() * EPSILON10;
+        let is_east = self.extent.west.val() >= mid_lng - lng_eps;
+        let is_north = self.extent.south.val() >= mid_lat - lat_eps;
+        Some(match (is_east, is_north) {
+            (false, true) => TileRegion::NorthWest,
+            (true, true) => TileRegion::NorthEast,
+            (false, false) => TileRegion::SouthWest,
+            (true, false) => TileRegion::SouthEast,
         })
     }
 
@@ -526,8 +539,17 @@ impl Tile for RasterTile {
         )
     }
 
-    fn new_child((x, y, z): Coords<Self::CoordUnit>, max_height: f64, min_height: f64) -> Self {
-        Self::new(TileXYZ { x, y, z }, max_height, min_height)
+    fn tiling_scheme(&self) -> TilingScheme {
+        self.tiling_scheme.clone()
+    }
+
+    fn new_child(
+        (x, y, z): Coords<Self::CoordUnit>,
+        max_height: f64,
+        min_height: f64,
+        tiling_scheme: TilingScheme,
+    ) -> Self {
+        Self::new_with_scheme(TileXYZ { x, y, z }, max_height, min_height, tiling_scheme)
     }
 }
 
@@ -728,12 +750,89 @@ fn traverse_contained_children(
 
 #[cfg(test)]
 mod test {
-    use navara_core::{Angle, LngLat, TileXYZ};
+    use navara_core::{Angle, LngLat, TileRegion, TileXYZ, TilingScheme};
     use navara_quadtree::Coords;
 
     use super::RasterTileQuadtree;
 
     use super::{RasterTile, find_contained_child};
+
+    #[test]
+    fn get_region_handles_floating_point_drift_on_mid_boundary() {
+        // Regression for: geographic grandchildren whose west edge lies exactly
+        // on the parent's mid_lng were miscategorised as the WEST child because
+        // `f64::EPSILON` is too tight at ~2.4 rad.
+        // Parent (29011, 11410, 14) and east children (58023, *, 15) near Mt
+        // Fuji from the original bug report.
+        let scheme = TilingScheme::Geographic { tms: true };
+        let parent = RasterTile::new_with_scheme(
+            TileXYZ {
+                x: 29011,
+                y: 11410,
+                z: 14,
+            },
+            0.,
+            0.,
+            scheme.clone(),
+        );
+        let nw = RasterTile::new_with_scheme(
+            TileXYZ {
+                x: 58022,
+                y: 22821,
+                z: 15,
+            },
+            0.,
+            0.,
+            scheme.clone(),
+        );
+        let ne = RasterTile::new_with_scheme(
+            TileXYZ {
+                x: 58023,
+                y: 22821,
+                z: 15,
+            },
+            0.,
+            0.,
+            scheme.clone(),
+        );
+        let sw = RasterTile::new_with_scheme(
+            TileXYZ {
+                x: 58022,
+                y: 22820,
+                z: 15,
+            },
+            0.,
+            0.,
+            scheme.clone(),
+        );
+        let se = RasterTile::new_with_scheme(
+            TileXYZ {
+                x: 58023,
+                y: 22820,
+                z: 15,
+            },
+            0.,
+            0.,
+            scheme,
+        );
+
+        assert!(matches!(
+            nw.get_region(&parent),
+            Some(TileRegion::NorthWest)
+        ));
+        assert!(matches!(
+            ne.get_region(&parent),
+            Some(TileRegion::NorthEast)
+        ));
+        assert!(matches!(
+            sw.get_region(&parent),
+            Some(TileRegion::SouthWest)
+        ));
+        assert!(matches!(
+            se.get_region(&parent),
+            Some(TileRegion::SouthEast)
+        ));
+    }
 
     fn setup_tile(qt: &mut RasterTileQuadtree, coords: Coords<usize>) {
         let children = qt.qt.initialize_children(coords, &|v| {

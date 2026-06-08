@@ -1,0 +1,90 @@
+import ThreeView from "@navara/three";
+import { ToneMappingMode } from "@navara/three_default_descs";
+import {
+  DefaultPlugin,
+  type DefaultDescriptions,
+} from "@navara/three_default_plugin";
+import { Pane } from "tweakpane";
+
+import { showAttributions } from "../../helpers/attributions";
+import { TERRAIN_DATASETS, TILE_DATASETS } from "../../helpers/constants";
+import { addDateControl } from "../../helpers/control";
+
+export type CustomDescriptions = DefaultDescriptions;
+
+export const run = async (view: ThreeView<CustomDescriptions>) => {
+  view.addPlugin(new DefaultPlugin());
+
+  await view.init();
+
+  view.toneMappingExposure = 3;
+  view.addEffect({
+    toneMapping: {
+      mode: ToneMappingMode.NEUTRAL,
+    },
+  });
+
+  view.addEffect({
+    smaa: {},
+  });
+
+  view.addLight({
+    sun: {
+      intensity: 1,
+    },
+  });
+  view.addMesh({
+    sky: {},
+  });
+
+  view.addLight({
+    ambient: {
+      intensity: 0.1,
+    },
+  });
+
+  view.addLayer({
+    type: "tiles",
+    data: {
+      url: TILE_DATASETS.openstreetmap.url,
+    },
+    rasterTile: {
+      maxZoom: 23,
+    },
+  });
+
+  view.addLayer({
+    type: "terrain",
+    data: {
+      url: TERRAIN_DATASETS.reearthQuantizedMesh.url,
+    },
+    quantizedMesh: {
+      maxZoom: 14,
+      castShadow: true,
+      receiveShadow: true,
+      tms: true,
+      geographic: true,
+    },
+  });
+
+  view.setCamera({
+    lng: 138.7274, // Mount Fuji
+    lat: 35.3606,
+    height: 50000,
+    heading: 0,
+    pitch: -45,
+    roll: 360.0,
+  });
+
+  const pane = new Pane();
+
+  const date = new Date();
+  date.setUTCHours(6);
+
+  addDateControl(view, pane, date);
+
+  showAttributions([
+    TERRAIN_DATASETS.reearthQuantizedMesh,
+    TILE_DATASETS.openstreetmap,
+  ]);
+};

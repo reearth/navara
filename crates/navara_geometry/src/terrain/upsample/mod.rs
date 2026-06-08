@@ -80,13 +80,7 @@ impl UpsampledTerrainGeometry {
         let offset_v = if self.is_north { 1. } else { 0. };
 
         fn clamp_uv(v: FloatType, min: FloatType, max: FloatType, offset: FloatType) -> FloatType {
-            if v > max {
-                return max;
-            }
-            if v < min {
-                return min;
-            }
-            v * 2. - offset
+            v.clamp(min, max) * 2. - offset
         }
 
         let heights = self.heights.take().unwrap();
@@ -186,7 +180,7 @@ fn clip(
 
         let clipped_transformed_v_indices =
             clip_2d_triangle_at_threshold(threashold, is_north, &interpolated_v_coords);
-        if clipped_u_indices.is_empty() {
+        if clipped_transformed_v_indices.is_empty() {
             continue;
         }
 
@@ -223,7 +217,7 @@ fn clip(
 
             let clipped_transformed_v_indices =
                 clip_2d_triangle_at_threshold(threashold, is_north, &interpolated_v_coords);
-            if clipped_u_indices.is_empty() {
+            if clipped_transformed_v_indices.is_empty() {
                 continue;
             }
 
@@ -342,10 +336,10 @@ impl ClippedCoordMap {
     }
     fn make_key(&self, u: FloatType, v: FloatType, h: FloatType) -> String {
         format!(
-            "{}{}{}",
+            "{}_{}_{}",
             self.quantize_float(u),
             self.quantize_float(v),
-            self.quantize_float(h)
+            h.to_bits()
         )
     }
     fn quantize_float(&self, v: FloatType) -> u16 {
@@ -356,12 +350,171 @@ impl ClippedCoordMap {
 #[cfg(test)]
 mod test {
     use approx::assert_abs_diff_eq;
-    use navara_core::TileRegion;
-    use navara_math::EPSILON5;
+    use navara_core::{Extent, LngLat, Rad, TileRegion, WGS84_64};
+    use navara_math::{EPSILON5, Vec3};
 
     use crate::UpsamplableTerrainGeometry;
 
     use super::UpsampledTerrainGeometry;
+
+    #[test]
+    fn sw_and_se_should_have_different_clipped_uvs() {
+        // Same parent mesh, two different u-halves. The clipped UVs (in parent UV
+        // space, before clamp_uv) must differ: SW keeps u<=0.5, SE keeps u>=0.5.
+        let uvs: Vec<f32> = (0..3)
+            .flat_map(|j| (0..3).map(move |i| [(i as f32) * 0.5, (j as f32) * 0.5]))
+            .flatten()
+            .collect();
+        let heights: Vec<f32> = (0..9).map(|i| i as f32 * 100.0).collect();
+        let mut indices = Vec::new();
+        for j in 0..2u32 {
+            for i in 0..2u32 {
+                let a = j * 3 + i;
+                let b = a + 1;
+                let c = a + 3;
+                let d = c + 1;
+                indices.extend_from_slice(&[a, b, d, a, d, c]);
+            }
+        }
+
+        let sw = UpsampledTerrainGeometry::new(
+            UpsamplableTerrainGeometry {
+                uvs: &uvs,
+                heights: &heights,
+                indices: &indices,
+            },
+            &TileRegion::SouthWest,
+        );
+        let se = UpsampledTerrainGeometry::new(
+            UpsamplableTerrainGeometry {
+                uvs: &uvs,
+                heights: &heights,
+                indices: &indices,
+            },
+            &TileRegion::SouthEast,
+        );
+
+        let sw_uvs = sw.uvs.as_ref().unwrap();
+        let se_uvs = se.uvs.as_ref().unwrap();
+
+        // SW kept u in [0, 0.5]. Every u in SW's clipped output must satisfy u <= 0.5.
+        for u in sw_uvs.iter().step_by(2) {
+            assert!(
+                *u <= 0.5 + 1e-9,
+                "SW clip leaked vertex with u={} (should be u<=0.5)",
+                u
+            );
+        }
+        // SE kept u in [0.5, 1]. Every u in SE's clipped output must satisfy u >= 0.5.
+        for u in se_uvs.iter().step_by(2) {
+            assert!(
+                *u >= 0.5 - 1e-9,
+                "SE clip leaked vertex with u={} (should be u>=0.5)",
+                u
+            );
+        }
+
+        // The two clipped UV sets MUST differ — otherwise SW and SE render identical
+        // geometry (the user-visible bug).
+        assert_ne!(
+            sw_uvs, se_uvs,
+            "SW and SE produced identical clipped UVs — u-clip is not working"
+        );
+    }
+
+    #[test]
+    fn grandchild_upsample_clips_to_smaller_quadrant() {
+        // Simulate a denser parent mesh (3×3 grid → 8 triangles).
+        let mut uvs = Vec::new();
+        let mut heights = Vec::new();
+        for j in 0..3 {
+            for i in 0..3 {
+                uvs.push(i as f32 * 0.5);
+                uvs.push(j as f32 * 0.5);
+                heights.push((i * 10 + j * 100) as f32);
+            }
+        }
+        let mut indices = Vec::new();
+        for j in 0..2u32 {
+            for i in 0..2u32 {
+                let a = j * 3 + i;
+                let b = a + 1;
+                let c = a + 3;
+                let d = c + 1;
+                indices.extend_from_slice(&[a, b, d, a, d, c]);
+            }
+        }
+
+        // First upsample: parent → NE child
+        let mut child = UpsampledTerrainGeometry::new(
+            UpsamplableTerrainGeometry {
+                uvs: &uvs,
+                heights: &heights,
+                indices: &indices,
+            },
+            &TileRegion::NorthEast,
+        );
+
+        // Run construct_geometry to remap child uvs to child space [0, 1].
+        let parent_extent = Extent::from_points(&[
+            LngLat {
+                lng: Rad::new(2.41887_f64),
+                lat: Rad::new(0.61610_f64),
+            },
+            LngLat {
+                lng: Rad::new(2.41922_f64),
+                lat: Rad::new(0.61645_f64),
+            },
+        ]);
+        let mid_lng = (parent_extent.west.val() + parent_extent.east.val()) / 2.0;
+        let mid_lat = (parent_extent.south.val() + parent_extent.north.val()) / 2.0;
+        let child_extent = Extent::from_points(&[
+            LngLat {
+                lng: Rad::new(mid_lng),
+                lat: Rad::new(mid_lat),
+            },
+            LngLat {
+                lng: parent_extent.east,
+                lat: parent_extent.north,
+            },
+        ]);
+        let (child_geom, child_heights) =
+            child.construct_geometry(WGS84_64, &child_extent, &Vec3::ZERO);
+
+        // Second upsample: child → NE grandchild
+        let grandchild = UpsampledTerrainGeometry::new(
+            UpsamplableTerrainGeometry {
+                uvs: &child_geom.uvs,
+                heights: &child_heights,
+                indices: &child_geom.indices,
+            },
+            &TileRegion::NorthEast,
+        );
+
+        let clipped_uvs = grandchild.uvs.as_ref().unwrap();
+        let clipped_indices = grandchild.indices.as_ref().unwrap();
+
+        // Sanity: clip should produce *fewer* triangles than the child had.
+        assert!(
+            !clipped_indices.is_empty(),
+            "grandchild produced no triangles"
+        );
+
+        // All referenced vertices must be in [0.5, 1] x [0.5, 1] of child UV.
+        use std::collections::HashSet;
+        let referenced: HashSet<u32> = clipped_indices.iter().copied().collect();
+        for &idx in &referenced {
+            let u = clipped_uvs[idx as usize * 2];
+            let v = clipped_uvs[idx as usize * 2 + 1];
+            assert!(
+                u >= 0.5 - 1e-9 && v >= 0.5 - 1e-9,
+                "grandchild referenced vertex {} ({}, {}) outside NE quadrant of child",
+                idx,
+                u,
+                v
+            );
+        }
+    }
 
     #[test]
     fn it_should_construct_upsampled_coords() {

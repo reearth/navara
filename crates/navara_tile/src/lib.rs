@@ -42,6 +42,7 @@ impl Plugin for TilePlugin {
                 (
                     tile::system::update_layer,
                     tile::system::delete_layer,
+                    tile::system::init_globe_tiling,
                     tile::system::update_tiles,
                     tile::system::transfer_mesh,
                     tile::system::update_mesh_material,
