@@ -151,6 +151,9 @@ export const addCameraControl = (
 };
 
 export const addHidePaneKeyShortcut = (pane: Pane) => {
+  pane.element.style.maxHeight = "98vh";
+  pane.element.style.overflow = "scroll";
+
   // Hide the pane for taking a screenshot.
   window.addEventListener("keydown", (e) => {
     if (e.key !== "Escape") return;

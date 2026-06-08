@@ -87,6 +87,9 @@ export const App = () => {
             // Sort "uncategorized" to the end
             if (a === "uncategorized") return 1;
             if (b === "uncategorized") return -1;
+
+            if (a === "showcases") return -1;
+
             return a.localeCompare(b);
           })
           .map(([category, categoryPages]) => (
