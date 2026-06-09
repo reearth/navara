@@ -94,7 +94,7 @@ fn rasterize_returns_none_for_monochrome_font() {
 }
 
 #[test]
-fn color_atlas_packs_glyphs_and_tracks_lru() {
+fn color_atlas_packs_glyphs_and_refcounts() {
     let gid = first_renderable_color_glyph(COLRV1_FONT)
         .expect("fixture should have at least one paintable COLRv1 glyph");
 
@@ -103,8 +103,10 @@ fn color_atlas_packs_glyphs_and_tracks_lru() {
     // unified signature.
     let raster_font =
         fontdue::Font::from_bytes(COLRV1_FONT, fontdue::FontSettings::default()).unwrap();
-    let added = atlas.ensure_glyphs_in_atlas(&raster_font, COLRV1_FONT, 0, &[gid], 0);
+    let mut evicted = false;
+    let added = atlas.ensure_glyphs_in_atlas(&raster_font, COLRV1_FONT, 0, &[gid], &mut evicted);
     assert!(added, "first call should report new glyphs added");
+    assert!(!evicted, "nothing should be evicted on first pack");
 
     let key = gid as u64; // composite_key(font_index=0, gid)
     let metrics = atlas
@@ -113,9 +115,19 @@ fn color_atlas_packs_glyphs_and_tracks_lru() {
     assert!(metrics.atlas_w > 0 && metrics.atlas_h > 0);
 
     // Calling again with the same id is idempotent (atlas unchanged).
-    let added_again = atlas.ensure_glyphs_in_atlas(&raster_font, COLRV1_FONT, 0, &[gid], 1);
+    let added_again =
+        atlas.ensure_glyphs_in_atlas(&raster_font, COLRV1_FONT, 0, &[gid], &mut evicted);
     assert!(!added_again, "no new glyphs on repeat call");
 
-    // LRU should record the latest frame for the repeat call.
-    assert_eq!(atlas.last_used.get(&key), Some(&1));
+    // A retained (visible) glyph is pinned; releasing drops the reference.
+    atlas.retain(key);
+    assert_eq!(atlas.ref_count.get(&key), Some(&1));
+    atlas.retain(key);
+    assert_eq!(atlas.ref_count.get(&key), Some(&2));
+    atlas.release(key);
+    atlas.release(key);
+    assert!(
+        !atlas.ref_count.contains_key(&key),
+        "glyph should be unreferenced after balanced releases"
+    );
 }

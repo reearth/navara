@@ -73,6 +73,10 @@ pub struct ShapeTextResult {
     pub atlas_changed: bool,
     /// True when this font is COLRv1 — glyphs were packed into the color atlas.
     pub is_color: bool,
+    /// True if any glyph was evicted to make room while packing this text. The
+    /// reused rects mean cached TS metrics for this atlas may be stale, so TS
+    /// bumps the atlas generation to force a re-shape on next use.
+    pub evicted: bool,
 }
 
 // ---------------------------------------------------------------------------
@@ -148,7 +152,6 @@ impl FontCache {
     /// for monochrome fonts, RGBA for COLRv1 fonts).
     #[wasm_bindgen(js_name = shapeText)]
     pub fn wasm_shape_text(&mut self, url: &str, text: &str) -> Option<ShapeTextResult> {
-        let tick = self.tick;
         let entry = self.fonts.get(url)?;
         let shaped = shaping::shape_text(&entry.data, text)?;
         let units_per_em = entry.units_per_em;
@@ -169,8 +172,14 @@ impl FontCache {
             &mut self.atlases
         };
         let atlas = atlases.get_mut(&atlas_key)?;
-        let atlas_changed =
-            atlas.ensure_glyphs_in_atlas(raster_font, font_data, font_index, &glyph_ids, tick);
+        let mut evicted = false;
+        let atlas_changed = atlas.ensure_glyphs_in_atlas(
+            raster_font,
+            font_data,
+            font_index,
+            &glyph_ids,
+            &mut evicted,
+        );
 
         let glyphs: Vec<WasmShapedGlyph> = shaped
             .iter()
@@ -218,6 +227,7 @@ impl FontCache {
             font_index,
             atlas_changed,
             is_color,
+            evicted,
         })
     }
 
@@ -234,10 +244,19 @@ impl FontCache {
         lookup_atlas(&self.color_atlases, &self.fonts, key).map(snapshot_atlas)
     }
 
-    /// Advance the LRU clock. Called once per `prepareTextBatch` — not per
-    /// rendered frame (see [`LRU_MIN_AGE`]).
-    #[wasm_bindgen(js_name = tick)]
-    pub fn wasm_tick(&mut self) {
-        self.tick += 1;
+    /// Add one visible-label reference to each glyph (composite keys) under
+    /// `atlas_key`. Called when a label using these glyphs becomes visible, so
+    /// the glyphs are pinned against eviction while on screen.
+    #[wasm_bindgen(js_name = retainGlyphs)]
+    pub fn wasm_retain_glyphs(&mut self, atlas_key: &str, keys: &[u64]) {
+        self.retain_glyphs(atlas_key, keys);
+    }
+
+    /// Drop one visible-label reference from each glyph under `atlas_key`.
+    /// Called when a label hides or is disposed; once a glyph's count hits zero
+    /// it becomes eligible for eviction when the atlas next needs space.
+    #[wasm_bindgen(js_name = releaseGlyphs)]
+    pub fn wasm_release_glyphs(&mut self, atlas_key: &str, keys: &[u64]) {
+        self.release_glyphs(atlas_key, keys);
     }
 }
