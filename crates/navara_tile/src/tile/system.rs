@@ -422,7 +422,7 @@ pub fn transfer_mesh(
 
         // Calculate UV transforms for hillshade parent reuse
         let mut mesh_uv_transform = None;
-        for i in 0..tile_layers_len {
+        for (i, uv_trans_slot) in hillshade_uv_transforms.iter_mut().enumerate() {
             let uv_trans = hillshade_parents
                 .and_then(|parents| parents.get(i))
                 .and_then(|p| p.as_ref())
@@ -434,7 +434,7 @@ pub fn transfer_mesh(
                     }
                     transform
                 });
-            hillshade_uv_transforms.push(uv_trans);
+            *uv_trans_slot = uv_trans;
         }
         let mesh_uv_transform = mesh_uv_transform.unwrap_or_default();
 
@@ -1150,12 +1150,10 @@ pub fn update_mesh_material(
             needs_update = true;
         }
 
-        // Force update if any hillshade entity has HillshadeNeedsUpdate marker
-        if !needs_update && let Some(hill_ids) = &tile.hillshade_entity_ids {
-            for &entity_opt in hill_ids.iter() {
-                if let Some(entity) = entity_opt
-                    && hillshade_needs_update.contains(entity)
-                {
+        // Force update if any referenced fragment entity has HillshadeNeedsUpdate marker
+        if !needs_update {
+            for entity in texture_fragment_entity_ids.iter().filter_map(|&e| e) {
+                if hillshade_needs_update.contains(entity) {
                     needs_update = true;
                     break;
                 }
@@ -1193,14 +1191,10 @@ pub fn update_mesh_material(
         appearance.hillshade_config = hillshade_config;
         appearance.hillshade_uv_transforms = hillshade_uv_transforms;
 
-        // Remove HillshadeNeedsUpdate marker from hillshade entities that were just processed
-        if let Some(hill_ids) = &tile.hillshade_entity_ids {
-            for &entity_opt in hill_ids.iter() {
-                if let Some(entity) = entity_opt
-                    && hillshade_needs_update.contains(entity)
-                {
-                    commands.entity(entity).remove::<HillshadeNeedsUpdate>();
-                }
+        // Remove HillshadeNeedsUpdate marker from fragment entities that were just processed
+        for entity in texture_fragment_entity_ids.iter().filter_map(|&e| e) {
+            if hillshade_needs_update.contains(entity) {
+                commands.entity(entity).remove::<HillshadeNeedsUpdate>();
             }
         }
     }
