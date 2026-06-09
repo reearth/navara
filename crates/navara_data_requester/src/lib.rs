@@ -85,6 +85,11 @@ pub struct DataRequester {
     /// If true, cleanup is handled via DataManager's refcounting.
     /// If false, handle cleanup is the responsibility of the owner.
     pub managed_by_data_manager: bool,
+    /// Optional HTTP byte range as `(offset, length)`. When `Some`, the fetch
+    /// issues a `Range: bytes=offset-(offset+length-1)` request instead of
+    /// fetching the whole resource. `None` preserves the existing
+    /// full-resource GET behavior, so every current caller is unaffected.
+    pub byte_range: Option<(u64, u64)>,
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -158,6 +163,7 @@ impl DataRequester {
             extension,
             status: DataRequesterStatus::default(),
             managed_by_data_manager: false,
+            byte_range: None,
         }
     }
 
@@ -176,7 +182,18 @@ impl DataRequester {
             extension,
             status,
             managed_by_data_manager: true,
+            byte_range: None,
         }
+    }
+
+    /// Attach an HTTP byte range (`offset`, `length`) to this request.
+    ///
+    /// Builder-style so existing construction sites stay unchanged; callers
+    /// that need a partial fetch (e.g. PMTiles header / directory / tile
+    /// reads) opt in explicitly.
+    pub fn with_byte_range(mut self, offset: u64, length: u64) -> Self {
+        self.byte_range = Some((offset, length));
+        self
     }
 
     pub fn from_store(

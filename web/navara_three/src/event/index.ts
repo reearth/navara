@@ -464,8 +464,19 @@ async function processRequestedData(ctx: EventContext, req: DataRequestEvent) {
     return;
   }
 
-  await fetch(req.url, { signal: abortController.signal })
+  const init: RequestInit = { signal: abortController.signal };
+  // Partial fetch: PMTiles (and any future range-based source) sets a byte
+  // range on the request. `!= null` is intentional so a 0n offset (the header
+  // bootstrap read) is still treated as present.
+  if (req.offset != null && req.length != null) {
+    const end = req.offset + req.length - 1n;
+    init.headers = { Range: `bytes=${req.offset}-${end}` };
+  }
+
+  await fetch(req.url, init)
     .then((res) => {
+      // A successful range request returns 206 Partial Content, which is in
+      // the ok range (200-299), so this guard handles both 200 and 206.
       if (!res.ok) throw new Error();
       return res.arrayBuffer();
     })

@@ -951,6 +951,7 @@ mod raster_tile_tests {
             extension: DataRequesterExtension::Png,
             status,
             managed_by_data_manager: false,
+            byte_range: None,
         }
     }
 
