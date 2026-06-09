@@ -152,7 +152,6 @@ pub fn traverse_tile(
     let were_children_rendered = tile.were_children_rendered;
     tile.were_children_rendered = false;
 
-    // Check only if terrain is exist.
     let is_over_min_z = if has_regular_tiles {
         tiles
             .iter()

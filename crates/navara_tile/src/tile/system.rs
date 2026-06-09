@@ -16,6 +16,7 @@ use navara_math::{FloatType, Transform};
 use navara_mesh::{CachedMeshHandle, Mesh, MeshBundle, ObjectBundle};
 use navara_occluder::ellipsoidal_occluder::EllipsoidalOccluder;
 
+use crate::hillshade::HillshadeNeedsUpdate;
 use navara_camera::{CameraFrustum, CameraMarker};
 use navara_tile_component::{
     ChangedTileTerrainDataRequesterQuery, ChangedTileTextureFragmentQuery, RasterTile,
@@ -915,6 +916,7 @@ pub fn delete_layer(
 
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn update_mesh_material(
+    mut commands: Commands,
     tc: ResMut<TileCacheManager>,
     qt: ResMut<RasterTileQuadtree>,
     rendered_tiles: Query<(&RenderedTile, &OrderByDistance), With<Rendered>>,
@@ -942,16 +944,19 @@ pub fn update_mesh_material(
         ),
         Without<Deleted>,
     >,
+    hillshade_needs_update: Query<Entity, With<HillshadeNeedsUpdate>>,
 ) {
     let are_tile_layers_updated = !tile_layers.p1().is_empty();
     let are_tile_layers_removed = !tile_layers.p2().is_empty();
     let are_texture_fragments_updated = !texture_fragment.p1().is_empty();
     let are_data_requesters_updated = !data_requesters.p1().is_empty();
+    let has_hillshade_needs_update = !hillshade_needs_update.is_empty();
 
     if !are_tile_layers_updated
         && !are_texture_fragments_updated
         && !are_tile_layers_removed
         && !are_data_requesters_updated
+        && !has_hillshade_needs_update
     {
         return;
     }
@@ -1145,6 +1150,18 @@ pub fn update_mesh_material(
             needs_update = true;
         }
 
+        // Force update if any hillshade entity has HillshadeNeedsUpdate marker
+        if !needs_update && let Some(hill_ids) = &tile.hillshade_entity_ids {
+            for &entity_opt in hill_ids.iter() {
+                if let Some(entity) = entity_opt
+                    && hillshade_needs_update.contains(entity)
+                {
+                    needs_update = true;
+                    break;
+                }
+            }
+        }
+
         if !needs_update {
             continue;
         }
@@ -1175,6 +1192,17 @@ pub fn update_mesh_material(
         appearance.is_hillshades = is_hillshades;
         appearance.hillshade_config = hillshade_config;
         appearance.hillshade_uv_transforms = hillshade_uv_transforms;
+
+        // Remove HillshadeNeedsUpdate marker from hillshade entities that were just processed
+        if let Some(hill_ids) = &tile.hillshade_entity_ids {
+            for &entity_opt in hill_ids.iter() {
+                if let Some(entity) = entity_opt
+                    && hillshade_needs_update.contains(entity)
+                {
+                    commands.entity(entity).remove::<HillshadeNeedsUpdate>();
+                }
+            }
+        }
     }
 }
 
