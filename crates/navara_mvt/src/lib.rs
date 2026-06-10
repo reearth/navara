@@ -46,6 +46,16 @@ impl Plugin for MvtPlugin {
             PostUpdate,
             send_data_request_events_with_priority_and_sort::<pmtiles_source::PmtilesMetaOrder>
                 .in_set(DataRequesterSet::PrioritizeRequests),
+        )
+        // Dispatch MVT/PMTiles tile payload fetches nearest-first too. Without
+        // this, tile requests carry an `OrderByDistance` that only the
+        // backpressure filter reads — the byte-range fetches themselves went out
+        // in arbitrary spawn order, so view-center tiles could queue behind
+        // peripheral ones under the single-archive-URL connection limit.
+        .add_systems(
+            PostUpdate,
+            send_data_request_events_with_priority_and_sort::<data_requester::MvtTileOrder>
+                .in_set(DataRequesterSet::PrioritizeRequests),
         );
     }
 }

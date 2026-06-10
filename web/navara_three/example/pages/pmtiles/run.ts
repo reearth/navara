@@ -31,14 +31,14 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   });
 
   // The sample archive covers Florence, Italy.
-  view.setCamera({
-    lng: 11.2558,
-    lat: 43.7696,
-    height: 9000,
-    heading: 0,
-    pitch: -55,
-    roll: 0,
-  });
+  // view.setCamera({
+  //   lng: 11.2558,
+  //   lat: 43.7696,
+  //   height: 9000,
+  //   heading: 0,
+  //   pitch: -55,
+  //   roll: 0,
+  // });
 
   // A plain ellipsoid surface to drape the clamp-to-ground vectors onto (this
   // example has no terrain/raster base of its own).
