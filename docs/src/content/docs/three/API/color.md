@@ -331,7 +331,8 @@ view.globe.color = new Color().setStyle("#1a1a2e");
 ### Usage with Lights
 
 ```typescript
-import ThreeView, { SunLightDesc, Color } from "@navara/three";
+import ThreeView, { Color } from "@navara/three";
+import { SunLightDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
 await view.init();

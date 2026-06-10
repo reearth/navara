@@ -58,7 +58,8 @@ view.toneMappingExposure = 10;
 ### 異なるトーンマッピングモードの使用
 
 ```typescript
-import ThreeView, { ToneMappingEffectDesc, ToneMappingMode } from "@navara/three";
+import ThreeView from "@navara/three";
+import { ToneMappingEffectDesc, ToneMappingMode } from "@navara/three_default_descs";
 
 const view = new ThreeView();
 await view.init();
@@ -88,7 +89,8 @@ view.addEffect<ToneMappingEffectDesc>({
 ### 露出調整と組み合わせた使用
 
 ```typescript
-import ThreeView, { ToneMappingMode } from "@navara/three";
+import ThreeView from "@navara/three";
+import { ToneMappingMode } from "@navara/three_default_descs";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
@@ -116,7 +118,8 @@ view.toneMappingExposure = 5;
 ### 個別にトーンマッピングDescriptorを追加
 
 ```typescript
-import ThreeView, { ToneMappingEffectDesc, SMAAEffectDesc, ToneMappingMode } from "@navara/three";
+import ThreeView from "@navara/three";
+import { ToneMappingEffectDesc, SMAAEffectDesc, ToneMappingMode } from "@navara/three_default_descs";
 
 const view = new ThreeView();
 await view.init();

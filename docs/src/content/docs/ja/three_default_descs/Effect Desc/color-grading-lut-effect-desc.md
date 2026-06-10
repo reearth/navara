@@ -104,7 +104,8 @@ sidebar:
 ### 基本的なカラーグレーディングの追加
 
 ```typescript
-import ThreeView, { ColorGradingLUTEffectDesc } from "@navara/three";
+import ThreeView from "@navara/three";
+import { ColorGradingLUTEffectDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
 await view.init();
@@ -118,7 +119,8 @@ const colorGradingDesc = view.addEffect<ColorGradingLUTEffectDesc>({
 ### カスタムLUTを使用したカラーグレーディング
 
 ```typescript
-import ThreeView, { ColorGradingLUTEffectDesc } from "@navara/three";
+import ThreeView from "@navara/three";
+import { ColorGradingLUTEffectDesc } from "@navara/three_default_descs";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
@@ -142,7 +144,8 @@ const colorGradingDesc = view.addEffect<ColorGradingLUTEffectDesc>({
 ### カラーグレーディングの動的更新
 
 ```typescript
-import ThreeView, { ColorGradingLUTEffectDesc } from "@navara/three";
+import ThreeView from "@navara/three";
+import { ColorGradingLUTEffectDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
 await view.init();

@@ -122,7 +122,7 @@ NASA の Earth at Night 画像を XYZ タイル形式に変換する必要があ
 `GlowGlobeMeshDesc` を使うと、地球の周りに美しいグローエフェクトを追加できます。
 
 ```typescript
-import type { GlowGlobeMeshDesc } from "@navara/three";
+import type { GlowGlobeMeshDesc } from "@navara/three_default_descs";
 
 // 地球のグローエフェクトを追加
 view.addMesh<GlowGlobeMeshDesc>({
@@ -255,7 +255,7 @@ const arcLines = data.features.map((feature) => {
 作成したアーチライン定義をメッシュとして追加します。
 
 ```typescript
-import type { ArclineMeshDesc } from "@navara/three";
+import type { ArclineMeshDesc } from "@navara/three_default_descs";
 
 const arcLineHandle = view.addMesh<ArclineMeshDesc>({
   arcLines,

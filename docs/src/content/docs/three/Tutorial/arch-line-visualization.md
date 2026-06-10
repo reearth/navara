@@ -122,7 +122,7 @@ You need to convert NASA Earth at Night imagery to XYZ tile format. Download fro
 Using `GlowGlobeMeshDesc`, you can add a beautiful glow effect around the globe.
 
 ```typescript
-import type { GlowGlobeMeshDesc } from "@navara/three";
+import type { GlowGlobeMeshDesc } from "@navara/three_default_descs";
 
 // Add globe glow effect
 view.addMesh<GlowGlobeMeshDesc>({
@@ -255,7 +255,7 @@ For details on `ColorMap` class methods (`linear()`, `quantize()`, etc.), see th
 Add the arch line definitions as an object.
 
 ```typescript
-import type { ArclineMeshDesc } from "@navara/three";
+import type { ArclineMeshDesc } from "@navara/three_default_descs";
 
 const arcLineHandle = view.addMesh<ArclineMeshDesc>({
   arcLines,
