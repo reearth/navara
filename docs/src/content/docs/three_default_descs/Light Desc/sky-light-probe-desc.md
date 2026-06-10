@@ -77,7 +77,8 @@ The only property that can be changed via the `update()` method after Descriptor
 ### Basic Usage
 
 ```typescript
-import ThreeView, { SkyLightProbeDesc } from "@navara/three";
+import ThreeView from "@navara/three";
+import { SkyLightProbeDesc } from "@navara/three_default_descs";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();

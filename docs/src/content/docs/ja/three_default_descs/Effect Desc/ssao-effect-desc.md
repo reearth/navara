@@ -132,7 +132,8 @@ import { Color } from "@navara/three";
 ### 基本的なSSAOエフェクトの追加
 
 ```typescript
-import ThreeView, { SSAOEffectDesc } from "@navara/three";
+import ThreeView from "@navara/three";
+import { SSAOEffectDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
 await view.init();
@@ -147,7 +148,8 @@ const ssaoDesc = view.addEffect<SSAOEffectDesc>({
 ### 高品質SSAOの設定
 
 ```typescript
-import ThreeView, { SSAOEffectDesc, Color } from "@navara/three";
+import ThreeView, { Color } from "@navara/three";
+import { SSAOEffectDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
 await view.init();
@@ -168,7 +170,8 @@ const ssaoDesc = view.addEffect<SSAOEffectDesc>({
 ### パフォーマンス重視のSSAO設定
 
 ```typescript
-import ThreeView, { SSAOEffectDesc } from "@navara/three";
+import ThreeView from "@navara/three";
+import { SSAOEffectDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
 await view.init();
@@ -186,7 +189,8 @@ const ssaoDesc = view.addEffect<SSAOEffectDesc>({
 ### デフォルトエフェクトと組み合わせた使用
 
 ```typescript
-import ThreeView, { SSAOEffectDesc, Color } from "@navara/three";
+import ThreeView, { Color } from "@navara/three";
+import { SSAOEffectDesc } from "@navara/three_default_descs";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();

@@ -292,7 +292,8 @@ sidebar:
 ### 基本的な雨粒エフェクトの追加
 
 ```typescript
-import ThreeView, { RainDropEffectDesc } from "@navara/three";
+import ThreeView from "@navara/three";
+import { RainDropEffectDesc } from "@navara/three_default_descs";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();

@@ -27,7 +27,8 @@ The `FXAAEffectDesc` class is a Descriptor that applies the FXAA (Fast Approxima
 ### Enabling FXAA anti-aliasing
 
 ```typescript
-import ThreeView, { FXAAEffectDesc } from "@navara/three";
+import ThreeView from "@navara/three";
+import { FXAAEffectDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
 await view.init();

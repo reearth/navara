@@ -60,7 +60,8 @@ sidebar:
 ## 使用例
 
 ```typescript
-import ThreeView, { ArrowHelperDesc, Color } from "@navara/three";
+import ThreeView, { Color } from "@navara/three";
+import { ArrowHelperDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
 await view.init();

@@ -187,7 +187,8 @@ const cubeDesc = view.addMesh<BoxMeshDesc>({
 ### 強いブルームエフェクト
 
 ```typescript
-import ThreeView, { SelectiveBloomEffectDesc } from "@navara/three";
+import ThreeView from "@navara/three";
+import { SelectiveBloomEffectDesc } from "@navara/three_default_descs";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
@@ -211,7 +212,8 @@ const bloomDesc = view.addEffect<SelectiveBloomEffectDesc>({
 ### パフォーマンス重視の設定
 
 ```typescript
-import ThreeView, { SelectiveBloomEffectDesc } from "@navara/three";
+import ThreeView from "@navara/three";
+import { SelectiveBloomEffectDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
 await view.init();
@@ -230,7 +232,8 @@ const bloomDesc = view.addEffect<SelectiveBloomEffectDesc>({
 ### ブルームエフェクトの動的更新
 
 ```typescript
-import ThreeView, { SelectiveBloomEffectDesc } from "@navara/three";
+import ThreeView from "@navara/three";
+import { SelectiveBloomEffectDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
 await view.init();
@@ -253,7 +256,8 @@ bloomDesc.update({
 ### 3D Tiles へのブルーム適用
 
 ```typescript
-import ThreeView, { SelectiveBloomEffectDesc, Color } from "@navara/three";
+import ThreeView, { Color } from "@navara/three";
+import { SelectiveBloomEffectDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
 await view.init();
@@ -285,7 +289,8 @@ const buildingsLayer = view.addLayer({
 ### GeoJSON モデルへのブルーム適用
 
 ```typescript
-import ThreeView, { SelectiveBloomEffectDesc, Color } from "@navara/three";
+import ThreeView, { Color } from "@navara/three";
+import { SelectiveBloomEffectDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
 await view.init();

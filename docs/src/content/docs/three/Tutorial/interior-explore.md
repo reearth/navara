@@ -117,6 +117,23 @@ view.addLayer({
   type: "tiles",
   data: {
     // Credit:
+    // - Geospatial Information Authority of Japan Tiles - Digital Elevation Map
+    //   https://maps.gsi.go.jp/development/ichiran.html
+    url: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
+  },
+  rasterTile: {
+    minZoom: 6,
+    maxZoom: 15,
+  },
+  hillshade: {
+    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+  },
+});
+
+view.addLayer({
+  type: "tiles",
+  data: {
+    // Credit:
     // - Geospatial Information Authority of Japan Tiles - Latest Nationwide Photo (Seamless)
     //   https://maps.gsi.go.jp/development/ichiran.html
     url: "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg",
@@ -274,6 +291,23 @@ view.addLayer({
     castShadow: true,
     receiveShadow: true,
     skirt: false,
+  },
+});
+
+view.addLayer({
+  type: "tiles",
+  data: {
+    // Credit:
+    // - Geospatial Information Authority of Japan Tiles - Digital Elevation Map
+    //   https://maps.gsi.go.jp/development/ichiran.html
+    url: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
+  },
+  rasterTile: {
+    minZoom: 6,
+    maxZoom: 15,
+  },
+  hillshade: {
+    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
   },
 });
 

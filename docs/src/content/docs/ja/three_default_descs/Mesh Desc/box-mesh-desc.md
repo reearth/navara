@@ -299,7 +299,8 @@ import { Color } from "@navara/three";
 ### 基本的な使い方
 
 ```typescript
-import ThreeView, { BoxMeshDesc, Color } from "@navara/three";
+import ThreeView, { Color } from "@navara/three";
+import { BoxMeshDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
 await view.init();
@@ -319,7 +320,8 @@ const boxDesc = view.addMesh<BoxMeshDesc>({
 ### 影付き立方体
 
 ```typescript
-import ThreeView, { BoxMeshDesc, Color } from "@navara/three";
+import ThreeView, { Color } from "@navara/three";
+import { BoxMeshDesc } from "@navara/three_default_descs";
 
 const boxDesc = view.addMesh<BoxMeshDesc>({
   box: {
@@ -337,7 +339,8 @@ const boxDesc = view.addMesh<BoxMeshDesc>({
 ### 半透明の立方体
 
 ```typescript
-import ThreeView, { BoxMeshDesc, Color } from "@navara/three";
+import ThreeView, { Color } from "@navara/three";
+import { BoxMeshDesc } from "@navara/three_default_descs";
 
 const boxDesc = view.addMesh<BoxMeshDesc>({
   box: {

@@ -330,7 +330,8 @@ import { Color } from "@navara/three";
 ### 基本的な円柱
 
 ```typescript
-import ThreeView, { CylinderMeshDesc, Color } from "@navara/three";
+import ThreeView, { Color } from "@navara/three";
+import { CylinderMeshDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
 await view.init();
@@ -350,7 +351,8 @@ const cylinderDesc = view.addMesh<CylinderMeshDesc>({
 ### 円錐の作成
 
 ```typescript
-import ThreeView, { CylinderMeshDesc, Color } from "@navara/three";
+import ThreeView, { Color } from "@navara/three";
+import { CylinderMeshDesc } from "@navara/three_default_descs";
 
 const coneDesc = view.addMesh<CylinderMeshDesc>({
   cylinder: {

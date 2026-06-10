@@ -113,7 +113,8 @@ If both `sh` and `coefficients` are specified, `coefficients` takes precedence.
 ### Basic Usage (Night Scene)
 
 ```typescript
-import ThreeView, { LightProbeDesc } from "@navara/three";
+import ThreeView from "@navara/three";
+import { LightProbeDesc } from "@navara/three_default_descs";
 import * as THREE from "three";
 
 const view = new ThreeView();
