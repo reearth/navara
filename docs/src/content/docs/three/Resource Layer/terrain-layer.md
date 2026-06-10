@@ -95,7 +95,63 @@ const terrainLayer = view.addLayer({
 For details on pre-defined decoder constants, see [RasterTerrainMaterial](../../../three/resource-layer-reference/raster-terrain-material/#pre-defined-constants).
 :::
 
+### Combined Use with Hillshade
+
+Combining a Terrain layer with a [Hillshade](../../../three/resource-layer-reference/hillshade-material/) layer produces shaded relief on top of the actual 3D surface: the Terrain layer provides the geometry, while the Hillshade layer adds shading driven by elevation gradients. Reusing the same DEM URL for both layers ensures the geometry and shading stay consistent.
+
+```typescript
+import ThreeView, { TERRARIUM_ELEVATION_DECODER } from "@navara/three";
+
+const view = new ThreeView(/* options */);
+await view.init();
+
+const TERRAIN_URL =
+  "https://example.com/elevation-tiles/terrarium/{z}/{x}/{y}.png";
+
+// Base raster tile layer
+view.addLayer({
+  type: "tiles",
+  data: {
+    url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+  },
+  rasterTile: {
+    maxZoom: 23,
+  },
+});
+
+// 3D terrain layer (provides geometry)
+view.addLayer({
+  type: "terrain",
+  data: {
+    url: TERRAIN_URL,
+  },
+  rasterTerrain: {
+    maxZoom: 15,
+    minZoom: 5,
+    elevationDecoder: TERRARIUM_ELEVATION_DECODER(),
+    tileSize: 512,
+  },
+});
+
+// Hillshade layer (adds shaded relief on top of the terrain)
+view.addLayer({
+  type: "tiles",
+  data: {
+    url: TERRAIN_URL,
+  },
+  rasterTile: {
+    maxZoom: 17,
+    minZoom: 5,
+  },
+  hillshade: {
+    elevationDecoder: TERRARIUM_ELEVATION_DECODER(),
+    exaggeration: 0.5,
+  },
+});
+```
+
 ## Related Resources
 
 - [Tile Layer](../../../three/resource-layer-reference/tile-layer/) - Display raster tiles
 - [RasterTerrainMaterial](../../../three/resource-layer-reference/raster-terrain-material/) - Detailed terrain material settings
+- [HillshadeMaterial](../../../three/resource-layer-reference/hillshade-material/) - Combine 3D terrain with hillshade rendering
