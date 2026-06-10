@@ -97,7 +97,7 @@ const terrainLayer = view.addLayer({
 
 ### ヒルシェードと組み合わせた使用
 
-Terrain レイヤーを[ヒルシェード](../../../three/resource-layer-reference/hillshade-material/)と組み合わせると、実際の 3D 地表の上に陰影起伏を重ねて描画できます。Terrain レイヤーがジオメトリを提供し、Hillshade レイヤーが標高勾配に基づく陰影を追加します。両方のレイヤーで同じ DEM の URL を使用することで、ジオメトリと陰影の整合性が保たれます。
+Terrain レイヤーを[ヒルシェード](../../../three/resource-layer/hillshade-material/)と組み合わせると、実際の 3D 地表の上に陰影起伏を重ねて描画できます。Terrain レイヤーがジオメトリを提供し、Hillshade レイヤーが標高勾配に基づく陰影を追加します。両方のレイヤーで同じ DEM の URL を使用することで、ジオメトリと陰影の整合性が保たれます。
 
 ```typescript
 import ThreeView, { TERRARIUM_ELEVATION_DECODER } from "@navara/three";
