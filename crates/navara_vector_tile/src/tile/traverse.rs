@@ -172,6 +172,10 @@ pub fn traverse_tile(
 
         if !meets_sse_ancestors {
             let tile = qt.qt.get_mut(handle).unwrap();
+            // This tile meets SSE — it's the resolution actually being viewed, so
+            // it outranks coarse ancestors (requested at `Low` below). Otherwise
+            // the multi-MB overview tiles win both backpressure and dispatch and
+            // starve the tiles on screen.
             source.prepare_tile(
                 command,
                 tile,
@@ -179,7 +183,7 @@ pub fn traverse_tile(
                 tc,
                 buf,
                 data_requesters,
-                Priority::Low,
+                Priority::Medium,
             );
         }
 
@@ -439,6 +443,10 @@ pub fn traverse_tile(
         }
 
         let tile = qt.qt.get_mut(handle).unwrap();
+        // This tile does not meet SSE — it's a coarse ancestor fetched only as a
+        // placeholder while finer tiles load, so it sorts below the on-screen
+        // (SSE-meeting) tiles above. Under the in-flight cap it's also the first
+        // to be dropped, which is what we want.
         source.prepare_tile(
             command,
             tile,
@@ -446,7 +454,7 @@ pub fn traverse_tile(
             tc,
             buf,
             data_requesters,
-            Priority::Medium,
+            Priority::Low,
         );
 
         return TraversalResult::NotFound;
