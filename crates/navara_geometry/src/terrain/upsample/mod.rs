@@ -17,6 +17,8 @@ pub struct UpsamplableTerrainGeometry<'a> {
     pub uvs: &'a [f32],
     pub heights: &'a [f32],
     pub indices: &'a [u32],
+    /// Optional per-vertex normals from the parent (stride 3).
+    pub normals: Option<&'a [f32]>,
 }
 
 /// Upsample a terrain mesh which is one of the four split child tiles.
@@ -29,6 +31,7 @@ pub struct UpsampledTerrainGeometry {
     pub uvs: Option<Vec<FloatType>>,
     pub heights: Option<Vec<f32>>,
     pub indices: Option<Vec<u32>>,
+    pub normals: Option<Vec<f32>>,
     pub max_height: FloatType,
     pub min_height: FloatType,
     is_east: bool,
@@ -40,6 +43,7 @@ impl UpsampledTerrainGeometry {
         let uvs = &upsamplable_geometry.uvs;
         let heights = &upsamplable_geometry.heights;
         let indices = &upsamplable_geometry.indices;
+        let normals = upsamplable_geometry.normals;
 
         let (is_east, is_north) = match tile_region {
             TileRegion::NorthEast => (true, true),
@@ -48,13 +52,14 @@ impl UpsampledTerrainGeometry {
             TileRegion::NorthWest => (false, true),
         };
 
-        let (new_uvs, new_heights, new_indices, max_height, min_height) =
-            clip(uvs, heights, indices, is_east, is_north);
+        let (new_uvs, new_heights, new_normals, new_indices, max_height, min_height) =
+            clip(uvs, heights, normals, indices, is_east, is_north);
 
         Self {
             uvs: Some(new_uvs),
             heights: Some(new_heights),
             indices: Some(new_indices),
+            normals: new_normals,
             max_height,
             min_height,
             is_east,
@@ -108,6 +113,7 @@ impl UpsampledTerrainGeometry {
                 vertices,
                 uvs,
                 indices: self.indices.take().unwrap(),
+                normals: self.normals.take(),
                 ..Default::default()
             },
             heights,
@@ -116,23 +122,33 @@ impl UpsampledTerrainGeometry {
 }
 
 // TODO: Execute this function in worker
+#[allow(clippy::type_complexity)]
 fn clip(
     uvs: &[f32],
     heights: &[f32],
+    normals: Option<&[f32]>,
     indices: &[u32],
     is_east: bool,
     is_north: bool,
-) -> (Vec<f64>, Vec<f32>, Vec<u32>, f64, f64) {
+) -> (Vec<f64>, Vec<f32>, Option<Vec<f32>>, Vec<u32>, f64, f64) {
     let threashold = 0.5;
 
     let mut clipped_coord_map = ClippedCoordMap::new();
 
     let mut new_uvs = vec![];
     let mut new_heights = vec![];
+    let mut new_normals: Option<Vec<f32>> = normals.map(|_| Vec::new());
     let mut new_indices = vec![];
 
     let mut max_height = 0.0;
     let mut min_height = 99999.0;
+
+    let read_normal = |idx: u32| -> Option<[f64; 3]> {
+        normals.map(|src| {
+            let base = idx as usize * 3;
+            [src[base] as f64, src[base + 1] as f64, src[base + 2] as f64]
+        })
+    };
 
     for polygon_indices in indices.chunks(3) {
         let [u0, v0] = [
@@ -156,6 +172,16 @@ fn clip(
         let origin_v_coords = [v0 as f64, v1 as f64, v2 as f64];
         let origin_h_coords = [h0 as f64, h1 as f64, h2 as f64];
 
+        let origin_normals = read_normal(polygon_indices[0]).map(|n0| {
+            let n1 = read_normal(polygon_indices[1]).unwrap();
+            let n2 = read_normal(polygon_indices[2]).unwrap();
+            [
+                [n0[0], n1[0], n2[0]],
+                [n0[1], n1[1], n2[1]],
+                [n0[2], n1[2], n2[2]],
+            ]
+        });
+
         let clipped_u_indices =
             clip_2d_triangle_at_threshold(threashold, is_east, &origin_u_coords);
         if clipped_u_indices.is_empty() {
@@ -177,6 +203,25 @@ fn clip(
             clipped_u_indices[1].interpolate(&origin_h_coords),
             clipped_u_indices[2].interpolate(&origin_h_coords),
         ];
+        let interpolated_normals = origin_normals.map(|comps| {
+            [
+                [
+                    clipped_u_indices[0].interpolate(&comps[0]),
+                    clipped_u_indices[1].interpolate(&comps[0]),
+                    clipped_u_indices[2].interpolate(&comps[0]),
+                ],
+                [
+                    clipped_u_indices[0].interpolate(&comps[1]),
+                    clipped_u_indices[1].interpolate(&comps[1]),
+                    clipped_u_indices[2].interpolate(&comps[1]),
+                ],
+                [
+                    clipped_u_indices[0].interpolate(&comps[2]),
+                    clipped_u_indices[1].interpolate(&comps[2]),
+                    clipped_u_indices[2].interpolate(&comps[2]),
+                ],
+            ]
+        });
 
         let clipped_transformed_v_indices =
             clip_2d_triangle_at_threshold(threashold, is_north, &interpolated_v_coords);
@@ -188,12 +233,14 @@ fn clip(
             &clipped_transformed_v_indices,
             &mut new_uvs,
             &mut new_heights,
+            new_normals.as_mut(),
             &mut new_indices,
             [
                 interpolated_u_coords,
                 interpolated_v_coords,
                 interpolated_h_coords,
             ],
+            interpolated_normals,
             &mut clipped_coord_map,
             (&mut max_height, &mut min_height),
         );
@@ -214,6 +261,25 @@ fn clip(
                 interpolated_h_coords[2],
                 clipped_u_indices[3].interpolate(&origin_h_coords),
             ];
+            let interpolated_normals2 = origin_normals.map(|comps| {
+                [
+                    [
+                        interpolated_normals.as_ref().unwrap()[0][0],
+                        interpolated_normals.as_ref().unwrap()[0][2],
+                        clipped_u_indices[3].interpolate(&comps[0]),
+                    ],
+                    [
+                        interpolated_normals.as_ref().unwrap()[1][0],
+                        interpolated_normals.as_ref().unwrap()[1][2],
+                        clipped_u_indices[3].interpolate(&comps[1]),
+                    ],
+                    [
+                        interpolated_normals.as_ref().unwrap()[2][0],
+                        interpolated_normals.as_ref().unwrap()[2][2],
+                        clipped_u_indices[3].interpolate(&comps[2]),
+                    ],
+                ]
+            });
 
             let clipped_transformed_v_indices =
                 clip_2d_triangle_at_threshold(threashold, is_north, &interpolated_v_coords);
@@ -225,35 +291,48 @@ fn clip(
                 &clipped_transformed_v_indices,
                 &mut new_uvs,
                 &mut new_heights,
+                new_normals.as_mut(),
                 &mut new_indices,
                 [
                     interpolated_u_coords,
                     interpolated_v_coords,
                     interpolated_h_coords,
                 ],
+                interpolated_normals2,
                 &mut clipped_coord_map,
                 (&mut max_height, &mut min_height),
             );
         }
     }
 
-    (new_uvs, new_heights, new_indices, max_height, min_height)
+    (
+        new_uvs,
+        new_heights,
+        new_normals,
+        new_indices,
+        max_height,
+        min_height,
+    )
 }
 
+#[allow(clippy::too_many_arguments)]
 fn construct_polygon(
     clipped_indices: &[ClippedIndex],
     new_uvs: &mut Vec<FloatType>,
     new_heights: &mut Vec<f32>,
+    new_normals: Option<&mut Vec<f32>>,
     new_indices: &mut Vec<u32>,
     [
         interpolated_u_coords,
         interpolated_v_coords,
         interpolated_h_coords,
     ]: [[FloatType; 3]; 3],
+    interpolated_normal_coords: Option<[[FloatType; 3]; 3]>,
     clipped_coord_map: &mut ClippedCoordMap,
     (max_height, min_height): (&mut FloatType, &mut FloatType),
 ) {
     let mut new_polygon_indices = vec![];
+    let mut new_normals = new_normals;
     for i in clipped_indices {
         let new_index = new_uvs.len() / 2;
         let u = i.interpolate(&interpolated_u_coords);
@@ -268,6 +347,24 @@ fn construct_polygon(
             new_uvs.push(u);
             new_uvs.push(v);
             new_heights.push(h as f32);
+
+            if let (Some(dst), Some(comps)) =
+                (new_normals.as_deref_mut(), interpolated_normal_coords)
+            {
+                let nx = i.interpolate(&comps[0]);
+                let ny = i.interpolate(&comps[1]);
+                let nz = i.interpolate(&comps[2]);
+                let len = (nx * nx + ny * ny + nz * nz).sqrt();
+                if len > 0.0 {
+                    dst.push((nx / len) as f32);
+                    dst.push((ny / len) as f32);
+                    dst.push((nz / len) as f32);
+                } else {
+                    dst.push(0.0);
+                    dst.push(0.0);
+                    dst.push(1.0);
+                }
+            }
 
             new_index
         };
@@ -382,6 +479,7 @@ mod test {
                 uvs: &uvs,
                 heights: &heights,
                 indices: &indices,
+                normals: None,
             },
             &TileRegion::SouthWest,
         );
@@ -390,6 +488,7 @@ mod test {
                 uvs: &uvs,
                 heights: &heights,
                 indices: &indices,
+                normals: None,
             },
             &TileRegion::SouthEast,
         );
@@ -451,6 +550,7 @@ mod test {
                 uvs: &uvs,
                 heights: &heights,
                 indices: &indices,
+                normals: None,
             },
             &TileRegion::NorthEast,
         );
@@ -487,6 +587,7 @@ mod test {
                 uvs: &child_geom.uvs,
                 heights: &child_heights,
                 indices: &child_geom.indices,
+                normals: None,
             },
             &TileRegion::NorthEast,
         );
@@ -523,6 +624,7 @@ mod test {
                 uvs: &[0.1, 0.8, 0.4, 0.2, 0.8, 0.9],
                 heights: &[0., 50., 100.],
                 indices: &[0, 1, 2],
+                normals: None,
             },
             &TileRegion::NorthEast,
         );
@@ -553,6 +655,7 @@ mod test {
                 uvs: &[0., 1., 0., 0., 1., 0., 1., 1.],
                 heights: &[0., 50., 100., 50.],
                 indices: &[0, 1, 2, 0, 2, 3],
+                normals: None,
             },
             &TileRegion::NorthEast,
         );

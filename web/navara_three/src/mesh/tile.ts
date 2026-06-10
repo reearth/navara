@@ -413,6 +413,14 @@ export class TileMesh
       terrainGeometry.setAttribute("uv", new BufferAttribute(uv.slice(), 2));
     }
 
+    const normals = mesh.normals != null ? buf.f32(mesh.normals) : null;
+    if (normals) {
+      terrainGeometry.setAttribute(
+        "normal",
+        new BufferAttribute(normals.slice(), 3),
+      );
+    }
+
     terrainGeometry.setIndex(new BufferAttribute(indices.slice(), 1));
 
     const aabb_center = new Vector3(
@@ -432,7 +440,21 @@ export class TileMesh
       position,
       uv,
       indices,
+      normals,
     );
+
+    // Watermask: 1 byte = uniform, 65536 bytes = 256x256 grid. Stored for downstream consumers.
+    if (mesh.watermask != null) {
+      const watermask = buf.u8(mesh.watermask);
+      if (watermask) {
+        this.userData.watermask = {
+          data: watermask.slice(),
+          isUniform: watermask.length === 1,
+        };
+      }
+    }
+
+    this.userData.hasNormalAttribute = normals != null;
 
     geometry.boundingBox = new Box3(
       aabb_center.clone().sub(aabb_extent),
@@ -509,6 +531,7 @@ export class TileMesh
     position: Float32Array,
     uv: Float32Array | null,
     indices: Uint32Array,
+    normals: Float32Array | null,
   ) {
     const { buf } = this.ctx;
     // Check for separate skirt data
@@ -516,6 +539,7 @@ export class TileMesh
     const skirtIndicesHandle = mesh.skirt_indices;
     const skirtUvsHandle = mesh.skirt_uvs;
     const skirtIndicesToEdgeHandle = mesh.skirt_indices_to_edge;
+    const skirtNormalsHandle = mesh.skirt_normals;
 
     const hasSkirt = skirtVerticesHandle != null && skirtIndicesHandle != null;
     const skirtPosition =
@@ -527,6 +551,8 @@ export class TileMesh
       skirtIndicesToEdgeHandle != null
         ? buf.u32(skirtIndicesToEdgeHandle)
         : null;
+    const skirtNormals =
+      skirtNormalsHandle != null ? buf.f32(skirtNormalsHandle) : null;
 
     // Create combined geometry (terrain + skirt) for main rendering
     let geometry: BufferGeometry;
@@ -554,6 +580,21 @@ export class TileMesh
         geometry.setAttribute("uv", new BufferAttribute(combinedUv, 2));
       }
 
+      // Combine normals: terrain normals + skirt normals (computed in Rust as edge normals)
+      if (normals) {
+        const combinedNormals = new Float32Array(
+          normals.length + (skirtNormals?.length ?? 0),
+        );
+        combinedNormals.set(normals);
+        if (skirtNormals) {
+          combinedNormals.set(skirtNormals, normals.length);
+        }
+        geometry.setAttribute(
+          "normal",
+          new BufferAttribute(combinedNormals, 3),
+        );
+      }
+
       // Combine indices: terrain indices + skirt indices
       const combinedIndices = new Uint32Array(
         indices.length + (skirtIndices?.length ?? 0),
@@ -571,6 +612,9 @@ export class TileMesh
       if (skirtIndicesToEdge) {
         skirtIndicesToEdge.set([]);
       }
+      if (skirtNormals) {
+        skirtNormals.set([]);
+      }
     } else {
       // No skirt data - use terrain geometry directly
       geometry = terrainGeometry;
@@ -583,8 +627,25 @@ export class TileMesh
       uv.set([]);
       uv = null;
     }
+    if (normals) {
+      normals.set([]);
+    }
 
     return geometry;
+  }
+
+  private shouldUseNormal(
+    mat: Partial<RasterTileInternalMaterial> | RasterTileInternalMaterial,
+    globe: Globe,
+  ): boolean {
+    // Lambert (normal-based) shading is needed if any of these is true:
+    // 1. globe.useNormal is set
+    // 2. a per-vertex normal attribute is bound (e.g. quantized-mesh)
+    // 3. any hillshade slot is active
+    const hillshadeActive = !!mat.isHillshades?.some((v) => v !== 0);
+    return (
+      !!globe.useNormal || !!this.userData.hasNormalAttribute || hillshadeActive
+    );
   }
 
   private initMaterial(
@@ -592,10 +653,7 @@ export class TileMesh
     uniforms: CommonUniforms,
     globe: Globe,
   ): TileMaterial {
-    let useNormal = !!globe.useNormal;
-    if (_mat.isHillshades && _mat.isHillshades.length > 0) {
-      useNormal = _mat.isHillshades.some((v) => v !== 0);
-    }
+    const useNormal = this.shouldUseNormal(_mat, globe);
     const m = useNormal
       ? new MeshLambertMaterial({
           stencilWrite: false,
@@ -617,6 +675,9 @@ export class TileMesh
     m.userData.defines.USE_ELEVATION_HEATMAP = 0;
     m.userData.defines.USE_HILLSHADE = 0;
     m.userData.defines.USE_SELECTIVE_EFFECT = 1;
+    m.userData.defines.USE_VERTEX_NORMAL = this.userData.hasNormalAttribute
+      ? 1
+      : 0;
 
     m.envMap = uniforms.tSkyEnvMap.value ?? null;
     m.combine = AddOperation;
@@ -855,8 +916,12 @@ vUv = vUv * uScale + uOffset;
         .replaceWithCondition(
           "#include <normal_fragment_maps>",
           `
-  vec3 N = normalize(vPosition);
-  normal = normalize(mat3(viewMatrix) * N);
+  #if USE_VERTEX_NORMAL && !USE_HILLSHADE
+    // Keep the interpolated per-vertex normal (already in view space via three.js).
+  #else
+    vec3 N = normalize(vPosition);
+    normal = normalize(mat3(viewMatrix) * N);
+  #endif
 
   ${generateHillshadeNormalShader(maxTextures)}
 
@@ -1149,11 +1214,9 @@ if (uPickable > 0.) {
       scale: { x: number; y: number };
     },
   ): void {
-    // Determine if hillshade is present in the material configuration
-    const needsLambert =
-      mat.isHillshades && mat.isHillshades.length > 0
-        ? mat.isHillshades.some((v) => v !== 0)
-        : !!globe.useNormal;
+    // Same decision used by initMaterial — keeping them in sync avoids
+    // mid-session Lambert↔Basic flips that strip normal shading from some tiles.
+    const needsLambert = this.shouldUseNormal(mat, globe);
     const isLambert = this.material instanceof MeshLambertMaterial;
 
     if (needsLambert !== isLambert) {

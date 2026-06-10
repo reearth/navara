@@ -130,6 +130,33 @@ impl TerrainAppearance {
     pub fn geographic(&self) -> bool {
         self.crs().is_geographic()
     }
+
+    /// Whether the quantized-mesh server should be asked for the oct-encoded
+    /// per-vertex normals extension. Always false for non-quantized-mesh appearances.
+    pub fn request_vertex_normals(&self) -> bool {
+        match self {
+            TerrainAppearance::QuantizedMesh(mat) => mat.request_vertex_normals,
+            _ => false,
+        }
+    }
+
+    /// Whether the quantized-mesh server should be asked for the watermask
+    /// extension. Always false for non-quantized-mesh appearances.
+    pub fn request_water_mask(&self) -> bool {
+        match self {
+            TerrainAppearance::QuantizedMesh(mat) => mat.request_water_mask,
+            _ => false,
+        }
+    }
+
+    /// Bearer token sent as the `Authorization` header when fetching
+    /// `.terrain` tiles. Always `None` for non-quantized-mesh appearances.
+    pub fn token(&self) -> Option<&str> {
+        match self {
+            TerrainAppearance::QuantizedMesh(mat) => mat.token.as_deref(),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Default, Component)]

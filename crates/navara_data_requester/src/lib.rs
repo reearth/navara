@@ -85,6 +85,15 @@ pub struct DataRequester {
     /// If true, cleanup is handled via DataManager's refcounting.
     /// If false, handle cleanup is the responsibility of the owner.
     pub managed_by_data_manager: bool,
+    /// Quantized-mesh only: ask the server for oct-encoded per-vertex normals.
+    /// Adds `octvertexnormals` to the Accept header for `.terrain` requests.
+    pub request_vertex_normals: bool,
+    /// Quantized-mesh only: ask the server for the watermask extension.
+    /// Adds `watermask` to the Accept header for `.terrain` requests.
+    pub request_water_mask: bool,
+    /// Quantized-mesh only: bearer token sent as the `Authorization` header.
+    /// `None` means no Authorization header is added.
+    pub token: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -162,6 +171,9 @@ impl DataRequester {
             extension,
             status: DataRequesterStatus::default(),
             managed_by_data_manager: false,
+            request_vertex_normals: false,
+            request_water_mask: false,
+            token: None,
         }
     }
 
@@ -180,6 +192,9 @@ impl DataRequester {
             extension,
             status,
             managed_by_data_manager: true,
+            request_vertex_normals: false,
+            request_water_mask: false,
+            token: None,
         }
     }
 
@@ -189,6 +204,24 @@ impl DataRequester {
         extension: DataRequesterExtension,
     ) -> Self {
         Self::new(buf.new_handle(), url, extension)
+    }
+
+    /// Builder-style setter for quantized-mesh extension flags.
+    pub fn with_quantized_mesh_extensions(
+        mut self,
+        request_vertex_normals: bool,
+        request_water_mask: bool,
+    ) -> Self {
+        self.request_vertex_normals = request_vertex_normals;
+        self.request_water_mask = request_water_mask;
+        self
+    }
+
+    /// Builder-style setter for the bearer token used in the `Authorization`
+    /// header for `.terrain` requests.
+    pub fn with_token(mut self, token: Option<String>) -> Self {
+        self.token = token;
+        self
     }
 
     pub fn is_succeeded(&self) -> bool {

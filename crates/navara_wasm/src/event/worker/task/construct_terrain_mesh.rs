@@ -53,6 +53,7 @@ pub struct ConstructTerrainMeshResult {
     pub min_height: FloatType,
     pub max_height: FloatType,
     pub rtc_translation: Option<Vec3>,
+    pub watermask: Option<Handle>,
 }
 
 #[wasm_bindgen]
@@ -71,6 +72,7 @@ impl ConstructTerrainMeshResult {
             min_height,
             max_height,
             rtc_translation,
+            watermask: None,
         }
     }
 }
@@ -85,6 +87,7 @@ impl From<ConstructTerrainMeshResult>
             min_height: val.min_height,
             max_height: val.max_height,
             rtc_translation: val.rtc_translation.map(|r| r.into()),
+            watermask: val.watermask,
         }
     }
 }
@@ -100,6 +103,7 @@ impl<'a> From<&'a navara_worker::construct_terrain_mesh::ConstructTerrainMeshRes
             min_height: val.min_height,
             max_height: val.max_height,
             rtc_translation: val.rtc_translation.map(|r| r.into()),
+            watermask: val.watermask,
         }
     }
 }

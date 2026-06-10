@@ -63,6 +63,16 @@ pub(crate) fn request_terrain_data(
         };
         let extension = DataRequesterExtension::from_url(&url::Url::from_str(&url).unwrap());
 
+        let (request_vertex_normals, request_water_mask) = t
+            .appearance
+            .as_ref()
+            .map(|app| (app.request_vertex_normals(), app.request_water_mask()))
+            .unwrap_or((false, false));
+        let token = t
+            .appearance
+            .as_ref()
+            .and_then(|app| app.token().map(|s| s.to_string()));
+
         // Spawn entity first to get entity ID
         let entity_id = commands.spawn_empty().id();
 
@@ -90,7 +100,9 @@ pub(crate) fn request_terrain_data(
         let mut entity_commands = commands.entity(entity_id);
         entity_commands.insert((
             TerrainDataRequesterMarker(handle),
-            DataRequester::new_with_status(shared_handle, url, extension, initial_status),
+            DataRequester::new_with_status(shared_handle, url, extension, initial_status)
+                .with_quantized_mesh_extensions(request_vertex_normals, request_water_mask)
+                .with_token(token),
             OrderByDistance {
                 sse: tile.sse,
                 distance: tile.distance_from_camera,

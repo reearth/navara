@@ -7,7 +7,7 @@ use navara_core::{
 };
 use navara_data_requester::{DataRequester, DataRequesterStatus};
 use navara_geometry::{ReturnedConstructedTerrainMesh, UpsamplableTerrainGeometry};
-use navara_math::{EPSILON10, Vec3};
+use navara_math::{EPSILON6, Vec3};
 
 use navara_mesh::CachedMeshHandle;
 use navara_quadtree::Coords;
@@ -374,8 +374,8 @@ impl RasterTile {
         // magnitudes involved (~2.4 rad) `f64::EPSILON` is rounded away by the
         // subtraction, leaving an effectively-strict `>=` that miscategorises
         // tiles whose west edge sits exactly on the parent's mid line.
-        let lng_eps = (parent.extent.east.val() - parent.extent.west.val()).abs() * EPSILON10;
-        let lat_eps = (parent.extent.north.val() - parent.extent.south.val()).abs() * EPSILON10;
+        let lng_eps = (parent.extent.east.val() - parent.extent.west.val()).abs() * EPSILON6;
+        let lat_eps = (parent.extent.north.val() - parent.extent.south.val()).abs() * EPSILON6;
         let is_east = self.extent.west.val() >= mid_lng - lng_eps;
         let is_north = self.extent.south.val() >= mid_lat - lat_eps;
         Some(match (is_east, is_north) {
@@ -421,6 +421,7 @@ impl RasterTile {
             max_height: upsampled_mesh.max_height,
             min_height: upsampled_mesh.min_height,
             rtc_translation: Some(tile_center),
+            watermask: None,
         })
     }
 
@@ -895,6 +896,7 @@ mod test {
             indices: 0,
             uvs: 0,
             heights: None,
+            normals: None,
         });
         tile.terrain_data = Some(Box::new(RasterDEMData::default()));
     }
@@ -1050,6 +1052,9 @@ mod raster_tile_tests {
             extension: DataRequesterExtension::Png,
             status,
             managed_by_data_manager: false,
+            request_vertex_normals: false,
+            request_water_mask: false,
+            token: None,
         }
     }
 
@@ -1288,6 +1293,7 @@ mod raster_tile_tests {
                     indices: 0,
                     uvs: 0,
                     heights: Some(0),
+                    normals: None,
                 });
             }
 

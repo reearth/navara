@@ -464,7 +464,26 @@ async function processRequestedData(ctx: EventContext, req: DataRequestEvent) {
     return;
   }
 
-  await fetch(req.url, { signal: abortController.signal })
+  // Cesium-style quantized-mesh servers gate the normals/watermask extensions
+  // behind an explicit Accept header. Only opt in when the layer requested it
+  // — otherwise some servers refuse to respond, and we don't want to pay for
+  // bytes we won't use anyway.
+  const headers = (() => {
+    if (req.extension !== "terrain") {
+      return req.token ? { Authorization: `Bearer ${req.token}` } : undefined;
+    }
+    const exts: string[] = [];
+    if (req.requestVertexNormals) exts.push("octvertexnormals");
+    if (req.requestWaterMask) exts.push("watermask");
+    const accept = exts.length
+      ? `application/vnd.quantized-mesh;extensions=${exts.join("-")},application/vnd.quantized-mesh,*/*;q=0.01`
+      : "application/vnd.quantized-mesh,*/*;q=0.01";
+    const h: Record<string, string> = { Accept: accept };
+    if (req.token) h.Authorization = `Bearer ${req.token}`;
+    return h;
+  })();
+
+  await fetch(req.url, { signal: abortController.signal, headers })
     .then((res) => {
       if (!res.ok) throw new Error();
       return res.arrayBuffer();

@@ -1802,6 +1802,14 @@ pub struct QuantizedMeshTerrainMaterial {
     pub skirt_exaggeration: Option<f32>,
     pub tms: Option<bool>,
     pub geographic: Option<bool>,
+    #[wasm_bindgen(js_name = requestVertexNormals)]
+    #[serde(rename = "requestVertexNormals")]
+    pub request_vertex_normals: Option<bool>,
+    #[wasm_bindgen(js_name = requestWaterMask)]
+    #[serde(rename = "requestWaterMask")]
+    pub request_water_mask: Option<bool>,
+    #[wasm_bindgen(getter_with_clone)]
+    pub token: Option<String>,
 }
 
 impl From<QuantizedMeshTerrainMaterial> for navara_material::QuantizedMeshTerrainMaterial {
@@ -1829,6 +1837,11 @@ impl From<QuantizedMeshTerrainMaterial> for navara_material::QuantizedMeshTerrai
             } else {
                 TerrainCrs::WebMercator { tms }
             },
+            request_vertex_normals: val
+                .request_vertex_normals
+                .unwrap_or(default.request_vertex_normals),
+            request_water_mask: val.request_water_mask.unwrap_or(default.request_water_mask),
+            token: val.token.or(default.token),
         }
     }
 }
@@ -1849,6 +1862,9 @@ impl<'a> From<&'a navara_material::QuantizedMeshTerrainMaterial> for QuantizedMe
             skirt_exaggeration: Some(value.skirt_exaggeration),
             tms: Some(value.crs.tms()),
             geographic: Some(value.crs.is_geographic()),
+            request_vertex_normals: Some(value.request_vertex_normals),
+            request_water_mask: Some(value.request_water_mask),
+            token: value.token.clone(),
         }
     }
 }

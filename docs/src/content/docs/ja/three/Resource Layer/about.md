@@ -62,7 +62,7 @@ data: {
 ### [Terrain Layer](../../../three/resource-layer-reference/terrain-layer/)
 
 **用途:** 地形・標高データ用
-**対応マテリアル:** RasterTerrainMaterial
+**対応マテリアル:** RasterTerrainMaterial, QuantizedMeshTerrainMaterial
 
 ### [Tile Layer](../../../three/resource-layer-reference/tile-layer/)
 
@@ -108,6 +108,12 @@ data: {
 **用途:** ポリラインジオメトリレンダリング用
 **設定キー:** `polyline`
 **対応レイヤー:** GeoJSON Layer, MVT Layer
+
+### [QuantizedMeshTerrainMaterial](../../../three/resource-layer-reference/quantized-mesh-terrain-material/)
+
+**用途:** quantized-meshをレンダリングする
+**設定キー:** `quantizedMesh`
+**対応レイヤー:** Terrain Layer
 
 ### [RasterTerrainMaterial](../../../three/resource-layer-reference/raster-terrain-material/)
 

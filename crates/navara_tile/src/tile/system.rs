@@ -539,6 +539,7 @@ pub fn transfer_mesh(
                         indices: ihandle,
                         uvs: uvshandle,
                         heights: None,
+                        normals: None,
                     });
                 };
             }
@@ -563,11 +564,14 @@ pub fn transfer_mesh(
                                 .transform_point(tile_aabb.center),
                             extents: tile_aabb.extents,
                         },
-                        // Flat tiles don't have skirts
+                        // Flat tiles don't carry quantized-mesh normals or watermask.
+                        normals: None,
                         skirt_vertices: v_skirt_handle,
                         skirt_uvs: u_skirt_handle,
                         skirt_indices: i_skirt_handle,
                         skirt_indices_to_edge: e_skirt_handle,
+                        skirt_normals: None,
+                        watermask: None,
                     },
                     material: appearance,
                     object: ObjectBundle {
@@ -658,6 +662,7 @@ pub fn transfer_mesh(
                         indices: ihandle,
                         uvs: uvshandle,
                         heights: Some(heights_handle),
+                        normals: terrain_mesh_upsampler.geometry.normals,
                     });
                     t.upsampled = true;
                 };
@@ -683,12 +688,15 @@ pub fn transfer_mesh(
                                 .transform_point(tile_aabb.center),
                             extents: tile_aabb.extents,
                         },
+                        normals: terrain_mesh_upsampler.geometry.normals,
                         skirt_vertices: terrain_mesh_upsampler.geometry.skirt_vertices,
                         skirt_uvs: terrain_mesh_upsampler.geometry.skirt_uvs,
                         skirt_indices: terrain_mesh_upsampler.geometry.skirt_indices,
                         skirt_indices_to_edge: terrain_mesh_upsampler
                             .geometry
                             .skirt_indices_to_edge,
+                        skirt_normals: terrain_mesh_upsampler.geometry.skirt_normals,
+                        watermask: None,
                     },
                     material: appearance,
                     object: ObjectBundle {
@@ -761,6 +769,7 @@ pub fn transfer_mesh(
                     indices: ihandle,
                     uvs: uvshandle,
                     heights: Some(heights_handle),
+                    normals: terrain_mesh_constructor.geometry.normals,
                 })
             };
         }
@@ -785,10 +794,13 @@ pub fn transfer_mesh(
                             .transform_point(tile_aabb.center),
                         extents: tile_aabb.extents,
                     },
+                    normals: terrain_mesh_constructor.geometry.normals,
                     skirt_vertices: terrain_mesh_constructor.geometry.skirt_vertices,
                     skirt_uvs: terrain_mesh_constructor.geometry.skirt_uvs,
                     skirt_indices: terrain_mesh_constructor.geometry.skirt_indices,
                     skirt_indices_to_edge: terrain_mesh_constructor.geometry.skirt_indices_to_edge,
+                    skirt_normals: terrain_mesh_constructor.geometry.skirt_normals,
+                    watermask: terrain_mesh_constructor.watermask,
                 },
                 material: appearance,
                 object: ObjectBundle {

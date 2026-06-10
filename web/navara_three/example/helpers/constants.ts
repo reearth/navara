@@ -5,6 +5,12 @@ export type Dataset = {
   url: string;
   attribution?: string;
   attributionUrl?: string;
+  /**
+   * Optional logo image path. When provided, `showAttributions` renders it to
+   * the left of the collapsible attributions container — used to satisfy
+   * provider attribution requirements (Google Photoreal, Cesium Ion, etc.).
+   */
+  logo?: string;
 };
 
 /**
@@ -49,6 +55,14 @@ export const TERRAIN_DATASETS = {
     url: "https://terrain.reearth.land/cesium-mesh/ellipsoid/{z}/{x}/{y}.terrain",
     attribution: "© Re:Earth Terrain",
     attributionUrl: "https://reearth.io",
+  },
+  cesiumIon: {
+    // The URL is resolved at runtime via the Cesium Ion endpoint API; this
+    // constant exists so the dataset can be passed to `showAttributions`.
+    url: "https://api.cesium.com/v1/assets",
+    attribution: "© Cesium Ion",
+    attributionUrl: "https://cesium.com/legal/terms-of-service/",
+    logo: "/credits/CesiumIon.png",
   },
   mapbox: {
     url: `https://api.mapbox.com/v4/mapbox.terrain-rgb/{z}/{x}/{y}.webp?access_token=${
@@ -152,6 +166,7 @@ export const TILES_3D_DATASETS = {
   googlePhotorealTiles: {
     url: `https://tile.googleapis.com/v1/3dtiles/root.json`, // API key should be appended via query parameter, e.g. "https://tile.googleapis.com/v1/3dtiles/root.json?key=YOUR_API_KEY"
     attribution: "Google Maps Photorealistic 3D Tiles",
+    logo: "/credits/GoogleMaps.png",
   },
 } satisfies Record<string, Dataset>;
 

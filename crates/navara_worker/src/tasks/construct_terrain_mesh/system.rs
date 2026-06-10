@@ -86,12 +86,14 @@ pub(crate) fn construct_terrain_mesh(
                 .construct_terrain_mesh(WGS84_32, &ctx, bytes, 0., None)
         };
 
+        let watermask_handle = returned.watermask.map(|w| buf.new_u8(w));
         commands.entity(e).insert(ConstructTerrainMeshResult {
             geometry: TransferableGeometry::with_buf(&mut buf, returned.geometry),
             heights: buf.new_f32(returned.heights),
             max_height: returned.max_height,
             min_height: returned.min_height,
             rtc_translation: returned.rtc_translation,
+            watermask: watermask_handle,
         });
     }
 }

@@ -191,6 +191,7 @@ impl TerrainData for RasterDEMData {
             min_height,
             heights,
             rtc_translation: Some(tile_center),
+            watermask: None,
         }
     }
 

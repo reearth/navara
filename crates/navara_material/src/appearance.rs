@@ -642,6 +642,15 @@ pub struct QuantizedMeshTerrainMaterial {
     pub skirt: bool,
     pub skirt_exaggeration: f32,
     pub crs: TerrainCrs,
+    /// Request the oct-encoded per-vertex normals extension from the server.
+    /// Adds `octvertexnormals` to the Accept header when fetching `.terrain` tiles.
+    pub request_vertex_normals: bool,
+    /// Request the watermask extension from the server.
+    /// Adds `watermask` to the Accept header when fetching `.terrain` tiles.
+    pub request_water_mask: bool,
+    /// Bearer token sent as the `Authorization` header for `.terrain` requests.
+    /// `None` means no Authorization header is added.
+    pub token: Option<String>,
 }
 
 impl Default for QuantizedMeshTerrainMaterial {
@@ -657,6 +666,9 @@ impl Default for QuantizedMeshTerrainMaterial {
             skirt: true,
             skirt_exaggeration: 1.0,
             crs: TerrainCrs::Geographic { tms: true },
+            request_vertex_normals: false,
+            request_water_mask: false,
+            token: None,
         }
     }
 }

@@ -33,6 +33,7 @@ pub struct ConstructTerrainMeshResult {
     pub min_height: FloatType,
     pub max_height: FloatType,
     pub rtc_translation: Option<Vec3>,
+    pub watermask: Option<Handle>,
 }
 
 pub type ConstructTerrainMeshWorkerTaskBundle =

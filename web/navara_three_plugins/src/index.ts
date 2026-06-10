@@ -14,3 +14,9 @@ export {
   type WorldPosition,
   type ProjectedPosition,
 } from "./OverlayPlugin";
+
+export {
+  CesiumIonPlugin,
+  type CesiumIonConfig,
+  type CesiumIonTerrainOptions,
+} from "./CesiumIonPlugin";

@@ -17,7 +17,8 @@ navara_three (core: ThreeView, Plugin, addPlugin)
   ├── three_default_plugin (DefaultPlugin: bulk descriptor registration)
   └── three_plugins (use-case specific plugins)
         ├── FlyingModelPlugin (keyboard-driven GLTF model flight)
-        └── OverlayPlugin (world-to-screen HTML overlay projection)
+        ├── OverlayPlugin (world-to-screen HTML overlay projection)
+        └── CesiumIonPlugin (Cesium Ion quantized-mesh terrain)
 ```
 
 `three_plugins` depends on `navara_three` for the `Plugin` base class and core APIs, and on `three_default_plugin` for the `DefaultDescriptions` type. Each plugin is independent — you can use one without the other.
@@ -25,7 +26,12 @@ navara_three (core: ThreeView, Plugin, addPlugin)
 ## Installation
 
 ```typescript
-import { FlyingModelPlugin, OverlayPlugin, moveOverlayElement } from "@navara/three_plugins";
+import {
+  FlyingModelPlugin,
+  OverlayPlugin,
+  CesiumIonPlugin,
+  moveOverlayElement,
+} from "@navara/three_plugins";
 ```
 
 ## Available Plugins
@@ -37,6 +43,10 @@ A keyboard-controlled GLTF model flight simulator. Loads any animated GLTF model
 ### OverlayPlugin
 
 Projects geographic positions (lat/lng/alt) to screen coordinates on every render frame, enabling HTML overlays that track world positions. See [OverlayPlugin](../overlayplugin/) for details.
+
+### CesiumIonPlugin
+
+Resolves a Cesium Ion asset endpoint at `init()` time and registers it as a quantized-mesh terrain layer via `addTerrain()`. See [CesiumIonPlugin](../cesiumionplugin/) for details.
 
 ## Usage
 

@@ -17,7 +17,8 @@ navara_three（コア: ThreeView, Plugin, addPlugin）
   ├── three_default_plugin（DefaultPlugin: Descriptor の一括登録）
   └── three_plugins（ユースケース特化型プラグイン）
         ├── FlyingModelPlugin（キーボード操作による GLTF モデル飛行）
-        └── OverlayPlugin（ワールド座標からスクリーン座標への HTML オーバーレイ投影）
+        ├── OverlayPlugin（ワールド座標からスクリーン座標への HTML オーバーレイ投影）
+        └── CesiumIonPlugin（Cesium Ion quantized-mesh 地形）
 ```
 
 `three_plugins` は `Plugin` 基底クラスとコア API のために `navara_three` に依存し、`DefaultDescriptions` 型のために `three_default_plugin` に依存しています。各プラグインは独立しており、片方だけを使うこともできます。
@@ -25,7 +26,12 @@ navara_three（コア: ThreeView, Plugin, addPlugin）
 ## インストール
 
 ```typescript
-import { FlyingModelPlugin, OverlayPlugin, moveOverlayElement } from "@navara/three_plugins";
+import {
+  FlyingModelPlugin,
+  OverlayPlugin,
+  CesiumIonPlugin,
+  moveOverlayElement,
+} from "@navara/three_plugins";
 ```
 
 ## 提供プラグイン
@@ -37,6 +43,10 @@ import { FlyingModelPlugin, OverlayPlugin, moveOverlayElement } from "@navara/th
 ### OverlayPlugin
 
 毎フレーム、地理座標（緯度/経度/高度）をスクリーン座標に投影するプラグインです。ワールド座標に追従する HTML オーバーレイ（マーカー、ラベル、ツールチップなど）を実現します。詳細は [OverlayPlugin](../overlayplugin/) を参照してください。
+
+### CesiumIonPlugin
+
+`init()` 時に Cesium Ion のアセットエンドポイントを解決し、`addTerrain()` を通じて quantized-mesh 地形レイヤーとして登録するプラグインです。詳細は [CesiumIonPlugin](../cesiumionplugin/) を参照してください。
 
 ## 使い方
 

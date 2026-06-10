@@ -1,9 +1,9 @@
-use js_sys::{Float32Array, Uint32Array};
+use js_sys::{Float32Array, Uint8Array, Uint32Array};
 use navara_math::FloatType;
 use serde::Deserialize;
 use wasm_bindgen::prelude::wasm_bindgen;
 
-use crate::{Vec3, copy_f32_array, copy_u32_array};
+use crate::{Vec3, copy_f32_array, copy_u8_array, copy_u32_array};
 
 #[wasm_bindgen]
 #[derive(Debug, Clone, PartialEq, Default, Deserialize)]
@@ -14,6 +14,8 @@ pub struct Geometry {
     uvs: Vec<f32>,
     /// Vector of index that constructs a triangle.
     indices: Vec<u32>,
+    /// Per-vertex normals (terrain only). Stride is 3.
+    normals: Option<Vec<f32>>,
     /// Vector of skirt vertex. The stride is 3.
     skirt_vertices: Option<Vec<f32>>,
     /// Vector of skirt UV. The stride is 2.
@@ -22,6 +24,8 @@ pub struct Geometry {
     skirt_indices: Option<Vec<u32>>,
     /// Mapping from skirt vertex index to edge vertex index in main geometry.
     skirt_indices_to_edge: Option<Vec<u32>>,
+    /// Per-vertex skirt normals copied from corresponding edge vertices. Stride is 3.
+    skirt_normals: Option<Vec<f32>>,
 }
 
 #[wasm_bindgen]
@@ -32,10 +36,12 @@ impl Geometry {
             vertices,
             indices,
             uvs,
+            normals: None,
             skirt_vertices: None,
             skirt_uvs: None,
             skirt_indices: None,
             skirt_indices_to_edge: None,
+            skirt_normals: None,
         }
     }
 
@@ -76,9 +82,24 @@ impl Geometry {
             .map(|v| copy_u32_array(v))
     }
 
+    #[wasm_bindgen(js_name = "transferNormals")]
+    pub fn transfer_normals(&self) -> Option<Float32Array> {
+        self.normals.as_ref().map(|v| copy_f32_array(v))
+    }
+
+    #[wasm_bindgen(js_name = "transferSkirtNormals")]
+    pub fn transfer_skirt_normals(&self) -> Option<Float32Array> {
+        self.skirt_normals.as_ref().map(|v| copy_f32_array(v))
+    }
+
     #[wasm_bindgen(js_name = "hasSkirt")]
     pub fn has_skirt(&self) -> bool {
         self.skirt_vertices.is_some()
+    }
+
+    #[wasm_bindgen(js_name = "hasNormals")]
+    pub fn has_normals(&self) -> bool {
+        self.normals.is_some()
     }
 }
 
@@ -88,10 +109,12 @@ impl From<navara_geometry::Geometry> for Geometry {
             vertices: d.vertices,
             uvs: d.uvs,
             indices: d.indices,
+            normals: d.normals,
             skirt_vertices: d.skirt_vertices,
             skirt_uvs: d.skirt_uvs,
             skirt_indices: d.skirt_indices,
             skirt_indices_to_edge: d.skirt_indices_to_edge,
+            skirt_normals: d.skirt_normals,
         }
     }
 }
@@ -102,10 +125,12 @@ impl From<Geometry> for navara_geometry::Geometry {
             vertices: d.vertices,
             uvs: d.uvs,
             indices: d.indices,
+            normals: d.normals,
             skirt_vertices: d.skirt_vertices,
             skirt_uvs: d.skirt_uvs,
             skirt_indices: d.skirt_indices,
             skirt_indices_to_edge: d.skirt_indices_to_edge,
+            skirt_normals: d.skirt_normals,
         }
     }
 }
@@ -117,6 +142,7 @@ pub struct ReturnedConstructedTerrainMesh {
     pub min_height: FloatType,
     heights: Vec<f32>,
     pub rtc_translation: Option<Vec3>,
+    watermask: Option<Vec<u8>>,
 }
 
 #[wasm_bindgen]
@@ -135,6 +161,7 @@ impl ReturnedConstructedTerrainMesh {
             min_height,
             heights,
             rtc_translation,
+            watermask: None,
         }
     }
 
@@ -178,9 +205,34 @@ impl ReturnedConstructedTerrainMesh {
         self.geometry.transfer_skirt_indices_to_edge()
     }
 
+    #[wasm_bindgen(js_name = "transferNormals")]
+    pub fn transfer_normals(&self) -> Option<Float32Array> {
+        self.geometry.transfer_normals()
+    }
+
+    #[wasm_bindgen(js_name = "transferSkirtNormals")]
+    pub fn transfer_skirt_normals(&self) -> Option<Float32Array> {
+        self.geometry.transfer_skirt_normals()
+    }
+
+    #[wasm_bindgen(js_name = "transferWatermask")]
+    pub fn transfer_watermask(&self) -> Option<Uint8Array> {
+        self.watermask.as_ref().map(|v| copy_u8_array(v))
+    }
+
     #[wasm_bindgen(js_name = "hasSkirt")]
     pub fn has_skirt(&self) -> bool {
         self.geometry.has_skirt()
+    }
+
+    #[wasm_bindgen(js_name = "hasNormals")]
+    pub fn has_normals(&self) -> bool {
+        self.geometry.has_normals()
+    }
+
+    #[wasm_bindgen(js_name = "hasWatermask")]
+    pub fn has_watermask(&self) -> bool {
+        self.watermask.is_some()
     }
 }
 
@@ -192,6 +244,7 @@ impl From<navara_geometry::ReturnedConstructedTerrainMesh> for ReturnedConstruct
             min_height: d.min_height,
             heights: d.heights,
             rtc_translation: d.rtc_translation.map(|v| v.into()),
+            watermask: d.watermask,
         }
     }
 }
@@ -204,6 +257,7 @@ impl From<ReturnedConstructedTerrainMesh> for navara_geometry::ReturnedConstruct
             min_height: d.min_height,
             heights: d.heights,
             rtc_translation: d.rtc_translation.map(|v| v.into()),
+            watermask: d.watermask,
         }
     }
 }
@@ -213,16 +267,23 @@ pub struct UpsamplableTerrainGeometry {
     uvs: Vec<f32>,
     heights: Vec<f32>,
     indices: Vec<u32>,
+    normals: Option<Vec<f32>>,
 }
 
 #[wasm_bindgen]
 impl UpsamplableTerrainGeometry {
     #[wasm_bindgen(constructor)]
-    pub fn new(uvs: Vec<f32>, indices: Vec<u32>, heights: Vec<f32>) -> Self {
+    pub fn new(
+        uvs: Vec<f32>,
+        indices: Vec<u32>,
+        heights: Vec<f32>,
+        normals: Option<Vec<f32>>,
+    ) -> Self {
         Self {
             uvs,
             indices,
             heights,
+            normals,
         }
     }
 }
@@ -233,6 +294,7 @@ impl<'a> From<navara_geometry::UpsamplableTerrainGeometry<'a>> for UpsamplableTe
             uvs: d.uvs.to_vec(),
             heights: d.heights.to_vec(),
             indices: d.indices.to_vec(),
+            normals: d.normals.map(|n| n.to_vec()),
         }
     }
 }
@@ -243,6 +305,7 @@ impl<'a> From<&'a UpsamplableTerrainGeometry> for navara_geometry::UpsamplableTe
             uvs: &d.uvs,
             heights: &d.heights,
             indices: &d.indices,
+            normals: d.normals.as_deref(),
         }
     }
 }

@@ -8,7 +8,7 @@ use navara_geometry::{
     Geometry, ReturnedConstructedTerrainMesh, UpsamplableTerrainGeometry, UpsampledTerrainGeometry,
 };
 use navara_math::FloatType;
-use quantized_mesh::DecodedMesh;
+use quantized_mesh::{DecodedMesh, WaterMask};
 
 use crate::terrain_data_requester::TileTerrainDataRequesterQuery;
 
@@ -67,6 +67,7 @@ impl TerrainData for QuantizedMeshData {
                 min_height: 0.0,
                 heights: vec![],
                 rtc_translation: None,
+                watermask: None,
             };
         };
 
@@ -118,17 +119,37 @@ impl TerrainData for QuantizedMeshData {
 
         let vertices: Vec<f32> = positions.iter().flat_map(|&(x, y, z)| [x, y, z]).collect();
 
+        // Oct-decoded per-vertex normals in ECEF unit-vector form.
+        let normals = decoded
+            .extensions
+            .normals
+            .as_ref()
+            .filter(|nv| nv.len() == n)
+            .map(|nv| {
+                nv.iter()
+                    .flat_map(|v| [v[0], v[1], v[2]])
+                    .collect::<Vec<f32>>()
+            });
+
+        // Watermask: 1 byte for uniform, 65536 bytes for 256x256 grid.
+        let watermask = decoded.extensions.water_mask.as_ref().map(|w| match w {
+            WaterMask::Uniform(v) => vec![*v],
+            WaterMask::Grid(g) => g.to_vec(),
+        });
+
         ReturnedConstructedTerrainMesh {
             geometry: Geometry {
                 vertices,
                 indices: decoded.indices,
                 uvs,
+                normals,
                 ..Default::default()
             },
             max_height: actual_max_height,
             min_height: actual_min_height,
             heights,
             rtc_translation: Some(tile_center),
+            watermask,
         }
     }
 
