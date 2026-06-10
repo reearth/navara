@@ -1,7 +1,5 @@
 import ThreeView, {
   TERRARIUM_ELEVATION_DECODER,
-  degreeToRadian,
-  geodeticToVector3,
   type EffectHandle,
   type MeshHandle,
 } from "@navara/three";
@@ -315,20 +313,13 @@ export const run = async () => {
       clouds: { ...DEFAULT_CLOUDS, coverage: 0 },
     });
 
-    // Lazy effects/meshes — created on enable, deleted on disable.
-    const meshPosition = geodeticToVector3({
-      lat: degreeToRadian(cameraState.lat),
-      lng: degreeToRadian(cameraState.lng),
-      height: 10,
-    });
-
     const lazyFactories: LazyFactories = {
       rainDrop: () =>
         v.addEffect<RainDropEffectDesc>({
           rainDrop: { ...DEFAULT_RAIN_DROP },
         }),
-      rain: () => v.addMesh<RainMeshDesc>({ position: meshPosition, rain: {} }),
-      snow: () => v.addMesh<SnowMeshDesc>({ position: meshPosition, snow: {} }),
+      rain: () => v.addMesh<RainMeshDesc>({ rain: {} }),
+      snow: () => v.addMesh<SnowMeshDesc>({ snow: {} }),
     };
 
     const p = new Pane({ title: "Camera Studio", expanded: true });
