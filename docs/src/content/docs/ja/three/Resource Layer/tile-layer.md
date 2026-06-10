@@ -76,7 +76,7 @@ const heatmapLayer = view.addLayer({
 
 ### ヒルシェード
 
-ヒルシェードは DEM タイルから陰影起伏を描画し、尾根や谷などの地形特徴を強調します。平面のベースマップに重ねて使用するほか、[Terrain Layer](../../../three/resource-layer-reference/terrain-layer/) と組み合わせて 3D 地形上に陰影起伏を表示することもできます。
+ヒルシェードは DEM タイルから陰影起伏を描画し、尾根や谷などの地形特徴を強調します。平面のベースマップに重ねて使用するほか、[Terrain Layer](../../../three/resource-layer/terrain-layer/) と組み合わせて 3D 地形上に陰影起伏を表示することもできます。
 
 ```typescript
 import ThreeView, { TERRARIUM_ELEVATION_DECODER } from "@navara/three";
