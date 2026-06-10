@@ -17,6 +17,7 @@ import type { FeatureCollection, MultiLineString } from "geojson";
 import { showAttributions } from "../../../helpers/attributions";
 import { PLASMA_COLORMAP } from "../../../helpers/colors";
 import { LOCAL_DATASETS, TILE_DATASETS } from "../../../helpers/constants";
+import { atZoneTime } from "../../../helpers/control";
 
 type AirportTrafficData = FeatureCollection<
   MultiLineString,
@@ -106,7 +107,7 @@ export async function run() {
   view.addPlugin(plugin);
   await view.init();
 
-  view.atmosphere.date.setHours(8);
+  view.atmosphere.date = atZoneTime(view.atmosphere.date, 8);
 
   view.toneMappingExposure = 10;
 

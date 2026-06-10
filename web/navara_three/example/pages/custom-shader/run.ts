@@ -28,6 +28,7 @@ import { ToonShaderHatching, MarchingCubes } from "three-stdlib";
 
 import { showAttributions } from "../../helpers/attributions";
 import { TERRAIN_DATASETS, TILE_DATASETS } from "../../helpers/constants";
+import { atZoneTime } from "../../helpers/control";
 
 // Custom MarchingCubesLayer definition
 type MarchingCubesLayerDescription = {
@@ -160,8 +161,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     roll: 0.16, // -180 to 180
   });
 
-  const date = new Date();
-  date.setHours(8);
+  const date = atZoneTime(new Date(), 8);
 
   view.atmosphere.date = date;
 

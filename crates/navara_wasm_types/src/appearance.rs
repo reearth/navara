@@ -304,6 +304,14 @@ pub struct TextMaterial {
     /// Language code for text shaping (e.g., "en", "ja", "ar"). Used for proper text rendering.
     #[wasm_bindgen(getter_with_clone)]
     pub lang: Option<String>,
+    /// Enable high-quality glyph rendering. When `true`, text uses an MTSDF
+    /// atlas (sharper corners at large sizes, dramatically slower
+    /// rasterization). When `false` or omitted, the default single-channel SDF
+    /// atlas is used (fast). Mirrors `navara_material::TextMaterial::high_quality`
+    /// on the Rust side.
+    #[wasm_bindgen(js_name = highQuality)]
+    #[serde(rename = "highQuality")]
+    pub high_quality: Option<bool>,
 }
 
 impl From<TextMaterial> for navara_material::TextMaterial {
@@ -335,6 +343,7 @@ impl From<TextMaterial> for navara_material::TextMaterial {
             outline_opacity: val.outline_opacity.unwrap_or(default.outline_opacity),
             outline_width: val.outline_width.unwrap_or(default.outline_width),
             lang: val.lang.unwrap_or(default.lang),
+            high_quality: val.high_quality.unwrap_or(default.high_quality),
         }
     }
 }
@@ -363,6 +372,7 @@ impl<'a> From<&'a navara_material::TextMaterial> for TextMaterial {
             outline_opacity: Some(value.outline_opacity),
             outline_width: Some(value.outline_width),
             lang: Some(value.lang.clone()),
+            high_quality: Some(value.high_quality),
         }
     }
 }
@@ -395,6 +405,7 @@ impl TextMaterial {
             outline_opacity: self.outline_opacity.unwrap_or(other.outline_opacity),
             outline_width: self.outline_width.unwrap_or(other.outline_width),
             lang: self.lang.clone().unwrap_or(other.lang.clone()),
+            high_quality: self.high_quality.unwrap_or(other.high_quality),
         }
     }
 }
@@ -1019,6 +1030,15 @@ pub struct ModelMaterial {
     #[wasm_bindgen(js_name = showBoundingBox)]
     #[serde(rename = "showBoundingBox")]
     pub show_bounding_box: Option<bool>,
+    /// When true, recompute vertex normals using a creased-normals algorithm
+    /// after the model loads. Useful for tiled glTF assets that ship without
+    /// normals or with low-quality normals.
+    pub normals: Option<bool>,
+    /// Crease angle (in radians) used when `normals` is true. Defaults to 30°
+    /// (PI/6) when omitted.
+    #[wasm_bindgen(js_name = creaseNormalAngle)]
+    #[serde(rename = "creaseNormalAngle")]
+    pub crease_normal_angle: Option<f32>,
     #[wasm_bindgen(getter_with_clone)]
     pub __internal__: Option<ModelInternalMaterial>,
     // SelectiveEffect
@@ -1068,6 +1088,8 @@ impl From<ModelMaterial> for navara_material::ModelMaterial {
             animation_speed: val.animation_speed,
             point_size: val.point_size.unwrap_or(default.point_size),
             show_bounding_box: val.show_bounding_box.unwrap_or(default.show_bounding_box),
+            normals: val.normals.unwrap_or(default.normals),
+            crease_normal_angle: val.crease_normal_angle.or(default.crease_normal_angle),
             internal: val.__internal__.clone().map(|v| v.into()),
             effect_ids: val.effect_ids.or(default.effect_ids),
             emissive_intensity: val.emissive_intensity.or(default.emissive_intensity),
@@ -1105,6 +1127,8 @@ impl<'a> From<&'a navara_material::ModelMaterial> for ModelMaterial {
             animation_speed: value.animation_speed,
             point_size: Some(value.point_size),
             show_bounding_box: Some(value.show_bounding_box),
+            normals: Some(value.normals),
+            crease_normal_angle: value.crease_normal_angle,
             __internal__: value.internal.clone().as_ref().map(|v| v.into()),
             effect_ids: value.effect_ids.clone(),
             emissive_intensity: value.emissive_intensity,
@@ -1147,6 +1171,8 @@ impl ModelMaterial {
             animation_speed: self.animation_speed.or(other.animation_speed),
             point_size: self.point_size.unwrap_or(other.point_size),
             show_bounding_box: self.show_bounding_box.unwrap_or(other.show_bounding_box),
+            normals: self.normals.unwrap_or(other.normals),
+            crease_normal_angle: self.crease_normal_angle.or(other.crease_normal_angle),
             internal: other.internal.clone(),
             effect_ids: self.effect_ids.clone().or_else(|| other.effect_ids.clone()),
             emissive_intensity: self.emissive_intensity.or(other.emissive_intensity),

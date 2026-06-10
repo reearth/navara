@@ -126,6 +126,8 @@ export {
   type InstancedGltfModelEvent,
 } from "./InstancedGltfModelMeshDesc";
 
+export { convertToNodeMaterial, applyRTEToNodeMaterial } from "../nodes";
+
 // Mesh implementations
 export { SkyMesh, type SkyMeshOptions } from "./skyMesh";
 export { RainMesh, type RainConfig, DefaultRainConfig } from "./rain";

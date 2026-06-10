@@ -18,6 +18,7 @@ import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../../helpers/attributions";
 import { TERRAIN_DATASETS, TILE_DATASETS } from "../../../helpers/constants";
+import { atZoneTime } from "../../../helpers/control";
 
 const RADIUS = 30000; // 30km
 const BUILDING_COUNT = 5000;
@@ -69,7 +70,7 @@ const run = async () => {
     sun: { intensity: 1, castShadow: true },
   });
 
-  view.atmosphere.date.setHours(8);
+  view.atmosphere.date = atZoneTime(view.atmosphere.date, 8);
 
   defaultAtmospheres.toneMapping.update({
     toneMapping: {
@@ -112,8 +113,8 @@ const run = async () => {
       castShadow: true,
       receiveShadow: true,
       children: buildings,
-      effectIds: [outlineEffect.id],
     },
+    effectIds: [outlineEffect.id],
     matrixWorld,
   });
 

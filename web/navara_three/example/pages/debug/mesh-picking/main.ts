@@ -28,7 +28,6 @@ import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
-import { Mesh, MeshStandardMaterial } from "three";
 import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../../helpers/attributions";
@@ -37,7 +36,7 @@ import {
   TERRAIN_DATASETS,
   TILE_DATASETS,
 } from "../../../helpers/constants";
-import { addDateControl } from "../../../helpers/control";
+import { addDateControl, atZoneTime } from "../../../helpers/control";
 
 const run = async () => {
   const view = new ThreeView<DefaultDescriptions>({
@@ -54,7 +53,7 @@ const run = async () => {
   defaultLayers.sun.update({
     sun: { intensity: 1, castShadow: true },
   });
-  view.atmosphere.date.setHours(10);
+  view.atmosphere.date = atZoneTime(view.atmosphere.date, 10);
 
   // Shared origin frame — all meshes are offset from here in NUE coordinates
   const origin = geodeticToVector3({
@@ -391,7 +390,7 @@ const run = async () => {
   }
   const instancedGltfLayer = view.addMesh<InstancedGltfModelMeshDesc>({
     pickable: true,
-    models: {
+    gltfModels: {
       url: LOCAL_DATASETS.steelDrumGLTF.url,
       castShadow: true,
       receiveShadow: false,
@@ -534,14 +533,11 @@ const run = async () => {
       smoothLineLayer.update({ smoothLines: [{ color }] });
     } else if (batchId === gltfLayer.ref.batchId) {
       // GLTF: tint via emissive on child MeshStandardMaterials
-      gltfLayer.ref.raw?.traverse((child) => {
-        if (
-          child instanceof Mesh &&
-          child.material instanceof MeshStandardMaterial
-        ) {
-          child.material.emissive.setHex(color);
-          child.material.emissiveIntensity = color === gltfColor ? 0 : 0.5;
-        }
+      gltfLayer.update({
+        gltfModel: {
+          emissiveColor: c,
+          emissiveIntensity: color === gltfColor ? 0 : 0.5,
+        },
       });
     } else {
       // Check instanced layers

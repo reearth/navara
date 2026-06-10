@@ -13,7 +13,11 @@ import { Pane, FolderApi } from "tweakpane";
 
 import { showAttributions } from "../../helpers/attributions";
 import { TERRAIN_DATASETS, TILE_DATASETS } from "../../helpers/constants";
-import { addDateControl, addCameraControl } from "../../helpers/control";
+import {
+  addDateControl,
+  addCameraControl,
+  atZoneTime,
+} from "../../helpers/control";
 
 const gCameraParams = {
   longitude: 139.75711454748298,
@@ -34,7 +38,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   view.addPlugin(plugin);
   await view.init();
 
-  view.atmosphere.date.setHours(8);
+  view.atmosphere.date = atZoneTime(view.atmosphere.date, 8);
 
   plugin.addDefaultPhotorealScene();
 
@@ -127,6 +131,7 @@ const addChangeCameraOption = (
   view: ThreeView<CustomDescriptions>,
 ) => {
   const cameraParams = gCameraParams;
+  const distanceParams = { use_distance: false, distance: 10000.0 };
 
   const folder = pane.addFolder({
     title: "Change Camera",
@@ -139,14 +144,26 @@ const addChangeCameraOption = (
     if (gIgnoreChange) {
       return;
     }
-    view.setCamera({
-      lng: cameraParams.longitude,
-      lat: cameraParams.latitude,
-      height: cameraParams.altitude,
-      heading: cameraParams.heading,
-      pitch: cameraParams.pitch,
-      roll: cameraParams.roll,
-    });
+    if (distanceParams.use_distance) {
+      view.setCamera({
+        lng: cameraParams.longitude,
+        lat: cameraParams.latitude,
+        height: cameraParams.altitude,
+        distance: distanceParams.distance,
+        heading: cameraParams.heading,
+        pitch: cameraParams.pitch,
+        roll: cameraParams.roll,
+      });
+    } else {
+      view.setCamera({
+        lng: cameraParams.longitude,
+        lat: cameraParams.latitude,
+        height: cameraParams.altitude,
+        heading: cameraParams.heading,
+        pitch: cameraParams.pitch,
+        roll: cameraParams.roll,
+      });
+    }
   };
 
   folder
@@ -161,6 +178,13 @@ const addChangeCameraOption = (
   folder.addBinding(cameraParams, "heading").on("change", changeFunc);
   folder.addBinding(cameraParams, "pitch").on("change", changeFunc);
   folder.addBinding(cameraParams, "roll").on("change", changeFunc);
+
+  folder
+    .addBinding(distanceParams, "use_distance", { label: "use distance" })
+    .on("change", changeFunc);
+  folder
+    .addBinding(distanceParams, "distance", { min: 1, max: 19070256 })
+    .on("change", changeFunc);
 };
 
 const addMoveCameraOption = (
@@ -245,24 +269,42 @@ const addFlyToOption = (pane: Pane, view: ThreeView<CustomDescriptions>) => {
     duration: 2000,
     max_height: 0,
   };
+  const distanceParams = { use_distance: false, distance: 10000.0 };
+
   const folder = pane.addFolder({
     title: "Fly To",
     expanded: false,
   });
 
   const clickFunc = () => {
-    view.flyTo(
-      {
-        lng: cameraParams.longitude,
-        lat: cameraParams.latitude,
-        height: cameraParams.altitude,
-        heading: cameraParams.heading,
-        pitch: cameraParams.pitch,
-        roll: cameraParams.roll,
-      },
-      cameraParams.duration,
-      cameraParams.max_height > 1 ? cameraParams.max_height : undefined,
-    );
+    if (distanceParams.use_distance) {
+      view.flyTo(
+        {
+          lng: cameraParams.longitude,
+          lat: cameraParams.latitude,
+          height: cameraParams.altitude,
+          distance: distanceParams.distance,
+          heading: cameraParams.heading,
+          pitch: cameraParams.pitch,
+          roll: cameraParams.roll,
+        },
+        cameraParams.duration,
+        cameraParams.max_height > 1 ? cameraParams.max_height : undefined,
+      );
+    } else {
+      view.flyTo(
+        {
+          lng: cameraParams.longitude,
+          lat: cameraParams.latitude,
+          height: cameraParams.altitude,
+          heading: cameraParams.heading,
+          pitch: cameraParams.pitch,
+          roll: cameraParams.roll,
+        },
+        cameraParams.duration,
+        cameraParams.max_height > 1 ? cameraParams.max_height : undefined,
+      );
+    }
   };
 
   folder.addBinding(cameraParams, "longitude", { min: -180.0, max: 180.0 });
@@ -273,6 +315,9 @@ const addFlyToOption = (pane: Pane, view: ThreeView<CustomDescriptions>) => {
   folder.addBinding(cameraParams, "roll", { min: -180.0, max: 180.0 });
   folder.addBinding(cameraParams, "duration");
   folder.addBinding(cameraParams, "max_height");
+
+  folder.addBinding(distanceParams, "use_distance", { label: "use distance" });
+  folder.addBinding(distanceParams, "distance", { min: 1, max: 19070256 });
 
   folder.addButton({ title: "Fly To", label: "" }).on("click", () => {
     clickFunc();
@@ -333,6 +378,9 @@ const addCameraControlOptions = (
     spinDuration: 500.0,
     zoomDuration: 100.0,
     translateDuration: 500.0,
+    enableSpin: true,
+    enableZoom: true,
+    enableTilt: true,
   };
 
   const frustumParams = {
@@ -424,6 +472,9 @@ const addCameraControlOptions = (
   folder
     .addBinding(controlParams, "translateDuration", { min: 0, max: 2000 })
     .on("change", applyOptions);
+  folder.addBinding(controlParams, "enableSpin").on("change", applyOptions);
+  folder.addBinding(controlParams, "enableZoom").on("change", applyOptions);
+  folder.addBinding(controlParams, "enableTilt").on("change", applyOptions);
 };
 
 const addRotateOption = (pane: Pane, view: ThreeView<CustomDescriptions>) => {

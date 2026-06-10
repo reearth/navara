@@ -120,7 +120,7 @@ export class DefaultPlugin extends Plugin<
     view.registerMesh("spheres", InstancedSphereMeshDesc);
     view.registerMesh("planes", InstancedPlaneMeshDesc);
     view.registerMesh("cylinders", InstancedCylinderMeshDesc);
-    view.registerMesh("models", InstancedGltfModelMeshDesc);
+    view.registerMesh("gltfModels", InstancedGltfModelMeshDesc);
 
     // Register lights
     view.registerLight("sun", SunLightDesc);

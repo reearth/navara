@@ -152,9 +152,9 @@ import { Color } from "@navara/three";
 
 **Type:** `number`
 
-**Description:** Specifies the width of individual raindrops.
+**Description:** Specifies the width of individual raindrops, measured against `baseFov`. The on-screen size is held constant relative to that reference fov, so the actual rendered width scales with the camera's current fov.
 
-**Default:** `3.0`
+**Default:** `2.0`
 
 **Example:**
 
@@ -288,6 +288,24 @@ import { Color } from "@navara/three";
 {
   rain: {
     maxHeight: 5000,
+  }
+}
+```
+
+### baseFov
+
+**Type:** `number`
+
+**Description:** Reference field of view in degrees at which `width` and `height` look as authored. The raindrop's on-screen size is held constant relative to this fov: when the active perspective camera's fov differs, particle sizes are rescaled by `tan(fov/2) / tan(baseFov/2)` so they keep their intended apparent size regardless of zoom.
+
+**Default:** `45`
+
+**Example:**
+
+```typescript
+{
+  rain: {
+    baseFov: 60,
   }
 }
 ```

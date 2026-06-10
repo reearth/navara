@@ -956,10 +956,11 @@ if (uPickable > 0.) {
     this.visible = active;
 
     if (active) {
-      // Update UV transform if available in the mesh
-      const { offset, scale } = tileMesh.uv_transform;
-      this.material.userData.uvTransform.offset.set(offset.x, offset.y);
-      this.material.userData.uvTransform.scale.set(scale.x, scale.y);
+      this.ensureCorrectMaterialType(
+        changedMaterial,
+        globe,
+        tileMesh.uv_transform,
+      );
 
       this.setupTextureFragments(
         changedMaterial?.texture_fragments(),
@@ -968,7 +969,24 @@ if (uPickable > 0.) {
         textureFragmentIndex,
         tileMeshToFragmentIds,
       );
+
+      // Set uniforms (this may switch material type for hillshade)
+      // Pass uvTransform from mesh data so new material gets correct values immediately
       this.setUniforms(changedMaterial, maxTextures);
+
+      // Update UV transform AFTER material switch to ensure it's set on the current material
+      // This handles the case where material didn't switch
+      if (!this.material.userData.uvTransform) {
+        this.material.userData.uvTransform = {
+          offset: new Vector2(),
+          scale: new Vector2(1, 1),
+        };
+      }
+
+      const { offset, scale } = tileMesh.uv_transform;
+      this.material.userData.uvTransform.offset.set(offset.x, offset.y);
+      this.material.userData.uvTransform.scale.set(scale.x, scale.y);
+
       this.setupTextures(
         loadedTexs,
         textureOptions,
@@ -1114,6 +1132,50 @@ if (uPickable > 0.) {
         m.userData.emissiveColors.value[lastIdx].set(mesh.emissiveColor);
         m.userData.effectIdsMasks.value[lastIdx] = mesh.effectIdsMask;
       }
+    }
+  }
+
+  /**
+   * Ensures the material type matches the hillshade requirements.
+   * Switches between MeshBasicMaterial and MeshLambertMaterial as needed.
+   * - MeshLambertMaterial: Required for hillshade (supports normal-based lighting)
+   * - MeshBasicMaterial: Used when no hillshade (more performant)
+   */
+  private ensureCorrectMaterialType(
+    mat: RasterTileInternalMaterial,
+    globe: Globe,
+    uvTransform: {
+      offset: { x: number; y: number };
+      scale: { x: number; y: number };
+    },
+  ): void {
+    // Determine if hillshade is present in the material configuration
+    const needsLambert =
+      mat.isHillshades && mat.isHillshades.length > 0
+        ? mat.isHillshades.some((v) => v !== 0)
+        : !!globe.useNormal;
+    const isLambert = this.material instanceof MeshLambertMaterial;
+
+    if (needsLambert !== isLambert) {
+      const oldMaterial = this.material;
+
+      // Create new material with correct type
+      this.material = this.initMaterial(mat, this.ctx.uniforms, globe);
+
+      if (this.shadowMesh) {
+        this.shadowMesh.material = this.material;
+      }
+
+      // Set up uvTransform immediately with correct values from mesh data
+      // This prevents shader from compiling with default/stale values
+      this.material.userData.uvTransform = {
+        offset: new Vector2(uvTransform.offset.x, uvTransform.offset.y),
+        scale: new Vector2(uvTransform.scale.x, uvTransform.scale.y),
+      };
+
+      // Dispose old material
+      this.ctx.viewContext?.removeShadowMaterial(oldMaterial);
+      oldMaterial.dispose();
     }
   }
 

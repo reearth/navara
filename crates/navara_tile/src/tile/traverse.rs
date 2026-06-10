@@ -120,6 +120,7 @@ pub fn traverse_tile(
         tiles,
     );
     let is_tile_ready = tile_ready_state.is_tile_ready;
+    let use_terrain = tile_ready_state.use_terrain;
 
     let is_activated = tc.is_rendered_tile_activated(&handle, meshes);
     let is_rendered_last_frame = is_activated;
@@ -337,8 +338,13 @@ pub fn traverse_tile(
 
             let tile = qt.qt.get_mut(handle).unwrap();
             tile.were_children_rendered = are_all_children_activated && !hide_children;
+            // Defer spawning children until this tile's mesh is ready so each
+            // level can upsample from a parent that already has a built mesh.
+            // Children's data requests are already issued via
+            // prepare_tile_resource and act as preload while waiting.
+            let parent_mesh_ready = tile.cached_mesh_handle.is_some();
 
-            if allow_updating_state_of_children {
+            if allow_updating_state_of_children && (!use_terrain || parent_mesh_ready) {
                 for (i, child) in children.iter().enumerate() {
                     // If this child is not renderable, skip rendering this child.
                     if hidden_children_indices.contains(&i) {
@@ -574,6 +580,10 @@ fn prepare_upsamplable_terrain_data(
     terrain_layer: &Option<&TerrainLayer>,
     handle: TileHandle,
 ) {
+    if qt.qt.get(handle).is_some_and(|t| t.terrain_data.is_some()) {
+        return;
+    }
+
     let Some((terrain_type, terrain_appearance)) =
         terrain_layer.map(|l| (&l.terrain_type, &l.appearance))
     else {

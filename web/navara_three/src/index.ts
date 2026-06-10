@@ -19,7 +19,7 @@ import initCore, {
 import { FontManager, type FontFamily } from "@navara/font";
 import FontWorkerURL from "@navara/font/fontWorker?worker&url";
 import { initNavaraApi } from "@navara/three_api";
-import { initializeWorkerPool } from "@navara/worker";
+import { initializeWorkerPool, terminateWorkerPool } from "@navara/worker";
 import {
   Scene,
   WebGLRenderer,
@@ -194,6 +194,11 @@ export type Options = {
   /** Enables mobile device optimizations such as lower pixel ratio. */
   mobileOptimization?: boolean;
   /**
+   * Milliseconds of inactivity (no Rust-side events) before the `idle` event fires.
+   * @defaultValue 100
+   */
+  idleThreshold?: number;
+  /**
    * Enables shared water texture. When enabled, a single water normal texture
    * is loaded once and shared across all meshes that have water effects enabled.
    */
@@ -249,6 +254,8 @@ export type ViewEvents = {
   mouseup: (event: MapMouseEvent) => void;
   /** Emitted on click with map coordinates. */
   click: (event: MapMouseEvent) => void;
+  /** Emitted when the engine becomes idle (no Rust-side events for `idleThreshold` ms). */
+  idle: () => void;
 };
 
 /**
@@ -294,6 +301,7 @@ export default class ThreeView<
     forceUpdate: false,
     animation: false,
   };
+  private _isIdle = false;
   private _uniforms: CommonUniforms;
 
   private _meshes: MeshCache = new Map();
@@ -531,6 +539,7 @@ export default class ThreeView<
       return this._core?.getLayerIndex(layerId);
     },
   };
+  private _ownedRootElement: HTMLElement | undefined;
   private _eventManager = new EventManager();
   private _pickHelper?: PickHelper;
   private _terrainPicker: TerrainPicker;
@@ -563,6 +572,7 @@ export default class ThreeView<
       div.appendChild(options.canvas);
 
       document.body.appendChild(div);
+      this._ownedRootElement = div;
     }
 
     this._options = options;
@@ -718,7 +728,11 @@ export default class ThreeView<
       };
     }
 
-    this._atmosphere = new Atmosphere(this._renderer, options.atmosphere);
+    this._atmosphere = new Atmosphere(
+      this._renderer,
+      options.atmosphere,
+      this._camera,
+    );
     this._atmosphere.on("needsUpdate", this.forceUpdate);
 
     this.on("layer", (e, id, ...args) => {
@@ -817,6 +831,10 @@ export default class ThreeView<
     return this.renderPass.globeDepthCopyPass.texture;
   }
 
+  private get depthTexture() {
+    return this.renderPass.allDepthCopyPass.texture;
+  }
+
   /**
    * Returns whether mobile optimizations should be applied.
    * If `mobileOptimization` option is explicitly set, returns that value;
@@ -843,9 +861,11 @@ export default class ThreeView<
 
     this._initialized = true;
 
-    const concurrencyManager = createDefaultConcurrencyManager(
-      this.isMobileOptimized(),
-    );
+    const mobileOptimized = this.isMobileOptimized();
+    const concurrencyManager = createDefaultConcurrencyManager(mobileOptimized);
+    if (mobileOptimized) {
+      this._hillshadeContext.normalMapScale = 0.5;
+    }
 
     initializeWorkerPool(WorkerURL, concurrencyManager);
 
@@ -912,6 +932,16 @@ export default class ThreeView<
       this._eventDisposer = registerInputEvents(
         this._core,
         this._renderer.domElement,
+        () => {
+          const el = this._renderer.domElement;
+          const rect = el.getBoundingClientRect();
+          const pos = this.pickDepthPosition(
+            rect.left + rect.width / 2,
+            rect.top + rect.height / 2,
+          );
+          if (!pos) return null;
+          return this._camera.raw.position.distanceTo(pos);
+        },
       );
       this._pickHelper = new PickHelper(
         this._renderer.domElement,
@@ -924,6 +954,7 @@ export default class ThreeView<
         // },
       );
       this._pickHelper.enablePick(this._options.picking ?? true);
+      this._pickHelper.setLightsGroup(this._scenes.light);
     }
 
     await this.initializeRenderPass();
@@ -989,6 +1020,7 @@ export default class ThreeView<
    */
   dispose() {
     this._disposed = true;
+    this._initialized = false;
     if (!isWorker()) {
       window.removeEventListener("resize", this._handleResize);
       this.pixelRatioMatchedMedia?.removeEventListener(
@@ -1038,6 +1070,11 @@ export default class ThreeView<
     this._meshes.clear();
     this._workerPoolPromises.clear();
     this._tileMapByHandle.clear();
+    this._textureFragmentIndex.clear();
+    this._tileMeshToFragmentIds.clear();
+
+    // Dispose render pipeline GPU resources
+    this.renderPassOrchestrator.dispose();
 
     // Clean up WASM core
     this._core?.free();
@@ -1055,6 +1092,13 @@ export default class ThreeView<
     ) {
       this._renderer.dispose();
     }
+
+    // Remove auto-created DOM container so a new ThreeView can append its own
+    this._ownedRootElement?.remove();
+    this._ownedRootElement = undefined;
+
+    // Reset worker pool so a new ThreeView can reinitialize it
+    terminateWorkerPool();
   }
 
   /**
@@ -1572,11 +1616,11 @@ export default class ThreeView<
       return Number.isFinite(value) && value != null;
     }
 
+    const lng = camPos.lng;
+    const lat = camPos.lat;
     const position =
-      checkFinite(camPos.lng) &&
-      checkFinite(camPos.lat) &&
-      checkFinite(camPos.height)
-        ? new Float64Array([camPos.lng, camPos.lat, camPos.height])
+      checkFinite(lng) && checkFinite(lat)
+        ? new Float64Array([lng, lat, camPos.height ?? 0])
         : null;
 
     this._core?.changeCamera(
@@ -1584,6 +1628,7 @@ export default class ThreeView<
       camPos.pitch,
       camPos.heading,
       camPos.roll,
+      camPos.distance,
     );
   }
 
@@ -1632,25 +1677,29 @@ export default class ThreeView<
 
   /**
    * Animates the camera to fly to a target position.
-   * @param camPos - Target position with required lng (degrees), lat (degrees), height (meters), and optional pitch, heading, roll (degrees)
+   * @param camPos - Target position with required lng/lat (degrees). Provide either `height` (meters above the ellipsoid)
+   *   or `distance` (meters from the target point along the camera forward direction). Optional pitch, heading, roll (degrees).
    * @param duration - Animation duration in milliseconds
    * @param maxHeight - Maximum height during the flight arc in meters
    */
   flyTo(
     camPos: CameraPosition &
-      Required<Pick<CameraPosition, "lng" | "lat" | "height">>,
+      Required<Pick<CameraPosition, "lng" | "lat">> &
+      ({ height: number } | { distance: number }),
     duration?: number,
     maxHeight?: number,
   ) {
-    const position = new Float64Array([camPos.lng, camPos.lat, camPos.height]);
+    const pos = camPos as CameraPosition & { lng: number; lat: number };
+    const position = new Float64Array([pos.lng, pos.lat, pos.height ?? 0]);
 
     this._core?.flyTo(
       position,
-      camPos.pitch,
-      camPos.heading,
-      camPos.roll,
+      pos.pitch,
+      pos.heading,
+      pos.roll,
       duration,
       maxHeight,
+      pos.distance,
     );
   }
 
@@ -1745,19 +1794,28 @@ export default class ThreeView<
   }
 
   private _startMainLoop() {
+    const idleThreshold = this._options.idleThreshold ?? 100;
     const loop: XRFrameRequestCallback = (time) => {
       if (this._disposed) return;
       this._stats?.begin();
 
       this._forceFeatureUpdates(time);
 
-      if (
-        this._update(time) ||
-        this._renderFlag.forceUpdate ||
-        this._renderFlag.animation
-      )
+      const updated = this._update(time);
+      if (updated || this._renderFlag.forceUpdate || this._renderFlag.animation)
         this._render(time);
       this._renderFlag.forceUpdate = false;
+
+      if (updated) {
+        this._isIdle = false;
+      } else if (
+        !this._isIdle &&
+        this.eventContext.updatedAt > 0 &&
+        time - this.eventContext.updatedAt >= idleThreshold
+      ) {
+        this._isIdle = true;
+        this.emit("idle");
+      }
 
       this._stats?.end();
     };
@@ -1874,6 +1932,22 @@ export default class ThreeView<
       y,
       this._renderer,
       this.globeDepthTexture,
+      this._camera.raw,
+    );
+  }
+
+  /**
+   * Picks the position at screen coordinates from the depth.
+   * @param x - Screen X coordinate in CSS pixels (same as MouseEvent.clientX)
+   * @param y - Screen Y coordinate in CSS pixels (same as MouseEvent.clientY)
+   * @returns World position Vector3 in ECEF coordinates, or null if nothing is hit
+   */
+  pickDepthPosition(x: number, y: number): Nullable<Vector3> {
+    return this._terrainPicker.pick(
+      x,
+      y,
+      this._renderer,
+      this.depthTexture,
       this._camera.raw,
     );
   }

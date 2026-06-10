@@ -8,7 +8,7 @@ import { type CommonTasks } from "./worker";
 
 export type { Promise } from "workerpool";
 
-const { initializeWorkerPool, worker } = (() => {
+const { initializeWorkerPool, terminateWorkerPool, worker } = (() => {
   // Restrict access to this object.
   let worker:
     | {
@@ -37,6 +37,12 @@ const { initializeWorkerPool, worker } = (() => {
         manager,
       };
     },
+    terminateWorkerPool: () => {
+      if (worker) {
+        worker.pool.terminate();
+        worker = undefined;
+      }
+    },
     worker: () => {
       invariant(worker, "initializeWorkerPool() must be invoked first.");
       return {
@@ -47,7 +53,7 @@ const { initializeWorkerPool, worker } = (() => {
   };
 })();
 
-export { initializeWorkerPool };
+export { initializeWorkerPool, terminateWorkerPool };
 
 export const canWorkerProcessImmediately = () => {
   return worker().manager.canIncrement();

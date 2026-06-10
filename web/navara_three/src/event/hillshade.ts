@@ -1,12 +1,5 @@
 import { generate_id_from_entity } from "@navara/core";
 import type { HillshadeBackfilledEvent } from "@navara/engine";
-import {
-  DataTexture,
-  NearestFilter,
-  NoColorSpace,
-  RGBAFormat,
-  UnsignedByteType,
-} from "three";
 
 import type { TileMesh } from "../mesh/tile";
 import { getTextureFragmentSlots } from "../utils/textureFragmentIndex";
@@ -15,13 +8,12 @@ import type { EventContext } from "./context";
 import type { HillshadeContext } from "./HillshadeContext";
 
 /**
- * Create padded DEM texture from original data
- * @returns DataTexture with padding, or undefined if invalid data
+ * Create padded DEM data (CPU only, no GPU upload)
+ * @returns { data, paddedSize } or undefined if invalid
  */
-function createPaddedDemTexture(
+function createPaddedDemData(
   originalBytes: Uint8Array,
-): DataTexture | undefined {
-  // Validate buffer format (must be RGBA)
+): { data: Uint8Array; paddedSize: number } | undefined {
   if (originalBytes.length % 4 !== 0) {
     return undefined;
   }
@@ -31,77 +23,54 @@ function createPaddedDemTexture(
     return undefined;
   }
 
-  // Expand to padded size (originalSize + 2 for 1px padding on each side)
   const paddedSize = originalSize + 2;
   const paddedBytes = new Uint8Array(paddedSize * paddedSize * 4);
 
-  // Copy center content from original data
-  // Optimized: copy entire rows at once using Uint8Array.set (5-10× faster than per-pixel loop)
-  const rowBytes = originalSize * 4; // RGBA bytes per row
+  const rowBytes = originalSize * 4;
   for (let y = 0; y < originalSize; y++) {
     const srcRowStart = y * rowBytes;
-    const dstRowStart = (y + 1) * paddedSize * 4 + 4; // +1 row for top padding, +4 bytes for left padding
+    const dstRowStart = (y + 1) * paddedSize * 4 + 4;
     paddedBytes.set(
       originalBytes.subarray(srcRowStart, srcRowStart + rowBytes),
       dstRowStart,
     );
   }
 
-  // Initialize padding with edge replication (will be updated by neighbor edges later)
   replicateEdgesToPadding(paddedBytes, paddedSize);
 
-  // Create DataTexture with padded size
-  const dataTexture = new DataTexture(
-    paddedBytes,
-    paddedSize,
-    paddedSize,
-    RGBAFormat,
-    UnsignedByteType,
-  );
-  dataTexture.colorSpace = NoColorSpace;
-  dataTexture.minFilter = NearestFilter;
-  dataTexture.magFilter = NearestFilter;
-  dataTexture.generateMipmaps = false;
-  dataTexture.needsUpdate = true;
-
-  return dataTexture;
+  return { data: paddedBytes, paddedSize };
 }
 
 /**
- * Apply pending edges that arrived before texture creation
- * @returns Array of successfully applied edge directions
+ * Apply pending edges that arrived before texture creation.
+ * @returns Array of { direction, bytes } for each successfully applied edge
  */
 function applyPendingEdges(
-  dataTexture: DataTexture,
+  demData: Uint8Array,
+  paddedSize: number,
   hillshadeContext: HillshadeContext,
   entityId: string,
-): number[] {
-  const appliedEdges: number[] = [];
+): { direction: number; bytes: Uint8Array }[] {
+  const applied: { direction: number; bytes: Uint8Array }[] = [];
   const pending = hillshadeContext.pendingEdges.get(entityId);
 
   if (!pending || pending.size === 0) {
-    return appliedEdges;
+    return applied;
   }
-
-  const textureData = dataTexture.image.data as Uint8Array;
-  const texSize = dataTexture.image.width;
 
   for (const [edgeDirection, edgeBytes] of pending) {
     const edgeSize = edgeBytes.length / 4;
     const expectedTexSize = edgeSize + 2;
 
-    // Only apply if size matches (same zoom level)
-    if (texSize === expectedTexSize) {
-      updatePaddingEdge(textureData, edgeBytes, texSize, edgeDirection);
-      dataTexture.needsUpdate = true;
-      appliedEdges.push(edgeDirection);
+    if (paddedSize === expectedTexSize) {
+      updatePaddingEdge(demData, edgeBytes, paddedSize, edgeDirection);
+      applied.push({ direction: edgeDirection, bytes: edgeBytes });
     }
   }
 
-  // Clear pending updates for this entity
   hillshadeContext.pendingEdges.delete(entityId);
 
-  return appliedEdges;
+  return applied;
 }
 
 /**
@@ -159,11 +128,12 @@ function processInitialHillshadeTexture(
     return;
   }
 
-  // Create padded DEM texture
-  const dataTexture = createPaddedDemTexture(originalBytes);
-  if (!dataTexture) {
+  // Create padded DEM data (CPU only, no GPU upload)
+  const padded = createPaddedDemData(originalBytes);
+  if (!padded) {
     return;
   }
+  const { data: demData, paddedSize } = padded;
 
   // Get tile handle for calculations
   const tileHandleBigInt =
@@ -174,13 +144,13 @@ function processInitialHillshadeTexture(
   // Get tile info for zoom level (validate before doing expensive work)
   const tile = tileHandler.getTile(tileHandleBigInt);
   if (!tile) {
-    dataTexture.dispose();
     return;
   }
 
   // Apply any pending edge updates that arrived before texture creation
   const appliedEdges = applyPendingEdges(
-    dataTexture,
+    demData,
+    paddedSize,
     hillshadeContext,
     entityId,
   );
@@ -188,19 +158,16 @@ function processInitialHillshadeTexture(
   const metersPerTexel = tileHandler.calcMetersPerTexel(
     tileHandleBigInt,
     tile.coords.z,
-    dataTexture.image.width,
+    paddedSize,
   );
 
-  // Get hillshade decoder config from tile (cached after first query)
   const hillshadeConfig = hillshadeContext.getHillshadeConfig(
     tileHandler,
     tileHandleBigInt,
   );
 
-  // Calculate content dimensions from padded texture
-  // createPaddedDemTexture adds 1px padding on each side, so subtract 2
-  const contentWidth = dataTexture.image.width - 2;
-  const contentHeight = dataTexture.image.height - 2;
+  const contentWidth = paddedSize - 2;
+  const contentHeight = paddedSize - 2;
 
   // Sanity check: in normal flow, loadedTexs should not have this entity yet
   if (loadedTexs.has(entityId)) {
@@ -211,34 +178,39 @@ function processInitialHillshadeTexture(
     loadedTexs.delete(entityId);
   }
 
-  // Generate normal map from DEM texture using RenderTarget pool
-  // Pass explicit content dimensions to avoid fragile power-of-two inference
+  // Generate normal map (DEM is uploaded transiently and freed after render)
   const normalMap = hillshadeContext.generateNormalMap(
     entityId,
     ctx.viewContext,
-    dataTexture,
+    demData,
+    paddedSize,
     metersPerTexel,
     hillshadeConfig,
     contentWidth,
     contentHeight,
   );
 
-  // Use normal map as the texture
   loadedTexs.set(entityId, normalMap);
 
-  // Store temporary DEM texture for edge updates
+  // Store handle-only TempDem entry (no full padded DEM retained)
   hillshadeContext.storeTempDem(
     entityId,
-    dataTexture,
+    originalHandle,
+    paddedSize,
     metersPerTexel,
     hillshadeConfig,
   );
 
+  // Persist edge bytes so padded DEM can be reconstructed on subsequent edge arrivals
+  for (const { direction, bytes } of appliedEdges) {
+    hillshadeContext.storeEdgeData(entityId, direction, bytes);
+  }
+
   // Mark the edges that were already applied from pending as received
-  for (const edgeDirection of appliedEdges) {
+  for (const { direction } of appliedEdges) {
     const allEdgesReceived = hillshadeContext.markEdgeReceived(
       entityId,
-      edgeDirection,
+      direction,
     );
     if (allEdgesReceived) {
       hillshadeContext.clearTempDem(entityId);
@@ -296,7 +268,7 @@ function processHillshadeEdgeUpdate(
     return;
   }
 
-  // Texture exists (it's a normal map), check if we have the temporary DEM
+  // Texture exists (it's a normal map), check if we have the temporary DEM entry
   const tempDemEntry = hillshadeContext.getTempDem(entityId);
   if (!tempDemEntry) {
     // No temp DEM - edge updates complete or timed out, ignore this late arrival
@@ -304,20 +276,21 @@ function processHillshadeEdgeUpdate(
   }
 
   const edgeSize = edgeBytes.length / 4;
-  const demTexture = tempDemEntry.demTexture;
-  const textureData = demTexture.image.data as Uint8Array;
-  const texSize = demTexture.image.width;
+  const { originalHandle, paddedSize } = tempDemEntry;
 
   // Texture should be padded (edgeSize + 2)
   const expectedTexSize = edgeSize + 2;
-  if (texSize !== expectedTexSize) {
+  if (paddedSize !== expectedTexSize) {
     // Size mismatch - different zoom levels, discard this edge data
     return;
   }
 
-  // Update the DEM texture padding edge
-  updatePaddingEdge(textureData, edgeBytes, texSize, event.edge_direction);
-  demTexture.needsUpdate = true;
+  // Store edge bytes for reconstruction on future edge arrivals
+  hillshadeContext.storeEdgeData(
+    entityId,
+    event.edge_direction,
+    new Uint8Array(edgeBytes),
+  );
 
   // Mark this edge as received
   const allEdgesReceived = hillshadeContext.markEdgeReceived(
@@ -325,22 +298,34 @@ function processHillshadeEdgeUpdate(
     event.edge_direction,
   );
 
-  // Regenerate normal map from updated DEM
-  // Calculate content dimensions from padded texture (subtract 2px padding)
-  const contentWidth = demTexture.image.width - 2;
-  const contentHeight = demTexture.image.height - 2;
-  const updatedTexture = hillshadeContext.generateNormalMap(
-    entityId,
-    ctx.viewContext,
-    demTexture,
-    tempDemEntry.metersPerTexel,
-    tempDemEntry.hillshadeConfig,
-    contentWidth,
-    contentHeight,
-  );
-  loadedTexs.set(entityId, updatedTexture);
+  // Re-read the original DEM from WASM buffer (reference-counted, still valid)
+  const originalBytes = buf.u8(originalHandle);
+  if (originalBytes) {
+    // Rebuild the padded DEM transiently, apply all received edges, generate normal map
+    const padded = createPaddedDemData(originalBytes);
+    if (padded) {
+      for (const [dir, storedBytes] of tempDemEntry.receivedEdgeData) {
+        updatePaddingEdge(padded.data, storedBytes, padded.paddedSize, dir);
+      }
 
-  // If all 4 edges received, cleanup the temporary DEM
+      const contentWidth = padded.paddedSize - 2;
+      const contentHeight = padded.paddedSize - 2;
+      const updatedTexture = hillshadeContext.generateNormalMap(
+        entityId,
+        ctx.viewContext,
+        padded.data,
+        padded.paddedSize,
+        tempDemEntry.metersPerTexel,
+        tempDemEntry.hillshadeConfig,
+        contentWidth,
+        contentHeight,
+      );
+      loadedTexs.set(entityId, updatedTexture);
+      // padded.data is released here (no persistent reference kept)
+    }
+  }
+
+  // If all 4 edges received, cleanup the temporary entry
   if (allEdgesReceived) {
     hillshadeContext.clearTempDem(entityId);
   }

@@ -123,6 +123,25 @@ import { Color } from "@navara/three";
 }
 ```
 
+### creaseNormalAngle
+
+**Type:** `number | undefined`
+
+**Description:** [`normals`](#normals) が有効な場合に使用する、クリース角度（ラジアン）を指定します。共有する面の角度がこの閾値を超えるエッジはクリース（ハード）エッジとして維持され、それ以下のエッジはスムージングされます。
+
+**Default:** `Math.PI / 6`（30°。`normals` を有効化し、このプロパティを省略した場合に適用されます）
+
+**Example:**
+
+```typescript
+{
+  model: {
+    normals: true,
+    creaseNormalAngle: Math.PI / 3, // 60°
+  }
+}
+```
+
 ### effectIds
 
 **Type:** `string[] | undefined`
@@ -247,6 +266,24 @@ import { Color } from "@navara/three";
 {
   model: {
     metalness: 0.1
+  }
+}
+```
+
+### normals
+
+**Type:** `boolean | undefined`
+
+**Description:** 有効にすると、モデルのロード後に creased-normals アルゴリズムで頂点法線を再計算します。法線情報を持たない、または法線品質の低いタイル glTF アセット（フォトグラメトリのタイルセットなど）でライティングや大気遠近法エフェクトを正しくシェーディングしたい場合に有用です。クリース角度は [`creaseNormalAngle`](#creasenormalangle) で指定します。
+
+**Default:** `undefined`
+
+**Example:**
+
+```typescript
+{
+  model: {
+    normals: true,
   }
 }
 ```

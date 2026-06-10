@@ -31,7 +31,11 @@ import {
   TILES_3D_DATASETS,
   LOCAL_DATASETS,
 } from "../../helpers/constants";
-import { addCameraControl, addDateControl } from "../../helpers/control";
+import {
+  addCameraControl,
+  addDateControl,
+  atZoneTime,
+} from "../../helpers/control";
 import { SH_COEFFICIENTS } from "../../helpers/sh";
 
 export type CustomDescriptions = DefaultDescriptions;
@@ -64,8 +68,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   });
 
   // Set time to night (10 PM)
-  const nightDate = new Date();
-  nightDate.setHours(22);
+  const nightDate = atZoneTime(new Date(), 22);
 
   // Add sky light probe for night ambient lighting
   defaultAtmosphere.skyLightProbe.update({

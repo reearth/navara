@@ -2,13 +2,17 @@
 vec3 getDirLightColor() {
   vec3 lightColor = vec3(1.0);
   #if ( NUM_DIR_LIGHTS > 0 )
-    DirectionalLight directionalLight;
-    #pragma unroll_loop_start
-	  for ( int i = 0; i < NUM_DIR_LIGHTS; i ++ ) {
-		  directionalLight = directionalLights[ i ];
-      lightColor *= directionalLight.color;
-    }
-    #pragma unroll_loop_end
+    // TODO: Support multiple lights. Also need to accumulate the material color.
+    // #pragma unroll_loop_start
+    //   for ( int i = 0; i < NUM_DIR_LIGHTS; i ++ ) {
+    //     directionalLight = directionalLights[ i ];
+    //     lightColor *= directionalLight.color;
+    //   }
+    // #pragma unroll_loop_end
+
+    // Assume the first light is sun, otherwise we have to accumulate the material color.
+    DirectionalLight directionalLight = directionalLights[ 0 ];
+    lightColor = directionalLight.color;
   #endif
   return lightColor;
 }

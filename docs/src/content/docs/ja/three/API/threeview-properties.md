@@ -15,18 +15,23 @@ sidebar:
 
 **Read-only** (getter)
 
-ビューの位置、向き、投影を管理するカメラコントローラー。`raw` プロパティで Three.js の `PerspectiveCamera` にアクセスできます。
+ビューの位置、向き、投影、インタラクティブ操作動作を管理するカメラコントローラー。
 
 **Example:**
 
 ```tsx
-// Three.js カメラの位置を取得
-const position = view.camera.raw.position;
+// カメラの地理座標を取得
+const pos = view.camera.positionGeographic;
 
-// カメラの視野角を変更
-view.camera.raw.fov = 60;
-view.camera.raw.updateProjectionMatrix();
+// カメラの移動イベントをサブスクライブ
+view.camera.on("moveend", () => {
+  console.log("カメラが停止しました");
+});
 ```
+
+:::tip[関連ドキュメント]
+すべてのプロパティ・イベント・操作オプションの詳細は [ThreeViewCamera クラス](../../../three/api-reference/camera/) を参照してください。
+:::
 
 ### globe
 

@@ -1,5 +1,6 @@
 import {
   cameraFar,
+  color,
   diffuseColor,
   log2,
   normalView,
@@ -9,7 +10,7 @@ import {
   vec3,
   vec4,
 } from "three/tsl";
-import type { Node, NodeMaterial } from "three/webgpu";
+import { NodeMaterial, type Node } from "three/webgpu";
 
 import { packNormalToVec2 } from "./normalPacking";
 
@@ -69,6 +70,13 @@ export function setupNodeMaterialForMRT(
   options: MRTOptions = {},
   logarithmicDepthBuffer = true,
 ): void {
+  const emissive = color(
+    (options.emissiveNode ?? vec3(0)).mul(options.emissiveIntensityNode ?? 0),
+  );
+  // There is no type definition, but this is no problem: https://github.com/mrdoob/three.js/blob/dev/src/materials/nodes/NodeMaterial.js#L1105
+  (material as NodeMaterial & { emissiveNode: Node<"color"> }).emissiveNode =
+    emissive;
+
   const colorSlot = options.colorNode ?? output;
   const normalSlot = vec4(
     packNormalToVec2(options.normalNode ?? normalView),
@@ -76,12 +84,7 @@ export function setupNodeMaterialForMRT(
     options.roughnessNode ?? 0,
   );
   const effectIdSlot = vec4(options.effectIdsMaskNode ?? 0, 0, 0, 1);
-  const emissiveSlot = vec4(
-    diffuseColor.rgb
-      .mul(options.emissiveIntensityNode ?? 0)
-      .add(options.emissiveNode ?? vec3(0)),
-    1,
-  );
+  const emissiveSlot = vec4(diffuseColor.rgb.add(emissive), 1);
 
   // Must be the OutputStructNode directly, not wrapped in `Fn(() => ...)`:
   // the wrapper would make the builder declare a temporary `OutputType nodeVarN`

@@ -136,6 +136,42 @@ See [Atmosphere class](../../../three/api-reference/atmosphere/) for details on 
 }
 ```
 
+### useNormalBuffer
+
+**Type:** `boolean | undefined`
+
+**Description:** Specifies whether to bind the normal buffer to the effect, which controls whether deferred lighting (irradiance applied via this pass) is performed on scene materials. When `false`, the normal buffer is not provided to the effect and post-processing lighting is not applied to materials — atmospheric in-scatter and transmittance still compute, but materials are not relit by this pass. Disable this when scene geometry does not produce a reliable normal buffer (for example, tiled glTF assets without authored normals) and material lighting should be left untouched.
+
+**Default:** `true`
+
+**Example:**
+
+```typescript
+{
+  aerialPerspective: {
+    useNormalBuffer: false,
+  }
+}
+```
+
+### albedoScale
+
+**Type:** `number | undefined`
+
+**Description:** Specifies the scale factor passed to the underlying `AerialPerspectiveEffect`'s `albedoScale` uniform. It is multiplied with the scene color when computing the diffuse term used by the irradiance pass.
+
+**Default:** `2 / Math.PI`
+
+**Example:**
+
+```typescript
+{
+  aerialPerspective: {
+    albedoScale: 2 / Math.PI,
+  }
+}
+```
+
 ## Usage Examples
 
 ### Enable aerial perspective with default effect descriptors

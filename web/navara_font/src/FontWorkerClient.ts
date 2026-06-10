@@ -23,7 +23,9 @@ export class FontWorkerClient {
   constructor(workerUrl: string | URL, concurrencyManager: ConcurrencyManager) {
     this._concurrencyManager = concurrencyManager;
 
-    this._worker = new Worker(workerUrl, { type: "module" });
+    this._worker = new Worker(workerUrl, {
+      type: import.meta.env.PROD ? undefined : "module",
+    });
 
     this._worker.onmessage = (e: MessageEvent) => {
       const { id, type, payload } = e.data;
@@ -44,8 +46,8 @@ export class FontWorkerClient {
       this.dispose();
     };
 
-    // Trigger WASM init by sending a tick
-    this._ready = this._send("tick", undefined).then(() => undefined);
+    // Trigger WASM init and resolve once the worker is ready.
+    this._ready = this._send("init", undefined).then(() => undefined);
     this._concurrencyManager.increment();
   }
 
@@ -56,13 +58,20 @@ export class FontWorkerClient {
 
   /** Load a font file into the worker's FontCache. Transfers the ArrayBuffer.
    *  `atlasKey`: optional shared atlas identifier (e.g. font family name).
-   *  When provided, all fonts loaded with the same key share a single SDF atlas. */
+   *  When provided, all fonts loaded with the same key share a single atlas.
+   *  `highQuality`: whether to use the high-quality atlas raster path. The Rust side creates the
+   *  atlas with this mode on the first load; subsequent loads under the same
+   *  `atlasKey` are expected to reuse the same quality (the TS layer
+   *  guarantees this by including the highQuality flag in both `url` and `atlasKey`). */
   async loadFont(
     url: string,
     data: ArrayBuffer,
-    atlasKey?: string,
+    atlasKey: string | undefined,
+    highQuality: boolean,
   ): Promise<{ ok: boolean }> {
-    return this._send("loadFont", { url, data, atlasKey }, [data]) as Promise<{
+    return this._send("loadFont", { url, data, atlasKey, highQuality }, [
+      data,
+    ]) as Promise<{
       ok: boolean;
     }>;
   }
@@ -71,8 +80,16 @@ export class FontWorkerClient {
     return this._send("unloadFont", { url }) as Promise<{ ok: boolean }>;
   }
 
-  async tick(): Promise<void> {
-    return this._send("tick", undefined) as Promise<void>;
+  /** Add one visible-label reference to each glyph (composite keys) under
+   *  `atlasKey`. Fire-and-forget; the worker replies so `_pending` is cleared.
+   *  Transfers the key buffer — the caller discards it after this call. */
+  retainGlyphs(atlasKey: string, keys: BigUint64Array): void {
+    void this._send("retainGlyphs", { atlasKey, keys }, [keys.buffer]);
+  }
+
+  /** Drop one visible-label reference from each glyph under `atlasKey`. */
+  releaseGlyphs(atlasKey: string, keys: BigUint64Array): void {
+    void this._send("releaseGlyphs", { atlasKey, keys }, [keys.buffer]);
   }
 
   /** Shape multiple texts in one worker round-trip. */
@@ -80,24 +97,30 @@ export class FontWorkerClient {
     fontUrl: string,
     texts: string[],
   ): Promise<BatchPrepareTextResult> {
+    type RawAtlas = {
+      data: ArrayBuffer;
+      width: number;
+      height: number;
+      channels: number;
+    };
     const raw = (await this._send("prepareTextBatch", {
       fontUrl,
       texts,
     })) as {
       results: { text: string; shapeResult: ShapeTextResult | null }[];
-      atlas: { data: ArrayBuffer; width: number; height: number } | null;
-      colorAtlas: { data: ArrayBuffer; width: number; height: number } | null;
+      atlas: RawAtlas | null;
+      colorAtlas: RawAtlas | null;
       atlasKey: string;
+      evicted: boolean;
     };
 
-    const wrap = (
-      raw: { data: ArrayBuffer; width: number; height: number } | null,
-    ): FontAtlasData | null =>
+    const wrap = (raw: RawAtlas | null): FontAtlasData | null =>
       raw
         ? {
             data: new Uint8Array(raw.data),
             width: raw.width,
             height: raw.height,
+            channels: raw.channels,
           }
         : null;
 
@@ -106,6 +129,7 @@ export class FontWorkerClient {
       atlas: wrap(raw.atlas),
       colorAtlas: wrap(raw.colorAtlas),
       atlasKey: raw.atlasKey,
+      evicted: raw.evicted,
     };
   }
 

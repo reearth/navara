@@ -143,6 +143,12 @@ importers:
         specifier: 1.59.1
         version: 1.59.1
 
+  web/integration-tests/navara-iife:
+    devDependencies:
+      vite:
+        specifier: 8.0.8
+        version: 8.0.8(@types/node@24.12.2)(esbuild@0.27.4)(jiti@2.6.1)(terser@5.43.1)(tsx@4.21.0)
+
   web/integration-tests/navara-three:
     dependencies:
       '@navara/engine':
@@ -266,6 +272,9 @@ importers:
       '@takram/three-geospatial-effects':
         specifier: 0.6.4
         version: 0.6.4(@react-three/fiber@9.1.2(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(three@0.184.0))(postprocessing@6.38.3(three@0.184.0))(react@19.2.5)(three@0.184.0)
+      astronomy-engine:
+        specifier: 2.1.19
+        version: 2.1.19
       stats.js:
         specifier: 0.17.0
         version: 0.17.0
@@ -330,6 +339,9 @@ importers:
       clsx:
         specifier: 2.1.1
         version: 2.1.1
+      dayjs:
+        specifier: 1.11.20
+        version: 1.11.20
       lucide-react:
         specifier: 1.14.0
         version: 1.14.0(react@19.2.5)

@@ -199,6 +199,12 @@ pub struct TextMaterial {
     pub outline_opacity: f32, // outlineOpacity Default:1
     pub outline_width: f32,   // outlineWidth Default:0
     pub lang: String,
+    /// Enable high-quality glyph rendering. When `true`, text uses an MTSDF
+    /// atlas via `fdsm` — preserves sharp corners at large sizes but per-glyph
+    /// cost is dominated by exact distance-to-curve math. When `false` (the
+    /// default), single-channel SDF (Felzenszwalb on a fontdue bitmap) is used
+    /// — ~100× faster per glyph, slightly soft corners at extreme zoom.
+    pub high_quality: bool,
 }
 
 impl Default for TextMaterial {
@@ -226,6 +232,7 @@ impl Default for TextMaterial {
             outline_opacity: 1.0,
             outline_width: 0.0,
             lang: "".to_string(),
+            high_quality: false,
         }
     }
 }
@@ -409,6 +416,13 @@ pub struct ModelMaterial {
     pub animation_speed: Option<f32>,
     pub point_size: f32,
     pub show_bounding_box: bool,
+    /// When true, recompute vertex normals using a creased-normals algorithm
+    /// after the model loads. Useful for tiled glTF assets that ship without
+    /// normals or with low-quality normals.
+    pub normals: bool,
+    /// Crease angle (in radians) used when `normals` is true. `None` lets the
+    /// renderer pick its default (currently 30° / PI/6).
+    pub crease_normal_angle: Option<f32>,
     pub internal: Option<ModelInternalMaterial>,
     // post effect
     pub effect_ids: Option<Vec<String>>,
@@ -445,6 +459,8 @@ impl Default for ModelMaterial {
             animation_speed: None,
             point_size: 0.3,
             show_bounding_box: false,
+            normals: false,
+            crease_normal_angle: None,
             internal: None,
             // post effect
             effect_ids: None,

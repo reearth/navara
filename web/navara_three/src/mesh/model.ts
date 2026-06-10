@@ -117,17 +117,43 @@ export class ModelMesh
       : new Uint32Array(dataSize);
 
     const meshMaterial = m.material;
+    const uniforms = this.ctx.uniforms;
 
-    // For Cesium 3D Tiles
-    if (batchIds) {
-      this.overrideCesium3DTilesMaterial(meshMaterial, batchIds, dataSize);
-    }
+    const updateProps = this.buildUpdateProps(meshMaterial);
+    const modelInitialProps: ModelMaterialProps = {
+      ...updateProps,
+      water: {
+        ...updateProps.water,
+        skyEnvMap: uniforms.tSkyEnvMap.value,
+        waterNormalMap: uniforms.waterTexture as UniformValue<Texture | null>,
+        timeUniform: uniforms.time as UniformValue<number>,
+        skyEnvMapUniform: uniforms.tSkyEnvMap as UniformValue<Texture | null>,
+      },
+    };
 
-    // `overridePntsMaterial` traverses `THREE.Points` nodes via `traversePoints`
-    // and is a no-op when none are present. Always invoking it gives per-node
-    // accuracy for mixed-mode glTFs (POINTS + TRIANGLES) at near-zero cost for
-    // pure-mesh tiles.
-    this.overridePntsMaterial(meshMaterial);
+    const geodeticNormal: Vec3 =
+      meshMaterial.__internal__?.pointCloudGeodeticNormal ?? new Vec3(0, 0, 0);
+    const pntsInitialProps: PntsProps = {
+      color: meshMaterial.color ?? 0,
+      pointSize: meshMaterial.pointSize ?? 1,
+      height: meshMaterial.height ?? 0,
+      geodeticNormal,
+      divideColor: meshMaterial.__internal__?.pointCloud,
+    };
+
+    this.traverse((object: Object3D) => {
+      if (object instanceof Mesh) {
+        this._setupMeshNode(
+          object,
+          meshMaterial,
+          batchIds,
+          dataSize,
+          modelInitialProps,
+        );
+      } else if (object instanceof Points) {
+        this._setupPointsNode(object, pntsInitialProps);
+      }
+    });
 
     this.visible = meshMaterial.show ?? true;
   }
@@ -197,121 +223,80 @@ export class ModelMesh
     });
   }
 
-  private overrideCesium3DTilesMaterial(
+  private _setupMeshNode(
+    mesh: Mesh<BufferGeometry<NormalBufferAttributes>, ModelMaterial>,
     meshMaterial: NavaraModelMaterial,
-    batchIds: Uint32Array<ArrayBufferLike>,
+    batchIds: Uint32Array<ArrayBufferLike> | null,
     dataSize: number,
+    initialProps: ModelMaterialProps,
   ) {
-    const uniforms = this.ctx.uniforms;
+    if (!batchIds) return;
 
-    // Build initial props using buildUpdateProps plus initial-only external refs
-    const updateProps = this.buildUpdateProps(meshMaterial);
-    const initialProps: ModelMaterialProps = {
-      ...updateProps,
-      water: {
-        ...updateProps.water,
-        skyEnvMap: uniforms.tSkyEnvMap.value,
-        // Pass waterNormalMap directly from uniforms if water is enabled
-        waterNormalMap: uniforms.waterTexture as UniformValue<Texture | null>,
-        timeUniform: uniforms.time as UniformValue<number>,
-        skyEnvMapUniform: uniforms.tSkyEnvMap as UniformValue<Texture | null>,
-      },
-    };
+    const vertCnt = mesh.geometry.attributes?.position?.count;
 
-    this.traverseMesh((mesh) => {
-      const vertCnt = mesh.geometry.attributes?.position?.count;
+    const attrBatchIds = new Float32Array(vertCnt);
+    // B3DM (1.0) uses _batchid; glTF with EXT_mesh_features (1.1) uses _FEATURE_ID_N.
+    // Assign _FEATURE_ID_0 to _batchid so the batch texture shader works unchanged.
+    // Also accept lowercase _feature_id_0 as a compatibility fallback.
+    const attrs = mesh.geometry.attributes;
+    const featureIdAttribute =
+      attrs?.["_FEATURE_ID_0"] ?? attrs?.["_feature_id_0"];
+    if (!attrs?._batchid && featureIdAttribute) {
+      // TODO: Support other feature ID semantics such as `_FEATURE_ID_n`.
+      // Need to clone, since it might be switch to different feature ID attributes.
+      mesh.geometry.setAttribute("_batchid", featureIdAttribute.clone());
+    }
+    const internalBatchIds = attrs?._batchid?.array;
 
-      const attrBatchIds = new Float32Array(vertCnt);
-      // B3DM (1.0) uses _batchid; glTF with EXT_mesh_features (1.1) uses _FEATURE_ID_N.
-      // Assign _FEATURE_ID_0 to _batchid so the batch texture shader works unchanged.
-      // Also accept lowercase _feature_id_0 as a compatibility fallback.
-      const attrs = mesh.geometry.attributes;
-      const featureIdAttribute =
-        attrs?.["_FEATURE_ID_0"] ?? attrs?.["_feature_id_0"];
-      if (!attrs?._batchid && featureIdAttribute) {
-        // TODO: Support other feature ID semantics such as `_FEATURE_ID_n`.
-        // Need to clone, since it might be switch to different feature ID attributes.
-        mesh.geometry.setAttribute("_batchid", featureIdAttribute.clone());
+    if (internalBatchIds) {
+      let i = 0;
+      for (const internalBatchId of internalBatchIds) {
+        attrBatchIds[i] = batchIds[internalBatchId] ?? 0;
+        i++;
       }
-      const internalBatchIds = attrs?._batchid?.array;
-
-      if (internalBatchIds) {
-        let i = 0;
-        for (const internalBatchId of internalBatchIds) {
-          attrBatchIds[i] = batchIds[internalBatchId] ?? 0;
-          i++;
-        }
-      } else {
-        for (let i = 0; i < vertCnt; i++) {
-          attrBatchIds[i] = batchIds[0];
-        }
+    } else {
+      for (let i = 0; i < vertCnt; i++) {
+        attrBatchIds[i] = batchIds[0];
       }
+    }
 
-      mesh.geometry.setAttribute(
-        "batchId",
-        new BufferAttribute(attrBatchIds, dataSize),
-      );
+    mesh.geometry.setAttribute(
+      "batchId",
+      new BufferAttribute(attrBatchIds, dataSize),
+    );
 
-      mesh.castShadow = !!meshMaterial.castShadow;
-      mesh.receiveShadow = !!meshMaterial.receiveShadow;
+    mesh.castShadow = !!meshMaterial.castShadow;
+    mesh.receiveShadow = !!meshMaterial.receiveShadow;
 
-      mesh.material.depthTest = true;
-      mesh.material.depthWrite = true;
+    mesh.material.depthTest = true;
+    mesh.material.depthWrite = true;
 
-      // Create enhanced material with encapsulated state
-      const enhancer = createModelMaterialEnhancer(mesh.material);
-      this._enhancers.set(mesh, enhancer);
+    const enhancer = createModelMaterialEnhancer(mesh.material);
+    this._enhancers.set(mesh, enhancer);
 
-      // Mount the enhancer
-      enhancer.mount(initialProps);
+    enhancer.mount(initialProps);
 
-      // Set up custom program cache key based on config flags that affect shader defines
-      mesh.material.customProgramCacheKey = () => enhancer.programCacheKey();
+    mesh.material.customProgramCacheKey = () => enhancer.programCacheKey();
+    mesh.material.onBeforeCompile = enhancer.transformShader;
 
-      // Set up onBeforeCompile using the enhancer's transformShader
-      mesh.material.onBeforeCompile = enhancer.transformShader;
+    this._initBatchedMaterial(mesh);
 
-      this._initBatchedMaterial(mesh);
+    this.initDepthMaterial(mesh, enhancer);
 
-      this.initDepthMaterial(mesh, enhancer);
-
-      this.ctx.viewContext.applyShadowMaterial(mesh.material);
-    });
+    this.ctx.viewContext.applyShadowMaterial(mesh.material);
   }
 
-  private traversePoints(
-    f: (
-      points: Points<BufferGeometry<NormalBufferAttributes>, PointsMaterial>,
-    ) => void,
+  private _setupPointsNode(
+    points: Points<BufferGeometry<NormalBufferAttributes>, PointsMaterial>,
+    initialProps: PntsProps,
   ) {
-    this.traverse((object: Object3D) => {
-      if (object instanceof Points) {
-        f(object);
-      }
-    });
-  }
+    const enhancer = createPntsEnhancer(points.material);
+    this._pntsEnhancers.set(points, enhancer);
 
-  private overridePntsMaterial(meshMaterial: NavaraModelMaterial) {
-    const geodeticNormal: Vec3 =
-      meshMaterial.__internal__?.pointCloudGeodeticNormal ?? new Vec3(0, 0, 0);
+    enhancer.mount(initialProps);
 
-    const initialProps: PntsProps = {
-      color: meshMaterial.color ?? 0,
-      pointSize: meshMaterial.pointSize ?? 1,
-      height: meshMaterial.height ?? 0,
-      geodeticNormal,
-      divideColor: meshMaterial.__internal__?.pointCloud,
-    };
-
-    this.traversePoints((points) => {
-      const enhancer = createPntsEnhancer(points.material);
-      this._pntsEnhancers.set(points, enhancer);
-
-      enhancer.mount(initialProps);
-
-      points.material.customProgramCacheKey = () => enhancer.programCacheKey();
-      points.material.onBeforeCompile = enhancer.transformShader;
-    });
+    points.material.customProgramCacheKey = () => enhancer.programCacheKey();
+    points.material.onBeforeCompile = enhancer.transformShader;
   }
 
   /**

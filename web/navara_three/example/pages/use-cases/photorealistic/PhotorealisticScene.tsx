@@ -3,6 +3,7 @@ import { useViewContext } from "@navara/three_react";
 import { useEffect, useState } from "react";
 
 import { FLOOD_RANK_COLOR_MAP } from "../../../helpers/colors";
+import { atZoneTime } from "../../../helpers/control";
 
 import { AttributionPanel, type Attribution } from "./AttributionPanel";
 import type { BuildingColorAttribute } from "./BuildingLayer";
@@ -122,10 +123,11 @@ export const PhotorealisticScene = ({
     const minutes = Math.round((t - hours) * 60);
 
     // Use current date; only adjust hours/minutes like addDateControl does
-    const d = new Date(view.atmosphere.date ?? Date.now());
-    d.setHours(hours);
-    d.setMinutes(minutes);
-    view.atmosphere.date = d;
+    view.atmosphere.date = atZoneTime(
+      new Date(view.atmosphere.date ?? Date.now()),
+      hours,
+      minutes,
+    );
   }, [view, sceneTime]);
 
   // Flood

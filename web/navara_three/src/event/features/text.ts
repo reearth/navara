@@ -25,12 +25,19 @@ export async function renderText(
       // For font families, only the face URLs needed for `text` are loaded (lazy).
       // For raw URLs, the single font file is loaded directly.
       const text = m.material.text ?? "";
+      const highQuality = m.material.highQuality ?? false;
       const loadedFaceUrls = new Set<string>();
       if (fontManager.isFamily(fontUrl)) {
-        if (text) await fontManager.prepareText(fontUrl, text, loadedFaceUrls);
+        if (text)
+          await fontManager.prepareText(
+            fontUrl,
+            text,
+            highQuality,
+            loadedFaceUrls,
+          );
       } else {
-        await fontManager.loadFont(fontUrl);
-        if (text) await fontManager.prepareText(fontUrl, text);
+        await fontManager.loadFont(fontUrl, highQuality);
+        if (text) await fontManager.prepareText(fontUrl, text, highQuality);
       }
 
       const textGroup = new BatchedSdfTextMesh(

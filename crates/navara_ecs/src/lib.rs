@@ -8,8 +8,9 @@ use bevy_ecs::{
 };
 use navara_buffer_store::{BufferStore, Handle};
 use navara_camera::{
-    CamDirType, CameraControlUpdateEvent, CameraDirection, CameraEvent, CameraFrustum,
-    CameraMarker, CameraOrientation, CameraStatus, FrustumEvent, get_heading, get_pitch, get_roll,
+    CamDirType, CameraControlUpdateEvent, CameraController, CameraDirection, CameraEvent,
+    CameraFrustum, CameraMarker, CameraOrientation, CameraStatus, FrustumEvent, get_heading,
+    get_pitch, get_roll,
 };
 use navara_component::{Deleted, Rendered};
 use navara_core::{CRS, ElevationDecoder, LLE, LngLat, Radians, WGS84_64};
@@ -598,6 +599,7 @@ impl App {
         pitch: Option<FloatType>,
         heading: Option<FloatType>,
         roll: Option<FloatType>,
+        distance: Option<FloatType>,
     ) {
         let pos = position.and_then(|v| (v.len() == 3).then(|| Vec3::new(v[0], v[1], v[2])));
         self.app.world_mut().write_message(CameraEvent::Change {
@@ -607,6 +609,7 @@ impl App {
                 heading,
                 roll,
             }),
+            distance,
         });
     }
 
@@ -627,6 +630,7 @@ impl App {
         });
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn fly_to(
         &mut self,
         position: Option<Vec<FloatType>>,
@@ -635,6 +639,7 @@ impl App {
         roll: Option<FloatType>,
         duration: Option<FloatType>,
         max_height: Option<FloatType>,
+        distance: Option<FloatType>,
     ) {
         let pos = position.and_then(|v| (v.len() == 3).then(|| Vec3::new(v[0], v[1], v[2])));
         self.app.world_mut().write_message(CameraEvent::FlyTo {
@@ -646,6 +651,7 @@ impl App {
             }),
             duration,
             max_height,
+            distance,
         });
     }
 
@@ -797,6 +803,14 @@ impl App {
 
     pub fn set_camera_control(&mut self, event: CameraControlUpdateEvent) {
         self.app.world_mut().write_message(event);
+    }
+
+    pub fn set_terrain_pick_distance(&mut self, distance: Option<f64>) {
+        let world = self.app.world_mut();
+        let mut query = world.query::<(&CameraMarker, &mut CameraController)>();
+        for (_, mut controller) in query.iter_mut(world) {
+            controller.terrain_hit_distance = distance;
+        }
     }
 
     pub fn get_globe(&self) -> Option<&Globe> {

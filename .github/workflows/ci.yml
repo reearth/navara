@@ -55,6 +55,9 @@ jobs:
       - name: Run Build library
         run: pnpm build
 
+      - name: Build IIFE
+        run: pnpm build:iife
+
       - name: Build Integration Tests
         run: pnpm build:integration
 

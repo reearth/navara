@@ -292,6 +292,24 @@ import { Color } from "@navara/three";
 }
 ```
 
+### highQuality
+
+**Type:** `boolean | undefined`
+
+**Description:** Enables high-quality glyph rendering. When `true`, text uses an MSDF atlas, which preserves sharp corners at large sizes but is significantly slower to rasterize per glyph. When `false` or omitted, the default single-channel SDF atlas is used, which is dramatically faster with slightly soft corners at extreme zoom.
+
+**Default:** `false`
+
+**Example:**
+
+```typescript
+{
+  text: {
+    highQuality: true
+  }
+}
+```
+
 ### sizeInMeters
 
 **Type:** `boolean | undefined`
