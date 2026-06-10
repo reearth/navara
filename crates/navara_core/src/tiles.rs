@@ -128,7 +128,7 @@ pub fn calc_meters_per_texel(
     let earth_circumference = 2.0 * std::f64::consts::PI * ellipsoid_semi_major_axis;
     let content_pixel_width = texture_width.saturating_sub(2).max(1) as f64;
     let meters_per_texel =
-        (earth_circumference * cos_lat) / (content_pixel_width * (1u64 << texture_zoom) as f64);
+        (earth_circumference * cos_lat) / (content_pixel_width * (texture_zoom as f64).exp2());
     meters_per_texel as f32
 }
 
