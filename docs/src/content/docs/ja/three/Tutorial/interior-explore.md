@@ -308,5 +308,5 @@ personView.start();
 - **任意のモデルを使う**: `character.modelUrl` を差し替え、`idleClip` / `dashClip` をモデルが持つクリップ名に合わせてください
 - **カメラを追従モードに固定**: 例では `allowCameraControl: true` を指定して常時フリーカメラにしていますが、`false` にすると基本は自動の追従ショットになり、**Alt** を押している間だけ手動でオービット操作できます
 - **起動時に一人称**: `initialView: "fpv"` を渡すと一人称視点で開始します
-- **キー割り当てのカスタマイズ**: `keys` オプションで任意のアクションを再割り当てできます（例: `keys: { ascend: "Space", descend: "ControlLeft" }`）
+- **キー割り当てのカスタマイズ**: `keys` オプションで任意のアクションを再割り当てできます（例: `keys: { ascend: ["Space"], descend: ["ControlLeft"] }`）
 :::
