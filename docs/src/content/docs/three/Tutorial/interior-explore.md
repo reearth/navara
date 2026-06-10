@@ -161,14 +161,15 @@ That's it — the character now responds to the keyboard and the camera follows 
 
 **Default key bindings**
 
-| Key             | Action                                |
-| --------------- | ------------------------------------- |
-| W / S           | Move forward / backward               |
-| A / D           | Turn left / right                     |
-| Arrow Up / Down | Ascend / descend                      |
-| Shift           | Dash (switches to `dashClip`)         |
-| Alt (hold)      | Free-orbit camera                     |
-| V               | Toggle third-person / first-person    |
+| Key              | Action                             |
+| ---------------- | ---------------------------------- |
+| W / S            | Move forward / backward            |
+| A / D            | Turn left / right                  |
+| Arrow Up / Space | Ascend                             |
+| Arrow Down / Ctrl| Descend                            |
+| Shift            | Dash (switches to `dashClip`)      |
+| Alt (hold)       | Free-orbit camera                  |
+| V                | Toggle third-person / first-person |
 
 The default chase view (TPV) is third person. Press **V** to switch to first person (FPV); the character mesh is hidden automatically. Hold **Alt** to take manual control of the camera while keeping it focused on the character.
 
