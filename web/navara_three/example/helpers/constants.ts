@@ -69,6 +69,19 @@ export const VECTOR_DATASETS = {
 } satisfies Record<string, Dataset>;
 
 /**
+ * PMTiles datasets — a single archive served over HTTP range requests, with an
+ * MVT payload (resolved by PmtilesSource). The URL has no `{z}/{x}/{y}`.
+ */
+export const PMTILES_DATASETS = {
+  protomapsFirenze: {
+    // url: "https://pmtiles.io/protomaps(vector)ODbL_firenze.pmtiles",
+    url:"https://overturemaps-extras-us-west-2.s3.us-west-2.amazonaws.com/tiles/2026-05-20.0/base.pmtiles",
+    attribution: "© OpenStreetMap contributors, © Protomaps",
+    attributionUrl: "https://protomaps.com",
+  },
+} satisfies Record<string, Dataset>;
+
+/**
  * 3D Tiles datasets (PLATEAU)
  */
 export const TILES_3D_DATASETS = {
