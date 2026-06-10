@@ -146,7 +146,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     }
   });
 
-  // Start flight
+  // Start person view
   personViewPlugin.start();
 
   createHud();
