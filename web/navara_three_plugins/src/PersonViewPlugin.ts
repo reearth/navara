@@ -371,6 +371,7 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
 
       this.modelRef = this.handle.ref;
       this.modelRef.on("load", () => {
+        if (!this.view) return;
         this.lastTime = performance.now();
         this.animId = requestAnimationFrame(this.tick);
       });
