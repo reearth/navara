@@ -21,7 +21,7 @@ addLayer(l: LayerDescription): Layer
 
 **Parameters:**
 
-For detailed types of LayerDescription, see [Resource Layer Reference](../../../three/resource-layer-reference/resource-layer/).
+For detailed types of LayerDescription, see [Resource Layer Reference](../../../three/resource-layer/resource-layer/).
 
 **Returns:**
 

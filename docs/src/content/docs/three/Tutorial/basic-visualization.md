@@ -310,7 +310,7 @@ receiveShadow: true,
 - The maximum zoom level, minimum zoom level, and shadows for terrain tiles are configured here.
 - The elevationDecoder decodes the terrain data.
 
-For details, see [Terrain Layer](../../../three/resource-layer-reference/terrain-layer/).
+For details, see [Terrain Layer](../../../three/resource-layer/terrain-layer/).
 
 ### Complete Code
 
@@ -434,7 +434,7 @@ A polygon is displayed on the map.
 
 Use the `view.addLayer` method to add a GeoJSON layer. By specifying `type: "geojson"`, you can display GeoJSON format data on the map. You can also configure polygon styling (color, height, transparency, etc.).
 
-For details, see [GeoJSON Layer](../../../three/resource-layer-reference/geojson-layer/).
+For details, see [GeoJSON Layer](../../../three/resource-layer/geojson-layer/).
 
 ### Complete Code
 

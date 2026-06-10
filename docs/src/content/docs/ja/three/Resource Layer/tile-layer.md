@@ -16,11 +16,11 @@ Tile レイヤーは、XYZ 形式のラスタータイル（航空写真、衛�
 
 ## 対応マテリアル
 
-| マテリアル                                                                                      | 設定キー           | 説明                                            |
-| ----------------------------------------------------------------------------------------------- | ------------------ | ----------------------------------------------- |
-| [RasterTileMaterial](../../../three/resource-layer-reference/raster-tile-material/)             | `rasterTile`       | タイルの外観を設定                              |
-| [ElevationHeatmapMaterial](../../../three/resource-layer-reference/elevation-heatmap-material/) | `elevationHeatmap` | 標高データをヒートマップとして表示              |
-| [HillshadeMaterial](../../../three/resource-layer-reference/hillshade-material/)                | `hillshade`        | DEM タイルから陰影起伏図（ヒルシェード）を描画  |
+| マテリアル                                                                                      | 設定キー           | 説明                               |
+| ----------------------------------------------------------------------------------------------- | ------------------ | ---------------------------------- |
+| [RasterTileMaterial](../../../three/resource-layer/raster-tile-material/)             | `rasterTile`       | タイルの外観を設定                 |
+| [ElevationHeatmapMaterial](../../../three/resource-layer/elevation-heatmap-material/) | `elevationHeatmap` | 標高データをヒートマップとして表示 |
+| [HillshadeMaterial](../../../three/resource-layer/hillshade-material/)                | `hillshade`        | DEM タイルから陰影起伏図（ヒルシェード）を描画  |
 
 ## 使用例
 
@@ -99,7 +99,7 @@ const hillshadeLayer = view.addLayer({
 
 ## 関連リソース
 
-- [Terrain Layer](../../../three/resource-layer-reference/terrain-layer/) - 3D 地形を表示
-- [RasterTileMaterial](../../../three/resource-layer-reference/raster-tile-material/) - タイルマテリアルの詳細設定
-- [ElevationHeatmapMaterial](../../../three/resource-layer-reference/elevation-heatmap-material/) - ヒートマップマテリアルの詳細設定
-- [HillshadeMaterial](../../../three/resource-layer-reference/hillshade-material/) - ヒルシェードマテリアルの詳細設定
+- [Terrain Layer](../../../three/resource-layer/terrain-layer/) - 3D 地形を表示
+- [RasterTileMaterial](../../../three/resource-layer/raster-tile-material/) - タイルマテリアルの詳細設定
+- [ElevationHeatmapMaterial](../../../three/resource-layer/elevation-heatmap-material/) - ヒートマップマテリアルの詳細設定
+- [HillshadeMaterial](../../../three/resource-layer/hillshade-material/) - ヒルシェードマテリアルの詳細設定

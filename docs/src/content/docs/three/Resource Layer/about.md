@@ -44,27 +44,27 @@ data: {
 
 ## Layer Types
 
-### [Cesium 3D Tiles Layer](../../../three/resource-layer-reference/cesium3dtiles-layer/)
+### [Cesium 3D Tiles Layer](../../../three/resource-layer/cesium3dtiles-layer/)
 
 **Use case:** For Cesium 3D Tiles data
 **Supported materials:** ModelMaterial
 
-### [GeoJSON Layer](../../../three/resource-layer-reference/geojson-layer/)
+### [GeoJSON Layer](../../../three/resource-layer/geojson-layer/)
 
 **Use case:** For GeoJSON format data
 **Supported materials:** PointMaterial, BillboardMaterial, TextMaterial, PolylineMaterial, PolygonMaterial, ModelMaterial
 
-### [MVT Layer](../../../three/resource-layer-reference/mvt-layer/)
+### [MVT Layer](../../../three/resource-layer/mvt-layer/)
 
 **Use case:** For Mapbox Vector Tiles (MVT) data
 **Supported materials:** PointMaterial, BillboardMaterial, TextMaterial, PolylineMaterial, PolygonMaterial, VectorTileMaterial
 
-### [Terrain Layer](../../../three/resource-layer-reference/terrain-layer/)
+### [Terrain Layer](../../../three/resource-layer/terrain-layer/)
 
 **Use case:** For terrain and elevation data
 **Supported materials:** RasterTerrainMaterial
 
-### [Tile Layer](../../../three/resource-layer-reference/tile-layer/)
+### [Tile Layer](../../../three/resource-layer/tile-layer/)
 
 **Use case:** For raster tile data
 **Supported materials:** RasterTileMaterial, ElevationHeatmapMaterial
@@ -73,61 +73,61 @@ data: {
 
 For resource layers, you can specify the following materials depending on the data format. Each material is specified using the corresponding key in the layer configuration.
 
-### [BillboardMaterial](../../../three/resource-layer-reference/billboard-material/)
+### [BillboardMaterial](../../../three/resource-layer/billboard-material/)
 
 **Use case:** For billboard rendering
 **Config key:** `billboard`
 **Supported layers:** GeoJSON Layer, MVT Layer
 
-### [ElevationHeatmapMaterial](../../../three/resource-layer-reference/elevation-heatmap-material/)
+### [ElevationHeatmapMaterial](../../../three/resource-layer/elevation-heatmap-material/)
 
 **Use case:** For elevation heatmap rendering
 **Config key:** `elevationHeatmap`
 **Supported layers:** Tile Layer
 
-### [ModelMaterial](../../../three/resource-layer-reference/model-material/)
+### [ModelMaterial](../../../three/resource-layer/model-material/)
 
 **Use case:** For 3D model rendering
 **Config key:** `model`
 **Supported layers:** Cesium 3D Tiles Layer
 
-### [PointMaterial](../../../three/resource-layer-reference/point-material/)
+### [PointMaterial](../../../three/resource-layer/point-material/)
 
 **Use case:** For point geometry rendering
 **Config key:** `point`
 **Supported layers:** GeoJSON Layer, MVT Layer
 
-### [PolygonMaterial](../../../three/resource-layer-reference/polygon-material/)
+### [PolygonMaterial](../../../three/resource-layer/polygon-material/)
 
 **Use case:** For polygon geometry rendering
 **Config key:** `polygon`
 **Supported layers:** GeoJSON Layer, MVT Layer
 
-### [PolylineMaterial](../../../three/resource-layer-reference/polyline-material/)
+### [PolylineMaterial](../../../three/resource-layer/polyline-material/)
 
 **Use case:** For polyline geometry rendering
 **Config key:** `polyline`
 **Supported layers:** GeoJSON Layer, MVT Layer
 
-### [RasterTerrainMaterial](../../../three/resource-layer-reference/raster-terrain-material/)
+### [RasterTerrainMaterial](../../../three/resource-layer/raster-terrain-material/)
 
 **Use case:** For raster terrain rendering
 **Config key:** `rasterTerrain`
 **Supported layers:** Terrain Layer
 
-### [RasterTileMaterial](../../../three/resource-layer-reference/raster-tile-material/)
+### [RasterTileMaterial](../../../three/resource-layer/raster-tile-material/)
 
 **Use case:** For raster tile rendering
 **Config key:** `rasterTile`
 **Supported layers:** Tile Layer
 
-### [TextMaterial](../../../three/resource-layer-reference/text-material/)
+### [TextMaterial](../../../three/resource-layer/text-material/)
 
 **Use case:** For text label rendering
 **Config key:** `text`
 **Supported layers:** GeoJSON Layer, MVT Layer
 
-### [VectorTileMaterial](../../../three/resource-layer-reference/vector-tile-material/)
+### [VectorTileMaterial](../../../three/resource-layer/vector-tile-material/)
 
 **Use case:** For vector tile rendering
 **Config key:** `vectorTile`

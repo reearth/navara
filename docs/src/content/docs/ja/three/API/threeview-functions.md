@@ -21,7 +21,7 @@ addLayer(l: LayerDescription): Layer
 
 **Parameters:**
 
-LayerDescription の詳細な型については、[Resource Layer Reference](../../../three/resource-layer-reference/resource-layer/) を参照してください。
+LayerDescription の詳細な型については、[Resource Layer Reference](../../../three/resource-layer/resource-layer/) を参照してください。
 
 **Returns:**
 

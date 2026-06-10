@@ -53,7 +53,7 @@ sidebar:
 
 ### elevationDecoder
 
-**Type:** [`ElevationDecoder`](../../../three/resource-layer-reference/raster-terrain-material/#elevationdecoder-type) | `undefined`
+**Type:** [`ElevationDecoder`](../../../three/resource-layer/raster-terrain-material/#elevationdecoder-type) | `undefined`
 
 **Description:** エンコードされた標高データを実際の標高値に変換するためのデコーダー設定を指定します。使用する DEM タイルのフォーマットに応じて適切なデコーダーを選択します。
 
@@ -237,8 +237,8 @@ view.globe.elevationColormap = rdYlBuColorMap;
 
 - [ColorMap クラス](../../../three/api-reference/colormap/) - カラーマップの詳細な API リファレンス
 - [Globe クラス](../../../three/api-reference/globe/) - `elevationColormap` プロパティの詳細
-- [RasterTerrainMaterial](../../../three/resource-layer-reference/raster-terrain-material/) - 3D 地形レンダリング用マテリアル
-- [Tile Layer](../../../three/resource-layer-reference/tile-layer/) - タイルレイヤーの設定
+- [RasterTerrainMaterial](../../../three/resource-layer/raster-terrain-material/) - 3D 地形レンダリング用マテリアル
+- [Tile Layer](../../../three/resource-layer/tile-layer/) - タイルレイヤーの設定
 
 :::note
 標高ヒートマップは Tile Layer の `elevationHeatmap` プロパティで設定します。`rasterTile` と併用して使用してください。

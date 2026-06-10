@@ -18,7 +18,7 @@ Terrain レイヤーは、標高データを使用して 3D 地形を表示す�
 
 | マテリアル                                                                        | 設定キー        | 説明                             |
 | --------------------------------------------------------------------------------- | --------------- | -------------------------------- |
-| [RasterTerrainMaterial](../../../three/resource-layer-reference/raster-terrain-material/) | `rasterTerrain` | 地形の外観と標高デコーダーを設定 |
+| [RasterTerrainMaterial](../../../three/resource-layer/raster-terrain-material/) | `rasterTerrain` | 地形の外観と標高デコーダーを設定 |
 
 ## 使用例
 
@@ -92,7 +92,7 @@ const terrainLayer = view.addLayer({
 ```
 
 :::note
-事前定義されたデコーダー定数の詳細は [RasterTerrainMaterial](../../../three/resource-layer-reference/raster-terrain-material/#pre-defined-constants) を参照してください。
+事前定義されたデコーダー定数の詳細は [RasterTerrainMaterial](../../../three/resource-layer/raster-terrain-material/#pre-defined-constants) を参照してください。
 :::
 
 ### ヒルシェードと組み合わせた使用
@@ -152,6 +152,6 @@ view.addLayer({
 
 ## 関連リソース
 
-- [Tile Layer](../../../three/resource-layer-reference/tile-layer/) - ラスタータイルを表示
-- [RasterTerrainMaterial](../../../three/resource-layer-reference/raster-terrain-material/) - 地形マテリアルの詳細設定
-- [HillshadeMaterial](../../../three/resource-layer-reference/hillshade-material/) - 3D 地形とヒルシェードの組み合わせ
+- [Tile Layer](../../../three/resource-layer/tile-layer/) - ラスタータイルを表示
+- [RasterTerrainMaterial](../../../three/resource-layer/raster-terrain-material/) - 地形マテリアルの詳細設定
+- [HillshadeMaterial](../../../three/resource-layer/hillshade-material/) - 3D 地形とヒルシェードの組み合わせ

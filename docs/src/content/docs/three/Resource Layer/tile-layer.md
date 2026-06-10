@@ -16,11 +16,11 @@ The Tile layer is a layer for displaying XYZ raster tiles (aerial photos, satell
 
 ## Supported Materials
 
-| Material                                                                                    | Config key         | Description                                       |
-| ------------------------------------------------------------------------------------------- | ------------------ | ------------------------------------------------- |
-| [RasterTileMaterial](../../../three/resource-layer-reference/raster-tile-material/)         | `rasterTile`       | Configures tile appearance                        |
-| [ElevationHeatmapMaterial](../../../three/resource-layer-reference/elevation-heatmap-material/) | `elevationHeatmap` | Displays elevation data as a heatmap              |
-| [HillshadeMaterial](../../../three/resource-layer-reference/hillshade-material/)            | `hillshade`        | Renders shaded relief (hillshade) from DEM tiles  |
+| Material                                                                                    | Config key         | Description                            |
+| ------------------------------------------------------------------------------------------- | ------------------ | -------------------------------------- |
+| [RasterTileMaterial](../../../three/resource-layer/raster-tile-material/)         | `rasterTile`       | Configures tile appearance             |
+| [ElevationHeatmapMaterial](../../../three/resource-layer/elevation-heatmap-material/) | `elevationHeatmap` | Displays elevation data as a heatmap   |
+| [HillshadeMaterial](../../../three/resource-layer/hillshade-material/)            | `hillshade`        | Renders shaded relief (hillshade) from DEM tiles  |
 
 ## Usage Examples
 
@@ -99,7 +99,7 @@ const hillshadeLayer = view.addLayer({
 
 ## Related Resources
 
-- [Terrain Layer](../../../three/resource-layer-reference/terrain-layer/) - Display 3D terrain
-- [RasterTileMaterial](../../../three/resource-layer-reference/raster-tile-material/) - Detailed tile material settings
-- [ElevationHeatmapMaterial](../../../three/resource-layer-reference/elevation-heatmap-material/) - Detailed heatmap material settings
-- [HillshadeMaterial](../../../three/resource-layer-reference/hillshade-material/) - Detailed hillshade material settings
+- [Terrain Layer](../../../three/resource-layer/terrain-layer/) - Display 3D terrain
+- [RasterTileMaterial](../../../three/resource-layer/raster-tile-material/) - Detailed tile material settings
+- [ElevationHeatmapMaterial](../../../three/resource-layer/elevation-heatmap-material/) - Detailed heatmap material settings
+- [HillshadeMaterial](../../../three/resource-layer/hillshade-material/) - Detailed hillshade material settings

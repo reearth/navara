@@ -310,7 +310,7 @@ receiveShadow: true,
 - 地形タイルの最大ズームレベル、最小ズームレベル、影などを設定しています。
 - elevationDecoder で、地形データをデコードします。
 
-詳細については、[Terrain Layer](../../../three/resource-layer-reference/terrain-layer/) を参照してください。
+詳細については、[Terrain Layer](../../../three/resource-layer/terrain-layer/) を参照してください。
 
 ### 完全なコード
 
@@ -434,7 +434,7 @@ view.addLayer({
 
 `view.addLayer` メソッドで GeoJSON レイヤーを追加します。`type: "geojson"` を指定すると、GeoJSON 形式のデータを地図上に表示できます。ポリゴンのスタイル設定（色、高さ、透明度など）も指定できます。
 
-詳細については、[GeoJSON Layer](../../../three/resource-layer-reference/geojson-layer/) を参照してください。
+詳細については、[GeoJSON Layer](../../../three/resource-layer/geojson-layer/) を参照してください。
 
 ### 完全なコード
 
