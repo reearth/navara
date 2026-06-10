@@ -25,11 +25,11 @@ import ThreeView, {
   Color,
   JAPAN_GSI_ELEVATION_DECODER,
 } from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import { DefaultPlugin, type DefaultDescriptions } from "@navara/three_default_plugin";
 import { PersonViewPlugin } from "@navara/three_plugins";
 
 const plugin = new DefaultPlugin();
-const view = new ThreeView({
+const view = new ThreeView<DefaultDescriptions>({
   shadow: true,
   backgroundColor: new Color().setStyle("#475668"),
 });
@@ -226,11 +226,11 @@ import ThreeView, {
   Color,
   JAPAN_GSI_ELEVATION_DECODER,
 } from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import { DefaultPlugin, type DefaultDescriptions } from "@navara/three_default_plugin";
 import { PersonViewPlugin } from "@navara/three_plugins";
 
 const plugin = new DefaultPlugin();
-const view = new ThreeView({
+const view = new ThreeView<DefaultDescriptions>({
   shadow: true,
   backgroundColor: new Color().setStyle("#475668"),
 });

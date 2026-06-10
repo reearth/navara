@@ -208,7 +208,7 @@ const snow = view.addMesh<SnowMeshDesc>({
 水面マテリアルを利用するには、`ThreeView` の生成時に `waterTexture` を有効化する必要があります。これを設定しないと、レイヤー側の `water: true` は効果を持ちません。
 
 ```typescript
-const view = new ThreeView({
+const view = new ThreeView<DefaultDescriptions>({
   waterTexture: { enabled: true },
   // ...その他のオプション
 });
