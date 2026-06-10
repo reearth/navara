@@ -308,5 +308,5 @@ personView.start();
 - **Use your own model**: Pass a different `character.modelUrl` and update `idleClip` / `dashClip` to match the clips it ships with
 - **Lock camera to chase mode**: The example sets `allowCameraControl: true` so the camera always orbits freely. Set it to `false` to require holding **Alt** for manual orbit while the chase shot follows automatically the rest of the time
 - **First-person at startup**: Pass `initialView: "fpv"` to start in first person
-- **Custom key bindings**: Use the `keys` option to remap any action (for example, `keys: { ascend: "Space", descend: "ControlLeft" }`)
+- **Custom key bindings**: Use the `keys` option to remap any action (for example, `keys: { ascend: ["Space"], descend: ["ControlLeft"] }`)
 :::
