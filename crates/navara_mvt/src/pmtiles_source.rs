@@ -19,6 +19,7 @@
 //! ranges against the one archive URL never collapse via `DataManager` dedup.
 
 use std::any::Any;
+use std::cmp::Ordering;
 use std::collections::HashMap;
 
 use bevy_ecs::{
@@ -29,7 +30,9 @@ use bevy_ecs::{
 };
 use navara_buffer_store::{BufferStore, Handle};
 use navara_component::{OrderByDistance, Priority};
-use navara_data_requester::{DataRequester, DataRequesterExtension, DataRequesterStatus};
+use navara_data_requester::{
+    DataRequester, DataRequesterExtension, DataRequesterStatus, RequestOrder, RequestOrderKey,
+};
 use navara_feature_component::batch::BatchTable;
 use navara_pmtiles::{ByteRange, Compression, PmtilesArchive, Resolution};
 use navara_tile_component::{TileHandle, VectorTile};
@@ -48,6 +51,48 @@ use crate::{
 /// [`VectorTileDataRequesterMarker`] so these requests bypass tile backpressure.
 #[derive(Component)]
 pub struct PmtilesMetaMarker;
+
+/// Secondary request-queue sort key for PMTiles container (header/leaf) fetches:
+/// **highest SSE first, then nearest**. Because directory fetches gate their
+/// tiles, ordering them by the demanding-ness of the viewport region they serve
+/// makes the view center resolve first — which matters under HTTP/1.1's small
+/// concurrent-connection limit, where dispatch order decides what loads first.
+#[derive(Component, PartialEq, Debug, Clone, Default)]
+pub struct PmtilesMetaOrder {
+    /// Screen-space error of the tile that triggered the fetch.
+    pub sse: f32,
+    /// Distance from camera of that tile.
+    pub distance: f32,
+}
+
+impl PmtilesMetaOrder {
+    /// Order that sorts ahead of any tile-triggered fetch — used for the
+    /// bootstrap (header/root dir), which gates the entire archive.
+    const FIRST: Self = Self {
+        sse: f32::MAX,
+        distance: 0.0,
+    };
+}
+
+impl RequestOrderKey for PmtilesMetaOrder {}
+
+impl PartialOrd for PmtilesMetaOrder {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for PmtilesMetaOrder {
+    fn cmp(&self, other: &Self) -> Ordering {
+        // Higher SSE sorts earlier; ties broken by nearer distance.
+        other
+            .sse
+            .total_cmp(&self.sse)
+            .then(self.distance.total_cmp(&other.distance))
+    }
+}
+
+impl Eq for PmtilesMetaOrder {}
 
 /// A vector-tile source backed by a PMTiles archive.
 pub struct PmtilesSource {
@@ -76,18 +121,20 @@ impl PmtilesSource {
         }
     }
 
-    /// Spawn an unmanaged meta request for `range` and return its tracking pair.
+    /// Spawn an unmanaged meta request for `range`, ordered by `order` so the
+    /// view center's directory chain resolves first, and return its tracking pair.
     fn spawn_meta(
         &self,
         commands: &mut Commands,
         buf: &mut BufferStore,
         range: ByteRange,
+        order: PmtilesMetaOrder,
     ) -> (Entity, Handle) {
         let req = DataRequester::from_store(self.url.clone(), buf, DataRequesterExtension::Mvt)
             .with_byte_range(range.offset, range.length);
         let handle = req.handle;
         let entity = commands
-            .spawn((PmtilesMetaMarker, req, Priority::High))
+            .spawn((PmtilesMetaMarker, req, Priority::High, RequestOrder(order)))
             .id();
         (entity, handle)
     }
@@ -111,7 +158,9 @@ impl PmtilesSource {
             && !self.archive.is_failed()
             && let Some(range) = self.archive.take_bootstrap_request()
         {
-            self.bootstrap_req = Some(self.spawn_meta(commands, buf, range));
+            // The bootstrap gates everything, so it sorts ahead of all leaves.
+            self.bootstrap_req =
+                Some(self.spawn_meta(commands, buf, range, PmtilesMetaOrder::FIRST));
         }
 
         // Leaves: feed any whose bytes have landed.
@@ -261,7 +310,13 @@ impl VectorTileSource for PmtilesSource {
                 request,
             } => {
                 if !self.leaf_reqs.contains_key(&leaf_offset) {
-                    let req = self.spawn_meta(commands, buf, request);
+                    // Order this leaf by the tile that needs it, so leaves for
+                    // the view center are fetched before peripheral ones.
+                    let order = PmtilesMetaOrder {
+                        sse: tile.sse as f32,
+                        distance: tile.distance_from_camera as f32,
+                    };
+                    let req = self.spawn_meta(commands, buf, request, order);
                     self.leaf_reqs.insert(leaf_offset, req);
                 }
                 tc.needs_update = true; // keep polling until the leaf lands

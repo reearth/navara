@@ -50,14 +50,16 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   // resolve through a single PmtilesSource (one header/directory fetch, shared
   // tile cache). The `vectorTile.layers` filter picks which MVT layer each one
   // styles — identical to how the MVT example works.
+  // `land` is the base fill, so it goes first; water / land_use / infrastructure
+  // drape on top of it.
   view.addLayer({
     type: "mvt",
     data: { url },
     polygon: {
-      color: new Color().setStyle("#4a90d9"),
+      color: new Color().setStyle("#efece6"),
       clampToGround: true,
     },
-    vectorTile: { maxZoom: 15, layers: ["water"] },
+    vectorTile: { maxZoom: 13, layers: ["land"] },
   });
 
   view.addLayer({
@@ -67,17 +69,17 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
       color: new Color().setStyle("#cfe6a8"),
       clampToGround: true,
     },
-    vectorTile: { maxZoom: 15, layers: ["landuse"] },
+    vectorTile: { maxZoom: 13, layers: ["land_use"] },
   });
 
   view.addLayer({
     type: "mvt",
     data: { url },
     polygon: {
-      color: new Color().setStyle("#b9a98f"),
+      color: new Color().setStyle("#4a90d9"),
       clampToGround: true,
     },
-    vectorTile: { maxZoom: 15, layers: ["buildings"] },
+    vectorTile: { maxZoom: 13, layers: ["water"] },
   });
 
   view.addLayer({
@@ -85,12 +87,12 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     data: { url },
     polyline: {
       show: true,
-      color: new Color().setStyle("#cd12c7"),
+      color: new Color().setStyle("#d06a1e"),
       width: 2,
       height: 1,
       clampToGround: true,
     },
-    vectorTile: { maxZoom: 15, layers: ["roads"] },
+    vectorTile: { maxZoom: 13, layers: ["infrastructure"] },
   });
 
   const pane = new Pane();

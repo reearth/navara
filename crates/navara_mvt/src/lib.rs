@@ -1,7 +1,8 @@
 #![doc = include_str!("../README.md")]
 
-use bevy_app::{App, Plugin, Update};
+use bevy_app::{App, Plugin, PostUpdate, Update};
 use bevy_ecs::schedule::IntoScheduleConfigs;
+use navara_data_requester::{DataRequesterSet, send_data_request_events_with_priority_and_sort};
 use navara_vector_tile::VectorTileSet;
 
 mod data_requester;
@@ -38,6 +39,13 @@ impl Plugin for MvtPlugin {
         .add_systems(
             Update,
             pmtiles_source::handle_pmtiles_meta_failures.before(VectorTileSet::Prepare),
+        )
+        // Dispatch PMTiles container (header/leaf) fetches nearest-first, so the
+        // viewport center's directory chain resolves before peripheral regions.
+        .add_systems(
+            PostUpdate,
+            send_data_request_events_with_priority_and_sort::<pmtiles_source::PmtilesMetaOrder>
+                .in_set(DataRequesterSet::PrioritizeRequests),
         );
     }
 }
