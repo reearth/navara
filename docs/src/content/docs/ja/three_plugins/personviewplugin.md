@@ -70,7 +70,7 @@ personView.dispose();
 | Arrow Up / Space    | 上昇                                        |
 | Arrow Down / Ctrl   | 下降                                        |
 | Shift               | ダッシュ（2.5 倍速、`dashClip` に切り替え） |
-| Alt（押下中）       | カメラのオービット操作（FPV 以外で有効）    |
+| Alt（押下中）       | フリーカメラ操作（TPV: オービット / FPV: フリールック） |
 | V                   | TPV / FPV の切り替え                        |
 
 すべてのキー割り当ては `keys` オプションで再設定できます（[KeyBindings](#keybindings) を参照）。
@@ -84,7 +84,9 @@ personView.dispose();
 - **TPV（三人称視点）** — キャラクターの背後やや上に位置する追従カメラ。カメラの方位はキャラクターの方位に向けて滑らかに補間されます。
 - **FPV（一人称視点）** — キャラクターの目線位置にカメラを置き、進行方向を向きます。FPV ではキャラクターのモデルはデフォルトで非表示になります（`character.hideModelInFpv` で変更可）。
 
-**V** キー（または `toggleViewMode()`）で切り替えます。TPV では **Alt** を押している間カメラを一時的にフリーにしてオービット操作できますが、注視点はキャラクターに固定されます。`allowCameraControl: true` を設定すると、Alt を押さなくても常時フリーカメラになります。
+**V** キー（または `toggleViewMode()`）で切り替えます。**Alt** 押下中はカメラを手動操作できます。TPV ではキャラクター中心にオービット、FPV では目線位置を固定したまま視点だけ自由に回せます（フリールック）。`allowCameraControl: true` を設定すると、Alt を押さなくても常時フリーカメラになります。
+
+Alt を離してもカメラの向きは **そのまま保持** されます。好きな角度で眺め続けたいときに便利です。前進・後退・旋回・上昇・下降のいずれかの移動キーを押した時点でフリーカメラ状態が解除され、TPV のチェイス位置や FPV の標準姿勢にスナップして戻ります。Dash と `V` は解除のトリガーになりません。
 
 ## コンストラクタ
 
@@ -158,7 +160,7 @@ new PersonViewPlugin(config?: PersonViewConfig)
 | `ascend`        | `string[]` | `["ArrowUp", "Space"]`                              | 上昇。                                                              |
 | `descend`       | `string[]` | `["ArrowDown", "ControlLeft", "ControlRight"]`      | 下降。                                                              |
 | `dash`          | `string[]` | `["ShiftLeft", "ShiftRight"]`                       | ホールド中にダッシュ。                                              |
-| `orbitCamera`   | `string[]` | `["AltLeft", "AltRight"]`                           | ホールド中にフリーカメラ（`allowCameraControl` が `true` なら無視）。 |
+| `orbitCamera`   | `string[]` | `["AltLeft", "AltRight"]`                           | ホールド中にフリーカメラ（TPV: オービット / FPV: フリールック）。離した後も移動キーを押すまで向きが保持される。 |
 | `toggleView`    | `string[]` | `["KeyV"]`                                          | TPV / FPV の切り替え。                                              |
 
 ## メソッド

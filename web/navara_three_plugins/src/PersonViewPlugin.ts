@@ -287,6 +287,10 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
   private heldActions = new Set<Action>();
   private dashMultiplier = 1;
   private orbitKeyHeld = false;
+  // Persists the free-camera state after Alt release until the user
+  // initiates a new movement action. Lets users dwell at an orbited
+  // angle instead of snapping back the moment Alt is released.
+  private orbitLatched = false;
   private currentAnimState: string | null;
   private modelHeading: number;
   private cameraHeading: number;
@@ -492,6 +496,7 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
     this.heldActions.clear();
     this.listeners.clear();
     this.orbitKeyHeld = false;
+    this.orbitLatched = false;
     this.dashMultiplier = 1;
     this.view = undefined;
   }
@@ -527,8 +532,20 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
   }
 
   private isFreeCamera(): boolean {
-    if (this.viewMode === "fpv") return false;
-    return this.config.allowCameraControl || this.orbitKeyHeld;
+    return (
+      this.config.allowCameraControl || this.orbitKeyHeld || this.orbitLatched
+    );
+  }
+
+  private isMovementAction(action: Action): boolean {
+    return (
+      action === "forward" ||
+      action === "backward" ||
+      action === "turnLeft" ||
+      action === "turnRight" ||
+      action === "ascend" ||
+      action === "descend"
+    );
   }
 
   private applyModelVisibility(): void {
@@ -656,6 +673,7 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
     }
     if (action === "orbitCamera") {
       this.orbitKeyHeld = true;
+      this.orbitLatched = true;
       return;
     }
 
@@ -664,6 +682,11 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
     if (action === "dash") {
       this.dashMultiplier = 2.5;
       return;
+    }
+    if (this.isMovementAction(action)) {
+      // A new movement keypress releases the latched orbit so the camera
+      // snaps back to chase on the next tick.
+      this.orbitLatched = false;
     }
     this.heldActions.add(action);
   }
@@ -774,11 +797,22 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
       headingDiff * Math.min(deltaTime * cameraLerpSpeed, 1);
 
     if (this.isFreeCamera()) {
-      this.view.cameraFollow(true, {
-        lat: nextLat,
-        lng: nextLng,
-        height: nextAlt + 1,
-      });
+      if (this.viewMode === "fpv") {
+        // FPV: position-locked free-look at eye height. The Rust side
+        // pins the camera to the target and lets mouse drag rotate
+        // orientation only — no orbit-around-target motion.
+        this.view.cameraFreeLook(true, {
+          lat: nextLat,
+          lng: nextLng,
+          height: nextAlt + this.config.fpvHeightOffset,
+        });
+      } else {
+        this.view.cameraFollow(true, {
+          lat: nextLat,
+          lng: nextLng,
+          height: nextAlt + 1,
+        });
+      }
     } else {
       this.placeChaseCamera(nextLat, nextLng, nextAlt, this.cameraHeading);
     }

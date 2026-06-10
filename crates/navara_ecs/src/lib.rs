@@ -678,6 +678,17 @@ impl App {
         });
     }
 
+    pub fn camera_free_look(&mut self, enabled: bool, target: Option<Vec<FloatType>>) {
+        let target_vec3 = target.and_then(|v| (v.len() == 3).then(|| Vec3::new(v[0], v[1], v[2])));
+
+        self.app
+            .world_mut()
+            .write_message(CameraEvent::FollowFreeLook {
+                enabled,
+                target: target_vec3,
+            });
+    }
+
     pub fn get_camera_status(&mut self) -> Option<CameraStatus> {
         let world = self.app.world_mut();
         let mut query = world.query_filtered::<&CameraStatus, With<CameraMarker>>();

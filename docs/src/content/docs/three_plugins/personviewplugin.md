@@ -70,7 +70,7 @@ personView.dispose();
 | Arrow Up / Space     | Ascend                                     |
 | Arrow Down / Ctrl    | Descend                                    |
 | Shift                | Dash (2.5x speed; switches to `dashClip`)  |
-| Alt (hold)           | Free-orbit camera (when not in FPV)        |
+| Alt (hold)           | Free-orbit camera (TPV) / free-look (FPV)  |
 | V                    | Toggle TPV / FPV                           |
 
 All bindings can be remapped via the `keys` option (see [KeyBindings](#keybindings)).
@@ -84,7 +84,9 @@ The camera operates in one of two modes:
 - **TPV (third-person view)** — Chase camera positioned behind and above the character, smoothly interpolating its heading toward the character's heading.
 - **FPV (first-person view)** — Camera placed at the character's eye, looking forward along the heading. The character mesh is hidden by default in FPV (configurable via `character.hideModelInFpv`).
 
-Press **V** (or call `toggleViewMode()`) to switch. In TPV, hold **Alt** to temporarily free the camera and orbit it manually while it stays focused on the character. Set `allowCameraControl: true` in the config to make the camera always free without needing Alt.
+Press **V** (or call `toggleViewMode()`) to switch. Hold **Alt** to take manual control of the camera: in TPV the camera orbits around the character; in FPV the camera stays planted at the eye and mouse drag rotates the view direction in place (free-look). Set `allowCameraControl: true` in the config to make the camera always free without needing Alt.
+
+After releasing Alt, the camera **keeps the orientation** you left it at — useful for dwelling at a custom angle. The free-camera state stays active until you press any movement key (forward/backward/turn/ascend/descend), at which point the camera snaps back to its default chase or FPV position. Dash and `V` do not exit the free-camera state.
 
 ## Constructor
 
@@ -158,7 +160,7 @@ Each entry takes an array of `KeyboardEvent.code` values (e.g. `["KeyW"]`, `["Ar
 | `ascend`        | `string[]`  | `["ArrowUp", "Space"]`                             | Climb.                                                            |
 | `descend`       | `string[]`  | `["ArrowDown", "ControlLeft", "ControlRight"]`     | Descend.                                                          |
 | `dash`          | `string[]`  | `["ShiftLeft", "ShiftRight"]`                      | Hold to dash.                                                     |
-| `orbitCamera`   | `string[]`  | `["AltLeft", "AltRight"]`                          | Hold to enable free camera (ignored when `allowCameraControl`).   |
+| `orbitCamera`   | `string[]`  | `["AltLeft", "AltRight"]`                          | Hold to enable free camera (orbit in TPV / free-look in FPV). After release, the camera keeps its orientation until a movement key is pressed. |
 | `toggleView`    | `string[]`  | `["KeyV"]`                                         | Toggle TPV / FPV.                                                 |
 
 ## Methods

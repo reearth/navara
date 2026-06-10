@@ -641,6 +641,36 @@ view.cameraFollow(
 view.cameraFollow(false);
 ```
 
+### cameraFreeLook()
+
+Enables or disables position-locked free-look. The camera stays planted at the target position while mouse drag rotates orientation in place. Useful for first-person-view "look around" controls where the eye must not move.
+
+**Syntax:**
+
+```tsx
+cameraFreeLook(enabled: boolean, target?: LatLngHeight): void
+```
+
+**Parameters:**
+
+- `enabled`: Whether to enable free-look mode
+- `target`: Target position the camera is locked to
+  - `lng`: Longitude (degrees)
+  - `lat`: Latitude (degrees)
+  - `height`: Height (meters)
+
+When the target moves between calls (e.g. the player walks), the camera translates with it; orientation is preserved. Mouse wheel zoom is disabled in this mode (the camera is at zero distance from the pivot).
+
+**Example:**
+
+```tsx
+// Lock the camera at the player's eye position; drag to look around
+view.cameraFreeLook(true, { lng: 139.7671, lat: 35.6812, height: 105 });
+
+// Disable free-look mode
+view.cameraFreeLook(false);
+```
+
 ### sampleTerrainHeight()
 
 Synchronously gets the terrain height at a specified geodetic position. Returns `undefined` if terrain data has not yet been loaded.
