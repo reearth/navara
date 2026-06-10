@@ -333,10 +333,10 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
     };
   }
 
-  /** Start the per-frame loop and (if configured) load the character model. */
   start(): void {
     if (!this.view) return;
     if (this.animId != null) return;
+    this.animId = -1;
 
     const { startLat, startLng, startHeight, startHeading } = this.config;
     const startPos = geodeticToVector3({
