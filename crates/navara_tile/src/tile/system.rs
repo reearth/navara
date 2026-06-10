@@ -421,22 +421,13 @@ pub fn transfer_mesh(
             .and_then(|cache| cache.hillshade_parents.as_ref());
 
         // Calculate UV transforms for hillshade parent reuse
-        let mut mesh_uv_transform = None;
         for (i, uv_trans_slot) in hillshade_uv_transforms.iter_mut().enumerate() {
             let uv_trans = hillshade_parents
                 .and_then(|parents| parents.get(i))
                 .and_then(|p| p.as_ref())
-                .map(|p| {
-                    let transform = uv_transform(tile.coords, p.zoom);
-                    // Use the first hillshade parent's zoom for global mesh UV transform
-                    if mesh_uv_transform.is_none() {
-                        mesh_uv_transform = Some(transform);
-                    }
-                    transform
-                });
+                .map(|p| uv_transform(tile.coords, p.zoom));
             *uv_trans_slot = uv_trans;
         }
-        let mesh_uv_transform = mesh_uv_transform.unwrap_or_default();
 
         // Merge texture and hillshade entities (fix for hillshade not displaying)
         let merged_texture_fragments = if let Some(tex_ids) = texture_fragment_entity_ids.as_ref() {
@@ -558,7 +549,7 @@ pub fn transfer_mesh(
                         uvs: uvshandle,
                         active: false,
                         render_order,
-                        uv_transform: mesh_uv_transform,
+                        uv_transform: Default::default(),
                         aabb: Aabb {
                             center: Transform::from_translation(-rtc_translation)
                                 .transform_point(tile_aabb.center),
@@ -675,7 +666,7 @@ pub fn transfer_mesh(
                         uvs: uvshandle,
                         active: false,
                         render_order,
-                        uv_transform: mesh_uv_transform,
+                        uv_transform: Default::default(),
                         aabb: Aabb {
                             center: Transform::from_translation(-rtc_translation)
                                 .transform_point(tile_aabb.center),
@@ -944,7 +935,7 @@ pub fn update_mesh_material(
         ),
         Without<Deleted>,
     >,
-    hillshade_needs_update: Query<Entity, With<HillshadeNeedsUpdate>>,
+    hillshade_needs_update: Query<Entity, (With<HillshadeNeedsUpdate>, Without<Deleted>)>,
 ) {
     let are_tile_layers_updated = !tile_layers.p1().is_empty();
     let are_tile_layers_removed = !tile_layers.p2().is_empty();
