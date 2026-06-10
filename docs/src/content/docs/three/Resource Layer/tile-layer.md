@@ -100,6 +100,6 @@ const hillshadeLayer = view.addLayer({
 ## Related Resources
 
 - [Terrain Layer](../../../three/resource-layer/terrain-layer/) - Display 3D terrain
-- [RasterTileMaterial](../../../three/resource-layer/raster-tile-material/) - Detailed tile material settings
+- [RasterTileMaterial](../../../three/resource-layer/raster-tile-material/) - Detailed tile material settingsresource-layer
 - [ElevationHeatmapMaterial](../../../three/resource-layer/elevation-heatmap-material/) - Detailed heatmap material settings
 - [HillshadeMaterial](../../../three/resource-layer/hillshade-material/) - Detailed hillshade material settings
