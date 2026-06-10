@@ -1,5 +1,5 @@
 use bevy_ecs::component::Component;
-use navara_core::{CRS, is_tile_url};
+use navara_core::{CRS, is_pmtiles_url, is_tile_url};
 
 use navara_material::{Appearance, VectorTileMaterial};
 
@@ -16,6 +16,12 @@ pub struct MvtLayer {
 impl MvtLayer {
     pub fn has_template_url(&self) -> bool {
         is_tile_url(&self.data.as_ref().unwrap().url)
+    }
+
+    /// Whether this layer's data points to a PMTiles archive (vs a `{z}/{x}/{y}`
+    /// tile template).
+    pub fn is_pmtiles(&self) -> bool {
+        self.data.as_ref().is_some_and(|d| is_pmtiles_url(&d.url))
     }
 
     pub fn vector_tile_appearance(&self) -> Option<&VectorTileMaterial> {

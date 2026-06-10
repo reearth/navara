@@ -94,6 +94,13 @@ pub fn is_tile_url(s: &str) -> bool {
     s.contains("/{x}") && s.contains("/{y}") && s.contains("/{z}")
 }
 
+/// Returns true if the URL points to a PMTiles archive, i.e. its path ends with
+/// `.pmtiles` (case-insensitive), ignoring any query string or fragment.
+pub fn is_pmtiles_url(s: &str) -> bool {
+    let path = s.split(['?', '#']).next().unwrap_or(s);
+    path.to_ascii_lowercase().ends_with(".pmtiles")
+}
+
 // Ref: https://github.com/mapbox/vector-tile-spec/tree/master/2.1#3-projection-and-bounds
 // The function get_tile_pos_from_url is designed to parse the values of x, y, and z
 // from the end of a URL in the format .../z/x/y.mvt
