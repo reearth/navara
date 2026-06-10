@@ -142,6 +142,7 @@ function createAttributionItem(attr: UniqueAttribution): HTMLDivElement {
       link.href = attr.attributionUrl;
       link.textContent = attr.attribution ?? "";
       link.target = "_blank";
+      link.rel = "noopener noreferrer";
       link.style.color = "#60a5fa";
     } else if (link instanceof HTMLSpanElement) {
       link.innerHTML = attr.attributionHtml ?? "";
