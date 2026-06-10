@@ -23,14 +23,12 @@ sidebar:
 まずベースとなるビューを作成します。背景色を暗くし、星空と衛星写真タイルを追加します。
 
 ```typescript
-import ThreeView, {
-  ToneMappingMode,
-  Color,
-} from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import ThreeView, { Color } from "@navara/three";
+import { ToneMappingMode } from "@navara/three_default_descs";
+import { DefaultPlugin, type DefaultDescriptions } from "@navara/three_default_plugin";
 
 const plugin = new DefaultPlugin();
-const view = new ThreeView({
+const view = new ThreeView<DefaultDescriptions>({
   backgroundColor: new Color().setStyle("#0b0a0d"),
 });
 view.addPlugin(plugin);
@@ -301,15 +299,17 @@ dashAnimFunc();
 
 ```typescript
 import ThreeView, {
-  ToneMappingMode,
-  type ArclineMeshDesc,
-  type GlowGlobeMeshDesc,
   Color,
   ColorMap,
   geodeticToVector3,
   degreeToRadian,
 } from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import {
+  ToneMappingMode,
+  type ArclineMeshDesc,
+  type GlowGlobeMeshDesc,
+} from "@navara/three_default_descs";
+import { DefaultPlugin, type DefaultDescriptions } from "@navara/three_default_plugin";
 import type { FeatureCollection, MultiLineString } from "geojson";
 
 // 航空交通量データの型定義
@@ -391,7 +391,7 @@ const constructData = async () => {
 // メイン関数
 async function run() {
   const plugin = new DefaultPlugin();
-  const view = new ThreeView({
+  const view = new ThreeView<DefaultDescriptions>({
     backgroundColor: new Color().setStyle("#0b0a0d"),
   });
   view.addPlugin(plugin);

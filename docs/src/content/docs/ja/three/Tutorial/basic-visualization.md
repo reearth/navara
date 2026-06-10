@@ -41,11 +41,11 @@ npm install
 
 ```typescript
 import ThreeView from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import { DefaultPlugin, type DefaultDescriptions } from "@navara/three_default_plugin";
 
 // ThreeView インスタンスを作成
 const plugin = new DefaultPlugin();
-const view = new ThreeView({});
+const view = new ThreeView<DefaultDescriptions>({});
 view.addPlugin(plugin);
 await view.init();
 ```
@@ -87,7 +87,7 @@ view.addLayer({
 
 ```typescript
 const plugin = new DefaultPlugin();
-const view = new ThreeView({});
+const view = new ThreeView<DefaultDescriptions>({});
 view.addPlugin(plugin);
 await view.init();
 ```
@@ -127,11 +127,11 @@ OpenStreetMap のラスタタイルを使用して地図レイヤーを追加し
 
 ```typescript
 import ThreeView from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import { DefaultPlugin, type DefaultDescriptions } from "@navara/three_default_plugin";
 
 // ThreeView インスタンスを作成
 const plugin = new DefaultPlugin();
-const view = new ThreeView({});
+const view = new ThreeView<DefaultDescriptions>({});
 view.addPlugin(plugin);
 await view.init();
 
@@ -185,11 +185,11 @@ view.setCamera({
 
 ```typescript
 import ThreeView from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import { DefaultPlugin, type DefaultDescriptions } from "@navara/three_default_plugin";
 
 // ThreeView インスタンスを作成
 const plugin = new DefaultPlugin();
-const view = new ThreeView({});
+const view = new ThreeView<DefaultDescriptions>({});
 view.addPlugin(plugin);
 await view.init();
 
@@ -316,11 +316,11 @@ receiveShadow: true,
 
 ```typescript
 import ThreeView, { JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import { DefaultPlugin, type DefaultDescriptions } from "@navara/three_default_plugin";
 
 // ThreeView インスタンスを作成
 const plugin = new DefaultPlugin();
-const view = new ThreeView({});
+const view = new ThreeView<DefaultDescriptions>({});
 view.addPlugin(plugin);
 await view.init();
 
@@ -442,10 +442,10 @@ view.addLayer({
 
 ```typescript
 import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import { DefaultPlugin, type DefaultDescriptions } from "@navara/three_default_plugin";
 
 const plugin = new DefaultPlugin();
-const view = new ThreeView({});
+const view = new ThreeView<DefaultDescriptions>({});
 view.addPlugin(plugin);
 await view.init();
 

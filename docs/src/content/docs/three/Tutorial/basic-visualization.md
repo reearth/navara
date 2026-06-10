@@ -41,11 +41,11 @@ Next, open `src/main.ts` and you will see the following:
 
 ```typescript
 import ThreeView from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import { DefaultPlugin, type DefaultDescriptions } from "@navara/three_default_plugin";
 
 // Create a ThreeView instance
 const plugin = new DefaultPlugin();
-const view = new ThreeView({});
+const view = new ThreeView<DefaultDescriptions>({});
 view.addPlugin(plugin);
 await view.init();
 ```
@@ -87,7 +87,7 @@ A base map will be displayed on the globe in the scene.
 
 ```typescript
 const plugin = new DefaultPlugin();
-const view = new ThreeView({});
+const view = new ThreeView<DefaultDescriptions>({});
 view.addPlugin(plugin);
 await view.init();
 ```
@@ -127,11 +127,11 @@ Add a map layer using OpenStreetMap raster tiles.
 
 ```typescript
 import ThreeView from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import { DefaultPlugin, type DefaultDescriptions } from "@navara/three_default_plugin";
 
 // Create a ThreeView instance
 const plugin = new DefaultPlugin();
-const view = new ThreeView({});
+const view = new ThreeView<DefaultDescriptions>({});
 view.addPlugin(plugin);
 await view.init();
 
@@ -185,11 +185,11 @@ You can set the camera position and orientation using the `view.setCamera()` met
 
 ```typescript
 import ThreeView from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import { DefaultPlugin, type DefaultDescriptions } from "@navara/three_default_plugin";
 
 // Create a ThreeView instance
 const plugin = new DefaultPlugin();
-const view = new ThreeView({});
+const view = new ThreeView<DefaultDescriptions>({});
 view.addPlugin(plugin);
 await view.init();
 
@@ -316,11 +316,11 @@ For details, see [Terrain Layer](../../../three/resource-layer/terrain-layer/).
 
 ```typescript
 import ThreeView, { JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import { DefaultPlugin, type DefaultDescriptions } from "@navara/three_default_plugin";
 
 // Create a ThreeView instance
 const plugin = new DefaultPlugin();
-const view = new ThreeView({});
+const view = new ThreeView<DefaultDescriptions>({});
 view.addPlugin(plugin);
 await view.init();
 
@@ -442,10 +442,10 @@ A complete example combining everything:
 
 ```typescript
 import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import { DefaultPlugin, type DefaultDescriptions } from "@navara/three_default_plugin";
 
 const plugin = new DefaultPlugin();
-const view = new ThreeView({});
+const view = new ThreeView<DefaultDescriptions>({});
 view.addPlugin(plugin);
 await view.init();
 
