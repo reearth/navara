@@ -142,5 +142,5 @@ overlayPlugin.onUpdate(({ projected }) => {
 
 ## 関連リソース
 
-- [FlyingModelPlugin](../flyingmodelplugin/) — OverlayPlugin と組み合わせてインタラクティブな飛行とマーカーを実現
+- [PersonViewPlugin](../personviewplugin/) — OverlayPlugin と組み合わせて一人称 / 三人称ビューのナビゲーションとマーカーを実現
 - [About three_plugins](../about/) — パッケージ概要

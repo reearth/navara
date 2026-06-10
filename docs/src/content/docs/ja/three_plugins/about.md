@@ -16,7 +16,7 @@ navara_three（コア: ThreeView, Plugin, addPlugin）
   ├── three_default_descs（Descriptor の実装）
   ├── three_default_plugin（DefaultPlugin: Descriptor の一括登録）
   └── three_plugins（ユースケース特化型プラグイン）
-        ├── FlyingModelPlugin（キーボード操作による GLTF モデル飛行）
+        ├── PersonViewPlugin（キーボード操作による一人称 / 三人称ビューコントローラー）
         └── OverlayPlugin（ワールド座標からスクリーン座標への HTML オーバーレイ投影）
 ```
 
@@ -25,14 +25,14 @@ navara_three（コア: ThreeView, Plugin, addPlugin）
 ## インストール
 
 ```typescript
-import { FlyingModelPlugin, OverlayPlugin, moveOverlayElement } from "@navara/three_plugins";
+import { PersonViewPlugin, OverlayPlugin, moveOverlayElement } from "@navara/three_plugins";
 ```
 
 ## 提供プラグイン
 
-### FlyingModelPlugin
+### PersonViewPlugin
 
-キーボード操作による GLTF モデル飛行シミュレーターです。アニメーション付きの GLTF モデルを地球上にロードし、WASD / 矢印キーで操作できます。追従カメラ付きで、毎フレーム位置状態をブロードキャストします。詳細は [FlyingModelPlugin](../flyingmodelplugin/) を参照してください。
+キーボード操作の一人称 / 三人称ビューコントローラーです。WASD / 矢印キーで地球上の仮想位置を駆動し、追従カメラ（TPV）または一人称カメラ（FPV）で追います。任意で GLTF キャラクターをアタッチでき、アイドルとダッシュの 2 クリップをクロスフェードします。詳細は [PersonViewPlugin](../personviewplugin/) を参照してください。
 
 ### OverlayPlugin
 
@@ -45,29 +45,31 @@ import { FlyingModelPlugin, OverlayPlugin, moveOverlayElement } from "@navara/th
 ```typescript
 import ThreeView from "@navara/three";
 import { DefaultPlugin } from "@navara/three_default_plugin";
-import { FlyingModelPlugin, OverlayPlugin } from "@navara/three_plugins";
+import { PersonViewPlugin, OverlayPlugin } from "@navara/three_plugins";
 
 const view = new ThreeView({ container, animation: true });
 
 const defaultPlugin = new DefaultPlugin();
-const flyingModel = new FlyingModelPlugin({
-  modelUrl: "/glTF/bird/scene.gltf",
-  animation: {
-    idleClip: "Gliding",
-    dashClip: "Flapping",
-    speed: 1.0,
-    crossfadeDuration: 0.3,
+const personView = new PersonViewPlugin({
+  character: {
+    modelUrl: "/glTF/bird/scene.gltf",
+    animation: {
+      idleClip: "Gliding",
+      dashClip: "Flapping",
+      speed: 1.0,
+      crossfadeDuration: 0.3,
+    },
   },
 });
 const overlay = new OverlayPlugin({ maxDistance: 100_000 });
 
 view.addPlugin(defaultPlugin);
-view.addPlugin(flyingModel);
+view.addPlugin(personView);
 view.addPlugin(overlay);
 
 await view.init();
 
-flyingModel.start();
+personView.start();
 ```
 
 ## 関連リソース

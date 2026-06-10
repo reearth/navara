@@ -98,11 +98,11 @@ view.addEffect({ toneMapping: {} });
 
 [three_plugins](../../../three_plugins/about/) パッケージは、プラグインシステムの上に構築されたユースケース特化型プラグインのコレクションを提供します。すぐに使える形で一般的なユースケースを解決します：
 
-- **FlyingModelPlugin** — キーボード操作による GLTF モデル飛行と追従カメラ
+- **PersonViewPlugin** — キーボード操作の一人称 / 三人称ビューコントローラー（任意で GLTF キャラクター）
 - **OverlayPlugin** — ワールド座標からスクリーン座標への HTML オーバーレイ投影
 
 ```typescript
-import { FlyingModelPlugin, OverlayPlugin } from "@navara/three_plugins";
+import { PersonViewPlugin, OverlayPlugin } from "@navara/three_plugins";
 ```
 
 詳細は [three_plugins のドキュメント](../../../three_plugins/about/) を参照してください。

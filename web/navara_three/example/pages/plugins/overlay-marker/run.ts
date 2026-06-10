@@ -4,7 +4,7 @@ import {
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
 import {
-  FlyingModelPlugin,
+  PersonViewPlugin,
   OverlayPlugin,
   moveOverlayElement,
 } from "@navara/three_plugins";
@@ -32,21 +32,23 @@ export type CustomDescriptions = DefaultDescriptions;
 export const run = async (view: ThreeView<CustomDescriptions>) => {
   // Register plugins before init
   const defaultPlugin = new DefaultPlugin();
-  const flyingModelPlugin = new FlyingModelPlugin({
-    modelUrl: "/glTF/animated_bird_pigeon/scene.gltf",
-    animation: {
-      idleClip: "BirdRig|Gliding",
-      dashClip: "BirdRig|Flapping",
-      speed: 1.0,
-      crossfadeDuration: 0.3,
+  const personViewPlugin = new PersonViewPlugin({
+    character: {
+      modelUrl: "/glTF/animated_bird_pigeon/scene.gltf",
+      animation: {
+        idleClip: "BirdRig|Gliding",
+        dashClip: "BirdRig|Flapping",
+        speed: 1.0,
+        crossfadeDuration: 0.3,
+      },
+      modelRotationOffset: { x: -Math.PI / 2, y: 0, z: Math.PI },
+      modelScale: 3,
     },
-    modelRotationOffset: { x: -Math.PI / 2, y: 0, z: Math.PI },
-    modelScale: 3,
   });
   const overlayPlugin = new OverlayPlugin({ maxDistance: 100_000 });
 
   view.addPlugin(defaultPlugin);
-  view.addPlugin(flyingModelPlugin);
+  view.addPlugin(personViewPlugin);
   view.addPlugin(overlayPlugin);
 
   await view.init();
@@ -83,6 +85,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
       },
       model: {
         maxSse: 60,
+        normals: true,
       },
     });
     datasets.unshift(TILES_3D_DATASETS.googlePhotorealTiles);
@@ -114,7 +117,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     );
 
     root.addEventListener("click", () => {
-      flyingModelPlugin.teleport(landmark.lng, landmark.lat, landmark.alt);
+      personViewPlugin.teleport(landmark.lng, landmark.lat, landmark.alt);
     });
 
     overlayContainer.appendChild(root);
@@ -144,7 +147,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   });
 
   // Start flight
-  flyingModelPlugin.start();
+  personViewPlugin.start();
 
   createHud();
 };
