@@ -395,7 +395,7 @@ export const run = async () => {
     const p = new Pane({ title: "Photoreal Showcases", expanded: true });
     pane = p;
 
-    addDateControl(view, p, v.atmosphere.date);
+    addDateControl(v, p, v.atmosphere.date, scene.date.timezone);
     addHidePaneKeyShortcut(p);
     addSceneControl(p, scene.key, switchScene);
   };
