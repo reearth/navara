@@ -476,8 +476,8 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
     this.listeners.clear();
     this.orbitKeyHeld = false;
     this.dashMultiplier = 1;
+    this.view = undefined;
   }
-
   private resolveCharacter(c: CharacterConfig): ResolvedCharacter {
     return {
       modelUrl: c.modelUrl,
