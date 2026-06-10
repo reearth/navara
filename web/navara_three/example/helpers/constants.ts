@@ -4,6 +4,7 @@
 export type Dataset = {
   url: string;
   attribution?: string;
+  attributionHtml?: string;
   attributionUrl?: string;
 };
 
@@ -15,6 +16,15 @@ export const TILE_DATASETS = {
     url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
     attribution: "© OpenStreetMap contributors",
     attributionUrl: "https://www.openstreetmap.org/copyright",
+  },
+  eox: {
+    url:
+      "https://tiles.maps.eox.at/wmts?layer=s2cloudless-2020_3857&style=default" +
+      "&tilematrixset=g&Service=WMTS&Request=GetTile" +
+      "&Version=1.0.0&Format=image%2Fjpeg" +
+      "&TileMatrix={z}&TileCol={x}&TileRow={y}",
+    attributionHtml:
+      '<a href="https://s2maps.eu">Sentinel-2 cloudless 2020</a> by <a href="https://eox.at">EOX IT Services GmbH</a> (contains modified Copernicus Sentinel data 2020)',
   },
   gsiStd: {
     url: "https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png",

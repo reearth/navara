@@ -12,7 +12,8 @@ let isCollapsed = true;
  * Unique attribution with optional URL
  */
 type UniqueAttribution = {
-  attribution: string;
+  attribution?: string;
+  attributionHtml?: string;
   attributionUrl?: string;
 };
 
@@ -133,28 +134,26 @@ function createAttributionItem(attr: UniqueAttribution): HTMLDivElement {
   item.style.paddingLeft = "8px";
   item.style.borderLeft = "2px solid rgba(255, 255, 255, 0.3)";
 
-  if (attr.attributionUrl) {
-    const link = document.createElement("a");
-    link.href = attr.attributionUrl;
-    link.textContent = attr.attribution;
-    link.target = "_blank";
-    link.style.color = "#60a5fa";
-    link.style.textDecoration = "none";
-    link.style.transition = "color 0.2s";
-
-    link.addEventListener("mouseenter", () => {
-      link.style.color = "#93c5fd";
-      link.style.textDecoration = "underline";
-    });
-
-    link.addEventListener("mouseleave", () => {
+  if (attr.attributionHtml || attr.attributionUrl) {
+    const link = attr.attributionHtml
+      ? document.createElement("span")
+      : document.createElement("a");
+    if (attr.attributionUrl && link instanceof HTMLAnchorElement) {
+      link.href = attr.attributionUrl;
+      link.textContent = attr.attribution ?? "";
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
       link.style.color = "#60a5fa";
-      link.style.textDecoration = "none";
-    });
+    } else if (link instanceof HTMLSpanElement) {
+      link.innerHTML = attr.attributionHtml ?? "";
+      link.querySelectorAll("a").forEach((e) => {
+        e.style.color = "#60a5fa";
+      });
+    }
 
     item.appendChild(link);
   } else {
-    item.textContent = attr.attribution;
+    item.textContent = attr.attribution ?? "";
     item.style.color = "rgba(255, 255, 255, 0.9)";
   }
 
@@ -228,14 +227,11 @@ export function showAttributions(
   const seen = new Set<string>();
 
   for (const dataset of datasets) {
-    if (!dataset.attribution) continue;
-
-    const key = `${dataset.attribution}|${dataset.attributionUrl || ""}`;
+    const key = `${dataset.attribution ?? ""}|${dataset.attributionHtml ?? ""}|${dataset.attributionUrl ?? ""}`;
     if (!seen.has(key)) {
       seen.add(key);
       uniqueAttributions.push({
-        attribution: dataset.attribution,
-        attributionUrl: dataset.attributionUrl,
+        ...dataset,
       });
     }
   }
