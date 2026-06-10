@@ -358,8 +358,13 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
     this.cameraHeading = startHeading;
 
     if (this.character) {
-      const { animation, modelRotationOffset, modelScale, castShadow, receiveShadow } =
-        this.character;
+      const {
+        animation,
+        modelRotationOffset,
+        modelScale,
+        castShadow,
+        receiveShadow,
+      } = this.character;
       this.handle = this.view.addMesh({
         gltfModel: {
           url: this.character.modelUrl,
