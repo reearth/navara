@@ -604,29 +604,31 @@ const addCameraPanel = (
 };
 
 const parseCameraSnippet = (text: string): CameraState | null => {
-  try {
-    const fn = new Function(`"use strict"; return (${text});`);
-    const obj = fn() as Partial<CameraState>;
-    const keys: (keyof CameraState)[] = [
-      "lng",
-      "lat",
-      "height",
-      "heading",
-      "pitch",
-      "roll",
-      "fov",
-    ];
-    const out = {} as CameraState;
-    for (const k of keys) {
-      const v = obj?.[k];
-      if (typeof v !== "number" || !Number.isFinite(v)) return null;
-      out[k] = v;
-    }
-    return out;
-  } catch (e) {
-    console.error("Camera snippet parse failed:", e);
-    return null;
+  const readNumber = (key: keyof CameraState): number | null => {
+    const re = new RegExp(
+      String.raw`${key}\s*:\s*([-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?)`,
+    );
+    const m = text.match(re);
+    if (!m) return null;
+    const n = Number(m[1]);
+    return Number.isFinite(n) ? n : null;
+  };
+
+  const out = {} as CameraState;
+  for (const k of [
+    "lng",
+    "lat",
+    "height",
+    "heading",
+    "pitch",
+    "roll",
+    "fov",
+  ] as const) {
+    const n = readNumber(k);
+    if (n === null) return null;
+    out[k] = n;
   }
+  return out;
 };
 
 const formatCameraSnippet = (p: CameraState): string => {
