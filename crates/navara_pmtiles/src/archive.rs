@@ -15,7 +15,7 @@
 //!    fetch the leaf and feed it to [`on_leaf_bytes`](PmtilesArchive::on_leaf_bytes),
 //!    then resolve again. On [`Resolution::Tile`], fetch the payload.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::{Compression, Directory, Header, PmtError, tile_id};
 
@@ -79,6 +79,9 @@ struct Ready {
     /// Leaf directories already fetched, keyed by their offset within the
     /// leaf-directory section.
     leaves: HashMap<u64, Directory>,
+    /// Leaf offsets whose fetch failed. Tiles behind them resolve to `Absent`
+    /// instead of being re-requested forever.
+    failed_leaves: HashSet<u64>,
 }
 
 /// A PMTiles v3 archive being resolved incrementally. URL-agnostic: the caller
@@ -176,6 +179,7 @@ impl PmtilesArchive {
                         header,
                         root_dir,
                         leaves: HashMap::new(),
+                        failed_leaves: HashSet::new(),
                     });
                 } else {
                     self.state = State::NeedRootDir(header);
@@ -189,6 +193,7 @@ impl PmtilesArchive {
                     header,
                     root_dir,
                     leaves: HashMap::new(),
+                    failed_leaves: HashSet::new(),
                 });
                 Ok(())
             }
@@ -225,6 +230,11 @@ impl PmtilesArchive {
                     },
                 };
             }
+            // A leaf whose fetch previously failed: treat as no data rather
+            // than re-requesting it forever.
+            if ready.failed_leaves.contains(&entry.offset) {
+                return Resolution::Absent;
+            }
             // Leaf pointer: descend if cached, otherwise ask for it.
             match ready.leaves.get(&entry.offset) {
                 Some(child) => dir = child,
@@ -259,6 +269,15 @@ impl PmtilesArchive {
     /// network layer). Stops all further requests.
     pub fn mark_failed(&mut self) {
         self.state = State::Failed;
+    }
+
+    /// Record that the leaf directory at `leaf_offset` failed to fetch. Tiles
+    /// behind it will resolve to [`Resolution::Absent`] rather than looping on
+    /// re-requests. No-op unless the archive is ready.
+    pub fn mark_leaf_failed(&mut self, leaf_offset: u64) {
+        if let State::Ready(ready) = &mut self.state {
+            ready.failed_leaves.insert(leaf_offset);
+        }
     }
 }
 
@@ -397,6 +416,24 @@ mod tests {
         assert!(archive.is_failed());
         // No retry storm: a failed archive issues no further requests.
         assert!(archive.take_bootstrap_request().is_none());
+    }
+
+    #[test]
+    fn marked_failed_leaf_resolves_to_absent() {
+        let mut archive = PmtilesArchive::new();
+        archive.take_bootstrap_request();
+        archive.on_bootstrap_bytes(LEAF_ARCHIVE).unwrap();
+
+        // Tile 4 routes through the (single) leaf pointer at offset 0.
+        assert!(matches!(
+            archive.resolve(1, 1, 0),
+            Resolution::NeedLeaf { leaf_offset: 0, .. }
+        ));
+
+        // Once that leaf is marked failed, the tile resolves to Absent instead
+        // of looping on another NeedLeaf.
+        archive.mark_leaf_failed(0);
+        assert_eq!(archive.resolve(1, 1, 0), Resolution::Absent);
     }
 
     #[test]

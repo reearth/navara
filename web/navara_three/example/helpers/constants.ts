@@ -75,7 +75,7 @@ export const VECTOR_DATASETS = {
 export const PMTILES_DATASETS = {
   protomapsFirenze: {
     // url: "https://pmtiles.io/protomaps(vector)ODbL_firenze.pmtiles",
-    url:"https://overturemaps-extras-us-west-2.s3.us-west-2.amazonaws.com/tiles/2026-05-20.0/base.pmtiles",
+    url: "https://overturemaps-extras-us-west-2.s3.us-west-2.amazonaws.com/tiles/2026-05-20.0/base.pmtiles",
     attribution: "© OpenStreetMap contributors, © Protomaps",
     attributionUrl: "https://protomaps.com",
   },

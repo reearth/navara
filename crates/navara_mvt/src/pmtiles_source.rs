@@ -21,7 +21,12 @@
 use std::any::Any;
 use std::collections::HashMap;
 
-use bevy_ecs::{component::Component, entity::Entity, system::Commands};
+use bevy_ecs::{
+    component::Component,
+    entity::Entity,
+    query::With,
+    system::{Commands, Query},
+};
 use navara_buffer_store::{BufferStore, Handle};
 use navara_component::{OrderByDistance, Priority};
 use navara_data_requester::{DataRequester, DataRequesterExtension, DataRequesterStatus};
@@ -29,7 +34,7 @@ use navara_feature_component::batch::BatchTable;
 use navara_pmtiles::{ByteRange, Compression, PmtilesArchive, Resolution};
 use navara_tile_component::{TileHandle, VectorTile};
 use navara_vector_tile::{
-    ReadyState, TileCacheManager, VectorTileSource,
+    ReadyState, TileCacheManager, TileSource, VectorTileSource,
     data_requester::{VectorTileDataRequesterMarker, VectorTileDataRequesterQuery},
 };
 
@@ -142,6 +147,55 @@ impl PmtilesSource {
             Some((_, dr)) if tile.is_ready(&dr.status) => ReadyState::Success,
             Some((_, dr)) if matches!(dr.status, DataRequesterStatus::Fail) => ReadyState::Failed,
             _ => ReadyState::Pending,
+        }
+    }
+
+    /// Detect meta requests (header / leaf directory) that failed at the
+    /// network layer and reflect that on the archive: a failed bootstrap fails
+    /// the whole archive; a failed leaf is recorded so its tiles resolve to
+    /// `Absent` rather than looping.
+    ///
+    /// This needs the `DataRequester` status — failures never write a buffer,
+    /// so `drive`'s `buf` polling cannot observe them. Called from the
+    /// [`handle_pmtiles_meta_failures`] system, which has the status query.
+    fn handle_meta_failures(
+        &mut self,
+        commands: &mut Commands,
+        requesters: &Query<&DataRequester, With<PmtilesMetaMarker>>,
+    ) {
+        if let Some((entity, _)) = self.bootstrap_req
+            && requesters.get(entity).is_ok_and(DataRequester::is_failed)
+        {
+            self.archive.mark_failed();
+            commands.entity(entity).despawn();
+            self.bootstrap_req = None;
+        }
+
+        let failed: Vec<(u64, Entity)> = self
+            .leaf_reqs
+            .iter()
+            .filter(|(_, (entity, _))| requesters.get(*entity).is_ok_and(DataRequester::is_failed))
+            .map(|(offset, (entity, _))| (*offset, *entity))
+            .collect();
+        for (offset, entity) in failed {
+            self.archive.mark_leaf_failed(offset);
+            self.leaf_reqs.remove(&offset);
+            commands.entity(entity).despawn();
+        }
+    }
+}
+
+/// System: surface network failures of PMTiles container (header/leaf) fetches
+/// onto their archives. Without it, a failed bootstrap would leave the layer
+/// stuck `Pending` (blank) forever, since such failures produce no buffer bytes.
+pub(crate) fn handle_pmtiles_meta_failures(
+    mut commands: Commands,
+    mut sources: Query<&mut TileSource>,
+    requesters: Query<&DataRequester, With<PmtilesMetaMarker>>,
+) {
+    for mut tile_source in &mut sources {
+        if let Some(source) = tile_source.downcast_mut::<PmtilesSource>() {
+            source.handle_meta_failures(&mut commands, &requesters);
         }
     }
 }
