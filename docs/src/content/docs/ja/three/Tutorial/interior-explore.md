@@ -25,11 +25,11 @@ import ThreeView, {
   Color,
   JAPAN_GSI_ELEVATION_DECODER,
 } from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import { DefaultPlugin, type DefaultDescriptions } from "@navara/three_default_plugin";
 import { PersonViewPlugin } from "@navara/three_plugins";
 
 const plugin = new DefaultPlugin();
-const view = new ThreeView({
+const view = new ThreeView<DefaultDescriptions>({
   shadow: true,
   backgroundColor: new Color().setStyle("#475668"),
 });
@@ -43,13 +43,14 @@ view.addPlugin(plugin);
 プラグインがキャラクター（モデル・アニメーション・移動）とカメラの面倒を見てくれます。`minAlt` を負の値にすると地下にも降りられます。建物内に収まるよう、`cameraDistance` と `cameraHeight` は小さめに設定します。
 
 ```typescript
-const startLat = 35.6669;
-const startLng = 139.7490;
-const startHeight = 38;
+const startLat = 35.6341630282;
+const startLng = 139.7420527162;
+const startHeight = 23.0;
+const startHeading = Math.PI * 1.6;
 
 const personView = new PersonViewPlugin({
   character: {
-    modelUrl: "/glTF/Soldier/Soldier.glb",
+    modelUrl: "/Soldier.glb",
     animation: {
       idleClip: "Idle",
       walkClip: "Walk",
@@ -64,7 +65,7 @@ const personView = new PersonViewPlugin({
   },
   moveSpeed: 5,
   altSpeed: 5,
-  rotationSpeed: 4,
+  rotationSpeed: 2,
   cameraDistance: 10,
   cameraHeight: 1,
   cameraLerpSpeed: 4,
@@ -73,6 +74,7 @@ const personView = new PersonViewPlugin({
   startLat,
   startLng,
   startHeight,
+  startHeading,
   allowCameraControl: true,
 });
 
@@ -87,7 +89,7 @@ layers.sun.update({ sun: { castShadow: true } });
 ```
 
 :::note[モデルデータの準備]
-このチュートリアルでは Three.js 公式サンプルに含まれる `Soldier.glb` を使用します。[Three.js GitHub リポジトリ](https://github.com/mrdoob/three.js/tree/dev/examples/models/gltf/Soldier.glb) からダウンロードし、`public/glTF/Soldier/` 以下に配置してください。アニメーション付きの GLTF モデルであれば任意のものを使えます。その場合は `idleClip` と `dashClip` をモデルが持つクリップ名に合わせて変更してください。
+このチュートリアルでは Three.js 公式サンプルに含まれる `Soldier.glb` を使用します。[Three.js GitHub リポジトリ](https://github.com/mrdoob/three.js/tree/dev/examples/models/gltf/Soldier.glb) からダウンロードしてください。アニメーション付きの GLTF モデルであれば任意のものを使えます。その場合は `idleClip`、`walkClip`、 `dashClip` をモデルが持つクリップ名に合わせて変更してください。
 :::
 
 ## 地形と地図タイルを追加する
@@ -224,22 +226,23 @@ import ThreeView, {
   Color,
   JAPAN_GSI_ELEVATION_DECODER,
 } from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import { DefaultPlugin, type DefaultDescriptions } from "@navara/three_default_plugin";
 import { PersonViewPlugin } from "@navara/three_plugins";
 
 const plugin = new DefaultPlugin();
-const view = new ThreeView({
+const view = new ThreeView<DefaultDescriptions>({
   shadow: true,
   backgroundColor: new Color().setStyle("#475668"),
 });
 
-const startLat = 35.6669;
-const startLng = 139.7490;
-const startHeight = 38;
+const startLat = 35.6341630282;
+const startLng = 139.7420527162;
+const startHeight = 23.0;
+const startHeading = Math.PI * 1.6;
 
 const personView = new PersonViewPlugin({
   character: {
-    modelUrl: "/glTF/Soldier/Soldier.glb",
+    modelUrl: "/Soldier.glb",
     animation: {
       idleClip: "Idle",
       walkClip: "Walk",
@@ -254,7 +257,7 @@ const personView = new PersonViewPlugin({
   },
   moveSpeed: 5,
   altSpeed: 5,
-  rotationSpeed: 4,
+  rotationSpeed: 2,
   cameraDistance: 10,
   cameraHeight: 1,
   cameraLerpSpeed: 4,
@@ -263,6 +266,7 @@ const personView = new PersonViewPlugin({
   startLat,
   startLng,
   startHeight,
+  startHeading,
   allowCameraControl: true,
 });
 

@@ -25,11 +25,11 @@ import ThreeView, {
   Color,
   JAPAN_GSI_ELEVATION_DECODER,
 } from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import { DefaultPlugin, type DefaultDescriptions } from "@navara/three_default_plugin";
 import { PersonViewPlugin } from "@navara/three_plugins";
 
 const plugin = new DefaultPlugin();
-const view = new ThreeView({
+const view = new ThreeView<DefaultDescriptions>({
   shadow: true,
   backgroundColor: new Color().setStyle("#475668"),
 });
@@ -43,13 +43,14 @@ We will register the `PersonViewPlugin` next, before calling `view.init()`.
 The plugin handles the character (model, animation, movement) and the camera. Set `minAlt` to a negative value so the character can walk below ground level, and choose a tight `cameraDistance` / `cameraHeight` that works inside a building.
 
 ```typescript
-const startLat = 35.6669;
-const startLng = 139.7490;
-const startHeight = 38;
+const startLat = 35.6341630282;
+const startLng = 139.7420527162;
+const startHeight = 23.0;
+const startHeading = Math.PI * 1.6;
 
 const personView = new PersonViewPlugin({
   character: {
-    modelUrl: "/glTF/Soldier/Soldier.glb",
+    modelUrl: "/Soldier.glb",
     animation: {
       idleClip: "Idle",
       walkClip: "Walk",
@@ -64,7 +65,7 @@ const personView = new PersonViewPlugin({
   },
   moveSpeed: 5,
   altSpeed: 5,
-  rotationSpeed: 4,
+  rotationSpeed: 2,
   cameraDistance: 10,
   cameraHeight: 1,
   cameraLerpSpeed: 4,
@@ -73,6 +74,7 @@ const personView = new PersonViewPlugin({
   startLat,
   startLng,
   startHeight,
+  startHeading,
   allowCameraControl: true,
 });
 
@@ -87,7 +89,7 @@ layers.sun.update({ sun: { castShadow: true } });
 ```
 
 :::note[Preparing Model Data]
-This tutorial uses `Soldier.glb` from the official Three.js samples. Download it from the [Three.js GitHub repository](https://github.com/mrdoob/three.js/tree/dev/examples/models/gltf/Soldier.glb) and place it under `public/glTF/Soldier/`. Any animated GLTF model works — just match `idleClip` and `dashClip` to the clip names your model exposes.
+This tutorial uses `Soldier.glb` from the official Three.js samples. Download it from the [Three.js GitHub repository](https://github.com/mrdoob/three.js/tree/dev/examples/models/gltf/Soldier.glb). Any animated GLTF model works — just match `idleClip`, `walkClip` and `dashClip` to the clip names your model exposes.
 :::
 
 ## Adding Terrain and Map Tiles
@@ -224,22 +226,23 @@ import ThreeView, {
   Color,
   JAPAN_GSI_ELEVATION_DECODER,
 } from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import { DefaultPlugin, type DefaultDescriptions } from "@navara/three_default_plugin";
 import { PersonViewPlugin } from "@navara/three_plugins";
 
 const plugin = new DefaultPlugin();
-const view = new ThreeView({
+const view = new ThreeView<DefaultDescriptions>({
   shadow: true,
   backgroundColor: new Color().setStyle("#475668"),
 });
 
-const startLat = 35.6669;
-const startLng = 139.7490;
-const startHeight = 38;
+const startLat = 35.6341630282;
+const startLng = 139.7420527162;
+const startHeight = 23.0;
+const startHeading = Math.PI * 1.6;
 
 const personView = new PersonViewPlugin({
   character: {
-    modelUrl: "/glTF/Soldier/Soldier.glb",
+    modelUrl: "/Soldier.glb",
     animation: {
       idleClip: "Idle",
       walkClip: "Walk",
@@ -254,7 +257,7 @@ const personView = new PersonViewPlugin({
   },
   moveSpeed: 5,
   altSpeed: 5,
-  rotationSpeed: 4,
+  rotationSpeed: 2,
   cameraDistance: 10,
   cameraHeight: 1,
   cameraLerpSpeed: 4,
@@ -263,6 +266,7 @@ const personView = new PersonViewPlugin({
   startLat,
   startLng,
   startHeight,
+  startHeading,
   allowCameraControl: true,
 });
 

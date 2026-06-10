@@ -208,7 +208,7 @@ The Geospatial Information Authority of Japan's experimental vector tiles (exper
 To use the water surface material, you must enable `waterTexture` when constructing `ThreeView`. Without it, the `water: true` option on the layer will have no effect.
 
 ```typescript
-const view = new ThreeView({
+const view = new ThreeView<DefaultDescriptions>({
   waterTexture: { enabled: true },
   // ...other options
 });
