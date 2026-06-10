@@ -12,7 +12,7 @@ use navara_tile_component::{
     RasterTile, TileHandle, TileTextureFragmentMarker, TileTextureFragmentQuery,
 };
 
-use crate::hillshade::{HillshadeNeedsUpdate, HillshadeTextureMarker};
+use crate::hillshade::HillshadeTextureMarker;
 
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn request_texture_fragment(
@@ -134,7 +134,6 @@ pub(crate) fn request_texture_fragment(
             entity_commands.insert((
                 TileTextureFragmentMarker(handle),
                 HillshadeTextureMarker,
-                HillshadeNeedsUpdate, // Marker to ensure update_mesh_material processes this
                 DataRequester::new_with_status(shared_handle, url, extension, initial_status),
                 OrderByDistance {
                     sse,

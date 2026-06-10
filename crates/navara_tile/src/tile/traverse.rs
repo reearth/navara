@@ -480,6 +480,7 @@ pub fn spawn_tile_entity(
             hillshade_parents,
             mesh_entity: None,
             mesh_prepared: false,
+            needs_material_update: true,
         },
     );
 }

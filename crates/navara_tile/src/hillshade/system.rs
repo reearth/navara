@@ -21,11 +21,6 @@ const MAX_HILLSHADE_PENDINGS: u32 = 50;
 #[derive(Debug, Clone, Copy, Component)]
 pub struct HillshadeTextureMarker;
 
-/// Marker component indicating a hillshade needs material update
-/// Added when hillshade DataRequester is created, removed after update_mesh_material processes it
-#[derive(Debug, Clone, Copy, Component)]
-pub struct HillshadeNeedsUpdate;
-
 /// Marker component indicating that HillshadeBackfillEvents have been extracted
 /// Used to delay cleanup until after read_events() has accessed the data
 #[derive(Debug, Clone, Copy, Component)]
