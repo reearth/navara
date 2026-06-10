@@ -414,21 +414,6 @@ pub fn transfer_mesh(
                 )
             });
 
-        // Get hillshade_parents from cache for overscale tiles
-        let hillshade_parents = tc
-            .rendered_tile_caches
-            .get(&rendered_tile.tile_handle)
-            .and_then(|cache| cache.hillshade_parents.as_ref());
-
-        // Calculate UV transforms for hillshade parent reuse
-        for (i, uv_trans_slot) in hillshade_uv_transforms.iter_mut().enumerate() {
-            let uv_trans = hillshade_parents
-                .and_then(|parents| parents.get(i))
-                .and_then(|p| p.as_ref())
-                .map(|p| uv_transform(tile.coords, p.zoom));
-            *uv_trans_slot = uv_trans;
-        }
-
         // Merge texture and hillshade entities (fix for hillshade not displaying)
         let merged_texture_fragments = if let Some(tex_ids) = texture_fragment_entity_ids.as_ref() {
             let mut merged = Vec::with_capacity(tex_ids.len());
@@ -437,14 +422,7 @@ pub fn transfer_mesh(
             for i in 0..tex_ids.len() {
                 let tex = tex_ids.get(i).and_then(|&e| e);
                 let hill = hill_ids.and_then(|ids| ids.get(i).and_then(|&e| e));
-
-                // For overscale tiles: use parent's hillshade entity if available
-                let from_parent = hillshade_parents
-                    .and_then(|parents| parents.get(i))
-                    .and_then(|p| p.as_ref())
-                    .map(|p| p.entity);
-
-                merged.push(tex.or(hill).or(from_parent));
+                merged.push(tex.or(hill));
             }
 
             Some(merged)
