@@ -51,6 +51,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
       },
       modelRotationOffset: { x: Math.PI / 2, y: 0, z: 0 },
       modelScale: 1,
+      receiveShadow: true,
     },
     moveSpeed: 5,
     altSpeed: 5,

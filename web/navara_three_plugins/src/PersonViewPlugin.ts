@@ -122,6 +122,10 @@ export type CharacterConfig = {
   modelScale?: number;
   /** Hide the model while the camera is in FPV. Defaults to true. */
   hideModelInFpv?: boolean;
+  /** Whether the character casts shadows. Defaults to false. */
+  castShadow?: boolean;
+  /** Whether the character receives shadows. Defaults to false. */
+  receiveShadow?: boolean;
 };
 
 /**
@@ -238,7 +242,12 @@ const FPV_LOOK_AHEAD_DISTANCE = 1000;
 type ResolvedCharacter = Required<
   Pick<
     CharacterConfig,
-    "modelUrl" | "animation" | "modelScale" | "hideModelInFpv"
+    | "modelUrl"
+    | "animation"
+    | "modelScale"
+    | "hideModelInFpv"
+    | "castShadow"
+    | "receiveShadow"
   >
 > & {
   modelRotationOffset: ModelRotationOffset;
@@ -349,10 +358,13 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
     this.cameraHeading = startHeading;
 
     if (this.character) {
-      const { animation, modelRotationOffset, modelScale } = this.character;
+      const { animation, modelRotationOffset, modelScale, castShadow, receiveShadow } =
+        this.character;
       this.handle = this.view.addMesh({
         gltfModel: {
           url: this.character.modelUrl,
+          castShadow,
+          receiveShadow,
           animationEnabled: true,
           animationAutoPlay: true,
           animationActiveClip: animation.idleClip,
@@ -487,6 +499,8 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
         : DEFAULT_ROTATION_OFFSET,
       modelScale: c.modelScale ?? DEFAULT_MODEL_SCALE,
       hideModelInFpv: c.hideModelInFpv ?? true,
+      castShadow: c.castShadow ?? false,
+      receiveShadow: c.receiveShadow ?? false,
     };
   }
 
@@ -794,7 +808,7 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
       lat: nextLat,
       alt: nextAlt,
       heading: radianToDegree(this.modelHeading),
-      speed: isMoving ? moveSpeed * this.dashMultiplier : 0,
+      speed: moveSpeed * this.dashMultiplier,
       animationState: nextAnimState,
       mode: this.viewMode,
     };

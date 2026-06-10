@@ -124,6 +124,8 @@ new PersonViewPlugin(config?: PersonViewConfig)
 | `modelRotationOffset` | `ModelRotationOffset`  | `{ x: 0, y: 0, z: 0 }` | Rotation offset to correct the model's default orientation.  |
 | `modelScale`          | `number`               | `3`              | Uniform scale multiplier for the model.                      |
 | `hideModelInFpv`      | `boolean`              | `true`           | Hide the model while the camera is in FPV.                   |
+| `castShadow`          | `boolean`              | `false`          | Whether the character casts shadows.                         |
+| `receiveShadow`       | `boolean`              | `false`          | Whether the character receives shadows.                      |
 
 ### AnimationConfig
 

@@ -124,6 +124,8 @@ new PersonViewPlugin(config?: PersonViewConfig)
 | `modelRotationOffset` | `ModelRotationOffset` | `{ x: 0, y: 0, z: 0 }` | モデルのデフォルト向きを補正する回転オフセット。            |
 | `modelScale`          | `number`              | `3`                    | モデルの均等スケール倍率。                                  |
 | `hideModelInFpv`      | `boolean`             | `true`                 | FPV のときにモデルを非表示にするかどうか。                  |
+| `castShadow`          | `boolean`             | `false`                | キャラクターが影を落とすかどうか。                          |
+| `receiveShadow`       | `boolean`             | `false`                | キャラクターが影を受けるかどうか。                          |
 
 ### AnimationConfig
 
