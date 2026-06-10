@@ -97,7 +97,7 @@ For details on pre-defined decoder constants, see [RasterTerrainMaterial](../../
 
 ### Combined Use with Hillshade
 
-Combining a Terrain layer with a [Hillshade](../../../three/resource-layer-reference/hillshade-material/) layer produces shaded relief on top of the actual 3D surface: the Terrain layer provides the geometry, while the Hillshade layer adds shading driven by elevation gradients. Reusing the same DEM URL for both layers ensures the geometry and shading stay consistent.
+Combining a Terrain layer with a [Hillshade](../../../three/resource-layer/hillshade-material/) layer produces shaded relief on top of the actual 3D surface: the Terrain layer provides the geometry, while the Hillshade layer adds shading driven by elevation gradients. Reusing the same DEM URL for both layers ensures the geometry and shading stay consistent.
 
 ```typescript
 import ThreeView, { TERRARIUM_ELEVATION_DECODER } from "@navara/three";
