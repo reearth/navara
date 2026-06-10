@@ -2,17 +2,12 @@ import ThreeView, {
   JAPAN_GSI_ELEVATION_DECODER,
   Color,
   type LayerDescription,
-  geodeticToVector3,
-  degreeToRadian,
-  geodeticSurfaceNormal,
-  MeshHandle,
 } from "@navara/three";
-import type { GLTFModelDesc } from "@navara/three_default_descs";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
-import { Vector3, Quaternion, Euler } from "three";
+import { PersonViewPlugin } from "@navara/three_plugins";
 import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../../helpers/attributions";
@@ -23,7 +18,6 @@ import {
   LOCAL_DATASETS,
 } from "../../../helpers/constants";
 import { atZoneTime } from "../../../helpers/control";
-import { controlGLTFModel } from "../../../helpers/modelControl";
 
 const SCENES = {
   ToranomonHillsBIM: {
@@ -44,26 +38,47 @@ export type CustomDescriptions = DefaultDescriptions;
 
 export const run = async (view: ThreeView<CustomDescriptions>) => {
   const plugin = new DefaultPlugin();
+  const startLLE = SCENES[gCurSceneName].startLLE;
+  const personView = new PersonViewPlugin({
+    character: {
+      modelUrl: LOCAL_DATASETS.soldierGLTF.url,
+      animation: {
+        idleClip: "Idle",
+        walkClip: "Walk",
+        dashClip: "Run",
+        speed: 1.0,
+        crossfadeDuration: 0.3,
+      },
+      modelRotationOffset: { x: Math.PI / 2, y: 0, z: 0 },
+      modelScale: 1,
+      receiveShadow: true,
+    },
+    moveSpeed: 5,
+    altSpeed: 5,
+    rotationSpeed: 4,
+    cameraDistance: 10,
+    cameraLerpSpeed: 4,
+    cameraHeight: 1,
+    minAlt: -1000,
+    maxAlt: 5000,
+    startLat: startLLE[0],
+    startLng: startLLE[1],
+    startHeight: startLLE[2],
+    allowCameraControl: true,
+  });
   view.addPlugin(plugin);
+  view.addPlugin(personView);
   await view.init();
 
   view.atmosphere.date = atZoneTime(view.atmosphere.date, 8);
   view.toneMappingExposure = 10;
 
   const defaultLayers = plugin.addDefaultPhotorealScene();
-
-  const sunLight = defaultLayers.sun;
-  sunLight.update({
-    sun: {
-      castShadow: true,
-    },
-  });
+  defaultLayers.sun.update({ sun: { castShadow: true } });
 
   view.addLayer({
     type: "terrain",
-    data: {
-      url: TERRAIN_DATASETS.gsi.url,
-    },
+    data: { url: TERRAIN_DATASETS.gsi.url },
     rasterTerrain: {
       maxZoom: 15,
       minZoom: 6,
@@ -77,13 +92,8 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   view.addLayer({
     type: "tiles",
     data: { url: TERRAIN_DATASETS.gsi.url },
-    rasterTile: {
-      maxZoom: 15,
-      minZoom: 6,
-    },
-    hillshade: {
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-    },
+    rasterTile: { maxZoom: 15, minZoom: 6 },
+    hillshade: { elevationDecoder: JAPAN_GSI_ELEVATION_DECODER() },
   });
 
   view.addLayer({
@@ -95,42 +105,10 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     },
   });
 
-  // Add GLTF model at Mount Fuji summit
-  const modelLayer = view.addMesh<GLTFModelDesc>({
-    gltfModel: {
-      url: LOCAL_DATASETS.soldierGLTF.url,
-      animationEnabled: true,
-      animationActiveClip: "Idle",
-      animationSpeed: 1.0,
-      animationLoop: true,
-      animationAutoPlay: true,
-      animationCrossfadeDuration: 0.3,
-      receiveShadow: true,
-      castShadow: true,
-    },
-  });
-
-  const startLLE = SCENES[gCurSceneName].startLLE;
-
-  modelLayer.ref.on("load", () => {
-    updateModelLayerPos(view, modelLayer, startLLE);
-
-    controlGLTFModel(view, modelLayer, {
-      walkSpeed: 5,
-      rotationSpeed: 3,
-      cameraFollow: true,
-      allowUnderground: true,
-      allowFly: true,
-    });
-  });
-
-  view.lookAt(
-    { lat: startLLE[0], lng: startLLE[1], height: startLLE[2] + 1 }, // Add 1 to height to look at model center
-    new Vector3(10, 10, 5),
-  );
+  personView.start();
 
   const pane = new Pane({ title: "Interior Explore" });
-  add3DTilesSceneControl(view, pane, modelLayer);
+  add3DTilesSceneControl(view, pane, personView);
 
   showAttributions([
     TERRAIN_DATASETS.gsi,
@@ -140,54 +118,18 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   ]);
 };
 
-const updateModelLayerPos = (
-  view: ThreeView<CustomDescriptions>,
-  modelLayer: MeshHandle<GLTFModelDesc>,
-  lle: number[],
-) => {
-  const startPos = geodeticToVector3({
-    lat: degreeToRadian(lle[0]),
-    lng: degreeToRadian(lle[1]),
-    height: lle[2],
-  });
-
-  const normal = geodeticSurfaceNormal({
-    lat: degreeToRadian(lle[0]),
-    lng: degreeToRadian(lle[1]),
-    height: lle[2],
-  });
-  // Calculate rotation to align model with surface normal
-  const up = new Vector3(0, 1, 0);
-  const quaternion = new Quaternion().setFromUnitVectors(up, normal);
-  const euler = new Euler().setFromQuaternion(quaternion);
-
-  modelLayer.update({
-    position: { x: startPos.x, y: startPos.y, z: startPos.z },
-    rotation: { x: euler.x, y: euler.y, z: euler.z },
-  });
-
-  view.cameraFollow(
-    true,
-    { lat: lle[0], lng: lle[1], height: lle[2] + 1 },
-    new Vector3(10, 10, 5),
-  );
-};
-
 const add3DTilesSceneControl = (
   view: ThreeView<CustomDescriptions>,
   pane: Pane,
-  modelLayer: MeshHandle<GLTFModelDesc>,
+  personView: PersonViewPlugin,
 ) => {
   const PARAMS = {
     scene: gCurSceneName,
   };
 
-  // Track current layer
   let currentLayer: ReturnType<typeof view.addLayer> | null = null;
 
-  // Function to load new scene
   const loadScene = (sceneName: keyof typeof SCENES) => {
-    // Clear current layer
     if (currentLayer) {
       currentLayer.delete();
     }
@@ -195,9 +137,7 @@ const add3DTilesSceneControl = (
     const sceneData = SCENES[sceneName];
     const description: LayerDescription = {
       type: "cesium3dtiles",
-      data: {
-        url: sceneData.url,
-      },
+      data: { url: sceneData.url },
       model: {
         show: true,
         castShadow: true,
@@ -208,10 +148,8 @@ const add3DTilesSceneControl = (
     currentLayer = view.addLayer(description);
   };
 
-  // Load initial scene
   loadScene(PARAMS.scene);
 
-  // Add control to pane
   const folder = pane.addFolder({
     title: "3D Tiles Scene",
     expanded: true,
@@ -231,6 +169,7 @@ const add3DTilesSceneControl = (
       gCurSceneName = v.value as keyof typeof SCENES;
       loadScene(gCurSceneName);
 
-      updateModelLayerPos(view, modelLayer, SCENES[gCurSceneName].startLLE);
+      const lle = SCENES[gCurSceneName].startLLE;
+      personView.teleport(lle[1], lle[0], lle[2]);
     });
 };
