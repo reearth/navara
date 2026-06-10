@@ -10,7 +10,7 @@ sidebar:
 ## Use Cases
 
 - Emphasizing terrain undulation on flat (2D) basemaps
-- Adding richer surface detail on top of [3D terrain layers](../../../three/resource-layer-reference/terrain-layer/)
+- Computing accurate terrain normals from DEM tiles on top of [3D terrain layers](../../../three/resource-layer-reference/terrain-layer/) (the geometry's vertex normals are coarse-grained; hillshade derives per-pixel normals directly from the elevation tile)
 - Drawing attention to subtle topographic features that are hard to perceive from a raster basemap alone
 
 ## Properties

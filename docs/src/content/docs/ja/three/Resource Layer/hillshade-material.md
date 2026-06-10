@@ -10,7 +10,7 @@ sidebar:
 ## 用途
 
 - 平面（2D）のベースマップ上で地形の起伏を強調する
-- [3D 地形レイヤー](../../../three/resource-layer-reference/terrain-layer/)に重ねて、より豊かな地表表現を追加する
+- [3D 地形レイヤー](../../../three/resource-layer-reference/terrain-layer/)に重ねて、DEMタイルから地形の法線を正確に計算する（ジオメトリの頂点法線は粗いため、ヒルシェードは標高タイルから直接ピクセル単位の法線を求めます）
 - ラスタータイルだけでは伝わりにくい微細な地形を可視化する
 
 ## Properties
