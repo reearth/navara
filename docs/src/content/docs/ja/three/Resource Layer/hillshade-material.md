@@ -10,14 +10,14 @@ sidebar:
 ## 用途
 
 - 平面（2D）のベースマップ上で地形の起伏を強調する
-- [3D 地形レイヤー](../../../three/resource-layer-reference/terrain-layer/)に重ねて、DEMタイルから地形の法線を正確に計算する（ジオメトリの頂点法線は粗いため、ヒルシェードは標高タイルから直接ピクセル単位の法線を求めます）
+- [3D 地形レイヤー](../../../three/resource-layer/terrain-layer/)に重ねて、DEMタイルから地形の法線を正確に計算する（ジオメトリの頂点法線は粗いため、ヒルシェードは標高タイルから直接ピクセル単位の法線を求めます）
 - ラスタータイルだけでは伝わりにくい微細な地形を可視化する
 
 ## Properties
 
 ### elevationDecoder
 
-**Type:** [`ElevationDecoder`](../../../three/resource-layer-reference/raster-terrain-material/#elevationdecoder-type) | `undefined`
+**Type:** [`ElevationDecoder`](../../../three/resource-layer/raster-terrain-material/#elevationdecoder-type) | `undefined`
 
 **Description:** エンコードされた標高データを実際の標高値に変換するためのデコーダー設定を指定します。使用する DEM タイルのフォーマットに応じて適切なデコーダーを選択します。
 
@@ -96,7 +96,7 @@ view.addLayer({
 
 ### 3D 地形と組み合わせた使用
 
-ヒルシェードは [3D Terrain レイヤー](../../../three/resource-layer-reference/terrain-layer/)と組み合わせて使用することで、3D 地表の上に陰影起伏を重ねて描画できます。Terrain レイヤーがジオメトリを提供し、Hillshade レイヤーが標高勾配に基づく陰影を追加します。
+ヒルシェードは [3D Terrain レイヤー](../../../three/resource-layer/terrain-layer/)と組み合わせて使用することで、3D 地表の上に陰影起伏を重ねて描画できます。Terrain レイヤーがジオメトリを提供し、Hillshade レイヤーが標高勾配に基づく陰影を追加します。
 
 ```typescript
 import ThreeView, { TERRARIUM_ELEVATION_DECODER } from "@navara/three";
@@ -188,10 +188,10 @@ if (layerDef.hillshade) {
 
 ## 関連項目
 
-- [Tile Layer](../../../three/resource-layer-reference/tile-layer/) - タイルレイヤーの設定
-- [Terrain Layer](../../../three/resource-layer-reference/terrain-layer/) - 3D 地形の描画
-- [RasterTerrainMaterial](../../../three/resource-layer-reference/raster-terrain-material/) - 3D 地形レンダリング用マテリアル（標高デコーダーのリファレンスを含む）
-- [ElevationHeatmapMaterial](../../../three/resource-layer-reference/elevation-heatmap-material/) - 標高データをヒートマップとして可視化
+- [Tile Layer](../../../three/resource-layer/tile-layer/) - タイルレイヤーの設定
+- [Terrain Layer](../../../three/resource-layer/terrain-layer/) - 3D 地形の描画
+- [RasterTerrainMaterial](../../../three/resource-layer/raster-terrain-material/) - 3D 地形レンダリング用マテリアル（標高デコーダーのリファレンスを含む）
+- [ElevationHeatmapMaterial](../../../three/resource-layer/elevation-heatmap-material/) - 標高データをヒートマップとして可視化
 
 :::note
 ヒルシェードは Tile Layer の `hillshade` プロパティで設定します。通常は `rasterTile` と併用し、Terrain Layer と組み合わせることで 3D 地形の上に陰影起伏を重ねることもできます。

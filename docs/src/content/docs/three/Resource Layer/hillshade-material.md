@@ -10,14 +10,14 @@ sidebar:
 ## Use Cases
 
 - Emphasizing terrain undulation on flat (2D) basemaps
-- Computing accurate terrain normals from DEM tiles on top of [3D terrain layers](../../../three/resource-layer-reference/terrain-layer/) (the geometry's vertex normals are coarse-grained; hillshade derives per-pixel normals directly from the elevation tile)
+- Computing accurate terrain normals from DEM tiles on top of [3D terrain layers](../../../three/resource-layer/terrain-layer/) (the geometry's vertex normals are coarse-grained; hillshade derives per-pixel normals directly from the elevation tile)
 - Drawing attention to subtle topographic features that are hard to perceive from a raster basemap alone
 
 ## Properties
 
 ### elevationDecoder
 
-**Type:** [`ElevationDecoder`](../../../three/resource-layer-reference/raster-terrain-material/#elevationdecoder-type) | `undefined`
+**Type:** [`ElevationDecoder`](../../../three/resource-layer/raster-terrain-material/#elevationdecoder-type) | `undefined`
 
 **Description:** Specifies the decoder settings for converting encoded elevation data to actual elevation values. Select the appropriate decoder according to the DEM tile format being used.
 
@@ -96,7 +96,7 @@ view.addLayer({
 
 ### Combined Use with 3D Terrain
 
-Hillshade can be combined with a [3D Terrain layer](../../../three/resource-layer-reference/terrain-layer/) to produce a shaded relief over the actual 3D surface. The terrain layer provides the geometry, while the hillshade layer adds shading driven by elevation gradients.
+Hillshade can be combined with a [3D Terrain layer](../../../three/resource-layer/terrain-layer/) to produce a shaded relief over the actual 3D surface. The terrain layer provides the geometry, while the hillshade layer adds shading driven by elevation gradients.
 
 ```typescript
 import ThreeView, { TERRARIUM_ELEVATION_DECODER } from "@navara/three";
@@ -188,10 +188,10 @@ if (layerDef.hillshade) {
 
 ## Related Resources
 
-- [Tile Layer](../../../three/resource-layer-reference/tile-layer/) - Tile layer configuration
-- [Terrain Layer](../../../three/resource-layer-reference/terrain-layer/) - 3D terrain rendering
-- [RasterTerrainMaterial](../../../three/resource-layer-reference/raster-terrain-material/) - Material for 3D terrain rendering, including elevation decoder reference
-- [ElevationHeatmapMaterial](../../../three/resource-layer-reference/elevation-heatmap-material/) - Visualize elevation data as a heatmap
+- [Tile Layer](../../../three/resource-layer/tile-layer/) - Tile layer configuration
+- [Terrain Layer](../../../three/resource-layer/terrain-layer/) - 3D terrain rendering
+- [RasterTerrainMaterial](../../../three/resource-layer/raster-terrain-material/) - Material for 3D terrain rendering, including elevation decoder reference
+- [ElevationHeatmapMaterial](../../../three/resource-layer/elevation-heatmap-material/) - Visualize elevation data as a heatmap
 
 :::note
 Hillshade is configured via the `hillshade` property of the Tile Layer. It is typically used together with `rasterTile`, and can be combined with a separate Terrain Layer for shaded relief over 3D terrain.

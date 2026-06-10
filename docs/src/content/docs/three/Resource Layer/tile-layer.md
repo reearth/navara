@@ -76,7 +76,7 @@ const heatmapLayer = view.addLayer({
 
 ### Hillshade
 
-Hillshade renders shaded relief from DEM tiles, emphasizing terrain features such as ridges and valleys. It can be used on top of a flat basemap, or combined with a [Terrain Layer](../../../three/resource-layer-reference/terrain-layer/) for shaded relief over 3D terrain.
+Hillshade renders shaded relief from DEM tiles, emphasizing terrain features such as ridges and valleys. It can be used on top of a flat basemap, or combined with a [Terrain Layer](../../../three/resource-layer/terrain-layer/) for shaded relief over 3D terrain.
 
 ```typescript
 import ThreeView, { TERRARIUM_ELEVATION_DECODER } from "@navara/three";
