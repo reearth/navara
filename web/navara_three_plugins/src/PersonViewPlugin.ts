@@ -650,6 +650,7 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
     if (action === undefined) return;
 
     if (action === "toggleView") {
+      if (e.repeat) return;
       this.toggleViewMode();
       return;
     }
