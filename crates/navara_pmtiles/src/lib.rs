@@ -8,12 +8,14 @@
 //! Scope: the container format only. The tile payloads it points at (MVT, PNG,
 //! …) are decoded elsewhere.
 
+mod archive;
 mod decode;
 mod directory;
 mod error;
 mod header;
 mod tile_id;
 
+pub use archive::{ByteRange, PmtilesArchive, Resolution};
 pub use decode::decompress;
 pub use directory::{DirEntry, Directory};
 pub use error::PmtError;
