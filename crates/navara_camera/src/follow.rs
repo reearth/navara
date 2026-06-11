@@ -29,7 +29,15 @@ pub(crate) fn handle_follow(
         return;
     }
 
-    handle_follow_move(transform, orbit, controller);
+    if controller.free_look {
+        handle_follow_move(transform, orbit, controller, false);
+        orbit.local_position = Vec3::ZERO;
+        orbit.horizontal_rotation_axis = Vec3::Z;
+        handle_follow_spin(transform, orbit, controller, mb, mm);
+        return;
+    }
+
+    handle_follow_move(transform, orbit, controller, true);
     handle_follow_spin(transform, orbit, controller, mb, mm);
     handle_follow_zoom(transform, orbit, controller, mw);
 }
@@ -39,6 +47,7 @@ fn handle_follow_move(
     transform: &mut Transform,
     orbit: &mut Orbit,
     controller: &mut CameraController,
+    tilt: bool,
 ) {
     if let (Some(target_cur), Some(target_pre)) =
         (controller.follow_target_cur, controller.follow_target_pre)
@@ -50,26 +59,29 @@ fn handle_follow_move(
 
         // Calculate the movement delta in world space
         let target_delta = world_target_cur - world_target_pre;
-        if target_delta.length_squared() > EPSILON3 {
+        let has_delta = target_delta.length_squared() > EPSILON3;
+
+        if has_delta {
             // Apply the delta to camera position to follow the target smoothly
             transform.translation += target_delta;
-
-            // Update orbit pivot to keep the orbit center at the new target position
-            orbit.pivot = world_target_cur;
-
-            // Update orbit state to maintain synchronization
-            let enu_transform = east_north_up_to_fixed_frame(world_target_cur, ellipsoid);
-            orbit.set_quat(
-                transform,
-                Quat::from_mat4(&enu_transform),
-                world_target_cur,
-                true,
-            );
-
-            commit(transform, orbit);
-
-            controller.follow_target_pre = controller.follow_target_cur;
         }
+
+        // Update orbit pivot to keep the orbit center at the new target position
+        orbit.pivot = world_target_cur;
+        // Update orbit state to maintain synchronization
+        let enu_transform = east_north_up_to_fixed_frame(world_target_cur, ellipsoid);
+        orbit.set_quat(
+            transform,
+            Quat::from_mat4(&enu_transform),
+            world_target_cur,
+            tilt,
+        );
+
+        if has_delta {
+            commit(transform, orbit);
+        }
+
+        controller.follow_target_pre = controller.follow_target_cur;
     }
 }
 

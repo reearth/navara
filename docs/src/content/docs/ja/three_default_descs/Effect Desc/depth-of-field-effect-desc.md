@@ -76,7 +76,8 @@ sidebar:
 ### 基本的な被写界深度エフェクトの追加
 
 ```typescript
-import ThreeView, { DepthOfFieldEffectDesc } from "@navara/three";
+import ThreeView from "@navara/three";
+import { DepthOfFieldEffectDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
 await view.init();
@@ -91,7 +92,8 @@ const depthOfFieldDesc = view.addEffect<DepthOfFieldEffectDesc>({
 ### 3Dタイルと組み合わせた被写界深度
 
 ```typescript
-import ThreeView, { DepthOfFieldEffectDesc, Color } from "@navara/three";
+import ThreeView, { Color } from "@navara/three";
+import { DepthOfFieldEffectDesc } from "@navara/three_default_descs";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();

@@ -3,7 +3,7 @@ title: Navara
 description: Navara documentation site
 template: splash
 hero:
-  tagline: 3D globe map engine prototype built on Rust + WebAssembly + Three.js
+  tagline: Rust + WebAssembly + Three.js で構築された 3D 地図エンジン
   actions:
     - text: Get Started
       link: /guides/introduction/what-is-navara/
@@ -20,21 +20,26 @@ import { LinkCard, CardGrid } from "@astrojs/starlight/components";
   <LinkCard
     title="three"
     href="/ja/three/introduction/what-is-navara-three/"
-    description="Map engine for manipulating maps on the front-end side, based on Three.js"
+    description="Three.js をベースにした、フロントエンド側で地図を操作するためのマップエンジン"
   />
   <LinkCard
     title="three_default_descs"
     href="/ja/three_default_descs/about/"
-    description="Default layer implementations for navara_three (mesh, effect, light)"
+    description="navara_three 向けのデフォルトレイヤー実装 (mesh、effect、light)"
   />
   <LinkCard
     title="three_default_plugin"
     href="/ja/three_default_plugin/about/"
-    description="Default plugin implementations for navara_three"
+    description="navara_three 向けのデフォルトプラグイン実装"
+  />
+  <LinkCard
+    title="three_plugins"
+    href="/ja/three_plugins/about/"
+    description="navara_three 向けの各種プラグイン実装"
   />
   {/* <LinkCard
     title="engine"
     href="/engine/introduction/what-is-navara-wasm/"
-    description="A GIS engine built on Rust and compiled to WebAssembly (WASM) to run on the frontend"
+    description="Rust で構築され、フロントエンドで動作するように WebAssembly (WASM) にコンパイルされた GIS エンジン"
   /> */}
 </CardGrid>

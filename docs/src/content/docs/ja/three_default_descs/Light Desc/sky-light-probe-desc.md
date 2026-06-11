@@ -77,7 +77,8 @@ Descriptor作成後に`update()`メソッドで変更できるプロパティは
 ### 基本的な使用例
 
 ```typescript
-import ThreeView, { SkyLightProbeDesc } from "@navara/three";
+import ThreeView from "@navara/three";
+import { SkyLightProbeDesc } from "@navara/three_default_descs";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();

@@ -20,12 +20,12 @@ You can specify multiple materials simultaneously depending on the geometry type
 
 | Material                                                                         | Config key  | Supported geometry              |
 | -------------------------------------------------------------------------------- | ----------- | ------------------------------- |
-| [PointMaterial](../../../three/resource-layer-reference/point-material/)         | `point`     | Point, MultiPoint               |
-| [BillboardMaterial](../../../three/resource-layer-reference/billboard-material/) | `billboard` | Point (icon display)            |
-| [TextMaterial](../../../three/resource-layer-reference/text-material/)           | `text`      | Point (label display)           |
-| [PolylineMaterial](../../../three/resource-layer-reference/polyline-material/)   | `polyline`  | LineString, MultiLineString     |
-| [PolygonMaterial](../../../three/resource-layer-reference/polygon-material/)     | `polygon`   | Polygon, MultiPolygon           |
-| [ModelMaterial](../../../three/resource-layer-reference/model-material/)         | `model`     | Point (3D model placement)      |
+| [PointMaterial](../../../three/resource-layer/point-material/)         | `point`     | Point, MultiPoint               |
+| [BillboardMaterial](../../../three/resource-layer/billboard-material/) | `billboard` | Point (icon display)            |
+| [TextMaterial](../../../three/resource-layer/text-material/)           | `text`      | Point (label display)           |
+| [PolylineMaterial](../../../three/resource-layer/polyline-material/)   | `polyline`  | LineString, MultiLineString     |
+| [PolygonMaterial](../../../three/resource-layer/polygon-material/)     | `polygon`   | Polygon, MultiPolygon           |
+| [ModelMaterial](../../../three/resource-layer/model-material/)         | `model`     | Point (3D model placement)      |
 
 ## Usage Examples
 
@@ -248,6 +248,6 @@ const modelLayer = view.addLayer({
 
 ## Related Resources
 
-- [MVT Layer](../../../three/resource-layer-reference/mvt-layer/) - Display data in vector tile format
-- [PointMaterial](../../../three/resource-layer-reference/point-material/) - Detailed point material settings
-- [PolygonMaterial](../../../three/resource-layer-reference/polygon-material/) - Detailed polygon material settings
+- [MVT Layer](../../../three/resource-layer/mvt-layer/) - Display data in vector tile format
+- [PointMaterial](../../../three/resource-layer/point-material/) - Detailed point material settings
+- [PolygonMaterial](../../../three/resource-layer/polygon-material/) - Detailed polygon material settings

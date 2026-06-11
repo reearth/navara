@@ -142,5 +142,5 @@ overlayPlugin.onUpdate(({ projected }) => {
 
 ## Related Resources
 
-- [FlyingModelPlugin](../flyingmodelplugin/) — Combine with OverlayPlugin for interactive flight with markers
+- [PersonViewPlugin](../personviewplugin/) — Combine with OverlayPlugin for interactive person-view navigation with markers
 - [About three_plugins](../about/) — Package overview

@@ -140,7 +140,8 @@ For details on the atmosphere system, see the [Atmosphere class](../../../three/
 ## Usage Examples
 
 ```typescript
-import ThreeView, { SkyMeshDesc } from "@navara/three";
+import ThreeView from "@navara/three";
+import { SkyMeshDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
 await view.init();

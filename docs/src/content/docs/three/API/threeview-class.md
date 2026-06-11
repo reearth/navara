@@ -45,6 +45,24 @@ view.addLayer({
   },
 });
 
+// Add hillshade layer
+view.addLayer({
+  type: "tiles",
+  data: {
+    // Credit:
+    // - Geospatial Information Authority of Japan Tiles - Digital Elevation Map
+    //   https://maps.gsi.go.jp/development/ichiran.html
+    url: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
+  },
+  rasterTile: {
+    minZoom: 6,
+    maxZoom: 15,
+  },
+  hillshade: {
+    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+  },
+});
+
 // Add raster tile layer
 view.addLayer({
   type: "tiles",

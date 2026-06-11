@@ -20,12 +20,12 @@ GeoJSON レイヤーは、GeoJSON フォーマットの地理データを表示�
 
 | マテリアル                                                                       | 設定キー    | 対応ジオメトリ              |
 | -------------------------------------------------------------------------------- | ----------- | --------------------------- |
-| [PointMaterial](../../../three/resource-layer-reference/point-material/)         | `point`     | Point, MultiPoint           |
-| [BillboardMaterial](../../../three/resource-layer-reference/billboard-material/) | `billboard` | Point（アイコン表示）       |
-| [TextMaterial](../../../three/resource-layer-reference/text-material/)           | `text`      | Point（ラベル表示）         |
-| [PolylineMaterial](../../../three/resource-layer-reference/polyline-material/)   | `polyline`  | LineString, MultiLineString |
-| [PolygonMaterial](../../../three/resource-layer-reference/polygon-material/)     | `polygon`   | Polygon, MultiPolygon       |
-| [ModelMaterial](../../../three/resource-layer-reference/model-material/)         | `model`     | Point（3D モデル配置）      |
+| [PointMaterial](../../../three/resource-layer/point-material/)         | `point`     | Point, MultiPoint           |
+| [BillboardMaterial](../../../three/resource-layer/billboard-material/) | `billboard` | Point（アイコン表示）       |
+| [TextMaterial](../../../three/resource-layer/text-material/)           | `text`      | Point（ラベル表示）         |
+| [PolylineMaterial](../../../three/resource-layer/polyline-material/)   | `polyline`  | LineString, MultiLineString |
+| [PolygonMaterial](../../../three/resource-layer/polygon-material/)     | `polygon`   | Polygon, MultiPolygon       |
+| [ModelMaterial](../../../three/resource-layer/model-material/)         | `model`     | Point（3D モデル配置）      |
 
 ## 使用例
 
@@ -248,6 +248,6 @@ const modelLayer = view.addLayer({
 
 ## 関連リソース
 
-- [MVT Layer](../../../three/resource-layer-reference/mvt-layer/) - ベクタータイル形式のデータを表示
-- [PointMaterial](../../../three/resource-layer-reference/point-material/) - ポイントマテリアルの詳細設定
-- [PolygonMaterial](../../../three/resource-layer-reference/polygon-material/) - ポリゴンマテリアルの詳細設定
+- [MVT Layer](../../../three/resource-layer/mvt-layer/) - ベクタータイル形式のデータを表示
+- [PointMaterial](../../../three/resource-layer/point-material/) - ポイントマテリアルの詳細設定
+- [PolygonMaterial](../../../three/resource-layer/polygon-material/) - ポリゴンマテリアルの詳細設定

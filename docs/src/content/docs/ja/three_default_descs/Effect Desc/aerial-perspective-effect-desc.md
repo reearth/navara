@@ -201,7 +201,8 @@ defaultLayers.aerialPerspective.update({
 ### 雲の影と組み合わせた大気遠近法
 
 ```typescript
-import ThreeView, { CloudsEffectDesc } from "@navara/three";
+import ThreeView from "@navara/three";
+import { CloudsEffectDesc } from "@navara/three_default_descs";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();

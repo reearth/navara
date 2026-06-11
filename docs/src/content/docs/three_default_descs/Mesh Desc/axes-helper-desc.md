@@ -30,7 +30,8 @@ In addition to the properties below, all common properties from the base class (
 ## Usage Example
 
 ```typescript
-import ThreeView, { AxesHelperDesc } from "@navara/three";
+import ThreeView from "@navara/three";
+import { AxesHelperDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
 await view.init();

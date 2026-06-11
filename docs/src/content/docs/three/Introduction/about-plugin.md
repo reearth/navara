@@ -98,11 +98,11 @@ For details, see the [three_default_plugin documentation](../../../three_default
 
 The [three_plugins](../../../three_plugins/about/) package provides a collection of use-case specific plugins built on top of the plugin system. These plugins solve common use cases out of the box:
 
-- **FlyingModelPlugin** — Keyboard-driven GLTF model flight with a chase camera
+- **PersonViewPlugin** — Keyboard-driven first/third-person view controller with an optional GLTF character
 - **OverlayPlugin** — Projects world coordinates to screen coordinates for HTML overlays
 
 ```typescript
-import { FlyingModelPlugin, OverlayPlugin } from "@navara/three_plugins";
+import { PersonViewPlugin, OverlayPlugin } from "@navara/three_plugins";
 ```
 
 For details, see the [three_plugins documentation](../../../three_plugins/about/).

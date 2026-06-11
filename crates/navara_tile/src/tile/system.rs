@@ -884,7 +884,7 @@ pub fn delete_layer(
 
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn update_mesh_material(
-    tc: ResMut<TileCacheManager>,
+    mut tc: ResMut<TileCacheManager>,
     qt: ResMut<RasterTileQuadtree>,
     rendered_tiles: Query<(&RenderedTile, &OrderByDistance), With<Rendered>>,
     mut texture_fragment: ParamSet<(TileTextureFragmentQuery, ChangedTileTextureFragmentQuery)>,
@@ -916,10 +916,16 @@ pub fn update_mesh_material(
     let are_tile_layers_removed = !tile_layers.p2().is_empty();
     let are_texture_fragments_updated = !texture_fragment.p1().is_empty();
     let are_data_requesters_updated = !data_requesters.p1().is_empty();
+    let has_tiles_needing_material_update = tc
+        .rendered_tile_caches
+        .values()
+        .any(|cache| cache.needs_material_update);
+
     if !are_tile_layers_updated
         && !are_texture_fragments_updated
         && !are_tile_layers_removed
         && !are_data_requesters_updated
+        && !has_tiles_needing_material_update
     {
         return;
     }
@@ -1113,6 +1119,11 @@ pub fn update_mesh_material(
             needs_update = true;
         }
 
+        // Force update if tile cache has needs_material_update flag set
+        if !needs_update && cached_rendered_tile.needs_material_update {
+            needs_update = true;
+        }
+
         if !needs_update {
             continue;
         }
@@ -1143,6 +1154,11 @@ pub fn update_mesh_material(
         appearance.is_hillshades = is_hillshades;
         appearance.hillshade_config = hillshade_config;
         appearance.hillshade_uv_transforms = hillshade_uv_transforms;
+
+        // Clear needs_material_update flag now that material has been updated
+        if let Some(cache) = tc.rendered_tile_caches.get_mut(&rendered_tile.tile_handle) {
+            cache.needs_material_update = false;
+        }
     }
 }
 

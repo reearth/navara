@@ -398,4 +398,26 @@ mod tests {
         assert!(captured.hill_ids[1].is_none());
         assert!(captured.tex_ids[2].is_some());
     }
+
+    /// Hillshade layers at z >= max_zoom must not spawn a hillshade entity — the slot stays None,
+    /// allowing the tile to use its parent's hillshade via ready_hillshade_parents.
+    #[test]
+    fn hillshade_beyond_max_zoom_leaves_hillshade_slot_none() {
+        // Create a hillshade layer with max_zoom=10
+        let layer = hillshade_layer("hillshade", 0, 10);
+
+        // Tile at z=15 is beyond max_zoom (15 >= 10): no hillshade requester should spawn.
+        let captured = run_request(vec![(layer, Order(0))], 15, |_| {});
+
+        assert_eq!(captured.tex_ids.len(), 1);
+        assert_eq!(captured.hill_ids.len(), 1);
+
+        // No hillshade entity should be spawned in the overscale zone
+        assert!(
+            captured.hill_ids[0].is_none(),
+            "hillshade in overscale zone must not spawn DataRequester"
+        );
+        // Regular texture slot should also be None (no regular texture for hillshade layer)
+        assert!(captured.tex_ids[0].is_none());
+    }
 }

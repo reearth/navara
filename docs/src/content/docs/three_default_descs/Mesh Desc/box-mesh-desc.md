@@ -299,7 +299,8 @@ import { Color } from "@navara/three";
 ### Basic Usage
 
 ```typescript
-import ThreeView, { BoxMeshDesc, Color } from "@navara/three";
+import ThreeView, { Color } from "@navara/three";
+import { BoxMeshDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
 await view.init();
@@ -319,7 +320,8 @@ const boxDesc = view.addMesh<BoxMeshDesc>({
 ### Box with Shadows
 
 ```typescript
-import ThreeView, { BoxMeshDesc, Color } from "@navara/three";
+import ThreeView, { Color } from "@navara/three";
+import { BoxMeshDesc } from "@navara/three_default_descs";
 
 const boxDesc = view.addMesh<BoxMeshDesc>({
   box: {
@@ -337,7 +339,8 @@ const boxDesc = view.addMesh<BoxMeshDesc>({
 ### Semi-transparent Box
 
 ```typescript
-import ThreeView, { BoxMeshDesc, Color } from "@navara/three";
+import ThreeView, { Color } from "@navara/three";
+import { BoxMeshDesc } from "@navara/three_default_descs";
 
 const boxDesc = view.addMesh<BoxMeshDesc>({
   box: {
