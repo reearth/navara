@@ -42,7 +42,6 @@ use navara_vector_tile::{
 };
 
 use crate::{
-    data_requester::MvtTileOrder,
     geometry::{MatchedLayerInfo, construct_geometry_multi_layer},
     source::OwnedMatchedLayerInfo,
 };
@@ -299,13 +298,6 @@ impl VectorTileSource for PmtilesSource {
                             sse: tile.sse,
                             distance: tile.distance_from_camera,
                         },
-                        // Dispatch sort key: identical ordering to the bare
-                        // `OrderByDistance` above, but visible to the request
-                        // sender so byte-range fetches go out view-center first.
-                        RequestOrder(MvtTileOrder(OrderByDistance {
-                            sse: tile.sse,
-                            distance: tile.distance_from_camera,
-                        })),
                         priority,
                     ))
                     .id();

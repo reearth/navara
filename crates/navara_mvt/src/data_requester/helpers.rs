@@ -2,10 +2,10 @@ use bevy_ecs::{entity::Entity, system::Commands};
 use navara_buffer_store::BufferStore;
 use navara_component::{OrderByDistance, Priority};
 use navara_core::{is_tile_url, tile_url};
-use navara_data_requester::{DataRequester, DataRequesterExtension, RequestOrder};
+use navara_data_requester::{DataRequester, DataRequesterExtension};
 use navara_tile_component::{TileHandle, VectorTile};
 
-use super::{MvtDataRequesterMarker, MvtDataRequesterQuery, MvtTileOrder};
+use super::{MvtDataRequesterMarker, MvtDataRequesterQuery};
 
 pub(crate) fn request_mvt_data(
     commands: &mut Commands,
@@ -36,12 +36,6 @@ pub(crate) fn request_mvt_data(
                 sse: tile.sse,
                 distance: tile.distance_from_camera,
             },
-            // Dispatch sort key mirroring `OrderByDistance`, so tile fetches are
-            // enqueued view-center first instead of in arbitrary spawn order.
-            RequestOrder(MvtTileOrder(OrderByDistance {
-                sse: tile.sse,
-                distance: tile.distance_from_camera,
-            })),
             priority,
         ))
         .id();
