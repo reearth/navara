@@ -35,7 +35,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     lat: 43.7696,
     height: 9000,
     heading: 0,
-    pitch: -55,
+    pitch: -90,
     roll: 0,
   });
 
@@ -119,9 +119,10 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
         lat: 43.7696,
         height: 9000,
         heading: 0,
-        pitch: -55,
+        pitch: -90,
         roll: 0,
       });
     });
+
   showAttributions([PMTILES_DATASETS.protomapsFirenze]);
 };
