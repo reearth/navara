@@ -170,19 +170,26 @@ impl PmtilesArchive {
         match std::mem::replace(&mut self.state, State::Failed) {
             State::AwaitHeader => {
                 let header = Header::parse(bytes)?;
-                let end = header.root_dir_offset + header.root_dir_length;
-                if end <= bytes.len() as u64 {
-                    // Root directory rode along in the bootstrap window.
-                    let raw = &bytes[header.root_dir_offset as usize..end as usize];
-                    let root_dir = parse_directory(header.internal_compression, raw)?;
-                    self.state = State::Ready(Ready {
-                        header,
-                        root_dir,
-                        leaves: HashMap::new(),
-                        failed_leaves: HashSet::new(),
-                    });
-                } else {
-                    self.state = State::NeedRootDir(header);
+                // `checked_add` guards against a corrupt header whose
+                // offset+length wraps `u64`. When `end` is in-window it is
+                // `<= bytes.len()` (a `usize`), so both `as usize` casts below
+                // are lossless even on wasm32; an overflow or out-of-window end
+                // falls through to a separate root-directory fetch.
+                match header.root_dir_offset.checked_add(header.root_dir_length) {
+                    Some(end) if end <= bytes.len() as u64 => {
+                        // Root directory rode along in the bootstrap window.
+                        let raw = &bytes[header.root_dir_offset as usize..end as usize];
+                        let root_dir = parse_directory(header.internal_compression, raw)?;
+                        self.state = State::Ready(Ready {
+                            header,
+                            root_dir,
+                            leaves: HashMap::new(),
+                            failed_leaves: HashSet::new(),
+                        });
+                    }
+                    _ => {
+                        self.state = State::NeedRootDir(header);
+                    }
                 }
                 Ok(())
             }
@@ -215,6 +222,12 @@ impl PmtilesArchive {
         let State::Ready(ready) = &self.state else {
             return Resolution::Absent;
         };
+        // Out-of-range zoom is absent by definition, and this cheap early-out
+        // also keeps `tile_id` away from the `z >= 32` shift overflow it would
+        // panic on (PMTiles tile ids are only defined up to zoom 31).
+        if z < ready.header.min_zoom || z > ready.header.max_zoom || z > 31 {
+            return Resolution::Absent;
+        }
         let id = tile_id(z, x, y);
 
         let mut dir = &ready.root_dir;
@@ -223,9 +236,15 @@ impl PmtilesArchive {
                 return Resolution::Absent;
             };
             if !entry.is_leaf() {
+                // Tile entry offsets are relative to `tile_data_offset`;
+                // `checked_add` treats a corrupt offset that wraps `u64` as no
+                // tile rather than emitting a bogus range request.
+                let Some(offset) = ready.header.tile_data_offset.checked_add(entry.offset) else {
+                    return Resolution::Absent;
+                };
                 return Resolution::Tile {
                     request: ByteRange {
-                        offset: ready.header.tile_data_offset + entry.offset,
+                        offset,
                         length: u64::from(entry.length),
                     },
                 };
@@ -239,10 +258,17 @@ impl PmtilesArchive {
             match ready.leaves.get(&entry.offset) {
                 Some(child) => dir = child,
                 None => {
+                    // Leaf entry offsets are relative to `leaf_dirs_offset`;
+                    // a corrupt offset that wraps `u64` resolves to absent
+                    // rather than producing a bogus range request.
+                    let Some(offset) = ready.header.leaf_dirs_offset.checked_add(entry.offset)
+                    else {
+                        return Resolution::Absent;
+                    };
                     return Resolution::NeedLeaf {
                         leaf_offset: entry.offset,
                         request: ByteRange {
-                            offset: ready.header.leaf_dirs_offset + entry.offset,
+                            offset,
                             length: u64::from(entry.length),
                         },
                     };
@@ -352,19 +378,15 @@ mod tests {
     }
 
     #[test]
-    fn resolve_absent_after_descending_into_leaf() {
+    fn resolve_absent_for_out_of_range_zoom() {
         let mut archive = PmtilesArchive::new();
         archive.take_bootstrap_request();
         archive.on_bootstrap_bytes(LEAF_ARCHIVE).unwrap();
 
-        // A coordinate whose tile id is past every entry in the archive.
-        let Resolution::NeedLeaf { request, .. } = archive.resolve(2, 3, 3) else {
-            panic!("expected a leaf request");
-        };
-        let leaf_bytes =
-            &LEAF_ARCHIVE[request.offset as usize..(request.offset + request.length) as usize];
-        archive.on_leaf_bytes(0, leaf_bytes).unwrap();
-
+        // The fixture's header advertises max_zoom = 1, so a z = 2 request is
+        // out of range. It resolves to Absent directly via the zoom early-out,
+        // without descending into (or fetching) any leaf directory.
+        assert_eq!(archive.header().unwrap().max_zoom, 1);
         assert_eq!(archive.resolve(2, 3, 3), Resolution::Absent);
     }
 

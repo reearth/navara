@@ -344,7 +344,12 @@ impl VectorTileSource for PmtilesSource {
             .archive
             .header()
             .map_or(Compression::None, |h| h.tile_compression);
-        let mvt_bin = navara_pmtiles::decompress(compression, &raw).ok()?;
+        // Reuse the owned buffer when there is nothing to decompress;
+        // `decompress` would otherwise clone the whole tile on this hot path.
+        let mvt_bin = match compression {
+            Compression::None => raw,
+            _ => navara_pmtiles::decompress(compression, &raw).ok()?,
+        };
 
         let matched_layers: Vec<MatchedLayerInfo> = self
             .layers

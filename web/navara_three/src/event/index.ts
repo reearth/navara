@@ -467,8 +467,11 @@ async function processRequestedData(ctx: EventContext, req: DataRequestEvent) {
   const init: RequestInit = { signal: abortController.signal };
   // Partial fetch: PMTiles (and any future range-based source) sets a byte
   // range on the request. `!= null` is intentional so a 0n offset (the header
-  // bootstrap read) is still treated as present.
-  if (req.offset != null && req.length != null) {
+  // bootstrap read) is still treated as present. A length of 0n (from a
+  // malformed header/directory or an upstream bug) would underflow `end` to
+  // `offset - 1n` and emit an invalid `Range` header, so require length > 0n
+  // and fall back to a full fetch otherwise.
+  if (req.offset != null && req.length != null && req.length > 0n) {
     const end = req.offset + req.length - 1n;
     init.headers = { Range: `bytes=${req.offset}-${end}` };
   }
