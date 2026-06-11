@@ -181,9 +181,6 @@ pub fn update_tiles(
                 }
                 TraversalResult::NotFound => {
                     let tile = qt.qt.get_mut(zero_tile_handle).unwrap();
-                    // The z0 root is the coarsest ancestor; keep it at the same
-                    // low priority as other overview tiles so it never preempts
-                    // the on-screen tiles.
                     tile_source.0.prepare_tile(
                         &mut commands,
                         tile,
@@ -191,7 +188,7 @@ pub fn update_tiles(
                         &mut tc,
                         &mut buf,
                         &data_requester,
-                        Priority::Low,
+                        Priority::Medium,
                     );
                 }
                 TraversalResult::ChildrenMeshPrepared => {
