@@ -293,7 +293,8 @@ sidebar:
 ### 基本的な使い方
 
 ```typescript
-import ThreeView, { ArclineMeshDesc } from "@navara/three";
+import ThreeView from "@navara/three";
+import { ArclineMeshDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
 await view.init();

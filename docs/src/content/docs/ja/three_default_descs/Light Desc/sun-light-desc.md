@@ -345,7 +345,8 @@ import { Color } from "@navara/three";
 ### 基本的な使用例
 
 ```typescript
-import ThreeView, { SunLightDesc } from "@navara/three";
+import ThreeView from "@navara/three";
+import { SunLightDesc } from "@navara/three_default_descs";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView({

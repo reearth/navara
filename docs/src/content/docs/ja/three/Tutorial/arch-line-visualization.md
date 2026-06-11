@@ -23,14 +23,12 @@ sidebar:
 まずベースとなるビューを作成します。背景色を暗くし、星空と衛星写真タイルを追加します。
 
 ```typescript
-import ThreeView, {
-  ToneMappingMode,
-  Color,
-} from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import ThreeView, { Color } from "@navara/three";
+import { ToneMappingMode } from "@navara/three_default_descs";
+import { DefaultPlugin, type DefaultDescriptions } from "@navara/three_default_plugin";
 
 const plugin = new DefaultPlugin();
-const view = new ThreeView({
+const view = new ThreeView<DefaultDescriptions>({
   backgroundColor: new Color().setStyle("#0b0a0d"),
 });
 view.addPlugin(plugin);
@@ -122,7 +120,7 @@ NASA の Earth at Night 画像を XYZ タイル形式に変換する必要があ
 `GlowGlobeMeshDesc` を使うと、地球の周りに美しいグローエフェクトを追加できます。
 
 ```typescript
-import type { GlowGlobeMeshDesc } from "@navara/three";
+import type { GlowGlobeMeshDesc } from "@navara/three_default_descs";
 
 // 地球のグローエフェクトを追加
 view.addMesh<GlowGlobeMeshDesc>({
@@ -255,7 +253,7 @@ const arcLines = data.features.map((feature) => {
 作成したアーチライン定義をメッシュとして追加します。
 
 ```typescript
-import type { ArclineMeshDesc } from "@navara/three";
+import type { ArclineMeshDesc } from "@navara/three_default_descs";
 
 const arcLineHandle = view.addMesh<ArclineMeshDesc>({
   arcLines,
@@ -301,15 +299,17 @@ dashAnimFunc();
 
 ```typescript
 import ThreeView, {
-  ToneMappingMode,
-  type ArclineMeshDesc,
-  type GlowGlobeMeshDesc,
   Color,
   ColorMap,
   geodeticToVector3,
   degreeToRadian,
 } from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import {
+  ToneMappingMode,
+  type ArclineMeshDesc,
+  type GlowGlobeMeshDesc,
+} from "@navara/three_default_descs";
+import { DefaultPlugin, type DefaultDescriptions } from "@navara/three_default_plugin";
 import type { FeatureCollection, MultiLineString } from "geojson";
 
 // 航空交通量データの型定義
@@ -391,7 +391,7 @@ const constructData = async () => {
 // メイン関数
 async function run() {
   const plugin = new DefaultPlugin();
-  const view = new ThreeView({
+  const view = new ThreeView<DefaultDescriptions>({
     backgroundColor: new Color().setStyle("#0b0a0d"),
   });
   view.addPlugin(plugin);

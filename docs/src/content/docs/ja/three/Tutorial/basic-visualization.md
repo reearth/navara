@@ -41,11 +41,11 @@ npm install
 
 ```typescript
 import ThreeView from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import { DefaultPlugin, type DefaultDescriptions } from "@navara/three_default_plugin";
 
 // ThreeView インスタンスを作成
 const plugin = new DefaultPlugin();
-const view = new ThreeView({});
+const view = new ThreeView<DefaultDescriptions>({});
 view.addPlugin(plugin);
 await view.init();
 ```
@@ -87,7 +87,7 @@ view.addLayer({
 
 ```typescript
 const plugin = new DefaultPlugin();
-const view = new ThreeView({});
+const view = new ThreeView<DefaultDescriptions>({});
 view.addPlugin(plugin);
 await view.init();
 ```
@@ -127,11 +127,11 @@ OpenStreetMap のラスタタイルを使用して地図レイヤーを追加し
 
 ```typescript
 import ThreeView from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import { DefaultPlugin, type DefaultDescriptions } from "@navara/three_default_plugin";
 
 // ThreeView インスタンスを作成
 const plugin = new DefaultPlugin();
-const view = new ThreeView({});
+const view = new ThreeView<DefaultDescriptions>({});
 view.addPlugin(plugin);
 await view.init();
 
@@ -185,11 +185,11 @@ view.setCamera({
 
 ```typescript
 import ThreeView from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import { DefaultPlugin, type DefaultDescriptions } from "@navara/three_default_plugin";
 
 // ThreeView インスタンスを作成
 const plugin = new DefaultPlugin();
-const view = new ThreeView({});
+const view = new ThreeView<DefaultDescriptions>({});
 view.addPlugin(plugin);
 await view.init();
 
@@ -255,6 +255,23 @@ view.addLayer({
     receiveShadow: true,
   },
 });
+
+view.addLayer({
+  type: "tiles",
+  data: {
+    // Credit:
+    // - Geospatial Information Authority of Japan Tiles - Digital Elevation Map
+    //   https://maps.gsi.go.jp/development/ichiran.html
+    url: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
+  },
+  rasterTile: {
+    minZoom: 6,
+    maxZoom: 15,
+  },
+  hillshade: {
+    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+  },
+});
 ```
 
 ### 実行結果
@@ -293,17 +310,17 @@ receiveShadow: true,
 - 地形タイルの最大ズームレベル、最小ズームレベル、影などを設定しています。
 - elevationDecoder で、地形データをデコードします。
 
-詳細については、[Terrain Layer](../../../three/resource-layer-reference/terrain-layer/) を参照してください。
+詳細については、[Terrain Layer](../../../three/resource-layer/terrain-layer/) を参照してください。
 
 ### 完全なコード
 
 ```typescript
 import ThreeView, { JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import { DefaultPlugin, type DefaultDescriptions } from "@navara/three_default_plugin";
 
 // ThreeView インスタンスを作成
 const plugin = new DefaultPlugin();
-const view = new ThreeView({});
+const view = new ThreeView<DefaultDescriptions>({});
 view.addPlugin(plugin);
 await view.init();
 
@@ -326,6 +343,23 @@ view.addLayer({
     elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
     castShadow: true,
     receiveShadow: true,
+  },
+});
+
+view.addLayer({
+  type: "tiles",
+  data: {
+    // Credit:
+    // - Geospatial Information Authority of Japan Tiles - Digital Elevation Map
+    //   https://maps.gsi.go.jp/development/ichiran.html
+    url: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
+  },
+  rasterTile: {
+    minZoom: 6,
+    maxZoom: 15,
+  },
+  hillshade: {
+    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
   },
 });
 
@@ -400,7 +434,7 @@ view.addLayer({
 
 `view.addLayer` メソッドで GeoJSON レイヤーを追加します。`type: "geojson"` を指定すると、GeoJSON 形式のデータを地図上に表示できます。ポリゴンのスタイル設定（色、高さ、透明度など）も指定できます。
 
-詳細については、[GeoJSON Layer](../../../three/resource-layer-reference/geojson-layer/) を参照してください。
+詳細については、[GeoJSON Layer](../../../three/resource-layer/geojson-layer/) を参照してください。
 
 ### 完全なコード
 
@@ -408,10 +442,10 @@ view.addLayer({
 
 ```typescript
 import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import { DefaultPlugin, type DefaultDescriptions } from "@navara/three_default_plugin";
 
 const plugin = new DefaultPlugin();
-const view = new ThreeView({});
+const view = new ThreeView<DefaultDescriptions>({});
 view.addPlugin(plugin);
 await view.init();
 
@@ -433,6 +467,23 @@ view.addLayer({
     elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
     castShadow: true,
     receiveShadow: true,
+  },
+});
+
+view.addLayer({
+  type: "tiles",
+  data: {
+    // Credit:
+    // - Geospatial Information Authority of Japan Tiles - Digital Elevation Map
+    //   https://maps.gsi.go.jp/development/ichiran.html
+    url: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
+  },
+  rasterTile: {
+    minZoom: 6,
+    maxZoom: 15,
+  },
+  hillshade: {
+    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
   },
 });
 

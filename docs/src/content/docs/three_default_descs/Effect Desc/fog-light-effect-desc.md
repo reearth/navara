@@ -191,7 +191,8 @@ The `FogLightEffectDesc` class is a Descriptor that generates volumetric lightin
 ### Adding a basic fog light effect
 
 ```typescript
-import ThreeView, { FogLightEffectDesc, Color } from "@navara/three";
+import ThreeView, { Color } from "@navara/three";
+import { FogLightEffectDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
 await view.init();
@@ -216,7 +217,8 @@ view.addEffect<FogLightEffectDesc>({
 ### Street light effect in a night scene
 
 ```typescript
-import ThreeView, { FogLightEffectDesc, Color, type LayerDescription } from "@navara/three";
+import ThreeView, { Color, type LayerDescription } from "@navara/three";
+import { FogLightEffectDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
 await view.init();
@@ -245,7 +247,8 @@ view.addEffect<FogLightEffectDesc>(fogEffectDesc);
 ### Dynamically adding lights to a scene
 
 ```typescript
-import ThreeView, { FogLightEffectDesc, Color, type FogLightDefinition } from "@navara/three";
+import ThreeView, { Color } from "@navara/three";
+import { FogLightEffectDesc, type FogLightDefinition } from "@navara/three_default_descs";
 
 const view = new ThreeView();
 await view.init();
@@ -285,7 +288,8 @@ function addLight(x: number, y: number, z: number) {
 ### Fog lights visible only at night
 
 ```typescript
-import ThreeView, { FogLightEffectDesc, Color } from "@navara/three";
+import ThreeView, { Color } from "@navara/three";
+import { FogLightEffectDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
 await view.init();

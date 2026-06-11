@@ -23,10 +23,10 @@ sidebar:
 
 ```typescript
 import ThreeView, { JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import { DefaultPlugin, type DefaultDescriptions } from "@navara/three_default_plugin";
 
 const plugin = new DefaultPlugin();
-const view = new ThreeView({ shadow: true });
+const view = new ThreeView<DefaultDescriptions>({ shadow: true });
 view.addPlugin(plugin);
 await view.init();
 
@@ -65,6 +65,23 @@ view.addLayer({
     elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
     castShadow: true,
     receiveShadow: true,
+  },
+});
+
+view.addLayer({
+  type: "tiles",
+  data: {
+    // Credit:
+    // - Geospatial Information Authority of Japan Tiles - Digital Elevation Map
+    //   https://maps.gsi.go.jp/development/ichiran.html
+    url: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
+  },
+  rasterTile: {
+    minZoom: 6,
+    maxZoom: 15,
+  },
+  hillshade: {
+    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
   },
 });
 
@@ -141,12 +158,10 @@ const rain = view.addMesh<RainMeshDesc>({
 ```typescript
 const rainDropEffect = view.addEffect<RainDropEffectDesc>({
   rainDrop: {
-    opacity: 1.0,           // エフェクト全体の不透明度
-    dropGridSize: 12,       // 水滴グリッドのサイズ
-    dropDensity: 1,         // 水滴の密度
-    dropLayers: 4,          // 水滴レイヤー数
-    dropSizeFactor: 0.015,  // 水滴サイズ係数
-    refractionStrength: 0.3, // 屈折の強さ
+    opacity: 0.8,           // エフェクト全体の不透明度
+    dropGridSize: 14,       // 水滴グリッドのサイズ
+    dropDensity: 0.1,       // 水滴の密度
+    dropSizeFactor: 0.025,  // 水滴サイズ係数
   },
 });
 ```
@@ -189,6 +204,17 @@ const snow = view.addMesh<SnowMeshDesc>({
 
 国土地理院のベクトルタイル実験（experimental_bvmap）には河川・湖沼などの水域データが含まれています。`water: true` オプションを使用すると、波紋のある水面マテリアルを適用できます。
 
+:::caution[ThreeView 側で必須のオプション]
+水面マテリアルを利用するには、`ThreeView` の生成時に `waterTexture` を有効化する必要があります。これを設定しないと、レイヤー側の `water: true` は効果を持ちません。
+
+```typescript
+const view = new ThreeView<DefaultDescriptions>({
+  waterTexture: { enabled: true },
+  // ...その他のオプション
+});
+```
+:::
+
 ```typescript
 // 国土地理院ベクトルタイル実験から水域レイヤーを追加
 view.addLayer({
@@ -210,7 +236,7 @@ view.addLayer({
   },
 });
 
-view.atmosphere.date.setHours(16); // 時間を設定
+view.atmosphere.date = new Date("2026-01-01T16:00:00+09:00"); // 1月1日 16:00 JST
 view.setCamera({ lng: 140.0372145462, lat: 35.6059411903, height: 3880, heading: -98.4184014976, pitch: -18.0000012192, roll: 0 });
 ```
 
@@ -246,7 +272,7 @@ view.addEffect<SSREffectDesc>({
   ssr: {},
 });
 
-view.atmosphere.date.setHours(12);
+view.atmosphere.date = new Date("2026-01-01T12:00:00+09:00"); // 1月1日 12:00 JST
 
 view.setCamera({
   lng: 139.7511145474829,
@@ -265,11 +291,12 @@ view.setCamera({
 以下は大気エフェクト、雨、水面マテリアルをすべて組み合わせた完全な例です。
 
 ```typescript
-import ThreeView, { type CloudsEffectDesc, Color, JAPAN_GSI_ELEVATION_DECODER, type RainDropEffectDesc, type RainMeshDesc, type SnowMeshDesc, type SSREffectDesc, ToneMappingMode } from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
+import { type CloudsEffectDesc, type RainDropEffectDesc, type RainMeshDesc, type SnowMeshDesc, type SSREffectDesc, ToneMappingMode } from "@navara/three_default_descs";
+import { DefaultPlugin, type DefaultDescriptions } from "@navara/three_default_plugin";
 
 const plugin = new DefaultPlugin();
-const view = new ThreeView({
+const view = new ThreeView<DefaultDescriptions>({
   shadow: true,
   animation: true,
   waterTexture: {
@@ -317,6 +344,23 @@ view.addLayer({
   },
 });
 
+view.addLayer({
+  type: "tiles",
+  data: {
+    // Credit:
+    // - Geospatial Information Authority of Japan Tiles - Digital Elevation Map
+    //   https://maps.gsi.go.jp/development/ichiran.html
+    url: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
+  },
+  rasterTile: {
+    minZoom: 6,
+    maxZoom: 15,
+  },
+  hillshade: {
+    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+  },
+});
+
 layers.sun.update({ sun: { castShadow: true } }); // 影を落とす
 
 // トーンマッピング
@@ -347,12 +391,10 @@ view.addMesh<RainMeshDesc>({
 
 view.addEffect<RainDropEffectDesc>({
   rainDrop: {
-    opacity: 1.0,           // エフェクト全体の不透明度
-    dropGridSize: 12,       // 水滴グリッドのサイズ
-    dropDensity: 1,         // 水滴の密度
-    dropLayers: 4,          // 水滴レイヤー数
-    dropSizeFactor: 0.015,  // 水滴サイズ係数
-    refractionStrength: 0.3, // 屈折の強さ
+    opacity: 0.8,           // エフェクト全体の不透明度
+    dropGridSize: 14,       // 水滴グリッドのサイズ
+    dropDensity: 0.1,       // 水滴の密度
+    dropSizeFactor: 0.025,  // 水滴サイズ係数
   },
 });
 
@@ -402,7 +444,7 @@ view.addEffect<SSREffectDesc>({
   },
 });
 
-view.atmosphere.date.setHours(16); // 時間を設定
+view.atmosphere.date = new Date("2026-01-01T16:00:00+09:00"); // 1月1日 16:00 JST
 
 view.setCamera({ lng: 140.0372145462, lat: 35.6059411903, height: 3880, heading: -98.4184014976, pitch: -18.0000012192, roll: 0 });
 ```

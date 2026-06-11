@@ -20,12 +20,12 @@ MVT（Mapbox Vector Tiles）レイヤーは、ベクタータイル形式の地�
 
 | マテリアル                                                                          | 設定キー     | 対応ジオメトリ        |
 | ----------------------------------------------------------------------------------- | ------------ | --------------------- |
-| [PointMaterial](../../../three/resource-layer-reference/point-material/)            | `point`      | Point                 |
-| [BillboardMaterial](../../../three/resource-layer-reference/billboard-material/)    | `billboard`  | Point（アイコン表示） |
-| [TextMaterial](../../../three/resource-layer-reference/text-material/)              | `text`       | Point（ラベル表示）   |
-| [PolylineMaterial](../../../three/resource-layer-reference/polyline-material/)      | `polyline`   | LineString            |
-| [PolygonMaterial](../../../three/resource-layer-reference/polygon-material/)        | `polygon`    | Polygon               |
-| [VectorTileMaterial](../../../three/resource-layer-reference/vector-tile-material/) | `vectorTile` | タイル全体の設定      |
+| [PointMaterial](../../../three/resource-layer/point-material/)            | `point`      | Point                 |
+| [BillboardMaterial](../../../three/resource-layer/billboard-material/)    | `billboard`  | Point（アイコン表示） |
+| [TextMaterial](../../../three/resource-layer/text-material/)              | `text`       | Point（ラベル表示）   |
+| [PolylineMaterial](../../../three/resource-layer/polyline-material/)      | `polyline`   | LineString            |
+| [PolygonMaterial](../../../three/resource-layer/polygon-material/)        | `polygon`    | Polygon               |
+| [VectorTileMaterial](../../../three/resource-layer/vector-tile-material/) | `vectorTile` | タイル全体の設定      |
 
 ## キャッシュ戦略
 
@@ -158,5 +158,5 @@ const landUseLayer = view.addLayer({
 
 ## 関連リソース
 
-- [GeoJSON Layer](../../../three/resource-layer-reference/geojson-layer/) - GeoJSON 形式のデータを表示
-- [VectorTileMaterial](../../../three/resource-layer-reference/vector-tile-material/) - ベクタータイルマテリアルの詳細設定
+- [GeoJSON Layer](../../../three/resource-layer/geojson-layer/) - GeoJSON 形式のデータを表示
+- [VectorTileMaterial](../../../three/resource-layer/vector-tile-material/) - ベクタータイルマテリアルの詳細設定

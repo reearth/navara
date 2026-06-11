@@ -201,7 +201,8 @@ defaultLayers.aerialPerspective.update({
 ### Aerial perspective combined with cloud shadows
 
 ```typescript
-import ThreeView, { CloudsEffectDesc } from "@navara/three";
+import ThreeView from "@navara/three";
+import { CloudsEffectDesc } from "@navara/three_default_descs";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();

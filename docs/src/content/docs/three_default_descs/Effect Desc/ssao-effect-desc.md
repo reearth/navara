@@ -132,7 +132,8 @@ import { Color } from "@navara/three";
 ### Adding a basic SSAO effect
 
 ```typescript
-import ThreeView, { SSAOEffectDesc } from "@navara/three";
+import ThreeView from "@navara/three";
+import { SSAOEffectDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
 await view.init();
@@ -147,7 +148,8 @@ const ssaoDesc = view.addEffect<SSAOEffectDesc>({
 ### High-quality SSAO settings
 
 ```typescript
-import ThreeView, { SSAOEffectDesc, Color } from "@navara/three";
+import ThreeView, { Color } from "@navara/three";
+import { SSAOEffectDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
 await view.init();
@@ -168,7 +170,8 @@ const ssaoDesc = view.addEffect<SSAOEffectDesc>({
 ### Performance-oriented SSAO settings
 
 ```typescript
-import ThreeView, { SSAOEffectDesc } from "@navara/three";
+import ThreeView from "@navara/three";
+import { SSAOEffectDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
 await view.init();
@@ -186,7 +189,8 @@ const ssaoDesc = view.addEffect<SSAOEffectDesc>({
 ### Usage combined with default effects
 
 ```typescript
-import ThreeView, { SSAOEffectDesc, Color } from "@navara/three";
+import ThreeView, { Color } from "@navara/three";
+import { SSAOEffectDesc } from "@navara/three_default_descs";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();

@@ -110,7 +110,8 @@ import { Color } from "@navara/three";
 ### Basic Usage
 
 ```typescript
-import ThreeView, { GlowGlobeMeshDesc, Color } from "@navara/three";
+import ThreeView, { Color } from "@navara/three";
+import { GlowGlobeMeshDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
 await view.init();

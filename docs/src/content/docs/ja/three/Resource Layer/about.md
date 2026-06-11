@@ -44,27 +44,27 @@ data: {
 
 ## レイヤータイプ一覧
 
-### [Cesium 3D Tiles Layer](../../../three/resource-layer-reference/cesium3dtiles-layer/)
+### [Cesium 3D Tiles Layer](../../../three/resource-layer/cesium3dtiles-layer/)
 
 **用途:** Cesium 3D Tiles データ用
 **対応マテリアル:** ModelMaterial
 
-### [GeoJSON Layer](../../../three/resource-layer-reference/geojson-layer/)
+### [GeoJSON Layer](../../../three/resource-layer/geojson-layer/)
 
 **用途:** GeoJSON フォーマットデータ用
 **対応マテリアル:** PointMaterial, BillboardMaterial, TextMaterial, PolylineMaterial, PolygonMaterial, ModelMaterial
 
-### [MVT Layer](../../../three/resource-layer-reference/mvt-layer/)
+### [MVT Layer](../../../three/resource-layer/mvt-layer/)
 
 **用途:** Mapbox Vector Tiles（MVT）データ用
 **対応マテリアル:** PointMaterial, BillboardMaterial, TextMaterial, PolylineMaterial, PolygonMaterial, VectorTileMaterial
 
-### [Terrain Layer](../../../three/resource-layer-reference/terrain-layer/)
+### [Terrain Layer](../../../three/resource-layer/terrain-layer/)
 
 **用途:** 地形・標高データ用
 **対応マテリアル:** RasterTerrainMaterial
 
-### [Tile Layer](../../../three/resource-layer-reference/tile-layer/)
+### [Tile Layer](../../../three/resource-layer/tile-layer/)
 
 **用途:** ラスタータイルデータ用
 **対応マテリアル:** RasterTileMaterial, ElevationHeatmapMaterial
@@ -73,61 +73,61 @@ data: {
 
 リソースレイヤーでは、データフォーマットに応じて以下のマテリアルを指定できます。各マテリアルはレイヤー設定内の対応するキーで指定します。
 
-### [BillboardMaterial](../../../three/resource-layer-reference/billboard-material/)
+### [BillboardMaterial](../../../three/resource-layer/billboard-material/)
 
 **用途:** ビルボードレンダリング用
 **設定キー:** `billboard`
 **対応レイヤー:** GeoJSON Layer, MVT Layer
 
-### [ElevationHeatmapMaterial](../../../three/resource-layer-reference/elevation-heatmap-material/)
+### [ElevationHeatmapMaterial](../../../three/resource-layer/elevation-heatmap-material/)
 
 **用途:** 標高ヒートマップレンダリング用
 **設定キー:** `elevationHeatmap`
 **対応レイヤー:** Tile Layer
 
-### [ModelMaterial](../../../three/resource-layer-reference/model-material/)
+### [ModelMaterial](../../../three/resource-layer/model-material/)
 
 **用途:** 3D モデルレンダリング用
 **設定キー:** `model`
 **対応レイヤー:** Cesium 3D Tiles Layer
 
-### [PointMaterial](../../../three/resource-layer-reference/point-material/)
+### [PointMaterial](../../../three/resource-layer/point-material/)
 
 **用途:** ポイントジオメトリレンダリング用
 **設定キー:** `point`
 **対応レイヤー:** GeoJSON Layer, MVT Layer
 
-### [PolygonMaterial](../../../three/resource-layer-reference/polygon-material/)
+### [PolygonMaterial](../../../three/resource-layer/polygon-material/)
 
 **用途:** ポリゴンジオメトリレンダリング用
 **設定キー:** `polygon`
 **対応レイヤー:** GeoJSON Layer, MVT Layer
 
-### [PolylineMaterial](../../../three/resource-layer-reference/polyline-material/)
+### [PolylineMaterial](../../../three/resource-layer/polyline-material/)
 
 **用途:** ポリラインジオメトリレンダリング用
 **設定キー:** `polyline`
 **対応レイヤー:** GeoJSON Layer, MVT Layer
 
-### [RasterTerrainMaterial](../../../three/resource-layer-reference/raster-terrain-material/)
+### [RasterTerrainMaterial](../../../three/resource-layer/raster-terrain-material/)
 
 **用途:** ラスター地形レンダリング用
 **設定キー:** `rasterTerrain`
 **対応レイヤー:** Terrain Layer
 
-### [RasterTileMaterial](../../../three/resource-layer-reference/raster-tile-material/)
+### [RasterTileMaterial](../../../three/resource-layer/raster-tile-material/)
 
 **用途:** ラスタータイルレンダリング用
 **設定キー:** `rasterTile`
 **対応レイヤー:** Tile Layer
 
-### [TextMaterial](../../../three/resource-layer-reference/text-material/)
+### [TextMaterial](../../../three/resource-layer/text-material/)
 
 **用途:** テキストラベルレンダリング用
 **設定キー:** `text`
 **対応レイヤー:** GeoJSON Layer, MVT Layer
 
-### [VectorTileMaterial](../../../three/resource-layer-reference/vector-tile-material/)
+### [VectorTileMaterial](../../../three/resource-layer/vector-tile-material/)
 
 **用途:** ベクタータイルレンダリング用
 **設定キー:** `vectorTile`

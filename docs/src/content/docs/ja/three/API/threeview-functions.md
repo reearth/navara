@@ -21,7 +21,7 @@ addLayer(l: LayerDescription): Layer
 
 **Parameters:**
 
-LayerDescription の詳細な型については、[Resource Layer Reference](../../../three/resource-layer-reference/resource-layer/) を参照してください。
+LayerDescription の詳細な型については、[Resource Layer Reference](../../../three/resource-layer/resource-layer/) を参照してください。
 
 **Returns:**
 
@@ -563,6 +563,36 @@ view.cameraFollow(
 
 // フォローモードを無効にする
 view.cameraFollow(false);
+```
+
+### cameraFreeLook()
+
+位置固定のフリールックモードを有効／無効にします。カメラはターゲット位置に固定されたまま、マウスドラッグで向きだけがその場で回転します。視点位置を動かしたくない一人称視点の「見回し」操作に有用です。
+
+**Syntax:**
+
+```tsx
+cameraFreeLook(enabled: boolean, target?: LatLngHeight): void
+```
+
+**Parameters:**
+
+- `enabled`: フリールックモードを有効にするかどうか
+- `target`: カメラを固定するターゲット位置
+  - `lng`: 経度（度）
+  - `lat`: 緯度（度）
+  - `height`: 高さ（メートル）
+
+呼び出し間でターゲットが移動した場合（プレイヤーが歩くなど）、カメラも一緒に平行移動します。向きは保持されます。このモードではマウスホイールによるズームは無効です（カメラと注視点の距離がゼロのため）。
+
+**Example:**
+
+```tsx
+// プレイヤーの目線位置にカメラをロックし、ドラッグで見回す
+view.cameraFreeLook(true, { lng: 139.7671, lat: 35.6812, height: 105 });
+
+// フリールックモードを無効にする
+view.cameraFreeLook(false);
 ```
 
 ### sampleTerrainHeight()
