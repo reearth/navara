@@ -86,9 +86,33 @@ export function matchesZoom(
 }
 
 /**
- * Append a credit HTML string to `target`, allowing only `<a href>` elements.
- * Other tags are dropped while keeping their (sanitized) text content. External
- * links get `target="_blank"` and `rel="noopener noreferrer"`.
+ * Returns `href` if it points to a safe location (http / https / mailto, or a
+ * relative URL), otherwise `undefined`. Blocks code-executing schemes such as
+ * `javascript:` and `data:` to prevent XSS via attribution links.
+ */
+export function safeHref(href: string): string | undefined {
+  let url: URL;
+  try {
+    // A fixed base resolves relative URLs; only the scheme matters here.
+    url = new URL(href, "http://localhost/");
+  } catch {
+    return undefined;
+  }
+  if (
+    url.protocol === "http:" ||
+    url.protocol === "https:" ||
+    url.protocol === "mailto:"
+  ) {
+    return href;
+  }
+  return undefined;
+}
+
+/**
+ * Append a credit HTML string to `target`, allowing only `<a href>` elements
+ * with a safe scheme. Other tags (and unsafe links) are dropped while keeping
+ * their (sanitized) text content. Surviving links get `target="_blank"` and
+ * `rel="noopener noreferrer"`.
  */
 export function appendSanitizedHtml(target: Node, html: string): void {
   const doc = new DOMParser().parseFromString(
@@ -106,9 +130,15 @@ function appendSanitizedChildren(target: Node, source: Node): void {
       return;
     }
     if (node instanceof HTMLAnchorElement) {
+      const raw = node.getAttribute("href");
+      const href = raw ? safeHref(raw) : undefined;
+      if (!href) {
+        // Unsafe / missing href: drop the link, keep its text.
+        appendSanitizedChildren(target, node);
+        return;
+      }
       const anchor = document.createElement("a");
-      const href = node.getAttribute("href");
-      if (href) anchor.href = href;
+      anchor.href = href;
       anchor.target = "_blank";
       anchor.rel = "noopener noreferrer";
       appendSanitizedChildren(anchor, node);

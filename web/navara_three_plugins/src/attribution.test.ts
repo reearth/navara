@@ -5,8 +5,27 @@ import {
   appendSanitizedHtml,
   isAttributionHtml,
   matchesZoom,
+  safeHref,
   type AttributionChild,
 } from "./attribution";
+
+describe("safeHref", () => {
+  it("allows http / https / mailto and relative URLs", () => {
+    expect(safeHref("https://example.test")).toBe("https://example.test");
+    expect(safeHref("http://example.test")).toBe("http://example.test");
+    expect(safeHref("mailto:a@example.test")).toBe("mailto:a@example.test");
+    expect(safeHref("/path")).toBe("/path");
+    expect(safeHref("#section")).toBe("#section");
+  });
+
+  it("blocks code-executing schemes", () => {
+    expect(safeHref("javascript:alert(1)")).toBeUndefined();
+    expect(
+      safeHref("data:text/html,<script>alert(1)</script>"),
+    ).toBeUndefined();
+    expect(safeHref("vbscript:msgbox(1)")).toBeUndefined();
+  });
+});
 
 describe("aggregateCredits", () => {
   it("splits on ';', trims, dedups, and orders by frequency then name", () => {
@@ -81,6 +100,12 @@ describe("appendSanitizedHtml", () => {
     expect(anchor?.target).toBe("_blank");
     expect(anchor?.rel).toBe("noopener noreferrer");
     expect(anchor?.textContent).toBe("GSI");
+  });
+
+  it("drops <a> with a javascript: href but keeps its text", () => {
+    const el = render('<a href="javascript:alert(1)">credit</a>');
+    expect(el.querySelector("a")).toBeNull();
+    expect(el.textContent).toBe("credit");
   });
 
   it("drops <script> elements (keeps only their text, never executes)", () => {

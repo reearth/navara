@@ -134,6 +134,7 @@ type AttributionItem = AttributionSource | AttributionHtml;
 - **Zoom ranges are for raster sources you declare yourself.** Tiles like GSI or OpenStreetMap don't carry their own credits, so describe their zoom-dependent credits with `children`.
 - **Per-layer credits come from the tiles.** Only sources that embed a copyright (such as Google Photorealistic 3D Tiles) produce credits through `layers`; for everything else, use `children`.
 - **Mandated logos go in the logo frame, not the popover.** Use `logo` only for marks you are required to keep visible at all times; ordinary sources are best shown as text.
+- **Links are scheme-checked.** Credit links (`url`, and `<a>` in HTML/`title`) are kept only for safe schemes (`http` / `https` / `mailto`, or relative URLs); anything else (e.g. `javascript:`) is dropped to plain text.
 
 ## Related Resources
 

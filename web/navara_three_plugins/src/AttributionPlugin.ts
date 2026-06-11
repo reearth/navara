@@ -54,12 +54,20 @@ import {
   appendSanitizedHtml,
   isAttributionHtml,
   matchesZoom,
+  safeHref,
   type AttributionItem,
 } from "./attribution";
 
 type View = ThreeView<DefaultDescriptions>;
 
 const STYLE_ELEMENT_ID = "navara-attribution-styles";
+
+/**
+ * Number of live instances using the shared `<style>` element. The style is
+ * injected once and removed only when the last instance tears down, so
+ * multiple plugins don't duplicate the id or strip each other's styles.
+ */
+let styleRefCount = 0;
 
 /** Earth circumference at the equator (meters) and tile size (px) for the
  * web-mercator zoom approximation. */
@@ -273,14 +281,22 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
     this.refreshDynamicCredits();
   }
 
-  /** Create the dock DOM and inject styles once. */
+  /** Create the dock DOM and inject (or reuse) the shared styles. */
   private ensureDom(): void {
     if (!this.styleEl) {
-      const style = document.createElement("style");
-      style.id = STYLE_ELEMENT_ID;
-      style.textContent = STYLE_TEXT;
-      document.head.appendChild(style);
-      this.styleEl = style;
+      // Reuse a shared style element if another instance already injected it,
+      // and count this instance as an owner (removed on the last teardown).
+      const existing = document.getElementById(STYLE_ELEMENT_ID);
+      if (existing instanceof HTMLStyleElement) {
+        this.styleEl = existing;
+      } else {
+        const style = document.createElement("style");
+        style.id = STYLE_ELEMENT_ID;
+        style.textContent = STYLE_TEXT;
+        document.head.appendChild(style);
+        this.styleEl = style;
+      }
+      styleRefCount += 1;
     }
     if (this.dock) return;
 
@@ -360,11 +376,13 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
     for (const item of this.items) {
       const { li, text } = this.createItemShell();
 
+      const url = isAttributionHtml(item) ? undefined : item.url;
+      const href = url ? safeHref(url) : undefined;
       if (isAttributionHtml(item)) {
         appendSanitizedHtml(text, item.attributionHtml);
-      } else if (item.url) {
+      } else if (href) {
         const anchor = document.createElement("a");
-        anchor.href = item.url;
+        anchor.href = href;
         anchor.target = "_blank";
         anchor.rel = "noopener noreferrer";
         anchor.textContent = item.attribution;
@@ -484,7 +502,10 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
     return Math.floor(Math.log2(metersPerPixelZ0 / metersPerPixel));
   }
 
-  /** Remove DOM nodes, injected styles, document + layer listeners, and state. */
+  /**
+   * Remove this instance's DOM nodes, document + layer listeners, and state.
+   * The shared style element is removed only when the last instance tears down.
+   */
   private teardownDom(): void {
     for (const off of this.layerCleanups) off();
     this.layerCleanups = [];
@@ -494,7 +515,11 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
       this.dock.remove();
     }
     this.logosEl?.remove();
-    this.styleEl?.remove();
+    if (this.styleEl) {
+      // Only remove the shared style when the last owning instance tears down.
+      styleRefCount = Math.max(0, styleRefCount - 1);
+      if (styleRefCount === 0) this.styleEl.remove();
+    }
     this.dock = undefined;
     this.card = undefined;
     this.listEl = undefined;
