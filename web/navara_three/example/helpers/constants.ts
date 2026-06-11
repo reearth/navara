@@ -77,7 +77,7 @@ export const PMTILES_DATASETS = {
     url: "https://pmtiles.io/protomaps(vector)ODbL_firenze.pmtiles",
     attribution: "© OpenStreetMap contributors, © Protomaps",
     attributionUrl: "https://protomaps.com",
-  }
+  },
 } satisfies Record<string, Dataset>;
 
 /**
