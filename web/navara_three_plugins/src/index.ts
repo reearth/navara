@@ -17,3 +17,12 @@ export {
   type WorldPosition,
   type ProjectedPosition,
 } from "./OverlayPlugin";
+
+export { AttributionPlugin } from "./AttributionPlugin";
+export {
+  isAttributionHtml,
+  type AttributionItem,
+  type AttributionSource,
+  type AttributionHtml,
+  type AttributionChild,
+} from "./attribution";

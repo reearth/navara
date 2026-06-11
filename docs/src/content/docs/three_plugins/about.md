@@ -17,7 +17,8 @@ navara_three (core: ThreeView, Plugin, addPlugin)
   ├── three_default_plugin (DefaultPlugin: bulk descriptor registration)
   └── three_plugins (use-case specific plugins)
         ├── PersonViewPlugin (keyboard-driven first/third-person view controller)
-        └── OverlayPlugin (world-to-screen HTML overlay projection)
+        ├── OverlayPlugin (world-to-screen HTML overlay projection)
+        └── AttributionPlugin (non-modal, zoom-aware data attribution UI)
 ```
 
 `three_plugins` depends on `navara_three` for the `Plugin` base class and core APIs, and on `three_default_plugin` for the `DefaultDescriptions` type. Each plugin is independent — you can use one without the other.
@@ -25,7 +26,12 @@ navara_three (core: ThreeView, Plugin, addPlugin)
 ## Installation
 
 ```typescript
-import { PersonViewPlugin, OverlayPlugin, moveOverlayElement } from "@navara/three_plugins";
+import {
+  PersonViewPlugin,
+  OverlayPlugin,
+  moveOverlayElement,
+  AttributionPlugin,
+} from "@navara/three_plugins";
 ```
 
 ## Available Plugins
@@ -37,6 +43,10 @@ A keyboard-driven first-/third-person view controller. Drives a virtual position
 ### OverlayPlugin
 
 Projects geographic positions (lat/lng/alt) to screen coordinates on every render frame, enabling HTML overlays that track world positions. See [OverlayPlugin](../overlayplugin/) for details.
+
+### AttributionPlugin
+
+A non-modal data attribution (credit) UI. Lists active data sources in a bottom-right popover with zoom-banded credits, per-layer dynamic credits, and an always-visible logo frame for mandated marks. See [AttributionPlugin](../attributionplugin/) for details.
 
 ## Usage
 
