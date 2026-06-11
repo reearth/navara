@@ -9,7 +9,6 @@ import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../helpers/attributions";
 import { PMTILES_DATASETS } from "../../helpers/constants";
-import { addCameraControl } from "../../helpers/control";
 import { SH_COEFFICIENTS } from "../../helpers/sh";
 
 export type CustomDescriptions = DefaultDescriptions;
@@ -31,14 +30,14 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   });
 
   // The sample archive covers Florence, Italy.
-  // view.setCamera({
-  //   lng: 11.2558,
-  //   lat: 43.7696,
-  //   height: 9000,
-  //   heading: 0,
-  //   pitch: -55,
-  //   roll: 0,
-  // });
+  view.setCamera({
+    lng: 11.2558,
+    lat: 43.7696,
+    height: 9000,
+    heading: 0,
+    pitch: -55,
+    roll: 0,
+  });
 
   // A plain ellipsoid surface to drape the clamp-to-ground vectors onto (this
   // example has no terrain/raster base of its own).
@@ -56,20 +55,23 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     type: "mvt",
     data: { url },
     polygon: {
-      color: new Color().setStyle("#efece6"),
+      color: new Color().setStyle("#d0bf70"),
       clampToGround: true,
     },
-    vectorTile: { maxZoom: 13, layers: ["land"] },
+    vectorTile: { maxZoom: 15, layers: ["earth"] },
   });
 
   view.addLayer({
     type: "mvt",
     data: { url },
-    polygon: {
-      color: new Color().setStyle("#cfe6a8"),
+    polyline: {
+      show: true,
+      color: new Color().setStyle("#b4aa15"),
+      width: 2,
+      height: 1,
       clampToGround: true,
     },
-    vectorTile: { maxZoom: 13, layers: ["land_use"] },
+    vectorTile: { maxZoom: 15, layers: ["boundaries"] },
   });
 
   view.addLayer({
@@ -79,7 +81,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
       color: new Color().setStyle("#4a90d9"),
       clampToGround: true,
     },
-    vectorTile: { maxZoom: 13, layers: ["water"] },
+    vectorTile: { maxZoom: 15, layers: ["water"] },
   });
 
   view.addLayer({
@@ -87,15 +89,39 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     data: { url },
     polyline: {
       show: true,
-      color: new Color().setStyle("#d06a1e"),
-      width: 2,
+      color: new Color().setStyle("#278b8c"),
+      width: 6,
       height: 1,
       clampToGround: true,
     },
-    vectorTile: { maxZoom: 13, layers: ["infrastructure"] },
+    vectorTile: { maxZoom: 15, layers: ["roads"] },
+  });
+
+  view.addLayer({
+    type: "mvt",
+    data: { url },
+    polygon: {
+      color: new Color().setStyle("#ca7c56"),
+      clampToGround: true,
+    },
+    vectorTile: { maxZoom: 15, layers: ["buildings"] },
   });
 
   const pane = new Pane();
-  addCameraControl(view, pane);
+
+  pane
+    .addButton({
+      title: "reset camera",
+    })
+    .on("click", () => {
+      view.setCamera({
+        lng: 11.2558,
+        lat: 43.7696,
+        height: 9000,
+        heading: 0,
+        pitch: -55,
+        roll: 0,
+      });
+    });
   showAttributions([PMTILES_DATASETS.protomapsFirenze]);
 };
