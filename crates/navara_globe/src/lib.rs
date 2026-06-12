@@ -53,7 +53,7 @@ pub struct Globe {
 
     /// Tiling scheme for the quadtree.
     /// `WebMercator` (default): single root (0,0,0), WM extents.
-    /// `Geographic`: two roots (0,0,0) and (0,1,0), equal-degree extents.
+    /// `Geographic`: two roots (0,0,0) and (1,0,0), equal-degree extents.
     pub tiling_scheme: TilingScheme,
 }
 
