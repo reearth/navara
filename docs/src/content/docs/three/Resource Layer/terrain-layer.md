@@ -9,17 +9,17 @@ The Terrain layer is a layer for displaying 3D terrain. It supports two data sou
 
 ## Basic Configuration
 
-| Property   | Type              | Description                                              |
-| ---------- | ----------------- | -------------------------------------------------------- |
-| `type`     | `"terrain"`       | Layer type (required)                                    |
-| `data`     | `{ url: string }` | Terrain tile URL (containing `{z}/{x}/{y}` placeholders). Use a `.png` / `.webp` URL for raster DEM, or a `.terrain` URL for quantized-mesh. |
+| Property | Type              | Description                                                                                                                                  |
+| -------- | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `type`   | `"terrain"`       | Layer type (required)                                                                                                                        |
+| `data`   | `{ url: string }` | Terrain tile URL (containing `{z}/{x}/{y}` placeholders). Use a `.png` / `.webp` URL for raster DEM, or a `.terrain` URL for quantized-mesh. |
 
 ## Supported Materials
 
-| Material                                                                                          | Config key       | Description                                                          |
-| ------------------------------------------------------------------------------------------------- | ---------------- | -------------------------------------------------------------------- |
-| [RasterTerrainMaterial](../../../three/resource-layer-reference/raster-terrain-material/)         | `rasterTerrain`  | Configures terrain appearance and elevation decoder for PNG/WebP DEM |
-| [QuantizedMeshTerrainMaterial](../../../three/resource-layer-reference/quantized-mesh-terrain-material/) | `quantizedMesh`  | Configures terrain appearance for quantized-mesh tile sources        |
+| Material                                                                                       | Config key      | Description                                                          |
+| ---------------------------------------------------------------------------------------------- | --------------- | -------------------------------------------------------------------- |
+| [RasterTerrainMaterial](../../../three/resource-layer/raster-terrain-material/)                | `rasterTerrain` | Configures terrain appearance and elevation decoder for PNG/WebP DEM |
+| [QuantizedMeshTerrainMaterial](../../../three/resource-layer/quantized-mesh-terrain-material/) | `quantizedMesh` | Configures terrain appearance for quantized-mesh tile                |
 
 ## Usage Examples
 
@@ -93,8 +93,62 @@ const terrainLayer = view.addLayer({
 ```
 
 :::note
-For details on pre-defined decoder constants, see [RasterTerrainMaterial](../../../three/resource-layer-reference/raster-terrain-material/#pre-defined-constants).
+For details on pre-defined decoder constants, see [RasterTerrainMaterial](../../../three/resource-layer/raster-terrain-material/#pre-defined-constants).
 :::
+
+### Combined Use with Hillshade
+
+Combining a Terrain layer with a [Hillshade](../../../three/resource-layer/hillshade-material/) layer produces shaded relief on top of the actual 3D surface: the Terrain layer provides the geometry, while the Hillshade layer adds shading driven by elevation gradients. Reusing the same DEM URL for both layers ensures the geometry and shading stay consistent.
+
+```typescript
+import ThreeView, { TERRARIUM_ELEVATION_DECODER } from "@navara/three";
+
+const view = new ThreeView(/* options */);
+await view.init();
+
+const TERRAIN_URL =
+  "https://example.com/elevation-tiles/terrarium/{z}/{x}/{y}.png";
+
+// Base raster tile layer
+view.addLayer({
+  type: "tiles",
+  data: {
+    url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+  },
+  rasterTile: {
+    maxZoom: 23,
+  },
+});
+
+// 3D terrain layer (provides geometry)
+view.addLayer({
+  type: "terrain",
+  data: {
+    url: TERRAIN_URL,
+  },
+  rasterTerrain: {
+    maxZoom: 15,
+    minZoom: 5,
+    elevationDecoder: TERRARIUM_ELEVATION_DECODER(),
+    tileSize: 512,
+  },
+});
+
+// Hillshade layer (adds shaded relief on top of the terrain)
+view.addLayer({
+  type: "tiles",
+  data: {
+    url: TERRAIN_URL,
+  },
+  rasterTile: {
+    maxZoom: 17,
+    minZoom: 5,
+  },
+  hillshade: {
+    elevationDecoder: TERRARIUM_ELEVATION_DECODER(),
+    exaggeration: 0.5,
+  },
+});
 
 ### Quantized-Mesh (Cesium Ion)
 
@@ -146,7 +200,8 @@ const terrainLayer = view.addLayer({
 
 ## Related Resources
 
-- [Tile Layer](../../../three/resource-layer-reference/tile-layer/) - Display raster tiles
-- [RasterTerrainMaterial](../../../three/resource-layer-reference/raster-terrain-material/) - Detailed terrain material settings
-- [QuantizedMeshTerrainMaterial](../../../three/resource-layer-reference/quantized-mesh-terrain-material/) - Quantized-mesh material settings
+- [Tile Layer](../../../three/resource-layer/tile-layer/) - Display raster tiles
+- [RasterTerrainMaterial](../../../three/resource-layer/raster-terrain-material/) - Detailed terrain material settings
+- [HillshadeMaterial](../../../three/resource-layer/hillshade-material/) - Combine 3D terrain with hillshade rendering
+- [QuantizedMeshTerrainMaterial](../../../three/resource-layer/quantized-mesh-terrain-material/) - Quantized-mesh material settings
 - [CesiumIonPlugin](../../../three_plugins/cesiumionplugin/) - Resolve Cesium Ion quantized-mesh assets and register them as a terrain layer

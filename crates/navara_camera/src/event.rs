@@ -82,6 +82,10 @@ pub enum CameraEvent {
         target: Option<Vec3>, // [longitude, latitude, altitude]
         offset: Option<Vec3>, // The offset from the target in the local east-north-up reference frame centered at the target.
     },
+    FollowFreeLook {
+        enabled: bool,
+        target: Option<Vec3>, // [longitude, latitude, altitude] — camera position-locked to target; mouse drag rotates orientation only.
+    },
 }
 
 #[derive(Message)]

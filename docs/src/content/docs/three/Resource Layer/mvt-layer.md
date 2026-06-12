@@ -20,12 +20,12 @@ You can specify multiple materials simultaneously depending on the geometry type
 
 | Material                                                                            | Config key   | Supported geometry        |
 | ----------------------------------------------------------------------------------- | ------------ | ------------------------- |
-| [PointMaterial](../../../three/resource-layer-reference/point-material/)            | `point`      | Point                     |
-| [BillboardMaterial](../../../three/resource-layer-reference/billboard-material/)    | `billboard`  | Point (icon display)      |
-| [TextMaterial](../../../three/resource-layer-reference/text-material/)              | `text`       | Point (label display)     |
-| [PolylineMaterial](../../../three/resource-layer-reference/polyline-material/)      | `polyline`   | LineString                |
-| [PolygonMaterial](../../../three/resource-layer-reference/polygon-material/)        | `polygon`    | Polygon                   |
-| [VectorTileMaterial](../../../three/resource-layer-reference/vector-tile-material/) | `vectorTile` | Overall tile settings     |
+| [PointMaterial](../../../three/resource-layer/point-material/)            | `point`      | Point                     |
+| [BillboardMaterial](../../../three/resource-layer/billboard-material/)    | `billboard`  | Point (icon display)      |
+| [TextMaterial](../../../three/resource-layer/text-material/)              | `text`       | Point (label display)     |
+| [PolylineMaterial](../../../three/resource-layer/polyline-material/)      | `polyline`   | LineString                |
+| [PolygonMaterial](../../../three/resource-layer/polygon-material/)        | `polygon`    | Polygon                   |
+| [VectorTileMaterial](../../../three/resource-layer/vector-tile-material/) | `vectorTile` | Overall tile settings     |
 
 ## Cache Strategy
 
@@ -158,5 +158,5 @@ const landUseLayer = view.addLayer({
 
 ## Related Resources
 
-- [GeoJSON Layer](../../../three/resource-layer-reference/geojson-layer/) - Display data in GeoJSON format
-- [VectorTileMaterial](../../../three/resource-layer-reference/vector-tile-material/) - Detailed vector tile material settings
+- [GeoJSON Layer](../../../three/resource-layer/geojson-layer/) - Display data in GeoJSON format
+- [VectorTileMaterial](../../../three/resource-layer/vector-tile-material/) - Detailed vector tile material settings

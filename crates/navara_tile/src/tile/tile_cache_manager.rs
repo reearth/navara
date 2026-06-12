@@ -31,6 +31,8 @@ pub struct RenderedTileCache {
     /// This is used to check if the mesh is prepared in client side.
     /// Because sometimes rendering engine needs to do some preparation asynchronously.
     pub mesh_prepared: bool,
+    /// Flag indicating this tile needs material update (e.g., hillshade parent reuse, UV transforms)
+    pub needs_material_update: bool,
 }
 
 // Manage the tiles that are going to be rendered.

@@ -16,9 +16,10 @@ navara_three (core: ThreeView, Plugin, addPlugin)
   ├── three_default_descs (descriptor implementations)
   ├── three_default_plugin (DefaultPlugin: bulk descriptor registration)
   └── three_plugins (use-case specific plugins)
-        ├── FlyingModelPlugin (keyboard-driven GLTF model flight)
+        ├── PersonViewPlugin (keyboard-driven first/third-person view controller)
         ├── OverlayPlugin (world-to-screen HTML overlay projection)
         └── CesiumIonPlugin (Cesium Ion quantized-mesh terrain)
+
 ```
 
 `three_plugins` depends on `navara_three` for the `Plugin` base class and core APIs, and on `three_default_plugin` for the `DefaultDescriptions` type. Each plugin is independent — you can use one without the other.
@@ -27,7 +28,7 @@ navara_three (core: ThreeView, Plugin, addPlugin)
 
 ```typescript
 import {
-  FlyingModelPlugin,
+  PersonViewPlugin,
   OverlayPlugin,
   CesiumIonPlugin,
   moveOverlayElement,
@@ -36,9 +37,9 @@ import {
 
 ## Available Plugins
 
-### FlyingModelPlugin
+### PersonViewPlugin
 
-A keyboard-controlled GLTF model flight simulator. Loads any animated GLTF model onto the globe, moves it via WASD / arrow keys with a chase camera, and broadcasts position state on every frame. See [FlyingModelPlugin](../flyingmodelplugin/) for details.
+A keyboard-driven first-/third-person view controller. Drives a virtual position on the globe with WASD / arrow keys and follows it with a chase camera (TPV) or eye camera (FPV). Optionally attaches a GLTF character whose animations cross-fade between idle and dash. See [PersonViewPlugin](../personviewplugin/) for details.
 
 ### OverlayPlugin
 
@@ -55,29 +56,31 @@ Both plugins follow the standard plugin lifecycle: create an instance, register 
 ```typescript
 import ThreeView from "@navara/three";
 import { DefaultPlugin } from "@navara/three_default_plugin";
-import { FlyingModelPlugin, OverlayPlugin } from "@navara/three_plugins";
+import { PersonViewPlugin, OverlayPlugin } from "@navara/three_plugins";
 
 const view = new ThreeView({ container, animation: true });
 
 const defaultPlugin = new DefaultPlugin();
-const flyingModel = new FlyingModelPlugin({
-  modelUrl: "/glTF/bird/scene.gltf",
-  animation: {
-    idleClip: "Gliding",
-    dashClip: "Flapping",
-    speed: 1.0,
-    crossfadeDuration: 0.3,
+const personView = new PersonViewPlugin({
+  character: {
+    modelUrl: "/glTF/bird/scene.gltf",
+    animation: {
+      idleClip: "Gliding",
+      dashClip: "Flapping",
+      speed: 1.0,
+      crossfadeDuration: 0.3,
+    },
   },
 });
 const overlay = new OverlayPlugin({ maxDistance: 100_000 });
 
 view.addPlugin(defaultPlugin);
-view.addPlugin(flyingModel);
+view.addPlugin(personView);
 view.addPlugin(overlay);
 
 await view.init();
 
-flyingModel.start();
+personView.start();
 ```
 
 ## Related Resources

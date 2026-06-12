@@ -23,10 +23,10 @@ Aerial Perspective applies a haze and atmospheric depth effect based on distance
 
 ```typescript
 import ThreeView, { JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import { DefaultPlugin, type DefaultDescriptions } from "@navara/three_default_plugin";
 
 const plugin = new DefaultPlugin();
-const view = new ThreeView({ shadow: true });
+const view = new ThreeView<DefaultDescriptions>({ shadow: true });
 view.addPlugin(plugin);
 await view.init();
 
@@ -65,6 +65,23 @@ view.addLayer({
     elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
     castShadow: true,
     receiveShadow: true,
+  },
+});
+
+view.addLayer({
+  type: "tiles",
+  data: {
+    // Credit:
+    // - Geospatial Information Authority of Japan Tiles - Digital Elevation Map
+    //   https://maps.gsi.go.jp/development/ichiran.html
+    url: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
+  },
+  rasterTile: {
+    minZoom: 6,
+    maxZoom: 15,
+  },
+  hillshade: {
+    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
   },
 });
 
@@ -141,12 +158,10 @@ A post-processing effect that simulates water droplets adhering to the camera le
 ```typescript
 const rainDropEffect = view.addEffect<RainDropEffectDesc>({
   rainDrop: {
-    opacity: 1.0,           // Overall effect opacity
-    dropGridSize: 12,       // Water droplet grid size
-    dropDensity: 1,         // Water droplet density
-    dropLayers: 4,          // Number of water droplet layers
-    dropSizeFactor: 0.015,  // Water droplet size factor
-    refractionStrength: 0.3, // Refraction strength
+    opacity: 0.8,           // Overall effect opacity
+    dropGridSize: 14,       // Water droplet grid size
+    dropDensity: 0.1,       // Water droplet density
+    dropSizeFactor: 0.025,  // Water droplet size factor
   },
 });
 ```
@@ -189,6 +204,17 @@ Increasing `particleCount` makes the effect more realistic, but may impact perfo
 
 The Geospatial Information Authority of Japan's experimental vector tiles (experimental_bvmap) include water area data such as rivers and lakes. Using the `water: true` option applies a water surface material with ripples.
 
+:::caution[Required ThreeView Option]
+To use the water surface material, you must enable `waterTexture` when constructing `ThreeView`. Without it, the `water: true` option on the layer will have no effect.
+
+```typescript
+const view = new ThreeView<DefaultDescriptions>({
+  waterTexture: { enabled: true },
+  // ...other options
+});
+```
+:::
+
 ```typescript
 // Add water area layer from GSI experimental vector tiles
 view.addLayer({
@@ -210,7 +236,7 @@ view.addLayer({
   },
 });
 
-view.atmosphere.date.setHours(16); // Set time of day
+view.atmosphere.date = new Date("2026-01-01T16:00:00+09:00"); // January 1, 16:00 JST
 view.setCamera({ lng: 140.0372145462, lat: 35.6059411903, height: 3880, heading: -98.4184014976, pitch: -18.0000012192, roll: 0 });
 ```
 
@@ -246,7 +272,7 @@ view.addEffect<SSREffectDesc>({
   ssr: {},
 });
 
-view.atmosphere.date.setHours(12);
+view.atmosphere.date = new Date("2026-01-01T12:00:00+09:00"); // January 1, 12:00 JST
 
 view.setCamera({
   lng: 139.7511145474829,
@@ -265,11 +291,12 @@ view.setCamera({
 Below is a complete example combining atmospheric effects, rain, and water surface materials.
 
 ```typescript
-import ThreeView, { type CloudsEffectDesc, Color, JAPAN_GSI_ELEVATION_DECODER, type RainDropEffectDesc, type RainMeshDesc, type SnowMeshDesc, type SSREffectDesc, ToneMappingMode } from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
+import { type CloudsEffectDesc, type RainDropEffectDesc, type RainMeshDesc, type SnowMeshDesc, type SSREffectDesc, ToneMappingMode } from "@navara/three_default_descs";
+import { DefaultPlugin, type DefaultDescriptions } from "@navara/three_default_plugin";
 
 const plugin = new DefaultPlugin();
-const view = new ThreeView({
+const view = new ThreeView<DefaultDescriptions>({
   shadow: true,
   animation: true,
   waterTexture: {
@@ -317,6 +344,23 @@ view.addLayer({
   },
 });
 
+view.addLayer({
+  type: "tiles",
+  data: {
+    // Credit:
+    // - Geospatial Information Authority of Japan Tiles - Digital Elevation Map
+    //   https://maps.gsi.go.jp/development/ichiran.html
+    url: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
+  },
+  rasterTile: {
+    minZoom: 6,
+    maxZoom: 15,
+  },
+  hillshade: {
+    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+  },
+});
+
 layers.sun.update({ sun: { castShadow: true } }); // Cast shadows
 
 // Tone mapping
@@ -347,12 +391,10 @@ view.addMesh<RainMeshDesc>({
 
 view.addEffect<RainDropEffectDesc>({
   rainDrop: {
-    opacity: 1.0,           // Overall effect opacity
-    dropGridSize: 12,       // Water droplet grid size
-    dropDensity: 1,         // Water droplet density
-    dropLayers: 4,          // Number of water droplet layers
-    dropSizeFactor: 0.015,  // Water droplet size factor
-    refractionStrength: 0.3, // Refraction strength
+    opacity: 0.8,           // Overall effect opacity
+    dropGridSize: 14,       // Water droplet grid size
+    dropDensity: 0.1,       // Water droplet density
+    dropSizeFactor: 0.025,  // Water droplet size factor
   },
 });
 
@@ -402,14 +444,14 @@ view.addEffect<SSREffectDesc>({
   },
 });
 
-view.atmosphere.date.setHours(16); // Set time of day
+view.atmosphere.date = new Date("2026-01-01T16:00:00+09:00"); // January 1, 16:00 JST
 
 view.setCamera({ lng: 140.0372145462, lat: 35.6059411903, height: 3880, heading: -98.4184014976, pitch: -18.0000012192, roll: 0 });
 ```
 
 :::tip[Tips for a Natural Look]
 - **3D Tiles models**: Adjust `roughness`/`metalness` and properly enable `castShadow`/`receiveShadow`
-- **Time of day adjustment**: Set the time with `view.atmosphere.date.setHours(8)` etc.
+- **Time of day adjustment**: Set the time with an ISO string including a timezone offset, e.g. `new Date("2026-01-01T08:00:00+09:00")`
 - **Weather switching**: Rain and snow can be toggled using the `.visible` property
 - **Water surface adjustment**: Adjust wave motion with `waterSpeed` and `waterScaleNormal`
 :::

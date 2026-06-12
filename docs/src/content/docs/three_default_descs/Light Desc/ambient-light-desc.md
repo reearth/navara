@@ -77,7 +77,8 @@ import { Color } from "@navara/three";
 ### Basic Usage
 
 ```typescript
-import ThreeView, { AmbientLightDesc, Color } from "@navara/three";
+import ThreeView, { Color } from "@navara/three";
+import { AmbientLightDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
 await view.init();

@@ -278,7 +278,8 @@ import { Color } from "@navara/three";
 ### 基本的な使い方
 
 ```typescript
-import ThreeView, { SnowMeshDesc } from "@navara/three";
+import ThreeView from "@navara/three";
+import { SnowMeshDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
 await view.init();
@@ -302,13 +303,8 @@ const snowDesc = view.addMesh<SnowMeshDesc>({
 ### 特定の位置に雪を配置
 
 ```typescript
-import ThreeView, {
-  SnowMeshDesc,
-  Color,
-  geodeticToVector3,
-  degreeToRadian,
-  LLE,
-} from "@navara/three";
+import ThreeView, { Color, geodeticToVector3, degreeToRadian, LLE } from "@navara/three";
+import { SnowMeshDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView({ animation: true });
 await view.init();

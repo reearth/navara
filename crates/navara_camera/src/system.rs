@@ -363,6 +363,7 @@ fn process_camera_event(
             offset,
         } => {
             controller.enable_follow = *enabled;
+            controller.free_look = false;
 
             if controller.enable_follow {
                 controller.follow_target_pre = controller.follow_target_cur;
@@ -373,6 +374,28 @@ fn process_camera_event(
             }
 
             controller.follow_offset = *offset;
+        }
+        CameraEvent::FollowFreeLook { enabled, target } => {
+            let was_free_look = controller.free_look;
+            controller.enable_follow = *enabled;
+            controller.free_look = *enabled;
+            controller.follow_offset = None;
+
+            if *enabled {
+                if !was_free_look {
+                    // Entry transition: snap pre = cur so handle_follow_move
+                    // doesn't translate the camera by the (potentially huge)
+                    // delta from the previous mode's target.
+                    controller.follow_target_pre = *target;
+                    controller.follow_target_cur = *target;
+                } else {
+                    controller.follow_target_pre = controller.follow_target_cur;
+                    controller.follow_target_cur = *target;
+                }
+            } else {
+                controller.follow_target_pre = None;
+                controller.follow_target_cur = None;
+            }
         }
     }
 }

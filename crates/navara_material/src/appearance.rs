@@ -536,6 +536,7 @@ pub struct RasterTileMaterial {
     pub min_zoom: usize,
     pub tms: bool,
     pub show_bounding_box: bool,
+    pub overscaled_max_zoom: usize,
 }
 
 impl Default for RasterTileMaterial {
@@ -548,6 +549,7 @@ impl Default for RasterTileMaterial {
             min_zoom: 0,
             tms: false,
             show_bounding_box: false,
+            overscaled_max_zoom: 24,
         }
     }
 }

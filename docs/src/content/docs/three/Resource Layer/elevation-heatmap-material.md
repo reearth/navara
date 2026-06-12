@@ -53,7 +53,7 @@ sidebar:
 
 ### elevationDecoder
 
-**Type:** [`ElevationDecoder`](../../../three/resource-layer-reference/raster-terrain-material/#elevationdecoder-type) | `undefined`
+**Type:** [`ElevationDecoder`](../../../three/resource-layer/raster-terrain-material/#elevationdecoder-type) | `undefined`
 
 **Description:** Specifies the decoder settings for converting encoded elevation data to actual elevation values. Select the appropriate decoder according to the DEM tile format being used.
 
@@ -237,8 +237,8 @@ view.globe.elevationColormap = rdYlBuColorMap;
 
 - [ColorMap class](../../../three/api-reference/colormap/) - Detailed API reference for ColorMap
 - [Globe class](../../../three/api-reference/globe/) - Details on the `elevationColormap` property
-- [RasterTerrainMaterial](../../../three/resource-layer-reference/raster-terrain-material/) - Material for 3D terrain rendering
-- [Tile Layer](../../../three/resource-layer-reference/tile-layer/) - Tile layer configuration
+- [RasterTerrainMaterial](../../../three/resource-layer/raster-terrain-material/) - Material for 3D terrain rendering
+- [Tile Layer](../../../three/resource-layer/tile-layer/) - Tile layer configuration
 
 :::note
 The elevation heatmap is configured via the `elevationHeatmap` property of the Tile Layer. Use it in conjunction with `rasterTile`.

@@ -41,11 +41,11 @@ Next, open `src/main.ts` and you will see the following:
 
 ```typescript
 import ThreeView from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import { DefaultPlugin, type DefaultDescriptions } from "@navara/three_default_plugin";
 
 // Create a ThreeView instance
 const plugin = new DefaultPlugin();
-const view = new ThreeView({});
+const view = new ThreeView<DefaultDescriptions>({});
 view.addPlugin(plugin);
 await view.init();
 ```
@@ -87,7 +87,7 @@ A base map will be displayed on the globe in the scene.
 
 ```typescript
 const plugin = new DefaultPlugin();
-const view = new ThreeView({});
+const view = new ThreeView<DefaultDescriptions>({});
 view.addPlugin(plugin);
 await view.init();
 ```
@@ -127,11 +127,11 @@ Add a map layer using OpenStreetMap raster tiles.
 
 ```typescript
 import ThreeView from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import { DefaultPlugin, type DefaultDescriptions } from "@navara/three_default_plugin";
 
 // Create a ThreeView instance
 const plugin = new DefaultPlugin();
-const view = new ThreeView({});
+const view = new ThreeView<DefaultDescriptions>({});
 view.addPlugin(plugin);
 await view.init();
 
@@ -185,11 +185,11 @@ You can set the camera position and orientation using the `view.setCamera()` met
 
 ```typescript
 import ThreeView from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import { DefaultPlugin, type DefaultDescriptions } from "@navara/three_default_plugin";
 
 // Create a ThreeView instance
 const plugin = new DefaultPlugin();
-const view = new ThreeView({});
+const view = new ThreeView<DefaultDescriptions>({});
 view.addPlugin(plugin);
 await view.init();
 
@@ -255,6 +255,23 @@ view.addLayer({
     receiveShadow: true,
   },
 });
+
+view.addLayer({
+  type: "tiles",
+  data: {
+    // Credit:
+    // - Geospatial Information Authority of Japan Tiles - Digital Elevation Map
+    //   https://maps.gsi.go.jp/development/ichiran.html
+    url: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
+  },
+  rasterTile: {
+    minZoom: 6,
+    maxZoom: 15,
+  },
+  hillshade: {
+    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+  },
+});
 ```
 
 ### Result
@@ -293,17 +310,17 @@ receiveShadow: true,
 - The maximum zoom level, minimum zoom level, and shadows for terrain tiles are configured here.
 - The elevationDecoder decodes the terrain data.
 
-For details, see [Terrain Layer](../../../three/resource-layer-reference/terrain-layer/).
+For details, see [Terrain Layer](../../../three/resource-layer/terrain-layer/).
 
 ### Complete Code
 
 ```typescript
 import ThreeView, { JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import { DefaultPlugin, type DefaultDescriptions } from "@navara/three_default_plugin";
 
 // Create a ThreeView instance
 const plugin = new DefaultPlugin();
-const view = new ThreeView({});
+const view = new ThreeView<DefaultDescriptions>({});
 view.addPlugin(plugin);
 await view.init();
 
@@ -326,6 +343,23 @@ view.addLayer({
     elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
     castShadow: true,
     receiveShadow: true,
+  },
+});
+
+view.addLayer({
+  type: "tiles",
+  data: {
+    // Credit:
+    // - Geospatial Information Authority of Japan Tiles - Digital Elevation Map
+    //   https://maps.gsi.go.jp/development/ichiran.html
+    url: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
+  },
+  rasterTile: {
+    minZoom: 6,
+    maxZoom: 15,
+  },
+  hillshade: {
+    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
   },
 });
 
@@ -400,7 +434,7 @@ A polygon is displayed on the map.
 
 Use the `view.addLayer` method to add a GeoJSON layer. By specifying `type: "geojson"`, you can display GeoJSON format data on the map. You can also configure polygon styling (color, height, transparency, etc.).
 
-For details, see [GeoJSON Layer](../../../three/resource-layer-reference/geojson-layer/).
+For details, see [GeoJSON Layer](../../../three/resource-layer/geojson-layer/).
 
 ### Complete Code
 
@@ -408,10 +442,10 @@ A complete example combining everything:
 
 ```typescript
 import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import { DefaultPlugin, type DefaultDescriptions } from "@navara/three_default_plugin";
 
 const plugin = new DefaultPlugin();
-const view = new ThreeView({});
+const view = new ThreeView<DefaultDescriptions>({});
 view.addPlugin(plugin);
 await view.init();
 
@@ -433,6 +467,23 @@ view.addLayer({
     elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
     castShadow: true,
     receiveShadow: true,
+  },
+});
+
+view.addLayer({
+  type: "tiles",
+  data: {
+    // Credit:
+    // - Geospatial Information Authority of Japan Tiles - Digital Elevation Map
+    //   https://maps.gsi.go.jp/development/ichiran.html
+    url: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
+  },
+  rasterTile: {
+    minZoom: 6,
+    maxZoom: 15,
+  },
+  hillshade: {
+    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
   },
 });
 

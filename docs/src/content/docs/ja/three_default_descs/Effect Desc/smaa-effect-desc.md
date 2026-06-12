@@ -82,7 +82,8 @@ defaultLayers.smaa.update({
 ### 高品質SMAAの設定
 
 ```typescript
-import ThreeView, { SMAAEffectDesc } from "@navara/three";
+import ThreeView from "@navara/three";
+import { SMAAEffectDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
 await view.init();
@@ -99,7 +100,8 @@ view.addEffect<SMAAEffectDesc>({
 ### SMAAの品質とエッジ検出モードの動的変更
 
 ```typescript
-import ThreeView, { FXAAEffectDesc } from "@navara/three";
+import ThreeView from "@navara/three";
+import { FXAAEffectDesc } from "@navara/three_default_descs";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();

@@ -469,26 +469,16 @@ impl App {
     ) -> Option<f32> {
         let world = self.app.world_mut();
         let qt = world.get_resource::<RasterTileQuadtree>()?;
-
         let tile = qt.qt.get(tile_handle)?;
 
-        // Calculate tile center latitude's cosine for metersPerTexel calculation
-        let tile_size = 1u64 << tile.coords.z;
-        let center_y = (tile.coords.y as f64 + 0.5) / tile_size as f64;
-        let lat_rad = ((std::f64::consts::PI * (1.0 - 2.0 * center_y)).sinh()).atan();
-        let cos_lat = lat_rad.cos();
-
-        // Earth circumference at equator (2π × WGS84 semi-major axis)
-        let earth_circumference = 2.0 * std::f64::consts::PI * WGS84_64.a;
-
-        // Content width excludes 2-pixel padding
-        let content_pixel_width = (texture_width - 2) as f64;
-
-        // Calculate meters per texel using texture zoom
-        let meters_per_texel =
-            (earth_circumference * cos_lat) / (content_pixel_width * (1u64 << texture_zoom) as f64);
-
-        Some(meters_per_texel as f32)
+        // Delegate to pure function in navara_core
+        Some(navara_core::calc_meters_per_texel(
+            tile.coords.y,
+            tile.coords.z,
+            texture_zoom,
+            texture_width,
+            WGS84_64.a,
+        ))
     }
 
     pub fn get_parent_tile(&mut self, handle: TileHandle) -> Option<&RasterTile> {
@@ -676,6 +666,17 @@ impl App {
             target: target_vec3,
             offset: offset_vec3,
         });
+    }
+
+    pub fn camera_free_look(&mut self, enabled: bool, target: Option<Vec<FloatType>>) {
+        let target_vec3 = target.and_then(|v| (v.len() == 3).then(|| Vec3::new(v[0], v[1], v[2])));
+
+        self.app
+            .world_mut()
+            .write_message(CameraEvent::FollowFreeLook {
+                enabled,
+                target: target_vec3,
+            });
     }
 
     pub fn get_camera_status(&mut self) -> Option<CameraStatus> {

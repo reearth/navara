@@ -374,7 +374,8 @@ sidebar:
 ### 基本的なSSRエフェクトの追加
 
 ```typescript
-import ThreeView, { SSREffectDesc } from "@navara/three";
+import ThreeView from "@navara/three";
+import { SSREffectDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
 await view.init();
@@ -388,7 +389,8 @@ const ssrDesc = view.addEffect<SSREffectDesc>({
 ### 水面反射のためのSSR
 
 ```typescript
-import ThreeView, { SSREffectDesc, Color } from "@navara/three";
+import ThreeView, { Color } from "@navara/three";
+import { SSREffectDesc } from "@navara/three_default_descs";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
@@ -440,7 +442,8 @@ view.addLayer({
 ### パフォーマンス重視のSSR設定
 
 ```typescript
-import ThreeView, { SSREffectDesc } from "@navara/three";
+import ThreeView from "@navara/three";
+import { SSREffectDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
 await view.init();
@@ -458,7 +461,8 @@ const ssrDesc = view.addEffect<SSREffectDesc>({
 ### コーントレーシングを使用した高品質SSR
 
 ```typescript
-import ThreeView, { SSREffectDesc } from "@navara/three";
+import ThreeView from "@navara/three";
+import { SSREffectDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
 await view.init();

@@ -33,38 +33,45 @@ type SharedEntry = {
   renderer: SparkRenderer;
   refCount: number;
   enableLod: boolean;
+  /** Fanout of per-descriptor `onDirty` callbacks. */
+  listeners: Set<() => void>;
 };
 
 const shared = new WeakMap<Scene, SharedEntry>();
 
 function acquireSparkRenderer(
   ctx: ViewContext,
-  opts: { enableLod: boolean },
-): { renderer: SparkRenderer; enableLod: boolean } {
+  opts: { enableLod: boolean; onDirty: () => void },
+): { enableLod: boolean } {
   // Transparent scene: render after atmosphere/aerial-perspective so baked color survives.
   const target = ctx.scenes.transparent;
   const existing = shared.get(target);
   if (existing) {
-    // Only the lod:true → lod:false downgrade is order-dependent; the reverse runs fine on a LoD renderer.
+    // Asymmetric: a lod:true descriptor can't add LoD to a renderer built
+    // without it, but lod:false on a LoD-enabled renderer runs fine.
     if (opts.enableLod && !existing.enableLod) {
       console.warn(
         `SplatMeshDesc: splat.lod=true requested but the shared SparkRenderer was created with splat.lod=false; rendering this mesh without LoD.`,
       );
     }
+    existing.listeners.add(opts.onDirty);
     existing.refCount += 1;
     // Re-assert in case another view changed the global override.
     SparkRenderer.sparkOverride = existing.renderer;
-    return { renderer: existing.renderer, enableLod: existing.enableLod };
+    return { enableLod: existing.enableLod };
   }
 
   // Linear when the post-pp pipeline is linear, else the final sRGB pass double-encodes.
   const encodeLinear =
     ctx.getInputBuffer().texture.colorSpace !== SRGBColorSpace;
 
+  const listeners = new Set<() => void>([opts.onDirty]);
   const renderer = new SparkRenderer({
     renderer: ctx.getRenderer(),
     enableLod: opts.enableLod,
     encodeLinear,
+    // Fan out to every descriptor sharing this renderer.
+    onDirty: () => listeners.forEach((fn) => fn()),
   });
   target.add(renderer);
   SparkRenderer.sparkOverride = renderer;
@@ -73,15 +80,17 @@ function acquireSparkRenderer(
     renderer,
     refCount: 1,
     enableLod: opts.enableLod,
+    listeners,
   });
-  return { renderer, enableLod: opts.enableLod };
+  return { enableLod: opts.enableLod };
 }
 
-function releaseSparkRenderer(ctx: ViewContext): void {
+function releaseSparkRenderer(ctx: ViewContext, listener: () => void): void {
   const target = ctx.scenes.transparent;
   const entry = shared.get(target);
   if (!entry) return;
 
+  entry.listeners.delete(listener);
   entry.refCount -= 1;
   if (entry.refCount > 0) return;
 
@@ -109,6 +118,8 @@ export class SplatMeshDesc extends MeshDesc<
 > {
   private config: SplatMeshConfig;
   private holdsSlot = false;
+  /** Bound listener for the shared SparkRenderer's `onDirty` fanout. */
+  private onSparkDirty?: () => void;
 
   constructor(view: ThreeView, ctx: ViewContext, config: SplatMeshConfig) {
     super(view, ctx, config);
@@ -126,8 +137,13 @@ export class SplatMeshDesc extends MeshDesc<
     }
 
     const requestedLod = cfg.lod ?? false;
+    // SparkJS fires `onDirty` when its async sort/LoD worker finishes a new
+    // pass; without this, the new ordering only shows up on the next external
+    // frame request (camera move, etc.).
+    this.onSparkDirty = () => this.requestUpdate();
     const { enableLod: rendererLod } = acquireSparkRenderer(this.ctx, {
       enableLod: requestedLod,
+      onDirty: this.onSparkDirty,
     });
     const effectiveLod = requestedLod && rendererLod;
 
@@ -141,6 +157,7 @@ export class SplatMeshDesc extends MeshDesc<
     // the catch log the new url for an old failure.
     const url = cfg.url;
     const mesh = new SplatMesh({ url, lod: effectiveLod });
+
     mesh.initialized
       .then(() => this.requestUpdate())
       .catch((err: unknown) => {
@@ -183,6 +200,9 @@ export class SplatMeshDesc extends MeshDesc<
 
     // Fallback: destroyed before `mesh.initialized` settled.
     this.releaseSlot();
-    releaseSparkRenderer(this.ctx);
+    if (this.onSparkDirty) {
+      releaseSparkRenderer(this.ctx, this.onSparkDirty);
+      this.onSparkDirty = undefined;
+    }
   }
 }

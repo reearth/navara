@@ -47,7 +47,7 @@ Navara supports the following 3D Tiles specifications:
 
 | Material                                                                         | Config key | Description                    |
 | ------------------------------------------------------------------------ | -------- | --------------------- |
-| [ModelMaterial](../../../three/resource-layer-reference/model-material/) | `model`  | Controls 3D model appearance |
+| [ModelMaterial](../../../three/resource-layer/model-material/) | `model`  | Controls 3D model appearance |
 
 ## Usage Examples
 
@@ -179,4 +179,4 @@ When using Google Photorealistic 3D Tiles, you must display appropriate credits 
 
 ## Related Resources
 
-- [ModelMaterial](../../../three/resource-layer-reference/model-material/) - Detailed model material settings
+- [ModelMaterial](../../../three/resource-layer/model-material/) - Detailed model material settings

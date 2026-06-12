@@ -62,6 +62,16 @@ export class SDFTextMesh
   private _atlasTexture: DataTexture | null = null;
   /** Atlas texture is owned externally; do not dispose on cleanup when true. */
   private _sharedAtlas = false;
+  /** Unique atlas glyphs this mesh currently renders (composite keys). */
+  private _glyphKeys: bigint[] = [];
+  /** The glyph set currently retained in the atlas (one visible-label
+   *  reference per key), or null when this mesh holds no references. */
+  private _retainedKeys: bigint[] | null = null;
+  /** Re-prepare a text in the worker (re-rasterizing evicted glyphs) using the
+   *  owner's font identity and loaded faces. Set by the parent batch. */
+  private _reprepare?: (text: string) => Promise<void>;
+  /** Ask the owner to schedule a render after an async re-prepare. */
+  private _requestRender?: () => void;
   // The COLRv1 color atlas is always FontManager-owned; no local field needed.
 
   private _enhancer: MaterialEnhancer<
@@ -182,6 +192,81 @@ export class SDFTextMesh
   }
 
   /**
+   * Wire the callbacks the parent batch uses to re-prepare evicted glyphs and
+   * request a render. `reprepare` must apply the batch's font identity and
+   * loaded faces so font refcounts stay balanced.
+   */
+  setGlyphLifecycleHandlers(
+    reprepare: (text: string) => Promise<void>,
+    requestRender: () => void,
+  ): void {
+    this._reprepare = reprepare;
+    this._requestRender = requestRender;
+  }
+
+  /** Replace the retained glyph set, releasing the old references and (if
+   *  visible) retaining the new ones. */
+  private _setGlyphKeys(keys: bigint[]): void {
+    if (this._retainedKeys) {
+      this._fontManager.releaseGlyphs(
+        this._fontUrl,
+        this._highQuality,
+        this._retainedKeys,
+      );
+      this._retainedKeys = null;
+    }
+    this._glyphKeys = keys;
+    this._syncGlyphRefs();
+  }
+
+  /** Reconcile atlas references with current visibility: retain glyphs while
+   *  on screen, release them when hidden. If shown after the glyphs were
+   *  evicted (cache no longer prepared), re-prepare to re-rasterize them and
+   *  rebuild with fresh metrics. */
+  private _syncGlyphRefs(): void {
+    const visible = this.visible && this._glyphKeys.length > 0;
+
+    if (visible && !this._retainedKeys) {
+      if (
+        this._reprepare &&
+        !this._fontManager.isTextPrepared(
+          this._fontUrl,
+          this._text,
+          this._highQuality,
+        )
+      ) {
+        // Glyphs were evicted while hidden; re-rasterize then rebuild (which
+        // re-enters here with the fresh set and retains it).
+        const text = this._text;
+        this._reprepare(text)
+          .then(() => {
+            if (this._text === text) {
+              this.setText(text, true);
+              this._requestRender?.();
+            }
+          })
+          .catch((err: unknown) => {
+            console.error("SDFTextMesh: re-prepare on show failed:", err);
+          });
+        return;
+      }
+      this._fontManager.retainGlyphs(
+        this._fontUrl,
+        this._highQuality,
+        this._glyphKeys,
+      );
+      this._retainedKeys = this._glyphKeys;
+    } else if (!visible && this._retainedKeys) {
+      this._fontManager.releaseGlyphs(
+        this._fontUrl,
+        this._highQuality,
+        this._retainedKeys,
+      );
+      this._retainedKeys = null;
+    }
+  }
+
+  /**
    * Set text to render. Shapes via WASM, rebuilds instanced geometry, updates atlas texture.
    */
   setText(text: string, forceUpdate = false): void {
@@ -190,6 +275,7 @@ export class SDFTextMesh
 
     if (!text) {
       this.geometry.instanceCount = 0;
+      this._setGlyphKeys([]);
       return;
     }
 
@@ -200,6 +286,7 @@ export class SDFTextMesh
     );
     if (!shapeResult) {
       this.geometry.instanceCount = 0;
+      this._setGlyphKeys([]);
       return;
     }
 
@@ -229,6 +316,18 @@ export class SDFTextMesh
    */
   setFont(fontUrl: string): void {
     if (fontUrl === this._fontUrl) return;
+
+    // Release glyph references against the old font before switching; the
+    // baked instances are about to be rebuilt for the new font anyway.
+    if (this._retainedKeys) {
+      this._fontManager.releaseGlyphs(
+        this._fontUrl,
+        this._highQuality,
+        this._retainedKeys,
+      );
+      this._retainedKeys = null;
+    }
+    this._glyphKeys = [];
     this._fontUrl = fontUrl;
 
     // Clear current atlas since it's tied to the previous font
@@ -288,6 +387,7 @@ export class SDFTextMesh
     }
 
     this.visible = (material.show ?? true) && !!this._text;
+    this._syncGlyphRefs();
     if (!this.visible) return;
 
     const state = this._enhancer.states();
@@ -402,6 +502,7 @@ export class SDFTextMesh
 
   _setFeatureShow(visible: boolean): void {
     this.visible = visible;
+    this._syncGlyphRefs();
   }
 
   _setFeatureExtrudedHeight(_height: number): void {
@@ -433,6 +534,15 @@ export class SDFTextMesh
   // --- Cleanup ---
 
   dispose(): void {
+    // Release atlas glyph references so they can be evicted once unreferenced.
+    if (this._retainedKeys) {
+      this._fontManager.releaseGlyphs(
+        this._fontUrl,
+        this._highQuality,
+        this._retainedKeys,
+      );
+      this._retainedKeys = null;
+    }
     this.geometry?.dispose();
     if (!this._sharedAtlas) {
       this._atlasTexture?.dispose();
@@ -521,9 +631,13 @@ export class SDFTextMesh
       isColor: boolean;
     }[] = [];
 
+    // Unique atlas glyphs this mesh references — retained while it is visible.
+    const glyphKeys = new Set<bigint>();
+
     for (const glyph of glyphs) {
       const m = metricsMap.get(glyph.compositeKey);
       if (m && m.atlasW > 0 && m.atlasH > 0) {
+        glyphKeys.add(glyph.compositeKey);
         const px = m.isColor ? COLOR_GLYPH_PX_SIZE : SDF_PX_SIZE;
         const fuToPx = m.isColor ? fontUnitToColorPx : fontUnitToSdfPx;
         const offsetPxX = (cursorX + glyph.xOffset) * fuToPx + m.bearingX;
@@ -547,6 +661,10 @@ export class SDFTextMesh
       cursorX += glyph.xAdvance;
       cursorY += glyph.yAdvance;
     }
+
+    // Update atlas references to this mesh's new glyph set (retains/releases
+    // as needed based on visibility).
+    this._setGlyphKeys([...glyphKeys]);
 
     const count = renderable.length;
     if (count === 0) {

@@ -217,6 +217,59 @@ pub fn web_mercator_world_pos_to_lnglat<F: Float + Two<F>>(x: F, y: F) -> LngLat
     }
 }
 
+/// Converts a tile Y coordinate to latitude in radians using Web Mercator projection.
+///
+/// # Arguments
+/// * `y` - Tile Y coordinate (can be fractional, e.g., y + 0.5 for tile center)
+/// * `z` - Zoom level
+///
+/// # Returns
+/// Latitude in radians
+///
+/// # Note
+/// This uses the identity: lat = atan(sinh(π·(1 - 2·y_normalized)))
+/// which is equivalent to: lat = 2·atan(exp(π·(1 - 2·y_normalized))) - π/2
+pub fn tile_y_to_latitude(y: f64, z: usize) -> f64 {
+    let tile_size = (z as f64).exp2();
+    let normalized_y = y / tile_size;
+    let phi = std::f64::consts::PI * (1.0 - 2.0 * normalized_y);
+    phi.sinh().atan()
+}
+
+/// Calculates meters per texel for a tile at given coordinates.
+/// This is used for hillshade normal map generation to determine the scale of elevation changes.
+///
+/// # Arguments
+/// * `tile_y` - Tile Y coordinate
+/// * `tile_z` - Tile zoom level
+/// * `texture_zoom` - Texture zoom level (may differ from tile zoom for overscaled tiles)
+/// * `texture_width` - Total texture width in pixels (including padding)
+/// * `ellipsoid_semi_major_axis` - Semi-major axis of the ellipsoid in meters (e.g., WGS84: 6378137.0)
+///
+/// # Returns
+/// Meters per texel at the tile's center latitude
+///
+/// # Note
+/// The calculation accounts for:
+/// - 2-pixel padding (content width = texture_width - 2)
+/// - Web Mercator distortion (using cosine of latitude)
+/// - Earth's curvature (using ellipsoid circumference)
+pub fn calc_meters_per_texel(
+    tile_y: usize,
+    tile_z: usize,
+    texture_zoom: usize,
+    texture_width: u32,
+    ellipsoid_semi_major_axis: f64,
+) -> f32 {
+    // Calculate latitude at tile center and get its cosine for Web Mercator correction
+    let cos_lat = tile_y_to_latitude(tile_y as f64 + 0.5, tile_z).cos();
+    let earth_circumference = 2.0 * std::f64::consts::PI * ellipsoid_semi_major_axis;
+    let content_pixel_width = texture_width.saturating_sub(2).max(1) as f64;
+    let meters_per_texel =
+        (earth_circumference * cos_lat) / (content_pixel_width * (texture_zoom as f64).exp2());
+    meters_per_texel as f32
+}
+
 pub fn tile_url(s: &str, xyz: &TileXYZ, tms: bool) -> String {
     let y = if tms {
         2usize.pow(xyz.z as u32) - 1 - xyz.y
@@ -333,6 +386,27 @@ mod tests {
     }
 
     #[test]
+    fn test_tile_y_to_latitude() {
+        // Test at equator (tile center at y=0.5 at z=0 should give lat=0)
+        let lat = tile_y_to_latitude(0.5, 0);
+        assert!((lat - 0.0).abs() < 1e-10, "Equator should have latitude 0");
+
+        // Test at zoom 1, center of tile (0, 0) should be north of equator
+        let lat_north = tile_y_to_latitude(0.5, 1);
+        assert!(lat_north > 0.0, "North tile should have positive latitude");
+
+        // Test at zoom 1, center of tile (0, 1) should be south of equator
+        let lat_south = tile_y_to_latitude(1.5, 1);
+        assert!(lat_south < 0.0, "South tile should have negative latitude");
+
+        // Test symmetry: tiles equidistant from equator should have opposite latitudes
+        assert!(
+            (lat_north + lat_south).abs() < 1e-10,
+            "Latitudes should be symmetric around equator"
+        );
+    }
+
+    #[test]
     fn test_tile_extent() {
         const PI: FloatType = std::f64::consts::PI;
         let max_lat = 2.0 * (((PI - 2.0 * PI * 0.0).exp().atan()) - PI / 4.0);
@@ -427,5 +501,19 @@ mod tests {
         assert_eq!(iter.next(), Some(TileXYZ { x: 2, y: 3, z: 2 }));
         assert_eq!(iter.next(), Some(TileXYZ { x: 3, y: 3, z: 2 }));
         assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn test_calc_meters_per_texel_sanity() {
+        let a = 6378137.0;
+        // Width includes 2px padding => content width = 256
+        let m = calc_meters_per_texel(0, 0, 0, 258, a);
+        assert!(m.is_finite() && m > 0.0);
+        let expected = (2.0 * std::f64::consts::PI * a) / 256.0;
+        let rel_err = ((m as f64) - expected).abs() / expected;
+        assert!(rel_err < 1e-4, "unexpected relative error: {rel_err}");
+        // Guard: texture_width < 2 must not underflow or divide by zero
+        let m_tiny = calc_meters_per_texel(0, 0, 0, 1, a);
+        assert!(m_tiny.is_finite() && m_tiny > 0.0);
     }
 }

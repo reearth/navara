@@ -374,7 +374,8 @@ This property can only be set when creating the Descriptor. It cannot be changed
 ### Adding a basic SSR effect
 
 ```typescript
-import ThreeView, { SSREffectDesc } from "@navara/three";
+import ThreeView from "@navara/three";
+import { SSREffectDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
 await view.init();
@@ -388,7 +389,8 @@ const ssrDesc = view.addEffect<SSREffectDesc>({
 ### SSR for water surface reflections
 
 ```typescript
-import ThreeView, { SSREffectDesc, Color } from "@navara/three";
+import ThreeView, { Color } from "@navara/three";
+import { SSREffectDesc } from "@navara/three_default_descs";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
@@ -440,7 +442,8 @@ view.addLayer({
 ### Performance-oriented SSR settings
 
 ```typescript
-import ThreeView, { SSREffectDesc } from "@navara/three";
+import ThreeView from "@navara/three";
+import { SSREffectDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
 await view.init();
@@ -458,7 +461,8 @@ const ssrDesc = view.addEffect<SSREffectDesc>({
 ### High-quality SSR with cone tracing
 
 ```typescript
-import ThreeView, { SSREffectDesc } from "@navara/three";
+import ThreeView from "@navara/three";
+import { SSREffectDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
 await view.init();

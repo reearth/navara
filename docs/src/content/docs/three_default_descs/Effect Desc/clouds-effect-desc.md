@@ -634,7 +634,8 @@ import { Vector3 } from "three";
 ### Adding a basic clouds effect descriptor
 
 ```typescript
-import ThreeView, { CloudsEffectDesc } from "@navara/three";
+import ThreeView from "@navara/three";
+import { CloudsEffectDesc } from "@navara/three_default_descs";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
@@ -657,7 +658,8 @@ const cloudsDesc = view.addEffect<CloudsEffectDesc>({
 ### Scene with cloud shadows enabled
 
 ```typescript
-import ThreeView, { CloudsEffectDesc } from "@navara/three";
+import ThreeView from "@navara/three";
+import { CloudsEffectDesc } from "@navara/three_default_descs";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView({ shadow: true });
@@ -693,7 +695,8 @@ const cloudsDesc = view.addEffect<CloudsEffectDesc>({
 ### Using as a fog effect
 
 ```typescript
-import ThreeView, { CloudsEffectDesc, LayerHandle } from "@navara/three";
+import ThreeView, { EffectHandle } from "@navara/three";
+import { CloudsEffectDesc } from "@navara/three_default_descs";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();
@@ -725,7 +728,8 @@ if (clouds) {
 ### Animated clouds
 
 ```typescript
-import ThreeView, { CloudsEffectDesc } from "@navara/three";
+import ThreeView from "@navara/three";
+import { CloudsEffectDesc } from "@navara/three_default_descs";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 import { Vector2 } from "three";
 
@@ -751,7 +755,8 @@ const cloudsDesc = view.addEffect<CloudsEffectDesc>({
 ### Complete weather scene example
 
 ```typescript
-import ThreeView, { CloudsEffectDesc } from "@navara/three";
+import ThreeView from "@navara/three";
+import { CloudsEffectDesc } from "@navara/three_default_descs";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 import { Vector2 } from "three";
 

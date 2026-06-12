@@ -46,8 +46,8 @@ export class FontWorkerClient {
       this.dispose();
     };
 
-    // Trigger WASM init by sending a tick
-    this._ready = this._send("tick", undefined).then(() => undefined);
+    // Trigger WASM init and resolve once the worker is ready.
+    this._ready = this._send("init", undefined).then(() => undefined);
     this._concurrencyManager.increment();
   }
 
@@ -80,8 +80,16 @@ export class FontWorkerClient {
     return this._send("unloadFont", { url }) as Promise<{ ok: boolean }>;
   }
 
-  async tick(): Promise<void> {
-    return this._send("tick", undefined) as Promise<void>;
+  /** Add one visible-label reference to each glyph (composite keys) under
+   *  `atlasKey`. Fire-and-forget; the worker replies so `_pending` is cleared.
+   *  Transfers the key buffer — the caller discards it after this call. */
+  retainGlyphs(atlasKey: string, keys: BigUint64Array): void {
+    void this._send("retainGlyphs", { atlasKey, keys }, [keys.buffer]);
+  }
+
+  /** Drop one visible-label reference from each glyph under `atlasKey`. */
+  releaseGlyphs(atlasKey: string, keys: BigUint64Array): void {
+    void this._send("releaseGlyphs", { atlasKey, keys }, [keys.buffer]);
   }
 
   /** Shape multiple texts in one worker round-trip. */
@@ -103,6 +111,7 @@ export class FontWorkerClient {
       atlas: RawAtlas | null;
       colorAtlas: RawAtlas | null;
       atlasKey: string;
+      evicted: boolean;
     };
 
     const wrap = (raw: RawAtlas | null): FontAtlasData | null =>
@@ -120,6 +129,7 @@ export class FontWorkerClient {
       atlas: wrap(raw.atlas),
       colorAtlas: wrap(raw.colorAtlas),
       atlasKey: raw.atlasKey,
+      evicted: raw.evicted,
     };
   }
 

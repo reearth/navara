@@ -1,10 +1,13 @@
 export {
-  FlyingModelPlugin,
-  type FlyingModelConfig,
-  type FlyingModelState,
+  PersonViewPlugin,
+  type PersonViewConfig,
+  type PersonViewState,
+  type CharacterConfig,
   type AnimationConfig,
   type ModelRotationOffset,
-} from "./FlyingModelPlugin";
+  type KeyBindings,
+  type ViewMode,
+} from "./PersonViewPlugin";
 
 export {
   OverlayPlugin,

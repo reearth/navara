@@ -356,5 +356,5 @@ view.globe.opacity = 0.8;
 
 - [Color Class](../../../three/api-reference/color/) - A class for representing colors
 - [ColorMap Class](../../../three/api-reference/colormap/) - Defining color gradients
-- [ElevationHeatmapMaterial](../../../three/resource-layer-reference/elevation-heatmap-material/) - Elevation heatmap material
+- [ElevationHeatmapMaterial](../../../three/resource-layer/elevation-heatmap-material/) - Elevation heatmap material
 - [ThreeView Class](../../../three/api-reference/threeview-class/) - Main view class

@@ -82,7 +82,8 @@ defaultLayers.smaa.update({
 ### High-quality SMAA settings
 
 ```typescript
-import ThreeView, { SMAAEffectDesc } from "@navara/three";
+import ThreeView from "@navara/three";
+import { SMAAEffectDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
 await view.init();
@@ -99,7 +100,8 @@ view.addEffect<SMAAEffectDesc>({
 ### Dynamically changing SMAA quality and edge detection mode
 
 ```typescript
-import ThreeView, { FXAAEffectDesc } from "@navara/three";
+import ThreeView from "@navara/three";
+import { FXAAEffectDesc } from "@navara/three_default_descs";
 import { DefaultPlugin } from "@navara/three_default_plugin";
 
 const view = new ThreeView();

@@ -404,7 +404,8 @@ modelDesc.on("animationReady", () => {
 ### Basic Usage
 
 ```typescript
-import ThreeView, { GLTFModelDesc } from "@navara/three";
+import ThreeView from "@navara/three";
+import { GLTFModelDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
 await view.init();

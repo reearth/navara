@@ -23,14 +23,12 @@ Learn how to visualize air traffic volume data between airports using arch lines
 First, create the base view. Set a dark background color and add a starfield and satellite imagery tiles.
 
 ```typescript
-import ThreeView, {
-  ToneMappingMode,
-  Color,
-} from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import ThreeView, { Color } from "@navara/three";
+import { ToneMappingMode } from "@navara/three_default_descs";
+import { DefaultPlugin, type DefaultDescriptions } from "@navara/three_default_plugin";
 
 const plugin = new DefaultPlugin();
-const view = new ThreeView({
+const view = new ThreeView<DefaultDescriptions>({
   backgroundColor: new Color().setStyle("#0b0a0d"),
 });
 view.addPlugin(plugin);
@@ -122,7 +120,7 @@ You need to convert NASA Earth at Night imagery to XYZ tile format. Download fro
 Using `GlowGlobeMeshDesc`, you can add a beautiful glow effect around the globe.
 
 ```typescript
-import type { GlowGlobeMeshDesc } from "@navara/three";
+import type { GlowGlobeMeshDesc } from "@navara/three_default_descs";
 
 // Add globe glow effect
 view.addMesh<GlowGlobeMeshDesc>({
@@ -255,7 +253,7 @@ For details on `ColorMap` class methods (`linear()`, `quantize()`, etc.), see th
 Add the arch line definitions as an object.
 
 ```typescript
-import type { ArclineMeshDesc } from "@navara/three";
+import type { ArclineMeshDesc } from "@navara/three_default_descs";
 
 const arcLineHandle = view.addMesh<ArclineMeshDesc>({
   arcLines,
@@ -301,15 +299,17 @@ Below is a complete example that visualizes air traffic volume between airports.
 
 ```typescript
 import ThreeView, {
-  ToneMappingMode,
-  type ArclineMeshDesc,
-  type GlowGlobeMeshDesc,
   Color,
   ColorMap,
   geodeticToVector3,
   degreeToRadian,
 } from "@navara/three";
-import { DefaultPlugin } from "@navara/three_default_plugin";
+import {
+  ToneMappingMode,
+  type ArclineMeshDesc,
+  type GlowGlobeMeshDesc,
+} from "@navara/three_default_descs";
+import { DefaultPlugin, type DefaultDescriptions } from "@navara/three_default_plugin";
 import type { FeatureCollection, MultiLineString } from "geojson";
 
 // Type definition for air traffic volume data
@@ -391,7 +391,7 @@ const constructData = async () => {
 // Main function
 async function run() {
   const plugin = new DefaultPlugin();
-  const view = new ThreeView({
+  const view = new ThreeView<DefaultDescriptions>({
     backgroundColor: new Color().setStyle("#0b0a0d"),
   });
   view.addPlugin(plugin);

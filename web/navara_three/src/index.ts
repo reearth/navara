@@ -1733,6 +1733,21 @@ export default class ThreeView<
   }
 
   /**
+   * Enables position-locked free-look. The camera stays at the target
+   * position while mouse drag rotates orientation in place. Use for
+   * first-person-view "look around" controls.
+   * @param enabled - Whether to enable free-look mode
+   * @param target - Target geodetic position the camera is locked to (lng/lat degrees, height meters)
+   */
+  cameraFreeLook(enabled: boolean, target?: LatLngHeight) {
+    const targetArray = target
+      ? new Float64Array([target.lng, target.lat, target.height])
+      : undefined;
+
+    this._core?.cameraFreeLook(enabled, targetArray);
+  }
+
+  /**
    * Samples the terrain height at a given geodetic position synchronously.
    * @param pos - Geodetic position (lat in radians, lng in radians; height is ignored)
    * @returns Terrain height in meters, or undefined if terrain data not loaded

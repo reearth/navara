@@ -82,7 +82,8 @@ import { Color } from "@navara/three";
 ### Basic Usage
 
 ```typescript
-import ThreeView, { SkyBoxMeshDesc, Color } from "@navara/three";
+import ThreeView, { Color } from "@navara/three";
+import { SkyBoxMeshDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
 await view.init();
@@ -96,7 +97,8 @@ const skyBox = view.addMesh<SkyBoxMeshDesc>({
 ### Custom Color Settings
 
 ```typescript
-import ThreeView, { SkyBoxMeshDesc, Color } from "@navara/three";
+import ThreeView, { Color } from "@navara/three";
+import { SkyBoxMeshDesc } from "@navara/three_default_descs";
 
 const view = new ThreeView();
 await view.init();

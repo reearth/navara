@@ -47,7 +47,7 @@ Navara は以下の 3D Tiles 仕様に対応しています。
 
 | マテリアル                                                               | 設定キー | 説明                  |
 | ------------------------------------------------------------------------ | -------- | --------------------- |
-| [ModelMaterial](../../../three/resource-layer-reference/model-material/) | `model`  | 3D モデルの外観を制御 |
+| [ModelMaterial](../../../three/resource-layer/model-material/) | `model`  | 3D モデルの外観を制御 |
 
 ## 使用例
 
@@ -179,4 +179,4 @@ Google Photorealistic 3D Tiles を使用する場合、[Google Maps Platform の
 
 ## 関連リソース
 
-- [ModelMaterial](../../../three/resource-layer-reference/model-material/) - モデルマテリアルの詳細設定
+- [ModelMaterial](../../../three/resource-layer/model-material/) - モデルマテリアルの詳細設定

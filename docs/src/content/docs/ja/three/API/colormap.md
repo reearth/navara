@@ -318,4 +318,4 @@ setColorMap("rdYlGn");
 
 - [Color クラス](../../../three/api-reference/color/) - 色を表現するクラス
 - [Globe クラス](../../../three/api-reference/globe/) - `elevationColormap` プロパティ
-- [ElevationHeatmapMaterial](../../../three/resource-layer-reference/elevation-heatmap-material/) - 標高ヒートマップマテリアル
+- [ElevationHeatmapMaterial](../../../three/resource-layer/elevation-heatmap-material/) - 標高ヒートマップマテリアル
