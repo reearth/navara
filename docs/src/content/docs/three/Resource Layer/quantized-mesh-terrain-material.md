@@ -5,7 +5,7 @@ sidebar:
   order: 41
 ---
 
-`QuantizedMeshTerrainMaterial` represents a material for rendering terrain from [quantized-mesh](https://github.com/CesiumGS/quantized-mesh) tile endpoints. Use it via the `quantizedMesh` key on a [Terrain Layer](../../../three/resource-layer-reference/terrain-layer/).
+`QuantizedMeshTerrainMaterial` represents a material for rendering terrain from [quantized-mesh](https://github.com/CesiumGS/quantized-mesh) tile endpoints. Use it via the `quantizedMesh` key on a [Terrain Layer](../../../three/resource-layer/terrain-layer/).
 
 For Cesium Ion assets, prefer the [CesiumIonPlugin](../../../three_plugins/cesiumionplugin/), which handles endpoint resolution and access tokens for you.
 
@@ -259,6 +259,6 @@ For Cesium Ion assets, prefer the [CesiumIonPlugin](../../../three_plugins/cesiu
 
 ## Related Resources
 
-- [Terrain Layer](../../../three/resource-layer-reference/terrain-layer/) - Terrain layer overview and usage
-- [RasterTerrainMaterial](../../../three/resource-layer-reference/raster-terrain-material/) - Material for raster PNG/WebP DEM terrain
+- [Terrain Layer](../../../three/resource-layer/terrain-layer/) - Terrain layer overview and usage
+- [RasterTerrainMaterial](../../../three/resource-layer/raster-terrain-material/) - Material for raster PNG/WebP DEM terrain
 - [CesiumIonPlugin](../../../three_plugins/cesiumionplugin/) - High-level plugin for Cesium Ion quantized-mesh assets

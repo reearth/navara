@@ -5,7 +5,7 @@ sidebar:
   order: 41
 ---
 
-`QuantizedMeshTerrainMaterial` は、[quantized-mesh](https://github.com/CesiumGS/quantized-mesh) タイルエンドポイントから地形をレンダリングするためのマテリアルです。[Terrain Layer](../../../three/resource-layer-reference/terrain-layer/) の `quantizedMesh` キーで指定して使用します。
+`QuantizedMeshTerrainMaterial` は、[quantized-mesh](https://github.com/CesiumGS/quantized-mesh) タイルエンドポイントから地形をレンダリングするためのマテリアルです。[Terrain Layer](../../../three/resource-layer/terrain-layer/) の `quantizedMesh` キーで指定して使用します。
 
 Cesium Ion のアセットを利用する場合は、エンドポイントの解決とアクセストークンの受け渡しを行ってくれる [CesiumIonPlugin](../../../three_plugins/cesiumionplugin/) の使用を推奨します。
 

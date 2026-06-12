@@ -194,7 +194,8 @@ const terrainLayer = view.addLayer({
     castShadow: true,
     receiveShadow: true,
     requestVertexNormals: true,
-    requestWaterMask: true,,
+    requestWaterMask: true,
+  },
 });
 ```
 
