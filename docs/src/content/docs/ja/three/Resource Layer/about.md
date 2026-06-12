@@ -109,7 +109,7 @@ data: {
 **設定キー:** `polyline`
 **対応レイヤー:** GeoJSON Layer, MVT Layer
 
-### [QuantizedMeshTerrainMaterial](../../../three/resource-layer-/quantized-mesh-terrain-material/)
+### [QuantizedMeshTerrainMaterial](../../../three/resource-layer/quantized-mesh-terrain-material/)
 
 **用途:** quantized-meshをレンダリングする
 **設定キー:** `quantizedMesh`
