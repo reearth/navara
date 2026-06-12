@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 /// Tiling scheme for a quadtree Globe.
 ///
 /// `WebMercator`: single root `(0,0,0)`, tile extents use the Mercator projection.
-/// `Geographic`: two roots `(0,0,0)` and `(0,1,0)`, tile extents are equal-degree
+/// `Geographic`: two roots `(0,0,0)` and `(1,0,0)`, tile extents are equal-degree
 /// (EPSG:4326, 2^(z+1) columns × 2^z rows).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub enum TilingScheme {
