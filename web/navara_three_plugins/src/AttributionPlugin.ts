@@ -315,7 +315,7 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
     close.className = "navara-attr-close";
     close.type = "button";
     close.textContent = "✕";
-    close.setAttribute("aria-label", "閉じる");
+    close.setAttribute("aria-label", "Close");
     close.addEventListener("click", () => this.setOpen(false));
     head.appendChild(title);
     head.appendChild(close);
@@ -331,7 +331,7 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
     toggle.type = "button";
     toggle.textContent = "ⓘ";
     toggle.setAttribute("aria-expanded", "false");
-    toggle.setAttribute("aria-label", "出典を表示");
+    toggle.setAttribute("aria-label", "Show attributions");
     toggle.addEventListener("click", () => this.setOpen(this.card?.hidden));
 
     dock.appendChild(card);
