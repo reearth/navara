@@ -109,7 +109,7 @@ For resource layers, you can specify the following materials depending on the da
 **Config key:** `polyline`
 **Supported layers:** GeoJSON Layer, MVT Layer
 
-### [QuantizedMeshTerrainMaterial](../../../three/resource-layer-reference/quantized-mesh-terrain-material/)
+### [QuantizedMeshTerrainMaterial](../../../three/resource-layer/quantized-mesh-terrain-material/)
 
 **Use case:** For rendering quantized-mesh terrain
 **Config key:** `quantizedMesh`
