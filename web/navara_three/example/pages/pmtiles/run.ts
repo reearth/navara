@@ -111,7 +111,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
 
   pane
     .addButton({
-      title: "reset camera",
+      title: "Firenze view",
     })
     .on("click", () => {
       view.setCamera({

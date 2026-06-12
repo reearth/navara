@@ -176,7 +176,12 @@ impl PmtilesSource {
                 .remove(&offset)
                 .expect("offset just collected");
             if let Some(bytes) = buf.remove_u8(&handle) {
-                let _ = self.archive.on_leaf_bytes(offset, &bytes);
+                // A malformed leaf will never parse on a refetch either; mark
+                // it failed so its tiles resolve to `Absent` instead of
+                // `resolve` returning `NeedLeaf` (and re-requesting) forever.
+                if self.archive.on_leaf_bytes(offset, &bytes).is_err() {
+                    self.archive.mark_leaf_failed(offset);
+                }
             }
             commands.entity(entity).despawn();
         }

@@ -44,6 +44,12 @@ mod tests {
         assert_eq!(tile_id(31, max, 0), 6_148_914_691_236_517_204);
     }
 
+    #[test]
+    #[should_panic(expected = "z <= 31")]
+    fn tile_id_rejects_zoom_past_31() {
+        let _ = tile_id(32, 0, 0);
+    }
+
     // ---- header ----
 
     #[test]
@@ -114,6 +120,14 @@ mod tests {
         assert_eq!(tile.offset, 3);
         assert_eq!(tile.length, 1);
         assert_eq!(tile.run_length, 1);
+    }
+
+    #[test]
+    fn directory_parse_rejects_hostile_entry_count() {
+        // A count the remaining bytes can't possibly hold (each entry needs at
+        // least 4 bytes) must fail before allocating, not OOM.
+        let huge_count = [0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x7f];
+        assert_eq!(Directory::parse(&huge_count), Err(PmtError::UnexpectedEof));
     }
 
     #[test]

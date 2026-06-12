@@ -51,6 +51,13 @@ impl Directory {
     pub fn parse(bytes: &[u8]) -> Result<Self, PmtError> {
         let mut cursor = bytes;
         let n = read_uvarint(&mut cursor)? as usize;
+        // The count is untrusted input. Every entry occupies at least four
+        // bytes (one per varint column), so a count the remaining buffer
+        // cannot possibly satisfy is malformed — reject it before allocating
+        // rather than letting a hostile count trigger a huge allocation.
+        if n > cursor.len() / 4 {
+            return Err(PmtError::UnexpectedEof);
+        }
         let mut entries = vec![DirEntry::default(); n];
 
         // Column 1: tile IDs, delta-encoded from the previous entry.

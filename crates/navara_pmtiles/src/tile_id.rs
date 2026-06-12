@@ -14,8 +14,15 @@ fn pyramid_base(z: u8) -> u64 {
 }
 
 /// Map `z/x/y` to its PMTiles tile ID.
+///
+/// # Panics
+/// Panics if `z > 31`; PMTiles tile IDs are only defined up to zoom 31.
 #[must_use]
 pub fn tile_id(z: u8, x: u32, y: u32) -> u64 {
+    // Without this, z >= 32 would panic on shift overflow in debug but
+    // silently return a wrong ID in release (masked shift); fail
+    // deterministically in both.
+    assert!(z <= 31, "PMTiles tile ids are only defined for z <= 31");
     if z == 0 {
         // 0/0/0 is tile ID 0; `xy2h` is not defined for order 0.
         return 0;
