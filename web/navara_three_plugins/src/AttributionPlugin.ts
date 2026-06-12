@@ -69,11 +69,6 @@ const STYLE_ELEMENT_ID = "navara-attribution-styles";
  */
 let styleRefCount = 0;
 
-/** Earth circumference at the equator (meters) and tile size (px) for the
- * web-mercator zoom approximation. */
-const EARTH_CIRCUMFERENCE_M = 40075016.686;
-const TILE_SIZE_PX = 256;
-
 const STYLE_TEXT = `
 .navara-attr-dock {
   position: fixed;
@@ -479,27 +474,14 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
   }
 
   /**
-   * Derive the current integer web-mercator zoom level from the camera height
-   * (provisional approximation — straight-down view, ignores pitch). Returns
-   * `undefined` when it can't be computed, in which case all bands are shown.
+   * Current integer Web Mercator zoom level. The engine computes the fractional
+   * zoom (altitude/FOV/viewport) in Rust via `camera.zoom`; floor it to a tile
+   * level for band matching. `undefined` (e.g. before the first frame) shows all
+   * bands.
    */
   private currentZoomLevel(): number | undefined {
-    if (!this.view) return undefined;
-    // `getCameraFOVY()` returns the vertical FOV in radians.
-    const { fovy } = this.view.camera;
-    const heightPx = this.view.screenSize.y;
-    if (fovy === undefined || heightPx <= 0) return undefined;
-
-    const { lat, height } = this.view.camera.positionGeographic;
-    if (height <= 0) return undefined;
-
-    const metersPerPixel = (2 * height * Math.tan(fovy / 2)) / heightPx;
-    if (metersPerPixel <= 0) return undefined;
-
-    const latRad = (lat * Math.PI) / 180;
-    const metersPerPixelZ0 =
-      (EARTH_CIRCUMFERENCE_M * Math.cos(latRad)) / TILE_SIZE_PX;
-    return Math.floor(Math.log2(metersPerPixelZ0 / metersPerPixel));
+    const z = this.view?.camera.zoom;
+    return z === undefined ? undefined : Math.floor(z);
   }
 
   /**

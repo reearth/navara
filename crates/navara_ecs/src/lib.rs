@@ -13,7 +13,9 @@ use navara_camera::{
     get_pitch, get_roll,
 };
 use navara_component::{Deleted, Rendered};
-use navara_core::{CRS, ElevationDecoder, LLE, LngLat, Radians, WGS84_64};
+use navara_core::{
+    CRS, ElevationDecoder, LLE, LngLat, Radians, WGS84_64, WGS84_A_64, camera_zoom_level,
+};
 use navara_data_requester::DataRequester;
 use navara_event::Events;
 use navara_feature_component::{
@@ -742,6 +744,40 @@ impl App {
         }
 
         None
+    }
+
+    /// Effective Web Mercator zoom level the camera is viewing the surface at,
+    /// derived from camera altitude, FOV and viewport (see
+    /// [`navara_core::camera_zoom_level`]).
+    pub fn get_zoom_level(&mut self) -> Option<FloatType> {
+        // Camera altitude (m) and latitude (rad).
+        let lle = {
+            let world = self.app.world_mut();
+            let mut query = world.query_filtered::<&Transform, With<CameraMarker>>();
+            let transform = query.iter(world).next()?;
+            CRS::Geocentric.to_lle(WGS84_64, transform.translation, 0.0)
+        };
+        // Vertical field of view (rad).
+        let fov_y = {
+            let world = self.app.world_mut();
+            let mut query = world.query_filtered::<&CameraFrustum, With<CameraMarker>>();
+            query.iter(world).next()?.fov_y
+        };
+        // Viewport height in CSS px (matches the 256px tile model).
+        let viewport_height = self.app.world_mut().get_resource::<Window>()?.raw_height();
+
+        let height = lle.height.val();
+        let lat = lle.lat.val();
+        if height <= 0.0 || viewport_height <= 0.0 {
+            return None;
+        }
+        Some(camera_zoom_level(
+            height,
+            fov_y,
+            viewport_height,
+            lat,
+            WGS84_A_64,
+        ))
     }
 
     pub fn rotate_around_axis(&mut self, axis: Option<Vec<FloatType>>, angle: FloatType) {
