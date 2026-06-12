@@ -66,11 +66,11 @@ impl Clone for VectorTile {
 
 impl VectorTile {
     pub fn new(coords: TileXYZ, max_height: f64, min_height: f64) -> Self {
-        let extent = coords.extent();
+        let extent = TilingScheme::WebMercator.tile_extent(coords);
 
         Self {
             coords,
-            extent: coords.extent(),
+            extent,
             aabb: Aabb::from_extent_f64(extent, min_height, max_height),
             bounding_region: Some(TileBoundingRegion::from_extent_f64(extent, WGS84_64)),
             rendered_at: 0,

@@ -140,7 +140,7 @@ impl TileBoundingRegion<FloatType> {
 #[cfg(test)]
 mod test {
     use approx::assert_abs_diff_eq;
-    use navara_core::{Angle, LLE, Meters, TileXYZ, WGS84_64, WGS84_A_32};
+    use navara_core::{Angle, LLE, Meters, TileXYZ, TilingScheme, WGS84_64, WGS84_A_32};
     use navara_math::{EPSILON1, EPSILON7};
     use navara_mock::camera::update_camera_transform;
 
@@ -149,7 +149,10 @@ mod test {
     #[test]
     fn get_correct_bounding_region_from_tile() {
         let tile_coords = TileXYZ { x: 0, y: 1, z: 1 };
-        let tbr = TileBoundingRegion::from_extent_f64(tile_coords.extent(), WGS84_64);
+        let tbr = TileBoundingRegion::from_extent_f64(
+            TilingScheme::WebMercator.tile_extent(tile_coords),
+            WGS84_64,
+        );
 
         // northeast_corner
         assert_abs_diff_eq!(tbr.northeast_corner.x.val(), 6378137., epsilon = EPSILON1);
@@ -193,7 +196,10 @@ mod test {
     #[test]
     fn get_correct_distance_to_camera() {
         let tile_coords = TileXYZ { x: 0, y: 1, z: 1 };
-        let tbr = TileBoundingRegion::from_extent_f64(tile_coords.extent(), WGS84_64);
+        let tbr = TileBoundingRegion::from_extent_f64(
+            TilingScheme::WebMercator.tile_extent(tile_coords),
+            WGS84_64,
+        );
 
         let (camera_pos, camera_lle) = update_camera_transform(WGS84_A_32 as f64 * 3.);
         let camera_lle = LLE {

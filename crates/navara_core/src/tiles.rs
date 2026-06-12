@@ -31,8 +31,8 @@ impl TilingScheme {
     /// Tile extent in lng/lat radians for the given tile coordinates.
     pub fn tile_extent(&self, coords: TileXYZ) -> Extent<FloatType, Radians> {
         match self {
-            TilingScheme::WebMercator => coords.extent(),
-            TilingScheme::Geographic { tms } => geographic_tile_extent_direct(coords, *tms),
+            TilingScheme::WebMercator => web_mercator_tile_extent(coords),
+            TilingScheme::Geographic { tms } => geographic_tile_extent(coords, *tms),
         }
     }
 
@@ -67,22 +67,43 @@ impl TilingScheme {
     }
 }
 
-/// Computes the EPSG:4326 tile extent directly from geographic tile coordinates.
+/// Computes the Web Mercator tile extent from tile coordinates.
+fn web_mercator_tile_extent(coords: TileXYZ) -> Extent<FloatType, Radians> {
+    let e1 = coords.north_west_world_pos();
+    let e2 = (TileXYZ {
+        x: coords.x + 1,
+        y: coords.y + 1,
+        z: coords.z,
+    })
+    .north_west_world_pos();
+
+    let p1 = web_mercator_world_pos_to_lnglat(e1.0, e1.1);
+    let p2 = web_mercator_world_pos_to_lnglat(e2.0, e2.1);
+    Extent::from_points(&[p1, p2])
+}
+
+/// Computes the EPSG:4326 tile extent from geographic tile coordinates.
 /// At level z: 2^(z+1) columns × 2^z rows, each tile is (180/2^z)° square.
-fn geographic_tile_extent_direct(coords: TileXYZ, tms: bool) -> Extent<FloatType, Radians> {
+fn geographic_tile_extent(coords: TileXYZ, tms: bool) -> Extent<FloatType, Radians> {
     let n_x = (1usize << (coords.z + 1)) as FloatType;
     let n_y = (1usize << coords.z) as FloatType;
 
-    let west_rad = (coords.x as FloatType * 360.0 / n_x - 180.0).to_radians();
-    let east_rad = ((coords.x as FloatType + 1.0) * 360.0 / n_x - 180.0).to_radians();
+    let x = coords.x as FloatType;
+    let y = coords.y as FloatType;
+
+    let tile_width_lon = 360.0 / n_x;
+    let tile_height_lat = 180.0 / n_y;
+
+    let west_rad = (x * tile_width_lon - 180.0).to_radians();
+    let east_rad = ((x + 1.0) * tile_width_lon - 180.0).to_radians();
 
     let (south_rad, north_rad) = if tms {
-        let s = (coords.y as FloatType * 180.0 / n_y - 90.0).to_radians();
-        let n = ((coords.y as FloatType + 1.0) * 180.0 / n_y - 90.0).to_radians();
+        let s = (y * tile_height_lat - 90.0).to_radians();
+        let n = ((y + 1.0) * tile_height_lat - 90.0).to_radians();
         (s, n)
     } else {
-        let n = (90.0 - coords.y as FloatType * 180.0 / n_y).to_radians();
-        let s = (90.0 - (coords.y as FloatType + 1.0) * 180.0 / n_y).to_radians();
+        let n = (90.0 - y * tile_height_lat).to_radians();
+        let s = (90.0 - (y + 1.0) * tile_height_lat).to_radians();
         (s, n)
     };
 
@@ -188,21 +209,6 @@ impl TileXYZ {
         let n = self.n() as FloatType;
         (self.x as FloatType / n, self.y as FloatType / n)
     }
-
-    /// Returns the normalized world position of the north-east corner of the tile.
-    pub fn extent(self) -> Extent<FloatType, Radians> {
-        let e1 = self.north_west_world_pos();
-        let e2 = (TileXYZ {
-            x: self.x + 1,
-            y: self.y + 1,
-            z: self.z,
-        })
-        .north_west_world_pos();
-
-        let p1 = web_mercator_world_pos_to_lnglat(e1.0, e1.1);
-        let p2 = web_mercator_world_pos_to_lnglat(e2.0, e2.1);
-        Extent::from_points(&[p1, p2])
-    }
 }
 
 /// Converts a normalized world position in Web mercator to a longitude and latitude.
@@ -279,40 +285,6 @@ pub fn tile_url(s: &str, xyz: &TileXYZ, tms: bool) -> String {
     s.replace("{x}", &xyz.x.to_string())
         .replace("{y}", &y.to_string())
         .replace("{z}", &xyz.z.to_string())
-}
-
-/// Build a tile URL for a server that uses EPSG:4326 geographic tiling.
-///
-/// Geographic tiling has 2^(z+1) tiles wide × 2^z tiles tall at server zoom z.
-/// At server zoom z_s = wm_z - 1, geographic tile width equals WM tile width exactly
-/// (180/2^(z_s) = 360/2^wm_z), giving a 1:1 mapping: geo_x == wm_x.
-/// `tms` controls whether y=0 is at the south (TMS) or north.
-pub fn tile_url_geographic(s: &str, xyz: &TileXYZ, tms: bool) -> String {
-    let wm_z = xyz.z;
-    // Use server zoom z_s = wm_z - 1 so geographic tile width matches WM tile width.
-    // At z_s, there are 2^(z_s+1) = 2^wm_z geographic tiles wide → geo_x == wm_x.
-    let z_s = wm_z.saturating_sub(1);
-    let n_geo = (1usize << z_s) as f64; // 2^z_s
-
-    // geo_x == wm_x (exact 1:1 since geographic tile width = WM tile width at z_s)
-    let geo_x = xyz.x;
-
-    // Compute center latitude of the WM tile to find the geographic row
-    let n_wm = (1usize << wm_z) as f64;
-    let mercator_n = std::f64::consts::PI * (1.0 - 2.0 * (xyz.y as f64 + 0.5) / n_wm);
-    let lat_center = mercator_n.sinh().atan().to_degrees();
-
-    let geo_y = if tms {
-        // TMS: y=0 at south
-        ((lat_center + 90.0) * n_geo / 180.0) as usize
-    } else {
-        // y=0 at north
-        ((90.0 - lat_center) * n_geo / 180.0) as usize
-    };
-
-    s.replace("{x}", &geo_x.to_string())
-        .replace("{y}", &geo_y.to_string())
-        .replace("{z}", &z_s.to_string())
 }
 
 pub fn is_tile_url(s: &str) -> bool {
@@ -413,7 +385,7 @@ mod tests {
         let min_lat = 2.0 * (((PI - 2.0 * PI * 1.0).exp().atan()) - PI / 4.0);
 
         let xyz = TileXYZ { x: 0, y: 0, z: 0 };
-        let extent = xyz.extent();
+        let extent = TilingScheme::WebMercator.tile_extent(xyz);
         assert_eq!(extent.west, Rad::new(-PI), "west");
         assert_eq!(extent.east, Rad::new(PI), "east");
         assert_eq!(extent.north, Rad::new(max_lat), "north");
@@ -421,7 +393,7 @@ mod tests {
     }
 
     #[test]
-    fn test_geographic_tile_extent_direct_z0() {
+    fn test_geographic_tile_extent_z0() {
         use std::f64::consts::PI;
         // z=0: 2 columns × 1 row, each tile is 180°×180°
         let west =
@@ -444,7 +416,7 @@ mod tests {
     }
 
     #[test]
-    fn test_geographic_tile_extent_direct_contiguous() {
+    fn test_geographic_tile_extent_contiguous() {
         // Adjacent tiles at z=6 must share boundaries exactly
         let scheme = TilingScheme::Geographic { tms: true };
         let a = scheme.tile_extent(TileXYZ { x: 56, y: 45, z: 6 });
