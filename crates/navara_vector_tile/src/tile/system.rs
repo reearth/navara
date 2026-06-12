@@ -110,6 +110,7 @@ pub fn update_tiles(
             tc.is_updated_in_this_frame = true;
             tc.last_rendered_frame = frame.rendered_frame();
 
+            // TODO: Use `root_handles` to cover geographic tiles.
             let zero_tile = match qt.qt.zero() {
                 Some(z) => z,
                 None => {

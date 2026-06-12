@@ -25,6 +25,8 @@ use super::tile_bounding_region::TileBoundingRegion;
 // Note Tile have to keep light size for caching efficiently.
 // So if you want to store large data in this struct, use [`BufferStore`].
 // And don't forget to destroy the stored data in [`Tile::destroy method`].
+// TODO: Rename this struct like `TerrainBasedTile` or `GlobeTile`,
+//      since this struct mostly manage both the terrain and raster tiles.
 #[derive(Debug)]
 pub struct RasterTile {
     pub coords: TileXYZ,
@@ -674,13 +676,35 @@ pub fn compute_terrain_height_by_tile_handle(
         .unwrap_or(0.0)
 }
 
+/// Collect handles of all root tiles based on the tiling scheme carried by the
+/// `(0, 0, 0)` tile. For WebMercator this is a single handle; for Geographic it
+/// is two — `(0, 0, 0)` and `(1, 0, 0)`.
+pub fn root_handles(qt: &RasterTileQuadtree) -> Vec<TileHandle> {
+    let Some(zero_handle) = qt.qt.zero().map(|l| l.handle()) else {
+        return vec![];
+    };
+    let Some(zero_tile) = qt.qt.get(zero_handle) else {
+        return vec![];
+    };
+    zero_tile
+        .tiling_scheme
+        .root_tiles()
+        .into_iter()
+        .filter_map(|c| qt.qt.leaf((c.x, c.y, c.z)).map(|l| l.handle()))
+        .collect()
+}
+
 /// Find a child that the tile contains.
 fn find_contained_child(
     qt: &RasterTileQuadtree,
     contain: &dyn Fn(&RasterTile) -> bool,
 ) -> Option<TileHandle> {
-    let handle = qt.qt.zero().map(|l| l.handle());
-    traverse_contained_child(qt, handle.and_then(|h| qt.qt.get(h)), handle, contain)
+    for root in root_handles(qt) {
+        if let Some(v) = traverse_contained_child(qt, qt.qt.get(root), Some(root), contain) {
+            return Some(v);
+        }
+    }
+    None
 }
 
 /// Find a child that the tile contains.
@@ -689,14 +713,15 @@ fn find_contained_children(
     contain: &dyn Fn(&RasterTile) -> bool,
 ) -> Vec<TileHandle> {
     let mut result = vec![];
-    let handle = qt.qt.zero().map(|l| l.handle());
-    traverse_contained_children(
-        qt,
-        handle.and_then(|h| qt.qt.get(h)),
-        handle,
-        contain,
-        &mut result,
-    );
+    for root in root_handles(qt) {
+        let previous_len = result.len();
+        if let Some(v) =
+            traverse_contained_children(qt, qt.qt.get(root), Some(root), contain, &mut result)
+            && previous_len == result.len()
+        {
+            result.push(v);
+        }
+    }
     result
 }
 
@@ -980,6 +1005,75 @@ mod test {
 
         let leaves = collect_terrain_leaves(&qt);
         assert_eq!(leaves.len(), 2);
+    }
+
+    /// Initialize a leaf with the Geographic tiling scheme so its extent and
+    /// children match EPSG:4326 layout.
+    fn setup_geographic_tile(qt: &mut RasterTileQuadtree, coords: Coords<usize>) {
+        let scheme = TilingScheme::Geographic { tms: true };
+        let children = qt.qt.initialize_children(coords, &|v| {
+            RasterTile::new_with_scheme(
+                TileXYZ {
+                    x: v.0,
+                    y: v.1,
+                    z: v.2,
+                },
+                0.,
+                0.,
+                scheme.clone(),
+            )
+        });
+        let tile = qt.qt.get_mut(qt.qt.leaf(coords).unwrap().handle()).unwrap();
+        tile.children = children.unwrap();
+    }
+
+    /// Geographic has two roots — `(0,0,0)` covers the western hemisphere and
+    /// `(1,0,0)` covers the eastern. Both find helpers must traverse both.
+    #[test]
+    fn find_helpers_traverse_both_geographic_roots() {
+        use super::collect_terrain_leaves;
+
+        let scheme = TilingScheme::Geographic { tms: true };
+        let mut qt = RasterTileQuadtree::new_with_linear_qt();
+
+        for root in scheme.root_tiles() {
+            qt.qt.initialize_leaf((root.x, root.y, root.z), &|v| {
+                RasterTile::new_with_scheme(
+                    TileXYZ {
+                        x: v.0,
+                        y: v.1,
+                        z: v.2,
+                    },
+                    0.,
+                    0.,
+                    TilingScheme::Geographic { tms: true },
+                )
+            });
+        }
+
+        setup_geographic_tile(&mut qt, (0, 0, 0)); // west root children
+        setup_geographic_tile(&mut qt, (1, 0, 0)); // east root children
+
+        // Mark one tile under each root as ready — collect_terrain_leaves uses
+        // find_contained_children internally and must see both.
+        mark_tile_ready(&mut qt, (0, 0, 1));
+        mark_tile_ready(&mut qt, (2, 0, 1));
+
+        let leaves = collect_terrain_leaves(&qt);
+        assert_eq!(leaves.len(), 2, "should collect tiles from both roots");
+
+        // find_contained_child for a point inside (2,0,1) — under the east
+        // root — must descend into the (1,0,0) subtree, not give up because
+        // the west root (0,0,0) misses. At z=1 with tms=true, (2,0,1) covers
+        // lng 0°..90°, lat -90°..0°.
+        let east_handle = find_contained_child(&qt, &|t| {
+            t.extent.contains(&LngLat {
+                lng: Angle::new(1.0), // ~57°E
+                lat: Angle::new(-0.5),
+            }) && t.cached_mesh_handle.is_some()
+        });
+        let east_tile = qt.qt.get(east_handle.unwrap()).unwrap();
+        assert_eq!(east_tile.coords, TileXYZ { x: 2, y: 0, z: 1 });
     }
 }
 
