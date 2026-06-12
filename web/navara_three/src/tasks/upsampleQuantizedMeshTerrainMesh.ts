@@ -28,11 +28,16 @@ export function upsampleQuantizedMeshTerrainMesh(
       tms,
     ],
     {
+    {
       transfer: [
         upsamplableGeometryLike.uvs.buffer,
         upsamplableGeometryLike.heights.buffer,
         upsamplableGeometryLike.indices.buffer,
+        ...(upsamplableGeometryLike.normals
+          ? [upsamplableGeometryLike.normals.buffer]
+          : []),
       ],
+    }
     },
   );
 }
