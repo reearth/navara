@@ -115,12 +115,11 @@ export function safeHref(href: string): string | undefined {
  * `rel="noopener noreferrer"`.
  */
 export function appendSanitizedHtml(target: Node, html: string): void {
-  const doc = new DOMParser().parseFromString(
-    `<span>${html}</span>`,
-    "text/html",
-  );
-  const root = doc.body.firstChild;
-  if (root) appendSanitizedChildren(target, root);
+  // Parse without a wrapper element: a wrapper would be closed early by a
+  // stray `</span>` in the input, dropping the nodes parsed after it (and thus
+  // silently omitting credits). Sanitizing the whole body keeps every node.
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  appendSanitizedChildren(target, doc.body);
 }
 
 function appendSanitizedChildren(target: Node, source: Node): void {

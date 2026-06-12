@@ -108,6 +108,13 @@ describe("appendSanitizedHtml", () => {
     expect(el.textContent).toBe("credit");
   });
 
+  it("keeps all nodes even when the input injects a closing tag", () => {
+    const el = render('A</span><a href="https://x.test">B</a>');
+    expect(el.textContent).toContain("A");
+    expect(el.querySelector("a")?.textContent).toBe("B");
+    expect(el.querySelector("a")?.getAttribute("href")).toBe("https://x.test");
+  });
+
   it("drops <script> elements (keeps only their text, never executes)", () => {
     const el = render("a<script>alert(1)</script>b");
     expect(el.querySelector("script")).toBeNull();

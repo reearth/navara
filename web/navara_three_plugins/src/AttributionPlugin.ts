@@ -545,14 +545,20 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
     this.visibleFeatures.clear();
 
     for (const layer of this.layers) {
+      // Track this layer's feature IDs so they can be purged on `deleted`,
+      // which fires once for the layer without a `featureRemoved` per feature.
+      const layerFeatures = new Set<bigint>();
+
       const onCreated = ({ featureSetId, credit }: FeatureCreatedParams) => {
         if (credit) this.dynamicCredits.set(featureSetId, credit);
         this.visibleFeatures.add(featureSetId);
+        layerFeatures.add(featureSetId);
         this.refreshDynamicCredits();
       };
       const onRemoved = ({ featureSetId }: FeatureRemovedParams) => {
         this.dynamicCredits.delete(featureSetId);
         this.visibleFeatures.delete(featureSetId);
+        layerFeatures.delete(featureSetId);
         this.refreshDynamicCredits();
       };
       const onVisibility = ({
@@ -563,14 +569,24 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
         else this.visibleFeatures.delete(featureSetId);
         this.refreshDynamicCredits();
       };
+      const onDeleted = () => {
+        for (const id of layerFeatures) {
+          this.dynamicCredits.delete(id);
+          this.visibleFeatures.delete(id);
+        }
+        layerFeatures.clear();
+        this.refreshDynamicCredits();
+      };
 
       layer.on("featureCreated", onCreated);
       layer.on("featureRemoved", onRemoved);
       layer.on("featureVisibilityChanged", onVisibility);
+      layer.on("deleted", onDeleted);
       this.layerCleanups.push(() => {
         layer.off("featureCreated", onCreated);
         layer.off("featureRemoved", onRemoved);
         layer.off("featureVisibilityChanged", onVisibility);
+        layer.off("deleted", onDeleted);
       });
     }
   }
