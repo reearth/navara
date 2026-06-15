@@ -9,7 +9,8 @@ import type { AttributionItem } from "@navara/three_plugins";
  * camera zoom (Phase 3); until then all bands are shown together.
  *
  * `children[].title` may contain partial `<a>` links — they are sanitized and
- * rendered as anchors by the plugin.
+ * rendered as anchors by the plugin. Bare `http(s)` URLs are auto-linked too,
+ * so an official notice can be pasted verbatim without hand-wrapping its URL.
  */
 export const GSI_ATTRIBUTION: AttributionItem = {
   attribution: "国土地理院",
@@ -21,16 +22,19 @@ export const GSI_ATTRIBUTION: AttributionItem = {
     // z9-13: 全国ランドサットモザイク画像
     { title: "全国ランドサットモザイク画像", minZoom: 9, maxZoom: 13 },
     {
+      // Pasted verbatim from the GSI tile list (note: no spaces after the
+      // commas inside the first parens — do not "tidy" them).
       title:
-        "データソース：Landsat8画像（GSI, TSIC, GEO Grid/AIST）, Landsat8画像（courtesy of the U.S. Geological Survey）, 海底地形（GEBCO）",
+        "データソース：Landsat8画像（GSI,TSIC,GEO Grid/AIST）, Landsat8画像（courtesy of the U.S. Geological Survey）, 海底地形（GEBCO）",
       minZoom: 9,
       maxZoom: 13,
     },
     // z2-8: 世界衛星モザイク画像
     { title: "世界衛星モザイク画像", minZoom: 2, maxZoom: 8 },
     {
+      // Pasted verbatim from the GSI tile list; the bare URL is auto-linked.
       title:
-        'Images on 世界衛星モザイク画像 obtained from site <a href="https://lpdaac.usgs.gov/data_access">https://lpdaac.usgs.gov/data_access</a> maintained by the NASA Land Processes Distributed Active Archive Center (LP DAAC), USGS/Earth Resources Observation and Science (EROS) Center, Sioux Falls, South Dakota, (Year). Source of image data product.',
+        "Images on 世界衛星モザイク画像 obtained from site https://lpdaac.usgs.gov/data_access maintained by the NASA Land Processes Distributed Active Archive Center (LP DAAC), USGS/Earth Resources Observation and Science (EROS) Center, Sioux Falls, South Dakota, (Year). Source of image data product.",
       minZoom: 2,
       maxZoom: 8,
     },
@@ -53,7 +57,7 @@ export const GSI_ATTRIBUTION: AttributionItem = {
     },
     {
       title:
-        'The bathymetric contours are derived from those contained within the GEBCO Digital Atlas, published by the BODC on behalf of IOC and IHO (2003) (<a href="https://www.gebco.net">https://www.gebco.net</a>) 海上保安庁許可第292502号（水路業務法第25条に基づく類似刊行物）',
+        "The bathymetric contours are derived from those contained within the GEBCO Digital Atlas, published by the BODC on behalf of IOC and IHO (2003) (https://www.gebco.net) 海上保安庁許可第292502号（水路業務法第25条に基づく類似刊行物）",
       minZoom: 5,
       maxZoom: 8,
     },

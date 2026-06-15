@@ -108,12 +108,14 @@ type AttributionItem = AttributionSource | AttributionHtml;
 
 ### AttributionSource
 
-| Property      | Type                 | Description                                                            |
-| ------------- | -------------------- | ---------------------------------------------------------------------- |
-| `attribution` | `string`             | Data source name shown at the top level                                |
-| `url`         | `string`             | Optional link for the source name                                      |
-| `logo`        | `string`             | Optional logo image URL, shown in the always-visible bottom-left frame |
-| `children`    | `AttributionChild[]` | Optional credits shown only at their zoom range                        |
+| Property      | Type                 | Description                                                                       |
+| ------------- | -------------------- | --------------------------------------------------------------------------------- |
+| `attribution` | `string`             | Data source name shown at the top level                                           |
+| `url`         | `string`             | Optional link for the source name                                                 |
+| `logo`        | `string`             | Optional logo image URL, shown in the always-visible bottom-left frame            |
+| `children`    | `AttributionChild[]` | Optional credits shown only at their zoom range                                   |
+| `creditLayerId` | `string`           | Optional `layer.id`; per-feature credits from that layer are nested under this source |
+| `collapsible` | `boolean`            | When `true`, the source's sub-credits become a foldable group (starts expanded). Defaults to `false` |
 
 ### AttributionHtml
 
@@ -134,7 +136,8 @@ type AttributionItem = AttributionSource | AttributionHtml;
 - **Zoom ranges are for raster sources you declare yourself.** Tiles like GSI or OpenStreetMap don't carry their own credits, so describe their zoom-dependent credits with `children`.
 - **Per-layer credits come from the tiles.** Only sources that embed a copyright (such as Google Photorealistic 3D Tiles) produce credits through `layers`; for everything else, use `children`.
 - **Mandated logos go in the logo frame, not the popover.** Use `logo` only for marks you are required to keep visible at all times; ordinary sources are best shown as text.
-- **Links are scheme-checked.** Credit links (`url`, and `<a>` in HTML/`title`) are kept only for safe schemes (`http` / `https` / `mailto`, or relative URLs); anything else (e.g. `javascript:`) is dropped to plain text.
+- **Links are scheme-checked.** Every credit link — `url`, inline `<a>` in `attributionHtml` / `title`, and `<a>` embedded in a layer's per-feature credits — is kept only for safe schemes (`http` / `https` / `mailto`, or relative URLs); anything else (e.g. `javascript:`) is dropped to plain text. This makes it safe to render links even from untrusted tile metadata.
+- **Bare URLs are auto-linked.** A plain `http(s)` URL inside credit text is turned into a clickable link automatically, so you can paste an official notice verbatim without hand-wrapping the URL in `<a>` — the wording (and the URL) stays unchanged.
 
 ## Related Resources
 

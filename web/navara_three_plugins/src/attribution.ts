@@ -34,6 +34,21 @@ export type AttributionSource = {
   logo?: string;
   /** Zoom-banded child credits, filtered by current camera zoom. */
   children?: AttributionChild[];
+  /**
+   * Optional id (`layer.id`) of the tracked layer whose per-feature credits are
+   * nested under this source (instead of listed flat). Named `creditLayerId`
+   * rather than `layerId` because "layer" alone is ambiguous in this project.
+   * A plain string (not a `Layer`) keeps `attribution.ts` engine-free.
+   */
+  creditLayerId?: string;
+  /**
+   * When `true`, this source's sub-credits (zoom-banded children and dynamic
+   * per-layer credits) are wrapped in a collapsible group that users can fold
+   * to tidy long credit lists. The group starts **expanded**. Defaults to
+   * `false` (always-expanded flat list) — leave unset for sources whose license
+   * requires the attribution to stay visible.
+   */
+  collapsible?: boolean;
 };
 
 /** A raw HTML credit with partial links, rendered as-is (after sanitization). */
@@ -56,19 +71,66 @@ export function isAttributionHtml(
  * Aggregate `;`-separated credit strings (e.g. a 3D-tile's `asset.copyright`)
  * into a deduplicated list, ordered by frequency (desc) with an alphabetical
  * tie-break for stable, flicker-free ordering across updates.
+ *
+ * The `;` split is **HTML-aware** (see {@link splitCredits}): a `;` inside an
+ * `<a href>` or an HTML entity is never treated as a delimiter, so attribution
+ * URLs and links are preserved verbatim — a license notice must not be altered.
  */
 export function aggregateCredits(creditStrings: Iterable<string>): string[] {
   const counts = new Map<string, number>();
   for (const raw of creditStrings) {
-    for (const part of raw.split(";")) {
-      const credit = part.trim();
-      if (!credit) continue;
+    for (const credit of splitCredits(raw)) {
       counts.set(credit, (counts.get(credit) ?? 0) + 1);
     }
   }
   return Array.from(counts.entries())
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
     .map(([credit]) => credit);
+}
+
+/** Escape text so it round-trips faithfully back through HTML parsing. */
+function escapeHtmlText(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+/**
+ * Split a raw credit on the `;` delimiter (the glTF / Cesium `asset.copyright`
+ * convention) **without breaking HTML**. The string is parsed first, so a `;`
+ * inside an `<a href>` or an HTML entity is not a delimiter and links / URLs
+ * stay intact. Each returned segment is a trimmed HTML string (empties
+ * dropped); plain-text segments are escaped so they survive re-parsing.
+ *
+ * Note: a literal `;` in plain (non-HTML) text is still a delimiter — the
+ * convention can't represent a credit that itself contains an unescaped `;`.
+ */
+function splitCredits(raw: string): string[] {
+  const doc = new DOMParser().parseFromString(raw, "text/html");
+  const segments: string[] = [];
+  let current = "";
+  const flush = (): void => {
+    const trimmed = current.trim();
+    if (trimmed) segments.push(trimmed);
+    current = "";
+  };
+  doc.body.childNodes.forEach((node) => {
+    if (node instanceof Text) {
+      const parts = (node.textContent ?? "").split(";");
+      parts.forEach((part, i) => {
+        if (i > 0) flush();
+        current += escapeHtmlText(part);
+      });
+      return;
+    }
+    if (node instanceof Element) {
+      // Keep elements (notably `<a>`) atomic — never split inside them.
+      current += node.outerHTML;
+    }
+  });
+  flush();
+  return segments;
 }
 
 /**
@@ -122,10 +184,16 @@ export function appendSanitizedHtml(target: Node, html: string): void {
   appendSanitizedChildren(target, doc.body);
 }
 
-function appendSanitizedChildren(target: Node, source: Node): void {
+function appendSanitizedChildren(
+  target: Node,
+  source: Node,
+  autolink = true,
+): void {
   source.childNodes.forEach((node) => {
     if (node instanceof Text) {
-      target.appendChild(document.createTextNode(node.textContent ?? ""));
+      // Inside an existing `<a>`, emit plain text — never nest a link.
+      if (autolink) appendTextWithLinks(target, node.textContent ?? "");
+      else target.appendChild(document.createTextNode(node.textContent ?? ""));
       return;
     }
     if (node instanceof HTMLAnchorElement) {
@@ -133,20 +201,59 @@ function appendSanitizedChildren(target: Node, source: Node): void {
       const href = raw ? safeHref(raw) : undefined;
       if (!href) {
         // Unsafe / missing href: drop the link, keep its text.
-        appendSanitizedChildren(target, node);
+        appendSanitizedChildren(target, node, autolink);
         return;
       }
       const anchor = document.createElement("a");
       anchor.href = href;
       anchor.target = "_blank";
       anchor.rel = "noopener noreferrer";
-      appendSanitizedChildren(anchor, node);
+      appendSanitizedChildren(anchor, node, false);
       target.appendChild(anchor);
       return;
     }
     if (node instanceof Element) {
       // Drop the tag, keep its sanitized contents.
-      appendSanitizedChildren(target, node);
+      appendSanitizedChildren(target, node, autolink);
     }
   });
+}
+
+/** Matches an explicit http(s) URL, used to auto-link bare URLs in credit text. */
+const BARE_URL_PATTERN = /https?:\/\/[^\s]+/g;
+/** Trailing punctuation kept outside an auto-linked URL (e.g. a closing paren). */
+const TRAILING_PUNCTUATION = /[.,;:!?)\]}'"]+$/;
+
+/**
+ * Append `text` to `target`, turning bare http(s) URLs into links. This lets an
+ * attribution be pasted verbatim (no hand-inserted `<a>`, which would itself
+ * edit the notice) while its URL stays both faithful and clickable: the URL
+ * text is preserved exactly and only trailing sentence punctuation is left out.
+ */
+function appendTextWithLinks(target: Node, text: string): void {
+  let lastIndex = 0;
+  for (const match of text.matchAll(BARE_URL_PATTERN)) {
+    const start = match.index ?? 0;
+    let url = match[0];
+    const trailing = url.match(TRAILING_PUNCTUATION);
+    if (trailing) url = url.slice(0, url.length - trailing[0].length);
+    if (start > lastIndex) {
+      target.appendChild(document.createTextNode(text.slice(lastIndex, start)));
+    }
+    const href = safeHref(url);
+    if (href) {
+      const anchor = document.createElement("a");
+      anchor.href = href;
+      anchor.target = "_blank";
+      anchor.rel = "noopener noreferrer";
+      anchor.textContent = url;
+      target.appendChild(anchor);
+    } else {
+      target.appendChild(document.createTextNode(url));
+    }
+    lastIndex = start + url.length;
+  }
+  if (lastIndex < text.length) {
+    target.appendChild(document.createTextNode(text.slice(lastIndex)));
+  }
 }

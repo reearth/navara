@@ -43,6 +43,16 @@ describe("aggregateCredits", () => {
   it("returns an empty list when there are no credits", () => {
     expect(aggregateCredits([])).toEqual([]);
   });
+
+  it("does not split a ';' inside an <a> href (URL preserved verbatim)", () => {
+    expect(
+      aggregateCredits(['<a href="https://x.com?a=1;b=2">Map</a>;Other']),
+    ).toEqual(['<a href="https://x.com?a=1;b=2">Map</a>', "Other"]);
+  });
+
+  it("does not split a ';' that terminates an HTML entity", () => {
+    expect(aggregateCredits(["AT&amp;T;Foo"])).toEqual(["AT&amp;T", "Foo"]);
+  });
 });
 
 describe("isAttributionHtml", () => {
@@ -131,5 +141,31 @@ describe("appendSanitizedHtml", () => {
     expect(el.querySelector("b")).toBeNull();
     expect(el.querySelector("a")?.getAttribute("href")).toBe("https://x.test");
     expect(el.textContent).toBe("bold link");
+  });
+
+  it("auto-links a bare http(s) URL, preserving the text verbatim", () => {
+    const el = render("see https://lpdaac.usgs.gov/data_access maintained by");
+    const anchor = el.querySelector("a");
+    expect(anchor?.getAttribute("href")).toBe(
+      "https://lpdaac.usgs.gov/data_access",
+    );
+    expect(anchor?.textContent).toBe("https://lpdaac.usgs.gov/data_access");
+    expect(anchor?.rel).toBe("noopener noreferrer");
+    expect(el.textContent).toBe(
+      "see https://lpdaac.usgs.gov/data_access maintained by",
+    );
+  });
+
+  it("keeps trailing punctuation outside an auto-linked URL", () => {
+    const el = render("(https://www.gebco.net) 海上保安庁");
+    expect(el.querySelector("a")?.textContent).toBe("https://www.gebco.net");
+    expect(el.textContent).toBe("(https://www.gebco.net) 海上保安庁");
+  });
+
+  it("does not nest a link when a bare URL sits inside an <a>", () => {
+    const el = render('<a href="https://x.test">https://y.test</a>');
+    expect(el.querySelectorAll("a")).toHaveLength(1);
+    expect(el.querySelector("a")?.getAttribute("href")).toBe("https://x.test");
+    expect(el.querySelector("a")?.textContent).toBe("https://y.test");
   });
 });

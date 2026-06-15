@@ -56,6 +56,7 @@ import {
   matchesZoom,
   safeHref,
   type AttributionItem,
+  type AttributionSource,
 } from "./attribution";
 
 type View = ThreeView<DefaultDescriptions>;
@@ -186,6 +187,18 @@ const STYLE_TEXT = `
 .navara-attr-card a:hover {
   text-decoration: underline;
 }
+.navara-attr-fold {
+  margin: 5px 0 0 13px;
+}
+.navara-attr-fold > summary {
+  cursor: pointer;
+  font-size: 12px;
+  color: rgba(27, 31, 36, 0.64);
+  user-select: none;
+}
+.navara-attr-fold > .navara-attr-related {
+  margin-top: 5px;
+}
 `;
 
 /**
@@ -211,11 +224,16 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
   /** Last computed integer zoom level. Used to skip no-op re-renders. */
   private lastZoomLevel?: number;
 
-  /** Per-feature credits tracked from layers (Phase 4). */
-  private dynamicCredits = new Map<bigint, string>();
-  private visibleFeatures = new Set<bigint>();
-  private dynamicItems: HTMLElement[] = [];
+  /** Per-layer dynamic credits (Phase 4), keyed by `layer.id`. */
+  private layerCredits = new Map<
+    string,
+    { credits: Map<bigint, string>; visible: Set<bigint> }
+  >();
   private layerCleanups: (() => void)[] = [];
+  /** Collapsible-group open state, keyed per source (survives re-renders). */
+  private foldOpen = new Map<string, boolean>();
+  /** A render is pending because content changed while the popover was closed. */
+  private dirty = false;
 
   private boundKeydown: (event: KeyboardEvent) => void;
   private boundPreRender: () => void;
@@ -273,7 +291,7 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
     this.lastZoomLevel = this.currentZoomLevel();
     this.populateList();
     this.populateLogos();
-    this.refreshDynamicCredits();
+    this.dirty = false;
   }
 
   /** Create the dock DOM and inject (or reuse) the shared styles. */
@@ -363,19 +381,29 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
     return { li, text };
   }
 
-  /** Rebuild the static list contents from `this.items`. */
+  /**
+   * Rebuild the list. Each source shows its sub-credits — zoom-filtered static
+   * `children` plus any tracked layer's dynamic credits — in one list, always
+   * expanded by default. A source marked `collapsible` wraps that list in a
+   * foldable group (starts expanded). Layers whose id no source declared via
+   * `creditLayerId` fall back to flat top-level credits.
+   */
   private populateList(): void {
     if (!this.listEl) return;
     this.listEl.replaceChildren();
+    const matchedLayerIds = new Set<string>();
 
     for (const item of this.items) {
       const { li, text } = this.createItemShell();
 
-      const url = isAttributionHtml(item) ? undefined : item.url;
-      const href = url ? safeHref(url) : undefined;
       if (isAttributionHtml(item)) {
         appendSanitizedHtml(text, item.attributionHtml);
-      } else if (href) {
+        this.listEl.appendChild(li);
+        continue;
+      }
+
+      const href = item.url ? safeHref(item.url) : undefined;
+      if (href) {
         const anchor = document.createElement("a");
         anchor.href = href;
         anchor.target = "_blank";
@@ -386,47 +414,95 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
         text.textContent = item.attribution;
       }
 
-      if (!isAttributionHtml(item) && item.children) {
-        const visible = item.children.filter((child) =>
-          matchesZoom(child, this.lastZoomLevel),
-        );
-        if (visible.length > 0) {
-          const sub = document.createElement("ul");
-          sub.className = "navara-attr-related";
-          for (const child of visible) {
-            const childLi = document.createElement("li");
-            appendSanitizedHtml(childLi, child.title);
-            sub.appendChild(childLi);
-          }
-          li.appendChild(sub);
+      // Collect this source's sub-credits into one list: static zoom-banded
+      // children followed by dynamic per-layer credits. Both go through the
+      // sanitizer so embedded `<a>` links stay clickable — it allows only
+      // safe-scheme anchors and drops everything else (incl. untrusted tile
+      // metadata's scripts/handlers) to text, so it is safe for both sources.
+      const sub = document.createElement("ul");
+      sub.className = "navara-attr-related";
+      if (item.children) {
+        for (const child of item.children) {
+          if (!matchesZoom(child, this.lastZoomLevel)) continue;
+          const childLi = document.createElement("li");
+          appendSanitizedHtml(childLi, child.title);
+          sub.appendChild(childLi);
         }
+      }
+      if (item.creditLayerId) {
+        matchedLayerIds.add(item.creditLayerId);
+        for (const credit of this.layerCreditStrings(item.creditLayerId)) {
+          const creditLi = document.createElement("li");
+          appendSanitizedHtml(creditLi, credit);
+          sub.appendChild(creditLi);
+        }
+      }
+
+      const count = sub.childElementCount;
+      if (count > 0) {
+        li.appendChild(
+          item.collapsible ? this.wrapFold(item, sub, count) : sub,
+        );
       }
 
       this.listEl.appendChild(li);
     }
+
+    // Unmatched layers (no source declared their `layerId`) fall back to flat.
+    for (const layerId of this.layerCredits.keys()) {
+      if (matchedLayerIds.has(layerId)) continue;
+      for (const credit of this.layerCreditStrings(layerId)) {
+        const { li, text } = this.createItemShell();
+        appendSanitizedHtml(text, credit);
+        this.listEl.appendChild(li);
+      }
+    }
+  }
+
+  /** Aggregated, deduped credit strings for a tracked layer's visible features. */
+  private layerCreditStrings(layerId: string): string[] {
+    const state = this.layerCredits.get(layerId);
+    if (!state) return [];
+    const strings: string[] = [];
+    for (const id of state.visible) {
+      const credit = state.credits.get(id);
+      if (credit) strings.push(credit);
+    }
+    return aggregateCredits(strings);
   }
 
   /**
-   * Rebuild the flat, deduplicated dynamic credits from tracked layers,
-   * appended after the static items. Rendered as **plain text** (never HTML)
-   * because the credit originates from untrusted tile metadata.
+   * Wrap a source's sub-credit list in a collapsible group, expanded by
+   * default. The open/closed state is preserved across re-renders, keyed by the
+   * source (its `creditLayerId`, else its attribution text).
    */
-  private refreshDynamicCredits(): void {
-    if (!this.listEl) return;
-    for (const item of this.dynamicItems) item.remove();
-    this.dynamicItems = [];
+  private wrapFold(
+    source: AttributionSource,
+    list: HTMLUListElement,
+    count: number,
+  ): HTMLDetailsElement {
+    const key = source.creditLayerId ?? source.attribution;
+    const details = document.createElement("details");
+    details.className = "navara-attr-fold";
+    details.open = this.foldOpen.get(key) ?? true;
+    details.addEventListener("toggle", () => {
+      this.foldOpen.set(key, details.open);
+    });
 
-    const creditStrings: string[] = [];
-    for (const id of this.visibleFeatures) {
-      const credit = this.dynamicCredits.get(id);
-      if (credit) creditStrings.push(credit);
-    }
+    const summary = document.createElement("summary");
+    summary.textContent = `${count} credit${count === 1 ? "" : "s"}`;
+    details.appendChild(summary);
+    details.appendChild(list);
+    return details;
+  }
 
-    for (const credit of aggregateCredits(creditStrings)) {
-      const { li, text } = this.createItemShell();
-      text.textContent = credit;
-      this.listEl.appendChild(li);
-      this.dynamicItems.push(li);
+  /** Re-render now if the popover is open; otherwise defer until it opens. */
+  private requestRender(): void {
+    if (this.dock && this.isOpen) {
+      this.populateList();
+      this.dirty = false;
+    } else {
+      this.dirty = true;
     }
   }
 
@@ -452,6 +528,11 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
     this.isOpen = open ?? !this.isOpen;
     this.card.hidden = !this.isOpen;
     this.toggle.setAttribute("aria-expanded", String(this.isOpen));
+    // Catch up on any updates that were deferred while the popover was closed.
+    if (this.isOpen && this.dirty) {
+      this.populateList();
+      this.dirty = false;
+    }
   }
 
   private handleKeydown(event: KeyboardEvent): void {
@@ -468,9 +549,7 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
     const level = this.currentZoomLevel();
     if (level === this.lastZoomLevel) return;
     this.lastZoomLevel = level;
-    // populateList() rebuilds the whole list; re-append the dynamic items.
-    this.populateList();
-    this.refreshDynamicCredits();
+    this.requestRender();
   }
 
   /**
@@ -510,9 +589,9 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
     this.styleEl = undefined;
     this.isOpen = false;
 
-    this.dynamicItems = [];
-    this.dynamicCredits.clear();
-    this.visibleFeatures.clear();
+    this.layerCredits.clear();
+    this.foldOpen.clear();
+    this.dirty = false;
   }
 
   /**
@@ -523,41 +602,39 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
   private trackLayers(): void {
     for (const off of this.layerCleanups) off();
     this.layerCleanups = [];
-    this.dynamicCredits.clear();
-    this.visibleFeatures.clear();
+    this.layerCredits.clear();
 
     for (const layer of this.layers) {
-      // Track this layer's feature IDs so they can be purged on `deleted`,
-      // which fires once for the layer without a `featureRemoved` per feature.
-      const layerFeatures = new Set<bigint>();
+      const state = {
+        credits: new Map<bigint, string>(),
+        visible: new Set<bigint>(),
+      };
+      this.layerCredits.set(layer.id, state);
 
       const onCreated = ({ featureSetId, credit }: FeatureCreatedParams) => {
-        if (credit) this.dynamicCredits.set(featureSetId, credit);
-        this.visibleFeatures.add(featureSetId);
-        layerFeatures.add(featureSetId);
-        this.refreshDynamicCredits();
+        if (credit) state.credits.set(featureSetId, credit);
+        state.visible.add(featureSetId);
+        this.requestRender();
       };
       const onRemoved = ({ featureSetId }: FeatureRemovedParams) => {
-        this.dynamicCredits.delete(featureSetId);
-        this.visibleFeatures.delete(featureSetId);
-        layerFeatures.delete(featureSetId);
-        this.refreshDynamicCredits();
+        state.credits.delete(featureSetId);
+        state.visible.delete(featureSetId);
+        this.requestRender();
       };
       const onVisibility = ({
         featureSetId,
         visible,
       }: FeatureVisibilityChangedParams) => {
-        if (visible) this.visibleFeatures.add(featureSetId);
-        else this.visibleFeatures.delete(featureSetId);
-        this.refreshDynamicCredits();
+        if (visible) state.visible.add(featureSetId);
+        else state.visible.delete(featureSetId);
+        this.requestRender();
       };
+      // `deleted` fires once for the layer (no per-feature `featureRemoved`),
+      // so clear all of this layer's tracked credits.
       const onDeleted = () => {
-        for (const id of layerFeatures) {
-          this.dynamicCredits.delete(id);
-          this.visibleFeatures.delete(id);
-        }
-        layerFeatures.clear();
-        this.refreshDynamicCredits();
+        state.credits.clear();
+        state.visible.clear();
+        this.requestRender();
       };
 
       layer.on("featureCreated", onCreated);
