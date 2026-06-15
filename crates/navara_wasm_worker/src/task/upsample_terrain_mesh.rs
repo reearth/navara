@@ -7,18 +7,35 @@ use wasm_bindgen::prelude::wasm_bindgen;
 
 #[wasm_bindgen(js_name = upsampleTerrainMesh)]
 pub fn upsample_terrain_mesh(
-    tile: TransferableTile,
-    parent_tile: TransferableTile,
+    mut tile: TransferableTile,
+    mut parent_tile: TransferableTile,
     raster_dem_data: TransferableRasterDEMData,
     upsamplable_geometry: UpsamplableTerrainGeometry,
     skirt: bool,
     skirt_exaggeration: f32,
+    tms: bool,
 ) -> ReturnedConstructedTerrainMesh {
     let raster_dem_data: RasterDEMData = raster_dem_data.into();
+    let tiling_scheme = TilingScheme::WebMercator { tms };
 
-    let mut tile: RasterTile = tile.into();
+    let tile_cached_mesh_handle = tile.cached_mesh_handle.take();
+    let mut tile = RasterTile::new_with_scheme(
+        tile.coords.into(),
+        tile.max_height,
+        tile.min_height,
+        tiling_scheme.clone(),
+    );
+    tile.cached_mesh_handle = tile_cached_mesh_handle.map(|v| v.into());
     tile.terrain_data = Some(Box::new(raster_dem_data.clone()));
-    let mut parent_tile: RasterTile = parent_tile.into();
+
+    let parent_cached_mesh_handle = parent_tile.cached_mesh_handle.take();
+    let mut parent_tile = RasterTile::new_with_scheme(
+        parent_tile.coords.into(),
+        parent_tile.max_height,
+        parent_tile.min_height,
+        tiling_scheme,
+    );
+    parent_tile.cached_mesh_handle = parent_cached_mesh_handle.map(|v| v.into());
     parent_tile.terrain_data = Some(Box::new(raster_dem_data));
 
     let upsamplable_geometry: navara_geometry::UpsamplableTerrainGeometry =
