@@ -40,6 +40,13 @@ impl Plugin for MvtPlugin {
             Update,
             pmtiles_source::handle_pmtiles_meta_failures.before(VectorTileSet::Prepare),
         )
+        // Cap in-flight PMTiles container (header/leaf) fetches after tiles have
+        // spawned them in Prepare, so a global-scale viewport can't saturate the
+        // request pipeline with leaf-directory fetches.
+        .add_systems(
+            Update,
+            pmtiles_source::filter_requestable_pmtiles_meta.after(VectorTileSet::Prepare),
+        )
         // Dispatch PMTiles container (header/leaf) fetches nearest-first, so the
         // viewport center's directory chain resolves before peripheral regions.
         .add_systems(

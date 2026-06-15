@@ -20,16 +20,16 @@
 
 use std::any::Any;
 use std::cmp::Ordering;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use bevy_ecs::{
     component::Component,
     entity::Entity,
-    query::With,
+    query::{Added, With, Without},
     system::{Commands, Query},
 };
 use navara_buffer_store::{BufferStore, Handle};
-use navara_component::{OrderByDistance, Priority};
+use navara_component::{Deleted, Ignored, OrderByDistance, Priority, Requested};
 use navara_data_requester::{
     DataRequester, DataRequesterExtension, DataRequesterStatus, RequestOrder, RequestOrderKey,
 };
@@ -236,6 +236,70 @@ impl PmtilesSource {
             self.leaf_reqs.remove(&offset);
             commands.entity(entity).despawn();
         }
+    }
+}
+
+/// Maximum number of PMTiles container (header/leaf) fetches allowed in flight
+/// at once. Mirrors the tile-request cap in
+/// [`filter_requestable_data_requester`](navara_vector_tile::data_requester::system).
+const MAX_PENDING_META: usize = 50;
+
+/// System: cap the number of in-flight PMTiles container (header/leaf) fetches,
+/// the meta-request analogue of
+/// [`filter_requestable_data_requester`](navara_vector_tile::data_requester::system)
+/// (which only governs tile requests). Without it, a zoomed-out viewport over a
+/// global-scale archive could spawn a leaf-directory request for every distinct
+/// leaf at once and saturate the request pipeline, blocking the app.
+///
+/// Excess requests — lowest [`PmtilesMetaOrder`] (lowest SSE / farthest) first —
+/// are marked `(Deleted, Ignored)` so the sender skips them and
+/// `remove_removed_data_requesters` despawns them. Each owning [`PmtilesSource`]
+/// is told to forget the dropped leaves, so the next `prepare_tile` re-issues
+/// them — with a fresh, current priority — once earlier fetches free up slots.
+///
+/// The bootstrap request is never dropped: it lives in `bootstrap_req` (not
+/// `leaf_reqs`, the only map this clears) and is only `Added` in a frame with no
+/// leaves in flight (leaves require a ready archive), so a slot is always free.
+#[allow(clippy::type_complexity)]
+pub(crate) fn filter_requestable_pmtiles_meta(
+    mut commands: Commands,
+    mut sources: Query<&mut TileSource>,
+    added: Query<
+        (Entity, &Priority, &RequestOrder<PmtilesMetaOrder>),
+        (Added<PmtilesMetaMarker>, Without<Deleted>),
+    >,
+    pending: Query<
+        Entity,
+        (
+            With<PmtilesMetaMarker>,
+            With<DataRequester>,
+            With<Requested>,
+            Without<Deleted>,
+        ),
+    >,
+) {
+    let free_slots = MAX_PENDING_META.saturating_sub(pending.iter().count());
+
+    // Keep the `free_slots` most-demanding new requests (sorted ahead); drop the rest.
+    let dropped: HashSet<Entity> = added
+        .iter()
+        .sort::<(&Priority, &RequestOrder<PmtilesMetaOrder>)>()
+        .skip(free_slots)
+        .map(|(e, _, _)| e)
+        .collect();
+    if dropped.is_empty() {
+        return;
+    }
+
+    // Forget the dropped leaves so the source re-requests them later; without
+    // this the source would treat them as forever in-flight and deadlock.
+    for mut tile_source in &mut sources {
+        if let Some(source) = tile_source.downcast_mut::<PmtilesSource>() {
+            source.leaf_reqs.retain(|_, (e, _)| !dropped.contains(e));
+        }
+    }
+    for e in dropped {
+        commands.entity(e).try_insert((Deleted, Ignored));
     }
 }
 
