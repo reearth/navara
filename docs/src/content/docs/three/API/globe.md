@@ -246,7 +246,7 @@ view.globe.elevationColormap = ylGnBuColorMap;
 ```
 
 :::tip[Related Documentation]
-For details on the ColorMap class (methods, properties, color map patterns), see [ColorMap Class](../../../three/api-reference/colormap/).
+For details on the ColorMap class (methods, properties, color map patterns), see [ColorMap Class](../../../three/api/colormap/).
 :::
 
 ## Elevation Heatmap Usage Example
@@ -354,7 +354,7 @@ view.globe.opacity = 0.8;
 
 ## See Also
 
-- [Color Class](../../../three/api-reference/color/) - A class for representing colors
-- [ColorMap Class](../../../three/api-reference/colormap/) - Defining color gradients
+- [Color Class](../../../three/api/color/) - A class for representing colors
+- [ColorMap Class](../../../three/api/colormap/) - Defining color gradients
 - [ElevationHeatmapMaterial](../../../three/resource-layer/elevation-heatmap-material/) - Elevation heatmap material
-- [ThreeView Class](../../../three/api-reference/threeview-class/) - Main view class
+- [ThreeView Class](../../../three/api/threeview-class/) - Main view class

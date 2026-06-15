@@ -367,7 +367,7 @@ const ylGnBu = new ColorMap("sequential", "YlGnBu", [
 
 ## See Also
 
-- [ColorMap Class](../../../three/api-reference/colormap/) - Defining color gradients
-- [Globe Class](../../../three/api-reference/globe/) - `color` property
-- [SunLightDesc](../../../three/effect-desc-reference/sun-light-desc/) - Light color configuration
-- [AmbientLightDesc](../../../three/effect-desc-reference/ambient-light-desc/) - Ambient light color configuration
+- [ColorMap Class](../../../three/api/colormap/) - Defining color gradients
+- [Globe Class](../../../three/api/globe/) - `color` property
+- [SunLightDesc](../../../three_default_descs/light-desc/sun-light-desc/) - Light color configuration
+- [AmbientLightDesc](../../../three_default_descs/light-desc/ambient-light-desc/) - Ambient light color configuration

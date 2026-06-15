@@ -367,7 +367,7 @@ const ylGnBu = new ColorMap("sequential", "YlGnBu", [
 
 ## 関連項目
 
-- [ColorMap クラス](../../../three/api-reference/colormap/) - カラーグラデーションの定義
-- [Globe クラス](../../../three/api-reference/globe/) - `color` プロパティ
-- [SunLightDesc](../../../three/effect-desc-reference/sun-light-desc/) - ライトの色設定
-- [AmbientLightDesc](../../../three/effect-desc-reference/ambient-light-desc/) - 環境光の色設定
+- [ColorMap クラス](../../../three/api/colormap/) - カラーグラデーションの定義
+- [Globe クラス](../../../three/api/globe/) - `color` プロパティ
+- [SunLightDesc](../../../three_default_descs/light-desc/sun-light-desc/) - ライトの色設定
+- [AmbientLightDesc](../../../three_default_descs/light-desc/ambient-light-desc/) - 環境光の色設定

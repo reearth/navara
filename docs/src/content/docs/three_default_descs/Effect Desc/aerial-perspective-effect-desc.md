@@ -10,7 +10,7 @@ The `AerialPerspectiveEffectDesc` class is a Descriptor that represents the aeri
 This effect uses precomputed textures and sun/moon directions provided by the `Atmosphere` class to reproduce physically accurate atmospheric scattering.
 
 :::tip[Related Documentation]
-See [Atmosphere class](../../../three/api-reference/atmosphere/) for details on the atmosphere system.
+See [Atmosphere class](../../../three/api/atmosphere/) for details on the atmosphere system.
 :::
 
 ## Properties

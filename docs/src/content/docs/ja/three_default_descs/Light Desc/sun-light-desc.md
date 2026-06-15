@@ -10,7 +10,7 @@ sidebar:
 太陽の方向は `view.atmosphere.date` に基づいて自動計算され、影の向きも連動して変化します。
 
 :::tip[関連ドキュメント]
-大気システムの詳細については [Atmosphere クラス](../../../three/api-reference/atmosphere/) を参照してください。
+大気システムの詳細については [Atmosphere クラス](../../../three/api/atmosphere/) を参照してください。
 :::
 
 ## Common Properties

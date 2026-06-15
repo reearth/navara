@@ -10,7 +10,7 @@ The `CloudsEffectDesc` class is an effect descriptor that renders real-time volu
 This effect uses atmospheric textures and sun direction provided by the `Atmosphere` class to calculate physically accurate cloud lighting.
 
 :::tip[Related Documentation]
-See [Atmosphere class](../../../three/api-reference/atmosphere/) for details on the atmosphere system.
+See [Atmosphere class](../../../three/api/atmosphere/) for details on the atmosphere system.
 :::
 
 ## Properties

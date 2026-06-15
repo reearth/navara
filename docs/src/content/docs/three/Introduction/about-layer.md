@@ -180,7 +180,7 @@ const boxMesh = boxHandle.ref;
 boxHandle.delete();
 ```
 
-For detailed API reference, see [Descriptor Types](../../../three/api-reference/desc-types/).
+For detailed API reference, see [Descriptor Types](../../../three/api/desc-types/).
 
 ## Summary
 

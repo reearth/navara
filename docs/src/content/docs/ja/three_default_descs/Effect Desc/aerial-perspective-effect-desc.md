@@ -10,7 +10,7 @@ sidebar:
 このエフェクトは `Atmosphere` クラスが提供する事前計算済みテクスチャと太陽・月の方向を使用して、物理的に正確な大気散乱を再現します。
 
 :::tip[関連ドキュメント]
-大気システムの詳細については [Atmosphere クラス](../../../three/api-reference/atmosphere/) を参照してください。
+大気システムの詳細については [Atmosphere クラス](../../../three/api/atmosphere/) を参照してください。
 :::
 
 ## Properties

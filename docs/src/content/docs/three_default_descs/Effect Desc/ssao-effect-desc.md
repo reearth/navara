@@ -229,4 +229,4 @@ view.addLayer({
 
 ## See Also
 
-- [Color class](../../../three/api-reference/color/) - How to configure colors
+- [Color class](../../../three/api/color/) - How to configure colors

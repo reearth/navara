@@ -193,7 +193,7 @@ view.atmosphere.date = new Date("2024-12-21T18:00:00");
 ```
 
 :::tip[関連ドキュメント]
-大気システムの詳細については [Atmosphere クラス](../../../three/api-reference/atmosphere/) を参照してください。
+大気システムの詳細については [Atmosphere クラス](../../../three/api/atmosphere/) を参照してください。
 :::
 
 ### backgroundColor
@@ -433,7 +433,7 @@ type GlobeOptions = {
 :::
 
 :::tip[関連ドキュメント]
-各プロパティの詳細と使用例は [Globe クラス](../../../three/api-reference/globe/) を参照してください。
+各プロパティの詳細と使用例は [Globe クラス](../../../three/api/globe/) を参照してください。
 :::
 
 **Example:**

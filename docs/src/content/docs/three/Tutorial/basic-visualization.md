@@ -179,7 +179,7 @@ The camera position is set to the area around Tokyo.
 
 ### Code Explanation
 
-You can set the camera position and orientation using the `view.setCamera()` method. For details on the parameters, see [ThreeView Functions](../../../three/api-reference/threeview-functions/).
+You can set the camera position and orientation using the `view.setCamera()` method. For details on the parameters, see [ThreeView Functions](../../../three/api/threeview-functions/).
 
 ### Complete Code
 
