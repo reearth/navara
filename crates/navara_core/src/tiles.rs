@@ -1,6 +1,7 @@
 use crate::{Extent, Float, LngLat, Rad, Radians};
 use navara_math::{FloatType, Two};
 use regex::Regex;
+use url::Url;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct TileXY {
@@ -150,8 +151,13 @@ pub fn is_tile_url(s: &str) -> bool {
 /// Returns true if the URL points to a PMTiles archive, i.e. its path ends with
 /// `.pmtiles` (case-insensitive), ignoring any query string or fragment.
 pub fn is_pmtiles_url(s: &str) -> bool {
-    let path = s.split(['?', '#']).next().unwrap_or(s);
-    path.to_ascii_lowercase().ends_with(".pmtiles")
+    // Let the `url` crate strip the query/fragment via a real parser. It rejects
+    // relative URLs, so fall back to a manual split for those.
+    let path = match Url::parse(s) {
+        Ok(url) => url.path().to_ascii_lowercase(),
+        Err(_) => s.split(['?', '#']).next().unwrap_or(s).to_ascii_lowercase(),
+    };
+    path.ends_with(".pmtiles")
 }
 
 // Ref: https://github.com/mapbox/vector-tile-spec/tree/master/2.1#3-projection-and-bounds
