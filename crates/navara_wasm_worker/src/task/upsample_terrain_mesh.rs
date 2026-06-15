@@ -39,8 +39,8 @@ pub fn upsample_terrain_mesh(
 
 #[wasm_bindgen(js_name = upsampleQuantizedMeshTerrainMesh)]
 pub fn upsample_quantized_mesh_terrain_mesh(
-    tile: TransferableTile,
-    parent_tile: TransferableTile,
+    mut tile: TransferableTile,
+    mut parent_tile: TransferableTile,
     upsamplable_geometry: UpsamplableTerrainGeometry,
     skirt: bool,
     skirt_exaggeration: f32,
@@ -52,13 +52,27 @@ pub fn upsample_quantized_mesh_terrain_mesh(
     } else {
         TilingScheme::WebMercator { tms }
     };
-    let mut tile: RasterTile = tile.into();
-    tile.extent = tiling_scheme.tile_extent(tile.coords);
+
+    let tile_cached_mesh_handle = tile.cached_mesh_handle.take();
+    let mut tile = RasterTile::new_with_scheme(
+        tile.coords.into(),
+        tile.max_height,
+        tile.min_height,
+        tiling_scheme.clone(),
+    );
+    tile.cached_mesh_handle = tile_cached_mesh_handle.map(|v| v.into());
     tile.terrain_data = Some(Box::new(QuantizedMeshData::new_with_tiling_scheme(
         tiling_scheme.clone(),
     )));
-    let mut parent_tile: RasterTile = parent_tile.into();
-    parent_tile.extent = tiling_scheme.tile_extent(parent_tile.coords);
+
+    let parent_cached_mesh_handle = parent_tile.cached_mesh_handle.take();
+    let mut parent_tile = RasterTile::new_with_scheme(
+        parent_tile.coords.into(),
+        parent_tile.max_height,
+        parent_tile.min_height,
+        tiling_scheme.clone(),
+    );
+    parent_tile.cached_mesh_handle = parent_cached_mesh_handle.map(|v| v.into());
     parent_tile.terrain_data = Some(Box::new(QuantizedMeshData::new_with_tiling_scheme(
         tiling_scheme,
     )));

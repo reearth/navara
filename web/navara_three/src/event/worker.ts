@@ -119,7 +119,9 @@ async function processConstructTerrainMesh(
     return;
   }
 
-  let promise;
+  let promise: ReturnType<
+    typeof constructQuantizedMeshTerrainMesh | typeof constructTerrainMesh
+  >;
   if (params.isQuantizedMesh) {
     promise = constructQuantizedMeshTerrainMesh(
       bytes,
@@ -271,7 +273,9 @@ async function processUpsampleTerrainMesh(
     parentNormals,
   );
 
-  let promise;
+  let promise: ReturnType<
+    typeof upsampleQuantizedMeshTerrainMesh | typeof upsampleTerrainMesh
+  >;
   if (params.isQuantizedMesh) {
     promise = upsampleQuantizedMeshTerrainMesh(
       new TransferableTileLike(tile),
