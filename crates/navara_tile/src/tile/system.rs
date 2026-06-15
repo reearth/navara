@@ -55,21 +55,24 @@ pub struct DataResources<'w> {
     pub data_manager: ResMut<'w, DataManager>,
 }
 
-/// One-shot system that runs whenever a TerrainLayer is added.
-/// Syncs Globe.tiling_scheme from the layer and initializes the quadtree roots.
+/// Initializes the quadtree roots. Driven by a newly added TerrainLayer when
+/// present (the layer's appearance dictates the tiling scheme); otherwise falls
+/// back to the default `Globe.tiling_scheme` so a terrain-less map still has
+/// roots to traverse.
 pub fn init_globe_tiling(
     terrain_layer: Query<&navara_layer::TerrainLayer, Added<navara_layer::TerrainLayer>>,
     mut globe: ResMut<navara_globe::Globe>,
     mut qt: ResMut<RasterTileQuadtree>,
+    mut initialized: Local<bool>,
 ) {
-    let Some(layer) = terrain_layer.iter().next() else {
+    if let Some(layer) = terrain_layer.iter().next() {
+        let Some(appearance) = &layer.appearance else {
+            return;
+        };
+        globe.tiling_scheme = appearance.tiling_scheme();
+    } else if *initialized {
         return;
-    };
-    let Some(appearance) = &layer.appearance else {
-        return;
-    };
-
-    globe.tiling_scheme = appearance.tiling_scheme();
+    }
 
     for root in globe.tiling_scheme.root_tiles() {
         let coords = (root.x, root.y, root.z);
@@ -80,6 +83,8 @@ pub fn init_globe_tiling(
             });
         }
     }
+
+    *initialized = true;
 }
 
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
