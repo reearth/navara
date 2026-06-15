@@ -19,7 +19,6 @@
 //! ranges against the one archive URL never collapse via `DataManager` dedup.
 
 use std::any::Any;
-use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 
 use bevy_ecs::{
@@ -57,42 +56,22 @@ pub struct PmtilesMetaMarker;
 /// tiles, ordering them by the demanding-ness of the viewport region they serve
 /// makes the view center resolve first — which matters under HTTP/1.1's small
 /// concurrent-connection limit, where dispatch order decides what loads first.
-#[derive(Component, PartialEq, Debug, Clone, Default)]
-pub struct PmtilesMetaOrder {
-    /// Screen-space error of the tile that triggered the fetch.
-    pub sse: f32,
-    /// Distance from camera of that tile.
-    pub distance: f32,
-}
+///
+/// Wraps [`OrderByDistance`] so the ordering policy is shared with tile requests
+/// rather than reimplemented; the derived [`Ord`] delegates to the inner value.
+#[derive(Component, PartialEq, Eq, PartialOrd, Ord, Debug, Clone)]
+pub struct PmtilesMetaOrder(pub OrderByDistance);
 
 impl PmtilesMetaOrder {
     /// Order that sorts ahead of any tile-triggered fetch — used for the
     /// bootstrap (header/root dir), which gates the entire archive.
-    const FIRST: Self = Self {
-        sse: f32::MAX,
+    const FIRST: Self = Self(OrderByDistance {
+        sse: f64::MAX,
         distance: 0.0,
-    };
+    });
 }
 
 impl RequestOrderKey for PmtilesMetaOrder {}
-
-impl PartialOrd for PmtilesMetaOrder {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Ord for PmtilesMetaOrder {
-    fn cmp(&self, other: &Self) -> Ordering {
-        // Higher SSE sorts earlier; ties broken by nearer distance.
-        other
-            .sse
-            .total_cmp(&self.sse)
-            .then(self.distance.total_cmp(&other.distance))
-    }
-}
-
-impl Eq for PmtilesMetaOrder {}
 
 /// A vector-tile source backed by a PMTiles archive.
 pub struct PmtilesSource {
@@ -381,10 +360,10 @@ impl VectorTileSource for PmtilesSource {
                 if !self.leaf_reqs.contains_key(&leaf_offset) {
                     // Order this leaf by the tile that needs it, so leaves for
                     // the view center are fetched before peripheral ones.
-                    let order = PmtilesMetaOrder {
-                        sse: tile.sse as f32,
-                        distance: tile.distance_from_camera as f32,
-                    };
+                    let order = PmtilesMetaOrder(OrderByDistance {
+                        sse: tile.sse,
+                        distance: tile.distance_from_camera,
+                    });
                     let req = self.spawn_meta(commands, buf, request, order);
                     self.leaf_reqs.insert(leaf_offset, req);
                 }
