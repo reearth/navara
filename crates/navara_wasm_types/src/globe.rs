@@ -105,6 +105,7 @@ impl From<&Globe> for navara_globe::Globe {
             opacity: val.opacity,
             wireframe: val.wireframe,
             elevation_colormap: val.elevation_colormap.clone(),
+            tiling_scheme: Default::default(),
         }
     }
 }

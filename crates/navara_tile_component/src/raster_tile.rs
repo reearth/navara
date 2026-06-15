@@ -2,15 +2,15 @@ use bevy_ecs::prelude::*;
 use navara_buffer_store::BufferStore;
 use navara_component::{Deleted, Order};
 use navara_core::{
-    Aabb, Ellipsoid, Extent, LngLat, Radians, TileRegion, TileXYZ, WGS84_64,
+    Aabb, Ellipsoid, Extent, LngLat, Radians, TileRegion, TileXYZ, TilingScheme, WGS84_64,
     get_ellipsoid_terrain_level_zero_maximum_geometric_error, get_level_maximum_geometric_error,
 };
 use navara_data_requester::{DataRequester, DataRequesterStatus};
 use navara_geometry::{ReturnedConstructedTerrainMesh, UpsamplableTerrainGeometry};
-use navara_math::Vec3;
+use navara_math::{EPSILON6, Vec3};
 
 use navara_mesh::CachedMeshHandle;
-use navara_quadtree::{Coords, children_coords};
+use navara_quadtree::Coords;
 
 use crate::{
     RasterTileQuadtree, Tile, TileHandle, raster_tile_texture_fragment::TileTextureFragmentQuery,
@@ -25,6 +25,8 @@ use super::tile_bounding_region::TileBoundingRegion;
 // Note Tile have to keep light size for caching efficiently.
 // So if you want to store large data in this struct, use [`BufferStore`].
 // And don't forget to destroy the stored data in [`Tile::destroy method`].
+// TODO: Rename this struct like `TerrainBasedTile` or `GlobeTile`,
+//      since this struct mostly manage both the terrain and raster tiles.
 #[derive(Debug)]
 pub struct RasterTile {
     pub coords: TileXYZ,
@@ -46,6 +48,7 @@ pub struct RasterTile {
     pub min_height: f64,
     pub distance_from_camera: FloatType,
     pub sse: FloatType,
+    pub tiling_scheme: TilingScheme,
 }
 
 impl Clone for RasterTile {
@@ -70,6 +73,7 @@ impl Clone for RasterTile {
             min_height: self.min_height,
             distance_from_camera: 0.,
             sse: 0.,
+            tiling_scheme: self.tiling_scheme.clone(),
         }
     }
 }
@@ -85,11 +89,25 @@ pub struct ReadyState {
 
 impl RasterTile {
     pub fn new(coords: TileXYZ, max_height: FloatType, min_height: FloatType) -> Self {
-        let extent = coords.extent();
+        Self::new_with_scheme(
+            coords,
+            max_height,
+            min_height,
+            TilingScheme::WebMercator { tms: false },
+        )
+    }
+
+    pub fn new_with_scheme(
+        coords: TileXYZ,
+        max_height: FloatType,
+        min_height: FloatType,
+        tiling_scheme: TilingScheme,
+    ) -> Self {
+        let extent = tiling_scheme.tile_extent(coords);
 
         Self {
             coords,
-            extent: coords.extent(),
+            extent,
             aabb: Aabb::from_extent_f64(extent, min_height, max_height),
             bounding_region: Some(TileBoundingRegion::from_extent_f64(extent, WGS84_64)),
             rendered_at: 0,
@@ -106,6 +124,7 @@ impl RasterTile {
             min_height,
             distance_from_camera: 0.,
             sse: 0.,
+            tiling_scheme,
         }
     }
 
@@ -353,23 +372,24 @@ impl RasterTile {
     }
 
     fn get_region(&self, parent: &RasterTile) -> Option<TileRegion> {
-        let parent_children_coords =
-            children_coords((parent.coords.x, parent.coords.y, parent.coords.z));
-
-        Some(match (self.coords.x, self.coords.y) {
-            (x, y) if x == parent_children_coords[0].0 && y == parent_children_coords[0].1 => {
-                TileRegion::NorthWest
-            }
-            (x, y) if x == parent_children_coords[1].0 && y == parent_children_coords[1].1 => {
-                TileRegion::NorthEast
-            }
-            (x, y) if x == parent_children_coords[2].0 && y == parent_children_coords[2].1 => {
-                TileRegion::SouthWest
-            }
-            (x, y) if x == parent_children_coords[3].0 && y == parent_children_coords[3].1 => {
-                TileRegion::SouthEast
-            }
-            (_, _) => unreachable!(),
+        let mid_lng = (parent.extent.west.val() + parent.extent.east.val()) / 2.0;
+        let mid_lat = (parent.extent.south.val() + parent.extent.north.val()) / 2.0;
+        // Use a tolerance proportional to the tile size, not `f64::EPSILON`.
+        // `mid_lng` can be off by a few ULPs from `self.extent.west` even when
+        // they are mathematically equal (different rounding paths in
+        // `(west_rad + east_rad) / 2` vs `(deg).to_radians()`), and at the
+        // magnitudes involved (~2.4 rad) `f64::EPSILON` is rounded away by the
+        // subtraction, leaving an effectively-strict `>=` that miscategorises
+        // tiles whose west edge sits exactly on the parent's mid line.
+        let lng_eps = (parent.extent.east.val() - parent.extent.west.val()).abs() * EPSILON6;
+        let lat_eps = (parent.extent.north.val() - parent.extent.south.val()).abs() * EPSILON6;
+        let is_east = self.extent.west.val() >= mid_lng - lng_eps;
+        let is_north = self.extent.south.val() >= mid_lat - lat_eps;
+        Some(match (is_east, is_north) {
+            (false, true) => TileRegion::NorthWest,
+            (true, true) => TileRegion::NorthEast,
+            (false, false) => TileRegion::SouthWest,
+            (true, false) => TileRegion::SouthEast,
         })
     }
 
@@ -408,6 +428,7 @@ impl RasterTile {
             max_height: upsampled_mesh.max_height,
             min_height: upsampled_mesh.min_height,
             rtc_translation: Some(tile_center),
+            watermask: None,
         })
     }
 
@@ -526,8 +547,17 @@ impl Tile for RasterTile {
         )
     }
 
-    fn new_child((x, y, z): Coords<Self::CoordUnit>, max_height: f64, min_height: f64) -> Self {
-        Self::new(TileXYZ { x, y, z }, max_height, min_height)
+    fn tiling_scheme(&self) -> TilingScheme {
+        self.tiling_scheme.clone()
+    }
+
+    fn new_child(
+        (x, y, z): Coords<Self::CoordUnit>,
+        max_height: f64,
+        min_height: f64,
+        tiling_scheme: TilingScheme,
+    ) -> Self {
+        Self::new_with_scheme(TileXYZ { x, y, z }, max_height, min_height, tiling_scheme)
     }
 }
 
@@ -651,13 +681,35 @@ pub fn compute_terrain_height_by_tile_handle(
         .unwrap_or(0.0)
 }
 
+/// Collect handles of all root tiles based on the tiling scheme carried by the
+/// `(0, 0, 0)` tile. For WebMercator this is a single handle; for Geographic it
+/// is two — `(0, 0, 0)` and `(1, 0, 0)`.
+pub fn root_handles(qt: &RasterTileQuadtree) -> Vec<TileHandle> {
+    let Some(zero_handle) = qt.qt.zero().map(|l| l.handle()) else {
+        return vec![];
+    };
+    let Some(zero_tile) = qt.qt.get(zero_handle) else {
+        return vec![];
+    };
+    zero_tile
+        .tiling_scheme
+        .root_tiles()
+        .into_iter()
+        .filter_map(|c| qt.qt.leaf((c.x, c.y, c.z)).map(|l| l.handle()))
+        .collect()
+}
+
 /// Find a child that the tile contains.
 fn find_contained_child(
     qt: &RasterTileQuadtree,
     contain: &dyn Fn(&RasterTile) -> bool,
 ) -> Option<TileHandle> {
-    let handle = qt.qt.zero().map(|l| l.handle());
-    traverse_contained_child(qt, handle.and_then(|h| qt.qt.get(h)), handle, contain)
+    for root in root_handles(qt) {
+        if let Some(v) = traverse_contained_child(qt, qt.qt.get(root), Some(root), contain) {
+            return Some(v);
+        }
+    }
+    None
 }
 
 /// Find a child that the tile contains.
@@ -666,14 +718,15 @@ fn find_contained_children(
     contain: &dyn Fn(&RasterTile) -> bool,
 ) -> Vec<TileHandle> {
     let mut result = vec![];
-    let handle = qt.qt.zero().map(|l| l.handle());
-    traverse_contained_children(
-        qt,
-        handle.and_then(|h| qt.qt.get(h)),
-        handle,
-        contain,
-        &mut result,
-    );
+    for root in root_handles(qt) {
+        let previous_len = result.len();
+        if let Some(v) =
+            traverse_contained_children(qt, qt.qt.get(root), Some(root), contain, &mut result)
+            && previous_len == result.len()
+        {
+            result.push(v);
+        }
+    }
     result
 }
 
@@ -728,12 +781,91 @@ fn traverse_contained_children(
 
 #[cfg(test)]
 mod test {
-    use navara_core::{Angle, LngLat, TileXYZ};
+    use navara_core::{Angle, LngLat, TileRegion, TileXYZ, TilingScheme};
     use navara_quadtree::Coords;
 
     use super::RasterTileQuadtree;
 
     use super::{RasterTile, find_contained_child};
+
+    #[test]
+    fn get_region_handles_floating_point_drift_on_mid_boundary() {
+        // Regression for: geographic grandchildren whose west edge lies exactly
+        // on the parent's mid_lng were miscategorised as the WEST child because
+        // `f64::EPSILON` is too tight at ~2.4 rad.
+        // Parent (29011, 11410, 14) and east children (58023, *, 15) near Mt
+        // Fuji from the original bug report.
+        // Internal y is XYZ-style (y=0 north). Parent y=11410 at z=14 → child
+        // northern row is y=22820, southern row is y=22821.
+        let scheme = TilingScheme::Geographic { tms: true };
+        let parent = RasterTile::new_with_scheme(
+            TileXYZ {
+                x: 29011,
+                y: 11410,
+                z: 14,
+            },
+            0.,
+            0.,
+            scheme.clone(),
+        );
+        let nw = RasterTile::new_with_scheme(
+            TileXYZ {
+                x: 58022,
+                y: 22820,
+                z: 15,
+            },
+            0.,
+            0.,
+            scheme.clone(),
+        );
+        let ne = RasterTile::new_with_scheme(
+            TileXYZ {
+                x: 58023,
+                y: 22820,
+                z: 15,
+            },
+            0.,
+            0.,
+            scheme.clone(),
+        );
+        let sw = RasterTile::new_with_scheme(
+            TileXYZ {
+                x: 58022,
+                y: 22821,
+                z: 15,
+            },
+            0.,
+            0.,
+            scheme.clone(),
+        );
+        let se = RasterTile::new_with_scheme(
+            TileXYZ {
+                x: 58023,
+                y: 22821,
+                z: 15,
+            },
+            0.,
+            0.,
+            scheme,
+        );
+
+        assert!(matches!(
+            nw.get_region(&parent),
+            Some(TileRegion::NorthWest)
+        ));
+        assert!(matches!(
+            ne.get_region(&parent),
+            Some(TileRegion::NorthEast)
+        ));
+        assert!(matches!(
+            sw.get_region(&parent),
+            Some(TileRegion::SouthWest)
+        ));
+        assert!(matches!(
+            se.get_region(&parent),
+            Some(TileRegion::SouthEast)
+        ));
+    }
 
     fn setup_tile(qt: &mut RasterTileQuadtree, coords: Coords<usize>) {
         let children = qt.qt.initialize_children(coords, &|v| {
@@ -796,6 +928,7 @@ mod test {
             indices: 0,
             uvs: 0,
             heights: None,
+            normals: None,
         });
         tile.terrain_data = Some(Box::new(RasterDEMData::default()));
     }
@@ -880,6 +1013,75 @@ mod test {
         let leaves = collect_terrain_leaves(&qt);
         assert_eq!(leaves.len(), 2);
     }
+
+    /// Initialize a leaf with the Geographic tiling scheme so its extent and
+    /// children match EPSG:4326 layout.
+    fn setup_geographic_tile(qt: &mut RasterTileQuadtree, coords: Coords<usize>) {
+        let scheme = TilingScheme::Geographic { tms: true };
+        let children = qt.qt.initialize_children(coords, &|v| {
+            RasterTile::new_with_scheme(
+                TileXYZ {
+                    x: v.0,
+                    y: v.1,
+                    z: v.2,
+                },
+                0.,
+                0.,
+                scheme.clone(),
+            )
+        });
+        let tile = qt.qt.get_mut(qt.qt.leaf(coords).unwrap().handle()).unwrap();
+        tile.children = children.unwrap();
+    }
+
+    /// Geographic has two roots — `(0,0,0)` covers the western hemisphere and
+    /// `(1,0,0)` covers the eastern. Both find helpers must traverse both.
+    #[test]
+    fn find_helpers_traverse_both_geographic_roots() {
+        use super::collect_terrain_leaves;
+
+        let scheme = TilingScheme::Geographic { tms: true };
+        let mut qt = RasterTileQuadtree::new_with_linear_qt();
+
+        for root in scheme.root_tiles() {
+            qt.qt.initialize_leaf((root.x, root.y, root.z), &|v| {
+                RasterTile::new_with_scheme(
+                    TileXYZ {
+                        x: v.0,
+                        y: v.1,
+                        z: v.2,
+                    },
+                    0.,
+                    0.,
+                    TilingScheme::Geographic { tms: true },
+                )
+            });
+        }
+
+        setup_geographic_tile(&mut qt, (0, 0, 0)); // west root children
+        setup_geographic_tile(&mut qt, (1, 0, 0)); // east root children
+
+        // Mark one tile under each root as ready — collect_terrain_leaves uses
+        // find_contained_children internally and must see both.
+        mark_tile_ready(&mut qt, (0, 0, 1));
+        mark_tile_ready(&mut qt, (2, 1, 1));
+
+        let leaves = collect_terrain_leaves(&qt);
+        assert_eq!(leaves.len(), 2, "should collect tiles from both roots");
+
+        // find_contained_child for a point inside (2,1,1) — under the east
+        // root — must descend into the (1,0,0) subtree, not give up because
+        // the west root (0,0,0) misses. Internal y is XYZ-style, so at z=1
+        // (2,1,1) covers lng 0°..90°, lat -90°..0°.
+        let east_handle = find_contained_child(&qt, &|t| {
+            t.extent.contains(&LngLat {
+                lng: Angle::new(1.0), // ~57°E
+                lat: Angle::new(-0.5),
+            }) && t.cached_mesh_handle.is_some()
+        });
+        let east_tile = qt.qt.get(east_handle.unwrap()).unwrap();
+        assert_eq!(east_tile.coords, TileXYZ { x: 2, y: 1, z: 1 });
+    }
 }
 
 #[cfg(test)]
@@ -951,6 +1153,9 @@ mod raster_tile_tests {
             extension: DataRequesterExtension::Png,
             status,
             managed_by_data_manager: false,
+            request_vertex_normals: false,
+            request_water_mask: false,
+            token: None,
         }
     }
 
@@ -1189,6 +1394,7 @@ mod raster_tile_tests {
                     indices: 0,
                     uvs: 0,
                     heights: Some(0),
+                    normals: None,
                 });
             }
 

@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use navara_camera::CameraFrustum;
 use navara_core::{
-    Aabb, Ellipsoid, Extent, LLE, Meters, Radians, TileXYZ, vec3_to_xyz, xyz_to_vec3,
+    Aabb, Ellipsoid, Extent, LLE, Meters, Radians, TileXYZ, TilingScheme, vec3_to_xyz, xyz_to_vec3,
 };
 use navara_fog::{Fog, fog};
 use navara_math::{FloatType, Transform, Vec3};
@@ -75,7 +75,10 @@ pub trait Tile {
 
     fn is_root(&self) -> bool {
         let coords = self.coords();
-        coords.x == 0 && coords.y == 0 && coords.z == 0
+        self.tiling_scheme()
+            .root_tiles()
+            .iter()
+            .any(|r| r.x == coords.x && r.y == coords.y && r.z == coords.z)
     }
 
     fn intersect_with_camera_frustum(&self, frustum: &CameraFrustum) -> bool {
@@ -124,7 +127,18 @@ pub trait Tile {
         error / window.pixel_ratio
     }
 
-    fn new_child(coords: Coords<Self::CoordUnit>, max_height: f64, min_height: f64) -> Self;
+    /// Tiling scheme for this tile. Default: `WebMercator`.
+    /// Override to propagate a different scheme (e.g. `Geographic`) to child tiles.
+    fn tiling_scheme(&self) -> TilingScheme {
+        TilingScheme::WebMercator { tms: false }
+    }
+
+    fn new_child(
+        coords: Coords<Self::CoordUnit>,
+        max_height: f64,
+        min_height: f64,
+        tiling_scheme: TilingScheme,
+    ) -> Self;
 
     /// This is used to align children, because a child might be removed in quadtree.
     fn traversable_children(
@@ -135,12 +149,22 @@ pub trait Tile {
         Self: Sized + Sync + Send + 'static + Debug,
     {
         let tile = qt.qt.get(handle).unwrap();
-        let children = tile.children();
+        let children = tile.children().to_vec();
         let coords = tile.coords();
         let coords = (to_int(coords.x), to_int(coords.y), to_int(coords.z));
         let parent_max_height = tile.max_height();
         let parent_min_height = tile.min_height();
-        let init = |coords| Self::new_child(coords, parent_max_height, parent_min_height);
+        let tiling_scheme = tile.tiling_scheme();
+
+        let init = |coords| {
+            Self::new_child(
+                coords,
+                parent_max_height,
+                parent_min_height,
+                tiling_scheme.clone(),
+            )
+        };
+
         if children.is_empty() {
             let children = qt.qt.initialize_children(coords, &init)?;
             let tile = qt.qt.get_mut(handle).unwrap();
@@ -148,7 +172,6 @@ pub trait Tile {
             return Some(children);
         }
 
-        let children = children.to_vec();
         let mut new_children = Vec::with_capacity(4);
         for (i, c) in children.iter().enumerate() {
             let c = *c;

@@ -17,6 +17,9 @@ pub struct UpsampleTerrainMeshParameters {
     pub skirt: bool,
     /// Multiplier for the automatically calculated skirt height.
     pub skirt_exaggeration: f32,
+    pub is_quantized_mesh: bool,
+    pub geographic: bool,
+    pub tms: bool,
 }
 #[derive(Component, Clone, Debug, Serialize)]
 pub struct UpsampleTerrainMeshResult {

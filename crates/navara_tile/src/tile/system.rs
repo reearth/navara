@@ -55,6 +55,38 @@ pub struct DataResources<'w> {
     pub data_manager: ResMut<'w, DataManager>,
 }
 
+/// Initializes the quadtree roots. Driven by a newly added TerrainLayer when
+/// present (the layer's appearance dictates the tiling scheme); otherwise falls
+/// back to the default `Globe.tiling_scheme` so a terrain-less map still has
+/// roots to traverse.
+pub fn init_globe_tiling(
+    terrain_layer: Query<&navara_layer::TerrainLayer, Added<navara_layer::TerrainLayer>>,
+    mut globe: ResMut<navara_globe::Globe>,
+    mut qt: ResMut<RasterTileQuadtree>,
+    mut initialized: Local<bool>,
+) {
+    if let Some(layer) = terrain_layer.iter().next() {
+        let Some(appearance) = &layer.appearance else {
+            return;
+        };
+        globe.tiling_scheme = appearance.tiling_scheme();
+    } else if *initialized {
+        return;
+    }
+
+    for root in globe.tiling_scheme.root_tiles() {
+        let coords = (root.x, root.y, root.z);
+        if qt.qt.leaf(coords).is_none() {
+            let scheme = globe.tiling_scheme.clone();
+            qt.qt.initialize_leaf(coords, &|(x, y, z)| {
+                RasterTile::new_with_scheme(TileXYZ { x, y, z }, 0., 0., scheme.clone())
+            });
+        }
+    }
+
+    *initialized = true;
+}
+
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn update_tiles(
     mut commands: Commands,
@@ -147,111 +179,106 @@ pub fn update_tiles(
     tc.last_rendered_frame = frame.rendered_frame();
     tc.prev_layers_len = tiles_len;
 
-    let zero_tile = match qt.qt.zero() {
-        Some(z) => z,
-        None => {
-            qt.qt
-                .initialize_zero(&|(x, y, z)| RasterTile::new(TileXYZ { x, y, z }, 0., 0.));
-            qt.qt
-                .zero()
-                .expect("Failed to initialize a level zero tile unexpectedly")
-        }
-    };
-    let zero_tile_handle = zero_tile.handle();
-
-    let is_texture_ready = qt.qt.get_mut(zero_tile_handle).unwrap().is_texture_ready(
-        &texture_fragment,
-        &data_requesters,
-        tiles,
-    );
-
-    let traversal_result = traverse_tile(
-        &mut commands,
-        tiles,
-        &terrain_layer,
-        zero_tile_handle,
-        &mut tc,
-        &mut qt,
-        &mut data_resources.buf,
-        &mut data_resources.data_manager,
-        &frame,
-        &camera,
-        &frustum,
-        &texture_fragment,
-        &data_requesters,
-        &terrain_data_requester,
-        &window,
-        &WGS84_64,
-        &occluder,
-        &mut meshes,
-        &fog,
-        globe.max_sse as f64,
-        false,
-        false,
-        is_texture_ready.then_some(zero_tile_handle),
-        None,
-    );
+    let root_coords: Vec<TileXYZ> = globe.tiling_scheme.root_tiles();
 
     let is_over_min_z = if !tiles.is_empty() {
-        tiles.iter().any(|t| {
-            t.0.is_over_min_zoom(qt.qt.get(zero_tile_handle).unwrap().coords.z)
-        })
+        tiles.iter().any(|t| t.0.is_over_min_zoom(0))
     } else {
         true
     };
 
-    // Avoid rendering level zero tile if this tile isn't allowed.
-    if !is_over_min_z {
-        return;
-    }
+    for root in &root_coords {
+        let coords = (root.x, root.y, root.z);
+        let Some(root_handle) = qt.qt.leaf(coords).map(|n| n.handle()) else {
+            continue;
+        };
 
-    match traversal_result {
-        TraversalResult::TileRendered => {
-            spawn_tile_entity(
-                &mut commands,
-                &mut tc,
-                &frame,
-                qt.qt.get_mut(zero_tile_handle).unwrap(),
-                zero_tile_handle,
-                None,
-                None,
-            );
-            if tc.is_rendered_tile_prepared(&zero_tile_handle) {
-                tc.activate_rendered_tile(&zero_tile_handle, &mut meshes, true);
+        let is_texture_ready = qt.qt.get_mut(root_handle).unwrap().is_texture_ready(
+            &texture_fragment,
+            &data_requesters,
+            tiles,
+        );
+
+        let traversal_result = traverse_tile(
+            &mut commands,
+            tiles,
+            &terrain_layer,
+            root_handle,
+            &mut tc,
+            &mut qt,
+            &mut data_resources.buf,
+            &mut data_resources.data_manager,
+            &frame,
+            &camera,
+            &frustum,
+            &texture_fragment,
+            &data_requesters,
+            &terrain_data_requester,
+            &window,
+            &WGS84_64,
+            &occluder,
+            &mut meshes,
+            &fog,
+            globe.max_sse as f64,
+            false,
+            false,
+            is_texture_ready.then_some(root_handle),
+            None,
+        );
+
+        // Skip rendering root tile if below minimum zoom, but allow traversal above.
+        if !is_over_min_z {
+            continue;
+        }
+
+        match traversal_result {
+            TraversalResult::TileRendered => {
+                spawn_tile_entity(
+                    &mut commands,
+                    &mut tc,
+                    &frame,
+                    qt.qt.get_mut(root_handle).unwrap(),
+                    root_handle,
+                    None,
+                    None,
+                );
+                if tc.is_rendered_tile_prepared(&root_handle) {
+                    tc.activate_rendered_tile(&root_handle, &mut meshes, true);
+                }
             }
+            TraversalResult::NotFound => {
+                prepare_tile_resource(
+                    &mut commands,
+                    &mut qt,
+                    &mut data_resources.buf,
+                    &mut data_resources.data_manager,
+                    &terrain_layer,
+                    root_handle,
+                    &mut tc,
+                    tiles,
+                    &texture_fragment,
+                    &data_requesters,
+                    &terrain_data_requester,
+                    Priority::Extreme,
+                );
+                let tile = qt.qt.get_mut(root_handle).unwrap();
+                request_texture_fragment(
+                    &mut commands,
+                    tile,
+                    tiles,
+                    root_handle,
+                    &texture_fragment,
+                    &data_requesters,
+                    Priority::High,
+                    &mut data_resources.buf,
+                    &mut data_resources.data_manager,
+                );
+            }
+            TraversalResult::ChildrenMeshesPrepared => {
+                tc.activate_rendered_tile(&root_handle, &mut meshes, false);
+            }
+            _ => {}
         }
-        TraversalResult::NotFound => {
-            prepare_tile_resource(
-                &mut commands,
-                &mut qt,
-                &mut data_resources.buf,
-                &mut data_resources.data_manager,
-                &terrain_layer,
-                zero_tile_handle,
-                &mut tc,
-                tiles,
-                &texture_fragment,
-                &data_requesters,
-                &terrain_data_requester,
-                Priority::Extreme,
-            );
-            let tile = qt.qt.get_mut(zero_tile_handle).unwrap();
-            request_texture_fragment(
-                &mut commands,
-                tile,
-                tiles,
-                zero_tile_handle,
-                &texture_fragment,
-                &data_requesters,
-                Priority::High,
-                &mut data_resources.buf,
-                &mut data_resources.data_manager,
-            );
-        }
-        TraversalResult::ChildrenMeshesPrepared => {
-            tc.activate_rendered_tile(&zero_tile_handle, &mut meshes, false);
-        }
-        _ => {}
     }
 }
 
@@ -326,6 +353,15 @@ pub fn transfer_mesh(
         let is_ellipsoid_terrain = terrain_layer
             .map(|l| matches!(l.terrain_type, navara_layer::TerrainDataType::Ellipsoid))
             .unwrap_or(false);
+        let is_quantized_mesh = terrain_layer
+            .map(|l| matches!(l.terrain_type, navara_layer::TerrainDataType::QuantizedMesh))
+            .unwrap_or(false);
+        let qm_geographic = terrain_layer
+            .and_then(|l| l.appearance.as_ref())
+            .is_some_and(|a| a.geographic());
+        let qm_tms = terrain_layer
+            .and_then(|l| l.appearance.as_ref())
+            .is_some_and(|a| a.tms());
 
         let texture_fragment_entity_ids = &tile.texture_fragment_entity_ids;
 
@@ -508,6 +544,7 @@ pub fn transfer_mesh(
                         indices: ihandle,
                         uvs: uvshandle,
                         heights: None,
+                        normals: None,
                     });
                 };
             }
@@ -532,11 +569,14 @@ pub fn transfer_mesh(
                                 .transform_point(tile_aabb.center),
                             extents: tile_aabb.extents,
                         },
-                        // Flat tiles don't have skirts
+                        // Flat tiles don't carry quantized-mesh normals or watermask.
+                        normals: None,
                         skirt_vertices: v_skirt_handle,
                         skirt_uvs: u_skirt_handle,
                         skirt_indices: i_skirt_handle,
                         skirt_indices_to_edge: e_skirt_handle,
+                        skirt_normals: None,
+                        watermask: None,
                     },
                     material: appearance,
                     object: ObjectBundle {
@@ -591,6 +631,9 @@ pub fn transfer_mesh(
                                     tile_handle: rendered_tile.tile_handle,
                                     skirt,
                                     skirt_exaggeration,
+                                    is_quantized_mesh,
+                                    geographic: qm_geographic,
+                                    tms: qm_tms,
                                 },
                             ),
                             order.clone(),
@@ -624,6 +667,7 @@ pub fn transfer_mesh(
                         indices: ihandle,
                         uvs: uvshandle,
                         heights: Some(heights_handle),
+                        normals: terrain_mesh_upsampler.geometry.normals,
                     });
                     t.upsampled = true;
                 };
@@ -649,12 +693,15 @@ pub fn transfer_mesh(
                                 .transform_point(tile_aabb.center),
                             extents: tile_aabb.extents,
                         },
+                        normals: terrain_mesh_upsampler.geometry.normals,
                         skirt_vertices: terrain_mesh_upsampler.geometry.skirt_vertices,
                         skirt_uvs: terrain_mesh_upsampler.geometry.skirt_uvs,
                         skirt_indices: terrain_mesh_upsampler.geometry.skirt_indices,
                         skirt_indices_to_edge: terrain_mesh_upsampler
                             .geometry
                             .skirt_indices_to_edge,
+                        skirt_normals: terrain_mesh_upsampler.geometry.skirt_normals,
+                        watermask: None,
                     },
                     material: appearance,
                     object: ObjectBundle {
@@ -691,6 +738,9 @@ pub fn transfer_mesh(
                                 tile_handle: rendered_tile.tile_handle,
                                 skirt,
                                 skirt_exaggeration,
+                                is_quantized_mesh,
+                                geographic: qm_geographic,
+                                tms: qm_tms,
                             },
                         ),
                         order.clone(),
@@ -724,6 +774,7 @@ pub fn transfer_mesh(
                     indices: ihandle,
                     uvs: uvshandle,
                     heights: Some(heights_handle),
+                    normals: terrain_mesh_constructor.geometry.normals,
                 })
             };
         }
@@ -748,10 +799,13 @@ pub fn transfer_mesh(
                             .transform_point(tile_aabb.center),
                         extents: tile_aabb.extents,
                     },
+                    normals: terrain_mesh_constructor.geometry.normals,
                     skirt_vertices: terrain_mesh_constructor.geometry.skirt_vertices,
                     skirt_uvs: terrain_mesh_constructor.geometry.skirt_uvs,
                     skirt_indices: terrain_mesh_constructor.geometry.skirt_indices,
                     skirt_indices_to_edge: terrain_mesh_constructor.geometry.skirt_indices_to_edge,
+                    skirt_normals: terrain_mesh_constructor.geometry.skirt_normals,
+                    watermask: terrain_mesh_constructor.watermask,
                 },
                 material: appearance,
                 object: ObjectBundle {

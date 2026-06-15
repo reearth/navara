@@ -19,6 +19,10 @@ pub struct ConstructTerrainMeshParameters {
     /// Multiplier for the automatically calculated skirt height.
     #[wasm_bindgen(js_name = skirtExaggeration)]
     pub skirt_exaggeration: f32,
+    #[wasm_bindgen(js_name = isQuantizedMesh)]
+    pub is_quantized_mesh: bool,
+    pub geographic: bool,
+    pub tms: bool,
 }
 
 impl<'a> From<&'a navara_worker::construct_terrain_mesh::ConstructTerrainMeshParameters>
@@ -33,6 +37,9 @@ impl<'a> From<&'a navara_worker::construct_terrain_mesh::ConstructTerrainMeshPar
             tile_handle: val.tile_handle,
             skirt: val.skirt,
             skirt_exaggeration: val.skirt_exaggeration,
+            is_quantized_mesh: val.is_quantized_mesh,
+            geographic: val.geographic,
+            tms: val.tms,
         }
     }
 }
@@ -46,6 +53,7 @@ pub struct ConstructTerrainMeshResult {
     pub min_height: FloatType,
     pub max_height: FloatType,
     pub rtc_translation: Option<Vec3>,
+    pub watermask: Option<Handle>,
 }
 
 #[wasm_bindgen]
@@ -64,6 +72,7 @@ impl ConstructTerrainMeshResult {
             min_height,
             max_height,
             rtc_translation,
+            watermask: None,
         }
     }
 }
@@ -78,6 +87,7 @@ impl From<ConstructTerrainMeshResult>
             min_height: val.min_height,
             max_height: val.max_height,
             rtc_translation: val.rtc_translation.map(|r| r.into()),
+            watermask: val.watermask,
         }
     }
 }
@@ -93,6 +103,7 @@ impl<'a> From<&'a navara_worker::construct_terrain_mesh::ConstructTerrainMeshRes
             min_height: val.min_height,
             max_height: val.max_height,
             rtc_translation: val.rtc_translation.map(|r| r.into()),
+            watermask: val.watermask,
         }
     }
 }

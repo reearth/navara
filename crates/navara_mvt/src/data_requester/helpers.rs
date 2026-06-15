@@ -1,7 +1,7 @@
 use bevy_ecs::{entity::Entity, system::Commands};
 use navara_buffer_store::BufferStore;
 use navara_component::{OrderByDistance, Priority};
-use navara_core::{is_tile_url, tile_url};
+use navara_core::{TilingScheme, is_tile_url};
 use navara_data_requester::{DataRequester, DataRequesterExtension};
 use navara_tile_component::{TileHandle, VectorTile};
 
@@ -28,7 +28,7 @@ pub(crate) fn request_mvt_data(
         .spawn((
             MvtDataRequesterMarker(handle),
             DataRequester::from_store(
-                tile_url(url, &tile.coords, false),
+                TilingScheme::WebMercator { tms: false }.tile_url(url, tile.coords),
                 buf,
                 DataRequesterExtension::Mvt,
             ),

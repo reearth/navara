@@ -1,6 +1,8 @@
 use navara_core::WGS84_64;
 use navara_geometry::calculate_skirt_height;
-use navara_tile_component::{MartiniComponent, RasterDEMData, RasterTile};
+use navara_tile_component::{
+    MartiniComponent, RasterDEMData, RasterTile, TerrainConstructContext, TerrainData,
+};
 use navara_wasm_transferable::{TransferableMartini, TransferableRasterDEMData, TransferableTile};
 use navara_wasm_types::ReturnedConstructedTerrainMesh;
 use wasm_bindgen::prelude::wasm_bindgen;
@@ -14,15 +16,18 @@ pub fn construct_terrain_mesh(
     skirt: bool,
     skirt_exaggeration: f32,
 ) -> ReturnedConstructedTerrainMesh {
-    let mut tile: RasterTile = tile.into();
+    let tile: RasterTile = tile.into();
     let raster_dem_data: RasterDEMData = raster_dem_data.into();
-    tile.terrain_data = Some(Box::new(raster_dem_data));
+    let ctx = TerrainConstructContext {
+        coords: tile.coords,
+        extent: tile.extent,
+        max_height: tile.max_height,
+    };
 
     let mut martini: MartiniComponent = martini.into();
 
-    let terrain_data = tile.terrain_data.as_ref().unwrap();
     let mut result =
-        terrain_data.construct_terrain_mesh(WGS84_64, &tile, bytes, 0., martini.get_mut());
+        raster_dem_data.construct_terrain_mesh(WGS84_64, &ctx, bytes, 0., Some(martini.get_mut()));
 
     if skirt {
         let skirt_height = calculate_skirt_height(&WGS84_64, tile.coords.z, skirt_exaggeration);

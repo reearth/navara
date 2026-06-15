@@ -1,7 +1,7 @@
 use bevy_ecs::prelude::*;
 use navara_buffer_store::BufferStore;
 use navara_component::{Deleted, Order, OrderByDistance, Priority};
-use navara_core::Ellipsoid;
+use navara_core::{Ellipsoid, TilingScheme};
 use navara_data_requester::DataManager;
 
 use navara_fog::Fog;
@@ -13,8 +13,8 @@ use navara_occluder::ellipsoidal_occluder::EllipsoidalOccluder;
 
 use navara_camera::CameraFrustum;
 use navara_tile_component::{
-    RasterDEMData, RasterTile, RasterTileQuadtree, Tile, TileHandle, TileMeshMarker,
-    TileTerrainDataRequesterQuery, TileTextureFragmentQuery,
+    QuantizedMeshData, RasterDEMData, RasterTile, RasterTileQuadtree, Tile, TileHandle,
+    TileMeshMarker, TileTerrainDataRequesterQuery, TileTextureFragmentQuery,
 };
 use navara_window::Window;
 
@@ -595,29 +595,34 @@ fn prepare_upsamplable_terrain_data(
         return;
     }
 
-    let Some((terrain_type, terrain_appearance)) =
-        terrain_layer.map(|l| (&l.terrain_type, &l.appearance))
-    else {
+    let Some(layer) = terrain_layer else {
         return;
     };
 
-    let Some(elevation_decoder) = terrain_appearance
-        .as_ref()
-        .and_then(|t| t.elevation_decoder())
-    else {
-        return;
-    };
-
-    let terrain_data = match terrain_type {
-        TerrainDataType::RasterDEM => RasterDEMData::new(*elevation_decoder),
-        // TODO: Support quantized-mesh
-        TerrainDataType::QuantizedMesh => unimplemented!(), // quantized-mesh
+    let terrain_data: Box<dyn navara_tile_component::TerrainData> = match &layer.terrain_type {
+        TerrainDataType::RasterDEM => {
+            let Some(elevation_decoder) = layer
+                .appearance
+                .as_ref()
+                .and_then(|a| a.elevation_decoder())
+            else {
+                return;
+            };
+            Box::new(RasterDEMData::new(*elevation_decoder))
+        }
+        TerrainDataType::QuantizedMesh => {
+            let scheme = layer
+                .appearance
+                .as_ref()
+                .map_or_else(TilingScheme::default, |a| a.tiling_scheme());
+            Box::new(QuantizedMeshData::new_with_tiling_scheme(scheme))
+        }
         TerrainDataType::Ellipsoid | TerrainDataType::Unknown => unreachable!(),
     };
 
     let tile = qt.qt.get_mut(handle).unwrap();
 
-    tile.terrain_data = Some(Box::new(terrain_data));
+    tile.terrain_data = Some(terrain_data);
 }
 
 fn begine_traverse_tile(

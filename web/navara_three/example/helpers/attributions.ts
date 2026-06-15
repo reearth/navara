@@ -1,6 +1,6 @@
 import type { Layer } from "@navara/three";
 
-import { type Dataset, TILES_3D_DATASETS } from "./constants";
+import type { Dataset } from "./constants";
 
 /**
  * Attribution UI state
@@ -35,13 +35,15 @@ function createWrapper(): HTMLDivElement {
 }
 
 /**
- * Create the Google Maps logo image element. Per Google Photorealistic 3D
- * Tiles attribution guidelines, the logo must always be visible.
+ * Create a provider logo image element. Logos are rendered to the left of the
+ * collapsible attribution container so they remain visible regardless of the
+ * collapsed state — required by providers like Google Photorealistic 3D Tiles
+ * and Cesium Ion.
  */
-function createGoogleLogo(): HTMLImageElement {
+function createLogoImage(src: string, alt: string): HTMLImageElement {
   const img = document.createElement("img");
-  img.src = "/credits/GoogleMaps.png";
-  img.alt = "Google Maps";
+  img.src = src;
+  img.alt = alt;
   img.style.height = "22px";
   img.style.width = "auto";
   img.style.display = "block";
@@ -194,9 +196,10 @@ function createContent(attributions: UniqueAttribution[]): {
  * become visible or are removed. This is what Google Photorealistic 3D Tiles
  * requires for compliance.
  *
- * When the Google Photorealistic 3D Tiles dataset is included, the Google Maps
- * logo is shown to the left of the container and remains visible regardless of
- * the collapsed state, as required by Google's attribution guidelines.
+ * Datasets that declare a `logo` (e.g. Google Photorealistic 3D Tiles, Cesium
+ * Ion) get the logo rendered to the left of the container, where it remains
+ * visible regardless of the collapsed state — required by those providers'
+ * attribution guidelines.
  *
  * @param datasets - Datasets to display attributions for
  * @param layers - Optional layers whose per-feature credits should be tracked
@@ -300,14 +303,16 @@ export function showAttributions(
     });
   };
 
-  // Build wrapper. The Google logo sits outside the collapsible container, to
-  // its left, so it stays visible even when attributions are collapsed.
+  // Build wrapper. Provider logos sit outside the collapsible container, to
+  // its left, so they stay visible even when attributions are collapsed.
   const wrapper = createWrapper();
-  const includesGooglePhotoreal = datasets.some(
-    (d) => d.url === TILES_3D_DATASETS.googlePhotorealTiles.url,
-  );
-  if (includesGooglePhotoreal) {
-    wrapper.appendChild(createGoogleLogo());
+  const seenLogos = new Set<string>();
+  for (const dataset of datasets) {
+    if (!dataset.logo || seenLogos.has(dataset.logo)) continue;
+    seenLogos.add(dataset.logo);
+    wrapper.appendChild(
+      createLogoImage(dataset.logo, dataset.attribution ?? ""),
+    );
   }
   wrapper.appendChild(container);
 

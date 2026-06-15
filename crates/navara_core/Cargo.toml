@@ -11,3 +11,4 @@ bevy_ecs.workspace = true
 approx.workspace = true
 regex.workspace = true
 navara_math.workspace = true
+serde.workspace = true

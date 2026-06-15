@@ -1,5 +1,5 @@
 use bevy_ecs::{component::Component, entity::Entity};
-use navara_core::{CRS, ElevationDecoder, calc_transform};
+use navara_core::{CRS, ElevationDecoder, TilingScheme, calc_transform};
 use navara_geometry::TileUvTransform;
 use navara_math::{Transform, Vec2, Vec3};
 
@@ -628,6 +628,49 @@ impl Default for EllipsoidTerrainMaterial {
             show_bounding_box: false,
             max_zoom: 20,
             min_zoom: 0,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Component)]
+pub struct QuantizedMeshTerrainMaterial {
+    pub show: bool,
+    pub cast_shadow: bool,
+    pub receive_shadow: bool,
+    pub show_bounding_box: bool,
+    pub max_zoom: usize,
+    pub min_zoom: usize,
+    pub overscaled_max_zoom: usize,
+    pub skirt: bool,
+    pub skirt_exaggeration: f32,
+    pub tiling_scheme: TilingScheme,
+    /// Request the oct-encoded per-vertex normals extension from the server.
+    /// Adds `octvertexnormals` to the Accept header when fetching `.terrain` tiles.
+    pub request_vertex_normals: bool,
+    /// Request the watermask extension from the server.
+    /// Adds `watermask` to the Accept header when fetching `.terrain` tiles.
+    pub request_water_mask: bool,
+    /// Bearer token sent as the `Authorization` header for `.terrain` requests.
+    /// `None` means no Authorization header is added.
+    pub token: Option<String>,
+}
+
+impl Default for QuantizedMeshTerrainMaterial {
+    fn default() -> Self {
+        Self {
+            show: true,
+            cast_shadow: false,
+            receive_shadow: false,
+            show_bounding_box: false,
+            max_zoom: 14,
+            min_zoom: 0,
+            overscaled_max_zoom: 24,
+            skirt: true,
+            skirt_exaggeration: 1.0,
+            tiling_scheme: TilingScheme::Geographic { tms: true },
+            request_vertex_normals: false,
+            request_water_mask: false,
+            token: None,
         }
     }
 }

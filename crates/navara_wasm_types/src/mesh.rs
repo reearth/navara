@@ -9,6 +9,7 @@ pub struct CachedMeshHandle {
     pub indices: Handle,
     pub uvs: Handle,
     pub heights: Option<Handle>,
+    pub normals: Option<Handle>,
 }
 
 #[wasm_bindgen]
@@ -20,6 +21,7 @@ impl CachedMeshHandle {
             indices,
             uvs,
             heights,
+            normals: None,
         }
     }
 }
@@ -31,6 +33,7 @@ impl From<navara_mesh::CachedMeshHandle> for CachedMeshHandle {
             uvs: d.uvs,
             indices: d.indices,
             heights: d.heights,
+            normals: d.normals,
         }
     }
 }
@@ -42,6 +45,7 @@ impl From<CachedMeshHandle> for navara_mesh::CachedMeshHandle {
             uvs: d.uvs,
             indices: d.indices,
             heights: d.heights,
+            normals: d.normals,
         }
     }
 }

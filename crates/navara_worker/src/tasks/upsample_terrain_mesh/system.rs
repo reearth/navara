@@ -62,6 +62,7 @@ pub(crate) fn upsample_terrain_mesh(
                     uvs,
                     heights,
                     indices,
+                    normals: None,
                 },
             )
             .unwrap();

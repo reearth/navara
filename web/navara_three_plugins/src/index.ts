@@ -26,3 +26,9 @@ export {
   type AttributionHtml,
   type AttributionChild,
 } from "./attribution";
+
+export {
+  CesiumIonPlugin,
+  type CesiumIonConfig,
+  type CesiumIonTerrainOptions,
+} from "./CesiumIonPlugin";

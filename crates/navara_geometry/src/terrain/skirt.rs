@@ -29,6 +29,9 @@ pub struct SkirtData {
     /// For each skirt vertex pair (new_v0, new_v1), this stores the original
     /// edge vertex indices (v0, v1) so normals can be copied from the edge.
     pub indices_to_edge: Vec<u32>,
+    /// Optional skirt normals (stride 3), copied from corresponding edge vertices.
+    /// Only populated when the source geometry has normals.
+    pub normals: Option<Vec<f32>>,
 }
 
 /// Information about an edge during boundary detection.
@@ -134,6 +137,9 @@ pub fn generate_skirt(
     let mut skirt_uvs = Vec::with_capacity(edge_count * 2 * 2);
     let mut skirt_indices = Vec::with_capacity(edge_count * 2 * 3);
     let mut indices_to_edge = Vec::with_capacity(edge_count * 2);
+    let source_normals = geometry.normals.as_deref();
+    let mut skirt_normals: Option<Vec<f32>> =
+        source_normals.map(|_| Vec::with_capacity(edge_count * 2 * 3));
 
     for (edge_index, edge) in boundary_edges.iter().enumerate() {
         let v0 = edge.v0 as usize;
@@ -176,6 +182,14 @@ pub fn generate_skirt(
         indices_to_edge.push(edge.v0);
         indices_to_edge.push(edge.v1);
 
+        // --- Normals (copy from edge vertex) ---
+        if let (Some(src), Some(dst)) = (source_normals, skirt_normals.as_mut()) {
+            let n0 = v0 * 3;
+            let n1 = v1 * 3;
+            dst.extend_from_slice(&src[n0..n0 + 3]);
+            dst.extend_from_slice(&src[n1..n1 + 3]);
+        }
+
         // --- Triangles ---
         // The indices reference both main geometry vertices (v0, v1) and
         // skirt vertices (offset by original_vertex_count).
@@ -200,6 +214,7 @@ pub fn generate_skirt(
         uvs: skirt_uvs,
         indices: skirt_indices,
         indices_to_edge,
+        normals: skirt_normals,
     }
 }
 
@@ -215,6 +230,7 @@ pub fn add_skirt_separate(geometry: &mut Geometry, skirt_height: f32, down_dir_f
     geometry.skirt_uvs = Some(skirt_data.uvs);
     geometry.skirt_indices = Some(skirt_data.indices);
     geometry.skirt_indices_to_edge = Some(skirt_data.indices_to_edge);
+    geometry.skirt_normals = skirt_data.normals;
 }
 
 /// Add skirts along all boundary edges of the mesh (legacy inline method).

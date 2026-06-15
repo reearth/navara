@@ -72,6 +72,7 @@ pub fn tile_triangles_with_terrain(
         min_height,
         heights,
         rtc_translation: Some(tile_center),
+        watermask: None,
     }
 }
 

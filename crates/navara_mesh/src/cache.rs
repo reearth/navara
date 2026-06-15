@@ -6,4 +6,6 @@ pub struct CachedMeshHandle {
     pub indices: Handle,
     pub uvs: Handle,
     pub heights: Option<Handle>,
+    /// Optional per-vertex normals (terrain only). Needed for upsample propagation.
+    pub normals: Option<Handle>,
 }

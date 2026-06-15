@@ -17,6 +17,8 @@ pub struct UpsamplableTerrainGeometry<'a> {
     pub uvs: &'a [f32],
     pub heights: &'a [f32],
     pub indices: &'a [u32],
+    /// Optional per-vertex normals from the parent (stride 3).
+    pub normals: Option<&'a [f32]>,
 }
 
 /// Upsample a terrain mesh which is one of the four split child tiles.
@@ -29,6 +31,7 @@ pub struct UpsampledTerrainGeometry {
     pub uvs: Option<Vec<FloatType>>,
     pub heights: Option<Vec<f32>>,
     pub indices: Option<Vec<u32>>,
+    pub normals: Option<Vec<f32>>,
     pub max_height: FloatType,
     pub min_height: FloatType,
     is_east: bool,
@@ -40,6 +43,7 @@ impl UpsampledTerrainGeometry {
         let uvs = &upsamplable_geometry.uvs;
         let heights = &upsamplable_geometry.heights;
         let indices = &upsamplable_geometry.indices;
+        let normals = upsamplable_geometry.normals;
 
         let (is_east, is_north) = match tile_region {
             TileRegion::NorthEast => (true, true),
@@ -48,13 +52,14 @@ impl UpsampledTerrainGeometry {
             TileRegion::NorthWest => (false, true),
         };
 
-        let (new_uvs, new_heights, new_indices, max_height, min_height) =
-            clip(uvs, heights, indices, is_east, is_north);
+        let (new_uvs, new_heights, new_normals, new_indices, max_height, min_height) =
+            clip(uvs, heights, normals, indices, is_east, is_north);
 
         Self {
             uvs: Some(new_uvs),
             heights: Some(new_heights),
             indices: Some(new_indices),
+            normals: new_normals,
             max_height,
             min_height,
             is_east,
@@ -80,13 +85,7 @@ impl UpsampledTerrainGeometry {
         let offset_v = if self.is_north { 1. } else { 0. };
 
         fn clamp_uv(v: FloatType, min: FloatType, max: FloatType, offset: FloatType) -> FloatType {
-            if v > max {
-                return max;
-            }
-            if v < min {
-                return min;
-            }
-            v * 2. - offset
+            v.clamp(min, max) * 2. - offset
         }
 
         let heights = self.heights.take().unwrap();
@@ -114,6 +113,7 @@ impl UpsampledTerrainGeometry {
                 vertices,
                 uvs,
                 indices: self.indices.take().unwrap(),
+                normals: self.normals.take(),
                 ..Default::default()
             },
             heights,
@@ -122,23 +122,33 @@ impl UpsampledTerrainGeometry {
 }
 
 // TODO: Execute this function in worker
+#[allow(clippy::type_complexity)]
 fn clip(
     uvs: &[f32],
     heights: &[f32],
+    normals: Option<&[f32]>,
     indices: &[u32],
     is_east: bool,
     is_north: bool,
-) -> (Vec<f64>, Vec<f32>, Vec<u32>, f64, f64) {
+) -> (Vec<f64>, Vec<f32>, Option<Vec<f32>>, Vec<u32>, f64, f64) {
     let threashold = 0.5;
 
     let mut clipped_coord_map = ClippedCoordMap::new();
 
     let mut new_uvs = vec![];
     let mut new_heights = vec![];
+    let mut new_normals: Option<Vec<f32>> = normals.map(|_| Vec::new());
     let mut new_indices = vec![];
 
     let mut max_height = 0.0;
     let mut min_height = 99999.0;
+
+    let read_normal = |idx: u32| -> Option<[f64; 3]> {
+        normals.map(|src| {
+            let base = idx as usize * 3;
+            [src[base] as f64, src[base + 1] as f64, src[base + 2] as f64]
+        })
+    };
 
     for polygon_indices in indices.chunks(3) {
         let [u0, v0] = [
@@ -162,6 +172,16 @@ fn clip(
         let origin_v_coords = [v0 as f64, v1 as f64, v2 as f64];
         let origin_h_coords = [h0 as f64, h1 as f64, h2 as f64];
 
+        let origin_normals = read_normal(polygon_indices[0]).map(|n0| {
+            let n1 = read_normal(polygon_indices[1]).unwrap();
+            let n2 = read_normal(polygon_indices[2]).unwrap();
+            [
+                [n0[0], n1[0], n2[0]],
+                [n0[1], n1[1], n2[1]],
+                [n0[2], n1[2], n2[2]],
+            ]
+        });
+
         let clipped_u_indices =
             clip_2d_triangle_at_threshold(threashold, is_east, &origin_u_coords);
         if clipped_u_indices.is_empty() {
@@ -183,10 +203,29 @@ fn clip(
             clipped_u_indices[1].interpolate(&origin_h_coords),
             clipped_u_indices[2].interpolate(&origin_h_coords),
         ];
+        let interpolated_normals = origin_normals.map(|comps| {
+            [
+                [
+                    clipped_u_indices[0].interpolate(&comps[0]),
+                    clipped_u_indices[1].interpolate(&comps[0]),
+                    clipped_u_indices[2].interpolate(&comps[0]),
+                ],
+                [
+                    clipped_u_indices[0].interpolate(&comps[1]),
+                    clipped_u_indices[1].interpolate(&comps[1]),
+                    clipped_u_indices[2].interpolate(&comps[1]),
+                ],
+                [
+                    clipped_u_indices[0].interpolate(&comps[2]),
+                    clipped_u_indices[1].interpolate(&comps[2]),
+                    clipped_u_indices[2].interpolate(&comps[2]),
+                ],
+            ]
+        });
 
         let clipped_transformed_v_indices =
             clip_2d_triangle_at_threshold(threashold, is_north, &interpolated_v_coords);
-        if clipped_u_indices.is_empty() {
+        if clipped_transformed_v_indices.is_empty() {
             continue;
         }
 
@@ -194,12 +233,14 @@ fn clip(
             &clipped_transformed_v_indices,
             &mut new_uvs,
             &mut new_heights,
+            new_normals.as_mut(),
             &mut new_indices,
             [
                 interpolated_u_coords,
                 interpolated_v_coords,
                 interpolated_h_coords,
             ],
+            interpolated_normals,
             &mut clipped_coord_map,
             (&mut max_height, &mut min_height),
         );
@@ -220,10 +261,29 @@ fn clip(
                 interpolated_h_coords[2],
                 clipped_u_indices[3].interpolate(&origin_h_coords),
             ];
+            let interpolated_normals2 = origin_normals.map(|comps| {
+                [
+                    [
+                        interpolated_normals.as_ref().unwrap()[0][0],
+                        interpolated_normals.as_ref().unwrap()[0][2],
+                        clipped_u_indices[3].interpolate(&comps[0]),
+                    ],
+                    [
+                        interpolated_normals.as_ref().unwrap()[1][0],
+                        interpolated_normals.as_ref().unwrap()[1][2],
+                        clipped_u_indices[3].interpolate(&comps[1]),
+                    ],
+                    [
+                        interpolated_normals.as_ref().unwrap()[2][0],
+                        interpolated_normals.as_ref().unwrap()[2][2],
+                        clipped_u_indices[3].interpolate(&comps[2]),
+                    ],
+                ]
+            });
 
             let clipped_transformed_v_indices =
                 clip_2d_triangle_at_threshold(threashold, is_north, &interpolated_v_coords);
-            if clipped_u_indices.is_empty() {
+            if clipped_transformed_v_indices.is_empty() {
                 continue;
             }
 
@@ -231,35 +291,48 @@ fn clip(
                 &clipped_transformed_v_indices,
                 &mut new_uvs,
                 &mut new_heights,
+                new_normals.as_mut(),
                 &mut new_indices,
                 [
                     interpolated_u_coords,
                     interpolated_v_coords,
                     interpolated_h_coords,
                 ],
+                interpolated_normals2,
                 &mut clipped_coord_map,
                 (&mut max_height, &mut min_height),
             );
         }
     }
 
-    (new_uvs, new_heights, new_indices, max_height, min_height)
+    (
+        new_uvs,
+        new_heights,
+        new_normals,
+        new_indices,
+        max_height,
+        min_height,
+    )
 }
 
+#[allow(clippy::too_many_arguments)]
 fn construct_polygon(
     clipped_indices: &[ClippedIndex],
     new_uvs: &mut Vec<FloatType>,
     new_heights: &mut Vec<f32>,
+    new_normals: Option<&mut Vec<f32>>,
     new_indices: &mut Vec<u32>,
     [
         interpolated_u_coords,
         interpolated_v_coords,
         interpolated_h_coords,
     ]: [[FloatType; 3]; 3],
+    interpolated_normal_coords: Option<[[FloatType; 3]; 3]>,
     clipped_coord_map: &mut ClippedCoordMap,
     (max_height, min_height): (&mut FloatType, &mut FloatType),
 ) {
     let mut new_polygon_indices = vec![];
+    let mut new_normals = new_normals;
     for i in clipped_indices {
         let new_index = new_uvs.len() / 2;
         let u = i.interpolate(&interpolated_u_coords);
@@ -274,6 +347,24 @@ fn construct_polygon(
             new_uvs.push(u);
             new_uvs.push(v);
             new_heights.push(h as f32);
+
+            if let (Some(dst), Some(comps)) =
+                (new_normals.as_deref_mut(), interpolated_normal_coords)
+            {
+                let nx = i.interpolate(&comps[0]);
+                let ny = i.interpolate(&comps[1]);
+                let nz = i.interpolate(&comps[2]);
+                let len = (nx * nx + ny * ny + nz * nz).sqrt();
+                if len > 0.0 {
+                    dst.push((nx / len) as f32);
+                    dst.push((ny / len) as f32);
+                    dst.push((nz / len) as f32);
+                } else {
+                    dst.push(0.0);
+                    dst.push(0.0);
+                    dst.push(1.0);
+                }
+            }
 
             new_index
         };
@@ -342,10 +433,10 @@ impl ClippedCoordMap {
     }
     fn make_key(&self, u: FloatType, v: FloatType, h: FloatType) -> String {
         format!(
-            "{}{}{}",
+            "{}_{}_{}",
             self.quantize_float(u),
             self.quantize_float(v),
-            self.quantize_float(h)
+            h.to_bits()
         )
     }
     fn quantize_float(&self, v: FloatType) -> u16 {
@@ -356,12 +447,175 @@ impl ClippedCoordMap {
 #[cfg(test)]
 mod test {
     use approx::assert_abs_diff_eq;
-    use navara_core::TileRegion;
-    use navara_math::EPSILON5;
+    use navara_core::{Extent, LngLat, Rad, TileRegion, WGS84_64};
+    use navara_math::{EPSILON5, Vec3};
 
     use crate::UpsamplableTerrainGeometry;
 
     use super::UpsampledTerrainGeometry;
+
+    #[test]
+    fn sw_and_se_should_have_different_clipped_uvs() {
+        // Same parent mesh, two different u-halves. The clipped UVs (in parent UV
+        // space, before clamp_uv) must differ: SW keeps u<=0.5, SE keeps u>=0.5.
+        let uvs: Vec<f32> = (0..3)
+            .flat_map(|j| (0..3).map(move |i| [(i as f32) * 0.5, (j as f32) * 0.5]))
+            .flatten()
+            .collect();
+        let heights: Vec<f32> = (0..9).map(|i| i as f32 * 100.0).collect();
+        let mut indices = Vec::new();
+        for j in 0..2u32 {
+            for i in 0..2u32 {
+                let a = j * 3 + i;
+                let b = a + 1;
+                let c = a + 3;
+                let d = c + 1;
+                indices.extend_from_slice(&[a, b, d, a, d, c]);
+            }
+        }
+
+        let sw = UpsampledTerrainGeometry::new(
+            UpsamplableTerrainGeometry {
+                uvs: &uvs,
+                heights: &heights,
+                indices: &indices,
+                normals: None,
+            },
+            &TileRegion::SouthWest,
+        );
+        let se = UpsampledTerrainGeometry::new(
+            UpsamplableTerrainGeometry {
+                uvs: &uvs,
+                heights: &heights,
+                indices: &indices,
+                normals: None,
+            },
+            &TileRegion::SouthEast,
+        );
+
+        let sw_uvs = sw.uvs.as_ref().unwrap();
+        let se_uvs = se.uvs.as_ref().unwrap();
+
+        // SW kept u in [0, 0.5]. Every u in SW's clipped output must satisfy u <= 0.5.
+        for u in sw_uvs.iter().step_by(2) {
+            assert!(
+                *u <= 0.5 + 1e-9,
+                "SW clip leaked vertex with u={} (should be u<=0.5)",
+                u
+            );
+        }
+        // SE kept u in [0.5, 1]. Every u in SE's clipped output must satisfy u >= 0.5.
+        for u in se_uvs.iter().step_by(2) {
+            assert!(
+                *u >= 0.5 - 1e-9,
+                "SE clip leaked vertex with u={} (should be u>=0.5)",
+                u
+            );
+        }
+
+        // The two clipped UV sets MUST differ — otherwise SW and SE render identical
+        // geometry (the user-visible bug).
+        assert_ne!(
+            sw_uvs, se_uvs,
+            "SW and SE produced identical clipped UVs — u-clip is not working"
+        );
+    }
+
+    #[test]
+    fn grandchild_upsample_clips_to_smaller_quadrant() {
+        // Simulate a denser parent mesh (3×3 grid → 8 triangles).
+        let mut uvs = Vec::new();
+        let mut heights = Vec::new();
+        for j in 0..3 {
+            for i in 0..3 {
+                uvs.push(i as f32 * 0.5);
+                uvs.push(j as f32 * 0.5);
+                heights.push((i * 10 + j * 100) as f32);
+            }
+        }
+        let mut indices = Vec::new();
+        for j in 0..2u32 {
+            for i in 0..2u32 {
+                let a = j * 3 + i;
+                let b = a + 1;
+                let c = a + 3;
+                let d = c + 1;
+                indices.extend_from_slice(&[a, b, d, a, d, c]);
+            }
+        }
+
+        // First upsample: parent → NE child
+        let mut child = UpsampledTerrainGeometry::new(
+            UpsamplableTerrainGeometry {
+                uvs: &uvs,
+                heights: &heights,
+                indices: &indices,
+                normals: None,
+            },
+            &TileRegion::NorthEast,
+        );
+
+        // Run construct_geometry to remap child uvs to child space [0, 1].
+        let parent_extent = Extent::from_points(&[
+            LngLat {
+                lng: Rad::new(2.41887_f64),
+                lat: Rad::new(0.61610_f64),
+            },
+            LngLat {
+                lng: Rad::new(2.41922_f64),
+                lat: Rad::new(0.61645_f64),
+            },
+        ]);
+        let mid_lng = (parent_extent.west.val() + parent_extent.east.val()) / 2.0;
+        let mid_lat = (parent_extent.south.val() + parent_extent.north.val()) / 2.0;
+        let child_extent = Extent::from_points(&[
+            LngLat {
+                lng: Rad::new(mid_lng),
+                lat: Rad::new(mid_lat),
+            },
+            LngLat {
+                lng: parent_extent.east,
+                lat: parent_extent.north,
+            },
+        ]);
+        let (child_geom, child_heights) =
+            child.construct_geometry(WGS84_64, &child_extent, &Vec3::ZERO);
+
+        // Second upsample: child → NE grandchild
+        let grandchild = UpsampledTerrainGeometry::new(
+            UpsamplableTerrainGeometry {
+                uvs: &child_geom.uvs,
+                heights: &child_heights,
+                indices: &child_geom.indices,
+                normals: None,
+            },
+            &TileRegion::NorthEast,
+        );
+
+        let clipped_uvs = grandchild.uvs.as_ref().unwrap();
+        let clipped_indices = grandchild.indices.as_ref().unwrap();
+
+        // Sanity: clip should produce *fewer* triangles than the child had.
+        assert!(
+            !clipped_indices.is_empty(),
+            "grandchild produced no triangles"
+        );
+
+        // All referenced vertices must be in [0.5, 1] x [0.5, 1] of child UV.
+        use std::collections::HashSet;
+        let referenced: HashSet<u32> = clipped_indices.iter().copied().collect();
+        for &idx in &referenced {
+            let u = clipped_uvs[idx as usize * 2];
+            let v = clipped_uvs[idx as usize * 2 + 1];
+            assert!(
+                u >= 0.5 - 1e-9 && v >= 0.5 - 1e-9,
+                "grandchild referenced vertex {} ({}, {}) outside NE quadrant of child",
+                idx,
+                u,
+                v
+            );
+        }
+    }
 
     #[test]
     fn it_should_construct_upsampled_coords() {
@@ -370,6 +624,7 @@ mod test {
                 uvs: &[0.1, 0.8, 0.4, 0.2, 0.8, 0.9],
                 heights: &[0., 50., 100.],
                 indices: &[0, 1, 2],
+                normals: None,
             },
             &TileRegion::NorthEast,
         );
@@ -400,6 +655,7 @@ mod test {
                 uvs: &[0., 1., 0., 0., 1., 0., 1., 1.],
                 heights: &[0., 50., 100., 50.],
                 indices: &[0, 1, 2, 0, 2, 3],
+                normals: None,
             },
             &TileRegion::NorthEast,
         );
