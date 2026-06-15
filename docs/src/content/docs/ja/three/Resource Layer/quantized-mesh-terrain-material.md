@@ -258,6 +258,6 @@ Cesium Ion のアセットを利用する場合は、エンドポイントの解
 
 ## 関連リソース
 
-- [Terrain Layer](../../../three/resource-layer-reference/terrain-layer/) - Terrain レイヤーの概要と使い方
-- [RasterTerrainMaterial](../../../three/resource-layer-reference/raster-terrain-material/) - ラスター PNG/WebP DEM 向け地形マテリアル
+- [Terrain Layer](../../../three/resource-layer/terrain-layer/) - Terrain レイヤーの概要と使い方
+- [RasterTerrainMaterial](../../../three/resource-layer/raster-terrain-material/) - ラスター PNG/WebP DEM 向け地形マテリアル
 - [CesiumIonPlugin](../../../three_plugins/cesiumionplugin/) - Cesium Ion の quantized-mesh アセットを扱う高レベルプラグイン
