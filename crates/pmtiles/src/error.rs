@@ -2,7 +2,7 @@
 
 /// Errors that can arise while parsing a PMTiles v3 archive.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum PmtError {
+pub enum Error {
     /// The header did not begin with the `PMTiles` magic string.
     InvalidMagic,
     /// The archive declares a spec version other than 3 (e.g. a legacy v2 file).
@@ -17,7 +17,7 @@ pub enum PmtError {
     Decompression,
 }
 
-impl core::fmt::Display for PmtError {
+impl core::fmt::Display for Error {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::InvalidMagic => write!(f, "not a PMTiles archive (bad magic number)"),
@@ -32,4 +32,4 @@ impl core::fmt::Display for PmtError {
     }
 }
 
-impl std::error::Error for PmtError {}
+impl std::error::Error for Error {}

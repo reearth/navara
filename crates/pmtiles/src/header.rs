@@ -3,7 +3,7 @@
 //! The byte layout is defined by the spec and is little-endian throughout:
 //! <https://github.com/protomaps/PMTiles/blob/main/spec/v3/spec.md>
 
-use crate::PmtError;
+use crate::Error;
 
 /// Size of the PMTiles v3 header, in bytes.
 pub const HEADER_SIZE: usize = 127;
@@ -26,14 +26,14 @@ pub enum Compression {
 }
 
 impl Compression {
-    fn from_byte(b: u8) -> Result<Self, PmtError> {
+    fn from_byte(b: u8) -> Result<Self, Error> {
         Ok(match b {
             0 => Self::Unknown,
             1 => Self::None,
             2 => Self::Gzip,
             3 => Self::Brotli,
             4 => Self::Zstd,
-            other => return Err(PmtError::InvalidCompression(other)),
+            other => return Err(Error::InvalidCompression(other)),
         })
     }
 }
@@ -58,7 +58,7 @@ pub enum TileType {
 }
 
 impl TileType {
-    fn from_byte(b: u8) -> Result<Self, PmtError> {
+    fn from_byte(b: u8) -> Result<Self, Error> {
         Ok(match b {
             0 => Self::Unknown,
             1 => Self::Mvt,
@@ -67,7 +67,7 @@ impl TileType {
             4 => Self::Webp,
             5 => Self::Avif,
             6 => Self::Mlt,
-            other => return Err(PmtError::InvalidTileType(other)),
+            other => return Err(Error::InvalidTileType(other)),
         })
     }
 }
@@ -109,18 +109,18 @@ impl Header {
     /// only the leading header region is inspected.
     ///
     /// # Errors
-    /// Returns [`PmtError`] if the buffer is too short, the magic number is
+    /// Returns [`Error`] if the buffer is too short, the magic number is
     /// wrong, the version is not 3, or a compression/tile-type byte is invalid.
-    pub fn parse(bytes: &[u8]) -> Result<Self, PmtError> {
+    pub fn parse(bytes: &[u8]) -> Result<Self, Error> {
         if bytes.len() < HEADER_SIZE {
-            return Err(PmtError::UnexpectedEof);
+            return Err(Error::UnexpectedEof);
         }
         if &bytes[0..MAGIC.len()] != MAGIC {
-            return Err(PmtError::InvalidMagic);
+            return Err(Error::InvalidMagic);
         }
         let version = bytes[7];
         if version != 3 {
-            return Err(PmtError::UnsupportedVersion(version));
+            return Err(Error::UnsupportedVersion(version));
         }
 
         // `bytes.len() >= HEADER_SIZE` was checked above, so every fixed offset

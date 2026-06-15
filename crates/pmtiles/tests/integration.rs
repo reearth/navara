@@ -1,4 +1,4 @@
-use navara_pmtiles::*;
+use pmtiles::*;
 
 // A real 265-byte archive: 5 tiles addressed through a root directory that
 // is a single leaf pointer into a 5-entry leaf directory. Internal
@@ -28,10 +28,10 @@ fn tile_id_rejects_zoom_past_31() {
 
 #[test]
 fn header_parse_rejects_bad_input() {
-    assert_eq!(Header::parse(&[]), Err(PmtError::UnexpectedEof));
+    assert_eq!(Header::parse(&[]), Err(Error::UnexpectedEof));
     let mut not_pmtiles = vec![0u8; HEADER_SIZE];
     not_pmtiles[..4].copy_from_slice(b"XXXX");
-    assert_eq!(Header::parse(&not_pmtiles), Err(PmtError::InvalidMagic));
+    assert_eq!(Header::parse(&not_pmtiles), Err(Error::InvalidMagic));
 }
 
 #[test]
@@ -101,7 +101,7 @@ fn directory_parse_rejects_hostile_entry_count() {
     // A count the remaining bytes can't possibly hold (each entry needs at
     // least 4 bytes) must fail before allocating, not OOM.
     let huge_count = [0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x7f];
-    assert_eq!(Directory::parse(&huge_count), Err(PmtError::UnexpectedEof));
+    assert_eq!(Directory::parse(&huge_count), Err(Error::UnexpectedEof));
 }
 
 #[test]
@@ -109,7 +109,7 @@ fn find_returns_none_past_the_end() {
     // A leaf with ids 0..=4, none covering id 9.
     let dir = Directory {
         entries: (0..5)
-            .map(|i| DirEntry {
+            .map(|i| Entry {
                 tile_id: i,
                 offset: i,
                 length: 1,

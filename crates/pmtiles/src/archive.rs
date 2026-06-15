@@ -1,23 +1,23 @@
 //! The PMTiles archive state machine.
 //!
-//! [`PmtilesArchive`] tracks just enough state to turn a `z/x/y` request into a
+//! [`Archive`] tracks just enough state to turn a `z/x/y` request into a
 //! byte range to fetch. It performs **no IO itself**: it emits the byte ranges
 //! it needs ([`ByteRange`]) and is fed the resulting bytes back. The caller
 //! owns the fetching (HTTP range requests, a local file, …), which keeps this
 //! type a pure, deterministic state machine.
 //!
 //! Lifecycle:
-//! 1. Repeatedly call [`take_bootstrap_request`](PmtilesArchive::take_bootstrap_request);
+//! 1. Repeatedly call [`take_bootstrap_request`](Archive::take_bootstrap_request);
 //!    fetch each returned range and feed it to
-//!    [`on_bootstrap_bytes`](PmtilesArchive::on_bootstrap_bytes) until
-//!    [`is_ready`](PmtilesArchive::is_ready).
-//! 2. Call [`resolve`](PmtilesArchive::resolve) per tile. On [`Resolution::NeedLeaf`],
-//!    fetch the leaf and feed it to [`on_leaf_bytes`](PmtilesArchive::on_leaf_bytes),
+//!    [`on_bootstrap_bytes`](Archive::on_bootstrap_bytes) until
+//!    [`is_ready`](Archive::is_ready).
+//! 2. Call [`resolve`](Archive::resolve) per tile. On [`Resolution::NeedLeaf`],
+//!    fetch the leaf and feed it to [`on_leaf_bytes`](Archive::on_leaf_bytes),
 //!    then resolve again. On [`Resolution::Tile`], fetch the payload.
 
 use std::collections::{HashMap, HashSet};
 
-use crate::{Compression, Directory, Header, PmtError, tile_id};
+use crate::{Compression, Directory, Header, Error, tile_id};
 
 /// A byte range to fetch from the archive: `length` bytes starting at `offset`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -32,10 +32,10 @@ pub struct ByteRange {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Resolution {
     /// A leaf directory must be fetched before the tile can be resolved. Fetch
-    /// `request`, feed it to [`PmtilesArchive::on_leaf_bytes`] keyed by
+    /// `request`, feed it to [`Archive::on_leaf_bytes`] keyed by
     /// `leaf_offset`, then resolve again.
     NeedLeaf {
-        /// Key to pass back to [`PmtilesArchive::on_leaf_bytes`].
+        /// Key to pass back to [`Archive::on_leaf_bytes`].
         leaf_offset: u64,
         /// Bytes to fetch for the leaf directory.
         request: ByteRange,
@@ -86,11 +86,11 @@ struct Ready {
 
 /// A PMTiles v3 archive being resolved incrementally. URL-agnostic: the caller
 /// pairs it with whatever locates the bytes.
-pub struct PmtilesArchive {
+pub struct Archive {
     state: State,
 }
 
-impl Default for PmtilesArchive {
+impl Default for Archive {
     fn default() -> Self {
         Self {
             state: State::NeedHeader,
@@ -98,7 +98,7 @@ impl Default for PmtilesArchive {
     }
 }
 
-impl PmtilesArchive {
+impl Archive {
     /// Create a fresh archive that still needs bootstrapping.
     #[must_use]
     pub fn new() -> Self {
@@ -163,9 +163,9 @@ impl PmtilesArchive {
     /// [`take_bootstrap_request`](Self::take_bootstrap_request).
     ///
     /// # Errors
-    /// Returns [`PmtError`] if the header or root directory is malformed. On
+    /// Returns [`Error`] if the header or root directory is malformed. On
     /// error the archive transitions to failed and issues no further requests.
-    pub fn on_bootstrap_bytes(&mut self, bytes: &[u8]) -> Result<(), PmtError> {
+    pub fn on_bootstrap_bytes(&mut self, bytes: &[u8]) -> Result<(), Error> {
         // On any early return via `?`, the state stays `Failed`.
         match std::mem::replace(&mut self.state, State::Failed) {
             State::AwaitHeader => {
@@ -281,8 +281,8 @@ impl PmtilesArchive {
     /// [`Resolution::NeedLeaf`] that requested it.
     ///
     /// # Errors
-    /// Returns [`PmtError`] if the leaf directory is malformed.
-    pub fn on_leaf_bytes(&mut self, leaf_offset: u64, bytes: &[u8]) -> Result<(), PmtError> {
+    /// Returns [`Error`] if the leaf directory is malformed.
+    pub fn on_leaf_bytes(&mut self, leaf_offset: u64, bytes: &[u8]) -> Result<(), Error> {
         let State::Ready(ready) = &mut self.state else {
             return Ok(());
         };
@@ -308,7 +308,7 @@ impl PmtilesArchive {
 }
 
 /// Decompress then parse a directory blob.
-fn parse_directory(compression: Compression, raw: &[u8]) -> Result<Directory, PmtError> {
+fn parse_directory(compression: Compression, raw: &[u8]) -> Result<Directory, Error> {
     let bytes = crate::decompress(compression, raw)?;
     Directory::parse(&bytes)
 }

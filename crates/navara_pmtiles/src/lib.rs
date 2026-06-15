@@ -1,23 +1,12 @@
-//! Pure PMTiles v3 parsing primitives — no IO, no ECS.
+//! TEMPORARY shim (step 1 of the PMTiles refactor).
 //!
-//! This crate knows how to read a PMTiles archive's header and directories and
-//! how to map `z/x/y` to a tile ID, but it never fetches anything itself. A
-//! higher layer feeds it byte ranges (obtained however it likes — HTTP range
-//! requests, a local file, …) and uses the parsed offsets to ask for more.
-//!
-//! Scope: the container format only. The tile payloads it points at (MVT, PNG,
-//! …) are decoded elsewhere.
+//! The pure parser has moved to the standalone [`pmtiles`] crate. This crate is
+//! being repurposed into the Bevy-integration layer (step 3); until then it
+//! re-exports `pmtiles` — including backward-compatible aliases for the
+//! de-stuttered type names — so `navara_mvt` keeps compiling unchanged.
 
-mod archive;
-mod decode;
-mod directory;
-mod error;
-mod header;
-mod tile_id;
+pub use pmtiles::*;
 
-pub use archive::{ByteRange, PmtilesArchive, Resolution};
-pub use decode::decompress;
-pub use directory::{DirEntry, Directory};
-pub use error::PmtError;
-pub use header::{Compression, HEADER_SIZE, Header, TileType};
-pub use tile_id::tile_id;
+// Pre-rename aliases, dropped in step 3 when `navara_mvt` switches to the new
+// names via `navara_parser::pmtiles`.
+pub use pmtiles::{Archive as PmtilesArchive, Entry as DirEntry, Error as PmtError};

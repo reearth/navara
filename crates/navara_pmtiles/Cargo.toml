@@ -5,5 +5,7 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
-fast_hilbert.workspace = true
-flate2.workspace = true
+# TEMPORARY (step 1 of the PMTiles refactor): this crate is being repurposed
+# from "pure parser" into the Bevy-integration crate. For now it re-exports the
+# extracted `pmtiles` crate so dependents keep building; step 3 replaces this.
+pmtiles.workspace = true

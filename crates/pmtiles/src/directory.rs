@@ -1,7 +1,7 @@
 //! PMTiles v3 directory: a sorted run of entries that map tile IDs to byte
 //! ranges, encoded as four delta/LEB128-varint columns.
 
-use crate::PmtError;
+use crate::Error;
 
 /// One directory entry.
 ///
@@ -11,7 +11,7 @@ use crate::PmtError;
 /// directory in the leaf-directory section rather than a tile in the tile-data
 /// section.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct DirEntry {
+pub struct Entry {
     /// First tile ID this entry addresses.
     pub tile_id: u64,
     /// Byte offset, relative to the start of the section this entry points
@@ -23,7 +23,7 @@ pub struct DirEntry {
     pub run_length: u32,
 }
 
-impl DirEntry {
+impl Entry {
     /// Whether this entry points to a child (leaf) directory rather than a tile.
     #[must_use]
     pub fn is_leaf(&self) -> bool {
@@ -35,7 +35,7 @@ impl DirEntry {
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Directory {
     /// Entries in ascending `tile_id` order (as stored in the archive).
-    pub entries: Vec<DirEntry>,
+    pub entries: Vec<Entry>,
 }
 
 impl Directory {
@@ -47,8 +47,8 @@ impl Directory {
     /// offset is stored as `value - 1`.
     ///
     /// # Errors
-    /// Returns [`PmtError::UnexpectedEof`] if the buffer ends mid-structure.
-    pub fn parse(bytes: &[u8]) -> Result<Self, PmtError> {
+    /// Returns [`Error::UnexpectedEof`] if the buffer ends mid-structure.
+    pub fn parse(bytes: &[u8]) -> Result<Self, Error> {
         let mut cursor = bytes;
         let n = read_uvarint(&mut cursor)? as usize;
         // The count is untrusted input. Every entry occupies at least four
@@ -56,9 +56,9 @@ impl Directory {
         // cannot possibly satisfy is malformed — reject it before allocating
         // rather than letting a hostile count trigger a huge allocation.
         if n > cursor.len() / 4 {
-            return Err(PmtError::UnexpectedEof);
+            return Err(Error::UnexpectedEof);
         }
-        let mut entries = vec![DirEntry::default(); n];
+        let mut entries = vec![Entry::default(); n];
 
         // Column 1: tile IDs, delta-encoded from the previous entry.
         let mut tile_id = 0u64;
@@ -78,7 +78,7 @@ impl Directory {
         for i in 0..entries.len() {
             let raw = read_uvarint(&mut cursor)?;
             entries[i].offset = if raw == 0 {
-                let prev = i.checked_sub(1).ok_or(PmtError::UnexpectedEof)?;
+                let prev = i.checked_sub(1).ok_or(Error::UnexpectedEof)?;
                 entries[prev].offset + u64::from(entries[prev].length)
             } else {
                 raw - 1
@@ -95,7 +95,7 @@ impl Directory {
     /// pointer (so the caller can descend into that leaf). Returns `None` when
     /// the archive has no data for this tile.
     #[must_use]
-    pub fn find(&self, tile_id: u64) -> Option<&DirEntry> {
+    pub fn find(&self, tile_id: u64) -> Option<&Entry> {
         match self.entries.binary_search_by(|e| e.tile_id.cmp(&tile_id)) {
             Ok(idx) => self.entries.get(idx),
             Err(next) => {
@@ -113,11 +113,11 @@ impl Directory {
 }
 
 /// Read one unsigned LEB128 varint, advancing the cursor past it.
-fn read_uvarint(cursor: &mut &[u8]) -> Result<u64, PmtError> {
+fn read_uvarint(cursor: &mut &[u8]) -> Result<u64, Error> {
     let mut result = 0u64;
     let mut shift = 0u32;
     loop {
-        let (&byte, rest) = cursor.split_first().ok_or(PmtError::UnexpectedEof)?;
+        let (&byte, rest) = cursor.split_first().ok_or(Error::UnexpectedEof)?;
         *cursor = rest;
         result |= u64::from(byte & 0x7f) << shift;
         if byte & 0x80 == 0 {
@@ -126,7 +126,7 @@ fn read_uvarint(cursor: &mut &[u8]) -> Result<u64, PmtError> {
         shift += 7;
         if shift >= 64 {
             // More continuation bits than a u64 can hold: malformed input.
-            return Err(PmtError::UnexpectedEof);
+            return Err(Error::UnexpectedEof);
         }
     }
 }

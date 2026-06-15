@@ -93,6 +93,7 @@ mvt-reader = { git = "https://github.com/reearth/mvt-reader.git" }
 
 # --- Internal Crates ---
 martini = { path = "crates/martini" }
+pmtiles = { path = "crates/pmtiles" }
 navara_b3dm = { path = "crates/navara_b3dm" }
 navara_bin = { path = "crates/navara_bin" }
 navara_buffer_store = { path = "crates/navara_buffer_store" }

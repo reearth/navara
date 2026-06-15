@@ -1,13 +1,13 @@
-//! End-to-end tests for the [`PmtilesArchive`] bootstrap/resolve state machine,
+//! End-to-end tests for the [`Archive`] bootstrap/resolve state machine,
 //! driven entirely through the crate's public API.
 
-use navara_pmtiles::*;
+use pmtiles::*;
 
 const LEAF_ARCHIVE: &[u8] = include_bytes!("./fixtures/leaf.pmtiles");
 
 #[test]
 fn bootstrap_in_one_read_then_resolve_through_a_leaf() {
-    let mut archive = PmtilesArchive::new();
+    let mut archive = Archive::new();
 
     // Bootstrap: one request, no duplicate while in flight.
     let req = archive.take_bootstrap_request().unwrap();
@@ -64,7 +64,7 @@ fn bootstrap_in_one_read_then_resolve_through_a_leaf() {
 
 #[test]
 fn resolve_absent_for_out_of_range_zoom() {
-    let mut archive = PmtilesArchive::new();
+    let mut archive = Archive::new();
     archive.take_bootstrap_request();
     archive.on_bootstrap_bytes(LEAF_ARCHIVE).unwrap();
 
@@ -80,7 +80,7 @@ fn bootstrap_falls_back_to_a_separate_root_dir_fetch() {
     // Header claims the root dir lives at byte 10_000, beyond the bytes we
     // hand back for the bootstrap read, forcing a second request.
     let header = synth_header(10_000, 5);
-    let mut archive = PmtilesArchive::new();
+    let mut archive = Archive::new();
 
     assert_eq!(archive.take_bootstrap_request().unwrap().offset, 0);
     archive.on_bootstrap_bytes(&header).unwrap();
@@ -114,11 +114,11 @@ fn bootstrap_falls_back_to_a_separate_root_dir_fetch() {
 
 #[test]
 fn malformed_header_poisons_the_archive_without_retrying() {
-    let mut archive = PmtilesArchive::new();
+    let mut archive = Archive::new();
     archive.take_bootstrap_request();
     assert_eq!(
         archive.on_bootstrap_bytes(b"too short"),
-        Err(PmtError::UnexpectedEof)
+        Err(Error::UnexpectedEof)
     );
     assert!(archive.is_failed());
     // No retry storm: a failed archive issues no further requests.
@@ -127,7 +127,7 @@ fn malformed_header_poisons_the_archive_without_retrying() {
 
 #[test]
 fn marked_failed_leaf_resolves_to_absent() {
-    let mut archive = PmtilesArchive::new();
+    let mut archive = Archive::new();
     archive.take_bootstrap_request();
     archive.on_bootstrap_bytes(LEAF_ARCHIVE).unwrap();
 
@@ -145,7 +145,7 @@ fn marked_failed_leaf_resolves_to_absent() {
 
 #[test]
 fn mark_failed_stops_bootstrapping() {
-    let mut archive = PmtilesArchive::new();
+    let mut archive = Archive::new();
     archive.mark_failed();
     assert!(archive.is_failed());
     assert!(archive.take_bootstrap_request().is_none());
