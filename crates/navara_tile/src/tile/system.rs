@@ -8,7 +8,7 @@ use navara_fog::Fog;
 use navara_frame::FrameManager;
 use navara_geometry::{
     add_skirt_separate, calculate_skirt_height, make_wgs84_down_dir_fn, tile_triangles_flat,
-    uv_transform_with_tms,
+    uv_transform,
 };
 use navara_material::RasterTileInternalMaterial;
 use navara_math::{FloatType, Transform};
@@ -1152,9 +1152,9 @@ pub fn update_mesh_material(
             }
 
             // Calculate UV transform for hillshade parent reuse
-            let uv_trans = hillshade_parent_zooms.get(&i).map(|&parent_zoom| {
-                uv_transform_with_tms(tile.coords, parent_zoom, tile.tiling_scheme.tms())
-            });
+            let uv_trans = hillshade_parent_zooms
+                .get(&i)
+                .map(|&parent_zoom| uv_transform(tile.coords, parent_zoom));
             hillshade_uv_transforms.push(uv_trans);
         }
 
@@ -1188,8 +1188,7 @@ pub fn update_mesh_material(
 
         match parent_z {
             Some(parent_z) => {
-                mesh.uv_transform =
-                    uv_transform_with_tms(tile.coords, parent_z, tile.tiling_scheme.tms());
+                mesh.uv_transform = uv_transform(tile.coords, parent_z);
             }
             None => mesh.uv_transform = Default::default(),
         }

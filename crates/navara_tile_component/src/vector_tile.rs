@@ -66,7 +66,7 @@ impl Clone for VectorTile {
 
 impl VectorTile {
     pub fn new(coords: TileXYZ, max_height: f64, min_height: f64) -> Self {
-        let extent = TilingScheme::WebMercator.tile_extent(coords);
+        let extent = TilingScheme::WebMercator { tms: false }.tile_extent(coords);
 
         Self {
             coords,

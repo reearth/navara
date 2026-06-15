@@ -130,7 +130,7 @@ pub trait Tile {
     /// Tiling scheme for this tile. Default: `WebMercator`.
     /// Override to propagate a different scheme (e.g. `Geographic`) to child tiles.
     fn tiling_scheme(&self) -> TilingScheme {
-        TilingScheme::WebMercator
+        TilingScheme::WebMercator { tms: false }
     }
 
     fn new_child(

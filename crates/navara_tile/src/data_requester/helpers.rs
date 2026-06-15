@@ -4,7 +4,7 @@ use bevy_ecs::system::Commands;
 
 use navara_buffer_store::BufferStore;
 use navara_component::{OrderByDistance, Priority, Requested};
-use navara_core::TerrainCrs;
+use navara_core::TilingScheme;
 use navara_data_requester::{DataManager, DataRequester, DataRequesterExtension};
 use navara_layer::{TerrainDataType, TerrainLayer};
 use navara_tile_component::{
@@ -38,26 +38,17 @@ pub(crate) fn request_terrain_data(
             _ => {}
         }
 
-        let url = t
+        let scheme = t
             .appearance
             .as_ref()
-            .map(|app| {
-                app.crs()
-                    .build_url(t.data.as_ref().unwrap().url.as_str(), &tile.coords)
-            })
-            .unwrap_or_else(|| {
-                TerrainCrs::default().build_url(t.data.as_ref().unwrap().url.as_str(), &tile.coords)
-            });
+            .map_or_else(TilingScheme::default, |a| a.tiling_scheme());
+        let url = scheme.tile_url(t.data.as_ref().unwrap().url.as_str(), tile.coords);
         let mut terrain_data: Box<dyn TerrainData> = match &t.terrain_type {
             TerrainDataType::RasterDEM => Box::new(RasterDEMData::new(
                 *t.appearance.as_ref().unwrap().elevation_decoder().unwrap(),
             )),
             TerrainDataType::QuantizedMesh => {
-                let crs = t
-                    .appearance
-                    .as_ref()
-                    .map_or_else(TerrainCrs::default, |a| a.crs());
-                Box::new(QuantizedMeshData::new_with_crs(crs))
+                Box::new(QuantizedMeshData::new_with_tiling_scheme(scheme.clone()))
             }
             TerrainDataType::Ellipsoid | TerrainDataType::Unknown => unreachable!(),
         };

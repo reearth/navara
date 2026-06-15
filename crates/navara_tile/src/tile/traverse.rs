@@ -1,7 +1,7 @@
 use bevy_ecs::prelude::*;
 use navara_buffer_store::BufferStore;
 use navara_component::{Deleted, Order, OrderByDistance, Priority};
-use navara_core::{Ellipsoid, TerrainCrs};
+use navara_core::{Ellipsoid, TilingScheme};
 use navara_data_requester::DataManager;
 
 use navara_fog::Fog;
@@ -611,11 +611,11 @@ fn prepare_upsamplable_terrain_data(
             Box::new(RasterDEMData::new(*elevation_decoder))
         }
         TerrainDataType::QuantizedMesh => {
-            let crs = layer
+            let scheme = layer
                 .appearance
                 .as_ref()
-                .map_or_else(TerrainCrs::default, |a| a.crs());
-            Box::new(QuantizedMeshData::new_with_crs(crs))
+                .map_or_else(TilingScheme::default, |a| a.tiling_scheme());
+            Box::new(QuantizedMeshData::new_with_tiling_scheme(scheme))
         }
         TerrainDataType::Ellipsoid | TerrainDataType::Unknown => unreachable!(),
     };

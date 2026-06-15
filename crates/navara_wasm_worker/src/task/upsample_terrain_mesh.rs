@@ -1,4 +1,4 @@
-use navara_core::{TerrainCrs, TilingScheme, WGS84_64};
+use navara_core::{TilingScheme, WGS84_64};
 use navara_geometry::calculate_skirt_height;
 use navara_tile_component::{QuantizedMeshData, RasterDEMData, RasterTile};
 use navara_wasm_transferable::{TransferableRasterDEMData, TransferableTile};
@@ -47,22 +47,21 @@ pub fn upsample_quantized_mesh_terrain_mesh(
     geographic: bool,
     tms: bool,
 ) -> ReturnedConstructedTerrainMesh {
-    let crs = if geographic {
-        TerrainCrs::Geographic { tms }
-    } else {
-        TerrainCrs::WebMercator { tms }
-    };
     let tiling_scheme = if geographic {
         TilingScheme::Geographic { tms }
     } else {
-        TilingScheme::WebMercator
+        TilingScheme::WebMercator { tms }
     };
     let mut tile: RasterTile = tile.into();
     tile.extent = tiling_scheme.tile_extent(tile.coords);
-    tile.terrain_data = Some(Box::new(QuantizedMeshData::new_with_crs(crs.clone())));
+    tile.terrain_data = Some(Box::new(QuantizedMeshData::new_with_tiling_scheme(
+        tiling_scheme.clone(),
+    )));
     let mut parent_tile: RasterTile = parent_tile.into();
     parent_tile.extent = tiling_scheme.tile_extent(parent_tile.coords);
-    parent_tile.terrain_data = Some(Box::new(QuantizedMeshData::new_with_crs(crs)));
+    parent_tile.terrain_data = Some(Box::new(QuantizedMeshData::new_with_tiling_scheme(
+        tiling_scheme,
+    )));
 
     let upsamplable_geometry: navara_geometry::UpsamplableTerrainGeometry =
         (&upsamplable_geometry).into();

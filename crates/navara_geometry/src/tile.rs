@@ -41,14 +41,6 @@ impl Default for TileUvTransform {
 ///
 /// Panics if the child's zoom level is less than the parent's zoom level
 pub fn uv_transform(child: TileXYZ, parent_z: usize) -> TileUvTransform {
-    uv_transform_with_tms(child, parent_z, false)
-}
-
-/// Like `uv_transform` but respects `tms` y-axis convention.
-///
-/// XYZ (tms=false): y=0 is north → y is inverted for UV (v=0 at south in mesh space).
-/// TMS (tms=true):  y=0 is south → y is not inverted.
-pub fn uv_transform_with_tms(child: TileXYZ, parent_z: usize, tms: bool) -> TileUvTransform {
     let TileXYZ {
         z: z_c,
         x: x_c,
@@ -62,13 +54,8 @@ pub fn uv_transform_with_tms(child: TileXYZ, parent_z: usize, tms: bool) -> Tile
     let dz = z_c - parent_z;
     let div = 1u32 << dz;
     let rel_x = x_c as u32 % div;
-    let rel_y = if tms {
-        // TMS: y=0 is south, matches mesh UV (v=0 at south) — no inversion needed
-        y_c as u32 % div
-    } else {
-        // XYZ: y=0 is north, opposite of mesh UV — invert
-        div - 1 - (y_c as u32 % div)
-    };
+    // Internal y is XYZ-style (y=0 north); mesh UV has v=0 at south, so invert.
+    let rel_y = div - 1 - (y_c as u32 % div);
 
     let s = 1.0 / div as f64;
     TileUvTransform {
@@ -265,27 +252,6 @@ mod tests {
         assert_relative_eq!(tf.offset.y, 0.25, epsilon = 1e-6);
         assert_relative_eq!(tf.scale.x, 0.25, epsilon = 1e-6);
         assert_relative_eq!(tf.scale.y, 0.25, epsilon = 1e-6);
-    }
-
-    // TMS variant: y=0 is south, no y inversion needed
-    #[test]
-    fn tms_sw_child() {
-        // TMS (y=0 south): SW child at (x=0, y=0, z=1) should show south half (offset_y=0)
-        let tf = uv_transform_with_tms(TileXYZ { z: 1, x: 0, y: 0 }, 0, true);
-        assert_relative_eq!(tf.offset.x, 0.0, epsilon = 1e-6);
-        assert_relative_eq!(tf.offset.y, 0.0, epsilon = 1e-6); // south half
-        assert_relative_eq!(tf.scale.x, 0.5, epsilon = 1e-6);
-        assert_relative_eq!(tf.scale.y, 0.5, epsilon = 1e-6);
-    }
-
-    #[test]
-    fn tms_nw_child() {
-        // TMS: NW child at (x=0, y=1, z=1) should show north half (offset_y=0.5)
-        let tf = uv_transform_with_tms(TileXYZ { z: 1, x: 0, y: 1 }, 0, true);
-        assert_relative_eq!(tf.offset.x, 0.0, epsilon = 1e-6);
-        assert_relative_eq!(tf.offset.y, 0.5, epsilon = 1e-6); // north half
-        assert_relative_eq!(tf.scale.x, 0.5, epsilon = 1e-6);
-        assert_relative_eq!(tf.scale.y, 0.5, epsilon = 1e-6);
     }
 
     // Tests for ortho_camera_transform

@@ -2,7 +2,7 @@ use bevy_ecs::entity::Entity;
 use martini::Martini;
 use navara_buffer_store::{BufferStore, Handle};
 use navara_core::{
-    Aabb, Ellipsoid, Extent, LLE, LngLat, Meters, Radians, TerrainCrs, TileRegion, XYZ,
+    Aabb, Ellipsoid, Extent, LLE, LngLat, Meters, Radians, TileRegion, TilingScheme, XYZ,
 };
 use navara_geometry::{
     Geometry, ReturnedConstructedTerrainMesh, UpsamplableTerrainGeometry, UpsampledTerrainGeometry,
@@ -23,7 +23,7 @@ pub struct QuantizedMeshData {
     pub current_min_height: Option<FloatType>,
     // Cached decoded heights: interleaved (u_norm, v_norm, height) as f32, stride 3
     pub heights_handle: Option<Handle>,
-    pub crs: TerrainCrs,
+    pub tiling_scheme: TilingScheme,
 }
 
 impl QuantizedMeshData {
@@ -31,9 +31,9 @@ impl QuantizedMeshData {
         Self::default()
     }
 
-    pub fn new_with_crs(crs: TerrainCrs) -> Self {
+    pub fn new_with_tiling_scheme(tiling_scheme: TilingScheme) -> Self {
         Self {
-            crs,
+            tiling_scheme,
             ..Self::default()
         }
     }
@@ -254,7 +254,7 @@ impl TerrainData for QuantizedMeshData {
         Box::new(self.clone())
     }
 
-    fn crs(&self) -> navara_core::TerrainCrs {
-        self.crs.clone()
+    fn tiling_scheme(&self) -> navara_core::TilingScheme {
+        self.tiling_scheme.clone()
     }
 }

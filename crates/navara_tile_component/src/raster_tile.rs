@@ -89,7 +89,12 @@ pub struct ReadyState {
 
 impl RasterTile {
     pub fn new(coords: TileXYZ, max_height: FloatType, min_height: FloatType) -> Self {
-        Self::new_with_scheme(coords, max_height, min_height, TilingScheme::WebMercator)
+        Self::new_with_scheme(
+            coords,
+            max_height,
+            min_height,
+            TilingScheme::WebMercator { tms: false },
+        )
     }
 
     pub fn new_with_scheme(
@@ -790,6 +795,8 @@ mod test {
         // `f64::EPSILON` is too tight at ~2.4 rad.
         // Parent (29011, 11410, 14) and east children (58023, *, 15) near Mt
         // Fuji from the original bug report.
+        // Internal y is XYZ-style (y=0 north). Parent y=11410 at z=14 → child
+        // northern row is y=22820, southern row is y=22821.
         let scheme = TilingScheme::Geographic { tms: true };
         let parent = RasterTile::new_with_scheme(
             TileXYZ {
@@ -804,7 +811,7 @@ mod test {
         let nw = RasterTile::new_with_scheme(
             TileXYZ {
                 x: 58022,
-                y: 22821,
+                y: 22820,
                 z: 15,
             },
             0.,
@@ -814,7 +821,7 @@ mod test {
         let ne = RasterTile::new_with_scheme(
             TileXYZ {
                 x: 58023,
-                y: 22821,
+                y: 22820,
                 z: 15,
             },
             0.,
@@ -824,7 +831,7 @@ mod test {
         let sw = RasterTile::new_with_scheme(
             TileXYZ {
                 x: 58022,
-                y: 22820,
+                y: 22821,
                 z: 15,
             },
             0.,
@@ -834,7 +841,7 @@ mod test {
         let se = RasterTile::new_with_scheme(
             TileXYZ {
                 x: 58023,
-                y: 22820,
+                y: 22821,
                 z: 15,
             },
             0.,
@@ -1057,15 +1064,15 @@ mod test {
         // Mark one tile under each root as ready — collect_terrain_leaves uses
         // find_contained_children internally and must see both.
         mark_tile_ready(&mut qt, (0, 0, 1));
-        mark_tile_ready(&mut qt, (2, 0, 1));
+        mark_tile_ready(&mut qt, (2, 1, 1));
 
         let leaves = collect_terrain_leaves(&qt);
         assert_eq!(leaves.len(), 2, "should collect tiles from both roots");
 
-        // find_contained_child for a point inside (2,0,1) — under the east
+        // find_contained_child for a point inside (2,1,1) — under the east
         // root — must descend into the (1,0,0) subtree, not give up because
-        // the west root (0,0,0) misses. At z=1 with tms=true, (2,0,1) covers
-        // lng 0°..90°, lat -90°..0°.
+        // the west root (0,0,0) misses. Internal y is XYZ-style, so at z=1
+        // (2,1,1) covers lng 0°..90°, lat -90°..0°.
         let east_handle = find_contained_child(&qt, &|t| {
             t.extent.contains(&LngLat {
                 lng: Angle::new(1.0), // ~57°E
@@ -1073,7 +1080,7 @@ mod test {
             }) && t.cached_mesh_handle.is_some()
         });
         let east_tile = qt.qt.get(east_handle.unwrap()).unwrap();
-        assert_eq!(east_tile.coords, TileXYZ { x: 2, y: 0, z: 1 });
+        assert_eq!(east_tile.coords, TileXYZ { x: 2, y: 1, z: 1 });
     }
 }
 

@@ -150,7 +150,7 @@ mod test {
     fn get_correct_bounding_region_from_tile() {
         let tile_coords = TileXYZ { x: 0, y: 1, z: 1 };
         let tbr = TileBoundingRegion::from_extent_f64(
-            TilingScheme::WebMercator.tile_extent(tile_coords),
+            TilingScheme::WebMercator { tms: false }.tile_extent(tile_coords),
             WGS84_64,
         );
 
@@ -197,7 +197,7 @@ mod test {
     fn get_correct_distance_to_camera() {
         let tile_coords = TileXYZ { x: 0, y: 1, z: 1 };
         let tbr = TileBoundingRegion::from_extent_f64(
-            TilingScheme::WebMercator.tile_extent(tile_coords),
+            TilingScheme::WebMercator { tms: false }.tile_extent(tile_coords),
             WGS84_64,
         );
 

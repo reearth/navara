@@ -5,7 +5,7 @@ use bevy_ecs::entity::Entity;
 use martini::Martini;
 use navara_buffer_store::BufferStore;
 use navara_core::{
-    ElevationDecoder, Ellipsoid, Extent, LngLat, Radians, TerrainCrs, TileRegion, TileXYZ,
+    ElevationDecoder, Ellipsoid, Extent, LngLat, Radians, TileRegion, TileXYZ, TilingScheme,
     get_ellipsoid_terrain_level_zero_maximum_geometric_error, get_level_maximum_geometric_error,
 };
 use navara_geometry::{
@@ -67,7 +67,7 @@ pub trait TerrainData: Debug + Sync + Send {
         None
     }
 
-    fn crs(&self) -> TerrainCrs {
-        TerrainCrs::default()
+    fn tiling_scheme(&self) -> TilingScheme {
+        TilingScheme::default()
     }
 }

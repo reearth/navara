@@ -69,7 +69,7 @@ impl Default for Globe {
             opacity: 1.0,
             wireframe: false,
             elevation_colormap: Vec::new(),
-            tiling_scheme: TilingScheme::WebMercator,
+            tiling_scheme: TilingScheme::WebMercator { tms: false },
         }
     }
 }

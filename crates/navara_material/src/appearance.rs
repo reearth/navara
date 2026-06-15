@@ -1,5 +1,5 @@
 use bevy_ecs::{component::Component, entity::Entity};
-use navara_core::{CRS, ElevationDecoder, TerrainCrs, calc_transform};
+use navara_core::{CRS, ElevationDecoder, TilingScheme, calc_transform};
 use navara_geometry::TileUvTransform;
 use navara_math::{Transform, Vec2, Vec3};
 
@@ -643,7 +643,7 @@ pub struct QuantizedMeshTerrainMaterial {
     pub overscaled_max_zoom: usize,
     pub skirt: bool,
     pub skirt_exaggeration: f32,
-    pub crs: TerrainCrs,
+    pub tiling_scheme: TilingScheme,
     /// Request the oct-encoded per-vertex normals extension from the server.
     /// Adds `octvertexnormals` to the Accept header when fetching `.terrain` tiles.
     pub request_vertex_normals: bool,
@@ -667,7 +667,7 @@ impl Default for QuantizedMeshTerrainMaterial {
             overscaled_max_zoom: 24,
             skirt: true,
             skirt_exaggeration: 1.0,
-            crs: TerrainCrs::Geographic { tms: true },
+            tiling_scheme: TilingScheme::Geographic { tms: true },
             request_vertex_normals: false,
             request_water_mask: false,
             token: None,

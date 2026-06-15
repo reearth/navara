@@ -8,20 +8,27 @@ use serde::{Deserialize, Serialize};
 /// `WebMercator`: single root `(0,0,0)`, tile extents use the Mercator projection.
 /// `Geographic`: two roots `(0,0,0)` and `(1,0,0)`, tile extents are equal-degree
 /// (EPSG:4326, 2^(z+1) columns × 2^z rows).
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+///
+/// In both variants internal `coords.y` is XYZ-style (y=0 at the north edge).
+/// The `tms` flag describes the URL endpoint convention: when `tms = true` the
+/// URL receives a south-origin `{y}` (the y is flipped) for TMS-compatible servers.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum TilingScheme {
-    #[default]
-    WebMercator,
-    Geographic {
-        tms: bool,
-    },
+    WebMercator { tms: bool },
+    Geographic { tms: bool },
+}
+
+impl Default for TilingScheme {
+    fn default() -> Self {
+        TilingScheme::WebMercator { tms: false }
+    }
 }
 
 impl TilingScheme {
     /// Root tile(s) for this scheme.
     pub fn root_tiles(&self) -> Vec<TileXYZ> {
         match self {
-            TilingScheme::WebMercator => vec![TileXYZ { x: 0, y: 0, z: 0 }],
+            TilingScheme::WebMercator { .. } => vec![TileXYZ { x: 0, y: 0, z: 0 }],
             TilingScheme::Geographic { .. } => {
                 vec![TileXYZ { x: 0, y: 0, z: 0 }, TileXYZ { x: 1, y: 0, z: 0 }]
             }
@@ -31,34 +38,28 @@ impl TilingScheme {
     /// Tile extent in lng/lat radians for the given tile coordinates.
     pub fn tile_extent(&self, coords: TileXYZ) -> Extent<FloatType, Radians> {
         match self {
-            TilingScheme::WebMercator => web_mercator_tile_extent(coords),
-            TilingScheme::Geographic { tms } => geographic_tile_extent(coords, *tms),
+            TilingScheme::WebMercator { .. } => web_mercator_tile_extent(coords),
+            TilingScheme::Geographic { .. } => geographic_tile_extent(coords),
         }
     }
 
     /// Build a tile URL for a server using this tiling scheme.
+    /// `tms = true` flips the internal XYZ-style `y` into TMS's south-origin `y`.
     pub fn tile_url(&self, base_url: &str, coords: TileXYZ) -> String {
-        match self {
-            TilingScheme::WebMercator => tile_url(base_url, &coords, false),
-            TilingScheme::Geographic { tms } => {
-                let y = if *tms {
-                    coords.y
-                } else {
-                    let n_y = 1usize << coords.z;
-                    n_y - 1 - coords.y
-                };
-                base_url
-                    .replace("{x}", &coords.x.to_string())
-                    .replace("{y}", &y.to_string())
-                    .replace("{z}", &coords.z.to_string())
-            }
-        }
+        let y = if self.tms() {
+            (1usize << coords.z) - 1 - coords.y
+        } else {
+            coords.y
+        };
+        base_url
+            .replace("{x}", &coords.x.to_string())
+            .replace("{y}", &y.to_string())
+            .replace("{z}", &coords.z.to_string())
     }
 
     pub fn tms(&self) -> bool {
         match self {
-            TilingScheme::WebMercator => false,
-            TilingScheme::Geographic { tms } => *tms,
+            TilingScheme::WebMercator { tms } | TilingScheme::Geographic { tms } => *tms,
         }
     }
 
@@ -84,7 +85,9 @@ fn web_mercator_tile_extent(coords: TileXYZ) -> Extent<FloatType, Radians> {
 
 /// Computes the EPSG:4326 tile extent from geographic tile coordinates.
 /// At level z: 2^(z+1) columns × 2^z rows, each tile is (180/2^z)° square.
-fn geographic_tile_extent(coords: TileXYZ, tms: bool) -> Extent<FloatType, Radians> {
+///
+/// Internal `coords.y` is always XYZ-style: `y = 0` is the northernmost row.
+fn geographic_tile_extent(coords: TileXYZ) -> Extent<FloatType, Radians> {
     let n_x = (1usize << (coords.z + 1)) as FloatType;
     let n_y = (1usize << coords.z) as FloatType;
 
@@ -96,16 +99,8 @@ fn geographic_tile_extent(coords: TileXYZ, tms: bool) -> Extent<FloatType, Radia
 
     let west_rad = (x * tile_width_lon - 180.0).to_radians();
     let east_rad = ((x + 1.0) * tile_width_lon - 180.0).to_radians();
-
-    let (south_rad, north_rad) = if tms {
-        let s = (y * tile_height_lat - 90.0).to_radians();
-        let n = ((y + 1.0) * tile_height_lat - 90.0).to_radians();
-        (s, n)
-    } else {
-        let n = (90.0 - y * tile_height_lat).to_radians();
-        let s = (90.0 - (y + 1.0) * tile_height_lat).to_radians();
-        (s, n)
-    };
+    let north_rad = (90.0 - y * tile_height_lat).to_radians();
+    let south_rad = (90.0 - (y + 1.0) * tile_height_lat).to_radians();
 
     let sw = LngLat {
         lng: Rad::new(west_rad),
@@ -116,49 +111,6 @@ fn geographic_tile_extent(coords: TileXYZ, tms: bool) -> Extent<FloatType, Radia
         lat: Rad::new(north_rad),
     };
     Extent::from_points(&[sw, ne])
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum TerrainCrs {
-    WebMercator { tms: bool },
-    Geographic { tms: bool },
-}
-
-impl Default for TerrainCrs {
-    fn default() -> Self {
-        TerrainCrs::WebMercator { tms: false }
-    }
-}
-
-impl TerrainCrs {
-    pub fn tms(&self) -> bool {
-        match self {
-            TerrainCrs::WebMercator { tms } | TerrainCrs::Geographic { tms } => *tms,
-        }
-    }
-
-    pub fn is_geographic(&self) -> bool {
-        matches!(self, TerrainCrs::Geographic { .. })
-    }
-
-    pub fn build_url(&self, base_url: &str, xyz: &TileXYZ) -> String {
-        match self {
-            TerrainCrs::WebMercator { tms } => tile_url(base_url, xyz, *tms),
-            TerrainCrs::Geographic { tms } => {
-                // xyz is already a geographic tile coordinate; just apply TMS y-flip.
-                let y = if *tms {
-                    xyz.y
-                } else {
-                    let n_y = 1usize << xyz.z;
-                    n_y - 1 - xyz.y
-                };
-                base_url
-                    .replace("{x}", &xyz.x.to_string())
-                    .replace("{y}", &y.to_string())
-                    .replace("{z}", &xyz.z.to_string())
-            }
-        }
-    }
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -276,17 +228,6 @@ pub fn calc_meters_per_texel(
     meters_per_texel as f32
 }
 
-pub fn tile_url(s: &str, xyz: &TileXYZ, tms: bool) -> String {
-    let y = if tms {
-        2usize.pow(xyz.z as u32) - 1 - xyz.y
-    } else {
-        xyz.y
-    };
-    s.replace("{x}", &xyz.x.to_string())
-        .replace("{y}", &y.to_string())
-        .replace("{z}", &xyz.z.to_string())
-}
-
 pub fn is_tile_url(s: &str) -> bool {
     s.contains("/{x}") && s.contains("/{y}") && s.contains("/{z}")
 }
@@ -385,7 +326,7 @@ mod tests {
         let min_lat = 2.0 * (((PI - 2.0 * PI * 1.0).exp().atan()) - PI / 4.0);
 
         let xyz = TileXYZ { x: 0, y: 0, z: 0 };
-        let extent = TilingScheme::WebMercator.tile_extent(xyz);
+        let extent = TilingScheme::WebMercator { tms: false }.tile_extent(xyz);
         assert_eq!(extent.west, Rad::new(-PI), "west");
         assert_eq!(extent.east, Rad::new(PI), "east");
         assert_eq!(extent.north, Rad::new(max_lat), "north");
@@ -417,12 +358,13 @@ mod tests {
 
     #[test]
     fn test_geographic_tile_extent_contiguous() {
-        // Adjacent tiles at z=6 must share boundaries exactly
+        // Adjacent tiles at z=6 must share boundaries exactly.
+        // Internal y is XYZ-style (north=0), so y=46 sits south of y=45.
         let scheme = TilingScheme::Geographic { tms: true };
         let a = scheme.tile_extent(TileXYZ { x: 56, y: 45, z: 6 });
         let b = scheme.tile_extent(TileXYZ { x: 56, y: 46, z: 6 });
         assert!(
-            (a.north.val() - b.south.val()).abs() < 1e-12,
+            (a.south.val() - b.north.val()).abs() < 1e-12,
             "vertical boundary"
         );
 
@@ -435,11 +377,35 @@ mod tests {
 
     #[test]
     fn test_tiling_scheme_root_tiles() {
-        assert_eq!(TilingScheme::WebMercator.root_tiles().len(), 1);
+        assert_eq!(
+            TilingScheme::WebMercator { tms: false }.root_tiles().len(),
+            1
+        );
         assert_eq!(
             TilingScheme::Geographic { tms: false }.root_tiles().len(),
             2
         );
+    }
+
+    #[test]
+    fn test_tile_url_flip_on_tms() {
+        // Internal y is always XYZ (north-origin); flip only when the URL is TMS.
+        let xyz = TileXYZ { x: 3, y: 1, z: 2 };
+        let xyz_url =
+            TilingScheme::WebMercator { tms: false }.tile_url("https://s/{z}/{x}/{y}.png", xyz);
+        let tms_url =
+            TilingScheme::WebMercator { tms: true }.tile_url("https://s/{z}/{x}/{y}.png", xyz);
+        assert_eq!(xyz_url, "https://s/2/3/1.png");
+        // At z=2 there are 4 rows; flip 1 → 4 - 1 - 1 = 2.
+        assert_eq!(tms_url, "https://s/2/3/2.png");
+
+        // Geographic follows the same URL convention.
+        let geo_xyz_url =
+            TilingScheme::Geographic { tms: false }.tile_url("https://s/{z}/{x}/{y}.png", xyz);
+        let geo_tms_url =
+            TilingScheme::Geographic { tms: true }.tile_url("https://s/{z}/{x}/{y}.png", xyz);
+        assert_eq!(geo_xyz_url, "https://s/2/3/1.png");
+        assert_eq!(geo_tms_url, "https://s/2/3/2.png");
     }
 
     #[test]

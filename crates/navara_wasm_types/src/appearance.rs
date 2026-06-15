@@ -1824,12 +1824,12 @@ pub struct QuantizedMeshTerrainMaterial {
 
 impl From<QuantizedMeshTerrainMaterial> for navara_material::QuantizedMeshTerrainMaterial {
     fn from(val: QuantizedMeshTerrainMaterial) -> Self {
-        use navara_core::TerrainCrs;
+        use navara_core::TilingScheme;
         let default = navara_material::QuantizedMeshTerrainMaterial::default();
-        let tms = val.tms.unwrap_or_else(|| default.crs.tms());
+        let tms = val.tms.unwrap_or_else(|| default.tiling_scheme.tms());
         let geographic = val
             .geographic
-            .unwrap_or_else(|| default.crs.is_geographic());
+            .unwrap_or_else(|| default.tiling_scheme.is_geographic());
         navara_material::QuantizedMeshTerrainMaterial {
             show: val.show.unwrap_or(default.show),
             cast_shadow: val.cast_shadow.unwrap_or(default.cast_shadow),
@@ -1842,10 +1842,10 @@ impl From<QuantizedMeshTerrainMaterial> for navara_material::QuantizedMeshTerrai
             min_zoom: val.min_zoom.unwrap_or(default.min_zoom),
             skirt: val.skirt.unwrap_or(default.skirt),
             skirt_exaggeration: val.skirt_exaggeration.unwrap_or(default.skirt_exaggeration),
-            crs: if geographic {
-                TerrainCrs::Geographic { tms }
+            tiling_scheme: if geographic {
+                TilingScheme::Geographic { tms }
             } else {
-                TerrainCrs::WebMercator { tms }
+                TilingScheme::WebMercator { tms }
             },
             request_vertex_normals: val
                 .request_vertex_normals
@@ -1870,8 +1870,8 @@ impl<'a> From<&'a navara_material::QuantizedMeshTerrainMaterial> for QuantizedMe
             min_zoom: Some(value.min_zoom),
             skirt: Some(value.skirt),
             skirt_exaggeration: Some(value.skirt_exaggeration),
-            tms: Some(value.crs.tms()),
-            geographic: Some(value.crs.is_geographic()),
+            tms: Some(value.tiling_scheme.tms()),
+            geographic: Some(value.tiling_scheme.is_geographic()),
             request_vertex_normals: Some(value.request_vertex_normals),
             request_water_mask: Some(value.request_water_mask),
             token: value.token.clone(),

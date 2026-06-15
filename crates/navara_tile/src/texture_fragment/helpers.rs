@@ -3,7 +3,7 @@ use url::Url;
 
 use navara_buffer_store::BufferStore;
 use navara_component::{Order, OrderByDistance, Priority, Requested};
-use navara_core::tile_url;
+use navara_core::TilingScheme;
 use navara_data_requester::{DataManager, DataRequester, DataRequesterExtension};
 use navara_layer::TilesLayer;
 use navara_material::Appearance;
@@ -97,7 +97,8 @@ pub(crate) fn request_texture_fragment(
         }
 
         let tms = matches!(layer.appearance.as_ref(), Some(Appearance::RasterTile(m)) if m.tms);
-        let url = tile_url(layer.data.as_ref().unwrap().url.as_str(), &coords, tms);
+        let url = TilingScheme::WebMercator { tms }
+            .tile_url(layer.data.as_ref().unwrap().url.as_str(), coords);
 
         let entity_id = if is_hillshade {
             // Hillshade texture: use DataRequester so Rust can backfill edges.

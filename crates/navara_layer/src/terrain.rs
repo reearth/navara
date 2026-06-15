@@ -1,6 +1,6 @@
 use crate::LayerData;
 use bevy_ecs::component::Component;
-use navara_core::{ElevationDecoder, TerrainCrs, TilingScheme};
+use navara_core::{ElevationDecoder, TilingScheme};
 use navara_material::{
     EllipsoidTerrainMaterial, QuantizedMeshTerrainMaterial, RasterTerrainMaterial,
 };
@@ -103,32 +103,21 @@ impl TerrainAppearance {
         }
     }
 
-    pub fn crs(&self) -> TerrainCrs {
-        match self {
-            TerrainAppearance::Raster(_) => TerrainCrs::WebMercator { tms: false },
-            TerrainAppearance::Ellipsoid(_) => TerrainCrs::WebMercator { tms: false },
-            TerrainAppearance::QuantizedMesh(mat) => mat.crs.clone(),
-        }
-    }
-
     pub fn tiling_scheme(&self) -> TilingScheme {
         match self {
             TerrainAppearance::Raster(_) | TerrainAppearance::Ellipsoid(_) => {
-                TilingScheme::WebMercator
+                TilingScheme::WebMercator { tms: false }
             }
-            TerrainAppearance::QuantizedMesh(mat) => match &mat.crs {
-                TerrainCrs::Geographic { tms } => TilingScheme::Geographic { tms: *tms },
-                TerrainCrs::WebMercator { .. } => TilingScheme::WebMercator,
-            },
+            TerrainAppearance::QuantizedMesh(mat) => mat.tiling_scheme.clone(),
         }
     }
 
     pub fn tms(&self) -> bool {
-        self.crs().tms()
+        self.tiling_scheme().tms()
     }
 
     pub fn geographic(&self) -> bool {
-        self.crs().is_geographic()
+        self.tiling_scheme().is_geographic()
     }
 
     /// Whether the quantized-mesh server should be asked for the oct-encoded
