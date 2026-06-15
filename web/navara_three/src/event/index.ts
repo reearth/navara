@@ -476,8 +476,8 @@ async function processRequestedData(ctx: EventContext, req: DataRequestEvent) {
     if (req.requestVertexNormals) exts.push("octvertexnormals");
     if (req.requestWaterMask) exts.push("watermask");
     const accept = exts.length
-      ? `application/vnd.quantized-mesh;extensions=${exts.join("-")},application/vnd.quantized-mesh,*/*;q=0.01`
-      : "application/vnd.quantized-mesh,*/*;q=0.01";
+      ? `application/vnd.quantized-mesh;extensions=${exts.join("-")},application/octet-stream;q=0.9,*/*;q=0.01`
+      : "application/vnd.quantized-mesh,application/octet-stream;q=0.9,*/*;q=0.01";
     const h: Record<string, string> = { Accept: accept };
     if (req.token) h.Authorization = `Bearer ${req.token}`;
     return h;
