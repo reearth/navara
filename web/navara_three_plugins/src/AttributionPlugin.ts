@@ -285,8 +285,6 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
   private layerCleanups: (() => void)[] = [];
   /** Collapsible-group open state, keyed per source (survives re-renders). */
   private foldOpen = new Map<string, boolean>();
-  /** A render is pending because content changed while the popover was closed. */
-  private dirty = false;
 
   /** Color overrides, applied as CSS custom properties on the dock. */
   private style: AttributionStyle;
@@ -380,7 +378,6 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
     this.lastZoomLevel = this.currentZoomLevel();
     this.populateList();
     this.populateLogos();
-    this.dirty = false;
   }
 
   /** Create the dock DOM and inject (or reuse) the shared styles. */
@@ -581,14 +578,12 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
     return details;
   }
 
-  /** Re-render now if the popover is open; otherwise defer until it opens. */
+  /**
+   * Rebuild the list if the popover is open; while closed, do nothing —
+   * `setOpen()` repopulates on open, so deferred updates are picked up then.
+   */
   private requestRender(): void {
-    if (this.dock && this.isOpen) {
-      this.populateList();
-      this.dirty = false;
-    } else {
-      this.dirty = true;
-    }
+    if (this.dock && this.isOpen) this.populateList();
   }
 
   /** Rebuild the always-visible logo frame from sources that declare a `logo`. */
@@ -618,10 +613,11 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
       "aria-label",
       this.isOpen ? "Hide attributions" : "Show attributions",
     );
-    // Catch up on any updates that were deferred while the popover was closed.
-    if (this.isOpen && this.dirty) {
+    // On open, refresh once: the per-frame zoom poll is skipped while closed, so
+    // the zoom band (and any render deferred via `dirty`) may be stale.
+    if (this.isOpen) {
+      if (this.hasZoomBands) this.lastZoomLevel = this.currentZoomLevel();
       this.populateList();
-      this.dirty = false;
     }
   }
 
@@ -635,9 +631,11 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
    * `preRender`; the level-change gate makes it a no-op unless the band changes.
    */
   private handlePreRender(): void {
-    // No zoom-banded children → nothing to re-filter, so skip the per-frame
-    // `camera.zoom` poll (a WASM-boundary call) entirely.
-    if (!this.dock || !this.hasZoomBands) return;
+    // Poll only while the popover is open and a source has zoom bands. The
+    // `camera.zoom` poll crosses the WASM boundary, so skipping it while closed
+    // (or when nothing is zoom-banded) avoids per-frame overhead for users who
+    // never open the UI; `setOpen()` refreshes the level on open.
+    if (!this.dock || !this.hasZoomBands || !this.isOpen) return;
     const level = this.currentZoomLevel();
     if (level === this.lastZoomLevel) return;
     this.lastZoomLevel = level;
@@ -683,7 +681,6 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
 
     this.layerCredits.clear();
     this.foldOpen.clear();
-    this.dirty = false;
   }
 
   /**
