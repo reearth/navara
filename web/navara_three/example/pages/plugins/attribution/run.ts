@@ -26,24 +26,20 @@ import { GSI_ATTRIBUTION, SENTINEL_ATTRIBUTION } from "./data/attributions";
 
 export type CustomDescriptions = DefaultDescriptions;
 
-/** Default (light) colors, used to flip back from the dark theme. */
+// Light / dark color sets for the setStyle() demo below. setStyle() merges, so
+// LIGHT_STYLE just re-applies the defaults to switch back from dark.
 const LIGHT_STYLE: AttributionStyle = {
   backgroundColor: "rgba(252, 253, 254, 0.96)",
-  titleColor: "#1b1f24",
   textColor: "#1b1f24",
   nestedTextColor: "rgba(27, 31, 36, 0.64)",
   linkColor: "#3a6595",
-  listStyleColor: "#3a6595",
 };
 
-/** Dark theme, applied live via `setStyle()` from the panel toggle. */
 const DARK_STYLE: AttributionStyle = {
-  backgroundColor: "rgba(20, 24, 28, 0.94)",
-  titleColor: "#f3f5f8",
+  backgroundColor: "rgba(20, 24, 28, 0.92)",
   textColor: "#e6e9ee",
   nestedTextColor: "rgba(230, 233, 238, 0.64)",
   linkColor: "#8ab4f8",
-  listStyleColor: "#8ab4f8",
 };
 
 /** PLATEAU 3D Tiles (Chiyoda). Key-free 3D-tiles source for the Phase 4 path. */

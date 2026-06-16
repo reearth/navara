@@ -10,16 +10,16 @@
  *
  * ```ts
  * import ThreeView from "@navara/three";
- * import { DefaultPlugin } from "@navara/three_default_plugin";
  * import { AttributionPlugin } from "@navara/three_plugins";
  *
  * const view = new ThreeView({ container });
  * const attribution = new AttributionPlugin();
- *
  * view.addPlugin(attribution);
  * await view.init();
  *
- * const layer = view.addLayer({ ... });
+ * // A 3D-tiles layer whose tiles embed their own copyright (tracked dynamically).
+ * const photoreal = view.addLayer({ type: "cesium3dtiles", data: { url } });
+ *
  * attribution.show(
  *   [
  *     {
@@ -30,10 +30,21 @@
  *         { title: "全国ランドサットモザイク画像", minZoom: 9, maxZoom: 13 },
  *       ],
  *     },
- *     { attributionHtml: '<a href="https://s2maps.eu">Sentinel-2 cloudless</a>' },
+ *     {
+ *       attribution: "Google Maps Photorealistic 3D Tiles",
+ *       creditLayerId: photoreal.id,
+ *       collapsible: true,
+ *     },
+ *     {
+ *       attributionHtml:
+ *         '<a href="https://s2maps.eu">Sentinel-2 cloudless 2020</a> by <a href="https://eox.at">EOX IT Services GmbH</a>',
+ *     },
  *   ],
- *   [layer],
+ *   [photoreal],
  * );
+ *
+ * // Re-theme at runtime (e.g. light / dark switch).
+ * attribution.setStyle({ backgroundColor: "#14181c", textColor: "#e6e9ee" });
  *
  * attribution.hide();
  * attribution.dispose();
@@ -283,8 +294,12 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
     { credits: Map<bigint, string>; visible: Set<bigint> }
   >();
   private layerCleanups: (() => void)[] = [];
-  /** Collapsible-group open state, keyed per source (survives re-renders). */
-  private foldOpen = new Map<string, boolean>();
+  /**
+   * Collapsible-group open state, keyed by the source object itself (its
+   * identity) — survives re-renders, and two same-named sources can't collide
+   * on one shared entry. A WeakMap lets dropped sources be garbage-collected.
+   */
+  private foldOpen = new WeakMap<AttributionSource, boolean>();
 
   /** Color overrides, applied as CSS custom properties on the dock. */
   private style: AttributionStyle;
@@ -556,19 +571,18 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
   /**
    * Wrap a source's sub-credit list in a collapsible group, expanded by
    * default. The open/closed state is preserved across re-renders, keyed by the
-   * source (its `creditLayerId`, else its attribution text).
+   * source object itself so same-named sources can't collide.
    */
   private wrapFold(
     source: AttributionSource,
     list: HTMLUListElement,
     count: number,
   ): HTMLDetailsElement {
-    const key = source.creditLayerId ?? source.attribution;
     const details = document.createElement("details");
     details.className = "navara-attr-fold";
-    details.open = this.foldOpen.get(key) ?? true;
+    details.open = this.foldOpen.get(source) ?? true;
     details.addEventListener("toggle", () => {
-      this.foldOpen.set(key, details.open);
+      this.foldOpen.set(source, details.open);
     });
 
     const summary = document.createElement("summary");
@@ -680,7 +694,7 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
     this.isOpen = false;
 
     this.layerCredits.clear();
-    this.foldOpen.clear();
+    this.foldOpen = new WeakMap();
   }
 
   /**
