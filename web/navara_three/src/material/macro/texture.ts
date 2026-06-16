@@ -49,7 +49,7 @@ export function generateHillshadeNormalShader(maxTextures: number): string {
       ivec2 normalMapSize = textureSize(uTextures[${i}], 0);
 
       if (normalMapSize.x > 1 && normalMapSize.y > 1) {
-        vec2 hillshadeUv = vOrigUv * uHillshadeUvScale[${i}] + uHillshadeUvOffset[${i}];
+        vec2 hillshadeUv = vOrigUv * uLayerUvScale[${i}] + uLayerUvOffset[${i}];
         hillshadeUv = clamp(hillshadeUv, vec2(0.0), vec2(1.0));
 
         // [0,1] -> [-1,1] to get normal vector from texture

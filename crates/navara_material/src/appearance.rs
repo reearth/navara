@@ -572,7 +572,11 @@ pub struct RasterTileInternalMaterial {
     // Hillshade fields
     pub is_hillshades: Vec<bool>, // Per-layer flags: which texture slots are hillshades
     pub hillshade_config: Option<HillshadeConfig>, // Shared config for all hillshade layers
-    pub hillshade_uv_transforms: Vec<Option<TileUvTransform>>, // Per-layer UV transforms for parent texture reuse
+
+    /// Per-layer UV transform used when this layer's slot samples a parent tile's data.
+    /// `None` means identity (own tile's data is in use). Length matches `texture_fragments`
+    /// and other per-layer vectors. Covers both regular texture layers and hillshade layers.
+    pub layer_uv_transforms: Vec<Option<TileUvTransform>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Component)]

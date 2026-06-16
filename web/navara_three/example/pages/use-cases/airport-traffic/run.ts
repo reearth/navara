@@ -139,7 +139,7 @@ export async function run() {
       url: TILE_DATASETS.gsiSeamlessphoto.url,
     },
     rasterTile: {
-      maxZoom: 6,
+      maxZoom: 18,
       minZoom: 2,
     },
   });

@@ -16,7 +16,6 @@ use navara_buffer_store::Handle;
 use navara_component::Deleted;
 use navara_core::Aabb;
 use navara_event_store::EventStore;
-use navara_geometry::TileUvTransform;
 use navara_globe::Globe;
 use navara_material::RasterTileInternalMaterial;
 use navara_math::Transform;
@@ -37,7 +36,6 @@ pub struct Mesh {
     pub indices: Handle,
     pub active: bool,
     pub render_order: i32,
-    pub uv_transform: TileUvTransform,
     pub aabb: Aabb,
     /// Per-vertex normals for the terrain. Stride 3.
     pub normals: Option<Handle>,
