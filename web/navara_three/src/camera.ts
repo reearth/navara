@@ -103,7 +103,8 @@ export class ThreeViewCamera extends EventHandler<CameraEvent> {
 
   /**
    * Effective Web Mercator zoom level the camera is viewing the surface at
-   * (fractional). Computed engine-side from altitude, FOV and viewport.
+   * (fractional). Computed engine-side from the camera's ellipsoid height (not
+   * terrain), FOV and viewport.
    */
   get zoom(): number | undefined {
     return this._core?.getZoomLevel();

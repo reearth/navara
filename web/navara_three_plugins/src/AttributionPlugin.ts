@@ -52,14 +52,58 @@ import type { DefaultDescriptions } from "@navara/three_default_plugin";
 import {
   aggregateCredits,
   appendSanitizedHtml,
+  createSafeAnchor,
   isAttributionHtml,
   matchesZoom,
   safeHref,
   type AttributionItem,
   type AttributionSource,
+  type AttributionStyle,
 } from "./attribution";
 
 type View = ThreeView<DefaultDescriptions>;
+
+/** Options for {@link AttributionPlugin}. */
+export type AttributionPluginOptions = {
+  /** Initial color overrides; tweak later with {@link AttributionPlugin.setStyle}. */
+  style?: AttributionStyle;
+};
+
+const SVG_NS = "http://www.w3.org/2000/svg";
+
+/** Build the ⓘ trigger icon. Uses `currentColor`, so it follows the link color. */
+function createInfoIcon(): SVGSVGElement {
+  const svg = document.createElementNS(SVG_NS, "svg");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("fill", "none");
+  svg.setAttribute("aria-hidden", "true");
+
+  const ring = document.createElementNS(SVG_NS, "circle");
+  ring.setAttribute("cx", "12");
+  ring.setAttribute("cy", "12");
+  ring.setAttribute("r", "10.5");
+  ring.setAttribute("stroke", "currentColor");
+  ring.setAttribute("stroke-width", "2");
+
+  const dot = document.createElementNS(SVG_NS, "circle");
+  dot.setAttribute("cx", "12");
+  dot.setAttribute("cy", "8");
+  dot.setAttribute("r", "1");
+  dot.setAttribute("fill", "currentColor");
+
+  const stem = document.createElementNS(SVG_NS, "rect");
+  stem.setAttribute("x", "11");
+  stem.setAttribute("y", "11");
+  stem.setAttribute("width", "2");
+  stem.setAttribute("height", "6");
+  stem.setAttribute("rx", "1");
+  stem.setAttribute("fill", "currentColor");
+
+  svg.appendChild(ring);
+  svg.appendChild(dot);
+  svg.appendChild(stem);
+  return svg;
+}
 
 const STYLE_ELEMENT_ID = "navara-attribution-styles";
 
@@ -80,7 +124,7 @@ const STYLE_TEXT = `
   flex-direction: column;
   align-items: flex-end;
   gap: 10px;
-  font-family: system-ui, -apple-system, "Hiragino Kaku Gothic ProN", sans-serif;
+  font-family: system-ui, sans-serif;
 }
 .navara-attr-logoframe {
   position: fixed;
@@ -103,21 +147,27 @@ const STYLE_TEXT = `
   min-width: 38px;
   border-radius: 50%;
   cursor: pointer;
-  background: rgba(252, 253, 254, 0.92);
+  background: var(--nvr-attr-bg, rgba(252, 253, 254, 0.92));
   border: 1px solid rgba(0, 0, 0, 0.1);
   box-shadow: 0 2px 8px rgba(20, 24, 28, 0.16);
-  font-size: 18px;
-  line-height: 1;
-  color: #3a6595;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--nvr-attr-link, #3a6595);
+}
+.navara-attr-toggle svg {
+  width: 20px;
+  height: 20px;
+  display: block;
 }
 .navara-attr-card {
   width: min(300px, calc(100vw - 32px));
   max-height: 340px;
   overflow-y: auto;
-  background: rgba(252, 253, 254, 0.96);
+  background: var(--nvr-attr-bg, rgba(252, 253, 254, 0.96));
   border-radius: 14px;
   box-shadow: 0 10px 30px rgba(20, 24, 28, 0.16);
-  color: #1b1f24;
+  color: var(--nvr-attr-text, #1b1f24);
 }
 .navara-attr-card[hidden] {
   display: none;
@@ -133,6 +183,7 @@ const STYLE_TEXT = `
   margin: 0;
   font-size: 13.5px;
   font-weight: 600;
+  color: var(--nvr-attr-title, inherit);
 }
 .navara-attr-close {
   background: transparent;
@@ -161,7 +212,7 @@ const STYLE_TEXT = `
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: #3a6595;
+  background: var(--nvr-attr-bullet, #3a6595);
   flex: none;
   margin-top: 6px;
 }
@@ -175,13 +226,13 @@ const STYLE_TEXT = `
 }
 .navara-attr-related li {
   font-size: 12px;
-  color: rgba(27, 31, 36, 0.64);
+  color: var(--nvr-attr-nested, rgba(27, 31, 36, 0.64));
   line-height: 1.5;
   overflow-wrap: anywhere;
   word-break: break-word;
 }
 .navara-attr-card a {
-  color: #3a6595;
+  color: var(--nvr-attr-link, #3a6595);
   text-decoration: none;
 }
 .navara-attr-card a:hover {
@@ -193,7 +244,7 @@ const STYLE_TEXT = `
 .navara-attr-fold > summary {
   cursor: pointer;
   font-size: 12px;
-  color: rgba(27, 31, 36, 0.64);
+  color: var(--nvr-attr-nested, rgba(27, 31, 36, 0.64));
   user-select: none;
 }
 .navara-attr-fold > .navara-attr-related {
@@ -223,6 +274,8 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
 
   /** Last computed integer zoom level. Used to skip no-op re-renders. */
   private lastZoomLevel?: number;
+  /** Whether any source has zoom-banded children — gates the per-frame poll. */
+  private hasZoomBands = false;
 
   /** Per-layer dynamic credits (Phase 4), keyed by `layer.id`. */
   private layerCredits = new Map<
@@ -235,11 +288,15 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
   /** A render is pending because content changed while the popover was closed. */
   private dirty = false;
 
+  /** Color overrides, applied as CSS custom properties on the dock. */
+  private style: AttributionStyle;
+
   private boundKeydown: (event: KeyboardEvent) => void;
   private boundPreRender: () => void;
 
-  constructor() {
+  constructor(options: AttributionPluginOptions = {}) {
     super();
+    this.style = options.style ?? {};
     this.boundKeydown = this.handleKeydown.bind(this);
     this.boundPreRender = this.handlePreRender.bind(this);
   }
@@ -282,12 +339,44 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
   }
 
   /**
+   * Update the UI colors. Merges over the current style and re-themes the live
+   * DOM in place (no rebuild), so it suits runtime switches like light ⇄ dark.
+   */
+  setStyle(style: AttributionStyle): void {
+    this.style = { ...this.style, ...style };
+    this.applyStyle();
+  }
+
+  /** Push the current style onto the dock as CSS custom properties. */
+  private applyStyle(): void {
+    const dock = this.dock;
+    if (!dock) return;
+    const set = (name: string, value: string | undefined): void => {
+      if (value !== undefined) dock.style.setProperty(name, value);
+    };
+    set("--nvr-attr-title", this.style.titleColor);
+    set("--nvr-attr-link", this.style.linkColor);
+    set("--nvr-attr-bullet", this.style.listStyleColor);
+    set("--nvr-attr-text", this.style.textColor);
+    set("--nvr-attr-nested", this.style.nestedTextColor);
+    set("--nvr-attr-bg", this.style.backgroundColor);
+  }
+
+  /**
    * Build / refresh the popover DOM from `this.items`, filtering zoom-banded
    * children by the current camera zoom.
    */
   private render(): void {
     if (!this.view) return;
     this.ensureDom();
+    this.hasZoomBands = this.items.some(
+      (item) =>
+        !isAttributionHtml(item) &&
+        (item.children?.some(
+          (c) => c.minZoom !== undefined || c.maxZoom !== undefined,
+        ) ??
+          false),
+    );
     this.lastZoomLevel = this.currentZoomLevel();
     this.populateList();
     this.populateLogos();
@@ -342,7 +431,7 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
     const toggle = document.createElement("button");
     toggle.className = "navara-attr-toggle";
     toggle.type = "button";
-    toggle.textContent = "ⓘ";
+    toggle.appendChild(createInfoIcon());
     toggle.setAttribute("aria-expanded", "false");
     toggle.setAttribute("aria-label", "Show attributions");
     toggle.addEventListener("click", () => this.setOpen(this.card?.hidden));
@@ -364,6 +453,7 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
     this.listEl = list;
     this.logosEl = logoFrame;
     this.toggle = toggle;
+    this.applyStyle();
   }
 
   /** Create a bullet list item, returning the `<li>` and its text `<span>`. */
@@ -404,12 +494,7 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
 
       const href = item.url ? safeHref(item.url) : undefined;
       if (href) {
-        const anchor = document.createElement("a");
-        anchor.href = href;
-        anchor.target = "_blank";
-        anchor.rel = "noopener noreferrer";
-        anchor.textContent = item.attribution;
-        text.appendChild(anchor);
+        text.appendChild(createSafeAnchor(href, item.attribution));
       } else {
         text.textContent = item.attribution;
       }
@@ -448,7 +533,7 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
       this.listEl.appendChild(li);
     }
 
-    // Unmatched layers (no source declared their `layerId`) fall back to flat.
+    // Unmatched layers (no source declared their `creditLayerId`) fall back to flat.
     for (const layerId of this.layerCredits.keys()) {
       if (matchedLayerIds.has(layerId)) continue;
       for (const credit of this.layerCreditStrings(layerId)) {
@@ -528,6 +613,11 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
     this.isOpen = open ?? !this.isOpen;
     this.card.hidden = !this.isOpen;
     this.toggle.setAttribute("aria-expanded", String(this.isOpen));
+    // Keep the accessible name in sync with what activating the button does.
+    this.toggle.setAttribute(
+      "aria-label",
+      this.isOpen ? "Hide attributions" : "Show attributions",
+    );
     // Catch up on any updates that were deferred while the popover was closed.
     if (this.isOpen && this.dirty) {
       this.populateList();
@@ -545,7 +635,9 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
    * `preRender`; the level-change gate makes it a no-op unless the band changes.
    */
   private handlePreRender(): void {
-    if (!this.dock) return;
+    // No zoom-banded children → nothing to re-filter, so skip the per-frame
+    // `camera.zoom` poll (a WASM-boundary call) entirely.
+    if (!this.dock || !this.hasZoomBands) return;
     const level = this.currentZoomLevel();
     if (level === this.lastZoomLevel) return;
     this.lastZoomLevel = level;
@@ -611,12 +703,17 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
       };
       this.layerCredits.set(layer.id, state);
 
+      // Track only features that actually carry a credit: layers can emit many
+      // credit-less features (e.g. PLATEAU), and tracking them would grow these
+      // sets unbounded and churn the UI with no visible effect.
       const onCreated = ({ featureSetId, credit }: FeatureCreatedParams) => {
-        if (credit) state.credits.set(featureSetId, credit);
+        if (!credit) return;
+        state.credits.set(featureSetId, credit);
         state.visible.add(featureSetId);
         this.requestRender();
       };
       const onRemoved = ({ featureSetId }: FeatureRemovedParams) => {
+        if (!state.credits.has(featureSetId)) return;
         state.credits.delete(featureSetId);
         state.visible.delete(featureSetId);
         this.requestRender();
@@ -625,6 +722,7 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
         featureSetId,
         visible,
       }: FeatureVisibilityChangedParams) => {
+        if (!state.credits.has(featureSetId)) return;
         if (visible) state.visible.add(featureSetId);
         else state.visible.delete(featureSetId);
         this.requestRender();
@@ -632,6 +730,7 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
       // `deleted` fires once for the layer (no per-feature `featureRemoved`),
       // so clear all of this layer's tracked credits.
       const onDeleted = () => {
+        if (state.credits.size === 0) return;
         state.credits.clear();
         state.visible.clear();
         this.requestRender();

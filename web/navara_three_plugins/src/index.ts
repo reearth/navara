@@ -18,13 +18,17 @@ export {
   type ProjectedPosition,
 } from "./OverlayPlugin";
 
-export { AttributionPlugin } from "./AttributionPlugin";
+export {
+  AttributionPlugin,
+  type AttributionPluginOptions,
+} from "./AttributionPlugin";
 export {
   isAttributionHtml,
   type AttributionItem,
   type AttributionSource,
   type AttributionHtml,
   type AttributionChild,
+  type AttributionStyle,
 } from "./attribution";
 
 export {

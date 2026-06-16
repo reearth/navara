@@ -747,8 +747,8 @@ impl App {
     }
 
     /// Effective Web Mercator zoom level the camera is viewing the surface at,
-    /// derived from camera altitude, FOV and viewport (see
-    /// [`navara_core::camera_zoom_level`]).
+    /// derived from the camera's ellipsoid height (not terrain), FOV and
+    /// viewport (see [`navara_core::camera_zoom_level`]).
     pub fn get_zoom_level(&mut self) -> Option<FloatType> {
         // Camera altitude (m) and latitude (rad).
         let lle = {

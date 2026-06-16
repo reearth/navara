@@ -229,14 +229,14 @@ pub fn calc_meters_per_texel(
 }
 
 /// Estimates the effective Web Mercator zoom level a camera is viewing the
-/// surface at, from its altitude and vertical field of view.
+/// surface at, from its ellipsoid height and vertical field of view.
 ///
 /// Inverts the model in [`calc_meters_per_texel`] (256px tiles, Web Mercator
 /// latitude correction): the ground meters-per-pixel implied by the camera
 /// frustum is mapped back to a zoom level.
 ///
 /// # Arguments
-/// * `height_m` - Camera altitude above the surface in meters
+/// * `height_m` - Camera height above the ellipsoid in meters
 /// * `fov_y` - Vertical field of view in radians
 /// * `viewport_height_px` - Rendered viewport height in (CSS) pixels
 /// * `lat_rad` - Camera latitude in radians

@@ -20,7 +20,11 @@ export type AttributionChild = {
   maxZoom?: number;
 };
 
-/** A data source shown at the top level, optionally with zoom-banded children. */
+/**
+ * A data source shown at the top level. It may carry zoom-banded `children`, a
+ * mandated `logo`, dynamic per-layer credits linked via `creditLayerId`, and an
+ * optional `collapsible` fold for long credit lists.
+ */
 export type AttributionSource = {
   /** Data source / title text. */
   attribution: string;
@@ -49,6 +53,27 @@ export type AttributionSource = {
    * requires the attribution to stay visible.
    */
   collapsible?: boolean;
+};
+
+/**
+ * Customizable colors for the attribution UI. Every field is optional; an unset
+ * field keeps the built-in default. Applied as CSS custom properties, so
+ * {@link AttributionPlugin.setStyle} can re-theme live (e.g. light ⇄ dark)
+ * without rebuilding the DOM.
+ */
+export type AttributionStyle = {
+  /** Source title text color. */
+  titleColor?: string;
+  /** Link (`<a>`) and info-icon color. */
+  linkColor?: string;
+  /** Bullet (list marker) color. */
+  listStyleColor?: string;
+  /** Body text color. */
+  textColor?: string;
+  /** Nested sub-credit text color. */
+  nestedTextColor?: string;
+  /** Popover and trigger background color. */
+  backgroundColor?: string;
 };
 
 /** A raw HTML credit with partial links, rendered as-is (after sanitization). */
@@ -171,10 +196,28 @@ export function safeHref(href: string): string | undefined {
 }
 
 /**
+ * Create an `<a>` for an already-validated safe href with the standard
+ * external-link attributes. Centralizes `target`/`rel` so no call site forgets
+ * them. Pass `text` to set the visible label (omit to fill children manually).
+ */
+export function createSafeAnchor(
+  href: string,
+  text?: string,
+): HTMLAnchorElement {
+  const anchor = document.createElement("a");
+  anchor.href = href;
+  anchor.target = "_blank";
+  anchor.rel = "noopener noreferrer";
+  if (text !== undefined) anchor.textContent = text;
+  return anchor;
+}
+
+/**
  * Append a credit HTML string to `target`, allowing only `<a href>` elements
  * with a safe scheme. Other tags (and unsafe links) are dropped while keeping
  * their (sanitized) text content. Surviving links get `target="_blank"` and
- * `rel="noopener noreferrer"`.
+ * `rel="noopener noreferrer"`. Bare `http(s)` URLs in text are auto-linked too,
+ * so an official notice can be pasted verbatim without hand-wrapping its URL.
  */
 export function appendSanitizedHtml(target: Node, html: string): void {
   // Parse without a wrapper element: a wrapper would be closed early by a
@@ -204,10 +247,7 @@ function appendSanitizedChildren(
         appendSanitizedChildren(target, node, autolink);
         return;
       }
-      const anchor = document.createElement("a");
-      anchor.href = href;
-      anchor.target = "_blank";
-      anchor.rel = "noopener noreferrer";
+      const anchor = createSafeAnchor(href);
       appendSanitizedChildren(anchor, node, false);
       target.appendChild(anchor);
       return;
@@ -242,12 +282,7 @@ function appendTextWithLinks(target: Node, text: string): void {
     }
     const href = safeHref(url);
     if (href) {
-      const anchor = document.createElement("a");
-      anchor.href = href;
-      anchor.target = "_blank";
-      anchor.rel = "noopener noreferrer";
-      anchor.textContent = url;
-      target.appendChild(anchor);
+      target.appendChild(createSafeAnchor(href, url));
     } else {
       target.appendChild(document.createTextNode(url));
     }

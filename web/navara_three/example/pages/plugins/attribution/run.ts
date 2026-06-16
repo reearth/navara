@@ -11,7 +11,9 @@ import {
   AttributionPlugin,
   type AttributionItem,
   type AttributionSource,
+  type AttributionStyle,
 } from "@navara/three_plugins";
+import { Pane } from "tweakpane";
 
 import {
   TERRAIN_DATASETS,
@@ -23,6 +25,26 @@ import { GOOGLE_MAPS_API_KEY } from "../../../helpers/keys";
 import { GSI_ATTRIBUTION, SENTINEL_ATTRIBUTION } from "./data/attributions";
 
 export type CustomDescriptions = DefaultDescriptions;
+
+/** Default (light) colors, used to flip back from the dark theme. */
+const LIGHT_STYLE: AttributionStyle = {
+  backgroundColor: "rgba(252, 253, 254, 0.96)",
+  titleColor: "#1b1f24",
+  textColor: "#1b1f24",
+  nestedTextColor: "rgba(27, 31, 36, 0.64)",
+  linkColor: "#3a6595",
+  listStyleColor: "#3a6595",
+};
+
+/** Dark theme, applied live via `setStyle()` from the panel toggle. */
+const DARK_STYLE: AttributionStyle = {
+  backgroundColor: "rgba(20, 24, 28, 0.94)",
+  titleColor: "#f3f5f8",
+  textColor: "#e6e9ee",
+  nestedTextColor: "rgba(230, 233, 238, 0.64)",
+  linkColor: "#8ab4f8",
+  listStyleColor: "#8ab4f8",
+};
 
 /** PLATEAU 3D Tiles (Chiyoda). Key-free 3D-tiles source for the Phase 4 path. */
 const PLATEAU_ATTRIBUTION: AttributionSource = {
@@ -130,4 +152,13 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   // Phases 2-4: popover + logo frame, zoom-filtered children (GSI), and
   // dynamic per-feature credits tracked from `layers` (PLATEAU / Google).
   attribution.show(items, layers);
+
+  // Live theme switch — exercises `setStyle()` (light ⇄ dark).
+  const pane = new Pane({ title: "Attribution", expanded: true });
+  const params = { darkTheme: false };
+  pane
+    .addBinding(params, "darkTheme", { label: "Dark theme" })
+    .on("change", (ev) => {
+      attribution.setStyle(ev.value ? DARK_STYLE : LIGHT_STYLE);
+    });
 };

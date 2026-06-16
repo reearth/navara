@@ -12,10 +12,10 @@ sidebar:
 It covers the three things map attributions usually need:
 
 - **Zoom-aware credits** — a source can carry child credits that apply only within a zoom range, so only the relevant ones are shown and they switch quietly as the user zooms.
-- **Per-layer credits** — credits supplied by layers (such as a 3D tile's copyright) are tracked automatically as features appear and disappear.
+- **Per-layer credits** — credits supplied by layers (such as a 3D tile's copyright) are tracked automatically and nested under the source you link with `creditLayerId`; mark that source `collapsible` to fold a long credit list.
 - **Always-visible logos** — logos that must always be shown (e.g. Google) sit in a separate bottom-left frame, independent of whether the popover is open.
 
-Credits may contain inline `<a>` links; they are sanitized before display.
+Credits may contain inline `<a>` links; they are sanitized before display. The colors are themeable at runtime with [`setStyle()`](#setstylestyle).
 
 ## Usage
 
@@ -32,12 +32,19 @@ view.addPlugin(defaultPlugin);
 view.addPlugin(attribution);
 await view.init();
 
-const tiles = view.addLayer({
+// Raster basemap: it carries no per-feature credit, so declare it statically.
+view.addLayer({
   type: "tiles",
   data: {
     url: "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg",
   },
   rasterTile: { maxZoom: 18 },
+});
+
+// 3D tiles whose tiles embed their own copyright (tracked dynamically).
+const photoreal = view.addLayer({
+  type: "cesium3dtiles",
+  data: { url: "https://tile.googleapis.com/v1/3dtiles/root.json?key=YOUR_KEY" },
 });
 
 attribution.show(
@@ -51,11 +58,18 @@ attribution.show(
       ],
     },
     {
+      attribution: "Google Maps Photorealistic 3D Tiles",
+      logo: "/credits/GoogleMaps.png",
+      // Nest this layer's per-tile credits here, folded into a group.
+      creditLayerId: photoreal.id,
+      collapsible: true,
+    },
+    {
       attributionHtml:
         '<a href="https://s2maps.eu">Sentinel-2 cloudless 2020</a> by <a href="https://eox.at">EOX IT Services GmbH</a>',
     },
   ],
-  [tiles],
+  [photoreal],
 );
 
 attribution.hide();
@@ -65,10 +79,10 @@ attribution.dispose();
 ## Constructor
 
 ```typescript
-new AttributionPlugin();
+new AttributionPlugin(options?: { style?: AttributionStyle });
 ```
 
-Takes no configuration. Register it with `view.addPlugin()` **before** `view.init()`.
+`options.style` sets the initial colors (see [AttributionStyle](#attributionstyle)); omit it for the defaults. Register the plugin with `view.addPlugin()` **before** `view.init()`.
 
 ## Methods
 
@@ -95,6 +109,23 @@ dispose(): void
 ```
 
 Removes the UI and releases everything the plugin set up. Call it when the plugin is no longer needed.
+
+### setStyle(style)
+
+```typescript
+setStyle(style: AttributionStyle): void
+```
+
+Updates the UI colors at runtime. Merges over the current style and re-themes the live DOM in place (no rebuild), so it suits switching between light and dark modes.
+
+```typescript
+attribution.setStyle({
+  backgroundColor: "rgba(20, 24, 28, 0.92)",
+  textColor: "#e6e9ee",
+  nestedTextColor: "rgba(230, 233, 238, 0.64)",
+  linkColor: "#8ab4f8",
+});
+```
 
 ## Types
 
@@ -130,6 +161,19 @@ type AttributionItem = AttributionSource | AttributionHtml;
 | `title`   | `string` | Credit text. May contain inline `<a>` links         |
 | `minZoom` | `number` | Lowest zoom this credit applies to (omit for none)  |
 | `maxZoom` | `number` | Highest zoom this credit applies to (omit for none) |
+
+### AttributionStyle
+
+All fields are optional; an unset field keeps the default color. Colors are applied as CSS custom properties, so `setStyle()` re-themes live.
+
+| Property         | Type     | Description                                |
+| ---------------- | -------- | ------------------------------------------ |
+| `titleColor`     | `string` | Source title text color                    |
+| `linkColor`      | `string` | Link and info-icon color                   |
+| `listStyleColor` | `string` | Bullet (list marker) color                 |
+| `textColor`      | `string` | Body text color                            |
+| `nestedTextColor`| `string` | Nested sub-credit text color               |
+| `backgroundColor`| `string` | Popover and trigger background color       |
 
 ## Notes
 
