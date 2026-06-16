@@ -18,6 +18,7 @@ navara_three（コア: ThreeView, Plugin, addPlugin）
   └── three_plugins（ユースケース特化型プラグイン）
         ├── PersonViewPlugin（キーボード操作による一人称 / 三人称ビューコントローラー）
         ├── OverlayPlugin（ワールド座標からスクリーン座標への HTML オーバーレイ投影）
+        ├── AttributionPlugin（非モーダルでズーム連動するデータ出典 UI）
         └── CesiumIonPlugin（Cesium Ion quantized-mesh 地形）
 ```
 
@@ -29,6 +30,7 @@ navara_three（コア: ThreeView, Plugin, addPlugin）
 import {
   PersonViewPlugin,
   OverlayPlugin,
+  AttributionPlugin,
   CesiumIonPlugin,
   moveOverlayElement,
 } from "@navara/three_plugins";
@@ -43,6 +45,10 @@ import {
 ### OverlayPlugin
 
 毎フレーム、地理座標（緯度/経度/高度）をスクリーン座標に投影するプラグインです。ワールド座標に追従する HTML オーバーレイ（マーカー、ラベル、ツールチップなど）を実現します。詳細は [OverlayPlugin](../overlayplugin/) を参照してください。
+
+### AttributionPlugin
+
+地図データの出典（クレジット）UI です。右下のポップオーバーにアクティブなデータソースを一覧し、ズーム連動のクレジット、レイヤー単位の動的クレジット、掲出義務のあるロゴ用の常時表示フレームを備えます。詳細は [AttributionPlugin](../attributionplugin/) を参照してください。
 
 ### CesiumIonPlugin
 
