@@ -10,11 +10,11 @@ import {
 import {
   AttributionPlugin,
   type AttributionItem,
-  type AttributionSource,
   type AttributionStyle,
 } from "@navara/three_plugins";
 import { Pane } from "tweakpane";
 
+import { datasetToSource } from "../../../helpers/attribution-source";
 import {
   TERRAIN_DATASETS,
   TILE_DATASETS,
@@ -40,22 +40,6 @@ const DARK_STYLE: AttributionStyle = {
   textColor: "#e6e9ee",
   nestedTextColor: "rgba(230, 233, 238, 0.64)",
   linkColor: "#8ab4f8",
-};
-
-/** PLATEAU 3D Tiles (Chiyoda). Key-free 3D-tiles source for the Phase 4 path. */
-const PLATEAU_ATTRIBUTION: AttributionSource = {
-  attribution:
-    TILES_3D_DATASETS.plateauChiyoda.attribution ?? "Project PLATEAU",
-  url: TILES_3D_DATASETS.plateauChiyoda.attributionUrl,
-};
-
-/** Google Photorealistic 3D Tiles. Shows an always-visible logo (key required). */
-const GOOGLE_ATTRIBUTION: AttributionSource = {
-  attribution: TILES_3D_DATASETS.googlePhotorealTiles.attribution ?? "Google",
-  url: "https://www.google.com/permissions/geoguidelines/",
-  logo: "/credits/GoogleMaps.png",
-  // Google emits many dynamic credits — fold them into a collapsible group.
-  collapsible: true,
 };
 
 export const run = async (view: ThreeView<CustomDescriptions>) => {
@@ -114,8 +98,13 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
       castShadow: true,
     },
   });
-  // `creditLayerId` nests this layer's dynamic credits under the source.
-  items.push({ ...PLATEAU_ATTRIBUTION, creditLayerId: plateauLayer.id });
+  // `creditLayerId` nests this layer's dynamic credits under the source
+  // (derived from the shared dataset in constants).
+  items.push(
+    datasetToSource(TILES_3D_DATASETS.plateauChiyoda, {
+      creditLayerId: plateauLayer.id,
+    }),
+  );
   layers.push(plateauLayer);
   // Note: PLATEAU tiles fire `featureCreated` but carry no `asset.copyright`,
   // so they exercise the Phase 4 path without producing a dynamic credit.
@@ -130,7 +119,12 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
       },
       model: { maxSse: 60 },
     });
-    items.push({ ...GOOGLE_ATTRIBUTION, creditLayerId: googleLayer.id });
+    items.push(
+      datasetToSource(TILES_3D_DATASETS.googlePhotorealTiles, {
+        creditLayerId: googleLayer.id,
+        collapsible: true,
+      }),
+    );
     layers.push(googleLayer);
   }
 

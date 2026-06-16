@@ -176,6 +176,7 @@ export const TILES_3D_DATASETS = {
   googlePhotorealTiles: {
     url: `https://tile.googleapis.com/v1/3dtiles/root.json`, // API key should be appended via query parameter, e.g. "https://tile.googleapis.com/v1/3dtiles/root.json?key=YOUR_API_KEY"
     attribution: "Google Maps Photorealistic 3D Tiles",
+    attributionUrl: "https://www.google.com/permissions/geoguidelines/",
     logo: "/credits/GoogleMaps.png",
   },
 } satisfies Record<string, Dataset>;

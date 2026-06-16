@@ -1,25 +1,11 @@
 import ThreeView, { type Layer } from "@navara/three";
-import {
-  AttributionPlugin,
-  type AttributionSource,
-} from "@navara/three_plugins";
+import { AttributionPlugin } from "@navara/three_plugins";
 import { Pane } from "tweakpane";
 
+import { datasetToSource } from "../../helpers/attribution-source";
 import { TILES_3D_DATASETS } from "../../helpers/constants";
 import { addDateControl, addCameraControl } from "../../helpers/control";
 import { GOOGLE_MAPS_API_KEY } from "../../helpers/keys";
-
-/**
- * Google Photorealistic 3D Tiles attribution: an always-visible logo
- * (bottom-left) plus the per-tile dynamic credits tracked from the layer.
- */
-const GOOGLE_ATTRIBUTION: AttributionSource = {
-  attribution: TILES_3D_DATASETS.googlePhotorealTiles.attribution ?? "Google",
-  url: "https://www.google.com/permissions/geoguidelines/",
-  logo: "/credits/GoogleMaps.png",
-  // Google emits many dynamic credits — fold them into a collapsible group.
-  collapsible: true,
-};
 
 export const run = async (view: ThreeView) => {
   // Plugins must be registered before init().
@@ -34,9 +20,15 @@ export const run = async (view: ThreeView) => {
   });
 
   const layer = addTileLayer(view, GOOGLE_MAPS_API_KEY);
-  // Static source + logo; `creditLayerId` nests the per-tile credits under it.
+  // Attribution derived from the shared dataset (constants); per-tile credits
+  // nest under it via `creditLayerId`.
   attribution.show(
-    [{ ...GOOGLE_ATTRIBUTION, creditLayerId: layer.id }],
+    [
+      datasetToSource(TILES_3D_DATASETS.googlePhotorealTiles, {
+        creditLayerId: layer.id,
+        collapsible: true,
+      }),
+    ],
     [layer],
   );
   addCameraControl(view, pane);
