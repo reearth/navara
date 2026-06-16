@@ -768,16 +768,20 @@ impl App {
 
         let height = lle.height.val();
         let lat = lle.lat.val();
-        if height <= 0.0 || viewport_height <= 0.0 {
+        // Guard the inputs: a default/unset frustum has `fov_y == 0` (→ tan(0)=0
+        // → division by zero → ±inf), and a non-finite latitude would poison the
+        // math. The `is_finite` checks also reject NaN/inf. Bail so a non-finite
+        // zoom never crosses the WASM boundary to JS.
+        if height <= 0.0
+            || viewport_height <= 0.0
+            || !fov_y.is_finite()
+            || fov_y <= 0.0
+            || !lat.is_finite()
+        {
             return None;
         }
-        Some(camera_zoom_level(
-            height,
-            fov_y,
-            viewport_height,
-            lat,
-            WGS84_A_64,
-        ))
+        let zoom = camera_zoom_level(height, fov_y, viewport_height, lat, WGS84_A_64);
+        zoom.is_finite().then_some(zoom)
     }
 
     pub fn rotate_around_axis(&mut self, axis: Option<Vec<FloatType>>, angle: FloatType) {
