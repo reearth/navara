@@ -10,12 +10,16 @@ import type { Dataset } from "./constants";
  * Maps `attributionUrl` → `url` and carries `logo`. Pass `extra` for the
  * plugin-specific view options that don't belong on a dataset
  * (`creditLayerId`, `collapsible`, `children`).
+ *
+ * `attribution` is required at the type level: a dataset without it (e.g. an
+ * `attributionHtml`-only one) is rejected at compile time rather than rendering
+ * a blank top-level entry.
  */
 export const datasetToSource = (
-  dataset: Dataset,
+  dataset: Dataset & { attribution: string },
   extra?: Partial<AttributionSource>,
 ): AttributionSource => ({
-  attribution: dataset.attribution ?? "",
+  attribution: dataset.attribution,
   url: dataset.attributionUrl,
   logo: dataset.logo,
   ...extra,
