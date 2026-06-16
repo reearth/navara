@@ -256,19 +256,29 @@ const addCloudsTilesControl = (
     title: "CloudsTiles",
   });
 
-  const transitionTile = () => {
-    const position = view.camera.positionGeographic;
-    if (!position?.height) return;
-    const targetHeight = 85e6;
-    const opacity = Math.min(1, position.height / targetHeight);
+  view.once("postUpdate", () => {
+    const initialHeight = view.camera.positionGeographic.height;
 
-    if (!description.rasterTile) return;
-    description.rasterTile.opacity = opacity;
-    cloudsTilesLayer.update(description);
-  };
+    const transitionTile = () => {
+      const position = view.camera.positionGeographic;
+      if (!position?.height) return;
 
-  view.camera.on("move", transitionTile);
-  view.camera.on("moveend", transitionTile);
+      const targetMaxHeight = initialHeight;
+      const targetMinHeight = 10e5;
+      const opacity = Math.min(
+        1,
+        (position.height - targetMinHeight) /
+          (targetMaxHeight - targetMinHeight),
+      );
+
+      if (!description.rasterTile) return;
+      description.rasterTile.opacity = opacity;
+      cloudsTilesLayer.update(description);
+    };
+
+    view.camera.on("move", transitionTile);
+    view.camera.on("moveend", transitionTile);
+  });
 
   const fields: FolderFields<typeof PARAMS> = [
     {
