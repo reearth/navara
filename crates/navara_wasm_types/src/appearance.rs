@@ -1380,16 +1380,16 @@ pub struct RasterTileInternalMaterial {
     #[wasm_bindgen(js_name = hillshadeExaggeration)]
     #[serde(rename = "hillshadeExaggeration")]
     pub hillshade_exaggeration: f32,
-    // Hillshade UV transforms for parent texture reuse (per-layer)
-    // Stored as raw Vec for internal use, exposed via getter
-    hillshade_uv_transforms: Vec<Option<TileUvTransform>>,
+    // Per-layer UV transforms for parent data reuse (covers both regular textures and hillshades).
+    // Stored as raw Vec for internal use, exposed via getter.
+    layer_uv_transforms: Vec<Option<TileUvTransform>>,
 }
 
 #[wasm_bindgen]
 impl RasterTileInternalMaterial {
-    #[wasm_bindgen(js_name = hillshadeUvTransforms)]
-    pub fn hillshade_uv_transforms(&self) -> Vec<JsValue> {
-        self.hillshade_uv_transforms
+    #[wasm_bindgen(js_name = layerUvTransforms)]
+    pub fn layer_uv_transforms(&self) -> Vec<JsValue> {
+        self.layer_uv_transforms
             .iter()
             .map(|opt| match opt {
                 Some(transform) => JsValue::from(*transform),
@@ -1538,9 +1538,9 @@ impl<'a> From<&'a navara_material::RasterTileInternalMaterial> for RasterTileInt
                 .as_ref()
                 .map(|c| c.exaggeration)
                 .unwrap_or(1.0),
-            // Hillshade UV transforms
-            hillshade_uv_transforms: m
-                .hillshade_uv_transforms
+            // Per-layer UV transforms
+            layer_uv_transforms: m
+                .layer_uv_transforms
                 .iter()
                 .map(|opt| opt.as_ref().map(|t| t.into()))
                 .collect(),

@@ -11,9 +11,7 @@ use serde::Serialize;
 use wasm_bindgen::prelude::*;
 use worker::WorkerTaskDelegatedEvent;
 
-use navara_wasm_types::{
-    CameraFrustum, Globe, LLE, RasterTileInternalMaterial, TileUvTransform, Transform,
-};
+use navara_wasm_types::{CameraFrustum, Globe, LLE, RasterTileInternalMaterial, Transform};
 
 #[wasm_bindgen(getter_with_clone)]
 #[derive(Debug, Clone, Serialize)]
@@ -81,7 +79,6 @@ pub struct Mesh {
     pub indices: i32,  // handle
     pub active: bool,
     pub render_order: i32,
-    pub uv_transform: TileUvTransform,
     pub aabb: navara_wasm_types::Aabb,
     /// Per-vertex normals handle (terrain only).
     pub normals: Option<i32>,
@@ -387,7 +384,6 @@ impl<'a> From<&'a navara_mesh::Mesh> for Mesh {
             indices: m.indices,
             active: m.active,
             render_order: m.render_order,
-            uv_transform: (&m.uv_transform).into(),
             aabb: m.aabb.clone().into(),
             normals: m.normals,
             skirt_vertices: m.skirt_vertices,

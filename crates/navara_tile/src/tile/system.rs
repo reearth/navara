@@ -7,8 +7,8 @@ use navara_data_requester::{DataManager, DataRequester, DataRequesterStatus};
 use navara_fog::Fog;
 use navara_frame::FrameManager;
 use navara_geometry::{
-    add_skirt_separate, calculate_skirt_height, make_wgs84_down_dir_fn, tile_triangles_flat,
-    uv_transform,
+    TileUvTransform, add_skirt_separate, calculate_skirt_height, make_wgs84_down_dir_fn,
+    tile_triangles_flat, uv_transform,
 };
 use navara_material::RasterTileInternalMaterial;
 use navara_math::{FloatType, Transform};
@@ -376,7 +376,7 @@ pub fn transfer_mesh(
 
         // Hillshade fields
         let mut is_hillshades = Vec::with_capacity(tile_layers_len);
-        let mut hillshade_uv_transforms = Vec::with_capacity(tile_layers_len);
+        let mut layer_uv_transforms = Vec::with_capacity(tile_layers_len);
         let mut shared_hillshade_config = None;
         let mut tile_show_bounding_box = false;
 
@@ -434,8 +434,9 @@ pub fn transfer_mesh(
                 is_hillshades.push(false);
             }
 
-            // UV transform will be computed in update_mesh_material based on actual parent zoom
-            hillshade_uv_transforms.push(None);
+            // Per-layer UV transform is finalized in `update_mesh_material` once each
+            // layer's actual parent (LayerParent) is resolved.
+            layer_uv_transforms.push(None);
         }
 
         // Extract shared elevation heatmap configuration (or use defaults)
@@ -482,7 +483,7 @@ pub fn transfer_mesh(
             // Hillshade fields
             is_hillshades,
             hillshade_config: shared_hillshade_config.cloned(),
-            hillshade_uv_transforms,
+            layer_uv_transforms,
         };
 
         let terrain_req = match tile.terrain_data.as_ref() {
@@ -563,7 +564,6 @@ pub fn transfer_mesh(
                         uvs: uvshandle,
                         active: false,
                         render_order,
-                        uv_transform: Default::default(),
                         aabb: Aabb {
                             center: Transform::from_translation(-rtc_translation)
                                 .transform_point(tile_aabb.center),
@@ -687,7 +687,6 @@ pub fn transfer_mesh(
                         uvs: uvshandle,
                         active: false,
                         render_order,
-                        uv_transform: Default::default(),
                         aabb: Aabb {
                             center: Transform::from_translation(-rtc_translation)
                                 .transform_point(tile_aabb.center),
@@ -793,7 +792,6 @@ pub fn transfer_mesh(
                     uvs: uvshandle,
                     active: false,
                     render_order,
-                    uv_transform: Default::default(),
                     aabb: Aabb {
                         center: Transform::from_translation(-rtc_translation)
                             .transform_point(tile_aabb.center),
@@ -1003,71 +1001,7 @@ pub fn update_mesh_material(
             continue;
         };
 
-        let texture_fragment_entity_ids_original = match tile.texture_fragment_entity_ids.as_deref()
-        {
-            Some(texture_fragment_entity_ids) => texture_fragment_entity_ids,
-            // Use a parent texture if this tile hasn't been prepared yet.
-            None => &[],
-        };
-
-        let mut parent_z = None;
-
-        // Merge texture_fragment_entity_ids and hillshade_entity_ids with per-layer parent fallback
-        let mut merged_current_fragments = Vec::new();
-
-        // Get parent tile for texture fallback from ready_parent_tile_handle
-        let parent_tile = cached_rendered_tile
-            .ready_parent_tile_handle
-            .and_then(|h| qt.qt.get(h));
-
-        let hill_ids = tile.hillshade_entity_ids.as_ref();
-
-        for i in 0..texture_fragment_entity_ids_original.len() {
-            let tex = texture_fragment_entity_ids_original.get(i).and_then(|&e| e);
-            let hill = hill_ids.and_then(|ids| ids.get(i).and_then(|&e| e));
-            merged_current_fragments.push(tex.or(hill));
-        }
-
         let tile_layers_len = tile_layers.iter().len();
-
-        // Use parent if tile isn't ready (all-or-nothing to respect single UV transform)
-        let is_ready = tile.is_texture_ready(&texture_fragment, &data_requesters, &tile_layers);
-
-        if !is_ready && let Some(parent) = parent_tile {
-            parent_z = Some(parent.coords.z);
-
-            // Use parent's merged fragments for ALL layers
-            merged_current_fragments.clear();
-            if let Some(parent_tex_ids) = &parent.texture_fragment_entity_ids {
-                let parent_hill_ids = parent.hillshade_entity_ids.as_ref();
-                for i in 0..parent_tex_ids.len() {
-                    let tex = parent_tex_ids.get(i).and_then(|&e| e);
-                    let hill = parent_hill_ids.and_then(|ids| ids.get(i).and_then(|&e| e));
-                    merged_current_fragments.push(tex.or(hill));
-                }
-            }
-        }
-
-        let mut hillshade_parent_zooms: std::collections::HashMap<usize, usize> =
-            std::collections::HashMap::new();
-        if let Some(hillshade_parents) = &cached_rendered_tile.hillshade_parents {
-            for (i, parent) in hillshade_parents.iter().enumerate() {
-                if let Some(parent) = parent
-                    && i < merged_current_fragments.len()
-                {
-                    merged_current_fragments[i] = Some(parent.entity);
-                    hillshade_parent_zooms.insert(i, parent.zoom);
-                }
-            }
-        }
-
-        let texture_fragment_entity_ids = &merged_current_fragments;
-
-        if texture_fragment_entity_ids.len() != tile_layers_len {
-            // Serial request incomplete or parent has different layer count
-            // Skip update (continue using parent or old state)
-            continue;
-        }
 
         let Some((tile_mesh_marker, _, appearance)) = cached_rendered_tile
             .mesh_entity
@@ -1087,6 +1021,7 @@ pub fn update_mesh_material(
         let prev_opacities = &appearance.opacities;
         let prev_is_elevation_heatmaps = &appearance.is_elevation_heatmaps;
         let prev_is_hillshades = &appearance.is_hillshades;
+        let prev_layer_uv_transforms = &appearance.layer_uv_transforms;
 
         let mut shows = Vec::with_capacity(tile_layers_len);
         let mut opacities = Vec::with_capacity(tile_layers_len);
@@ -1097,18 +1032,47 @@ pub fn update_mesh_material(
         // Hillshade fields
         let mut is_hillshades = Vec::with_capacity(tile_layers_len);
         let mut hillshade_config = None;
-        let mut hillshade_uv_transforms = Vec::with_capacity(tile_layers_len);
+
+        // Per-layer fragment resolution: for each layer, use own entity if ready,
+        // otherwise fall back to that layer's nearest ready ancestor recorded in
+        // `cached_rendered_tile.layer_parents`. UV transform is per-layer too.
+        let mut layer_fragments: Vec<Option<Entity>> = Vec::with_capacity(tile_layers_len);
+        let mut layer_uv_transforms: Vec<Option<TileUvTransform>> =
+            Vec::with_capacity(tile_layers_len);
 
         for (i, (l, _)) in tile_layers.iter().sort::<&Order>().enumerate() {
-            // Check if texture is ready: TextureFragment OR DataRequester (for hillshade)
-            let should_show = texture_fragment_entity_ids
-                .get(i)
-                .and_then(|entity| {
-                    entity.map(|e| {
-                        RasterTile::is_texture_entity_ready(e, &texture_fragment, &data_requesters)
-                    })
-                })
-                .unwrap_or(false);
+            // Resolve own entity for this layer based on its kind.
+            let own_entity = if l.hillshade_config.is_some() {
+                tile.hillshade_entity_ids
+                    .as_ref()
+                    .and_then(|ids| ids.get(i).copied().flatten())
+            } else {
+                tile.texture_fragment_entity_ids
+                    .as_ref()
+                    .and_then(|ids| ids.get(i).copied().flatten())
+            };
+            let own_ready = own_entity.is_some_and(|e| {
+                RasterTile::is_texture_entity_ready(e, &texture_fragment, &data_requesters)
+            });
+
+            let (resolved_entity, resolved_uv) = if own_ready {
+                (own_entity, None)
+            } else if let Some(parent) = cached_rendered_tile
+                .layer_parents
+                .as_ref()
+                .and_then(|v| v.get(i).copied().flatten())
+            {
+                (
+                    Some(parent.entity),
+                    Some(uv_transform(tile.coords, parent.zoom)),
+                )
+            } else {
+                (None, None)
+            };
+
+            let should_show = resolved_entity.is_some_and(|e| {
+                RasterTile::is_texture_entity_ready(e, &texture_fragment, &data_requesters)
+            });
 
             let a = l.appearance().unwrap();
             let next_show = should_show && a.show;
@@ -1120,12 +1084,14 @@ pub fn update_mesh_material(
             let is_hillshade_layer_check = l.hillshade_config.is_some();
 
             // Check if entity changed and new entity is ready
-            let entity_changed = prev_texture_fragments.as_ref().and_then(|t| t.get(i))
-                != texture_fragment_entity_ids.get(i);
+            let entity_changed =
+                prev_texture_fragments.as_ref().and_then(|t| t.get(i)) != Some(&resolved_entity);
 
             // Only trigger update for entity changes when new entity is ready
             // This prevents flickering when entity is replaced with a pending one
             let should_update_for_entity_change = entity_changed && should_show;
+
+            let uv_changed = prev_layer_uv_transforms.get(i) != Some(&resolved_uv);
 
             if prev_shows.get(i) != Some(&next_show)
                 || prev_opacities.get(i) != Some(&next_opacity)
@@ -1133,6 +1099,7 @@ pub fn update_mesh_material(
                 || should_update_for_entity_change
                 || prev_is_elevation_heatmaps.get(i) != Some(&is_heatmap)
                 || prev_is_hillshades.get(i) != Some(&is_hillshade_layer_check)
+                || uv_changed
             {
                 needs_update = true;
             }
@@ -1147,20 +1114,15 @@ pub fn update_mesh_material(
                 elevation_heatmap_config = l.elevation_heatmap_config.clone();
             }
 
-            // Mark whether this layer is a hillshade
-            let is_hillshade_layer = l.hillshade_config.is_some();
-            is_hillshades.push(is_hillshade_layer);
+            is_hillshades.push(is_hillshade_layer_check);
 
             // Use the first hillshade_config we find (they should all be the same)
-            if is_hillshade_layer && hillshade_config.is_none() {
+            if is_hillshade_layer_check && hillshade_config.is_none() {
                 hillshade_config = l.hillshade_config.clone();
             }
 
-            // Calculate UV transform for hillshade parent reuse
-            let uv_trans = hillshade_parent_zooms
-                .get(&i)
-                .map(|&parent_zoom| uv_transform(tile.coords, parent_zoom));
-            hillshade_uv_transforms.push(uv_trans);
+            layer_fragments.push(resolved_entity);
+            layer_uv_transforms.push(resolved_uv);
         }
 
         // Check if elevation_heatmap_config changed
@@ -1182,7 +1144,7 @@ pub fn update_mesh_material(
             continue;
         }
 
-        let Some((mut tile_mesh_marker, mut mesh, mut appearance)) = cached_rendered_tile
+        let Some((mut tile_mesh_marker, _mesh, mut appearance)) = cached_rendered_tile
             .mesh_entity
             .and_then(|e| appearances.get_mut(e).ok())
         else {
@@ -1191,14 +1153,7 @@ pub fn update_mesh_material(
 
         tile_mesh_marker.ready_parent_tile_handle = cached_rendered_tile.ready_parent_tile_handle;
 
-        match parent_z {
-            Some(parent_z) => {
-                mesh.uv_transform = uv_transform(tile.coords, parent_z);
-            }
-            None => mesh.uv_transform = Default::default(),
-        }
-
-        appearance.texture_fragments = Some(texture_fragment_entity_ids.clone());
+        appearance.texture_fragments = Some(layer_fragments);
 
         appearance.shows = shows;
         appearance.opacities = opacities;
@@ -1207,7 +1162,7 @@ pub fn update_mesh_material(
         appearance.elevation_heatmap_config = elevation_heatmap_config;
         appearance.is_hillshades = is_hillshades;
         appearance.hillshade_config = hillshade_config;
-        appearance.hillshade_uv_transforms = hillshade_uv_transforms;
+        appearance.layer_uv_transforms = layer_uv_transforms;
 
         // Clear needs_material_update flag now that material has been updated
         if let Some(cache) = tc.rendered_tile_caches.get_mut(&rendered_tile.tile_handle) {

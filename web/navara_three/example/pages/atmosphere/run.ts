@@ -259,7 +259,7 @@ const addCloudsTilesControl = (
   const transitionTile = () => {
     const position = view.camera.positionGeographic;
     if (!position?.height) return;
-    const targetHeight = 35e6;
+    const targetHeight = 85e6;
     const opacity = Math.min(1, position.height / targetHeight);
 
     if (!description.rasterTile) return;
