@@ -361,5 +361,5 @@ view.camera.once("moveend", () => {
 
 ## See Also
 
-- [ThreeView Properties](../../../three/api-reference/threeview-properties/) — `view.camera` and other view properties
-- [ThreeView Functions](../../../three/api-reference/threeview-functions/) — `setCamera()`, `flyTo()`, `lookAt()`, and other camera movement methods
+- [ThreeView Properties](../../../three/api/threeview-properties/) — `view.camera` and other view properties
+- [ThreeView Functions](../../../three/api/threeview-functions/) — `setCamera()`, `flyTo()`, `lookAt()`, and other camera movement methods

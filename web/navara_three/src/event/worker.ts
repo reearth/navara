@@ -300,6 +300,7 @@ async function processUpsampleTerrainMesh(
       upsamplableTerrainGeometry,
       params.skirt,
       params.skirtExaggeration,
+      params.tms,
     );
   }
   workerPoolPromises.set(id, promise);

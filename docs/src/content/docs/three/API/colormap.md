@@ -316,6 +316,6 @@ setColorMap("rdYlGn");
 
 ## See Also
 
-- [Color Class](../../../three/api-reference/color/) - A class for representing colors
-- [Globe Class](../../../three/api-reference/globe/) - `elevationColormap` property
+- [Color Class](../../../three/api/color/) - A class for representing colors
+- [Globe Class](../../../three/api/globe/) - `elevationColormap` property
 - [ElevationHeatmapMaterial](../../../three/resource-layer/elevation-heatmap-material/) - Elevation heatmap material

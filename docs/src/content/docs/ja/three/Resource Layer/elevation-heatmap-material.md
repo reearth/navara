@@ -235,8 +235,8 @@ view.globe.elevationColormap = rdYlBuColorMap;
 
 ## 関連項目
 
-- [ColorMap クラス](../../../three/api-reference/colormap/) - カラーマップの詳細な API リファレンス
-- [Globe クラス](../../../three/api-reference/globe/) - `elevationColormap` プロパティの詳細
+- [ColorMap クラス](../../../three/api/colormap/) - カラーマップの詳細な API リファレンス
+- [Globe クラス](../../../three/api/globe/) - `elevationColormap` プロパティの詳細
 - [RasterTerrainMaterial](../../../three/resource-layer/raster-terrain-material/) - 3D 地形レンダリング用マテリアル
 - [Tile Layer](../../../three/resource-layer/tile-layer/) - タイルレイヤーの設定
 

@@ -30,7 +30,7 @@ view.camera.on("moveend", () => {
 ```
 
 :::tip[Related Documentation]
-For full details on all properties, events, and control options, see [ThreeViewCamera Class](../../../three/api-reference/camera/).
+For full details on all properties, events, and control options, see [ThreeViewCamera Class](../../../three/api/camera/).
 :::
 
 ### globe
@@ -56,7 +56,7 @@ view.globe.elevationColormap = customColorMap;
 ```
 
 :::tip[Related Documentation]
-For details, see [Globe Class](../../../three/api-reference/globe/).
+For details, see [Globe Class](../../../three/api/globe/).
 :::
 
 ### atmosphere
@@ -86,7 +86,7 @@ view.atmosphere.on("sunChanged", (sunDirection) => {
 ```
 
 :::tip[Related Documentation]
-For details, see [Atmosphere Class](../../../three/api-reference/atmosphere/).
+For details, see [Atmosphere Class](../../../three/api/atmosphere/).
 :::
 
 ### toneMappingExposure

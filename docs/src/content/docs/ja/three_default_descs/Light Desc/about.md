@@ -11,7 +11,7 @@ LightDesc は、3Dシーンの照明を管理するクラス群です。環境�
 
 navara_three は、様々な照明要件に対応する複数のライトタイプを提供しています：
 
-### [AmbientLightDesc](../../../three/light-desc-reference/ambient-light-desc/)
+### [AmbientLightDesc](../../../three_default_descs/light-desc/ambient-light-desc/)
 
 **用途:** シーン全体の環境光
 **説明:** すべてのオブジェクトを均等に照らす基本的な環境光。影を作りません。
@@ -35,7 +35,7 @@ view.addLight<AmbientLightDesc>({
 });
 ```
 
-### [LightProbeDesc](../../../three/light-desc-reference/light-probe-desc/)
+### [LightProbeDesc](../../../three_default_descs/light-desc/light-probe-desc/)
 
 **用途:** Image-Based Lighting（IBL）
 **説明:** 球面調和関数を使用した事前計算済みの環境照明。リアルな間接照明を実現します。
@@ -59,7 +59,7 @@ view.addLight<LightProbeDesc>({
 });
 ```
 
-### [SkyLightProbeDesc](../../../three/light-desc-reference/sky-light-probe-desc/)
+### [SkyLightProbeDesc](../../../three_default_descs/light-desc/sky-light-probe-desc/)
 
 **用途:** 動的なスカイライティング
 **説明:** 大気散乱シミュレーションと連携した動的な環境照明。太陽の位置に応じて自動更新されます。
@@ -82,7 +82,7 @@ view.addLight<SkyLightProbeDesc>({
 });
 ```
 
-### [SunLightDesc](../../../three/light-desc-reference/sun-light-desc/)
+### [SunLightDesc](../../../three_default_descs/light-desc/sun-light-desc/)
 
 **用途:** 太陽光と影
 **説明:** Cascaded Shadow Maps（CSM）を使用した高品質な太陽光シミュレーション。大気散乱と連携します。
@@ -193,5 +193,5 @@ view.atmosphere.on("sunChanged", () => {
 ## 関連リソース
 
 - [Resource Layer Reference](../../../three/resource-layer/about/) - リソースレイヤーの詳細
-- [Effect Descriptor Reference](../../../three/effect-desc-reference/about/) - エフェクト
+- [Effect Descriptor Reference](../../../three_default_descs/effect-desc/about/) - エフェクト
 - [API Reference](../../../three/api/) - ThreeView API

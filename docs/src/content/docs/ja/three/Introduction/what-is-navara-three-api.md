@@ -15,7 +15,7 @@ sidebar:
 
 ## 提供する機能
 
-以下は navara_three_api が提供する代表的な機能です。すべての関数やクラスの詳細については [API Reference](../../../three/api-reference/navara_three_api/) を参照してください。
+以下は navara_three_api が提供する代表的な機能です。すべての関数やクラスの詳細については [API Reference](../../../three/api/navara_three_api/) を参照してください。
 
 ### 座標変換
 

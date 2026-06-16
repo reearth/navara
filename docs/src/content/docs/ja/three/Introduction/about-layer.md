@@ -180,7 +180,7 @@ const boxMesh = boxHandle.ref;
 boxHandle.delete();
 ```
 
-詳細な API リファレンスは [Descriptor Types](../../../three/api-reference/desc-types/) を参照してください。
+詳細な API リファレンスは [Descriptor Types](../../../three/api/desc-types/) を参照してください。
 
 ## まとめ
 

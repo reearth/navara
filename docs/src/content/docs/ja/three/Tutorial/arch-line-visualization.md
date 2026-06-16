@@ -245,7 +245,7 @@ const arcLines = data.features.map((feature) => {
 :::
 
 :::tip[ColorMap の詳細]
-`ColorMap` クラスのメソッド（`linear()`、`quantize()` など）については、[ColorMap クラス](../../../three/api-reference/colormap/) を参照してください。
+`ColorMap` クラスのメソッド（`linear()`、`quantize()` など）については、[ColorMap クラス](../../../three/api/colormap/) を参照してください。
 :::
 
 ## アーチラインオブジェクトを追加する

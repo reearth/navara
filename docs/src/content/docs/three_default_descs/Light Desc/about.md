@@ -11,7 +11,7 @@ LightDesc is a group of classes that manage lighting in a 3D scene. It provides 
 
 navara_three provides multiple light descriptor types to address various lighting requirements:
 
-### [AmbientLightDesc](../../../three/light-desc-reference/ambient-light-desc/)
+### [AmbientLightDesc](../../../three_default_descs/light-desc/ambient-light-desc/)
 
 **Purpose:** Ambient light for the entire scene
 **Description:** Basic ambient light that illuminates all objects evenly. Does not cast shadows.
@@ -35,7 +35,7 @@ view.addLight<AmbientLightDesc>({
 });
 ```
 
-### [LightProbeDesc](../../../three/light-desc-reference/light-probe-desc/)
+### [LightProbeDesc](../../../three_default_descs/light-desc/light-probe-desc/)
 
 **Purpose:** Image-Based Lighting (IBL)
 **Description:** Pre-computed environment lighting using spherical harmonics. Achieves realistic indirect lighting.
@@ -59,7 +59,7 @@ view.addLight<LightProbeDesc>({
 });
 ```
 
-### [SkyLightProbeDesc](../../../three/light-desc-reference/sky-light-probe-desc/)
+### [SkyLightProbeDesc](../../../three_default_descs/light-desc/sky-light-probe-desc/)
 
 **Purpose:** Dynamic sky lighting
 **Description:** Dynamic environment lighting that works in conjunction with atmospheric scattering simulation. Automatically updates based on the sun's position.
@@ -82,7 +82,7 @@ view.addLight<SkyLightProbeDesc>({
 });
 ```
 
-### [SunLightDesc](../../../three/light-desc-reference/sun-light-desc/)
+### [SunLightDesc](../../../three_default_descs/light-desc/sun-light-desc/)
 
 **Purpose:** Sunlight and shadows
 **Description:** High-quality sunlight simulation using Cascaded Shadow Maps (CSM). Works in conjunction with atmospheric scattering.
@@ -193,5 +193,5 @@ If you are not using the atmosphere system, use AmbientLightDesc and LightProbeD
 ## Related Resources
 
 - [Resource Layer Reference](../../../three/resource-layer/about/) - Resource layer details
-- [Effect Descriptor Reference](../../../three/effect-desc-reference/about/) - Effect descriptors
+- [Effect Descriptor Reference](../../../three_default_descs/effect-desc/about/) - Effect descriptors
 - [API Reference](../../../three/api/) - ThreeView API

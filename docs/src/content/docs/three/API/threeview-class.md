@@ -193,7 +193,7 @@ view.atmosphere.date = new Date("2024-12-21T18:00:00");
 ```
 
 :::tip[Related Documentation]
-For details on the atmosphere system, see [Atmosphere Class](../../../three/api-reference/atmosphere/).
+For details on the atmosphere system, see [Atmosphere Class](../../../three/api/atmosphere/).
 :::
 
 ### backgroundColor
@@ -433,7 +433,7 @@ Disabling `hideUnderground` may cause unexpected behavior with some effect Descr
 :::
 
 :::tip[Related Documentation]
-For details and usage examples of each property, see [Globe Class](../../../three/api-reference/globe/).
+For details and usage examples of each property, see [Globe Class](../../../three/api/globe/).
 :::
 
 **Example:**

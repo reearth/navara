@@ -7,7 +7,7 @@ use navara_core::{
 };
 use navara_data_requester::{DataRequester, DataRequesterStatus};
 use navara_geometry::{ReturnedConstructedTerrainMesh, UpsamplableTerrainGeometry};
-use navara_math::{EPSILON6, Vec3};
+use navara_math::Vec3;
 
 use navara_mesh::CachedMeshHandle;
 use navara_quadtree::Coords;
@@ -372,19 +372,17 @@ impl RasterTile {
     }
 
     fn get_region(&self, parent: &RasterTile) -> Option<TileRegion> {
-        let mid_lng = (parent.extent.west.val() + parent.extent.east.val()) / 2.0;
-        let mid_lat = (parent.extent.south.val() + parent.extent.north.val()) / 2.0;
-        // Use a tolerance proportional to the tile size, not `f64::EPSILON`.
-        // `mid_lng` can be off by a few ULPs from `self.extent.west` even when
-        // they are mathematically equal (different rounding paths in
-        // `(west_rad + east_rad) / 2` vs `(deg).to_radians()`), and at the
-        // magnitudes involved (~2.4 rad) `f64::EPSILON` is rounded away by the
-        // subtraction, leaving an effectively-strict `>=` that miscategorises
-        // tiles whose west edge sits exactly on the parent's mid line.
-        let lng_eps = (parent.extent.east.val() - parent.extent.west.val()).abs() * EPSILON6;
-        let lat_eps = (parent.extent.north.val() - parent.extent.south.val()).abs() * EPSILON6;
-        let is_east = self.extent.west.val() >= mid_lng - lng_eps;
-        let is_north = self.extent.south.val() >= mid_lat - lat_eps;
+        // Use tile coordinates rather than extents to detect the quadrant.
+        // Both WebMercator and Geographic schemes share XYZ-style y (y=0 at the
+        // north edge), so the relationship between parent and child indices is
+        // identical: `(2x, 2y)` is the NW child, `(2x+1, 2y+1)` the SE, etc.
+        // An extent-based check using the arithmetic midpoint of latitude is
+        // incorrect for WebMercator: the projection is non-linear in lat, so
+        // the actual boundary between north and south children does not sit at
+        // `(south + north) / 2`. This was particularly visible in the southern
+        // hemisphere, where the north child was misidentified as a south one.
+        let is_east = self.coords.x == parent.coords.x * 2 + 1;
+        let is_north = self.coords.y == parent.coords.y * 2;
         Some(match (is_east, is_north) {
             (false, true) => TileRegion::NorthWest,
             (true, true) => TileRegion::NorthEast,
@@ -848,6 +846,39 @@ mod test {
             0.,
             scheme,
         );
+
+        assert!(matches!(
+            nw.get_region(&parent),
+            Some(TileRegion::NorthWest)
+        ));
+        assert!(matches!(
+            ne.get_region(&parent),
+            Some(TileRegion::NorthEast)
+        ));
+        assert!(matches!(
+            sw.get_region(&parent),
+            Some(TileRegion::SouthWest)
+        ));
+        assert!(matches!(
+            se.get_region(&parent),
+            Some(TileRegion::SouthEast)
+        ));
+    }
+
+    #[test]
+    fn get_region_works_for_web_mercator_southern_hemisphere() {
+        // Regression for: WebMercator south-hemisphere tiles were misidentified
+        // because the projection is non-linear in latitude — the actual child
+        // boundary does not sit at the parent's arithmetic mid_lat, so the
+        // north child of a southern tile was classified as a south child and
+        // raster-DEM upsampling produced incorrect geometry.
+        let scheme = TilingScheme::WebMercator { tms: false };
+        let parent =
+            RasterTile::new_with_scheme(TileXYZ { x: 1, y: 2, z: 2 }, 0., 0., scheme.clone());
+        let nw = RasterTile::new_with_scheme(TileXYZ { x: 2, y: 4, z: 3 }, 0., 0., scheme.clone());
+        let ne = RasterTile::new_with_scheme(TileXYZ { x: 3, y: 4, z: 3 }, 0., 0., scheme.clone());
+        let sw = RasterTile::new_with_scheme(TileXYZ { x: 2, y: 5, z: 3 }, 0., 0., scheme.clone());
+        let se = RasterTile::new_with_scheme(TileXYZ { x: 3, y: 5, z: 3 }, 0., 0., scheme);
 
         assert!(matches!(
             nw.get_region(&parent),
