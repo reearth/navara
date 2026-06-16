@@ -17,7 +17,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use crate::{Compression, Directory, Header, Error, tile_id};
+use crate::{Compression, Directory, Error, Header, tile_id};
 
 /// A byte range to fetch from the archive: `length` bytes starting at `offset`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

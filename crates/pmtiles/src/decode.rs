@@ -26,8 +26,6 @@ pub fn decompress(compression: Compression, data: &[u8]) -> Result<Vec<u8>, Erro
                 .map_err(|_| Error::Decompression)?;
             Ok(out)
         }
-        Compression::Brotli | Compression::Zstd | Compression::Unknown => {
-            Err(Error::Decompression)
-        }
+        Compression::Brotli | Compression::Zstd | Compression::Unknown => Err(Error::Decompression),
     }
 }

@@ -19,7 +19,9 @@ use navara_vector_tile::{
     VectorTileSourceCache, VectorTileSourceResources,
 };
 
-use crate::pmtiles_source::PmtilesSource;
+use navara_pmtiles::PmtilesSource;
+
+use crate::pmtiles_decoder::MvtPmtilesDecoder;
 use crate::source::{MvtSource, OwnedMatchedLayerInfo};
 use crate::source_cache::MvtSourceId;
 
@@ -59,8 +61,8 @@ pub fn prepare_layer_resource(
                         .get(layer_entity)
                         .map(|(_, l)| l.layer_id.clone())
                         .unwrap_or_default();
-                    // Add layer info to the source (MVT or PMTiles — both keep
-                    // the same `layers` list).
+                    // Add layer info to the source (MVT directly, or PMTiles via
+                    // its injected MVT decoder — `with_source_layers` handles both).
                     if let Ok((_, layer)) = mvt_layers.get(layer_entity)
                         && let Some(ts) = tile_source.as_mut()
                     {
@@ -109,8 +111,9 @@ pub fn prepare_layer_resource(
     }
 }
 
-/// Run `f` against a source's layer list, regardless of whether it's an
-/// [`MvtSource`] or a [`PmtilesSource`] (both hold `Vec<OwnedMatchedLayerInfo>`).
+/// Run `f` against a source's layer list, whether it's an [`MvtSource`] (which
+/// holds the layers directly) or a [`PmtilesSource`] (which holds them inside
+/// its injected [`MvtPmtilesDecoder`]).
 ///
 /// Uses a callback rather than returning `&mut Vec` so the transient downcast
 /// borrow doesn't escape — returning it conditionally trips the borrow checker.
@@ -121,8 +124,13 @@ fn with_source_layers<R>(
     if let Some(s) = tile_source.downcast_mut::<MvtSource>() {
         return Some(f(&mut s.layers));
     }
-    if let Some(s) = tile_source.downcast_mut::<PmtilesSource>() {
-        return Some(f(&mut s.layers));
+    if let Some(s) = tile_source.downcast_mut::<PmtilesSource>()
+        && let Some(d) = s
+            .decoder_mut()
+            .as_any_mut()
+            .downcast_mut::<MvtPmtilesDecoder>()
+    {
+        return Some(f(&mut d.layers));
     }
     None
 }
@@ -183,7 +191,12 @@ fn create_new_source(
     // resolved through PmtilesSource, everything else is a `{z}/{x}/{y}` MVT
     // template. Both share the identical decode path downstream.
     let source: Box<dyn VectorTileSource> = if is_pmtiles_url(&url) {
-        Box::new(PmtilesSource::new(url, owned_layers))
+        Box::new(PmtilesSource::new(
+            url,
+            Box::new(MvtPmtilesDecoder {
+                layers: owned_layers,
+            }),
+        ))
     } else {
         Box::new(MvtSource {
             url,

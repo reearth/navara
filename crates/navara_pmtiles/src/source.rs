@@ -1,11 +1,11 @@
 //! [`PmtilesSource`]: a [`VectorTileSource`] whose tiles come from a single
-//! PMTiles v3 archive (MVT payload) fetched over HTTP byte ranges.
+//! PMTiles v3 archive fetched over HTTP byte ranges.
 //!
-//! The container parsing/resolution lives in `navara_pmtiles`; this type is the
-//! thin ECS binding. It differs from [`MvtSource`](crate::source::MvtSource) in
-//! exactly one place — `prepare_tile`, which drives the archive and issues
-//! byte-range requests — and reuses the identical MVT decode path in
-//! `construct_geometry`.
+//! The container parsing/resolution lives in the `pmtiles` crate (via
+//! `navara_parser::pmtiles`); this type is the ECS binding that drives it and
+//! issues byte-range requests. Decoding the resolved tile payload is delegated
+//! to an injected [`TilePayloadDecoder`], so this crate stays free of any
+//! payload-format (e.g. MVT) dependency.
 //!
 //! ## Request kinds
 //! - **Meta requests** (header + leaf directories): tagged [`PmtilesMetaMarker`]
@@ -13,7 +13,8 @@
 //!   the data-requester sender but ignored by the vector-tile request
 //!   backpressure. There are very few of them per archive.
 //! - **Tile requests**: tagged [`VectorTileDataRequesterMarker`] exactly like
-//!   `MvtSource`, so they're tracked, throttled, and cleaned up identically.
+//!   the `{z}/{x}/{y}` MVT source, so they're tracked, throttled, and cleaned up
+//!   identically.
 //!
 //! Both kinds use unmanaged [`DataRequester::from_store`] requests, so multiple
 //! ranges against the one archive URL never collapse via `DataManager` dedup.
@@ -33,17 +34,14 @@ use navara_data_requester::{
     DataRequester, DataRequesterExtension, DataRequesterStatus, RequestOrder, RequestOrderKey,
 };
 use navara_feature_component::batch::BatchTable;
-use navara_pmtiles::{ByteRange, Compression, PmtilesArchive, Resolution};
+use navara_parser::pmtiles::{Archive, ByteRange, Compression, Resolution};
 use navara_tile_component::{TileHandle, VectorTile};
 use navara_vector_tile::{
     ReadyState, TileCacheManager, TileSource, VectorTileSource,
     data_requester::{VectorTileDataRequesterMarker, VectorTileDataRequesterQuery},
 };
 
-use crate::{
-    geometry::{MatchedLayerInfo, construct_geometry_multi_layer},
-    source::OwnedMatchedLayerInfo,
-};
+use crate::decoder::TilePayloadDecoder;
 
 /// Marks a [`DataRequester`] that fetches PMTiles container bytes (the header
 /// or a leaf directory) rather than a tile payload. Kept distinct from
@@ -77,10 +75,10 @@ impl RequestOrderKey for PmtilesMetaOrder {}
 pub struct PmtilesSource {
     /// URL of the `.pmtiles` archive (no `{z}/{x}/{y}` template).
     pub url: String,
-    /// Per-layer styling/filtering, shared with the MVT decode path.
-    pub layers: Vec<OwnedMatchedLayerInfo>,
+    /// Decodes resolved tile payloads into geometry (e.g. MVT, supplied by `navara_mvt`).
+    decoder: Box<dyn TilePayloadDecoder>,
     /// Container parsing/resolution state machine.
-    archive: PmtilesArchive,
+    archive: Archive,
     /// In-flight header/root-directory request, if any: `(entity, buffer handle)`.
     bootstrap_req: Option<(Entity, Handle)>,
     /// In-flight leaf-directory requests, keyed by leaf offset.
@@ -88,16 +86,23 @@ pub struct PmtilesSource {
 }
 
 impl PmtilesSource {
-    /// Create a source for `url` with the given layers.
+    /// Create a source for `url` whose tile payloads are decoded by `decoder`.
     #[must_use]
-    pub fn new(url: String, layers: Vec<OwnedMatchedLayerInfo>) -> Self {
+    pub fn new(url: String, decoder: Box<dyn TilePayloadDecoder>) -> Self {
         Self {
             url,
-            layers,
-            archive: PmtilesArchive::new(),
+            decoder,
+            archive: Archive::new(),
             bootstrap_req: None,
             leaf_reqs: HashMap::new(),
         }
+    }
+
+    /// Mutable access to the injected payload decoder, so the owning format crate
+    /// can reach its decoder-specific state (e.g. per-layer styling) by
+    /// downcasting [`TilePayloadDecoder::as_any_mut`].
+    pub fn decoder_mut(&mut self) -> &mut dyn TilePayloadDecoder {
+        &mut *self.decoder
     }
 
     /// Spawn an unmanaged meta request for `range`, ordered by `order` so the
@@ -166,8 +171,8 @@ impl PmtilesSource {
         }
     }
 
-    /// Resolve a tile's data-requester status into a [`ReadyState`] (mirrors
-    /// `MvtSource`).
+    /// Resolve a tile's data-requester status into a [`ReadyState`] (mirrors the
+    /// `{z}/{x}/{y}` MVT source).
     fn tile_ready_state(
         &self,
         tile: &VectorTile,
@@ -387,32 +392,26 @@ impl VectorTileSource for PmtilesSource {
         let data_req = data_requester?;
         let raw = buf.remove_u8(&data_req.handle)?;
 
-        // Tiles inside the archive may be individually gzip-compressed.
+        // Tiles inside the archive may be individually gzip-compressed. Keep this
+        // container concern here so the decoder only ever sees plain payload bytes.
         let compression = self
             .archive
             .header()
             .map_or(Compression::None, |h| h.tile_compression);
         // Reuse the owned buffer when there is nothing to decompress;
         // `decompress` would otherwise clone the whole tile on this hot path.
-        let mvt_bin = match compression {
+        let payload = match compression {
             Compression::None => raw,
-            _ => navara_pmtiles::decompress(compression, &raw).ok()?,
+            _ => navara_parser::pmtiles::decompress(compression, &raw).ok()?,
         };
 
-        let matched_layers: Vec<MatchedLayerInfo> = self
-            .layers
-            .iter()
-            .map(OwnedMatchedLayerInfo::as_ref)
-            .collect();
-
-        construct_geometry_multi_layer(
+        self.decoder.decode(
             commands,
             batch_table,
             buf,
-            mvt_bin,
-            tile.coords,
-            &matched_layers,
-            Some((tile_handle, tile.extent)),
+            payload,
+            tile,
+            tile_handle,
             order,
         )
     }

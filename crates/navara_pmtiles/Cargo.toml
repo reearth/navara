@@ -5,7 +5,12 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
-# TEMPORARY (step 1 of the PMTiles refactor): this crate is being repurposed
-# from "pure parser" into the Bevy-integration crate. For now it re-exports the
-# extracted `pmtiles` crate so dependents keep building; step 3 replaces this.
-pmtiles.workspace = true
+bevy_app.workspace = true
+bevy_ecs.workspace = true
+navara_parser.workspace = true
+navara_vector_tile.workspace = true
+navara_buffer_store.workspace = true
+navara_component.workspace = true
+navara_data_requester.workspace = true
+navara_feature_component.workspace = true
+navara_tile_component.workspace = true
