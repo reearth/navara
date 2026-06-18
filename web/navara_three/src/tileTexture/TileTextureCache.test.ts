@@ -1,0 +1,126 @@
+import { describe, it, expect, vi } from "vitest";
+
+import { TileTextureCache } from "./TileTextureCache";
+import type { AtlasFactory, CompositeAtlas } from "./types";
+
+function makeFakeAtlas(): CompositeAtlas {
+  // Minimal stand-ins for Texture / WebGLRenderTarget — the cache only checks
+  // identity (acquire returns the same Texture instance) and lifecycle.
+  const tex = (name: string) =>
+    ({ name, needsUpdate: false }) as unknown as CompositeAtlas["color"];
+  return {
+    target: { dispose: vi.fn() } as unknown as CompositeAtlas["target"],
+    color: tex("color"),
+    attr: tex("attr"),
+    normal: tex("normal"),
+    dispose: vi.fn(),
+  };
+}
+
+function makeCache() {
+  const factory = vi.fn<AtlasFactory>(() => makeFakeAtlas());
+  const cache = new TileTextureCache({ size: 512, atlasFactory: factory });
+  return { cache, factory };
+}
+
+describe("TileTextureCache.acquire", () => {
+  it("creates exactly one atlas per handle even across multiple acquires", () => {
+    const { cache, factory } = makeCache();
+    const a = cache.acquire(1n);
+    const b = cache.acquire(1n);
+    expect(factory).toHaveBeenCalledTimes(1);
+    expect(a.color).toBe(b.color);
+    expect(cache.size).toBe(1);
+  });
+
+  it("newly-acquired handles start dirty in every reason category", () => {
+    const { cache } = makeCache();
+    cache.acquire(1n);
+    const reasons = cache.consumeDirty(1n);
+    expect(reasons).not.toBeNull();
+    // First composite must run, so all reason categories present.
+    expect(reasons?.has("material")).toBe(true);
+    expect(reasons?.has("texture-binding")).toBe(true);
+    expect(reasons?.has("vector-revision")).toBe(true);
+    expect(reasons?.has("hillshade")).toBe(true);
+  });
+});
+
+describe("TileTextureCache.release", () => {
+  it("disposes atlas only when refCount reaches zero", () => {
+    const { cache, factory } = makeCache();
+    cache.acquire(1n);
+    cache.acquire(1n);
+    const entry = cache.getEntry(1n);
+    if (!entry) throw new Error("expected entry to exist");
+    const atlas = entry.atlas;
+
+    cache.release(1n);
+    expect(atlas.dispose).not.toHaveBeenCalled();
+    expect(cache.size).toBe(1);
+
+    cache.release(1n);
+    expect(atlas.dispose).toHaveBeenCalledTimes(1);
+    expect(cache.size).toBe(0);
+
+    // A subsequent acquire reuses the slot but spins up a fresh atlas.
+    cache.acquire(1n);
+    expect(factory).toHaveBeenCalledTimes(2);
+  });
+
+  it("is a no-op for unknown handles", () => {
+    const { cache } = makeCache();
+    expect(() => cache.release(999n)).not.toThrow();
+  });
+});
+
+describe("TileTextureCache.markDirty + consumeDirty", () => {
+  it("coalesces multiple markDirty calls into a single consume result", () => {
+    const { cache } = makeCache();
+    cache.acquire(1n);
+    // Drain the initial-acquire dirty set so we test markDirty in isolation.
+    cache.consumeDirty(1n);
+
+    cache.markDirty(1n, "hillshade");
+    cache.markDirty(1n, "vector-revision");
+    cache.markDirty(1n, "hillshade"); // duplicate
+
+    const reasons = cache.consumeDirty(1n);
+    expect(reasons?.size).toBe(2);
+    expect(reasons?.has("hillshade")).toBe(true);
+    expect(reasons?.has("vector-revision")).toBe(true);
+  });
+
+  it("consumeDirty leaves the entry clean", () => {
+    const { cache } = makeCache();
+    cache.acquire(1n);
+    cache.consumeDirty(1n);
+    expect(cache.isDirty(1n)).toBe(false);
+    expect(cache.consumeDirty(1n)).toBeNull();
+  });
+
+  it("markDirty on unknown handle is a no-op (no entry created)", () => {
+    const { cache } = makeCache();
+    cache.markDirty(42n, "hillshade");
+    expect(cache.size).toBe(0);
+    expect(cache.consumeDirty(42n)).toBeNull();
+  });
+});
+
+describe("TileTextureCache.disposeAll", () => {
+  it("disposes every atlas and clears the cache", () => {
+    const { cache } = makeCache();
+    cache.acquire(1n);
+    cache.acquire(2n);
+    const e1 = cache.getEntry(1n);
+    const e2 = cache.getEntry(2n);
+    if (!e1 || !e2) throw new Error("expected both entries");
+    const a1 = e1.atlas;
+    const a2 = e2.atlas;
+
+    cache.disposeAll();
+    expect(a1.dispose).toHaveBeenCalledTimes(1);
+    expect(a2.dispose).toHaveBeenCalledTimes(1);
+    expect(cache.size).toBe(0);
+  });
+});
