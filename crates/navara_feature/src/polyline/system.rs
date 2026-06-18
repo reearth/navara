@@ -144,7 +144,12 @@ pub fn transfer_batched_mesh(
 
         feature_batch_id_map.add(entity, global_batch_ids.clone());
 
-        commands.entity(task_entity).insert(Deleted);
+        // Drop the result component so worker::remove() can tell consumed from
+        // unconsumed entities. Handles ownership moves into the spawned feature.
+        commands
+            .entity(task_entity)
+            .insert(Deleted)
+            .remove::<ConstructPolylineBatchedFeatureResult>();
     }
 }
 

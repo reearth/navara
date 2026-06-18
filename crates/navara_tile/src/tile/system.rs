@@ -546,6 +546,12 @@ pub fn transfer_mesh(
                         uvs: uvshandle,
                         heights: None,
                         normals: None,
+                        skirt_vertices: v_skirt_handle,
+                        skirt_uvs: u_skirt_handle,
+                        skirt_indices: i_skirt_handle,
+                        skirt_indices_to_edge: e_skirt_handle,
+                        skirt_normals: None,
+                        watermask: None,
                     });
                 };
             }
@@ -650,7 +656,13 @@ pub fn transfer_mesh(
                 };
 
             rendered_tile.terrain_mesh_upsampler = None;
-            commands.entity(terrain_mesh_upsampler_id).insert(Deleted);
+            // Drop the result component here so worker::remove() can tell consumed
+            // from unconsumed entities. Handles ownership moves into the mesh +
+            // CachedMeshHandle below.
+            commands
+                .entity(terrain_mesh_upsampler_id)
+                .insert(Deleted)
+                .remove::<UpsampleTerrainMeshResult>();
 
             let min_height = terrain_mesh_upsampler.min_height;
             let max_height = terrain_mesh_upsampler.max_height;
@@ -668,6 +680,14 @@ pub fn transfer_mesh(
                         uvs: uvshandle,
                         heights: Some(heights_handle),
                         normals: terrain_mesh_upsampler.geometry.normals,
+                        skirt_vertices: terrain_mesh_upsampler.geometry.skirt_vertices,
+                        skirt_uvs: terrain_mesh_upsampler.geometry.skirt_uvs,
+                        skirt_indices: terrain_mesh_upsampler.geometry.skirt_indices,
+                        skirt_indices_to_edge: terrain_mesh_upsampler
+                            .geometry
+                            .skirt_indices_to_edge,
+                        skirt_normals: terrain_mesh_upsampler.geometry.skirt_normals,
+                        watermask: None,
                     });
                     t.upsampled = true;
                 };
@@ -756,7 +776,13 @@ pub fn transfer_mesh(
             };
 
         rendered_tile.terrain_mesh_constructor = None;
-        commands.entity(terrain_mesh_constructor_id).insert(Deleted);
+        // Drop the result component here so worker::remove() can tell consumed
+        // from unconsumed entities. Handles ownership moves into the mesh +
+        // CachedMeshHandle below.
+        commands
+            .entity(terrain_mesh_constructor_id)
+            .insert(Deleted)
+            .remove::<ConstructTerrainMeshResult>();
 
         let min_height = terrain_mesh_constructor.min_height;
         let max_height = terrain_mesh_constructor.max_height;
@@ -774,6 +800,12 @@ pub fn transfer_mesh(
                     uvs: uvshandle,
                     heights: Some(heights_handle),
                     normals: terrain_mesh_constructor.geometry.normals,
+                    skirt_vertices: terrain_mesh_constructor.geometry.skirt_vertices,
+                    skirt_uvs: terrain_mesh_constructor.geometry.skirt_uvs,
+                    skirt_indices: terrain_mesh_constructor.geometry.skirt_indices,
+                    skirt_indices_to_edge: terrain_mesh_constructor.geometry.skirt_indices_to_edge,
+                    skirt_normals: terrain_mesh_constructor.geometry.skirt_normals,
+                    watermask: terrain_mesh_constructor.watermask,
                 })
             };
         }

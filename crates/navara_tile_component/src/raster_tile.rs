@@ -432,14 +432,9 @@ impl RasterTile {
 
     // This function will be invoked before this tile is destroyed.
     pub fn destroy(&mut self, commands: &mut Commands, buf: &mut BufferStore) {
-        if let Some(cached_mesh) = &self.cached_mesh_handle {
-            buf.remove(&cached_mesh.vertices);
-            buf.remove(&cached_mesh.indices);
-            buf.remove(&cached_mesh.uvs);
-            if let Some(h) = &cached_mesh.heights {
-                buf.remove(h);
-            }
-            self.cached_mesh_handle = None;
+        if let Some(cached_mesh) = self.cached_mesh_handle.take() {
+            // Frees vertices/indices/uvs/heights/normals/skirt_*/watermask in one place.
+            cached_mesh.remove_from_buf(buf);
         }
 
         if let Some(fragments) = self.texture_fragment_entity_ids.take() {
@@ -958,8 +953,7 @@ mod test {
             vertices: 0,
             indices: 0,
             uvs: 0,
-            heights: None,
-            normals: None,
+            ..Default::default()
         });
         tile.terrain_data = Some(Box::new(RasterDEMData::default()));
     }
@@ -1425,7 +1419,7 @@ mod raster_tile_tests {
                     indices: 0,
                     uvs: 0,
                     heights: Some(0),
-                    normals: None,
+                    ..Default::default()
                 });
             }
 

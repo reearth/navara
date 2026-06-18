@@ -46,6 +46,10 @@ impl From<CachedMeshHandle> for navara_mesh::CachedMeshHandle {
             indices: d.indices,
             heights: d.heights,
             normals: d.normals,
+            // Skirt/watermask handles are owned by the mesh component only and are
+            // populated when the tile builds its mesh, not when reconstructing
+            // CachedMeshHandle from WASM-facing payloads.
+            ..Default::default()
         }
     }
 }

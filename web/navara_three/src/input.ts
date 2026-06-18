@@ -46,14 +46,12 @@ export function registerInputEvents(
   const touchstart = (event: TouchEvent) => {
     event.preventDefault();
 
-    lastTerrainDistance = getTerrainDistance?.() ?? undefined;
     for (const touch of event.changedTouches) {
       core.input({
         type: "touchstart",
         x: touch.clientX,
         y: touch.clientY,
         id: touch.identifier,
-        terrain_distance: lastTerrainDistance,
       });
     }
   };
