@@ -79,10 +79,6 @@ float getViewZ(const float depth) {
   #endif
 }
 
-vec3 readNormal(const vec2 uv) {
-  return unpackVec2ToNormal(texture2D(geometryBuffer, uv).xy);
-}
-
 void swapIfBigger(inout float aa, inout float bb) {
   if (aa > bb) {
     float tmp = aa;
@@ -342,7 +338,7 @@ void main() {
     projectionMatrix,
     inverseProjectionMatrix
   );
-  vec3 viewNormal = readNormal(vUv);
+  vec3 viewNormal = unpackVec2ToNormal(geometry.xy);
 
   vec3 rayOrigin = viewPosition;
   vec3 rayDirection = reflect(normalize(rayOrigin), viewNormal);
