@@ -9,9 +9,12 @@ use navara_mesh::Mesh;
 use navara_tile_component::{TileHandle, TileMeshMarker};
 use rustc_hash::{FxHashMap, FxHashSet};
 
-/// Stores hillshade parent information for a layer when hillshade is beyond max_zoom
+/// Per-layer parent reference used when sampling a parent tile's data
+/// (e.g. when this tile is overscaled or its own data isn't ready yet).
+/// `entity` is the parent fragment/data-requester entity, `zoom` is the
+/// parent tile's zoom level so a `uv_transform(child, parent_zoom)` can be derived.
 #[derive(Debug, Clone, Copy)]
-pub struct HillshadeParent {
+pub struct LayerParent {
     pub entity: Entity,
     pub zoom: usize,
 }
@@ -24,9 +27,10 @@ pub struct RenderedTileCache {
     pub mesh_entity: Option<Entity>,
     /// This tile should be used to show the parent tile instead of the child tile if the child tile is still preparing.
     pub ready_parent_tile_handle: Option<TileHandle>,
-    /// Hillshade parent entities for layers beyond max_zoom (computed during traversal)
-    /// Index corresponds to layer index, None means no parent reuse for that layer
-    pub hillshade_parents: Option<Vec<Option<HillshadeParent>>>,
+    /// Per-layer parent entities computed during traversal.
+    /// Index corresponds to layer index (sorted by `Order`).
+    /// `None` slot means the layer's own entity is ready (no parent reuse).
+    pub layer_parents: Option<Vec<Option<LayerParent>>>,
     pub rendered_tile_entity: Entity,
     /// This is used to check if the mesh is prepared in client side.
     /// Because sometimes rendering engine needs to do some preparation asynchronously.

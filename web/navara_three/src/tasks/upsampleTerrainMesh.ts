@@ -15,6 +15,7 @@ export function upsampleTerrainMesh(
   upsamplableGeometryLike: UpsamplableTerrainGeometryLike,
   skirt: boolean,
   skirtExaggeration: number,
+  tms: boolean,
 ): Promise<ReturnedConstructedTerrainMeshLike> {
   return queueTask(
     "upsampleTerrainMesh",
@@ -25,6 +26,7 @@ export function upsampleTerrainMesh(
       upsamplableGeometryLike,
       skirt,
       skirtExaggeration,
+      tms,
     ],
     {
       transfer: [

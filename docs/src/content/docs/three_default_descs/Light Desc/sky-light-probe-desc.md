@@ -10,7 +10,7 @@ The `SkyLightProbeDesc` class represents a dynamic sky light probe Descriptor th
 The sun direction is automatically calculated based on `view.atmosphere.date`, and lighting is updated every frame.
 
 :::tip[Related Documentation]
-For details on the atmosphere system, see the [Atmosphere class](../../../three/api-reference/atmosphere/).
+For details on the atmosphere system, see the [Atmosphere class](../../../three/api/atmosphere/).
 :::
 
 ## Common Properties

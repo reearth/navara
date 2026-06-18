@@ -1,7 +1,7 @@
 use bevy_ecs::prelude::*;
 use navara_component::Deleted;
 use navara_core::{
-    Aabb, Ellipsoid, Extent, Radians, TileXYZ, WGS84_64,
+    Aabb, Ellipsoid, Extent, Radians, TileXYZ, TilingScheme, WGS84_64,
     get_ellipsoid_terrain_level_zero_maximum_geometric_error, get_level_maximum_geometric_error,
 };
 use navara_data_requester::DataRequesterStatus;
@@ -66,11 +66,11 @@ impl Clone for VectorTile {
 
 impl VectorTile {
     pub fn new(coords: TileXYZ, max_height: f64, min_height: f64) -> Self {
-        let extent = coords.extent();
+        let extent = TilingScheme::WebMercator { tms: false }.tile_extent(coords);
 
         Self {
             coords,
-            extent: coords.extent(),
+            extent,
             aabb: Aabb::from_extent_f64(extent, min_height, max_height),
             bounding_region: Some(TileBoundingRegion::from_extent_f64(extent, WGS84_64)),
             rendered_at: 0,
@@ -179,7 +179,12 @@ impl Tile for VectorTile {
         )
     }
 
-    fn new_child((x, y, z): Coords<Self::CoordUnit>, max_height: f64, min_height: f64) -> Self {
+    fn new_child(
+        (x, y, z): Coords<Self::CoordUnit>,
+        max_height: f64,
+        min_height: f64,
+        _tiling_scheme: TilingScheme,
+    ) -> Self {
         Self::new(TileXYZ { x, y, z }, max_height, min_height)
     }
 }

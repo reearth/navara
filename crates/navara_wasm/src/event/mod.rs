@@ -11,9 +11,7 @@ use serde::Serialize;
 use wasm_bindgen::prelude::*;
 use worker::WorkerTaskDelegatedEvent;
 
-use navara_wasm_types::{
-    CameraFrustum, Globe, LLE, RasterTileInternalMaterial, TileUvTransform, Transform,
-};
+use navara_wasm_types::{CameraFrustum, Globe, LLE, RasterTileInternalMaterial, Transform};
 
 #[wasm_bindgen(getter_with_clone)]
 #[derive(Debug, Clone, Serialize)]
@@ -81,8 +79,9 @@ pub struct Mesh {
     pub indices: i32,  // handle
     pub active: bool,
     pub render_order: i32,
-    pub uv_transform: TileUvTransform,
     pub aabb: navara_wasm_types::Aabb,
+    /// Per-vertex normals handle (terrain only).
+    pub normals: Option<i32>,
     /// Skirt vertices handle (separate from main geometry for shadow/normal handling).
     pub skirt_vertices: Option<i32>,
     /// Skirt UVs handle.
@@ -91,6 +90,10 @@ pub struct Mesh {
     pub skirt_indices: Option<i32>,
     /// Mapping from skirt vertex index to edge vertex index in main geometry.
     pub skirt_indices_to_edge: Option<i32>,
+    /// Skirt per-vertex normals handle.
+    pub skirt_normals: Option<i32>,
+    /// Watermask handle (1 byte uniform or 65536 byte grid).
+    pub watermask: Option<i32>,
 }
 
 #[wasm_bindgen]
@@ -110,6 +113,16 @@ pub struct DataRequestEvent {
     pub offset: Option<u64>,
     /// Byte-range length in bytes. Set together with `offset`.
     pub length: Option<u64>,
+    /// Quantized-mesh only: server should return the oct-encoded normals extension.
+    #[wasm_bindgen(js_name = requestVertexNormals)]
+    pub request_vertex_normals: bool,
+    /// Quantized-mesh only: server should return the watermask extension.
+    #[wasm_bindgen(js_name = requestWaterMask)]
+    pub request_water_mask: bool,
+    /// Quantized-mesh only: bearer token sent as the `Authorization` header
+    /// for `.terrain` requests. `None` means no Authorization header is added.
+    #[wasm_bindgen(getter_with_clone)]
+    pub token: Option<String>,
 }
 
 #[wasm_bindgen]
@@ -375,12 +388,14 @@ impl<'a> From<&'a navara_mesh::Mesh> for Mesh {
             indices: m.indices,
             active: m.active,
             render_order: m.render_order,
-            uv_transform: (&m.uv_transform).into(),
             aabb: m.aabb.clone().into(),
+            normals: m.normals,
             skirt_vertices: m.skirt_vertices,
             skirt_uvs: m.skirt_uvs,
             skirt_indices: m.skirt_indices,
             skirt_indices_to_edge: m.skirt_indices_to_edge,
+            skirt_normals: m.skirt_normals,
+            watermask: m.watermask,
         }
     }
 }
@@ -408,6 +423,9 @@ impl<'a>
             url: ev.comp.url.clone(),
             offset,
             length,
+            request_vertex_normals: ev.comp.request_vertex_normals,
+            request_water_mask: ev.comp.request_water_mask,
+            token: ev.comp.token.clone(),
         }
     }
 }

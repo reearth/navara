@@ -15,7 +15,7 @@ If you are using `@navara/three`, the navara_three_api functions can be imported
 
 ## Provided Features
 
-Below are representative features provided by navara_three_api. For details on all functions and classes, see the [API Reference](../../../three/api-reference/navara_three_api/).
+Below are representative features provided by navara_three_api. For details on all functions and classes, see the [API Reference](../../../three/api/navara_three_api/).
 
 ### Coordinate Transformation
 

@@ -7,4 +7,5 @@ license.workspace = true
 [dependencies]
 bevy_app.workspace = true
 bevy_ecs.workspace = true
+navara_core.workspace = true
 serde.workspace = true

@@ -62,7 +62,7 @@ data: {
 ### [Terrain Layer](../../../three/resource-layer/terrain-layer/)
 
 **Use case:** For terrain and elevation data
-**Supported materials:** RasterTerrainMaterial
+**Supported materials:** RasterTerrainMaterial, QuantizedMeshTerrainMaterial
 
 ### [Tile Layer](../../../three/resource-layer/tile-layer/)
 
@@ -108,6 +108,12 @@ For resource layers, you can specify the following materials depending on the da
 **Use case:** For polyline geometry rendering
 **Config key:** `polyline`
 **Supported layers:** GeoJSON Layer, MVT Layer
+
+### [QuantizedMeshTerrainMaterial](../../../three/resource-layer/quantized-mesh-terrain-material/)
+
+**Use case:** For rendering quantized-mesh terrain
+**Config key:** `quantizedMesh`
+**Supported layers:** Terrain Layer
 
 ### [RasterTerrainMaterial](../../../three/resource-layer/raster-terrain-material/)
 
@@ -163,4 +169,4 @@ const tilesLayer = view.addLayer({
 ## Related Resources
 
 - [About Layer](../../../three/introduction/about-layer/) - Layer concepts
-- [Layer Types](../../../three/api-reference/desc-types/) - Layer class API reference
+- [Layer Types](../../../three/api/desc-types/) - Layer class API reference

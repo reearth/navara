@@ -12,7 +12,7 @@ The sun and moon positions are automatically calculated based on `view.atmospher
 In addition to the properties below, all common properties from the base class (`position`, `rotation`, `scale`, `matrix`, `matrixWorld`, `pickable`, `visible`) are available. See [MeshDesc](./mesh-desc-base) for details.
 
 :::tip[Related Documentation]
-For details on the atmosphere system, see the [Atmosphere class](../../../three/api-reference/atmosphere/).
+For details on the atmosphere system, see the [Atmosphere class](../../../three/api/atmosphere/).
 :::
 
 ## Properties

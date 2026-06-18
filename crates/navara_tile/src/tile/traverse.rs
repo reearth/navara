@@ -1,7 +1,7 @@
 use bevy_ecs::prelude::*;
 use navara_buffer_store::BufferStore;
 use navara_component::{Deleted, Order, OrderByDistance, Priority};
-use navara_core::Ellipsoid;
+use navara_core::{Ellipsoid, TilingScheme};
 use navara_data_requester::DataManager;
 
 use navara_fog::Fog;
@@ -13,8 +13,8 @@ use navara_occluder::ellipsoidal_occluder::EllipsoidalOccluder;
 
 use navara_camera::CameraFrustum;
 use navara_tile_component::{
-    RasterDEMData, RasterTile, RasterTileQuadtree, Tile, TileHandle, TileMeshMarker,
-    TileTerrainDataRequesterQuery, TileTextureFragmentQuery,
+    QuantizedMeshData, RasterDEMData, RasterTile, RasterTileQuadtree, Tile, TileHandle,
+    TileMeshMarker, TileTerrainDataRequesterQuery, TileTextureFragmentQuery,
 };
 use navara_window::Window;
 
@@ -23,7 +23,7 @@ use crate::texture_fragment::request_texture_fragment;
 
 use super::{
     render::RenderedTile,
-    tile_cache_manager::{HillshadeParent, RenderedTileCache, TileCacheManager},
+    tile_cache_manager::{LayerParent, RenderedTileCache, TileCacheManager},
 };
 
 use navara_layer::{TerrainDataType, TerrainLayer, TilesLayer};
@@ -64,7 +64,7 @@ pub fn traverse_tile(
     // This is used to show parent's texture if child's texture isn't ready.
     ready_parent_tile_handle: Option<TileHandle>,
     // This tracks the nearest ready hillshade parent for each layer.
-    ready_hillshade_parents: Option<Vec<Option<HillshadeParent>>>,
+    ready_layer_parents: Option<Vec<Option<LayerParent>>>,
 ) -> TraversalResult {
     let has_regular_tiles = tiles.iter().any(|(t, _)| t.hillshade_config.is_none());
 
@@ -233,13 +233,13 @@ pub fn traverse_tile(
         };
 
         // Update hillshade parents - track nearest ready parent for each layer
-        let ready_hillshade_parents = update_ready_hillshade_parents(
+        let ready_layer_parents = update_ready_layer_parents(
             qt,
             handle,
             tiles,
             texture_fragment,
             data_requesters,
-            ready_hillshade_parents,
+            ready_layer_parents,
         );
 
         // Tile has several states to switch LOD smoothly.
@@ -283,7 +283,7 @@ pub fn traverse_tile(
                 },
                 meets_sse,
                 ready_parent_tile_handle,
-                ready_hillshade_parents.clone(),
+                ready_layer_parents.clone(),
             );
 
             if matches!(traversal_result, TraversalResult::NotFound) {
@@ -378,7 +378,7 @@ pub fn traverse_tile(
                         tile,
                         handle,
                         ready_parent_tile_handle,
-                        ready_hillshade_parents.clone(),
+                        ready_layer_parents.clone(),
                     );
                 }
             }
@@ -451,14 +451,14 @@ pub fn spawn_tile_entity(
     tile: &mut RasterTile,
     tile_handle: TileHandle,
     ready_parent_tile_handle: Option<TileHandle>,
-    hillshade_parents: Option<Vec<Option<HillshadeParent>>>,
+    layer_parents: Option<Vec<Option<LayerParent>>>,
 ) {
     tile.rendered_at = frame.rendered_frame();
     tc.is_updated_in_this_frame = true;
 
     if let Some(tile) = tc.rendered_tile_caches.get_mut(&tile_handle) {
         tile.ready_parent_tile_handle = ready_parent_tile_handle;
-        tile.hillshade_parents = hillshade_parents;
+        tile.layer_parents = layer_parents;
         return;
     }
 
@@ -477,7 +477,7 @@ pub fn spawn_tile_entity(
         RenderedTileCache {
             rendered_tile_entity: e.id(),
             ready_parent_tile_handle,
-            hillshade_parents,
+            layer_parents,
             mesh_entity: None,
             mesh_prepared: false,
             needs_material_update: true,
@@ -485,45 +485,44 @@ pub fn spawn_tile_entity(
     );
 }
 
-/// Update hillshade parents by tracking the nearest ready parent for each layer
-/// Similar to how ready_parent_tile_handle tracks the nearest ready parent tile
-fn update_ready_hillshade_parents(
+/// Update per-layer parents by tracking the nearest ready ancestor entity for each layer.
+/// Works uniformly for regular texture layers and hillshade layers: for each layer,
+/// the appropriate entity slot (texture_fragment_entity_ids vs hillshade_entity_ids) is
+/// consulted, and if it is ready it becomes the parent for the layer's descendants.
+fn update_ready_layer_parents(
     qt: &RasterTileQuadtree,
     handle: TileHandle,
     tiles: &Query<(&TilesLayer, &Order)>,
     texture_fragment: &TileTextureFragmentQuery,
     data_requesters: &Query<&navara_data_requester::DataRequester>,
-    ready_hillshade_parents: Option<Vec<Option<HillshadeParent>>>,
-) -> Option<Vec<Option<HillshadeParent>>> {
-    let has_hillshade = tiles.iter().any(|(l, _)| l.hillshade_config.is_some());
-    if !has_hillshade {
-        return None;
-    }
-
+    ready_layer_parents: Option<Vec<Option<LayerParent>>>,
+) -> Option<Vec<Option<LayerParent>>> {
     let tile = qt.qt.get(handle)?;
     let mut updated_parents = Vec::new();
 
     for (i, (layer, _)) in tiles.iter().sort::<&Order>().enumerate() {
-        let parent = if layer.hillshade_config.is_some() {
-            // Check if current tile has a ready hillshade entity for this layer
-            if let Some(hill_ids) = &tile.hillshade_entity_ids
-                && let Some(&Some(entity)) = hill_ids.get(i)
-                && RasterTile::is_texture_entity_ready(entity, texture_fragment, data_requesters)
-            {
-                // Current tile has ready hillshade, use it as parent
-                Some(HillshadeParent {
-                    entity,
-                    zoom: tile.coords.z,
-                })
-            } else {
-                // Current tile doesn't have ready hillshade, preserve parent's value
-                ready_hillshade_parents
-                    .as_ref()
-                    .and_then(|parents| parents.get(i).cloned())
-                    .flatten()
-            }
+        let own_entity = if layer.hillshade_config.is_some() {
+            tile.hillshade_entity_ids
+                .as_ref()
+                .and_then(|ids| ids.get(i).copied().flatten())
         } else {
-            None
+            tile.texture_fragment_entity_ids
+                .as_ref()
+                .and_then(|ids| ids.get(i).copied().flatten())
+        };
+
+        let parent = if let Some(entity) = own_entity
+            && RasterTile::is_texture_entity_ready(entity, texture_fragment, data_requesters)
+        {
+            Some(LayerParent {
+                entity,
+                zoom: tile.coords.z,
+            })
+        } else {
+            ready_layer_parents
+                .as_ref()
+                .and_then(|parents| parents.get(i).cloned())
+                .flatten()
         };
         updated_parents.push(parent);
     }
@@ -595,29 +594,34 @@ fn prepare_upsamplable_terrain_data(
         return;
     }
 
-    let Some((terrain_type, terrain_appearance)) =
-        terrain_layer.map(|l| (&l.terrain_type, &l.appearance))
-    else {
+    let Some(layer) = terrain_layer else {
         return;
     };
 
-    let Some(elevation_decoder) = terrain_appearance
-        .as_ref()
-        .and_then(|t| t.elevation_decoder())
-    else {
-        return;
-    };
-
-    let terrain_data = match terrain_type {
-        TerrainDataType::RasterDEM => RasterDEMData::new(*elevation_decoder),
-        // TODO: Support quantized-mesh
-        TerrainDataType::QuantizedMesh => unimplemented!(), // quantized-mesh
+    let terrain_data: Box<dyn navara_tile_component::TerrainData> = match &layer.terrain_type {
+        TerrainDataType::RasterDEM => {
+            let Some(elevation_decoder) = layer
+                .appearance
+                .as_ref()
+                .and_then(|a| a.elevation_decoder())
+            else {
+                return;
+            };
+            Box::new(RasterDEMData::new(*elevation_decoder))
+        }
+        TerrainDataType::QuantizedMesh => {
+            let scheme = layer
+                .appearance
+                .as_ref()
+                .map_or_else(TilingScheme::default, |a| a.tiling_scheme());
+            Box::new(QuantizedMeshData::new_with_tiling_scheme(scheme))
+        }
         TerrainDataType::Ellipsoid | TerrainDataType::Unknown => unreachable!(),
     };
 
     let tile = qt.qt.get_mut(handle).unwrap();
 
-    tile.terrain_data = Some(Box::new(terrain_data));
+    tile.terrain_data = Some(terrain_data);
 }
 
 fn begine_traverse_tile(

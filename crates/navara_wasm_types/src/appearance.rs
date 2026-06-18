@@ -1380,16 +1380,16 @@ pub struct RasterTileInternalMaterial {
     #[wasm_bindgen(js_name = hillshadeExaggeration)]
     #[serde(rename = "hillshadeExaggeration")]
     pub hillshade_exaggeration: f32,
-    // Hillshade UV transforms for parent texture reuse (per-layer)
-    // Stored as raw Vec for internal use, exposed via getter
-    hillshade_uv_transforms: Vec<Option<TileUvTransform>>,
+    // Per-layer UV transforms for parent data reuse (covers both regular textures and hillshades).
+    // Stored as raw Vec for internal use, exposed via getter.
+    layer_uv_transforms: Vec<Option<TileUvTransform>>,
 }
 
 #[wasm_bindgen]
 impl RasterTileInternalMaterial {
-    #[wasm_bindgen(js_name = hillshadeUvTransforms)]
-    pub fn hillshade_uv_transforms(&self) -> Vec<JsValue> {
-        self.hillshade_uv_transforms
+    #[wasm_bindgen(js_name = layerUvTransforms)]
+    pub fn layer_uv_transforms(&self) -> Vec<JsValue> {
+        self.layer_uv_transforms
             .iter()
             .map(|opt| match opt {
                 Some(transform) => JsValue::from(*transform),
@@ -1538,9 +1538,9 @@ impl<'a> From<&'a navara_material::RasterTileInternalMaterial> for RasterTileInt
                 .as_ref()
                 .map(|c| c.exaggeration)
                 .unwrap_or(1.0),
-            // Hillshade UV transforms
-            hillshade_uv_transforms: m
-                .hillshade_uv_transforms
+            // Per-layer UV transforms
+            layer_uv_transforms: m
+                .layer_uv_transforms
                 .iter()
                 .map(|opt| opt.as_ref().map(|t| t.into()))
                 .collect(),
@@ -1780,6 +1780,101 @@ impl<'a> From<&'a navara_material::EllipsoidTerrainMaterial> for EllipsoidTerrai
             show_bounding_box: Some(value.show_bounding_box),
             max_zoom: Some(value.max_zoom),
             min_zoom: Some(value.min_zoom),
+        }
+    }
+}
+
+#[wasm_bindgen]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QuantizedMeshTerrainMaterial {
+    pub show: Option<bool>,
+    #[wasm_bindgen(js_name = castShadow)]
+    #[serde(rename = "castShadow")]
+    pub cast_shadow: Option<bool>,
+    #[wasm_bindgen(js_name = receiveShadow)]
+    #[serde(rename = "receiveShadow")]
+    pub receive_shadow: Option<bool>,
+    #[wasm_bindgen(js_name = showBoundingBox)]
+    #[serde(rename = "showBoundingBox")]
+    pub show_bounding_box: Option<bool>,
+    #[wasm_bindgen(js_name = maxZoom)]
+    #[serde(rename = "maxZoom")]
+    pub max_zoom: Option<usize>,
+    #[wasm_bindgen(js_name = overscaledMaxZoom)]
+    #[serde(rename = "overscaledMaxZoom")]
+    pub overscaled_max_zoom: Option<usize>,
+    #[wasm_bindgen(js_name = minZoom)]
+    #[serde(rename = "minZoom")]
+    pub min_zoom: Option<usize>,
+    pub skirt: Option<bool>,
+    #[wasm_bindgen(js_name = skirtExaggeration)]
+    #[serde(rename = "skirtExaggeration")]
+    pub skirt_exaggeration: Option<f32>,
+    pub tms: Option<bool>,
+    pub geographic: Option<bool>,
+    #[wasm_bindgen(js_name = requestVertexNormals)]
+    #[serde(rename = "requestVertexNormals")]
+    pub request_vertex_normals: Option<bool>,
+    #[wasm_bindgen(js_name = requestWaterMask)]
+    #[serde(rename = "requestWaterMask")]
+    pub request_water_mask: Option<bool>,
+    #[wasm_bindgen(getter_with_clone)]
+    pub token: Option<String>,
+}
+
+impl From<QuantizedMeshTerrainMaterial> for navara_material::QuantizedMeshTerrainMaterial {
+    fn from(val: QuantizedMeshTerrainMaterial) -> Self {
+        use navara_core::TilingScheme;
+        let default = navara_material::QuantizedMeshTerrainMaterial::default();
+        let tms = val.tms.unwrap_or_else(|| default.tiling_scheme.tms());
+        let geographic = val
+            .geographic
+            .unwrap_or_else(|| default.tiling_scheme.is_geographic());
+        navara_material::QuantizedMeshTerrainMaterial {
+            show: val.show.unwrap_or(default.show),
+            cast_shadow: val.cast_shadow.unwrap_or(default.cast_shadow),
+            receive_shadow: val.receive_shadow.unwrap_or(default.receive_shadow),
+            show_bounding_box: val.show_bounding_box.unwrap_or(default.show_bounding_box),
+            max_zoom: val.max_zoom.unwrap_or(default.max_zoom),
+            overscaled_max_zoom: val
+                .overscaled_max_zoom
+                .unwrap_or(default.overscaled_max_zoom),
+            min_zoom: val.min_zoom.unwrap_or(default.min_zoom),
+            skirt: val.skirt.unwrap_or(default.skirt),
+            skirt_exaggeration: val.skirt_exaggeration.unwrap_or(default.skirt_exaggeration),
+            tiling_scheme: if geographic {
+                TilingScheme::Geographic { tms }
+            } else {
+                TilingScheme::WebMercator { tms }
+            },
+            request_vertex_normals: val
+                .request_vertex_normals
+                .unwrap_or(default.request_vertex_normals),
+            request_water_mask: val.request_water_mask.unwrap_or(default.request_water_mask),
+            token: val.token.or(default.token),
+        }
+    }
+}
+
+impl<'a> From<&'a navara_material::QuantizedMeshTerrainMaterial> for QuantizedMeshTerrainMaterial {
+    fn from(
+        value: &'a navara_material::QuantizedMeshTerrainMaterial,
+    ) -> QuantizedMeshTerrainMaterial {
+        QuantizedMeshTerrainMaterial {
+            show: Some(value.show),
+            cast_shadow: Some(value.cast_shadow),
+            receive_shadow: Some(value.receive_shadow),
+            show_bounding_box: Some(value.show_bounding_box),
+            max_zoom: Some(value.max_zoom),
+            overscaled_max_zoom: Some(value.overscaled_max_zoom),
+            min_zoom: Some(value.min_zoom),
+            skirt: Some(value.skirt),
+            skirt_exaggeration: Some(value.skirt_exaggeration),
+            tms: Some(value.tiling_scheme.tms()),
+            geographic: Some(value.tiling_scheme.is_geographic()),
+            request_vertex_normals: Some(value.request_vertex_normals),
+            request_water_mask: Some(value.request_water_mask),
+            token: value.token.clone(),
         }
     }
 }

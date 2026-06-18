@@ -16,7 +16,6 @@ use navara_buffer_store::Handle;
 use navara_component::Deleted;
 use navara_core::Aabb;
 use navara_event_store::EventStore;
-use navara_geometry::TileUvTransform;
 use navara_globe::Globe;
 use navara_material::RasterTileInternalMaterial;
 use navara_math::Transform;
@@ -37,8 +36,9 @@ pub struct Mesh {
     pub indices: Handle,
     pub active: bool,
     pub render_order: i32,
-    pub uv_transform: TileUvTransform,
     pub aabb: Aabb,
+    /// Per-vertex normals for the terrain. Stride 3.
+    pub normals: Option<Handle>,
     /// Skirt vertices (separate from main geometry for shadow/normal handling).
     pub skirt_vertices: Option<Handle>,
     /// Skirt UVs.
@@ -47,6 +47,10 @@ pub struct Mesh {
     pub skirt_indices: Option<Handle>,
     /// Mapping from skirt vertex index to edge vertex index in main geometry.
     pub skirt_indices_to_edge: Option<Handle>,
+    /// Skirt normals, copied from corresponding edge vertices. Stride 3.
+    pub skirt_normals: Option<Handle>,
+    /// Watermask payload (1 byte for uniform, 65536 bytes for 256x256 grid).
+    pub watermask: Option<Handle>,
 }
 
 #[derive(Bundle, Debug)]

@@ -245,7 +245,7 @@ When data distribution is skewed (a few high values and many low values), using 
 :::
 
 :::tip[ColorMap Details]
-For details on `ColorMap` class methods (`linear()`, `quantize()`, etc.), see the [ColorMap class](../../../three/api-reference/colormap/) reference.
+For details on `ColorMap` class methods (`linear()`, `quantize()`, etc.), see the [ColorMap class](../../../three/api/colormap/) reference.
 :::
 
 ## Adding the Arch Line Object

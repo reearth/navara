@@ -229,4 +229,4 @@ view.addLayer({
 
 ## 関連項目
 
-- [Color クラス](../../../three/api-reference/color/) - 色の設定方法
+- [Color クラス](../../../three/api/color/) - 色の設定方法

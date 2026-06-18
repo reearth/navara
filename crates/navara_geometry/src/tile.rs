@@ -51,10 +51,11 @@ pub fn uv_transform(child: TileXYZ, parent_z: usize) -> TileUvTransform {
         "child must be deeper than or equal to parent"
     );
 
-    let dz = z_c - parent_z; // Level difference
-    let div = 1u32 << dz; // Parent divided into 2^dz parts
-    let rel_x = x_c as u32 % div; // Relative x position within parent
-    let rel_y = div - 1 - (y_c as u32 % div); // Relative y position within parent (origin=bottom-left)
+    let dz = z_c - parent_z;
+    let div = 1u32 << dz;
+    let rel_x = x_c as u32 % div;
+    // Internal y is XYZ-style (y=0 north); mesh UV has v=0 at south, so invert.
+    let rel_y = div - 1 - (y_c as u32 % div);
 
     let s = 1.0 / div as f64;
     TileUvTransform {

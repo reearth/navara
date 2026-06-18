@@ -20,7 +20,7 @@ import { canWorkerProcessImmediately } from "@navara/worker";
 import { Mesh, Object3D, Sprite } from "three";
 
 import { BatchedSdfTextMesh, Layer } from "..";
-import { getImageDataFromImageBitmap } from "../tasks/getImageDataFromImageBitmap";
+import { getImageDataFromBlob } from "../tasks/getImageDataFromBlob";
 
 import { EventContext } from "./context";
 import {
@@ -29,7 +29,7 @@ import {
   processRenderableFeatureChanged,
 } from "./feature";
 import { processHillshadeBackfilled } from "./hillshade";
-import { ABORTABLE_IMAGE_LOADER, ABORTABLE_TEXTURE_LOADER } from "./loaders";
+import { ABORTABLE_TEXTURE_LOADER } from "./loaders";
 import { processMeshAdded, processMeshChanged } from "./tile";
 import {
   processWorkerTaskDelegatedEvent,
@@ -418,17 +418,22 @@ async function processRequestedData(ctx: EventContext, req: DataRequestEvent) {
   })();
 
   if (IMAGE_EXTENSIONS.includes(req.extension)) {
-    await ABORTABLE_IMAGE_LOADER.loadAsyncWithAbort(req.url, abortController)
-      .then(async (img) => {
-        // TODO: Get OffScreeCanvas from main thread in worker.
-        const canvas = document.createElement("canvas");
-        canvas.height = img.height;
-        canvas.width = img.width;
+    // Fetch the compressed bytes here and hand the Blob to a worker that runs
+    // createImageBitmap + getImageData. Decoding the image (e.g. terrain-RGB
+    // DEM tiles) entirely on the worker keeps the costly "Image Decode" off the
+    // main thread — previously we decoded an HTMLImageElement and then
+    // re-decoded it via createImageBitmap on the main thread.
+    await fetch(req.url, { signal: abortController.signal })
+      .then((res) => {
+        if (!res.ok) throw new Error();
+        return res.blob();
+      })
+      .then(async (blob) => {
+        if (abortController.signal.aborted) {
+          return;
+        }
 
-        const promise = getImageDataFromImageBitmap(
-          await createImageBitmap(img),
-          canvas.transferControlToOffscreen(),
-        );
+        const promise = getImageDataFromBlob(blob);
 
         ctx.workerPoolPromises.set(id, promise);
         const data = await (async () => {
@@ -451,9 +456,6 @@ async function processRequestedData(ctx: EventContext, req: DataRequestEvent) {
         u8a = null;
 
         data.set([]);
-
-        img.remove();
-        canvas.remove();
       })
       .catch(() => {
         buf.triggerDataRequesterFailed(req.bits);
@@ -464,7 +466,25 @@ async function processRequestedData(ctx: EventContext, req: DataRequestEvent) {
     return;
   }
 
-  const init: RequestInit = { signal: abortController.signal };
+  // Cesium-style quantized-mesh servers gate the normals/watermask extensions
+  // behind an explicit Accept header. Only opt in when the layer requested it
+  // — otherwise some servers refuse to respond, and we don't want to pay for
+  // bytes we won't use anyway.
+  var headers = (() => {
+    if (req.extension !== "terrain") {
+      return req.token ? { Authorization: `Bearer ${req.token}` } : undefined;
+    }
+    const exts: string[] = [];
+    if (req.requestVertexNormals) exts.push("octvertexnormals");
+    if (req.requestWaterMask) exts.push("watermask");
+    const accept = exts.length
+      ? `application/vnd.quantized-mesh;extensions=${exts.join("-")},application/octet-stream;q=0.9,*/*;q=0.01`
+      : "application/vnd.quantized-mesh,application/octet-stream;q=0.9,*/*;q=0.01";
+    const h: Record<string, string> = { Accept: accept };
+    if (req.token) h.Authorization = `Bearer ${req.token}`;
+    return h;
+  })();
+
   // Partial fetch: PMTiles (and any future range-based source) sets a byte
   // range on the request. `!= null` is intentional so a 0n offset (the header
   // bootstrap read) is still treated as present. A length of 0n (from a
@@ -479,10 +499,10 @@ async function processRequestedData(ctx: EventContext, req: DataRequestEvent) {
       return;
     }
     const end = req.offset + req.length - 1n;
-    init.headers = { Range: `bytes=${req.offset}-${end}` };
+    headers = { ...headers, Range: `bytes=${req.offset}-${end}` };
   }
 
-  await fetch(req.url, init)
+  await fetch(req.url, { signal: abortController.signal, headers })
     .then((res) => {
       // A successful range request returns 206 Partial Content, which is in
       // the ok range (200-299), so this guard handles both 200 and 206.

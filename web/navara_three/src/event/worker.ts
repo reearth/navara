@@ -34,7 +34,9 @@ import {
 
 import { constructPolygonBatchedFeature } from "../tasks/constructPolygonBatchedFeature";
 import { constructPolylineBatchedFeature } from "../tasks/constructPolylineBatchedFeature";
+import { constructQuantizedMeshTerrainMesh } from "../tasks/constructQuantizedMeshTerrainMesh";
 import { constructTerrainMesh } from "../tasks/constructTerrainMesh";
+import { upsampleQuantizedMeshTerrainMesh } from "../tasks/upsampleQuantizedMeshTerrainMesh";
 import { upsampleTerrainMesh } from "../tasks/upsampleTerrainMesh";
 
 import type { EventContext } from ".";
@@ -116,20 +118,35 @@ async function processConstructTerrainMesh(
   if (!tile) {
     return;
   }
-  const elevationDecoder = tileHandler.getTileElevationDecoder(
-    params.tile_handle,
-  );
-  if (!elevationDecoder) {
-    return;
+
+  let promise: ReturnType<
+    typeof constructQuantizedMeshTerrainMesh | typeof constructTerrainMesh
+  >;
+  if (params.isQuantizedMesh) {
+    promise = constructQuantizedMeshTerrainMesh(
+      bytes,
+      new TransferableTileLike(tile),
+      params.skirt,
+      params.skirtExaggeration,
+      params.geographic,
+      params.tms,
+    );
+  } else {
+    const elevationDecoder = tileHandler.getTileElevationDecoder(
+      params.tile_handle,
+    );
+    if (!elevationDecoder) {
+      return;
+    }
+    promise = constructTerrainMesh(
+      bytes,
+      new TransferableTileLike(tile),
+      new TransferableRasterDEMDataLike(elevationDecoder),
+      params.tile_size,
+      params.skirt,
+      params.skirtExaggeration,
+    );
   }
-  const promise = constructTerrainMesh(
-    bytes,
-    new TransferableTileLike(tile),
-    new TransferableRasterDEMDataLike(elevationDecoder),
-    params.tile_size,
-    params.skirt,
-    params.skirtExaggeration,
-  );
   workerPoolPromises.set(id, promise);
   const { result } = await promise;
   workerPoolPromises.delete(id);
@@ -148,6 +165,11 @@ async function processConstructTerrainMesh(
 
   const geometry = new TransferableGeometry(vertices, uvs, indices);
 
+  if (result.normals) {
+    const normals = bufHandler.newF32(result.normals);
+    if (normals != null) geometry.normals = normals;
+  }
+
   // Set skirt data if available
   if (result.skirt_vertices && result.skirt_uvs && result.skirt_indices) {
     const skirtVertices = bufHandler.newF32(result.skirt_vertices);
@@ -155,6 +177,9 @@ async function processConstructTerrainMesh(
     const skirtIndices = bufHandler.newU32(result.skirt_indices);
     const skirtIndicesToEdge = result.skirt_indices_to_edge
       ? bufHandler.newU32(result.skirt_indices_to_edge)
+      : undefined;
+    const skirtNormals = result.skirt_normals
+      ? bufHandler.newF32(result.skirt_normals)
       : undefined;
 
     if (skirtVertices != null) {
@@ -169,9 +194,16 @@ async function processConstructTerrainMesh(
     if (skirtIndicesToEdge != null) {
       geometry.skirt_indices_to_edge = skirtIndicesToEdge;
     }
+    if (skirtNormals != null) {
+      geometry.skirt_normals = skirtNormals;
+    }
   }
 
   const rtcTranslation = result.rtc_translation;
+  const watermaskHandle = result.watermask
+    ? bufHandler.newU8(result.watermask)
+    : undefined;
+
   const constructTerrainMeshResult = new ConstructTerrainMeshResult(
     geometry,
     heights,
@@ -181,6 +213,9 @@ async function processConstructTerrainMesh(
       ? new Vec3(rtcTranslation.x, rtcTranslation.y, rtcTranslation.z)
       : undefined,
   );
+  if (watermaskHandle != null) {
+    constructTerrainMeshResult.watermask = watermaskHandle;
+  }
 
   const delegatedTaskResult =
     DelegatedWorkerTasksResult.withConstructTerrainMesh(
@@ -225,27 +260,49 @@ async function processUpsampleTerrainMesh(
     return;
   }
 
-  const elevationDecoder = tileHandler.getTileElevationDecoder(
-    params.tile_handle,
-  );
-  if (!elevationDecoder) {
-    return;
-  }
+  const parentNormalsHandle = cachedMeshHandle.normals;
+  const parentNormals =
+    parentNormalsHandle != null
+      ? (bufHandler.f32(parentNormalsHandle) ?? undefined)
+      : undefined;
 
   const upsamplableTerrainGeometry = new UpsamplableTerrainGeometryLike(
     parentUvs,
     parentIndices,
     parentHeights,
+    parentNormals,
   );
 
-  const promise = upsampleTerrainMesh(
-    new TransferableTileLike(tile),
-    new TransferableTileLike(parentTile),
-    new TransferableRasterDEMDataLike(elevationDecoder),
-    upsamplableTerrainGeometry,
-    params.skirt,
-    params.skirtExaggeration,
-  );
+  let promise: ReturnType<
+    typeof upsampleQuantizedMeshTerrainMesh | typeof upsampleTerrainMesh
+  >;
+  if (params.isQuantizedMesh) {
+    promise = upsampleQuantizedMeshTerrainMesh(
+      new TransferableTileLike(tile),
+      new TransferableTileLike(parentTile),
+      upsamplableTerrainGeometry,
+      params.skirt,
+      params.skirtExaggeration,
+      params.geographic,
+      params.tms,
+    );
+  } else {
+    const elevationDecoder = tileHandler.getTileElevationDecoder(
+      params.tile_handle,
+    );
+    if (!elevationDecoder) {
+      return;
+    }
+    promise = upsampleTerrainMesh(
+      new TransferableTileLike(tile),
+      new TransferableTileLike(parentTile),
+      new TransferableRasterDEMDataLike(elevationDecoder),
+      upsamplableTerrainGeometry,
+      params.skirt,
+      params.skirtExaggeration,
+      params.tms,
+    );
+  }
   workerPoolPromises.set(id, promise);
   const result = await promise;
   workerPoolPromises.delete(id);
@@ -264,6 +321,11 @@ async function processUpsampleTerrainMesh(
 
   const geometry = new TransferableGeometry(vertices, uvs, indices);
 
+  if (result.normals) {
+    const normals = bufHandler.newF32(result.normals);
+    if (normals != null) geometry.normals = normals;
+  }
+
   // Set skirt data if available
   if (result.skirt_vertices && result.skirt_uvs && result.skirt_indices) {
     const skirtVertices = bufHandler.newF32(result.skirt_vertices);
@@ -271,6 +333,9 @@ async function processUpsampleTerrainMesh(
     const skirtIndices = bufHandler.newU32(result.skirt_indices);
     const skirtIndicesToEdge = result.skirt_indices_to_edge
       ? bufHandler.newU32(result.skirt_indices_to_edge)
+      : undefined;
+    const skirtNormals = result.skirt_normals
+      ? bufHandler.newF32(result.skirt_normals)
       : undefined;
 
     if (skirtVertices != null) {
@@ -284,6 +349,9 @@ async function processUpsampleTerrainMesh(
     }
     if (skirtIndicesToEdge != null) {
       geometry.skirt_indices_to_edge = skirtIndicesToEdge;
+    }
+    if (skirtNormals != null) {
+      geometry.skirt_normals = skirtNormals;
     }
   }
 

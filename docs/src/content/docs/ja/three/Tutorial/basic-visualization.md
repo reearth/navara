@@ -179,7 +179,7 @@ view.setCamera({
 
 ### コードの説明
 
-`view.setCamera()` メソッドを使用して、カメラの位置と向きを設定できます。パラメータの詳細については、[ThreeView Functions](../../../three/api-reference/threeview-functions/) を参照してください。
+`view.setCamera()` メソッドを使用して、カメラの位置と向きを設定できます。パラメータの詳細については、[ThreeView Functions](../../../three/api/threeview-functions/) を参照してください。
 
 ### 完全なコード
 

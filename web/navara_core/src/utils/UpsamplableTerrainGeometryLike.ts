@@ -6,10 +6,17 @@ export class UpsamplableTerrainGeometryLike implements RemoveFreeRecursively<Ups
   uvs: Float32Array;
   indices: Uint32Array;
   heights: Float32Array;
+  normals: Float32Array | undefined;
 
-  constructor(uvs: Float32Array, indices: Uint32Array, heights: Float32Array) {
+  constructor(
+    uvs: Float32Array,
+    indices: Uint32Array,
+    heights: Float32Array,
+    normals?: Float32Array,
+  ) {
     this.uvs = uvs;
     this.indices = indices;
     this.heights = heights;
+    this.normals = normals;
   }
 }

@@ -4,5 +4,10 @@ import { UpsamplableTerrainGeometry } from "@navara/engine-worker";
 export function toUpsamplableTerrainGeometry(
   like: UpsamplableTerrainGeometryLike,
 ) {
-  return new UpsamplableTerrainGeometry(like.uvs, like.indices, like.heights);
+  return new UpsamplableTerrainGeometry(
+    like.uvs,
+    like.indices,
+    like.heights,
+    like.normals,
+  );
 }

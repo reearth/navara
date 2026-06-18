@@ -17,6 +17,10 @@ pub struct UpsampleTerrainMeshParameters {
     /// Multiplier for the automatically calculated skirt height.
     #[wasm_bindgen(js_name = skirtExaggeration)]
     pub skirt_exaggeration: f32,
+    #[wasm_bindgen(js_name = isQuantizedMesh)]
+    pub is_quantized_mesh: bool,
+    pub geographic: bool,
+    pub tms: bool,
 }
 
 #[wasm_bindgen]
@@ -27,6 +31,9 @@ impl UpsampleTerrainMeshParameters {
             tile_handle,
             skirt,
             skirt_exaggeration,
+            is_quantized_mesh: false,
+            geographic: false,
+            tms: false,
         }
     }
 }
@@ -41,6 +48,9 @@ impl<'a> From<&'a navara_worker::upsample_terrain_mesh::UpsampleTerrainMeshParam
             tile_handle: val.tile_handle,
             skirt: val.skirt,
             skirt_exaggeration: val.skirt_exaggeration,
+            is_quantized_mesh: val.is_quantized_mesh,
+            geographic: val.geographic,
+            tms: val.tms,
         }
     }
 }

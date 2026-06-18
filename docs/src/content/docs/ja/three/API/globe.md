@@ -246,7 +246,7 @@ view.globe.elevationColormap = ylGnBuColorMap;
 ```
 
 :::tip[関連ドキュメント]
-ColorMap クラスの詳細（メソッド、プロパティ、カラーマップパターン）については [ColorMap クラス](../../../three/api-reference/colormap/) を参照してください。
+ColorMap クラスの詳細（メソッド、プロパティ、カラーマップパターン）については [ColorMap クラス](../../../three/api/colormap/) を参照してください。
 :::
 
 ## 標高ヒートマップの使用例
@@ -354,7 +354,7 @@ view.globe.opacity = 0.8;
 
 ## 関連項目
 
-- [Color クラス](../../../three/api-reference/color/) - 色を表現するクラス
-- [ColorMap クラス](../../../three/api-reference/colormap/) - カラーグラデーションの定義
+- [Color クラス](../../../three/api/color/) - 色を表現するクラス
+- [ColorMap クラス](../../../three/api/colormap/) - カラーグラデーションの定義
 - [ElevationHeatmapMaterial](../../../three/resource-layer/elevation-heatmap-material/) - 標高ヒートマップマテリアル
-- [ThreeView クラス](../../../three/api-reference/threeview-class/) - メインビュークラス
+- [ThreeView クラス](../../../three/api/threeview-class/) - メインビュークラス

@@ -364,7 +364,6 @@ export class TileMesh
       mesh.mesh,
       mesh.material,
       mesh.transform,
-      mesh.ready_parent_tile_handle,
       mesh.globe,
     );
 
@@ -382,7 +381,6 @@ export class TileMesh
     mesh: EventMesh,
     mat: RasterTileInternalMaterial,
     transform: Transform | undefined,
-    readyParentTileHandle: TileHandle | undefined,
     globe: Globe,
   ) {
     const {
@@ -391,7 +389,6 @@ export class TileMesh
       buf,
       loadedTexs,
       textureOptions,
-      tileMapByHandle,
       uniforms,
       textureFragmentIndex,
       tileMeshToFragmentIds,
@@ -413,6 +410,14 @@ export class TileMesh
       terrainGeometry.setAttribute("uv", new BufferAttribute(uv.slice(), 2));
     }
 
+    const normals = mesh.normals != null ? buf.f32(mesh.normals) : null;
+    if (normals) {
+      terrainGeometry.setAttribute(
+        "normal",
+        new BufferAttribute(normals.slice(), 3),
+      );
+    }
+
     terrainGeometry.setIndex(new BufferAttribute(indices.slice(), 1));
 
     const aabb_center = new Vector3(
@@ -432,7 +437,21 @@ export class TileMesh
       position,
       uv,
       indices,
+      normals,
     );
+
+    // Watermask: 1 byte = uniform, 65536 bytes = 256x256 grid. Stored for downstream consumers.
+    if (mesh.watermask != null) {
+      const watermask = buf.u8(mesh.watermask);
+      if (watermask) {
+        this.userData.watermask = {
+          data: watermask.slice(),
+          isUniform: watermask.length === 1,
+        };
+      }
+    }
+
+    this.userData.hasNormalAttribute = normals != null;
 
     geometry.boundingBox = new Box3(
       aabb_center.clone().sub(aabb_extent),
@@ -449,23 +468,10 @@ export class TileMesh
 
     this.material = this.initMaterial(mat, uniforms, globe);
 
-    if (!this.material.userData.uvTransform) {
-      this.material.userData.uvTransform = {
-        offset: new Vector2(),
-        scale: new Vector2(1, 1),
-      };
-    }
-
-    const { offset, scale } = mesh.uv_transform;
-    this.material.userData.uvTransform.offset.set(offset.x, offset.y);
-    this.material.userData.uvTransform.scale.set(scale.x, scale.y);
-
     const maxTextures = this.maxTextures;
     this.setUniforms(mat, maxTextures);
     this.setupTextureFragments(
       mat.texture_fragments(),
-      tileMapByHandle,
-      readyParentTileHandle,
       textureFragmentIndex,
       tileMeshToFragmentIds,
     );
@@ -509,6 +515,7 @@ export class TileMesh
     position: Float32Array,
     uv: Float32Array | null,
     indices: Uint32Array,
+    normals: Float32Array | null,
   ) {
     const { buf } = this.ctx;
     // Check for separate skirt data
@@ -516,6 +523,7 @@ export class TileMesh
     const skirtIndicesHandle = mesh.skirt_indices;
     const skirtUvsHandle = mesh.skirt_uvs;
     const skirtIndicesToEdgeHandle = mesh.skirt_indices_to_edge;
+    const skirtNormalsHandle = mesh.skirt_normals;
 
     const hasSkirt = skirtVerticesHandle != null && skirtIndicesHandle != null;
     const skirtPosition =
@@ -527,6 +535,8 @@ export class TileMesh
       skirtIndicesToEdgeHandle != null
         ? buf.u32(skirtIndicesToEdgeHandle)
         : null;
+    const skirtNormals =
+      skirtNormalsHandle != null ? buf.f32(skirtNormalsHandle) : null;
 
     // Create combined geometry (terrain + skirt) for main rendering
     let geometry: BufferGeometry;
@@ -554,6 +564,21 @@ export class TileMesh
         geometry.setAttribute("uv", new BufferAttribute(combinedUv, 2));
       }
 
+      // Combine normals: terrain normals + skirt normals (computed in Rust as edge normals)
+      if (normals) {
+        const combinedNormals = new Float32Array(
+          normals.length + (skirtNormals?.length ?? 0),
+        );
+        combinedNormals.set(normals);
+        if (skirtNormals) {
+          combinedNormals.set(skirtNormals, normals.length);
+        }
+        geometry.setAttribute(
+          "normal",
+          new BufferAttribute(combinedNormals, 3),
+        );
+      }
+
       // Combine indices: terrain indices + skirt indices
       const combinedIndices = new Uint32Array(
         indices.length + (skirtIndices?.length ?? 0),
@@ -571,6 +596,9 @@ export class TileMesh
       if (skirtIndicesToEdge) {
         skirtIndicesToEdge.set([]);
       }
+      if (skirtNormals) {
+        skirtNormals.set([]);
+      }
     } else {
       // No skirt data - use terrain geometry directly
       geometry = terrainGeometry;
@@ -583,8 +611,25 @@ export class TileMesh
       uv.set([]);
       uv = null;
     }
+    if (normals) {
+      normals.set([]);
+    }
 
     return geometry;
+  }
+
+  private shouldUseNormal(
+    mat: Partial<RasterTileInternalMaterial> | RasterTileInternalMaterial,
+    globe: Globe,
+  ): boolean {
+    // Lambert (normal-based) shading is needed if any of these is true:
+    // 1. globe.useNormal is set
+    // 2. a per-vertex normal attribute is bound (e.g. quantized-mesh)
+    // 3. any hillshade slot is active
+    const hillshadeActive = !!mat.isHillshades?.some((v) => v !== 0);
+    return (
+      !!globe.useNormal || !!this.userData.hasNormalAttribute || hillshadeActive
+    );
   }
 
   private initMaterial(
@@ -592,10 +637,7 @@ export class TileMesh
     uniforms: CommonUniforms,
     globe: Globe,
   ): TileMaterial {
-    let useNormal = !!globe.useNormal;
-    if (_mat.isHillshades && _mat.isHillshades.length > 0) {
-      useNormal = _mat.isHillshades.some((v) => v !== 0);
-    }
+    const useNormal = this.shouldUseNormal(_mat, globe);
     const m = useNormal
       ? new MeshLambertMaterial({
           stencilWrite: false,
@@ -617,6 +659,9 @@ export class TileMesh
     m.userData.defines.USE_ELEVATION_HEATMAP = 0;
     m.userData.defines.USE_HILLSHADE = 0;
     m.userData.defines.USE_SELECTIVE_EFFECT = 1;
+    m.userData.defines.USE_VERTEX_NORMAL = this.userData.hasNormalAttribute
+      ? 1
+      : 0;
 
     m.envMap = uniforms.tSkyEnvMap.value ?? null;
     m.combine = AddOperation;
@@ -626,10 +671,6 @@ export class TileMesh
     m.onBeforeCompile = (shader) => {
       shader.defines ??= {};
       Object.assign(shader.defines, m.userData.defines);
-      // Add UV transform uniforms
-      const uvT = m.userData.uvTransform;
-      shader.uniforms.uOffset = { value: uvT.offset };
-      shader.uniforms.uScale = { value: uvT.scale };
       shader.uniforms.reflectivity = { value: 0 };
 
       shader.uniforms.uShows = m.userData.shows;
@@ -671,18 +712,17 @@ export class TileMesh
       // Hillshade uniforms
       shader.uniforms.uIsHillshades = m.userData.isHillshades;
       shader.uniforms.uHillshadeExaggeration = m.userData.hillshadeExaggeration;
-      shader.uniforms.uHillshadeUvOffset = m.userData.hillshadeUvOffset;
-      shader.uniforms.uHillshadeUvScale = m.userData.hillshadeUvScale;
+      // Per-layer UV transform (parent tile reuse). Covers both regular textures and hillshades.
+      shader.uniforms.uLayerUvOffset = m.userData.layerUvOffset;
+      shader.uniforms.uLayerUvScale = m.userData.layerUvScale;
 
-      // Add UV transform uniforms to the shader
+      // Per-layer UV transform is applied in the fragment shader so each texture
+      // slot can sample from a different parent tile when overscaled independently.
       shader.vertexShader = createReplacer(shader.vertexShader)
         .replace(
           "#include <common>",
           `
-uniform vec2 uOffset;
-uniform vec2 uScale;
-
-// Store original UV for MVT textures
+// Pass tile-local UV; per-layer transforms are applied in the fragment shader.
 varying vec2 vOrigUv;
 varying vec3 vPosition;
 
@@ -694,8 +734,6 @@ varying vec3 vPosition;
           `
 #include <uv_vertex>
 vOrigUv = vUv;
-// Apply transform for raster textures
-vUv = vUv * uScale + uOffset;
 `,
         )
         .replace(
@@ -725,8 +763,8 @@ vUv = vUv * uScale + uOffset;
   uniform sampler2D uTextures[${maxTextures}];
   uniform bool uIsElevationHeatmaps[${maxTextures}];
   uniform bool uIsHillshades[${maxTextures}];
-  uniform vec2 uHillshadeUvOffset[${maxTextures}];
-  uniform vec2 uHillshadeUvScale[${maxTextures}];
+  uniform vec2 uLayerUvOffset[${maxTextures}];
+  uniform vec2 uLayerUvScale[${maxTextures}];
   uniform float uEmissiveIntensities[${maxTextures}];
   uniform vec3 uEmissiveColors[${maxTextures}];
   uniform float uEffectIdsMasks[${maxTextures}];
@@ -776,10 +814,9 @@ vUv = vUv * uScale + uOffset;
   ${generateMixOverlaidTexturesMacro(
     maxTextures,
     (texColorVar, idx) => `
-    // Determine which UV coordinates to use based on texture index
-    // For MVT textures (index >= this.texturizedSceneIndexFrom), use original UV
-    // For raster textures, use transformed UV
-    vec2 texUv = ${idx} >= ${this.texturizedSceneIndexFrom} ? vOrigUv : vUv;
+    // Per-layer UV transform: each slot may sample from a different parent tile
+    // when its source/zoom forces it to overscale independently.
+    vec2 texUv = vOrigUv * uLayerUvScale[${idx}] + uLayerUvOffset[${idx}];
 
     #if USE_HILLSHADE
       // Skip hillshade textures for color rendering (they're only used for normals)
@@ -855,8 +892,12 @@ vUv = vUv * uScale + uOffset;
         .replaceWithCondition(
           "#include <normal_fragment_maps>",
           `
-  vec3 N = normalize(vPosition);
-  normal = normalize(mat3(viewMatrix) * N);
+  #if USE_VERTEX_NORMAL && !USE_HILLSHADE
+    // Keep the interpolated per-vertex normal (already in view space via three.js).
+  #else
+    vec3 N = normalize(vPosition);
+    normal = normalize(mat3(viewMatrix) * N);
+  #endif
 
   ${generateHillshadeNormalShader(maxTextures)}
 
@@ -940,7 +981,6 @@ if (uPickable > 0.) {
     const {
       loadedTexs,
       textureOptions,
-      tileMapByHandle,
       textureFragmentIndex,
       tileMeshToFragmentIds,
     } = this.ctx;
@@ -948,7 +988,6 @@ if (uPickable > 0.) {
     const changedMaterial = mesh.material;
     const tileMesh = mesh.mesh;
     const active = tileMesh.active;
-    const readyParentTileHandle = mesh.ready_parent_tile_handle;
 
     const maxTextures = textureOptions.maxTextures;
 
@@ -956,36 +995,16 @@ if (uPickable > 0.) {
     this.visible = active;
 
     if (active) {
-      this.ensureCorrectMaterialType(
-        changedMaterial,
-        globe,
-        tileMesh.uv_transform,
-      );
+      this.ensureCorrectMaterialType(changedMaterial, globe);
 
       this.setupTextureFragments(
         changedMaterial?.texture_fragments(),
-        tileMapByHandle,
-        readyParentTileHandle,
         textureFragmentIndex,
         tileMeshToFragmentIds,
       );
 
       // Set uniforms (this may switch material type for hillshade)
-      // Pass uvTransform from mesh data so new material gets correct values immediately
       this.setUniforms(changedMaterial, maxTextures);
-
-      // Update UV transform AFTER material switch to ensure it's set on the current material
-      // This handles the case where material didn't switch
-      if (!this.material.userData.uvTransform) {
-        this.material.userData.uvTransform = {
-          offset: new Vector2(),
-          scale: new Vector2(1, 1),
-        };
-      }
-
-      const { offset, scale } = tileMesh.uv_transform;
-      this.material.userData.uvTransform.offset.set(offset.x, offset.y);
-      this.material.userData.uvTransform.scale.set(scale.x, scale.y);
 
       this.setupTextures(
         loadedTexs,
@@ -1144,34 +1163,22 @@ if (uPickable > 0.) {
   private ensureCorrectMaterialType(
     mat: RasterTileInternalMaterial,
     globe: Globe,
-    uvTransform: {
-      offset: { x: number; y: number };
-      scale: { x: number; y: number };
-    },
   ): void {
-    // Determine if hillshade is present in the material configuration
-    const needsLambert =
-      mat.isHillshades && mat.isHillshades.length > 0
-        ? mat.isHillshades.some((v) => v !== 0)
-        : !!globe.useNormal;
+    // Same decision used by initMaterial — keeping them in sync avoids
+    // mid-session Lambert↔Basic flips that strip normal shading from some tiles.
+    const needsLambert = this.shouldUseNormal(mat, globe);
     const isLambert = this.material instanceof MeshLambertMaterial;
 
     if (needsLambert !== isLambert) {
       const oldMaterial = this.material;
 
-      // Create new material with correct type
+      // Create new material with correct type. Per-layer UV uniforms will be
+      // re-populated by setupTextures before the next render.
       this.material = this.initMaterial(mat, this.ctx.uniforms, globe);
 
       if (this.shadowMesh) {
         this.shadowMesh.material = this.material;
       }
-
-      // Set up uvTransform immediately with correct values from mesh data
-      // This prevents shader from compiling with default/stale values
-      this.material.userData.uvTransform = {
-        offset: new Vector2(uvTransform.offset.x, uvTransform.offset.y),
-        scale: new Vector2(uvTransform.scale.x, uvTransform.scale.y),
-      };
 
       // Dispose old material
       this.ctx.viewContext?.removeShadowMaterial(oldMaterial);
@@ -1413,37 +1420,22 @@ if (uPickable > 0.) {
 
   private setupTextureFragments(
     textureFragments: TextureFragment[] | undefined,
-    tileMapByHandle: TileMapByHandle,
-    readyParentTileHandle: TileHandle | undefined,
     textureFragmentIndex: Map<string, Set<TextureSlot>> | undefined,
     tileMeshToFragmentIds: Map<TileMesh, Set<string>> | undefined,
   ) {
     const m = this.material;
 
+    // Per-layer parent fallback is now resolved in Rust: when a layer's own data
+    // isn't ready, the entity slot in `texture_fragments` already points at the
+    // nearest ready ancestor entity for that layer. So this side has nothing to do
+    // for the "no fragments / use parent" case.
     if (!textureFragments || !textureFragments.length) {
-      if (!readyParentTileHandle) {
-        // No fragments - clear material state and remove from index
-        m.userData.textureFragments = { value: [] };
-        updateTextureFragmentIndex(
-          textureFragmentIndex,
-          tileMeshToFragmentIds,
-          this,
-          [],
-        );
-        return;
-      }
-
-      m.userData.textureFragments = tileMapByHandle.get(
-        readyParentTileHandle,
-      )?.material.userData.textureFragments;
-
-      // Update index with parent's texture fragments
-      const parentFragments = m.userData.textureFragments?.value ?? [];
+      m.userData.textureFragments = { value: [] };
       updateTextureFragmentIndex(
         textureFragmentIndex,
         tileMeshToFragmentIds,
         this,
-        parentFragments,
+        [],
       );
       return;
     }
@@ -1473,7 +1465,7 @@ if (uPickable > 0.) {
     textureOptions: TextureOptions,
     maxTextures: number,
     mat: Partial<RasterTileInternalMaterial> | RasterTileInternalMaterial,
-    preserveHillshadeUv = false,
+    preserveLayerUv = false,
   ) {
     const m = this.material;
 
@@ -1483,26 +1475,26 @@ if (uPickable > 0.) {
       };
     }
 
-    if (!m.userData.hillshadeUvOffset) {
-      m.userData.hillshadeUvOffset = {
+    if (!m.userData.layerUvOffset) {
+      m.userData.layerUvOffset = {
         value: [...new Array(maxTextures)].map(() => new Vector2(0, 0)),
       };
     }
 
-    if (!m.userData.hillshadeUvScale) {
-      m.userData.hillshadeUvScale = {
+    if (!m.userData.layerUvScale) {
+      m.userData.layerUvScale = {
         value: [...new Array(maxTextures)].map(() => new Vector2(1, 1)),
       };
     }
 
-    // Reset textures (always) and hillshade UV (only if not preserving)
+    // Reset textures (always) and per-layer UV (only if not preserving)
     for (let i = 0; i < maxTextures; i++) {
       m.userData.textures.value[i] = null;
 
-      // Skip resetting hillshade UV if preserving (e.g., during rebind)
-      if (!preserveHillshadeUv) {
-        m.userData.hillshadeUvOffset.value[i].set(0, 0);
-        m.userData.hillshadeUvScale.value[i].set(1, 1);
+      // Skip resetting per-layer UV if preserving (e.g., during rebind)
+      if (!preserveLayerUv) {
+        m.userData.layerUvOffset.value[i].set(0, 0);
+        m.userData.layerUvScale.value[i].set(1, 1);
       }
     }
 
@@ -1519,8 +1511,9 @@ if (uPickable > 0.) {
 
     const textures = m.userData.textures.value;
 
-    // Get hillshade UV transforms from Rust (for parent texture reuse)
-    const hillshadeUvTransforms = mat.hillshadeUvTransforms?.() ?? [];
+    // Per-layer UV transforms from Rust (covers regular textures and hillshades).
+    // `null` entry means identity (no parent reuse).
+    const layerUvTransforms = mat.layerUvTransforms?.() ?? [];
 
     // Setting tile textures
     for (let i = 0; i < textureFragmentsLen; i++) {
@@ -1539,32 +1532,22 @@ if (uPickable > 0.) {
         mat.isElevationHeatmaps && mat.isElevationHeatmaps[i];
       const isHillshade = mat.isHillshades && mat.isHillshades[i];
 
-      // Set hillshade UV transform
-      if (isHillshade && !preserveHillshadeUv) {
-        // Use UV transform from Rust (for hillshade-specific parent reuse)
-        // Rust calculates this based on max_zoom and ancestor lookup
-        const uvTransform = hillshadeUvTransforms[i];
+      // Per-layer UV transform: identity by default; uses Rust's resolved transform
+      // when this layer is sampling a parent tile.
+      if (!preserveLayerUv) {
+        const uvTransform = layerUvTransforms[i];
         if (uvTransform) {
-          // Rust provided a specific hillshade parent reuse transform
-          m.userData.hillshadeUvOffset.value[i].set(
+          m.userData.layerUvOffset.value[i].set(
             uvTransform.offset.x,
             uvTransform.offset.y,
           );
-          m.userData.hillshadeUvScale.value[i].set(
+          m.userData.layerUvScale.value[i].set(
             uvTransform.scale.x,
             uvTransform.scale.y,
           );
         } else {
-          // No hillshade-specific transform: use global tile UV transform (for parent fallback)
-          const globalUvTransform = this.material.userData.uvTransform;
-          m.userData.hillshadeUvOffset.value[i].set(
-            globalUvTransform.offset.x,
-            globalUvTransform.offset.y,
-          );
-          m.userData.hillshadeUvScale.value[i].set(
-            globalUvTransform.scale.x,
-            globalUvTransform.scale.y,
-          );
+          m.userData.layerUvOffset.value[i].set(0, 0);
+          m.userData.layerUvScale.value[i].set(1, 1);
         }
       }
 
@@ -1665,8 +1648,8 @@ if (uPickable > 0.) {
   /**
    * Rebind textures for this TileMesh by calling setupTextures
    * This ensures texture updates go through the standard texture management system
-   * Used by hillshade backfill and other dynamic texture updates
-   * Preserves existing hillshade UV transforms to avoid overwriting parent-reuse values
+   * Used by hillshade backfill and other dynamic texture updates.
+   * Preserves existing per-layer UV transforms to avoid overwriting parent-reuse values.
    */
   rebindTextures(
     loadedTexs: Map<string, Texture>,
@@ -1681,14 +1664,12 @@ if (uPickable > 0.) {
       isHillshades: material.userData.isHillshades?.value,
     };
 
-    // Call setupTextures to properly bind textures through standard flow
-    // preserveHillshadeUv = true to avoid overwriting existing parent-reuse transforms
     this.setupTextures(
       loadedTexs,
       textureOptions,
       this.maxTextures,
       materialData,
-      true, // preserveHillshadeUv
+      true, // preserveLayerUv
     );
   }
 

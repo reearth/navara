@@ -10,7 +10,7 @@ The `SunLightDesc` class represents a directional light descriptor that simulate
 The sun direction is automatically calculated based on `view.atmosphere.date`, and shadow directions change accordingly.
 
 :::tip[Related Documentation]
-For details on the atmosphere system, see the [Atmosphere class](../../../three/api-reference/atmosphere/).
+For details on the atmosphere system, see the [Atmosphere class](../../../three/api/atmosphere/).
 :::
 
 ## Common Properties
