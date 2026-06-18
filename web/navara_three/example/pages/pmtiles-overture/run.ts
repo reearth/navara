@@ -3,7 +3,6 @@ import ThreeView, {
   type FeatureEvaluator,
   type Layer,
 } from "@navara/three";
-import { ToneMappingMode } from "@navara/three_default_descs";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
@@ -15,11 +14,30 @@ import { showAttributions } from "../../helpers/attributions";
 import { PMTILES_DATASETS } from "../../helpers/constants";
 import { SH_COEFFICIENTS } from "../../helpers/sh";
 
-// A multi-script font family: each face declares the `unicodeRanges` it covers
-// (Latin, Cyrillic, Greek, CJK slices, Arabic, Thai, Devanagari, …). Registered
-// once with `view.addFontFamily`, the font pipeline then picks the right face
-// per glyph automatically — so a single text layer can label names in any
-// script without us routing by hand.
+// A multi-script font family: each face declares the `unicodeRanges` it covers,
+// and the font pipeline picks the first face whose range contains each glyph —
+// so a single text layer can label names in any script without manual routing.
+//
+// The labels are bold and wide: Latin/Vietnamese use Archivo at ExtraBold
+// (wght 800) and the widest width (wdth 125); every other script uses Noto at
+// the heaviest weight Google Fonts offers it.
+//
+// Precedence (first match wins): Archivo gives the bold/wide Latin look and the
+// fallback (face 0); a "Noto Sans" face backstops Cyrillic/Greek plus any Latin
+// glyphs Archivo omits (e.g. U+02BB in "Oʻzbekiston", U+1E37 in "Ṃajeḷ"); then
+// per-script Noto faces (Arabic, Hebrew, Thaana, the Indic family,
+// Thai/Lao/Khmer/Myanmar, Georgian, Armenian, Ethiopic, Tibetan, Mongolian,
+// Tifinagh, …); then full CJK (Noto Sans JP/SC/KR).
+//
+// Each face's ranges are built from the font's ACTUAL cmap, not the CSS
+// `unicode-range` — because the segmenter has no glyph-existence fallback, a
+// face that claimed a glyph it lacks (a font subset, or the shared CJK slice
+// partition where SC advertises Hangul it doesn't ship) would tofu instead of
+// deferring to the next face. Faces load lazily, so the long list is cheap.
+//
+// Regenerate (from repo root): python3 \
+//   web/navara_three/example/pages/pmtiles-overture/gen_label_font_family.py \
+//   web/navara_three/example/pages/pmtiles-overture/labelFontFamily.json
 import LABEL_FONT_FAMILY from "./labelFontFamily.json";
 
 export type CustomDescriptions = DefaultDescriptions;
@@ -77,7 +95,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   await view.init();
 
   // defaultPlugin.addDefaultPhotorealScene();
-  
+
   view.addFontFamily(LABEL_FONT_FAMILY);
 
   view.addLight({ ambient: {} });
@@ -194,15 +212,14 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     data: { url: divisionsUrl },
     text: {
       font: LABEL_FONT,
-      color: new Color().setStyle("#000000"), // division.label gray.900
+      color: new Color().setStyle("#000000"),
       size: params.size,
       sizeInMeters: false,
       clampToGround: true,
       center: { x: 0.5, y: 0.5 },
-      outlineColor: new Color().setStyle("#ffffff"), // division.halo white
+      outlineColor: new Color().setStyle("#ffffff"),
       outlineWidth: 5,
       outlineOpacity: 0.4,
-      // highQuality: true,
       offsetDepth: true,
       depthTest: true,
     },
