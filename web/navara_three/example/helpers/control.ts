@@ -29,7 +29,7 @@ export const atZoneDate = (
 ): Date =>
   dayjs(dateObj)
     .tz(zone)
-    .month(month)
+    .month(month - 1)
     .date(date)
     .hour(hours)
     .minute(minutes)
