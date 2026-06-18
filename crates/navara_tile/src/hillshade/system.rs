@@ -10,7 +10,8 @@ use navara_data_requester::DataRequester;
 use navara_event_store::EventStore;
 use navara_quadtree::{decode_quadleaf_handle, encode_quadleaf_handle};
 use navara_tile_component::{
-    HillshadeBackfillEventData, HillshadeBackfillEvents, HillshadeEdges, HillshadeEdgesExtracted,
+    HillshadeBackfillEventData, HillshadeBackfillEvents, HillshadeCancelRequested, HillshadeEdges,
+    HillshadeEdgesExtracted,
 };
 use navara_tile_component::{RasterTileQuadtree, TileTextureFragmentMarker};
 
@@ -222,6 +223,26 @@ pub fn backfill_hillshade_on_loaded(
     }
 }
 
+/// System that emits hillshade_canceled events for hillshade entities whose
+/// owning RasterTile was just destroyed.
+///
+/// Scoped to the `HillshadeCancelRequested` marker (inserted by
+/// `RasterTile::destroy`) so it fires only on the tile-destruction path, not
+/// on every entity that happens to pick up `Deleted + HillshadeTextureMarker`.
+/// The marker is a one-shot — consumed on emit — so no separate "already
+/// emitted" guard is needed. Texture/render-target teardown is left to
+/// `texture_fragment_removed`; this event only cancels in-flight backfill data.
+pub fn emit_hillshade_canceled(
+    mut commands: Commands,
+    mut events: ResMut<EventStore>,
+    query: Query<Entity, With<HillshadeCancelRequested>>,
+) {
+    for entity in query.iter() {
+        events.hillshade_canceled.push(entity);
+        commands.entity(entity).remove::<HillshadeCancelRequested>();
+    }
+}
+
 /// System that cleans up hillshade edge data when entities are deleted
 /// Removes the 4 edge buffers from BufferStore to prevent memory leaks
 pub fn cleanup_hillshade_edges(
@@ -245,15 +266,25 @@ pub fn cleanup_hillshade_edges(
 /// Uses a two-phase approach: mark in first frame, cleanup in second frame
 pub(crate) fn cleanup_hillshade_backfill_events(
     mut commands: Commands,
-    query: Query<(Entity, Option<&HillshadeEventsExtracted>), With<HillshadeBackfillEvents>>,
+    mut buf: ResMut<BufferStore>,
+    query: Query<(
+        Entity,
+        &HillshadeBackfillEvents,
+        Option<&HillshadeEventsExtracted>,
+    )>,
 ) {
-    for (entity, extracted_marker) in query.iter() {
+    for (entity, events, extracted_marker) in query.iter() {
         if extracted_marker.is_some() {
             // Frame N+1: Marker exists, safe to cleanup
             // Frame N: backfill_hillshade_on_loaded → insert(HillshadeBackfillEvents)
             // Frame N: read_events() → extracts events
             // Frame N: this system → adds HillshadeEventsExtracted marker
             // Frame N+1: this system → removes both components
+            for event in &events.events {
+                if event.edge_data_handle >= 0 {
+                    buf.remove(&event.edge_data_handle);
+                }
+            }
             commands.entity(entity).remove::<HillshadeBackfillEvents>();
             commands.entity(entity).remove::<HillshadeEventsExtracted>();
         } else {
@@ -673,5 +704,121 @@ mod tests {
             assert_eq!(right_edge[y * 4], 3); // x=3
             assert_eq!(right_edge[y * 4 + 1], y as u8); // y
         }
+    }
+
+    #[test]
+    fn cleanup_hillshade_backfill_events_frees_remaining_edge_handles() {
+        use bevy_app::App;
+        use bevy_app::Update;
+
+        let mut app = App::new();
+        app.init_resource::<BufferStore>();
+        app.init_resource::<EventStore>();
+
+        // Allocate two edge buffers and one initial (no-edge) entry.
+        let (edge_a, edge_b) = {
+            let mut buf = app.world_mut().resource_mut::<BufferStore>();
+            (buf.new_u8(vec![1, 2, 3, 4]), buf.new_u8(vec![5, 6, 7, 8]))
+        };
+
+        let entity = app
+            .world_mut()
+            .spawn(HillshadeBackfillEvents {
+                events: vec![
+                    HillshadeBackfillEventData {
+                        tile_handle: 0,
+                        edge_data_handle: -1,
+                        original_handle: Some(42),
+                        target_entity: None,
+                        edge_direction: 255,
+                    },
+                    HillshadeBackfillEventData {
+                        tile_handle: 0,
+                        edge_data_handle: edge_a,
+                        original_handle: None,
+                        target_entity: None,
+                        edge_direction: 0,
+                    },
+                    HillshadeBackfillEventData {
+                        tile_handle: 0,
+                        edge_data_handle: edge_b,
+                        original_handle: None,
+                        target_entity: None,
+                        edge_direction: 1,
+                    },
+                ],
+            })
+            .id();
+
+        app.add_systems(Update, cleanup_hillshade_backfill_events);
+
+        // First pass: marker is inserted, no buffers freed yet.
+        app.update();
+        let buf = app.world().resource::<BufferStore>();
+        assert!(buf.contains(&edge_a));
+        assert!(buf.contains(&edge_b));
+        assert!(
+            app.world()
+                .get::<HillshadeEventsExtracted>(entity)
+                .is_some()
+        );
+
+        // Second pass: component is removed and edge handles freed.
+        app.update();
+        let buf = app.world().resource::<BufferStore>();
+        assert!(
+            !buf.contains(&edge_a),
+            "edge_a should be freed after cleanup"
+        );
+        assert!(
+            !buf.contains(&edge_b),
+            "edge_b should be freed after cleanup"
+        );
+        assert!(app.world().get::<HillshadeBackfillEvents>(entity).is_none());
+    }
+
+    #[test]
+    fn emit_hillshade_canceled_fires_only_for_marked_entities() {
+        use bevy_app::App;
+        use bevy_app::Update;
+
+        let mut app = App::new();
+        app.init_resource::<EventStore>();
+
+        // Marked: should emit and have the marker drained.
+        let marked = app
+            .world_mut()
+            .spawn((Deleted, HillshadeTextureMarker, HillshadeCancelRequested))
+            .id();
+        // Deleted hillshade entity WITHOUT the request marker: must not emit
+        // (e.g., deletion paths outside RasterTile::destroy).
+        let unmarked = app
+            .world_mut()
+            .spawn((Deleted, HillshadeTextureMarker))
+            .id();
+
+        app.add_systems(Update, emit_hillshade_canceled);
+
+        app.update();
+
+        let events = app.world().resource::<EventStore>();
+        assert_eq!(events.hillshade_canceled, vec![marked]);
+        assert!(
+            app.world()
+                .get::<HillshadeCancelRequested>(marked)
+                .is_none(),
+            "marker should be drained after emission"
+        );
+        // Unmarked entity stays untouched.
+        assert!(app.world().get::<Deleted>(unmarked).is_some());
+
+        // Second pass: nothing left to emit, no re-fire.
+        app.world_mut()
+            .resource_mut::<EventStore>()
+            .hillshade_canceled
+            .clear();
+        app.update();
+        let events = app.world().resource::<EventStore>();
+        assert!(events.hillshade_canceled.is_empty());
     }
 }
