@@ -111,7 +111,7 @@ export function generateTileMapFragment(): string {
   float tileReflectivity      = hasWinner ? uReflectivities[winIdx]      : 0.0;
   float tileRoughness         = hasWinner ? uRoughnesses[winIdx]         : 0.0;
 
-  // TODO: Support waster material
+  // TODO: Support water material
   float waterScaleNormal      = hasWinner ? uWaterScaleNormals[winIdx]   : 0.0;
   float waterSpeed            = hasWinner ? uWaterSpeeds[winIdx]         : 0.0;
   float waterShininess        = hasWinner ? uShininesses[winIdx]         : 100.0;
