@@ -16,10 +16,10 @@ export const GSI_ATTRIBUTION: AttributionItem = {
   attribution: "国土地理院",
   url: "https://maps.gsi.go.jp/development/ichiran.html",
   children: [
-    // z14-18: 全国最新写真（シームレス）
+    // z14-18: latest seamless aerial photo
     { title: "全国最新写真（シームレス）", minZoom: 14, maxZoom: 18 },
     { title: "GRUS画像（© Axelspace）", minZoom: 14, maxZoom: 18 },
-    // z9-13: 全国ランドサットモザイク画像
+    // z9-13: nationwide Landsat mosaic
     { title: "全国ランドサットモザイク画像", minZoom: 9, maxZoom: 13 },
     {
       // Pasted verbatim from the GSI tile list (note: no spaces after the
@@ -29,7 +29,7 @@ export const GSI_ATTRIBUTION: AttributionItem = {
       minZoom: 9,
       maxZoom: 13,
     },
-    // z2-8: 世界衛星モザイク画像
+    // z2-8: global satellite mosaic
     { title: "世界衛星モザイク画像", minZoom: 2, maxZoom: 8 },
     {
       // Pasted verbatim from the GSI tile list; the bare URL is auto-linked.
@@ -39,7 +39,7 @@ export const GSI_ATTRIBUTION: AttributionItem = {
       maxZoom: 8,
     },
 
-    // --- 電子地形図（タイル）/ English（seamlessphoto とは別製品）---
+    // --- Electronic topographic map (tiles) — a separate product from seamlessphoto ---
     // z9-11: 1:1,000,000 International Map
     {
       title:
@@ -47,8 +47,8 @@ export const GSI_ATTRIBUTION: AttributionItem = {
       minZoom: 9,
       maxZoom: 11,
     },
-    // z5-8: Japan And Its Surroundings。標準の出所明示に加え、以下の出所も
-    // 合わせて明示する掲出義務がある（GSI タイル一覧の備考より）。
+    // z5-8: Japan And Its Surroundings. Beyond the standard source credit, the
+    // sources below must also be shown (per the notes in the GSI tile list).
     {
       title:
         "Japan And Its Surroundings（電子地形図（タイル）/ Geospatial Information Authority of Japan (GSI)）",
