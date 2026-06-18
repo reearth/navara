@@ -20,7 +20,7 @@ import { canWorkerProcessImmediately } from "@navara/worker";
 import { Mesh, Object3D, Sprite } from "three";
 
 import { BatchedSdfTextMesh, Layer } from "..";
-import { getImageDataFromImageBitmap } from "../tasks/getImageDataFromImageBitmap";
+import { getImageDataFromBlob } from "../tasks/getImageDataFromBlob";
 
 import { EventContext } from "./context";
 import {
@@ -29,7 +29,7 @@ import {
   processRenderableFeatureChanged,
 } from "./feature";
 import { processHillshadeBackfilled } from "./hillshade";
-import { ABORTABLE_IMAGE_LOADER, ABORTABLE_TEXTURE_LOADER } from "./loaders";
+import { ABORTABLE_TEXTURE_LOADER } from "./loaders";
 import { processMeshAdded, processMeshChanged } from "./tile";
 import {
   processWorkerTaskDelegatedEvent,
@@ -418,17 +418,22 @@ async function processRequestedData(ctx: EventContext, req: DataRequestEvent) {
   })();
 
   if (IMAGE_EXTENSIONS.includes(req.extension)) {
-    await ABORTABLE_IMAGE_LOADER.loadAsyncWithAbort(req.url, abortController)
-      .then(async (img) => {
-        // TODO: Get OffScreeCanvas from main thread in worker.
-        const canvas = document.createElement("canvas");
-        canvas.height = img.height;
-        canvas.width = img.width;
+    // Fetch the compressed bytes here and hand the Blob to a worker that runs
+    // createImageBitmap + getImageData. Decoding the image (e.g. terrain-RGB
+    // DEM tiles) entirely on the worker keeps the costly "Image Decode" off the
+    // main thread — previously we decoded an HTMLImageElement and then
+    // re-decoded it via createImageBitmap on the main thread.
+    await fetch(req.url, { signal: abortController.signal })
+      .then((res) => {
+        if (!res.ok) throw new Error();
+        return res.blob();
+      })
+      .then(async (blob) => {
+        if (abortController.signal.aborted) {
+          return;
+        }
 
-        const promise = getImageDataFromImageBitmap(
-          await createImageBitmap(img),
-          canvas.transferControlToOffscreen(),
-        );
+        const promise = getImageDataFromBlob(blob);
 
         ctx.workerPoolPromises.set(id, promise);
         const data = await (async () => {
@@ -451,9 +456,6 @@ async function processRequestedData(ctx: EventContext, req: DataRequestEvent) {
         u8a = null;
 
         data.set([]);
-
-        img.remove();
-        canvas.remove();
       })
       .catch(() => {
         buf.triggerDataRequesterFailed(req.bits);
