@@ -101,7 +101,16 @@ export const run = async (
       onTerrainChange(ev.value as TerrainType);
     });
 
-  addDateControl(view, pane, atZoneDate(view.atmosphere.date, {month: 7, date: 1, hours: 6, minutes: 0}));
+  addDateControl(
+    view,
+    pane,
+    atZoneDate(view.atmosphere.date, {
+      month: 7,
+      date: 1,
+      hours: 6,
+      minutes: 0,
+    }),
+  );
 
   const terrainDataset =
     terrainType === "cesiumIon"

@@ -14,15 +14,27 @@ export const DEFAULT_TIME_ZONE = "Asia/Tokyo";
 // transitions are handled by the dayjs timezone plugin.
 export const atZoneDate = (
   dateObj: Date,
-  { month = 1, date = 1, hours = 8, minutes = 0 }: {
-    month?: number,
-    date?: number,
-    hours?: number,
-    minutes?: number,
+  {
+    month = 1,
+    date = 1,
+    hours = 8,
+    minutes = 0,
+  }: {
+    month?: number;
+    date?: number;
+    hours?: number;
+    minutes?: number;
   },
   zone: string = DEFAULT_TIME_ZONE,
 ): Date =>
-  dayjs(dateObj).tz(zone).month(month).date(date).hour(hours).minute(minutes).startOf("minute").toDate();
+  dayjs(dateObj)
+    .tz(zone)
+    .month(month)
+    .date(date)
+    .hour(hours)
+    .minute(minutes)
+    .startOf("minute")
+    .toDate();
 
 // Returns a new Date set to `hours:minutes` wall-clock time in the given IANA
 // zone, on the same calendar day the input falls on in that zone. DST
