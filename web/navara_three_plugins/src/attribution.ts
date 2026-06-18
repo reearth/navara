@@ -22,8 +22,7 @@ export type AttributionChild = {
 
 /**
  * A data source shown at the top level. It may carry zoom-banded `children`, a
- * mandated `logo`, dynamic per-layer credits linked via `creditLayerId`, and an
- * optional `collapsible` fold for long credit lists.
+ * mandated `logo`, and dynamic per-layer credits linked via `creditLayerId`.
  */
 export type AttributionSource = {
   /** Data source / title text. */
@@ -45,14 +44,6 @@ export type AttributionSource = {
    * A plain string (not a `Layer`) keeps `attribution.ts` engine-free.
    */
   creditLayerId?: string;
-  /**
-   * When `true`, this source's sub-credits (zoom-banded children and dynamic
-   * per-layer credits) are wrapped in a collapsible group that users can fold
-   * to tidy long credit lists. The group starts **expanded**. Defaults to
-   * `false` (always-expanded flat list) — leave unset for sources whose license
-   * requires the attribution to stay visible.
-   */
-  collapsible?: boolean;
 };
 
 /**
@@ -74,6 +65,8 @@ export type AttributionStyle = {
   nestedTextColor?: string;
   /** Popover and trigger background color. */
   backgroundColor?: string;
+  /** Header divider (border) color — useful for dark themes. */
+  borderColor?: string;
 };
 
 /** A raw HTML credit with partial links, rendered as-is (after sanitization). */

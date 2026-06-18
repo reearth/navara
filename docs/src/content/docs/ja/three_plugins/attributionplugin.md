@@ -12,7 +12,7 @@ sidebar:
 地図の出典表示でよく必要になる 3 点をカバーします。
 
 - **ズーム連動クレジット** — ソースは、特定のズーム範囲でのみ適用される子クレジットを持てます。該当するものだけが表示され、ズームに応じて静かに切り替わります。
-- **レイヤー単位の動的クレジット** — レイヤー（3D タイルの copyright など）が供給するクレジットを、フィーチャーの出現 / 消滅に合わせて自動追跡します。`creditLayerId` で結び付けたソースの配下にネストされ、`collapsible` を指定すると長いクレジット一覧を折り畳めます。
+- **レイヤー単位の動的クレジット** — レイヤー（3D タイルの copyright など）が供給するクレジットを、フィーチャーの出現 / 消滅に合わせて自動追跡します。`creditLayerId` で結び付けたソースの配下にネスト表示されます。
 - **常時表示ロゴ** — 常に表示が必要なロゴ（Google など）は、ポップオーバーの開閉とは独立して左下の専用フレームに表示されます。
 
 クレジットにはインライン `<a>` リンクを含められます（表示前にサニタイズされます）。色は [`setStyle()`](#setstylestyle) で実行時にテーマ変更できます。
@@ -60,9 +60,8 @@ attribution.show(
     {
       attribution: "Google Maps Photorealistic 3D Tiles",
       logo: "/credits/GoogleMaps.png",
-      // このレイヤーのタイル単位のクレジットをここに、折り畳みグループとしてネスト。
+      // このレイヤーのタイル単位のクレジットをこのソース配下にネスト。
       creditLayerId: photoreal.id,
-      collapsible: true,
     },
     {
       attributionHtml:
@@ -146,7 +145,6 @@ type AttributionItem = AttributionSource | AttributionHtml;
 | `logo`          | `string`             | 任意のロゴ画像 URL。常時表示の左下フレームに表示される           |
 | `children`      | `AttributionChild[]` | 該当ズーム範囲でのみ表示される任意のクレジット                   |
 | `creditLayerId` | `string`             | 任意の `layer.id`。そのレイヤーのフィーチャー単位クレジットがこのソース配下にネストされる |
-| `collapsible`   | `boolean`            | `true` のとき、ソースの従属クレジットが折り畳み可能なグループになる（初期は展開）。既定は `false` |
 
 ### AttributionHtml
 
@@ -174,6 +172,7 @@ type AttributionItem = AttributionSource | AttributionHtml;
 | `textColor`       | `string` | 本文テキスト色                       |
 | `nestedTextColor` | `string` | ネストした従属クレジットのテキスト色 |
 | `backgroundColor` | `string` | ポップオーバーとトリガーの背景色     |
+| `borderColor`     | `string` | ヘッダ区切り線の色（ダークテーマで有用） |
 
 ## 補足
 

@@ -26,7 +26,6 @@ export const run = async (view: ThreeView) => {
     [
       datasetToSource(TILES_3D_DATASETS.googlePhotorealTiles, {
         creditLayerId: layer.id,
-        collapsible: true,
       }),
     ],
     [layer],

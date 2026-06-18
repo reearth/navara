@@ -33,7 +33,6 @@
  *     {
  *       attribution: "Google Maps Photorealistic 3D Tiles",
  *       creditLayerId: photoreal.id,
- *       collapsible: true,
  *     },
  *     {
  *       attributionHtml:
@@ -68,7 +67,6 @@ import {
   matchesZoom,
   safeHref,
   type AttributionItem,
-  type AttributionSource,
   type AttributionStyle,
 } from "./attribution";
 
@@ -80,41 +78,15 @@ export type AttributionPluginOptions = {
   style?: AttributionStyle;
 };
 
-const SVG_NS = "http://www.w3.org/2000/svg";
-
-/** Build the ⓘ trigger icon. Uses `currentColor`, so it follows the link color. */
-function createInfoIcon(): SVGSVGElement {
-  const svg = document.createElementNS(SVG_NS, "svg");
-  svg.setAttribute("viewBox", "0 0 24 24");
-  svg.setAttribute("fill", "none");
-  svg.setAttribute("aria-hidden", "true");
-
-  const ring = document.createElementNS(SVG_NS, "circle");
-  ring.setAttribute("cx", "12");
-  ring.setAttribute("cy", "12");
-  ring.setAttribute("r", "10.5");
-  ring.setAttribute("stroke", "currentColor");
-  ring.setAttribute("stroke-width", "2");
-
-  const dot = document.createElementNS(SVG_NS, "circle");
-  dot.setAttribute("cx", "12");
-  dot.setAttribute("cy", "8");
-  dot.setAttribute("r", "1");
-  dot.setAttribute("fill", "currentColor");
-
-  const stem = document.createElementNS(SVG_NS, "rect");
-  stem.setAttribute("x", "11");
-  stem.setAttribute("y", "11");
-  stem.setAttribute("width", "2");
-  stem.setAttribute("height", "6");
-  stem.setAttribute("rx", "1");
-  stem.setAttribute("fill", "currentColor");
-
-  svg.appendChild(ring);
-  svg.appendChild(dot);
-  svg.appendChild(stem);
-  return svg;
-}
+/**
+ * ⓘ trigger icon as a markup string, inserted via `innerHTML` so the icon can
+ * be swapped in one place. `currentColor` makes it follow the button's color.
+ */
+const SVG_ICON_HTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+  <circle cx="12" cy="12" r="10.5" stroke="currentColor" stroke-width="2" />
+  <circle cx="12" cy="8" r="1" fill="currentColor" />
+  <rect x="11" y="11" width="2" height="6" rx="1" fill="currentColor" />
+</svg>`;
 
 const STYLE_ELEMENT_ID = "navara-attribution-styles";
 
@@ -128,8 +100,8 @@ let styleRefCount = 0;
 const STYLE_TEXT = `
 .navara-attr-dock {
   position: fixed;
-  right: 16px;
-  bottom: 16px;
+  right: 8px;
+  bottom: 8px;
   z-index: 1000;
   display: flex;
   flex-direction: column;
@@ -139,23 +111,24 @@ const STYLE_TEXT = `
 }
 .navara-attr-logoframe {
   position: fixed;
-  left: 16px;
-  bottom: 16px;
+  left: 8px;
+  bottom: 8px;
   z-index: 1000;
   display: flex;
   align-items: center;
   gap: 8px;
 }
 .navara-attr-logo {
-  height: 26px;
+  height: 24px;
   width: auto;
   display: block;
   user-select: none;
 }
 .navara-attr-toggle {
-  width: 38px;
-  height: 38px;
-  min-width: 38px;
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  padding: 0;
   border-radius: 50%;
   cursor: pointer;
   background: var(--nvr-attr-bg, rgba(252, 253, 254, 0.92));
@@ -167,12 +140,13 @@ const STYLE_TEXT = `
   color: var(--nvr-attr-link, #3a6595);
 }
 .navara-attr-toggle svg {
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
   display: block;
 }
 .navara-attr-card {
-  width: min(300px, calc(100vw - 32px));
+  min-width: 280px;
+  max-width: calc(100vw - 16px);
   max-height: 340px;
   overflow-y: auto;
   background: var(--nvr-attr-bg, rgba(252, 253, 254, 0.96));
@@ -187,8 +161,8 @@ const STYLE_TEXT = `
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 14px 16px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  padding: 20px;
+  border-bottom: 1px solid var(--nvr-attr-border, rgba(0, 0, 0, 0.08));
 }
 .navara-attr-head h3 {
   margin: 0;
@@ -208,7 +182,7 @@ const STYLE_TEXT = `
 .navara-attr-list {
   list-style: none;
   margin: 0;
-  padding: 8px 16px 14px;
+  padding: 12px;
 }
 .navara-attr-item + .navara-attr-item {
   margin-top: 15px;
@@ -249,18 +223,6 @@ const STYLE_TEXT = `
 .navara-attr-card a:hover {
   text-decoration: underline;
 }
-.navara-attr-fold {
-  margin: 5px 0 0 13px;
-}
-.navara-attr-fold > summary {
-  cursor: pointer;
-  font-size: 12px;
-  color: var(--nvr-attr-nested, rgba(27, 31, 36, 0.64));
-  user-select: none;
-}
-.navara-attr-fold > .navara-attr-related {
-  margin-top: 5px;
-}
 `;
 
 /**
@@ -294,12 +256,6 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
     { credits: Map<bigint, string>; visible: Set<bigint> }
   >();
   private layerCleanups: (() => void)[] = [];
-  /**
-   * Collapsible-group open state, keyed by the source object itself (its
-   * identity) — survives re-renders, and two same-named sources can't collide
-   * on one shared entry. A WeakMap lets dropped sources be garbage-collected.
-   */
-  private foldOpen = new WeakMap<AttributionSource, boolean>();
 
   /** Color overrides, applied as CSS custom properties on the dock. */
   private style: AttributionStyle;
@@ -373,6 +329,7 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
     set("--nvr-attr-text", this.style.textColor);
     set("--nvr-attr-nested", this.style.nestedTextColor);
     set("--nvr-attr-bg", this.style.backgroundColor);
+    set("--nvr-attr-border", this.style.borderColor);
   }
 
   /**
@@ -443,7 +400,7 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
     const toggle = document.createElement("button");
     toggle.className = "navara-attr-toggle";
     toggle.type = "button";
-    toggle.appendChild(createInfoIcon());
+    toggle.innerHTML = SVG_ICON_HTML;
     toggle.setAttribute("aria-expanded", "false");
     toggle.setAttribute("aria-label", "Show attributions");
     toggle.addEventListener("click", () => this.setOpen(this.card?.hidden));
@@ -485,10 +442,9 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
 
   /**
    * Rebuild the list. Each source shows its sub-credits — zoom-filtered static
-   * `children` plus any tracked layer's dynamic credits — in one list, always
-   * expanded by default. A source marked `collapsible` wraps that list in a
-   * foldable group (starts expanded). Layers whose id no source declared via
-   * `creditLayerId` fall back to flat top-level credits.
+   * `children` plus any tracked layer's dynamic credits — as a nested list.
+   * Layers whose id no source declared via `creditLayerId` fall back to flat
+   * top-level credits.
    */
   private populateList(): void {
     if (!this.listEl) return;
@@ -535,12 +491,7 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
         }
       }
 
-      const count = sub.childElementCount;
-      if (count > 0) {
-        li.appendChild(
-          item.collapsible ? this.wrapFold(item, sub, count) : sub,
-        );
-      }
+      if (sub.childElementCount > 0) li.appendChild(sub);
 
       this.listEl.appendChild(li);
     }
@@ -566,30 +517,6 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
       if (credit) strings.push(credit);
     }
     return aggregateCredits(strings);
-  }
-
-  /**
-   * Wrap a source's sub-credit list in a collapsible group, expanded by
-   * default. The open/closed state is preserved across re-renders, keyed by the
-   * source object itself so same-named sources can't collide.
-   */
-  private wrapFold(
-    source: AttributionSource,
-    list: HTMLUListElement,
-    count: number,
-  ): HTMLDetailsElement {
-    const details = document.createElement("details");
-    details.className = "navara-attr-fold";
-    details.open = this.foldOpen.get(source) ?? true;
-    details.addEventListener("toggle", () => {
-      this.foldOpen.set(source, details.open);
-    });
-
-    const summary = document.createElement("summary");
-    summary.textContent = `${count} credit${count === 1 ? "" : "s"}`;
-    details.appendChild(summary);
-    details.appendChild(list);
-    return details;
   }
 
   /**
@@ -694,7 +621,6 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
     this.isOpen = false;
 
     this.layerCredits.clear();
-    this.foldOpen = new WeakMap();
   }
 
   /**

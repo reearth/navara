@@ -12,7 +12,7 @@ sidebar:
 It covers the three things map attributions usually need:
 
 - **Zoom-aware credits** — a source can carry child credits that apply only within a zoom range, so only the relevant ones are shown and they switch quietly as the user zooms.
-- **Per-layer credits** — credits supplied by layers (such as a 3D tile's copyright) are tracked automatically and nested under the source you link with `creditLayerId`; mark that source `collapsible` to fold a long credit list.
+- **Per-layer credits** — credits supplied by layers (such as a 3D tile's copyright) are tracked automatically and nested under the source you link with `creditLayerId`.
 - **Always-visible logos** — logos that must always be shown (e.g. Google) sit in a separate bottom-left frame, independent of whether the popover is open.
 
 Credits may contain inline `<a>` links; they are sanitized before display. The colors are themeable at runtime with [`setStyle()`](#setstylestyle).
@@ -60,9 +60,8 @@ attribution.show(
     {
       attribution: "Google Maps Photorealistic 3D Tiles",
       logo: "/credits/GoogleMaps.png",
-      // Nest this layer's per-tile credits here, folded into a group.
+      // Nest this layer's per-tile credits under this source.
       creditLayerId: photoreal.id,
-      collapsible: true,
     },
     {
       attributionHtml:
@@ -146,7 +145,6 @@ type AttributionItem = AttributionSource | AttributionHtml;
 | `logo`        | `string`             | Optional logo image URL, shown in the always-visible bottom-left frame            |
 | `children`    | `AttributionChild[]` | Optional credits shown only at their zoom range                                   |
 | `creditLayerId` | `string`           | Optional `layer.id`; per-feature credits from that layer are nested under this source |
-| `collapsible` | `boolean`            | When `true`, the source's sub-credits become a foldable group (starts expanded). Defaults to `false` |
 
 ### AttributionHtml
 
@@ -174,6 +172,7 @@ All fields are optional; an unset field keeps the default color. Colors are appl
 | `textColor`      | `string` | Body text color                            |
 | `nestedTextColor`| `string` | Nested sub-credit text color               |
 | `backgroundColor`| `string` | Popover and trigger background color       |
+| `borderColor`    | `string` | Header divider color (useful for dark themes) |
 
 ## Notes
 
