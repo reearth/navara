@@ -14,30 +14,6 @@ import { showAttributions } from "../../helpers/attributions";
 import { PMTILES_DATASETS } from "../../helpers/constants";
 import { SH_COEFFICIENTS } from "../../helpers/sh";
 
-// A multi-script font family: each face declares the `unicodeRanges` it covers,
-// and the font pipeline picks the first face whose range contains each glyph —
-// so a single text layer can label names in any script without manual routing.
-//
-// The labels are bold and wide: Latin/Vietnamese use Archivo at ExtraBold
-// (wght 800) and the widest width (wdth 125); every other script uses Noto at
-// the heaviest weight Google Fonts offers it.
-//
-// Precedence (first match wins): Archivo gives the bold/wide Latin look and the
-// fallback (face 0); a "Noto Sans" face backstops Cyrillic/Greek plus any Latin
-// glyphs Archivo omits (e.g. U+02BB in "Oʻzbekiston", U+1E37 in "Ṃajeḷ"); then
-// per-script Noto faces (Arabic, Hebrew, Thaana, the Indic family,
-// Thai/Lao/Khmer/Myanmar, Georgian, Armenian, Ethiopic, Tibetan, Mongolian,
-// Tifinagh, …); then full CJK (Noto Sans JP/SC/KR).
-//
-// Each face's ranges are built from the font's ACTUAL cmap, not the CSS
-// `unicode-range` — because the segmenter has no glyph-existence fallback, a
-// face that claimed a glyph it lacks (a font subset, or the shared CJK slice
-// partition where SC advertises Hangul it doesn't ship) would tofu instead of
-// deferring to the next face. Faces load lazily, so the long list is cheap.
-//
-// Regenerate (from repo root): python3 \
-//   web/navara_three/example/pages/pmtiles-overture/gen_label_font_family.py \
-//   web/navara_three/example/pages/pmtiles-overture/labelFontFamily.json
 import LABEL_FONT_FAMILY from "./labelFontFamily.json";
 
 export type CustomDescriptions = DefaultDescriptions;
@@ -53,17 +29,41 @@ const VIEWPOINTS = {
   Americas: { lng: -95, lat: 35, height: 8_000_000, pitch: -90 },
 } as const;
 
-// Overture's `division` layer carries far too many features to label all of
-// them on a global view, so we keep administrative areas (countries / regions)
-// plus only the largest localities. `subtype` and `population` come straight
-// from the Overture schema.
-const LABELLED_SUBTYPES = new Set(["country"]);
+const LABEL_TIERS = [
+  { 
+    key: "country",
+    maxHeight: 4_000_000,
+    match: ["country"]
+  },
+  {
+    key: "region",
+    maxHeight: 2_000_000,
+    match: ["region", "macroregion", "governorate", "province", "state"],
+  },
+  {
+    key: "county",
+    maxHeight: 800_000,
+    match: ["county", "macrocounty", "localadmin", "district"],
+  },
+  {
+    key: "locality",
+    maxHeight: 100_000,
+    match: ["locality", "city", "town"],
+  },
+];
+
+// Reverse index: normalized property value -> tier index (first tier wins).
+const TIER_INDEX_OF = new Map<string, number>();
+LABEL_TIERS.forEach((tier, i) => {
+  for (const value of tier.match) {
+    if (!TIER_INDEX_OF.has(value)) TIER_INDEX_OF.set(value, i);
+  }
+});
+
+// Within the finest (`locality`) tier, still drop everything but large cities
+// to keep dense regions legible.
 const CITY_POPULATION_THRESHOLD = 1_000_000;
 
-// Polygon fills from the `base` theme, drawn back-to-front. `land` is the base
-// fill; everything else drapes on top of it. Colors mirror the Overture Maps
-// Explorer palette (its `sand`/`ocean`/`green` design tokens, converted from
-// HSL to hex) so this page reads the same as explore.overturemaps.org.
 const BASE_POLYGONS = [
   { title: "Land", source: "land", color: "#f8f4f1" }, // sand.50
   { title: "Land cover", source: "land_cover", color: "#c4eaa9" }, // grass fallback
@@ -71,10 +71,6 @@ const BASE_POLYGONS = [
   { title: "Water", source: "water", color: "#79cdf6" }, // ocean.900
 ] as const;
 
-// `land_cover` features carry a `subtype` (the dominant ground material, from
-// Overture's `LandCoverSubtype` enum). Instead of one flat fill we color each
-// feature by its category. Any subtype not listed falls back to the layer's
-// material color. Values are Overture's per-subtype semantic tokens.
 const LAND_COVER_COLORS: Record<string, string> = {
   forest: "#a2e2a4", // green.500
   mangrove: "#a1e3cf", // teal.100
@@ -94,14 +90,9 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
 
   await view.init();
 
-  // defaultPlugin.addDefaultPhotorealScene();
-
   view.addFontFamily(LABEL_FONT_FAMILY);
 
   view.addLight({ ambient: {} });
-  // view.toneMappingExposure = 3;
-  // view.addEffect({ toneMapping: { mode: ToneMappingMode.REINHARD2 } });
-  // view.addEffect({ smaa: {} });
   view.addLight({
     lightProbe: {
       sh: new SphericalHarmonics3().set(SH_COEFFICIENTS.white),
@@ -111,8 +102,6 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
 
   view.setCamera({ ...VIEWPOINTS.World, heading: 0, roll: 0 });
 
-  // A plain ellipsoid surface to drape the clamp-to-ground vectors onto (this
-  // example has no terrain/raster base of its own).
   view.addLayer({ type: "terrain", ellipsoid: {} });
 
   const baseUrl = PMTILES_DATASETS.overtureBase.url;
@@ -205,7 +194,16 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   // family resolves the correct face per glyph.
   const labelTitle = "Labels";
   visible[labelTitle] = true;
-  const params = { size: 16 };
+  const params = { size: 20 };
+
+  // The evaluator (which runs per feature) reads this closure variable to decide
+  // which tiers are currently visible. We keep it in sync with the camera below
+  // and re-run the evaluator only when crossing a tier threshold.
+  //
+  // Seed it from the initial viewpoint rather than `view.camera.positionGeographic`:
+  // that getter reads the WASM core's camera status, which isn't computed until
+  // the engine ticks its first frame, so reading it here would throw.
+  let currentHeight: number = VIEWPOINTS.World.height;
 
   const labelLayer = view.addLayer({
     type: "mvt",
@@ -221,9 +219,13 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
       outlineWidth: 5,
       outlineOpacity: 0.4,
       offsetDepth: true,
+      // highQuality: true,
       depthTest: true,
     },
-    vectorTile: { maxZoom: 1, layers: ["division"] },
+    // Finer admin features (governorate/district) only exist in higher-zoom
+    // tiles, so we fetch up to z12 (matching the boundary layer) and rely on
+    // the altitude tiers below to keep the world view uncluttered.
+    vectorTile: { maxZoom: 12, layers: ["division"] },
   });
 
   {
@@ -235,26 +237,55 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
           const name = properties?.["@name"] as string | undefined;
           if (!name) return { text: "", show: false };
 
-          // Declutter: administrative areas plus only the largest cities.
-          const subtype = properties?.["subtype"] as string | undefined;
-          const population = properties?.["population"] as number | undefined;
-          const isAdminArea = subtype ? LABELLED_SUBTYPES.has(subtype) : false;
-          const isMajorCity =
-            subtype === "locality" &&
-            (population ?? 0) >= CITY_POPULATION_THRESHOLD;
-          if (!isAdminArea && !isMajorCity) {
-            return { text: "", show: false };
+          // Assign the feature to an altitude tier: prefer the locale-specific
+          // `local_type` (governorate/district/…), fall back to the stable
+          // `subtype` enum. Anything unrecognized is never labeled.
+          const localType = (
+            properties?.["local_type"] as string | undefined
+          )?.toLowerCase();
+          const subtype = (
+            properties?.["subtype"] as string | undefined
+          )?.toLowerCase();
+          const tierIndex =
+            (localType !== undefined
+              ? TIER_INDEX_OF.get(localType)
+              : undefined) ??
+            (subtype !== undefined ? TIER_INDEX_OF.get(subtype) : undefined);
+          if (tierIndex === undefined) return { text: "", show: false };
+
+          const tier = LABEL_TIERS[tierIndex];
+
+          // Hidden until the camera descends to this tier's altitude band.
+          if (currentHeight > tier.maxHeight) return { text: "", show: false };
+
+          // Within the locality tier, still keep only the largest cities.
+          if (tier.key === "locality") {
+            const population = properties?.["population"] as number | undefined;
+            if ((population ?? 0) < CITY_POPULATION_THRESHOLD) {
+              return { text: "", show: false };
+            }
           }
 
           return { text: name, show: true };
         },
-        { filters: ["@name", "subtype", "population"] },
+        { filters: ["@name", "subtype", "local_type", "population"] },
       );
     };
     labelLayer.on("featureCreated", apply);
     labelLayer.on("featureUpdated", apply);
     // toggles.push({ title: labelTitle, layer: labelLayer });
   }
+
+  // Drive label visibility from camera altitude. The set of visible tiers only
+  // changes when `currentHeight` crosses a tier's `maxHeight`, so we encode the
+  // current set as a "band key" and re-style only on a change — `move` fires
+  // continuously while the camera animates, and re-evaluating every frame would
+  // thrash the batcher for no visible difference.
+  const bandKeyAt = (height: number) =>
+    LABEL_TIERS.map((tier) => (height <= tier.maxHeight ? "1" : "0")).join("");
+  let lastBandKey = bandKeyAt(currentHeight);
+  // The single `move` handler that drives both the altitude readout and the
+  // tier restyle is registered at the end, once the control panel exists.
 
   // Re-evaluate every layer and request a render. `forceUpdate` re-emits
   // `featureUpdated` for all loaded tiles, so a toggle flips visibility on
@@ -293,6 +324,60 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
       labelLayer.update({ text: { size: value } });
       view.forceUpdate();
     });
+
+  // Live-tunable altitude thresholds (km). The `country` tier is always visible
+  // (Infinity), so only the finer, finite tiers are exposed. Changing one
+  // re-evaluates the labels immediately against the current camera height.
+  const tiersFolder = pane.addFolder({ title: "Label altitude (km)" });
+  for (const tier of LABEL_TIERS) {
+    const proxy = { km: Math.round(tier.maxHeight / 1000) };
+    tiersFolder
+      .addBinding(proxy, "km", {
+        min: 100,
+        max: 20_000,
+        step: 100,
+        label: tier.key,
+      })
+      .on("change", ({ value }) => {
+        tier.maxHeight = value * 1000;
+        lastBandKey = bandKeyAt(currentHeight);
+        labelLayer.forceUpdate();
+        view.forceUpdate();
+      });
+  }
+
+  // Read-only altitude readout. A `readonly` binding infers its view from the
+  // bound value's type (string -> text monitor); we mutate `readout.altitude`
+  // and call `.refresh()` from the move handler to update it.
+  const readout = { altitude: `${(currentHeight / 1000).toFixed(0)} km` };
+  const altitudeMonitor = pane.addBinding(readout, "altitude", {
+    readonly: true,
+    label: "Camera Altitude",
+  });
+
+  // One handler for both jobs: update the readout every move, and restyle the
+  // labels only when the camera crosses a tier threshold.
+  view.camera.on("move", () => {
+    // `positionGeographic` throws if the core's camera status isn't ready yet;
+    // skip this tick rather than letting it escape the camera event loop.
+    let height: number;
+    try {
+      height = view.camera.positionGeographic.height;
+    } catch {
+      return;
+    }
+    currentHeight = height;
+
+    readout.altitude = `${(currentHeight / 1000).toFixed(0)} km`;
+    altitudeMonitor.refresh();
+
+    const bandKey = bandKeyAt(currentHeight);
+    if (bandKey === lastBandKey) return;
+    lastBandKey = bandKey;
+    // Re-run the label evaluator against the new altitude and redraw.
+    labelLayer.forceUpdate();
+    view.forceUpdate();
+  });
 
   showAttributions([
     PMTILES_DATASETS.overtureBase,

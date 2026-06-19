@@ -470,7 +470,7 @@ async function processRequestedData(ctx: EventContext, req: DataRequestEvent) {
   // behind an explicit Accept header. Only opt in when the layer requested it
   // — otherwise some servers refuse to respond, and we don't want to pay for
   // bytes we won't use anyway.
-  var headers = (() => {
+  let headers = (() => {
     if (req.extension !== "terrain") {
       return req.token ? { Authorization: `Bearer ${req.token}` } : undefined;
     }
