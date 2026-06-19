@@ -53,6 +53,14 @@ describe("aggregateCredits", () => {
   it("does not split a ';' that terminates an HTML entity", () => {
     expect(aggregateCredits(["AT&amp;T;Foo"])).toEqual(["AT&amp;T", "Foo"]);
   });
+
+  it("splits inside non-anchor tags and drops the tag from the key", () => {
+    // Split into "Google"/"Airbus" (tag dropped), then ordered alphabetically.
+    expect(aggregateCredits(["<b>Google;Airbus</b>"])).toEqual([
+      "Airbus",
+      "Google",
+    ]);
+  });
 });
 
 describe("isAttributionHtml", () => {

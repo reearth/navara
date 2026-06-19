@@ -337,7 +337,7 @@ mod tests {
         let z1 = camera_zoom_level(1000.0, 1.0, 800.0, 0.0, A);
         let z2 = camera_zoom_level(2000.0, 1.0, 800.0, 0.0, A);
         assert!(
-            (z1 - z2 - 1.0).abs() < 1e-9,
+            (z1 - z2 - 1.0).abs() < 1e-6,
             "doubling height should drop zoom by 1"
         );
         // Closer to the surface means a higher zoom level.

@@ -133,20 +133,30 @@ function splitCredits(raw: string): string[] {
     if (trimmed) segments.push(trimmed);
     current = "";
   };
-  doc.body.childNodes.forEach((node) => {
-    if (node instanceof Text) {
-      const parts = (node.textContent ?? "").split(";");
-      parts.forEach((part, i) => {
-        if (i > 0) flush();
-        current += escapeHtmlText(part);
-      });
-      return;
-    }
-    if (node instanceof Element) {
-      // Keep elements (notably `<a>`) atomic — never split inside them.
-      current += node.outerHTML;
-    }
-  });
+  const walk = (parent: Node): void => {
+    parent.childNodes.forEach((node) => {
+      if (node instanceof Text) {
+        const parts = (node.textContent ?? "").split(";");
+        parts.forEach((part, i) => {
+          if (i > 0) flush();
+          current += escapeHtmlText(part);
+        });
+        return;
+      }
+      if (node instanceof HTMLAnchorElement) {
+        // Keep `<a>` atomic so a `;` inside its href/text isn't a delimiter.
+        current += node.outerHTML;
+        return;
+      }
+      if (node instanceof Element) {
+        // Other tags are dropped by the sanitizer anyway — recurse into their
+        // children so a `;` inside still splits and the tag doesn't end up in
+        // the dedup key.
+        walk(node);
+      }
+    });
+  };
+  walk(doc.body);
   flush();
   return segments;
 }

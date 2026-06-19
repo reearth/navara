@@ -132,7 +132,7 @@ const STYLE_TEXT = `
   border-radius: 50%;
   cursor: pointer;
   background: var(--nvr-attr-bg, rgba(252, 253, 254, 0.92));
-  border: 1px solid rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--nvr-attr-border, rgba(0, 0, 0, 0.1));
   box-shadow: 0 2px 8px rgba(20, 24, 28, 0.16);
   display: flex;
   align-items: center;
@@ -176,7 +176,7 @@ const STYLE_TEXT = `
   cursor: pointer;
   font-size: 15px;
   line-height: 1;
-  color: rgba(27, 31, 36, 0.64);
+  color: var(--nvr-attr-nested, rgba(27, 31, 36, 0.64));
   padding: 2px 4px;
 }
 .navara-attr-list {
