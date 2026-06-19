@@ -50,7 +50,7 @@ void main() {
     // closer to camera.
     float depthInput = uOffsetDepth ? vFragDepth * 0.8 : vFragDepth;
     gl_FragDepth = log(depthInput) / log(uFarPlane + 1.0);
-    gl_FragDepth += 0.0001;
+    gl_FragDepth = clamp(gl_FragDepth + 0.0001, 0.0, 1.0);
     // Picking mode
     if (nvr_uPickable > 0.0) {
         gl_FragColor = vec4(nvr_batchIdToColor(nvr_uBatchId), 1.0);
@@ -150,7 +150,7 @@ void main() {
         //   • outline stays coplanar with the background, so it still draws over it
         //     via instance draw order (background is instance 0, drawn first).
         // AA band ramps smoothly because fillAlpha is the weight.
-        gl_FragDepth -= 0.0002 * fillAlpha;
+        gl_FragDepth = clamp(gl_FragDepth - (0.0002 * fillAlpha), 0.0, 1.0);
         gl_FragColor = vec4(color, alpha);
     } else {
         float alpha = smoothstep(uSdfThreshold - edgeWidth,
@@ -158,7 +158,7 @@ void main() {
                                  dist);
         if (alpha <= 0.0) discard;
         gl_FragColor = vec4(uColor, alpha);
-        gl_FragDepth -= 0.0001; 
+        gl_FragDepth = clamp(gl_FragDepth - 0.0001, 0.0, 1.0);
     }
 
     #ifndef USE_SHADOWMAP_DEPTH
