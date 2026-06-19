@@ -18,7 +18,7 @@ use navara_math::{Transform, Vec3};
 
 use navara_feature_component::polyline::PolylineMarker;
 use navara_tile_component::{
-    OverscaledTileHandle, RasterTileQuadtree, TileExtent, TileMeshMarker,
+    OverscaledTileHandle, TerrainTileQuadtree, TileExtent, TileMeshMarker,
     sample_terrain_height_within_extent,
 };
 use navara_worker::construct_polyline_batched_feature::{
@@ -153,7 +153,7 @@ pub fn transfer_batched_mesh(
 //       to execute only when the layer's bounding box is within the camera frustum.
 #[allow(clippy::too_many_arguments)]
 pub fn update_height_by_terrain(
-    mut qt: ResMut<RasterTileQuadtree>,
+    mut qt: ResMut<TerrainTileQuadtree>,
     mut renderable_features: Query<(&PolylineMarker, &mut RenderableFeature)>,
     tile_meshes: Query<&TileMeshMarker, Added<TileMeshMarker>>,
 ) {

@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 /// Globe resource that manages shared properties across different material types.
 ///
-/// This resource provides centralized configuration for VectorTile, RasterTile,
+/// This resource provides centralized configuration for VectorTile, TerrainTile,
 /// and RasterTerrain materials, replacing individual material properties with
 /// a unified globe configuration.
 #[derive(Debug, Clone, PartialEq, Resource, Serialize, Deserialize)]

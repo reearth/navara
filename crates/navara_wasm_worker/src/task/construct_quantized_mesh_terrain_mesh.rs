@@ -1,6 +1,6 @@
 use navara_core::{TilingScheme, WGS84_64};
 use navara_geometry::calculate_skirt_height;
-use navara_tile_component::{QuantizedMeshData, RasterTile, TerrainConstructContext, TerrainData};
+use navara_tile_component::{QuantizedMeshData, TerrainConstructContext, TerrainData, TerrainTile};
 use navara_wasm_transferable::TransferableTile;
 use navara_wasm_types::ReturnedConstructedTerrainMesh;
 use wasm_bindgen::prelude::wasm_bindgen;
@@ -14,7 +14,7 @@ pub fn construct_quantized_mesh_terrain_mesh(
     geographic: bool,
     tms: bool,
 ) -> ReturnedConstructedTerrainMesh {
-    let tile: RasterTile = tile.into();
+    let tile: TerrainTile = tile.into();
     // TransferableTile.into() uses WebMercator by default; recompute with the actual scheme.
     let tiling_scheme = if geographic {
         TilingScheme::Geographic { tms }

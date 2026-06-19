@@ -7,10 +7,10 @@ pub mod texture_fragment;
 use bevy_app::{App, Plugin, PreUpdate, Update};
 use bevy_ecs::schedule::{IntoScheduleConfigs, SystemSet};
 use navara_data_requester::DataManager;
-use navara_tile_component::{CachedMartini, RasterTileQuadtree, TerrainInformationQuadtree};
+use navara_tile_component::{CachedMartini, TerrainInformationQuadtree, TerrainTileQuadtree};
 use tile::{event::MeshPreparedEvent, tile_cache_manager::TileCacheManager};
 
-/// System set for raster tile processing.
+/// System set for terrain tile processing.
 /// Feature systems that depend on terrain data should run `.after(TileSet)`.
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct TileSet;
@@ -25,7 +25,7 @@ impl Plugin for TilePlugin {
         app.init_resource::<TileCacheManager>()
             .init_resource::<CachedMartini>()
             .init_resource::<DataManager>()
-            .insert_resource(RasterTileQuadtree::new_with_linear_qt())
+            .insert_resource(TerrainTileQuadtree::new_with_linear_qt())
             .insert_resource(TerrainInformationQuadtree::new_with_linear_qt())
             .add_message::<MeshPreparedEvent>()
             .add_systems(

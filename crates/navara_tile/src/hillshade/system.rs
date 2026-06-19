@@ -13,7 +13,7 @@ use navara_tile_component::{
     HillshadeBackfillEventData, HillshadeBackfillEvents, HillshadeCancelRequested, HillshadeEdges,
     HillshadeEdgesExtracted,
 };
-use navara_tile_component::{RasterTileQuadtree, TileTextureFragmentMarker};
+use navara_tile_component::{TerrainTileQuadtree, TileTextureFragmentMarker};
 
 const MAX_HILLSHADE_PENDINGS: u32 = 50;
 
@@ -55,7 +55,7 @@ enum EdgeDirection {
 #[allow(clippy::type_complexity)]
 pub fn filter_requestable_hillshade_data_requester(
     mut commands: Commands,
-    mut qt: ResMut<RasterTileQuadtree>,
+    mut qt: ResMut<TerrainTileQuadtree>,
     hillshade_requesters: Query<
         (
             Entity,
@@ -125,7 +125,7 @@ pub fn filter_requestable_hillshade_data_requester(
 pub fn backfill_hillshade_on_loaded(
     mut commands: Commands,
     mut buf: ResMut<BufferStore>,
-    qt: Res<RasterTileQuadtree>,
+    qt: Res<TerrainTileQuadtree>,
     mut events: ResMut<EventStore>,
     query: Query<
         (Entity, &DataRequester, &TileTextureFragmentMarker),
@@ -396,7 +396,7 @@ fn collect_neighbor_edge_exchanges(
     z: usize,
     extracted_edges: &Option<ExtractedEdges>,
     edges_query: &Query<&HillshadeEdges>,
-    qt: &RasterTileQuadtree,
+    qt: &TerrainTileQuadtree,
     data_requesters: &Query<
         &DataRequester,
         (

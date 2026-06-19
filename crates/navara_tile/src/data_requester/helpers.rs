@@ -8,14 +8,14 @@ use navara_core::TilingScheme;
 use navara_data_requester::{DataManager, DataRequester, DataRequesterExtension};
 use navara_layer::{TerrainDataType, TerrainLayer};
 use navara_tile_component::{
-    QuantizedMeshData, RasterDEMData, RasterTile, TerrainData, TerrainDataRequesterMarker,
+    QuantizedMeshData, RasterDEMData, TerrainData, TerrainDataRequesterMarker, TerrainTile,
     TileHandle, TileTerrainDataRequesterQuery,
 };
 
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn request_terrain_data(
     commands: &mut Commands,
-    tile: &mut RasterTile,
+    tile: &mut TerrainTile,
     buf: &mut BufferStore,
     data_manager: &mut DataManager,
     terrain_layer: &Option<&TerrainLayer>,
