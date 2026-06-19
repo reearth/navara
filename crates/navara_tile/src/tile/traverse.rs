@@ -102,7 +102,7 @@ pub fn traverse_tile(
     };
 
     match qt.qt.get_mut(handle) {
-        Some(tile) => begine_traverse_tile(ellipsoid, occluder, camera, frame, tile),
+        Some(tile) => begin_traverse_tile(ellipsoid, occluder, camera, frame, tile),
         None => unreachable!(),
     };
 
@@ -624,7 +624,7 @@ fn prepare_upsamplable_terrain_data(
     tile.terrain_data = Some(terrain_data);
 }
 
-fn begine_traverse_tile(
+fn begin_traverse_tile(
     ellipsoid: &Ellipsoid<FloatType>,
     occluder: &EllipsoidalOccluder,
     _camera: &Transform,
