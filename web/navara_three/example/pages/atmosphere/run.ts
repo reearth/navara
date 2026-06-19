@@ -274,7 +274,8 @@ const addCloudsTilesControl = (
       if (
         !description.rasterTile ||
         (description.rasterTile.opacity != null &&
-          description.rasterTile.opacity <= 0)
+          description.rasterTile.opacity <= 0 &&
+          opacity <= 0)
       )
         return;
 
