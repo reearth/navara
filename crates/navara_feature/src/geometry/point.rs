@@ -82,7 +82,7 @@ impl PositionBuffer {
     }
 }
 
-/// Collects extents of newly added terrain tiles from the raster quadtree.
+/// Collects extents of newly added terrain tiles from the terrain-tile quadtree.
 pub fn collect_changed_tile_extents<'a>(
     qt: &TerrainTileQuadtree,
     tile_meshes: impl Iterator<Item = &'a TileMeshMarker>,
