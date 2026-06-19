@@ -70,6 +70,16 @@ pub struct HillshadeBackfillEvents {
 #[derive(Component, Debug, Clone, Copy)]
 pub struct HillshadeEdgesExtracted;
 
+/// One-shot marker inserted by `RasterTile::destroy` to request a hillshade
+/// cancel event for an entity. Drained by `emit_hillshade_canceled` in the
+/// same frame, which pushes the entity to `EventStore.hillshade_canceled` and
+/// removes the marker.
+///
+/// Scopes cancel emission to the RasterTile destruction path so it can't
+/// double-fire texture teardown that `texture_fragment_removed` already owns.
+#[derive(Component, Debug, Clone, Copy)]
+pub struct HillshadeCancelRequested;
+
 /// Component storing handles to the 4 edge buffers of a hillshade tile
 /// Each edge is 256×4 bytes (RGBA) for a 256×256 DEM texture
 /// Edges are extracted after first load to save memory (4KB instead of 256KB per tile)

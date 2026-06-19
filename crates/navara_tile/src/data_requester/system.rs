@@ -6,14 +6,14 @@ use bevy_ecs::{
 use navara_buffer_store::BufferStore;
 use navara_component::{Deleted, Ignored, OrderByDistance, Priority, Requested};
 use navara_data_requester::{DataRequester, DataRequesterStatus};
-use navara_tile_component::{RasterTileQuadtree, TerrainDataRequesterMarker};
+use navara_tile_component::{TerrainDataRequesterMarker, TerrainTileQuadtree};
 
 const MAX_PENDINGS: u32 = 50;
 
 #[allow(clippy::type_complexity)]
 pub(crate) fn filter_requestable_data_requester(
     mut commands: Commands,
-    mut qt: ResMut<RasterTileQuadtree>,
+    mut qt: ResMut<TerrainTileQuadtree>,
     mut buf: ResMut<BufferStore>,
     data_requesters: Query<
         (

@@ -25,6 +25,7 @@ import type { LayersManager } from "../layersManager";
 import type { TileMesh } from "../mesh/tile";
 import type { Scenes, TexturizedSceneByTileCoordinates } from "../scene";
 import type { TextureOptions } from "../textures";
+import type { TileTextureCompositor } from "../tileTexture";
 import type {
   AbortControllers,
   MeshCache,
@@ -159,6 +160,7 @@ type EventContextArgs = {
   workerPoolPromises: WorkerPoolPromises;
   uniforms: CommonUniforms;
   texturizedSceneByTileCoordinates: TexturizedSceneByTileCoordinates;
+  tileTextureCompositor: TileTextureCompositor;
   tileMapByHandle: TileMapByHandle;
   textureOptions: TextureOptions;
   renderFlag: RenderFlag;
@@ -192,6 +194,7 @@ export class EventContext {
   readonly workerPoolPromises: WorkerPoolPromises;
   readonly uniforms: CommonUniforms;
   readonly texturizedSceneByTileCoordinates: TexturizedSceneByTileCoordinates;
+  readonly tileTextureCompositor: TileTextureCompositor;
   readonly tileMapByHandle: TileMapByHandle;
   readonly textureOptions: TextureOptions;
   readonly renderFlag: RenderFlag;
@@ -223,6 +226,7 @@ export class EventContext {
     this.uniforms = args.uniforms;
     this.texturizedSceneByTileCoordinates =
       args.texturizedSceneByTileCoordinates;
+    this.tileTextureCompositor = args.tileTextureCompositor;
     this.tileMapByHandle = args.tileMapByHandle;
     this.textureOptions = args.textureOptions;
     this.renderFlag = args.renderFlag;

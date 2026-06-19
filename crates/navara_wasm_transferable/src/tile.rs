@@ -1,4 +1,4 @@
-use navara_tile_component::RasterTile;
+use navara_tile_component::TerrainTile;
 use navara_wasm_types::{CachedMeshHandle, TileXYZ};
 use wasm_bindgen::prelude::wasm_bindgen;
 
@@ -29,8 +29,8 @@ impl TransferableTile {
     }
 }
 
-impl<'a> From<&'a RasterTile> for TransferableTile {
-    fn from(value: &'a RasterTile) -> Self {
+impl<'a> From<&'a TerrainTile> for TransferableTile {
+    fn from(value: &'a TerrainTile) -> Self {
         Self {
             coords: value.coords.into(),
             max_height: value.max_height,
@@ -40,7 +40,7 @@ impl<'a> From<&'a RasterTile> for TransferableTile {
     }
 }
 
-impl From<TransferableTile> for RasterTile {
+impl From<TransferableTile> for TerrainTile {
     fn from(value: TransferableTile) -> Self {
         let mut t = Self::new(value.coords.into(), value.max_height, value.min_height);
         t.cached_mesh_handle = value.cached_mesh_handle.map(|v| v.into());

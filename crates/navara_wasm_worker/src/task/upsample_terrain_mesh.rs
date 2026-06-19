@@ -1,6 +1,6 @@
 use navara_core::{TilingScheme, WGS84_64};
 use navara_geometry::calculate_skirt_height;
-use navara_tile_component::{QuantizedMeshData, RasterDEMData, RasterTile};
+use navara_tile_component::{QuantizedMeshData, RasterDEMData, TerrainTile};
 use navara_wasm_transferable::{TransferableRasterDEMData, TransferableTile};
 use navara_wasm_types::{ReturnedConstructedTerrainMesh, UpsamplableTerrainGeometry};
 use wasm_bindgen::prelude::wasm_bindgen;
@@ -19,7 +19,7 @@ pub fn upsample_terrain_mesh(
     let tiling_scheme = TilingScheme::WebMercator { tms };
 
     let tile_cached_mesh_handle = tile.cached_mesh_handle.take();
-    let mut tile = RasterTile::new_with_scheme(
+    let mut tile = TerrainTile::new_with_scheme(
         tile.coords.into(),
         tile.max_height,
         tile.min_height,
@@ -29,7 +29,7 @@ pub fn upsample_terrain_mesh(
     tile.terrain_data = Some(Box::new(raster_dem_data.clone()));
 
     let parent_cached_mesh_handle = parent_tile.cached_mesh_handle.take();
-    let mut parent_tile = RasterTile::new_with_scheme(
+    let mut parent_tile = TerrainTile::new_with_scheme(
         parent_tile.coords.into(),
         parent_tile.max_height,
         parent_tile.min_height,
@@ -71,7 +71,7 @@ pub fn upsample_quantized_mesh_terrain_mesh(
     };
 
     let tile_cached_mesh_handle = tile.cached_mesh_handle.take();
-    let mut tile = RasterTile::new_with_scheme(
+    let mut tile = TerrainTile::new_with_scheme(
         tile.coords.into(),
         tile.max_height,
         tile.min_height,
@@ -83,7 +83,7 @@ pub fn upsample_quantized_mesh_terrain_mesh(
     )));
 
     let parent_cached_mesh_handle = parent_tile.cached_mesh_handle.take();
-    let mut parent_tile = RasterTile::new_with_scheme(
+    let mut parent_tile = TerrainTile::new_with_scheme(
         parent_tile.coords.into(),
         parent_tile.max_height,
         parent_tile.min_height,

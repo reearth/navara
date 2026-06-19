@@ -31,7 +31,7 @@ use navara_material::{PolygonMaterial, PolylineMaterial};
 use navara_math::{FloatType, Transform, Vec3};
 use navara_texture_fragment::{TextureFragmentLoadedEvent, TextureFragmentStatus};
 use navara_tile_component::{
-    MartiniComponent, RasterTile, RasterTileQuadtree, TerrainHeightObserver, TileHandle,
+    MartiniComponent, TerrainHeightObserver, TerrainTile, TerrainTileQuadtree, TileHandle,
     TileTerrainDataRequesterQuery, VectorTile, VectorTileQuadtree, compute_terrain_height_at_point,
 };
 use navara_vector_tile::LayerResources;
@@ -454,9 +454,9 @@ impl App {
         query.get(world, martini_id).ok()
     }
 
-    pub fn get_tile(&mut self, handle: TileHandle) -> Option<&RasterTile> {
+    pub fn get_tile(&mut self, handle: TileHandle) -> Option<&TerrainTile> {
         let world = self.app.world_mut();
-        let qt = world.get_resource::<RasterTileQuadtree>()?;
+        let qt = world.get_resource::<TerrainTileQuadtree>()?;
 
         qt.qt.get(handle)
     }
@@ -468,7 +468,7 @@ impl App {
         texture_width: u32,
     ) -> Option<f32> {
         let world = self.app.world_mut();
-        let qt = world.get_resource::<RasterTileQuadtree>()?;
+        let qt = world.get_resource::<TerrainTileQuadtree>()?;
         let tile = qt.qt.get(tile_handle)?;
 
         // Delegate to pure function in navara_core
@@ -481,9 +481,9 @@ impl App {
         ))
     }
 
-    pub fn get_parent_tile(&mut self, handle: TileHandle) -> Option<&RasterTile> {
+    pub fn get_parent_tile(&mut self, handle: TileHandle) -> Option<&TerrainTile> {
         let world = self.app.world_mut();
-        let qt = world.get_resource::<RasterTileQuadtree>()?;
+        let qt = world.get_resource::<TerrainTileQuadtree>()?;
 
         let tile = qt.qt.get(handle).unwrap();
         tile.get_parent_tile(qt)
@@ -510,7 +510,7 @@ impl App {
 
     pub fn get_tile_elevation_decoder(&mut self, handle: TileHandle) -> Option<ElevationDecoder> {
         let world = self.app.world_mut();
-        let qt = world.get_resource::<RasterTileQuadtree>()?;
+        let qt = world.get_resource::<TerrainTileQuadtree>()?;
 
         let tile = qt.qt.get(handle).unwrap();
         tile.terrain_data.as_ref()?.decoder().copied()
@@ -754,10 +754,10 @@ impl App {
     pub fn sample_terrain_height(&mut self, lle: LLE<FloatType, Radians>) -> Option<FloatType> {
         let world = self.app.world_mut();
 
-        let _ = world.get_resource::<RasterTileQuadtree>()?;
+        let _ = world.get_resource::<TerrainTileQuadtree>()?;
         let _ = world.get_resource::<BufferStore>()?;
 
-        world.resource_scope(|world, mut qt: Mut<RasterTileQuadtree>| {
+        world.resource_scope(|world, mut qt: Mut<TerrainTileQuadtree>| {
             world.resource_scope(|world, mut buf: Mut<BufferStore>| {
                 let mut state: SystemState<TileTerrainDataRequesterQuery> = SystemState::new(world);
                 let query = state.get(world);

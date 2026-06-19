@@ -90,6 +90,7 @@ export class EventManager {
     worker_task_delegated: [],
     worker_task_removed: [],
     hillshade_backfilled: [],
+    hillshade_canceled: [],
   };
   addedEventIds = new Set();
   private transactionManager = new TransactionManager();

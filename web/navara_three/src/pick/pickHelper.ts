@@ -12,6 +12,7 @@ import {
 
 import { BufferView } from "../bufferView";
 import { isPickableMesh, type PickableMesh } from "../mesh/pickableMesh";
+import { TileScene } from "../scene";
 import type { MeshCache } from "../type";
 
 export type PickHelperOptions = {
@@ -158,6 +159,16 @@ export class PickHelper {
 
       obj.onBeforePicking(pickingCoord);
       activated.push(obj);
+
+      // Draped vector-tile meshes live inside a TileScene and are picked
+      // through their owning TileMesh's composite atlas — the per-layer RT
+      // is re-rendered with pick mode active (the onBeforePicking above
+      // flipped the mesh's own enhancer into pick mode) and the atlas then
+      // carries the pick IDs into the main pick render. Reparenting them
+      // here would (a) empty the TileScene so the per-layer RT renders
+      // nothing and (b) make them draw at their un-draped 3D position in
+      // pickScene, where they depth-fight with the terrain.
+      if (originalParent instanceof TileScene) continue;
 
       // Scene.add auto-removes from the previous parent. Both parents
       // are pass scenes with identity world transforms, so the raw's

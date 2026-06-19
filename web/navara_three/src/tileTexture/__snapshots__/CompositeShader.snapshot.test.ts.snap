@@ -1,0 +1,1507 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`generateCompositeFragmentShader snapshots > all features on, mixed raster+vector 1`] = `
+"
+precision highp float;
+precision highp int;
+
+varying vec2 vUv;
+
+
+
+uniform int uShows[4];
+uniform vec3 uColors[4];
+uniform float uOpacities[4];
+uniform sampler2D uTextures[4];
+uniform vec2 uLayerUvOffset[4];
+uniform vec2 uLayerUvScale[4];
+uniform bool uIsHillshades[4];
+uniform float uHillshadeExaggeration;
+uniform bool uIsElevationHeatmaps[4];
+uniform bool uWaters[4];
+
+uniform sampler2D uWatermask;
+
+
+#if USE_ELEVATION_HEATMAP
+  float nvr_branchFreeTernary(bool comparison, float a, float b) {
+    float useA = float(comparison);
+    return a * useA + b * (1.0 - useA);
+}
+
+/**
+ * Branchless ternary operator to be used when it's inexpensive to explicitly
+ * evaluate both possibilities for a vec2 expression.
+ *
+ * @name nvr_branchFreeTernary
+ * @glslFunction
+ *
+ * @param {bool} comparison A comparison statement
+ * @param {vec2} a Value to return if the comparison is true.
+ * @param {vec2} b Value to return if the comparison is false.
+ *
+ * @returns {vec2} equivalent of comparison ? a : b
+ */
+vec2 nvr_branchFreeTernary(bool comparison, vec2 a, vec2 b) {
+    float useA = float(comparison);
+    return a * useA + b * (1.0 - useA);
+}
+
+/**
+ * Branchless ternary operator to be used when it's inexpensive to explicitly
+ * evaluate both possibilities for a vec3 expression.
+ *
+ * @name nvr_branchFreeTernary
+ * @glslFunction
+ *
+ * @param {bool} comparison A comparison statement
+ * @param {vec3} a Value to return if the comparison is true.
+ * @param {vec3} b Value to return if the comparison is false.
+ *
+ * @returns {vec3} equivalent of comparison ? a : b
+ */
+vec3 nvr_branchFreeTernary(bool comparison, vec3 a, vec3 b) {
+    float useA = float(comparison);
+    return a * useA + b * (1.0 - useA);
+}
+
+/**
+ * Branchless ternary operator to be used when it's inexpensive to explicitly
+ * evaluate both possibilities for a vec4 expression.
+ *
+ * @name nvr_branchFreeTernary
+ * @glslFunction
+ *
+ * @param {bool} comparison A comparison statement
+ * @param {vec3} a Value to return if the comparison is true.
+ * @param {vec3} b Value to return if the comparison is false.
+ *
+ * @returns {vec3} equivalent of comparison ? a : b
+ */
+vec4 nvr_branchFreeTernary(bool comparison, vec4 a, vec4 b) {
+    float useA = float(comparison);
+    return a * useA + b * (1.0 - useA);
+}
+  #ifndef DEM_UTIL_GLSL
+#define DEM_UTIL_GLSL
+
+bool isPowerOfTwo(int n) {
+  return n > 0 && ((n & (n - 1)) == 0);
+}
+
+const float invalidHeight = -999999.0; 
+bool isValidHeight(float h) {
+  return h > -999998.0; 
+}
+
+struct DEMBilinearData {
+  ivec2 p00, p10, p01, p11;  
+  vec2 frac;                  
+};
+
+DEMBilinearData prepareDEMBilinear(ivec2 actualTexSize, vec2 uv) {
+  vec2 paddedTexSize = vec2(actualTexSize);
+
+  
+  
+  
+  bool hasPadding = !isPowerOfTwo(actualTexSize.x);
+
+  vec2 contentSize = hasPadding ? paddedTexSize - vec2(2.0) : paddedTexSize;
+
+  
+  
+  
+  
+  
+  
+  
+  
+  vec2 pixelCoord = hasPadding
+    ? uv * (contentSize - vec2(1.0)) + vec2(1.0)  
+    : uv * (contentSize - vec2(1.0));              
+
+  vec2 pixelFloor = floor(pixelCoord);
+  vec2 pixelFrac = fract(pixelCoord);
+
+  
+  
+  ivec2 maxCoord = ivec2(paddedTexSize) - ivec2(1);
+
+  DEMBilinearData data;
+  data.p00 = clamp(ivec2(pixelFloor), ivec2(0), maxCoord);
+  data.p10 = clamp(ivec2(pixelFloor + vec2(1.0, 0.0)), ivec2(0), maxCoord);
+  data.p01 = clamp(ivec2(pixelFloor + vec2(0.0, 1.0)), ivec2(0), maxCoord);
+  data.p11 = clamp(ivec2(pixelFloor + vec2(1.0, 1.0)), ivec2(0), maxCoord);
+  data.frac = pixelFrac;
+
+  return data;
+}
+
+float decodeDEMHeight(vec4 color, vec3 rgbScaler, float boundary, float minOffset, float maxOffset, float epsilon, float offset) {
+  vec3 rgb = color.rgb * 255.0;
+  float x = dot(rgb, rgbScaler);
+
+  float h;
+  float epsilon_cmp = 1.0; 
+  if (abs(x - boundary) > epsilon_cmp) {
+    if (x > boundary) {
+      h = x + maxOffset;  
+    } else {
+      h = x + minOffset;  
+    }
+    
+    h = h * epsilon + offset;
+  } else {
+    h = invalidHeight;  
+  }
+
+  return h;
+}
+
+float interpolateDEMHeights(float h00, float h10, float h01, float h11, vec2 frac) {
+  
+  if (!isValidHeight(h00)) return invalidHeight;
+
+  
+  
+  float maxReasonableDiff = 1000.0;
+  
+  
+  if (isValidHeight(h10) && abs(h10 - h00) > maxReasonableDiff) h10 = h00;
+  if (isValidHeight(h01) && abs(h01 - h00) > maxReasonableDiff) h01 = h00;
+  if (isValidHeight(h11) && abs(h11 - h00) > maxReasonableDiff) h11 = h00;
+
+  
+  if (!isValidHeight(h10)) h10 = h00;
+  if (!isValidHeight(h01)) h01 = h00;
+  if (!isValidHeight(h11)) h11 = h00;
+
+  
+  float h0 = mix(h00, h10, frac.x);
+  float h1 = mix(h01, h11, frac.x);
+  return mix(h0, h1, frac.y);
+}
+
+#endif
+
+  uniform sampler2D uColorMapTexture;
+  uniform vec3 uElevationRGBScaler;
+  uniform vec3 uElevationMinMaxHeightAndBoundary;
+  uniform vec4 uElevationMinMaxOffsetAndEpsilonAndOffset;
+  uniform bool uLogarithmic; 
+  uniform float uLogBase; 
+  uniform float uLogBoundary; 
+
+  float pseudoLog(float value) {
+    return value > uLogBoundary ? log(value) / uLogBase : value < -uLogBoundary ? -log(-value) / uLogBase : value / uLogBoundary;
+  }
+
+  
+  float decodeRawHeightForElevation(vec4 color) {
+    return decodeDEMHeight(
+      color,
+      uElevationRGBScaler,
+      uElevationMinMaxHeightAndBoundary.z,  
+      uElevationMinMaxOffsetAndEpsilonAndOffset.x,  
+      uElevationMinMaxOffsetAndEpsilonAndOffset.y,  
+      uElevationMinMaxOffsetAndEpsilonAndOffset.z,  
+      uElevationMinMaxOffsetAndEpsilonAndOffset.w   
+    );
+  }
+
+  
+  float normalizeElevationHeight(float h) {
+    
+    float minHeight = nvr_branchFreeTernary(uLogarithmic, pseudoLog(uElevationMinMaxHeightAndBoundary.x), uElevationMinMaxHeightAndBoundary.x);
+    float maxHeight = nvr_branchFreeTernary(uLogarithmic, pseudoLog(uElevationMinMaxHeightAndBoundary.y), uElevationMinMaxHeightAndBoundary.y);
+    float value = nvr_branchFreeTernary(uLogarithmic, pseudoLog(h), h);
+
+    return clamp(
+        (value - minHeight) / (maxHeight - minHeight),
+        0.0,
+        1.0
+    );
+  }
+
+  
+  
+  float sampleElevationBilinear(sampler2D demTexture, vec2 uv, ivec2 texSize) {
+    
+    DEMBilinearData data = prepareDEMBilinear(texSize, uv);
+
+    float h = invalidHeight; 
+
+    
+    float h00 = decodeRawHeightForElevation(texelFetch(demTexture, data.p00, 0));
+    if(isValidHeight(h00)) {
+      float h10 = decodeRawHeightForElevation(texelFetch(demTexture, data.p10, 0));
+      float h01 = decodeRawHeightForElevation(texelFetch(demTexture, data.p01, 0));
+      float h11 = decodeRawHeightForElevation(texelFetch(demTexture, data.p11, 0));
+
+      
+      h = interpolateDEMHeights(h00, h10, h01, h11, data.frac);
+    }
+
+    if (!isValidHeight(h)) {
+      return 0.0;
+    }
+
+    
+    return normalizeElevationHeight(h);
+  }
+#endif
+
+layout(location = 0) out vec4 colorBuffer;
+layout(location = 1) out vec4 attrBuffer;
+layout(location = 2) out vec4 normalBuffer;
+
+void main() {
+  vec4 compositedColor = vec4(0.0);
+  int winningSlot = -1;
+  float isWater = 0.0;
+  float isTexturized = 0.0;
+
+  vec3 hillshadeNormal = vec3(0.5, 0.5, 1.0); // neutral upward
+  bool hasHillshadeNormal = false;
+
+
+  // ---- compact slot 0 (absolute slot 0, raster) ----
+  if (uShows[0] == 1) {
+    vec2 texUv0 = vUv * uLayerUvScale[0] + uLayerUvOffset[0];
+
+    vec4 texColor0;
+    if (uIsElevationHeatmaps[0]) {
+      ivec2 demTexSize = textureSize(uTextures[0], 0);
+      float normalized_h = sampleElevationBilinear(uTextures[0], texUv0, demTexSize);
+      texColor0 = vec4(texture2D(uColorMapTexture, vec2(normalized_h, 0.5)).rgb, 1.0);
+    } else {
+      texColor0 = texture2D(uTextures[0], texUv0) * vec4(uColors[0], 1.0);
+    }
+
+    if (uIsHillshades[0]) {
+      texColor0 = vec4(0.0);
+    }
+    float alpha0 = texColor0.a * uOpacities[0];
+    if (alpha0 > 0.01) {
+      compositedColor = mix(compositedColor, vec4(texColor0.rgb, 1.0), alpha0);
+      winningSlot = 0;
+      isTexturized = 0.0;
+
+      isWater = uWaters[0] ? 1.0 : 0.0;
+    }
+  }
+
+  // ---- compact slot 1 (absolute slot 1, raster) ----
+  if (uShows[1] == 1) {
+    vec2 texUv1 = vUv * uLayerUvScale[1] + uLayerUvOffset[1];
+
+    vec4 texColor1;
+    if (uIsElevationHeatmaps[1]) {
+      ivec2 demTexSize = textureSize(uTextures[1], 0);
+      float normalized_h = sampleElevationBilinear(uTextures[1], texUv1, demTexSize);
+      texColor1 = vec4(texture2D(uColorMapTexture, vec2(normalized_h, 0.5)).rgb, 1.0);
+    } else {
+      texColor1 = texture2D(uTextures[1], texUv1) * vec4(uColors[1], 1.0);
+    }
+
+    if (uIsHillshades[1]) {
+      texColor1 = vec4(0.0);
+    }
+    float alpha1 = texColor1.a * uOpacities[1];
+    if (alpha1 > 0.01) {
+      compositedColor = mix(compositedColor, vec4(texColor1.rgb, 1.0), alpha1);
+      winningSlot = 1;
+      isTexturized = 0.0;
+
+      isWater = uWaters[1] ? 1.0 : 0.0;
+    }
+  }
+
+  // ---- compact slot 2 (absolute slot 2, vector) ----
+  if (uShows[2] == 1) {
+    vec2 texUv2 = vUv * uLayerUvScale[2] + uLayerUvOffset[2];
+
+    vec4 texColor2;
+    if (uIsElevationHeatmaps[2]) {
+      ivec2 demTexSize = textureSize(uTextures[2], 0);
+      float normalized_h = sampleElevationBilinear(uTextures[2], texUv2, demTexSize);
+      texColor2 = vec4(texture2D(uColorMapTexture, vec2(normalized_h, 0.5)).rgb, 1.0);
+    } else {
+      texColor2 = texture2D(uTextures[2], texUv2) * vec4(uColors[2], 1.0);
+    }
+
+    if (uIsHillshades[2]) {
+      texColor2 = vec4(0.0);
+    }
+    float alpha2 = texColor2.a * uOpacities[2];
+    if (alpha2 > 0.01) {
+      compositedColor = mix(compositedColor, vec4(texColor2.rgb, 1.0), alpha2);
+      winningSlot = 2;
+      isTexturized = 1.0;
+
+      isWater = uWaters[2] ? 1.0 : 0.0;
+    }
+  }
+
+  // ---- compact slot 3 (absolute slot 3, vector) ----
+  if (uShows[3] == 1) {
+    vec2 texUv3 = vUv * uLayerUvScale[3] + uLayerUvOffset[3];
+
+    vec4 texColor3;
+    if (uIsElevationHeatmaps[3]) {
+      ivec2 demTexSize = textureSize(uTextures[3], 0);
+      float normalized_h = sampleElevationBilinear(uTextures[3], texUv3, demTexSize);
+      texColor3 = vec4(texture2D(uColorMapTexture, vec2(normalized_h, 0.5)).rgb, 1.0);
+    } else {
+      texColor3 = texture2D(uTextures[3], texUv3) * vec4(uColors[3], 1.0);
+    }
+
+    if (uIsHillshades[3]) {
+      texColor3 = vec4(0.0);
+    }
+    float alpha3 = texColor3.a * uOpacities[3];
+    if (alpha3 > 0.01) {
+      compositedColor = mix(compositedColor, vec4(texColor3.rgb, 1.0), alpha3);
+      winningSlot = 3;
+      isTexturized = 1.0;
+
+      isWater = uWaters[3] ? 1.0 : 0.0;
+    }
+  }
+
+
+  if (uIsHillshades[0]) {
+    ivec2 normalMapSize0 = textureSize(uTextures[0], 0);
+    if (normalMapSize0.x > 1 && normalMapSize0.y > 1) {
+      vec2 hillshadeUv0 = clamp(vUv * uLayerUvScale[0] + uLayerUvOffset[0], vec2(0.0), vec2(1.0));
+      vec3 n0 = texture2D(uTextures[0], hillshadeUv0).rgb * 2.0 - 1.0;
+      n0 = normalize(n0);
+      n0.xy *= uHillshadeExaggeration;
+      n0 = normalize(n0);
+      hillshadeNormal = n0 * 0.5 + 0.5; // store in [0,1]
+      hasHillshadeNormal = true;
+    }
+  }
+
+  if (uIsHillshades[1]) {
+    ivec2 normalMapSize1 = textureSize(uTextures[1], 0);
+    if (normalMapSize1.x > 1 && normalMapSize1.y > 1) {
+      vec2 hillshadeUv1 = clamp(vUv * uLayerUvScale[1] + uLayerUvOffset[1], vec2(0.0), vec2(1.0));
+      vec3 n1 = texture2D(uTextures[1], hillshadeUv1).rgb * 2.0 - 1.0;
+      n1 = normalize(n1);
+      n1.xy *= uHillshadeExaggeration;
+      n1 = normalize(n1);
+      hillshadeNormal = n1 * 0.5 + 0.5; // store in [0,1]
+      hasHillshadeNormal = true;
+    }
+  }
+
+  if (uIsHillshades[2]) {
+    ivec2 normalMapSize2 = textureSize(uTextures[2], 0);
+    if (normalMapSize2.x > 1 && normalMapSize2.y > 1) {
+      vec2 hillshadeUv2 = clamp(vUv * uLayerUvScale[2] + uLayerUvOffset[2], vec2(0.0), vec2(1.0));
+      vec3 n2 = texture2D(uTextures[2], hillshadeUv2).rgb * 2.0 - 1.0;
+      n2 = normalize(n2);
+      n2.xy *= uHillshadeExaggeration;
+      n2 = normalize(n2);
+      hillshadeNormal = n2 * 0.5 + 0.5; // store in [0,1]
+      hasHillshadeNormal = true;
+    }
+  }
+
+  if (uIsHillshades[3]) {
+    ivec2 normalMapSize3 = textureSize(uTextures[3], 0);
+    if (normalMapSize3.x > 1 && normalMapSize3.y > 1) {
+      vec2 hillshadeUv3 = clamp(vUv * uLayerUvScale[3] + uLayerUvOffset[3], vec2(0.0), vec2(1.0));
+      vec3 n3 = texture2D(uTextures[3], hillshadeUv3).rgb * 2.0 - 1.0;
+      n3 = normalize(n3);
+      n3.xy *= uHillshadeExaggeration;
+      n3 = normalize(n3);
+      hillshadeNormal = n3 * 0.5 + 0.5; // store in [0,1]
+      hasHillshadeNormal = true;
+    }
+  }
+
+  // Quantized-mesh watermask: 0 = land, 255 = water (per spec). Takes priority
+  // over per-slot uWaters — even if no winning slot flagged water, watermask
+  // can still mark this pixel as water. Threshold at 0.5 (byte > 127).
+  isWater = max(isWater, step(0.5, texture(uWatermask, vUv).r));
+
+  colorBuffer = compositedColor;
+
+  // Attr.a packs the winning slot index as (idx+1)/255 — 0 means no winner.
+  // Main shader: int winIdx = int(round(attr.a * 255.0)) - 1.
+  attrBuffer = vec4(
+    isWater,
+    isTexturized,
+    0.0,
+    float(winningSlot + 1) / 255.0
+  );
+
+  normalBuffer = vec4(hillshadeNormal, hasHillshadeNormal ? 1.0 : 0.0);
+}
+"
+`;
+
+exports[`generateCompositeFragmentShader snapshots > elevation heatmap only 1`] = `
+"
+precision highp float;
+precision highp int;
+
+varying vec2 vUv;
+
+
+
+uniform int uShows[2];
+uniform vec3 uColors[2];
+uniform float uOpacities[2];
+uniform sampler2D uTextures[2];
+uniform vec2 uLayerUvOffset[2];
+uniform vec2 uLayerUvScale[2];
+uniform bool uIsElevationHeatmaps[2];
+
+
+
+
+#if USE_ELEVATION_HEATMAP
+  float nvr_branchFreeTernary(bool comparison, float a, float b) {
+    float useA = float(comparison);
+    return a * useA + b * (1.0 - useA);
+}
+
+/**
+ * Branchless ternary operator to be used when it's inexpensive to explicitly
+ * evaluate both possibilities for a vec2 expression.
+ *
+ * @name nvr_branchFreeTernary
+ * @glslFunction
+ *
+ * @param {bool} comparison A comparison statement
+ * @param {vec2} a Value to return if the comparison is true.
+ * @param {vec2} b Value to return if the comparison is false.
+ *
+ * @returns {vec2} equivalent of comparison ? a : b
+ */
+vec2 nvr_branchFreeTernary(bool comparison, vec2 a, vec2 b) {
+    float useA = float(comparison);
+    return a * useA + b * (1.0 - useA);
+}
+
+/**
+ * Branchless ternary operator to be used when it's inexpensive to explicitly
+ * evaluate both possibilities for a vec3 expression.
+ *
+ * @name nvr_branchFreeTernary
+ * @glslFunction
+ *
+ * @param {bool} comparison A comparison statement
+ * @param {vec3} a Value to return if the comparison is true.
+ * @param {vec3} b Value to return if the comparison is false.
+ *
+ * @returns {vec3} equivalent of comparison ? a : b
+ */
+vec3 nvr_branchFreeTernary(bool comparison, vec3 a, vec3 b) {
+    float useA = float(comparison);
+    return a * useA + b * (1.0 - useA);
+}
+
+/**
+ * Branchless ternary operator to be used when it's inexpensive to explicitly
+ * evaluate both possibilities for a vec4 expression.
+ *
+ * @name nvr_branchFreeTernary
+ * @glslFunction
+ *
+ * @param {bool} comparison A comparison statement
+ * @param {vec3} a Value to return if the comparison is true.
+ * @param {vec3} b Value to return if the comparison is false.
+ *
+ * @returns {vec3} equivalent of comparison ? a : b
+ */
+vec4 nvr_branchFreeTernary(bool comparison, vec4 a, vec4 b) {
+    float useA = float(comparison);
+    return a * useA + b * (1.0 - useA);
+}
+  #ifndef DEM_UTIL_GLSL
+#define DEM_UTIL_GLSL
+
+bool isPowerOfTwo(int n) {
+  return n > 0 && ((n & (n - 1)) == 0);
+}
+
+const float invalidHeight = -999999.0; 
+bool isValidHeight(float h) {
+  return h > -999998.0; 
+}
+
+struct DEMBilinearData {
+  ivec2 p00, p10, p01, p11;  
+  vec2 frac;                  
+};
+
+DEMBilinearData prepareDEMBilinear(ivec2 actualTexSize, vec2 uv) {
+  vec2 paddedTexSize = vec2(actualTexSize);
+
+  
+  
+  
+  bool hasPadding = !isPowerOfTwo(actualTexSize.x);
+
+  vec2 contentSize = hasPadding ? paddedTexSize - vec2(2.0) : paddedTexSize;
+
+  
+  
+  
+  
+  
+  
+  
+  
+  vec2 pixelCoord = hasPadding
+    ? uv * (contentSize - vec2(1.0)) + vec2(1.0)  
+    : uv * (contentSize - vec2(1.0));              
+
+  vec2 pixelFloor = floor(pixelCoord);
+  vec2 pixelFrac = fract(pixelCoord);
+
+  
+  
+  ivec2 maxCoord = ivec2(paddedTexSize) - ivec2(1);
+
+  DEMBilinearData data;
+  data.p00 = clamp(ivec2(pixelFloor), ivec2(0), maxCoord);
+  data.p10 = clamp(ivec2(pixelFloor + vec2(1.0, 0.0)), ivec2(0), maxCoord);
+  data.p01 = clamp(ivec2(pixelFloor + vec2(0.0, 1.0)), ivec2(0), maxCoord);
+  data.p11 = clamp(ivec2(pixelFloor + vec2(1.0, 1.0)), ivec2(0), maxCoord);
+  data.frac = pixelFrac;
+
+  return data;
+}
+
+float decodeDEMHeight(vec4 color, vec3 rgbScaler, float boundary, float minOffset, float maxOffset, float epsilon, float offset) {
+  vec3 rgb = color.rgb * 255.0;
+  float x = dot(rgb, rgbScaler);
+
+  float h;
+  float epsilon_cmp = 1.0; 
+  if (abs(x - boundary) > epsilon_cmp) {
+    if (x > boundary) {
+      h = x + maxOffset;  
+    } else {
+      h = x + minOffset;  
+    }
+    
+    h = h * epsilon + offset;
+  } else {
+    h = invalidHeight;  
+  }
+
+  return h;
+}
+
+float interpolateDEMHeights(float h00, float h10, float h01, float h11, vec2 frac) {
+  
+  if (!isValidHeight(h00)) return invalidHeight;
+
+  
+  
+  float maxReasonableDiff = 1000.0;
+  
+  
+  if (isValidHeight(h10) && abs(h10 - h00) > maxReasonableDiff) h10 = h00;
+  if (isValidHeight(h01) && abs(h01 - h00) > maxReasonableDiff) h01 = h00;
+  if (isValidHeight(h11) && abs(h11 - h00) > maxReasonableDiff) h11 = h00;
+
+  
+  if (!isValidHeight(h10)) h10 = h00;
+  if (!isValidHeight(h01)) h01 = h00;
+  if (!isValidHeight(h11)) h11 = h00;
+
+  
+  float h0 = mix(h00, h10, frac.x);
+  float h1 = mix(h01, h11, frac.x);
+  return mix(h0, h1, frac.y);
+}
+
+#endif
+
+  uniform sampler2D uColorMapTexture;
+  uniform vec3 uElevationRGBScaler;
+  uniform vec3 uElevationMinMaxHeightAndBoundary;
+  uniform vec4 uElevationMinMaxOffsetAndEpsilonAndOffset;
+  uniform bool uLogarithmic; 
+  uniform float uLogBase; 
+  uniform float uLogBoundary; 
+
+  float pseudoLog(float value) {
+    return value > uLogBoundary ? log(value) / uLogBase : value < -uLogBoundary ? -log(-value) / uLogBase : value / uLogBoundary;
+  }
+
+  
+  float decodeRawHeightForElevation(vec4 color) {
+    return decodeDEMHeight(
+      color,
+      uElevationRGBScaler,
+      uElevationMinMaxHeightAndBoundary.z,  
+      uElevationMinMaxOffsetAndEpsilonAndOffset.x,  
+      uElevationMinMaxOffsetAndEpsilonAndOffset.y,  
+      uElevationMinMaxOffsetAndEpsilonAndOffset.z,  
+      uElevationMinMaxOffsetAndEpsilonAndOffset.w   
+    );
+  }
+
+  
+  float normalizeElevationHeight(float h) {
+    
+    float minHeight = nvr_branchFreeTernary(uLogarithmic, pseudoLog(uElevationMinMaxHeightAndBoundary.x), uElevationMinMaxHeightAndBoundary.x);
+    float maxHeight = nvr_branchFreeTernary(uLogarithmic, pseudoLog(uElevationMinMaxHeightAndBoundary.y), uElevationMinMaxHeightAndBoundary.y);
+    float value = nvr_branchFreeTernary(uLogarithmic, pseudoLog(h), h);
+
+    return clamp(
+        (value - minHeight) / (maxHeight - minHeight),
+        0.0,
+        1.0
+    );
+  }
+
+  
+  
+  float sampleElevationBilinear(sampler2D demTexture, vec2 uv, ivec2 texSize) {
+    
+    DEMBilinearData data = prepareDEMBilinear(texSize, uv);
+
+    float h = invalidHeight; 
+
+    
+    float h00 = decodeRawHeightForElevation(texelFetch(demTexture, data.p00, 0));
+    if(isValidHeight(h00)) {
+      float h10 = decodeRawHeightForElevation(texelFetch(demTexture, data.p10, 0));
+      float h01 = decodeRawHeightForElevation(texelFetch(demTexture, data.p01, 0));
+      float h11 = decodeRawHeightForElevation(texelFetch(demTexture, data.p11, 0));
+
+      
+      h = interpolateDEMHeights(h00, h10, h01, h11, data.frac);
+    }
+
+    if (!isValidHeight(h)) {
+      return 0.0;
+    }
+
+    
+    return normalizeElevationHeight(h);
+  }
+#endif
+
+layout(location = 0) out vec4 colorBuffer;
+layout(location = 1) out vec4 attrBuffer;
+layout(location = 2) out vec4 normalBuffer;
+
+void main() {
+  vec4 compositedColor = vec4(0.0);
+  int winningSlot = -1;
+  float isWater = 0.0;
+  float isTexturized = 0.0;
+
+  vec3 hillshadeNormal = vec3(0.5, 0.5, 1.0); // neutral upward
+  bool hasHillshadeNormal = false;
+
+
+  // ---- compact slot 0 (absolute slot 0, raster) ----
+  if (uShows[0] == 1) {
+    vec2 texUv0 = vUv * uLayerUvScale[0] + uLayerUvOffset[0];
+
+    vec4 texColor0;
+    if (uIsElevationHeatmaps[0]) {
+      ivec2 demTexSize = textureSize(uTextures[0], 0);
+      float normalized_h = sampleElevationBilinear(uTextures[0], texUv0, demTexSize);
+      texColor0 = vec4(texture2D(uColorMapTexture, vec2(normalized_h, 0.5)).rgb, 1.0);
+    } else {
+      texColor0 = texture2D(uTextures[0], texUv0) * vec4(uColors[0], 1.0);
+    }
+
+    float alpha0 = texColor0.a * uOpacities[0];
+    if (alpha0 > 0.01) {
+      compositedColor = mix(compositedColor, vec4(texColor0.rgb, 1.0), alpha0);
+      winningSlot = 0;
+      isTexturized = 0.0;
+
+    }
+  }
+
+  // ---- compact slot 1 (absolute slot 1, raster) ----
+  if (uShows[1] == 1) {
+    vec2 texUv1 = vUv * uLayerUvScale[1] + uLayerUvOffset[1];
+
+    vec4 texColor1;
+    if (uIsElevationHeatmaps[1]) {
+      ivec2 demTexSize = textureSize(uTextures[1], 0);
+      float normalized_h = sampleElevationBilinear(uTextures[1], texUv1, demTexSize);
+      texColor1 = vec4(texture2D(uColorMapTexture, vec2(normalized_h, 0.5)).rgb, 1.0);
+    } else {
+      texColor1 = texture2D(uTextures[1], texUv1) * vec4(uColors[1], 1.0);
+    }
+
+    float alpha1 = texColor1.a * uOpacities[1];
+    if (alpha1 > 0.01) {
+      compositedColor = mix(compositedColor, vec4(texColor1.rgb, 1.0), alpha1);
+      winningSlot = 1;
+      isTexturized = 0.0;
+
+    }
+  }
+
+
+
+  colorBuffer = compositedColor;
+
+  // Attr.a packs the winning slot index as (idx+1)/255 — 0 means no winner.
+  // Main shader: int winIdx = int(round(attr.a * 255.0)) - 1.
+  attrBuffer = vec4(
+    isWater,
+    isTexturized,
+    0.0,
+    float(winningSlot + 1) / 255.0
+  );
+
+  normalBuffer = vec4(hillshadeNormal, hasHillshadeNormal ? 1.0 : 0.0);
+}
+"
+`;
+
+exports[`generateCompositeFragmentShader snapshots > hillshade only 1`] = `
+"
+precision highp float;
+precision highp int;
+
+varying vec2 vUv;
+
+
+
+uniform int uShows[2];
+uniform vec3 uColors[2];
+uniform float uOpacities[2];
+uniform sampler2D uTextures[2];
+uniform vec2 uLayerUvOffset[2];
+uniform vec2 uLayerUvScale[2];
+uniform bool uIsHillshades[2];
+uniform float uHillshadeExaggeration;
+
+
+
+
+
+
+layout(location = 0) out vec4 colorBuffer;
+layout(location = 1) out vec4 attrBuffer;
+layout(location = 2) out vec4 normalBuffer;
+
+void main() {
+  vec4 compositedColor = vec4(0.0);
+  int winningSlot = -1;
+  float isWater = 0.0;
+  float isTexturized = 0.0;
+
+  vec3 hillshadeNormal = vec3(0.5, 0.5, 1.0); // neutral upward
+  bool hasHillshadeNormal = false;
+
+
+  // ---- compact slot 0 (absolute slot 0, raster) ----
+  if (uShows[0] == 1) {
+    vec2 texUv0 = vUv * uLayerUvScale[0] + uLayerUvOffset[0];
+
+    vec4 texColor0 = texture2D(uTextures[0], texUv0) * vec4(uColors[0], 1.0);
+
+    if (uIsHillshades[0]) {
+      texColor0 = vec4(0.0);
+    }
+    float alpha0 = texColor0.a * uOpacities[0];
+    if (alpha0 > 0.01) {
+      compositedColor = mix(compositedColor, vec4(texColor0.rgb, 1.0), alpha0);
+      winningSlot = 0;
+      isTexturized = 0.0;
+
+    }
+  }
+
+  // ---- compact slot 1 (absolute slot 1, raster) ----
+  if (uShows[1] == 1) {
+    vec2 texUv1 = vUv * uLayerUvScale[1] + uLayerUvOffset[1];
+
+    vec4 texColor1 = texture2D(uTextures[1], texUv1) * vec4(uColors[1], 1.0);
+
+    if (uIsHillshades[1]) {
+      texColor1 = vec4(0.0);
+    }
+    float alpha1 = texColor1.a * uOpacities[1];
+    if (alpha1 > 0.01) {
+      compositedColor = mix(compositedColor, vec4(texColor1.rgb, 1.0), alpha1);
+      winningSlot = 1;
+      isTexturized = 0.0;
+
+    }
+  }
+
+
+  if (uIsHillshades[0]) {
+    ivec2 normalMapSize0 = textureSize(uTextures[0], 0);
+    if (normalMapSize0.x > 1 && normalMapSize0.y > 1) {
+      vec2 hillshadeUv0 = clamp(vUv * uLayerUvScale[0] + uLayerUvOffset[0], vec2(0.0), vec2(1.0));
+      vec3 n0 = texture2D(uTextures[0], hillshadeUv0).rgb * 2.0 - 1.0;
+      n0 = normalize(n0);
+      n0.xy *= uHillshadeExaggeration;
+      n0 = normalize(n0);
+      hillshadeNormal = n0 * 0.5 + 0.5; // store in [0,1]
+      hasHillshadeNormal = true;
+    }
+  }
+
+  if (uIsHillshades[1]) {
+    ivec2 normalMapSize1 = textureSize(uTextures[1], 0);
+    if (normalMapSize1.x > 1 && normalMapSize1.y > 1) {
+      vec2 hillshadeUv1 = clamp(vUv * uLayerUvScale[1] + uLayerUvOffset[1], vec2(0.0), vec2(1.0));
+      vec3 n1 = texture2D(uTextures[1], hillshadeUv1).rgb * 2.0 - 1.0;
+      n1 = normalize(n1);
+      n1.xy *= uHillshadeExaggeration;
+      n1 = normalize(n1);
+      hillshadeNormal = n1 * 0.5 + 0.5; // store in [0,1]
+      hasHillshadeNormal = true;
+    }
+  }
+
+  colorBuffer = compositedColor;
+
+  // Attr.a packs the winning slot index as (idx+1)/255 — 0 means no winner.
+  // Main shader: int winIdx = int(round(attr.a * 255.0)) - 1.
+  attrBuffer = vec4(
+    isWater,
+    isTexturized,
+    0.0,
+    float(winningSlot + 1) / 255.0
+  );
+
+  normalBuffer = vec4(hillshadeNormal, hasHillshadeNormal ? 1.0 : 0.0);
+}
+"
+`;
+
+exports[`generateCompositeFragmentShader snapshots > raster+single vector, boundary 24 1`] = `
+"
+precision highp float;
+precision highp int;
+
+varying vec2 vUv;
+
+
+
+uniform int uShows[3];
+uniform vec3 uColors[3];
+uniform float uOpacities[3];
+uniform sampler2D uTextures[3];
+uniform vec2 uLayerUvOffset[3];
+uniform vec2 uLayerUvScale[3];
+
+
+
+
+
+
+
+layout(location = 0) out vec4 colorBuffer;
+layout(location = 1) out vec4 attrBuffer;
+layout(location = 2) out vec4 normalBuffer;
+
+void main() {
+  vec4 compositedColor = vec4(0.0);
+  int winningSlot = -1;
+  float isWater = 0.0;
+  float isTexturized = 0.0;
+
+  vec3 hillshadeNormal = vec3(0.5, 0.5, 1.0); // neutral upward
+  bool hasHillshadeNormal = false;
+
+
+  // ---- compact slot 0 (absolute slot 0, raster) ----
+  if (uShows[0] == 1) {
+    vec2 texUv0 = vUv * uLayerUvScale[0] + uLayerUvOffset[0];
+
+    vec4 texColor0 = texture2D(uTextures[0], texUv0) * vec4(uColors[0], 1.0);
+
+    float alpha0 = texColor0.a * uOpacities[0];
+    if (alpha0 > 0.01) {
+      compositedColor = mix(compositedColor, vec4(texColor0.rgb, 1.0), alpha0);
+      winningSlot = 0;
+      isTexturized = 0.0;
+
+    }
+  }
+
+  // ---- compact slot 1 (absolute slot 1, raster) ----
+  if (uShows[1] == 1) {
+    vec2 texUv1 = vUv * uLayerUvScale[1] + uLayerUvOffset[1];
+
+    vec4 texColor1 = texture2D(uTextures[1], texUv1) * vec4(uColors[1], 1.0);
+
+    float alpha1 = texColor1.a * uOpacities[1];
+    if (alpha1 > 0.01) {
+      compositedColor = mix(compositedColor, vec4(texColor1.rgb, 1.0), alpha1);
+      winningSlot = 1;
+      isTexturized = 0.0;
+
+    }
+  }
+
+  // ---- compact slot 2 (absolute slot 24, vector) ----
+  if (uShows[2] == 1) {
+    vec2 texUv2 = vUv * uLayerUvScale[2] + uLayerUvOffset[2];
+
+    vec4 texColor2 = texture2D(uTextures[2], texUv2) * vec4(uColors[2], 1.0);
+
+    float alpha2 = texColor2.a * uOpacities[2];
+    if (alpha2 > 0.01) {
+      compositedColor = mix(compositedColor, vec4(texColor2.rgb, 1.0), alpha2);
+      winningSlot = 24;
+      isTexturized = 1.0;
+
+    }
+  }
+
+
+
+  colorBuffer = compositedColor;
+
+  // Attr.a packs the winning slot index as (idx+1)/255 — 0 means no winner.
+  // Main shader: int winIdx = int(round(attr.a * 255.0)) - 1.
+  attrBuffer = vec4(
+    isWater,
+    isTexturized,
+    0.0,
+    float(winningSlot + 1) / 255.0
+  );
+
+  normalBuffer = vec4(hillshadeNormal, hasHillshadeNormal ? 1.0 : 0.0);
+}
+"
+`;
+
+exports[`generateCompositeFragmentShader snapshots > raster+vector, all features off 1`] = `
+"
+precision highp float;
+precision highp int;
+
+varying vec2 vUv;
+
+
+
+uniform int uShows[4];
+uniform vec3 uColors[4];
+uniform float uOpacities[4];
+uniform sampler2D uTextures[4];
+uniform vec2 uLayerUvOffset[4];
+uniform vec2 uLayerUvScale[4];
+
+
+
+
+
+
+
+layout(location = 0) out vec4 colorBuffer;
+layout(location = 1) out vec4 attrBuffer;
+layout(location = 2) out vec4 normalBuffer;
+
+void main() {
+  vec4 compositedColor = vec4(0.0);
+  int winningSlot = -1;
+  float isWater = 0.0;
+  float isTexturized = 0.0;
+
+  vec3 hillshadeNormal = vec3(0.5, 0.5, 1.0); // neutral upward
+  bool hasHillshadeNormal = false;
+
+
+  // ---- compact slot 0 (absolute slot 0, raster) ----
+  if (uShows[0] == 1) {
+    vec2 texUv0 = vUv * uLayerUvScale[0] + uLayerUvOffset[0];
+
+    vec4 texColor0 = texture2D(uTextures[0], texUv0) * vec4(uColors[0], 1.0);
+
+    float alpha0 = texColor0.a * uOpacities[0];
+    if (alpha0 > 0.01) {
+      compositedColor = mix(compositedColor, vec4(texColor0.rgb, 1.0), alpha0);
+      winningSlot = 0;
+      isTexturized = 0.0;
+
+    }
+  }
+
+  // ---- compact slot 1 (absolute slot 1, raster) ----
+  if (uShows[1] == 1) {
+    vec2 texUv1 = vUv * uLayerUvScale[1] + uLayerUvOffset[1];
+
+    vec4 texColor1 = texture2D(uTextures[1], texUv1) * vec4(uColors[1], 1.0);
+
+    float alpha1 = texColor1.a * uOpacities[1];
+    if (alpha1 > 0.01) {
+      compositedColor = mix(compositedColor, vec4(texColor1.rgb, 1.0), alpha1);
+      winningSlot = 1;
+      isTexturized = 0.0;
+
+    }
+  }
+
+  // ---- compact slot 2 (absolute slot 2, vector) ----
+  if (uShows[2] == 1) {
+    vec2 texUv2 = vUv * uLayerUvScale[2] + uLayerUvOffset[2];
+
+    vec4 texColor2 = texture2D(uTextures[2], texUv2) * vec4(uColors[2], 1.0);
+
+    float alpha2 = texColor2.a * uOpacities[2];
+    if (alpha2 > 0.01) {
+      compositedColor = mix(compositedColor, vec4(texColor2.rgb, 1.0), alpha2);
+      winningSlot = 2;
+      isTexturized = 1.0;
+
+    }
+  }
+
+  // ---- compact slot 3 (absolute slot 3, vector) ----
+  if (uShows[3] == 1) {
+    vec2 texUv3 = vUv * uLayerUvScale[3] + uLayerUvOffset[3];
+
+    vec4 texColor3 = texture2D(uTextures[3], texUv3) * vec4(uColors[3], 1.0);
+
+    float alpha3 = texColor3.a * uOpacities[3];
+    if (alpha3 > 0.01) {
+      compositedColor = mix(compositedColor, vec4(texColor3.rgb, 1.0), alpha3);
+      winningSlot = 3;
+      isTexturized = 1.0;
+
+    }
+  }
+
+
+
+  colorBuffer = compositedColor;
+
+  // Attr.a packs the winning slot index as (idx+1)/255 — 0 means no winner.
+  // Main shader: int winIdx = int(round(attr.a * 255.0)) - 1.
+  attrBuffer = vec4(
+    isWater,
+    isTexturized,
+    0.0,
+    float(winningSlot + 1) / 255.0
+  );
+
+  normalBuffer = vec4(hillshadeNormal, hasHillshadeNormal ? 1.0 : 0.0);
+}
+"
+`;
+
+exports[`generateCompositeFragmentShader snapshots > single raster+2 vector, boundary 24 1`] = `
+"
+precision highp float;
+precision highp int;
+
+varying vec2 vUv;
+
+
+
+uniform int uShows[3];
+uniform vec3 uColors[3];
+uniform float uOpacities[3];
+uniform sampler2D uTextures[3];
+uniform vec2 uLayerUvOffset[3];
+uniform vec2 uLayerUvScale[3];
+
+
+
+
+
+
+
+layout(location = 0) out vec4 colorBuffer;
+layout(location = 1) out vec4 attrBuffer;
+layout(location = 2) out vec4 normalBuffer;
+
+void main() {
+  vec4 compositedColor = vec4(0.0);
+  int winningSlot = -1;
+  float isWater = 0.0;
+  float isTexturized = 0.0;
+
+  vec3 hillshadeNormal = vec3(0.5, 0.5, 1.0); // neutral upward
+  bool hasHillshadeNormal = false;
+
+
+  // ---- compact slot 0 (absolute slot 0, raster) ----
+  if (uShows[0] == 1) {
+    vec2 texUv0 = vUv * uLayerUvScale[0] + uLayerUvOffset[0];
+
+    vec4 texColor0 = texture2D(uTextures[0], texUv0) * vec4(uColors[0], 1.0);
+
+    float alpha0 = texColor0.a * uOpacities[0];
+    if (alpha0 > 0.01) {
+      compositedColor = mix(compositedColor, vec4(texColor0.rgb, 1.0), alpha0);
+      winningSlot = 0;
+      isTexturized = 0.0;
+
+    }
+  }
+
+  // ---- compact slot 1 (absolute slot 24, vector) ----
+  if (uShows[1] == 1) {
+    vec2 texUv1 = vUv * uLayerUvScale[1] + uLayerUvOffset[1];
+
+    vec4 texColor1 = texture2D(uTextures[1], texUv1) * vec4(uColors[1], 1.0);
+
+    float alpha1 = texColor1.a * uOpacities[1];
+    if (alpha1 > 0.01) {
+      compositedColor = mix(compositedColor, vec4(texColor1.rgb, 1.0), alpha1);
+      winningSlot = 24;
+      isTexturized = 1.0;
+
+    }
+  }
+
+  // ---- compact slot 2 (absolute slot 25, vector) ----
+  if (uShows[2] == 1) {
+    vec2 texUv2 = vUv * uLayerUvScale[2] + uLayerUvOffset[2];
+
+    vec4 texColor2 = texture2D(uTextures[2], texUv2) * vec4(uColors[2], 1.0);
+
+    float alpha2 = texColor2.a * uOpacities[2];
+    if (alpha2 > 0.01) {
+      compositedColor = mix(compositedColor, vec4(texColor2.rgb, 1.0), alpha2);
+      winningSlot = 25;
+      isTexturized = 1.0;
+
+    }
+  }
+
+
+
+  colorBuffer = compositedColor;
+
+  // Attr.a packs the winning slot index as (idx+1)/255 — 0 means no winner.
+  // Main shader: int winIdx = int(round(attr.a * 255.0)) - 1.
+  attrBuffer = vec4(
+    isWater,
+    isTexturized,
+    0.0,
+    float(winningSlot + 1) / 255.0
+  );
+
+  normalBuffer = vec4(hillshadeNormal, hasHillshadeNormal ? 1.0 : 0.0);
+}
+"
+`;
+
+exports[`generateCompositeFragmentShader snapshots > vector-only (rasterCount 0) 1`] = `
+"
+precision highp float;
+precision highp int;
+
+varying vec2 vUv;
+
+
+
+uniform int uShows[2];
+uniform vec3 uColors[2];
+uniform float uOpacities[2];
+uniform sampler2D uTextures[2];
+uniform vec2 uLayerUvOffset[2];
+uniform vec2 uLayerUvScale[2];
+
+
+
+
+
+
+
+layout(location = 0) out vec4 colorBuffer;
+layout(location = 1) out vec4 attrBuffer;
+layout(location = 2) out vec4 normalBuffer;
+
+void main() {
+  vec4 compositedColor = vec4(0.0);
+  int winningSlot = -1;
+  float isWater = 0.0;
+  float isTexturized = 0.0;
+
+  vec3 hillshadeNormal = vec3(0.5, 0.5, 1.0); // neutral upward
+  bool hasHillshadeNormal = false;
+
+
+  // ---- compact slot 0 (absolute slot 24, vector) ----
+  if (uShows[0] == 1) {
+    vec2 texUv0 = vUv * uLayerUvScale[0] + uLayerUvOffset[0];
+
+    vec4 texColor0 = texture2D(uTextures[0], texUv0) * vec4(uColors[0], 1.0);
+
+    float alpha0 = texColor0.a * uOpacities[0];
+    if (alpha0 > 0.01) {
+      compositedColor = mix(compositedColor, vec4(texColor0.rgb, 1.0), alpha0);
+      winningSlot = 24;
+      isTexturized = 1.0;
+
+    }
+  }
+
+  // ---- compact slot 1 (absolute slot 25, vector) ----
+  if (uShows[1] == 1) {
+    vec2 texUv1 = vUv * uLayerUvScale[1] + uLayerUvOffset[1];
+
+    vec4 texColor1 = texture2D(uTextures[1], texUv1) * vec4(uColors[1], 1.0);
+
+    float alpha1 = texColor1.a * uOpacities[1];
+    if (alpha1 > 0.01) {
+      compositedColor = mix(compositedColor, vec4(texColor1.rgb, 1.0), alpha1);
+      winningSlot = 25;
+      isTexturized = 1.0;
+
+    }
+  }
+
+
+
+  colorBuffer = compositedColor;
+
+  // Attr.a packs the winning slot index as (idx+1)/255 — 0 means no winner.
+  // Main shader: int winIdx = int(round(attr.a * 255.0)) - 1.
+  attrBuffer = vec4(
+    isWater,
+    isTexturized,
+    0.0,
+    float(winningSlot + 1) / 255.0
+  );
+
+  normalBuffer = vec4(hillshadeNormal, hasHillshadeNormal ? 1.0 : 0.0);
+}
+"
+`;
+
+exports[`generateCompositeFragmentShader snapshots > water only 1`] = `
+"
+precision highp float;
+precision highp int;
+
+varying vec2 vUv;
+
+
+
+uniform int uShows[2];
+uniform vec3 uColors[2];
+uniform float uOpacities[2];
+uniform sampler2D uTextures[2];
+uniform vec2 uLayerUvOffset[2];
+uniform vec2 uLayerUvScale[2];
+uniform bool uWaters[2];
+
+
+
+
+
+
+layout(location = 0) out vec4 colorBuffer;
+layout(location = 1) out vec4 attrBuffer;
+layout(location = 2) out vec4 normalBuffer;
+
+void main() {
+  vec4 compositedColor = vec4(0.0);
+  int winningSlot = -1;
+  float isWater = 0.0;
+  float isTexturized = 0.0;
+
+  vec3 hillshadeNormal = vec3(0.5, 0.5, 1.0); // neutral upward
+  bool hasHillshadeNormal = false;
+
+
+  // ---- compact slot 0 (absolute slot 0, raster) ----
+  if (uShows[0] == 1) {
+    vec2 texUv0 = vUv * uLayerUvScale[0] + uLayerUvOffset[0];
+
+    vec4 texColor0 = texture2D(uTextures[0], texUv0) * vec4(uColors[0], 1.0);
+
+    float alpha0 = texColor0.a * uOpacities[0];
+    if (alpha0 > 0.01) {
+      compositedColor = mix(compositedColor, vec4(texColor0.rgb, 1.0), alpha0);
+      winningSlot = 0;
+      isTexturized = 0.0;
+
+      isWater = uWaters[0] ? 1.0 : 0.0;
+    }
+  }
+
+  // ---- compact slot 1 (absolute slot 1, raster) ----
+  if (uShows[1] == 1) {
+    vec2 texUv1 = vUv * uLayerUvScale[1] + uLayerUvOffset[1];
+
+    vec4 texColor1 = texture2D(uTextures[1], texUv1) * vec4(uColors[1], 1.0);
+
+    float alpha1 = texColor1.a * uOpacities[1];
+    if (alpha1 > 0.01) {
+      compositedColor = mix(compositedColor, vec4(texColor1.rgb, 1.0), alpha1);
+      winningSlot = 1;
+      isTexturized = 0.0;
+
+      isWater = uWaters[1] ? 1.0 : 0.0;
+    }
+  }
+
+
+
+  colorBuffer = compositedColor;
+
+  // Attr.a packs the winning slot index as (idx+1)/255 — 0 means no winner.
+  // Main shader: int winIdx = int(round(attr.a * 255.0)) - 1.
+  attrBuffer = vec4(
+    isWater,
+    isTexturized,
+    0.0,
+    float(winningSlot + 1) / 255.0
+  );
+
+  normalBuffer = vec4(hillshadeNormal, hasHillshadeNormal ? 1.0 : 0.0);
+}
+"
+`;
+
+exports[`generateCompositeFragmentShader snapshots > watermask only feature, with slots 1`] = `
+"
+precision highp float;
+precision highp int;
+
+varying vec2 vUv;
+
+
+
+uniform int uShows[2];
+uniform vec3 uColors[2];
+uniform float uOpacities[2];
+uniform sampler2D uTextures[2];
+uniform vec2 uLayerUvOffset[2];
+uniform vec2 uLayerUvScale[2];
+
+
+uniform sampler2D uWatermask;
+
+
+
+
+layout(location = 0) out vec4 colorBuffer;
+layout(location = 1) out vec4 attrBuffer;
+layout(location = 2) out vec4 normalBuffer;
+
+void main() {
+  vec4 compositedColor = vec4(0.0);
+  int winningSlot = -1;
+  float isWater = 0.0;
+  float isTexturized = 0.0;
+
+  vec3 hillshadeNormal = vec3(0.5, 0.5, 1.0); // neutral upward
+  bool hasHillshadeNormal = false;
+
+
+  // ---- compact slot 0 (absolute slot 0, raster) ----
+  if (uShows[0] == 1) {
+    vec2 texUv0 = vUv * uLayerUvScale[0] + uLayerUvOffset[0];
+
+    vec4 texColor0 = texture2D(uTextures[0], texUv0) * vec4(uColors[0], 1.0);
+
+    float alpha0 = texColor0.a * uOpacities[0];
+    if (alpha0 > 0.01) {
+      compositedColor = mix(compositedColor, vec4(texColor0.rgb, 1.0), alpha0);
+      winningSlot = 0;
+      isTexturized = 0.0;
+
+    }
+  }
+
+  // ---- compact slot 1 (absolute slot 1, raster) ----
+  if (uShows[1] == 1) {
+    vec2 texUv1 = vUv * uLayerUvScale[1] + uLayerUvOffset[1];
+
+    vec4 texColor1 = texture2D(uTextures[1], texUv1) * vec4(uColors[1], 1.0);
+
+    float alpha1 = texColor1.a * uOpacities[1];
+    if (alpha1 > 0.01) {
+      compositedColor = mix(compositedColor, vec4(texColor1.rgb, 1.0), alpha1);
+      winningSlot = 1;
+      isTexturized = 0.0;
+
+    }
+  }
+
+
+  // Quantized-mesh watermask: 0 = land, 255 = water (per spec). Takes priority
+  // over per-slot uWaters — even if no winning slot flagged water, watermask
+  // can still mark this pixel as water. Threshold at 0.5 (byte > 127).
+  isWater = max(isWater, step(0.5, texture(uWatermask, vUv).r));
+
+  colorBuffer = compositedColor;
+
+  // Attr.a packs the winning slot index as (idx+1)/255 — 0 means no winner.
+  // Main shader: int winIdx = int(round(attr.a * 255.0)) - 1.
+  attrBuffer = vec4(
+    isWater,
+    isTexturized,
+    0.0,
+    float(winningSlot + 1) / 255.0
+  );
+
+  normalBuffer = vec4(hillshadeNormal, hasHillshadeNormal ? 1.0 : 0.0);
+}
+"
+`;
+
+exports[`generateCompositeFragmentShader snapshots > watermask-only shader (no slots) 1`] = `
+"
+precision highp float;
+precision highp int;
+
+varying vec2 vUv;
+
+
+
+uniform sampler2D uWatermask;
+
+
+
+
+layout(location = 0) out vec4 colorBuffer;
+layout(location = 1) out vec4 attrBuffer;
+layout(location = 2) out vec4 normalBuffer;
+
+void main() {
+  vec4 compositedColor = vec4(0.0);
+  int winningSlot = -1;
+  float isWater = 0.0;
+  float isTexturized = 0.0;
+
+  vec3 hillshadeNormal = vec3(0.5, 0.5, 1.0); // neutral upward
+  bool hasHillshadeNormal = false;
+
+
+
+
+  // Quantized-mesh watermask: 0 = land, 255 = water (per spec). Takes priority
+  // over per-slot uWaters — even if no winning slot flagged water, watermask
+  // can still mark this pixel as water. Threshold at 0.5 (byte > 127).
+  isWater = max(isWater, step(0.5, texture(uWatermask, vUv).r));
+
+  colorBuffer = compositedColor;
+
+  // Attr.a packs the winning slot index as (idx+1)/255 — 0 means no winner.
+  // Main shader: int winIdx = int(round(attr.a * 255.0)) - 1.
+  attrBuffer = vec4(
+    isWater,
+    isTexturized,
+    0.0,
+    float(winningSlot + 1) / 255.0
+  );
+
+  normalBuffer = vec4(hillshadeNormal, hasHillshadeNormal ? 1.0 : 0.0);
+}
+"
+`;

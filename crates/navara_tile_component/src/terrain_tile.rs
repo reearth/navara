@@ -13,8 +13,9 @@ use navara_mesh::CachedMeshHandle;
 use navara_quadtree::Coords;
 
 use crate::{
-    RasterTileQuadtree, Tile, TileHandle, raster_tile_texture_fragment::TileTextureFragmentQuery,
-    terrain::TerrainData, terrain_data_requester::TileTerrainDataRequesterQuery,
+    HillshadeCancelRequested, TerrainTileQuadtree, Tile, TileHandle,
+    raster_tile_texture_fragment::TileTextureFragmentQuery, terrain::TerrainData,
+    terrain_data_requester::TileTerrainDataRequesterQuery,
 };
 
 use navara_layer::{TerrainLayer, TilesLayer};
@@ -28,7 +29,7 @@ use super::tile_bounding_region::TileBoundingRegion;
 // TODO: Rename this struct like `TerrainBasedTile` or `GlobeTile`,
 //      since this struct mostly manage both the terrain and raster tiles.
 #[derive(Debug)]
-pub struct RasterTile {
+pub struct TerrainTile {
     pub coords: TileXYZ,
     pub extent: Extent<FloatType, Radians>,
     pub aabb: Aabb,
@@ -51,7 +52,7 @@ pub struct RasterTile {
     pub tiling_scheme: TilingScheme,
 }
 
-impl Clone for RasterTile {
+impl Clone for TerrainTile {
     fn clone(&self) -> Self {
         Self {
             coords: self.coords,
@@ -87,7 +88,7 @@ pub struct ReadyState {
     pub use_terrain: bool,
 }
 
-impl RasterTile {
+impl TerrainTile {
     pub fn new(coords: TileXYZ, max_height: FloatType, min_height: FloatType) -> Self {
         Self::new_with_scheme(
             coords,
@@ -131,7 +132,7 @@ impl RasterTile {
     #[allow(clippy::too_many_arguments)]
     pub fn is_ready(
         &self,
-        qt: &RasterTileQuadtree,
+        qt: &TerrainTileQuadtree,
         texture_fragment: &TileTextureFragmentQuery,
         data_requesters: &Query<&navara_data_requester::DataRequester>,
         terrain_data_requester: &TileTerrainDataRequesterQuery,
@@ -310,7 +311,7 @@ impl RasterTile {
 
     pub fn is_parent_ready(
         &self,
-        qt: &RasterTileQuadtree,
+        qt: &TerrainTileQuadtree,
         terrain_data_requesters: &TileTerrainDataRequesterQuery,
     ) -> bool {
         self.get_parent_tile(qt).is_some_and(|p| {
@@ -321,7 +322,7 @@ impl RasterTile {
 
     pub fn is_upsamplable(
         &self,
-        qt: &RasterTileQuadtree,
+        qt: &TerrainTileQuadtree,
         terrain_data_requester: &TileTerrainDataRequesterQuery,
         terrain_layer: &Option<&TerrainLayer>,
     ) -> bool {
@@ -352,7 +353,7 @@ impl RasterTile {
                 .any(|(&entity_opt, (layer, _))| {
                     if let Some(entity) = entity_opt {
                         // Entity exists, check if it's ready
-                        RasterTile::is_texture_entity_ready(
+                        TerrainTile::is_texture_entity_ready(
                             entity,
                             texture_fragment,
                             data_requesters,
@@ -365,13 +366,13 @@ impl RasterTile {
         })
     }
 
-    pub fn get_parent_tile<'a>(&self, qt: &'a RasterTileQuadtree) -> Option<&'a Self> {
+    pub fn get_parent_tile<'a>(&self, qt: &'a TerrainTileQuadtree) -> Option<&'a Self> {
         qt.qt
             .parent((self.coords.x, self.coords.y, self.coords.z))
             .and_then(|p| qt.qt.get(p.handle()))
     }
 
-    fn get_region(&self, parent: &RasterTile) -> Option<TileRegion> {
+    fn get_region(&self, parent: &TerrainTile) -> Option<TileRegion> {
         // Use tile coordinates rather than extents to detect the quadrant.
         // Both WebMercator and Geographic schemes share XYZ-style y (y=0 at the
         // north edge), so the relationship between parent and child indices is
@@ -399,7 +400,7 @@ impl RasterTile {
     pub fn upsample(
         &self,
         ellipsoid: Ellipsoid<FloatType>,
-        parent: &RasterTile,
+        parent: &TerrainTile,
         upsamplable_geometry: UpsamplableTerrainGeometry,
     ) -> Option<ReturnedConstructedTerrainMesh> {
         let region = self.get_region(parent)?;
@@ -450,7 +451,9 @@ impl RasterTile {
 
         if let Some(hillshade_entities) = self.hillshade_entity_ids.take() {
             for hillshade_entity in hillshade_entities.into_iter().flatten() {
-                commands.entity(hillshade_entity).insert(Deleted);
+                commands
+                    .entity(hillshade_entity)
+                    .insert((Deleted, HillshadeCancelRequested));
             }
         }
 
@@ -468,7 +471,7 @@ impl RasterTile {
     }
 }
 
-impl Tile for RasterTile {
+impl Tile for TerrainTile {
     type CoordUnit = usize;
 
     fn aabb(&self) -> &Aabb {
@@ -561,7 +564,7 @@ impl Tile for RasterTile {
 
 /// Compute a terrain height at specified point.
 pub fn compute_terrain_height_at_point(
-    qt: &mut RasterTileQuadtree,
+    qt: &mut TerrainTileQuadtree,
     buf: &mut BufferStore,
     terrain_data_requesters: &TileTerrainDataRequesterQuery,
     point: &LngLat<FloatType, Radians>,
@@ -581,7 +584,7 @@ pub fn compute_terrain_height_at_point(
 
 /// Compute a terrain height at specified point.
 pub fn sample_terrain_height_within_extent(
-    qt: &mut RasterTileQuadtree,
+    qt: &mut TerrainTileQuadtree,
     extent: Extent<f64, Radians>,
 ) -> (FloatType, FloatType) {
     let tiles = find_contained_children(qt, &|t| {
@@ -634,7 +637,7 @@ pub fn sample_terrain_height_within_extent(
 /// Returns handles of the deepest tiles (not necessarily quadtree leaves) that
 /// have cached mesh, terrain data, and are not upsampled.
 /// Used to batch-resolve terrain heights without per-point tree traversal.
-pub fn collect_terrain_leaves(qt: &RasterTileQuadtree) -> Vec<TileHandle> {
+pub fn collect_terrain_leaves(qt: &TerrainTileQuadtree) -> Vec<TileHandle> {
     find_contained_children(qt, &|t| {
         t.cached_mesh_handle.is_some() && !t.upsampled && t.terrain_data.is_some()
     })
@@ -646,8 +649,8 @@ pub fn collect_terrain_leaves(qt: &RasterTileQuadtree) -> Vec<TileHandle> {
 ///
 /// Uses containment (not intersection) so the returned tile's DEM grid covers
 /// all points within the given extent.
-pub fn find_raster_tile_for_extent(
-    qt: &RasterTileQuadtree,
+pub fn find_terrain_tile_for_extent(
+    qt: &TerrainTileQuadtree,
     extent: &Extent<FloatType, Radians>,
 ) -> Option<TileHandle> {
     find_contained_child(qt, &|t| {
@@ -661,7 +664,7 @@ pub fn find_raster_tile_for_extent(
 /// Compute terrain height for a single point from a known tile.
 /// Returns 0.0 if height cannot be determined.
 pub fn compute_terrain_height_by_tile_handle(
-    qt: &mut RasterTileQuadtree,
+    qt: &mut TerrainTileQuadtree,
     buf: &mut BufferStore,
     terrain_data_requesters: &TileTerrainDataRequesterQuery,
     tile_handle: TileHandle,
@@ -682,7 +685,7 @@ pub fn compute_terrain_height_by_tile_handle(
 /// Collect handles of all root tiles based on the tiling scheme carried by the
 /// `(0, 0, 0)` tile. For WebMercator this is a single handle; for Geographic it
 /// is two — `(0, 0, 0)` and `(1, 0, 0)`.
-pub fn root_handles(qt: &RasterTileQuadtree) -> Vec<TileHandle> {
+pub fn root_handles(qt: &TerrainTileQuadtree) -> Vec<TileHandle> {
     let Some(zero_handle) = qt.qt.zero().map(|l| l.handle()) else {
         return vec![];
     };
@@ -699,8 +702,8 @@ pub fn root_handles(qt: &RasterTileQuadtree) -> Vec<TileHandle> {
 
 /// Find a child that the tile contains.
 fn find_contained_child(
-    qt: &RasterTileQuadtree,
-    contain: &dyn Fn(&RasterTile) -> bool,
+    qt: &TerrainTileQuadtree,
+    contain: &dyn Fn(&TerrainTile) -> bool,
 ) -> Option<TileHandle> {
     for root in root_handles(qt) {
         if let Some(v) = traverse_contained_child(qt, qt.qt.get(root), Some(root), contain) {
@@ -712,8 +715,8 @@ fn find_contained_child(
 
 /// Find a child that the tile contains.
 fn find_contained_children(
-    qt: &RasterTileQuadtree,
-    contain: &dyn Fn(&RasterTile) -> bool,
+    qt: &TerrainTileQuadtree,
+    contain: &dyn Fn(&TerrainTile) -> bool,
 ) -> Vec<TileHandle> {
     let mut result = vec![];
     for root in root_handles(qt) {
@@ -729,10 +732,10 @@ fn find_contained_children(
 }
 
 fn traverse_contained_child(
-    qt: &RasterTileQuadtree,
-    tile: Option<&RasterTile>,
+    qt: &TerrainTileQuadtree,
+    tile: Option<&TerrainTile>,
     handle: Option<TileHandle>,
-    contain: &dyn Fn(&RasterTile) -> bool,
+    contain: &dyn Fn(&TerrainTile) -> bool,
 ) -> Option<TileHandle> {
     let h = handle?;
     let tile = tile?;
@@ -751,10 +754,10 @@ fn traverse_contained_child(
 }
 
 fn traverse_contained_children(
-    qt: &RasterTileQuadtree,
-    tile: Option<&RasterTile>,
+    qt: &TerrainTileQuadtree,
+    tile: Option<&TerrainTile>,
     handle: Option<TileHandle>,
-    contain: &dyn Fn(&RasterTile) -> bool,
+    contain: &dyn Fn(&TerrainTile) -> bool,
     result: &mut Vec<TileHandle>,
 ) -> Option<TileHandle> {
     let h = handle?;
@@ -782,9 +785,9 @@ mod test {
     use navara_core::{Angle, LngLat, TileRegion, TileXYZ, TilingScheme};
     use navara_quadtree::Coords;
 
-    use super::RasterTileQuadtree;
+    use super::TerrainTileQuadtree;
 
-    use super::{RasterTile, find_contained_child};
+    use super::{TerrainTile, find_contained_child};
 
     #[test]
     fn get_region_handles_floating_point_drift_on_mid_boundary() {
@@ -796,7 +799,7 @@ mod test {
         // Internal y is XYZ-style (y=0 north). Parent y=11410 at z=14 → child
         // northern row is y=22820, southern row is y=22821.
         let scheme = TilingScheme::Geographic { tms: true };
-        let parent = RasterTile::new_with_scheme(
+        let parent = TerrainTile::new_with_scheme(
             TileXYZ {
                 x: 29011,
                 y: 11410,
@@ -806,7 +809,7 @@ mod test {
             0.,
             scheme.clone(),
         );
-        let nw = RasterTile::new_with_scheme(
+        let nw = TerrainTile::new_with_scheme(
             TileXYZ {
                 x: 58022,
                 y: 22820,
@@ -816,7 +819,7 @@ mod test {
             0.,
             scheme.clone(),
         );
-        let ne = RasterTile::new_with_scheme(
+        let ne = TerrainTile::new_with_scheme(
             TileXYZ {
                 x: 58023,
                 y: 22820,
@@ -826,7 +829,7 @@ mod test {
             0.,
             scheme.clone(),
         );
-        let sw = RasterTile::new_with_scheme(
+        let sw = TerrainTile::new_with_scheme(
             TileXYZ {
                 x: 58022,
                 y: 22821,
@@ -836,7 +839,7 @@ mod test {
             0.,
             scheme.clone(),
         );
-        let se = RasterTile::new_with_scheme(
+        let se = TerrainTile::new_with_scheme(
             TileXYZ {
                 x: 58023,
                 y: 22821,
@@ -874,11 +877,11 @@ mod test {
         // raster-DEM upsampling produced incorrect geometry.
         let scheme = TilingScheme::WebMercator { tms: false };
         let parent =
-            RasterTile::new_with_scheme(TileXYZ { x: 1, y: 2, z: 2 }, 0., 0., scheme.clone());
-        let nw = RasterTile::new_with_scheme(TileXYZ { x: 2, y: 4, z: 3 }, 0., 0., scheme.clone());
-        let ne = RasterTile::new_with_scheme(TileXYZ { x: 3, y: 4, z: 3 }, 0., 0., scheme.clone());
-        let sw = RasterTile::new_with_scheme(TileXYZ { x: 2, y: 5, z: 3 }, 0., 0., scheme.clone());
-        let se = RasterTile::new_with_scheme(TileXYZ { x: 3, y: 5, z: 3 }, 0., 0., scheme);
+            TerrainTile::new_with_scheme(TileXYZ { x: 1, y: 2, z: 2 }, 0., 0., scheme.clone());
+        let nw = TerrainTile::new_with_scheme(TileXYZ { x: 2, y: 4, z: 3 }, 0., 0., scheme.clone());
+        let ne = TerrainTile::new_with_scheme(TileXYZ { x: 3, y: 4, z: 3 }, 0., 0., scheme.clone());
+        let sw = TerrainTile::new_with_scheme(TileXYZ { x: 2, y: 5, z: 3 }, 0., 0., scheme.clone());
+        let se = TerrainTile::new_with_scheme(TileXYZ { x: 3, y: 5, z: 3 }, 0., 0., scheme);
 
         assert!(matches!(
             nw.get_region(&parent),
@@ -898,9 +901,9 @@ mod test {
         ));
     }
 
-    fn setup_tile(qt: &mut RasterTileQuadtree, coords: Coords<usize>) {
+    fn setup_tile(qt: &mut TerrainTileQuadtree, coords: Coords<usize>) {
         let children = qt.qt.initialize_children(coords, &|v| {
-            RasterTile::new(
+            TerrainTile::new(
                 TileXYZ {
                     x: v.0,
                     y: v.1,
@@ -916,10 +919,10 @@ mod test {
 
     #[test]
     fn it_should_find_contained_tile() {
-        let mut qt = RasterTileQuadtree::new_with_linear_qt();
+        let mut qt = TerrainTileQuadtree::new_with_linear_qt();
 
         qt.qt.initialize_zero(&|v| {
-            RasterTile::new(
+            TerrainTile::new(
                 TileXYZ {
                     x: v.0,
                     y: v.1,
@@ -945,12 +948,12 @@ mod test {
         assert_eq!(child.unwrap().coords, TileXYZ { x: 3, y: 1, z: 2 });
     }
 
-    use super::find_raster_tile_for_extent;
+    use super::find_terrain_tile_for_extent;
     use navara_mesh::CachedMeshHandle;
 
     /// Mark a tile as having terrain data and a cached mesh so it's eligible
-    /// for `find_raster_tile_for_extent`.
-    fn mark_tile_ready(qt: &mut RasterTileQuadtree, coords: Coords<usize>) {
+    /// for `find_terrain_tile_for_extent`.
+    fn mark_tile_ready(qt: &mut TerrainTileQuadtree, coords: Coords<usize>) {
         use crate::terrain::RasterDEMData;
         let handle = qt.qt.leaf(coords).unwrap().handle();
         let tile = qt.qt.get_mut(handle).unwrap();
@@ -964,10 +967,10 @@ mod test {
         tile.terrain_data = Some(Box::new(RasterDEMData::default()));
     }
 
-    fn setup_qt_with_ready_tiles() -> RasterTileQuadtree {
-        let mut qt = RasterTileQuadtree::new_with_linear_qt();
+    fn setup_qt_with_ready_tiles() -> TerrainTileQuadtree {
+        let mut qt = TerrainTileQuadtree::new_with_linear_qt();
         qt.qt.initialize_zero(&|v| {
-            RasterTile::new(
+            TerrainTile::new(
                 TileXYZ {
                     x: v.0,
                     y: v.1,
@@ -995,7 +998,7 @@ mod test {
         let tile_3_1_2 = qt.qt.get(qt.qt.leaf((3, 1, 2)).unwrap().handle()).unwrap();
         let target_extent = tile_3_1_2.extent;
 
-        let result = find_raster_tile_for_extent(&qt, &target_extent);
+        let result = find_terrain_tile_for_extent(&qt, &target_extent);
         assert!(result.is_some());
         let found = qt.qt.get(result.unwrap()).unwrap();
         assert_eq!(found.coords, TileXYZ { x: 3, y: 1, z: 2 });
@@ -1010,7 +1013,7 @@ mod test {
             .get(qt.qt.leaf((3, 1, 2)).unwrap().handle())
             .unwrap()
             .extent;
-        let result = find_raster_tile_for_extent(&qt, &extent);
+        let result = find_terrain_tile_for_extent(&qt, &extent);
         assert!(result.is_none());
     }
 
@@ -1024,7 +1027,7 @@ mod test {
         qt.qt.get_mut(handle).unwrap().upsampled = true;
 
         let extent = qt.qt.get(handle).unwrap().extent;
-        let result = find_raster_tile_for_extent(&qt, &extent);
+        let result = find_terrain_tile_for_extent(&qt, &extent);
         assert!(result.is_none());
     }
 
@@ -1047,10 +1050,10 @@ mod test {
 
     /// Initialize a leaf with the Geographic tiling scheme so its extent and
     /// children match EPSG:4326 layout.
-    fn setup_geographic_tile(qt: &mut RasterTileQuadtree, coords: Coords<usize>) {
+    fn setup_geographic_tile(qt: &mut TerrainTileQuadtree, coords: Coords<usize>) {
         let scheme = TilingScheme::Geographic { tms: true };
         let children = qt.qt.initialize_children(coords, &|v| {
-            RasterTile::new_with_scheme(
+            TerrainTile::new_with_scheme(
                 TileXYZ {
                     x: v.0,
                     y: v.1,
@@ -1072,11 +1075,11 @@ mod test {
         use super::collect_terrain_leaves;
 
         let scheme = TilingScheme::Geographic { tms: true };
-        let mut qt = RasterTileQuadtree::new_with_linear_qt();
+        let mut qt = TerrainTileQuadtree::new_with_linear_qt();
 
         for root in scheme.root_tiles() {
             qt.qt.initialize_leaf((root.x, root.y, root.z), &|v| {
-                RasterTile::new_with_scheme(
+                TerrainTile::new_with_scheme(
                     TileXYZ {
                         x: v.0,
                         y: v.1,
@@ -1116,7 +1119,7 @@ mod test {
 }
 
 #[cfg(test)]
-mod raster_tile_tests {
+mod terrain_tile_tests {
     use super::*;
     use bevy_app::{App, Update};
     use bevy_ecs::prelude::{Entity, Resource};
@@ -1141,7 +1144,7 @@ mod raster_tile_tests {
             data: Some(LayerData {
                 url: "https://example.com/.png".into(),
             }),
-            appearance: Some(Appearance::RasterTile(RasterTileMaterial {
+            appearance: Some(Appearance::TerrainTile(RasterTileMaterial {
                 min_zoom,
                 max_zoom,
                 ..Default::default()
@@ -1157,7 +1160,7 @@ mod raster_tile_tests {
             data: Some(LayerData {
                 url: "https://example.com/.png".into(),
             }),
-            appearance: Some(Appearance::RasterTile(RasterTileMaterial {
+            appearance: Some(Appearance::TerrainTile(RasterTileMaterial {
                 min_zoom,
                 max_zoom,
                 ..Default::default()
@@ -1221,7 +1224,7 @@ mod raster_tile_tests {
                       data_requesters: Query<&DataRequester>,
                       tiles: Query<(&TilesLayer, &Order)>,
                       mut out: ResMut<Out>| {
-                    let mut tile = RasterTile::new(TileXYZ { x: 0, y: 0, z: 5 }, 0., 0.);
+                    let mut tile = TerrainTile::new(TileXYZ { x: 0, y: 0, z: 5 }, 0., 0.);
                     tile.texture_fragment_entity_ids =
                         Some(tex_ids.lock().unwrap().take().unwrap());
                     tile.hillshade_entity_ids = Some(hill_ids.lock().unwrap().take().unwrap());
@@ -1394,9 +1397,9 @@ mod raster_tile_tests {
             ));
 
             // Build qt with the root (parent of z=1). Optionally make it terrain-ready.
-            let mut qt = RasterTileQuadtree::new_with_linear_qt();
+            let mut qt = TerrainTileQuadtree::new_with_linear_qt();
             qt.qt.initialize_zero(&|v| {
-                RasterTile::new(
+                TerrainTile::new(
                     TileXYZ {
                         x: v.0,
                         y: v.1,
@@ -1431,7 +1434,7 @@ mod raster_tile_tests {
             }
 
             // Build the child tile (standalone — is_ready doesn't require it in qt).
-            let mut child = RasterTile::new(TileXYZ { x: 0, y: 0, z: 1 }, 0., 0.);
+            let mut child = TerrainTile::new(TileXYZ { x: 0, y: 0, z: 1 }, 0., 0.);
             if let Some(status) = scenario.self_dem_status {
                 // child_handle is irrelevant; we just need an entity carrying the
                 // marker + DataRequester components.
@@ -1457,7 +1460,7 @@ mod raster_tile_tests {
             let child = std::sync::Mutex::new(Some(child));
             app.add_systems(
                 Update,
-                move |qt: bevy_ecs::system::Res<RasterTileQuadtree>,
+                move |qt: bevy_ecs::system::Res<TerrainTileQuadtree>,
                       texture_fragment: TileTextureFragmentQuery,
                       data_requesters: Query<&DataRequester>,
                       terrain_data_requester: crate::TileTerrainDataRequesterQuery,

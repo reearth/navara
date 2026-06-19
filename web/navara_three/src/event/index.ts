@@ -28,7 +28,10 @@ import {
   processRenderableFeatureAdded,
   processRenderableFeatureChanged,
 } from "./feature";
-import { processHillshadeBackfilled } from "./hillshade";
+import {
+  processHillshadeBackfilled,
+  processHillshadeCanceled,
+} from "./hillshade";
 import { ABORTABLE_TEXTURE_LOADER } from "./loaders";
 import { processMeshAdded, processMeshChanged } from "./tile";
 import {
@@ -76,6 +79,20 @@ export function processEvent(ctx: EventContext, event: Events | undefined) {
 
   eventManager.forEachStack("update_sample_terrain_height", (ev) =>
     viewEvents.emit("_sample_terrain_height_received", ev),
+  );
+
+  // Process cancels before backfills, synchronously. Each cancel drops its
+  // own matching pending backfills from the stack (see processHillshadeCanceled),
+  // so the subsequent forEachStack only iterates surviving events.
+  //
+  // Using forEachStack here matches main's per-frame timing — switching this
+  // to processTransactionEvents earlier caused hillshade adds to be spread
+  // across frames via the TransactionManager chain, which produced visible
+  // texture offset during fast pan/zoom.
+  eventManager.forEachStack(
+    "hillshade_canceled",
+    (ev) => processHillshadeCanceled(ctx, ev),
+    Infinity,
   );
 
   eventManager.forEachStack("hillshade_backfilled", (ev) =>

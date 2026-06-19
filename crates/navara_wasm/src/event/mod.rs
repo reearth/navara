@@ -33,6 +33,7 @@ pub struct Events {
     pub renderable_feature_removed: Vec<RenderableFeatureRemovedEvent>,
     pub update_sample_terrain_height: Vec<TerrainHeightUpdatedEvent>,
     pub hillshade_backfilled: Vec<HillshadeBackfilledEvent>,
+    pub hillshade_canceled: Vec<EntityEvent>,
 }
 
 #[wasm_bindgen]
@@ -260,6 +261,11 @@ impl From<navara_event::Events<'_>> for Events {
                 .collect(),
             hillshade_backfilled: ev
                 .hillshade_backfilled
+                .into_iter()
+                .map(|ev| ev.into())
+                .collect(),
+            hillshade_canceled: ev
+                .hillshade_canceled
                 .into_iter()
                 .map(|ev| ev.into())
                 .collect(),
