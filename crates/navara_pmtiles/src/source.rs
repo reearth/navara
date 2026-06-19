@@ -241,9 +241,10 @@ const MAX_PENDING_META: usize = 50;
 /// is told to forget the dropped leaves, so the next `prepare_tile` re-issues
 /// them — with a fresh, current priority — once earlier fetches free up slots.
 ///
-/// The bootstrap request is never dropped: it lives in `bootstrap_req` (not
-/// `leaf_reqs`, the only map this clears) and is only `Added` in a frame with no
-/// leaves in flight (leaves require a ready archive), so a slot is always free.
+/// The bootstrap request lives in `bootstrap_req` (not `leaf_reqs`, the only map this
+/// system clears). It is ordered ahead of leaf requests via `PmtilesMetaOrder::FIRST`,
+/// but it can still be dropped if the global meta-request cap is saturated; in that
+/// case we reset and retry bootstrapping in a future frame.
 #[allow(clippy::type_complexity)]
 pub(crate) fn filter_requestable_pmtiles_meta(
     mut commands: Commands,
