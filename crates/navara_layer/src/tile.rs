@@ -14,7 +14,7 @@ pub struct TilesLayer {
 impl TilesLayer {
     pub fn appearance(&self) -> Option<&RasterTileMaterial> {
         self.appearance.as_ref().and_then(|a| match a {
-            Appearance::RasterTile(v) => Some(v),
+            Appearance::TerrainTile(v) => Some(v),
             _ => None,
         })
     }

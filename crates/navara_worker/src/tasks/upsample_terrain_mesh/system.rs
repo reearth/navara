@@ -8,7 +8,7 @@ use navara_buffer_store::BufferStore;
 use navara_component::Deleted;
 use navara_core::WGS84_32;
 use navara_geometry::TransferableGeometry;
-use navara_tile_component::TileQuadtree;
+use navara_tile_component::TerrainTileQuadtree;
 
 use super::{UpsampleTerrainMeshParameters, UpsampleTerrainMeshResult};
 use crate::WorkerTaskMarker;
@@ -17,7 +17,7 @@ use crate::WorkerTaskMarker;
 #[cfg(not(feature = "delegated_worker"))]
 pub(crate) fn upsample_terrain_mesh(
     mut commands: Commands,
-    qt: Res<TileQuadtree>,
+    qt: Res<TerrainTileQuadtree>,
     mut buf: ResMut<BufferStore>,
     constructors: Query<
         (Entity, &UpsampleTerrainMeshParameters),

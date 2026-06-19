@@ -271,7 +271,14 @@ const addCloudsTilesControl = (
           (targetMaxHeight - targetMinHeight),
       );
 
-      if (!description.rasterTile) return;
+      if (
+        !description.rasterTile ||
+        (description.rasterTile.opacity != null &&
+          description.rasterTile.opacity <= 0 &&
+          opacity <= 0)
+      )
+        return;
+
       description.rasterTile.opacity = opacity;
       cloudsTilesLayer.update(description);
     };

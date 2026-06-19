@@ -1,0 +1,136 @@
+import { describe, expect, it } from "vitest";
+
+import {
+  generateTileCommonInjection,
+  generateTileMapFragment,
+  generateTileNormalFragmentMaps,
+  TILE_EMISSIVE_EFFECT_BUFFER_REPLACEMENT,
+  TILE_NORMAL_BUFFER_REPLACEMENT,
+  TILE_PICK_FRAGMENT_OVERRIDE,
+} from "./tileShader";
+
+describe("generateTileCommonInjection", () => {
+  it("declares the three atlas samplers", () => {
+    const src = generateTileCommonInjection(8);
+    expect(src).toContain("uniform sampler2D uColorAtlas;");
+    expect(src).toContain("uniform sampler2D uAttrAtlas;");
+    expect(src).toContain("uniform sampler2D uNormalAtlas;");
+  });
+
+  it("sizes per-slot uniform arrays to the requested slot count", () => {
+    const src = generateTileCommonInjection(16);
+    expect(src).toContain("uniform float uShininesses[16];");
+    expect(src).toContain("uniform vec3 uEmissiveColors[16];");
+    expect(src).toContain("uniform float uEffectIdsMasks[16];");
+  });
+});
+
+describe("generateTileMapFragment", () => {
+  const src = generateTileMapFragment();
+
+  it("samples each atlas exactly once", () => {
+    const colorMatches = src.match(/texture2D\(uColorAtlas/g) ?? [];
+    const attrMatches = src.match(/texture2D\(uAttrAtlas/g) ?? [];
+    expect(colorMatches.length).toBe(1);
+    expect(attrMatches.length).toBe(1);
+  });
+
+  it("decodes winning slot from attr.a as (n*255) - 1", () => {
+    expect(src).toContain("int winIdx = int(round(atlasAttr.a * 255.0)) - 1;");
+  });
+
+  it("masks colour by attr.g and snapshots into nvr_pickColor on picking pass", () => {
+    // Raster pixels contribute 0 (no entity); vector pixels keep the pick
+    // ID written into atlasColor by the per-layer RT pass. We snapshot the
+    // masked value BEFORE the diffuse merge so the dithering-stage override
+    // writes it straight to gl_FragColor without lighting/tonemapping/fog
+    // corruption.
+    expect(src).toContain("if (uPickable > 0.)");
+    expect(src).toContain("atlasColor.rgb *= atlasAttr.g;");
+    expect(src).toContain("vec3 nvr_pickColor = atlasColor.rgb;");
+  });
+
+  it("indexes per-slot uniforms with winIdx (no loop)", () => {
+    expect(src).toContain("uShininesses[winIdx]");
+    expect(src).toContain("uReflectivities[winIdx]");
+    // Should not loop over slots — the dynamic index is the whole point.
+    expect(src).not.toMatch(/for\s*\(/);
+  });
+
+  it("uses premultiplied 'over' blend so transparent atlas keeps base color", () => {
+    // src.rgb + dst * (1 - src.a) — NOT mix(dst, src.rgb, src.a). Mixing
+    // would double-apply alpha because the composite already premultiplies.
+    expect(src).toContain(
+      "diffuseColor.rgb = atlasColor.rgb + diffuseColor.rgb * (1.0 - atlasColor.a);",
+    );
+    expect(src).not.toMatch(/mix\(diffuseColor\.rgb,\s*atlasColor\.rgb/);
+  });
+});
+
+describe("generateTileNormalFragmentMaps", () => {
+  it("omits the hillshade lookup entirely when hasHillshade is off", () => {
+    const src = generateTileNormalFragmentMaps({
+      hasHillshade: false,
+      hasWater: false,
+    });
+    expect(src).not.toContain("uNormalAtlas");
+    expect(src).not.toContain("TBN");
+  });
+
+  it("samples uNormalAtlas exactly once when hasHillshade is on", () => {
+    const src = generateTileNormalFragmentMaps({
+      hasHillshade: true,
+      hasWater: false,
+    });
+    const matches = src.match(/texture2D\(uNormalAtlas/g) ?? [];
+    expect(matches.length).toBe(1);
+    expect(src).toContain("atlasNormalSample.a > 0.5");
+    expect(src).toContain("uHillshadeExaggeration");
+  });
+
+  it("omits water specular call when hasWater is off", () => {
+    const src = generateTileNormalFragmentMaps({
+      hasHillshade: false,
+      hasWater: false,
+    });
+    expect(src).not.toContain("computeWaterSpecular");
+    expect(src).toContain("computeSpecular(");
+  });
+
+  it("emits computeWaterSpecular when hasWater is on", () => {
+    const src = generateTileNormalFragmentMaps({
+      hasHillshade: false,
+      hasWater: true,
+    });
+    expect(src).toContain("computeWaterSpecular(");
+  });
+});
+
+describe("MRT buffer replacements", () => {
+  it("writes finalNormal into normalBuffer with reflectivity/roughness packed", () => {
+    expect(TILE_NORMAL_BUFFER_REPLACEMENT).toContain("normalBuffer = vec4(");
+    expect(TILE_NORMAL_BUFFER_REPLACEMENT).toContain("tileReflectivity");
+    expect(TILE_NORMAL_BUFFER_REPLACEMENT).toContain("tileRoughness");
+  });
+
+  it("gates emissive/effect on isTexturizedLayer", () => {
+    expect(TILE_EMISSIVE_EFFECT_BUFFER_REPLACEMENT).toContain(
+      "if (isTexturizedLayer)",
+    );
+    expect(TILE_EMISSIVE_EFFECT_BUFFER_REPLACEMENT).toContain(
+      "effectIdBuffer = vec4(0.0);",
+    );
+  });
+
+  it("pick override writes nvr_pickColor straight to gl_FragColor", () => {
+    // Output is the LAST write of the fragment shader so envmap/tonemapping/
+    // colorspace/fog can't pollute the pick buffer with lit colours. The
+    // value comes from the attr.g-masked atlas (see generateTileMapFragment)
+    // — raster pixels become batchId=0 (no entity); vector pixels carry the
+    // ID their own per-layer enhancer wrote during the per-layer RT pass.
+    expect(TILE_PICK_FRAGMENT_OVERRIDE).toContain("if (uPickable > 0.)");
+    expect(TILE_PICK_FRAGMENT_OVERRIDE).toContain(
+      "gl_FragColor = vec4(nvr_pickColor, 1.0);",
+    );
+  });
+});

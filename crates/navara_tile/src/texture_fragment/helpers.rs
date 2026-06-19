@@ -9,7 +9,7 @@ use navara_layer::TilesLayer;
 use navara_material::Appearance;
 use navara_texture_fragment::TextureFragment;
 use navara_tile_component::{
-    RasterTile, TileHandle, TileTextureFragmentMarker, TileTextureFragmentQuery,
+    TerrainTile, TileHandle, TileTextureFragmentMarker, TileTextureFragmentQuery,
 };
 
 use crate::hillshade::HillshadeTextureMarker;
@@ -17,7 +17,7 @@ use crate::hillshade::HillshadeTextureMarker;
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn request_texture_fragment(
     commands: &mut Commands,
-    leaf: &mut RasterTile,
+    leaf: &mut TerrainTile,
     tiles: &Query<(&TilesLayer, &Order)>,
     handle: TileHandle,
     texture_fragment: &TileTextureFragmentQuery,
@@ -96,7 +96,7 @@ pub(crate) fn request_texture_fragment(
             continue;
         }
 
-        let tms = matches!(layer.appearance.as_ref(), Some(Appearance::RasterTile(m)) if m.tms);
+        let tms = matches!(layer.appearance.as_ref(), Some(Appearance::TerrainTile(m)) if m.tms);
         let url = TilingScheme::WebMercator { tms }
             .tile_url(layer.data.as_ref().unwrap().url.as_str(), coords);
 
@@ -187,7 +187,7 @@ mod tests {
             data: Some(LayerData {
                 url: "https://example.com/{z}/{x}/{y}.png".to_string(),
             }),
-            appearance: Some(Appearance::RasterTile(RasterTileMaterial {
+            appearance: Some(Appearance::TerrainTile(RasterTileMaterial {
                 min_zoom,
                 max_zoom,
                 ..Default::default()
@@ -203,7 +203,7 @@ mod tests {
             data: Some(LayerData {
                 url: "https://example.com/{z}/{x}/{y}.png".to_string(),
             }),
-            appearance: Some(Appearance::RasterTile(RasterTileMaterial {
+            appearance: Some(Appearance::TerrainTile(RasterTileMaterial {
                 min_zoom,
                 max_zoom,
                 ..Default::default()
@@ -222,12 +222,12 @@ mod tests {
         hill_ids: Vec<Option<Entity>>,
     }
 
-    /// Run a single update where the caller can mutate a freshly-built `RasterTile`
+    /// Run a single update where the caller can mutate a freshly-built `TerrainTile`
     /// before and after the call to `request_texture_fragment`. The post-call state
     /// of both entity-id arrays is captured into `CapturedSlots`.
     fn run_request<F>(layers: Vec<(TilesLayer, Order)>, tile_z: usize, prepare: F) -> CapturedSlots
     where
-        F: FnOnce(&mut RasterTile) + Send + Sync + 'static,
+        F: FnOnce(&mut TerrainTile) + Send + Sync + 'static,
     {
         let mut app = App::new();
         app.init_resource::<BufferStore>();
@@ -248,7 +248,7 @@ mod tests {
                   texture_fragment: TileTextureFragmentQuery,
                   data_requesters: Query<&DataRequester>,
                   mut out: ResMut<CapturedSlots>| {
-                let mut tile = RasterTile::new(
+                let mut tile = TerrainTile::new(
                     TileXYZ {
                         x: 0,
                         y: 0,

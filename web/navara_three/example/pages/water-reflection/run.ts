@@ -327,7 +327,7 @@ const addWaterControls = (view: ThreeView<CustomDescriptions>, pane: Pane) => {
       shininess: 100,
       specularStrength: 2,
       applyWaterNormal: false,
-      specular: true,
+      specular: false,
       ior: 1.33333,
       transparent: false,
       opacity: 1.0,
