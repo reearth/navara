@@ -13,7 +13,7 @@ use navara_occluder::ellipsoidal_occluder::EllipsoidalOccluder;
 
 use navara_camera::CameraFrustum;
 use navara_tile_component::{
-    QuantizedMeshData, RasterDEMData, RasterTile, RasterTileQuadtree, Tile, TileHandle,
+    QuantizedMeshData, RasterDEMData, TerrainTile, TerrainTileQuadtree, Tile, TileHandle,
     TileMeshMarker, TileTerrainDataRequesterQuery, TileTextureFragmentQuery,
 };
 use navara_window::Window;
@@ -43,7 +43,7 @@ pub fn traverse_tile(
     terrain_layer: &Option<&TerrainLayer>,
     handle: TileHandle,
     tc: &mut TileCacheManager,
-    qt: &mut RasterTileQuadtree,
+    qt: &mut TerrainTileQuadtree,
     buf: &mut BufferStore,
     data_manager: &mut DataManager,
     frame: &FrameManager,
@@ -223,7 +223,7 @@ pub fn traverse_tile(
     }
 
     // Culled tiles do not traverse children, but they are rendered to prevent parent tiles from flickering.
-    if !is_culled_by_frustum && let Some(children) = RasterTile::traversable_children(qt, handle) {
+    if !is_culled_by_frustum && let Some(children) = TerrainTile::traversable_children(qt, handle) {
         let mut any_children_rendered = false;
 
         let ready_parent_tile_handle = if tile_ready_state.is_texture_ready {
@@ -448,7 +448,7 @@ pub fn spawn_tile_entity(
     commands: &mut Commands,
     tc: &mut TileCacheManager,
     frame: &FrameManager,
-    tile: &mut RasterTile,
+    tile: &mut TerrainTile,
     tile_handle: TileHandle,
     ready_parent_tile_handle: Option<TileHandle>,
     layer_parents: Option<Vec<Option<LayerParent>>>,
@@ -490,7 +490,7 @@ pub fn spawn_tile_entity(
 /// the appropriate entity slot (texture_fragment_entity_ids vs hillshade_entity_ids) is
 /// consulted, and if it is ready it becomes the parent for the layer's descendants.
 fn update_ready_layer_parents(
-    qt: &RasterTileQuadtree,
+    qt: &TerrainTileQuadtree,
     handle: TileHandle,
     tiles: &Query<(&TilesLayer, &Order)>,
     texture_fragment: &TileTextureFragmentQuery,
@@ -512,7 +512,7 @@ fn update_ready_layer_parents(
         };
 
         let parent = if let Some(entity) = own_entity
-            && RasterTile::is_texture_entity_ready(entity, texture_fragment, data_requesters)
+            && TerrainTile::is_texture_entity_ready(entity, texture_fragment, data_requesters)
         {
             Some(LayerParent {
                 entity,
@@ -535,7 +535,7 @@ fn update_ready_layer_parents(
 #[allow(clippy::too_many_arguments)]
 pub fn prepare_tile_resource(
     commands: &mut Commands,
-    qt: &mut RasterTileQuadtree,
+    qt: &mut TerrainTileQuadtree,
     buf: &mut BufferStore,
     data_manager: &mut DataManager,
     terrain_layer: &Option<&TerrainLayer>,
@@ -586,7 +586,7 @@ pub fn prepare_tile_resource(
 }
 
 fn prepare_upsamplable_terrain_data(
-    qt: &mut RasterTileQuadtree,
+    qt: &mut TerrainTileQuadtree,
     terrain_layer: &Option<&TerrainLayer>,
     handle: TileHandle,
 ) {
@@ -629,7 +629,7 @@ fn begine_traverse_tile(
     occluder: &EllipsoidalOccluder,
     _camera: &Transform,
     frame: &FrameManager,
-    tile: &mut RasterTile,
+    tile: &mut TerrainTile,
 ) {
     tile.visited_at = frame.rendered_frame();
     tile.update_tile_occludee_point(ellipsoid, occluder);

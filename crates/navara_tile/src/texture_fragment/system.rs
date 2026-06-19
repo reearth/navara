@@ -5,7 +5,7 @@ use bevy_ecs::{
 };
 use navara_component::{Deleted, Ignored, OrderByDistance, Priority, Requested};
 use navara_texture_fragment::TextureFragment;
-use navara_tile_component::{RasterTileQuadtree, TileTextureFragmentMarker};
+use navara_tile_component::{TerrainTileQuadtree, TileTextureFragmentMarker};
 
 use crate::hillshade::HillshadeTextureMarker;
 
@@ -14,7 +14,7 @@ const MAX_PENDINGS: u32 = 50;
 #[allow(clippy::type_complexity)]
 pub(crate) fn filter_requestable_texture_fragment(
     mut commands: Commands,
-    mut qt: ResMut<RasterTileQuadtree>,
+    mut qt: ResMut<TerrainTileQuadtree>,
     fragments: Query<
         (
             Entity,

@@ -20,7 +20,7 @@ use navara_window::Window;
 use navara_camera::{CameraFrustum, CameraMarker};
 use navara_occluder::ellipsoidal_occluder::EllipsoidalOccluder;
 use navara_tile_component::{
-    RasterTileQuadtree, TileExtent, TileMeshMarker, TileTerrainDataRequesterQuery,
+    TerrainTileQuadtree, TileExtent, TileMeshMarker, TileTerrainDataRequesterQuery,
 };
 
 use navara_feature_component::point::PointMarker;
@@ -108,7 +108,7 @@ pub fn transfer_batched_mesh(
 /// and per-point traversal for GeoJSON features.
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn update_height_by_terrain_for_batched(
-    mut qt: ResMut<RasterTileQuadtree>,
+    mut qt: ResMut<TerrainTileQuadtree>,
     mut buf: ResMut<BufferStore>,
     mut renderable_features: Query<
         (&PointMarker, &mut RenderableFeature),
