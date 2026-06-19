@@ -102,6 +102,11 @@ export class SDFTextMesh
     // Create empty ShaderMaterial — enhancer will set shaders and uniforms
     const mat = new ShaderMaterial({
       transparent: true,
+      // depthWrite must stay enabled: the fragment shader's per-pixel outline
+      // depth offset (sdfText.frag.glsl) relies on fills writing a nearer depth
+      // so a neighbouring glyph's fill occludes this glyph's outline at overlaps
+      // — without depth writes that outline-seam fix becomes a no-op.
+      depthWrite: true,
     });
 
     this._enhancer = createSdfTextMaterialEnhancer(mat);
