@@ -10,7 +10,7 @@ use navara_data_requester::DataManager;
 use navara_tile_component::{CachedMartini, TerrainInformationQuadtree, TerrainTileQuadtree};
 use tile::{event::MeshPreparedEvent, tile_cache_manager::TileCacheManager};
 
-/// System set for raster tile processing.
+/// System set for terrain tile processing.
 /// Feature systems that depend on terrain data should run `.after(TileSet)`.
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct TileSet;
