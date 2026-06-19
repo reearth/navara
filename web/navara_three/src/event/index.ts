@@ -492,7 +492,8 @@ async function processRequestedData(ctx: EventContext, req: DataRequestEvent) {
   // `offset - 1n` and emit an invalid `Range` header — and falling back to a
   // full fetch could silently download an entire multi-GB archive — so fail
   // the request instead.
-  if (req.offset != null && req.length != null) {
+  const isRangeRequest = req.offset != null && req.length != null;
+  if (isRangeRequest) {
     if (req.length <= 0n) {
       buf.triggerDataRequesterFailed(req.bits);
       abortControllers.delete(id);
@@ -504,6 +505,10 @@ async function processRequestedData(ctx: EventContext, req: DataRequestEvent) {
 
   await fetch(req.url, { signal: abortController.signal, headers })
     .then((res) => {
+      // For range reads, require 206 so we don't silently accept a full-body 200
+      // response and download an entire PMTiles archive.
+      if (isRangeRequest && res.status !== 206) throw new Error();
+
       // A successful range request returns 206 Partial Content, which is in
       // the ok range (200-299), so this guard handles both 200 and 206.
       if (!res.ok) throw new Error();

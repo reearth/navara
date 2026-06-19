@@ -1,8 +1,8 @@
 use crate::{Extent, Float, LngLat, Rad, Radians};
 use navara_math::{FloatType, Two};
 use regex::Regex;
-use url::Url;
 use serde::{Deserialize, Serialize};
+use url::Url;
 
 /// Tiling scheme for a quadtree Globe.
 ///

@@ -26,9 +26,9 @@ use navara_vector_tile::VectorTileSet;
 /// Tile *payload* requests reuse the vector-tile pipeline's own systems (they
 /// carry `VectorTileDataRequesterMarker`); this plugin only adds the
 /// container-fetch concerns that are specific to PMTiles.
-pub struct PMTilePlugin;
+pub struct PmTilePlugin;
 
-impl Plugin for PMTilePlugin {
+impl Plugin for PmTilePlugin {
     fn build(&self, app: &mut App) {
         app
             // Surface PMTiles container-fetch failures before tiles are traversed,

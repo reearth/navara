@@ -275,11 +275,20 @@ pub(crate) fn filter_requestable_pmtiles_meta(
         return;
     }
 
-    // Forget the dropped leaves so the source re-requests them later; without
-    // this the source would treat them as forever in-flight and deadlock.
+    // Forget dropped requests so sources can retry them later; otherwise they would
+    // treat them as forever in-flight and deadlock.
     for mut tile_source in &mut sources {
         if let Some(source) = tile_source.downcast_mut::<PmtilesSource>() {
+            // Leaves can be retried by clearing their in-flight markers.
             source.leaf_reqs.retain(|_, (e, _)| !dropped.contains(e));
+            // If the bootstrap request was dropped, clear it and reset the archive
+            // so a future frame can re-issue the bootstrap range.
+            if let Some((e, _)) = source.bootstrap_req
+                && dropped.contains(&e)
+            {
+                source.bootstrap_req = None;
+                source.archive = Archive::new();
+            }
         }
     }
     for e in dropped {

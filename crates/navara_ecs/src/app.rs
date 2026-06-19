@@ -15,7 +15,7 @@ use navara_layer_event::LayerPlugin;
 use navara_mesh::MeshPlugin;
 use navara_mvt::MvtPlugin;
 use navara_occluder::OccluderPlugin;
-use navara_pmtiles::PMTilePlugin;
+use navara_pmtiles::PmTilePlugin;
 use navara_texture_fragment::TextureFragmentPlugin;
 use navara_tile::TilePlugin;
 use navara_vector_tile::VectorTilePlugin;
@@ -50,7 +50,7 @@ impl bevy_app::Plugin for Plugin {
         app.add_plugins(Cesium3dTilesPlugin);
         app.add_plugins(VectorTilePlugin);
         app.add_plugins(MvtPlugin);
-        app.add_plugins(PMTilePlugin);
+        app.add_plugins(PmTilePlugin);
         app.add_plugins(WorkerPlugin);
 
         // custom systems

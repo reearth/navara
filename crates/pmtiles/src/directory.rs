@@ -68,11 +68,13 @@ impl Directory {
         }
         // Column 2: run lengths.
         for entry in &mut entries {
-            entry.run_length = read_uvarint(&mut cursor)? as u32;
+            let v = read_uvarint(&mut cursor)?;
+            entry.run_length = u32::try_from(v).map_err(|_| Error::UnexpectedEof)?;
         }
         // Column 3: byte lengths.
         for entry in &mut entries {
-            entry.length = read_uvarint(&mut cursor)? as u32;
+            let v = read_uvarint(&mut cursor)?;
+            entry.length = u32::try_from(v).map_err(|_| Error::UnexpectedEof)?;
         }
         // Column 4: offsets. 0 means "contiguous with the previous entry".
         for i in 0..entries.len() {

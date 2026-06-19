@@ -30,10 +30,10 @@ const VIEWPOINTS = {
 } as const;
 
 const LABEL_TIERS = [
-  { 
+  {
     key: "country",
     maxHeight: 4_000_000,
-    match: ["country"]
+    match: ["country"],
   },
   {
     key: "region",
@@ -219,7 +219,6 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
       outlineWidth: 5,
       outlineOpacity: 0.4,
       offsetDepth: true,
-      // highQuality: true,
       depthTest: true,
     },
     // Finer admin features (governorate/district) only exist in higher-zoom
