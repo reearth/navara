@@ -1,5 +1,4 @@
 import { generate_id_from_entity, type TileHandle } from "@navara/core";
-import { orthoCameraTransform } from "@navara/engine";
 import type {
   MeshAdded,
   Mesh as EventMesh,
@@ -9,20 +8,22 @@ import type {
   MeshChanged,
   Globe,
 } from "@navara/engine";
-import ElevationParsFragment from "@shaders/glsl/chunks/elevation_pars_fragment.glsl";
+import BranchFreeTernary from "@shaders/glsl/chunks/branchFreeTernary.glsl?raw";
 import SpecularParsFragment from "@shaders/glsl/chunks/spucular_pars_fragment.glsl";
 import WaterParsFragment from "@shaders/glsl/chunks/water_pars_fragment.glsl?raw";
 import {
   BufferAttribute,
   BufferGeometry,
   Color,
+  DataTexture,
   NearestFilter,
   Mesh,
   MeshLambertMaterial,
-  OrthographicCamera,
+  RedFormat,
   RGBAFormat,
   SRGBColorSpace,
   Texture,
+  UnsignedByteType,
   Vector2,
   Vector3,
   Vector4,
@@ -44,12 +45,25 @@ import { PolygonMesh, PolylineMesh } from "..";
 import { setTransform } from "../event";
 import type { EventContext, TileHandler } from "../event/context";
 import {
-  generateMixOverlaidTexturesMacro,
-  generateHillshadeNormalShader,
+  generateTileCommonInjection,
+  generateTileMapFragment,
+  generateTileNormalFragmentMaps,
+  TILE_EMISSIVE_EFFECT_BUFFER_REPLACEMENT,
+  TILE_NORMAL_BUFFER_REPLACEMENT,
+  TILE_PICK_FRAGMENT_OVERRIDE,
+  TILE_VERTEX_INJECTIONS,
 } from "../material";
+import { deriveCompositeFeatures } from "../material/enhancer/tileComposite";
 import type { CustomObject3DEventMap } from "../object3DEvent";
 import type { SceneGroup, TexturizedSceneByTileCoordinates } from "../scene";
 import type { TextureOptions } from "../textures";
+import {
+  planSlots,
+  type CompositeFeatures,
+  type CompositeGlobals,
+  type CompositeLayer,
+  type TileTextureCompositor,
+} from "../tileTexture";
 import type { TileMapByHandle } from "../type";
 import type { CommonUniforms } from "../uniforms";
 import { createReplacer } from "../utils";
@@ -62,8 +76,6 @@ import {
 import type { PickableMesh } from "./pickableMesh";
 
 export type TileMaterial = MeshBasicMaterial | MeshLambertMaterial;
-
-const PREV_RENDERER_CLEAR_COLOR = new Color();
 
 export class TileMesh
   extends Mesh<BufferGeometry, TileMaterial, CustomObject3DEventMap>
@@ -94,10 +106,9 @@ export class TileMesh
   private shadowMesh?: Mesh<BufferGeometry, TileMaterial>;
 
   private texturizedSceneByTileCoordinates: TexturizedSceneByTileCoordinates;
+  private compositor: TileTextureCompositor;
   // This is used to attach this scene as a texture to the tile.
   private texturizedScenes: SceneGroup;
-  // Private camera for this tile to prevent conflicts with other tiles
-  private camera = new OrthographicCamera();
 
   texturizedSceneRenderTargets: WebGLRenderTarget[] = [];
 
@@ -111,6 +122,7 @@ export class TileMesh
 
     const {
       texturizedSceneByTileCoordinates,
+      tileTextureCompositor,
       textureOptions,
       tileMapByHandle,
       tileHandler,
@@ -120,11 +132,15 @@ export class TileMesh
     this.handle = handle;
 
     this.texturizedSceneByTileCoordinates = texturizedSceneByTileCoordinates;
+    this.compositor = tileTextureCompositor;
 
     this.texturizedScenes = texturizedSceneByTileCoordinates.get(handle);
 
-    // Initialize the private camera by copying the shared camera
-    this.camera.copy(texturizedSceneByTileCoordinates.camera);
+    // Acquire the per-tile composite atlas from the compositor. Pairing the
+    // acquire with the mesh keeps the atlas lifecycle tied to the tile and lets
+    // the compositor allocate its private OrthographicCamera for this handle.
+    // The atlas Textures are bound to the main shader later in initMaterial.
+    this.compositor.acquire(handle);
 
     this.maxTextures = textureOptions.maxTextures;
 
@@ -225,16 +241,11 @@ export class TileMesh
   private _onBeforeRender = () => {
     if (!this.visible) return;
 
-    // This needs to be executed in every render to check parent tile state.
-    // If the parent tile is available, but the child tile is still preparing, use the parent tile.
+    // Refresh parent-tile fallback state. Done every frame because Rust's
+    // tile-state can flip between frames as data arrives.
     this.updateTexturizedSceneByTileState();
 
-    if (!this.texturizedSceneByTileCoordinates.getNeedsUpdate(this.handle))
-      return;
-
-    this.texturizedSceneByTileCoordinates.setNeedsUpdate(this.handle, false);
-
-    // Warn if MVT layers exceed available slots
+    // Warn once when more MVT layers requested than we have slots for.
     const numScenes = this.texturizedScenes.tileScenes.length;
     if (numScenes > this.numTexturizedVector) {
       if (!this.warnedExceededTextures) {
@@ -249,114 +260,149 @@ export class TileMesh
       this.warnedExceededTextures = false;
     }
 
-    let i = -1;
-    for (const texturizedScene of this.texturizedScenes.tileScenes) {
-      i++;
-
-      if (texturizedScene.removed) {
-        this.updateTexturizedSceneTextureVisibility(
-          false,
-          texturizedScene.layerId,
-        );
-        continue;
-      }
-
-      if (!texturizedScene.children.length) {
-        this.updateTexturizedSceneTextureVisibility(
-          false,
-          texturizedScene.layerId,
-        );
-        continue;
-      }
-
-      this.updateTexturizedSceneTextureVisibility(
-        true,
-        texturizedScene.layerId,
-      );
-
-      const renderTarget = this.texturizedSceneRenderTargets[i];
-      if (!renderTarget) break;
-
-      const currentRenderTarget =
-        this.texturizedSceneByTileCoordinates.renderer.getRenderTarget();
-      const clearColor =
-        this.texturizedSceneByTileCoordinates.renderer.getClearColor(
-          PREV_RENDERER_CLEAR_COLOR,
-        );
-
-      // Get the parent tile's zoom level if available
-      const tileStates = this.tileStates;
-      const layerId = texturizedScene.layerId;
-      const state = tileStates?.find((s) => s.layerId === layerId);
-      const parentHandle =
-        // Parent tile should be used if this tile isn't available, or
-        !state?.isRendered ||
-        // this tile is still preparing in rendering engine(It means this texturized scene doesn't have a mesh except for the parent tile).
-        !this.texturizedSceneByTileCoordinates.hasCurrentMesh(
-          this.handle,
-          layerId,
-        )
-          ? state?.parentHandle
-          : undefined;
-
-      this.texturizedSceneByTileCoordinates.showMeshFromParent(
-        this.handle,
-        layerId,
-        !!parentHandle,
-      );
-
-      // Save original camera projection parameters
-      const originalLeft = this.camera.left;
-      const originalRight = this.camera.right;
-      const originalTop = this.camera.top;
-      const originalBottom = this.camera.bottom;
-
-      // If we have a parent tile, adjust the camera to focus on the correct region.
-      if (parentHandle) {
-        const result = orthoCameraTransform(this.handle, parentHandle);
-
-        // Update the camera parameters to focus on the subtile
-        // Set the projection parameters directly.
-        this.camera.left = result.left;
-        this.camera.right = result.right;
-        this.camera.top = result.top;
-        this.camera.bottom = result.bottom;
-
-        // Update the projection matrix to apply the changes
-        this.camera.updateProjectionMatrix();
-      }
-
-      this.texturizedSceneByTileCoordinates.renderer.setRenderTarget(
-        renderTarget,
-      );
-      this.texturizedSceneByTileCoordinates.renderer.setClearColor(0x000, 0); // Transparent scene
-      this.texturizedSceneByTileCoordinates.renderer.clear();
-      this.texturizedSceneByTileCoordinates.renderer.render(
-        texturizedScene,
-        this.camera, // Use the private camera instead of the shared one
-      );
-
-      // Restore camera settings
-      if (parentHandle) {
-        this.camera.left = originalLeft;
-        this.camera.right = originalRight;
-        this.camera.top = originalTop;
-        this.camera.bottom = originalBottom;
-        this.camera.updateProjectionMatrix();
-      }
-
-      // Restore previous renderer settings.
-      this.texturizedSceneByTileCoordinates.renderer.setRenderTarget(
-        currentRenderTarget,
-      );
-      this.texturizedSceneByTileCoordinates.renderer.setClearColor(
-        clearColor,
-        1,
-      );
-
-      renderTarget.texture.needsUpdate = true;
+    // Per-layer vector-scene offscreen render. Returns true when any render
+    // happened — in that case the composite atlas needs to repaint so the
+    // main shader sees the new texturized-layer pixels.
+    const vectorRendered = this.compositor.renderVectorScenes(
+      this.handle,
+      this.texturizedSceneRenderTargets,
+      (layerId) => {
+        const s = this.tileStates?.find((x) => x.layerId === layerId);
+        if (!s) return undefined;
+        return {
+          candidateParent: s.parentHandle,
+          isRendered: s.isRendered,
+        };
+      },
+      (layerId, visible) =>
+        this.updateTexturizedSceneTextureVisibility(visible, layerId),
+    );
+    if (vectorRendered) {
+      this.compositor.markDirty(this.handle, "vector-revision");
     }
+
+    // MRT composite pass: bakes N source textures into the per-tile atlas.
+    // Skip building the layer snapshot entirely when nothing is dirty.
+    if (!this.compositor.cache.isDirty(this.handle)) return;
+    const { layers, globals } = this.buildCompositeLayers();
+    const plan = planSlots(
+      layers,
+      this.texturizedSceneIndexFrom,
+      this.maxTextures,
+    );
+    this.compositor.runCompositePassIfDirty(
+      this.handle,
+      plan,
+      globals,
+      deriveCompositeFeatures(layers, globals),
+    );
   };
+
+  /**
+   * Feature flags for the **main** TileMesh shader (atlas-sampling side): drives
+   * its program cache key and which normal/specular branches compile. Sourced
+   * from the material defines/userData, independent of the composite pass's own
+   * (layer-derived) feature set — see {@link deriveCompositeFeatures}.
+   */
+  private computeFeatures(): CompositeFeatures {
+    const ud = this.material.userData;
+    return {
+      hasHillshade: ud.defines?.USE_HILLSHADE === 1,
+      hasWater: !!(ud.waters?.value as boolean[] | undefined)?.some(
+        (v) => v === true,
+      ),
+      hasElevationHeatmap: !!(
+        ud.isElevationHeatmaps?.value as boolean[] | undefined
+      )?.some((v) => v === true),
+      hasWatermask: this.userData.watermask != null,
+    };
+  }
+
+  /**
+   * Snapshot the current per-slot uniform state into a typed layer list for the
+   * compositor's MRT pass. Reads directly from material.userData (the same
+   * source of truth the main shader uses); only slots that are both shown and
+   * textured become layers, so the SlotPlanner's compact counts cover exactly
+   * the active slots.
+   */
+  private buildCompositeLayers(): {
+    layers: CompositeLayer[];
+    globals: CompositeGlobals;
+  } {
+    const ud = this.material.userData;
+    const shows: number[] = ud.shows?.value ?? [];
+    const textures: (Texture | null)[] = ud.textures?.value ?? [];
+    const colors: Color[] = ud.colors?.value ?? [];
+    const opacities: number[] = ud.opacities?.value ?? [];
+    const layerUvOffset: Vector2[] = ud.layerUvOffset?.value ?? [];
+    const layerUvScale: Vector2[] = ud.layerUvScale?.value ?? [];
+    const isHillshades: boolean[] = ud.isHillshades?.value ?? [];
+    const isElevationHeatmaps: boolean[] = ud.isElevationHeatmaps?.value ?? [];
+    const waters: boolean[] = ud.waters?.value ?? [];
+    const boundary = this.texturizedSceneIndexFrom;
+
+    const layers: CompositeLayer[] = [];
+    for (let absSlot = 0; absSlot < this.maxTextures; absSlot++) {
+      const texture = textures[absSlot] ?? null;
+      if (shows[absSlot] !== 1 || texture == null) continue;
+
+      const region = absSlot < boundary ? "raster" : "vector";
+      const uvOffset = layerUvOffset[absSlot] ?? new Vector2(0, 0);
+      const uvScale = layerUvScale[absSlot] ?? new Vector2(1, 1);
+
+      // Hillshade takes precedence: a slot flagged both ways has its color
+      // zeroed and emits a normal, so classifying it as hillshade is correct —
+      // the elevation sample would be zeroed anyway.
+      if (isHillshades[absSlot]) {
+        layers.push({
+          kind: "hillshade",
+          region,
+          absSlot,
+          texture,
+          uvOffset,
+          uvScale,
+        });
+      } else if (isElevationHeatmaps[absSlot]) {
+        layers.push({
+          kind: "elevationHeatmap",
+          region,
+          absSlot,
+          texture,
+          uvOffset,
+          uvScale,
+          opacity: opacities[absSlot] ?? 1,
+        });
+      } else {
+        layers.push({
+          kind: "raster",
+          region,
+          absSlot,
+          texture,
+          uvOffset,
+          uvScale,
+          color: colors[absSlot] ?? new Color(),
+          opacity: opacities[absSlot] ?? 1,
+          water: waters[absSlot] ?? false,
+        });
+      }
+    }
+
+    const globals: CompositeGlobals = {
+      hillshadeExaggeration: ud.hillshadeExaggeration?.value ?? 1,
+      watermask: this.userData.watermask?.texture ?? null,
+      colorMapTexture: this.ctx.uniforms.colorMapTexture.value ?? null,
+      elevationRGBScaler: ud.elevationRGBScaler?.value ?? new Vector3(),
+      elevationMinMaxHeightAndBoundary:
+        ud.elevationMinMaxHeightAndBoundary?.value ?? new Vector3(),
+      elevationMinMaxOffsetAndEpsilonAndOffset:
+        ud.elevationMinMaxOffsetAndEpsilonAndOffset?.value ?? new Vector4(),
+      logarithmic: ud.logarithmic?.value ?? false,
+      logBase: ud.logBase?.value ?? 10,
+      logBoundary: ud.logBoundary?.value ?? 10,
+    };
+
+    return { layers, globals };
+  }
 
   async _init(mesh: MeshAdded) {
     await this.createMesh(
@@ -444,9 +490,23 @@ export class TileMesh
     if (mesh.watermask != null) {
       const watermask = buf.u8(mesh.watermask);
       if (watermask) {
+        const isUniform = watermask.length === 1;
+        const size = isUniform ? 1 : 256;
+        // Single-channel R8 — the composite shader only reads `.r`. RedFormat
+        // halves GPU memory vs. RGBA (256×256 = 64KB instead of 256KB).
+        const texture = new DataTexture(
+          watermask.slice(),
+          size,
+          size,
+          RedFormat,
+          UnsignedByteType,
+        );
+        texture.flipY = true;
+        texture.needsUpdate = true;
         this.userData.watermask = {
           data: watermask.slice(),
-          isUniform: watermask.length === 1,
+          isUniform,
+          texture,
         };
       }
     }
@@ -500,7 +560,6 @@ export class TileMesh
 
     this.visible = false;
     this.renderOrder = mesh.render_order;
-    this.userData.tileOrigColor = globe.color;
     if (transform) setTransform(this, transform);
     scenes.globe.add(this);
     meshes.set(id, this);
@@ -654,134 +713,88 @@ export class TileMesh
 
     m.userData.uTime = uniforms.time;
 
-    m.userData.defines ??= {};
-    m.userData.defines.USE_UV = 1;
-    m.userData.defines.USE_ELEVATION_HEATMAP = 0;
-    m.userData.defines.USE_HILLSHADE = 0;
-    m.userData.defines.USE_SELECTIVE_EFFECT = 1;
-    m.userData.defines.USE_VERTEX_NORMAL = this.userData.hasNormalAttribute
-      ? 1
-      : 0;
+    m.userData.defines = {
+      USE_UV: 1,
+      USE_SELECTIVE_EFFECT: 1,
+      USE_VERTEX_NORMAL: this.userData.hasNormalAttribute ? 1 : 0,
+    };
 
     m.envMap = uniforms.tSkyEnvMap.value ?? null;
     m.combine = AddOperation;
 
     const maxTextures = this.maxTextures;
 
+    // Bind the compositor's atlas outputs as TileMesh-visible uniforms so the
+    // slim shader can sample them. Atlas Textures are created once per tile
+    // and persist across composite passes — `needsUpdate` is flipped by the
+    // compositor when a new pass writes to them.
+    const atlasOutputs = this.compositor.acquireOutputs(this.handle);
+    m.userData.uColorAtlas = { value: atlasOutputs.color };
+    m.userData.uAttrAtlas = { value: atlasOutputs.attr };
+    m.userData.uNormalAtlas = { value: atlasOutputs.normal };
+
+    m.customProgramCacheKey = () =>
+      "TILE" + JSON.stringify(this.computeFeatures());
+
     m.onBeforeCompile = (shader) => {
       shader.defines ??= {};
       Object.assign(shader.defines, m.userData.defines);
       shader.uniforms.reflectivity = { value: 0 };
 
-      shader.uniforms.uShows = m.userData.shows;
+      const features = this.computeFeatures();
+
       shader.uniforms.uPickable = m.userData.uPickable;
+      shader.uniforms.uColorAtlas = m.userData.uColorAtlas;
+      shader.uniforms.uAttrAtlas = m.userData.uAttrAtlas;
+      shader.uniforms.uNormalAtlas = m.userData.uNormalAtlas;
+
+      // Per-slot uniform arrays — indexed once per fragment by the winning
+      // slot decoded from attr.a (no per-fragment loop any more).
       shader.uniforms.uColors = m.userData.colors;
-      shader.uniforms.uOpacities = m.userData.opacities;
       shader.uniforms.uReflectivities = m.userData.reflectivities;
       shader.uniforms.uRoughnesses = m.userData.roughnesses;
-      shader.uniforms.uWaters = m.userData.waters;
       shader.uniforms.uWaterScaleNormals = m.userData.waterScaleNormals;
       shader.uniforms.uWaterSpeeds = m.userData.waterSpeeds;
       shader.uniforms.uShininesses = m.userData.shininesses;
       shader.uniforms.uSpecularStrengths = m.userData.specularStrengths;
       shader.uniforms.uApplyWaterNormals = m.userData.applyWaterNormals;
       shader.uniforms.uSpeculars = m.userData.speculars;
-      shader.uniforms.uTextures = m.userData.textures;
       shader.uniforms.uEmissiveIntensities = m.userData.emissiveIntensities;
       shader.uniforms.uEmissiveColors = m.userData.emissiveColors;
       shader.uniforms.uEffectIdsMasks = m.userData.effectIdsMasks;
-      // Satisfy MRT-injected single uniform declarations (tile uses per-texture arrays instead)
+      // Satisfy MRT-injected single uniform declarations (tile uses per-slot
+      // arrays + winIdx indexing instead).
       shader.uniforms.uEffectIdsMask = { value: 0 };
       shader.uniforms.uEmissiveIntensity = { value: 0 };
       shader.uniforms.uWaterNormalMap = uniforms.waterTexture;
-      shader.uniforms.uColorMapTexture = uniforms.colorMapTexture;
+      shader.uniforms.uHillshadeExaggeration = m.userData.hillshadeExaggeration;
       shader.uniforms.uIor = { value: 1.33333 };
       shader.uniforms.uTime = m.userData.uTime;
 
-      // Elevation Heatmap uniforms
-      shader.uniforms.uIsElevationHeatmaps = m.userData.isElevationHeatmaps;
-      shader.uniforms.uElevationRGBScaler = m.userData.elevationRGBScaler;
-      shader.uniforms.uElevationMinMaxHeightAndBoundary =
-        m.userData.elevationMinMaxHeightAndBoundary;
-      shader.uniforms.uElevationMinMaxOffsetAndEpsilonAndOffset =
-        m.userData.elevationMinMaxOffsetAndEpsilonAndOffset;
-      shader.uniforms.uLogarithmic = m.userData.logarithmic;
-      shader.uniforms.uLogBase = m.userData.logBase;
-      shader.uniforms.uLogBoundary = m.userData.logBoundary;
-
-      // Hillshade uniforms
-      shader.uniforms.uIsHillshades = m.userData.isHillshades;
-      shader.uniforms.uHillshadeExaggeration = m.userData.hillshadeExaggeration;
-      // Per-layer UV transform (parent tile reuse). Covers both regular textures and hillshades.
-      shader.uniforms.uLayerUvOffset = m.userData.layerUvOffset;
-      shader.uniforms.uLayerUvScale = m.userData.layerUvScale;
-
-      // Per-layer UV transform is applied in the fragment shader so each texture
-      // slot can sample from a different parent tile when overscaled independently.
       shader.vertexShader = createReplacer(shader.vertexShader)
         .replace(
           "#include <common>",
-          `
-// Pass tile-local UV; per-layer transforms are applied in the fragment shader.
-varying vec2 vOrigUv;
-varying vec3 vPosition;
-
-#include <common>
-`,
+          `${TILE_VERTEX_INJECTIONS.afterCommon}
+#include <common>`,
         )
         .replace(
           "#include <uv_vertex>",
-          `
-#include <uv_vertex>
-vOrigUv = vUv;
-`,
+          `#include <uv_vertex>
+          ${TILE_VERTEX_INJECTIONS.afterUvVertex}`,
         )
         .replace(
           "#include <envmap_vertex>",
-          `
-  #include <envmap_vertex>
-  vPosition = (modelMatrix * vec4(transformed, 1.0)).xyz;
-  `,
+          `#include <envmap_vertex>
+          ${TILE_VERTEX_INJECTIONS.afterEnvmapVertex}`,
         ).source;
 
       shader.fragmentShader = createReplacer(shader.fragmentShader)
         .replace(
           "#include <common>",
           `
-  uniform int uShows[${maxTextures}];
-  uniform vec3 uColors[${maxTextures}];
-  uniform float uOpacities[${maxTextures}];
-  uniform float uReflectivities[${maxTextures}];
-  uniform float uRoughnesses[${maxTextures}];
-  uniform bool uWaters[${maxTextures}];
-  uniform float uWaterScaleNormals[${maxTextures}];
-  uniform float uWaterSpeeds[${maxTextures}];
-  uniform float uShininesses[${maxTextures}];
-  uniform float uSpecularStrengths[${maxTextures}];
-  uniform float uApplyWaterNormals[${maxTextures}];
-  uniform bool uSpeculars[${maxTextures}];
-  uniform sampler2D uTextures[${maxTextures}];
-  uniform bool uIsElevationHeatmaps[${maxTextures}];
-  uniform bool uIsHillshades[${maxTextures}];
-  uniform vec2 uLayerUvOffset[${maxTextures}];
-  uniform vec2 uLayerUvScale[${maxTextures}];
-  uniform float uEmissiveIntensities[${maxTextures}];
-  uniform vec3 uEmissiveColors[${maxTextures}];
-  uniform float uEffectIdsMasks[${maxTextures}];
-  uniform float uHillshadeExaggeration; // Terrain exaggeration factor (recommended: 0.3-2.0)
-  uniform sampler2D uWaterNormalMap;
-  uniform float uPickable;
-  uniform float uIor;
-  uniform float uTime;
-
-  // Add varying for original UV coordinates
-  varying vec2 vOrigUv;
+${generateTileCommonInjection(maxTextures)}
 
   #include <common>
-
-  // uColorMapTexture is used for elevation heatmap color mapping
-  ${ElevationParsFragment}
-
   `,
         )
         .replaceWithCondition(
@@ -791,141 +804,14 @@ vOrigUv = vUv;
 
         ${WaterParsFragment}
         ${SpecularParsFragment}
+        ${BranchFreeTernary}
         `,
           useNormal,
         )
-        .replace(
-          "#include <map_fragment>",
-          `
-  float tileReflectivity;
-  float tileRoughness;
-  bool useWater;
-  float waterScaleNormal = 0.0;
-  float waterSpeed = 0.0;
-  float waterShininess = 30.0;
-  float waterSpecularStrength = 1.0;
-  float applyWaterNormals = 0.0;
-  bool useSpecular = false;
-  float tileEmissiveIntensity = 0.0;
-  vec3 tileEmissiveColor = vec3(0.0);
-  float tileEffectIdsMask = 0.0;
-  bool isTexturizedLayer = false;
-
-  ${generateMixOverlaidTexturesMacro(
-    maxTextures,
-    (texColorVar, idx) => `
-    // Per-layer UV transform: each slot may sample from a different parent tile
-    // when its source/zoom forces it to overscale independently.
-    vec2 texUv = vOrigUv * uLayerUvScale[${idx}] + uLayerUvOffset[${idx}];
-
-    #if USE_HILLSHADE
-      // Skip hillshade textures for color rendering (they're only used for normals)
-      if (uIsHillshades[${idx}]) {
-        ${texColorVar} = vec4(0.0); // Transparent, no color contribution
-      }
-      else
-    #endif
-    #if USE_ELEVATION_HEATMAP
-      // Check if this is an elevation heatmap texture
-      if (uIsElevationHeatmaps[${idx}]) {
-        // For elevation heatmap: decode DEM data with bilinear interpolation and apply color mapping
-        ivec2 demTexSize = textureSize(uTextures[${idx}], 0);
-        float normalized_h = sampleElevationBilinear(uTextures[${idx}], texUv, demTexSize);
-        ${texColorVar} = vec4(texture2D(uColorMapTexture, vec2(normalized_h, 0.5)).rgb, 1.0);
-      }
-      else {
-        ${texColorVar} = texture2D(uTextures[${idx}], texUv) * vec4(uColors[${idx}], 1.0);
-      }
-    #else
-      {
-        // For regular textures: use color as-is
-        ${texColorVar} = texture2D(uTextures[${idx}], texUv) * vec4(uColors[${idx}], 1.0);
-      }
-    #endif
-
-    float currentReflectivity = uReflectivities[${idx}];
-    float currentRoughness = uRoughnesses[${idx}];
-    bool currentWater = uWaters[${idx}];
-    float currentWaterScaleNormal = uWaterScaleNormals[${idx}];
-    float currentWaterSpeed = uWaterSpeeds[${idx}];
-    float currentShininess = uShininesses[${idx}];
-    float currentSpecularStrength = uSpecularStrengths[${idx}];
-    float currentApplyWaterNormals = uApplyWaterNormals[${idx}];
-    bool currentSpecular = uSpeculars[${idx}];
-    float currentEmissiveIntensity = uEmissiveIntensities[${idx}];
-    vec3 currentEmissiveColor = uEmissiveColors[${idx}];
-    float currentEffectIdsMask = uEffectIdsMasks[${idx}];
-
-    if(${texColorVar}.a > 0.0) {
-      tileReflectivity = currentReflectivity;
-      tileRoughness = currentRoughness;
-      useWater = currentWater;
-      waterScaleNormal = currentWaterScaleNormal;
-      waterSpeed = currentWaterSpeed;
-      waterShininess = currentShininess;
-      waterSpecularStrength = currentSpecularStrength;
-      applyWaterNormals = currentApplyWaterNormals;
-      useSpecular = currentSpecular;
-      if (${idx} >= ${this.texturizedSceneIndexFrom}) {
-        isTexturizedLayer = true;
-        tileEmissiveIntensity = currentEmissiveIntensity;
-        tileEmissiveColor = currentEmissiveColor;
-        tileEffectIdsMask = float(int(tileEffectIdsMask) | int(currentEffectIdsMask));
-      } else {
-        isTexturizedLayer = false;
-        tileEmissiveIntensity = 0.0;
-        tileEmissiveColor = vec3(0.0);
-        tileEffectIdsMask = 0.0;
-      }
-    }
-
-    // Disable picking for the raster tile.
-    // Allow picking for texturizedScene because it's vector data.
-    if(uPickable > 0.) {
-      ${texColorVar}.xyz *= float(${idx} >= ${this.texturizedSceneIndexFrom});
-    }
-  `,
-  )}
-  diffuseColor.rgb = sampledDiffuseColor.rgb;
-  `,
-        )
+        .replace("#include <map_fragment>", generateTileMapFragment())
         .replaceWithCondition(
           "#include <normal_fragment_maps>",
-          `
-  #if USE_VERTEX_NORMAL && !USE_HILLSHADE
-    // Keep the interpolated per-vertex normal (already in view space via three.js).
-  #else
-    vec3 N = normalize(vPosition);
-    normal = normalize(mat3(viewMatrix) * N);
-  #endif
-
-  ${generateHillshadeNormalShader(maxTextures)}
-
-  vec3 origNormal = vec3(normal);
-  vec3 specular = vec3(0.0);
-  if(useWater) {
-    specular = computeWaterSpecular(
-      uWaterNormalMap,
-      (vPosition.xy + vPosition.zy + vPosition.xz) / 3.0 * waterScaleNormal,
-      uTime * waterSpeed,
-      vViewPosition,
-      normalMatrix,
-      origNormal,
-      waterShininess,
-      waterSpecularStrength,
-      diffuseColor.rgb,
-      normal
-    );
-  } else if(useSpecular) {
-    specular = computeSpecular(
-      vViewPosition,
-      origNormal,
-      waterShininess,
-      waterSpecularStrength,
-      uIor
-    );
-  }
-  `,
+          generateTileNormalFragmentMaps(features),
           useNormal,
         )
         .replaceWithCondition(
@@ -936,39 +822,31 @@ vOrigUv = vUv;
         `,
           useNormal,
         )
-        .replace(
-          "#include <envmap_fragment>",
-          `
-if (uPickable > 0.) {
-  outgoingLight = diffuseColor.xyz;
-}
-
-  #include <envmap_fragment>
-`,
-        )
-        .replace(
+        .replaceWithCondition(
           "#include <envmap_fragment>",
           createReplacer(ShaderChunk.envmap_fragment).replace(
             "outgoingLight += envColor.xyz * specularStrength * reflectivity;",
-            "outgoingLight += envColor.xyz * specularStrength * tileReflectivity;",
+            "outgoingLight += nvr_branchFreeTernary(useSpecular, vec3(0.0), envColor.xyz * specularStrength * tileReflectivity);",
           ).source,
+          useNormal,
+        )
+        // Pick override is the LAST write of the fragment shader (after
+        // tonemapping/colorspace/fog/dithering), so the encoded batchId
+        // reaches the pick buffer bit-for-bit. See TILE_PICK_FRAGMENT_OVERRIDE.
+        .replace(
+          "#include <dithering_fragment>",
+          `#include <dithering_fragment>
+          ${TILE_PICK_FRAGMENT_OVERRIDE}`,
         )
         .replaceWithCondition(
           "normalBuffer = vec4(packNormalToVec2(normal), reflectivity, roughnessFactor);",
-          `vec3 finalNormal = mix(origNormal, normalize(origNormal * 0.7 + normal), applyWaterNormals);
-          normalBuffer = vec4(packNormalToVec2(finalNormal), tileReflectivity, tileRoughness);`,
+          TILE_NORMAL_BUFFER_REPLACEMENT,
           useNormal,
         )
         .replace(
           `effectIdBuffer = vec4(uEffectIdsMask, 0.0, 0.0, 1.0);
               emissiveBuffer = vec4(diffuseColor.rgb * uEmissiveIntensity + emissive, 1.0);`,
-          `if (isTexturizedLayer) {
-                effectIdBuffer = vec4(tileEffectIdsMask, 0.0, 0.0, 1.0);
-                emissiveBuffer = vec4(diffuseColor.rgb * tileEmissiveIntensity + tileEmissiveColor, 1.0);
-              } else {
-                effectIdBuffer = vec4(0.0);
-                emissiveBuffer = vec4(0.0);
-              }`,
+          TILE_EMISSIVE_EFFECT_BUFFER_REPLACEMENT,
         ).source;
     };
 
@@ -1016,6 +894,9 @@ if (uPickable > 0.) {
       this._setupSceneObserver();
 
       this.texturizedSceneByTileCoordinates.setNeedsUpdate(this.handle, true);
+      // Material / texture-binding changed → composite atlas must repaint.
+      this.compositor.markDirty(this.handle, "material");
+      this.compositor.markDirty(this.handle, "texture-binding");
     }
 
     // Update shadow settings
@@ -1039,7 +920,6 @@ if (uPickable > 0.) {
     }
     if (this.material.color.getHex() !== globe.color) {
       this.material.color.setHex(globe.color);
-      this.userData.tileOrigColor = globe.color;
     }
     if (this.material.transparent !== globe.transparent) {
       this.material.transparent = globe.transparent;
@@ -1096,6 +976,8 @@ if (uPickable > 0.) {
             this.handle,
             true,
           );
+          // A vector layer scene changed → composite atlas must repaint.
+          this.compositor.markDirty(this.handle, "vector-revision");
         };
 
         texturizedScene.childrenObserver = observer;
@@ -1388,32 +1270,14 @@ if (uPickable > 0.) {
     m.userData.logBase.value = Math.log(mat.logBoundary);
     m.userData.logBoundary.value = mat.logBoundary;
 
-    if (!m.userData.defines) {
-      m.userData.defines = {
-        USE_UV: 1,
-        USE_ELEVATION_HEATMAP: 0,
-        USE_HILLSHADE: 0,
-      };
-    }
-
-    const prevHeatmap = m.userData.defines.USE_ELEVATION_HEATMAP;
     const prevHillshade = m.userData.defines.USE_HILLSHADE;
-
-    const newHeatmap = m.userData.isElevationHeatmaps.value.some(
-      (v: boolean) => v === true,
-    )
-      ? 1
-      : 0;
     const newHillshade = m.userData.isHillshades.value.some(
       (v: boolean) => v === true,
     )
       ? 1
       : 0;
-
-    m.userData.defines.USE_ELEVATION_HEATMAP = newHeatmap;
     m.userData.defines.USE_HILLSHADE = newHillshade;
-
-    if (prevHeatmap !== newHeatmap || prevHillshade !== newHillshade) {
+    if (prevHillshade !== newHillshade) {
       this.material.needsUpdate = true;
     }
   }
@@ -1671,25 +1535,21 @@ if (uPickable > 0.) {
       materialData,
       true, // preserveLayerUv
     );
-  }
-
-  _setPickable(pickable: boolean): void {
-    if (pickable) {
-      this.material.color.setHex(0);
-    } else {
-      this.material.color.setHex(this.userData.tileOrigColor);
-    }
-    this.material.userData.uPickable.value = pickable ? 1 : 0;
+    // Hillshade backfill / dynamic rebinds change the composite atlas inputs.
+    this.compositor.markDirty(this.handle, "hillshade");
   }
 
   onBeforePicking(): void {
-    this.material.color.setHex(0);
     this.material.userData.uPickable.value = 1;
+
+    this.texturizedSceneByTileCoordinates.setNeedsUpdate(this.handle, true);
+    this.compositor.markDirty(this.handle, "vector-revision");
   }
 
   onAfterPicking(): void {
-    this.material.color.setHex(this.userData.tileOrigColor);
     this.material.userData.uPickable.value = 0;
+    this.texturizedSceneByTileCoordinates.setNeedsUpdate(this.handle, true);
+    this.compositor.markDirty(this.handle, "vector-revision");
   }
 
   getRenderable(): Object3D {
@@ -1746,10 +1606,17 @@ if (uPickable > 0.) {
     }
     this.texturizedSceneRenderTargets.length = 0;
 
+    // Release the watermask DataTexture (one per tile, RedFormat 1×1 or 256×256).
+    this.userData.watermask?.texture?.dispose();
+
     // Clean up from tileMapByHandle
     if (tileMapByHandle) {
       tileMapByHandle.delete(this.handle);
     }
+
+    // Release the per-tile composite atlas (refcounted via the compositor's
+    // TileTextureCache). Mirrors the acquire() in the constructor.
+    this.compositor.release(this.handle);
 
     // Clean up from texturizedSceneByTileCoordinates
     this.texturizedSceneByTileCoordinates.delete(this.handle);

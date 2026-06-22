@@ -46,9 +46,9 @@ impl TileLayerDescription {
                 (self.raster_tile.take(), old_layer.appearance.as_ref())
         {
             match old_appearance {
-                navara_material::Appearance::RasterTile(old_tile_material) => {
+                navara_material::Appearance::TerrainTile(old_tile_material) => {
                     let updated_tile_material = new_tile_material.merge(old_tile_material);
-                    return Some(Appearance::RasterTile(updated_tile_material));
+                    return Some(Appearance::TerrainTile(updated_tile_material));
                 }
                 _ => unreachable!(),
             }
@@ -57,7 +57,7 @@ impl TileLayerDescription {
         self.raster_tile
             .take()
             .map(|v| v.into())
-            .map(Appearance::RasterTile)
+            .map(Appearance::TerrainTile)
     }
 }
 

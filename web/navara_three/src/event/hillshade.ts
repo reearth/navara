@@ -1,11 +1,28 @@
 import { generate_id_from_entity } from "@navara/core";
-import type { HillshadeBackfilledEvent } from "@navara/engine";
+import type { EntityEvent, HillshadeBackfilledEvent } from "@navara/engine";
 
 import type { TileMesh } from "../mesh/tile";
 import { getTextureFragmentSlots } from "../utils/textureFragmentIndex";
 
 import type { EventContext } from "./context";
 import type { HillshadeContext } from "./HillshadeContext";
+
+/**
+ * Resolve the entity ID that hillshade state is keyed by.
+ * For edge updates with target_entity_ind/gen, use the target.
+ * Otherwise fall back to the event's own entity.
+ */
+export function resolveHillshadeEntityId(
+  event: HillshadeBackfilledEvent,
+): string {
+  if (
+    event.target_entity_ind !== undefined &&
+    event.target_entity_gen !== undefined
+  ) {
+    return `${event.target_entity_ind}_${event.target_entity_gen}`;
+  }
+  return generate_id_from_entity(event);
+}
 
 /**
  * Create padded DEM data (CPU only, no GPU upload)
@@ -334,6 +351,55 @@ function processHillshadeEdgeUpdate(
   rebindTexturesForEntity(entityId, ctx);
 }
 
+/**
+ * Handle a hillshade_canceled event.
+ *
+ * Two responsibilities, both scoped to "the canceled entity":
+ * 1. Pre-empt any pending `hillshade_backfilled` events in the EventManager
+ *    stack whose effect would target this entity, so they never run. Matched
+ *    via `resolveHillshadeEntityId` so an edge update X→Y (keyed by target Y)
+ *    survives a cancel of source X — Y still wants that edge data.
+ * 2. Drop in-flight backfill state that earlier events created — queued
+ *    neighbor edges and the in-progress DEM assembly entry.
+ *
+ * Does NOT dispose render targets or `loadedTexs` textures: those belong to
+ * the texture-fragment lifecycle and are released by
+ * `processTextureFragmentRemoved`. Disposing them here would race against
+ * other tiles that may still reference the texture.
+ *
+ * Idempotent: safe to call when no state exists for the entity.
+ */
+export function processHillshadeCanceled(
+  ctx: EventContext,
+  event: EntityEvent | undefined,
+) {
+  if (!event) return;
+
+  const { hillshadeContext, eventManager } = ctx;
+  if (!hillshadeContext) return;
+
+  const entityId = generate_id_from_entity(event);
+
+  const backfillStack = eventManager.stacks
+    .hillshade_backfilled as HillshadeBackfilledEvent[];
+  if (backfillStack.length > 0) {
+    const kept: HillshadeBackfilledEvent[] = [];
+    for (const bf of backfillStack) {
+      if (resolveHillshadeEntityId(bf) === entityId) {
+        if (bf && "free" in bf && typeof bf.free === "function") {
+          bf.free();
+        }
+      } else {
+        kept.push(bf);
+      }
+    }
+    eventManager.stacks.hillshade_backfilled = kept;
+  }
+
+  hillshadeContext.pendingEdges.delete(entityId);
+  hillshadeContext.clearTempDem(entityId);
+}
+
 export function processHillshadeBackfilled(
   ctx: EventContext,
   event: HillshadeBackfilledEvent | undefined,
@@ -360,12 +426,7 @@ export function processHillshadeBackfilled(
     return;
   }
 
-  // Use target_entity if provided (edge updates), otherwise use event entity (initialization)
-  const entityId =
-    event.target_entity_ind !== undefined &&
-    event.target_entity_gen !== undefined
-      ? `${event.target_entity_ind}_${event.target_entity_gen}`
-      : generate_id_from_entity(event);
+  const entityId = resolveHillshadeEntityId(event);
 
   // 1. Create texture if original data is provided
   if (event.original_handle !== undefined && event.original_handle !== null) {

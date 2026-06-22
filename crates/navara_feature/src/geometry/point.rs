@@ -6,8 +6,8 @@ use navara_feature_component::render::TransferablePointGeometry;
 use navara_math::{FloatType, Vec3};
 use navara_occluder::ellipsoidal_occluder::EllipsoidalOccluder;
 use navara_tile_component::{
-    RasterTileQuadtree, TileExtent, TileMeshMarker, TileTerrainDataRequesterQuery,
-    collect_terrain_leaves, compute_terrain_height_by_tile_handle, find_raster_tile_for_extent,
+    TerrainTileQuadtree, TileExtent, TileMeshMarker, TileTerrainDataRequesterQuery,
+    collect_terrain_leaves, compute_terrain_height_by_tile_handle, find_terrain_tile_for_extent,
 };
 
 /// Holds position data encoded as either RTC or RTE f32 values.
@@ -82,9 +82,9 @@ impl PositionBuffer {
     }
 }
 
-/// Collects extents of newly added terrain tiles from the raster quadtree.
+/// Collects extents of newly added terrain tiles from the terrain-tile quadtree.
 pub fn collect_changed_tile_extents<'a>(
-    qt: &RasterTileQuadtree,
+    qt: &TerrainTileQuadtree,
     tile_meshes: impl Iterator<Item = &'a TileMeshMarker>,
 ) -> Vec<Extent<FloatType, Radians>> {
     tile_meshes
@@ -126,13 +126,13 @@ pub fn resolve_tiled_heights_and_build_positions(
     material_height: f32,
     clamp_to_ground: bool,
     terrain_heights: &mut [f64],
-    qt: &mut RasterTileQuadtree,
+    qt: &mut TerrainTileQuadtree,
     buf: &mut BufferStore,
     terrain_data_requester: &TileTerrainDataRequesterQuery,
     positions: &mut PositionBuffer,
 ) {
     let tile_handle = if clamp_to_ground {
-        find_raster_tile_for_extent(qt, tile_extent)
+        find_terrain_tile_for_extent(qt, tile_extent)
     } else {
         None
     };
@@ -183,7 +183,7 @@ pub fn resolve_absolute_heights_and_build_positions(
     camera_position: Vec3,
     screen_height: FloatType,
     terrain_heights: &mut [f64],
-    qt: &mut RasterTileQuadtree,
+    qt: &mut TerrainTileQuadtree,
     buf: &mut BufferStore,
     terrain_data_requester: &TileTerrainDataRequesterQuery,
     positions: &mut PositionBuffer,

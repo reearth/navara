@@ -94,6 +94,7 @@ import { ShadowMapViewers } from "./ShadowMapViewers";
 import { RendererStats } from "./stats";
 import { warmUp } from "./tasks/warmUp";
 import type { TextureOptions } from "./textures";
+import { TileTextureCompositor } from "./tileTexture";
 import {
   type AbortControllers,
   type LayerDescription,
@@ -309,6 +310,7 @@ export default class ThreeView<
   private _workerPoolPromises: WorkerPoolPromises = new Map();
   private _loadedTexs = new Map<string, Texture>();
   private _texturizedSceneByTileCoordinates: TexturizedSceneByTileCoordinates;
+  private _tileTextureCompositor!: TileTextureCompositor;
   private _tileMapByHandle: TileMapByHandle = new Map();
   // fragment id → Set of {tileMesh, slotIndex}
   private _textureFragmentIndex: Map<string, Set<TextureSlot>> = new Map<
@@ -628,6 +630,15 @@ export default class ThreeView<
     this._texturizedSceneByTileCoordinates =
       new TexturizedSceneByTileCoordinates(this._renderer);
 
+    // Compositor owns the per-tile composite atlas pool. It centralises the
+    // vector-scene offscreen render loop that previously lived in TileMesh,
+    // and is the seam through which a future MRT composite pass will reduce
+    // the main TileMesh shader's texture fetches.
+    this._tileTextureCompositor = new TileTextureCompositor({
+      renderer: this._renderer,
+      texturizedSceneByTileCoordinates: this._texturizedSceneByTileCoordinates,
+    });
+
     this._scenes = {
       light: new Group(),
       mrt: new Scene(),
@@ -912,6 +923,7 @@ export default class ThreeView<
       workerPoolPromises: this._workerPoolPromises,
       uniforms: this._uniforms,
       texturizedSceneByTileCoordinates: this._texturizedSceneByTileCoordinates,
+      tileTextureCompositor: this._tileTextureCompositor,
       tileMapByHandle: this._tileMapByHandle,
       textureOptions: this._defaultTextureOptions,
       renderFlag: this._renderFlag,
@@ -1075,6 +1087,10 @@ export default class ThreeView<
 
     // Dispose render pipeline GPU resources
     this.renderPassOrchestrator.dispose();
+
+    // Release per-tile composite atlases, cached shader materials, placeholder
+    // textures, and the fullscreen quad geometry owned by the compositor.
+    this._tileTextureCompositor.dispose();
 
     // Clean up WASM core
     this._core?.free();

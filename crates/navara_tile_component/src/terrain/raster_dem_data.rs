@@ -253,13 +253,13 @@ fn compute_terrain_height_from_tile(
 mod test {
     use navara_core::{Angle, LngLat, TileXYZ};
 
-    use crate::RasterTile;
+    use crate::TerrainTile;
 
     use super::compute_terrain_height_from_tile;
 
     #[test]
     fn it_should_compute_terrain_height_from_tile() {
-        let tile = RasterTile::new(TileXYZ { x: 3, y: 1, z: 2 }, 0., 0.);
+        let tile = TerrainTile::new(TileXYZ { x: 3, y: 1, z: 2 }, 0., 0.);
         #[rustfmt::skip]
         let heights = &[
             0., 1., 2., 3.,

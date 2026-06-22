@@ -1,7 +1,7 @@
 use navara_core::WGS84_64;
 use navara_geometry::calculate_skirt_height;
 use navara_tile_component::{
-    MartiniComponent, RasterDEMData, RasterTile, TerrainConstructContext, TerrainData,
+    MartiniComponent, RasterDEMData, TerrainConstructContext, TerrainData, TerrainTile,
 };
 use navara_wasm_transferable::{TransferableMartini, TransferableRasterDEMData, TransferableTile};
 use navara_wasm_types::ReturnedConstructedTerrainMesh;
@@ -16,7 +16,7 @@ pub fn construct_terrain_mesh(
     skirt: bool,
     skirt_exaggeration: f32,
 ) -> ReturnedConstructedTerrainMesh {
-    let tile: RasterTile = tile.into();
+    let tile: TerrainTile = tile.into();
     let raster_dem_data: RasterDEMData = raster_dem_data.into();
     let ctx = TerrainConstructContext {
         coords: tile.coords,

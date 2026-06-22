@@ -3,7 +3,7 @@ use navara_buffer_store::BufferStore;
 use navara_core::LngLat;
 use navara_event_store::EventStore;
 use navara_math::{EPSILON3, EqualEpsilon};
-use navara_tile_component::RasterTileQuadtree;
+use navara_tile_component::TerrainTileQuadtree;
 use navara_tile_component::{
     TerrainHeightObserver, TileMeshMarker, TileTerrainDataRequesterQuery,
     compute_terrain_height_at_point,
@@ -11,7 +11,7 @@ use navara_tile_component::{
 
 pub fn update_height_observers(
     mut events: ResMut<EventStore>,
-    mut qt: ResMut<RasterTileQuadtree>,
+    mut qt: ResMut<TerrainTileQuadtree>,
     mut buf: ResMut<BufferStore>,
     mut query: Query<(Entity, &mut TerrainHeightObserver)>,
     tile_meshes: Query<&TileMeshMarker, Added<TileMeshMarker>>,

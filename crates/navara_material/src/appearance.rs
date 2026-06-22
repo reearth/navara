@@ -37,7 +37,7 @@ pub enum Appearance {
     Polygon(PolygonMaterial),
     Model(ModelMaterial),
     VectorTile(VectorTileMaterial),
-    RasterTile(RasterTileMaterial),
+    TerrainTile(RasterTileMaterial),
 }
 
 impl Appearance {
@@ -64,7 +64,7 @@ impl Appearance {
             (Appearance::VectorTile(dist), Appearance::VectorTile(src)) => {
                 *dist = src.clone();
             }
-            (Appearance::RasterTile(dist), Appearance::RasterTile(src)) => {
+            (Appearance::TerrainTile(dist), Appearance::TerrainTile(src)) => {
                 *dist = src.clone();
             }
             _ => {}

@@ -18,8 +18,8 @@ use navara_occluder::ellipsoidal_occluder::EllipsoidalOccluder;
 
 use navara_camera::{CameraFrustum, CameraMarker};
 use navara_tile_component::{
-    ChangedTileTerrainDataRequesterQuery, ChangedTileTextureFragmentQuery, RasterTile,
-    RasterTileQuadtree, TerrainInformation, TerrainInformationQuadtree, Tile, TileMeshMarker,
+    ChangedTileTerrainDataRequesterQuery, ChangedTileTextureFragmentQuery, TerrainInformation,
+    TerrainInformationQuadtree, TerrainTile, TerrainTileQuadtree, Tile, TileMeshMarker,
     TileTerrainDataRequesterQuery, TileTextureFragmentMarker, TileTextureFragmentQuery,
 };
 use navara_window::Window;
@@ -62,7 +62,7 @@ pub struct DataResources<'w> {
 pub fn init_globe_tiling(
     terrain_layer: Query<&navara_layer::TerrainLayer, Added<navara_layer::TerrainLayer>>,
     mut globe: ResMut<navara_globe::Globe>,
-    mut qt: ResMut<RasterTileQuadtree>,
+    mut qt: ResMut<TerrainTileQuadtree>,
     mut initialized: Local<bool>,
 ) {
     if let Some(layer) = terrain_layer.iter().next() {
@@ -79,7 +79,7 @@ pub fn init_globe_tiling(
         if qt.qt.leaf(coords).is_none() {
             let scheme = globe.tiling_scheme.clone();
             qt.qt.initialize_leaf(coords, &|(x, y, z)| {
-                RasterTile::new_with_scheme(TileXYZ { x, y, z }, 0., 0., scheme.clone())
+                TerrainTile::new_with_scheme(TileXYZ { x, y, z }, 0., 0., scheme.clone())
             });
         }
     }
@@ -90,7 +90,7 @@ pub fn init_globe_tiling(
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn update_tiles(
     mut commands: Commands,
-    mut qt: ResMut<RasterTileQuadtree>,
+    mut qt: ResMut<TerrainTileQuadtree>,
     mut tc: ResMut<TileCacheManager>,
     mut data_resources: DataResources,
     frame: Res<FrameManager>,
@@ -291,7 +291,7 @@ pub fn transfer_mesh(
     mut commands: Commands,
     mut buf: ResMut<BufferStore>,
     mut tc: ResMut<TileCacheManager>,
-    mut qt: ResMut<RasterTileQuadtree>,
+    mut qt: ResMut<TerrainTileQuadtree>,
     mut terrain_qt: ResMut<TerrainInformationQuadtree>,
     mut rendered_tiles: Query<
         (Entity, &mut RenderedTile, &OrderByDistance),
@@ -595,7 +595,7 @@ pub fn transfer_mesh(
         }
 
         fn postupdate_tile(
-            tile: &mut RasterTile,
+            tile: &mut TerrainTile,
             terrain_info: &mut TerrainInformation,
             max_height: FloatType,
             min_height: FloatType,
@@ -857,7 +857,7 @@ pub fn update_layer(
 
 pub fn delete_layer(
     mut commands: Commands,
-    mut qt: ResMut<RasterTileQuadtree>,
+    mut qt: ResMut<TerrainTileQuadtree>,
     mut rendered_tiles: Query<&mut RenderedTile, With<Rendered>>,
     deleted: Query<(Entity, &DeleteRasterTileLayerMarker)>,
     layers: Query<(Entity, &TilesLayer, &Order)>,
@@ -937,7 +937,7 @@ pub fn delete_layer(
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn update_mesh_material(
     mut tc: ResMut<TileCacheManager>,
-    qt: ResMut<RasterTileQuadtree>,
+    qt: ResMut<TerrainTileQuadtree>,
     rendered_tiles: Query<(&RenderedTile, &OrderByDistance), With<Rendered>>,
     mut texture_fragment: ParamSet<(TileTextureFragmentQuery, ChangedTileTextureFragmentQuery)>,
     mut data_requesters: ParamSet<(
@@ -1052,7 +1052,7 @@ pub fn update_mesh_material(
                     .and_then(|ids| ids.get(i).copied().flatten())
             };
             let own_ready = own_entity.is_some_and(|e| {
-                RasterTile::is_texture_entity_ready(e, &texture_fragment, &data_requesters)
+                TerrainTile::is_texture_entity_ready(e, &texture_fragment, &data_requesters)
             });
 
             let (resolved_entity, resolved_uv) = if own_ready {
@@ -1071,7 +1071,7 @@ pub fn update_mesh_material(
             };
 
             let should_show = resolved_entity.is_some_and(|e| {
-                RasterTile::is_texture_entity_ready(e, &texture_fragment, &data_requesters)
+                TerrainTile::is_texture_entity_ready(e, &texture_fragment, &data_requesters)
             });
 
             let a = l.appearance().unwrap();
@@ -1223,7 +1223,7 @@ pub fn add_order_to_tiles_layer(
 pub fn clear_caches(
     mut commands: Commands,
     mut tc: ResMut<TileCacheManager>,
-    mut qt: ResMut<RasterTileQuadtree>,
+    mut qt: ResMut<TerrainTileQuadtree>,
     mut terrain_qt: ResMut<TerrainInformationQuadtree>,
     mut buf: ResMut<BufferStore>,
     mut rendered_tiles: Query<(Entity, &mut RenderedTile, &OrderByDistance)>,

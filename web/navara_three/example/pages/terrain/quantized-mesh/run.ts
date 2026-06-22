@@ -1,4 +1,4 @@
-import ThreeView from "@navara/three";
+import ThreeView, { Color } from "@navara/three";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
@@ -8,7 +8,7 @@ import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../../helpers/attributions";
 import { TERRAIN_DATASETS } from "../../../helpers/constants";
-import { addDateControl, atZoneTime } from "../../../helpers/control";
+import { addDateControl, atZoneDate } from "../../../helpers/control";
 
 export type CustomDescriptions = DefaultDescriptions;
 
@@ -26,6 +26,15 @@ const CESIUM_ION_TOKEN =
 const CESIUM_ION_ASSET_ID = 3258112;
 
 let activePane: Pane | undefined;
+
+const CAMERA_COORDS = {
+  lng: 138.20666767536997,
+  lat: 34.932278489375214,
+  height: 11248.139126100761,
+  heading: 64.9520725765606,
+  pitch: -8.264746227532386,
+  roll: 359.9992800601617,
+};
 
 export const run = async (
   view: ThreeView<CustomDescriptions>,
@@ -45,6 +54,8 @@ export const run = async (
   }
 
   await view.init();
+
+  view.globe.color = new Color().setHex(0xcccccc);
 
   defaultPlugin.addDefaultPhotorealScene();
   view.toneMappingExposure = 10;
@@ -73,15 +84,7 @@ export const run = async (
     });
   }
 
-  view.setCamera({
-    lng: 138.7274, // Mount Fuji
-    lat: 35.3606,
-    height: 0,
-    heading: 0,
-    pitch: -25,
-    roll: 360.0,
-    distance: 20000,
-  });
+  view.setCamera(CAMERA_COORDS);
 
   activePane?.dispose();
   const pane = new Pane();
@@ -98,7 +101,16 @@ export const run = async (
       onTerrainChange(ev.value as TerrainType);
     });
 
-  addDateControl(view, pane, atZoneTime(view.atmosphere.date, 6));
+  addDateControl(
+    view,
+    pane,
+    atZoneDate(view.atmosphere.date, {
+      month: 7,
+      date: 1,
+      hours: 6,
+      minutes: 0,
+    }),
+  );
 
   const terrainDataset =
     terrainType === "cesiumIon"
