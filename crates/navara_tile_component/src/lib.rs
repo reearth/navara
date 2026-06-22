@@ -1,7 +1,9 @@
 #![doc = include_str!("../README.md")]
 
 mod component;
+mod raster_tile;
 mod raster_tile_texture_fragment;
+mod resolve;
 mod terrain;
 mod terrain_data_requester;
 mod terrain_tile;
@@ -11,7 +13,9 @@ mod types;
 mod vector_tile;
 
 pub use component::*;
+pub use raster_tile::*;
 pub use raster_tile_texture_fragment::*;
+pub use resolve::*;
 pub use terrain::*;
 pub use terrain_data_requester::*;
 pub use terrain_tile::*;

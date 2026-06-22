@@ -1,0 +1,16 @@
+use bevy_ecs::prelude::Resource;
+use navara_tile_component::TileHandle;
+use rustc_hash::FxHashSet;
+
+/// Tracks which raster tiles were visited so stale ones can be pruned. Raster
+/// tiles own no mesh entity, so unlike the terrain `TileCacheManager` this only
+/// needs the set of live handles plus frame bookkeeping.
+#[derive(Default, Resource)]
+pub struct RasterTileCacheManager {
+    /// Handles touched by the most recent traversals. Used by
+    /// `clear_raster_caches` to find tiles to prune.
+    pub active_handles: FxHashSet<TileHandle>,
+    pub last_rendered_frame: usize,
+    pub is_updated_in_this_frame: bool,
+    pub prev_layers_len: usize,
+}

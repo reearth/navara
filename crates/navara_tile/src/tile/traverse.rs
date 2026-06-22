@@ -14,12 +14,12 @@ use navara_occluder::ellipsoidal_occluder::EllipsoidalOccluder;
 use navara_camera::CameraFrustum;
 use navara_tile_component::{
     QuantizedMeshData, RasterDEMData, TerrainTile, TerrainTileQuadtree, Tile, TileHandle,
-    TileMeshMarker, TileTerrainDataRequesterQuery, TileTextureFragmentQuery,
+    TileMeshMarker, TileTerrainDataRequesterQuery,
 };
 use navara_window::Window;
 
 use crate::data_requester::request_terrain_data;
-use crate::texture_fragment::request_texture_fragment;
+use crate::texture_fragment::request_hillshade_data_requester;
 
 use super::{
     render::RenderedTile,
@@ -37,7 +37,7 @@ use navara_layer::{TerrainDataType, TerrainLayer, TilesLayer};
 // 6. If above steps aren't matched, traverse children.
 // 7. If children couldn't be rendered completely, use this tile instead.
 #[allow(clippy::too_many_arguments)]
-pub fn traverse_tile(
+pub fn traverse_terrain(
     command: &mut Commands,
     tiles: &Query<(&TilesLayer, &Order)>,
     terrain_layer: &Option<&TerrainLayer>,
@@ -49,7 +49,6 @@ pub fn traverse_tile(
     frame: &FrameManager,
     camera: &Transform,
     frustum: &CameraFrustum,
-    texture_fragment: &TileTextureFragmentQuery,
     data_requesters: &Query<&navara_data_requester::DataRequester>,
     terrain_data_requester: &TileTerrainDataRequesterQuery,
     window: &Window,
@@ -102,7 +101,7 @@ pub fn traverse_tile(
     };
 
     match qt.qt.get_mut(handle) {
-        Some(tile) => begin_traverse_tile(ellipsoid, occluder, camera, frame, tile),
+        Some(tile) => begin_traverse_terrain(ellipsoid, occluder, camera, frame, tile),
         None => unreachable!(),
     };
 
@@ -123,7 +122,6 @@ pub fn traverse_tile(
 
     let tile_ready_state = tile.is_ready(
         qt,
-        texture_fragment,
         data_requesters,
         terrain_data_requester,
         terrain_layer,
@@ -165,16 +163,16 @@ pub fn traverse_tile(
 
     let is_renderable = is_rendered_last_frame || is_tile_ready;
 
-    // If this tile has a terrain and it's prepared, request a texture for this tile.
-    // It means terrain is rendered first, then the texture is prepared lazily.
+    // If this tile has a terrain and it's prepared, request its hillshade
+    // textures lazily. Regular raster textures are draped from the raster
+    // pipeline (see `update_mesh_material`).
     if terrain_layer.is_some() && is_renderable {
         let tile = qt.qt.get_mut(handle).unwrap();
-        request_texture_fragment(
+        request_hillshade_data_requester(
             command,
             tile,
             tiles,
             handle,
-            texture_fragment,
             data_requesters,
             Priority::High,
             buf,
@@ -199,7 +197,6 @@ pub fn traverse_tile(
                 handle,
                 tc,
                 tiles,
-                texture_fragment,
                 data_requesters,
                 terrain_data_requester,
                 if is_renderable {
@@ -233,14 +230,8 @@ pub fn traverse_tile(
         };
 
         // Update hillshade parents - track nearest ready parent for each layer
-        let ready_layer_parents = update_ready_layer_parents(
-            qt,
-            handle,
-            tiles,
-            texture_fragment,
-            data_requesters,
-            ready_layer_parents,
-        );
+        let ready_layer_parents =
+            update_ready_layer_parents(qt, handle, tiles, data_requesters, ready_layer_parents);
 
         // Tile has several states to switch LOD smoothly.
         // 1. RenderedTile component is spawned if a tile is selected.
@@ -255,7 +246,7 @@ pub fn traverse_tile(
         let mut activated_children_indices = vec![];
         let mut hidden_children_indices = vec![];
         for (i, child) in children.iter().enumerate() {
-            let traversal_result = traverse_tile(
+            let traversal_result = traverse_terrain(
                 command,
                 tiles,
                 terrain_layer,
@@ -267,7 +258,6 @@ pub fn traverse_tile(
                 frame,
                 camera,
                 frustum,
-                texture_fragment,
                 data_requesters,
                 terrain_data_requester,
                 window,
@@ -426,7 +416,6 @@ pub fn traverse_tile(
                 handle,
                 tc,
                 tiles,
-                texture_fragment,
                 data_requesters,
                 terrain_data_requester,
                 Priority::Extreme,
@@ -485,15 +474,14 @@ pub fn spawn_tile_entity(
     );
 }
 
-/// Update per-layer parents by tracking the nearest ready ancestor entity for each layer.
-/// Works uniformly for regular texture layers and hillshade layers: for each layer,
-/// the appropriate entity slot (texture_fragment_entity_ids vs hillshade_entity_ids) is
-/// consulted, and if it is ready it becomes the parent for the layer's descendants.
+/// Update the per-layer hillshade ancestor fallback by tracking the nearest
+/// ready hillshade entity for each layer. Regular raster layers are resolved by
+/// the raster pull (see `update_mesh_material`) and keep a `None` slot here, so
+/// only hillshade layers carry a terrain-side parent.
 fn update_ready_layer_parents(
     qt: &TerrainTileQuadtree,
     handle: TileHandle,
     tiles: &Query<(&TilesLayer, &Order)>,
-    texture_fragment: &TileTextureFragmentQuery,
     data_requesters: &Query<&navara_data_requester::DataRequester>,
     ready_layer_parents: Option<Vec<Option<LayerParent>>>,
 ) -> Option<Vec<Option<LayerParent>>> {
@@ -501,18 +489,20 @@ fn update_ready_layer_parents(
     let mut updated_parents = Vec::new();
 
     for (i, (layer, _)) in tiles.iter().sort::<&Order>().enumerate() {
-        let own_entity = if layer.hillshade_config.is_some() {
-            tile.hillshade_entity_ids
-                .as_ref()
-                .and_then(|ids| ids.get(i).copied().flatten())
-        } else {
-            tile.texture_fragment_entity_ids
-                .as_ref()
-                .and_then(|ids| ids.get(i).copied().flatten())
-        };
+        // Regular raster layers are draped via the raster pull, not the
+        // terrain-side ancestor fallback, so they keep an empty slot here.
+        if layer.hillshade_config.is_none() {
+            updated_parents.push(None);
+            continue;
+        }
+
+        let own_entity = tile
+            .hillshade_entity_ids
+            .as_ref()
+            .and_then(|ids| ids.get(i).copied().flatten());
 
         let parent = if let Some(entity) = own_entity
-            && TerrainTile::is_texture_entity_ready(entity, texture_fragment, data_requesters)
+            && TerrainTile::is_hillshade_entity_ready(entity, data_requesters)
         {
             Some(LayerParent {
                 entity,
@@ -542,7 +532,6 @@ pub fn prepare_tile_resource(
     handle: TileHandle,
     tc: &mut TileCacheManager,
     tiles: &Query<(&TilesLayer, &Order)>,
-    texture_fragment: &TileTextureFragmentQuery,
     data_requesters: &Query<&navara_data_requester::DataRequester>,
     terrain_data_requester: &TileTerrainDataRequesterQuery,
     priority: Priority,
@@ -566,13 +555,13 @@ pub fn prepare_tile_resource(
             priority,
         );
     } else {
-        // If this tile doesn't have terrain, request just a texture.
-        request_texture_fragment(
+        // If this tile doesn't have terrain, request its hillshade textures.
+        // Regular raster textures are draped from the raster pipeline.
+        request_hillshade_data_requester(
             commands,
             tile,
             tiles,
             handle,
-            texture_fragment,
             data_requesters,
             Priority::High,
             buf,
@@ -624,7 +613,7 @@ fn prepare_upsamplable_terrain_data(
     tile.terrain_data = Some(terrain_data);
 }
 
-fn begin_traverse_tile(
+fn begin_traverse_terrain(
     ellipsoid: &Ellipsoid<FloatType>,
     occluder: &EllipsoidalOccluder,
     _camera: &Transform,
@@ -641,4 +630,394 @@ pub(super) enum TraversalResult {
     ChildrenMeshesPrepared,
     Culled,
     NotFound,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use bevy_app::{App, Update};
+
+    use navara_core::{Aabb, Angle, TileXYZ, WGS84_64, WGS84_A_64};
+    use navara_layer::LayerData;
+    use navara_material::{Appearance, RasterTileMaterial};
+    use navara_math::Vec3;
+
+    /// Camera placed at twice the Earth radius above (lng 0, lat 0), looking at
+    /// the globe centre. The horizon half-angle is `acos(R / 2R) = 60°`, so any
+    /// tile centred more than ~60° away in longitude/latitude is occluded.
+    fn test_camera() -> (Transform, CameraFrustum, EllipsoidalOccluder) {
+        let camera_ecef = Vec3::new(WGS84_A_64 * 2.0, 0.0, 0.0);
+        let camera = Transform::from_translation(camera_ecef).looking_at(Vec3::ZERO, Vec3::Y);
+        let frustum = CameraFrustum::new(&camera, 0.1, 1e9, Angle::new(60.0).rad().val(), 1.0, 1.0);
+        let occluder = EllipsoidalOccluder::new(&camera_ecef, WGS84_64);
+        (camera, frustum, occluder)
+    }
+
+    // ----- begin_traverse_terrain --------------------------------------------
+
+    #[test]
+    fn begin_traverse_terrain_stamps_visit_and_computes_occludee() {
+        let (camera, _frustum, occluder) = test_camera();
+        let frame = FrameManager::default(); // rendered_frame() == 0
+
+        // A small tile near (lng 0, lat 0) so the occludee point is well defined.
+        let mut tile = TerrainTile::new(TileXYZ { x: 8, y: 8, z: 4 }, 0., 0.);
+        tile.visited_at = 42; // sentinel that must be overwritten
+        assert!(tile.occludee_point_in_scaled_space.is_none());
+
+        begin_traverse_terrain(&WGS84_64, &occluder, &camera, &frame, &mut tile);
+
+        // The visit frame is recorded (here 0, overwriting the sentinel)...
+        assert_eq!(tile.visited_at, frame.rendered_frame());
+        assert_ne!(tile.visited_at, 42);
+        // ...and the horizon-culling point is computed.
+        assert!(tile.occludee_point_in_scaled_space.is_some());
+    }
+
+    // ----- traverse_terrain ---------------------------------------------------
+
+    #[derive(bevy_ecs::prelude::Resource)]
+    struct TargetHandle(TileHandle);
+
+    #[derive(bevy_ecs::prelude::Resource)]
+    struct TraverseConfig {
+        max_sse: f64,
+    }
+
+    #[derive(bevy_ecs::prelude::Resource, Default)]
+    struct LastResult(String);
+
+    fn result_label(r: &TraversalResult) -> &'static str {
+        match r {
+            TraversalResult::TileRendered => "rendered",
+            TraversalResult::ChildrenRendered => "children_rendered",
+            TraversalResult::ChildrenMeshesPrepared => "children_prepared",
+            TraversalResult::Culled => "culled",
+            TraversalResult::NotFound => "notfound",
+        }
+    }
+
+    /// Drive `traverse_terrain` from a Bevy system so its `Commands`/`Query`
+    /// system-params are supplied. No terrain layer is present, so a fresh tile is
+    /// "ready" (renders as flat geometry) — this keeps the readiness deterministic
+    /// without standing up the async mesh-construction worker.
+    #[allow(clippy::too_many_arguments)]
+    fn run_terrain_traverse(
+        mut commands: Commands,
+        tiles: Query<(&TilesLayer, &Order)>,
+        mut qt: ResMut<TerrainTileQuadtree>,
+        mut tc: ResMut<TileCacheManager>,
+        mut buf: ResMut<BufferStore>,
+        mut data_manager: ResMut<DataManager>,
+        frame: Res<FrameManager>,
+        window: Res<Window>,
+        data_requesters: Query<&navara_data_requester::DataRequester>,
+        terrain_data_requester: TileTerrainDataRequesterQuery,
+        mut meshes: Query<&mut Mesh, (With<TileMeshMarker>, Without<Deleted>)>,
+        target: Res<TargetHandle>,
+        config: Res<TraverseConfig>,
+        mut out: ResMut<LastResult>,
+    ) {
+        let (camera, frustum, occluder) = test_camera();
+        let fog = Fog {
+            enabled: false,
+            density: 0.,
+            sse_factor: 1.0,
+        };
+        let terrain_layer: Option<&TerrainLayer> = None;
+
+        let result = traverse_terrain(
+            &mut commands,
+            &tiles,
+            &terrain_layer,
+            target.0,
+            &mut tc,
+            &mut qt,
+            &mut buf,
+            &mut data_manager,
+            &frame,
+            &camera,
+            &frustum,
+            &data_requesters,
+            &terrain_data_requester,
+            &window,
+            &WGS84_64,
+            &occluder,
+            &mut meshes,
+            &fog,
+            config.max_sse,
+            false,
+            false,
+            None,
+            None,
+        );
+        out.0 = result_label(&result).to_string();
+
+        // Mirror the relevant arms of `update_terrain`'s root handling so a test
+        // can observe the parent being shown (TileRendered) or hidden once its
+        // children take over (ChildrenMeshesPrepared). For tiles without a seeded
+        // render cache these calls are no-ops.
+        match &result {
+            TraversalResult::TileRendered => {
+                if tc.is_rendered_tile_prepared(&target.0) {
+                    tc.activate_rendered_tile(&target.0, &mut meshes, true);
+                }
+            }
+            TraversalResult::ChildrenMeshesPrepared => {
+                tc.activate_rendered_tile(&target.0, &mut meshes, false);
+            }
+            _ => {}
+        }
+    }
+
+    /// A regular (non-hillshade) raster layer with the given zoom range.
+    fn raster_layer(layer_id: &str, min_zoom: usize, max_zoom: usize) -> TilesLayer {
+        TilesLayer {
+            layer_id: layer_id.to_string(),
+            data: Some(LayerData {
+                url: "https://example.com/{z}/{x}/{y}.png".to_string(),
+            }),
+            appearance: Some(Appearance::TerrainTile(RasterTileMaterial {
+                min_zoom,
+                max_zoom,
+                overscaled_max_zoom: max_zoom,
+                ..Default::default()
+            })),
+            elevation_heatmap_config: None,
+            hillshade_config: None,
+        }
+    }
+
+    /// App holding the terrain quadtree root and the resources `traverse_terrain`
+    /// reads. `FramePlugin` advances the frame so `visited_at` is meaningful.
+    fn terrain_app_with_root() -> (App, TileHandle) {
+        let mut app = App::new();
+        app.add_plugins(navara_frame::FramePlugin);
+
+        let mut qt = TerrainTileQuadtree::new_with_linear_qt();
+        qt.qt
+            .initialize_zero(&|(x, y, z)| TerrainTile::new(TileXYZ { x, y, z }, 0., 0.));
+        let handle = qt.qt.zero().unwrap().handle();
+        app.insert_resource(qt);
+
+        app.insert_resource(TileCacheManager::default());
+        app.insert_resource(BufferStore::default());
+        app.insert_resource(DataManager::default());
+        app.insert_resource(Window {
+            width: 800.,
+            height: 600.,
+            pixel_ratio: 1.,
+        });
+        app.insert_resource(LastResult::default());
+        app.insert_resource(TraverseConfig { max_sse: 1e30 });
+
+        (app, handle)
+    }
+
+    #[test]
+    fn traverse_terrain_stops_at_max_zoom_with_not_found() {
+        let (mut app, handle) = terrain_app_with_root();
+        app.insert_resource(TargetHandle(handle));
+        // Layer maxes out at zoom 0; the root (z=0) is already beyond it, so all
+        // sources are over their limit and the traversal bails before visiting.
+        app.world_mut().spawn((raster_layer("a", 0, 0), Order(0)));
+
+        app.add_systems(Update, run_terrain_traverse);
+        app.update();
+
+        assert_eq!(app.world().resource::<LastResult>().0, "notfound");
+
+        // The over-max early-out happens before `begin_traverse_terrain`, so the
+        // tile is never stamped with the current frame.
+        let frame = app.world().resource::<FrameManager>().rendered_frame();
+        let qt = app.world().resource::<TerrainTileQuadtree>();
+        assert_ne!(qt.qt.get(handle).unwrap().visited_at, frame);
+    }
+
+    #[test]
+    fn traverse_terrain_renders_ready_tile_when_sse_satisfied() {
+        let (mut app, handle) = terrain_app_with_root();
+        app.insert_resource(TargetHandle(handle));
+        app.world_mut().spawn((raster_layer("a", 0, 20), Order(0)));
+        // Huge threshold: the root's error is acceptable. With no terrain layer the
+        // tile is ready (flat geometry), so geometry-first rendering selects it.
+        app.insert_resource(TraverseConfig { max_sse: 1e30 });
+
+        app.add_systems(Update, run_terrain_traverse);
+        app.update();
+
+        assert_eq!(app.world().resource::<LastResult>().0, "rendered");
+
+        let frame = app.world().resource::<FrameManager>().rendered_frame();
+        let qt = app.world().resource::<TerrainTileQuadtree>();
+        assert_eq!(qt.qt.get(handle).unwrap().visited_at, frame);
+
+        // The tile's resource was requested while it renders.
+        let tc = app.world().resource::<TileCacheManager>();
+        assert!(tc.requested_tile_caches.contains(&handle));
+    }
+
+    #[test]
+    fn traverse_terrain_subdivides_but_keeps_parent_until_children_ready() {
+        let (mut app, handle) = terrain_app_with_root();
+        app.insert_resource(TargetHandle(handle));
+        // max_zoom=1 bounds the forced subdivision to a single level.
+        app.world_mut().spawn((raster_layer("a", 0, 1), Order(0)));
+        // Zero threshold: the root error is never satisfied, so it subdivides.
+        app.insert_resource(TraverseConfig { max_sse: 0. });
+
+        app.add_systems(Update, run_terrain_traverse);
+        app.update();
+
+        // The root was subdivided into its 4 children...
+        let qt = app.world().resource::<TerrainTileQuadtree>();
+        assert!(qt.qt.leaf((0, 0, 1)).is_some(), "root should subdivide");
+
+        // ...but since the children have no prepared mesh, the strict swap keeps
+        // the (ready) parent visible instead of hiding it behind holes.
+        assert_eq!(app.world().resource::<LastResult>().0, "rendered");
+    }
+
+    #[test]
+    fn traverse_terrain_culls_occluded_tile() {
+        let (mut app, _root) = terrain_app_with_root();
+        app.world_mut().spawn((raster_layer("a", 0, 20), Order(0)));
+
+        // A tile on the far side of the globe (centre ~lng 146°, > 60° from the
+        // camera), so its horizon-culling point is occluded.
+        let occluded = {
+            let mut qt = app.world_mut().resource_mut::<TerrainTileQuadtree>();
+            qt.qt
+                .initialize_leaf((7, 4, 3), &|(x, y, z)| {
+                    TerrainTile::new(TileXYZ { x, y, z }, 0., 0.)
+                })
+                .unwrap()
+        };
+        app.insert_resource(TargetHandle(occluded));
+
+        app.add_systems(Update, run_terrain_traverse);
+        app.update();
+
+        assert_eq!(app.world().resource::<LastResult>().0, "culled");
+    }
+
+    /// A minimal renderable `Mesh` whose only meaningful field for traversal is
+    /// `active` (drives `is_rendered_tile_activated`).
+    fn dummy_mesh(active: bool) -> Mesh {
+        Mesh {
+            vertices: 0,
+            uvs: 0,
+            indices: 0,
+            active,
+            render_order: 0,
+            aabb: Aabb::from_vec3(&[Vec3::ZERO]),
+            normals: None,
+            skirt_vertices: None,
+            skirt_uvs: None,
+            skirt_indices: None,
+            skirt_indices_to_edge: None,
+            skirt_normals: None,
+            watermask: None,
+        }
+    }
+
+    fn spawn_mesh(app: &mut App, active: bool) -> Entity {
+        app.world_mut()
+            .spawn((dummy_mesh(active), TileMeshMarker::default()))
+            .id()
+    }
+
+    /// Insert a render cache entry pointing at a (prepared) mesh, as if the tile
+    /// had already been selected and its mesh built.
+    fn seed_rendered(app: &mut App, handle: TileHandle, mesh_entity: Entity, prepared: bool) {
+        let dummy = app.world_mut().spawn_empty().id();
+        let mut tc = app.world_mut().resource_mut::<TileCacheManager>();
+        tc.rendered_tile_caches.insert(
+            handle,
+            RenderedTileCache {
+                mesh_entity: Some(mesh_entity),
+                ready_parent_tile_handle: None,
+                layer_parents: None,
+                rendered_tile_entity: dummy,
+                mesh_prepared: prepared,
+                needs_material_update: false,
+            },
+        );
+    }
+
+    fn mesh_active(app: &App, e: Entity) -> bool {
+        app.world().get::<Mesh>(e).unwrap().active
+    }
+
+    #[test]
+    fn traverse_terrain_swaps_parent_for_children_once_prepared() {
+        let (mut app, root) = terrain_app_with_root();
+        app.insert_resource(TargetHandle(root));
+        // max_zoom=2 bounds the forced subdivision: the z=1 children render, their
+        // z=2 grandchildren are over max → NotFound, so each child resolves at z=1.
+        app.world_mut().spawn((raster_layer("a", 0, 2), Order(0)));
+        app.insert_resource(TraverseConfig { max_sse: 0. });
+
+        // The parent begins visible: a prepared, active mesh.
+        let root_mesh = spawn_mesh(&mut app, true);
+        seed_rendered(&mut app, root, root_mesh, true);
+
+        app.add_systems(Update, run_terrain_traverse);
+
+        // --- Phase A: children selected but their meshes are not built yet ---
+        app.update();
+        assert_eq!(
+            app.world().resource::<LastResult>().0,
+            "rendered",
+            "parent stays visible while children load"
+        );
+        assert!(mesh_active(&app, root_mesh), "parent mesh still shown");
+
+        // The visible children now have render caches (no mesh yet). Far-side
+        // children may be occlusion-culled and have none — only seed the rest.
+        let rendered_children: Vec<TileHandle> = {
+            let qt = app.world().resource::<TerrainTileQuadtree>();
+            let tc = app.world().resource::<TileCacheManager>();
+            qt.qt
+                .children((0, 0, 0))
+                .unwrap()
+                .iter()
+                .map(|c| c.handle())
+                .filter(|h| tc.rendered_tile_caches.contains_key(h))
+                .collect()
+        };
+        assert!(
+            !rendered_children.is_empty(),
+            "at least one child should be rendered while the parent waits"
+        );
+
+        // --- Simulate the worker finishing every selected child's mesh ---
+        let child_meshes: Vec<Entity> = rendered_children
+            .iter()
+            .map(|&child| {
+                let e = spawn_mesh(&mut app, true);
+                let mut tc = app.world_mut().resource_mut::<TileCacheManager>();
+                let cache = tc.rendered_tile_caches.get_mut(&child).unwrap();
+                cache.mesh_entity = Some(e);
+                cache.mesh_prepared = true;
+                e
+            })
+            .collect();
+
+        // --- Phase B: all children prepared → strict swap ---
+        app.update();
+        assert_eq!(
+            app.world().resource::<LastResult>().0,
+            "children_prepared",
+            "all children prepared → parent hands off to them"
+        );
+        assert!(
+            !mesh_active(&app, root_mesh),
+            "parent mesh hidden once children take over"
+        );
+        for e in child_meshes {
+            assert!(mesh_active(&app, e), "child mesh shown after swap");
+        }
+    }
 }

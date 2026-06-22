@@ -35,13 +35,13 @@ use navara_worker::{
     },
 };
 
-use crate::texture_fragment::request_texture_fragment;
+use crate::texture_fragment::request_hillshade_data_requester;
 
 use super::{
     event::MeshPreparedEvent,
     render::RenderedTile,
     tile_cache_manager::TileCacheManager,
-    traverse::{TraversalResult, prepare_tile_resource, spawn_tile_entity, traverse_tile},
+    traverse::{TraversalResult, prepare_tile_resource, spawn_tile_entity, traverse_terrain},
 };
 
 use navara_layer::{
@@ -88,7 +88,7 @@ pub fn init_globe_tiling(
 }
 
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
-pub fn update_tiles(
+pub fn update_terrain(
     mut commands: Commands,
     mut qt: ResMut<TerrainTileQuadtree>,
     mut tc: ResMut<TileCacheManager>,
@@ -102,7 +102,6 @@ pub fn update_tiles(
         Query<(Ref<Transform>, Ref<CameraFrustum>), With<CameraMarker>>,
         Query<&Fog>,
     )>,
-    texture_fragment: TileTextureFragmentQuery,
     changed_texture_fragment: ChangedTileTextureFragmentQuery,
     mut data_requesters_set: ParamSet<(
         Query<&DataRequester>,
@@ -193,13 +192,13 @@ pub fn update_tiles(
             continue;
         };
 
-        let is_texture_ready = qt.qt.get_mut(root_handle).unwrap().is_texture_ready(
-            &texture_fragment,
-            &data_requesters,
-            tiles,
-        );
+        let is_texture_ready = qt
+            .qt
+            .get_mut(root_handle)
+            .unwrap()
+            .is_hillshade_ready(&data_requesters, tiles);
 
-        let traversal_result = traverse_tile(
+        let traversal_result = traverse_terrain(
             &mut commands,
             tiles,
             &terrain_layer,
@@ -211,7 +210,6 @@ pub fn update_tiles(
             &frame,
             &camera,
             &frustum,
-            &texture_fragment,
             &data_requesters,
             &terrain_data_requester,
             &window,
@@ -256,18 +254,16 @@ pub fn update_tiles(
                     root_handle,
                     &mut tc,
                     tiles,
-                    &texture_fragment,
                     &data_requesters,
                     &terrain_data_requester,
                     Priority::Extreme,
                 );
                 let tile = qt.qt.get_mut(root_handle).unwrap();
-                request_texture_fragment(
+                request_hillshade_data_requester(
                     &mut commands,
                     tile,
                     tiles,
                     root_handle,
-                    &texture_fragment,
                     &data_requesters,
                     Priority::High,
                     &mut data_resources.buf,
@@ -297,7 +293,6 @@ pub fn transfer_mesh(
         (Entity, &mut RenderedTile, &OrderByDistance),
         Or<(Added<RenderedTile>, Without<Rendered>)>,
     >,
-    texture_fragment: TileTextureFragmentQuery,
     data_requesters: Query<&DataRequester>,
     terrain_data_requester: TileTerrainDataRequesterQuery,
     tile_layers: Query<(&TilesLayer, &Order)>,
@@ -363,8 +358,6 @@ pub fn transfer_mesh(
             .and_then(|l| l.appearance.as_ref())
             .is_some_and(|a| a.tms());
 
-        let texture_fragment_entity_ids = &tile.texture_fragment_entity_ids;
-
         let tile_layers_len = tile_layers.iter().len();
         let mut shows = Vec::with_capacity(tile_layers_len);
         let mut opacities = Vec::with_capacity(tile_layers_len);
@@ -381,26 +374,14 @@ pub fn transfer_mesh(
         let mut tile_show_bounding_box = false;
 
         for (i, (l, _)) in tile_layers.iter().sort::<&Order>().enumerate() {
-            // Check if texture is ready: check texture_fragment_entity_ids OR hillshade_entity_ids
+            // The initial material only reflects terrain-owned hillshade readiness;
+            // regular raster textures are draped later in `update_mesh_material`.
             let mut should_show = false;
-
-            // Check texture_fragment_entity_ids first
-            if let Some(tex_entity) = texture_fragment_entity_ids
+            if let Some(hill_entity) = tile
+                .hillshade_entity_ids
                 .as_ref()
                 .and_then(|ids| ids.get(i))
                 .and_then(|&e| e)
-                && let Ok((_, tf)) = texture_fragment.get(tex_entity)
-            {
-                should_show = tf.is_succeeded();
-            }
-
-            // If no texture fragment, check hillshade_entity_ids
-            if !should_show
-                && let Some(hill_entity) = tile
-                    .hillshade_entity_ids
-                    .as_ref()
-                    .and_then(|ids| ids.get(i))
-                    .and_then(|&e| e)
                 && let Ok(dr) = data_requesters.get(hill_entity)
             {
                 should_show = dr.is_succeeded();
@@ -450,22 +431,9 @@ pub fn transfer_mesh(
                 )
             });
 
-        // Merge texture and hillshade entities (fix for hillshade not displaying)
-        let merged_texture_fragments = if let Some(tex_ids) = texture_fragment_entity_ids.as_ref() {
-            let mut merged = Vec::with_capacity(tex_ids.len());
-            let hill_ids = tile.hillshade_entity_ids.as_ref();
-
-            for i in 0..tex_ids.len() {
-                let tex = tex_ids.get(i).and_then(|&e| e);
-                let hill = hill_ids.and_then(|ids| ids.get(i).and_then(|&e| e));
-                merged.push(tex.or(hill));
-            }
-
-            Some(merged)
-        } else {
-            // Edge case: only hillshade entities exist, no texture entities
-            tile.hillshade_entity_ids.clone()
-        };
+        // The initial material carries only terrain-owned hillshade entities;
+        // regular raster textures are pulled by extent in `update_mesh_material`.
+        let merged_texture_fragments = tile.hillshade_entity_ids.clone();
 
         let appearance = RasterTileInternalMaterial {
             shows,
@@ -858,6 +826,8 @@ pub fn update_layer(
 pub fn delete_layer(
     mut commands: Commands,
     mut qt: ResMut<TerrainTileQuadtree>,
+    mut raster_qt: ResMut<navara_tile_component::RasterTileQuadtree>,
+    raster_tc: Res<crate::raster::RasterTileCacheManager>,
     mut rendered_tiles: Query<&mut RenderedTile, With<Rendered>>,
     deleted: Query<(Entity, &DeleteRasterTileLayerMarker)>,
     layers: Query<(Entity, &TilesLayer, &Order)>,
@@ -889,46 +859,40 @@ pub fn delete_layer(
         }
     }
 
+    // Per-layer arrays are indexed by the sorted-layer position, so a deleted
+    // layer's slot must be removed (shifting the rest down) from BOTH the
+    // terrain-side hillshade array AND the raster-side texture array, or the two
+    // sides fall out of alignment and `resolve_raster_texture` reads the wrong
+    // layer — breaking layer (z) order.
     for rendered_tile in &mut rendered_tiles {
         let tile = qt.qt.get_mut(rendered_tile.tile_handle).unwrap();
         for (removed_idx, idx) in deleted_layers.iter().enumerate() {
             let target_idx = idx - removed_idx;
 
-            // Must remove from BOTH arrays at the same index to maintain alignment
-            let tex_ids = tile.texture_fragment_entity_ids.as_mut();
-            let hill_ids = tile.hillshade_entity_ids.as_mut();
+            if let Some(hill) = tile.hillshade_entity_ids.as_mut()
+                && target_idx < hill.len()
+                && let Some(e) = hill.remove(target_idx)
+            {
+                commands.entity(e).insert(Deleted);
+            }
+        }
+    }
 
-            match (tex_ids, hill_ids) {
-                (Some(tex), Some(hill)) => {
-                    // Remove from each array independently if the index is valid
-                    if target_idx < tex.len()
-                        && let Some(e) = tex.remove(target_idx)
-                    {
-                        commands.entity(e).insert(Deleted);
-                    }
-                    if target_idx < hill.len()
-                        && let Some(e) = hill.remove(target_idx)
-                    {
-                        commands.entity(e).insert(Deleted);
-                    }
-                }
-                (Some(tex), None) => {
-                    if target_idx < tex.len()
-                        && let Some(e) = tex.remove(target_idx)
-                    {
-                        commands.entity(e).insert(Deleted);
-                    }
-                }
-                (None, Some(hill)) => {
-                    if target_idx < hill.len()
-                        && let Some(e) = hill.remove(target_idx)
-                    {
-                        commands.entity(e).insert(Deleted);
-                    }
-                }
-                (None, None) => {
-                    // Both None - nothing to do
-                }
+    // Compact the same slot out of every live raster tile's texture array.
+    // `active_handles` covers the visited tiles (including the ancestors that
+    // `resolve_raster_texture` can fall back to).
+    for handle in raster_tc.active_handles.iter() {
+        let Some(raster_tile) = raster_qt.qt.get_mut(*handle) else {
+            continue;
+        };
+        for (removed_idx, idx) in deleted_layers.iter().enumerate() {
+            let target_idx = idx - removed_idx;
+
+            if let Some(tex) = raster_tile.texture_fragment_entity_ids.as_mut()
+                && target_idx < tex.len()
+                && let Some(e) = tex.remove(target_idx)
+            {
+                commands.entity(e).insert(Deleted);
             }
         }
     }
@@ -938,6 +902,7 @@ pub fn delete_layer(
 pub fn update_mesh_material(
     mut tc: ResMut<TileCacheManager>,
     qt: ResMut<TerrainTileQuadtree>,
+    raster_qt: Res<navara_tile_component::RasterTileQuadtree>,
     rendered_tiles: Query<(&RenderedTile, &OrderByDistance), With<Rendered>>,
     mut texture_fragment: ParamSet<(TileTextureFragmentQuery, ChangedTileTextureFragmentQuery)>,
     mut data_requesters: ParamSet<(
@@ -985,11 +950,6 @@ pub fn update_mesh_material(
     let tile_layers = tile_layers.p0();
     let texture_fragment = texture_fragment.p0();
     let data_requesters = data_requesters.p0();
-
-    let has_tile_layer = !tile_layers.is_empty();
-    if !has_tile_layer {
-        return;
-    }
 
     for (rendered_tile, _) in rendered_tiles.iter().sort::<&OrderByDistance>() {
         let Some(tile) = qt.qt.get(rendered_tile.tile_handle) else {
@@ -1041,38 +1001,48 @@ pub fn update_mesh_material(
             Vec::with_capacity(tile_layers_len);
 
         for (i, (l, _)) in tile_layers.iter().sort::<&Order>().enumerate() {
-            // Resolve own entity for this layer based on its kind.
-            let own_entity = if l.hillshade_config.is_some() {
-                tile.hillshade_entity_ids
+            // Hillshade layers stay terrain-side (DataRequester-backed); regular
+            // raster layers are pulled from the WebMercator raster quadtree by
+            // extent (Phase 1: identity coordinates, with ancestor fallback). Each
+            // branch reports its own readiness so `should_show` needs no re-check.
+            let (resolved_entity, resolved_uv, should_show) = if l.hillshade_config.is_some() {
+                let own_entity = tile
+                    .hillshade_entity_ids
                     .as_ref()
-                    .and_then(|ids| ids.get(i).copied().flatten())
-            } else {
-                tile.texture_fragment_entity_ids
+                    .and_then(|ids| ids.get(i).copied().flatten());
+                let own_ready = own_entity
+                    .is_some_and(|e| TerrainTile::is_hillshade_entity_ready(e, &data_requesters));
+                if own_ready {
+                    (own_entity, None, true)
+                } else if let Some(parent) = cached_rendered_tile
+                    .layer_parents
                     .as_ref()
-                    .and_then(|ids| ids.get(i).copied().flatten())
-            };
-            let own_ready = own_entity.is_some_and(|e| {
-                TerrainTile::is_texture_entity_ready(e, &texture_fragment, &data_requesters)
-            });
-
-            let (resolved_entity, resolved_uv) = if own_ready {
-                (own_entity, None)
-            } else if let Some(parent) = cached_rendered_tile
-                .layer_parents
-                .as_ref()
-                .and_then(|v| v.get(i).copied().flatten())
-            {
-                (
-                    Some(parent.entity),
-                    Some(uv_transform(tile.coords, parent.zoom)),
-                )
+                    .and_then(|v| v.get(i).copied().flatten())
+                {
+                    // Cached ancestor fallback: re-check readiness since the
+                    // parent's hillshade may have been pruned across frames.
+                    let ready =
+                        TerrainTile::is_hillshade_entity_ready(parent.entity, &data_requesters);
+                    (
+                        Some(parent.entity),
+                        Some(uv_transform(tile.coords, parent.zoom)),
+                        ready,
+                    )
+                } else {
+                    (None, None, false)
+                }
             } else {
-                (None, None)
+                // The raster pull only returns a fragment once it has loaded.
+                match crate::raster::resolve_raster_texture(
+                    &raster_qt,
+                    tile.coords,
+                    i,
+                    &texture_fragment,
+                ) {
+                    Some(r) => (Some(r.entity), r.uv_transform, true),
+                    None => (None, None, false),
+                }
             };
-
-            let should_show = resolved_entity.is_some_and(|e| {
-                TerrainTile::is_texture_entity_ready(e, &texture_fragment, &data_requesters)
-            });
 
             let a = l.appearance().unwrap();
             let next_show = should_show && a.show;
@@ -1290,5 +1260,80 @@ pub fn clear_caches(
 
     for removed in removed_handles {
         tc.requested_tile_caches.remove(&removed);
+    }
+}
+
+#[cfg(test)]
+mod delete_layer_tests {
+    use super::*;
+    use bevy_app::{App, Update};
+    use navara_layer::LayerData;
+    use navara_material::{Appearance, RasterTileMaterial};
+    use navara_tile_component::{RasterTile, RasterTileQuadtree};
+
+    use crate::raster::RasterTileCacheManager;
+
+    fn raster_layer(layer_id: &str) -> TilesLayer {
+        TilesLayer {
+            layer_id: layer_id.to_string(),
+            data: Some(LayerData {
+                url: "https://example.com/{z}/{x}/{y}.png".to_string(),
+            }),
+            appearance: Some(Appearance::TerrainTile(RasterTileMaterial::default())),
+            elevation_heatmap_config: None,
+            hillshade_config: None,
+        }
+    }
+
+    /// Deleting a middle raster layer must compact that slot out of the raster
+    /// tile's `texture_fragment_entity_ids`, keeping the remaining layers aligned
+    /// with the new sorted-layer order (the layer-ordering regression this guards).
+    #[test]
+    fn delete_layer_compacts_raster_texture_slots() {
+        let mut app = App::new();
+        app.insert_resource(TerrainTileQuadtree::new_with_linear_qt());
+
+        // A raster tile carrying one texture entity per layer [A, B, C].
+        let ea = app.world_mut().spawn_empty().id();
+        let eb = app.world_mut().spawn_empty().id();
+        let ec = app.world_mut().spawn_empty().id();
+
+        let mut raster_qt = RasterTileQuadtree::new_with_linear_qt();
+        raster_qt
+            .qt
+            .initialize_zero(&|(x, y, z)| RasterTile::new(TileXYZ { x, y, z }, 0., 0.));
+        let handle = raster_qt.qt.zero().unwrap().handle();
+        raster_qt
+            .qt
+            .get_mut(handle)
+            .unwrap()
+            .texture_fragment_entity_ids = Some(vec![Some(ea), Some(eb), Some(ec)]);
+        app.insert_resource(raster_qt);
+
+        let mut raster_tc = RasterTileCacheManager::default();
+        raster_tc.active_handles.insert(handle);
+        app.insert_resource(raster_tc);
+
+        // Layers A(0), B(1), C(2); delete the middle one (B).
+        app.world_mut().spawn((raster_layer("A"), Order(0)));
+        app.world_mut().spawn((raster_layer("B"), Order(1)));
+        app.world_mut().spawn((raster_layer("C"), Order(2)));
+        app.world_mut()
+            .spawn(DeleteRasterTileLayerMarker("B".to_string()));
+
+        app.add_systems(Update, delete_layer);
+        app.update();
+
+        let raster_qt = app.world().resource::<RasterTileQuadtree>();
+        let tex = raster_qt
+            .qt
+            .get(handle)
+            .unwrap()
+            .texture_fragment_entity_ids
+            .as_ref()
+            .unwrap();
+
+        // B's slot is gone; A and C keep their relative order, now at indices 0,1.
+        assert_eq!(tex, &vec![Some(ea), Some(ec)]);
     }
 }
