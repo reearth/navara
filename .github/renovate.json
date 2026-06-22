@@ -17,13 +17,6 @@
         "node"
       ],
       "enabled": false
-    },
-    {
-      "matchManagers": ["npm"],
-      "matchUpdateTypes": ["patch"],
-      "groupName": "npm patch updates",
-      "groupSlug": "npm-patch",
-      "schedule": ["before 3:00 am on monday"]
     }
   ]
 }
