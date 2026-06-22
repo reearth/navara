@@ -848,16 +848,24 @@ pub fn delete_layer(
         commands.entity(e).despawn();
     }
 
-    let mut deleted_layers = Vec::with_capacity(deleted.iter().len());
-    for (i, (_, layer, _)) in layers.iter().sort::<&Order>().enumerate() {
-        for (_, u) in &deleted {
-            let layer_id = u.0.clone();
-            if layer.layer_id != layer_id {
-                continue;
-            }
-            deleted_layers.push(i);
-        }
-    }
+    // The compaction below relies on `idx - removed_idx` to translate an
+    // original sorted-layer index into its current (already-shifted) position.
+    // That arithmetic is only correct when the indices are strictly increasing:
+    // duplicates (e.g. two delete markers spawned for the same layer in one
+    // frame) would either over-remove slots or underflow `usize`.
+    //
+    // Collecting the marker ids into a set and filtering the sorted layers in a
+    // single pass yields strictly increasing, duplicate-free indices by
+    // construction, so no later sort/dedup is needed (and it avoids the
+    // per-layer linear scan over every marker).
+    let deleted_ids: std::collections::HashSet<&String> =
+        deleted.iter().map(|(_, u)| &u.0).collect();
+    let deleted_layers: Vec<usize> = layers
+        .iter()
+        .sort::<&Order>()
+        .enumerate()
+        .filter_map(|(i, (_, layer, _))| deleted_ids.contains(&layer.layer_id).then_some(i))
+        .collect();
 
     // Per-layer arrays are indexed by the sorted-layer position, so a deleted
     // layer's slot must be removed (shifting the rest down) from BOTH the
@@ -1335,5 +1343,60 @@ mod delete_layer_tests {
 
         // B's slot is gone; A and C keep their relative order, now at indices 0,1.
         assert_eq!(tex, &vec![Some(ea), Some(ec)]);
+    }
+
+    /// Two delete markers for the *same* layer in one frame must compact exactly
+    /// one slot. Without sort+dedup of the index list, the duplicate index makes
+    /// `idx - removed_idx` over-remove a slot (and underflow `usize` when the
+    /// duplicated layer sits at index 0).
+    #[test]
+    fn delete_layer_handles_duplicate_markers_for_same_layer() {
+        let mut app = App::new();
+        app.insert_resource(TerrainTileQuadtree::new_with_linear_qt());
+
+        let ea = app.world_mut().spawn_empty().id();
+        let eb = app.world_mut().spawn_empty().id();
+        let ec = app.world_mut().spawn_empty().id();
+
+        let mut raster_qt = RasterTileQuadtree::new_with_linear_qt();
+        raster_qt
+            .qt
+            .initialize_zero(&|(x, y, z)| RasterTile::new(TileXYZ { x, y, z }, 0., 0.));
+        let handle = raster_qt.qt.zero().unwrap().handle();
+        raster_qt
+            .qt
+            .get_mut(handle)
+            .unwrap()
+            .texture_fragment_entity_ids = Some(vec![Some(ea), Some(eb), Some(ec)]);
+        app.insert_resource(raster_qt);
+
+        let mut raster_tc = RasterTileCacheManager::default();
+        raster_tc.active_handles.insert(handle);
+        app.insert_resource(raster_tc);
+
+        // Delete the *first* layer (A, index 0) so a mishandled duplicate would
+        // underflow `usize` on the second pass (0 - 1).
+        app.world_mut().spawn((raster_layer("A"), Order(0)));
+        app.world_mut().spawn((raster_layer("B"), Order(1)));
+        app.world_mut().spawn((raster_layer("C"), Order(2)));
+        app.world_mut()
+            .spawn(DeleteRasterTileLayerMarker("A".to_string()));
+        app.world_mut()
+            .spawn(DeleteRasterTileLayerMarker("A".to_string()));
+
+        app.add_systems(Update, delete_layer);
+        app.update();
+
+        let raster_qt = app.world().resource::<RasterTileQuadtree>();
+        let tex = raster_qt
+            .qt
+            .get(handle)
+            .unwrap()
+            .texture_fragment_entity_ids
+            .as_ref()
+            .unwrap();
+
+        // Exactly one slot (A) removed; B and C remain intact and in order.
+        assert_eq!(tex, &vec![Some(eb), Some(ec)]);
     }
 }
