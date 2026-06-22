@@ -199,10 +199,11 @@ mod tests {
     fn terrain_qt_with(entries: &[(TileXYZ, f64, f64)]) -> TerrainInformationQuadtree {
         let mut qt = TerrainInformationQuadtree::new_with_linear_qt();
         for &(coords, max_height, min_height) in entries {
-            qt.qt.initialize_leaf((coords.x, coords.y, coords.z), &|_| TerrainInformation {
-                max_height,
-                min_height,
-            });
+            qt.qt
+                .initialize_leaf((coords.x, coords.y, coords.z), &|_| TerrainInformation {
+                    max_height,
+                    min_height,
+                });
         }
         qt
     }
@@ -238,7 +239,10 @@ mod tests {
         // No intermediate info: the climb reaches the root and borrows its height.
         let qt = terrain_qt_with(&[(TileXYZ { x: 0, y: 0, z: 0 }, 42., -7.)]);
 
-        assert_eq!(terrain_height(&qt, TileXYZ { x: 5, y: 5, z: 4 }), (42., -7.));
+        assert_eq!(
+            terrain_height(&qt, TileXYZ { x: 5, y: 5, z: 4 }),
+            (42., -7.)
+        );
     }
 
     #[test]
@@ -417,10 +421,9 @@ mod tests {
         // handle, then drop it from the tree.
         let stale = {
             let mut qt = app.world_mut().resource_mut::<RasterTileQuadtree>();
-            qt.qt
-                .initialize_children((0, 0, 0), &|(x, y, z)| {
-                    RasterTile::new(TileXYZ { x, y, z }, 0., 0.)
-                });
+            qt.qt.initialize_children((0, 0, 0), &|(x, y, z)| {
+                RasterTile::new(TileXYZ { x, y, z }, 0., 0.)
+            });
             let stale = qt.qt.leaf((0, 0, 1)).unwrap().handle();
             qt.qt.remove(stale);
             stale
@@ -496,7 +499,8 @@ mod tests {
         let (mut app, handle) = app_with_root(TerrainInformationQuadtree::new_with_linear_qt());
         app.insert_resource(TargetHandle(handle));
         // Regular layer at slot 0, hillshade layer at slot 1.
-        app.world_mut().spawn((raster_layer("regular", 0, 20), Order(0)));
+        app.world_mut()
+            .spawn((raster_layer("regular", 0, 20), Order(0)));
         app.world_mut().spawn((hillshade_layer("hill"), Order(1)));
 
         app.add_systems(Update, run_traverse_system);
@@ -534,7 +538,10 @@ mod tests {
         app.update();
 
         let urls = requested_urls(&mut app);
-        assert!(!urls.is_empty(), "the layer should be fetched at its min zoom");
+        assert!(
+            !urls.is_empty(),
+            "the layer should be fetched at its min zoom"
+        );
         assert!(
             urls.iter().all(|u| u.starts_with("https://example.com/2/")),
             "no fetch below min zoom; got {urls:?}"
@@ -581,7 +588,10 @@ mod tests {
 
         // The root was subdivided into its children.
         let qt = app.world().resource::<RasterTileQuadtree>();
-        assert!(qt.qt.leaf((0, 0, 1)).is_some(), "root should have subdivided");
+        assert!(
+            qt.qt.leaf((0, 0, 1)).is_some(),
+            "root should have subdivided"
+        );
         let tc = app.world().resource::<RasterTileCacheManager>();
         assert!(tc.active_handles.len() > 1, "children must be visited");
     }
@@ -603,7 +613,10 @@ mod tests {
 
         // Beyond max zoom there is no subdivision despite the zero threshold.
         let qt = app.world().resource::<RasterTileQuadtree>();
-        assert!(qt.qt.leaf((0, 0, 1)).is_none(), "must not descend past max zoom");
+        assert!(
+            qt.qt.leaf((0, 0, 1)).is_none(),
+            "must not descend past max zoom"
+        );
         let tc = app.world().resource::<RasterTileCacheManager>();
         assert_eq!(tc.active_handles.len(), 1);
     }
