@@ -66,10 +66,18 @@ const CITY_POPULATION_THRESHOLD = 1_000_000;
 
 const BASE_POLYGONS = [
   { title: "Land", source: "land", color: "#f8f4f1" }, // sand.50
-  { title: "Land cover", source: "land_cover", color: "#c4eaa9" }, // grass fallback
+  // { title: "Land cover", source: "land_cover", color: "#c4eaa9" }, // grass fallback
   { title: "Land use", source: "land_use", color: "#d6ecd5" }, // park green.200
   { title: "Water", source: "water", color: "#79cdf6" }, // ocean.900
 ] as const;
+
+// 3D buildings (Overture `buildings` theme). The `building` MVT layer carries a
+// real `height` in meters; where it's missing we estimate from `num_floors`
+// (~3 m per floor) and finally fall back to a small default so footprints are
+// never extruded to zero.
+const BUILDING_COLOR = "#cabfb3"; // sand.300
+const METERS_PER_FLOOR = 3;
+const DEFAULT_BUILDING_HEIGHT = 6;
 
 const LAND_COVER_COLORS: Record<string, string> = {
   forest: "#a2e2a4", // green.500
@@ -189,6 +197,107 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     toggles.push({ title: boundaryTitle, layer: boundaryLayer });
   }
 
+  // 3D buildings from the `buildings` theme. Each footprint is extruded by the
+  // per-feature `extrudedHeight` (meters) set in the evaluator below — the
+  // polygon shader raises the roof from the ground (so `clampToGround` is off,
+  // it would otherwise drape the geometry onto terrain and ignore the height).
+  // These only exist at z5–z14, so they appear only once the camera descends.
+  //
+  // Two MVT layers cooperate here, following the OSM/Overture 3D convention:
+  //   • `building`      — one footprint per building (the city's bulk massing).
+  //   • `building_part` — detailed sub-volumes for buildings modeled in 3D.
+  // Overture reliably tags `height` on parts but only sparsely on footprints,
+  // so the parts are what make landmark buildings read as real shapes. Where a
+  // footprint `has_parts`, we hide it and let its parts stand in — otherwise the
+  // footprint and its parts double-draw and z-fight.
+  const buildingsTitle = "Buildings";
+  visible[buildingsTitle] = true;
+  const buildingColor = new Color().setStyle(BUILDING_COLOR);
+
+  // Bulk footprints. Hidden where `has_parts`, so detailed parts represent them.
+  const buildingLayer = view.addLayer({
+    type: "mvt",
+    data: { url: PMTILES_DATASETS.overtureBuildings.url },
+    polygon: {
+      color: buildingColor,
+      // Seeds the attribute slots; the evaluator overrides height per feature.
+      height: 0,
+      extrudedHeight: 0,
+      clampToGround: false,
+    },
+    vectorTile: { maxZoom: 14, layers: ["building"] },
+  });
+  {
+    const apply = ({ evaluator }: { evaluator: FeatureEvaluator }) => {
+      evaluator.evaluate(
+        ({ properties }) => {
+          if (!visible[buildingsTitle]) return { show: false };
+          // Buildings with detailed parts are drawn by the part layer instead.
+          if (properties?.["has_parts"] === true) return { show: false };
+
+          const height = properties?.["height"] as number | undefined;
+          const numFloors = properties?.["num_floors"] as number | undefined;
+          const extrudedHeight =
+            height ??
+            (numFloors != null
+              ? numFloors * METERS_PER_FLOOR
+              : DEFAULT_BUILDING_HEIGHT);
+
+          return { show: true, extrudedHeight };
+        },
+        { filters: ["height", "num_floors", "has_parts"] },
+      );
+    };
+    buildingLayer.on("featureCreated", apply);
+    buildingLayer.on("featureUpdated", apply);
+    toggles.push({ title: buildingsTitle, layer: buildingLayer });
+  }
+
+  // Detailed building parts. A part spans `min_height` (its base elevation) to
+  // `height` (its top), so we set the polygon's base (`height` attribute) to
+  // `min_height` and its top (`extrudedHeight`) to `height` — this keeps stacked
+  // setbacks from overlapping and lets towers float above their podium.
+  const buildingPartLayer = view.addLayer({
+    type: "mvt",
+    data: { url: PMTILES_DATASETS.overtureBuildings.url },
+    polygon: {
+      color: buildingColor,
+      height: 0,
+      extrudedHeight: 0,
+      clampToGround: false,
+    },
+    vectorTile: { maxZoom: 14, layers: ["building_part"] },
+  });
+  {
+    const apply = ({ evaluator }: { evaluator: FeatureEvaluator }) => {
+      evaluator.evaluate(
+        ({ properties }) => {
+          if (!visible[buildingsTitle]) return { show: false };
+
+          const top = properties?.["height"] as number | undefined;
+          const numFloors = properties?.["num_floors"] as number | undefined;
+          const base = (properties?.["min_height"] as number | undefined) ?? 0;
+          const extrudedHeight =
+            top ??
+            (numFloors != null
+              ? numFloors * METERS_PER_FLOOR
+              : DEFAULT_BUILDING_HEIGHT);
+
+          // Skip degenerate parts whose base is at or above their top.
+          if (extrudedHeight <= base) return { show: false };
+
+          return { show: true, height: base, extrudedHeight };
+        },
+        { filters: ["height", "num_floors", "min_height"] },
+      );
+    };
+    buildingPartLayer.on("featureCreated", apply);
+    buildingPartLayer.on("featureUpdated", apply);
+    // Same title as the footprint layer: one "Buildings" toggle drives both, and
+    // `restyle()` force-updates both. The panel dedupes the repeated title.
+    toggles.push({ title: buildingsTitle, layer: buildingPartLayer });
+  }
+
   // A single text layer for labels in every script. Overture stores the
   // localized primary name under the `@name` property; the registered font
   // family resolves the correct face per glyph.
@@ -305,8 +414,13 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   });
 
   // Layer toggles — flipping any checkbox re-styles every layer immediately.
+  // Some titles map to more than one layer (e.g. "Buildings" drives both the
+  // footprint and part layers), so add a single binding per distinct title.
   const layersFolder = pane.addFolder({ title: "Layers" });
+  const boundToggleTitles = new Set<string>();
   for (const { title } of toggles) {
+    if (boundToggleTitles.has(title)) continue;
+    boundToggleTitles.add(title);
     layersFolder.addBinding(visible, title).on("change", () => {
       restyle();
     });
@@ -381,5 +495,6 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   showAttributions([
     PMTILES_DATASETS.overtureBase,
     PMTILES_DATASETS.overtureDivisions,
+    PMTILES_DATASETS.overtureBuildings,
   ]);
 };
