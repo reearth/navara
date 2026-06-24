@@ -7,6 +7,43 @@ import type { EvaluationContext, StyleLayer } from "../engine/types";
 import type { StyleEngine } from "../engine/StyleEngine";
 
 /**
+ * MapLibre Color object returned from expression evaluation.
+ */
+interface MapLibreColor {
+  r: number;
+  g: number;
+  b: number;
+  a: number;
+}
+
+/**
+ * Type guard to check if a value is a MapLibre Color object.
+ */
+function isMapLibreColor(value: unknown): value is MapLibreColor {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "r" in value &&
+    "g" in value &&
+    "b" in value &&
+    typeof (value as MapLibreColor).r === "number"
+  );
+}
+
+/**
+ * Convert MapLibre Color object to Navara Color.
+ * MapLibre's expression evaluator always returns Color objects for color-type
+ * expressions, even for constant values like "#ff0000".
+ */
+function toNavaraColor(value: unknown): Color | undefined {
+  if (isMapLibreColor(value)) {
+    // MapLibre Color object with r, g, b values (0-1 range)
+    return new Color().setRGB(value.r, value.g, value.b);
+  }
+  return undefined;
+}
+
+/**
  * Create evaluator functions for a style layer's paint properties.
  *
  * @param styleLayer - MapLibre layer definition
@@ -67,23 +104,19 @@ export function toEvaluatedValue(
 
   // Map paint properties to Navara properties based on layer type
   if (styleLayer.type === "fill") {
-    const colorStr = paintValues["fill-color"] as string | undefined;
-
-    if (colorStr) {
-      const color = new Color().setStyle(colorStr);
+    const color = toNavaraColor(paintValues["fill-color"]);
+    if (color) {
       result.color = color;
     }
   } else if (styleLayer.type === "line") {
-    const colorStr = paintValues["line-color"] as string | undefined;
-
-    if (colorStr) {
-      result.color = new Color().setStyle(colorStr);
+    const color = toNavaraColor(paintValues["line-color"]);
+    if (color) {
+      result.color = color;
     }
   } else if (styleLayer.type === "circle") {
-    const colorStr = paintValues["circle-color"] as string | undefined;
-
-    if (colorStr) {
-      result.color = new Color().setStyle(colorStr);
+    const color = toNavaraColor(paintValues["circle-color"]);
+    if (color) {
+      result.color = color;
     }
   }
 

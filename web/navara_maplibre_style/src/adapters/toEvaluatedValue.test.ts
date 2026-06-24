@@ -10,21 +10,11 @@ vi.mock("@navara/three", () => ({
     g = 0;
     b = 0;
 
-    setStyle(style: string) {
-      // Simple hex color parser for testing
-      if (style.startsWith("#")) {
-        const hex = style.slice(1);
-        this.r = parseInt(hex.slice(0, 2), 16) / 255;
-        this.g = parseInt(hex.slice(2, 4), 16) / 255;
-        this.b = parseInt(hex.slice(4, 6), 16) / 255;
-      } else if (style.startsWith("rgb")) {
-        const match = style.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
-        if (match) {
-          this.r = parseInt(match[1]) / 255;
-          this.g = parseInt(match[2]) / 255;
-          this.b = parseInt(match[3]) / 255;
-        }
-      }
+    setRGB(r: number, g: number, b: number) {
+      // Set RGB values directly (0-1 range)
+      this.r = r;
+      this.g = g;
+      this.b = b;
       return this;
     }
   },
@@ -114,32 +104,16 @@ describe("createPaintEvaluators", () => {
 });
 
 describe("toEvaluatedValue", () => {
-  it("should convert fill-color to Navara color", () => {
+  it("should convert fill-color Color object to Navara color", () => {
     const layer: StyleLayer = {
       id: "test",
       type: "fill",
       source: "test",
     };
 
+    // MapLibre always returns Color objects from expression evaluation
     const paintValues = {
-      "fill-color": "rgb(255, 0, 0)",
-    };
-
-    const result = toEvaluatedValue(layer, paintValues);
-
-    expect(result.color).toBeDefined();
-    expect(result.show).toBe(true);
-  });
-
-  it("should handle hex color strings from evaluators", () => {
-    const layer: StyleLayer = {
-      id: "test",
-      type: "fill",
-      source: "test",
-    };
-
-    const paintValues = {
-      "fill-color": "#ff00ff",
+      "fill-color": { r: 1, g: 0, b: 0, a: 1 },
     };
 
     const result = toEvaluatedValue(layer, paintValues);

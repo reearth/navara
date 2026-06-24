@@ -6,7 +6,12 @@
  */
 
 import { Plugin } from "@navara/core";
-import ThreeView, { type ViewContext, type Layer } from "@navara/three";
+import ThreeView, {
+  type ViewContext,
+  type Layer,
+  type FeatureEvaluator,
+  type FeatureInfo,
+} from "@navara/three";
 import type { StyleEngine } from "./engine/StyleEngine";
 import { JsStyleEngine } from "./engine/JsStyleEngine";
 import type { ParsedStyle, StyleLayer } from "./engine/types";
@@ -110,9 +115,13 @@ export class MapLibreStylePlugin extends Plugin<ThreeView, ViewContext> {
       geometryType,
     );
 
-    // Attach to featureUpdated event
-    layer.on("featureUpdated", ({ evaluator }) => {
-      evaluator.evaluate(({ properties }) => {
+    // Shared evaluation function for both featureCreated and featureUpdated
+    const evaluateFeature = ({
+      evaluator,
+    }: {
+      evaluator: FeatureEvaluator;
+    }) => {
+      evaluator.evaluate(({ properties }: FeatureInfo) => {
         const ctx = { properties };
 
         // Check filter first
@@ -133,7 +142,13 @@ export class MapLibreStylePlugin extends Plugin<ThreeView, ViewContext> {
         // Convert to Navara's EvaluatedValue format
         return toEvaluatedValue(styleLayer, paintValues);
       });
-    });
+    };
+
+    // Register for both featureCreated and featureUpdated events
+    // featureCreated: handles newly created features as they load
+    // featureUpdated: handles updates to existing features (e.g., property changes)
+    layer.on("featureCreated", evaluateFeature);
+    layer.on("featureUpdated", evaluateFeature);
   }
 
   /**
