@@ -37,6 +37,7 @@ export async function run() {
               properties: {
                 name: "Polygon A",
                 type: "polygon",
+                color: "#ffffff",
                 No: 1,
               },
               geometry: {
@@ -57,6 +58,7 @@ export async function run() {
               properties: {
                 name: "Polygon B",
                 type: "polygon",
+                color: "#ff0000",
                 No: 2,
               },
               geometry: {
@@ -77,6 +79,7 @@ export async function run() {
               properties: {
                 name: "Polygon C",
                 type: "polygon",
+                color: "#00ff00",
                 No: 3,
               },
               geometry: {
@@ -97,6 +100,7 @@ export async function run() {
               properties: {
                 name: "Polygon D",
                 type: "polygon",
+                color: "#0000ff",
                 No: 4,
               },
               geometry: {
@@ -123,6 +127,7 @@ export async function run() {
         source: "simple-polygon",
         filter: [">", ["get", "No"], 0],
         paint: {
+          // "fill-color": ["get", "color"],
           "fill-color": [
             "case",
             // case: If the "No" property is odd

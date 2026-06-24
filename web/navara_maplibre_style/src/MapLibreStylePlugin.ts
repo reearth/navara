@@ -44,17 +44,14 @@ export class MapLibreStylePlugin extends Plugin<ThreeView, ViewContext> {
 
     // Process each layer in the style
     for (const styleLayer of this.parsedStyle.layers) {
-      await this.addStyleLayer(view, styleLayer);
+      this.addStyleLayer(view, styleLayer);
     }
   }
 
   /**
    * Add a MapLibre Style layer to the Navara view.
    */
-  private async addStyleLayer(
-    view: ThreeView,
-    styleLayer: StyleLayer,
-  ): Promise<void> {
+  private addStyleLayer(view: ThreeView, styleLayer: StyleLayer): void {
     if (!this.parsedStyle) {
       throw new Error("Style not parsed yet");
     }

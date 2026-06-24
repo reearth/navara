@@ -26,17 +26,22 @@ function isMapLibreColor(value: unknown): value is MapLibreColor {
     "r" in value &&
     "g" in value &&
     "b" in value &&
-    typeof (value as MapLibreColor).r === "number"
+    typeof (value as MapLibreColor).r === "number" &&
+    typeof (value as MapLibreColor).g === "number" &&
+    typeof (value as MapLibreColor).b === "number"
   );
 }
 
 /**
- * Convert MapLibre Color object to Navara Color.
- * MapLibre's expression evaluator always returns Color objects for color-type
- * expressions, even for constant values like "#ff0000".
+ * Convert MapLibre color value to Navara Color.
+ * MapLibre's expression evaluator returns Color objects for evaluated expressions,
+ * but fallback defaults from spec.default are often CSS strings like "#000000".
  */
 function toNavaraColor(value: unknown): Color | undefined {
-  if (isMapLibreColor(value)) {
+  if (typeof value === "string") {
+    // CSS color string from spec.default fallback (e.g., "#000000", "rgb(255, 0, 0)")
+    return new Color().setStyle(value);
+  } else if (isMapLibreColor(value)) {
     // MapLibre Color object with r, g, b values (0-1 range)
     return new Color().setRGB(value.r, value.g, value.b);
   }

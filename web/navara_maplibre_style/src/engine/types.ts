@@ -3,7 +3,7 @@
  * These types define the interface between the plugin and the style engine,
  * allowing easy swap between JS and future Rust/WASM implementations.
  */
-
+import type { GeoJSON } from "geojson";
 /**
  * Simplified MapLibre Style specification.
  * For the PoC, we only support a subset of the full spec.
@@ -21,7 +21,7 @@ export type StyleSource = GeoJSONSource | VectorSource;
 
 export interface GeoJSONSource {
   type: "geojson";
-  data: string | GeoJSON.GeoJSON;
+  data: string | GeoJSON;
   maxzoom?: number;
   buffer?: number;
   tolerance?: number;

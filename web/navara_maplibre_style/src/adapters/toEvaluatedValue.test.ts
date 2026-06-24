@@ -17,6 +17,24 @@ vi.mock("@navara/three", () => ({
       this.b = b;
       return this;
     }
+
+    setStyle(style: string) {
+      // Simple color parser for testing fallback defaults
+      if (style.startsWith("#")) {
+        const hex = style.slice(1);
+        this.r = parseInt(hex.slice(0, 2), 16) / 255;
+        this.g = parseInt(hex.slice(2, 4), 16) / 255;
+        this.b = parseInt(hex.slice(4, 6), 16) / 255;
+      } else if (style.startsWith("rgb")) {
+        const match = style.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+        if (match) {
+          this.r = parseInt(match[1]) / 255;
+          this.g = parseInt(match[2]) / 255;
+          this.b = parseInt(match[3]) / 255;
+        }
+      }
+      return this;
+    }
   },
 }));
 
@@ -135,6 +153,43 @@ describe("toEvaluatedValue", () => {
 
     const result = toEvaluatedValue(layer, paintValues);
 
+    expect(result.color).toBeUndefined();
+    expect(result.show).toBe(true);
+  });
+
+  it("should handle CSS string fallback defaults", () => {
+    const layer: StyleLayer = {
+      id: "test",
+      type: "fill",
+      source: "test",
+    };
+
+    // spec.default often returns CSS strings like "#000000"
+    const paintValues = {
+      "fill-color": "#ff0000",
+    };
+
+    const result = toEvaluatedValue(layer, paintValues);
+
+    expect(result.color).toBeDefined();
+    expect(result.show).toBe(true);
+  });
+
+  it("should handle invalid Color objects gracefully", () => {
+    const layer: StyleLayer = {
+      id: "test",
+      type: "fill",
+      source: "test",
+    };
+
+    // Invalid Color object with missing numeric fields
+    const paintValues = {
+      "fill-color": { r: 1, g: "invalid", b: 0 },
+    };
+
+    const result = toEvaluatedValue(layer, paintValues);
+
+    // Should not crash, but color will be undefined
     expect(result.color).toBeUndefined();
     expect(result.show).toBe(true);
   });
