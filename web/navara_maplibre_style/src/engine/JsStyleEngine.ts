@@ -1,16 +1,13 @@
 /**
  * JavaScript implementation of StyleEngine using @maplibre/maplibre-gl-style-spec.
  *
- * IMPORTANT: This is the ONLY file that imports from @maplibre/maplibre-gl-style-spec.
- * When we move to Rust/WASM, this file can be deleted and replaced with WasmStyleEngine.
- *
- * This file is isolated to make the future migration easy - enforce via ESLint no-restricted-imports.
  */
 
 import {
   createExpression,
   featureFilter,
   validateStyleMin,
+  v8,
 } from "@maplibre/maplibre-gl-style-spec";
 import type { StyleEngine } from "./StyleEngine";
 import type {
@@ -23,6 +20,16 @@ import type {
   StyleValue,
   ValueExpression,
 } from "./types";
+
+/**
+ * MapLibre's official paint property specifications by layer type.
+ * Using the official specs ensures compatibility with the MapLibre Style spec.
+ */
+const PAINT_SPECS_BY_TYPE = {
+  fill: v8.paint_fill,
+  line: v8.paint_line,
+  circle: v8.paint_circle,
+};
 
 export class JsStyleEngine implements StyleEngine {
   async parseStyle(raw: unknown): Promise<ParsedStyle> {
@@ -98,5 +105,18 @@ export class JsStyleEngine implements StyleEngine {
 
       return value as T;
     };
+  }
+
+  getPaintSpec(
+    layerType: LayerType,
+    propertyName: string,
+  ): PropertySpec | undefined {
+    const paintSpecs = PAINT_SPECS_BY_TYPE[layerType];
+    if (!paintSpecs) {
+      return undefined;
+    }
+
+    const spec = paintSpecs[propertyName as keyof typeof paintSpecs];
+    return spec as PropertySpec | undefined;
   }
 }

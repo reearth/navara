@@ -58,4 +58,18 @@ export interface StyleEngine {
     spec: PropertySpec,
     geometryType?: string,
   ): (ctx: EvaluationContext) => T;
+
+  /**
+   * Get the property specification for a paint property.
+   * This allows adapters to access paint specs without directly importing
+   * from the style-spec library, maintaining the StyleEngine abstraction.
+   *
+   * @param layerType - Layer type (fill, line, circle)
+   * @param propertyName - Paint property name (e.g., "fill-color", "line-width")
+   * @returns Property specification with type, default, and constraints, or undefined if not found
+   */
+  getPaintSpec(
+    layerType: LayerType,
+    propertyName: string,
+  ): PropertySpec | undefined;
 }

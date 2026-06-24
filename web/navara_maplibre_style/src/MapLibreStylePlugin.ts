@@ -33,7 +33,7 @@ export class MapLibreStylePlugin extends Plugin<ThreeView, ViewContext> {
     super();
   }
 
-  async init(view: ThreeView): Promise<void> {
+  async init(view: ThreeView, _ctx: ViewContext): Promise<void> {
     // Parse and validate the style
     this.parsedStyle = await this.engine.parseStyle(this.style);
 

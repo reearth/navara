@@ -2,20 +2,9 @@
  * Converts MapLibre Style paint properties to Navara EvaluatedValue.
  */
 
-import { v8 } from "@maplibre/maplibre-gl-style-spec";
 import { Color } from "@navara/three";
 import type { EvaluationContext, StyleLayer } from "../engine/types";
 import type { StyleEngine } from "../engine/StyleEngine";
-
-/**
- * MapLibre's official paint property specifications by layer type.
- * Using the official specs ensures compatibility with the MapLibre Style spec.
- */
-const PAINT_SPECS_BY_TYPE = {
-  fill: v8.paint_fill,
-  line: v8.paint_line,
-  circle: v8.paint_circle,
-};
 
 /**
  * Create evaluator functions for a style layer's paint properties.
@@ -36,16 +25,9 @@ export function createPaintEvaluators(
     return evaluators;
   }
 
-  // Get the paint specs for this layer type
-  const paintSpecs = PAINT_SPECS_BY_TYPE[styleLayer.type];
-  if (!paintSpecs) {
-    console.warn(`No paint specs for layer type: ${styleLayer.type}`);
-    return evaluators;
-  }
-
   // Create evaluator for each paint property
   for (const [key, value] of Object.entries(styleLayer.paint)) {
-    const spec = paintSpecs[key];
+    const spec = engine.getPaintSpec(styleLayer.type, key);
     if (!spec) {
       console.warn(`Unknown paint property for ${styleLayer.type}: ${key}`);
       continue;

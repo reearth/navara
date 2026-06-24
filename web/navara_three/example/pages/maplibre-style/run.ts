@@ -197,5 +197,5 @@ export async function run() {
   const pane = new Pane();
   addCameraControl(view, pane);
 
-  showAttributions([TILE_DATASETS.eox]);
+  showAttributions([TILE_DATASETS.openstreetmap, TERRAIN_DATASETS.gsi]);
 }

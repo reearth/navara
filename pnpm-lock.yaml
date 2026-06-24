@@ -242,10 +242,10 @@ importers:
       '@maplibre/maplibre-gl-style-spec':
         specifier: ^20.3.1
         version: 20.4.0
-    devDependencies:
       '@navara/core':
         specifier: workspace:*
         version: link:../navara_core
+    devDependencies:
       '@navara/three':
         specifier: workspace:*
         version: link:../navara_three

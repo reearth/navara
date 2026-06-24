@@ -26,10 +26,10 @@
     "@navara/three": "workspace:*"
   },
   "dependencies": {
-    "@maplibre/maplibre-gl-style-spec": "^20.3.1"
+    "@maplibre/maplibre-gl-style-spec": "^20.3.1",
+    "@navara/core": "workspace:*"
   },
   "devDependencies": {
-    "@navara/core": "workspace:*",
     "@navara/three": "workspace:*"
   }
 }
