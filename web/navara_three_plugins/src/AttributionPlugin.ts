@@ -145,7 +145,7 @@ const STYLE_TEXT = `
   display: block;
 }
 .navara-attr-card {
-  min-width: 280px;
+  width: 280px;
   max-width: calc(100vw - 16px);
   max-height: 340px;
   overflow-y: auto;
@@ -161,7 +161,7 @@ const STYLE_TEXT = `
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px;
+  padding: 12px;
   border-bottom: 1px solid var(--nvr-attr-border, rgba(0, 0, 0, 0.08));
 }
 .navara-attr-head h3 {
@@ -192,6 +192,8 @@ const STYLE_TEXT = `
   gap: 8px;
   font-size: 13px;
   font-weight: 500;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 .navara-attr-bullet {
   width: 5px;
