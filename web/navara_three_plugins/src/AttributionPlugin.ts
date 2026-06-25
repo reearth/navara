@@ -31,6 +31,7 @@
  *       ],
  *     },
  *     {
+ *       // Per-tile copyright is tracked dynamically by resolving this layer id.
  *       attribution: "Google Maps Photorealistic 3D Tiles",
  *       creditLayerId: photoreal.id,
  *     },
@@ -39,7 +40,6 @@
  *         '<a href="https://s2maps.eu">Sentinel-2 cloudless 2020</a> by <a href="https://eox.at">EOX IT Services GmbH</a>',
  *     },
  *   ],
- *   [photoreal],
  * );
  *
  * // Re-theme at runtime (e.g. light / dark switch).
@@ -237,7 +237,6 @@ const STYLE_TEXT = `
 export class AttributionPlugin extends Plugin<View, ViewContext> {
   private view?: View;
   private items: AttributionItem[] = [];
-  private layers: Layer[] = [];
 
   private styleEl?: HTMLStyleElement;
   private dock?: HTMLDivElement;
@@ -252,7 +251,7 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
   /** Whether any source has zoom-banded children — gates the per-frame poll. */
   private hasZoomBands = false;
 
-  /** Per-layer dynamic credits (Phase 4), keyed by `layer.id`. */
+  /** Per-layer dynamic credits, keyed by `layer.id`. */
   private layerCredits = new Map<
     string,
     { credits: Map<bigint, string>; visible: Set<bigint> }
@@ -285,21 +284,35 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
    * Display the given attributions. Re-invoking replaces the current content
    * (supports dynamic license changes).
    *
+   * Sources that declare a `creditLayerId` have that layer's per-feature credits
+   * tracked dynamically; the layer is resolved from the view by id, so callers
+   * don't pass the `Layer` object separately.
+   *
    * @param items - Attribution entries (sources or raw HTML credits)
-   * @param layers - Layers whose per-feature credits are tracked dynamically
    */
-  show(items: AttributionItem[], layers: Layer[] = []): void {
+  show(items: AttributionItem[]): void {
     this.items = items;
-    this.layers = layers;
-    this.trackLayers();
+    this.trackLayers(this.resolveCreditLayers(items));
     this.render();
+  }
+
+  /** Resolve the `Layer` objects referenced by sources' `creditLayerId`. */
+  private resolveCreditLayers(items: AttributionItem[]): Layer[] {
+    const view = this.view;
+    if (!view) return [];
+    const layers: Layer[] = [];
+    for (const item of items) {
+      if (isAttributionHtml(item) || !item.creditLayerId) continue;
+      const layer = view.findLayerById(item.creditLayerId);
+      if (layer) layers.push(layer);
+    }
+    return layers;
   }
 
   /** Hide the attribution UI and clear tracked content. */
   hide(): void {
     this.teardownDom();
     this.items = [];
-    this.layers = [];
   }
 
   /** Release all DOM nodes, camera listeners, and layer listeners. */
@@ -444,14 +457,12 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
 
   /**
    * Rebuild the list. Each source shows its sub-credits — zoom-filtered static
-   * `children` plus any tracked layer's dynamic credits — as a nested list.
-   * Layers whose id no source declared via `creditLayerId` fall back to flat
-   * top-level credits.
+   * `children` plus the dynamic credits of the layer it links via
+   * `creditLayerId` — as a nested list.
    */
   private populateList(): void {
     if (!this.listEl) return;
     this.listEl.replaceChildren();
-    const matchedLayerIds = new Set<string>();
 
     for (const item of this.items) {
       const { li, text } = this.createItemShell();
@@ -485,7 +496,6 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
         }
       }
       if (item.creditLayerId) {
-        matchedLayerIds.add(item.creditLayerId);
         for (const credit of this.layerCreditStrings(item.creditLayerId)) {
           const creditLi = document.createElement("li");
           appendSanitizedHtml(creditLi, credit);
@@ -496,16 +506,6 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
       if (sub.childElementCount > 0) li.appendChild(sub);
 
       this.listEl.appendChild(li);
-    }
-
-    // Unmatched layers (no source declared their `creditLayerId`) fall back to flat.
-    for (const layerId of this.layerCredits.keys()) {
-      if (matchedLayerIds.has(layerId)) continue;
-      for (const credit of this.layerCreditStrings(layerId)) {
-        const { li, text } = this.createItemShell();
-        appendSanitizedHtml(text, credit);
-        this.listEl.appendChild(li);
-      }
     }
   }
 
@@ -626,16 +626,16 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
   }
 
   /**
-   * Subscribe to layer feature events and merge per-feature credits into the
-   * rendered list as features appear / disappear. Detaches any previously
-   * registered listeners first, so repeated `show()` calls don't leak.
+   * Subscribe to the given layers' feature events and merge per-feature credits
+   * into the rendered list as features appear / disappear. Detaches any
+   * previously registered listeners first, so repeated `show()` calls don't leak.
    */
-  private trackLayers(): void {
+  private trackLayers(layers: Layer[]): void {
     for (const off of this.layerCleanups) off();
     this.layerCleanups = [];
     this.layerCredits.clear();
 
-    for (const layer of this.layers) {
+    for (const layer of layers) {
       const state = {
         credits: new Map<bigint, string>(),
         visible: new Set<bigint>(),

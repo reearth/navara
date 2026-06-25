@@ -61,6 +61,7 @@ attribution.show(
       attribution: "Google Maps Photorealistic 3D Tiles",
       logo: "/credits/GoogleMaps.png",
       // このレイヤーのタイル単位のクレジットをこのソース配下にネスト。
+      // レイヤーは id から view 内で解決されるため、別途渡す必要はありません。
       creditLayerId: photoreal.id,
     },
     {
@@ -68,7 +69,6 @@ attribution.show(
         '<a href="https://s2maps.eu">Sentinel-2 cloudless 2020</a> by <a href="https://eox.at">EOX IT Services GmbH</a>',
     },
   ],
-  [photoreal],
 );
 
 attribution.hide();
@@ -85,13 +85,13 @@ new AttributionPlugin(options?: { style?: AttributionStyle });
 
 ## メソッド
 
-### show(items, layers?)
+### show(items)
 
 ```typescript
-show(items: AttributionItem[], layers?: Layer[]): void
+show(items: AttributionItem[]): void
 ```
 
-指定した出典を表示します。再度呼ぶと内容を置き換えるため、表示中のデータが変わったときにクレジットを更新できます。フィーチャー単位のクレジットを追跡したいレイヤーを `layers` に渡します（任意）。
+指定した出典を表示します。再度呼ぶと内容を置き換えるため、表示中のデータが変わったときにクレジットを更新できます。`creditLayerId` を設定したソースは、そのレイヤーのフィーチャー単位のクレジットが動的に追跡されます。レイヤーは id から view 内で解決されるため、別途渡す必要はありません。
 
 ### hide()
 
@@ -177,7 +177,7 @@ type AttributionItem = AttributionSource | AttributionHtml;
 ## 補足
 
 - **ズーム範囲は、自分で宣言するラスタソース向けです。** GSI や OpenStreetMap などのタイルは自前のクレジットを持たないため、ズーム依存のクレジットは `children` で記述します。
-- **レイヤー単位のクレジットはタイル由来です。** Google Photorealistic 3D Tiles のように copyright を埋め込むソースだけが `layers` 経由でクレジットを生成します。それ以外は `children` を使ってください。
+- **レイヤー単位のクレジットはタイル由来です。** Google Photorealistic 3D Tiles のように copyright を埋め込むソースだけが `creditLayerId` 経由でクレジットを生成します。それ以外は `children` を使ってください。
 - **掲出義務のあるロゴはロゴフレームへ（ポップオーバーではなく）。** 常時表示が必須のマークにのみ `logo` を使い、通常のソースはテキスト表示が適切です。
 - **リンクはスキーム検証されます。** すべてのクレジットリンク（`url`、`attributionHtml` / `title` 内のインライン `<a>`、レイヤーのフィーチャー単位クレジットに埋め込まれた `<a>`）は、安全なスキーム（`http` / `https` / `mailto`、または相対 URL）のみ保持され、それ以外（例: `javascript:`）はプレーンテキストに落とされます。これにより、信頼できないタイルメタデータ由来のリンクでも安全に描画できます。
 - **生の URL は自動でリンク化されます。** クレジットテキスト内のプレーンな `http(s)` URL は自動でクリック可能なリンクになるため、公式の表記をそのまま貼り付けても URL を手で `<a>` で囲む必要がありません（文言も URL も変更されません）。

@@ -1418,6 +1418,18 @@ export default class ThreeView<
   }
 
   /**
+   * Finds a resource layer by its ID.
+   * Only returns resource layers added via `addLayer()` (not mesh, light, or
+   * effect descriptors).
+   * @param id - The unique identifier of the layer to find
+   * @returns The matching {@link Layer}, or `undefined` if none exists
+   */
+  findLayerById(id: string): Layer | undefined {
+    const target = this.layersManager.get(id);
+    return target instanceof Layer ? target : undefined;
+  }
+
+  /**
    * Updates an existing resource layer's configuration by its ID.
    * Only works for resource layers added via `addLayer()`.
    * @param id - The unique identifier of the layer to update

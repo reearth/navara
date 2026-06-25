@@ -22,14 +22,11 @@ export const run = async (view: ThreeView) => {
   const layer = addTileLayer(view, GOOGLE_MAPS_API_KEY);
   // Attribution derived from the shared dataset (constants); per-tile credits
   // nest under it via `creditLayerId`.
-  attribution.show(
-    [
-      datasetToSource(TILES_3D_DATASETS.googlePhotorealTiles, {
-        creditLayerId: layer.id,
-      }),
-    ],
-    [layer],
-  );
+  attribution.show([
+    datasetToSource(TILES_3D_DATASETS.googlePhotorealTiles, {
+      creditLayerId: layer.id,
+    }),
+  ]);
   addCameraControl(view, pane);
   addDateControl(view, pane);
 };

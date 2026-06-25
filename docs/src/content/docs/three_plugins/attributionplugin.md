@@ -60,7 +60,8 @@ attribution.show(
     {
       attribution: "Google Maps Photorealistic 3D Tiles",
       logo: "/credits/GoogleMaps.png",
-      // Nest this layer's per-tile credits under this source.
+      // Nest this layer's per-tile credits under this source. The layer is
+      // resolved from the view by id, so you don't pass it separately.
       creditLayerId: photoreal.id,
     },
     {
@@ -68,7 +69,6 @@ attribution.show(
         '<a href="https://s2maps.eu">Sentinel-2 cloudless 2020</a> by <a href="https://eox.at">EOX IT Services GmbH</a>',
     },
   ],
-  [photoreal],
 );
 
 attribution.hide();
@@ -85,13 +85,13 @@ new AttributionPlugin(options?: { style?: AttributionStyle });
 
 ## Methods
 
-### show(items, layers?)
+### show(items)
 
 ```typescript
-show(items: AttributionItem[], layers?: Layer[]): void
+show(items: AttributionItem[]): void
 ```
 
-Displays the given attributions. Calling it again replaces the content, so you can update credits when the displayed data changes. Pass the `layers` you want per-feature credits tracked for; this is optional.
+Displays the given attributions. Calling it again replaces the content, so you can update credits when the displayed data changes. Sources that set `creditLayerId` have that layer's per-feature credits tracked dynamically — the layer is resolved from the view by id, so you don't pass it separately.
 
 ### hide()
 
@@ -177,7 +177,7 @@ All fields are optional; an unset field keeps the default color. Colors are appl
 ## Notes
 
 - **Zoom ranges are for raster sources you declare yourself.** Tiles like GSI or OpenStreetMap don't carry their own credits, so describe their zoom-dependent credits with `children`.
-- **Per-layer credits come from the tiles.** Only sources that embed a copyright (such as Google Photorealistic 3D Tiles) produce credits through `layers`; for everything else, use `children`.
+- **Per-layer credits come from the tiles.** Only sources that embed a copyright (such as Google Photorealistic 3D Tiles) produce credits through `creditLayerId`; for everything else, use `children`.
 - **Mandated logos go in the logo frame, not the popover.** Use `logo` only for marks you are required to keep visible at all times; ordinary sources are best shown as text.
 - **Links are scheme-checked.** Every credit link — `url`, inline `<a>` in `attributionHtml` / `title`, and `<a>` embedded in a layer's per-feature credits — is kept only for safe schemes (`http` / `https` / `mailto`, or relative URLs); anything else (e.g. `javascript:`) is dropped to plain text. This makes it safe to render links even from untrusted tile metadata.
 - **Bare URLs are auto-linked.** A plain `http(s)` URL inside credit text is turned into a clickable link automatically, so you can paste an official notice verbatim without hand-wrapping the URL in `<a>` — the wording (and the URL) stays unchanged.
