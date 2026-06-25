@@ -7,13 +7,20 @@
  */
 
 /**
- * A single zoom-banded child credit. The band `[minZoom, maxZoom]` is matched
- * against the current camera zoom to decide whether this credit is shown.
- * Omitting a bound means unbounded on that side.
+ * A zoom-banded data source under a top-level source. The band
+ * `[minZoom, maxZoom]` is matched against the current camera zoom; an omitted
+ * bound is unbounded on that side. Pairs the `dataSource` name with the
+ * `credits` shown nested beneath it, so a required notice never appears
+ * detached from the source it belongs to.
  */
 export type AttributionChild = {
-  /** Credit text. May contain partial `<a>` links. */
-  title: string;
+  /** Data source / product name, shown as the parent label. */
+  dataSource: string;
+  /**
+   * Required license / source notices, shown nested under the name. May contain
+   * partial `<a>` links; mandated notices should be kept verbatim.
+   */
+  credits?: string[];
   /** Inclusive lower zoom bound. Unbounded when omitted. */
   minZoom?: number;
   /** Inclusive upper zoom bound. Unbounded when omitted. */
@@ -21,11 +28,12 @@ export type AttributionChild = {
 };
 
 /**
- * A data source shown at the top level. It may carry zoom-banded `children`, a
- * mandated `logo`, and dynamic per-layer credits linked via `creditLayerId`.
+ * A top-level source (provider). It may carry zoom-banded data-source
+ * `children`, a mandated `logo`, and dynamic per-layer credits linked via
+ * `creditLayerId`.
  */
 export type AttributionSource = {
-  /** Data source / title text. */
+  /** Top-level source / provider name. */
   attribution: string;
   /** Optional URL. Rendered as an `<a>`. */
   url?: string;
@@ -35,13 +43,13 @@ export type AttributionSource = {
    * as required for contractually-mandated marks (Google, Cesium ion, etc.).
    */
   logo?: string;
-  /** Zoom-banded child credits, filtered by current camera zoom. */
+  /** Zoom-banded data sources, filtered by current camera zoom. */
   children?: AttributionChild[];
   /**
    * Optional id (`layer.id`) of the tracked layer whose per-feature credits are
-   * nested under this source (instead of listed flat). Named `creditLayerId`
-   * rather than `layerId` because "layer" alone is ambiguous in this project.
-   * A plain string (not a `Layer`) keeps `attribution.ts` engine-free.
+   * nested under this source. Named `creditLayerId` rather than `layerId`
+   * because "layer" alone is ambiguous in this project. A plain string (not a
+   * `Layer`) keeps `attribution.ts` engine-free.
    */
   creditLayerId?: string;
 };

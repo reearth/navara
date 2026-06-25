@@ -11,7 +11,7 @@ sidebar:
 
 地図の出典表示でよく必要になる 3 点をカバーします。
 
-- **ズーム連動クレジット** — ソースは、特定のズーム範囲でのみ適用される子クレジットを持てます。該当するものだけが表示され、ズームに応じて静かに切り替わります。
+- **ズーム連動クレジット** — ソースは、特定のズーム範囲でのみ適用されるデータソースを持てます。該当するものだけが表示され、ズームに応じて静かに切り替わります。
 - **レイヤー単位の動的クレジット** — レイヤー（3D タイルの copyright など）が供給するクレジットを、フィーチャーの出現 / 消滅に合わせて自動追跡します。`creditLayerId` で結び付けたソースの配下にネスト表示されます。
 - **常時表示ロゴ** — 常に表示が必要なロゴ（Google など）は、ポップオーバーの開閉とは独立して左下の専用フレームに表示されます。
 
@@ -53,8 +53,13 @@ attribution.show(
       attribution: "国土地理院",
       url: "https://maps.gsi.go.jp/development/ichiran.html",
       children: [
-        { title: "全国最新写真（シームレス）", minZoom: 14, maxZoom: 18 },
-        { title: "全国ランドサットモザイク画像", minZoom: 9, maxZoom: 13 },
+        // データソース名と、その下にネストする GSI 指定の出所明示。
+        {
+          dataSource: "全国最新写真（シームレス）",
+          credits: ["GRUS画像（© Axelspace）"],
+          minZoom: 14,
+          maxZoom: 18,
+        },
       ],
     },
     {
@@ -140,10 +145,10 @@ type AttributionItem = AttributionSource | AttributionHtml;
 
 | プロパティ      | 型                   | 説明                                                             |
 | --------------- | -------------------- | ---------------------------------------------------------------- |
-| `attribution`   | `string`             | トップレベルに表示されるデータソース名                           |
+| `attribution`   | `string`             | トップレベルのソース／プロバイダ名                               |
 | `url`           | `string`             | ソース名に付ける任意のリンク                                     |
 | `logo`          | `string`             | 任意のロゴ画像 URL。常時表示の左下フレームに表示される           |
-| `children`      | `AttributionChild[]` | 該当ズーム範囲でのみ表示される任意のクレジット                   |
+| `children`      | `AttributionChild[]` | 任意のズーム帯ごとのデータソース。各々がクレジットを子に持つ     |
 | `creditLayerId` | `string`             | 任意の `layer.id`。そのレイヤーのフィーチャー単位クレジットがこのソース配下にネストされる |
 
 ### AttributionHtml
@@ -154,11 +159,12 @@ type AttributionItem = AttributionSource | AttributionHtml;
 
 ### AttributionChild
 
-| プロパティ | 型       | 説明                                            |
-| ---------- | -------- | ----------------------------------------------- |
-| `title`    | `string` | クレジットテキスト。インライン `<a>` リンクを含めてよい |
-| `minZoom`  | `number` | このクレジットが適用される最小ズーム（省略で下限なし） |
-| `maxZoom`  | `number` | このクレジットが適用される最大ズーム（省略で上限なし） |
+| プロパティ   | 型         | 説明                                                   |
+| ------------ | ---------- | ------------------------------------------------------ |
+| `dataSource` | `string`   | データソース／製品名。親ラベルとして表示               |
+| `credits`    | `string[]` | 必須のライセンス／出所明示。名前の下にネスト表示       |
+| `minZoom`    | `number`   | この項目が適用される最小ズーム（省略で下限なし）       |
+| `maxZoom`    | `number`   | この項目が適用される最大ズーム（省略で上限なし）       |
 
 ### AttributionStyle
 
@@ -170,7 +176,7 @@ type AttributionItem = AttributionSource | AttributionHtml;
 | `linkColor`       | `string` | リンクと info アイコンの色           |
 | `listStyleColor`  | `string` | 箇条書き（リストマーカー）の色       |
 | `textColor`       | `string` | 本文テキスト色                       |
-| `nestedTextColor` | `string` | ネストした従属クレジットのテキスト色 |
+| `nestedTextColor` | `string` | ネストしたデータソース／クレジットのテキスト色 |
 | `backgroundColor` | `string` | ポップオーバーとトリガーの背景色     |
 | `borderColor`     | `string` | ヘッダ区切り線の色（ダークテーマで有用） |
 
@@ -179,7 +185,7 @@ type AttributionItem = AttributionSource | AttributionHtml;
 - **ズーム範囲は、自分で宣言するラスタソース向けです。** GSI や OpenStreetMap などのタイルは自前のクレジットを持たないため、ズーム依存のクレジットは `children` で記述します。
 - **レイヤー単位のクレジットはタイル由来です。** Google Photorealistic 3D Tiles のように copyright を埋め込むソースだけが `creditLayerId` 経由でクレジットを生成します。それ以外は `children` を使ってください。
 - **掲出義務のあるロゴはロゴフレームへ（ポップオーバーではなく）。** 常時表示が必須のマークにのみ `logo` を使い、通常のソースはテキスト表示が適切です。
-- **リンクはスキーム検証されます。** すべてのクレジットリンク（`url`、`attributionHtml` / `title` 内のインライン `<a>`、レイヤーのフィーチャー単位クレジットに埋め込まれた `<a>`）は、安全なスキーム（`http` / `https` / `mailto`、または相対 URL）のみ保持され、それ以外（例: `javascript:`）はプレーンテキストに落とされます。これにより、信頼できないタイルメタデータ由来のリンクでも安全に描画できます。
+- **リンクはスキーム検証されます。** すべてのクレジットリンク（`url`、`attributionHtml` / `dataSource` / `credits` 内のインライン `<a>`、レイヤーのフィーチャー単位クレジットに埋め込まれた `<a>`）は、安全なスキーム（`http` / `https` / `mailto`、または相対 URL）のみ保持され、それ以外（例: `javascript:`）はプレーンテキストに落とされます。これにより、信頼できないタイルメタデータ由来のリンクでも安全に描画できます。
 - **生の URL は自動でリンク化されます。** クレジットテキスト内のプレーンな `http(s)` URL は自動でクリック可能なリンクになるため、公式の表記をそのまま貼り付けても URL を手で `<a>` で囲む必要がありません（文言も URL も変更されません）。
 
 ## 関連リソース

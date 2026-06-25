@@ -5,65 +5,65 @@ import type { AttributionItem } from "@navara/three_plugins";
  *
  * The GSI "seamless photo" tile composites different imagery depending on zoom
  * (per the GSI tile list — https://maps.gsi.go.jp/development/ichiran.html), so
- * its credits are banded by zoom. The plugin filters `children` by the current
- * camera zoom (Phase 3); until then all bands are shown together.
+ * its data sources are banded by zoom. The plugin filters `children` by the
+ * current camera zoom, so only the bands for the current zoom level are shown.
  *
- * `children[].title` may contain partial `<a>` links — they are sanitized and
- * rendered as anchors by the plugin. Bare `http(s)` URLs are auto-linked too,
- * so an official notice can be pasted verbatim without hand-wrapping its URL.
+ * Each child pairs a `dataSource` name (translated) with the GSI-mandated
+ * `credits` (kept verbatim) shown nested beneath it. Bare URLs in a credit are
+ * auto-linked, so an official notice can be pasted as-is.
  */
+
+// GSI's electronic topographic map tiles share this source credit.
+const GSI_TOPO_MAP_CREDIT =
+  "Electronic topographic map (tiles) / Geospatial Information Authority of Japan (GSI)";
+
 export const GSI_ATTRIBUTION: AttributionItem = {
-  attribution: "国土地理院",
+  attribution: "Geospatial Information Authority of Japan (GSI)",
   url: "https://maps.gsi.go.jp/development/ichiran.html",
   children: [
-    // z14-18: latest seamless aerial photo
-    { title: "全国最新写真（シームレス）", minZoom: 14, maxZoom: 18 },
-    { title: "GRUS画像（© Axelspace）", minZoom: 14, maxZoom: 18 },
-    // z9-13: nationwide Landsat mosaic
-    { title: "全国ランドサットモザイク画像", minZoom: 9, maxZoom: 13 },
     {
+      dataSource: "Nationwide latest aerial photos (seamless)",
+      // GSI mandates this exact notice when GRUS tiles are included — verbatim.
+      credits: ["GRUS画像（© Axelspace）"],
+      minZoom: 14,
+      maxZoom: 18,
+    },
+    {
+      dataSource: "Nationwide Landsat mosaic imagery",
       // Pasted verbatim from the GSI tile list (note: no spaces after the
       // commas inside the first parens — do not "tidy" them).
-      title:
+      credits: [
         "データソース：Landsat8画像（GSI,TSIC,GEO Grid/AIST）, Landsat8画像（courtesy of the U.S. Geological Survey）, 海底地形（GEBCO）",
+      ],
       minZoom: 9,
       maxZoom: 13,
     },
-    // z2-8: global satellite mosaic
-    { title: "世界衛星モザイク画像", minZoom: 2, maxZoom: 8 },
     {
+      dataSource: "Global satellite mosaic imagery",
       // Pasted verbatim from the GSI tile list; the bare URL is auto-linked.
-      title:
+      credits: [
         "Images on 世界衛星モザイク画像 obtained from site https://lpdaac.usgs.gov/data_access maintained by the NASA Land Processes Distributed Active Archive Center (LP DAAC), USGS/Earth Resources Observation and Science (EROS) Center, Sioux Falls, South Dakota, (Year). Source of image data product.",
+      ],
       minZoom: 2,
       maxZoom: 8,
     },
 
-    // --- Electronic topographic map (tiles) — a separate product from seamlessphoto ---
-    // z9-11: 1:1,000,000 International Map
+    // Electronic topographic map (tiles) — a separate product from seamlessphoto.
     {
-      title:
-        "1:1,000,000 International Map（電子地形図（タイル）/ Geospatial Information Authority of Japan (GSI)）",
+      dataSource: "1:1,000,000 International Map",
+      credits: [GSI_TOPO_MAP_CREDIT],
       minZoom: 9,
       maxZoom: 11,
     },
-    // z5-8: Japan And Its Surroundings. Beyond the standard source credit, the
-    // sources below must also be shown (per the notes in the GSI tile list).
     {
-      title:
-        "Japan And Its Surroundings（電子地形図（タイル）/ Geospatial Information Authority of Japan (GSI)）",
-      minZoom: 5,
-      maxZoom: 8,
-    },
-    {
-      title:
+      // Beyond the standard source credit, the notices below must also be shown
+      // (per the notes in the GSI tile list).
+      dataSource: "Japan And Its Surroundings",
+      credits: [
+        GSI_TOPO_MAP_CREDIT,
         "The bathymetric contours are derived from those contained within the GEBCO Digital Atlas, published by the BODC on behalf of IOC and IHO (2003) (https://www.gebco.net) 海上保安庁許可第292502号（水路業務法第25条に基づく類似刊行物）",
-      minZoom: 5,
-      maxZoom: 8,
-    },
-    {
-      title:
         'Shoreline data is derived from: United States. National Imagery and Mapping Agency. "Vector Map Level 0 (VMAP0)." Bethesda, MD: Denver, CO: The Agency; USGS Information Services, 1997.',
+      ],
       minZoom: 5,
       maxZoom: 8,
     },
