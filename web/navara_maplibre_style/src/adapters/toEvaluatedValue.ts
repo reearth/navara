@@ -38,12 +38,17 @@ function isMapLibreColor(value: unknown): value is MapLibreColor {
  * but fallback defaults from spec.default are often CSS strings like "#000000".
  */
 function toNavaraColor(value: unknown): Color | undefined {
-  if (typeof value === "string") {
-    // CSS color string from spec.default fallback (e.g., "#000000", "rgb(255, 0, 0)")
-    return new Color().setStyle(value);
-  } else if (isMapLibreColor(value)) {
-    // MapLibre Color object with r, g, b values (0-1 range)
-    return new Color().setRGB(value.r, value.g, value.b);
+  try {
+    if (typeof value === "string") {
+      // CSS color string from spec.default fallback (e.g., "#000000", "rgb(255, 0, 0)")
+      return new Color().setStyle(value);
+    }
+    if (isMapLibreColor(value)) {
+      // MapLibre Color object with r, g, b values (0-1 range)
+      return new Color().setRGB(value.r, value.g, value.b);
+    }
+  } catch {
+    // Ignore invalid color values.
   }
   return undefined;
 }

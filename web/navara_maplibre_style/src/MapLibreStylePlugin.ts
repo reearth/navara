@@ -131,8 +131,8 @@ export class MapLibreStylePlugin extends Plugin<ThreeView, ViewContext> {
         for (const [key, evalFn] of Object.entries(paintEvaluators)) {
           try {
             paintValues[key] = evalFn(ctx);
-          } catch (err) {
-            console.error(`Error evaluating ${key}:`, err);
+          } catch (_err) {
+            // Ignore evaluation errors for individual paint properties
           }
         }
 
