@@ -301,6 +301,10 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
     // static map; `preRender` reliably fires while the scene renders. The
     // level-change gate in `handlePreRender` keeps this from churning the DOM.
     view.on("preRender", this.boundPreRender);
+    // `show()` may have run before init (the plugin is created before
+    // `view.init()`); apply any pending items now that the view exists, instead
+    // of silently dropping them.
+    if (this.items.length) this.apply();
   }
 
   /**
@@ -315,17 +319,28 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
    */
   show(items: AttributionItem[]): void {
     this.items = items;
-    this.trackLayers(this.resolveCreditLayers(items));
+    this.apply();
+  }
+
+  /** Resolve/track the current items' credit layers and render. */
+  private apply(): void {
+    this.trackLayers(this.resolveCreditLayers(this.items));
     this.render();
   }
 
-  /** Resolve the `Layer` objects referenced by sources' `creditLayerId`. */
+  /**
+   * Resolve the `Layer` objects referenced by sources' `creditLayerId`, deduped
+   * by id so a layer referenced by multiple sources is tracked only once.
+   */
   private resolveCreditLayers(items: AttributionItem[]): Layer[] {
     const view = this.view;
     if (!view) return [];
+    const seen = new Set<string>();
     const layers: Layer[] = [];
     for (const item of items) {
       if (isAttributionHtml(item) || !item.creditLayerId) continue;
+      if (seen.has(item.creditLayerId)) continue;
+      seen.add(item.creditLayerId);
       const layer = view.findLayerById(item.creditLayerId);
       if (layer) layers.push(layer);
     }
