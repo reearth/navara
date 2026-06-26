@@ -15,7 +15,7 @@ use wasm_bindgen::JsValue;
 // to `memory.grow`. The single wasm-memory write happens inside `to_vec`, which
 // creates its view and uses it in one step with no intervening allocation.
 //
-// Background: https://github.com/rustwasm/wasm-bindgen/issues/1079#issuecomment-508577627
+// Background: https://github.com/wasm-bindgen/wasm-bindgen/blob/c9ee617e9a63340bfba0cecd7d53ba5262f25ddc/crates/js-sys/src/lib.rs#L6251-L6263
 
 pub fn transfer_u8_array(byte_length: usize, f: &js_sys::Function) -> Vec<u8> {
     let array = js_sys::Uint8Array::new_with_length(byte_length as u32);
