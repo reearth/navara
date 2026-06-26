@@ -109,7 +109,7 @@ type PoiKey = (typeof POI_CATEGORIES)[number]["key"];
 const POI_LABEL_MAX_HEIGHT = 5_000; // 5 km
 const POI_LABEL_MIN_CONFIDENCE = 0.9;
 
-// Deterministic [0,1) hash (FNV-1a) of a string. The engine has no label
+// Deterministic [0,1] hash (FNV-1a) of a string. The engine has no label
 // collision/declutter system and the evaluator sees no geometry, so dense areas
 // (e.g. Tokyo street level) can't be grid-thinned spatially. Instead we hash a
 // stable per-feature key and keep only points below a density threshold: this
