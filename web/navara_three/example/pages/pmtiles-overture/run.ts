@@ -488,6 +488,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
       outlineOpacity: 0.6,
       depthTest: true,
       offsetDepth: true,
+      highQuality: true,
     },
     vectorTile: { maxZoom: 14, layers: ["place"] },
   });
