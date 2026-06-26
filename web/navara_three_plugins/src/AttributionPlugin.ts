@@ -456,7 +456,7 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
     toggle.innerHTML = SVG_ICON_HTML;
     toggle.setAttribute("aria-expanded", "false");
     toggle.setAttribute("aria-label", "Show attributions");
-    toggle.addEventListener("click", () => this.setOpen(this.card?.hidden));
+    toggle.addEventListener("click", () => this.setOpen());
 
     dock.appendChild(card);
     dock.appendChild(toggle);
@@ -616,8 +616,8 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
       "aria-label",
       this.isOpen ? "Hide attributions" : "Show attributions",
     );
-    // On open, refresh once: the per-frame zoom poll is skipped while closed, so
-    // the zoom band (and any render deferred via `dirty`) may be stale.
+    // On open, refresh once: the per-frame zoom poll is skipped while closed,
+    // so the zoom band may be stale.
     if (this.isOpen) {
       if (this.hasZoomBands) this.lastZoomLevel = this.currentZoomLevel();
       this.populateList();
@@ -726,25 +726,30 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
         else state.visible.delete(featureSetId);
         this.requestRender();
       };
-      // `deleted` fires once for the layer (no per-feature `featureRemoved`),
-      // so clear all of this layer's tracked credits.
+      // Assigned below; declared first so `onDeleted` can reference it.
+      let detach = () => {};
+      // `deleted` fires once for the layer (no per-feature `featureRemoved`).
+      // Fully release the layer — drop its credits entry and detach its
+      // listeners (and this cleanup) — so a deleted layer doesn't linger until
+      // the next show()/hide()/dispose().
       const onDeleted = () => {
-        if (state.credits.size === 0) return;
-        state.credits.clear();
-        state.visible.clear();
+        detach();
+        this.layerCleanups = this.layerCleanups.filter((c) => c !== detach);
+        this.layerCredits.delete(layer.id);
         this.requestRender();
+      };
+      detach = () => {
+        layer.off("featureCreated", onCreated);
+        layer.off("featureRemoved", onRemoved);
+        layer.off("featureVisibilityChanged", onVisibility);
+        layer.off("deleted", onDeleted);
       };
 
       layer.on("featureCreated", onCreated);
       layer.on("featureRemoved", onRemoved);
       layer.on("featureVisibilityChanged", onVisibility);
       layer.on("deleted", onDeleted);
-      this.layerCleanups.push(() => {
-        layer.off("featureCreated", onCreated);
-        layer.off("featureRemoved", onRemoved);
-        layer.off("featureVisibilityChanged", onVisibility);
-        layer.off("deleted", onDeleted);
-      });
+      this.layerCleanups.push(detach);
     }
   }
 }
