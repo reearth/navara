@@ -7,6 +7,7 @@ export {
   type ModelRotationOffset,
   type KeyBindings,
   type ViewMode,
+  type TeleportOptions,
 } from "./PersonViewPlugin";
 
 export {
