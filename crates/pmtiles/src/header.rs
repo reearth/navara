@@ -12,7 +12,7 @@ const MAGIC: &[u8] = b"PMTiles";
 
 /// Compression applied to directories (internal) or tile payloads.
 /// Only `None` and `Gzip` are supported by this crate; the others are included for completeness.
-/// Most of pmtile archives use `Gzip` for directories and `None` for tile payloads, but some use `Gzip` for both. 
+/// Most of pmtile archives use `Gzip` for directories and `None` for tile payloads, but some use `Gzip` for both.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Compression {
     /// Unspecified / unknown.

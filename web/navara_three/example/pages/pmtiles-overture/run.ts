@@ -525,7 +525,9 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
             : "";
           return { show: true, text: name };
         },
-        { filters: ["id", "@name", "taxonomy", "basic_category", "confidence"] },
+        {
+          filters: ["id", "@name", "taxonomy", "basic_category", "confidence"],
+        },
       );
     };
     poiLayer.on("featureCreated", apply);

@@ -217,7 +217,12 @@ describe("FontManager", () => {
             text,
             shapeResult: createShapeResult(text),
           })),
-          atlas: { data: new Uint8Array([1]), width: 256, height: 256, channels: 1 },
+          atlas: {
+            data: new Uint8Array([1]),
+            width: 256,
+            height: 256,
+            channels: 1,
+          },
           colorAtlas: null,
           atlasKey: fontUrl,
           evicted: true,
