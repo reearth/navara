@@ -540,11 +540,17 @@ async function processRequestedData(ctx: EventContext, req: DataRequestEvent) {
       // For range reads, require 206 so we don't silently accept a full-body 200
       // response and download an entire PMTiles archive.
       const isRangeRequest = req.offset != null && req.length != null;
-      if (isRangeRequest && res.status !== 206) throw new Error();
+      if (isRangeRequest && res.status !== 206) {
+        throw new Error(
+          `Range request expected 206 Partial Content, got ${res.status} ${res.statusText}`,
+        );
+      }
 
       // A successful range request returns 206 Partial Content, which is in
       // the ok range (200-299), so this guard handles both 200 and 206.
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        throw new Error(`Request failed with ${res.status} ${res.statusText}`);
+      }
       return res.arrayBuffer();
     })
     .then((val) => {
