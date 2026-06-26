@@ -450,7 +450,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     minConfidence: 0.99,
     // Fraction of matching places to keep (deterministic hash thinning). Low by
     // default so the street view stays legible and cheap; raise for completeness.
-    density: 0.2,
+    density: 0.02,
   };
 
   // `sizeInMeters: false` keeps a constant screen size; `depthTest: false` keeps
