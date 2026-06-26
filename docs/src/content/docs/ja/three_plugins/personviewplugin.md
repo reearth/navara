@@ -51,7 +51,7 @@ const unsub = personView.onStateChange((state) => {
 });
 
 // 新しい位置にテレポート
-personView.teleport(139.77, 35.68, 300);
+personView.teleport({ lng: 139.77, lat: 35.68, alt: 300 });
 
 // 三人称 / 一人称を切り替え
 personView.toggleViewMode();
@@ -107,10 +107,11 @@ new PersonViewPlugin(config?: PersonViewConfig)
 | `minAlt`             | `number`               | `50`             | 最低高度（メートル）。                                                          |
 | `maxAlt`             | `number`               | `5000`           | 最高高度（メートル）。                                                          |
 | `cameraDistance`     | `number`               | `50`             | 追従カメラ（TPV）の距離（メートル）。                                           |
-| `cameraHeight`       | `number`               | `20`             | 追従カメラ（TPV）の高さオフセット（メートル）。                                 |
+| `cameraPitch`        | `number`               | `0`              | TPV カメラの下向きピッチ（ラジアン。モデルの上方へ回り込む）。                  |
 | `cameraLerpSpeed`    | `number`               | `3`              | カメラ方位の補間速度。                                                          |
-| `fpvForwardOffset`   | `number`               | `1.5`            | FPV 目線位置の前方オフセット（メートル）。                                      |
-| `fpvHeightOffset`    | `number`               | `5`              | FPV 目線位置の高さオフセット（メートル）。                                      |
+| `fpvForwardOffset`   | `number`               | `0`            | FPV 目線位置の前方オフセット（メートル）。                                      |
+| `fpvHeightOffset`    | `number`               | `1`              | FPV 目線位置の高さオフセット（メートル）。                                      |
+| `fpvPitch`           | `number`               | `0`              | FPV カメラの下向きピッチ（ラジアン。その場で視線を下に傾ける）。                |
 | `startLat`           | `number`               | `35.6812`        | 開始緯度（度）。                                                                |
 | `startLng`           | `number`               | `139.7671`       | 開始経度（度）。                                                                |
 | `startHeight`        | `number`               | `500`            | 開始高度（メートル）。                                                          |
@@ -173,20 +174,27 @@ start(): void
 
 GLTF モデルをロードし（設定されている場合）、毎フレームの更新ループを開始します。`view.init()` の完了**後**に呼び出してください。
 
-### teleport(lng, lat, alt, heading?)
+### teleport(options)
 
 ```typescript
-teleport(lng: number, lat: number, alt: number, heading?: number): void
+teleport(options: {
+  lng: number;
+  lat: number;
+  alt: number;
+  heading?: number;
+  pitch?: number;
+}): void
 ```
 
-新しい地理的位置に瞬時に移動させます。`heading` を省略した場合、現在のカメラ方位が維持されます。
+新しい地理的位置に瞬時に移動させます。`heading` を省略した場合、現在のカメラ方位が維持されます。`pitch` を指定すると永続的な `cameraPitch` を更新し、省略した場合は現在のピッチが維持されます。
 
-| パラメータ | 型                    | 説明                |
-| ---------- | --------------------- | ------------------- |
-| `lng`      | `number`              | 経度（度）。        |
-| `lat`      | `number`              | 緯度（度）。        |
-| `alt`      | `number`              | 高度（メートル）。  |
-| `heading`  | `number \| undefined` | 方位（度、省略可）。|
+| フィールド | 型                    | 説明                                            |
+| ---------- | --------------------- | ----------------------------------------------- |
+| `lng`      | `number`              | 経度（度）。                                    |
+| `lat`      | `number`              | 緯度（度）。                                    |
+| `alt`      | `number`              | 高度（メートル）。                              |
+| `heading`  | `number \| undefined` | 方位（ラジアン、省略可）。                      |
+| `pitch`    | `number \| undefined` | カメラの下向きピッチ（ラジアン、0 で水平、省略可）。|
 
 ### setViewMode(mode) / toggleViewMode()
 
@@ -238,7 +246,7 @@ dispose(): void
 | `lng`             | `number`         | 現在の経度（度）。                                                     |
 | `lat`             | `number`         | 現在の緯度（度）。                                                     |
 | `alt`             | `number`         | 現在の高度（メートル）。                                               |
-| `heading`         | `number`         | 現在の方位（度、0 = 北、90 = 東）。                                    |
+| `heading`         | `number`         | 現在の方位（ラジアン、0 = 北、時計回りに増加）。                       |
 | `speed`           | `number`         | 現在の速度（m/s、静止時は 0）。                                        |
 | `animationState`  | `string \| null` | 現在再生中のクリップ名。キャラクター未設定の場合は `null`。            |
 | `mode`            | `"tpv" \| "fpv"` | 現在の視点モード。                                                     |

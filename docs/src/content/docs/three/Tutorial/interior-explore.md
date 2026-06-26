@@ -40,7 +40,7 @@ We will register the `PersonViewPlugin` next, before calling `view.init()`.
 
 ## Adding the PersonViewPlugin
 
-The plugin handles the character (model, animation, movement) and the camera. Set `minAlt` to a negative value so the character can walk below ground level, and choose a tight `cameraDistance` / `cameraHeight` that works inside a building.
+The plugin handles the character (model, animation, movement) and the camera. Set `minAlt` to a negative value so the character can walk below ground level, and choose a tight `cameraDistance` that works inside a building.
 
 ```typescript
 const startLat = 35.6341630282;
@@ -67,7 +67,6 @@ const personView = new PersonViewPlugin({
   altSpeed: 5,
   rotationSpeed: 2,
   cameraDistance: 10,
-  cameraHeight: 1,
   cameraLerpSpeed: 4,
   minAlt: -1000,
   maxAlt: 5000,
@@ -209,10 +208,10 @@ unsubscribe();
 
 ## Teleporting Between Scenes
 
-Use `teleport(lng, lat, alt, heading?)` to jump the character to a new place — for example when the user picks a different building from a menu.
+Use `teleport({ lng, lat, alt, heading?, pitch? })` to jump the character to a new place — for example when the user picks a different building from a menu.
 
 ```typescript
-personView.teleport(139.7397, 35.6352, 45);
+personView.teleport({ lng: 139.7397, lat: 35.6352, alt: 45 });
 ```
 
 The chase camera snaps to the new location and the state listener fires once with the updated position.
@@ -259,7 +258,6 @@ const personView = new PersonViewPlugin({
   altSpeed: 5,
   rotationSpeed: 2,
   cameraDistance: 10,
-  cameraHeight: 1,
   cameraLerpSpeed: 4,
   minAlt: -1000,
   maxAlt: 5000,

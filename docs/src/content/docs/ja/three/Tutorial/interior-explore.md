@@ -40,7 +40,7 @@ view.addPlugin(plugin);
 
 ## PersonViewPlugin を追加する
 
-プラグインがキャラクター（モデル・アニメーション・移動）とカメラの面倒を見てくれます。`minAlt` を負の値にすると地下にも降りられます。建物内に収まるよう、`cameraDistance` と `cameraHeight` は小さめに設定します。
+プラグインがキャラクター（モデル・アニメーション・移動）とカメラの面倒を見てくれます。`minAlt` を負の値にすると地下にも降りられます。建物内に収まるよう、`cameraDistance` は小さめに設定します。
 
 ```typescript
 const startLat = 35.6341630282;
@@ -67,7 +67,6 @@ const personView = new PersonViewPlugin({
   altSpeed: 5,
   rotationSpeed: 2,
   cameraDistance: 10,
-  cameraHeight: 1,
   cameraLerpSpeed: 4,
   minAlt: -1000,
   maxAlt: 5000,
@@ -209,10 +208,10 @@ unsubscribe();
 
 ## シーン間でテレポートする
 
-`teleport(lng, lat, alt, heading?)` を使うと、メニューから別の建物を選んだ時などにキャラクターを瞬時に移動させられます。
+`teleport({ lng, lat, alt, heading?, pitch? })` を使うと、メニューから別の建物を選んだ時などにキャラクターを瞬時に移動させられます。
 
 ```typescript
-personView.teleport(139.7397, 35.6352, 45);
+personView.teleport({ lng: 139.7397, lat: 35.6352, alt: 45 });
 ```
 
 追従カメラも新しい位置にスナップし、状態リスナーが新しい位置で 1 回発火します。
@@ -259,7 +258,6 @@ const personView = new PersonViewPlugin({
   altSpeed: 5,
   rotationSpeed: 2,
   cameraDistance: 10,
-  cameraHeight: 1,
   cameraLerpSpeed: 4,
   minAlt: -1000,
   maxAlt: 5000,

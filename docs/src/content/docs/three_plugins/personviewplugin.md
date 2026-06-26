@@ -51,7 +51,7 @@ const unsub = personView.onStateChange((state) => {
 });
 
 // Teleport to a new position
-personView.teleport(139.77, 35.68, 300);
+personView.teleport({ lng: 139.77, lat: 35.68, alt: 300 });
 
 // Toggle between third-person and first-person view
 personView.toggleViewMode();
@@ -107,10 +107,11 @@ new PersonViewPlugin(config?: PersonViewConfig)
 | `minAlt`             | `number`              | `50`             | Minimum altitude in meters.                                              |
 | `maxAlt`             | `number`              | `5000`           | Maximum altitude in meters.                                              |
 | `cameraDistance`     | `number`              | `50`             | Chase camera distance (TPV) in meters.                                   |
-| `cameraHeight`       | `number`              | `20`             | Chase camera height offset (TPV) in meters.                              |
+| `cameraPitch`        | `number`              | `0`              | Downward TPV camera pitch in radians (orbits up and over the model).     |
 | `cameraLerpSpeed`    | `number`              | `3`              | Camera heading interpolation speed.                                      |
-| `fpvForwardOffset`   | `number`              | `1.5`            | Forward offset (m) applied to the FPV eye position.                      |
-| `fpvHeightOffset`    | `number`              | `5`              | Height offset (m) applied to the FPV eye position.                       |
+| `fpvForwardOffset`   | `number`              | `0`            | Forward offset (m) applied to the FPV eye position.                      |
+| `fpvHeightOffset`    | `number`              | `1`              | Height offset (m) applied to the FPV eye position.                       |
+| `fpvPitch`           | `number`              | `0`              | Downward FPV camera pitch in radians (tilts the view down in place).     |
 | `startLat`           | `number`              | `35.6812`        | Starting latitude in degrees.                                            |
 | `startLng`           | `number`              | `139.7671`       | Starting longitude in degrees.                                           |
 | `startHeight`        | `number`              | `500`            | Starting altitude in meters.                                             |
@@ -173,20 +174,27 @@ start(): void
 
 Loads the GLTF model (when configured) and starts the per-frame update loop. Must be called **after** `view.init()` completes.
 
-### teleport(lng, lat, alt, heading?)
+### teleport(options)
 
 ```typescript
-teleport(lng: number, lat: number, alt: number, heading?: number): void
+teleport(options: {
+  lng: number;
+  lat: number;
+  alt: number;
+  heading?: number;
+  pitch?: number;
+}): void
 ```
 
-Instantly moves to a new geographic position. When `heading` is omitted, the current camera heading is kept.
+Instantly moves to a new geographic position. When `heading` is omitted, the current camera heading is kept. When `pitch` is provided it updates the persistent `cameraPitch`; when omitted the current pitch is kept.
 
-| Parameter | Type                | Description                       |
-| --------- | ------------------- | --------------------------------- |
-| `lng`     | `number`            | Longitude in degrees.             |
-| `lat`     | `number`            | Latitude in degrees.              |
-| `alt`     | `number`            | Altitude in meters.               |
-| `heading` | `number \| undefined` | Optional heading in degrees.    |
+| Field     | Type                | Description                                                       |
+| --------- | ------------------- | ---------------------------------------------------------------- |
+| `lng`     | `number`            | Longitude in degrees.                                            |
+| `lat`     | `number`            | Latitude in degrees.                                             |
+| `alt`     | `number`            | Altitude in meters.                                              |
+| `heading` | `number \| undefined` | Optional heading in radians.                                   |
+| `pitch`   | `number \| undefined` | Optional downward camera pitch in radians (0 = horizontal).    |
 
 ### setViewMode(mode) / toggleViewMode()
 
@@ -238,7 +246,7 @@ The state object emitted by `onStateChange()`:
 | `lng`            | `number`         | Current longitude in degrees.                                 |
 | `lat`            | `number`         | Current latitude in degrees.                                  |
 | `alt`            | `number`         | Current altitude in meters.                                   |
-| `heading`        | `number`         | Current heading in degrees (0 = north, 90 = east).            |
+| `heading`        | `number`         | Current heading in radians (0 = north, increasing clockwise). |
 | `speed`          | `number`         | Current speed in m/s (0 when stationary).                     |
 | `animationState` | `string \| null` | Name of the currently playing clip; `null` when no character. |
 | `mode`           | `"tpv" \| "fpv"` | Current view mode.                                            |
