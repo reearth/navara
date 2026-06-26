@@ -743,6 +743,9 @@ export class TileMesh
     m.userData.uAttrAtlas = { value: atlasOutputs.attr };
     m.userData.uNormalAtlas = { value: atlasOutputs.normal };
 
+    m.customProgramCacheKey = () =>
+      "TILE" + JSON.stringify(this.computeFeatures());
+
     m.onBeforeCompile = (shader) => {
       shader.defines ??= {};
       Object.assign(shader.defines, m.userData.defines);

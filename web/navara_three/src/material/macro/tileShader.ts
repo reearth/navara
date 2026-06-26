@@ -134,7 +134,7 @@ export function generateTileMapFragment(maxTextures: number): string {
   // specular must survive a (non-water) raster winner. OR it in rather than
   // letting the winner's own specular flag gate it — otherwise a draped raster
   // imagery slot (uSpeculars == false) suppresses the watermask water entirely.
-  bool  useSpecular           = useWater || (hasWinner && uSpeculars[winIdx]);
+  bool  useSpecular           = (!isTexturizedLayer && useWater) || (hasWinner && uSpeculars[winIdx]);
 
   float tileEmissiveIntensity = (hasWinner && isTexturizedLayer) ? uEmissiveIntensities[winIdx] : 0.0;
   vec3  tileEmissiveColor     = (hasWinner && isTexturizedLayer) ? uEmissiveColors[winIdx]      : vec3(0.0);
