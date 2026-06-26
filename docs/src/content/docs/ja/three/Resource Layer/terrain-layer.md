@@ -199,6 +199,59 @@ const terrainLayer = view.addLayer({
 });
 ```
 
+### ラスター画像との併用
+
+quantized-mesh 地形レイヤーが提供するのは 3D サーフェスのみです。その上に画像を表示するには、1 つ以上の [Tile Layer](../../../three/resource-layer/tile-layer/) を追加します。ラスタータイルが地形メッシュにドレープされます。レイヤーを重ねることもでき、後から追加したレイヤーが上に描画されるため、広域のベースレイヤーを高解像度のオーバーレイで補完できます。
+
+```typescript
+import ThreeView from "@navara/three";
+
+const view = new ThreeView(/* options */);
+await view.init();
+
+// 3D 地形サーフェス（quantized-mesh）
+view.addLayer({
+  type: "terrain",
+  data: {
+    url: "https://example.com/{z}/{x}/{y}.terrain",
+  },
+  quantizedMesh: {
+    maxZoom: 18,
+    castShadow: true,
+    receiveShadow: true,
+    requestVertexNormals: true,
+    requestWaterMask: true,
+  },
+});
+
+// ベースとなるラスター画像（地形にドレープ）
+view.addLayer({
+  type: "tiles",
+  data: {
+    url: "https://example.com/satellite/{z}/{x}/{y}.jpg",
+  },
+  rasterTile: {
+    maxZoom: 15,
+  },
+});
+
+// 近距離ズーム向けの高解像度オーバーレイ
+view.addLayer({
+  type: "tiles",
+  data: {
+    url: "https://example.com/aerial/{z}/{x}/{y}.png",
+  },
+  rasterTile: {
+    maxZoom: 18,
+    minZoom: 10,
+  },
+});
+```
+
+:::note
+ラスタータイルは WebMercator、Geographic の quantized-mesh 地形は等緯度のため、1 つの地形タイルが複数のラスタータイルにまたがります。Navara はこの重なりを解決し、画像をフラグメント単位で再投影するため、Geographic 地形上でも正しく整列します。併用可否の一覧は [QuantizedMeshTerrainMaterial › 他レイヤーとの併用](../../../three/resource-layer/quantized-mesh-terrain-material/#他レイヤーとの併用) を参照してください。ベクタータイル（[MVT Layer](../../../three/resource-layer/mvt-layer/)）は現状 quantized-mesh 地形にドレープできません。
+:::
+
 ## 関連リソース
 
 - [Tile Layer](../../../three/resource-layer/tile-layer/) - ラスタータイルを表示

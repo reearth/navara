@@ -7,6 +7,8 @@ sidebar:
 
 Tile レイヤーは、XYZ 形式のラスタータイル（航空写真、衛星画像、地図タイルなど）を表示するためのレイヤーです。
 
+[Terrain Layer](../../../three/resource-layer/terrain-layer/) が存在する場合、ラスタータイルは [quantized-mesh 地形](../../../three/resource-layer/quantized-mesh-terrain-material/) を含む 3D サーフェスにドレープされます。terrain レイヤーがない場合は、平面のグローブ上に描画されます。
+
 ## 基本設定
 
 | プロパティ | 型                | 説明                                                 |

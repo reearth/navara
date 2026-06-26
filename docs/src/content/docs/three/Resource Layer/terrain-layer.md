@@ -149,6 +149,7 @@ view.addLayer({
     exaggeration: 0.5,
   },
 });
+```
 
 ### Quantized-Mesh (Cesium Ion)
 
@@ -197,6 +198,59 @@ const terrainLayer = view.addLayer({
   },
 });
 ```
+
+### Quantized-Mesh with Raster Imagery
+
+A quantized-mesh terrain layer provides only the 3D surface. To show imagery on it, add one or more [Tile Layers](../../../three/resource-layer/tile-layer/) — their raster tiles are draped onto the terrain mesh. Stacking layers works too: later layers render on top, so a higher-resolution overlay can refine a wider base layer.
+
+```typescript
+import ThreeView from "@navara/three";
+
+const view = new ThreeView(/* options */);
+await view.init();
+
+// 3D terrain surface (quantized-mesh)
+view.addLayer({
+  type: "terrain",
+  data: {
+    url: "https://example.com/{z}/{x}/{y}.terrain",
+  },
+  quantizedMesh: {
+    maxZoom: 18,
+    castShadow: true,
+    receiveShadow: true,
+    requestVertexNormals: true,
+    requestWaterMask: true,
+  },
+});
+
+// Base raster imagery, draped onto the terrain
+view.addLayer({
+  type: "tiles",
+  data: {
+    url: "https://example.com/satellite/{z}/{x}/{y}.jpg",
+  },
+  rasterTile: {
+    maxZoom: 15,
+  },
+});
+
+// Higher-resolution overlay for closer zooms
+view.addLayer({
+  type: "tiles",
+  data: {
+    url: "https://example.com/aerial/{z}/{x}/{y}.png",
+  },
+  rasterTile: {
+    maxZoom: 18,
+    minZoom: 10,
+  },
+});
+```
+
+:::note
+Raster tiles are WebMercator, while Geographic quantized-mesh terrain is equal-degree, so one terrain tile can overlap several raster tiles. Navara resolves this overlap and reprojects the imagery per fragment, so it aligns correctly even over Geographic terrain. See [QuantizedMeshTerrainMaterial › Combining with Other Layers](../../../three/resource-layer/quantized-mesh-terrain-material/#combining-with-other-layers) for the full compatibility matrix. Vector tiles ([MVT Layer](../../../three/resource-layer/mvt-layer/)) cannot currently be draped onto quantized-mesh terrain.
+:::
 
 ## Related Resources
 
