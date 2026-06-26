@@ -815,7 +815,10 @@ ${generateTileCommonInjection(maxTextures)}
         `,
           useNormal,
         )
-        .replace("#include <map_fragment>", generateTileMapFragment(maxTextures))
+        .replace(
+          "#include <map_fragment>",
+          generateTileMapFragment(maxTextures),
+        )
         .replaceWithCondition(
           "#include <normal_fragment_maps>",
           generateTileNormalFragmentMaps(features),
