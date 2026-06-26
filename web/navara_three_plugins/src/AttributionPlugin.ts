@@ -75,6 +75,11 @@ import {
   type AttributionItem,
   type AttributionStyle,
 } from "./attribution";
+import {
+  STYLE_ELEMENT_ID,
+  STYLE_TEXT,
+  SVG_ICON_HTML,
+} from "./attributionStyles";
 
 type View = ThreeView<DefaultDescriptions>;
 
@@ -85,170 +90,11 @@ export type AttributionPluginOptions = {
 };
 
 /**
- * ⓘ trigger icon as a markup string, inserted via `innerHTML` so the icon can
- * be swapped in one place. `currentColor` makes it follow the button's color.
- */
-const SVG_ICON_HTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-  <circle cx="12" cy="12" r="10.5" stroke="currentColor" stroke-width="2" />
-  <circle cx="12" cy="8" r="1" fill="currentColor" />
-  <rect x="11" y="11" width="2" height="6" rx="1" fill="currentColor" />
-</svg>`;
-
-const STYLE_ELEMENT_ID = "navara-attribution-styles";
-
-/**
  * Number of live instances using the shared `<style>` element. The style is
  * injected once and removed only when the last instance tears down, so
  * multiple plugins don't duplicate the id or strip each other's styles.
  */
 let styleRefCount = 0;
-
-const STYLE_TEXT = `
-.navara-attr-dock {
-  position: fixed;
-  right: 8px;
-  bottom: 8px;
-  z-index: 1000;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 10px;
-  font-family: system-ui, sans-serif;
-}
-.navara-attr-logoframe {
-  position: fixed;
-  left: 8px;
-  bottom: 8px;
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.navara-attr-logo {
-  height: 24px;
-  width: auto;
-  display: block;
-  user-select: none;
-}
-.navara-attr-toggle {
-  width: 24px;
-  height: 24px;
-  min-width: 24px;
-  padding: 0;
-  border-radius: 50%;
-  cursor: pointer;
-  background: var(--nvr-attr-bg, rgba(252, 253, 254, 0.92));
-  border: 1px solid var(--nvr-attr-border, rgba(0, 0, 0, 0.1));
-  box-shadow: 0 2px 8px rgba(20, 24, 28, 0.16);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--nvr-attr-link, #3a6595);
-}
-.navara-attr-toggle svg {
-  width: 16px;
-  height: 16px;
-  display: block;
-}
-.navara-attr-card {
-  width: 280px;
-  max-width: calc(100vw - 16px);
-  max-height: 340px;
-  overflow-y: auto;
-  background: var(--nvr-attr-bg, rgba(252, 253, 254, 0.96));
-  border-radius: 14px;
-  box-shadow: 0 10px 30px rgba(20, 24, 28, 0.16);
-  color: var(--nvr-attr-text, #1b1f24);
-}
-.navara-attr-card[hidden] {
-  display: none;
-}
-.navara-attr-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px;
-  border-bottom: 1px solid var(--nvr-attr-border, rgba(0, 0, 0, 0.08));
-}
-.navara-attr-head h3 {
-  margin: 0;
-  font-size: 13.5px;
-  font-weight: 600;
-  color: var(--nvr-attr-title, inherit);
-}
-.navara-attr-close {
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  font-size: 15px;
-  line-height: 1;
-  color: var(--nvr-attr-nested, rgba(27, 31, 36, 0.64));
-  padding: 2px 4px;
-}
-.navara-attr-list {
-  list-style: none;
-  margin: 0;
-  padding: 12px;
-}
-.navara-attr-item + .navara-attr-item {
-  margin-top: 15px;
-}
-.navara-attr-name {
-  display: flex;
-  gap: 8px;
-  font-size: 13px;
-  font-weight: 500;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-}
-.navara-attr-bullet {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--nvr-attr-bullet, #3a6595);
-  flex: none;
-  margin-top: 6px;
-}
-.navara-attr-related {
-  list-style: none;
-  margin: 5px 0 0 13px;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-.navara-attr-related > li {
-  font-size: 12px;
-  color: var(--nvr-attr-nested, rgba(27, 31, 36, 0.64));
-  line-height: 1.5;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-}
-/* Third level: a data source's required license / source notices. */
-.navara-attr-licenses {
-  list-style: none;
-  margin: 3px 0 0 12px;
-  padding: 0 0 0 9px;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  border-left: 1px solid var(--nvr-attr-border, rgba(0, 0, 0, 0.08));
-}
-.navara-attr-licenses li {
-  font-size: 11px;
-  opacity: 0.82;
-  line-height: 1.45;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-}
-.navara-attr-card a {
-  color: var(--nvr-attr-link, #3a6595);
-  text-decoration: none;
-}
-.navara-attr-card a:hover {
-  text-decoration: underline;
-}
-`;
 
 /**
  * Renders map data attributions as a non-modal popover (bottom-right ⓘ
