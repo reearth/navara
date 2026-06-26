@@ -26,7 +26,7 @@ describe("generateTileCommonInjection", () => {
 });
 
 describe("generateTileMapFragment", () => {
-  const src = generateTileMapFragment();
+  const src = generateTileMapFragment(16);
 
   it("samples each atlas exactly once", () => {
     const colorMatches = src.match(/texture2D\(uColorAtlas/g) ?? [];

@@ -8,6 +8,7 @@ const switchTerrain = async (terrainType: TerrainType): Promise<void> => {
   currentView?.dispose();
   currentView = new ThreeView<CustomDescriptions>({
     shadow: true,
+    debug: true,
   });
   await run(currentView, terrainType, switchTerrain);
 };

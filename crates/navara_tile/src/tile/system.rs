@@ -35,18 +35,29 @@ use navara_worker::{
     },
 };
 
-use crate::texture_fragment::request_texture_fragment;
+use crate::texture_fragment::request_hillshade_data_requester;
 
 use super::{
     event::MeshPreparedEvent,
     render::RenderedTile,
     tile_cache_manager::TileCacheManager,
-    traverse::{TraversalResult, prepare_tile_resource, spawn_tile_entity, traverse_tile},
+    traverse::{TraversalResult, prepare_tile_resource, spawn_tile_entity, traverse_terrain},
 };
 
 use navara_layer::{
     DeleteRasterTileLayerMarker, TerrainLayer, TilesLayer, UpdateRasterTileLayerMarker,
 };
+
+/// Raster texture slots a single terrain tile may fill with draped imagery,
+/// shared across all of its raster (non-hillshade) layers. Draping WebMercator
+/// raster onto a Geographic terrain tile is N:M — one terrain tile overlaps
+/// several WM tiles, growing toward the poles — so without a cap the per-tile
+/// texture count can exceed the GPU slots the composite shader binds. This
+/// mirrors the web renderer's `texturizedSceneIndexFrom` (half the GPU texture
+/// budget, typically 5); the web side clamps as a final safety net. Each layer
+/// gets an even share and coarsens its WM zoom to fit (see
+/// [`resolve_raster_textures`](crate::raster::resolve_raster_textures)).
+const RASTER_DRAPE_SLOT_BUDGET: usize = 5;
 
 /// System parameter that groups BufferStore and DataManager to reduce parameter count
 #[derive(SystemParam)]
@@ -88,7 +99,7 @@ pub fn init_globe_tiling(
 }
 
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
-pub fn update_tiles(
+pub fn update_terrain(
     mut commands: Commands,
     mut qt: ResMut<TerrainTileQuadtree>,
     mut tc: ResMut<TileCacheManager>,
@@ -102,7 +113,6 @@ pub fn update_tiles(
         Query<(Ref<Transform>, Ref<CameraFrustum>), With<CameraMarker>>,
         Query<&Fog>,
     )>,
-    texture_fragment: TileTextureFragmentQuery,
     changed_texture_fragment: ChangedTileTextureFragmentQuery,
     mut data_requesters_set: ParamSet<(
         Query<&DataRequester>,
@@ -193,13 +203,13 @@ pub fn update_tiles(
             continue;
         };
 
-        let is_texture_ready = qt.qt.get_mut(root_handle).unwrap().is_texture_ready(
-            &texture_fragment,
-            &data_requesters,
-            tiles,
-        );
+        let is_texture_ready = qt
+            .qt
+            .get_mut(root_handle)
+            .unwrap()
+            .is_hillshade_ready(&data_requesters, tiles);
 
-        let traversal_result = traverse_tile(
+        let traversal_result = traverse_terrain(
             &mut commands,
             tiles,
             &terrain_layer,
@@ -211,7 +221,6 @@ pub fn update_tiles(
             &frame,
             &camera,
             &frustum,
-            &texture_fragment,
             &data_requesters,
             &terrain_data_requester,
             &window,
@@ -256,18 +265,16 @@ pub fn update_tiles(
                     root_handle,
                     &mut tc,
                     tiles,
-                    &texture_fragment,
                     &data_requesters,
                     &terrain_data_requester,
                     Priority::Extreme,
                 );
                 let tile = qt.qt.get_mut(root_handle).unwrap();
-                request_texture_fragment(
+                request_hillshade_data_requester(
                     &mut commands,
                     tile,
                     tiles,
                     root_handle,
-                    &texture_fragment,
                     &data_requesters,
                     Priority::High,
                     &mut data_resources.buf,
@@ -297,7 +304,6 @@ pub fn transfer_mesh(
         (Entity, &mut RenderedTile, &OrderByDistance),
         Or<(Added<RenderedTile>, Without<Rendered>)>,
     >,
-    texture_fragment: TileTextureFragmentQuery,
     data_requesters: Query<&DataRequester>,
     terrain_data_requester: TileTerrainDataRequesterQuery,
     tile_layers: Query<(&TilesLayer, &Order)>,
@@ -363,8 +369,6 @@ pub fn transfer_mesh(
             .and_then(|l| l.appearance.as_ref())
             .is_some_and(|a| a.tms());
 
-        let texture_fragment_entity_ids = &tile.texture_fragment_entity_ids;
-
         let tile_layers_len = tile_layers.iter().len();
         let mut shows = Vec::with_capacity(tile_layers_len);
         let mut opacities = Vec::with_capacity(tile_layers_len);
@@ -381,26 +385,14 @@ pub fn transfer_mesh(
         let mut tile_show_bounding_box = false;
 
         for (i, (l, _)) in tile_layers.iter().sort::<&Order>().enumerate() {
-            // Check if texture is ready: check texture_fragment_entity_ids OR hillshade_entity_ids
+            // The initial material only reflects terrain-owned hillshade readiness;
+            // regular raster textures are draped later in `update_mesh_material`.
             let mut should_show = false;
-
-            // Check texture_fragment_entity_ids first
-            if let Some(tex_entity) = texture_fragment_entity_ids
+            if let Some(hill_entity) = tile
+                .hillshade_entity_ids
                 .as_ref()
                 .and_then(|ids| ids.get(i))
                 .and_then(|&e| e)
-                && let Ok((_, tf)) = texture_fragment.get(tex_entity)
-            {
-                should_show = tf.is_succeeded();
-            }
-
-            // If no texture fragment, check hillshade_entity_ids
-            if !should_show
-                && let Some(hill_entity) = tile
-                    .hillshade_entity_ids
-                    .as_ref()
-                    .and_then(|ids| ids.get(i))
-                    .and_then(|&e| e)
                 && let Ok(dr) = data_requesters.get(hill_entity)
             {
                 should_show = dr.is_succeeded();
@@ -450,22 +442,13 @@ pub fn transfer_mesh(
                 )
             });
 
-        // Merge texture and hillshade entities (fix for hillshade not displaying)
-        let merged_texture_fragments = if let Some(tex_ids) = texture_fragment_entity_ids.as_ref() {
-            let mut merged = Vec::with_capacity(tex_ids.len());
-            let hill_ids = tile.hillshade_entity_ids.as_ref();
+        // The initial material carries only terrain-owned hillshade entities;
+        // regular raster textures are pulled by extent in `update_mesh_material`.
+        let merged_texture_fragments = tile.hillshade_entity_ids.clone();
 
-            for i in 0..tex_ids.len() {
-                let tex = tex_ids.get(i).and_then(|&e| e);
-                let hill = hill_ids.and_then(|ids| ids.get(i).and_then(|&e| e));
-                merged.push(tex.or(hill));
-            }
-
-            Some(merged)
-        } else {
-            // Edge case: only hillshade entities exist, no texture entities
-            tile.hillshade_entity_ids.clone()
-        };
+        // Reprojection is resolved per raster slot in `update_mesh_material`; the
+        // initial (hillshade-only) material never reprojects.
+        let layer_reproject = vec![false; shows.len()];
 
         let appearance = RasterTileInternalMaterial {
             shows,
@@ -484,6 +467,8 @@ pub fn transfer_mesh(
             is_hillshades,
             hillshade_config: shared_hillshade_config.cloned(),
             layer_uv_transforms,
+            layer_reproject,
+            terrain_lat_range: None,
         };
 
         let terrain_req = match tile.terrain_data.as_ref() {
@@ -858,6 +843,8 @@ pub fn update_layer(
 pub fn delete_layer(
     mut commands: Commands,
     mut qt: ResMut<TerrainTileQuadtree>,
+    mut raster_qt: ResMut<navara_tile_component::RasterTileQuadtree>,
+    raster_tc: Res<crate::raster::RasterTileCacheManager>,
     mut rendered_tiles: Query<&mut RenderedTile, With<Rendered>>,
     deleted: Query<(Entity, &DeleteRasterTileLayerMarker)>,
     layers: Query<(Entity, &TilesLayer, &Order)>,
@@ -878,57 +865,59 @@ pub fn delete_layer(
         commands.entity(e).despawn();
     }
 
-    let mut deleted_layers = Vec::with_capacity(deleted.iter().len());
-    for (i, (_, layer, _)) in layers.iter().sort::<&Order>().enumerate() {
-        for (_, u) in &deleted {
-            let layer_id = u.0.clone();
-            if layer.layer_id != layer_id {
-                continue;
-            }
-            deleted_layers.push(i);
-        }
-    }
+    // The compaction below relies on `idx - removed_idx` to translate an
+    // original sorted-layer index into its current (already-shifted) position.
+    // That arithmetic is only correct when the indices are strictly increasing:
+    // duplicates (e.g. two delete markers spawned for the same layer in one
+    // frame) would either over-remove slots or underflow `usize`.
+    //
+    // Collecting the marker ids into a set and filtering the sorted layers in a
+    // single pass yields strictly increasing, duplicate-free indices by
+    // construction, so no later sort/dedup is needed (and it avoids the
+    // per-layer linear scan over every marker).
+    let deleted_ids: std::collections::HashSet<&String> =
+        deleted.iter().map(|(_, u)| &u.0).collect();
+    let deleted_layers: Vec<usize> = layers
+        .iter()
+        .sort::<&Order>()
+        .enumerate()
+        .filter_map(|(i, (_, layer, _))| deleted_ids.contains(&layer.layer_id).then_some(i))
+        .collect();
 
+    // Per-layer arrays are indexed by the sorted-layer position, so a deleted
+    // layer's slot must be removed (shifting the rest down) from BOTH the
+    // terrain-side hillshade array AND the raster-side texture array, or the two
+    // sides fall out of alignment and `resolve_raster_texture` reads the wrong
+    // layer — breaking layer (z) order.
     for rendered_tile in &mut rendered_tiles {
         let tile = qt.qt.get_mut(rendered_tile.tile_handle).unwrap();
         for (removed_idx, idx) in deleted_layers.iter().enumerate() {
             let target_idx = idx - removed_idx;
 
-            // Must remove from BOTH arrays at the same index to maintain alignment
-            let tex_ids = tile.texture_fragment_entity_ids.as_mut();
-            let hill_ids = tile.hillshade_entity_ids.as_mut();
+            if let Some(hill) = tile.hillshade_entity_ids.as_mut()
+                && target_idx < hill.len()
+                && let Some(e) = hill.remove(target_idx)
+            {
+                commands.entity(e).insert(Deleted);
+            }
+        }
+    }
 
-            match (tex_ids, hill_ids) {
-                (Some(tex), Some(hill)) => {
-                    // Remove from each array independently if the index is valid
-                    if target_idx < tex.len()
-                        && let Some(e) = tex.remove(target_idx)
-                    {
-                        commands.entity(e).insert(Deleted);
-                    }
-                    if target_idx < hill.len()
-                        && let Some(e) = hill.remove(target_idx)
-                    {
-                        commands.entity(e).insert(Deleted);
-                    }
-                }
-                (Some(tex), None) => {
-                    if target_idx < tex.len()
-                        && let Some(e) = tex.remove(target_idx)
-                    {
-                        commands.entity(e).insert(Deleted);
-                    }
-                }
-                (None, Some(hill)) => {
-                    if target_idx < hill.len()
-                        && let Some(e) = hill.remove(target_idx)
-                    {
-                        commands.entity(e).insert(Deleted);
-                    }
-                }
-                (None, None) => {
-                    // Both None - nothing to do
-                }
+    // Compact the same slot out of every live raster tile's texture array.
+    // `active_handles` covers the visited tiles (including the ancestors that
+    // `resolve_raster_texture` can fall back to).
+    for handle in raster_tc.active_handles.iter() {
+        let Some(raster_tile) = raster_qt.qt.get_mut(*handle) else {
+            continue;
+        };
+        for (removed_idx, idx) in deleted_layers.iter().enumerate() {
+            let target_idx = idx - removed_idx;
+
+            if let Some(tex) = raster_tile.texture_fragment_entity_ids.as_mut()
+                && target_idx < tex.len()
+                && let Some(e) = tex.remove(target_idx)
+            {
+                commands.entity(e).insert(Deleted);
             }
         }
     }
@@ -938,6 +927,7 @@ pub fn delete_layer(
 pub fn update_mesh_material(
     mut tc: ResMut<TileCacheManager>,
     qt: ResMut<TerrainTileQuadtree>,
+    raster_qt: Res<navara_tile_component::RasterTileQuadtree>,
     rendered_tiles: Query<(&RenderedTile, &OrderByDistance), With<Rendered>>,
     mut texture_fragment: ParamSet<(TileTextureFragmentQuery, ChangedTileTextureFragmentQuery)>,
     mut data_requesters: ParamSet<(
@@ -986,10 +976,21 @@ pub fn update_mesh_material(
     let texture_fragment = texture_fragment.p0();
     let data_requesters = data_requesters.p0();
 
-    let has_tile_layer = !tile_layers.is_empty();
-    if !has_tile_layer {
-        return;
-    }
+    // Split the raster slot budget evenly across the draped (non-hillshade) layers.
+    // Hillshade layers are terrain-side and contribute exactly one slot each, so
+    // they're subtracted from the budget rather than sharing the per-layer cap.
+    // Each draped layer then coarsens its WM zoom to stay within its share, keeping
+    // the per-tile texture count under the GPU slots the composite shader binds.
+    let num_hillshade_layers = tile_layers
+        .iter()
+        .filter(|(l, _)| l.hillshade_config.is_some())
+        .count();
+    let num_draped_layers = tile_layers.iter().count() - num_hillshade_layers;
+    let max_tiles_per_layer = if num_draped_layers == 0 {
+        1
+    } else {
+        (RASTER_DRAPE_SLOT_BUDGET.saturating_sub(num_hillshade_layers) / num_draped_layers).max(1)
+    };
 
     for (rendered_tile, _) in rendered_tiles.iter().sort::<&OrderByDistance>() {
         let Some(tile) = qt.qt.get(rendered_tile.tile_handle) else {
@@ -1001,8 +1002,6 @@ pub fn update_mesh_material(
             continue;
         };
 
-        let tile_layers_len = tile_layers.iter().len();
-
         let Some((tile_mesh_marker, _, appearance)) = cached_rendered_tile
             .mesh_entity
             .and_then(|e| appearances.get(e).ok())
@@ -1010,135 +1009,127 @@ pub fn update_mesh_material(
             continue;
         };
 
-        let mut needs_update = are_tile_layers_removed
+        let needs_update = are_tile_layers_removed
             // If it has a different parent tile, it should be updated.
             || tile_mesh_marker.ready_parent_tile_handle
                 != cached_rendered_tile.ready_parent_tile_handle;
 
-        let prev_texture_fragments = &appearance.texture_fragments;
-        let prev_shows = &appearance.shows;
-        let prev_colors = &appearance.colors;
-        let prev_opacities = &appearance.opacities;
-        let prev_is_elevation_heatmaps = &appearance.is_elevation_heatmaps;
-        let prev_is_hillshades = &appearance.is_hillshades;
-        let prev_layer_uv_transforms = &appearance.layer_uv_transforms;
-
-        let mut shows = Vec::with_capacity(tile_layers_len);
-        let mut opacities = Vec::with_capacity(tile_layers_len);
-        let mut colors = Vec::with_capacity(tile_layers_len);
-        let mut is_elevation_heatmaps = Vec::with_capacity(tile_layers_len);
+        // Per-composite-slot arrays. A hillshade layer contributes one slot
+        // (resolved terrain-side); a regular raster / elevation-heatmap layer
+        // contributes one slot per overlapping WebMercator tile (N:M for
+        // cross-scheme terrain, a single identity tile for WebMercator terrain).
+        // Layers are emitted in sorted order, so z-stacking is preserved; the N
+        // tiles within one layer are non-overlapping so their order is free.
+        let terrain_extent = tile.extent;
+        // WebMercator raster draped on a Geographic terrain tile must be
+        // reprojected (Mercator) on the latitude axis in the composite shader;
+        // the linear affine UV alone stretches it.
+        let terrain_is_geographic = tile.tiling_scheme.is_geographic();
+        let mut shows = Vec::new();
+        let mut opacities = Vec::new();
+        let mut colors = Vec::new();
+        let mut is_elevation_heatmaps = Vec::new();
+        let mut is_hillshades = Vec::new();
+        let mut layer_fragments: Vec<Option<Entity>> = Vec::new();
+        let mut layer_uv_transforms: Vec<Option<TileUvTransform>> = Vec::new();
+        let mut layer_reproject = Vec::new();
         let mut elevation_heatmap_config = None;
-
-        // Hillshade fields
-        let mut is_hillshades = Vec::with_capacity(tile_layers_len);
         let mut hillshade_config = None;
 
-        // Per-layer fragment resolution: for each layer, use own entity if ready,
-        // otherwise fall back to that layer's nearest ready ancestor recorded in
-        // `cached_rendered_tile.layer_parents`. UV transform is per-layer too.
-        let mut layer_fragments: Vec<Option<Entity>> = Vec::with_capacity(tile_layers_len);
-        let mut layer_uv_transforms: Vec<Option<TileUvTransform>> =
-            Vec::with_capacity(tile_layers_len);
-
         for (i, (l, _)) in tile_layers.iter().sort::<&Order>().enumerate() {
-            // Resolve own entity for this layer based on its kind.
-            let own_entity = if l.hillshade_config.is_some() {
-                tile.hillshade_entity_ids
-                    .as_ref()
-                    .and_then(|ids| ids.get(i).copied().flatten())
-            } else {
-                tile.texture_fragment_entity_ids
-                    .as_ref()
-                    .and_then(|ids| ids.get(i).copied().flatten())
-            };
-            let own_ready = own_entity.is_some_and(|e| {
-                TerrainTile::is_texture_entity_ready(e, &texture_fragment, &data_requesters)
-            });
-
-            let (resolved_entity, resolved_uv) = if own_ready {
-                (own_entity, None)
-            } else if let Some(parent) = cached_rendered_tile
-                .layer_parents
-                .as_ref()
-                .and_then(|v| v.get(i).copied().flatten())
-            {
-                (
-                    Some(parent.entity),
-                    Some(uv_transform(tile.coords, parent.zoom)),
-                )
-            } else {
-                (None, None)
-            };
-
-            let should_show = resolved_entity.is_some_and(|e| {
-                TerrainTile::is_texture_entity_ready(e, &texture_fragment, &data_requesters)
-            });
-
             let a = l.appearance().unwrap();
-            let next_show = should_show && a.show;
-            let next_opacity = a.opacity;
-            let next_color = a.color;
-
-            // Check if this layer is an elevation heatmap
             let is_heatmap = l.elevation_heatmap_config.is_some();
-            let is_hillshade_layer_check = l.hillshade_config.is_some();
 
-            // Check if entity changed and new entity is ready
-            let entity_changed =
-                prev_texture_fragments.as_ref().and_then(|t| t.get(i)) != Some(&resolved_entity);
+            if l.hillshade_config.is_some() {
+                let own_entity = tile
+                    .hillshade_entity_ids
+                    .as_ref()
+                    .and_then(|ids| ids.get(i).copied().flatten());
+                let own_ready = own_entity
+                    .is_some_and(|e| TerrainTile::is_hillshade_entity_ready(e, &data_requesters));
+                let (entity, uv, ready) = if own_ready {
+                    (own_entity, None, true)
+                } else if let Some(parent) = cached_rendered_tile
+                    .layer_parents
+                    .as_ref()
+                    .and_then(|v| v.get(i).copied().flatten())
+                {
+                    // Cached ancestor fallback: re-check readiness since the
+                    // parent's hillshade may have been pruned across frames.
+                    let ready =
+                        TerrainTile::is_hillshade_entity_ready(parent.entity, &data_requesters);
+                    (
+                        Some(parent.entity),
+                        Some(uv_transform(tile.coords, parent.zoom)),
+                        ready,
+                    )
+                } else {
+                    (None, None, false)
+                };
 
-            // Only trigger update for entity changes when new entity is ready
-            // This prevents flickering when entity is replaced with a pending one
-            let should_update_for_entity_change = entity_changed && should_show;
+                shows.push(ready && a.show);
+                opacities.push(a.opacity.clamp(0., 1.));
+                colors.push(a.color);
+                is_elevation_heatmaps.push(false);
+                is_hillshades.push(true);
+                layer_fragments.push(entity);
+                layer_uv_transforms.push(uv);
+                // Hillshade is terrain-side; cross-scheme reprojection is out of
+                // scope for it, so its slot is never reprojected.
+                layer_reproject.push(false);
 
-            let uv_changed = prev_layer_uv_transforms.get(i) != Some(&resolved_uv);
+                if hillshade_config.is_none() {
+                    hillshade_config = l.hillshade_config.clone();
+                }
+            } else {
+                let lng_span = (terrain_extent.east - terrain_extent.west).val();
+                let target_z = crate::raster::wm_zoom_for_lng_span(lng_span, a.max_zoom);
+                // The raster pull only returns fragments that have loaded.
+                let resolved = crate::raster::resolve_raster_textures(
+                    &raster_qt,
+                    &terrain_extent,
+                    target_z,
+                    max_tiles_per_layer,
+                    i,
+                    &texture_fragment,
+                );
+                for r in resolved {
+                    shows.push(a.show);
+                    opacities.push(a.opacity.clamp(0., 1.));
+                    colors.push(a.color);
+                    is_elevation_heatmaps.push(is_heatmap);
+                    is_hillshades.push(false);
+                    layer_fragments.push(Some(r.entity));
+                    layer_uv_transforms.push(Some(r.uv_transform));
+                    layer_reproject.push(terrain_is_geographic);
+                }
 
-            if prev_shows.get(i) != Some(&next_show)
-                || prev_opacities.get(i) != Some(&next_opacity)
-                || prev_colors.get(i) != Some(&next_color)
-                || should_update_for_entity_change
-                || prev_is_elevation_heatmaps.get(i) != Some(&is_heatmap)
-                || prev_is_hillshades.get(i) != Some(&is_hillshade_layer_check)
-                || uv_changed
-            {
-                needs_update = true;
+                if is_heatmap && elevation_heatmap_config.is_none() {
+                    elevation_heatmap_config = l.elevation_heatmap_config.clone();
+                }
             }
-
-            shows.push(next_show);
-            opacities.push(a.opacity.clamp(0., 1.));
-            colors.push(a.color);
-            is_elevation_heatmaps.push(is_heatmap);
-
-            // Use the first elevation_heatmap_config we find (they should all be the same)
-            if is_heatmap && elevation_heatmap_config.is_none() {
-                elevation_heatmap_config = l.elevation_heatmap_config.clone();
-            }
-
-            is_hillshades.push(is_hillshade_layer_check);
-
-            // Use the first hillshade_config we find (they should all be the same)
-            if is_hillshade_layer_check && hillshade_config.is_none() {
-                hillshade_config = l.hillshade_config.clone();
-            }
-
-            layer_fragments.push(resolved_entity);
-            layer_uv_transforms.push(resolved_uv);
         }
 
-        // Check if elevation_heatmap_config changed
-        if appearance.elevation_heatmap_config != elevation_heatmap_config {
-            needs_update = true;
-        }
+        let terrain_lat_range = terrain_is_geographic.then(|| {
+            [
+                terrain_extent.south.val() as f32,
+                terrain_extent.north.val() as f32,
+            ]
+        });
 
-        // Check if hillshade_config changed
-        if appearance.hillshade_config != hillshade_config {
-            needs_update = true;
-        }
-
-        // Force update if tile cache has needs_material_update flag set
-        if !needs_update && cached_rendered_tile.needs_material_update {
-            needs_update = true;
-        }
+        let needs_update = needs_update
+            || cached_rendered_tile.needs_material_update
+            || appearance.texture_fragments.as_ref() != Some(&layer_fragments)
+            || appearance.shows != shows
+            || appearance.opacities != opacities
+            || appearance.colors != colors
+            || appearance.is_elevation_heatmaps != is_elevation_heatmaps
+            || appearance.is_hillshades != is_hillshades
+            || appearance.layer_uv_transforms != layer_uv_transforms
+            || appearance.layer_reproject != layer_reproject
+            || appearance.terrain_lat_range != terrain_lat_range
+            || appearance.elevation_heatmap_config != elevation_heatmap_config
+            || appearance.hillshade_config != hillshade_config;
 
         if !needs_update {
             continue;
@@ -1163,6 +1154,8 @@ pub fn update_mesh_material(
         appearance.is_hillshades = is_hillshades;
         appearance.hillshade_config = hillshade_config;
         appearance.layer_uv_transforms = layer_uv_transforms;
+        appearance.layer_reproject = layer_reproject;
+        appearance.terrain_lat_range = terrain_lat_range;
 
         // Clear needs_material_update flag now that material has been updated
         if let Some(cache) = tc.rendered_tile_caches.get_mut(&rendered_tile.tile_handle) {
@@ -1290,5 +1283,135 @@ pub fn clear_caches(
 
     for removed in removed_handles {
         tc.requested_tile_caches.remove(&removed);
+    }
+}
+
+#[cfg(test)]
+mod delete_layer_tests {
+    use super::*;
+    use bevy_app::{App, Update};
+    use navara_layer::LayerData;
+    use navara_material::{Appearance, RasterTileMaterial};
+    use navara_tile_component::{RasterTile, RasterTileQuadtree};
+
+    use crate::raster::RasterTileCacheManager;
+
+    fn raster_layer(layer_id: &str) -> TilesLayer {
+        TilesLayer {
+            layer_id: layer_id.to_string(),
+            data: Some(LayerData {
+                url: "https://example.com/{z}/{x}/{y}.png".to_string(),
+            }),
+            appearance: Some(Appearance::TerrainTile(RasterTileMaterial::default())),
+            elevation_heatmap_config: None,
+            hillshade_config: None,
+        }
+    }
+
+    /// Deleting a middle raster layer must compact that slot out of the raster
+    /// tile's `texture_fragment_entity_ids`, keeping the remaining layers aligned
+    /// with the new sorted-layer order (the layer-ordering regression this guards).
+    #[test]
+    fn delete_layer_compacts_raster_texture_slots() {
+        let mut app = App::new();
+        app.insert_resource(TerrainTileQuadtree::new_with_linear_qt());
+
+        // A raster tile carrying one texture entity per layer [A, B, C].
+        let ea = app.world_mut().spawn_empty().id();
+        let eb = app.world_mut().spawn_empty().id();
+        let ec = app.world_mut().spawn_empty().id();
+
+        let mut raster_qt = RasterTileQuadtree::new_with_linear_qt();
+        raster_qt
+            .qt
+            .initialize_zero(&|(x, y, z)| RasterTile::new(TileXYZ { x, y, z }, 0., 0.));
+        let handle = raster_qt.qt.zero().unwrap().handle();
+        raster_qt
+            .qt
+            .get_mut(handle)
+            .unwrap()
+            .texture_fragment_entity_ids = Some(vec![Some(ea), Some(eb), Some(ec)]);
+        app.insert_resource(raster_qt);
+
+        let mut raster_tc = RasterTileCacheManager::default();
+        raster_tc.active_handles.insert(handle);
+        app.insert_resource(raster_tc);
+
+        // Layers A(0), B(1), C(2); delete the middle one (B).
+        app.world_mut().spawn((raster_layer("A"), Order(0)));
+        app.world_mut().spawn((raster_layer("B"), Order(1)));
+        app.world_mut().spawn((raster_layer("C"), Order(2)));
+        app.world_mut()
+            .spawn(DeleteRasterTileLayerMarker("B".to_string()));
+
+        app.add_systems(Update, delete_layer);
+        app.update();
+
+        let raster_qt = app.world().resource::<RasterTileQuadtree>();
+        let tex = raster_qt
+            .qt
+            .get(handle)
+            .unwrap()
+            .texture_fragment_entity_ids
+            .as_ref()
+            .unwrap();
+
+        // B's slot is gone; A and C keep their relative order, now at indices 0,1.
+        assert_eq!(tex, &vec![Some(ea), Some(ec)]);
+    }
+
+    /// Two delete markers for the *same* layer in one frame must compact exactly
+    /// one slot. Without sort+dedup of the index list, the duplicate index makes
+    /// `idx - removed_idx` over-remove a slot (and underflow `usize` when the
+    /// duplicated layer sits at index 0).
+    #[test]
+    fn delete_layer_handles_duplicate_markers_for_same_layer() {
+        let mut app = App::new();
+        app.insert_resource(TerrainTileQuadtree::new_with_linear_qt());
+
+        let ea = app.world_mut().spawn_empty().id();
+        let eb = app.world_mut().spawn_empty().id();
+        let ec = app.world_mut().spawn_empty().id();
+
+        let mut raster_qt = RasterTileQuadtree::new_with_linear_qt();
+        raster_qt
+            .qt
+            .initialize_zero(&|(x, y, z)| RasterTile::new(TileXYZ { x, y, z }, 0., 0.));
+        let handle = raster_qt.qt.zero().unwrap().handle();
+        raster_qt
+            .qt
+            .get_mut(handle)
+            .unwrap()
+            .texture_fragment_entity_ids = Some(vec![Some(ea), Some(eb), Some(ec)]);
+        app.insert_resource(raster_qt);
+
+        let mut raster_tc = RasterTileCacheManager::default();
+        raster_tc.active_handles.insert(handle);
+        app.insert_resource(raster_tc);
+
+        // Delete the *first* layer (A, index 0) so a mishandled duplicate would
+        // underflow `usize` on the second pass (0 - 1).
+        app.world_mut().spawn((raster_layer("A"), Order(0)));
+        app.world_mut().spawn((raster_layer("B"), Order(1)));
+        app.world_mut().spawn((raster_layer("C"), Order(2)));
+        app.world_mut()
+            .spawn(DeleteRasterTileLayerMarker("A".to_string()));
+        app.world_mut()
+            .spawn(DeleteRasterTileLayerMarker("A".to_string()));
+
+        app.add_systems(Update, delete_layer);
+        app.update();
+
+        let raster_qt = app.world().resource::<RasterTileQuadtree>();
+        let tex = raster_qt
+            .qt
+            .get(handle)
+            .unwrap()
+            .texture_fragment_entity_ids
+            .as_ref()
+            .unwrap();
+
+        // Exactly one slot (A) removed; B and C remain intact and in order.
+        assert_eq!(tex, &vec![Some(eb), Some(ec)]);
     }
 }

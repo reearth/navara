@@ -151,7 +151,6 @@ export class DefaultPlugin extends Plugin<
    */
   addDefaultPhotorealScene(): {
     sky: MeshHandle<SkyMeshDesc>;
-    skyEnv: MeshHandle<SkyMeshDesc>;
     stars: MeshHandle<StarsDesc>;
     skyLightProbe: LightHandle<SkyLightProbeDesc>;
     sun: LightHandle<SunLightDesc>;
@@ -172,12 +171,6 @@ export class DefaultPlugin extends Plugin<
     // Meshes
     const sky = view.addMesh<SkyMeshDesc>({
       sky: {},
-    });
-    const skyEnv = view.addMesh<SkyMeshDesc>({
-      sky: {
-        envMap: true,
-        sunAngularRadius: 0.1,
-      },
     });
     const stars = view.addMesh<StarsDesc>({
       stars: {},
@@ -218,7 +211,6 @@ export class DefaultPlugin extends Plugin<
 
     return {
       sky,
-      skyEnv,
       stars,
       skyLightProbe,
       sun,

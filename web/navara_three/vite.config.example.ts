@@ -126,6 +126,9 @@ export default defineConfig((env) => {
               "@navara/three_react": normalizePath(
                 path.resolve(__dirname, "../navara_three_react/src"),
               ),
+              "@navara/maplibre_style": normalizePath(
+                path.resolve(__dirname, "../navara_maplibre_style/src"),
+              ),
               "@navara/worker": normalizePath(
                 path.resolve(__dirname, "../navara_worker/src"),
               ),

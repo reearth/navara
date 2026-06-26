@@ -7,20 +7,17 @@ use navara_core::TilingScheme;
 use navara_data_requester::{DataManager, DataRequester, DataRequesterExtension};
 use navara_layer::TilesLayer;
 use navara_material::Appearance;
-use navara_texture_fragment::TextureFragment;
-use navara_tile_component::{
-    TerrainTile, TileHandle, TileTextureFragmentMarker, TileTextureFragmentQuery,
-};
+use navara_tile_component::{TerrainTile, TileHandle, TileTextureFragmentMarker};
 
 use crate::hillshade::HillshadeTextureMarker;
 
+/// Request hillshade textures for a terrain tile, one `DataRequester` per in-zoom hillshade layer.
 #[allow(clippy::too_many_arguments)]
-pub(crate) fn request_texture_fragment(
+pub(crate) fn request_hillshade_data_requester(
     commands: &mut Commands,
     leaf: &mut TerrainTile,
     tiles: &Query<(&TilesLayer, &Order)>,
     handle: TileHandle,
-    texture_fragment: &TileTextureFragmentQuery,
     data_requesters: &Query<&DataRequester>,
     priority: Priority,
     buf: &mut BufferStore,
@@ -36,17 +33,11 @@ pub(crate) fn request_texture_fragment(
     let sse = leaf.sse;
     let distance_from_camera = leaf.distance_from_camera;
 
-    // Both arrays must match `tiles_len`. Filter systems clear rejected slots
-    // to None (rather than removing) so layer-index alignment is preserved
+    // The hillshade array must match `tiles_len`. Filter systems clear rejected
+    // slots to None (rather than removing) so layer-index alignment is preserved
     // across frames. When a layer is added between calls, `add_order_to_tiles_layer`
-    // assigns it the highest Order, so extending the arrays with trailing Nones
-    // keeps existing layer indices intact; `delete_layer` handles shrinking.
-    let tex_ids = leaf
-        .texture_fragment_entity_ids
-        .get_or_insert_with(|| vec![None; tiles_len]);
-    if tex_ids.len() < tiles_len {
-        tex_ids.resize(tiles_len, None);
-    }
+    // assigns it the highest Order, so extending with trailing Nones keeps
+    // existing layer indices intact; `delete_layer` handles shrinking.
     let hill_ids = leaf
         .hillshade_entity_ids
         .get_or_insert_with(|| vec![None; tiles_len]);
@@ -54,21 +45,19 @@ pub(crate) fn request_texture_fragment(
         hill_ids.resize(tiles_len, None);
     }
 
-    // Check whether every layer is already handled.
-    // Out-of-zoom layers stay None; regular layers must have a queryable
-    // TextureFragment entity; hillshade layers must have a queryable DataRequester.
+    // Check whether every hillshade layer is already handled. Regular (texture)
+    // layers are owned by the raster pipeline and are never requested here.
+    // Out-of-zoom layers stay None; hillshade layers must have a queryable DataRequester.
     let all_layers_requested = {
-        let tex_ids = leaf.texture_fragment_entity_ids.as_ref().unwrap();
         let hill_ids = leaf.hillshade_entity_ids.as_ref().unwrap();
         sorted_tiles.iter().enumerate().all(|(i, (layer, _))| {
+            if layer.hillshade_config.is_none() {
+                return true;
+            }
             if !layer.is_over_min_zoom(coords.z) || layer.is_over_max_zoom(coords.z) {
                 return true;
             }
-            if layer.hillshade_config.is_some() {
-                hill_ids[i].is_some_and(|e| data_requesters.get(e).is_ok())
-            } else {
-                tex_ids[i].is_some_and(|e| texture_fragment.contains(e))
-            }
+            hill_ids[i].is_some_and(|e| data_requesters.get(e).is_ok())
         })
     };
     if all_layers_requested {
@@ -76,21 +65,18 @@ pub(crate) fn request_texture_fragment(
     }
 
     for (i, (layer, _)) in sorted_tiles.iter().enumerate() {
+        // Regular texture layers are handled by the raster pipeline.
+        if layer.hillshade_config.is_none() {
+            continue;
+        }
         // Skip layers whose zoom range excludes this tile. The slot stays None.
         if !layer.is_over_min_zoom(coords.z) || layer.is_over_max_zoom(coords.z) {
             continue;
         }
-        let is_hillshade = layer.hillshade_config.is_some();
-
         // Skip layers that already have a valid in-flight or completed entity.
         let already_requested = {
-            let tex_ids = leaf.texture_fragment_entity_ids.as_ref().unwrap();
             let hill_ids = leaf.hillshade_entity_ids.as_ref().unwrap();
-            if is_hillshade {
-                hill_ids[i].is_some_and(|e| data_requesters.get(e).is_ok())
-            } else {
-                tex_ids[i].is_some_and(|e| texture_fragment.contains(e))
-            }
+            hill_ids[i].is_some_and(|e| data_requesters.get(e).is_ok())
         };
         if already_requested {
             continue;
@@ -100,75 +86,55 @@ pub(crate) fn request_texture_fragment(
         let url = TilingScheme::WebMercator { tms }
             .tile_url(layer.data.as_ref().unwrap().url.as_str(), coords);
 
-        let entity_id = if is_hillshade {
-            // Hillshade texture: use DataRequester so Rust can backfill edges.
-            let extension = Url::parse(&url)
-                .ok()
-                .map(|parsed_url| DataRequesterExtension::from_url(&parsed_url))
-                .unwrap_or(DataRequesterExtension::Png); // Fallback to PNG if URL parsing fails
+        // Hillshade texture: use DataRequester so Rust can backfill edges.
+        let extension = Url::parse(&url)
+            .ok()
+            .map(|parsed_url| DataRequesterExtension::from_url(&parsed_url))
+            .unwrap_or(DataRequesterExtension::Png); // Fallback to PNG if URL parsing fails
 
-            // Spawn entity first to get entity ID
-            let entity_id = commands.spawn_empty().id();
+        // Spawn entity first to get entity ID
+        let entity_id = commands.spawn_empty().id();
 
-            // Register with DataManager to get shared handle.
-            // is_new=true means this is the first consumer for this URL.
-            // fetch_already_enqueued=true means another consumer already triggered a fetch.
-            let (shared_handle, is_new, fetch_already_enqueued) =
-                data_manager.register_consumer(url.clone(), entity_id, buf);
+        // Register with DataManager to get shared handle.
+        // is_new=true means this is the first consumer for this URL.
+        // fetch_already_enqueued=true means another consumer already triggered a fetch.
+        let (shared_handle, is_new, fetch_already_enqueued) =
+            data_manager.register_consumer(url.clone(), entity_id, buf);
 
-            // Check if data already exists in BufferStore (loaded by previous consumer)
-            let data_exists = buf.get_u8(&shared_handle).is_some();
+        // Check if data already exists in BufferStore (loaded by previous consumer)
+        let data_exists = buf.get_u8(&shared_handle).is_some();
 
-            // Determine initial status: Success if data already loaded, otherwise Pending
-            let initial_status = if !is_new && data_exists {
-                navara_data_requester::DataRequesterStatus::Success
-            } else {
-                navara_data_requester::DataRequesterStatus::Pending
-            };
-
-            // Check if we should wait for an in-flight fetch before moving initial_status
-            let should_wait_for_fetch = fetch_already_enqueued
-                && initial_status == navara_data_requester::DataRequesterStatus::Pending;
-
-            // Insert components with shared handle.
-            let mut entity_commands = commands.entity(entity_id);
-            entity_commands.insert((
-                TileTextureFragmentMarker(handle),
-                HillshadeTextureMarker,
-                DataRequester::new_with_status(shared_handle, url, extension, initial_status),
-                OrderByDistance {
-                    sse,
-                    distance: distance_from_camera,
-                },
-                priority,
-            ));
-
-            // If another consumer already enqueued a fetch AND we're still pending,
-            // insert Requested marker so this consumer waits for the shared fetch.
-            if should_wait_for_fetch {
-                entity_commands.insert(Requested);
-            }
-
-            entity_id
+        // Determine initial status: Success if data already loaded, otherwise Pending
+        let initial_status = if !is_new && data_exists {
+            navara_data_requester::DataRequesterStatus::Success
         } else {
-            commands
-                .spawn((
-                    TileTextureFragmentMarker(handle),
-                    TextureFragment::new(url),
-                    OrderByDistance {
-                        sse,
-                        distance: distance_from_camera,
-                    },
-                    priority,
-                ))
-                .id()
+            navara_data_requester::DataRequesterStatus::Pending
         };
 
-        if is_hillshade {
-            leaf.hillshade_entity_ids.as_mut().unwrap()[i] = Some(entity_id);
-        } else {
-            leaf.texture_fragment_entity_ids.as_mut().unwrap()[i] = Some(entity_id);
+        // Check if we should wait for an in-flight fetch before moving initial_status
+        let should_wait_for_fetch = fetch_already_enqueued
+            && initial_status == navara_data_requester::DataRequesterStatus::Pending;
+
+        // Insert components with shared handle.
+        let mut entity_commands = commands.entity(entity_id);
+        entity_commands.insert((
+            TileTextureFragmentMarker(handle),
+            HillshadeTextureMarker,
+            DataRequester::new_with_status(shared_handle, url, extension, initial_status),
+            OrderByDistance {
+                sse,
+                distance: distance_from_camera,
+            },
+            priority,
+        ));
+
+        // If another consumer already enqueued a fetch AND we're still pending,
+        // insert Requested marker so this consumer waits for the shared fetch.
+        if should_wait_for_fetch {
+            entity_commands.insert(Requested);
         }
+
+        leaf.hillshade_entity_ids.as_mut().unwrap()[i] = Some(entity_id);
     }
 }
 
@@ -218,13 +184,12 @@ mod tests {
 
     #[derive(Resource, Default, Clone)]
     struct CapturedSlots {
-        tex_ids: Vec<Option<Entity>>,
         hill_ids: Vec<Option<Entity>>,
     }
 
     /// Run a single update where the caller can mutate a freshly-built `TerrainTile`
-    /// before and after the call to `request_texture_fragment`. The post-call state
-    /// of both entity-id arrays is captured into `CapturedSlots`.
+    /// before and after the call to `request_hillshade_data_requester`. The
+    /// post-call state of `hillshade_entity_ids` is captured into `CapturedSlots`.
     fn run_request<F>(layers: Vec<(TilesLayer, Order)>, tile_z: usize, prepare: F) -> CapturedSlots
     where
         F: FnOnce(&mut TerrainTile) + Send + Sync + 'static,
@@ -245,7 +210,6 @@ mod tests {
                   mut buf: ResMut<BufferStore>,
                   mut data_manager: ResMut<DataManager>,
                   tiles: Query<(&TilesLayer, &Order)>,
-                  texture_fragment: TileTextureFragmentQuery,
                   data_requesters: Query<&DataRequester>,
                   mut out: ResMut<CapturedSlots>| {
                 let mut tile = TerrainTile::new(
@@ -260,19 +224,17 @@ mod tests {
                 let prepare = prepare.lock().unwrap().take().unwrap();
                 prepare(&mut tile);
 
-                request_texture_fragment(
+                request_hillshade_data_requester(
                     &mut commands,
                     &mut tile,
                     &tiles,
                     0,
-                    &texture_fragment,
                     &data_requesters,
                     Priority::High,
                     &mut buf,
                     &mut data_manager,
                 );
 
-                out.tex_ids = tile.texture_fragment_entity_ids.clone().unwrap_or_default();
                 out.hill_ids = tile.hillshade_entity_ids.clone().unwrap_or_default();
             },
         );
@@ -280,11 +242,10 @@ mod tests {
         app.world().resource::<CapturedSlots>().clone()
     }
 
-    /// Regular layers must land in `texture_fragment_entity_ids` and hillshade
-    /// layers must land in `hillshade_entity_ids` — never crossed. This is the
-    /// invariant the misalignment bug used to break.
+    /// The terrain-side helper only requests hillshade layers; regular (texture)
+    /// layers are owned by the raster pipeline and are never touched here.
     #[test]
-    fn mixed_layers_go_to_correct_arrays() {
+    fn only_hillshade_layers_are_requested() {
         let captured = run_request(
             vec![
                 (regular_layer("a", 0, 20), Order(0)),
@@ -295,30 +256,18 @@ mod tests {
             |_| {},
         );
 
-        assert_eq!(captured.tex_ids.len(), 3);
         assert_eq!(captured.hill_ids.len(), 3);
 
-        // Layer 0 (regular) — tex has Some, hill stays None.
-        assert!(captured.tex_ids[0].is_some());
+        // Only the hillshade layer (index 1) gets a hillshade entity.
         assert!(captured.hill_ids[0].is_none());
-
-        // Layer 1 (hillshade) — hill has Some, tex stays None.
-        assert!(captured.tex_ids[1].is_none());
         assert!(captured.hill_ids[1].is_some());
-
-        // Layer 2 (regular) — tex has Some, hill stays None.
-        assert!(captured.tex_ids[2].is_some());
         assert!(captured.hill_ids[2].is_none());
     }
 
-    /// When the filter has cleared a layer's slot to None, the next call must
-    /// refill it into the array that matches the layer's type — the regression
-    /// would refill a hillshade layer's slot into `texture_fragment_entity_ids`.
+    /// When the hillshade filter has cleared a hillshade slot to None, the next
+    /// call must refill it into `hillshade_entity_ids`.
     #[test]
-    fn filter_rejected_slots_refill_into_correct_array() {
-        // Both arrays start at length 2 with all None — this is the state the
-        // tile is in after the filter rejected the very first attempt on both
-        // layers.
+    fn rejected_hillshade_slot_refills_into_hillshade_array() {
         let captured = run_request(
             vec![
                 (regular_layer("a", 0, 20), Order(0)),
@@ -326,78 +275,68 @@ mod tests {
             ],
             5,
             |tile| {
-                tile.texture_fragment_entity_ids = Some(vec![None, None]);
                 tile.hillshade_entity_ids = Some(vec![None, None]);
             },
         );
 
-        // Layer 0 (regular) is refilled into tex.
-        assert!(captured.tex_ids[0].is_some());
+        // Layer 0 (regular) — untouched by the terrain helper.
         assert!(captured.hill_ids[0].is_none());
 
-        // Layer 1 (hillshade) is refilled into hill, NOT tex.
-        assert!(
-            captured.tex_ids[1].is_none(),
-            "hillshade entity must not land in texture_fragment_entity_ids"
-        );
+        // Layer 1 (hillshade) is refilled into the hillshade array.
         assert!(captured.hill_ids[1].is_some());
     }
 
     /// When a layer is added after the tile already has shorter arrays, the
-    /// function must extend them (not panic). The new layer is always appended
-    /// by `add_order_to_tiles_layer`, so trailing Nones preserve existing
-    /// layer-to-index alignment.
+    /// function must extend them (not panic). The new hillshade layer is always
+    /// appended by `add_order_to_tiles_layer`, so trailing Nones preserve
+    /// existing layer-to-index alignment.
     #[test]
     fn new_layer_with_shorter_existing_arrays_extends_without_panic() {
         let captured = run_request(
             vec![
                 (regular_layer("a", 0, 20), Order(0)),
                 (regular_layer("b", 0, 20), Order(1)),
-                (regular_layer("c", 0, 20), Order(2)),
+                (hillshade_layer("c", 0, 20), Order(2)),
             ],
             5,
             |tile| {
                 // Tile was previously built with only 2 layers; layer c was
-                // added later. Without resize, accessing tex_ids[2] would panic.
-                tile.texture_fragment_entity_ids = Some(vec![None, None]);
+                // added later. Without resize, accessing hill_ids[2] would panic.
                 tile.hillshade_entity_ids = Some(vec![None, None]);
             },
         );
 
-        assert_eq!(captured.tex_ids.len(), 3);
         assert_eq!(captured.hill_ids.len(), 3);
         assert!(
-            captured.tex_ids[2].is_some(),
-            "newly appended layer must be spawned"
+            captured.hill_ids[2].is_some(),
+            "newly appended hillshade layer must be spawned"
         );
     }
 
-    /// Out-of-zoom layers must keep both array slots as `None` — no entity is
-    /// spawned for them. This is what tells `is_texture_ready` apart from
-    /// filter rejection.
+    /// Out-of-zoom hillshade layers must keep their slot as `None` — no entity
+    /// is spawned for them.
     #[test]
-    fn out_of_zoom_layer_leaves_both_slots_none() {
-        // tile is at z=2, layer 1 has min_zoom=10 → out of range.
+    fn out_of_zoom_hillshade_layer_leaves_slot_none() {
+        // tile is at z=2; hillshade layer 1 has min_zoom=10 → out of range.
         let captured = run_request(
             vec![
-                (regular_layer("a", 0, 20), Order(0)),
+                (hillshade_layer("a", 0, 20), Order(0)),
                 (regular_layer("c", 0, 20), Order(2)),
-                (regular_layer("b", 10, 20), Order(1)),
+                (hillshade_layer("b", 10, 20), Order(1)),
             ],
             2,
             |_| {},
         );
 
-        assert_eq!(captured.tex_ids.len(), 3);
         assert_eq!(captured.hill_ids.len(), 3);
 
-        assert!(captured.tex_ids[0].is_some());
+        // In-zoom hillshade spawns.
+        assert!(captured.hill_ids[0].is_some());
+        // Out-of-zoom hillshade leaves slot None.
         assert!(
-            captured.tex_ids[1].is_none(),
-            "out-of-zoom layer must not spawn"
+            captured.hill_ids[1].is_none(),
+            "out-of-zoom hillshade layer must not spawn"
         );
-        assert!(captured.hill_ids[1].is_none());
-        assert!(captured.tex_ids[2].is_some());
     }
 
     /// Hillshade layers at z >= max_zoom must not spawn a hillshade entity — the slot stays None,
@@ -410,7 +349,6 @@ mod tests {
         // Tile at z=15 is beyond max_zoom (15 >= 10): no hillshade requester should spawn.
         let captured = run_request(vec![(layer, Order(0))], 15, |_| {});
 
-        assert_eq!(captured.tex_ids.len(), 1);
         assert_eq!(captured.hill_ids.len(), 1);
 
         // No hillshade entity should be spawned in the overscale zone
@@ -418,7 +356,5 @@ mod tests {
             captured.hill_ids[0].is_none(),
             "hillshade in overscale zone must not spawn DataRequester"
         );
-        // Regular texture slot should also be None (no regular texture for hillshade layer)
-        assert!(captured.tex_ids[0].is_none());
     }
 }

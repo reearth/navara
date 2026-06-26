@@ -13,8 +13,7 @@ use navara_mesh::CachedMeshHandle;
 use navara_quadtree::Coords;
 
 use crate::{
-    HillshadeCancelRequested, TerrainTileQuadtree, Tile, TileHandle,
-    raster_tile_texture_fragment::TileTextureFragmentQuery, terrain::TerrainData,
+    HillshadeCancelRequested, TerrainTileQuadtree, Tile, TileHandle, terrain::TerrainData,
     terrain_data_requester::TileTerrainDataRequesterQuery,
 };
 
@@ -39,7 +38,6 @@ pub struct TerrainTile {
     pub rendered_at: usize,
     pub visited_at: usize,
     pub terrain_data: Option<Box<dyn TerrainData>>,
-    pub texture_fragment_entity_ids: Option<Vec<Option<Entity>>>,
     pub hillshade_entity_ids: Option<Vec<Option<Entity>>>,
     pub occludee_point_in_scaled_space: Option<Vec3>,
     pub cached_mesh_handle: Option<CachedMeshHandle>,
@@ -65,7 +63,6 @@ impl Clone for TerrainTile {
             rendered_at: self.rendered_at,
             visited_at: self.visited_at,
             terrain_data: self.terrain_data.as_ref().map(|t| t.box_clone()),
-            texture_fragment_entity_ids: self.texture_fragment_entity_ids.clone(),
             hillshade_entity_ids: self.hillshade_entity_ids.clone(),
             occludee_point_in_scaled_space: self.occludee_point_in_scaled_space,
             cached_mesh_handle: self.cached_mesh_handle.clone(),
@@ -114,7 +111,6 @@ impl TerrainTile {
             rendered_at: 0,
             visited_at: 0,
             terrain_data: None,
-            texture_fragment_entity_ids: None,
             hillshade_entity_ids: None,
             occludee_point_in_scaled_space: None,
             cached_mesh_handle: None,
@@ -133,13 +129,12 @@ impl TerrainTile {
     pub fn is_ready(
         &self,
         qt: &TerrainTileQuadtree,
-        texture_fragment: &TileTextureFragmentQuery,
         data_requesters: &Query<&navara_data_requester::DataRequester>,
         terrain_data_requester: &TileTerrainDataRequesterQuery,
         terrain_layer: &Option<&TerrainLayer>,
         tiles: &Query<(&TilesLayer, &Order)>,
     ) -> ReadyState {
-        let is_texture_loaded = self.is_texture_ready(texture_fragment, data_requesters, tiles);
+        let is_texture_loaded = self.is_hillshade_ready(data_requesters, tiles);
 
         let data_requester_entity_id = self
             .terrain_data
@@ -150,14 +145,11 @@ impl TerrainTile {
             .map(|l| l.is_over_min_zoom(self.coords.z))
             .unwrap_or(false);
 
-        // This means a terrain isn't used.
-        if !use_terrain
-            && self
-                .texture_fragment_entity_ids
-                .as_ref()
-                .is_some_and(|ids| !ids.is_empty())
-            && data_requester_entity_id.is_none()
-        {
+        // Terrain isn't used at this tile (no terrain layer, or below its min
+        // zoom): the tile renders as flat geometry, which is always ready. The
+        // regular raster textures are draped via the raster pull (with ancestor
+        // fallback), so readiness no longer waits on terrain-owned textures.
+        if !use_terrain && data_requester_entity_id.is_none() {
             return ReadyState {
                 is_tile_ready: true,
                 is_texture_ready: is_texture_loaded,
@@ -218,85 +210,17 @@ impl TerrainTile {
         })
     }
 
-    /// Check if a single texture entity is ready (either TextureFragment or DataRequester)
-    pub fn is_texture_entity_ready(
+    /// Whether a hillshade entity's data has finished loading. Hillshade is
+    /// terrain-owned and backed by a `DataRequester` (Rust backfills its edges),
+    /// so this checks the requester only. Regular raster textures are owned by
+    /// the raster pipeline (see `resolve_raster_texture`).
+    pub fn is_hillshade_entity_ready(
         entity: Entity,
-        texture_fragment: &TileTextureFragmentQuery,
         data_requesters: &Query<&navara_data_requester::DataRequester>,
     ) -> bool {
-        // Check TextureFragment first
-        if let Ok(t) = texture_fragment.get(entity) {
-            return t.1.is_succeeded();
-        }
-        // Check DataRequester second (for hillshade)
-        if let Ok(dr) = data_requesters.get(entity) {
-            return dr.is_succeeded();
-        }
-        false
-    }
-
-    pub fn is_texture_ready(
-        &self,
-        texture_fragment: &TileTextureFragmentQuery,
-        data_requesters: &Query<&navara_data_requester::DataRequester>,
-        tiles: &Query<'_, '_, (&TilesLayer, &Order)>,
-    ) -> bool {
-        // If TileLayer is None, texture is considered ready
-        if tiles.is_empty() {
-            return true;
-        }
-
-        let Some(tex_ids) = self.texture_fragment_entity_ids.as_ref() else {
-            return false;
-        };
-
-        // Sort tiles once and reuse for both hillshade and texture checks
-        let sorted_tiles: Vec<_> = tiles.iter().sort::<&Order>().collect();
-
-        if !self.is_hillshade_ready(&sorted_tiles, texture_fragment, data_requesters) {
-            return false;
-        }
-
-        if tex_ids.len() != sorted_tiles.len() {
-            return false;
-        }
-        let hill_ids = self.hillshade_entity_ids.as_ref();
-
-        // At least one entity (regular texture or hillshade) must be ready so we
-        // actually have something to render.
-        let any_ready = tex_ids.iter().enumerate().any(|(i, tex_opt)| {
-            let entity = tex_opt.or_else(|| hill_ids.and_then(|ids| ids.get(i).and_then(|&e| e)));
-            entity.is_some_and(|e| {
-                Self::is_texture_entity_ready(e, texture_fragment, data_requesters)
-            })
-        });
-        if !any_ready {
-            return false;
-        }
-
-        // Every required layer must have finished (succeeded or failed) or be
-        // intentionally skipped. A None slot for a regular layer means the
-        // filter rejected it and we still need to retry, so it is NOT ready.
-        tex_ids
-            .iter()
-            .zip(sorted_tiles.iter())
-            .all(|(tex_opt, (layer, _))| {
-                // Layer outside its configured zoom range: never requested.
-                if !layer.is_over_min_zoom(self.coords.z) || layer.is_over_max_zoom(self.coords.z) {
-                    return true;
-                }
-                // Hillshade layers are validated above via is_hillshade_ready.
-                if layer.hillshade_config.is_some() {
-                    return true;
-                }
-                match tex_opt {
-                    Some(e) => texture_fragment
-                        .get(*e)
-                        .map(|t| t.1.is_succeeded() || t.1.is_failed())
-                        .unwrap_or(false),
-                    None => false,
-                }
-            })
+        data_requesters
+            .get(entity)
+            .is_ok_and(|dr| dr.is_succeeded())
     }
 
     pub fn is_terrain_ready(
@@ -329,12 +253,20 @@ impl TerrainTile {
         terrain_layer.is_some() && self.is_parent_ready(qt, terrain_data_requester)
     }
 
+    /// Terrain-side texture readiness. Regular raster textures are owned by the
+    /// raster pipeline and pulled separately (with ancestor fallback), so this
+    /// only gates on hillshade layers, which derive from the terrain DEM.
     pub fn is_hillshade_ready(
         &self,
-        sorted_tiles: &[(&TilesLayer, &Order)],
-        texture_fragment: &TileTextureFragmentQuery,
         data_requesters: &Query<&navara_data_requester::DataRequester>,
+        tiles: &Query<'_, '_, (&TilesLayer, &Order)>,
     ) -> bool {
+        if tiles.is_empty() {
+            return true;
+        }
+
+        let sorted_tiles: Vec<_> = tiles.iter().sort::<&Order>().collect();
+
         // Check if there are any hillshade layers in the sorted tiles
         let has_hillshade_layers = sorted_tiles
             .iter()
@@ -353,11 +285,7 @@ impl TerrainTile {
                 .any(|(&entity_opt, (layer, _))| {
                     if let Some(entity) = entity_opt {
                         // Entity exists, check if it's ready
-                        TerrainTile::is_texture_entity_ready(
-                            entity,
-                            texture_fragment,
-                            data_requesters,
-                        )
+                        TerrainTile::is_hillshade_entity_ready(entity, data_requesters)
                     } else {
                         // Entity is None, check if this layer is beyond max_zoom
                         layer.hillshade_config.is_some() && layer.is_over_max_zoom(self.coords.z)
@@ -441,12 +369,6 @@ impl TerrainTile {
                 buf.remove(h);
             }
             self.cached_mesh_handle = None;
-        }
-
-        if let Some(fragments) = self.texture_fragment_entity_ids.take() {
-            for fragment in fragments.into_iter().flatten() {
-                commands.entity(fragment).insert(Deleted);
-            }
         }
 
         if let Some(hillshade_entities) = self.hillshade_entity_ids.take() {
@@ -569,9 +491,11 @@ pub fn compute_terrain_height_at_point(
     terrain_data_requesters: &TileTerrainDataRequesterQuery,
     point: &LngLat<FloatType, Radians>,
 ) -> Option<FloatType> {
-    let tile_handle = find_contained_child(qt, &|t| {
-        t.extent.contains(point) && t.cached_mesh_handle.is_some() && !t.upsampled
-    })?;
+    let tile_handle = find_contained_child(
+        qt,
+        &|t| t.extent.contains(point) && t.cached_mesh_handle.is_some() && !t.upsampled,
+        &|t| t.extent.contains(point),
+    )?;
     let tile = qt.qt.get_mut(tile_handle)?;
 
     tile.terrain_data.as_mut()?.compute_height_at_point(
@@ -587,13 +511,17 @@ pub fn sample_terrain_height_within_extent(
     qt: &mut TerrainTileQuadtree,
     extent: Extent<f64, Radians>,
 ) -> (FloatType, FloatType) {
-    let tiles = find_contained_children(qt, &|t| {
-        t.extent.intersects(extent)
-            && extent.ratio(&t.extent) <= 1.
-            && t.cached_mesh_handle.is_some()
-            && !t.upsampled
-            && t.terrain_data.is_some()
-    });
+    let tiles = find_contained_children(
+        qt,
+        &|t| {
+            t.extent.intersects(extent)
+                && extent.ratio(&t.extent) <= 1.
+                && t.cached_mesh_handle.is_some()
+                && !t.upsampled
+                && t.terrain_data.is_some()
+        },
+        &|t| t.extent.intersects(extent),
+    );
 
     let mut max_height: FloatType = 0.;
     let mut min_height: FloatType = 9999.;
@@ -638,9 +566,13 @@ pub fn sample_terrain_height_within_extent(
 /// have cached mesh, terrain data, and are not upsampled.
 /// Used to batch-resolve terrain heights without per-point tree traversal.
 pub fn collect_terrain_leaves(qt: &TerrainTileQuadtree) -> Vec<TileHandle> {
-    find_contained_children(qt, &|t| {
-        t.cached_mesh_handle.is_some() && !t.upsampled && t.terrain_data.is_some()
-    })
+    // No spatial filter — every ready tile is wanted regardless of location, so
+    // the full tree must be walked (`overlaps` always true, no pruning).
+    find_contained_children(
+        qt,
+        &|t| t.cached_mesh_handle.is_some() && !t.upsampled && t.terrain_data.is_some(),
+        &|_| true,
+    )
 }
 
 /// Find the deepest raster tile whose extent fully contains the given extent.
@@ -653,12 +585,41 @@ pub fn find_terrain_tile_for_extent(
     qt: &TerrainTileQuadtree,
     extent: &Extent<FloatType, Radians>,
 ) -> Option<TileHandle> {
-    find_contained_child(qt, &|t| {
-        t.extent.contains_extent(extent)
-            && t.cached_mesh_handle.is_some()
-            && !t.upsampled
-            && t.terrain_data.is_some()
-    })
+    find_contained_child(
+        qt,
+        &|t| {
+            t.extent.contains_extent(extent)
+                && t.cached_mesh_handle.is_some()
+                && !t.upsampled
+                && t.terrain_data.is_some()
+        },
+        &|t| t.extent.contains_extent(extent),
+    )
+}
+
+/// Terrain elevation `(max_height, min_height)` at the centre of `extent`, read
+/// from the deepest rendered terrain tile covering that point.
+///
+/// This is a point-in-tile lookup, so it works regardless of tiling scheme — a
+/// WebMercator raster tile can read the height of the Geographic (quantized-mesh)
+/// terrain it drapes onto, where a coordinate-identity lookup would fail. Used to
+/// keep the raster traversal's screen-space error in step with terrain elevation.
+/// Returns `None` when no rendered terrain covers the centre.
+pub fn terrain_height_for_extent(
+    qt: &TerrainTileQuadtree,
+    extent: &Extent<FloatType, Radians>,
+) -> Option<(FloatType, FloatType)> {
+    let center = LngLat {
+        lng: (extent.west + extent.east) * 0.5,
+        lat: (extent.south + extent.north) * 0.5,
+    };
+    let handle = find_contained_child(
+        qt,
+        &|t| t.extent.contains(&center) && t.cached_mesh_handle.is_some(),
+        &|t| t.extent.contains(&center),
+    )?;
+    let tile = qt.qt.get(handle)?;
+    Some((tile.max_height, tile.min_height))
 }
 
 /// Compute terrain height for a single point from a known tile.
@@ -700,30 +661,52 @@ pub fn root_handles(qt: &TerrainTileQuadtree) -> Vec<TileHandle> {
         .collect()
 }
 
-/// Find a child that the tile contains.
+/// Find the deepest tile satisfying `contain`.
+///
+/// `overlaps` is a spatial pruning predicate: a subtree is descended into only
+/// when its root tile passes `overlaps`. It MUST be downward-monotone along the
+/// tree (if a tile passes, every ancestor passes — equivalently, if a tile
+/// fails, no descendant can satisfy `contain`). Because child extents partition
+/// their parent's extent, the spatial part of `contain` (e.g. `extent.contains`,
+/// `extent.intersects`, `extent.contains_extent`) is such a predicate. Pruning
+/// turns this from a full `O(tree)` walk into an `O(depth)` descent — without
+/// it, every terrain tile is visited for every query, which is called per raster
+/// tile per frame in the raster traversal.
+///
+/// Pass `|_| true` when no spatial pruning is possible (full traversal).
 fn find_contained_child(
     qt: &TerrainTileQuadtree,
     contain: &dyn Fn(&TerrainTile) -> bool,
+    overlaps: &dyn Fn(&TerrainTile) -> bool,
 ) -> Option<TileHandle> {
     for root in root_handles(qt) {
-        if let Some(v) = traverse_contained_child(qt, qt.qt.get(root), Some(root), contain) {
+        if let Some(v) =
+            traverse_contained_child(qt, qt.qt.get(root), Some(root), contain, overlaps)
+        {
             return Some(v);
         }
     }
     None
 }
 
-/// Find a child that the tile contains.
+/// Collect the deepest tile satisfying `contain` along each branch. See
+/// [`find_contained_child`] for the contract on `overlaps`.
 fn find_contained_children(
     qt: &TerrainTileQuadtree,
     contain: &dyn Fn(&TerrainTile) -> bool,
+    overlaps: &dyn Fn(&TerrainTile) -> bool,
 ) -> Vec<TileHandle> {
     let mut result = vec![];
     for root in root_handles(qt) {
         let previous_len = result.len();
-        if let Some(v) =
-            traverse_contained_children(qt, qt.qt.get(root), Some(root), contain, &mut result)
-            && previous_len == result.len()
+        if let Some(v) = traverse_contained_children(
+            qt,
+            qt.qt.get(root),
+            Some(root),
+            contain,
+            overlaps,
+            &mut result,
+        ) && previous_len == result.len()
         {
             result.push(v);
         }
@@ -736,12 +719,21 @@ fn traverse_contained_child(
     tile: Option<&TerrainTile>,
     handle: Option<TileHandle>,
     contain: &dyn Fn(&TerrainTile) -> bool,
+    overlaps: &dyn Fn(&TerrainTile) -> bool,
 ) -> Option<TileHandle> {
     let h = handle?;
     let tile = tile?;
 
+    // Prune: if this tile cannot spatially overlap the query, neither can any of
+    // its descendants, so skip the whole subtree.
+    if !overlaps(tile) {
+        return None;
+    }
+
     for child in &tile.children {
-        if let Some(v) = traverse_contained_child(qt, qt.qt.get(*child), Some(*child), contain) {
+        if let Some(v) =
+            traverse_contained_child(qt, qt.qt.get(*child), Some(*child), contain, overlaps)
+        {
             return Some(v);
         }
     }
@@ -758,17 +750,28 @@ fn traverse_contained_children(
     tile: Option<&TerrainTile>,
     handle: Option<TileHandle>,
     contain: &dyn Fn(&TerrainTile) -> bool,
+    overlaps: &dyn Fn(&TerrainTile) -> bool,
     result: &mut Vec<TileHandle>,
 ) -> Option<TileHandle> {
     let h = handle?;
     let tile = tile?;
 
+    // Prune: a subtree that cannot spatially overlap the query holds no match.
+    if !overlaps(tile) {
+        return None;
+    }
+
     let previous_result_len = result.len();
 
     for child in &tile.children {
-        if let Some(v) =
-            traverse_contained_children(qt, qt.qt.get(*child), Some(*child), contain, result)
-        {
+        if let Some(v) = traverse_contained_children(
+            qt,
+            qt.qt.get(*child),
+            Some(*child),
+            contain,
+            overlaps,
+            result,
+        ) {
             result.push(v);
         }
     }
@@ -938,14 +941,81 @@ mod test {
         setup_tile(&mut qt, (0, 1, 1));
         setup_tile(&mut qt, (1, 1, 1));
 
-        let h = find_contained_child(&qt, &|t| {
-            t.extent.contains(&LngLat {
-                lng: Angle::new(2.5),
-                lat: Angle::new(1.1),
-            })
+        let point = LngLat {
+            lng: Angle::new(2.5),
+            lat: Angle::new(1.1),
+        };
+        let h = find_contained_child(&qt, &|t| t.extent.contains(&point), &|t| {
+            t.extent.contains(&point)
         });
         let child = qt.qt.get(h.unwrap());
         assert_eq!(child.unwrap().coords, TileXYZ { x: 3, y: 1, z: 2 });
+    }
+
+    #[test]
+    fn find_contained_child_prunes_non_overlapping_subtrees() {
+        use std::cell::Cell;
+
+        // z0 root + 4 tiles at z1 + 16 tiles at z2 = 21 tiles total.
+        let mut qt = TerrainTileQuadtree::new_with_linear_qt();
+        qt.qt.initialize_zero(&|v| {
+            TerrainTile::new(
+                TileXYZ {
+                    x: v.0,
+                    y: v.1,
+                    z: v.2,
+                },
+                0.,
+                0.,
+            )
+        });
+        setup_tile(&mut qt, (0, 0, 0));
+        setup_tile(&mut qt, (0, 0, 1));
+        setup_tile(&mut qt, (1, 0, 1));
+        setup_tile(&mut qt, (0, 1, 1));
+        setup_tile(&mut qt, (1, 1, 1));
+
+        let point = LngLat {
+            lng: Angle::new(2.5),
+            lat: Angle::new(1.1),
+        };
+
+        // The pruning predicate skips subtrees whose extent misses the point, so
+        // `contain` is evaluated only along the single descent path — never on
+        // the 12 z2 tiles in the other three quadrants. Without pruning every
+        // tile would be visited.
+        let contain_calls = Cell::new(0);
+        let overlaps_calls = Cell::new(0);
+        let h = find_contained_child(
+            &qt,
+            &|t| {
+                contain_calls.set(contain_calls.get() + 1);
+                t.extent.contains(&point)
+            },
+            &|t| {
+                overlaps_calls.set(overlaps_calls.get() + 1);
+                t.extent.contains(&point)
+            },
+        );
+
+        // Same result as the unpruned walk.
+        assert_eq!(
+            qt.qt.get(h.unwrap()).unwrap().coords,
+            TileXYZ { x: 3, y: 1, z: 2 }
+        );
+
+        // Only the deepest matching tile reaches `contain` (its overlapping
+        // ancestors short-circuit on a child match, its siblings are pruned).
+        assert_eq!(contain_calls.get(), 1);
+        // Visited tiles stay on the descent path: root + its 4 children + at
+        // most the matching child's 4 children = 9 (fewer in practice, as the
+        // child loop stops at the first match). Far below the 21 tiles a full,
+        // unpruned walk would visit.
+        assert!(
+            overlaps_calls.get() <= 9,
+            "expected pruned visit count, got {}",
+            overlaps_calls.get()
+        );
     }
 
     use super::find_terrain_tile_for_extent;
@@ -1048,6 +1118,40 @@ mod test {
         assert_eq!(leaves.len(), 2);
     }
 
+    #[test]
+    fn terrain_height_for_extent_reads_covering_tile() {
+        use super::terrain_height_for_extent;
+
+        let mut qt = setup_qt_with_ready_tiles();
+        // Give a ready z=2 tile a known elevation.
+        mark_tile_ready(&mut qt, (3, 1, 2));
+        let handle = qt.qt.leaf((3, 1, 2)).unwrap().handle();
+        {
+            let t = qt.qt.get_mut(handle).unwrap();
+            t.max_height = 1500.;
+            t.min_height = -20.;
+        }
+
+        // An extent centred inside that tile resolves to its elevation
+        // (point-in-tile, independent of coordinate identity).
+        let extent = qt.qt.get(handle).unwrap().extent;
+        assert_eq!(terrain_height_for_extent(&qt, &extent), Some((1500., -20.)));
+    }
+
+    #[test]
+    fn terrain_height_for_extent_none_without_ready_terrain() {
+        use super::terrain_height_for_extent;
+
+        // No tile has a cached mesh → nothing to read.
+        let qt = setup_qt_with_ready_tiles();
+        let extent = qt
+            .qt
+            .get(qt.qt.leaf((3, 1, 2)).unwrap().handle())
+            .unwrap()
+            .extent;
+        assert_eq!(terrain_height_for_extent(&qt, &extent), None);
+    }
+
     /// Initialize a leaf with the Geographic tiling scheme so its extent and
     /// children match EPSG:4326 layout.
     fn setup_geographic_tile(qt: &mut TerrainTileQuadtree, coords: Coords<usize>) {
@@ -1107,12 +1211,15 @@ mod test {
         // root — must descend into the (1,0,0) subtree, not give up because
         // the west root (0,0,0) misses. Internal y is XYZ-style, so at z=1
         // (2,1,1) covers lng 0°..90°, lat -90°..0°.
-        let east_handle = find_contained_child(&qt, &|t| {
-            t.extent.contains(&LngLat {
-                lng: Angle::new(1.0), // ~57°E
-                lat: Angle::new(-0.5),
-            }) && t.cached_mesh_handle.is_some()
-        });
+        let east_point = LngLat {
+            lng: Angle::new(1.0), // ~57°E
+            lat: Angle::new(-0.5),
+        };
+        let east_handle = find_contained_child(
+            &qt,
+            &|t| t.extent.contains(&east_point) && t.cached_mesh_handle.is_some(),
+            &|t| t.extent.contains(&east_point),
+        );
         let east_tile = qt.qt.get(east_handle.unwrap()).unwrap();
         assert_eq!(east_tile.coords, TileXYZ { x: 2, y: 1, z: 1 });
     }
@@ -1132,9 +1239,7 @@ mod terrain_tile_tests {
     use navara_material::{Appearance, HillshadeConfig, RasterTileMaterial};
     use navara_texture_fragment::{TextureFragment, TextureFragmentStatus};
 
-    use crate::raster_tile_texture_fragment::{
-        TileTextureFragmentMarker, TileTextureFragmentQuery,
-    };
+    use crate::raster_tile_texture_fragment::TileTextureFragmentMarker;
 
     // ---- shared fixtures ----
 
@@ -1194,12 +1299,12 @@ mod terrain_tile_tests {
         }
     }
 
-    // ---- is_texture_ready ----
+    // ---- is_hillshade_ready ----
 
-    mod is_texture_ready {
+    mod is_hillshade_ready {
         use super::*;
 
-        /// Returns `is_texture_ready` for a tile at z=5, given the layer fixture and
+        /// Returns `is_hillshade_ready` for a tile at z=5, given the layer fixture and
         /// closures that produce the entity-id arrays. The setup callback receives
         /// the world so it can spawn entities and reference their IDs.
         fn run<F>(layers: Vec<(TilesLayer, Order)>, setup: F) -> bool
@@ -1210,58 +1315,48 @@ mod terrain_tile_tests {
             for (layer, order) in layers {
                 app.world_mut().spawn((layer, order));
             }
-            let (tex_ids, hill_ids) = setup(app.world_mut());
+            let (_tex_ids, hill_ids) = setup(app.world_mut());
 
             #[derive(Resource, Default)]
             struct Out(Option<bool>);
             app.init_resource::<Out>();
 
-            let tex_ids = std::sync::Mutex::new(Some(tex_ids));
             let hill_ids = std::sync::Mutex::new(Some(hill_ids));
             app.add_systems(
                 Update,
-                move |texture_fragment: TileTextureFragmentQuery,
-                      data_requesters: Query<&DataRequester>,
+                move |data_requesters: Query<&DataRequester>,
                       tiles: Query<(&TilesLayer, &Order)>,
                       mut out: ResMut<Out>| {
                     let mut tile = TerrainTile::new(TileXYZ { x: 0, y: 0, z: 5 }, 0., 0.);
-                    tile.texture_fragment_entity_ids =
-                        Some(tex_ids.lock().unwrap().take().unwrap());
                     tile.hillshade_entity_ids = Some(hill_ids.lock().unwrap().take().unwrap());
-                    out.0 =
-                        Some(tile.is_texture_ready(&texture_fragment, &data_requesters, &tiles));
+                    out.0 = Some(tile.is_hillshade_ready(&data_requesters, &tiles));
                 },
             );
             app.update();
             app.world().resource::<Out>().0.unwrap()
         }
 
-        /// A None slot for an in-zoom regular layer must NOT be treated as ready.
-        /// Before the fix, the `unwrap_or(true)` in the all-check would have
-        /// returned true and let the tile render with a missing texture.
+        /// Regular (texture) layers no longer gate terrain-side texture
+        /// readiness: they are owned by the raster pipeline and pulled
+        /// separately (with ancestor fallback). A regular-only tile is therefore
+        /// texture-ready regardless of its (now unused) terrain texture slots.
         #[test]
-        fn none_slot_on_in_zoom_regular_layer_is_not_ready() {
+        fn regular_layers_do_not_gate_texture_readiness() {
             let ready = run(
                 vec![
                     (regular_layer("a", 0, 20), Order(0)),
                     (regular_layer("b", 0, 20), Order(1)),
                 ],
-                |world| {
-                    // Layer 0 has a succeeded texture; layer 1's slot is None
-                    // (simulating a filter-rejected request that hasn't retried yet).
-                    let e0 = world
-                        .spawn((
-                            TileTextureFragmentMarker(0),
-                            texture_fragment(TextureFragmentStatus::Success),
-                        ))
-                        .id();
-                    (vec![Some(e0), None], vec![None, None])
+                |_world| {
+                    // No terrain-owned texture entities: regular textures are
+                    // the raster pipeline's responsibility now.
+                    (vec![None, None], vec![None, None])
                 },
             );
 
             assert!(
-                !ready,
-                "in-zoom regular layer with None slot must not be ready"
+                ready,
+                "regular-only tile is texture-ready (terrain gating is hillshade-only)"
             );
         }
 
@@ -1293,8 +1388,7 @@ mod terrain_tile_tests {
         }
 
         /// A tile with only hillshade layers must become ready as soon as the
-        /// hillshade DataRequester succeeds — even though `texture_fragment_entity_ids`
-        /// holds only Nones at those indices.
+        /// hillshade DataRequester succeeds, reading from `hillshade_entity_ids`.
         #[test]
         fn hillshade_only_tile_is_ready_when_hill_array_has_succeeded_entity() {
             let ready = run(vec![(hillshade_layer("h", 0, 20), Order(0))], |world| {
@@ -1313,34 +1407,33 @@ mod terrain_tile_tests {
             );
         }
 
-        /// When a regular layer's texture is still pending, the tile is not ready,
-        /// even if a hillshade layer is already succeeded. This exercises the
-        /// per-layer all-check: regular Some(pending) → false.
+        /// A pending regular layer must NOT block terrain readiness: regular
+        /// textures are pulled from the raster pipeline, so terrain-side texture
+        /// readiness depends only on the hillshade layer here.
         #[test]
-        fn pending_regular_blocks_readiness_even_with_succeeded_hillshade() {
+        fn pending_regular_does_not_block_when_hillshade_ready() {
             let ready = run(
                 vec![
                     (regular_layer("a", 0, 20), Order(0)),
                     (hillshade_layer("h", 0, 20), Order(1)),
                 ],
                 |world| {
-                    let e0 = world
-                        .spawn((
-                            TileTextureFragmentMarker(0),
-                            texture_fragment(TextureFragmentStatus::Pending),
-                        ))
-                        .id();
                     let h1 = world
                         .spawn((
                             TileTextureFragmentMarker(0),
                             data_requester(DataRequesterStatus::Success),
                         ))
                         .id();
-                    (vec![Some(e0), None], vec![None, Some(h1)])
+                    // Regular slot stays None (raster's job); only the hillshade
+                    // entity gates terrain readiness.
+                    (vec![None, None], vec![None, Some(h1)])
                 },
             );
 
-            assert!(!ready, "pending regular layer must block readiness");
+            assert!(
+                ready,
+                "pending regular must not block; terrain gating is hillshade-only"
+            );
         }
     }
 
@@ -1461,7 +1554,6 @@ mod terrain_tile_tests {
             app.add_systems(
                 Update,
                 move |qt: bevy_ecs::system::Res<TerrainTileQuadtree>,
-                      texture_fragment: TileTextureFragmentQuery,
                       data_requesters: Query<&DataRequester>,
                       terrain_data_requester: crate::TileTerrainDataRequesterQuery,
                       terrain_layers: Query<&TerrainLayer>,
@@ -1471,7 +1563,6 @@ mod terrain_tile_tests {
                     let child = child.lock().unwrap().take().unwrap();
                     let rs = child.is_ready(
                         &qt,
-                        &texture_fragment,
                         &data_requesters,
                         &terrain_data_requester,
                         &terrain_layer,

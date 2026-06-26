@@ -2,8 +2,11 @@
 
 How `@navara/three` composites many overlays — hillshade normals, elevation
 heatmaps, multiple raster tiles, and texturized vector tiles — onto a single
-terrain mesh. For the broader rendering pipeline see
-[ARCHITECTURE.md](ARCHITECTURE.md); for the enhancer pattern reused here see
+terrain mesh. For how those tiles are selected and resolved on the Rust side
+(the terrain/raster quadtree traversals that feed this stage) see
+[TILE_TERRAIN_TRAVERSAL.md](TILE_TERRAIN_TRAVERSAL.md). For the broader rendering
+pipeline see [ARCHITECTURE.md](ARCHITECTURE.md); for the enhancer pattern reused
+here see
 [material/enhancer/DESIGN.md](../web/navara_three/src/material/enhancer/DESIGN.md).
 
 ## Overview
@@ -154,7 +157,9 @@ that is **shown AND bound to a texture**:
 - **`CompositeLayer`** — a discriminated union: `raster` (a raster tile *or* a
   texturized vector scene), `hillshade`, or `elevationHeatmap`. Each carries its
   `absSlot`, `region` (`raster` | `vector`), `texture`, and UV transform; raster
-  layers also carry color / opacity / water.
+  layers also carry color / opacity / water, and — for a WebMercator raster
+  draped on Geographic terrain — a `reproject` `[south, north]` latitude range
+  (see [N:M draping](#nm-draping-stitching-and-mercator-reprojection)).
 - **`CompositeGlobals`** — tile-wide, non-per-slot inputs: watermask, colormap +
   elevation decoder params, hillshade exaggeration.
 
@@ -353,14 +358,80 @@ result into `isWater`. So even an open-ocean tile with no raster/vector overlays
 still bakes water into `attr.r` for the main shader's reflection — which is why
 the bake runs for a watermask-only tile even though it has zero slots.
 
-## Extending: the stitching seam
+Because raster imagery now drapes on quantized-mesh tiles, a watermask tile can
+also have a **winning raster slot**. The watermask flags water independently of
+which slot wins the blend, so the main shader (`generateTileMapFragment`) OR's
+`useWater` into `useSpecular` rather than gating it on the winner's own specular
+flag — otherwise a draped raster slot (`uSpeculars == false`) would suppress the
+watermask glint. Per-slot water specular params (`shininess`,
+`specularStrength`) only exist for **vector** water layers, so when the winner is
+a raster slot the shader falls back to the default water appearance (the same
+one the no-winner open-ocean path uses) instead of reading the raster slot's
+zeroed params.
 
-Today one `CompositeLayer` maps to exactly one slot. Stitching multiple raster
-textures onto one terrain tile (e.g. several source tiles covering one
-quantized-mesh tile) is the intended next step: expand a layer into several
-consecutive `SlotBinding`s inside `planSlots()`. Everything downstream already
-binds per `SlotBinding`, so the bake, the atlas, and the main shader need no
-changes.
+## N:M draping: stitching and Mercator reprojection
+
+When the raster and terrain schemes differ — a WebMercator imagery layer draped
+on a **Geographic** quantized-mesh tile — one terrain tile is covered by
+**several** source tiles, and each source tile's latitude axis is non-linear
+relative to the terrain tile's equal-degree grid. The composite pass handles
+both, and neither one needed a change to `planSlots()` or the atlas.
+
+**Stitching is done upstream, not in `planSlots()`.** The Rust pull
+(`resolve_raster_textures`, see
+[TILE_TERRAIN_TRAVERSAL.md](TILE_TERRAIN_TRAVERSAL.md)) already resolves the
+**set** of overlapping WebMercator tiles and hands `update_mesh_material` one
+material slot per tile. So a single logical layer arrives at the compositor as
+**several independent `RasterCompositeLayer`s**, each with its own `texture` and
+`uvOffset`/`uvScale` sub-rect. `buildCompositeLayers()` and `planSlots()` treat
+them like any other slot — one `CompositeLayer` is still exactly one slot. (This
+is why the earlier "expand a layer into consecutive `SlotBinding`s" idea was
+unnecessary: the fan-out happens before the snapshot.) The count is capped on
+the Rust side by `RASTER_DRAPE_SLOT_BUDGET`; the TS overflow guard in
+`TileMesh.bindUniforms` (`textureFragmentsLen > texturizedSceneIndexFrom`) is the
+final safety net.
+
+**Latitude is reprojected per fragment.** The affine `uvOffset`/`uvScale` maps
+**longitude** exactly but stretches **latitude** (WebMercator is non-linear in
+latitude; Geographic is equal-degree). The base enhancer
+(`tileCompositeBaseEnhancer`) carries three extra per-slot uniforms for this:
+
+| Uniform | Source | Meaning |
+| --- | --- | --- |
+| `uReproject[k]` | `RasterCompositeLayer.reproject != null` | `1` = reproject this slot's latitude |
+| `uReprojectTerrainLat[k]` | `reproject` `[south, north]` | terrain tile latitude band (radians) |
+| `uReprojectMerc[k]` | precomputed in `bindSlot` | `(mRs, mDen, clampTop, clampBottom)` — source tile's Mercator band start + span, plus polar-cap clamp flags |
+
+`bindSlot` recovers the source tile's latitude band from the affine y mapping and
+precomputes its Mercator-space start/span (`log(tan(π/4 + lat/2))`) on the CPU, so
+the per-fragment shader does **one** transcendental — `gReprojMLat`, the
+fragment's own latitude in Mercator space — and reuses it across every
+reprojecting slot (the terrain band is tile-wide):
+
+```mermaid
+flowchart TD
+  A["raster slot, uReproject[k] == 1"] --> B["gReprojMLat = log(tan(π/4 + lat/2))<br/>(once per fragment, reused)"]
+  B --> C["texUv.y = (gReprojMLat − mRs) / mDen<br/>(skip if mDen ≈ 0 — deep tile, sub-pixel)"]
+  C --> D["polar-cap clamp<br/>(min/max onto band-edge texel)"]
+  D --> E["inBounds = texUv ∈ [0,1]²<br/>confine to this tile's sub-rect"]
+  E --> F["alpha ×= inBounds<br/>drop fragments outside the sub-rect"]
+```
+
+Two subtleties:
+
+- **Sub-rect confinement.** With N:M draping each source tile covers only part of
+  the terrain tile. Outside its `[0,1]` UV range the sampler would smear the edge
+  texel, so `inBounds` (a `step` test) folds into the slot's `alpha` and drops it
+  there. Reprojection is the only path that pushes UV outside `[0,1]`, so both the
+  transcendental math and the bounds test live behind the `uReproject` branch —
+  same-scheme slots pay neither cost.
+- **Polar caps.** WebMercator imagery stops at ~±85.05°. When a slot is the
+  band-edge tile (`clampTop`/`clampBottom`), its last imagery row is clamped
+  across the polar overshoot instead of being dropped, so the cap is covered.
+
+The atlas, the main shader's atlas sampling, and the slot plan are all unchanged
+— the entire N:M mechanism lives in the pull (Rust) and the base composite
+enhancer's per-slot reprojection.
 
 ## Key files
 
@@ -371,7 +442,7 @@ changes.
 | `tileTexture/TileTextureCompositor.ts` | 1, 4 | vector-scene render, material cache, MRT bake |
 | `tileTexture/TileTextureCache.ts` | 4 | per-tile atlas lifecycle + dirty tracking |
 | `tileTexture/types.ts` | 2 | `CompositeLayer`, `CompositeGlobals` domain model |
-| `material/enhancer/tileComposite/tileCompositeBaseEnhancer/` | 4 | shader skeleton + core uniforms |
+| `material/enhancer/tileComposite/tileCompositeBaseEnhancer/` | 4 | shader skeleton + core uniforms + N:M Mercator reprojection |
 | `material/enhancer/tileComposite/tile{Hillshade,ElevationHeatmap,Water,Watermask}Enhancer/` | 4 | per-expression modules |
 | `material/enhancer/tileComposite/compose.ts` | 4 | enhancer chain, contributions, feature derivation |
 | `material/macro/tileShader.ts` | 5 | main TileMesh shader injections (atlas sampling) |

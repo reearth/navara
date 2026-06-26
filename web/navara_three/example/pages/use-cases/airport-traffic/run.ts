@@ -78,7 +78,7 @@ const constructData = async () => {
     return {
       thickness,
       transparent: true,
-      opacity: 0.3,
+      opacity: 1,
       segments: 64,
       height: 0,
       arcHeightScale: 0.3,
@@ -111,14 +111,10 @@ export async function run() {
 
   view.toneMappingExposure = 10;
 
-  view.addLight({
-    ambient: {},
-  });
-
   view.addMesh({
     stars: {
-      intensity: 100,
-      pointSize: 1.5,
+      intensity: 50,
+      pointSize: 1.2,
     },
   });
 
@@ -141,6 +137,7 @@ export async function run() {
     rasterTile: {
       maxZoom: 18,
       minZoom: 2,
+      color: new Color().setHex(0x555555),
     },
   });
 
@@ -151,7 +148,7 @@ export async function run() {
     },
     rasterTile: {
       maxZoom: 6,
-      minZoom: 1,
+      minZoom: 2,
       opacity: 0.8,
     },
   });
@@ -162,15 +159,25 @@ export async function run() {
       radiusScale: 1.2,
       coefficient: 0.43,
       exponent: 40.0,
-      glowColor: new Color().setStyle("#938cff"),
+      glowColor: new Color().setStyle("#48447e"),
       opacity: 0.5,
     },
   });
 
   const { arcLines } = await constructData();
 
+  const bloom = view.addEffect({
+    selectiveBloom: {
+      strength: 1.5,
+      radius: 0.01,
+    },
+  });
+
   const arcLineLayer = view.addMesh<ArclineMeshDesc>({
     arcLines,
+    emissiveColor: new Color().setStyle("#111111"),
+    emissiveIntensity: 0.3,
+    effectIds: [bloom.id],
   });
 
   // Dash animation - moves from src to dest

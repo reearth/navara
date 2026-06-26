@@ -9,6 +9,11 @@ export const run = async (view: ThreeView) => {
 
   view.globe.useNormal = false;
 
+  view.addLayer({
+    type: "terrain",
+    ellipsoid: {},
+  });
+
   addCtrlPanel(
     [
       {

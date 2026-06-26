@@ -7,6 +7,8 @@ sidebar:
 
 The Tile layer is a layer for displaying XYZ raster tiles (aerial photos, satellite imagery, map tiles, etc.).
 
+When a [Terrain Layer](../../../three/resource-layer/terrain-layer/) is present, raster tiles are draped onto the 3D surface — including [quantized-mesh terrain](../../../three/resource-layer/quantized-mesh-terrain-material/). Without a terrain layer, they are rendered on the flat globe.
+
 ## Basic Configuration
 
 | Property   | Type              | Description                                          |

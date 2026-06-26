@@ -9,6 +9,48 @@ sidebar:
 
 For Cesium Ion assets, prefer the [CesiumIonPlugin](../../../three_plugins/cesiumionplugin/), which handles endpoint resolution and access tokens for you.
 
+## Supported Specifications
+
+Navara supports the following parts of the quantized-mesh format.
+
+### Tile format
+
+| Feature                | Description                                                                                                  |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------ |
+| quantized-mesh (`.terrain`) | Pre-meshed terrain tiles ([quantized-mesh 1.0](https://github.com/CesiumGS/quantized-mesh)) served over an XYZ endpoint |
+
+### Extensions
+
+| Extension                       | Enabled by             | Description                                                                                |
+| ------------------------------- | ---------------------- | ------------------------------------------------------------------------------------------ |
+| Oct-Encoded Per-Vertex Normals  | `requestVertexNormals` | Appends `octvertexnormals` to the request. Required to shade (light) the terrain surface.  |
+| Water Mask                      | `requestWaterMask`     | Appends `watermask` to the request. Distinguishes land from water on the surface.          |
+
+### Tiling schemes
+
+| Scheme                | Enabled by         | Notes                                                                                |
+| --------------------- | ------------------ | ------------------------------------------------------------------------------------ |
+| Geographic (EPSG:4326) | `geographic: true` (default) | Cesium World Terrain and most self-hosted endpoints. 2 roots, equal-degree, ±90°. |
+| WebMercator (EPSG:3857) | `geographic: false` | For endpoints served on a WebMercator grid. 1 root, ±85.05°.                       |
+
+The `tms` flag controls whether the endpoint uses TMS tile coordinates (y axis flipped); Cesium Ion's layers are TMS, which is the default.
+
+## Combining with Other Layers
+
+A quantized-mesh terrain layer provides the 3D surface. You can drape additional layers on top of it:
+
+| Layer                                                                  | Combinable | Notes                                                                                          |
+| ---------------------------------------------------------------------- | ---------- | ---------------------------------------------------------------------------------------------- |
+| [Tile Layer](../../../three/resource-layer/tile-layer/) (`rasterTile`) | ✅ Yes     | Raster imagery (aerial, satellite, map tiles) is reprojected and draped onto the terrain mesh. Multiple raster layers can be stacked. |
+| [Tile Layer](../../../three/resource-layer/tile-layer/) (`hillshade`)  | ✅ Yes     | Shaded relief computed from DEM tiles, rendered over the 3D surface.                            |
+| [MVT Layer](../../../three/resource-layer/mvt-layer/) (vector tiles)   | ❌ Not yet | Vector tiles cannot currently be draped onto quantized-mesh terrain.                            |
+
+Raster tiles are WebMercator while Geographic quantized-mesh terrain is equal-degree, so one terrain tile can overlap several raster tiles. Navara resolves this overlap and reprojects each raster tile per fragment, so raster imagery aligns correctly even over Geographic terrain. See [Terrain Layer › Quantized-Mesh with Raster Imagery](../../../three/resource-layer/terrain-layer/#quantized-mesh-with-raster-imagery) for an example.
+
+:::note
+Raster imagery (WebMercator) stops at ~±85.05°, while Geographic terrain reaches ±90°. Near the poles, the last available imagery row is stretched across the cap so the surface is covered rather than blank.
+:::
+
 ## Properties
 
 ### castShadow

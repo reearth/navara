@@ -577,6 +577,16 @@ pub struct RasterTileInternalMaterial {
     /// `None` means identity (own tile's data is in use). Length matches `texture_fragments`
     /// and other per-layer vectors. Covers both regular texture layers and hillshade layers.
     pub layer_uv_transforms: Vec<Option<TileUvTransform>>,
+
+    /// Per-slot flag: the slot is a WebMercator raster draped on a Geographic
+    /// (e.g. quantized-mesh) terrain tile, so the composite shader must reproject
+    /// its latitude (Mercator) instead of using the linear affine UV. Length
+    /// matches the other per-slot vectors.
+    pub layer_reproject: Vec<bool>,
+    /// The terrain tile's `(south, north)` latitude in radians, used by the
+    /// composite shader to reproject `layer_reproject` slots. `None` when no slot
+    /// needs reprojection (WebMercator terrain).
+    pub terrain_lat_range: Option<[f32; 2]>,
 }
 
 #[derive(Debug, Clone, PartialEq, Component)]

@@ -7,7 +7,7 @@ import { CesiumIonPlugin } from "@navara/three_plugins";
 import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../../helpers/attributions";
-import { TERRAIN_DATASETS } from "../../../helpers/constants";
+import { TERRAIN_DATASETS, TILE_DATASETS } from "../../../helpers/constants";
 import { addDateControl, atZoneDate } from "../../../helpers/control";
 
 export type CustomDescriptions = DefaultDescriptions;
@@ -84,6 +84,27 @@ export const run = async (
     });
   }
 
+  view.addLayer({
+    type: "tiles",
+    data: {
+      url: TILE_DATASETS.eox.url,
+    },
+    rasterTile: {
+      maxZoom: 15,
+    },
+  });
+
+  view.addLayer({
+    type: "tiles",
+    data: {
+      url: TILE_DATASETS.gsiSeamlessphoto.url,
+    },
+    rasterTile: {
+      maxZoom: 18,
+      minZoom: 10,
+    },
+  });
+
   view.setCamera(CAMERA_COORDS);
 
   activePane?.dispose();
@@ -116,5 +137,5 @@ export const run = async (
     terrainType === "cesiumIon"
       ? TERRAIN_DATASETS.cesiumIon
       : TERRAIN_DATASETS.reearthQuantizedMesh;
-  showAttributions([terrainDataset]);
+  showAttributions([terrainDataset, TILE_DATASETS.eox]);
 };
