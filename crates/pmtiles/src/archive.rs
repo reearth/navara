@@ -236,17 +236,21 @@ impl Archive {
                 return Resolution::Absent;
             };
             if !entry.is_leaf() {
+                let length = u64::from(entry.length);
+                if length == 0 {
+                    return Resolution::Absent;
+                }
                 // Tile entry offsets are relative to `tile_data_offset`;
                 // `checked_add` treats a corrupt offset that wraps `u64` as no
                 // tile rather than emitting a bogus range request.
                 let Some(offset) = ready.header.tile_data_offset.checked_add(entry.offset) else {
                     return Resolution::Absent;
                 };
+                if offset.checked_add(length).is_none() {
+                    return Resolution::Absent;
+                }
                 return Resolution::Tile {
-                    request: ByteRange {
-                        offset,
-                        length: u64::from(entry.length),
-                    },
+                    request: ByteRange { offset, length },
                 };
             }
             // A leaf whose fetch previously failed: treat as no data rather
@@ -255,9 +259,11 @@ impl Archive {
                 return Resolution::Absent;
             }
             // Leaf pointer: descend if cached, otherwise ask for it.
-            match ready.leaves.get(&entry.offset) {
-                Some(child) => dir = child,
                 None => {
+                    let length = u64::from(entry.length);
+                    if length == 0 {
+                        return Resolution::Absent;
+                    }
                     // Leaf entry offsets are relative to `leaf_dirs_offset`;
                     // a corrupt offset that wraps `u64` resolves to absent
                     // rather than producing a bogus range request.
@@ -265,15 +271,14 @@ impl Archive {
                     else {
                         return Resolution::Absent;
                     };
+                    if offset.checked_add(length).is_none() {
+                        return Resolution::Absent;
+                    }
                     return Resolution::NeedLeaf {
                         leaf_offset: entry.offset,
-                        request: ByteRange {
-                            offset,
-                            length: u64::from(entry.length),
-                        },
+                        request: ByteRange { offset, length },
                     };
                 }
-            }
         }
     }
 
