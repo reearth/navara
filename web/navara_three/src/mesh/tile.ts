@@ -339,6 +339,13 @@ export class TileMesh
     const isHillshades: boolean[] = ud.isHillshades?.value ?? [];
     const isElevationHeatmaps: boolean[] = ud.isElevationHeatmaps?.value ?? [];
     const waters: boolean[] = ud.waters?.value ?? [];
+    // Per-slot Mercator reprojection flag + the shared terrain latitude range.
+    const layerReproject: number[] = ud.layerReproject ?? [];
+    const terrainLatRange: number[] = ud.terrainLatRange ?? [];
+    const reproject: [number, number] | undefined =
+      terrainLatRange.length === 2
+        ? [terrainLatRange[0], terrainLatRange[1]]
+        : undefined;
     const boundary = this.texturizedSceneIndexFrom;
 
     const layers: CompositeLayer[] = [];
@@ -383,6 +390,9 @@ export class TileMesh
           color: colors[absSlot] ?? new Color(),
           opacity: opacities[absSlot] ?? 1,
           water: waters[absSlot] ?? false,
+          // WebMercator raster on Geographic terrain: carry the terrain latitude
+          // range so the composite shader can reproject this slot's latitude.
+          reproject: layerReproject[absSlot] === 1 ? reproject : undefined,
         });
       }
     }
@@ -733,9 +743,6 @@ export class TileMesh
     m.userData.uAttrAtlas = { value: atlasOutputs.attr };
     m.userData.uNormalAtlas = { value: atlasOutputs.normal };
 
-    m.customProgramCacheKey = () =>
-      "TILE" + JSON.stringify(this.computeFeatures());
-
     m.onBeforeCompile = (shader) => {
       shader.defines ??= {};
       Object.assign(shader.defines, m.userData.defines);
@@ -808,7 +815,7 @@ ${generateTileCommonInjection(maxTextures)}
         `,
           useNormal,
         )
-        .replace("#include <map_fragment>", generateTileMapFragment())
+        .replace("#include <map_fragment>", generateTileMapFragment(maxTextures))
         .replaceWithCondition(
           "#include <normal_fragment_maps>",
           generateTileNormalFragmentMaps(features),
@@ -1367,7 +1374,12 @@ ${generateTileCommonInjection(maxTextures)}
 
     const numTexturizedVector = this.numTexturizedVector;
 
-    if (textureFragmentsLen >= this.texturizedSceneIndexFrom) {
+    // Raster textures fill slots [0, texturizedSceneIndexFrom); texturized vector
+    // scenes occupy the rest. Exactly `texturizedSceneIndexFrom` raster layers fit
+    // (indices 0..from-1), so only a strictly larger count overflows. Rust caps the
+    // draped-tile fan-out (RASTER_DRAPE_SLOT_BUDGET) to keep this from triggering;
+    // this guard is the final safety net and the extra fragments are dropped below.
+    if (textureFragmentsLen > this.texturizedSceneIndexFrom) {
       console.error(
         `Exceeded maximum textures: ${textureFragmentsLen} layers are provided. Maximum the number of textures is ${this.texturizedSceneIndexFrom}.`,
       );
@@ -1378,6 +1390,12 @@ ${generateTileCommonInjection(maxTextures)}
     // Per-layer UV transforms from Rust (covers regular textures and hillshades).
     // `null` entry means identity (no parent reuse).
     const layerUvTransforms = mat.layerUvTransforms?.() ?? [];
+
+    // Per-slot Mercator reprojection (WebMercator raster on Geographic terrain).
+    // Stashed for `buildCompositeLayers`; the terrain latitude range is shared by
+    // every reprojecting slot of this tile.
+    m.userData.layerReproject = Array.from(mat.layerReproject ?? []);
+    m.userData.terrainLatRange = Array.from(mat.terrainLatRange ?? []);
 
     // Setting tile textures
     for (let i = 0; i < textureFragmentsLen; i++) {

@@ -71,14 +71,19 @@ export function generateTileCommonInjection(numTextures: number): string {
  * generateTileEmissiveBuffer below to decide what gets written to the
  * emissive/effect MRT attachments).
  */
-export function generateTileMapFragment(): string {
+export function generateTileMapFragment(maxTextures: number): string {
   return `
   vec4 atlasColor = texture2D(uColorAtlas, vOrigUv);
   vec4 atlasAttr  = texture2D(uAttrAtlas,  vOrigUv);
 
   // attr.a encodes (winningSlot + 1) / 255 — 0 means no contributing slot.
   int winIdx = int(round(atlasAttr.a * 255.0)) - 1;
-  bool hasWinner = winIdx >= 0;
+  // Bound + clamp the decoded index to the valid uniform-array range. A tile drawn
+  // BEFORE its composite atlas is initialized samples an undefined attr.a that can
+  // decode to an out-of-range winIdx. An out-of-bounds DYNAMIC array index
+  // is undefined behavior that HANGS the Apple/iOS GPU with no WebGL error —
+  bool hasWinner = winIdx >= 0 && winIdx < ${maxTextures};
+  winIdx = clamp(winIdx, 0, ${maxTextures - 1});
 
   // Picking: only vector (texturized) layers carry a pickable entity.
   // attr.g is 1.0 on a vector pixel, 0.0 on a raster pixel — masking by
@@ -114,10 +119,22 @@ export function generateTileMapFragment(): string {
   // TODO: Support water material
   float waterScaleNormal      = hasWinner ? uWaterScaleNormals[winIdx]   : 0.0;
   float waterSpeed            = hasWinner ? uWaterSpeeds[winIdx]         : 0.0;
-  float waterShininess        = hasWinner ? uShininesses[winIdx]         : 100.0;
-  float waterSpecularStrength = hasWinner ? uSpecularStrengths[winIdx]   : 10.0;
+  // Per-slot water specular params only exist for vector (texturized) water
+  // layers. When useWater comes from the tile-wide quantized-mesh watermask
+  // instead, the winning slot is a raster imagery layer (attr.g == 0) that
+  // carries no water params — so fall back to the default water appearance,
+  // the same one the no-winner open-ocean path uses. Without this a raster tile
+  // draped over a watermask would index the raster slot's zeroed params and the
+  // water glint would vanish under the imagery.
+  bool hasSlotWaterParams     = hasWinner && isTexturizedLayer;
+  float waterShininess        = hasSlotWaterParams ? uShininesses[winIdx]       : 50.0;
+  float waterSpecularStrength = hasSlotWaterParams ? uSpecularStrengths[winIdx]  : 1.0;
   float applyWaterNormals     = hasWinner ? uApplyWaterNormals[winIdx]   : 0.0;
-  bool  useSpecular           = hasWinner ? uSpeculars[winIdx]           : useWater;
+  // The watermask flags water independently of which slot wins the blend, so its
+  // specular must survive a (non-water) raster winner. OR it in rather than
+  // letting the winner's own specular flag gate it — otherwise a draped raster
+  // imagery slot (uSpeculars == false) suppresses the watermask water entirely.
+  bool  useSpecular           = useWater || (hasWinner && uSpeculars[winIdx]);
 
   float tileEmissiveIntensity = (hasWinner && isTexturizedLayer) ? uEmissiveIntensities[winIdx] : 0.0;
   vec3  tileEmissiveColor     = (hasWinner && isTexturizedLayer) ? uEmissiveColors[winIdx]      : vec3(0.0);

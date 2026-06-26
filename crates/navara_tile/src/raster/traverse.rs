@@ -2,47 +2,20 @@ use bevy_ecs::system::{Commands, Query};
 
 use navara_camera::CameraFrustum;
 use navara_component::{Order, Priority};
-use navara_core::{Ellipsoid, TileXYZ};
+use navara_core::Ellipsoid;
 use navara_fog::Fog;
 use navara_frame::FrameManager;
 use navara_layer::TilesLayer;
 use navara_math::{FloatType, Transform};
 use navara_occluder::ellipsoidal_occluder::EllipsoidalOccluder;
 use navara_tile_component::{
-    RasterTile, RasterTileQuadtree, TerrainInformationQuadtree, Tile, TileHandle,
-    TileTextureFragmentQuery,
+    RasterTile, RasterTileQuadtree, TerrainTileQuadtree, Tile, TileHandle,
+    TileTextureFragmentQuery, terrain_height_for_extent,
 };
 use navara_window::Window;
 
 use super::request::request_raster_texture_fragment;
 use super::tile_cache_manager::RasterTileCacheManager;
-
-/// Borrow the terrain elevation for a WebMercator tile coordinate from the
-/// terrain information quadtree (populated by the terrain pipeline). Raster tiles
-/// are otherwise flat at height 0, which makes their screen-space error
-/// underestimate detail on elevated terrain — so the raster stops subdividing
-/// while the terrain keeps refining (e.g. via upsampling), leaving coarse
-/// imagery on a detailed surface. Climbs to the nearest ancestor that has
-/// rendered terrain info.
-fn terrain_height(
-    terrain_qt: &TerrainInformationQuadtree,
-    coords: TileXYZ,
-) -> (FloatType, FloatType) {
-    let (mut x, mut y, mut z) = (coords.x, coords.y, coords.z);
-    loop {
-        if let Some(leaf) = terrain_qt.qt.leaf((x, y, z))
-            && let Some(info) = terrain_qt.qt.get(leaf.handle())
-        {
-            return (info.max_height, info.min_height);
-        }
-        if z == 0 {
-            return (0., 0.);
-        }
-        z -= 1;
-        x /= 2;
-        y /= 2;
-    }
-}
 
 /// Raster (texture) tile traversal in the WebMercator quadtree.
 ///
@@ -63,7 +36,7 @@ pub fn traverse_raster(
     handle: TileHandle,
     qt: &mut RasterTileQuadtree,
     tc: &mut RasterTileCacheManager,
-    terrain_qt: &TerrainInformationQuadtree,
+    terrain_qt: &TerrainTileQuadtree,
     frame: &FrameManager,
     camera: &Transform,
     frustum: &CameraFrustum,
@@ -75,14 +48,16 @@ pub fn traverse_raster(
     max_sse: f64,
     terrain_present: bool,
 ) {
-    let coords = match qt.qt.get(handle) {
-        Some(tile) => tile.coords,
+    let extent = match qt.qt.get(handle) {
+        Some(tile) => tile.extent,
         None => return,
     };
 
-    // Borrow the terrain elevation so the SSE matches the terrain's subdivision
-    // depth instead of treating the tile as flat at sea level.
-    let (max_height, min_height) = terrain_height(terrain_qt, coords);
+    // Borrow the terrain elevation (by extent, so it works on any terrain scheme
+    // including quantized-mesh/Geographic) so the SSE matches the terrain's
+    // subdivision depth instead of treating the tile as flat at sea level.
+    let (max_height, min_height) =
+        terrain_height_for_extent(terrain_qt, &extent).unwrap_or((0., 0.));
 
     let tile = qt.qt.get_mut(handle).unwrap();
     tile.update_heights(max_height, min_height);
@@ -188,69 +163,26 @@ mod tests {
     use navara_layer::LayerData;
     use navara_material::{Appearance, HillshadeConfig, RasterTileMaterial};
     use navara_math::Vec3;
+    use navara_mesh::CachedMeshHandle;
     use navara_texture_fragment::TextureFragment;
-    use navara_tile_component::{TerrainInformation, TileTextureFragmentMarker};
+    use navara_tile_component::{TerrainTile, TileTextureFragmentMarker};
 
-    // ----- terrain_height -----------------------------------------------------
-
-    /// Build a terrain-information quadtree with elevation set at the given
-    /// `(coords, max_height, min_height)` entries. Leaves can be inserted at
-    /// arbitrary coordinates without their ancestors (linear quadtree).
-    fn terrain_qt_with(entries: &[(TileXYZ, f64, f64)]) -> TerrainInformationQuadtree {
-        let mut qt = TerrainInformationQuadtree::new_with_linear_qt();
-        for &(coords, max_height, min_height) in entries {
-            qt.qt
-                .initialize_leaf((coords.x, coords.y, coords.z), &|_| TerrainInformation {
-                    max_height,
-                    min_height,
-                });
-        }
+    /// A terrain quadtree whose WebMercator root tile carries the given heights
+    /// and a (dummy) cached mesh, so `terrain_height_for_extent` resolves it.
+    fn terrain_qt_with_root_height(max_height: f64, min_height: f64) -> TerrainTileQuadtree {
+        let mut qt = TerrainTileQuadtree::new_with_linear_qt();
+        qt.qt.initialize_zero(&|(x, y, z)| {
+            let mut t = TerrainTile::new(TileXYZ { x, y, z }, max_height, min_height);
+            t.cached_mesh_handle = Some(CachedMeshHandle {
+                vertices: 0,
+                indices: 0,
+                uvs: 0,
+                heights: None,
+                normals: None,
+            });
+            t
+        });
         qt
-    }
-
-    #[test]
-    fn terrain_height_returns_exact_match() {
-        let qt = terrain_qt_with(&[(TileXYZ { x: 1, y: 2, z: 3 }, 1200., -30.)]);
-
-        assert_eq!(
-            terrain_height(&qt, TileXYZ { x: 1, y: 2, z: 3 }),
-            (1200., -30.)
-        );
-    }
-
-    #[test]
-    fn terrain_height_climbs_to_nearest_ancestor() {
-        // Info lives at the root and at z=1 (1,1,1). Querying a z=3 descendant of
-        // (1,1,1) must borrow the *nearest* ancestor (z=1), not the root.
-        let qt = terrain_qt_with(&[
-            (TileXYZ { x: 0, y: 0, z: 0 }, 9999., -9999.),
-            (TileXYZ { x: 1, y: 1, z: 1 }, 500., -10.),
-        ]);
-
-        // (7,7,3) -> (3,3,2) -> (1,1,1), the first ancestor that has info.
-        assert_eq!(
-            terrain_height(&qt, TileXYZ { x: 7, y: 7, z: 3 }),
-            (500., -10.)
-        );
-    }
-
-    #[test]
-    fn terrain_height_falls_back_to_root() {
-        // No intermediate info: the climb reaches the root and borrows its height.
-        let qt = terrain_qt_with(&[(TileXYZ { x: 0, y: 0, z: 0 }, 42., -7.)]);
-
-        assert_eq!(
-            terrain_height(&qt, TileXYZ { x: 5, y: 5, z: 4 }),
-            (42., -7.)
-        );
-    }
-
-    #[test]
-    fn terrain_height_defaults_to_zero_when_absent() {
-        // Nothing in the tree (not even the root): the climb bottoms out at z=0.
-        let qt = terrain_qt_with(&[]);
-
-        assert_eq!(terrain_height(&qt, TileXYZ { x: 5, y: 5, z: 4 }), (0., 0.));
     }
 
     // ----- traverse_raster ----------------------------------------------------
@@ -279,7 +211,7 @@ mod tests {
         texture_fragment: TileTextureFragmentQuery,
         mut qt: ResMut<RasterTileQuadtree>,
         mut tc: ResMut<RasterTileCacheManager>,
-        terrain_qt: Res<TerrainInformationQuadtree>,
+        terrain_qt: Res<TerrainTileQuadtree>,
         frame: Res<FrameManager>,
         window: Res<Window>,
         target: Res<TargetHandle>,
@@ -318,7 +250,7 @@ mod tests {
     /// App with the raster root tile, the terrain quadtree, and the supporting
     /// resources `traverse_raster` reads. `FramePlugin` advances the frame counter
     /// so `visited_at` becomes a meaningful non-zero value.
-    fn app_with_root(terrain_qt: TerrainInformationQuadtree) -> (App, TileHandle) {
+    fn app_with_root(terrain_qt: TerrainTileQuadtree) -> (App, TileHandle) {
         let mut app = App::new();
         app.add_plugins(navara_frame::FramePlugin);
 
@@ -384,15 +316,7 @@ mod tests {
 
     #[test]
     fn traverse_raster_marks_root_visited_and_borrows_terrain_height() {
-        let terrain_qt = {
-            let mut qt = TerrainInformationQuadtree::new_with_linear_qt();
-            qt.qt.initialize_zero(&|_| TerrainInformation {
-                max_height: 1000.,
-                min_height: -50.,
-            });
-            qt
-        };
-        let (mut app, handle) = app_with_root(terrain_qt);
+        let (mut app, handle) = app_with_root(terrain_qt_with_root_height(1000., -50.));
         app.insert_resource(TargetHandle(handle));
 
         app.add_systems(Update, run_traverse_system);
@@ -415,7 +339,7 @@ mod tests {
 
     #[test]
     fn traverse_raster_ignores_unknown_handle() {
-        let (mut app, _) = app_with_root(TerrainInformationQuadtree::new_with_linear_qt());
+        let (mut app, _) = app_with_root(TerrainTileQuadtree::new_with_linear_qt());
 
         // A handle the quadtree no longer holds: create a child leaf, capture its
         // handle, then drop it from the tree.
@@ -445,7 +369,7 @@ mod tests {
 
     #[test]
     fn traverse_raster_requests_texture_for_in_zoom_layer() {
-        let (mut app, handle) = app_with_root(TerrainInformationQuadtree::new_with_linear_qt());
+        let (mut app, handle) = app_with_root(TerrainTileQuadtree::new_with_linear_qt());
         app.insert_resource(TargetHandle(handle));
         app.world_mut().spawn((raster_layer("a", 0, 20), Order(0)));
 
@@ -478,7 +402,7 @@ mod tests {
 
     #[test]
     fn traverse_raster_request_is_idempotent() {
-        let (mut app, handle) = app_with_root(TerrainInformationQuadtree::new_with_linear_qt());
+        let (mut app, handle) = app_with_root(TerrainTileQuadtree::new_with_linear_qt());
         app.insert_resource(TargetHandle(handle));
         app.world_mut().spawn((raster_layer("a", 0, 20), Order(0)));
 
@@ -496,7 +420,7 @@ mod tests {
 
     #[test]
     fn traverse_raster_skips_hillshade_layer() {
-        let (mut app, handle) = app_with_root(TerrainInformationQuadtree::new_with_linear_qt());
+        let (mut app, handle) = app_with_root(TerrainTileQuadtree::new_with_linear_qt());
         app.insert_resource(TargetHandle(handle));
         // Regular layer at slot 0, hillshade layer at slot 1.
         app.world_mut()
@@ -527,7 +451,7 @@ mod tests {
 
     #[test]
     fn traverse_raster_skips_layer_below_min_zoom() {
-        let (mut app, handle) = app_with_root(TerrainInformationQuadtree::new_with_linear_qt());
+        let (mut app, handle) = app_with_root(TerrainTileQuadtree::new_with_linear_qt());
         app.insert_resource(TargetHandle(handle));
         // A layer that only exists from zoom 2 upward. The root (z=0) and z=1 are
         // below its min zoom, so requests must only appear once the traversal
@@ -552,7 +476,7 @@ mod tests {
 
     #[test]
     fn traverse_raster_stops_when_sse_satisfied() {
-        let (mut app, handle) = app_with_root(TerrainInformationQuadtree::new_with_linear_qt());
+        let (mut app, handle) = app_with_root(TerrainTileQuadtree::new_with_linear_qt());
         app.insert_resource(TargetHandle(handle));
         app.world_mut().spawn((raster_layer("a", 0, 20), Order(0)));
         // Huge threshold: the root's error is always acceptable.
@@ -573,7 +497,7 @@ mod tests {
 
     #[test]
     fn traverse_raster_subdivides_when_sse_exceeds_threshold() {
-        let (mut app, handle) = app_with_root(TerrainInformationQuadtree::new_with_linear_qt());
+        let (mut app, handle) = app_with_root(TerrainTileQuadtree::new_with_linear_qt());
         app.insert_resource(TargetHandle(handle));
         // max_zoom=2 bounds how deep the forced subdivision goes.
         app.world_mut().spawn((raster_layer("a", 0, 2), Order(0)));
@@ -598,7 +522,7 @@ mod tests {
 
     #[test]
     fn traverse_raster_stops_subdividing_at_max_zoom() {
-        let (mut app, handle) = app_with_root(TerrainInformationQuadtree::new_with_linear_qt());
+        let (mut app, handle) = app_with_root(TerrainTileQuadtree::new_with_linear_qt());
         app.insert_resource(TargetHandle(handle));
         // Layer maxes out at zoom 0, so even an unsatisfiable error must not fetch
         // finer tiles past the max zoom.

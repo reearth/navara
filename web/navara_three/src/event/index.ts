@@ -483,6 +483,17 @@ async function processRequestedData(ctx: EventContext, req: DataRequestEvent) {
     return;
   }
 
+  // Quantized-mesh extensions requested for this terrain tile (empty otherwise).
+  // The hyphen-joined token list is shared by the Accept header (server
+  // negotiation) and the URL query (cache key) below.
+  const terrainExts =
+    req.extension === "terrain"
+      ? [
+          ...(req.requestVertexNormals ? ["octvertexnormals"] : []),
+          ...(req.requestWaterMask ? ["watermask"] : []),
+        ]
+      : [];
+
   // Cesium-style quantized-mesh servers gate the normals/watermask extensions
   // behind an explicit Accept header. Only opt in when the layer requested it
   // — otherwise some servers refuse to respond, and we don't want to pay for
@@ -491,18 +502,23 @@ async function processRequestedData(ctx: EventContext, req: DataRequestEvent) {
     if (req.extension !== "terrain") {
       return req.token ? { Authorization: `Bearer ${req.token}` } : undefined;
     }
-    const exts: string[] = [];
-    if (req.requestVertexNormals) exts.push("octvertexnormals");
-    if (req.requestWaterMask) exts.push("watermask");
-    const accept = exts.length
-      ? `application/vnd.quantized-mesh;extensions=${exts.join("-")},application/octet-stream;q=0.9,*/*;q=0.01`
+    const accept = terrainExts.length
+      ? `application/vnd.quantized-mesh;extensions=${terrainExts.join("-")},application/octet-stream;q=0.9,*/*;q=0.01`
       : "application/vnd.quantized-mesh,application/octet-stream;q=0.9,*/*;q=0.01";
     const h: Record<string, string> = { Accept: accept };
     if (req.token) h.Authorization = `Bearer ${req.token}`;
     return h;
   })();
 
-  await fetch(req.url, { signal: abortController.signal, headers })
+  // Set extensions as query params to stale the cache.
+  const fetchUrl = (() => {
+    if (!terrainExts.length) return req.url;
+    const u = new URL(req.url, globalThis.location?.href);
+    u.searchParams.set("extensions", terrainExts.join("-"));
+    return u.toString();
+  })();
+
+  await fetch(fetchUrl, { signal: abortController.signal, headers })
     .then((res) => {
       if (!res.ok) throw new Error();
       return res.arrayBuffer();

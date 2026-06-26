@@ -81,6 +81,12 @@ uniform float uOpacities[${numTextures}];
 uniform sampler2D uTextures[${numTextures}];
 uniform vec2 uLayerUvOffset[${numTextures}];
 uniform vec2 uLayerUvScale[${numTextures}];
+uniform int uReproject[${numTextures}];
+uniform vec2 uReprojectTerrainLat[${numTextures}];
+// CPU-precomputed per-slot reprojection constants (see mutates.ts):
+//   .xy = (mRs, mDen) — source tile's Mercator band start + span,
+//   .z  = clamp-to-top-edge flag, .w = clamp-to-bottom-edge flag (polar cap).
+uniform vec4 uReprojectMerc[${numTextures}];
 ${contributions.slotUniformDecls}
 `
       : "";
@@ -104,13 +110,65 @@ ${contributions.globalUniformDecls}
     const isTexturizedConst = isVector ? "1.0" : "0.0";
     const ctx: CompositeSlotContext = { k, absSlot, isVector };
 
+    // WebMercator-on-Geographic latitude reprojection only applies to raster
+    // (imagery) slots; texturized vector reprojection is handled separately.
+    //
+    // Reprojection (and therefore N:M sub-rect confinement) is the only path that
+    // can drive texUv outside [0,1], so both the transcendental math and the
+    // `inBounds` test live behind the `uReproject` branch — non-reprojecting slots
+    // keep texUv in [0,1] by construction and pay neither cost.
+    const reprojectBlock = isVector
+      ? ""
+      : `
+    if (uReproject[${k}] == 1) {
+      // Affine UV is correct in longitude but stretches latitude. Remap this
+      // fragment's latitude through Mercator so it samples the source correctly.
+      //
+      // The only per-fragment transcendental left is mLat: it depends solely on
+      // vUv.y and the (tile-wide, slot-invariant) terrain lat range, so it is
+      // identical for every reprojecting slot — computed once and reused. The
+      // per-slot source band (mRs, mDen) and polar-cap flags are constant per slot
+      // and precomputed on the CPU (see mutates.ts), so no log/tan runs per slot.
+      if (!gReprojMLatReady) {
+        float lat = uReprojectTerrainLat[${k}].x
+          + vUv.y * (uReprojectTerrainLat[${k}].y - uReprojectTerrainLat[${k}].x);
+        gReprojMLat = log(tan(PI * 0.25 + lat * 0.5));
+        gReprojMLatReady = true;
+      }
+      float mRs = uReprojectMerc[${k}].x;
+      float mDen = uReprojectMerc[${k}].y;
+      // Only reproject when the source's Mercator span is wide enough to be
+      // numerically safe. For deep/upsampled tiles the span shrinks to ~1e-6 while
+      // mLat/mRs are ~O(1), so (mLat-mRs)/(mRn-mRs) catastrophically cancels in
+      // float32 and produces vertical-stretch noise. There the Mercator correction
+      // is sub-pixel anyway, so the affine texUv.y is both correct and stable.
+      if (abs(mDen) > 1e-3) {
+        texUv${k}.y = (gReprojMLat - mRs) / mDen;
+      }
+      // Polar cap fill: WM imagery stops at ±~85.05° but Geographic terrain reaches
+      // ±90°. When this slot is the band-edge raster tile (its north/south edge sits
+      // on the WM limit), clamp the polar overshoot onto that edge texel so the last
+      // available imagery row stretches across the cap instead of being dropped by
+      // the in-bounds test below. Non-edge tiles keep the normal drop.
+      if (uReprojectMerc[${k}].z > 0.5) texUv${k}.y = min(texUv${k}.y, 1.0);
+      if (uReprojectMerc[${k}].w > 0.5) texUv${k}.y = max(texUv${k}.y, 0.0);
+      // Confine the slot to the sub-rect it actually covers. With N:M draping each
+      // source tile covers only part of the terrain tile; outside its [0,1] range
+      // the sampler would smear the edge texel across the rest, so drop it there.
+      inBounds${k} = step(0.0, texUv${k}.x) * step(texUv${k}.x, 1.0)
+                   * step(0.0, texUv${k}.y) * step(texUv${k}.y, 1.0);
+    }`;
+
     return `
 ${emitSlotMarker(k, absSlot, isVector)}
   if (uShows[${k}] == 1) {
     vec2 texUv${k} = vUv * uLayerUvScale[${k}] + uLayerUvOffset[${k}];
+    // 1.0 unless the reproject branch below confines this slot to a sub-rect.
+    float inBounds${k} = 1.0;
+${reprojectBlock}
 ${sampleProducer(ctx)}
 ${contributions.perSlotPostSample(ctx)}
-    float alpha${k} = texColor${k}.a * uOpacities[${k}];
+    float alpha${k} = texColor${k}.a * uOpacities[${k}] * inBounds${k};
     if (alpha${k} > 0.01) {
       compositedColor = mix(compositedColor, vec4(texColor${k}.rgb, 1.0), alpha${k});
       winningSlot = ${absSlot};
@@ -123,6 +181,8 @@ ${contributions.perSlotOnWinner(ctx)}
   return `
 precision highp float;
 precision highp int;
+
+#include <common>
 
 varying vec2 vUv;
 
@@ -142,6 +202,12 @@ void main() {
 
   vec3 hillshadeNormal = vec3(0.5, 0.5, 1.0); // neutral upward
   bool hasHillshadeNormal = false;
+
+  // Shared WebMercator reprojection latitude for this fragment. The terrain lat
+  // range is tile-wide, so mLat is identical across every reprojecting slot —
+  // computed lazily on first use and reused by the rest (see reproject block).
+  float gReprojMLat = 0.0;
+  bool gReprojMLatReady = false;
 
 ${slotBlocks}
 

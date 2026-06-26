@@ -491,9 +491,11 @@ pub fn compute_terrain_height_at_point(
     terrain_data_requesters: &TileTerrainDataRequesterQuery,
     point: &LngLat<FloatType, Radians>,
 ) -> Option<FloatType> {
-    let tile_handle = find_contained_child(qt, &|t| {
-        t.extent.contains(point) && t.cached_mesh_handle.is_some() && !t.upsampled
-    })?;
+    let tile_handle = find_contained_child(
+        qt,
+        &|t| t.extent.contains(point) && t.cached_mesh_handle.is_some() && !t.upsampled,
+        &|t| t.extent.contains(point),
+    )?;
     let tile = qt.qt.get_mut(tile_handle)?;
 
     tile.terrain_data.as_mut()?.compute_height_at_point(
@@ -509,13 +511,17 @@ pub fn sample_terrain_height_within_extent(
     qt: &mut TerrainTileQuadtree,
     extent: Extent<f64, Radians>,
 ) -> (FloatType, FloatType) {
-    let tiles = find_contained_children(qt, &|t| {
-        t.extent.intersects(extent)
-            && extent.ratio(&t.extent) <= 1.
-            && t.cached_mesh_handle.is_some()
-            && !t.upsampled
-            && t.terrain_data.is_some()
-    });
+    let tiles = find_contained_children(
+        qt,
+        &|t| {
+            t.extent.intersects(extent)
+                && extent.ratio(&t.extent) <= 1.
+                && t.cached_mesh_handle.is_some()
+                && !t.upsampled
+                && t.terrain_data.is_some()
+        },
+        &|t| t.extent.intersects(extent),
+    );
 
     let mut max_height: FloatType = 0.;
     let mut min_height: FloatType = 9999.;
@@ -560,9 +566,13 @@ pub fn sample_terrain_height_within_extent(
 /// have cached mesh, terrain data, and are not upsampled.
 /// Used to batch-resolve terrain heights without per-point tree traversal.
 pub fn collect_terrain_leaves(qt: &TerrainTileQuadtree) -> Vec<TileHandle> {
-    find_contained_children(qt, &|t| {
-        t.cached_mesh_handle.is_some() && !t.upsampled && t.terrain_data.is_some()
-    })
+    // No spatial filter — every ready tile is wanted regardless of location, so
+    // the full tree must be walked (`overlaps` always true, no pruning).
+    find_contained_children(
+        qt,
+        &|t| t.cached_mesh_handle.is_some() && !t.upsampled && t.terrain_data.is_some(),
+        &|_| true,
+    )
 }
 
 /// Find the deepest raster tile whose extent fully contains the given extent.
@@ -575,12 +585,41 @@ pub fn find_terrain_tile_for_extent(
     qt: &TerrainTileQuadtree,
     extent: &Extent<FloatType, Radians>,
 ) -> Option<TileHandle> {
-    find_contained_child(qt, &|t| {
-        t.extent.contains_extent(extent)
-            && t.cached_mesh_handle.is_some()
-            && !t.upsampled
-            && t.terrain_data.is_some()
-    })
+    find_contained_child(
+        qt,
+        &|t| {
+            t.extent.contains_extent(extent)
+                && t.cached_mesh_handle.is_some()
+                && !t.upsampled
+                && t.terrain_data.is_some()
+        },
+        &|t| t.extent.contains_extent(extent),
+    )
+}
+
+/// Terrain elevation `(max_height, min_height)` at the centre of `extent`, read
+/// from the deepest rendered terrain tile covering that point.
+///
+/// This is a point-in-tile lookup, so it works regardless of tiling scheme — a
+/// WebMercator raster tile can read the height of the Geographic (quantized-mesh)
+/// terrain it drapes onto, where a coordinate-identity lookup would fail. Used to
+/// keep the raster traversal's screen-space error in step with terrain elevation.
+/// Returns `None` when no rendered terrain covers the centre.
+pub fn terrain_height_for_extent(
+    qt: &TerrainTileQuadtree,
+    extent: &Extent<FloatType, Radians>,
+) -> Option<(FloatType, FloatType)> {
+    let center = LngLat {
+        lng: (extent.west + extent.east) * 0.5,
+        lat: (extent.south + extent.north) * 0.5,
+    };
+    let handle = find_contained_child(
+        qt,
+        &|t| t.extent.contains(&center) && t.cached_mesh_handle.is_some(),
+        &|t| t.extent.contains(&center),
+    )?;
+    let tile = qt.qt.get(handle)?;
+    Some((tile.max_height, tile.min_height))
 }
 
 /// Compute terrain height for a single point from a known tile.
@@ -622,30 +661,52 @@ pub fn root_handles(qt: &TerrainTileQuadtree) -> Vec<TileHandle> {
         .collect()
 }
 
-/// Find a child that the tile contains.
+/// Find the deepest tile satisfying `contain`.
+///
+/// `overlaps` is a spatial pruning predicate: a subtree is descended into only
+/// when its root tile passes `overlaps`. It MUST be downward-monotone along the
+/// tree (if a tile passes, every ancestor passes — equivalently, if a tile
+/// fails, no descendant can satisfy `contain`). Because child extents partition
+/// their parent's extent, the spatial part of `contain` (e.g. `extent.contains`,
+/// `extent.intersects`, `extent.contains_extent`) is such a predicate. Pruning
+/// turns this from a full `O(tree)` walk into an `O(depth)` descent — without
+/// it, every terrain tile is visited for every query, which is called per raster
+/// tile per frame in the raster traversal.
+///
+/// Pass `|_| true` when no spatial pruning is possible (full traversal).
 fn find_contained_child(
     qt: &TerrainTileQuadtree,
     contain: &dyn Fn(&TerrainTile) -> bool,
+    overlaps: &dyn Fn(&TerrainTile) -> bool,
 ) -> Option<TileHandle> {
     for root in root_handles(qt) {
-        if let Some(v) = traverse_contained_child(qt, qt.qt.get(root), Some(root), contain) {
+        if let Some(v) =
+            traverse_contained_child(qt, qt.qt.get(root), Some(root), contain, overlaps)
+        {
             return Some(v);
         }
     }
     None
 }
 
-/// Find a child that the tile contains.
+/// Collect the deepest tile satisfying `contain` along each branch. See
+/// [`find_contained_child`] for the contract on `overlaps`.
 fn find_contained_children(
     qt: &TerrainTileQuadtree,
     contain: &dyn Fn(&TerrainTile) -> bool,
+    overlaps: &dyn Fn(&TerrainTile) -> bool,
 ) -> Vec<TileHandle> {
     let mut result = vec![];
     for root in root_handles(qt) {
         let previous_len = result.len();
-        if let Some(v) =
-            traverse_contained_children(qt, qt.qt.get(root), Some(root), contain, &mut result)
-            && previous_len == result.len()
+        if let Some(v) = traverse_contained_children(
+            qt,
+            qt.qt.get(root),
+            Some(root),
+            contain,
+            overlaps,
+            &mut result,
+        ) && previous_len == result.len()
         {
             result.push(v);
         }
@@ -658,12 +719,21 @@ fn traverse_contained_child(
     tile: Option<&TerrainTile>,
     handle: Option<TileHandle>,
     contain: &dyn Fn(&TerrainTile) -> bool,
+    overlaps: &dyn Fn(&TerrainTile) -> bool,
 ) -> Option<TileHandle> {
     let h = handle?;
     let tile = tile?;
 
+    // Prune: if this tile cannot spatially overlap the query, neither can any of
+    // its descendants, so skip the whole subtree.
+    if !overlaps(tile) {
+        return None;
+    }
+
     for child in &tile.children {
-        if let Some(v) = traverse_contained_child(qt, qt.qt.get(*child), Some(*child), contain) {
+        if let Some(v) =
+            traverse_contained_child(qt, qt.qt.get(*child), Some(*child), contain, overlaps)
+        {
             return Some(v);
         }
     }
@@ -680,17 +750,28 @@ fn traverse_contained_children(
     tile: Option<&TerrainTile>,
     handle: Option<TileHandle>,
     contain: &dyn Fn(&TerrainTile) -> bool,
+    overlaps: &dyn Fn(&TerrainTile) -> bool,
     result: &mut Vec<TileHandle>,
 ) -> Option<TileHandle> {
     let h = handle?;
     let tile = tile?;
 
+    // Prune: a subtree that cannot spatially overlap the query holds no match.
+    if !overlaps(tile) {
+        return None;
+    }
+
     let previous_result_len = result.len();
 
     for child in &tile.children {
-        if let Some(v) =
-            traverse_contained_children(qt, qt.qt.get(*child), Some(*child), contain, result)
-        {
+        if let Some(v) = traverse_contained_children(
+            qt,
+            qt.qt.get(*child),
+            Some(*child),
+            contain,
+            overlaps,
+            result,
+        ) {
             result.push(v);
         }
     }
@@ -860,14 +941,81 @@ mod test {
         setup_tile(&mut qt, (0, 1, 1));
         setup_tile(&mut qt, (1, 1, 1));
 
-        let h = find_contained_child(&qt, &|t| {
-            t.extent.contains(&LngLat {
-                lng: Angle::new(2.5),
-                lat: Angle::new(1.1),
-            })
+        let point = LngLat {
+            lng: Angle::new(2.5),
+            lat: Angle::new(1.1),
+        };
+        let h = find_contained_child(&qt, &|t| t.extent.contains(&point), &|t| {
+            t.extent.contains(&point)
         });
         let child = qt.qt.get(h.unwrap());
         assert_eq!(child.unwrap().coords, TileXYZ { x: 3, y: 1, z: 2 });
+    }
+
+    #[test]
+    fn find_contained_child_prunes_non_overlapping_subtrees() {
+        use std::cell::Cell;
+
+        // z0 root + 4 tiles at z1 + 16 tiles at z2 = 21 tiles total.
+        let mut qt = TerrainTileQuadtree::new_with_linear_qt();
+        qt.qt.initialize_zero(&|v| {
+            TerrainTile::new(
+                TileXYZ {
+                    x: v.0,
+                    y: v.1,
+                    z: v.2,
+                },
+                0.,
+                0.,
+            )
+        });
+        setup_tile(&mut qt, (0, 0, 0));
+        setup_tile(&mut qt, (0, 0, 1));
+        setup_tile(&mut qt, (1, 0, 1));
+        setup_tile(&mut qt, (0, 1, 1));
+        setup_tile(&mut qt, (1, 1, 1));
+
+        let point = LngLat {
+            lng: Angle::new(2.5),
+            lat: Angle::new(1.1),
+        };
+
+        // The pruning predicate skips subtrees whose extent misses the point, so
+        // `contain` is evaluated only along the single descent path — never on
+        // the 12 z2 tiles in the other three quadrants. Without pruning every
+        // tile would be visited.
+        let contain_calls = Cell::new(0);
+        let overlaps_calls = Cell::new(0);
+        let h = find_contained_child(
+            &qt,
+            &|t| {
+                contain_calls.set(contain_calls.get() + 1);
+                t.extent.contains(&point)
+            },
+            &|t| {
+                overlaps_calls.set(overlaps_calls.get() + 1);
+                t.extent.contains(&point)
+            },
+        );
+
+        // Same result as the unpruned walk.
+        assert_eq!(
+            qt.qt.get(h.unwrap()).unwrap().coords,
+            TileXYZ { x: 3, y: 1, z: 2 }
+        );
+
+        // Only the deepest matching tile reaches `contain` (its overlapping
+        // ancestors short-circuit on a child match, its siblings are pruned).
+        assert_eq!(contain_calls.get(), 1);
+        // Visited tiles stay on the descent path: root + its 4 children + at
+        // most the matching child's 4 children = 9 (fewer in practice, as the
+        // child loop stops at the first match). Far below the 21 tiles a full,
+        // unpruned walk would visit.
+        assert!(
+            overlaps_calls.get() <= 9,
+            "expected pruned visit count, got {}",
+            overlaps_calls.get()
+        );
     }
 
     use super::find_terrain_tile_for_extent;
@@ -970,6 +1118,40 @@ mod test {
         assert_eq!(leaves.len(), 2);
     }
 
+    #[test]
+    fn terrain_height_for_extent_reads_covering_tile() {
+        use super::terrain_height_for_extent;
+
+        let mut qt = setup_qt_with_ready_tiles();
+        // Give a ready z=2 tile a known elevation.
+        mark_tile_ready(&mut qt, (3, 1, 2));
+        let handle = qt.qt.leaf((3, 1, 2)).unwrap().handle();
+        {
+            let t = qt.qt.get_mut(handle).unwrap();
+            t.max_height = 1500.;
+            t.min_height = -20.;
+        }
+
+        // An extent centred inside that tile resolves to its elevation
+        // (point-in-tile, independent of coordinate identity).
+        let extent = qt.qt.get(handle).unwrap().extent;
+        assert_eq!(terrain_height_for_extent(&qt, &extent), Some((1500., -20.)));
+    }
+
+    #[test]
+    fn terrain_height_for_extent_none_without_ready_terrain() {
+        use super::terrain_height_for_extent;
+
+        // No tile has a cached mesh → nothing to read.
+        let qt = setup_qt_with_ready_tiles();
+        let extent = qt
+            .qt
+            .get(qt.qt.leaf((3, 1, 2)).unwrap().handle())
+            .unwrap()
+            .extent;
+        assert_eq!(terrain_height_for_extent(&qt, &extent), None);
+    }
+
     /// Initialize a leaf with the Geographic tiling scheme so its extent and
     /// children match EPSG:4326 layout.
     fn setup_geographic_tile(qt: &mut TerrainTileQuadtree, coords: Coords<usize>) {
@@ -1029,12 +1211,15 @@ mod test {
         // root — must descend into the (1,0,0) subtree, not give up because
         // the west root (0,0,0) misses. Internal y is XYZ-style, so at z=1
         // (2,1,1) covers lng 0°..90°, lat -90°..0°.
-        let east_handle = find_contained_child(&qt, &|t| {
-            t.extent.contains(&LngLat {
-                lng: Angle::new(1.0), // ~57°E
-                lat: Angle::new(-0.5),
-            }) && t.cached_mesh_handle.is_some()
-        });
+        let east_point = LngLat {
+            lng: Angle::new(1.0), // ~57°E
+            lat: Angle::new(-0.5),
+        };
+        let east_handle = find_contained_child(
+            &qt,
+            &|t| t.extent.contains(&east_point) && t.cached_mesh_handle.is_some(),
+            &|t| t.extent.contains(&east_point),
+        );
         let east_tile = qt.qt.get(east_handle.unwrap()).unwrap();
         assert_eq!(east_tile.coords, TileXYZ { x: 2, y: 1, z: 1 });
     }

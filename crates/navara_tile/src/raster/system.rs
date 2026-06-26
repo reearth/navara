@@ -9,7 +9,7 @@ use navara_math::Transform;
 use navara_occluder::ellipsoidal_occluder::EllipsoidalOccluder;
 use navara_texture_fragment::TextureFragment;
 use navara_tile_component::{
-    ChangedTileTextureFragmentQuery, RasterTile, RasterTileQuadtree, TerrainInformationQuadtree,
+    ChangedTileTextureFragmentQuery, RasterTile, RasterTileQuadtree, TerrainTileQuadtree,
     TileTextureFragmentMarker, TileTextureFragmentQuery,
 };
 use navara_window::Window;
@@ -95,7 +95,7 @@ pub fn update_raster_tiles(
     mut commands: Commands,
     mut qt: ResMut<RasterTileQuadtree>,
     mut tc: ResMut<RasterTileCacheManager>,
-    terrain_qt: Res<TerrainInformationQuadtree>,
+    terrain_qt: Res<TerrainTileQuadtree>,
     frame: Res<FrameManager>,
     window: Res<Window>,
     globe: Res<navara_globe::Globe>,

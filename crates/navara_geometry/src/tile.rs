@@ -64,6 +64,34 @@ pub fn uv_transform(child: TileXYZ, parent_z: usize) -> TileUvTransform {
     }
 }
 
+/// Affine UV transform mapping a tile's `[0, 1]` mesh UV (over the `target`
+/// extent, with `v = 0` at the south edge) into a `source` tile's texture UV:
+/// `texUv = meshUv * scale + offset`.
+///
+/// Computed in geographic lng/lat, so it is exact when `target` and `source`
+/// share a tiling scheme (e.g. WebMercator terrain ↔ WebMercator raster). For a
+/// cross-scheme drape (Geographic terrain ↔ WebMercator raster) this gives the
+/// correct longitude (x) mapping; the latitude (y) non-linearity is corrected by
+/// the composite shader's per-fragment reprojection. Returns the identity
+/// transform when the two extents are equal.
+pub fn uv_rect_from_extents(
+    target: Extent<FloatType, Radians>,
+    source: Extent<FloatType, Radians>,
+) -> TileUvTransform {
+    let target_width = target.east.val() - target.west.val();
+    let target_height = target.north.val() - target.south.val();
+    let source_width = source.east.val() - source.west.val();
+    let source_height = source.north.val() - source.south.val();
+
+    TileUvTransform {
+        offset: Vec2::new(
+            (target.west.val() - source.west.val()) / source_width,
+            (target.south.val() - source.south.val()) / source_height,
+        ),
+        scale: Vec2::new(target_width / source_width, target_height / source_height),
+    }
+}
+
 /// OrthographicCamera transformation values to align with child tile region
 #[derive(Debug, Clone, Copy)]
 pub struct OrthoCamTransform {
@@ -298,5 +326,29 @@ mod tests {
         assert_relative_eq!(t.right, 0.0, epsilon = 1e-6);
         assert_relative_eq!(t.top, 0.0, epsilon = 1e-6);
         assert_relative_eq!(t.bottom, -0.5, epsilon = 1e-6);
+    }
+
+    #[test]
+    fn uv_rect_identity_when_equal() {
+        use navara_core::LngLat;
+        let e = Extent::from_points(&[LngLat::new(0.1, 0.2), LngLat::new(0.3, 0.5)]);
+        let tf = uv_rect_from_extents(e, e);
+        assert_relative_eq!(tf.offset.x, 0.0, epsilon = 1e-9);
+        assert_relative_eq!(tf.offset.y, 0.0, epsilon = 1e-9);
+        assert_relative_eq!(tf.scale.x, 1.0, epsilon = 1e-9);
+        assert_relative_eq!(tf.scale.y, 1.0, epsilon = 1e-9);
+    }
+
+    #[test]
+    fn uv_rect_sub_rect() {
+        use navara_core::LngLat;
+        // source covers lng[0,1] lat[0,1]; target is the NE quarter.
+        let source = Extent::from_points(&[LngLat::new(0.0, 0.0), LngLat::new(1.0, 1.0)]);
+        let target = Extent::from_points(&[LngLat::new(0.5, 0.5), LngLat::new(1.0, 1.0)]);
+        let tf = uv_rect_from_extents(target, source);
+        assert_relative_eq!(tf.scale.x, 0.5, epsilon = 1e-9);
+        assert_relative_eq!(tf.scale.y, 0.5, epsilon = 1e-9);
+        assert_relative_eq!(tf.offset.x, 0.5, epsilon = 1e-9);
+        assert_relative_eq!(tf.offset.y, 0.5, epsilon = 1e-9);
     }
 }

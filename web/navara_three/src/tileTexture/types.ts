@@ -103,6 +103,13 @@ export type RasterCompositeLayer = CompositeLayerBase & {
   color: Color;
   opacity: number;
   water: boolean;
+  /**
+   * `[south, north]` latitude (radians) of the terrain tile when this slot is a
+   * WebMercator raster draped on Geographic terrain — the composite shader uses
+   * it to reproject the latitude axis (Mercator). `undefined` for same-scheme
+   * drapes (no reprojection).
+   */
+  reproject?: [number, number];
 };
 
 /** A DEM-derived normal map; contributes no color, only a hillshade normal. */
