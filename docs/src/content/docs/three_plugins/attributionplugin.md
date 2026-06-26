@@ -143,13 +143,13 @@ type AttributionItem = AttributionSource | AttributionHtml;
 
 ### AttributionSource
 
-| Property      | Type                 | Description                                                                       |
-| ------------- | -------------------- | --------------------------------------------------------------------------------- |
-| `attribution` | `string`             | Top-level source / provider name                                                  |
-| `url`         | `string`             | Optional link for the source name                                                 |
-| `logo`        | `string`             | Optional logo image URL, shown in the always-visible bottom-left frame            |
-| `children`    | `AttributionChild[]` | Optional zoom-banded data sources, each with its credits nested                   |
-| `creditLayerId` | `string`           | Optional `layer.id`; per-feature credits from that layer are nested under this source |
+| Property        | Type                              | Description                                                                           |
+| --------------- | --------------------------------- | ------------------------------------------------------------------------------------- |
+| `attribution`   | `string`                          | Top-level source / provider name                                                      |
+| `url`           | `string \| undefined`             | Optional link for the source name                                                     |
+| `logo`          | `string \| undefined`             | Optional logo image URL, shown in the always-visible bottom-left frame                |
+| `children`      | `AttributionChild[] \| undefined` | Optional zoom-banded data sources, each with its credits nested                       |
+| `creditLayerId` | `string \| undefined`             | Optional `layer.id`; per-feature credits from that layer are nested under this source |
 
 ### AttributionHtml
 
@@ -159,26 +159,26 @@ type AttributionItem = AttributionSource | AttributionHtml;
 
 ### AttributionChild
 
-| Property     | Type       | Description                                                       |
-| ------------ | ---------- | ----------------------------------------------------------------- |
-| `dataSource` | `string`   | Data source / product name, shown as the parent label             |
-| `credits`    | `string[]` | Required license / source notices, shown nested under the name    |
-| `minZoom`    | `number`   | Lowest zoom this entry applies to (omit for none)                 |
-| `maxZoom`    | `number`   | Highest zoom this entry applies to (omit for none)                |
+| Property     | Type                    | Description                                                    |
+| ------------ | ----------------------- | -------------------------------------------------------------- |
+| `dataSource` | `string`                | Data source / product name, shown as the parent label          |
+| `credits`    | `string[] \| undefined` | Required license / source notices, shown nested under the name |
+| `minZoom`    | `number \| undefined`   | Lowest zoom this entry applies to (omit for none)              |
+| `maxZoom`    | `number \| undefined`   | Highest zoom this entry applies to (omit for none)             |
 
 ### AttributionStyle
 
 All fields are optional; an unset field keeps the default color. Colors are applied as CSS custom properties, so `setStyle()` re-themes live.
 
-| Property         | Type     | Description                                |
-| ---------------- | -------- | ------------------------------------------ |
-| `titleColor`     | `string` | Source title text color                    |
-| `linkColor`      | `string` | Link and info-icon color                   |
-| `listStyleColor` | `string` | Bullet (list marker) color                 |
-| `textColor`      | `string` | Body text color                            |
-| `nestedTextColor`| `string` | Nested data-source / credit text color     |
-| `backgroundColor`| `string` | Popover and trigger background color       |
-| `borderColor`    | `string` | Header divider color (useful for dark themes) |
+| Property          | Type                  | Description                                   |
+| ----------------- | --------------------- | --------------------------------------------- |
+| `titleColor`      | `string \| undefined` | Source title text color                       |
+| `linkColor`       | `string \| undefined` | Link and info-icon color                      |
+| `listStyleColor`  | `string \| undefined` | Bullet (list marker) color                    |
+| `textColor`       | `string \| undefined` | Body text color                               |
+| `nestedTextColor` | `string \| undefined` | Nested data-source / credit text color        |
+| `backgroundColor` | `string \| undefined` | Popover and trigger background color          |
+| `borderColor`     | `string \| undefined` | Header divider color (useful for dark themes) |
 
 ## Notes
 

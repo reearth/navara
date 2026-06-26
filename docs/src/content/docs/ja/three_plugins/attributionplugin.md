@@ -143,42 +143,42 @@ type AttributionItem = AttributionSource | AttributionHtml;
 
 ### AttributionSource
 
-| プロパティ      | 型                   | 説明                                                             |
-| --------------- | -------------------- | ---------------------------------------------------------------- |
-| `attribution`   | `string`             | トップレベルのソース／プロバイダ名                               |
-| `url`           | `string`             | ソース名に付ける任意のリンク                                     |
-| `logo`          | `string`             | 任意のロゴ画像 URL。常時表示の左下フレームに表示される           |
-| `children`      | `AttributionChild[]` | 任意のズーム帯ごとのデータソース。各々がクレジットを子に持つ     |
-| `creditLayerId` | `string`             | 任意の `layer.id`。そのレイヤーのフィーチャー単位クレジットがこのソース配下にネストされる |
+| プロパティ           | 型                                 | 説明                                                 |
+| --------------- | --------------------------------- | -------------------------------------------------- |
+| `attribution`   | `string`                          | トップレベルのソース／プロバイダ名                                  |
+| `url`           | `string \| undefined`             | ソース名に付ける任意のリンク                                     |
+| `logo`          | `string \| undefined`             | 任意のロゴ画像 URL。常時表示の左下フレームに表示される                      |
+| `children`      | `AttributionChild[] \| undefined` | 任意のズーム帯ごとのデータソース。各々がクレジットを子に持つ                     |
+| `creditLayerId` | `string \| undefined`             | 任意の `layer.id`。そのレイヤーのフィーチャー単位クレジットがこのソース配下にネストされる |
 
 ### AttributionHtml
 
-| プロパティ        | 型       | 説明                                          |
-| ----------------- | -------- | --------------------------------------------- |
+| プロパティ             | 型        | 説明                               |
+| ----------------- | -------- | -------------------------------- |
 | `attributionHtml` | `string` | インライン `<a>` リンクを含む HTML 形式のクレジット |
 
 ### AttributionChild
 
-| プロパティ   | 型         | 説明                                                   |
-| ------------ | ---------- | ------------------------------------------------------ |
-| `dataSource` | `string`   | データソース／製品名。親ラベルとして表示               |
-| `credits`    | `string[]` | 必須のライセンス／出所明示。名前の下にネスト表示       |
-| `minZoom`    | `number`   | この項目が適用される最小ズーム（省略で下限なし）       |
-| `maxZoom`    | `number`   | この項目が適用される最大ズーム（省略で上限なし）       |
+| プロパティ        | 型                       | 説明                       |
+| ------------ | ----------------------- | ------------------------ |
+| `dataSource` | `string`                | データソース／製品名。親ラベルとして表示     |
+| `credits`    | `string[] \| undefined` | 必須のライセンス／出所明示。名前の下にネスト表示 |
+| `minZoom`    | `number \| undefined`   | この項目が適用される最小ズーム（省略で下限なし） |
+| `maxZoom`    | `number \| undefined`   | この項目が適用される最大ズーム（省略で上限なし） |
 
 ### AttributionStyle
 
 すべてのフィールドは任意です。未指定のフィールドは既定色を保ちます。色は CSS カスタムプロパティとして適用されるため、`setStyle()` でライブに再テーマできます。
 
-| プロパティ        | 型       | 説明                                 |
-| ----------------- | -------- | ------------------------------------ |
-| `titleColor`      | `string` | ソースタイトルのテキスト色           |
-| `linkColor`       | `string` | リンクと info アイコンの色           |
-| `listStyleColor`  | `string` | 箇条書き（リストマーカー）の色       |
-| `textColor`       | `string` | 本文テキスト色                       |
-| `nestedTextColor` | `string` | ネストしたデータソース／クレジットのテキスト色 |
-| `backgroundColor` | `string` | ポップオーバーとトリガーの背景色     |
-| `borderColor`     | `string` | ヘッダ区切り線の色（ダークテーマで有用） |
+| プロパティ             | 型                     | 説明                      |
+| ----------------- | --------------------- | ----------------------- |
+| `titleColor`      | `string \| undefined` | ソースタイトルのテキスト色           |
+| `linkColor`       | `string \| undefined` | リンクと info アイコンの色        |
+| `listStyleColor`  | `string \| undefined` | 箇条書き（リストマーカー）の色         |
+| `textColor`       | `string \| undefined` | 本文テキスト色                 |
+| `nestedTextColor` | `string \| undefined` | ネストしたデータソース／クレジットのテキスト色 |
+| `backgroundColor` | `string \| undefined` | ポップオーバーとトリガーの背景色        |
+| `borderColor`     | `string \| undefined` | ヘッダ区切り線の色（ダークテーマで有用）    |
 
 ## 補足
 
