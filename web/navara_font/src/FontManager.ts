@@ -8,7 +8,6 @@ import {
   SRGBColorSpace,
   UnsignedByteType,
 } from "three";
-import invariant from "tiny-invariant";
 
 import { FontWorkerClient } from "./FontWorkerClient";
 import { LRUMap } from "./LRUMap";
@@ -125,9 +124,17 @@ export class FontManager {
   /** Per-atlas generation counter. Bumped when the worker reports it evicted
    *  glyphs from an atlas; cached shape results carry the generation they were
    *  built under, so any from before the eviction are re-shaped on next use.
-   *  Visible labels are unaffected — their glyphs are pinned and never evicted,
-   *  so their (possibly older-generation) metrics stay valid. */
+   *  Visible labels are *normally* unaffected — their glyphs are pinned and not
+   *  evicted — but a large burst can evict a still-in-flight glyph before its
+   *  retain lands; `onAtlasEvicted` lets consumers rebuild such stale meshes. */
   private _atlasGeneration = new Map<string, number>();
+  /** Eviction listeners keyed by resolved atlas key. Notified (coalesced on a
+   *  microtask) after an eviction bumps an atlas's generation, so visible
+   *  consumers can rebuild meshes whose baked metrics may now be stale. */
+  private _evictListeners = new Map<string, Set<() => void>>();
+  /** Atlas keys with an eviction awaiting notification, plus its schedule flag. */
+  private _pendingEvictNotify = new Set<string>();
+  private _evictNotifyScheduled = false;
   /** Pending visible-label refcount increments per atlas key (one entry per
    *  occurrence), flushed to the worker on a microtask. */
   private _retainQueue = new Map<string, bigint[]>();
@@ -511,10 +518,13 @@ export class FontManager {
       const result = this._shapeCache
         .get(_q(seg.url, highQuality))
         ?.get(seg.text);
-      invariant(
-        result,
-        `FontManager: missing shape cache for ${seg.url} "${seg.text}" (${highQuality})`,
-      );
+      // A segment can be absent when the worker produced no glyphs for it: the
+      // face matched by unicode range may not actually contain the codepoint, or
+      // segmentation fell through to face 0 (which can't shape this script). The
+      // prepare promise still resolves in that case (the result is simply never
+      // cached), so skip the unshaped segment and stitch the rest rather than
+      // aborting the whole label — one uncovered glyph shouldn't drop the name.
+      if (!result) continue;
 
       if (targetUnitsPerEm === 0) targetUnitsPerEm = result.unitsPerEm;
       const scale = targetUnitsPerEm / result.unitsPerEm;
@@ -542,7 +552,11 @@ export class FontManager {
     }
 
     if (targetUnitsPerEm === 0) {
-      throw new Error("FontManager: _stitchSegments produced unitsPerEm of 0");
+      // Every segment was unshaped (e.g. a name entirely in an uncovered
+      // script). Return an empty result so the label renders blank instead of
+      // throwing; `unitsPerEm` is irrelevant with zero glyphs but must be
+      // nonzero so the consumer's scale factor stays finite.
+      return { glyphs: [], metrics: [], unitsPerEm: 1000 };
     }
 
     return {
@@ -696,6 +710,55 @@ export class FontManager {
   ): boolean {
     const entry = this._shapeCache.get(shapeCacheKey)?.get(text);
     return !!entry && (entry._generation ?? 0) === this._currentGen(atlasKey);
+  }
+
+  /**
+   * Subscribe to evictions on the atlas backing `(fontIdentifier, highQuality)`.
+   * The listener fires (coalesced on a microtask) after the worker reports that
+   * atlas evicted glyphs — the cue for a visible consumer to rebuild any mesh
+   * whose baked atlas rects may now be stale. Returns an unsubscribe function.
+   */
+  onAtlasEvicted(
+    fontIdentifier: string,
+    highQuality: boolean,
+    listener: () => void,
+  ): () => void {
+    const atlasKey = this._resolveAtlasKey(fontIdentifier, highQuality);
+    let set = this._evictListeners.get(atlasKey);
+    if (!set) {
+      set = new Set();
+      this._evictListeners.set(atlasKey, set);
+    }
+    set.add(listener);
+    return () => {
+      const s = this._evictListeners.get(atlasKey);
+      if (!s) return;
+      s.delete(listener);
+      if (s.size === 0) this._evictListeners.delete(atlasKey);
+    };
+  }
+
+  /** Queue an eviction notification for `atlasKey`, coalescing a burst of
+   *  per-batch evictions into a single microtask-deferred fan-out. */
+  private _scheduleEvictNotify(atlasKey: string): void {
+    if (!this._evictListeners.has(atlasKey)) return;
+    this._pendingEvictNotify.add(atlasKey);
+    if (this._evictNotifyScheduled) return;
+    this._evictNotifyScheduled = true;
+    queueMicrotask(() => this._flushEvictNotify());
+  }
+
+  private _flushEvictNotify(): void {
+    this._evictNotifyScheduled = false;
+    const keys = this._pendingEvictNotify;
+    this._pendingEvictNotify = new Set();
+    for (const key of keys) {
+      const set = this._evictListeners.get(key);
+      if (!set) continue;
+      // Snapshot: a listener may unsubscribe (or rebuild + re-subscribe) while
+      // iterating.
+      for (const listener of [...set]) listener();
+    }
   }
 
   /**
@@ -858,6 +921,9 @@ export class FontManager {
         // so they carry the new generation.
         if (batchResult.evicted) {
           this._atlasGeneration.set(atlasKey, this._currentGen(atlasKey) + 1);
+          // Wake any consumers so they can rebuild visible meshes whose baked
+          // metrics this eviction may have invalidated.
+          this._scheduleEvictNotify(atlasKey);
         }
         const generation = this._currentGen(atlasKey);
 

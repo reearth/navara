@@ -173,6 +173,11 @@ export class SDFTextMesh
     this.frustumCulled = false;
   }
 
+  /** The text this mesh currently renders (its baked glyph string). */
+  get text(): string {
+    return this._text;
+  }
+
   /**
    * Set a shared atlas texture. When set, setText() will skip creating its own texture.
    * The caller is responsible for the texture lifecycle.

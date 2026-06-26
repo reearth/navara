@@ -18,15 +18,16 @@ import LABEL_FONT_FAMILY from "./labelFontFamily.json";
 
 export type CustomDescriptions = DefaultDescriptions;
 
-// The family name the faces are registered under (see labelFontFamily.json).
+// Family name the faces are registered under (see labelFontFamily.json).
 const LABEL_FONT = "OvertureLabels";
 
-// Camera presets for exploring the worldwide archive.
+// Camera presets.
 const VIEWPOINTS = {
   World: { lng: 10, lat: 25, height: 22_000_000, pitch: -90 },
   Europe: { lng: 12, lat: 48, height: 4_500_000, pitch: -90 },
   "East Asia": { lng: 121, lat: 33, height: 5_000_000, pitch: -90 },
   Americas: { lng: -95, lat: 35, height: 8_000_000, pitch: -90 },
+  "Tokyo (street)": { lng: 139.767, lat: 35.679, height: 1_000, pitch: -35 },
 } as const;
 
 const LABEL_TIERS = [
@@ -60,21 +61,18 @@ LABEL_TIERS.forEach((tier, i) => {
   }
 });
 
-// Within the finest (`locality`) tier, still drop everything but large cities
-// to keep dense regions legible.
+// Within the finest (`locality`) tier, keep only large cities.
 const CITY_POPULATION_THRESHOLD = 1_000_000;
 
 const BASE_POLYGONS = [
   { title: "Land", source: "land", color: "#f8f4f1" }, // sand.50
-  // { title: "Land cover", source: "land_cover", color: "#c4eaa9" }, // grass fallback
-  { title: "Land use", source: "land_use", color: "#d6ecd5" }, // park green.200
+  { title: "Land cover", source: "land_cover", color: "#c4eaa9" }, // grass fallback
+  // { title: "Land use", source: "land_use", color: "#d6ecd5" }, // park green.200
   { title: "Water", source: "water", color: "#79cdf6" }, // ocean.900
 ] as const;
 
-// 3D buildings (Overture `buildings` theme). The `building` MVT layer carries a
-// real `height` in meters; where it's missing we estimate from `num_floors`
-// (~3 m per floor) and finally fall back to a small default so footprints are
-// never extruded to zero.
+// 3D buildings (Overture `buildings` theme). Where `height` (meters) is missing
+// we estimate from `num_floors` (~3 m each), else fall back to a small default.
 const BUILDING_COLOR = "#cabfb3"; // sand.300
 const METERS_PER_FLOOR = 3;
 const DEFAULT_BUILDING_HEIGHT = 6;
@@ -90,6 +88,75 @@ const LAND_COVER_COLORS: Record<string, string> = {
   barren: "#efe8cd", // yellow.200
   snow: "#f3f5f7", // sky.50
   urban: "#e8ded4", // sand.400
+};
+
+const POI_CATEGORIES = [
+  { key: "Restaurants", icon: "/icons/restaurant.svg" },
+  { key: "Cafés", icon: "/icons/cafe.svg" },
+  { key: "Hotels", icon: "/icons/hotel.svg" },
+  { key: "Schools", icon: "/icons/school.svg" },
+  { key: "Hospitals", icon: "/icons/hospital.svg" },
+  { key: "Shopping", icon: "/icons/shopping.svg" },
+] as const;
+
+type PoiKey = (typeof POI_CATEGORIES)[number]["key"];
+
+// Place names are far more numerous and glyph-diverse than admin labels, so the
+// text is gated harder than the icons: a place gets a label only when the camera
+// is below `POI_LABEL_MAX_HEIGHT` and the place's `confidence` clears a higher
+// floor than the icon needs. This keeps dense cities readable and bounds how
+// many distinct strings the text shaper handles at once. Icons are unaffected.
+const POI_LABEL_MAX_HEIGHT = 5_000; // 5 km
+const POI_LABEL_MIN_CONFIDENCE = 0.9;
+
+// Deterministic [0,1) hash (FNV-1a) of a string. The engine has no label
+// collision/declutter system and the evaluator sees no geometry, so dense areas
+// (e.g. Tokyo street level) can't be grid-thinned spatially. Instead we hash a
+// stable per-feature key and keep only points below a density threshold: this
+// caps how many icon/label pairs render, is stable across re-evaluation (so
+// nothing flickers on pan/zoom), and thins roughly uniformly across space.
+const hash01 = (s: string): number => {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return (h >>> 0) / 0xffffffff;
+};
+
+// Map an Overture place to an icon category (or `undefined` to skip).
+// `taxonomy` is a JSON string whose `hierarchy[0]` is the broad bucket;
+// `basic_category` is finer, used only to split cafés out of food_and_drink.
+const classifyPlace = (
+  properties: Record<string, unknown> | undefined,
+): PoiKey | undefined => {
+  const basic = properties?.["basic_category"] as string | undefined;
+  if (basic === "cafe" || basic === "coffee_shop") return "Cafés";
+
+  const taxonomyRaw = properties?.["taxonomy"] as string | undefined;
+  if (!taxonomyRaw) return undefined;
+  let bucket: string | undefined;
+  try {
+    bucket = (JSON.parse(taxonomyRaw) as { hierarchy?: string[] })
+      .hierarchy?.[0];
+  } catch {
+    return undefined;
+  }
+
+  switch (bucket) {
+    case "food_and_drink":
+      return "Restaurants";
+    case "lodging":
+      return "Hotels";
+    case "education":
+      return "Schools";
+    case "health_care":
+      return "Hospitals";
+    case "shopping":
+      return "Shopping";
+    default:
+      return undefined;
+  }
 };
 
 export const run = async (view: ThreeView<CustomDescriptions>) => {
@@ -115,19 +182,16 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   const baseUrl = PMTILES_DATASETS.overtureBase.url;
   const divisionsUrl = PMTILES_DATASETS.overtureDivisions.url;
 
-  // Visibility is driven per-feature through each layer's evaluator rather than
-  // the material's `show`. A material-level `show` only seeds features created
-  // afterward, whereas the evaluator sets `show` on already-batched tile
-  // geometry — so toggling re-styles what's already on screen.
+  // Visibility is driven per-feature via each layer's evaluator, not the
+  // material's `show` (which only seeds future features). The evaluator restyles
+  // already-batched geometry, so toggling affects what's already on screen.
   const visible: Record<string, boolean> = {};
 
-  // The `vectorTile.layers` filter selects which MVT layer inside the shared
-  // archive each Navara layer styles (same mechanism as the MVT example). Every
-  // layer reusing the same URL resolves through a single PmtilesSource.
+  // Every layer reusing the same URL resolves through a single PmtilesSource;
+  // `vectorTile.layers` selects which MVT sublayer each one styles.
   const toggles: { title: string; layer: Layer }[] = [];
 
-  // Precompute the per-subtype Color instances once and reuse them across
-  // features (the evaluator runs per feature, per tile).
+  // Precompute per-subtype Color instances (the evaluator runs per feature).
   const landCoverColors: Record<string, Color> = Object.fromEntries(
     Object.entries(LAND_COVER_COLORS).map(([k, hex]) => [
       k,
@@ -147,11 +211,9 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
       vectorTile: { maxZoom: 13, layers: [source] },
     });
 
-    // Apply the current visibility to each feature set, both on initial load
-    // and on every forced re-style (toggle). `land_cover` additionally colors
-    // each feature by its `subtype`.
+    // `land_cover` additionally colors each feature by its `subtype`.
     const apply = ({ evaluator }: { evaluator: FeatureEvaluator }) => {
-      if (source === "land_cover") {
+      if ((source as string) === "land_cover") {
         evaluator.evaluate(
           ({ properties }) => {
             const subtype = properties?.["subtype"] as string | undefined;
@@ -197,19 +259,14 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     toggles.push({ title: boundaryTitle, layer: boundaryLayer });
   }
 
-  // 3D buildings from the `buildings` theme. Each footprint is extruded by the
-  // per-feature `extrudedHeight` (meters) set in the evaluator below — the
-  // polygon shader raises the roof from the ground (so `clampToGround` is off,
-  // it would otherwise drape the geometry onto terrain and ignore the height).
-  // These only exist at z5–z14, so they appear only once the camera descends.
+  // 3D buildings from the `buildings` theme. Footprints are extruded by the
+  // per-feature `extrudedHeight` (meters)
   //
-  // Two MVT layers cooperate here, following the OSM/Overture 3D convention:
-  //   • `building`      — one footprint per building (the city's bulk massing).
+  // Two MVT layers cooperate (OSM/Overture 3D convention):
+  //   • `building`      — one footprint per building (bulk massing).
   //   • `building_part` — detailed sub-volumes for buildings modeled in 3D.
-  // Overture reliably tags `height` on parts but only sparsely on footprints,
-  // so the parts are what make landmark buildings read as real shapes. Where a
-  // footprint `has_parts`, we hide it and let its parts stand in — otherwise the
-  // footprint and its parts double-draw and z-fight.
+  // Where a footprint `has_parts` we hide it and let its parts stand in, else
+  // the two double-draw and z-fight.
   const buildingsTitle = "Buildings";
   visible[buildingsTitle] = true;
   const buildingColor = new Color().setStyle(BUILDING_COLOR);
@@ -253,9 +310,8 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     toggles.push({ title: buildingsTitle, layer: buildingLayer });
   }
 
-  // Detailed building parts. A part spans `min_height` (its base elevation) to
-  // `height` (its top), so we set the polygon's base (`height` attribute) to
-  // `min_height` and its top (`extrudedHeight`) to `height` — this keeps stacked
+  // Detailed building parts. A part spans `min_height` (base) to `height` (top),
+  // so base -> `height` attribute, top -> `extrudedHeight`; this keeps stacked
   // setbacks from overlapping and lets towers float above their podium.
   const buildingPartLayer = view.addLayer({
     type: "mvt",
@@ -293,25 +349,20 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     };
     buildingPartLayer.on("featureCreated", apply);
     buildingPartLayer.on("featureUpdated", apply);
-    // Same title as the footprint layer: one "Buildings" toggle drives both, and
-    // `restyle()` force-updates both. The panel dedupes the repeated title.
+    // Same title as the footprint layer: one "Buildings" toggle drives both
+    // (the panel dedupes the repeated title).
     toggles.push({ title: buildingsTitle, layer: buildingPartLayer });
   }
 
-  // A single text layer for labels in every script. Overture stores the
-  // localized primary name under the `@name` property; the registered font
-  // family resolves the correct face per glyph.
+  // Labels. Overture stores the localized primary name under `@name`; the
+  // registered font family resolves the correct face per glyph.
   const labelTitle = "Labels";
   visible[labelTitle] = true;
   const params = { size: 20 };
 
-  // The evaluator (which runs per feature) reads this closure variable to decide
-  // which tiers are currently visible. We keep it in sync with the camera below
-  // and re-run the evaluator only when crossing a tier threshold.
-  //
-  // Seed it from the initial viewpoint rather than `view.camera.positionGeographic`:
-  // that getter reads the WASM core's camera status, which isn't computed until
-  // the engine ticks its first frame, so reading it here would throw.
+  // The evaluator reads this closure variable to decide which tiers are visible;
+  // kept in sync with the camera below. Seed it from the initial viewpoint, not
+  // `view.camera.positionGeographic` — that getter throws before the first frame.
   let currentHeight: number = VIEWPOINTS.World.height;
 
   const labelLayer = view.addLayer({
@@ -322,7 +373,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
       color: new Color().setStyle("#000000"),
       size: params.size,
       sizeInMeters: false,
-      clampToGround: true,
+      clampToGround: false,
       center: { x: 0.5, y: 0.5 },
       outlineColor: new Color().setStyle("#ffffff"),
       outlineWidth: 5,
@@ -330,9 +381,8 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
       offsetDepth: true,
       depthTest: true,
     },
-    // Finer admin features (governorate/district) only exist in higher-zoom
-    // tiles, so we fetch up to z12 (matching the boundary layer) and rely on
-    // the altitude tiers below to keep the world view uncluttered.
+    // Finer admin features (governorate/district) exist only in higher-zoom
+    // tiles, so fetch to z12 and let the altitude tiers keep the view uncluttered.
     vectorTile: { maxZoom: 12, layers: ["division"] },
   });
 
@@ -345,9 +395,8 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
           const name = properties?.["@name"] as string | undefined;
           if (!name) return { text: "", show: false };
 
-          // Assign the feature to an altitude tier: prefer the locale-specific
-          // `local_type` (governorate/district/…), fall back to the stable
-          // `subtype` enum. Anything unrecognized is never labeled.
+          // Assign an altitude tier: prefer locale-specific `local_type`, fall
+          // back to the stable `subtype` enum. Unrecognized is never labeled.
           const localType = (
             properties?.["local_type"] as string | undefined
           )?.toLowerCase();
@@ -384,20 +433,126 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     // toggles.push({ title: labelTitle, layer: labelLayer });
   }
 
-  // Drive label visibility from camera altitude. The set of visible tiers only
-  // changes when `currentHeight` crosses a tier's `maxHeight`, so we encode the
-  // current set as a "band key" and re-style only on a change — `move` fires
-  // continuously while the camera animates, and re-evaluating every frame would
-  // thrash the batcher for no visible difference.
+  // ---- Points of interest (places theme) -----------------------------------
+  const placesUrl = PMTILES_DATASETS.overturePlaces.url;
+
+  // A billboard carries one icon texture for the whole layer (the evaluator sets
+  // `show`/`height` per feature, but not a per-feature icon). So rather than one
+  // layer per category, we use ONE billboard layer and swap its icon + filter.
+  const iconByKey = new Map<PoiKey, string>(
+    POI_CATEGORIES.map(({ key, icon }) => [key, icon]),
+  );
+
+  // Active category (or "Off") plus a confidence floor — Overture tags a
+  // `confidence` in [0,1] per place; raising the floor thins the dense icons.
+  const poiState = {
+    category: "Restaurants" as PoiKey | "Off",
+    minConfidence: 0.99,
+    // Fraction of matching places to keep (deterministic hash thinning). Low by
+    // default so the street view stays legible and cheap; raise for completeness.
+    density: 0.2,
+  };
+
+  // `sizeInMeters: false` keeps a constant screen size; `depthTest: false` keeps
+  // the icon above buildings. `text` and `billboard` are independent materials on
+  // ONE MVT layer, so each place draws both an icon and its name — no extra layer
+  // or engine support needed.
+  //
+  // Positioning is anchor-only (`center`, a normalized Vec2), there is no pixel
+  // offset. To read as `icon │ name` we anchor the icon's RIGHT edge and the
+  // text's LEFT edge to the same geographic point, both vertically centered, so
+  // the icon sits just left of the point and the name extends right from it.
+  const poiLayer = view.addLayer({
+    type: "mvt",
+    data: { url: placesUrl },
+    billboard: {
+      url: iconByKey.get("Restaurants") ?? "",
+      size: 30,
+      sizeInMeters: false,
+      clampToGround: false,
+      center: { x: 0.5, y: 0.0 },
+      depthTest: true,
+      offsetDepth: true,
+      transparent: true,
+      alphaTest: 0.5,
+    },
+    text: {
+      font: LABEL_FONT,
+      color: new Color().setStyle("#1a1a1a"),
+      size: 14,
+      sizeInMeters: false,
+      clampToGround: false,
+      center: { x: 0.0, y: 0.0 },
+      outlineColor: new Color().setStyle("#ffffff"),
+      outlineWidth: 4,
+      outlineOpacity: 0.6,
+      depthTest: true,
+      offsetDepth: true,
+    },
+    vectorTile: { maxZoom: 14, layers: ["place"] },
+  });
+  {
+    const apply = ({ evaluator }: { evaluator: FeatureEvaluator }) => {
+      evaluator.evaluate(
+        ({ properties }) => {
+          if (poiState.category === "Off") return { show: false };
+          if (classifyPlace(properties) !== poiState.category)
+            return { show: false };
+          const confidence =
+            (properties?.["confidence"] as number | undefined) ?? 0;
+          if (confidence < poiState.minConfidence) return { show: false };
+
+          // Density cap: keep only a stable hashed fraction so dense areas don't
+          // flood the view. Key off the stable Overture `id` when present, else
+          // a composite of properties (name+taxonomy+confidence) — either way the
+          // same feature always hashes the same, so the kept set never flickers.
+          const key =
+            (properties?.["id"] as string | undefined) ??
+            `${(properties?.["@name"] as string | undefined) ?? ""}|${
+              (properties?.["taxonomy"] as string | undefined) ?? ""
+            }|${confidence}`;
+          if (hash01(key) >= poiState.density) return { show: false };
+
+          // Names are gated tighter than icons (see POI_LABEL_* above): only the
+          // most confident places, and only when zoomed in. Empty text → the
+          // icon draws with no label. `@name` is Overture's computed primary
+          // name (same convention the divisions labels use).
+          const labelable =
+            currentHeight <= POI_LABEL_MAX_HEIGHT &&
+            confidence >= POI_LABEL_MIN_CONFIDENCE;
+          const name = labelable
+            ? ((properties?.["@name"] as string | undefined) ?? "")
+            : "";
+          return { show: true, text: name };
+        },
+        { filters: ["id", "@name", "taxonomy", "basic_category", "confidence"] },
+      );
+    };
+    poiLayer.on("featureCreated", apply);
+    poiLayer.on("featureUpdated", apply);
+  }
+
+  // Re-evaluate the POI layer (after a category/confidence change) and redraw.
+  const restylePois = () => {
+    poiLayer.forceUpdate();
+    view.forceUpdate();
+  };
+
+  // Drive label visibility from altitude. The visible tier set only changes when
+  // `currentHeight` crosses a `maxHeight`, so encode it as a "band key" and
+  // restyle only on change — `move` fires every frame and would thrash the batcher.
   const bandKeyAt = (height: number) =>
     LABEL_TIERS.map((tier) => (height <= tier.maxHeight ? "1" : "0")).join("");
   let lastBandKey = bandKeyAt(currentHeight);
-  // The single `move` handler that drives both the altitude readout and the
-  // tier restyle is registered at the end, once the control panel exists.
+  // POI names appear only below `POI_LABEL_MAX_HEIGHT`; track that band crossing
+  // separately so we re-evaluate the POI layer when it flips (its threshold need
+  // not line up with any `LABEL_TIERS` boundary).
+  let poiLabelsVisible = currentHeight <= POI_LABEL_MAX_HEIGHT;
+  // The `move` handler (readout + tier restyle) is registered at the end, once
+  // the control panel exists.
 
-  // Re-evaluate every layer and request a render. `forceUpdate` re-emits
-  // `featureUpdated` for all loaded tiles, so a toggle flips visibility on
-  // existing geometry immediately rather than only on the next data load.
+  // Re-evaluate every layer and render. `forceUpdate` re-emits `featureUpdated`
+  // for all loaded tiles, so a toggle flips visibility on existing geometry now.
   const restyle = () => {
     for (const { layer } of toggles) layer.forceUpdate();
     view.forceUpdate();
@@ -413,9 +568,8 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     });
   });
 
-  // Layer toggles — flipping any checkbox re-styles every layer immediately.
-  // Some titles map to more than one layer (e.g. "Buildings" drives both the
-  // footprint and part layers), so add a single binding per distinct title.
+  // Layer toggles — flipping a checkbox restyles every layer. Some titles map to
+  // multiple layers (e.g. "Buildings"), so add one binding per distinct title.
   const layersFolder = pane.addFolder({ title: "Layers" });
   const boundToggleTitles = new Set<string>();
   for (const { title } of toggles) {
@@ -438,9 +592,8 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
       view.forceUpdate();
     });
 
-  // Live-tunable altitude thresholds (km). The `country` tier is always visible
-  // (Infinity), so only the finer, finite tiers are exposed. Changing one
-  // re-evaluates the labels immediately against the current camera height.
+  // Live-tunable altitude thresholds (km). Changing one re-evaluates the labels
+  // against the current camera height.
   const tiersFolder = pane.addFolder({ title: "Label altitude (km)" });
   for (const tier of LABEL_TIERS) {
     const proxy = { km: Math.round(tier.maxHeight / 1000) };
@@ -459,20 +612,53 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
       });
   }
 
-  // Read-only altitude readout. A `readonly` binding infers its view from the
-  // bound value's type (string -> text monitor); we mutate `readout.altitude`
-  // and call `.refresh()` from the move handler to update it.
+  // POI controls: pick a category (swaps icon + filter) and a confidence floor.
+  const poiFolder = pane.addFolder({ title: "Places (POIs)" });
+  poiFolder
+    .addBinding(poiState, "category", {
+      label: "category",
+      options: {
+        Off: "Off",
+        ...Object.fromEntries(POI_CATEGORIES.map(({ key }) => [key, key])),
+      },
+    })
+    .on("change", ({ value }) => {
+      const icon = value !== "Off" ? iconByKey.get(value as PoiKey) : undefined;
+      if (icon) poiLayer.update({ billboard: { url: icon } });
+      restylePois();
+    });
+  poiFolder
+    .addBinding(poiState, "minConfidence", {
+      min: 0,
+      max: 1,
+      step: 0.01,
+      label: "min confidence",
+    })
+    .on("change", () => {
+      restylePois();
+    });
+  poiFolder
+    .addBinding(poiState, "density", {
+      min: 0,
+      max: 1,
+      step: 0.01,
+      label: "max density",
+    })
+    .on("change", () => {
+      restylePois();
+    });
+
+  // Read-only altitude readout. A `readonly` string binding renders as a text
+  // monitor; we mutate `readout.altitude` and `.refresh()` it from the handler.
   const readout = { altitude: `${(currentHeight / 1000).toFixed(0)} km` };
   const altitudeMonitor = pane.addBinding(readout, "altitude", {
     readonly: true,
     label: "Camera Altitude",
   });
 
-  // One handler for both jobs: update the readout every move, and restyle the
-  // labels only when the camera crosses a tier threshold.
+  // Update the readout every move; restyle labels only when crossing a tier.
   view.camera.on("move", () => {
-    // `positionGeographic` throws if the core's camera status isn't ready yet;
-    // skip this tick rather than letting it escape the camera event loop.
+    // `positionGeographic` throws before the core's camera status is ready; skip.
     let height: number;
     try {
       height = view.camera.positionGeographic.height;
@@ -483,6 +669,16 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
 
     readout.altitude = `${(currentHeight / 1000).toFixed(0)} km`;
     altitudeMonitor.refresh();
+
+    // POI name gate: re-evaluate the POI layer only when crossing its altitude
+    // threshold (checked before the admin-label early-return below, since the
+    // two band boundaries are independent).
+    const poiVisibleNow = currentHeight <= POI_LABEL_MAX_HEIGHT;
+    if (poiVisibleNow !== poiLabelsVisible) {
+      poiLabelsVisible = poiVisibleNow;
+      poiLayer.forceUpdate();
+      view.forceUpdate();
+    }
 
     const bandKey = bandKeyAt(currentHeight);
     if (bandKey === lastBandKey) return;
@@ -496,5 +692,6 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     PMTILES_DATASETS.overtureBase,
     PMTILES_DATASETS.overtureDivisions,
     PMTILES_DATASETS.overtureBuildings,
+    PMTILES_DATASETS.overturePlaces,
   ]);
 };

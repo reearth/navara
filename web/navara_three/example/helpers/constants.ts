@@ -127,6 +127,11 @@ export const PMTILES_DATASETS = {
     attribution: "© OpenStreetMap contributors, © Overture Maps Foundation",
     attributionUrl: "https://overturemaps.org",
   },
+  overturePlaces: {
+    url: "https://overturemaps-extras-us-west-2.s3.us-west-2.amazonaws.com/tiles/2026-05-20.0/places.pmtiles",
+    attribution: "© Overture Maps Foundation",
+    attributionUrl: "https://overturemaps.org",
+  },
 } satisfies Record<string, Dataset>;
 
 /**
