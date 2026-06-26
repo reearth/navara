@@ -35,12 +35,20 @@ export class SkyEnvMapPass extends RenderPass {
     _inputBuffer: WebGLRenderTarget | null,
     _outputBuffer: WebGLRenderTarget | null,
   ) {
+    // Nothing requests the env map (no sky mesh with `envMap` enabled), so skip
+    // the expensive 6-face cube render entirely.
+    if (this._scenes.skyEnvMap.children.length === 0) return;
+
     this.cubeCamera.position.copy(this._camera.position);
 
     this.cubeCamera.update(renderer, this._scenes.skyEnvMap);
   }
 
-  getEnvMapTexture() {
+  getEnvMapTexture(): WebGLCubeRenderTarget["texture"] | undefined {
+    // Don't hand a stale/cleared cube texture to meshes when nothing populates
+    // the env map scene; callers fall back to `null`.
+    if (this._scenes.skyEnvMap.children.length === 0) return undefined;
+
     return this.cubeRenderTarget.texture;
   }
 
