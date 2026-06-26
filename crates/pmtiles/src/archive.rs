@@ -259,6 +259,8 @@ impl Archive {
                 return Resolution::Absent;
             }
             // Leaf pointer: descend if cached, otherwise ask for it.
+            match ready.leaves.get(&entry.offset) {
+                Some(child) => dir = child,
                 None => {
                     let length = u64::from(entry.length);
                     if length == 0 {
@@ -279,6 +281,7 @@ impl Archive {
                         request: ByteRange { offset, length },
                     };
                 }
+            }
         }
     }
 
