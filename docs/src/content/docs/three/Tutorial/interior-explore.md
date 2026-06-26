@@ -10,6 +10,7 @@ sidebar:
 Learn how to explore the interior of 3D Tiles buildings while controlling a character with [PersonViewPlugin](../../../three_plugins/personviewplugin/) from `@navara/three_plugins`. The plugin lets you wire up character controls with minimal code.
 
 **What you will learn in this tutorial:**
+
 - Loading 3D Tiles building models
 - Driving a GLTF character with `PersonViewPlugin`
 - Letting the character move underground and through buildings
@@ -21,11 +22,11 @@ Learn how to explore the interior of 3D Tiles buildings while controlling a char
 First, build a scene for building exploration. Create a `ThreeView` with shadow and background color settings.
 
 ```typescript
-import ThreeView, {
-  Color,
-  JAPAN_GSI_ELEVATION_DECODER,
-} from "@navara/three";
-import { DefaultPlugin, type DefaultDescriptions } from "@navara/three_default_plugin";
+import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
+import {
+  DefaultPlugin,
+  type DefaultDescriptions,
+} from "@navara/three_default_plugin";
 import { PersonViewPlugin } from "@navara/three_plugins";
 
 const plugin = new DefaultPlugin();
@@ -181,15 +182,15 @@ That's it — the character now responds to the keyboard and the camera follows 
 
 **Default key bindings**
 
-| Key              | Action                             |
-| ---------------- | ---------------------------------- |
-| W / S            | Move forward / backward            |
-| A / D            | Turn left / right                  |
-| Arrow Up / Space | Ascend                             |
-| Arrow Down / Ctrl| Descend                            |
-| Shift            | Dash (switches to `dashClip`)      |
-| Alt (hold)       | Free-orbit camera                  |
-| V                | Toggle third-person / first-person |
+| Key               | Action                             |
+| ----------------- | ---------------------------------- |
+| W / S             | Move forward / backward            |
+| A / D             | Turn left / right                  |
+| Arrow Up / Space  | Ascend                             |
+| Arrow Down / Ctrl | Descend                            |
+| Shift             | Dash (switches to `dashClip`)      |
+| Alt (hold)        | Free-orbit camera                  |
+| V                 | Toggle third-person / first-person |
 
 The default chase view (TPV) is third person. Press **V** to switch to first person (FPV); the character mesh is hidden automatically. Hold **Alt** to take manual control of the camera while keeping it focused on the character.
 
@@ -208,7 +209,7 @@ unsubscribe();
 
 ## Teleporting Between Scenes
 
-Use `teleport({ lng, lat, alt, heading?, pitch? })` to jump the character to a new place — for example when the user picks a different building from a menu.
+Use `teleport({ lng, lat, alt, heading? })` to jump the character to a new place — for example when the user picks a different building from a menu. To rotate in place use `setHeading()`, and to adjust the camera pitch use `setCameraPitch()` / `setFpvPitch()`.
 
 ```typescript
 personView.teleport({ lng: 139.7397, lat: 35.6352, alt: 45 });
@@ -221,11 +222,11 @@ The chase camera snaps to the new location and the state listener fires once wit
 A complete example that combines the plugin with a 3D Tiles building. The code is intentionally short: the plugin owns the input, character, animation, and camera.
 
 ```typescript
-import ThreeView, {
-  Color,
-  JAPAN_GSI_ELEVATION_DECODER,
-} from "@navara/three";
-import { DefaultPlugin, type DefaultDescriptions } from "@navara/three_default_plugin";
+import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
+import {
+  DefaultPlugin,
+  type DefaultDescriptions,
+} from "@navara/three_default_plugin";
 import { PersonViewPlugin } from "@navara/three_plugins";
 
 const plugin = new DefaultPlugin();
@@ -344,10 +345,11 @@ personView.start();
 ```
 
 :::tip[Customization Tips]
+
 - **Explore a different building**: Change the `cesium3dtiles` layer URL to load a different PLATEAU model and call `personView.teleport()` to drop the character at the new location
 - **Adjust movement feel**: Tweak `moveSpeed`, `rotationSpeed`, and `altSpeed` on the plugin config
 - **Use your own model**: Pass a different `character.modelUrl` and update `idleClip` / `dashClip` to match the clips it ships with
 - **Lock camera to chase mode**: The example sets `allowCameraControl: true` so the camera always orbits freely. Set it to `false` to require holding **Alt** for manual orbit while the chase shot follows automatically the rest of the time
 - **First-person at startup**: Pass `initialView: "fpv"` to start in first person
 - **Custom key bindings**: Use the `keys` option to remap any action (for example, `keys: { ascend: ["Space"], descend: ["ControlLeft"] }`)
-:::
+  :::

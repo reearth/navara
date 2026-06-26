@@ -63,15 +63,15 @@ personView.dispose();
 
 ## Keyboard Controls
 
-| Key                  | Action                                     |
-| -------------------- | ------------------------------------------ |
-| W / S                | Forward / backward                         |
-| A / D                | Turn left / right                          |
-| Arrow Up / Space     | Ascend                                     |
-| Arrow Down / Ctrl    | Descend                                    |
-| Shift                | Dash (2.5x speed; switches to `dashClip`)  |
-| Alt (hold)           | Free-orbit camera (TPV) / free-look (FPV)  |
-| V                    | Toggle TPV / FPV                           |
+| Key               | Action                                    |
+| ----------------- | ----------------------------------------- |
+| W / S             | Forward / backward                        |
+| A / D             | Turn left / right                         |
+| Arrow Up / Space  | Ascend                                    |
+| Arrow Down / Ctrl | Descend                                   |
+| Shift             | Dash (2.5x speed; switches to `dashClip`) |
+| Alt (hold)        | Free-orbit camera (TPV) / free-look (FPV) |
+| V                 | Toggle TPV / FPV                          |
 
 All bindings can be remapped via the `keys` option (see [KeyBindings](#keybindings)).
 
@@ -96,49 +96,49 @@ new PersonViewPlugin(config?: PersonViewConfig)
 
 ### PersonViewConfig
 
-| Property             | Type                  | Default          | Description                                                              |
-| -------------------- | --------------------- | ---------------- | ------------------------------------------------------------------------ |
-| `character`          | `CharacterConfig`     | _(none)_         | Optional character. When omitted, the plugin runs as a pure camera controller. |
-| `allowCameraControl` | `boolean`             | `false`          | When `true`, the camera is always free (no Alt-hold required).           |
-| `initialView`        | `"tpv" \| "fpv"`      | `"tpv"`          | Initial view mode.                                                       |
-| `moveSpeed`          | `number`              | `50`             | Forward/backward speed in m/s.                                           |
-| `rotationSpeed`      | `number`              | `3`              | Turning speed in deg/frame.                                              |
-| `altSpeed`           | `number`              | `30`             | Altitude change speed in m/s.                                            |
-| `minAlt`             | `number`              | `50`             | Minimum altitude in meters.                                              |
-| `maxAlt`             | `number`              | `5000`           | Maximum altitude in meters.                                              |
-| `cameraDistance`     | `number`              | `50`             | Chase camera distance (TPV) in meters.                                   |
-| `cameraPitch`        | `number`              | `0`              | Downward TPV camera pitch in radians (orbits up and over the model).     |
-| `cameraLerpSpeed`    | `number`              | `3`              | Camera heading interpolation speed.                                      |
-| `fpvForwardOffset`   | `number`              | `0`            | Forward offset (m) applied to the FPV eye position.                      |
-| `fpvHeightOffset`    | `number`              | `1`              | Height offset (m) applied to the FPV eye position.                       |
-| `fpvPitch`           | `number`              | `0`              | Downward FPV camera pitch in radians (tilts the view down in place).     |
-| `startLat`           | `number`              | `35.6812`        | Starting latitude in degrees.                                            |
-| `startLng`           | `number`              | `139.7671`       | Starting longitude in degrees.                                           |
-| `startHeight`        | `number`              | `500`            | Starting altitude in meters.                                             |
-| `startHeading`       | `number`              | `Math.PI * 1.3`  | Starting heading in radians (0 = north).                                 |
-| `keys`               | `KeyBindings`         | _defaults_       | Keyboard bindings — see [KeyBindings](#keybindings).                     |
+| Property             | Type              | Default         | Description                                                                                                  |
+| -------------------- | ----------------- | --------------- | ------------------------------------------------------------------------------------------------------------ |
+| `character`          | `CharacterConfig` | _(none)_        | Optional character. When omitted, the plugin runs as a pure camera controller.                               |
+| `allowCameraControl` | `boolean`         | `false`         | When `true`, the camera is always free (no Alt-hold required).                                               |
+| `initialView`        | `"tpv" \| "fpv"`  | `"tpv"`         | Initial view mode.                                                                                           |
+| `moveSpeed`          | `number`          | `50`            | Forward/backward speed in m/s.                                                                               |
+| `rotationSpeed`      | `number`          | `3`             | Turning speed in deg/frame.                                                                                  |
+| `altSpeed`           | `number`          | `30`            | Altitude change speed in m/s.                                                                                |
+| `minAlt`             | `number`          | `50`            | Minimum altitude in meters.                                                                                  |
+| `maxAlt`             | `number`          | `5000`          | Maximum altitude in meters.                                                                                  |
+| `cameraDistance`     | `number`          | `50`            | Chase camera distance (TPV) in meters.                                                                       |
+| `cameraPitch`        | `number`          | `0`             | Downward TPV camera pitch in radians (orbits up and over the model).                                         |
+| `cameraLerpSpeed`    | `number`          | `3`             | Camera heading interpolation speed.                                                                          |
+| `fpvForwardOffset`   | `number`          | `0`             | Forward offset (m) applied to the FPV eye position.                                                          |
+| `fpvHeightOffset`    | `number`          | `1`             | Eye-line height offset (m): the FPV eye height, and the shared eye-line height the TPV camera orbits around. |
+| `fpvPitch`           | `number`          | `0`             | Downward FPV camera pitch in radians (tilts the view down in place).                                         |
+| `startLat`           | `number`          | `35.6812`       | Starting latitude in degrees.                                                                                |
+| `startLng`           | `number`          | `139.7671`      | Starting longitude in degrees.                                                                               |
+| `startHeight`        | `number`          | `500`           | Starting altitude in meters.                                                                                 |
+| `startHeading`       | `number`          | `Math.PI * 1.3` | Starting heading in radians (0 = north).                                                                     |
+| `keys`               | `KeyBindings`     | _defaults_      | Keyboard bindings — see [KeyBindings](#keybindings).                                                         |
 
 ### CharacterConfig
 
-| Property              | Type                   | Default          | Description                                                  |
-| --------------------- | ---------------------- | ---------------- | ------------------------------------------------------------ |
-| `modelUrl`            | `string`               | **(required)**   | URL of the GLTF model to load.                               |
-| `animation`           | `AnimationConfig`      | **(required)**   | Animation clip configuration.                                |
-| `modelRotationOffset` | `ModelRotationOffset`  | `{ x: 0, y: 0, z: 0 }` | Rotation offset to correct the model's default orientation.  |
-| `modelScale`          | `number`               | `3`              | Uniform scale multiplier for the model.                      |
-| `hideModelInFpv`      | `boolean`              | `true`           | Hide the model while the camera is in FPV.                   |
-| `castShadow`          | `boolean`              | `false`          | Whether the character casts shadows.                         |
-| `receiveShadow`       | `boolean`              | `false`          | Whether the character receives shadows.                      |
+| Property              | Type                  | Default                | Description                                                 |
+| --------------------- | --------------------- | ---------------------- | ----------------------------------------------------------- |
+| `modelUrl`            | `string`              | **(required)**         | URL of the GLTF model to load.                              |
+| `animation`           | `AnimationConfig`     | **(required)**         | Animation clip configuration.                               |
+| `modelRotationOffset` | `ModelRotationOffset` | `{ x: 0, y: 0, z: 0 }` | Rotation offset to correct the model's default orientation. |
+| `modelScale`          | `number`              | `3`                    | Uniform scale multiplier for the model.                     |
+| `hideModelInFpv`      | `boolean`             | `true`                 | Hide the model while the camera is in FPV.                  |
+| `castShadow`          | `boolean`             | `false`                | Whether the character casts shadows.                        |
+| `receiveShadow`       | `boolean`             | `false`                | Whether the character receives shadows.                     |
 
 ### AnimationConfig
 
-| Property            | Type      | Description                                                                                                          |
-| ------------------- | --------- | -------------------------------------------------------------------------------------------------------------------- |
-| `idleClip`          | `string`  | Clip played while the model is idle (no movement keys held).                                                         |
+| Property            | Type      | Description                                                                                                                |
+| ------------------- | --------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `idleClip`          | `string`  | Clip played while the model is idle (no movement keys held).                                                               |
 | `walkClip`          | `string?` | Clip played while the model is moving without dashing. Omit to keep `idleClip` running — useful for idle+dash-only models. |
-| `dashClip`          | `string`  | Clip played while the model is dashing (dash key held).                                                              |
-| `speed`             | `number`  | Playback speed multiplier.                                                                                           |
-| `crossfadeDuration` | `number`  | Duration in seconds for cross-fade transitions between clips.                                                        |
+| `dashClip`          | `string`  | Clip played while the model is dashing (dash key held).                                                                    |
+| `speed`             | `number`  | Playback speed multiplier.                                                                                                 |
+| `crossfadeDuration` | `number`  | Duration in seconds for cross-fade transitions between clips.                                                              |
 
 ### ModelRotationOffset
 
@@ -152,17 +152,17 @@ new PersonViewPlugin(config?: PersonViewConfig)
 
 Each entry takes an array of `KeyboardEvent.code` values (e.g. `["KeyW"]`, `["ArrowUp", "ControlLeft"]`) so multiple keys can trigger the same action.
 
-| Property        | Type        | Default                                            | Description                                                       |
-| --------------- | ----------- | -------------------------------------------------- | ----------------------------------------------------------------- |
-| `forward`       | `string[]`  | `["KeyW"]`                                         | Move forward.                                                     |
-| `backward`      | `string[]`  | `["KeyS"]`                                         | Move backward.                                                    |
-| `turnLeft`      | `string[]`  | `["KeyA"]`                                         | Turn left.                                                        |
-| `turnRight`     | `string[]`  | `["KeyD"]`                                         | Turn right.                                                       |
-| `ascend`        | `string[]`  | `["ArrowUp", "Space"]`                             | Climb.                                                            |
-| `descend`       | `string[]`  | `["ArrowDown", "ControlLeft", "ControlRight"]`     | Descend.                                                          |
-| `dash`          | `string[]`  | `["ShiftLeft", "ShiftRight"]`                      | Hold to dash.                                                     |
-| `orbitCamera`   | `string[]`  | `["AltLeft", "AltRight"]`                          | Hold to enable free camera (orbit in TPV / free-look in FPV). After release, the camera keeps its orientation until a movement key is pressed. |
-| `toggleView`    | `string[]`  | `["KeyV"]`                                         | Toggle TPV / FPV.                                                 |
+| Property      | Type       | Default                                        | Description                                                                                                                                    |
+| ------------- | ---------- | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `forward`     | `string[]` | `["KeyW"]`                                     | Move forward.                                                                                                                                  |
+| `backward`    | `string[]` | `["KeyS"]`                                     | Move backward.                                                                                                                                 |
+| `turnLeft`    | `string[]` | `["KeyA"]`                                     | Turn left.                                                                                                                                     |
+| `turnRight`   | `string[]` | `["KeyD"]`                                     | Turn right.                                                                                                                                    |
+| `ascend`      | `string[]` | `["ArrowUp", "Space"]`                         | Climb.                                                                                                                                         |
+| `descend`     | `string[]` | `["ArrowDown", "ControlLeft", "ControlRight"]` | Descend.                                                                                                                                       |
+| `dash`        | `string[]` | `["ShiftLeft", "ShiftRight"]`                  | Hold to dash.                                                                                                                                  |
+| `orbitCamera` | `string[]` | `["AltLeft", "AltRight"]`                      | Hold to enable free camera (orbit in TPV / free-look in FPV). After release, the camera keeps its orientation until a movement key is pressed. |
+| `toggleView`  | `string[]` | `["KeyV"]`                                     | Toggle TPV / FPV.                                                                                                                              |
 
 ## Methods
 
@@ -182,19 +182,46 @@ teleport(options: {
   lat: number;
   alt: number;
   heading?: number;
-  pitch?: number;
 }): void
 ```
 
-Instantly moves to a new geographic position. When `heading` is omitted, the current camera heading is kept. When `pitch` is provided it updates the persistent `cameraPitch`; when omitted the current pitch is kept.
+Instantly moves to a new geographic position. When `heading` is omitted, the current camera heading is kept. To rotate in place without moving, use [`setHeading()`](#setheadingradians--getheading); for the camera pitch, use [`setCameraPitch()` / `setFpvPitch()`](#setcamerapitchradians--setfpvpitchradians).
 
-| Field     | Type                | Description                                                       |
-| --------- | ------------------- | ---------------------------------------------------------------- |
-| `lng`     | `number`            | Longitude in degrees.                                            |
-| `lat`     | `number`            | Latitude in degrees.                                             |
-| `alt`     | `number`            | Altitude in meters.                                              |
-| `heading` | `number \| undefined` | Optional heading in radians.                                   |
-| `pitch`   | `number \| undefined` | Optional downward camera pitch in radians (0 = horizontal).    |
+| Field     | Type                  | Description                                                    |
+| --------- | --------------------- | -------------------------------------------------------------- |
+| `lng`     | `number`              | Longitude in degrees.                                          |
+| `lat`     | `number`              | Latitude in degrees.                                           |
+| `alt`     | `number`              | Altitude in meters.                                            |
+| `heading` | `number \| undefined` | Optional heading in radians (0 = north, increasing clockwise). |
+
+### setHeading(radians) / getHeading()
+
+```typescript
+setHeading(radians: number): void
+getHeading(): number
+```
+
+Rotates the character to the given heading in radians (0 = north, increasing clockwise) **without changing position**. The chase camera snaps to match; in free-camera mode only the model rotates. `getHeading()` returns the current heading.
+
+### setCameraPitch(radians) / setFpvPitch(radians)
+
+```typescript
+setCameraPitch(radians: number): void
+getCameraPitch(): number
+setFpvPitch(radians: number): void
+getFpvPitch(): number
+```
+
+Set the downward camera pitch in radians, taking effect immediately for the chase / locked camera. `setCameraPitch` controls the **TPV** pitch (orbits the camera up and over the model), while `setFpvPitch` controls the **FPV** pitch (tilts the view down in place). The matching getters return the current values.
+
+### setFpvHeightOffset(meters) / getFpvHeightOffset()
+
+```typescript
+setFpvHeightOffset(meters: number): void
+getFpvHeightOffset(): number
+```
+
+Set the eye-line height offset in meters, taking effect immediately for the chase / locked camera. It is the FPV eye height and the shared eye-line height the TPV camera orbits around and aims at. `getFpvHeightOffset()` returns the current value.
 
 ### setViewMode(mode) / toggleViewMode()
 

@@ -761,17 +761,12 @@ const addPersonPanel = (
   folder.addBinding(params, "height", { readonly: true, label: "alt" });
 
   // Heading (radians) is editable so the character orientation can be
-  // fine-tuned; applying it teleports in place with the new heading.
+  // fine-tuned; applying it rotates the character in place.
   folder
     .addBinding(personParams, "heading", { label: "heading (rad)" })
     .on("change", () => {
       if (ignoreChange) return;
-      personView.teleport({
-        lng: params.lng,
-        lat: params.lat,
-        alt: params.height,
-        heading: personParams.heading,
-      });
+      personView.setHeading(personParams.heading);
     });
 
   // TPV camera pitch (radians). Orbits the camera up and over the model

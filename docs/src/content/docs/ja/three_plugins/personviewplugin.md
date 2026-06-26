@@ -63,15 +63,15 @@ personView.dispose();
 
 ## キーボード操作
 
-| キー                | アクション                                  |
-| ------------------- | ------------------------------------------- |
-| W / S               | 前進 / 後退                                 |
-| A / D               | 左旋回 / 右旋回                             |
-| Arrow Up / Space    | 上昇                                        |
-| Arrow Down / Ctrl   | 下降                                        |
-| Shift               | ダッシュ（2.5 倍速、`dashClip` に切り替え） |
-| Alt（押下中）       | フリーカメラ操作（TPV: オービット / FPV: フリールック） |
-| V                   | TPV / FPV の切り替え                        |
+| キー              | アクション                                              |
+| ----------------- | ------------------------------------------------------- |
+| W / S             | 前進 / 後退                                             |
+| A / D             | 左旋回 / 右旋回                                         |
+| Arrow Up / Space  | 上昇                                                    |
+| Arrow Down / Ctrl | 下降                                                    |
+| Shift             | ダッシュ（2.5 倍速、`dashClip` に切り替え）             |
+| Alt（押下中）     | フリーカメラ操作（TPV: オービット / FPV: フリールック） |
+| V                 | TPV / FPV の切り替え                                    |
 
 すべてのキー割り当ては `keys` オプションで再設定できます（[KeyBindings](#keybindings) を参照）。
 
@@ -96,54 +96,54 @@ new PersonViewPlugin(config?: PersonViewConfig)
 
 ### PersonViewConfig
 
-| プロパティ           | 型                     | デフォルト       | 説明                                                                            |
-| -------------------- | ---------------------- | ---------------- | ------------------------------------------------------------------------------- |
-| `character`          | `CharacterConfig`      | _(なし)_         | 任意のキャラクター。省略時は純粋なカメラコントローラーとして動作。              |
-| `allowCameraControl` | `boolean`              | `false`          | `true` にすると常時フリーカメラ（Alt 押下不要）。                                |
-| `initialView`        | `"tpv" \| "fpv"`       | `"tpv"`          | 初期視点モード。                                                                |
-| `moveSpeed`          | `number`               | `50`             | 前後移動速度（m/s）。                                                           |
-| `rotationSpeed`      | `number`               | `3`              | 旋回速度（deg/frame）。                                                         |
-| `altSpeed`           | `number`               | `30`             | 高度変更速度（m/s）。                                                           |
-| `minAlt`             | `number`               | `50`             | 最低高度（メートル）。                                                          |
-| `maxAlt`             | `number`               | `5000`           | 最高高度（メートル）。                                                          |
-| `cameraDistance`     | `number`               | `50`             | 追従カメラ（TPV）の距離（メートル）。                                           |
-| `cameraPitch`        | `number`               | `0`              | TPV カメラの下向きピッチ（ラジアン。モデルの上方へ回り込む）。                  |
-| `cameraLerpSpeed`    | `number`               | `3`              | カメラ方位の補間速度。                                                          |
-| `fpvForwardOffset`   | `number`               | `0`            | FPV 目線位置の前方オフセット（メートル）。                                      |
-| `fpvHeightOffset`    | `number`               | `1`              | FPV 目線位置の高さオフセット（メートル）。                                      |
-| `fpvPitch`           | `number`               | `0`              | FPV カメラの下向きピッチ（ラジアン。その場で視線を下に傾ける）。                |
-| `startLat`           | `number`               | `35.6812`        | 開始緯度（度）。                                                                |
-| `startLng`           | `number`               | `139.7671`       | 開始経度（度）。                                                                |
-| `startHeight`        | `number`               | `500`            | 開始高度（メートル）。                                                          |
-| `startHeading`       | `number`               | `Math.PI * 1.3`  | 開始方位（ラジアン、0 = 北）。                                                  |
-| `keys`               | `KeyBindings`          | _デフォルト_     | キー割り当て — [KeyBindings](#keybindings) を参照。                              |
+| プロパティ           | 型                | デフォルト      | 説明                                                                                                                     |
+| -------------------- | ----------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `character`          | `CharacterConfig` | _(なし)_        | 任意のキャラクター。省略時は純粋なカメラコントローラーとして動作。                                                       |
+| `allowCameraControl` | `boolean`         | `false`         | `true` にすると常時フリーカメラ（Alt 押下不要）。                                                                        |
+| `initialView`        | `"tpv" \| "fpv"`  | `"tpv"`         | 初期視点モード。                                                                                                         |
+| `moveSpeed`          | `number`          | `50`            | 前後移動速度（m/s）。                                                                                                    |
+| `rotationSpeed`      | `number`          | `3`             | 旋回速度（deg/frame）。                                                                                                  |
+| `altSpeed`           | `number`          | `30`            | 高度変更速度（m/s）。                                                                                                    |
+| `minAlt`             | `number`          | `50`            | 最低高度（メートル）。                                                                                                   |
+| `maxAlt`             | `number`          | `5000`          | 最高高度（メートル）。                                                                                                   |
+| `cameraDistance`     | `number`          | `50`            | 追従カメラ（TPV）の距離（メートル）。                                                                                    |
+| `cameraPitch`        | `number`          | `0`             | TPV カメラの下向きピッチ（ラジアン。モデルの上方へ回り込む）。                                                           |
+| `cameraLerpSpeed`    | `number`          | `3`             | カメラ方位の補間速度。                                                                                                   |
+| `fpvForwardOffset`   | `number`          | `0`             | FPV 目線位置の前方オフセット（メートル）。                                                                               |
+| `fpvHeightOffset`    | `number`          | `1`             | アイレベルの高さオフセット（メートル）。FPV では目線の高さ、TPV ではカメラが回り込む共有アイレベル高さとして使われます。 |
+| `fpvPitch`           | `number`          | `0`             | FPV カメラの下向きピッチ（ラジアン。その場で視線を下に傾ける）。                                                         |
+| `startLat`           | `number`          | `35.6812`       | 開始緯度（度）。                                                                                                         |
+| `startLng`           | `number`          | `139.7671`      | 開始経度（度）。                                                                                                         |
+| `startHeight`        | `number`          | `500`           | 開始高度（メートル）。                                                                                                   |
+| `startHeading`       | `number`          | `Math.PI * 1.3` | 開始方位（ラジアン、0 = 北）。                                                                                           |
+| `keys`               | `KeyBindings`     | _デフォルト_    | キー割り当て — [KeyBindings](#keybindings) を参照。                                                                      |
 
 ### CharacterConfig
 
-| プロパティ            | 型                    | デフォルト             | 説明                                                       |
-| --------------------- | --------------------- | ---------------------- | ---------------------------------------------------------- |
-| `modelUrl`            | `string`              | **（必須）**           | ロードする GLTF モデルの URL。                              |
-| `animation`           | `AnimationConfig`     | **（必須）**           | アニメーションクリップの設定。                              |
-| `modelRotationOffset` | `ModelRotationOffset` | `{ x: 0, y: 0, z: 0 }` | モデルのデフォルト向きを補正する回転オフセット。            |
-| `modelScale`          | `number`              | `3`                    | モデルの均等スケール倍率。                                  |
-| `hideModelInFpv`      | `boolean`             | `true`                 | FPV のときにモデルを非表示にするかどうか。                  |
-| `castShadow`          | `boolean`             | `false`                | キャラクターが影を落とすかどうか。                          |
-| `receiveShadow`       | `boolean`             | `false`                | キャラクターが影を受けるかどうか。                          |
+| プロパティ            | 型                    | デフォルト             | 説明                                             |
+| --------------------- | --------------------- | ---------------------- | ------------------------------------------------ |
+| `modelUrl`            | `string`              | **（必須）**           | ロードする GLTF モデルの URL。                   |
+| `animation`           | `AnimationConfig`     | **（必須）**           | アニメーションクリップの設定。                   |
+| `modelRotationOffset` | `ModelRotationOffset` | `{ x: 0, y: 0, z: 0 }` | モデルのデフォルト向きを補正する回転オフセット。 |
+| `modelScale`          | `number`              | `3`                    | モデルの均等スケール倍率。                       |
+| `hideModelInFpv`      | `boolean`             | `true`                 | FPV のときにモデルを非表示にするかどうか。       |
+| `castShadow`          | `boolean`             | `false`                | キャラクターが影を落とすかどうか。               |
+| `receiveShadow`       | `boolean`             | `false`                | キャラクターが影を受けるかどうか。               |
 
 ### AnimationConfig
 
-| プロパティ          | 型        | 説明                                                                                                            |
-| ------------------- | --------- | --------------------------------------------------------------------------------------------------------------- |
-| `idleClip`          | `string`  | 静止時（移動キー未押下）に再生されるクリップ名。                                                                |
-| `walkClip`          | `string?` | ダッシュなしで移動中に再生されるクリップ名。省略すると移動中も `idleClip` が継続（idle + dash のみのモデル向け）。|
-| `dashClip`          | `string`  | ダッシュ時（ダッシュキー押下中）に再生されるクリップ名。                                                        |
-| `speed`             | `number`  | 再生速度の倍率。                                                                                                |
-| `crossfadeDuration` | `number`  | クリップ間のクロスフェード遷移時間（秒）。                                                                      |
+| プロパティ          | 型        | 説明                                                                                                               |
+| ------------------- | --------- | ------------------------------------------------------------------------------------------------------------------ |
+| `idleClip`          | `string`  | 静止時（移動キー未押下）に再生されるクリップ名。                                                                   |
+| `walkClip`          | `string?` | ダッシュなしで移動中に再生されるクリップ名。省略すると移動中も `idleClip` が継続（idle + dash のみのモデル向け）。 |
+| `dashClip`          | `string`  | ダッシュ時（ダッシュキー押下中）に再生されるクリップ名。                                                           |
+| `speed`             | `number`  | 再生速度の倍率。                                                                                                   |
+| `crossfadeDuration` | `number`  | クリップ間のクロスフェード遷移時間（秒）。                                                                         |
 
 ### ModelRotationOffset
 
-| プロパティ | 型       | 説明                              |
-| ---------- | -------- | --------------------------------- |
+| プロパティ | 型       | 説明                                   |
+| ---------- | -------- | -------------------------------------- |
 | `x`        | `number` | X 軸周りの回転オフセット（ラジアン）。 |
 | `y`        | `number` | Y 軸周りの回転オフセット（ラジアン）。 |
 | `z`        | `number` | Z 軸周りの回転オフセット（ラジアン）。 |
@@ -152,17 +152,17 @@ new PersonViewPlugin(config?: PersonViewConfig)
 
 各エントリには `KeyboardEvent.code` の値の配列（例：`["KeyW"]`、`["ArrowUp", "ControlLeft"]`）を指定します。配列で複数キーを同じアクションに割り当てられます。
 
-| プロパティ      | 型         | デフォルト                                          | 説明                                                                |
-| --------------- | ---------- | --------------------------------------------------- | ------------------------------------------------------------------- |
-| `forward`       | `string[]` | `["KeyW"]`                                          | 前進。                                                              |
-| `backward`      | `string[]` | `["KeyS"]`                                          | 後退。                                                              |
-| `turnLeft`      | `string[]` | `["KeyA"]`                                          | 左旋回。                                                            |
-| `turnRight`     | `string[]` | `["KeyD"]`                                          | 右旋回。                                                            |
-| `ascend`        | `string[]` | `["ArrowUp", "Space"]`                              | 上昇。                                                              |
-| `descend`       | `string[]` | `["ArrowDown", "ControlLeft", "ControlRight"]`      | 下降。                                                              |
-| `dash`          | `string[]` | `["ShiftLeft", "ShiftRight"]`                       | ホールド中にダッシュ。                                              |
-| `orbitCamera`   | `string[]` | `["AltLeft", "AltRight"]`                           | ホールド中にフリーカメラ（TPV: オービット / FPV: フリールック）。離した後も移動キーを押すまで向きが保持される。 |
-| `toggleView`    | `string[]` | `["KeyV"]`                                          | TPV / FPV の切り替え。                                              |
+| プロパティ    | 型         | デフォルト                                     | 説明                                                                                                            |
+| ------------- | ---------- | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `forward`     | `string[]` | `["KeyW"]`                                     | 前進。                                                                                                          |
+| `backward`    | `string[]` | `["KeyS"]`                                     | 後退。                                                                                                          |
+| `turnLeft`    | `string[]` | `["KeyA"]`                                     | 左旋回。                                                                                                        |
+| `turnRight`   | `string[]` | `["KeyD"]`                                     | 右旋回。                                                                                                        |
+| `ascend`      | `string[]` | `["ArrowUp", "Space"]`                         | 上昇。                                                                                                          |
+| `descend`     | `string[]` | `["ArrowDown", "ControlLeft", "ControlRight"]` | 下降。                                                                                                          |
+| `dash`        | `string[]` | `["ShiftLeft", "ShiftRight"]`                  | ホールド中にダッシュ。                                                                                          |
+| `orbitCamera` | `string[]` | `["AltLeft", "AltRight"]`                      | ホールド中にフリーカメラ（TPV: オービット / FPV: フリールック）。離した後も移動キーを押すまで向きが保持される。 |
+| `toggleView`  | `string[]` | `["KeyV"]`                                     | TPV / FPV の切り替え。                                                                                          |
 
 ## メソッド
 
@@ -182,19 +182,46 @@ teleport(options: {
   lat: number;
   alt: number;
   heading?: number;
-  pitch?: number;
 }): void
 ```
 
-新しい地理的位置に瞬時に移動させます。`heading` を省略した場合、現在のカメラ方位が維持されます。`pitch` を指定すると永続的な `cameraPitch` を更新し、省略した場合は現在のピッチが維持されます。
+新しい地理的位置に瞬時に移動させます。`heading` を省略した場合、現在のカメラ方位が維持されます。移動せずにその場で向きだけを変える場合は [`setHeading()`](#setheadingradians--getheading) を、カメラのピッチを変える場合は [`setCameraPitch()` / `setFpvPitch()`](#setcamerapitchradians--setfpvpitchradians) を使用してください。
 
-| フィールド | 型                    | 説明                                            |
-| ---------- | --------------------- | ----------------------------------------------- |
-| `lng`      | `number`              | 経度（度）。                                    |
-| `lat`      | `number`              | 緯度（度）。                                    |
-| `alt`      | `number`              | 高度（メートル）。                              |
-| `heading`  | `number \| undefined` | 方位（ラジアン、省略可）。                      |
-| `pitch`    | `number \| undefined` | カメラの下向きピッチ（ラジアン、0 で水平、省略可）。|
+| フィールド | 型                    | 説明                                               |
+| ---------- | --------------------- | -------------------------------------------------- |
+| `lng`      | `number`              | 経度（度）。                                       |
+| `lat`      | `number`              | 緯度（度）。                                       |
+| `alt`      | `number`              | 高度（メートル）。                                 |
+| `heading`  | `number \| undefined` | 方位（ラジアン、0 = 北、時計回りに増加、省略可）。 |
+
+### setHeading(radians) / getHeading()
+
+```typescript
+setHeading(radians: number): void
+getHeading(): number
+```
+
+キャラクターを指定した方位（ラジアン、0 = 北、時計回りに増加）に**位置を変えずに**回転させます。チェイスカメラは追従してスナップし、フリーカメラモードではモデルのみが回転します。`getHeading()` は現在の方位を返します。
+
+### setCameraPitch(radians) / setFpvPitch(radians)
+
+```typescript
+setCameraPitch(radians: number): void
+getCameraPitch(): number
+setFpvPitch(radians: number): void
+getFpvPitch(): number
+```
+
+カメラの下向きピッチ（ラジアン）を設定し、チェイス／固定カメラに即座に反映します。`setCameraPitch` は **TPV** のピッチ（カメラをモデルの上方へ回り込ませる）を、`setFpvPitch` は **FPV** のピッチ（その場で視線を下に傾ける）を制御します。対応するゲッターは現在の値を返します。
+
+### setFpvHeightOffset(meters) / getFpvHeightOffset()
+
+```typescript
+setFpvHeightOffset(meters: number): void
+getFpvHeightOffset(): number
+```
+
+アイレベルの高さオフセット（メートル）を設定し、チェイス／固定カメラに即座に反映します。これは FPV での目線の高さであり、TPV ではカメラが回り込んで注視する共有アイレベル高さでもあります。`getFpvHeightOffset()` は現在の値を返します。
 
 ### setViewMode(mode) / toggleViewMode()
 
@@ -241,15 +268,15 @@ dispose(): void
 
 `onStateChange()` で発行される状態オブジェクト：
 
-| プロパティ        | 型               | 説明                                                                   |
-| ----------------- | ---------------- | ---------------------------------------------------------------------- |
-| `lng`             | `number`         | 現在の経度（度）。                                                     |
-| `lat`             | `number`         | 現在の緯度（度）。                                                     |
-| `alt`             | `number`         | 現在の高度（メートル）。                                               |
-| `heading`         | `number`         | 現在の方位（ラジアン、0 = 北、時計回りに増加）。                       |
-| `speed`           | `number`         | 現在の速度（m/s、静止時は 0）。                                        |
-| `animationState`  | `string \| null` | 現在再生中のクリップ名。キャラクター未設定の場合は `null`。            |
-| `mode`            | `"tpv" \| "fpv"` | 現在の視点モード。                                                     |
+| プロパティ       | 型               | 説明                                                        |
+| ---------------- | ---------------- | ----------------------------------------------------------- |
+| `lng`            | `number`         | 現在の経度（度）。                                          |
+| `lat`            | `number`         | 現在の緯度（度）。                                          |
+| `alt`            | `number`         | 現在の高度（メートル）。                                    |
+| `heading`        | `number`         | 現在の方位（ラジアン、0 = 北、時計回りに増加）。            |
+| `speed`          | `number`         | 現在の速度（m/s、静止時は 0）。                             |
+| `animationState` | `string \| null` | 現在再生中のクリップ名。キャラクター未設定の場合は `null`。 |
+| `mode`           | `"tpv" \| "fpv"` | 現在の視点モード。                                          |
 
 ## 関連リソース
 

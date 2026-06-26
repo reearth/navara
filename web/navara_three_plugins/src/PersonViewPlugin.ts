@@ -90,15 +90,10 @@ export type TeleportOptions = {
   alt: number;
   /**
    * Heading in radians (0 = north, increasing clockwise). If omitted, the
-   * current camera heading is kept.
+   * current camera heading is kept. (Use `setHeading` to rotate in place
+   * without moving, and `setCameraPitch` / `setFpvPitch` for camera pitch.)
    */
   heading?: number;
-  /**
-   * Downward TPV camera pitch in radians. If provided, it updates the
-   * persistent `cameraPitch`; if omitted, the current pitch is kept. (Use
-   * `setFpvPitch` for the FPV pitch.)
-   */
-  pitch?: number;
 };
 
 /**
@@ -207,7 +202,11 @@ export type PersonViewConfig = {
   cameraLerpSpeed?: number;
   /** Forward offset (meters) applied to the FPV eye position. */
   fpvForwardOffset?: number;
-  /** Height offset (meters) applied to the FPV eye position. */
+  /**
+   * Eye-line height offset (meters) added to the position. Used in FPV for the
+   * eye position and in TPV as the shared eye-line height the camera orbits
+   * around and aims at.
+   */
   fpvHeightOffset?: number;
   /**
    * Downward camera pitch in radians for **FPV**. `0` looks straight ahead
@@ -450,9 +449,6 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
     const { lng, lat, alt } = options;
     const headingRad =
       options.heading != null ? options.heading : this.cameraHeading;
-    if (options.pitch != null) {
-      this.config.cameraPitch = options.pitch;
-    }
 
     if (this.handle && this.character) {
       const pos = geodeticToVector3({
@@ -515,6 +511,42 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
 
   setAllowCameraControl(value: boolean): void {
     this.config.allowCameraControl = value;
+  }
+
+  /**
+   * Rotate the character to the given heading in radians (0 = north,
+   * increasing clockwise) without changing position. Snaps the chase camera to
+   * match; in free-camera mode only the model rotates.
+   */
+  setHeading(radians: number): void {
+    if (!this.view) return;
+
+    const { lat, lng, alt } = this.state;
+    this.modelHeading = radians;
+    this.cameraHeading = radians;
+
+    if (this.handle && this.character) {
+      const pos = geodeticToVector3({
+        lat: degreeToRadian(lat),
+        lng: degreeToRadian(lng),
+        height: alt,
+      });
+      this.handle.update({
+        matrixWorld: this.composeCharacterFrame(pos, radians),
+      });
+    }
+
+    if (!this.isFreeCamera()) {
+      this.placeChaseCamera(lat, lng, alt, radians);
+    }
+
+    this.state = { ...this.state, heading: radians };
+    this.notify();
+  }
+
+  /** Current character heading in radians. */
+  getHeading(): number {
+    return this.state.heading;
   }
 
   /**

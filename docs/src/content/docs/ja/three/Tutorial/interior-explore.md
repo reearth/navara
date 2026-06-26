@@ -10,6 +10,7 @@ sidebar:
 `@navara/three_plugins` の [PersonViewPlugin](../../../three_plugins/personviewplugin/) を使って、3D Tiles の建物内をキャラクター操作で探索する方法を学びます。キャラクター操作処理をプラグインを使用することで簡単に実装できます。
 
 **このチュートリアルで学べること:**
+
 - 3D Tiles 建物モデルを読み込む
 - `PersonViewPlugin` で GLTF キャラクターを操作する
 - 地下や建物内をキャラクターに歩かせる
@@ -21,11 +22,11 @@ sidebar:
 まずは建物探索用のシーンを構築します。影と背景色を設定した `ThreeView` を作成します。
 
 ```typescript
-import ThreeView, {
-  Color,
-  JAPAN_GSI_ELEVATION_DECODER,
-} from "@navara/three";
-import { DefaultPlugin, type DefaultDescriptions } from "@navara/three_default_plugin";
+import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
+import {
+  DefaultPlugin,
+  type DefaultDescriptions,
+} from "@navara/three_default_plugin";
 import { PersonViewPlugin } from "@navara/three_plugins";
 
 const plugin = new DefaultPlugin();
@@ -181,15 +182,15 @@ personView.start();
 
 **デフォルトのキー割り当て**
 
-| キー              | アクション                              |
-| ----------------- | --------------------------------------- |
-| W / S             | 前進 / 後退                             |
-| A / D             | 左旋回 / 右旋回                         |
-| Arrow Up / Space  | 上昇                                    |
-| Arrow Down / Ctrl | 下降                                    |
-| Shift             | ダッシュ（`dashClip` に切り替わる）     |
-| Alt（押下中）     | カメラのオービット操作                  |
-| V                 | 三人称 / 一人称の切り替え               |
+| キー              | アクション                          |
+| ----------------- | ----------------------------------- |
+| W / S             | 前進 / 後退                         |
+| A / D             | 左旋回 / 右旋回                     |
+| Arrow Up / Space  | 上昇                                |
+| Arrow Down / Ctrl | 下降                                |
+| Shift             | ダッシュ（`dashClip` に切り替わる） |
+| Alt（押下中）     | カメラのオービット操作              |
+| V                 | 三人称 / 一人称の切り替え           |
 
 デフォルトの追従カメラ（TPV）は三人称です。**V** キーで一人称（FPV）に切り替えると、キャラクターのモデルは自動的に非表示になります。**Alt** を押している間はカメラを手動操作できますが、注視点はキャラクターのままです。
 
@@ -208,7 +209,7 @@ unsubscribe();
 
 ## シーン間でテレポートする
 
-`teleport({ lng, lat, alt, heading?, pitch? })` を使うと、メニューから別の建物を選んだ時などにキャラクターを瞬時に移動させられます。
+`teleport({ lng, lat, alt, heading? })` を使うと、メニューから別の建物を選んだ時などにキャラクターを瞬時に移動させられます。その場で向きだけを変えるには `setHeading()` を、カメラのピッチを調整するには `setCameraPitch()` / `setFpvPitch()` を使用します。
 
 ```typescript
 personView.teleport({ lng: 139.7397, lat: 35.6352, alt: 45 });
@@ -221,11 +222,11 @@ personView.teleport({ lng: 139.7397, lat: 35.6352, alt: 45 });
 3D Tiles 建物と組み合わせた完全な例です。入力・キャラクター・アニメーション・カメラをすべてプラグインが担うため、アプリ側のコードは短く保てます。
 
 ```typescript
-import ThreeView, {
-  Color,
-  JAPAN_GSI_ELEVATION_DECODER,
-} from "@navara/three";
-import { DefaultPlugin, type DefaultDescriptions } from "@navara/three_default_plugin";
+import ThreeView, { Color, JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
+import {
+  DefaultPlugin,
+  type DefaultDescriptions,
+} from "@navara/three_default_plugin";
 import { PersonViewPlugin } from "@navara/three_plugins";
 
 const plugin = new DefaultPlugin();
@@ -344,10 +345,11 @@ personView.start();
 ```
 
 :::tip[カスタマイズのヒント]
+
 - **別の建物を探索する**: `cesium3dtiles` レイヤーの URL を変更して別の PLATEAU モデルを読み込み、`personView.teleport()` でキャラクターを新しい場所に降ろします
 - **操作感の調整**: `moveSpeed`、`rotationSpeed`、`altSpeed` をプラグイン設定で調整できます
 - **任意のモデルを使う**: `character.modelUrl` を差し替え、`idleClip` / `dashClip` をモデルが持つクリップ名に合わせてください
 - **カメラを追従モードに固定**: 例では `allowCameraControl: true` を指定して常時フリーカメラにしていますが、`false` にすると基本は自動の追従ショットになり、**Alt** を押している間だけ手動でオービット操作できます
 - **起動時に一人称**: `initialView: "fpv"` を渡すと一人称視点で開始します
 - **キー割り当てのカスタマイズ**: `keys` オプションで任意のアクションを再割り当てできます（例: `keys: { ascend: ["Space"], descend: ["ControlLeft"] }`）
-:::
+  :::

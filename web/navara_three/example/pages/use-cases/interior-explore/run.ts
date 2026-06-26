@@ -187,6 +187,7 @@ const addTeleportControl = (pane: Pane, personView: PersonViewPlugin) => {
   const teleportTo = (name: TeleportPositionName) => {
     const position = TELEPORT_POSITIONS[name];
     personView.setViewMode(position.initialView);
+    personView.setCameraPitch(position.cameraPitch);
     personView.setFpvPitch(position.fpvPitch);
     personView.setFpvHeightOffset(position.fpvHeightOffset);
     personView.teleport({
@@ -194,7 +195,6 @@ const addTeleportControl = (pane: Pane, personView: PersonViewPlugin) => {
       lat: position.startLat,
       alt: position.startHeight,
       heading: position.startHeading,
-      pitch: position.cameraPitch,
     });
   };
 
