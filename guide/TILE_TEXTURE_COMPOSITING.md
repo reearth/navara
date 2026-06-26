@@ -2,8 +2,11 @@
 
 How `@navara/three` composites many overlays — hillshade normals, elevation
 heatmaps, multiple raster tiles, and texturized vector tiles — onto a single
-terrain mesh. For the broader rendering pipeline see
-[ARCHITECTURE.md](ARCHITECTURE.md); for the enhancer pattern reused here see
+terrain mesh. For how those tiles are selected and resolved on the Rust side
+(the terrain/raster quadtree traversals that feed this stage) see
+[TILE_TERRAIN_TRAVERSAL.md](TILE_TERRAIN_TRAVERSAL.md). For the broader rendering
+pipeline see [ARCHITECTURE.md](ARCHITECTURE.md); for the enhancer pattern reused
+here see
 [material/enhancer/DESIGN.md](../web/navara_three/src/material/enhancer/DESIGN.md).
 
 ## Overview
