@@ -42,8 +42,12 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
         crossfadeDuration: 0.3,
       },
       modelRotationOffset: { x: -Math.PI / 2, y: 0, z: Math.PI },
-      modelScale: 3,
+      modelScale: 1,
     },
+    cameraDistance: 20,
+    cameraPitch: Math.PI * 0.12,
+    fpvHeightOffset: 0,
+    fpvForwardOffset: 0.1,
   });
   const overlayPlugin = new OverlayPlugin({ maxDistance: 100_000 });
 
@@ -117,7 +121,11 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     );
 
     root.addEventListener("click", () => {
-      personViewPlugin.teleport(landmark.lng, landmark.lat, landmark.alt);
+      personViewPlugin.teleport({
+        lng: landmark.lng,
+        lat: landmark.lat,
+        alt: landmark.alt,
+      });
     });
 
     overlayContainer.appendChild(root);

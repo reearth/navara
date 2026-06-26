@@ -62,6 +62,9 @@ const PAGE_CONFIGS: Record<string, PageConfig> = {
   "use-cases-photorealistic": {
     waitTime: 50000,
   },
+  "use-cases-interior-explore": {
+    waitTime: 60000,
+  },
 };
 
 class ScreenshotGenerator {

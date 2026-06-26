@@ -1,5 +1,7 @@
 import ThreeView, {
   TERRARIUM_ELEVATION_DECODER,
+  degreeToRadian,
+  radianToDegree,
   type EffectHandle,
   type MeshHandle,
 } from "@navara/three";
@@ -13,11 +15,13 @@ import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
+import { PersonViewPlugin, type ViewMode } from "@navara/three_plugins";
 import { Vector2 } from "three";
 import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../helpers/attributions";
 import {
+  LOCAL_DATASETS,
   TERRAIN_DATASETS,
   TILE_DATASETS,
   TILES_3D_DATASETS,
@@ -28,6 +32,12 @@ import { GOOGLE_MAPS_API_KEY } from "../../helpers/keys";
 export type CustomDescriptions = DefaultDescriptions;
 
 type BaseMode = "mapterhorn" | "google";
+
+// "normal" drives the free orbit camera (setCamera + tweakpane sliders).
+// "person" hands camera control to PersonViewPlugin (Soldier character,
+// TPV/FPV) so the character orientation and a person-anchored camera can
+// be authored and exported as a PersonViewPlugin config.
+type ViewKind = "normal" | "person";
 
 type CameraState = {
   lng: number;
@@ -41,6 +51,10 @@ type CameraState = {
 
 const DEFAULT_FOV = 45;
 const DEFAULT_EXPOSURE = 10;
+
+// Whether the person-view camera starts in free-look (always-free) mode.
+// Shared between PersonViewPlugin construction and the panel toggle default.
+const PERSON_FREE_LOOK_DEFAULT = true;
 
 const BASE_CLOUDS = {
   qualityPreset: "high" as const,
@@ -219,10 +233,12 @@ const INITIAL_CAMERA: CameraState = {
 
 export const run = async () => {
   let currentMode: BaseMode = "google";
+  let currentKind: ViewKind = "normal";
   let cameraState: CameraState = { ...INITIAL_CAMERA };
   let exposureState = DEFAULT_EXPOSURE;
   let firstSetup = true;
   let view: ThreeView<CustomDescriptions> | null = null;
+  let personView: PersonViewPlugin | null = null;
   let pane: Pane | null = null;
   let switching = false;
 
@@ -272,8 +288,9 @@ export const run = async () => {
     showAttributions([TILES_3D_DATASETS.googlePhotorealTiles], [tiles]);
   };
 
-  const setup = async (mode: BaseMode) => {
+  const setup = async (mode: BaseMode, kind: ViewKind) => {
     currentMode = mode;
+    currentKind = kind;
 
     const v = new ThreeView<CustomDescriptions>({
       animation: true,
@@ -282,6 +299,41 @@ export const run = async () => {
 
     const plugin = new DefaultPlugin();
     v.addPlugin(plugin);
+
+    // PersonViewPlugin must be registered before init(). Seed it from the
+    // current camera state so the position carries over from normal mode.
+    if (kind === "person") {
+      personView = new PersonViewPlugin({
+        character: {
+          modelUrl: LOCAL_DATASETS.soldierGLTF.url,
+          animation: {
+            idleClip: "Idle",
+            walkClip: "Walk",
+            dashClip: "Run",
+            speed: 1,
+            crossfadeDuration: 0.3,
+          },
+          modelRotationOffset: { x: Math.PI / 2, y: 0, z: 0 },
+          modelScale: 1,
+          castShadow: true,
+          receiveShadow: true,
+        },
+        initialView: "tpv",
+        moveSpeed: 5,
+        altSpeed: 5,
+        rotationSpeed: 4,
+        allowCameraControl: PERSON_FREE_LOOK_DEFAULT,
+        startLat: cameraState.lat,
+        startLng: cameraState.lng,
+        startHeight: cameraState.height,
+        startHeading: degreeToRadian(cameraState.heading),
+        minAlt: -1000,
+        maxAlt: 1_000_000,
+        cameraDistance: 10,
+      });
+      v.addPlugin(personView);
+    }
+
     await v.init();
 
     const defaultScene = plugin.addDefaultPhotorealScene();
@@ -293,7 +345,11 @@ export const run = async () => {
 
     view.toneMappingExposure = exposureState;
 
-    if (firstSetup) {
+    if (kind === "person") {
+      // PersonViewPlugin drives the camera every frame; do not call
+      // setCamera here or it would fight the per-frame follow.
+      personView?.start();
+    } else if (firstSetup) {
       v.setCamera({ ...cameraState, distance: INITIAL_CITY.distance });
       firstSetup = false;
     } else {
@@ -305,6 +361,10 @@ export const run = async () => {
       buildMapterhorn(v);
     } else {
       buildGoogle(v);
+    }
+
+    if (kind === "person") {
+      showAttributions([LOCAL_DATASETS.soldierGLTF]);
     }
 
     // Clouds are kept alive (creating/deleting them is expensive); toggle by
@@ -328,34 +388,56 @@ export const run = async () => {
 
     addDateControl(v, p);
     addBaseLayerControl(p, () => currentMode, switchBase);
+    addViewModeControl(p, () => currentKind, switchViewKind);
     addRenderControl(p, v, exposureState, (next) => {
       exposureState = next;
     });
     addEffectsControl(p, clouds, lazyFactories);
-    addCameraPanel(p, v, cameraState, (next) => {
-      cameraState = next;
-    });
+    if (kind === "person" && personView) {
+      addPersonPanel(p, v, personView, cameraState, (next) => {
+        cameraState = next;
+      });
+    } else {
+      addCameraPanel(p, v, cameraState, (next) => {
+        cameraState = next;
+      });
+    }
   };
 
   const teardown = () => {
     pane?.dispose();
     pane = null;
+    // Dispose the plugin before the view so its keyboard listeners and
+    // requestAnimationFrame loop are torn down (the view does not own them).
+    personView?.dispose();
+    personView = null;
     view?.dispose();
     view = null;
   };
 
-  const switchBase = async (mode: BaseMode) => {
-    if (switching || mode === currentMode) return;
+  const rebuild = async () => {
     switching = true;
     try {
       teardown();
-      await setup(mode);
+      await setup(currentMode, currentKind);
     } finally {
       switching = false;
     }
   };
 
-  await setup(currentMode);
+  const switchBase = async (mode: BaseMode) => {
+    if (switching || mode === currentMode) return;
+    currentMode = mode;
+    await rebuild();
+  };
+
+  const switchViewKind = async (kind: ViewKind) => {
+    if (switching || kind === currentKind) return;
+    currentKind = kind;
+    await rebuild();
+  };
+
+  await setup(currentMode, currentKind);
 };
 
 const addBaseLayerControl = (
@@ -376,6 +458,24 @@ const addBaseLayerControl = (
     .on("change", (ev) => {
       switchBase(ev.value as BaseMode);
     });
+};
+
+const addViewModeControl = (
+  pane: Pane,
+  getKind: () => ViewKind,
+  switchViewKind: (kind: ViewKind) => void,
+) => {
+  const folder = pane.addFolder({ title: "View Mode", expanded: true });
+  // The pane is rebuilt on every setup(), so the title reflects the kind
+  // that will be active after the toggle for the current build.
+  const target: ViewKind = getKind() === "normal" ? "person" : "normal";
+  const label =
+    target === "person"
+      ? "Switch to Person view (Soldier)"
+      : "Switch to Normal camera";
+  folder.addButton({ title: label }).on("click", () => {
+    switchViewKind(target);
+  });
 };
 
 const addRenderControl = (
@@ -603,6 +703,314 @@ const addCameraPanel = (
   });
 };
 
+const addPersonPanel = (
+  pane: Pane,
+  view: ThreeView<CustomDescriptions>,
+  personView: PersonViewPlugin,
+  initial: CameraState,
+  onCameraChange: (state: CameraState) => void,
+) => {
+  // Person view only authors position + heading; pitch/roll/fov are carried
+  // over untouched so toggling back to the normal camera preserves them.
+  // CameraState stays in degrees (shared with the normal camera), while the
+  // person heading is authored in radians to match PersonViewPlugin's
+  // startHeading / teleport units so the copied config pastes verbatim.
+  const params: CameraState = { ...initial };
+  const personParams = {
+    heading: degreeToRadian(initial.heading),
+    cameraPitch: personView.getCameraPitch(),
+    fpvPitch: personView.getFpvPitch(),
+    fpvHeightOffset: personView.getFpvHeightOffset(),
+  };
+
+  const folder = pane.addFolder({
+    title: "Camera (Person View)",
+    expanded: true,
+  });
+
+  let ignoreChange = false;
+
+  // View mode (TPV/FPV). The "V" key also toggles it inside the plugin, so
+  // keep this binding in sync via onStateChange below.
+  const viewParams = { mode: personView.getState().mode };
+  folder
+    .addBinding(viewParams, "mode", {
+      label: "view",
+      options: [
+        { text: "Third person (TPV)", value: "tpv" },
+        { text: "First person (FPV)", value: "fpv" },
+      ],
+    })
+    .on("change", (ev) => {
+      personView.setViewMode(ev.value as ViewMode);
+    });
+
+  // Free look: when on, the camera is always free (mouse drag rotates the
+  // view). When off, the camera chases the character and Alt-hold gives a
+  // temporary free look. Defaults to the constructed `allowCameraControl`.
+  const controlParams = { freeLook: PERSON_FREE_LOOK_DEFAULT };
+  folder
+    .addBinding(controlParams, "freeLook", { label: "free look" })
+    .on("change", (ev) => {
+      personView.setAllowCameraControl(ev.value);
+    });
+
+  // Live position readouts driven by the plugin's per-frame state.
+  folder.addBinding(params, "lng", { readonly: true });
+  folder.addBinding(params, "lat", { readonly: true });
+  folder.addBinding(params, "height", { readonly: true, label: "alt" });
+
+  // Heading (radians) is editable so the character orientation can be
+  // fine-tuned; applying it rotates the character in place.
+  folder
+    .addBinding(personParams, "heading", { label: "heading (rad)" })
+    .on("change", () => {
+      if (ignoreChange) return;
+      personView.setHeading(personParams.heading);
+    });
+
+  // TPV camera pitch (radians). Orbits the camera up and over the model
+  // while keeping it centered.
+  folder
+    .addBinding(personParams, "cameraPitch", {
+      label: "tpv pitch (rad)",
+      min: -1.5,
+      max: 1.5,
+      step: 0.01,
+    })
+    .on("change", () => {
+      if (ignoreChange) return;
+      personView.setCameraPitch(personParams.cameraPitch);
+    });
+
+  // FPV camera pitch (radians). Tilts the first-person view down in place.
+  folder
+    .addBinding(personParams, "fpvPitch", {
+      label: "fpv pitch (rad)",
+      min: -1.5,
+      max: 1.5,
+      step: 0.01,
+    })
+    .on("change", () => {
+      if (ignoreChange) return;
+      personView.setFpvPitch(personParams.fpvPitch);
+    });
+
+  // FPV eye height offset (meters). Also the shared eye-line height used by TPV.
+  folder
+    .addBinding(personParams, "fpvHeightOffset", {
+      label: "fpv height (m)",
+      min: 0,
+      max: 100,
+      step: 0.5,
+    })
+    .on("change", () => {
+      if (ignoreChange) return;
+      personView.setFpvHeightOffset(personParams.fpvHeightOffset);
+    });
+
+  folder
+    .addBinding(params, "fov", { min: 1, max: 179, step: 0.1 })
+    .on("change", (ev) => {
+      view.camera.fov = ev.value;
+      onCameraChange({ ...params });
+    });
+
+  personView.onStateChange((s) => {
+    params.lng = s.lng;
+    params.lat = s.lat;
+    params.height = s.alt;
+    // s.heading is radians; keep CameraState (degrees) in sync for the
+    // normal-mode carryover and the "Copy camera state" snippet.
+    personParams.heading = s.heading;
+    params.heading = radianToDegree(s.heading);
+    viewParams.mode = s.mode;
+    onCameraChange({ ...params });
+    ignoreChange = true;
+    folder.refresh();
+    ignoreChange = false;
+  });
+
+  const citiesFolder = folder.addFolder({ title: "Cities" });
+  for (const city of CITIES) {
+    citiesFolder.addButton({ title: city.name }).on("click", () => {
+      // Preserve the current sun elevation at the new location, mirroring the
+      // normal camera panel's behaviour.
+      view.atmosphere.setElevationFromCameraAt({
+        lat: city.lat,
+        lng: city.lng,
+      });
+      personView.teleport({
+        lng: city.lng,
+        lat: city.lat,
+        alt: city.height,
+        heading: degreeToRadian(city.heading),
+      });
+    });
+  }
+
+  addClipboardCopyButton(folder, "Copy PersonViewPlugin config", () =>
+    formatPersonViewSnippet(
+      params,
+      personParams.heading,
+      personParams.cameraPitch,
+      personParams.fpvPitch,
+      personParams.fpvHeightOffset,
+      personView.getState().mode,
+    ),
+  );
+  addClipboardCopyButton(folder, "Copy camera state", () =>
+    formatCameraSnippet(params),
+  );
+
+  // Accepts either a PersonViewPlugin config snippet (startLat/…/startHeading
+  // in radians) or a CameraState snippet (lat/…/heading in degrees). The two
+  // are distinguishable by their key names, so try the person config first.
+  addClipboardPasteButton(folder, "Paste config / camera state", (text) => {
+    const personCfg = parsePersonViewSnippet(text);
+    if (personCfg) {
+      if (personCfg.initialView) personView.setViewMode(personCfg.initialView);
+      if (personCfg.cameraPitch !== null) {
+        personParams.cameraPitch = personCfg.cameraPitch;
+        personView.setCameraPitch(personCfg.cameraPitch);
+      }
+      if (personCfg.fpvPitch !== null) {
+        personParams.fpvPitch = personCfg.fpvPitch;
+        personView.setFpvPitch(personCfg.fpvPitch);
+      }
+      if (personCfg.fpvHeightOffset !== null) {
+        personParams.fpvHeightOffset = personCfg.fpvHeightOffset;
+        personView.setFpvHeightOffset(personCfg.fpvHeightOffset);
+      }
+      personView.teleport({
+        lng: personCfg.startLng,
+        lat: personCfg.startLat,
+        alt: personCfg.startHeight,
+        heading: personCfg.startHeading,
+      });
+      ignoreChange = true;
+      folder.refresh();
+      ignoreChange = false;
+      return true;
+    }
+    const cam = parseCameraSnippet(text);
+    if (cam) {
+      // pitch/roll/fov are not driven by the person camera; keep them in the
+      // shared CameraState so toggling back to normal preserves them.
+      params.pitch = cam.pitch;
+      params.roll = cam.roll;
+      params.fov = cam.fov;
+      view.camera.fov = cam.fov;
+      personView.teleport({
+        lng: cam.lng,
+        lat: cam.lat,
+        alt: cam.height,
+        heading: degreeToRadian(cam.heading),
+      });
+      return true;
+    }
+    return false;
+  });
+};
+
+const addClipboardCopyButton = (
+  folder: ReturnType<Pane["addFolder"]>,
+  title: string,
+  getText: () => string,
+) => {
+  const button = folder.addButton({ title });
+  const originalTitle = button.title;
+  button.on("click", async () => {
+    try {
+      await navigator.clipboard.writeText(getText());
+      button.title = "Copied!";
+      setTimeout(() => {
+        button.title = originalTitle;
+      }, 1200);
+    } catch (e) {
+      console.error("Clipboard write failed:", e);
+    }
+  });
+};
+
+// Reads the clipboard and hands the text to `apply`, which returns whether it
+// could parse and apply the snippet. The button title flashes the outcome.
+const addClipboardPasteButton = (
+  folder: ReturnType<Pane["addFolder"]>,
+  title: string,
+  apply: (text: string) => boolean,
+) => {
+  const button = folder.addButton({ title });
+  const originalTitle = button.title;
+  const flash = (msg: string) => {
+    button.title = msg;
+    setTimeout(() => {
+      button.title = originalTitle;
+    }, 1500);
+  };
+  button.on("click", async () => {
+    let text: string;
+    try {
+      text = await navigator.clipboard.readText();
+    } catch (e) {
+      console.error("Clipboard read failed:", e);
+      flash("Read failed");
+      return;
+    }
+    flash(apply(text) ? "Pasted!" : "Parse failed");
+  });
+};
+
+type PersonViewSnippet = {
+  startLat: number;
+  startLng: number;
+  startHeight: number;
+  startHeading: number;
+  cameraPitch: number | null;
+  fpvPitch: number | null;
+  fpvHeightOffset: number | null;
+  initialView: ViewMode | null;
+};
+
+const parsePersonViewSnippet = (text: string): PersonViewSnippet | null => {
+  const readNumber = (key: string): number | null => {
+    const re = new RegExp(
+      String.raw`${key}\s*:\s*([-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?)`,
+    );
+    const m = text.match(re);
+    if (!m) return null;
+    const n = Number(m[1]);
+    return Number.isFinite(n) ? n : null;
+  };
+
+  const startLat = readNumber("startLat");
+  const startLng = readNumber("startLng");
+  const startHeight = readNumber("startHeight");
+  const startHeading = readNumber("startHeading");
+  if (
+    startLat === null ||
+    startLng === null ||
+    startHeight === null ||
+    startHeading === null
+  ) {
+    return null;
+  }
+
+  const viewMatch = text.match(/initialView\s*:\s*["']?(tpv|fpv)["']?/);
+  const initialView = (viewMatch?.[1] as ViewMode | undefined) ?? null;
+
+  return {
+    startLat,
+    startLng,
+    startHeight,
+    startHeading,
+    cameraPitch: readNumber("cameraPitch"),
+    fpvPitch: readNumber("fpvPitch"),
+    fpvHeightOffset: readNumber("fpvHeightOffset"),
+    initialView,
+  };
+};
+
 const parseCameraSnippet = (text: string): CameraState | null => {
   const readNumber = (key: keyof CameraState): number | null => {
     const re = new RegExp(
@@ -629,6 +1037,30 @@ const parseCameraSnippet = (text: string): CameraState | null => {
     out[k] = n;
   }
   return out;
+};
+
+// Emits an object that can be spread straight into `new PersonViewPlugin({…})`.
+// `startHeading` is in radians, matching the plugin's unit and the radian
+// heading shown in the panel, so the value can be pasted verbatim.
+const formatPersonViewSnippet = (
+  p: CameraState,
+  headingRad: number,
+  cameraPitchRad: number,
+  fpvPitchRad: number,
+  fpvHeightOffset: number,
+  mode: ViewMode,
+): string => {
+  const lines = [
+    `  startLat: ${p.lat},`,
+    `  startLng: ${p.lng},`,
+    `  startHeight: ${p.height},`,
+    `  startHeading: ${headingRad},`,
+    `  cameraPitch: ${cameraPitchRad},`,
+    `  fpvPitch: ${fpvPitchRad},`,
+    `  fpvHeightOffset: ${fpvHeightOffset},`,
+    `  initialView: "${mode}",`,
+  ];
+  return `{\n${lines.join("\n")}\n}`;
 };
 
 const formatCameraSnippet = (p: CameraState): string => {

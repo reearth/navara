@@ -43,7 +43,7 @@
  *   console.log(state.lat, state.lng, state.alt, state.mode);
  * });
  *
- * personView.teleport(lng, lat, alt, headingDeg);
+ * personView.teleport({ lng, lat, alt, heading: headingRad });
  * personView.toggleViewMode();
  *
  * unsub();
@@ -72,12 +72,28 @@ export type PersonViewState = {
   lng: number;
   lat: number;
   alt: number;
-  /** Heading in degrees — 0 = north, 90 = east. */
+  /** Heading in radians — 0 = north, increasing clockwise. */
   heading: number;
   speed: number;
   /** Current animation clip name, or null when no character is configured. */
   animationState: string | null;
   mode: ViewMode;
+};
+
+/** Options for {@link PersonViewPlugin.teleport}. */
+export type TeleportOptions = {
+  /** Longitude in degrees. */
+  lng: number;
+  /** Latitude in degrees. */
+  lat: number;
+  /** Altitude in meters. */
+  alt: number;
+  /**
+   * Heading in radians (0 = north, increasing clockwise). If omitted, the
+   * current camera heading is kept. (Use `setHeading` to rotate in place
+   * without moving, and `setCameraPitch` / `setFpvPitch` for camera pitch.)
+   */
+  heading?: number;
 };
 
 /**
@@ -175,12 +191,29 @@ export type PersonViewConfig = {
   minAlt?: number;
   maxAlt?: number;
   cameraDistance?: number;
-  cameraHeight?: number;
+  /**
+   * Downward camera pitch in radians for **TPV**. `0` keeps the camera
+   * behind the model at eye level; positive values orbit the camera up and
+   * over so it looks down at the model while keeping it centered. Has no
+   * effect while the free camera is active (Alt-hold or `allowCameraControl`),
+   * where mouse drag controls the pitch instead.
+   */
+  cameraPitch?: number;
   cameraLerpSpeed?: number;
   /** Forward offset (meters) applied to the FPV eye position. */
   fpvForwardOffset?: number;
-  /** Height offset (meters) applied to the FPV eye position. */
+  /**
+   * Eye-line height offset (meters) added to the position. Used in FPV for the
+   * eye position and in TPV as the shared eye-line height the camera orbits
+   * around and aims at.
+   */
   fpvHeightOffset?: number;
+  /**
+   * Downward camera pitch in radians for **FPV**. `0` looks straight ahead
+   * (horizontal); positive values tilt the view down in place without moving
+   * the eye. Has no effect while the free camera is active.
+   */
+  fpvPitch?: number;
 
   startLat?: number;
   startLng?: number;
@@ -224,10 +257,11 @@ const DEFAULTS: PersonViewDefaults = {
   minAlt: 50,
   maxAlt: 5000,
   cameraDistance: 50,
-  cameraHeight: 20,
+  cameraPitch: 0,
   cameraLerpSpeed: 3,
-  fpvForwardOffset: 1.5,
-  fpvHeightOffset: 5,
+  fpvForwardOffset: 0,
+  fpvHeightOffset: 1,
+  fpvPitch: 0,
   startLat: 35.6812,
   startLng: 139.7671,
   startHeight: 500,
@@ -339,7 +373,7 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
       lng: this.config.startLng,
       lat: this.config.startLat,
       alt: this.config.startHeight,
-      heading: radianToDegree(this.config.startHeading),
+      heading: this.config.startHeading,
       speed: 0,
       animationState: this.currentAnimState,
       mode: this.viewMode,
@@ -408,15 +442,13 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
     document.addEventListener("keyup", this.boundKeyUp);
   }
 
-  /**
-   * Instantly move to a new geographic position.
-   * @param heading - Optional heading in degrees. If omitted, the current camera heading is kept.
-   */
-  teleport(lng: number, lat: number, alt: number, heading?: number): void {
+  /** Instantly move to a new geographic position. */
+  teleport(options: TeleportOptions): void {
     if (!this.view) return;
 
+    const { lng, lat, alt } = options;
     const headingRad =
-      heading != null ? degreeToRadian(heading) : this.cameraHeading;
+      options.heading != null ? options.heading : this.cameraHeading;
 
     if (this.handle && this.character) {
       const pos = geodeticToVector3({
@@ -437,7 +469,7 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
       lng,
       lat,
       alt,
-      heading: radianToDegree(headingRad),
+      heading: headingRad,
       speed: 0,
       animationState: this.currentAnimState,
       mode: this.viewMode,
@@ -479,6 +511,108 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
 
   setAllowCameraControl(value: boolean): void {
     this.config.allowCameraControl = value;
+  }
+
+  /**
+   * Rotate the character to the given heading in radians (0 = north,
+   * increasing clockwise) without changing position. Snaps the chase camera to
+   * match; in free-camera mode only the model rotates.
+   */
+  setHeading(radians: number): void {
+    if (!this.view) return;
+
+    const { lat, lng, alt } = this.state;
+    this.modelHeading = radians;
+    this.cameraHeading = radians;
+
+    if (this.handle && this.character) {
+      const pos = geodeticToVector3({
+        lat: degreeToRadian(lat),
+        lng: degreeToRadian(lng),
+        height: alt,
+      });
+      this.handle.update({
+        matrixWorld: this.composeCharacterFrame(pos, radians),
+      });
+    }
+
+    if (!this.isFreeCamera()) {
+      this.placeChaseCamera(lat, lng, alt, radians);
+    }
+
+    this.state = { ...this.state, heading: radians };
+    this.notify();
+  }
+
+  /** Current character heading in radians. */
+  getHeading(): number {
+    return this.state.heading;
+  }
+
+  /**
+   * Set the downward TPV camera pitch in radians (0 = behind at eye level,
+   * positive orbits up and over the model). Takes effect immediately for the
+   * chase / locked camera.
+   */
+  setCameraPitch(radians: number): void {
+    this.config.cameraPitch = radians;
+    if (!this.isFreeCamera()) {
+      this.placeChaseCamera(
+        this.state.lat,
+        this.state.lng,
+        this.state.alt,
+        this.cameraHeading,
+      );
+    }
+  }
+
+  /** Current downward TPV camera pitch in radians. */
+  getCameraPitch(): number {
+    return this.config.cameraPitch;
+  }
+
+  /**
+   * Set the downward FPV camera pitch in radians (0 = horizontal, positive
+   * tilts the view down in place). Takes effect immediately for the chase /
+   * locked camera.
+   */
+  setFpvPitch(radians: number): void {
+    this.config.fpvPitch = radians;
+    if (!this.isFreeCamera()) {
+      this.placeChaseCamera(
+        this.state.lat,
+        this.state.lng,
+        this.state.alt,
+        this.cameraHeading,
+      );
+    }
+  }
+
+  /** Current downward FPV camera pitch in radians. */
+  getFpvPitch(): number {
+    return this.config.fpvPitch;
+  }
+
+  /**
+   * Set the FPV eye height offset in meters (added to the position to get the
+   * eye height). Also used as the shared eye-line height in TPV. Takes effect
+   * immediately for the chase / locked camera.
+   */
+  setFpvHeightOffset(meters: number): void {
+    this.config.fpvHeightOffset = meters;
+    if (!this.isFreeCamera()) {
+      this.placeChaseCamera(
+        this.state.lat,
+        this.state.lng,
+        this.state.alt,
+        this.cameraHeading,
+      );
+    }
+  }
+
+  /** Current FPV eye height offset in meters. */
+  getFpvHeightOffset(): number {
+    return this.config.fpvHeightOffset;
   }
 
   dispose(): void {
@@ -560,9 +694,12 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
   }
 
   /**
-   * Unified chase-camera placement for both TPV and FPV.
-   * Caller supplies the heading (radians) to use — lerped during the
-   * per-frame loop, snapped on teleport / init.
+   * Chase / locked camera placement. Caller supplies the heading (radians)
+   * to use — lerped during the per-frame loop, snapped on teleport / init.
+   *
+   * Pitch is per-mode: FPV uses `fpvPitch` and tilts the view down in place
+   * (the eye stays fixed); TPV uses `cameraPitch` and orbits the camera around
+   * the model, staying aimed at it so the model remains centered.
    */
   private placeChaseCamera(
     lat: number,
@@ -572,37 +709,58 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
   ): void {
     if (!this.view) return;
 
-    const { cameraDistance, cameraHeight, fpvHeightOffset, fpvForwardOffset } =
-      this.config;
+    const {
+      cameraDistance,
+      cameraPitch,
+      fpvPitch,
+      fpvHeightOffset,
+      fpvForwardOffset,
+    } = this.config;
     const isFpv = this.viewMode === "fpv";
+    const eyeHeight = alt + fpvHeightOffset;
 
-    // Place the look-at target ahead of the eye so the camera, offset
-    // back by the same distance, ends up at the eye looking forward.
-    // For TPV the eye is the model; we still aim the camera slightly
-    // ahead of the model so the chase shot is centered on what's ahead.
-    const lookAheadDistance = isFpv
-      ? fpvForwardOffset + FPV_LOOK_AHEAD_DISTANCE
-      : 0;
-    const backDistance = isFpv ? FPV_LOOK_AHEAD_DISTANCE : cameraDistance;
-    const upOffset = isFpv ? 0 : cameraHeight;
-    const targetHeight = alt + (isFpv ? fpvHeightOffset : 1);
+    if (isFpv) {
+      // FPV: the eye is locked to the person's position at eye height.
+      // `fpvPitch` tilts the view down *in place* by lowering the look-at
+      // target while a matching upward offset keeps the eye itself at
+      // `eyeHeight` — only the look direction changes, not the position.
+      //
+      // The target sits far ahead and the camera is offset back by the
+      // same distance, so the camera ends up at the eye looking forward.
+      const backDistance = FPV_LOOK_AHEAD_DISTANCE;
+      const lookAheadDistance = fpvForwardOffset + FPV_LOOK_AHEAD_DISTANCE;
+      const targetDrop = Math.tan(fpvPitch) * backDistance;
+      const target = this.advanceLatLng(lat, lng, heading, lookAheadDistance);
 
-    const target =
-      lookAheadDistance > 0
-        ? this.advanceLatLng(lat, lng, heading, lookAheadDistance)
-        : { lat, lng };
+      this._offset.set(
+        -Math.sin(heading) * backDistance,
+        -Math.cos(heading) * backDistance,
+        targetDrop,
+      );
+
+      this.view.cameraFollow(
+        true,
+        { lat: target.lat, lng: target.lng, height: eyeHeight - targetDrop },
+        this._offset,
+      );
+      return;
+    }
+
+    // TPV: orbit the camera around the model. The look-at target stays on
+    // the model at eye height, and `cameraPitch` raises the camera while
+    // keeping it aimed at the model, so the model stays centered as you tilt
+    // down. The eye orbits at constant `cameraDistance` from the model:
+    // pulled back by `cos(pitch)` horizontally and up by `sin(pitch)`.
+    const horizontal = cameraDistance * Math.cos(cameraPitch);
+    const vertical = cameraDistance * Math.sin(cameraPitch);
 
     this._offset.set(
-      -Math.sin(heading) * backDistance,
-      -Math.cos(heading) * backDistance,
-      upOffset,
+      -Math.sin(heading) * horizontal,
+      -Math.cos(heading) * horizontal,
+      vertical,
     );
 
-    this.view.cameraFollow(
-      true,
-      { lat: target.lat, lng: target.lng, height: targetHeight },
-      this._offset,
-    );
+    this.view.cameraFollow(true, { lat, lng, height: eyeHeight }, this._offset);
   }
 
   /**
@@ -801,16 +959,30 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
         // FPV: position-locked free-look at eye height. The Rust side
         // pins the camera to the target and lets mouse drag rotate
         // orientation only — no orbit-around-target motion.
+        //
+        // Advance the eye by `fpvForwardOffset` so it matches the eye
+        // position produced by `placeChaseCamera` (which lands the
+        // camera that far ahead of the position). Without this the eye
+        // sits exactly on the position, so engaging free-look snaps the
+        // camera back by `fpvForwardOffset` from the chase placement.
+        const eye = this.advanceLatLng(
+          nextLat,
+          nextLng,
+          this.cameraHeading,
+          this.config.fpvForwardOffset,
+        );
         this.view.cameraFreeLook(true, {
-          lat: nextLat,
-          lng: nextLng,
+          lat: eye.lat,
+          lng: eye.lng,
           height: nextAlt + this.config.fpvHeightOffset,
         });
       } else {
+        // Keep the orbit pivot at the same eye height used everywhere
+        // else so switching between free and chase camera is seamless.
         this.view.cameraFollow(true, {
           lat: nextLat,
           lng: nextLng,
-          height: nextAlt + 1,
+          height: nextAlt + this.config.fpvHeightOffset,
         });
       }
     } else {
@@ -847,7 +1019,7 @@ export class PersonViewPlugin extends Plugin<View, ViewContext> {
       lng: nextLng,
       lat: nextLat,
       alt: nextAlt,
-      heading: radianToDegree(this.modelHeading),
+      heading: this.modelHeading,
       speed: moveSpeed * this.dashMultiplier,
       animationState: nextAnimState,
       mode: this.viewMode,

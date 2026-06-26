@@ -48,6 +48,17 @@ use navara_layer::{
     DeleteRasterTileLayerMarker, TerrainLayer, TilesLayer, UpdateRasterTileLayerMarker,
 };
 
+/// Raster texture slots a single terrain tile may fill with draped imagery,
+/// shared across all of its raster (non-hillshade) layers. Draping WebMercator
+/// raster onto a Geographic terrain tile is N:M — one terrain tile overlaps
+/// several WM tiles, growing toward the poles — so without a cap the per-tile
+/// texture count can exceed the GPU slots the composite shader binds. This
+/// mirrors the web renderer's `texturizedSceneIndexFrom` (half the GPU texture
+/// budget, typically 5); the web side clamps as a final safety net. Each layer
+/// gets an even share and coarsens its WM zoom to fit (see
+/// [`resolve_raster_textures`](crate::raster::resolve_raster_textures)).
+const RASTER_DRAPE_SLOT_BUDGET: usize = 5;
+
 /// System parameter that groups BufferStore and DataManager to reduce parameter count
 #[derive(SystemParam)]
 pub struct DataResources<'w> {
@@ -435,6 +446,10 @@ pub fn transfer_mesh(
         // regular raster textures are pulled by extent in `update_mesh_material`.
         let merged_texture_fragments = tile.hillshade_entity_ids.clone();
 
+        // Reprojection is resolved per raster slot in `update_mesh_material`; the
+        // initial (hillshade-only) material never reprojects.
+        let layer_reproject = vec![false; shows.len()];
+
         let appearance = RasterTileInternalMaterial {
             shows,
             opacities,
@@ -452,6 +467,8 @@ pub fn transfer_mesh(
             is_hillshades,
             hillshade_config: shared_hillshade_config.cloned(),
             layer_uv_transforms,
+            layer_reproject,
+            terrain_lat_range: None,
         };
 
         let terrain_req = match tile.terrain_data.as_ref() {
@@ -959,6 +976,22 @@ pub fn update_mesh_material(
     let texture_fragment = texture_fragment.p0();
     let data_requesters = data_requesters.p0();
 
+    // Split the raster slot budget evenly across the draped (non-hillshade) layers.
+    // Hillshade layers are terrain-side and contribute exactly one slot each, so
+    // they're subtracted from the budget rather than sharing the per-layer cap.
+    // Each draped layer then coarsens its WM zoom to stay within its share, keeping
+    // the per-tile texture count under the GPU slots the composite shader binds.
+    let num_hillshade_layers = tile_layers
+        .iter()
+        .filter(|(l, _)| l.hillshade_config.is_some())
+        .count();
+    let num_draped_layers = tile_layers.iter().count() - num_hillshade_layers;
+    let max_tiles_per_layer = if num_draped_layers == 0 {
+        1
+    } else {
+        (RASTER_DRAPE_SLOT_BUDGET.saturating_sub(num_hillshade_layers) / num_draped_layers).max(1)
+    };
+
     for (rendered_tile, _) in rendered_tiles.iter().sort::<&OrderByDistance>() {
         let Some(tile) = qt.qt.get(rendered_tile.tile_handle) else {
             continue;
@@ -969,8 +1002,6 @@ pub fn update_mesh_material(
             continue;
         };
 
-        let tile_layers_len = tile_layers.iter().len();
-
         let Some((tile_mesh_marker, _, appearance)) = cached_rendered_tile
             .mesh_entity
             .and_then(|e| appearances.get(e).ok())
@@ -978,49 +1009,45 @@ pub fn update_mesh_material(
             continue;
         };
 
-        let mut needs_update = are_tile_layers_removed
+        let needs_update = are_tile_layers_removed
             // If it has a different parent tile, it should be updated.
             || tile_mesh_marker.ready_parent_tile_handle
                 != cached_rendered_tile.ready_parent_tile_handle;
 
-        let prev_texture_fragments = &appearance.texture_fragments;
-        let prev_shows = &appearance.shows;
-        let prev_colors = &appearance.colors;
-        let prev_opacities = &appearance.opacities;
-        let prev_is_elevation_heatmaps = &appearance.is_elevation_heatmaps;
-        let prev_is_hillshades = &appearance.is_hillshades;
-        let prev_layer_uv_transforms = &appearance.layer_uv_transforms;
-
-        let mut shows = Vec::with_capacity(tile_layers_len);
-        let mut opacities = Vec::with_capacity(tile_layers_len);
-        let mut colors = Vec::with_capacity(tile_layers_len);
-        let mut is_elevation_heatmaps = Vec::with_capacity(tile_layers_len);
+        // Per-composite-slot arrays. A hillshade layer contributes one slot
+        // (resolved terrain-side); a regular raster / elevation-heatmap layer
+        // contributes one slot per overlapping WebMercator tile (N:M for
+        // cross-scheme terrain, a single identity tile for WebMercator terrain).
+        // Layers are emitted in sorted order, so z-stacking is preserved; the N
+        // tiles within one layer are non-overlapping so their order is free.
+        let terrain_extent = tile.extent;
+        // WebMercator raster draped on a Geographic terrain tile must be
+        // reprojected (Mercator) on the latitude axis in the composite shader;
+        // the linear affine UV alone stretches it.
+        let terrain_is_geographic = tile.tiling_scheme.is_geographic();
+        let mut shows = Vec::new();
+        let mut opacities = Vec::new();
+        let mut colors = Vec::new();
+        let mut is_elevation_heatmaps = Vec::new();
+        let mut is_hillshades = Vec::new();
+        let mut layer_fragments: Vec<Option<Entity>> = Vec::new();
+        let mut layer_uv_transforms: Vec<Option<TileUvTransform>> = Vec::new();
+        let mut layer_reproject = Vec::new();
         let mut elevation_heatmap_config = None;
-
-        // Hillshade fields
-        let mut is_hillshades = Vec::with_capacity(tile_layers_len);
         let mut hillshade_config = None;
 
-        // Per-layer fragment resolution: for each layer, use own entity if ready,
-        // otherwise fall back to that layer's nearest ready ancestor recorded in
-        // `cached_rendered_tile.layer_parents`. UV transform is per-layer too.
-        let mut layer_fragments: Vec<Option<Entity>> = Vec::with_capacity(tile_layers_len);
-        let mut layer_uv_transforms: Vec<Option<TileUvTransform>> =
-            Vec::with_capacity(tile_layers_len);
-
         for (i, (l, _)) in tile_layers.iter().sort::<&Order>().enumerate() {
-            // Hillshade layers stay terrain-side (DataRequester-backed); regular
-            // raster layers are pulled from the WebMercator raster quadtree by
-            // extent (Phase 1: identity coordinates, with ancestor fallback). Each
-            // branch reports its own readiness so `should_show` needs no re-check.
-            let (resolved_entity, resolved_uv, should_show) = if l.hillshade_config.is_some() {
+            let a = l.appearance().unwrap();
+            let is_heatmap = l.elevation_heatmap_config.is_some();
+
+            if l.hillshade_config.is_some() {
                 let own_entity = tile
                     .hillshade_entity_ids
                     .as_ref()
                     .and_then(|ids| ids.get(i).copied().flatten());
                 let own_ready = own_entity
                     .is_some_and(|e| TerrainTile::is_hillshade_entity_ready(e, &data_requesters));
-                if own_ready {
+                let (entity, uv, ready) = if own_ready {
                     (own_entity, None, true)
                 } else if let Some(parent) = cached_rendered_tile
                     .layer_parents
@@ -1038,85 +1065,71 @@ pub fn update_mesh_material(
                     )
                 } else {
                     (None, None, false)
+                };
+
+                shows.push(ready && a.show);
+                opacities.push(a.opacity.clamp(0., 1.));
+                colors.push(a.color);
+                is_elevation_heatmaps.push(false);
+                is_hillshades.push(true);
+                layer_fragments.push(entity);
+                layer_uv_transforms.push(uv);
+                // Hillshade is terrain-side; cross-scheme reprojection is out of
+                // scope for it, so its slot is never reprojected.
+                layer_reproject.push(false);
+
+                if hillshade_config.is_none() {
+                    hillshade_config = l.hillshade_config.clone();
                 }
             } else {
-                // The raster pull only returns a fragment once it has loaded.
-                match crate::raster::resolve_raster_texture(
+                let lng_span = (terrain_extent.east - terrain_extent.west).val();
+                let target_z = crate::raster::wm_zoom_for_lng_span(lng_span, a.max_zoom);
+                // The raster pull only returns fragments that have loaded.
+                let resolved = crate::raster::resolve_raster_textures(
                     &raster_qt,
-                    tile.coords,
+                    &terrain_extent,
+                    target_z,
+                    max_tiles_per_layer,
                     i,
                     &texture_fragment,
-                ) {
-                    Some(r) => (Some(r.entity), r.uv_transform, true),
-                    None => (None, None, false),
+                );
+                for r in resolved {
+                    shows.push(a.show);
+                    opacities.push(a.opacity.clamp(0., 1.));
+                    colors.push(a.color);
+                    is_elevation_heatmaps.push(is_heatmap);
+                    is_hillshades.push(false);
+                    layer_fragments.push(Some(r.entity));
+                    layer_uv_transforms.push(Some(r.uv_transform));
+                    layer_reproject.push(terrain_is_geographic);
                 }
-            };
 
-            let a = l.appearance().unwrap();
-            let next_show = should_show && a.show;
-            let next_opacity = a.opacity;
-            let next_color = a.color;
-
-            // Check if this layer is an elevation heatmap
-            let is_heatmap = l.elevation_heatmap_config.is_some();
-            let is_hillshade_layer_check = l.hillshade_config.is_some();
-
-            // Check if entity changed and new entity is ready
-            let entity_changed =
-                prev_texture_fragments.as_ref().and_then(|t| t.get(i)) != Some(&resolved_entity);
-
-            // Only trigger update for entity changes when new entity is ready
-            // This prevents flickering when entity is replaced with a pending one
-            let should_update_for_entity_change = entity_changed && should_show;
-
-            let uv_changed = prev_layer_uv_transforms.get(i) != Some(&resolved_uv);
-
-            if prev_shows.get(i) != Some(&next_show)
-                || prev_opacities.get(i) != Some(&next_opacity)
-                || prev_colors.get(i) != Some(&next_color)
-                || should_update_for_entity_change
-                || prev_is_elevation_heatmaps.get(i) != Some(&is_heatmap)
-                || prev_is_hillshades.get(i) != Some(&is_hillshade_layer_check)
-                || uv_changed
-            {
-                needs_update = true;
+                if is_heatmap && elevation_heatmap_config.is_none() {
+                    elevation_heatmap_config = l.elevation_heatmap_config.clone();
+                }
             }
-
-            shows.push(next_show);
-            opacities.push(a.opacity.clamp(0., 1.));
-            colors.push(a.color);
-            is_elevation_heatmaps.push(is_heatmap);
-
-            // Use the first elevation_heatmap_config we find (they should all be the same)
-            if is_heatmap && elevation_heatmap_config.is_none() {
-                elevation_heatmap_config = l.elevation_heatmap_config.clone();
-            }
-
-            is_hillshades.push(is_hillshade_layer_check);
-
-            // Use the first hillshade_config we find (they should all be the same)
-            if is_hillshade_layer_check && hillshade_config.is_none() {
-                hillshade_config = l.hillshade_config.clone();
-            }
-
-            layer_fragments.push(resolved_entity);
-            layer_uv_transforms.push(resolved_uv);
         }
 
-        // Check if elevation_heatmap_config changed
-        if appearance.elevation_heatmap_config != elevation_heatmap_config {
-            needs_update = true;
-        }
+        let terrain_lat_range = terrain_is_geographic.then(|| {
+            [
+                terrain_extent.south.val() as f32,
+                terrain_extent.north.val() as f32,
+            ]
+        });
 
-        // Check if hillshade_config changed
-        if appearance.hillshade_config != hillshade_config {
-            needs_update = true;
-        }
-
-        // Force update if tile cache has needs_material_update flag set
-        if !needs_update && cached_rendered_tile.needs_material_update {
-            needs_update = true;
-        }
+        let needs_update = needs_update
+            || cached_rendered_tile.needs_material_update
+            || appearance.texture_fragments.as_ref() != Some(&layer_fragments)
+            || appearance.shows != shows
+            || appearance.opacities != opacities
+            || appearance.colors != colors
+            || appearance.is_elevation_heatmaps != is_elevation_heatmaps
+            || appearance.is_hillshades != is_hillshades
+            || appearance.layer_uv_transforms != layer_uv_transforms
+            || appearance.layer_reproject != layer_reproject
+            || appearance.terrain_lat_range != terrain_lat_range
+            || appearance.elevation_heatmap_config != elevation_heatmap_config
+            || appearance.hillshade_config != hillshade_config;
 
         if !needs_update {
             continue;
@@ -1141,6 +1154,8 @@ pub fn update_mesh_material(
         appearance.is_hillshades = is_hillshades;
         appearance.hillshade_config = hillshade_config;
         appearance.layer_uv_transforms = layer_uv_transforms;
+        appearance.layer_reproject = layer_reproject;
+        appearance.terrain_lat_range = terrain_lat_range;
 
         // Clear needs_material_update flag now that material has been updated
         if let Some(cache) = tc.rendered_tile_caches.get_mut(&rendered_tile.tile_handle) {

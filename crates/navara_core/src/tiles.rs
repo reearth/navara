@@ -175,6 +175,95 @@ pub fn web_mercator_world_pos_to_lnglat<F: Float + Two<F>>(x: F, y: F) -> LngLat
     }
 }
 
+/// Inverse of [`web_mercator_world_pos_to_lnglat`]: lng/lat (radians) →
+/// normalized Web Mercator world position `(x, y)` in `[0, 1]`.
+///
+/// Latitude beyond the Web Mercator valid band (~±85.05°) is not representable
+/// (`y` diverges), so callers that may pass polar latitudes should clamp first —
+/// see [`web_mercator_overlapping_tiles`].
+/// ref: https://en.wikipedia.org/wiki/Web_Mercator_projection
+pub fn web_mercator_lnglat_to_world_pos<F: Float + Two<F>>(lnglat: LngLat<F, Radians>) -> (F, F) {
+    let pi_4 = F::PI / (F::two() * F::two());
+    let two_pi = F::two() * F::PI;
+    let lng = lnglat.lng.val();
+    let lat = lnglat.lat.val();
+    let x = (lng + F::PI) / two_pi;
+    // Forward: lat = 2*(atan(exp(phi)) - π/4) with phi = π - 2π*y.
+    // Invert: phi = ln(tan(lat/2 + π/4)); y = (π - phi) / 2π.
+    let phi = (lat / F::two() + pi_4).tan().ln();
+    let y = (F::PI - phi) / two_pi;
+    (x, y)
+}
+
+/// The WebMercator tiles at zoom `z` whose extent overlaps `extent` (geographic
+/// lng/lat radians). Returned in row-major (y outer, x inner) order.
+///
+/// Used to drape WebMercator raster onto a terrain tile of a different scheme
+/// (Geographic): one terrain tile overlaps several WM tiles. Latitude is clamped
+/// to the WM valid band, so an extent reaching past it (toward the poles) collapses
+/// onto the band-edge tile row — that edge tile is stretched across the polar cap by
+/// the composite shader, since WM imagery carries no data beyond ~±85.05°. A
+/// boundary-aligned extent resolves to exactly the tiles it covers (no spurious
+/// extra tile).
+pub fn web_mercator_overlapping_tiles(
+    extent: Extent<FloatType, Radians>,
+    z: usize,
+) -> Vec<TileXYZ> {
+    let n = (1usize << z) as FloatType;
+
+    // WM latitude coverage: lat at y=0 (north) and y=1 (south).
+    let max_lat = web_mercator_world_pos_to_lnglat::<FloatType>(0., 0.)
+        .lat
+        .val();
+    let min_lat = web_mercator_world_pos_to_lnglat::<FloatType>(0., 1.)
+        .lat
+        .val();
+
+    let ext_north = extent.north.val();
+    let ext_south = extent.south.val();
+    // No longitudinal overlap is impossible (WM x is defined for every lng), so the
+    // only way to miss entirely is a degenerate extent. Clamp the latitude span into
+    // the WM-representable band: a terrain tile reaching past the band (Geographic
+    // terrain goes to ±90°, WM stops at ~±85.05°) collapses onto the band-edge row.
+    // That edge raster tile is then stretched across the polar cap by the composite
+    // shader — WM imagery has no polar data, so the last available row is reused.
+    let north = ext_north.clamp(min_lat, max_lat);
+    let south = ext_south.clamp(min_lat, max_lat);
+    let west = extent.west.val();
+    let east = extent.east.val();
+
+    let nw = web_mercator_lnglat_to_world_pos(LngLat {
+        lng: Rad::new(west),
+        lat: Rad::new(north),
+    });
+    let se = web_mercator_lnglat_to_world_pos(LngLat {
+        lng: Rad::new(east),
+        lat: Rad::new(south),
+    });
+
+    // Tile i covers [i/n, (i+1)/n); it overlaps [min, max] for
+    // i ∈ [floor(min*n), ceil(max*n) - 1]. North maps to the smaller y. The eps
+    // nudge keeps boundary-aligned extents (e.g. a WM tile's own extent after a
+    // projection round-trip) from leaking into the neighbouring tile.
+    let last = (n as isize) - 1;
+    let eps = 1e-9;
+    let lo = |v: FloatType| (((v * n) + eps).floor() as isize).clamp(0, last) as usize;
+    let hi = |v: FloatType| ((((v * n) - eps).ceil() as isize) - 1).clamp(0, last) as usize;
+
+    let x0 = lo(nw.0);
+    let x1 = hi(se.0);
+    let y0 = lo(nw.1);
+    let y1 = hi(se.1);
+
+    let mut tiles = Vec::with_capacity((x1 - x0 + 1) * (y1 - y0 + 1));
+    for y in y0..=y1 {
+        for x in x0..=x1 {
+            tiles.push(TileXYZ { x, y, z });
+        }
+    }
+    tiles
+}
+
 /// Converts a tile Y coordinate to latitude in radians using Web Mercator projection.
 ///
 /// # Arguments
@@ -499,5 +588,93 @@ mod tests {
         // Guard: texture_width < 2 must not underflow or divide by zero
         let m_tiny = calc_meters_per_texel(0, 0, 0, 1, a);
         assert!(m_tiny.is_finite() && m_tiny > 0.0);
+    }
+
+    #[test]
+    fn web_mercator_world_pos_round_trip() {
+        for &(x, y) in &[
+            (0.0, 0.0),
+            (0.5, 0.5),
+            (0.25, 0.75),
+            (1.0, 1.0),
+            (0.123, 0.456),
+        ] {
+            let ll = web_mercator_world_pos_to_lnglat::<f64>(x, y);
+            let (rx, ry) = web_mercator_lnglat_to_world_pos(ll);
+            assert!((rx - x).abs() < 1e-9, "x round-trip {x} -> {rx}");
+            assert!((ry - y).abs() < 1e-9, "y round-trip {y} -> {ry}");
+        }
+    }
+
+    #[test]
+    fn overlapping_tiles_wm_identity() {
+        // A WM tile's own extent at its own zoom resolves to exactly that tile.
+        for &(x, y, z) in &[(0usize, 0usize, 0usize), (1, 2, 2), (5, 3, 3), (10, 6, 4)] {
+            let coords = TileXYZ { x, y, z };
+            let extent = web_mercator_tile_extent(coords);
+            assert_eq!(
+                web_mercator_overlapping_tiles(extent, z),
+                vec![coords],
+                "identity for {coords:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn overlapping_tiles_geographic_spans_multiple_and_all_overlap() {
+        // A Geographic tile extent overlaps several WM tiles; every returned tile
+        // genuinely overlaps the extent.
+        let geo = TilingScheme::Geographic { tms: false };
+        let extent = geo.tile_extent(TileXYZ { x: 1, y: 0, z: 1 });
+        let tiles = web_mercator_overlapping_tiles(extent, 3);
+        assert!(!tiles.is_empty());
+        for t in &tiles {
+            assert!(
+                extent.intersects(web_mercator_tile_extent(*t)),
+                "{t:?} should overlap the extent"
+            );
+        }
+    }
+
+    #[test]
+    fn overlapping_tiles_polar_cap_returns_edge_row() {
+        use std::f64::consts::PI;
+        // Entirely north of the WM band (~85.05°): collapses onto the north edge
+        // row (y == 0) so that edge tile can be stretched across the polar cap.
+        let north_cap = Extent::from_points(&[
+            LngLat {
+                lng: Rad::new(-0.1),
+                lat: Rad::new(1.5), // ~85.9°
+            },
+            LngLat {
+                lng: Rad::new(0.1),
+                lat: Rad::new(PI / 2.0), // 90°
+            },
+        ]);
+        let north = web_mercator_overlapping_tiles(north_cap, 3);
+        assert!(!north.is_empty());
+        assert!(
+            north.iter().all(|t| t.y == 0),
+            "north cap -> y==0 row: {north:?}"
+        );
+
+        // Entirely south of the band: collapses onto the south edge row (y == 2^z-1).
+        let south_cap = Extent::from_points(&[
+            LngLat {
+                lng: Rad::new(-0.1),
+                lat: Rad::new(-PI / 2.0), // -90°
+            },
+            LngLat {
+                lng: Rad::new(0.1),
+                lat: Rad::new(-1.5), // ~-85.9°
+            },
+        ]);
+        let south = web_mercator_overlapping_tiles(south_cap, 3);
+        let last = (1usize << 3) - 1;
+        assert!(!south.is_empty());
+        assert!(
+            south.iter().all(|t| t.y == last),
+            "south cap -> y==last row: {south:?}"
+        );
     }
 }

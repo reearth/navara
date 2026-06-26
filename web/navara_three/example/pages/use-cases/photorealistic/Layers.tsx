@@ -201,15 +201,6 @@ export const Layers: FC<SceneLayerToggles> = ({
     });
   }, [defaultLayers, quality]);
 
-  useEffect(() => {
-    if (!defaultLayers) return;
-    defaultLayers.skyEnv.update({
-      sky: {
-        sunAngularRadius: cloudsEffectVisible ? 0.0001 : 0.1,
-      },
-    });
-  }, [defaultLayers, cloudsEffectVisible]);
-
   // Clouds shadow: enable/disable aerial perspective irradiance
   useEffect(() => {
     if (!defaultLayers) return;

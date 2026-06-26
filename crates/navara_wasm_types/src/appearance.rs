@@ -1383,6 +1383,17 @@ pub struct RasterTileInternalMaterial {
     // Per-layer UV transforms for parent data reuse (covers both regular textures and hillshades).
     // Stored as raw Vec for internal use, exposed via getter.
     layer_uv_transforms: Vec<Option<TileUvTransform>>,
+
+    // Per-slot flag (1/0): WebMercator raster draped on Geographic terrain that
+    // the composite shader must reproject (Mercator) on the latitude axis.
+    #[wasm_bindgen(getter_with_clone, js_name = layerReproject)]
+    #[serde(rename = "layerReproject")]
+    pub layer_reproject: Vec<u8>,
+    // Terrain tile `[south, north]` latitude in radians for reprojection, or `[]`
+    // when no slot reprojects (WebMercator terrain).
+    #[wasm_bindgen(getter_with_clone, js_name = terrainLatRange)]
+    #[serde(rename = "terrainLatRange")]
+    pub terrain_lat_range: Vec<f32>,
 }
 
 #[wasm_bindgen]
@@ -1544,6 +1555,11 @@ impl<'a> From<&'a navara_material::RasterTileInternalMaterial> for RasterTileInt
                 .iter()
                 .map(|opt| opt.as_ref().map(|t| t.into()))
                 .collect(),
+            layer_reproject: m.layer_reproject.iter().map(|&b| b as u8).collect(),
+            terrain_lat_range: m
+                .terrain_lat_range
+                .map(|[s, n]| vec![s, n])
+                .unwrap_or_default(),
         }
     }
 }
