@@ -72,4 +72,4 @@ export type StyleEngine = {
     layerType: LayerType,
     propertyName: string,
   ): PropertySpec | undefined;
-}
+};

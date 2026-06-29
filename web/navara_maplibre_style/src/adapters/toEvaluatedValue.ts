@@ -15,7 +15,7 @@ type MapLibreColor = {
   g: number;
   b: number;
   a: number;
-}
+};
 
 /**
  * Type guard to check if a value is a MapLibre Color object.

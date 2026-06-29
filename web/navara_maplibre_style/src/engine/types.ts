@@ -12,7 +12,7 @@ export type ParsedStyle = {
   version: 8;
   sources: Record<string, StyleSource>;
   layers: StyleLayer[];
-}
+};
 
 /**
  * Style source types we support in the PoC.
@@ -25,7 +25,7 @@ export type GeoJSONSource = {
   maxzoom?: number;
   buffer?: number;
   tolerance?: number;
-}
+};
 
 export type VectorSource = {
   type: "vector";
@@ -33,7 +33,7 @@ export type VectorSource = {
   tiles?: string[];
   minzoom?: number;
   maxzoom?: number;
-}
+};
 
 /**
  * Layer types supported in PoC: fill, line, circle.
@@ -51,40 +51,40 @@ export type BaseLayer = {
   maxzoom?: number;
   filter?: FilterExpression;
   layout?: Record<string, unknown>;
-}
+};
 
 export type FillLayer = {
   type: "fill";
   paint?: FillPaint;
-} & BaseLayer
+} & BaseLayer;
 
 export type FillPaint = {
   "fill-color"?: ValueExpression;
   "fill-opacity"?: ValueExpression;
   "fill-outline-color"?: ValueExpression;
-}
+};
 
 export type LineLayer = {
   type: "line";
   paint?: LinePaint;
-} & BaseLayer
+} & BaseLayer;
 
 export type LinePaint = {
   "line-color"?: ValueExpression;
   "line-width"?: ValueExpression;
   "line-opacity"?: ValueExpression;
-}
+};
 
 export type CircleLayer = {
   type: "circle";
   paint?: CirclePaint;
-} & BaseLayer
+} & BaseLayer;
 
 export type CirclePaint = {
   "circle-color"?: ValueExpression;
   "circle-radius"?: ValueExpression;
   "circle-opacity"?: ValueExpression;
-}
+};
 
 /**
  * Expression types from MapLibre Style spec.
@@ -101,14 +101,14 @@ export type FilterExpression = unknown[];
  */
 export type EvaluationContext = {
   properties: Record<string, unknown> | undefined;
-}
+};
 
 /**
  * Context for filter evaluation (subset of EvaluationContext).
  */
 export type FeatureContext = {
   properties: Record<string, unknown> | undefined;
-}
+};
 
 /**
  * Possible return types from style expressions.
@@ -132,4 +132,4 @@ export type PropertySpec = {
     interpolated: boolean;
     parameters: string[];
   };
-}
+};
