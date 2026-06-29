@@ -30,7 +30,7 @@ export {
   type AttributionHtml,
   type AttributionChild,
   type AttributionStyle,
-} from "./attribution";
+} from "./AttributionPlugin/attribution";
 
 export {
   CesiumIonPlugin,
