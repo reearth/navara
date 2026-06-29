@@ -67,7 +67,7 @@ const CITY_POPULATION_THRESHOLD = 1_000_000;
 const BASE_POLYGONS = [
   { title: "Land", source: "land", color: "#f8f4f1" }, // sand.50
   { title: "Land cover", source: "land_cover", color: "#c4eaa9" }, // grass fallback
-  // { title: "Land use", source: "land_use", color: "#d6ecd5" }, // park green.200
+  { title: "Land use", source: "land_use", color: "#d6ecd5" }, // park green.200
   { title: "Water", source: "water", color: "#79cdf6" }, // ocean.900
 ] as const;
 
