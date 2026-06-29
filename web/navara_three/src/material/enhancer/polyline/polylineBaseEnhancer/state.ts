@@ -11,6 +11,8 @@ export const DEFAULT_BASE_PROPS: Required<
   >
 > = {
   color: 0xffffff,
+  addHeight: 0,
+  addWidth: 0,
   width: 1,
   maxWidth: 1000,
   isTexturized: false,
@@ -23,7 +25,7 @@ export const DEFAULT_BASE_PROPS: Required<
   useBatchTexture: false,
   useBatchColorShow: false,
   useBatchHeight: false,
-  useBatchExtrudedHeight: false,
+  useBatchLineWidth: false,
 };
 
 /** Default state derived from DEFAULT_BASE_PROPS */
@@ -35,6 +37,8 @@ export const DEFAULT_BASE_STATE: PolylineBaseState = {
   emissiveColor: DEFAULT_BASE_PROPS.emissiveColor,
   emissiveIntensity: DEFAULT_BASE_PROPS.emissiveIntensity,
   minMaxHeight: [0, 0],
+  addHeight: DEFAULT_BASE_PROPS.addHeight,
+  addWidth: DEFAULT_BASE_PROPS.addWidth,
   width: DEFAULT_BASE_PROPS.width,
   maxWidth: DEFAULT_BASE_PROPS.maxWidth,
   color: DEFAULT_BASE_PROPS.color,
@@ -42,7 +46,7 @@ export const DEFAULT_BASE_STATE: PolylineBaseState = {
   useBatchTexture: DEFAULT_BASE_PROPS.useBatchTexture,
   useBatchColorShow: DEFAULT_BASE_PROPS.useBatchColorShow,
   useBatchHeight: DEFAULT_BASE_PROPS.useBatchHeight,
-  useBatchExtrudedHeight: DEFAULT_BASE_PROPS.useBatchExtrudedHeight,
+  useBatchLineWidth: DEFAULT_BASE_PROPS.useBatchLineWidth,
 };
 
 /**
@@ -69,6 +73,8 @@ export const updateState = (
     emissiveIntensity:
       props.emissiveIntensity ?? currentState.emissiveIntensity,
     minMaxHeight: props.minMaxHeight ?? currentState.minMaxHeight,
+    addHeight: props.addHeight ?? currentState.addHeight,
+    addWidth: props.addWidth ?? currentState.addWidth,
     width: props.width ?? currentState.width,
     maxWidth: props.maxWidth ?? currentState.maxWidth,
     color: props.color ?? currentState.color,
@@ -79,7 +85,7 @@ export const updateState = (
     useBatchColorShow:
       currentState.useBatchColorShow || !!props.useBatchColorShow,
     useBatchHeight: currentState.useBatchHeight || !!props.useBatchHeight,
-    useBatchExtrudedHeight:
-      currentState.useBatchExtrudedHeight || !!props.useBatchExtrudedHeight,
+    useBatchLineWidth:
+      currentState.useBatchLineWidth || !!props.useBatchLineWidth,
   };
 };

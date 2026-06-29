@@ -400,6 +400,13 @@ export class BatchedSdfTextMesh
     }
   }
 
+  setFeatureSizeByBatchIndex(batchIndex: number, size: number) {
+    const mesh = this.meshes()[batchIndex];
+    if (mesh) {
+      mesh.setSize(size);
+    }
+  }
+
   dispose() {
     const q = this._highQuality;
     const unload =

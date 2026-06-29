@@ -365,6 +365,10 @@ export class SDFTextMesh
     this._enhancer.update({ base: { addHeight: height } });
   }
 
+  setSize(size: number): void {
+    this._enhancer.update({ base: { fontSize: size } });
+  }
+
   setPosition(
     position: Float32Array | { high: Float32Array; low: Float32Array },
     RTE: boolean,

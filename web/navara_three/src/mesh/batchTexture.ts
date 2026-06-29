@@ -5,6 +5,9 @@ export const BATCH_TEXTURE_ROW = [
   "COLOR_SHOW", // R=colorR, G=colorG, B=colorB, A=NONE
   "HEIGHT", // R,G,B,A=height as RGBA
   "EXTRUDED_HEIGHT", // R,G,B,A=extrudedHeight as RGBA
+  "LINE_WIDTH", // R,G,B,A=lineWidth as RGBA
+  "SIZE", // R,G,B,A=size as RGBA
+  "OPACITY", // R,G,B,A=opacity as RGBA
 ] as const;
 
 export type BatchTextureRowKey = (typeof BATCH_TEXTURE_ROW)[number];
@@ -19,6 +22,9 @@ export const BATCHED_ATTRIBUTE_NAMES = [
   "show", // Use alpha channel of color texel.
   "height", // R,G,B,A=Encoded height as RGBA
   "extrudedHeight", // R,G,B,A=Encoded extruded height as RGBA
+  "lineWidth", // R,G,B,A=Encoded lineWidth as RGBA
+  "size", // R,G,B,A=Encoded size as RGBA
+  "opacity", // R,G,B,A=Encoded opacity as RGBA
 ] as const;
 
 export type BatchedAttributeName = (typeof BATCHED_ATTRIBUTE_NAMES)[number];
@@ -258,6 +264,63 @@ export function updateBatchAttribute(
       data[baseIndex + 1] = encodedHeight[1]; // G
       data[baseIndex + 2] = encodedHeight[2]; // B
       data[baseIndex + 3] = encodedHeight[3]; // A
+      break;
+    }
+    case "lineWidth": {
+      if (typeof value !== "number") return;
+      if (material.userData.defines) {
+        material.userData.defines.USE_BATCH_LINE_WIDTH = true;
+        material.needsUpdate = true;
+      }
+
+      const rowIndex = getRowIndex(material, "LINE_WIDTH");
+      if (rowIndex < 0) return;
+
+      const encodedLineWidth = encodeFloatToRGBA(value);
+
+      const baseIndex = batchBaseIndex(texWidth, rowCount, batchId, rowIndex);
+      data[baseIndex] = encodedLineWidth[0]; // R
+      data[baseIndex + 1] = encodedLineWidth[1]; // G
+      data[baseIndex + 2] = encodedLineWidth[2]; // B
+      data[baseIndex + 3] = encodedLineWidth[3]; // A
+      break;
+    }
+    case "size": {
+      if (typeof value !== "number") return;
+      if (material.userData.defines) {
+        material.userData.defines.USE_BATCH_SIZE = true;
+        material.needsUpdate = true;
+      }
+
+      const rowIndex = getRowIndex(material, "SIZE");
+      if (rowIndex < 0) return;
+
+      const encodedSize = encodeFloatToRGBA(value);
+
+      const baseIndex = batchBaseIndex(texWidth, rowCount, batchId, rowIndex);
+      data[baseIndex] = encodedSize[0]; // R
+      data[baseIndex + 1] = encodedSize[1]; // G
+      data[baseIndex + 2] = encodedSize[2]; // B
+      data[baseIndex + 3] = encodedSize[3]; // A
+      break;
+    }
+    case "opacity": {
+      if (typeof value !== "number") return;
+      if (material.userData.defines) {
+        material.userData.defines.USE_BATCH_OPACITY = true;
+        material.needsUpdate = true;
+      }
+
+      const rowIndex = getRowIndex(material, "OPACITY");
+      if (rowIndex < 0) return;
+
+      const encodedOpacity = encodeFloatToRGBA(value);
+
+      const baseIndex = batchBaseIndex(texWidth, rowCount, batchId, rowIndex);
+      data[baseIndex] = encodedOpacity[0]; // R
+      data[baseIndex + 1] = encodedOpacity[1]; // G
+      data[baseIndex + 2] = encodedOpacity[2]; // B
+      data[baseIndex + 3] = encodedOpacity[3]; // A
       break;
     }
   }

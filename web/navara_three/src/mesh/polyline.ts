@@ -261,6 +261,8 @@ export class PolylineMesh extends BatchedFeatureMesh<
       base: {
         color: meshMaterial.color,
         minMaxHeight: [minHeight, maxHeight],
+        addHeight: meshMaterial.height ?? 0,
+        addWidth: meshMaterial.width ?? 0,
         width: meshMaterial.width,
         maxWidth: meshMaterial.maxWidth,
         isTexturized,
@@ -357,8 +359,8 @@ export class PolylineMesh extends BatchedFeatureMesh<
       case "height":
         this.getEnhancer().update({ base: { useBatchHeight: true } });
         break;
-      case "extrudedHeight":
-        this.getEnhancer().update({ base: { useBatchExtrudedHeight: true } });
+      case "lineWidth":
+        this.getEnhancer().update({ base: { useBatchLineWidth: true } });
         break;
     }
 
@@ -394,6 +396,8 @@ export class PolylineMesh extends BatchedFeatureMesh<
           minMaxHeights !== undefined
             ? [minMaxHeights[0], minMaxHeights[1]]
             : undefined,
+        addHeight: material.height,
+        addWidth: material.width,
         width: material.width,
         maxWidth: material.maxWidth,
         effectIdsMask:

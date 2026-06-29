@@ -24,7 +24,7 @@ import type {
  * - Clamp to ground (with ground normals support)
  * - Texturized rendering (draped on terrain)
  * - Picking
- * - Batch texture attributes (color, show, height, extrudedHeight)
+ * - Batch texture attributes (color, show, height, lineWidth)
  * - RTE (Relative-To-Eye) support for high-precision coordinates
  *
  * Supports ShaderMaterial with custom polyline shaders.
@@ -88,7 +88,7 @@ export function createPolylineBaseEnhancer(
       const prevUseBatchTexture = state.useBatchTexture;
       const prevUseBatchColorShow = state.useBatchColorShow;
       const prevUseBatchHeight = state.useBatchHeight;
-      const prevUseBatchExtrudedHeight = state.useBatchExtrudedHeight;
+      const prevUseBatchLineWidth = state.useBatchLineWidth;
 
       state = updateState(props, state);
       mutates.update(state);
@@ -99,7 +99,7 @@ export function createPolylineBaseEnhancer(
         state.useBatchTexture !== prevUseBatchTexture ||
         state.useBatchColorShow !== prevUseBatchColorShow ||
         state.useBatchHeight !== prevUseBatchHeight ||
-        state.useBatchExtrudedHeight !== prevUseBatchExtrudedHeight;
+        state.useBatchLineWidth !== prevUseBatchLineWidth;
 
       if (shaderStateChanged) {
         material.needsUpdate = true;
@@ -130,7 +130,7 @@ export function createPolylineBaseEnhancer(
         useBatchTexture: state.useBatchTexture,
         useBatchColorShow: state.useBatchColorShow,
         useBatchHeight: state.useBatchHeight,
-        useBatchExtrudedHeight: state.useBatchExtrudedHeight,
+        useBatchLineWidth: state.useBatchLineWidth,
         // Additional shader-affecting state used by transformShader
         isTexturized: state.isTexturized,
         useRTE: state.useRTE,

@@ -3,4 +3,7 @@ export type BatchTextureFlags = {
   useBatchColorShow?: boolean;
   useBatchHeight?: boolean;
   useBatchExtrudedHeight?: boolean;
+  useBatchLineWidth?: boolean;
+  useBatchSize?: boolean;
+  useBatchOpacity?: boolean;
 };

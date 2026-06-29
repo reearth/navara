@@ -17,6 +17,7 @@
 
 attribute float instanceShow;
 attribute float instanceHeight;
+attribute float instanceSize;
 attribute vec3 instanceColor;
 attribute float instanceBatchID;
 
@@ -76,7 +77,9 @@ void main() {
     mvPosition += mvr_getMvHeightOffset(absTransformed, instanceHeight);
     vec2 center = clamp(uCenter, vec2(-0.5), vec2(0.5)); // Ensure center is within the bounds of the sprite
 
-    float clampedScale = max(0.0, uScale); // Prevent negative scaling
+    // Use per-instance size if provided (> 0), otherwise fall back to uniform scale
+    float scale = instanceSize > 0.0 ? instanceSize : uScale;
+    float clampedScale = max(0.0, scale); // Prevent negative scaling
     // This makes it always face the camera
     if (!uSizeInMeters) {
         clampedScale = nvr_pxToWorld(clampedScale, uFovRad, uScreenHeightPx, vec3(0.0, 0.0, mvPosition.z), vec3(0.0, 0.0, 0.0));

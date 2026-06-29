@@ -50,4 +50,22 @@ float getBatchExtrudedHeight(float batchId) {
   return decodeRGBAToFloat(data);
 }
 #endif
+
+#ifdef USE_BATCH_LINE_WIDTH
+float getBatchLineWidth(float batchId) {
+  vec2 uv = getBatchTextureCoord(batchId, BATCHED_TEXTURE_ROW_LINE_WIDTH);
+
+  vec4 data = texture2D(batchDataTexture, uv);
+  return decodeRGBAToFloat(data);
+}
+#endif
+
+#ifdef USE_BATCH_OPACITY
+float getBatchOpacity(float batchId) {
+  vec2 uv = getBatchTextureCoord(batchId, BATCHED_TEXTURE_ROW_OPACITY);
+
+  vec4 data = texture2D(batchDataTexture, uv);
+  return decodeRGBAToFloat(data);
+}
+#endif
 #endif // USE_BATCH_TEXTURE

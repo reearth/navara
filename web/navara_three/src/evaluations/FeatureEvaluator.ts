@@ -49,6 +49,12 @@ export type EvaluatableMaterialProperty = {
   height: AvailableMaterialProperty["height"];
   /** Text content expression from layer configuration (for text). */
   text: AvailableMaterialProperty["text"];
+  /** Line width expression from layer configuration (for polylines). */
+  width: AvailableMaterialProperty["width"];
+  /** Point/text size expression from layer configuration (for points/text). */
+  size: AvailableMaterialProperty["size"];
+  /** Opacity expression from layer configuration (for polygons). */
+  opacity: AvailableMaterialProperty["opacity"];
 };
 
 type EvaluatableMaterialPropertyKey = keyof EvaluatableMaterialProperty;
@@ -59,6 +65,9 @@ type EvaluatedMaterialProperty = {
   extrudedHeight: number;
   height: number;
   text: string;
+  width: number;
+  size: number;
+  opacity: number;
 };
 
 /**
@@ -293,6 +302,9 @@ export class FeatureEvaluator {
    * - `height` - Feature height in meters
    * - `extrudedHeight` - Extrusion height for polygons in meters
    * - `text` - Label text content (for text/label features)
+   * - `width` - Line width in pixels (for polylines)
+   * - `size` - Point/text size in pixels or meters (for points/text)
+   * - `opacity` - Feature opacity 0-1 (for polygons)
    *
    * Note: Evaluated styles override the layer's default styles.
    *
@@ -362,6 +374,9 @@ export class FeatureEvaluator {
       if (evaluated.height != null) {
         obj.setFeatureHeightByBatchId(batchId, evaluated.height);
       }
+      if (evaluated.size != null) {
+        obj.setFeatureSizeByBatchId(batchId, evaluated.size);
+      }
       return;
     }
 
@@ -377,6 +392,9 @@ export class FeatureEvaluator {
       }
       if (evaluated.text != null && obj instanceof BatchedSdfTextMesh) {
         obj.setTextByBatchIndex(batchIndex, evaluated.text);
+      }
+      if (evaluated.size != null && obj instanceof BatchedSdfTextMesh) {
+        obj.setFeatureSizeByBatchIndex(batchIndex, evaluated.size);
       }
       return;
     }
@@ -428,6 +446,12 @@ export class FeatureEvaluator {
       if (evaluated.height != null) {
         featureMesh._setFeatureHeight(evaluated.height);
       }
+      if (evaluated.width != null) {
+        featureMesh._setFeatureWidth(evaluated.width);
+      }
+      if (evaluated.opacity != null) {
+        featureMesh._setFeatureOpacity(evaluated.opacity);
+      }
       return;
     }
 
@@ -473,6 +497,15 @@ export class FeatureEvaluator {
     }
     if (evaluated.extrudedHeight != null) {
       updateBatchAttribute("extrudedHeight", evaluated.extrudedHeight);
+    }
+    if (evaluated.width != null) {
+      updateBatchAttribute("lineWidth", evaluated.width);
+    }
+    if (evaluated.size != null) {
+      updateBatchAttribute("size", evaluated.size);
+    }
+    if (evaluated.opacity != null) {
+      updateBatchAttribute("opacity", evaluated.opacity);
     }
   }
 }

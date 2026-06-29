@@ -5,6 +5,10 @@ import ExtrudedHeightParsVertex from "@shaders/glsl/chunks/extruded_height_pars_
 import ExtrudedHeightVertex from "@shaders/glsl/chunks/extruded_height_vertex.glsl";
 import HeightParsVertex from "@shaders/glsl/chunks/height_pars_vertex.glsl";
 import HeightVertex from "@shaders/glsl/chunks/height_vertex.glsl";
+import OpacityParsVertex from "@shaders/glsl/chunks/opacity_pars_vertex.glsl";
+import OpacityVertex from "@shaders/glsl/chunks/opacity_vertex.glsl";
+import OpacityParsFragment from "@shaders/glsl/chunks/opacity_pars_fragment.glsl";
+import OpacityFragment from "@shaders/glsl/chunks/opacity_fragment.glsl";
 import Pick from "@shaders/glsl/chunks/pick.glsl";
 import ProjectVertexRte from "@shaders/glsl/chunks/project_vertex_rte.glsl";
 import RteParsVertex from "@shaders/glsl/chunks/rte_pars_vertex.glsl";
@@ -73,6 +77,7 @@ ${useRTE ? RteParsVertex : ""}
 ${ShowParsVertex}
 ${ExtrudedHeightParsVertex}
 ${HeightParsVertex}
+${OpacityParsVertex}
 ${BatchTextureParsVertex}
 
 ${BranchFreeTernary}
@@ -89,7 +94,15 @@ ${useRTE ? RteVertex : "#include <begin_vertex>"}
 
 ${ExtrudedHeightVertex}
 ${HeightVertex}
+${OpacityVertex}
 ${BatchTextureVertex}
+
+#ifdef USE_BATCH_OPACITY
+  // Ensure vBatchOpacity is set (fallback if batch texture wasn't used)
+  #ifndef USE_BATCH_TEXTURE
+    vBatchOpacity = 1.0;
+  #endif
+#endif
 
 transformed.xyz += scaleNormalAndCap.xyz * nvr_branchFreeTernary(
   scaleNormalAndCap.w == 0.0,
@@ -161,6 +174,7 @@ ${POLYGON_BASE_SHADER_MARKERS.fragment.UNIFORM_END}
 in float nvr_vBatchId;
 
 ${ShowParsFragment}
+${OpacityParsFragment}
 
 ${Pick}
 
@@ -181,6 +195,13 @@ ${SpecularParsFragment}
 void main() {
   ${ShowFragment}
   ${ShadowMapDepthFragment}
+`,
+    )
+    .replace(
+      "#include <color_fragment>",
+      `
+#include <color_fragment>
+${OpacityFragment}
 `,
     )
     .replace(

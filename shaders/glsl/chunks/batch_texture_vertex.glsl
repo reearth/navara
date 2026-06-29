@@ -15,7 +15,16 @@
   #endif
 
   #ifdef USE_BATCH_HEIGHT
-    float height = getBatchHeight(batchId);
-    addHeight = height;
+    float batchHeight = getBatchHeight(batchId);
+    addHeight = batchHeight;
+  #endif
+
+  #ifdef USE_BATCH_LINE_WIDTH
+    batchLineWidth = getBatchLineWidth(batchId);
+  #endif
+
+  #ifdef USE_BATCH_OPACITY
+    batchOpacity = getBatchOpacity(batchId);
+    vBatchOpacity = batchOpacity;
   #endif
 #endif

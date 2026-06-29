@@ -578,6 +578,10 @@ export class PolygonMesh extends BatchedFeatureMesh<
           this._maxBatchExtrudedHeight = eh;
         break;
       }
+      case "opacity": {
+        this.getEnhancer().update({ base: { useBatchOpacity: true } });
+        break;
+      }
     }
 
     // Call parent to update the batch texture

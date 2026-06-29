@@ -54,6 +54,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
   private _batchIdToInstance = new Map<number, number>();
   private _initialColor: Color = new Color(0xffffff);
   private _initialHeight = 0.0;
+  private _initialSize = 1.0;
   private _loadedUrls = new Set<string>();
   private _active = true;
   readonly ctx: EventContext;
@@ -144,6 +145,19 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
         heightAttr.setX(i, m.material.height ?? 0.0);
       }
       heightAttr.needsUpdate = true;
+    }
+
+    // Size (per-instance attribute)
+    if (this._initialSize !== (m.material.size ?? 1.0)) {
+      this._initialSize = m.material.size ?? 1.0;
+      const sizeAttr = this.geometry.getAttribute(
+        "instanceSize",
+      ) as InstancedBufferAttribute;
+      const instanceCount = sizeAttr.count;
+      for (let i = 0; i < instanceCount; i++) {
+        sizeAttr.setX(i, m.material.size ?? 1.0);
+      }
+      sizeAttr.needsUpdate = true;
     }
 
     // Position updates (per-instance attributes)
@@ -239,13 +253,16 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
 
     // Add Custom Attributes
     const heightBuffer = new Float32Array(instanceCount);
+    const sizeBuffer = new Float32Array(instanceCount);
     const showBuffer = new Float32Array(instanceCount);
     const colorBuffer = new Float32Array(instanceCount * 3);
     let layerBuffer = undefined;
 
     this._initialColor = new Color().setHex(m.material.color ?? 0xffffff);
+    this._initialSize = m.material.size ?? 1.0;
     for (let i = 0; i < instanceCount; i++) {
       heightBuffer[i] = m.material.height ?? 0.0;
+      sizeBuffer[i] = this._initialSize;
       showBuffer[i] =
         m.material.show !== undefined ? (m.material.show ? 1.0 : 0.0) : 1.0;
 
@@ -294,6 +311,10 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     instancedGeometry.setAttribute(
       "instanceHeight",
       new InstancedBufferAttribute(heightBuffer, 1),
+    );
+    instancedGeometry.setAttribute(
+      "instanceSize",
+      new InstancedBufferAttribute(sizeBuffer, 1),
     );
     instancedGeometry.setAttribute(
       "instanceShow",
@@ -597,6 +618,17 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     ) as InstancedBufferAttribute;
     heightAttr.setX(instanceId, height);
     heightAttr.needsUpdate = true;
+  }
+
+  setFeatureSizeByBatchId(batchId: number, size: number) {
+    const instanceId = this._batchIdToInstance.get(batchId);
+    if (instanceId === undefined) return;
+
+    const sizeAttr = this.geometry.getAttribute(
+      "instanceSize",
+    ) as InstancedBufferAttribute;
+    sizeAttr.setX(instanceId, size);
+    sizeAttr.needsUpdate = true;
   }
 
   dispose(): void {
