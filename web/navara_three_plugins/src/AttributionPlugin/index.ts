@@ -418,7 +418,17 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
       img.alt = item.attribution;
       img.className = "navara-attr-logo";
       img.draggable = false;
-      this.logosEl.appendChild(img);
+
+      // Link the logo only when the source declares a (safe) `logoUrl`, opened in
+      // a new tab. A mark that must be shown but not turned into a link omits
+      // `logoUrl` and stays a plain `<img>`.
+      const href = item.logoUrl ? safeHref(item.logoUrl) : undefined;
+      let node: HTMLElement = img;
+      if (href) {
+        node = createSafeAnchor(href);
+        node.appendChild(img);
+      }
+      this.logosEl.appendChild(node);
     }
   }
 

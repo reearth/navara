@@ -143,6 +143,7 @@ type AttributionItem = AttributionSource | AttributionHtml;
 | `attribution`   | `string`                          | トップレベルのソース／プロバイダ名                                  |
 | `url`           | `string \| undefined`             | ソース名に付ける任意のリンク                                     |
 | `logo`          | `string \| undefined`             | 任意のロゴ画像 URL。常時表示の左下フレームに表示される                      |
+| `logoUrl`       | `string \| undefined`             | `logo` の任意のクリック遷移先。設定したときだけロゴがリンク化される              |
 | `children`      | `AttributionChild[] \| undefined` | 該当ズーム範囲でのみ表示される任意のクレジット                   |
 | `creditLayerId` | `string \| undefined`             | 任意の `layer.id`。そのレイヤーのフィーチャー単位クレジットがこのソース配下にネストされる |
 
@@ -178,8 +179,8 @@ type AttributionItem = AttributionSource | AttributionHtml;
 
 - **ズーム範囲は、自分で宣言するラスタソース向けです。** GSI や OpenStreetMap などのタイルは自前のクレジットを持たないため、ズーム依存のクレジットは `children` で記述します。
 - **レイヤー単位のクレジットはタイル由来です。** Google Photorealistic 3D Tiles のように copyright を埋め込むソースだけが `creditLayerId` 経由でクレジットを生成します。それ以外は `children` を使ってください。
-- **掲出義務のあるロゴはロゴフレームへ（ポップオーバーではなく）。** 常時表示が必須のマークにのみ `logo` を使い、通常のソースはテキスト表示が適切です。
-- **リンクはスキーム検証されます。** すべてのクレジットリンク（`url`、`attributionHtml` / `attribution` 内のインライン `<a>`、レイヤーのフィーチャー単位クレジットに埋め込まれた `<a>`）は、安全なスキーム（`http` / `https` / `mailto`、または相対 URL）のみ保持され、それ以外（例: `javascript:`）はプレーンテキストに落とされます。これにより、信頼できないタイルメタデータ由来のリンクでも安全に描画できます。
+- **掲出義務のあるロゴはロゴフレームへ（ポップオーバーではなく）。** 常時表示が必須のマークにのみ `logo` を使い、通常のソースはテキスト表示が適切です。ロゴは既定ではただの画像で、`logoUrl` を設定するとプロバイダのページへのリンクになります。表示は必須でもリンク化してはいけないマークもあるため、その場合は `logoUrl` を設定しないでください。
+- **リンクはスキーム検証されます。** すべてのクレジットリンク（`url`、`logoUrl`、`attributionHtml` / `attribution` 内のインライン `<a>`、レイヤーのフィーチャー単位クレジットに埋め込まれた `<a>`）は、安全なスキーム（`http` / `https` / `mailto`、または相対 URL）のみ保持され、それ以外（例: `javascript:`）はプレーンテキストに落とされます。これにより、信頼できないタイルメタデータ由来のリンクでも安全に描画できます。
 - **生の URL は自動でリンク化されます。** クレジットテキスト内のプレーンな `http(s)` URL は自動でクリック可能なリンクになるため、公式の表記をそのまま貼り付けても URL を手で `<a>` で囲む必要がありません（文言も URL も変更されません）。
 
 ## 関連リソース

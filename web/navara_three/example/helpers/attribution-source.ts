@@ -7,8 +7,8 @@ import type { Dataset } from "./constants";
  * attribution for the services Navara uses lives in one place (`constants.ts`)
  * instead of being re-declared per example (which invites drift / mistakes).
  *
- * Maps `attributionUrl` → `url` and carries `logo`. Pass `extra` for the
- * plugin-specific view options that don't belong on a dataset
+ * Maps `attributionUrl` → `url` and carries `logo` / `logoUrl`. Pass `extra` for
+ * the plugin-specific view options that don't belong on a dataset
  * (`creditLayerId`, `children`).
  *
  * `attribution` is required at the type level: a dataset without it (e.g. an
@@ -22,5 +22,6 @@ export const datasetToSource = (
   attribution: dataset.attribution,
   url: dataset.attributionUrl,
   logo: dataset.logo,
+  logoUrl: dataset.logoUrl,
   ...extra,
 });

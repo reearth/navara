@@ -28,14 +28,23 @@ export type AttributionChild = {
 export type AttributionSource = {
   /** Top-level source / provider name. */
   attribution: string;
-  /** Optional URL. Rendered as an `<a>`. */
+  /** Optional URL. Rendered as an `<a>` for the source title. */
   url?: string;
   /**
    * Optional logo image URL. When set, the logo is shown in an always-visible
    * frame in the bottom-left corner, independent of the popover's open state —
    * as required for contractually-mandated marks (Google, Cesium ion, etc.).
+   * The logo is linked only when {@link logoUrl} is set; otherwise it is a plain
+   * image (e.g. a mark that must be shown but not turned into a link).
    */
   logo?: string;
+  /**
+   * Optional click target for the {@link logo}, opened in a new tab. Kept
+   * separate from {@link url} (the title's link) so a provider can require the
+   * logo be shown without linking it, or point the logo somewhere other than the
+   * title. Has no effect unless {@link logo} is also set.
+   */
+  logoUrl?: string;
   /** Zoom-banded child credits, filtered by current camera zoom. */
   children?: AttributionChild[];
   /**
