@@ -1,14 +1,14 @@
+import { MapLibreStylePlugin } from "@navara/maplibre_style";
 import ThreeView, { JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
-import { MapLibreStylePlugin } from "@navara/maplibre_style";
+import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../helpers/attributions";
-import { addCameraControl } from "../../helpers/control";
 import { TILE_DATASETS, TERRAIN_DATASETS } from "../../helpers/constants";
-import { Pane } from "tweakpane";
+import { addCameraControl } from "../../helpers/control";
 
 export type CustomDescriptions = DefaultDescriptions;
 

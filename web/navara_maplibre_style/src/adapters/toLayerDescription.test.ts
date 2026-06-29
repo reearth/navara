@@ -2,6 +2,8 @@ import { describe, it, expect, vi } from "vitest";
 
 import type { ParsedStyle, StyleLayer } from "../engine/types";
 
+import { toLayerDescription } from "./toLayerDescription";
+
 // Mock @navara/three to avoid importing Three.js in tests
 vi.mock("@navara/three", () => ({
   Color: class Color {
@@ -13,8 +15,6 @@ vi.mock("@navara/three", () => ({
     }
   },
 }));
-
-import { toLayerDescription } from "./toLayerDescription";
 
 describe("toLayerDescription", () => {
   describe("GeoJSON source", () => {

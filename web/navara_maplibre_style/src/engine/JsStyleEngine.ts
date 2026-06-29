@@ -9,6 +9,7 @@ import {
   validateStyleMin,
   v8,
 } from "@maplibre/maplibre-gl-style-spec";
+
 import type { StyleEngine } from "./StyleEngine";
 import type {
   EvaluationContext,
