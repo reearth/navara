@@ -15,6 +15,7 @@ import {
   TILE_DATASETS,
   TILES_3D_DATASETS,
 } from "../../../helpers/constants";
+import { atZoneTime } from "../../../helpers/control";
 import { GOOGLE_MAPS_API_KEY } from "../../../helpers/keys";
 
 import { GSI_ATTRIBUTION } from "./data/attributions";
@@ -141,6 +142,8 @@ export const run = async () => {
     });
 
     v.toneMappingExposure = EXPOSURE[mode];
+    // Fix the time of day so the lighting/screenshot is deterministic.
+    v.atmosphere.date = atZoneTime(v.atmosphere.date, 10);
     v.setCamera({ ...INITIAL_CAMERA });
 
     if (mode === "google") {
