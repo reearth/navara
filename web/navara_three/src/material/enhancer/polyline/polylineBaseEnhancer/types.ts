@@ -1,18 +1,14 @@
 import type { Color, Matrix4, Texture, Vector2, Vector3 } from "three";
 
 import type { UniformValue } from "../../../types";
-import type { BatchTextureFlags } from "../../batchTexture";
 import type { Mutates } from "../../MaterialEnhancer";
 
-type PolylineBatchTextureFlags = Required<
-  Pick<
-    BatchTextureFlags,
-    | "useBatchTexture"
-    | "useBatchColorShow"
-    | "useBatchHeight"
-    | "useBatchLineWidth"
-  >
->;
+type PolylineBatchTextureFlags = {
+  useBatchTexture: boolean;
+  useBatchColorShow: boolean;
+  useBatchHeight: boolean;
+  useBatchLineWidth: boolean;
+};
 
 /**
  * Props for the polyline base enhancer.
@@ -24,7 +20,7 @@ export type PolylineBaseProps = {
   // Height/width
   minMaxHeight?: [number, number];
   addHeight?: number;
-  addWidth?: number;
+  lineWidth?: number;
   width?: number;
   maxWidth?: number;
 
@@ -73,7 +69,7 @@ export type PolylineBaseState = Readonly<
     emissiveIntensity: number;
     minMaxHeight: [number, number];
     addHeight: number;
-    addWidth: number;
+    lineWidth: number;
     width: number;
     maxWidth: number;
     color: number;

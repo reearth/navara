@@ -1,8 +1,12 @@
 import type { Texture } from "three";
 
 import type { UniformValue } from "../../../types";
-import type { BatchTextureFlags } from "../../batchTexture";
 import type { Mutates } from "../../MaterialEnhancer";
+
+type ModelBatchTextureFlags = {
+  useBatchTexture: boolean;
+  useBatchColorShow: boolean;
+};
 
 /**
  * Props for the model base enhancer.
@@ -28,23 +32,23 @@ export type ModelBaseProps = {
 
   // When batchColorEnabled is true, material.color is set to white and actual colors come from batch texture
   batchColorEnabled?: boolean;
-} & Omit<BatchTextureFlags, "useBatchExtrudedHeight" | "useBatchHeight">;
+} & Partial<ModelBatchTextureFlags>;
 
 /**
  * Immutable state for the model base enhancer.
  * This state is always replaced as a whole (never mutated).
  * Returned directly via states() - refresh after updates.
  */
-export type ModelBaseState = Readonly<{
-  pickable: boolean;
-  emissiveColor: number;
-  emissiveIntensity: number;
-  effectIdsMask: number;
-  // Batch texture state - when true, material.color is white and colors come from batch texture
-  batchColorEnabled: boolean;
-  useBatchTexture: boolean;
-  useBatchColorShow: boolean;
-}>;
+export type ModelBaseState = Readonly<
+  {
+    pickable: boolean;
+    emissiveColor: number;
+    emissiveIntensity: number;
+    effectIdsMask: number;
+    // Batch texture state - when true, material.color is white and colors come from batch texture
+    batchColorEnabled: boolean;
+  } & ModelBatchTextureFlags
+>;
 
 /**
  * Mutable references (uniforms) for the model base enhancer.

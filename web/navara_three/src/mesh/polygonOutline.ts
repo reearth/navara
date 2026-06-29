@@ -341,6 +341,21 @@ export class PolygonOutlineMesh extends Line2 implements FeatureMesh {
     this.material.userData.uAddHeight.value = height;
   }
 
+  _setFeatureWidth(_width: number): void {
+    // Width is not applicable to polygon outlines.
+    // This method is intentionally a no-op to satisfy the FeatureMesh interface.
+  }
+
+  _setFeatureSize(_size: number): void {
+    // Size is not applicable to polygon outlines.
+    // This method is intentionally a no-op to satisfy the FeatureMesh interface.
+  }
+
+  _setFeatureOpacity(_opacity: number): void {
+    // Opacity adjustment is not applicable to polygon outlines.
+    // This method is intentionally a no-op to satisfy the FeatureMesh interface.
+  }
+
   // Utility method to update resolution (should be called when renderer size changes)
   updateResolution(width: number, height: number): void {
     this.material.resolution.set(width, height);

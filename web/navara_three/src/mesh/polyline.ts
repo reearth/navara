@@ -262,7 +262,7 @@ export class PolylineMesh extends BatchedFeatureMesh<
         color: meshMaterial.color,
         minMaxHeight: [minHeight, maxHeight],
         addHeight: meshMaterial.height ?? 0,
-        addWidth: meshMaterial.width ?? 0,
+        lineWidth: meshMaterial.width ?? 0,
         width: meshMaterial.width,
         maxWidth: meshMaterial.maxWidth,
         isTexturized,
@@ -397,7 +397,7 @@ export class PolylineMesh extends BatchedFeatureMesh<
             ? [minMaxHeights[0], minMaxHeights[1]]
             : undefined,
         addHeight: material.height,
-        addWidth: material.width,
+        lineWidth: material.width,
         width: material.width,
         maxWidth: material.maxWidth,
         effectIdsMask:

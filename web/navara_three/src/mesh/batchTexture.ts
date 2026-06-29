@@ -87,6 +87,26 @@ export function initBatchDataTexture(
   const batchRows = Math.ceil(config.batchLength / textureWidth);
   const textureHeight = batchRows * rowCount;
   const data = new Float32Array(textureWidth * 4 * textureHeight);
+
+  // Initialize OPACITY row to 1.0 for all batch IDs (default is fully opaque)
+  // Without this, zero-initialized data would make features fully transparent
+  const opacityRowIndex = config.rows.indexOf("OPACITY");
+  if (opacityRowIndex >= 0) {
+    const encodedOpacity = encodeFloatToRGBA(1.0);
+    for (let batchId = 0; batchId < config.batchLength; batchId++) {
+      const baseIndex = batchBaseIndex(
+        textureWidth,
+        rowCount,
+        batchId,
+        opacityRowIndex,
+      );
+      data[baseIndex] = encodedOpacity[0]; // R
+      data[baseIndex + 1] = encodedOpacity[1]; // G
+      data[baseIndex + 2] = encodedOpacity[2]; // B
+      data[baseIndex + 3] = encodedOpacity[3]; // A
+    }
+  }
+
   const texture = new DataTexture(
     data,
     textureWidth,

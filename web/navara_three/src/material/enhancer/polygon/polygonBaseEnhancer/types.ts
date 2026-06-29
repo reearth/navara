@@ -1,11 +1,15 @@
 import type { Matrix4, Texture, Vector3 } from "three";
 
 import type { UniformValue } from "../../../types";
-import type { BatchTextureFlags } from "../../batchTexture";
 import type { Mutates } from "../../MaterialEnhancer";
 
-// Helper type to make BatchTextureFlags required (remove optional modifiers)
-type RequiredBatchTextureFlags = Required<BatchTextureFlags>;
+type PolygonBatchTextureFlags = {
+  useBatchTexture: boolean;
+  useBatchColorShow: boolean;
+  useBatchHeight: boolean;
+  useBatchExtrudedHeight: boolean;
+  useBatchOpacity: boolean;
+};
 
 /**
  * Props for the polygon core enhancer.
@@ -52,7 +56,7 @@ export type PolygonBaseProps = {
 
   // RTE (Relative To Eye) support
   useRTE?: boolean;
-} & BatchTextureFlags;
+} & Partial<PolygonBatchTextureFlags>;
 
 /**
  * Immutable state for the polygon base enhancer.
@@ -75,7 +79,7 @@ export type PolygonBaseState = Readonly<
     roughness: number;
     // Batch texture state - when true, material.color is white and colors come from batch texture
     batchColorEnabled: boolean;
-  } & RequiredBatchTextureFlags
+  } & PolygonBatchTextureFlags
 >;
 
 /**

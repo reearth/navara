@@ -428,6 +428,21 @@ export class ModelMesh
     // This method is intentionally a no-op to avoid breaking existing callers.
   }
 
+  _setFeatureWidth(_width: number): void {
+    // Width is not applicable to 3D models.
+    // This method is intentionally a no-op to satisfy the FeatureMesh interface.
+  }
+
+  _setFeatureSize(_size: number): void {
+    // Size adjustment is not applicable to 3D models.
+    // This method is intentionally a no-op to satisfy the FeatureMesh interface.
+  }
+
+  _setFeatureOpacity(_opacity: number): void {
+    // Opacity adjustment via batch textures is currently not implemented for models.
+    // This method is intentionally a no-op to satisfy the FeatureMesh interface.
+  }
+
   dispose() {
     this.traverseMesh((m) => {
       this.ctx.viewContext.removeShadowMaterial(m.material);

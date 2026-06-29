@@ -64,7 +64,7 @@ export const createBaseMutates = (useRTE: boolean): PolylineBaseMutates => {
       ];
       refs.maxWidth.value = state.maxWidth;
       refs.uAddHeight.value = state.addHeight;
-      refs.uBatchLineWidth.value = state.addWidth;
+      refs.uBatchLineWidth.value = state.lineWidth;
       refs.nvr_uPickable.value = state.pickable ? 1 : 0;
       refs.uEffectIdsMask.value = state.effectIdsMask;
       const c = state.emissiveColor;
