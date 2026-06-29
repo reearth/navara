@@ -7,11 +7,18 @@ export type Dataset = {
   attributionHtml?: string;
   attributionUrl?: string;
   /**
-   * Optional logo image path. When provided, `showAttributions` renders it to
-   * the left of the collapsible attributions container — used to satisfy
-   * provider attribution requirements (Google Photoreal, Cesium Ion, etc.).
+   * Optional logo image path. When provided, the logo is shown in the
+   * always-visible logo frame — used to satisfy provider attribution
+   * requirements (Google Photoreal, Cesium Ion, etc.).
    */
   logo?: string;
+  /**
+   * Optional click target for the logo. Separate from `attributionUrl` so a
+   * mark can be shown without linking it (some marks must be displayed but not
+   * turned into a link). Only the `AttributionPlugin` path (via `datasetToSource`)
+   * uses this; the legacy `showAttributions` helper ignores it.
+   */
+  logoUrl?: string;
 };
 
 /**
