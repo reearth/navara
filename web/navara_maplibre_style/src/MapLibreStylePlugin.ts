@@ -12,14 +12,15 @@ import ThreeView, {
   type FeatureEvaluator,
   type FeatureInfo,
 } from "@navara/three";
-import type { StyleEngine } from "./engine/StyleEngine";
-import { JsStyleEngine } from "./engine/JsStyleEngine";
-import type { ParsedStyle, StyleLayer } from "./engine/types";
-import { toLayerDescription } from "./adapters/toLayerDescription";
+
 import {
   createPaintEvaluators,
   toEvaluatedValue,
 } from "./adapters/toEvaluatedValue";
+import { toLayerDescription } from "./adapters/toLayerDescription";
+import { JsStyleEngine } from "./engine/JsStyleEngine";
+import type { StyleEngine } from "./engine/StyleEngine";
+import type { ParsedStyle, StyleLayer } from "./engine/types";
 
 export class MapLibreStylePlugin extends Plugin<ThreeView, ViewContext> {
   private layers: Layer[] = [];

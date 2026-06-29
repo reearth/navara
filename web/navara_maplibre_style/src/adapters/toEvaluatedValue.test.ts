@@ -3,6 +3,8 @@ import { describe, it, expect, vi } from "vitest";
 import { JsStyleEngine } from "../engine/JsStyleEngine";
 import type { StyleLayer } from "../engine/types";
 
+import { createPaintEvaluators, toEvaluatedValue } from "./toEvaluatedValue";
+
 // Mock @navara/three to avoid importing Three.js in tests
 vi.mock("@navara/three", () => ({
   Color: class Color {
@@ -37,8 +39,6 @@ vi.mock("@navara/three", () => ({
     }
   },
 }));
-
-import { createPaintEvaluators, toEvaluatedValue } from "./toEvaluatedValue";
 
 describe("createPaintEvaluators", () => {
   const engine = new JsStyleEngine();

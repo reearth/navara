@@ -8,7 +8,7 @@ import type { GeoJSON } from "geojson";
  * Simplified MapLibre Style specification.
  * For the PoC, we only support a subset of the full spec.
  */
-export interface ParsedStyle {
+export type ParsedStyle = {
   version: 8;
   sources: Record<string, StyleSource>;
   layers: StyleLayer[];
@@ -19,7 +19,7 @@ export interface ParsedStyle {
  */
 export type StyleSource = GeoJSONSource | VectorSource;
 
-export interface GeoJSONSource {
+export type GeoJSONSource = {
   type: "geojson";
   data: string | GeoJSON;
   maxzoom?: number;
@@ -27,7 +27,7 @@ export interface GeoJSONSource {
   tolerance?: number;
 }
 
-export interface VectorSource {
+export type VectorSource = {
   type: "vector";
   url?: string;
   tiles?: string[];
@@ -42,7 +42,7 @@ export type StyleLayer = FillLayer | LineLayer | CircleLayer;
 
 export type LayerType = "fill" | "line" | "circle";
 
-export interface BaseLayer {
+export type BaseLayer = {
   id: string;
   type: LayerType;
   source: string;
@@ -53,34 +53,34 @@ export interface BaseLayer {
   layout?: Record<string, unknown>;
 }
 
-export interface FillLayer extends BaseLayer {
+export type FillLayer = {
   type: "fill";
   paint?: FillPaint;
-}
+} & BaseLayer
 
-export interface FillPaint {
+export type FillPaint = {
   "fill-color"?: ValueExpression;
   "fill-opacity"?: ValueExpression;
   "fill-outline-color"?: ValueExpression;
 }
 
-export interface LineLayer extends BaseLayer {
+export type LineLayer = {
   type: "line";
   paint?: LinePaint;
-}
+} & BaseLayer
 
-export interface LinePaint {
+export type LinePaint = {
   "line-color"?: ValueExpression;
   "line-width"?: ValueExpression;
   "line-opacity"?: ValueExpression;
 }
 
-export interface CircleLayer extends BaseLayer {
+export type CircleLayer = {
   type: "circle";
   paint?: CirclePaint;
-}
+} & BaseLayer
 
-export interface CirclePaint {
+export type CirclePaint = {
   "circle-color"?: ValueExpression;
   "circle-radius"?: ValueExpression;
   "circle-opacity"?: ValueExpression;
@@ -99,14 +99,14 @@ export type FilterExpression = unknown[];
  * TODO: Add zoom support - requires camera movement listeners and re-evaluation
  * when zoom changes, since features from different tile zoom levels coexist.
  */
-export interface EvaluationContext {
+export type EvaluationContext = {
   properties: Record<string, unknown> | undefined;
 }
 
 /**
  * Context for filter evaluation (subset of EvaluationContext).
  */
-export interface FeatureContext {
+export type FeatureContext = {
   properties: Record<string, unknown> | undefined;
 }
 
@@ -123,7 +123,7 @@ export type StyleValue =
  * Property specification for type checking and defaults.
  * This matches the structure from @maplibre/maplibre-gl-style-spec.
  */
-export interface PropertySpec {
+export type PropertySpec = {
   type: "color" | "number" | "boolean" | "string" | "array";
   default?: unknown;
   minimum?: number;

@@ -19,7 +19,7 @@ import type {
   ValueExpression,
 } from "./types";
 
-export interface StyleEngine {
+export type StyleEngine = {
   /**
    * Validate and normalize Style JSON.
    * In WASM implementations, this may also include async initialization.
