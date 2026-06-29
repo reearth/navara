@@ -131,27 +131,10 @@ export const STYLE_TEXT = `
   flex-direction: column;
   gap: 5px;
 }
-.navara-attr-related > li {
+.navara-attr-related li {
   font-size: 12px;
   color: var(--nvr-attr-nested, rgba(27, 31, 36, 0.64));
   line-height: 1.5;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-}
-/* Third level: a data source's required license / source notices. */
-.navara-attr-licenses {
-  list-style: none;
-  margin: 3px 0 0 12px;
-  padding: 0 0 0 9px;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  border-left: 1px solid var(--nvr-attr-border, rgba(0, 0, 0, 0.08));
-}
-.navara-attr-licenses li {
-  font-size: 11px;
-  opacity: 0.82;
-  line-height: 1.45;
   overflow-wrap: anywhere;
   word-break: break-word;
 }

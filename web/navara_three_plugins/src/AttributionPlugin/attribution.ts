@@ -7,20 +7,13 @@
  */
 
 /**
- * A zoom-banded data source under a top-level source. The band
+ * A single zoom-banded child credit under a top-level source. The band
  * `[minZoom, maxZoom]` is matched against the current camera zoom; an omitted
- * bound is unbounded on that side. Pairs the `dataSource` name with the
- * `credits` shown nested beneath it, so a required notice never appears
- * detached from the source it belongs to.
+ * bound is unbounded on that side.
  */
 export type AttributionChild = {
-  /** Data source / product name, shown as the parent label. */
-  dataSource: string;
-  /**
-   * Required license / source notices, shown nested under the name. May contain
-   * partial `<a>` links; mandated notices should be kept verbatim.
-   */
-  credits?: string[];
+  /** Attribution / credit text. May contain partial `<a>` links. */
+  attribution: string;
   /** Inclusive lower zoom bound. Unbounded when omitted. */
   minZoom?: number;
   /** Inclusive upper zoom bound. Unbounded when omitted. */
@@ -28,8 +21,8 @@ export type AttributionChild = {
 };
 
 /**
- * A top-level source (provider). It may carry zoom-banded data-source
- * `children`, a mandated `logo`, and dynamic per-layer credits linked via
+ * A top-level source (provider). It may carry zoom-banded child credits
+ * (`children`), a mandated `logo`, and dynamic per-layer credits linked via
  * `creditLayerId`.
  */
 export type AttributionSource = {
@@ -43,7 +36,7 @@ export type AttributionSource = {
    * as required for contractually-mandated marks (Google, Cesium ion, etc.).
    */
   logo?: string;
-  /** Zoom-banded data sources, filtered by current camera zoom. */
+  /** Zoom-banded child credits, filtered by current camera zoom. */
   children?: AttributionChild[];
   /**
    * Optional id (`layer.id`) of the tracked layer whose per-feature credits are

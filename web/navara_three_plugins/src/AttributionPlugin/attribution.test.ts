@@ -74,7 +74,7 @@ describe("isAttributionHtml", () => {
 });
 
 describe("matchesZoom", () => {
-  const band: AttributionChild = { dataSource: "x", minZoom: 14, maxZoom: 18 };
+  const band: AttributionChild = { attribution: "x", minZoom: 14, maxZoom: 18 };
 
   it("matches everything when the level is undefined", () => {
     expect(matchesZoom(band, undefined)).toBe(true);
@@ -92,11 +92,11 @@ describe("matchesZoom", () => {
   });
 
   it("treats a missing bound as unbounded on that side", () => {
-    expect(matchesZoom({ dataSource: "x" }, 0)).toBe(true);
-    expect(matchesZoom({ dataSource: "x", minZoom: 10 }, 100)).toBe(true);
-    expect(matchesZoom({ dataSource: "x", minZoom: 10 }, 9)).toBe(false);
-    expect(matchesZoom({ dataSource: "x", maxZoom: 10 }, 0)).toBe(true);
-    expect(matchesZoom({ dataSource: "x", maxZoom: 10 }, 11)).toBe(false);
+    expect(matchesZoom({ attribution: "x" }, 0)).toBe(true);
+    expect(matchesZoom({ attribution: "x", minZoom: 10 }, 100)).toBe(true);
+    expect(matchesZoom({ attribution: "x", minZoom: 10 }, 9)).toBe(false);
+    expect(matchesZoom({ attribution: "x", maxZoom: 10 }, 0)).toBe(true);
+    expect(matchesZoom({ attribution: "x", maxZoom: 10 }, 11)).toBe(false);
   });
 });
 

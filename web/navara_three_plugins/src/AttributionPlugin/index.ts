@@ -26,13 +26,8 @@
  *       attribution: "Geospatial Information Authority of Japan (GSI)",
  *       url: "https://maps.gsi.go.jp/development/ichiran.html",
  *       children: [
- *         // A data source name with its mandated notice nested beneath.
- *         {
- *           dataSource: "Nationwide latest aerial photos (seamless)",
- *           credits: ["GRUS画像（© Axelspace）"],
- *           minZoom: 14,
- *           maxZoom: 18,
- *         },
+ *         { attribution: "Nationwide latest aerial photos (seamless)", minZoom: 14, maxZoom: 18 },
+ *         { attribution: "GRUS画像（© Axelspace）", minZoom: 14, maxZoom: 18 },
  *       ],
  *     },
  *     {
@@ -71,7 +66,6 @@ import {
   isAttributionHtml,
   matchesZoom,
   safeHref,
-  type AttributionChild,
   type AttributionItem,
   type AttributionStyle,
 } from "./attribution";
@@ -340,33 +334,9 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
   }
 
   /**
-   * Build a data-source `<li>`: the source name with its required notices
-   * nested beneath, so a mandated credit never appears detached from its
-   * source. Both name and notices are sanitized (only safe-scheme `<a>` kept).
-   */
-  private createDataSourceItem(child: AttributionChild): HTMLLIElement {
-    const li = document.createElement("li");
-    const name = document.createElement("div");
-    appendSanitizedHtml(name, child.dataSource);
-    li.appendChild(name);
-
-    if (child.credits?.length) {
-      const licenses = document.createElement("ul");
-      licenses.className = "navara-attr-licenses";
-      for (const credit of child.credits) {
-        const creditLi = document.createElement("li");
-        appendSanitizedHtml(creditLi, credit);
-        licenses.appendChild(creditLi);
-      }
-      li.appendChild(licenses);
-    }
-    return li;
-  }
-
-  /**
-   * Rebuild the list. Each source shows, as a nested list, its zoom-filtered
-   * data-source `children` (name + nested notices) plus the dynamic credits of
-   * the layer it links via `creditLayerId`.
+   * Rebuild the list. Each source shows its sub-credits — zoom-filtered static
+   * `children` plus the dynamic credits of the layer it links via
+   * `creditLayerId` — as a nested list.
    */
   private populateList(): void {
     if (!this.listEl) return;
@@ -388,20 +358,21 @@ export class AttributionPlugin extends Plugin<View, ViewContext> {
         text.textContent = item.attribution;
       }
 
-      // Sub-entries: zoom-banded data sources (name + nested notices), then the
-      // linked layer's dynamic credits.
+      // Sub-credits: zoom-banded static children, then the linked layer's
+      // dynamic credits. Both go through the sanitizer so embedded `<a>` links
+      // stay clickable while scripts/handlers from untrusted tile metadata are
+      // dropped to text.
       const sub = document.createElement("ul");
       sub.className = "navara-attr-related";
       if (item.children) {
         for (const child of item.children) {
           if (!matchesZoom(child, this.lastZoomLevel)) continue;
-          sub.appendChild(this.createDataSourceItem(child));
+          const childLi = document.createElement("li");
+          appendSanitizedHtml(childLi, child.attribution);
+          sub.appendChild(childLi);
         }
       }
       if (item.creditLayerId) {
-        // Dynamic per-tile credits (e.g. Google) have no data-source grouping,
-        // so they render flat under the source. Sanitized like all credit text,
-        // so untrusted tile metadata can't inject scripts/handlers.
         for (const credit of this.layerCreditStrings(item.creditLayerId)) {
           const creditLi = document.createElement("li");
           appendSanitizedHtml(creditLi, credit);

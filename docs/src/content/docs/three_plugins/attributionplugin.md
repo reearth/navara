@@ -11,7 +11,7 @@ sidebar:
 
 It covers the three things map attributions usually need:
 
-- **Zoom-aware credits** — a source can carry data sources that apply only within a zoom range, so only the relevant ones are shown and they switch quietly as the user zooms.
+- **Zoom-aware credits** — a source can carry child credits that apply only within a zoom range, so only the relevant ones are shown and they switch quietly as the user zooms.
 - **Per-layer credits** — credits supplied by layers (such as a 3D tile's copyright) are tracked automatically and nested under the source you link with `creditLayerId`.
 - **Always-visible logos** — logos that must always be shown (e.g. Google) sit in a separate bottom-left frame, independent of whether the popover is open.
 
@@ -53,13 +53,8 @@ attribution.show(
       attribution: "Geospatial Information Authority of Japan (GSI)",
       url: "https://maps.gsi.go.jp/development/ichiran.html",
       children: [
-        // A data source name with its GSI-mandated notice nested beneath.
-        {
-          dataSource: "Nationwide latest aerial photos (seamless)",
-          credits: ["GRUS画像（© Axelspace）"],
-          minZoom: 14,
-          maxZoom: 18,
-        },
+        { attribution: "Nationwide latest aerial photos (seamless)", minZoom: 14, maxZoom: 18 },
+        { attribution: "GRUS画像（© Axelspace）", minZoom: 14, maxZoom: 18 },
       ],
     },
     {
@@ -112,7 +107,7 @@ Hides the attribution UI and clears the tracked content.
 dispose(): void
 ```
 
-Removes the UI and releases everything the plugin set up. Call it when the plugin is no longer needed.
+Removes the UI and releases everything the plugin set up.
 
 ### setStyle(style)
 
@@ -148,7 +143,7 @@ type AttributionItem = AttributionSource | AttributionHtml;
 | `attribution`   | `string`                          | Top-level source / provider name                                                      |
 | `url`           | `string \| undefined`             | Optional link for the source name                                                     |
 | `logo`          | `string \| undefined`             | Optional logo image URL, shown in the always-visible bottom-left frame                |
-| `children`      | `AttributionChild[] \| undefined` | Optional zoom-banded data sources, each with its credits nested                       |
+| `children`      | `AttributionChild[] \| undefined` | Optional credits shown only at their zoom range                                       |
 | `creditLayerId` | `string \| undefined`             | Optional `layer.id`; per-feature credits from that layer are nested under this source |
 
 ### AttributionHtml
@@ -159,12 +154,11 @@ type AttributionItem = AttributionSource | AttributionHtml;
 
 ### AttributionChild
 
-| Property     | Type                    | Description                                                    |
-| ------------ | ----------------------- | -------------------------------------------------------------- |
-| `dataSource` | `string`                | Data source / product name, shown as the parent label          |
-| `credits`    | `string[] \| undefined` | Required license / source notices, shown nested under the name |
-| `minZoom`    | `number \| undefined`   | Lowest zoom this entry applies to (omit for none)              |
-| `maxZoom`    | `number \| undefined`   | Highest zoom this entry applies to (omit for none)             |
+| Property        | Type                  | Description                                          |
+| --------------- | --------------------- | --------------------------------------------------- |
+| `attribution`   | `string`              | Credit text. May contain inline `<a>` links         |
+| `minZoom`       | `number \| undefined` | Lowest zoom this credit applies to (omit for none)  |
+| `maxZoom`       | `number \| undefined` | Highest zoom this credit applies to (omit for none) |
 
 ### AttributionStyle
 
@@ -176,7 +170,7 @@ All fields are optional; an unset field keeps the default color. Colors are appl
 | `linkColor`       | `string \| undefined` | Link and info-icon color                      |
 | `listStyleColor`  | `string \| undefined` | Bullet (list marker) color                    |
 | `textColor`       | `string \| undefined` | Body text color                               |
-| `nestedTextColor` | `string \| undefined` | Nested data-source / credit text color        |
+| `nestedTextColor` | `string \| undefined` | Nested child-credit text color                |
 | `backgroundColor` | `string \| undefined` | Popover and trigger background color          |
 | `borderColor`     | `string \| undefined` | Header divider color (useful for dark themes) |
 
@@ -185,7 +179,7 @@ All fields are optional; an unset field keeps the default color. Colors are appl
 - **Zoom ranges are for raster sources you declare yourself.** Tiles like GSI or OpenStreetMap don't carry their own credits, so describe their zoom-dependent credits with `children`.
 - **Per-layer credits come from the tiles.** Only sources that embed a copyright (such as Google Photorealistic 3D Tiles) produce credits through `creditLayerId`; for everything else, use `children`.
 - **Mandated logos go in the logo frame, not the popover.** Use `logo` only for marks you are required to keep visible at all times; ordinary sources are best shown as text.
-- **Links are scheme-checked.** Every credit link — `url`, inline `<a>` in `attributionHtml` / `dataSource` / `credits`, and `<a>` embedded in a layer's per-feature credits — is kept only for safe schemes (`http` / `https` / `mailto`, or relative URLs); anything else (e.g. `javascript:`) is dropped to plain text. This makes it safe to render links even from untrusted tile metadata.
+- **Links are scheme-checked.** Every credit link — `url`, inline `<a>` in `attributionHtml` / `attribution`, and `<a>` embedded in a layer's per-feature credits — is kept only for safe schemes (`http` / `https` / `mailto`, or relative URLs); anything else (e.g. `javascript:`) is dropped to plain text. This makes it safe to render links even from untrusted tile metadata.
 - **Bare URLs are auto-linked.** A plain `http(s)` URL inside credit text is turned into a clickable link automatically, so you can paste an official notice verbatim without hand-wrapping the URL in `<a>` — the wording (and the URL) stays unchanged.
 
 ## Related Resources
