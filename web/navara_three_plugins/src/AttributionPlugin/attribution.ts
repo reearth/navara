@@ -88,8 +88,8 @@ export function isAttributionHtml(
 
 /**
  * Aggregate `;`-separated credit strings (e.g. a 3D-tile's `asset.copyright`)
- * into a deduplicated list, ordered by frequency (desc) with an alphabetical
- * tie-break for stable, flicker-free ordering across updates.
+ * into a deduplicated list, ordered by frequency (desc) with a deterministic
+ * code-point tie-break, so the order is stable across updates and environments.
  *
  * The `;` split is **HTML-aware** (see {@link splitCredits}): a `;` inside an
  * `<a href>` or an HTML entity is never treated as a delimiter, so attribution
@@ -103,7 +103,7 @@ export function aggregateCredits(creditStrings: Iterable<string>): string[] {
     }
   }
   return Array.from(counts.entries())
-    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0))
     .map(([credit]) => credit);
 }
 
