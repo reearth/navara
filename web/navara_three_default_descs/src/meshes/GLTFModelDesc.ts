@@ -245,9 +245,9 @@ export class GLTFModelDesc extends MeshDesc<
 
     if (!modelConfig) return;
 
-    // When matrixWorld is set, applyRTETransform() already encoded the world position.
-    // Only encode from this.position when there is no frame matrix.
-    if (!this.matrixWorld && this.position) {
+    // When matrixWorld/matrix is set, applyRTETransform() already encoded the world position.
+    // Only encode from this.position when there is no base frame matrix.
+    if (!this.matrixWorld && !this.matrix && this.position) {
       this.setPositionRTE(
         new Vector3(this.position.x, this.position.y, this.position.z),
       );
