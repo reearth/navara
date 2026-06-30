@@ -504,11 +504,10 @@ export class FeatureEvaluator {
     if (evaluated.width != null) {
       updateBatchAttribute("lineWidth", evaluated.width);
     }
-    if (evaluated.size != null) {
-      updateBatchAttribute("size", evaluated.size);
-    }
     if (evaluated.opacity != null) {
       updateBatchAttribute("opacity", evaluated.opacity);
     }
+
+    // size is handled by InstancedSpriteMesh / BatchedSdfTextMesh paths above
   }
 }
