@@ -1,19 +1,26 @@
 import type ThreeView from "@navara/three";
 import {
   Color,
-  NewInstancedMeshDesc,
-  type InstancedMeshDescChildConfig,
-  type InstancedMeshDescConfig,
-  type InstancedMeshDescUpdate,
+  InstancedMeshDesc,
+  PickableInstancedMeshWrapper,
+  setupSelectiveEffectUniforms,
+  type InstancedChildConfig,
+  type InstancedMeshConfig,
+  type InstancedMeshUpdate,
   type ViewContext,
 } from "@navara/three";
-import { BoxGeometry, Color as ThreeColor, Vector3 } from "three";
-import { MeshLambertNodeMaterial } from "three/webgpu";
+import {
+  BoxGeometry,
+  Color as ThreeColor,
+  InstancedMesh as ThreeInstancedMesh,
+  MeshLambertMaterial,
+  Vector3,
+} from "three";
 
 const _tempColor = new ThreeColor();
 
 /** Per-instance configuration for a single box. */
-export type BoxChildConfig = InstancedMeshDescChildConfig & {
+export type BoxChildConfig = InstancedChildConfig & {
   /** Box width (X-axis). Encoded as scale in the instance matrix. */
   width?: number;
   /** Box height (Y-axis). Encoded as scale in the instance matrix. */
@@ -33,6 +40,7 @@ export type SharedBoxMaterialConfig = {
   transparent?: boolean;
   castShadow?: boolean;
   receiveShadow?: boolean;
+  effectIds?: string[];
 };
 
 /** The `boxes` config object containing shared material props and children. */
@@ -44,34 +52,37 @@ type Description = {
   boxes?: BoxesDescription;
 };
 
-export type InstancedBoxMeshConfig = InstancedMeshDescConfig & Description;
+export type InstancedBoxMeshConfig = InstancedMeshConfig &
+  Description & { pickable?: boolean };
 
-export type InstancedBoxMeshUpdate = InstancedMeshDescUpdate & Description;
+export type InstancedBoxMeshUpdate = InstancedMeshUpdate & Description;
 
-export class InstancedBoxMeshDesc extends NewInstancedMeshDesc<
+export class InstancedBoxMeshDesc extends InstancedMeshDesc<
   BoxGeometry,
-  MeshLambertNodeMaterial,
+  MeshLambertMaterial,
   InstancedBoxMeshConfig,
   InstancedBoxMeshUpdate,
   BoxChildConfig
 > {
   private config: InstancedBoxMeshConfig;
+  private pickWrapper?: PickableInstancedMeshWrapper;
 
   constructor(
     view: ThreeView,
     ctx: ViewContext,
     config: InstancedBoxMeshConfig,
   ) {
+    // Propagate effectIds to base class
+    if (config.boxes?.effectIds) {
+      config.effectIds = config.boxes.effectIds;
+    }
     super(view, ctx, config);
     this.config = config;
+  }
 
-    // Drive the MRT emissive uniforms from the boxes config.
-    if (config.boxes?.emissiveColor !== undefined) {
-      this.emissive = config.boxes.emissiveColor;
-    }
-    if (config.boxes?.emissiveIntensity !== undefined) {
-      this.emissiveIntensity = config.boxes.emissiveIntensity;
-    }
+  /** Per-instance batch IDs when picking is enabled. */
+  get batchIds(): readonly number[] {
+    return this.pickWrapper?.batchIds ?? [];
   }
 
   private get boxesConfig(): BoxesDescription | undefined {
@@ -87,18 +98,19 @@ export class InstancedBoxMeshDesc extends NewInstancedMeshDesc<
     return new BoxGeometry(1, 1, 1);
   }
 
-  protected createMaterial(): MeshLambertNodeMaterial {
+  protected createMaterial(): MeshLambertMaterial {
     const cfg = this.boxesConfig;
     const colorValue = cfg?.color ?? new Color().setStyle("#ffffff");
     const emissiveColorValue = cfg?.emissiveColor ? cfg.emissiveColor.raw : 0;
 
-    const material = new MeshLambertNodeMaterial({
+    const material = new MeshLambertMaterial({
       color: colorValue.raw,
+      emissive: emissiveColorValue,
+      emissiveIntensity: cfg?.emissiveIntensity ?? 0,
       opacity: cfg?.opacity ?? 1,
       transparent: cfg?.transparent ?? false,
     });
-    material.emissive.set(emissiveColorValue);
-    material.emissiveIntensity = cfg?.emissiveIntensity ?? 0;
+    setupSelectiveEffectUniforms(material);
     return material;
   }
 
@@ -128,7 +140,38 @@ export class InstancedBoxMeshDesc extends NewInstancedMeshDesc<
       mesh.castShadow = cfg?.castShadow ?? false;
       mesh.receiveShadow = cfg?.receiveShadow ?? false;
       this.ctx.applyShadowMaterial(mesh.material);
+
+      if (this.config.pickable) {
+        this.pickWrapper = new PickableInstancedMeshWrapper(
+          mesh,
+          this.count,
+          this.ctx,
+        );
+        this.ctx.registerPickableMesh(this.id, this.pickWrapper);
+      }
     }
+  }
+
+  protected override onInstanceAdded(_index: number): void {
+    this.pickWrapper?.addInstance();
+  }
+
+  protected override onInstanceRemoved(index: number, _wasLast: boolean): void {
+    this.pickWrapper?.removeInstanceAt(index);
+  }
+
+  protected override onInstancesCleared(): void {
+    this.pickWrapper?.clearInstances();
+  }
+
+  protected override onInstancesReplaced(count: number): void {
+    this.pickWrapper?.replaceAll(count);
+  }
+
+  protected override onInstanceMeshReplaced(
+    newMesh: ThreeInstancedMesh<BoxGeometry, MeshLambertMaterial>,
+  ): void {
+    this.pickWrapper?.syncMesh(newMesh);
   }
 
   onUpdateConfig(updates: InstancedBoxMeshUpdate): void {
@@ -165,11 +208,9 @@ export class InstancedBoxMeshDesc extends NewInstancedMeshDesc<
         this.replaceAll(boxesUpdate.children);
       }
 
-      if (boxesUpdate.emissiveColor !== undefined) {
-        this.emissive = boxesUpdate.emissiveColor;
-      }
-      if (boxesUpdate.emissiveIntensity !== undefined) {
-        this.emissiveIntensity = boxesUpdate.emissiveIntensity;
+      // Propagate effectIds to base class
+      if (boxesUpdate.effectIds !== undefined) {
+        updates.effectIds = boxesUpdate.effectIds;
       }
 
       // Update stored config
@@ -183,6 +224,10 @@ export class InstancedBoxMeshDesc extends NewInstancedMeshDesc<
   }
 
   override onDestroy(): void {
+    if (this.pickWrapper) {
+      this.ctx.unregisterPickableMesh(this.id);
+      this.pickWrapper = undefined;
+    }
     if (this.raw) {
       this.ctx.removeShadowMaterial(this.raw.material);
     }
