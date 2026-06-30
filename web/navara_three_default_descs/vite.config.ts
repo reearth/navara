@@ -33,11 +33,7 @@ export default defineConfig((env) => {
       },
       rollupOptions: {
         ...common.build.rollupOptions,
-        external: [
-          "three",
-          "postprocessing",
-          "@navara/three",
-        ],
+        external: ["three", "postprocessing", "@navara/three"],
       },
     },
   };
