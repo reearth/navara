@@ -107,6 +107,25 @@ export function initBatchDataTexture(
     }
   }
 
+  // Initialize LINE_WIDTH row to -1.0 for all batch IDs (sentinel for "use default")
+  // Negative value indicates shader should fall back to minMaxHeightAndWidth.z
+  const lineWidthRowIndex = config.rows.indexOf("LINE_WIDTH");
+  if (lineWidthRowIndex >= 0) {
+    const encodedLineWidth = encodeFloatToRGBA(-1.0);
+    for (let batchId = 0; batchId < config.batchLength; batchId++) {
+      const baseIndex = batchBaseIndex(
+        textureWidth,
+        rowCount,
+        batchId,
+        lineWidthRowIndex,
+      );
+      data[baseIndex] = encodedLineWidth[0]; // R
+      data[baseIndex + 1] = encodedLineWidth[1]; // G
+      data[baseIndex + 2] = encodedLineWidth[2]; // B
+      data[baseIndex + 3] = encodedLineWidth[3]; // A
+    }
+  }
+
   const texture = new DataTexture(
     data,
     textureWidth,

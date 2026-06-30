@@ -33,9 +33,10 @@ void main() {
 
     // Line width in normalized coordinates (width is in pixels, need to scale)
     // For a 512x512 render target, convert pixels to normalized coords
-    // Use batchLineWidth only when batch line width is enabled
+    // Use batchLineWidth when >= 0.0, otherwise fall back to default width.
+    // Negative batchLineWidth indicates "use default width from minMaxHeightAndWidth.z"
     #ifdef USE_BATCH_LINE_WIDTH
-        float baseWidth = batchLineWidth;
+        float baseWidth = batchLineWidth >= 0.0 ? batchLineWidth : minMaxHeightAndWidth.z;
     #else
         float baseWidth = minMaxHeightAndWidth.z;
     #endif

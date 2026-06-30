@@ -339,6 +339,44 @@ describe("initBatchDataTexture", () => {
       expect(data[baseIndex + 3]).toBe(0);
     }
   });
+
+  test("initializes LINE_WIDTH row to -1.0 for all batchIds when LINE_WIDTH is in config", () => {
+    const config: BatchTextureConfig = {
+      rows: ["COLOR_SHOW", "LINE_WIDTH"],
+      batchLength: 100,
+    };
+    const material = new MeshBasicMaterial();
+    initBatchedMaterial(material, config);
+    initBatchDataTexture(material, config);
+
+    const texture = getBatchDataTexture(material);
+    invariant(texture);
+    const data = texture.image.data as Float32Array;
+    const texWidth = texture.image.width;
+    const rowCount = config.rows.length;
+    const lineWidthRowIndex = config.rows.indexOf("LINE_WIDTH");
+
+    // Check all 100 batch IDs have lineWidth -1.0 (sentinel for "use default")
+    for (let batchId = 0; batchId < 100; batchId++) {
+      const baseIndex = batchBaseIndex(
+        texWidth,
+        rowCount,
+        batchId,
+        lineWidthRowIndex,
+      );
+      const encoded: [number, number, number, number] = [
+        data[baseIndex],
+        data[baseIndex + 1],
+        data[baseIndex + 2],
+        data[baseIndex + 3],
+      ];
+      const lineWidth = decodeRGBAToFloat(encoded);
+      expect(
+        lineWidth,
+        `batchId ${batchId} should have lineWidth -1.0`,
+      ).toBeCloseTo(-1.0);
+    }
+  });
 });
 
 // ── initBatchedMaterial ─────────────────────────────────────────────────

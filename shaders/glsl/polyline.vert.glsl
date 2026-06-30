@@ -161,9 +161,10 @@ void main() {
  
     v_texcoordNormalizationAndStartEcYZ.y = nvr_branchFreeTernary(v_texcoordNormalizationAndStartEcYZ.y > 1.0, 0.0, abs(v_texcoordNormalizationAndStartEcYZ.y));
 
-    // Use batchLineWidth only when batch line width is enabled; allow 0.0 as a valid value.
+    // Use batchLineWidth when >= 0.0, otherwise fall back to default width.
+    // Negative batchLineWidth indicates "use default width from minMaxHeightAndWidth.z"
     #ifdef USE_BATCH_LINE_WIDTH
-        float lineWidth = batchLineWidth;
+        float lineWidth = batchLineWidth >= 0.0 ? batchLineWidth : minMaxHeightAndWidth.z;
     #else
         float lineWidth = minMaxHeightAndWidth.z;
     #endif
