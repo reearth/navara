@@ -369,6 +369,18 @@ export class SDFTextMesh
     this._enhancer.update({ base: { fontSize: size } });
   }
 
+  _setFeatureWidth(_width: number): void {
+    // Width is not applicable to text meshes.
+    // This method is intentionally a no-op to satisfy the FeatureMesh guard.
+  }
+  _setFeatureSize(size: number): void {
+    this.setSize(size);
+  }
+  _setFeatureOpacity(_opacity: number): void {
+    // Opacity adjustment is not currently supported for text meshes.
+    // This method is intentionally a no-op to satisfy the FeatureMesh guard.
+  }
+
   setPosition(
     position: Float32Array | { high: Float32Array; low: Float32Array },
     RTE: boolean,

@@ -38,6 +38,7 @@ export const isFeatureMesh = (v: object): v is FeatureMesh => {
     "_getFeatureColor" in v &&
     "_setFeatureShow" in v &&
     "_setFeatureExtrudedHeight" in v &&
+    "_setFeatureHeight" in v &&
     "_setFeatureWidth" in v &&
     "_setFeatureSize" in v &&
     "_setFeatureOpacity" in v &&

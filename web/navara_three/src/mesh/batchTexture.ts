@@ -224,6 +224,10 @@ export function updateBatchAttribute(
     }
     case "show": {
       if (typeof value !== "boolean") return;
+
+      const rowIndex = getRowIndex(material, "COLOR_SHOW");
+      if (rowIndex < 0) return;
+
       if (material.userData.defines) {
         material.vertexColors = true;
         material.userData.defines.USE_BATCH_COLOR_SHOW = true;
@@ -231,10 +235,6 @@ export function updateBatchAttribute(
       }
 
       material.userData._batchShowTouched = true;
-
-      // Reuse color texel.
-      const rowIndex = getRowIndex(material, "COLOR_SHOW");
-      if (rowIndex < 0) return;
 
       const baseIndex = batchBaseIndex(texWidth, rowCount, batchId, rowIndex);
       if (!material.userData._batchColorTouched) {
@@ -248,13 +248,14 @@ export function updateBatchAttribute(
     }
     case "height": {
       if (typeof value !== "number") return;
+
+      const rowIndex = getRowIndex(material, "HEIGHT");
+      if (rowIndex < 0) return;
+
       if (material.userData.defines) {
         material.userData.defines.USE_BATCH_HEIGHT = true;
         material.needsUpdate = true;
       }
-
-      const rowIndex = getRowIndex(material, "HEIGHT");
-      if (rowIndex < 0) return;
 
       // Encode the height to RGBA
       const encodedHeight = encodeFloatToRGBA(value);
@@ -269,13 +270,14 @@ export function updateBatchAttribute(
     }
     case "extrudedHeight": {
       if (typeof value !== "number") return;
+
+      const rowIndex = getRowIndex(material, "EXTRUDED_HEIGHT");
+      if (rowIndex < 0) return;
+
       if (material.userData.defines) {
         material.userData.defines.USE_BATCH_EXTRUDED_HEIGHT = true;
         material.needsUpdate = true;
       }
-
-      const rowIndex = getRowIndex(material, "EXTRUDED_HEIGHT");
-      if (rowIndex < 0) return;
 
       const encodedHeight = encodeFloatToRGBA(value);
 
@@ -288,13 +290,14 @@ export function updateBatchAttribute(
     }
     case "lineWidth": {
       if (typeof value !== "number") return;
+
+      const rowIndex = getRowIndex(material, "LINE_WIDTH");
+      if (rowIndex < 0) return;
+
       if (material.userData.defines) {
         material.userData.defines.USE_BATCH_LINE_WIDTH = true;
         material.needsUpdate = true;
       }
-
-      const rowIndex = getRowIndex(material, "LINE_WIDTH");
-      if (rowIndex < 0) return;
 
       const encodedLineWidth = encodeFloatToRGBA(value);
 
@@ -307,13 +310,14 @@ export function updateBatchAttribute(
     }
     case "size": {
       if (typeof value !== "number") return;
+
+      const rowIndex = getRowIndex(material, "SIZE");
+      if (rowIndex < 0) return;
+
       if (material.userData.defines) {
         material.userData.defines.USE_BATCH_SIZE = true;
         material.needsUpdate = true;
       }
-
-      const rowIndex = getRowIndex(material, "SIZE");
-      if (rowIndex < 0) return;
 
       const encodedSize = encodeFloatToRGBA(value);
 
@@ -326,13 +330,14 @@ export function updateBatchAttribute(
     }
     case "opacity": {
       if (typeof value !== "number") return;
+
+      const rowIndex = getRowIndex(material, "OPACITY");
+      if (rowIndex < 0) return;
+
       if (material.userData.defines) {
         material.userData.defines.USE_BATCH_OPACITY = true;
         material.needsUpdate = true;
       }
-
-      const rowIndex = getRowIndex(material, "OPACITY");
-      if (rowIndex < 0) return;
 
       const encodedOpacity = encodeFloatToRGBA(value);
 
