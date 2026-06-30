@@ -35,8 +35,6 @@ export default defineConfig((env) => {
         ...common.build.rollupOptions,
         external: [
           "three",
-          "three/webgpu",
-          "three/tsl",
           "postprocessing",
           "@navara/three",
         ],

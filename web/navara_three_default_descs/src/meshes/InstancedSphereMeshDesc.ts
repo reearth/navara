@@ -1,19 +1,26 @@
 import type ThreeView from "@navara/three";
 import {
   Color,
-  NewInstancedMeshDesc,
-  type InstancedMeshDescChildConfig,
-  type InstancedMeshDescConfig,
-  type InstancedMeshDescUpdate,
+  InstancedMeshDesc,
+  PickableInstancedMeshWrapper,
+  setupSelectiveEffectUniforms,
+  type InstancedChildConfig,
+  type InstancedMeshConfig,
+  type InstancedMeshUpdate,
   type ViewContext,
 } from "@navara/three";
-import { Color as ThreeColor, SphereGeometry, Vector3 } from "three";
-import { MeshLambertNodeMaterial } from "three/webgpu";
+import {
+  Color as ThreeColor,
+  InstancedMesh as ThreeInstancedMesh,
+  MeshLambertMaterial,
+  SphereGeometry,
+  Vector3,
+} from "three";
 
 const _tempColor = new ThreeColor();
 
 /** Per-instance configuration for a single sphere. */
-export type SphereChildConfig = InstancedMeshDescChildConfig & {
+export type SphereChildConfig = InstancedChildConfig & {
   /** Sphere radius. Encoded as uniform scale in the instance matrix. */
   radius?: number;
   /** Per-instance color. */
@@ -46,18 +53,20 @@ type Description = {
   spheres?: SpheresDescription;
 };
 
-export type InstancedSphereMeshConfig = InstancedMeshDescConfig & Description;
+export type InstancedSphereMeshConfig = InstancedMeshConfig &
+  Description & { pickable?: boolean };
 
-export type InstancedSphereMeshUpdate = InstancedMeshDescUpdate & Description;
+export type InstancedSphereMeshUpdate = InstancedMeshUpdate & Description;
 
-export class InstancedSphereMeshDesc extends NewInstancedMeshDesc<
+export class InstancedSphereMeshDesc extends InstancedMeshDesc<
   SphereGeometry,
-  MeshLambertNodeMaterial,
+  MeshLambertMaterial,
   InstancedSphereMeshConfig,
   InstancedSphereMeshUpdate,
   SphereChildConfig
 > {
   private config: InstancedSphereMeshConfig;
+  private pickWrapper?: PickableInstancedMeshWrapper;
 
   constructor(
     view: ThreeView,
@@ -69,14 +78,10 @@ export class InstancedSphereMeshDesc extends NewInstancedMeshDesc<
     }
     super(view, ctx, config);
     this.config = config;
+  }
 
-    // Drive the MRT emissive uniforms from the spheres config.
-    if (config.spheres?.emissiveColor !== undefined) {
-      this.emissive = config.spheres.emissiveColor;
-    }
-    if (config.spheres?.emissiveIntensity !== undefined) {
-      this.emissiveIntensity = config.spheres.emissiveIntensity;
-    }
+  get batchIds(): readonly number[] {
+    return this.pickWrapper?.batchIds ?? [];
   }
 
   private get spheresConfig(): SpheresDescription | undefined {
@@ -100,18 +105,19 @@ export class InstancedSphereMeshDesc extends NewInstancedMeshDesc<
     );
   }
 
-  protected createMaterial(): MeshLambertNodeMaterial {
+  protected createMaterial(): MeshLambertMaterial {
     const cfg = this.spheresConfig;
     const colorValue = cfg?.color ?? new Color().setStyle("#ffffff");
     const emissiveColorValue = cfg?.emissiveColor ? cfg.emissiveColor.raw : 0;
 
-    const material = new MeshLambertNodeMaterial({
+    const material = new MeshLambertMaterial({
       color: colorValue.raw,
+      emissive: emissiveColorValue,
+      emissiveIntensity: cfg?.emissiveIntensity ?? 0,
       opacity: cfg?.opacity ?? 1,
       transparent: cfg?.transparent ?? false,
     });
-    material.emissive.set(emissiveColorValue);
-    material.emissiveIntensity = cfg?.emissiveIntensity ?? 0;
+    setupSelectiveEffectUniforms(material);
     return material;
   }
 
@@ -140,7 +146,38 @@ export class InstancedSphereMeshDesc extends NewInstancedMeshDesc<
       mesh.castShadow = cfg?.castShadow ?? false;
       mesh.receiveShadow = cfg?.receiveShadow ?? false;
       this.ctx.applyShadowMaterial(mesh.material);
+
+      if (this.config.pickable) {
+        this.pickWrapper = new PickableInstancedMeshWrapper(
+          mesh,
+          this.count,
+          this.ctx,
+        );
+        this.ctx.registerPickableMesh(this.id, this.pickWrapper);
+      }
     }
+  }
+
+  protected override onInstanceAdded(_index: number): void {
+    this.pickWrapper?.addInstance();
+  }
+
+  protected override onInstanceRemoved(index: number, _wasLast: boolean): void {
+    this.pickWrapper?.removeInstanceAt(index);
+  }
+
+  protected override onInstancesCleared(): void {
+    this.pickWrapper?.clearInstances();
+  }
+
+  protected override onInstancesReplaced(count: number): void {
+    this.pickWrapper?.replaceAll(count);
+  }
+
+  protected override onInstanceMeshReplaced(
+    newMesh: ThreeInstancedMesh<SphereGeometry, MeshLambertMaterial>,
+  ): void {
+    this.pickWrapper?.syncMesh(newMesh);
   }
 
   onUpdateConfig(updates: InstancedSphereMeshUpdate): void {
@@ -169,12 +206,6 @@ export class InstancedSphereMeshDesc extends NewInstancedMeshDesc<
       if (u.effectIds !== undefined) {
         updates.effectIds = u.effectIds;
       }
-      if (u.emissiveColor !== undefined) {
-        this.emissive = u.emissiveColor;
-      }
-      if (u.emissiveIntensity !== undefined) {
-        this.emissiveIntensity = u.emissiveIntensity;
-      }
 
       this.config.spheres = {
         ...this.config.spheres,
@@ -186,6 +217,10 @@ export class InstancedSphereMeshDesc extends NewInstancedMeshDesc<
   }
 
   override onDestroy(): void {
+    if (this.pickWrapper) {
+      this.ctx.unregisterPickableMesh(this.id);
+      this.pickWrapper = undefined;
+    }
     if (this.raw) {
       this.ctx.removeShadowMaterial(this.raw.material);
     }

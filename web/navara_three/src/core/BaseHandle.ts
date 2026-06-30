@@ -4,10 +4,9 @@ import { BaseDesc, type BaseDescConfigUpdate } from "./BaseDesc";
 import type { EffectDesc } from "./EffectDesc";
 import type { LightDesc } from "./LightDesc";
 import type { MeshDesc } from "./MeshDesc";
-import type { MeshDescBase } from "./MeshDescBase";
 
-/** Union of the legacy {@link MeshDesc} and the TSL-only {@link MeshDescBase} hierarchies. */
-export type AnyMeshDesc = MeshDesc | MeshDescBase;
+/** The mesh descriptor hierarchy. */
+export type AnyMeshDesc = MeshDesc;
 
 /**
  * Events emitted by handles.
