@@ -8,6 +8,7 @@ import {
   setupRTEBeforeRender,
   type MeshConfig,
   type MeshUpdate,
+  type PassKey,
   type RTEUserData,
   type ViewContext,
 } from "@navara/three";
@@ -255,6 +256,17 @@ export class InstancedGltfModelMeshDesc extends MeshDesc<
       });
     }
     return root;
+  }
+
+  /**
+   * Render into the MRT G-buffer rather than the plain opaque pass, so the
+   * instances contribute their normal/depth to deferred lighting (aerial
+   * perspective, irradiance). The opaque pass writes only color into a
+   * single-attachment target, which would leave the models wearing the
+   * terrain's G-buffer normal. (Matches the descriptor's pre-revert default.)
+   */
+  protected override getPassKey(): PassKey {
+    return "mrt";
   }
 
   override onCreate(): void {

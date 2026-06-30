@@ -5,6 +5,7 @@ import {
   PickableMeshWrapper,
   type MeshConfig,
   type MeshUpdate,
+  type PassKey,
   type ViewContext,
   createShadowMapDepthEnhancer,
   type ShadowMapDepthSupportedMaterial,
@@ -26,6 +27,7 @@ import {
   LoopOnce,
   Material,
   Matrix4,
+  Quaternion,
   Vector3,
   BufferGeometry,
   type NormalBufferAttributes,
@@ -159,10 +161,21 @@ export class GLTFModelDesc extends MeshDesc<
     this.loader = new GLTFLoader();
   }
 
+  /**
+   * Render into the MRT G-buffer rather than the plain opaque pass, so the
+   * model contributes its normal/depth to deferred lighting (aerial
+   * perspective, irradiance). The opaque pass writes only color into a
+   * single-attachment target, which would leave the model wearing the
+   * terrain's G-buffer normal. (Matches the descriptor's pre-revert default.)
+   */
+  protected override getPassKey(): PassKey {
+    return "mrt";
+  }
+
   override onCreate() {
     this._instance = this.createMesh();
 
-    if (this.matrixWorld) {
+    if (this.matrixWorld || this.matrix) {
       // Decompose effective transform into RTE position + rotation/scale matrix
       this.applyRTETransform();
     } else {
@@ -394,13 +407,33 @@ export class GLTFModelDesc extends MeshDesc<
    * only contains rotation and scale.
    */
   private applyRTETransform(): void {
-    if (!this.raw || !this.matrixWorld) return;
+    if (!this.raw) return;
 
-    // Compose frame * local, then split into RTE position and rotation/scale
-    const { position, rotationScale } = composeWorldMatrixForRTE(
-      this.matrixWorld,
-      this.composeLocalTransform(),
-    );
+    // Split the effective placement into an RTE translation (encoded in
+    // uniforms) plus a rotation/scale matrix (the shader's modelMatrix), so a
+    // far-from-origin position survives f32 precision.
+    let position: Vector3;
+    let rotationScale: Matrix4;
+    if (this.matrixWorld) {
+      // Frame * local: matrixWorld carries the ECEF placement.
+      ({ position, rotationScale } = composeWorldMatrixForRTE(
+        this.matrixWorld,
+        this.composeLocalTransform(),
+      ));
+    } else if (this.matrix) {
+      // Full local placement supplied as a matrix — `composeLocalTransform()`
+      // ignores `matrix`, so decompose it directly (mirrors the instanced desc).
+      const p = new Vector3();
+      const q = new Quaternion();
+      const s = new Vector3();
+      this.matrix.decompose(p, q, s);
+      position = p;
+      rotationScale = new Matrix4().compose(new Vector3(0, 0, 0), q, s);
+    } else {
+      // No base frame matrix; local TRS / position are handled elsewhere.
+      return;
+    }
+
     this.setPositionRTE(position);
 
     this.raw.matrixAutoUpdate = false;
@@ -549,14 +582,19 @@ export class GLTFModelDesc extends MeshDesc<
     // Handle spatial updates for RTE mode
     const hasSpatialChange =
       updates.matrixWorld !== undefined ||
+      updates.matrix !== undefined ||
       updates.position !== undefined ||
       updates.scale !== undefined ||
       updates.rotation !== undefined;
 
-    if (hasSpatialChange && (this.matrixWorld || updates.matrixWorld)) {
-      // matrixWorld path: recompute the full RTE decomposition
+    if (
+      hasSpatialChange &&
+      (this.matrixWorld || updates.matrixWorld || this.matrix || updates.matrix)
+    ) {
+      // matrixWorld / matrix path: recompute the full RTE decomposition
       if (updates.matrixWorld !== undefined)
         this.matrixWorld = updates.matrixWorld;
+      if (updates.matrix !== undefined) this.matrix = updates.matrix;
       if (updates.position !== undefined) this.position = updates.position;
       if (updates.scale !== undefined) this.scale = updates.scale;
       if (updates.rotation !== undefined) this.rotation = updates.rotation;
@@ -564,7 +602,7 @@ export class GLTFModelDesc extends MeshDesc<
       this.applyRTETransform();
 
       // Strip spatial properties so super doesn't also apply them
-      const { position, matrixWorld, scale, rotation, ...restUpdates } =
+      const { position, matrixWorld, matrix, scale, rotation, ...restUpdates } =
         updates;
       super.onUpdateConfig(restUpdates as GLTFModelUpdate);
     } else if (updates.position !== undefined) {
