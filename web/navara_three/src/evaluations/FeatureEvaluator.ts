@@ -449,6 +449,9 @@ export class FeatureEvaluator {
       if (evaluated.width != null) {
         featureMesh._setFeatureWidth(evaluated.width);
       }
+      if (evaluated.size != null) {
+        featureMesh._setFeatureSize(evaluated.size);
+      }
       if (evaluated.opacity != null) {
         featureMesh._setFeatureOpacity(evaluated.opacity);
       }

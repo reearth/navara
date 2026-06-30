@@ -272,6 +272,73 @@ describe("initBatchDataTexture", () => {
     const tex2 = getBatchDataTexture(material);
     expect(tex1).toBe(tex2);
   });
+
+  test("initializes OPACITY row to 1.0 for all batchIds when OPACITY is in config", () => {
+    const config: BatchTextureConfig = {
+      rows: ["COLOR_SHOW", "HEIGHT", "OPACITY"],
+      batchLength: 100,
+    };
+    const material = new MeshBasicMaterial();
+    initBatchedMaterial(material, config);
+    initBatchDataTexture(material, config);
+
+    const texture = getBatchDataTexture(material);
+    invariant(texture);
+    const data = texture.image.data as Float32Array;
+    const texWidth = texture.image.width;
+    const rowCount = config.rows.length;
+    const opacityRowIndex = config.rows.indexOf("OPACITY");
+
+    // Check all 100 batch IDs have opacity 1.0
+    for (let batchId = 0; batchId < 100; batchId++) {
+      const baseIndex = batchBaseIndex(
+        texWidth,
+        rowCount,
+        batchId,
+        opacityRowIndex,
+      );
+      const encoded: [number, number, number, number] = [
+        data[baseIndex],
+        data[baseIndex + 1],
+        data[baseIndex + 2],
+        data[baseIndex + 3],
+      ];
+      const opacity = decodeRGBAToFloat(encoded);
+      expect(opacity, `batchId ${batchId} should have opacity 1.0`).toBeCloseTo(
+        1.0,
+      );
+    }
+  });
+
+  test("does not initialize OPACITY row when not in config", () => {
+    const config: BatchTextureConfig = {
+      rows: ["COLOR_SHOW", "HEIGHT"], // No OPACITY
+      batchLength: 100,
+    };
+    const material = new MeshBasicMaterial();
+    initBatchedMaterial(material, config);
+    initBatchDataTexture(material, config);
+
+    const texture = getBatchDataTexture(material);
+    invariant(texture);
+    const data = texture.image.data as Float32Array;
+
+    // OPACITY row doesn't exist, so we can't check it directly
+    // But we can verify the texture size is correct for 2 rows only
+    expect(texture.image.height).toBe(2); // 1 batch-row * 2 attribute rows
+
+    // And that all data is zero-initialized (no OPACITY initialization happened)
+    // Check a few positions to ensure they're still 0
+    const texWidth = texture.image.width;
+    for (let i = 0; i < Math.min(10, config.batchLength); i++) {
+      // Check positions in the second attribute row (HEIGHT)
+      const baseIndex = batchBaseIndex(texWidth, 2, i, 1);
+      expect(data[baseIndex]).toBe(0);
+      expect(data[baseIndex + 1]).toBe(0);
+      expect(data[baseIndex + 2]).toBe(0);
+      expect(data[baseIndex + 3]).toBe(0);
+    }
+  });
 });
 
 // ── initBatchedMaterial ─────────────────────────────────────────────────
