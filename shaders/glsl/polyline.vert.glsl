@@ -161,8 +161,12 @@ void main() {
  
     v_texcoordNormalizationAndStartEcYZ.y = nvr_branchFreeTernary(v_texcoordNormalizationAndStartEcYZ.y > 1.0, 0.0, abs(v_texcoordNormalizationAndStartEcYZ.y));
 
-    // Use batchLineWidth from batch texture or uniform, fallback to minMaxHeightAndWidth.z
-    float lineWidth = batchLineWidth > 0.0 ? batchLineWidth : minMaxHeightAndWidth.z;
+    // Use batchLineWidth only when batch line width is enabled; allow 0.0 as a valid value.
+    #ifdef USE_BATCH_LINE_WIDTH
+        float lineWidth = batchLineWidth;
+    #else
+        float lineWidth = minMaxHeightAndWidth.z;
+    #endif
 
     v_startPlaneNormalEcAndHalfWidth.xyz = startPlaneEC.xyz;
     v_startPlaneNormalEcAndHalfWidth.w = lineWidth * 0.5;

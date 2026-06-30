@@ -33,8 +33,12 @@ void main() {
 
     // Line width in normalized coordinates (width is in pixels, need to scale)
     // For a 512x512 render target, convert pixels to normalized coords
-    // Use batchLineWidth from batch texture or uniform, fallback to minMaxHeightAndWidth.z
-    float baseWidth = batchLineWidth > 0.0 ? batchLineWidth : minMaxHeightAndWidth.z;
+    // Use batchLineWidth only when batch line width is enabled
+    #ifdef USE_BATCH_LINE_WIDTH
+        float baseWidth = batchLineWidth;
+    #else
+        float baseWidth = minMaxHeightAndWidth.z;
+    #endif
     float lineWidth = baseWidth / 512.0;
 
     // Compensate for parent tile zoom-in: when a parent tile's mesh is rendered

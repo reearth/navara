@@ -77,8 +77,8 @@ void main() {
     mvPosition += mvr_getMvHeightOffset(absTransformed, instanceHeight);
     vec2 center = clamp(uCenter, vec2(-0.5), vec2(0.5)); // Ensure center is within the bounds of the sprite
 
-    // Use per-instance size if provided (> 0), otherwise fall back to uniform scale
-    float scale = instanceSize > 0.0 ? instanceSize : uScale;
+    // Use per-instance size when set (>= 0.0). A negative value means "use uScale".
+    float scale = instanceSize >= 0.0 ? instanceSize : uScale;
     float clampedScale = max(0.0, scale); // Prevent negative scaling
     // This makes it always face the camera
     if (!uSizeInMeters) {

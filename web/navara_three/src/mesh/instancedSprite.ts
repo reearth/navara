@@ -54,7 +54,7 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
   private _batchIdToInstance = new Map<number, number>();
   private _initialColor: Color = new Color(0xffffff);
   private _initialHeight = 0.0;
-  private _initialSize = 1.0;
+  private _initialSize = -1.0; // Negative value indicates "use uScale" in shader
   private _loadedUrls = new Set<string>();
   private _active = true;
   readonly ctx: EventContext;
@@ -145,19 +145,6 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
         heightAttr.setX(i, m.material.height ?? 0.0);
       }
       heightAttr.needsUpdate = true;
-    }
-
-    // Size (per-instance attribute)
-    if (this._initialSize !== (m.material.size ?? 1.0)) {
-      this._initialSize = m.material.size ?? 1.0;
-      const sizeAttr = this.geometry.getAttribute(
-        "instanceSize",
-      ) as InstancedBufferAttribute;
-      const instanceCount = sizeAttr.count;
-      for (let i = 0; i < instanceCount; i++) {
-        sizeAttr.setX(i, m.material.size ?? 1.0);
-      }
-      sizeAttr.needsUpdate = true;
     }
 
     // Position updates (per-instance attributes)
@@ -259,7 +246,8 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     let layerBuffer = undefined;
 
     this._initialColor = new Color().setHex(m.material.color ?? 0xffffff);
-    this._initialSize = m.material.size ?? 1.0;
+    // instanceSize defaults to a negative value to indicate "use uScale" in the shader.
+    this._initialSize = -1.0;
     for (let i = 0; i < instanceCount; i++) {
       heightBuffer[i] = m.material.height ?? 0.0;
       sizeBuffer[i] = this._initialSize;
