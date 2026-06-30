@@ -591,6 +591,11 @@ impl Core {
         self.app.get_camera_fov_y()
     }
 
+    #[wasm_bindgen(js_name = getZoomLevel)]
+    pub fn get_zoom_level(&mut self) -> Option<FloatType> {
+        self.app.get_zoom_level()
+    }
+
     #[wasm_bindgen(js_name = rotateAroundAxis)]
     pub fn rotate_around_axis(&mut self, axis: Option<Vec<FloatType>>, angle: FloatType) {
         self.app.rotate_around_axis(axis, angle);

@@ -34,25 +34,13 @@ export default defineConfig({
         find: /^@navara\/three$/,
         replacement: normalizePath(path.resolve(__dirname, "src/index.ts")),
       },
-      // Use Three.js source files directly so that `three`, `three/webgpu`, and
-      // `three/tsl` all share the same module instances (avoids duplicate ShaderChunk).
+      // Use the Three.js source file directly so that `three` resolves to a
+      // single module instance (avoids duplicate ShaderChunk).
       // Use exact-match regex to avoid breaking `three/addons/*` subpath imports.
       {
         find: /^three$/,
         replacement: normalizePath(
           path.resolve(__dirname, "node_modules/three/src/Three.js"),
-        ),
-      },
-      {
-        find: "three/webgpu",
-        replacement: normalizePath(
-          path.resolve(__dirname, "node_modules/three/src/Three.WebGPU.js"),
-        ),
-      },
-      {
-        find: "three/tsl",
-        replacement: normalizePath(
-          path.resolve(__dirname, "node_modules/three/src/Three.TSL.js"),
         ),
       },
       {

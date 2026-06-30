@@ -4,6 +4,7 @@
 
 import { Color } from "@navara/three";
 import type { LayerDescription } from "@navara/three";
+
 import type { ParsedStyle, StyleLayer } from "../engine/types";
 
 /**

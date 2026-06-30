@@ -1,13 +1,17 @@
-import ThreeView from "@navara/three";
-import type { Layer } from "@navara/three";
+import ThreeView, { type Layer } from "@navara/three";
+import { AttributionPlugin } from "@navara/three_plugins";
 import { Pane } from "tweakpane";
 
-import { showAttributions } from "../../helpers/attributions";
+import { datasetToSource } from "../../helpers/attribution-source";
 import { TILES_3D_DATASETS } from "../../helpers/constants";
 import { addDateControl, addCameraControl } from "../../helpers/control";
 import { GOOGLE_MAPS_API_KEY } from "../../helpers/keys";
 
 export const run = async (view: ThreeView) => {
+  // Plugins must be registered before init().
+  const attribution = new AttributionPlugin();
+  view.addPlugin(attribution);
+
   await view.init();
 
   const pane = new Pane({
@@ -16,7 +20,13 @@ export const run = async (view: ThreeView) => {
   });
 
   const layer = addTileLayer(view, GOOGLE_MAPS_API_KEY);
-  showAttributions([TILES_3D_DATASETS.googlePhotorealTiles], [layer]);
+  // Attribution derived from the shared dataset (constants); per-tile credits
+  // nest under it via `creditLayerId`.
+  attribution.show([
+    datasetToSource(TILES_3D_DATASETS.googlePhotorealTiles, {
+      creditLayerId: layer.id,
+    }),
+  ]);
   addCameraControl(view, pane);
   addDateControl(view, pane);
 };

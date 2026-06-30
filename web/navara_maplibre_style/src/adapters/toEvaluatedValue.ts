@@ -3,18 +3,19 @@
  */
 
 import { Color } from "@navara/three";
-import type { EvaluationContext, StyleLayer } from "../engine/types";
+
 import type { StyleEngine } from "../engine/StyleEngine";
+import type { EvaluationContext, StyleLayer } from "../engine/types";
 
 /**
  * MapLibre Color object returned from expression evaluation.
  */
-interface MapLibreColor {
+type MapLibreColor = {
   r: number;
   g: number;
   b: number;
   a: number;
-}
+};
 
 /**
  * Type guard to check if a value is a MapLibre Color object.

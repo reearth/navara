@@ -318,6 +318,37 @@ pub fn calc_meters_per_texel(
     meters_per_texel as f32
 }
 
+/// Estimates the effective Web Mercator zoom level a camera is viewing the
+/// surface at, from its ellipsoid height and vertical field of view.
+///
+/// Inverts the model in [`calc_meters_per_texel`] (256px tiles, Web Mercator
+/// latitude correction): the ground meters-per-pixel implied by the camera
+/// frustum is mapped back to a zoom level.
+///
+/// # Arguments
+/// * `height_m` - Camera height above the ellipsoid in meters
+/// * `fov_y` - Vertical field of view in radians
+/// * `viewport_height_px` - Rendered viewport height in (CSS) pixels
+/// * `lat_rad` - Camera latitude in radians
+/// * `semi_major_axis` - Ellipsoid semi-major axis in meters (e.g. WGS84: 6378137.0)
+///
+/// # Returns
+/// The fractional zoom level. The caller guards against invalid inputs
+/// (non-positive height / viewport).
+pub fn camera_zoom_level(
+    height_m: f64,
+    fov_y: f64,
+    viewport_height_px: f64,
+    lat_rad: f64,
+    semi_major_axis: f64,
+) -> f64 {
+    const TILE_SIZE_PX: f64 = 256.0;
+    let meters_per_pixel = (2.0 * height_m * (fov_y / 2.0).tan()) / viewport_height_px;
+    let earth_circumference = 2.0 * std::f64::consts::PI * semi_major_axis;
+    let meters_per_pixel_z0 = (earth_circumference * lat_rad.cos()) / TILE_SIZE_PX;
+    (meters_per_pixel_z0 / meters_per_pixel).log2()
+}
+
 pub fn is_tile_url(s: &str) -> bool {
     s.contains("/{x}") && s.contains("/{y}") && s.contains("/{z}")
 }
@@ -398,6 +429,21 @@ mod tests {
         let p = web_mercator_world_pos_to_lnglat(0.5, 0.5);
         assert_eq!(p.lng, Rad::new(0.0));
         assert_eq!(p.lat, Rad::new(0.0));
+    }
+
+    #[test]
+    fn test_camera_zoom_level() {
+        const A: f64 = 6378137.0;
+        // Doubling the camera altitude halves the ground resolution, so the
+        // zoom level drops by exactly 1.
+        let z1 = camera_zoom_level(1000.0, 1.0, 800.0, 0.0, A);
+        let z2 = camera_zoom_level(2000.0, 1.0, 800.0, 0.0, A);
+        assert!(
+            (z1 - z2 - 1.0).abs() < 1e-6,
+            "doubling height should drop zoom by 1"
+        );
+        // Closer to the surface means a higher zoom level.
+        assert!(z1 > z2);
     }
 
     #[test]

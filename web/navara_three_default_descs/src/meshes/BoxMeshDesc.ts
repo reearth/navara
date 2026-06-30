@@ -2,19 +2,21 @@ import type ThreeView from "@navara/three";
 import {
   Color,
   DrapedMesh,
-  NewMeshDesc,
-  type MeshDescConfig,
-  type MeshDescUpdate,
+  MeshDescWithSelectiveEffect,
+  PickableMeshWrapper,
+  type MeshConfigWithSelectiveEffect,
+  type MeshUpdateWithSelectiveEffect,
   type ViewContext,
   type CustomObject3DEventMap,
   type PassKey,
+  setupSelectiveEffectUniforms,
 } from "@navara/three";
-import { BoxGeometry, type Object3DEventMap } from "three";
 import {
-  MeshBasicNodeMaterial,
-  MeshLambertNodeMaterial,
-  type NodeMaterial,
-} from "three/webgpu";
+  BoxGeometry,
+  MeshBasicMaterial,
+  MeshLambertMaterial,
+  type Object3DEventMap,
+} from "three";
 
 type BoxMeshEventMap = Object3DEventMap & CustomObject3DEventMap;
 
@@ -39,39 +41,36 @@ type Description = {
      * the mesh must cover the terrain.
      */
     draped?: boolean;
-    // TODO: This is just for debugging. Remove later.
-    colorNode?: NodeMaterial["colorNode"];
   };
 };
 
-export type BoxMeshConfig = MeshDescConfig & Description;
+export type BoxMeshConfig = MeshConfigWithSelectiveEffect &
+  Description & { pickable?: boolean };
 
-export type BoxMeshUpdate = MeshDescUpdate & Description;
+export type BoxMeshUpdate = MeshUpdateWithSelectiveEffect & Description;
 
-type BoxMeshMaterial = MeshLambertNodeMaterial | MeshBasicNodeMaterial;
+type BoxMeshMaterial = MeshLambertMaterial | MeshBasicMaterial;
 
-export class BoxMeshDesc extends NewMeshDesc<
+export class BoxMeshDesc extends MeshDescWithSelectiveEffect<
   BoxMeshConfig,
   BoxMeshUpdate,
   DrapedMesh<BoxGeometry, BoxMeshMaterial, BoxMeshEventMap>
 > {
   private config: BoxMeshConfig;
+  private pickWrapper?: PickableMeshWrapper;
 
   constructor(view: ThreeView, ctx: ViewContext, config: BoxMeshConfig) {
-    // Propagate initial effectIds to MeshDescBase
+    // Propagate initial effectIds to base MeshDesc
     if (config.box?.effectIds) {
       config.effectIds = config.box.effectIds;
     }
     super(view, ctx, config);
     this.config = config;
+  }
 
-    // Drive the MRT emissive uniforms from this box's config.
-    if (config.box?.emissiveColor !== undefined) {
-      this.emissive = config.box.emissiveColor;
-    }
-    if (config.box?.emissiveIntensity !== undefined) {
-      this.emissiveIntensity = config.box.emissiveIntensity;
-    }
+  /** The batch ID assigned to this mesh when picking is enabled. */
+  get batchId(): number | undefined {
+    return this.pickWrapper?.batchId;
   }
 
   createMesh() {
@@ -80,6 +79,7 @@ export class BoxMeshDesc extends NewMeshDesc<
       throw new Error("BoxMesh configuration is required");
     }
 
+    // Create geometry from parameters
     const geometry = new BoxGeometry(
       cfg.width ?? 1,
       cfg.height ?? 1,
@@ -89,7 +89,15 @@ export class BoxMeshDesc extends NewMeshDesc<
       cfg.depthSegments ?? 1,
     );
 
+    // Create material from properties
     const material = this.createMaterial(cfg);
+
+    // Set up selective effect uniforms and emissive properties
+    if (material instanceof MeshLambertMaterial) {
+      material.emissive.set(cfg.emissiveColor?.raw ?? 0x000000);
+      material.emissiveIntensity = cfg.emissiveIntensity ?? 0;
+      setupSelectiveEffectUniforms(material);
+    }
 
     const mesh = new DrapedMesh<BoxGeometry, BoxMeshMaterial, BoxMeshEventMap>(
       geometry,
@@ -100,6 +108,14 @@ export class BoxMeshDesc extends NewMeshDesc<
     mesh.castShadow = cfg.castShadow ?? false;
     mesh.receiveShadow = cfg.receiveShadow ?? false;
 
+    // Emit CSM event for shadow map integration
+    this.ctx.applyShadowMaterial(material);
+
+    if (this.config.pickable) {
+      this.pickWrapper = new PickableMeshWrapper(mesh, this.ctx);
+      this.ctx.registerPickableMesh(this.id, this.pickWrapper);
+    }
+
     return mesh;
   }
 
@@ -107,23 +123,18 @@ export class BoxMeshDesc extends NewMeshDesc<
     cfg: NonNullable<BoxMeshConfig["box"]>,
   ): BoxMeshMaterial {
     const colorValue = cfg.color ?? new Color().setStyle("#ffffff");
-    const baseParams = {
+    if (cfg.draped) {
+      return new MeshBasicMaterial({
+        color: colorValue.raw,
+        opacity: cfg.opacity ?? 1,
+        transparent: cfg.transparent ?? false,
+      });
+    }
+    return new MeshLambertMaterial({
       color: colorValue.raw,
       opacity: cfg.opacity ?? 1,
       transparent: cfg.transparent ?? false,
-    };
-
-    if (cfg.draped) {
-      const material = new MeshBasicNodeMaterial(baseParams);
-      if (cfg.colorNode) material.colorNode = cfg.colorNode;
-      return material;
-    }
-
-    const material = new MeshLambertNodeMaterial(baseParams);
-    material.emissive.set(cfg.emissiveColor?.raw ?? 0x000000);
-    material.emissiveIntensity = cfg.emissiveIntensity ?? 0;
-    if (cfg.colorNode) material.colorNode = cfg.colorNode;
-    return material;
+    });
   }
 
   protected override getPassKey(): PassKey {
@@ -144,13 +155,23 @@ export class BoxMeshDesc extends NewMeshDesc<
         origin.draped = cfg.draped;
         this._instance.drapedEnable = cfg.draped;
 
+        // Swap material between lit and unlit
         if (wasChanged) {
+          this.ctx.removeShadowMaterial(this._instance.material);
           this._instance.material.dispose();
           const newMaterial = this.createMaterial(origin);
           this._instance.material = newMaterial;
-          // Pickable handle is preserved across draped swaps; re-run the
-          // NodeMaterial setup against the freshly-created material.
-          this.refreshNodeMaterial();
+          if (!cfg.draped) {
+            this.ctx.applyShadowMaterial(newMaterial);
+          }
+          // Re-setup SelectiveEffect uniforms for the new material
+          if (newMaterial instanceof MeshLambertMaterial) {
+            newMaterial.emissive.set(origin.emissiveColor?.raw ?? 0x000000);
+            newMaterial.emissiveIntensity = origin.emissiveIntensity ?? 0;
+            setupSelectiveEffectUniforms(newMaterial);
+          }
+          // Re-inject picking hooks into the new material (preserves batchId)
+          this.pickWrapper?.syncMaterials();
         }
       }
 
@@ -173,13 +194,17 @@ export class BoxMeshDesc extends NewMeshDesc<
           cfg.depthSegments ?? origin?.depthSegments ?? 1,
         );
 
+        // Update the stored config with the new values
         if (origin) {
           Object.assign(origin, cfg);
         }
       }
 
+      // Update material if material properties changed
       if (
         cfg.color !== undefined ||
+        cfg.emissiveColor !== undefined ||
+        cfg.emissiveIntensity !== undefined ||
         cfg.opacity !== undefined ||
         cfg.transparent !== undefined
       ) {
@@ -190,6 +215,14 @@ export class BoxMeshDesc extends NewMeshDesc<
         if (cfg.opacity !== undefined) material.opacity = cfg.opacity;
         if (cfg.transparent !== undefined)
           material.transparent = cfg.transparent;
+        if (material instanceof MeshLambertMaterial) {
+          if (cfg.emissiveColor !== undefined) {
+            material.emissive.set(cfg.emissiveColor.raw);
+          }
+          if (cfg.emissiveIntensity !== undefined) {
+            material.emissiveIntensity = cfg.emissiveIntensity;
+          }
+        }
         material.needsUpdate = true;
       }
 
@@ -205,12 +238,6 @@ export class BoxMeshDesc extends NewMeshDesc<
       if (cfg.effectIds !== undefined) {
         updates.effectIds = cfg.effectIds;
       }
-      if (cfg.emissiveColor !== undefined) {
-        this.emissive = cfg.emissiveColor;
-      }
-      if (cfg.emissiveIntensity !== undefined) {
-        this.emissiveIntensity = cfg.emissiveIntensity;
-      }
       this.emit("needsUpdate");
     }
 
@@ -219,9 +246,21 @@ export class BoxMeshDesc extends NewMeshDesc<
 
   protected disposeMesh(): void {
     if (this._instance) {
+      // Emit CSM event for shadow map cleanup
+      this.ctx.removeShadowMaterial(this._instance.material);
+
       this._instance.geometry.dispose();
       this._instance.material.dispose();
+
       this._instance = undefined;
     }
+  }
+
+  override onDestroy(): void {
+    if (this.pickWrapper) {
+      this.ctx.unregisterPickableMesh(this.id);
+      this.pickWrapper = undefined;
+    }
+    super.onDestroy();
   }
 }
