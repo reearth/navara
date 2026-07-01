@@ -147,4 +147,9 @@ export const run = async (
     datasetToSource(terrainDataset),
     datasetToHtmlSource(TILE_DATASETS.eox),
   ]);
+
+  // Returned so the caller can dispose it when recreating the view:
+  // ThreeView.dispose() does not dispose plugins, so the attribution dock/logo
+  // DOM and its global keydown listener would otherwise leak per terrain switch.
+  return attribution;
 };
