@@ -161,9 +161,9 @@ export class Layer extends EventHandler<LayerEvent> {
    */
   update(l: LayerDescription) {
     const normalized =
-          "source" in l && l.source instanceof Source
-            ? { ...l, source: l.source.id }
-            : l;
+      "source" in l && l.source instanceof Source
+        ? { ...l, source: l.source.id }
+        : l;
     // Convert Color objects to numbers if converter is provided
     const processedLayer = this.convertColors
       ? (this.convertColors(normalized) as LayerDescription)
