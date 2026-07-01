@@ -1,48 +1,70 @@
-use wasm_bindgen::JsValue;
+use wasm_bindgen::{JsCast, JsValue};
 
-// These functions hand a freshly-allocated, *standalone* JS typed array to the
-// callback `f`, let JS fill it, then copy it into an owned Rust `Vec`.
+// These functions expose a freshly-allocated Rust `Vec` to the JS callback `f` as
+// a typed-array *view into wasm linear memory*, so JS writes straight into the Vec
+// with no extra copy.
 //
-// We deliberately do NOT use `js_sys::*Array::view`, which returns a view into
-// wasm's linear memory: such a view is only valid until the next allocation that
-// grows the memory, after which its backing `ArrayBuffer` is detached. Because the
-// view escapes into the JS callback (and back), any `memory.grow` along the way
-// leaves the callback writing into a detached/out-of-bounds buffer — observed as
-// intermittent `%TypedArray%.prototype.set on a detached ... ArrayBuffer` panics
-// once the worker's heap is large enough to grow mid-transfer.
+// The subtlety: `js_sys::*Array::view` builds its view from wasm-bindgen's *cached*
+// memory object (`getFloat64ArrayMemory0()` etc.). If a `memory.grow` occurred, that
+// cache can be stale, and the resulting view is detached/out-of-bounds — the callback
+// then writes into a dead buffer (`%TypedArray%.prototype.set on a detached ...
+// ArrayBuffer`), seen intermittently once the worker's heap grows mid-transfer.
 //
-// A standalone JS array lives on the JS heap, not in wasm memory, so it is immune
-// to `memory.grow`. The single wasm-memory write happens inside `to_vec`, which
-// creates its view and uses it in one step with no intervening allocation.
+// We sidestep the stale cache by building the view over `wasm.memory.buffer` fetched
+// *fresh* at this instant, right after the `vec!` allocation (which is what may grow
+// the memory) and immediately before the callback. Nothing allocates in between, so
+// the view always references the current buffer. Zero-copy, and grow-safe.
 //
 // Background: https://github.com/rustwasm/wasm-bindgen/issues/1079#issuecomment-508577627
 
+/// The current wasm linear-memory `ArrayBuffer`, fetched fresh (not cached).
+#[inline]
+fn current_memory_buffer() -> JsValue {
+    wasm_bindgen::memory()
+        .unchecked_ref::<js_sys::WebAssembly::Memory>()
+        .buffer()
+}
+
 pub fn transfer_u8_array(byte_length: usize, f: &js_sys::Function) -> Vec<u8> {
-    let array = js_sys::Uint8Array::new_with_length(byte_length as u32);
+    let mut buffer = vec![0u8; byte_length];
+    let ptr = buffer.as_mut_ptr() as u32;
+    let buf = current_memory_buffer();
+    let array = js_sys::Uint8Array::new_with_byte_offset_and_length(&buf, ptr, byte_length as u32);
     f.call1(&JsValue::NULL, array.as_ref())
         .expect("The callback function should not throw");
-    array.to_vec()
+    buffer
 }
 
 pub fn transfer_u32_array(byte_length: usize, f: &js_sys::Function) -> Vec<u32> {
-    let array = js_sys::Uint32Array::new_with_length(byte_length as u32);
+    let mut buffer = vec![0u32; byte_length];
+    let ptr = buffer.as_mut_ptr() as u32;
+    let buf = current_memory_buffer();
+    let array = js_sys::Uint32Array::new_with_byte_offset_and_length(&buf, ptr, byte_length as u32);
     f.call1(&JsValue::NULL, array.as_ref())
         .expect("The callback function should not throw");
-    array.to_vec()
+    buffer
 }
 
 pub fn transfer_f32_array(byte_length: usize, f: &js_sys::Function) -> Vec<f32> {
-    let array = js_sys::Float32Array::new_with_length(byte_length as u32);
+    let mut buffer = vec![0f32; byte_length];
+    let ptr = buffer.as_mut_ptr() as u32;
+    let buf = current_memory_buffer();
+    let array =
+        js_sys::Float32Array::new_with_byte_offset_and_length(&buf, ptr, byte_length as u32);
     f.call1(&JsValue::NULL, array.as_ref())
         .expect("The callback function should not throw");
-    array.to_vec()
+    buffer
 }
 
 pub fn transfer_f64_array(byte_length: usize, f: &js_sys::Function) -> Vec<f64> {
-    let array = js_sys::Float64Array::new_with_length(byte_length as u32);
+    let mut buffer = vec![0f64; byte_length];
+    let ptr = buffer.as_mut_ptr() as u32;
+    let buf = current_memory_buffer();
+    let array =
+        js_sys::Float64Array::new_with_byte_offset_and_length(&buf, ptr, byte_length as u32);
     f.call1(&JsValue::NULL, array.as_ref())
         .expect("The callback function should not throw");
-    array.to_vec()
+    buffer
 }
 
 pub fn copy_u8_array(buf: &[u8]) -> js_sys::Uint8Array {
