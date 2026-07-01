@@ -1,4 +1,4 @@
-import ThreeView, { Color, Layer } from "@navara/three";
+import ThreeView, { Color, Layer, Source } from "@navara/three";
 import { AmbientLightDesc } from "@navara/three_default_descs";
 import {
   DefaultPlugin,
@@ -19,6 +19,17 @@ let gB3dmLayer: Layer;
 let gPntsLayer: Layer;
 let gMvtLayer: Layer;
 
+// Raster-tile source for gTileLayer. Source-level params (zoom/tms) are updated
+// via this handle; appearance params (show/color/opacity) via the layer.
+let gTileSource: Source;
+const gTileSourceDesc = {
+  type: "raster-tile" as const,
+  url: TILE_DATASETS.openstreetmap.url,
+  maxZoom: 23,
+  minZoom: 0,
+  tms: false,
+};
+
 export const run = async (view: ThreeView<DefaultDescriptions>) => {
   const defaultPlugin = new DefaultPlugin();
   view.addPlugin(defaultPlugin);
@@ -29,15 +40,10 @@ export const run = async (view: ThreeView<DefaultDescriptions>) => {
     ambient: {},
   });
 
-  gTileLayer = view.addLayer({
-    type: "tiles",
-    data: { url: TILE_DATASETS.openstreetmap.url },
-    rasterTile: {
-      maxZoom: 23,
-    },
-  });
+  gTileSource = view.addSource(gTileSourceDesc);
+  gTileLayer = view.addLayer({ type: "raster", source: gTileSource });
 
-  gGeojsonLayer = view.addLayer({
+  const geojsonSource = view.addSource({
     type: "geojson",
     data: {
       type: "Feature",
@@ -55,14 +61,22 @@ export const run = async (view: ThreeView<DefaultDescriptions>) => {
         type: "Polygon",
       },
     },
+  });
+  gGeojsonLayer = view.addLayer({
+    type: "vector",
+    source: geojsonSource,
     polygon: {
       outline: true,
     },
   });
 
+  const b3dmSource = view.addSource({
+    type: "3d-tiles",
+    url: TILES_3D_DATASETS.plateauChiyoda.url,
+  });
   gB3dmLayer = view.addLayer({
-    type: "cesium3dtiles",
-    data: { url: TILES_3D_DATASETS.plateauChiyoda.url },
+    type: "3d-tiles",
+    source: b3dmSource,
     model: {
       show: true,
       color: new Color().setStyle("#ffffff"),
@@ -71,9 +85,13 @@ export const run = async (view: ThreeView<DefaultDescriptions>) => {
     },
   });
 
+  const pntsSource = view.addSource({
+    type: "3d-tiles",
+    url: TILES_3D_DATASETS.plateauKakegawaCastle.url,
+  });
   gPntsLayer = view.addLayer({
-    type: "cesium3dtiles",
-    data: { url: TILES_3D_DATASETS.plateauKakegawaCastle.url },
+    type: "3d-tiles",
+    source: pntsSource,
     model: {
       show: true,
       pointSize: 0.3,
@@ -82,20 +100,20 @@ export const run = async (view: ThreeView<DefaultDescriptions>) => {
     },
   });
 
+  const mvtSource = view.addSource({
+    type: "vector-tile",
+    url: MVT_DATASETS.plateauGifuTran.url,
+    maxZoom: 16,
+  });
   gMvtLayer = view.addLayer({
-    type: "mvt",
-    data: {
-      url: MVT_DATASETS.plateauGifuTran.url,
-    },
+    type: "vector",
+    source: mvtSource,
     polyline: {
       show: true,
       color: new Color().setStyle("#00ff00"),
       width: 2,
       height: 1,
       clampToGround: true,
-    },
-    vectorTile: {
-      maxZoom: 16,
     },
   });
 
@@ -158,18 +176,21 @@ function addRasterTileFolder(pane: Pane) {
     expanded: false,
   });
 
+  // Appearance updates need the layer's type + source so the layer can be
+  // rebuilt from its source.
+  const updateRaster = (patch: { show?: boolean; color?: Color; opacity?: number; showBoundingBox?: boolean }) =>
+    gTileLayer.update({ type: "raster", source: gTileSource.id, ...patch });
+
   rasterFolder
     .addBinding(tileParams, "rasterShow", { label: "show" })
-    .on("change", (v) => gTileLayer.update({ rasterTile: { show: v.value } }));
+    .on("change", (v) => updateRaster({ show: v.value }));
 
   rasterFolder
     .addBinding(tileParams, "rasterColor", {
       label: "color",
       color: { type: "int" },
     })
-    .on("change", (v) =>
-      gTileLayer.update({ rasterTile: { color: new Color().setHex(v.value) } }),
-    );
+    .on("change", (v) => updateRaster({ color: new Color().setHex(v.value) }));
 
   rasterFolder
     .addBinding(tileParams, "rasterOpacity", {
@@ -178,10 +199,9 @@ function addRasterTileFolder(pane: Pane) {
       max: 1,
       step: 0.01,
     })
-    .on("change", (v) =>
-      gTileLayer.update({ rasterTile: { opacity: v.value } }),
-    );
+    .on("change", (v) => updateRaster({ opacity: v.value }));
 
+  // zoom / tms are source-level params, so update them through the source.
   rasterFolder
     .addBinding(tileParams, "rasterMaxZoom", {
       label: "maxZoom",
@@ -189,9 +209,10 @@ function addRasterTileFolder(pane: Pane) {
       max: 30,
       step: 1,
     })
-    .on("change", (v) =>
-      gTileLayer.update({ rasterTile: { maxZoom: v.value } }),
-    );
+    .on("change", (v) => {
+      gTileSourceDesc.maxZoom = v.value;
+      gTileSource.update(gTileSourceDesc);
+    });
 
   rasterFolder
     .addBinding(tileParams, "rasterMinZoom", {
@@ -200,21 +221,23 @@ function addRasterTileFolder(pane: Pane) {
       max: 30,
       step: 1,
     })
-    .on("change", (v) =>
-      gTileLayer.update({ rasterTile: { minZoom: v.value } }),
-    );
+    .on("change", (v) => {
+      gTileSourceDesc.minZoom = v.value;
+      gTileSource.update(gTileSourceDesc);
+    });
 
   rasterFolder
     .addBinding(tileParams, "rasterTms", { label: "tms" })
-    .on("change", (v) => gTileLayer.update({ rasterTile: { tms: v.value } }));
+    .on("change", (v) => {
+      gTileSourceDesc.tms = v.value;
+      gTileSource.update(gTileSourceDesc);
+    });
 
   rasterFolder
     .addBinding(tileParams, "rasterShowBoundingBox", {
       label: "showBoundingBox",
     })
-    .on("change", (v) =>
-      gTileLayer.update({ rasterTile: { showBoundingBox: v.value } }),
-    );
+    .on("change", (v) => updateRaster({ showBoundingBox: v.value }));
 }
 
 function addGeojsonLayerFolder(pane: Pane) {
@@ -469,11 +492,7 @@ function addMvtLayerFolder(pane: Pane) {
 
   PolylineFolder.addBinding(mvtParams, "Show", { label: "show" }).on(
     "change",
-    (v) =>
-      gMvtLayer.update({
-        vectorTile: { show: v.value },
-        polyline: { show: v.value },
-      }),
+    (v) => gMvtLayer.update({ polyline: { show: v.value } }),
   );
 
   PolylineFolder.addBinding(mvtParams, "Color", {

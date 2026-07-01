@@ -49,43 +49,44 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     roll: 0,
   });
 
+  // GSI DEM as a raster-dem source, shared by the terrain and the hillshade.
+  const dem = view.addSource({
+    type: "raster-dem",
+    url: TERRAIN_DATASETS.gsi.url,
+    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+    maxZoom: 15,
+    minZoom: 5,
+  });
+
   // Add terrain layer for 3D surface
   view.addLayer({
     type: "terrain",
-    data: {
-      url: TERRAIN_DATASETS.gsi.url,
-    },
-    rasterTerrain: {
-      maxZoom: 15,
-      minZoom: 5,
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-      castShadow: false,
-      receiveShadow: false,
-    },
+    source: dem,
+    castShadow: false,
+    receiveShadow: false,
   });
 
   view.addLayer({
-    type: "tiles",
-    data: { url: TERRAIN_DATASETS.gsi.url },
-    rasterTile: {
-      maxZoom: 15,
-      minZoom: 5,
-    },
-    hillshade: {
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-    },
+    type: "raster",
+    source: dem,
+    hillshade: {},
   });
 
-  // view.addLayer({
-  //   type: "terrain",
-  //   ellipsoid: {},
-  // });
+  // const ellipsoid = view.addSource({ type: "ellipsoid" });
+  // view.addLayer({ type: "terrain", source: ellipsoid });
+
+  // A single vector-tile source shared by multiple vector layers; each layer
+  // renders a different source layer of the same tileset.
+  const vectorTiles = view.addSource({
+    type: "vector-tile",
+    url: VECTOR_DATASETS.gsiExperimentalVector.url,
+    maxZoom: 16,
+  });
 
   view.addLayer({
-    type: "mvt",
-    data: {
-      url: VECTOR_DATASETS.gsiExperimentalVector.url,
-    },
+    type: "vector",
+    source: vectorTiles,
+    sourceLayers: ["waterarea"],
     polygon: {
       color: new Color().setStyle("#00aaff"),
       height: 10,
@@ -93,16 +94,11 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
       clampToGround: true,
       wireframe: false,
     },
-    vectorTile: {
-      maxZoom: 16,
-      layers: ["waterarea"],
-    },
   });
   view.addLayer({
-    type: "mvt",
-    data: {
-      url: VECTOR_DATASETS.gsiExperimentalVector.url,
-    },
+    type: "vector",
+    source: vectorTiles,
+    sourceLayers: ["building"],
     polygon: {
       color: new Color().setStyle("#555555"),
       height: 10,
@@ -110,16 +106,11 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
       clampToGround: true,
       wireframe: false,
     },
-    vectorTile: {
-      maxZoom: 16,
-      layers: ["building"],
-    },
   });
   view.addLayer({
-    type: "mvt",
-    data: {
-      url: VECTOR_DATASETS.gsiExperimentalVector.url,
-    },
+    type: "vector",
+    source: vectorTiles,
+    sourceLayers: ["contour"],
     polyline: {
       show: true,
       color: new Color().setStyle("#c320d8"),
@@ -127,16 +118,11 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
       height: 1,
       clampToGround: true,
     },
-    vectorTile: {
-      maxZoom: 16,
-      layers: ["contour"],
-    },
   });
   view.addLayer({
-    type: "mvt",
-    data: {
-      url: VECTOR_DATASETS.gsiExperimentalVector.url,
-    },
+    type: "vector",
+    source: vectorTiles,
+    sourceLayers: ["road"],
     polyline: {
       show: true,
       color: new Color().setStyle("#777777"),
@@ -144,13 +130,9 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
       height: 1,
       clampToGround: true,
     },
-    vectorTile: {
-      maxZoom: 16,
-      layers: ["road"],
-    },
   });
 
-  view.addLayer({
+  const geojsonSource = view.addSource({
     type: "geojson",
     data: {
       type: "Feature",
@@ -195,6 +177,10 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
         type: "Polygon",
       },
     },
+  });
+  view.addLayer({
+    type: "vector",
+    source: geojsonSource,
     polygon: {
       color: new Color().setStyle("#00aaff"),
       clampToGround: true,

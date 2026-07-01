@@ -22,6 +22,7 @@ web-sys.workspace = true
 navara_core.workspace = true
 navara_ecs.workspace = true
 navara_layer.workspace = true
+navara_source.workspace = true
 navara_material.workspace = true
 navara_parser.workspace = true
 navara_input.workspace = true

@@ -75,12 +75,17 @@ pub fn init_globe_tiling(
     mut globe: ResMut<navara_globe::Globe>,
     mut qt: ResMut<TerrainTileQuadtree>,
     mut initialized: Local<bool>,
+    source_store: Res<navara_source::SourceStore>,
 ) {
     if let Some(layer) = terrain_layer.iter().next() {
-        let Some(appearance) = &layer.appearance else {
+        let Some(source) = layer
+            .source_id
+            .as_deref()
+            .and_then(|id| source_store.get(id))
+        else {
             return;
         };
-        globe.tiling_scheme = appearance.tiling_scheme();
+        globe.tiling_scheme = source.tiling_scheme();
     } else if *initialized {
         return;
     }
@@ -107,6 +112,7 @@ pub fn update_terrain(
     frame: Res<FrameManager>,
     window: Res<Window>,
     globe: Res<navara_globe::Globe>,
+    source_store: Res<navara_source::SourceStore>,
     mut tiles_set: ParamSet<(Query<(&TilesLayer, &Order)>, Query<(), Changed<TilesLayer>>)>,
     mut terrain_layer_set: ParamSet<(Query<&TerrainLayer>, Query<(), Added<TerrainLayer>>)>,
     mut camera_set: ParamSet<(
@@ -192,7 +198,10 @@ pub fn update_terrain(
     let root_coords: Vec<TileXYZ> = globe.tiling_scheme.root_tiles();
 
     let is_over_min_z = if !tiles.is_empty() {
-        tiles.iter().any(|t| t.0.is_over_min_zoom(0))
+        tiles
+            .iter()
+            .filter_map(|t| t.0.source_id.as_deref().and_then(|id| source_store.get(id)))
+            .any(|s| s.is_over_min_zoom(0))
     } else {
         true
     };
@@ -203,16 +212,17 @@ pub fn update_terrain(
             continue;
         };
 
-        let is_texture_ready = qt
-            .qt
-            .get_mut(root_handle)
-            .unwrap()
-            .is_hillshade_ready(&data_requesters, tiles);
+        let is_texture_ready = qt.qt.get_mut(root_handle).unwrap().is_hillshade_ready(
+            &data_requesters,
+            tiles,
+            &source_store,
+        );
 
         let traversal_result = traverse_terrain(
             &mut commands,
             tiles,
             &terrain_layer,
+            &source_store,
             root_handle,
             &mut tc,
             &mut qt,
@@ -265,6 +275,7 @@ pub fn update_terrain(
                     root_handle,
                     &mut tc,
                     tiles,
+                    &source_store,
                     &data_requesters,
                     &terrain_data_requester,
                     Priority::Extreme,
@@ -274,6 +285,7 @@ pub fn update_terrain(
                     &mut commands,
                     tile,
                     tiles,
+                    &source_store,
                     root_handle,
                     &data_requesters,
                     Priority::High,
@@ -311,6 +323,7 @@ pub fn transfer_mesh(
     terrain_mesh_constructors: Query<&ConstructTerrainMeshResult, Without<Deleted>>,
     terrain_mesh_upsamplers: Query<&UpsampleTerrainMeshResult, Without<Deleted>>,
     globe: Res<navara_globe::Globe>,
+    source_store: Res<navara_source::SourceStore>,
 ) {
     if !tc.is_updated_in_this_frame {
         return;
@@ -318,8 +331,13 @@ pub fn transfer_mesh(
 
     // TODO: Support mutiple terrain layers
     let terrain_layer = terrain_layer.iter().next();
+    // The terrain's fetch/geometry config (tile size, tiling scheme, zoom range)
+    // is read live from the referenced source.
+    let terrain_source = terrain_layer
+        .and_then(|l| l.source_id.as_deref())
+        .and_then(|id| source_store.get(id));
 
-    let tile_size = terrain_layer.map(|l| l.appearance.as_ref().unwrap().tile_size());
+    let tile_size = terrain_source.map(|s| s.tile_size());
 
     for (rendered_tile_id, mut rendered_tile, order) in
         rendered_tiles.iter_mut().sort::<&OrderByDistance>()
@@ -362,12 +380,8 @@ pub fn transfer_mesh(
         let is_quantized_mesh = terrain_layer
             .map(|l| matches!(l.terrain_type, navara_layer::TerrainDataType::QuantizedMesh))
             .unwrap_or(false);
-        let qm_geographic = terrain_layer
-            .and_then(|l| l.appearance.as_ref())
-            .is_some_and(|a| a.geographic());
-        let qm_tms = terrain_layer
-            .and_then(|l| l.appearance.as_ref())
-            .is_some_and(|a| a.tms());
+        let qm_geographic = terrain_source.is_some_and(|s| s.tiling_scheme().is_geographic());
+        let qm_tms = terrain_source.is_some_and(|s| s.tiling_scheme().tms());
 
         let tile_layers_len = tile_layers.iter().len();
         let mut shows = Vec::with_capacity(tile_layers_len);
@@ -486,12 +500,12 @@ pub fn transfer_mesh(
         // OR when our own DEM request failed but the parent terrain is ready.
         let should_upsample_terrain = terrain_layer.is_some()
             && tile.is_upsamplable(&qt, &terrain_data_requester, &terrain_layer)
-            && (terrain_layer.is_some_and(|l| l.should_upsample(tile.coords.z))
+            && (terrain_source.is_some_and(|s| s.should_overscale(tile.coords.z))
                 || is_terrain_failed);
 
         if !should_render_terrain
             || is_ellipsoid_terrain
-            || (terrain_layer.is_some_and(|t| !t.is_over_min_zoom(tile.coords.z))
+            || (terrain_source.is_some_and(|s| !s.is_over_min_zoom(tile.coords.z))
                 || (!should_upsample_terrain && is_terrain_failed))
         {
             // TODO: Move these tile construction process to worker.
@@ -928,6 +942,7 @@ pub fn update_mesh_material(
     mut tc: ResMut<TileCacheManager>,
     qt: ResMut<TerrainTileQuadtree>,
     raster_qt: Res<navara_tile_component::RasterTileQuadtree>,
+    source_store: Res<navara_source::SourceStore>,
     rendered_tiles: Query<(&RenderedTile, &OrderByDistance), With<Rendered>>,
     mut texture_fragment: ParamSet<(TileTextureFragmentQuery, ChangedTileTextureFragmentQuery)>,
     mut data_requesters: ParamSet<(
@@ -1083,7 +1098,14 @@ pub fn update_mesh_material(
                 }
             } else {
                 let lng_span = (terrain_extent.east - terrain_extent.west).val();
-                let target_z = crate::raster::wm_zoom_for_lng_span(lng_span, a.max_zoom);
+                // Max zoom now lives on the referenced source.
+                let max_zoom = l
+                    .source_id
+                    .as_deref()
+                    .and_then(|id| source_store.get(id))
+                    .map(|s| s.max_zoom())
+                    .unwrap_or(20);
+                let target_z = crate::raster::wm_zoom_for_lng_span(lng_span, max_zoom);
                 // The raster pull only returns fragments that have loaded.
                 let resolved = crate::raster::resolve_raster_textures(
                     &raster_qt,
@@ -1290,7 +1312,6 @@ pub fn clear_caches(
 mod delete_layer_tests {
     use super::*;
     use bevy_app::{App, Update};
-    use navara_layer::LayerData;
     use navara_material::{Appearance, RasterTileMaterial};
     use navara_tile_component::{RasterTile, RasterTileQuadtree};
 
@@ -1299,9 +1320,7 @@ mod delete_layer_tests {
     fn raster_layer(layer_id: &str) -> TilesLayer {
         TilesLayer {
             layer_id: layer_id.to_string(),
-            data: Some(LayerData {
-                url: "https://example.com/{z}/{x}/{y}.png".to_string(),
-            }),
+            source_id: None,
             appearance: Some(Appearance::TerrainTile(RasterTileMaterial::default())),
             elevation_heatmap_config: None,
             hillshade_config: None,

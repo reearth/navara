@@ -1,32 +1,18 @@
 use bevy_ecs::component::Component;
-use navara_core::{CRS, is_tile_url};
+use navara_core::CRS;
 
-use navara_material::{Appearance, VectorTileMaterial};
-
-use crate::LayerData;
+use navara_material::Appearance;
 
 #[derive(Debug, Clone, PartialEq, Component)]
 pub struct MvtLayer {
     pub layer_id: String,
-    pub data: Option<LayerData>,
+    /// Reference to the source whose fetch config (URL, zoom, ...) this layer
+    /// uses. The loader resolves it live from `SourceStore`.
+    pub source_id: Option<String>,
+    /// Source layers (MapLibre `source-layer`) to render. `None` renders all.
+    pub source_layers: Option<Vec<String>>,
     pub appearances: Vec<Appearance>,
     pub crs: Option<CRS>,
-}
-
-impl MvtLayer {
-    pub fn has_template_url(&self) -> bool {
-        is_tile_url(&self.data.as_ref().unwrap().url)
-    }
-
-    pub fn vector_tile_appearance(&self) -> Option<&VectorTileMaterial> {
-        self.appearances
-            .iter()
-            .find(|a| matches!(a, Appearance::VectorTile(_)))
-            .and_then(|a| match a {
-                Appearance::VectorTile(v) => Some(v),
-                _ => None,
-            })
-    }
 }
 
 #[derive(Debug, Component)]

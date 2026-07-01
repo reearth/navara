@@ -31,6 +31,7 @@ use navara_globe::Globe;
 use navara_layer::{LayerDescStore, LayerDescription, LayerId};
 use navara_material::{PolygonMaterial, PolylineMaterial};
 use navara_math::{FloatType, Transform, Vec3};
+use navara_source::{Source, SourceStore};
 use navara_texture_fragment::{TextureFragmentLoadedEvent, TextureFragmentStatus};
 use navara_tile_component::{
     MartiniComponent, TerrainHeightObserver, TerrainTile, TerrainTileQuadtree, TileHandle,
@@ -423,11 +424,71 @@ impl App {
     }
 
     pub fn delete_layer(&mut self, layer_id: &str) {
+        if let Some(mut source_store) = self.app.world_mut().get_resource_mut::<SourceStore>() {
+            source_store.unlink_layer(layer_id);
+        }
+
         self.app
             .world_mut()
             .write_message(navara_layer_event::DeleteLayerEvent(LayerId(
                 layer_id.to_owned(),
             )));
+    }
+
+    /// Record that a layer references a source so the source is reference-counted
+    /// and protected from deletion while in use.
+    pub fn link_layer_source(&mut self, layer_id: &str, source_id: &str) {
+        if let Some(mut source_store) = self.app.world_mut().get_resource_mut::<SourceStore>() {
+            source_store.link_layer(layer_id.to_owned(), source_id);
+        }
+    }
+
+    pub fn add_source(&mut self, source_id: &str, source: Source) {
+        // A duplicate id overrides the existing source (later wins) while keeping
+        // its reference count.
+        if let Some(mut source_store) = self.app.world_mut().get_resource_mut::<SourceStore>() {
+            source_store.add(source_id.to_owned(), source);
+        }
+    }
+
+    // TODO: Remove with the legacy layer API.
+    /// Register an implicit source created for a legacy layer. Unlike
+    /// [`add_source`](Self::add_source), the source is reclaimed automatically
+    /// once the referencing layer is deleted.
+    pub fn add_implicit_source(&mut self, source_id: &str, source: Source) {
+        if let Some(mut source_store) = self.app.world_mut().get_resource_mut::<SourceStore>() {
+            source_store.add_implicit(source_id.to_owned(), source);
+        }
+    }
+
+    pub fn update_source(&mut self, source_id: &str, source: Source) {
+        if let Some(mut source_store) = self.app.world_mut().get_resource_mut::<SourceStore>() {
+            source_store.update(source_id.to_owned(), source);
+        }
+    }
+
+    pub fn delete_source(&mut self, source_id: &str) {
+        if let Some(mut source_store) = self.app.world_mut().get_resource_mut::<SourceStore>() {
+            let ref_count = source_store.ref_count(source_id);
+            if ref_count > 0 {
+                #[cfg(feature = "debug")]
+                bevy_log::warn!(
+                    "Cannot delete source `{source_id}` while {ref_count} layer(s) reference it"
+                );
+                return;
+            }
+            source_store.delete(source_id);
+        }
+    }
+
+    pub fn get_source_type(&self, source_id: &str) -> Option<&str> {
+        let store = self.app.world().get_resource::<SourceStore>()?;
+        Some(store.get(source_id)?.source_type())
+    }
+
+    pub fn get_source_description(&self, source_id: &str) -> Option<Source> {
+        let store = self.app.world().get_resource::<SourceStore>()?;
+        store.get(source_id).cloned()
     }
 
     pub fn has_data_requester(&mut self, bits: u64) -> bool {

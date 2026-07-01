@@ -27,35 +27,31 @@ const run = async () => {
     roll: 0,
   });
 
-  // Base tiles layer
-  view.addLayer({
-    type: "tiles",
-    data: { url: TILE_DATASETS.openstreetmap.url },
-    rasterTile: { maxZoom: 19 },
+  // Base imagery as a raster-tile source.
+  const baseImagery = view.addSource({
+    type: "raster-tile",
+    url: TILE_DATASETS.openstreetmap.url,
+    maxZoom: 19,
+  });
+  view.addLayer({ type: "raster", source: baseImagery });
+
+  // GSI DEM as a raster-dem source, shared by the terrain and the hillshade.
+  const dem = view.addSource({
+    type: "raster-dem",
+    url: TERRAIN_DATASETS.gsi.url,
+    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+    maxZoom: 15,
   });
   view.addLayer({
     type: "terrain",
-    data: {
-      url: TERRAIN_DATASETS.gsi.url,
-    },
-    rasterTerrain: {
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-      maxZoom: 15,
-      castShadow: true,
-      receiveShadow: true,
-    },
+    source: dem,
+    castShadow: true,
+    receiveShadow: true,
   });
-
   view.addLayer({
-    type: "tiles",
-    data: { url: TERRAIN_DATASETS.gsi.url },
-    rasterTile: {
-      maxZoom: 15,
-      show: false, // Don't render DEM as color
-    },
-    hillshade: {
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-    },
+    type: "raster",
+    source: dem,
+    hillshade: {},
   });
 
   // Track updated features to prevent duplicate evaluations
@@ -67,7 +63,7 @@ const run = async () => {
   const addGeoJsonLayer = () => {
     updatedFeatures = new Set<bigint>();
 
-    const layer = view.addLayer({
+    const geojsonSource = view.addSource({
       type: "geojson",
       data: {
         type: "FeatureCollection",
@@ -106,6 +102,10 @@ const run = async () => {
           },
         ],
       },
+    });
+    const layer = view.addLayer({
+      type: "vector",
+      source: geojsonSource,
       polygon: {
         color: new Color().setStyle("#00aaff"),
         height: 0,

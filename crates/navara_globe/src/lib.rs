@@ -13,8 +13,8 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, PartialEq, Resource, Serialize, Deserialize)]
 pub struct Globe {
     /// Screen-space error threshold for level of detail (LOD) calculations.
-    /// Used by VectorTileMaterial, RasterTileMaterial, and RasterTerrainMaterial.
-    /// VectorTileMaterial can still override this individually if not using clamp_to_ground.
+    /// Used by the raster and terrain tile pipelines; vector-tile traversal uses
+    /// the source's `max_sse` (or this value for clamp-to-ground features).
     pub max_sse: f32,
 
     /// Number of segments for mesh tessellation.
@@ -23,7 +23,7 @@ pub struct Globe {
     pub segments: usize,
 
     /// Base color for the globe surface (RGB as u32, e.g., 0xffffff for white).
-    /// Used by VectorTileMaterial, RasterTileMaterial, and RasterTerrainMaterial.
+    /// Used by RasterTileMaterial and RasterTerrainMaterial.
     pub color: u32,
 
     /// Whether to hide underground geometry.

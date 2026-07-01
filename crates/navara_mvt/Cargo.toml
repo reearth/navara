@@ -22,6 +22,7 @@ navara_data_requester.workspace = true
 navara_event_store.workspace = true
 navara_geometry.workspace = true
 navara_layer.workspace = true
+navara_source.workspace = true
 navara_component.workspace = true
 navara_tile_component.workspace = true
 navara_quadtree.workspace = true

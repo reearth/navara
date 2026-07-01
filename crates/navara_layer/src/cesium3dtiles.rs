@@ -3,12 +3,12 @@ use navara_core::CRS;
 
 use navara_material::{Appearance, ModelMaterial};
 
-use crate::LayerData;
-
 #[derive(Debug, Clone, PartialEq, Component)]
 pub struct Cesium3dTilesLayer {
     pub layer_id: String,
-    pub data: Option<LayerData>,
+    /// Reference to the source whose fetch config (URL) this layer uses. The
+    /// loader resolves it live from `SourceStore`.
+    pub source_id: Option<String>,
     pub appearances: Vec<Appearance>,
     pub crs: Option<CRS>,
 }

@@ -133,17 +133,21 @@ impl TerrainTile {
         terrain_data_requester: &TileTerrainDataRequesterQuery,
         terrain_layer: &Option<&TerrainLayer>,
         tiles: &Query<(&TilesLayer, &Order)>,
+        source_store: &navara_source::SourceStore,
     ) -> ReadyState {
-        let is_texture_loaded = self.is_hillshade_ready(data_requesters, tiles);
+        let is_texture_loaded = self.is_hillshade_ready(data_requesters, tiles, source_store);
+
+        // Terrain fetch/zoom config is read live from the referenced source.
+        let terrain_source = terrain_layer
+            .and_then(|l| l.source_id.as_deref())
+            .and_then(|id| source_store.get(id));
 
         let data_requester_entity_id = self
             .terrain_data
             .as_ref()
             .and_then(|t| t.data_requester_entity_id());
 
-        let use_terrain = terrain_layer
-            .map(|l| l.is_over_min_zoom(self.coords.z))
-            .unwrap_or(false);
+        let use_terrain = terrain_source.is_some_and(|s| s.is_over_min_zoom(self.coords.z));
 
         // Terrain isn't used at this tile (no terrain layer, or below its min
         // zoom): the tile renders as flat geometry, which is always ready. The
@@ -169,7 +173,7 @@ impl TerrainTile {
             self.is_terrain_ready(terrain_data_requester)
         };
 
-        let should_upsample = terrain_layer.is_some_and(|l| l.should_upsample(self.coords.z));
+        let should_upsample = terrain_source.is_some_and(|s| s.should_overscale(self.coords.z));
         let is_upsamplable = self.is_upsamplable(qt, terrain_data_requester, terrain_layer);
         let is_in_upsample_band = should_upsample && is_upsamplable;
 
@@ -260,6 +264,7 @@ impl TerrainTile {
         &self,
         data_requesters: &Query<&navara_data_requester::DataRequester>,
         tiles: &Query<'_, '_, (&TilesLayer, &Order)>,
+        source_store: &navara_source::SourceStore,
     ) -> bool {
         if tiles.is_empty() {
             return true;
@@ -288,7 +293,13 @@ impl TerrainTile {
                         TerrainTile::is_hillshade_entity_ready(entity, data_requesters)
                     } else {
                         // Entity is None, check if this layer is beyond max_zoom
-                        layer.hillshade_config.is_some() && layer.is_over_max_zoom(self.coords.z)
+                        // (resolved live from its source).
+                        layer.hillshade_config.is_some()
+                            && layer
+                                .source_id
+                                .as_deref()
+                                .and_then(|id| source_store.get(id))
+                                .is_some_and(|s| s.is_over_max_zoom(self.coords.z))
                     }
                 })
         })
@@ -1235,7 +1246,6 @@ mod terrain_tile_tests {
     use navara_component::Order;
     use navara_core::TileXYZ;
     use navara_data_requester::{DataRequester, DataRequesterExtension, DataRequesterStatus};
-    use navara_layer::LayerData;
     use navara_material::{Appearance, HillshadeConfig, RasterTileMaterial};
     use navara_texture_fragment::{TextureFragment, TextureFragmentStatus};
 
@@ -1243,33 +1253,24 @@ mod terrain_tile_tests {
 
     // ---- shared fixtures ----
 
-    fn regular_layer(id: &str, min_zoom: usize, max_zoom: usize) -> TilesLayer {
+    // Zoom now lives on the source; these readiness tests don't exercise zoom
+    // ranges (regular-only tiles short-circuit; hillshade cases supply entities),
+    // so the zoom args are unused and the harness uses an empty `SourceStore`.
+    fn regular_layer(id: &str, _min_zoom: usize, _max_zoom: usize) -> TilesLayer {
         TilesLayer {
             layer_id: id.into(),
-            data: Some(LayerData {
-                url: "https://example.com/.png".into(),
-            }),
-            appearance: Some(Appearance::TerrainTile(RasterTileMaterial {
-                min_zoom,
-                max_zoom,
-                ..Default::default()
-            })),
+            source_id: None,
+            appearance: Some(Appearance::TerrainTile(RasterTileMaterial::default())),
             elevation_heatmap_config: None,
             hillshade_config: None,
         }
     }
 
-    fn hillshade_layer(id: &str, min_zoom: usize, max_zoom: usize) -> TilesLayer {
+    fn hillshade_layer(id: &str, _min_zoom: usize, _max_zoom: usize) -> TilesLayer {
         TilesLayer {
             layer_id: id.into(),
-            data: Some(LayerData {
-                url: "https://example.com/.png".into(),
-            }),
-            appearance: Some(Appearance::TerrainTile(RasterTileMaterial {
-                min_zoom,
-                max_zoom,
-                ..Default::default()
-            })),
+            source_id: None,
+            appearance: Some(Appearance::TerrainTile(RasterTileMaterial::default())),
             elevation_heatmap_config: None,
             hillshade_config: Some(HillshadeConfig {
                 elevation_decoder: Default::default(),
@@ -1328,7 +1329,8 @@ mod terrain_tile_tests {
                       mut out: ResMut<Out>| {
                     let mut tile = TerrainTile::new(TileXYZ { x: 0, y: 0, z: 5 }, 0., 0.);
                     tile.hillshade_entity_ids = Some(hill_ids.lock().unwrap().take().unwrap());
-                    out.0 = Some(tile.is_hillshade_ready(&data_requesters, &tiles));
+                    let source_store = navara_source::SourceStore::new();
+                    out.0 = Some(tile.is_hillshade_ready(&data_requesters, &tiles, &source_store));
                 },
             );
             app.update();
@@ -1465,28 +1467,41 @@ mod terrain_tile_tests {
             terrain_overscaled_max_zoom: usize,
         }
 
-        fn terrain_layer_with(max_zoom: usize, overscaled_max_zoom: usize) -> TerrainLayer {
+        fn terrain_layer_with() -> TerrainLayer {
+            // Zoom config now lives on the source (see `terrain_source`); the
+            // material is render-only.
             TerrainLayer {
                 layer_id: "terrain".into(),
-                data: Some(LayerData {
-                    url: "https://example.com/{z}/{x}/{y}.png".into(),
-                }),
+                source_id: Some("terrain".into()),
                 terrain_type: TerrainDataType::RasterDEM,
-                appearance: Some(TerrainAppearance::Raster(RasterTerrainMaterial {
-                    min_zoom: 0,
-                    max_zoom,
-                    overscaled_max_zoom,
-                    ..Default::default()
-                })),
+                appearance: Some(TerrainAppearance::Raster(RasterTerrainMaterial::default())),
             }
+        }
+
+        fn terrain_source(max_zoom: usize, overscaled_max_zoom: usize) -> navara_source::Source {
+            navara_source::Source::RasterDem(navara_source::RasterDemSource {
+                source_id: "terrain".into(),
+                url: "https://example.com/{z}/{x}/{y}.png".into(),
+                tms: false,
+                elevation_decoder: Default::default(),
+                tile_size: 256,
+                min_zoom: 0,
+                max_zoom,
+                overscaled_max_zoom,
+            })
         }
 
         fn run(scenario: Scenario) -> ReadyStateSnapshot {
             let mut app = App::new();
-            app.world_mut().spawn(terrain_layer_with(
-                scenario.terrain_max_zoom,
-                scenario.terrain_overscaled_max_zoom,
-            ));
+            app.world_mut().spawn(terrain_layer_with());
+            let mut source_store = navara_source::SourceStore::new();
+            source_store.add(
+                "terrain".into(),
+                terrain_source(
+                    scenario.terrain_max_zoom,
+                    scenario.terrain_overscaled_max_zoom,
+                ),
+            );
 
             // Build qt with the root (parent of z=1). Optionally make it terrain-ready.
             let mut qt = TerrainTileQuadtree::new_with_linear_qt();
@@ -1550,6 +1565,7 @@ mod terrain_tile_tests {
             app.init_resource::<Out>();
 
             let child = std::sync::Mutex::new(Some(child));
+            let source_store = std::sync::Mutex::new(Some(source_store));
             app.add_systems(
                 Update,
                 move |qt: bevy_ecs::system::Res<TerrainTileQuadtree>,
@@ -1560,12 +1576,14 @@ mod terrain_tile_tests {
                       mut out: ResMut<Out>| {
                     let terrain_layer = terrain_layers.iter().next();
                     let child = child.lock().unwrap().take().unwrap();
+                    let source_store = source_store.lock().unwrap().take().unwrap();
                     let rs = child.is_ready(
                         &qt,
                         &data_requesters,
                         &terrain_data_requester,
                         &terrain_layer,
                         &tiles,
+                        &source_store,
                     );
                     out.0 = Some(ReadyStateSnapshot {
                         is_tile_ready: rs.is_tile_ready,

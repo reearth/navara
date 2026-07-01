@@ -2,7 +2,6 @@
 
 mod b3dm;
 mod cesium3dtiles;
-mod data;
 mod descriptor;
 mod geojson;
 mod layer_desc_store;
@@ -14,7 +13,6 @@ mod terrain;
 mod tile;
 pub use b3dm::*;
 pub use cesium3dtiles::*;
-pub use data::*;
 pub use descriptor::*;
 pub use geojson::*;
 pub use layer_desc_store::*;

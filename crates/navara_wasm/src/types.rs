@@ -1,12 +1,11 @@
 use navara_core::CRS;
 
 use navara_layer::{
-    B3dmLayer, Cesium3dTilesLayer, GeoJsonLayer, GeoJsonLayerData, LayerData, MvtLayer, PntsLayer,
-    TerrainDataType, TerrainLayer, TilesLayer,
+    B3dmLayer, Cesium3dTilesLayer, GeoJsonLayer, MvtLayer, PntsLayer, TerrainDataType,
+    TerrainLayer, TilesLayer,
 };
 
 use navara_material::{Appearance, ElevationHeatmapConfig, HillshadeConfig};
-use navara_parser::geojson::GeoJson;
 use serde::Deserialize;
 use wasm_bindgen::prelude::*;
 
@@ -18,6 +17,7 @@ use navara_wasm_types::{
 
 #[wasm_bindgen]
 #[derive(Debug, Clone, Deserialize)]
+// TODO: Remove with the legacy layer API (superseded by source-based layers).
 pub struct TileLayerDescription {
     #[wasm_bindgen(getter_with_clone)]
     pub r#type: Option<String>,
@@ -63,6 +63,7 @@ impl TileLayerDescription {
 
 #[wasm_bindgen]
 #[derive(Debug, Clone, Deserialize)]
+// TODO: Remove with the legacy layer API (superseded by source-based layers).
 pub struct TerrainLayerDescription {
     #[wasm_bindgen(getter_with_clone)]
     pub r#type: String,
@@ -110,6 +111,7 @@ impl TerrainLayerDescription {
 /// instead.
 #[wasm_bindgen]
 #[derive(Debug, Default, Clone, Deserialize)]
+// TODO: Remove with the legacy layer API (superseded by source-based layers).
 pub struct GeoJsonLayerDescription {
     #[wasm_bindgen(getter_with_clone)]
     pub r#type: Option<String>,
@@ -267,6 +269,7 @@ impl GeoJsonLayerDescription {
 // This is used for debugging.
 #[wasm_bindgen]
 #[derive(Debug, Default, Clone, Deserialize)]
+// TODO: Remove with the legacy layer API (superseded by source-based layers).
 pub struct B3dmLayerDescription {
     #[wasm_bindgen(getter_with_clone)]
     pub r#type: Option<String>,
@@ -315,6 +318,7 @@ impl B3dmLayerDescription {
 
 #[wasm_bindgen]
 #[derive(Debug, Default, Clone, Deserialize)]
+// TODO: Remove with the legacy layer API (superseded by source-based layers).
 pub struct PntsLayerDescription {
     #[wasm_bindgen(getter_with_clone)]
     pub r#type: Option<String>,
@@ -363,6 +367,7 @@ impl PntsLayerDescription {
 
 #[wasm_bindgen]
 #[derive(Debug, Default, Clone, Deserialize)]
+// TODO: Remove with the legacy layer API (superseded by source-based layers).
 pub struct Cesium3dTilesLayerDescription {
     #[wasm_bindgen(getter_with_clone)]
     pub r#type: Option<String>,
@@ -411,6 +416,7 @@ impl Cesium3dTilesLayerDescription {
 
 #[wasm_bindgen]
 #[derive(Debug, Default, Clone, Deserialize)]
+// TODO: Remove with the legacy layer API (superseded by source-based layers).
 pub struct MvtLayerDescription {
     #[wasm_bindgen(getter_with_clone)]
     pub r#type: Option<String>,
@@ -540,24 +546,6 @@ impl MvtLayerDescription {
                 }
             }
 
-            if let Some(new_vector_tile_material) = self.vector_tile.take() {
-                // Merge with the old material if exists.
-                if let Some(old_appearance) = old_layer
-                    .appearances
-                    .iter()
-                    .find(|a| matches!(a, Appearance::VectorTile(_)))
-                {
-                    if let Appearance::VectorTile(old_vector_tile_material) = old_appearance {
-                        let updated_vector_tile_material =
-                            new_vector_tile_material.merge(old_vector_tile_material);
-                        // Replace the old appearance with the updated one.
-                        result.retain(|a| !matches!(a, Appearance::VectorTile(_)));
-                        result.push(Appearance::VectorTile(updated_vector_tile_material));
-                    }
-                } else {
-                    result.push(Appearance::VectorTile(new_vector_tile_material.into()));
-                }
-            }
             result
         } else {
             // Otherwise, return new appearances
@@ -577,9 +565,6 @@ impl MvtLayerDescription {
             if let Some(v) = self.polygon.take() {
                 result.push(Appearance::Polygon(v.into()));
             }
-            if let Some(v) = self.vector_tile.take() {
-                result.push(Appearance::VectorTile(v.into()));
-            }
             result
         }
     }
@@ -598,6 +583,7 @@ pub struct LayerDescription {
 
 #[wasm_bindgen]
 #[derive(Debug, Clone, Deserialize)]
+// TODO: Remove with the legacy layer API (the legacy inline `data: { url }` shape).
 pub struct LayerDescriptionData {
     #[wasm_bindgen(getter_with_clone)]
     #[serde(with = "serde_wasm_bindgen::preserve")]
@@ -606,6 +592,7 @@ pub struct LayerDescriptionData {
 
 #[wasm_bindgen]
 #[derive(Debug, Clone, Deserialize)]
+// TODO: Remove with the legacy layer API (the legacy inline `data: { url }` shape).
 pub struct LayerDescriptionUrl {
     #[wasm_bindgen(getter_with_clone)]
     pub url: String,
@@ -616,24 +603,18 @@ impl LayerDescription {
         serde_wasm_bindgen::from_value(value).ok()
     }
 
+    // TODO: Remove with the legacy layer API. Converts a legacy layer
+    // description (inline fetch config) into the internal layer; the
+    // source-based API uses `source_types::build_source_layer` instead.
     pub fn to(
         layer_id: &str,
         layer_type: &str,
         value: JsValue,
         old_desc: Option<navara_layer::LayerDescription>,
+        source_id: Option<&str>,
     ) -> Option<navara_layer::LayerDescription> {
         match layer_type {
             "tiles" => {
-                let js_data: LayerDescriptionData = serde_wasm_bindgen::from_value(value.clone())
-                    .unwrap_or_else(|_e| LayerDescriptionData {
-                        data: JsValue::NULL,
-                    });
-
-                let mut data: Option<LayerDescriptionUrl> = None;
-                if !js_data.data.is_null() && !js_data.data.is_undefined() {
-                    data = serde_wasm_bindgen::from_value(js_data.data).ok()?;
-                }
-
                 let mut layer: TileLayerDescription = serde_wasm_bindgen::from_value(value).ok()?;
 
                 // Parse elevation_heatmap config
@@ -659,7 +640,7 @@ impl LayerDescription {
                 Some(navara_layer::LayerDescription::Tiles(Box::new(
                     TilesLayer {
                         layer_id: layer_id.to_string(),
-                        data: data.map(|d| LayerData { url: d.url }),
+                        source_id: source_id.map(|s| s.to_owned()),
                         appearance: layer.appearance(old_desc),
                         elevation_heatmap_config,
                         hillshade_config,
@@ -682,32 +663,20 @@ impl LayerDescription {
 
                 let appearance = layer.appearance();
 
-                // Determine terrain type and prepare data
-                let (terrain_type, layer_data) = if appearance.is_some() {
+                // Determine the terrain type. The URL itself is owned by the
+                // implicit source (see `legacy_source`); it is only read here to
+                // disambiguate the raster terrain encoding.
+                let terrain_type = if appearance.is_some() {
                     match &appearance {
-                        Some(TerrainMaterial::Ellipsoid(_)) => (TerrainDataType::Ellipsoid, None),
+                        Some(TerrainMaterial::Ellipsoid(_)) => TerrainDataType::Ellipsoid,
                         Some(TerrainMaterial::Raster(_)) => {
-                            let url = data.as_ref()?.url.as_str();
-                            (
-                                TerrainDataType::from_url(url),
-                                Some(LayerData {
-                                    url: String::from(url),
-                                }),
-                            )
+                            TerrainDataType::from_url(data.as_ref()?.url.as_str())
                         }
-                        Some(TerrainMaterial::QuantizedMesh(_)) => {
-                            let url = data.as_ref()?.url.as_str();
-                            (
-                                TerrainDataType::QuantizedMesh,
-                                Some(LayerData {
-                                    url: String::from(url),
-                                }),
-                            )
-                        }
-                        None => (TerrainDataType::Unknown, None),
+                        Some(TerrainMaterial::QuantizedMesh(_)) => TerrainDataType::QuantizedMesh,
+                        None => TerrainDataType::Unknown,
                     }
                 } else {
-                    (TerrainDataType::Unknown, None)
+                    TerrainDataType::Unknown
                 };
 
                 let terrain_appearance = appearance.map(|mat| match mat {
@@ -721,124 +690,68 @@ impl LayerDescription {
                 Some(navara_layer::LayerDescription::Terrain(Box::new(
                     TerrainLayer {
                         layer_id: layer_id.to_string(),
-                        data: layer_data,
+                        source_id: source_id.map(|s| s.to_owned()),
                         appearance: terrain_appearance,
                         terrain_type,
                     },
                 )))
             }
             "geojson" => {
-                let js_data: LayerDescriptionData = serde_wasm_bindgen::from_value(value.clone())
-                    .unwrap_or_else(|_e| LayerDescriptionData {
-                        data: JsValue::NULL,
-                    });
-
-                let mut geo_data: Option<GeoJsonLayerData> = None;
-                if !js_data.data.is_null() && !js_data.data.is_undefined() {
-                    // Try to parse the data as URL first.
-                    let data_url: Option<LayerDescriptionUrl> =
-                        serde_wasm_bindgen::from_value(js_data.clone().data).ok();
-
-                    if let Some(layer_description_url) = data_url {
-                        geo_data = Some(GeoJsonLayerData::URL(layer_description_url.url));
-                    } else {
-                        // Try to parse the data as GeoJson if the URL is not provided.
-                        let data_json: Option<GeoJson> =
-                            serde_wasm_bindgen::from_value(js_data.data).ok();
-                        geo_data = Some(GeoJsonLayerData::GeoJson(data_json.unwrap()));
-                    }
-                }
-
+                // The GeoJSON data (inline or URL) lives on the implicit source
+                // built by `legacy_source`; the layer only references it.
                 let mut layer: GeoJsonLayerDescription =
                     serde_wasm_bindgen::from_value(value).ok()?;
 
                 Some(navara_layer::LayerDescription::GeoJson(Box::new(
                     GeoJsonLayer {
                         layer_id: layer_id.to_string(),
-                        data: geo_data,
+                        source_id: source_id.map(str::to_owned),
                         appearances: layer.appearances(old_desc),
                         crs: layer.crs(),
                     },
                 )))
             }
             "b3dm" => {
-                let js_data: LayerDescriptionData = serde_wasm_bindgen::from_value(value.clone())
-                    .unwrap_or_else(|_e| LayerDescriptionData {
-                        data: JsValue::NULL,
-                    });
-
-                let mut data: Option<LayerDescriptionUrl> = None;
-                if !js_data.data.is_null() && !js_data.data.is_undefined() {
-                    data = serde_wasm_bindgen::from_value(js_data.data).ok()?;
-                }
-
                 let mut layer: B3dmLayerDescription = serde_wasm_bindgen::from_value(value).ok()?;
 
                 Some(navara_layer::LayerDescription::B3dm(Box::new(B3dmLayer {
                     layer_id: layer_id.to_string(),
-                    data: data.map(|d| LayerData { url: d.url }),
+                    source_id: source_id.map(|s| s.to_owned()),
                     appearances: layer.appearances(old_desc),
                     crs: layer.crs(),
                 })))
             }
             "pnts" => {
-                let js_data: LayerDescriptionData = serde_wasm_bindgen::from_value(value.clone())
-                    .unwrap_or_else(|_e| LayerDescriptionData {
-                        data: JsValue::NULL,
-                    });
-
-                let mut data: Option<LayerDescriptionUrl> = None;
-                if !js_data.data.is_null() && !js_data.data.is_undefined() {
-                    data = serde_wasm_bindgen::from_value(js_data.data).ok()?;
-                }
-
                 let mut layer: PntsLayerDescription = serde_wasm_bindgen::from_value(value).ok()?;
 
                 Some(navara_layer::LayerDescription::Pnts(PntsLayer {
                     layer_id: layer_id.to_string(),
-                    data: data.map(|d| LayerData { url: d.url }),
+                    source_id: source_id.map(|s| s.to_owned()),
                     appearances: layer.appearances(old_desc),
                     crs: layer.crs(),
                 }))
             }
             "mvt" => {
-                let js_data: LayerDescriptionData = serde_wasm_bindgen::from_value(value.clone())
-                    .unwrap_or_else(|_e| LayerDescriptionData {
-                        data: JsValue::NULL,
-                    });
-
-                let mut data: Option<LayerDescriptionUrl> = None;
-                if !js_data.data.is_null() && !js_data.data.is_undefined() {
-                    data = serde_wasm_bindgen::from_value(js_data.data).ok()?;
-                }
-
                 let mut layer: MvtLayerDescription = serde_wasm_bindgen::from_value(value).ok()?;
+                // The legacy `vectorTile` material's `layers` is the sub-layer filter.
+                let source_layers = layer.vector_tile.as_ref().and_then(|vt| vt.layers.clone());
 
                 Some(navara_layer::LayerDescription::Mvt(MvtLayer {
                     layer_id: layer_id.to_string(),
-                    data: data.map(|d| LayerData { url: d.url }),
+                    source_id: source_id.map(|s| s.to_owned()),
+                    source_layers,
                     appearances: layer.appearances(old_desc),
                     crs: layer.crs(),
                 }))
             }
             "cesium3dtiles" => {
-                let js_data: LayerDescriptionData = serde_wasm_bindgen::from_value(value.clone())
-                    .unwrap_or_else(|_e| LayerDescriptionData {
-                        data: JsValue::NULL,
-                    });
-
-                let mut data: Option<LayerDescriptionUrl> = None;
-                if !js_data.data.is_null() && !js_data.data.is_undefined() {
-                    data = serde_wasm_bindgen::from_value(js_data.data).ok()?;
-                }
-
                 let mut layer: Cesium3dTilesLayerDescription =
                     serde_wasm_bindgen::from_value(value).ok()?;
 
                 Some(navara_layer::LayerDescription::Cesium3dTiles(
                     Cesium3dTilesLayer {
                         layer_id: layer_id.to_string(),
-                        data: data.map(|d| LayerData { url: d.url }),
+                        source_id: source_id.map(|s| s.to_owned()),
                         appearances: layer.appearances(old_desc),
                         crs: layer.crs(),
                     },

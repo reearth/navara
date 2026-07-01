@@ -1,5 +1,5 @@
 use bevy_ecs::{component::Component, entity::Entity};
-use navara_core::{CRS, ElevationDecoder, TilingScheme, calc_transform};
+use navara_core::{CRS, ElevationDecoder, calc_transform};
 use navara_geometry::TileUvTransform;
 use navara_math::{Transform, Vec2, Vec3};
 
@@ -36,7 +36,6 @@ pub enum Appearance {
     Polyline(PolylineMaterial),
     Polygon(PolygonMaterial),
     Model(ModelMaterial),
-    VectorTile(VectorTileMaterial),
     TerrainTile(RasterTileMaterial),
 }
 
@@ -59,9 +58,6 @@ impl Appearance {
                 *dist = src.clone();
             }
             (Appearance::Model(dist), Appearance::Model(src)) => {
-                *dist = src.clone();
-            }
-            (Appearance::VectorTile(dist), Appearance::VectorTile(src)) => {
                 *dist = src.clone();
             }
             (Appearance::TerrainTile(dist), Appearance::TerrainTile(src)) => {
@@ -503,40 +499,11 @@ pub struct ModelInternalMaterial {
 }
 
 #[derive(Debug, Clone, PartialEq, Component)]
-pub struct VectorTileMaterial {
-    pub show: bool,
-    pub cast_shadow: bool,
-    pub receive_shadow: bool,
-    pub max_sse: f32,
-    pub max_zoom: usize,
-    pub layers: Option<Vec<String>>,
-    pub overscaled_max_zoom: usize,
-}
-
-impl Default for VectorTileMaterial {
-    fn default() -> Self {
-        Self {
-            show: true,
-            cast_shadow: false,
-            receive_shadow: false,
-            max_sse: 2.,
-            max_zoom: 20,
-            layers: None,
-            overscaled_max_zoom: 24, // Allow overscaling up to zoom level 24 by default
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Component)]
 pub struct RasterTileMaterial {
     pub show: bool,
     pub color: u32,
     pub opacity: f32,
-    pub max_zoom: usize,
-    pub min_zoom: usize,
-    pub tms: bool,
     pub show_bounding_box: bool,
-    pub overscaled_max_zoom: usize,
 }
 
 impl Default for RasterTileMaterial {
@@ -545,11 +512,7 @@ impl Default for RasterTileMaterial {
             show: true,
             color: 0xffffff,
             opacity: 1.,
-            max_zoom: 20,
-            min_zoom: 0,
-            tms: false,
             show_bounding_box: false,
-            overscaled_max_zoom: 24,
         }
     }
 }
@@ -595,11 +558,6 @@ pub struct RasterTerrainMaterial {
     pub cast_shadow: bool,
     pub receive_shadow: bool,
     pub show_bounding_box: bool,
-    pub max_zoom: usize,
-    pub min_zoom: usize,
-    pub elevation_decoder: ElevationDecoder,
-    pub tile_size: u32,
-    pub overscaled_max_zoom: usize,
     /// Whether to render skirts along tile boundaries to hide gaps.
     pub skirt: bool,
     /// Multiplier for the automatically calculated skirt height.
@@ -614,36 +572,17 @@ impl Default for RasterTerrainMaterial {
             cast_shadow: false,
             receive_shadow: false,
             show_bounding_box: false,
-            max_zoom: 20,
-            min_zoom: 0,
-            elevation_decoder: ElevationDecoder::default(),
-            tile_size: 256,
-            overscaled_max_zoom: 24,
             skirt: true,
             skirt_exaggeration: 1.0,
         }
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Component)]
+#[derive(Debug, Clone, PartialEq, Default, Component)]
 pub struct EllipsoidTerrainMaterial {
     pub cast_shadow: bool,
     pub receive_shadow: bool,
     pub show_bounding_box: bool,
-    pub max_zoom: usize,
-    pub min_zoom: usize,
-}
-
-impl Default for EllipsoidTerrainMaterial {
-    fn default() -> Self {
-        Self {
-            cast_shadow: false,
-            receive_shadow: false,
-            show_bounding_box: false,
-            max_zoom: 20,
-            min_zoom: 0,
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Component)]
@@ -652,21 +591,8 @@ pub struct QuantizedMeshTerrainMaterial {
     pub cast_shadow: bool,
     pub receive_shadow: bool,
     pub show_bounding_box: bool,
-    pub max_zoom: usize,
-    pub min_zoom: usize,
-    pub overscaled_max_zoom: usize,
     pub skirt: bool,
     pub skirt_exaggeration: f32,
-    pub tiling_scheme: TilingScheme,
-    /// Request the oct-encoded per-vertex normals extension from the server.
-    /// Adds `octvertexnormals` to the Accept header when fetching `.terrain` tiles.
-    pub request_vertex_normals: bool,
-    /// Request the watermask extension from the server.
-    /// Adds `watermask` to the Accept header when fetching `.terrain` tiles.
-    pub request_water_mask: bool,
-    /// Bearer token sent as the `Authorization` header for `.terrain` requests.
-    /// `None` means no Authorization header is added.
-    pub token: Option<String>,
 }
 
 impl Default for QuantizedMeshTerrainMaterial {
@@ -676,15 +602,8 @@ impl Default for QuantizedMeshTerrainMaterial {
             cast_shadow: false,
             receive_shadow: false,
             show_bounding_box: false,
-            max_zoom: 14,
-            min_zoom: 0,
-            overscaled_max_zoom: 24,
             skirt: true,
             skirt_exaggeration: 1.0,
-            tiling_scheme: TilingScheme::Geographic { tms: true },
-            request_vertex_normals: false,
-            request_water_mask: false,
-            token: None,
         }
     }
 }

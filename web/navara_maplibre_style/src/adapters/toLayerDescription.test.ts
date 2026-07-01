@@ -71,7 +71,7 @@ describe("toLayerDescription", () => {
         source: "test",
       };
 
-      const result = toLayerDescription(layer, style);
+      const result = toLayerDescription(layer, style) as any;
 
       expect(result.type).toBe("geojson");
       expect(result.data).toEqual({

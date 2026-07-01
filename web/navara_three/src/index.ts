@@ -95,9 +95,11 @@ import { RendererStats } from "./stats";
 import { warmUp } from "./tasks/warmUp";
 import type { TextureOptions } from "./textures";
 import { TileTextureCompositor } from "./tileTexture";
+import { Source } from "./source";
 import {
   type AbortControllers,
   type LayerDescription,
+  type SourceDescription,
   type BuiltInEffectDescription,
   type Descriptions,
   type EmptyDescriptions,
@@ -139,6 +141,7 @@ export * from "./constants";
 export * from "./light";
 export * from "./mesh";
 export * from "./layer";
+export * from "./source";
 export * from "./effects";
 export * from "./shaders";
 export * from "./material";
@@ -1244,26 +1247,28 @@ export default class ThreeView<
    * Handles the two-level structure: layer -> material -> color fields.
    */
   private _convertColorsToNumbers(obj: unknown): unknown {
+    // Convert Navara Color objects to hex numbers at any depth.
+    if (obj instanceof Color) {
+      return obj.toHex();
+    }
     if (obj === null || obj === undefined || typeof obj !== "object") {
       return obj;
     }
-
-    // Process the object's properties (shallow copy)
-    const result: Record<string, unknown> = { ...obj };
-
-    for (const [key, value] of Object.entries(result)) {
-      if (value && typeof value === "object" && !Array.isArray(value)) {
-        // Nested object (e.g., point, billboard, text, model, etc.)
-        const nestedResult: Record<string, unknown> = { ...value };
-        for (const [nestedKey, nestedValue] of Object.entries(nestedResult)) {
-          if (nestedValue instanceof Color) {
-            nestedResult[nestedKey] = nestedValue.toHex();
-          }
-        }
-        result[key] = nestedResult;
-      }
+    if (Array.isArray(obj)) {
+      return obj.map((v) => this._convertColorsToNumbers(v));
     }
-
+    // Leave non-plain objects (e.g. wasm class instances such as
+    // ElevationDecoder) untouched by reference — spreading them would drop their
+    // getter-backed fields and corrupt the value passed to WASM.
+    const proto = Object.getPrototypeOf(obj);
+    if (proto !== Object.prototype && proto !== null) {
+      return obj;
+    }
+    // Recurse into plain objects (e.g. point, billboard, polygon, source config).
+    const result: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(obj)) {
+      result[key] = this._convertColorsToNumbers(value);
+    }
     return result;
   }
 
@@ -1274,8 +1279,16 @@ export default class ThreeView<
    * @returns A Layer for controlling the added layer
    */
   addLayer(l: LayerDescription): Layer {
+    // Normalize a Source handle reference to its id before passing to Rust.
+    const normalized =
+      "source" in l && l.source instanceof Source
+        ? { ...l, source: l.source.id }
+        : l;
+
     // Convert all Color objects to numbers before passing to Rust
-    const processedLayer = this._convertColorsToNumbers(l) as LayerDescription;
+    const processedLayer = this._convertColorsToNumbers(
+      normalized,
+    ) as LayerDescription;
 
     // Existing resource layer process
     const layerId = this._core?.addLayer(processedLayer);
@@ -1290,6 +1303,21 @@ export default class ThreeView<
     this.layersManager.add(layer);
 
     return layer;
+  }
+
+  /**
+   * Registers a data source (GeoJSON, vector tile, raster tile, raster DEM,
+   * quantized mesh, ellipsoid, 3D Tiles) and returns a {@link Source} handle.
+   * Reference the returned source from layers via `addLayer({ source })`.
+   * @param s - Source configuration object specifying type and options
+   * @returns A Source handle for referencing, updating, and deleting the source
+   */
+  addSource(s: SourceDescription): Source {
+    const sourceId = this._core?.addSource(s);
+    invariant(sourceId);
+    invariant(this._core);
+
+    return new Source(sourceId, s.type ?? "", this._core);
   }
 
   /**

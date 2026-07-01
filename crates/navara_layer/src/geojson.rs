@@ -1,20 +1,15 @@
 use bevy_ecs::component::Component;
 use bevy_ecs::entity::Entity;
 use navara_core::CRS;
-use navara_parser::geojson::GeoJson;
 
 use navara_material::Appearance;
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum GeoJsonLayerData {
-    GeoJson(GeoJson),
-    URL(String),
-}
 
 #[derive(Debug, Clone, PartialEq, Component)]
 pub struct GeoJsonLayer {
     pub layer_id: String,
-    pub data: Option<GeoJsonLayerData>,
+    /// The referenced GeoJSON source. The actual data (inline or fetched) lives
+    /// on the source in `SourceStore` and is read live by the loaders.
+    pub source_id: Option<String>,
     pub appearances: Vec<Appearance>,
     pub crs: Option<CRS>,
 }
