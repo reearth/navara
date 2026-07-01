@@ -498,7 +498,7 @@ async function processRequestedData(ctx: EventContext, req: DataRequestEvent) {
   // behind an explicit Accept header. Only opt in when the layer requested it
   // — otherwise some servers refuse to respond, and we don't want to pay for
   // bytes we won't use anyway.
-  const headers = (() => {
+  let headers = (() => {
     if (req.extension !== "terrain") {
       return req.token ? { Authorization: `Bearer ${req.token}` } : undefined;
     }
@@ -510,6 +510,23 @@ async function processRequestedData(ctx: EventContext, req: DataRequestEvent) {
     return h;
   })();
 
+  // Partial fetch: PMTiles (and any future range-based source) sets a byte
+  // range on the request. `!= null` is intentional so a 0n offset (the header
+  // bootstrap read) is still treated as present. A length of 0n (from a
+  // malformed header/directory or an upstream bug) would underflow `end` to
+  // `offset - 1n` and emit an invalid `Range` header — and falling back to a
+  // full fetch could silently download an entire multi-GB archive — so fail
+  // the request instead.
+  if (req.offset != null && req.length != null) {
+    if (req.length <= 0n) {
+      buf.triggerDataRequesterFailed(req.bits);
+      abortControllers.delete(id);
+      return;
+    }
+    const end = req.offset + req.length - 1n;
+    headers = { ...(headers ?? {}), Range: `bytes=${req.offset}-${end}` };
+  }
+
   // Set extensions as query params to stale the cache.
   const fetchUrl = (() => {
     if (!terrainExts.length) return req.url;
@@ -520,7 +537,20 @@ async function processRequestedData(ctx: EventContext, req: DataRequestEvent) {
 
   await fetch(fetchUrl, { signal: abortController.signal, headers })
     .then((res) => {
-      if (!res.ok) throw new Error();
+      // For range reads, require 206 so we don't silently accept a full-body 200
+      // response and download an entire PMTiles archive.
+      const isRangeRequest = req.offset != null && req.length != null;
+      if (isRangeRequest && res.status !== 206) {
+        throw new Error(
+          `Range request expected 206 Partial Content, got ${res.status} ${res.statusText}`,
+        );
+      }
+
+      // A successful range request returns 206 Partial Content, which is in
+      // the ok range (200-299), so this guard handles both 200 and 206.
+      if (!res.ok) {
+        throw new Error(`Request failed with ${res.status} ${res.statusText}`);
+      }
       return res.arrayBuffer();
     })
     .then((val) => {

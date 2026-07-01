@@ -110,6 +110,10 @@ pub struct DataRequestEvent {
     pub extension: String,
     #[wasm_bindgen(getter_with_clone)]
     pub url: String,
+    /// Byte-range offset for a partial fetch. `None` for a full-resource GET.
+    pub offset: Option<u64>,
+    /// Byte-range length in bytes. Set together with `offset`.
+    pub length: Option<u64>,
     /// Quantized-mesh only: server should return the oct-encoded normals extension.
     #[wasm_bindgen(js_name = requestVertexNormals)]
     pub request_vertex_normals: bool,
@@ -412,6 +416,10 @@ impl<'a>
             &'a navara_data_requester::DataRequester,
         >,
     ) -> Self {
+        let (offset, length) = match ev.comp.byte_range {
+            Some((offset, length)) => (Some(offset), Some(length)),
+            None => (None, None),
+        };
         Self {
             ind: ev.ind,
             r#gen: ev.r#gen,
@@ -419,6 +427,8 @@ impl<'a>
             handle: ev.comp.handle,
             extension: ev.comp.extension.to_string(),
             url: ev.comp.url.clone(),
+            offset,
+            length,
             request_vertex_normals: ev.comp.request_vertex_normals,
             request_water_mask: ev.comp.request_water_mask,
             token: ev.comp.token.clone(),

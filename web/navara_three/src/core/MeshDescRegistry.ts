@@ -3,14 +3,9 @@ import type ThreeView from "../index";
 import type { AnyMeshDesc } from "./BaseHandle";
 import { DescRegistry } from "./DescRegistry";
 import type { MeshConfig } from "./MeshDesc";
-import type { MeshDescBaseConfig } from "./MeshDescBase";
 import type { ViewContext } from "./ViewContext";
 
-/**
- * Union of legacy and TSL config types. The registry accepts subclasses from
- * either hierarchy during the incremental TSL migration.
- */
-export type AnyMeshConfig = MeshConfig | MeshDescBaseConfig;
+export type AnyMeshConfig = MeshConfig;
 
 export type MeshDescConstructor<TConfig extends AnyMeshConfig = AnyMeshConfig> =
   new (view: ThreeView, ctx: ViewContext, config: TConfig) => AnyMeshDesc;

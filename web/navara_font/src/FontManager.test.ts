@@ -203,6 +203,72 @@ describe("FontManager", () => {
   });
 
   // -----------------------------------------------------------------------
+  // Atlas eviction notifications
+  // -----------------------------------------------------------------------
+
+  describe("onAtlasEvicted", () => {
+    const evictingBatch = () => {
+      mocks.mockPrepareTextBatch.mockImplementation(
+        async (
+          fontUrl: string,
+          texts: string[],
+        ): Promise<BatchPrepareTextResult> => ({
+          results: texts.map((text) => ({
+            text,
+            shapeResult: createShapeResult(text),
+          })),
+          atlas: {
+            data: new Uint8Array([1]),
+            width: 256,
+            height: 256,
+            channels: 1,
+          },
+          colorAtlas: null,
+          atlasKey: fontUrl,
+          evicted: true,
+        }),
+      );
+    };
+
+    it("notifies subscribers (coalesced) when an atlas evicts", async () => {
+      await manager.loadFont(FONT_URL, false);
+      const listener = vi.fn();
+      manager.onAtlasEvicted(FONT_URL, false, listener);
+      evictingBatch();
+
+      await manager.prepareText(FONT_URL, "hello", false);
+      await Promise.resolve(); // drain the coalescing microtask
+
+      expect(listener).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not notify when nothing was evicted", async () => {
+      await manager.loadFont(FONT_URL, false);
+      const listener = vi.fn();
+      manager.onAtlasEvicted(FONT_URL, false, listener);
+      // beforeEach's default mock reports no eviction.
+
+      await manager.prepareText(FONT_URL, "hello", false);
+      await Promise.resolve();
+
+      expect(listener).not.toHaveBeenCalled();
+    });
+
+    it("stops notifying after unsubscribe", async () => {
+      await manager.loadFont(FONT_URL, false);
+      const listener = vi.fn();
+      const off = manager.onAtlasEvicted(FONT_URL, false, listener);
+      off();
+      evictingBatch();
+
+      await manager.prepareText(FONT_URL, "world", false);
+      await Promise.resolve();
+
+      expect(listener).not.toHaveBeenCalled();
+    });
+  });
+
+  // -----------------------------------------------------------------------
   // Font family registration
   // -----------------------------------------------------------------------
 
@@ -1345,6 +1411,94 @@ describe("FontManager", () => {
           expect(g.fontIndex).toBe(0);
           expect(g.xAdvance).toBe(500);
         }
+      });
+    });
+
+    // ----- graceful degradation when a segment fails to shape -----
+
+    describe("unshaped segments", () => {
+      /** Mock that shapes Latin normally but returns no result for CJK,
+       *  simulating a worker that produced no glyphs for a segment (the matched
+       *  face lacks the codepoint, or it fell through to a face that can't shape
+       *  the script). The prepare promise still resolves; nothing is cached. */
+      function setupPartialShapeMock() {
+        mocks.mockPrepareTextBatch.mockImplementation(
+          async (
+            fontUrl: string,
+            texts: string[],
+          ): Promise<BatchPrepareTextResult> => {
+            const rawUrl = stripQuality(fontUrl);
+            const shapes = rawUrl === LATIN;
+            return {
+              results: texts.map((text) => ({
+                text,
+                shapeResult: shapes
+                  ? {
+                      glyphs: [...text].map((_, i) => ({
+                        glyphId: i + 1,
+                        fontIndex: 0,
+                        compositeKey: makeCompositeKey(0, i + 1),
+                        xAdvance: 500,
+                        yAdvance: 10,
+                        xOffset: 20,
+                        yOffset: 30,
+                      })),
+                      metrics: [...text].map((_, i) => ({
+                        glyphId: i + 1,
+                        fontIndex: 0,
+                        compositeKey: makeCompositeKey(0, i + 1),
+                        atlasX: i * 32,
+                        atlasY: 0,
+                        atlasW: 32,
+                        atlasH: 32,
+                        bearingX: 5,
+                        bearingY: 30,
+                        isColor: false,
+                      })),
+                      unitsPerEm: 1000,
+                    }
+                  : null,
+              })),
+              atlas: {
+                data: new Uint8Array([1]),
+                width: 64,
+                height: 64,
+                channels: 1,
+              },
+              colorAtlas: null,
+              atlasKey: "Seg#q=false",
+            };
+          },
+        );
+      }
+
+      it("should not reject prepareText when a segment fails to shape", async () => {
+        setupPartialShapeMock();
+        await expect(
+          manager.prepareText("Seg", "Hi世界", false),
+        ).resolves.toBeUndefined();
+      });
+
+      it("should stitch only the segments that shaped, dropping the rest", async () => {
+        setupPartialShapeMock();
+        // "Hi世界": Latin "Hi" shapes (2 glyphs); CJK "世界" yields nothing.
+        await manager.prepareText("Seg", "Hi世界", false);
+        const result = manager.shapeText("Seg", "Hi世界", false)!;
+
+        expect(result.glyphs.length).toBe(2);
+        expect(result.glyphs.every((g) => g.fontIndex === 0)).toBe(true);
+        expect(result.unitsPerEm).toBe(1000);
+      });
+
+      it("should return an empty result when no segment shapes", async () => {
+        setupPartialShapeMock();
+        // All-CJK: every segment yields nothing → blank label, not a throw.
+        await manager.prepareText("Seg", "世界", false);
+        const result = manager.shapeText("Seg", "世界", false)!;
+
+        expect(result.glyphs).toEqual([]);
+        expect(result.metrics).toEqual([]);
+        expect(result.unitsPerEm).toBe(1000);
       });
     });
   });

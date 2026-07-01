@@ -32,7 +32,6 @@ import {
   Group,
   PCFShadowMap,
 } from "three";
-import type { BasicNodeLibrary } from "three/webgpu";
 import invariant from "tiny-invariant";
 
 import { Atmosphere, type AtmosphereOptions } from "./atmosphere";
@@ -85,7 +84,6 @@ import { FinalCopyEffectDesc } from "./layers/effect/FinalCopyEffectDesc";
 import { LayersManager } from "./layersManager";
 import { overrideMaterialsForMRT } from "./material";
 import type { TileMesh } from "./mesh/tile";
-import { setupWebGLNodesHandler } from "./nodes";
 import { RenderPassOrchestrator } from "./orchestrators/RenderPassOrchestrator";
 import { PickHelper } from "./pick/pickHelper";
 import { TerrainPicker } from "./pick/pickTerrain";
@@ -145,7 +143,6 @@ export * from "./source";
 export * from "./effects";
 export * from "./shaders";
 export * from "./material";
-export * from "./nodes";
 export * from "./core";
 export { BufferView } from "./bufferView";
 export * from "./layers";
@@ -277,7 +274,6 @@ export default class ThreeView<
 > extends EventHandler<ViewEvents> {
   private _camera: ThreeViewCamera;
   private _renderer: WebGLRenderer;
-  private _nodeLibrary: BasicNodeLibrary;
   private _globe!: Globe;
   private _atmosphere: Atmosphere;
 
@@ -602,8 +598,6 @@ export default class ThreeView<
     renderer.autoClearColor = false;
     renderer.autoClearDepth = false;
 
-    this._nodeLibrary = setupWebGLNodesHandler(renderer);
-
     this._renderer = renderer;
 
     renderer.shadowMap.enabled = !!options.shadow;
@@ -907,7 +901,6 @@ export default class ThreeView<
       concurrencyManager,
       this._core,
       this._meshes,
-      this._nodeLibrary,
     );
     this.registries = new Registries(this, this.viewContext);
     this.eventContext = new EventContext({
@@ -969,7 +962,6 @@ export default class ThreeView<
         // },
       );
       this._pickHelper.enablePick(this._options.picking ?? true);
-      this._pickHelper.setLightsGroup(this._scenes.light);
     }
 
     await this.initializeRenderPass();

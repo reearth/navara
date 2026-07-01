@@ -1293,6 +1293,7 @@ mod terrain_tile_tests {
             extension: DataRequesterExtension::Png,
             status,
             managed_by_data_manager: false,
+            byte_range: None,
             request_vertex_normals: false,
             request_water_mask: false,
             token: None,

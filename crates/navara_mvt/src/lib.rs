@@ -7,10 +7,12 @@ use navara_vector_tile::VectorTileSet;
 mod data_requester;
 mod geometry;
 mod layer;
+mod pmtiles_decoder;
 pub mod source;
 mod source_cache;
 
 pub use navara_vector_tile::LayerResources as MvtLayerResources;
+pub use pmtiles_decoder::MvtPmtilesDecoder;
 pub use source_cache::{
     MvtSourceCache, MvtSourceId, MvtSourceResources, SourceId, TraversalConfig,
 };

@@ -47,6 +47,8 @@ export class BatchedSdfTextMesh
   private _highQuality: boolean;
   private _fontManager: FontManager;
   private _needRender?: () => void;
+  /** Unsubscribe from the font manager's atlas-eviction notifications. */
+  private _unsubscribeEvict?: () => void;
   /**
    * Face URLs loaded by this mesh for font-family fonts.
    * Each URL in this set has had loadFont() called exactly once by this mesh
@@ -69,6 +71,52 @@ export class BatchedSdfTextMesh
     this._fontManager = ctx.fontManager;
     this._loadedFaceUrls = loadedFaceUrls ?? new Set();
     this.initMeshes(m);
+    // When the shared atlas evicts glyphs, a still-in-flight glyph this batch
+    // already baked into a visible mesh may have had its rect reused. Rebuild
+    // any such stale mesh so its UVs and retains refresh.
+    this._unsubscribeEvict = this._fontManager.onAtlasEvicted(
+      this._fontIdentifier,
+      this._highQuality,
+      () => this._revalidateStaleMeshes(),
+    );
+  }
+
+  /**
+   * After an atlas eviction, re-prepare and force-rebuild any visible mesh whose
+   * shaped text is now stale (its pinned glyphs may have been evicted before the
+   * retain landed and its rect reused). Fresh meshes short-circuit on the cheap
+   * `isTextPrepared` check, so this is inexpensive to run per eviction.
+   */
+  private _revalidateStaleMeshes(): void {
+    const q = this._highQuality;
+    for (const mesh of this.meshes()) {
+      const text = mesh.text;
+      if (!mesh.visible || !text) continue;
+      if (this._fontManager.isTextPrepared(this._fontIdentifier, text, q)) {
+        continue;
+      }
+      this._fontManager
+        .prepareText(this._fontIdentifier, text, q, this._loadedFaceUrls)
+        .then(() => {
+          // Text may have changed (or the mesh hidden) while re-preparing.
+          if (mesh.text !== text || !mesh.visible) return;
+          const sharedTex = this._fontManager.getAtlasTexture(
+            this._fontIdentifier,
+            q,
+          );
+          if (sharedTex) mesh.setAtlasTexture(sharedTex);
+          mesh.setColorAtlasTexture(
+            this._fontManager.getColorAtlasTexture(this._fontIdentifier, q),
+          );
+          // Force a rebuild even though the text string is unchanged: the baked
+          // atlas rects and glyph retains must refresh against the new metrics.
+          mesh.setText(text, true);
+          this._needRender?.();
+        })
+        .catch((err: unknown) => {
+          console.error("Failed to revalidate text after eviction:", err);
+        });
+    }
   }
 
   get fontIdentifier(): string {
@@ -401,6 +449,8 @@ export class BatchedSdfTextMesh
   }
 
   dispose() {
+    this._unsubscribeEvict?.();
+    this._unsubscribeEvict = undefined;
     const q = this._highQuality;
     const unload =
       this._loadedFaceUrls.size > 0

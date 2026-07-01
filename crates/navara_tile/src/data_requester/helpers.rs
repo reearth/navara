@@ -70,7 +70,7 @@ pub(crate) fn request_terrain_data(
         // is_new=true means this is the first consumer for this URL.
         // fetch_already_enqueued=true means another consumer already triggered a fetch.
         let (shared_handle, is_new, fetch_already_enqueued) =
-            data_manager.register_consumer(url.clone(), entity_id, buf);
+            data_manager.register_consumer(url.clone(), None, entity_id, buf);
 
         // Check if data already exists in BufferStore (loaded by previous consumer)
         let data_exists = buf.get_u8(&shared_handle).is_some();

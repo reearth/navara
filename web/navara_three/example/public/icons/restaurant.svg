@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <circle cx="32" cy="32" r="29" fill="#e8590c" stroke="#ffffff" stroke-width="2.5"/>
+  <!-- fork -->
+  <rect x="22.5" y="17" width="2" height="9" rx="1" fill="#fff"/>
+  <rect x="26" y="17" width="2" height="9" rx="1" fill="#fff"/>
+  <rect x="29.5" y="17" width="2" height="9" rx="1" fill="#fff"/>
+  <rect x="22.5" y="24" width="9" height="2.4" rx="1.2" fill="#fff"/>
+  <rect x="25.5" y="25" width="3" height="22" rx="1.5" fill="#fff"/>
+  <!-- knife -->
+  <path d="M39.5 17 c4 1.5 4.5 13 1 16.5 h-1 z" fill="#fff"/>
+  <rect x="38.5" y="31" width="3" height="16" rx="1.5" fill="#fff"/>
+</svg>

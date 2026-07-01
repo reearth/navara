@@ -10,5 +10,6 @@ bevy_log.workspace = true
 bevy_ecs.workspace = true
 approx.workspace = true
 regex.workspace = true
+url.workspace = true
 navara_math.workspace = true
 serde.workspace = true

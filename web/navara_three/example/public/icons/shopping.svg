@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <circle cx="32" cy="32" r="29" fill="#d6336c" stroke="#ffffff" stroke-width="2.5"/>
+  <!-- bag body -->
+  <path d="M21 27 h22 l1.8 18.5 a2.5 2.5 0 0 1 -2.5 2.7 H21.7 a2.5 2.5 0 0 1 -2.5 -2.7 Z" fill="#fff"/>
+  <!-- handle -->
+  <path d="M26 28 V24 a6 6 0 0 1 12 0 v4" fill="none" stroke="#d6336c" stroke-width="3.2"/>
+</svg>
