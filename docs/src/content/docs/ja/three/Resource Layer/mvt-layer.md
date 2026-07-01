@@ -7,12 +7,19 @@ sidebar:
 
 MVT（Mapbox Vector Tiles）レイヤーは、ベクタータイル形式の地理データを表示するためのレイヤーです。大規模なベクターデータを効率的に表示できます。
 
+`data.url` には 2 種類の形式を指定できます。
+
+- **タイルテンプレート** — `{z}/{x}/{y}` プレースホルダーを含む URL。各タイルを個別に取得します。
+- **PMTiles アーカイブ** — `.pmtiles` で終わる単一の URL。すべてのタイルが 1 つのファイルにまとめられ、HTTP レンジリクエストで取得されます。詳しくは下記の [PMTiles アーカイブ](#pmtiles-アーカイブ)を参照してください。
+
+どちらの形式でも同じ MVT レイヤーが生成され、エンジンが URL に応じて適切なソースを自動的に選択します。
+
 ## 基本設定
 
-| プロパティ | 型                | 説明                                                         |
-| ---------- | ----------------- | ------------------------------------------------------------ |
-| `type`     | `"mvt"`           | レイヤータイプ（必須）                                       |
-| `data`     | `{ url: string }` | ベクタータイルの URL（`{z}/{x}/{y}` プレースホルダーを含む） |
+| プロパティ | 型                | 説明                                                                       |
+| ---------- | ----------------- | -------------------------------------------------------------------------- |
+| `type`     | `"mvt"`           | レイヤータイプ（必須）                                                     |
+| `data`     | `{ url: string }` | ベクタータイルの URL（`{z}/{x}/{y}` テンプレート、または `.pmtiles` アーカイブ URL） |
 
 ## 対応マテリアル
 
@@ -71,6 +78,71 @@ view.addLayer({
 
 :::warning
 URL にクエリパラメータを追加すると、キャッシュが共有されなくなります。キャッシュを効率的に活用するには、`data.url` を完全に一致させてください。
+:::
+
+## PMTiles アーカイブ
+
+[PMTiles](https://docs.protomaps.com/pmtiles/) アーカイブは、タイルピラミッド全体を **1 つのファイル** にまとめたものです。タイルごとに HTTP リクエストを送る代わりに、エンジンはアーカイブのヘッダーとディレクトリを一度だけ読み込み、その後は HTTP レンジリクエストで個々のタイルを取得します。ペイロードが MVT のアーカイブのみサポートされます。
+
+利用するには `data.url` にアーカイブを指定します。URL に `{z}/{x}/{y}` プレースホルダーは **不要** で、`.pmtiles` で終わります。
+
+```typescript
+import ThreeView, { Color } from "@navara/three";
+
+// Credit: © OpenStreetMap contributors, © Protomaps (https://protomaps.com)
+const PMTILES_URL =
+  "https://pmtiles.io/protomaps(vector)ODbL_firenze.pmtiles";
+
+view.addLayer({
+  type: "mvt",
+  data: { url: PMTILES_URL },
+  polygon: {
+    color: new Color().setStyle("#4a90d9"),
+    clampToGround: true,
+  },
+  vectorTile: {
+    maxZoom: 15,
+    layers: ["water"],
+  },
+});
+```
+
+これ以外はテンプレート形式の MVT レイヤーと同じです。同じマテリアルが適用でき、`vectorTile.layers` でスタイルを適用するベクターレイヤーを選択でき、同一の `data.url` を共有する複数のレイヤーは 1 つのアーカイブソースを共有します（ヘッダー／ディレクトリの取得は一度だけ、タイルキャッシュも共有）。
+
+```typescript
+import ThreeView, { Color } from "@navara/three";
+
+const PMTILES_URL =
+  "https://pmtiles.io/protomaps(vector)ODbL_firenze.pmtiles";
+
+// 土地のベース塗り。
+view.addLayer({
+  type: "mvt",
+  data: { url: PMTILES_URL },
+  polygon: {
+    color: new Color().setStyle("#d0bf70"),
+    clampToGround: true,
+  },
+  vectorTile: { maxZoom: 15, layers: ["earth"] },
+});
+
+// 道路を上に重ねる（同じアーカイブを一度だけ解決）。
+view.addLayer({
+  type: "mvt",
+  data: { url: PMTILES_URL },
+  polyline: {
+    show: true,
+    color: new Color().setStyle("#278b8c"),
+    width: 6,
+    height: 1,
+    clampToGround: true,
+  },
+  vectorTile: { maxZoom: 15, layers: ["roads"] },
+});
+```
+
+:::note
+アーカイブは HTTP レンジリクエスト（`Range` / `Accept-Ranges`）をサポートするホストから配信する必要があります。クロスオリジンの URL の場合は CORS も許可されている必要があります。ほとんどの静的ホスト（S3、CDN）は両方を満たしています。
 :::
 
 ## 使用例

@@ -56,7 +56,7 @@ data: {
 
 ### [MVT Layer](../../../three/resource-layer/mvt-layer/)
 
-**用途:** Mapbox Vector Tiles（MVT）データ用
+**用途:** Mapbox Vector Tiles（MVT）データ用（`{z}/{x}/{y}` タイルテンプレート、または `.pmtiles` アーカイブ）
 **対応マテリアル:** PointMaterial, BillboardMaterial, TextMaterial, PolylineMaterial, PolygonMaterial, VectorTileMaterial
 
 ### [Terrain Layer](../../../three/resource-layer/terrain-layer/)

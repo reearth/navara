@@ -56,7 +56,7 @@ data: {
 
 ### [MVT Layer](../../../three/resource-layer/mvt-layer/)
 
-**Use case:** For Mapbox Vector Tiles (MVT) data
+**Use case:** For Mapbox Vector Tiles (MVT) data, from either `{z}/{x}/{y}` tile templates or `.pmtiles` archives
 **Supported materials:** PointMaterial, BillboardMaterial, TextMaterial, PolylineMaterial, PolygonMaterial, VectorTileMaterial
 
 ### [Terrain Layer](../../../three/resource-layer/terrain-layer/)

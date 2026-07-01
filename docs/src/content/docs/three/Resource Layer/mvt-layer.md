@@ -7,12 +7,19 @@ sidebar:
 
 The MVT (Mapbox Vector Tiles) layer is a layer for displaying geographic data in vector tile format. It can efficiently display large-scale vector data.
 
+The layer accepts two kinds of `data.url`:
+
+- **Tile templates** — a URL containing `{z}/{x}/{y}` placeholders, where each tile is fetched individually.
+- **PMTiles archives** — a single URL ending in `.pmtiles`, where all tiles live in one file served over HTTP range requests. See [PMTiles Archives](#pmtiles-archives) below.
+
+Both forms produce the same MVT layer; the engine picks the right source automatically based on the URL.
+
 ## Basic Configuration
 
-| Property   | Type              | Description                                                  |
-| ---------- | ----------------- | ------------------------------------------------------------ |
-| `type`     | `"mvt"`           | Layer type (required)                                        |
-| `data`     | `{ url: string }` | Vector tile URL (containing `{z}/{x}/{y}` placeholders)     |
+| Property   | Type              | Description                                                                                     |
+| ---------- | ----------------- | ----------------------------------------------------------------------------------------------- |
+| `type`     | `"mvt"`           | Layer type (required)                                                                           |
+| `data`     | `{ url: string }` | Vector tile URL — either a `{z}/{x}/{y}` template or a `.pmtiles` archive URL                   |
 
 ## Supported Materials
 
@@ -71,6 +78,71 @@ In the example above, since the same URL is used, tile data is downloaded only o
 
 :::warning
 Adding query parameters to the URL will prevent cache sharing. To efficiently use caching, ensure the `data.url` is an exact match.
+:::
+
+## PMTiles Archives
+
+A [PMTiles](https://docs.protomaps.com/pmtiles/) archive packs an entire tile pyramid into a **single file**. Instead of requesting one tile per HTTP call, the engine reads the archive's header and directory once, then fetches individual tiles with HTTP range requests. Only archives whose payload is MVT are supported.
+
+To use one, point `data.url` at the archive. The URL has **no** `{z}/{x}/{y}` placeholders and ends in `.pmtiles`:
+
+```typescript
+import ThreeView, { Color } from "@navara/three";
+
+// Credit: © OpenStreetMap contributors, © Protomaps (https://protomaps.com)
+const PMTILES_URL =
+  "https://pmtiles.io/protomaps(vector)ODbL_firenze.pmtiles";
+
+view.addLayer({
+  type: "mvt",
+  data: { url: PMTILES_URL },
+  polygon: {
+    color: new Color().setStyle("#4a90d9"),
+    clampToGround: true,
+  },
+  vectorTile: {
+    maxZoom: 15,
+    layers: ["water"],
+  },
+});
+```
+
+Everything else is identical to a templated MVT layer — the same materials apply, `vectorTile.layers` selects which vector layers to style, and multiple layers sharing the same `data.url` share one archive source (a single header/directory fetch and a shared tile cache).
+
+```typescript
+import ThreeView, { Color } from "@navara/three";
+
+const PMTILES_URL =
+  "https://pmtiles.io/protomaps(vector)ODbL_firenze.pmtiles";
+
+// Base land fill.
+view.addLayer({
+  type: "mvt",
+  data: { url: PMTILES_URL },
+  polygon: {
+    color: new Color().setStyle("#d0bf70"),
+    clampToGround: true,
+  },
+  vectorTile: { maxZoom: 15, layers: ["earth"] },
+});
+
+// Roads drape on top — same archive, resolved once.
+view.addLayer({
+  type: "mvt",
+  data: { url: PMTILES_URL },
+  polyline: {
+    show: true,
+    color: new Color().setStyle("#278b8c"),
+    width: 6,
+    height: 1,
+    clampToGround: true,
+  },
+  vectorTile: { maxZoom: 15, layers: ["roads"] },
+});
+```
+
+:::note
+The archive must be served from a host that supports HTTP range requests (`Range` / `Accept-Ranges`) and, for cross-origin URLs, permits CORS. Most static hosts (S3, CDNs) satisfy both.
 :::
 
 ## Usage Examples
