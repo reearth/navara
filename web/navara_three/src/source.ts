@@ -16,12 +16,20 @@ import type { SourceDescription } from "./type";
  * const poi = view.addSource({
  *   type: "vector-tile",
  *   url: "https://example.com/{z}/{x}/{y}.pbf",
- *   sourceLayers: ["building"],
  * });
  *
- * view.addLayer({ type: "vector", source: poi, polygon: { color: 0x00aaff } });
- * view.addLayer({ type: "vector", source: poi, polyline: { color: 0xffffff } });
- * ```
+ * view.addLayer({
+ *   type: "vector",
+ *   source: poi,
+ *   sourceLayers: ["building"],
+ *   polygon: { color: 0x00aaff },
+ * });
+ * view.addLayer({
+ *   type: "vector",
+ *   source: poi,
+ *   sourceLayers: ["building"],
+ *   polyline: { color: 0xffffff },
+ * });
  */
 export class Source {
   /** The unique identifier of this source, used to reference it from layers. */
