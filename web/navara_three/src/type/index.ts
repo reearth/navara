@@ -16,7 +16,6 @@ import type {
   RasterTileSourceDescription,
   RasterDemSourceDescription,
   QuantizedMeshSourceDescription,
-  EllipsoidSourceDescription,
   Tiles3dSourceDescription,
   SourceDescription as SourceDescriptionImpl,
 } from "@navara/engine";
@@ -206,9 +205,6 @@ export type SourceDescription = Omit<
       >
     | WithColorSupport<
         Layer<QuantizedMeshSourceDescription & { type: "quantized-mesh" }>
-      >
-    | WithColorSupport<
-        Layer<EllipsoidSourceDescription & { type: "ellipsoid" }>
       >
     | WithColorSupport<Layer<Tiles3dSourceDescription & { type: "3d-tiles" }>>
     | WithColorSupport<Layer<Tiles3dSourceDescription & { type: "b3dm" }>>
