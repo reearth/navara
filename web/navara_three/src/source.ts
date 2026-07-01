@@ -1,5 +1,7 @@
 import type { Core } from "@navara/engine";
 
+import type { SourceDescription } from "./type";
+
 /**
  * A handle to a data source (GeoJSON, vector tile, raster tile, raster DEM,
  * quantized mesh, ellipsoid, 3D Tiles) registered via {@link ThreeView.addSource}.
@@ -26,29 +28,27 @@ export class Source {
   id: string;
   /** The discriminant type of this source (e.g. "vector-tile"). */
   type: string;
-  // private core: Core;
+  private core: Core;
 
-  constructor(id: string, type: string, _core: Core) {
+  constructor(id: string, type: string, core: Core) {
     this.id = id;
     this.type = type;
-    // this.core = core;
+    this.core = core;
   }
 
   /**
    * Updates the source configuration and re-fetches its data. The change
    * propagates to every layer that references this source.
    */
-  // TODO: Support dynamic update
-  // update(s: SourceDescription) {
-  //   this.core.updateSource(this.id, s);
-  // }
+  update(s: SourceDescription) {
+    this.core.updateSource(this.id, s);
+  }
 
   /**
    * Removes the source. This is refused (with a warning) while any layer still
    * references it; delete the referencing layers first.
    */
-  // TODO: Support dynamic deletion
-  // delete() {
-  //   this.core.deleteSource(this.id);
-  // }
+  delete() {
+    this.core.deleteSource(this.id);
+  }
 }
