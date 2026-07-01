@@ -89,11 +89,11 @@ import { PickHelper } from "./pick/pickHelper";
 import { TerrainPicker } from "./pick/pickTerrain";
 import { TexturizedSceneByTileCoordinates, type Scenes } from "./scene";
 import { ShadowMapViewers } from "./ShadowMapViewers";
+import { Source } from "./source";
 import { RendererStats } from "./stats";
 import { warmUp } from "./tasks/warmUp";
 import type { TextureOptions } from "./textures";
 import { TileTextureCompositor } from "./tileTexture";
-import { Source } from "./source";
 import {
   type AbortControllers,
   type LayerDescription,

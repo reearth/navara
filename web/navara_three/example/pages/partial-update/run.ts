@@ -178,8 +178,12 @@ function addRasterTileFolder(pane: Pane) {
 
   // Appearance updates need the layer's type + source so the layer can be
   // rebuilt from its source.
-  const updateRaster = (patch: { show?: boolean; color?: Color; opacity?: number; showBoundingBox?: boolean }) =>
-    gTileLayer.update({ type: "raster", source: gTileSource.id, ...patch });
+  const updateRaster = (patch: {
+    show?: boolean;
+    color?: Color;
+    opacity?: number;
+    showBoundingBox?: boolean;
+  }) => gTileLayer.update({ type: "raster", source: gTileSource.id, ...patch });
 
   rasterFolder
     .addBinding(tileParams, "rasterShow", { label: "show" })

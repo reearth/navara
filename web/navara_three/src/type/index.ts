@@ -186,27 +186,34 @@ export type LayerDescription =
 export type SourceDescription = Omit<
   NormalizeWASMClass<SourceDescriptionImpl>,
   "type"
-> & (
-  | (Omit<
-      WithColorSupport<Layer<GeoJsonSourceDescription & { type: "geojson" }>>,
-      "data"
-    > & {
-      /** Inline GeoJSON. Use `url` instead to fetch from a URL. */
-      data?: FeatureCollection | Feature | Geometry;
-    })
-  | WithColorSupport<
-      Layer<VectorTileSourceDescription & { type: "vector-tile" }>
-    >
-  | WithColorSupport<Layer<RasterTileSourceDescription & { type: "raster-tile" }>>
-  | WithColorSupport<Layer<RasterDemSourceDescription & { type: "raster-dem" }>>
-  | WithColorSupport<
-      Layer<QuantizedMeshSourceDescription & { type: "quantized-mesh" }>
-    >
-  | WithColorSupport<Layer<EllipsoidSourceDescription & { type: "ellipsoid" }>>
-  | WithColorSupport<Layer<Tiles3dSourceDescription & { type: "3d-tiles" }>>
-  | WithColorSupport<Layer<Tiles3dSourceDescription & { type: "b3dm" }>>
-  | WithColorSupport<Layer<Tiles3dSourceDescription & { type: "pnts" }>>
-);
+> &
+  (
+    | (Omit<
+        WithColorSupport<Layer<GeoJsonSourceDescription & { type: "geojson" }>>,
+        "data"
+      > & {
+        /** Inline GeoJSON. Use `url` instead to fetch from a URL. */
+        data?: FeatureCollection | Feature | Geometry;
+      })
+    | WithColorSupport<
+        Layer<VectorTileSourceDescription & { type: "vector-tile" }>
+      >
+    | WithColorSupport<
+        Layer<RasterTileSourceDescription & { type: "raster-tile" }>
+      >
+    | WithColorSupport<
+        Layer<RasterDemSourceDescription & { type: "raster-dem" }>
+      >
+    | WithColorSupport<
+        Layer<QuantizedMeshSourceDescription & { type: "quantized-mesh" }>
+      >
+    | WithColorSupport<
+        Layer<EllipsoidSourceDescription & { type: "ellipsoid" }>
+      >
+    | WithColorSupport<Layer<Tiles3dSourceDescription & { type: "3d-tiles" }>>
+    | WithColorSupport<Layer<Tiles3dSourceDescription & { type: "b3dm" }>>
+    | WithColorSupport<Layer<Tiles3dSourceDescription & { type: "pnts" }>>
+  );
 
 export type MeshCache = Map<string, Mesh | Sprite | Object3D>;
 
