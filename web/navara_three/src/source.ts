@@ -53,8 +53,8 @@ export class Source {
   }
 
   /**
-   * Removes the source. This is refused (with a warning) while any layer still
-   * references it; delete the referencing layers first.
+   * Removes the source.
+   * Note: deletion is ignored while any layer still references this source.
    */
   delete() {
     this.core.deleteSource(this.id);
