@@ -14,8 +14,8 @@ use navara_layer::{
 use navara_material::{Appearance, ElevationHeatmapConfig, HillshadeConfig};
 use navara_parser::geojson::GeoJson;
 use navara_source::{
-    B3dmSource, EllipsoidSource, GeoJsonData, GeoJsonSource, PntsSource, QuantizedMeshSource,
-    RasterDemSource, RasterTileSource, Source, Tiles3dSource, VectorTileSource,
+    B3dmSource, GeoJsonData, GeoJsonSource, PntsSource, QuantizedMeshSource, RasterDemSource,
+    RasterTileSource, Source, Tiles3dSource, VectorTileSource,
 };
 use navara_wasm_types::{
     BillboardMaterial, ElevationDecoder, ModelMaterial, PointMaterial, PolygonMaterial,
@@ -149,19 +149,6 @@ pub struct QuantizedMeshSourceDescription {
     #[wasm_bindgen(js_name = overscaledMaxZoom)]
     #[serde(rename = "overscaledMaxZoom")]
     pub overscaled_max_zoom: Option<usize>,
-}
-
-#[wasm_bindgen]
-#[derive(Debug, Clone, Deserialize)]
-pub struct EllipsoidSourceDescription {
-    #[wasm_bindgen(getter_with_clone)]
-    pub r#type: Option<String>,
-    #[wasm_bindgen(js_name = minZoom)]
-    #[serde(rename = "minZoom")]
-    pub min_zoom: Option<usize>,
-    #[wasm_bindgen(js_name = maxZoom)]
-    #[serde(rename = "maxZoom")]
-    pub max_zoom: Option<usize>,
 }
 
 #[wasm_bindgen]
@@ -381,15 +368,6 @@ impl SourceDescription {
                     overscaled_max_zoom: desc
                         .overscaled_max_zoom
                         .unwrap_or(DEFAULT_OVERSCALED_MAX_ZOOM),
-                }))
-            }
-            "ellipsoid" => {
-                let desc: EllipsoidSourceDescription =
-                    serde_wasm_bindgen::from_value(value).ok()?;
-                Some(Source::Ellipsoid(EllipsoidSource {
-                    source_id: source_id.to_string(),
-                    min_zoom: desc.min_zoom.unwrap_or(DEFAULT_MIN_ZOOM),
-                    max_zoom: desc.max_zoom.unwrap_or(DEFAULT_MAX_ZOOM),
                 }))
             }
             "3d-tiles" => {
@@ -631,17 +609,6 @@ fn build_terrain_layer(
                 }),
             )
         }
-        Source::Ellipsoid(_) => {
-            let d = navara_material::EllipsoidTerrainMaterial::default();
-            (
-                TerrainDataType::Ellipsoid,
-                TerrainAppearance::Ellipsoid(navara_material::EllipsoidTerrainMaterial {
-                    cast_shadow: desc.cast_shadow.unwrap_or(d.cast_shadow),
-                    receive_shadow: desc.receive_shadow.unwrap_or(d.receive_shadow),
-                    show_bounding_box: desc.show_bounding_box.unwrap_or(d.show_bounding_box),
-                }),
-            )
-        }
         _ => return None,
     };
 
@@ -734,12 +701,6 @@ pub fn legacy_source(source_id: &str, layer_type: &str, value: JsValue) -> Optio
                         .overscaled_max_zoom
                         .unwrap_or(DEFAULT_OVERSCALED_MAX_ZOOM),
                 }))
-            } else if let Some(m) = layer.ellipsoid {
-                Some(Source::Ellipsoid(EllipsoidSource {
-                    source_id: source_id.to_owned(),
-                    min_zoom: m.min_zoom.unwrap_or(DEFAULT_MIN_ZOOM),
-                    max_zoom: m.max_zoom.unwrap_or(DEFAULT_MAX_ZOOM),
-                }))
             } else if let Some(m) = layer.quantized_mesh {
                 // Historical quantized-mesh defaults: Geographic { tms: true }, max_zoom 14.
                 let tms = m.tms.unwrap_or(true);
@@ -763,6 +724,8 @@ pub fn legacy_source(source_id: &str, layer_type: &str, value: JsValue) -> Optio
                         .unwrap_or(DEFAULT_OVERSCALED_MAX_ZOOM),
                 }))
             } else {
+                // Ellipsoid terrain is layer-only (render settings, no data), so
+                // it needs no source.
                 None
             }
         }

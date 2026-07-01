@@ -18,7 +18,6 @@ pub enum Source {
     RasterTile(RasterTileSource),
     RasterDem(RasterDemSource),
     QuantizedMesh(QuantizedMeshSource),
-    Ellipsoid(EllipsoidSource),
     Tiles3d(Tiles3dSource),
     B3dm(B3dmSource),
     Pnts(PntsSource),
@@ -33,15 +32,14 @@ impl Source {
             Source::RasterTile(s) => &s.source_id,
             Source::RasterDem(s) => &s.source_id,
             Source::QuantizedMesh(s) => &s.source_id,
-            Source::Ellipsoid(s) => &s.source_id,
             Source::Tiles3d(s) => &s.source_id,
             Source::B3dm(s) => &s.source_id,
             Source::Pnts(s) => &s.source_id,
         }
     }
 
-    /// The fetch URL (template) of this source, if it has one. Inline GeoJSON,
-    /// ellipsoid terrain, and other URL-less variants return `None`.
+    /// The fetch URL (template) of this source, if it has one. Inline GeoJSON
+    /// and other URL-less variants return `None`.
     pub fn url(&self) -> Option<&str> {
         match self {
             Source::GeoJson(s) => match s.data.as_ref() {
@@ -52,7 +50,6 @@ impl Source {
             Source::RasterTile(s) => Some(&s.url),
             Source::RasterDem(s) => Some(&s.url),
             Source::QuantizedMesh(s) => Some(&s.url),
-            Source::Ellipsoid(_) => None,
             Source::Tiles3d(s) => Some(&s.url),
             Source::B3dm(s) => Some(&s.url),
             Source::Pnts(s) => Some(&s.url),
@@ -65,7 +62,6 @@ impl Source {
             Source::RasterTile(s) => s.min_zoom,
             Source::RasterDem(s) => s.min_zoom,
             Source::QuantizedMesh(s) => s.min_zoom,
-            Source::Ellipsoid(s) => s.min_zoom,
             _ => unreachable!("min_zoom is not supported for this source variant"),
         }
     }
@@ -77,7 +73,6 @@ impl Source {
             Source::RasterTile(s) => s.max_zoom,
             Source::RasterDem(s) => s.max_zoom,
             Source::QuantizedMesh(s) => s.max_zoom,
-            Source::Ellipsoid(s) => s.max_zoom,
             _ => unreachable!("max_zoom is not supported for this source variant"),
         }
     }
@@ -112,30 +107,18 @@ impl Source {
 
     /// Whether `z` is at or beyond this source's minimum zoom.
     pub fn is_over_min_zoom(&self, z: usize) -> bool {
-        match self {
-            // Ellipsoid terrain has no lower bound; it starts from zoom 0.
-            Source::Ellipsoid(_) => true,
-            _ => z >= self.min_zoom(),
-        }
+        z >= self.min_zoom()
     }
 
     /// Whether `z` is at or beyond this source's maximum zoom (exclusive upper
     /// bound for new tile requests).
     pub fn is_over_max_zoom(&self, z: usize) -> bool {
-        match self {
-            // Ellipsoid terrain has no maximum zoom limit.
-            Source::Ellipsoid(_) => false,
-            _ => z >= self.max_zoom(),
-        }
+        z >= self.max_zoom()
     }
 
     /// Whether `z` is at or beyond this source's overscaled maximum zoom.
     pub fn is_over_overscaled_max_zoom(&self, z: usize) -> bool {
-        match self {
-            // Ellipsoid terrain has no overscale limit.
-            Source::Ellipsoid(_) => false,
-            _ => z >= self.overscaled_max_zoom(),
-        }
+        z >= self.overscaled_max_zoom()
     }
 
     /// Whether tiles at `z` should reuse an overscaled parent tile: past
@@ -149,7 +132,7 @@ impl Source {
     pub fn elevation_decoder(&self) -> Option<&ElevationDecoder> {
         match self {
             Source::RasterDem(s) => Some(&s.elevation_decoder),
-            Source::Ellipsoid(_) | Source::QuantizedMesh(_) => None,
+            Source::QuantizedMesh(_) => None,
             _ => unreachable!("elevation_decoder is not supported for this source variant"),
         }
     }
@@ -158,7 +141,7 @@ impl Source {
     pub fn tile_size(&self) -> u32 {
         match self {
             Source::RasterDem(s) => s.tile_size,
-            Source::Ellipsoid(_) | Source::QuantizedMesh(_) => 256,
+            Source::QuantizedMesh(_) => 256,
             _ => unreachable!("tile_size is not supported for this source variant"),
         }
     }
@@ -167,7 +150,6 @@ impl Source {
     pub fn tiling_scheme(&self) -> TilingScheme {
         match self {
             Source::RasterDem(s) => TilingScheme::WebMercator { tms: s.tms },
-            Source::Ellipsoid(_) => TilingScheme::WebMercator { tms: false },
             Source::QuantizedMesh(s) => s.tiling_scheme.clone(),
             _ => unreachable!("tiling_scheme is not supported for this source variant"),
         }
@@ -178,7 +160,7 @@ impl Source {
     pub fn token(&self) -> Option<&str> {
         match self {
             Source::QuantizedMesh(s) => s.token.as_deref(),
-            Source::RasterDem(_) | Source::Ellipsoid(_) => None,
+            Source::RasterDem(_) => None,
             _ => unreachable!("token is not supported for this source variant"),
         }
     }
@@ -188,7 +170,7 @@ impl Source {
     pub fn request_vertex_normals(&self) -> bool {
         match self {
             Source::QuantizedMesh(s) => s.request_vertex_normals,
-            Source::RasterDem(_) | Source::Ellipsoid(_) => false,
+            Source::RasterDem(_) => false,
             _ => unreachable!("request_vertex_normals is not supported for this source variant"),
         }
     }
@@ -198,7 +180,7 @@ impl Source {
     pub fn request_water_mask(&self) -> bool {
         match self {
             Source::QuantizedMesh(s) => s.request_water_mask,
-            Source::RasterDem(_) | Source::Ellipsoid(_) => false,
+            Source::RasterDem(_) => false,
             _ => unreachable!("request_water_mask is not supported for this source variant"),
         }
     }
@@ -212,7 +194,6 @@ impl Source {
             Source::RasterTile(_) => "raster-tile",
             Source::RasterDem(_) => "raster-dem",
             Source::QuantizedMesh(_) => "quantized-mesh",
-            Source::Ellipsoid(_) => "ellipsoid",
             Source::Tiles3d(_) => "3d-tiles",
             Source::B3dm(_) => "b3dm",
             Source::Pnts(_) => "pnts",
@@ -292,14 +273,6 @@ pub struct QuantizedMeshSource {
     pub min_zoom: usize,
     pub max_zoom: usize,
     pub overscaled_max_zoom: usize,
-}
-
-/// Plain ellipsoid terrain with no elevation data.
-#[derive(Debug, Clone, PartialEq, Default)]
-pub struct EllipsoidSource {
-    pub source_id: String,
-    pub min_zoom: usize,
-    pub max_zoom: usize,
 }
 
 /// 3D Tiles source pointing at a `tileset.json` hierarchy.

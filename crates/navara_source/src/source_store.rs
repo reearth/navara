@@ -143,12 +143,13 @@ impl SourceStore {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::EllipsoidSource;
+    use crate::Tiles3dSource;
 
     fn source(id: &str) -> Source {
-        Source::Ellipsoid(EllipsoidSource {
+        Source::Tiles3d(Tiles3dSource {
             source_id: id.to_owned(),
-            ..Default::default()
+            url: String::new(),
+            crs: None,
         })
     }
 
