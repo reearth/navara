@@ -1303,11 +1303,11 @@ export default class ThreeView<
    * @returns A Source handle for referencing, updating, and deleting the source
    */
   addSource(s: SourceDescription): Source {
-    const sourceId = this._core?.addSource(s);
-    invariant(sourceId);
     invariant(this._core);
+    invariant(s.type);
+    const sourceId = this._core.addSource(s);
 
-    return new Source(sourceId, s.type ?? "", this._core);
+    return new Source(sourceId, s.type, this._core);
   }
 
   /**
