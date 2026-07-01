@@ -2,12 +2,13 @@ use crate::{GeoJsonData, Source};
 use bevy_ecs::prelude::Resource;
 use std::collections::HashMap;
 
-/// A registry mapping a source id to its [`Source`] definition, the spawned
-/// source entity, and the number of layers currently referencing it.
+/// A registry mapping a source id to its [`Source`] definition and the number of
+/// layers currently referencing it.
 ///
 /// This mirrors `LayerDescStore` on the layer side, and additionally tracks a
-/// reference count so a source can be kept alive while any layer references it
-/// and cleaned up once the last reference is gone.
+/// reference count so sources stay alive while referenced. Implicit sources are
+/// reclaimed automatically once their last reference is dropped; explicit sources
+/// are removed only via `delete`.
 #[derive(Resource, Debug, Default)]
 pub struct SourceStore {
     map: HashMap<String, SourceEntry>,
