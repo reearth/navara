@@ -15,11 +15,18 @@ import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
-import { PersonViewPlugin, type ViewMode } from "@navara/three_plugins";
+import {
+  AttributionPlugin,
+  PersonViewPlugin,
+  type ViewMode,
+} from "@navara/three_plugins";
 import { Vector2 } from "three";
 import { Pane } from "tweakpane";
 
-import { showAttributions } from "../../helpers/attributions";
+import {
+  datasetToHtmlSource,
+  datasetToSource,
+} from "../../helpers/attribution-source";
 import {
   LOCAL_DATASETS,
   TERRAIN_DATASETS,
@@ -239,6 +246,7 @@ export const run = async () => {
   let firstSetup = true;
   let view: ThreeView<CustomDescriptions> | null = null;
   let personView: PersonViewPlugin | null = null;
+  let attribution: AttributionPlugin | null = null;
   let pane: Pane | null = null;
   let switching = false;
 
@@ -271,7 +279,10 @@ export const run = async () => {
       },
     });
 
-    showAttributions([TERRAIN_DATASETS.mapterhorn, TILE_DATASETS.eox]);
+    attribution?.show([
+      datasetToSource(TERRAIN_DATASETS.mapterhorn),
+      datasetToHtmlSource(TILE_DATASETS.eox),
+    ]);
   };
 
   const buildGoogle = (v: ThreeView<CustomDescriptions>) => {
@@ -285,7 +296,11 @@ export const run = async () => {
       model: { maxSse: 60, normals: true },
     });
 
-    showAttributions([TILES_3D_DATASETS.googlePhotorealTiles], [tiles]);
+    attribution?.show([
+      datasetToSource(TILES_3D_DATASETS.googlePhotorealTiles, {
+        creditLayerId: tiles.id,
+      }),
+    ]);
   };
 
   const setup = async (mode: BaseMode, kind: ViewKind) => {
@@ -299,6 +314,9 @@ export const run = async () => {
 
     const plugin = new DefaultPlugin();
     v.addPlugin(plugin);
+
+    attribution = new AttributionPlugin();
+    v.addPlugin(attribution);
 
     // PersonViewPlugin must be registered before init(). Seed it from the
     // current camera state so the position carries over from normal mode.
@@ -364,7 +382,7 @@ export const run = async () => {
     }
 
     if (kind === "person") {
-      showAttributions([LOCAL_DATASETS.soldierGLTF]);
+      attribution?.show([datasetToSource(LOCAL_DATASETS.soldierGLTF)]);
     }
 
     // Clouds are kept alive (creating/deleting them is expensive); toggle by
@@ -411,6 +429,10 @@ export const run = async () => {
     // requestAnimationFrame loop are torn down (the view does not own them).
     personView?.dispose();
     personView = null;
+    // ThreeView.dispose() does not dispose plugins; release the attribution
+    // plugin's DOM explicitly or it leaks across rebuilds.
+    attribution?.dispose();
+    attribution = null;
     view?.dispose();
     view = null;
   };

@@ -13,10 +13,11 @@ import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
+import { AttributionPlugin } from "@navara/three_plugins";
 import { Vector3, Quaternion, Euler } from "three";
 import { Pane } from "tweakpane";
 
-import { showAttributions } from "../../helpers/attributions";
+import { datasetToSource } from "../../helpers/attribution-source";
 import {
   TERRAIN_DATASETS,
   TILE_DATASETS,
@@ -42,6 +43,10 @@ export type CustomDescriptions = DefaultDescriptions;
 export const run = async (view: ThreeView<CustomDescriptions>) => {
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
+
+  const attribution = new AttributionPlugin();
+  view.addPlugin(attribution);
+
   await view.init();
 
   view.toneMappingExposure = 3;
@@ -127,10 +132,10 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   const pane = new Pane();
   addDateControl(view, pane);
 
-  showAttributions([
-    TERRAIN_DATASETS.mapterhorn,
-    TILE_DATASETS.openstreetmap,
-    TILES_3D_DATASETS.plateauChiyoda,
+  attribution.show([
+    datasetToSource(TERRAIN_DATASETS.mapterhorn),
+    datasetToSource(TILE_DATASETS.openstreetmap),
+    datasetToSource(TILES_3D_DATASETS.plateauChiyoda),
   ]);
 
   const startLLE = [35.69127684, 139.75865163, 7];

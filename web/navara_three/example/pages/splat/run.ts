@@ -8,10 +8,11 @@ import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
+import { AttributionPlugin } from "@navara/three_plugins";
 import { Vector3 } from "three";
 import { Pane } from "tweakpane";
 
-import { showAttributions } from "../../helpers/attributions";
+import { datasetToSource } from "../../helpers/attribution-source";
 import { SPLAT_DATASETS, TILE_DATASETS } from "../../helpers/constants";
 
 export type CustomDescriptions = DefaultDescriptions;
@@ -88,6 +89,10 @@ const placeSplat = (
 export const run = async (view: ThreeView<CustomDescriptions>) => {
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
+
+  const attribution = new AttributionPlugin();
+  view.addPlugin(attribution);
+
   await view.init();
 
   plugin.addDefaultPhotorealScene();
@@ -98,10 +103,10 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     rasterTile: { maxZoom: 23 },
   });
 
-  showAttributions([
-    TILE_DATASETS.openstreetmap,
-    SPLAT_DATASETS.quechua,
-    SPLAT_DATASETS.pencilSharpener,
+  attribution.show([
+    datasetToSource(TILE_DATASETS.openstreetmap),
+    datasetToSource(SPLAT_DATASETS.quechua),
+    datasetToSource(SPLAT_DATASETS.pencilSharpener),
   ]);
 
   for (const sample of SAMPLES) {

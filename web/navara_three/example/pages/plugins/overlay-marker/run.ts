@@ -1,20 +1,18 @@
-import ThreeView, { type Layer } from "@navara/three";
+import ThreeView from "@navara/three";
 import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
 import {
+  AttributionPlugin,
+  type AttributionSource,
   PersonViewPlugin,
   OverlayPlugin,
   moveOverlayElement,
 } from "@navara/three_plugins";
 
-import { showAttributions } from "../../../helpers/attributions";
-import {
-  type Dataset,
-  LOCAL_DATASETS,
-  TILES_3D_DATASETS,
-} from "../../../helpers/constants";
+import { datasetToSource } from "../../../helpers/attribution-source";
+import { LOCAL_DATASETS, TILES_3D_DATASETS } from "../../../helpers/constants";
 import { atZoneTime } from "../../../helpers/control";
 import { GOOGLE_MAPS_API_KEY } from "../../../helpers/keys";
 
@@ -51,9 +49,12 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   });
   const overlayPlugin = new OverlayPlugin({ maxDistance: 100_000 });
 
+  const attribution = new AttributionPlugin();
+
   view.addPlugin(defaultPlugin);
   view.addPlugin(personViewPlugin);
   view.addPlugin(overlayPlugin);
+  view.addPlugin(attribution);
 
   await view.init();
 
@@ -79,8 +80,9 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
 
   // Google 3D Tiles
   const googleApiKey = GOOGLE_MAPS_API_KEY;
-  const datasets: Dataset[] = [LOCAL_DATASETS.animatedBirdPigeonGLTF];
-  const layers: Layer[] = [];
+  const sources: AttributionSource[] = [
+    datasetToSource(LOCAL_DATASETS.animatedBirdPigeonGLTF),
+  ];
   if (googleApiKey) {
     const tilesLayer = view.addLayer({
       type: "cesium3dtiles",
@@ -92,10 +94,14 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
         normals: true,
       },
     });
-    datasets.unshift(TILES_3D_DATASETS.googlePhotorealTiles);
-    layers.push(tilesLayer);
+    // Per-tile credits nest under the Google source via `creditLayerId`.
+    sources.unshift(
+      datasetToSource(TILES_3D_DATASETS.googlePhotorealTiles, {
+        creditLayerId: tilesLayer.id,
+      }),
+    );
   }
-  showAttributions(datasets, layers);
+  attribution.show(sources);
 
   // Set overlay positions from landmark data
   overlayPlugin.setPositions(

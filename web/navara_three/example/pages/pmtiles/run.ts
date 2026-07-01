@@ -4,10 +4,11 @@ import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
+import { AttributionPlugin } from "@navara/three_plugins";
 import { SphericalHarmonics3 } from "three";
 import { Pane } from "tweakpane";
 
-import { showAttributions } from "../../helpers/attributions";
+import { datasetToSource } from "../../helpers/attribution-source";
 import { PMTILES_DATASETS } from "../../helpers/constants";
 import { SH_COEFFICIENTS } from "../../helpers/sh";
 
@@ -15,6 +16,9 @@ export type CustomDescriptions = DefaultDescriptions;
 
 export const run = async (view: ThreeView<CustomDescriptions>) => {
   view.addPlugin(new DefaultPlugin());
+
+  const attribution = new AttributionPlugin();
+  view.addPlugin(attribution);
 
   await view.init();
 
@@ -124,5 +128,5 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
       });
     });
 
-  showAttributions([PMTILES_DATASETS.protomapsFirenze]);
+  attribution.show([datasetToSource(PMTILES_DATASETS.protomapsFirenze)]);
 };

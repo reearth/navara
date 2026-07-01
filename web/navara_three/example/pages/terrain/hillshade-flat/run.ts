@@ -7,9 +7,10 @@ import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
+import { AttributionPlugin } from "@navara/three_plugins";
 import { Pane } from "tweakpane";
 
-import { showAttributions } from "../../../helpers/attributions";
+import { datasetToSource } from "../../../helpers/attribution-source";
 import { TERRAIN_DATASETS, TILE_DATASETS } from "../../../helpers/constants";
 import { addCameraControl, addDateControl } from "../../../helpers/control";
 
@@ -17,6 +18,10 @@ export type CustomDeclarations = DefaultDescriptions;
 
 export const run = async (view: ThreeView<CustomDeclarations>) => {
   view.addPlugin(new DefaultPlugin());
+
+  const attribution = new AttributionPlugin();
+  view.addPlugin(attribution);
+
   await view.init();
 
   view.toneMappingExposure = 3;
@@ -92,7 +97,10 @@ export const run = async (view: ThreeView<CustomDeclarations>) => {
 
   addDateControl(view, pane, date);
   addCameraControl(view, pane);
-  showAttributions([TERRAIN_DATASETS.mapterhorn, TILE_DATASETS.openstreetmap]);
+  attribution.show([
+    datasetToSource(TERRAIN_DATASETS.mapterhorn),
+    datasetToSource(TILE_DATASETS.openstreetmap),
+  ]);
 
   const params = {
     exaggeration: 0.5,

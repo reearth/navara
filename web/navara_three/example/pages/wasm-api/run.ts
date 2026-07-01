@@ -33,10 +33,11 @@ import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
+import { AttributionPlugin } from "@navara/three_plugins";
 import { Mesh, Vector2, Vector3, Object3D, Group, ArrowHelper } from "three";
 import { Pane, FolderApi } from "tweakpane";
 
-import { showAttributions } from "../../helpers/attributions";
+import { datasetToSource } from "../../helpers/attribution-source";
 import {
   TERRAIN_DATASETS,
   TILE_DATASETS,
@@ -103,6 +104,10 @@ export const run = async (
 ) => {
   const plugin = new DefaultPlugin();
   view.addPlugin(plugin);
+
+  const attribution = new AttributionPlugin();
+  view.addPlugin(attribution);
+
   await view.init();
 
   plugin.addDefaultPhotorealScene();
@@ -210,11 +215,11 @@ export const run = async (
   onDistPosChange();
   onRegisterChange();
 
-  showAttributions([
-    TERRAIN_DATASETS.gsi,
-    TILE_DATASETS.openstreetmap,
-    TILES_3D_DATASETS.plateauChiyoda,
-    LOCAL_DATASETS.steelDrumGLTF,
+  attribution.show([
+    datasetToSource(TERRAIN_DATASETS.gsi),
+    datasetToSource(TILE_DATASETS.openstreetmap),
+    datasetToSource(TILES_3D_DATASETS.plateauChiyoda),
+    datasetToSource(LOCAL_DATASETS.steelDrumGLTF),
   ]);
 };
 

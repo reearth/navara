@@ -7,10 +7,11 @@ import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
+import { AttributionPlugin } from "@navara/three_plugins";
 import { SphericalHarmonics3 } from "three";
 import { Pane } from "tweakpane";
 
-import { showAttributions } from "../../helpers/attributions";
+import { datasetToSource } from "../../helpers/attribution-source";
 import { PMTILES_DATASETS } from "../../helpers/constants";
 import { SH_COEFFICIENTS } from "../../helpers/sh";
 
@@ -162,6 +163,9 @@ const classifyPlace = (
 export const run = async (view: ThreeView<CustomDescriptions>) => {
   const defaultPlugin = new DefaultPlugin();
   view.addPlugin(defaultPlugin);
+
+  const attribution = new AttributionPlugin();
+  view.addPlugin(attribution);
 
   await view.init();
 
@@ -691,10 +695,10 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     view.forceUpdate();
   });
 
-  showAttributions([
-    PMTILES_DATASETS.overtureBase,
-    PMTILES_DATASETS.overtureDivisions,
-    PMTILES_DATASETS.overtureBuildings,
-    PMTILES_DATASETS.overturePlaces,
+  attribution.show([
+    datasetToSource(PMTILES_DATASETS.overtureBase),
+    datasetToSource(PMTILES_DATASETS.overtureDivisions),
+    datasetToSource(PMTILES_DATASETS.overtureBuildings),
+    datasetToSource(PMTILES_DATASETS.overturePlaces),
   ]);
 };

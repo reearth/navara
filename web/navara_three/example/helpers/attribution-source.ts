@@ -1,4 +1,4 @@
-import type { AttributionSource } from "@navara/three_plugins";
+import type { AttributionHtml, AttributionSource } from "@navara/three_plugins";
 
 import type { Dataset } from "./constants";
 
@@ -24,4 +24,18 @@ export const datasetToSource = (
   logo: dataset.logo,
   logoUrl: dataset.logoUrl,
   ...extra,
+});
+
+/**
+ * Build an {@link AttributionHtml} from a dataset whose credit is raw HTML
+ * (e.g. EOX's Sentinel-2 cloudless, where the notice carries anchor links).
+ *
+ * `attributionHtml` is required at the type level, mirroring
+ * {@link datasetToSource}: a plain-text dataset belongs in `datasetToSource`,
+ * not here.
+ */
+export const datasetToHtmlSource = (
+  dataset: Dataset & { attributionHtml: string },
+): AttributionHtml => ({
+  attributionHtml: dataset.attributionHtml,
 });

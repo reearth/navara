@@ -3,10 +3,13 @@ import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
-import { CesiumIonPlugin } from "@navara/three_plugins";
+import { AttributionPlugin, CesiumIonPlugin } from "@navara/three_plugins";
 import { Pane } from "tweakpane";
 
-import { showAttributions } from "../../../helpers/attributions";
+import {
+  datasetToHtmlSource,
+  datasetToSource,
+} from "../../../helpers/attribution-source";
 import { TERRAIN_DATASETS, TILE_DATASETS } from "../../../helpers/constants";
 import { addDateControl, atZoneDate } from "../../../helpers/control";
 
@@ -43,6 +46,9 @@ export const run = async (
 ) => {
   const defaultPlugin = new DefaultPlugin();
   view.addPlugin(defaultPlugin);
+
+  const attribution = new AttributionPlugin();
+  view.addPlugin(attribution);
 
   let cesiumIon: CesiumIonPlugin | undefined;
   if (terrainType === "cesiumIon") {
@@ -137,5 +143,8 @@ export const run = async (
     terrainType === "cesiumIon"
       ? TERRAIN_DATASETS.cesiumIon
       : TERRAIN_DATASETS.reearthQuantizedMesh;
-  showAttributions([terrainDataset, TILE_DATASETS.eox]);
+  attribution.show([
+    datasetToSource(terrainDataset),
+    datasetToHtmlSource(TILE_DATASETS.eox),
+  ]);
 };
