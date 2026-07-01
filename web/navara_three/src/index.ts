@@ -1239,28 +1239,26 @@ export default class ThreeView<
    * Handles the two-level structure: layer -> material -> color fields.
    */
   private _convertColorsToNumbers(obj: unknown): unknown {
-    // Convert Navara Color objects to hex numbers at any depth.
-    if (obj instanceof Color) {
-      return obj.toHex();
-    }
     if (obj === null || obj === undefined || typeof obj !== "object") {
       return obj;
     }
-    if (Array.isArray(obj)) {
-      return obj.map((v) => this._convertColorsToNumbers(v));
+
+    // Process the object's properties (shallow copy)
+    const result: Record<string, unknown> = { ...obj };
+
+    for (const [key, value] of Object.entries(result)) {
+      if (value && typeof value === "object" && !Array.isArray(value)) {
+        // Nested object (e.g., point, billboard, text, model, etc.)
+        const nestedResult: Record<string, unknown> = { ...value };
+        for (const [nestedKey, nestedValue] of Object.entries(nestedResult)) {
+          if (nestedValue instanceof Color) {
+            nestedResult[nestedKey] = nestedValue.toHex();
+          }
+        }
+        result[key] = nestedResult;
+      }
     }
-    // Leave non-plain objects (e.g. wasm class instances such as
-    // ElevationDecoder) untouched by reference — spreading them would drop their
-    // getter-backed fields and corrupt the value passed to WASM.
-    const proto = Object.getPrototypeOf(obj);
-    if (proto !== Object.prototype && proto !== null) {
-      return obj;
-    }
-    // Recurse into plain objects (e.g. point, billboard, polygon, source config).
-    const result: Record<string, unknown> = {};
-    for (const [key, value] of Object.entries(obj)) {
-      result[key] = this._convertColorsToNumbers(value);
-    }
+
     return result;
   }
 
