@@ -8,7 +8,6 @@ import { AttributionPlugin } from "@navara/three_plugins";
 import { AstroTime, Body, Equator, Horizon, Observer } from "astronomy-engine";
 import { Pane } from "tweakpane";
 
-
 import { datasetToSource } from "../../helpers/attribution-source";
 import { TERRAIN_DATASETS, TILE_DATASETS } from "../../helpers/constants";
 
