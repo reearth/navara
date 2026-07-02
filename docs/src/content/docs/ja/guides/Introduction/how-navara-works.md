@@ -13,7 +13,7 @@ Navara はプラグインシステムを使用してDescriptorを登録します
 
 独自のメッシュ、エフェクト、ライトを Three.js シーングラフへのフルアクセスを持って作成することもできます。これは Navara のビルトインオブジェクトを支えるのと同じ仕組みです。詳細は [Custom Descriptor](../../../three/core/custom-desc/) ドキュメントを参照してください。
 
-これらに加えて、Navara は GeoJSON、MVT、3D Tiles などの地理データを読み込み・表示するための[**レイヤー**](../../../three/layer/about/)を提供しています。レイヤーは地物とその属性の複雑さ — パース、空間インデックス、[`FeatureEvaluator`](../../../three/api/feature-evaluator/) による属性ベースのスタイリング — を扱います。一方、メッシュはジオメトリとレンダリングのみを扱うため、描画パフォーマンスに特化した最適化が可能で、大量のオブジェクトを効率的にレンダリングするのに適しています。この分離により、ユースケースに応じて適切なツールを選択できます。Descriptorタイプの詳細は [About Layer](../../../three/introduction/about-layer/) を参照してください。
+これらに加えて、Navara は GeoJSON、MVT、3D Tiles などの地理データを読み込み・表示するための[**レイヤー**](../../../three/layer/about/)を提供しています。レイヤーは地物とその属性の複雑さ — パース、空間インデックス、[`FeatureEvaluator`](../../../three/api/feature-evaluator/) による属性ベースのスタイリング — を扱います。一方、メッシュはジオメトリとレンダリングのみを扱うため、描画パフォーマンスに特化した最適化が可能で、大量のオブジェクトを効率的にレンダリングするのに適しています。この分離により、ユースケースに応じて適切なツールを選択できます。Descriptorタイプの詳細は [About Layer](../../../three/layer/about/) を参照してください。
 
 ```mermaid
 sequenceDiagram
