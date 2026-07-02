@@ -130,7 +130,7 @@ export class CustomRenderPass extends RenderPass {
     inputBuffer: WebGLRenderTarget | null,
     _outputBuffer: WebGLRenderTarget | null,
   ) {
-    const shouldDrapeByStencilTest = this._scenes.draped.children.length !== 0;    
+    const shouldDrapeByStencilTest = this._scenes.draped.children.length !== 0;
 
     const renderTarget = this.gbufferRenderTarget;
 
