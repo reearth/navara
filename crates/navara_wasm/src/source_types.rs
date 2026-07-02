@@ -9,7 +9,7 @@
 use navara_core::{CRS, TilingScheme};
 use navara_layer::{
     B3dmLayer, Cesium3dTilesLayer, GeoJsonLayer, LayerDescription, MvtLayer, PntsLayer,
-    TerrainAppearance, TerrainDataType, TerrainLayer, TilesLayer,
+    TerrainDataType, TerrainLayer, TilesLayer,
 };
 use navara_material::{Appearance, ElevationHeatmapConfig, HillshadeConfig};
 use navara_parser::geojson::GeoJson;
@@ -18,8 +18,9 @@ use navara_source::{
     RasterTileSource, Source, Tiles3dSource, VectorTileSource,
 };
 use navara_wasm_types::{
-    BillboardMaterial, ElevationDecoder, ModelMaterial, PointMaterial, PolygonMaterial,
-    PolylineMaterial, TextMaterial,
+    BillboardMaterial, ElevationDecoder, ElevationHeatmapMaterial, HillshadeMaterial,
+    ModelMaterial, PointMaterial, PolygonMaterial, PolylineMaterial, RasterMaterial,
+    TerrainMaterial, TextMaterial,
 };
 use serde::Deserialize;
 use wasm_bindgen::prelude::*;
@@ -412,31 +413,6 @@ pub fn read_source_ref(value: JsValue) -> Option<String> {
         .and_then(|d| d.source)
 }
 
-/// Hillshade options for a `raster` layer. The elevation decoder is taken from
-/// the referenced `raster-dem` source.
-#[wasm_bindgen]
-#[derive(Debug, Clone, Deserialize)]
-pub struct HillshadeInput {
-    pub exaggeration: Option<f32>,
-}
-
-/// Elevation-heatmap options for a `raster` layer. The elevation decoder is
-/// taken from the referenced `raster-dem` source.
-#[wasm_bindgen]
-#[derive(Debug, Clone, Deserialize)]
-pub struct ElevationHeatmapInput {
-    #[wasm_bindgen(js_name = maxHeight)]
-    #[serde(rename = "maxHeight")]
-    pub max_height: Option<f64>,
-    #[wasm_bindgen(js_name = minHeight)]
-    #[serde(rename = "minHeight")]
-    pub min_height: Option<f64>,
-    pub logarithmic: Option<bool>,
-    #[wasm_bindgen(js_name = logBoundary)]
-    #[serde(rename = "logBoundary")]
-    pub log_boundary: Option<f64>,
-}
-
 /// A `raster` layer renders a `raster-tile` (imagery) or `raster-dem` source.
 /// For a `raster-dem` source it can additionally render hillshade / elevation
 /// heatmap by decoding the same tiles.
@@ -447,17 +423,19 @@ pub struct RasterLayerDescription {
     pub r#type: Option<String>,
     #[wasm_bindgen(getter_with_clone)]
     pub source: Option<String>,
-    pub show: Option<bool>,
-    pub color: Option<u32>,
-    pub opacity: Option<f32>,
-    #[wasm_bindgen(js_name = showBoundingBox)]
-    #[serde(rename = "showBoundingBox")]
-    pub show_bounding_box: Option<bool>,
+    /// Imagery rendering options for the raster texture. Parallel to `hillshade`
+    /// and `elevationHeatmap`; `show`/`color`/etc. apply only to the imagery.
+    /// Accepts the legacy `rasterTile` key too so old-API tile layers can still
+    /// be updated (extra legacy fields like `maxZoom`/`tms` are ignored here —
+    /// they live on the source).
     #[wasm_bindgen(getter_with_clone)]
-    pub hillshade: Option<HillshadeInput>,
+    #[serde(alias = "rasterTile")] // TODO: Remove with the legacy layer API.
+    pub raster: Option<RasterMaterial>,
+    #[wasm_bindgen(getter_with_clone)]
+    pub hillshade: Option<HillshadeMaterial>,
     #[wasm_bindgen(getter_with_clone, js_name = elevationHeatmap)]
     #[serde(rename = "elevationHeatmap")]
-    pub elevation_heatmap: Option<ElevationHeatmapInput>,
+    pub elevation_heatmap: Option<ElevationHeatmapMaterial>,
 }
 
 /// A `terrain` layer renders a `raster-dem`, `quantized-mesh`, or `ellipsoid`
@@ -470,20 +448,15 @@ pub struct TerrainSourceLayerDescription {
     pub r#type: Option<String>,
     #[wasm_bindgen(getter_with_clone)]
     pub source: Option<String>,
-    pub show: Option<bool>,
-    #[wasm_bindgen(js_name = castShadow)]
-    #[serde(rename = "castShadow")]
-    pub cast_shadow: Option<bool>,
-    #[wasm_bindgen(js_name = receiveShadow)]
-    #[serde(rename = "receiveShadow")]
-    pub receive_shadow: Option<bool>,
-    #[wasm_bindgen(js_name = showBoundingBox)]
-    #[serde(rename = "showBoundingBox")]
-    pub show_bounding_box: Option<bool>,
-    pub skirt: Option<bool>,
-    #[wasm_bindgen(js_name = skirtExaggeration)]
-    #[serde(rename = "skirtExaggeration")]
-    pub skirt_exaggeration: Option<f32>,
+    /// Terrain mesh rendering options. Nested like the other layers' render
+    /// inputs (`raster`, `model`, ...); all fetch/geometry config lives on the
+    /// referenced source. Accepts the legacy terrain material keys too so
+    /// old-API terrain layers can still be updated (extra legacy fetch fields
+    /// are ignored — they live on the source).
+    #[wasm_bindgen(getter_with_clone)]
+    // TODO: Remove with the legacy layer API.
+    #[serde(alias = "rasterTerrain", alias = "quantizedMesh", alias = "ellipsoid")]
+    pub terrain: Option<TerrainMaterial>,
 }
 
 /// A `3d-tiles` layer renders a `3d-tiles` tileset (and the single-content
@@ -534,13 +507,8 @@ fn build_raster_layer(layer_id: &str, value: JsValue, source: &Source) -> Option
         _ => return None,
     };
 
-    let default = navara_material::RasterTileMaterial::default();
-    let appearance = Appearance::TerrainTile(navara_material::RasterTileMaterial {
-        show: desc.show.unwrap_or(default.show),
-        color: desc.color.unwrap_or(default.color),
-        opacity: desc.opacity.unwrap_or(default.opacity),
-        show_bounding_box: desc.show_bounding_box.unwrap_or(default.show_bounding_box),
-    });
+    let raster_material = desc.raster.map(Into::into).unwrap_or_default();
+    let appearance = Appearance::TerrainTile(raster_material);
 
     // Hillshade / heatmap require a DEM decoder, which only `raster-dem` provides.
     let hillshade_config = match (&desc.hillshade, decoder) {
@@ -577,40 +545,16 @@ fn build_terrain_layer(
 ) -> Option<LayerDescription> {
     let desc: TerrainSourceLayerDescription = serde_wasm_bindgen::from_value(value).ok()?;
 
-    // Terrain materials carry render config only; all fetch/geometry config
-    // (zoom range, tiling scheme, decoder, tile size, quantized-mesh extensions,
-    // token) is read live from the referenced source.
-    let (terrain_type, appearance) = match source {
-        Source::RasterDem(_) => {
-            let d = navara_material::RasterTerrainMaterial::default();
-            (
-                TerrainDataType::RasterDEM,
-                TerrainAppearance::Raster(navara_material::RasterTerrainMaterial {
-                    show: desc.show.unwrap_or(d.show),
-                    cast_shadow: desc.cast_shadow.unwrap_or(d.cast_shadow),
-                    receive_shadow: desc.receive_shadow.unwrap_or(d.receive_shadow),
-                    show_bounding_box: desc.show_bounding_box.unwrap_or(d.show_bounding_box),
-                    skirt: desc.skirt.unwrap_or(d.skirt),
-                    skirt_exaggeration: desc.skirt_exaggeration.unwrap_or(d.skirt_exaggeration),
-                }),
-            )
-        }
-        Source::QuantizedMesh(_) => {
-            let d = navara_material::QuantizedMeshTerrainMaterial::default();
-            (
-                TerrainDataType::QuantizedMesh,
-                TerrainAppearance::QuantizedMesh(navara_material::QuantizedMeshTerrainMaterial {
-                    show: desc.show.unwrap_or(d.show),
-                    cast_shadow: desc.cast_shadow.unwrap_or(d.cast_shadow),
-                    receive_shadow: desc.receive_shadow.unwrap_or(d.receive_shadow),
-                    show_bounding_box: desc.show_bounding_box.unwrap_or(d.show_bounding_box),
-                    skirt: desc.skirt.unwrap_or(d.skirt),
-                    skirt_exaggeration: desc.skirt_exaggeration.unwrap_or(d.skirt_exaggeration),
-                }),
-            )
-        }
+    // The data format is derived from the source variant; the terrain material
+    // carries render config only. All fetch/geometry config (zoom range, tiling
+    // scheme, decoder, tile size, quantized-mesh extensions, token) is read live
+    // from the referenced source.
+    let terrain_type = match source {
+        Source::RasterDem(_) => TerrainDataType::RasterDEM,
+        Source::QuantizedMesh(_) => TerrainDataType::QuantizedMesh,
         _ => return None,
     };
+    let appearance = desc.terrain.map(Into::into).unwrap_or_default();
 
     Some(LayerDescription::Terrain(Box::new(TerrainLayer {
         layer_id: layer_id.to_string(),
@@ -672,16 +616,49 @@ pub fn legacy_source(source_id: &str, layer_type: &str, value: JsValue) -> Optio
             // material onto the implicit source (the render material drops them).
             let layer: TileLayerDescription = serde_wasm_bindgen::from_value(value).ok()?;
             let rt = layer.raster_tile.as_ref();
-            Some(Source::RasterTile(RasterTileSource {
-                source_id: source_id.to_owned(),
-                url: url?,
-                tms: rt.and_then(|m| m.tms).unwrap_or(false),
-                min_zoom: rt.and_then(|m| m.min_zoom).unwrap_or(DEFAULT_MIN_ZOOM),
-                max_zoom: rt.and_then(|m| m.max_zoom).unwrap_or(DEFAULT_MAX_ZOOM),
-                overscaled_max_zoom: rt
-                    .and_then(|m| m.overscaled_max_zoom)
-                    .unwrap_or(DEFAULT_OVERSCALED_MAX_ZOOM),
-            }))
+            let url = url?;
+            let tms = rt.and_then(|m| m.tms).unwrap_or(false);
+            let min_zoom = rt.and_then(|m| m.min_zoom).unwrap_or(DEFAULT_MIN_ZOOM);
+            let max_zoom = rt.and_then(|m| m.max_zoom).unwrap_or(DEFAULT_MAX_ZOOM);
+            let overscaled_max_zoom = rt
+                .and_then(|m| m.overscaled_max_zoom)
+                .unwrap_or(DEFAULT_OVERSCALED_MAX_ZOOM);
+
+            // A hillshade / elevation-heatmap tiles layer decodes DEM tiles, so it
+            // needs a `raster-dem` source carrying the elevation decoder (mirrors
+            // the new API, where such raster layers reference a raster-dem
+            // source). Plain imagery uses a `raster-tile` source.
+            let decoder = layer
+                .hillshade
+                .as_ref()
+                .and_then(|h| h.elevation_decoder)
+                .or_else(|| {
+                    layer
+                        .elevation_heatmap
+                        .as_ref()
+                        .and_then(|e| e.elevation_decoder)
+                });
+            if let Some(decoder) = decoder {
+                Some(Source::RasterDem(RasterDemSource {
+                    source_id: source_id.to_owned(),
+                    url,
+                    tms,
+                    elevation_decoder: decoder.into(),
+                    tile_size: DEFAULT_TILE_SIZE,
+                    min_zoom,
+                    max_zoom,
+                    overscaled_max_zoom,
+                }))
+            } else {
+                Some(Source::RasterTile(RasterTileSource {
+                    source_id: source_id.to_owned(),
+                    url,
+                    tms,
+                    min_zoom,
+                    max_zoom,
+                    overscaled_max_zoom,
+                }))
+            }
         }
         "terrain" => {
             // Carry the real fetch config from the legacy terrain material (the

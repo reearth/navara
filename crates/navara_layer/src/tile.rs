@@ -1,5 +1,5 @@
 use bevy_ecs::component::Component;
-use navara_material::{Appearance, ElevationHeatmapConfig, HillshadeConfig, RasterTileMaterial};
+use navara_material::{Appearance, ElevationHeatmapConfig, HillshadeConfig, RasterMaterial};
 
 #[derive(Debug, Clone, PartialEq, Default, Component)]
 pub struct TilesLayer {
@@ -13,7 +13,7 @@ pub struct TilesLayer {
 }
 
 impl TilesLayer {
-    pub fn appearance(&self) -> Option<&RasterTileMaterial> {
+    pub fn appearance(&self) -> Option<&RasterMaterial> {
         self.appearance.as_ref().and_then(|a| match a {
             Appearance::TerrainTile(v) => Some(v),
             _ => None,

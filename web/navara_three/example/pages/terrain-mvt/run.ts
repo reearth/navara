@@ -62,8 +62,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   view.addLayer({
     type: "terrain",
     source: dem,
-    castShadow: false,
-    receiveShadow: false,
+    terrain: { castShadow: false, receiveShadow: false },
   });
 
   view.addLayer({

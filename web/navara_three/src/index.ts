@@ -1457,8 +1457,7 @@ export default class ThreeView<
     invariant(this._core);
     const target = this.layersManager.get(id);
     if (!target || !(target instanceof Layer)) return;
-    const processedLayer = this._convertColorsToNumbers(l) as LayerDescription;
-    target.update(processedLayer);
+    target.update(l);
   }
 
   /**

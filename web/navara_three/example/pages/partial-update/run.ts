@@ -183,7 +183,12 @@ function addRasterTileFolder(pane: Pane) {
     color?: Color;
     opacity?: number;
     showBoundingBox?: boolean;
-  }) => gTileLayer.update({ type: "raster", source: gTileSource.id, ...patch });
+  }) =>
+    gTileLayer.update({
+      type: "raster",
+      source: gTileSource.id,
+      raster: patch,
+    });
 
   rasterFolder
     .addBinding(tileParams, "rasterShow", { label: "show" })

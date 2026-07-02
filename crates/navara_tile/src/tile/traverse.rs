@@ -656,7 +656,7 @@ mod tests {
     use bevy_app::{App, Update};
 
     use navara_core::{Aabb, Angle, TileXYZ, WGS84_64, WGS84_A_64};
-    use navara_material::{Appearance, RasterTileMaterial};
+    use navara_material::{Appearance, RasterMaterial};
     use navara_math::Vec3;
 
     /// Camera placed at twice the Earth radius above (lng 0, lat 0), looking at
@@ -799,7 +799,7 @@ mod tests {
         let layer = TilesLayer {
             layer_id: layer_id.to_string(),
             source_id: Some(layer_id.to_string()),
-            appearance: Some(Appearance::TerrainTile(RasterTileMaterial::default())),
+            appearance: Some(Appearance::TerrainTile(RasterMaterial::default())),
             elevation_heatmap_config: None,
             hillshade_config: None,
         };

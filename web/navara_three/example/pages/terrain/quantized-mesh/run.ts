@@ -79,8 +79,7 @@ export const run = async (
     view.addLayer({
       type: "terrain",
       source: qmSource,
-      castShadow: true,
-      receiveShadow: true,
+      terrain: { castShadow: true, receiveShadow: true },
     });
   }
 

@@ -164,7 +164,7 @@ mod tests {
         system::{Res, ResMut},
     };
     use navara_core::TileXYZ;
-    use navara_material::{Appearance, HillshadeConfig, RasterTileMaterial};
+    use navara_material::{Appearance, HillshadeConfig, RasterMaterial};
 
     /// A raster-DEM-style source carrying the layer's zoom range (zoom now lives
     /// on the source, not the material). The id matches the layer's `source_id`.
@@ -187,7 +187,7 @@ mod tests {
         let layer = TilesLayer {
             layer_id: layer_id.to_string(),
             source_id: Some(layer_id.to_string()),
-            appearance: Some(Appearance::TerrainTile(RasterTileMaterial::default())),
+            appearance: Some(Appearance::TerrainTile(RasterMaterial::default())),
             elevation_heatmap_config: None,
             hillshade_config: None,
         };
@@ -202,7 +202,7 @@ mod tests {
         let layer = TilesLayer {
             layer_id: layer_id.to_string(),
             source_id: Some(layer_id.to_string()),
-            appearance: Some(Appearance::TerrainTile(RasterTileMaterial::default())),
+            appearance: Some(Appearance::TerrainTile(RasterMaterial::default())),
             elevation_heatmap_config: None,
             hillshade_config: Some(HillshadeConfig {
                 elevation_decoder: Default::default(),

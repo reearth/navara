@@ -246,18 +246,18 @@ impl Core {
         let implicit_id = generate_id();
         let implicit_source =
             source_types::legacy_source(&implicit_id, layer_type.as_str(), layer.clone());
-        let source_id = implicit_source.as_ref().map(|_| implicit_id.clone());
         if let Some(l) = LayerDescription::to(
             &layer_id,
             layer_type.as_str(),
             layer,
             None,
-            source_id.as_deref(),
+            implicit_source.as_ref(),
         ) {
-            if let (Some(source), Some(sid)) = (implicit_source, &source_id) {
-                self.app.add_implicit_source(sid, source);
+            if let Some(source) = implicit_source {
+                let sid = source.source_id().to_owned();
+                self.app.add_implicit_source(&sid, source);
                 self.app.add_layer(layer_id.as_str(), l);
-                self.app.link_layer_source(&layer_id, sid);
+                self.app.link_layer_source(&layer_id, &sid);
             } else {
                 // No implicit source (e.g. inline geojson); add the layer as-is.
                 self.app.add_layer(layer_id.as_str(), l);
@@ -269,57 +269,28 @@ impl Core {
 
     #[wasm_bindgen(js_name = updateLayer)]
     pub fn update_layer(&mut self, layer_id: String, layer: JsValue) {
-        // Source-based layers rebuild from the referenced source (mirrors add_layer).
-        if let Some(ld) = LayerDescription::from(layer.clone())
-            && let Some(layer_type) = ld.r#type
+        // Partial update payloads (e.g. `{ polygon: { opacity } }`) don't repeat
+        // `type` or `source`, so both come from the stored layer. Changing a
+        // layer's source via updateLayer is not supported: keep the layer's
+        // current source, falling back to the payload's source only when the
+        // layer has none yet.
+        let Some(layer_type) = self.app.get_layer_type(&layer_id) else {
+            return;
+        };
+
+        let source_id = self
+            .app
+            .get_layer_description(&layer_id)
+            .and_then(|d| d.source_id().map(str::to_owned))
+            .or_else(|| source_types::read_source_ref(layer.clone()));
+        let Some(source_id) = source_id else {
+            return;
+        };
+
+        if let Some(source) = self.app.get_source_description(&source_id)
+            && let Some(l) =
+                source_types::build_source_layer(layer_id.as_str(), layer_type, layer, &source)
         {
-            let is_source_based = matches!(layer_type.as_str(), "vector" | "raster" | "3d-tiles")
-                || (layer_type == "terrain"
-                    && source_types::read_source_ref(layer.clone()).is_some());
-            if is_source_based {
-                if let Some(source_id) = source_types::read_source_ref(layer.clone()) {
-                    // Pointing a layer at a different source via updateLayer is not
-                    // supported yet (it would leave source reference counts
-                    // inconsistent), so reject a source change and keep the
-                    // existing one.
-                    let current_source_id = self
-                        .app
-                        .get_layer_description(&layer_id)
-                        .and_then(|d| d.source_id().map(str::to_owned));
-                    if matches!(&current_source_id, Some(current) if *current != source_id) {
-                        return;
-                    }
-
-                    if let Some(source) = self.app.get_source_description(&source_id)
-                        && let Some(l) = source_types::build_source_layer(
-                            &layer_id,
-                            layer_type.as_str(),
-                            layer,
-                            &source,
-                        )
-                    {
-                        self.app.update_layer(layer_id.as_str(), l);
-                    }
-                }
-                return;
-            }
-        }
-
-        // TODO: Remove with the legacy layer API (this whole non-source branch).
-        let layer_type = self.app.get_layer_type(&layer_id).unwrap_or("");
-        let old_layer_desc = self.app.get_layer_description(&layer_id);
-        // Preserve the implicit source created at add time (do not create a new one).
-        let source_id = old_layer_desc
-            .as_ref()
-            .and_then(|d| d.source_id())
-            .map(str::to_owned);
-        if let Some(l) = LayerDescription::to(
-            layer_id.as_str(),
-            layer_type,
-            layer,
-            old_layer_desc,
-            source_id.as_deref(),
-        ) {
             self.app.update_layer(layer_id.as_str(), l);
         }
     }

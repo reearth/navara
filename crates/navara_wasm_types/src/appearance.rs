@@ -2,7 +2,7 @@ use navara_wasm_utils::ToU8;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
-use crate::{ElevationDecoder, TextureFragment, TileUvTransform, Vec2, Vec3 as WasmVec3};
+use crate::{TextureFragment, TileUvTransform, Vec2, Vec3 as WasmVec3};
 #[wasm_bindgen]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PointMaterial {
@@ -1215,35 +1215,24 @@ impl From<ModelInternalMaterial> for navara_material::ModelInternalMaterial {
     }
 }
 
+/// Render-only appearance for a `raster` layer's imagery. All fetch/tiling
+/// config lives on the referenced `Source`; only display fields are carried
+/// here. Parallel to [`HillshadeMaterial`] / [`ElevationHeatmapMaterial`].
 #[wasm_bindgen]
-#[derive(Debug, Clone, Serialize, Deserialize)]
-// TODO: Remove once all layers use source. Legacy `tiles` layer material; the
-// new API expresses raster layers as flat render fields + a raster-tile source.
-pub struct RasterTileMaterial {
+#[derive(Debug, Clone, Deserialize)]
+pub struct RasterMaterial {
     pub show: Option<bool>,
     pub color: Option<u32>,
     pub opacity: Option<f32>,
-    #[wasm_bindgen(js_name = maxZoom)]
-    #[serde(rename = "maxZoom")]
-    pub max_zoom: Option<usize>,
-    #[wasm_bindgen(js_name = minZoom)]
-    #[serde(rename = "minZoom")]
-    pub min_zoom: Option<usize>,
-    pub tms: Option<bool>,
     #[wasm_bindgen(js_name = showBoundingBox)]
     #[serde(rename = "showBoundingBox")]
     pub show_bounding_box: Option<bool>,
-    #[wasm_bindgen(js_name = overscaledMaxZoom)]
-    #[serde(rename = "overscaledMaxZoom")]
-    pub overscaled_max_zoom: Option<usize>,
 }
 
-impl From<RasterTileMaterial> for navara_material::RasterTileMaterial {
-    fn from(val: RasterTileMaterial) -> Self {
-        // tms/zoom are fetch config (carried on the Source), not the render
-        // material — they are intentionally ignored in this conversion.
-        let default = navara_material::RasterTileMaterial::default();
-        navara_material::RasterTileMaterial {
+impl From<RasterMaterial> for navara_material::RasterMaterial {
+    fn from(val: RasterMaterial) -> Self {
+        let default = navara_material::RasterMaterial::default();
+        navara_material::RasterMaterial {
             show: val.show.unwrap_or(default.show),
             color: val.color.unwrap_or(default.color),
             opacity: val.opacity.unwrap_or(default.opacity),
@@ -1251,28 +1240,13 @@ impl From<RasterTileMaterial> for navara_material::RasterTileMaterial {
         }
     }
 }
-impl<'a> From<&'a navara_material::RasterTileMaterial> for RasterTileMaterial {
-    fn from(value: &'a navara_material::RasterTileMaterial) -> RasterTileMaterial {
-        RasterTileMaterial {
-            show: Some(value.show),
-            color: Some(value.color),
-            opacity: Some(value.opacity),
-            // Fetch config now lives on the Source, not the render material.
-            max_zoom: None,
-            min_zoom: None,
-            tms: None,
-            show_bounding_box: Some(value.show_bounding_box),
-            overscaled_max_zoom: None,
-        }
-    }
-}
 
-impl RasterTileMaterial {
+impl RasterMaterial {
     pub fn merge(
         &self,
-        other: &navara_material::RasterTileMaterial,
-    ) -> navara_material::RasterTileMaterial {
-        navara_material::RasterTileMaterial {
+        other: &navara_material::RasterMaterial,
+    ) -> navara_material::RasterMaterial {
+        navara_material::RasterMaterial {
             show: self.show.unwrap_or(other.show),
             color: self.color.unwrap_or(other.color),
             opacity: self.opacity.unwrap_or(other.opacity),
@@ -1557,38 +1531,13 @@ impl<'a> From<&'a navara_material::RasterTileInternalMaterial> for RasterTileInt
     }
 }
 
+/// Render-only appearance for a `terrain` layer's mesh, regardless of the
+/// referenced source's data format (raster-dem, quantized-mesh, or the
+/// source-less ellipsoid). All fetch/geometry config lives on the referenced
+/// `Source`; the data format itself is carried by `TerrainDataType`.
 #[wasm_bindgen]
-#[derive(Debug, Clone, Serialize, Deserialize)]
-// TODO: Remove once all layers use source. Legacy `mvt` layer material; the new
-// API expresses vector layers via per-feature materials + `source_layers` and a
-// vector-tile source (zoom/sse live on the source).
-pub struct VectorTileMaterial {
-    pub show: Option<bool>,
-    #[wasm_bindgen(js_name = castShadow)]
-    #[serde(rename = "castShadow")]
-    pub cast_shadow: Option<bool>,
-    #[wasm_bindgen(js_name = receiveShadow)]
-    #[serde(rename = "receiveShadow")]
-    pub receive_shadow: Option<bool>,
-    #[wasm_bindgen(js_name = maxZoom)]
-    #[serde(rename = "maxZoom")]
-    pub max_zoom: Option<usize>,
-    /// `Globe.max_sse` would be used to a material that uses `clamp_to_ground`.
-    #[wasm_bindgen(js_name = maxSse)]
-    #[serde(rename = "maxSse")]
-    pub max_sse: Option<f32>,
-    #[wasm_bindgen(getter_with_clone)]
-    pub layers: Option<Vec<String>>,
-    #[wasm_bindgen(js_name = overscaledMaxZoom)]
-    #[serde(rename = "overscaledMaxZoom")]
-    pub overscaled_max_zoom: Option<usize>,
-}
-
-#[wasm_bindgen]
-#[derive(Debug, Clone, Serialize, Deserialize)]
-// TODO: Remove once all layers use source. Legacy `terrain` layer material; the
-// new API expresses terrain as flat render fields + a raster-dem source.
-pub struct RasterTerrainMaterial {
+#[derive(Debug, Clone, Deserialize)]
+pub struct TerrainMaterial {
     pub show: Option<bool>,
     #[wasm_bindgen(js_name = castShadow)]
     #[serde(rename = "castShadow")]
@@ -1599,22 +1548,6 @@ pub struct RasterTerrainMaterial {
     #[wasm_bindgen(js_name = showBoundingBox)]
     #[serde(rename = "showBoundingBox")]
     pub show_bounding_box: Option<bool>,
-    #[wasm_bindgen(js_name = maxZoom)]
-    #[serde(rename = "maxZoom")]
-    pub max_zoom: Option<usize>,
-    /// The terrain is upsampled until it reaches `overscaled_max_zoom`.
-    #[wasm_bindgen(js_name = overscaledMaxZoom)]
-    #[serde(rename = "overscaledMaxZoom")]
-    pub overscaled_max_zoom: Option<usize>,
-    #[wasm_bindgen(js_name = minZoom)]
-    #[serde(rename = "minZoom")]
-    pub min_zoom: Option<usize>,
-    #[wasm_bindgen(js_name = elevationDecoder)]
-    #[serde(rename = "elevationDecoder")]
-    pub elevation_decoder: Option<ElevationDecoder>,
-    #[wasm_bindgen(js_name = tileSize)]
-    #[serde(rename = "tileSize")]
-    pub tile_size: Option<u32>,
     /// Whether to render skirts along tile boundaries to hide gaps.
     /// You should disable `skirt` if you want to visualize an underground model.
     pub skirt: Option<bool>,
@@ -1625,42 +1558,32 @@ pub struct RasterTerrainMaterial {
     pub skirt_exaggeration: Option<f32>,
 }
 
-impl From<RasterTerrainMaterial> for navara_material::RasterTerrainMaterial {
-    fn from(val: RasterTerrainMaterial) -> Self {
-        let default = navara_material::RasterTerrainMaterial::default();
-        navara_material::RasterTerrainMaterial {
-            show: val.show.unwrap_or(default.show),
-            cast_shadow: val.cast_shadow.unwrap_or(default.cast_shadow),
-            receive_shadow: val.receive_shadow.unwrap_or(default.receive_shadow),
-            show_bounding_box: val.show_bounding_box.unwrap_or(default.show_bounding_box),
-            skirt: val.skirt.unwrap_or(default.skirt),
-            skirt_exaggeration: val.skirt_exaggeration.unwrap_or(default.skirt_exaggeration),
+impl From<TerrainMaterial> for navara_material::TerrainMaterial {
+    fn from(val: TerrainMaterial) -> Self {
+        val.merge(&navara_material::TerrainMaterial::default())
+    }
+}
+
+impl TerrainMaterial {
+    pub fn merge(
+        &self,
+        other: &navara_material::TerrainMaterial,
+    ) -> navara_material::TerrainMaterial {
+        navara_material::TerrainMaterial {
+            show: self.show.unwrap_or(other.show),
+            cast_shadow: self.cast_shadow.unwrap_or(other.cast_shadow),
+            receive_shadow: self.receive_shadow.unwrap_or(other.receive_shadow),
+            show_bounding_box: self.show_bounding_box.unwrap_or(other.show_bounding_box),
+            skirt: self.skirt.unwrap_or(other.skirt),
+            skirt_exaggeration: self.skirt_exaggeration.unwrap_or(other.skirt_exaggeration),
         }
     }
 }
 
-impl<'a> From<&'a navara_material::RasterTerrainMaterial> for RasterTerrainMaterial {
-    fn from(value: &'a navara_material::RasterTerrainMaterial) -> RasterTerrainMaterial {
-        // Fetch fields (zoom/tile_size/decoder) now live on the source, not the
-        // material, so they are not reported back here.
-        RasterTerrainMaterial {
-            show: Some(value.show),
-            cast_shadow: Some(value.cast_shadow),
-            receive_shadow: Some(value.receive_shadow),
-            show_bounding_box: Some(value.show_bounding_box),
-            max_zoom: None,
-            overscaled_max_zoom: None,
-            min_zoom: None,
-            elevation_decoder: None,
-            tile_size: None,
-            skirt: Some(value.skirt),
-            skirt_exaggeration: Some(value.skirt_exaggeration),
-        }
-    }
-}
-
+/// Elevation-heatmap render options for a `raster` layer. The elevation decoder
+/// is taken from the referenced `raster-dem` source, not from here.
 #[wasm_bindgen]
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct ElevationHeatmapMaterial {
     #[wasm_bindgen(js_name = maxHeight)]
     #[serde(rename = "maxHeight")]
@@ -1668,145 +1591,17 @@ pub struct ElevationHeatmapMaterial {
     #[wasm_bindgen(js_name = minHeight)]
     #[serde(rename = "minHeight")]
     pub min_height: Option<f64>,
-    #[wasm_bindgen(js_name = elevationDecoder)]
-    #[serde(rename = "elevationDecoder")]
-    pub elevation_decoder: Option<ElevationDecoder>,
-    pub logarithmic: bool,
+    pub logarithmic: Option<bool>,
     #[wasm_bindgen(js_name = logBoundary)]
     #[serde(rename = "logBoundary")]
-    pub log_boundary: f64,
+    pub log_boundary: Option<f64>,
 }
 
+/// Hillshade render options for a `raster` layer. The elevation decoder is taken
+/// from the referenced `raster-dem` source, not from here.
 #[wasm_bindgen]
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct HillshadeMaterial {
-    #[wasm_bindgen(js_name = elevationDecoder)]
-    #[serde(rename = "elevationDecoder")]
-    pub elevation_decoder: Option<ElevationDecoder>,
     /// Exaggeration factor for hillshade effect (default: 1.0)
     pub exaggeration: Option<f32>,
-}
-
-#[wasm_bindgen]
-#[derive(Debug, Clone, Serialize, Deserialize)]
-// TODO: Remove once all layers use source. Legacy `terrain` layer material; the
-// new API expresses terrain as flat render fields + an ellipsoid source.
-pub struct EllipsoidTerrainMaterial {
-    #[wasm_bindgen(js_name = castShadow)]
-    #[serde(rename = "castShadow")]
-    pub cast_shadow: Option<bool>,
-    #[wasm_bindgen(js_name = receiveShadow)]
-    #[serde(rename = "receiveShadow")]
-    pub receive_shadow: Option<bool>,
-    #[wasm_bindgen(js_name = showBoundingBox)]
-    #[serde(rename = "showBoundingBox")]
-    pub show_bounding_box: Option<bool>,
-    #[wasm_bindgen(js_name = maxZoom)]
-    #[serde(rename = "maxZoom")]
-    pub max_zoom: Option<usize>,
-    #[wasm_bindgen(js_name = minZoom)]
-    #[serde(rename = "minZoom")]
-    pub min_zoom: Option<usize>,
-}
-
-impl From<EllipsoidTerrainMaterial> for navara_material::EllipsoidTerrainMaterial {
-    fn from(val: EllipsoidTerrainMaterial) -> Self {
-        let default = navara_material::EllipsoidTerrainMaterial::default();
-        navara_material::EllipsoidTerrainMaterial {
-            cast_shadow: val.cast_shadow.unwrap_or(default.cast_shadow),
-            receive_shadow: val.receive_shadow.unwrap_or(default.receive_shadow),
-            show_bounding_box: val.show_bounding_box.unwrap_or(default.show_bounding_box),
-        }
-    }
-}
-
-impl<'a> From<&'a navara_material::EllipsoidTerrainMaterial> for EllipsoidTerrainMaterial {
-    fn from(value: &'a navara_material::EllipsoidTerrainMaterial) -> EllipsoidTerrainMaterial {
-        // Zoom range now lives on the source, not the material.
-        EllipsoidTerrainMaterial {
-            cast_shadow: Some(value.cast_shadow),
-            receive_shadow: Some(value.receive_shadow),
-            show_bounding_box: Some(value.show_bounding_box),
-            max_zoom: None,
-            min_zoom: None,
-        }
-    }
-}
-
-#[wasm_bindgen]
-#[derive(Debug, Clone, Serialize, Deserialize)]
-// TODO: Remove once all layers use source. Legacy `terrain` layer material; the
-// new API expresses terrain as flat render fields + a quantized-mesh source.
-pub struct QuantizedMeshTerrainMaterial {
-    pub show: Option<bool>,
-    #[wasm_bindgen(js_name = castShadow)]
-    #[serde(rename = "castShadow")]
-    pub cast_shadow: Option<bool>,
-    #[wasm_bindgen(js_name = receiveShadow)]
-    #[serde(rename = "receiveShadow")]
-    pub receive_shadow: Option<bool>,
-    #[wasm_bindgen(js_name = showBoundingBox)]
-    #[serde(rename = "showBoundingBox")]
-    pub show_bounding_box: Option<bool>,
-    #[wasm_bindgen(js_name = maxZoom)]
-    #[serde(rename = "maxZoom")]
-    pub max_zoom: Option<usize>,
-    #[wasm_bindgen(js_name = overscaledMaxZoom)]
-    #[serde(rename = "overscaledMaxZoom")]
-    pub overscaled_max_zoom: Option<usize>,
-    #[wasm_bindgen(js_name = minZoom)]
-    #[serde(rename = "minZoom")]
-    pub min_zoom: Option<usize>,
-    pub skirt: Option<bool>,
-    #[wasm_bindgen(js_name = skirtExaggeration)]
-    #[serde(rename = "skirtExaggeration")]
-    pub skirt_exaggeration: Option<f32>,
-    pub tms: Option<bool>,
-    pub geographic: Option<bool>,
-    #[wasm_bindgen(js_name = requestVertexNormals)]
-    #[serde(rename = "requestVertexNormals")]
-    pub request_vertex_normals: Option<bool>,
-    #[wasm_bindgen(js_name = requestWaterMask)]
-    #[serde(rename = "requestWaterMask")]
-    pub request_water_mask: Option<bool>,
-    #[wasm_bindgen(getter_with_clone)]
-    pub token: Option<String>,
-}
-
-impl From<QuantizedMeshTerrainMaterial> for navara_material::QuantizedMeshTerrainMaterial {
-    fn from(val: QuantizedMeshTerrainMaterial) -> Self {
-        let default = navara_material::QuantizedMeshTerrainMaterial::default();
-        navara_material::QuantizedMeshTerrainMaterial {
-            show: val.show.unwrap_or(default.show),
-            cast_shadow: val.cast_shadow.unwrap_or(default.cast_shadow),
-            receive_shadow: val.receive_shadow.unwrap_or(default.receive_shadow),
-            show_bounding_box: val.show_bounding_box.unwrap_or(default.show_bounding_box),
-            skirt: val.skirt.unwrap_or(default.skirt),
-            skirt_exaggeration: val.skirt_exaggeration.unwrap_or(default.skirt_exaggeration),
-        }
-    }
-}
-
-impl<'a> From<&'a navara_material::QuantizedMeshTerrainMaterial> for QuantizedMeshTerrainMaterial {
-    fn from(
-        value: &'a navara_material::QuantizedMeshTerrainMaterial,
-    ) -> QuantizedMeshTerrainMaterial {
-        // Fetch fields (zoom/scheme/extensions/token) now live on the source.
-        QuantizedMeshTerrainMaterial {
-            show: Some(value.show),
-            cast_shadow: Some(value.cast_shadow),
-            receive_shadow: Some(value.receive_shadow),
-            show_bounding_box: Some(value.show_bounding_box),
-            max_zoom: None,
-            overscaled_max_zoom: None,
-            min_zoom: None,
-            skirt: Some(value.skirt),
-            skirt_exaggeration: Some(value.skirt_exaggeration),
-            tms: None,
-            geographic: None,
-            request_vertex_normals: None,
-            request_water_mask: None,
-            token: None,
-        }
-    }
 }

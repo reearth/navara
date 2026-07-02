@@ -45,8 +45,7 @@ const run = async () => {
   view.addLayer({
     type: "terrain",
     source: dem,
-    castShadow: true,
-    receiveShadow: true,
+    terrain: { castShadow: true, receiveShadow: true },
   });
   view.addLayer({
     type: "raster",

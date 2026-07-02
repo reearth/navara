@@ -308,19 +308,21 @@ impl App {
         store.get_order(layer_id).copied()
     }
 
-    pub fn get_layer_type(&self, layer_id: &str) -> Option<&str> {
+    /// The source-based layer type (`vector`/`raster`/`terrain`/`3d-tiles`) of a
+    /// layer — the same type accepted by `build_source_layer`. `update_layer`
+    /// uses this so a partial update payload doesn't need to repeat `type`.
+    pub fn get_layer_type(&self, layer_id: &str) -> Option<&'static str> {
         let mut layer_type = None;
         if let Some(layer_desc_store) = self.app.world().get_resource::<LayerDescStore>()
             && let Some(desc) = layer_desc_store.get(layer_id)
         {
             layer_type = match desc {
-                LayerDescription::Tiles(_) => Some("tiles"),
+                LayerDescription::Tiles(_) => Some("raster"),
                 LayerDescription::Terrain(_) => Some("terrain"),
-                LayerDescription::GeoJson(_) => Some("geojson"),
-                LayerDescription::B3dm(_) => Some("b3dm"),
-                LayerDescription::Pnts(_) => Some("pnts"),
-                LayerDescription::Mvt(_) => Some("mvt"),
-                LayerDescription::Cesium3dTiles(_) => Some("cesium3dtiles"),
+                LayerDescription::GeoJson(_) | LayerDescription::Mvt(_) => Some("vector"),
+                LayerDescription::B3dm(_)
+                | LayerDescription::Pnts(_)
+                | LayerDescription::Cesium3dTiles(_) => Some("3d-tiles"),
             };
         }
 

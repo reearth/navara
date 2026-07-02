@@ -1,66 +1,5 @@
 use bevy_ecs::component::Component;
-use navara_material::{
-    EllipsoidTerrainMaterial, QuantizedMeshTerrainMaterial, RasterTerrainMaterial,
-};
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum TerrainAppearance {
-    Raster(RasterTerrainMaterial),
-    Ellipsoid(EllipsoidTerrainMaterial),
-    QuantizedMesh(QuantizedMeshTerrainMaterial),
-}
-
-impl TerrainAppearance {
-    pub fn cast_shadow(&self) -> bool {
-        match self {
-            TerrainAppearance::Raster(mat) => mat.cast_shadow,
-            TerrainAppearance::Ellipsoid(mat) => mat.cast_shadow,
-            TerrainAppearance::QuantizedMesh(mat) => mat.cast_shadow,
-        }
-    }
-
-    pub fn receive_shadow(&self) -> bool {
-        match self {
-            TerrainAppearance::Raster(mat) => mat.receive_shadow,
-            TerrainAppearance::Ellipsoid(mat) => mat.receive_shadow,
-            TerrainAppearance::QuantizedMesh(mat) => mat.receive_shadow,
-        }
-    }
-
-    pub fn show(&self) -> bool {
-        match self {
-            TerrainAppearance::Raster(mat) => mat.show,
-            TerrainAppearance::Ellipsoid(_) => true,
-            TerrainAppearance::QuantizedMesh(mat) => mat.show,
-        }
-    }
-
-    pub fn show_bounding_box(&self) -> bool {
-        match self {
-            TerrainAppearance::Raster(mat) => mat.show_bounding_box,
-            TerrainAppearance::Ellipsoid(mat) => mat.show_bounding_box,
-            TerrainAppearance::QuantizedMesh(mat) => mat.show_bounding_box,
-        }
-    }
-
-    /// Whether to render skirts along tile boundaries to hide gaps.
-    pub fn skirt(&self) -> bool {
-        match self {
-            TerrainAppearance::Raster(mat) => mat.skirt,
-            TerrainAppearance::Ellipsoid(_) => false, // Ellipsoid terrain doesn't need skirts
-            TerrainAppearance::QuantizedMesh(mat) => mat.skirt,
-        }
-    }
-
-    /// Multiplier for the automatically calculated skirt height.
-    pub fn skirt_exaggeration(&self) -> f32 {
-        match self {
-            TerrainAppearance::Raster(mat) => mat.skirt_exaggeration,
-            TerrainAppearance::Ellipsoid(_) => 1.0,
-            TerrainAppearance::QuantizedMesh(mat) => mat.skirt_exaggeration,
-        }
-    }
-}
+use navara_material::TerrainMaterial;
 
 #[derive(Debug, Clone, PartialEq, Default, Component)]
 pub struct TerrainLayer {
@@ -69,7 +8,9 @@ pub struct TerrainLayer {
     /// from `SourceStore` by this id.
     pub source_id: Option<String>,
     pub terrain_type: TerrainDataType,
-    pub appearance: Option<TerrainAppearance>,
+    /// Render-only appearance. The data format is carried by `terrain_type`;
+    /// the ellipsoid case bakes its defaults (`skirt = false`) at construction.
+    pub appearance: Option<TerrainMaterial>,
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]

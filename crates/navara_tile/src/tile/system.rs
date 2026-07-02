@@ -450,9 +450,9 @@ pub fn transfer_mesh(
             .and_then(|l| l.appearance.as_ref())
             .map_or((false, false, false), |appearance| {
                 (
-                    appearance.cast_shadow(),
-                    appearance.receive_shadow(),
-                    appearance.show_bounding_box(),
+                    appearance.cast_shadow,
+                    appearance.receive_shadow,
+                    appearance.show_bounding_box,
                 )
             });
 
@@ -520,7 +520,7 @@ pub fn transfer_mesh(
             let (skirt, skirt_exaggeration) = terrain_layer
                 .and_then(|l| l.appearance.as_ref())
                 .map_or((true, 1.0), |appearance| {
-                    (appearance.skirt(), appearance.skirt_exaggeration())
+                    (appearance.skirt, appearance.skirt_exaggeration)
                 });
             if should_render_terrain && skirt {
                 // Use terrain tile_size if available, otherwise default to 256
@@ -615,7 +615,7 @@ pub fn transfer_mesh(
         let (skirt, skirt_exaggeration) = terrain_layer
             .and_then(|l| l.appearance.as_ref())
             .map_or((true, 1.0), |appearance| {
-                (appearance.skirt(), appearance.skirt_exaggeration())
+                (appearance.skirt, appearance.skirt_exaggeration)
             });
 
         if should_upsample_terrain {
@@ -1312,7 +1312,7 @@ pub fn clear_caches(
 mod delete_layer_tests {
     use super::*;
     use bevy_app::{App, Update};
-    use navara_material::{Appearance, RasterTileMaterial};
+    use navara_material::{Appearance, RasterMaterial};
     use navara_tile_component::{RasterTile, RasterTileQuadtree};
 
     use crate::raster::RasterTileCacheManager;
@@ -1321,7 +1321,7 @@ mod delete_layer_tests {
         TilesLayer {
             layer_id: layer_id.to_string(),
             source_id: None,
-            appearance: Some(Appearance::TerrainTile(RasterTileMaterial::default())),
+            appearance: Some(Appearance::TerrainTile(RasterMaterial::default())),
             elevation_heatmap_config: None,
             hillshade_config: None,
         }

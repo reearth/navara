@@ -36,7 +36,7 @@ pub enum Appearance {
     Polyline(PolylineMaterial),
     Polygon(PolygonMaterial),
     Model(ModelMaterial),
-    TerrainTile(RasterTileMaterial),
+    TerrainTile(RasterMaterial),
 }
 
 impl Appearance {
@@ -498,15 +498,17 @@ pub struct ModelInternalMaterial {
     pub point_cloud_geodetic_normal: Vec3,
 }
 
+/// Render-only appearance for a `raster` layer's imagery. All fetch/tiling
+/// config lives on the referenced `Source`.
 #[derive(Debug, Clone, PartialEq, Component)]
-pub struct RasterTileMaterial {
+pub struct RasterMaterial {
     pub show: bool,
     pub color: u32,
     pub opacity: f32,
     pub show_bounding_box: bool,
 }
 
-impl Default for RasterTileMaterial {
+impl Default for RasterMaterial {
     fn default() -> Self {
         Self {
             show: true,
@@ -552,8 +554,12 @@ pub struct RasterTileInternalMaterial {
     pub terrain_lat_range: Option<[f32; 2]>,
 }
 
+/// Render-only appearance for a `terrain` layer's mesh, regardless of the
+/// referenced source's data format (raster-dem, quantized-mesh, or the
+/// source-less ellipsoid). All fetch/geometry config lives on the referenced
+/// `Source`; the data format itself is carried by `TerrainDataType`.
 #[derive(Debug, Clone, PartialEq, Component)]
-pub struct RasterTerrainMaterial {
+pub struct TerrainMaterial {
     pub show: bool,
     pub cast_shadow: bool,
     pub receive_shadow: bool,
@@ -565,37 +571,7 @@ pub struct RasterTerrainMaterial {
     pub skirt_exaggeration: f32,
 }
 
-impl Default for RasterTerrainMaterial {
-    fn default() -> Self {
-        Self {
-            show: true,
-            cast_shadow: false,
-            receive_shadow: false,
-            show_bounding_box: false,
-            skirt: true,
-            skirt_exaggeration: 1.0,
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Default, Component)]
-pub struct EllipsoidTerrainMaterial {
-    pub cast_shadow: bool,
-    pub receive_shadow: bool,
-    pub show_bounding_box: bool,
-}
-
-#[derive(Debug, Clone, PartialEq, Component)]
-pub struct QuantizedMeshTerrainMaterial {
-    pub show: bool,
-    pub cast_shadow: bool,
-    pub receive_shadow: bool,
-    pub show_bounding_box: bool,
-    pub skirt: bool,
-    pub skirt_exaggeration: f32,
-}
-
-impl Default for QuantizedMeshTerrainMaterial {
+impl Default for TerrainMaterial {
     fn default() -> Self {
         Self {
             show: true,

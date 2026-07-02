@@ -46,9 +46,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     },
   });
 
-  // Mapterhorn DEM as a single raster-dem source shared by the terrain, the
-  // hillshade and the elevation heatmap.
-  const dem = view.addSource({
+  const demMesh = view.addSource({
     type: "raster-dem",
     url: TERRAIN_DATASETS.mapterhorn.url,
     elevationDecoder: TERRARIUM_ELEVATION_DECODER(),
@@ -56,15 +54,22 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     maxZoom: 17,
     minZoom: 5,
   });
+  const demRaster = view.addSource({
+    type: "raster-dem",
+    url: TERRAIN_DATASETS.mapterhorn.url,
+    elevationDecoder: TERRARIUM_ELEVATION_DECODER(),
+    tileSize: 512,
+    maxZoom: 17,
+    minZoom: 0,
+  });
   view.addLayer({
     type: "terrain",
-    source: dem,
-    castShadow: false,
-    receiveShadow: false,
+    source: demMesh,
+    terrain: { castShadow: false, receiveShadow: false },
   });
   view.addLayer({
     type: "raster",
-    source: dem,
+    source: demRaster,
     hillshade: {},
   });
 
@@ -74,7 +79,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   // Elevation heatmap from the same DEM, applied via a raster layer.
   const layerDef: LayerDescription = {
     type: "raster",
-    source: dem.id,
+    source: demRaster.id,
     elevationHeatmap: {
       maxHeight: 3000,
       minHeight: 0,

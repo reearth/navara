@@ -1246,7 +1246,7 @@ mod terrain_tile_tests {
     use navara_component::Order;
     use navara_core::TileXYZ;
     use navara_data_requester::{DataRequester, DataRequesterExtension, DataRequesterStatus};
-    use navara_material::{Appearance, HillshadeConfig, RasterTileMaterial};
+    use navara_material::{Appearance, HillshadeConfig, RasterMaterial};
     use navara_texture_fragment::{TextureFragment, TextureFragmentStatus};
 
     use crate::raster_tile_texture_fragment::TileTextureFragmentMarker;
@@ -1260,7 +1260,7 @@ mod terrain_tile_tests {
         TilesLayer {
             layer_id: id.into(),
             source_id: None,
-            appearance: Some(Appearance::TerrainTile(RasterTileMaterial::default())),
+            appearance: Some(Appearance::TerrainTile(RasterMaterial::default())),
             elevation_heatmap_config: None,
             hillshade_config: None,
         }
@@ -1270,7 +1270,7 @@ mod terrain_tile_tests {
         TilesLayer {
             layer_id: id.into(),
             source_id: None,
-            appearance: Some(Appearance::TerrainTile(RasterTileMaterial::default())),
+            appearance: Some(Appearance::TerrainTile(RasterMaterial::default())),
             elevation_heatmap_config: None,
             hillshade_config: Some(HillshadeConfig {
                 elevation_decoder: Default::default(),
@@ -1445,8 +1445,8 @@ mod terrain_tile_tests {
         use super::*;
         use crate::terrain::RasterDEMData;
         use crate::terrain_data_requester::TerrainDataRequesterMarker;
-        use navara_layer::{TerrainAppearance, TerrainDataType};
-        use navara_material::RasterTerrainMaterial;
+        use navara_layer::TerrainDataType;
+        use navara_material::TerrainMaterial;
         use navara_mesh::CachedMeshHandle;
 
         #[derive(Default)]
@@ -1475,7 +1475,7 @@ mod terrain_tile_tests {
                 layer_id: "terrain".into(),
                 source_id: Some("terrain".into()),
                 terrain_type: TerrainDataType::RasterDEM,
-                appearance: Some(TerrainAppearance::Raster(RasterTerrainMaterial::default())),
+                appearance: Some(TerrainMaterial::default()),
             }
         }
 

@@ -166,7 +166,7 @@ mod tests {
     use bevy_ecs::prelude::{Res, ResMut, Resource};
 
     use navara_core::{Angle, ElevationDecoder, TileXYZ, WGS84_64, WGS84_A_64};
-    use navara_material::{Appearance, HillshadeConfig, RasterTileMaterial};
+    use navara_material::{Appearance, HillshadeConfig, RasterMaterial};
     use navara_math::Vec3;
     use navara_mesh::CachedMeshHandle;
     use navara_texture_fragment::TextureFragment;
@@ -308,7 +308,7 @@ mod tests {
         let layer = TilesLayer {
             layer_id: layer_id.to_string(),
             source_id: Some(layer_id.to_string()),
-            appearance: Some(Appearance::TerrainTile(RasterTileMaterial::default())),
+            appearance: Some(Appearance::TerrainTile(RasterMaterial::default())),
             elevation_heatmap_config: None,
             hillshade_config: None,
         };

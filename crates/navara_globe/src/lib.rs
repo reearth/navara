@@ -18,32 +18,32 @@ pub struct Globe {
     pub max_sse: f32,
 
     /// Number of segments for mesh tessellation.
-    /// Used by RasterTileMaterial.
-    /// RasterTerrainMaterial maintains individual segment control.
+    /// Used by RasterMaterial.
+    /// TerrainMaterial maintains individual segment control.
     pub segments: usize,
 
     /// Base color for the globe surface (RGB as u32, e.g., 0xffffff for white).
-    /// Used by RasterTileMaterial and RasterTerrainMaterial.
+    /// Used by RasterMaterial and TerrainMaterial.
     pub color: u32,
 
     /// Whether to hide underground geometry.
-    /// Used by RasterTileMaterial and RasterTerrainMaterial.
+    /// Used by RasterMaterial and TerrainMaterial.
     pub hide_underground: bool,
 
     /// Whether to use normals
     pub use_normal: bool,
 
     /// Whether materials should be transparent.
-    /// Used by RasterTileMaterial and RasterTerrainMaterial.
+    /// Used by RasterMaterial and TerrainMaterial.
     pub transparent: bool,
 
     /// Global opacity for materials (0.0 to 1.0).
-    /// Used by RasterTileMaterial and RasterTerrainMaterial.
-    /// Note: This is different from RasterTileMaterial's per-texture opacity used for blending.
+    /// Used by RasterMaterial and TerrainMaterial.
+    /// Note: This is different from RasterMaterial's per-texture opacity used for blending.
     pub opacity: f32,
 
     /// Whether to render materials in wireframe mode.
-    /// Used by RasterTileMaterial and RasterTerrainMaterial.
+    /// Used by RasterMaterial and TerrainMaterial.
     pub wireframe: bool,
 
     /// Color map lookup table for elevation heatmap rendering.

@@ -33,9 +33,9 @@ import type { SourceDescription } from "./type";
  */
 export class Source {
   /** The unique identifier of this source, used to reference it from layers. */
-  id: string;
+  readonly id: string;
   /** The discriminant type of this source (e.g. "vector-tile"). */
-  type: string;
+  readonly type: string;
   private core: Core;
 
   constructor(id: string, type: string, core: Core) {
