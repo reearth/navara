@@ -21,7 +21,7 @@ addLayer(l: LayerDescription): Layer
 
 **Parameters:**
 
-LayerDescription の詳細な型については、[Materials](../../../three/material/about/) を参照してください。
+LayerDescription の設定項目については、[About Layer](../../../three/layer/about/) と各レイヤータイプのページを参照してください。
 
 **Returns:**
 
