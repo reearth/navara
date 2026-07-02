@@ -476,6 +476,29 @@ impl TerrainSourceLayerDescription {
             appearance: Some(appearance),
         })))
     }
+
+    /// Build a source-less terrain layer (the ellipsoid: render-only, no fetch
+    /// config). Used by `updateLayer` when the layer has no `source_id`. The
+    /// previous terrain data format is preserved.
+    fn build_sourceless(
+        mut self,
+        layer_id: &str,
+        old_desc: Option<&LayerDescription>,
+    ) -> Option<LayerDescription> {
+        let terrain_type = match old_desc {
+            Some(LayerDescription::Terrain(l)) => l.terrain_type.clone(),
+            _ => TerrainDataType::Ellipsoid,
+        };
+
+        let appearance = self.appearance(old_desc);
+
+        Some(LayerDescription::Terrain(Box::new(TerrainLayer {
+            layer_id: layer_id.to_string(),
+            source_id: None,
+            terrain_type,
+            appearance: Some(appearance),
+        })))
+    }
 }
 
 fn crs(value: Option<String>) -> Option<CRS> {
@@ -718,6 +741,23 @@ pub fn build_source_layer(
             from_js::<TerrainSourceLayerDescription>(value)?.build(layer_id, source, old_desc)
         }
         "3d-tiles" => from_js::<Tiles3dLayerDescription>(value)?.build(layer_id, source, old_desc),
+        _ => None,
+    }
+}
+
+/// Build a layer that has no referenced `Source` (currently only ellipsoid
+/// terrain, which is render-only). Used by `updateLayer` when the stored layer
+/// has no `source_id`. Returns `None` for layer types that require a source.
+pub fn build_sourceless_layer(
+    layer_id: &str,
+    layer_type: &str,
+    value: JsValue,
+    old_desc: Option<&LayerDescription>,
+) -> Option<LayerDescription> {
+    match layer_type {
+        "terrain" => {
+            from_js::<TerrainSourceLayerDescription>(value)?.build_sourceless(layer_id, old_desc)
+        }
         _ => None,
     }
 }

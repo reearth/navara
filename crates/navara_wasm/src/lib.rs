@@ -288,19 +288,32 @@ impl Core {
             .as_ref()
             .and_then(|d| d.source_id().map(str::to_owned))
             .or_else(|| source_types::read_source_ref(layer.clone()));
-        let Some(source_id) = source_id else {
-            return;
-        };
 
-        if let Some(source) = self.app.get_source_description(&source_id)
-            && let Some(l) = source_types::build_source_layer(
+        // Source-less layers (currently only ellipsoid terrain) have no
+        // `source_id`, so they take a dedicated build path instead of resolving
+        // a source. Everything else builds from its referenced source.
+        let new_layer = match source_id {
+            Some(source_id) => self
+                .app
+                .get_source_description(&source_id)
+                .and_then(|source| {
+                    source_types::build_source_layer(
+                        layer_id.as_str(),
+                        layer_type,
+                        layer,
+                        &source,
+                        old_desc.as_ref(),
+                    )
+                }),
+            None => source_types::build_sourceless_layer(
                 layer_id.as_str(),
                 layer_type,
                 layer,
-                &source,
                 old_desc.as_ref(),
-            )
-        {
+            ),
+        };
+
+        if let Some(l) = new_layer {
             self.app.update_layer(layer_id.as_str(), l);
         }
     }
