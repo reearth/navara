@@ -513,6 +513,11 @@ export class FontManager {
     const allGlyphs: ShapedGlyph[] = [];
     const metricsMap = new Map<string, GlyphMetrics>();
     let targetUnitsPerEm = 0;
+    // Line metrics come from the first shaped segment — the same face that
+    // defines the target unitsPerEm, so no rescaling is needed.
+    let ascender = 0;
+    let descender = 0;
+    let lineGap = 0;
 
     for (const seg of segments) {
       const result = this._shapeCache
@@ -526,7 +531,12 @@ export class FontManager {
       // aborting the whole label — one uncovered glyph shouldn't drop the name.
       if (!result) continue;
 
-      if (targetUnitsPerEm === 0) targetUnitsPerEm = result.unitsPerEm;
+      if (targetUnitsPerEm === 0) {
+        targetUnitsPerEm = result.unitsPerEm;
+        ascender = result.ascender;
+        descender = result.descender;
+        lineGap = result.lineGap;
+      }
       const scale = targetUnitsPerEm / result.unitsPerEm;
 
       for (const g of result.glyphs) {
@@ -556,13 +566,23 @@ export class FontManager {
       // script). Return an empty result so the label renders blank instead of
       // throwing; `unitsPerEm` is irrelevant with zero glyphs but must be
       // nonzero so the consumer's scale factor stays finite.
-      return { glyphs: [], metrics: [], unitsPerEm: 1000 };
+      return {
+        glyphs: [],
+        metrics: [],
+        unitsPerEm: 1000,
+        ascender: 800,
+        descender: -200,
+        lineGap: 0,
+      };
     }
 
     return {
       glyphs: allGlyphs,
       metrics: [...metricsMap.values()],
       unitsPerEm: targetUnitsPerEm,
+      ascender,
+      descender,
+      lineGap,
     };
   }
 

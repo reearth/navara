@@ -358,7 +358,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
   // registered font family resolves the correct face per glyph.
   const labelTitle = "Labels";
   visible[labelTitle] = true;
-  const params = { size: 20 };
+  const params = { size: 20, maxWidth: 3.5 };
 
   // The evaluator reads this closure variable to decide which tiers are visible;
   // kept in sync with the camera below. Seed it from the initial viewpoint, not
@@ -380,6 +380,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
       outlineOpacity: 0.4,
       offsetDepth: true,
       depthTest: true,
+      maxWidth: params.maxWidth,
     },
     // Finer admin features (governorate/district) exist only in higher-zoom
     // tiles, so fetch to z12 and let the altitude tiers keep the view uncluttered.
@@ -489,6 +490,7 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
       depthTest: true,
       offsetDepth: true,
       highQuality: true,
+      maxWidth: params.maxWidth,
     },
     vectorTile: { maxZoom: 14, layers: ["place"] },
   });
@@ -592,6 +594,14 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     })
     .on("change", ({ value }) => {
       labelLayer.update({ text: { size: value } });
+      view.forceUpdate();
+    });
+
+  layersFolder
+    .addBinding(params, "maxWidth", { min: 0, max: 20, step: 0.5, label: "label max width" })
+    .on("change", ({ value }) => {
+      labelLayer.update({ text: { maxWidth: value } });
+      poiLayer.update({ text: { maxWidth: value } });
       view.forceUpdate();
     });
 
