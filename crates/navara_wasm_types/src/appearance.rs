@@ -1418,44 +1418,44 @@ impl<'a> From<&'a navara_material::RasterTileInternalMaterial> for RasterTileInt
                 .map(|c| c.max_height)
                 .unwrap_or(1000.0),
             elevation_r_scaler: m
-                .elevation_heatmap_config
+                .heatmap_elevation_decoder
                 .as_ref()
-                .map(|c| c.elevation_decoder.r_scaler)
+                .map(|d| d.r_scaler)
                 .unwrap_or(0.0),
             elevation_g_scaler: m
-                .elevation_heatmap_config
+                .heatmap_elevation_decoder
                 .as_ref()
-                .map(|c| c.elevation_decoder.g_scaler)
+                .map(|d| d.g_scaler)
                 .unwrap_or(0.0),
             elevation_b_scaler: m
-                .elevation_heatmap_config
+                .heatmap_elevation_decoder
                 .as_ref()
-                .map(|c| c.elevation_decoder.b_scaler)
+                .map(|d| d.b_scaler)
                 .unwrap_or(0.0),
             elevation_boundary: m
-                .elevation_heatmap_config
+                .heatmap_elevation_decoder
                 .as_ref()
-                .map(|c| c.elevation_decoder.boundary)
+                .map(|d| d.boundary)
                 .unwrap_or(0.0),
             elevation_max_offset: m
-                .elevation_heatmap_config
+                .heatmap_elevation_decoder
                 .as_ref()
-                .map(|c| c.elevation_decoder.max_offset)
+                .map(|d| d.max_offset)
                 .unwrap_or(0.0),
             elevation_min_offset: m
-                .elevation_heatmap_config
+                .heatmap_elevation_decoder
                 .as_ref()
-                .map(|c| c.elevation_decoder.min_offset)
+                .map(|d| d.min_offset)
                 .unwrap_or(0.0),
             elevation_epsilon: m
-                .elevation_heatmap_config
+                .heatmap_elevation_decoder
                 .as_ref()
-                .map(|c| c.elevation_decoder.epsilon)
+                .map(|d| d.epsilon)
                 .unwrap_or(1.0),
             elevation_offset: m
-                .elevation_heatmap_config
+                .heatmap_elevation_decoder
                 .as_ref()
-                .map(|c| c.elevation_decoder.offset)
+                .map(|d| d.offset)
                 .unwrap_or(0.0),
 
             logarithmic: m
@@ -1472,44 +1472,44 @@ impl<'a> From<&'a navara_material::RasterTileInternalMaterial> for RasterTileInt
             // Hillshade fields
             is_hillshades: m.is_hillshades.iter().map(|b| b.to_u8()).collect(),
             hillshade_r_scaler: m
-                .hillshade_config
+                .hillshade_elevation_decoder
                 .as_ref()
-                .map(|c| c.elevation_decoder.r_scaler)
+                .map(|d| d.r_scaler)
                 .unwrap_or(0.0),
             hillshade_g_scaler: m
-                .hillshade_config
+                .hillshade_elevation_decoder
                 .as_ref()
-                .map(|c| c.elevation_decoder.g_scaler)
+                .map(|d| d.g_scaler)
                 .unwrap_or(0.0),
             hillshade_b_scaler: m
-                .hillshade_config
+                .hillshade_elevation_decoder
                 .as_ref()
-                .map(|c| c.elevation_decoder.b_scaler)
+                .map(|d| d.b_scaler)
                 .unwrap_or(0.0),
             hillshade_boundary: m
-                .hillshade_config
+                .hillshade_elevation_decoder
                 .as_ref()
-                .map(|c| c.elevation_decoder.boundary)
+                .map(|d| d.boundary)
                 .unwrap_or(0.0),
             hillshade_epsilon: m
-                .hillshade_config
+                .hillshade_elevation_decoder
                 .as_ref()
-                .map(|c| c.elevation_decoder.epsilon)
+                .map(|d| d.epsilon)
                 .unwrap_or(0.01),
             hillshade_max_offset: m
-                .hillshade_config
+                .hillshade_elevation_decoder
                 .as_ref()
-                .map(|c| c.elevation_decoder.max_offset)
+                .map(|d| d.max_offset)
                 .unwrap_or(0.0),
             hillshade_min_offset: m
-                .hillshade_config
+                .hillshade_elevation_decoder
                 .as_ref()
-                .map(|c| c.elevation_decoder.min_offset)
+                .map(|d| d.min_offset)
                 .unwrap_or(0.0),
             hillshade_offset: m
-                .hillshade_config
+                .hillshade_elevation_decoder
                 .as_ref()
-                .map(|c| c.elevation_decoder.offset)
+                .map(|d| d.offset)
                 .unwrap_or(0.0),
             hillshade_exaggeration: m
                 .hillshade_config

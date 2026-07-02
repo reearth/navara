@@ -391,12 +391,23 @@ pub fn transfer_mesh(
         // Elevation Heatmap fields
         let mut is_elevation_heatmaps = Vec::with_capacity(tile_layers_len);
         let mut shared_heatmap_config = None;
+        // DEM decoder is fetch config: read live from the source, not the layer.
+        let mut shared_heatmap_decoder = None;
 
         // Hillshade fields
         let mut is_hillshades = Vec::with_capacity(tile_layers_len);
         let mut layer_uv_transforms = Vec::with_capacity(tile_layers_len);
         let mut shared_hillshade_config = None;
+        let mut shared_hillshade_decoder = None;
         let mut tile_show_bounding_box = false;
+
+        // Resolve a raster layer's DEM decoder live from its referenced source.
+        let layer_decoder = |l: &TilesLayer| {
+            l.source_id
+                .as_deref()
+                .and_then(|id| source_store.get(id))
+                .and_then(|s| s.elevation_decoder().copied())
+        };
 
         for (i, (l, _)) in tile_layers.iter().sort::<&Order>().enumerate() {
             // The initial material only reflects terrain-owned hillshade readiness;
@@ -424,6 +435,7 @@ pub fn transfer_mesh(
                 // Use the first heatmap config as shared configuration
                 if shared_heatmap_config.is_none() {
                     shared_heatmap_config = Some(heatmap_config);
+                    shared_heatmap_decoder = layer_decoder(l);
                 }
             } else {
                 is_elevation_heatmaps.push(false);
@@ -435,6 +447,7 @@ pub fn transfer_mesh(
                 // Use the first hillshade config as shared configuration
                 if shared_hillshade_config.is_none() {
                     shared_hillshade_config = Some(hillshade_config);
+                    shared_hillshade_decoder = layer_decoder(l);
                 }
             } else {
                 is_hillshades.push(false);
@@ -476,10 +489,12 @@ pub fn transfer_mesh(
             // Elevation Heatmap fields
             is_elevation_heatmaps,
             elevation_heatmap_config: shared_heatmap_config.cloned(),
+            heatmap_elevation_decoder: shared_heatmap_decoder,
 
             // Hillshade fields
             is_hillshades,
             hillshade_config: shared_hillshade_config.cloned(),
+            hillshade_elevation_decoder: shared_hillshade_decoder,
             layer_uv_transforms,
             layer_reproject,
             terrain_lat_range: None,
@@ -1050,6 +1065,17 @@ pub fn update_mesh_material(
         let mut layer_reproject = Vec::new();
         let mut elevation_heatmap_config = None;
         let mut hillshade_config = None;
+        // DEM decoder is fetch config: read live from the source, not the layer.
+        let mut heatmap_elevation_decoder = None;
+        let mut hillshade_elevation_decoder = None;
+
+        // Resolve a raster layer's DEM decoder live from its referenced source.
+        let layer_decoder = |l: &TilesLayer| {
+            l.source_id
+                .as_deref()
+                .and_then(|id| source_store.get(id))
+                .and_then(|s| s.elevation_decoder().copied())
+        };
 
         for (i, (l, _)) in tile_layers.iter().sort::<&Order>().enumerate() {
             let a = l.appearance().unwrap();
@@ -1095,6 +1121,7 @@ pub fn update_mesh_material(
 
                 if hillshade_config.is_none() {
                     hillshade_config = l.hillshade_config.clone();
+                    hillshade_elevation_decoder = layer_decoder(l);
                 }
             } else {
                 let lng_span = (terrain_extent.east - terrain_extent.west).val();
@@ -1128,6 +1155,7 @@ pub fn update_mesh_material(
 
                 if is_heatmap && elevation_heatmap_config.is_none() {
                     elevation_heatmap_config = l.elevation_heatmap_config.clone();
+                    heatmap_elevation_decoder = layer_decoder(l);
                 }
             }
         }
@@ -1151,7 +1179,9 @@ pub fn update_mesh_material(
             || appearance.layer_reproject != layer_reproject
             || appearance.terrain_lat_range != terrain_lat_range
             || appearance.elevation_heatmap_config != elevation_heatmap_config
-            || appearance.hillshade_config != hillshade_config;
+            || appearance.hillshade_config != hillshade_config
+            || appearance.heatmap_elevation_decoder != heatmap_elevation_decoder
+            || appearance.hillshade_elevation_decoder != hillshade_elevation_decoder;
 
         if !needs_update {
             continue;
@@ -1173,8 +1203,10 @@ pub fn update_mesh_material(
         appearance.colors = colors;
         appearance.is_elevation_heatmaps = is_elevation_heatmaps;
         appearance.elevation_heatmap_config = elevation_heatmap_config;
+        appearance.heatmap_elevation_decoder = heatmap_elevation_decoder;
         appearance.is_hillshades = is_hillshades;
         appearance.hillshade_config = hillshade_config;
+        appearance.hillshade_elevation_decoder = hillshade_elevation_decoder;
         appearance.layer_uv_transforms = layer_uv_transforms;
         appearance.layer_reproject = layer_reproject;
         appearance.terrain_lat_range = terrain_lat_range;

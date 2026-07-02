@@ -862,32 +862,23 @@ impl LayerDescription {
             "tiles" => {
                 let mut layer: TileLayerDescription = serde_wasm_bindgen::from_value(value).ok()?;
 
-                // Hillshade / heatmap decode DEM tiles, so the elevation decoder
-                // comes from the referenced `raster-dem` source (not the render
-                // material), exactly like `build_raster_layer`.
-                let decoder = match source {
-                    Some(Source::RasterDem(dem)) => Some(dem.elevation_decoder),
-                    _ => None,
-                };
+                // Hillshade / heatmap configs carry render params only; the DEM
+                // decoder is read live from the referenced source where it's
+                // used, exactly like `RasterLayerDescription::build`.
+                let elevation_heatmap_config =
+                    layer
+                        .elevation_heatmap
+                        .as_ref()
+                        .map(|heatmap| ElevationHeatmapConfig {
+                            max_height: heatmap.max_height.unwrap_or(1000.0),
+                            min_height: heatmap.min_height.unwrap_or(0.0),
+                            logarithmic: heatmap.logarithmic.unwrap_or(false),
+                            log_boundary: heatmap.log_boundary.unwrap_or(0.0),
+                        });
 
-                let elevation_heatmap_config = match (&layer.elevation_heatmap, decoder) {
-                    (Some(heatmap), Some(dec)) => Some(ElevationHeatmapConfig {
-                        max_height: heatmap.max_height.unwrap_or(1000.0),
-                        min_height: heatmap.min_height.unwrap_or(0.0),
-                        elevation_decoder: dec,
-                        logarithmic: heatmap.logarithmic.unwrap_or(false),
-                        log_boundary: heatmap.log_boundary.unwrap_or(0.0),
-                    }),
-                    _ => None,
-                };
-
-                let hillshade_config = match (&layer.hillshade, decoder) {
-                    (Some(hillshade), Some(dec)) => Some(HillshadeConfig {
-                        elevation_decoder: dec,
-                        exaggeration: hillshade.exaggeration.unwrap_or(1.0),
-                    }),
-                    _ => None,
-                };
+                let hillshade_config = layer.hillshade.as_ref().map(|hillshade| HillshadeConfig {
+                    exaggeration: hillshade.exaggeration.unwrap_or(1.0),
+                });
 
                 Some(navara_layer::LayerDescription::Tiles(Box::new(
                     TilesLayer {

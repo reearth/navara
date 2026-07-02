@@ -1272,10 +1272,7 @@ mod terrain_tile_tests {
             source_id: None,
             appearance: Some(Appearance::TerrainTile(RasterMaterial::default())),
             elevation_heatmap_config: None,
-            hillshade_config: Some(HillshadeConfig {
-                elevation_decoder: Default::default(),
-                exaggeration: 1.0,
-            }),
+            hillshade_config: Some(HillshadeConfig { exaggeration: 1.0 }),
         }
     }
 

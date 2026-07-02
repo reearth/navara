@@ -165,7 +165,7 @@ mod tests {
     use bevy_app::{App, Update};
     use bevy_ecs::prelude::{Res, ResMut, Resource};
 
-    use navara_core::{Angle, ElevationDecoder, TileXYZ, WGS84_64, WGS84_A_64};
+    use navara_core::{Angle, TileXYZ, WGS84_64, WGS84_A_64};
     use navara_material::{Appearance, HillshadeConfig, RasterMaterial};
     use navara_math::Vec3;
     use navara_mesh::CachedMeshHandle;
@@ -319,10 +319,7 @@ mod tests {
     /// traversal must skip it entirely.
     fn hillshade_layer(layer_id: &str) -> (TilesLayer, navara_source::Source) {
         let (mut layer, source) = raster_layer(layer_id, 0, 20);
-        layer.hillshade_config = Some(HillshadeConfig {
-            elevation_decoder: ElevationDecoder::default(),
-            exaggeration: 1.0,
-        });
+        layer.hillshade_config = Some(HillshadeConfig { exaggeration: 1.0 });
         (layer, source)
     }
 

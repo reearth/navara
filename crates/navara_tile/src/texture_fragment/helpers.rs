@@ -204,10 +204,7 @@ mod tests {
             source_id: Some(layer_id.to_string()),
             appearance: Some(Appearance::TerrainTile(RasterMaterial::default())),
             elevation_heatmap_config: None,
-            hillshade_config: Some(HillshadeConfig {
-                elevation_decoder: Default::default(),
-                exaggeration: 1.0,
-            }),
+            hillshade_config: Some(HillshadeConfig { exaggeration: 1.0 }),
         };
         (layer, layer_source(layer_id, min_zoom, max_zoom))
     }

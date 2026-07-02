@@ -10,7 +10,6 @@ use navara_math::{Transform, Vec2, Vec3};
 pub struct ElevationHeatmapConfig {
     pub max_height: f64,
     pub min_height: f64,
-    pub elevation_decoder: ElevationDecoder,
 
     pub logarithmic: bool,
     pub log_boundary: f64,
@@ -21,8 +20,6 @@ pub struct ElevationHeatmapConfig {
 /// The computed normals are used with existing scene lighting.
 #[derive(Debug, Clone, PartialEq)]
 pub struct HillshadeConfig {
-    pub elevation_decoder: ElevationDecoder,
-
     /// Exaggeration factor for hillshade effect (default: 1.0)
     /// Higher values make terrain appear more dramatic, lower values flatten it. Recommended range is 0.5 to 2.0.
     pub exaggeration: f32,
@@ -533,10 +530,18 @@ pub struct RasterTileInternalMaterial {
     // Elevation Heatmap fields
     pub is_elevation_heatmaps: Vec<bool>, // Per-layer flags: which texture slots are elevation heatmaps
     pub elevation_heatmap_config: Option<ElevationHeatmapConfig>, // Shared config for all heatmap layers
+    /// DEM decoder for the heatmap's source, resolved live from the referenced
+    /// `Source` at material-build time (not stored on the layer config). `None`
+    /// when there is no heatmap or the source isn't a raster-dem.
+    pub heatmap_elevation_decoder: Option<ElevationDecoder>,
 
     // Hillshade fields
     pub is_hillshades: Vec<bool>, // Per-layer flags: which texture slots are hillshades
     pub hillshade_config: Option<HillshadeConfig>, // Shared config for all hillshade layers
+    /// DEM decoder for the hillshade's source, resolved live from the referenced
+    /// `Source` at material-build time (not stored on the layer config). `None`
+    /// when there is no hillshade or the source isn't a raster-dem.
+    pub hillshade_elevation_decoder: Option<ElevationDecoder>,
 
     /// Per-layer UV transform used when this layer's slot samples a parent tile's data.
     /// `None` means identity (own tile's data is in use). Length matches `texture_fragments`

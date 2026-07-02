@@ -228,8 +228,13 @@ impl Core {
         if is_source_based {
             if let Some(source_id) = source_types::read_source_ref(layer.clone())
                 && let Some(source) = self.app.get_source_description(&source_id)
-                && let Some(l) =
-                    source_types::build_source_layer(&layer_id, layer_type.as_str(), layer, &source)
+                && let Some(l) = source_types::build_source_layer(
+                    &layer_id,
+                    layer_type.as_str(),
+                    layer,
+                    &source,
+                    None,
+                )
             {
                 self.app.add_layer(layer_id.as_str(), l);
                 self.app.link_layer_source(&layer_id, &source_id);
@@ -278,9 +283,9 @@ impl Core {
             return;
         };
 
-        let source_id = self
-            .app
-            .get_layer_description(&layer_id)
+        let old_desc = self.app.get_layer_description(&layer_id);
+        let source_id = old_desc
+            .as_ref()
             .and_then(|d| d.source_id().map(str::to_owned))
             .or_else(|| source_types::read_source_ref(layer.clone()));
         let Some(source_id) = source_id else {
@@ -288,8 +293,13 @@ impl Core {
         };
 
         if let Some(source) = self.app.get_source_description(&source_id)
-            && let Some(l) =
-                source_types::build_source_layer(layer_id.as_str(), layer_type, layer, &source)
+            && let Some(l) = source_types::build_source_layer(
+                layer_id.as_str(),
+                layer_type,
+                layer,
+                &source,
+                old_desc.as_ref(),
+            )
         {
             self.app.update_layer(layer_id.as_str(), l);
         }
