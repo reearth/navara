@@ -40,49 +40,42 @@ layers.aerialPerspective.update({
   },
 });
 
+const photoSource = view.addSource({
+  // Credit:
+  // - Geospatial Information Authority of Japan Tiles - Latest Nationwide Photo (Seamless)
+  //   https://maps.gsi.go.jp/development/ichiran.html
+  type: "raster-tile",
+  url: "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg",
+  maxZoom: 23,
+});
 view.addLayer({
-  type: "tiles",
-  data: {
-    // Credit:
-    // - Geospatial Information Authority of Japan Tiles - Latest Nationwide Photo (Seamless)
-    //   https://maps.gsi.go.jp/development/ichiran.html
-    url: "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg",
-  },
-  rasterTile: { maxZoom: 23 },
+  type: "raster",
+  source: photoSource,
 });
 
+const terrainSource = view.addSource({
+  // Credit:
+  // - Geospatial Information Authority of Japan Tiles - Digital Elevation Map
+  //   https://maps.gsi.go.jp/development/ichiran.html
+  type: "raster-dem",
+  url: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
+  elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+  minZoom: 6,
+  maxZoom: 15,
+});
 view.addLayer({
   type: "terrain",
-  data: {
-    // Credit:
-    // - Geospatial Information Authority of Japan Tiles - Digital Elevation Map
-    //   https://maps.gsi.go.jp/development/ichiran.html
-    url: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
-  },
-  rasterTerrain: {
-    minZoom: 6,
-    maxZoom: 15,
-    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+  source: terrainSource,
+  terrain: {
     castShadow: true,
     receiveShadow: true,
   },
 });
 
 view.addLayer({
-  type: "tiles",
-  data: {
-    // Credit:
-    // - Geospatial Information Authority of Japan Tiles - Digital Elevation Map
-    //   https://maps.gsi.go.jp/development/ichiran.html
-    url: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
-  },
-  rasterTile: {
-    minZoom: 6,
-    maxZoom: 15,
-  },
-  hillshade: {
-    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-  },
+  type: "raster",
+  source: terrainSource,
+  hillshade: {},
 });
 
 view.setCamera({ lng: 139.7511, lat: 35.6736, height: 400, heading: -100, pitch: -20, roll: 0 });
@@ -217,22 +210,22 @@ const view = new ThreeView<DefaultDescriptions>({
 
 ```typescript
 // Add water area layer from GSI experimental vector tiles
+const waterSource = view.addSource({
+  // Credit: Geospatial Information Authority of Japan Vector Tile Experimental Service
+  // https://github.com/gsi-cyberjapan/gsimaps-vector-experiment
+  type: "vector-tile",
+  url: "https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/{z}/{x}/{y}.pbf",
+  maxZoom: 16,
+});
 view.addLayer({
-  type: "mvt",
-  data: {
-    // Credit: Geospatial Information Authority of Japan Vector Tile Experimental Service
-    // https://github.com/gsi-cyberjapan/gsimaps-vector-experiment
-    url: "https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/{z}/{x}/{y}.pbf",
-  },
+  type: "vector",
+  source: waterSource,
+  sourceLayers: ["waterarea"], // Use only the water area layer
   polygon: {
     color: new Color().setStyle("#001e0f"),
     reflectivity: 0.2,    // Reflectivity
     clampToGround: true,  // Clamp to terrain
     water: true,          // Enable water surface material
-  },
-  vectorTile: {
-    maxZoom: 16,
-    layers: ["waterarea"], // Use only the water area layer
   },
 });
 
@@ -248,14 +241,16 @@ Adding `SSREffectDesc` enables real-time reflections of buildings and other obje
 
 ```typescript
 // Add PLATEAU building models
+const plateauSource = view.addSource({
+  // Credit:
+  // - 3D City Model (Project PLATEAU) Chiyoda Ward (FY2023) - MLIT PLATEAU
+  //   https://www.geospatial.jp/ckan/dataset/plateau-13101-chiyoda-ku-2023
+  type: "3d-tiles",
+  url: "https://assets.cms.plateau.reearth.io/assets/db/070026-aa27-431b-8d53-7cc6b03244f8/13101_chiyoda-ku_pref_2023_citygml_1_op_bldg_3dtiles_13101_chiyoda-ku_lod2_no_texture/tileset.json",
+});
 view.addLayer({
-  type: "cesium3dtiles",
-  data: {
-    // Credit:
-    // - 3D City Model (Project PLATEAU) Chiyoda Ward (FY2023) - MLIT PLATEAU
-    //   https://www.geospatial.jp/ckan/dataset/plateau-13101-chiyoda-ku-2023
-    url: "https://assets.cms.plateau.reearth.io/assets/db/070026-aa27-431b-8d53-7cc6b03244f8/13101_chiyoda-ku_pref_2023_citygml_1_op_bldg_3dtiles_13101_chiyoda-ku_lod2_no_texture/tileset.json",
-  },
+  type: "3d-tiles",
+  source: plateauSource,
   model: {
     show: true,
     color: new Color().setStyle("#ffffff"),
@@ -316,49 +311,42 @@ layers.aerialPerspective.update({
   },
 });
 
+const photoSource = view.addSource({
+  // Credit:
+  // - Geospatial Information Authority of Japan Tiles - Latest Nationwide Photo (Seamless)
+  //   https://maps.gsi.go.jp/development/ichiran.html
+  type: "raster-tile",
+  url: "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg",
+  maxZoom: 23,
+});
 view.addLayer({
-  type: "tiles",
-  data: {
-    // Credit:
-    // - Geospatial Information Authority of Japan Tiles - Latest Nationwide Photo (Seamless)
-    //   https://maps.gsi.go.jp/development/ichiran.html
-    url: "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg",
-  },
-  rasterTile: { maxZoom: 23 },
+  type: "raster",
+  source: photoSource,
 });
 
+const terrainSource = view.addSource({
+  // Credit:
+  // - Geospatial Information Authority of Japan Tiles - Digital Elevation Map
+  //   https://maps.gsi.go.jp/development/ichiran.html
+  type: "raster-dem",
+  url: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
+  elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+  minZoom: 6,
+  maxZoom: 15,
+});
 view.addLayer({
   type: "terrain",
-  data: {
-    // Credit:
-    // - Geospatial Information Authority of Japan Tiles - Digital Elevation Map
-    //   https://maps.gsi.go.jp/development/ichiran.html
-    url: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
-  },
-  rasterTerrain: {
-    minZoom: 6,
-    maxZoom: 15,
-    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+  source: terrainSource,
+  terrain: {
     castShadow: true,
     receiveShadow: true,
   },
 });
 
 view.addLayer({
-  type: "tiles",
-  data: {
-    // Credit:
-    // - Geospatial Information Authority of Japan Tiles - Digital Elevation Map
-    //   https://maps.gsi.go.jp/development/ichiran.html
-    url: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
-  },
-  rasterTile: {
-    minZoom: 6,
-    maxZoom: 15,
-  },
-  hillshade: {
-    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-  },
+  type: "raster",
+  source: terrainSource,
+  hillshade: {},
 });
 
 layers.sun.update({ sun: { castShadow: true } }); // Cast shadows
@@ -399,34 +387,36 @@ view.addEffect<RainDropEffectDesc>({
 });
 
 // Add water area layer from GSI experimental vector tiles
+const waterSource = view.addSource({
+  // Credit: Geospatial Information Authority of Japan Vector Tile Experimental Service
+  // https://github.com/gsi-cyberjapan/gsimaps-vector-experiment
+  type: "vector-tile",
+  url: "https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/{z}/{x}/{y}.pbf",
+  maxZoom: 16,
+});
 view.addLayer({
-  type: "mvt",
-  data: {
-    // Credit: Geospatial Information Authority of Japan Vector Tile Experimental Service
-    // https://github.com/gsi-cyberjapan/gsimaps-vector-experiment
-    url: "https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/{z}/{x}/{y}.pbf",
-  },
+  type: "vector",
+  source: waterSource,
+  sourceLayers: ["waterarea"], // Use only the water area layer
   polygon: {
     color: new Color().setStyle("#001e0f"),
     reflectivity: 0.02,    // Reflectivity
     clampToGround: true,  // Clamp to terrain
     water: true,          // Enable water surface material
   },
-  vectorTile: {
-    maxZoom: 16,
-    layers: ["waterarea"], // Use only the water area layer
-  },
 });
 
 // Add PLATEAU building models
+const plateauSource = view.addSource({
+  // Credit:
+  // - 3D City Model (Project PLATEAU) Chiyoda Ward (FY2023) - MLIT PLATEAU
+  //   https://www.geospatial.jp/ckan/dataset/plateau-13101-chiyoda-ku-2023
+  type: "3d-tiles",
+  url: "https://assets.cms.plateau.reearth.io/assets/db/070026-aa27-431b-8d53-7cc6b03244f8/13101_chiyoda-ku_pref_2023_citygml_1_op_bldg_3dtiles_13101_chiyoda-ku_lod2_no_texture/tileset.json",
+});
 view.addLayer({
-  type: "cesium3dtiles",
-  data: {
-    // Credit:
-    // - 3D City Model (Project PLATEAU) Chiyoda Ward (FY2023) - MLIT PLATEAU
-    //   https://www.geospatial.jp/ckan/dataset/plateau-13101-chiyoda-ku-2023
-    url: "https://assets.cms.plateau.reearth.io/assets/db/070026-aa27-431b-8d53-7cc6b03244f8/13101_chiyoda-ku_pref_2023_citygml_1_op_bldg_3dtiles_13101_chiyoda-ku_lod2_no_texture/tileset.json",
-  },
+  type: "3d-tiles",
+  source: plateauSource,
   model: {
     show: true,
     color: new Color().setStyle("#ffffff"),

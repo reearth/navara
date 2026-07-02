@@ -61,7 +61,7 @@ new CesiumIonPlugin(config: CesiumIonConfig)
 addTerrain(options?: CesiumIonTerrainOptions): Layer
 ```
 
-Registers the resolved Cesium Ion asset as a quantized-mesh terrain layer via `view.addLayer({ type: "terrain", quantizedMesh: ... })`. Must be called after `view.init()` has completed; otherwise the endpoint has not yet been resolved and the call throws.
+Registers the resolved Cesium Ion asset as a quantized-mesh terrain layer — internally it creates a `quantized-mesh` source (`view.addSource(...)`) and renders it with `view.addLayer({ type: "terrain", source })`. Must be called after `view.init()` has completed; otherwise the endpoint has not yet been resolved and the call throws.
 
 Returns the `Layer` handle returned by `view.addLayer()`.
 
@@ -94,4 +94,4 @@ See the `quantizedMesh` field on the terrain layer description for the complete 
 ## Related Resources
 
 - [About three_plugins](../about/) — Package overview
-- [Terrain Layer](../../three/resource-layer/terrain-layer/) — Terrain layer reference
+- [Terrain Layer](../../three/layer/terrain-layer/) — Terrain layer reference

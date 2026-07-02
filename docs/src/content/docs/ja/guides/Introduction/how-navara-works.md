@@ -13,7 +13,7 @@ Navara はプラグインシステムを使用してDescriptorを登録します
 
 独自のメッシュ、エフェクト、ライトを Three.js シーングラフへのフルアクセスを持って作成することもできます。これは Navara のビルトインオブジェクトを支えるのと同じ仕組みです。詳細は [Custom Descriptor](../../../three/core/custom-desc/) ドキュメントを参照してください。
 
-これらに加えて、Navara は GeoJSON、MVT、3D Tiles などの地理データを読み込み・表示するための[リソースレイヤー](../../../three/resource-layer/about/)を提供しています。リソースレイヤーは地物とその属性の複雑さ — パース、空間インデックス、[`FeatureEvaluator`](../../../three/api/feature-evaluator/) による属性ベースのスタイリング — を扱います。一方、メッシュはジオメトリとレンダリングのみを扱うため、描画パフォーマンスに特化した最適化が可能で、大量のオブジェクトを効率的にレンダリングするのに適しています。この分離により、ユースケースに応じて適切なツールを選択できます。レイヤータイプの詳細は [About Layer](../../../three/introduction/about-layer/) を参照してください。
+これらに加えて、Navara は GeoJSON、MVT、3D Tiles などの地理データを読み込み・表示するための[**レイヤー**](../../../three/layer/about/)を提供しています。レイヤーは地物とその属性の複雑さ — パース、空間インデックス、[`FeatureEvaluator`](../../../three/api/feature-evaluator/) による属性ベースのスタイリング — を扱います。一方、メッシュはジオメトリとレンダリングのみを扱うため、描画パフォーマンスに特化した最適化が可能で、大量のオブジェクトを効率的にレンダリングするのに適しています。この分離により、ユースケースに応じて適切なツールを選択できます。Descriptorタイプの詳細は [About Layer](../../../three/introduction/about-layer/) を参照してください。
 
 ```mermaid
 sequenceDiagram
@@ -30,8 +30,9 @@ sequenceDiagram
   P->>TV: registerMesh / registerLight / registerEffect
   TV->>E: Initialize WASM + Workers
   E-->>TV: Ready
-  App->>TV: addLayer({ type: "tiles", ... })
-  TV->>E: Process layer data
+  App->>TV: addSource({ type: "raster-tile", ... })
+  App->>TV: addLayer({ type: "raster", source })
+  TV->>E: Process source + layer data
   E-->>TV: Rendering-ready output
 ```
 
@@ -76,7 +77,7 @@ Navara は複数の npm パッケージに分かれています。一見複雑�
 
 | Package                        | Role                                                            | When you need it                                     |
 | ------------------------------ | --------------------------------------------------------------- | ---------------------------------------------------- |
-| `@navara/three`                | メインパッケージ — `ThreeView` クラス、レイヤー API、カメラ制御 | 常に必要                                             |
+| `@navara/three`                | メインパッケージ — `ThreeView` クラス、Source & レイヤー API、カメラ制御 | 常に必要                                             |
 | `@navara/three_default_plugin` | `DefaultPlugin` — ビルトインのメッシュ、ライト、エフェクト      | ほぼ常に必要                                         |
 | `@navara/three_default_descs` | 個別のDescriptorクラス実装                                      | `DefaultPlugin` を使わず手動でDescriptorを登録する場合 |
 | `@navara/three_api`            | スタンドアロン GIS ユーティリティ（座標変換、測地線計算）       | フルマップエンジンなしで GIS 計算が必要な場合        |

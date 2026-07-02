@@ -235,18 +235,18 @@ const spectralColorMap = new ColorMap("diverging", "Spectral", [
 view.globe.elevationColormap = spectralColorMap;
 
 // 標高ヒートマップレイヤーを追加
+const heatmapSource = view.addSource({
+  type: "raster-dem",
+  url: "https://example.com/terrain/{z}/{x}/{y}.png",
+  elevationDecoder: TERRARIUM_ELEVATION_DECODER(),
+  maxZoom: 15,
+});
 view.addLayer({
-  type: "tiles",
-  data: {
-    url: "https://example.com/terrain/{z}/{x}/{y}.png",
-  },
-  rasterTile: {
-    maxZoom: 15,
-  },
+  type: "raster",
+  source: heatmapSource,
   elevationHeatmap: {
     maxHeight: 3000,
     minHeight: 0,
-    elevationDecoder: TERRARIUM_ELEVATION_DECODER(),
   },
 });
 ```
@@ -318,4 +318,4 @@ setColorMap("rdYlGn");
 
 - [Color クラス](../../../three/api/color/) - 色を表現するクラス
 - [Globe クラス](../../../three/api/globe/) - `elevationColormap` プロパティ
-- [ElevationHeatmapMaterial](../../../three/resource-layer/elevation-heatmap-material/) - 標高ヒートマップマテリアル
+- [ElevationHeatmapMaterial](../../../three/material/elevation-heatmap-material/) - 標高ヒートマップマテリアル

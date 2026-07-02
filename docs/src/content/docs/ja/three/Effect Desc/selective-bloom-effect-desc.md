@@ -270,11 +270,14 @@ const bloomDesc = view.addEffect<SelectiveBloomEffectDesc>({
 });
 
 // 3D Tiles の建物にブルームを適用
+const buildingsSource = view.addSource({
+  type: "3d-tiles",
+  url: "https://example.com/tileset.json",
+});
+
 const buildingsLayer = view.addLayer({
-  type: "cesium3dtiles",
-  data: {
-    url: "https://example.com/tileset.json",
-  },
+  type: "3d-tiles",
+  source: buildingsSource,
   model: {
     show: true,
     color: new Color().setHex(0xffffff),
@@ -302,9 +305,14 @@ const bloomDesc = view.addEffect<SelectiveBloomEffectDesc>({
 });
 
 // GeoJSON レイヤーのモデルにブルームを適用
-const modelLayer = view.addLayer({
+const modelSource = view.addSource({
   type: "geojson",
   data: featureCollection,
+});
+
+const modelLayer = view.addLayer({
+  type: "vector",
+  source: modelSource,
   model: {
     show: true,
     size: 100,

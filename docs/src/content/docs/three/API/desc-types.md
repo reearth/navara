@@ -45,16 +45,21 @@ update(l: LayerDescription): void
 **Example:**
 
 ```typescript
-const geoJsonHandle = view.addLayer({
+const geoJsonSource = view.addSource({
   type: "geojson",
-  data: { url: "https://example.com/data.geojson" },
+  url: "https://example.com/data.geojson",
+});
+
+const geoJsonHandle = view.addLayer({
+  type: "vector",
+  source: geoJsonSource,
   point: { color: 0xff0000 },
 });
 
 // Update layer settings
 geoJsonHandle.update({
-  type: "geojson",
-  data: { url: "https://example.com/data.geojson" },
+  type: "vector",
+  source: geoJsonSource,
   point: { color: 0x00ff00 },
 });
 ```
@@ -95,7 +100,7 @@ layer.forceUpdate();
 ### Events
 
 :::note
-For the data structure behind these events (Layer, FeatureSet, Feature, Batch), see [About Layer](../../introduction/about-layer/#resource-layer-data-structure). For the `FeatureEvaluator` class used in event callbacks, see [FeatureEvaluator](./feature-evaluator/).
+For the data structure behind these events (Layer, FeatureSet, Feature, Batch), see [About Layer](../../introduction/about-layer/#layer-data-structure). For the `FeatureEvaluator` class used in event callbacks, see [FeatureEvaluator](./feature-evaluator/).
 :::
 
 #### featureCreated

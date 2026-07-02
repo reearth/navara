@@ -412,7 +412,7 @@ const ssrDesc = view.addEffect<SSREffectDesc>({
 });
 
 // Add water surface polygon
-view.addLayer({
+const waterSource = view.addSource({
   type: "geojson",
   data: {
     type: "Feature",
@@ -429,6 +429,11 @@ view.addLayer({
       ],
     },
   },
+});
+
+view.addLayer({
+  type: "vector",
+  source: waterSource,
   polygon: {
     color: new Color().setHex(0x001e0f),
     reflectivity: 0.02,

@@ -19,7 +19,7 @@ npm install
 
 ## 地図を表示する
 
-### ラスタタイルレイヤーを追加する
+### ラスタレイヤーを追加する
 
 `index.html` を開くと、以下のようになっています。
 
@@ -50,28 +50,28 @@ view.addPlugin(plugin);
 await view.init();
 ```
 
-`DefaultPlugin` を追加することで、メッシュ・エフェクト・ライトのデフォルトDescriptorが利用可能になります。
+`DefaultPlugin` を追加することで、メッシュ・エフェクト・ライトのデフォルト Descriptor が利用可能になります。
 
 `main.ts` に以下のコードを追加します。
 
 ```typescript
-// 基本的な環境光を追加
+// Add basic ambient light
 view.addLight({
   ambient: {},
 });
 
-// OpenStreetMap タイルレイヤーを追加
+// Add OpenStreetMap tile layer
+const osmSource = view.addSource({
+  type: "raster-tile",
+  // Credit:
+  // - © OpenStreetMap contributors
+  //   https://www.openstreetmap.org/copyright
+  url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+  maxZoom: 23,
+});
 view.addLayer({
-  type: "tiles",
-  data: {
-    // Credit:
-    // - © OpenStreetMap contributors
-    //   https://www.openstreetmap.org/copyright
-    url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-  },
-  rasterTile: {
-    maxZoom: 23,
-  },
+  type: "raster",
+  source: osmSource,
 });
 ```
 
@@ -92,7 +92,7 @@ view.addPlugin(plugin);
 await view.init();
 ```
 
-`ThreeView` インスタンスを作成し、`DefaultPlugin` でデフォルトDescriptorを登録してから初期化します。これにより、3D シーンとカメラが設定されます。
+`ThreeView` インスタンスを作成し、`DefaultPlugin` でデフォルト Descriptor を登録してから初期化します。これにより、3D シーンとカメラが設定されます。
 
 **ライトの追加**
 
@@ -104,20 +104,20 @@ view.addLight({
 
 シーンを照らすための基本的な環境光を追加します。
 
-**タイルレイヤーの追加**
+**ラスタレイヤーの追加**
 
 ```typescript
+const osmSource = view.addSource({
+  type: "raster-tile",
+  // Credit:
+  // - © OpenStreetMap contributors
+  //   https://www.openstreetmap.org/copyright
+  url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+  maxZoom: 23,
+});
 view.addLayer({
-  type: "tiles",
-  data: {
-    // Credit:
-    // - © OpenStreetMap contributors
-    //   https://www.openstreetmap.org/copyright
-    url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-  },
-  rasterTile: {
-    maxZoom: 23,
-  },
+  type: "raster",
+  source: osmSource,
 });
 ```
 
@@ -139,18 +139,18 @@ view.addLight({
   ambient: {},
 });
 
-// OpenStreetMap タイルレイヤーを追加
+// Add OpenStreetMap tile layer
+const osmSource = view.addSource({
+  type: "raster-tile",
+  // Credit:
+  // - © OpenStreetMap contributors
+  //   https://www.openstreetmap.org/copyright
+  url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+  maxZoom: 23,
+});
 view.addLayer({
-  type: "tiles",
-  data: {
-    // Credit:
-    // - © OpenStreetMap contributors
-    //   https://www.openstreetmap.org/copyright
-    url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-  },
-  rasterTile: {
-    maxZoom: 23,
-  },
+  type: "raster",
+  source: osmSource,
 });
 ```
 
@@ -197,18 +197,18 @@ view.addLight({
   ambient: {},
 });
 
-// OpenStreetMap タイルレイヤーを追加
+// Add OpenStreetMap tile layer
+const osmSource = view.addSource({
+  type: "raster-tile",
+  // Credit:
+  // - © OpenStreetMap contributors
+  //   https://www.openstreetmap.org/copyright
+  url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+  maxZoom: 23,
+});
 view.addLayer({
-  type: "tiles",
-  data: {
-    // Credit:
-    // - © OpenStreetMap contributors
-    //   https://www.openstreetmap.org/copyright
-    url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-  },
-  rasterTile: {
-    maxZoom: 23,
-  },
+  type: "raster",
+  source: osmSource,
 });
 
 view.setCamera({
@@ -238,39 +238,30 @@ import ThreeView, { JAPAN_GSI_ELEVATION_DECODER } from "@navara/three";
 ラスタタイルレイヤーの**前**に地形レイヤーを追加してください（レイヤーは追加順に描画されます）：
 
 ```typescript
-// 地形レイヤーを追加
+// Add terrain layer
+const demSource = view.addSource({
+  type: "raster-dem",
+  // Credit:
+  // - Geospatial Information Authority of Japan Tiles - Digital Elevation Map
+  //   https://maps.gsi.go.jp/development/ichiran.html
+  url: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
+  minZoom: 6,
+  maxZoom: 15,
+  elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+});
 view.addLayer({
   type: "terrain",
-  data: {
-    // Credit:
-    // - Geospatial Information Authority of Japan Tiles - Digital Elevation Map
-    //   https://maps.gsi.go.jp/development/ichiran.html
-    url: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
-  },
-  rasterTerrain: {
-    minZoom: 6,
-    maxZoom: 15,
-    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+  source: demSource,
+  terrain: {
     castShadow: true,
     receiveShadow: true,
   },
 });
 
 view.addLayer({
-  type: "tiles",
-  data: {
-    // Credit:
-    // - Geospatial Information Authority of Japan Tiles - Digital Elevation Map
-    //   https://maps.gsi.go.jp/development/ichiran.html
-    url: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
-  },
-  rasterTile: {
-    minZoom: 6,
-    maxZoom: 15,
-  },
-  hillshade: {
-    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-  },
+  type: "raster",
+  source: demSource,
+  hillshade: {},
 });
 ```
 
@@ -285,12 +276,10 @@ view.addLayer({
 **地形データソース**
 
 ```typescript
-data: {
 // Credit:
 // - Geospatial Information Authority of Japan Tiles - Digital Elevation Map
 //   https://maps.gsi.go.jp/development/ichiran.html
 url: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
-},
 ```
 
 ここでは、国土地理院の標高タイルを使用します。
@@ -298,19 +287,23 @@ url: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
 **地形設定**
 
 ```typescript
-rasterTerrain: {
-minZoom: 6,
-maxZoom: 15,
-elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-castShadow: true,
-receiveShadow: true,
+source: view.addSource({
+  type: "raster-dem",
+  url: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
+  minZoom: 6,
+  maxZoom: 15,
+  elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+}),
+terrain: {
+  castShadow: true,
+  receiveShadow: true,
 },
 ```
 
 - 地形タイルの最大ズームレベル、最小ズームレベル、影などを設定しています。
 - elevationDecoder で、地形データをデコードします。
 
-詳細については、[Terrain Layer](../../../three/resource-layer/terrain-layer/) を参照してください。
+詳細については、[Terrain Layer](../../../three/layer/terrain-layer/) を参照してください。
 
 ### 完全なコード
 
@@ -328,53 +321,44 @@ view.addLight({
   ambient: {},
 });
 
-// 地形レイヤーを追加
+// Add terrain layer
+const demSource = view.addSource({
+  type: "raster-dem",
+  // Credit:
+  // - Geospatial Information Authority of Japan Tiles - Digital Elevation Map
+  //   https://maps.gsi.go.jp/development/ichiran.html
+  url: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
+  minZoom: 6,
+  maxZoom: 15,
+  elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+});
 view.addLayer({
   type: "terrain",
-  data: {
-    // Credit:
-    // - Geospatial Information Authority of Japan Tiles - Digital Elevation Map
-    //   https://maps.gsi.go.jp/development/ichiran.html
-    url: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
-  },
-  rasterTerrain: {
-    minZoom: 6,
-    maxZoom: 15,
-    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+  source: demSource,
+  terrain: {
     castShadow: true,
     receiveShadow: true,
   },
 });
 
 view.addLayer({
-  type: "tiles",
-  data: {
-    // Credit:
-    // - Geospatial Information Authority of Japan Tiles - Digital Elevation Map
-    //   https://maps.gsi.go.jp/development/ichiran.html
-    url: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
-  },
-  rasterTile: {
-    minZoom: 6,
-    maxZoom: 15,
-  },
-  hillshade: {
-    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-  },
+  type: "raster",
+  source: demSource,
+  hillshade: {},
 });
 
-// OpenStreetMap タイルレイヤーを追加
+// Add OpenStreetMap tile layer
+const osmSource = view.addSource({
+  type: "raster-tile",
+  // Credit:
+  // - © OpenStreetMap contributors
+  //   https://www.openstreetmap.org/copyright
+  url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+  maxZoom: 23,
+});
 view.addLayer({
-  type: "tiles",
-  data: {
-    // Credit:
-    // - © OpenStreetMap contributors
-    //   https://www.openstreetmap.org/copyright
-    url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-  },
-  rasterTile: {
-    maxZoom: 23,
-  },
+  type: "raster",
+  source: osmSource,
 });
 
 view.setCamera({
@@ -396,12 +380,12 @@ view.setCamera({
 `src/main.ts` に GeoJSON レイヤーを追加します。
 
 ```typescript
-// ポリゴンデータを表示
-view.addLayer({
+// Display polygon data
+const geojsonSource = view.addSource({
   type: "geojson",
   data: {
     type: "Feature",
-    properties: { name: "エリア" },
+    properties: { name: "Area" },
     geometry: {
       type: "Polygon",
       coordinates: [
@@ -415,6 +399,10 @@ view.addLayer({
       ],
     },
   },
+});
+view.addLayer({
+  type: "vector",
+  source: geojsonSource,
   polygon: {
     color: new Color().setHex(0x00ff00),
     height: 0,
@@ -432,9 +420,9 @@ view.addLayer({
 
 ### コードの解説
 
-`view.addLayer` メソッドで GeoJSON レイヤーを追加します。`type: "geojson"` を指定すると、GeoJSON 形式のデータを地図上に表示できます。ポリゴンのスタイル設定（色、高さ、透明度など）も指定できます。
+`view.addSource({ type: "geojson", ... })` で GeoJSON データを Source として登録し、`view.addLayer({ type: "vector", source, ... })` で描画します。`polygon` Material を通じてポリゴンのスタイル設定（色、高さ、透明度など）も指定できます。
 
-詳細については、[GeoJSON Layer](../../../three/resource-layer/geojson-layer/) を参照してください。
+詳細については、[Vector Layer](../../../three/layer/vector-layer/) を参照してください。
 
 ### 完全なコード
 
@@ -453,55 +441,46 @@ view.addLight({
   ambient: {},
 });
 
+const demSource = view.addSource({
+  type: "raster-dem",
+  // Credit:
+  // - Geospatial Information Authority of Japan Tiles - Digital Elevation Map
+  //   https://maps.gsi.go.jp/development/ichiran.html
+  url: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
+  minZoom: 6,
+  maxZoom: 15,
+  elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+});
 view.addLayer({
   type: "terrain",
-  data: {
-    // Credit:
-    // - Geospatial Information Authority of Japan Tiles - Digital Elevation Map
-    //   https://maps.gsi.go.jp/development/ichiran.html
-    url: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
-  },
-  rasterTerrain: {
-    minZoom: 6,
-    maxZoom: 15,
-    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+  source: demSource,
+  terrain: {
     castShadow: true,
     receiveShadow: true,
   },
 });
 
 view.addLayer({
-  type: "tiles",
-  data: {
-    // Credit:
-    // - Geospatial Information Authority of Japan Tiles - Digital Elevation Map
-    //   https://maps.gsi.go.jp/development/ichiran.html
-    url: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
-  },
-  rasterTile: {
-    minZoom: 6,
-    maxZoom: 15,
-  },
-  hillshade: {
-    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-  },
+  type: "raster",
+  source: demSource,
+  hillshade: {},
 });
 
+const osmSource = view.addSource({
+  type: "raster-tile",
+  // Credit:
+  // - © OpenStreetMap contributors
+  //   https://www.openstreetmap.org/copyright
+  url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+  maxZoom: 23,
+});
 view.addLayer({
-  type: "tiles",
-  data: {
-    // Credit:
-    // - © OpenStreetMap contributors
-    //   https://www.openstreetmap.org/copyright
-    url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-  },
-  rasterTile: {
-    maxZoom: 23,
-  },
+  type: "raster",
+  source: osmSource,
 });
 
-// ポリゴン（エリア）
-view.addLayer({
+// Polygon (area)
+const geojsonSource = view.addSource({
   type: "geojson",
   data: {
     type: "Feature",
@@ -519,6 +498,10 @@ view.addLayer({
       ],
     },
   },
+});
+view.addLayer({
+  type: "vector",
+  source: geojsonSource,
   polygon: {
     color: new Color().setHex(0x00ff00),
     height: 0,

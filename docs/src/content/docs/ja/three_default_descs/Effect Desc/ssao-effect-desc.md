@@ -215,11 +215,14 @@ const ssaoDesc = view.addEffect<SSAOEffectDesc>({
 });
 
 // 3Dタイルと組み合わせて使用
+const buildingsSource = view.addSource({
+  type: "3d-tiles",
+  url: "https://example.com/tileset.json",
+});
+
 view.addLayer({
-  type: "cesium3dtiles",
-  data: {
-    url: "https://example.com/tileset.json",
-  },
+  type: "3d-tiles",
+  source: buildingsSource,
   model: {
     show: true,
     color: new Color().setHex(0xffffff),

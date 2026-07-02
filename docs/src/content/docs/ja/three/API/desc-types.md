@@ -45,16 +45,21 @@ update(l: LayerDescription): void
 **Example:**
 
 ```typescript
-const geoJsonHandle = view.addLayer({
+const geoJsonSource = view.addSource({
   type: "geojson",
-  data: { url: "https://example.com/data.geojson" },
+  url: "https://example.com/data.geojson",
+});
+
+const geoJsonHandle = view.addLayer({
+  type: "vector",
+  source: geoJsonSource,
   point: { color: 0xff0000 },
 });
 
 // レイヤー設定を更新
 geoJsonHandle.update({
-  type: "geojson",
-  data: { url: "https://example.com/data.geojson" },
+  type: "vector",
+  source: geoJsonSource,
   point: { color: 0x00ff00 },
 });
 ```
@@ -95,7 +100,7 @@ layer.forceUpdate();
 ### Events
 
 :::note
-これらのイベントの背景にあるデータ構造（Layer、FeatureSet、Feature、Batch）については [About Layer](../../introduction/about-layer/#リソースレイヤーのデータ構造) を参照してください。イベントコールバックで使用する `FeatureEvaluator` クラスについては [FeatureEvaluator](./feature-evaluator/) を参照してください。
+これらのイベントの背景にあるデータ構造（Layer、FeatureSet、Feature、Batch）については [About Layer](../../introduction/about-layer/#レイヤーのデータ構造) を参照してください。イベントコールバックで使用する `FeatureEvaluator` クラスについては [FeatureEvaluator](./feature-evaluator/) を参照してください。
 :::
 
 #### featureCreated

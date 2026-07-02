@@ -61,7 +61,7 @@ new CesiumIonPlugin(config: CesiumIonConfig)
 addTerrain(options?: CesiumIonTerrainOptions): Layer
 ```
 
-解決済みの Cesium Ion アセットを、`view.addLayer({ type: "terrain", quantizedMesh: ... })` を経由して quantized-mesh 地形レイヤーとして登録します。`view.init()` が完了してから呼び出してください。それ以前に呼ぶとエンドポイント未解決のため例外が投げられます。
+解決済みの Cesium Ion アセットを quantized-mesh 地形レイヤーとして登録します。内部では `quantized-mesh` ソースを作成し（`view.addSource(...)`）、`view.addLayer({ type: "terrain", source })` で描画します。`view.init()` が完了してから呼び出してください。それ以前に呼ぶとエンドポイント未解決のため例外が投げられます。
 
 戻り値は `view.addLayer()` が返す `Layer` ハンドルです。
 
@@ -94,4 +94,4 @@ addTerrain(options?: CesiumIonTerrainOptions): Layer
 ## 関連リソース
 
 - [About three_plugins](../about/) — パッケージ概要
-- [Terrain Layer](../../three/resource-layer/terrain-layer/) — Terrain レイヤーのリファレンス
+- [Terrain Layer](../../three/layer/terrain-layer/) — Terrain レイヤーのリファレンス
