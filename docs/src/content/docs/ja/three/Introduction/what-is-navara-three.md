@@ -16,7 +16,7 @@ sidebar:
 navara_three では、地図上に表示するすべての要素を宣言的に追加できます。データを **Source** として登録し、**Layer** がそれを描画します。
 
 ```typescript
-// Register the data as a source, then render it with a layer
+// データを Source として登録し、Layer で描画
 const source = view.addSource({
   type: "geojson",
   url: "https://example.com/data.geojson",
