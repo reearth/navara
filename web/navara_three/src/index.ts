@@ -1297,7 +1297,7 @@ export default class ThreeView<
 
   /**
    * Registers a data source (GeoJSON, vector tile, raster tile, raster DEM,
-   * quantized mesh, ellipsoid, 3D Tiles) and returns a {@link Source} handle.
+   * quantized mesh, 3D Tiles) and returns a {@link Source} handle.
    * Reference the returned source from layers via `addLayer({ source })`.
    * @param s - Source configuration object specifying type and options
    * @returns A Source handle for referencing, updating, and deleting the source

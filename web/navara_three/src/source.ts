@@ -4,7 +4,7 @@ import type { SourceDescription } from "./type";
 
 /**
  * A handle to a data source (GeoJSON, vector tile, raster tile, raster DEM,
- * quantized mesh, ellipsoid, 3D Tiles) registered via {@link ThreeView.addSource}.
+ * quantized mesh, 3D Tiles) registered via {@link ThreeView.addSource}.
  *
  * A source describes where data comes from and how it is fetched/decoded. One
  * source can be referenced by multiple layers (by its `id`). The engine
