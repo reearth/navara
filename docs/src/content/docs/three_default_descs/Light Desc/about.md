@@ -192,6 +192,6 @@ If you are not using the atmosphere system, use AmbientLightDesc and LightProbeD
 
 ## Related Resources
 
-- [Materials](../../../three/material/about/) - Resource layer details
+- [Materials](../../../three/material/about/) - Layer material reference
 - [Effect Descriptor Reference](../../../three_default_descs/effect-desc/about/) - Effect descriptors
 - [API Reference](../../../three/api/) - ThreeView API
