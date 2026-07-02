@@ -130,16 +130,7 @@ export class CustomRenderPass extends RenderPass {
     inputBuffer: WebGLRenderTarget | null,
     _outputBuffer: WebGLRenderTarget | null,
   ) {
-    // Manual clearing (autoClear is disabled) uses the cached GL clear color,
-    // which three re-encodes per the *currently bound* render target's color
-    // space (getUnlitUniformColorSpace: screen -> sRGB, offscreen -> linear).
-    renderer.setRenderTarget(this.gbufferRenderTarget);
-    renderer.setClearColor(
-      renderer.getClearColor(CLEAR_COLOR),
-      renderer.getClearAlpha(),
-    );
-
-    const shouldDrapeByStencilTest = this._scenes.draped.children.length !== 0;
+    const shouldDrapeByStencilTest = this._scenes.draped.children.length !== 0;    
 
     const renderTarget = this.gbufferRenderTarget;
 
@@ -165,6 +156,10 @@ export class CustomRenderPass extends RenderPass {
       (!this.allowTransparent && this.globe.transparent);
 
     renderer.setRenderTarget(renderTarget);
+    renderer.setClearColor(
+      renderer.getClearColor(CLEAR_COLOR),
+      renderer.getClearAlpha(),
+    );
     renderer.clear();
 
     this._renderWithLight(renderer, this._scenes.globe);
