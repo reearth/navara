@@ -438,7 +438,7 @@ pub struct RasterLayerDescription {
     pub elevation_heatmap: Option<ElevationHeatmapMaterial>,
 }
 
-/// A `terrain` layer renders a `raster-dem`, `quantized-mesh`, or `ellipsoid`
+/// A `terrain` layer renders a `raster-dem` or `quantized-mesh`
 /// source as the globe surface. Rendering options are uniform regardless of the
 /// source's data format.
 #[wasm_bindgen]

@@ -144,8 +144,7 @@ type TerrainSourceLayerBase = WithColorSupport<
 >;
 
 /**
- * A `terrain` layer renders a `raster-dem`, `quantized-mesh`, or `ellipsoid`
- * source as the globe surface.
+ * A `terrain` layer renders a `raster-dem` or `quantized-mesh` source as the globe surface.
  */
 export type TerrainSourceLayer = Omit<TerrainSourceLayerBase, "source"> & {
   source: SourceRef;
