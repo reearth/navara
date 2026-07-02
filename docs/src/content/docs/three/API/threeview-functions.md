@@ -21,7 +21,7 @@ addLayer(l: LayerDescription): Layer
 
 **Parameters:**
 
-For detailed types of LayerDescription, see [Materials](../../../three/material/about/).
+For layer configuration options, see [About Layer](../../../three/layer/about/) and each layer type page.
 
 **Returns:**
 
