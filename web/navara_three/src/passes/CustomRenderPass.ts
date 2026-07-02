@@ -1,6 +1,7 @@
 import { Globe } from "@navara/core";
 import { DepthCopyPass } from "postprocessing";
 import {
+  Color,
   DepthTexture,
   HalfFloatType,
   NearestFilter,
@@ -16,6 +17,9 @@ import { DrapedMesh } from "../mesh/DrapedMesh";
 import type { Scenes } from "../scene";
 
 import { AllDepthCopyPass, NormalCopyPass, RenderTargetCopyPass } from ".";
+
+// Scratch color reused when re-asserting the clear color each frame.
+const CLEAR_COLOR = new Color();
 
 /**
  * Options for CustomRenderPass
@@ -126,6 +130,15 @@ export class CustomRenderPass extends RenderPass {
     inputBuffer: WebGLRenderTarget | null,
     _outputBuffer: WebGLRenderTarget | null,
   ) {
+    // Manual clearing (autoClear is disabled) uses the cached GL clear color,
+    // which three re-encodes per the *currently bound* render target's color
+    // space (getUnlitUniformColorSpace: screen -> sRGB, offscreen -> linear).
+    renderer.setRenderTarget(this.gbufferRenderTarget);
+    renderer.setClearColor(
+      renderer.getClearColor(CLEAR_COLOR),
+      renderer.getClearAlpha(),
+    );
+
     const shouldDrapeByStencilTest = this._scenes.draped.children.length !== 0;
 
     const renderTarget = this.gbufferRenderTarget;
