@@ -1,7 +1,8 @@
 use bevy_ecs::prelude::*;
 use navara_geojson_vt::{GeoJsonVt, Options as GeoJsonVtOptions};
-use navara_layer::{GeoJsonLayer, GeoJsonLayerData};
+use navara_layer::GeoJsonLayer;
 use navara_material::Appearance;
+use navara_source::{GeoJsonData, Source, SourceStore};
 use navara_tile_component::VectorTileQuadtree;
 use navara_vector_tile::{
     LayerResources, SourceId, TileCacheManager, TileSource, TraversalConfig, VectorTileSourceCache,
@@ -23,6 +24,7 @@ pub(crate) struct Tiled;
 pub fn setup_tiled_geojson(
     mut commands: Commands,
     geojson_layers: Query<(Entity, &GeoJsonLayer), (Changed<GeoJsonLayer>, Without<Tiled>)>,
+    source_store: Res<SourceStore>,
     mut source_cache: ResMut<VectorTileSourceCache>,
 ) {
     for (layer_entity, layer) in &geojson_layers {
@@ -34,8 +36,17 @@ pub fn setup_tiled_geojson(
             continue;
         }
 
-        let geojson = match &layer.data {
-            Some(GeoJsonLayerData::GeoJson(g)) => g,
+        // Read the inline GeoJSON live from the source; skip until a URL source
+        // has been fetched and cached onto the source.
+        let geojson = match layer
+            .source_id
+            .as_deref()
+            .and_then(|id| source_store.get(id))
+        {
+            Some(Source::GeoJson(s)) => match &s.data {
+                Some(GeoJsonData::GeoJson(g)) => g,
+                _ => continue,
+            },
             _ => continue,
         };
 

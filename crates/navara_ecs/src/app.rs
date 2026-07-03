@@ -16,6 +16,7 @@ use navara_mesh::MeshPlugin;
 use navara_mvt::MvtPlugin;
 use navara_occluder::OccluderPlugin;
 use navara_pmtiles::PmTilesPlugin;
+use navara_source::SourcePlugin;
 use navara_texture_fragment::TextureFragmentPlugin;
 use navara_tile::TilePlugin;
 use navara_vector_tile::VectorTilePlugin;
@@ -43,6 +44,7 @@ impl bevy_app::Plugin for Plugin {
         app.add_plugins(CameraPlugin);
         app.add_plugins(FogPlugin);
         app.add_plugins(OccluderPlugin);
+        app.add_plugins(SourcePlugin);
         app.add_plugins(LayerPlugin);
         app.add_plugins(FeaturePlugin);
         app.add_plugins(GeoJsonPlugin);

@@ -73,11 +73,16 @@ This document provides detailed documentation for all 40+ Rust crates in the Nav
 - **Key Features**: Component definitions for points, lines, polygons, models, text
 - **Used by**: `navara_feature` and ECS systems
 
-## Data Handling & Formats (7 crates)
+## Data Handling & Formats (8 crates)
+
+### **`navara_source`**
+- **Purpose**: Defines the `Source` concept — the origin and format of data consumed by one or more layers (GeoJSON, vector/raster tiles, raster DEM, quantized mesh, ellipsoid, 3D Tiles / b3dm / pnts)
+- **Key Features**: A `Source` owns everything needed to fetch and decode data (URL, zoom range, tiling scheme, decoder, inline data); `SourceStore` resource maps a source id to its definition, spawned entity, and layer reference count so multiple layers can share (and dedupe) one source
+- **Used by**: `navara_ecs`, `navara_tile`, `navara_mvt`, `navara_geojson`, `navara_cesium3dtiles`, and the data loaders that read fetch config from it
 
 ### **`navara_layer`**
 - **Purpose**: Layer management system with multi-format support
-- **Key Features**: Layer hierarchies, data source management, format abstraction
+- **Key Features**: Layer hierarchies and rendering configuration; a layer references its data by source id (`source_id`) rather than owning fetch config, which lives in `navara_source`
 - **Used by**: Main engine for organizing and managing data layers
 
 ### **`navara_tile`**
@@ -243,10 +248,13 @@ This document provides detailed documentation for all 40+ Rust crates in the Nav
 
 ### **Data Processing Pipeline**
 ```
-Data Sources → Parser → Layer → Feature → Geometry → Rendering
-     ↓           ↓        ↓        ↓         ↓          ↓
-   Various → navara_parser → navara_layer → navara_feature → navara_geometry → Render Systems
+Source (fetch config) → Parser → Layer → Feature → Geometry → Rendering
+        ↓                 ↓        ↓        ↓          ↓          ↓
+  navara_source → navara_parser → navara_layer → navara_feature → navara_geometry → Render Systems
 ```
+A `Source` (in `navara_source`) describes *where* data comes from and *how* to
+decode it; a layer references a source by id and describes *how* to render it.
+The engine deduplicates shared sources via `SourceStore`'s reference counting.
 
 ### **WASM Integration**
 - `navara_wasm` - Integrates all 40+ crates

@@ -80,7 +80,7 @@ view.addLayer({ type: "terrain", source: dem, terrain: { skirt: true } });
 | Type                                                                        | Description                                      |
 | --------------------------------------------------------------------------- | ------------------------------------------------ |
 | [`geojson`](../../../three/source/geojson-source/)                          | GeoJSON, from a URL or inline                    |
-| [`vector-tile`](../../../three/source/vector-tile-source/)                  | Mapbox Vector Tiles (MVT) tileset                |
+| [`vector-tile`](../../../three/source/vector-tile-source/)                  | Mapbox Vector Tiles (MVT) tileset — `{z}/{x}/{y}` template or `.pmtiles` archive |
 | [`raster-tile`](../../../three/source/raster-tile-source/)                  | Raster imagery tiles (XYZ / TMS)                 |
 | [`raster-dem`](../../../three/source/raster-dem-source/)                    | RGB-encoded elevation tiles (terrain / hillshade)|
 | [`quantized-mesh`](../../../three/source/quantized-mesh-source/)            | Cesium quantized-mesh terrain                    |

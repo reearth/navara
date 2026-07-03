@@ -99,6 +99,7 @@ pub fn update_raster_tiles(
     frame: Res<FrameManager>,
     window: Res<Window>,
     globe: Res<navara_globe::Globe>,
+    source_store: Res<navara_source::SourceStore>,
     tiles: Query<(&TilesLayer, &Order)>,
     terrain_layer: Query<&TerrainLayer>,
     texture_fragment: TileTextureFragmentQuery,
@@ -160,6 +161,7 @@ pub fn update_raster_tiles(
         traverse_raster(
             &mut commands,
             &tiles,
+            &source_store,
             root_handle,
             &mut qt,
             &mut tc,

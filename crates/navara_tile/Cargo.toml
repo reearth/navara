@@ -15,6 +15,7 @@ navara_core.workspace = true
 navara_geometry.workspace = true
 navara_globe.workspace = true
 navara_layer.workspace = true
+navara_source.workspace = true
 navara_math.workspace = true
 navara_texture_fragment.workspace = true
 navara_window.workspace = true

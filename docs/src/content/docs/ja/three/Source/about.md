@@ -80,7 +80,7 @@ view.addLayer({ type: "terrain", source: dem, terrain: { skirt: true } });
 | 型                                                                        | 説明                                      |
 | --------------------------------------------------------------------------- | ------------------------------------------------ |
 | [`geojson`](../../../three/source/geojson-source/)                          | GeoJSON（URL またはインライン）                  |
-| [`vector-tile`](../../../three/source/vector-tile-source/)                  | Mapbox Vector Tiles (MVT) タイルセット           |
+| [`vector-tile`](../../../three/source/vector-tile-source/)                  | Mapbox Vector Tiles (MVT) タイルセット（`{z}/{x}/{y}` テンプレート、または `.pmtiles` アーカイブ） |
 | [`raster-tile`](../../../three/source/raster-tile-source/)                  | ラスター画像タイル（XYZ / TMS）                  |
 | [`raster-dem`](../../../three/source/raster-dem-source/)                    | RGB エンコードされた標高タイル（地形 / 陰影起伏）|
 | [`quantized-mesh`](../../../three/source/quantized-mesh-source/)            | Cesium quantized-mesh 地形                        |
