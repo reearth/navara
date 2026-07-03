@@ -16,6 +16,7 @@ export const DEFAULT_BASE_PROPS: Required<
   useRTE: false,
   useMsdf: false,
   color: 0xffffff,
+  opacity: 1.0,
   fontSize: 16.0,
   center: [0.5, 0.0],
   sizeInMeters: true,
@@ -30,6 +31,8 @@ export const DEFAULT_BASE_PROPS: Required<
   backgroundOutlineWidth: 0.1,
   pickable: false,
   depthTest: true,
+  transparent: false,
+  depthWrite: true,
 };
 
 /** Default state derived from DEFAULT_BASE_PROPS */
@@ -37,6 +40,7 @@ export const DEFAULT_BASE_STATE: SdfTextBaseState = {
   useRTE: DEFAULT_BASE_PROPS.useRTE,
   useMsdf: DEFAULT_BASE_PROPS.useMsdf,
   color: hexToColor(DEFAULT_BASE_PROPS.color),
+  opacity: DEFAULT_BASE_PROPS.opacity,
   fontSize: DEFAULT_BASE_PROPS.fontSize,
   center: DEFAULT_BASE_PROPS.center,
   sizeInMeters: DEFAULT_BASE_PROPS.sizeInMeters,
@@ -52,6 +56,8 @@ export const DEFAULT_BASE_STATE: SdfTextBaseState = {
   backgroundOutlineWidth: DEFAULT_BASE_PROPS.backgroundOutlineWidth,
   pickable: DEFAULT_BASE_PROPS.pickable,
   depthTest: DEFAULT_BASE_PROPS.depthTest,
+  transparent: DEFAULT_BASE_PROPS.transparent,
+  depthWrite: DEFAULT_BASE_PROPS.depthWrite,
 };
 
 /**
@@ -70,6 +76,7 @@ export const updateState = (
     // Mutable
     color:
       props.color !== undefined ? hexToColor(props.color) : currentState.color,
+    opacity: props.opacity ?? currentState.opacity,
     fontSize: props.fontSize ?? currentState.fontSize,
     center: props.center ?? currentState.center,
     sizeInMeters: props.sizeInMeters ?? currentState.sizeInMeters,
@@ -97,5 +104,7 @@ export const updateState = (
       props.backgroundOutlineWidth ?? currentState.backgroundOutlineWidth,
     pickable: props.pickable ?? currentState.pickable,
     depthTest: props.depthTest ?? currentState.depthTest,
+    transparent: props.transparent ?? currentState.transparent,
+    depthWrite: props.depthWrite ?? currentState.depthWrite,
   };
 };

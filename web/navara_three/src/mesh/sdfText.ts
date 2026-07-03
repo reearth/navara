@@ -117,6 +117,7 @@ export class SDFTextMesh
         useRTE: RTE,
         useMsdf: this._highQuality,
         color: material.color ?? 0xffffff,
+        opacity: material.opacity ?? 1.0,
         fontSize: material.size ?? 16.0,
         center: material.center
           ? [material.center.x, material.center.y]
@@ -132,6 +133,8 @@ export class SDFTextMesh
         backgroundOutlineColor: material.borderColor ?? 0x000000,
         backgroundOutlineWidth: material.borderWidth ?? 0.1,
         depthTest: material.depthTest ?? true,
+        transparent: material.transparent ?? false,
+        depthWrite: material.depthWrite ?? true,
         rtcCenter: [transform.tx, transform.ty, transform.tz],
       },
     });
@@ -369,6 +372,10 @@ export class SDFTextMesh
     this._enhancer.update({ base: { fontSize: size } });
   }
 
+  setOpacity(opacity: number): void {
+    this._enhancer.update({ base: { opacity } });
+  }
+
   _setFeatureWidth(_width: number): void {
     // Width is not applicable to text meshes.
     // This method is intentionally a no-op to satisfy the FeatureMesh guard.
@@ -376,9 +383,8 @@ export class SDFTextMesh
   _setFeatureSize(size: number): void {
     this.setSize(size);
   }
-  _setFeatureOpacity(_opacity: number): void {
-    // Opacity adjustment is not currently supported for text meshes.
-    // This method is intentionally a no-op to satisfy the FeatureMesh guard.
+  _setFeatureOpacity(opacity: number): void {
+    this._enhancer.update({ base: { opacity } });
   }
 
   setPosition(
@@ -421,6 +427,14 @@ export class SDFTextMesh
     if (nextColor !== state.color.getHex()) {
       baseProps.color = nextColor;
       hasUpdate = true;
+    }
+
+    if (material.opacity !== undefined) {
+      const nextOpacity = material.opacity;
+      if (nextOpacity !== state.opacity) {
+        baseProps.opacity = nextOpacity;
+        hasUpdate = true;
+      }
     }
 
     const nextFontSize = material.size ?? 16.0;
@@ -503,6 +517,22 @@ export class SDFTextMesh
     if (nextBGOutlineWidth !== state.backgroundOutlineWidth) {
       baseProps.backgroundOutlineWidth = nextBGOutlineWidth;
       hasUpdate = true;
+    }
+
+    if (material.transparent !== undefined) {
+      const nextTransparent = material.transparent;
+      if (nextTransparent !== state.transparent) {
+        baseProps.transparent = nextTransparent;
+        hasUpdate = true;
+      }
+    }
+
+    if (material.depthWrite !== undefined) {
+      const nextDepthWrite = material.depthWrite;
+      if (nextDepthWrite !== state.depthWrite) {
+        baseProps.depthWrite = nextDepthWrite;
+        hasUpdate = true;
+      }
     }
 
     if (hasUpdate) {

@@ -32,6 +32,7 @@ uniform sampler2D uAtlas;
 uniform sampler2D uColorAtlas;
 uniform float uSdfThreshold;
 uniform vec3 uColor;
+uniform float uOpacity;
 uniform vec3 uOutlineColor;
 uniform float uOutlineWidth;
 uniform float uOutlineOpacity;
@@ -62,9 +63,9 @@ void main() {
 
         if ((p.x > (0.5 - uBackgroundOutlineWidth / vBackGroundRatio)) ||
             (p.y > (0.5 - uBackgroundOutlineWidth))) {
-            gl_FragColor = vec4(uBackgroundOutlineColor, 1.0);
+            gl_FragColor = vec4(uBackgroundOutlineColor, uOpacity);
         } else {
-            gl_FragColor = vec4(uBackgroundColor, 1.0);
+            gl_FragColor = vec4(uBackgroundColor, uOpacity);
         }
 
         return;
@@ -76,6 +77,7 @@ void main() {
     if (vIsColor == 1) {
         vec4 c = texture2D(uColorAtlas, vAtlasUv);
         if (c.a <= 0.0) discard;
+        c.a *= uOpacity; // Apply text opacity
         gl_FragColor = c;
 
         #ifndef USE_SHADOWMAP_DEPTH
@@ -141,7 +143,7 @@ void main() {
 
         // Blend: fill on top of outline
         vec3 color = mix(uOutlineColor, uColor, fillAlpha);
-        float alpha = mix(outlineAlpha * uOutlineOpacity, 1.0, fillAlpha);
+        float alpha = mix(outlineAlpha * uOutlineOpacity, 1.0, fillAlpha) * uOpacity; // Apply text opacity
         // Pull the FILL toward the camera (SMALLER depth = nearer). Outline pixels
         // (fillAlpha≈0) get no pull and stay at the base label depth — coplanar with
         // the background quad. Net effect, with depthWrite enabled:
@@ -155,7 +157,7 @@ void main() {
     } else {
         float alpha = smoothstep(uSdfThreshold - edgeWidth,
                                  uSdfThreshold + edgeWidth,
-                                 dist);
+                                 dist) * uOpacity; // Apply text opacity
         if (alpha <= 0.0) discard;
         gl_FragColor = vec4(uColor, alpha);
         gl_FragDepth = clamp(gl_FragDepth - 0.0001, 0.0, 1.0);

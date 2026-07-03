@@ -15,9 +15,7 @@
     varying float vLayer;
 #endif
 
-attribute float instanceShow;
-attribute float instanceHeight;
-attribute float instanceSize;
+attribute vec4 instanceParams; // x=height, y=size, z=show, w=opacity
 attribute vec3 instanceColor;
 attribute float instanceBatchID;
 
@@ -35,8 +33,14 @@ varying vec2 vUv;
 varying vec3 vColor;
 varying float vBatchID;
 varying float vFragDepth;
+varying float vOpacity; // Pass opacity to fragment shader
 
 void main() {
+    float instanceHeight = instanceParams.x;
+    float instanceSize = instanceParams.y;
+    float instanceShow = instanceParams.z;
+    vOpacity = instanceParams.w;
+
 #ifdef USE_RTE
     vec3 absTransformed = instancePositionHIGH + instancePositionLOW;
 #else

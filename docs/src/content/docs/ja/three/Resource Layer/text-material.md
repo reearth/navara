@@ -141,6 +141,24 @@ import { Color } from "@navara/three";
 }
 ```
 
+### depthWrite
+
+**Type:** `boolean | undefined`
+
+**Description:** 深度バッファへの書き込みを有効にします。透明なマテリアルの場合は `false` に設定して、深度ソートの問題を防ぎます。
+
+**Default:** `true`
+
+**Example:**
+
+```typescript
+{
+  text: {
+    depthWrite: false
+  }
+}
+```
+
 ### font
 
 **Type:** `string | undefined`
@@ -232,6 +250,24 @@ view.addFontFamily({
 {
   text: {
     offsetDepth: true
+  }
+}
+```
+
+### opacity
+
+**Type:** `number | undefined`
+
+**Description:** テキストの不透明度を指定します。範囲は 0.0（完全に透明）から 1.0（完全に不透明）です。
+
+**Default:** `1.0`
+
+**Example:**
+
+```typescript
+{
+  text: {
+    opacity: 0.5
   }
 }
 ```
@@ -378,6 +414,25 @@ import { Color } from "@navara/three";
 {
   text: {
     text: "Tokyo Station"
+  }
+}
+```
+
+### transparent
+
+**Type:** `boolean | undefined`
+
+**Description:** 透明度とアルファブレンディングを有効にします。有効にすると、`opacity` プロパティを使用して透明度を制御できます。
+
+**Default:** `false`
+
+**Example:**
+
+```typescript
+{
+  text: {
+    transparent: true,
+    opacity: 0.5
   }
 }
 ```

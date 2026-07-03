@@ -109,7 +109,6 @@ export function createPolygonBaseEnhancer(
         useBatchColorShow: state.useBatchColorShow,
         useBatchHeight: state.useBatchHeight,
         useBatchExtrudedHeight: state.useBatchExtrudedHeight,
-        useBatchOpacity: state.useBatchOpacity,
         isTexturized: state.isTexturized,
         clampToGround: state.clampToGround,
         useRTE: state.useRTE,

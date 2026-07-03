@@ -65,6 +65,24 @@ import { Color } from "@navara/three";
 }
 ```
 
+### depthWrite
+
+**Type:** `boolean | undefined`
+
+**Description:** 深度バッファへの書き込みを有効にします。透明なマテリアルの場合は `false` に設定して、深度ソートの問題を防ぎます。
+
+**Default:** `true`
+
+**Example:**
+
+```typescript
+{
+  polyline: {
+    depthWrite: false
+  }
+}
+```
+
 ### effectIds
 
 **Type:** `string[] | undefined`
@@ -210,6 +228,28 @@ import { Color } from "@navara/three";
   }
 }
 ```
+
+### transparent
+
+**Type:** `boolean | undefined`
+
+**Description:** 透明度とアルファブレンディングを有効にします。これにより、ポリラインを不透明度付きでレンダリングできます。
+
+**Default:** `false`
+
+**Example:**
+
+```typescript
+{
+  polyline: {
+    transparent: true
+  }
+}
+```
+
+:::note
+`transparent` を有効にすると、セレクティブエフェクトを使用する際に予期しない動作を引き起こす可能性があります。
+:::
 
 ### tiled
 

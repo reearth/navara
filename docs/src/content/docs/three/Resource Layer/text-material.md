@@ -141,6 +141,24 @@ import { Color } from "@navara/three";
 }
 ```
 
+### depthWrite
+
+**Type:** `boolean | undefined`
+
+**Description:** Enables writing to the depth buffer. Set to `false` for transparent materials to prevent depth sorting issues.
+
+**Default:** `true`
+
+**Example:**
+
+```typescript
+{
+  text: {
+    depthWrite: false
+  }
+}
+```
+
 ### font
 
 **Type:** `string | undefined`
@@ -232,6 +250,24 @@ view.addFontFamily({
 {
   text: {
     offsetDepth: true
+  }
+}
+```
+
+### opacity
+
+**Type:** `number | undefined`
+
+**Description:** Specifies the opacity of the text. The range is 0.0 (fully transparent) to 1.0 (fully opaque).
+
+**Default:** `1.0`
+
+**Example:**
+
+```typescript
+{
+  text: {
+    opacity: 0.5
   }
 }
 ```
@@ -378,6 +414,25 @@ import { Color } from "@navara/three";
 {
   text: {
     text: "Tokyo Station"
+  }
+}
+```
+
+### transparent
+
+**Type:** `boolean | undefined`
+
+**Description:** Enables transparency and alpha blending. When enabled, the `opacity` property can be used to control transparency.
+
+**Default:** `false`
+
+**Example:**
+
+```typescript
+{
+  text: {
+    transparent: true,
+    opacity: 0.5
   }
 }
 ```

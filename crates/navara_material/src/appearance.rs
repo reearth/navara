@@ -205,6 +205,12 @@ pub struct TextMaterial {
     /// default), single-channel SDF (Felzenszwalb on a fontdue bitmap) is used
     /// — ~100× faster per glyph, slightly soft corners at extreme zoom.
     pub high_quality: bool,
+    /// Opacity of the text
+    pub opacity: f32,
+    /// Enable transparency and alpha blending
+    pub transparent: bool,
+    /// Enable writing to depth buffer (default: true; set false for transparent materials)
+    pub depth_write: bool,
 }
 
 impl Default for TextMaterial {
@@ -233,6 +239,9 @@ impl Default for TextMaterial {
             outline_width: 0.0,
             lang: "".to_string(),
             high_quality: false,
+            opacity: 1.0,
+            transparent: false,
+            depth_write: true,
         }
     }
 }
@@ -259,6 +268,10 @@ pub struct PolylineMaterial {
     pub effect_ids: Option<Vec<String>>,
     pub emissive_intensity: Option<f32>,
     pub emissive_color: Option<u32>,
+    /// Enable transparency and alpha blending
+    pub transparent: bool,
+    /// Enable writing to depth buffer
+    pub depth_write: bool,
 }
 
 impl Default for PolylineMaterial {
@@ -278,6 +291,8 @@ impl Default for PolylineMaterial {
             effect_ids: None,
             emissive_intensity: None,
             emissive_color: None,
+            transparent: false,
+            depth_write: true,
         }
     }
 }
@@ -428,6 +443,10 @@ pub struct ModelMaterial {
     pub effect_ids: Option<Vec<String>>,
     pub emissive_intensity: Option<f32>,
     pub emissive_color: Option<u32>,
+    /// Enable transparency and alpha blending
+    pub transparent: bool,
+    /// Enable writing to depth buffer
+    pub depth_write: bool,
 }
 
 impl Default for ModelMaterial {
@@ -466,6 +485,8 @@ impl Default for ModelMaterial {
             effect_ids: None,
             emissive_intensity: None,
             emissive_color: None,
+            transparent: false,
+            depth_write: true,
         }
     }
 }

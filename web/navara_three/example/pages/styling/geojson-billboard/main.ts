@@ -97,6 +97,7 @@ const run = async () => {
           const isStopped = (properties?.["N05_005e"] as string) === "9999";
 
           return {
+            opacity: isStopped ? 0.5 : 1.0,
             color: new Color().setHex(isStopped ? 0xff0000 : 0xffffff),
           };
         },

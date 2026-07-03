@@ -1,12 +1,12 @@
 import type { Texture } from "three";
 
 import type { UniformValue } from "../../../types";
+import type { BatchTextureFlags } from "../../batchTexture";
 import type { Mutates } from "../../MaterialEnhancer";
 
-type ModelBatchTextureFlags = {
-  useBatchTexture: boolean;
-  useBatchColorShow: boolean;
-};
+type ModelBatchTextureFlags = Required<
+  Pick<BatchTextureFlags, "useBatchTexture" | "useBatchColorShow">
+>;
 
 /**
  * Props for the model base enhancer.
@@ -16,6 +16,9 @@ export type ModelBaseProps = {
   color?: number;
   metalness?: number;
   roughness?: number;
+
+  transparent?: boolean;
+  depthWrite?: boolean;
 
   // Emissive (for selective effects)
   emissiveColor?: number;

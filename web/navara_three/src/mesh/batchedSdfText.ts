@@ -407,6 +407,13 @@ export class BatchedSdfTextMesh
     }
   }
 
+  setFeatureOpacityByBatchIndex(batchIndex: number, opacity: number) {
+    const mesh = this.meshes()[batchIndex];
+    if (mesh) {
+      mesh.setOpacity(opacity);
+    }
+  }
+
   dispose() {
     const q = this._highQuality;
     const unload =

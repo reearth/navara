@@ -22,9 +22,4 @@
   #ifdef USE_BATCH_LINE_WIDTH
     batchLineWidth = getBatchLineWidth(batchId);
   #endif
-
-  #ifdef USE_BATCH_OPACITY
-    batchOpacity = getBatchOpacity(batchId);
-    vBatchOpacity = batchOpacity;
-  #endif
 #endif

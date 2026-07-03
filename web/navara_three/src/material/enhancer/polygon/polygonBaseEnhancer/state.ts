@@ -26,7 +26,6 @@ export const DEFAULT_BASE_PROPS: Required<
   useBatchColorShow: false,
   useBatchHeight: false,
   useBatchExtrudedHeight: false,
-  useBatchOpacity: false,
 };
 
 /** Default state derived from DEFAULT_BASE_PROPS */
@@ -48,7 +47,6 @@ export const DEFAULT_BASE_STATE: PolygonBaseState = {
   useBatchColorShow: DEFAULT_BASE_PROPS.useBatchColorShow,
   useBatchHeight: DEFAULT_BASE_PROPS.useBatchHeight,
   useBatchExtrudedHeight: DEFAULT_BASE_PROPS.useBatchExtrudedHeight,
-  useBatchOpacity: DEFAULT_BASE_PROPS.useBatchOpacity,
 };
 
 /**
@@ -90,6 +88,5 @@ export const updateState = (
     useBatchHeight: props.useBatchHeight ?? currentState.useBatchHeight,
     useBatchExtrudedHeight:
       props.useBatchExtrudedHeight ?? currentState.useBatchExtrudedHeight,
-    useBatchOpacity: props.useBatchOpacity ?? currentState.useBatchOpacity,
   };
 };

@@ -36,6 +36,11 @@ void main() {
 	vec3 totalEmissiveRadiance = vec3(0.);
 
     #include <color_fragment>
+
+#ifdef USE_BATCH_COLOR_SHOW
+    diffuseColor.a = nvr_vShow;
+#endif
+
     #include <specularmap_fragment>
     #include <normal_fragment_begin>
     #include <emissivemap_fragment>

@@ -33,14 +33,7 @@ export type BatchedFeatureAttributes<
 } & Attr;
 
 export const FEATURE_BATCH_TEXTURE_CONFIG: BatchTextureConfig = {
-  rows: [
-    "COLOR_SHOW",
-    "HEIGHT",
-    "EXTRUDED_HEIGHT",
-    "LINE_WIDTH",
-    "SIZE",
-    "OPACITY",
-  ],
+  rows: ["COLOR_SHOW", "HEIGHT", "EXTRUDED_HEIGHT", "LINE_WIDTH", "SIZE"],
   batchLength: 0,
 };
 

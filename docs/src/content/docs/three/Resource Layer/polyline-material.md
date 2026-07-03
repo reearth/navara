@@ -65,6 +65,24 @@ import { Color } from "@navara/three";
 }
 ```
 
+### depthWrite
+
+**Type:** `boolean | undefined`
+
+**Description:** Enables writing to the depth buffer. Set to `false` for transparent materials to prevent depth sorting issues.
+
+**Default:** `true`
+
+**Example:**
+
+```typescript
+{
+  polyline: {
+    depthWrite: false
+  }
+}
+```
+
 ### effectIds
 
 **Type:** `string[] | undefined`
@@ -210,6 +228,28 @@ import { Color } from "@navara/three";
   }
 }
 ```
+
+### transparent
+
+**Type:** `boolean | undefined`
+
+**Description:** Enables transparency and alpha blending. This allows the polyline to be rendered with opacity.
+
+**Default:** `false`
+
+**Example:**
+
+```typescript
+{
+  polyline: {
+    transparent: true
+  }
+}
+```
+
+:::note
+Enabling `transparent` might cause unexpected behavior when using selective effects.
+:::
 
 ### tiled
 

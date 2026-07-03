@@ -24,6 +24,7 @@ export const createBaseMutates = (
 ): SdfTextBaseMutates => {
   const refs: SdfTextBaseRefs = {
     uColor: { value: new Color(1, 1, 1) },
+    uOpacity: { value: 1.0 },
     uFontSize: { value: 16.0 },
     uCenter: { value: new Vector2(0.5, 0.0) },
     uSizeInMeters: { value: true },
@@ -73,6 +74,7 @@ export const createBaseMutates = (
   return {
     update: (state: SdfTextBaseState) => {
       refs.uColor.value.set(state.color);
+      refs.uOpacity.value = state.opacity;
       refs.uFontSize.value = state.fontSize;
       refs.uCenter.value.set(state.center[0], state.center[1]);
       refs.uSizeInMeters.value = state.sizeInMeters;
@@ -90,6 +92,7 @@ export const createBaseMutates = (
 
     updateUniforms: (uniforms) => {
       uniforms.uColor = refs.uColor;
+      uniforms.uOpacity = refs.uOpacity;
       uniforms.uFontSize = refs.uFontSize;
       uniforms.uCenter = refs.uCenter;
       uniforms.uSizeInMeters = refs.uSizeInMeters;

@@ -44,7 +44,7 @@ import type { PickableMesh } from "./pickableMesh";
 export type ModelMaterial = MeshStandardMaterial | MeshPhysicalMaterial;
 
 // TODO: Height to adjust the height based on its property.
-export type ModelBatchedAttributeName = "color" | "show";
+export type ModelBatchedAttributeName = "color" | "show" | "opacity";
 
 export const MODEL_BATCH_TEXTURE_CONFIG: BatchTextureConfig = {
   rows: ["COLOR_SHOW"],
@@ -215,6 +215,11 @@ export class ModelMesh
           enhancer.update({ base: { useBatchColorShow: true } });
           break;
         }
+        case "opacity": {
+          // Opacity is bundled with show in COLOR_SHOW alpha channel
+          enhancer.update({ base: { useBatchColorShow: true } });
+          break;
+        }
       }
     }
 
@@ -353,6 +358,8 @@ export class ModelMesh
         roughness: material.roughness,
         emissiveColor: material.emissiveColor,
         emissiveIntensity: material.emissiveIntensity,
+        transparent: material.transparent,
+        depthWrite: material.depthWrite,
         effectIdsMask:
           this.ctx.viewContext.selectiveEffectRegistry?.computeMask(
             material.effectIds ?? [],
@@ -438,9 +445,10 @@ export class ModelMesh
     // This method is intentionally a no-op to satisfy the FeatureMesh interface.
   }
 
-  _setFeatureOpacity(_opacity: number): void {
-    // Opacity adjustment via batch textures is currently not implemented for models.
-    // This method is intentionally a no-op to satisfy the FeatureMesh interface.
+  _setFeatureOpacity(opacity: number): void {
+    this.traverseMesh((m) => {
+      this._updateBatchAttribute(m, 0, "opacity", opacity);
+    });
   }
 
   dispose() {

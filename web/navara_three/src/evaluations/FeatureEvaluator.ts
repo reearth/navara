@@ -377,6 +377,9 @@ export class FeatureEvaluator {
       if (evaluated.size != null) {
         obj.setFeatureSizeByBatchId(batchId, evaluated.size);
       }
+      if (evaluated.opacity != null) {
+        obj.setFeatureOpacityByBatchId(batchId, evaluated.opacity);
+      }
       return;
     }
 
@@ -395,6 +398,9 @@ export class FeatureEvaluator {
       }
       if (evaluated.size != null && obj instanceof BatchedSdfTextMesh) {
         obj.setFeatureSizeByBatchIndex(batchIndex, evaluated.size);
+      }
+      if (evaluated.opacity != null && obj instanceof BatchedSdfTextMesh) {
+        obj.setFeatureOpacityByBatchIndex(batchIndex, evaluated.opacity);
       }
       return;
     }

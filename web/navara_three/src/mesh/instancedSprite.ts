@@ -239,20 +239,23 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     instancedGeometry.instanceCount = instanceCount;
 
     // Add Custom Attributes
-    const heightBuffer = new Float32Array(instanceCount);
-    const sizeBuffer = new Float32Array(instanceCount);
-    const showBuffer = new Float32Array(instanceCount);
+    // instanceParams: vec4(height, size, show, opacity)
+    const paramsBuffer = new Float32Array(instanceCount * 4);
     const colorBuffer = new Float32Array(instanceCount * 3);
     let layerBuffer = undefined;
 
     this._initialColor = new Color().setHex(m.material.color ?? 0xffffff);
     // instanceSize defaults to a negative value to indicate "use uScale" in the shader.
     this._initialSize = -1.0;
+    const initialShow =
+      m.material.show !== undefined ? (m.material.show ? 1.0 : 0.0) : 1.0;
+    const initialOpacity = 1.0;
+
     for (let i = 0; i < instanceCount; i++) {
-      heightBuffer[i] = m.material.height ?? 0.0;
-      sizeBuffer[i] = this._initialSize;
-      showBuffer[i] =
-        m.material.show !== undefined ? (m.material.show ? 1.0 : 0.0) : 1.0;
+      paramsBuffer[i * 4 + 0] = m.material.height ?? 0.0; // height
+      paramsBuffer[i * 4 + 1] = this._initialSize; // size
+      paramsBuffer[i * 4 + 2] = initialShow; // show
+      paramsBuffer[i * 4 + 3] = initialOpacity; // opacity
 
       colorBuffer[i * 3 + 0] = this._initialColor.r;
       colorBuffer[i * 3 + 1] = this._initialColor.g;
@@ -297,16 +300,8 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
       );
     }
     instancedGeometry.setAttribute(
-      "instanceHeight",
-      new InstancedBufferAttribute(heightBuffer, 1),
-    );
-    instancedGeometry.setAttribute(
-      "instanceSize",
-      new InstancedBufferAttribute(sizeBuffer, 1),
-    );
-    instancedGeometry.setAttribute(
-      "instanceShow",
-      new InstancedBufferAttribute(showBuffer, 1),
+      "instanceParams",
+      new InstancedBufferAttribute(paramsBuffer, 4),
     );
     instancedGeometry.setAttribute(
       "instanceColor",
@@ -590,33 +585,44 @@ export class InstancedSpriteMesh extends Mesh implements PickableMesh {
     const instanceId = this._batchIdToInstance.get(batchId);
     if (instanceId === undefined) return;
 
-    const showAttr = this.geometry.getAttribute(
-      "instanceShow",
+    const paramsAttr = this.geometry.getAttribute(
+      "instanceParams",
     ) as InstancedBufferAttribute;
-    showAttr.setX(instanceId, rawVisible ? 1.0 : 0.0);
-    showAttr.needsUpdate = true;
+    paramsAttr.setZ(instanceId, rawVisible ? 1.0 : 0.0);
+    paramsAttr.needsUpdate = true;
+  }
+
+  setFeatureOpacityByBatchId(batchId: number, opacity: number) {
+    const instanceId = this._batchIdToInstance.get(batchId);
+    if (instanceId === undefined) return;
+
+    const paramsAttr = this.geometry.getAttribute(
+      "instanceParams",
+    ) as InstancedBufferAttribute;
+    paramsAttr.setW(instanceId, opacity);
+    paramsAttr.needsUpdate = true;
   }
 
   setFeatureHeightByBatchId(batchId: number, height: number) {
     const instanceId = this._batchIdToInstance.get(batchId);
     if (instanceId === undefined) return;
 
-    const heightAttr = this.geometry.getAttribute(
-      "instanceHeight",
+    const paramsAttr = this.geometry.getAttribute(
+      "instanceParams",
     ) as InstancedBufferAttribute;
-    heightAttr.setX(instanceId, height);
-    heightAttr.needsUpdate = true;
+    paramsAttr.setX(instanceId, height);
+    paramsAttr.needsUpdate = true;
   }
 
   setFeatureSizeByBatchId(batchId: number, size: number) {
     const instanceId = this._batchIdToInstance.get(batchId);
     if (instanceId === undefined) return;
 
-    const sizeAttr = this.geometry.getAttribute(
-      "instanceSize",
+    const paramsAttr = this.geometry.getAttribute(
+      "instanceParams",
     ) as InstancedBufferAttribute;
-    sizeAttr.setX(instanceId, size);
-    sizeAttr.needsUpdate = true;
+    paramsAttr.setY(instanceId, size);
+    paramsAttr.needsUpdate = true;
   }
 
   dispose(): void {

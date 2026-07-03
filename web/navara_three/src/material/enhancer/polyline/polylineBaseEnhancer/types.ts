@@ -1,14 +1,12 @@
 import type { Color, Matrix4, Texture, Vector2, Vector3 } from "three";
 
 import type { UniformValue } from "../../../types";
+import type { BatchTextureFlags } from "../../batchTexture";
 import type { Mutates } from "../../MaterialEnhancer";
 
-type PolylineBatchTextureFlags = {
-  useBatchTexture: boolean;
-  useBatchColorShow: boolean;
-  useBatchHeight: boolean;
-  useBatchLineWidth: boolean;
-};
+type PolylineBatchTextureFlags = Required<
+  Omit<BatchTextureFlags, "useBatchExtrudedHeight" | "useBatchSize">
+>;
 
 /**
  * Props for the polyline base enhancer.
@@ -16,6 +14,9 @@ type PolylineBatchTextureFlags = {
 export type PolylineBaseProps = {
   // Basic material props
   color?: number;
+
+  transparent?: boolean;
+  depthWrite?: boolean;
 
   // Height/width
   minMaxHeight?: [number, number];

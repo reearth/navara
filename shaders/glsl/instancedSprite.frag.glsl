@@ -35,6 +35,7 @@ varying vec2 vUv;
 varying vec3 vColor;
 varying float vBatchID;
 varying float vFragDepth;
+varying float vOpacity;
 
 uniform bool uOffsetDepth;
 uniform float nvr_uPickable;
@@ -54,9 +55,9 @@ void main() {
         vec4 color = texture(uTexture, vec3(vUv, vLayer));
         vec4 tint = vec4(vColor, color.a);
         color *= tint ;
-        alpha = color.a;
+        alpha = color.a * vOpacity; // Apply opacity
     #else
-        alpha = nvr_circle_alpha(vUv - vec2(0.5));
+        alpha = nvr_circle_alpha(vUv - vec2(0.5)) * vOpacity; // Apply opacity
         vec4 color = vec4(vColor, 1.0);
     #endif
 
@@ -65,6 +66,8 @@ void main() {
     if (nvr_uPickable > 0.0 && alpha > 0.0) {
         vec3 pickColor = nvr_batchIdToColor(vBatchID);
         color = vec4(pickColor.xyz, 1.0);
+    } else {
+        color.a = alpha;
     }
 
     gl_FragColor = color;

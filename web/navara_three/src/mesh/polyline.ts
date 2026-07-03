@@ -268,6 +268,8 @@ export class PolylineMesh extends BatchedFeatureMesh<
         isTexturized,
         pickable: false,
         useRTE,
+        transparent: meshMaterial.transparent,
+        depthWrite: meshMaterial.depthWrite,
         // External shared uniforms from CommonUniforms
         viewportAndPixelRatio: uniforms.viewportAndPixelRatio,
         frustumNearFar: uniforms.frustumNearFar,
@@ -400,6 +402,8 @@ export class PolylineMesh extends BatchedFeatureMesh<
         lineWidth: material.width,
         width: material.width,
         maxWidth: material.maxWidth,
+        transparent: material.transparent,
+        depthWrite: material.depthWrite,
         effectIdsMask:
           this.ctx.viewContext.selectiveEffectRegistry?.computeMask(
             material.effectIds ?? [],

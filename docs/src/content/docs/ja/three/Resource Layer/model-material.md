@@ -142,6 +142,24 @@ import { Color } from "@navara/three";
 }
 ```
 
+### depthWrite
+
+**Type:** `boolean | undefined`
+
+**Description:** 深度バッファへの書き込みを有効にします。透明なマテリアルの場合は `false` に設定して、深度ソートの問題を防ぎます。
+
+**Default:** `true`
+
+**Example:**
+
+```typescript
+{
+  model: {
+    depthWrite: false
+  }
+}
+```
+
 ### effectIds
 
 **Type:** `string[] | undefined`
@@ -500,6 +518,24 @@ import { Color } from "@navara/three";
 {
   model: {
     specularStrength: 0.5
+  }
+}
+```
+
+### transparent
+
+**Type:** `boolean | undefined`
+
+**Description:** 透明度とアルファブレンディングを有効にします。有効にすると、モデルのアルファチャンネルに基づいて透明度付きでレンダリングできます。
+
+**Default:** `false`
+
+**Example:**
+
+```typescript
+{
+  model: {
+    transparent: true
   }
 }
 ```

@@ -22,6 +22,7 @@ export type SdfTextBaseProps = {
 
   // Mutable state
   color?: number; // hex color
+  opacity?: number;
   fontSize?: number;
   center?: [number, number];
   sizeInMeters?: boolean;
@@ -38,6 +39,8 @@ export type SdfTextBaseProps = {
 
   // Material properties (set directly on material, not via uniforms)
   depthTest?: boolean;
+  transparent?: boolean;
+  depthWrite?: boolean;
 
   // External uniform refs / values (may change over time)
   rtcCenter?: [number, number, number];
@@ -54,6 +57,7 @@ export type SdfTextBaseState = Readonly<{
 
   // Mutable
   color: Color;
+  opacity: number;
   fontSize: number;
   center: [number, number];
   sizeInMeters: boolean;
@@ -70,6 +74,8 @@ export type SdfTextBaseState = Readonly<{
 
   // Material properties
   depthTest: boolean;
+  transparent: boolean;
+  depthWrite: boolean;
 }>;
 
 /**
@@ -79,6 +85,7 @@ export type SdfTextBaseState = Readonly<{
  */
 export type SdfTextBaseRefs = {
   uColor: UniformValue<Color>;
+  uOpacity: UniformValue<number>;
   uFontSize: UniformValue<number>;
   uCenter: UniformValue<Vector2>;
   uSizeInMeters: UniformValue<boolean>;

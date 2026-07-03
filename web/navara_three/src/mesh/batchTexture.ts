@@ -2,12 +2,11 @@ import { Color, DataTexture, FloatType, Material, RGBAFormat } from "three";
 import invariant from "tiny-invariant";
 
 export const BATCH_TEXTURE_ROW = [
-  "COLOR_SHOW", // R=colorR, G=colorG, B=colorB, A=NONE
+  "COLOR_SHOW", // R=colorR, G=colorG, B=colorB, A=show*opacity
   "HEIGHT", // R,G,B,A=height as RGBA
   "EXTRUDED_HEIGHT", // R,G,B,A=extrudedHeight as RGBA
   "LINE_WIDTH", // R,G,B,A=lineWidth as RGBA
   "SIZE", // R,G,B,A=size as RGBA
-  "OPACITY", // R,G,B,A=opacity as RGBA
 ] as const;
 
 export type BatchTextureRowKey = (typeof BATCH_TEXTURE_ROW)[number];
@@ -88,22 +87,19 @@ export function initBatchDataTexture(
   const textureHeight = batchRows * rowCount;
   const data = new Float32Array(textureWidth * 4 * textureHeight);
 
-  // Initialize OPACITY row to 1.0 for all batch IDs (default is fully opaque)
-  // Without this, zero-initialized data would make features fully transparent
-  const opacityRowIndex = config.rows.indexOf("OPACITY");
-  if (opacityRowIndex >= 0) {
-    const encodedOpacity = encodeFloatToRGBA(1.0);
+  // Initialize COLOR_SHOW alpha channel to 1.0 for all batch IDs (default is fully visible and opaque)
+  // Alpha channel now contains: show * opacity (1.0 * 1.0 = 1.0 by default)
+  const colorShowRowIndex = config.rows.indexOf("COLOR_SHOW");
+  if (colorShowRowIndex >= 0) {
     for (let batchId = 0; batchId < config.batchLength; batchId++) {
       const baseIndex = batchBaseIndex(
         textureWidth,
         rowCount,
         batchId,
-        opacityRowIndex,
+        colorShowRowIndex,
       );
-      data[baseIndex] = encodedOpacity[0]; // R
-      data[baseIndex + 1] = encodedOpacity[1]; // G
-      data[baseIndex + 2] = encodedOpacity[2]; // B
-      data[baseIndex + 3] = encodedOpacity[3]; // A
+      // R, G, B remain 0 (will be set when color is first written)
+      data[baseIndex + 3] = 1.0; // A = show (true) * opacity (1.0)
     }
   }
 
@@ -262,7 +258,12 @@ export function updateBatchAttribute(
         data[baseIndex + 1] = color.g; // G
         data[baseIndex + 2] = color.b; // B
       }
-      data[baseIndex + 3] = value ? 1.0 : 0.0; // A
+      // Get current opacity (default 1.0 if not set)
+      const currentOpacity = material.userData._batchOpacityTouched
+        ? data[baseIndex + 3]
+        : 1.0;
+      // Alpha = show * opacity
+      data[baseIndex + 3] = value ? currentOpacity : 0.0; // A
       break;
     }
     case "height": {
@@ -349,22 +350,31 @@ export function updateBatchAttribute(
     }
     case "opacity": {
       if (typeof value !== "number") return;
-
-      const rowIndex = getRowIndex(material, "OPACITY");
+      // Opacity is now bundled with show in COLOR_SHOW's alpha channel
+      const rowIndex = getRowIndex(material, "COLOR_SHOW");
       if (rowIndex < 0) return;
 
       if (material.userData.defines) {
-        material.userData.defines.USE_BATCH_OPACITY = true;
+        material.vertexColors = true;
+        material.userData.defines.USE_BATCH_COLOR_SHOW = true;
         material.needsUpdate = true;
       }
 
-      const encodedOpacity = encodeFloatToRGBA(value);
+      material.userData._batchOpacityTouched = true;
 
       const baseIndex = batchBaseIndex(texWidth, rowCount, batchId, rowIndex);
-      data[baseIndex] = encodedOpacity[0]; // R
-      data[baseIndex + 1] = encodedOpacity[1]; // G
-      data[baseIndex + 2] = encodedOpacity[2]; // B
-      data[baseIndex + 3] = encodedOpacity[3]; // A
+      if (!material.userData._batchColorTouched) {
+        const color = defaultValues.color;
+        data[baseIndex] = color.r; // R
+        data[baseIndex + 1] = color.g; // G
+        data[baseIndex + 2] = color.b; // B
+      }
+      // Get current show state (default true if not set)
+      const currentShow = material.userData._batchShowTouched
+        ? data[baseIndex + 3] > 0.0
+        : material.visible;
+      // Alpha = show * opacity
+      data[baseIndex + 3] = currentShow ? value : 0.0; // A
       break;
     }
   }

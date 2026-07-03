@@ -579,7 +579,8 @@ export class PolygonMesh extends BatchedFeatureMesh<
         break;
       }
       case "opacity": {
-        this.getEnhancer().update({ base: { useBatchOpacity: true } });
+        // Opacity is bundled with show in COLOR_SHOW's alpha channel
+        this.getEnhancer().update({ base: { useBatchColorShow: true } });
         break;
       }
     }

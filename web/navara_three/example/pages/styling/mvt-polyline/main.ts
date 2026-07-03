@@ -78,7 +78,8 @@ const run = async () => {
       polyline: {
         width: params.width,
         height: 1,
-        clampToGround: true,
+        clampToGround: false,
+        transparent: true,
       },
       vectorTile: { maxZoom: 16 },
     });
@@ -105,17 +106,25 @@ const run = async () => {
           ) as { value: { value: string }[] } | undefined;
 
           const code = treeInfo?.value[0]?.value;
-
+          let height = 1;
+          let width = params.width;
+          let opacity = 1;
           // Color based on street tree presence
           const color = (() => {
             // Has street trees
             if (code === "1") {
-              return 0x00ff00;
+              height = 200;
+              width = 20;
+              opacity = 0.5;
+              return 0x0000ff;
             }
             return 0x777777;
           })();
 
           return {
+            height,
+            width,
+            opacity,
             color: new Color().setHex(color),
           };
         },

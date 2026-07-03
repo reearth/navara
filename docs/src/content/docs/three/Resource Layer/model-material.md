@@ -142,6 +142,24 @@ import { Color } from "@navara/three";
 }
 ```
 
+### depthWrite
+
+**Type:** `boolean | undefined`
+
+**Description:** Enables writing to the depth buffer. Set to `false` for transparent materials to prevent depth sorting issues.
+
+**Default:** `true`
+
+**Example:**
+
+```typescript
+{
+  model: {
+    depthWrite: false
+  }
+}
+```
+
 ### effectIds
 
 **Type:** `string[] | undefined`
@@ -500,6 +518,24 @@ import { Color } from "@navara/three";
 {
   model: {
     specularStrength: 0.5
+  }
+}
+```
+
+### transparent
+
+**Type:** `boolean | undefined`
+
+**Description:** Enables transparency and alpha blending. When enabled, the material can be rendered with transparency based on the model's alpha channel.
+
+**Default:** `false`
+
+**Example:**
+
+```typescript
+{
+  model: {
+    transparent: true
   }
 }
 ```

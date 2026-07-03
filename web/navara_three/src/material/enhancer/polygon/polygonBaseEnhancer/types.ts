@@ -1,15 +1,13 @@
 import type { Matrix4, Texture, Vector3 } from "three";
 
 import type { UniformValue } from "../../../types";
+import type { BatchTextureFlags } from "../../batchTexture";
 import type { Mutates } from "../../MaterialEnhancer";
 
-type PolygonBatchTextureFlags = {
-  useBatchTexture: boolean;
-  useBatchColorShow: boolean;
-  useBatchHeight: boolean;
-  useBatchExtrudedHeight: boolean;
-  useBatchOpacity: boolean;
-};
+type PolygonBatchTextureFlags = Required<
+  Omit<BatchTextureFlags, "useBatchLineWidth" | "useBatchSize">
+>;
+// Note: opacity is bundled with show in useBatchColorShow
 
 /**
  * Props for the polygon core enhancer.

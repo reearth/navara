@@ -23,6 +23,13 @@ export type SupportedMaterial = ShaderMaterial;
  * @param props - The props to apply
  */
 export function updateMaterialProps(
-  _material: SupportedMaterial,
-  _props: PolylineBaseProps,
-): void {}
+  material: SupportedMaterial,
+  props: PolylineBaseProps,
+): void {
+  if (props.transparent !== undefined) {
+    material.transparent = props.transparent;
+  }
+  if (props.depthWrite !== undefined) {
+    material.depthWrite = props.depthWrite;
+  }
+}
