@@ -48,8 +48,7 @@ type SplatSample = {
 };
 
 /** Camera distance (m) that frames a sample, proportional to its scale. */
-const flyDistance = (sample: SplatSample): number =>
-  sample.viewDistance ?? 100;
+const flyDistance = (sample: SplatSample): number => sample.viewDistance ?? 100;
 
 /** A 3/4 down-looking view by default; per-sample overrides win. */
 const DEFAULT_VIEW_HEADING = -25;

@@ -38,7 +38,8 @@ const meshWith = (ecef: Matrix4): Object3D => {
 
 const asSplat = (mesh: Object3D): SplatMesh => mesh as unknown as SplatMesh;
 
-const translationOf = (m: Matrix4): Vector3 => new Vector3().setFromMatrixPosition(m);
+const translationOf = (m: Matrix4): Vector3 =>
+  new Vector3().setFromMatrixPosition(m);
 
 describe("SplatOriginController", () => {
   describe("grid snapping", () => {
