@@ -235,18 +235,18 @@ const spectralColorMap = new ColorMap("diverging", "Spectral", [
 view.globe.elevationColormap = spectralColorMap;
 
 // Add an elevation heatmap layer
+const heatmapSource = view.addSource({
+  type: "raster-dem",
+  url: "https://example.com/terrain/{z}/{x}/{y}.png",
+  elevationDecoder: TERRARIUM_ELEVATION_DECODER(),
+  maxZoom: 15,
+});
 view.addLayer({
-  type: "tiles",
-  data: {
-    url: "https://example.com/terrain/{z}/{x}/{y}.png",
-  },
-  rasterTile: {
-    maxZoom: 15,
-  },
+  type: "raster",
+  source: heatmapSource,
   elevationHeatmap: {
     maxHeight: 3000,
     minHeight: 0,
-    elevationDecoder: TERRARIUM_ELEVATION_DECODER(),
   },
 });
 ```
@@ -318,4 +318,4 @@ setColorMap("rdYlGn");
 
 - [Color Class](../../../three/api/color/) - A class for representing colors
 - [Globe Class](../../../three/api/globe/) - `elevationColormap` property
-- [ElevationHeatmapMaterial](../../../three/resource-layer/elevation-heatmap-material/) - Elevation heatmap material
+- [ElevationHeatmapMaterial](../../../three/material/elevation-heatmap-material/) - Elevation heatmap material

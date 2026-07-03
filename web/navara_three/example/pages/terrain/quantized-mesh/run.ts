@@ -75,41 +75,34 @@ export const run = async (
       requestWaterMask: true,
     });
   } else {
+    const qmSource = view.addSource({
+      type: "quantized-mesh",
+      url: TERRAIN_DATASETS.reearthQuantizedMesh.url,
+      maxZoom: 18,
+      requestVertexNormals: true,
+      requestWaterMask: true,
+    });
     view.addLayer({
       type: "terrain",
-      data: {
-        url: TERRAIN_DATASETS.reearthQuantizedMesh.url,
-      },
-      quantizedMesh: {
-        maxZoom: 18,
-        castShadow: true,
-        receiveShadow: true,
-        requestVertexNormals: true,
-        requestWaterMask: true,
-      },
+      source: qmSource,
+      terrain: { castShadow: true, receiveShadow: true },
     });
   }
 
-  view.addLayer({
-    type: "tiles",
-    data: {
-      url: TILE_DATASETS.eox.url,
-    },
-    rasterTile: {
-      maxZoom: 15,
-    },
+  const eox = view.addSource({
+    type: "raster-tile",
+    url: TILE_DATASETS.eox.url,
+    maxZoom: 15,
   });
+  view.addLayer({ type: "raster", source: eox });
 
-  view.addLayer({
-    type: "tiles",
-    data: {
-      url: TILE_DATASETS.gsiSeamlessphoto.url,
-    },
-    rasterTile: {
-      maxZoom: 18,
-      minZoom: 10,
-    },
+  const photo = view.addSource({
+    type: "raster-tile",
+    url: TILE_DATASETS.gsiSeamlessphoto.url,
+    maxZoom: 18,
+    minZoom: 10,
   });
+  view.addLayer({ type: "raster", source: photo });
 
   view.setCamera(CAMERA_COORDS);
 

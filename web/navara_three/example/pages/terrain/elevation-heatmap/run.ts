@@ -50,51 +50,43 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     },
   });
 
-  // Add terrain layer for 3D surface
+  const demMesh = view.addSource({
+    type: "raster-dem",
+    url: TERRAIN_DATASETS.mapterhorn.url,
+    elevationDecoder: TERRARIUM_ELEVATION_DECODER(),
+    tileSize: 512,
+    maxZoom: 17,
+    minZoom: 5,
+  });
+  const demRaster = view.addSource({
+    type: "raster-dem",
+    url: TERRAIN_DATASETS.mapterhorn.url,
+    elevationDecoder: TERRARIUM_ELEVATION_DECODER(),
+    tileSize: 512,
+    maxZoom: 17,
+    minZoom: 0,
+  });
   view.addLayer({
     type: "terrain",
-    data: {
-      url: TERRAIN_DATASETS.mapterhorn.url,
-    },
-    rasterTerrain: {
-      maxZoom: 15,
-      minZoom: 5,
-      elevationDecoder: TERRARIUM_ELEVATION_DECODER(),
-      tileSize: 512,
-      castShadow: false,
-      receiveShadow: false,
-    },
+    source: demMesh,
+    terrain: { castShadow: false, receiveShadow: false },
   });
-
   view.addLayer({
-    type: "tiles",
-    data: {
-      url: TERRAIN_DATASETS.mapterhorn.url,
-    },
-    rasterTile: {
-      maxZoom: 17,
-      minZoom: 5,
-    },
-    hillshade: {
-      elevationDecoder: TERRARIUM_ELEVATION_DECODER(),
-    },
+    type: "raster",
+    source: demRaster,
+    hillshade: {},
   });
 
   // Set the elevation colormap on the globe
   view.globe.elevationColormap = PLATEAU_COLOR_MAP;
 
+  // Elevation heatmap from the same DEM, applied via a raster layer.
   const layerDef: LayerDescription = {
-    type: "tiles",
-    data: {
-      url: TERRAIN_DATASETS.mapterhorn.url,
-    },
-    rasterTile: {
-      maxZoom: 17,
-    },
+    type: "raster",
+    source: demRaster.id,
     elevationHeatmap: {
       maxHeight: 3000,
       minHeight: 0,
-      elevationDecoder: TERRARIUM_ELEVATION_DECODER(),
       logarithmic: true,
       logBoundary: 1000,
     },

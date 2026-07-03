@@ -6,6 +6,7 @@ mod event;
 mod geometry;
 mod input;
 mod property_value;
+mod source_types;
 mod types;
 mod vector_tile;
 
@@ -29,6 +30,7 @@ pub use event::*;
 pub use input::*;
 pub use navara_wasm_transferable::*;
 pub use navara_wasm_types::*;
+pub use source_types::*;
 pub use types::*;
 pub use vector_tile::*;
 use worker::DelegatedWorkerTasksResult;
@@ -210,11 +212,61 @@ impl Core {
     pub fn add_layer(&mut self, layer: JsValue) -> String {
         let layer_id = generate_id();
         // TODO: Improve an undesirable cloning the layer.
-        if let Some(ld) = LayerDescription::from(layer.clone())
-            && let Some(layer_type) = ld.r#type
-            && let Some(l) = LayerDescription::to(&layer_id, layer_type.as_str(), layer, None)
-        {
-            self.app.add_layer(layer_id.as_str(), l);
+        let Some(ld) = LayerDescription::from(layer.clone()) else {
+            return layer_id;
+        };
+        let Some(layer_type) = ld.r#type else {
+            return layer_id;
+        };
+
+        // New source-based layer types resolve their referenced source and build
+        // the legacy internal layer from it. `terrain` keeps its old `data`-based
+        // form too, so it is only treated as new when a `source` is present.
+        let is_source_based = matches!(layer_type.as_str(), "vector" | "raster" | "3d-tiles")
+            || (layer_type == "terrain" && source_types::read_source_ref(layer.clone()).is_some());
+
+        if is_source_based {
+            if let Some(source_id) = source_types::read_source_ref(layer.clone())
+                && let Some(source) = self.app.get_source_description(&source_id)
+                && let Some(l) = source_types::build_source_layer(
+                    &layer_id,
+                    layer_type.as_str(),
+                    layer,
+                    &source,
+                    None,
+                )
+            {
+                self.app.add_layer(layer_id.as_str(), l);
+                self.app.link_layer_source(&layer_id, &source_id);
+            }
+            return layer_id;
+        }
+
+        // TODO: Remove with the legacy layer API (this whole non-source branch).
+        // Legacy layers carry their fetch config inline. Build an implicit
+        // source from it so the loaders resolve the URL through `SourceStore`
+        // exactly like new-API layers (the old API is unified onto sources). The
+        // source is only registered once the layer itself is successfully built,
+        // so a failed `to()` never leaves an orphan source behind.
+        let implicit_id = generate_id();
+        let implicit_source =
+            source_types::legacy_source(&implicit_id, layer_type.as_str(), layer.clone());
+        if let Some(l) = LayerDescription::to(
+            &layer_id,
+            layer_type.as_str(),
+            layer,
+            None,
+            implicit_source.as_ref(),
+        ) {
+            if let Some(source) = implicit_source {
+                let sid = source.source_id().to_owned();
+                self.app.add_implicit_source(&sid, source);
+                self.app.add_layer(layer_id.as_str(), l);
+                self.app.link_layer_source(&layer_id, &sid);
+            } else {
+                // No implicit source (e.g. inline geojson); add the layer as-is.
+                self.app.add_layer(layer_id.as_str(), l);
+            }
         }
 
         layer_id
@@ -222,10 +274,46 @@ impl Core {
 
     #[wasm_bindgen(js_name = updateLayer)]
     pub fn update_layer(&mut self, layer_id: String, layer: JsValue) {
-        let layer_type = self.app.get_layer_type(&layer_id).unwrap_or("");
-        let old_layer_desc = self.app.get_layer_description(&layer_id);
-        if let Some(l) = LayerDescription::to(layer_id.as_str(), layer_type, layer, old_layer_desc)
-        {
+        // Partial update payloads (e.g. `{ polygon: { opacity } }`) don't repeat
+        // `type` or `source`, so both come from the stored layer. Changing a
+        // layer's source via updateLayer is not supported: keep the layer's
+        // current source, falling back to the payload's source only when the
+        // layer has none yet.
+        let Some(layer_type) = self.app.get_layer_type(&layer_id) else {
+            return;
+        };
+
+        let old_desc = self.app.get_layer_description(&layer_id);
+        let source_id = old_desc
+            .as_ref()
+            .and_then(|d| d.source_id().map(str::to_owned))
+            .or_else(|| source_types::read_source_ref(layer.clone()));
+
+        // Source-less layers (currently only ellipsoid terrain) have no
+        // `source_id`, so they take a dedicated build path instead of resolving
+        // a source. Everything else builds from its referenced source.
+        let new_layer = match source_id {
+            Some(source_id) => self
+                .app
+                .get_source_description(&source_id)
+                .and_then(|source| {
+                    source_types::build_source_layer(
+                        layer_id.as_str(),
+                        layer_type,
+                        layer,
+                        &source,
+                        old_desc.as_ref(),
+                    )
+                }),
+            None => source_types::build_sourceless_layer(
+                layer_id.as_str(),
+                layer_type,
+                layer,
+                old_desc.as_ref(),
+            ),
+        };
+
+        if let Some(l) = new_layer {
             self.app.update_layer(layer_id.as_str(), l);
         }
     }
@@ -233,6 +321,44 @@ impl Core {
     #[wasm_bindgen(js_name = deleteLayer)]
     pub fn delete_layer(&mut self, layer_id: String) {
         self.app.delete_layer(layer_id.as_str());
+    }
+
+    #[wasm_bindgen(js_name = addSource)]
+    pub fn add_source(&mut self, source: JsValue) -> String {
+        let Some(sd) = SourceDescription::from(source.clone()) else {
+            unreachable!();
+        };
+        // Use the caller-provided id, or generate one. A duplicate id overrides
+        // the existing source (later definition wins).
+        let source_id = sd.id.clone().unwrap_or_else(generate_id);
+        if let Some(source_type) = sd.r#type
+            && let Some(s) = SourceDescription::to(&source_id, source_type.as_str(), source)
+        {
+            self.app.add_source(source_id.as_str(), s);
+        }
+
+        source_id
+    }
+
+    // TODO(source-pipeline): Under the current shim, layers project the source
+    // onto their own `data` at add time, so updating a source does not yet
+    // re-render existing layers. This will take effect once loaders read from the
+    // shared source entity directly.
+    #[wasm_bindgen(js_name = updateSource)]
+    pub fn update_source(&mut self, source_id: String, source: JsValue) {
+        let source_type = self
+            .app
+            .get_source_type(&source_id)
+            .unwrap_or("")
+            .to_owned();
+        if let Some(s) = SourceDescription::to(source_id.as_str(), source_type.as_str(), source) {
+            self.app.update_source(source_id.as_str(), s);
+        }
+    }
+
+    #[wasm_bindgen(js_name = deleteSource)]
+    pub fn delete_source(&mut self, source_id: String) {
+        self.app.delete_source(source_id.as_str());
     }
 
     #[wasm_bindgen(js_name = getLayerIndex)]

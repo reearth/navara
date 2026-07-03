@@ -66,18 +66,18 @@ view.addEffect({
 });
 
 // Base satellite imagery tiles
+const satelliteSource = view.addSource({
+  type: "raster-tile",
+  // Credit:
+  // - Geospatial Information Authority of Japan Tiles - Latest Nationwide Photo (Seamless)
+  //   https://maps.gsi.go.jp/development/ichiran.html
+  url: "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg",
+  maxZoom: 6,
+  minZoom: 2,
+});
 view.addLayer({
-  type: "tiles",
-  data: {
-    // Credit:
-    // - Geospatial Information Authority of Japan Tiles - Latest Nationwide Photo (Seamless)
-    //   https://maps.gsi.go.jp/development/ichiran.html
-    url: "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg",
-  },
-  rasterTile: {
-    maxZoom: 6,
-    minZoom: 2,
-  },
+  type: "raster",
+  source: satelliteSource,
 });
 
 // Set camera to a position where the entire globe is visible
@@ -96,16 +96,18 @@ To create a more beautiful nighttime Earth, overlay night tiles (NASA Earth at N
 
 ```typescript
 // Add night tiles (overlaid with transparency)
+const nightSource = view.addSource({
+  type: "raster-tile",
+  // Credit:
+  // - NASA Earth at Night imagery (Converted as raster tiles)
+  url: "/data/blue-marble-night/{z}/{x}/{y}.webp",
+  maxZoom: 6,
+  minZoom: 1,
+});
 view.addLayer({
-  type: "tiles",
-  data: {
-    // Credit:
-    // - NASA Earth at Night imagery (Converted as raster tiles)
-    url: "/data/blue-marble-night/{z}/{x}/{y}.webp",
-  },
-  rasterTile: {
-    maxZoom: 6,
-    minZoom: 1,
+  type: "raster",
+  source: nightSource,
+  raster: {
     opacity: 0.8, // Overlay with transparency
   },
 });
@@ -429,31 +431,33 @@ async function run() {
   });
 
   // Satellite imagery tiles
+  const satelliteSource = view.addSource({
+    type: "raster-tile",
+    // Credit:
+    // - Geospatial Information Authority of Japan Tiles - Latest Nationwide Photo (Seamless)
+    //   https://maps.gsi.go.jp/development/ichiran.html
+    url: "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg",
+    maxZoom: 6,
+    minZoom: 2,
+  });
   view.addLayer({
-    type: "tiles",
-    data: {
-      // Credit:
-      // - Geospatial Information Authority of Japan Tiles - Latest Nationwide Photo (Seamless)
-      //   https://maps.gsi.go.jp/development/ichiran.html
-      url: "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg",
-    },
-    rasterTile: {
-      maxZoom: 6,
-      minZoom: 2,
-    },
+    type: "raster",
+    source: satelliteSource,
   });
 
   // Night tiles (optional)
+  const nightSource = view.addSource({
+    type: "raster-tile",
+    // Credit:
+    // - NASA Earth at Night imagery (Converted as raster tiles)
+    url: "/data/blue-marble-night/{z}/{x}/{y}.webp",
+    maxZoom: 6,
+    minZoom: 1,
+  });
   view.addLayer({
-    type: "tiles",
-    data: {
-      // Credit:
-      // - NASA Earth at Night imagery (Converted as raster tiles)
-      url: "/data/blue-marble-night/{z}/{x}/{y}.webp",
-    },
-    rasterTile: {
-      maxZoom: 6,
-      minZoom: 1,
+    type: "raster",
+    source: nightSource,
+    raster: {
       opacity: 0.8,
     },
   });

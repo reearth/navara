@@ -3,7 +3,6 @@ use bevy_ecs::system::{Commands, Query};
 use navara_component::{Order, OrderByDistance, Priority};
 use navara_core::TilingScheme;
 use navara_layer::TilesLayer;
-use navara_material::Appearance;
 use navara_texture_fragment::TextureFragment;
 use navara_tile_component::{
     RasterTile, TileHandle, TileTextureFragmentMarker, TileTextureFragmentQuery,
@@ -19,6 +18,7 @@ pub(crate) fn request_raster_texture_fragment(
     commands: &mut Commands,
     leaf: &mut RasterTile,
     tiles: &Query<(&TilesLayer, &Order)>,
+    source_store: &navara_source::SourceStore,
     handle: TileHandle,
     texture_fragment: &TileTextureFragmentQuery,
     priority: Priority,
@@ -49,7 +49,14 @@ pub(crate) fn request_raster_texture_fragment(
             if layer.hillshade_config.is_some() {
                 return true;
             }
-            if !layer.is_over_min_zoom(coords.z) || layer.is_over_max_zoom(coords.z) {
+            let Some(source) = layer
+                .source_id
+                .as_deref()
+                .and_then(|id| source_store.get(id))
+            else {
+                return true;
+            };
+            if !source.is_over_min_zoom(coords.z) || source.is_over_max_zoom(coords.z) {
                 return true;
             }
             tex_ids[i].is_some_and(|e| texture_fragment.contains(e))
@@ -64,8 +71,16 @@ pub(crate) fn request_raster_texture_fragment(
         if layer.hillshade_config.is_some() {
             continue;
         }
+        // Resolve the referenced source; skip the layer if it is missing.
+        let Some(source) = layer
+            .source_id
+            .as_deref()
+            .and_then(|id| source_store.get(id))
+        else {
+            continue;
+        };
         // Skip layers whose zoom range excludes this tile. The slot stays None.
-        if !layer.is_over_min_zoom(coords.z) || layer.is_over_max_zoom(coords.z) {
+        if !source.is_over_min_zoom(coords.z) || source.is_over_max_zoom(coords.z) {
             continue;
         }
 
@@ -77,9 +92,10 @@ pub(crate) fn request_raster_texture_fragment(
             continue;
         }
 
-        let tms = matches!(layer.appearance.as_ref(), Some(Appearance::TerrainTile(m)) if m.tms);
-        let url = TilingScheme::WebMercator { tms }
-            .tile_url(layer.data.as_ref().unwrap().url.as_str(), coords);
+        let Some(url_template) = source.url() else {
+            continue;
+        };
+        let url = TilingScheme::WebMercator { tms: source.tms() }.tile_url(url_template, coords);
 
         let entity_id = commands
             .spawn((

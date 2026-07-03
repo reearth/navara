@@ -285,31 +285,31 @@ view.globe.elevationColormap = rdYlGnColorMap;
 view.globe.color = new Color().setStyle("#1a9850");
 
 // Add terrain layer
+const terrainSource = view.addSource({
+  type: "raster-dem",
+  url: "https://example.com/terrain/{z}/{x}/{y}.png",
+  elevationDecoder: TERRARIUM_ELEVATION_DECODER(),
+  maxZoom: 12,
+  minZoom: 5,
+});
 view.addLayer({
   type: "terrain",
-  data: {
-    url: "https://example.com/terrain/{z}/{x}/{y}.png",
-  },
-  rasterTerrain: {
-    maxZoom: 12,
-    minZoom: 5,
-    elevationDecoder: TERRARIUM_ELEVATION_DECODER(),
-  },
+  source: terrainSource,
 });
 
 // Add elevation heatmap layer
+const heatmapSource = view.addSource({
+  type: "raster-dem",
+  url: "https://example.com/terrain/{z}/{x}/{y}.png",
+  elevationDecoder: TERRARIUM_ELEVATION_DECODER(),
+  maxZoom: 15,
+});
 view.addLayer({
-  type: "tiles",
-  data: {
-    url: "https://example.com/terrain/{z}/{x}/{y}.png",
-  },
-  rasterTile: {
-    maxZoom: 15,
-  },
+  type: "raster",
+  source: heatmapSource,
   elevationHeatmap: {
     maxHeight: 3000,
     minHeight: 0,
-    elevationDecoder: TERRARIUM_ELEVATION_DECODER(),
     logarithmic: true,
     logBoundary: 1000,
   },
@@ -356,5 +356,5 @@ view.globe.opacity = 0.8;
 
 - [Color Class](../../../three/api/color/) - A class for representing colors
 - [ColorMap Class](../../../three/api/colormap/) - Defining color gradients
-- [ElevationHeatmapMaterial](../../../three/resource-layer/elevation-heatmap-material/) - Elevation heatmap material
+- [ElevationHeatmapMaterial](../../../three/material/elevation-heatmap-material/) - Elevation heatmap material
 - [ThreeView Class](../../../three/api/threeview-class/) - Main view class

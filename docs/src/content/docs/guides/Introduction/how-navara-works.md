@@ -13,7 +13,7 @@ Navara uses a plugin system to register descriptor types. Before calling `init()
 
 You can also create your own mesh descriptors, effect descriptors, and light descriptors with full access to the Three.js scene graph. This is the same mechanism that powers Navara's built-in descriptors. For details, see the [Custom Descriptor](../../../three/core/custom-desc/) documentation.
 
-In addition to these, Navara provides [resource layers](../../../three/resource-layer/about/) for loading and displaying geographic data such as GeoJSON, MVT, and 3D Tiles. Resource layers handle the complexity of features and their attributes — parsing, spatial indexing, and attribute-based styling through [`FeatureEvaluator`](../../../three/api/feature-evaluator/). Mesh descriptors, on the other hand, deal only with geometry and rendering, which allows them to be optimized purely for draw performance and is suited for rendering large numbers of objects efficiently. This separation lets you choose the right tool for each use case. For more on descriptor types, see [About Layer](../../../three/introduction/about-layer/).
+In addition to these, Navara provides [**layers**](../../../three/layer/about/) for loading and displaying geographic data such as GeoJSON, MVT, and 3D Tiles. Layers handle the complexity of features and their attributes — parsing, spatial indexing, and attribute-based styling through [`FeatureEvaluator`](../../../three/api/feature-evaluator/). Mesh descriptors, on the other hand, deal only with geometry and rendering, which allows them to be optimized purely for draw performance and is suited for rendering large numbers of objects efficiently. This separation lets you choose the right tool for each use case. For more on descriptor types, see [About Layer](../../../three/layer/about/).
 
 ```mermaid
 sequenceDiagram
@@ -30,8 +30,9 @@ sequenceDiagram
   P->>TV: registerMesh / registerLight / registerEffect
   TV->>E: Initialize WASM + Workers
   E-->>TV: Ready
-  App->>TV: addLayer({ type: "tiles", ... })
-  TV->>E: Process layer data
+  App->>TV: addSource({ type: "raster-tile", ... })
+  App->>TV: addLayer({ type: "raster", source })
+  TV->>E: Process source + layer data
   E-->>TV: Rendering-ready output
 ```
 
@@ -76,7 +77,7 @@ In practice, most applications only need two packages: `@navara/three` for the c
 
 | Package | Role | When you need it |
 |---------|------|-----------------|
-| `@navara/three` | Main package — `ThreeView` class, layer API, camera control | Always |
+| `@navara/three` | Main package — `ThreeView` class, source & layer API, camera control | Always |
 | `@navara/three_default_plugin` | `DefaultPlugin` — built-in mesh, light, and effect descriptors | Almost always |
 | `@navara/three_default_descs` | Individual descriptor class implementations | When registering descriptors manually without `DefaultPlugin` |
 | `@navara/three_api` | Standalone GIS utilities (coordinate transforms, geodesic calculations) | When you need GIS math without the full map engine |

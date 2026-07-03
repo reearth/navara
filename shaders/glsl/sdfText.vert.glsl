@@ -17,6 +17,10 @@ attribute float glyphIsColor; // 1.0 = sample COLRv1 color atlas, 0.0 = sample S
 #else
     uniform vec3 uRTCPosition;
     uniform vec3 uRTCCenter;
+    // RTC center already transformed into view (eye) space on the CPU in
+    // float64, to avoid the catastrophic float32 cancellation that
+    // `viewMatrix * uRTCCenter` suffers from when both operands are ~6.4e6.
+    uniform vec3 uRTCCenterView;
 #endif
 
 uniform float uFontSize;
@@ -61,10 +65,11 @@ void main() {
     viewMatrixRTE[3] = vec4(0.0, 0.0, 0.0, 1.0); // Remove translation
     mvPosition = viewMatrixRTE * vec4(resolvedPosition, 1.0);
 #else
-    // Adjust view matrix for RTC
-    vec4 centerMV = viewMatrix * vec4(uRTCCenter, 1.0);
+    // Adjust view matrix for RTC. uRTCCenterView is the RTC center already in
+    // view space (computed on the CPU in float64), so no large-coordinate
+    // float32 subtraction happens here — this is what removes the jitter.
     mat4 viewMatrixRTC = viewMatrix;
-    viewMatrixRTC[3] = vec4(centerMV.xyz, 1.0);
+    viewMatrixRTC[3] = vec4(uRTCCenterView, 1.0);
 
     mvPosition = viewMatrixRTC * vec4(uRTCPosition, 1.0);
 #endif

@@ -19,7 +19,7 @@ npm install
 
 ## Displaying a Map
 
-### Adding a Raster Tile Layer
+### Adding a Raster Layer
 
 Open `index.html` and you will see the following:
 
@@ -61,17 +61,17 @@ view.addLight({
 });
 
 // Add OpenStreetMap tile layer
+const osmSource = view.addSource({
+  type: "raster-tile",
+  // Credit:
+  // - © OpenStreetMap contributors
+  //   https://www.openstreetmap.org/copyright
+  url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+  maxZoom: 23,
+});
 view.addLayer({
-  type: "tiles",
-  data: {
-    // Credit:
-    // - © OpenStreetMap contributors
-    //   https://www.openstreetmap.org/copyright
-    url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-  },
-  rasterTile: {
-    maxZoom: 23,
-  },
+  type: "raster",
+  source: osmSource,
 });
 ```
 
@@ -104,20 +104,20 @@ view.addLight({
 
 Add basic ambient light to illuminate the scene.
 
-**Adding a Tile Layer**
+**Adding a Raster Layer**
 
 ```typescript
+const osmSource = view.addSource({
+  type: "raster-tile",
+  // Credit:
+  // - © OpenStreetMap contributors
+  //   https://www.openstreetmap.org/copyright
+  url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+  maxZoom: 23,
+});
 view.addLayer({
-  type: "tiles",
-  data: {
-    // Credit:
-    // - © OpenStreetMap contributors
-    //   https://www.openstreetmap.org/copyright
-    url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-  },
-  rasterTile: {
-    maxZoom: 23,
-  },
+  type: "raster",
+  source: osmSource,
 });
 ```
 
@@ -140,17 +140,17 @@ view.addLight({
 });
 
 // Add OpenStreetMap tile layer
+const osmSource = view.addSource({
+  type: "raster-tile",
+  // Credit:
+  // - © OpenStreetMap contributors
+  //   https://www.openstreetmap.org/copyright
+  url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+  maxZoom: 23,
+});
 view.addLayer({
-  type: "tiles",
-  data: {
-    // Credit:
-    // - © OpenStreetMap contributors
-    //   https://www.openstreetmap.org/copyright
-    url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-  },
-  rasterTile: {
-    maxZoom: 23,
-  },
+  type: "raster",
+  source: osmSource,
 });
 ```
 
@@ -198,17 +198,17 @@ view.addLight({
 });
 
 // Add OpenStreetMap tile layer
+const osmSource = view.addSource({
+  type: "raster-tile",
+  // Credit:
+  // - © OpenStreetMap contributors
+  //   https://www.openstreetmap.org/copyright
+  url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+  maxZoom: 23,
+});
 view.addLayer({
-  type: "tiles",
-  data: {
-    // Credit:
-    // - © OpenStreetMap contributors
-    //   https://www.openstreetmap.org/copyright
-    url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-  },
-  rasterTile: {
-    maxZoom: 23,
-  },
+  type: "raster",
+  source: osmSource,
 });
 
 view.setCamera({
@@ -239,38 +239,29 @@ Add the terrain layer **before** the raster tile layer (layers are rendered in t
 
 ```typescript
 // Add terrain layer
+const demSource = view.addSource({
+  type: "raster-dem",
+  // Credit:
+  // - Geospatial Information Authority of Japan Tiles - Digital Elevation Map
+  //   https://maps.gsi.go.jp/development/ichiran.html
+  url: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
+  minZoom: 6,
+  maxZoom: 15,
+  elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+});
 view.addLayer({
   type: "terrain",
-  data: {
-    // Credit:
-    // - Geospatial Information Authority of Japan Tiles - Digital Elevation Map
-    //   https://maps.gsi.go.jp/development/ichiran.html
-    url: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
-  },
-  rasterTerrain: {
-    minZoom: 6,
-    maxZoom: 15,
-    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+  source: demSource,
+  terrain: {
     castShadow: true,
     receiveShadow: true,
   },
 });
 
 view.addLayer({
-  type: "tiles",
-  data: {
-    // Credit:
-    // - Geospatial Information Authority of Japan Tiles - Digital Elevation Map
-    //   https://maps.gsi.go.jp/development/ichiran.html
-    url: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
-  },
-  rasterTile: {
-    minZoom: 6,
-    maxZoom: 15,
-  },
-  hillshade: {
-    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-  },
+  type: "raster",
+  source: demSource,
+  hillshade: {},
 });
 ```
 
@@ -285,12 +276,10 @@ When you tilt the map, you can see the terrain relief.
 **Terrain Data Source**
 
 ```typescript
-data: {
 // Credit:
 // - Geospatial Information Authority of Japan Tiles - Digital Elevation Map
 //   https://maps.gsi.go.jp/development/ichiran.html
 url: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
-},
 ```
 
 Here we use the elevation tiles from the Geospatial Information Authority of Japan.
@@ -298,19 +287,23 @@ Here we use the elevation tiles from the Geospatial Information Authority of Jap
 **Terrain Settings**
 
 ```typescript
-rasterTerrain: {
-minZoom: 6,
-maxZoom: 15,
-elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-castShadow: true,
-receiveShadow: true,
+source: view.addSource({
+  type: "raster-dem",
+  url: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
+  minZoom: 6,
+  maxZoom: 15,
+  elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+}),
+terrain: {
+  castShadow: true,
+  receiveShadow: true,
 },
 ```
 
 - The maximum zoom level, minimum zoom level, and shadows for terrain tiles are configured here.
 - The elevationDecoder decodes the terrain data.
 
-For details, see [Terrain Layer](../../../three/resource-layer/terrain-layer/).
+For details, see [Terrain Layer](../../../three/layer/terrain-layer/).
 
 ### Complete Code
 
@@ -329,52 +322,43 @@ view.addLight({
 });
 
 // Add terrain layer
+const demSource = view.addSource({
+  type: "raster-dem",
+  // Credit:
+  // - Geospatial Information Authority of Japan Tiles - Digital Elevation Map
+  //   https://maps.gsi.go.jp/development/ichiran.html
+  url: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
+  minZoom: 6,
+  maxZoom: 15,
+  elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+});
 view.addLayer({
   type: "terrain",
-  data: {
-    // Credit:
-    // - Geospatial Information Authority of Japan Tiles - Digital Elevation Map
-    //   https://maps.gsi.go.jp/development/ichiran.html
-    url: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
-  },
-  rasterTerrain: {
-    minZoom: 6,
-    maxZoom: 15,
-    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+  source: demSource,
+  terrain: {
     castShadow: true,
     receiveShadow: true,
   },
 });
 
 view.addLayer({
-  type: "tiles",
-  data: {
-    // Credit:
-    // - Geospatial Information Authority of Japan Tiles - Digital Elevation Map
-    //   https://maps.gsi.go.jp/development/ichiran.html
-    url: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
-  },
-  rasterTile: {
-    minZoom: 6,
-    maxZoom: 15,
-  },
-  hillshade: {
-    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-  },
+  type: "raster",
+  source: demSource,
+  hillshade: {},
 });
 
 // Add OpenStreetMap tile layer
+const osmSource = view.addSource({
+  type: "raster-tile",
+  // Credit:
+  // - © OpenStreetMap contributors
+  //   https://www.openstreetmap.org/copyright
+  url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+  maxZoom: 23,
+});
 view.addLayer({
-  type: "tiles",
-  data: {
-    // Credit:
-    // - © OpenStreetMap contributors
-    //   https://www.openstreetmap.org/copyright
-    url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-  },
-  rasterTile: {
-    maxZoom: 23,
-  },
+  type: "raster",
+  source: osmSource,
 });
 
 view.setCamera({
@@ -397,7 +381,7 @@ Add a GeoJSON layer to `src/main.ts`.
 
 ```typescript
 // Display polygon data
-view.addLayer({
+const geojsonSource = view.addSource({
   type: "geojson",
   data: {
     type: "Feature",
@@ -415,6 +399,10 @@ view.addLayer({
       ],
     },
   },
+});
+view.addLayer({
+  type: "vector",
+  source: geojsonSource,
   polygon: {
     color: new Color().setHex(0x00ff00),
     height: 0,
@@ -432,9 +420,9 @@ A polygon is displayed on the map.
 
 ### Code Explanation
 
-Use the `view.addLayer` method to add a GeoJSON layer. By specifying `type: "geojson"`, you can display GeoJSON format data on the map. You can also configure polygon styling (color, height, transparency, etc.).
+Register the GeoJSON data as a source with `view.addSource({ type: "geojson", ... })`, then render it with `view.addLayer({ type: "vector", source, ... })`. You can also configure polygon styling (color, height, transparency, etc.) via the `polygon` material.
 
-For details, see [GeoJSON Layer](../../../three/resource-layer/geojson-layer/).
+For details, see [Vector Layer](../../../three/layer/vector-layer/).
 
 ### Complete Code
 
@@ -453,55 +441,46 @@ view.addLight({
   ambient: {},
 });
 
+const demSource = view.addSource({
+  type: "raster-dem",
+  // Credit:
+  // - Geospatial Information Authority of Japan Tiles - Digital Elevation Map
+  //   https://maps.gsi.go.jp/development/ichiran.html
+  url: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
+  minZoom: 6,
+  maxZoom: 15,
+  elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+});
 view.addLayer({
   type: "terrain",
-  data: {
-    // Credit:
-    // - Geospatial Information Authority of Japan Tiles - Digital Elevation Map
-    //   https://maps.gsi.go.jp/development/ichiran.html
-    url: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
-  },
-  rasterTerrain: {
-    minZoom: 6,
-    maxZoom: 15,
-    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+  source: demSource,
+  terrain: {
     castShadow: true,
     receiveShadow: true,
   },
 });
 
 view.addLayer({
-  type: "tiles",
-  data: {
-    // Credit:
-    // - Geospatial Information Authority of Japan Tiles - Digital Elevation Map
-    //   https://maps.gsi.go.jp/development/ichiran.html
-    url: "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
-  },
-  rasterTile: {
-    minZoom: 6,
-    maxZoom: 15,
-  },
-  hillshade: {
-    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-  },
+  type: "raster",
+  source: demSource,
+  hillshade: {},
 });
 
+const osmSource = view.addSource({
+  type: "raster-tile",
+  // Credit:
+  // - © OpenStreetMap contributors
+  //   https://www.openstreetmap.org/copyright
+  url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+  maxZoom: 23,
+});
 view.addLayer({
-  type: "tiles",
-  data: {
-    // Credit:
-    // - © OpenStreetMap contributors
-    //   https://www.openstreetmap.org/copyright
-    url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-  },
-  rasterTile: {
-    maxZoom: 23,
-  },
+  type: "raster",
+  source: osmSource,
 });
 
 // Polygon (area)
-view.addLayer({
+const geojsonSource = view.addSource({
   type: "geojson",
   data: {
     type: "Feature",
@@ -519,6 +498,10 @@ view.addLayer({
       ],
     },
   },
+});
+view.addLayer({
+  type: "vector",
+  source: geojsonSource,
   polygon: {
     color: new Color().setHex(0x00ff00),
     height: 0,

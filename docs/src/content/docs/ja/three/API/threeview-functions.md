@@ -11,7 +11,7 @@ sidebar:
 
 ### addLayer()
 
-navara_three に新しいリソースレイヤーを追加します。このメソッドは、リソースレイヤー（タイル、地形、geojson など）をサポートします。メッシュには `addMesh()`、ライトには `addLight()`、エフェクトには `addEffect()` を使用してください。
+navara_three に新しいリソースレイヤーを追加します。このメソッドは、リソースレイヤー（vector、raster、terrain、3d-tiles）をサポートします。各リソースレイヤーは、`source` プロパティを介して [source](../../../three/source/about/) を参照します。メッシュには `addMesh()`、ライトには `addLight()`、エフェクトには `addEffect()` を使用してください。
 
 **Syntax:**
 
@@ -21,7 +21,7 @@ addLayer(l: LayerDescription): Layer
 
 **Parameters:**
 
-LayerDescription の詳細な型については、[Resource Layer Reference](../../../three/resource-layer/resource-layer/) を参照してください。
+LayerDescription の設定項目については、[About Layer](../../../three/layer/about/) と各レイヤータイプのページを参照してください。
 
 **Returns:**
 
@@ -34,19 +34,57 @@ Layer;
 **Example:**
 
 ```tsx
+const source = view.addSource({
+  type: "raster-tile",
+  url: "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg",
+  maxZoom: 23,
+});
+
 const layer = view.addLayer({
-  type: "tiles",
-  data: {
-    url: "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg",
-  },
-  rasterTile: {
-    segments: 10,
+  type: "raster",
+  source,
+  raster: {
     color: new Color().setStyle("#cccccc"),
-    maxSse: 2,
-    maxZoom: 23,
-    wireframe: false,
   },
 });
+```
+
+### addSource()
+
+データ[source](../../../three/source/about/)を登録し、`Source` ハンドルを返します。Source は、データがどこから来て、どのように取得／デコードされるかを記述します。レイヤーの `source` プロパティ（ハンドルまたはその `id`）を介して、リソースレイヤーから参照します。
+
+**Syntax:**
+
+```tsx
+addSource(s: SourceDescription): Source
+```
+
+**Parameters:**
+
+利用可能な Source のタイプとそのフィールドについては、[About Source](../../../three/source/about/) を参照してください。
+
+**Returns:**
+
+```tsx
+Source;
+```
+
+`id`、`type`、`update(s)`、`delete()` を公開する `Source` ハンドル。
+
+**Example:**
+
+```tsx
+const imagery = view.addSource({
+  type: "raster-tile",
+  url: "https://example.com/{z}/{x}/{y}.png",
+  maxZoom: 19,
+});
+
+view.addLayer({ type: "raster", source: imagery });
+
+// 後で
+imagery.update({ type: "raster-tile", url: "https://example.com/new/{z}/{x}/{y}.png" });
+imagery.delete();
 ```
 
 ### updateLayerById()
@@ -69,17 +107,12 @@ updateLayerById(id: string, l: LayerDescription): void
 ```tsx
 const id = layer.id; // addLayer の戻り値からレイヤー ID を取得
 
+// `source` はレイヤーが参照している raster-tile source です。
 view.updateLayerById(id, {
-  type: "tiles",
-  data: {
-    url: "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg",
-  },
-  rasterTile: {
-    segments: 10,
+  type: "raster",
+  source,
+  raster: {
     color: new Color().setStyle("#ffffff"),
-    maxSse: 2,
-    maxZoom: 23,
-    wireframe: false,
   },
 });
 ```
@@ -267,11 +300,13 @@ const view = new ThreeView();
 await view.init();
 
 // init() 後にレイヤーを追加
-view.addLayer({
-  type: "tiles",
-  data: { url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png" },
-  rasterTile: { maxZoom: 19 },
+const osm = view.addSource({
+  type: "raster-tile",
+  url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+  maxZoom: 19,
 });
+
+view.addLayer({ type: "raster", source: osm });
 ```
 
 ### dispose()
@@ -910,7 +945,7 @@ await view.init();
 
 ### addFontFamily()
 
-複数のフェイスから構成されるフォントファミリを登録します。各フェイスは Unicode 範囲の集合をカバーし、個別のフォントファイル URL（ttf、otf、woff、woff2）を指します。ファミリを登録すると、テキストレイヤは [`material.font`](../../resource-layer/text-material/#font) で `family` 名を指定してこのファミリを参照できます。ラベルの `text` に含まれる文字の Unicode 範囲をカバーするフェイスのみがダウンロードされます。
+複数のフェイスから構成されるフォントファミリを登録します。各フェイスは Unicode 範囲の集合をカバーし、個別のフォントファイル URL（ttf、otf、woff、woff2）を指します。ファミリを登録すると、テキストレイヤは [`material.font`](../../../three/material/text-material/#font) で `family` 名を指定してこのファミリを参照できます。ラベルの `text` に含まれる文字の Unicode 範囲をカバーするフェイスのみがダウンロードされます。
 
 **フェイスの優先順位とフォールバック:**
 
@@ -952,9 +987,14 @@ view.addFontFamily({
   ],
 });
 
-const layer = view.addLayer({
+const source = view.addSource({
   type: "geojson",
-  data: { url: "/cities.geojson" },
+  url: "/cities.geojson",
+});
+
+const layer = view.addLayer({
+  type: "vector",
+  source,
   text: {
     font: "MapFont",
   },

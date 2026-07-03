@@ -7,22 +7,22 @@ sidebar:
 
 ## What is a Layer?
 
-In navara_three, elements displayed in the 3D scene are managed as "layers" and "Descriptors." Map data rendering uses resource layers, while 3D object placement, post-processing effects, and lighting are added and controlled as Descriptors.
+In navara_three, elements displayed in the 3D scene are managed as "layers" and "Descriptors." Map data rendering uses **layers** — a layer references a [Source](../../../three/source/about/) (where the data comes from) and describes how it is rendered — while 3D object placement, post-processing effects, and lighting are added and controlled as Descriptors.
 
 ## Descriptor Types
 
 navara_three has 4 types of Descriptors:
 
-| Descriptor Type           | Description                                            | Method                                                   |
-| -------------------- | ------------------------------------------------------ | -------------------------------------------------------- |
-| **Resource Layer**   | Loads and displays geographic data from external data sources | `addLayer()` with data format name (`"geojson"`, `"terrain"`, etc.) |
-| **Mesh Desc**       | Adds 3D mesh objects to the scene                      | `addMesh()`                                              |
-| **Effect Desc**     | Applies post-processing effects                        | `addEffect()`                                            |
-| **Light Desc**      | Manages scene lighting                                 | `addLight()`                                             |
+| Descriptor Type   | Description                                                    | Method                                                            |
+| ----------------- | ------------------------------------------------------------- | ----------------------------------------------------------------- |
+| **Layer**         | Renders geographic data from a [Source](../../../three/source/about/) | `addLayer()` with a layer type (`"vector"`, `"raster"`, `"terrain"`, `"3d-tiles"`) + a `source` |
+| **Mesh Desc**     | Adds 3D mesh objects to the scene                             | `addMesh()`                                                       |
+| **Effect Desc**   | Applies post-processing effects                               | `addEffect()`                                                     |
+| **Light Desc**    | Manages scene lighting                                        | `addLight()`                                                      |
 
-## Resource Layer Data Structure
+## Layer Data Structure
 
-Resource layers organize geographic data in a hierarchical structure:
+Layers organize geographic data in a hierarchical structure:
 
 ```mermaid
 graph LR
@@ -42,38 +42,64 @@ When working with [`FeatureEvaluator`](../../api/feature-evaluator/), the callba
 
 For details on feature events (`featureCreated`, `featureUpdated`, etc.), see [Layer Types](../../api/desc-types/#events).
 
-## Differences Between Resource Layers and Other Descriptors
+## Sources and Layers
 
-Resource layers handle external geographic data, so they differ from mesh, effect, and light descriptors in how they are used.
+A layer does not fetch data itself — it references a **Source**. The source describes *where* the data is and how it is fetched/decoded (URL, zoom range, tiling scheme, elevation decoder); the layer describes *how* it renders (materials). One source can be shared by several layers.
 
-### Resource Layer
+```typescript
+// 1. Register a source (the data)
+const imagery = view.addSource({
+  type: "raster-tile",
+  url: "https://example.com/{z}/{x}/{y}.png",
+  maxZoom: 19,
+});
 
-Resource layers load and display external data sources such as GeoJSON, 3D Tiles, and terrain data.
+// 2. Add a layer that renders it (the styling)
+view.addLayer({ type: "raster", source: imagery, raster: { opacity: 0.8 } });
+```
+
+See [About Source](../../../three/source/about/) for source types and [About Layer (types)](../../../three/layer/about/) for the layer types and their render options.
+
+## Differences Between Layers and Other Descriptors
+
+Layers render external geographic data, so they differ from mesh, effect, and light descriptors in how they are used.
+
+### Layer
+
+Layers render a source such as GeoJSON, vector tiles, raster imagery, terrain, or 3D Tiles.
 
 **Characteristics:**
 
-- Specify the data format name for `type` (`"geojson"`, `"terrain"`, `"cesium3dtiles"`, `"tiles"`, `"mvt"`, etc.)
-- Specify the data source URL or inline data with the `data` property
-- Multiple Materials can be specified depending on the data format
-- Available Materials vary by data format
+- Specify the layer type for `type` (`"vector"`, `"raster"`, `"terrain"`, `"3d-tiles"`)
+- Reference the data with the `source` property (a `Source` handle or its `id`)
+- Multiple Materials can be specified depending on the layer type
+- Available Materials vary by layer type
 
 ```typescript
-// GeoJSON layer example
-const geoJsonHandle = view.addLayer({
+// Vector layer example (a geojson / vector-tile source)
+const features = view.addSource({
   type: "geojson",
-  data: { url: "https://example.com/data.geojson" },
-  // For GeoJSON, you can specify multiple Materials such as point, polyline, polygon
+  data: { type: "FeatureCollection", features: [] },
+});
+const vectorHandle = view.addLayer({
+  type: "vector",
+  source: features,
+  // A vector layer can take several materials at once
   point: { color: 0xff0000, size: 10 },
   polyline: { color: 0x00ff00, width: 2 },
   polygon: { color: 0x0000ff, opacity: 0.5 },
 });
 
-// Terrain layer example
+// Terrain layer example (a raster-dem / quantized-mesh source)
+const dem = view.addSource({
+  type: "raster-dem",
+  url: "https://example.com/dem/{z}/{x}/{y}.png",
+  maxZoom: 15,
+});
 const terrainHandle = view.addLayer({
   type: "terrain",
-  data: { url: "https://example.com/terrain/{z}/{x}/{y}.png" },
-  // For terrain layers, only the rasterTerrain Material can be specified
-  rasterTerrain: { exaggeration: 1.5 },
+  source: dem,
+  terrain: { castShadow: true, receiveShadow: true },
 });
 ```
 
@@ -130,33 +156,30 @@ Using `DefaultPlugin` from [three_default_plugin](../../../three_default_plugin/
 
 The handle class returned from `view.addLayer()` / `view.addMesh()` / `view.addEffect()` / `view.addLight()` differs depending on the descriptor type:
 
-| Descriptor Type                       | Returned Class   | Main Features                                                                    |
-| -------------------------------- | ---------------- | -------------------------------------------------------------------------------- |
-| Resource Layer                   | `Layer`          | `update()`, `delete()`, `forceUpdate()`, feature events                          |
-| Mesh / Effect / Light Desc      | `BaseHandle<T>` | `update()`, `delete()`, `visible`, `ref` (access to the base instance)           |
+| Descriptor Type            | Returned Class  | Main Features                                                          |
+| -------------------------- | --------------- | --------------------------------------------------------------------- |
+| Layer                      | `Layer`         | `update()`, `delete()`, `forceUpdate()`, feature events               |
+| Mesh / Effect / Light Desc | `BaseHandle<T>` | `update()`, `delete()`, `visible`, `ref` (access to the base instance) |
 
-### Layer (for Resource Layers)
+### Layer
 
 ```typescript
-const geoJsonHandle = view.addLayer({
+const source = view.addSource({
   type: "geojson",
-  data: { url: "https://example.com/data.geojson" },
+  url: "https://example.com/data.geojson",
 });
+const layerHandle = view.addLayer({ type: "vector", source });
 
 // Update by fully overwriting the configuration
-geoJsonHandle.update({
-  type: "geojson",
-  data: { url: "https://example.com/data.geojson" },
-  point: { color: 0x00ff00 },
-});
+layerHandle.update({ type: "vector", source, point: { color: 0x00ff00 } });
 
 // Subscribe to feature events
-geoJsonHandle.on("featureCreated", (evaluator) => {
+layerHandle.on("featureCreated", (evaluator) => {
   console.log("A feature was created");
 });
 
 // Delete the layer
-geoJsonHandle.delete();
+layerHandle.delete();
 ```
 
 ### BaseHandle (for Mesh / Effect / Light Descs)
@@ -184,16 +207,18 @@ For detailed API reference, see [Descriptor Types](../../../three/api/desc-types
 
 ## Summary
 
-| Aspect              | Resource Layer                     | Mesh / Effect / Light Desc                                 |
-| ------------------- | ---------------------------------- | ----------------------------------------------------------- |
-| Purpose             | Loading and displaying external data | 3D objects, effects, lighting                              |
-| Method               | `addLayer()` with data format name | `addMesh()`, `addEffect()`, `addLight()`                   |
-| Pre-registration    | Not required                       | Required (`registerMesh` / `registerEffect` / `registerLight`) |
-| Number of Materials | Multiple depending on the data     | 1 Material per Descriptor                                   |
-| Handle Class        | `Layer`                            | `BaseHandle<T>`                                            |
-| Update Method       | Overwrite with a complete configuration object | Partial updates are possible                       |
+| Aspect              | Layer                                          | Mesh / Effect / Light Desc                                     |
+| ------------------- | ---------------------------------------------- | -------------------------------------------------------------- |
+| Purpose             | Rendering data from a source                   | 3D objects, effects, lighting                                  |
+| Method              | `addLayer()` with a layer type + `source`      | `addMesh()`, `addEffect()`, `addLight()`                       |
+| Pre-registration    | Not required                                   | Required (`registerMesh` / `registerEffect` / `registerLight`) |
+| Number of Materials | Multiple depending on the layer type           | 1 Material per Descriptor                                      |
+| Handle Class        | `Layer`                                         | `BaseHandle<T>`                                               |
+| Update Method       | Overwrite with a complete configuration object | Partial updates are possible                                   |
 
 ## Related Resources
 
-- [Resource Layer](../../../three/resource-layer/about/) - Resource layer details
+- [About Source](../../../three/source/about/) - where layer data comes from
+- [About Layer (types)](../../../three/layer/about/) - layer types and render options
+- [Materials](../../../three/material/about/) - styling (materials) reference
 - [three_default_descs](../../../three_default_descs/about/) - Default Descriptor details

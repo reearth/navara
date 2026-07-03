@@ -1,4 +1,4 @@
-import type { DataArrayTexture, Vector2, Vector3 } from "three";
+import type { DataArrayTexture, Matrix4, Vector2, Vector3 } from "three";
 
 import type { UniformValue } from "../../../types";
 import type { Mutates } from "../../MaterialEnhancer";
@@ -73,6 +73,7 @@ export type InstancedSpriteBaseState = Readonly<{
  */
 export type InstancedSpriteBaseRefs = {
   uRTCCenter: UniformValue<Vector3>;
+  uRTCCenterView: UniformValue<Vector3>;
   uEyeRTELow: UniformValue<Vector3>;
   uEyeRTEHigh: UniformValue<Vector3>;
   uScale: UniformValue<number>;
@@ -110,6 +111,15 @@ export type InstancedSpriteBaseMutates = Mutates<
       cameraX: number,
       cameraY: number,
       cameraZ: number,
+      state: InstancedSpriteBaseState,
+    ) => void;
+    /**
+     * Update the RTC uniforms per-frame. Transforms the RTC center into view
+     * space on the CPU (float64) so the shader avoids a large-coordinate
+     * float32 subtraction that would otherwise cause jitter.
+     */
+    updateRtcUniforms: (
+      viewMatrix: Matrix4,
       state: InstancedSpriteBaseState,
     ) => void;
     /**

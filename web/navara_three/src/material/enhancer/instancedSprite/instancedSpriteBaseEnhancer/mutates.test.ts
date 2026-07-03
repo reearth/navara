@@ -1,5 +1,5 @@
 import { degreeToRadian } from "@navara/three_api";
-import type { DataArrayTexture } from "three";
+import { type DataArrayTexture, Matrix4 } from "three";
 import { describe, expect, it, vi } from "vitest";
 
 import type { ShaderUniforms } from "../../MaterialEnhancer";
@@ -156,6 +156,47 @@ describe("instancedSpriteBaseEnhancer/mutates", () => {
       expect(uniforms.uEyeRTEHigh?.value.x).toBe(0);
       expect(uniforms.uEyeRTEHigh?.value.y).toBe(0);
       expect(uniforms.uEyeRTEHigh?.value.z).toBe(0);
+    });
+  });
+
+  describe("updateRtcUniforms", () => {
+    it("should transform the RTC center into view space when useRTE=false", () => {
+      const state: InstancedSpriteBaseState = { ...DEFAULT_BASE_STATE };
+      // RTC center at a large ECEF-scale coordinate.
+      const mutates = createBaseMutates(false, false, [6_400_000, 0, 0]);
+      mutates.update(state);
+
+      // View matrix that translates the world by -6,400,000 on X, so the
+      // center lands near the origin (small, precise value) in view space.
+      const viewInverse = new Matrix4().makeTranslation(-6_400_000, 0, 0);
+      mutates.updateRtcUniforms(viewInverse, state);
+
+      const uniforms: ShaderUniforms = {};
+      mutates.updateUniforms(uniforms, state);
+
+      expect(uniforms.uRTCCenterView?.value.x).toBeCloseTo(0, 3);
+      expect(uniforms.uRTCCenterView?.value.y).toBeCloseTo(0, 3);
+      expect(uniforms.uRTCCenterView?.value.z).toBeCloseTo(0, 3);
+    });
+
+    it("should do nothing when useRTE=true", () => {
+      const state: InstancedSpriteBaseState = {
+        ...DEFAULT_BASE_STATE,
+        useRTE: true,
+      };
+      const mutates = createBaseMutates(true, false, [6_400_000, 0, 0]);
+      mutates.update(state);
+
+      mutates.updateRtcUniforms(
+        new Matrix4().makeTranslation(-6_400_000, 0, 0),
+        state,
+      );
+
+      const uniforms: ShaderUniforms = {};
+      mutates.updateUniforms(uniforms, state);
+
+      // Left at the default; the RTC path is not used under RTE.
+      expect(uniforms.uRTCCenterView?.value.x).toBe(0);
     });
   });
 

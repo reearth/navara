@@ -10,25 +10,30 @@ pub type MvtSourceCache = VectorTileSourceCache;
 
 /// Extension trait for creating SourceId from MvtLayer.
 pub trait MvtSourceId {
-    fn from_mvt_layer(layer: &MvtLayer) -> Option<SourceId>;
+    /// Build a [`SourceId`] from the resolved tile URL template and the
+    /// traversal config, which is taken from the referenced [`Source`]
+    /// (zoom/sse) and the layer's appearances (clamp-to-ground).
+    fn from_mvt_layer(
+        layer: &MvtLayer,
+        url: String,
+        source: &navara_source::Source,
+    ) -> Option<SourceId>;
 }
 
 impl MvtSourceId for SourceId {
-    fn from_mvt_layer(layer: &MvtLayer) -> Option<SourceId> {
-        let data = layer.data.as_ref()?;
-        let vt = layer.vector_tile_appearance();
-        let max_zoom = vt.map(|v| v.max_zoom).unwrap_or(20);
-        let max_sse = vt.map(|v| v.max_sse).unwrap_or(2.0);
-        let overscaled_max_zoom = vt.map(|v| v.overscaled_max_zoom).unwrap_or(24);
-
+    fn from_mvt_layer(
+        layer: &MvtLayer,
+        url: String,
+        source: &navara_source::Source,
+    ) -> Option<SourceId> {
         let traversal_config = TraversalConfig::from_appearances(
             &layer.appearances,
-            max_zoom,
-            max_sse,
-            overscaled_max_zoom,
+            source.max_zoom(),
+            source.max_sse(),
+            source.overscaled_max_zoom(),
         );
 
-        Some(SourceId::new(data.url.clone(), traversal_config))
+        Some(SourceId::new(url, traversal_config))
     }
 }
 

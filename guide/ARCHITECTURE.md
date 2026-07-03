@@ -55,7 +55,8 @@ GIS Processing Modules
 - **`navara_wasm`** processes complex geospatial data through its full GIS module suite:
   - Tile loading and parsing (`navara_tile`, `navara_parser`)
   - Feature processing and batching (`navara_feature`, `navara_geometry`)
-  - Layer management (`navara_layer`) with multiple format support
+  - Source definitions and dedup (`navara_source`) — the fetch/decode config layers read from
+  - Layer management (`navara_layer`) with multiple format support, referencing sources by id
 - Transmits rendering-ready information including:
   - Transformed geometry data (meshes, vertices, indices)
   - Camera matrices and view parameters from ECS system
@@ -103,6 +104,21 @@ GIS Processing Modules
 - **Background processing** via Web Workers for CPU-intensive GIS operations
 
 This architecture ensures clear separation of concerns: the GIS engine handles all geospatial computations and data processing, while the rendering engine focuses purely on visual representation and GPU optimization.
+
+## Source and Layer Model
+
+Navara separates **what data to fetch** from **how to render it**:
+
+- **`Source`** (`navara_source`) — the origin and format of data: URL/template, zoom range, tiling scheme, elevation decoder, inline data, etc. One `Source` variant exists per data kind (GeoJSON, vector tile, raster tile, raster DEM, quantized mesh, ellipsoid, 3D Tiles, b3dm, pnts). A source owns everything required to fetch and decode; it carries no rendering options.
+- **`Layer`** (`navara_layer`) — rendering configuration that references a source by its id (`source_id`). Many layers can reference the same source.
+
+The engine deduplicates the underlying fetch/tiling resources so multiple layers sharing a source do not re-fetch the same tiles. The **`SourceStore`** resource maps a source id to its `Source` definition, its spawned source entity, and a **reference count** of the layers using it:
+
+- Adding a layer links it to a source (`link_layer_source` / `link_layer`), incrementing the ref count.
+- Deleting a layer unlinks it, decrementing the count. A user-defined (explicit) source survives at ref count 0 and is removed only via `delete_source`.
+- Deleting a source while layers still reference it is rejected.
+
+> **Legacy layer API:** older layer APIs create an *implicit* source (1:1 with the layer) behind the scenes; implicit sources are reclaimed automatically once their last reference is dropped. These paths are marked `TODO: Remove with the legacy layer API` and will go away once callers migrate to explicit sources.
 
 ## Multi-Language Architecture
 

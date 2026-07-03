@@ -8,29 +8,6 @@ import { TILE_DATASETS, TILES_3D_DATASETS } from "../../helpers/constants";
 import { addDateControl } from "../../helpers/control";
 import { addCtrlPanel, type MaterialDesc } from "../../helpers/panel";
 
-const gGeoLayersDef: MaterialDesc[] = [
-  {
-    type: "cesium3dtiles",
-    data: { url: TILES_3D_DATASETS.YamanashiKyonaka.url },
-    model: {
-      show: true,
-      pointSize: 0.3,
-      height: 0,
-      maxSse: 16,
-    },
-  },
-  {
-    type: "cesium3dtiles",
-    data: { url: TILES_3D_DATASETS.plateauKakegawaCastle.url },
-    model: {
-      show: true,
-      pointSize: 0.3,
-      height: 0,
-      maxSse: 16,
-    },
-  },
-];
-
 export const run = async (view: ThreeView) => {
   const defaultPlugin = new DefaultPlugin();
   view.addPlugin(defaultPlugin);
@@ -51,13 +28,34 @@ export const run = async (view: ThreeView) => {
     roll: 0.0,
   });
 
-  view.addLayer({
-    type: "tiles",
-    data: { url: TILE_DATASETS.openstreetmap.url },
-    rasterTile: {
-      maxZoom: 23,
-    },
+  const baseImagery = view.addSource({
+    type: "raster-tile",
+    url: TILE_DATASETS.openstreetmap.url,
+    maxZoom: 23,
   });
+  view.addLayer({ type: "raster", source: baseImagery });
+
+  // Point-cloud 3D Tiles, each as a 3d-tiles source rendered by a 3d-tiles layer.
+  const yamanashiSource = view.addSource({
+    type: "3d-tiles",
+    url: TILES_3D_DATASETS.YamanashiKyonaka.url,
+  });
+  const kakegawaSource = view.addSource({
+    type: "3d-tiles",
+    url: TILES_3D_DATASETS.plateauKakegawaCastle.url,
+  });
+  const geoLayersDef: MaterialDesc[] = [
+    {
+      type: "3d-tiles",
+      source: yamanashiSource.id,
+      model: { show: true, pointSize: 0.3, height: 0, maxSse: 16 },
+    },
+    {
+      type: "3d-tiles",
+      source: kakegawaSource.id,
+      model: { show: true, pointSize: 0.3, height: 0, maxSse: 16 },
+    },
+  ];
 
   const pane = new Pane({
     title: "Parameters",
@@ -65,7 +63,7 @@ export const run = async (view: ThreeView) => {
   });
 
   addCameraControl(view, pane);
-  addCtrlPanel(gGeoLayersDef, view, pane);
+  addCtrlPanel(geoLayersDef, view, pane);
   addDateControl(view, pane);
   attribution.show([datasetToSource(TILE_DATASETS.openstreetmap)]);
 };

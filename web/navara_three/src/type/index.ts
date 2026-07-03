@@ -7,8 +7,20 @@ import type {
   TerrainLayerDescription,
   TileLayerDescription,
   MvtLayerDescription,
+  VectorLayerDescription,
+  RasterLayerDescription,
+  TerrainSourceLayerDescription,
+  Tiles3dLayerDescription,
+  GeoJsonSourceDescription,
+  VectorTileSourceDescription,
+  RasterTileSourceDescription,
+  RasterDemSourceDescription,
+  QuantizedMeshSourceDescription,
+  Tiles3dSourceDescription,
+  SourceDescription as SourceDescriptionImpl,
 } from "@navara/engine";
 import type { Promise as WorkerPoolPromise } from "@navara/worker";
+import type { Feature, FeatureCollection, Geometry } from "geojson";
 import type { Mesh, Sprite, Object3D } from "three";
 
 import type { Color } from "../Color";
@@ -20,6 +32,7 @@ import type {
   TransparentPassConfig,
 } from "../layers/effect";
 import type { TileMesh } from "../mesh";
+import type { Source } from "../source";
 
 export type { Promise as WorkerPoolPromise } from "@navara/worker";
 
@@ -99,6 +112,53 @@ export type MvtLayer = WithColorSupport<
   Layer<MvtLayerDescription & { type: "mvt" }>
 >;
 
+/**
+ * A reference to a {@link Source}: either the source handle returned by
+ * `addSource`, or its `id` string.
+ */
+export type SourceRef = string | Source;
+
+type VectorLayerBase = WithColorSupport<
+  Layer<VectorLayerDescription & { type: "vector" }>
+>;
+
+/**
+ * A `vector` layer renders a `geojson` or `vector-tile` source as points,
+ * lines, polygons, text and billboards.
+ */
+export type VectorLayer = Omit<VectorLayerBase, "source"> & {
+  source: SourceRef;
+};
+
+type RasterLayerBase = WithColorSupport<
+  Layer<RasterLayerDescription & { type: "raster" }>
+>;
+
+/** A `raster` layer renders a `raster-tile` (imagery) or `raster-dem` source. */
+export type RasterLayer = Omit<RasterLayerBase, "source"> & {
+  source: SourceRef;
+};
+
+type TerrainSourceLayerBase = WithColorSupport<
+  Layer<TerrainSourceLayerDescription & { type: "terrain" }>
+>;
+
+/**
+ * A `terrain` layer renders a `raster-dem` or `quantized-mesh` source as the globe surface.
+ */
+export type TerrainSourceLayer = Omit<TerrainSourceLayerBase, "source"> & {
+  source: SourceRef;
+};
+
+type Tiles3dLayerBase = WithColorSupport<
+  Layer<Tiles3dLayerDescription & { type: "3d-tiles" }>
+>;
+
+/** A `3d-tiles` layer renders a `3d-tiles`, `b3dm`, or `pnts` source. */
+export type Tiles3dLayer = Omit<Tiles3dLayerBase, "source"> & {
+  source: SourceRef;
+};
+
 export type LayerDescription =
   | TilesLayer
   | TerrainLayer
@@ -106,7 +166,49 @@ export type LayerDescription =
   | B3dmLayer
   | PntsLayer
   | Cesium3dTilesLayer
-  | MvtLayer;
+  | MvtLayer
+  | VectorLayer
+  | RasterLayer
+  | TerrainSourceLayer
+  | Tiles3dLayer;
+
+/**
+ * A source describes where data comes from and how it is fetched/decoded.
+ * Register one with `addSource` and reference it from layers by handle or id.
+ *
+ * An optional `id` may be given; when omitted a random id is generated. Adding a
+ * source with an existing id overrides it (later definition wins). Combined with
+ * referencing a source by its id string from a layer, this enables defining the
+ * whole map declaratively (MapLibre-style) from JSON.
+ */
+export type SourceDescription = Omit<
+  NormalizeWASMClass<SourceDescriptionImpl>,
+  "type"
+> &
+  (
+    | (Omit<
+        WithColorSupport<Layer<GeoJsonSourceDescription & { type: "geojson" }>>,
+        "data"
+      > & {
+        /** Inline GeoJSON. Use `url` instead to fetch from a URL. */
+        data?: FeatureCollection | Feature | Geometry;
+      })
+    | WithColorSupport<
+        Layer<VectorTileSourceDescription & { type: "vector-tile" }>
+      >
+    | WithColorSupport<
+        Layer<RasterTileSourceDescription & { type: "raster-tile" }>
+      >
+    | WithColorSupport<
+        Layer<RasterDemSourceDescription & { type: "raster-dem" }>
+      >
+    | WithColorSupport<
+        Layer<QuantizedMeshSourceDescription & { type: "quantized-mesh" }>
+      >
+    | WithColorSupport<Layer<Tiles3dSourceDescription & { type: "3d-tiles" }>>
+    | WithColorSupport<Layer<Tiles3dSourceDescription & { type: "b3dm" }>>
+    | WithColorSupport<Layer<Tiles3dSourceDescription & { type: "pnts" }>>
+  );
 
 export type MeshCache = Map<string, Mesh | Sprite | Object3D>;
 

@@ -1,0 +1,11 @@
+[package]
+name = "navara_source"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+bevy_app.workspace = true
+bevy_ecs.workspace = true
+navara_core.workspace = true
+navara_parser.workspace = true
