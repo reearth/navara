@@ -12,6 +12,7 @@ serde_json.workspace = true
 rustc-hash.workspace = true
 navara_core.workspace = true
 navara_layer.workspace = true
+navara_source.workspace = true
 navara_material.workspace = true
 navara_math.workspace = true
 navara_parser.workspace = true

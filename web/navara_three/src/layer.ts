@@ -2,6 +2,7 @@ import { EventHandler, type FeatureSetId } from "@navara/core";
 import type { Core } from "@navara/engine";
 
 import { FeatureEvaluator } from "./evaluations";
+import { Source } from "./source";
 import type { LayerDescription } from "./type";
 
 export type FeatureCreatedParams = {
@@ -159,10 +160,14 @@ export class Layer extends EventHandler<LayerEvent> {
    * @param l - New layer configuration
    */
   update(l: LayerDescription) {
+    const normalized =
+      "source" in l && l.source instanceof Source
+        ? { ...l, source: l.source.id }
+        : l;
     // Convert Color objects to numbers if converter is provided
     const processedLayer = this.convertColors
-      ? (this.convertColors(l) as LayerDescription)
-      : l;
+      ? (this.convertColors(normalized) as LayerDescription)
+      : normalized;
     this.core.updateLayer(this.id, processedLayer);
   }
 

@@ -47,24 +47,23 @@ const run = async () => {
   });
 
   // Base layers
-  view.addLayer({
-    type: "tiles",
-    data: {
-      url: TILE_DATASETS.gsiSeamlessphoto.url,
-    },
-    rasterTile: { maxZoom: 18 },
+  const baseImagery = view.addSource({
+    type: "raster-tile",
+    url: TILE_DATASETS.gsiSeamlessphoto.url,
+    maxZoom: 18,
+  });
+  view.addLayer({ type: "raster", source: baseImagery });
+
+  const dem = view.addSource({
+    type: "raster-dem",
+    url: TERRAIN_DATASETS.gsi.url,
+    elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
+    maxZoom: 15,
   });
   view.addLayer({
     type: "terrain",
-    data: {
-      url: TERRAIN_DATASETS.gsi.url,
-    },
-    rasterTerrain: {
-      elevationDecoder: JAPAN_GSI_ELEVATION_DECODER(),
-      maxZoom: 15,
-      castShadow: true,
-      receiveShadow: true,
-    },
+    source: dem,
+    terrain: { castShadow: true, receiveShadow: true },
   });
 
   // Color and visibility parameters
@@ -90,9 +89,13 @@ const run = async () => {
 
   // Cesium 3D Tiles layer
   const add3DTilesLayer = () => {
+    const tilesSource = view.addSource({
+      type: "3d-tiles",
+      url: TILES_3D_DATASETS.plateauAjigasawa.url,
+    });
     const layer = view.addLayer({
-      type: "cesium3dtiles",
-      data: { url: TILES_3D_DATASETS.plateauAjigasawa.url },
+      type: "3d-tiles",
+      source: tilesSource,
       model: {
         show: true,
         color: new Color().setStyle("#ffffff"),

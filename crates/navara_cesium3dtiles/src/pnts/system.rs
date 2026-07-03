@@ -29,17 +29,23 @@ use super::requester::PntsLayerDataRequesterMarker;
 pub fn request_model_by_pnts_layer(
     mut commands: Commands,
     mut buf: ResMut<BufferStore>,
+    source_store: Res<navara_source::SourceStore>,
     pnts_layers: Query<(Entity, &PntsLayer), Added<PntsLayer>>,
 ) {
     for (e, layer) in &pnts_layers {
+        // Resolve the content URL live from the referenced source.
+        let Some(base_url) = layer
+            .source_id
+            .as_deref()
+            .and_then(|id| source_store.get(id))
+            .and_then(|s| s.url())
+        else {
+            continue;
+        };
         commands.spawn((
             PntsLayerDataRequesterMarker(e),
             Priority::Medium,
-            DataRequester::from_store(
-                layer.data.as_ref().unwrap().url.clone(),
-                &mut buf,
-                DataRequesterExtension::Pnts,
-            ),
+            DataRequester::from_store(base_url.to_owned(), &mut buf, DataRequesterExtension::Pnts),
         ));
     }
 }

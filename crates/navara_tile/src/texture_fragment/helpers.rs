@@ -6,7 +6,6 @@ use navara_component::{Order, OrderByDistance, Priority, Requested};
 use navara_core::TilingScheme;
 use navara_data_requester::{DataManager, DataRequester, DataRequesterExtension};
 use navara_layer::TilesLayer;
-use navara_material::Appearance;
 use navara_tile_component::{TerrainTile, TileHandle, TileTextureFragmentMarker};
 
 use crate::hillshade::HillshadeTextureMarker;
@@ -17,6 +16,7 @@ pub(crate) fn request_hillshade_data_requester(
     commands: &mut Commands,
     leaf: &mut TerrainTile,
     tiles: &Query<(&TilesLayer, &Order)>,
+    source_store: &navara_source::SourceStore,
     handle: TileHandle,
     data_requesters: &Query<&DataRequester>,
     priority: Priority,
@@ -54,7 +54,14 @@ pub(crate) fn request_hillshade_data_requester(
             if layer.hillshade_config.is_none() {
                 return true;
             }
-            if !layer.is_over_min_zoom(coords.z) || layer.is_over_max_zoom(coords.z) {
+            let Some(source) = layer
+                .source_id
+                .as_deref()
+                .and_then(|id| source_store.get(id))
+            else {
+                return true;
+            };
+            if !source.is_over_min_zoom(coords.z) || source.is_over_max_zoom(coords.z) {
                 return true;
             }
             hill_ids[i].is_some_and(|e| data_requesters.get(e).is_ok())
@@ -69,8 +76,16 @@ pub(crate) fn request_hillshade_data_requester(
         if layer.hillshade_config.is_none() {
             continue;
         }
+        // Resolve the referenced source; skip the layer if it is missing.
+        let Some(source) = layer
+            .source_id
+            .as_deref()
+            .and_then(|id| source_store.get(id))
+        else {
+            continue;
+        };
         // Skip layers whose zoom range excludes this tile. The slot stays None.
-        if !layer.is_over_min_zoom(coords.z) || layer.is_over_max_zoom(coords.z) {
+        if !source.is_over_min_zoom(coords.z) || source.is_over_max_zoom(coords.z) {
             continue;
         }
         // Skip layers that already have a valid in-flight or completed entity.
@@ -82,9 +97,10 @@ pub(crate) fn request_hillshade_data_requester(
             continue;
         }
 
-        let tms = matches!(layer.appearance.as_ref(), Some(Appearance::TerrainTile(m)) if m.tms);
-        let url = TilingScheme::WebMercator { tms }
-            .tile_url(layer.data.as_ref().unwrap().url.as_str(), coords);
+        let Some(url_template) = source.url() else {
+            continue;
+        };
+        let url = TilingScheme::WebMercator { tms: source.tms() }.tile_url(url_template, coords);
 
         // Hillshade texture: use DataRequester so Rust can backfill edges.
         let extension = Url::parse(&url)
@@ -142,44 +158,55 @@ pub(crate) fn request_hillshade_data_requester(
 mod tests {
     use super::*;
     use bevy_app::{App, Update};
-    use bevy_ecs::{entity::Entity, prelude::Resource, system::ResMut};
+    use bevy_ecs::{
+        entity::Entity,
+        prelude::Resource,
+        system::{Res, ResMut},
+    };
     use navara_core::TileXYZ;
-    use navara_layer::LayerData;
-    use navara_material::{HillshadeConfig, RasterTileMaterial};
+    use navara_material::{Appearance, HillshadeConfig, RasterMaterial};
 
-    fn regular_layer(layer_id: &str, min_zoom: usize, max_zoom: usize) -> TilesLayer {
-        TilesLayer {
-            layer_id: layer_id.to_string(),
-            data: Some(LayerData {
-                url: "https://example.com/{z}/{x}/{y}.png".to_string(),
-            }),
-            appearance: Some(Appearance::TerrainTile(RasterTileMaterial {
-                min_zoom,
-                max_zoom,
-                ..Default::default()
-            })),
-            elevation_heatmap_config: None,
-            hillshade_config: None,
-        }
+    /// A raster-DEM-style source carrying the layer's zoom range (zoom now lives
+    /// on the source, not the material). The id matches the layer's `source_id`.
+    fn layer_source(id: &str, min_zoom: usize, max_zoom: usize) -> navara_source::Source {
+        navara_source::Source::RasterTile(navara_source::RasterTileSource {
+            source_id: id.to_string(),
+            url: "https://example.com/{z}/{x}/{y}.png".to_string(),
+            tms: false,
+            min_zoom,
+            max_zoom,
+            overscaled_max_zoom: 24,
+        })
     }
 
-    fn hillshade_layer(layer_id: &str, min_zoom: usize, max_zoom: usize) -> TilesLayer {
-        TilesLayer {
+    fn regular_layer(
+        layer_id: &str,
+        min_zoom: usize,
+        max_zoom: usize,
+    ) -> (TilesLayer, navara_source::Source) {
+        let layer = TilesLayer {
             layer_id: layer_id.to_string(),
-            data: Some(LayerData {
-                url: "https://example.com/{z}/{x}/{y}.png".to_string(),
-            }),
-            appearance: Some(Appearance::TerrainTile(RasterTileMaterial {
-                min_zoom,
-                max_zoom,
-                ..Default::default()
-            })),
+            source_id: Some(layer_id.to_string()),
+            appearance: Some(Appearance::TerrainTile(RasterMaterial::default())),
             elevation_heatmap_config: None,
-            hillshade_config: Some(HillshadeConfig {
-                elevation_decoder: Default::default(),
-                exaggeration: 1.0,
-            }),
-        }
+            hillshade_config: None,
+        };
+        (layer, layer_source(layer_id, min_zoom, max_zoom))
+    }
+
+    fn hillshade_layer(
+        layer_id: &str,
+        min_zoom: usize,
+        max_zoom: usize,
+    ) -> (TilesLayer, navara_source::Source) {
+        let layer = TilesLayer {
+            layer_id: layer_id.to_string(),
+            source_id: Some(layer_id.to_string()),
+            appearance: Some(Appearance::TerrainTile(RasterMaterial::default())),
+            elevation_heatmap_config: None,
+            hillshade_config: Some(HillshadeConfig { exaggeration: 1.0 }),
+        };
+        (layer, layer_source(layer_id, min_zoom, max_zoom))
     }
 
     #[derive(Resource, Default, Clone)]
@@ -190,7 +217,11 @@ mod tests {
     /// Run a single update where the caller can mutate a freshly-built `TerrainTile`
     /// before and after the call to `request_hillshade_data_requester`. The
     /// post-call state of `hillshade_entity_ids` is captured into `CapturedSlots`.
-    fn run_request<F>(layers: Vec<(TilesLayer, Order)>, tile_z: usize, prepare: F) -> CapturedSlots
+    fn run_request<F>(
+        layers: Vec<((TilesLayer, navara_source::Source), Order)>,
+        tile_z: usize,
+        prepare: F,
+    ) -> CapturedSlots
     where
         F: FnOnce(&mut TerrainTile) + Send + Sync + 'static,
     {
@@ -199,9 +230,12 @@ mod tests {
         app.init_resource::<CapturedSlots>();
         app.init_resource::<DataManager>();
 
-        for (layer, order) in layers {
+        let mut store = navara_source::SourceStore::new();
+        for ((layer, source), order) in layers {
+            store.add(source.source_id().to_string(), source);
             app.world_mut().spawn((layer, order));
         }
+        app.insert_resource(store);
 
         let prepare = std::sync::Mutex::new(Some(prepare));
         app.add_systems(
@@ -211,6 +245,7 @@ mod tests {
                   mut data_manager: ResMut<DataManager>,
                   tiles: Query<(&TilesLayer, &Order)>,
                   data_requesters: Query<&DataRequester>,
+                  source_store: Res<navara_source::SourceStore>,
                   mut out: ResMut<CapturedSlots>| {
                 let mut tile = TerrainTile::new(
                     TileXYZ {
@@ -228,6 +263,7 @@ mod tests {
                     &mut commands,
                     &mut tile,
                     &tiles,
+                    &source_store,
                     0,
                     &data_requesters,
                     Priority::High,

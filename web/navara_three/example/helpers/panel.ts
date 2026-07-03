@@ -327,7 +327,12 @@ export const addCtrlPanel = (
     const layerId = layerIds[paneParams.layer];
     const layer = layerMap.get(layerId);
     if (layer && paneParams.material in layer) {
-      const material = layer[paneParams.material as keyof typeof layer];
+      // Indexing by a dynamic key widens to the union of all layer property
+      // values; narrow to a loose material record (the `in` guard above ensures
+      // it is present).
+      const material = layer[
+        paneParams.material as keyof typeof layer
+      ] as unknown as Record<string, any>;
 
       material.show = paneParams.show;
 
@@ -463,9 +468,10 @@ export const addCtrlPanel = (
         material.offsetDepth = paneParams.offsetDepth;
       }
 
+      // Spread the whole layer description so source-based layers keep their
+      // `source` (and legacy layers keep their `data`) on update.
       view.updateLayerById(layerId, {
-        type: layer.type,
-        data: layer.data,
+        ...layer,
         [paneParams.material]: material,
       });
     }
@@ -482,7 +488,13 @@ function createParamCtrl(
     return undefined;
   }
 
-  const material = layer[paneParams.material as keyof typeof layer];
+  // The pane controls a single appearance object on the layer. Indexing the
+  // layer description by an arbitrary key widens the type to the union of all
+  // its property values (including `string`/`source`), so narrow it to a loose
+  // material record here — matching the `Record<string, any>` paneParams.
+  const material = layer[paneParams.material as keyof typeof layer] as
+    | Record<string, any>
+    | undefined;
   if (material) {
     const f = pane.addFolder({
       title: "",
