@@ -94,17 +94,23 @@ use super::{
 pub fn request_metadata(
     mut commands: Commands,
     mut buf: ResMut<BufferStore>,
+    source_store: Res<navara_source::SourceStore>,
     layers: Query<(Entity, &Cesium3dTilesLayer), Added<Cesium3dTilesLayer>>,
 ) {
     for (e, layer) in &layers {
+        // Resolve the tileset.json URL live from the referenced source.
+        let Some(base_url) = layer
+            .source_id
+            .as_deref()
+            .and_then(|id| source_store.get(id))
+            .and_then(|s| s.url())
+        else {
+            continue;
+        };
         commands.spawn((
             Cesium3dTilesMetadataDataRequesterMarker(e),
             Priority::Medium,
-            DataRequester::from_store(
-                layer.data.as_ref().unwrap().url.clone(),
-                &mut buf,
-                DataRequesterExtension::Json,
-            ),
+            DataRequester::from_store(base_url.to_owned(), &mut buf, DataRequesterExtension::Json),
             RequestOrder(TileOrderByDistance::default()),
         ));
     }

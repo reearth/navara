@@ -1,3 +1,4 @@
+import invariant from "tiny-invariant";
 import { describe, it, expect, vi } from "vitest";
 
 import type { ParsedStyle, StyleLayer } from "../engine/types";
@@ -42,7 +43,8 @@ describe("toLayerDescription", () => {
         },
       };
 
-      const result = toLayerDescription(layer, style) as any;
+      const result = toLayerDescription(layer, style);
+      invariant(result.type === "geojson");
 
       expect(result.type).toBe("geojson");
       expect(result.data).toEqual({
@@ -72,6 +74,7 @@ describe("toLayerDescription", () => {
       };
 
       const result = toLayerDescription(layer, style);
+      invariant(result.type === "geojson");
 
       expect(result.type).toBe("geojson");
       expect(result.data).toEqual({

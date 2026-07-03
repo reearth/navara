@@ -13,27 +13,35 @@ sidebar:
 
 ### Declarative API
 
-In navara_three, all elements displayed on the map can be added declaratively.
+In navara_three, all elements displayed on the map can be added declaratively. Data is registered as a **Source**, and a **Layer** renders it.
 
 ```typescript
-// Add GeoJSON data as a layer
-const layer = view.addLayer({
+// Register the data as a source, then render it with a layer
+const source = view.addSource({
   type: "geojson",
-  data: { url: "https://example.com/data.geojson" },
+  url: "https://example.com/data.geojson",
+});
+const layer = view.addLayer({
+  type: "vector",
+  source,
   polygon: { color: 0x3388ff, opacity: 0.6 },
 });
 ```
 
-Many data formats that were complex in traditional GIS development (GeoJSON, MVT, 3D Tiles, terrain data, raster tiles, etc.) can all be handled through a unified layer API.
+Many data formats that were complex in traditional GIS development (GeoJSON, MVT, 3D Tiles, terrain data, raster tiles, etc.) are all handled through a unified Source + Layer API.
 
 ### Styling with Materials
 
 Each layer is styled by specifying Materials. You can flexibly specify color, size, opacity, and more for each feature type such as points, lines, and polygons.
 
 ```typescript
-view.addLayer({
+const source = view.addSource({
   type: "geojson",
-  data: { url: "https://example.com/data.geojson" },
+  url: "https://example.com/data.geojson",
+});
+view.addLayer({
+  type: "vector",
+  source,
   point: { color: 0xff0000, size: 10 },
   polyline: { color: 0x00ff00, width: 2 },
   polygon: { color: 0x0000ff, opacity: 0.5 },

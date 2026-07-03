@@ -170,6 +170,7 @@ export class SDFTextMesh
         camera.position.x,
         camera.position.y,
         camera.position.z,
+        camera.matrixWorldInverse,
         state,
       );
       // Keep atlas-size uniforms in sync with the (possibly resized) shared
@@ -179,6 +180,11 @@ export class SDFTextMesh
 
     this.material = mat;
     this.frustumCulled = false;
+  }
+
+  /** The text this mesh currently renders (its baked glyph string). */
+  get text(): string {
+    return this._text;
   }
 
   /**

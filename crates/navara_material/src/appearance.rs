@@ -1,5 +1,5 @@
 use bevy_ecs::{component::Component, entity::Entity};
-use navara_core::{CRS, ElevationDecoder, TilingScheme, calc_transform};
+use navara_core::{CRS, ElevationDecoder, calc_transform};
 use navara_geometry::TileUvTransform;
 use navara_math::{Transform, Vec2, Vec3};
 
@@ -10,7 +10,6 @@ use navara_math::{Transform, Vec2, Vec3};
 pub struct ElevationHeatmapConfig {
     pub max_height: f64,
     pub min_height: f64,
-    pub elevation_decoder: ElevationDecoder,
 
     pub logarithmic: bool,
     pub log_boundary: f64,
@@ -21,8 +20,6 @@ pub struct ElevationHeatmapConfig {
 /// The computed normals are used with existing scene lighting.
 #[derive(Debug, Clone, PartialEq)]
 pub struct HillshadeConfig {
-    pub elevation_decoder: ElevationDecoder,
-
     /// Exaggeration factor for hillshade effect (default: 1.0)
     /// Higher values make terrain appear more dramatic, lower values flatten it. Recommended range is 0.5 to 2.0.
     pub exaggeration: f32,
@@ -36,8 +33,7 @@ pub enum Appearance {
     Polyline(PolylineMaterial),
     Polygon(PolygonMaterial),
     Model(ModelMaterial),
-    VectorTile(VectorTileMaterial),
-    TerrainTile(RasterTileMaterial),
+    TerrainTile(RasterMaterial),
 }
 
 impl Appearance {
@@ -59,9 +55,6 @@ impl Appearance {
                 *dist = src.clone();
             }
             (Appearance::Model(dist), Appearance::Model(src)) => {
-                *dist = src.clone();
-            }
-            (Appearance::VectorTile(dist), Appearance::VectorTile(src)) => {
                 *dist = src.clone();
             }
             (Appearance::TerrainTile(dist), Appearance::TerrainTile(src)) => {
@@ -523,54 +516,23 @@ pub struct ModelInternalMaterial {
     pub point_cloud_geodetic_normal: Vec3,
 }
 
+/// Render-only appearance for a `raster` layer's imagery. All fetch/tiling
+/// config lives on the referenced `Source`.
 #[derive(Debug, Clone, PartialEq, Component)]
-pub struct VectorTileMaterial {
-    pub show: bool,
-    pub cast_shadow: bool,
-    pub receive_shadow: bool,
-    pub max_sse: f32,
-    pub max_zoom: usize,
-    pub layers: Option<Vec<String>>,
-    pub overscaled_max_zoom: usize,
-}
-
-impl Default for VectorTileMaterial {
-    fn default() -> Self {
-        Self {
-            show: true,
-            cast_shadow: false,
-            receive_shadow: false,
-            max_sse: 2.,
-            max_zoom: 20,
-            layers: None,
-            overscaled_max_zoom: 24, // Allow overscaling up to zoom level 24 by default
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Component)]
-pub struct RasterTileMaterial {
+pub struct RasterMaterial {
     pub show: bool,
     pub color: u32,
     pub opacity: f32,
-    pub max_zoom: usize,
-    pub min_zoom: usize,
-    pub tms: bool,
     pub show_bounding_box: bool,
-    pub overscaled_max_zoom: usize,
 }
 
-impl Default for RasterTileMaterial {
+impl Default for RasterMaterial {
     fn default() -> Self {
         Self {
             show: true,
             color: 0xffffff,
             opacity: 1.,
-            max_zoom: 20,
-            min_zoom: 0,
-            tms: false,
             show_bounding_box: false,
-            overscaled_max_zoom: 24,
         }
     }
 }
@@ -589,10 +551,18 @@ pub struct RasterTileInternalMaterial {
     // Elevation Heatmap fields
     pub is_elevation_heatmaps: Vec<bool>, // Per-layer flags: which texture slots are elevation heatmaps
     pub elevation_heatmap_config: Option<ElevationHeatmapConfig>, // Shared config for all heatmap layers
+    /// DEM decoder for the heatmap's source, resolved live from the referenced
+    /// `Source` at material-build time (not stored on the layer config). `None`
+    /// when there is no heatmap or the source isn't a raster-dem.
+    pub heatmap_elevation_decoder: Option<ElevationDecoder>,
 
     // Hillshade fields
     pub is_hillshades: Vec<bool>, // Per-layer flags: which texture slots are hillshades
     pub hillshade_config: Option<HillshadeConfig>, // Shared config for all hillshade layers
+    /// DEM decoder for the hillshade's source, resolved live from the referenced
+    /// `Source` at material-build time (not stored on the layer config). `None`
+    /// when there is no hillshade or the source isn't a raster-dem.
+    pub hillshade_elevation_decoder: Option<ElevationDecoder>,
 
     /// Per-layer UV transform used when this layer's slot samples a parent tile's data.
     /// `None` means identity (own tile's data is in use). Length matches `texture_fragments`
@@ -610,17 +580,16 @@ pub struct RasterTileInternalMaterial {
     pub terrain_lat_range: Option<[f32; 2]>,
 }
 
+/// Render-only appearance for a `terrain` layer's mesh, regardless of the
+/// referenced source's data format (raster-dem, quantized-mesh, or the
+/// source-less ellipsoid). All fetch/geometry config lives on the referenced
+/// `Source`; the data format itself is carried by `TerrainDataType`.
 #[derive(Debug, Clone, PartialEq, Component)]
-pub struct RasterTerrainMaterial {
+pub struct TerrainMaterial {
     pub show: bool,
     pub cast_shadow: bool,
     pub receive_shadow: bool,
     pub show_bounding_box: bool,
-    pub max_zoom: usize,
-    pub min_zoom: usize,
-    pub elevation_decoder: ElevationDecoder,
-    pub tile_size: u32,
-    pub overscaled_max_zoom: usize,
     /// Whether to render skirts along tile boundaries to hide gaps.
     pub skirt: bool,
     /// Multiplier for the automatically calculated skirt height.
@@ -628,84 +597,15 @@ pub struct RasterTerrainMaterial {
     pub skirt_exaggeration: f32,
 }
 
-impl Default for RasterTerrainMaterial {
+impl Default for TerrainMaterial {
     fn default() -> Self {
         Self {
             show: true,
             cast_shadow: false,
             receive_shadow: false,
             show_bounding_box: false,
-            max_zoom: 20,
-            min_zoom: 0,
-            elevation_decoder: ElevationDecoder::default(),
-            tile_size: 256,
-            overscaled_max_zoom: 24,
             skirt: true,
             skirt_exaggeration: 1.0,
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Component)]
-pub struct EllipsoidTerrainMaterial {
-    pub cast_shadow: bool,
-    pub receive_shadow: bool,
-    pub show_bounding_box: bool,
-    pub max_zoom: usize,
-    pub min_zoom: usize,
-}
-
-impl Default for EllipsoidTerrainMaterial {
-    fn default() -> Self {
-        Self {
-            cast_shadow: false,
-            receive_shadow: false,
-            show_bounding_box: false,
-            max_zoom: 20,
-            min_zoom: 0,
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Component)]
-pub struct QuantizedMeshTerrainMaterial {
-    pub show: bool,
-    pub cast_shadow: bool,
-    pub receive_shadow: bool,
-    pub show_bounding_box: bool,
-    pub max_zoom: usize,
-    pub min_zoom: usize,
-    pub overscaled_max_zoom: usize,
-    pub skirt: bool,
-    pub skirt_exaggeration: f32,
-    pub tiling_scheme: TilingScheme,
-    /// Request the oct-encoded per-vertex normals extension from the server.
-    /// Adds `octvertexnormals` to the Accept header when fetching `.terrain` tiles.
-    pub request_vertex_normals: bool,
-    /// Request the watermask extension from the server.
-    /// Adds `watermask` to the Accept header when fetching `.terrain` tiles.
-    pub request_water_mask: bool,
-    /// Bearer token sent as the `Authorization` header for `.terrain` requests.
-    /// `None` means no Authorization header is added.
-    pub token: Option<String>,
-}
-
-impl Default for QuantizedMeshTerrainMaterial {
-    fn default() -> Self {
-        Self {
-            show: true,
-            cast_shadow: false,
-            receive_shadow: false,
-            show_bounding_box: false,
-            max_zoom: 14,
-            min_zoom: 0,
-            overscaled_max_zoom: 24,
-            skirt: true,
-            skirt_exaggeration: 1.0,
-            tiling_scheme: TilingScheme::Geographic { tms: true },
-            request_vertex_normals: false,
-            request_water_mask: false,
-            token: None,
         }
     }
 }

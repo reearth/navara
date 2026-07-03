@@ -7,6 +7,7 @@ use bevy_ecs::{
 };
 
 use navara_component::Deleted;
+use navara_core::{is_pmtiles_url, is_tile_url};
 use navara_feature_component::{
     batch::BatchedFeature, id::FeatureId, polygon::UpdatePolygon, render::RenderableFeature,
 };
@@ -14,10 +15,13 @@ use navara_layer::{DeleteMvtLayerMarker, LayerId, LayerStore, MvtLayer, UpdateMv
 use navara_material::Appearance;
 use navara_tile_component::VectorTileQuadtree;
 use navara_vector_tile::{
-    LayerResources, RenderedTile, TileCacheManager, TileSource, VectorTileSourceCache,
-    VectorTileSourceResources,
+    LayerResources, RenderedTile, TileCacheManager, TileSource, VectorTileSource,
+    VectorTileSourceCache, VectorTileSourceResources,
 };
 
+use navara_pmtiles::PmtilesSource;
+
+use crate::pmtiles_decoder::MvtPmtilesDecoder;
 use crate::source::{MvtSource, OwnedMatchedLayerInfo};
 use crate::source_cache::MvtSourceId;
 
@@ -25,16 +29,32 @@ use crate::source_cache::MvtSourceId;
 pub fn prepare_layer_resource(
     mut commands: Commands,
     mvt_layers: Query<(Entity, &MvtLayer), Added<MvtLayer>>,
+    source_store: Res<navara_source::SourceStore>,
     mut source_cache: ResMut<VectorTileSourceCache>,
     mut source_query: Query<(&mut VectorTileSourceResources, Option<&mut TileSource>)>,
 ) {
     let mut layer_source_map: HashMap<navara_vector_tile::SourceId, Vec<Entity>> = HashMap::new();
 
     for (layer_entity, layer) in &mvt_layers {
-        if !layer.has_template_url() {
+        // Resolve the referenced source; its URL + zoom/sse drive traversal.
+        let Some(source) = layer
+            .source_id
+            .as_deref()
+            .and_then(|id| source_store.get(id))
+        else {
+            continue;
+        };
+        let Some(url) = source.url() else {
+            continue;
+        };
+        // Accept both `{z}/{x}/{y}` tile templates (MvtSource) and `.pmtiles`
+        // archive URLs (PmtilesSource); skip anything else.
+        if !is_tile_url(url) && !is_pmtiles_url(url) {
             continue;
         }
-        let Some(source_id) = navara_vector_tile::SourceId::from_mvt_layer(layer) else {
+        let Some(source_id) =
+            navara_vector_tile::SourceId::from_mvt_layer(layer, url.to_owned(), source)
+        else {
             continue;
         };
         layer_source_map
@@ -55,12 +75,12 @@ pub fn prepare_layer_resource(
                         .get(layer_entity)
                         .map(|(_, l)| l.layer_id.clone())
                         .unwrap_or_default();
-                    // Add layer info to MvtSource
+                    // Add layer info to the source (MVT directly, or PMTiles via
+                    // its injected MVT decoder — `with_source_layers` handles both).
                     if let Ok((_, layer)) = mvt_layers.get(layer_entity)
                         && let Some(ts) = tile_source.as_mut()
-                        && let Some(mvt_source) = ts.downcast_mut::<MvtSource>()
                     {
-                        mvt_source.layers.push(owned_layer_info(layer));
+                        push_layer_info(ts, owned_layer_info(layer));
                     }
                     commands.entity(layer_entity).insert(LayerResources {
                         layer_id,
@@ -105,12 +125,57 @@ pub fn prepare_layer_resource(
     }
 }
 
+/// Run `f` against a source's layer list, whether it's an [`MvtSource`] (which
+/// holds the layers directly) or a [`PmtilesSource`] (which holds them inside
+/// its injected [`MvtPmtilesDecoder`]).
+///
+/// Uses a callback rather than returning `&mut Vec` so the transient downcast
+/// borrow doesn't escape — returning it conditionally trips the borrow checker.
+fn with_source_layers<R>(
+    tile_source: &mut TileSource,
+    f: impl FnOnce(&mut Vec<OwnedMatchedLayerInfo>) -> R,
+) -> Option<R> {
+    if let Some(s) = tile_source.downcast_mut::<MvtSource>() {
+        return Some(f(&mut s.layers));
+    }
+    if let Some(s) = tile_source.downcast_mut::<PmtilesSource>()
+        && let Some(d) = s
+            .decoder_mut()
+            .as_any_mut()
+            .downcast_mut::<MvtPmtilesDecoder>()
+    {
+        return Some(f(&mut d.layers));
+    }
+    None
+}
+
+/// Append a layer's info to whichever source kind backs `tile_source`.
+fn push_layer_info(tile_source: &mut TileSource, info: OwnedMatchedLayerInfo) {
+    with_source_layers(tile_source, |layers| layers.push(info));
+}
+
+/// Drop the layer `layer_id` from the source so new tiles stop generating its geometry.
+fn retain_layers_except(tile_source: &mut TileSource, layer_id: &str) {
+    with_source_layers(tile_source, |layers| {
+        layers.retain(|l| l.layer_id != layer_id);
+    });
+}
+
+/// Apply an appearance update to the matching layer inside the source.
+fn set_layer_appearances(tile_source: &mut TileSource, layer_id: &str, appearance: &Appearance) {
+    with_source_layers(tile_source, |layers| {
+        for owned in layers {
+            if owned.layer_id == layer_id {
+                for a in &mut owned.appearances {
+                    a.set(appearance);
+                }
+            }
+        }
+    });
+}
+
 fn owned_layer_info(layer: &MvtLayer) -> OwnedMatchedLayerInfo {
-    let limit_layers = layer
-        .vector_tile_appearance()
-        .map(|vt| &vt.layers)
-        .unwrap_or(&None)
-        .clone();
+    let limit_layers = layer.source_layers.clone();
     OwnedMatchedLayerInfo {
         layer_id: layer.layer_id.clone(),
         appearances: layer.appearances.clone(),
@@ -132,6 +197,23 @@ fn create_new_source(
 
     let url = source_id.key.clone();
 
+    // The URL form chooses the source implementation: a `.pmtiles` archive is
+    // resolved through PmtilesSource, everything else is a `{z}/{x}/{y}` MVT
+    // template. Both share the identical decode path downstream.
+    let source: Box<dyn VectorTileSource> = if is_pmtiles_url(&url) {
+        Box::new(PmtilesSource::new(
+            url,
+            Box::new(MvtPmtilesDecoder {
+                layers: owned_layers,
+            }),
+        ))
+    } else {
+        Box::new(MvtSource {
+            url,
+            layers: owned_layers,
+        })
+    };
+
     let source_entity = commands
         .spawn((
             VectorTileSourceResources::new(
@@ -140,10 +222,7 @@ fn create_new_source(
                 tile_cache_manager,
                 layer_entities,
             ),
-            TileSource(Box::new(MvtSource {
-                url,
-                layers: owned_layers,
-            })),
+            TileSource(source),
         ))
         .id();
 
@@ -172,18 +251,11 @@ pub fn update_mvt_layer(
                 appearance.set(&u.appearance);
             }
 
-            // Sync updated appearances to MvtSource.layers for newly loaded tiles
+            // Sync updated appearances to the source's layers for newly loaded tiles
             if let Some(layer_res) = layer_res
                 && let Ok(mut tile_source) = tile_sources.get_mut(layer_res.source)
-                && let Some(mvt_source) = tile_source.downcast_mut::<MvtSource>()
             {
-                for owned in &mut mvt_source.layers {
-                    if owned.layer_id == layer_id {
-                        for appearance in &mut owned.appearances {
-                            appearance.set(&u.appearance);
-                        }
-                    }
-                }
+                set_layer_appearances(&mut tile_source, &layer_id, &u.appearance);
             }
         }
 
@@ -292,11 +364,9 @@ pub fn delete_mvt_layer(
                     &mut sources,
                     &mut source_cache,
                 );
-                // Remove layer from MvtSource.layers so new tiles won't generate geometry for it
-                if let Ok(mut tile_source) = tile_sources.get_mut(resource.source)
-                    && let Some(mvt_source) = tile_source.downcast_mut::<MvtSource>()
-                {
-                    mvt_source.layers.retain(|l| l.layer_id != d.0);
+                // Remove layer from the source's layers so new tiles won't generate geometry for it
+                if let Ok(mut tile_source) = tile_sources.get_mut(resource.source) {
+                    retain_layers_except(&mut tile_source, &d.0);
                 }
             }
             commands.entity(layer_entity).despawn();

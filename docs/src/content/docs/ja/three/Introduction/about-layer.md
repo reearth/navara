@@ -1,28 +1,28 @@
 ---
 title: About Layer
-description: レイヤーとオブジェクトの概念について説明します。
+description: レイヤーの概念について説明します。
 sidebar:
   order: 4
 ---
 
-## レイヤーとオブジェクトとは
+## レイヤーとは
 
-navara_three では、3D シーンに表示される要素を「レイヤー」や「オブジェクト」として管理します。地図データの描画にはリソースレイヤーを、3D オブジェクトの配置、ポストプロセッシングエフェクト、照明にはそれぞれ専用の Descriptor を使用して追加・制御できます。
+navara_three では、3D シーンに表示される要素を「レイヤー」や「Descriptor」として管理します。地図データの描画には**レイヤー**を使用します。レイヤーは [Source](../../../three/source/about/)（データの取得元）を参照し、それをどのように描画するかを記述します。一方、3D オブジェクトの配置、ポストプロセッシングエフェクト、照明は Descriptor として追加・制御します。
 
-## レイヤーとオブジェクトの種類
+## Descriptor の種類
 
-navara_three には以下の種類があります：
+navara_three には 4 種類の Descriptor があります：
 
-| 種別                 | 説明                                           | `type` の指定                                         |
-| -------------------- | ---------------------------------------------- | ----------------------------------------------------- |
-| **リソースレイヤー** | 外部データソースから地理データを読み込んで表示 | データフォーマット名（`"geojson"`, `"terrain"` など） |
-| **メッシュ**         | 3D メッシュオブジェクトをシーンに追加          | `"mesh"`                                              |
-| **エフェクト**       | ポストプロセッシングエフェクトを適用           | `"effect"`                                            |
-| **ライト**           | シーンの照明を管理                             | `"light"`                                             |
+| Descriptor の種類 | 説明                                                          | メソッド                                                          |
+| ----------------- | ------------------------------------------------------------- | ----------------------------------------------------------------- |
+| **Layer**         | [Source](../../../three/source/about/) の地理データを描画     | レイヤータイプ（`"vector"`, `"raster"`, `"terrain"`, `"3d-tiles"`）と `source` を指定して `addLayer()` |
+| **Mesh Desc**     | 3D メッシュオブジェクトをシーンに追加                         | `addMesh()`                                                       |
+| **Effect Desc**   | ポストプロセッシングエフェクトを適用                         | `addEffect()`                                                     |
+| **Light Desc**    | シーンの照明を管理                                           | `addLight()`                                                      |
 
-## リソースレイヤーのデータ構造
+## レイヤーのデータ構造
 
-リソースレイヤーは、地理データを以下の階層構造で管理します：
+レイヤーは、地理データを以下の階層構造で管理します：
 
 ```mermaid
 graph LR
@@ -42,48 +42,74 @@ graph LR
 
 フィーチャーイベント（`featureCreated`、`featureUpdated` など）の詳細は [Layer Types](../../api/desc-types/#events) を参照してください。
 
-## リソースレイヤーとメッシュ・エフェクト・ライトの違い
+## Source とレイヤー
 
-リソースレイヤーは外部の地理データを扱うため、メッシュ・エフェクト・ライトとは扱いが異なります。
+レイヤー自身はデータを取得しません。レイヤーは **Source** を参照します。Source はデータが*どこ*にあり、どのように取得・デコードされるか（URL、ズーム範囲、タイリングスキーム、標高デコーダー）を記述し、レイヤーは*どのように*描画するか（Material）を記述します。1 つの Source は複数のレイヤーで共有できます。
 
-### リソースレイヤー
+```typescript
+// 1. Register a source (the data)
+const imagery = view.addSource({
+  type: "raster-tile",
+  url: "https://example.com/{z}/{x}/{y}.png",
+  maxZoom: 19,
+});
 
-リソースレイヤーは、GeoJSON、3D Tiles、地形データなどの外部データソースを読み込んで表示します。
+// 2. Add a layer that renders it (the styling)
+view.addLayer({ type: "raster", source: imagery, raster: { opacity: 0.8 } });
+```
+
+Source の種類については [About Source](../../../three/source/about/) を、レイヤーの種類と描画オプションについては [About Layer (types)](../../../three/layer/about/) を参照してください。
+
+## レイヤーと他の Descriptor の違い
+
+レイヤーは外部の地理データを描画するため、メッシュ・エフェクト・ライトの Descriptor とは扱いが異なります。
+
+### Layer
+
+レイヤーは、GeoJSON、ベクタタイル、ラスタ画像、地形、3D Tiles などの Source を描画します。
 
 **特徴:**
 
-- `type` にはデータフォーマット名を指定（`"geojson"`, `"terrain"`, `"cesium3dtiles"`, `"tiles"`, `"mvt"` など）
-- `data` プロパティでデータソースの URL やインラインデータを指定
-- データフォーマットに応じて複数の Material を指定可能
-- 指定できる Material はデータフォーマットによって異なる
+- `type` にはレイヤータイプを指定（`"vector"`, `"raster"`, `"terrain"`, `"3d-tiles"`）
+- `source` プロパティでデータを参照（`Source` ハンドルまたはその `id`）
+- レイヤータイプに応じて複数の Material を指定可能
+- 指定できる Material はレイヤータイプによって異なる
 
 ```typescript
-// GeoJSON レイヤーの例
-const geoJsonHandle = view.addLayer({
+// Vector layer example (a geojson / vector-tile source)
+const features = view.addSource({
   type: "geojson",
-  data: { url: "https://example.com/data.geojson" },
-  // GeoJSON では point, polyline, polygon など複数の Material を指定可能
+  data: { type: "FeatureCollection", features: [] },
+});
+const vectorHandle = view.addLayer({
+  type: "vector",
+  source: features,
+  // A vector layer can take several materials at once
   point: { color: 0xff0000, size: 10 },
   polyline: { color: 0x00ff00, width: 2 },
   polygon: { color: 0x0000ff, opacity: 0.5 },
 });
 
-// 地形レイヤーの例
+// Terrain layer example (a raster-dem / quantized-mesh source)
+const dem = view.addSource({
+  type: "raster-dem",
+  url: "https://example.com/dem/{z}/{x}/{y}.png",
+  maxZoom: 15,
+});
 const terrainHandle = view.addLayer({
   type: "terrain",
-  data: { url: "https://example.com/terrain/{z}/{x}/{y}.png" },
-  // 地形レイヤーでは rasterTerrain Material のみ指定可能
-  rasterTerrain: { exaggeration: 1.5 },
+  source: dem,
+  terrain: { castShadow: true, receiveShadow: true },
 });
 ```
 
-### メッシュ・エフェクト・ライト
+### Mesh・Effect・Light Desc
 
-メッシュ、エフェクト、ライトは、クライアントサイドで Three.js オブジェクトを直接作成します。
+メッシュ Descriptor、エフェクト Descriptor、ライト Descriptor は、クライアントサイドで Three.js オブジェクトを直接作成します。
 
 **特徴:**
 
-- `addMesh()`, `addEffect()`, `addLight()` の専用メソッドで追加
+- 種類ごとの専用メソッドを使用：`addMesh()`, `addEffect()`, `addLight()`
 - 1 つの Descriptor につき 1 つの Material（設定オブジェクト）を持つ
 - Material のキー名で Descriptor の種類が決まる
 - **使用前に Descriptor クラスの登録が必要**（`registerMesh`, `registerEffect`, `registerLight`）
@@ -91,31 +117,31 @@ const terrainHandle = view.addLayer({
 ```typescript
 import { BoxMeshDesc, FXAAEffectDesc, SunLightDesc } from "@navara/three_default_descs";
 
-// Descriptor クラスを登録（addMesh/addEffect/addLight の前に必要）
+// Register descriptor classes (required before addMesh/addEffect/addLight)
 view.registerMesh("box", BoxMeshDesc);
 view.registerEffect("fxaa", FXAAEffectDesc);
 view.registerLight("sun", SunLightDesc);
 
-// メッシュの例（BoxMeshDesc）
+// Mesh descriptor example (BoxMeshDesc)
 const boxHandle = view.addMesh<BoxMeshDesc>({
   box: {
-    // box キーで BoxMeshDesc として認識される
+    // Recognized as BoxMeshDesc by the box key
     width: 100,
     height: 100,
   },
 });
 
-// エフェクトの例（FXAAEffectDesc）
+// Effect descriptor example (FXAAEffectDesc)
 const fxaaHandle = view.addEffect<FXAAEffectDesc>({
   fxaa: {
-    // fxaa キーで FXAAEffectDesc として認識される
+    // Recognized as FXAAEffectDesc by the fxaa key
   },
 });
 
-// ライトの例（SunLightDesc）
+// Light descriptor example (SunLightDesc)
 const sunHandle = view.addLight<SunLightDesc>({
   sun: {
-    // sun キーで SunLightDesc として認識される
+    // Recognized as SunLightDesc by the sun key
     intensity: 1.0,
     castShadow: true,
   },
@@ -128,55 +154,52 @@ const sunHandle = view.addLight<SunLightDesc>({
 
 ## 返却されるハンドルクラスの違い
 
-`view.addLayer()` / `view.addMesh()` / `view.addEffect()` / `view.addLight()` から返されるハンドルクラスは、種別によって異なります：
+`view.addLayer()` / `view.addMesh()` / `view.addEffect()` / `view.addLight()` から返されるハンドルクラスは、Descriptor の種類によって異なります：
 
-| 種別                         | 返却されるクラス | 主な機能                                                                 |
+| Descriptor の種類            | 返却されるクラス | 主な機能                                                                 |
 | ---------------------------- | ---------------- | ------------------------------------------------------------------------ |
-| リソースレイヤー             | `Layer`          | `update()`, `delete()`, `forceUpdate()`, 地物イベント                    |
-| メッシュ・エフェクト・ライト | `BaseHandle<T>`  | `update()`, `delete()`, `visible`, `ref`（基底インスタンスへのアクセス） |
+| Layer                        | `Layer`          | `update()`, `delete()`, `forceUpdate()`, フィーチャーイベント            |
+| Mesh・Effect・Light Desc     | `BaseHandle<T>`  | `update()`, `delete()`, `visible`, `ref`（基底インスタンスへのアクセス） |
 
-### Layer（リソースレイヤー用）
+### Layer
 
 ```typescript
-const geoJsonHandle = view.addLayer({
+const source = view.addSource({
   type: "geojson",
-  data: { url: "https://example.com/data.geojson" },
+  url: "https://example.com/data.geojson",
+});
+const layerHandle = view.addLayer({ type: "vector", source });
+
+// Update by fully overwriting the configuration
+layerHandle.update({ type: "vector", source, point: { color: 0x00ff00 } });
+
+// Subscribe to feature events
+layerHandle.on("featureCreated", (evaluator) => {
+  console.log("A feature was created");
 });
 
-// 設定を完全に上書きして更新
-geoJsonHandle.update({
-  type: "geojson",
-  data: { url: "https://example.com/data.geojson" },
-  point: { color: 0x00ff00 },
-});
-
-// 地物イベントを購読
-geoJsonHandle.on("featureCreated", (evaluator) => {
-  console.log("地物が作成されました");
-});
-
-// リソースレイヤーを削除
-geoJsonHandle.delete();
+// Delete the layer
+layerHandle.delete();
 ```
 
-### BaseHandle（メッシュ・エフェクト・ライト用）
+### BaseHandle（Mesh・Effect・Light Desc 用）
 
 ```typescript
-// BoxMeshDesc が登録済みであること（Descriptor）
+// BoxMeshDesc must be registered
 const boxHandle = view.addMesh<BoxMeshDesc>({
   box: { width: 100, height: 100, depth: 100 },
 });
 
-// 部分的な更新（指定したプロパティのみ変更）
+// Partial update (only the specified properties are changed)
 boxHandle.update({ width: 200 });
 
-// 表示/非表示の切り替え
+// Toggle visibility
 boxHandle.visible = false;
 
-// 基底の Three.js オブジェクトにアクセス
+// Access the underlying Three.js object
 const boxMesh = boxHandle.ref;
 
-// オブジェクトを削除
+// Delete the object
 boxHandle.delete();
 ```
 
@@ -184,16 +207,18 @@ boxHandle.delete();
 
 ## まとめ
 
-| 観点           | リソースレイヤー               | メッシュ・エフェクト・ライト                                |
-| -------------- | ------------------------------ | ----------------------------------------------------------- |
-| 用途           | 外部データの読み込み・表示     | 3D オブジェクト・エフェクト・照明                           |
-| `type` の指定  | データフォーマット名           | `"mesh"`, `"effect"`, `"light"`                             |
-| 事前登録       | 不要                           | 必要（`registerMesh` / `registerEffect` / `registerLight`） |
-| Material 数    | データに応じて複数可           | 1 Descriptor 1 Material                                     |
-| ハンドルクラス | `Layer`                        | `BaseHandle<T>`                                             |
-| 更新方法       | 完全な設定オブジェクトで上書き | 部分的な更新が可能                                          |
+| 観点           | Layer                                    | Mesh・Effect・Light Desc                                    |
+| -------------- | ---------------------------------------- | ----------------------------------------------------------- |
+| 用途           | Source のデータを描画                     | 3D オブジェクト・エフェクト・照明                           |
+| メソッド       | レイヤータイプ + `source` で `addLayer()` | `addMesh()`, `addEffect()`, `addLight()`                    |
+| 事前登録       | 不要                                     | 必要（`registerMesh` / `registerEffect` / `registerLight`） |
+| Material 数    | レイヤータイプに応じて複数可             | 1 Descriptor 1 Material                                     |
+| ハンドルクラス | `Layer`                                  | `BaseHandle<T>`                                             |
+| 更新方法       | 完全な設定オブジェクトで上書き           | 部分的な更新が可能                                          |
 
 ## 関連リソース
 
-- [Resource Layer](../../../three/resource-layer/about/) - リソースレイヤーの詳細
+- [About Source](../../../three/source/about/) - レイヤーのデータの取得元
+- [About Layer (types)](../../../three/layer/about/) - レイヤーの種類と描画オプション
+- [Materials](../../../three/material/about/) - スタイル設定（Material）のリファレンス
 - [three_default_descs](../../../three_default_descs/about/) - デフォルト Descriptor の詳細

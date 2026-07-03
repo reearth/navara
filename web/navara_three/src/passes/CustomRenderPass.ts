@@ -1,6 +1,7 @@
 import { Globe } from "@navara/core";
 import { DepthCopyPass } from "postprocessing";
 import {
+  Color,
   DepthTexture,
   HalfFloatType,
   NearestFilter,
@@ -16,6 +17,9 @@ import { DrapedMesh } from "../mesh/DrapedMesh";
 import type { Scenes } from "../scene";
 
 import { AllDepthCopyPass, NormalCopyPass, RenderTargetCopyPass } from ".";
+
+// Scratch color reused when re-asserting the clear color each frame.
+const CLEAR_COLOR = new Color();
 
 /**
  * Options for CustomRenderPass
@@ -152,6 +156,10 @@ export class CustomRenderPass extends RenderPass {
       (!this.allowTransparent && this.globe.transparent);
 
     renderer.setRenderTarget(renderTarget);
+    renderer.setClearColor(
+      renderer.getClearColor(CLEAR_COLOR),
+      renderer.getClearAlpha(),
+    );
     renderer.clear();
 
     this._renderWithLight(renderer, this._scenes.globe);

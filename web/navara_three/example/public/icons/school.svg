@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <circle cx="32" cy="32" r="29" fill="#2f9e44" stroke="#ffffff" stroke-width="2.5"/>
+  <!-- mortarboard -->
+  <path d="M32 19 L50 27 L32 35 L14 27 Z" fill="#fff"/>
+  <!-- cap base -->
+  <path d="M23 30.5 V38 a9 4.5 0 0 0 18 0 V30.5 L32 34.5 Z" fill="#fff"/>
+  <!-- tassel -->
+  <path d="M50 27 V37" fill="none" stroke="#fff" stroke-width="2"/>
+  <circle cx="50" cy="39" r="2.4" fill="#fff"/>
+</svg>

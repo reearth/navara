@@ -105,6 +105,43 @@ export const VECTOR_DATASETS = {
 } satisfies Record<string, Dataset>;
 
 /**
+ * PMTiles datasets — a single archive served over HTTP range requests, with an
+ * MVT payload (resolved by PmtilesSource). The URL has no `{z}/{x}/{y}`.
+ */
+export const PMTILES_DATASETS = {
+  protomapsFirenze: {
+    url: "https://pmtiles.io/protomaps(vector)ODbL_firenze.pmtiles",
+    attribution: "© OpenStreetMap contributors, © Protomaps",
+    attributionUrl: "https://protomaps.com",
+  },
+  // Overture Maps publishes a worldwide PMTiles archive per theme with every
+  // release, served over HTTP range requests from S3. Each theme is a single
+  // global `.pmtiles` file (no `{z}/{x}/{y}`), so it resolves through a
+  // PmtilesSource exactly like the Protomaps sample above.
+  // Ref: https://docs.overturemaps.org/examples/overture-tiles/
+  overtureBase: {
+    url: "https://overturemaps-extras-us-west-2.s3.us-west-2.amazonaws.com/tiles/2026-05-20.0/base.pmtiles",
+    attribution: "© OpenStreetMap contributors, © Overture Maps Foundation",
+    attributionUrl: "https://overturemaps.org",
+  },
+  overtureDivisions: {
+    url: "https://overturemaps-extras-us-west-2.s3.us-west-2.amazonaws.com/tiles/2026-05-20.0/divisions.pmtiles",
+    attribution: "© OpenStreetMap contributors, © Overture Maps Foundation",
+    attributionUrl: "https://overturemaps.org",
+  },
+  overtureBuildings: {
+    url: "https://overturemaps-extras-us-west-2.s3.us-west-2.amazonaws.com/tiles/2026-05-20.0/buildings.pmtiles",
+    attribution: "© OpenStreetMap contributors, © Overture Maps Foundation",
+    attributionUrl: "https://overturemaps.org",
+  },
+  overturePlaces: {
+    url: "https://overturemaps-extras-us-west-2.s3.us-west-2.amazonaws.com/tiles/2026-05-20.0/places.pmtiles",
+    attribution: "© Overture Maps Foundation",
+    attributionUrl: "https://overturemaps.org",
+  },
+} satisfies Record<string, Dataset>;
+
+/**
  * 3D Tiles datasets (PLATEAU)
  */
 export const TILES_3D_DATASETS = {

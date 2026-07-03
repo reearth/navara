@@ -46,6 +46,15 @@ earcutr = "=0.5.0"
 geozero = { git = "https://github.com/keiya01/geozero.git", branch = "fix/ccw-mvt", default-features = false, features = ["with-mvt", "with-geo"] }
 prost = "=0.14.3"
 
+# --- PMTiles ---
+# We parse the PMTiles v3 container ourselves (fixed-layout header + varint
+# directories) so we can drive byte-range IO through `DataRequester`. The
+# `pmtiles` crate seals the offsets/entries we need behind `pub(crate)`, so it
+# can't be used for that. `fast_hilbert` provides the one non-trivial bit (the
+# Hilbert tile-id curve); `flate2` provides gzip. Both are pure-Rust / wasm-safe.
+fast_hilbert = "=2.1.0"
+flate2 = "=1.1.9"
+
 # --- Time ---
 instant = { version = "=0.1.13", features = ["wasm-bindgen", "inaccurate"] }
 
@@ -85,6 +94,7 @@ quantized-mesh = "=0.2.2"
 
 # --- Internal Crates ---
 martini = { path = "crates/martini" }
+pmtiles = { path = "crates/pmtiles" }
 navara_b3dm = { path = "crates/navara_b3dm" }
 navara_bin = { path = "crates/navara_bin" }
 navara_buffer_store = { path = "crates/navara_buffer_store" }
@@ -116,8 +126,10 @@ navara_mock = { path = "crates/navara_mock" }
 navara_mvt = { path = "crates/navara_mvt" }
 navara_occluder = { path = "crates/navara_occluder" }
 navara_parser = { path = "crates/navara_parser" }
+navara_pmtiles = { path = "crates/navara_pmtiles" }
 navara_pnts = { path = "crates/navara_pnts" }
 navara_quadtree = { path = "crates/navara_quadtree" }
+navara_source = { path = "crates/navara_source" }
 navara_texture_fragment = { path = "crates/navara_texture_fragment" }
 navara_tile = { path = "crates/navara_tile" }
 navara_vector_tile = { path = "crates/navara_vector_tile" }

@@ -75,12 +75,17 @@ pub fn init_globe_tiling(
     mut globe: ResMut<navara_globe::Globe>,
     mut qt: ResMut<TerrainTileQuadtree>,
     mut initialized: Local<bool>,
+    source_store: Res<navara_source::SourceStore>,
 ) {
     if let Some(layer) = terrain_layer.iter().next() {
-        let Some(appearance) = &layer.appearance else {
+        let Some(source) = layer
+            .source_id
+            .as_deref()
+            .and_then(|id| source_store.get(id))
+        else {
             return;
         };
-        globe.tiling_scheme = appearance.tiling_scheme();
+        globe.tiling_scheme = source.tiling_scheme();
     } else if *initialized {
         return;
     }
@@ -107,6 +112,7 @@ pub fn update_terrain(
     frame: Res<FrameManager>,
     window: Res<Window>,
     globe: Res<navara_globe::Globe>,
+    source_store: Res<navara_source::SourceStore>,
     mut tiles_set: ParamSet<(Query<(&TilesLayer, &Order)>, Query<(), Changed<TilesLayer>>)>,
     mut terrain_layer_set: ParamSet<(Query<&TerrainLayer>, Query<(), Added<TerrainLayer>>)>,
     mut camera_set: ParamSet<(
@@ -192,7 +198,10 @@ pub fn update_terrain(
     let root_coords: Vec<TileXYZ> = globe.tiling_scheme.root_tiles();
 
     let is_over_min_z = if !tiles.is_empty() {
-        tiles.iter().any(|t| t.0.is_over_min_zoom(0))
+        tiles
+            .iter()
+            .filter_map(|t| t.0.source_id.as_deref().and_then(|id| source_store.get(id)))
+            .any(|s| s.is_over_min_zoom(0))
     } else {
         true
     };
@@ -203,16 +212,17 @@ pub fn update_terrain(
             continue;
         };
 
-        let is_texture_ready = qt
-            .qt
-            .get_mut(root_handle)
-            .unwrap()
-            .is_hillshade_ready(&data_requesters, tiles);
+        let is_texture_ready = qt.qt.get_mut(root_handle).unwrap().is_hillshade_ready(
+            &data_requesters,
+            tiles,
+            &source_store,
+        );
 
         let traversal_result = traverse_terrain(
             &mut commands,
             tiles,
             &terrain_layer,
+            &source_store,
             root_handle,
             &mut tc,
             &mut qt,
@@ -265,6 +275,7 @@ pub fn update_terrain(
                     root_handle,
                     &mut tc,
                     tiles,
+                    &source_store,
                     &data_requesters,
                     &terrain_data_requester,
                     Priority::Extreme,
@@ -274,6 +285,7 @@ pub fn update_terrain(
                     &mut commands,
                     tile,
                     tiles,
+                    &source_store,
                     root_handle,
                     &data_requesters,
                     Priority::High,
@@ -311,6 +323,7 @@ pub fn transfer_mesh(
     terrain_mesh_constructors: Query<&ConstructTerrainMeshResult, Without<Deleted>>,
     terrain_mesh_upsamplers: Query<&UpsampleTerrainMeshResult, Without<Deleted>>,
     globe: Res<navara_globe::Globe>,
+    source_store: Res<navara_source::SourceStore>,
 ) {
     if !tc.is_updated_in_this_frame {
         return;
@@ -318,8 +331,13 @@ pub fn transfer_mesh(
 
     // TODO: Support mutiple terrain layers
     let terrain_layer = terrain_layer.iter().next();
+    // The terrain's fetch/geometry config (tile size, tiling scheme, zoom range)
+    // is read live from the referenced source.
+    let terrain_source = terrain_layer
+        .and_then(|l| l.source_id.as_deref())
+        .and_then(|id| source_store.get(id));
 
-    let tile_size = terrain_layer.map(|l| l.appearance.as_ref().unwrap().tile_size());
+    let tile_size = terrain_source.map(|s| s.tile_size());
 
     for (rendered_tile_id, mut rendered_tile, order) in
         rendered_tiles.iter_mut().sort::<&OrderByDistance>()
@@ -362,12 +380,8 @@ pub fn transfer_mesh(
         let is_quantized_mesh = terrain_layer
             .map(|l| matches!(l.terrain_type, navara_layer::TerrainDataType::QuantizedMesh))
             .unwrap_or(false);
-        let qm_geographic = terrain_layer
-            .and_then(|l| l.appearance.as_ref())
-            .is_some_and(|a| a.geographic());
-        let qm_tms = terrain_layer
-            .and_then(|l| l.appearance.as_ref())
-            .is_some_and(|a| a.tms());
+        let qm_geographic = terrain_source.is_some_and(|s| s.tiling_scheme().is_geographic());
+        let qm_tms = terrain_source.is_some_and(|s| s.tiling_scheme().tms());
 
         let tile_layers_len = tile_layers.iter().len();
         let mut shows = Vec::with_capacity(tile_layers_len);
@@ -377,12 +391,23 @@ pub fn transfer_mesh(
         // Elevation Heatmap fields
         let mut is_elevation_heatmaps = Vec::with_capacity(tile_layers_len);
         let mut shared_heatmap_config = None;
+        // DEM decoder is fetch config: read live from the source, not the layer.
+        let mut shared_heatmap_decoder = None;
 
         // Hillshade fields
         let mut is_hillshades = Vec::with_capacity(tile_layers_len);
         let mut layer_uv_transforms = Vec::with_capacity(tile_layers_len);
         let mut shared_hillshade_config = None;
+        let mut shared_hillshade_decoder = None;
         let mut tile_show_bounding_box = false;
+
+        // Resolve a raster layer's DEM decoder live from its referenced source.
+        let layer_decoder = |l: &TilesLayer| {
+            l.source_id
+                .as_deref()
+                .and_then(|id| source_store.get(id))
+                .and_then(|s| s.elevation_decoder().copied())
+        };
 
         for (i, (l, _)) in tile_layers.iter().sort::<&Order>().enumerate() {
             // The initial material only reflects terrain-owned hillshade readiness;
@@ -410,6 +435,7 @@ pub fn transfer_mesh(
                 // Use the first heatmap config as shared configuration
                 if shared_heatmap_config.is_none() {
                     shared_heatmap_config = Some(heatmap_config);
+                    shared_heatmap_decoder = layer_decoder(l);
                 }
             } else {
                 is_elevation_heatmaps.push(false);
@@ -421,6 +447,7 @@ pub fn transfer_mesh(
                 // Use the first hillshade config as shared configuration
                 if shared_hillshade_config.is_none() {
                     shared_hillshade_config = Some(hillshade_config);
+                    shared_hillshade_decoder = layer_decoder(l);
                 }
             } else {
                 is_hillshades.push(false);
@@ -436,9 +463,9 @@ pub fn transfer_mesh(
             .and_then(|l| l.appearance.as_ref())
             .map_or((false, false, false), |appearance| {
                 (
-                    appearance.cast_shadow(),
-                    appearance.receive_shadow(),
-                    appearance.show_bounding_box(),
+                    appearance.cast_shadow,
+                    appearance.receive_shadow,
+                    appearance.show_bounding_box,
                 )
             });
 
@@ -462,10 +489,12 @@ pub fn transfer_mesh(
             // Elevation Heatmap fields
             is_elevation_heatmaps,
             elevation_heatmap_config: shared_heatmap_config.cloned(),
+            heatmap_elevation_decoder: shared_heatmap_decoder,
 
             // Hillshade fields
             is_hillshades,
             hillshade_config: shared_hillshade_config.cloned(),
+            hillshade_elevation_decoder: shared_hillshade_decoder,
             layer_uv_transforms,
             layer_reproject,
             terrain_lat_range: None,
@@ -486,12 +515,12 @@ pub fn transfer_mesh(
         // OR when our own DEM request failed but the parent terrain is ready.
         let should_upsample_terrain = terrain_layer.is_some()
             && tile.is_upsamplable(&qt, &terrain_data_requester, &terrain_layer)
-            && (terrain_layer.is_some_and(|l| l.should_upsample(tile.coords.z))
+            && (terrain_source.is_some_and(|s| s.should_overscale(tile.coords.z))
                 || is_terrain_failed);
 
         if !should_render_terrain
             || is_ellipsoid_terrain
-            || (terrain_layer.is_some_and(|t| !t.is_over_min_zoom(tile.coords.z))
+            || (terrain_source.is_some_and(|s| !s.is_over_min_zoom(tile.coords.z))
                 || (!should_upsample_terrain && is_terrain_failed))
         {
             // TODO: Move these tile construction process to worker.
@@ -506,7 +535,7 @@ pub fn transfer_mesh(
             let (skirt, skirt_exaggeration) = terrain_layer
                 .and_then(|l| l.appearance.as_ref())
                 .map_or((true, 1.0), |appearance| {
-                    (appearance.skirt(), appearance.skirt_exaggeration())
+                    (appearance.skirt, appearance.skirt_exaggeration)
                 });
             if should_render_terrain && skirt {
                 // Use terrain tile_size if available, otherwise default to 256
@@ -601,7 +630,7 @@ pub fn transfer_mesh(
         let (skirt, skirt_exaggeration) = terrain_layer
             .and_then(|l| l.appearance.as_ref())
             .map_or((true, 1.0), |appearance| {
-                (appearance.skirt(), appearance.skirt_exaggeration())
+                (appearance.skirt, appearance.skirt_exaggeration)
             });
 
         if should_upsample_terrain {
@@ -928,6 +957,7 @@ pub fn update_mesh_material(
     mut tc: ResMut<TileCacheManager>,
     qt: ResMut<TerrainTileQuadtree>,
     raster_qt: Res<navara_tile_component::RasterTileQuadtree>,
+    source_store: Res<navara_source::SourceStore>,
     rendered_tiles: Query<(&RenderedTile, &OrderByDistance), With<Rendered>>,
     mut texture_fragment: ParamSet<(TileTextureFragmentQuery, ChangedTileTextureFragmentQuery)>,
     mut data_requesters: ParamSet<(
@@ -1035,6 +1065,17 @@ pub fn update_mesh_material(
         let mut layer_reproject = Vec::new();
         let mut elevation_heatmap_config = None;
         let mut hillshade_config = None;
+        // DEM decoder is fetch config: read live from the source, not the layer.
+        let mut heatmap_elevation_decoder = None;
+        let mut hillshade_elevation_decoder = None;
+
+        // Resolve a raster layer's DEM decoder live from its referenced source.
+        let layer_decoder = |l: &TilesLayer| {
+            l.source_id
+                .as_deref()
+                .and_then(|id| source_store.get(id))
+                .and_then(|s| s.elevation_decoder().copied())
+        };
 
         for (i, (l, _)) in tile_layers.iter().sort::<&Order>().enumerate() {
             let a = l.appearance().unwrap();
@@ -1080,10 +1121,18 @@ pub fn update_mesh_material(
 
                 if hillshade_config.is_none() {
                     hillshade_config = l.hillshade_config.clone();
+                    hillshade_elevation_decoder = layer_decoder(l);
                 }
             } else {
                 let lng_span = (terrain_extent.east - terrain_extent.west).val();
-                let target_z = crate::raster::wm_zoom_for_lng_span(lng_span, a.max_zoom);
+                // Max zoom now lives on the referenced source.
+                let max_zoom = l
+                    .source_id
+                    .as_deref()
+                    .and_then(|id| source_store.get(id))
+                    .map(|s| s.max_zoom())
+                    .unwrap_or(20);
+                let target_z = crate::raster::wm_zoom_for_lng_span(lng_span, max_zoom);
                 // The raster pull only returns fragments that have loaded.
                 let resolved = crate::raster::resolve_raster_textures(
                     &raster_qt,
@@ -1106,6 +1155,7 @@ pub fn update_mesh_material(
 
                 if is_heatmap && elevation_heatmap_config.is_none() {
                     elevation_heatmap_config = l.elevation_heatmap_config.clone();
+                    heatmap_elevation_decoder = layer_decoder(l);
                 }
             }
         }
@@ -1129,7 +1179,9 @@ pub fn update_mesh_material(
             || appearance.layer_reproject != layer_reproject
             || appearance.terrain_lat_range != terrain_lat_range
             || appearance.elevation_heatmap_config != elevation_heatmap_config
-            || appearance.hillshade_config != hillshade_config;
+            || appearance.hillshade_config != hillshade_config
+            || appearance.heatmap_elevation_decoder != heatmap_elevation_decoder
+            || appearance.hillshade_elevation_decoder != hillshade_elevation_decoder;
 
         if !needs_update {
             continue;
@@ -1151,8 +1203,10 @@ pub fn update_mesh_material(
         appearance.colors = colors;
         appearance.is_elevation_heatmaps = is_elevation_heatmaps;
         appearance.elevation_heatmap_config = elevation_heatmap_config;
+        appearance.heatmap_elevation_decoder = heatmap_elevation_decoder;
         appearance.is_hillshades = is_hillshades;
         appearance.hillshade_config = hillshade_config;
+        appearance.hillshade_elevation_decoder = hillshade_elevation_decoder;
         appearance.layer_uv_transforms = layer_uv_transforms;
         appearance.layer_reproject = layer_reproject;
         appearance.terrain_lat_range = terrain_lat_range;
@@ -1290,8 +1344,7 @@ pub fn clear_caches(
 mod delete_layer_tests {
     use super::*;
     use bevy_app::{App, Update};
-    use navara_layer::LayerData;
-    use navara_material::{Appearance, RasterTileMaterial};
+    use navara_material::{Appearance, RasterMaterial};
     use navara_tile_component::{RasterTile, RasterTileQuadtree};
 
     use crate::raster::RasterTileCacheManager;
@@ -1299,10 +1352,8 @@ mod delete_layer_tests {
     fn raster_layer(layer_id: &str) -> TilesLayer {
         TilesLayer {
             layer_id: layer_id.to_string(),
-            data: Some(LayerData {
-                url: "https://example.com/{z}/{x}/{y}.png".to_string(),
-            }),
-            appearance: Some(Appearance::TerrainTile(RasterTileMaterial::default())),
+            source_id: None,
+            appearance: Some(Appearance::TerrainTile(RasterMaterial::default())),
             elevation_heatmap_config: None,
             hillshade_config: None,
         }

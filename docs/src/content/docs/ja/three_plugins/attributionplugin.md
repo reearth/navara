@@ -33,19 +33,19 @@ view.addPlugin(attribution);
 await view.init();
 
 // ラスタの基盤地図: フィーチャー単位のクレジットを持たないため、静的に宣言します。
-view.addLayer({
-  type: "tiles",
-  data: {
-    url: "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg",
-  },
-  rasterTile: { maxZoom: 18 },
+const basemap = view.addSource({
+  type: "raster-tile",
+  url: "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg",
+  maxZoom: 18,
 });
+view.addLayer({ type: "raster", source: basemap });
 
 // タイルが自前の copyright を埋め込む 3D タイル（動的に追跡されます）。
-const photoreal = view.addLayer({
-  type: "cesium3dtiles",
-  data: { url: "https://tile.googleapis.com/v1/3dtiles/root.json?key=YOUR_KEY" },
+const photorealSource = view.addSource({
+  type: "3d-tiles",
+  url: "https://tile.googleapis.com/v1/3dtiles/root.json?key=YOUR_KEY",
 });
+const photoreal = view.addLayer({ type: "3d-tiles", source: photorealSource });
 
 attribution.show(
   [

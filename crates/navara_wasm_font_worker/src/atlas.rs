@@ -15,6 +15,20 @@ pub const DEFAULT_COLOR_ATLAS_SIZE: i32 = 1024;
 /// 2048 → 4096 → 8192 (~64 MiB for the R8 buffer).
 pub const MAX_ATLAS_SIZE: i32 = 1024 * 8;
 
+/// How many recent `ensure_glyphs_in_atlas` calls a freshly-packed glyph stays
+/// protected from eviction while waiting for the client to retain it.
+///
+/// A glyph has no reference count between the moment it is packed and the moment
+/// the TS mesh (built from the shaped result a few messages later) calls
+/// `retainGlyphs`. Without this grace, a *subsequent* batch needing space could
+/// evict the glyph and reuse its rect, leaving the in-flight mesh sampling the
+/// wrong glyph. Protecting the last `EVICTION_GRACE_CALLS` calls' additions
+/// covers that retain lag; glyphs older than the window that are still
+/// unreferenced (shaped but never displayed) age out and become evictable, so
+/// the protection set stays bounded. Under sustained pressure this degrades to a
+/// *missing* glyph (allocation fails, glyph skipped), never a *wrong* one.
+pub const EVICTION_GRACE_CALLS: u64 = 512;
+
 /// Padding pixels around a glyph bitmap during SDF generation.
 const SDF_BUFFER: usize = 12;
 
@@ -95,6 +109,15 @@ pub struct Atlas {
     /// evicted to reclaim space; a glyph with `>= 1` is on screen and must never
     /// be evicted, since its atlas rect is baked into a live mesh.
     pub ref_count: FxHashMap<u64, u32>,
+    /// Monotonic counter, bumped once per [`Self::ensure_glyphs_in_atlas`] call,
+    /// used to age entries in `pending`.
+    pack_seq: u64,
+    /// Freshly-packed, not-yet-retained glyphs → the `pack_seq` at which they
+    /// were added. Such a glyph is protected from eviction until the client
+    /// retains it or it ages past [`EVICTION_GRACE_CALLS`] (see that constant for
+    /// the race this closes). A glyph leaves here when retained (moves into
+    /// `ref_count`) or when removed/evicted.
+    pending: FxHashMap<u64, u64>,
 }
 
 /// Pack a font index and glyph ID into a single u64 key.
@@ -180,6 +203,8 @@ impl Atlas {
             channels: channels as u8,
             glyph_map: FxHashMap::default(),
             ref_count: FxHashMap::default(),
+            pack_seq: 0,
+            pending: FxHashMap::default(),
         }
     }
 
@@ -189,6 +214,8 @@ impl Atlas {
     pub fn retain(&mut self, key: u64) {
         if self.glyph_map.contains_key(&key) {
             *self.ref_count.entry(key).or_insert(0) += 1;
+            // Now reference-counted, so it no longer needs grace protection.
+            self.pending.remove(&key);
         }
     }
 
@@ -217,6 +244,7 @@ impl Atlas {
         if let Some(metrics) = self.glyph_map.remove(&key) {
             self.allocator.deallocate(metrics.alloc_id);
             self.ref_count.remove(&key);
+            self.pending.remove(&key);
         }
     }
 
@@ -251,6 +279,9 @@ impl Atlas {
 
         let pad = self.mode.padding();
         let mut new_glyphs = false;
+        // Advance the call sequence so glyphs packed here are tagged with the
+        // newest `pack_seq` and stay protected for the grace window below.
+        self.pack_seq = self.pack_seq.wrapping_add(1);
         // Glyphs packed during this call have no references yet; protect them
         // so a later glyph in the same batch can't evict them before the
         // caller's label retains them.
@@ -321,6 +352,9 @@ impl Atlas {
                 },
             );
             just_added.insert(key);
+            // Protect against eviction by later calls until the client retains
+            // it (or it ages out of the grace window).
+            self.pending.insert(key, self.pack_seq);
             new_glyphs = true;
         }
         new_glyphs
@@ -401,15 +435,27 @@ impl Atlas {
     }
 
     /// Free every glyph with no visible-label references, so the freed rects
-    /// can be reused. Glyphs in `protect` (packed earlier in the current
-    /// shaping call, not yet retained) are kept. Returns `true` if anything was
-    /// evicted, so the caller can invalidate the now-stale TS metrics.
+    /// can be reused. A glyph is kept if it is reference-counted, is in `protect`
+    /// (packed earlier in the current shaping call), or was packed within the
+    /// last [`EVICTION_GRACE_CALLS`] calls and is still awaiting the client's
+    /// retain (see `pending`). Returns `true` if anything was evicted, so the
+    /// caller can invalidate the now-stale TS metrics.
     fn evict_unreferenced(&mut self, protect: &FxHashSet<u64>) -> bool {
+        let pack_seq = self.pack_seq;
         let evictable: Vec<u64> = self
             .glyph_map
             .keys()
             .copied()
-            .filter(|key| !self.ref_count.contains_key(key) && !protect.contains(key))
+            .filter(|key| {
+                if self.ref_count.contains_key(key) || protect.contains(key) {
+                    return false;
+                }
+                // Keep recently-packed glyphs until their retain can arrive.
+                match self.pending.get(key) {
+                    Some(&seq) => pack_seq.wrapping_sub(seq) >= EVICTION_GRACE_CALLS,
+                    None => true,
+                }
+            })
             .collect();
 
         let evicted = !evictable.is_empty();
@@ -417,5 +463,87 @@ impl Atlas {
             self.remove(key);
         }
         evicted
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Insert a glyph straight into the atlas (bypassing rasterization), tagged
+    /// as pending at the current `pack_seq` — mirroring what
+    /// `ensure_glyphs_in_atlas` records for a freshly-packed glyph.
+    fn pack_fake(atlas: &mut Atlas, key: u64) {
+        let alloc = atlas
+            .allocator
+            .allocate(Size::new(8, 8))
+            .expect("fresh atlas has room");
+        atlas.glyph_map.insert(
+            key,
+            GlyphMetrics {
+                alloc_id: alloc.id,
+                atlas_x: 0,
+                atlas_y: 0,
+                atlas_w: 4,
+                atlas_h: 4,
+                bearing_x: 0.0,
+                bearing_y: 0.0,
+            },
+        );
+        atlas.pending.insert(key, atlas.pack_seq);
+    }
+
+    fn no_protect() -> FxHashSet<u64> {
+        FxHashSet::default()
+    }
+
+    #[test]
+    fn grace_keeps_recent_glyph_then_evicts_after_window() {
+        let mut atlas = Atlas::new(DEFAULT_ATLAS_SIZE, AtlasMode::Sdf);
+        atlas.pack_seq = 1;
+        pack_fake(&mut atlas, 42);
+
+        // Still inside the grace window (age = GRACE - 1) → kept even though it
+        // was never retained.
+        atlas.pack_seq = EVICTION_GRACE_CALLS;
+        assert!(!atlas.evict_unreferenced(&no_protect()));
+        assert!(atlas.contains(42));
+
+        // Aged out (age = GRACE) → now evictable.
+        atlas.pack_seq = 1 + EVICTION_GRACE_CALLS;
+        assert!(atlas.evict_unreferenced(&no_protect()));
+        assert!(!atlas.contains(42));
+    }
+
+    #[test]
+    fn retain_pins_glyph_and_clears_pending() {
+        let mut atlas = Atlas::new(DEFAULT_ATLAS_SIZE, AtlasMode::Sdf);
+        atlas.pack_seq = 1;
+        pack_fake(&mut atlas, 7);
+
+        atlas.retain(7);
+        assert!(!atlas.pending.contains_key(&7), "retain clears pending");
+
+        // Far past the grace window, but a referenced glyph is never evicted.
+        atlas.pack_seq = 10 * EVICTION_GRACE_CALLS;
+        assert!(!atlas.evict_unreferenced(&no_protect()));
+        assert!(atlas.contains(7));
+
+        // Released → unreferenced and (no longer pending) immediately evictable.
+        atlas.release(7);
+        assert!(atlas.evict_unreferenced(&no_protect()));
+        assert!(!atlas.contains(7));
+    }
+
+    #[test]
+    fn unpending_unreferenced_glyph_is_evictable() {
+        let mut atlas = Atlas::new(DEFAULT_ATLAS_SIZE, AtlasMode::Sdf);
+        atlas.pack_seq = 1;
+        pack_fake(&mut atlas, 5);
+        // A glyph that left the pending set without being retained (e.g. shaped
+        // for a label that never became visible) is fair game right away.
+        atlas.pending.remove(&5);
+        assert!(atlas.evict_unreferenced(&no_protect()));
+        assert!(!atlas.contains(5));
     }
 }

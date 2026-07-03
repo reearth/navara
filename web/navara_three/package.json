@@ -63,6 +63,7 @@
     "@radix-ui/react-switch": "1.2.6",
     "@tailwindcss/postcss": "4.2.2",
     "@tweakpane/core": "2.0.5",
+    "@types/geojson": "7946.0.16",
     "@types/stats.js": "0.17.4",
     "@types/three": "0.184.0",
     "ajv": "8.20.0",

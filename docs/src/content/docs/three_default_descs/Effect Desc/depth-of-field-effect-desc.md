@@ -120,12 +120,15 @@ const depthOfFieldDesc = view.addEffect<DepthOfFieldEffectDesc>({
   visible: true,
 });
 
-// Add 3D tiles resource layer
+// Add 3D tiles layer
+const buildingsSource = view.addSource({
+  type: "3d-tiles",
+  url: "https://example.com/tileset.json",
+});
+
 view.addLayer({
-  type: "cesium3dtiles",
-  data: {
-    url: "https://example.com/tileset.json",
-  },
+  type: "3d-tiles",
+  source: buildingsSource,
   model: {
     show: true,
     color: new Color().setHex(0xffffff),

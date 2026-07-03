@@ -192,6 +192,6 @@ view.atmosphere.on("sunChanged", () => {
 
 ## 関連リソース
 
-- [Resource Layer Reference](../../../three/resource-layer/about/) - リソースレイヤーの詳細
+- [Materials](../../../three/material/about/) - リソースレイヤーの詳細
 - [Effect Descriptor Reference](../../../three_default_descs/effect-desc/about/) - エフェクト
 - [API Reference](../../../three/api/) - ThreeView API
