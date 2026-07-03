@@ -8,7 +8,6 @@ import {
   DefaultPlugin,
   type DefaultDescriptions,
 } from "@navara/three_default_plugin";
-import { Vector3 } from "three";
 import { Pane } from "tweakpane";
 
 import { showAttributions } from "../../helpers/attributions";
@@ -37,7 +36,34 @@ type SplatSample = {
   yaw?: number;
   /** Optional per-sample height delta [m]. */
   dHeight?: number;
+  /**
+   * Optional camera distance [m] used by the folder's "Fly to" button to frame
+   * the model. Defaults to a scale-proportional distance (see {@link flyDistance}).
+   */
+  viewDistance?: number;
+  /** Optional camera heading [deg] for "Fly to" (0 = looking north). */
+  viewHeading?: number;
+  /** Optional camera pitch [deg] for "Fly to" (negative looks down). */
+  viewPitch?: number;
 };
+
+/** Camera distance (m) that frames a sample, proportional to its scale. */
+const flyDistance = (sample: SplatSample): number =>
+  sample.viewDistance ?? 100;
+
+/** A 3/4 down-looking view by default; per-sample overrides win. */
+const DEFAULT_VIEW_HEADING = -25;
+const DEFAULT_VIEW_PITCH = -20;
+
+/** Camera pose that frames a sample — shared by the initial view and "Fly to". */
+const sampleCamPos = (sample: SplatSample) => ({
+  lng: CENTER.lng + sample.dLng,
+  lat: CENTER.lat + sample.dLat,
+  height: CENTER.height + (sample.dHeight ?? 0),
+  distance: flyDistance(sample),
+  heading: sample.viewHeading ?? DEFAULT_VIEW_HEADING,
+  pitch: sample.viewPitch ?? DEFAULT_VIEW_PITCH,
+});
 
 const SAMPLES: SplatSample[] = [
   {
@@ -46,7 +72,7 @@ const SAMPLES: SplatSample[] = [
     note: "QUECHUA - Webviewer by Christoph SCHINDELAR",
     dLng: -0.0012,
     dLat: 0,
-    scale: 10,
+    scale: 1,
   },
   {
     url: SPLAT_DATASETS.pencilSharpener.url,
@@ -54,7 +80,17 @@ const SAMPLES: SplatSample[] = [
     note: "Pencil sharpener shaped like a duck by Alfred Duemlein",
     dLng: 0.0028,
     dLat: 0,
-    scale: 200,
+    scale: 20,
+  },
+  {
+    // ~1800 km east of CENTER: exercises the dynamic RTC origin — flying here
+    // should be as jitter-free as CENTER (a single static origin could not do both).
+    url: SPLAT_DATASETS.quechua.url,
+    name: "quechua-far",
+    note: "QUECHUA (far copy, ~1800 km east) — dynamic-origin jitter test",
+    dLng: 20,
+    dLat: 0,
+    scale: 1,
   },
 ];
 
@@ -108,7 +144,9 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     placeSplat(view, sample);
   }
 
-  view.lookAt(CENTER, new Vector3(0, 700, 400));
+  // Start from the same framing as quechua's "Fly to" (instant, no animation).
+  const quechua = SAMPLES.find((s) => s.name === "quechua") ?? SAMPLES[0];
+  view.setCamera(sampleCamPos(quechua));
 
   addDebugPane(view);
 };
@@ -173,6 +211,12 @@ const addDebugPane = (view: ThreeView<CustomDescriptions>): void => {
     sub.addBinding(target, "height", {
       readonly: true,
       format: (v: number) => v.toFixed(2),
+    });
+    sub.addButton({ title: "Fly to" }).on("click", () => {
+      // Keep `height` (the model sits ~30 m up) and use `distance` to frame it:
+      // the camera stops `distance` m from the target along its forward ray,
+      // oriented by heading/pitch so the model is framed rather than edge-on.
+      view.flyTo(sampleCamPos(sample), 1000);
     });
   }
 

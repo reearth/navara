@@ -9,19 +9,36 @@ import {
 import { SparkRenderer, SplatMesh } from "@sparkjsdev/spark";
 import { SRGBColorSpace, type Scene } from "three";
 
+import {
+  ORIGIN_KEY,
+  ORIGIN_UPDATER,
+  ensureSparkOriginPatch,
+} from "./sparkOriginPatch";
+import { SplatOriginController } from "./splatOriginController";
+
+/** Default grid cell (m) for the dynamic RTC origin. See {@link SplatOriginController}. */
+const DEFAULT_ORIGIN_CELL_SIZE = 2000;
+
 type SplatDescription = {
   splat?: {
     url: string;
     lod?: boolean;
+    /**
+     * Grid cell edge (m) for the dynamic floating-origin that keeps splats
+     * precise at globe scale. Shared per transparent scene: the first splat's
+     * value wins. Smaller = tighter precision but more re-sorts. Default 2000.
+     */
+    originCellSize?: number;
   };
 };
 
-// Update accepts partials; `url` and `lod` are frozen post-creation
-// (only warn if an explicitly provided value differs).
+// Update accepts partials; `url`, `lod` and `originCellSize` are frozen
+// post-creation (only warn if an explicitly provided value differs).
 type SplatDescriptionUpdate = {
   splat?: {
     url?: string;
     lod?: boolean;
+    originCellSize?: number;
   };
 };
 
@@ -35,14 +52,16 @@ type SharedEntry = {
   enableLod: boolean;
   /** Fanout of per-descriptor `onDirty` callbacks. */
   listeners: Set<() => void>;
+  /** Dynamic floating-origin driver shared by every splat on this renderer. */
+  controller: SplatOriginController;
 };
 
 const shared = new WeakMap<Scene, SharedEntry>();
 
 function acquireSparkRenderer(
   ctx: ViewContext,
-  opts: { enableLod: boolean; onDirty: () => void },
-): { enableLod: boolean } {
+  opts: { enableLod: boolean; onDirty: () => void; cellSize: number },
+): { enableLod: boolean; controller: SplatOriginController } {
   // Transparent scene: render after atmosphere/aerial-perspective so baked color survives.
   const target = ctx.scenes.transparent;
   const existing = shared.get(target);
@@ -58,7 +77,7 @@ function acquireSparkRenderer(
     existing.refCount += 1;
     // Re-assert in case another view changed the global override.
     SparkRenderer.sparkOverride = existing.renderer;
-    return { enableLod: existing.enableLod };
+    return { enableLod: existing.enableLod, controller: existing.controller };
   }
 
   // Linear when the post-pp pipeline is linear, else the final sRGB pass double-encodes.
@@ -73,6 +92,14 @@ function acquireSparkRenderer(
     // Fan out to every descriptor sharing this renderer.
     onDirty: () => listeners.forEach((fn) => fn()),
   });
+
+  // The patch reads the live origin vector and calls the updater each frame to
+  // grid-snap it to the camera and recenter registered splats.
+  const controller = new SplatOriginController(opts.cellSize);
+  renderer.userData[ORIGIN_KEY] = controller.origin;
+  renderer.userData[ORIGIN_UPDATER] = controller.update;
+  ensureSparkOriginPatch();
+
   target.add(renderer);
   SparkRenderer.sparkOverride = renderer;
 
@@ -81,8 +108,9 @@ function acquireSparkRenderer(
     refCount: 1,
     enableLod: opts.enableLod,
     listeners,
+    controller,
   });
-  return { enableLod: opts.enableLod };
+  return { enableLod: opts.enableLod, controller };
 }
 
 function releaseSparkRenderer(ctx: ViewContext, listener: () => void): void {
@@ -120,6 +148,8 @@ export class SplatMeshDesc extends MeshDesc<
   private holdsSlot = false;
   /** Bound listener for the shared SparkRenderer's `onDirty` fanout. */
   private onSparkDirty?: () => void;
+  /** Shared dynamic-origin driver this splat registers with (RTC). */
+  private controller?: SplatOriginController;
 
   constructor(view: ThreeView, ctx: ViewContext, config: SplatMeshConfig) {
     super(view, ctx, config);
@@ -141,10 +171,15 @@ export class SplatMeshDesc extends MeshDesc<
     // pass; without this, the new ordering only shows up on the next external
     // frame request (camera move, etc.).
     this.onSparkDirty = () => this.requestUpdate();
-    const { enableLod: rendererLod } = acquireSparkRenderer(this.ctx, {
-      enableLod: requestedLod,
-      onDirty: this.onSparkDirty,
-    });
+    const { enableLod: rendererLod, controller } = acquireSparkRenderer(
+      this.ctx,
+      {
+        enableLod: requestedLod,
+        onDirty: this.onSparkDirty,
+        cellSize: cfg.originCellSize ?? DEFAULT_ORIGIN_CELL_SIZE,
+      },
+    );
+    this.controller = controller;
     const effectiveLod = requestedLod && rendererLod;
 
     // Slot held only during load; released on `mesh.initialized` settle.
@@ -165,6 +200,19 @@ export class SplatMeshDesc extends MeshDesc<
       })
       .finally(() => this.releaseSlot());
     return mesh;
+  }
+
+  override onCreate(): void {
+    super.onCreate();
+    // Base class has applied the (ECEF) world transform. Register with the
+    // dynamic-origin controller, which recenters this mesh to a camera-tracking
+    // origin so Spark's accumulator only ever sees small coordinates.
+    const mesh = this.raw;
+    if (!mesh || !this.controller) return;
+
+    // Stash the original ECEF world matrix so the controller can re-derive the
+    // recentered matrix for any origin it snaps to.
+    this.controller.register(mesh, mesh.matrixWorld.clone());
   }
 
   private releaseSlot(): void {
@@ -188,6 +236,14 @@ export class SplatMeshDesc extends MeshDesc<
         warnIfChanged("lod", next.lod, current.lod ?? false);
         current.lod = next.lod;
       }
+      if (next.originCellSize !== undefined) {
+        warnIfChanged(
+          "originCellSize",
+          next.originCellSize,
+          current.originCellSize,
+        );
+        current.originCellSize = next.originCellSize;
+      }
     }
     super.onUpdateConfig(updates);
   }
@@ -196,6 +252,7 @@ export class SplatMeshDesc extends MeshDesc<
     // Capture before super: super removes from scene and nulls `_instance`.
     const mesh = this._instance;
     super.onDestroy();
+    if (mesh) this.controller?.unregister(mesh);
     mesh?.dispose();
 
     // Fallback: destroyed before `mesh.initialized` settled.
