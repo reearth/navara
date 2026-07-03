@@ -146,6 +146,24 @@ describe("SplatOriginController", () => {
       expect(mesh.matrixWorld.equals(ecef)).toBe(true);
     });
 
+    it("re-registering replaces the stored matrix so transform updates take effect", () => {
+      const c = new SplatOriginController(CELL);
+      const mesh = meshWith(ecefMatrix(new Vector3(6_000_000, 0, 0)));
+      c.register(asSplat(mesh), new Matrix4().copy(mesh.matrixWorld));
+      c.update(cameraAt(6_000_000, 0, 0));
+
+      // Simulate a transform update: the mesh now sits at a new ECEF position.
+      const moved = ecefMatrix(new Vector3(6_000_000, 500, 0));
+      c.register(asSplat(mesh), moved.clone());
+
+      // Cross a cell so the controller re-derives from its stored matrix.
+      c.update(cameraAt(6_000_000, 500, 0));
+
+      // Net world placement must reflect the NEW matrix (y = 500), not the old.
+      const world = translationOf(mesh.matrixWorld).add(c.origin);
+      expect(world.y).toBeCloseTo(500, 3);
+    });
+
     it("stops recentering a mesh after it is unregistered", () => {
       const c = new SplatOriginController(CELL);
       const ecef = ecefMatrix(new Vector3(6_000_000, 0, 0));

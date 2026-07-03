@@ -109,7 +109,7 @@ const placeSplat = (
   // assets; `sample.yaw` rotates around the local up.
   const matrix = northUpEastToFixedFrame(pos);
 
-  view.addMesh<SplatMeshDesc>({
+  return view.addMesh<SplatMeshDesc>({
     matrixWorld: matrix,
     splat: {
       url: sample.url,
@@ -119,6 +119,8 @@ const placeSplat = (
     scale: { x: sample.scale, y: sample.scale, z: sample.scale },
   });
 };
+
+type SplatHandle = ReturnType<typeof placeSplat>;
 
 export const run = async (view: ThreeView<CustomDescriptions>) => {
   const plugin = new DefaultPlugin();
@@ -139,19 +141,23 @@ export const run = async (view: ThreeView<CustomDescriptions>) => {
     SPLAT_DATASETS.pencilSharpener,
   ]);
 
+  const handles = new Map<SplatSample, SplatHandle>();
   for (const sample of SAMPLES) {
-    placeSplat(view, sample);
+    handles.set(sample, placeSplat(view, sample));
   }
 
   // Start from the same framing as quechua's "Fly to" (instant, no animation).
   const quechua = SAMPLES.find((s) => s.name === "quechua") ?? SAMPLES[0];
   view.setCamera(sampleCamPos(quechua));
 
-  addDebugPane(view);
+  addDebugPane(view, handles);
 };
 
 /** Tweakpane debug pane: camera pose + each splat's intended position. */
-const addDebugPane = (view: ThreeView<CustomDescriptions>): void => {
+const addDebugPane = (
+  view: ThreeView<CustomDescriptions>,
+  handles: Map<SplatSample, SplatHandle>,
+): void => {
   const pane = new Pane({ title: "splat debug", expanded: true });
 
   const cameraState = {
@@ -211,6 +217,19 @@ const addDebugPane = (view: ThreeView<CustomDescriptions>): void => {
       readonly: true,
       format: (v: number) => v.toFixed(2),
     });
+
+    // Live uniform-scale control. Splats are placed with a `matrixWorld` frame,
+    // so the update recomposes frame · rotation · scale and the RTC controller
+    // re-tracks it — no reload needed. High scales show sort "boiling".
+    const scaleParams = { scale: sample.scale };
+    sub
+      .addBinding(scaleParams, "scale", { min: 0.1, max: 500, step: 0.1 })
+      .on("change", (ev) => {
+        handles.get(sample)?.update({
+          scale: { x: ev.value, y: ev.value, z: ev.value },
+        });
+      });
+
     sub.addButton({ title: "Fly to" }).on("click", () => {
       // Keep `height` (the model sits ~30 m up) and use `distance` to frame it:
       // the camera stops `distance` m from the target along its forward ray,

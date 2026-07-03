@@ -246,6 +246,29 @@ export class SplatMeshDesc extends MeshDesc<
       }
     }
     super.onUpdateConfig(updates);
+
+    // A transform update makes the base class re-apply the raw ECEF matrix to
+    // `mesh.matrixWorld` (undoing the RTC recenter). Refresh the controller's
+    // cached matrix from it and re-recenter now, otherwise the splat renders at
+    // ECEF until the next origin change — which would then snap it back to the
+    // *original* placement captured at creation. Only the matrixWorld/matrix
+    // path is RTC-managed (the base recomputes `matrixWorld` there); the
+    // auto-update position-only path is moved by the base class directly.
+    const spatialChanged =
+      updates.matrix !== undefined ||
+      updates.matrixWorld !== undefined ||
+      updates.position !== undefined ||
+      updates.scale !== undefined ||
+      updates.rotation !== undefined;
+    const mesh = this.raw;
+    if (
+      spatialChanged &&
+      mesh &&
+      this.controller &&
+      (this.matrixWorld || this.matrix)
+    ) {
+      this.controller.register(mesh, mesh.matrixWorld.clone());
+    }
   }
 
   override onDestroy(): void {
