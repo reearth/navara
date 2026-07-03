@@ -38,7 +38,7 @@ type SplatSample = {
   dHeight?: number;
   /**
    * Optional camera distance [m] used by the folder's "Fly to" button to frame
-   * the model. Defaults to a scale-proportional distance (see {@link flyDistance}).
+   * the model. Defaults to 100 m (see {@link flyDistance}).
    */
   viewDistance?: number;
   /** Optional camera heading [deg] for "Fly to" (0 = looking north). */
